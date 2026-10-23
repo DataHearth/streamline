@@ -1,0 +1,53 @@
+apiVersion: 1
+
+datasources:
+  - name: VictoriaMetrics
+    type: prometheus
+    access: proxy
+    uid: victoriametrics
+    url: http://victoriametrics:8428
+    isDefault: true
+
+  - name: VictoriaTraces
+    type: jaeger
+    access: proxy
+    uid: victoriatraces
+    url: http://victoriatraces:10428/select/jaeger
+
+  - name: VictoriaLogs
+    type: victoriametrics-logs-datasource
+    access: proxy
+    uid: victorialogs
+    url: http://victorialogs:9428
+    jsonData:
+      logLevelRules:
+        - field: severity
+          operator: equals
+          value: TRACE
+          level: trace
+          enabled: true
+        - field: severity
+          operator: equals
+          value: DEBUG
+          level: debug
+          enabled: true
+        - field: severity
+          operator: equals
+          value: INFO
+          level: info
+          enabled: true
+        - field: severity
+          operator: equals
+          value: WARN
+          level: warning
+          enabled: true
+        - field: severity
+          operator: equals
+          value: ERROR
+          level: error
+          enabled: true
+        - field: severity
+          operator: equals
+          value: CRITICAL
+          level: critical
+          enabled: true

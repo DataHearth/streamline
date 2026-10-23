@@ -1,0 +1,14 @@
+{
+  "go": {
+    "1.27.3": "sha256-bndJA1zzYPBrJXXRYup535/ajvZxiJ5cN1+OUHd/Jrs="
+  },
+  "node": {
+    "24.22.0": "sha256-Qfl8/yxmbx+Ck9xfhcZejdYFwWtD/Z/r1J7eMu4eAyk="
+  },
+  "pnpm": {
+    "12.11.2": {
+      "x86_64-linux": "sha512-FK7QKe24AYgppJwO3mpooYptduuvIGqKJPi5ac7MdnWkjUy46JBfYhCW0grnkWKC8YOf0x+vGviuQqJEj3SpQQ==",
+      "aarch64-linux": "sha512-6e8ZAQUwFXAWHHHv5FesWqf/kEK04wuitBv5f/gxzkC0DiBfaixr+f+6JQede8SF4Ji5LcMwVFJbzAtffpWxEg=="
+    }
+  }
+}

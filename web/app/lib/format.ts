@@ -1,0 +1,76 @@
+import type { StatusKind } from "@components/shared/StatusPill.svelte";
+
+// formatBytes renders a byte count as a compact human string ("4.1 GB").
+// Defaults to an em dash when unknown so table columns stay aligned; callers
+// that concatenate the result into a sentence or a "·"-joined meta line pass
+// their own fallback instead.
+export function formatBytes(
+	n: number | undefined | null,
+	fallback = "—",
+): string {
+	if (!n || n <= 0) return fallback;
+	const units = ["B", "KB", "MB", "GB", "TB"];
+	let v = n;
+	let i = 0;
+	while (v >= 1024 && i < units.length - 1) {
+		v /= 1024;
+		i++;
+	}
+	return `${i > 0 && v < 10 ? v.toFixed(1) : Math.round(v)} ${units[i]}`;
+}
+
+// formatSpeed renders a bytes/sec rate ("1.2 MB/s"); empty when idle.
+export function formatSpeed(bytesPerSec: number | undefined | null): string {
+	if (!bytesPerSec || bytesPerSec <= 0) return "";
+	return `${formatBytes(bytesPerSec)}/s`;
+}
+
+// formatEta renders seconds-to-completion ("2m", "1h 04m"); empty when
+// unknown (the backend already normalizes qBittorrent's ∞ sentinel to 0).
+export function formatEta(seconds: number | undefined | null): string {
+	if (!seconds || seconds <= 0) return "";
+	const s = Math.round(seconds);
+	if (s < 60) return `${s}s`;
+	const m = Math.floor(s / 60);
+	if (m < 60) return `${m}m`;
+	const h = Math.floor(m / 60);
+	return `${h}h ${String(m % 60).padStart(2, "0")}m`;
+}
+
+// formatRatio renders a torrent share ratio ("1.84"). Em dash when unknown.
+export function formatRatio(ratio: number | undefined | null): string {
+	if (ratio == null || ratio < 0) return "—";
+	return ratio.toFixed(2);
+}
+
+// pillStatus maps a download lifecycle status onto a StatusPill kind:
+// error/failed share "failed", completed → "available". "importing" carries
+// grabbing's hue through a CSS alias but keeps its own label — reusing the
+// "grabbing" kind outright made the pill read "Grabbing" on a record the
+// importer already had.
+export function pillStatus(
+	status:
+		| "downloading"
+		| "importing"
+		| "paused"
+		| "error"
+		| "completed"
+		| "failed"
+		| "held",
+): StatusKind {
+	switch (status) {
+		case "held":
+			return "held";
+		case "importing":
+			return "importing";
+		case "error":
+		case "failed":
+			return "failed";
+		case "completed":
+			return "available";
+		case "paused":
+			return "paused";
+		default:
+			return "downloading";
+	}
+}

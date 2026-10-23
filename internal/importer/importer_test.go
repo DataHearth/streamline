@@ -1,0 +1,1779 @@
+package importer
+
+import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
+	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	mockdb "github.com/datahearth/streamline/internal/db/mocks"
+	mockdl "github.com/datahearth/streamline/internal/download/mocks"
+	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/ffmpeg"
+	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
+	"github.com/datahearth/streamline/internal/library"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/dbtest"
+)
+
+func seedMediaFile(dir, name string) {
+	GinkgoHelper()
+	p := filepath.Join(dir, name)
+	f, err := os.Create(p)
+	Expect(err).NotTo(HaveOccurred())
+	DeferCleanup(f.Close)
+	Expect(f.Truncate(60 << 20)).To(Succeed())
+}
+
+func fixtureRecord(
+	id, movieID uint32,
+	savePath string,
+	attempts uint8,
+) *ent.DownloadRecord {
+	m := &ent.Movie{ID: movieID, Title: "Flick", Year: 2024, TmdbID: 999}
+	r := &ent.DownloadRecord{
+		ID:                 id,
+		TorrentHash:        "hash",
+		SavePath:           savePath,
+		ImportAttempts:     attempts,
+		Status:             downloadrecord.StatusImporting,
+		DownloadClientName: "qbit",
+		ReplaceMode:        downloadrecord.ReplaceModeNone,
+	}
+	r.Edges.Movie = m
+	return r
+}
+
+var _ = Describe("Worker", Label("unit", "importer"), func() {
+	var (
+		storeMk *mockdb.MockStore
+		msMk    *msmocks.MockRefresher
+		libSvc  *library.ImportService
+		w       *Worker
+		tmp     string
+		libDir  string
+	)
+
+	BeforeEach(func() {
+		tmp = GinkgoT().TempDir()
+		libDir = filepath.Join(tmp, "library")
+		Expect(os.MkdirAll(libDir, 0o755)).To(Succeed())
+
+		configtest.Setup(map[string]any{
+			"library": map[string]any{
+				"movie_path":           libDir,
+				"import_mode":          "copy",
+				"import_max_attempts":  3,
+				"keep_torrent_seeding": true,
+				"movie_naming":         "{title} ({year})/{title}.{ext}",
+				"series_path":          libDir,
+				"series_naming":        "{title}/{title} S{season}E{episode}.{ext}",
+			},
+		})
+
+		storeMk = mockdb.NewMockStore(GinkgoT())
+		msMk = msmocks.NewMockRefresher(GinkgoT())
+		libSvc = library.NewImportService()
+		w = NewWorker(Deps{DB: storeMk, Library: libSvc, MediaServer: msMk})
+	})
+
+	It("happy path: success writes success + refreshes media server", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordImportSuccessParams) bool {
+				return p.RecordID == 1 && p.MovieID == 10 && !p.QueueTranscode
+			})).
+			Return(nil).
+			Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+	})
+
+	It(
+		"move mode drops the torrent and its leftovers even when seeding is kept",
+		func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":           libDir,
+					"import_mode":          "move",
+					"import_max_attempts":  3,
+					"keep_torrent_seeding": true,
+					"movie_naming":         "{title} ({year})/{title}.{ext}",
+					"series_path":          libDir,
+					"series_naming":        "{title}/{title} S{season}E{episode}.{ext}",
+				},
+			})
+			libSvc = library.NewImportService()
+			dlMk := mockdl.NewMockDownloader(GinkgoT())
+			w = NewWorker(
+				Deps{
+					DB:          storeMk,
+					Library:     libSvc,
+					MediaServer: msMk,
+					Download:    dlMk,
+				},
+			)
+
+			src := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).
+				Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().RecordImportSuccess(mock.Anything, mock.Anything).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).Once()
+			dlMk.EXPECT().RemoveTorrent(mock.Anything, "qbit", "hash", true).
+				Return(nil).Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		},
+	)
+
+	It(
+		"queues a transcode job when the movie's profile is transcode-eligible",
+		func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":           libDir,
+					"import_mode":          "copy",
+					"import_max_attempts":  3,
+					"keep_torrent_seeding": true,
+					"movie_naming":         "{title} ({year})/{title}.{ext}",
+					"series_path":          libDir,
+					"series_naming":        "{title}/{title} S{season}E{episode}.{ext}",
+				},
+				"transcoding": map[string]any{"enabled": true},
+				"quality_profiles": []map[string]any{{
+					"name": "hd", "preferred_resolution": "1080p",
+					"min_resolution": "720p",
+					"transcode": map[string]any{
+						"to": map[string]any{
+							"container": "mkv", "video_codec": "hevc",
+							"preset": "medium", "audio_codec": "aac",
+						},
+					},
+				}},
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
+			})
+			src := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).
+				Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().
+				RecordImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordImportSuccessParams) bool {
+					return p.RecordID == 1 && p.MovieID == 10 && p.QueueTranscode
+				})).
+				Return(nil).
+				Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).
+				Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		},
+	)
+
+	It("attaches probe info to the movie media file row", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+
+		prober := mockffmpeg.NewMockProber(GinkgoT())
+		prober.EXPECT().Available().Return(true).Once()
+		prober.EXPECT().Probe(mock.Anything, mock.Anything).
+			Return(&ffmpeg.Info{
+				VideoCodec:  "h264",
+				Width:       1920,
+				Height:      1080,
+				DurationSec: 5400,
+				Container:   "matroska",
+			}, nil).Once()
+		wp := NewWorker(Deps{
+			DB: storeMk, Library: libSvc, MediaServer: msMk, Prober: prober,
+		})
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordImportSuccessParams) bool {
+				return p.RecordID == 1 && p.MovieID == 10 &&
+					p.File.Probe != nil && p.File.Probe.VideoCodec == "h264"
+			})).
+			Return(nil).
+			Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
+
+		Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+	})
+
+	It("imports with no probe row when probing fails and is bypassed", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+		rec.VerificationBypassed = true
+
+		prober := mockffmpeg.NewMockProber(GinkgoT())
+		prober.EXPECT().Available().Return(true).Once()
+		prober.EXPECT().Probe(mock.Anything, mock.Anything).
+			Return(nil, ffmpeg.ErrUnreadable).Once()
+		wp := NewWorker(Deps{
+			DB: storeMk, Library: libSvc, MediaServer: msMk, Prober: prober,
+		})
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordImportSuccessParams) bool {
+				return p.RecordID == 1 && p.MovieID == 10 && p.File.Probe == nil
+			})).
+			Return(nil).
+			Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
+
+		Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+	})
+
+	It("skips probing when ffmpeg is disabled", func() {
+		configtest.Setup(map[string]any{
+			"library": map[string]any{
+				"movie_path":           libDir,
+				"import_mode":          "copy",
+				"import_max_attempts":  3,
+				"keep_torrent_seeding": true,
+				"movie_naming":         "{title} ({year})/{title}.{ext}",
+				"series_path":          libDir,
+				"series_naming":        "{title}/{title} S{season}E{episode}.{ext}",
+			},
+			"ffmpeg": map[string]any{
+				"enabled": false,
+			},
+		})
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+
+		// No expectations set: mockery fails the spec if Probe or Available
+		// is called while probing is disabled.
+		prober := mockffmpeg.NewMockProber(GinkgoT())
+		wp := NewWorker(Deps{
+			DB: storeMk, Library: libSvc, MediaServer: msMk, Prober: prober,
+		})
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordImportSuccessParams) bool {
+				return p.RecordID == 1 && p.MovieID == 10 && p.File.Probe == nil
+			})).
+			Return(nil).
+			Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
+
+		Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+	})
+
+	It("existing file + replace flag: old file replaced, import succeeds", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		old := filepath.Join(libDir, "old.mkv")
+		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		rec := fixtureRecord(1, 10, src, 0)
+		rec.ReplaceMode = downloadrecord.ReplaceModeAll
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return([]*ent.MediaFile{{ID: 5, Path: old}}, nil).Once()
+		storeMk.EXPECT().
+			DeleteMediaFileAndRevertMovie(mock.Anything, uint32(5), uint32(10)).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.Anything).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		Expect(old).NotTo(BeAnExistingFile())
+	})
+
+	It("replaces a file that sits at the replacement's own path", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		old := filepath.Join(libDir, "Flick (2024)", "Flick.mkv")
+		Expect(os.MkdirAll(filepath.Dir(old), 0o755)).To(Succeed())
+		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		rec := fixtureRecord(1, 10, src, 0)
+		rec.ReplaceMode = downloadrecord.ReplaceModeAll
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return([]*ent.MediaFile{{ID: 5, Path: old}}, nil).Once()
+		storeMk.EXPECT().
+			DeleteMediaFileAndRevertMovie(mock.Anything, uint32(5), uint32(10)).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.Anything).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		got, err := os.ReadFile(old)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(got)).NotTo(Equal("old"))
+		Expect(old + replacedSuffix).NotTo(BeAnExistingFile())
+	})
+
+	It("keeps the existing file when placing its replacement fails", func() {
+		configtest.Setup(map[string]any{
+			"library": map[string]any{
+				"movie_path":   libDir,
+				"import_mode":  "copy",
+				"movie_naming": "../escape/{title}.{ext}",
+				"series_path":  libDir,
+			},
+		})
+		w = NewWorker(Deps{
+			DB: storeMk, Library: library.NewImportService(), MediaServer: msMk,
+		})
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		old := filepath.Join(libDir, "old.mkv")
+		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		rec := fixtureRecord(1, 10, src, 0)
+		rec.ReplaceMode = downloadrecord.ReplaceModeAll
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return([]*ent.MediaFile{{ID: 5, Path: old}}, nil).Once()
+
+		Expect(w.runImport(context.Background(), 1)).
+			To(MatchError(library.ErrUnsafePath))
+		got, err := os.ReadFile(old)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(got)).To(Equal("old"))
+		Expect(old + replacedSuffix).NotTo(BeAnExistingFile())
+	})
+
+	It("existing file without replace flag: terminal ErrMovieHasFile", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Twice()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return([]*ent.MediaFile{{ID: 5, Path: "/lib/old.mkv"}}, nil).Once()
+		storeMk.EXPECT().
+			RecordImportFailure(mock.Anything, mock.MatchedBy(func(p db.RecordImportFailureParams) bool {
+				return p.Terminal && p.Attempts == 1
+			})).
+			Return(nil).
+			Once()
+
+		err := w.runImport(context.Background(), 1)
+		Expect(err).To(MatchError(ErrMovieHasFile))
+		w.handleOutcome(context.Background(), 1, err)
+	})
+
+	It("two records for one movie: only one of them transfers", func() {
+		srcA := filepath.Join(tmp, "dlA")
+		srcB := filepath.Join(tmp, "dlB")
+		for _, d := range []string{srcA, srcB} {
+			Expect(os.MkdirAll(d, 0o755)).To(Succeed())
+			seedMediaFile(d, "Flick.2024.1080p.mkv")
+		}
+
+		var mu sync.Mutex
+		var files []*ent.MediaFile
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(fixtureRecord(1, 10, srcA, 0), nil).Once()
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+			Return(fixtureRecord(2, 10, srcB, 0), nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			RunAndReturn(func(context.Context, uint32) ([]*ent.MediaFile, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				return files, nil
+			}).Twice()
+		storeMk.EXPECT().RecordImportSuccess(mock.Anything, mock.Anything).
+			RunAndReturn(func(_ context.Context, p db.RecordImportSuccessParams) error {
+				mu.Lock()
+				defer mu.Unlock()
+				files = append(files, &ent.MediaFile{ID: 5, Path: p.File.Path})
+				return nil
+			})
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		msMk.EXPECT().RefreshAll(mock.Anything, mock.Anything, libDir).Return(nil)
+
+		errs := make(chan error, 2)
+		var wg sync.WaitGroup
+		for _, id := range []uint32{1, 2} {
+			wg.Go(func() { errs <- w.runImport(context.Background(), id) })
+		}
+		wg.Wait()
+		close(errs)
+
+		failed := 0
+		for err := range errs {
+			if err != nil {
+				Expect(err).To(MatchError(ErrMovieHasFile))
+				failed++
+			}
+		}
+		Expect(failed).To(Equal(1))
+		Expect(files).To(HaveLen(1))
+	})
+
+	It("retryable error increments attempts, does not flip movie to failed", func() {
+		rec := fixtureRecord(1, 10, filepath.Join(tmp, "nope"), 0)
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Twice()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
+		storeMk.EXPECT().
+			RecordImportFailure(mock.Anything, mock.MatchedBy(func(p db.RecordImportFailureParams) bool {
+				return p.RecordID == 1 && !p.Terminal && p.Attempts == 1
+			})).
+			Return(nil).
+			Once()
+
+		err := w.runImport(context.Background(), 1)
+		Expect(err).To(HaveOccurred())
+		w.handleOutcome(context.Background(), 1, err)
+	})
+
+	It("terminal error (ErrMultipleMedia) flips to failed on attempt 1", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "a.mkv")
+		seedMediaFile(src, "b.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Twice()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
+		storeMk.EXPECT().
+			RecordImportFailure(mock.Anything, mock.MatchedBy(func(p db.RecordImportFailureParams) bool {
+				return p.Terminal && p.Attempts == 1
+			})).
+			Return(nil).
+			Once()
+
+		err := w.runImport(context.Background(), 1)
+		Expect(err).To(MatchError(library.ErrMultipleMedia))
+		w.handleOutcome(context.Background(), 1, err)
+	})
+
+	It("retry exhaustion: attempts at MaxAttempts-1 + 1 flips to failed", func() {
+		rec := fixtureRecord(1, 10, filepath.Join(tmp, "nope"), 2)
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Twice()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
+		storeMk.EXPECT().
+			RecordImportFailure(mock.Anything, mock.MatchedBy(func(p db.RecordImportFailureParams) bool {
+				return p.Terminal && p.Attempts == 3
+			})).
+			Return(nil).
+			Once()
+
+		err := w.runImport(context.Background(), 1)
+		Expect(err).To(HaveOccurred())
+		w.handleOutcome(context.Background(), 1, err)
+	})
+
+	It("ctx cancel mid-run leaves state untouched", func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		w.handleOutcome(ctx, 1, context.Canceled)
+	})
+
+	It("media server refresh failure does not fail the import", func() {
+		src := filepath.Join(tmp, "dl2")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.mkv")
+		rec := fixtureRecord(2, 11, src, 0)
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(11)).
+			Return(nil, nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.Anything).
+			Return(nil).
+			Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(errors.New("boom")).
+			Once()
+
+		Expect(w.runImport(context.Background(), 2)).To(Succeed())
+	})
+
+	It("AllowedDownloadRoots non-empty + save_path outside = terminal", func() {
+		config.Get().Library.AllowedDownloadRoots = []string{"/safe"}
+
+		rec := fixtureRecord(3, 12, "/unsafe/path", 0)
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(3)).
+			Return(rec, nil).Twice()
+		storeMk.EXPECT().
+			RecordImportFailure(mock.Anything, mock.MatchedBy(func(p db.RecordImportFailureParams) bool {
+				return p.Terminal
+			})).
+			Return(nil).
+			Once()
+
+		err := w.runImport(context.Background(), 3)
+		Expect(err).To(MatchError(ErrPathNotAllowed))
+		w.handleOutcome(context.Background(), 3, err)
+	})
+
+	It("AllowedDownloadRoots: a sibling sharing the prefix is refused", func() {
+		config.Get().Library.AllowedDownloadRoots = []string{"/safe"}
+
+		rec := fixtureRecord(4, 12, "/safe-evil/path", 0)
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(4)).
+			Return(rec, nil).Once()
+
+		Expect(w.runImport(context.Background(), 4)).
+			To(MatchError(ErrPathNotAllowed))
+	})
+
+	It("Enqueue dedupe: an in-flight ID is coalesced, not queued twice", func() {
+		w.mu.Lock()
+		w.inFlight[7] = struct{}{}
+		w.mu.Unlock()
+		w.Enqueue(7)
+		Expect(w.ch).To(BeEmpty())
+
+		w.mu.Lock()
+		_, pending := w.requeue[7]
+		w.mu.Unlock()
+		Expect(pending).To(BeTrue())
+	})
+
+	// A hold writes status=held and only then unwinds to the delete that
+	// clears inFlight. A resolve landing in that gap reads the record as held,
+	// flips it back to importing and enqueues — and used to be dropped as a
+	// duplicate, parking the record at importing until the import_scan tick.
+	It("Enqueue during the tail of an import still runs an import", func() {
+		configtest.Setup(map[string]any{
+			"library": map[string]any{
+				"movie_path":           libDir,
+				"import_mode":          "copy",
+				"import_max_attempts":  3,
+				"keep_torrent_seeding": true,
+				"movie_naming":         "{title} ({year})/{title}.{ext}",
+				"series_path":          libDir,
+				"series_naming":        "{title}/{title} S{season}E{episode}.{ext}",
+				"probe":                map[string]any{"always_ask": true},
+			},
+		})
+
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+
+		bypassed := fixtureRecord(5, 15, src, 0)
+		bypassed.VerificationBypassed = true
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(5)).
+			Return(fixtureRecord(5, 15, src, 0), nil).Once()
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(5)).
+			Return(bypassed, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(15)).
+			Return(nil, nil).Times(2)
+		storeMk.EXPECT().
+			HoldDownloadRecord(mock.Anything, uint32(5), mock.Anything).
+			RunAndReturn(func(context.Context, uint32, []schema.HoldReason) error {
+				w.Enqueue(5)
+				return nil
+			}).Once()
+
+		imported := make(chan struct{})
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.Anything).
+			RunAndReturn(func(context.Context, db.RecordImportSuccessParams) error {
+				close(imported)
+				return nil
+			}).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).Once()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		stopped := make(chan struct{})
+		go func() { w.Start(ctx); close(stopped) }()
+		DeferCleanup(func() {
+			cancel()
+			Eventually(stopped).WithTimeout(time.Second).Should(BeClosed())
+		})
+
+		w.Enqueue(5)
+		Eventually(imported).WithTimeout(5 * time.Second).Should(BeClosed())
+	})
+
+	It("Start returns once ctx is canceled", func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() { w.Start(ctx); close(done) }()
+
+		cancel()
+		Eventually(done).WithTimeout(time.Second).Should(BeClosed())
+	})
+
+	It("Enqueue after shutdown is a no-op, not a panic", func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() { w.Start(ctx); close(done) }()
+
+		cancel()
+		Eventually(done).WithTimeout(time.Second).Should(BeClosed())
+
+		Expect(func() { w.Enqueue(99) }).NotTo(Panic())
+		Expect(w.ch).To(BeEmpty())
+	})
+
+	It("Scan picks up importing rows and calls Enqueue for each", func() {
+		storeMk.EXPECT().ListImportingDownloadRecords(mock.Anything).
+			Return([]*ent.DownloadRecord{{ID: 42}, {ID: 43}}, nil).Once()
+		Expect(w.Scan(context.Background())).To(Succeed())
+
+		Eventually(func() int { return len(w.ch) }).
+			WithTimeout(100 * time.Millisecond).
+			Should(Equal(2))
+	})
+
+	It(
+		"single-episode record imports the file + marks the episode available",
+		func() {
+			season, eps := buildShow()
+			src := filepath.Join(tmp, "ep")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Show.S01E01.1080p.mkv")
+			rec := episodeRecord(1, src, season, eps[0])
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).
+				Once()
+			storeMk.EXPECT().
+				FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+				Return(nil, &ent.NotFoundError{}).Once()
+			storeMk.EXPECT().
+				RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordEpisodeImportSuccessParams) bool {
+					return p.RecordID == 1 && p.EpisodeID == eps[0].ID &&
+						!p.QueueTranscode
+				})).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).
+				Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		},
+	)
+
+	It(
+		"queues a transcode job when the show's profile is transcode-eligible",
+		func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":           libDir,
+					"import_mode":          "copy",
+					"import_max_attempts":  3,
+					"keep_torrent_seeding": true,
+					"movie_naming":         "{title} ({year})/{title}.{ext}",
+					"series_path":          libDir,
+					"series_naming":        "{title}/{title} S{season}E{episode}.{ext}",
+				},
+				"transcoding": map[string]any{"enabled": true},
+				"quality_profiles": []map[string]any{{
+					"name": "hd", "preferred_resolution": "1080p",
+					"min_resolution": "720p",
+					"transcode": map[string]any{
+						"to": map[string]any{
+							"container": "mkv", "video_codec": "hevc",
+							"preset": "medium", "audio_codec": "aac",
+						},
+					},
+				}},
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
+			})
+			season, eps := buildShow()
+			src := filepath.Join(tmp, "ep-transcode")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Show.S01E01.1080p.mkv")
+			rec := episodeRecord(1, src, season, eps[0])
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).
+				Once()
+			storeMk.EXPECT().
+				FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+				Return(nil, &ent.NotFoundError{}).Once()
+			storeMk.EXPECT().
+				RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordEpisodeImportSuccessParams) bool {
+					return p.RecordID == 1 && p.EpisodeID == eps[0].ID &&
+						p.QueueTranscode
+				})).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).
+				Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		},
+	)
+
+	It("existing episode file + replace flag: replaced then imported", func() {
+		season, eps := buildShow()
+		src := filepath.Join(tmp, "ep-r")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.S01E01.1080p.mkv")
+		old := filepath.Join(libDir, "old-ep.mkv")
+		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		rec := episodeRecord(
+			1,
+			filepath.Join(src, "Show.S01E01.1080p.mkv"),
+			season,
+			eps[0],
+		)
+		rec.ReplaceMode = downloadrecord.ReplaceModeAll
+
+		storeMk.EXPECT().
+			FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().
+			FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+			Return(&ent.MediaFile{ID: 8, Path: old}, nil).Once()
+		storeMk.EXPECT().
+			DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(8), eps[0].ID).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			RecordEpisodeImportSuccess(mock.Anything, mock.Anything).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		Expect(old).NotTo(BeAnExistingFile())
+	})
+
+	It("existing episode file without replace: terminal ErrEpisodeHasFile", func() {
+		season, eps := buildShow()
+		src := filepath.Join(tmp, "ep-n")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.S01E01.1080p.mkv")
+		rec := episodeRecord(
+			1,
+			filepath.Join(src, "Show.S01E01.1080p.mkv"),
+			season,
+			eps[0],
+		)
+
+		storeMk.EXPECT().
+			FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Twice()
+		storeMk.EXPECT().
+			FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+			Return(&ent.MediaFile{ID: 8, Path: "/lib/old-ep.mkv"}, nil).Once()
+		storeMk.EXPECT().
+			RecordImportFailure(mock.Anything, mock.MatchedBy(func(p db.RecordImportFailureParams) bool {
+				return p.Terminal && p.Attempts == 1
+			})).
+			Return(nil).Once()
+
+		err := w.runImport(context.Background(), 1)
+		Expect(err).To(MatchError(ErrEpisodeHasFile))
+		w.handleOutcome(context.Background(), 1, err)
+	})
+
+	It("season pack matches each file to its episode + records both", func() {
+		season, eps := buildShow()
+		src := filepath.Join(tmp, "pack")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.S01E01.1080p.mkv")
+		seedMediaFile(src, "Show.S01E02.1080p.mkv")
+		rec := episodeRecord(2, src, season, eps[0])
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, mock.Anything).
+			Return(nil, &ent.NotFoundError{}).Twice()
+		recorded := map[uint32]bool{}
+		storeMk.EXPECT().
+			RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordEpisodeImportSuccessParams) bool {
+				recorded[p.EpisodeID] = true
+				return p.RecordID == 2 && !p.QueueTranscode
+			})).
+			Return(nil).Twice()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 2)).To(Succeed())
+		Expect(recorded).To(HaveKey(eps[0].ID))
+		Expect(recorded).To(HaveKey(eps[1].ID))
+	})
+
+	It("multi-season pack imports a file from a season past its anchor's", func() {
+		season, eps := buildShow()
+		show := season.Edges.TvShow
+		s3e1 := &ent.Episode{ID: 301, Number: 1}
+		s3 := &ent.Season{ID: 13, Number: 3}
+		s3.Edges.Episodes = []*ent.Episode{s3e1}
+		s3.Edges.TvShow = show
+		s3e1.Edges.Season = s3
+		show.Edges.Seasons = append(show.Edges.Seasons, s3)
+		src := filepath.Join(tmp, "integrale")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.S01E01.1080p.mkv")
+		seedMediaFile(src, "Show.S03E01.1080p.mkv")
+		rec := episodeRecord(5, src, season, eps[0])
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(5)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, mock.Anything).
+			Return(nil, &ent.NotFoundError{}).Twice()
+		recorded := map[uint32]bool{}
+		storeMk.EXPECT().
+			RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordEpisodeImportSuccessParams) bool {
+				recorded[p.EpisodeID] = true
+				return p.RecordID == 5
+			})).
+			Return(nil).Twice()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 5)).To(Succeed())
+		Expect(recorded).To(HaveKey(eps[0].ID))
+		Expect(recorded).To(HaveKey(s3e1.ID))
+	})
+
+	It("season pack records one series imported event for the whole pack", func() {
+		ctx := context.Background()
+		entClient := dbtest.SetupTestDB(ctx)
+		DeferCleanup(entClient.Close)
+		events.Register(entClient)
+
+		season, eps := buildShow()
+		// The event hangs off a real row: the show the fixture describes has to
+		// exist for the media_events foreign key to hold.
+		row := entClient.TVShow.Create().
+			SetTitle("Show").SetYear(2024).SetTvdbID(4242).SaveX(ctx)
+		season.Edges.TvShow.ID = row.ID
+
+		src := filepath.Join(tmp, "pack-one-event")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.S01E01.1080p.mkv")
+		seedMediaFile(src, "Show.S01E02.1080p.mkv")
+		rec := episodeRecord(2, src, season, eps[0])
+		rec.Title = "Show.S01.1080p.WEB-DL-X"
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, mock.Anything).
+			Return(nil, &ent.NotFoundError{}).Twice()
+		storeMk.EXPECT().
+			RecordEpisodeImportSuccess(mock.Anything, mock.Anything).
+			Return(nil).Twice()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).Once()
+
+		Expect(w.runImport(ctx, 2)).To(Succeed())
+
+		evs := entClient.MediaEvent.Query().
+			Where(mediaevent.TypeEQ(mediaevent.Type(events.TypeImported))).
+			WithTvShow().
+			AllX(ctx)
+		Expect(evs).To(HaveLen(1))
+		Expect(evs[0].Edges.TvShow.ID).To(Equal(row.ID))
+		Expect(evs[0].Payload).To(
+			HaveKeyWithValue("episodes", BeNumerically("==", 2)),
+		)
+		Expect(evs[0].Payload).To(HaveKeyWithValue("source", "pack"))
+		Expect(evs[0].Payload).To(
+			HaveKeyWithValue("release_title", "Show.S01.1080p.WEB-DL-X"),
+		)
+		Expect(evs[0].Payload).To(HaveKeyWithValue(
+			"seasons", ConsistOf(BeNumerically("==", 1)),
+		))
+	})
+
+	It(
+		"season pack queues transcode jobs when the show's profile is eligible",
+		func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":           libDir,
+					"import_mode":          "copy",
+					"import_max_attempts":  3,
+					"keep_torrent_seeding": true,
+					"movie_naming":         "{title} ({year})/{title}.{ext}",
+					"series_path":          libDir,
+					"series_naming":        "{title}/{title} S{season}E{episode}.{ext}",
+				},
+				"transcoding": map[string]any{"enabled": true},
+				"quality_profiles": []map[string]any{{
+					"name": "hd", "preferred_resolution": "1080p",
+					"min_resolution": "720p",
+					"transcode": map[string]any{
+						"to": map[string]any{
+							"container": "mkv", "video_codec": "hevc",
+							"preset": "medium", "audio_codec": "aac",
+						},
+					},
+				}},
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
+			})
+			season, eps := buildShow()
+			src := filepath.Join(tmp, "pack-transcode")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Show.S01E01.1080p.mkv")
+			seedMediaFile(src, "Show.S01E02.1080p.mkv")
+			rec := episodeRecord(2, src, season, eps[0])
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+				Return(rec, nil).
+				Once()
+			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, mock.Anything).
+				Return(nil, &ent.NotFoundError{}).Twice()
+			storeMk.EXPECT().
+				RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordEpisodeImportSuccessParams) bool {
+					return p.RecordID == 2 && p.QueueTranscode
+				})).
+				Return(nil).Twice()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).
+				Once()
+
+			Expect(w.runImport(context.Background(), 2)).To(Succeed())
+		},
+	)
+
+	It("season pack skips a filed episode when replace is not requested", func() {
+		season, eps := buildShow()
+		src := filepath.Join(tmp, "pack-skip")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.S01E01.1080p.mkv")
+		seedMediaFile(src, "Show.S01E02.1080p.mkv")
+		rec := episodeRecord(2, src, season, eps[0])
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+			Return(&ent.MediaFile{ID: 8, Path: "/lib/kept.mkv"}, nil).Once()
+		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
+			Return(nil, &ent.NotFoundError{}).Once()
+		storeMk.EXPECT().
+			RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordEpisodeImportSuccessParams) bool {
+				return p.EpisodeID == eps[1].ID
+			})).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 2)).To(Succeed())
+	})
+
+	Describe("import verification", func() {
+		// probing returns info for every file the worker hands it; a Times(n)
+		// per file would just restate len(files).
+		proberReturning := func(info *ffmpeg.Info, err error) *Worker {
+			GinkgoHelper()
+			prober := mockffmpeg.NewMockProber(GinkgoT())
+			prober.EXPECT().Available().Return(true)
+			prober.EXPECT().Probe(mock.Anything, mock.Anything).Return(info, err)
+			return NewWorker(Deps{
+				DB: storeMk, Library: libSvc, MediaServer: msMk, Prober: prober,
+			})
+		}
+		probed := func(width uint16, codec string) *ffmpeg.Info {
+			return &ffmpeg.Info{
+				VideoCodec: codec, Width: width, Height: 800,
+				DurationSec: 5400, Container: "matroska",
+			}
+		}
+		// proberFailingFor probes every file clean except basename, which reports
+		// ErrUnreadable — for asserting a hold is scoped to one bad file.
+		proberFailingFor := func(basename string) *Worker {
+			GinkgoHelper()
+			prober := mockffmpeg.NewMockProber(GinkgoT())
+			prober.EXPECT().Available().Return(true)
+			prober.EXPECT().Probe(mock.Anything, mock.Anything).
+				RunAndReturn(func(_ context.Context, path string) (*ffmpeg.Info, error) {
+					if filepath.Base(path) == basename {
+						return nil, ffmpeg.ErrUnreadable
+					}
+					return probed(1920, "h264"), nil
+				})
+			return NewWorker(Deps{
+				DB: storeMk, Library: libSvc, MediaServer: msMk, Prober: prober,
+			})
+		}
+
+		It("holds a movie whose file is below the claimed resolution", func() {
+			src := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+			wp := proberReturning(probed(1280, "h264"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.MatchedBy(
+					func(rs []schema.HoldReason) bool {
+						return len(rs) == 1 && rs[0].Check == "resolution"
+					})).
+				Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+		})
+
+		It("falls back to the release title for the resolution claim", func() {
+			src := filepath.Join(tmp, "dl-generic")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "movie.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+			rec.Title = "Flick.2024.2160p.WEB-DL.x265-GRP"
+			wp := proberReturning(probed(1280, "h264"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.MatchedBy(
+					func(rs []schema.HoldReason) bool {
+						return len(rs) == 1 && rs[0].Check == "resolution" &&
+							rs[0].Expected == "2160p" && rs[0].Actual == "720p"
+					})).
+				Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+		})
+
+		It("holds a movie whose file will not probe", func() {
+			src := filepath.Join(tmp, "dl-corrupt")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+			wp := proberReturning(nil, ffmpeg.ErrUnreadable)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.MatchedBy(
+					func(rs []schema.HoldReason) bool {
+						return len(rs) == 1 && rs[0].Check == "corrupt"
+					})).
+				Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+		})
+
+		It("keeps the existing movie file when the replacement is held", func() {
+			src := filepath.Join(tmp, "dl-replace-held")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			old := filepath.Join(libDir, "old.mkv")
+			Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+			rec := fixtureRecord(1, 10, src, 0)
+			rec.ReplaceMode = downloadrecord.ReplaceModeAll
+			wp := proberReturning(probed(720, "h264"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return([]*ent.MediaFile{{ID: 5, Path: old}}, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.Anything).
+				Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(old).To(BeAnExistingFile())
+		})
+
+		It("keeps the existing episode file when the replacement is held", func() {
+			season, eps := buildShow()
+			src := filepath.Join(tmp, "ep-replace-held")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Show.S01E01.1080p.mkv")
+			old := filepath.Join(libDir, "old-ep.mkv")
+			Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+			rec := episodeRecord(
+				1,
+				filepath.Join(src, "Show.S01E01.1080p.mkv"),
+				season,
+				eps[0],
+			)
+			rec.ReplaceMode = downloadrecord.ReplaceModeAll
+			wp := proberReturning(probed(1280, "hevc"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().
+				FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+				Return(&ent.MediaFile{ID: 8, Path: old}, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.Anything).
+				Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(old).To(BeAnExistingFile())
+		})
+
+		It("imports a rejected file once verification is bypassed", func() {
+			src := filepath.Join(tmp, "dl-bypass")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+			rec.VerificationBypassed = true
+			wp := proberReturning(probed(1280, "h264"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().
+				RecordImportSuccess(mock.Anything, mock.Anything).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).
+				Once()
+
+			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+		})
+
+		It("holds a clean movie when always_ask is on, without a prober", func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":   libDir,
+					"import_mode":  "copy",
+					"movie_naming": "{title} ({year})/{title}.{ext}",
+					"probe":        map[string]any{"always_ask": true},
+				},
+			})
+			src := filepath.Join(tmp, "dl-ask")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.MatchedBy(
+					func(rs []schema.HoldReason) bool {
+						return len(rs) == 1 && rs[0].Check == "always_ask"
+					})).
+				Return(nil).Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		})
+
+		It("fails, never holds, when the source file is missing", func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":   libDir,
+					"import_mode":  "copy",
+					"movie_naming": "{title} ({year})/{title}.{ext}",
+					"probe":        map[string]any{"always_ask": true},
+				},
+			})
+			src := filepath.Join(tmp, "dl-empty")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			rec := fixtureRecord(1, 10, src, 0)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+
+			Expect(w.runImport(context.Background(), 1)).
+				To(MatchError(library.ErrNoMedia))
+		})
+
+		It(
+			"keeps the existing movie file when the replacement has no media",
+			func() {
+				src := filepath.Join(tmp, "dl-replace-empty")
+				Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+				old := filepath.Join(libDir, "old.mkv")
+				Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+				rec := fixtureRecord(1, 10, src, 0)
+				rec.ReplaceMode = downloadrecord.ReplaceModeAll
+
+				storeMk.EXPECT().
+					FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+					Return(rec, nil).Once()
+				storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+					Return([]*ent.MediaFile{{ID: 5, Path: old}}, nil).Once()
+
+				Expect(w.runImport(context.Background(), 1)).
+					To(MatchError(library.ErrNoMedia))
+				Expect(old).To(BeAnExistingFile())
+			},
+		)
+
+		It(
+			"keeps the existing episode file when the replacement has no media",
+			func() {
+				season, eps := buildShow()
+				src := filepath.Join(tmp, "ep-replace-empty")
+				Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+				old := filepath.Join(libDir, "old-ep.mkv")
+				Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+				rec := episodeRecord(1, src, season, eps[0])
+				rec.ReplaceMode = downloadrecord.ReplaceModeAll
+
+				storeMk.EXPECT().
+					FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+					Return(rec, nil).Once()
+				storeMk.EXPECT().
+					FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+					Return(&ent.MediaFile{ID: 8, Path: old}, nil).Once()
+
+				Expect(w.runImport(context.Background(), 1)).
+					To(MatchError(library.ErrNoMedia))
+				Expect(old).To(BeAnExistingFile())
+			},
+		)
+
+		It("holds a whole season pack when one file fails", func() {
+			season, eps := buildShow()
+			src := filepath.Join(tmp, "pack-held")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Show.S01E01.1080p.mkv")
+			seedMediaFile(src, "Show.S01E02.1080p.mkv")
+			rec := episodeRecord(2, src, season, eps[0])
+			wp := proberReturning(probed(1280, "h264"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, mock.Anything).
+				Return(nil, &ent.NotFoundError{}).Twice()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(2), mock.MatchedBy(
+					func(rs []schema.HoldReason) bool {
+						return len(rs) == 2 && rs[0].Check == "resolution"
+					})).
+				Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 2)).To(Succeed())
+		})
+
+		// probedFile is an existing library file with probe results on it.
+		// probed_at is what makes audio_tracks readable: without it
+		// ContextFromRow reports every stream field unknown, since a zero count
+		// cannot be told from a row nothing ever looked at.
+		probedFile := func(id uint32, name string, tracks uint8) *ent.MediaFile {
+			probed := time.Now()
+			return &ent.MediaFile{
+				ID:          id,
+				Path:        filepath.Join(libDir, name),
+				Width:       1920,
+				AudioTracks: tracks,
+				ProbedAt:    &probed,
+			}
+		}
+
+		packProfileConfig := func() map[string]any {
+			return map[string]any{
+				"library": map[string]any{
+					"movie_path":    libDir,
+					"import_mode":   "copy",
+					"series_path":   libDir,
+					"series_naming": "{title}/{title} S{season}E{episode}.{ext}",
+				},
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
+				"quality_profiles": []map[string]any{{
+					"name":                 "hd",
+					"preferred_resolution": "1080p",
+					"min_resolution":       "720p",
+					"upgrade_allowed":      true,
+					// multi-audio, not remux: remux is a release_title format, so
+					// a file on disk cannot answer it and ReplacesFile drops it
+					// from both sides. The track-count arm is what lets an
+					// existing file be compared at all.
+					"formats": []map[string]any{
+						{"name": "multi-audio", "score": 200},
+					},
+				}},
+			}
+		}
+
+		It("season pack replaces only the episodes it outscores", func() {
+			configtest.Setup(packProfileConfig())
+			season, eps := buildShow()
+			src := filepath.Join(tmp, "pack-upgrades")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Show.S01E01.1080p.MULTi.BluRay.x264-GRP.mkv")
+			seedMediaFile(src, "Show.S01E02.1080p.MULTi.BluRay.x264-GRP.mkv")
+			rec := episodeRecord(2, src, season, eps[0])
+			rec.ReplaceMode = downloadrecord.ReplaceModeUpgrades
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+				Return(rec, nil).
+				Once()
+			// E01 holds a single-audio file the pack's MULTi beats; E02 already
+			// holds a multi-audio one and ties.
+			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+				Return(probedFile(8, "Show.S01E01.1080p.WEB-DL.x264-GRP.mkv", 1), nil).
+				Once()
+			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
+				Return(probedFile(9, "Show.S01E02.1080p.MULTi.BluRay.x264-GRP.mkv", 2), nil).
+				Once()
+			// Only E01's row is cleared, and only E01 is re-recorded.
+			storeMk.EXPECT().
+				DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(8), eps[0].ID).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(
+					func(p db.RecordEpisodeImportSuccessParams) bool {
+						return p.EpisodeID == eps[0].ID
+					})).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).
+				Once()
+
+			Expect(w.runImport(context.Background(), 2)).To(Succeed())
+		})
+
+		It(
+			"replaces a pack episode using the release title when the member filename carries no format markers",
+			func() {
+				configtest.Setup(packProfileConfig())
+				season, eps := buildShow()
+				src := filepath.Join(tmp, "pack-title-fallback")
+				Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+				// Neither member's own name says MULTi — only the pack's
+				// release title does, the way a real season-pack release is
+				// usually named.
+				seedMediaFile(src, "Show.S01E01.1080p.mkv")
+				seedMediaFile(src, "Show.S01E02.1080p.mkv")
+				rec := episodeRecord(2, src, season, eps[0])
+				rec.ReplaceMode = downloadrecord.ReplaceModeUpgrades
+				rec.Title = "Show.S01.1080p.MULTi.BluRay.x264-GRP"
+
+				storeMk.EXPECT().
+					FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+					Return(rec, nil).
+					Once()
+				storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+					Return(probedFile(8, "Show.S01E01.1080p.WEB-DL.x264-GRP.mkv", 1), nil).
+					Once()
+				storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
+					Return(probedFile(9, "Show.S01E02.1080p.WEB-DL.x264-GRP.mkv", 1), nil).
+					Once()
+				storeMk.EXPECT().
+					DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(8), eps[0].ID).
+					Return(nil).Once()
+				storeMk.EXPECT().
+					DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(9), eps[1].ID).
+					Return(nil).Once()
+				recorded := map[uint32]bool{}
+				storeMk.EXPECT().
+					RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(
+						func(p db.RecordEpisodeImportSuccessParams) bool {
+							recorded[p.EpisodeID] = true
+							return p.RecordID == 2
+						})).
+					Return(nil).Twice()
+				storeMk.EXPECT().
+					MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				msMk.EXPECT().
+					RefreshAll(mock.Anything, mock.Anything, libDir).
+					Return(nil).
+					Once()
+
+				Expect(w.runImport(context.Background(), 2)).To(Succeed())
+				Expect(recorded).To(HaveKey(eps[0].ID))
+				Expect(recorded).To(HaveKey(eps[1].ID))
+			},
+		)
+
+		It("season pack holds only on files it planned to import", func() {
+			configtest.Setup(packProfileConfig())
+			season, eps := buildShow()
+			src := filepath.Join(tmp, "pack-hold-scope")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Show.S01E01.1080p.MULTi.BluRay.x264-GRP.mkv")
+			seedMediaFile(src, "Show.S01E02.1080p.MULTi.BluRay.x264-GRP.mkv")
+			rec := episodeRecord(2, src, season, eps[0])
+			rec.ReplaceMode = downloadrecord.ReplaceModeUpgrades
+			// E02 is the corrupt one, and E02 is the episode already holding a
+			// multi-audio file — so nothing this import touches is bad.
+			wp := proberFailingFor("Show.S01E02.1080p.MULTi.BluRay.x264-GRP.mkv")
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+				Return(rec, nil).
+				Once()
+			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+				Return(probedFile(8, "Show.S01E01.1080p.WEB-DL.x264-GRP.mkv", 1), nil).
+				Once()
+			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
+				Return(probedFile(9, "Show.S01E02.1080p.MULTi.BluRay.x264-GRP.mkv", 2), nil).
+				Once()
+			storeMk.EXPECT().
+				DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(8), eps[0].ID).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				RecordEpisodeImportSuccess(mock.Anything, mock.Anything).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).
+				Once()
+
+			// No HoldDownloadRecord expectation: the mock fails the spec if it fires.
+			Expect(wp.runImport(context.Background(), 2)).To(Succeed())
+		})
+
+		It(
+			"season pack leaves existing files alone when no profile resolves",
+			func() {
+				// quality_profiles is set to empty explicitly: the config loader
+				// otherwise defaults it to a built-in "default" profile, which
+				// would resolve and defeat the point of this spec.
+				configtest.Setup(map[string]any{
+					"library": map[string]any{
+						"movie_path":    libDir,
+						"import_mode":   "copy",
+						"series_path":   libDir,
+						"series_naming": "{title}/{title} S{season}E{episode}.{ext}",
+					},
+					"quality_profiles": []map[string]any{},
+				})
+				season, eps := buildShow()
+				src := filepath.Join(tmp, "pack-no-profile")
+				Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+				seedMediaFile(src, "Show.S01E01.1080p.BluRay.REMUX.x264-GRP.mkv")
+				seedMediaFile(src, "Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv")
+				rec := episodeRecord(2, src, season, eps[0])
+				rec.ReplaceMode = downloadrecord.ReplaceModeUpgrades
+
+				storeMk.EXPECT().
+					FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+					Return(rec, nil).
+					Once()
+				storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+					Return(&ent.MediaFile{
+						ID: 8,
+						Path: filepath.Join(
+							libDir,
+							"Show.S01E01.1080p.WEB-DL.x264-GRP.mkv",
+						),
+						Width: 1920,
+					}, nil).Once()
+				storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
+					Return(&ent.MediaFile{
+						ID: 9,
+						Path: filepath.Join(
+							libDir,
+							"Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv",
+						),
+						Width: 1920,
+					}, nil).Once()
+
+				// No DeleteMediaFileAndRevertEpisode, no RecordEpisodeImportSuccess:
+				// the mock fails the spec if either fires with no profile resolved.
+				Expect(
+					w.runImport(context.Background(), 2),
+				).To(MatchError(ErrEpisodeHasFile))
+			},
+		)
+
+		It(
+			"refuses to replace a pack episode whose probed resolution is above the profile's ceiling",
+			func() {
+				configtest.Setup(map[string]any{
+					"library": map[string]any{
+						"movie_path":    libDir,
+						"import_mode":   "copy",
+						"series_path":   libDir,
+						"series_naming": "{title}/{title} S{season}E{episode}.{ext}",
+					},
+					"custom_formats": []map[string]any{{
+						"name": "badgroup",
+						"conditions": []map[string]any{{
+							"type":     "release_group",
+							"pattern":  `(?i)^BADGRP$`,
+							"required": true,
+						}},
+					}},
+					"movie_quality_default_profile":  "hd",
+					"series_quality_default_profile": "hd",
+					"quality_profiles": []map[string]any{{
+						"name":                 "hd",
+						"preferred_resolution": "1080p",
+						"min_resolution":       "720p",
+						"upgrade_allowed":      true,
+						"min_score":            -2000,
+						"formats": []map[string]any{
+							{"name": "badgroup", "score": -1000},
+						},
+					}},
+				})
+				season, eps := buildShow()
+				src := filepath.Join(tmp, "pack-out-of-band")
+				Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+				seedMediaFile(src, "Show.S01E01.1080p.mkv")
+				seedMediaFile(src, "Show.S01E02.1080p.mkv")
+				rec := episodeRecord(2, src, season, eps[0])
+				rec.ReplaceMode = downloadrecord.ReplaceModeUpgrades
+				// The pack's naming claims 1080p, but the probe genuinely finds
+				// 2160p — verification only holds on a claim the probe falls
+				// short of, never one it exceeds, so this import proceeds.
+				wp := proberReturning(probed(3840, "hevc"), nil)
+
+				storeMk.EXPECT().
+					FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+					Return(rec, nil).
+					Once()
+				// E01's existing file matches a very-negative custom format, and
+				// an unguarded ReplacesFile would let the incoming 0 (a rejected
+				// release scores 0, same as "matched nothing") beat it.
+				storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+					Return(&ent.MediaFile{
+						ID: 8,
+						Path: filepath.Join(
+							libDir,
+							"Show.S01E01.720p.WEB-DL.x264-BADGRP.mkv",
+						),
+					}, nil).Once()
+				storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
+					Return(nil, &ent.NotFoundError{}).Once()
+				storeMk.EXPECT().
+					RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(
+						func(p db.RecordEpisodeImportSuccessParams) bool {
+							return p.EpisodeID == eps[1].ID
+						})).
+					Return(nil).Once()
+				storeMk.EXPECT().
+					MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				msMk.EXPECT().
+					RefreshAll(mock.Anything, mock.Anything, libDir).
+					Return(nil).
+					Once()
+
+				// No DeleteMediaFileAndRevertEpisode for E01: the mock fails the
+				// spec if its file is touched.
+				Expect(wp.runImport(context.Background(), 2)).To(Succeed())
+			},
+		)
+	})
+})
+
+// buildShow wires a one-season show with two episodes, with the season<->show
+// and season->episodes edges populated for matcher + importer tests.
+func buildShow() (*ent.Season, []*ent.Episode) {
+	ep1 := &ent.Episode{ID: 101, Number: 1}
+	ep2 := &ent.Episode{ID: 102, Number: 2}
+	season := &ent.Season{ID: 11, Number: 1}
+	season.Edges.Episodes = []*ent.Episode{ep1, ep2}
+	show := &ent.TVShow{ID: 1, Title: "Show", Year: 2024, Type: tvshow.TypeStandard}
+	show.Edges.Seasons = []*ent.Season{season}
+	season.Edges.TvShow = show
+	ep1.Edges.Season = season
+	ep2.Edges.Season = season
+	return season, []*ent.Episode{ep1, ep2}
+}
+
+func episodeRecord(
+	id uint32,
+	savePath string,
+	season *ent.Season,
+	ep *ent.Episode,
+) *ent.DownloadRecord {
+	r := &ent.DownloadRecord{
+		ID:                 id,
+		TorrentHash:        "hash",
+		SavePath:           savePath,
+		Status:             downloadrecord.StatusImporting,
+		DownloadClientName: "qbit",
+		ReplaceMode:        downloadrecord.ReplaceModeNone,
+	}
+	r.Edges.AnchorEpisode = ep
+	_ = season
+	return r
+}

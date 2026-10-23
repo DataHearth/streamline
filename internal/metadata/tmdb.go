@@ -1,0 +1,646 @@
+package metadata
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/utils/numeric"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
+)
+
+// maxProviderResponse bounds one TMDB or TVDB answer: a title's details, or
+// one page of its episodes.
+const maxProviderResponse = 16 << 20
+
+const tmdbBaseURL = "https://api.themoviedb.org"
+
+// maxCastMembers caps how many top-billed cast entries we surface per movie.
+const maxCastMembers = 15
+
+// profileSize is the TMDB image size for person portraits. TMDB offers only
+// w45, w185, h632 and original for profiles; the cast rail and the person page
+// both render the portrait at roughly 260px wide, so w185 is upscaled and
+// visibly soft. h632 is the next size that covers it.
+const profileSize = "h632"
+
+var (
+	tracer = otel.Tracer("github.com/datahearth/streamline/internal/metadata")
+	meter  = otel.Meter("github.com/datahearth/streamline/internal/metadata")
+
+	tmdbRequests metric.Int64Counter
+	tmdbDuration metric.Float64Histogram
+)
+
+func init() {
+	tmdbRequests = otelx.Must(meter.Int64Counter(
+		"streamline.metadata.tmdb.requests",
+		metric.WithDescription("TMDB API requests by endpoint and outcome"),
+	))
+	tmdbDuration = otelx.Must(meter.Float64Histogram(
+		"streamline.metadata.tmdb.duration",
+		metric.WithDescription("TMDB API request duration"),
+		metric.WithUnit("s"),
+	))
+
+	ctx := context.Background()
+	tmdbRequests.Add(ctx, 0)
+	tmdbDuration.Record(ctx, 0)
+}
+
+type TMDB struct {
+	apiKey   string
+	language string
+	BaseURL  string
+	client   *http.Client
+}
+
+// NewTMDB builds a TMDB client using the api key and language from the
+// config singleton (metadata.tmdb_api_key, metadata.language). An empty
+// metadata.language leaves the language param off requests, letting TMDB
+// fall back to its provider default. The hidden metadata.tmdb.base_url key
+// overrides the TMDB API base URL when set (e2e seam).
+func NewTMDB() *TMDB {
+	m := config.Get().Metadata
+	baseURL := config.HiddenString("metadata.tmdb.base_url")
+	if baseURL == "" {
+		baseURL = tmdbBaseURL
+	}
+	return &TMDB{
+		apiKey:   config.SecretValue(m.TMDBAPIKey, m.TMDBAPIKeyFile),
+		language: m.Language,
+		BaseURL:  baseURL,
+		client:   otelx.HTTPClient,
+	}
+}
+
+func (t *TMDB) SearchMovie(
+	ctx context.Context,
+	query string,
+	year uint16,
+) ([]MovieResult, error) {
+	ctx, span := tracer.Start(ctx, "metadata.tmdb.search_movie",
+		trace.WithAttributes(
+			attribute.String("query", query),
+			attribute.Int("year", int(year)),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
+	outcome := "success"
+	defer func() {
+		tmdbDuration.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+			attribute.String("endpoint", "search_movie"),
+		))
+		tmdbRequests.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("endpoint", "search_movie"),
+			attribute.String("outcome", outcome),
+		))
+	}()
+
+	params := url.Values{"query": {query}}
+	if year > 0 {
+		params.Set("year", strconv.FormatUint(uint64(year), 10))
+	}
+	params = t.withLang(params, t.language)
+
+	var resp tmdbSearchResponse
+	if err := t.get(ctx, "/3/search/movie", params, &resp); err != nil {
+		outcome = "error"
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("tmdb search: %w", err))
+	}
+
+	results := make([]MovieResult, 0, len(resp.Results))
+	for _, r := range resp.Results {
+		title := r.Title
+		if title == "" {
+			title = r.OriginalTitle
+		}
+		originalTitle := r.OriginalTitle
+		if originalTitle == "" {
+			originalTitle = title
+		}
+		results = append(results, MovieResult{
+			TMDBID:        r.ID,
+			Title:         title,
+			OriginalTitle: originalTitle,
+			Year:          extractYear(r.ReleaseDate),
+			Overview:      r.Overview,
+			PosterPath:    r.PosterPath,
+		})
+	}
+	span.SetAttributes(attribute.Int("results.count", len(results)))
+
+	slog.DebugContext(ctx, "tmdb search", "query", query, "results", len(results))
+	return results, nil
+}
+
+func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, error) {
+	ctx, span := tracer.Start(ctx, "metadata.tmdb.get_movie",
+		trace.WithAttributes(attribute.Int64("tmdb.id", int64(tmdbID))),
+	)
+	defer span.End()
+
+	start := time.Now()
+	outcome := "success"
+	defer func() {
+		tmdbDuration.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+			attribute.String("endpoint", "get_movie"),
+		))
+		tmdbRequests.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("endpoint", "get_movie"),
+			attribute.String("outcome", outcome),
+		))
+	}()
+
+	params := url.Values{
+		"append_to_response": {"translations,alternative_titles,credits"},
+	}
+	params = t.withLang(params, t.language)
+
+	var resp tmdbMovieResponse
+	if err := t.get(
+		ctx,
+		fmt.Sprintf("/3/movie/%d", tmdbID),
+		params,
+		&resp,
+	); err != nil {
+		outcome = "error"
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("tmdb get movie: %w", err),
+		)
+	}
+
+	title, overview := resp.Title, resp.Overview
+	if (title == "" || overview == "") && resp.OriginalLanguage != "" {
+		if orig, ok := findTranslation(
+			resp.Translations.Translations,
+			resp.OriginalLanguage,
+		); ok {
+			if title == "" {
+				title = orig.Data.Title
+			}
+			if overview == "" {
+				overview = orig.Data.Overview
+			}
+		}
+	}
+	if title == "" {
+		title = resp.OriginalTitle
+	}
+
+	genres := make([]string, 0, len(resp.Genres))
+	for _, g := range resp.Genres {
+		genres = append(genres, g.Name)
+	}
+
+	entries := resp.Credits.Cast
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].Order < entries[j].Order
+	})
+	if len(entries) > maxCastMembers {
+		entries = entries[:maxCastMembers]
+	}
+	cast := make([]CastMember, 0, len(entries))
+	for _, c := range entries {
+		cast = append(cast, CastMember{
+			TMDBID:     c.ID,
+			Name:       c.Name,
+			Character:  c.Character,
+			ProfileURL: PosterURL(c.ProfilePath, profileSize),
+		})
+	}
+
+	originalTitle := resp.OriginalTitle
+	if originalTitle == "" {
+		originalTitle = title
+	}
+
+	candidates := make(
+		[]string,
+		0,
+		len(resp.Translations.Translations)+len(resp.AltTitles.Titles),
+	)
+	for _, tr := range resp.Translations.Translations {
+		candidates = append(candidates, tr.Data.Title)
+	}
+	for _, at := range resp.AltTitles.Titles {
+		candidates = append(candidates, at.Title)
+	}
+
+	return &MovieDetails{
+		TMDBID:           resp.ID,
+		Title:            title,
+		OriginalTitle:    originalTitle,
+		Year:             extractYear(resp.ReleaseDate),
+		Overview:         overview,
+		PosterPath:       resp.PosterPath,
+		Genres:           genres,
+		Runtime:          numeric.SaturateU16(resp.Runtime),
+		Rating:           resp.VoteAverage,
+		VoteCount:        resp.VoteCount,
+		Cast:             cast,
+		Tagline:          resp.Tagline,
+		ReleaseDate:      resp.ReleaseDate,
+		OriginalLanguage: resp.OriginalLanguage,
+		Aliases:          collectAliases([]string{title, originalTitle}, candidates),
+	}, nil
+}
+
+// GetPerson returns the biographical record for a TMDB person id. The social
+// handles and the IMDb id live under external_ids, appended to the same request
+// rather than fetched separately.
+func (t *TMDB) GetPerson(
+	ctx context.Context,
+	tmdbID uint32,
+) (*PersonDetails, error) {
+	ctx, span := tracer.Start(ctx, "metadata.tmdb.get_person",
+		trace.WithAttributes(attribute.Int64("tmdb.id", int64(tmdbID))),
+	)
+	defer span.End()
+
+	start := time.Now()
+	outcome := "success"
+	defer func() {
+		tmdbDuration.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+			attribute.String("endpoint", "get_person"),
+		))
+		tmdbRequests.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("endpoint", "get_person"),
+			attribute.String("outcome", outcome),
+		))
+	}()
+
+	params := url.Values{"append_to_response": {"external_ids"}}
+	params = t.withLang(params, t.language)
+
+	var resp tmdbPersonResponse
+	if err := t.get(
+		ctx,
+		fmt.Sprintf("/3/person/%d", tmdbID),
+		params,
+		&resp,
+	); err != nil {
+		outcome = "error"
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("tmdb get person: %w", err),
+		)
+	}
+
+	return &PersonDetails{
+		Biography:    resp.Biography,
+		KnownFor:     resp.KnownForDepartment,
+		Birthday:     resp.Birthday,
+		Deathday:     resp.Deathday,
+		PlaceOfBirth: resp.PlaceOfBirth,
+		ProfileURL:   PosterURL(resp.ProfilePath, profileSize),
+		IMDbID:       resp.ExternalIDs.IMDbID,
+		InstagramID:  resp.ExternalIDs.InstagramID,
+		TwitterID:    resp.ExternalIDs.TwitterID,
+	}, nil
+}
+
+// Recommendations returns TMDB's "recommended" movies for the given title.
+// The response shares the search-result shape, so it maps through the same
+// MovieResult projection.
+func (t *TMDB) Recommendations(
+	ctx context.Context,
+	tmdbID uint32,
+) ([]MovieResult, error) {
+	ctx, span := tracer.Start(ctx, "metadata.tmdb.recommendations",
+		trace.WithAttributes(attribute.Int64("tmdb.id", int64(tmdbID))),
+	)
+	defer span.End()
+
+	start := time.Now()
+	outcome := "success"
+	defer func() {
+		tmdbDuration.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+			attribute.String("endpoint", "recommendations"),
+		))
+		tmdbRequests.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("endpoint", "recommendations"),
+			attribute.String("outcome", outcome),
+		))
+	}()
+
+	params := t.withLang(nil, t.language)
+
+	var resp tmdbSearchResponse
+	if err := t.get(
+		ctx,
+		fmt.Sprintf("/3/movie/%d/recommendations", tmdbID),
+		params,
+		&resp,
+	); err != nil {
+		outcome = "error"
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("tmdb recommendations: %w", err),
+		)
+	}
+
+	results := make([]MovieResult, 0, len(resp.Results))
+	for _, r := range resp.Results {
+		title := r.Title
+		if title == "" {
+			title = r.OriginalTitle
+		}
+		originalTitle := r.OriginalTitle
+		if originalTitle == "" {
+			originalTitle = title
+		}
+		results = append(results, MovieResult{
+			TMDBID:        r.ID,
+			Title:         title,
+			OriginalTitle: originalTitle,
+			Year:          extractYear(r.ReleaseDate),
+			Overview:      r.Overview,
+			PosterPath:    r.PosterPath,
+		})
+	}
+	span.SetAttributes(attribute.Int("results.count", len(results)))
+
+	slog.DebugContext(ctx, "tmdb recommendations",
+		"tmdb.id", tmdbID, "results", len(results))
+	return results, nil
+}
+
+// FetchDigitalRelease returns the earliest digital-type (TMDB type 4)
+// release date for the given region, or (nil, nil) when none is published.
+func (t *TMDB) FetchDigitalRelease(
+	ctx context.Context,
+	tmdbID uint32,
+	region string,
+) (*time.Time, error) {
+	ctx, span := tracer.Start(ctx, "metadata.tmdb.fetch_digital_release",
+		trace.WithAttributes(
+			attribute.Int64("tmdb.id", int64(tmdbID)),
+			attribute.String("region", region),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
+	outcome := "success"
+	defer func() {
+		tmdbDuration.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+			attribute.String("endpoint", "release_dates"),
+		))
+		tmdbRequests.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("endpoint", "release_dates"),
+			attribute.String("outcome", outcome),
+		))
+	}()
+
+	var resp tmdbReleaseDatesResponse
+	if err := t.get(
+		ctx,
+		fmt.Sprintf("/3/movie/%d/release_dates", tmdbID),
+		nil,
+		&resp,
+	); err != nil {
+		outcome = "error"
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("tmdb release_dates: %w", err),
+		)
+	}
+
+	region = strings.ToUpper(region)
+	for _, r := range resp.Results {
+		if strings.ToUpper(r.ISO31661) != region {
+			continue
+		}
+		var earliest *time.Time
+		for _, d := range r.ReleaseDates {
+			if d.Type != 4 || d.ReleaseDate == "" {
+				continue
+			}
+			parsed, err := time.Parse(time.RFC3339, d.ReleaseDate)
+			if err != nil {
+				continue
+			}
+			if earliest == nil || parsed.Before(*earliest) {
+				p := parsed
+				earliest = &p
+			}
+		}
+		return earliest, nil
+	}
+	return nil, nil
+}
+
+func findTranslation(ts []tmdbTranslation, lang string) (tmdbTranslation, bool) {
+	for _, t := range ts {
+		if t.ISO639_1 == lang {
+			return t, true
+		}
+	}
+	return tmdbTranslation{}, false
+}
+
+func (t *TMDB) get(
+	ctx context.Context,
+	path string,
+	params url.Values,
+	out any,
+) error {
+	u := t.BaseURL + path
+	if params != nil {
+		u += "?" + params.Encode()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+t.apiKey)
+
+	resp, err := t.client.Do(req)
+	if err != nil {
+		slog.WarnContext(
+			ctx,
+			"tmdb request transport error",
+			"tmdb.endpoint",
+			path,
+			"error",
+			err,
+		)
+		return err
+	}
+	defer resp.Body.Close()
+
+	// On the caller's span, not just in a log line: a 429 (TMDB does rate
+	// limit) and a 500 were otherwise indistinguishable in every signal an
+	// alert could reach.
+	recordProviderStatus(ctx, resp.StatusCode)
+
+	if resp.StatusCode != http.StatusOK {
+		slog.WarnContext(
+			ctx,
+			"tmdb request non-200",
+			"tmdb.endpoint",
+			path,
+			"http.status_code",
+			resp.StatusCode,
+		)
+		return fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+
+	return otelx.DecodeJSON(resp.Body, maxProviderResponse, out)
+}
+
+func (t *TMDB) withLang(p url.Values, lang string) url.Values {
+	if p == nil {
+		p = url.Values{}
+	}
+	if lang == "" {
+		return p
+	}
+	p.Set("language", lang)
+	return p
+}
+
+// ParseISODate reads the `yyyy-mm-dd` both providers use for a release or air
+// date. Nil for anything it cannot read — an empty string, which is how TMDB
+// and TVDB both report "no date announced", and a malformed one, which must
+// not fail the metadata refresh carrying it.
+func ParseISODate(s string) *time.Time {
+	t, err := time.Parse(time.DateOnly, s)
+	if err != nil {
+		return nil
+	}
+	return &t
+}
+
+func extractYear(releaseDate string) uint16 {
+	if parts := strings.SplitN(releaseDate, "-", 2); len(parts) > 0 {
+		y, _ := strconv.ParseUint(parts[0], 10, 16)
+		return uint16(y)
+	}
+	return 0
+}
+
+type tmdbSearchResponse struct {
+	Results []tmdbSearchResult `json:"results"`
+}
+
+type tmdbSearchResult struct {
+	ID            uint32 `json:"id"`
+	Title         string `json:"title"`
+	OriginalTitle string `json:"original_title"`
+	ReleaseDate   string `json:"release_date"`
+	Overview      string `json:"overview"`
+	PosterPath    string `json:"poster_path"`
+}
+
+type tmdbMovieResponse struct {
+	ID               uint32             `json:"id"`
+	Title            string             `json:"title"`
+	OriginalTitle    string             `json:"original_title"`
+	OriginalLanguage string             `json:"original_language"`
+	ReleaseDate      string             `json:"release_date"`
+	Overview         string             `json:"overview"`
+	Tagline          string             `json:"tagline"`
+	PosterPath       string             `json:"poster_path"`
+	Genres           []tmdbGenre        `json:"genres"`
+	Runtime          int                `json:"runtime"`
+	VoteAverage      float32            `json:"vote_average"`
+	VoteCount        uint32             `json:"vote_count"`
+	Translations     tmdbTranslationBag `json:"translations"`
+	AltTitles        tmdbAltTitleBag    `json:"alternative_titles"`
+	Credits          tmdbCredits        `json:"credits"`
+}
+
+// tmdbAltTitleBag is append_to_response=alternative_titles. These are the
+// region-tagged AKAs — romaji, a distributor's retitling, an abbreviation a
+// tracker favours — which the per-language translations do not carry.
+type tmdbAltTitleBag struct {
+	Titles []tmdbAltTitle `json:"titles"`
+}
+
+type tmdbAltTitle struct {
+	ISO3166_1 string `json:"iso_3166_1"`
+	Title     string `json:"title"`
+}
+
+// tmdbPersonResponse is /3/person/{id} with append_to_response=external_ids.
+// biography, deathday, place_of_birth and profile_path are all nullable, which
+// decodes to the empty string — the states the person page renders as unknown.
+type tmdbPersonResponse struct {
+	ID                 uint32              `json:"id"`
+	Name               string              `json:"name"`
+	Biography          string              `json:"biography"`
+	KnownForDepartment string              `json:"known_for_department"`
+	Birthday           string              `json:"birthday"`
+	Deathday           string              `json:"deathday"`
+	PlaceOfBirth       string              `json:"place_of_birth"`
+	ProfilePath        string              `json:"profile_path"`
+	ExternalIDs        tmdbPersonExternals `json:"external_ids"`
+}
+
+type tmdbPersonExternals struct {
+	IMDbID      string `json:"imdb_id"`
+	InstagramID string `json:"instagram_id"`
+	TwitterID   string `json:"twitter_id"`
+}
+
+type tmdbCredits struct {
+	Cast []tmdbCastEntry `json:"cast"`
+}
+
+type tmdbCastEntry struct {
+	ID          uint32 `json:"id"`
+	Name        string `json:"name"`
+	Character   string `json:"character"`
+	ProfilePath string `json:"profile_path"`
+	Order       int    `json:"order"`
+}
+
+type tmdbGenre struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type tmdbTranslationBag struct {
+	Translations []tmdbTranslation `json:"translations"`
+}
+
+type tmdbTranslation struct {
+	ISO639_1 string              `json:"iso_639_1"`
+	Data     tmdbTranslationData `json:"data"`
+}
+
+type tmdbTranslationData struct {
+	Title    string `json:"title"`
+	Overview string `json:"overview"`
+}
+
+type tmdbReleaseDatesResponse struct {
+	Results []tmdbRegionReleaseDates `json:"results"`
+}
+
+type tmdbRegionReleaseDates struct {
+	ISO31661     string                 `json:"iso_3166_1"`
+	ReleaseDates []tmdbReleaseDateEntry `json:"release_dates"`
+}
+
+type tmdbReleaseDateEntry struct {
+	Type        int    `json:"type"`
+	ReleaseDate string `json:"release_date"`
+}

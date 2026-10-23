@@ -1,0 +1,172 @@
+package library
+
+import (
+	"regexp"
+	"strings"
+
+	"golang.org/x/text/unicode/norm"
+
+	"github.com/datahearth/streamline/ent"
+)
+
+var (
+	titleNonAlnum    = regexp.MustCompile(`[^a-z0-9]+`)
+	titleArticleHead = regexp.MustCompile(`^(the|a|an)`)
+	// TVDB disambiguates same-named shows inside the title string itself
+	// ("Foundation (2021)"), so the year has to come off before comparing or
+	// the disambiguated entry never equals the folder it belongs to.
+	titleYearSuffix = regexp.MustCompile(`\s*\((?:19|20)\d{2}\)\s*$`)
+)
+
+// normalizeTitle lowercases, strips non-alphanumerics, and strips a leading
+// article ("the"/"a"/"an") for tolerant title comparison (e.g. "The Batman" vs
+// "the.batman" vs "Batman").
+//
+// NFD is what makes an accented library title comparable to a scene release,
+// which never carries one: decomposing splits "é" into "e" plus a combining
+// mark, and titleNonAlnum drops that mark like any other non-ASCII byte.
+// Without it "Détective Conan" normalized to "dtectiveconan" and matched none
+// of its own releases, so preferTitleMatches found nothing to prefer and fell
+// back to handing the whole result set to the season-pack grabber.
+func normalizeTitle(s string) string {
+	s = titleYearSuffix.ReplaceAllString(s, "")
+	s = strings.ToLower(norm.NFD.String(s))
+	s = titleNonAlnum.ReplaceAllString(s, "")
+	s = titleArticleHead.ReplaceAllString(s, "")
+	return s
+}
+
+// TitleMatches reports whether two titles are equal after normalization.
+func TitleMatches(a, b string) bool { return normalizeTitle(a) == normalizeTitle(b) }
+
+// TitleMatchesStrict is TitleMatches for callers deciding whether two names
+// denote the same thing: a name that normalizes to nothing (non-Latin script,
+// "!!!") matches nothing, where TitleMatches would call two of them equal.
+func TitleMatchesStrict(a, b string) bool {
+	na, nb := normalizeTitle(a), normalizeTitle(b)
+	return na != "" && na == nb
+}
+
+// TitleMatchesAny reports whether title equals name or any of alts after
+// normalization. alts are alternate names for the same work (TVDB aliases and
+// translations), which is the only way a romaji folder name reaches an entry
+// TVDB stores under its English title.
+func TitleMatchesAny(title, name string, alts []string) bool {
+	if TitleMatches(title, name) {
+		return true
+	}
+	for _, a := range alts {
+		if TitleMatches(title, a) {
+			return true
+		}
+	}
+	return false
+}
+
+// TitlePrefixMatches reports whether one normalized title starts with the
+// other, both being non-empty. It is a weaker signal than TitleMatches and is
+// only used to rank candidates, never to confirm one.
+func TitlePrefixMatches(a, b string) bool {
+	na, nb := normalizeTitle(a), normalizeTitle(b)
+	if na == "" || nb == "" {
+		return false
+	}
+	return strings.HasPrefix(na, nb) || strings.HasPrefix(nb, na)
+}
+
+// titleTagSuffix matches what may sit between a release's parsed title and the
+// show it names while still leaving it the same show: the tags extractTitle
+// could not cut. Normalization has already stripped the separators, hence the
+// repetition — "Breaking Bad COMPLETE MULTI" leaves "completemulti".
+//
+// The list is deliberately short. A word that is not on it is treated as part
+// of the title, so a release naming a longer work is refused; adding a word
+// that can distinguish two works is what reopens the bug this guards.
+var titleTagSuffix = regexp.MustCompile(
+	`^(?:complet|complete|integral|integrale|multi|french|truefrench|` +
+		`vostfr|vff|vf|vo|uncut|extended|remastered|repack|proper)+$`,
+)
+
+// TitleNamesSameWork reports whether a release title names the same work as
+// title. It is the confirming counterpart to TitlePrefixMatches, which a
+// caller that grabs unattended cannot use: a prefix is shared by every longer
+// work built on the same name, and bare prefix tolerance handed eight
+// "Narcos Mexico" episodes to Narcos' season 2.
+//
+// The two directions are not the same question, so they get different answers.
+// What a *release* carries beyond the title is either a tag the parser could
+// not cut ("Breaking Bad COMPLETE") or the rest of another work's name
+// ("Narcos Mexico"), and only the first is allowed. What a *library entry*
+// carries beyond the release is the provider's disambiguating subtitle, which
+// releases routinely drop — TMDB's "… Infinity Castle Chapter 1: The Return of
+// Akaza" against a tracker's "… Infinity Castle" — so that direction stays as
+// tolerant as it was. It leaves a release named for the shorter work matching
+// the longer one, which is the pre-existing reading and the only one that
+// reaches a title held under a fuller name.
+func TitleNamesSameWork(release, title string) bool {
+	nr, nt := normalizeTitle(release), normalizeTitle(title)
+	if nr == "" || nt == "" {
+		return false
+	}
+	if strings.HasPrefix(nt, nr) {
+		return true
+	}
+	rest, found := strings.CutPrefix(nr, nt)
+	return found && titleTagSuffix.MatchString(rest)
+}
+
+// MatchEpisode resolves a parsed release to an episode within the show's
+// seasons. Anime packs match on absolute number; everything else on
+// season+episode number. Returns nil when nothing matches.
+func MatchEpisode(
+	parsed ParseResult,
+	seasons []*ent.Season,
+	anime bool,
+) *ent.Episode {
+	_, ep := MatchEpisodeInSeason(parsed, seasons, anime)
+	return ep
+}
+
+// MatchEpisodeInSeason is MatchEpisode plus the number of the season the match
+// lives in — episodes don't carry it, and callers rendering a destination path
+// need it. Returns (0, nil) when nothing matches.
+func MatchEpisodeInSeason(
+	parsed ParseResult,
+	seasons []*ent.Season,
+	anime bool,
+) (uint16, *ent.Episode) {
+	for _, se := range seasons {
+		for _, e := range se.Edges.Episodes {
+			if anime && parsed.AbsoluteNumber > 0 {
+				if e.AbsoluteNumber == parsed.AbsoluteNumber {
+					return se.Number, e
+				}
+				continue
+			}
+			if se.Number == parsed.Season && e.Number == parsed.Episode {
+				return se.Number, e
+			}
+		}
+	}
+	// An anime group may write the absolute number in SxxExx form: TLC and
+	// Tsundere-Raws both publish "The.Elusive.Samurai.S02E15" for the episode
+	// TVDB numbers S02E03 (absolute 15), listing it on the indexer as S02E03
+	// and naming the file inside the torrent S02E15. The parser reads a real
+	// season and episode there, so AbsoluteNumber is 0 and the loop above never
+	// consults it — a grab whose keep-set matched nothing then fails with
+	// ErrNoWantedFiles before any client is contacted, and the episode is never
+	// filled no matter how many acceptable releases exist.
+	//
+	// Only reached once the exact season+episode found nothing, so a season
+	// that genuinely holds that episode still wins.
+	if anime && parsed.AbsoluteNumber == 0 && parsed.Episode > 0 {
+		for _, se := range seasons {
+			for _, e := range se.Edges.Episodes {
+				if e.AbsoluteNumber == parsed.Episode {
+					return se.Number, e
+				}
+			}
+		}
+	}
+	return 0, nil
+}

@@ -1,0 +1,42 @@
+{{- /* One template for both places the dashboard goes, so the two can never
+       drift: the observability subchart's own Grafana (which mounts the
+       ConfigMap by name from its namespace) and a Grafana you already run
+       (whose dashboard sidecar finds it by label). The subchart cannot render
+       this itself — it cannot read the parent's files, and the parent is where
+       grafanaDashboard lives. Both can be on at once. */ -}}
+{{- $targets := list -}}
+{{- $obs := .Values.observability | default dict -}}
+{{- if and $obs.enabled ($obs.grafana | default dict).enabled -}}
+{{- $targets = append $targets (dict
+      "name" "streamline-dashboard"
+      "namespace" ($obs.namespace | default "observability")
+      "labels" (dict "app.kubernetes.io/part-of" "streamline-observability" "app.kubernetes.io/managed-by" .Release.Service)
+      "annotations" dict
+      "logs" (dict "type" "victorialogs" "query" "")) -}}
+{{- end -}}
+{{- $gd := .Values.grafanaDashboard | default dict -}}
+{{- if $gd.enabled -}}
+{{- $targets = append $targets (dict
+      "name" (printf "%s-dashboard" (include "streamline.fullname" .))
+      "namespace" ($gd.namespace | default .Release.Namespace)
+      "labels" (merge (dict) ($gd.labels | default dict) (fromYaml (include "streamline.labels" .)))
+      "annotations" ($gd.annotations | default dict)
+      "logs" ($gd.logs | default dict)) -}}
+{{- end -}}
+{{- range $targets }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+  labels:
+    {{- toYaml .labels | nindent 4 }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  streamline.json: |
+    {{- include "streamline.dashboardJSON" (dict "root" $ "logs" .logs) | nindent 4 }}
+{{- end }}

@@ -1,0 +1,137 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+name: Release notes
+description: Extract a version's CHANGELOG section and rewrite it as readable release notes with Claude.
+
+# Both release lines assemble their notes the same way — the app on v* tags
+# (release.yaml) and the chart on chart-v* tags (chart.yaml) — so the extraction,
+# the prompt and the fallback live here once. Only the changelog, the subject
+# and the footer differ.
+
+inputs:
+  changelog:
+    description: Path to the CHANGELOG.md holding the section.
+    required: true
+  version:
+    description: Version whose "## [x.y.z]" section to extract. No leading v.
+    required: true
+  subject:
+    description: What is being released, in prose — e.g. "Streamline" or "the Streamline Helm chart".
+    required: true
+  footer:
+    description: Markdown appended verbatim below the notes (install and verify lines).
+    required: false
+    default: ""
+  claude_code_oauth_token:
+    description: Token for the Claude CLI. Omit it and the raw changelog section ships unchanged.
+    required: false
+    default: ""
+
+outputs:
+  file:
+    description: Path to the assembled release notes.
+    value: ${{ steps.assemble.outputs.file }}
+
+runs:
+  using: composite
+  steps:
+    # The changelog is the source of truth and the only input to the notes;
+    # a missing section is a release-blocking mistake, unlike a missing model.
+    #
+    # Every interpolated input reaches the shell through env, never spliced
+    # into the script: the footers carry backticks, and `helm install ...` in
+    # a double-quoted string is command substitution.
+    - id: extract
+      shell: bash
+      env:
+        CHANGELOG: ${{ inputs.changelog }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        raw="$RUNNER_TEMP/raw-notes.md"
+        # Stop at the next version heading, or at the link-reference block —
+        # the oldest section has no heading after it and would otherwise
+        # swallow the footer. That is the first release of any new changelog.
+        awk -v tag="## [$VERSION]" '
+          index($0, tag) == 1 {p=1; next}
+          p && (/^## \[/ || /^\[[^]]+\]: /) {exit}
+          p' "$CHANGELOG" > "$raw"
+        if ! grep -q '[^[:space:]]' "$raw"; then
+          echo "::error::$CHANGELOG has no section for $VERSION"
+          exit 1
+        fi
+
+    # The CLI is driven directly rather than through anthropics/claude-code-action:
+    # that action rejects `push` outright ("Unsupported event type: push") and both
+    # release lines are tag-push triggered, so the step never once ran under it.
+    #
+    # continue-on-error, and the token is optional: a release must never be
+    # blocked by the model being unreachable. assemble falls back to the raw
+    # section, which is what shipped before this step existed.
+    - id: claude
+      if: inputs.claude_code_oauth_token != ''
+      continue-on-error: true
+      shell: bash
+      working-directory: ${{ runner.temp }}
+      env:
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
+        SUBJECT: ${{ inputs.subject }}
+      run: |
+        curl -fsSL https://claude.ai/install.sh | bash
+        export PATH="$HOME/.local/bin:$PATH"
+        # Run from RUNNER_TEMP with no tool granted and the section piped in
+        # whole: the model has nothing to read and no checkout to wander into.
+        #
+        # The model is pinned, not left to the CLI's default: that default moves
+        # with the CLI version installed above, and release notes would change
+        # voice between releases for no reason anyone could see.
+        {
+        printf 'The markdown below is the changelog section for the new release of %s. It is generated from conventional commit subjects, and it is the only source you may use.\n\n' "$SUBJECT"
+        cat <<'PROMPT'
+        Rewrite it as the GitHub release notes an operator reads before deciding
+        whether to upgrade. Reply with the notes markdown and nothing else.
+
+        - The first line is prose, never a heading: one short paragraph saying what
+          the release is about — its character, naming the two or three subsystems
+          it turns on, not a list of everything in it. A handful of unrelated fixes
+          is said plainly rather than given an invented theme. End the paragraph
+          with "N changes are breaking." when any entry is marked BREAKING.
+        - Consolidate. The changelog section carries one entry per commit; the
+          notes do not. Fold every entry belonging to one feature or one subsystem
+          into a single bullet saying what the operator now has, and join small
+          unrelated items into one bullet with semicolons. Twenty bullets under a
+          heading means the folding was not done — a long section lands near five
+          bullets and never above ten.
+        - Lead a substantial bullet with its subject in bold — "**Quality
+          scoring.**", "**Performance:**" — then the detail in that same bullet. A
+          small bullet needs no bold.
+        - Anything marked **BREAKING** goes first, under its own `### Breaking
+          changes` heading: a bolded sentence naming the change, then what an
+          upgrade does to a running install.
+        - Keep the section's own headings (Added / Changed / Fixed / Removed) at
+          the same `###` level it uses, dropping one that would be empty. Write the
+          effect on someone running this, in present tense — not the commit subject
+          reworded. Keep what the scope prefix meant and drop the `scope:` syntax.
+        - Never invent a change, a version number, a migration step or a
+          justification that is not in the section. You have no other context.
+          Folding entries together is required; inventing what they did is not,
+          so keep an entry terse when it is too terse to expand honestly.
+        - No preamble, no sign-off, no heading naming the version — the release
+          page already shows it. Start with the summary paragraph.
+        PROMPT
+        printf '\n--- changelog section ---\n\n'
+        cat raw-notes.md
+        } | claude --print --model claude-sonnet-5 --tools "" > claude-notes.md
+
+    - id: assemble
+      shell: bash
+      env:
+        FOOTER: ${{ inputs.footer }}
+      run: |
+        notes="$RUNNER_TEMP/release-notes.md"
+        cp "$RUNNER_TEMP/claude-notes.md" "$notes" 2>/dev/null || : > "$notes"
+        if ! grep -q '[^[:space:]]' "$notes"; then
+          echo "::warning::no notes from Claude — using the raw changelog section"
+          cp "$RUNNER_TEMP/raw-notes.md" "$notes"
+        fi
+        printf '%s' "$FOOTER" >> "$notes"
+        echo "file=$notes" >> "$GITHUB_OUTPUT"
+        { echo '### Release notes'; echo; cat "$notes"; } >> "$GITHUB_STEP_SUMMARY"

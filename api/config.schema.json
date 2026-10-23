@@ -1,0 +1,948 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "https://github.com/datahearth/streamline/deploy/config/config.schema.json",
+  "title": "Streamline configuration",
+  "description": "Schema for a Streamline config file. Mirrors internal/config Config struct, validator tags and defaults(). All keys are optional — unset keys fall back to built-in defaults; `streamline config init` emits every key with its default.",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "duration": {
+      "type": "string",
+      "description": "Go duration string, e.g. \"30s\", \"15m\", \"168h\".",
+      "minLength": 1
+    },
+    "role": {
+      "type": "string",
+      "enum": ["admin", "member", "request_only"]
+    },
+    "tagKey": {
+      "type": "string",
+      "description": "A tag property key as MusicBrainz Picard names it (COMMENT, REPLAYGAIN_TRACK_GAIN), optionally ending in * to match a prefix.",
+      "pattern": "^[A-Za-z0-9_ ]+\\*?$",
+      "maxLength": 64
+    },
+    "resolution": {
+      "type": "string",
+      "enum": ["720p", "1080p", "2160p"]
+    },
+    "logRotate": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Size/age based log rotation (applies when output is a file path).",
+      "properties": {
+        "max_size_mb": { "type": "integer", "minimum": 0 },
+        "max_backups": { "type": "integer", "minimum": 0 },
+        "max_age_days": { "type": "integer", "minimum": 0 },
+        "compress": { "type": "boolean" }
+      }
+    },
+    "mediaServerEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "server_type", "host"],
+      "properties": {
+        "name": { "type": "string" },
+        "server_type": {
+          "type": "string",
+          "enum": ["plex", "jellyfin", "emby"]
+        },
+        "host": { "type": "string" },
+        "api_key": { "type": "string" },
+        "api_key_file": { "type": "string" },
+        "enabled": { "type": "boolean" },
+        "library_section": { "type": ["string", "null"] },
+        "library_section_tv": { "type": ["string", "null"] }
+      }
+    },
+    "downloadClientEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "client_type"],
+      "properties": {
+        "name": { "type": "string" },
+        "client_type": {
+          "type": "string",
+          "enum": ["qbittorrent", "transmission", "deluge", "builtin"]
+        },
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "auth_method": {
+          "type": "string",
+          "enum": ["password", "api_key"]
+        },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "password_file": { "type": "string" },
+        "api_key": { "type": "string" },
+        "api_key_file": { "type": "string" },
+        "use_ssl": { "type": "boolean" },
+        "priority": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "enabled": { "type": "boolean" },
+        "download_dir": { "type": "string" },
+        "listen_port": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "max_upload_kbps": { "type": "integer", "minimum": 0 },
+        "max_download_kbps": { "type": "integer", "minimum": 0 },
+        "seed_ratio": { "type": "number", "minimum": 0 },
+        "seed_time": { "type": "string" },
+        "disable_dht": { "type": "boolean" },
+        "bind_interface": { "type": "string" }
+      }
+    },
+    "indexerEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "host", "port", "protocol"],
+      "properties": {
+        "name": { "type": "string" },
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "path": { "type": "string" },
+        "use_ssl": { "type": "boolean" },
+        "api_key": { "type": "string" },
+        "api_key_file": { "type": "string" },
+        "protocol": {
+          "type": "string",
+          "enum": ["torznab", "prowlarr"]
+        },
+        "priority": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "enabled": { "type": "boolean" },
+        "private": { "type": "boolean" }
+      }
+    },
+    "musicQualityProfileEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "tiers", "preferred"],
+      "properties": {
+        "name": { "type": "string" },
+        "tiers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Accepted tiers, in any order; stored best first.",
+          "items": { "enum": ["hires", "lossless", "high", "standard", "low"] }
+        },
+        "preferred": {
+          "enum": ["hires", "lossless", "high", "standard", "low"],
+          "description": "The upgrade ceiling. Must be one of tiers."
+        },
+        "upgrade_allowed": { "type": "boolean" }
+      }
+    },
+    "ebookSlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formats", "preferred"],
+      "properties": {
+        "formats": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["EPUB", "AZW3", "MOBI", "PDF", "CBZ", "CBR"] }
+        },
+        "preferred": {
+          "enum": ["EPUB", "AZW3", "MOBI", "PDF", "CBZ", "CBR"],
+          "description": "Must be one of formats."
+        }
+      }
+    },
+    "audiobookSlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formats", "preferred"],
+      "properties": {
+        "formats": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["M4B", "MP3", "M4A", "FLAC"] }
+        },
+        "preferred": {
+          "enum": ["M4B", "MP3", "M4A", "FLAC"],
+          "description": "Must be one of formats."
+        },
+        "min_bitrate": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024,
+          "description": "Floor in kbps for an audiobook whose release states a rate; 0 for none."
+        }
+      }
+    },
+    "bookQualityProfileEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "ebook", "audiobook"],
+      "properties": {
+        "name": { "type": "string" },
+        "upgrade_allowed": { "type": "boolean" },
+        "ebook": { "$ref": "#/definitions/ebookSlot" },
+        "audiobook": { "$ref": "#/definitions/audiobookSlot" }
+      }
+    },
+    "qualityProfileEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "preferred_resolution", "min_resolution"],
+      "properties": {
+        "name": { "type": "string" },
+        "preferred_resolution": { "$ref": "#/definitions/resolution" },
+        "min_resolution": { "$ref": "#/definitions/resolution" },
+        "upgrade_allowed": { "type": "boolean" },
+        "allowed_codecs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "ffprobe video codec names (\"hevc\", \"av1\", \"h264\"). A grab whose probed codec isn't in this list is held. Empty means any codec."
+        },
+        "formats": {
+          "type": "array",
+          "description": "Scored formats evaluated against a candidate release. Each name must resolve to either a built-in format or an entry in custom_formats.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "score": {
+                "type": "integer",
+                "description": "May be negative, to penalize a matched format."
+              }
+            }
+          }
+        },
+        "min_score": {
+          "type": "integer",
+          "description": "Minimum total matched-format score a release must reach to be accepted."
+        },
+        "upgrade_until_score": {
+          "type": "integer",
+          "description": "Stops upgrade-seeking once the current score reaches this value. 0 means no cap."
+        },
+        "transcode": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["to"],
+          "description": "Background transcode policy for this profile. transcoding.enabled must also be true for it to take effect. Any failing `if` rule queues a transcode toward `to`. HDR/DV video is exempt from re-encode in v1; container remux still applies.",
+          "properties": {
+            "if": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "video_codecs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "h264",
+                      "hevc",
+                      "av1",
+                      "vp9",
+                      "mpeg4",
+                      "mpeg2video",
+                      "vc1"
+                    ]
+                  }
+                },
+                "containers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": ["mkv", "mp4", "avi", "mov", "ts", "m2ts", "webm", "wmv"]
+                  }
+                },
+                "max_video_bitrate": {
+                  "type": "string",
+                  "description": "e.g. \"12M\", \"8000k\", \"500000\" bits/sec. Must parse via config.ParseBitrate."
+                },
+                "min_video_bitrate": {
+                  "type": "string",
+                  "description": "Sources below this are exempt from the codec rule. e.g. \"2M\", \"1500k\". Must parse via config.ParseBitrate and stay below max_video_bitrate when both are set."
+                }
+              }
+            },
+            "to": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["container", "video_codec", "preset", "audio_codec"],
+              "properties": {
+                "container": {
+                  "type": "string",
+                  "enum": ["mkv", "mp4"]
+                },
+                "video_codec": {
+                  "type": "string",
+                  "enum": ["h264", "hevc", "av1"]
+                },
+                "crf": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 51
+                },
+                "preset": {
+                  "type": "string",
+                  "enum": [
+                    "ultrafast",
+                    "superfast",
+                    "veryfast",
+                    "faster",
+                    "fast",
+                    "medium",
+                    "slow",
+                    "slower",
+                    "veryslow"
+                  ]
+                },
+                "audio_codec": {
+                  "type": "string",
+                  "enum": ["aac", "opus", "ac3", "flac"]
+                },
+                "audio_passthrough": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Audio codecs copied rather than re-encoded. Defaults to config.DefaultAudioPassthrough when a policy names none."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "customFormatConditionEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "release_title",
+            "resolution",
+            "source",
+            "release_group",
+            "codec",
+            "size",
+            "seeders"
+          ],
+          "description": "Condition kind. release_title/release_group match pattern as a regex against the release title/group. resolution/source/codec match value case-insensitively (resolution accepts 720p/1080p/2160p only). size checks the release size against min_gb/max_gb. seeders checks the seeder count against min."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Regex pattern. Required for release_title and release_group."
+        },
+        "value": {
+          "type": "string",
+          "description": "Exact match value. Required for resolution, source and codec."
+        },
+        "min_gb": { "type": "number", "minimum": 0 },
+        "max_gb": { "type": "number", "minimum": 0 },
+        "min": { "type": "integer", "minimum": 0 },
+        "required": {
+          "type": "boolean",
+          "description": "When true, this condition must pass for the format to match. When false (the default), it joins the optional group: at least one optional condition must pass for the format to match."
+        },
+        "negate": { "type": "boolean" }
+      }
+    },
+    "customFormatEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "conditions"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Must not collide with a built-in format name (see internal/quality Builtins())."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional free-text explanation of what the format detects, shown alongside the format in the UI."
+        },
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/customFormatConditionEntry" }
+        }
+      }
+    }
+  },
+  "properties": {
+    "data_dir": {
+      "type": "string",
+      "description": "Directory holding runtime data. Created at boot if missing."
+    },
+    "read_only": {
+      "type": "boolean",
+      "description": "Reject all runtime config write-backs (config.Update). For declarative/GitOps deploys where config is mounted read-only; changes flow through git, not the UI."
+    },
+    "torrent_listen_port": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "Overrides the builtin download client's listen_port. Top-level so STREAMLINE_TORRENT_LISTEN_PORT can reach it — nothing inside download_clients[] is addressable from the environment. Intended for a VPN that assigns a forwarded port per session, which rotates and so cannot be written into a git-owned config file."
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "type": "string",
+          "description": "Bind address (IP or hostname)."
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "trusted_proxies": {
+          "type": "array",
+          "description": "CIDR ranges of reverse proxies allowed to set X-Forwarded-* headers. Empty trusts none, so the connecting peer is always treated as the client. WARNING: list the proxies themselves, as narrowly as possible (ideally /32 or /128 each) — never a whole client subnet. Naming a range clients can also occupy (10.0.0.0/8, 192.168.0.0/16, a Kubernetes pod or node CIDR) makes every host in it a trusted proxy: any of them can then forge X-Forwarded-For to claim an address inside auth.trusted_networks and be granted auth.trusted_role without authenticating.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["full", "trusted-network", "disabled"]
+        },
+        "trusted_networks": {
+          "type": "array",
+          "description": "CIDR ranges trusted when mode=trusted-network.",
+          "items": { "type": "string" }
+        },
+        "trusted_role": { "$ref": "#/definitions/role" },
+        "session_secret": {
+          "type": "string",
+          "description": "JWT HMAC signing secret. Auto-generated and persisted on first boot when empty."
+        },
+        "session_secret_file": {
+          "type": "string",
+          "description": "Path to a file holding session_secret. Mutually exclusive with session_secret."
+        },
+        "session_ttl": { "$ref": "#/definitions/duration" },
+        "registration_mode": {
+          "type": "string",
+          "enum": ["disabled", "open", "invite"]
+        },
+        "default_role": {
+          "allOf": [{ "$ref": "#/definitions/role" }],
+          "description": "Role a self-registering user is created with: an anonymous POST /auth/register in open mode, and an OIDC login provisioning a new account whose claims map to nothing. Only ever a fallback \u2014 an invite carries its own role and a matched claim outranks it \u2014 and admin is clamped to member on both paths (locally always, federated unless the provider sets allow_admin)."
+        },
+        "seed_admin": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Optional bootstrap admin, applied only against an empty database. An empty email resolves to admin@streamline.local and, when no password and no password_file are configured, that account gets a generated password printed once to stdout.",
+          "properties": {
+            "email": { "type": "string" },
+            "password": { "type": "string" },
+            "password_file": { "type": "string" }
+          }
+        },
+        "oidc": {
+          "type": "array",
+          "description": "OIDC providers discovered at startup.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "issuer", "client_id"],
+            "properties": {
+              "name": { "type": "string" },
+              "issuer": { "type": "string", "format": "uri" },
+              "client_id": { "type": "string" },
+              "client_secret": { "type": "string" },
+              "client_secret_file": { "type": "string" },
+              "role_claim": {
+                "type": "string",
+                "description": "ID-token claim (e.g. \"groups\") used for role mapping. Accepts a dotted path into nested claims, e.g. \"realm_access.roles\" for Keycloak."
+              },
+              "role_mapping": {
+                "type": "object",
+                "description": "Maps a role_claim value to a Streamline role. Highest-privilege match wins, capped by the provider's allow_admin ceiling; authoritative when set, except on the login that adopts an existing local account by email, which never changes the role.",
+                "additionalProperties": { "$ref": "#/definitions/role" }
+              },
+              "email_linking": {
+                "type": "string",
+                "enum": ["disabled", "non_admin", "all"],
+                "description": "Whether a federated identity this provider has never presented before may sign in as an existing account because the email addresses match. Default disabled: the provider's email claim is not proof of account ownership, so it adopts nothing. non_admin is the migration setting — it adopts non-admin accounts, so turn it on, have everyone sign in once to bind their identities, then turn it back off. all adopts any account, admin included. It gates the adoption, not its result: a login matching an identity an adoption already linked never reads this key, so setting it back to disabled keeps every account adopted while it was open reachable. Governs adoption only; roles are allow_admin's business."
+              },
+              "allow_admin": {
+                "type": "boolean",
+                "description": "Whether this provider may put an account on the admin role. Default false, in which case no role it confers is ever admin — not the claim-mapped role, not the auth.default_role a provisioning login falls back to, and not the role carried by an invite consumed through SSO. Independent of email_linking, so no change to either setting can raise capability on the other axis."
+              },
+              "auto_provision": {
+                "type": "boolean",
+                "description": "Under registration_mode: invite, let a first login through this provider create the account without an invite, on auth.default_role. An invite bound to the email is still consumed and its role applied. The IdP becomes the gate, so this is only as closed as its own sign-up. registration_mode: disabled still refuses. Default false."
+              }
+            }
+          }
+        },
+        "lockout": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "threshold": { "type": "integer", "minimum": 1, "maximum": 255 },
+            "window": { "$ref": "#/definitions/duration" },
+            "duration": { "$ref": "#/definitions/duration" }
+          }
+        }
+      }
+    },
+    "library": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "movie_path": { "type": "string" },
+        "movie_naming": { "type": "string" },
+        "series_path": { "type": "string" },
+        "series_naming": { "type": "string" },
+        "music_path": { "type": "string" },
+        "music_naming": { "type": "string" },
+        "ebook_path": { "type": "string" },
+        "ebook_naming": { "type": "string" },
+        "audiobook_path": { "type": "string" },
+        "audiobook_naming": { "type": "string" },
+        "book_series_naming": {
+          "type": "string",
+          "description": "Naming of a book series' ebook volumes: {Author}, {Series}, {Volume} and {Volume:02}, {Title}, {Year}, {Language}."
+        },
+        "book_language": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2,
+          "description": "ISO 639-1 language a new book prefers; picks the edition of each slot."
+        },
+        "download_path": {
+          "type": "string",
+          "description": "Host-side directory streamline reads completed torrents from. Combined with the torrent name to locate content (<download_path>/<torrent.Name>)."
+        },
+        "import_mode": {
+          "type": "string",
+          "enum": ["hardlink", "copy", "move"]
+        },
+        "monitor_specials": {
+          "type": "boolean",
+          "description": "Monitor season 0 (specials) when a series is added or a refresh discovers the season. Off by default."
+        },
+        "music_monitored_types": {
+          "type": "array",
+          "items": { "enum": ["album", "ep", "single", "compilation", "live", "other"] },
+          "uniqueItems": true,
+          "description": "Release types an artist's all and future monitor policies monitor; the others are added unmonitored. Defaults to album and ep."
+        },
+        "no_match_cooldown": { "$ref": "#/definitions/duration" },
+        "max_grab_failures": { "type": "integer", "minimum": 1 },
+        "keep_torrent_seeding": { "type": "boolean" },
+        "import_max_attempts": { "type": "integer", "minimum": 1 },
+        "allowed_download_roots": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "drift_grace_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Consecutive drift_check ticks a MediaFile may be missing before its row is deleted."
+        },
+        "probe": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Import-time verification against ffprobe results.",
+          "properties": {
+            "always_ask": {
+              "type": "boolean",
+              "description": "Hold every import for a decision, even when every check passes."
+            },
+            "min_duration_ratio": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "description": "Hold an import whose probed duration is less than this share of the known runtime."
+            }
+          }
+        },
+        "music_tags": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The tags Streamline writes into music files. Runtime-editable (Settings → Music).",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["off", "import", "managed"],
+              "description": "off never writes; import writes each file once, at import or at an adoption with tagging on; managed also rewrites a file whenever the library's data for it changes and undoes edits made elsewhere to the keys Streamline owns."
+            },
+            "seeding": {
+              "type": "string",
+              "enum": ["defer", "copy"],
+              "description": "defer keeps a hardlinked import as one copy on disk and tags it once its torrent is gone; copy imports a copy and tags it at once. A file a torrent still serves is never written."
+            },
+            "embed_art": {
+              "type": "boolean",
+              "description": "Write the album cover into each file as its front cover."
+            },
+            "art_max_px": {
+              "type": "integer",
+              "minimum": 256,
+              "maximum": 3000,
+              "description": "Longest edge of an embedded cover, in pixels."
+            },
+            "sidecar_art": {
+              "type": "boolean",
+              "description": "Write cover.jpg into each album folder and folder.jpg into each artist folder, never replacing one Streamline did not write."
+            },
+            "strip": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/tagKey" },
+              "description": "Keys deleted from every file written. An entry ending in * matches as a prefix."
+            },
+            "preserve": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/tagKey" },
+              "description": "Keys never written or deleted; wins over strip and over the keys Streamline manages. An entry ending in * matches as a prefix."
+            }
+          }
+        }
+      }
+    },
+    "schedules": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Cron-like job intervals (Go duration strings). One key per registered job; media-scoped jobs are keyed movie_*/tv_*/music_*/book_*, the rest are shared across every library.",
+      "properties": {
+        "movie_rss_sync": { "$ref": "#/definitions/duration" },
+        "tv_rss_sync": { "$ref": "#/definitions/duration" },
+        "movie_missing_search": { "$ref": "#/definitions/duration" },
+        "tv_missing_search": { "$ref": "#/definitions/duration" },
+        "movie_metadata_refresh": { "$ref": "#/definitions/duration" },
+        "tv_metadata_refresh": { "$ref": "#/definitions/duration" },
+        "music_missing_search": { "$ref": "#/definitions/duration" },
+        "music_metadata_refresh": { "$ref": "#/definitions/duration" },
+        "book_missing_search": { "$ref": "#/definitions/duration" },
+        "book_metadata_refresh": { "$ref": "#/definitions/duration" },
+        "movie_orphan_scan": { "$ref": "#/definitions/duration" },
+        "tv_orphan_scan": { "$ref": "#/definitions/duration" },
+        "download_monitor": { "$ref": "#/definitions/duration" },
+        "cleanup": { "$ref": "#/definitions/duration" },
+        "import_scan": { "$ref": "#/definitions/duration" },
+        "drift_check": { "$ref": "#/definitions/duration" },
+        "media_probe": { "$ref": "#/definitions/duration" },
+        "file_selection": { "$ref": "#/definitions/duration" },
+        "music_tag_sync": { "$ref": "#/definitions/duration" },
+        "rss_sync": {
+          "$ref": "#/definitions/duration",
+          "description": "Deprecated: renamed to movie_rss_sync. Still honoured, with a warning on boot."
+        },
+        "missing_search": {
+          "$ref": "#/definitions/duration",
+          "description": "Deprecated: split into movie_missing_search, tv_missing_search, music_missing_search and book_missing_search. Still honoured for all four, with a warning on boot."
+        },
+        "metadata_refresh": {
+          "$ref": "#/definitions/duration",
+          "description": "Deprecated: split into movie_metadata_refresh, tv_metadata_refresh, music_metadata_refresh and book_metadata_refresh. Still honoured for all four, with a warning on boot."
+        },
+        "orphan_scan": {
+          "$ref": "#/definitions/duration",
+          "description": "Deprecated: split into movie_orphan_scan and tv_orphan_scan. Still honoured for both, with a warning on boot."
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tmdb_api_key": { "type": "string" },
+        "tmdb_api_key_file": { "type": "string" },
+        "tvdb_api_key": { "type": "string" },
+        "tvdb_api_key_file": { "type": "string" },
+        "hardcover_api_key": { "type": "string" },
+        "hardcover_api_key_file": { "type": "string" },
+        "language": {
+          "type": "string",
+          "description": "BCP-47 language tag, e.g. \"en\", \"fr\"."
+        },
+        "tmdb_region": {
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 uppercase region code, e.g. \"FR\"."
+        }
+      }
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "retention": { "$ref": "#/definitions/duration" }
+      }
+    },
+    "ffmpeg": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "ffmpeg-suite dependency (ffprobe today, the player's transcoder later).",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "false makes probing and everything built on it inert."
+        },
+        "path": {
+          "type": "string",
+          "description": "Directory holding the ffmpeg/ffprobe binaries. Empty resolves via $PATH."
+        }
+      }
+    },
+    "download": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Gates selective file download. Off is bit-for-bit today's behaviour.",
+      "properties": {
+        "selective_files": {
+          "type": "boolean",
+          "description": "Enables selecting which files of a torrent to download."
+        },
+        "selection_grace": {
+          "$ref": "#/definitions/duration",
+          "description": "How long file selection stays open after grab."
+        },
+        "path_mappings": {
+          "type": "array",
+          "description": "Rewrites a save path a download client reports into one streamline can open, for deployments where the two mount the same volume at different roots. First matching prefix wins; empty means the paths already agree.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to"],
+            "properties": {
+              "from": {
+                "type": "string",
+                "description": "Absolute prefix as the download client reports it."
+              },
+              "to": {
+                "type": "string",
+                "description": "Absolute prefix streamline reads the same files at."
+              }
+            }
+          }
+        }
+      }
+    },
+    "smtp": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Outgoing mail relay used to send a book to a user's e-reader. File-only: restart required, never reachable through the config API. Empty host disables the feature.",
+      "properties": {
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "tls": {
+          "type": "string",
+          "enum": ["starttls", "implicit", "none"],
+          "description": "starttls upgrades a plain connection (port 587) and fails when the server does not offer it; implicit is TLS from the first byte (port 465); none is accepted only for a loopback host."
+        },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "password_file": { "type": "string" },
+        "from": {
+          "type": "string",
+          "description": "Sender address. Required when host is set."
+        },
+        "max_message_size_mb": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Raw attachment bytes per email, before base64."
+        }
+      }
+    },
+    "transcoding": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Global switch and budget for the post-import transcode worker. Binaries come from ffmpeg.",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "max_concurrent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "max_failures": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "hw_accel": {
+          "type": "string",
+          "enum": ["auto", "none", "vaapi"],
+          "description": "Hardware encoder backend. auto probes hw_device once and falls back to software when the probe fails or the target codec has no hardware encoder; none forces software; vaapi requires the hardware and defers such a job for an hour instead of encoding it in software, spending no attempt and re-probing on the next claim."
+        },
+        "hw_device": {
+          "type": "string",
+          "description": "DRM render node handed to ffmpeg as -vaapi_device."
+        },
+        "defer_seeding": {
+          "type": "boolean",
+          "description": "Hold back a job while the torrent that produced its file is still downloading or seeding in its download client, re-checking hourly. Keeps disk from carrying the original and the encode at once during the seed window. A file with no imported download record, or whose torrent has left the client or stopped seeding, is encoded right away."
+        },
+        "verify": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Checks an encode must pass before it replaces the library file. A failing encode is rejected and never retried automatically. Zero disables a bound.",
+          "properties": {
+            "max_size_percent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 200,
+              "description": "Reject a transcode whose output is larger than this percentage of the source. Remuxes are exempt."
+            },
+            "min_size_percent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Reject an output smaller than this percentage of the source — a dropped stream or a truncated encode."
+            },
+            "health_check": {
+              "type": "boolean",
+              "description": "Fully decode the output with ffmpeg before the swap. Costs a decode pass per job."
+            },
+            "min_vmaf": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Reject a transcode scoring below this VMAF, measured over three 60s windows against the source. Needs an ffmpeg built with libvmaf; skipped with a log line otherwise."
+            }
+          }
+        }
+      }
+    },
+    "log": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "level": {
+              "type": "string",
+              "enum": ["debug", "info", "warn", "error"]
+            },
+            "format": {
+              "type": "string",
+              "enum": ["text", "json"]
+            },
+            "output": {
+              "type": "string",
+              "description": "\"stderr\", an absolute file path, or a path relative to data_dir."
+            },
+            "rotate": { "$ref": "#/definitions/logRotate" }
+          }
+        },
+        "http": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "output": {
+              "type": "string",
+              "description": "\"stderr\", an absolute file path, or a path relative to data_dir."
+            },
+            "format": {
+              "type": "string",
+              "enum": ["json", "combined"]
+            },
+            "rotate": { "$ref": "#/definitions/logRotate" }
+          }
+        }
+      }
+    },
+    "otel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "description": "OTLP endpoint. Empty disables OTel export."
+        },
+        "insecure": {
+          "type": "boolean",
+          "description": "Send OTLP over plaintext HTTP. Required for an http:// collector; the SDK defaults to HTTPS."
+        },
+        "sample_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Head sampling rate for root spans. Ignored when OTEL_TRACES_SAMPLER is set."
+        },
+        "environment": {
+          "type": "string",
+          "description": "Value for the deployment.environment resource attribute (e.g. prod, staging)."
+        }
+      }
+    },
+    "media_server": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plex_client_id": {
+          "type": "string",
+          "description": "X-Plex-Client-Identifier. Auto-generated on first boot when empty."
+        },
+        "servers": {
+          "type": "array",
+          "description": "Media-server integrations (Plex/Jellyfin/Emby).",
+          "items": { "$ref": "#/definitions/mediaServerEntry" }
+        }
+      }
+    },
+    "download_clients": {
+      "type": "array",
+      "description": "Torrent download clients.",
+      "items": { "$ref": "#/definitions/downloadClientEntry" }
+    },
+    "indexers": {
+      "type": "array",
+      "description": "Torznab indexers.",
+      "items": { "$ref": "#/definitions/indexerEntry" }
+    },
+    "quality_profiles": {
+      "type": "array",
+      "description": "Named quality profiles. Setting this to an empty list leaves every movie without a resolvable profile, and is not rejected: the check that movie_quality_default_profile and series_quality_default_profile name a real profile only runs on a non-empty list.",
+      "items": { "$ref": "#/definitions/qualityProfileEntry" }
+    },
+    "movie_quality_default_profile": {
+      "type": "string",
+      "description": "Name of the quality profile used when a movie names none. Must name an entry in quality_profiles whenever that list has any. A v1 config's quality_default_profile is still read and fills this key (and series_quality_default_profile) when it is not set itself; it is never written back."
+    },
+    "series_quality_default_profile": {
+      "type": "string",
+      "description": "Name of the quality profile used when a series names none. Must name an entry in quality_profiles whenever that list has any. Seeded from the legacy quality_default_profile like movie_quality_default_profile."
+    },
+    "music_quality_profiles": {
+      "type": "array",
+      "description": "Named music quality profiles. A profile ticks the tiers it accepts (hires > lossless > high > standard > low) and names the preferred one, the ceiling for upgrades. Edited through /music/quality-profiles, never /config/*.",
+      "items": { "$ref": "#/definitions/musicQualityProfileEntry" }
+    },
+    "music_quality_default_profile": {
+      "type": "string",
+      "description": "Name of the music quality profile used when an artist names none. Must name an entry in music_quality_profiles whenever that list has any."
+    },
+    "book_quality_profiles": {
+      "type": "array",
+      "description": "Named book quality profiles. Each carries an ebook slot and an audiobook slot; which slots a title uses is its monitor, not the profile. Edited through /books/quality-profiles, never /config/*.",
+      "items": { "$ref": "#/definitions/bookQualityProfileEntry" }
+    },
+    "book_quality_default_profiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Name of the book quality profile used when a book (and its series) names none, per book kind. Each must name an entry in book_quality_profiles whenever that list has any.",
+      "properties": {
+        "novel": { "type": "string" },
+        "bd": { "type": "string" },
+        "comic": { "type": "string" },
+        "manga": { "type": "string" }
+      }
+    },
+    "custom_formats": {
+      "type": "array",
+      "description": "User-defined quality formats, scored per quality profile via quality_profiles[].formats.",
+      "items": { "$ref": "#/definitions/customFormatEntry" }
+    }
+  }
+}

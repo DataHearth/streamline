@@ -1,0 +1,639 @@
+package restapi
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"time"
+
+	"github.com/datahearth/streamline/ent/downloadrecord"
+	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/library"
+	moviesvc "github.com/datahearth/streamline/internal/media/movie"
+	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/utils/numeric"
+)
+
+func (s *Server) ListMovies(
+	ctx context.Context,
+	request ListMoviesRequestObject,
+) (ListMoviesResponseObject, error) {
+	page, ok := positiveOr(request.Params.Page, uint16(1))
+	if !ok {
+		return ListMovies400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(request.Params.Limit, 20, moviesMaxLimit)
+	if !ok {
+		return ListMovies400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(moviesMaxLimit)),
+		}, nil
+	}
+	p := moviesvc.FilterParams{Page: page, Limit: limit}
+	if request.Params.Status != nil {
+		p.Status = *request.Params.Status
+	}
+	if request.Params.Query != nil {
+		p.Query = *request.Params.Query
+	}
+	if request.Params.Sort != nil {
+		p.Sort = *request.Params.Sort
+	}
+	if request.Params.Order != nil {
+		p.Order = string(*request.Params.Order)
+	}
+	if request.Params.Monitored != nil {
+		on := *request.Params.Monitored == ListMoviesParamsMonitoredMonitored
+		p.Monitored = &on
+	}
+
+	movies, summaries, total, err := s.movies.FilterList(ctx, p)
+	if err != nil {
+		return ListMovies500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+
+	items := make([]Movie, 0, len(movies))
+	for _, m := range movies {
+		items = append(items, movieListToAPI(m, summaries[m.ID]))
+	}
+
+	return ListMovies200JSONResponse{
+		Items: items,
+		Total: total,
+		Page:  uint32(p.Page),
+		Limit: p.Limit,
+	}, nil
+}
+
+func (s *Server) GetMovieCounts(
+	ctx context.Context,
+	request GetMovieCountsRequestObject,
+) (GetMovieCountsResponseObject, error) {
+	// The list's filters, so each facet is counted against the other's.
+	p := moviesvc.FilterParams{}
+	if v := request.Params.Status; v != nil {
+		p.Status = *v
+	}
+	if v := request.Params.Query; v != nil {
+		p.Query = *v
+	}
+	if v := request.Params.Monitored; v != nil {
+		on := *v == GetMovieCountsParamsMonitoredMonitored
+		p.Monitored = &on
+	}
+	counts, err := s.movies.Counts(ctx, p)
+	if err != nil {
+		return GetMovieCounts500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	// trend is a required, non-nullable array in the spec, and the SPA maps
+	// over it unguarded — a nil slice would marshal as `null`.
+	trend := make([]uint32, 0, len(counts.Trend))
+	for _, v := range counts.Trend {
+		trend = append(trend, numeric.SaturateU32(v))
+	}
+	return GetMovieCounts200JSONResponse{
+		Total:          numeric.SaturateU32(counts.Total),
+		StatusTotal:    numeric.SaturateU32(counts.StatusTotal),
+		Wanted:         numeric.SaturateU32(counts.Wanted),
+		Downloading:    numeric.SaturateU32(counts.Downloading),
+		Importing:      numeric.SaturateU32(counts.Importing),
+		Available:      numeric.SaturateU32(counts.Available),
+		Failed:         numeric.SaturateU32(counts.Failed),
+		MonitoredTotal: numeric.SaturateU32(counts.MonitoredTotal),
+		Monitored:      numeric.SaturateU32(counts.Monitored),
+		Unmonitored:    numeric.SaturateU32(counts.Unmonitored),
+		Trend:          trend,
+	}, nil
+}
+
+func (s *Server) AddMovie(
+	ctx context.Context,
+	request AddMovieRequestObject,
+) (AddMovieResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return AddMovie403JSONResponse{ForbiddenJSONResponse: requestOnlyResp}, nil
+	}
+
+	var qpName string
+	if request.Body.QualityProfile != nil {
+		qpName = *request.Body.QualityProfile
+	}
+
+	m, _, err := s.movies.Add(ctx, request.Body.TmdbId, qpName)
+	if err != nil {
+		return AddMovie409JSONResponse{
+			ConflictJSONResponse: errConflict(err.Error()),
+		}, nil
+	}
+
+	result := movieToAPI(m)
+	return AddMovie201JSONResponse(result), nil
+}
+
+func (s *Server) GetMovie(
+	ctx context.Context,
+	request GetMovieRequestObject,
+) (GetMovieResponseObject, error) {
+	m, err := s.movies.Get(ctx, request.Id)
+	if err != nil {
+		return GetMovie404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	files, err := s.store.ListMediaFilesByMovieID(ctx, m.ID)
+	if err != nil {
+		return GetMovie500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	result := movieToAPI(m)
+	if len(files) > 0 {
+		apiFiles := make([]MediaFile, 0, len(files))
+		for _, f := range files {
+			af := mediaFileToAPI(f)
+			af.FileScore = mediaFileScore(config.MediaMovie, m.QualityProfile, f)
+			apiFiles = append(apiFiles, af)
+		}
+		result.MediaFiles = &apiFiles
+	}
+	credits, err := s.store.TitleCast(ctx, db.CastOwnerMovie, m.ID)
+	if err != nil {
+		return GetMovie500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	if len(credits) > 0 {
+		cast := libraryCastToAPI(credits)
+		result.Cast = &cast
+	}
+	if len(m.Genres) > 0 {
+		genres := m.Genres
+		result.Genres = &genres
+	}
+	if m.Rating > 0 {
+		rating := float32(m.Rating)
+		result.Rating = &rating
+	}
+	return GetMovie200JSONResponse(result), nil
+}
+
+func (s *Server) PatchMovie(
+	ctx context.Context,
+	request PatchMovieRequestObject,
+) (PatchMovieResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return PatchMovie403JSONResponse{ForbiddenJSONResponse: requestOnlyResp}, nil
+	}
+	var params moviesvc.UpdateParams
+	if request.Body.Status != nil {
+		st := entmovie.Status(*request.Body.Status)
+		params.Status = &st
+	}
+	params.QualityProfile = request.Body.QualityProfile
+	params.Monitored = request.Body.Monitored
+
+	m, err := s.movies.Update(ctx, request.Id, params)
+	if err != nil {
+		return PatchMovie404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+
+	return PatchMovie200JSONResponse(movieToAPI(m)), nil
+}
+
+func (s *Server) DeleteMovie(
+	ctx context.Context,
+	request DeleteMovieRequestObject,
+) (DeleteMovieResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return DeleteMovie403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	opts := moviesvc.DeleteOptions{}
+	if request.Params.DeleteFiles != nil {
+		opts.DeleteFiles = *request.Params.DeleteFiles
+	}
+	if err := s.movies.Delete(ctx, request.Id, opts); err != nil {
+		return DeleteMovie404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	return DeleteMovie204Response{}, nil
+}
+
+func (s *Server) DeleteMovieFile(
+	ctx context.Context,
+	request DeleteMovieFileRequestObject,
+) (DeleteMovieFileResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return DeleteMovieFile403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	remove := request.Body != nil &&
+		request.Body.RemoveTorrent != nil &&
+		*request.Body.RemoveTorrent
+	err := s.movies.DeleteFile(ctx, request.Id, request.FileId,
+		moviesvc.DeleteFileOptions{RemoveTorrent: remove})
+	if errors.Is(err, library.ErrOutsideRoot) {
+		return DeleteMovieFile409JSONResponse{
+			ConflictJSONResponse: conflictResp("outside_library", err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return DeleteMovieFile404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	return DeleteMovieFile204Response{}, nil
+}
+
+func (s *Server) SearchMovieNow(
+	ctx context.Context,
+	request SearchMovieNowRequestObject,
+) (SearchMovieNowResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return SearchMovieNow403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	m, err := s.movies.Get(ctx, request.Id)
+	if err != nil {
+		return SearchMovieNow404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	if s.missingSearcher == nil {
+		return SearchMovieNow500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, errSearchNotConfigured),
+		}, nil
+	}
+	if err := s.missingSearcher.SearchOne(ctx, m); err != nil {
+		return SearchMovieNow500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return SearchMovieNow202JSONResponse{
+		MovieId:      request.Id,
+		DispatchedAt: time.Now().UTC(),
+	}, nil
+}
+
+func (s *Server) SearchMovie(
+	ctx context.Context,
+	request SearchMovieRequestObject,
+) (SearchMovieResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return SearchMovie403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	m, err := s.movies.Get(ctx, request.Id)
+	if err != nil {
+		return SearchMovie404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+
+	results, err := s.indexers.SearchMovie(
+		ctx,
+		[]string{m.Title, m.OriginalTitle},
+		m.Aliases,
+		m.TmdbID,
+	)
+	if err != nil {
+		return SearchMovie500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+
+	items := s.toSearchResults(ctx, results, m.ID, 0)
+	annotateResults(
+		config.MediaMovie,
+		m.QualityProfile,
+		items,
+		singleReleaseEpisodes,
+	)
+
+	return SearchMovie200JSONResponse(items), nil
+}
+
+func (s *Server) GetMoviePlayOnLinks(
+	ctx context.Context,
+	request GetMoviePlayOnLinksRequestObject,
+) (GetMoviePlayOnLinksResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GetMoviePlayOnLinks403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	m, err := s.movies.Get(ctx, request.Id)
+	if err != nil {
+		return GetMoviePlayOnLinks404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	if s.deepLinker == nil {
+		return GetMoviePlayOnLinks500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, errPlayOnNotConfigured),
+		}, nil
+	}
+	results := s.deepLinker.Resolve(ctx, m.TmdbID, m.Title, m.Year)
+	items := make([]PlayOnLink, 0, len(results))
+	for _, r := range results {
+		items = append(items, playOnToAPI(r))
+	}
+	return GetMoviePlayOnLinks200JSONResponse{
+		Items: items,
+	}, nil
+}
+
+func (s *Server) GrabMovieRelease(
+	ctx context.Context,
+	request GrabMovieReleaseRequestObject,
+) (GrabMovieReleaseResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GrabMovieRelease403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	m, err := s.movies.Get(ctx, request.Id)
+	if err != nil {
+		return GrabMovieRelease404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
+		return GrabMovieRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabMovieRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
+		}, nil
+	}
+	rec, err := s.downloads.Grab(ctx, sr, m.ID)
+	switch {
+	case errors.Is(err, download.ErrUntrustedSource),
+		errors.Is(err, download.ErrClientFull),
+		errors.Is(err, download.ErrUnsafeTorrentName):
+		return GrabMovieRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabMovieRelease500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	if replaceExisting(request.Body) {
+		if err := s.store.SetDownloadRecordReplaceMode(
+			ctx,
+			rec.ID,
+			downloadrecord.ReplaceModeAll,
+		); err != nil {
+			slog.WarnContext(ctx, "grab movie: set replace mode failed",
+				"download_record.id", rec.ID, "error", err)
+		}
+	}
+	return GrabMovieRelease202JSONResponse{
+		MovieId:      request.Id,
+		DispatchedAt: time.Now().UTC(),
+	}, nil
+}
+
+func (s *Server) RefreshMovieMetadata(
+	ctx context.Context,
+	request RefreshMovieMetadataRequestObject,
+) (RefreshMovieMetadataResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return RefreshMovieMetadata403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	m, err := s.movies.RefreshOne(ctx, request.Id)
+	switch {
+	case errors.Is(err, moviesvc.ErrMovieNotFound):
+		return RefreshMovieMetadata404JSONResponse{
+			NotFoundJSONResponse: errNotFound("movie not found"),
+		}, nil
+	case err != nil:
+		return RefreshMovieMetadata500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return RefreshMovieMetadata200JSONResponse{
+		MovieRefreshedJSONResponse: MovieRefreshedJSONResponse(movieToAPI(m)),
+	}, nil
+}
+
+func (s *Server) RenameMovieFiles(
+	ctx context.Context,
+	request RenameMovieFilesRequestObject,
+) (RenameMovieFilesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return RenameMovieFiles403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if s.renamer == nil {
+		return RenameMovieFiles500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, errRenamerNotConfigured),
+		}, nil
+	}
+	preview := request.Params.Preview != nil && *request.Params.Preview
+	var plan library.RenamePlan
+	var err error
+	if preview {
+		plan, err = s.renamer.Preview(ctx, request.Id)
+	} else {
+		plan, err = s.renamer.Apply(ctx, request.Id)
+	}
+	switch {
+	case errors.Is(err, moviesvc.ErrMovieNotFound):
+		return RenameMovieFiles404JSONResponse{
+			NotFoundJSONResponse: errNotFound("movie not found"),
+		}, nil
+	case err != nil:
+		return RenameMovieFiles500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	out := RenamePlan{
+		MovieId:    request.Id,
+		Operations: make([]RenameOperation, 0, len(plan.Operations)),
+	}
+	for _, op := range plan.Operations {
+		out.Operations = append(out.Operations, RenameOperation{
+			MediaFileId: op.MediaFileID,
+			From:        op.From,
+			To:          op.To,
+		})
+	}
+	return RenameMovieFiles200JSONResponse{
+		MovieRenamePlanJSONResponse: MovieRenamePlanJSONResponse(out),
+	}, nil
+}
+
+func (s *Server) ReidentifyMovie(
+	ctx context.Context,
+	request ReidentifyMovieRequestObject,
+) (ReidentifyMovieResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ReidentifyMovie403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	m, err := s.movies.Reidentify(ctx, request.Id, request.Body.TmdbId)
+	switch {
+	case errors.Is(err, moviesvc.ErrMovieNotFound):
+		return ReidentifyMovie404JSONResponse{
+			NotFoundJSONResponse: errNotFound("movie not found"),
+		}, nil
+	case errors.Is(err, moviesvc.ErrInvalidTMDBID),
+		errors.Is(err, moviesvc.ErrSameTMDBID):
+		return ReidentifyMovie400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(err.Error()),
+		}, nil
+	case errors.Is(err, moviesvc.ErrMovieExists):
+		return ReidentifyMovie409JSONResponse{
+			ConflictJSONResponse: errConflict(
+				"that title is already in the library; delete it first",
+			),
+		}, nil
+	case err != nil:
+		return ReidentifyMovie500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+
+	out := ReidentifyResult{Id: m.ID, Title: m.Title}
+	// The identity is already repaired; a rename failure leaves the files where
+	// they were, which is recoverable from the movie's own rename action.
+	if s.renamer != nil {
+		plan, err := s.renamer.Apply(ctx, m.ID)
+		if err != nil {
+			slog.WarnContext(ctx, "rename after re-identify failed",
+				"movie.id", m.ID, "error", err)
+		}
+		out.Renamed = len(plan.Operations)
+	}
+	return ReidentifyMovie200JSONResponse{
+		ReidentifyResultJSONResponse: ReidentifyResultJSONResponse(out),
+	}, nil
+}
+
+func (s *Server) GetMovieRecommendations(
+	ctx context.Context,
+	request GetMovieRecommendationsRequestObject,
+) (GetMovieRecommendationsResponseObject, error) {
+	m, err := s.movies.Get(ctx, request.Id)
+	if err != nil {
+		return GetMovieRecommendations404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+
+	results, err := s.metadata.Recommendations(ctx, m.TmdbID)
+	if err != nil {
+		return GetMovieRecommendations500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+
+	items := make([]TMDBMovieResult, 0, len(results))
+	for _, r := range results {
+		item := TMDBMovieResult{
+			TmdbId:        r.TMDBID,
+			Title:         r.Title,
+			OriginalTitle: r.OriginalTitle,
+			Year:          r.Year,
+		}
+		if r.Overview != "" {
+			item.Overview = &r.Overview
+		}
+		if url := metadata.PosterURL(r.PosterPath, "w342"); url != "" {
+			item.PosterUrl = &url
+		}
+		items = append(items, item)
+	}
+
+	return GetMovieRecommendations200JSONResponse{
+		Items: items,
+	}, nil
+}
+
+func (s *Server) SearchTMDBMovie(
+	ctx context.Context,
+	request SearchTMDBMovieRequestObject,
+) (SearchTMDBMovieResponseObject, error) {
+	var year uint16
+	if request.Params.Year != nil {
+		year = *request.Params.Year
+	}
+
+	results, err := s.metadata.SearchMovie(ctx, request.Params.Q, year)
+	if err != nil {
+		return SearchTMDBMovie500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+
+	annotated, err := s.movies.AnnotateTMDBResults(ctx, results)
+	if err != nil {
+		return SearchTMDBMovie500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+
+	items := make([]TMDBMovieResult, 0, len(annotated))
+	for _, r := range annotated {
+		item := TMDBMovieResult{
+			TmdbId:        r.TMDBID,
+			Title:         r.Title,
+			OriginalTitle: r.OriginalTitle,
+			Year:          r.Year,
+		}
+		if r.Overview != "" {
+			item.Overview = &r.Overview
+		}
+		if url := metadata.PosterURL(r.PosterPath, "w185"); url != "" {
+			item.PosterUrl = &url
+		}
+		if r.AlreadyAdded {
+			added := true
+			item.AlreadyAdded = &added
+		}
+		items = append(items, item)
+	}
+
+	return SearchTMDBMovie200JSONResponse(items), nil
+}
+
+func (s *Server) GetTMDBMovieDetail(
+	ctx context.Context,
+	request GetTMDBMovieDetailRequestObject,
+) (GetTMDBMovieDetailResponseObject, error) {
+	d, err := s.metadata.GetMovie(ctx, request.TmdbId)
+	if err != nil {
+		return GetTMDBMovieDetail500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return GetTMDBMovieDetail200JSONResponse{
+		LookupDetailResponseJSONResponse: LookupDetailResponseJSONResponse(
+			toLookupDetail(movieDetailsToRequestMedia(d)),
+		),
+	}, nil
+}

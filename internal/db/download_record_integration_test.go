@@ -1,0 +1,2539 @@
+package db
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/ent"
+	entalbum "github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/mediafile"
+	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/ent/track"
+	"github.com/datahearth/streamline/ent/transcodejob"
+	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/library"
+)
+
+var _ = Describe("Download record store", Label("integration", "db"), func() {
+	var (
+		ctx     context.Context
+		client  *ent.Client
+		store   *DB
+		movieID uint32
+	)
+
+	const clientName = "qb"
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		var err error
+		client, err = Open(ctx, ":memory:")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { client.Close() })
+		store = New(client)
+
+		m, err := store.CreateMovie(ctx, CreateMovieParams{
+			Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: 438631,
+			Status: entmovie.StatusWanted, QualityProfile: "HD",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		movieID = m.ID
+	})
+
+	createRec := func(hash string, status downloadrecord.Status) *ent.DownloadRecord {
+		GinkgoHelper()
+		rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+			Title: "t", Size: 1,
+			TorrentHash: hash, Status: status,
+			MovieID: movieID, DownloadClientName: clientName,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		return rec
+	}
+
+	Describe("CreateDownloadRecord media edges", func() {
+		It("links the album edge and no movie or anchor episode", func() {
+			a, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-1",
+				Name: "Nirvana",
+				Albums: []AlbumSeed{
+					{MBID: "rg-1", Title: "Nevermind", Type: "album"},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			albumID := a.Edges.Albums[0].ID
+
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "album-hash",
+				Status: downloadrecord.StatusDownloading, AlbumID: albumID,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(rec.QueryAlbum().OnlyIDX(ctx)).To(Equal(albumID))
+			Expect(rec.QueryMovie().ExistX(ctx)).To(BeFalse())
+			Expect(rec.QueryAnchorEpisode().ExistX(ctx)).To(BeFalse())
+			Expect(rec.QueryBook().ExistX(ctx)).To(BeFalse())
+		})
+
+		It("links the book edge and stores the slot kind", func() {
+			b, err := store.CreateBook(ctx, BookSeed{
+				HardcoverID: 1, Title: "Elantris", Kind: "novel",
+				PreferredLanguage: "en",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			bookID := b.ID
+
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title:              "t",
+				Size:               1,
+				TorrentHash:        "book-hash",
+				Status:             downloadrecord.StatusDownloading,
+				BookID:             bookID,
+				BookKind:           downloadrecord.BookKindAudiobook,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(rec.QueryBook().OnlyIDX(ctx)).To(Equal(bookID))
+			Expect(rec.BookKind).To(Equal(downloadrecord.BookKindAudiobook))
+			Expect(rec.QueryAlbum().ExistX(ctx)).To(BeFalse())
+			Expect(rec.QueryMovie().ExistX(ctx)).To(BeFalse())
+		})
+
+		It("loads a volume's series in the queue and the history", func() {
+			b, err := store.CreateBook(ctx, BookSeed{
+				HardcoverID: 2, Title: "Tome 3", Kind: "bd",
+				PreferredLanguage: "fr",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			series := client.BookSeries.Create().
+				SetHardcoverID(9).SetTitle("Astérix").SaveX(ctx)
+			client.Book.UpdateOneID(b.ID).SetSeries(series).ExecX(ctx)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "volume-hash",
+				Status: downloadrecord.StatusHeld, BookID: b.ID,
+				BookKind:           downloadrecord.BookKindEbook,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			live, err := store.ListActiveDownloadRecords(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(live).To(HaveLen(1))
+			Expect(live[0].Edges.Book.Edges.Series.Title).To(Equal("Astérix"))
+
+			client.DownloadRecord.UpdateOneID(rec.ID).
+				SetStatus(downloadrecord.StatusCompleted).ExecX(ctx)
+			hist, err := store.ListDownloadHistory(ctx, 10, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hist.Records).To(HaveLen(1))
+			Expect(hist.Records[0].Edges.Book.Edges.Series.Title).
+				To(Equal("Astérix"))
+		})
+	})
+
+	Describe("CountLiveDownloadRecords", func() {
+		It("counts in-flight and pending rows, not terminal ones", func() {
+			createRec("live-dl", downloadrecord.StatusDownloading)
+			createRec("live-imp", downloadrecord.StatusImporting)
+			createRec("live-held", downloadrecord.StatusHeld)
+			createRec("live-pend", downloadrecord.StatusPending)
+			createRec("dead-comp", downloadrecord.StatusCompleted)
+			createRec("dead-fail", downloadrecord.StatusFailed)
+			createRec("dead-dism", downloadrecord.StatusDismissed)
+
+			n, err := store.CountLiveDownloadRecords(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(4))
+		})
+	})
+
+	Describe("FindImportedDownloadRecordByHash", func() {
+		It("returns the completed record for the hash", func() {
+			rec := createRec("done", downloadrecord.StatusCompleted)
+
+			got, err := store.FindImportedDownloadRecordByHash(ctx, "done")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).NotTo(BeNil())
+			Expect(got.ID).To(Equal(rec.ID))
+		})
+
+		It("reports every unfinished state as no row", func() {
+			createRec("dl", downloadrecord.StatusDownloading)
+			createRec("imp", downloadrecord.StatusImporting)
+			createRec("held", downloadrecord.StatusHeld)
+			createRec("pend", downloadrecord.StatusPending)
+			createRec("fail", downloadrecord.StatusFailed)
+
+			for _, hash := range []string{"dl", "imp", "held", "pend", "fail"} {
+				got, err := store.FindImportedDownloadRecordByHash(ctx, hash)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got).To(BeNil(), hash)
+			}
+		})
+
+		It("reports an unknown hash as no row and no error", func() {
+			got, err := store.FindImportedDownloadRecordByHash(ctx, "nope")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeNil())
+		})
+	})
+
+	Describe("CreateDownloadRecord", func() {
+		It("persists with the given edges", func() {
+			rec := createRec("abc", downloadrecord.StatusDownloading)
+			Expect(rec.TorrentHash).To(Equal("abc"))
+			mv, err := rec.QueryMovie().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mv.ID).To(Equal(movieID))
+		})
+
+		It("links the episode edge (not the movie) for a TV grab", func() {
+			ad := time.Now()
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Black Sea", Year: 2024, TvdbID: 9001,
+				Seasons: []SeasonSeed{{
+					Number: 3,
+					Episodes: []EpisodeSeed{
+						{Number: 1, Title: "Pilot", AirDate: &ad},
+					},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			episodeID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "tv",
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          episodeID,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			ep, err := rec.QueryAnchorEpisode().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ep.ID).To(Equal(episodeID))
+			Expect(rec.QueryEpisodes().IDs(ctx)).To(ConsistOf(episodeID))
+
+			_, err = rec.QueryMovie().Only(ctx)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+	})
+
+	Describe("LatestImportedRecordForEpisode", func() {
+		It(
+			"finds the completed pack behind a file, never a newer record in flight",
+			func() {
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "Source", Year: 2024, TvdbID: 9050,
+					Seasons: []SeasonSeed{{Number: 1, Episodes: []EpisodeSeed{
+						{Number: 1, Title: "One"}, {Number: 2, Title: "Two"},
+					}}},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				eps := show.Edges.Seasons[0].Edges.Episodes
+				imported := time.Now().Add(-time.Hour)
+				_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+					Title: "pack", Size: 1, TorrentHash: "source-pack",
+					Status:             downloadrecord.StatusCompleted,
+					EpisodeID:          eps[0].ID,
+					EpisodeIDs:         []uint32{eps[1].ID},
+					DownloadClientName: clientName,
+					ImportedAt:         &imported,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				// An upgrade pack still downloading, and a proposal the operator
+				// dismissed: both link the episode, neither produced its file.
+				for hash, status := range map[string]downloadrecord.Status{
+					"upgrade-in-flight": downloadrecord.StatusDownloading,
+					"dismissed":         downloadrecord.StatusDismissed,
+				} {
+					_, err = store.CreateDownloadRecord(
+						ctx,
+						CreateDownloadRecordParams{
+							Title: "newer", Size: 1, TorrentHash: hash,
+							Status:             status,
+							EpisodeID:          eps[0].ID,
+							EpisodeIDs:         []uint32{eps[1].ID},
+							DownloadClientName: clientName,
+						},
+					)
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+				rec, err := store.LatestImportedRecordForEpisode(ctx, eps[1].ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec.TorrentHash).To(Equal("source-pack"))
+			},
+		)
+	})
+
+	Describe("FindSeedingDownloadRecord", func() {
+		It(
+			"returns the newest completed record for the movie, never an in-flight one",
+			func() {
+				old := time.Now().Add(-time.Hour)
+				now := time.Now()
+				_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+					Title:              "t",
+					Size:               1,
+					TorrentHash:        "older",
+					MovieID:            movieID,
+					Status:             downloadrecord.StatusCompleted,
+					DownloadClientName: clientName,
+					ImportedAt:         &old,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+					Title:              "t",
+					Size:               1,
+					TorrentHash:        "newer",
+					MovieID:            movieID,
+					Status:             downloadrecord.StatusCompleted,
+					DownloadClientName: clientName,
+					ImportedAt:         &now,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				createRec("upgrade-in-flight", downloadrecord.StatusDownloading)
+
+				rec, err := store.FindSeedingDownloadRecord(ctx, movieID, 0)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec).NotTo(BeNil())
+				Expect(rec.TorrentHash).To(Equal("newer"))
+			},
+		)
+
+		It(
+			"finds a multi-season pack's record for either season's episode",
+			func() {
+				ad := time.Now()
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "The Black Sea", Year: 2024, TvdbID: 9001,
+					Seasons: []SeasonSeed{
+						{
+							Number: 1,
+							Episodes: []EpisodeSeed{
+								{Number: 1, Title: "One", AirDate: &ad},
+							},
+						},
+						{
+							Number: 2,
+							Episodes: []EpisodeSeed{
+								{Number: 1, Title: "Two", AirDate: &ad},
+							},
+						},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				s1e1 := show.Edges.Seasons[0].Edges.Episodes[0].ID
+				s2e1 := show.Edges.Seasons[1].Edges.Episodes[0].ID
+				now := time.Now()
+				_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+					Title: "pack", Size: 1, TorrentHash: "pack",
+					Status:             downloadrecord.StatusCompleted,
+					EpisodeID:          s1e1,
+					EpisodeIDs:         []uint32{s2e1},
+					DownloadClientName: clientName,
+					ImportedAt:         &now,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				for _, id := range []uint32{s1e1, s2e1} {
+					rec, err := store.FindSeedingDownloadRecord(ctx, 0, id)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(rec).NotTo(BeNil())
+					Expect(rec.TorrentHash).To(Equal("pack"))
+				}
+			},
+		)
+
+		It("is nil with nothing to ask about", func() {
+			createRec("no-import", downloadrecord.StatusDownloading)
+			rec, err := store.FindSeedingDownloadRecord(ctx, movieID, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec).To(BeNil())
+		})
+	})
+
+	Describe("ListReleaseGrabs", func() {
+		grab := func(
+			title, hash string,
+			status downloadrecord.Status,
+			movie, episode uint32,
+		) {
+			GinkgoHelper()
+			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: title, Size: 1, TorrentHash: hash, Status: status,
+				MovieID: movie, EpisodeID: episode, DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		}
+		titles := func(recs []*ent.DownloadRecord) []string {
+			out := make([]string, 0, len(recs))
+			for _, r := range recs {
+				out = append(out, r.Title)
+			}
+			return out
+		}
+
+		It("finds the movie's records by title, ignoring case, or by hash", func() {
+			other, err := store.CreateMovie(ctx, CreateMovieParams{
+				Title:         "Arrival",
+				OriginalTitle: "Arrival",
+				Year:          2016,
+				TmdbID:        329865,
+				Status:        entmovie.StatusWanted,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			grab(
+				"Dune.2021.1080p",
+				"aaaa",
+				downloadrecord.StatusCompleted,
+				movieID,
+				0,
+			)
+			grab("renamed", "bbbb", downloadrecord.StatusFailed, movieID, 0)
+			grab(
+				"Dune.2021.2160p",
+				"cccc",
+				downloadrecord.StatusCompleted,
+				movieID,
+				0,
+			)
+			grab(
+				"Dune.2021.1080p",
+				"dddd",
+				downloadrecord.StatusCompleted,
+				other.ID,
+				0,
+			)
+
+			recs, err := store.ListReleaseGrabs(ctx, movieID, 0,
+				[]string{"bbbb"}, []string{"DUNE.2021.1080P"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles(recs)).To(ConsistOf("Dune.2021.1080p", "renamed"))
+			for _, r := range recs {
+				Expect(r.CreateTime).NotTo(BeZero())
+			}
+		})
+
+		It("leaves adoption proposals out", func() {
+			grab("Dune.2021.1080p", "aaaa", downloadrecord.StatusPending, movieID, 0)
+			grab(
+				"Dune.2021.1080p",
+				"bbbb",
+				downloadrecord.StatusDismissed,
+				movieID,
+				0,
+			)
+
+			recs, err := store.ListReleaseGrabs(ctx, movieID, 0,
+				[]string{"aaaa", "bbbb"}, []string{"Dune.2021.1080p"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recs).To(BeEmpty())
+		})
+
+		It("covers every episode of the show and no other show", func() {
+			ad := time.Now()
+			seed := func(title string, tvdb uint32) *ent.TVShow {
+				GinkgoHelper()
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: title, Year: 2024, TvdbID: tvdb,
+					Seasons: []SeasonSeed{
+						{
+							Number:   1,
+							Episodes: []EpisodeSeed{{Number: 1, AirDate: &ad}},
+						},
+						{
+							Number:   2,
+							Episodes: []EpisodeSeed{{Number: 1, AirDate: &ad}},
+						},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				return show
+			}
+			show := seed("The Black Sea", 9001)
+			seasons := show.Edges.Seasons
+			others := seed("The Red Sea", 9002).Edges.Seasons
+
+			grab("BS.S01E01", "aaaa", downloadrecord.StatusCompleted, 0,
+				seasons[0].Edges.Episodes[0].ID)
+			grab("BS.S02", "bbbb", downloadrecord.StatusDownloading, 0,
+				seasons[1].Edges.Episodes[0].ID)
+			grab("BS.S01E01", "cccc", downloadrecord.StatusCompleted, 0,
+				others[0].Edges.Episodes[0].ID)
+
+			recs, err := store.ListReleaseGrabs(ctx, 0, show.ID,
+				[]string{"bbbb", "cccc"}, []string{"bs.s01e01"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles(recs)).To(ConsistOf("BS.S01E01", "BS.S02"))
+		})
+
+		It("asks nothing without an item or anything to match", func() {
+			grab(
+				"Dune.2021.1080p",
+				"aaaa",
+				downloadrecord.StatusCompleted,
+				movieID,
+				0,
+			)
+
+			recs, err := store.ListReleaseGrabs(
+				ctx,
+				0,
+				0,
+				nil,
+				[]string{"Dune.2021.1080p"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recs).To(BeEmpty())
+
+			recs, err = store.ListReleaseGrabs(ctx, movieID, 0, nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recs).To(BeEmpty())
+		})
+	})
+
+	Describe("SetDownloadRecordReplaceMode", func() {
+		It("raises none -> upgrades -> all and refuses to lower", func() {
+			rec := createRec("replace-mode", downloadrecord.StatusDownloading)
+			Expect(store.SetDownloadRecordReplaceMode(
+				ctx, rec.ID, downloadrecord.ReplaceModeUpgrades,
+			)).To(Succeed())
+			Expect(store.SetDownloadRecordReplaceMode(
+				ctx, rec.ID, downloadrecord.ReplaceModeAll,
+			)).To(Succeed())
+			Expect(store.SetDownloadRecordReplaceMode(
+				ctx, rec.ID, downloadrecord.ReplaceModeUpgrades,
+			)).To(Succeed()) // no error...
+
+			got, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				got.ReplaceMode,
+			).To(Equal(downloadrecord.ReplaceModeAll))
+			// ...but no downgrade
+		})
+	})
+
+	Describe("ListDownloadingRecordsWithMovie", func() {
+		It("preloads client and movie", func() {
+			createRec("abc", downloadrecord.StatusDownloading)
+			createRec("def", downloadrecord.StatusCompleted)
+
+			recs, err := store.ListDownloadingRecordsWithMovie(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recs).To(HaveLen(1))
+			Expect(recs[0].DownloadClientName).To(Equal(clientName))
+			Expect(recs[0].Edges.Movie).NotTo(BeNil())
+		})
+	})
+
+	Describe("UpdateDownloadRecordStatus", func() {
+		It("updates the status", func() {
+			rec := createRec("abc", downloadrecord.StatusDownloading)
+			Expect(
+				store.UpdateDownloadRecordStatus(
+					ctx,
+					rec.ID,
+					downloadrecord.StatusImporting,
+				),
+			).To(Succeed())
+			got, _ := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(got.Status).To(Equal(downloadrecord.StatusImporting))
+		})
+	})
+
+	Describe("ListImportingDownloadRecords", func() {
+		It("returns only status=importing with edges preloaded", func() {
+			createRec("abc", downloadrecord.StatusImporting)
+			createRec("def", downloadrecord.StatusDownloading)
+
+			items, err := store.ListImportingDownloadRecords(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(items).To(HaveLen(1))
+			Expect(items[0].Edges.Movie).NotTo(BeNil())
+			Expect(items[0].DownloadClientName).To(Equal(clientName))
+		})
+	})
+
+	Describe("FindImportingDownloadRecordByID", func() {
+		It("returns the matching importing row with edges preloaded", func() {
+			rec := createRec("abc", downloadrecord.StatusImporting)
+			got, err := store.FindImportingDownloadRecordByID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Edges.Movie).NotTo(BeNil())
+			Expect(got.DownloadClientName).To(Equal(clientName))
+		})
+
+		It("returns NotFound for a record that is not importing", func() {
+			rec := createRec("abc", downloadrecord.StatusDownloading)
+			_, err := store.FindImportingDownloadRecordByID(ctx, rec.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+	})
+
+	Describe("SetDownloadRecordSavePath", func() {
+		It("persists the path", func() {
+			rec := createRec("abc", downloadrecord.StatusDownloading)
+			Expect(
+				store.SetDownloadRecordSavePath(ctx, rec.ID, "/data"),
+			).To(Succeed())
+			got, _ := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(got.SavePath).To(Equal("/data"))
+		})
+	})
+
+	Describe("RecordImportSuccess", func() {
+		It("writes media file, completes record, marks movie available", func() {
+			rec := createRec("abc", downloadrecord.StatusImporting)
+			err := store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+				RecordID: rec.ID, MovieID: movieID,
+				File: MediaFileRow{
+					Path: "/lib/dune.mkv", Size: 1024,
+					Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			got, _ := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(got.Status).To(Equal(downloadrecord.StatusCompleted))
+
+			m, _ := client.Movie.Get(ctx, movieID)
+			Expect(m.Status).To(Equal(entmovie.StatusAvailable))
+
+			count, _ := client.MediaFile.Query().Count(ctx)
+			Expect(count).To(Equal(1))
+		})
+
+		It("stores the release name's parse, not the renamed path's", func() {
+			rec := createRec("def", downloadrecord.StatusImporting)
+			parsed := library.Parse("Dune.2021.2160p.WEB-DL.x265-GRP.mkv")
+			Expect(store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+				RecordID: rec.ID, MovieID: movieID,
+				File: MediaFileRow{
+					Path: "/lib/Dune (2021)/Dune (2021) [2160p].mkv", Size: 1,
+					Parsed: &parsed,
+				},
+			})).To(Succeed())
+
+			mf, _ := client.MediaFile.Query().Only(ctx)
+			Expect(mf.ParsedSource).To(Equal("WEB-DL"))
+			Expect(mf.ParsedCodec).To(Equal("HEVC"))
+		})
+
+		When("the media file path is empty", func() {
+			It("rolls back, leaving record + movie unchanged", func() {
+				rec := createRec("abc", downloadrecord.StatusImporting)
+				err := store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+					RecordID: rec.ID, MovieID: movieID,
+					File: MediaFileRow{Path: "", Size: 1},
+				})
+				Expect(err).To(HaveOccurred())
+
+				got, _ := client.DownloadRecord.Get(ctx, rec.ID)
+				Expect(got.Status).To(Equal(downloadrecord.StatusImporting))
+
+				m, _ := client.Movie.Get(ctx, movieID)
+				Expect(m.Status).To(Equal(entmovie.StatusWanted))
+
+				count, _ := client.MediaFile.Query().Count(ctx)
+				Expect(count).To(Equal(0))
+			})
+		})
+
+		It(
+			"persists probe columns and stamps probed_at when File.Probe is set",
+			func() {
+				rec := createRec("abc", downloadrecord.StatusImporting)
+				err := store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+					RecordID: rec.ID, MovieID: movieID,
+					File: MediaFileRow{
+						Path: "/lib/dune.mkv", Size: 1024,
+						Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+						Probe: &ffmpeg.Info{
+							Container: "matroska", DurationSec: 5400,
+							VideoCodec: "h264", Width: 1920, Height: 1080,
+							AudioCodec: "aac", AudioChannels: 2,
+							BitrateBPS: 8_000_000,
+						},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				mf, err := client.MediaFile.Query().Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mf.Container).To(Equal("matroska"))
+				Expect(mf.DurationSeconds).To(Equal(uint32(5400)))
+				Expect(mf.VideoCodec).To(Equal("h264"))
+				Expect(mf.Width).To(Equal(uint16(1920)))
+				Expect(mf.Height).To(Equal(uint16(1080)))
+				Expect(mf.AudioCodec).To(Equal("aac"))
+				Expect(mf.AudioChannels).To(Equal(uint8(2)))
+				Expect(mf.Bitrate).To(Equal(uint32(8_000_000)))
+				Expect(mf.ProbedAt).NotTo(BeNil())
+			},
+		)
+
+		It("leaves probed_at nil when File.Probe is nil", func() {
+			rec := createRec("abc", downloadrecord.StatusImporting)
+			err := store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+				RecordID: rec.ID, MovieID: movieID,
+				File: MediaFileRow{
+					Path: "/lib/dune.mkv", Size: 1024,
+					Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			mf, err := client.MediaFile.Query().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mf.ProbedAt).To(BeNil())
+			Expect(mf.VideoCodec).To(BeEmpty())
+		})
+
+		It("queues a transcode job when QueueTranscode is true", func() {
+			rec := createRec("qt-true", downloadrecord.StatusImporting)
+			err := store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+				RecordID: rec.ID, MovieID: movieID, QueueTranscode: true,
+				File: MediaFileRow{Path: "/lib/dune.mkv", Size: 1024},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			mf, err := client.MediaFile.Query().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := client.TranscodeJob.Query().
+				Where(transcodejob.HasMediaFileWith(mediafile.ID(mf.ID))).
+				Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+		})
+
+		It("queues no transcode job when QueueTranscode is false", func() {
+			rec := createRec("qt-false", downloadrecord.StatusImporting)
+			err := store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+				RecordID: rec.ID, MovieID: movieID,
+				File: MediaFileRow{Path: "/lib/dune.mkv", Size: 1024},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := client.TranscodeJob.Query().Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(0))
+		})
+	})
+
+	Describe("album imports", func() {
+		var (
+			albumID  uint32
+			trackIDs []uint32
+			recID    uint32
+		)
+
+		BeforeEach(func() {
+			a, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-1", Name: "Nirvana",
+				Albums: []AlbumSeed{
+					{MBID: "rg-1", Title: "Nevermind", Type: "album"},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			albumID = a.Edges.Albums[0].ID
+			trackIDs = make([]uint32, 0, 2)
+			for i, title := range []string{"One", "Two"} {
+				tr, err := client.Track.Create().
+					SetMbid(fmt.Sprintf("t-%d", i)).
+					SetTitle(title).
+					SetDisc(1).
+					SetPosition(uint16(i + 1)).
+					SetAlbumID(albumID).
+					Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				trackIDs = append(trackIDs, tr.ID)
+			}
+			Expect(client.Album.UpdateOneID(albumID).
+				SetStatus(entalbum.StatusDownloading).Exec(ctx)).To(Succeed())
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "album-import",
+				Status: downloadrecord.StatusImporting, AlbumID: albumID,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			recID = rec.ID
+		})
+
+		albumStatus := func() entalbum.Status {
+			GinkgoHelper()
+			return client.Album.GetX(ctx, albumID).Status
+		}
+
+		file := func(i int) AdoptAlbumFile {
+			return AdoptAlbumFile{
+				TrackID: trackIDs[i], Path: fmt.Sprintf("/music/%d.flac", i),
+				Quality: "flac", Format: "flac", Size: 10,
+			}
+		}
+
+		It(
+			"eager-loads the album, its artist and tracks onto the importing record",
+			func() {
+				rec, err := store.FindImportingDownloadRecordByID(ctx, recID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec.Edges.Album).NotTo(BeNil())
+				Expect(rec.Edges.Album.Edges.Artist).NotTo(BeNil())
+				Expect(rec.Edges.Album.Edges.Tracks).To(HaveLen(2))
+				Expect(rec.Edges.Album.Edges.Tracks[0].Title).To(Equal("One"))
+			},
+		)
+
+		It("completes the record and makes a fully covered album available", func() {
+			Expect(
+				store.RecordAlbumImportSuccess(ctx, RecordAlbumImportSuccessParams{
+					RecordID: recID, AlbumID: albumID,
+					Files: []AdoptAlbumFile{file(0), file(1)},
+				}),
+			).To(Succeed())
+
+			rec := client.DownloadRecord.GetX(ctx, recID)
+			Expect(rec.Status).To(Equal(downloadrecord.StatusCompleted))
+			Expect(rec.ImportedAt).NotTo(BeNil())
+			Expect(albumStatus()).To(Equal(entalbum.StatusAvailable))
+			files := client.MediaFile.Query().AllX(ctx)
+			Expect(files).To(HaveLen(2))
+			for _, f := range files {
+				Expect(f.Source).To(Equal(mediafile.SourceAuto))
+			}
+		})
+
+		It("sends a partially covered album back to wanted", func() {
+			Expect(
+				store.RecordAlbumImportSuccess(ctx, RecordAlbumImportSuccessParams{
+					RecordID: recID, AlbumID: albumID,
+					Files: []AdoptAlbumFile{file(0)},
+				}),
+			).To(Succeed())
+
+			Expect(albumStatus()).To(Equal(entalbum.StatusWanted))
+			Expect(client.DownloadRecord.GetX(ctx, recID).Status).
+				To(Equal(downloadrecord.StatusCompleted))
+		})
+
+		It("rolls everything back when a file cannot be recorded", func() {
+			bad := file(1)
+			bad.TrackID = 9999
+			err := store.RecordAlbumImportSuccess(
+				ctx,
+				RecordAlbumImportSuccessParams{
+					RecordID: recID, AlbumID: albumID,
+					Files: []AdoptAlbumFile{file(0), bad},
+				},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(client.MediaFile.Query().CountX(ctx)).To(Equal(0))
+			Expect(client.DownloadRecord.GetX(ctx, recID).Status).
+				To(Equal(downloadrecord.StatusImporting))
+		})
+
+		It("parks a downloading album at failed on a terminal failure", func() {
+			Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+				RecordID: recID, AlbumID: albumID, Terminal: true,
+				Reason: "no audio", Attempts: 1,
+			})).To(Succeed())
+
+			Expect(albumStatus()).To(Equal(entalbum.StatusFailed))
+			Expect(client.Album.GetX(ctx, albumID).FailureReason).
+				To(Equal("no audio"))
+			Expect(client.DownloadRecord.GetX(ctx, recID).Status).
+				To(Equal(downloadrecord.StatusFailed))
+		})
+
+		It(
+			"leaves an album that holds a file as it is on a terminal failure",
+			func() {
+				client.MediaFile.Create().
+					SetPath("/music/kept.flac").SetSize(1).SetQuality("flac").
+					SetFormat("flac").SetSource(mediafile.SourceAuto).
+					SetTrackID(trackIDs[0]).SaveX(ctx)
+				Expect(client.Album.UpdateOneID(albumID).
+					SetStatus(entalbum.StatusAvailable).Exec(ctx)).To(Succeed())
+
+				Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+					RecordID: recID, AlbumID: albumID, Terminal: true,
+					Reason: "no audio", Attempts: 1,
+				})).To(Succeed())
+
+				Expect(albumStatus()).To(Equal(entalbum.StatusAvailable))
+			},
+		)
+
+		It("does not touch the album on a retryable failure", func() {
+			Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+				RecordID: recID, AlbumID: albumID, Attempts: 1,
+			})).To(Succeed())
+
+			Expect(albumStatus()).To(Equal(entalbum.StatusDownloading))
+		})
+	})
+
+	Describe("RecordImportFailure", func() {
+		When("non-terminal", func() {
+			It(
+				"bumps attempts, leaves status importing, leaves movie wanted",
+				func() {
+					rec := createRec("abc", downloadrecord.StatusImporting)
+					err := store.RecordImportFailure(ctx, RecordImportFailureParams{
+						RecordID: rec.ID, MovieID: movieID,
+						Terminal: false, Reason: "tmp", Attempts: 2,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					got, _ := client.DownloadRecord.Get(ctx, rec.ID)
+					Expect(got.Status).To(Equal(downloadrecord.StatusImporting))
+					Expect(got.ImportAttempts).To(Equal(uint8(2)))
+
+					m, _ := client.Movie.Get(ctx, movieID)
+					Expect(m.Status).To(Equal(entmovie.StatusWanted))
+				},
+			)
+		})
+
+		When("terminal", func() {
+			It("flips record + movie to failed with reason", func() {
+				rec := createRec("abc", downloadrecord.StatusImporting)
+				err := store.RecordImportFailure(ctx, RecordImportFailureParams{
+					RecordID: rec.ID, MovieID: movieID,
+					Terminal: true, Reason: "bad file", Attempts: 5,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				got, _ := client.DownloadRecord.Get(ctx, rec.ID)
+				Expect(got.Status).To(Equal(downloadrecord.StatusFailed))
+				Expect(got.FailureReason).To(Equal("bad file"))
+
+				m, _ := client.Movie.Get(ctx, movieID)
+				Expect(m.Status).To(Equal(entmovie.StatusFailed))
+				Expect(m.FailureReason).To(Equal("bad file"))
+			})
+
+			// Both episode cases below cover the ErrEpisodeHasFile path: the
+			// importer declines every episode a season-pack upgrade selected
+			// because each already holds a file, and the record fails as
+			// terminal — but "wanted" would claim the episode is missing when
+			// it is not.
+			It(
+				"leaves an episode with a media file alone instead of "+
+					"reverting it to wanted",
+				func() {
+					show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+						Title: "The Black Sea", Year: 2024, TvdbID: 9201,
+						Seasons: []SeasonSeed{{
+							Number:   1,
+							Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+						}},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					episodeID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+					_, err = client.Episode.UpdateOneID(episodeID).
+						SetStatus(episode.StatusAvailable).Save(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					_, err = client.MediaFile.Create().
+						SetPath("/lib/pilot.mkv").SetSize(10).
+						SetEpisodeID(episodeID).Save(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					rec, err := store.CreateDownloadRecord(
+						ctx, CreateDownloadRecordParams{
+							Title: "t", Size: 1, TorrentHash: "tv-hasfile",
+							Status:             downloadrecord.StatusImporting,
+							EpisodeID:          episodeID,
+							DownloadClientName: clientName,
+						},
+					)
+					Expect(err).NotTo(HaveOccurred())
+
+					err = store.RecordImportFailure(ctx, RecordImportFailureParams{
+						RecordID: rec.ID, EpisodeID: episodeID,
+						Terminal: true, Reason: "already have it", Attempts: 1,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					e, _ := client.Episode.Get(ctx, episodeID)
+					Expect(e.Status).To(Equal(episode.StatusAvailable))
+
+					got, _ := client.DownloadRecord.Get(ctx, rec.ID)
+					Expect(got.Status).To(Equal(downloadrecord.StatusFailed))
+				},
+			)
+
+			It("still reverts a fileless episode to wanted", func() {
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "The Black Sea", Year: 2024, TvdbID: 9202,
+					Seasons: []SeasonSeed{{
+						Number:   1,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+					}},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				episodeID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+				_, err = client.Episode.UpdateOneID(episodeID).
+					SetStatus(episode.StatusDownloading).Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				rec, err := store.CreateDownloadRecord(
+					ctx, CreateDownloadRecordParams{
+						Title: "t", Size: 1, TorrentHash: "tv-nofile",
+						Status:             downloadrecord.StatusImporting,
+						EpisodeID:          episodeID,
+						DownloadClientName: clientName,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = store.RecordImportFailure(ctx, RecordImportFailureParams{
+					RecordID: rec.ID, EpisodeID: episodeID,
+					Terminal: true, Reason: "corrupt", Attempts: 1,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				e, _ := client.Episode.Get(ctx, episodeID)
+				Expect(e.Status).To(Equal(episode.StatusWanted))
+			})
+		})
+	})
+
+	Describe("MarkWantedRecordEpisodesImporting", func() {
+		It("moves a record's own wanted episodes, leaving the season alone", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Black Sea", Year: 2024, TvdbID: 9204,
+				Seasons: []SeasonSeed{{
+					Number: 1,
+					Episodes: []EpisodeSeed{
+						{Number: 1, Title: "Pilot"},
+						{Number: 2, Title: "Second"},
+					},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			eps := show.Edges.Seasons[0].Edges.Episodes
+			rec, err := store.CreateDownloadRecord(
+				ctx, CreateDownloadRecordParams{
+					Title: "t", Size: 1, TorrentHash: "adopt-mark",
+					Status:             downloadrecord.StatusImporting,
+					EpisodeID:          eps[0].ID,
+					DownloadClientName: clientName,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.MarkWantedRecordEpisodesImporting(ctx, rec.ID)).
+				To(Succeed())
+
+			linked, _ := client.Episode.Get(ctx, eps[0].ID)
+			Expect(linked.Status).To(Equal(episode.StatusImporting))
+			other, _ := client.Episode.Get(ctx, eps[1].ID)
+			Expect(other.Status).To(Equal(episode.StatusWanted),
+				"an episode this record does not link is not its business")
+		})
+
+		// A whole-series adoption links the show's every numbered episode, the
+		// announced-but-unaired ones and seasons the torrent never held among
+		// them. Moving those to importing parks them there for as long as a
+		// hold lasts, out of every missing search.
+		It("moves only the anchor of a set wider than the torrent", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Black Sea", Year: 2024, TvdbID: 9206,
+				Seasons: []SeasonSeed{
+					{
+						Number:   1,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+					},
+					{
+						Number:   2,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Announced"}},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			anchor := show.Edges.Seasons[0].Edges.Episodes[0].ID
+			beyond := show.Edges.Seasons[1].Edges.Episodes[0].ID
+			rec, err := store.CreateDownloadRecord(
+				ctx, CreateDownloadRecordParams{
+					Title: "t", Size: 1, TorrentHash: "adopt-integrale",
+					Status:             downloadrecord.StatusImporting,
+					EpisodeID:          anchor,
+					EpisodeIDs:         []uint32{beyond},
+					DownloadClientName: clientName,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.MarkWantedRecordEpisodesImporting(ctx, rec.ID)).
+				To(Succeed())
+
+			a, _ := client.Episode.Get(ctx, anchor)
+			Expect(a.Status).To(Equal(episode.StatusImporting))
+			b, _ := client.Episode.Get(ctx, beyond)
+			Expect(b.Status).To(Equal(episode.StatusWanted))
+		})
+
+		It("leaves an episode that already holds a file alone", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Black Sea", Year: 2024, TvdbID: 9205,
+				Seasons: []SeasonSeed{{
+					Number:   1,
+					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			episodeID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+			_, err = client.Episode.UpdateOneID(episodeID).
+				SetStatus(episode.StatusAvailable).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			rec, err := store.CreateDownloadRecord(
+				ctx, CreateDownloadRecordParams{
+					Title: "t", Size: 1, TorrentHash: "adopt-upgrade",
+					Status:             downloadrecord.StatusImporting,
+					EpisodeID:          episodeID,
+					DownloadClientName: clientName,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.MarkWantedRecordEpisodesImporting(ctx, rec.ID)).
+				To(Succeed())
+
+			e, _ := client.Episode.Get(ctx, episodeID)
+			Expect(e.Status).To(Equal(episode.StatusAvailable),
+				"an upgrade has nothing to walk back to on failure")
+		})
+	})
+
+	Describe("RetryFailedDownloadRecord", func() {
+		It("walks a terminal failure back to importing, media included", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Black Sea", Year: 2024, TvdbID: 9203,
+				Seasons: []SeasonSeed{{
+					Number:   1,
+					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			episodeID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+			_, err = client.Episode.UpdateOneID(episodeID).
+				SetStatus(episode.StatusDownloading).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			rec, err := store.CreateDownloadRecord(
+				ctx, CreateDownloadRecordParams{
+					Title: "t", Size: 1, TorrentHash: "tv-retry",
+					Status:             downloadrecord.StatusImporting,
+					EpisodeID:          episodeID,
+					DownloadClientName: clientName,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+				RecordID: rec.ID, EpisodeID: episodeID,
+				Terminal: true, Reason: "stat save path", Attempts: 3,
+			})).To(Succeed())
+
+			Expect(store.RetryFailedDownloadRecord(ctx, rec.ID)).To(Succeed())
+
+			got, _ := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(got.Status).To(Equal(downloadrecord.StatusImporting))
+			Expect(got.ImportAttempts).To(BeZero(),
+				"a retry that inherited the count would fail on its first run")
+			Expect(got.FailureReason).To(BeEmpty())
+
+			e, _ := client.Episode.Get(ctx, episodeID)
+			Expect(e.Status).To(Equal(episode.StatusImporting),
+				"leaving it wanted lets the missing search grab a duplicate")
+		})
+
+		It("refuses a record that has not failed", func() {
+			rec, err := store.CreateDownloadRecord(
+				ctx, CreateDownloadRecordParams{
+					Title: "t", Size: 1, TorrentHash: "retry-live",
+					Status:             downloadrecord.StatusDownloading,
+					DownloadClientName: clientName,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ent.IsNotFound(store.RetryFailedDownloadRecord(ctx, rec.ID))).
+				To(BeTrue(), "the status guard has to be in the query")
+		})
+	})
+
+	Describe("MarkEpisodeDownloading", func() {
+		newEpisode := func(tvdb uint32) uint32 {
+			GinkgoHelper()
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Marked", Year: 2024, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{
+					Number:   1,
+					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			return show.Edges.Seasons[0].Edges.Episodes[0].ID
+		}
+
+		It("moves a wanted episode", func() {
+			id := newEpisode(9301)
+			moved, err := store.MarkEpisodeDownloading(ctx, id)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(moved).To(BeTrue())
+			e, _ := client.Episode.Get(ctx, id)
+			Expect(e.Status).To(Equal(episode.StatusDownloading))
+		})
+
+		It("leaves an episode that already has a file alone", func() {
+			id := newEpisode(9302)
+			_, err := client.Episode.UpdateOneID(id).
+				SetStatus(episode.StatusAvailable).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			moved, err := store.MarkEpisodeDownloading(ctx, id)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(moved).To(BeFalse())
+			e, _ := client.Episode.Get(ctx, id)
+			Expect(e.Status).To(Equal(episode.StatusAvailable))
+		})
+	})
+
+	Describe("RecordEpisodeImportSuccess", func() {
+		createEpisode := func(tvdb uint32) uint32 {
+			GinkgoHelper()
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Black Sea", Year: 2024, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{
+					Number:   1,
+					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			return show.Edges.Seasons[0].Edges.Episodes[0].ID
+		}
+
+		It(
+			"persists probe columns and stamps probed_at when File.Probe is set",
+			func() {
+				episodeID := createEpisode(9101)
+				rec, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "t", Size: 1, TorrentHash: "tv",
+						Status:             downloadrecord.StatusImporting,
+						EpisodeID:          episodeID,
+						DownloadClientName: clientName,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = store.RecordEpisodeImportSuccess(
+					ctx,
+					RecordEpisodeImportSuccessParams{
+						RecordID: rec.ID, EpisodeID: episodeID,
+						File: MediaFileRow{
+							Path: "/lib/bear.mkv", Size: 1024,
+							Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+							Probe: &ffmpeg.Info{
+								Container: "matroska", DurationSec: 1500,
+								VideoCodec: "hevc", Width: 1920, Height: 1080,
+								AudioCodec: "aac", AudioChannels: 2,
+								BitrateBPS: 6_000_000,
+							},
+						},
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				mf, err := client.MediaFile.Query().Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mf.Container).To(Equal("matroska"))
+				Expect(mf.DurationSeconds).To(Equal(uint32(1500)))
+				Expect(mf.VideoCodec).To(Equal("hevc"))
+				Expect(mf.Width).To(Equal(uint16(1920)))
+				Expect(mf.Height).To(Equal(uint16(1080)))
+				Expect(mf.AudioCodec).To(Equal("aac"))
+				Expect(mf.AudioChannels).To(Equal(uint8(2)))
+				Expect(mf.Bitrate).To(Equal(uint32(6_000_000)))
+				Expect(mf.ProbedAt).NotTo(BeNil())
+			},
+		)
+
+		It("leaves probed_at nil when File.Probe is nil", func() {
+			episodeID := createEpisode(9102)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "tv2",
+				Status:             downloadrecord.StatusImporting,
+				EpisodeID:          episodeID,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			err = store.RecordEpisodeImportSuccess(
+				ctx,
+				RecordEpisodeImportSuccessParams{
+					RecordID: rec.ID, EpisodeID: episodeID,
+					File: MediaFileRow{
+						Path: "/lib/bear.mkv", Size: 1024,
+						Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+					},
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			mf, err := client.MediaFile.Query().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mf.ProbedAt).To(BeNil())
+			Expect(mf.VideoCodec).To(BeEmpty())
+		})
+
+		It("queues a transcode job when QueueTranscode is true", func() {
+			episodeID := createEpisode(9103)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "tv3",
+				Status:             downloadrecord.StatusImporting,
+				EpisodeID:          episodeID,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			err = store.RecordEpisodeImportSuccess(
+				ctx,
+				RecordEpisodeImportSuccessParams{
+					RecordID: rec.ID, EpisodeID: episodeID, QueueTranscode: true,
+					File: MediaFileRow{Path: "/lib/bear.mkv", Size: 1024},
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			mf, err := client.MediaFile.Query().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := client.TranscodeJob.Query().
+				Where(transcodejob.HasMediaFileWith(mediafile.ID(mf.ID))).
+				Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+		})
+
+		It("queues no transcode job when QueueTranscode is false", func() {
+			episodeID := createEpisode(9104)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "tv4",
+				Status:             downloadrecord.StatusImporting,
+				EpisodeID:          episodeID,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			err = store.RecordEpisodeImportSuccess(
+				ctx,
+				RecordEpisodeImportSuccessParams{
+					RecordID: rec.ID, EpisodeID: episodeID,
+					File: MediaFileRow{Path: "/lib/bear.mkv", Size: 1024},
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := client.TranscodeJob.Query().Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(0))
+		})
+	})
+
+	Describe("DeleteCompletedDownloadRecordsBefore", func() {
+		It("deletes only completed records older than cutoff", func() {
+			old := createRec("oldc", downloadrecord.StatusCompleted)
+			_, err := client.DownloadRecord.UpdateOneID(old.ID).
+				SetImportedAt(time.Now().Add(-40 * 24 * time.Hour)).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			fresh := createRec("newc", downloadrecord.StatusCompleted)
+			_, err = client.DownloadRecord.UpdateOneID(fresh.ID).
+				SetImportedAt(time.Now()).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			createRec("oldf", downloadrecord.StatusFailed)
+
+			n, err := store.DeleteCompletedDownloadRecordsBefore(
+				ctx, time.Now().Add(-30*24*time.Hour), nil,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			_, err = client.DownloadRecord.Get(ctx, old.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+			_, err = client.DownloadRecord.Get(ctx, fresh.ID)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("spares kept hashes and still purges hashless records", func() {
+			aged := time.Now().Add(-40 * 24 * time.Hour)
+			kept := createRec("seeding", downloadrecord.StatusCompleted)
+			gone := createRec("removed", downloadrecord.StatusCompleted)
+			hashless := createRec("tmp", downloadrecord.StatusCompleted)
+			for _, id := range []uint32{kept.ID, gone.ID} {
+				_, err := client.DownloadRecord.UpdateOneID(id).
+					SetImportedAt(aged).Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+			}
+			_, err := client.DownloadRecord.UpdateOneID(hashless.ID).
+				SetImportedAt(aged).ClearTorrentHash().Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := store.DeleteCompletedDownloadRecordsBefore(
+				ctx, time.Now().Add(-30*24*time.Hour), []string{"seeding"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(2))
+
+			_, err = client.DownloadRecord.Get(ctx, kept.ID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.DownloadRecord.Get(ctx, gone.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+			_, err = client.DownloadRecord.Get(ctx, hashless.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+	})
+
+	Describe("DeleteFailedDownloadRecordsBefore", func() {
+		It("deletes only failed records older than cutoff", func() {
+			old := createRec("oldf", downloadrecord.StatusFailed)
+			_, err := client.DownloadRecord.UpdateOneID(old.ID).
+				SetUpdateTime(time.Now().Add(-20 * 24 * time.Hour)).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			fresh := createRec("newf", downloadrecord.StatusFailed)
+			createRec("comp", downloadrecord.StatusCompleted)
+
+			n, err := store.DeleteFailedDownloadRecordsBefore(
+				ctx, time.Now().Add(-14*24*time.Hour),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			_, err = client.DownloadRecord.Get(ctx, old.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+			_, err = client.DownloadRecord.Get(ctx, fresh.ID)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("ListActiveDownloadRecords", func() {
+		It("returns downloading+importing only with edges preloaded", func() {
+			createRec("dl", downloadrecord.StatusDownloading)
+			createRec("imp", downloadrecord.StatusImporting)
+			createRec("done", downloadrecord.StatusCompleted)
+			createRec("fail", downloadrecord.StatusFailed)
+
+			recs, err := store.ListActiveDownloadRecords(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recs).To(HaveLen(2))
+			for _, r := range recs {
+				Expect(r.Status).To(Or(
+					Equal(downloadrecord.StatusDownloading),
+					Equal(downloadrecord.StatusImporting)))
+				Expect(r.Edges.Movie).NotTo(BeNil())
+				Expect(r.DownloadClientName).To(Equal(clientName))
+			}
+		})
+	})
+
+	Describe("FindActiveDownloadRecordByID", func() {
+		It("returns the in-flight record with edges", func() {
+			rec := createRec("dl", downloadrecord.StatusDownloading)
+			got, err := store.FindActiveDownloadRecordByID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Edges.Movie).NotTo(BeNil())
+			Expect(got.DownloadClientName).To(Equal(clientName))
+		})
+
+		It("returns NotFound for a terminal record", func() {
+			rec := createRec("done", downloadrecord.StatusCompleted)
+			_, err := store.FindActiveDownloadRecordByID(ctx, rec.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+
+		It("finds a held record so the queue verbs can 409 it", func() {
+			rec := createRec("held", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, []schema.HoldReason{
+				{File: "/dl/f.mkv", Check: "resolution"},
+			})).To(Succeed())
+
+			got, err := store.FindActiveDownloadRecordByID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusHeld))
+		})
+	})
+
+	Describe("ListDownloadHistory", func() {
+		It("paginates completed+failed desc, excluding in-flight", func() {
+			createRec("a", downloadrecord.StatusCompleted)
+			createRec("b", downloadrecord.StatusFailed)
+			createRec("c", downloadrecord.StatusCompleted)
+			createRec("dl", downloadrecord.StatusDownloading)
+
+			page1, err := store.ListDownloadHistory(ctx, 2, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(page1.Records).To(HaveLen(2))
+			Expect(page1.NextCursor).NotTo(BeEmpty())
+			for _, r := range page1.Records {
+				Expect(r.Status).To(Or(
+					Equal(downloadrecord.StatusCompleted),
+					Equal(downloadrecord.StatusFailed)))
+				Expect(r.Edges.Movie).NotTo(BeNil())
+			}
+
+			page2, err := store.ListDownloadHistory(ctx, 2, page1.NextCursor)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(page2.Records).To(HaveLen(1))
+			Expect(page2.NextCursor).To(BeEmpty())
+		})
+
+		It("400-style error on a malformed cursor", func() {
+			_, err := store.ListDownloadHistory(ctx, 10, "!!notbase64!!")
+			Expect(err).To(MatchError(ContainSubstring("decode cursor")))
+		})
+	})
+
+	Describe("DeleteDownloadRecord", func() {
+		It("deletes one record and NotFounds when absent", func() {
+			rec := createRec("x", downloadrecord.StatusFailed)
+			Expect(store.DeleteDownloadRecord(ctx, rec.ID)).To(Succeed())
+			_, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+			Expect(ent.IsNotFound(
+				store.DeleteDownloadRecord(ctx, rec.ID))).To(BeTrue())
+		})
+	})
+
+	Describe("DeleteAllCompletedDownloadRecords", func() {
+		It("removes every completed record, keeping failed", func() {
+			createRec("c1", downloadrecord.StatusCompleted)
+			createRec("c2", downloadrecord.StatusCompleted)
+			createRec("f1", downloadrecord.StatusFailed)
+
+			n, err := store.DeleteAllCompletedDownloadRecords(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(2))
+
+			rest, err := store.ListDownloadHistory(ctx, 50, "")
+			Expect(err).NotTo(HaveOccurred())
+			for _, r := range rest.Records {
+				Expect(r.Status).To(Equal(downloadrecord.StatusFailed))
+			}
+		})
+	})
+
+	Describe("RevertMovieToWantedIfNoFile", func() {
+		It("reverts a file-less movie but leaves a movie with a file", func() {
+			// movieID (from BeforeEach) has no media file — flip to available
+			// then expect revert to wanted.
+			_, err := client.Movie.UpdateOneID(movieID).
+				SetStatus(entmovie.StatusAvailable).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			m2, err := store.CreateMovie(ctx, CreateMovieParams{
+				Title:         "Arrival",
+				OriginalTitle: "Arrival",
+				Year:          2016,
+				TmdbID:        329865,
+				Status:        entmovie.StatusAvailable,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.MediaFile.Create().
+				SetPath("/lib/arrival.mkv").SetSize(10).
+				SetQuality("1080p").SetFormat("mkv").
+				SetReleaseGroup("G").SetMovieID(m2.ID).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.RevertMovieToWantedIfNoFile(ctx, movieID)).To(Succeed())
+			Expect(store.RevertMovieToWantedIfNoFile(ctx, m2.ID)).To(Succeed())
+
+			a, _ := client.Movie.Get(ctx, movieID)
+			b, _ := client.Movie.Get(ctx, m2.ID)
+			Expect(a.Status).To(Equal(entmovie.StatusWanted))
+			Expect(b.Status).To(Equal(entmovie.StatusAvailable))
+		})
+	})
+
+	Describe("RevertOrphanedDownloadingEpisodes", func() {
+		// seedDownloadingSeason creates a show with one season of n episodes,
+		// all flipped to "downloading", and returns their IDs.
+		seedDownloadingSeason := func(tvdb uint32, n int) []uint32 {
+			GinkgoHelper()
+			eps := make([]EpisodeSeed, n)
+			for i := range eps {
+				eps[i] = EpisodeSeed{Number: uint16(i + 1), Title: "E"}
+			}
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Show", Year: 2020, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{Number: 1, Episodes: eps}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			ids := make([]uint32, 0, n)
+			for _, e := range show.Edges.Seasons[0].Edges.Episodes {
+				_, err := client.Episode.UpdateOneID(e.ID).
+					SetStatus(episode.StatusDownloading).Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				ids = append(ids, e.ID)
+			}
+			return ids
+		}
+
+		It("reverts a stranded season pack with no active record", func() {
+			ids := seedDownloadingSeason(7001, 3)
+
+			n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(3))
+			for _, id := range ids {
+				e, _ := client.Episode.Get(ctx, id)
+				Expect(e.Status).To(Equal(episode.StatusWanted))
+			}
+		})
+
+		It("spares every episode an active record covers", func() {
+			ids := seedDownloadingSeason(7002, 3)
+			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "pack", Size: 1, TorrentHash: "h",
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          ids[0],
+				EpisodeIDs:         ids,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(0))
+			for _, id := range ids {
+				e, _ := client.Episode.Get(ctx, id)
+				Expect(e.Status).To(Equal(episode.StatusDownloading))
+			}
+		})
+
+		It("reverts a season sibling no active record covers", func() {
+			ids := seedDownloadingSeason(7008, 3)
+			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "pack", Size: 1, TorrentHash: "h-partial",
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          ids[0],
+				EpisodeIDs:         ids[:2],
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+			stranded, _ := client.Episode.Get(ctx, ids[2])
+			Expect(stranded.Status).To(Equal(episode.StatusWanted))
+		})
+
+		It("spares every episode a held record covers", func() {
+			ids := seedDownloadingSeason(7004, 3)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "pack", Size: 1, TorrentHash: "held-h",
+				Status:             downloadrecord.StatusImporting,
+				EpisodeID:          ids[0],
+				EpisodeIDs:         ids,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, []schema.HoldReason{
+				{File: "/dl/e1.mkv", Check: "resolution"},
+			})).To(Succeed())
+
+			n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(0))
+			for _, id := range ids {
+				e, _ := client.Episode.Get(ctx, id)
+				Expect(e.Status).To(Equal(episode.StatusDownloading))
+			}
+		})
+
+		It(
+			"spares an in-flight episode with a file too, while a held "+
+				"record covers it",
+			func() {
+				ids := seedDownloadingSeason(7005, 2)
+				_, err := client.MediaFile.Create().
+					SetPath("/lib/e1.mkv").SetSize(10).
+					SetEpisodeID(ids[0]).Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				rec, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "pack", Size: 1, TorrentHash: "held-h2",
+						Status:             downloadrecord.StatusImporting,
+						EpisodeID:          ids[1],
+						EpisodeIDs:         ids,
+						DownloadClientName: clientName,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(store.HoldDownloadRecord(ctx, rec.ID, []schema.HoldReason{
+					{File: "/dl/e2.mkv", Check: "resolution"},
+				})).To(Succeed())
+
+				n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(0))
+				for _, id := range ids {
+					e, _ := client.Episode.Get(ctx, id)
+					Expect(e.Status).To(Equal(episode.StatusDownloading))
+				}
+			},
+		)
+
+		It(
+			"reverts an episode left paused by a record that has since gone",
+			func() {
+				// The homelab shape: a duplicate grab in season 2 was paused by
+				// hand, the season-scoped pause sync flipped the season's
+				// episodes with it, then the record was purged. Nothing resumes
+				// them, so the sweep is the only way out.
+				ids := seedDownloadingSeason(7007, 3)
+				for _, id := range ids {
+					_, err := client.Episode.UpdateOneID(id).
+						SetStatus(episode.StatusPaused).Save(ctx)
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+				n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(3))
+				for _, id := range ids {
+					e, _ := client.Episode.Get(ctx, id)
+					Expect(e.Status).To(Equal(episode.StatusWanted))
+				}
+			},
+		)
+
+		It(
+			"spares every season a multi-season pack covers",
+			func() {
+				eps := []EpisodeSeed{
+					{Number: 1, Title: "E1"}, {Number: 2, Title: "E2"},
+				}
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "Integrale", Year: 2015, TvdbID: 7006,
+					Seasons: []SeasonSeed{
+						{Number: 1, Episodes: eps},
+						{Number: 2, Episodes: eps},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				var all []uint32
+				for _, se := range show.Edges.Seasons {
+					for _, e := range se.Edges.Episodes {
+						_, err := client.Episode.UpdateOneID(e.ID).
+							SetStatus(episode.StatusDownloading).Save(ctx)
+						Expect(err).NotTo(HaveOccurred())
+						all = append(all, e.ID)
+					}
+				}
+				// The record anchors to season 1 and links both seasons —
+				// what a whole-series grab writes.
+				_, err = store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "pack", Size: 1, TorrentHash: "integrale-h",
+						Status:             downloadrecord.StatusDownloading,
+						EpisodeID:          all[0],
+						EpisodeIDs:         all,
+						DownloadClientName: clientName,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(0))
+				for _, id := range all {
+					e, _ := client.Episode.Get(ctx, id)
+					Expect(e.Status).To(Equal(episode.StatusDownloading))
+				}
+			},
+		)
+
+		It(
+			"reverts a stranded episode with a media file to available, not wanted",
+			func() {
+				// A stranded upgrade target: it has a file, so "wanted" would
+				// wrongly claim it's missing.
+				ids := seedDownloadingSeason(7003, 2)
+				_, err := client.MediaFile.Create().
+					SetPath("/lib/e1.mkv").SetSize(10).
+					SetEpisodeID(ids[0]).Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(2)) // both revert, to different statuses
+				withFile, _ := client.Episode.Get(ctx, ids[0])
+				fileless, _ := client.Episode.Get(ctx, ids[1])
+				Expect(withFile.Status).To(Equal(episode.StatusAvailable))
+				Expect(fileless.Status).To(Equal(episode.StatusWanted))
+			},
+		)
+	})
+
+	Describe("SyncDownloadStateForRecord", func() {
+		It("pauses then resumes a whole season's downloading episodes", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "S", Year: 2020, TvdbID: 8001,
+				Seasons: []SeasonSeed{{Number: 1, Episodes: []EpisodeSeed{
+					{Number: 1, Title: "E1"}, {Number: 2, Title: "E2"},
+				}}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			epIDs := make([]uint32, 0, len(show.Edges.Seasons[0].Edges.Episodes))
+			for _, e := range show.Edges.Seasons[0].Edges.Episodes {
+				_, err := client.Episode.UpdateOneID(e.ID).
+					SetStatus(episode.StatusDownloading).Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				epIDs = append(epIDs, e.ID)
+			}
+			// The season-pack shape: anchored on the first episode, linked to
+			// them all, as every grab path writes it.
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "pack", Size: 1, TorrentHash: "h",
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          epIDs[0],
+				EpisodeIDs:         epIDs,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.SyncDownloadStateForRecord(ctx, rec.ID, true)).
+				To(Succeed())
+			for _, id := range epIDs {
+				e, _ := client.Episode.Get(ctx, id)
+				Expect(e.Status).To(Equal(episode.StatusPaused))
+			}
+
+			Expect(store.SyncDownloadStateForRecord(ctx, rec.ID, false)).
+				To(Succeed())
+			for _, id := range epIDs {
+				e, _ := client.Episode.Get(ctx, id)
+				Expect(e.Status).To(Equal(episode.StatusDownloading))
+			}
+		})
+
+		It("leaves another record's episodes in the same season alone", func() {
+			// The homelab shape: a whole-series pack anchored in season 1
+			// covers season 2 as well, and a duplicate grab of one season-2
+			// episode is paused by hand. Season scope flipped the pack's eight
+			// other season-2 episodes with it and the resume — scoped to the
+			// pack's own anchor season — never reached them again.
+			eps := []EpisodeSeed{{Number: 1, Title: "E1"}, {Number: 2, Title: "E2"}}
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Integrale", Year: 2015, TvdbID: 8002,
+				Seasons: []SeasonSeed{
+					{Number: 1, Episodes: eps}, {Number: 2, Episodes: eps},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			var all []uint32
+			for _, se := range show.Edges.Seasons {
+				for _, e := range se.Edges.Episodes {
+					_, err := client.Episode.UpdateOneID(e.ID).
+						SetStatus(episode.StatusDownloading).Save(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					all = append(all, e.ID)
+				}
+			}
+			_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "integrale", Size: 1, TorrentHash: "ih",
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          all[0],
+				EpisodeIDs:         all,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			// A second, unrelated grab of one season-2 episode.
+			dup, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "dupe", Size: 1, TorrentHash: "dh",
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          all[2],
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.SyncDownloadStateForRecord(ctx, dup.ID, true)).
+				To(Succeed())
+			paused, _ := client.Episode.Get(ctx, all[2])
+			Expect(paused.Status).To(Equal(episode.StatusPaused))
+			for _, id := range []uint32{all[0], all[1], all[3]} {
+				e, _ := client.Episode.Get(ctx, id)
+				Expect(e.Status).To(Equal(episode.StatusDownloading))
+			}
+		})
+
+		It("is a no-op for a movie record", func() {
+			rec := createRec("mh", downloadrecord.StatusDownloading)
+			Expect(store.SyncDownloadStateForRecord(ctx, rec.ID, true)).
+				To(Succeed())
+		})
+	})
+
+	Describe("AllDownloadRecordHashes", func() {
+		It("returns every non-empty torrent hash as a set", func() {
+			createRec("H1", downloadrecord.StatusDownloading)
+			createRec("H2", downloadrecord.StatusCompleted)
+			createRec("", downloadrecord.StatusDownloading) // empty hash skipped
+
+			set, err := store.AllDownloadRecordHashes(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(set).To(HaveKey("H1"))
+			Expect(set).To(HaveKey("H2"))
+			Expect(set).NotTo(HaveKey(""))
+		})
+	})
+
+	Describe("DeletePendingDownloadRecord", func() {
+		// The hash set is what the adoption sweep calls "already tracked", and
+		// it does not look at status. That is why forgetting a proposal has to
+		// delete the row: dismissing one leaves its hash in here, and the
+		// torrent is never looked at again.
+		It("frees the torrent's hash, which dismissing does not", func() {
+			kept := createRec("DISMISSED", downloadrecord.StatusPending)
+			gone := createRec("FORGOTTEN", downloadrecord.StatusPending)
+
+			Expect(store.UpdateDownloadRecordStatus(
+				ctx, kept.ID, downloadrecord.StatusDismissed,
+			)).To(Succeed())
+			Expect(store.DeletePendingDownloadRecord(ctx, gone.ID)).To(BeTrue())
+
+			set, err := store.AllDownloadRecordHashes(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(set).To(HaveKey("DISMISSED"))
+			Expect(set).NotTo(HaveKey("FORGOTTEN"))
+		})
+
+		It("leaves a record that is not pending alone", func() {
+			rec := createRec("BUSY", downloadrecord.StatusDownloading)
+
+			Expect(store.DeletePendingDownloadRecord(ctx, rec.ID)).To(BeFalse())
+
+			set, err := store.AllDownloadRecordHashes(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(set).To(HaveKey("BUSY"))
+		})
+	})
+
+	Describe("CreateDownloadRecord adoption fields", func() {
+		It("persists save_path, quality, and failure_reason when set", func() {
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "h",
+				Status:        downloadrecord.StatusPending,
+				MovieID:       movieID,
+				SavePath:      "/data/t",
+				Quality:       "1080p",
+				FailureReason: "already have a file",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			got, _ := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(got.SavePath).To(Equal("/data/t"))
+			Expect(got.Quality).To(Equal("1080p"))
+			Expect(got.FailureReason).To(Equal("already have a file"))
+			Expect(got.Status).To(Equal(downloadrecord.StatusPending))
+		})
+	})
+
+	Describe("LatestImportedRecordForMovie", func() {
+		It("returns the most recent hash-carrying record for the movie", func() {
+			createRec("old", downloadrecord.StatusCompleted)
+			newest := createRec("new", downloadrecord.StatusCompleted)
+
+			got, err := store.LatestImportedRecordForMovie(ctx, movieID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.ID).To(Equal(newest.ID))
+		})
+
+		It("returns NotFound when the movie has no hash-carrying record", func() {
+			_, err := store.LatestImportedRecordForMovie(ctx, movieID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+	})
+
+	Describe("DeleteStalePendingAdoptions", func() {
+		// other-client pending: must never be touched when pruning "qb".
+		otherPending := func(hash string) *ent.DownloadRecord {
+			GinkgoHelper()
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: hash,
+				Status:             downloadrecord.StatusPending,
+				MovieID:            movieID,
+				DownloadClientName: "deluge",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			return rec
+		}
+
+		It("prunes only this client's pendings whose hash is gone", func() {
+			live := createRec("live", downloadrecord.StatusPending)
+			stale := createRec("stale", downloadrecord.StatusPending)
+			active := createRec(
+				"active",
+				downloadrecord.StatusDownloading,
+			) // not pending
+			other := otherPending(
+				"stale",
+			) // different client
+
+			n, err := store.DeleteStalePendingAdoptions(
+				ctx,
+				clientName,
+				[]string{"live"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			_, err = client.DownloadRecord.Get(ctx, stale.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+			for _, keep := range []*ent.DownloadRecord{live, active, other} {
+				_, err := client.DownloadRecord.Get(ctx, keep.ID)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		})
+
+		It(
+			"prunes every pending for the client when it reports no torrents",
+			func() {
+				createRec("a", downloadrecord.StatusPending)
+				createRec("b", downloadrecord.StatusPending)
+				other := otherPending("c")
+
+				n, err := store.DeleteStalePendingAdoptions(ctx, clientName, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(2))
+
+				_, err = client.DownloadRecord.Get(ctx, other.ID)
+				Expect(err).NotTo(HaveOccurred())
+			},
+		)
+
+		It("prunes the pendings of a client that is no longer enabled", func() {
+			kept := createRec("kept", downloadrecord.StatusPending)
+			orphan := otherPending("orphan")
+			active := createRec("active", downloadrecord.StatusDownloading)
+
+			n, err := store.DeleteOrphanedPendingAdoptions(ctx, []string{clientName})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			_, err = client.DownloadRecord.Get(ctx, orphan.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+			for _, keep := range []*ent.DownloadRecord{kept, active} {
+				_, err := client.DownloadRecord.Get(ctx, keep.ID)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		})
+
+		It("prunes against a listing longer than SQLite's bind limit", func() {
+			live := createRec("live", downloadrecord.StatusPending)
+			stale := createRec("stale", downloadrecord.StatusPending)
+			hashes := make([]string, 0, 40_001)
+			for i := range 40_000 {
+				hashes = append(hashes, fmt.Sprintf("h%d", i))
+			}
+			hashes = append(hashes, "live")
+
+			n, err := store.DeleteStalePendingAdoptions(ctx, clientName, hashes)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			_, err = client.DownloadRecord.Get(ctx, stale.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+			_, err = client.DownloadRecord.Get(ctx, live.ID)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("the hold lifecycle", func() {
+		reasons := []schema.HoldReason{{
+			File: "/dl/f.mkv", Check: "codec",
+			Expected: "hevc", Actual: "h264",
+		}}
+
+		createEpisodeRec := func(tvdb uint32) (*ent.DownloadRecord, uint32) {
+			GinkgoHelper()
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Hold", Year: 2024, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{
+					Number:   1,
+					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			epID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "eh",
+				Status:    downloadrecord.StatusImporting,
+				EpisodeID: epID, DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			return rec, epID
+		}
+
+		It("holds an importing record with its reasons", func() {
+			rec := createRec("h1", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+
+			got, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusHeld))
+			Expect(got.HoldReasons).To(Equal(reasons))
+		})
+
+		It("finds a held record by id with its owner loaded", func() {
+			rec := createRec("h2", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+
+			got, err := store.FindHeldDownloadRecordByID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Edges.Movie).NotTo(BeNil())
+
+			other := createRec("h3", downloadrecord.StatusImporting)
+			_, err = store.FindHeldDownloadRecordByID(ctx, other.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+
+		It("releases a held record for a bypassed re-import", func() {
+			rec := createRec("h4", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+			Expect(store.ReleaseHeldDownloadRecord(ctx, rec.ID)).To(Succeed())
+
+			got, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusImporting))
+			Expect(got.VerificationBypassed).To(BeTrue())
+			Expect(got.HoldReasons).To(BeEmpty())
+		})
+
+		It("fails a rejected movie record back to wanted when requeued", func() {
+			rec := createRec("h5", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+			Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "re-grab", true)).
+				To(Succeed())
+
+			got, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusFailed))
+			Expect(got.FailureReason).To(Equal("re-grab"))
+			m, err := client.Movie.Get(ctx, movieID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.Status).To(Equal(entmovie.StatusWanted))
+		})
+
+		It("leaves a rejected movie failed when not requeued", func() {
+			rec := createRec("h6", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+			Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", false)).
+				To(Succeed())
+
+			m, err := client.Movie.Get(ctx, movieID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.Status).To(Equal(entmovie.StatusFailed))
+			Expect(m.FailureReason).To(Equal("rejected"))
+		})
+
+		It("reverts a rejected episode to wanted on either path", func() {
+			for i, requeue := range []bool{true, false} {
+				rec, epID := createEpisodeRec(9200 + uint32(i))
+				Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+				Expect(
+					store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", requeue),
+				).
+					To(Succeed())
+
+				e, err := client.Episode.Get(ctx, epID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(e.Status).To(Equal(episode.StatusWanted))
+			}
+		})
+
+		It("leaves a rejected upgrade's episode available", func() {
+			rec, epID := createEpisodeRec(9210)
+			Expect(client.Episode.UpdateOneID(epID).
+				SetStatus(episode.StatusAvailable).Exec(ctx)).To(Succeed())
+			_, err := client.MediaFile.Create().
+				SetPath("/lib/hold-s01e01.mkv").SetSize(10).
+				SetQuality("720p").SetFormat("mkv").
+				SetReleaseGroup("G").SetEpisodeID(epID).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+
+			Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", true)).
+				To(Succeed())
+
+			e, err := client.Episode.Get(ctx, epID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(e.Status).To(Equal(episode.StatusAvailable))
+		})
+	})
+
+	Describe("ListPendingDownloadRecords / FindPendingDownloadRecordByID", func() {
+		It("lists pending records and finds one by id, edges loaded", func() {
+			pending := createRec("p", downloadrecord.StatusPending)
+			createRec("d", downloadrecord.StatusDownloading)
+
+			list, total, err := store.ListPendingDownloadRecords(ctx, 50, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(total).To(BeEquivalentTo(1))
+			Expect(list).To(HaveLen(1))
+			Expect(list[0].ID).To(Equal(pending.ID))
+			Expect(list[0].Edges.Movie).NotTo(BeNil())
+
+			got, err := store.FindPendingDownloadRecordByID(ctx, pending.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Edges.Movie).NotTo(BeNil())
+
+			_, err = store.FindPendingDownloadRecordByID(ctx, 99999)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+	})
+
+	It("pages pending records and counts them all", func() {
+		createRec("first", downloadrecord.StatusPending)
+		createRec("second", downloadrecord.StatusPending)
+		createRec("third", downloadrecord.StatusPending)
+
+		page, total, err := store.ListPendingDownloadRecords(ctx, 2, 0)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(total).To(BeEquivalentTo(3))
+		Expect(page).To(HaveLen(2))
+
+		last, total, err := store.ListPendingDownloadRecords(ctx, 2, 2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(total).To(BeEquivalentTo(3))
+		Expect(last).To(HaveLen(1))
+		Expect(last[0].ID).NotTo(BeElementOf(page[0].ID, page[1].ID))
+	})
+
+	Describe("selection fields", func() {
+		// seedEpisodes creates a show with one season of n episodes and
+		// returns their ids.
+		seedEpisodes := func(tvdb uint32, n int) []uint32 {
+			GinkgoHelper()
+			eps := make([]EpisodeSeed, n)
+			for i := range eps {
+				eps[i] = EpisodeSeed{Number: uint16(i + 1), Title: "E"}
+			}
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Selection", Year: 2024, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{Number: 1, Episodes: eps}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			ids := make([]uint32, 0, n)
+			for _, e := range show.Edges.Seasons[0].Edges.Episodes {
+				ids = append(ids, e.ID)
+			}
+			return ids
+		}
+
+		It("creates linking its episodes, anchor included", func() {
+			ids := seedEpisodes(9101, 3)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "sel-create",
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          ids[0],
+				EpisodeIDs:         ids[1:],
+				DownloadClientName: clientName,
+				SelectionState:     downloadrecord.SelectionStatePending,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec.QueryEpisodes().IDs(ctx)).To(ConsistOf(ids))
+			Expect(
+				rec.SelectionState,
+			).To(Equal(downloadrecord.SelectionStatePending))
+		})
+
+		It("creates carrying the keep-set an applied state claims", func() {
+			// The post-add confirmation only corrects these; a confirmation
+			// that fails for any reason other than ErrNotSupported leaves the
+			// record applied, and an applied record with no selected_files
+			// renders "0 B of X selected".
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "sel-create-files",
+				Status:  downloadrecord.StatusDownloading,
+				MovieID: movieID, DownloadClientName: clientName,
+				SelectionState: downloadrecord.SelectionStateApplied,
+				SelectedFiles:  []int{0, 2},
+				SelectedBytes:  2_100_000_000,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			got, err := store.FindDownloadRecordByID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.SelectedFiles).To(Equal([]int{0, 2}))
+			Expect(got.SelectedBytes).To(Equal(int64(2_100_000_000)))
+		})
+
+		It("defaults selection_state to skipped when unset", func() {
+			rec := createRec("sel-default", downloadrecord.StatusDownloading)
+			Expect(
+				rec.SelectionState,
+			).To(Equal(downloadrecord.SelectionStateSkipped))
+			Expect(rec.QueryEpisodes().IDs(ctx)).To(BeEmpty())
+		})
+
+		It(
+			"SetDownloadRecordSelection writes state, files and bytes, re-readable",
+			func() {
+				rec := createRec("sel-set", downloadrecord.StatusDownloading)
+
+				err := store.SetDownloadRecordSelection(
+					ctx,
+					rec.ID,
+					downloadrecord.SelectionStateApplied,
+					[]int{0, 2},
+					2_100_000_000,
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				got, err := store.FindDownloadRecordByID(ctx, rec.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(
+					got.SelectionState,
+				).To(Equal(downloadrecord.SelectionStateApplied))
+				Expect(got.SelectedFiles).To(Equal([]int{0, 2}))
+				Expect(got.SelectedBytes).To(Equal(int64(2_100_000_000)))
+			},
+		)
+
+		It(
+			"AddDownloadRecordEpisodes adds to the set, keeping what is linked",
+			func() {
+				ids := seedEpisodes(9102, 3)
+				rec, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "t", Size: 1, TorrentHash: "sel-add",
+						Status:             downloadrecord.StatusDownloading,
+						EpisodeID:          ids[0],
+						DownloadClientName: clientName,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(
+					store.AddDownloadRecordEpisodes(ctx, rec.ID, ids),
+				).To(Succeed())
+
+				Expect(rec.QueryEpisodes().IDs(ctx)).To(ConsistOf(ids))
+			},
+		)
+
+		It(
+			"ListPendingSelectionRecords returns only pending rows, with episode edges loaded",
+			func() {
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "Selection Show", Year: 2024, TvdbID: 9100,
+					Seasons: []SeasonSeed{{
+						Number:   1,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+					}},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				episodeID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+
+				pending, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "t", Size: 1, TorrentHash: "sel-pending",
+						Status:             downloadrecord.StatusDownloading,
+						EpisodeID:          episodeID,
+						DownloadClientName: clientName,
+						SelectionState:     downloadrecord.SelectionStatePending,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Not pending — must not appear in the list.
+				_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+					Title: "t", Size: 1, TorrentHash: "sel-applied",
+					Status:             downloadrecord.StatusDownloading,
+					EpisodeID:          episodeID,
+					DownloadClientName: clientName,
+					SelectionState:     downloadrecord.SelectionStateApplied,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				createRec("sel-skipped", downloadrecord.StatusDownloading)
+
+				list, err := store.ListPendingSelectionRecords(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(list).To(HaveLen(1))
+				Expect(list[0].ID).To(Equal(pending.ID))
+				Expect(list[0].Edges.AnchorEpisode).NotTo(BeNil())
+				Expect(list[0].Edges.AnchorEpisode.Edges.Season).NotTo(BeNil())
+				Expect(RecordEpisodeIDs(list[0])).To(ConsistOf(episodeID))
+			},
+		)
+	})
+})
+
+var _ = Describe("Album import failure", Label("integration", "db"), func() {
+	var (
+		ctx    context.Context
+		client *ent.Client
+		store  *DB
+		alb    *ent.Album
+		rec    *ent.DownloadRecord
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		var err error
+		client, err = Open(ctx, ":memory:")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { client.Close() })
+		store = New(client)
+
+		_, err = store.CreateArtist(ctx, CreateArtistParams{
+			MBID: "a-1", Name: "Avatar",
+			Albums: []AlbumSeed{
+				{MBID: "rg-1", Title: "Hail the Apocalypse", Monitored: true},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		hydrateAlbum(
+			ctx,
+			store,
+			"rg-1",
+			TrackSeed{
+				MBID:     "t-1",
+				Title:    "Hail the Apocalypse",
+				Disc:     1,
+				Position: 1,
+			},
+			TrackSeed{
+				MBID:     "t-2",
+				Title:    "What I Don't Know",
+				Disc:     1,
+				Position: 2,
+			},
+		)
+		alb = client.Album.Query().OnlyX(ctx)
+		rec, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+			Title: "Avatar - Hail the Apocalypse (2014) [FLAC]", Size: 1,
+			TorrentHash: "cue-hash", Status: downloadrecord.StatusImporting,
+			AlbumID: alb.ID,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(store.SetAlbumStatus(
+			ctx, alb.ID, []entalbum.Status{entalbum.StatusWanted},
+			entalbum.StatusDownloading,
+		)).To(BeTrue())
+	})
+
+	failTerminally := func() {
+		GinkgoHelper()
+		Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+			RecordID: rec.ID, Terminal: true, Attempts: 1,
+			Reason: "release is a CD image", AlbumID: alb.ID,
+		})).To(Succeed())
+	}
+
+	albumNow := func() *ent.Album {
+		GinkgoHelper()
+		got, err := store.FindAlbumByID(ctx, alb.ID)
+		Expect(err).NotTo(HaveOccurred())
+		return got
+	}
+
+	holdTracks := func(mbids ...string) {
+		GinkgoHelper()
+		for _, mbid := range mbids {
+			client.MediaFile.Create().SetPath("/music/" + mbid + ".flac").
+				SetSize(1).SetQuality("lossless").SetFormat("flac").
+				SetTrackID(client.Track.Query().
+					Where(track.MbidEQ(mbid)).OnlyIDX(ctx)).
+				ExecX(ctx)
+		}
+	}
+
+	It("parks an album holding only some tracks at failed", func() {
+		holdTracks("t-1")
+
+		failTerminally()
+
+		got := albumNow()
+		Expect(got.Status).To(Equal(entalbum.StatusFailed))
+		Expect(got.FailureReason).To(Equal("release is a CD image"))
+	})
+
+	It("returns an album holding every track to available", func() {
+		holdTracks("t-1", "t-2")
+
+		failTerminally()
+
+		got := albumNow()
+		Expect(got.Status).To(Equal(entalbum.StatusAvailable))
+		Expect(got.FailureReason).To(BeEmpty())
+	})
+
+	It("fails a partial album of a rejected held record unless requeued", func() {
+		holdTracks("t-1")
+		Expect(store.HoldDownloadRecord(ctx, rec.ID, []schema.HoldReason{
+			{Check: "tracks", Expected: "11", Actual: "1"},
+		})).To(Succeed())
+		Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", false)).
+			To(Succeed())
+
+		Expect(albumNow().Status).To(Equal(entalbum.StatusFailed))
+	})
+
+	It("keeps a failed album out of the missing searches", func() {
+		failTerminally()
+
+		Expect(store.ListEligibleAlbumsForSync(ctx, 5, time.Now())).To(BeEmpty())
+		Expect(store.ListWantedAlbums(ctx, 5)).To(BeEmpty())
+	})
+
+	It("walks the album back to downloading on a retry", func() {
+		failTerminally()
+
+		Expect(store.RetryFailedDownloadRecord(ctx, rec.ID)).To(Succeed())
+
+		got := albumNow()
+		Expect(got.Status).To(Equal(entalbum.StatusDownloading))
+		Expect(got.FailureReason).To(BeEmpty())
+	})
+
+	It("lets a manual grab take a failed album, clearing the reason", func() {
+		failTerminally()
+
+		Expect(store.SetAlbumStatus(
+			ctx, alb.ID, []entalbum.Status{entalbum.StatusFailed},
+			entalbum.StatusDownloading,
+		)).To(BeTrue())
+
+		Expect(albumNow().FailureReason).To(BeEmpty())
+	})
+
+	It("fails the album of a rejected held record unless requeued", func() {
+		Expect(store.HoldDownloadRecord(ctx, rec.ID, []schema.HoldReason{
+			{Check: "tracks", Expected: "11", Actual: "1"},
+		})).To(Succeed())
+		Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", false)).
+			To(Succeed())
+
+		got := albumNow()
+		Expect(got.Status).To(Equal(entalbum.StatusFailed))
+		Expect(got.FailureReason).To(Equal("rejected"))
+	})
+})

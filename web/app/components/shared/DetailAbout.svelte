@@ -1,0 +1,56 @@
+<script lang="ts">
+	import DetailCast from "./DetailCast.svelte";
+	import type { CastMember } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	let {
+		overview,
+		cast = [],
+		onViewAllCast,
+	}: {
+		overview?: string;
+		cast?: CastMember[];
+		onViewAllCast?: () => void;
+	} = $props();
+
+	let topCast = $derived(cast.slice(0, 5));
+</script>
+
+<section class="min-w-0" aria-labelledby="detail-synopsis">
+	<h2
+		id="detail-synopsis"
+		class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+	>
+		{i18n.detail_synopsis()}
+	</h2>
+	{#if overview}
+		<p
+			class="mt-3 max-w-[720px] text-sm leading-relaxed text-fg-muted [text-wrap:pretty]"
+		>
+			{overview}
+		</p>
+	{:else}
+		<p class="mt-3 text-sm italic text-fg-subtle">{i18n.detail_no_overview()}</p>
+	{/if}
+
+	{#if topCast.length > 0}
+		<div class="my-5 h-px bg-border"></div>
+		<div class="mb-3 flex items-baseline justify-between">
+			<h3
+				class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+			>
+				{i18n.detail_cast()}
+			</h3>
+			{#if cast.length > topCast.length && onViewAllCast}
+				<button
+					type="button"
+					onclick={onViewAllCast}
+					class="touch-hit font-mono text-[11px] text-accent-text transition hover:text-accent"
+				>
+					{i18n.common_view_all()}
+				</button>
+			{/if}
+		</div>
+		<DetailCast cast={topCast} dense />
+	{/if}
+</section>

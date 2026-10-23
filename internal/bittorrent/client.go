@@ -1,0 +1,869 @@
+package bittorrent
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"math"
+	"net"
+	"net/url"
+	"os"
+	"path/filepath"
+	"time"
+
+	antorrent "github.com/anacrolix/torrent"
+	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
+	"github.com/anacrolix/torrent/types"
+
+	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/observability"
+	"github.com/datahearth/streamline/internal/otelx"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+)
+
+var _ download.Client = (*Engine)(nil)
+
+// dropUnusableTrackers removes announce URLs anacrolix would assert on, and
+// reports how many went.
+//
+// A tracker URL that does not survive url.Parse + String() unchanged trips a
+// panicif.NotEq inside the announcer — on the request goroutine for the add
+// itself, and again on the background announce goroutine. Both are recovered,
+// so the process lives, but the grab answers 500 and the half-added torrent
+// stays registered. A tracker is a peer-discovery hint, not the torrent's
+// identity, so a malformed one is dropped rather than made a reason to refuse
+// the content: DHT and the remaining trackers still find peers. What was
+// dropped is logged, since a magnet whose *only* tracker was unusable will
+// look slow for no visible reason.
+func dropUnusableTrackers(tiers [][]string) ([][]string, int) {
+	dropped := 0
+	out := make([][]string, 0, len(tiers))
+	for _, tier := range tiers {
+		kept := make([]string, 0, len(tier))
+		for _, tr := range tier {
+			if u, err := url.Parse(tr); err == nil && u.String() == tr {
+				kept = append(kept, tr)
+				continue
+			}
+			dropped++
+		}
+		if len(kept) > 0 {
+			out = append(out, kept)
+		}
+	}
+	return out, dropped
+}
+
+// specFromSource builds a torrent spec plus the persistable source fields.
+// Exactly one of Magnet/Bytes must be set (mirrors download.TorrentSource).
+func specFromSource(
+	src download.TorrentSource,
+) (*antorrent.TorrentSpec, string, []byte, error) {
+	switch {
+	case src.Magnet != "":
+		spec, err := antorrent.TorrentSpecFromMagnetUri(src.Magnet)
+		if err != nil {
+			return nil, "", nil, fmt.Errorf("parse magnet: %w", err)
+		}
+		// Peer and DHT-node hints are addresses the magnet's author picked
+		// for the engine to connect to, and peer dials are deliberately not
+		// filtered. Trackers and DHT find the swarm without them.
+		spec.PeerAddrs = nil
+		spec.DhtNodes = nil
+		return spec, src.Magnet, nil, nil
+	case len(src.Bytes) > 0:
+		// The same ceiling download.Manager applies to a .torrent it fetches
+		// from an indexer. Bytes arriving through the API skip that path, so
+		// without this their only bound is the transport body cap, which is
+		// sized in base64 and so lands a couple of MiB higher.
+		if len(src.Bytes) > download.MaxTorrentFileSize {
+			return nil, "", nil, fmt.Errorf(
+				"torrent file is %d bytes, over the %d byte cap",
+				len(src.Bytes), download.MaxTorrentFileSize,
+			)
+		}
+		mi, err := metainfo.Load(bytes.NewReader(src.Bytes))
+		if err != nil {
+			return nil, "", nil, fmt.Errorf("parse torrent file: %w", err)
+		}
+		spec, err := antorrent.TorrentSpecFromMetaInfoErr(mi)
+		if err != nil {
+			return nil, "", nil, fmt.Errorf("build torrent spec: %w", err)
+		}
+		return spec, "", src.Bytes, nil
+	default:
+		return nil, "", nil, errors.New(
+			"torrent source has neither bytes nor magnet",
+		)
+	}
+}
+
+// AddTorrent persists the session row first (boot re-add is idempotent by
+// infohash), then hands the spec to the engine.
+func (e *Engine) AddTorrent(
+	ctx context.Context,
+	src download.TorrentSource,
+) (string, error) {
+	ctx, span := tracer.Start(ctx, "bittorrent.add_torrent")
+	defer span.End()
+
+	spec, sourceMagnet, sourceBytes, err := specFromSource(src)
+	if err != nil {
+		return "", otelx.RecordSpanError(span, err)
+	}
+	hash := spec.InfoHash.HexString()
+	e.mu.Lock()
+	delete(e.refusals, hash)
+	e.mu.Unlock()
+	if _, held := e.client.Torrent(spec.InfoHash); !held &&
+		len(e.client.Torrents()) >= maxTorrents {
+		return "", otelx.RecordSpanError(span, download.ErrClientFull)
+	}
+	// A .torrent carries its info, so the storage guard's verdict can be had
+	// here, as a refusal the grab reports, rather than as an OpenTorrent
+	// failure deep in the add. A magnet's info arrives later, and the guard
+	// refuses it then.
+	if len(spec.InfoBytes) > 0 {
+		var info metainfo.Info
+		if err := bencode.Unmarshal(spec.InfoBytes, &info); err == nil &&
+			!e.paths.admits(e.downloadDir, &info, spec.InfoHash) {
+			return "", otelx.RecordSpanError(span, fmt.Errorf(
+				"%w: %q is taken or unsafe", download.ErrUnsafeTorrentName,
+				info.BestName(),
+			))
+		}
+	}
+	if trackers, dropped := dropUnusableTrackers(spec.Trackers); dropped > 0 {
+		spec.Trackers = trackers
+		span.SetAttributes(attribute.Int("trackers.dropped", dropped))
+		slog.WarnContext(ctx, "ignoring unusable announce URLs",
+			"hash", hash, "dropped", dropped, "remaining", len(trackers))
+	}
+
+	// Decided at add time, before AddTorrentSpec below can ever start pulling
+	// pieces (spec §4.4 builtin). A selective magnet has no keep-set yet —
+	// "pending" bumps nothing (applyFilePriorities) until the selection pass
+	// or a SetWantedFiles confirmation resolves it, so metadata fetches but
+	// zero data pieces are requested. A bytes source already carrying
+	// WantedFiles (Flow A) records "explicit" here instead of relying on the
+	// manager's post-add SetWantedFiles confirmation, which would otherwise
+	// let a moment of "all" priorities land first — a bytes source has its
+	// info immediately, so startWhenReady's default-priority pass can run
+	// before that confirmation call ever reaches the engine.
+	var selectionMode string
+	var wantedFiles []int
+	switch {
+	case src.Selective && sourceMagnet != "":
+		selectionMode = "pending"
+	case src.WantedFiles != nil:
+		selectionMode = "explicit"
+		wantedFiles = src.WantedFiles
+	}
+
+	if _, err := e.store.CreateTorrentSession(ctx, db.CreateTorrentSessionParams{
+		InfoHash:      hash,
+		Name:          spec.DisplayName,
+		SavePath:      e.downloadDir,
+		SourceMagnet:  sourceMagnet,
+		SourceTorrent: sourceBytes,
+		SelectionMode: selectionMode,
+		WantedFiles:   wantedFiles,
+	}); err != nil && !ent.IsConstraintError(err) {
+		return "", otelx.RecordSpanError(
+			span, fmt.Errorf("persist torrent session: %w", err),
+		)
+	}
+	t, _, err := e.client.AddTorrentSpec(spec)
+	if err != nil {
+		// The session row is written first so a crash between the two cannot
+		// lose the torrent, which means a *failed* add has to take it back
+		// out: AddTorrentSpec registers the torrent before it can fail, so
+		// what is left behind is a torrent the caller was told does not
+		// exist. It survives a restart (boot re-adds every session row),
+		// shows up in the queue, and re-adding the same hash hits the same
+		// failure again — the only way out was deleting it by hand.
+		e.rollbackAdd(ctx, hash)
+		return "", otelx.RecordSpanError(span, fmt.Errorf("add torrent: %w", err))
+	}
+	// Gated on freshness like addedAt: a duplicate-hash add (the
+	// swallowed-constraint-error path above, reached when a completed,
+	// non-widen-eligible record falls through to a normal grab on the same
+	// hash) must never let this call's selection overwrite what the first
+	// add already persisted — CreateTorrentSession is create-only, so
+	// applying it unconditionally here would diverge memory from the DB row
+	// in both directions: bumping an already-resolved torrent's skipped
+	// files back to Normal now, and reverting to the stale row on restart.
+	e.setState(hash, func(st *torrentState) {
+		if st.addedAt.IsZero() {
+			st.addedAt = time.Now()
+			st.selectionMode = selectionMode
+			st.wantedFiles = wantedFiles
+		}
+	})
+	e.startWhenReady(t, false)
+	return hash, nil
+}
+
+func (e *Engine) GetTorrent(
+	ctx context.Context,
+	hash string,
+) (*download.Torrent, error) {
+	t, err := e.torrent(hash)
+	if err != nil {
+		e.mu.Lock()
+		reason, refused := e.refusals[hash]
+		e.mu.Unlock()
+		if refused {
+			return nil, fmt.Errorf("%w: %s", download.ErrTorrentRefused, reason)
+		}
+		return nil, err
+	}
+	v := e.view(t)
+	return &v, nil
+}
+
+func (e *Engine) ListTorrents(ctx context.Context) ([]download.Torrent, error) {
+	live := e.client.Torrents()
+	out := make([]download.Torrent, 0, len(live))
+	for _, t := range live {
+		out = append(out, e.view(t))
+	}
+	return out, nil
+}
+
+// rollbackAdd undoes a partial AddTorrent: the session row it wrote up front,
+// the torrent anacrolix may already have registered, and the in-memory state.
+// Never deletes files — an add that failed transferred none, and the only
+// thing on disk under that name would be a previous torrent's.
+//
+// Every step is best-effort and logged rather than returned: the caller is
+// already failing the add, and the error it reports is the one worth seeing.
+func (e *Engine) rollbackAdd(ctx context.Context, hash string) {
+	if t, err := e.torrent(hash); err == nil {
+		t.Drop()
+	}
+	if err := e.store.DeleteTorrentSessionByHash(ctx, hash); err != nil {
+		slog.WarnContext(ctx, "could not drop the session of a failed add",
+			"hash", hash, "error", err)
+	}
+	e.forget(hash)
+}
+
+func (e *Engine) RemoveTorrent(
+	ctx context.Context,
+	hash string,
+	deleteFiles bool,
+) error {
+	ctx, span := tracer.Start(ctx, "bittorrent.remove_torrent")
+	defer span.End()
+
+	t, err := e.torrent(hash)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	var contentPath string
+	if info := t.Info(); info != nil {
+		// The same rule storage placed it by: a name it would have refused
+		// is never a path to delete.
+		if name := info.BestName(); safeContentName(name) {
+			contentPath = filepath.Join(e.downloadDir, name)
+		}
+	}
+	// The row goes first. Dropped first, a failed row delete left a torrent
+	// no API could reach any more (every call looks it up live) whose row the
+	// next boot restored — an admin's removal undone by a restart. This way
+	// round a failure leaves the torrent live, and the removal retryable.
+	if err := e.store.DeleteTorrentSessionByHash(ctx, hash); err != nil {
+		return otelx.RecordSpanError(
+			span, fmt.Errorf("delete torrent session: %w", err),
+		)
+	}
+	t.Drop()
+	e.forget(hash)
+	if deleteFiles && contentPath != "" {
+		// An incomplete single-file torrent stores its partial data at
+		// "<name>.part" (anacrolix UsePartFiles), a sibling of contentPath that
+		// os.RemoveAll(contentPath) would miss. Remove both; the .part path is a
+		// harmless no-op for a completed or multi-file torrent.
+		for _, p := range []string{contentPath, contentPath + ".part"} {
+			if err := os.RemoveAll(p); err != nil {
+				return otelx.RecordSpanError(
+					span, fmt.Errorf("delete torrent data: %w", err),
+				)
+			}
+		}
+	}
+	return nil
+}
+
+// refuseTorrent is the path guard's verdict on a magnet whose info just
+// arrived. anacrolix leaves such a torrent registered without info, fetching
+// at 0% for good, so it is dropped here and the reason kept for GetTorrent to
+// hand the download manager. It runs off the guard's goroutine: that one holds
+// the client lock Drop needs.
+func (e *Engine) refuseTorrent(
+	ih metainfo.Hash,
+	name string,
+	holder *metainfo.Hash,
+) {
+	hash := ih.HexString()
+	reason := fmt.Sprintf("the torrent name %q is unsafe", name)
+	logAttrs := []any{"hash", hash, "name", name}
+	if holder != nil {
+		reason = fmt.Sprintf(
+			"the engine already holds %q under torrent %s", name, holder.HexString(),
+		)
+		logAttrs = append(logAttrs, "held_by", holder.HexString())
+	}
+	e.mu.Lock()
+	if _, seen := e.refusals[hash]; seen {
+		e.mu.Unlock()
+		return
+	}
+	e.refusals[hash] = reason
+	e.mu.Unlock()
+
+	e.wg.Go(func() {
+		ctx := context.Background()
+		defer observability.RecoverPanic(ctx, "refuse torrent", nil)
+		slog.WarnContext(ctx, "dropping torrent refused by the path guard",
+			append(logAttrs, "reason", reason)...)
+		e.rollbackAdd(ctx, hash)
+	})
+}
+
+// forget drops everything the engine holds for a torrent that is gone.
+func (e *Engine) forget(hash string) {
+	e.mu.Lock()
+	delete(e.state, hash)
+	delete(e.sample, hash)
+	e.mu.Unlock()
+	var ih metainfo.Hash
+	if err := ih.FromHexString(hash); err == nil {
+		e.paths.release(ih)
+	}
+}
+
+func (e *Engine) PauseTorrent(ctx context.Context, hash string) error {
+	t, err := e.torrent(hash)
+	if err != nil {
+		return err
+	}
+	t.DisallowDataDownload()
+	t.DisallowDataUpload()
+	e.setState(hash, func(st *torrentState) { st.paused = true })
+	return e.store.SetTorrentSessionPaused(ctx, hash, true)
+}
+
+func (e *Engine) ResumeTorrent(ctx context.Context, hash string) error {
+	t, err := e.torrent(hash)
+	if err != nil {
+		return err
+	}
+	st := e.getState(hash)
+	t.AllowDataDownload()
+	if !st.seedStopped {
+		t.AllowDataUpload()
+	}
+	// Mode "pending" bumps no file at all, so resuming it without this would
+	// leave every piece at PiecePriorityNone forever — the torrent runs and
+	// asks for nothing. Resume is therefore the give-up exit from a pending
+	// selection: take it whole. Both callers want exactly that — the selection
+	// pass's finalizePending arms (grace expired, unsupported, everything
+	// matched) and a human clicking resume on the Torrents page.
+	//
+	// Persist before touching priorities: metadata may not have resolved yet,
+	// in which case startWhenReady's pass is what applies mode "all", and it
+	// reads the state this sets.
+	if st.selectionMode == "pending" {
+		if err := e.store.SetTorrentSessionSelection(
+			ctx, hash, "all", nil,
+		); err != nil {
+			return fmt.Errorf("persist torrent session selection: %w", err)
+		}
+		e.setState(hash, func(s *torrentState) {
+			s.selectionMode = "all"
+			s.wantedFiles = nil
+		})
+		if t.Info() != nil {
+			e.prioritize(t, "all", nil)
+		}
+	}
+	e.setState(hash, func(st *torrentState) { st.paused = false })
+	return e.store.SetTorrentSessionPaused(ctx, hash, false)
+}
+
+// TestConnection is a no-op: a constructed engine is by definition running.
+func (e *Engine) TestConnection(ctx context.Context) error { return nil }
+
+// ListFiles returns the torrent's files, empty (nil error) when metadata
+// hasn't resolved yet — the same "not an error" shape GetTorrent's
+// StatusFetching reports for the same condition.
+func (e *Engine) ListFiles(
+	ctx context.Context,
+	hash string,
+) ([]download.TorrentFile, error) {
+	t, err := e.torrent(hash)
+	if err != nil {
+		return nil, err
+	}
+	files := []download.TorrentFile{}
+	if t.Info() != nil {
+		for i, f := range t.Files() {
+			files = append(files, download.TorrentFile{
+				Index:  i,
+				Path:   f.DisplayPath(),
+				Size:   f.Length(),
+				Wanted: f.Priority() != types.PiecePriorityNone,
+			})
+		}
+	}
+	return files, nil
+}
+
+// SetWantedFiles applies an explicit keep-set and persists it so a restart's
+// metadata re-resolve (startWhenReady) reproduces the same skip instead of
+// reverting to mode "all". Skip-everything is refused up front — a selective
+// record never wants zero files — before any state or priority is touched,
+// matching the Transmission/Deluge/qBittorrent behavior.
+func (e *Engine) SetWantedFiles(
+	ctx context.Context,
+	hash string,
+	wanted []int,
+) error {
+	ctx, span := tracer.Start(ctx, "bittorrent.set_wanted_files",
+		trace.WithAttributes(
+			attribute.String("torrent.hash", hash),
+			attribute.Int("wanted.count", len(wanted)),
+		))
+	defer span.End()
+
+	if len(wanted) == 0 {
+		return otelx.RecordSpanError(span, errors.New(
+			"builtin set wanted files: refusing to skip every file",
+		))
+	}
+	t, err := e.torrent(hash)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if t.Info() == nil {
+		return otelx.RecordSpanError(
+			span, errors.New("torrent metadata not yet available"),
+		)
+	}
+	st := e.getState(hash)
+	newlyWanted := newlyWantedIndexes(st.selectionMode, st.wantedFiles, wanted)
+
+	e.prioritize(t, "explicit", wanted)
+	if err := e.store.SetTorrentSessionSelection(
+		ctx, hash, "explicit", wanted,
+	); err != nil {
+		return otelx.RecordSpanError(
+			span, fmt.Errorf("persist torrent session selection: %w", err),
+		)
+	}
+	e.setState(hash, func(s *torrentState) {
+		s.selectionMode = "explicit"
+		s.wantedFiles = wanted
+	})
+
+	// A widened selection (spec §4.6: re-grabbing the same hash for more
+	// episodes) can hand back files that were never downloaded while this
+	// torrent was seed-stopped. Re-arm it, and reset completed_at — left
+	// stale, it would make the seed-time limit re-stop the torrent the
+	// instant the new files finish, since enforceOnce never re-stamps a
+	// completedAt that isn't already zero.
+	if st.seedStopped && filesHaveMissingBytes(t, newlyWanted) {
+		t.AllowDataUpload()
+		if err := e.store.SetTorrentSessionCompleted(
+			ctx, hash, time.Time{},
+		); err != nil {
+			slog.WarnContext(ctx, "resetting torrent completion failed",
+				"info_hash", hash, "error", err)
+		}
+		// Persisted, not just in-memory: restore() re-applies whatever
+		// seed_stopped last saved, and a restart landing between this call and
+		// the newly-wanted files completing would otherwise re-stamp the stale
+		// "true" and strand the torrent seed-stopped with no enforcer pass left
+		// to re-check it (enforceOnce skips its bookkeeping entirely while
+		// wantedMissing(t) != 0).
+		if err := e.store.SetTorrentSessionSeedStopped(
+			ctx, hash, false,
+		); err != nil {
+			slog.WarnContext(ctx, "persisting seed re-arm failed",
+				"info_hash", hash, "error", err)
+		}
+		e.setState(hash, func(s *torrentState) {
+			s.seedStopped = false
+			s.completedAt = time.Time{}
+		})
+	}
+	return nil
+}
+
+// newlyWantedIndexes reports which of wanted were not already wanted under
+// the previous selection. Only mode "explicit" recorded a keep-set to diff
+// against; "all"/"pending" (or a session predating selection) already cover
+// every index, so nothing in a narrower wanted list can be "new".
+func newlyWantedIndexes(prevMode string, prevWanted, wanted []int) []int {
+	if prevMode != "explicit" {
+		return nil
+	}
+	prev := make(map[int]struct{}, len(prevWanted))
+	for _, i := range prevWanted {
+		prev[i] = struct{}{}
+	}
+	var out []int
+	for _, i := range wanted {
+		if _, ok := prev[i]; !ok {
+			out = append(out, i)
+		}
+	}
+	return out
+}
+
+// filesHaveMissingBytes reports whether any of indexes still has undownloaded
+// data, i.e. it needs the torrent uploading-disallowed state re-armed.
+func filesHaveMissingBytes(t *antorrent.Torrent, indexes []int) bool {
+	files := t.Files()
+	for _, i := range indexes {
+		if i < 0 || i >= len(files) {
+			continue
+		}
+		if files[i].BytesCompleted() < files[i].Length() {
+			return true
+		}
+	}
+	return false
+}
+
+// SetListenPort moves the engine's peer sockets to port.
+//
+// It exists for a VPN forwarded port, which rotates on every tunnel
+// reconnect and is authored by the tunnel rather than by config — so this
+// deliberately persists nothing. A restart falls back to
+// torrent_listen_port from the environment, which is where the value comes
+// from in the first place.
+//
+// The sockets move immediately, and every torrent then re-announces to DHT —
+// AnnounceToDht is a real forced announce and reads the peer port live, so it
+// carries the new one. Trackers do not get that treatment: announceRequest
+// also reads the port live per request, but they only learn it at the *next*
+// scheduled announce. There is no public forced-announce for regular trackers
+// in this version of anacrolix (ModifyTrackers used to force one; it no
+// longer does — torrentRegularTrackerAnnouncer.Stop is now a no-op, and both
+// modifyTrackers and the client-level dispatcher key their state by infohash,
+// so restarting an announcer that's already running is a no-op too). On a
+// long tracker interval this leaves a real window where the tracker still
+// advertises the old port and inbound connections to it fail; DHT is the half
+// of peer discovery that can be refreshed at once.
+func (e *Engine) SetListenPort(ctx context.Context, port uint16) error {
+	ctx, span := tracer.Start(ctx, "bittorrent.set_listen_port")
+	defer span.End()
+
+	if port == 0 {
+		return otelx.RecordSpanError(
+			span,
+			errors.New("listen port must be non-zero"),
+		)
+	}
+
+	moved, err := e.movePeerSockets(ctx, port)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if !moved {
+		return nil
+	}
+
+	slog.InfoContext(ctx, "torrent listen port moved", "port", port)
+	e.announceToDHT(ctx)
+	return nil
+}
+
+// movePeerSockets rebinds whichever of the two peer sockets is not already on
+// port and reports whether anything moved.
+//
+// It is split out of SetListenPort so the DHT announce that follows runs with
+// e.mu released: AnnounceToDht takes the anacrolix client lock, and this file
+// otherwise never holds e.mu across a call into anacrolix.
+func (e *Engine) movePeerSockets(ctx context.Context, port uint16) (bool, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	// The question is whether the sockets being moved are already on port,
+	// not whether the client thinks it's listening there — a bare *Engine{}
+	// built for teardown/tests has no client at all.
+	listenerPort, ok := portOf(e.listener.Addr())
+	if !ok {
+		return false, fmt.Errorf(
+			"tcp listener address %v is not a TCP/UDP address", e.listener.Addr(),
+		)
+	}
+	packetConnPort, ok := portOf(e.packetConn.LocalAddr())
+	if !ok {
+		return false, fmt.Errorf(
+			"packet conn address %v is not a TCP/UDP address",
+			e.packetConn.LocalAddr(),
+		)
+	}
+	if listenerPort == port && packetConnPort == port {
+		return false, nil
+	}
+
+	// Rebinding a socket already on port would open a second listener on an
+	// address the first one still holds and fail with "already in use" —
+	// each socket only rebinds when it isn't already where it needs to be,
+	// rather than the pair moving as an all-or-nothing unit.
+	if listenerPort != port {
+		if err := e.listener.rebind(port); err != nil {
+			return false, fmt.Errorf("rebind tcp listener: %w", err)
+		}
+	}
+	if packetConnPort != port {
+		if err := e.packetConn.rebind(port); err != nil {
+			// The listener move above already landed (or wasn't needed), but
+			// the packet conn didn't: announces still carry packetConnPort —
+			// that's the port every tracker learns, not the listener's (see
+			// newPeerSockets) — while inbound TCP now only answers on the new
+			// port, so peers can reach neither.
+			//
+			// Calling this again *would* converge, because each socket is
+			// guarded on its own port and the one that already moved is
+			// skipped. Nothing does: the only caller is gluetun's
+			// VPN_PORT_FORWARDING_UP_COMMAND, fired once per rotation with no
+			// retry of its own, so without a human the mismatch persists until
+			// the next rotation or a restart. Hence CRITICAL.
+			//
+			// listener.Addr() is re-read rather than reusing listenerPort:
+			// the listener may have just been rebound above, and this must
+			// report where it actually ended up. Its type was already
+			// validated at the top of this function and a rebind cannot change
+			// it, so the discarded bool cannot be false here.
+			currentTCPPort, _ := portOf(e.listener.Addr())
+			//nolint:sloglint // LogAttrs takes slog.Attr by API design
+			slog.LogAttrs(
+				ctx,
+				observability.LevelCritical,
+				"torrent listen port partially moved: tcp listener and packet conn disagree",
+				slog.Int("tcp_port", int(currentTCPPort)),
+				slog.Int("packet_conn_port", int(packetConnPort)),
+			)
+			return false, fmt.Errorf("rebind packet conn: %w", err)
+		}
+	}
+
+	return true, nil
+}
+
+// announceToDHT re-announces every torrent on every DHT server the client
+// holds. Unlike the tracker side this is a real forced announce, and
+// AnnounceToDht reads the peer port live (Client.incomingPeerPort) at announce
+// time, so one issued after a rebind carries the new port with no extra
+// plumbing.
+//
+// Failures are logged and skipped: a torrent that cannot announce is one
+// torrent findable by fewer peers until its next scheduled announce, not a
+// reason to fail a port move that already landed.
+func (e *Engine) announceToDHT(ctx context.Context) {
+	// A bare *Engine{} — the shape SetListenPort's own specs build — has no
+	// client.
+	if e.client == nil {
+		return
+	}
+	// entry.DisableDHT sets cc.NoDHT, which leaves no servers at all. That is
+	// a configured no-op, not a failure worth logging on every rotation.
+	servers := e.client.DhtServers()
+	if len(servers) == 0 {
+		return
+	}
+	for _, t := range e.client.Torrents() {
+		for _, s := range servers {
+			// The discarded stop func force-ends an announce early; this one
+			// is meant to run to completion on its own goroutine.
+			if _, _, err := t.AnnounceToDht(s); err != nil {
+				slog.WarnContext(ctx, "dht announce after port move failed",
+					"torrent", t.Name(), "error", err)
+			}
+		}
+	}
+}
+
+// portOf reads the port off a net.Addr as returned by a rebindableListener
+// or rebindablePacketConn — always a *net.TCPAddr or *net.UDPAddr. The bool
+// is false for any other type; returning it explicitly (rather than a -1
+// sentinel a uint16 cast would silently wrap to 65535) is what makes an
+// unexpected address type a reported error instead of an indistinguishable
+// "already on port 65535".
+func portOf(addr net.Addr) (uint16, bool) {
+	switch a := addr.(type) {
+	case *net.TCPAddr:
+		return narrowPort(a.Port)
+	case *net.UDPAddr:
+		return narrowPort(a.Port)
+	default:
+		return 0, false
+	}
+}
+
+// narrowPort converts a net address' int Port to the uint16 the wire format
+// actually is. The guard is what lets gosec prove the conversion, and a port
+// outside the range means the address is not one we can listen on.
+func narrowPort(p int) (uint16, bool) {
+	if p < 0 || p > math.MaxUint16 {
+		return 0, false
+	}
+	return uint16(p), true
+}
+
+// liveStats is one consistent snapshot of a torrent's transfer state,
+// shared by the download.Client view and the /torrents management views so
+// the rate sampler is hit exactly once per observation.
+type liveStats struct {
+	hash           string
+	name           string
+	status         download.TorrentStatus
+	progress       float64
+	size           int64
+	downloadSpeed  int64
+	uploadSpeed    int64
+	uploaded       int64
+	eta            int64
+	seeds          int
+	activePeers    int
+	knownPeers     int
+	addedAt        time.Time
+	seedingStopped bool
+}
+
+func (e *Engine) live(t *antorrent.Torrent) liveStats {
+	hash := t.InfoHash().HexString()
+	var size, completed int64
+	if t.Info() != nil {
+		size = wantedBytes(t)
+		completed = wantedCompleted(t)
+	}
+	var progress float64
+	if size > 0 {
+		progress = float64(completed) / float64(size)
+	}
+	stats := t.Stats()
+	// This process's counter only — rates works on deltas, and folding a
+	// constant base into it would change nothing but the first sample.
+	sessionUp := stats.BytesWrittenData.Int64()
+	down, up := e.rates(hash, completed, sessionUp)
+	var eta int64
+	if down > 0 && size > completed {
+		eta = (size - completed) / down
+	}
+	st := e.getState(hash)
+	return liveStats{
+		hash:           hash,
+		name:           t.Name(),
+		status:         e.status(t, hash),
+		progress:       progress,
+		size:           size,
+		downloadSpeed:  down,
+		uploadSpeed:    up,
+		uploaded:       st.uploadedBase + sessionUp,
+		eta:            eta,
+		seeds:          stats.ConnectedSeeders,
+		activePeers:    stats.ActivePeers,
+		knownPeers:     stats.TotalPeers,
+		addedAt:        st.addedAt,
+		seedingStopped: st.seedStopped,
+	}
+}
+
+// view builds the download.Client-facing snapshot of one torrent.
+func (e *Engine) view(t *antorrent.Torrent) download.Torrent {
+	l := e.live(t)
+	return download.Torrent{
+		Hash:           l.hash,
+		Name:           l.name,
+		Status:         l.status,
+		Progress:       l.progress,
+		Size:           l.size,
+		SavePath:       e.downloadDir,
+		DownloadSpeed:  l.downloadSpeed,
+		ETA:            l.eta,
+		SeedingStopped: l.seedingStopped,
+	}
+}
+
+func (e *Engine) status(
+	t *antorrent.Torrent,
+	hash string,
+) download.TorrentStatus {
+	st := e.getState(hash)
+	if st.paused {
+		return download.StatusPaused
+	}
+	if t.Info() == nil {
+		return download.StatusFetching
+	}
+	// A pending selection wants no file yet, so wantedBytes — and with it
+	// wantedMissing — is 0 and the completed branch below would report the
+	// torrent as seeding the instant its metadata resolved, which the download
+	// monitor reads as "ready to import". It is still fetching, just fetching
+	// the answer to which files it wants rather than the metainfo.
+	if st.selectionMode == "pending" {
+		return download.StatusFetching
+	}
+	// The same zero, one step earlier: priorities are applied off the
+	// caller's goroutine (startWhenReady), so every mode — not just pending
+	// — has a window where the torrent is registered with the client and no
+	// file has left PiecePriorityNone yet. A magnet is covered by the Info
+	// check above, but a .torrent resolves its info synchronously and lands
+	// here with wantedMissing already 0. Ratio and progress divide by that
+	// same zero, which is what made this visible: a restored torrent read
+	// back as seeding at 0% with ratio 0.
+	if !st.prioritized {
+		return download.StatusFetching
+	}
+	// wantedMissing alone would call a torrent done while its last pieces are
+	// still being hashed (see wantedVerified). The download monitor imports
+	// on seeding, and a restart in that window loses those pieces' completion.
+	if wantedMissing(t) == 0 && wantedVerified(t) {
+		if st.seedStopped {
+			return download.StatusCompleted
+		}
+		return download.StatusSeeding
+	}
+	// Downloading but with nothing to download from: no data can move, so
+	// surface it as stalled rather than a healthy-looking "downloading".
+	if t.Stats().ActivePeers == 0 {
+		return download.StatusStalled
+	}
+	return download.StatusDownloading
+}
+
+// rates derives download/upload bytes/sec from the deltas since the
+// previous observation of this torrent. First observation (or byte
+// regression after a failed piece check) reports 0.
+func (e *Engine) rates(hash string, completed, uploaded int64) (int64, int64) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	prev, ok := e.sample[hash]
+	now := time.Now()
+	e.sample[hash] = speedSample{down: completed, up: uploaded, at: now}
+	elapsed := now.Sub(prev.at).Seconds()
+	if !ok || elapsed <= 0 {
+		return 0, 0
+	}
+	var down, up int64
+	if completed >= prev.down {
+		down = int64(float64(completed-prev.down) / elapsed)
+	}
+	if uploaded >= prev.up {
+		up = int64(float64(uploaded-prev.up) / elapsed)
+	}
+	return down, up
+}

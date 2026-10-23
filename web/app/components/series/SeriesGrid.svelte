@@ -1,0 +1,108 @@
+<script lang="ts">
+	import { auth } from "@lib/auth.svelte";
+	import { api } from "@lib/api";
+	import { createAction, monitorToast, SERIES, updateFailed } from "@lib/actions";
+	import { tvPosterUrl } from "@lib/posters";
+	import { seriesStatus } from "@lib/status";
+	import PosterCard from "@components/shared/PosterCard.svelte";
+	import SeriesActionsMenu from "./SeriesActionsMenu.svelte";
+	import type { TVShow } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	let {
+		series,
+		selected,
+		selectMode = false,
+		onToggle,
+		onLongPress,
+	}: {
+		series: TVShow[];
+		selected: Set<number>;
+		selectMode?: boolean;
+		onToggle: (id: number, v: boolean) => void;
+		onLongPress?: (id: number) => void;
+	} = $props();
+
+	let selectionActive = $derived(selectMode || selected.size > 0);
+
+	const monitor = createAction<TVShow>(() => ({
+		run: (s) => api<TVShow>(`/series/${s.id}`, { method: "PATCH", body: { monitored: !s.monitored } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: (s) => monitorToast(!s.monitored),
+	}));
+
+	function episodeText(s: TVShow): string | undefined {
+		const seasons = s.total_seasons ?? 0;
+		const seasonText =
+			seasons > 0 ? `${seasons} season${seasons === 1 ? "" : "s"}` : undefined;
+		// A show the library follows no episode of still has seasons, and that
+		// is the only size the card can report for it.
+		if (!s.total_episodes) return seasonText;
+		const eps = `${s.have_episodes ?? 0}/${s.total_episodes} eps`;
+		return seasonText ? `${seasonText} · ${eps}` : eps;
+	}
+
+	// While something is in flight the card names what is coming rather than
+	// what it holds — the episode, the season pack, or the whole series. The
+	// have/total count is the one thing about to change.
+	const pad = (n: number) => String(n).padStart(2, "0");
+	function downloadText(s: TVShow): string {
+		if (
+			s.downloading_scope === "episode" &&
+			s.downloading_season != null &&
+			s.downloading_episode != null
+		)
+			return `S${pad(s.downloading_season)}E${pad(s.downloading_episode)}`;
+		if (s.downloading_scope === "season" && s.downloading_season != null)
+			return i18n.series_dl_season_pack({ season: pad(s.downloading_season) });
+		if (s.downloading_scope === "series") return i18n.series_dl_full_series();
+		// Scope unknown — the count still says how much is in flight.
+		return `${s.downloading_episodes || s.importing_episodes || 0} eps`;
+	}
+
+	function enrich(s: TVShow) {
+		const status = seriesStatus(s);
+		const downloading = status === "downloading";
+		const inFlight = downloading || status === "importing";
+		return {
+			id: s.id,
+			title: s.title,
+			original_title: s.original_title,
+			year: s.year,
+			releaseDate: s.first_aired,
+			status,
+			monitored: s.monitored,
+			rating: s.rating ?? undefined,
+			// Undefined progress draws the indeterminate bar, which is the honest
+			// reading when the server has not sent one — and an import has no
+			// percentage to send.
+			progress: downloading ? s.download_progress : undefined,
+			size_text: inFlight ? downloadText(s) : episodeText(s),
+		};
+	}
+</script>
+
+<div
+	class="grid gap-x-4 gap-y-6 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]"
+>
+	{#each series as show (show.id)}
+		<PosterCard
+			movie={enrich(show)}
+			href={`/series/${show.id}`}
+			posterSrc={tvPosterUrl(show.id)}
+			onMonitor={auth.canAddDirectly ? () => monitor.mutate(show) : undefined}
+			monitorPending={monitor.isPending && monitor.variables?.id === show.id}
+			selected={selected.has(show.id)}
+			{selectionActive}
+			onSelect={auth.canAddDirectly ? (v) => onToggle(show.id, v) : undefined}
+			onLongPress={auth.canAddDirectly && onLongPress ? () => onLongPress(show.id) : undefined}
+		>
+			{#snippet kebab()}
+				{#if auth.canAddDirectly}
+					<SeriesActionsMenu {show} />
+				{/if}
+			{/snippet}
+		</PosterCard>
+	{/each}
+</div>

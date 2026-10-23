@@ -1,0 +1,746 @@
+package bulkimport
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/datahearth/streamline/ent"
+	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
+	entmediafile "github.com/datahearth/streamline/ent/mediafile"
+	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/db"
+	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/media/movie"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
+	"github.com/datahearth/streamline/internal/metadata"
+	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
+)
+
+var _ = Describe("Service.Commit validation", Label("unit", "bulkimport"), func() {
+	var (
+		ctx   context.Context
+		store *dbmocks.MockStore
+		svc   *Service
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		svc = NewService(
+			store,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			"/lib",
+			"/lib-tv",
+			nil,
+			nil,
+			nil,
+			nil,
+		)
+	})
+
+	It("rejects when scan is not in awaiting_review status", func() {
+		store.EXPECT().FindImportScan(mock.Anything, uint32(1)).
+			Return(&ent.ImportScan{ID: 1, Status: entimportscan.StatusRunning}, nil).
+			Once()
+		err := svc.Commit(ctx, 1)
+		Expect(err).To(MatchError(ErrScanNotReviewable))
+	})
+
+	It("refuses a book scan when Hardcover is not configured", func() {
+		store.EXPECT().FindImportScan(mock.Anything, uint32(4)).
+			Return(&ent.ImportScan{
+				ID:     4,
+				Kind:   entimportscan.KindBook,
+				Status: entimportscan.StatusAwaitingReview,
+			}, nil).Once()
+
+		Expect(svc.Commit(ctx, 4)).To(MatchError(book.ErrNotConfigured))
+	})
+
+	It("returns ErrScanNotFound when scan does not exist", func() {
+		store.EXPECT().FindImportScan(mock.Anything, uint32(2)).
+			Return(nil, &ent.NotFoundError{}).Once()
+		err := svc.Commit(ctx, 2)
+		Expect(err).To(MatchError(ErrScanNotFound))
+	})
+
+	It("flips status to committing then dispatches runCommit", func() {
+		store.EXPECT().FindImportScan(mock.Anything, uint32(3)).
+			Return(&ent.ImportScan{ID: 3, Kind: entimportscan.KindMovie, Status: entimportscan.StatusAwaitingReview, Mode: entimportscan.ModeInPlace}, nil).
+			Once()
+		store.EXPECT().
+			UpdateImportScanStatus(mock.Anything, uint32(3), entimportscan.StatusCommitting, mock.Anything).
+			Return(nil).
+			Once()
+		// Async goroutine: allow any subsequent calls.
+		store.EXPECT().
+			ListImportScanFilesForCommit(mock.Anything, uint32(3)).
+			Return(nil, nil).
+			Maybe()
+		store.EXPECT().
+			UpdateImportScanStatus(mock.Anything, uint32(3), entimportscan.StatusCompleted, mock.Anything).
+			Return(nil).
+			Maybe()
+
+		Expect(svc.Commit(ctx, 3)).To(Succeed())
+	})
+})
+
+var _ = Describe("Service.runCommit", Label("unit", "bulkimport"), func() {
+	var (
+		ctx   context.Context
+		store *dbmocks.MockStore
+		ms    *msmocks.MockRefresher
+		svc   *Service
+		scan  *ent.ImportScan
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		ms = msmocks.NewMockRefresher(GinkgoT())
+		svc = NewService(
+			store,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			ms,
+			"/lib",
+			"/lib-tv",
+			nil,
+			nil,
+			nil,
+			nil,
+		)
+		scan = &ent.ImportScan{ID: 3, Mode: entimportscan.ModeInPlace}
+		store.EXPECT().
+			UpdateImportScanStatus(mock.Anything, uint32(3), entimportscan.StatusCompleted, mock.Anything).
+			Return(nil).
+			Once()
+	})
+
+	It("rescans the media servers once something committed", func() {
+		store.EXPECT().ListImportScanFilesForCommit(mock.Anything, uint32(3)).
+			Return([]*ent.ImportScanFile{{
+				ID:              1,
+				Classification:  entimportscanfile.ClassificationExisting,
+				ExistingMovieID: 5,
+				SourcePath:      "/lib/Movie (2020)/Movie.mkv",
+			}}, nil).
+			Once()
+		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(5)).
+			Return([]*ent.MediaFile{{Path: "/lib/Movie (2020)/Movie.mkv"}}, nil).
+			Once()
+		store.EXPECT().
+			UpdateImportScanFileOutcome(mock.Anything, uint32(1), entimportscanfile.OutcomeAttached, mock.Anything).
+			Return(nil).
+			Once()
+		refreshed := make(chan struct{})
+		ms.EXPECT().RefreshAll(mock.Anything, "movie", "/lib").
+			Run(func(context.Context, string, string) { close(refreshed) }).
+			Return(nil).Once()
+
+		svc.runCommit(ctx, scan)
+		Eventually(refreshed).Should(BeClosed())
+	})
+
+	It("leaves the media servers alone when nothing committed", func() {
+		store.EXPECT().ListImportScanFilesForCommit(mock.Anything, uint32(3)).
+			Return(nil, nil).
+			Once()
+		refreshed := make(chan struct{})
+		ms.EXPECT().RefreshAll(mock.Anything, mock.Anything, mock.Anything).
+			Run(func(context.Context, string, string) { close(refreshed) }).
+			Return(nil).Maybe()
+
+		svc.runCommit(ctx, scan)
+		Consistently(refreshed).ShouldNot(BeClosed())
+	})
+})
+
+var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
+	var (
+		ctx   context.Context
+		store *dbmocks.MockStore
+		svc   *Service
+	)
+
+	inPlaceScan := &ent.ImportScan{ID: 1, Mode: entimportscan.ModeInPlace}
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		svc = NewService(
+			store,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			"/lib",
+			"/lib-tv",
+			nil,
+			nil,
+			nil,
+			nil,
+		)
+	})
+
+	It(
+		"creates the media file with Source=wizard and marks the movie available",
+		func() {
+			f := &ent.ImportScanFile{
+				ID:                 7,
+				ExistingMovieID:    42,
+				SourcePath:         "/import/Movie.mkv",
+				Size:               1_500_000_000,
+				ParsedQuality:      "1080p",
+				ParsedReleaseGroup: "X",
+			}
+
+			store.EXPECT().
+				ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+				Return(nil, nil).
+				Once()
+			store.EXPECT().
+				FindMovieByID(mock.Anything, uint32(42)).
+				Return(&ent.Movie{ID: 42}, nil).
+				Once()
+			store.EXPECT().
+				CreateMediaFile(mock.Anything, db.CreateMediaFileParams{
+					MovieID:      42,
+					Path:         "/import/Movie.mkv",
+					Size:         1_500_000_000,
+					Quality:      "1080p",
+					ReleaseGroup: "X",
+					Source:       entmediafile.SourceWizard,
+				}).
+				Return(&ent.MediaFile{}, nil).
+				Once()
+			store.EXPECT().
+				UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+				Return(nil).
+				Once()
+
+			outcome, msg, movieID := svc.commitAttach(ctx, inPlaceScan, f)
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+			Expect(msg).To(BeEmpty())
+			Expect(movieID).To(Equal(uint32(42)))
+		},
+	)
+
+	It("replaces the movie's current file before attaching", func() {
+		old := filepath.Join(GinkgoT().TempDir(), "old.mkv")
+		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		f := &ent.ImportScanFile{
+			ID:              7,
+			ExistingMovieID: 42,
+			SourcePath:      "/import/Movie.mkv",
+			Size:            1_500_000_000,
+		}
+
+		store.EXPECT().
+			ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+			Return([]*ent.MediaFile{{ID: 9, Path: old}}, nil).
+			Once()
+		store.EXPECT().
+			DeleteMediaFile(mock.Anything, uint32(9)).
+			Return(nil).
+			Once()
+		store.EXPECT().
+			FindMovieByID(mock.Anything, uint32(42)).
+			Return(&ent.Movie{ID: 42}, nil).
+			Once()
+		store.EXPECT().
+			CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
+				return p.MovieID == 42 && p.Path == "/import/Movie.mkv"
+			})).
+			Return(&ent.MediaFile{}, nil).
+			Once()
+		store.EXPECT().
+			UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+			Return(nil).
+			Once()
+
+		outcome, _, movieID := svc.commitAttach(ctx, inPlaceScan, f)
+		Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+		Expect(movieID).To(Equal(uint32(42)))
+		Expect(old).NotTo(BeAnExistingFile())
+	})
+
+	It("is a no-op when the scanned path is already the movie's file", func() {
+		f := &ent.ImportScanFile{
+			ID:              7,
+			ExistingMovieID: 42,
+			SourcePath:      "/import/Movie.mkv",
+		}
+
+		store.EXPECT().
+			ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+			Return([]*ent.MediaFile{{ID: 9, Path: "/import/Movie.mkv"}}, nil).
+			Once()
+
+		outcome, msg, movieID := svc.commitAttach(ctx, inPlaceScan, f)
+		Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+		Expect(msg).To(BeEmpty())
+		Expect(movieID).To(Equal(uint32(42)))
+	})
+
+	It(
+		"queues a transcode job when the movie's profile is transcode-eligible",
+		func() {
+			configtest.Setup(map[string]any{
+				"transcoding": map[string]any{"enabled": true},
+				"quality_profiles": []map[string]any{{
+					"name": "hd", "preferred_resolution": "1080p",
+					"min_resolution": "720p",
+					"transcode": map[string]any{
+						"to": map[string]any{
+							"container": "mkv", "video_codec": "hevc",
+							"preset": "medium", "audio_codec": "aac",
+						},
+					},
+				}},
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
+			})
+			f := &ent.ImportScanFile{
+				ID: 7, ExistingMovieID: 42, SourcePath: "/import/Movie.mkv",
+				Size: 1_500_000_000,
+			}
+
+			store.EXPECT().
+				ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+				Return(nil, nil).
+				Once()
+			store.EXPECT().
+				FindMovieByID(mock.Anything, uint32(42)).
+				Return(&ent.Movie{ID: 42, QualityProfile: "hd"}, nil).
+				Once()
+			store.EXPECT().
+				CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
+					return p.QueueTranscode
+				})).
+				Return(&ent.MediaFile{}, nil).
+				Once()
+			store.EXPECT().
+				UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+				Return(nil).
+				Once()
+
+			outcome, _, movieID := svc.commitAttach(ctx, inPlaceScan, f)
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+			Expect(movieID).To(Equal(uint32(42)))
+		},
+	)
+})
+
+var _ = Describe(
+	"Service.commitAttach in rename mode",
+	Label("unit", "bulkimport"),
+	func() {
+		var (
+			ctx    context.Context
+			store  *dbmocks.MockStore
+			svc    *Service
+			libDir string
+			srcDir string
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			store = dbmocks.NewMockStore(GinkgoT())
+			base := GinkgoT().TempDir()
+			libDir = filepath.Join(base, "lib")
+			srcDir = filepath.Join(base, "src", "Fight Club (1999)")
+			Expect(os.MkdirAll(libDir, 0o755)).To(Succeed())
+			Expect(os.MkdirAll(srcDir, 0o755)).To(Succeed())
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":   libDir,
+					"movie_naming": "{title} ({year})/{title}.{ext}",
+					"import_mode":  "hardlink",
+				},
+			})
+			svc = NewService(
+				store,
+				nil,
+				nil,
+				library.NewImportService(),
+				nil,
+				nil,
+				nil,
+				libDir,
+				libDir,
+				nil, nil, nil, nil,
+			)
+		})
+
+		It(
+			"relocates an existing movie's file instead of adopting it in place",
+			func() {
+				src := filepath.Join(srcDir, "Fight Club - 1999 .mkv")
+				Expect(
+					os.WriteFile(src, make([]byte, 60*1024*1024), 0o644),
+				).To(Succeed())
+				scan := &ent.ImportScan{
+					ID:         1,
+					Mode:       entimportscan.ModeRename,
+					ImportMode: entimportscan.ImportModeHardlink,
+				}
+				f := &ent.ImportScanFile{ID: 7, ExistingMovieID: 42, SourcePath: src}
+
+				store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+					Return(nil, nil).Once()
+				store.EXPECT().FindMovieByID(mock.Anything, uint32(42)).
+					Return(&ent.Movie{ID: 42, Title: "Fight Club", Year: 1999}, nil).
+					Once()
+				var recorded db.CreateMediaFileParams
+				store.EXPECT().CreateMediaFile(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, p db.CreateMediaFileParams) {
+						recorded = p
+					}).Return(&ent.MediaFile{}, nil).Once()
+				store.EXPECT().
+					UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+					Return(nil).Once()
+
+				outcome, msg, movieID := svc.commitAttach(ctx, scan, f)
+				Expect(msg).To(BeEmpty())
+				Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+				Expect(movieID).To(Equal(uint32(42)))
+				Expect(recorded.Path).To(HavePrefix(libDir))
+				Expect(recorded.Path).To(BeAnExistingFile())
+			},
+		)
+	},
+)
+
+var _ = Describe("Service.addOrFindMovie", Label("unit", "bulkimport"), func() {
+	var (
+		ctx   context.Context
+		store *dbmocks.MockStore
+		meta  *metamocks.MockProvider
+		svc   *Service
+	)
+
+	const tmdbID = uint32(49948)
+
+	BeforeEach(func() {
+		configtest.Setup(map[string]any{
+			"quality_profiles": []map[string]any{{
+				"name": "hd", "preferred_resolution": "1080p",
+				"min_resolution": "720p",
+			}},
+			"movie_quality_default_profile":  "hd",
+			"series_quality_default_profile": "hd",
+		})
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		// movie.Service enriches cast after every add; nothing to enrich here.
+		store.EXPECT().PeopleNeedingDetails(
+			mock.Anything, mock.Anything, mock.Anything,
+		).Return(nil, nil).Maybe()
+		meta = metamocks.NewMockProvider(GinkgoT())
+		svc = NewService(
+			store,
+			meta,
+			nil,
+			nil,
+			movie.NewService(
+				store,
+				meta,
+				nil,
+				nil,
+				nil,
+			),
+			nil,
+			nil,
+			"/lib",
+			"/lib-tv",
+			nil, nil, nil, nil,
+		)
+	})
+
+	It("returns the existing row when another scan added the movie first", func() {
+		meta.EXPECT().GetMovie(mock.Anything, tmdbID).
+			Return(&metadata.MovieDetails{
+				TMDBID: tmdbID, Title: "Fantasia 2000", Year: 2000,
+			}, nil).Once()
+		store.EXPECT().CreateMovie(mock.Anything, mock.Anything).
+			Return(nil, &ent.ConstraintError{}).Once()
+		store.EXPECT().FindMovieByTMDBID(mock.Anything, tmdbID).
+			Return(&ent.Movie{ID: 3, TmdbID: tmdbID}, nil).Once()
+
+		m, err := svc.addOrFindMovie(ctx, tmdbID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(m.ID).To(Equal(uint32(3)))
+	})
+})
+
+var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func() {
+	var (
+		ctx   context.Context
+		store *dbmocks.MockStore
+		meta  *metamocks.MockProvider
+		svc   *Service
+	)
+
+	const tmdbID = uint32(55001)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		// movie.Service enriches cast after every add; nothing to enrich here.
+		store.EXPECT().PeopleNeedingDetails(
+			mock.Anything, mock.Anything, mock.Anything,
+		).Return(nil, nil).Maybe()
+		meta = metamocks.NewMockProvider(GinkgoT())
+	})
+
+	It(
+		"queues a transcode job when the created movie's profile is transcode-eligible",
+		func() {
+			configtest.Setup(map[string]any{
+				"transcoding": map[string]any{"enabled": true},
+				// tmdb_region defaults to "FR", which makes Add fetch a digital
+				// release date — irrelevant here and not stubbed on the mock.
+				"metadata": map[string]any{"tmdb_region": ""},
+				"quality_profiles": []map[string]any{{
+					"name": "hd", "preferred_resolution": "1080p",
+					"min_resolution": "720p",
+					"transcode": map[string]any{
+						"to": map[string]any{
+							"container": "mkv", "video_codec": "hevc",
+							"preset": "medium", "audio_codec": "aac",
+						},
+					},
+				}},
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
+			})
+			svc = NewService(
+				store,
+				meta,
+				nil,
+				nil,
+				movie.NewService(
+					store,
+					meta,
+					nil,
+					nil,
+					nil,
+				),
+				nil,
+				nil,
+				"/lib",
+				"/lib-tv",
+				nil, nil, nil, nil,
+			)
+			f := &ent.ImportScanFile{
+				ID: 7, SourcePath: "/import/Movie.mkv", Size: 1_500_000_000,
+				ParsedQuality: "1080p", ParsedReleaseGroup: "X",
+			}
+
+			meta.EXPECT().GetMovie(mock.Anything, tmdbID).
+				Return(&metadata.MovieDetails{
+					TMDBID: tmdbID, Title: "Fantasia 2000", Year: 2000,
+				}, nil).Once()
+			// Add is called with an empty quality profile (resolved later at
+			// read time), so the created row's QualityProfile is empty here too
+			// — config.TranscodeEligible("") is what falls back to the default.
+			store.EXPECT().CreateMovie(mock.Anything, mock.Anything).
+				Return(&ent.Movie{ID: 42}, nil).Once()
+			store.EXPECT().
+				CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
+					return p.QueueTranscode
+				})).
+				Return(&ent.MediaFile{}, nil).
+				Once()
+			store.EXPECT().
+				UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+				Return(nil).
+				Once()
+
+			outcome, msg, movieID := svc.commitAdoptInPlace(ctx, f, tmdbID)
+			Expect(msg).To(BeEmpty())
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeCreated))
+			Expect(movieID).To(Equal(uint32(42)))
+		},
+	)
+
+	It("does not queue a transcode job when transcoding is disabled", func() {
+		configtest.Setup(map[string]any{
+			"metadata": map[string]any{"tmdb_region": ""},
+			"quality_profiles": []map[string]any{{
+				"name": "hd", "preferred_resolution": "1080p",
+				"min_resolution": "720p",
+			}},
+			"movie_quality_default_profile":  "hd",
+			"series_quality_default_profile": "hd",
+		})
+		svc = NewService(
+			store,
+			meta,
+			nil,
+			nil,
+			movie.NewService(
+				store,
+				meta,
+				nil,
+				nil,
+				nil,
+			),
+			nil,
+			nil,
+			"/lib",
+			"/lib-tv",
+			nil, nil, nil, nil,
+		)
+		f := &ent.ImportScanFile{
+			ID: 8, SourcePath: "/import/Movie2.mkv", Size: 1_500_000_000,
+		}
+
+		meta.EXPECT().GetMovie(mock.Anything, tmdbID).
+			Return(&metadata.MovieDetails{
+				TMDBID: tmdbID, Title: "Fantasia 2000", Year: 2000,
+			}, nil).Once()
+		store.EXPECT().CreateMovie(mock.Anything, mock.Anything).
+			Return(&ent.Movie{ID: 43}, nil).Once()
+		store.EXPECT().
+			CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
+				return !p.QueueTranscode
+			})).
+			Return(&ent.MediaFile{}, nil).
+			Once()
+		store.EXPECT().
+			UpdateMovieStatus(mock.Anything, uint32(43), entmovie.StatusAvailable).
+			Return(nil).
+			Once()
+
+		outcome, _, movieID := svc.commitAdoptInPlace(ctx, f, tmdbID)
+		Expect(outcome).To(Equal(entimportscanfile.OutcomeCreated))
+		Expect(movieID).To(Equal(uint32(43)))
+	})
+})
+
+var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
+	var (
+		ctx    context.Context
+		store  *dbmocks.MockStore
+		meta   *metamocks.MockProvider
+		svc    *Service
+		libDir string
+		srcDir string
+	)
+
+	const tmdbID = uint32(55002)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		// movie.Service enriches cast after every add; nothing to enrich here.
+		store.EXPECT().PeopleNeedingDetails(
+			mock.Anything, mock.Anything, mock.Anything,
+		).Return(nil, nil).Maybe()
+		meta = metamocks.NewMockProvider(GinkgoT())
+		base := GinkgoT().TempDir()
+		libDir = filepath.Join(base, "lib")
+		srcDir = filepath.Join(base, "src")
+		Expect(os.MkdirAll(libDir, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(srcDir, 0o755)).To(Succeed())
+	})
+
+	It(
+		"queues a transcode job when the created movie's profile is transcode-eligible",
+		func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":   libDir,
+					"movie_naming": "{title} ({year})/{title}.{ext}",
+					"import_mode":  "hardlink",
+				},
+				"transcoding": map[string]any{"enabled": true},
+				"metadata":    map[string]any{"tmdb_region": ""},
+				"quality_profiles": []map[string]any{{
+					"name": "hd", "preferred_resolution": "1080p",
+					"min_resolution": "720p",
+					"transcode": map[string]any{
+						"to": map[string]any{
+							"container": "mkv", "video_codec": "hevc",
+							"preset": "medium", "audio_codec": "aac",
+						},
+					},
+				}},
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
+			})
+			svc = NewService(
+				store, meta, nil, library.NewImportService(),
+				movie.NewService(store, meta, nil, nil, nil), nil, nil,
+				libDir, libDir,
+				nil, nil, nil, nil,
+			)
+
+			src := filepath.Join(srcDir, "Fight Club - 1999.mkv")
+			Expect(
+				os.WriteFile(src, make([]byte, 60*1024*1024), 0o644),
+			).To(Succeed())
+			scan := &ent.ImportScan{
+				ID:         1,
+				Mode:       entimportscan.ModeRename,
+				ImportMode: entimportscan.ImportModeHardlink,
+			}
+			f := &ent.ImportScanFile{ID: 7, SourcePath: src}
+
+			meta.EXPECT().GetMovie(mock.Anything, tmdbID).
+				Return(&metadata.MovieDetails{
+					TMDBID: tmdbID, Title: "Fight Club", Year: 1999,
+				}, nil).Once()
+			store.EXPECT().CreateMovie(mock.Anything, mock.Anything).
+				Return(&ent.Movie{ID: 42, Title: "Fight Club", Year: 1999}, nil).
+				Once()
+			store.EXPECT().
+				CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
+					return p.QueueTranscode
+				})).
+				Return(&ent.MediaFile{}, nil).
+				Once()
+			store.EXPECT().
+				UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+				Return(nil).
+				Once()
+
+			outcome, msg, movieID := svc.commitRename(ctx, scan, f, tmdbID)
+			Expect(msg).To(BeEmpty())
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeCreated))
+			Expect(movieID).To(Equal(uint32(42)))
+		},
+	)
+})
+
+var _ = Describe("CommitOptions", Label("unit", "bulkimport"), func() {
+	It("leaves adopted files alone unless the commit asks for tags", func() {
+		on, off := true, false
+		Expect(CommitOptions{}.writeTags()).To(BeFalse(),
+			"a commit with no body never rewrites a collection's files")
+		Expect(CommitOptions{WriteTags: &off}.writeTags()).To(BeFalse())
+		Expect(CommitOptions{WriteTags: &on}.writeTags()).To(BeTrue())
+	})
+})

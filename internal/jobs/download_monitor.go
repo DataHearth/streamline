@@ -1,0 +1,62 @@
+package jobs
+
+import (
+	"context"
+	"log/slog"
+
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/importer"
+	"github.com/datahearth/streamline/internal/scheduler"
+)
+
+// DownloadMonitor returns a scheduler.JobFunc that polls the download manager
+// and forwards each completion to the importer, then reaps the builtin
+// torrents that have finished seeding, runs the manual-torrent adoption pass
+// and enqueues anything it auto-imported. Intended to run on a short interval
+// (default 30s).
+func DownloadMonitor(
+	c download.Checker,
+	r download.SeedReaper,
+	a download.Adopter,
+	imp importer.Enqueuer,
+) scheduler.JobFunc {
+	return func(ctx context.Context) error {
+		completed, err := c.CheckStatus(ctx)
+		if err != nil {
+			return err
+		}
+		// Self-heal episodes, albums and book slots left "downloading" by a
+		// cancelled, refused or lost record.
+		// Non-fatal: a reconcile failure must not abort the completion pass.
+		if err := c.ReconcileStrandedMedia(ctx); err != nil {
+			slog.WarnContext(ctx, "reconcile stranded media failed", "error", err)
+		}
+		for _, cd := range completed {
+			slog.InfoContext(
+				ctx,
+				"download completed, enqueue import",
+				"record.id",
+				cd.Record.ID,
+			)
+			imp.Enqueue(cd.Record.ID)
+		}
+		// Reclaiming disk is never worth failing the tick over: the sweep is
+		// idempotent and the same torrents are still there next time.
+		if err := r.RemoveSeedCompleteTorrents(ctx); err != nil {
+			slog.WarnContext(ctx, "remove seed-complete torrents failed",
+				"error", err)
+		}
+		adopted, err := a.AdoptManualTorrents(ctx)
+		if err != nil {
+			// Adoption failure must not kill the completion pass.
+			slog.WarnContext(ctx, "adopt manual torrents failed", "error", err)
+			return nil
+		}
+		for _, id := range adopted {
+			slog.InfoContext(ctx, "adopted manual torrent, enqueue import",
+				"record.id", id)
+			imp.Enqueue(id)
+		}
+		return nil
+	}
+}

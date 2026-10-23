@@ -1,0 +1,80 @@
+root = "."
+testdata_dir = "testdata"
+tmp_dir = "tmp"
+
+[build]
+args_bin = ["--config ./tmp/config.yaml"]
+bin = "streamline"
+cmd = "task build:app"
+entrypoint = ["streamline"]
+exclude_dir = [
+  "docs",
+  ".jj",
+  ".git",
+  ".direnv",
+  ".claude",
+  "tmp",
+  "deploy",
+  "node_modules",
+  "migrations",
+  # config_test creates and removes ./data relative to the package dir, so
+  # every test run spams the watcher with "watching internal/config/data".
+  "internal/config/data",
+]
+# Every build output under the watched `web` tree, or the build that writes
+# them retriggers the watcher: air then starts the binary from the previous
+# build while the next one is still linking, and the running server serves a
+# stale embedded SPA. Keep in sync with the `generates:` lists in Taskfile.yaml.
+exclude_file = [
+  "web/static/js/docs.min.js",
+  "web/static/css/docs.min.css",
+  "web/static/css/style.css",
+  "web/static/dist/spa.min.js",
+  "web/static/dist/spa.min.css",
+]
+exclude_regex = ["_test\\.go$", "mocks/mock_.*\\.go$", "\\.test$"]
+include_dir = ["web", "internal", "ent", "cmd", "api"]
+include_ext = [
+  "go",
+  "tpl",
+  "tmpl",
+  "html",
+  "js",
+  "ts",
+  "svelte",
+  "css",
+  "png",
+  "woff2",
+  "sql",
+  # web/app/messages/*.json — paraglide compiles these into lib/paraglide, so a
+  # message-only edit silently kept the old bundle without this.
+  "json",
+]
+include_file = []
+kill_delay = "0s"
+log = "build-errors.log"
+
+[color]
+app = ""
+build = "yellow"
+main = "magenta"
+runner = "green"
+watcher = "cyan"
+
+[log]
+main_only = false
+silent = false
+time = false
+
+[misc]
+clean_on_exit = false
+
+[proxy]
+app_port = 0
+app_start_timeout = 0
+enabled = false
+proxy_port = 0
+
+[screen]
+clear_on_rebuild = false
+keep_scroll = true

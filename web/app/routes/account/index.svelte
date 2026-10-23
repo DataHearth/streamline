@@ -1,0 +1,120 @@
+<script lang="ts">
+	import IdentityHero from "@components/account/IdentityHero.svelte";
+	import AccountIndex from "@components/account/AccountIndex.svelte";
+	import ProfileCard from "@components/account/ProfileCard.svelte";
+	import PasswordCard from "@components/account/PasswordCard.svelte";
+	import APIKeysCard from "@components/account/APIKeysCard.svelte";
+	import SessionsCard from "@components/account/SessionsCard.svelte";
+	import JWTRotateCard from "@components/account/JWTRotateCard.svelte";
+	import LanguageCard from "@components/account/LanguageCard.svelte";
+	import AppAccessCard from "@components/account/AppAccessCard.svelte";
+	import DeviceEmailCard from "@components/account/DeviceEmailCard.svelte";
+	import { auth } from "@lib/auth.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	let isAdmin = $derived(auth.user?.role === "admin");
+</script>
+
+<div
+	class="mx-auto w-full max-w-[920px] space-y-8 px-4 py-6 md:px-6 md:py-7 lg:px-8"
+>
+	<IdentityHero />
+
+	<!-- Touch: the same sections as rows carrying their current value, each
+	     opening its card as a screen. Matches how settings reads on a phone. -->
+	<AccountIndex />
+
+	<div class="hidden space-y-8 lg:block">
+		{@render section(
+			i18n.account_section_identity(),
+			i18n.account_section_identity_sub(),
+			identitySection,
+		)}
+
+		{@render section(
+			i18n.account_section_prefs(),
+			i18n.account_section_prefs_sub(),
+			prefsSection,
+		)}
+
+		{@render section(
+			i18n.account_section_devices(),
+			i18n.account_section_devices_sub(),
+			devicesSection,
+		)}
+
+		{@render section(
+			i18n.account_section_apps(),
+			i18n.account_section_apps_sub(),
+			appsSection,
+		)}
+
+		{#if isAdmin}
+			{@render section(
+				i18n.account_section_danger(),
+				i18n.account_section_danger_sub(),
+				dangerSection,
+				true,
+			)}
+		{/if}
+	</div>
+</div>
+
+{#snippet section(
+	title: string,
+	subtitle: string,
+	body: import("svelte").Snippet,
+	danger = false,
+)}
+	<section>
+		<header class="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+			<h2
+				class={[
+					"font-mono text-[11px] font-semibold uppercase tracking-[0.16em]",
+					danger ? "text-status-failed" : "text-fg-faint",
+				]}
+			>
+				{title}
+			</h2>
+			<span
+				class={[
+					"hidden h-px flex-1 sm:block",
+					danger ? "bg-status-failed/30" : "bg-border",
+				]}
+				aria-hidden="true"
+			></span>
+			<p class="text-xs text-fg-subtle">{subtitle}</p>
+		</header>
+		{@render body()}
+	</section>
+{/snippet}
+
+{#snippet identitySection()}
+	<div class="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+		<ProfileCard />
+		<PasswordCard />
+	</div>
+{/snippet}
+
+{#snippet prefsSection()}
+	<LanguageCard />
+{/snippet}
+
+{#snippet devicesSection()}
+	<div class="grid items-start gap-4">
+		<APIKeysCard />
+		<SessionsCard />
+	</div>
+{/snippet}
+
+{#snippet appsSection()}
+	<div class="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+		<AppAccessCard kind="subsonic" />
+		<AppAccessCard kind="opds" />
+		<DeviceEmailCard />
+	</div>
+{/snippet}
+
+{#snippet dangerSection()}
+	<JWTRotateCard />
+{/snippet}

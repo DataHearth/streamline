@@ -1,0 +1,65 @@
+// Receive OTLP from streamline.
+otelcol.receiver.otlp "default" {
+	http {}
+	grpc {}
+
+	output {
+		metrics = [otelcol.processor.batch.default.input]
+		logs    = [otelcol.processor.batch.default.input]
+		traces  = [otelcol.processor.batch.default.input]
+	}
+}
+
+// Batch before export.
+otelcol.processor.batch "default" {
+	output {
+		metrics = [otelcol.exporter.prometheus.victoriametrics.input]
+		logs    = [otelcol.processor.transform.log_severity.input]
+		traces  = [otelcol.exporter.otlphttp.victoriatraces.input]
+	}
+}
+
+// Bridge OTel metrics to Prometheus format.
+otelcol.exporter.prometheus "victoriametrics" {
+	forward_to = [prometheus.remote_write.victoriametrics.receiver]
+}
+
+// Export metrics to VictoriaMetrics via Prometheus remote write.
+prometheus.remote_write "victoriametrics" {
+	endpoint {
+		url = "http://victoriametrics:8428/api/v1/write"
+	}
+}
+
+// Map SeverityNumber to SeverityText for VictoriaLogs display.
+otelcol.processor.transform "log_severity" {
+	error_mode = "ignore"
+	log_statements {
+		context = "log"
+		statements = [
+			"set(severity_text, \"TRACE\") where severity_number >= 1 and severity_number <= 4",
+			"set(severity_text, \"DEBUG\") where severity_number >= 5 and severity_number <= 8",
+			"set(severity_text, \"INFO\") where severity_number >= 9 and severity_number <= 12",
+			"set(severity_text, \"WARN\") where severity_number >= 13 and severity_number <= 16",
+			"set(severity_text, \"ERROR\") where severity_number >= 17 and severity_number <= 20",
+			"set(severity_text, \"CRITICAL\") where severity_number >= 21 and severity_number <= 24",
+		]
+	}
+	output {
+		logs = [otelcol.exporter.otlphttp.victorialogs.input]
+	}
+}
+
+// Logs → VictoriaLogs (OTLP ingestion at /insert/opentelemetry/v1/logs).
+otelcol.exporter.otlphttp "victorialogs" {
+	client {
+		endpoint = "http://victorialogs:9428/insert/opentelemetry"
+	}
+}
+
+// Traces → VictoriaTraces (OTLP ingestion at /insert/opentelemetry/v1/traces).
+otelcol.exporter.otlphttp "victoriatraces" {
+	client {
+		endpoint = "http://victoriatraces:10428/insert/opentelemetry"
+	}
+}

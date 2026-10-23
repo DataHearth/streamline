@@ -1,0 +1,534 @@
+package indexer
+
+import (
+	"context"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
+)
+
+var _ = Describe("Service", Label("unit", "indexers"), func() {
+	var (
+		ctx context.Context
+		svc Manager
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		svc = New()
+	})
+
+	Describe("SearchMovie", func() {
+		When("no indexers are enabled", func() {
+			It(
+				"returns an empty result slice without contacting any indexer",
+				func() {
+					configtest.Setup()
+					results, err := svc.SearchMovie(
+						ctx,
+						[]string{"Interstellar"},
+						nil,
+						157336,
+					)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(results).To(BeEmpty())
+				},
+			)
+		})
+
+		When("the titles slice is empty after dedup", func() {
+			It("returns nil without contacting any indexer", func() {
+				configtest.Setup()
+				results, err := svc.SearchMovie(ctx, []string{"", ""},
+					nil, 0)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(BeNil())
+			})
+		})
+	})
+
+	Describe("SearchAlbum", func() {
+		It("returns an empty slice when no indexer is enabled", func() {
+			configtest.Setup()
+			results, err := svc.SearchAlbum(ctx, "Nirvana", "Nevermind", 1991)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeEmpty())
+		})
+
+		It("returns nil when artist and album are both empty", func() {
+			configtest.Setup()
+			results, err := svc.SearchAlbum(ctx, "", "", 1991)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeNil())
+		})
+	})
+
+	Describe("SearchArtist", func() {
+		It("returns an empty slice when no indexer is enabled", func() {
+			configtest.Setup()
+			results, err := svc.SearchArtist(ctx, "Nirvana")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeEmpty())
+		})
+
+		It("returns nil for a blank name", func() {
+			configtest.Setup()
+			results, err := svc.SearchArtist(ctx, "  ")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeNil())
+		})
+	})
+
+	Describe("SearchBook", func() {
+		It("returns an empty slice when no indexer is enabled", func() {
+			configtest.Setup()
+			results, err := svc.SearchBook(
+				ctx, "Brandon Sanderson", "Elantris", 2005, mediafile.BookKindEbook)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeEmpty())
+		})
+
+		It("returns nil when author and title are both empty", func() {
+			configtest.Setup()
+			results, err := svc.SearchBook(
+				ctx,
+				"",
+				"",
+				2005,
+				mediafile.BookKindEbook,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeNil())
+		})
+
+		It("rejects an unknown kind without contacting any indexer", func() {
+			rec := recordingIndexer()
+			_, err := svc.SearchBook(
+				ctx,
+				"Brandon Sanderson",
+				"Elantris",
+				2005,
+				mediafile.BookKind("comic"),
+			)
+			Expect(err).To(MatchError(ContainSubstring("unknown book kind")))
+			Expect(rec.queries()).To(BeEmpty())
+		})
+	})
+
+	Describe("SearchSeason", func() {
+		When("no indexers are enabled", func() {
+			It(
+				"returns an empty result slice without contacting any indexer",
+				func() {
+					configtest.Setup()
+					results, err := svc.SearchSeason(
+						ctx,
+						[]string{"The Black Sea"},
+						nil,
+						12345,
+						3,
+					)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(results).To(BeEmpty())
+				},
+			)
+		})
+
+		When("the titles slice is empty after dedup", func() {
+			It("returns nil without contacting any indexer", func() {
+				configtest.Setup()
+				results, err := svc.SearchSeason(ctx, []string{"", ""},
+					nil, 0, 0)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(BeNil())
+			})
+		})
+	})
+
+	Describe("SearchEpisode", func() {
+		When("no indexers are enabled", func() {
+			It(
+				"returns an empty result slice without contacting any indexer",
+				func() {
+					configtest.Setup()
+					results, hidden, err := svc.SearchEpisode(
+						ctx,
+						[]string{"The Black Sea"},
+						nil,
+						12345,
+						3,
+						5,
+					)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(results).To(BeEmpty())
+					Expect(hidden).To(BeZero())
+				},
+			)
+		})
+
+		When("the titles slice is empty after dedup", func() {
+			It("returns nil without contacting any indexer", func() {
+				configtest.Setup()
+				results, hidden, err := svc.SearchEpisode(
+					ctx,
+					[]string{"", ""},
+					nil,
+					0,
+					0,
+					0,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(BeNil())
+				Expect(hidden).To(BeZero())
+			})
+		})
+	})
+
+	Describe("dedupTitles", func() {
+		It("strips empty entries and collapses duplicates first-seen order", func() {
+			Expect(dedupTitles(nil)).To(BeNil())
+			Expect(dedupTitles([]string{})).To(BeNil())
+			Expect(dedupTitles([]string{""})).To(BeEmpty())
+			Expect(
+				dedupTitles([]string{"Fight Club", "Fight Club"}),
+			).To(Equal([]string{"Fight Club"}))
+			Expect(
+				dedupTitles([]string{"", "Astérix", ""}),
+			).To(Equal([]string{"Astérix"}))
+			Expect(
+				dedupTitles([]string{"Fight Club", "Astérix", "Fight Club"}),
+			).To(Equal([]string{"Fight Club", "Astérix"}))
+		})
+	})
+
+	Describe("dedupResults", func() {
+		rel := func(idx, dl string) SearchResult {
+			return SearchResult{
+				Title:    "Slime.S04E07.1080p-GRP",
+				Indexer:  idx,
+				Download: dl,
+				Size:     1_400_000_000,
+			}
+		}
+
+		It("collapses one release answered under two proxy links", func() {
+			out := dedupResults([]SearchResult{
+				rel("C411", "http://p/1?q=local"),
+				rel("C411", "http://p/1?q=original"),
+			})
+			Expect(out).To(HaveLen(1))
+			Expect(out[0].Download).To(Equal("http://p/1?q=local"))
+		})
+
+		It("keeps the same release on a different tracker", func() {
+			Expect(dedupResults([]SearchResult{
+				rel("C411", "http://p/1"),
+				rel("TR4KER", "http://p/2"),
+			})).To(HaveLen(2))
+		})
+
+		It("keeps a same-named release of a different size", func() {
+			a := rel("C411", "http://p/1")
+			b := a
+			b.Size = 426_000_000
+			Expect(dedupResults([]SearchResult{a, b})).To(HaveLen(2))
+		})
+	})
+
+	Describe("Feed", func() {
+		When("the named indexer is not configured", func() {
+			It("returns ErrIndexerNotFound", func() {
+				configtest.Setup()
+				results, err := svc.Feed(ctx, "ghost")
+				Expect(err).To(MatchError(config.ErrIndexerNotFound))
+				Expect(results).To(BeNil())
+			})
+		})
+	})
+
+	Describe("TestByName", func() {
+		When("the named indexer is not configured", func() {
+			It("returns ErrIndexerNotFound", func() {
+				configtest.Setup()
+				Expect(svc.TestByName(ctx, "ghost")).
+					To(MatchError(config.ErrIndexerNotFound))
+			})
+		})
+	})
+
+	Describe("filterToSeason", func() {
+		It("keeps only season packs of exactly the season", func() {
+			in := []SearchResult{
+				{Title: "Breaking.Bad.S01.MULTI.1080p.BluRay.x265.RamirouHD"},
+				{Title: "Breaking.Bad.S01E05.1080p.WEB.x265-GRP"},
+				{Title: "Breaking.Bad.S02.MULTI.2160p.WEBRip.x265-SQUEEZE"},
+				{Title: "Breaking.Bad.INTEGRALE.MULTI.1080p.WEB.x265-NoTAG"},
+				{
+					Title: "Breaking.Bad.The.Complete.Series.Collection.MULTi.1080p.PopHD",
+				},
+				{Title: "Breaking.Bad.COMPLETE.S01-S05.Bluray.Remux.1080p-GRP"},
+			}
+			out := filterToSeason(in, 1)
+			titles := make([]string, len(out))
+			for i, r := range out {
+				titles[i] = r.Title
+			}
+			// S02 (wrong season), the single episode, the integral, the complete
+			// collection and the S01-S05 range are all dropped.
+			Expect(titles).To(ConsistOf(
+				"Breaking.Bad.S01.MULTI.1080p.BluRay.x265.RamirouHD",
+			))
+		})
+	})
+
+	Describe("filterToEpisode", func() {
+		It("keeps the requested episode, absolute numbers and dailies", func() {
+			in := []SearchResult{
+				{Title: "Breaking.Bad.S01E05.1080p.WEB.x265-GRP"},
+				{Title: "Breaking.Bad.S01E06.1080p.WEB.x265-GRP"},
+				{Title: "Breaking.Bad.S02E05.1080p.WEB.x265-GRP"},
+				{Title: "Breaking.Bad.S01.MULTI.1080p.BluRay.x265.RamirouHD"},
+				{Title: "[SubsPlease] Breaking Bad - 05 (1080p) [A1B2C3D4]"},
+				{Title: "Breaking.Bad.2011.09.25.FRENCH.720p.WEB-GRP"},
+				// Names no scope at all: a tracker that publishes packs under the
+				// bare show title, and a different show entirely.
+				{Title: "Breaking Bad"},
+				{Title: "Breaking Bad The Movie 2017 Web-DL 720p AVC AAC VOSTF"},
+			}
+			out, _ := filterToEpisode(in, 1, 5)
+			titles := make([]string, len(out))
+			for i, r := range out {
+				titles[i] = r.Title
+			}
+			Expect(titles).To(ConsistOf(
+				"Breaking.Bad.S01E05.1080p.WEB.x265-GRP",
+				"[SubsPlease] Breaking Bad - 05 (1080p) [A1B2C3D4]",
+				"Breaking.Bad.2011.09.25.FRENCH.720p.WEB-GRP",
+			))
+		})
+
+		It("counts only the dropped packs that cover the episode", func() {
+			in := []SearchResult{
+				{Title: "Breaking.Bad.S01.MULTI.1080p.BluRay.x265.RamirouHD"},
+				{Title: "Breaking.Bad.COMPLETE.S01-S05.Bluray.Remux.1080p-GRP"},
+				{Title: "Breaking.Bad.INTEGRALE.MULTI.1080p.WEB.x265-NoTAG"},
+				// Covers other seasons, not season 1.
+				{Title: "Breaking.Bad.S02-S03.MULTI.1080p.WEB.x265-GRP"},
+				// Plain noise: another episode, nowhere to send anyone.
+				{Title: "Breaking.Bad.S01E06.1080p.WEB.x265-GRP"},
+			}
+			out, hidden := filterToEpisode(in, 1, 5)
+			Expect(out).To(BeEmpty())
+			Expect(hidden).To(Equal(3))
+		})
+	})
+
+	Describe("filterProviderIDs", func() {
+		It("drops a release the tracker labelled as another show", func() {
+			// The one filter here that does not guess: the tracker said what
+			// the release is for, so a disagreement settles it outright —
+			// where preferTitleMatches can only prefer.
+			in := []SearchResult{
+				{Title: "right show", TVDBID: 81189},
+				{Title: "wrong show", TVDBID: 99999},
+				{Title: "unlabelled"},
+			}
+			out := filterProviderIDs(in, SearchParams{
+				Kind:   KindTV,
+				TVDBID: 81189,
+			})
+			titles := make([]string, len(out))
+			for i, r := range out {
+				titles[i] = r.Title
+			}
+			Expect(titles).To(ConsistOf("right show", "unlabelled"))
+		})
+
+		It("reads a zero id as unsaid, not as a mismatch", func() {
+			// Most releases on most trackers carry none; reading zero as a
+			// mismatch empties the result set.
+			in := []SearchResult{{Title: "a"}, {Title: "b"}}
+			Expect(filterProviderIDs(in, SearchParams{
+				Kind:   KindMovie,
+				TMDBID: 438631,
+			})).To(HaveLen(2))
+		})
+
+		It("compares only the id the search itself asked about", func() {
+			// A series' TMDB id on a release says nothing about the TVDB id
+			// the library holds, so a TV search must not read it as a verdict.
+			in := []SearchResult{{Title: "a", TMDBID: 1396, TVDBID: 81189}}
+			Expect(filterProviderIDs(in, SearchParams{
+				Kind:   KindTV,
+				TVDBID: 81189,
+			})).To(HaveLen(1))
+		})
+
+		It("leaves an unscoped search untouched", func() {
+			in := []SearchResult{{Title: "a", TVDBID: 99999}}
+			Expect(filterProviderIDs(in, SearchParams{Query: "a"})).To(HaveLen(1))
+		})
+	})
+
+	Describe("SearchParams.narrowed", func() {
+		It("reports whether the query carried more than a bare title", func() {
+			// What gates the empty-result retry: a query that named nothing
+			// else has no narrower form to fall back from.
+			Expect(SearchParams{Query: "x"}.narrowed()).To(BeFalse())
+			Expect(SearchParams{Query: "x", Kind: KindTV}.narrowed()).To(BeFalse())
+			Expect(SearchParams{TMDBID: 1}.narrowed()).To(BeTrue())
+			Expect(SearchParams{TVDBID: 1}.narrowed()).To(BeTrue())
+			// Season and episode count now that they narrow at the tracker.
+			Expect(SearchParams{Season: 1}.narrowed()).To(BeTrue())
+			Expect(SearchParams{Episode: 1}.narrowed()).To(BeTrue())
+		})
+	})
+
+	Describe("preferTitleMatches", func() {
+		It(
+			"keeps this show's releases when another show shares the numbers",
+			func() {
+				in := []SearchResult{
+					{Title: "Breaking.Bad.S01E05.1080p.WEB.x265-GRP"},
+					{Title: "Ted Lasso S01E05 1080p WEB H264-CAKES"},
+					{Title: "Reacher S01E05 1080p HEVC x265-MeGusta"},
+					// A pack keyword and a fansub tag both survive extractTitle, so
+					// the comparison has to tolerate them.
+					{Title: "Breaking.Bad.S01.COMPLETE.MULTI.1080p.WEB-GRP"},
+					{Title: "[SubsPlease] Breaking Bad - 05 (1080p) [A1B2C3D4]"},
+				}
+				out := preferTitleMatches(
+					in,
+					[]string{"Breaking Bad", "Breaking Bad"},
+				)
+				titles := make([]string, len(out))
+				for i, r := range out {
+					titles[i] = r.Title
+				}
+				Expect(titles).To(ConsistOf(
+					"Breaking.Bad.S01E05.1080p.WEB.x265-GRP",
+					"Breaking.Bad.S01.COMPLETE.MULTI.1080p.WEB-GRP",
+					"[SubsPlease] Breaking Bad - 05 (1080p) [A1B2C3D4]",
+				))
+			},
+		)
+
+		// The real shape of the homelab case, with the real strings: TMDB's
+		// primary French title carries no "Le film" and the US titles no
+		// "Forteresse", so the library's own two titles match three of the five
+		// releases a tracker holds. The alias set is what reaches the rest, and
+		// the English ones match a *longer* alias rather than a shorter one —
+		// prefix tolerance runs in both directions on purpose.
+		It("reaches releases named in another language through an alias", func() {
+			in := []SearchResult{
+				{
+					Title: "Demon.Slayer.Kimetsu.no.Yaiba.La.Forteresse.Infinie.2025.HYBRID.MULTi.VFF.1080p.Bluray.Remux",
+				},
+				{
+					Title: "Demon.Slayer.Kimetsu.No.Yaiba.Le.Film.La.Forteresse.Infinie.2025.AD.MULTI.VFF.1080p.BLURAY",
+				},
+				{
+					Title: "Demon.Slayer.Kimetsu.no.Yaiba.Infinity.Castle.2025.MULTi.1080p.Bluray.10bits.AAC.2.0.x265-KAF",
+				},
+				{
+					Title: "Gekijouban.Kimetsu.no.Yaiba.Mugenjou-hen.2025.1080p.BluRay.x264",
+				},
+				{Title: "Nonnas.2025.AD.MULTI.VFF.1080p.WEB.EAC3.5.1.x264-FW"},
+			}
+			out := preferTitleMatches(in, matchTitles(
+				[]string{
+					"Demon Slayer : Kimetsu no Yaiba La Forteresse Infinie",
+					"劇場版「鬼滅の刃」無限城編 第一章 猗窩座再来",
+				},
+				[]string{
+					"Demon Slayer Kimetsu no Yaiba - Le film La Forteresse infinie",
+					"Demon Slayer: Kimetsu no Yaiba Infinity Castle Chapter 1: The Return of Akaza",
+					"Gekijouban Kimetsu no Yaiba Mugenjou-hen",
+				},
+			))
+			titles := make([]string, len(out))
+			for i, r := range out {
+				titles[i] = r.Title
+			}
+			Expect(titles).To(ConsistOf(
+				"Demon.Slayer.Kimetsu.no.Yaiba.La.Forteresse.Infinie.2025.HYBRID.MULTi.VFF.1080p.Bluray.Remux",
+				"Demon.Slayer.Kimetsu.No.Yaiba.Le.Film.La.Forteresse.Infinie.2025.AD.MULTI.VFF.1080p.BLURAY",
+				"Demon.Slayer.Kimetsu.no.Yaiba.Infinity.Castle.2025.MULTi.1080p.Bluray.10bits.AAC.2.0.x265-KAF",
+				"Gekijouban.Kimetsu.no.Yaiba.Mugenjou-hen.2025.1080p.BluRay.x264",
+			))
+		})
+
+		// The homelab case: a "Narcos" season-2 search came back holding only
+		// Narcos Mexico, whose name starts with the show's. Prefix tolerance
+		// read all eight as matches and the missing-search grabbed them.
+		It("refuses a longer show built on this one's name", func() {
+			in := []SearchResult{
+				{Title: "Narcos Mexico S02E03 German DL 1080p BluRay x264-AWARDS"},
+				{Title: "Narcos Mexico S02E04 German DL 1080p BluRay x264-AWARDS"},
+			}
+			out := preferTitleMatches(in, []string{"Narcos", "Narcos"})
+			Expect(out).To(HaveLen(2))
+			for _, r := range out {
+				Expect(r.TitleMismatch).To(BeTrue())
+			}
+		})
+
+		// The whole-series scope: "COMPLETE"/"INTEGRALE" is a tag every show's
+		// packs carry, so IsWholeSeriesPack separates nothing by show and this
+		// filter is the only thing between a Narcos browse and Narcos Mexico's
+		// integral. The kept release is the one the homelab actually grabbed.
+		It("keeps this show's integral and drops the other show's", func() {
+			in := []SearchResult{
+				{Title: "Narcos.INTEGRALE.FRENCH.1080p.WEB.10bits.EAC3.5.1.H265-FW"},
+				{Title: "Narcos.Mexico.COMPLETE.S01-S03.MULTi.1080p.WEB.x265-GRP"},
+			}
+			out := preferTitleMatches(in, []string{"Narcos", "Narcos"})
+			titles := make([]string, len(out))
+			for i, r := range out {
+				titles[i] = r.Title
+			}
+			Expect(titles).To(ConsistOf(
+				"Narcos.INTEGRALE.FRENCH.1080p.WEB.10bits.EAC3.5.1.H265-FW",
+			))
+		})
+
+		It("keeps everything when no release names the show", func() {
+			// A library holding a show under a translated title matches none of
+			// its English releases, and dropping them leaves nothing to grab.
+			in := []SearchResult{
+				{
+					Title: "That.Time.I.Got.Reincarnated.as.a.Slime.S04E20.VOSTFR.1080p.WEB",
+				},
+				{Title: "Slime.Datta.Ken.S04E20.VOSTFR.1080p.WEB"},
+			}
+			out := preferTitleMatches(in, []string{
+				"Moi, quand je me réincarne en Slime",
+				"転生したらスライムだった件",
+			})
+			Expect(out).To(HaveLen(2))
+			for _, r := range out {
+				Expect(r.TitleMismatch).To(BeTrue())
+			}
+		})
+	})
+})
+
+var _ = Describe("withoutAudiobooks", Label("unit", "indexers"), func() {
+	It(
+		"drops the audiobook subcategory and keeps the rest of the audio root",
+		func() {
+			got := withoutAudiobooks([]SearchResult{
+				{Title: "album", Category: "3000"},
+				{Title: "lossless", Category: "3040"},
+				{Title: "audiobook", Category: catAudiobook},
+				{Title: "uncategorised"},
+			})
+			Expect(got).To(HaveLen(3))
+			Expect(got).NotTo(ContainElement(HaveField("Title", "audiobook")))
+		},
+	)
+})

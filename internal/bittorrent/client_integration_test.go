@@ -1,0 +1,923 @@
+package bittorrent
+
+import (
+	"bytes"
+	"context"
+	"math/rand/v2"
+	"net"
+	"os"
+	"path/filepath"
+	"strconv"
+	"sync"
+	"time"
+
+	analog "github.com/anacrolix/log"
+	antorrent "github.com/anacrolix/torrent"
+	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
+	"github.com/anacrolix/torrent/storage"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/dbtest"
+	"github.com/datahearth/streamline/internal/testutil/nettest"
+)
+
+// engineBindIP keeps the engine loopback-only. Binding it also switches off
+// anacrolix's UPnP discovery (see New), so a run neither multicasts SSDP nor
+// leaves transient sockets behind on ports this suite is about to hand out.
+const engineBindIP = "127.0.0.1"
+
+// reserveListenPort picks a port the engine can bind on both protocols.
+//
+// The engine binds TCP *and* UDP on its configured port, and anacrolix only
+// retries a taken port when it was asked for a dynamic one — a configured
+// port that is busy is a hard start failure. Ports are therefore drawn from
+// below the kernel's ephemeral range (32768-60999 on Linux), which nothing
+// on the box can be auto-assigned: an OS-assigned port would come out of
+// that shared pool, and probing it over TCP says nothing about whether the
+// UDP half is free.
+func reserveListenPort() uint16 {
+	GinkgoHelper()
+	for range 100 {
+		//nolint:gosec // bounded 10000..29999, well inside uint16
+		port := uint16(10000 + rand.IntN(20000))
+		if portBindable(port) {
+			return port
+		}
+	}
+	Fail("no port below the ephemeral range was free for TCP and UDP")
+	return 0
+}
+
+func portBindable(port uint16) bool {
+	addr := net.JoinHostPort(engineBindIP, strconv.Itoa(int(port)))
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return false
+	}
+	defer l.Close()
+	p, err := net.ListenPacket("udp", addr)
+	if err != nil {
+		return false
+	}
+	defer p.Close()
+	return true
+}
+
+// newSeeder builds a 2 MiB payload, its .torrent bytes, and a local
+// anacrolix client seeding it. Returns the torrent bytes and seeder port.
+func newSeeder(dir string) ([]byte, int) {
+	GinkgoHelper()
+	return newSeederOfSize(dir, 2<<20, 256<<10)
+}
+
+func newSeederOfSize(dir string, size int, pieceLen int64) ([]byte, int) {
+	GinkgoHelper()
+	content := make([]byte, size)
+	for i := range content {
+		content[i] = byte(i % 251)
+	}
+	Expect(os.WriteFile(
+		filepath.Join(dir, "payload.bin"), content, 0o644,
+	)).To(Succeed())
+
+	info := metainfo.Info{PieceLength: pieceLen}
+	Expect(info.BuildFromFilePath(filepath.Join(dir, "payload.bin"))).To(Succeed())
+	ib, err := bencode.Marshal(info)
+	Expect(err).NotTo(HaveOccurred())
+	mi := metainfo.MetaInfo{InfoBytes: ib}
+	var buf bytes.Buffer
+	Expect(mi.Write(&buf)).To(Succeed())
+
+	cc := antorrent.NewDefaultClientConfig()
+	cc.DataDir = dir
+	cc.Seed = true
+	cc.NoDHT = true
+	cc.DisableTrackers = true
+	// PEX is the last discovery path left once DHT and trackers are off, and it
+	// defeats the isolation they buy. Every spec seeds the same deterministic
+	// payload, so one infohash is shared across the suite on loopback: the
+	// seeder gossips peers it saw for that infohash to the engine under test,
+	// which dials a client from another spec — usually one already closed. That
+	// connection establishes and never sends a chunk, leaving the engine at
+	// ActivePeers=1 with zero bytes until the spec times out.
+	cc.DisablePEX = true
+	cc.NoDefaultPortForwarding = true
+	cc.ListenPort = 0
+	// A host without IPv6 fails every default anacrolix client at the tcp6
+	// listener; the engine under test binds its own dual-stack socket.
+	cc.DisableIPv6 = !nettest.IPv6()
+	cc.Slogger = engineSlogger()
+	seeder, err := antorrent.NewClient(cc)
+	Expect(err).NotTo(HaveOccurred())
+	var st *antorrent.Torrent
+	DeferCleanup(func() { closeSeeder(seeder, st) })
+	st, err = seeder.AddTorrent(&mi)
+	Expect(err).NotTo(HaveOccurred())
+	<-st.GotInfo()
+	return buf.Bytes(), seeder.LocalPort()
+}
+
+// newTCPOnlySeeder is newSeederOfSize with uTP turned off, so the only way a
+// peer can reach it is by dialing TCP. DisableUTP alone leaves the udp
+// networks listening for DHT; NoDHT is already set above, and together the
+// pair drops listenNetworks() to tcp4 and tcp6 (client.go's listenOnNetwork)
+// — this seeder does not set DisableIPv6, so both survive, and only the udp
+// pair is gone. LocalPort() still resolves correctly with no uTP socket
+// present: it returns the first non-zero port across cl.listeners, which is
+// then a TCP one.
+func newTCPOnlySeeder(dir string) ([]byte, int) {
+	GinkgoHelper()
+	content := make([]byte, 64<<10)
+	for i := range content {
+		content[i] = byte(i % 251)
+	}
+	Expect(os.WriteFile(
+		filepath.Join(dir, "payload.bin"), content, 0o644,
+	)).To(Succeed())
+
+	info := metainfo.Info{PieceLength: 16 << 10}
+	Expect(info.BuildFromFilePath(filepath.Join(dir, "payload.bin"))).To(Succeed())
+	ib, err := bencode.Marshal(info)
+	Expect(err).NotTo(HaveOccurred())
+	mi := metainfo.MetaInfo{InfoBytes: ib}
+	var buf bytes.Buffer
+	Expect(mi.Write(&buf)).To(Succeed())
+
+	cc := antorrent.NewDefaultClientConfig()
+	cc.DataDir = dir
+	cc.Seed = true
+	cc.NoDHT = true
+	cc.DisableUTP = true
+	cc.DisableTrackers = true
+	cc.DisablePEX = true
+	cc.NoDefaultPortForwarding = true
+	cc.ListenPort = 0
+	// A host without IPv6 fails every default anacrolix client at the tcp6
+	// listener; the engine under test binds its own dual-stack socket.
+	cc.DisableIPv6 = !nettest.IPv6()
+	cc.Slogger = engineSlogger()
+	seeder, err := antorrent.NewClient(cc)
+	Expect(err).NotTo(HaveOccurred())
+	var st *antorrent.Torrent
+	DeferCleanup(func() { closeSeeder(seeder, st) })
+	st, err = seeder.AddTorrent(&mi)
+	Expect(err).NotTo(HaveOccurred())
+	<-st.GotInfo()
+	return buf.Bytes(), seeder.LocalPort()
+}
+
+// newEngine spins an Engine on a temp dir wired to an in-memory store and
+// registers its shutdown before returning, so a spec that fails part-way
+// can never leave the listener bound.
+//
+// DHT is off and the engine is pinned to loopback so the suite talks to
+// nothing but its own seeder: with DHT on, the engine resolves and queries
+// the global bootstrap nodes and announces an infohash that is identical on
+// every machine running this suite, then competes the resulting internet
+// peers against the local seeder for connection slots.
+//
+// The returned stop closes the engine early — the restart spec needs that —
+// and turns the registered cleanup into a no-op, because Engine.Close closes
+// its stop channel and panics if called twice.
+func newEngine(
+	ctx context.Context,
+	dlDir string,
+	store db.Store,
+) (*Engine, func()) {
+	GinkgoHelper()
+	return newEngineBoundTo(ctx, dlDir, store, engineBindIP)
+}
+
+// newEngineBoundTo is newEngine with bind_interface left to the caller — an
+// empty string reproduces the unbound (no bind_interface configured) path,
+// which is the shape production runs in without a VPN tunnel.
+func newEngineBoundTo(
+	ctx context.Context,
+	dlDir string,
+	store db.Store,
+	bindInterface string,
+) (*Engine, func()) {
+	GinkgoHelper()
+	configtest.Setup(map[string]any{
+		"download_clients": []map[string]any{{
+			"name": "embedded", "client_type": "builtin",
+			"download_dir": dlDir, "listen_port": int(reserveListenPort()),
+			"bind_interface": bindInterface, "disable_dht": true,
+			"enabled": true,
+		}},
+	})
+	e, err := New(ctx, store)
+	Expect(err).NotTo(HaveOccurred())
+	closed := false
+	stop := func() {
+		GinkgoHelper()
+		if closed {
+			return
+		}
+		closed = true
+		Expect(e.Close()).To(Succeed())
+	}
+	DeferCleanup(stop)
+	return e, stop
+}
+
+// logSink collects everything tee'd off GinkgoWriter. It serializes access
+// because the writes this spec hunts for come from anacrolix goroutines that
+// outlive the call under test, so the buffer is read while they may still be
+// logging.
+type logSink struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (s *logSink) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *logSink) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
+}
+
+// teeEngineLogs routes both log streams the engine can fail through into sink:
+// slog, which now carries the embedded client's records as well as streamline's
+// own, and anacrolix's package logger, which anything logging through
+// analog.Default rather than the client config would otherwise write straight
+// to stderr, bypassing GinkgoWriter entirely.
+func teeEngineLogs(sink *logSink) {
+	GinkgoHelper()
+	GinkgoWriter.TeeTo(sink)
+	DeferCleanup(GinkgoWriter.ClearTeeWriters)
+	prev := analog.Default
+	DeferCleanup(func() { analog.Default = prev })
+	analog.Default.SetHandlers(analog.StreamHandler{
+		W: GinkgoWriter, Fmt: analog.LineFormatter,
+	})
+}
+
+// pieceCheckSettled reports whether the torrent's initial verification is done.
+func pieceCheckSettled(t *antorrent.Torrent) bool {
+	for _, run := range t.PieceStateRuns() {
+		if run.Hashing || run.QueuedForHash {
+			return false
+		}
+	}
+	return true
+}
+
+// closeSeeder waits for the seeder's own initial piece check before closing
+// the client. The seeder runs anacrolix's default storage, whose in-memory
+// piece completion is cleared by Close; a hasher still marking a piece
+// complete then finds no entry for the infohash, its GetRange yields nothing,
+// and allFilePiecesComplete's panicif takes the whole suite down (file-piece.go:209
+// in the pinned v1.61.1 pre-release). st is nil when AddTorrent never ran.
+func closeSeeder(seeder *antorrent.Client, st *antorrent.Torrent) {
+	GinkgoHelper()
+	if st != nil {
+		Eventually(pieceCheckSettled).WithArguments(st).
+			WithTimeout(30 * time.Second).WithPolling(2 * time.Millisecond).
+			Should(BeTrue())
+		Consistently(pieceCheckSettled).WithArguments(st).
+			WithTimeout(50 * time.Millisecond).WithPolling(5 * time.Millisecond).
+			Should(BeTrue())
+	}
+	Expect(seeder.Close()).To(BeEmpty())
+}
+
+// connectToSeeder points the engine's torrent at the local seeder, but not
+// before its initial piece check has settled.
+//
+// Adding a torrent hashes every piece against the download dir, and a piece
+// mid-hash is ignored for requests (anacrolix Piece.ignoreForRequests). A peer
+// that completes its handshake inside that window finds nothing to want, and
+// only requests once the check ends and its message writer is woken to
+// recompute its request state. anacrolix used to lose that wakeup when it
+// landed while the writer was mid-fill, leaving the download at zero bytes
+// with a live unchoked seeder until the next keepalive. The pinned version
+// installs the wakeup channel before filling (anacrolix #1070,
+// peer-conn-msg-writer.go), so the wedge is gone; these specs still wait the
+// hashing window out because the handshake-during-check path is anacrolix's
+// to test, not theirs, and hashing is CPU-bound enough that a contended
+// machine — CI especially — lands in it regularly.
+// The Consistently guards against the check not having *started* yet: a bare
+// "nothing hashing" poll is also true before the first piece is queued.
+func connectToSeeder(e *Engine, hash string, seederPort int) {
+	GinkgoHelper()
+	t, err := e.torrent(hash)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(pieceCheckSettled).WithArguments(t).
+		WithTimeout(30 * time.Second).WithPolling(2 * time.Millisecond).
+		Should(BeTrue())
+	Consistently(pieceCheckSettled).WithArguments(t).
+		WithTimeout(50 * time.Millisecond).WithPolling(5 * time.Millisecond).
+		Should(BeTrue())
+	t.AddPeers([]antorrent.PeerInfo{{
+		Addr: &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: seederPort},
+	}})
+}
+
+var _ = Describe("Engine download flow", Label("integration", "bittorrent"), func() {
+	var (
+		ctx          context.Context
+		store        db.Store
+		engine       *Engine
+		stopEngine   func()
+		dlDir        string
+		torrentBytes []byte
+		seederPort   int
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		tmp := GinkgoT().TempDir()
+		seedDir := filepath.Join(tmp, "seed")
+		dlDir = filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(seedDir, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+
+		entClient := dbtest.SetupTestDB(ctx)
+		DeferCleanup(entClient.Close)
+		store = db.New(entClient)
+
+		torrentBytes, seederPort = newSeeder(seedDir)
+		engine, stopEngine = newEngine(ctx, dlDir, store)
+	})
+
+	// A magnet whose tr= param carried trailing junk used to panic inside
+	// AddTorrentSpec — on this goroutine and on the announcer's — leaving the
+	// caller a 500 and the torrent registered anyway.
+	It("adds a magnet whose announce URL is malformed, minus that tracker",
+		func() {
+			hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+				Magnet: "magnet:?xt=urn:btih:" +
+					"aabbccddeeff00112233445566778899aabbccdd" +
+					"&dn=busted&tr=http%3A%2F%2F127.0.0.1%3A9117%2Fannounce%3C%2Flink%3E",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hash).To(Equal("aabbccddeeff00112233445566778899aabbccdd"))
+
+			t, err := engine.GetTorrent(ctx, hash)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(t.Hash).To(Equal(hash))
+		},
+	)
+
+	It("leaves nothing behind when an add fails", func() {
+		// rollbackAdd is what AddTorrent runs when AddTorrentSpec fails, and
+		// the session row it has to take back out was written before the add
+		// could fail.
+		hash := "00112233445566778899aabbccddeeff00112233"
+		Expect(store.CreateTorrentSession(ctx, db.CreateTorrentSessionParams{
+			InfoHash: hash, Name: "half-added", SavePath: dlDir,
+		})).Error().NotTo(HaveOccurred())
+
+		engine.rollbackAdd(ctx, hash)
+
+		sessions, err := store.ListTorrentSessions(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		for _, s := range sessions {
+			Expect(s.InfoHash).NotTo(Equal(hash))
+		}
+	})
+
+	It("downloads a torrent to completion and reports status", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(hash).To(HaveLen(40))
+		connectToSeeder(engine, hash, seederPort)
+
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(download.StatusSeeding))
+
+		got, err := os.ReadFile(filepath.Join(dlDir, "payload.bin"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(HaveLen(2 << 20))
+
+		t, err := engine.GetTorrent(ctx, hash)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(t.Progress).To(BeNumerically("==", 1))
+		Expect(t.SavePath).To(Equal(dlDir))
+
+		list, err := engine.ListTorrents(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(list).To(HaveLen(1))
+
+		sessions, err := store.ListTorrentSessions(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(sessions).To(HaveLen(1))
+		Expect(sessions[0].InfoHash).To(Equal(hash))
+	})
+
+	It("returns ErrTorrentNotFound for unknown hashes", func() {
+		_, err := engine.GetTorrent(ctx,
+			"0000000000000000000000000000000000000000")
+		Expect(err).To(MatchError(download.ErrTorrentNotFound))
+	})
+
+	It("is a functioning download.Client for TestConnection", func() {
+		Expect(engine.TestConnection(ctx)).To(Succeed())
+	})
+
+	It("pauses and resumes with persisted state", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(engine.PauseTorrent(ctx, hash)).To(Succeed())
+		t, err := engine.GetTorrent(ctx, hash)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(t.Status).To(Equal(download.StatusPaused))
+		sessions, err := store.ListTorrentSessions(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(sessions[0].Paused).To(BeTrue())
+
+		Expect(engine.ResumeTorrent(ctx, hash)).To(Succeed())
+		connectToSeeder(engine, hash, seederPort)
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(download.StatusSeeding))
+	})
+
+	It("reports fetching while a magnet's metadata is unresolved", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Magnet: "magnet:?xt=urn:btih:" +
+				"aabbccddeeff00112233445566778899aabbccdd&dn=test",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		t, err := engine.GetTorrent(ctx, hash)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(t.Status).To(Equal(download.StatusFetching))
+	})
+
+	It("reports stalled while downloading with no connected peers", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		// Metadata is known immediately (.torrent source) but no seeder is
+		// connected, so there is data missing and zero active peers.
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(10 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(download.StatusStalled))
+	})
+
+	It("deletes the incomplete .part file for single-file torrents", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		// Mirror anacrolix's on-disk layout for an in-progress single-file
+		// torrent, whose partial data lives at "<name>.part".
+		partPath := filepath.Join(dlDir, "payload.bin.part")
+		Expect(os.WriteFile(partPath, []byte("partial"), 0o644)).To(Succeed())
+
+		Expect(engine.RemoveTorrent(ctx, hash, true)).To(Succeed())
+		_, err = os.Stat(partPath)
+		Expect(os.IsNotExist(err)).To(BeTrue())
+	})
+
+	It("removes a torrent and deletes its data on request", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		connectToSeeder(engine, hash, seederPort)
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(download.StatusSeeding))
+
+		Expect(engine.RemoveTorrent(ctx, hash, true)).To(Succeed())
+		_, err = engine.GetTorrent(ctx, hash)
+		Expect(err).To(MatchError(download.ErrTorrentNotFound))
+		_, err = os.Stat(filepath.Join(dlDir, "payload.bin"))
+		Expect(os.IsNotExist(err)).To(BeTrue())
+		sessions, err := store.ListTorrentSessions(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(sessions).To(BeEmpty())
+	})
+
+	It("restores completed torrents across restarts without redownload", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		connectToSeeder(engine, hash, seederPort)
+		// Polled tightly on purpose, to catch the first instant seeding is
+		// reported. Seeding used to be read off byte counts that include
+		// written-but-unhashed chunks, so it could arrive with pieces still
+		// queued for hash; closing then dropped their hash results, the store
+		// kept them incomplete, and the restored engine sat stalled with no
+		// peer to fetch them from.
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(60 * time.Second).WithPolling(time.Millisecond).
+			Should(Equal(download.StatusSeeding))
+		lt, err := engine.torrent(hash)
+		Expect(err).NotTo(HaveOccurred())
+		for _, run := range lt.PieceStateRuns() {
+			Expect(run.Complete).To(BeTrue(),
+				"seeding reported with unverified pieces: %v", lt.PieceStateRuns())
+		}
+		// A ratio built only from anacrolix's counter restarts at zero with the
+		// process, so a seed_ratio limit could never be met. Stand in for a
+		// prior life's upload and require the restored engine to carry it.
+		Expect(store.SetTorrentSessionUploaded(ctx, hash, 4096)).To(Succeed())
+		stopEngine()
+
+		// Second engine boots from the same store + download dir; the seeder
+		// is gone from its peer list, so completion must come from disk.
+		engine, stopEngine = newEngine(ctx, dlDir, store)
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(30 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(download.StatusSeeding))
+
+		views := engine.ListViews(ctx)
+		Expect(views).To(HaveLen(1))
+		Expect(views[0].Uploaded).To(BeNumerically(">=", int64(4096)))
+		Expect(views[0].Ratio).To(BeNumerically(">", 0))
+	})
+
+	// Starts 30 download cycles, which made it the loudest victim of
+	// anacrolix's lost writer wakeup (see connectToSeeder) before the pinned
+	// version fixed it. The engine now runs anacrolix's default 1min
+	// keepalive, so a wedged cycle would stall for about the whole 60s
+	// progress wait: a regression upstream shows here as a failure, not a
+	// slow run.
+	It("never writes piece completion into a closing store", func() {
+		var sink logSink
+		teeEngineLogs(&sink)
+
+		tmp := GinkgoT().TempDir()
+		seedDir := filepath.Join(tmp, "seed")
+		Expect(os.MkdirAll(seedDir, 0o755)).To(Succeed())
+		// 256 pieces instead of the shared seeder's 8: every piece that passes
+		// its hash costs one completion write, so a fine piece length keeps
+		// marks continuously in flight and makes the close land inside one of
+		// them often enough to be reproducible.
+		cycleBytes, cyclePort := newSeederOfSize(seedDir, 8<<20, 32<<10)
+
+		for cycle := range 30 {
+			dlDir := filepath.Join(tmp, "dl", strconv.Itoa(cycle))
+			Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+			cycleEngine, closeCycle := newEngine(ctx, dlDir, store)
+
+			hash, err := cycleEngine.AddTorrent(ctx, download.TorrentSource{
+				Bytes: cycleBytes,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			connectToSeeder(cycleEngine, hash, cyclePort)
+
+			// Close while hashers are hot rather than after completion: a
+			// completed torrent has, by construction, no mark left to race —
+			// anacrolix only flips a piece's reported completion after
+			// MarkComplete has returned (torrent.go:2647-2657).
+			Eventually(func() float64 {
+				t, terr := cycleEngine.GetTorrent(ctx, hash)
+				Expect(terr).NotTo(HaveOccurred())
+				return t.Progress
+			}).WithTimeout(60 * time.Second).WithPolling(time.Millisecond).
+				Should(BeNumerically(">", 0))
+			closeCycle()
+
+			// The next cycle boots a fresh engine off the same store, so drop
+			// this cycle's session rather than have it re-added elsewhere.
+			Expect(store.DeleteTorrentSessionByHash(ctx, hash)).To(Succeed())
+		}
+
+		logs := sink.String()
+		Expect(logs).NotTo(ContainSubstring("database not open"))
+		Expect(logs).NotTo(ContainSubstring("error marking piece"))
+		Expect(logs).NotTo(ContainSubstring("after the storage closed"))
+	})
+
+	It("excludes skipped files from downloading until re-wanted", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		// Wait for the async default prioritization, then skip the only file
+		// BEFORE any peer is known.
+		Eventually(func() string {
+			d, derr := engine.Details(ctx, hash)
+			Expect(derr).NotTo(HaveOccurred())
+			if len(d.Files) == 0 {
+				return ""
+			}
+			return d.Files[0].Priority
+		}).WithTimeout(10 * time.Second).WithPolling(50 * time.Millisecond).
+			Should(Equal("normal"))
+		Expect(engine.SetFilePriorities(ctx, hash, []FilePriority{
+			{Index: 0, Priority: "skip"},
+		})).To(Succeed())
+
+		connectToSeeder(engine, hash, seederPort)
+		// With the only file skipped there is no demand: a live local seeder
+		// (which otherwise completes this torrent in well under a second)
+		// transfers nothing.
+		Consistently(func() float64 {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Progress
+		}).WithTimeout(2 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(BeZero())
+
+		// Re-wanting the file resumes real transfer to completion.
+		Expect(engine.SetFilePriorities(ctx, hash, []FilePriority{
+			{Index: 0, Priority: "normal"},
+		})).To(Succeed())
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(download.StatusSeeding))
+	})
+
+	It("exposes files, trackers, and peers via Details", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		connectToSeeder(engine, hash, seederPort)
+
+		Eventually(func() int {
+			d, derr := engine.Details(ctx, hash)
+			Expect(derr).NotTo(HaveOccurred())
+			return len(d.Files)
+		}).WithTimeout(30 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(1))
+
+		d, err := engine.Details(ctx, hash)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(d.Files[0].Path).To(Equal("payload.bin"))
+		// startWhenReady bumps fresh files to Normal once metadata resolves —
+		// file priorities are the engine's single demand source, so the
+		// reported default matches what actually downloads.
+		Eventually(func() string {
+			d, derr := engine.Details(ctx, hash)
+			Expect(derr).NotTo(HaveOccurred())
+			return d.Files[0].Priority
+		}).WithTimeout(10 * time.Second).WithPolling(50 * time.Millisecond).
+			Should(Equal("normal"))
+
+		Expect(engine.SetFilePriorities(ctx, hash, []FilePriority{
+			{Index: 0, Priority: "high"},
+		})).To(Succeed())
+		d, err = engine.Details(ctx, hash)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(d.Files[0].Priority).To(Equal("high"))
+
+		views := engine.ListViews(ctx)
+		Expect(views).To(HaveLen(1))
+		Expect(views[0].Hash).To(Equal(hash))
+	})
+})
+
+// newUnboundEngineNoPortForwarding builds an unbound engine the way New
+// does, except cc.NoDefaultPortForwarding is forced on before the client is
+// constructed. New has no seam for this: it builds the *antorrent.ClientConfig
+// and calls antorrent.NewClient(cc) internally, and NewClient starts
+// `go cl.forwardPort()` synchronously, before returning, whenever
+// NoDefaultPortForwarding is unset — there is no point after New hands back
+// an *Engine where the flag could still matter. Every other spec in this
+// suite sidesteps the problem by binding to loopback (engineBindIP trips the
+// bound branch of newClientConfig, which already sets the flag); this is the
+// one spec that must stay unbound, to exercise the unbound TCP-dialer branch
+// the bug lived in, so it cannot use that trick. Left as production default,
+// this spec would multicast a real SSDP M-SEARCH on the developer's or CI
+// machine's LAN and, if a router answers, ask it for a real port mapping.
+func newUnboundEngineNoPortForwarding(
+	ctx context.Context, dlDir string, store db.Store,
+) (*Engine, func()) {
+	GinkgoHelper()
+	configtest.Setup(map[string]any{
+		"download_clients": []map[string]any{{
+			"name": "embedded", "client_type": "builtin",
+			"download_dir": dlDir, "listen_port": int(reserveListenPort()),
+			"disable_dht": true, "enabled": true,
+		}},
+	})
+	entry, ok := config.BuiltinDownloadClient()
+	Expect(ok).To(BeTrue())
+
+	sessionDir := filepath.Join(entry.DownloadDir, sessionDirName)
+	Expect(os.MkdirAll(sessionDir, 0o755)).To(Succeed())
+	pc, err := storage.NewBoltPieceCompletion(sessionDir)
+	Expect(err).NotTo(HaveOccurred())
+	st, paths := newContentStorage(entry.DownloadDir, pc)
+
+	packetConn, listener, err := newPeerSockets(ctx, nil, entry.ListenPort)
+	Expect(err).NotTo(HaveOccurred())
+
+	cc := newClientConfig(entry, nil, st, packetConn)
+	cc.NoDefaultPortForwarding = true
+
+	client, err := antorrent.NewClient(cc)
+	Expect(err).NotTo(HaveOccurred())
+	client.AddListener(listener)
+	client.AddDialer(antorrent.NetworkDialer{Network: "tcp4", Dialer: &net.Dialer{}})
+	client.AddDialer(antorrent.NetworkDialer{Network: "tcp6", Dialer: &net.Dialer{}})
+
+	e := &Engine{
+		client:      client,
+		storageImpl: st,
+		paths:       paths,
+		store:       store,
+		downloadDir: entry.DownloadDir,
+		listener:    listener,
+		packetConn:  packetConn,
+		state:       map[string]*torrentState{},
+		sample:      map[string]speedSample{},
+		stop:        make(chan struct{}),
+	}
+	Expect(e.restore(ctx)).To(Succeed())
+	e.wg.Go(e.enforceSeedLimits)
+
+	closed := false
+	stop := func() {
+		GinkgoHelper()
+		if closed {
+			return
+		}
+		closed = true
+		Expect(e.Close()).To(Succeed())
+	}
+	DeferCleanup(stop)
+	return e, stop
+}
+
+// Regression coverage for the finding that DisableTCP (set so the engine's
+// own rebindable listener is the only TCP socket anacrolix ever sees — see
+// newClientConfig) silently left outbound TCP dialing dead whenever
+// bind_interface was unset: New only attached a source-bound NetworkDialer
+// inside the bindIP != nil branch, so an unbound engine had cl.dialers
+// permanently empty and could reach peers over uTP only.
+//
+// cl.dialers is unexported, so this proves the fix the way the reviewer's
+// fallback allows: end to end, over a real loopback connection, against a
+// seeder with uTP turned off (newTCPOnlySeeder) so a TCP dial is the *only*
+// way in. It does not prove anything about IPv6 TCP dialing (no IPv6
+// loopback assumption is made here) or about dialer ordering when both TCP
+// and uTP peers are reachable — only that TCP dialing exists at all on the
+// unbound path.
+// A port move ends in a forced DHT re-announce, which is the only half of
+// peer discovery that can be refreshed at once — a tracker only learns the new
+// port at its next scheduled announce. Every engine in this suite runs with
+// disable_dht, so this pins the other guard: cc.NoDHT leaves DhtServers()
+// empty, and the announce has to read that as a configured no-op rather than
+// iterating torrents against nothing.
+var _ = Describe(
+	"Engine listen port move with DHT disabled",
+	Label("integration", "bittorrent"),
+	func() {
+		It("moves the sockets and announces nowhere", func() {
+			ctx := context.Background()
+			tmp := GinkgoT().TempDir()
+			dlDir := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+
+			entClient := dbtest.SetupTestDB(ctx)
+			DeferCleanup(entClient.Close)
+
+			engine, _ := newEngine(ctx, dlDir, db.New(entClient))
+			Expect(engine.client.DhtServers()).To(BeEmpty())
+
+			port := reserveListenPort()
+			Expect(engine.SetListenPort(ctx, port)).To(Succeed())
+			Expect(engine.listener.Addr().(*net.TCPAddr).Port).To(Equal(int(port)))
+			Expect(engine.packetConn.LocalAddr().(*net.UDPAddr).Port).
+				To(Equal(int(port)))
+		})
+	},
+)
+
+var _ = Describe(
+	"Engine unbound TCP dialing",
+	Label("integration", "bittorrent"),
+	func() {
+		It("downloads over TCP with no bind_interface configured", func() {
+			ctx := context.Background()
+			tmp := GinkgoT().TempDir()
+			seedDir := filepath.Join(tmp, "seed")
+			dlDir := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(seedDir, 0o755)).To(Succeed())
+			Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+
+			entClient := dbtest.SetupTestDB(ctx)
+			DeferCleanup(entClient.Close)
+			store := db.New(entClient)
+
+			torrentBytes, seederPort := newTCPOnlySeeder(seedDir)
+			engine, _ := newUnboundEngineNoPortForwarding(ctx, dlDir, store)
+
+			hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+				Bytes: torrentBytes,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			connectToSeeder(engine, hash, seederPort)
+
+			Eventually(func() download.TorrentStatus {
+				t, terr := engine.GetTorrent(ctx, hash)
+				Expect(terr).NotTo(HaveOccurred())
+				return t.Status
+			}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+				Should(Equal(download.StatusSeeding))
+
+			got, err := os.ReadFile(filepath.Join(dlDir, "payload.bin"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(HaveLen(64 << 10))
+		})
+	},
+)
+
+var _ = Describe(
+	"Engine magnet refused by the path guard",
+	Label("integration", "bittorrent"),
+	func() {
+		packInfo := func(size int) ([]byte, metainfo.Hash) {
+			GinkgoHelper()
+			dir := filepath.Join(GinkgoT().TempDir(), "pack")
+			Expect(os.MkdirAll(dir, 0o755)).To(Succeed())
+			Expect(os.WriteFile(
+				filepath.Join(dir, "a.bin"), make([]byte, size), 0o644,
+			)).To(Succeed())
+			info := metainfo.Info{PieceLength: 1 << 20}
+			Expect(info.BuildFromFilePath(dir)).To(Succeed())
+			ib, err := bencode.Marshal(info)
+			Expect(err).NotTo(HaveOccurred())
+			return ib, metainfo.HashBytes(ib)
+		}
+
+		It("drops a second magnet sharing a held name and reports why", func() {
+			ctx := context.Background()
+			dlDir := filepath.Join(GinkgoT().TempDir(), "dl")
+			Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+			entClient := dbtest.SetupTestDB(ctx)
+			DeferCleanup(entClient.Close)
+			engine, _ := newEngine(ctx, dlDir, db.New(entClient))
+
+			firstInfo, firstHash := packInfo(100)
+			secondInfo, secondHash := packInfo(200)
+			Expect(secondHash).NotTo(Equal(firstHash))
+
+			first, err := engine.AddTorrent(ctx, download.TorrentSource{
+				Magnet: "magnet:?xt=urn:btih:" + firstHash.HexString(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			ft, ok := engine.client.Torrent(firstHash)
+			Expect(ok).To(BeTrue())
+			Expect(ft.SetInfoBytes(firstInfo)).To(Succeed())
+
+			second, err := engine.AddTorrent(ctx, download.TorrentSource{
+				Magnet: "magnet:?xt=urn:btih:" + secondHash.HexString(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			st, ok := engine.client.Torrent(secondHash)
+			Expect(ok).To(BeTrue())
+			Expect(st.SetInfoBytes(secondInfo)).NotTo(Succeed())
+
+			Eventually(func() error {
+				_, gerr := engine.GetTorrent(ctx, second)
+				return gerr
+			}).WithTimeout(10 * time.Second).Should(MatchError(
+				download.ErrTorrentRefused,
+			))
+			_, err = engine.GetTorrent(ctx, second)
+			Expect(err).To(MatchError(ContainSubstring(first)))
+			_, ok = engine.client.Torrent(secondHash)
+			Expect(ok).To(BeFalse())
+			_, err = engine.GetTorrent(ctx, first)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	},
+)

@@ -1,0 +1,162 @@
+<script lang="ts">
+	import { Radar, Search, Tags } from "@lucide/svelte";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
+	import LabelPill from "@components/shared/LabelPill.svelte";
+	import ReleaseCover from "./ReleaseCover.svelte";
+	import Tracklist from "./Tracklist.svelte";
+	import ReleaseCredits from "./ReleaseCredits.svelte";
+	import { qualityNote, releaseFacts, releasePill, releaseTypeLabel, releaseYear, type Release, type Track } from "@lib/music-books";
+	import { albumPosterUrl } from "@lib/posters";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	// The selected release, right of the list from md. Two searches, as on the
+	// series and book pages: Search now hands the release to the automatic
+	// search, Manual search lists the results to pick one. Monitoring is per
+	// release too.
+	let {
+		release: r,
+		canEdit = false,
+		onSearch,
+		onManualSearch,
+		onMonitor,
+		monitorPending = false,
+		onManualSearchTrack,
+		onDeleteTrack,
+		onTags,
+	}: {
+		release: Release;
+		canEdit?: boolean;
+		onSearch: () => void;
+		onManualSearch: () => void;
+		onMonitor: () => void;
+		// The monitor write is in flight.
+		monitorPending?: boolean;
+		// A track is never grabbed on its own: its manual search lists the
+		// releases of its album.
+		onManualSearchTrack?: () => void;
+		onDeleteTrack?: (t: Track) => void;
+		// The release's tag panel, for a release holding files.
+		onTags?: () => void;
+	} = $props();
+
+	let up = $derived(r.status === "upcoming");
+	let failed = $derived(r.status === "failed");
+	let pill = $derived(releasePill(r));
+	let facts = $derived(releaseFacts(r));
+	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
+</script>
+
+<section aria-labelledby="release-title" class="min-w-0">
+	<div class="flex items-start gap-4 rounded-lg border border-border bg-bg-elevated/70 p-4 lg:gap-5">
+		<div class="w-[88px] shrink-0 lg:w-[112px]">
+			<ReleaseCover src={albumPosterUrl(r.id)} dim={up} dashed={up} />
+		</div>
+		<!-- A container, so Manual search can drop its label where this column
+		     is narrow (tablet, and lg until ~1180px) instead of wrapping the
+		     bookmark onto a line of its own. -->
+		<div class="@container min-w-0 flex-1">
+			<div class="flex flex-wrap items-center gap-2">
+				{#if pill}
+					<LabelPill token={pill.token} label={pill.label} size="md" variant="translucent" live={pill.live} />
+				{/if}
+				<span class={caps}>{releaseTypeLabel(r.type)}</span>
+				{#if !up && releaseYear(r)}
+					<span class="text-fg-faint" aria-hidden="true">·</span>
+					<span class={caps}>{releaseYear(r)}</span>
+				{/if}
+				{#if r.label}
+					<span class="text-fg-faint" aria-hidden="true">·</span>
+					<span class={caps}>{r.label}</span>
+				{/if}
+			</div>
+			<h2 id="release-title" class="mt-2 text-xl font-bold tracking-tight text-fg lg:text-2xl">{r.title}</h2>
+			<div class="mt-1.5 flex flex-wrap items-center gap-2 font-mono text-xs text-fg-muted">
+				{#each facts as f, i (i)}
+					{#if i > 0}<span class="text-fg-faint" aria-hidden="true">·</span>{/if}
+					<span>{f}</span>
+				{/each}
+			</div>
+			{#if failed}
+				<div class="mt-3 text-[13px] leading-snug">
+					{#if r.failure_reason}
+						<p class="font-mono text-xs text-status-failed">{r.failure_reason}</p>
+					{/if}
+					<p class="mt-1 text-fg-muted">{i18n.music_import_failed()}</p>
+				</div>
+			{/if}
+			{#if canEdit}
+				<!-- gap-1.5: at 1024 the column is 265 and French needs 179 + 36 + 36
+				     plus the gaps, which gap-2 took to 267. -->
+				<div class="mt-4 flex flex-wrap items-center gap-1.5">
+					{#if !up && !failed}
+						<button
+							type="button"
+							onclick={onSearch}
+							class="inline-flex h-11 items-center gap-2 rounded-lg bg-accent px-3 text-[13px] font-semibold text-fg-on-accent transition hover:bg-accent-hover lg:h-9"
+						>
+							<Radar size={15} aria-hidden="true" />
+							{i18n.music_search_now()}
+						</button>
+					{/if}
+					{#if !up}
+						<button
+							type="button"
+							onclick={onManualSearch}
+							aria-label={i18n.action_manual_search()}
+							title={i18n.action_manual_search()}
+							class="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.06] px-2 text-[13px] font-medium text-fg transition hover:bg-white/[0.12] lg:h-9 lg:min-w-9 @md:px-3"
+						>
+							<Search size={15} aria-hidden="true" />
+							<span class="hidden @md:inline">{i18n.action_manual_search()}</span>
+						</button>
+					{/if}
+					<MonitorToggle monitored={r.monitored} onToggle={onMonitor} pending={monitorPending} size="sm" />
+					{#if onTags && r.tracks_have > 0}
+						<button
+							type="button"
+							onclick={onTags}
+							aria-label={i18n.music_tags_panel_button()}
+							title={i18n.music_tags_panel_button()}
+							class="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.06] px-2 text-[13px] font-medium text-fg transition hover:bg-white/[0.12] lg:h-9 lg:min-w-9 @md:px-3"
+						>
+							<Tags size={15} aria-hidden="true" />
+							<span class="hidden @md:inline">{i18n.music_tags_panel_button()}</span>
+						</button>
+					{/if}
+					{#if up}
+						<span class="text-[13px] text-fg-muted">
+							{r.monitored ? i18n.music_upcoming_monitored() : i18n.music_upcoming_unmonitored()}
+						</span>
+					{/if}
+				</div>
+			{/if}
+		</div>
+	</div>
+
+	<div class="mt-4">
+		{#if r.tracks?.length}
+			<Tracklist
+				tracks={r.tracks}
+				release={r}
+				qualityNote={qualityNote(r)}
+				markMissing={r.status === "wanted" && r.tracks_have > 0}
+				{canEdit}
+				onManualSearch={onManualSearchTrack ? () => onManualSearchTrack() : undefined}
+				onDeleteFile={onDeleteTrack}
+			/>
+		{:else if r.tracks_pending}
+			<div class="rounded-lg border border-dashed border-border-strong px-6 py-10 text-center">
+				<p class="text-[14px] font-medium text-fg-muted">{i18n.music_tracks_fetching()}</p>
+			</div>
+		{:else}
+			<div class="rounded-lg border border-dashed border-border-strong px-6 py-10 text-center">
+				<p class="text-[14px] font-medium text-fg-muted">{i18n.music_tracklist_unannounced()}</p>
+				<p class="mt-1 text-[12.5px] text-fg-subtle">{i18n.music_tracklist_unannounced_hint()}</p>
+			</div>
+		{/if}
+	</div>
+
+	<div class="mt-6">
+		<ReleaseCredits release={r} />
+	</div>
+</section>

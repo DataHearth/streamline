@@ -1,0 +1,552 @@
+package indexer
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strconv"
+	"sync"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
+)
+
+func splitHostPort(rawURL string) (string, uint16) {
+	GinkgoHelper()
+	u, err := url.Parse(rawURL)
+	Expect(err).NotTo(HaveOccurred())
+	port, err := strconv.ParseUint(u.Port(), 10, 16)
+	Expect(err).NotTo(HaveOccurred())
+	return u.Hostname(), uint16(port)
+}
+
+type recordedSearch struct {
+	mu   sync.Mutex
+	qs   []string
+	cats []string
+}
+
+func (r *recordedSearch) queries() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.qs...)
+}
+
+func (r *recordedSearch) categories() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.cats...)
+}
+
+// recordingIndexer serves two releases of different seeder counts through one
+// torznab indexer and records every q and cat it is asked for.
+func recordingIndexer() *recordedSearch {
+	GinkgoHelper()
+	rec := &recordedSearch{}
+	item := func(n int, seeders string) testRSSItem {
+		u := "https://idx.com/dl/" + strconv.Itoa(n)
+		return testRSSItem{
+			Title: "Release " + strconv.Itoa(n),
+			GUID:  u,
+			Link:  u,
+			Size:  1000,
+			Enclosure: testEnclosure{
+				URL: u, Length: 1000, Type: "application/x-bittorrent",
+			},
+			ExtraXML: torznabAttrs(
+				map[string]string{"seeders": seeders, "peers": "1"},
+			),
+		}
+	}
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rec.mu.Lock()
+			rec.qs = append(rec.qs, r.URL.Query().Get("q"))
+			rec.cats = append(rec.cats, r.URL.Query().Get("cat"))
+			rec.mu.Unlock()
+			Expect(r.URL.Query().Get("t")).To(Equal("search"))
+			w.Header().Set("Content-Type", "application/xml")
+			_, err := w.Write(torznabXML([]testRSSItem{item(1, "5"), item(2, "90")}))
+			Expect(err).NotTo(HaveOccurred())
+		}),
+	)
+	DeferCleanup(ts.Close)
+	host, port := splitHostPort(ts.URL)
+	configtest.Setup(map[string]any{
+		"indexers": []map[string]any{{
+			"name": "Idx", "host": host, "port": int(port),
+			"api_key": "k", "protocol": "torznab", "enabled": true,
+		}},
+	})
+	return rec
+}
+
+var _ = Describe("Service", Label("integration", "indexers"), func() {
+	Describe("SearchBook", func() {
+		DescribeTable("queries the slot's categories with and without the year",
+			func(kind mediafile.BookKind, wantCat string) {
+				rec := recordingIndexer()
+				results, err := New().SearchBook(
+					context.Background(),
+					"Brandon Sanderson", "Elantris", 2005, kind)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec.queries()).To(ConsistOf(
+					"Brandon Sanderson Elantris", "Brandon Sanderson Elantris 2005"))
+				Expect(rec.categories()).To(HaveEach(wantCat))
+				Expect(results).NotTo(BeEmpty())
+			},
+			Entry("ebook", mediafile.BookKindEbook, "7000,7020"),
+			Entry("audiobook", mediafile.BookKindAudiobook, "3030"),
+		)
+	})
+
+	Describe("SearchAlbum", func() {
+		It("queries the music category with and without the year", func() {
+			rec := recordingIndexer()
+			results, err := New().SearchAlbum(
+				context.Background(), "Nirvana", "Nevermind", 1991)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec.queries()).To(ConsistOf(
+				"Nirvana Nevermind", "Nirvana Nevermind 1991"))
+			Expect(rec.categories()).To(HaveEach("3000"))
+			Expect(results).NotTo(BeEmpty())
+			Expect(results[0].Seeders).To(Equal(uint32(90)))
+		})
+
+		It("issues only the bare query without a year", func() {
+			rec := recordingIndexer()
+			_, err := New().SearchAlbum(
+				context.Background(), "Nirvana", "Nevermind", 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec.queries()).To(Equal([]string{"Nirvana Nevermind"}))
+		})
+	})
+
+	Describe("SearchArtist", func() {
+		It(
+			"asks each indexer once, by the bare name, in the music category",
+			func() {
+				rec := recordingIndexer()
+				results, err := New().SearchArtist(context.Background(), "  Nirvana ")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec.queries()).To(Equal([]string{"Nirvana"}))
+				Expect(rec.categories()).To(HaveEach("3000"))
+				Expect(results).NotTo(BeEmpty())
+			},
+		)
+	})
+
+	Describe("SearchMovie", func() {
+		It(
+			"searches all enabled indexers in parallel and merges results sorted by seeders",
+			func() {
+				ctx := context.Background()
+
+				ts1 := httptest.NewServer(
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						w.Header().Set("Content-Type", "application/xml")
+						w.WriteHeader(http.StatusOK)
+						_, err := w.Write(torznabXML([]testRSSItem{
+							{
+								Title: "Interstellar 1080p BluRay-GROUP1",
+								GUID:  "https://idx1.com/1",
+								Link:  "https://idx1.com/dl/1",
+								Size:  5000000000,
+								Enclosure: testEnclosure{
+									URL:    "https://idx1.com/dl/1",
+									Length: 5000000000,
+									Type:   "application/x-bittorrent",
+								},
+								ExtraXML: torznabAttrs(
+									map[string]string{
+										"seeders": "50",
+										"peers":   "10",
+									},
+								),
+							},
+						}))
+						Expect(err).NotTo(HaveOccurred())
+					}),
+				)
+				defer ts1.Close()
+
+				ts2 := httptest.NewServer(
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						w.Header().Set("Content-Type", "application/xml")
+						w.WriteHeader(http.StatusOK)
+						_, err := w.Write(torznabXML([]testRSSItem{
+							{
+								Title: "Interstellar 2160p BluRay-GROUP2",
+								GUID:  "https://idx2.com/1",
+								Link:  "https://idx2.com/dl/1",
+								Size:  10000000000,
+								Enclosure: testEnclosure{
+									URL:    "https://idx2.com/dl/1",
+									Length: 10000000000,
+									Type:   "application/x-bittorrent",
+								},
+								ExtraXML: torznabAttrs(
+									map[string]string{
+										"seeders": "200",
+										"peers":   "20",
+									},
+								),
+							},
+						}))
+						Expect(err).NotTo(HaveOccurred())
+					}),
+				)
+				defer ts2.Close()
+
+				host1, port1 := splitHostPort(ts1.URL)
+				host2, port2 := splitHostPort(ts2.URL)
+				configtest.Setup(map[string]any{
+					"indexers": []map[string]any{
+						{
+							"name":     "Indexer1",
+							"host":     host1,
+							"port":     int(port1),
+							"api_key":  "key1",
+							"protocol": "torznab",
+							"enabled":  true,
+						},
+						{
+							"name":     "Indexer2",
+							"host":     host2,
+							"port":     int(port2),
+							"api_key":  "key2",
+							"protocol": "torznab",
+							"enabled":  true,
+						},
+						// disabled — should be skipped
+						{
+							"name":     "Disabled",
+							"host":     "nope",
+							"port":     80,
+							"api_key":  "key3",
+							"protocol": "torznab",
+							"enabled":  false,
+						},
+					},
+				})
+
+				svc := New()
+				results, err := svc.SearchMovie(
+					ctx,
+					[]string{"Interstellar"},
+					nil,
+					157336,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(2))
+				// Sorted by seeders desc: 200, then 50
+				Expect(results[0].Seeders).To(Equal(uint32(200)))
+				Expect(results[1].Seeders).To(Equal(uint32(50)))
+				Expect(results[0].Indexer).To(Equal("Indexer2"))
+				Expect(results[0].ConfiguredIndexer).To(Equal("Indexer2"))
+			},
+		)
+
+		It(
+			"keeps a Prowlarr sub-tracker's name and records the entry it came through",
+			func() {
+				ts := httptest.NewServer(
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						_, err := w.Write([]byte(`[{"title":"Interstellar 1080p",` +
+							`"downloadUrl":"http://x/a.torrent","protocol":"torrent",` +
+							`"indexer":"SubTracker","seeders":3}]`))
+						Expect(err).NotTo(HaveOccurred())
+					}),
+				)
+				defer ts.Close()
+
+				host, port := splitHostPort(ts.URL)
+				configtest.Setup(map[string]any{
+					"indexers": []map[string]any{{
+						"name": "prowlarr", "host": host, "port": int(port),
+						"api_key": "k", "protocol": "prowlarr", "enabled": true,
+					}},
+				})
+
+				results, err := New().SearchMovie(
+					context.Background(), []string{"Interstellar"}, nil, 157336,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(1))
+				Expect(results[0].Indexer).To(Equal("SubTracker"))
+				Expect(results[0].ConfiguredIndexer).To(Equal("prowlarr"))
+			},
+		)
+
+		It("matches on an alias without ever querying one", func() {
+			ctx := context.Background()
+
+			var (
+				mu      sync.Mutex
+				queried []string
+			)
+			ts := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					mu.Lock()
+					queried = append(queried, r.URL.Query().Get("q"))
+					mu.Unlock()
+
+					w.Header().Set("Content-Type", "application/xml")
+					w.WriteHeader(http.StatusOK)
+					_, err := w.Write(torznabXML([]testRSSItem{
+						{
+							Title: "Demon.Slayer.Infinity.Castle.2025.1080p.BluRay-GRP",
+							GUID:  "https://idx.com/1",
+							Link:  "https://idx.com/dl/1",
+							Size:  5000000000,
+							Enclosure: testEnclosure{
+								URL:    "https://idx.com/dl/1",
+								Length: 5000000000,
+								Type:   "application/x-bittorrent",
+							},
+							ExtraXML: torznabAttrs(
+								map[string]string{"seeders": "50", "peers": "10"},
+							),
+						},
+					}))
+					Expect(err).NotTo(HaveOccurred())
+				}),
+			)
+			defer ts.Close()
+
+			host, port := splitHostPort(ts.URL)
+			configtest.Setup(map[string]any{
+				"indexers": []map[string]any{
+					{
+						"name":     "Indexer1",
+						"host":     host,
+						"port":     int(port),
+						"api_key":  "key1",
+						"protocol": "torznab",
+						"enabled":  true,
+					},
+				},
+			})
+
+			results, err := New().SearchMovie(
+				ctx,
+				[]string{"Demon Slayer La Forteresse Infinie"},
+				[]string{"Demon Slayer Infinity Castle"},
+				1311031,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(1))
+			// The point of the alias: without it the release matches no title,
+			// preferTitleMatches falls back to the whole set, and the flag tells
+			// the automatic grabbers to refuse what only a human should see.
+			Expect(results[0].TitleMismatch).To(BeFalse())
+			// Aliases widen what is matched, never what is asked for — one query
+			// per title, or a show's alias list multiplies every search by its
+			// length against rate-limited trackers.
+			Expect(queried).To(ConsistOf("Demon Slayer La Forteresse Infinie"))
+		})
+
+		It("drops the other films an indexer answers a keyword search with",
+			func() {
+				ctx := context.Background()
+
+				ts := httptest.NewServer(
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						w.Header().Set("Content-Type", "application/xml")
+						w.WriteHeader(http.StatusOK)
+						_, err := w.Write(torznabXML([]testRSSItem{
+							{
+								Title: "Nonnas.2025.AD.MULTI.VFF.1080p.WEB.EAC3.5.1.x264-FW",
+								GUID:  "https://idx.com/1",
+								Link:  "https://idx.com/dl/1",
+								Size:  5600000000,
+								Enclosure: testEnclosure{
+									URL:    "https://idx.com/dl/1",
+									Length: 5600000000,
+									Type:   "application/x-bittorrent",
+								},
+								ExtraXML: torznabAttrs(
+									map[string]string{"seeders": "29"},
+								),
+							},
+							{
+								Title: "Comme.un.chef.2012.MULTI.VFF.1080p.BluRay.x264-GRP",
+								GUID:  "https://idx.com/2",
+								Link:  "https://idx.com/dl/2",
+								Size:  4000000000,
+								Enclosure: testEnclosure{
+									URL:    "https://idx.com/dl/2",
+									Length: 4000000000,
+									Type:   "application/x-bittorrent",
+								},
+								ExtraXML: torznabAttrs(
+									map[string]string{"seeders": "5"},
+								),
+							},
+						}))
+						Expect(err).NotTo(HaveOccurred())
+					}),
+				)
+				defer ts.Close()
+
+				host, port := splitHostPort(ts.URL)
+				configtest.Setup(map[string]any{
+					"indexers": []map[string]any{
+						{
+							"name":     "Indexer1",
+							"host":     host,
+							"port":     int(port),
+							"api_key":  "key1",
+							"protocol": "torznab",
+							"enabled":  true,
+						},
+					},
+				})
+
+				results, err := New().SearchMovie(
+					ctx,
+					[]string{"Comme un chef"},
+					nil,
+					127585,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(1))
+				Expect(results[0].Title).To(HavePrefix("Comme.un.chef"))
+			},
+		)
+	})
+
+	// The unit specs cover prowlarrQuery, filterProviderIDs and narrowed() one
+	// at a time. What only shows up composed is searchAll's own wiring: that
+	// the retry fires at all, that it carries the kind and drops the tokens,
+	// and that a wrong-show release is gone before the caller's scope filters
+	// ever see it.
+	Describe("the Prowlarr fan-out", func() {
+		It("retries on the bare title, keeping the category", func() {
+			rec := newProwlarrRecorder(`[]`, `[
+				{"title":"Show.S02E03.1080p.WEB-GRP","downloadUrl":"http://x/a.torrent",
+				 "protocol":"torrent","seeders":10}
+			]`)
+			DeferCleanup(rec.Close)
+			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+			results, _, err := New().
+				SearchEpisode(context.Background(), []string{"Show"},
+					nil, 111, 2, 3)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(1))
+
+			queries := rec.Queries()
+			Expect(queries).To(HaveLen(2), "the empty first query must be retried")
+
+			// First pass: fully narrowed.
+			Expect(queries[0].Get("type")).To(Equal("tvsearch"))
+			Expect(queries[0].Get("query")).To(Equal("Show{season:2}{episode:3}"))
+			Expect(queries[0].Get("categories")).To(Equal("5000"))
+
+			// The retry: bare title, tokens gone — keeping them would re-issue
+			// the query that just came back empty — but the category stays, or
+			// the pass keyword-searches every indexer's whole catalogue.
+			Expect(queries[1].Get("query")).To(Equal("Show"))
+			Expect(queries[1].Get("categories")).To(Equal("5000"))
+		})
+
+		It("does not retry a query that was already bare", func() {
+			// A movie search with no tmdbid names nothing beyond the title, so
+			// there is no narrower form to fall back from.
+			rec := newProwlarrRecorder(`[]`)
+			DeferCleanup(rec.Close)
+			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+			_, err := New().SearchMovie(context.Background(), []string{"Dune"},
+				nil, 0)
+			Expect(err).NotTo(HaveOccurred())
+
+			queries := rec.Queries()
+			Expect(queries).To(HaveLen(1))
+			Expect(queries[0].Get("type")).To(Equal("movie"))
+			Expect(queries[0].Get("categories")).To(Equal("2000"))
+		})
+
+		It("drops a release the tracker labelled as another show", func() {
+			// Both releases parse to the same title and the same SxxExx, so
+			// neither filterToEpisode nor preferTitleMatches can separate
+			// them — the tracker's own id is the only thing that does.
+			rec := newProwlarrRecorder(`[
+				{"title":"Show.S02E03.1080p.WEB-OURS","downloadUrl":"http://x/a.torrent",
+				 "protocol":"torrent","seeders":5,"tvdbId":111},
+				{"title":"Show.S02E03.2160p.WEB-OTHER","downloadUrl":"http://x/b.torrent",
+				 "protocol":"torrent","seeders":900,"tvdbId":222}
+			]`)
+			DeferCleanup(rec.Close)
+			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+			results, _, err := New().
+				SearchEpisode(context.Background(), []string{"Show"},
+					nil, 111, 2, 3)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(1))
+			// The wrong show had 900 seeders and would have won on score.
+			Expect(results[0].Title).To(HaveSuffix("OURS"))
+			Expect(results[0].TVDBID).To(Equal(uint32(111)))
+		})
+	})
+})
+
+// prowlarrRecorder is a Prowlarr /api/v1/search stand-in that records every
+// query it is asked and replies with the next canned body, repeating the last
+// one once the list is spent.
+type prowlarrRecorder struct {
+	srv     *httptest.Server
+	mu      sync.Mutex
+	queries []url.Values
+	bodies  []string
+	calls   int
+}
+
+func newProwlarrRecorder(bodies ...string) *prowlarrRecorder {
+	rec := &prowlarrRecorder{bodies: bodies}
+	rec.srv = httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			rec.mu.Lock()
+			rec.queries = append(rec.queries, r.URL.Query())
+			body := rec.bodies[min(rec.calls, len(rec.bodies)-1)]
+			rec.calls++
+			rec.mu.Unlock()
+
+			w.Header().Set("Content-Type", "application/json")
+			_, err := w.Write([]byte(body))
+			Expect(err).NotTo(HaveOccurred())
+		}))
+	return rec
+}
+
+func (r *prowlarrRecorder) URL() string { return r.srv.URL }
+func (r *prowlarrRecorder) Close()      { r.srv.Close() }
+
+func (r *prowlarrRecorder) Queries() []url.Values {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]url.Values(nil), r.queries...)
+}
+
+func prowlarrIndexerConfig(rawURL string) map[string]any {
+	GinkgoHelper()
+	host, port := splitHostPort(rawURL)
+	return map[string]any{
+		"indexers": []map[string]any{
+			{
+				"name":     "Prowlarr",
+				"host":     host,
+				"port":     int(port),
+				"api_key":  "key",
+				"protocol": "prowlarr",
+				"enabled":  true,
+			},
+		},
+	}
+}

@@ -1,0 +1,1273 @@
+package download
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"time"
+
+	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+func jsonBytes(v any) []byte {
+	GinkgoHelper()
+	b, err := json.Marshal(v)
+	Expect(err).NotTo(HaveOccurred())
+	return b
+}
+
+var _ = Describe("qBittorrent Client", Label("unit", "downloads"), func() {
+	var (
+		ts     *httptest.Server
+		client Client
+	)
+
+	BeforeEach(func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc(
+			"/api/v2/auth/login",
+			func(w http.ResponseWriter, _ *http.Request) {
+				http.SetCookie(w, &http.Cookie{Name: "SID", Value: "test-session"})
+				w.WriteHeader(http.StatusOK)
+			},
+		)
+		mux.HandleFunc(
+			"/api/v2/torrents/info",
+			func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write(jsonBytes([]map[string]any{
+					{
+						"hash":      "abc123",
+						"name":      "Interstellar.2014.1080p.BluRay",
+						"state":     "uploading",
+						"progress":  1.0,
+						"size":      5368709120,
+						"save_path": "/downloads/",
+					},
+				}))
+			},
+		)
+		mux.HandleFunc(
+			"/api/v2/torrents/add",
+			func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			},
+		)
+		mux.HandleFunc(
+			"/api/v2/torrents/createCategory",
+			func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			},
+		)
+		mux.HandleFunc(
+			"/api/v2/torrents/delete",
+			func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			},
+		)
+		ts = httptest.NewServer(mux)
+		DeferCleanup(func() { ts.Close() })
+		client = NewQBittorrentPassword(ts.URL, "admin", "password")
+	})
+
+	Describe("ListTorrents", func() {
+		It("should authenticate and return torrents", func() {
+			torrents, err := client.ListTorrents(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(torrents).To(HaveLen(1))
+			Expect(torrents[0].Hash).To(Equal("abc123"))
+			Expect(torrents[0].Status).To(Equal(StatusSeeding))
+			Expect(torrents[0].Progress).To(Equal(1.0))
+		})
+
+		It("maps dlspeed/eta and normalizes the ∞ ETA sentinel to 0", func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/info",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write(jsonBytes([]map[string]any{
+						{
+							"hash": "active", "name": "Dune", "state": "downloading",
+							"progress": 0.42, "size": 8000000000,
+							"dlspeed": 1048576, "eta": 120,
+						},
+						{
+							"hash": "idle", "name": "Tenet", "state": "stalledDL",
+							"progress": 0.0, "size": 4000000000,
+							"dlspeed": 0, "eta": 8640000,
+						},
+					}))
+				})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			torrents, err := c.ListTorrents(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(torrents).To(HaveLen(2))
+			Expect(torrents[0].DownloadSpeed).To(Equal(int64(1048576)))
+			Expect(torrents[0].ETA).To(Equal(int64(120)))
+			Expect(torrents[1].DownloadSpeed).To(Equal(int64(0)))
+			Expect(torrents[1].ETA).To(Equal(int64(0)))
+		})
+	})
+
+	Describe("AddTorrent", func() {
+		It("ensures the category then sends category=streamline on add", func() {
+			var (
+				createCalled bool
+				addCategory  string
+			)
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/createCategory",
+				func(w http.ResponseWriter, r *http.Request) {
+					createCalled = true
+					Expect(r.ParseForm()).To(Succeed())
+					Expect(r.PostFormValue("category")).To(Equal("streamline"))
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/add",
+				func(w http.ResponseWriter, r *http.Request) {
+					addCategory = r.FormValue("category")
+					w.WriteHeader(http.StatusOK)
+				})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			_, err := c.AddTorrent(
+				context.Background(),
+				TorrentSource{Magnet: "magnet:?xt=urn:btih:abc123"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(createCalled).To(BeTrue())
+			Expect(addCategory).To(Equal("streamline"))
+		})
+
+		It(
+			"sends stopCondition=MetadataReceived for a selective magnet add",
+			func() {
+				var stopCondition string
+				var hasStopCondition bool
+				mux := http.NewServeMux()
+				mux.HandleFunc("/api/v2/auth/login",
+					func(w http.ResponseWriter, _ *http.Request) {
+						http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/createCategory",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/add",
+					func(w http.ResponseWriter, r *http.Request) {
+						Expect(r.ParseMultipartForm(1 << 20)).To(Succeed())
+						_, hasStopCondition = r.MultipartForm.Value["stopCondition"]
+						stopCondition = r.FormValue("stopCondition")
+						w.WriteHeader(http.StatusOK)
+					})
+				srv := httptest.NewServer(mux)
+				DeferCleanup(srv.Close)
+
+				c := NewQBittorrentPassword(srv.URL, "admin", "password")
+				_, err := c.AddTorrent(
+					context.Background(),
+					TorrentSource{
+						Magnet:    "magnet:?xt=urn:btih:abc123",
+						Selective: true,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hasStopCondition).To(BeTrue())
+				Expect(stopCondition).To(Equal("MetadataReceived"))
+			},
+		)
+
+		It(
+			"omits stopCondition for a non-selective magnet add",
+			func() {
+				var hasStopCondition bool
+				mux := http.NewServeMux()
+				mux.HandleFunc("/api/v2/auth/login",
+					func(w http.ResponseWriter, _ *http.Request) {
+						http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/createCategory",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/add",
+					func(w http.ResponseWriter, r *http.Request) {
+						Expect(r.ParseMultipartForm(1 << 20)).To(Succeed())
+						_, hasStopCondition = r.MultipartForm.Value["stopCondition"]
+						w.WriteHeader(http.StatusOK)
+					})
+				srv := httptest.NewServer(mux)
+				DeferCleanup(srv.Close)
+
+				c := NewQBittorrentPassword(srv.URL, "admin", "password")
+				_, err := c.AddTorrent(
+					context.Background(),
+					TorrentSource{Magnet: "magnet:?xt=urn:btih:abc123"},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hasStopCondition).To(BeFalse())
+			},
+		)
+
+		It("treats a 409 from createCategory as success", func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/createCategory",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusConflict)
+				})
+			mux.HandleFunc("/api/v2/torrents/add",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			_, err := c.AddTorrent(
+				context.Background(),
+				TorrentSource{Magnet: "magnet:?xt=urn:btih:abc123"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("fails the add when createCategory hard-errors", func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/createCategory",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusInternalServerError)
+				})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			_, err := c.AddTorrent(
+				context.Background(),
+				TorrentSource{Magnet: "magnet:?xt=urn:btih:abc123"},
+			)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("extracts btih from a magnet when qBittorrent gives no envelope", func() {
+			hash, err := client.AddTorrent(
+				context.Background(),
+				TorrentSource{Magnet: "magnet:?xt=urn:btih:abc123"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hash).To(Equal("abc123"))
+		})
+
+		It("returns the hash from the JSON envelope on multipart upload", func() {
+			var receivedCT string
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/createCategory",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/add",
+				func(w http.ResponseWriter, r *http.Request) {
+					receivedCT = r.Header.Get("Content-Type")
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(
+						`{"added_torrent_ids":["BB4C35E3081CCA7B36D4CDCB425C578980B3F4DB"],` +
+							`"success_count":1,"failure_count":0,"pending_count":0}`,
+					))
+				})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			hash, err := c.AddTorrent(
+				context.Background(),
+				TorrentSource{Bytes: []byte("d8:announce0:e")},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hash).To(Equal("bb4c35e3081cca7b36d4cdcb425c578980b3f4db"))
+			Expect(receivedCT).To(HavePrefix("multipart/form-data"))
+		})
+
+		It(
+			"derives the infohash locally when qBittorrent returns no envelope",
+			func() {
+				mux := http.NewServeMux()
+				mux.HandleFunc("/api/v2/auth/login",
+					func(w http.ResponseWriter, _ *http.Request) {
+						http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/createCategory",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})
+				// qBittorrent ≤5.0.x: plain-text "Ok.", no JSON envelope.
+				mux.HandleFunc("/api/v2/torrents/add",
+					func(w http.ResponseWriter, _ *http.Request) {
+						_, _ = w.Write([]byte("Ok."))
+					})
+				srv := httptest.NewServer(mux)
+				DeferCleanup(srv.Close)
+
+				info, err := bencode.Marshal(metainfo.Info{
+					Name:        "release.mkv",
+					Length:      4,
+					PieceLength: 32768,
+					Pieces:      make([]byte, 20),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				mi := metainfo.MetaInfo{InfoBytes: info}
+				var torrent bytes.Buffer
+				Expect(mi.Write(&torrent)).To(Succeed())
+
+				c := NewQBittorrentPassword(srv.URL, "admin", "password")
+				hash, err := c.AddTorrent(
+					context.Background(),
+					TorrentSource{Bytes: torrent.Bytes()},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).To(Equal(mi.HashInfoBytes().HexString()))
+			},
+		)
+
+		It("errors when no envelope arrives and no hash is derivable", func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/createCategory",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/add",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(
+						`{"added_torrent_ids":[],"success_count":0,` +
+							`"failure_count":0,"pending_count":1}`,
+					))
+				})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			// A bencoded dict with no info entry: uploadable, but hashless.
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			_, err := c.AddTorrent(
+				context.Background(),
+				TorrentSource{Bytes: []byte("d8:announce0:e")},
+			)
+			Expect(err).To(MatchError(ContainSubstring("no hash returned")))
+		})
+
+		It("rejects an empty TorrentSource", func() {
+			_, err := client.AddTorrent(
+				context.Background(), TorrentSource{},
+			)
+			Expect(err).To(MatchError(ContainSubstring("empty torrent source")))
+		})
+
+		It(
+			"never sends filePriorities on add; adds stopped, applies the"+
+				" selection via filePrio computed from the local metainfo,"+
+				" then starts",
+			func() {
+				// qBittorrent 5.x 400s the whole add ("Cannot specify"+
+				// " filePriorities when uploading torrent files") when
+				// filePriorities rides the same request as the "torrents"
+				// file part — verified against a real container. The
+				// selection has to land as separate filePrio calls once
+				// AddTorrent has a hash to address it with, and the torrent
+				// must not run unselected in the meantime — hence stopped at
+				// add, started only after both filePrio calls succeed.
+				var sawAddField bool
+				var addedStopped, addedPaused bool
+				var gotPrio []url.Values
+				var sawFilesCall, sawStart bool
+				mux := http.NewServeMux()
+				mux.HandleFunc("/api/v2/auth/login",
+					func(w http.ResponseWriter, _ *http.Request) {
+						http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/createCategory",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/add",
+					func(w http.ResponseWriter, r *http.Request) {
+						Expect(r.ParseMultipartForm(1 << 20)).To(Succeed())
+						_, sawAddField = r.MultipartForm.Value["filePriorities"]
+						addedStopped = r.FormValue("stopped") == "true"
+						addedPaused = r.FormValue("paused") == "true"
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write([]byte(
+							`{"added_torrent_ids":["abc123"],"success_count":1}`,
+						))
+					})
+				// Never hit: AddTorrent computes the selection from the raw
+				// .torrent bytes it already holds, not a daemon-side listing
+				// — the whole point being that listing can legitimately come
+				// back empty while metadata is still settling.
+				mux.HandleFunc("/api/v2/torrents/files",
+					func(w http.ResponseWriter, _ *http.Request) {
+						sawFilesCall = true
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte("[]"))
+					})
+				mux.HandleFunc("/api/v2/torrents/filePrio",
+					func(w http.ResponseWriter, r *http.Request) {
+						Expect(r.ParseForm()).To(Succeed())
+						gotPrio = append(gotPrio, r.Form)
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/start",
+					func(w http.ResponseWriter, r *http.Request) {
+						Expect(r.ParseForm()).To(Succeed())
+						Expect(r.FormValue("hashes")).To(Equal("abc123"))
+						// The selection must be fully applied before start —
+						// both filePrio calls seen already.
+						Expect(gotPrio).To(HaveLen(2))
+						sawStart = true
+						w.WriteHeader(http.StatusOK)
+					})
+				srv := httptest.NewServer(mux)
+				DeferCleanup(srv.Close)
+
+				info, err := bencode.Marshal(metainfo.Info{
+					Files: []metainfo.FileInfo{
+						{Path: []string{"a.mkv"}, Length: 4},
+						{Path: []string{"b.mkv"}, Length: 4},
+						{Path: []string{"c.mkv"}, Length: 4},
+					},
+					PieceLength: 32768,
+					Pieces:      make([]byte, 20),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				mi := metainfo.MetaInfo{InfoBytes: info}
+				var torrent bytes.Buffer
+				Expect(mi.Write(&torrent)).To(Succeed())
+
+				c := NewQBittorrentPassword(srv.URL, "admin", "password")
+				hash, err := c.AddTorrent(
+					context.Background(),
+					TorrentSource{
+						Bytes:       torrent.Bytes(),
+						WantedFiles: []int{0},
+						Selective:   true,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).To(Equal("abc123"))
+				Expect(sawAddField).To(BeFalse())
+				Expect(addedStopped).To(BeTrue())
+				Expect(addedPaused).To(BeTrue())
+				Expect(sawFilesCall).To(BeFalse())
+				Expect(gotPrio).To(ConsistOf(
+					SatisfyAll(
+						HaveKeyWithValue("id", []string{"1|2"}),
+						HaveKeyWithValue("priority", []string{"0"}),
+					),
+					SatisfyAll(
+						HaveKeyWithValue("id", []string{"0"}),
+						HaveKeyWithValue("priority", []string{"1"}),
+					),
+				))
+				Expect(sawStart).To(BeTrue())
+			},
+		)
+
+		Describe("a selective add qBittorrent has not registered yet", func() {
+			// 5.x answers the add 202 while it is still processing the upload;
+			// until it has, filePrio for the hash answers 404.
+			var (
+				prio404s  int
+				prioCalls int
+				started   bool
+				deleted   bool
+				torrent   []byte
+			)
+
+			serve := func(notRegisteredFor int) *httptest.Server {
+				GinkgoHelper()
+				prio404s, prioCalls, started, deleted = 0, 0, false, false
+				mux := http.NewServeMux()
+				mux.HandleFunc("/api/v2/auth/login",
+					func(w http.ResponseWriter, _ *http.Request) {
+						http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/createCategory",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/add",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusAccepted)
+						_, _ = w.Write([]byte(
+							`{"added_torrent_ids":["abc123"],"success_count":1}`,
+						))
+					})
+				mux.HandleFunc("/api/v2/torrents/filePrio",
+					func(w http.ResponseWriter, _ *http.Request) {
+						prioCalls++
+						if prio404s < notRegisteredFor {
+							prio404s++
+							w.WriteHeader(http.StatusNotFound)
+							return
+						}
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/start",
+					func(w http.ResponseWriter, _ *http.Request) {
+						started = true
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/delete",
+					func(w http.ResponseWriter, _ *http.Request) {
+						deleted = true
+						w.WriteHeader(http.StatusOK)
+					})
+				srv := httptest.NewServer(mux)
+				DeferCleanup(srv.Close)
+
+				info, err := bencode.Marshal(metainfo.Info{
+					Files: []metainfo.FileInfo{
+						{Path: []string{"a.mkv"}, Length: 4},
+						{Path: []string{"b.mkv"}, Length: 4},
+					},
+					PieceLength: 32768,
+					Pieces:      make([]byte, 20),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				var buf bytes.Buffer
+				Expect(
+					(&metainfo.MetaInfo{InfoBytes: info}).Write(&buf),
+				).To(Succeed())
+				torrent = buf.Bytes()
+				return srv
+			}
+
+			add := func(c *QBittorrent) (string, error) {
+				return c.AddTorrent(context.Background(), TorrentSource{
+					Bytes: torrent, WantedFiles: []int{0}, Selective: true,
+				})
+			}
+
+			It(
+				"waits for the registration, then applies the selection and starts",
+				func() {
+					srv := serve(3)
+					c := NewQBittorrentPassword(srv.URL, "admin", "password")
+					hash, err := add(c)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(hash).To(Equal("abc123"))
+					Expect(prio404s).To(Equal(3))
+					Expect(prioCalls).To(Equal(5), "3 refused, then skip and keep")
+					Expect(started).To(BeTrue())
+					Expect(deleted).To(BeFalse())
+				},
+			)
+
+			It(
+				"gives up after the wait, removes the stopped torrent and says why",
+				func() {
+					srv := serve(1 << 30)
+					c := NewQBittorrentPassword(srv.URL, "admin", "password")
+					c.registrationWait = 200 * time.Millisecond
+					_, err := add(c)
+					Expect(err).To(MatchError(ContainSubstring("not registered")))
+					Expect(err).NotTo(MatchError(ErrTorrentNotFound))
+					Expect(prioCalls).To(BeNumerically(">", 1))
+					Expect(started).To(BeFalse())
+					Expect(deleted).To(BeTrue())
+				},
+			)
+
+			It("stops waiting when the caller gives up", func() {
+				srv := serve(1 << 30)
+				c := NewQBittorrentPassword(srv.URL, "admin", "password")
+				ctx, cancel := context.WithTimeout(
+					context.Background(),
+					150*time.Millisecond,
+				)
+				DeferCleanup(cancel)
+				start := time.Now()
+				_, err := c.AddTorrent(ctx, TorrentSource{
+					Bytes: torrent, WantedFiles: []int{0}, Selective: true,
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(time.Since(start)).To(BeNumerically("<", 2*time.Second))
+			})
+		})
+
+		It(
+			"issues no selection call — no stopped/paused, no filePrio, no"+
+				" start — on a non-selective add",
+			func() {
+				var sawField, addedStopped, addedPaused bool
+				var sawFilePrio, sawStart bool
+				mux := http.NewServeMux()
+				mux.HandleFunc("/api/v2/auth/login",
+					func(w http.ResponseWriter, _ *http.Request) {
+						http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/createCategory",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/add",
+					func(w http.ResponseWriter, r *http.Request) {
+						Expect(r.ParseMultipartForm(1 << 20)).To(Succeed())
+						_, sawField = r.MultipartForm.Value["filePriorities"]
+						addedStopped = r.FormValue("stopped") == "true"
+						addedPaused = r.FormValue("paused") == "true"
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write([]byte(
+							`{"added_torrent_ids":["abc123"],"success_count":1}`,
+						))
+					})
+				mux.HandleFunc("/api/v2/torrents/filePrio",
+					func(w http.ResponseWriter, _ *http.Request) {
+						sawFilePrio = true
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/start",
+					func(w http.ResponseWriter, _ *http.Request) {
+						sawStart = true
+						w.WriteHeader(http.StatusOK)
+					})
+				srv := httptest.NewServer(mux)
+				DeferCleanup(srv.Close)
+
+				c := NewQBittorrentPassword(srv.URL, "admin", "password")
+				_, err := c.AddTorrent(
+					context.Background(),
+					TorrentSource{Bytes: []byte("d8:announce0:e")},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(sawField).To(BeFalse())
+				Expect(addedStopped).To(BeFalse())
+				Expect(addedPaused).To(BeFalse())
+				Expect(sawFilePrio).To(BeFalse())
+				Expect(sawStart).To(BeFalse())
+			},
+		)
+	})
+
+	Describe("ListFiles", func() {
+		It("maps qBittorrent's file listing, priority!=0 => Wanted", func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/files",
+				func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.URL.Query().Get("hash")).To(Equal("abc123"))
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write(jsonBytes([]map[string]any{
+						{
+							"index": 0, "name": "a.mkv", "size": 4,
+							"priority": 1, "progress": 0.0,
+						},
+						{
+							"index": 1, "name": "b.mkv", "size": 4,
+							"priority": 0, "progress": 0.0,
+						},
+					}))
+				})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			files, err := c.ListFiles(context.Background(), "abc123")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(files).To(HaveLen(2))
+			Expect(files[0]).To(Equal(TorrentFile{
+				Index: 0, Path: "a.mkv", Size: 4, Wanted: true,
+			}))
+			Expect(files[1]).To(Equal(TorrentFile{
+				Index: 1, Path: "b.mkv", Size: 4, Wanted: false,
+			}))
+		})
+
+		It("maps a missing-metadata empty array to an empty, non-nil slice", func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/files",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte("[]"))
+				})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			files, err := c.ListFiles(context.Background(), "abc123")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(files).NotTo(BeNil())
+			Expect(files).To(BeEmpty())
+		})
+	})
+
+	Describe("SetWantedFiles", func() {
+		It(
+			"skips priority=0 for the complement and priority=1 for wanted",
+			func() {
+				var skipHash, skipIDs, skipPriority string
+				var wantHash, wantIDs, wantPriority string
+				var filePrioCalls int
+				mux := http.NewServeMux()
+				mux.HandleFunc("/api/v2/auth/login",
+					func(w http.ResponseWriter, _ *http.Request) {
+						http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/files",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write(jsonBytes([]map[string]any{
+							{"index": 0, "name": "a.mkv", "size": 4, "priority": 1},
+							{"index": 1, "name": "b.mkv", "size": 4, "priority": 1},
+							{"index": 2, "name": "c.mkv", "size": 4, "priority": 1},
+						}))
+					})
+				mux.HandleFunc("/api/v2/torrents/filePrio",
+					func(w http.ResponseWriter, r *http.Request) {
+						filePrioCalls++
+						Expect(r.ParseForm()).To(Succeed())
+						priority := r.PostFormValue("priority")
+						if priority == "0" {
+							skipHash = r.PostFormValue("hash")
+							skipIDs = r.PostFormValue("id")
+							skipPriority = priority
+						} else {
+							wantHash = r.PostFormValue("hash")
+							wantIDs = r.PostFormValue("id")
+							wantPriority = priority
+						}
+						w.WriteHeader(http.StatusOK)
+					})
+				srv := httptest.NewServer(mux)
+				DeferCleanup(srv.Close)
+
+				c := NewQBittorrentPassword(srv.URL, "admin", "password")
+				err := c.SetWantedFiles(context.Background(), "abc123", []int{0})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(filePrioCalls).To(Equal(2))
+				Expect(skipHash).To(Equal("abc123"))
+				Expect(skipIDs).To(Equal("1|2"))
+				Expect(skipPriority).To(Equal("0"))
+				Expect(wantHash).To(Equal("abc123"))
+				Expect(wantIDs).To(Equal("0"))
+				Expect(wantPriority).To(Equal("1"))
+			},
+		)
+
+		It("makes a single call when nothing needs skipping", func() {
+			var filePrioCalls int
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/files",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write(jsonBytes([]map[string]any{
+						{"index": 0, "name": "a.mkv", "size": 4, "priority": 1},
+					}))
+				})
+			mux.HandleFunc("/api/v2/torrents/filePrio",
+				func(w http.ResponseWriter, r *http.Request) {
+					filePrioCalls++
+					Expect(r.ParseForm()).To(Succeed())
+					Expect(r.PostFormValue("priority")).To(Equal("1"))
+					w.WriteHeader(http.StatusOK)
+				})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			err := c.SetWantedFiles(context.Background(), "abc123", []int{0})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(filePrioCalls).To(Equal(1))
+		})
+
+		It("rejects a skip-everything call before issuing any request", func() {
+			var calls int
+			mux := http.NewServeMux()
+			mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+				calls++
+				w.WriteHeader(http.StatusOK)
+			})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			err := c.SetWantedFiles(context.Background(), "abc123", nil)
+			Expect(err).To(
+				MatchError(ContainSubstring("refusing to skip every file")),
+			)
+			Expect(calls).To(Equal(0))
+		})
+
+		It("returns a plain error on 409 (metadata not yet downloaded)", func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/files",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write(jsonBytes([]map[string]any{
+						{"index": 0, "name": "a.mkv", "size": 4, "priority": 1},
+						{"index": 1, "name": "b.mkv", "size": 4, "priority": 1},
+					}))
+				})
+			mux.HandleFunc("/api/v2/torrents/filePrio",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusConflict)
+				})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			err := c.SetWantedFiles(context.Background(), "abc123", []int{0})
+			Expect(err).To(HaveOccurred())
+			Expect(errors.Is(err, ErrNotSupported)).To(BeFalse())
+		})
+	})
+
+	Describe("RemoveTorrent", func() {
+		It("should delete the torrent", func() {
+			err := client.RemoveTorrent(context.Background(), "abc123", false)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("TestConnection", func() {
+		It("should succeed when login works", func() {
+			err := client.TestConnection(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("GetTorrent", func() {
+		It("returns the torrent matching the requested hash", func() {
+			torrent, err := client.GetTorrent(context.Background(), "abc123")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(torrent).NotTo(BeNil())
+			Expect(torrent.Hash).To(Equal("abc123"))
+			Expect(torrent.Name).To(Equal("Interstellar.2014.1080p.BluRay"))
+			Expect(torrent.Status).To(Equal(StatusSeeding))
+		})
+
+		It("reauthenticates when qBittorrent returns 403", func() {
+			var loginCalls, listCalls int
+			mux := http.NewServeMux()
+			mux.HandleFunc(
+				"/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					loginCalls++
+					http.SetCookie(
+						w, &http.Cookie{Name: "SID", Value: "session"},
+					)
+					w.WriteHeader(http.StatusOK)
+				},
+			)
+			mux.HandleFunc(
+				"/api/v2/torrents/info",
+				func(w http.ResponseWriter, r *http.Request) {
+					listCalls++
+					// First call after initial login fails with 403 — forces
+					// the reauth branch in doRequest.
+					if listCalls == 1 {
+						w.WriteHeader(http.StatusForbidden)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte("[]"))
+				},
+			)
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			torrents, err := c.ListTorrents(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(torrents).To(BeEmpty())
+			Expect(loginCalls).To(Equal(2))
+			Expect(listCalls).To(Equal(2))
+		})
+
+		It("AddTorrent surfaces 415 as an invalid-torrent error", func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc(
+				"/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w,
+						&http.Cookie{Name: "SID", Value: "session"})
+					w.WriteHeader(http.StatusOK)
+				},
+			)
+			mux.HandleFunc(
+				"/api/v2/torrents/createCategory",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				},
+			)
+			mux.HandleFunc(
+				"/api/v2/torrents/add",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusUnsupportedMediaType)
+				},
+			)
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			_, err := c.AddTorrent(
+				context.Background(),
+				TorrentSource{Bytes: []byte("not a torrent")},
+			)
+			Expect(err).To(MatchError(ContainSubstring("invalid torrent")))
+		})
+
+		It("AddTorrent wraps unexpected non-200 status codes", func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc(
+				"/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w,
+						&http.Cookie{Name: "SID", Value: "session"})
+					w.WriteHeader(http.StatusOK)
+				},
+			)
+			mux.HandleFunc(
+				"/api/v2/torrents/createCategory",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				},
+			)
+			mux.HandleFunc(
+				"/api/v2/torrents/add",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusInternalServerError)
+				},
+			)
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			_, err := c.AddTorrent(
+				context.Background(),
+				TorrentSource{Magnet: "magnet:?xt=urn:btih:abc"},
+			)
+			Expect(err).To(MatchError(ContainSubstring("unexpected status 500")))
+		})
+
+		It("accepts qBittorrent 5.x login: 204 + QBT_SID_<port> cookie", func() {
+			var sentSession string
+			mux := http.NewServeMux()
+			mux.HandleFunc(
+				"/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{
+						Name:  "QBT_SID_8090",
+						Value: "v5session",
+					})
+					w.WriteHeader(http.StatusNoContent)
+				},
+			)
+			mux.HandleFunc(
+				"/api/v2/torrents/info",
+				func(w http.ResponseWriter, r *http.Request) {
+					if c, err := r.Cookie("QBT_SID_8090"); err == nil {
+						sentSession = c.Value
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte("[]"))
+				},
+			)
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			_, err := c.ListTorrents(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(sentSession).To(Equal("v5session"))
+		})
+
+		It("returns error for unknown hash", func() {
+			By("Starting mock that returns an empty list for any hashes filter")
+			emptyMux := http.NewServeMux()
+			emptyMux.HandleFunc(
+				"/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "test"})
+					w.WriteHeader(http.StatusOK)
+				},
+			)
+			emptyMux.HandleFunc(
+				"/api/v2/torrents/info",
+				func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte("[]"))
+				},
+			)
+			emptySrv := httptest.NewServer(emptyMux)
+			DeferCleanup(emptySrv.Close)
+
+			c := NewQBittorrentPassword(emptySrv.URL, "admin", "password")
+
+			torrent, err := c.GetTorrent(context.Background(), "nonexistent")
+			Expect(err).To(HaveOccurred())
+			Expect(torrent).To(BeNil())
+		})
+
+		It("filters info queries by category=streamline", func() {
+			var gotCategory string
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/info",
+				func(w http.ResponseWriter, r *http.Request) {
+					gotCategory = r.URL.Query().Get("category")
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte("[]"))
+				})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			_, _ = c.ListTorrents(context.Background())
+			Expect(gotCategory).To(Equal("streamline"))
+		})
+
+		It("returns ErrTorrentNotFound when the filtered list is empty", func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+					w.WriteHeader(http.StatusOK)
+				})
+			mux.HandleFunc("/api/v2/torrents/info",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte("[]"))
+				})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			_, err := c.GetTorrent(context.Background(), "missing")
+			Expect(errors.Is(err, ErrTorrentNotFound)).To(BeTrue())
+		})
+	})
+
+	Describe("API key mode", func() {
+		It("TestConnection probes /api/v2/app/version with Bearer", func() {
+			var gotAuth string
+			mux := http.NewServeMux()
+			mux.HandleFunc(
+				"/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					Fail("login must not be called in API key mode")
+				},
+			)
+			mux.HandleFunc(
+				"/api/v2/app/version",
+				func(w http.ResponseWriter, r *http.Request) {
+					gotAuth = r.Header.Get("Authorization")
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte("v5.2.0"))
+				},
+			)
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentAPIKey(srv.URL, "qbt_testkey")
+			Expect(c.TestConnection(context.Background())).To(Succeed())
+			Expect(gotAuth).To(Equal("Bearer qbt_testkey"))
+		})
+
+		It("ListTorrents sends Bearer and skips login", func() {
+			var gotAuth string
+			mux := http.NewServeMux()
+			mux.HandleFunc(
+				"/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					Fail("login must not be called in API key mode")
+				},
+			)
+			mux.HandleFunc(
+				"/api/v2/torrents/info",
+				func(w http.ResponseWriter, r *http.Request) {
+					gotAuth = r.Header.Get("Authorization")
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte("[]"))
+				},
+			)
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentAPIKey(srv.URL, "qbt_testkey")
+			torrents, err := c.ListTorrents(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(torrents).To(BeEmpty())
+			Expect(gotAuth).To(Equal("Bearer qbt_testkey"))
+		})
+
+		It("TestConnection surfaces 401 as ErrUnauthorized", func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc(
+				"/api/v2/app/version",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusUnauthorized)
+				},
+			)
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentAPIKey(srv.URL, "qbt_rotated")
+			err := c.TestConnection(context.Background())
+			Expect(err).To(MatchError(ErrUnauthorized))
+		})
+	})
+})
+
+var _ = Describe("qBittorrent pause/resume", Label("unit", "downloads"), func() {
+	It("reports a stopped-but-complete torrent as completed, not paused", func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/api/v2/auth/login",
+			func(w http.ResponseWriter, _ *http.Request) {
+				http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+				w.WriteHeader(http.StatusOK)
+			})
+		mux.HandleFunc("/api/v2/torrents/info",
+			func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write(jsonBytes([]map[string]any{
+					{
+						"hash":      "abc123",
+						"name":      "Arrival.2016.1080p.BluRay",
+						"state":     "stoppedUP",
+						"progress":  1.0,
+						"size":      4294967296,
+						"save_path": "/downloads/",
+					},
+				}))
+			})
+		srv := httptest.NewServer(mux)
+		DeferCleanup(srv.Close)
+
+		torrent, err := NewQBittorrentPassword(srv.URL, "u", "p").
+			GetTorrent(context.Background(), "abc123")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(torrent.Status).To(Equal(StatusCompleted))
+	})
+
+	It("keeps a stopped mid-download torrent paused", func() {
+		Expect(mapQBState("stoppedDL")).To(Equal(StatusPaused))
+	})
+
+	It("PauseTorrent uses qB 5.x /stop and falls back to 4.x /pause on 404", func() {
+		var stopCalls, pauseCalls int
+		mux := http.NewServeMux()
+		mux.HandleFunc("/api/v2/auth/login",
+			func(w http.ResponseWriter, _ *http.Request) {
+				http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+				w.WriteHeader(http.StatusOK)
+			})
+		mux.HandleFunc("/api/v2/torrents/stop",
+			func(w http.ResponseWriter, _ *http.Request) {
+				stopCalls++
+				w.WriteHeader(http.StatusNotFound)
+			})
+		mux.HandleFunc("/api/v2/torrents/pause",
+			func(w http.ResponseWriter, _ *http.Request) {
+				pauseCalls++
+				w.WriteHeader(http.StatusOK)
+			})
+		srv := httptest.NewServer(mux)
+		DeferCleanup(srv.Close)
+
+		c := NewQBittorrentPassword(srv.URL, "admin", "password")
+		Expect(c.PauseTorrent(context.Background(), "abc")).To(Succeed())
+		Expect(stopCalls).To(Equal(1))
+		Expect(pauseCalls).To(Equal(1))
+	})
+
+	It("ResumeTorrent uses qB 5.x /start when available", func() {
+		var startCalls int
+		mux := http.NewServeMux()
+		mux.HandleFunc("/api/v2/auth/login",
+			func(w http.ResponseWriter, _ *http.Request) {
+				http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+				w.WriteHeader(http.StatusOK)
+			})
+		mux.HandleFunc("/api/v2/torrents/start",
+			func(w http.ResponseWriter, _ *http.Request) {
+				startCalls++
+				w.WriteHeader(http.StatusOK)
+			})
+		srv := httptest.NewServer(mux)
+		DeferCleanup(srv.Close)
+
+		c := NewQBittorrentPassword(srv.URL, "admin", "password")
+		Expect(c.ResumeTorrent(context.Background(), "abc")).To(Succeed())
+		Expect(startCalls).To(Equal(1))
+	})
+})

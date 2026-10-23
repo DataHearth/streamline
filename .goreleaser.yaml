@@ -1,0 +1,84 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: streamline
+
+# The helm chart versions independently on chart-v* tags (.taskfiles/release.yaml).
+# GoReleaser reads the latest tag as the release it is cutting, and "chart-v2.1.0"
+# is not a semver it can parse — so any run that is not exactly on a v* tag
+# (a snapshot, a local build) picks the chart tag and fails or mis-versions.
+git:
+  ignore_tags:
+    - "chart-v*"
+
+before:
+  hooks:
+    - pnpm install --frozen-lockfile
+    - task generate
+    - task build:js
+    - task build:css
+    - go run ./cmd config init -o config.example.yaml
+
+builds:
+  - id: streamline
+    main: ./cmd
+    binary: streamline
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      # The vars live in internal/buildinfo, not main — -X against a symbol that
+      # does not exist is silently ignored, which is how v1.0.0 shipped as "dev".
+      - -s -w
+      - -X github.com/datahearth/streamline/internal/buildinfo.Version={{.Version}}
+      - -X github.com/datahearth/streamline/internal/buildinfo.Commit={{.ShortCommit}}
+      - -X github.com/datahearth/streamline/internal/buildinfo.Date={{.Date}}
+
+archives:
+  - id: streamline
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+      - config.example.yaml
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+sboms:
+  - id: archive
+    artifacts: archive
+    cmd: syft
+    documents:
+      - "{{ .ArtifactName }}.sbom.spdx.json"
+
+signs:
+  - id: checksums
+    cmd: cosign
+    artifacts: checksum
+    # cosign v3 sign-blob only emits the new bundle format (cert + sig in one file).
+    signature: "${artifact}.bundle"
+    args:
+      - sign-blob
+      - "--yes"
+      - "--bundle=${signature}"
+      - "${artifact}"
+    output: true
+
+# No changelog/header/footer config: the release body is the git-cliff section
+# of CHANGELOG.md, assembled and passed as --release-notes by
+# .github/workflows/release.yaml — which makes GoReleaser skip all three.
+release:
+  github:
+    owner: datahearth
+    name: streamline
+  draft: false
+  prerelease: auto

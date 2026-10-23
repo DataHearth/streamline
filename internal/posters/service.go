@@ -1,0 +1,304 @@
+// Package posters caches artwork on the local filesystem and serves it via
+// HTTP. Keeps zero dependencies outside stdlib + otelx so the leaf can be
+// imported by any package.
+package posters
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+
+	"github.com/datahearth/streamline/internal/otelx"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+)
+
+var (
+	tracer = otel.Tracer("github.com/datahearth/streamline/internal/posters")
+	meter  = otel.Meter("github.com/datahearth/streamline/internal/posters")
+
+	posterCache metric.Int64Counter
+	posterFetch metric.Int64Counter
+)
+
+func init() {
+	posterCache = otelx.Must(meter.Int64Counter(
+		"streamline.posters.cache",
+		metric.WithDescription("Poster Serve cache hits/misses by kind + outcome"),
+	))
+	posterFetch = otelx.Must(meter.Int64Counter(
+		"streamline.posters.fetch",
+		metric.WithDescription("Poster source fetches by kind + outcome"),
+	))
+	ctx := context.Background()
+	posterCache.Add(ctx, 0)
+	posterFetch.Add(ctx, 0)
+}
+
+// maxPosterSize caps the fetched artwork. The TV path forwards whatever
+// TVDBArtworkURL returns — an arbitrary host — so a hostile or compromised
+// metadata provider must not be able to fill the data volume.
+const maxPosterSize = 20 * 1024 * 1024
+
+var errTooLarge = fmt.Errorf("poster exceeds %d byte cap", maxPosterSize)
+
+// validKinds doubles as a path-traversal guard: any kind outside this set
+// is rejected before touching the filesystem or the HTTP response.
+var validKinds = map[string]struct{}{
+	"movies":  {},
+	"tvshows": {},
+	"artists": {},
+	"albums":  {},
+	"authors": {},
+	"books":   {},
+}
+
+// Manager is the consumer-facing surface for the poster cache: fetch on
+// movie add, serve on HTTP request, resolve cache paths.
+type Manager interface {
+	Fetch(ctx context.Context, kind string, id uint32, src string) error
+	// Put stores bytes the caller already holds, replacing any cached poster.
+	Put(ctx context.Context, kind string, id uint32, r io.Reader) error
+	Serve(w http.ResponseWriter, r *http.Request, kind string, id uint32)
+	Path(kind string, id uint32) string
+	Remove(kind string, id uint32) error
+}
+
+type posters struct {
+	dataDir string
+	client  *http.Client
+}
+
+func New(dataDir string) (Manager, error) {
+	if err := os.MkdirAll(filepath.Join(dataDir, "posters"), 0o750); err != nil {
+		return nil, fmt.Errorf("create posters dir: %w", err)
+	}
+	return &posters{dataDir: dataDir, client: otelx.HTTPClient}, nil
+}
+
+func (p *posters) Path(kind string, id uint32) string {
+	return filepath.Join(
+		p.dataDir,
+		"posters",
+		kind,
+		strconv.FormatUint(uint64(id), 10),
+		"poster.jpg",
+	)
+}
+
+// Remove drops a cached poster. SQLite reuses the rowid of a deleted record,
+// so a cache entry left behind outlives its media and is served — verbatim,
+// because Fetch short-circuits on an existing file — as the artwork of the
+// next movie or show that lands on the same id.
+func (p *posters) Remove(kind string, id uint32) error {
+	if _, ok := validKinds[kind]; !ok {
+		return fmt.Errorf("posters: invalid kind %q", kind)
+	}
+	if err := os.RemoveAll(filepath.Dir(p.Path(kind, id))); err != nil {
+		return fmt.Errorf("remove poster cache: %w", err)
+	}
+	return nil
+}
+
+// Fetch is idempotent: returns nil without a network call when dst already
+// exists with non-zero size.
+func (p *posters) Fetch(
+	ctx context.Context,
+	kind string,
+	id uint32,
+	src string,
+) error {
+	if _, ok := validKinds[kind]; !ok {
+		return fmt.Errorf("posters: invalid kind %q", kind)
+	}
+	ctx, span := tracer.Start(ctx, "posters.fetch")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("poster.kind", kind),
+		attribute.Int64("poster.id", int64(id)),
+		attribute.String("poster.src", src),
+	)
+
+	// Serve counts cache hits and misses; the outbound fetch behind a miss had
+	// only a span, so an artwork CDN degrading — timeouts, 403s, oversized
+	// bodies — could be seen in a trace and thresholded nowhere.
+	outcome := "ok"
+	defer func() {
+		posterFetch.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("poster.kind", kind),
+			attribute.String("outcome", outcome),
+		))
+	}()
+
+	dst := p.Path(kind, id)
+	if st, err := os.Stat(dst); err == nil && st.Size() > 0 {
+		outcome = "cached"
+		return nil
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	resp, err := p.client.Do(req)
+	if err != nil {
+		outcome = "transport_error"
+		return otelx.RecordSpanError(span, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		outcome = "http_error"
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("poster source status %d", resp.StatusCode),
+		)
+	}
+
+	if err := store(dst, resp.Body, false); err != nil {
+		if errors.Is(err, errTooLarge) {
+			outcome = "too_large"
+		}
+		return otelx.RecordSpanError(span, err)
+	}
+	slog.InfoContext(
+		ctx,
+		"poster fetched",
+		"poster.kind",
+		kind,
+		"poster.id",
+		id,
+		"source.url",
+		src,
+		"cache.path",
+		dst,
+	)
+	return nil
+}
+
+// Put replaces the cached poster, unlike Fetch, which keeps one that exists:
+// the caller holds the bytes, so there is no network call to save, and a
+// picture embedded in the album's own files outranks a downloaded one.
+func (p *posters) Put(
+	ctx context.Context,
+	kind string,
+	id uint32,
+	r io.Reader,
+) error {
+	if _, ok := validKinds[kind]; !ok {
+		return fmt.Errorf("posters: invalid kind %q", kind)
+	}
+	_, span := tracer.Start(ctx, "posters.put")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("poster.kind", kind),
+		attribute.Int64("poster.id", int64(id)),
+	)
+	return otelx.RecordSpanError(span, store(p.Path(kind, id), r, true))
+}
+
+// store writes r to dst through a temp file in the same directory, so a
+// failed or oversized copy never leaves a partial poster behind. Without
+// replace, a poster that appeared while r was being read wins: an album's
+// own art stored by Put must not be undone by a slower remote fetch.
+func store(dst string, r io.Reader, replace bool) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
+		return fmt.Errorf("mkdir poster dir: %w", err)
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(dst), "poster-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create temp: %w", err)
+	}
+	tmpName := tmp.Name()
+	n, err := io.Copy(tmp, io.LimitReader(r, maxPosterSize+1))
+	if err != nil {
+		tmp.Close()
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("copy body: %w", err)
+	}
+	if n > maxPosterSize {
+		tmp.Close()
+		_ = os.Remove(tmpName)
+		return errTooLarge
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpName)
+		return err
+	}
+	if !replace {
+		if st, err := os.Stat(dst); err == nil && st.Size() > 0 {
+			return os.Remove(tmpName)
+		}
+	}
+	if err := os.Rename(tmpName, dst); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("rename: %w", err)
+	}
+	return nil
+}
+
+// sniffImageType reports the cached file's real image type: sources hand back
+// PNG, WebP or GIF as readily as JPEG, and the file is always named poster.jpg.
+// Anything that does not sniff as an image keeps image/jpeg, so a hostile body
+// is never served as a type a browser would render as a page.
+func sniffImageType(f *os.File) string {
+	head := make([]byte, 512)
+	n, err := f.ReadAt(head, 0)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "image/jpeg"
+	}
+	t := http.DetectContentType(head[:n])
+	if !strings.HasPrefix(t, "image/") {
+		return "image/jpeg"
+	}
+	return t
+}
+
+func (p *posters) Serve(
+	w http.ResponseWriter,
+	r *http.Request,
+	kind string,
+	id uint32,
+) {
+	ctx := r.Context()
+	record := func(outcome string) {
+		posterCache.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("kind", kind),
+			attribute.String("outcome", outcome),
+		))
+	}
+	if _, ok := validKinds[kind]; !ok {
+		record("invalid_kind")
+		http.NotFound(w, r)
+		return
+	}
+	f, err := os.Open(p.Path(kind, id))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			record("miss")
+			http.NotFound(w, r)
+			return
+		}
+		record("error")
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil {
+		record("error")
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	record("hit")
+	w.Header().Set("Content-Type", sniffImageType(f))
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	http.ServeContent(w, r, "poster.jpg", st.ModTime(), f)
+}

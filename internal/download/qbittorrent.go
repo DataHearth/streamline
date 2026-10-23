@@ -1,0 +1,852 @@
+package download
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"mime/multipart"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/anacrolix/torrent/metainfo"
+
+	"github.com/datahearth/streamline/internal/otelx"
+)
+
+// maxFileListResponse bounds qBittorrent's file list for one torrent. The
+// torrent list itself stays under otelx.MaxResponseBody alone: a large
+// seeder's honestly runs to tens of MiB.
+const maxFileListResponse = 16 << 20
+
+type qbAuthMode uint8
+
+const (
+	qbAuthPassword qbAuthMode = iota
+	qbAuthAPIKey
+)
+
+// managedCategory tags every torrent streamline adds so streamline only
+// ever sees/acts on its own torrents, never the operator's personal ones
+// in the same client.
+const managedCategory = "streamline"
+
+// maxQBResponse bounds an add reply. The daemon answers with a bare hash or a
+// small JSON envelope, so this only ever trips on something that is not
+// qBittorrent.
+const maxQBResponse = 1 << 20
+
+type QBittorrent struct {
+	baseURL string
+	mode    qbAuthMode
+
+	username string
+	password string
+	sid      *http.Cookie
+
+	apiKey string
+
+	client *http.Client
+
+	// registrationWait overrides qbRegistrationWait; tests shorten it.
+	registrationWait time.Duration
+}
+
+// qbRegistrationWait bounds how long the selection after a selective add
+// waits for qBittorrent to register the torrent. 5.x answers the add 202
+// while it is still processing the upload, and until it has, every call
+// addressing the hash answers 404 — a filePrio issued straight after the add
+// lost that race now and then and failed the whole grab.
+const qbRegistrationWait = 10 * time.Second
+
+// errQBNotRegistered is a 404 from a call addressing a hash qBittorrent does
+// not know (yet). Private, so it never reads as ErrTorrentNotFound, which
+// callers treat as "the torrent is gone".
+var errQBNotRegistered = errors.New("torrent not registered")
+
+func NewQBittorrentPassword(baseURL, username, password string) *QBittorrent {
+	return &QBittorrent{
+		baseURL:  strings.TrimRight(baseURL, "/"),
+		mode:     qbAuthPassword,
+		username: username,
+		password: password,
+		client:   otelx.HTTPClient,
+	}
+}
+
+func NewQBittorrentAPIKey(baseURL, apiKey string) *QBittorrent {
+	return &QBittorrent{
+		baseURL: strings.TrimRight(baseURL, "/"),
+		mode:    qbAuthAPIKey,
+		apiKey:  apiKey,
+		client:  otelx.HTTPClient,
+	}
+}
+
+func (q *QBittorrent) login(ctx context.Context) error {
+	form := url.Values{
+		"username": {q.username},
+		"password": {q.password},
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		q.baseURL+"/api/v2/auth/login",
+		strings.NewReader(form.Encode()),
+	)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Referer", q.baseURL)
+
+	resp, err := q.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrUnreachable, err)
+	}
+	defer resp.Body.Close()
+
+	switch {
+	case resp.StatusCode == http.StatusForbidden:
+		return fmt.Errorf(
+			"%w: IP banned due to too many failed login attempts",
+			ErrUnauthorized,
+		)
+	case resp.StatusCode == http.StatusUnauthorized:
+		return fmt.Errorf("%w: status %d", ErrUnauthorized, resp.StatusCode)
+	case resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusNoContent:
+		return fmt.Errorf("%w: status %d", ErrUnexpectedStatus, resp.StatusCode)
+	}
+
+	for _, cookie := range resp.Cookies() {
+		if cookie.Name == "SID" ||
+			strings.HasPrefix(cookie.Name, "QBT_SID_") {
+			q.sid = cookie
+			return nil
+		}
+	}
+
+	// qBittorrent returns 200 with body "Fails." on bad credentials —
+	// no SID cookie is set, so distinguish from other malformed responses
+	// by treating a missing SID as an auth failure.
+	return fmt.Errorf("%w: no SID cookie in login response", ErrUnauthorized)
+}
+
+func (q *QBittorrent) doRequest(
+	ctx context.Context,
+	method, path string,
+	form url.Values,
+) (*http.Response, error) {
+	if q.mode == qbAuthPassword && q.sid == nil {
+		if err := q.login(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	var body *strings.Reader
+	if form != nil {
+		body = strings.NewReader(form.Encode())
+	} else {
+		body = strings.NewReader("")
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, q.baseURL+path, body)
+	if err != nil {
+		return nil, err
+	}
+	if form != nil {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+	req.Header.Set("Referer", q.baseURL)
+
+	switch q.mode {
+	case qbAuthAPIKey:
+		req.Header.Set("Authorization", "Bearer "+q.apiKey)
+	default:
+		req.AddCookie(q.sid)
+	}
+
+	resp, err := q.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusForbidden && q.mode == qbAuthPassword {
+		resp.Body.Close()
+		q.sid = nil
+		if err := q.login(ctx); err != nil {
+			return nil, err
+		}
+		return q.doRequest(ctx, method, path, form)
+	}
+
+	return resp, nil
+}
+
+// ensureCategory provisions managedCategory in qBittorrent. qBittorrent
+// does not reliably auto-create a category on add, so streamline creates
+// it explicitly; an already-existing category (409) is success.
+func (q *QBittorrent) ensureCategory(ctx context.Context) error {
+	form := url.Values{"category": {managedCategory}}
+	resp, err := q.doRequest(
+		ctx, http.MethodPost, "/api/v2/torrents/createCategory", form,
+	)
+	if err != nil {
+		return fmt.Errorf("qbittorrent createCategory: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusConflict ||
+		(resp.StatusCode >= 200 && resp.StatusCode < 300) {
+		return nil
+	}
+	return fmt.Errorf(
+		"qbittorrent createCategory: unexpected status %d", resp.StatusCode,
+	)
+}
+
+// qbAddEnvelope is the JSON body qBittorrent 5.x returns from
+// /api/v2/torrents/add. For a multipart upload of a real .torrent file the
+// daemon parses it synchronously and reports the resulting infohash in
+// AddedTorrentIDs. Older qBittorrent versions return plain "Ok." with no
+// body — handled via the magnet btih fallback.
+type qbAddEnvelope struct {
+	AddedTorrentIDs []string `json:"added_torrent_ids"`
+	SuccessCount    int      `json:"success_count"`
+}
+
+// AddTorrent uploads the source to qBittorrent and returns the infohash.
+// .torrent bytes are sent as a multipart file part so qBittorrent never has
+// to reach the indexer itself — this is what unblocks deployments where the
+// client lives in a VPN/Docker network the indexer is not on. The save path
+// is intentionally left to qBittorrent's own configuration; streamline only
+// needs to know where to read completed downloads from (library.download_path).
+func (q *QBittorrent) AddTorrent(
+	ctx context.Context,
+	src TorrentSource,
+) (string, error) {
+	if len(src.Bytes) == 0 && src.Magnet == "" {
+		return "", fmt.Errorf("qbittorrent add: empty torrent source")
+	}
+	if err := q.ensureCategory(ctx); err != nil {
+		return "", err
+	}
+
+	buildBody := func() (*bytes.Buffer, string, error) {
+		buf := &bytes.Buffer{}
+		mw := multipart.NewWriter(buf)
+		if err := mw.WriteField("category", managedCategory); err != nil {
+			return nil, "", err
+		}
+		if src.Magnet != "" {
+			if err := mw.WriteField("urls", src.Magnet); err != nil {
+				return nil, "", err
+			}
+			// A selective magnet has no keep-set to apply yet — the pass owns
+			// resolving it (Task 16) — so the torrent must not start pulling
+			// data before then. stopCondition halts it the moment metadata
+			// lands rather than immediately (a bare "stopped" add would never
+			// resolve file names for the pass to match against).
+			if src.Selective {
+				if err := mw.WriteField(
+					"stopCondition", "MetadataReceived",
+				); err != nil {
+					return nil, "", err
+				}
+			}
+		}
+		if len(src.Bytes) > 0 {
+			fw, err := mw.CreateFormFile("torrents", "release.torrent")
+			if err != nil {
+				return nil, "", err
+			}
+			if _, err := fw.Write(src.Bytes); err != nil {
+				return nil, "", err
+			}
+		}
+		// filePriorities is deliberately never sent here: qBittorrent 5.x
+		// rejects the whole add with 400 ("Cannot specify filePriorities when
+		// uploading torrent files") when it's combined with a "torrents" file
+		// part — the "torrents" field accepts more than one file per request,
+		// so per-file priorities would be ambiguous across them. The selection
+		// is applied below, after add — and to keep that window from
+		// downloading anything before priorities land, a selective add
+		// starts stopped ("stopped" is the v5 field, "paused" the v4 one;
+		// qBittorrent silently ignores whichever its version doesn't
+		// recognize, same as the stopCondition/magnet handling) and is only
+		// started once selection has been confirmed applied.
+		if len(src.WantedFiles) > 0 {
+			if err := mw.WriteField("stopped", "true"); err != nil {
+				return nil, "", err
+			}
+			if err := mw.WriteField("paused", "true"); err != nil {
+				return nil, "", err
+			}
+		}
+		if err := mw.Close(); err != nil {
+			return nil, "", err
+		}
+		return buf, mw.FormDataContentType(), nil
+	}
+
+	doOnce := func() (*http.Response, error) {
+		if q.mode == qbAuthPassword && q.sid == nil {
+			if err := q.login(ctx); err != nil {
+				return nil, err
+			}
+		}
+		body, contentType, err := buildBody()
+		if err != nil {
+			return nil, err
+		}
+		req, err := http.NewRequestWithContext(
+			ctx, http.MethodPost, q.baseURL+"/api/v2/torrents/add", body,
+		)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", contentType)
+		req.Header.Set("Referer", q.baseURL)
+		switch q.mode {
+		case qbAuthAPIKey:
+			req.Header.Set("Authorization", "Bearer "+q.apiKey)
+		default:
+			req.AddCookie(q.sid)
+		}
+		return q.client.Do(req)
+	}
+
+	resp, err := doOnce()
+	if err != nil {
+		return "", fmt.Errorf("qbittorrent add: %w", err)
+	}
+	if resp.StatusCode == http.StatusForbidden && q.mode == qbAuthPassword {
+		resp.Body.Close()
+		q.sid = nil
+		if lerr := q.login(ctx); lerr != nil {
+			return "", lerr
+		}
+		resp, err = doOnce()
+		if err != nil {
+			return "", fmt.Errorf("qbittorrent add: %w", err)
+		}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnsupportedMediaType {
+		return "", fmt.Errorf("qbittorrent: invalid torrent")
+	}
+	if resp.StatusCode == http.StatusConflict {
+		return "", ErrTorrentAlreadyExists
+	}
+	// qBittorrent 5.x replies 202 when the upload is still being processed
+	// (the daemon hasn't finished parsing yet). 200 is the synchronous case.
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return "", fmt.Errorf(
+			"qbittorrent add: unexpected status %d",
+			resp.StatusCode,
+		)
+	}
+
+	// The reply is a hash or a short JSON envelope; anything approaching the
+	// cap is a misconfigured host answering with something else entirely
+	// (a proxy error page, the wrong service), which is not worth buffering.
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxQBResponse))
+	hash := ""
+	if strings.Contains(resp.Header.Get("Content-Type"), "application/json") {
+		var env qbAddEnvelope
+		if jerr := json.Unmarshal(body, &env); jerr == nil &&
+			len(env.AddedTorrentIDs) > 0 {
+			hash = strings.ToLower(env.AddedTorrentIDs[0])
+			slog.DebugContext(ctx,
+				"qbittorrent torrent added",
+				"hash", hash,
+				"success_count", env.SuccessCount,
+			)
+		}
+	}
+	if hash == "" && src.Magnet != "" {
+		if h := extractBtihFromMagnet(src.Magnet); h != "" {
+			hash = h
+			slog.DebugContext(ctx,
+				"qbittorrent torrent added (magnet btih fallback)",
+				"hash", hash,
+			)
+		}
+	}
+	// qBittorrent before WebAPI 2.15 (≤5.0.x) answers a bare "Ok." with no
+	// envelope, so for .torrent uploads the infohash is derived from the same
+	// bytes that were just sent. Guarded on a parseable info dict: hashing an
+	// absent one would mint a plausible-looking hash for garbage input.
+	if hash == "" && len(src.Bytes) > 0 {
+		if mi, merr := metainfo.Load(bytes.NewReader(src.Bytes)); merr == nil &&
+			len(mi.InfoBytes) > 0 {
+			hash = mi.HashInfoBytes().HexString()
+			slog.DebugContext(ctx,
+				"qbittorrent torrent added (locally derived infohash)",
+				"hash", hash,
+			)
+		}
+	}
+	if hash == "" {
+		return "", fmt.Errorf(
+			"qbittorrent add: no hash returned (success=0, body=%q)",
+			string(body),
+		)
+	}
+
+	// Selection couldn't ride the add request (see buildBody above), so it's
+	// applied here instead — computed from src.Bytes directly rather than a
+	// round-tripped SetWantedFiles/ListFiles. qBittorrent's file listing can
+	// legitimately answer ([], nil) while metadata is still settling (the
+	// same condition the 202-Accepted branch above already tolerates); going
+	// through ListFiles here would read that as "no files to skip" and leave
+	// the torrent downloading everything with no error to show for it. The
+	// local metainfo is authoritative and available immediately — no round
+	// trip needed to know what the torrent contains.
+	if len(src.WantedFiles) > 0 && len(src.Bytes) > 0 {
+		if serr := q.applySelectionAndStart(
+			ctx,
+			hash,
+			src.Bytes,
+			src.WantedFiles,
+		); serr != nil {
+			// The add already landed a stopped torrent that never got a
+			// selection applied — leaving it behind would either strand a
+			// stopped orphan or, worse, get started unselected by some other
+			// path. Best-effort: a removal failure here doesn't change
+			// which error AddTorrent reports.
+			if rerr := q.RemoveTorrent(ctx, hash, true); rerr != nil {
+				slog.WarnContext(ctx,
+					"qbittorrent add: cleanup after failed selection failed",
+					"hash", hash, "error", rerr,
+				)
+			}
+			return "", fmt.Errorf("qbittorrent add: select files: %w", serr)
+		}
+	}
+	return hash, nil
+}
+
+// applySelectionAndStart sets wantedFiles' complement to Ignored and
+// wantedFiles itself to Normal — computed against raw's own metainfo file
+// order rather than a daemon-side listing — then starts the torrent that
+// AddTorrent added stopped. Every step after the priorities are known must
+// succeed before the torrent starts, or a partial application would begin
+// downloading with the wrong (or no) selection in effect.
+func (q *QBittorrent) applySelectionAndStart(
+	ctx context.Context,
+	hash string,
+	raw []byte,
+	wantedFiles []int,
+) error {
+	files, err := decodeTorrentFiles(raw)
+	if err != nil {
+		return err
+	}
+	wanted := make(map[int]bool, len(wantedFiles))
+	for _, idx := range wantedFiles {
+		wanted[idx] = true
+	}
+	skipped := make([]int, 0, len(files))
+	for _, f := range files {
+		if !wanted[f.Index] {
+			skipped = append(skipped, f.Index)
+		}
+	}
+	// The first call waits out registration; once it lands the torrent
+	// exists, so the second goes straight through.
+	if err := q.setFilePriorityOnceRegistered(ctx, hash, skipped, "0"); err != nil {
+		return err
+	}
+	if err := q.setFilePriorityOnceRegistered(
+		ctx,
+		hash,
+		wantedFiles,
+		"1",
+	); err != nil {
+		return err
+	}
+	// stopStart(false) is the same v5 start / v4 resume version split
+	// ResumeTorrent uses.
+	return q.stopStart(ctx, hash, false)
+}
+
+func (q *QBittorrent) GetTorrent(
+	ctx context.Context,
+	hash string,
+) (*Torrent, error) {
+	torrents, err := q.listWithFilter(ctx, url.Values{"hashes": {hash}})
+	if err != nil {
+		return nil, err
+	}
+	if len(torrents) == 0 {
+		return nil, fmt.Errorf("%w: %s", ErrTorrentNotFound, hash)
+	}
+	return &torrents[0], nil
+}
+
+func (q *QBittorrent) ListTorrents(ctx context.Context) ([]Torrent, error) {
+	return q.listWithFilter(ctx, nil)
+}
+
+func (q *QBittorrent) listWithFilter(
+	ctx context.Context,
+	params url.Values,
+) ([]Torrent, error) {
+	if params == nil {
+		params = url.Values{}
+	}
+	params.Set("category", managedCategory)
+	path := "/api/v2/torrents/info?" + params.Encode()
+
+	resp, err := q.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("qbittorrent list: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var qbTorrents []qbTorrent
+	if err := json.NewDecoder(resp.Body).Decode(&qbTorrents); err != nil {
+		return nil, fmt.Errorf("qbittorrent list decode: %w", err)
+	}
+
+	torrents := make([]Torrent, 0, len(qbTorrents))
+	for _, t := range qbTorrents {
+		eta := t.Eta
+		if eta >= qbEtaInfinity {
+			eta = 0
+		}
+		torrents = append(torrents, Torrent{
+			Hash:          t.Hash,
+			Name:          t.Name,
+			Status:        mapQBState(t.State),
+			Progress:      t.Progress,
+			Size:          t.Size,
+			SavePath:      t.SavePath,
+			DownloadSpeed: t.Dlspeed,
+			ETA:           eta,
+		})
+	}
+
+	return torrents, nil
+}
+
+func (q *QBittorrent) RemoveTorrent(
+	ctx context.Context,
+	hash string,
+	deleteFiles bool,
+) error {
+	form := url.Values{
+		"hashes":      {hash},
+		"deleteFiles": {fmt.Sprintf("%t", deleteFiles)},
+	}
+
+	resp, err := q.doRequest(ctx, http.MethodPost, "/api/v2/torrents/delete", form)
+	if err != nil {
+		return fmt.Errorf("qbittorrent delete: %w", err)
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
+func (q *QBittorrent) PauseTorrent(ctx context.Context, hash string) error {
+	return q.stopStart(ctx, hash, true)
+}
+
+func (q *QBittorrent) ResumeTorrent(ctx context.Context, hash string) error {
+	return q.stopStart(ctx, hash, false)
+}
+
+// stopStart issues the qBittorrent 5.x stop/start verb, falling back to the
+// 4.x pause/resume path when the host returns 404/405 (older qBittorrent).
+func (q *QBittorrent) stopStart(
+	ctx context.Context,
+	hash string,
+	pause bool,
+) error {
+	newPath, oldPath := "/api/v2/torrents/start", "/api/v2/torrents/resume"
+	if pause {
+		newPath, oldPath = "/api/v2/torrents/stop", "/api/v2/torrents/pause"
+	}
+	form := url.Values{"hashes": {hash}}
+
+	resp, err := q.doRequest(ctx, http.MethodPost, newPath, form)
+	if err != nil {
+		return fmt.Errorf("qbittorrent %s: %w", newPath, err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound ||
+		resp.StatusCode == http.StatusMethodNotAllowed {
+		resp2, err := q.doRequest(ctx, http.MethodPost, oldPath, form)
+		if err != nil {
+			return fmt.Errorf("qbittorrent %s: %w", oldPath, err)
+		}
+		resp2.Body.Close()
+		if resp2.StatusCode != http.StatusOK {
+			return fmt.Errorf(
+				"qbittorrent %s: unexpected status %d",
+				oldPath, resp2.StatusCode)
+		}
+		return nil
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(
+			"qbittorrent %s: unexpected status %d", newPath, resp.StatusCode)
+	}
+	return nil
+}
+
+func (q *QBittorrent) TestConnection(ctx context.Context) error {
+	switch q.mode {
+	case qbAuthAPIKey:
+		return q.testAPIKey(ctx)
+	default:
+		return q.login(ctx)
+	}
+}
+
+// qbFile is one entry of qBittorrent's /api/v2/torrents/files response.
+type qbFile struct {
+	Index    int    `json:"index"`
+	Name     string `json:"name"`
+	Size     int64  `json:"size"`
+	Priority int    `json:"priority"`
+}
+
+func (q *QBittorrent) ListFiles(
+	ctx context.Context,
+	hash string,
+) ([]TorrentFile, error) {
+	path := "/api/v2/torrents/files?hash=" + url.QueryEscape(hash)
+	resp, err := q.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("qbittorrent files: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(
+			"qbittorrent files: unexpected status %d", resp.StatusCode,
+		)
+	}
+
+	var qbFiles []qbFile
+	if err := otelx.DecodeJSON(
+		resp.Body,
+		maxFileListResponse,
+		&qbFiles,
+	); err != nil {
+		return nil, fmt.Errorf("qbittorrent files decode: %w", err)
+	}
+
+	// Metadata not yet available (e.g. a magnet still resolving) answers an
+	// empty array; make(..., 0, 0) already yields a non-nil empty slice, so
+	// no special-casing is needed to satisfy the interface contract.
+	files := make([]TorrentFile, 0, len(qbFiles))
+	for _, f := range qbFiles {
+		files = append(files, TorrentFile{
+			Index:  f.Index,
+			Path:   f.Name,
+			Size:   f.Size,
+			Wanted: f.Priority != 0,
+		})
+	}
+	return files, nil
+}
+
+// SetWantedFiles makes wanted downloaded and everything else skipped.
+// Skip-everything is refused up front — a selective record never wants zero
+// files — before any request is made, matching the Transmission/Deluge and
+// builtin behavior. qBittorrent's filePrio verb only accepts an explicit id
+// list per call, and this method is only handed the keep-set, so it lists the
+// torrent's actual files first to compute the complement — "every other file"
+// per the interface contract.
+func (q *QBittorrent) SetWantedFiles(
+	ctx context.Context,
+	hash string,
+	wanted []int,
+) error {
+	if len(wanted) == 0 {
+		return fmt.Errorf(
+			"qbittorrent set wanted files: refusing to skip every file",
+		)
+	}
+
+	files, err := q.ListFiles(ctx, hash)
+	if err != nil {
+		return fmt.Errorf("qbittorrent set wanted files: %w", err)
+	}
+
+	keep := make(map[int]bool, len(wanted))
+	for _, idx := range wanted {
+		keep[idx] = true
+	}
+	var skipped []int
+	for _, f := range files {
+		if !keep[f.Index] {
+			skipped = append(skipped, f.Index)
+		}
+	}
+
+	if err := q.setFilePriority(ctx, hash, skipped, "0"); err != nil {
+		return err
+	}
+	return q.setFilePriority(ctx, hash, wanted, "1")
+}
+
+// setFilePriorityOnceRegistered is setFilePriority retried, with backoff,
+// while qBittorrent answers 404 for a torrent it accepted but has not
+// registered yet, up to qbRegistrationWait.
+func (q *QBittorrent) setFilePriorityOnceRegistered(
+	ctx context.Context,
+	hash string,
+	ids []int,
+	priority string,
+) error {
+	wait := q.registrationWait
+	if wait <= 0 {
+		wait = qbRegistrationWait
+	}
+	deadline := time.Now().Add(wait)
+	delay := 50 * time.Millisecond
+	for {
+		err := q.setFilePriority(ctx, hash, ids, priority)
+		if !errors.Is(err, errQBNotRegistered) {
+			return err
+		}
+		if !time.Now().Before(deadline) {
+			return fmt.Errorf("%w after %s", err, wait)
+		}
+		slog.DebugContext(
+			ctx,
+			"qbittorrent torrent not registered yet, retrying filePrio",
+			"hash",
+			hash,
+			"retry_in",
+			delay,
+		)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+		}
+		delay = min(delay*2, time.Second)
+	}
+}
+
+// setFilePriority issues one qBittorrent filePrio call for ids, or no call at
+// all when ids is empty — the no-op is what collapses SetWantedFiles to a
+// single request when nothing needs skipping.
+func (q *QBittorrent) setFilePriority(
+	ctx context.Context,
+	hash string,
+	ids []int,
+	priority string,
+) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	idStrs := make([]string, len(ids))
+	for i, id := range ids {
+		idStrs[i] = strconv.Itoa(id)
+	}
+	form := url.Values{
+		"hash":     {hash},
+		"id":       {strings.Join(idStrs, "|")},
+		"priority": {priority},
+	}
+	resp, err := q.doRequest(
+		ctx, http.MethodPost, "/api/v2/torrents/filePrio", form,
+	)
+	if err != nil {
+		return fmt.Errorf("qbittorrent filePrio: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("qbittorrent filePrio: %w: %s", errQBNotRegistered, hash)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(
+			"qbittorrent filePrio: unexpected status %d", resp.StatusCode,
+		)
+	}
+	return nil
+}
+
+func (q *QBittorrent) testAPIKey(ctx context.Context) error {
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		q.baseURL+"/api/v2/app/version",
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+q.apiKey)
+
+	resp, err := q.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrUnreachable, err)
+	}
+	defer resp.Body.Close()
+
+	switch {
+	case resp.StatusCode == http.StatusUnauthorized:
+		return fmt.Errorf("%w: status %d", ErrUnauthorized, resp.StatusCode)
+	case resp.StatusCode != http.StatusOK:
+		return fmt.Errorf("%w: status %d", ErrUnexpectedStatus, resp.StatusCode)
+	}
+	return nil
+}
+
+// mapQBState maps a qBittorrent state string to a TorrentStatus. The `UP`
+// suffix means the torrent already finished downloading and is in its
+// upload phase, so idle `UP` states report Completed (not Paused) and the
+// monitor still imports them — matching transmission/deluge. Only the `DL`
+// side is genuinely mid-transfer and therefore Paused.
+func mapQBState(state string) TorrentStatus {
+	switch state {
+	case "downloading",
+		"metaDL",
+		"forcedDL",
+		"allocating",
+		"stalledDL",
+		"checkingDL",
+		"checkingResumeData":
+		return StatusDownloading
+	case "uploading", "forcedUP", "stalledUP", "checkingUP":
+		return StatusSeeding
+	case "pausedDL", "stoppedDL", "queuedDL":
+		return StatusPaused
+	case "pausedUP", "stoppedUP", "queuedUP", "moving":
+		return StatusCompleted
+	case "error", "missingFiles", "unknown":
+		return StatusError
+	default:
+		return StatusError
+	}
+}
+
+type qbTorrent struct {
+	Hash     string  `json:"hash"`
+	Name     string  `json:"name"`
+	State    string  `json:"state"`
+	Progress float64 `json:"progress"`
+	Size     int64   `json:"size"`
+	SavePath string  `json:"save_path"`
+	Dlspeed  int64   `json:"dlspeed"`
+	Eta      int64   `json:"eta"`
+}
+
+// qbEtaInfinity is qBittorrent's "no ETA" sentinel (8640000s). Normalized
+// to 0 so the UI treats 0 as "unknown".
+const qbEtaInfinity = 8640000

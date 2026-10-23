@@ -1,0 +1,82 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+vars:
+  BINARY: streamline
+  LABEL_FILTER: '{{.LABEL_FILTER}}'
+
+# Split by namespace: a file per include, task names unchanged (`build:go`
+# lives in .taskfiles/build.yaml as `go`). Inside an included file a bare name
+# resolves within its own namespace; a leading colon reaches the global one,
+# which is how e.g. lint:go depends on `:build:js`.
+includes:
+  build: ./.taskfiles/build.yaml
+  test: ./.taskfiles/test.yaml
+  lint: ./.taskfiles/lint.yaml
+  helm: ./.taskfiles/helm.yaml
+  release: ./.taskfiles/release.yaml
+
+tasks:
+  default:
+    desc: Build everything
+    deps: [build:app]
+
+  # What follows owns no namespace of its own — everything else lives in an
+  # include above.
+
+  dev:
+    desc: Run with live reload via air
+    cmd: go tool air
+    interactive: true
+
+  vulncheck:
+    desc: Scan dependencies for known vulnerabilities
+    # Same //go:embed constraint as lint:go — govulncheck loads the packages.
+    deps: [build:js, build:css]
+    cmd: go tool govulncheck ./...
+
+  fmt:
+    desc: Format all code
+    cmds:
+      - go tool golangci-lint fmt ./...
+      - biome format --write web/static/js web/static/css
+      - nixfmt flake.nix nix/*.nix
+
+  fmt:check:
+    desc: Check formatting without writing
+    cmds:
+      - biome format web/static/js web/static/css
+      - nixfmt --check flake.nix nix/*.nix
+
+  migrate:diff:
+    desc: Generate a new versioned migration from the ent schema (usage - task migrate:diff -- NAME)
+    cmd: go run -mod=mod ./ent/migrate/main.go {{.CLI_ARGS}}
+
+  generate:
+    desc: Regenerate all generated code
+    cmds:
+      - go tool oapi-codegen --config api/oapi-codegen.yaml api/openapi.yaml
+      - go generate ./ent
+      - go tool mockery
+    sources:
+      - api/openapi.yaml
+      - api/oapi-codegen.yaml
+      - ent/schema/*.go
+      - .mockery.yaml
+      - internal/**/*.go
+      - exclude: "**/*_test.go"
+      - exclude: "**/mocks/**"
+    generates:
+      - internal/server/restapi/gen.go
+      - ent/**/*.go
+      - exclude: ent/schema/*.go
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -f {{.BINARY}}
+      - rm -f web/static/js/docs.min.js
+      - rm -f web/static/css/style.css
+      - rm -f web/static/css/docs.min.css
+      - rm -rf web/static/dist
+

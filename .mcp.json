@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "direnv",
+      "args": [
+        "exec",
+        ".",
+        "bash",
+        "-c",
+        "D=$(mktemp -d); for b in $PLAYWRIGHT_BROWSERS_PATH/*; do ln -s \"$(readlink -f \"$b\")\" \"$D/$(basename \"$b\")\"; done; PLAYWRIGHT_BROWSERS_PATH=$D PLAYWRIGHT_MCP_BROWSER=chromium exec .playwright-mcp-wrapped --headless --output-dir .playwright-mcp"
+      ]
+    }
+  }
+}

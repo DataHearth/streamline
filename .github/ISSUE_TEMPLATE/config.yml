@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question or setup help
+    url: https://github.com/datahearth/streamline/discussions
+    about: Ask in Discussions rather than opening an issue.
+  - name: Security vulnerability
+    url: https://github.com/datahearth/streamline/security/advisories/new
+    about: Report it privately, never as a public issue.

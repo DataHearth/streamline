@@ -1,0 +1,1072 @@
+package indexer
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"regexp"
+	"slices"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/otelx"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
+)
+
+// buildBaseURL composes scheme://host:port[path] for indexer requests.
+func buildBaseURL(host string, port uint16, path string, useSSL bool) string {
+	scheme := "http"
+	if useSSL {
+		scheme = "https"
+	}
+	return fmt.Sprintf("%s://%s:%d%s", scheme, host, port, path)
+}
+
+// newClient returns the indexer client for a protocol. Jackett is configured
+// as plain torznab (its /indexers/all aggregate feed is a standard Torznab
+// endpoint — only the prefilled path differs), so it needs no branch here.
+// Prowlarr has no aggregate Torznab feed and needs its native JSON search
+// client.
+func newClient(protocol, baseURL, apiKey string) Client {
+	switch protocol {
+	case "prowlarr":
+		return NewProwlarr(baseURL, apiKey)
+	default: // torznab
+		return NewTorznab(baseURL, apiKey)
+	}
+}
+
+var (
+	tracer = otel.Tracer("github.com/datahearth/streamline/internal/indexer")
+	meter  = otel.Meter("github.com/datahearth/streamline/internal/indexer")
+
+	searchCounter  metric.Int64Counter
+	searchDuration metric.Float64Histogram
+	indexerQueries metric.Int64Counter
+	indexerTests   metric.Int64Counter
+	indexerFeeds   metric.Int64Counter
+)
+
+// queryOutcome names why an indexer call failed, for the outcome attribute.
+//
+// A blanket "error" put an expired API key, an unreachable tracker and a
+// malformed response in one bucket, so the metric could say an indexer was
+// failing but never which of those to go and fix.
+func queryOutcome(err error) string {
+	switch {
+	case err == nil:
+		return "success"
+	case errors.Is(err, ErrUnauthorized):
+		return "unauthorized"
+	case errors.Is(err, ErrUnreachable):
+		return "unreachable"
+	case errors.Is(err, ErrBadResponse):
+		return "bad_response"
+	case errors.Is(err, ErrUnexpectedStatus):
+		return "unexpected_status"
+	default:
+		return "error"
+	}
+}
+
+func init() {
+	searchCounter = otelx.Must(meter.Int64Counter(
+		"streamline.indexer.searches",
+		metric.WithDescription("Aggregate indexer search operations"),
+	))
+	searchDuration = otelx.Must(meter.Float64Histogram(
+		"streamline.indexer.search.duration",
+		metric.WithDescription("Aggregate search duration across all indexers"),
+		metric.WithUnit("s"),
+	))
+	indexerQueries = otelx.Must(meter.Int64Counter(
+		"streamline.indexer.queries",
+		metric.WithDescription("Per-indexer query count by outcome"),
+	))
+	indexerTests = otelx.Must(meter.Int64Counter(
+		"streamline.indexer.tests",
+		metric.WithDescription("Indexer connection-test invocations by outcome"),
+	))
+	// Feed is what every RSS tick calls, once per enabled indexer — the
+	// primary automated ingestion path, and the one with no counter, so
+	// "indexer X's feed has been failing for an hour" was only ever a log
+	// grep while the search path had a graph.
+	indexerFeeds = otelx.Must(meter.Int64Counter(
+		"streamline.indexer.feeds",
+		metric.WithDescription("Per-indexer feed fetches by outcome"),
+	))
+
+	ctx := context.Background()
+	searchCounter.Add(ctx, 0)
+	indexerQueries.Add(ctx, 0)
+	indexerTests.Add(ctx, 0)
+	indexerFeeds.Add(ctx, 0)
+	searchDuration.Record(ctx, 0)
+}
+
+// Manager is the consumer-facing surface used by HTTP handlers and rss.
+// CRUD over indexers lives in the YAML config (config.AddIndexer etc.); this
+// surface keeps the behavioral operations that act on the configured entries.
+// Every search takes two name sets. titles is queried — one request per title
+// per indexer — and aliases is not: it only widens what the results are matched
+// against. Passing an alias list as titles multiplies every search by its
+// length against rate-limited trackers, which is the whole reason the two are
+// separate parameters rather than one slice. SearchAlbum and SearchBook are the
+// exception: they take a structured artist/author and title instead, since
+// neither has aliases.
+type Manager interface {
+	Test(ctx context.Context, p TestParams) error
+	TestByName(ctx context.Context, name string) error
+	SearchMovie(
+		ctx context.Context,
+		titles, aliases []string,
+		tmdbID uint32,
+	) ([]SearchResult, error)
+	SearchSeason(
+		ctx context.Context,
+		titles, aliases []string,
+		tvdbID uint32,
+		season uint16,
+	) ([]SearchResult, error)
+	SearchSeries(
+		ctx context.Context,
+		titles, aliases []string,
+		tvdbID uint32,
+	) ([]SearchResult, error)
+	// SearchEpisode also reports how many season/whole-series packs covering
+	// the episode were filtered out, so a caller can say why an empty list is
+	// empty and point at the season scope.
+	SearchEpisode(
+		ctx context.Context,
+		titles, aliases []string,
+		tvdbID uint32,
+		season, episode uint16,
+	) ([]SearchResult, int, error)
+	// SearchAlbum queries every enabled indexer for an album release. The
+	// music newznab root is 3000 (Audio); q is "<artist> <album>", then
+	// "<artist> <album> <year>" when year > 0.
+	SearchAlbum(
+		ctx context.Context,
+		artist, album string,
+		year uint16,
+	) ([]SearchResult, error)
+	// SearchArtist queries every enabled indexer for the artist's name in the
+	// music category: one request per indexer. It is the discography browse.
+	SearchArtist(ctx context.Context, artist string) ([]SearchResult, error)
+	// SearchBook queries every enabled indexer for one slot of a book.
+	// kind is ebook (newznab 7000 Books + 7020 Books/EBook) or audiobook
+	// (3030 Audio/Audiobook); q is "<author> <title>", then
+	// "<author> <title> <year>" when year > 0.
+	SearchBook(
+		ctx context.Context,
+		author, title string,
+		year uint16,
+		kind mediafile.BookKind,
+	) ([]SearchResult, error)
+	Feed(ctx context.Context, indexerName string) ([]SearchResult, error)
+}
+
+// TestParams describes ad-hoc credentials for a connection test that has not
+// yet been persisted as an Indexer row.
+type TestParams struct {
+	Protocol string
+	Host     string
+	Port     uint16
+	Path     string
+	UseSSL   bool
+	APIKey   string
+}
+
+// indexer searches across all enabled indexers in parallel. The configured
+// indexer set is read live from config.Get() per operation.
+type indexer struct{}
+
+func New() Manager {
+	return &indexer{}
+}
+
+// dedupTitles strips empty entries and collapses duplicates while
+// preserving first-seen order. Empty input → empty output.
+func dedupTitles(in []string) []string {
+	if len(in) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, t := range in {
+		if t == "" {
+			continue
+		}
+		if _, ok := seen[t]; ok {
+			continue
+		}
+		seen[t] = struct{}{}
+		out = append(out, t)
+	}
+	return out
+}
+
+// matchTitles is the set preferTitleMatches compares against: the queried
+// titles plus every alias the library holds for the same work, deduped.
+//
+// Kept apart from the queried set because the two are asked for different
+// things. A release names its work in one language, and which one is the
+// uploader's choice — so the library's own two titles match only the releases
+// that happen to share its language, and on a mixed tracker set that is a
+// minority of them. Matching against the aliases as well is what stops the
+// rest being discarded; querying for them would multiply every search by the
+// alias count against rate-limited trackers, for results the id and title
+// filters already cover.
+func matchTitles(titles, aliases []string) []string {
+	if len(aliases) == 0 {
+		return titles
+	}
+	all := make([]string, 0, len(titles)+len(aliases))
+	all = append(all, titles...)
+	all = append(all, aliases...)
+	return dedupTitles(all)
+}
+
+// dedupResults collapses the same release appearing more than once in a merged
+// result set, preserving first-seen order.
+//
+// The key is not the download URL: a series is queried once per title (local +
+// original) and Prowlarr answered the two queries with the same releases under
+// different proxy links, so every release showed up twice in the manual-search
+// modal. Title+indexer+size is the release identity; the indexer stays in the
+// key so the same release on two trackers keeps both rows, which carry their
+// own seeder counts.
+func dedupResults(in []SearchResult) []SearchResult {
+	if len(in) < 2 {
+		return in
+	}
+	seen := make(map[string]struct{}, len(in))
+	out := in[:0]
+	for _, r := range in {
+		key := fmt.Sprintf("%s|%s|%d", r.Title, r.Indexer, r.Size)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, r)
+	}
+	return out
+}
+
+// SearchMovie queries all enabled indexers for a movie against each
+// (deduped) title and returns results merged, deduped by release identity,
+// and sorted by seeders descending. Per-indexer queries run sequentially
+// across titles to respect indexer rate limits; indexers themselves are
+// fanned out in parallel.
+func (i *indexer) SearchMovie(
+	ctx context.Context,
+	titles, aliases []string,
+	tmdbID uint32,
+) ([]SearchResult, error) {
+	titles = dedupTitles(titles)
+	match := matchTitles(titles, aliases)
+	ctx, span := tracer.Start(ctx, "indexer.search_movie",
+		trace.WithAttributes(
+			attribute.Int("movie.titles.count", len(titles)),
+			// How far past the queried titles the result filter reached. A
+			// release kept on an alias is not stamped a title mismatch, so an
+			// automatic grab acts on it; when one turns out wrong, the width of
+			// that net is otherwise only readable from a library row a later
+			// refresh may already have rewritten.
+			attribute.Int("movie.aliases.count", len(aliases)),
+			attribute.Int64("movie.tmdb_id", int64(tmdbID)),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
+	defer func() {
+		searchDuration.Record(ctx, time.Since(start).Seconds())
+		searchCounter.Add(ctx, 1)
+	}()
+
+	if len(titles) == 0 {
+		slog.WarnContext(ctx, "indexer search skipped: no titles after dedup",
+			"movie.tmdb_id", tmdbID)
+		return nil, nil
+	}
+
+	results := i.searchAll(
+		ctx,
+		span,
+		titles,
+		SearchParams{Kind: KindMovie, TMDBID: tmdbID},
+	)
+	// Same keyword-search noise the TV scopes filter: an indexer ignoring the
+	// tmdbid answers with every film it holds, and a profile cannot tell one
+	// film from another.
+	filtered := preferTitleMatches(results, match)
+	span.SetAttributes(
+		attribute.Int("results.pre_title_filter", len(results)),
+		attribute.Int("results.total", len(filtered)),
+	)
+	return filtered, nil
+}
+
+// SearchSeason queries all enabled indexers for a season pack of the given
+// series (a tvsearch keyed by tvdbid + season, no episode). Results are
+// aggregated, deduped, and sorted exactly like SearchMovie.
+func (i *indexer) SearchSeason(
+	ctx context.Context,
+	titles, aliases []string,
+	tvdbID uint32,
+	season uint16,
+) ([]SearchResult, error) {
+	titles = dedupTitles(titles)
+	match := matchTitles(titles, aliases)
+	ctx, span := tracer.Start(ctx, "indexer.search_season",
+		trace.WithAttributes(
+			attribute.Int("series.titles.count", len(titles)),
+			attribute.Int("series.aliases.count", len(aliases)),
+			attribute.Int64("series.tvdb_id", int64(tvdbID)),
+			attribute.Int("series.season", int(season)),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
+	defer func() {
+		searchDuration.Record(ctx, time.Since(start).Seconds())
+		searchCounter.Add(ctx, 1)
+	}()
+
+	if len(titles) == 0 {
+		slog.WarnContext(ctx, "indexer search skipped: no titles after dedup",
+			"series.tvdb_id", tvdbID)
+		return nil, nil
+	}
+
+	// Indexers behind Prowlarr frequently ignore the season param and return
+	// the whole series, so drop releases that belong to a different season.
+	results := i.searchAll(
+		ctx,
+		span,
+		titles,
+		SearchParams{Kind: KindTV, TVDBID: tvdbID, Season: season},
+	)
+	filtered := preferTitleMatches(filterToSeason(results, season), match)
+	span.SetAttributes(
+		attribute.Int("results.pre_season_filter", len(results)),
+		attribute.Int("results.total", len(filtered)),
+	)
+	return filtered, nil
+}
+
+func (i *indexer) SearchAlbum(
+	ctx context.Context,
+	artist, album string,
+	year uint16,
+) ([]SearchResult, error) {
+	queries := nameQueries(artist, album, year)
+	ctx, span := tracer.Start(ctx, "indexer.search_album",
+		trace.WithAttributes(
+			attribute.String("album.artist", artist),
+			attribute.String("album.title", album),
+			attribute.Int("album.year", int(year)),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
+	defer func() {
+		searchDuration.Record(ctx, time.Since(start).Seconds())
+		searchCounter.Add(ctx, 1)
+	}()
+
+	if len(queries) == 0 {
+		slog.WarnContext(ctx, "indexer search skipped: no query after dedup",
+			"album.title", album)
+		return nil, nil
+	}
+
+	results := withoutAudiobooks(
+		i.searchAll(ctx, span, queries, SearchParams{Kind: KindMusic}),
+	)
+	span.SetAttributes(attribute.Int("results.total", len(results)))
+	return results, nil
+}
+
+func (i *indexer) SearchArtist(
+	ctx context.Context,
+	artist string,
+) ([]SearchResult, error) {
+	ctx, span := tracer.Start(ctx, "indexer.search_artist",
+		trace.WithAttributes(attribute.String("album.artist", artist)),
+	)
+	defer span.End()
+
+	start := time.Now()
+	defer func() {
+		searchDuration.Record(ctx, time.Since(start).Seconds())
+		searchCounter.Add(ctx, 1)
+	}()
+
+	artist = strings.TrimSpace(artist)
+	if artist == "" {
+		return nil, nil
+	}
+	results := withoutAudiobooks(i.searchAll(
+		ctx,
+		span,
+		[]string{artist},
+		SearchParams{Kind: KindMusic},
+	))
+	span.SetAttributes(attribute.Int("results.total", len(results)))
+	return results, nil
+}
+
+// withoutAudiobooks drops the 3030 Audio/Audiobook subcategory, which sits inside
+// the 3000 Audio root a music search queries and belongs to the book search.
+func withoutAudiobooks(results []SearchResult) []SearchResult {
+	return slices.DeleteFunc(results, func(r SearchResult) bool {
+		return r.Category == catAudiobook
+	})
+}
+
+func (i *indexer) SearchBook(
+	ctx context.Context,
+	author, title string,
+	year uint16,
+	kind mediafile.BookKind,
+) ([]SearchResult, error) {
+	ctx, span := tracer.Start(ctx, "indexer.search_book",
+		trace.WithAttributes(
+			attribute.String("book.author", author),
+			attribute.String("book.title", title),
+			attribute.Int("book.year", int(year)),
+			attribute.String("book.kind", string(kind)),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
+	defer func() {
+		searchDuration.Record(ctx, time.Since(start).Seconds())
+		searchCounter.Add(ctx, 1)
+	}()
+
+	var mk MediaKind
+	switch kind {
+	case mediafile.BookKindEbook:
+		mk = KindEbook
+	case mediafile.BookKindAudiobook:
+		mk = KindAudiobook
+	default:
+		return nil, otelx.RecordSpanError(span,
+			fmt.Errorf("indexer: unknown book kind %q", kind))
+	}
+
+	queries := nameQueries(author, title, year)
+	if len(queries) == 0 {
+		slog.WarnContext(ctx, "indexer search skipped: no query after dedup",
+			"book.title", title)
+		return nil, nil
+	}
+
+	results := i.searchAll(ctx, span, queries, SearchParams{Kind: mk})
+	span.SetAttributes(attribute.Int("results.total", len(results)))
+	return results, nil
+}
+
+// nameQueries builds the "<first> <second>" query and, when year > 0, the same
+// with the year appended. Title matching is deliberately not applied to these
+// searches: preferTitleMatches is built around movie and TV release names.
+func nameQueries(first, second string, year uint16) []string {
+	if strings.TrimSpace(first+second) == "" {
+		return nil
+	}
+	base := strings.TrimSpace(first + " " + second)
+	out := []string{base}
+	if year > 0 {
+		out = append(out, fmt.Sprintf("%s %d", base, year))
+	}
+	return dedupTitles(out)
+}
+
+// A fansub tag survives extractTitle and would make every tagged release read
+// as a different show. The opening bracket is usually already gone —
+// library.Parse trims leading delimiters — so it is optional here, and
+// everything through the first closing bracket goes. Same shape as
+// rss.fansubTagRe, which normalizes the same names for the feed scanner.
+var fansubTagRe = regexp.MustCompile(`^\[?[^\]]*\]\s*`)
+
+// An anime absolute number survives extractTitle in its " - 05" shape, and a
+// title comparison that cannot spell it out as a tag reads it as part of the
+// name. Only the dash-separated form goes: a number a title merely ends with
+// is part of that title, and dropping it would make every "Taxi" release name
+// "Taxi 5".
+var absoluteTailRe = regexp.MustCompile(`\s*-\s*\d{1,4}\s*$`)
+
+// filterProviderIDs drops releases whose own provider id contradicts the
+// search, and is the one filter here that does not guess.
+//
+// A tracker that publishes a tvdbid/tmdbid alongside a release states outright
+// what the release is for — Prowlarr re-emits it on ReleaseResource and the
+// Torznab path reads the same attrs. That settles what the title heuristics
+// cannot: a show held under a translated title matches none of its English
+// releases, and releases naming another show entirely share the numbers this
+// package's scope filters match on. So an id that disagrees is dropped
+// outright, ahead of preferTitleMatches, which keeps its prefer-don't-require
+// job for everything unlabelled.
+//
+// A zero id is the tracker saying nothing, never "no match" — most releases on
+// most trackers carry none, and reading zero as a mismatch would empty the
+// result set. Only ids the search itself asked about are compared: a TV search
+// carries no TMDB id, and a series' TMDB id on a release says nothing about
+// the TVDB id we hold.
+//
+// The trust this places in a tracker's metadata is the same trust an id-keyed
+// search would place in it, so a mis-tagged upload is filtered out. That is
+// the intended reading of a wrong id, not a regression.
+func filterProviderIDs(results []SearchResult, base SearchParams) []SearchResult {
+	if base.TMDBID == 0 && base.TVDBID == 0 {
+		return results
+	}
+	out := make([]SearchResult, 0, len(results))
+	for _, r := range results {
+		if base.TVDBID > 0 && r.TVDBID > 0 && r.TVDBID != base.TVDBID {
+			continue
+		}
+		if base.TMDBID > 0 && r.TMDBID > 0 && r.TMDBID != base.TMDBID {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out
+}
+
+// preferTitleMatches returns only the results whose parsed title names this
+// show, and every result when none does.
+//
+// The scope filters match on numbers alone, so an indexer answering a keyword
+// search offers every show sharing them: a search for one anime's S04E03 came
+// back with Reacher, Ted Lasso and Strange New Worlds alongside it, any of
+// which can outrank the right release under a profile that cannot tell them
+// apart. The importer files whatever was grabbed under the record's anchor
+// episode, so a wrong result becomes a wrong file with nothing downstream to
+// catch it.
+//
+// Dropping the non-matches outright is what this deliberately does not do.
+// titles is the show's own two names — TVShow stores no aliases and neither
+// caller loads TVDB's — so a library holding a show under a translated title
+// (`Moi, quand je me réincarne en Slime`, original `転生したらスライムだった件`)
+// matches none of its English releases, which are most of what its indexers
+// carry. Preferring keeps the wrong show from winning on score whenever the
+// right one is present, and costs nothing when it isn't.
+//
+// The fallback set is stamped TitleMismatch so the automatic grabbers can
+// refuse what only a human should see: "prefer" is the right answer for a
+// browse and the wrong one for a pass that grabs the highest score unattended.
+//
+// A release whose title the parser could not read counts as a match: an empty
+// title is no evidence of the wrong show. A release may carry more than the
+// show's name because a parsed title keeps what extractTitle could not cut —
+// `Breaking Bad COMPLETE`, a fansub tag, a translated suffix — but only the
+// release tags TitleNamesSameWork knows, never a word that distinguishes one
+// work from another. Bare prefix tolerance did the latter, and every
+// `Narcos Mexico` episode read as a match for `Narcos`.
+func preferTitleMatches(results []SearchResult, titles []string) []SearchResult {
+	if len(titles) == 0 {
+		return results
+	}
+	matched := make([]SearchResult, 0, len(results))
+	for _, r := range results {
+		name := absoluteTailRe.ReplaceAllString(
+			fansubTagRe.ReplaceAllString(library.Parse(r.Title).Title, ""), "",
+		)
+		if name == "" {
+			matched = append(matched, r)
+			continue
+		}
+		for _, t := range titles {
+			if library.TitleNamesSameWork(name, t) {
+				matched = append(matched, r)
+				break
+			}
+		}
+	}
+	if len(matched) == 0 {
+		for i := range results {
+			results[i].TitleMismatch = true
+		}
+		return results
+	}
+	return matched
+}
+
+// filterToSeason keeps only season packs of exactly the requested season.
+// Whole-series / multi-season packs (COMPLETE, INTEGRALE, S01-S05) are dropped
+// even though they cover the season, because grabbing one imports every season
+// it contains — those belong to the whole-series scope. Single episodes are
+// dropped too: both callers treat what comes back as a pack, sizing it against
+// the season's episode count and marking the whole season downloading.
+func filterToSeason(results []SearchResult, season uint16) []SearchResult {
+	out := make([]SearchResult, 0, len(results))
+	for _, r := range results {
+		if library.IsWholeSeriesPack(r.Title) {
+			continue
+		}
+		if p := library.Parse(r.Title); p.SeasonPack && p.Season == season {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// SearchSeries queries all enabled indexers for whole-series releases (a
+// tvsearch keyed by tvdbid with no season, catching integral / multi-season
+// packs). Results are aggregated, deduped, and sorted exactly like SearchMovie.
+//
+// The whole-series scope is the widest one here — a grab takes every season
+// the release holds — and "COMPLETE" is a tag any show's packs carry, so the
+// scope filter alone separates nothing by show. preferTitleMatches is what
+// keeps a longer show built on this one's name out of the list.
+func (i *indexer) SearchSeries(
+	ctx context.Context,
+	titles, aliases []string,
+	tvdbID uint32,
+) ([]SearchResult, error) {
+	titles = dedupTitles(titles)
+	match := matchTitles(titles, aliases)
+	ctx, span := tracer.Start(ctx, "indexer.search_series",
+		trace.WithAttributes(
+			attribute.Int("series.titles.count", len(titles)),
+			attribute.Int("series.aliases.count", len(aliases)),
+			attribute.Int64("series.tvdb_id", int64(tvdbID)),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
+	defer func() {
+		searchDuration.Record(ctx, time.Since(start).Seconds())
+		searchCounter.Add(ctx, 1)
+	}()
+
+	if len(titles) == 0 {
+		slog.WarnContext(ctx, "indexer search skipped: no titles after dedup",
+			"series.tvdb_id", tvdbID)
+		return nil, nil
+	}
+
+	results := i.searchAll(
+		ctx,
+		span,
+		titles,
+		SearchParams{Kind: KindTV, TVDBID: tvdbID},
+	)
+	packs := make([]SearchResult, 0, len(results))
+	for _, r := range results {
+		// A tvsearch with no season is a plain series query, so single episodes
+		// and single-season packs come back alongside the integrals. This scope
+		// grabs a release as covering every season, so only those qualify.
+		if library.IsWholeSeriesPack(r.Title) {
+			packs = append(packs, r)
+		}
+	}
+	filtered := preferTitleMatches(packs, match)
+	span.SetAttributes(
+		attribute.Int("results.pre_series_filter", len(results)),
+		attribute.Int("results.total", len(filtered)),
+	)
+	return filtered, nil
+}
+
+// SearchEpisode queries all enabled indexers for a single episode (a tvsearch
+// keyed by tvdbid + season + episode). Results are aggregated, deduped, and
+// sorted exactly like SearchMovie.
+func (i *indexer) SearchEpisode(
+	ctx context.Context,
+	titles, aliases []string,
+	tvdbID uint32,
+	season, episode uint16,
+) ([]SearchResult, int, error) {
+	titles = dedupTitles(titles)
+	match := matchTitles(titles, aliases)
+	ctx, span := tracer.Start(ctx, "indexer.search_episode",
+		trace.WithAttributes(
+			attribute.Int("series.titles.count", len(titles)),
+			attribute.Int("series.aliases.count", len(aliases)),
+			attribute.Int64("series.tvdb_id", int64(tvdbID)),
+			attribute.Int("series.season", int(season)),
+			attribute.Int("series.episode", int(episode)),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
+	defer func() {
+		searchDuration.Record(ctx, time.Since(start).Seconds())
+		searchCounter.Add(ctx, 1)
+	}()
+
+	if len(titles) == 0 {
+		slog.WarnContext(ctx, "indexer search skipped: no titles after dedup",
+			"series.tvdb_id", tvdbID)
+		return nil, 0, nil
+	}
+
+	// Same reason as the season scope: the season/episode params are routinely
+	// ignored, and the empty-result retry drops the id entirely, so what comes
+	// back is a keyword search over the whole series.
+	results := i.searchAll(
+		ctx, span, titles,
+		SearchParams{
+			Kind:    KindTV,
+			TVDBID:  tvdbID,
+			Season:  season,
+			Episode: episode,
+		},
+	)
+	filtered, hiddenPacks := filterToEpisode(results, season, episode)
+	filtered = preferTitleMatches(filtered, match)
+	span.SetAttributes(
+		attribute.Int("results.pre_episode_filter", len(results)),
+		attribute.Int("results.hidden_packs", hiddenPacks),
+		attribute.Int("results.total", len(filtered)),
+	)
+	return filtered, hiddenPacks, nil
+}
+
+// filterToEpisode keeps only releases naming exactly the requested episode.
+// Season packs are dropped: they are the season scope's business, and the
+// callers here size a result as one episode.
+//
+// A release naming no season and no episode is kept only when it carries an
+// anime absolute number or a daily air date — those shows never spell SxxExx,
+// and dropping them would hide every release they have. Keeping *anything*
+// unnumbered was the first cut of this and it let through the bulk of the noise
+// the filter exists to remove: a bare "Breaking Bad", a whole different show,
+// and any pack whose only scope word the parser cannot read.
+//
+// The second return counts the dropped releases that are packs *covering* this
+// episode, which is the only part of the noise an operator can act on: it is
+// what the season and whole-series scopes would offer instead. Releases for
+// some other episode are not counted — there is nowhere to send anyone for
+// those.
+func filterToEpisode(
+	results []SearchResult,
+	season, episode uint16,
+) ([]SearchResult, int) {
+	out := make([]SearchResult, 0, len(results))
+	hiddenPacks := 0
+	for _, r := range results {
+		p := library.Parse(r.Title)
+		if p.Season == season && p.Episode == episode {
+			out = append(out, r)
+			continue
+		}
+		// The span is read before the "names nothing" fallback below, not after:
+		// a COMPLETE/INTEGRALE pack carries no season token either, so the
+		// fallback would otherwise keep every integral in an episode search.
+		sp := library.ParseSeasonSpan(r.Title)
+		switch {
+		case sp.Complete ||
+			(sp.From != 0 && sp.From <= season && season <= sp.To):
+			hiddenPacks++
+		case sp.From == 0 && p.Season == 0 && p.Episode == 0 &&
+			(p.AbsoluteNumber > 0 || p.AirDate != nil):
+			out = append(out, r)
+		}
+	}
+	return out, hiddenPacks
+}
+
+// searchAll fans out one query per (indexer, title) across every enabled
+// indexer, merging results deduped by release identity and sorted by seeders
+// descending. base carries the id/season/episode params shared by every
+// query; Query is filled per title. Per-indexer errors are logged, never
+// returned. When a query keyed by a database id (tmdbid/tvdbid) comes back
+// empty, it is retried once on the bare title (keeping season/episode) since
+// many private trackers don't index by id.
+func (i *indexer) searchAll(
+	ctx context.Context,
+	span trace.Span,
+	titles []string,
+	base SearchParams,
+) []SearchResult {
+	indexers := config.EnabledIndexers()
+	span.SetAttributes(attribute.Int("indexers.count", len(indexers)))
+
+	var (
+		mu      sync.Mutex
+		results []SearchResult
+		wg      sync.WaitGroup
+	)
+
+	for _, idx := range indexers {
+		wg.Go(func() {
+			baseURL := buildBaseURL(idx.Host, idx.Port, idx.Path, idx.UseSSL)
+			client := newClient(
+				idx.Protocol,
+				baseURL,
+				config.SecretValue(idx.APIKey, idx.APIKeyFile),
+			)
+			for _, title := range titles {
+				queryCtx, childSpan := tracer.Start(ctx, "indexer.query",
+					trace.WithAttributes(
+						attribute.String("indexer.name", idx.Name),
+						attribute.String("indexer.url", redactURL(baseURL)),
+						attribute.String("query.title", title),
+					),
+				)
+				params := base
+				params.Query = title
+				res, err := client.Search(queryCtx, params)
+				if err != nil {
+					indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
+						attribute.String("indexer.name", idx.Name),
+						attribute.String("outcome", queryOutcome(err)),
+					))
+					otelx.RecordSpanError(childSpan, err)
+					slog.WarnContext(queryCtx,
+						"indexer search failed",
+						"indexer", idx.Name,
+						"query.title", title,
+						"error", err,
+					)
+					childSpan.End()
+					continue
+				}
+				// Most private trackers don't index by TMDB/TVDB ID and
+				// silently return 0 when one is set. Retry once on the bare
+				// title, keeping only the media kind so the category root —
+				// and with it Prowlarr's own indexer filtering — still
+				// applies.
+				//
+				// Season and episode are dropped too, not preserved. They
+				// used to be, harmlessly, because nothing forwarded them to
+				// Prowlarr; now that they narrow at the tracker, keeping them
+				// would make the retry re-issue the query that just came back
+				// empty. This is also the path that saves absolute-numbered
+				// anime, where the show genuinely has no SxxExx release and
+				// the title alone is the only query that can match.
+				if len(res) == 0 && base.narrowed() {
+					slog.DebugContext(queryCtx,
+						"indexer search empty, retrying on the bare title",
+						"indexer", idx.Name,
+						"title", title,
+					)
+					retry, retryErr := client.Search(queryCtx, SearchParams{
+						Query: title,
+						Kind:  base.Kind,
+					})
+					if retryErr == nil {
+						res = retry
+					} else {
+						// Dropping this silently made a tracker that is down
+						// or rate-limiting on the retry leg indistinguishable
+						// from a bare-title query that legitimately found
+						// nothing — both left an empty result and no signal.
+						indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
+							attribute.String("indexer.name", idx.Name),
+							attribute.String(
+								"outcome",
+								"retry_"+queryOutcome(retryErr),
+							),
+						))
+						slog.DebugContext(queryCtx,
+							"indexer bare-title retry failed",
+							"indexer", idx.Name,
+							"title", title,
+							"error", retryErr,
+						)
+					}
+				}
+				indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
+					attribute.String("indexer.name", idx.Name),
+					attribute.String("outcome", "success"),
+				))
+				childSpan.SetAttributes(attribute.Int("results.count", len(res)))
+				slog.InfoContext(queryCtx,
+					"indexer query complete",
+					"indexer.name", idx.Name,
+					"query.term", title,
+					"result.count", len(res),
+				)
+				childSpan.End()
+
+				for k := range res {
+					// Prowlarr stamps the real sub-tracker; only fall back to
+					// the config name when the client left it blank (Torznab).
+					if res[k].Indexer == "" {
+						res[k].Indexer = idx.Name
+					}
+					res[k].ConfiguredIndexer = idx.Name
+				}
+				mu.Lock()
+				results = append(results, res...)
+				mu.Unlock()
+			}
+		})
+	}
+
+	wg.Wait()
+
+	// Before the dedup and, more to the point, before the truncation below:
+	// a release for the wrong title must not spend one of the 200 slots the
+	// merged set is capped at.
+	kept := filterProviderIDs(results, base)
+	span.SetAttributes(attribute.Int("results.id_mismatch", len(results)-len(kept)))
+	results = dedupResults(kept)
+
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Seeders > results[j].Seeders
+	})
+
+	// Truncated after the sort, so what survives is the best of the merged
+	// set rather than whichever indexer answered first. The fan-out is
+	// indexers × titles, each already capped at torznabLimit, so a handful of
+	// indexers can still merge into thousands of rows — every one of which is
+	// then scored, converted and serialized for a UI showing a page of them.
+	dropped := 0
+	if len(results) > maxMergedResults {
+		dropped = len(results) - maxMergedResults
+		results = results[:maxMergedResults]
+	}
+
+	span.SetAttributes(
+		attribute.Int("results.total", len(results)),
+		attribute.Int("results.dropped", dropped),
+	)
+	if dropped > 0 {
+		// Said out loud: a silent cap reads as "this is everything there is".
+		slog.InfoContext(ctx,
+			"indexer results truncated to the highest-seeded",
+			"kept", len(results),
+			"dropped", dropped,
+		)
+	}
+	slog.DebugContext(ctx,
+		"indexer search complete",
+		"titles.count", len(titles),
+		"total_results", len(results),
+	)
+	return results
+}
+
+// Feed loads the indexer row by ID, dials Torznab, and returns the indexer's
+// forward-feed items. Used by the rss-sync FeedScanner.
+func (i *indexer) Feed(
+	ctx context.Context,
+	indexerName string,
+) ([]SearchResult, error) {
+	ctx, span := tracer.Start(ctx, "indexer.feed",
+		trace.WithAttributes(attribute.String("indexer.name", indexerName)),
+	)
+	defer span.End()
+
+	countFeed := func(outcome string) {
+		indexerFeeds.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("indexer.name", indexerName),
+			attribute.String("outcome", outcome),
+		))
+	}
+
+	row, ok := config.FindIndexer(indexerName)
+	if !ok {
+		countFeed("not_found")
+		return nil, otelx.RecordSpanError(span, config.ErrIndexerNotFound)
+	}
+
+	baseURL := buildBaseURL(row.Host, row.Port, row.Path, row.UseSSL)
+	results, err := newClient(
+		row.Protocol,
+		baseURL,
+		config.SecretValue(row.APIKey, row.APIKeyFile),
+	).Feed(ctx)
+	if errors.Is(err, ErrFeedUnsupported) {
+		// Not a failure and not a result: the protocol has no feed. Reported
+		// as an empty scan so callers stay unchanged, at debug so an install
+		// running Prowlarr does not log two lines per indexer per tick
+		// forever.
+		slog.DebugContext(ctx, "indexer has no feed endpoint, skipping",
+			"indexer.name", row.Name)
+		countFeed("unsupported")
+		return nil, nil
+	}
+	if err != nil {
+		countFeed(queryOutcome(err))
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	countFeed("success")
+	for k := range results {
+		// Prowlarr stamps the real sub-tracker; only fall back to the config
+		// name when the client left it blank (Torznab). Mirrors Search.
+		if results[k].Indexer == "" {
+			results[k].Indexer = row.Name
+		}
+		results[k].ConfiguredIndexer = row.Name
+	}
+	span.SetAttributes(attribute.Int("results.count", len(results)))
+	slog.InfoContext(ctx,
+		"indexer feed fetched",
+		"indexer.name", row.Name,
+		"result.count", len(results),
+	)
+	return results, nil
+}
+
+// Test exercises a Torznab endpoint with the supplied connection params.
+// Returns one of the typed torznab errors (ErrUnreachable, ErrUnauthorized,
+// ErrUnexpectedStatus, ErrBadResponse) on failure so callers can map them
+// to user-facing messages.
+func (i *indexer) Test(ctx context.Context, p TestParams) error {
+	baseURL := buildBaseURL(p.Host, p.Port, p.Path, p.UseSSL)
+	ctx, span := tracer.Start(ctx, "indexer.test",
+		trace.WithAttributes(attribute.String("indexer.url", redactURL(baseURL))),
+	)
+	defer span.End()
+
+	if err := newClient(
+		p.Protocol,
+		baseURL,
+		p.APIKey,
+	).TestConnection(ctx); err != nil {
+		indexerTests.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("outcome", "error"),
+		))
+		return otelx.RecordSpanError(span, err)
+	}
+	indexerTests.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("outcome", "success"),
+	))
+	return nil
+}
+
+// TestByName loads the named indexer from config and runs Test against its
+// credentials. Returns config.ErrIndexerNotFound when no entry carries the
+// name.
+func (i *indexer) TestByName(ctx context.Context, name string) error {
+	ctx, span := tracer.Start(ctx, "indexer.test_by_name",
+		trace.WithAttributes(attribute.String("indexer.name", name)),
+	)
+	defer span.End()
+
+	idx, ok := config.FindIndexer(name)
+	if !ok {
+		return otelx.RecordSpanError(span, config.ErrIndexerNotFound)
+	}
+	return i.Test(ctx, TestParams{
+		Protocol: idx.Protocol,
+		Host:     idx.Host,
+		Port:     idx.Port,
+		Path:     idx.Path,
+		UseSSL:   idx.UseSSL,
+		APIKey:   config.SecretValue(idx.APIKey, idx.APIKeyFile),
+	})
+}

@@ -1,0 +1,104 @@
+import { toast } from "./toast";
+import { m as i18n } from "./paraglide/messages.js";
+import type { PlexPinBegin, PlexPinPoll } from "./types";
+import { errorText } from "./api";
+
+const POLL_MS = 1500;
+const TIMEOUT_MS = 5 * 60 * 1000;
+
+type StartPlexPinOptions = {
+	// onClientId fires as soon as the flow starts (before sign-in completes),
+	// so callers can surface the client id immediately.
+	onClientId?: (clientID: string) => void;
+	onToken: (token: string, clientID: string) => void;
+	// onDone fires on any terminal outcome (success or failure), so callers can
+	// reset their busy state.
+	onDone?: () => void;
+};
+
+// startPlexPin drives the Plex PIN sign-in: POST to begin, open the auth popup,
+// then poll until the token arrives, the PIN expires, or it times out. Toasts
+// cover progress and failures; success is signalled to the caller via onToken.
+export async function startPlexPin({
+	onClientId,
+	onToken,
+	onDone,
+}: StartPlexPinOptions) {
+	toast.info(i18n.plex_signin_starting());
+	let flowID = "";
+	let authURL = "";
+	let clientID = "";
+	try {
+		const res = await fetch("/settings/media-servers/plex/pin", {
+			method: "POST",
+			credentials: "same-origin",
+		});
+		if (!res.ok) throw new Error(await res.text());
+		const body = (await res.json()) as PlexPinBegin;
+		flowID = body.flow_id;
+		authURL = body.auth_url;
+		clientID = body.client_id;
+		onClientId?.(clientID);
+	} catch (err) {
+		toast.err(i18n.plex_signin_failed({ error: errMsg(err) }));
+		onDone?.();
+		return;
+	}
+
+	const popup = window.open(authURL, "plex-auth", "width=600,height=700");
+	if (!popup) {
+		toast.err(i18n.plex_popup_blocked());
+		onDone?.();
+		return;
+	}
+	toast.info(i18n.plex_signin_waiting());
+
+	const startedAt = Date.now();
+	const tick = async () => {
+		if (Date.now() - startedAt > TIMEOUT_MS) {
+			toast.err(i18n.plex_signin_timeout());
+			closePopup(popup);
+			onDone?.();
+			return;
+		}
+		try {
+			const res = await fetch(`/settings/media-servers/plex/pin/${flowID}`, {
+				credentials: "same-origin",
+			});
+			if (res.ok) {
+				const body = (await res.json()) as PlexPinPoll;
+				if (body.expired) {
+					toast.err(i18n.plex_pin_expired());
+					closePopup(popup);
+					onDone?.();
+					return;
+				}
+				if (body.auth_token) {
+					closePopup(popup);
+					onToken(body.auth_token, clientID);
+					onDone?.();
+					return;
+				}
+			}
+			// Otherwise the PIN is still pending, or the poll hit a transient
+			// failure (plex.tv hiccup, rate-limit → our 502). Keep polling; only a
+			// token, expiry, or the overall timeout ends the flow.
+		} catch {
+			// Transient network failure — keep polling until the timeout.
+		}
+		setTimeout(tick, POLL_MS);
+	};
+	setTimeout(tick, POLL_MS);
+}
+
+function errMsg(err: unknown) {
+	return errorText(err, String(err));
+}
+
+function closePopup(popup: Window) {
+	try {
+		popup.close();
+	} catch {
+		/* ignore */
+	}
+}

@@ -1,0 +1,243 @@
+version: "3"
+
+# Everything that cuts a release lives here — the app and the chart both, since
+# they release the same way: edit the file that carries the version, commit it
+# on its own revision, advance main, then tag main and push. Only the edit, the
+# commit message and the tag name differ, so _changelog and _tag below are the
+# whole procedure and both flows call them.
+#
+# The two versions stay independent: a values/template fix ships without an app
+# release, and an app release ships without a chart bump. One namespace, two
+# version lines.
+
+vars:
+  CHART_DIR: deploy/helm/streamline
+  CHART: '{{.CHART_DIR}}/Chart.yaml'
+  # Two changelogs, one cliff.toml, split by path: the chart's commits are the
+  # only ones under CHART_DIR, so include/exclude on that one glob keeps each
+  # file to its own release line. A commit touching both lands in both.
+  CHART_PATHS: 'deploy/helm/**'
+
+tasks:
+  _tag:
+    internal: true
+    requires:
+      vars: [TAG]
+    preconditions:
+      # jj tag list warns on stderr and prints nothing on stdout for a name it
+      # doesn't have, so empty output is the "free to take" signal.
+      - sh: '[ -z "$(jj tag list {{.TAG}} 2>/dev/null)" ]'
+        msg: "{{.TAG}} already exists{{with .HINT}} — {{.}}{{end}}"
+    cmds:
+      # jj gained tags in 0.45, so this no longer drops to git. `jj tag set`
+      # writes a lightweight tag where `git tag -a` wrote an annotated one —
+      # nothing here reads a tag message (goreleaser takes its body from
+      # --release-notes, git-cliff never gets --with-tag-message).
+      #
+      # -r main, not the default @: @ is the working-copy commit, one ahead of
+      # the bookmark whenever it holds anything. Tag what is being released.
+      - jj tag set {{.TAG}} -r main
+      # --remote origin, not the default: there is a second remote (fork).
+      # This push is the trigger — it fans out to .github/workflows/.
+      - jj git push --remote origin --tag {{.TAG}}
+
+  # Both changelogs are one procedure with different scope: render the file
+  # with git-cliff, commit it on its own revision, advance main. Only CONFIG,
+  # TAG, SCOPE and OUT differ. FILE defaults to OUT — the chart overrides it
+  # because its revision carries Chart.yaml too.
+  #
+  # PRE is spliced ahead of git-cliff in the same shell, so a caller that must
+  # edit something else in the same revision (the chart's version rewrite) gets
+  # it committed alongside rather than in a second commit.
+  #
+  # GEN runs INSIDE the new revision — jj snapshots the working copy on the
+  # next command, which is the bookmark move, so the edit lands on the revision
+  # main ends up pointing at. Both tag tasks read main:<file>, so an edit left
+  # in the working copy must not pass. FILE is the git path only: jj snapshots
+  # the whole working copy and needs no equivalent.
+  _changelog:
+    internal: true
+    requires:
+      vars: [MESSAGE, TAG, SCOPE, OUT]
+    vars:
+      GEN: >-
+        {{with .PRE}}{{.}} && {{end}}git-cliff{{with .CONFIG}} --config {{.}}{{end}}
+        --tag {{.TAG}} {{.SCOPE}} -o {{.OUT}}
+    cmd: |
+      if command -v jj >/dev/null 2>&1; then
+        jj new -m "{{.MESSAGE}}"
+        {{.GEN}}
+        jj bookmark set main -r @
+      else
+        {{.GEN}}
+        git add {{.FILE | default .OUT}}
+        git commit -m "{{.MESSAGE}}"
+      fi
+
+  # --- App release --------------------------------------------------------
+
+  app:changelog:
+    desc: Regenerate CHANGELOG.md through VERSION, commit it, and advance main. Usage - task release:app:changelog VERSION=0.1.0
+    requires:
+      vars: [VERSION]
+    vars:
+      V: '{{trimPrefix "v" .VERSION}}'
+    preconditions:
+      # Also on app:tag, and needed on both: release:app runs this half first,
+      # so a guard only on the tag lets a bad VERSION commit a changelog before
+      # anything checks it. release:chart is safe by luck of ordering — its
+      # guarded half is the one that runs first.
+      - sh: 'echo "{{.V}}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+"'
+        msg: "VERSION must look like 0.1.0 or 0.1.0-alpha.1 (a leading v is accepted and stripped)"
+    cmds:
+      - task: _changelog
+        vars:
+          MESSAGE: 'docs(changelog): v{{.V}}'
+          # nix/package.nix carries the version goreleaser takes from the tag —
+          # `nix build` has no tag to read, so a nix install would otherwise
+          # report the previous release forever.
+          PRE: 'sed -i ''s/^  version ? ".*",$/  version ? "{{.V}}",/'' nix/package.nix'
+          FILE: 'CHANGELOG.md nix/package.nix'
+          TAG: 'v{{.V}}'
+          SCOPE: "--exclude-path '{{.CHART_PATHS}}'"
+          OUT: CHANGELOG.md
+
+  app:tag:
+    desc: Cut an app release — tag main v*.*.* and push it, triggering changelog, gh release and OCI image. Usage - task release:app:tag VERSION=0.1.0
+    requires:
+      vars: [VERSION]
+    vars:
+      V: '{{trimPrefix "v" .VERSION}}'
+    preconditions:
+      # A bad tag pushes fine but matches no CI glob — nothing releases. Fail first.
+      - sh: 'echo "{{.V}}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+"'
+        msg: "VERSION must look like 0.1.0 or 0.1.0-alpha.1 (a leading v is accepted and stripped)"
+      # Read the tag target, not the working copy: CHANGELOG.md is only in the
+      # release once it is committed, and an uncommitted one must not pass.
+      - sh: 'git show main:CHANGELOG.md 2>/dev/null | grep -q "^## \[{{.V}}\]"'
+        msg: "main has no CHANGELOG.md section for v{{.V}} — run: task release:app:changelog VERSION={{.V}}"
+      - sh: 'git show main:nix/package.nix 2>/dev/null | grep -q ''^  version ? "{{.V}}",$'''
+        msg: "main's nix/package.nix is not at {{.V}} — run: task release:app:changelog VERSION={{.V}}"
+    # The chart is NOT released here — it versions independently. Operators
+    # deploy this image by setting image.tag in their values; the chart has
+    # no appVersion and never picks a tag for them.
+    cmds:
+      - task: _tag
+        vars: {TAG: 'v{{.V}}'}
+
+  app:
+    desc: Cut an app release end to end — changelog, commit, advance main, tag and push. Usage - task release:app VERSION=3.0.0
+    requires:
+      vars: [VERSION]
+    # Same trade as release:chart: run the halves apart to read the generated
+    # changelog before the tag goes out, since the tag is what CI acts on.
+    cmds:
+      - task: app:changelog
+        vars: {VERSION: '{{.VERSION}}'}
+      - task: app:tag
+        vars: {VERSION: '{{.VERSION}}'}
+
+  # --- Chart release ------------------------------------------------------
+  # Chart.yaml is the source of truth for the chart version — release:chart:tag
+  # reads it, nothing stamps it at package time.
+
+  chart:bump:
+    desc: Bump the chart version, regenerate the chart CHANGELOG, commit both on their own revision and advance main. Usage - task release:chart:bump VERSION=2.1.0
+    requires:
+      vars: [VERSION]
+    vars:
+      V: '{{trimPrefix "v" .VERSION}}'
+    preconditions:
+      - sh: 'echo "{{.V}}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+$"'
+        msg: "VERSION must look like 2.1.0 (a leading v is accepted and stripped)"
+    # Bump against the diff, not against the version already there — a renovate
+    # deps PR bumps the patch itself, so a feature landing after it inherits a
+    # patch number that claims nothing shipped.
+    cmds:
+      # One revision for the bump and the changelog: chart:tag reads both off
+      # main, and helm packages the whole chart dir, so the CHANGELOG ships
+      # inside the tarball Artifact Hub renders.
+      - task: _changelog
+        vars:
+          MESSAGE: 'chore(helm): chart v{{.V}}'
+          PRE: "sed -i 's/^version: .*/version: {{.V}}/' {{.CHART}}"
+          FILE: '{{.CHART}} {{.CHART_DIR}}/CHANGELOG.md'
+          CONFIG: cliff.chart.toml
+          TAG: 'chart-v{{.V}}'
+          SCOPE: "--include-path '{{.CHART_PATHS}}'"
+          OUT: '{{.CHART_DIR}}/CHANGELOG.md'
+
+  chart:tag:
+    desc: Cut a chart release — tag main chart-v<Chart.yaml version> and push it, triggering .github/workflows/chart.yaml
+    vars:
+      CHART_VERSION:
+        sh: "sed -n 's/^version: *//p' deploy/helm/streamline/Chart.yaml"
+    preconditions:
+      # Tag the committed chart, not the working copy — CI packages from the tag.
+      - sh: 'git show main:{{.CHART}} | grep -q "^version: {{.CHART_VERSION}}$"'
+        msg: "main's Chart.yaml is not at version {{.CHART_VERSION}} — run: task release:chart:bump VERSION={{.CHART_VERSION}}"
+      - sh: 'git show main:{{.CHART_DIR}}/CHANGELOG.md 2>/dev/null | grep -q "^## \[{{.CHART_VERSION}}\]"'
+        msg: "main's chart CHANGELOG.md has no {{.CHART_VERSION}} section — run: task release:chart:bump VERSION={{.CHART_VERSION}}"
+    cmds:
+      - task: _tag
+        vars:
+          TAG: 'chart-v{{.CHART_VERSION}}'
+          HINT: 'bump version in {{.CHART}}'
+
+  chart:
+    desc: Cut a chart release end to end — bump, commit, advance main, tag and push. Usage - task release:chart VERSION=2.1.0
+    requires:
+      vars: [VERSION]
+    # Both halves keep their own preconditions, so this is only ever the two
+    # commands in order — chart:tag re-reads Chart.yaml after chart:bump wrote
+    # it. Run them apart to review the bump commit before the tag goes out.
+    cmds:
+      - task: chart:bump
+        vars: {VERSION: '{{.VERSION}}'}
+      - task: chart:tag
+
+  # --- Local release ------------------------------------------------------
+  # release:tag above is the real path — CI does everything on the tag push.
+  # The targets below cut a release from a workstation instead (e.g. an alpha
+  # to smoke-test in a real cluster), reusing the same steps CI runs. See
+  # .github/workflows/{image,release}.yaml.
+  # Requires `docker login ghcr.io` and `helm registry login ghcr.io`.
+
+  image:
+    desc: Build + push multi-arch OCI image to GHCR (usage - task release:image VERSION=0.1.0-alpha.1)
+    requires:
+      vars: [VERSION]
+    vars:
+      # ponytail: covers typical clusters; override PLATFORMS=linux/amd64 to narrow.
+      PLATFORMS: '{{.PLATFORMS | default "linux/amd64,linux/arm64"}}'
+      # CI's docker/metadata-action strips the leading v from semver tags. Match it,
+      # or a locally-cut release lands on tags no chart ever references.
+      VER: '{{trimPrefix "v" .VERSION}}'
+    cmd: |
+      docker buildx build --push \
+        --platform {{.PLATFORMS}} \
+        -f deploy/Dockerfile \
+        -t ghcr.io/datahearth/streamline:{{.VER}} \
+        --build-arg VERSION={{.VER}} \
+        --build-arg COMMIT="$(git rev-parse --short HEAD)" \
+        --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        .
+
+  helm:
+    desc: Package + push the helm chart to GHCR OCI at the version in Chart.yaml (usage - task release:helm)
+    # helm:package already builds the tarball CI releases — this only pushes it.
+    deps: [":helm:package"]
+    vars:
+      CHART_VERSION:
+        sh: "sed -n 's/^version: *//p' deploy/helm/streamline/Chart.yaml"
+    cmd: helm push /tmp/streamline/helm/streamline-{{.CHART_VERSION}}.tgz
+      oci://ghcr.io/datahearth/charts
+
+  default:
+    desc: Local k8s-deployable release - image at VERSION + chart at its own Chart.yaml version. Usage - task release VERSION=0.1.0-alpha.1
+    requires:
+      vars: [VERSION]
+    cmds:
+      - task: image
+        vars: {VERSION: "{{.VERSION}}"}
+      - task: helm

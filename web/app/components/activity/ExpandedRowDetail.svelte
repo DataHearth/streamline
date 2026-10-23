@@ -1,0 +1,263 @@
+<script lang="ts">
+	import { parts } from "@lib/message-parts";
+	import { slide } from "svelte/transition";
+	import { Pause, Play, Ban, Trash2, RotateCw, LoaderCircle } from "@lucide/svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import { cn } from "@lib/cn";
+	import { formatBytes } from "@lib/format";
+	import { formatDateTime } from "@lib/dates";
+	import type { QueueEntry, HistoryEntry } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	// Confirm bodies: whole sentences with the title (and status) marked up.
+	const cancelBody = parts(i18n.activity_cancel_body, ["title", "status"]);
+	const retryBody = parts(i18n.activity_retry_body, ["title"]);
+	const deleteEntryBody = parts(i18n.activity_delete_entry_body, ["title"]);
+
+	let {
+		item,
+		view,
+		colspan,
+		busy = false,
+		canControl = false,
+		onCancel,
+		onPause,
+		onResume,
+		onRemove,
+		onRetry,
+	}: {
+		item: QueueEntry | HistoryEntry;
+		view: "queue" | "history";
+		colspan: number;
+		busy?: boolean;
+		canControl?: boolean;
+		onCancel: (id: number) => void;
+		onPause: (id: number) => void;
+		onResume: (id: number) => void;
+		onRemove: (id: number) => void;
+		onRetry: (id: number) => void;
+	} = $props();
+
+	let confirmCancel = $state(false);
+	let confirmRemove = $state(false);
+	let confirmRetry = $state(false);
+
+	// Only a failed record can be retried — the backend 409s anything else, and
+	// a failure is the only history state that stopped short of importing.
+	let canRetry = $derived(view === "history" && item.status === "failed");
+
+	let isPaused = $derived(view === "queue" && item.status === "paused");
+	// A held record is off the network — pause and cancel reach the download
+	// client for a torrent that is already done, and the backend refuses them.
+	// Resolve is the only move, and the row itself carries that button.
+	let isHeld = $derived(view === "queue" && item.status === "held");
+	let queue = $derived(item as QueueEntry);
+
+	// Applied: the file selection kept a subset of the torrent, so the
+	// meaningful total is what got kept, not the whole release.
+	let selectionApplied = $derived(
+		view === "queue" && queue.selection_state === "applied",
+	);
+	let selectionUnsupported = $derived(
+		view === "queue" && queue.selection_state === "unsupported",
+	);
+
+	type KV = { label: string; value: string };
+	let rows = $derived.by<KV[]>(() => {
+		let sizeValue = formatBytes(item.size);
+		if (selectionApplied) {
+			sizeValue = i18n.queue_selected_of({
+				selected: formatBytes(queue.selected_bytes ?? 0),
+				total: formatBytes(item.size),
+			});
+		} else if (selectionUnsupported) {
+			sizeValue = `${sizeValue} — ${i18n.queue_selection_unsupported()}`;
+		}
+		const out: KV[] = [
+			{ label: i18n.common_release(), value: item.title },
+			{ label: i18n.common_indexer(), value: item.indexer || "—" },
+			{ label: i18n.common_client(), value: item.download_client || "—" },
+			{ label: i18n.common_size(), value: sizeValue },
+			{ label: i18n.common_created(), value: formatDateTime(item.created_at) },
+		];
+		if (view === "history") {
+			const h = item as HistoryEntry;
+			out.push({
+				label: i18n.activity_imported(),
+				value: h.imported_at ? formatDateTime(h.imported_at) : "—",
+			});
+		}
+		return out;
+	});
+
+	const btn =
+		"inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50";
+</script>
+
+<tr class="bg-bg-card">
+	<td {colspan} class="border-t border-border p-0">
+		<!-- slide on the inner div: Svelte's slide can't animate a <tr>'s height -->
+		<div
+			transition:slide={{ duration: 180 }}
+			class="grid gap-4 p-4 md:grid-cols-[1fr_auto]"
+		>
+			<dl
+				class="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1.5 text-xs"
+			>
+				{#each rows as kv (kv.label)}
+					<dt
+						class="font-medium uppercase tracking-[0.1em] text-fg-faint"
+					>
+						{kv.label}
+					</dt>
+					<dd class="min-w-0 break-words font-mono text-fg-muted">
+						{kv.value}
+					</dd>
+				{/each}
+				{#if item.failure_reason}
+					<dt
+						class="font-medium uppercase tracking-[0.1em] text-status-failed"
+					>
+						{i18n.common_error()}
+					</dt>
+					<dd class="min-w-0 break-words font-mono text-status-failed">
+						{item.failure_reason}
+					</dd>
+				{/if}
+			</dl>
+
+			{#if canControl && !isHeld}
+			<div class="flex items-start gap-2">
+				{#if view === "queue"}
+					{#if isPaused}
+						<button
+							type="button"
+							disabled={busy}
+							onclick={() => onResume(item.id)}
+							class={cn(btn, "bg-bg-subtle text-fg hover:bg-surface")}
+						>
+							{#if busy}
+								<LoaderCircle
+									size={13}
+									class="motion-safe:animate-spin"
+									aria-hidden="true"
+								/>
+							{:else}
+								<Play size={13} aria-hidden="true" />
+							{/if}
+							{i18n.common_resume()}
+						</button>
+					{:else}
+						<button
+							type="button"
+							disabled={busy}
+							onclick={() => onPause(item.id)}
+							class={cn(btn, "bg-bg-subtle text-fg hover:bg-surface")}
+						>
+							{#if busy}
+								<LoaderCircle
+									size={13}
+									class="motion-safe:animate-spin"
+									aria-hidden="true"
+								/>
+							{:else}
+								<Pause size={13} aria-hidden="true" />
+							{/if}
+							{i18n.common_pause()}
+						</button>
+					{/if}
+					<button
+						type="button"
+						disabled={busy}
+						onclick={() => (confirmCancel = true)}
+						class={cn(
+							btn,
+							"bg-status-failed/15 text-status-failed hover:bg-status-failed/25",
+						)}
+					>
+						<Ban size={13} aria-hidden="true" />
+						{i18n.common_cancel()}
+					</button>
+				{:else}
+					{#if canRetry}
+						<button
+							type="button"
+							disabled={busy}
+							onclick={() => (confirmRetry = true)}
+							class={cn(
+								btn,
+								"bg-accent/15 text-accent hover:bg-accent/25",
+							)}
+						>
+							<RotateCw size={13} aria-hidden="true" />
+							{i18n.activity_retry_import()}
+						</button>
+					{/if}
+					<button
+						type="button"
+						disabled={busy}
+						onclick={() => (confirmRemove = true)}
+						class={cn(
+							btn,
+							"bg-status-failed/15 text-status-failed hover:bg-status-failed/25",
+						)}
+					>
+						<Trash2 size={13} aria-hidden="true" />
+						{i18n.common_remove()}
+					</button>
+				{/if}
+			</div>
+			{/if}
+		</div>
+	</td>
+</tr>
+
+<Dialog
+	open={confirmCancel}
+	title={i18n.activity_cancel_confirm()}
+	onClose={() => (confirmCancel = false)}
+	actions={[
+		{ label: i18n.common_keep(), variant: "ghost", autofocus: true },
+		{
+			label: i18n.action_cancel_download(),
+			variant: "danger",
+			onClick: () => onCancel(item.id),
+		},
+	]}
+>
+	<p class="text-sm text-fg-muted">
+		{#each cancelBody as p}{#if p.slot === "title"}<span class="font-medium text-fg">{item.title}</span>{:else if p.slot === "status"}<em>{i18n.lc_wanted()}</em>{:else}{p.text}{/if}{/each}
+	</p>
+</Dialog>
+
+<Dialog
+	open={confirmRetry}
+	title={i18n.activity_retry_import_confirm()}
+	onClose={() => (confirmRetry = false)}
+	actions={[
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+		{
+			label: i18n.activity_retry_import(),
+			variant: "primary",
+			onClick: () => onRetry(item.id),
+		},
+	]}
+>
+	<p class="text-sm text-fg-muted">
+		{#each retryBody as p}{#if p.slot === "title"}<span class="font-medium text-fg">{item.title}</span>{:else}{p.text}{/if}{/each}
+	</p>
+</Dialog>
+
+<Dialog
+	open={confirmRemove}
+	title={i18n.activity_remove_record_confirm()}
+	onClose={() => (confirmRemove = false)}
+	actions={[
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+		{ label: i18n.common_remove(), variant: "danger", onClick: () => onRemove(item.id) },
+	]}
+>
+	<p class="text-sm text-fg-muted">
+		{#each deleteEntryBody as p}{#if p.slot === "title"}<span class="font-medium text-fg">{item.title}</span>{:else}{p.text}{/if}{/each}
+	</p>
+</Dialog>

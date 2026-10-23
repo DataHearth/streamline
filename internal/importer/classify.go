@@ -1,0 +1,33 @@
+package importer
+
+import (
+	"errors"
+
+	"github.com/datahearth/streamline/internal/library"
+)
+
+type classification int
+
+const (
+	retryable classification = iota
+	terminal
+)
+
+func classify(err error) classification {
+	switch {
+	case errors.Is(err, library.ErrNoMedia),
+		errors.Is(err, library.ErrMultipleMedia),
+		errors.Is(err, library.ErrSampleOnly),
+		errors.Is(err, library.ErrDestExists),
+		errors.Is(err, library.ErrUnsafePath),
+		errors.Is(err, ErrPathNotAllowed),
+		errors.Is(err, ErrMovieHasFile),
+		errors.Is(err, ErrEpisodeHasFile),
+		errors.Is(err, ErrNoAlbumTracks),
+		errors.Is(err, ErrCueImage),
+		errors.Is(err, ErrNoBookProfile):
+		return terminal
+	default:
+		return retryable
+	}
+}

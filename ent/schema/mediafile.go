@@ -1,0 +1,135 @@
+package schema
+
+import (
+	"time"
+
+	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
+	"entgo.io/ent/schema/edge"
+	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
+	"entgo.io/ent/schema/mixin"
+
+	"github.com/datahearth/streamline/ent/schema/mixins"
+)
+
+type MediaFile struct {
+	ent.Schema
+}
+
+func (MediaFile) Mixin() []ent.Mixin {
+	return []ent.Mixin{mixins.UintID{}, mixin.Time{}}
+}
+
+func (MediaFile) Fields() []ent.Field {
+	return []ent.Field{
+		field.String("path").NotEmpty(),
+		field.Int64("size"),
+		field.String("quality").Optional(),
+		field.String("format").Optional(),
+		field.String("release_group").Optional(),
+		field.Enum("source").
+			Values("wizard", "orphan", "auto").
+			Default("auto"),
+		field.Time("last_seen_at").
+			Optional().
+			Nillable().
+			Default(time.Now),
+		// Set on the first drift tick that cannot stat the file, cleared the
+		// moment it is seen again. last_seen_at alone cannot tell the first
+		// missing tick from the fifth — it just stops advancing — and that
+		// edge is what the drift_detected event fires on.
+		field.Time("missing_since").Optional().Nillable(),
+		field.String("container").Optional(),
+		field.Uint32("duration_seconds").Optional(),
+		field.String("video_codec").Optional(),
+		field.Uint16("width").Optional(),
+		field.Uint16("height").Optional(),
+		field.String("audio_codec").Optional(),
+		field.Uint8("audio_channels").Optional(),
+		field.Uint32("bitrate").Optional(),
+		// Stream-level probe results. audio_langs and sub_langs are
+		// comma-joined ISO-639-2/T codes rather than a JSON array: ent decodes
+		// a JSON field on every scanned row — the cost that put 480 MB of
+		// garbage on one walk of Movie.cast — and these sit on the same list
+		// paths. Empty is ambiguous between "no track" and "never probed", so
+		// readers gate on probed_at, not on the string.
+		field.Uint8("audio_tracks").Optional(),
+		field.String("audio_langs").Optional(),
+		field.String("sub_langs").Optional(),
+		field.Time("probed_at").Optional().Nillable(),
+		// Derived from the filename, stored because deriving it is ~12 regex
+		// passes and every response that mentions a file used to redo them —
+		// once per file, per episode, per poll. The filename never changes
+		// under a row, so the parse is a pure function of a column and there
+		// is nothing to keep in sync. Empty means "not parsed yet"; readers
+		// fall back to parsing live, which is what carries rows written
+		// before these columns existed.
+		field.String("parsed_source").Optional(),
+		field.String("parsed_resolution").Optional(),
+		field.String("parsed_codec").Optional(),
+		// Set together by the swap; the detail page states the saving from
+		// them without reaching the job.
+		field.Time("transcoded_at").Optional().Nillable(),
+		field.Int64("size_before").Optional(),
+		// book_kind discriminates which slot a book file belongs to. Only set
+		// on files with a book edge.
+		field.Enum("book_kind").Values("ebook", "audiobook").Optional(),
+		// The music tag writer's bookkeeping, set on track files only. NULL
+		// tags_state is a file it has never been asked to write (adopted
+		// before tagging existed, or with tagging off); pending waits for
+		// the music-tag-sync job, deferred waits for a torrent that still
+		// owns the file, failed gave up after max attempts. tags_hash is the
+		// hash of what was last written (empty forces the next write even
+		// when nothing changed), tags_mtime the file's modification time and
+		// tags_size its size right after, which is how an edit made elsewhere
+		// is noticed; tags_checked_at orders that check. tags_art_hash is
+		// the SHA-256 of the front cover the writer embedded, which is how
+		// it knows that picture for its own (MP4 keeps no description to
+		// mark it with): it replaces or removes only that one, and the cover
+		// resolver never takes it for the album's own art.
+		field.Enum("tags_state").
+			Values("pending", "deferred", "written", "failed").
+			Optional().Nillable(),
+		field.String("tags_hash").Optional(),
+		field.Time("tagged_at").Optional().Nillable(),
+		field.Int64("tags_mtime").Optional(),
+		field.Int64("tags_size").Optional(),
+		field.Time("tags_checked_at").Optional().Nillable(),
+		field.Uint8("tag_failures").Default(0),
+		field.String("tags_error").Optional(),
+		field.String("tags_art_hash").Optional(),
+	}
+}
+
+func (MediaFile) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("movie", Movie.Type).Ref("media_files").Unique(),
+		edge.From("episode", Episode.Type).Ref("media_files").Unique(),
+		edge.From("track", Track.Type).Ref("media_files").Unique(),
+		edge.From("book", Book.Type).Ref("media_files").Unique(),
+		edge.To("transcode_jobs", TranscodeJob.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+	}
+}
+
+// SQLite does not index a foreign key on its own, so every episode->file
+// lookup was a full media_files scan. The series list runs one per episode row
+// of the page: 3.9s for 20 shows on a real library.
+func (MediaFile) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Edges("episode"),
+		index.Edges("movie"),
+		index.Edges("track"),
+		index.Edges("book"),
+		index.Fields("tags_state"),
+		// Partial: the media-probe backfill asks for the oldest rows that were
+		// never probed, so once the backfill drains, the index is empty and
+		// the 15-minute job stops scanning the whole table forever.
+		index.Fields("probed_at").
+			Annotations(entsql.IndexWhere("probed_at IS NULL")),
+		// The dashboard's arrivals walk files newest first. SQLite appends the
+		// rowid to every index, so this one also serves the id tie-break.
+		index.Fields("create_time"),
+	}
+}

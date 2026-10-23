@@ -1,0 +1,76 @@
+package schema
+
+import (
+	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
+	"entgo.io/ent/schema/edge"
+	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
+	"entgo.io/ent/schema/mixin"
+
+	"github.com/datahearth/streamline/ent/schema/mixins"
+)
+
+type Movie struct {
+	ent.Schema
+}
+
+func (Movie) Mixin() []ent.Mixin {
+	return []ent.Mixin{mixins.UintID{}, mixin.Time{}}
+}
+
+func (Movie) Fields() []ent.Field {
+	return []ent.Field{
+		field.String("title").NotEmpty(),
+		field.String("original_title").NotEmpty(),
+		field.Uint16("year"),
+		field.String("overview").Optional(),
+		field.Uint16("runtime").Optional().Default(0),
+		field.Enum("status").
+			Values("wanted", "downloading", "importing", "available", "failed").
+			Default("wanted"),
+		field.Bool("monitored").Default(true),
+		field.Uint32("tmdb_id").Unique(),
+		field.Time("last_search_at").Optional().Nillable(),
+		// Primary (theatrical) release, as TMDB reports it. Distinct from
+		// digital_release_date, which is what the release-radar search waits on;
+		// this one is what the library displays.
+		field.Time("release_date").Optional().Nillable(),
+		field.Time("digital_release_date").Optional().Nillable(),
+		field.Uint8("grab_failures").Default(0),
+		field.String("failure_reason").Optional(),
+		field.String("quality_profile").Optional(),
+		field.Float("rating").Optional().Default(0),
+		field.Strings("genres").Optional(),
+		// TMDB's translated and alternative titles. A film held under its
+		// localized title matches none of the releases named in any other
+		// language, which on a mixed tracker set is most of them.
+		field.Strings("aliases").Optional(),
+		field.Time("last_refreshed_at").Optional().Nillable(),
+	}
+}
+
+func (Movie) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.To("download_records", DownloadRecord.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("media_files", MediaFile.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("events", MediaEvent.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("credits", Credit.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+	}
+}
+
+func (Movie) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("digital_release_date"),
+		// status: every counts call filters on it once per status and the
+		// library list filters on it per tab. create_time: the list orders by
+		// it on every page, which without an index is a full scan into a temp
+		// B-tree sort.
+		index.Fields("status"),
+		index.Fields("create_time"),
+	}
+}

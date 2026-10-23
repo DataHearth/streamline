@@ -1,0 +1,320 @@
+<script lang="ts">
+	import { roleLabel } from "@lib/roles";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
+	import {
+		createQuery,
+		createMutation,
+		useQueryClient,
+	} from "@tanstack/svelte-query";
+	import { createForm } from "@tanstack/svelte-form";
+	import { Mail, Send, Trash2, Clipboard, Link as LinkIcon } from "@lucide/svelte";
+	import * as v from "valibot";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { inviteEmail, userRole } from "@lib/schemas";
+	import { formatDateTime, formatRelative } from "@lib/dates";
+	import type {
+		AuthConfig,
+		Invite,
+		InviteCreated,
+		UserRole,
+	} from "@lib/types";
+	import TextField from "@components/forms/TextField.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import SubmitButton from "@components/forms/SubmitButton.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	const REGISTRATION_OFF_HINT = i18n.invites_registration_off();
+
+	const qc = useQueryClient();
+
+	let revoking = $state<number | null>(null);
+
+	const invites = createQuery<Invite[]>(() => ({
+		queryKey: ["auth", "invites"],
+		queryFn: () => api<Invite[]>("/auth/invites"),
+	}));
+
+	const authCfg = createQuery<AuthConfig>(() => ({
+		queryKey: ["config", "auth"],
+		queryFn: () => api<AuthConfig>("/config/auth"),
+	}));
+	let registrationOff = $derived(
+		authCfg.data?.registration_mode === "disabled",
+	);
+
+	let lastCreated = $state<InviteCreated | null>(null);
+
+	const create = createMutation<
+		InviteCreated,
+		Error,
+		{ email: string; role: UserRole; ttl: string }
+	>(() => ({
+		mutationFn: (body) =>
+			api<InviteCreated>("/auth/invites", { method: "POST", body }),
+		onSuccess: (resp) => {
+			lastCreated = resp;
+			form.reset();
+			qc.invalidateQueries({ queryKey: ["auth", "invites"] });
+			toast.ok(i18n.invites_created());
+		},
+		onError: (err) => toast.err(errorText(err)),
+	}));
+
+	const revoke = createMutation<null, Error, number>(() => ({
+		mutationFn: (id) =>
+			api<null>(`/auth/invites/${id}`, { method: "DELETE" }),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["auth", "invites"] });
+			toast.ok(i18n.invites_revoked());
+		},
+		onError: (err) => toast.err(errorText(err)),
+	}));
+
+	// Go duration strings, matching the API's `ttl` pattern. Presets rather than
+	// free text: the server takes any Go duration, but a typo there is a 422 on
+	// a form whose other two fields are fine.
+	const TTL_OPTIONS = [
+		{ value: "24h", label: i18n.invites_ttl_1d() },
+		{ value: "72h", label: i18n.invites_ttl_3d() },
+		{ value: "168h", label: i18n.invites_ttl_7d() },
+		{ value: "720h", label: i18n.invites_ttl_30d() },
+	];
+
+	const form = createForm(() => ({
+		// 168h is the API's own default; sending it explicitly keeps the control
+		// honest about what an untouched form will do.
+		defaultValues: { email: "", role: "member" as UserRole, ttl: "168h" },
+		validators: {
+			onChange: v.object({ email: inviteEmail, role: userRole, ttl: v.string() }),
+		},
+		onSubmit: ({ value }) => create.mutate(value),
+	}));
+
+	async function copy(text: string) {
+		try {
+			await navigator.clipboard.writeText(text);
+			toast.ok(i18n.common_copied());
+		} catch {
+			toast.err(i18n.common_clipboard_unavailable());
+		}
+	}
+
+	function rolePill(r: UserRole) {
+		switch (r) {
+			case "admin":
+				return "bg-status-wanted/10 text-status-wanted";
+			case "member":
+				return "bg-accent/10 text-accent";
+			default:
+				return "bg-surface text-fg-muted";
+		}
+	}
+
+</script>
+
+<section class="rounded-lg border border-border bg-bg-elevated p-5">
+	<header class="flex items-start gap-3">
+		<span
+			class="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-accent/10 text-accent"
+		>
+			<Mail size={16} aria-hidden="true" />
+		</span>
+		<div>
+			<h2 class="text-lg font-semibold text-fg">{i18n.invites_label()}</h2>
+			<p class="mt-0.5 text-sm text-fg-muted">
+				{registrationOff
+					? REGISTRATION_OFF_HINT
+					: i18n.users_invites_help()}
+			</p>
+		</div>
+	</header>
+
+	<form
+		class="mt-5 grid gap-3 sm:grid-cols-[1fr_200px_150px_auto] sm:items-end"
+		onsubmit={(e) => {
+			e.preventDefault();
+			form.handleSubmit();
+		}}
+	>
+		<form.Field name="email">
+			{#snippet children(field)}
+				<TextField
+					{field}
+					label={i18n.common_email()}
+					type="email"
+					autocomplete="off"
+					placeholder="teammate@example.com"
+					readonly={registrationOff}
+					floatError
+				/>
+			{/snippet}
+		</form.Field>
+		<form.Field name="role">
+			{#snippet children(field)}
+				<Select
+					label={i18n.common_role()}
+					value={field.state.value as UserRole}
+					options={[
+						{ value: "member", label: i18n.role_member() },
+						{ value: "request_only", label: i18n.role_request_only() },
+						{ value: "admin", label: i18n.common_admin() },
+					]}
+					onChange={(v) => field.handleChange(v)}
+					disabled={registrationOff}
+				/>
+			{/snippet}
+		</form.Field>
+		<form.Field name="ttl">
+			{#snippet children(field)}
+				<Select
+					label={i18n.invites_ttl()}
+					value={field.state.value}
+					options={TTL_OPTIONS}
+					onChange={(v) => field.handleChange(v)}
+					disabled={registrationOff}
+				/>
+			{/snippet}
+		</form.Field>
+		<SubmitButton
+			{form}
+			label={i18n.invites_create()}
+			pendingLabel={i18n.common_creating()}
+			disabled={registrationOff}
+			title={registrationOff ? REGISTRATION_OFF_HINT : undefined}
+		/>
+	</form>
+
+	{#if lastCreated}
+		<div
+			class="mt-4 rounded-md border border-status-wanted/40 bg-status-wanted/5 p-3 text-xs"
+		>
+			<p class="mb-2 flex items-center gap-1.5 font-medium text-fg">
+				<Send size={12} aria-hidden="true" />
+				{i18n.invites_for_copy({ who: lastCreated.email ?? i18n.invites_anyone() })}
+			</p>
+			<div class="grid gap-2">
+				<div>
+					<p class="text-fg-muted">{i18n.invites_registration_link()}</p>
+					<code
+						class="mt-1 block break-all rounded bg-bg-deep p-2 font-mono text-fg"
+					>
+						{lastCreated.url}
+					</code>
+					<button
+						type="button"
+						onclick={() => copy(lastCreated!.url)}
+						class="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-fg-muted hover:bg-surface hover:text-fg"
+					>
+						<LinkIcon size={12} aria-hidden="true" />
+						{i18n.common_copy_link()}
+					</button>
+				</div>
+				<div>
+					<p class="text-fg-muted">{i18n.invites_raw_token()}</p>
+					<code
+						class="mt-1 block break-all rounded bg-bg-deep p-2 font-mono text-fg"
+					>
+						{lastCreated.raw_token}
+					</code>
+					<button
+						type="button"
+						onclick={() => copy(lastCreated!.raw_token)}
+						class="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-fg-muted hover:bg-surface hover:text-fg"
+					>
+						<Clipboard size={12} aria-hidden="true" />
+						{i18n.common_copy_token()}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<div class="mt-5">
+		{#if invites.isPending}
+			<SkeletonList variant="divided" count={3} />
+		{:else if invites.isError}
+			<p class="text-sm text-status-failed">
+				{i18n.err_load_failed_detail({ reason: errorText(invites.error) })}
+			</p>
+		{:else if (invites.data ?? []).length === 0}
+			<p
+				class="rounded-md border border-dashed border-border bg-bg-deep/40 px-4 py-3 text-sm text-fg-muted"
+			>
+				{i18n.invites_none()}
+			</p>
+		{:else}
+			<ul class="divide-y divide-border rounded-md border border-border">
+				{#each invites.data ?? [] as inv (inv.id)}
+					{@const expired =
+						new Date(inv.expires_at).getTime() < Date.now()}
+					{@const used = inv.used_at !== null}
+					<li
+						class="flex items-start justify-between gap-3 px-4 py-2.5"
+					>
+						<div class="min-w-0 flex-1">
+							<div class="flex flex-wrap items-center gap-2">
+								<p class="truncate text-sm font-medium text-fg">
+									{inv.email || i18n.invites_no_email()}
+								</p>
+								<span
+									class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {rolePill(
+										inv.role,
+									)}"
+								>
+									{roleLabel(inv.role)}
+								</span>
+								{#if used}
+									<span
+										class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
+									>
+										{i18n.invites_used()}
+									</span>
+								{:else if expired}
+									<span
+										class="inline-flex items-center rounded-full bg-status-failed/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-failed"
+									>
+										{i18n.invites_expired()}
+									</span>
+								{/if}
+							</div>
+							<p class="mt-0.5 text-xs text-fg-muted">
+								{i18n.invites_created_expires({
+									created: formatDateTime(inv.created_at),
+									expires: formatRelative(inv.expires_at),
+								})}
+							</p>
+						</div>
+						{#if !used}
+							<button
+								type="button"
+								onclick={() => (revoking = inv.id)}
+								class="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-status-failed hover:bg-status-failed/10"
+								aria-label={i18n.invites_revoke()}
+							>
+								<Trash2 size={14} aria-hidden="true" />
+								{i18n.common_revoke()}
+							</button>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
+</section>
+
+<Dialog
+	open={revoking !== null}
+	title={i18n.invites_revoke_confirm()}
+	body={i18n.invites_revoke_body()}
+	onClose={() => (revoking = null)}
+	actions={[
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+		{
+			label: i18n.common_revoke(),
+			variant: "danger",
+			onClick: () => revoking !== null && revoke.mutate(revoking),
+		},
+	]}
+/>

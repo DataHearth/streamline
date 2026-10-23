@@ -1,0 +1,72 @@
+<script lang="ts">
+	import { auth } from "@lib/auth.svelte";
+	import { api } from "@lib/api";
+	import { createAction, monitorToast, MOVIES, updateFailed } from "@lib/actions";
+	import { formatBytes } from "@lib/format";
+	import { movieStatus } from "@lib/status";
+	import PosterCard from "@components/shared/PosterCard.svelte";
+	import MovieActionsMenu from "./MovieActionsMenu.svelte";
+	import type { Movie } from "@lib/types";
+
+	let {
+		movies,
+		selected,
+		selectMode = false,
+		onToggle,
+		onLongPress,
+	}: {
+		movies: Movie[];
+		selected: Set<number>;
+		selectMode?: boolean;
+		onToggle: (id: number, v: boolean) => void;
+		onLongPress?: (id: number) => void;
+	} = $props();
+
+	let selectionActive = $derived(selectMode || selected.size > 0);
+
+	const monitor = createAction<Movie>(() => ({
+		run: (m) => api<Movie>(`/movies/${m.id}`, { method: "PATCH", body: { monitored: !m.monitored } }),
+		refresh: MOVIES,
+		failed: updateFailed,
+		succeeded: (m) => monitorToast(!m.monitored),
+	}));
+
+	function enrich(m: Movie) {
+		// The list response's file rollup — media_files is detail-only.
+		const f = m.file_summary;
+		return {
+			id: m.id,
+			title: m.title,
+			original_title: m.original_title,
+			year: m.year,
+			releaseDate: m.release_date,
+			status: movieStatus(m),
+			monitored: m.monitored,
+			rating: m.rating,
+			resolution: f?.resolution,
+			size_text: formatBytes(f?.size_bytes, ""),
+		};
+	}
+</script>
+
+<div
+	class="grid gap-x-4 gap-y-6 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]"
+>
+	{#each movies as movie (movie.id)}
+		<PosterCard
+			movie={enrich(movie)}
+			onMonitor={auth.canAddDirectly ? () => monitor.mutate(movie) : undefined}
+			monitorPending={monitor.isPending && monitor.variables?.id === movie.id}
+			selected={selected.has(movie.id)}
+			{selectionActive}
+			onSelect={auth.canAddDirectly ? (v) => onToggle(movie.id, v) : undefined}
+			onLongPress={auth.canAddDirectly && onLongPress ? () => onLongPress(movie.id) : undefined}
+		>
+			{#snippet kebab()}
+				{#if auth.canAddDirectly}
+					<MovieActionsMenu {movie} />
+				{/if}
+			{/snippet}
+		</PosterCard>
+	{/each}
+</div>

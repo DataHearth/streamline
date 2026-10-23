@@ -1,0 +1,483 @@
+package bulkimport
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/datahearth/streamline/ent"
+	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/audiotags"
+	"github.com/datahearth/streamline/internal/media/music"
+	"github.com/datahearth/streamline/internal/mediaserver"
+	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/quality"
+)
+
+// runCommitMusic adopts every reviewed album folder in a music scan in place:
+// the artist is seeded from MusicBrainz when new, then the files already on
+// disk are recorded against the album's tracks. Sequential, since MusicBrainz
+// serializes behind a 1 req/s limiter anyway.
+func (s *Service) runCommitMusic(
+	ctx context.Context,
+	scan *ent.ImportScan,
+	writeTags bool,
+) {
+	ctx, span := tracer.Start(ctx, "bulkimport.run_commit_music",
+		trace.WithAttributes(
+			attribute.Int64("scan.id", int64(scan.ID)),
+			attribute.Bool("commit.write_tags", writeTags),
+		))
+	defer span.End()
+
+	defer func() {
+		if r := recover(); r != nil {
+			otelx.RecordSpanError(span, fmt.Errorf("panic: %v", r))
+			s.markScanFailed(ctx, scan.ID, fmt.Sprintf("panic: %v", r))
+		}
+	}()
+
+	albums, err := s.store.ListImportScanAlbumsForCommit(ctx, scan.ID)
+	if err != nil {
+		otelx.RecordSpanError(span, err)
+		s.markScanFailed(ctx, scan.ID, err.Error())
+		return
+	}
+
+	artists := map[string]struct{}{}
+	var success, failed uint32
+	for _, sc := range albums {
+		outcome, msg, createdID := s.commitAlbum(ctx, sc, artists, writeTags)
+		if uerr := s.store.UpdateImportScanAlbumOutcome(
+			ctx,
+			sc.ID,
+			outcome,
+			db.UpdateScanAlbumOutcomeOpts{Message: msg, CreatedAlbumID: createdID},
+		); uerr != nil {
+			slog.ErrorContext(ctx, "music commit: failed to record album outcome",
+				"scan.id", scan.ID, "album.scan_id", sc.ID, "error", uerr)
+		}
+		switch outcome {
+		case entimportscanalbum.OutcomeCreated, entimportscanalbum.OutcomeAttached:
+			success++
+		case entimportscanalbum.OutcomeFailed:
+			failed++
+		}
+	}
+
+	committedAt := time.Now()
+	if err := s.store.UpdateImportScanStatus(
+		ctx,
+		scan.ID,
+		entimportscan.StatusCompleted,
+		db.UpdateScanStatusOpts{
+			CommittedAt:        &committedAt,
+			CommitSuccessCount: &success,
+			CommitFailedCount:  &failed,
+		},
+	); err != nil {
+		slog.ErrorContext(ctx, "music commit: failed to flip scan to completed",
+			"scan.id", scan.ID, "error", err)
+	}
+	slog.InfoContext(ctx, "music commit finished",
+		"scan.id", scan.ID,
+		"commit.success_count", success,
+		"commit.failed_count", failed)
+	countCommit(ctx, "music", "success", int64(success))
+	countCommit(ctx, "music", "failed", int64(failed))
+	if success > 0 {
+		mediaserver.RefreshInBackground(
+			ctx, s.ms, mediaserver.KindMusic, config.Get().Library.MusicPath,
+		)
+	}
+}
+
+// commitAlbum adopts one album folder. A failure here is that album's alone.
+func (s *Service) commitAlbum(
+	ctx context.Context,
+	sc *ent.ImportScanAlbum,
+	artists map[string]struct{},
+	writeTags bool,
+) (entimportscanalbum.Outcome, string, uint32) {
+	ctx, span := tracer.Start(ctx, "bulkimport.commit_album",
+		trace.WithAttributes(
+			attribute.Int64("album.scan_id", int64(sc.ID)),
+			attribute.String("album.folder", sc.FolderPath)))
+	defer span.End()
+
+	alb, err := s.resolveAlbum(ctx, sc, artists)
+	if err != nil {
+		return commitAlbumFail(span, "resolve album", err, 0)
+	}
+	// An artist added by this commit has only album stubs: the tracks the
+	// files are matched to have to exist first. Only the albums actually
+	// adopted pay for it, at interactive priority.
+	if alb.MetadataFetchedAt == nil {
+		if err := s.musicAdder.HydrateAlbum(ctx, alb.ID); err != nil {
+			return commitAlbumFail(span, "hydrate album", err, alb.ID)
+		}
+		albumID := alb.ID
+		reloaded, err := s.store.FindAlbumByID(ctx, albumID)
+		if err != nil {
+			return commitAlbumFail(span, "reload album", err, albumID)
+		}
+		alb = reloaded
+	}
+
+	plan, unmatched, adopted, uncovered, err := s.planAlbumFiles(
+		ctx,
+		sc.FolderPath,
+		alb,
+	)
+	if err != nil {
+		return commitAlbumFail(span, "list folder", err, alb.ID)
+	}
+	if len(plan) == 0 && adopted == 0 {
+		return commitAlbumFail(
+			span,
+			"adopt files",
+			fmt.Errorf("no file matched a track (%d unmatched)", unmatched),
+			alb.ID,
+		)
+	}
+	for i := range plan {
+		plan[i].TagsPending = writeTags
+	}
+	// An album holding no file yet (a stub of the artist's discography, the
+	// commit's own or one the library already had) is brought in by this
+	// commit and follows the review's choice; one already holding files
+	// keeps its own.
+	heldFiles := slices.ContainsFunc(alb.Edges.Tracks, func(t *ent.Track) bool {
+		return len(t.Edges.MediaFiles) > 0
+	})
+	if err := s.store.AdoptAlbumFiles(ctx, alb.ID, plan); err != nil {
+		return commitAlbumFail(span, "adopt files", err, alb.ID)
+	}
+	// One row for the album, as the album importer writes: the per-file
+	// create hook leaves track files alone.
+	if len(plan) > 0 {
+		if err := events.Record(
+			ctx, nil, events.TypeImported, events.ScopeAlbum, alb.ID,
+			map[string]any{"tracks": len(plan), "source": "bulk_import"},
+		); err != nil {
+			slog.WarnContext(ctx, "music commit: record imported event failed",
+				"album.id", alb.ID, "error", err)
+		}
+	}
+	outcome := entimportscanalbum.OutcomeCreated
+	if sc.Classification == entimportscanalbum.ClassificationExisting &&
+		sc.DecisionReleaseGroupMbid == "" {
+		outcome = entimportscanalbum.OutcomeAttached
+	}
+	if !heldFiles {
+		if err := s.store.SetAlbumTagsManaged(ctx, alb.ID, writeTags); err != nil {
+			slog.WarnContext(
+				ctx,
+				"music commit: recording the album's tagging failed",
+				"album.id",
+				alb.ID,
+				"error",
+				err,
+			)
+		}
+	}
+	// Tagged before the media servers are told (one refresh at the end of
+	// the commit); a file a torrent still serves is left for the job.
+	coverResolved := false
+	if writeTags && len(plan) > 0 {
+		var err error
+		if coverResolved, err = s.musicAdder.TagAlbum(ctx, alb.ID); err != nil {
+			slog.WarnContext(
+				ctx,
+				"music commit: tagging the adopted files failed, the job retries",
+				"album.id",
+				alb.ID,
+				"error",
+				err,
+			)
+		}
+	}
+
+	var notes []string
+	if unmatched > 0 {
+		notes = append(notes, fmt.Sprintf("%d files unmatched", unmatched))
+	}
+	if uncovered > 0 {
+		notes = append(notes, fmt.Sprintf(
+			"%d of %d tracks have no file", uncovered, len(alb.Edges.Tracks)))
+	}
+	if !coverResolved {
+		s.musicAdder.ResolveCoversInBackground(ctx, alb.ID)
+	}
+	slog.InfoContext(ctx, "album adopted",
+		"album.id", alb.ID, "files", len(plan), "unmatched", unmatched,
+		"tags", writeTags)
+	return outcome, strings.Join(notes, "; "), alb.ID
+}
+
+// resolveAlbum returns the stored album a folder belongs to, seeding its
+// artist from MusicBrainz first when the library does not hold it yet.
+func (s *Service) resolveAlbum(
+	ctx context.Context,
+	sc *ent.ImportScanAlbum,
+	artists map[string]struct{},
+) (*ent.Album, error) {
+	rgMBID, artistMBID := sc.ReleaseGroupMbid, sc.ArtistMbid
+	if sc.DecisionReleaseGroupMbid != "" {
+		rgMBID = sc.DecisionReleaseGroupMbid
+		artistMBID = ""
+		for _, c := range sc.Candidates {
+			if c.ReleaseGroupMBID == rgMBID {
+				artistMBID = c.ArtistMBID
+			}
+		}
+	} else if sc.ExistingAlbumID != nil {
+		return s.store.FindAlbumByID(ctx, *sc.ExistingAlbumID)
+	}
+	if rgMBID == "" {
+		return nil, errors.New("no musicbrainz match to adopt")
+	}
+
+	found, err := s.store.FindAlbumByMBID(ctx, rgMBID)
+	if err != nil {
+		return nil, fmt.Errorf("look up album: %w", err)
+	}
+	if found != nil {
+		return found, nil
+	}
+	if artistMBID == "" {
+		return nil, fmt.Errorf("no artist known for release group %s", rgMBID)
+	}
+	if err := s.resolveArtist(ctx, artistMBID, artists); err != nil {
+		return nil, err
+	}
+	found, err = s.store.FindAlbumByMBID(ctx, rgMBID)
+	if err != nil {
+		return nil, fmt.Errorf("look up album: %w", err)
+	}
+	if found == nil {
+		return nil, fmt.Errorf(
+			"release group %s is not in the artist's discography", rgMBID)
+	}
+	return found, nil
+}
+
+// resolveArtist makes sure the artist is stored. Adoption must not turn a whole
+// discography wanted, so a new artist is added unmonitored; the monitored flag
+// is then set on the adopted album alone.
+func (s *Service) resolveArtist(
+	ctx context.Context, artistMBID string, seen map[string]struct{},
+) error {
+	if _, ok := seen[artistMBID]; ok {
+		return nil
+	}
+	existing, err := s.store.FindArtistByMBID(ctx, artistMBID)
+	if err != nil {
+		return fmt.Errorf("look up artist: %w", err)
+	}
+	if existing == nil {
+		_, err := s.musicAdder.Add(ctx, music.AddParams{
+			MBID: artistMBID, Monitor: "none",
+		})
+		if err != nil && !errors.Is(err, music.ErrArtistExists) {
+			return fmt.Errorf("add artist: %w", err)
+		}
+	}
+	seen[artistMBID] = struct{}{}
+	return nil
+}
+
+// SeedingFiles counts the audio files of an album folder, disc subfolders
+// included, that the tag writer will leave alone until a torrent is gone:
+// those a torrent the clients still list serves and, under seeding: defer,
+// those hardlinked to a listed torrent's file. A folder that cannot be read
+// counts none.
+func SeedingFiles(seeding download.SeedingSet, folder string) int {
+	files, err := albumFolderFiles(folder)
+	if err != nil {
+		return 0
+	}
+	deferLinks := config.Get().Library.MusicTags.Seeding == config.MusicTagsSeedingDefer
+	n := 0
+	for _, f := range files {
+		if seeding.Owns(f.path) || (deferLinks && seeding.SharesData(f.path)) {
+			n++
+		}
+	}
+	return n
+}
+
+// albumFolderFiles lists the audio files of an album folder: those directly in
+// it and those in its disc subfolders, each with the disc number its folder
+// names (0 for a file outside one).
+func albumFolderFiles(folder string) ([]albumFile, error) {
+	entries, err := os.ReadDir(folder)
+	if err != nil {
+		return nil, err
+	}
+	var out []albumFile
+	for _, e := range entries {
+		path := filepath.Join(folder, e.Name())
+		if !e.IsDir() {
+			if audiotags.IsAudioFile(path) {
+				out = append(out, albumFile{path: path})
+			}
+			continue
+		}
+		disc, ok := library.DiscFolderNumber(e.Name())
+		if !ok {
+			continue
+		}
+		sub, err := os.ReadDir(path)
+		if err != nil {
+			return nil, err
+		}
+		for _, se := range sub {
+			sp := filepath.Join(path, se.Name())
+			if se.IsDir() {
+				continue
+			}
+			if audiotags.IsAudioFile(sp) {
+				out = append(out, albumFile{path: sp, disc: disc})
+			}
+		}
+	}
+	return out, nil
+}
+
+type albumFile struct {
+	path string
+	disc uint8
+}
+
+// planAlbumFiles binds the audio files in folder, disc subfolders included, to the album's
+// tracks without touching the database. adopted counts files a track already
+// holds at the same path (an idempotent re-scan); unmatched counts files that
+// bind to no track or to a track another file in the folder already claimed;
+// uncovered counts tracks left without any file once the plan lands.
+func (s *Service) planAlbumFiles(
+	ctx context.Context, folder string, alb *ent.Album,
+) ([]db.AdoptAlbumFile, int, int, int, error) {
+	files, err := albumFolderFiles(folder)
+	if err != nil {
+		return nil, 0, 0, 0, err
+	}
+	held := map[string]struct{}{}
+	// A track already holding a file is covered before the walk starts, so a
+	// second copy of it in the folder counts as unmatched on every commit,
+	// not just the first.
+	covered := map[uint32]struct{}{}
+	for _, t := range alb.Edges.Tracks {
+		for _, mf := range t.Edges.MediaFiles {
+			held[mf.Path] = struct{}{}
+			covered[t.ID] = struct{}{}
+		}
+	}
+
+	var plan []db.AdoptAlbumFile
+	unmatched, adopted := 0, 0
+	// Every file's tags first: whether their numbers name the album's tracks
+	// is decided over the whole folder.
+	var paths []string
+	var infos []audiotags.Info
+	for _, af := range files {
+		path := af.path
+		if _, ok := held[path]; ok {
+			adopted++
+			continue
+		}
+		info, err := audiotags.Read(path)
+		if err != nil {
+			slog.WarnContext(ctx, "music adopt: tag read failed",
+				"file", path, "error", err)
+			unmatched++
+			continue
+		}
+		if info.Disc == 0 {
+			info.Disc = af.disc
+		}
+		paths = append(paths, path)
+		infos = append(infos, info)
+	}
+	matcher := library.NewTrackMatcher(alb.Edges.Tracks, infos)
+	for i, path := range paths {
+		info := infos[i]
+		stat, err := os.Stat(path)
+		if err != nil {
+			slog.WarnContext(ctx, "music adopt: stat failed",
+				"file", path, "error", err)
+			unmatched++
+			continue
+		}
+		tr := matcher.Match(info)
+		if tr == nil {
+			unmatched++
+			continue
+		}
+		if _, dup := covered[tr.ID]; dup {
+			unmatched++
+			continue
+		}
+		covered[tr.ID] = struct{}{}
+		plan = append(plan, db.AdoptAlbumFile{
+			TrackID: tr.ID,
+			Path:    path,
+			Quality: s.adoptedTier(ctx, path),
+			Format:  info.Format,
+			Size:    stat.Size(),
+		})
+	}
+	return plan, unmatched, adopted, len(alb.Edges.Tracks) - len(covered), nil
+}
+
+// adoptedTier is the tier recorded for an adopted file: measured when ffprobe
+// is available, otherwise read off the extension, where a lossless one is
+// lossless, never hi-res, and every other file is left without a tier rather
+// than guessed at.
+func (s *Service) adoptedTier(ctx context.Context, path string) string {
+	if s.probing() {
+		info, err := s.prober.ProbeAudio(ctx, path)
+		if err == nil {
+			if t, ok := quality.AudioTierOf(library.AudioFactsFromProbe(info)); ok {
+				return t.String()
+			}
+		} else {
+			slog.WarnContext(ctx, "music adopt: probe failed, tier from extension",
+				"file", filepath.Base(path), "error", err)
+		}
+	}
+	if strings.EqualFold(filepath.Ext(path), ".flac") {
+		return quality.TierLossless.String()
+	}
+	return ""
+}
+
+func (s *Service) probing() bool {
+	return s.prober != nil && s.prober.Available() && config.Get().FFmpeg.Enabled
+}
+
+func commitAlbumFail(
+	span trace.Span, label string, err error, albumID uint32,
+) (entimportscanalbum.Outcome, string, uint32) {
+	otelx.RecordSpanError(span, fmt.Errorf("%s: %w", label, err))
+	return entimportscanalbum.OutcomeFailed, fmt.Sprintf(
+		"%s: %v",
+		label,
+		err,
+	), albumID
+}

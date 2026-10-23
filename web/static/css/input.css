@@ -1,0 +1,824 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Self-hosted fonts                                                  */
+/* ------------------------------------------------------------------ */
+@font-face {
+	font-family: "Inter";
+	src: url("/static/fonts/Inter-Regular.woff2") format("woff2");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Inter";
+	src: url("/static/fonts/Inter-Medium.woff2") format("woff2");
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Inter";
+	src: url("/static/fonts/Inter-SemiBold.woff2") format("woff2");
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Inter";
+	src: url("/static/fonts/Inter-Bold.woff2") format("woff2");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+/* JetBrains Mono latin subset is a variable file covering 400-500; one file serves both. */
+@font-face {
+	font-family: "JetBrains Mono";
+	src: url("/static/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+	font-weight: 400 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+/* ------------------------------------------------------------------ */
+/* Design tokens — see design-system/MASTER.md                        */
+/* ------------------------------------------------------------------ */
+:root {
+	color-scheme: dark;
+
+	/* Surfaces — canonical names + bundle aliases */
+	--bg-deep: #0b0b10;
+	--bg-base: #111118;
+	--bg-elevated: #15151f;
+	--bg-overlay: rgb(11 11 16 / 0.7);
+	--bg-card: #1c1c28;
+	--bg-hover: #232333;
+	--surface: rgb(255 255 255 / 0.04);
+	--surface-2: rgb(255 255 255 / 0.06);
+	--border: rgb(255 255 255 / 0.08);
+	--border-strong: rgb(255 255 255 / 0.14);
+
+	/* Accent (cooler indigo per design bundle) */
+	--accent: #7c8cff;
+	--accent-hover: #8b9aff;
+	--accent-glow: rgb(124 140 255 / 0.25);
+	--accent-ring: rgb(124 140 255 / 0.4);
+	--accent-soft: rgb(124 140 255 / 0.14);
+	--accent-line: rgb(124 140 255 / 0.4);
+	--accent-text: #b8c2ff;
+	--fg-on-accent: #0b0b10;
+
+	/* Text */
+	--fg: #f5f5f7;
+	--fg-muted: #c8c8d2;
+	--fg-subtle: #8a8a99;
+	--fg-faint: #5a5a68;
+
+	/* Status (ops palette — preserved verbatim) */
+	--status-downloading: #3b82f6;
+	--status-grabbing: #a78bfa;
+	/* importing shares grabbing's hue — same in-progress family, its own label. */
+	--status-importing: var(--status-grabbing);
+	--status-available: #22c55e;
+	--status-wanted: #f59e0b;
+	--status-missing: #64748b;
+	--status-failed: #ef4444;
+	--status-paused: #71717a;
+	--status-warning: #f59e0b;
+	--status-seeding: #2dd4bf;
+	--status-completed: #94a3b8;
+	--status-stalled: #f97316;
+	--status-fetching: #818cf8;
+	/* Episode-only states. Aliases, not new hues: an episode nobody can have
+	   yet reads like anything else that is absent, and skipped reads like
+	   paused. Matches the season-progress and episode-modal mappings. */
+	--status-unaired: var(--status-missing);
+	--status-skipped: var(--status-paused);
+
+	/* Transcode job states. Aliases, not new hues: a queued job is the same
+	   "waiting on the machine" amber as wanted, a running one the same blue as
+	   a download, succeeded the same green as available, canceled the same zinc
+	   as paused. They exist as their own names so StatusPill can carry the
+	   right label, and so one line here moves any of them if they ever earn a
+	   hue. */
+	--status-queued: var(--status-wanted);
+	--status-running: var(--status-downloading);
+	--status-succeeded: var(--status-available);
+	--status-canceled: var(--status-paused);
+
+	/* A rejected encode is a failure the operator can act on, so it wears the
+	   failed hue under its own label. */
+	--status-rejected: var(--status-missing);
+
+	/* A download that finished, failed verification and waits on a person. Amber
+	   because it is the same "needs something from you" family as wanted — an
+	   alias rather than a reuse of the name, so StatusPill's
+	   var(--status-{status}) lookup resolves and one line moves it if held ever
+	   earns its own hue. */
+	--status-held: var(--status-wanted);
+
+	/* Calendar event kinds — deliberately outside the status ramp. A dot or chip
+	   on the calendar answers "movie or episode?", not "what state is it in?",
+	   and reusing amber/violet made a movie read as Wanted and an episode as
+	   Importing. Sand and sky: the two hue bands no status occupies, at about
+	   half the chroma of the status ramp so a filled kind pill still reads
+	   quieter than a filled status pill, and light enough to carry dark text. */
+	--kind-movie: oklch(0.8 0.095 105);
+	--kind-episode: oklch(0.8 0.09 220);
+	/* Music and books at the same lightness and chroma. Teal sat too close to
+	   sky as a 6px dot, so albums take lavender and books rose: four hues
+	   roughly evenly spaced (105, 220, 290, 355). */
+	--kind-album: oklch(0.78 0.09 290);
+	--kind-book: oklch(0.8 0.09 355);
+
+	/* Shadows */
+	--shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+	--shadow-2: 0 4px 12px rgb(0 0 0 / 0.35);
+	--shadow-3: 0 16px 32px rgb(0 0 0 / 0.45);
+	--shadow-4: 0 24px 64px rgb(0 0 0 / 0.55);
+	--shadow-glow: 0 0 24px var(--accent-glow);
+
+	/* Radii */
+	--radius-sm: 6px;
+	--radius-md: 10px;
+	--radius-lg: 16px;
+	--radius-xl: 20px;
+
+	/* Motion */
+	--dur-fast: 150ms;
+	--dur-base: 200ms;
+	--dur-slow: 300ms;
+	--dur-exit: 200ms;
+	--ease: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+	/* Card aspects */
+	--card-aspect-poster: 2 / 3;
+	--card-aspect-album: 1 / 1;
+	--card-aspect-book: 2 / 3;
+	--card-aspect-backdrop: 16 / 9;
+
+	/* Progress */
+	--progress-track: rgb(255 255 255 / 0.08);
+	--progress-fill: var(--accent);
+	--progress-buffer: rgb(255 255 255 / 0.16);
+}
+
+/* ------------------------------------------------------------------ */
+/* Tailwind v4 theme mapping                                           */
+/* Tokens exposed as utilities: bg-bg-deep, text-fg-muted, border-border, etc. */
+/* ------------------------------------------------------------------ */
+@theme {
+	--font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+	--font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+	--color-bg: var(--bg-card);
+	--color-bg-deep: var(--bg-deep);
+	--color-bg-base: var(--bg-base);
+	--color-bg-elevated: var(--bg-elevated);
+	--color-bg-overlay: var(--bg-overlay);
+	--color-bg-card: var(--bg-card);
+	--color-bg-hover: var(--bg-hover);
+	--color-surface: var(--surface);
+	--color-surface-2: var(--surface-2);
+	--color-border: var(--border);
+	--color-border-strong: var(--border-strong);
+
+	--color-accent: var(--accent);
+	--color-accent-hover: var(--accent-hover);
+	--color-accent-ring: var(--accent-ring);
+	--color-accent-soft: var(--accent-soft);
+	--color-accent-line: var(--accent-line);
+	--color-accent-text: var(--accent-text);
+	--color-fg-on-accent: var(--fg-on-accent);
+
+	--color-fg: var(--fg);
+	--color-fg-muted: var(--fg-muted);
+	--color-fg-subtle: var(--fg-subtle);
+	--color-fg-faint: var(--fg-faint);
+
+	--color-status-downloading: var(--status-downloading);
+	--color-status-grabbing: var(--status-grabbing);
+	--color-status-importing: var(--status-importing);
+	--color-status-available: var(--status-available);
+	--color-status-wanted: var(--status-wanted);
+	--color-status-missing: var(--status-missing);
+	--color-status-failed: var(--status-failed);
+	--color-status-paused: var(--status-paused);
+	--color-status-seeding: var(--status-seeding);
+	--color-status-completed: var(--status-completed);
+	--color-status-stalled: var(--status-stalled);
+	--color-status-fetching: var(--status-fetching);
+	--color-status-unaired: var(--status-unaired);
+	--color-status-skipped: var(--status-skipped);
+	--color-status-held: var(--status-held);
+	--color-status-queued: var(--status-queued);
+	--color-status-running: var(--status-running);
+	--color-status-succeeded: var(--status-succeeded);
+	--color-status-canceled: var(--status-canceled);
+	--color-status-rejected: var(--status-rejected);
+
+	--radius-sm: var(--radius-sm);
+	--radius-md: var(--radius-md);
+	--radius-lg: var(--radius-lg);
+	--radius-xl: var(--radius-xl);
+}
+
+/* ------------------------------------------------------------------ */
+/* Base resets                                                         */
+/* ------------------------------------------------------------------ */
+html {
+	background: var(--bg-deep);
+	color: var(--fg);
+	font-family: var(--font-sans);
+}
+
+body {
+	background: var(--bg-deep);
+	color: var(--fg);
+	min-height: 100dvh;
+}
+
+/* Tabular figures for stat numerals */
+.tabular {
+	font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cursor pointer on interactive buttons. Tailwind v4 Preflight sets   */
+/* button cursor to `default`; restore pointer for non-disabled        */
+/* buttons and explicit role="button" elements. Utilities like         */
+/* `disabled:cursor-wait` still override per-element.                  */
+/* ------------------------------------------------------------------ */
+@layer base {
+	button:not(:disabled),
+	[role="button"]:not([aria-disabled="true"]) {
+		cursor: pointer;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Number input — strip the up/down spinner UA chrome.                */
+/* ------------------------------------------------------------------ */
+@layer base {
+	input[type="number"]::-webkit-inner-spin-button,
+	input[type="number"]::-webkit-outer-spin-button {
+		appearance: none;
+		margin: 0;
+	}
+	input[type="number"] {
+		appearance: textfield;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Search input — strip the native clear (✕) WebKit/Blink draw once   */
+/* the field has a value. Every `type="search"` field draws its own   */
+/* themed clear button beside it, so the native one is a second ✕ —   */
+/* a full-size white glyph on Chrome Android. `type="search"` stays   */
+/* for the phone keyboard's Search key.                                */
+/* ------------------------------------------------------------------ */
+@layer base {
+	input[type="search"]::-webkit-search-cancel-button,
+	input[type="search"]::-webkit-search-decoration {
+		-webkit-appearance: none;
+		appearance: none;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Scrollbar (WebKit)                                                  */
+/* ------------------------------------------------------------------ */
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: rgb(255 255 255 / 0.06);
+	border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: rgb(255 255 255 / 0.12);
+}
+
+/* ------------------------------------------------------------------ */
+/* Custom checkbox — applied to every checkbox app-wide unless the     */
+/* element carries `.native` (escape hatch for date pickers etc) or    */
+/* `.sr-only` (visually-hidden form input driving a custom surrogate). */
+/* ------------------------------------------------------------------ */
+input[type="checkbox"]:not(.native):not(.sr-only) {
+	appearance: none !important;
+	-webkit-appearance: none !important;
+	width: 16px !important;
+	height: 16px !important;
+	min-width: 16px;
+	border: 1.5px solid rgb(255 255 255 / 0.25);
+	border-radius: 4px;
+	background: var(--bg-card);
+	cursor: pointer;
+	position: relative;
+	margin: 0;
+	padding: 0;
+	box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.2);
+	transition:
+		background var(--dur-fast) var(--ease),
+		border-color var(--dur-fast) var(--ease);
+	vertical-align: middle;
+	flex-shrink: 0;
+}
+input[type="checkbox"]:not(.native):hover {
+	border-color: var(--accent);
+}
+input[type="checkbox"]:not(.native):checked {
+	background: var(--accent);
+	border-color: var(--accent);
+	box-shadow: none;
+}
+input[type="checkbox"]:not(.native):checked::after {
+	content: "";
+	position: absolute;
+	left: 4px;
+	top: 0;
+	width: 4px;
+	height: 9px;
+	border: solid var(--fg-on-accent);
+	border-width: 0 2.4px 2.4px 0;
+	transform: rotate(45deg);
+}
+input[type="checkbox"]:not(.native):focus-visible {
+	outline: 2px solid var(--accent-ring);
+	outline-offset: 2px;
+}
+input[type="checkbox"]:not(.native):disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------ */
+/* Dialog reset (Tailwind Preflight wipes UA margin: auto)             */
+/* ------------------------------------------------------------------ */
+@layer base {
+	dialog {
+		margin: auto;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: inherit;
+		max-width: 92vw;
+		max-height: 85dvh;
+		overflow: visible;
+	}
+	dialog::backdrop {
+		background: var(--bg-overlay);
+		backdrop-filter: blur(8px);
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Modal                                                               */
+/* Centered <dialog> with fade + scale(.95→1) entrance via             */
+/* @starting-style, reverse on exit via [data-closing] attribute set    */
+/* by app.js before .close(). Backdrop fades in/out alongside.         */
+/* ------------------------------------------------------------------ */
+@layer base {
+	dialog.modal {
+		opacity: 0;
+		transform: scale(0.95);
+		transition:
+			opacity var(--dur-base) var(--ease),
+			transform var(--dur-base) var(--ease);
+	}
+	dialog.modal[open] {
+		opacity: 1;
+		transform: scale(1);
+	}
+	dialog.modal[data-closing] {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+	/* Without @starting-style the browser skips the entrance transition —
+	   <dialog> goes from display:none to display:block when .showModal()
+	   is called, and CSS transitions don't run across display changes.
+	   This declares the "from" values to transition out of on first paint. */
+	@starting-style {
+		dialog.modal[open] {
+			opacity: 0;
+			transform: scale(0.95);
+		}
+	}
+
+	dialog.modal::backdrop {
+		background: rgb(2 2 3 / 0.6);
+		backdrop-filter: blur(6px);
+		opacity: 0;
+		transition: opacity var(--dur-base) var(--ease);
+	}
+	dialog.modal[open]::backdrop {
+		opacity: 1;
+	}
+	dialog.modal[data-closing]::backdrop {
+		opacity: 0;
+	}
+	@starting-style {
+		dialog.modal[open]::backdrop {
+			opacity: 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		dialog.modal,
+		dialog.modal::backdrop {
+			transition: none;
+		}
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Global focus-visible                                                */
+/* ------------------------------------------------------------------ */
+/* Layered so a component's own focus treatment wins. Unlayered, it outranked
+   every utility: an input that sets `outline-none` and lets its rounded
+   wrapper light up via `focus-within:` still drew this rectangle inside the
+   pill — and Chrome matches :focus-visible on any focus of a text field, a tap
+   included, so every phone search field showed two rings. */
+@layer base {
+	:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+		border-radius: 4px;
+	}
+}
+
+/* A locked field still takes focus so its value can be read and copied, but the
+   accent outline says "type here" on the one control that will refuse. This
+   lives here rather than as a `read-only:focus-visible:outline-none` utility on
+   each input: the rule above is unlayered, and unlayered CSS outranks every
+   Tailwind utility no matter how specific, so the utility never applied. */
+input:read-only:focus-visible,
+textarea:read-only:focus-visible {
+	outline: none;
+}
+
+/* Screen-reader-only + focus reveal (skip link) */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+.focus\:not-sr-only:focus,
+.focus-visible\:not-sr-only:focus-visible {
+	position: static;
+	width: auto;
+	height: auto;
+	padding: inherit;
+	margin: inherit;
+	overflow: visible;
+	clip: auto;
+	white-space: inherit;
+}
+
+/* Skip-link: when focused, pin to the top-left so it can't be hidden by */
+/* the sticky topbar / sidebar grid; Tailwind utilities alone can't beat */
+/* `.focus\:not-sr-only:focus { position: static }`. */
+.skip-link:focus {
+	position: fixed;
+	top: 1rem;
+	left: 1rem;
+	z-index: 1000;
+}
+
+/* ------------------------------------------------------------------ */
+/* Toast enter / exit                                                  */
+/* ------------------------------------------------------------------ */
+@keyframes toast-in {
+	from {
+		opacity: 0;
+		transform: translateX(16px) translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes toast-out {
+	from {
+		opacity: 1;
+		transform: none;
+	}
+	to {
+		opacity: 0;
+		transform: translateX(16px);
+	}
+}
+
+[data-toast] {
+	animation: toast-in var(--dur-base) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+[data-toast][data-toast-leaving] {
+	animation: toast-out var(--dur-exit) ease-in both;
+}
+
+/* ------------------------------------------------------------------ */
+/* Skeleton shimmer — used for poster placeholders + loading rows.    */
+/* ------------------------------------------------------------------ */
+@keyframes shimmer {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
+}
+
+[data-shimmer] {
+	background-color: var(--bg-card);
+	background-image: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgb(255 255 255 / 0.05) 50%,
+		transparent 100%
+	);
+	background-size: 200% 100%;
+	animation: shimmer 1.6s linear infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* Indeterminate progress bar (downloading poster overlay).            */
+/* ------------------------------------------------------------------ */
+@keyframes progress-indeterminate {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(250%);
+	}
+}
+
+[data-progress-indeterminate] {
+	position: relative;
+	overflow: hidden;
+	background-color: rgb(59 130 246 / 0.18);
+}
+
+[data-progress-indeterminate]::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	width: 40%;
+	background-color: var(--status-downloading);
+	animation: progress-indeterminate 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* Poster card stagger entry — opt out per-card with [data-no-stagger]. */
+/* ------------------------------------------------------------------ */
+@keyframes card-enter {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+[data-poster-card]:not([data-no-stagger]) {
+	animation: card-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	animation-delay: calc(min(var(--card-i, 0), 20) * 35ms);
+}
+
+/* ------------------------------------------------------------------ */
+/* Status dot (poster cards). Driven by data-status on the card root.  */
+/* Inline `style="background-color: {{var}}"` in templates would get   */
+/* contextually scrubbed to ZgotmplZ by html/template; CSS rules keyed */
+/* off data-status are immune.                                         */
+/* ------------------------------------------------------------------ */
+[data-poster-card] [data-status-dot] {
+	background-color: var(--status-missing);
+	box-shadow:
+		0 0 0 2px var(--status-missing),
+		0 0 8px var(--status-missing);
+}
+
+[data-poster-card][data-status="available"] [data-status-dot] {
+	background-color: var(--status-available);
+	box-shadow:
+		0 0 0 2px var(--status-available),
+		0 0 8px var(--status-available);
+}
+
+[data-poster-card][data-status="wanted"] [data-status-dot] {
+	background-color: var(--status-wanted);
+	box-shadow:
+		0 0 0 2px var(--status-wanted),
+		0 0 8px var(--status-wanted);
+}
+
+[data-poster-card][data-status="downloading"] [data-status-dot] {
+	background-color: var(--status-downloading);
+	box-shadow:
+		0 0 0 2px var(--status-downloading),
+		0 0 8px var(--status-downloading);
+}
+
+[data-poster-card][data-status="failed"] [data-status-dot] {
+	background-color: var(--status-failed);
+	box-shadow:
+		0 0 0 2px var(--status-failed),
+		0 0 8px var(--status-failed);
+}
+
+/* ------------------------------------------------------------------ */
+/* Status pill (list-mode rows). Same data-status -> CSS rule pattern. */
+/* ------------------------------------------------------------------ */
+[data-poster-card] [data-status-pill] {
+	background-color: rgb(255 255 255 / 0.05);
+	color: var(--fg-subtle);
+}
+
+[data-poster-card][data-status="available"] [data-status-pill] {
+	background-color: rgb(34 197 94 / 0.15);
+	color: var(--status-available);
+}
+
+[data-poster-card][data-status="wanted"] [data-status-pill] {
+	background-color: rgb(245 158 11 / 0.15);
+	color: var(--status-wanted);
+}
+
+[data-poster-card][data-status="downloading"] [data-status-pill] {
+	background-color: rgb(59 130 246 / 0.15);
+	color: var(--status-downloading);
+}
+
+[data-poster-card][data-status="failed"] [data-status-pill] {
+	background-color: rgb(239 68 68 / 0.15);
+	color: var(--status-failed);
+}
+
+/* ------------------------------------------------------------------ */
+/* Card action menu (<details data-card-menu>): animate the dropdown   */
+/* panel on open / close. Override the UA default that hides closed    */
+/* <details> content so we can fade + translate instead of snap-hide.  */
+/* Origin from `top` so the panel feels anchored to the summary.       */
+/* ------------------------------------------------------------------ */
+[data-card-menu] > div {
+	display: block;
+	opacity: 0;
+	pointer-events: none;
+	transform: translateY(-4px) scale(0.96);
+	transform-origin: top;
+	transition:
+		opacity 160ms cubic-bezier(0.16, 1, 0.3, 1),
+		transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-card-menu][open] > div {
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateY(0) scale(1);
+}
+
+/* ------------------------------------------------------------------ */
+/* Sticky shadow — paired with a [data-sticky-sentinel] sibling above. */
+/* JS toggles `is-stuck` when the sentinel leaves the viewport top.    */
+/* ------------------------------------------------------------------ */
+[data-sticky-shadow].is-stuck {
+	backdrop-filter: blur(16px);
+	-webkit-backdrop-filter: blur(16px);
+	background-color: rgb(21 21 31 / 0.85);
+	border-bottom: 1px solid rgb(255 255 255 / 0.06);
+	box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion                                                      */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Mobile Gecko re-runs a GPU blur readback for every backdrop-filter  */
+/* element on each composited frame (bugzilla 1731965/1798592/1809738, */
+/* 1718471) — a dozen poster badges plus the chrome bars made the      */
+/* add-sheet drag stall 40-80ms per frame. Solid fallbacks on touch    */
+/* Firefox only; Chromium and desktop keep the glass.                  */
+@supports (-moz-appearance: none) {
+	@media (pointer: coarse) {
+		* {
+			backdrop-filter: none !important;
+			-webkit-backdrop-filter: none !important;
+		}
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Touch tap targets.                                                  */
+/* Below lg the pointer is a thumb, and several controls are drawn at  */
+/* desktop density on purpose: a 28px icon button over a poster, an    */
+/* inline text link inside a heading. `.touch-hit` grows the control's */
+/* OWN box by 15px top and bottom below lg, which clears 44px for      */
+/* anything with a line of text in it.                                 */
+/*                                                                     */
+/* Padding on the element, never an overlaid pseudo-element. A pseudo  */
+/* band is clipped by any ancestor that scrolls or hides overflow —    */
+/* and a one-axis scroller computes the other axis to `auto`, so chips */
+/* in the drag-scroll rows kept a 32px target while measuring as       */
+/* fixed. Padding is part of the element, so it is hit-tested as the   */
+/* element.                                                            */
+/*                                                                     */
+/* The doubled class outranks the Tailwind padding utility the same    */
+/* element usually carries (`py-1`, `px-3`); equal specificity would   */
+/* hand that contest to whichever sheet loaded last. Vertical only —   */
+/* horizontal padding would shift a glyph off the edge it is aligned   */
+/* to. A control that is too NARROW, or one anchored into a corner     */
+/* where padding would move the ink, gets real ink at a breakpoint     */
+/* instead (`h-10 w-10 lg:h-7 lg:w-7`).                                */
+/*                                                                     */
+/* NEVER put this on a control that also carries a fixed sub-44px      */
+/* `h-*`: `box-sizing: border-box` means the used height stays that    */
+/* value, the content box collapses and the label overflows it. Use    */
+/* `min-h-11 lg:h-8 lg:min-h-0` there.                                 */
+/* `grep 'touch-hit[^"]*\bh-[0-9]'` over the components should return  */
+/* nothing — every hit is a silent no-op.                              */
+/* ------------------------------------------------------------------ */
+@media (max-width: 1023px) {
+	.touch-hit.touch-hit {
+		padding-top: 15px;
+		padding-bottom: 15px;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Small-control floor below lg.                                       */
+/* The responsive audit's warn families were all one thing: primitives */
+/* drawn at desktop density (h-8 discs, h-9 fields and toolbar         */
+/* buttons, h-[30px] view switches, px-3.5/py-2 primary buttons,       */
+/* py-1.5 filter tabs) reaching a thumb 6-14px short of 44. Rather     */
+/* than 200 per-call-site breakpoints, the floor is stated once here   */
+/* and keyed on the utility the primitive already carries, so the      */
+/* desktop drawing is untouched and only the reachable box below lg    */
+/* changes. Square icon buttons get the same floor on the cross axis.  */
+/*                                                                     */
+/* `h-10` is deliberately absent: the 40px ceiling group was grown to  */
+/* 40 on purpose, and an invisible 44 there overlaps its neighbour.    */
+/* ------------------------------------------------------------------ */
+@media (max-width: 1023px) {
+	button[class~="h-8"],
+	button[class~="h-9"],
+	button[class~="h-[30px]"],
+	button[class~="py-2"],
+	button[class~="py-2.5"],
+	button[class~="py-1.5"],
+	a[class~="h-8"],
+	a[class~="h-9"],
+	a[class~="py-2"],
+	a[class~="py-2.5"],
+	a[class~="py-1.5"],
+	input[class~="h-8"],
+	input[class~="h-9"],
+	input[class~="py-2"],
+	input[class~="py-2.5"],
+	select[class~="h-8"],
+	select[class~="h-9"],
+	select[class~="py-2"],
+	select[class~="py-2.5"],
+	summary[class~="py-2"] {
+		min-height: 44px;
+	}
+
+	button[class~="h-8"][class~="w-8"],
+	button[class~="h-9"][class~="w-9"],
+	button[class~="h-[30px]"][class~="w-[30px]"] {
+		min-width: 44px;
+	}
+
+	/* Type floor. The 9-10px font-mono labels read as noise on a phone and
+	   sat under the 10.5px legibility line; the half-pixel lift costs no
+	   layout. */
+	[class~="text-[9px]"],
+	[class~="text-[9.5px]"],
+	[class~="text-[10px]"] {
+		font-size: 10.5px;
+	}
+}

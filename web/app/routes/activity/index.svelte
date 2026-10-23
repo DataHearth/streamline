@@ -1,0 +1,800 @@
+<script lang="ts">
+	import { untrack } from "svelte";
+	import { pageTitle } from "@lib/page-title.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
+	import { slide } from "svelte/transition";
+	import { ChevronDown, ChevronRight, LoaderCircle } from "@lucide/svelte";
+	import {
+		createQuery,
+		createInfiniteQuery,
+		createMutation,
+		useQueryClient,
+	} from "@tanstack/svelte-query";
+	import { api, apiAllPages, errorText } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
+	import { entryHeading } from "@lib/activity-touch";
+	import { toast } from "@lib/toast";
+	import { pullRefresh } from "@lib/pull-refresh";
+	import { formatEta, formatSpeed } from "@lib/format";
+	import { fold } from "@lib/text";
+	import { cn } from "@lib/cn";
+	import { Selection } from "@lib/selection.svelte";
+	import { NOUN_DOWNLOAD } from "@lib/nouns";
+	import type {
+		ActivityList,
+		DownloadQueue,
+		DownloadHistory,
+		QueueEntry,
+		HistoryEntry,
+		PendingList,
+		PendingItem,
+	} from "@lib/types";
+	import ActivityToolbar, {
+		ACTIVITY_CHIPS,
+	} from "@components/activity/ActivityToolbar.svelte";
+	import ActivityViewSwitch from "@components/activity/ActivityViewSwitch.svelte";
+	import ActivityTable from "@components/activity/ActivityTable.svelte";
+	import ActivityTouchList from "@components/activity/ActivityTouchList.svelte";
+	import ActivityDetailSheet from "@components/activity/ActivityDetailSheet.svelte";
+	import ActivityFilterSheet from "@components/activity/ActivityFilterSheet.svelte";
+	import PendingSheet from "@components/activity/PendingSheet.svelte";
+	import ResolveDialog from "@components/activity/ResolveDialog.svelte";
+	import TouchStatLine from "@components/activity/TouchStatLine.svelte";
+	import LiveStrip from "@components/activity/LiveStrip.svelte";
+	import PendingRow from "@components/pending/PendingRow.svelte";
+	import EventList from "@components/activity/EventList.svelte";
+	import DownloadBulkActions from "@components/activity/DownloadBulkActions.svelte";
+	import DownloadConfirmDialog, {
+		type DownloadConfirm,
+	} from "@components/activity/DownloadConfirmDialog.svelte";
+	import SelectionTopBar from "@components/shared/SelectionTopBar.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	// Torrents live on their own route (/torrents); this page is the
+	// queue/history/events trio the switch above the toolbar swaps between.
+	type View = "queue" | "history" | "events";
+
+	// The switch is page state, not a route, but ?view is honoured — the
+	// dashboard's Recent activity panel links straight to the events feed it
+	// samples, which used to land on the queue instead.
+	function initialView(): View {
+		if (typeof window === "undefined") return "queue";
+		const v = new URLSearchParams(window.location.search).get("view");
+		return v === "history" || v === "events" ? v : "queue";
+	}
+
+	let view = $state<View>(initialView());
+	let statusFilter = $state<string[]>([]);
+	let search = $state("");
+	const qc = useQueryClient();
+
+	const queue = createQuery<DownloadQueue>(() => ({
+		queryKey: ["activity", "queue"],
+		queryFn: () => api<DownloadQueue>("/activity/queue"),
+		refetchInterval: 2000,
+	}));
+
+	const PAGE = 50;
+	const history = createInfiniteQuery<
+		DownloadHistory,
+		Error,
+		{ pages: DownloadHistory[]; pageParams: (string | null)[] },
+		readonly ["activity", "history"],
+		string | null
+	>(() => ({
+		queryKey: ["activity", "history"] as const,
+		queryFn: ({ pageParam }) => {
+			const p = new URLSearchParams({ limit: String(PAGE) });
+			if (pageParam) p.set("cursor", pageParam);
+			return api<DownloadHistory>(`/activity/history?${p.toString()}`);
+		},
+		initialPageParam: null,
+		getNextPageParam: (last) => last.next_cursor ?? undefined,
+	}));
+
+	const events = createInfiniteQuery<
+		ActivityList,
+		Error,
+		{ pages: ActivityList[]; pageParams: (string | null)[] },
+		readonly ["activity", "events"],
+		string | null
+	>(() => ({
+		queryKey: ["activity", "events"] as const,
+		queryFn: ({ pageParam }) => {
+			const p = new URLSearchParams({ limit: String(PAGE) });
+			if (pageParam) p.set("cursor", pageParam);
+			return api<ActivityList>(`/activity?${p.toString()}`);
+		},
+		initialPageParam: null,
+		getNextPageParam: (last) => last.next_cursor ?? undefined,
+		enabled: view === "events",
+	}));
+
+	let eventItems = $derived(
+		(events.data?.pages ?? []).flatMap((p) => p.events),
+	);
+
+	function switchView(v: View) {
+		view = v;
+		statusFilter = [];
+		detailId = null;
+		selection.clear();
+	}
+
+	// Same shape as ActivityTable's: the sentinel mounts and unmounts with the
+	// view, so the effect keys on the binding to re-observe, and reads the query
+	// flags inside the callback to keep them out of its dependencies.
+	let eventSentinel = $state<HTMLDivElement | null>(null);
+	$effect(() => {
+		const el = eventSentinel;
+		if (!el) return;
+		const io = new IntersectionObserver((entries) => {
+			if (
+				entries[0]?.isIntersecting &&
+				events.hasNextPage &&
+				!events.isFetchingNextPage
+			) {
+				events.fetchNextPage();
+			}
+		});
+		io.observe(el);
+		return () => io.disconnect();
+	});
+
+	function invalidate() {
+		qc.invalidateQueries({ queryKey: ["activity", "queue"] });
+		qc.invalidateQueries({ queryKey: ["activity", "history"] });
+	}
+
+	const cancel = createMutation<unknown, Error, number>(() => ({
+		mutationFn: (id) => api(`/activity/queue/${id}`, { method: "DELETE" }),
+		onSuccess: () => {
+			toast.ok(i18n.activity_download_cancelled());
+			invalidate();
+		},
+		onError: (e) => toast.err(errorText(e)),
+	}));
+	const pause = createMutation<unknown, Error, number>(() => ({
+		mutationFn: (id) => api(`/activity/queue/${id}/pause`, { method: "POST" }),
+		onSuccess: invalidate,
+		onError: (e) => toast.err(errorText(e)),
+	}));
+	const resume = createMutation<unknown, Error, number>(() => ({
+		mutationFn: (id) => api(`/activity/queue/${id}/resume`, { method: "POST" }),
+		onSuccess: invalidate,
+		onError: (e) => toast.err(errorText(e)),
+	}));
+	// A held download is waiting on a person, so the dialog tracks an id: the
+	// queue repolls every 2 s and holding the object would show a stale finding
+	// list after a refetch. heldItem itself is declared below queueItems, which
+	// it reads.
+	let resolveId = $state<number | null>(null);
+
+	const resolve = createMutation<
+		unknown,
+		Error,
+		{ id: number; action: "import" | "regrab" | "delete" }
+	>(() => ({
+		mutationFn: ({ id, action }) =>
+			api(`/downloads/${id}/resolve`, { method: "POST", body: { action } }),
+		onSuccess: (_r, { action }) => {
+			invalidate();
+			resolveId = null;
+			toast.ok(
+				action === "import"
+					? i18n.hold_imported()
+					: action === "regrab"
+						? i18n.hold_searching_again()
+						: i18n.hold_deleted(),
+			);
+		},
+		onError: (e) => toast.err(errorText(e)),
+	}));
+
+	const removeHistory = createMutation<unknown, Error, number>(() => ({
+		mutationFn: (id) => api(`/activity/history/${id}`, { method: "DELETE" }),
+		onSuccess: () => {
+			toast.ok(i18n.activity_removed());
+			invalidate();
+		},
+		onError: (e) => toast.err(errorText(e)),
+	}));
+	const retryImport = createMutation<unknown, Error, number>(() => ({
+		mutationFn: (id) =>
+			api(`/activity/history/${id}/retry`, { method: "POST" }),
+		onSuccess: () => {
+			toast.ok(i18n.activity_retrying_import());
+			invalidate();
+		},
+		onError: (e) => toast.err(errorText(e)),
+	}));
+	const clearCompleted = createMutation<unknown, Error, void>(() => ({
+		mutationFn: () =>
+			api("/activity/history/clear-completed", { method: "POST" }),
+		onSuccess: () => {
+			toast.ok(i18n.activity_cleared_completed());
+			invalidate();
+		},
+		onError: (e) => toast.err(errorText(e)),
+	}));
+
+	// "Needs attention": adopted-torrent proposals awaiting a decision (admin).
+	const pendingQuery = createQuery<PendingList>(() => ({
+		queryKey: ["activity", "pending"],
+		queryFn: () => apiAllPages<PendingItem>("/activity/pending"),
+		enabled: auth.isAdmin,
+		refetchInterval: 30000,
+	}));
+	let pendingItems = $derived<PendingItem[]>(pendingQuery.data?.items ?? []);
+	let showPending = $derived(
+		auth.isAdmin && (pendingItems.length > 0 || pendingQuery.isError),
+	);
+	// Collapsed on arrival: the count in the header is the whole message, and the
+	// queue below it is what the page is for. Opening is one click when the
+	// proposals are what you came for.
+	let attnOpen = $state(false);
+	// Below md the section is one banner line and the proposals open in a sheet:
+	// three of them expanded push the queue entirely below the fold, and each one's
+	// three decisions want the full width.
+	let pendingOpen = $state(false);
+
+	function invalidatePending() {
+		qc.invalidateQueries({ queryKey: ["activity", "pending"] });
+	}
+
+	const importPending = createMutation<unknown, Error, number>(() => ({
+		mutationFn: (id) =>
+			api(`/activity/pending/${id}/import`, { method: "POST" }),
+		onSuccess: () => {
+			toast.ok(i18n.pending_importing());
+			invalidatePending();
+			invalidate();
+		},
+		onError: (e) => toast.err(errorText(e)),
+	}));
+	const replacePending = createMutation<
+		unknown,
+		Error,
+		{ id: number; removeOld: boolean }
+	>(() => ({
+		mutationFn: ({ id, removeOld }) =>
+			api(`/activity/pending/${id}/replace`, {
+				method: "POST",
+				body: { remove_old_torrent: removeOld },
+			}),
+		onSuccess: () => {
+			toast.ok(i18n.pending_replacing());
+			invalidatePending();
+			invalidate();
+		},
+		onError: (e) => toast.err(errorText(e)),
+	}));
+	const ignorePending = createMutation<
+		unknown,
+		Error,
+		{ id: number; removeTorrent: boolean }
+	>(() => ({
+		mutationFn: ({ id, removeTorrent }) =>
+			api(`/activity/pending/${id}/ignore`, {
+				method: "POST",
+				body: { remove_torrent: removeTorrent },
+			}),
+		onSuccess: () => {
+			toast.ok(i18n.pending_ignored());
+			invalidatePending();
+		},
+		onError: (e) => toast.err(errorText(e)),
+	}));
+
+	// Forget deletes the record and leaves the torrent seeding, which is the
+	// only thing that puts the hash back in front of the adoption sweep —
+	// dismissing keeps the row, and the sweep skips any hash it already has one
+	// for. Worth offering on an unidentified proposal in particular: those are
+	// the ones a later library change would now match.
+	const forgetPending = createMutation<unknown, Error, number>(() => ({
+		mutationFn: (id) =>
+			api(`/activity/pending/${id}`, { method: "DELETE" }),
+		onSuccess: () => {
+			toast.ok(i18n.imports_forgot());
+			invalidatePending();
+		},
+		onError: (e) => toast.err(errorText(e)),
+	}));
+
+	let unidentified = $derived(pendingItems.filter((i) => !i.media));
+	let forgettingAll = $state(false);
+	async function forgetAllUnidentified() {
+		forgettingAll = true;
+		let failed = 0;
+		for (const item of unidentified) {
+			try {
+				await api(`/activity/pending/${item.id}`, { method: "DELETE" });
+			} catch {
+				failed++;
+			}
+		}
+		forgettingAll = false;
+		if (failed > 0) toast.err(i18n.imports_forget_all_failed({ count: failed }));
+		else toast.ok(i18n.imports_forgot());
+		invalidatePending();
+	}
+
+	let pendingBusyId = $derived.by<number | null>(() => {
+		if (importPending.isPending) return importPending.variables ?? null;
+		if (replacePending.isPending) return replacePending.variables?.id ?? null;
+		if (ignorePending.isPending) return ignorePending.variables?.id ?? null;
+		if (forgetPending.isPending) return forgetPending.variables ?? null;
+		return null;
+	});
+
+	// The table, its sheets and the toolbar only ever deal in download records;
+	// the events feed is its own branch below and never reaches them.
+	let tableView = $derived<"queue" | "history">(
+		view === "history" ? "history" : "queue",
+	);
+
+	let queueItems = $derived<QueueEntry[]>(queue.data?.items ?? []);
+	let heldItem = $derived(
+		queueItems.find((q) => q.id === resolveId) ?? null,
+	);
+	let historyItems = $derived<HistoryEntry[]>(
+		(history.data?.pages ?? []).flatMap((p) => p.items),
+	);
+	// The badge counts the library, not what has been scrolled into view: the
+	// history is cursor-paginated, so historyItems.length is the page size
+	// until the last page loads and the count would sit at 50 forever.
+	let historyTotal = $derived(
+		history.data?.pages?.[0]?.total ?? historyItems.length,
+	);
+
+	let source = $derived<(QueueEntry | HistoryEntry)[]>(
+		view === "queue" ? queueItems : historyItems,
+	);
+	let rows = $derived.by<(QueueEntry | HistoryEntry)[]>(() => {
+		let out = source;
+		if (statusFilter.length)
+			out = out.filter((i) => statusFilter.includes(i.status));
+		if (search.trim()) {
+			const q = fold(search);
+			out = out.filter(
+				(i) =>
+					fold(i.title).includes(q) || fold(entryHeading(i)).includes(q),
+			);
+		}
+		return out;
+	});
+
+	let busyId = $derived.by<number | null>(() => {
+		if (cancel.isPending) return cancel.variables ?? null;
+		if (pause.isPending) return pause.variables ?? null;
+		if (resume.isPending) return resume.variables ?? null;
+		if (removeHistory.isPending) return removeHistory.variables ?? null;
+		if (retryImport.isPending) return retryImport.variables ?? null;
+		return null;
+	});
+
+	// ── Touch surfaces ───────────────────────────────────────────────────────
+	let filtersOpen = $state(false);
+	let detailId = $state<number | null>(null);
+	// Held by id, not by value: the queue repolls every 2 s, and a sheet holding
+	// the snapshot it opened with would show a frozen speed and percentage.
+	let detailItem = $derived<QueueEntry | HistoryEntry | null>(
+		detailId === null ? null : (source.find((i) => i.id === detailId) ?? null),
+	);
+	// A swiped row's cancel / retry / remove asks first, in the sheet's words.
+	// By id for the same reason as the sheet: the queue repolls every 2 s.
+	let swipeConfirm = $state<{ id: number; kind: DownloadConfirm } | null>(null);
+	let swipeItem = $derived(
+		swipeConfirm === null
+			? null
+			: (source.find((i) => i.id === swipeConfirm?.id) ?? null),
+	);
+	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0));
+	let clearableCount = $derived(
+		historyItems.filter((h) => h.status === "completed").length,
+	);
+
+	let aggregate = $derived(
+		queueItems.reduce((s, i) => s + (i.download_speed ?? 0), 0),
+	);
+	let minEta = $derived.by(() => {
+		const etas = queueItems.map((i) => i.eta ?? 0).filter((e) => e > 0);
+		return etas.length ? Math.min(...etas) : 0;
+	});
+	let activeCount = $derived(
+		queueItems.filter((i) => i.status === "downloading").length,
+	);
+	// Its own figure, not part of "active": a held download is not transferring,
+	// and folding it in would make the number mean two things.
+	let heldCount = $derived(
+		queueItems.filter((i) => i.status === "held").length,
+	);
+
+	function resetFilters() {
+		statusFilter = [];
+		search = "";
+	}
+
+	// ── Selection ────────────────────────────────────────────────────────────
+	// Bulk pause / resume / cancel on the queue, bulk remove on the history.
+	// The table carries checkboxes; below md a press and hold on a row starts
+	// selecting, and the selection bar takes the toolbar's line.
+	const selection = new Selection<number>();
+	let selecting = $derived(auth.isAdmin && selection.selecting);
+	// A selection made under one filter is meaningless under the next, and the
+	// bar would keep acting on rows the user can no longer see. The view switch
+	// clears it itself.
+	$effect(() => {
+		statusFilter;
+		search;
+		untrack(() => selection.clear());
+	});
+	// A download that finishes or is cancelled elsewhere leaves the queue on the
+	// next poll; it leaves the selection with it.
+	$effect(() => {
+		const ids = source.map((i) => i.id);
+		untrack(() => selection.prune(ids));
+	});
+	function selectAllRows() {
+		selection.selectAll(rows.map((r) => r.id));
+	}
+
+	// A pull re-fetches everything the page shows, not just the view in front —
+	// the point of the gesture is "is all of this current?".
+	async function refreshAll() {
+		await Promise.all([
+			qc.refetchQueries({ queryKey: ["activity", "queue"] }),
+			qc.refetchQueries({ queryKey: ["activity", "history"] }),
+			auth.isAdmin
+				? qc.refetchQueries({ queryKey: ["activity", "pending"] })
+				: Promise.resolve(),
+		]);
+	}
+	$effect(() => pageTitle.claim("/activity", view === "events" ? i18n.activity_events() : i18n.activity_queue_and_history()));
+</script>
+
+<!-- At md and up the page is capped at the viewport and the list inside it does
+     the scrolling: a 200-row history moved the toolbar and the sticky header off
+     screen before the rows ran out. A cap and not a fixed height, and the column
+     scrolls rather than clips: in a short window (a 540px-tall laptop window) the
+     chrome above the list plus the list's own floor is taller than the cap, and a
+     clipping column sliced the first row in half with no way to scroll to it.
+     Below md the page scrolls as before — the touch list is paged,
+     pull-to-refresh needs the page at scrollTop 0, and the bottom nav already
+     eats the bottom of the viewport. While rows are picked the column ends above
+     the floating bulk bar, which otherwise sat over the last rows of the list. -->
+<div
+	use:pullRefresh={{ onRefresh: refreshAll }}
+	class={cn(
+		"group relative flex flex-col px-4 py-6 md:max-h-[calc(100dvh-4rem)] md:min-h-0 md:overflow-y-auto md:px-6",
+		auth.isAdmin && selection.size > 0 && "md:pb-24",
+	)}
+>
+	<!-- Sits in the gap the pull opens above the page. -->
+	<div
+		aria-hidden="true"
+		class="pointer-events-none absolute inset-x-0 -top-11 flex h-11 items-center justify-center gap-2 text-[11.5px] text-fg-subtle opacity-0 transition-opacity group-data-[pulling]:opacity-100 md:hidden"
+	>
+		<LoaderCircle
+			size={15}
+			class="group-data-[refreshing]:motion-safe:animate-spin"
+			aria-hidden="true"
+		/>
+		<span class="group-data-[pull-armed]:hidden group-data-[refreshing]:hidden">
+			{i18n.common_pull_to_refresh()}
+		</span>
+		<span class="hidden group-data-[pull-armed]:inline">{i18n.common_release_to_refresh()}</span>
+		<span class="hidden group-data-[refreshing]:inline">{i18n.common_refreshing()}</span>
+	</div>
+
+	<header class="mb-1">
+		<p class="text-sm text-fg-muted">
+			{#if view === "events"}
+				{i18n.activity_events_subtitle()}
+			{:else}
+				{i18n.activity_queue_summary({ active: queueItems.length, history: historyTotal })}
+			{/if}
+		</p>
+	</header>
+
+	{#if showPending}
+		<section
+			class="mt-4 hidden shrink-0 rounded-xl border border-status-wanted/30 bg-status-wanted/[0.04] p-4 md:block"
+		>
+			<button
+				type="button"
+				onclick={() => (attnOpen = !attnOpen)}
+				aria-expanded={attnOpen}
+				class="touch-hit flex w-full items-center gap-2 text-left {attnOpen ? 'mb-3' : ''}"
+			>
+				<h2 class="text-sm font-semibold text-fg">{i18n.common_needs_attention()}</h2>
+				{#if pendingItems.length > 0}
+					<span
+						class="rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"
+					>
+						{pendingItems.length}
+					</span>
+				{/if}
+				<ChevronDown
+					size={16}
+					class="ml-auto shrink-0 text-fg-muted transition-transform {attnOpen
+						? 'rotate-180'
+						: ''}"
+					aria-hidden="true"
+				/>
+			</button>
+			{#if attnOpen}
+				<div transition:slide={{ duration: 180 }}>
+					{#if pendingQuery.isError}
+						<p class="text-sm text-status-failed">{i18n.torrent_proposals_failed()}</p>
+					{:else}
+						{#if unidentified.length > 1}
+							<div class="mb-2 flex justify-end">
+								<button
+									type="button"
+									onclick={forgetAllUnidentified}
+									disabled={forgettingAll}
+									class="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium text-fg-muted transition hover:bg-bg-elevated hover:text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
+								>
+									{i18n.imports_forget_all({ count: unidentified.length })}
+								</button>
+							</div>
+						{/if}
+						<div class="flex flex-col gap-2">
+							{#each pendingItems as item (item.id)}
+								<PendingRow
+									{item}
+									busy={pendingBusyId === item.id}
+									onImport={() => importPending.mutate(item.id)}
+									onReplace={(removeOld) =>
+										replacePending.mutate({ id: item.id, removeOld })}
+									onIgnore={(removeTorrent) =>
+										ignorePending.mutate({ id: item.id, removeTorrent })}
+									onForget={() => forgetPending.mutate(item.id)}
+								/>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{/if}
+		</section>
+	{/if}
+
+	<div class="hidden md:mt-3 md:block">
+		<LiveStrip items={queueItems} />
+	</div>
+
+	<TouchStatLine
+		stats={[
+			{ value: String(activeCount), label: i18n.common_active() },
+			...(heldCount > 0
+				? [
+						{
+							value: String(heldCount),
+							label: i18n.status_held(),
+							color: "var(--status-held)",
+						},
+					]
+				: []),
+			{
+				value: formatSpeed(aggregate) || "—",
+				label: i18n.torrent_aggregate_down(),
+				color: "var(--status-downloading)",
+			},
+			{ value: formatEta(minEta) || "—", label: i18n.activity_next_eta() },
+		]}
+	/>
+
+	{#if view === "events"}
+		<!-- The events feed is the dashboard panel's "View all" target: media
+		     events across the library, not download records, so it carries no
+		     status chips and shares only the view switch. -->
+		<div class="mt-2 flex items-center gap-2">
+			<ActivityViewSwitch
+				{view}
+				counts={{ queue: queueItems.length, history: historyTotal }}
+				onViewChange={switchView}
+			/>
+		</div>
+
+		<!-- min-h-0 with a floor rather than flex-1: the panel hugs a short feed,
+		     stops at the bottom edge once it would outgrow the column, and never
+		     shrinks below a few rows — under that it is a sliver of a row, and the
+		     column scrolls instead. The sentinel rides inside it, so the observer
+		     fires on the panel's scroll, not the page's. -->
+		<div
+			class="mt-3 overflow-hidden rounded-lg border border-border bg-bg-elevated md:min-h-[14rem] md:overflow-y-auto"
+		>
+			{#if events.isPending}
+				<SkeletonList variant="divided" count={5} />
+			{:else if events.isError}
+				<p class="px-5 py-10 text-center text-sm text-status-failed">
+					{errorText(events.error)}
+				</p>
+			{:else if eventItems.length === 0}
+				<p class="px-5 py-10 text-center text-sm text-fg-muted">
+					{i18n.activity_events_empty()}
+				</p>
+			{:else}
+				<EventList events={eventItems} />
+				{#if events.hasNextPage}
+					<div bind:this={eventSentinel} class="h-10">
+						{#if events.isFetchingNextPage}
+							<p class="py-3 text-center text-xs text-fg-subtle">
+								{i18n.common_loading()}
+							</p>
+						{/if}
+					</div>
+				{/if}
+			{/if}
+		</div>
+	{:else}
+	<!-- Below md an active selection takes over the top bar (SelectionTopBar
+	     draws nothing in place), so the toolbar and the list stay where they
+	     are as selecting begins. -->
+	{#if selecting}
+		<SelectionTopBar
+			count={selection.size}
+			total={rows.length}
+			noun={NOUN_DOWNLOAD}
+			onClear={() => selection.clear()}
+			onSelectAll={selectAllRows}
+		/>
+	{/if}
+	<ActivityToolbar
+		view={tableView}
+		{statusFilter}
+		{search}
+		{activeFilters}
+		{clearableCount}
+		onOpenFilters={() => (filtersOpen = true)}
+		onStatusFilterChange={(s) => (statusFilter = s)}
+		onSearchChange={(q) => (search = q)}
+		onClearCompleted={auth.isAdmin ? () => clearCompleted.mutate() : undefined}
+	>
+		{#snippet leading()}
+			<ActivityViewSwitch
+				{view}
+				counts={{ queue: queueItems.length, history: historyTotal }}
+				onViewChange={switchView}
+			/>
+		{/snippet}
+	</ActivityToolbar>
+
+	{#if showPending}
+		<!-- Below md the section is one line, and it sits under the toolbar rather than
+		     above the stats: up there it pushed the stat card down, so the same numbers
+		     landed in a different place on Queue than on Torrents. -->
+		<button
+			type="button"
+			onclick={() => (pendingOpen = true)}
+			class="mt-2 flex items-center gap-2.5 rounded-xl border border-status-wanted/30 bg-status-wanted/[0.06] px-3.5 py-2.5 text-left md:hidden"
+		>
+			<span
+				class="h-[7px] w-[7px] shrink-0 rounded-full bg-status-wanted"
+				aria-hidden="true"
+			></span>
+			<span class="min-w-0 flex-1 truncate text-[12.5px] font-medium text-fg">
+				{#if pendingQuery.isError}
+					{i18n.pending_load_failed()}
+				{:else}
+					{(pendingItems.length === 1
+						? i18n.pending_need_decision_one
+						: i18n.pending_need_decision_other)({ count: pendingItems.length })}
+				{/if}
+			</span>
+			<span class="shrink-0 text-[12.5px] font-semibold text-status-wanted">
+				{i18n.common_review()}
+			</span>
+			<ChevronRight size={14} class="shrink-0 text-status-wanted" aria-hidden="true" />
+		</button>
+	{/if}
+
+	<ActivityTable
+		view={tableView}
+		{rows}
+		{busyId}
+		loading={view === "queue" ? queue.isPending : history.isPending}
+		error={view === "queue" ? (queue.error ?? null) : (history.error ?? null)}
+		hasMore={view === "history" && (history.hasNextPage ?? false)}
+		loadingMore={history.isFetchingNextPage}
+		canControl={auth.isAdmin}
+		onLoadMore={() => history.fetchNextPage()}
+		onCancel={(id) => cancel.mutate(id)}
+		onPause={(id) => pause.mutate(id)}
+		onResume={(id) => resume.mutate(id)}
+		onRemove={(id) => removeHistory.mutate(id)}
+		onRetry={(id) => retryImport.mutate(id)}
+		onResolve={auth.isAdmin ? (item) => (resolveId = item.id) : undefined}
+		selected={auth.isAdmin ? selection.keys : undefined}
+		onToggle={(id, v) => selection.toggle(id, v)}
+		onToggleAll={(v) => (v ? selectAllRows() : selection.clear())}
+	/>
+
+	<ActivityTouchList
+		view={tableView}
+		{rows}
+		loading={view === "queue" ? queue.isPending : history.isPending}
+		error={view === "queue" ? (queue.error ?? null) : (history.error ?? null)}
+		hasMore={view === "history" && (history.hasNextPage ?? false)}
+		loadingMore={history.isFetchingNextPage}
+		onLoadMore={() => history.fetchNextPage()}
+		selected={auth.isAdmin ? selection.keys : undefined}
+		{selecting}
+		onToggle={(id) => selection.toggle(id)}
+		onBeginSelect={auth.isAdmin ? (id) => selection.begin(id) : undefined}
+		onOpen={(item) => (detailId = item.id)}
+		onResolve={auth.isAdmin ? (item) => (resolveId = item.id) : undefined}
+		onPause={auth.isAdmin ? (id) => pause.mutate(id) : undefined}
+		onResume={auth.isAdmin ? (id) => resume.mutate(id) : undefined}
+		onConfirm={auth.isAdmin
+			? (item, kind) => (swipeConfirm = { id: item.id, kind })
+			: undefined}
+	/>
+
+	{#if auth.isAdmin}
+		<DownloadBulkActions
+			view={tableView}
+			items={rows}
+			selected={selection.keys}
+			onSelectAll={selectAllRows}
+			onClear={() => selection.clear()}
+		/>
+	{/if}
+	{/if}
+</div>
+
+<ActivityFilterSheet
+	open={filtersOpen}
+	onClose={() => (filtersOpen = false)}
+	{search}
+	onSearchChange={(q) => (search = q)}
+	searchPlaceholder={i18n.activity_filter_title_or_movie()}
+	onReset={resetFilters}
+	activeCount={activeFilters}
+/>
+
+<PendingSheet
+	open={pendingOpen}
+	items={pendingItems}
+	busyId={pendingBusyId}
+	error={pendingQuery.isError}
+	onClose={() => (pendingOpen = false)}
+	onImport={(id) => importPending.mutate(id)}
+	onReplace={(id, removeOld) => replacePending.mutate({ id, removeOld })}
+	onIgnore={(id, removeTorrent) => ignorePending.mutate({ id, removeTorrent })}
+	onForget={(id) => forgetPending.mutate(id)}
+/>
+
+<ResolveDialog
+	item={heldItem}
+	pending={resolve.isPending}
+	onResolve={(action) =>
+		resolveId !== null && resolve.mutate({ id: resolveId, action })}
+	onClose={() => (resolveId = null)}
+/>
+
+<DownloadConfirmDialog
+	kind={swipeConfirm?.kind ?? null}
+	item={swipeItem}
+	onClose={() => (swipeConfirm = null)}
+	onConfirm={(kind, id) =>
+		kind === "cancel"
+			? cancel.mutate(id)
+			: kind === "retry"
+				? retryImport.mutate(id)
+				: removeHistory.mutate(id)}
+/>
+
+<ActivityDetailSheet
+	item={detailItem}
+	view={tableView}
+	busy={detailId !== null && busyId === detailId}
+	canControl={auth.isAdmin}
+	onClose={() => (detailId = null)}
+	onCancel={(id) => cancel.mutate(id)}
+	onPause={(id) => pause.mutate(id)}
+	onResume={(id) => resume.mutate(id)}
+	onRemove={(id) => removeHistory.mutate(id)}
+	onRetry={(id) => retryImport.mutate(id)}
+/>

@@ -1,0 +1,12 @@
+-- The aliases column added by 20260918183253_movie_aliases is provider-sourced
+-- and nothing backfills it: a row is only written on create and on metadata
+-- refresh, and the refresh skips anything last refreshed inside 24h. So every
+-- movie already in a library carries a stamp saying "already up to date" while
+-- holding no aliases — and aliases are what let a film held under its
+-- localized title match the releases named in another language. Without this,
+-- the library keeps filtering those releases out.
+--
+-- Same move as 20260906144051 and 20260902141241: a schema change is exactly
+-- what invalidates an "already recorded" marker. tv_shows is untouched, its
+-- aliases column having been populated since 20260910133742.
+UPDATE `movies` SET `last_refreshed_at` = NULL;

@@ -1,0 +1,1462 @@
+// Package db exposes the database surface as the Store interface. Callers
+// hold db.Store (or *DB directly) and invoke methods, rather than calling
+// top-level functions that take an *ent.Client.
+package db
+
+import (
+	"context"
+	"time"
+
+	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/ent/importscanbook"
+	"github.com/datahearth/streamline/ent/importscanfile"
+	"github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/request"
+	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/role"
+)
+
+// Tx is a transaction-bound Store. Caller invokes regular Store methods, then
+// Commit or Rollback. Either method is terminal — calling both, or calling
+// the same method twice, is a programmer error.
+type Tx interface {
+	Store
+	Commit() error
+	Rollback() error
+}
+
+// Store is the full database surface. Implementations: *DB (prod) and
+// generated mocks (tests).
+type Store interface {
+	// Tx starts a transaction and returns a Tx-bound Store. Caller owns
+	// Commit/Rollback.
+	Tx(ctx context.Context) (Tx, error)
+
+	// music
+	CreateArtist(ctx context.Context, p CreateArtistParams) (*ent.Artist, error)
+	// FindArtistByID eager-loads the members and the albums with their
+	// tracks (disc, position), the tracks' media files and every credit.
+	FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error)
+	// FindArtistRow returns the artist alone, with no edges loaded.
+	FindArtistRow(ctx context.Context, id uint32) (*ent.Artist, error)
+	// FindAlbumByID eager-loads the album's tracks (disc, then position) with
+	// their media files and credits, the album's credits, and its artist.
+	FindAlbumByID(ctx context.Context, id uint32) (*ent.Album, error)
+	// FindTrackByID eager-loads the track's files and its album with artist.
+	FindTrackByID(ctx context.Context, id uint32) (*ent.Track, error)
+	SetArtistQualityProfile(ctx context.Context, id uint32, profile string) error
+	// FindArtistByMBID returns nil, nil when no artist has the mbid.
+	FindArtistByMBID(ctx context.Context, mbid string) (*ent.Artist, error)
+	// ArtistIDsByMBID maps each mbid that is a library artist to its id.
+	ArtistIDsByMBID(ctx context.Context, mbids []string) (map[string]uint32, error)
+	// CountArtistsFiltered counts what ListArtists's filters match.
+	CountArtistsFiltered(ctx context.Context, p ListArtistsParams) (int, error)
+	// ListArtists returns one filtered, sorted page with each artist's albums
+	// loaded as tiles (no tracks).
+	ListArtists(ctx context.Context, p ListArtistsParams) ([]*ent.Artist, error)
+	// ArtistCounts is the faceted tally behind the artist list's toolbar.
+	ArtistCounts(ctx context.Context, p ListArtistsParams) (ArtistCounts, error)
+	// AlbumRollups tallies tracks, files, bytes and runtime per album for the
+	// given artists.
+	AlbumRollups(
+		ctx context.Context,
+		artistIDs []uint32,
+	) (map[uint32]AlbumRollup, error)
+	// HydratingArtists reports which of the artists still have an album being
+	// filled in.
+	HydratingArtists(
+		ctx context.Context,
+		artistIDs []uint32,
+		now time.Time,
+	) (map[uint32]bool, error)
+	// RefreshArtist reconciles the discography and returns the created albums.
+	RefreshArtist(
+		ctx context.Context,
+		id uint32,
+		p RefreshArtistParams,
+	) ([]uint32, error)
+	SetArtistDetails(
+		ctx context.Context,
+		id uint32,
+		p ArtistDetailsParams,
+		at time.Time,
+	) error
+	// SetArtistMonitor stores the policy and applies it to the existing
+	// albums, all and future only to the listed release types; it never
+	// touches album status. It returns how many albums it monitored and
+	// unmonitored.
+	SetArtistMonitor(
+		ctx context.Context,
+		id uint32,
+		monitor artist.Monitor,
+		types []string,
+		now time.Time,
+	) (int, int, error)
+	// ReapplyMonitorPolicies applies every all and future artist's policy to
+	// its albums again, returning how many it monitored and unmonitored.
+	ReapplyMonitorPolicies(
+		ctx context.Context,
+		types []string,
+		now time.Time,
+	) (int, int, error)
+	// SetAlbumMonitored sets the flag by hand, pinning it against
+	// ReapplyMonitorPolicies until the artist's policy is next changed.
+	SetAlbumMonitored(ctx context.Context, id uint32, monitored bool) error
+	SetAlbumStatus(
+		ctx context.Context,
+		id uint32,
+		from []album.Status,
+		to album.Status,
+	) (bool, error)
+	// SetAlbumHydration stores an album's release call: facts, tracks, credits.
+	SetAlbumHydration(
+		ctx context.Context,
+		albumID uint32,
+		p HydrationParams,
+		at time.Time,
+	) error
+	ListAlbumsAwaitingHydration(ctx context.Context, limit int) ([]*ent.Album, error)
+	ListAlbumsAwaitingCredits(ctx context.Context, limit int) ([]*ent.Album, error)
+	ListAlbumsAwaitingDetails(
+		ctx context.Context,
+		retryBefore time.Time,
+		limit int,
+	) ([]*ent.Album, error)
+	ListMediaFilesForTagSync(
+		ctx context.Context,
+		limit int,
+	) ([]*ent.MediaFile, error)
+	ListAlbumTagFiles(ctx context.Context, albumID uint32) ([]*ent.MediaFile, error)
+	SetMediaFileTagsWritten(ctx context.Context, id uint32, w TagWrite) error
+	SetMediaFileTagsDeferred(ctx context.Context, id uint32, at time.Time) error
+	RecordMediaFileTagFailure(
+		ctx context.Context,
+		id uint32,
+		msg string,
+		maxFailures uint8,
+	) error
+	MarkAlbumTags(ctx context.Context, albumIDs []uint32, mark TagMark) (int, error)
+	MarkAllMusicTags(ctx context.Context, mark TagMark) (int, error)
+	SetAlbumTagsManaged(ctx context.Context, id uint32, managed bool) error
+	QueueAlbumTags(ctx context.Context, albumID uint32, mark TagMark) (int, error)
+	ListMediaFilesForEditCheck(
+		ctx context.Context,
+		limit int,
+	) ([]*ent.MediaFile, error)
+	SetMediaFileTagsChecked(
+		ctx context.Context,
+		id uint32,
+		mtime, size int64,
+		at time.Time,
+	) error
+	SetMediaFileTagsEdited(ctx context.Context, id uint32, at time.Time) error
+	SetAlbumTagOverrides(
+		ctx context.Context,
+		id uint32,
+		overrides map[string][]string,
+	) error
+	SetTrackTagOverrides(
+		ctx context.Context,
+		id uint32,
+		overrides map[string][]string,
+	) (uint32, error)
+	SetAlbumArtSidecar(ctx context.Context, id uint32, hash string) error
+	SetArtistArtSidecar(ctx context.Context, id uint32, hash string) error
+	AlbumTorrentHashes(ctx context.Context, albumID uint32) ([]string, error)
+	ListAlbumsTrackless(
+		ctx context.Context,
+		staleBefore, releasedBefore time.Time,
+		limit int,
+	) ([]*ent.Album, error)
+	// ArtistMemberMBIDs returns the MusicBrainz ids of the artist's members.
+	ArtistMemberMBIDs(ctx context.Context, artistID uint32) ([]string, error)
+	// AlbumHasLiveRecord reports whether a download for the album, single or
+	// as part of a pack, is in flight.
+	AlbumHasLiveRecord(ctx context.Context, albumID uint32) (bool, error)
+	// ListArtistAlbumsForSearch returns the artist's monitored, released,
+	// hydrated, wanted albums.
+	ListArtistAlbumsForSearch(
+		ctx context.Context,
+		artistID uint32,
+	) ([]*ent.Album, error)
+	// ListPackAlbums returns the artist's monitored, released, hydrated albums
+	// that are wanted or paused: what a discography pack may cover.
+	ListPackAlbums(ctx context.Context, artistID uint32) ([]*ent.Album, error)
+	// ListWantedAlbums returns monitored, released, hydrated, wanted albums
+	// under the grab-failure cap with no live download record, artist loaded.
+	ListWantedAlbums(
+		ctx context.Context,
+		maxGrabFailures uint8,
+	) ([]*ent.Album, error)
+	DeleteArtist(ctx context.Context, id uint32) error
+	// ListEligibleAlbumsForSync returns wanted, monitored, released, hydrated
+	// albums under the failure cap and past cooldown with no in-flight record,
+	// least recently searched first. The artist is eager-loaded.
+	ListEligibleAlbumsForSync(
+		ctx context.Context,
+		maxGrabFailures uint8,
+		notSearchedSince time.Time,
+	) ([]*ent.Album, error)
+	SetAlbumLastSearchAt(ctx context.Context, id uint32, when time.Time) error
+	IncrementAlbumGrabFailures(ctx context.Context, id uint32) error
+	ResetAlbumGrabFailures(ctx context.Context, id uint32) error
+	// ListArtistsStaleSince returns at most limit artists never refreshed or
+	// refreshed before cutoff, oldest first.
+	ListArtistsStaleSince(
+		ctx context.Context,
+		cutoff time.Time,
+		limit int,
+	) ([]*ent.Artist, error)
+
+	// books
+	// CreateBook writes a standalone book with its editions, contributions and
+	// people in one transaction.
+	CreateBook(ctx context.Context, b BookSeed) (*ent.Book, error)
+	// FindBookByID eager-loads the book's files, editions, slot editions,
+	// series and contributors.
+	FindBookByID(ctx context.Context, id uint32) (*ent.Book, error)
+	// FindBookByHardcoverID returns nil, nil when no book has the id.
+	FindBookByHardcoverID(ctx context.Context, hardcoverID uint32) (*ent.Book, error)
+	FindBooksByHardcoverIDs(
+		ctx context.Context,
+		ids []uint32,
+	) (map[uint32]*ent.Book, error)
+	// ApplyBookMetadata writes provider data onto a book and re-derives its
+	// titles and any slot still without an edition; user state is untouched.
+	ApplyBookMetadata(ctx context.Context, id uint32, m BookMetadata) error
+	// SetBookSlotEdition points a slot at one of the book's editions of that
+	// format; 0 clears it.
+	SetBookSlotEdition(
+		ctx context.Context,
+		id uint32,
+		format string,
+		edition uint32,
+	) error
+	SetBookTitles(ctx context.Context, id uint32, title, original string) error
+	SetBookPreferredLanguage(ctx context.Context, id uint32, language string) error
+	SetBookQualityProfile(ctx context.Context, id uint32, profile string) error
+	SetBookKind(ctx context.Context, id uint32, kind string) error
+	// SetBookReplacing records the language of the edition a slot's file is
+	// being replaced from; empty clears it.
+	SetBookReplacing(ctx context.Context, id uint32, kind, language string) error
+	// SetBookSlot monitors or unmonitors one slot; kind is "ebook" or
+	// "audiobook". Monitoring moves skipped to wanted, unmonitoring moves
+	// wanted and paused to skipped, and a slot downloading or available keeps
+	// its status.
+	SetBookSlot(ctx context.Context, id uint32, kind string, monitored bool) error
+	// DeleteBook returns the ids of the people left with no contribution and
+	// deleted with it.
+	DeleteBook(ctx context.Context, id uint32) ([]uint32, error)
+	DeleteBooks(ctx context.Context, ids []uint32) error
+	// ListActiveBookRecords returns the in-flight download records of the
+	// given books.
+	ListActiveBookRecords(
+		ctx context.Context,
+		bookIDs []uint32,
+	) ([]BookRecordRef, error)
+	// MarkBookRefreshed stamps a book as read without changing its data.
+	MarkBookRefreshed(ctx context.Context, id uint32, at time.Time) error
+	ListShelf(ctx context.Context, p ShelfParams) ([]ShelfRow, uint32, error)
+	ShelfCountsFor(ctx context.Context, p ShelfParams) (ShelfCounts, error)
+	// ListHydrationStubs returns up to limit books never hydrated, oldest
+	// first.
+	ListHydrationStubs(ctx context.Context, limit int) ([]*ent.Book, error)
+	// ListPositionPeers returns the other books at the same series position as
+	// each given book, hydrated or not.
+	ListPositionPeers(ctx context.Context, books []*ent.Book) ([]*ent.Book, error)
+	ListStaleStandaloneBooks(
+		ctx context.Context,
+		cutoff time.Time,
+		limit int,
+	) ([]*ent.Book, error)
+	// series
+	CreateSeries(
+		ctx context.Context,
+		p CreateSeriesParams,
+	) (*ent.BookSeries, VolumeCounts, error)
+	AddSeriesVolumes(
+		ctx context.Context,
+		seriesID uint32,
+		profile string,
+		seeds []BookSeed,
+	) (VolumeCounts, error)
+	// FindSeriesByID eager-loads the volumes in ascending position with their
+	// files and editions, and the contributors.
+	FindSeriesByID(ctx context.Context, id uint32) (*ent.BookSeries, error)
+	// FindSeriesByHardcoverID returns nil, nil when no series has the id.
+	FindSeriesByHardcoverID(
+		ctx context.Context,
+		hardcoverID uint32,
+	) (*ent.BookSeries, error)
+	ListStaleSeries(
+		ctx context.Context,
+		cutoff time.Time,
+		limit int,
+	) ([]*ent.BookSeries, error)
+	// FindSeriesByHardcoverIDs returns the library series among the ids, keyed
+	// by Hardcover id, each with its first volume.
+	FindSeriesByHardcoverIDs(
+		ctx context.Context,
+		ids []uint32,
+	) (map[uint32]HeldSeries, error)
+	// FirstVolumeID is the lowest-position volume of a series, 0 when it has
+	// none.
+	FirstVolumeID(ctx context.Context, seriesID uint32) (uint32, error)
+	ApplySeriesMetadata(ctx context.Context, id uint32, m SeriesMetadata) error
+	MarkSeriesRefreshed(ctx context.Context, id uint32, at time.Time) error
+	// RefreshSeriesStats recomputes the stored since and rating from the
+	// volumes.
+	RefreshSeriesStats(ctx context.Context, id uint32) error
+	// SetSeriesQualityProfile writes the series and every one of its volumes.
+	SetSeriesQualityProfile(ctx context.Context, id uint32, profile string) error
+	// SetSeriesMonitor stores the policy and applies it to each volume's ebook
+	// slot; since is the instant "future" is measured against. It returns how
+	// many volumes' ebook flag it moved.
+	SetSeriesMonitor(
+		ctx context.Context,
+		id uint32,
+		monitor string,
+		since time.Time,
+	) (int, error)
+	// SetSeriesEdition stores the chosen (language, publisher) and re-picks
+	// the ebook slot of every volume without an ebook file.
+	SetSeriesEdition(
+		ctx context.Context,
+		id uint32,
+		language, publisher string,
+	) error
+	DeleteSeries(ctx context.Context, id uint32) ([]uint32, error)
+	// ListUpgradeCandidateAlbums returns the monitored albums that hold a file
+	// and have no live record, tracks and their files loaded.
+	ListUpgradeCandidateAlbums(ctx context.Context) ([]*ent.Album, error)
+	// SetLiveAlbumRecordReplaceMode flags the album's newest downloading record.
+	SetLiveAlbumRecordReplaceMode(
+		ctx context.Context,
+		albumID uint32,
+		mode downloadrecord.ReplaceMode,
+	) error
+	// SetLiveArtistRecordReplaceMode flags the artist's newest downloading
+	// discography record.
+	SetLiveArtistRecordReplaceMode(
+		ctx context.Context,
+		artistID uint32,
+		mode downloadrecord.ReplaceMode,
+	) error
+	// ListUpgradeCandidateBooks returns the books that hold a file of a slot no
+	// live record covers, files loaded.
+	ListUpgradeCandidateBooks(ctx context.Context) ([]*ent.Book, error)
+	// SetLiveBookRecordReplaceMode flags the newest downloading record of one
+	// book slot.
+	SetLiveBookRecordReplaceMode(
+		ctx context.Context,
+		bookID uint32,
+		kind downloadrecord.BookKind,
+		mode downloadrecord.ReplaceMode,
+	) error
+	// ListWantedBooks returns the searchable books with at least one
+	// monitored, wanted slot under the grab-failure cap and with no live
+	// download record, series, editions and makers loaded.
+	ListWantedBooks(ctx context.Context, maxGrabFailures uint8) ([]*ent.Book, error)
+	// SetBookSlotStatus moves one slot's status from `from` to `to` and
+	// writes nothing when the slot has already left `from`.
+	SetBookSlotStatus(
+		ctx context.Context,
+		id uint32,
+		kind string,
+		from, to string,
+	) error
+	// ListEligibleBookSlotsForSync returns the standalone books whose kind slot
+	// is wanted, monitored, under the failure cap and past cooldown with no
+	// in-flight record for that kind, least recently searched first. A series
+	// volume's ebook slot is the series' to search.
+	ListEligibleBookSlotsForSync(
+		ctx context.Context,
+		kind string,
+		maxGrabFailures uint8,
+		notSearchedSince time.Time,
+	) ([]*ent.Book, error)
+	// ListEligibleSeriesVolumes is the same for series volumes' ebook slots,
+	// series loaded.
+	ListEligibleSeriesVolumes(
+		ctx context.Context,
+		maxGrabFailures uint8,
+		notSearchedSince time.Time,
+	) ([]*ent.Book, error)
+	SetBookSlotLastSearchAt(
+		ctx context.Context,
+		id uint32,
+		kind string,
+		when time.Time,
+	) error
+	IncrementBookSlotGrabFailures(ctx context.Context, id uint32, kind string) error
+	ResetBookSlotGrabFailures(ctx context.Context, id uint32, kind string) error
+
+	// users
+	FindUserByEmail(ctx context.Context, email string) (*ent.User, error)
+	FindUserByID(ctx context.Context, id uint32) (*ent.User, error)
+	CountUsers(ctx context.Context) (int, error)
+	CreateUser(ctx context.Context, p CreateUserParams) (*ent.User, error)
+	UpdateUserPassword(ctx context.Context, id uint32, hash string) error
+	UpdateUser(
+		ctx context.Context,
+		id uint32,
+		p UpdateUserParams,
+	) (*ent.User, error)
+	UpdateUserRole(
+		ctx context.Context,
+		id uint32,
+		r role.Value,
+	) (*ent.User, error)
+	ListUsers(
+		ctx context.Context,
+		p ListUsersParams,
+	) ([]*ent.User, int, error)
+	UpdateUserUnlessLastAdmin(
+		ctx context.Context,
+		id uint32,
+		p UpdateUserParams,
+	) (*ent.User, error)
+	DeleteUser(ctx context.Context, id uint32) error
+	DeleteUserUnlessLastAdmin(ctx context.Context, id uint32) (int, error)
+
+	// sessions
+	CreateSession(ctx context.Context, p CreateSessionParams) (*ent.Session, error)
+	FindSessionByJTI(ctx context.Context, jti string) (*ent.Session, error)
+	TouchSession(ctx context.Context, jti string, when time.Time) error
+	RevokeSessionByJTI(ctx context.Context, jti string, when time.Time) error
+	RevokeUserSessionByID(
+		ctx context.Context,
+		userID, sessionID uint32,
+		when time.Time,
+	) (int, error)
+	UserSessionExists(ctx context.Context, userID, sessionID uint32) (bool, error)
+	RevokeAllUserSessions(ctx context.Context, userID uint32, when time.Time) error
+	RevokeOtherUserSessions(
+		ctx context.Context,
+		userID uint32,
+		keepJTI string,
+		when time.Time,
+	) error
+	ListUserSessions(ctx context.Context, userID uint32) ([]*ent.Session, error)
+	PurgeExpiredSessions(ctx context.Context, before time.Time) (int, error)
+	TruncateSessions(ctx context.Context) error
+
+	// api keys
+	CreateAPIKey(ctx context.Context, p CreateAPIKeyParams) (*ent.ApiKey, error)
+	CountAPIKeysByUser(ctx context.Context, userID uint32) (int, error)
+	FindAPIKeyByHash(ctx context.Context, hash string) (*ent.ApiKey, error)
+	TouchAPIKey(ctx context.Context, id uint32, at time.Time) error
+	ListAPIKeysByUser(ctx context.Context, userID uint32) ([]*ent.ApiKey, error)
+	DeleteAPIKeyByID(ctx context.Context, userID, keyID uint32) (int, error)
+	DeleteAPIKeysByUser(ctx context.Context, userID uint32) (int, error)
+
+	// torrent sessions (builtin BitTorrent engine persistence)
+	CreateTorrentSession(
+		ctx context.Context,
+		p CreateTorrentSessionParams,
+	) (*ent.TorrentSession, error)
+	ListTorrentSessions(ctx context.Context) ([]*ent.TorrentSession, error)
+	DeleteTorrentSessionByHash(ctx context.Context, infoHash string) error
+	SetTorrentSessionPaused(
+		ctx context.Context,
+		infoHash string,
+		paused bool,
+	) error
+	SetTorrentSessionName(ctx context.Context, infoHash, name string) error
+	SetTorrentSessionCompleted(
+		ctx context.Context,
+		infoHash string,
+		at time.Time,
+	) error
+	SetTorrentSessionSeedStopped(
+		ctx context.Context,
+		infoHash string,
+		stopped bool,
+	) error
+	SetTorrentSessionUploaded(
+		ctx context.Context,
+		infoHash string,
+		uploaded int64,
+	) error
+	CountTorrentSessions(ctx context.Context) (int, error)
+	// ListTorrentSessionsByPathPrefix returns sessions whose save_path sits
+	// under prefix. Used by the library path migration.
+	ListTorrentSessionsByPathPrefix(
+		ctx context.Context,
+		prefix string,
+	) ([]*ent.TorrentSession, error)
+	SetTorrentSessionSavePath(ctx context.Context, infoHash, path string) error
+	SetTorrentSessionSelection(
+		ctx context.Context,
+		hash, mode string,
+		wanted []int,
+	) error
+
+	// invites
+	CreateInvite(ctx context.Context, p CreateInviteParams) (*ent.Invite, error)
+	FindInviteByTokenHash(ctx context.Context, hash string) (*ent.Invite, error)
+	FindUnusedInviteForEmail(
+		ctx context.Context,
+		email string,
+		now time.Time,
+	) (*ent.Invite, error)
+	ListInvites(ctx context.Context) ([]*ent.Invite, error)
+	ConsumeInvite(
+		ctx context.Context,
+		id, userID uint32,
+		when time.Time,
+	) error
+	RevokeInvite(ctx context.Context, id uint32, now time.Time) error
+
+	// oidc identities
+	FindOIDCIdentity(
+		ctx context.Context,
+		provider, subject string,
+	) (*ent.OIDCIdentity, error)
+	CreateOIDCIdentity(
+		ctx context.Context,
+		p CreateOIDCIdentityParams,
+	) (*ent.OIDCIdentity, error)
+
+	// movies
+	CreateMovie(ctx context.Context, p CreateMovieParams) (*ent.Movie, error)
+	FindMovieByID(ctx context.Context, id uint32) (*ent.Movie, error)
+	FindMovieByTMDBID(ctx context.Context, tmdbID uint32) (*ent.Movie, error)
+	FindMoviesByTMDBIDs(ctx context.Context, tmdbIDs []uint32) ([]*ent.Movie, error)
+	CountMovies(ctx context.Context) (int, error)
+	CountMoviesByStatus(ctx context.Context, status movie.Status) (int, error)
+	// MovieFacetCounts tallies the status and monitoring facets of the movie
+	// list, each against the filter applied to the other.
+	MovieFacetCounts(
+		ctx context.Context,
+		p FilterMoviesParams,
+	) (MovieFacets, error)
+	MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error)
+	MovieFileSummaries(
+		ctx context.Context,
+		movieIDs []uint32,
+	) (map[uint32]MovieFileSummary, error)
+	MovieCreateTimesSince(ctx context.Context, since time.Time) ([]time.Time, error)
+	// TVShowFacetCounts tallies every facet of the series list — status, type
+	// and monitoring — each against the filters applied to the others.
+	TVShowFacetCounts(
+		ctx context.Context,
+		p FilterTVShowsParams,
+	) (TVShowFacets, error)
+	FilterMovies(
+		ctx context.Context,
+		p FilterMoviesParams,
+	) ([]*ent.Movie, int, error)
+	ListEligibleMoviesForSync(
+		ctx context.Context,
+		maxGrabFailures uint8,
+		notSearchedSince time.Time,
+	) ([]*ent.Movie, error)
+	ListWantedMovies(ctx context.Context) ([]*ent.Movie, error)
+	// ListUpgradeCandidateMovies returns monitored movies that already have a
+	// file, with the files loaded — the feed scanner scores them to decide an
+	// upgrade grab.
+	ListUpgradeCandidateMovies(ctx context.Context) ([]*ent.Movie, error)
+	ListMoviesStaleSince(
+		ctx context.Context,
+		cutoff time.Time,
+	) ([]*ent.Movie, error)
+	DeleteMovie(ctx context.Context, id uint32) error
+	UpdateMovie(
+		ctx context.Context,
+		id uint32,
+		p UpdateMovieParams,
+	) (*ent.Movie, error)
+	UpdateMovieMetadata(
+		ctx context.Context,
+		id uint32,
+		p UpdateMovieMetadataParams,
+	) error
+	UpdateMovieStatus(ctx context.Context, id uint32, status movie.Status) error
+	// SetMovieTMDBID repoints a row at a different TMDB title, leaving files
+	// and history in place. The caller refreshes metadata afterwards.
+	SetMovieTMDBID(ctx context.Context, id, tmdbID uint32) error
+	SetMovieLastSearchAt(ctx context.Context, id uint32, when time.Time) error
+	SetMovieDigitalReleaseDate(
+		ctx context.Context,
+		id uint32,
+		date *time.Time,
+	) error
+	IncrementMovieGrabFailures(ctx context.Context, id uint32) error
+	ResetMovieGrabFailures(ctx context.Context, id uint32) error
+
+	// RecentArrivals lists the newest limit imports across movies, series,
+	// albums and books, newest first.
+	RecentArrivals(ctx context.Context, limit int) ([]Arrival, error)
+
+	// movie events
+	RecentActivity(
+		ctx context.Context,
+		f ActivityFilter,
+	) (*ActivityResult, error)
+	UpcomingReleases(
+		ctx context.Context,
+		from, to time.Time,
+	) ([]*ent.Movie, error)
+	ListUpcomingEpisodes(
+		ctx context.Context,
+		from, to time.Time,
+	) ([]*ent.Episode, error)
+	ListUpcomingAlbums(
+		ctx context.Context,
+		from, to time.Time,
+	) ([]*ent.Album, error)
+	ListUpcomingBooks(
+		ctx context.Context,
+		from, to time.Time,
+	) ([]*ent.Book, error)
+
+	// download records — used by the download manager
+	CreateDownloadRecord(
+		ctx context.Context,
+		p CreateDownloadRecordParams,
+	) (*ent.DownloadRecord, error)
+	// ListMoviesForAdoption returns all movies as adoption-match candidates.
+	ListMoviesForAdoption(ctx context.Context) ([]*ent.Movie, error)
+	// ListTvShowsForAdoption returns all shows with seasons → episodes → media
+	// files eager-loaded, for episode adoption matching.
+	ListTvShowsForAdoption(ctx context.Context) ([]*ent.TVShow, error)
+	ListDownloadingRecordsWithMovie(
+		ctx context.Context,
+	) ([]*ent.DownloadRecord, error)
+	UpdateDownloadRecordStatus(
+		ctx context.Context,
+		id uint32,
+		status downloadrecord.Status,
+	) error
+	// IdentifyDownloadRecord attaches the media an operator named to a
+	// proposal that matched nothing, and rewrites its reason. Exactly one of
+	// movieID/episodeID is non-zero; episodeIDs replaces the episodes the
+	// record covers, and the anchor episodeID is always among them.
+	IdentifyDownloadRecord(
+		ctx context.Context,
+		id, movieID, episodeID uint32,
+		episodeIDs []uint32,
+		reason string,
+	) error
+	// IdentifyAlbumDownloadRecord files a proposal that matched nothing under
+	// an album, and rewrites its reason.
+	IdentifyAlbumDownloadRecord(
+		ctx context.Context,
+		id, albumID uint32,
+		reason string,
+	) error
+	// IdentifyBookDownloadRecord files a proposal that matched nothing under
+	// one slot of a book, and rewrites its reason.
+	IdentifyBookDownloadRecord(
+		ctx context.Context,
+		id, bookID uint32,
+		kind downloadrecord.BookKind,
+		reason string,
+	) error
+	// SetDownloadRecordReplaceMode sets how the importer treats episodes
+	// that already have a file for this record.
+	SetDownloadRecordReplaceMode(
+		ctx context.Context,
+		id uint32,
+		mode downloadrecord.ReplaceMode,
+	) error
+	// SetDownloadRecordSelection writes the resolution of a file selection:
+	// state, selected file indices, and their summed size.
+	SetDownloadRecordSelection(
+		ctx context.Context,
+		id uint32,
+		state downloadrecord.SelectionState,
+		files []int,
+		selectedBytes int64,
+	) error
+	// AddDownloadRecordEpisodes links more episodes to a record; ids
+	// already linked are left as they are.
+	AddDownloadRecordEpisodes(
+		ctx context.Context,
+		id uint32,
+		eps []uint32,
+	) error
+	// ListPendingSelectionRecords returns records awaiting file-selection
+	// resolution, with episode context eager-loaded.
+	ListPendingSelectionRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
+	// FailDownloadRecord finalizes a record whose torrent already exists in
+	// the client (unlike FailHeldDownloadRecord, no held-state precondition).
+	FailDownloadRecord(ctx context.Context, id uint32, reason string) error
+	ListImportingDownloadRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
+	FindImportingDownloadRecordByID(
+		ctx context.Context,
+		id uint32,
+	) (*ent.DownloadRecord, error)
+	FindDownloadRecordByID(
+		ctx context.Context,
+		id uint32,
+	) (*ent.DownloadRecord, error)
+	HoldDownloadRecord(
+		ctx context.Context,
+		id uint32,
+		reasons []schema.HoldReason,
+	) error
+	FindHeldDownloadRecordByID(
+		ctx context.Context,
+		id uint32,
+	) (*ent.DownloadRecord, error)
+	ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error
+	FailHeldDownloadRecord(
+		ctx context.Context,
+		id uint32,
+		reason string,
+		requeue bool,
+	) error
+	RecordImportSuccess(ctx context.Context, p RecordImportSuccessParams) error
+	RecordEpisodeImportSuccess(
+		ctx context.Context,
+		p RecordEpisodeImportSuccessParams,
+	) error
+	RecordBookImportSuccess(
+		ctx context.Context,
+		p RecordBookImportSuccessParams,
+	) error
+	RecordAlbumImportSuccess(
+		ctx context.Context,
+		p RecordAlbumImportSuccessParams,
+	) error
+	// CompletePackRecord completes a discography pack's record and returns
+	// the linked albums it did not fill to wanted.
+	CompletePackRecord(
+		ctx context.Context,
+		recordID uint32,
+		unmatchedAlbumIDs []uint32,
+	) error
+	RecordImportFailure(ctx context.Context, p RecordImportFailureParams) error
+	RetryFailedDownloadRecord(ctx context.Context, id uint32) error
+	SetDownloadRecordSavePath(ctx context.Context, id uint32, path string) error
+	CountLiveDownloadRecords(ctx context.Context) (int, error)
+	// ListDownloadRecordsByPathPrefix returns records whose save_path sits
+	// under prefix. Used by the library path migration.
+	ListDownloadRecordsByPathPrefix(
+		ctx context.Context,
+		prefix string,
+	) ([]*ent.DownloadRecord, error)
+	DeleteCompletedDownloadRecordsBefore(
+		ctx context.Context,
+		cutoff time.Time,
+		keepHashes []string,
+	) (int, error)
+	DeleteFailedDownloadRecordsBefore(
+		ctx context.Context,
+		cutoff time.Time,
+	) (int, error)
+	ListActiveDownloadRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
+	FindActiveDownloadRecordByID(
+		ctx context.Context,
+		id uint32,
+	) (*ent.DownloadRecord, error)
+	FindLiveDownloadRecordByHash(
+		ctx context.Context,
+		hash string,
+	) (*ent.DownloadRecord, error)
+	FindWidenableDownloadRecordByHash(
+		ctx context.Context,
+		hash string,
+	) (*ent.DownloadRecord, error)
+	FindImportedDownloadRecordByHash(
+		ctx context.Context,
+		hash string,
+	) (*ent.DownloadRecord, error)
+	// FindSeedingDownloadRecord returns the newest completed record that
+	// carried a file for the movie, or for the episode — any record whose
+	// episodes include it — and still names a torrent hash and a download
+	// client. Nil when there is none.
+	FindSeedingDownloadRecord(
+		ctx context.Context,
+		movieID, episodeID uint32,
+	) (*ent.DownloadRecord, error)
+	// ListReleaseGrabs returns the records grabbed for the movie, or for any
+	// episode of the show — set exactly one id — whose torrent hash is one of
+	// hashes or whose title equals one of titles ignoring case. Adoption
+	// proposals (pending, dismissed) were never grabbed and are left out.
+	// Only title, torrent_hash and create_time are loaded.
+	ListReleaseGrabs(
+		ctx context.Context,
+		movieID, showID uint32,
+		hashes, titles []string,
+	) ([]*ent.DownloadRecord, error)
+	ListDownloadHistory(
+		ctx context.Context,
+		limit int,
+		cursor string,
+	) (*DownloadHistoryResult, error)
+	DeleteDownloadRecord(ctx context.Context, id uint32) error
+	DeleteAllCompletedDownloadRecords(ctx context.Context) (int, error)
+	RevertMovieToWantedIfNoFile(ctx context.Context, movieID uint32) error
+	RevertOrphanedDownloadingEpisodes(ctx context.Context) (int, error)
+	RevertOrphanedDownloadingAlbumsAndBooks(ctx context.Context) (int, error)
+	SyncDownloadStateForRecord(
+		ctx context.Context,
+		recordID uint32,
+		paused bool,
+	) error
+	// AllDownloadRecordHashes returns the set of non-empty torrent hashes
+	// across every record. The adoption pass uses it to skip already-tracked
+	// torrents.
+	AllDownloadRecordHashes(ctx context.Context) (map[string]struct{}, error)
+	ListPendingDownloadRecords(
+		ctx context.Context,
+		limit, offset uint32,
+	) ([]*ent.DownloadRecord, uint32, error)
+	// DeleteStalePendingAdoptions prunes pending proposals for a client whose
+	// torrent_hash is absent from its current managed torrents (liveHashes).
+	DeleteStalePendingAdoptions(
+		ctx context.Context,
+		clientName string,
+		liveHashes []string,
+	) (int, error)
+	// DeleteOrphanedPendingAdoptions prunes pending proposals whose client is
+	// not among clientNames (the enabled download clients).
+	DeleteOrphanedPendingAdoptions(
+		ctx context.Context,
+		clientNames []string,
+	) (int, error)
+	FindPendingDownloadRecordByID(
+		ctx context.Context,
+		id uint32,
+	) (*ent.DownloadRecord, error)
+	// DeletePendingDownloadRecord drops one pending proposal, reporting whether
+	// a row matched. Deleting frees the torrent's hash for the adoption sweep;
+	// dismissing it does not.
+	DeletePendingDownloadRecord(ctx context.Context, id uint32) (bool, error)
+	// LatestImportedRecordForMovie returns the newest hash-carrying record for
+	// a movie (file-delete uses it to remove the source torrent). NotFound when
+	// none. LatestImportedRecordForEpisode is the episode twin, over every
+	// record covering the episode and completed imports only.
+	LatestImportedRecordForMovie(
+		ctx context.Context,
+		movieID uint32,
+	) (*ent.DownloadRecord, error)
+	LatestImportedRecordForEpisode(
+		ctx context.Context,
+		episodeID uint32,
+	) (*ent.DownloadRecord, error)
+
+	// media files — used by the library importer
+	CreateMediaFile(
+		ctx context.Context,
+		p CreateMediaFileParams,
+	) (*ent.MediaFile, error)
+	// FindMediaFileByID returns one MediaFile by ID, or ent NotFound.
+	FindMediaFileByID(ctx context.Context, id uint32) (*ent.MediaFile, error)
+	// FindMediaFileByEpisodeID returns the MediaFile owned by an episode (at
+	// most one), or ent NotFound when it has none.
+	FindMediaFileByEpisodeID(
+		ctx context.Context,
+		episodeID uint32,
+	) (*ent.MediaFile, error)
+	// MovieHasMediaFile reports whether the movie identified by tmdbID has at
+	// least one MediaFile row. Returns (false, nil) when the movie row itself
+	// is absent.
+	MovieHasMediaFile(ctx context.Context, tmdbID uint32) (bool, error)
+	// ListAllMediaFilesWithOwners returns every MediaFile row with its owning
+	// movie and episode eagerly loaded. Used by drift_check, which needs to
+	// tell movie-owned, episode-owned and orphaned rows apart.
+	ListAllMediaFilesWithOwners(ctx context.Context) ([]*ent.MediaFile, error)
+	// ListMediaFilesByMovieID returns every MediaFile attached to the given
+	// movie. Empty slice (no error) when the movie has no files.
+	ListMediaFilesByMovieID(
+		ctx context.Context,
+		movieID uint32,
+	) ([]*ent.MediaFile, error)
+	// ListMediaFilesByBook returns the MediaFiles filling one slot (ebook or
+	// audiobook) of a book. Empty slice (no error) when the slot has none.
+	ListMediaFilesByBook(
+		ctx context.Context,
+		bookID uint32,
+		kind mediafile.BookKind,
+	) ([]*ent.MediaFile, error)
+	// BumpMediaFilesLastSeen sets last_seen_at = now and clears any
+	// missing_since stamp for the given rows, in a bounded number of UPDATE
+	// statements rather than one per row.
+	BumpMediaFilesLastSeen(ctx context.Context, ids []uint32) error
+	// StartMediaFileGraceClock stamps last_seen_at for a row that never had
+	// one, without touching missing_since.
+	StartMediaFileGraceClock(ctx context.Context, id uint32) error
+	// MarkMediaFileMissing stamps missing_since, reporting true only when this
+	// call set it — the first drift tick that could not stat the file.
+	MarkMediaFileMissing(ctx context.Context, id uint32) (bool, error)
+	// CountMovieMediaFiles / CountEpisodeMediaFiles split the shared
+	// media_files table by owner, so the path migration can tell "this root
+	// holds nothing because the library is empty" apart from "…because the
+	// configured root no longer matches the stored paths".
+	CountMovieMediaFiles(ctx context.Context) (int, error)
+	CountEpisodeMediaFiles(ctx context.Context) (int, error)
+	// ListMediaFilesByPathPrefix returns every MediaFile whose path sits under
+	// prefix, ordered by path. Used by the library path migration.
+	ListMediaFilesByPathPrefix(
+		ctx context.Context,
+		prefix string,
+	) ([]*ent.MediaFile, error)
+	// ListUnprobedMediaFiles returns up to limit rows that have never been
+	// probed (probed_at IS NULL), oldest-first, for the media-probe backfill
+	// job to work through.
+	ListUnprobedMediaFiles(ctx context.Context, limit int) ([]*ent.MediaFile, error)
+	// StampMediaFileProbe records a probe attempt's result. A nil info
+	// (failed probe) still sets probed_at, so ListUnprobedMediaFiles never
+	// re-selects it.
+	StampMediaFileProbe(
+		ctx context.Context,
+		id uint32,
+		path string,
+		info *ffmpeg.Info,
+	) error
+	// UpdateMediaFilePath rewrites a MediaFile's path (used by rename).
+	UpdateMediaFilePath(ctx context.Context, id uint32, path string) error
+	// DeleteMediaFile removes a MediaFile row and leaves owners untouched.
+	DeleteMediaFile(ctx context.Context, id uint32) error
+	// DeleteMediaFileAndRevertMovie removes the MediaFile row and sets the
+	// owning movie's status back to "wanted" in a single transaction.
+	DeleteMediaFileAndRevertMovie(
+		ctx context.Context,
+		mediaFileID, movieID uint32,
+	) error
+	// DeleteMediaFileAndRevertEpisode is the episode twin of
+	// DeleteMediaFileAndRevertMovie.
+	DeleteMediaFileAndRevertEpisode(
+		ctx context.Context,
+		mediaFileID, episodeID uint32,
+	) error
+	// UpdateMediaFileAfterTranscode writes a transcode's outcome onto the file
+	// it replaced in place, restamping the probe columns from the encode's own
+	// probe so the row never scores off a release name it no longer describes.
+	UpdateMediaFileAfterTranscode(
+		ctx context.Context,
+		id uint32,
+		path string,
+		size, sizeBefore int64,
+		format string,
+		probe *ffmpeg.Info,
+	) error
+
+	// transcode jobs
+	// CreateTranscodeJob queues a transcode for mediaFileID, or returns the
+	// job already queued/running for that file instead of duplicating it.
+	CreateTranscodeJob(
+		ctx context.Context,
+		mediaFileID uint32,
+	) (*ent.TranscodeJob, error)
+	// ClaimNextTranscodeJob atomically moves the oldest queued job to
+	// running, bumping attempts and stamping started_at, with the media
+	// file's owner chain loaded. (nil, nil) when nothing is queued.
+	ClaimNextTranscodeJob(ctx context.Context) (*ent.TranscodeJob, error)
+	// CompleteTranscodeJob marks id succeeded with the before/after sizes,
+	// finished_at, and clears any error left from earlier attempts.
+	CompleteTranscodeJob(
+		ctx context.Context,
+		id uint32,
+		sizeBefore, sizeAfter int64,
+	) error
+	// FailTranscodeJob records a failed attempt: non-terminal returns the job
+	// to queued with the error recorded; terminal marks it failed with
+	// finished_at stamped.
+	FailTranscodeJob(
+		ctx context.Context,
+		id uint32,
+		reason string,
+		terminal bool,
+	) error
+	// DeferTranscodeJob returns id to the queue with a deadline before which
+	// no claim may take it, walking attempts back by one and clearing
+	// started_at — a deferral is not an attempt.
+	DeferTranscodeJob(ctx context.Context, id uint32, until time.Time) error
+	// RejectTranscodeJob parks id as rejected: the encode verified as worse
+	// than or broken relative to its source. Terminal like a failed job, but
+	// it also records both sizes.
+	RejectTranscodeJob(
+		ctx context.Context,
+		id uint32,
+		reason string,
+		sizeBefore, sizeAfter int64,
+	) error
+	// MarkTranscodeJobCanceled cancels a queued or running job, stamping
+	// finished_at. ErrTranscodeJobNotCancelable otherwise.
+	MarkTranscodeJobCanceled(ctx context.Context, id uint32) error
+	// RetryTranscodeJob resets a failed or rejected job back to queued with
+	// attempts, error and finished_at all cleared. ErrTranscodeJobNotRetryable
+	// otherwise.
+	RetryTranscodeJob(ctx context.Context, id uint32) error
+	// ResetRunningTranscodeJobs bulk-reverts every running job back to
+	// queued — restart-safety for a worker that died mid-transcode.
+	ResetRunningTranscodeJobs(ctx context.Context) (int, error)
+	// ListTranscodeJobs returns up to limit jobs newest-first with each
+	// job's media file and owner chain loaded.
+	ListTranscodeJobs(ctx context.Context, limit int) ([]*ent.TranscodeJob, error)
+	// ListMediaFilesWithTranscodeOwners returns every MediaFile with its
+	// owner chain loaded — the transcode scan's candidate set. A file
+	// holding a rejected job is excluded until it is retried.
+	ListMediaFilesWithTranscodeOwners(ctx context.Context) ([]*ent.MediaFile, error)
+
+	// bulk-import scans
+	CreateImportScan(
+		ctx context.Context,
+		p CreateImportScanParams,
+	) (*ent.ImportScan, error)
+	FindImportScan(ctx context.Context, id uint32) (*ent.ImportScan, error)
+	// FindOpenImportScanForSource returns the oldest awaiting_review scan for
+	// sourcePath, or ent NotFound.
+	FindOpenImportScanForSource(
+		ctx context.Context,
+		sourcePath string,
+	) (*ent.ImportScan, error)
+	ListImportScans(
+		ctx context.Context,
+		offset, limit uint32,
+	) ([]*ent.ImportScan, uint32, error)
+	UpdateImportScanStatus(
+		ctx context.Context,
+		id uint32,
+		status importscan.Status,
+		opts UpdateScanStatusOpts,
+	) error
+	IncrementImportScanProgress(
+		ctx context.Context,
+		id uint32,
+		processedDelta int,
+	) error
+	CountActiveImportScans(ctx context.Context) (uint32, error)
+	DeleteImportScan(ctx context.Context, id uint32) error
+	AbortInflightImportScans(ctx context.Context, reason string) (uint32, error)
+
+	// bulk-import scan files
+	BulkCreateImportScanFiles(
+		ctx context.Context,
+		scanID uint32,
+		files []CreateImportScanFileParams,
+	) error
+	FilterImportScanFiles(
+		ctx context.Context,
+		p FilterImportScanFilesParams,
+	) ([]*ent.ImportScanFile, uint32, error)
+	// FindImportScanFile returns the file with fileID scoped to scanID, or an
+	// ent NotFound error when no such row exists under that scan.
+	FindImportScanFile(
+		ctx context.Context,
+		scanID, fileID uint32,
+	) (*ent.ImportScanFile, error)
+	// UpdateImportScanFileDecision records a decision on the file with fileID
+	// under scanID, and reports ErrImportScanFileNotFound — without writing
+	// anything — when no such row exists under that scan.
+	UpdateImportScanFileDecision(
+		ctx context.Context,
+		scanID, fileID uint32,
+		decision importscanfile.Decision,
+		tmdbID *uint32,
+	) error
+	// BulkUpdateImportScanFileDecisions applies one decision across a scan,
+	// narrowed by classification and/or an explicit id list, returning the
+	// number of rows changed. An empty classification and no ids means every
+	// file in the scan.
+	BulkUpdateImportScanFileDecisions(
+		ctx context.Context,
+		scanID uint32,
+		decision importscanfile.Decision,
+		classification importscanfile.Classification,
+		ids []uint32,
+	) (int, error)
+	UpdateImportScanFileOutcome(
+		ctx context.Context,
+		id uint32,
+		outcome importscanfile.Outcome,
+		opts UpdateScanFileOutcomeOpts,
+	) error
+	ListImportScanFilesForCommit(
+		ctx context.Context,
+		scanID uint32,
+	) ([]*ent.ImportScanFile, error)
+	// ListPendingImportScanFilePaths returns the source_path of every
+	// ImportScanFile attached to a scan whose status is still
+	// "awaiting_review". Used by the orphan_scan dedup gate.
+	ListPendingImportScanFilePaths(ctx context.Context) ([]string, error)
+
+	// book import scans (import_scan_book children)
+	BulkCreateImportScanBooks(
+		ctx context.Context,
+		scanID uint32,
+		books []CreateImportScanBookParams,
+	) error
+	BookHardcoverIndex(ctx context.Context, kind string) (map[uint32]uint32, error)
+	ListImportScanBooksForCommit(
+		ctx context.Context,
+		scanID uint32,
+	) ([]*ent.ImportScanBook, error)
+	BulkUpdateImportScanBookDecisions(
+		ctx context.Context,
+		scanID uint32,
+		decision importscanbook.Decision,
+		classification importscanbook.Classification,
+		ids []uint32,
+	) (int, error)
+	ListImportScanBooks(
+		ctx context.Context,
+		p ListImportScanBooksParams,
+	) ([]*ent.ImportScanBook, uint32, error)
+	FindImportScanBook(
+		ctx context.Context,
+		scanID, bookID uint32,
+	) (*ent.ImportScanBook, error)
+	// UpdateImportScanBookDecision reports ErrImportScanBookNotFound when
+	// bookID is unknown or belongs to another scan.
+	UpdateImportScanBookDecision(
+		ctx context.Context,
+		scanID, bookID uint32,
+		decision importscanbook.Decision,
+		hardcoverID *uint32,
+	) error
+	UpdateImportScanBookOutcome(
+		ctx context.Context,
+		id uint32,
+		outcome importscanbook.Outcome,
+		opts UpdateScanBookOutcomeOpts,
+	) error
+	// MarkBookSlotAvailable monitors the slot and marks it available; kind is
+	// "ebook" or "audiobook".
+	MarkBookSlotAvailable(ctx context.Context, bookID uint32, kind string) error
+
+	// series import scans (import_scan_show children)
+	ListPendingImportScanShowFolders(ctx context.Context) ([]string, error)
+	BulkCreateImportScanShows(
+		ctx context.Context,
+		scanID uint32,
+		shows []CreateImportScanShowParams,
+	) error
+	ListImportScanShows(
+		ctx context.Context,
+		p ListImportScanShowsParams,
+	) ([]*ent.ImportScanShow, uint32, error)
+	FindImportScanShow(
+		ctx context.Context,
+		scanID, showID uint32,
+	) (*ent.ImportScanShow, error)
+	// UpdateImportScanShowDecision records a decision on the show with showID
+	// under scanID, and reports ErrImportScanShowNotFound — without writing
+	// anything — when no such row exists under that scan.
+	UpdateImportScanShowDecision(
+		ctx context.Context,
+		scanID, showID uint32,
+		decision importscanshow.Decision,
+		tvdbID *uint32,
+	) error
+	// BulkUpdateImportScanShowDecisions is the per-show counterpart of
+	// BulkUpdateImportScanFileDecisions.
+	BulkUpdateImportScanShowDecisions(
+		ctx context.Context,
+		scanID uint32,
+		decision importscanshow.Decision,
+		classification importscanshow.Classification,
+		ids []uint32,
+	) (int, error)
+	ListImportScanShowsForCommit(
+		ctx context.Context,
+		scanID uint32,
+	) ([]*ent.ImportScanShow, error)
+	UpdateImportScanShowOutcome(
+		ctx context.Context,
+		id uint32,
+		outcome importscanshow.Outcome,
+		opts UpdateScanShowOutcomeOpts,
+	) error
+	ListAllEpisodeMediaFilePaths(ctx context.Context) ([]string, error)
+
+	// music import scans (import_scan_album children)
+	ListPendingImportScanAlbumFolders(ctx context.Context) ([]string, error)
+	BulkCreateImportScanAlbums(
+		ctx context.Context,
+		scanID uint32,
+		albums []CreateImportScanAlbumParams,
+	) error
+	ListImportScanAlbumsForCommit(
+		ctx context.Context,
+		scanID uint32,
+	) ([]*ent.ImportScanAlbum, error)
+	ListImportScanAlbums(
+		ctx context.Context,
+		p ListImportScanAlbumsParams,
+	) ([]*ent.ImportScanAlbum, uint32, error)
+	FindImportScanAlbum(
+		ctx context.Context,
+		scanID, albumID uint32,
+	) (*ent.ImportScanAlbum, error)
+	// UpdateImportScanAlbumDecision reports ErrImportScanAlbumNotFound when
+	// albumID is unknown or belongs to another scan.
+	UpdateImportScanAlbumDecision(
+		ctx context.Context,
+		scanID, albumID uint32,
+		decision importscanalbum.Decision,
+		releaseGroupMBID *string,
+	) error
+	UpdateImportScanAlbumOutcome(
+		ctx context.Context,
+		id uint32,
+		outcome importscanalbum.Outcome,
+		opts UpdateScanAlbumOutcomeOpts,
+	) error
+	BulkUpdateImportScanAlbumDecisions(
+		ctx context.Context,
+		scanID uint32,
+		decision importscanalbum.Decision,
+		classification importscanalbum.Classification,
+		ids []uint32,
+	) (int, error)
+	// AlbumMBIDIndex maps release-group mbid to album id.
+	AlbumMBIDIndex(ctx context.Context) (map[string]uint32, error)
+	// AlbumIDsByMBID maps each release-group mbid that is a library album to its id.
+	AlbumIDsByMBID(ctx context.Context, mbids []string) (map[string]uint32, error)
+	// IsAlbumMonitoredByMBID reports whether a library album with this
+	// release-group mbid exists and is monitored.
+	IsAlbumMonitoredByMBID(ctx context.Context, mbid string) (bool, error)
+	// FindAlbumByMBID returns nil, nil on a miss; tracks are eager-loaded
+	// (disc, then position) with their media files.
+	FindAlbumByMBID(ctx context.Context, mbid string) (*ent.Album, error)
+	// AdoptAlbumFiles attaches existing files to the album's tracks in one
+	// transaction and marks the album available only when every track is
+	// covered.
+	AdoptAlbumFiles(
+		ctx context.Context,
+		albumID uint32,
+		files []AdoptAlbumFile,
+	) error
+
+	// tv shows / seasons / episodes
+	CreateTVShow(ctx context.Context, p CreateTVShowParams) (*ent.TVShow, error)
+	FindTVShowByID(ctx context.Context, id uint32) (*ent.TVShow, error)
+	FindTVShowByTVDBID(ctx context.Context, tvdbID uint32) (*ent.TVShow, error)
+	// TVShowForEpisode returns the show owning episodeID, with every season
+	// and its episodes eager-loaded — the tree a selective-download keep-set
+	// resolution matches a torrent's file names back to episode rows against.
+	TVShowForEpisode(ctx context.Context, episodeID uint32) (*ent.TVShow, error)
+	ListTVShows(ctx context.Context, offset, limit uint32) ([]*ent.TVShow, error)
+	ListTVShowsStaleSince(
+		ctx context.Context,
+		cutoff time.Time,
+	) ([]*ent.TVShow, error)
+	CountTVShows(ctx context.Context) (int, error)
+	CountTVShowsByStatus(
+		ctx context.Context,
+		status tvshow.SeriesStatus,
+	) (int, error)
+	UpdateTVShow(
+		ctx context.Context,
+		id uint32,
+		p UpdateTVShowParams,
+	) (*ent.TVShow, error)
+	UpdateTVShowMetadata(
+		ctx context.Context,
+		id uint32,
+		p UpdateTVShowMetadataParams,
+	) error
+	SetTVShowRefreshedAt(ctx context.Context, id uint32, when time.Time) error
+	// FilterTVShows applies filter, sort and page in SQL and returns the page's
+	// shows without their season/episode tree, plus the per-show episode
+	// rollup the list view renders in its place.
+	FilterTVShows(
+		ctx context.Context,
+		p FilterTVShowsParams,
+	) ([]*ent.TVShow, map[uint32]EpisodeCounts, uint32, error)
+	// SetTVShowTVDBID repoints a row at a different TVDB show. The episode tree
+	// still describes the old show until the caller reconciles it.
+	SetTVShowTVDBID(ctx context.Context, id, tvdbID uint32) error
+	// DetachEpisodeMediaFiles clears the episode edge on every media file under
+	// the show and returns the detached rows, each carrying its former episode
+	// and season so the caller can re-match by number.
+	DetachEpisodeMediaFiles(
+		ctx context.Context,
+		showID uint32,
+	) ([]*ent.MediaFile, error)
+	AttachMediaFileToEpisode(
+		ctx context.Context,
+		mediaFileID, episodeID uint32,
+	) error
+	ReconcileEpisodes(
+		ctx context.Context,
+		showID uint32,
+		seasons []SeasonSeed,
+	) ([]string, error)
+	DeleteTVShow(ctx context.Context, id uint32) error
+	SetSeasonMonitored(ctx context.Context, id uint32, monitored bool) error
+	TVShowTVDBIndex(ctx context.Context) (map[uint32]uint32, error)
+	ListMediaFilesForDrift(
+		ctx context.Context,
+		afterID uint32,
+		limit int,
+	) ([]DriftRow, error)
+	FindMediaFileWithOwners(ctx context.Context, id uint32) (*ent.MediaFile, error)
+	SetEpisodesMonitored(ctx context.Context, ids []uint32, monitored bool) error
+	SetSeasonsMonitored(ctx context.Context, ids []uint32, monitored bool) error
+	// SetEpisodeMonitored sets the flag by hand, pinning it against
+	// CascadeSpecialsMonitored until a show toggle or preset clears it.
+	SetEpisodeMonitored(ctx context.Context, id uint32, monitored bool) error
+	CascadeShowMonitored(
+		ctx context.Context,
+		showID uint32,
+		monitored bool,
+	) (int, error)
+	CascadeSeasonMonitored(
+		ctx context.Context,
+		seasonID uint32,
+		monitored bool,
+	) (SeasonCascade, error)
+	CascadeSpecialsMonitored(ctx context.Context, monitored bool) (int, error)
+	SetEpisodeStatus(ctx context.Context, id uint32, status episode.Status) error
+	MarkEpisodeDownloading(ctx context.Context, id uint32) (bool, error)
+	MarkRecordEpisodesImporting(ctx context.Context, recordID uint32) error
+	MarkWantedRecordEpisodesImporting(ctx context.Context, recordID uint32) error
+	SetEpisodeLastSearchAt(ctx context.Context, id uint32, when time.Time) error
+	IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error
+	ResetEpisodeGrabFailures(ctx context.Context, id uint32) error
+	// CountWantedEpisodes counts monitored, wanted episodes library-wide.
+	CountWantedEpisodes(ctx context.Context) (int, error)
+	// CountDownloadingEpisodes counts episodes with a grab in flight
+	// library-wide.
+	CountDownloadingEpisodes(ctx context.Context) (int, error)
+	ListEligibleEpisodesForSync(
+		ctx context.Context,
+		maxGrabFailures uint8,
+		notSearchedSince time.Time,
+		airedBefore time.Time,
+	) ([]*ent.TVShow, error)
+	// ListUpgradeCandidateShows returns shows whose episode edges hold the
+	// rows already on disk that an upgrade may replace, files loaded.
+	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)
+	// UpgradeCandidateShow is ListUpgradeCandidateShows for one show, for a
+	// missing-search pass immediately before a pack grab.
+	UpgradeCandidateShow(ctx context.Context, showID uint32) (*ent.TVShow, error)
+	// SeasonEpisodeCounts totals every season's episodes for the given shows,
+	// unfiltered — the denominator a pack's size bounds are measured in.
+	SeasonEpisodeCounts(
+		ctx context.Context,
+		showIDs []uint32,
+	) (map[uint32]map[uint16]int, error)
+
+	// people (cast)
+	// ListPeople pages the cast members credited anywhere in the library,
+	// most-credited first, with the credit count rolled up in SQL.
+	ListPeople(ctx context.Context, p ListPeopleParams) ([]Person, uint32, error)
+	// PersonCredits returns every movie and series crediting the person, each
+	// with the character they play there. ErrPersonNotFound when no such
+	// persons row exists.
+	PersonCredits(ctx context.Context, id uint32) (*PersonCredits, error)
+	// ReplaceCast persists a title's cast into persons/credits, replacing that
+	// owner's credits wholesale. An empty list leaves the stored credits
+	// alone — a provider that returned no cast is not a title with no cast.
+	ReplaceCast(
+		ctx context.Context,
+		owner CastOwner,
+		ownerID uint32,
+		cast []metadata.CastMember,
+	) error
+	// TitleCast returns a title's cast in billing order, each entry carrying
+	// the persons row id the API links by.
+	TitleCast(
+		ctx context.Context,
+		owner CastOwner,
+		ownerID uint32,
+	) ([]CastEntry, error)
+	// PeopleNeedingDetails returns the people credited on a title whose
+	// biographical record has never been fetched — the work list for the
+	// post-commit enrichment pass. Credits is not populated.
+	PeopleNeedingDetails(
+		ctx context.Context,
+		owner CastOwner,
+		ownerID uint32,
+	) ([]Person, error)
+	// SavePersonDetails writes one person's biographical record and stamps
+	// details_fetched_at, which is what keeps them out of every later
+	// PeopleNeedingDetails result.
+	SavePersonDetails(
+		ctx context.Context,
+		id uint32,
+		d metadata.PersonDetails,
+	) error
+
+	// requests
+	CreateRequest(ctx context.Context, p CreateRequestParams) (*ent.Request, error)
+	FindActiveRequest(
+		ctx context.Context,
+		mediaType string,
+		mediaID uint32,
+	) (*ent.Request, error)
+	FindActiveRequestByMBID(
+		ctx context.Context,
+		mediaType, mbid string,
+	) (*ent.Request, error)
+	MarkRequestAvailable(ctx context.Context, id uint32) error
+	ListRequests(
+		ctx context.Context,
+		p ListRequestsParams,
+	) ([]*ent.Request, int, error)
+	GetRequest(ctx context.Context, id uint32) (*ent.Request, error)
+	ApproveRequest(ctx context.Context, id, adminID uint32) error
+	ApproveAlbumRequest(
+		ctx context.Context,
+		id, adminID uint32,
+		artistMBID, artistName string,
+	) error
+	DenyRequest(ctx context.Context, id, adminID uint32, reason string) error
+	ReopenRequest(ctx context.Context, id uint32) error
+	MarkRequestsAvailableByMBID(
+		ctx context.Context,
+		mediaType, mbid string,
+	) error
+	MarkRequestsAvailable(
+		ctx context.Context,
+		mediaType string,
+		mediaID uint32,
+	) error
+	// CountRequestsByStatus counts every requester's rows when requesterID is 0.
+	CountRequestsByStatus(
+		ctx context.Context,
+		status request.Status,
+		requesterID uint32,
+	) (int, error)
+}
+
+// DB is the ent-backed implementation of Store.
+type DB struct {
+	client *ent.Client
+}
+
+// New constructs a *DB from an open ent client.
+func New(c *ent.Client) *DB { return &DB{client: c} }
+
+// Tx starts a transaction and returns a Tx-bound Store. Caller owns
+// Commit/Rollback.
+func (db *DB) Tx(ctx context.Context) (Tx, error) {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &dbTx{DB: &DB{client: tx.Client()}, ent: tx}, nil
+}
+
+// dbTx is the transactional implementation of the Tx interface.
+type dbTx struct {
+	*DB
+	ent *ent.Tx
+}
+
+func (t *dbTx) Commit() error   { return t.ent.Commit() }
+func (t *dbTx) Rollback() error { return t.ent.Rollback() }
+
+var (
+	_ Store = (*DB)(nil)
+	_ Tx    = (*dbTx)(nil)
+)

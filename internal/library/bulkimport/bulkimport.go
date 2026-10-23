@@ -1,0 +1,354 @@
+package bulkimport
+
+import (
+	"context"
+	"errors"
+
+	"github.com/datahearth/streamline/ent"
+	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
+	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
+	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
+	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/media/movie"
+	"github.com/datahearth/streamline/internal/media/music"
+	"github.com/datahearth/streamline/internal/mediaserver"
+	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/otelx"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+)
+
+// Manager is the consumer-facing interface for the bulk-import service.
+type Manager interface {
+	StartScan(ctx context.Context, p StartScanParams) (*ent.ImportScan, error)
+	Get(ctx context.Context, id uint32) (*ent.ImportScan, error)
+	List(ctx context.Context, page, limit uint16) ([]*ent.ImportScan, uint32, error)
+	Files(ctx context.Context, p FilesParams) ([]*ent.ImportScanFile, uint32, error)
+	GetFile(ctx context.Context, scanID, fileID uint32) (*ent.ImportScanFile, error)
+	UpdateFileDecision(
+		ctx context.Context,
+		scanID, fileID uint32,
+		decision entimportscanfile.Decision,
+		tmdbID *uint32,
+	) (*ent.ImportScanFile, error)
+	Cancel(ctx context.Context, id uint32) error
+	Commit(ctx context.Context, id uint32) error
+	CommitWith(ctx context.Context, id uint32, opts CommitOptions) error
+	Delete(ctx context.Context, id uint32) error
+	BulkDecide(ctx context.Context, p BulkDecisionParams) (int, error)
+	AbortInflight(ctx context.Context) (uint32, error)
+}
+
+// CommitOptions are the import review's choices for a commit. WriteTags, on
+// a music scan, queues the adopted files for the music tag writer and marks
+// the albums the commit creates as managed; nil means off. Other kinds
+// ignore it.
+type CommitOptions struct {
+	WriteTags *bool
+}
+
+// writeTags resolves WriteTags. Adoption takes files already in someone's
+// collection, which it never wrote before tagging existed: a commit that does
+// not ask for tags (an API client or a script sending no body) leaves them
+// byte for byte as they are, comments and all.
+func (o CommitOptions) writeTags() bool {
+	return o.WriteTags != nil && *o.WriteTags
+}
+
+// FilesParams is the input for Manager.Files.
+type FilesParams struct {
+	ScanID         uint32
+	Classification entimportscanfile.Classification // empty = all
+	Query          string
+	Page           uint16
+	Limit          uint16
+}
+
+// SeriesAdder creates a TV show (with its seasons and episodes) from a TVDB id.
+// Satisfied by *tvshow.Service; used to adopt shows on series-scan commit.
+type SeriesAdder interface {
+	Add(
+		ctx context.Context,
+		tvdbID uint32,
+		qualityProfile string,
+	) (*ent.TVShow, error)
+}
+
+// MusicAdder creates an artist with its discography from a MusicBrainz id and
+// resolves the cover of an adopted album. Satisfied by *music.Service; used on
+// music-scan commit.
+type MusicAdder interface {
+	Add(ctx context.Context, p music.AddParams) (*ent.Artist, error)
+	music.CoverResolver
+	music.AlbumHydrator
+	music.AlbumTagger
+}
+
+// BookAdder adds a book from a Hardcover id. Satisfied by *book.Service; used
+// to adopt books on book-scan commit.
+type BookAdder interface {
+	AddBook(ctx context.Context, p book.AddBookParams) (*ent.Book, error)
+}
+
+// Service implements Manager.
+type Service struct {
+	store       db.Store
+	metadata    metadata.Provider
+	tvmeta      metadata.TVProvider
+	bookmeta    metadata.BookProvider
+	bookAdder   BookAdder
+	importSvc   *library.ImportService
+	movieSvc    *movie.Service
+	seriesAdder SeriesAdder
+	ms          mediaserver.Refresher
+	moviePath   string
+	seriesPath  string
+	musicmeta   metadata.MusicProvider
+	musicAdder  MusicAdder
+	prober      ffmpeg.Prober
+}
+
+// Option tunes optional collaborators of the bulk-import service.
+type Option func(*Service)
+
+// WithProber lets adoption measure audio files, so an adopted album track gets
+// its real tier and an adopted audiobook its real bit rate. Without it, or with
+// ffmpeg disabled, adoption falls back to what the extension says.
+func WithProber(p ffmpeg.Prober) Option {
+	return func(s *Service) { s.prober = p }
+}
+
+// NewService constructs the bulk-import service.
+func NewService(
+	store db.Store,
+	meta metadata.Provider,
+	tvmeta metadata.TVProvider,
+	importSvc *library.ImportService,
+	movieSvc *movie.Service,
+	seriesAdder SeriesAdder,
+	ms mediaserver.Refresher,
+	moviePath string,
+	seriesPath string,
+	musicmeta metadata.MusicProvider,
+	musicAdder MusicAdder,
+	bookmeta metadata.BookProvider,
+	bookAdder BookAdder,
+	opts ...Option,
+) *Service {
+	s := &Service{
+		store:       store,
+		metadata:    meta,
+		tvmeta:      tvmeta,
+		importSvc:   importSvc,
+		movieSvc:    movieSvc,
+		seriesAdder: seriesAdder,
+		ms:          ms,
+		moviePath:   moviePath,
+		seriesPath:  seriesPath,
+		musicmeta:   musicmeta,
+		musicAdder:  musicAdder,
+		bookmeta:    bookmeta,
+		bookAdder:   bookAdder,
+	}
+	for _, o := range opts {
+		o(s)
+	}
+	return s
+}
+
+// AbortInflight is the boot-time helper. Called from wire.go before the HTTP server starts.
+func (s *Service) AbortInflight(ctx context.Context) (uint32, error) {
+	return s.store.AbortInflightImportScans(ctx, failureMessageOnRestart)
+}
+
+func (s *Service) Get(ctx context.Context, id uint32) (*ent.ImportScan, error) {
+	return s.store.FindImportScan(ctx, id)
+}
+
+func (s *Service) List(
+	ctx context.Context,
+	page, limit uint16,
+) ([]*ent.ImportScan, uint32, error) {
+	if page == 0 {
+		page = 1
+	}
+	if limit == 0 {
+		limit = historyPageSize
+	}
+	return s.store.ListImportScans(ctx, uint32(page-1)*uint32(limit), uint32(limit))
+}
+
+func (s *Service) Files(
+	ctx context.Context,
+	p FilesParams,
+) ([]*ent.ImportScanFile, uint32, error) {
+	if _, err := s.store.FindImportScan(ctx, p.ScanID); err != nil {
+		if ent.IsNotFound(err) {
+			return nil, 0, ErrScanNotFound
+		}
+		return nil, 0, err
+	}
+	page := p.Page
+	if page == 0 {
+		page = 1
+	}
+	limit := p.Limit
+	if limit == 0 {
+		limit = reviewPageSize
+	}
+	return s.store.FilterImportScanFiles(ctx, db.FilterImportScanFilesParams{
+		ScanID:         p.ScanID,
+		Classification: p.Classification,
+		Query:          p.Query,
+		Offset:         uint32(page-1) * uint32(limit),
+		Limit:          uint32(limit),
+	})
+}
+
+func (s *Service) GetFile(
+	ctx context.Context,
+	scanID, fileID uint32,
+) (*ent.ImportScanFile, error) {
+	row, err := s.store.FindImportScanFile(ctx, scanID, fileID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, ErrScanFileNotFound
+		}
+		return nil, err
+	}
+	return row, nil
+}
+
+func (s *Service) UpdateFileDecision(
+	ctx context.Context,
+	scanID, fileID uint32,
+	decision entimportscanfile.Decision,
+	tmdbID *uint32,
+) (*ent.ImportScanFile, error) {
+	if err := s.store.UpdateImportScanFileDecision(
+		ctx,
+		scanID,
+		fileID,
+		decision,
+		tmdbID,
+	); err != nil {
+		if errors.Is(err, db.ErrImportScanFileNotFound) {
+			return nil, ErrScanFileNotFound
+		}
+		return nil, err
+	}
+	return s.GetFile(ctx, scanID, fileID)
+}
+
+func (s *Service) Cancel(ctx context.Context, id uint32) error {
+	scan, err := s.store.FindImportScan(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return ErrScanNotFound
+		}
+		return err
+	}
+	if scan.Status != entimportscan.StatusRunning &&
+		scan.Status != entimportscan.StatusCommitting {
+		return ErrScanNotCancellable
+	}
+	return s.store.UpdateImportScanStatus(
+		ctx,
+		id,
+		entimportscan.StatusCancelled,
+		db.UpdateScanStatusOpts{},
+	)
+}
+
+func (s *Service) Delete(ctx context.Context, id uint32) error {
+	scan, err := s.store.FindImportScan(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return ErrScanNotFound
+		}
+		return err
+	}
+	if scan.Status == entimportscan.StatusRunning ||
+		scan.Status == entimportscan.StatusCommitting {
+		return ErrScanNotDeletable
+	}
+	return s.store.DeleteImportScan(ctx, id)
+}
+
+// BulkDecisionParams narrows a bulk decision. An empty Classification and no
+// IDs means every row in the scan.
+type BulkDecisionParams struct {
+	ScanID         uint32
+	Decision       string
+	Classification string
+	IDs            []uint32
+}
+
+// BulkDecide applies one decision across a scan's rows and returns how many
+// changed. It dispatches on the scan's kind, so one call serves movie
+// files, series shows, albums and books — reviewing a 465-file scan through the per-row
+// endpoint took 465 requests.
+func (s *Service) BulkDecide(
+	ctx context.Context,
+	p BulkDecisionParams,
+) (int, error) {
+	ctx, span := tracer.Start(ctx, "bulkimport.bulk_decide",
+		trace.WithAttributes(
+			attribute.Int64("scan.id", int64(p.ScanID)),
+			attribute.String("decision", p.Decision),
+		))
+	defer span.End()
+
+	scan, err := s.store.FindImportScan(ctx, p.ScanID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return 0, otelx.RecordSpanError(span, ErrScanNotFound)
+		}
+		return 0, otelx.RecordSpanError(span, err)
+	}
+	if scan.Status != entimportscan.StatusAwaitingReview {
+		return 0, otelx.RecordSpanError(span, ErrScanNotReviewable)
+	}
+
+	var n int
+	switch scan.Kind {
+	case entimportscan.KindSeries:
+		n, err = s.store.BulkUpdateImportScanShowDecisions(
+			ctx, p.ScanID,
+			entimportscanshow.Decision(p.Decision),
+			entimportscanshow.Classification(p.Classification),
+			p.IDs,
+		)
+	case entimportscan.KindMusic:
+		n, err = s.store.BulkUpdateImportScanAlbumDecisions(
+			ctx, p.ScanID,
+			entimportscanalbum.Decision(p.Decision),
+			entimportscanalbum.Classification(p.Classification),
+			p.IDs,
+		)
+	case entimportscan.KindBook:
+		n, err = s.store.BulkUpdateImportScanBookDecisions(
+			ctx, p.ScanID,
+			entimportscanbook.Decision(p.Decision),
+			entimportscanbook.Classification(p.Classification),
+			p.IDs,
+		)
+	default:
+		n, err = s.store.BulkUpdateImportScanFileDecisions(
+			ctx, p.ScanID,
+			entimportscanfile.Decision(p.Decision),
+			entimportscanfile.Classification(p.Classification),
+			p.IDs,
+		)
+	}
+	if err != nil {
+		return 0, otelx.RecordSpanError(span, err)
+	}
+	span.SetAttributes(attribute.Int("rows.updated", n))
+	return n, nil
+}

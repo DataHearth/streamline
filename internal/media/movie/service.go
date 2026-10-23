@@ -1,0 +1,940 @@
+package movie
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"strings"
+	"time"
+
+	"github.com/datahearth/streamline/ent"
+	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
+	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/posters"
+	"github.com/datahearth/streamline/internal/scheduler"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
+)
+
+var (
+	tracer = otel.Tracer("github.com/datahearth/streamline/internal/media/movie")
+	meter  = otel.Meter("github.com/datahearth/streamline/internal/media/movie")
+)
+
+var (
+	moviesAdded   metric.Int64Counter
+	moviesUpdated metric.Int64Counter
+	moviesDeleted metric.Int64Counter
+)
+
+func init() {
+	moviesAdded = otelx.Must(meter.Int64Counter(
+		"streamline.movies.added",
+		metric.WithDescription("Movies added"),
+	))
+	moviesUpdated = otelx.Must(meter.Int64Counter(
+		"streamline.movies.updated",
+		metric.WithDescription("Movies updated"),
+	))
+	moviesDeleted = otelx.Must(meter.Int64Counter(
+		"streamline.movies.deleted",
+		metric.WithDescription("Movies deleted"),
+	))
+
+	ctx := context.Background()
+	moviesAdded.Add(ctx, 0)
+	moviesUpdated.Add(ctx, 0)
+	moviesDeleted.Add(ctx, 0)
+}
+
+var (
+	ErrNoQualityProfile = errors.New("no quality profile configured")
+	ErrMovieNotFound    = errors.New("movie not found")
+	// ErrMovieExists means the tmdb id is already in the library. Callers that
+	// only want the movie to exist — a bulk-import commit racing another scan —
+	// treat it as success and look the row up.
+	ErrMovieExists   = errors.New("movie already exists")
+	ErrInvalidTMDBID = errors.New("tmdb id must be non-zero")
+	ErrSameTMDBID    = errors.New("movie already points at that tmdb id")
+)
+
+type Manager interface {
+	Add(
+		ctx context.Context,
+		tmdbID uint32,
+		qualityProfile string,
+	) (*ent.Movie, string, error)
+	FilterList(
+		ctx context.Context,
+		p FilterParams,
+	) ([]*ent.Movie, map[uint32]db.MovieFileSummary, uint32, error)
+	Get(ctx context.Context, id uint32) (*ent.Movie, error)
+	GetByTMDBID(ctx context.Context, tmdbID uint32) (*ent.Movie, error)
+	Update(ctx context.Context, id uint32, p UpdateParams) (*ent.Movie, error)
+	Delete(ctx context.Context, id uint32, opts DeleteOptions) error
+	DeleteFile(
+		ctx context.Context,
+		movieID, fileID uint32,
+		opts DeleteFileOptions,
+	) error
+	RefreshOne(ctx context.Context, id uint32) (*ent.Movie, error)
+	Reidentify(ctx context.Context, id, tmdbID uint32) (*ent.Movie, error)
+	Counts(ctx context.Context, p FilterParams) (Counts, error)
+	AnnotateTMDBResults(
+		ctx context.Context,
+		results []metadata.MovieResult,
+	) ([]AnnotatedTMDBResult, error)
+}
+
+// DeleteOptions controls Delete behaviour.
+type DeleteOptions struct {
+	// DeleteFiles removes attached media_files from disk before the row delete.
+	DeleteFiles bool
+}
+
+// AnnotatedTMDBResult pairs a TMDB search hit with library state. AlreadyAdded
+// is true when a movie row with this tmdb_id exists.
+type AnnotatedTMDBResult struct {
+	metadata.MovieResult
+	AlreadyAdded bool
+}
+
+type UpdateParams struct {
+	Status         *entmovie.Status
+	QualityProfile *string
+	Monitored      *bool
+}
+
+// Counts is the movie toolbar's model. The status and monitoring tallies are
+// faceted: each is counted with the *other* facet's filter applied and its own
+// left out, so both dropdowns say what picking a value would leave. Counted
+// against its own selection, a facet zeroes every row but the chosen one.
+//
+// Total and Trend are unconditional — the library, which the page header, the
+// empty state and the dashboard sparkline ask for.
+type Counts struct {
+	Total int
+
+	// StatusTotal is the status facet's "all" row: what the monitoring and
+	// search filters leave.
+	StatusTotal int
+	Wanted      int
+	Downloading int
+	Importing   int
+	Available   int
+	Failed      int
+
+	MonitoredTotal int
+	Monitored      int
+	Unmonitored    int
+
+	// Trend holds the cumulative library size at the end of each of the last
+	// trendDays days, oldest first; the final element equals Total.
+	Trend []int
+}
+
+// trendDays is the width of the dashboard sparkline window.
+const trendDays = 30
+
+// FilterParams.Status == "" means "all"; other fields default to sensible values.
+type FilterParams struct {
+	Status string
+	Query  string
+	Sort   string
+	Order  string
+	Page   uint16
+	Limit  uint16
+	// Monitored filters on the movie's own flag; nil means "either".
+	Monitored *bool
+}
+
+// metadataMinRefreshInterval bounds the TMDB call rate of the metadata-refresh
+// scheduler job: only movies last refreshed longer ago than this are touched.
+const metadataMinRefreshInterval = 24 * time.Hour
+
+// MetadataRefresher is the consumer-facing surface for the metadata-refresh
+// scheduler job (jobs.MetadataRefresh).
+type MetadataRefresher interface {
+	RefreshStale(ctx context.Context) error
+}
+
+type Service struct {
+	db       db.Store
+	metadata metadata.Provider
+	posters  posters.Manager
+	download download.Downloader
+	ms       mediaserver.Refresher
+}
+
+func NewService(
+	store db.Store,
+	meta metadata.Provider,
+	posters posters.Manager,
+	dl download.Downloader,
+	ms mediaserver.Refresher,
+) *Service {
+	return &Service{
+		db:       store,
+		metadata: meta,
+		posters:  posters,
+		download: dl,
+		ms:       ms,
+	}
+}
+
+func (s *Service) Add(
+	ctx context.Context,
+	tmdbID uint32,
+	qualityProfile string,
+) (*ent.Movie, string, error) {
+	ctx, span := tracer.Start(ctx, "movie.add",
+		trace.WithAttributes(
+			attribute.Int64("tmdb.id", int64(tmdbID)),
+			attribute.String("quality_profile", qualityProfile),
+		),
+	)
+	defer span.End()
+
+	// An empty name resolves to the movie default profile at read time; reject
+	// only when the named profile (or default) resolves to nothing at all.
+	if _, ok := config.ResolveQualityProfile(
+		config.MediaMovie,
+		qualityProfile,
+	); !ok {
+		return nil, "", otelx.RecordSpanError(span, ErrNoQualityProfile)
+	}
+
+	details, err := s.metadata.GetMovie(ctx, tmdbID)
+	if err != nil {
+		return nil, "", otelx.RecordSpanError(
+			span,
+			fmt.Errorf("fetch tmdb metadata: %w", err),
+		)
+	}
+	span.SetAttributes(attribute.String("movie.title", details.Title))
+	if details.OriginalTitle != details.Title {
+		span.SetAttributes(
+			attribute.String("movie.original_title", details.OriginalTitle),
+		)
+	}
+
+	m, err := s.db.CreateMovie(ctx, db.CreateMovieParams{
+		Title:          details.Title,
+		OriginalTitle:  details.OriginalTitle,
+		Year:           details.Year,
+		TmdbID:         tmdbID,
+		Status:         entmovie.StatusWanted,
+		Overview:       details.Overview,
+		Runtime:        details.Runtime,
+		QualityProfile: qualityProfile,
+		Rating:         float64(details.Rating),
+		Genres:         details.Genres,
+		Aliases:        details.Aliases,
+		Cast:           details.Cast,
+		ReleaseDate:    metadata.ParseISODate(details.ReleaseDate),
+	})
+	if err != nil {
+		if ent.IsConstraintError(err) {
+			return nil, "", otelx.RecordSpanError(
+				span,
+				fmt.Errorf("%w: tmdb_id %d", ErrMovieExists, tmdbID),
+			)
+		}
+		return nil, "", otelx.RecordSpanError(
+			span,
+			fmt.Errorf("create movie: %w", err),
+		)
+	}
+	span.SetAttributes(attribute.Int64("movie.id", int64(m.ID)))
+
+	if err := s.fetchDigitalRelease(ctx, m); err != nil {
+		slog.WarnContext(ctx, "digital release date not set on add",
+			"movie.id", m.ID, "movie.tmdb_id", m.TmdbID, "error", err)
+	}
+
+	s.fetchPoster(ctx, m.ID, details.PosterPath)
+	s.enrichPeople(ctx, m.ID)
+
+	moviesAdded.Add(ctx, 1)
+	slog.InfoContext(ctx, "movie added", "title", m.Title, "tmdb_id", m.TmdbID)
+	return m, details.PosterPath, nil
+}
+
+// FilterList returns one page of movies with the file rollup the list view
+// renders, mirroring the series twin. The rollup is a second query over the
+// page's ids rather than an eager-load, so a page costs one lean scan of
+// media_files instead of materialising every file row of every movie.
+func (s *Service) FilterList(
+	ctx context.Context,
+	p FilterParams,
+) ([]*ent.Movie, map[uint32]db.MovieFileSummary, uint32, error) {
+	ctx, span := tracer.Start(ctx, "movie.filter_list",
+		trace.WithAttributes(
+			attribute.String("filter.status", p.Status),
+			attribute.String("filter.query", p.Query),
+			attribute.String("filter.sort", p.Sort),
+			attribute.String("filter.order", p.Order),
+			attribute.Int("page", int(p.Page)),
+			attribute.Int("limit", int(p.Limit)),
+		),
+	)
+	defer span.End()
+
+	page := p.Page
+	if page == 0 {
+		page = 1
+	}
+	limit := p.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	items, total, err := s.db.FilterMovies(ctx, db.FilterMoviesParams{
+		Status:    entmovie.Status(p.Status),
+		Monitored: p.Monitored,
+		Query:     p.Query,
+		Sort:      p.Sort,
+		Order:     p.Order,
+		Offset:    uint32(page-1) * uint32(limit),
+		Limit:     uint32(limit),
+	})
+	if err != nil {
+		return nil, nil, 0, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("filter movies: %w", err),
+		)
+	}
+	ids := make([]uint32, 0, len(items))
+	for _, m := range items {
+		ids = append(ids, m.ID)
+	}
+	summaries, err := s.db.MovieFileSummaries(ctx, ids)
+	if err != nil {
+		return nil, nil, 0, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("movie file summaries: %w", err),
+		)
+	}
+	span.SetAttributes(attribute.Int64("results.total", int64(total)))
+	//nolint:gosec // total is non-negative
+	return items, summaries, uint32(total), nil
+}
+
+func (s *Service) Get(ctx context.Context, id uint32) (*ent.Movie, error) {
+	ctx, span := tracer.Start(ctx, "movie.get",
+		trace.WithAttributes(attribute.Int64("movie.id", int64(id))),
+	)
+	defer span.End()
+
+	m, err := s.db.FindMovieByID(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, otelx.RecordSpanError(
+				span,
+				fmt.Errorf("movie %d not found", id),
+			)
+		}
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("get movie: %w", err))
+	}
+	return m, nil
+}
+
+// GetByTMDBID returns the library row for the given TMDB id, or (nil, nil)
+// when none exists. The TMDB preview path treats absence as "not in library"
+// rather than as an error.
+func (s *Service) GetByTMDBID(
+	ctx context.Context,
+	tmdbID uint32,
+) (*ent.Movie, error) {
+	ctx, span := tracer.Start(ctx, "movie.get_by_tmdb_id",
+		trace.WithAttributes(attribute.Int64("tmdb.id", int64(tmdbID))),
+	)
+	defer span.End()
+
+	m, err := s.db.FindMovieByTMDBID(ctx, tmdbID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("get movie by tmdb_id: %w", err),
+		)
+	}
+	return m, nil
+}
+
+// Counts tallies the status and monitoring facets, each against the filters
+// applied to the other, so both dropdowns say what picking a value would
+// leave. p carries the list's current filter state; a zero value counts the
+// whole library, which is what the nav badge and the dashboard ask for.
+func (s *Service) Counts(ctx context.Context, p FilterParams) (Counts, error) {
+	ctx, span := tracer.Start(ctx, "movie.counts",
+		trace.WithAttributes(attribute.String("filter.status", p.Status)))
+	defer span.End()
+
+	f, err := s.db.MovieFacetCounts(ctx, db.FilterMoviesParams{
+		Status:    entmovie.Status(p.Status),
+		Monitored: p.Monitored,
+		Query:     strings.TrimSpace(p.Query),
+	})
+	if err != nil {
+		return Counts{}, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("count movies by facet: %w", err),
+		)
+	}
+	wanted := f.ByStatus[entmovie.StatusWanted]
+	downloading := f.ByStatus[entmovie.StatusDownloading]
+	importing := f.ByStatus[entmovie.StatusImporting]
+	available := f.ByStatus[entmovie.StatusAvailable]
+	failed := f.ByStatus[entmovie.StatusFailed]
+	span.SetAttributes(
+		attribute.Int("counts.total", f.Total),
+		attribute.Int("counts.wanted", wanted),
+		attribute.Int("counts.downloading", downloading),
+		attribute.Int("counts.importing", importing),
+		attribute.Int("counts.available", available),
+		attribute.Int("counts.failed", failed),
+	)
+	// The trend is the library's growth curve and ignores every filter: the
+	// dashboard sparkline is about the library, not the list's current view.
+	trend, err := s.movieTrend(ctx, f.Total)
+	if err != nil {
+		return Counts{}, err
+	}
+
+	return Counts{
+		Total:          f.Total,
+		StatusTotal:    f.StatusTotal,
+		Wanted:         wanted,
+		Downloading:    downloading,
+		Importing:      importing,
+		Available:      available,
+		Failed:         failed,
+		MonitoredTotal: f.MonitoredTotal,
+		Monitored:      f.Monitored,
+		Unmonitored:    f.Unmonitored,
+		Trend:          trend,
+	}, nil
+}
+
+// movieTrend returns the cumulative library size at the end of each of the
+// last trendDays days (oldest first), ending at `total` today. Movies added
+// before the window form a flat baseline; an empty library yields all zeros.
+func (s *Service) movieTrend(ctx context.Context, total int) ([]int, error) {
+	const day = 24 * time.Hour
+	todayStart := time.Now().UTC().Truncate(day)
+	windowStart := todayStart.Add(-time.Duration(trendDays-1) * day)
+
+	recent, err := s.db.MovieCreateTimesSince(ctx, windowStart)
+	if err != nil {
+		return nil, err
+	}
+
+	added := make([]int, trendDays)
+	for _, t := range recent {
+		idx := min(max(int(t.UTC().Sub(windowStart)/day), 0), trendDays-1)
+		added[idx]++
+	}
+
+	// Movies created before the window are the starting baseline.
+	baseline := max(total-len(recent), 0)
+
+	trend := make([]int, trendDays)
+	cum := baseline
+	for i := range trend {
+		cum += added[i]
+		trend[i] = cum
+	}
+	return trend, nil
+}
+
+func (s *Service) Update(
+	ctx context.Context,
+	id uint32,
+	p UpdateParams,
+) (*ent.Movie, error) {
+	ctx, span := tracer.Start(ctx, "movie.update",
+		trace.WithAttributes(attribute.Int64("movie.id", int64(id))),
+	)
+	defer span.End()
+
+	if p.QualityProfile != nil {
+		if _, ok := config.ResolveQualityProfile(
+			config.MediaMovie,
+			*p.QualityProfile,
+		); !ok {
+			return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)
+		}
+	}
+
+	m, err := s.db.UpdateMovie(ctx, id, db.UpdateMovieParams{
+		Status:         p.Status,
+		QualityProfile: p.QualityProfile,
+		Monitored:      p.Monitored,
+	})
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, otelx.RecordSpanError(
+				span,
+				fmt.Errorf("movie %d not found", id),
+			)
+		}
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("update movie: %w", err))
+	}
+	moviesUpdated.Add(ctx, 1)
+	return m, nil
+}
+
+// fetchPoster caches the movie's poster in the background. Best-effort: a
+// missing poster is cosmetic and must not fail the operation that asked for it.
+func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string) {
+	if posterPath == "" || s.posters == nil {
+		return
+	}
+	bg := context.WithoutCancel(ctx)
+	// One cached size serves every render, so it is sized for the largest sharp
+	// one: the detail hero's 260px column at DPR 3 = 780px. The two full-bleed
+	// backdrops are blur-md, so they do not raise the bar. "original" is ~1.9 MB
+	// against w780's ~360 KB, and the cards only ever needed ~400px.
+	src := metadata.PosterURL(posterPath, "w780")
+	go func() {
+		if err := s.posters.Fetch(bg, "movies", id, src); err != nil {
+			slog.WarnContext(bg, "poster fetch failed",
+				"movie.id", id, "error", err)
+		}
+	}()
+}
+
+// Reidentify points the row at a different TMDB title and refreshes its
+// metadata from there. The row keeps its id, so its files, download history
+// and requests survive the repair — only the provider identity changes.
+//
+// Renaming the files into the new title's path is the caller's next step: the
+// rename service is a separate type, and a caller that only wants the metadata
+// corrected (a re-identify to fix a wrong year, say) should not be forced to
+// move files.
+func (s *Service) Reidentify(
+	ctx context.Context,
+	id, tmdbID uint32,
+) (*ent.Movie, error) {
+	ctx, span := tracer.Start(ctx, "movie.reidentify",
+		trace.WithAttributes(
+			attribute.Int64("movie.id", int64(id)),
+			attribute.Int64("movie.tmdb_id", int64(tmdbID)),
+		),
+	)
+	defer span.End()
+
+	if tmdbID == 0 {
+		return nil, otelx.RecordSpanError(span, ErrInvalidTMDBID)
+	}
+	m, err := s.db.FindMovieByID(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, otelx.RecordSpanError(span,
+				fmt.Errorf("movie %d: %w", id, ErrMovieNotFound))
+		}
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("get movie: %w", err))
+	}
+	if m.TmdbID == tmdbID {
+		return nil, otelx.RecordSpanError(span, ErrSameTMDBID)
+	}
+	// tmdb_id is unique, so the write below would fail on a constraint the
+	// caller cannot act on. Check first and say what is actually wrong.
+	if _, err := s.db.FindMovieByTMDBID(ctx, tmdbID); err == nil {
+		return nil, otelx.RecordSpanError(span, ErrMovieExists)
+	} else if !ent.IsNotFound(err) {
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("lookup target: %w", err))
+	}
+
+	oldTMDBID := m.TmdbID
+	if err := s.db.SetMovieTMDBID(ctx, id, tmdbID); err != nil {
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("set tmdb id: %w", err))
+	}
+	// The row now carries the new id with the old title. A failed refresh would
+	// leave it that way, so report it rather than swallowing it.
+	m.TmdbID = tmdbID
+	details, err := s.metadata.GetMovie(ctx, tmdbID)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span,
+			fmt.Errorf("refresh after re-identify: %w", err))
+	}
+	if err := s.applyMetadata(ctx, id, details); err != nil {
+		return nil, otelx.RecordSpanError(span,
+			fmt.Errorf("refresh after re-identify: %w", err))
+	}
+	if err := s.fetchDigitalRelease(ctx, m); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	// The cached poster is keyed by row id, so it still shows the old title
+	// until it is replaced.
+	s.fetchPoster(ctx, id, details.PosterPath)
+	// The series twin logs its outcome; this one logged nothing, leaving the
+	// rarer and more consequential of the two corrections — a movie repointed
+	// at different metadata — without an audit trail.
+	slog.InfoContext(ctx, "movie re-identified",
+		"movie.id", id, "movie.tmdb_id", tmdbID, "title", details.Title)
+	if err := events.Record(
+		ctx, nil, events.TypeReidentified, events.ScopeMovie, id,
+		map[string]any{
+			"old_tmdb_id": oldTMDBID,
+			"new_tmdb_id": tmdbID,
+			"title":       details.Title,
+		},
+	); err != nil {
+		slog.WarnContext(ctx, "record re-identify event failed",
+			"movie.id", id, "error", err)
+	}
+	return s.db.FindMovieByID(ctx, id)
+}
+
+// RefreshStale re-fetches TMDB metadata for movies whose update_time is older
+// than metadataMinRefreshInterval. Per-row failures are logged and skipped;
+// the tick returns nil unless the initial DB query fails.
+func (s *Service) RefreshStale(ctx context.Context) error {
+	ctx, span := tracer.Start(ctx, "movie.refresh_stale")
+	defer span.End()
+
+	cutoff := time.Now()
+	if !scheduler.Manual(ctx) {
+		cutoff = cutoff.Add(-metadataMinRefreshInterval)
+	}
+	movies, err := s.db.ListMoviesStaleSince(ctx, cutoff)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	span.SetAttributes(attribute.Int("refresh.candidate_count", len(movies)))
+
+	refreshed, skipped := 0, 0
+	for i, m := range movies {
+		scheduler.Progress(ctx, i, len(movies))
+		if err := s.refreshOne(ctx, m); err != nil {
+			slog.WarnContext(ctx, "metadata-refresh: skipping movie",
+				"movie.id", m.ID, "movie.tmdb_id", m.TmdbID, "error", err)
+			skipped++
+			continue
+		}
+		refreshed++
+	}
+
+	span.SetAttributes(
+		attribute.Int("refresh.refreshed_count", refreshed),
+		attribute.Int("refresh.skipped_count", skipped),
+	)
+	slog.InfoContext(ctx, "metadata refresh complete",
+		"refreshed", refreshed, "skipped", skipped)
+	return nil
+}
+
+func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
+	ctx, span := tracer.Start(ctx, "movie.refresh_stale.movie",
+		trace.WithAttributes(
+			attribute.Int64("movie.id", int64(m.ID)),
+			attribute.Int64("movie.tmdb_id", int64(m.TmdbID)),
+		),
+	)
+	defer span.End()
+
+	details, err := s.metadata.GetMovie(ctx, m.TmdbID)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if err := s.applyMetadata(ctx, m.ID, details); err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+
+	if err := s.fetchDigitalRelease(ctx, m); err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	// Fetch is a no-op when the file is already cached, so this costs nothing
+	// on a populated cache and is the only thing that refills a cleared one —
+	// the series path already does it, and without it dropping the poster
+	// directory left movies with placeholders permanently.
+	s.fetchPoster(ctx, m.ID, details.PosterPath)
+	// Only when the provider actually moved something. RefreshStale runs this
+	// over every stale row on a tick, and an unconditional event would bury a
+	// day of real activity under one row per movie in the library.
+	if m.Title != details.Title || m.Year != details.Year {
+		if err := events.Record(
+			ctx, nil, events.TypeMetadataRefreshed, events.ScopeMovie, m.ID,
+			map[string]any{
+				"old_title": m.Title,
+				"title":     details.Title,
+				"year":      details.Year,
+			},
+		); err != nil {
+			slog.WarnContext(ctx, "record metadata refresh event failed",
+				"movie.id", m.ID, "error", err)
+		}
+	}
+	return nil
+}
+
+// applyMetadata persists the TMDB-sourced fields onto an existing row, then
+// enriches whatever cast that write introduced. The enrichment is deliberately
+// outside the update — UpdateMovieMetadata owns the transaction the credits
+// are written in, and provider calls do not belong inside a SQLite write lock.
+func (s *Service) applyMetadata(
+	ctx context.Context,
+	id uint32,
+	details *metadata.MovieDetails,
+) error {
+	if err := s.updateMetadata(ctx, id, details); err != nil {
+		return err
+	}
+	s.enrichPeople(ctx, id)
+	return nil
+}
+
+func (s *Service) updateMetadata(
+	ctx context.Context,
+	id uint32,
+	details *metadata.MovieDetails,
+) error {
+	return s.db.UpdateMovieMetadata(ctx, id, db.UpdateMovieMetadataParams{
+		Title:         details.Title,
+		OriginalTitle: details.OriginalTitle,
+		Overview:      details.Overview,
+		Year:          details.Year,
+		Runtime:       details.Runtime,
+		Rating:        float64(details.Rating),
+		Genres:        details.Genres,
+		Aliases:       details.Aliases,
+		Cast:          details.Cast,
+		ReleaseDate:   metadata.ParseISODate(details.ReleaseDate),
+	})
+}
+
+// fetchDigitalRelease persists m's configured-region digital (TMDB type-4)
+// release date. Best-effort: an unset region or a failed TMDB lookup is
+// swallowed (the metadata-refresh tick retries later); only the DB write
+// surfaces an error.
+func (s *Service) fetchDigitalRelease(ctx context.Context, m *ent.Movie) error {
+	region := config.Get().Metadata.TMDBRegion
+	if region == "" {
+		return nil
+	}
+	date, err := s.metadata.FetchDigitalRelease(ctx, m.TmdbID, region)
+	if err != nil {
+		slog.WarnContext(ctx, "tmdb digital release fetch failed",
+			"movie.id", m.ID, "movie.tmdb_id", m.TmdbID, "error", err)
+		return nil
+	}
+	return s.db.SetMovieDigitalReleaseDate(ctx, m.ID, date)
+}
+
+// AnnotateTMDBResults batches the AlreadyAdded lookup so callers avoid a
+// per-row FindMovieByTMDBID query (N+1) when rendering TMDB search rows.
+func (s *Service) AnnotateTMDBResults(
+	ctx context.Context,
+	results []metadata.MovieResult,
+) ([]AnnotatedTMDBResult, error) {
+	ctx, span := tracer.Start(ctx, "movie.annotate_tmdb_results",
+		trace.WithAttributes(attribute.Int("results.count", len(results))),
+	)
+	defer span.End()
+
+	if len(results) == 0 {
+		return nil, nil
+	}
+	ids := make([]uint32, 0, len(results))
+	for _, r := range results {
+		ids = append(ids, r.TMDBID)
+	}
+	existing, err := s.db.FindMoviesByTMDBIDs(ctx, ids)
+	if err != nil {
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("find movies by tmdb ids: %w", err),
+		)
+	}
+	added := make(map[uint32]struct{}, len(existing))
+	for _, m := range existing {
+		added[m.TmdbID] = struct{}{}
+	}
+	out := make([]AnnotatedTMDBResult, 0, len(results))
+	for _, r := range results {
+		_, hit := added[r.TMDBID]
+		out = append(out, AnnotatedTMDBResult{MovieResult: r, AlreadyAdded: hit})
+	}
+	return out, nil
+}
+
+func (s *Service) Delete(
+	ctx context.Context, id uint32, opts DeleteOptions,
+) error {
+	ctx, span := tracer.Start(ctx, "movie.delete",
+		trace.WithAttributes(
+			attribute.Int64("movie.id", int64(id)),
+			attribute.Bool("delete_files", opts.DeleteFiles),
+		),
+	)
+	defer span.End()
+
+	if opts.DeleteFiles {
+		files, err := s.db.ListMediaFilesByMovieID(ctx, id)
+		if err != nil {
+			return otelx.RecordSpanError(span,
+				fmt.Errorf("list media_files: %w", err))
+		}
+		root := config.Get().Library.MoviePath
+		var kept int
+		for _, f := range files {
+			if err := library.RemoveMediaFile(ctx, f.Path, root); err != nil {
+				kept++
+				// Error, not warn: the operator asked for the files and is
+				// about to be told the title was removed. A file that outlived
+				// the row it was reachable through is only findable from here,
+				// and a warn on a quiet instance was indistinguishable from
+				// the deletion having worked.
+				slog.ErrorContext(ctx, "movie file was not deleted from disk",
+					"movie.id", id, "path", f.Path, "error", err)
+			}
+		}
+		span.SetAttributes(
+			attribute.Int("files.requested", len(files)),
+			attribute.Int("files.kept", kept),
+		)
+		if len(files) > 0 {
+			mediaserver.RefreshInBackground(ctx, s.ms, "movie", root)
+		}
+		// Before DeleteMovie: the download_records edge cascades, so after the
+		// row goes there is nothing left to say which torrent produced this
+		// movie, and a still-seeding torrent comes back as an untracked
+		// adoption proposal on the next monitor tick.
+		s.removeSourceTorrent(ctx, id)
+	}
+	if err := s.db.DeleteMovie(ctx, id); err != nil {
+		if ent.IsNotFound(err) {
+			return otelx.RecordSpanError(span,
+				fmt.Errorf("movie %d not found", id))
+		}
+		return otelx.RecordSpanError(span, fmt.Errorf("delete movie: %w", err))
+	}
+	if s.posters != nil {
+		if err := s.posters.Remove("movies", id); err != nil {
+			slog.WarnContext(ctx, "poster cache eviction failed",
+				"movie.id", id, "error", err)
+		}
+	}
+	moviesDeleted.Add(ctx, 1)
+	slog.InfoContext(ctx, "movie deleted",
+		"id", id, "delete_files", opts.DeleteFiles)
+	return nil
+}
+
+// DeleteFileOptions controls DeleteFile.
+type DeleteFileOptions struct {
+	// RemoveTorrent also removes the source torrent from its download client.
+	RemoveTorrent bool
+}
+
+// DeleteFile removes one of a movie's media files from disk + DB and reverts
+// the movie to "wanted" so the next monitored search re-grabs it. When
+// opts.RemoveTorrent is set, the source torrent is also removed from its
+// download client (best-effort — a lingering torrent never fails the request).
+func (s *Service) DeleteFile(
+	ctx context.Context, movieID, fileID uint32, opts DeleteFileOptions,
+) error {
+	ctx, span := tracer.Start(ctx, "movie.delete_file",
+		trace.WithAttributes(
+			attribute.Int64("movie.id", int64(movieID)),
+			attribute.Int64("media_file.id", int64(fileID)),
+			attribute.Bool("remove_torrent", opts.RemoveTorrent),
+		))
+	defer span.End()
+
+	mf, err := s.db.FindMediaFileByID(ctx, fileID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return otelx.RecordSpanError(span,
+				fmt.Errorf("media file %d not found", fileID))
+		}
+		return otelx.RecordSpanError(span, fmt.Errorf("find media_file: %w", err))
+	}
+	root := config.Get().Library.MoviePath
+	if err := library.RemoveMediaFile(ctx, mf.Path, root); err != nil {
+		// Refused outright rather than logged and carried on: dropping the
+		// row would leave the file where it is with nothing tracking it, and
+		// the caller told the deletion happened.
+		if errors.Is(err, library.ErrOutsideRoot) {
+			return otelx.RecordSpanError(span, err)
+		}
+		slog.WarnContext(ctx, "delete media file from disk failed",
+			"path", mf.Path, "error", err)
+	}
+	mediaserver.RefreshInBackground(ctx, s.ms, "movie", root)
+	if err := s.db.DeleteMediaFileAndRevertMovie(ctx, fileID, movieID); err != nil {
+		return otelx.RecordSpanError(span, fmt.Errorf("delete + revert: %w", err))
+	}
+	if opts.RemoveTorrent {
+		s.removeSourceTorrent(ctx, movieID)
+	}
+	slog.InfoContext(ctx, "media file deleted",
+		"movie.id", movieID, "media_file.id", fileID)
+	return nil
+}
+
+// removeSourceTorrent best-effort removes the torrent that produced the movie's
+// most recent grab. Absence or any failure is logged, never surfaced.
+func (s *Service) removeSourceTorrent(ctx context.Context, movieID uint32) {
+	rec, err := s.db.LatestImportedRecordForMovie(ctx, movieID)
+	switch {
+	case ent.IsNotFound(err):
+		return
+	case err != nil:
+		slog.WarnContext(ctx, "lookup source torrent failed",
+			"movie.id", movieID, "error", err)
+		return
+	}
+	if rec.TorrentHash == "" || rec.DownloadClientName == "" {
+		return
+	}
+	if err := s.download.RemoveTorrent(
+		ctx, rec.DownloadClientName, rec.TorrentHash, false,
+	); err != nil {
+		slog.WarnContext(ctx, "remove source torrent failed",
+			"hash", rec.TorrentHash, "error", err)
+	}
+}
+
+// RefreshOne re-fetches TMDB metadata for one movie and returns the updated
+// row. Used by the manual "refresh metadata" UI action. An unknown id yields
+// ErrMovieNotFound so callers can answer 404 instead of 500.
+func (s *Service) RefreshOne(
+	ctx context.Context, id uint32,
+) (*ent.Movie, error) {
+	ctx, span := tracer.Start(ctx, "movie.refresh_one",
+		trace.WithAttributes(attribute.Int64("movie.id", int64(id))),
+	)
+	defer span.End()
+
+	m, err := s.db.FindMovieByID(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, otelx.RecordSpanError(span,
+				fmt.Errorf("movie %d: %w", id, ErrMovieNotFound))
+		}
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("get movie: %w", err))
+	}
+	if err := s.refreshOne(ctx, m); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	refreshed, err := s.db.FindMovieByID(ctx, id)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span,
+			fmt.Errorf("reload movie: %w", err))
+	}
+	return refreshed, nil
+}

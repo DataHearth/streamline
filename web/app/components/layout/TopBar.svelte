@@ -1,0 +1,564 @@
+<script lang="ts">
+	import { onMount, tick, onDestroy } from "svelte";
+	import { fade, fly } from "svelte/transition";
+	import { cubicOut } from "svelte/easing";
+	import { createQuery } from "@tanstack/svelte-query";
+	import { activeRoute } from "@roxi/routify";
+	import {
+		Search,
+		Plus,
+		Film,
+		Tv,
+		Music,
+		BookOpen,
+		FolderInput,
+		X,
+	} from "@lucide/svelte";
+	import { api } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
+	import { SETTINGS_TITLES } from "@lib/settings-nav.svelte";
+	import { pageTitle } from "@lib/page-title.svelte";
+	import { selectionHeader } from "@lib/selection-header.svelte";
+	import { cn } from "@lib/cn";
+	import SearchField from "@components/layout/SearchField.svelte";
+	import type { SystemInfo } from "@lib/types";
+	import { toast } from "@lib/toast";
+	import { modKey } from "@lib/platform";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	// Routify's `activeRoute` only emits once a navigation has resolved, so
+	// its `.url` is always the page we're actually on. Reading
+	// `window.location.pathname` from the `isActive` subscription instead
+	// lagged one navigation behind (it fired before the URL updated).
+	let pathname = $state(
+		typeof window !== "undefined" ? window.location.pathname : "/",
+	);
+	// Routify reports the root index route's url as "" — a truthy guard on
+	// r.url would keep the previous page's path when navigating home.
+	onMount(() =>
+		activeRoute.subscribe((r) => {
+			if (r) pathname = (r.url ?? "").split("?")[0] || "/";
+		}),
+	);
+
+	type Crumb = { label: string; href?: string; title?: boolean };
+	// Every page's title sits at the left of this bar: a section root shows its
+	// section's name (or what the page claimed through pageTitle), a named
+	// sub-page (settings) ends its breadcrumb on its title, and a record's
+	// detail page keeps a plain trail — its hero carries the h1. Pages no longer
+	// set an h1 of their own, so the heading never moves between tabs.
+	const SECTIONS: { prefix: string; label: string }[] = [
+		{ prefix: "/", label: i18n.nav_dashboard() },
+		{ prefix: "/movies", label: i18n.movies_label() },
+		{ prefix: "/series", label: i18n.settings_series() },
+		{ prefix: "/music", label: i18n.music_label() },
+		{ prefix: "/books", label: i18n.books_label() },
+		{ prefix: "/activity", label: i18n.nav_activity() },
+		{ prefix: "/torrents", label: i18n.torrent_label() },
+		{ prefix: "/transcoding", label: i18n.transcode_label() },
+		{ prefix: "/calendar", label: i18n.common_calendar() },
+		{ prefix: "/requests", label: i18n.requests_label() },
+		{ prefix: "/imports", label: i18n.imports_label() },
+		{ prefix: "/account", label: i18n.common_account() },
+		{ prefix: "/settings", label: i18n.nav_settings() },
+	];
+
+	// Sub-pages are named by their full path, from the same titles their own
+	// page heading uses. Deriving the crumb from the slug ("media-servers" →
+	// "Media servers") only ever produced English. Every sub-route not listed
+	// here is a numeric id.
+	const PAGE_LABELS: Record<string, () => string> = {
+		...SETTINGS_TITLES,
+	};
+
+	function segmentLabel(segment: string, href: string): string {
+		// Every dynamic route under these sections keys off a numeric id, which
+		// carries no name until its record loads.
+		if (/^\d+$/.test(segment)) return i18n.common_details();
+		const known = PAGE_LABELS[href];
+		if (known) return known();
+		// A path no list names yet: the slug is better than nothing.
+		return segment
+			.split("-")
+			.map((w, i) => (i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+			.join(" ");
+	}
+
+	let root = $derived(
+		SECTIONS.find(
+			(s) => pathname === s.prefix || pathname.startsWith(s.prefix + "/"),
+		),
+	);
+	let barTitle = $derived(
+		root && !pathname.slice(root.prefix.length).replace(/^\//, "")
+			? (pageTitle.valueFor(pathname) ?? root.label)
+			: "",
+	);
+	const titleClass =
+		"truncate text-[17px] font-semibold leading-[22px] tracking-[-0.02em] text-fg";
+
+	// Below md a live touch selection takes the bar over (lib/selection-header).
+	// The bar's own row goes invisible rather than unmounting, so the header
+	// keeps its height and the list under it does not move.
+	let selection = $derived(selectionHeader.state);
+	let hideForSelection = $derived(selection ? "max-md:invisible" : "");
+
+	let crumbs = $derived.by<Crumb[]>(() => {
+		if (!root) return [];
+		const rest = pathname.slice(root.prefix.length).replace(/^\//, "");
+		if (!rest) return [];
+		const segments = rest.split("/").filter(Boolean);
+		const trail: Crumb[] = [{ label: root.label, href: root.prefix }];
+		let href = root.prefix;
+		segments.forEach((seg, i) => {
+			href += `/${seg}`;
+			// /books/series/3 is one page, not a stop under a "Series" crumb.
+			if (root.prefix === "/books" && seg === "series") return;
+			const label = segmentLabel(seg, href);
+			const last = i === segments.length - 1;
+			trail.push(last ? { label, title: !/^\d+$/.test(seg) && !!PAGE_LABELS[href] } : { label, href });
+		});
+		return trail;
+	});
+
+	const systemQuery = createQuery<SystemInfo>(() => ({
+		queryKey: ["system", "info"],
+		queryFn: () => api<SystemInfo>("/system/info"),
+		enabled: auth.isAdmin,
+		retry: false,
+	}));
+
+	type Health = "healthy" | "degraded" | "down";
+	let health = $derived.by<Health>(() => {
+		const info = systemQuery.data;
+		if (!info) return "healthy";
+		const kinds = [info.data_usage?.kind, info.db_usage?.kind];
+		if (kinds.includes("err")) return "down";
+		if (kinds.includes("warn") || info.https_warn || info.ffmpeg_warn || info.hardcover_auth_warn) return "degraded";
+		return "healthy";
+	});
+
+	// `health` stays the enum — it drives the `health-${health}` class. Display
+	// text goes through a separate lookup.
+	const HEALTH_LABELS: Record<Health, string> = {
+		healthy: i18n.lc_healthy(),
+		degraded: i18n.lc_degraded(),
+		down: i18n.lc_down(),
+	};
+	let healthLabel = $derived(HEALTH_LABELS[health]);
+
+	function openPalette() {
+		window.dispatchEvent(new CustomEvent("streamline:open-palette"));
+	}
+	function openAddMovie() {
+		window.dispatchEvent(new CustomEvent("streamline:open-add-movie"));
+	}
+	function openAddSeries() {
+		window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
+	}
+	function openAddArtist() {
+		window.dispatchEvent(new CustomEvent("streamline:open-add-artist"));
+	}
+	function openAddBook() {
+		window.dispatchEvent(new CustomEvent("streamline:open-add-book"));
+	}
+
+	// Add-to-library dropdown ------------------------------------------------
+	// md and up, beside the search field. Below that the plus is not in the bar
+	// at all: on a phone it is the pill above the bottom nav (AddButton), since
+	// the top-right corner is the furthest point from a thumb. Both raise the
+	// same two events.
+	// request_only users may only request, so they see a trimmed menu (every
+	// title kind, which the modals route to a request) under a "Request a title"
+	// heading. admins/members get the full "Add to library" menu.
+	type AddItem = {
+		id: "movie" | "import" | "series" | "artist" | "book";
+		label: string;
+		desc: string;
+		icon: typeof Film;
+		soon?: boolean;
+		divider?: boolean;
+		requestable?: boolean;
+	};
+	const ADD_ITEMS: AddItem[] = [
+		{
+			id: "movie",
+			label: i18n.common_movie(),
+			desc: i18n.add_search_tmdb_track(),
+			icon: Film,
+			requestable: true,
+		},
+		{
+			id: "series",
+			label: i18n.settings_series(),
+			desc: i18n.add_tv_anime_daily(),
+			icon: Tv,
+			requestable: true,
+		},
+		// An artist rather than an album: adding one follows every release.
+		{
+			id: "artist",
+			label: i18n.common_artist(),
+			desc: i18n.add_artist_desc(),
+			icon: Music,
+			requestable: true,
+		},
+		{
+			id: "book",
+			label: i18n.common_book(),
+			desc: i18n.add_book_desc(),
+			icon: BookOpen,
+			requestable: true,
+		},
+		{
+			id: "import",
+			label: i18n.add_import_existing(),
+			desc: i18n.add_adopt_on_disk(),
+			icon: FolderInput,
+			divider: true,
+		},
+	];
+
+	let addHeading = $derived(
+		auth.canAddDirectly ? i18n.action_add_to_library() : i18n.action_request_title(),
+	);
+	// request_only only sees the requestable items (the title kinds); Import is
+	// admin-only, so members lose it too.
+	let addItems = $derived.by(() => {
+		const base = auth.canAddDirectly
+			? ADD_ITEMS
+			: ADD_ITEMS.filter((i) => i.requestable);
+		return auth.isAdmin ? base : base.filter((i) => i.id !== "import");
+	});
+
+	let addOpen = $state(false);
+	let addTrigger = $state<HTMLButtonElement | null>(null);
+	let addMenu = $state<HTMLDivElement | null>(null);
+	let addMenuTop = $state(0);
+	let addMenuRight = $state(0);
+	const ADD_MENU_W = 280;
+	const ADD_MENU_GAP = 8;
+
+	function recomputeAdd() {
+		if (!addTrigger) return;
+		const r = addTrigger.getBoundingClientRect();
+		if (
+			r.bottom < 0 ||
+			r.top > window.innerHeight ||
+			r.right < 0 ||
+			r.left > window.innerWidth
+		) {
+			closeAdd();
+			return;
+		}
+		addMenuTop = r.bottom + ADD_MENU_GAP;
+		addMenuRight = Math.max(8, window.innerWidth - r.right);
+	}
+
+	async function openAddMenu() {
+		addOpen = true;
+		await tick();
+		recomputeAdd();
+		window.addEventListener("scroll", recomputeAdd, true);
+		window.addEventListener("resize", recomputeAdd);
+	}
+
+	function closeAdd() {
+		if (!addOpen) return;
+		addOpen = false;
+		window.removeEventListener("scroll", recomputeAdd, true);
+		window.removeEventListener("resize", recomputeAdd);
+	}
+
+	function toggleAdd() {
+		if (addOpen) closeAdd();
+		else openAddMenu();
+	}
+
+	function pickAdd(item: AddItem) {
+		closeAdd();
+		if (item.soon) {
+			toast.info(i18n.common_not_implemented({ label: item.label }));
+			return;
+		}
+		if (item.id === "movie") openAddMovie();
+		else if (item.id === "series") openAddSeries();
+		else if (item.id === "artist") openAddArtist();
+		else if (item.id === "book") openAddBook();
+		else if (item.id === "import") {
+			window.location.href = "/imports";
+		}
+	}
+
+	function onAddKey(e: KeyboardEvent) {
+		if (!addOpen) return;
+		if (e.key === "Escape") {
+			e.preventDefault();
+			closeAdd();
+			addTrigger?.focus();
+		}
+	}
+	function onAddDocClick(e: MouseEvent) {
+		if (!addOpen) return;
+		const t = e.target as Node;
+		if (addMenu?.contains(t)) return;
+		if (addTrigger?.contains(t)) return;
+		closeAdd();
+	}
+	$effect(() => {
+		if (addOpen) {
+			document.addEventListener("mousedown", onAddDocClick);
+			document.addEventListener("keydown", onAddKey);
+			return () => {
+				document.removeEventListener("mousedown", onAddDocClick);
+				document.removeEventListener("keydown", onAddKey);
+			};
+		}
+	});
+	onDestroy(() => {
+		window.removeEventListener("scroll", recomputeAdd, true);
+		window.removeEventListener("resize", recomputeAdd);
+	});
+
+	function portal(node: HTMLElement) {
+		document.body.appendChild(node);
+		return {
+			destroy() {
+				node.parentNode?.removeChild(node);
+			},
+		};
+	}
+</script>
+
+<!-- Near-opaque while it holds a selection: the count and select all are
+     controls, and the rows scrolling under the usual 70% read through them. -->
+<header
+	class={cn(
+		"sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-border bg-bg-deep/70 pl-4 pr-2 pt-[env(safe-area-inset-top)] backdrop-blur-md saturate-150 md:gap-4 md:px-8",
+		selection && "max-md:bg-bg-deep/95",
+	)}
+>
+	<div class={cn("min-w-0 flex-1", hideForSelection)}>
+		<div class="flex h-[22px] min-w-0 items-center">
+			{#if crumbs.length > 1}
+				<nav
+					aria-label={i18n.nav_breadcrumb()}
+					class="flex min-w-0 items-center gap-2 text-sm text-fg-muted"
+				>
+					{#each crumbs as c, i (i)}
+						{#if c.href}
+							<a
+								href={c.href}
+								class="touch-hit shrink-0 transition hover:text-fg"
+							>
+								{c.label}
+							</a>
+						{:else if c.title}
+							<h1 aria-current="page" class={titleClass}>{c.label}</h1>
+						{:else}
+							<span aria-current="page" class="truncate text-fg">{c.label}</span>
+						{/if}
+						{#if i < crumbs.length - 1}
+							<span class="text-fg-faint" aria-hidden="true">/</span>
+						{/if}
+					{/each}
+				</nav>
+			{:else if barTitle}
+				<h1 class={titleClass}>{barTitle}</h1>
+			{/if}
+		</div>
+	</div>
+
+	<button
+		type="button"
+		onclick={openPalette}
+		aria-label={i18n.palette_open()}
+		class="{hideForSelection} hidden h-10 w-full max-w-[540px] flex-1 shrink-0 items-center gap-2.5 rounded-md border border-border bg-surface px-3.5 text-left text-[13px] text-fg-subtle transition hover:border-border-strong hover:bg-surface-2 hover:text-fg-muted lg:flex"
+	>
+		<Search size={14} aria-hidden="true" />
+		<span class="flex-1 truncate">{i18n.search_field_placeholder()}</span>
+		<kbd
+			class="rounded border border-border bg-surface px-1.5 py-px font-mono text-[10.5px] text-fg-faint"
+		>
+			{modKey} K
+		</kbd>
+	</button>
+
+	<!-- flex-none below lg: on a phone this group holds one 44px icon button, and
+	     a flex-1 here took half the header from the breadcrumbs. -->
+	<div class={cn("flex flex-none items-center justify-end gap-2 lg:flex-1", hideForSelection)}>
+		<SearchField />
+		<button
+			type="button"
+			onclick={openPalette}
+			aria-label={i18n.common_search()}
+			class="grid h-11 w-11 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg md:hidden"
+		>
+			<Search size={19} aria-hidden="true" />
+		</button>
+		<button
+			bind:this={addTrigger}
+			type="button"
+			onclick={toggleAdd}
+			aria-label={addHeading}
+			aria-haspopup="menu"
+			aria-expanded={addOpen}
+			title={addHeading}
+			class="hidden h-10 w-10 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg md:grid"
+		>
+			<Plus size={18} aria-hidden="true" />
+		</button>
+
+		{#if auth.isAdmin}
+			<div
+				class={`health-pill health-${health} hidden items-center gap-2 rounded-full px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] md:inline-flex`}
+				title={i18n.health_system({ state: healthLabel })}
+			>
+				<span aria-hidden="true" class="health-dot h-1.5 w-1.5 rounded-full"></span>
+				<span>{healthLabel}</span>
+			</div>
+		{/if}
+	</div>
+
+	{#if selection}
+		<div
+			transition:fade={{ duration: 140 }}
+			class="absolute inset-x-0 bottom-0 flex h-16 items-center gap-1 pl-1.5 pr-2 md:hidden"
+			role="toolbar"
+			aria-label={i18n.bulk_selection()}
+		>
+			<button
+				type="button"
+				onclick={selection.onClear}
+				aria-label={i18n.bulk_exit_selection()}
+				class="grid h-11 w-11 shrink-0 place-items-center rounded-full text-fg-muted transition active:bg-surface"
+			>
+				<X size={20} aria-hidden="true" />
+			</button>
+			<span class={cn(titleClass, "min-w-0 flex-1 pl-1 tabular-nums")} aria-live="polite">
+				{selection.count === 0
+					? i18n.a11y_select_all_of({ items: selection.noun.items })
+					: (selection.count === 1
+							? i18n.common_n_selected_one
+							: i18n.common_n_selected_other)({
+							count: selection.count.toLocaleString(),
+						})}
+			</span>
+			<button
+				type="button"
+				onclick={selection.count < selection.total
+					? selection.onSelectAll
+					: selection.onClear}
+				class="h-11 shrink-0 rounded-full px-3 text-[14px] font-semibold text-accent-text transition active:bg-accent-soft"
+			>
+				{selection.count < selection.total
+					? i18n.bulk_select_all_n({ total: selection.total })
+					: i18n.common_clear()}
+			</button>
+		</div>
+	{/if}
+</header>
+
+{#if addOpen}
+	<div
+		bind:this={addMenu}
+		use:portal
+		role="menu"
+		aria-label={addHeading}
+		transition:fly={{ duration: 160, y: -4, easing: cubicOut }}
+		class="add-menu fixed z-50 overflow-hidden rounded-md border border-border-strong bg-bg-elevated p-1 text-fg shadow-4"
+		style:--menu-top="{addMenuTop}px"
+		style:--menu-right="{addMenuRight}px"
+		style:--menu-width="{ADD_MENU_W}px"
+	>
+		<div
+			class="px-3 pb-1.5 pt-2 font-mono text-[9.5px] uppercase tracking-[0.18em] text-fg-faint"
+		>
+			{addHeading}
+		</div>
+		{#each addItems as item, i (item.id)}
+			{#if item.divider && i > 0}
+				<div class="-mx-1 my-1 h-px bg-border" role="separator"></div>
+			{/if}
+			<button
+				role="menuitem"
+				type="button"
+				disabled={item.soon}
+				onclick={() => pickAdd(item)}
+				class={`flex w-full items-center gap-2.5 rounded-sm px-2.5 py-2 text-left transition-colors hover:bg-bg-hover focus-visible:bg-bg-hover focus-visible:outline-none ${
+					item.soon ? "opacity-55 cursor-not-allowed hover:bg-transparent" : ""
+				}`}
+			>
+				<span
+					class="grid h-7 w-7 shrink-0 place-items-center rounded-sm bg-bg-card text-fg-muted"
+				>
+					<item.icon size={15} aria-hidden="true" />
+				</span>
+				<span class="flex min-w-0 flex-1 flex-col">
+					<span class="text-[13px] font-medium leading-tight">
+						{item.label}
+					</span>
+					<span class="mt-0.5 text-[10.5px] text-fg-subtle">
+						{item.desc}
+					</span>
+				</span>
+				{#if item.soon}
+					<span
+						class="rounded-sm border border-border px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.1em] text-fg-faint"
+					>
+						{i18n.common_soon()}
+					</span>
+				{/if}
+			</button>
+		{/each}
+	</div>
+{/if}
+
+<style>
+	.add-menu {
+		top: var(--menu-top);
+		right: var(--menu-right);
+		width: var(--menu-width);
+	}
+	.health-pill.health-healthy {
+		background-color: rgb(34 197 94 / 0.1);
+		border: 1px solid rgb(34 197 94 / 0.22);
+		color: var(--status-available);
+	}
+	.health-pill.health-degraded {
+		background-color: rgb(245 158 11 / 0.1);
+		border: 1px solid rgb(245 158 11 / 0.22);
+		color: var(--status-wanted);
+	}
+	.health-pill.health-down {
+		background-color: rgb(239 68 68 / 0.1);
+		border: 1px solid rgb(239 68 68 / 0.22);
+		color: var(--status-failed);
+	}
+	.health-pill.health-healthy .health-dot {
+		background-color: var(--status-available);
+		animation: health-pulse 2s var(--ease) infinite;
+	}
+	.health-pill.health-degraded .health-dot {
+		background-color: var(--status-wanted);
+	}
+	.health-pill.health-down .health-dot {
+		background-color: var(--status-failed);
+	}
+	@keyframes health-pulse {
+		0% {
+			box-shadow: 0 0 0 0 rgb(34 197 94 / 0.4);
+		}
+		70% {
+			box-shadow: 0 0 0 6px rgb(34 197 94 / 0);
+		}
+		100% {
+			box-shadow: 0 0 0 0 rgb(34 197 94 / 0);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.health-pill.health-healthy .health-dot {
+			animation: none;
+		}
+	}
+</style>

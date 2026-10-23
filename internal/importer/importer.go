@@ -1,0 +1,1038 @@
+// Package importer runs the post-download pipeline: find media file, apply
+// naming template, transfer to library, update DB, refresh media servers.
+// Fed by internal/jobs/download_monitor (event-fast path) and by the
+// import_scan scheduler job (restart-safe path).
+package importer
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io/fs"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"sync"
+
+	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/media/music"
+	"github.com/datahearth/streamline/internal/mediaserver"
+	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/quality"
+	"github.com/datahearth/streamline/internal/quality/qualityctx"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+)
+
+var tracer = otel.Tracer("github.com/datahearth/streamline/internal/importer")
+
+// Enqueuer is the consumer-facing queue surface. download_monitor accepts it
+// so it can be driven by a fake in tests without pulling in the full Worker.
+type Enqueuer interface {
+	Enqueue(recordID uint32)
+}
+
+// Deps is worker wiring. User-facing knobs (max attempts, keep seeding,
+// allowed roots, movie library path) are read via config.Get() inside
+// runImport.
+type Deps struct {
+	DB          db.Store
+	Library     *library.ImportService
+	Download    download.Downloader
+	MediaServer mediaserver.Refresher
+	Prober      ffmpeg.Prober
+	// Covers is optional: without it an imported album gets no cover resolved.
+	Covers music.CoverResolver
+	// Albums is optional: without it an album added as a stub is not hydrated
+	// before its download is matched to tracks.
+	Albums music.AlbumHydrator
+	// Tagger is optional: without it an imported album's files keep the tags
+	// they came with until the music-tag-sync job reaches them.
+	Tagger music.AlbumTagger
+}
+
+const (
+	consumers  = 2
+	channelCap = 100
+)
+
+type Worker struct {
+	db     db.Store
+	lib    *library.ImportService
+	dl     download.Downloader
+	ms     mediaserver.Refresher
+	probe  ffmpeg.Prober
+	covers music.CoverResolver
+	albums music.AlbumHydrator
+	tagger music.AlbumTagger
+
+	ch   chan uint32
+	stop chan struct{}
+
+	mu       sync.Mutex
+	inFlight map[uint32]struct{}
+
+	// requeue holds IDs enqueued while their own import was still in flight.
+	// An import publishes its outcome — a hold, a failure — to the DB and only
+	// unwinds to the inFlight delete afterwards, so a caller that reacts to
+	// that outcome by flipping the record back to importing and enqueueing it
+	// lands in the gap. Dropping it as a duplicate strands the record until
+	// the import_scan tick, which is a minute away by default.
+	requeue map[uint32]struct{}
+
+	// entityLocks holds one *sync.Mutex per import target. Queue dedup is by
+	// download-record ID, but two records can target one movie or show, and a
+	// destination path is derived from the target alone — concurrent consumers
+	// would race on it. Entries are never evicted: the key space is the
+	// library's, and deleting a mutex another goroutine is about to lock is
+	// how this bug comes back.
+	entityLocks sync.Map
+}
+
+func NewWorker(d Deps) *Worker {
+	return &Worker{
+		db:       d.DB,
+		lib:      d.Library,
+		dl:       d.Download,
+		ms:       d.MediaServer,
+		probe:    d.Prober,
+		covers:   d.Covers,
+		albums:   d.Albums,
+		tagger:   d.Tagger,
+		ch:       make(chan uint32, channelCap),
+		stop:     make(chan struct{}),
+		inFlight: make(map[uint32]struct{}),
+		requeue:  make(map[uint32]struct{}),
+	}
+}
+
+// Start spawns consumer goroutines reading from the queue. Blocks until ctx
+// is canceled and every consumer has finished its current import. Safe to
+// call once per app lifetime.
+//
+// w.ch is deliberately never closed: scheduler jobs holding this worker as an
+// importer.Enqueuer keep calling Enqueue after ctx is canceled, and a send on
+// a closed channel would panic them. Consumers terminate on ctx.Done instead;
+// w.stop turns those late enqueues into no-ops.
+func (w *Worker) Start(ctx context.Context) {
+	w.registerQueueGauges(ctx)
+	var wg sync.WaitGroup
+	for range consumers {
+		wg.Go(func() { w.consume(ctx) })
+	}
+	<-ctx.Done()
+	close(w.stop)
+	wg.Wait()
+}
+
+// Enqueue pushes a record ID into the import queue. Non-blocking: when the
+// queue is full the ID is dropped (import_scan will pick it up on the next
+// tick). Dedupe: an ID already in-flight is coalesced into a single requeue
+// that the consumer issues once the running import finishes. After shutdown
+// every enqueue is dropped — nothing is left to consume the queue.
+func (w *Worker) Enqueue(recordID uint32) {
+	select {
+	case <-w.stop:
+		slog.DebugContext(
+			context.Background(),
+			"importer stopped, dropping enqueue",
+			"record.id", recordID,
+		)
+		return
+	default:
+	}
+
+	w.mu.Lock()
+	_, inFlight := w.inFlight[recordID]
+	if inFlight {
+		w.requeue[recordID] = struct{}{}
+	}
+	w.mu.Unlock()
+	if inFlight {
+		return
+	}
+	select {
+	case w.ch <- recordID:
+	default:
+		dropped.Add(context.Background(), 1)
+		slog.WarnContext(
+			context.Background(),
+			"importer queue full, dropping enqueue",
+			"record.id", recordID,
+		)
+	}
+}
+
+// Scan re-enqueues all DownloadRecords sitting at status=importing. Used by
+// the scheduler as a safety net after a restart or a dropped enqueue.
+func (w *Worker) Scan(ctx context.Context) error {
+	records, err := w.db.ListImportingDownloadRecords(ctx)
+	if err != nil {
+		return err
+	}
+	for _, r := range records {
+		w.Enqueue(r.ID)
+	}
+	return nil
+}
+
+func (w *Worker) consume(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case id := <-w.ch:
+			w.mu.Lock()
+			if _, dup := w.inFlight[id]; dup {
+				w.mu.Unlock()
+				continue
+			}
+			w.inFlight[id] = struct{}{}
+			w.mu.Unlock()
+
+			err := w.runImport(ctx, id)
+			w.handleOutcome(ctx, id, err)
+
+			w.mu.Lock()
+			delete(w.inFlight, id)
+			_, again := w.requeue[id]
+			delete(w.requeue, id)
+			w.mu.Unlock()
+			if again {
+				w.Enqueue(id)
+			}
+		}
+	}
+}
+
+// lockEntity blocks until this import owns key and returns its release func.
+// It must be held across both the "already has a file" precondition read and
+// the transfer, or the read is stale by the time the file lands. Exactly one
+// key is taken per import — a second acquisition would be a deadlock.
+func (w *Worker) lockEntity(key string) func() {
+	v, _ := w.entityLocks.LoadOrStore(key, &sync.Mutex{})
+	mu := v.(*sync.Mutex)
+	mu.Lock()
+	return mu.Unlock
+}
+
+func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
+	ctx, span := tracer.Start(ctx, "importer.run",
+		trace.WithAttributes(attribute.Int64("download_record.id", int64(recordID))),
+	)
+	defer span.End()
+
+	rec, err := w.db.FindImportingDownloadRecordByID(ctx, recordID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil
+		}
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("find importing record: %w", err),
+		)
+	}
+	libCfg := config.Get().Library
+	span.SetAttributes(
+		attribute.Int("import.attempt", int(rec.ImportAttempts)+1),
+		attribute.String("save_path", rec.SavePath),
+	)
+
+	if len(libCfg.AllowedDownloadRoots) > 0 {
+		allowed := false
+		for _, root := range libCfg.AllowedDownloadRoots {
+			if library.PathUnderRoot(rec.SavePath, root) {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return otelx.RecordSpanError(span, ErrPathNotAllowed)
+		}
+	}
+
+	switch {
+	case rec.Edges.Movie != nil:
+		return w.importMovieRecord(ctx, span, rec, libCfg)
+	case rec.Edges.AnchorEpisode != nil:
+		return w.importEpisodeRecord(ctx, span, rec, libCfg)
+	case rec.Edges.Book != nil:
+		return w.importBookRecord(ctx, span, rec, libCfg)
+	case rec.Edges.Album != nil:
+		return w.importAlbumRecord(ctx, span, rec, libCfg)
+	case rec.Edges.Artist != nil:
+		return w.importPackRecord(ctx, span, rec, libCfg)
+	default:
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf(
+				"record %d has no movie, episode, album, artist or book", recordID),
+		)
+	}
+}
+
+// probeSource best-effort-probes a source media file before transfer. A nil
+// info with a nil error means probing is off or unavailable — never a bad
+// file, which is what tells verification to stay out of the way.
+func (w *Worker) probeSource(
+	ctx context.Context,
+	path string,
+) (*ffmpeg.Info, error) {
+	if !config.Get().FFmpeg.Enabled || w.probe == nil || !w.probe.Available() {
+		return nil, nil
+	}
+	info, err := w.probe.Probe(ctx, path)
+	if err != nil {
+		slog.WarnContext(ctx, "media probe failed", "file", path, "error", err)
+		return nil, err
+	}
+	return info, nil
+}
+
+// verdict verifies one probed source file against what the release claimed and
+// what the profile allows, returning the reasons to hold it. always_ask adds
+// its own reason only when nothing else objected — it needs no probe, so it
+// holds even with ffmpeg off.
+func (w *Worker) verdict(
+	media config.Media,
+	file string,
+	releaseTitle string,
+	info *ffmpeg.Info,
+	probeErr error,
+	runtimeMinutes uint16,
+	qualityProfile string,
+) []schema.HoldReason {
+	cfg := config.Get()
+	var allowedCodecs []string
+	if profile, ok := config.ResolveQualityProfile(media, qualityProfile); ok {
+		allowedCodecs = profile.AllowedCodecs
+	}
+	parsed := library.Parse(filepath.Base(file))
+	if parsed.Resolution == "" {
+		// A generically named payload ("movie.mkv") carries no claim of its
+		// own, so the check would silently pass. The release title the grab
+		// was made against always states one.
+		parsed.Resolution = library.Parse(releaseTitle).Resolution
+	}
+	reasons := verifyFile(
+		file,
+		parsed,
+		info,
+		probeErr,
+		uint32(runtimeMinutes),
+		allowedCodecs,
+		cfg.Library.Probe.MinDurationRatio,
+	)
+	if len(reasons) == 0 && cfg.Library.Probe.AlwaysAsk {
+		reasons = append(reasons, schema.HoldReason{
+			File:     file,
+			Check:    "always_ask",
+			Expected: "manual approval",
+		})
+	}
+	return reasons
+}
+
+// hold stops the import and parks the record for a user decision. A hold is an
+// outcome, not a failure: it returns nil so the attempt counter stays put.
+func (w *Worker) hold(
+	ctx context.Context,
+	span trace.Span,
+	rec *ent.DownloadRecord,
+	reasons []schema.HoldReason,
+) error {
+	if err := w.db.HoldDownloadRecord(ctx, rec.ID, reasons); err != nil {
+		return otelx.RecordSpanError(span, fmt.Errorf("hold record: %w", err))
+	}
+	recordOutcome(ctx, "held")
+	slog.InfoContext(ctx, "import held for review",
+		"download_record.id", rec.ID,
+		"reasons", len(reasons),
+		"check", reasons[0].Check)
+	return nil
+}
+
+func (w *Worker) importMovieRecord(
+	ctx context.Context,
+	span trace.Span,
+	rec *ent.DownloadRecord,
+	libCfg config.LibraryConfig,
+) error {
+	m := rec.Edges.Movie
+	span.SetAttributes(attribute.Int64("movie.id", int64(m.ID)))
+	defer w.lockEntity(fmt.Sprintf("movie:%d", m.ID))()
+
+	// A movie holds at most one media file: a grab arriving while one exists
+	// either replaces it (record flagged via the manual-search toggle) or
+	// fails terminally before any transfer happens.
+	existing, err := w.db.ListMediaFilesByMovieID(ctx, m.ID)
+	if err != nil {
+		return otelx.RecordSpanError(span, fmt.Errorf("list movie files: %w", err))
+	}
+	if len(existing) > 0 && rec.ReplaceMode == downloadrecord.ReplaceModeNone {
+		return otelx.RecordSpanError(span, ErrMovieHasFile)
+	}
+
+	var probeInfo *ffmpeg.Info
+	var probeErr error
+	src, srcErr := library.ResolveMediaFile(rec.SavePath)
+	if srcErr == nil {
+		probeInfo, probeErr = w.probeSource(ctx, src)
+	}
+	// Verified before the existing file is replaced, mirroring the season-pack
+	// path: a hold that ran after the replace would already have destroyed the
+	// only copy on disk while the new release sits unimported. For the same
+	// reason an unresolvable source fails here, as the counted failure the
+	// import call would have reported, rather than after the replace: the
+	// release's content decides srcErr, and a release with no usable media
+	// must not cost the library the file it was meant to upgrade.
+	if srcErr != nil {
+		return otelx.RecordSpanError(span, srcErr)
+	}
+	if !rec.VerificationBypassed {
+		reasons := w.verdict(
+			config.MediaMovie,
+			src,
+			rec.Title,
+			probeInfo,
+			probeErr,
+			m.Runtime,
+			m.QualityProfile,
+		)
+		if len(reasons) > 0 {
+			return w.hold(ctx, span, rec, reasons)
+		}
+	}
+	aside, err := setAside(ctx, existing)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	imported, err := w.lib.ImportMovie(ctx, rec.SavePath, m)
+	if err != nil {
+		putBack(ctx, aside)
+		return otelx.RecordSpanError(span, err)
+	}
+	for _, mf := range existing {
+		if err := w.db.DeleteMediaFileAndRevertMovie(ctx, mf.ID, m.ID); err != nil {
+			return otelx.RecordSpanError(
+				span, fmt.Errorf("delete replaced movie media file: %w", err),
+			)
+		}
+	}
+
+	if err := w.db.RecordImportSuccess(ctx, db.RecordImportSuccessParams{
+		RecordID: rec.ID,
+		MovieID:  m.ID,
+		QueueTranscode: config.TranscodeEligible(
+			config.MediaMovie,
+			m.QualityProfile,
+		),
+		File: db.MediaFileRow{
+			Path:         imported.Path,
+			Size:         imported.Size,
+			Quality:      imported.Parsed.Resolution,
+			Format:       imported.Parsed.Extension,
+			ReleaseGroup: imported.Parsed.Group,
+			Parsed:       &imported.Parsed,
+			Probe:        probeInfo,
+		},
+	}); err != nil {
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("record import success: %w", err),
+		)
+	}
+	dropAside(ctx, aside)
+	slog.InfoContext(ctx, "imported file",
+		"media_file.path", imported.Path,
+		"movie.id", m.ID,
+		"movie.tmdb_id", m.TmdbID,
+	)
+
+	w.markRequestsAvailable(ctx, "movie", m.TmdbID)
+	w.refreshMediaServers(ctx, "movie", libCfg.MoviePath)
+	w.cleanupTorrent(ctx, rec, libCfg)
+	return nil
+}
+
+// replacedSuffix names an existing library file set aside while the release
+// replacing it is placed.
+const replacedSuffix = ".streamline-replaced"
+
+// setAside renames each existing file out of the way beside itself and
+// returns the paths it moved. The replacement is placed before anything is
+// deleted: removing first cost the library its only copy whenever the new
+// import then failed — a release whose content was not what it claimed, a
+// destination the template refused, a cross-device transfer error. Renaming
+// rather than leaving the file where it is frees the destination when old and
+// new render to the same path. Same directory, so the rename is atomic; a
+// file already gone has nothing to protect and is skipped. A failed rename
+// puts back what had moved.
+func setAside(ctx context.Context, files []*ent.MediaFile) ([]string, error) {
+	var moved []string
+	for _, mf := range files {
+		err := os.Rename(mf.Path, mf.Path+replacedSuffix)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			putBack(ctx, moved)
+			return nil, fmt.Errorf("set aside %s: %w", mf.Path, err)
+		}
+		moved = append(moved, mf.Path)
+	}
+	return moved, nil
+}
+
+// putBack restores files setAside moved, after the replacement failed.
+func putBack(ctx context.Context, moved []string) {
+	for _, p := range moved {
+		if err := os.Rename(p+replacedSuffix, p); err != nil {
+			slog.ErrorContext(ctx,
+				"a library file set aside for a replacement could not be put back",
+				"path", p, "set_aside_as", p+replacedSuffix, "error", err)
+		}
+	}
+}
+
+// dropAside deletes files setAside moved, once the replacement is recorded.
+func dropAside(ctx context.Context, moved []string) {
+	for _, p := range moved {
+		if err := os.Remove(p + replacedSuffix); err != nil &&
+			!errors.Is(err, fs.ErrNotExist) {
+			slog.WarnContext(ctx, "replace: remove the replaced file failed",
+				"path", p+replacedSuffix, "error", err)
+		}
+	}
+}
+
+// packFile is one pack member resolved against the library: which episode it
+// belongs to, what is already there, and whether this import will take it.
+type packFile struct {
+	path       string
+	size       int64
+	season     uint16
+	episode    *ent.Episode
+	existing   *ent.MediaFile
+	info       *ffmpeg.Info
+	probeErr   error
+	willImport bool
+}
+
+// takesPackFile reports whether this import replaces or fills the episode the
+// file belongs to. An episode with no file is always taken — the pack is
+// filling a gap. Under ReplaceModeUpgrades each episode is compared against
+// its own file, which is what lets one pack fill holes and upgrade what it
+// beats without touching anything it doesn't.
+//
+// A pack member's basename ("Show.S01E01.1080p.mkv") carries none of the
+// release-level markers (remux, HDR, multi-audio, dubbed, source, group) that
+// the scanner scored against the pack's own release title — so the incoming
+// context is built the way w.verdict falls back to the release title for the
+// resolution claim: keep whatever the basename states, fill whatever it
+// doesn't from recordTitle. Without this, a member named plainly under a
+// release titled ...REMUX... scores 200 at the scanner and 0 here, and the
+// importer silently declines every episode the scanner just selected.
+func takesPackFile(
+	pf packFile,
+	mode downloadrecord.ReplaceMode,
+	profile quality.Profile,
+	hasProfile bool,
+	recordTitle string,
+) bool {
+	if pf.existing == nil {
+		return true
+	}
+	switch mode {
+	case downloadrecord.ReplaceModeAll:
+		return true
+	case downloadrecord.ReplaceModeUpgrades:
+		if !hasProfile {
+			return false
+		}
+		existing := qualityctx.ContextFromRow(pf.existing)
+		// The probe wins over the filename when there is one — the same
+		// degrade path an ffmpeg-disabled install takes everywhere else. A nil
+		// info is the ffmpeg-off case and leaves every stream field unknown,
+		// which drops those formats from both sides rather than scoring the
+		// incoming file as having none of them.
+		return qualityctx.Replaces(profile, existing, qualityctx.ContextFromPackFile(
+			filepath.Base(pf.path), pf.size, pf.info, recordTitle,
+		))
+	default:
+		return false
+	}
+}
+
+// importEpisodeRecord links a completed TV download to its episode(s). A
+// single-episode record imports the one file; a season-pack record (a
+// directory of multiple video files) matches each file to an episode and
+// imports the matches, leaving unmatched episodes wanted.
+func (w *Worker) importEpisodeRecord(
+	ctx context.Context,
+	span trace.Span,
+	rec *ent.DownloadRecord,
+	libCfg config.LibraryConfig,
+) error {
+	ep := rec.Edges.AnchorEpisode
+	season := ep.Edges.Season
+	if season == nil || season.Edges.TvShow == nil {
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("episode %d missing season/show context", ep.ID),
+		)
+	}
+	show := season.Edges.TvShow
+	anime := show.Type == tvshow.TypeAnime
+	span.SetAttributes(
+		attribute.Int64("tvshow.id", int64(show.ID)),
+		attribute.Int64("episode.id", int64(ep.ID)),
+	)
+	// Keyed by the show, not the episode: a season-pack record imports into
+	// every episode of the show, so an episode key would let a pack run
+	// alongside a single-episode record aimed at one of its files.
+	defer w.lockEntity(fmt.Sprintf("tvshow:%d", show.ID))()
+
+	info, err := os.Stat(rec.SavePath)
+	if err != nil {
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("stat save path: %w", err),
+		)
+	}
+
+	// Single file (or a dir resolving to exactly one file) → import directly to
+	// the record's own episode. Otherwise treat it as a season pack.
+	if !info.IsDir() {
+		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep, libCfg)
+	}
+	files, err := library.ListVideoFilesRecursive(rec.SavePath)
+	if err != nil {
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("list pack files: %w", err),
+		)
+	}
+	if len(files) <= 1 {
+		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep, libCfg)
+	}
+
+	profile, hasProfile := config.ResolveScoredProfile(
+		config.MediaSeries,
+		show.QualityProfile,
+	)
+	plan := make([]packFile, 0, len(files))
+	for _, f := range files {
+		pf := packFile{path: f}
+		parsed := library.Parse(filepath.Base(f))
+		pf.season, pf.episode = library.MatchEpisodeInSeason(
+			parsed, show.Edges.Seasons, anime,
+		)
+		if pf.episode == nil {
+			slog.WarnContext(ctx, "season pack file matched no episode",
+				"file", filepath.Base(f), "tvshow.id", show.ID)
+			continue
+		}
+		mf, err := w.db.FindMediaFileByEpisodeID(ctx, pf.episode.ID)
+		if err != nil && !ent.IsNotFound(err) {
+			slog.WarnContext(ctx, "season pack: media file lookup failed",
+				"episode.id", pf.episode.ID, "error", err)
+			continue
+		}
+		pf.existing = mf
+		if st, sErr := os.Stat(f); sErr == nil {
+			pf.size = st.Size()
+		} else {
+			slog.WarnContext(ctx, "season pack: stat failed",
+				"file", filepath.Base(f), "error", sErr)
+		}
+		pf.info, pf.probeErr = w.probeSource(ctx, f)
+		pf.willImport = takesPackFile(
+			pf,
+			rec.ReplaceMode,
+			profile,
+			hasProfile,
+			rec.Title,
+		)
+		plan = append(plan, pf)
+	}
+
+	// Verified before anything moves, and scoped to what will move: a corrupt
+	// file belonging to an episode this import was never going to touch is not
+	// this record's problem.
+	var reasons []schema.HoldReason
+	if !rec.VerificationBypassed {
+		for _, pf := range plan {
+			if !pf.willImport {
+				continue
+			}
+			reasons = append(reasons, w.verdict(
+				config.MediaSeries, pf.path, rec.Title, pf.info, pf.probeErr,
+				show.Runtime, show.QualityProfile,
+			)...)
+		}
+	}
+	if len(reasons) > 0 {
+		return w.hold(ctx, span, rec, reasons)
+	}
+
+	matched, skippedExisting := 0, 0
+	touched := map[uint16]struct{}{}
+	// One imported event stands for the whole pack, recorded below. Without
+	// this the per-file create hook wrote an activity row per episode, so a
+	// full-season grab read as twenty-odd unrelated imports.
+	ctx = events.SuppressImported(ctx)
+	for _, pf := range plan {
+		if !pf.willImport {
+			skippedExisting++
+			slog.InfoContext(ctx, "season pack: leaving episode's file in place",
+				"episode.id", pf.episode.ID, "file", filepath.Base(pf.path))
+			continue
+		}
+		var replaced []*ent.MediaFile
+		if pf.existing != nil {
+			replaced = []*ent.MediaFile{pf.existing}
+		}
+		aside, err := setAside(ctx, replaced)
+		if err != nil {
+			slog.WarnContext(ctx, "season pack replace: set existing aside failed",
+				"episode.id", pf.episode.ID, "error", err)
+			continue
+		}
+		imported, err := w.lib.ImportEpisode(
+			ctx,
+			pf.path,
+			show,
+			pf.season,
+			pf.episode,
+		)
+		if err != nil {
+			putBack(ctx, aside)
+			slog.WarnContext(ctx, "season pack file import failed",
+				"file", filepath.Base(pf.path), "error", err)
+			continue
+		}
+		if pf.existing != nil {
+			if err := w.db.DeleteMediaFileAndRevertEpisode(
+				ctx, pf.existing.ID, pf.episode.ID,
+			); err != nil {
+				return otelx.RecordSpanError(span, fmt.Errorf(
+					"delete replaced episode media file: %w", err,
+				))
+			}
+		}
+		if err := w.db.RecordEpisodeImportSuccess(
+			ctx,
+			db.RecordEpisodeImportSuccessParams{
+				RecordID:  rec.ID,
+				EpisodeID: pf.episode.ID,
+				QueueTranscode: config.TranscodeEligible(
+					config.MediaSeries,
+					show.QualityProfile,
+				),
+				File: db.MediaFileRow{
+					Path:         imported.Path,
+					Size:         imported.Size,
+					Quality:      imported.Parsed.Resolution,
+					Format:       imported.Parsed.Extension,
+					ReleaseGroup: imported.Parsed.Group,
+					Parsed:       &imported.Parsed,
+					Probe:        pf.info,
+				},
+			},
+		); err != nil {
+			return otelx.RecordSpanError(
+				span,
+				fmt.Errorf("record episode import success: %w", err),
+			)
+		}
+		dropAside(ctx, aside)
+		touched[pf.season] = struct{}{}
+		matched++
+	}
+	if matched == 0 {
+		if skippedExisting > 0 {
+			return otelx.RecordSpanError(span, ErrEpisodeHasFile)
+		}
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("season pack matched no episodes"),
+		)
+	}
+	slog.InfoContext(ctx, "imported season pack",
+		"tvshow.id", show.ID, "matched", matched, "files", len(files))
+
+	seasons := make([]uint16, 0, len(touched))
+	for n := range touched {
+		seasons = append(seasons, n)
+	}
+	slices.Sort(seasons)
+	if err := events.Record(
+		ctx, nil, events.TypeImported, events.ScopeSeries, show.ID,
+		map[string]any{
+			"seasons":       seasons,
+			"episodes":      matched,
+			"release_title": rec.Title,
+			"source":        "pack",
+		},
+	); err != nil {
+		slog.WarnContext(ctx, "season pack: record imported event failed",
+			"tvshow.id", show.ID, "error", err)
+	}
+
+	w.markRequestsAvailable(ctx, "tvshow", show.TvdbID)
+	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath)
+	w.cleanupTorrent(ctx, rec, libCfg)
+	return nil
+}
+
+func (w *Worker) importSingleEpisode(
+	ctx context.Context,
+	span trace.Span,
+	rec *ent.DownloadRecord,
+	show *ent.TVShow,
+	seasonNumber uint16,
+	ep *ent.Episode,
+	libCfg config.LibraryConfig,
+) error {
+	// An episode holds at most one media file: a grab arriving while one
+	// exists either replaces it (record flagged via the manual-search toggle)
+	// or fails terminally before any transfer happens.
+	mf, err := w.db.FindMediaFileByEpisodeID(ctx, ep.ID)
+	if err != nil && !ent.IsNotFound(err) {
+		return otelx.RecordSpanError(span, fmt.Errorf("find episode file: %w", err))
+	}
+	if mf != nil && rec.ReplaceMode == downloadrecord.ReplaceModeNone {
+		return otelx.RecordSpanError(span, ErrEpisodeHasFile)
+	}
+
+	var probeInfo *ffmpeg.Info
+	var probeErr error
+	src, srcErr := library.ResolveEpisodeFile(rec.SavePath)
+	if srcErr == nil {
+		probeInfo, probeErr = w.probeSource(ctx, src)
+	}
+	// Verified before the existing file is replaced, mirroring the season-pack
+	// path: a hold that ran after the replace would already have destroyed the
+	// only copy on disk while the new release sits unimported. For the same
+	// reason an unresolvable source fails here, as the counted failure the
+	// import call would have reported, rather than after the replace: the
+	// release's content decides srcErr, and a release with no usable media
+	// must not cost the library the file it was meant to upgrade.
+	if srcErr != nil {
+		return otelx.RecordSpanError(span, srcErr)
+	}
+	if !rec.VerificationBypassed {
+		reasons := w.verdict(
+			config.MediaSeries,
+			src,
+			rec.Title,
+			probeInfo,
+			probeErr,
+			show.Runtime,
+			show.QualityProfile,
+		)
+		if len(reasons) > 0 {
+			return w.hold(ctx, span, rec, reasons)
+		}
+	}
+	var replaced []*ent.MediaFile
+	if mf != nil {
+		replaced = []*ent.MediaFile{mf}
+	}
+	aside, err := setAside(ctx, replaced)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	imported, err := w.lib.ImportEpisode(ctx, rec.SavePath, show, seasonNumber, ep)
+	if err != nil {
+		putBack(ctx, aside)
+		return otelx.RecordSpanError(span, err)
+	}
+	if mf != nil {
+		if err := w.db.DeleteMediaFileAndRevertEpisode(
+			ctx,
+			mf.ID,
+			ep.ID,
+		); err != nil {
+			return otelx.RecordSpanError(
+				span, fmt.Errorf("delete replaced episode media file: %w", err),
+			)
+		}
+	}
+	if err := w.db.RecordEpisodeImportSuccess(
+		ctx,
+		db.RecordEpisodeImportSuccessParams{
+			RecordID:  rec.ID,
+			EpisodeID: ep.ID,
+			QueueTranscode: config.TranscodeEligible(
+				config.MediaSeries,
+				show.QualityProfile,
+			),
+			File: db.MediaFileRow{
+				Path:         imported.Path,
+				Size:         imported.Size,
+				Quality:      imported.Parsed.Resolution,
+				Format:       imported.Parsed.Extension,
+				ReleaseGroup: imported.Parsed.Group,
+				Parsed:       &imported.Parsed,
+				Probe:        probeInfo,
+			},
+		},
+	); err != nil {
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("record episode import success: %w", err),
+		)
+	}
+	dropAside(ctx, aside)
+	slog.InfoContext(ctx, "imported episode file",
+		"media_file.path", imported.Path,
+		"tvshow.id", show.ID, "episode.id", ep.ID)
+
+	w.markRequestsAvailable(ctx, "tvshow", show.TvdbID)
+	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath)
+	w.cleanupTorrent(ctx, rec, libCfg)
+	return nil
+}
+
+func (w *Worker) refreshMediaServers(ctx context.Context, kind, libraryPath string) {
+	if w.ms == nil {
+		return
+	}
+	if err := w.ms.RefreshAll(ctx, kind, libraryPath); err != nil {
+		slog.WarnContext(ctx, "media server refresh reported errors", "error", err)
+	}
+}
+
+// markRequestsAvailable best-effort flips any approved requests for this media
+// to available once it imports. Failures are logged, never fatal to the import.
+func (w *Worker) markRequestsAvailable(
+	ctx context.Context,
+	mediaType string,
+	mediaID uint32,
+) {
+	if err := w.db.MarkRequestsAvailable(ctx, mediaType, mediaID); err != nil {
+		slog.WarnContext(ctx, "mark requests available failed",
+			"media.type", mediaType, "media.id", mediaID, "error", err)
+	}
+}
+
+// markRequestsAvailableByMBID is markRequestsAvailable for the MusicBrainz-keyed
+// request types. An artist request flips on the artist's first imported album,
+// not when the discography is complete: a request has no notion of "all of it".
+func (w *Worker) markRequestsAvailableByMBID(
+	ctx context.Context,
+	mediaType, mbid string,
+) {
+	if err := w.db.MarkRequestsAvailableByMBID(ctx, mediaType, mbid); err != nil {
+		slog.WarnContext(ctx, "mark requests available failed",
+			"media.type", mediaType, "media.mbid", mbid, "error", err)
+	}
+}
+
+func (w *Worker) cleanupTorrent(
+	ctx context.Context,
+	rec *ent.DownloadRecord,
+	libCfg config.LibraryConfig,
+) {
+	if rec.DownloadClientName == "" {
+		return
+	}
+	// A moved torrent has nothing left to seed from — its payload is now the
+	// library file and the client fails its next recheck — so it goes
+	// regardless of keep_torrent_seeding, and whatever it still holds goes
+	// with it: files the import did not take cannot be seeded either.
+	moved := libCfg.ImportMode == "move"
+	if libCfg.KeepTorrentSeeding && !moved {
+		return
+	}
+	if err := w.dl.RemoveTorrent(
+		ctx,
+		rec.DownloadClientName,
+		rec.TorrentHash,
+		moved,
+	); err != nil {
+		slog.WarnContext(ctx, "remove torrent failed",
+			"hash", rec.TorrentHash, "error", err)
+	}
+}
+
+func (w *Worker) handleOutcome(ctx context.Context, recordID uint32, runErr error) {
+	if runErr == nil {
+		recordOutcome(ctx, "succeeded")
+		return
+	}
+	if errors.Is(runErr, context.Canceled) ||
+		errors.Is(runErr, context.DeadlineExceeded) {
+		return
+	}
+
+	rec, err := w.db.FindImportingDownloadRecordByID(ctx, recordID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return
+		}
+		slog.ErrorContext(ctx, "importer outcome lookup failed", "error", err)
+		return
+	}
+	attempts := rec.ImportAttempts + 1
+	isTerminal := classify(runErr) == terminal ||
+		attempts >= config.Get().Library.ImportMaxAttempts
+
+	params := db.RecordImportFailureParams{
+		RecordID: rec.ID,
+		Terminal: isTerminal,
+		Attempts: attempts,
+	}
+	if rec.Edges.Movie != nil {
+		params.MovieID = rec.Edges.Movie.ID
+	}
+	if rec.Edges.AnchorEpisode != nil {
+		params.EpisodeID = rec.Edges.AnchorEpisode.ID
+	}
+	if rec.Edges.Album != nil {
+		params.AlbumID = rec.Edges.Album.ID
+	}
+	for _, a := range rec.Edges.Albums {
+		params.PackAlbumIDs = append(params.PackAlbumIDs, a.ID)
+	}
+	if rec.Edges.Book != nil {
+		params.BookID = rec.Edges.Book.ID
+		params.BookKind = mediafile.BookKind(rec.BookKind)
+	}
+	if isTerminal {
+		params.Reason = strings.TrimSpace(runErr.Error())
+		if len(params.Reason) > 256 {
+			params.Reason = params.Reason[:256]
+		}
+	}
+	if err := w.db.RecordImportFailure(ctx, params); err != nil {
+		slog.ErrorContext(ctx, "record import failure write failed", "error", err)
+		return
+	}
+	if isTerminal {
+		recordOutcome(ctx, "terminal")
+	} else {
+		recordOutcome(ctx, "failed")
+	}
+	//nolint:sloglint // LogAttrs takes slog.Attr by API design
+	slog.LogAttrs(ctx, slog.LevelWarn, "import failed",
+		slog.Int("record.id", int(rec.ID)),
+		slog.Int("attempts", int(attempts)),
+		slog.Bool("terminal", isTerminal),
+		slog.String("error", runErr.Error()))
+}

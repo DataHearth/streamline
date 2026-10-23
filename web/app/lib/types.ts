@@ -1,0 +1,1774 @@
+import type { BookFormat, BookKind, MusicTier, ReleaseType } from "./music-books";
+
+export type MovieStatus =
+	| "wanted"
+	| "downloading"
+	| "importing"
+	| "available"
+	| "failed";
+
+export type SeriesStatus = "continuing" | "ended";
+// What an in-flight grab covers, which is what a library card has to say: one
+// episode, a season pack, or a complete-series pack.
+export type SeriesDownloadScope = "episode" | "season" | "series";
+export type SeriesType = "standard" | "anime" | "daily";
+export type EpisodeStatus =
+	| "wanted"
+	| "downloading"
+	| "importing"
+	| "paused"
+
+	| "available"
+	| "unaired"
+	| "skipped";
+
+// Monitoring presets accepted by POST /series and PATCH /series/{id}.
+export type MonitoringPreset =
+	| "all"
+	| "future"
+	| "missing"
+	| "existing"
+	| "pilot"
+	| "none";
+
+export type Episode = {
+	id: number;
+	number: number;
+	absolute_number?: number;
+	title?: string;
+	overview?: string;
+	air_date?: string | null;
+	status: EpisodeStatus;
+	monitored: boolean;
+	quality?: string;
+	size?: number | null;
+	has_file?: boolean;
+	path?: string;
+	release_group?: string;
+	parsed_source?: string;
+	file_score?: number;
+	media_info?: MediaInfo | null;
+	// Set when this file is the output of a transcode job. size_before is what
+	// the file weighed on import, so the detail can state the saving without
+	// going back to the job.
+	transcoded_at?: string;
+	size_before?: number;
+};
+
+export type Season = {
+	id: number;
+	number: number;
+	name?: string;
+	monitored: boolean;
+	available?: number;
+	missing?: number;
+	unaired?: number;
+	total?: number;
+	episodes?: Episode[];
+};
+
+export type TVShow = {
+	id: number;
+	title: string;
+	original_title?: string;
+	year: number;
+	overview?: string;
+	series_status: SeriesStatus;
+	type: SeriesType;
+	monitored: boolean;
+	tvdb_id: number;
+	// First air date, ISO yyyy-mm-dd — the series counterpart to
+	// Movie.release_date. Absent for an announced show with no date set, which
+	// is why `year` stays and stays required.
+	first_aired?: string | null;
+	network?: string;
+	creator?: string;
+	runtime?: number;
+	rating?: number | null;
+	genres?: string[];
+	quality_profile?: string;
+	// Specials (season 0) count for none of these — not the seasons, not the
+	// episodes.
+	total_seasons?: number;
+	have_episodes?: number;
+	total_episodes?: number;
+	wanted_episodes?: number;
+	// What the show has in flight, so a library card can badge it without a
+	// per-show queue lookup. List-only rollups — the detail response carries
+	// the episode tree instead. Zero or absent when nothing is running.
+	downloading_episodes?: number;
+	/** Episodes past the grab and being written into the library. */
+	importing_episodes?: number;
+	downloading_scope?: SeriesDownloadScope;
+	/** Season the grab lands in; absent when it spans seasons. */
+	downloading_season?: number;
+	/** Episode number, set only when the scope is a single episode. */
+	downloading_episode?: number;
+	/** Mean progress across the in-flight items, 0-1. */
+	download_progress?: number;
+	// Only populated by GET /series/{id}; absent in list responses.
+	seasons?: Season[];
+	cast?: CastMember[];
+	added_at?: string;
+	// The most recent import into this show. `added_at` is when the show record
+	// was created, which says nothing about when files arrived: a show followed
+	// since March can take an episode this morning. Absent until one has.
+	last_added?: SeriesAddition;
+};
+
+// What one import put in the library, summarised for a list response — enough
+// to name the arrival without fetching the show's seasons.
+export type SeriesAddition = {
+	at: string;
+	/** Seasons the import landed in — one entry in the ordinary case. */
+	seasons: number[];
+	/** Episode numbers within `seasons[0]`; omitted for a multi-season pack. */
+	episodes?: number[];
+	/** The episode's own title, set only when the import was a single episode. */
+	episode_title?: string;
+	/** Set when the batch filled its season, so it reads as a pack, not a run. */
+	whole_season?: boolean;
+	/** Episodes imported across every season the batch touched. */
+	count: number;
+};
+
+// Every field but `total` and the two episode tallies is faceted: counted with
+// the request's other filters applied and its own facet's filter left out, so
+// each dropdown says what picking a value would leave. Each facet carries its
+// own `*_total` "all" row — they differ as soon as two facets are filtered, so
+// read each from its own rather than sharing `total`.
+export type TVShowCounts = {
+	// The library, filtered by nothing: the page header and the empty state.
+	total: number;
+	status_total: number;
+	continuing: number;
+	ended: number;
+	// Shows with at least one aired, monitored episode and no file — a
+	// per-show count, not an episode count. Labels the library's "missing" tab.
+	missing: number;
+	// Shows with at least one episode in flight — a per-show count, like
+	// `missing`, and the one the library's downloading tab reads.
+	downloading: number;
+	// Shows with at least one episode importing — the phase after the grab, and
+	// the one a card reads as Importing.
+	importing: number;
+	type_total: number;
+	standard: number;
+	anime: number;
+	daily: number;
+	monitored_total: number;
+	monitored: number;
+	unmonitored: number;
+	// Library-wide and unfiltered — the nav badge and the dashboard read these.
+	wanted_episodes: number;
+	downloading_episodes: number;
+};
+
+export type SeriesLookupResult = {
+	tvdb_id: number;
+	title: string;
+	year: number;
+	network?: string;
+	overview?: string;
+	already_added?: boolean;
+	poster_url?: string;
+};
+
+// GET /series/lookup wraps results in an items envelope.
+export type SeriesLookupResultList = {
+	items: SeriesLookupResult[];
+};
+
+export type AddSeriesRequest = {
+	tvdb_id: number;
+	quality_profile?: string;
+	preset?: MonitoringPreset;
+};
+
+// Everything the add/request modals show for a highlighted lookup result that
+// the search response itself doesn't carry. Fetched per selected title from
+// GET /search/movie/:tmdb_id and GET /series/lookup/:tvdb_id. One shape serves
+// both: movies fill runtime/release_date, series fill network/season_count.
+export type LookupDetail = {
+	overview?: string;
+	tagline?: string;
+	// Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
+	release_date?: string;
+	// Minutes — feature length for a movie, average episode length for a series.
+	runtime?: number;
+	rating?: number;
+	vote_count?: number;
+	genres?: string[];
+	cast?: CastMember[];
+	original_language?: string;
+	tmdb_id?: number;
+	tvdb_id?: number;
+	// Series only.
+	network?: string;
+	season_count?: number;
+	episode_count?: number;
+	status?: string;
+};
+
+export type CastMember = {
+	// The persons row id — what a cast tile links to. TVDB-sourced cast (all
+	// series cast) has tmdb_id 0, so tmdb_id cannot key the person; person_id
+	// is the only stable identity.
+	person_id?: number;
+	tmdb_id?: number;
+	name: string;
+	character?: string;
+	profile_url?: string;
+	// Link to the person's page on the source provider (TMDB or TVDB).
+	person_url?: string;
+};
+
+// A search hit from GET /people. `credits` counts the library titles the
+// person appears in — the reason they are in the index at all. `id` is the
+// persons row id and the only valid key; `tmdb_id` stays for provider links
+// but is 0 for TVDB-only (series) cast.
+export type Person = {
+	id: number;
+	tmdb_id: number;
+	tvdb_id: number;
+	name: string;
+	profile_url?: string;
+	credits: number;
+};
+
+export type PersonMovieCredit = {
+	movie: Movie;
+	character: string;
+};
+
+export type PersonSeriesCredit = {
+	series: TVShow;
+	character: string;
+};
+
+// GET /people/{id}, keyed by the persons row id. Credits are the library's,
+// not TMDB's: a person with none answers 404 rather than an empty page.
+export type PersonDetail = {
+	id: number;
+	tmdb_id: number;
+	tvdb_id: number;
+	name: string;
+	profile_url?: string;
+	// Biography, dates and socials are all provider-dependent and usually
+	// absent: series cast comes from TVDB, which supplies no known_for and
+	// rarely any handle. Dates arrive as "YYYY-MM-DD" but can be partial.
+	biography?: string;
+	known_for?: string;
+	birthday?: string;
+	deathday?: string;
+	place_of_birth?: string;
+	imdb_id?: string;
+	instagram_id?: string;
+	twitter_id?: string;
+	movies: PersonMovieCredit[];
+	series: PersonSeriesCredit[];
+};
+
+export type Movie = {
+	id: number;
+	title: string;
+	original_title: string;
+	year: number;
+	// Primary (theatrical) release, ISO yyyy-mm-dd — the same field
+	// LookupDetail carries, kept on the library record so the detail page can
+	// name a day rather than a year. Absent for an announced title with no date
+	// set yet, which is why `year` stays and stays required.
+	release_date?: string | null;
+	status: MovieStatus;
+	tmdb_id: number;
+	overview?: string;
+	runtime?: number;
+	monitored?: boolean;
+	quality_profile?: string;
+	// Detail responses only (GET /movies/{id}). List responses carry
+	// file_summary instead — see MovieFileSummary.
+	media_files?: MediaFile[];
+	file_summary?: MovieFileSummary;
+	cast?: CastMember[];
+	genres?: string[];
+	rating?: number;
+	added_at?: string;
+};
+
+// The per-movie file rollup a list response carries in place of media_files:
+// enough for the grid's size and quality columns and for bulk-action totals,
+// without loading every file row of every movie on the page. Absent when the
+// movie has no files.
+export type MovieFileSummary = {
+	file_count: number;
+	size_bytes: number;
+	imported_at: string;
+	resolution?: string;
+	codec?: string;
+};
+
+// What ffprobe read off the file. Null until the file has been probed, and
+// still null when probing is disabled — every consumer falls back to the
+// parsed_* fields per field. See lib/media-info.ts.
+export type MediaInfo = {
+	container?: string;
+	video_codec?: string;
+	width?: number;
+	height?: number;
+	duration_seconds?: number;
+	// The default (or first) audio track, flattened — the one that plays. Kept
+	// alongside the aggregate fields below: a file whose streams could not be
+	// enumerated may still report this much.
+	audio_codec?: string;
+	audio_channels?: number;
+	bitrate?: number;
+	probed_at?: string;
+	// Aggregate stream facts, not per-track records: a count and two language
+	// sets, which is what the API actually carries. Languages are ISO 639-2/T,
+	// canonicalised server-side ("fre" is stored as "fra"). subtitle_languages
+	// excludes forced tracks. Which track holds which language, its codec, and
+	// whether it is default or forced are not knowable from this — do not
+	// reintroduce per-track types to render them.
+	audio_track_count?: number;
+	audio_languages?: string[];
+	subtitle_languages?: string[];
+};
+
+export type MediaFile = {
+	id: number;
+	path: string;
+	size: number;
+	quality?: string;
+	format?: string;
+	release_group?: string;
+	parsed_source?: string;
+	parsed_resolution?: string;
+	parsed_codec?: string;
+	// Matched-format total against the owning item's quality profile. Detail
+	// responses only — list responses omit it, and it is absent altogether when
+	// no quality profile resolves. 0 is a real score, not "unknown".
+	file_score?: number;
+	media_info?: MediaInfo | null;
+	// Set when this file is the output of a transcode job. size_before is what
+	// the file weighed on import, so the detail can state the saving without
+	// going back to the job.
+	transcoded_at?: string;
+	size_before?: number;
+};
+
+export type SearchResult = {
+	title: string;
+	info_url?: string;
+	download_url: string;
+	size: number;
+	seeders: number;
+	leechers?: number;
+	release_group?: string;
+	resolution?: string;
+	source?: string;
+	codec?: string;
+	// Book: the slot the release fills.
+	slot?: "ebook" | "audiobook";
+	indexer?: string;
+	published_at?: string;
+	// Scoring against the queried item's quality profile. Absent when no profile
+	// resolves; comparing scores across items on different profiles is
+	// meaningless. The API returns rows already sorted score-descending.
+	score?: number;
+	rejected?: boolean;
+	reject_reason?: string;
+	matched_formats?: string[];
+	// Music releases only: the tier read off the release name, absent when the
+	// name states none. The table falls back to releaseTier(source).
+	audio_tier?: "hires" | "lossless" | "high" | "standard" | "low";
+	// Audiobook releases only: the rate the name states.
+	bitrate_kbps?: number;
+	// Stamped from the indexer's own setting (Settings → Indexers): true for a
+	// private tracker, false for a public one, absent when the indexer does not
+	// say. Not derivable from a Torznab feed.
+	indexer_private?: boolean;
+	// When this exact release was last grabbed for the queried item, from its
+	// download history. Absent when it never was.
+	previously_grabbed_at?: string;
+};
+
+// A season or whole-series release's torrent read against the show before
+// grabbing it (POST /series/{id}[/seasons/{n}]/release-files). wanted is what a
+// grab without replace_existing fetches: still wanted, and aired.
+export type PackFiles = {
+	files: { path: string; size: number; episode_id?: number }[];
+	episodes: {
+		id: number;
+		season: number;
+		number: number;
+		title: string;
+		has_file: boolean;
+		wanted: boolean;
+		in_release: boolean;
+	}[];
+};
+
+export type PlayOnStatus = "resolved" | "fallback" | "unavailable";
+
+export type PlayOnLink = {
+	server_id: number;
+	name: string;
+	server_type: MediaServerType;
+	url?: string;
+	fallback: boolean;
+	status: PlayOnStatus;
+};
+
+export type PlayOnLinkList = {
+	items: PlayOnLink[];
+};
+
+export type RenameOperation = {
+	media_file_id: number;
+	from: string;
+	to: string;
+};
+
+export type RenamePlan = {
+	movie_id: number;
+	operations: RenameOperation[];
+};
+
+export type SeriesRenamePlan = {
+	series_id: number;
+	operations: RenameOperation[];
+};
+
+export type TMDBMovieResult = {
+	tmdb_id: number;
+	title: string;
+	original_title: string;
+	year: number;
+	overview?: string;
+	already_added?: boolean;
+	poster_url?: string;
+};
+
+export type MovieRecommendations = {
+	items: TMDBMovieResult[];
+};
+
+export type AddMovieRequest = {
+	tmdb_id: number;
+	quality_profile?: string;
+};
+
+export type DefaultMedia = "movie" | "series";
+
+export type QualityProfile = {
+	name: string;
+	is_default?: boolean;
+	// The media this profile is the default for.
+	default_for?: DefaultMedia[];
+};
+
+// Requests. UI label "Rejected" maps to status "denied".
+export type RequestStatus = "pending" | "approved" | "denied" | "available";
+
+export type RequestUser = {
+	id: number;
+	email: string;
+	display_name?: string;
+};
+
+export type MediaRequest = {
+	id: number;
+	// artist / album / book / book_series are the music and book requests. An
+	// artist is keyed by its MusicBrainz id and an album by its release group's
+	// (media_mbid, media_id is 0); a book and a series by Hardcover ids, which are
+	// separate spaces. An album request also names its artist, since approving
+	// one adds the artist if the library lacks it.
+	media_type: "movie" | "tvshow" | "artist" | "album" | "book" | "book_series";
+	media_id: number;
+	media_mbid?: string;
+	artist_mbid?: string;
+	artist_name?: string;
+	// Album requests only: the requester's own wording, exactly as typed.
+	// Untrusted and display-only, a caption beside the verified artist name when
+	// the two differ.
+	requested_as?: string;
+	title: string;
+	status: RequestStatus;
+	reason?: string;
+	// Quality profile the requester asked for; empty means no preference. The
+	// reviewer's approve form starts here and can override it.
+	quality_profile?: string;
+	requester: RequestUser;
+	approved_by?: RequestUser;
+	created_at: string;
+	updated_at: string;
+};
+
+export type RequestCounts = {
+	pending: number;
+	approved: number;
+	denied: number;
+	available: number;
+};
+
+// Cover + full metadata fetched on demand so reviewers can judge a request.
+// Extends LookupDetail with the cover, so the same LookupDetailPanel renders
+// an expanded request row and a highlighted add-modal result.
+export type RequestMediaDetails = LookupDetail & {
+	poster_url?: string;
+	year?: number;
+};
+
+// The status and monitoring tallies are faceted: each is counted with the
+// request's other filter applied and its own left out, so each dropdown says
+// what picking a value would leave. Each facet has its own `*_total` "all"
+// row — they diverge once both facets are filtered.
+export type MovieCounts = {
+	// The library, filtered by nothing: the page header and the empty state.
+	total: number;
+	status_total: number;
+	wanted: number;
+	downloading: number;
+	importing: number;
+	available: number;
+	failed: number;
+	monitored_total: number;
+	monitored: number;
+	unmonitored: number;
+	// Cumulative library size per day over the last 30 days, oldest first;
+	// the final element equals `total`. All zeros when the library is empty.
+	trend: number[];
+};
+
+export type UpcomingMovie = {
+	id: number;
+	title: string;
+	year: number;
+	tmdb_id: number;
+	digital_release_date: string;
+	release_type: "digital" | "theatrical";
+};
+
+export type UpcomingEpisode = {
+	series_id: number;
+	series_title: string;
+	season: number;
+	episode: number;
+	title?: string;
+	air_date: string;
+	status: EpisodeStatus;
+	monitored?: boolean;
+};
+
+// A release on a monitored artist's discography, dated to the day. Album and
+// book rows carry the item's real state: a release day that has passed can be
+// grabbed, paused or skipped like any episode.
+export type UpcomingStatus = "wanted" | "downloading" | "available" | "paused" | "skipped" | "failed";
+
+export type UpcomingAlbum = {
+	id: number;
+	title: string;
+	type: ReleaseType;
+	artist_id: number;
+	artist_name: string;
+	release_date: string;
+	status: UpcomingStatus;
+};
+
+// A monitored book, or the next volume of a monitored series, with its
+// publication date from Hardcover.
+export type UpcomingBook = {
+	id: number;
+	title: string;
+	author: string;
+	release_date: string;
+	status: UpcomingStatus;
+	series_id?: number;
+	series_title?: string;
+	position?: number;
+};
+
+export type UpcomingList = {
+	movies: UpcomingMovie[];
+	episodes: UpcomingEpisode[];
+	albums?: UpcomingAlbum[];
+	books?: UpcomingBook[];
+};
+
+// GET /library/recent?limit=: what landed in the library, newest first, across
+// the four media. One entry per import: a movie, a show with the episodes the
+// import added, an album, or one format of a book. A volume of a book series
+// is a book whose `series_id` names the series. `id` is the record whose art
+// the card shows — the movie, the show, the album, the book (a volume's own
+// book id) — and `at` is the import, never the record's added_at.
+export type ArrivalKind = "movie" | "series" | "album" | "book";
+export type LibraryArrival = {
+	kind: ArrivalKind;
+	at: string;
+	id: number;
+	title: string;
+	year?: number;
+	// Movie: the file's resolution.
+	resolution?: string;
+	// Series: what the import put in the show.
+	addition?: SeriesAddition;
+	// Album.
+	artist_id?: number;
+	artist_name?: string;
+	release_type?: ReleaseType;
+	// Book: the slot that arrived, or the volume of a series.
+	author?: string;
+	book_kind?: BookKind;
+	format?: BookFormat;
+	series_id?: number;
+	volume?: number;
+};
+export type LibraryArrivals = { items: LibraryArrival[] };
+
+export type ActivityType =
+	| "grabbed"
+	| "download_completed"
+	| "download_failed"
+	| "download_cancelled"
+	| "grab_widened"
+	| "imported"
+	| "import_failed"
+	| "import_held_for_review"
+	| "drift_detected"
+	| "drift_confirmed"
+	| "searched"
+	| "added"
+	| "file_renamed"
+	| "file_removed"
+	| "reidentified"
+	| "metadata_refreshed"
+	| "monitoring_changed"
+	| "request_approved"
+	| "transcode_completed"
+	| "transcode_failed"
+	| "transcode_rejected";
+
+export type SeriesRef = {
+	id: number;
+	title: string;
+};
+
+// Exactly one owner is set — what the event happened to. series carries only
+// what belongs to no single episode (a search issued at series or season
+// scope); per-episode outcomes use episode. Music and books split the same way
+// one level up: album and book carry their own lifecycle, artist a discography
+// pack and the artist being added, book_series what belongs to the series.
+export type ActivityEvent = {
+	id: number;
+	type: ActivityType;
+	created_at: string;
+	payload?: Record<string, unknown>;
+	movie?: Movie;
+	episode?: EpisodeRef;
+	series?: SeriesRef;
+	artist?: { id: number; name: string };
+	album?: ActivityAlbumRef;
+	book?: ActivityBookRef;
+	book_series?: SeriesRef;
+};
+
+export type ActivityList = {
+	events: ActivityEvent[];
+	next_cursor: string | null;
+};
+
+// Live download queue (GET /activity/queue) — DownloadRecords still in
+// flight, enriched with client telemetry.
+export type EpisodeRef = {
+	show_title: string;
+	season: number;
+	episode: number;
+	series_id?: number;
+};
+
+export type HoldCheck =
+	| "resolution"
+	| "corrupt"
+	| "duration"
+	| "codec"
+	| "tier"
+	| "album"
+	| "format"
+	| "bitrate"
+	| "metadata"
+	// Not a failed check: `library.probe.always_ask` holds an otherwise-clean
+	// import so a person signs off on it, so it carries no expected/actual pair.
+	| "always_ask";
+
+export type HoldReason = {
+	file: string;
+	check: HoldCheck;
+	expected?: string;
+	actual?: string;
+};
+
+// The title a music or book download is for — the activity rows' heading, as
+// EpisodeRef is a TV record's. At most one is set, and none on a movie record.
+export type ActivityAlbumRef = { id: number; title: string; artist_id: number; artist_name: string };
+// album_count is how many albums a discography pack is expected to cover. A
+// book names the slot it fills and, for a volume, its series.
+export type ActivityArtistRef = { id: number; name: string; album_count: number };
+export type ActivityBookRef = {
+	id: number;
+	title: string;
+	author: string;
+	slot?: "ebook" | "audiobook";
+	series?: { id: number; title: string; number: number };
+};
+
+export type QueueEntry = {
+	id: number;
+	// "held": the download finished and failed verification, so it is waiting on
+	// a decision rather than on the network. The only queue state whose next move
+	// belongs to a person.
+	status: "downloading" | "importing" | "paused" | "error" | "held";
+	title: string;
+	quality?: string;
+	release_group?: string;
+	movie: Movie;
+	episode?: EpisodeRef;
+	album?: ActivityAlbumRef;
+	artist?: ActivityArtistRef;
+	book?: ActivityBookRef;
+	indexer?: string;
+	download_client?: string;
+	size: number;
+	progress: number;
+	download_speed?: number;
+	eta?: number;
+	failure_reason?: string;
+	hold_reasons?: HoldReason[];
+	// Omitted entirely when "skipped" — no selection was ever applied, and the
+	// whole torrent downloads. selected_files_count/selected_bytes are present
+	// only when selection_state is "applied".
+	selection_state?: "pending" | "applied" | "unsupported";
+	selected_files_count?: number;
+	selected_bytes?: number;
+	created_at: string;
+};
+export type DownloadQueue = { items: QueueEntry[]; refreshed_at: string };
+
+export type PendingMedia = {
+	type: "movie" | "episode" | "album" | "book";
+	id: number;
+	title: string;
+	year?: number;
+	season?: number;
+	episode?: number;
+};
+export type PendingItem = {
+	id: number;
+	title: string;
+	quality: string;
+	reason: string;
+	has_file: boolean;
+	// Present only when media is absent: what the parser made of the release
+	// name, used to seed the identify search.
+	parsed_title?: string;
+	media?: PendingMedia;
+};
+export type PendingList = { items: PendingItem[]; total: number };
+
+export type PendingPreviewEpisode = {
+	season: number;
+	episode: number;
+	title?: string;
+};
+export type PendingPreview = {
+	imports: PendingPreviewEpisode[];
+	upgrades: PendingPreviewEpisode[];
+	keeps: PendingPreviewEpisode[];
+	unmatched: number;
+};
+
+export type HistoryEntry = {
+	id: number;
+	status: "completed" | "failed";
+	title: string;
+	quality?: string;
+	release_group?: string;
+	movie: Movie;
+	episode?: EpisodeRef;
+	album?: ActivityAlbumRef;
+	artist?: ActivityArtistRef;
+	book?: ActivityBookRef;
+	indexer?: string;
+	download_client?: string;
+	size: number;
+	failure_reason?: string;
+	imported_at?: string | null;
+	created_at: string;
+	updated_at: string;
+};
+export type DownloadHistory = {
+	items: HistoryEntry[];
+	next_cursor: string | null;
+	// Every terminal record, not this page — what the view switch badges.
+	total: number;
+};
+
+export type UserRole = "admin" | "member" | "request_only";
+
+export type AuthMethod = "local" | "oidc" | "both";
+
+export type User = {
+	id: number;
+	email: string;
+	role: UserRole;
+	auth_method: AuthMethod;
+	display_name?: string;
+	// The e-reader's send-by-email address; empty when unset.
+	device_email?: string;
+	// Only /auth/me fills this; admin user lists leave it out.
+	send?: { configured: boolean; from: string };
+	// What the account may do through the Subsonic API; gates /rest only.
+	subsonic?: SubsonicAccess;
+	created_at: string;
+	failed_login_count?: number;
+	locked_until?: string | null;
+};
+
+export type SubsonicAccess = {
+	can_stream: boolean;
+	can_download: boolean;
+	can_manage_playlists: boolean;
+	can_share: boolean;
+	can_rate: boolean;
+	can_change_password: boolean;
+	// Kbps ceiling on every stream; 0 is none.
+	max_bit_rate: number;
+};
+
+export type ApiKey = {
+	id: number;
+	name: string;
+	created_at: string;
+	last_used_at: string | null;
+};
+
+export type Session = {
+	id: number;
+	ip?: string;
+	user_agent?: string;
+	created_at: string;
+	last_seen_at: string | null;
+	expires_at: string;
+	is_current: boolean;
+};
+
+export type UserDetail = {
+	user: User;
+	api_keys: ApiKey[];
+	sessions: Session[];
+};
+
+export type UserList = {
+	items: User[];
+	total: number;
+};
+
+export type Invite = {
+	id: number;
+	email?: string;
+	role: UserRole;
+	expires_at: string;
+	used_at: string | null;
+	created_at: string;
+};
+
+export type InviteCreated = Invite & {
+	raw_token: string;
+	url: string;
+};
+
+export type AuthConfig = {
+	registration_mode: "disabled" | "open" | "invite";
+	session_ttl: string;
+	// Role a self-registering user lands on, on both paths: an anonymous
+	// /auth/register in open mode, and an OIDC login provisioning a new account
+	// whose claims map to nothing. A fallback only — an invite carries its own
+	// role and a matched claim outranks it.
+	default_role: UserRole;
+	lockout: LockoutConfig;
+};
+
+// Per-account login-failure lockout. Every field is optional on a patch: an
+// omitted one keeps its stored value.
+export type LockoutConfig = {
+	threshold?: number;
+	window?: string;
+	duration?: string;
+};
+
+// The three roots are read-only here — a root only moves through the path
+// migration on Settings → Advanced, which rewrites every stored path before it
+// repoints the config. They ride along so the page can show where the library
+// lives without a second request.
+export type LibraryConfig = {
+	monitor_specials: boolean;
+	// Release types an artist's all and future policies monitor.
+	music_monitored_types: ("album" | "ep" | "single" | "compilation" | "live" | "other")[];
+	movie_naming: string;
+	series_naming: string;
+	import_mode: ImportTransferMode;
+	keep_torrent_seeding: boolean;
+	no_match_cooldown: string;
+	max_grab_failures: number;
+	import_max_attempts: number;
+	drift_grace_ticks: number;
+	allowed_download_roots?: string[];
+	movie_path?: string;
+	series_path?: string;
+	download_path?: string;
+	probe?: ProbeConfig;
+	music_tags: MusicTagsConfig;
+};
+
+// library.music_tags: what Streamline writes into music files. Every field is
+// optional on a patch.
+export type MusicTagsMode = "off" | "import" | "managed";
+export type MusicTagsSeeding = "defer" | "copy";
+export type MusicTagsConfig = {
+	mode: MusicTagsMode;
+	seeding: MusicTagsSeeding;
+	embed_art: boolean;
+	art_max_px: number;
+	sidecar_art: boolean;
+	strip: string[];
+	preserve: string[];
+};
+
+export type DownloadConfig = {
+	selective_files: boolean;
+	selection_grace: string;
+};
+
+// The api keys are write-only: the response says whether one is configured
+// (`*_set`) and whether a `*_file` path owns it (`*_file_managed`, which is
+// what makes the field read-only), never the value.
+export type MetadataConfig = {
+	language: string;
+	tmdb_region: string;
+	tmdb_api_key_set: boolean;
+	tvdb_api_key_set: boolean;
+	hardcover_api_key_set: boolean;
+	tmdb_api_key_file_managed?: boolean;
+	tvdb_api_key_file_managed?: boolean;
+	hardcover_api_key_file_managed?: boolean;
+	restart_required: boolean;
+};
+
+// The server's own bookkeeping. Only `events_retention` applies without a
+// restart — the log handlers and OTLP exporters are built once at boot, which
+// is what `restart_required` reports.
+export type SystemConfig = {
+	log: LogConfig;
+	otel_endpoint: string;
+	events_retention: string;
+	restart_required: boolean;
+};
+
+// One shape for the read view and the patch: on a patch an omitted field keeps
+// its stored value, which is why everything nests optional.
+export type LogConfig = {
+	app?: AppLogConfig;
+	http?: HTTPLogConfig;
+};
+
+export type AppLogConfig = {
+	enabled?: boolean;
+	level?: "debug" | "info" | "warn" | "error";
+	format?: "text" | "json";
+	output?: string;
+	rotate?: LogRotateConfig;
+};
+
+export type HTTPLogConfig = {
+	enabled?: boolean;
+	format?: "json" | "combined";
+	output?: string;
+	rotate?: LogRotateConfig;
+};
+
+// Only meaningful when the matching output is a file path. 0 disables a bound.
+export type LogRotateConfig = {
+	max_size_mb?: number;
+	max_backups?: number;
+	max_age_days?: number;
+	compress?: boolean;
+};
+
+export type MetadataConfigPatch = {
+	language?: string;
+	tmdb_region?: string;
+	tmdb_api_key?: string;
+	tvdb_api_key?: string;
+	hardcover_api_key?: string;
+};
+
+export type ProbeConfig = {
+	// Hold every import for a decision, even when every check passes.
+	always_ask?: boolean;
+	// A file shorter than this share of the expected runtime fails the duration
+	// check. Stored as a ratio (0.9); the settings field shows it as a percentage.
+	min_duration_ratio?: number;
+};
+
+// The ffmpeg suite, not just ffprobe — the same block serves playback later.
+// `found` is what the settings page warns on and what the TopBar health pill's
+// new reason string comes from.
+export type FFmpegConfig = {
+	enabled: boolean;
+	path: string;
+	found?: boolean;
+	resolved_path?: string;
+	version?: string;
+	restart_required?: boolean;
+};
+
+// Runtime-patchable transcoding config. The 2026-07-07 block's own
+// ffmpeg_path / ffprobe_path keys are deliberately absent: the shipped
+// `ffmpeg` block already resolves the binary once at boot and Media probe owns
+// that surface.
+export type TranscodeVerifyConfig = {
+	max_size_percent: number;
+	min_size_percent: number;
+	health_check: boolean;
+	min_vmaf: number;
+};
+
+export type TranscodeHwAccel = "auto" | "none" | "vaapi";
+export type TranscodeHwStatus = "off" | "ready" | "unavailable";
+
+export type TranscodeConfig = {
+	enabled: boolean;
+	max_concurrent: number;
+	max_failures: number;
+	hw_accel: TranscodeHwAccel;
+	hw_device: string;
+	hw_status: TranscodeHwStatus;
+	// The probe's error text; present only when hw_status is "unavailable".
+	hw_reason?: string;
+	verify: TranscodeVerifyConfig;
+	// When on, a queued job whose torrent is still downloading or seeding in
+	// its client waits (re-checked hourly) rather than running immediately.
+	defer_seeding: boolean;
+};
+
+// PATCH body: every level optional. hw_status / hw_reason are the probe's
+// verdict and cannot be written.
+export type TranscodeConfigPatch = Partial<
+	Omit<TranscodeConfig, "verify" | "hw_status" | "hw_reason">
+> & {
+	verify?: Partial<TranscodeVerifyConfig>;
+};
+
+export type TranscodeStatus =
+	| "queued"
+	| "running"
+	| "succeeded"
+	| "failed"
+	| "canceled"
+	| "rejected";
+
+// One job is one media file. percent / eta_seconds / speed live in worker
+// memory only — they vanish on a server restart while the job is still
+// `running` (it is requeued at boot), so every reader must survive their
+// absence rather than treating them as required on a running row.
+export type TranscodeJob = {
+	id: number;
+	status: TranscodeStatus;
+	attempts: number;
+	// ffmpeg stderr tail, failed jobs. Up to ~10 lines.
+	error?: string;
+	file_path: string;
+	media_title: string;
+	// Where the row links back to. A job is always about a library item, but the
+	// contract as written carries no id for it — see github.md.
+	movie_id?: number;
+	series_id?: number;
+	episode_id?: number;
+	size_before?: number;
+	size_after?: number;
+	percent?: number;
+	eta_seconds?: number;
+	speed?: number;
+	created_at: string;
+	started_at?: string;
+	finished_at?: string;
+	// Present only while the job is queued and waiting on `defer_seeding`
+	// for its torrent to stop seeding. Next re-check time, not a deadline.
+	deferred_until?: string;
+};
+
+export type OIDCProvider = {
+	name: string;
+	issuer: string;
+	client_id: string;
+	client_secret_set: boolean;
+};
+
+export type OIDCProviderList = {
+	providers: OIDCProvider[];
+	restart_required: boolean;
+};
+
+export type Resolution = "720p" | "1080p" | "2160p";
+
+export type QualityProfileFormatScore = {
+	// A built-in format name or a custom_formats entry name.
+	name: string;
+	score?: number;
+};
+
+export type QualityProfileFull = {
+	name: string;
+	// True when this profile is the default for at least one media.
+	is_default?: boolean;
+	// The media whose empty quality_profile resolves to this profile.
+	default_for?: DefaultMedia[];
+	preferred_resolution: Resolution;
+	min_resolution: Resolution;
+	upgrade_allowed: boolean;
+	// ffprobe codec names ("hevc", "av1"). Empty means any codec.
+	allowed_codecs?: string[];
+	formats?: QualityProfileFormatScore[];
+	// The API omits both when they are 0, so absent reads as 0: no minimum, and
+	// no upgrade ceiling.
+	min_score?: number;
+	upgrade_until_score?: number;
+	transcode?: TranscodePolicy;
+};
+
+export type TranscodeSourceCodec =
+	| "h264"
+	| "hevc"
+	| "av1"
+	| "vp9"
+	| "mpeg4"
+	| "mpeg2video"
+	| "vc1";
+export type TranscodeContainer = "mkv" | "mp4" | "avi" | "mov" | "ts" | "m2ts" | "webm" | "wmv";
+export type TranscodeTargetContainer = "mkv" | "mp4";
+export type TranscodeTargetCodec = "h264" | "hevc" | "av1";
+export type TranscodePreset =
+	| "ultrafast"
+	| "superfast"
+	| "veryfast"
+	| "faster"
+	| "fast"
+	| "medium"
+	| "slow"
+	| "slower"
+	| "veryslow";
+export type TranscodeAudioCodec = "aac" | "opus" | "ac3" | "flac";
+
+export type TranscodeIf = {
+	// Empty (or absent) means the rule does not apply — any codec, any
+	// container, no bitrate ceiling.
+	video_codecs?: TranscodeSourceCodec[];
+	containers?: TranscodeContainer[];
+	max_video_bitrate?: string;
+	// Exempts a source from the codec rule alone; the ceiling and the
+	// container rule still apply below it.
+	min_video_bitrate?: string;
+};
+
+export type TranscodeTo = {
+	container: TranscodeTargetContainer;
+	video_codec: TranscodeTargetCodec;
+	// 0 or absent leaves -crf off the ffmpeg invocation entirely, so the
+	// encoder's own default applies. It is not a CRF of zero.
+	crf?: number;
+	preset: TranscodePreset;
+	audio_codec: TranscodeAudioCodec;
+	// Empty applies the built-in list, which keeps Atmos and DTS intact.
+	audio_passthrough?: string[];
+};
+
+export type TranscodePolicy = {
+	if?: TranscodeIf;
+	to: TranscodeTo;
+};
+
+export type CustomFormatConditionType =
+	| "release_title"
+	| "resolution"
+	| "source"
+	| "release_group"
+	| "codec"
+	| "size"
+	| "seeders"
+	// Answerable from a probed file as well as from a release name, which
+	// release_title is not — the renamer destroys the name of a file already in
+	// the library. Pair one with a release_title row in the same format and the
+	// format scores the release by its name and the file by its probe.
+	| "audio_tracks"
+	| "audio_language"
+	| "subtitle_language";
+
+// Only the fields its `type` reads are meaningful; the API omits the rest and
+// the editor keeps them around so switching a row's type back restores what
+// was typed. min_gb/max_gb of 0 mean "unbounded", not "0 GB".
+export type CustomFormatCondition = {
+	type: CustomFormatConditionType;
+	pattern?: string;
+	value?: string;
+	min_gb?: number;
+	max_gb?: number;
+	min?: number;
+	required?: boolean;
+	negate?: boolean;
+};
+
+export type CustomFormat = {
+	name: string;
+	// Set only on the shipped library, which cannot be edited or deleted.
+	builtin?: boolean;
+	// Human-readable explanation. Fixed on the shipped library; optional and
+	// author-set on your own formats.
+	description?: string;
+	conditions: CustomFormatCondition[];
+};
+
+export type CustomFormatTestSample = {
+	title: string;
+	// Bytes, as the API takes them — the editor asks for GB.
+	size?: number;
+	seeders?: number;
+};
+
+export type CustomFormatTestResult = {
+	matched: boolean;
+	conditions: { index: number; passed: boolean }[];
+};
+
+// "torznab" covers plain Torznab endpoints and Jackett (its /indexers/all
+// aggregate feed is standard Torznab). "prowlarr" uses Prowlarr's native JSON
+// search API, the only way to query all of Prowlarr's indexers at once.
+export type IndexerProtocol = "torznab" | "prowlarr";
+
+export type Indexer = {
+	name: string;
+	host: string;
+	port: number;
+	path?: string;
+	use_ssl?: boolean;
+	api_key_set: boolean;
+	protocol: IndexerProtocol;
+	priority?: number;
+	enabled: boolean;
+	// The operator's word for it: Torznab carries no privacy flag. Feeds
+	// SearchResult.indexer_private.
+	private?: boolean;
+};
+
+export type DownloadClientType =
+	| "qbittorrent"
+	| "transmission"
+	| "deluge"
+	| "builtin";
+export type DownloadClientAuth = "password" | "api_key";
+
+export type DownloadClient = {
+	name: string;
+	client_type: DownloadClientType;
+	host: string;
+	port: number;
+	auth_method: DownloadClientAuth;
+	username?: string;
+	use_ssl?: boolean;
+	priority?: number;
+	enabled: boolean;
+	api_key_set: boolean;
+	password_set: boolean;
+	// builtin-only knobs (client_type "builtin"); absent for external clients.
+	download_dir?: string;
+	listen_port?: number;
+	// Present on the builtin entry only, and only when the top-level
+	// torrent_listen_port is set (normally by STREAMLINE_TORRENT_LISTEN_PORT).
+	// It wins over listen_port, so a form showing this must present listen_port
+	// as having no effect rather than as the port in force.
+	listen_port_override?: number;
+	max_upload_kbps?: number;
+	max_download_kbps?: number;
+	seed_ratio?: number;
+	seed_time?: string;
+	disable_dht?: boolean;
+	// Interface name (e.g. wg0) or IP the engine binds to. Empty = all interfaces.
+	bind_interface?: string;
+	// Runtime state, populated only for the builtin entry from the live engine.
+	running?: boolean;
+	port_bound?: number;
+	interface_bound?: string;
+};
+
+// ── Built-in torrent engine (anacrolix "builtin" download client) ─────────
+// The builtin engine's config lives on its DownloadClient entry (client_type
+// "builtin"); there is no dedicated /download-clients/builtin endpoint. These
+// torrent types mirror the backend TorrentInfo / TorrentDetails schemas.
+export type TorrentStatus =
+	| "downloading"
+	| "seeding"
+	| "completed"
+	| "paused"
+	| "fetching"
+	| "stalled";
+
+export type TorrentFilePriority = "skip" | "normal" | "high";
+
+// GET /torrents list item. Light by design — no files/peers/trackers (those
+// come from the per-torrent detail query).
+export type Torrent = {
+	hash: string;
+	// Empty while a magnet resolves metadata.
+	name: string;
+	status: TorrentStatus;
+	// Fraction complete, 0..1.
+	progress: number;
+	// 0 while metadata is unknown.
+	size: number;
+	// Bytes per second.
+	download_speed: number;
+	upload_speed: number;
+	// Total bytes uploaded so far.
+	uploaded: number;
+	ratio: number;
+	// Seconds to completion; 0 = unknown.
+	eta: number;
+	// Connected peers holding the complete torrent.
+	seeds: number;
+	peer_count: number;
+	known_peers?: number;
+	save_path: string;
+	added_at: string;
+	// True once the ratio/seed-time limit stopped seeding.
+	seeding_stopped: boolean;
+	// False for arbitrary adds not tied to a library item.
+	tracked: boolean;
+};
+
+export type TorrentFile = {
+	index: number;
+	path: string;
+	size: number;
+	// Bytes downloaded for this file; progress = downloaded / size.
+	downloaded: number;
+	priority: TorrentFilePriority;
+};
+
+export type TorrentPeer = {
+	addr: string;
+	client?: string;
+	// Bytes per second.
+	download_rate?: number;
+	upload_rate?: number;
+};
+
+// GET /torrents/{hash} — the list item plus its file/tracker/peer breakdown.
+export type TorrentDetails = Torrent & {
+	files: TorrentFile[];
+	trackers: string[];
+	peers: TorrentPeer[];
+};
+
+export type TorrentList = { items: Torrent[]; refreshed_at: string };
+
+// POST /torrents — exactly one of magnet / torrent (base64 .torrent) is set.
+export type AddTorrentRequest = {
+	magnet?: string;
+	torrent?: string;
+};
+
+export type TorrentAddResult = { hash: string };
+
+export type MediaServerType = "plex" | "jellyfin" | "emby";
+
+export type MediaServer = {
+	name: string;
+	server_type: MediaServerType;
+	host: string;
+	library_section?: string | null;
+	library_section_tv?: string | null;
+	enabled: boolean;
+	api_key_set: boolean;
+};
+
+export type MediaServerSection = {
+	key: string;
+	name: string;
+	type: string;
+	locations: string[];
+};
+
+export type ScheduleStatus = "never" | "success" | "error" | "skipped";
+
+export type Schedule = {
+	name: string;
+	interval: string;
+	paused: boolean;
+	system: boolean;
+	running: boolean;
+	status: ScheduleStatus;
+	last_started_at: string | null;
+	last_finished_at: string | null;
+	next_run_at: string | null;
+	last_duration_ms: number;
+	last_error: string | null;
+	progress?: { done: number; total: number } | null;
+};
+
+export type ScheduleList = {
+	items: Schedule[];
+};
+
+export type DiskUsage = {
+	used: string;
+	total: string;
+	free: string;
+	free_bytes: number;
+	pct: number;
+	kind: "ok" | "warn" | "err";
+};
+
+export type SystemInfo = {
+	public_url: string;
+	https_warn: boolean;
+	ffmpeg_warn?: boolean;
+	hardcover_auth_warn?: boolean;
+	auth_mode: string;
+	data_dir: string;
+	data_usage?: DiskUsage;
+	db_path: string;
+	db_size?: string;
+	db_usage?: DiskUsage;
+	library_dir?: string;
+	library_usage?: DiskUsage;
+	series_dir?: string;
+	series_usage?: DiskUsage;
+	version: string;
+	commit?: string;
+	built_at?: string;
+	go_version: string;
+	go_os_arch: string;
+	// File-only by design — the trust boundary, the bootstrap block, and what
+	// the process generated for itself. Reported so Settings → General can say
+	// what is in force; secrets appear as a source, never a value.
+	server_host?: string;
+	server_port?: number;
+	read_only?: boolean;
+	trusted_proxies?: string[];
+	trusted_networks?: string[];
+	trusted_role?: string;
+	seed_admin_email?: string;
+	seed_admin_secret?: "file" | "config" | "unset";
+	session_secret_file?: string;
+	plex_client_id?: string;
+	torrent_listen_port?: number;
+	tmdb_api_key_file?: string;
+	tvdb_api_key_file?: string;
+	otel_endpoint?: string;
+	log_level?: string;
+	log_format?: string;
+};
+
+export type PlexPinBegin = {
+	flow_id: string;
+	auth_url: string;
+	client_id: string;
+};
+export type PlexPinPoll = { auth_token?: string; expired?: boolean };
+
+export type ImportStatus =
+	| "running"
+	| "awaiting_review"
+	| "committing"
+	| "completed"
+	| "cancelled"
+	| "failed";
+
+export type ImportMode = "in_place" | "rename";
+export type ImportTransferMode = "hardlink" | "copy" | "move";
+
+export type ImportScanKind = "movie" | "series" | "music" | "book";
+
+export type ImportScan = {
+	id: number;
+	source_path: string;
+	kind: ImportScanKind;
+	mode: ImportMode;
+	import_mode?: ImportTransferMode | "";
+	status: ImportStatus;
+	total_count: number;
+	processed_count: number;
+	commit_success_count: number;
+	commit_failed_count: number;
+	// The provider's own words, shown as given. `failure_code` is set only on a
+	// failed scan with a cause the page can act on, and absent for every other
+	// failure: `hardcover_key_rejected` when Hardcover refused the key partway
+	// through a book scan, `hardcover_not_configured` when the key went away
+	// mid-run.
+	failure_reason?: string | null;
+	failure_code?: string | null;
+	scanned_at?: string | null;
+	committed_at?: string | null;
+	created_at: string;
+	updated_at: string;
+};
+
+export type ImportCounts = {
+	running: number;
+	awaiting_review: number;
+};
+
+export type ImportScanList = {
+	items: ImportScan[];
+	total: number;
+};
+
+export type ImportFileClassification =
+	| "confirmed"
+	| "ambiguous"
+	| "unmatched"
+	| "existing";
+
+export type ImportFileOutcome =
+	| "pending"
+	| "created"
+	| "attached"
+	| "skipped"
+	| "failed";
+
+export type ImportFileDecision = "pending" | "accept" | "skip";
+
+export type ImportScanCandidate = {
+	tmdb_id: number;
+	title: string;
+	year: number;
+};
+
+export type ImportScanFile = {
+	id: number;
+	source_path: string;
+	size: number;
+	parsed_title?: string;
+	parsed_year?: number | null;
+	parsed_quality?: string;
+	parsed_release_group?: string;
+	classification: ImportFileClassification;
+	candidates?: ImportScanCandidate[];
+	tmdb_id?: number;
+	existing_movie_id?: number;
+	decision: ImportFileDecision;
+	decision_tmdb_id?: number;
+	outcome: ImportFileOutcome;
+	outcome_message?: string;
+	created_movie_id?: number;
+	created_at: string;
+	updated_at: string;
+};
+
+// Series import scans carry per-show rows instead of per-file rows. Shows reuse
+// the file classification/decision enums; outcomes are a shorter set.
+export type ImportShowOutcome = "pending" | "created" | "attached" | "failed";
+
+export type ImportScanShowCandidate = {
+	tvdb_id: number;
+	title: string;
+	year?: number;
+};
+
+export type ImportScanShow = {
+	id: number;
+	folder_path: string;
+	parsed_title?: string;
+	parsed_year?: number | null;
+	classification: ImportFileClassification;
+	tvdb_id?: number | null;
+	candidates?: ImportScanShowCandidate[];
+	existing_tvshow_id?: number | null;
+	file_count: number;
+	decision: ImportFileDecision;
+	decision_tvdb_id?: number | null;
+	outcome: ImportShowOutcome;
+	outcome_message?: string;
+	created_tvshow_id?: number | null;
+	created_at: string;
+	updated_at: string;
+};
+
+export type ImportBulkDecisionResult = {
+	updated: number;
+};
+
+// Music scans review one row per album folder, matched against a MusicBrainz
+// release group. A confirmed album whose artist the library lacks adds the
+// artist with it (`artist_id` absent); an existing one attaches its files to an
+// album the library already tracks.
+export type ImportScanAlbumCandidate = {
+	release_group_mbid: string;
+	artist_mbid?: string;
+	title: string;
+	artist?: string;
+	year?: number;
+	// The release group's primary type. A group has no track count of its own:
+	// its releases differ.
+	type?: ReleaseType;
+};
+
+export type ImportScanAlbum = {
+	id: number;
+	folder_path: string;
+	tagged_artist?: string;
+	tagged_album?: string;
+	tagged_year?: number;
+	// "FLAC 24/96", "MP3 320".
+	format?: string;
+	// Audio files in the folder, not MusicBrainz's track count.
+	file_count: number;
+	// Of those, the files a torrent the clients still list serves: tags reach
+	// them only once the torrent is removed. Read live.
+	seeding_files?: number;
+	size: number;
+	classification: ImportFileClassification;
+	release_group_mbid?: string;
+	artist_mbid?: string;
+	candidates?: ImportScanAlbumCandidate[];
+	artist_id?: number | null;
+	existing_album_id?: number | null;
+	decision: ImportFileDecision;
+	decision_release_group_mbid?: string;
+	outcome: ImportShowOutcome;
+	outcome_message?: string;
+	created_album_id?: number | null;
+	created_at: string;
+	updated_at: string;
+};
+
+// Book scans review one row per book: an ebook, or an audiobook — one file or a
+// folder of parts. Matched against Hardcover. Its search hits carry no series
+// position, so a candidate is named by its author alone.
+export type ImportScanBookCandidate = {
+	book_hardcover_id: number;
+	title: string;
+	author?: string;
+	year?: number;
+};
+
+export type ImportScanBook = {
+	id: number;
+	file_paths: string[];
+	// An audiobook's folder, an ebook's best-format file.
+	source_path: string;
+	slot: "ebook" | "audiobook";
+	// EPUB, PDF, CBZ, M4B, MP3.
+	format: string;
+	file_count: number;
+	size: number;
+	parsed_title?: string;
+	parsed_author?: string;
+	parsed_isbn?: string;
+	parsed_year?: number;
+	classification: ImportFileClassification;
+	book_hardcover_id?: number;
+	candidates?: ImportScanBookCandidate[];
+	existing_book_id?: number | null;
+	decision: ImportFileDecision;
+	decision_book_hardcover_id?: number;
+	outcome: ImportShowOutcome;
+	outcome_message?: string;
+	created_book_id?: number | null;
+	created_at: string;
+	updated_at: string;
+};
+
+// Subsonic and OPDS access (/account/subsonic-password, /account/opds-token).
+// Both sign in with the account's email and a secret; neither puts the secret in
+// a URL, where logs and referrers would keep it. The secret is only in the POST
+// response.
+export type AppAccessKind = "subsonic" | "opds";
+export type AppAccess = {
+	enabled: boolean;
+	// The name a client signs in with: the account's email.
+	username: string;
+	created_at?: string;
+	// Written in batches, so it can trail a client's first call by up to five
+	// minutes.
+	last_used_at?: string;
+	// The client's product name on its last call, e.g. "Symfonium".
+	last_client?: string;
+};
+// POST: the Subsonic password or the OPDS token, shown once.
+export type AppAccessCreated = AppAccess & { secret: string };
+
+export type ImportStartRequest = {
+	source_path: string;
+	kind?: ImportScanKind;
+	mode: ImportMode;
+	import_mode?: ImportTransferMode | "";
+};
+
+export type MigrationRoot = "movies" | "series" | "downloads";
+
+export type PathMigrationRequest = {
+	root: MigrationRoot;
+	from?: string;
+	to: string;
+	move_files?: boolean;
+};
+
+export type PathRewrite = {
+	from: string;
+	to: string;
+};
+
+export type PathMigrationRoot = {
+	root: MigrationRoot;
+	path: string;
+	tracked: number;
+	total: number;
+};
+
+export type PathMigrationRootList = {
+	items: PathMigrationRoot[];
+};
+
+export type PathMigrationPreview = {
+	root: MigrationRoot;
+	from: string;
+	to: string;
+	total: number;
+	skipped: number;
+	can_move: boolean;
+	samples: PathRewrite[];
+};
+
+export type PathMigration = {
+	running: boolean;
+	root: string;
+	from: string;
+	to: string;
+	move_files: boolean;
+	total: number;
+	done: number;
+	skipped: number;
+	current: string;
+	error?: string;
+	started_at?: string;
+	finished_at?: string;
+};
+
+// POST /{movies,series}/{id}/reidentify — the repaired entry plus what moved.
+export type ReidentifyResult = {
+	id: number;
+	title: string;
+	renamed: number;
+	// Series only: paths still on disk whose season/episode number has no
+	// counterpart in the new show.
+	unmatched?: string[];
+};

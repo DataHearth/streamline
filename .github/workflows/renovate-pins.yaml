@@ -1,0 +1,240 @@
+name: Renovate pins
+
+# Upstream decides each toolchain's patch and nixpkgs decides which lines exist.
+# Renovate bumps every copy of a version itself — go.mod's `go` directive and the
+# Dockerfile's GO_VERSION; engines.node, the Dockerfile's node tag and the
+# workflows' node-version; packageManager — from go.dev, nodejs.org and the npm
+# registry. What it cannot compute, this job derives on renovate's own branch,
+# before CI reads any of it:
+#
+#   1. a check that the locked nixpkgs has each declared line (go_1_NN,
+#      nodejs_NN, pnpm_NN) and that every copy agrees with its source
+#   2. the two base-image digests, which follow the tags renovate wrote
+#      — the digest is what resolves, so a tag moved without it silently keeps
+#        building the old image
+#   3. nix/toolchains.json: the hashes nix/{go,node,pnpm}.nix override
+#      nixpkgs' package with, for every tool whose declared version differs from
+#      the locked one — rebuilt from scratch each run, so a lock that has caught
+#      up drops its entry
+#   4. vendorHash and pnpmDeps.hash, which follow go.sum and pnpm-lock.yaml (and
+#      the pnpm that lays out the store, so after step 3)
+#
+# Renovate writes the workflow copies rather than this job because a push made
+# with the Actions token may not touch .github/workflows/; renovate's app may.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - flake.lock
+      - go.mod
+      - go.sum
+      - package.json
+      - pnpm-lock.yaml
+      - deploy/Dockerfile
+      - nix/package.nix
+      - nix/toolchains.json
+
+permissions:
+  contents: write
+
+jobs:
+  pins:
+    # Only renovate's own branches: on any other PR a stale pin is a mistake
+    # worth seeing, not something to paper over with a commit the author did
+    # not write. A human bumping a toolchain gets the same repair by hand — the
+    # throws in nix/{go,node,pnpm}.nix name the missing line or hash.
+    if: startsWith(github.head_ref, 'renovate/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+
+      - name: Remote builder
+        uses: ./.github/actions/nix-builder
+        with:
+          ssh-key: ${{ secrets.NIX_BUILDER_SSH_KEY }}
+
+      # Runs before anything writes to the tree: `builtins.getFlake` on a dirty
+      # working copy ingests the whole checkout before it evaluates anything.
+      - name: Toolchain declarations
+        id: toolchains
+        run: |
+          set -euo pipefail
+
+          go=$(sed -n 's/^go //p' go.mod)
+          node=$(jq -r '.engines.node' package.json | sed 's/^>=//')
+          pnpm=$(jq -r '.packageManager' package.json | sed 's/^pnpm@//; s/+.*//')
+
+          # The copies renovate is meant to have moved with their source. One it
+          # missed would build CI or the image on a version nix never checked.
+          fail=0
+          check() {
+            local what=$1 have=$2 want=$3
+            if [ "$have" != "$want" ]; then
+              echo "::error::${what} is ${have}, but its source says ${want}"
+              fail=1
+            fi
+          }
+          check "deploy/Dockerfile GO_VERSION" "$(sed -n 's/^ARG GO_VERSION=//p' deploy/Dockerfile)" "$go"
+          check "deploy/Dockerfile node tag" "$(grep -oP 'FROM node:\K[^-@]+' deploy/Dockerfile)" "$node"
+          while read -r file version; do
+            check "${file} node-version" "$version" "$node"
+          done < <(grep -oP '^\s*node-version: \K\S+' --with-filename .github/workflows/*.yaml | tr ':' ' ')
+          [ "$fail" -eq 0 ]
+
+          # What the locked nixpkgs ships on each line — empty when it has no
+          # such line, which is the one thing that must wait for nixpkgs.
+          locked() {
+            nix eval --raw --impure --expr \
+              "let p = (builtins.getFlake (toString ./.)).inputs.nixpkgs.legacyPackages.\${builtins.currentSystem}; in p.$1.version or \"\""
+          }
+          attr_go="go_$(echo "$go" | cut -d. -f1-2 | tr . _)"
+          attr_node="nodejs_${node%%.*}"
+          attr_pnpm="pnpm_${pnpm%%.*}"
+          for attr in "$attr_go" "$attr_node" "$attr_pnpm"; do
+            v=$(locked "$attr")
+            if [ -z "$v" ]; then
+              echo "::error::the locked nixpkgs has no ${attr} — a new line waits for nixpkgs to package it"
+              exit 1
+            fi
+            echo "Locked nixpkgs: ${attr} = ${v}"
+            printf 'locked_%s=%s\n' "${attr%%_*}" "$v" >> "$GITHUB_OUTPUT"
+          done
+          {
+            echo "go=$go"
+            echo "node=$node"
+            echo "pnpm=$pnpm"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Base image digests
+        run: |
+          set -euo pipefail
+
+          redigest() {
+            local image=$1 have=$2 want
+            want=$(docker buildx imagetools inspect "$image" --format '{{.Manifest.Digest}}')
+            [ "$want" = "$have" ] || sed -i "s|$have|$want|" deploy/Dockerfile
+          }
+
+          go_tag=$(sed -n 's/^ARG GO_VERSION=//p' deploy/Dockerfile)-alpine
+          redigest "golang:${go_tag}" "$(sed -n 's/^ARG GO_DIGEST=//p' deploy/Dockerfile)"
+
+          # Read as one string so the digest is always the one written next to
+          # that exact tag, whatever order the two were rewritten in.
+          node_ref=$(grep -oP 'FROM node:\K\S+' deploy/Dockerfile)
+          redigest "node:${node_ref%@*}" "${node_ref#*@}"
+
+      # Go and node are upstream's own source tarballs, so their hashes are a
+      # download each. pnpm is its prebuilt @pnpm/exe binary (nix/pnpm.nix says
+      # why), whose hashes are npm's own `integrity`, one per platform the
+      # flake builds — read off the registry, nothing downloaded.
+      - name: Toolchain hashes
+        env:
+          GO: ${{ steps.toolchains.outputs.go }}
+          NODE: ${{ steps.toolchains.outputs.node }}
+          PNPM: ${{ steps.toolchains.outputs.pnpm }}
+          LOCKED_GO: ${{ steps.toolchains.outputs.locked_go }}
+          LOCKED_NODE: ${{ steps.toolchains.outputs.locked_nodejs }}
+          LOCKED_PNPM: ${{ steps.toolchains.outputs.locked_pnpm }}
+        run: |
+          set -euo pipefail
+
+          prefetch() { nix store prefetch-file --json "$1" | jq -r .hash; }
+
+          tc='{"go": {}, "node": {}, "pnpm": {}}'
+          if [ "$GO" != "$LOCKED_GO" ]; then
+            tc=$(jq --arg v "$GO" --arg h "$(prefetch "https://go.dev/dl/go${GO}.src.tar.gz")" '.go[$v] = $h' <<< "$tc")
+          fi
+          if [ "$NODE" != "$LOCKED_NODE" ]; then
+            tc=$(jq --arg v "$NODE" --arg h "$(prefetch "https://nodejs.org/dist/v${NODE}/node-v${NODE}.tar.xz")" '.node[$v] = $h' <<< "$tc")
+          fi
+          if [ "$PNPM" != "$LOCKED_PNPM" ]; then
+            integrity() { curl -fsS "https://registry.npmjs.org/@pnpm/exe.$1/${PNPM}" | jq -r .dist.integrity; }
+            tc=$(jq --arg v "$PNPM" --arg x "$(integrity linux-x64)" --arg a "$(integrity linux-arm64)" \
+              '.pnpm[$v] = {"x86_64-linux": $x, "aarch64-linux": $a}' <<< "$tc")
+          fi
+          printf '%s\n' "$tc" | jq --indent 2 . > nix/toolchains.json
+          cat nix/toolchains.json
+
+      # vendorHash and pnpmDeps.hash are ordinary fixed-output derivations, so
+      # each is derived from a build that is made to fail against a placeholder
+      # and report the real hash.
+      - name: Package hashes
+        run: |
+          set -euo pipefail
+
+          # nix-update is deliberately not used here. It derives vendorHash and
+          # nothing else — it knows buildGoModule's `goModules` and has no idea
+          # the frontend derivation contains a pnpm store — yet it rewrote
+          # pnpmDeps.hash all the same, because it replaces a hash by
+          # substituting its literal text across the whole file. While the two
+          # fields held the same string that put one build's hash into both,
+          # and the next run put the other one into both: a two-cycle that
+          # never converged, landing every renovate PR with one field wrong and
+          # the `nix` job red. Deriving each from its own attribute and writing
+          # it to its own line is what keeps the two independent.
+          fake="sha256-$(printf 'A%.0s' $(seq 43))="
+
+          remote=()
+          if [ -n "${NIX_BUILDER_STORE:-}" ]; then
+            remote=(--store "$NIX_BUILDER_STORE" --eval-store auto)
+          fi
+
+          derive() {
+            local attr=$1 anchor=$2 log got
+            sed -i "s|^\( *\)${anchor} = \"sha256-[^\"]*\";|\1${anchor} = \"${fake}\";|" nix/package.nix
+
+            if log=$(nix build --no-link "${remote[@]}" ".#streamline.${attr}" 2>&1); then
+              echo "::error::${attr} built against the placeholder hash — nothing to derive"
+              exit 1
+            fi
+
+            # `|| true` is load-bearing: a build that failed for any other
+            # reason has no `got:` line, and under `set -e -o pipefail` the
+            # empty grep would abort here — failing the job with the build log
+            # still in $log and never printed, which reads like the step itself
+            # is broken.
+            got=$(printf '%s\n' "$log" | grep -oE 'got: +sha256-[A-Za-z0-9+/=]+' | tail -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+' || true)
+            if [ -z "$got" ]; then
+              printf '%s\n' "$log" >&2
+              echo "::error::${attr} failed for a reason other than a hash mismatch"
+              exit 1
+            fi
+
+            sed -i "s|^\( *\)${anchor} = \"${fake}\";|\1${anchor} = \"${got}\";|" nix/package.nix
+            echo "${anchor} = ${got}"
+          }
+
+          derive frontend.pnpmDeps hash
+          derive goModules vendorHash
+
+      - name: Commit
+        id: commit
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git diff --name-only | sed 's/^/  /' >> "$GITHUB_STEP_SUMMARY"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(deps): derive the pins renovate cannot compute"
+          git push
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Renovate pins" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.commit.outputs.changed }}" = "true" ]; then
+            echo "✅ Derived — see the files above" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ job.status }}" = "success" ]; then
+            echo "⏭️ All pins already current" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Could not derive the pins" >> "$GITHUB_STEP_SUMMARY"
+          fi

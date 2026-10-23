@@ -1,0 +1,371 @@
+package bittorrent
+
+import (
+	"context"
+	"net"
+	"os"
+	"path/filepath"
+
+	antorrent "github.com/anacrolix/torrent"
+	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
+	"github.com/anacrolix/torrent/types"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/testutil/nettest"
+)
+
+// newTestClient starts a network-disabled anacrolix client rooted so that
+// its default file storage resolves back to dir. The default storage nests
+// each torrent's data under baseDir/info.Name, and BuildFromFilePath sets
+// info.Name to dir's own basename — so the base has to be dir's *parent*.
+func newTestClient(dir string) *antorrent.Client {
+	GinkgoHelper()
+	cc := antorrent.NewDefaultClientConfig()
+	cc.DataDir = filepath.Dir(dir)
+	cc.NoDHT = true
+	cc.DisableTrackers = true
+	cc.DisablePEX = true
+	cc.NoDefaultPortForwarding = true
+	cc.ListenPort = 0
+	// A host without IPv6 fails every default anacrolix client at the tcp6
+	// listener; the engine under test binds its own dual-stack socket.
+	cc.DisableIPv6 = !nettest.IPv6()
+	cc.Slogger = engineSlogger()
+	client, err := antorrent.NewClient(cc)
+	Expect(err).NotTo(HaveOccurred())
+	DeferCleanup(func() { Expect(client.Close()).To(BeEmpty()) })
+	return client
+}
+
+// verifyData hash-checks every piece and waits for the results to land.
+// Piece.VerifyDataContext returns as soon as the hasher bumps the verify
+// count (torrent.go:2622-2623), but the hasher commits the verdict to the
+// completion bitmap only after MarkComplete/MarkNotComplete ran with the
+// client lock released (:2651-2663). A BytesMissing read in that window sees
+// the pre-check state — every piece complete, since the part-file scan at
+// open marked each full-length file so — which is how the corrupted-piece
+// fixture intermittently read 0 missing bytes on CI. PieceState.Marking is
+// raised in the same critical section as the count bump, so it is the fence.
+func verifyData(t *antorrent.Torrent) {
+	GinkgoHelper()
+	Expect(t.VerifyDataContext(context.Background())).To(Succeed())
+	waitPieceMarks([]*antorrent.Torrent{t})
+}
+
+// newTestTorrent builds a real single-piece, three-file torrent whose data
+// already sits in the client's own DataDir, so it never needs a peer or a
+// seeder: applyFilePriorities only reads/writes Torrent.Files(), and a
+// locally-satisfied torrent resolves Info synchronously off the metainfo it
+// was added with.
+func newTestTorrent() *antorrent.Torrent {
+	GinkgoHelper()
+	dir := GinkgoT().TempDir()
+	for i, name := range []string{"a.bin", "b.bin", "c.bin"} {
+		Expect(os.WriteFile(
+			filepath.Join(dir, name), []byte{byte(i), byte(i), byte(i)}, 0o644,
+		)).To(Succeed())
+	}
+	// BuildFromFilePath overwrites Name with dir's own basename, so setting
+	// it here first would be dead.
+	info := metainfo.Info{PieceLength: 1 << 20}
+	Expect(info.BuildFromFilePath(dir)).To(Succeed())
+	ib, err := bencode.Marshal(info)
+	Expect(err).NotTo(HaveOccurred())
+	mi := metainfo.MetaInfo{InfoBytes: ib}
+
+	t, err := newTestClient(dir).AddTorrent(&mi)
+	Expect(err).NotTo(HaveOccurred())
+	<-t.GotInfo()
+	// AddTorrent never hash-checks by itself — pieces stay "unknown" until
+	// something requests a check, so BytesCompleted reads 0 even though the
+	// data is already on disk. Callers that read completion (not just
+	// priority) need it verified up front.
+	verifyData(t)
+	return t
+}
+
+// newPartialTorrent builds a three-file, three-piece torrent (one piece per
+// file, via a piece length matching each file's size) where the first
+// file's on-disk bytes are corrupted *after* the metainfo hash was computed
+// from the correct content. Verifying then leaves that one piece genuinely
+// incomplete — the shape a file whose data was never downloaded takes —
+// while the other two verify complete, which newTestTorrent's single-piece
+// layout can't produce: there, one shared piece is atomically complete or
+// not, so a skip can never leave it partially missing.
+func newPartialTorrent() *antorrent.Torrent {
+	GinkgoHelper()
+	dir := GinkgoT().TempDir()
+	for i, name := range []string{"a.bin", "b.bin", "c.bin"} {
+		Expect(os.WriteFile(
+			filepath.Join(dir, name), []byte{byte(i), byte(i), byte(i)}, 0o644,
+		)).To(Succeed())
+	}
+	info := metainfo.Info{PieceLength: 3}
+	Expect(info.BuildFromFilePath(dir)).To(Succeed())
+	ib, err := bencode.Marshal(info)
+	Expect(err).NotTo(HaveOccurred())
+	mi := metainfo.MetaInfo{InfoBytes: ib}
+
+	Expect(os.WriteFile(
+		filepath.Join(dir, "a.bin"), []byte{9, 9, 9}, 0o644,
+	)).To(Succeed())
+
+	t, err := newTestClient(dir).AddTorrent(&mi)
+	Expect(err).NotTo(HaveOccurred())
+	<-t.GotInfo()
+	verifyData(t)
+	return t
+}
+
+var _ = Describe("applyFilePriorities", Label("unit", "bittorrent"), func() {
+	var t *antorrent.Torrent
+
+	BeforeEach(func() {
+		t = newTestTorrent()
+		Expect(t.Files()).To(HaveLen(3))
+	})
+
+	It("mode all bumps every undecided file", func() {
+		applyFilePriorities(t, "all", nil)
+		for _, f := range t.Files() {
+			Expect(f.Priority()).To(Equal(types.PiecePriorityNormal))
+		}
+	})
+
+	It("mode pending bumps nothing", func() {
+		applyFilePriorities(t, "pending", nil)
+		for _, f := range t.Files() {
+			Expect(f.Priority()).To(Equal(types.PiecePriorityNone))
+		}
+	})
+
+	It("mode explicit wants exactly the listed files, twice in a row", func() {
+		applyFilePriorities(t, "explicit", []int{1})
+		applyFilePriorities(t, "explicit", []int{1}) // the restart re-run
+		Expect(t.Files()[0].Priority()).To(Equal(types.PiecePriorityNone))
+		Expect(t.Files()[1].Priority()).To(Equal(types.PiecePriorityNormal))
+		Expect(t.Files()[2].Priority()).To(Equal(types.PiecePriorityNone))
+	})
+})
+
+var _ = Describe("parseHash", Label("unit", "bittorrent"), func() {
+	It("parses a 40-char hex hash", func() {
+		h, err := parseHash("aabbccddeeff00112233445566778899aabbccdd")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(h.HexString()).To(
+			Equal("aabbccddeeff00112233445566778899aabbccdd"))
+	})
+
+	It("rejects bad input as torrent-not-found", func() {
+		for _, s := range []string{"", "zz", "aabb", "not-hex-at-all!"} {
+			_, err := parseHash(s)
+			Expect(err).To(MatchError(download.ErrTorrentNotFound), s)
+		}
+	})
+})
+
+var _ = Describe("resolveBindIP", Label("unit", "bittorrent"), func() {
+	It("returns no IP for an empty interface (all interfaces)", func() {
+		ip, err := resolveBindIP("")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ip).To(BeNil())
+	})
+
+	It("uses a literal IPv4 address verbatim", func() {
+		ip, err := resolveBindIP("10.11.12.13")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ip.Equal(net.ParseIP("10.11.12.13"))).To(BeTrue())
+	})
+
+	It("uses a literal IPv6 address verbatim", func() {
+		ip, err := resolveBindIP("2001:db8::1")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ip.Equal(net.ParseIP("2001:db8::1"))).To(BeTrue())
+	})
+
+	It("fails start when the named interface does not exist", func() {
+		_, err := resolveBindIP("streamline-no-such-iface0")
+		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("newClientConfig", Label("unit", "bittorrent"), func() {
+	entry := config.DownloadClientEntry{DownloadDir: "/srv/media/downloads"}
+
+	It("disables WebTorrent whether bound or not", func() {
+		Expect(newClientConfig(entry, nil, nil, nil).DisableWebtorrent).To(BeTrue())
+		Expect(newClientConfig(entry, net.ParseIP("10.11.12.13"), nil, nil).
+			DisableWebtorrent).To(BeTrue())
+	})
+
+	It("leaves the default dialers alone when unbound", func() {
+		cc := newClientConfig(entry, nil, nil, nil)
+		Expect(cc.DialForPeerConns).To(BeTrue())
+		Expect(cc.DisableIPv6).To(BeFalse())
+		Expect(cc.NoDefaultPortForwarding).To(BeFalse())
+	})
+
+	It("binds fail-closed when given an interface IP", func() {
+		cc := newClientConfig(entry, net.ParseIP("10.11.12.13"), nil, nil)
+		Expect(cc.DialForPeerConns).To(BeFalse())
+		Expect(cc.DisableIPv6).To(BeTrue())
+		Expect(cc.NoDefaultPortForwarding).To(BeTrue())
+	})
+
+	It("carries the entry's knobs through", func() {
+		bound := config.DownloadClientEntry{
+			DownloadDir: entry.DownloadDir,
+			DisableDHT:  true,
+			ListenPort:  12345,
+		}
+		cc := newClientConfig(bound, nil, nil, nil)
+		Expect(cc.NoDHT).To(BeTrue())
+		Expect(cc.DataDir).To(Equal(bound.DownloadDir))
+		// entry.ListenPort is newPeerSockets' input, not anacrolix's: the
+		// engine binds both peer sockets itself and hands the packet conn back
+		// through ListenPacket, which ignores the address it is asked for.
+		// Asserting the entry's port here read as though cc.ListenPort still
+		// decided something — it is left at the library default untouched.
+		Expect(cc.ListenPort).
+			To(Equal(antorrent.NewDefaultClientConfig().ListenPort))
+	})
+})
+
+var _ = Describe(
+	"newClientConfig peer sockets",
+	Label("unit", "bittorrent"),
+	func() {
+		It("stops anacrolix creating its own TCP socket", func() {
+			cc := newClientConfig(
+				config.DownloadClientEntry{DownloadDir: GinkgoT().TempDir()},
+				nil, nil, nil,
+			)
+			// The engine registers its own rebindable TCP listener instead, so a
+			// socket anacrolix made would sit ahead of it in cl.listeners and
+			// LocalPort would report a port the engine cannot move.
+			Expect(cc.DisableTCP).To(BeTrue())
+		})
+
+		It("leaves uTP and DHT riding on the engine's packet conn", func() {
+			pc, err := newRebindablePacketConn(net.IPv4(127, 0, 0, 1), 0)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				Expect(pc.Close()).To(Succeed())
+			})
+			cc := newClientConfig(
+				config.DownloadClientEntry{DownloadDir: GinkgoT().TempDir()},
+				net.IPv4(127, 0, 0, 1), nil, pc,
+			)
+			Expect(cc.DisableUTP).To(BeFalse())
+			Expect(cc.ListenPacket).NotTo(BeNil())
+		})
+
+		It("binds the packet conn to the requested port", func() {
+			pc, err := newRebindablePacketConn(net.IPv4(127, 0, 0, 1), 0)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				Expect(pc.Close()).To(Succeed())
+			})
+			cc := newClientConfig(
+				config.DownloadClientEntry{DownloadDir: GinkgoT().TempDir()},
+				net.IPv4(127, 0, 0, 1), nil, pc,
+			)
+			got, err := cc.ListenPacket("udp", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeIdenticalTo(pc))
+		})
+
+		// Regression for the bug where an unbound client (no bind_interface)
+		// left both DisableIPv4 and DisableIPv6 unset: cl.listenNetworks()
+		// then yields udp4 *and* udp6, and listenAllRetry calls ListenPacket
+		// once per network — two separate utp.Socket instances (each with its
+		// own DHT server) reading the one shared packet conn, racing each
+		// other for every datagram.
+		It("narrows to one UDP network when unbound", func() {
+			pc, err := newRebindablePacketConn(nil, 0)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				Expect(pc.Close()).To(Succeed())
+			})
+			cc := newClientConfig(
+				config.DownloadClientEntry{DownloadDir: GinkgoT().TempDir()},
+				nil, nil, pc,
+			)
+			// The conn itself is still opened on a nil IP (dual-stack) — this
+			// only narrows anacrolix's own labelling to a single call.
+			Expect(cc.DisableIPv6).To(BeTrue())
+		})
+
+		// This is the spec whose absence let the regression above through:
+		// the previous "leaves the default dialers alone when unbound" case
+		// passes a nil packet conn, so it never exercises the real shape
+		// (bindIP nil, pc non-nil) that New always builds.
+		It("calls ListenPacket exactly once for a real unbound client", func() {
+			pc, err := newRebindablePacketConn(nil, 0)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				Expect(pc.Close()).To(Succeed())
+			})
+			entry := config.DownloadClientEntry{
+				DownloadDir: GinkgoT().TempDir(),
+				DisableDHT:  true,
+			}
+			cc := newClientConfig(entry, nil, nil, pc)
+			// Keep this unit test off the network; irrelevant to what's under
+			// test (the closure's own call count).
+			cc.NoDefaultPortForwarding = true
+
+			var calls int
+			inner := cc.ListenPacket
+			cc.ListenPacket = func(network, addr string) (net.PacketConn, error) {
+				calls++
+				return inner(network, addr)
+			}
+
+			client, err := antorrent.NewClient(cc)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() { Expect(client.Close()).To(BeEmpty()) })
+
+			Expect(calls).To(Equal(1))
+		})
+	},
+)
+
+var _ = Describe("newPeerSockets", Label("unit", "bittorrent"), func() {
+	It("binds both sockets to the same port when the requested port is 0", func() {
+		pc, ln, err := newPeerSockets(
+			context.Background(),
+			net.IPv4(127, 0, 0, 1),
+			0,
+		)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(pc.Close()).To(Succeed())
+			Expect(ln.Close()).To(Succeed())
+		})
+		pcPort := pc.LocalAddr().(*net.UDPAddr).Port
+		lnPort := ln.Addr().(*net.TCPAddr).Port
+		Expect(pcPort).NotTo(BeZero())
+		Expect(lnPort).To(Equal(pcPort))
+	})
+
+	It("binds both sockets to the requested port directly", func() {
+		port := reserveListenPort()
+		pc, ln, err := newPeerSockets(
+			context.Background(),
+			net.IPv4(127, 0, 0, 1),
+			port,
+		)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(pc.Close()).To(Succeed())
+			Expect(ln.Close()).To(Succeed())
+		})
+		Expect(pc.LocalAddr().(*net.UDPAddr).Port).To(Equal(int(port)))
+		Expect(ln.Addr().(*net.TCPAddr).Port).To(Equal(int(port)))
+	})
+})

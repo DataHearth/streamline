@@ -1,0 +1,977 @@
+package config_test
+
+import (
+	"context"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
+)
+
+var _ = Describe("Resource entries", Label("unit", "config"), func() {
+	It("loads media servers, download clients, indexers, quality profiles", func() {
+		c := configtest.Setup(map[string]any{
+			"media_server": map[string]any{
+				"servers": []map[string]any{
+					{
+						"name":        "home-plex",
+						"server_type": "plex",
+						"host":        "http://plex:32400",
+						"api_key":     "tok",
+					},
+				},
+			},
+			"download_clients": []map[string]any{
+				{
+					"name":        "qbit",
+					"client_type": "qbittorrent",
+					"host":        "qbit",
+					"port":        8080,
+					"auth_method": "password",
+				},
+			},
+			"indexers": []map[string]any{
+				{
+					"name":     "torznab1",
+					"host":     "idx",
+					"port":     9117,
+					"api_key":  "k",
+					"protocol": "torznab",
+				},
+			},
+			"quality_profiles": []map[string]any{
+				{
+					"name":                 "hd",
+					"preferred_resolution": "1080p",
+					"min_resolution":       "720p",
+				},
+			},
+			"movie_quality_default_profile":  "hd",
+			"series_quality_default_profile": "hd",
+		})
+		Expect(c.MediaServer.Servers).To(HaveLen(1))
+		Expect(c.MediaServer.Servers[0].Name).To(Equal("home-plex"))
+		Expect(c.DownloadClients).To(HaveLen(1))
+		Expect(c.Indexers).To(HaveLen(1))
+		Expect(c.QualityProfiles).To(HaveLen(1))
+		Expect(c.MovieQualityDefaultProfile).To(Equal("hd"))
+	})
+})
+
+var _ = Describe("Library quality globals", Label("unit", "config"), func() {
+	It("defaults the global quality knobs", func() {
+		c := configtest.Setup()
+		Expect(c.Library.NoMatchCooldown).To(Equal("6h"))
+		Expect(c.Library.MaxGrabFailures).To(Equal(uint8(3)))
+	})
+})
+
+var _ = Describe("FFmpeg config", Label("unit", "config"), func() {
+	It("defaults ffmpeg to enabled with PATH lookup", func() {
+		c := configtest.Setup()
+		Expect(c.FFmpeg.Enabled).To(BeTrue())
+		Expect(c.FFmpeg.Path).To(BeEmpty())
+	})
+})
+
+var _ = Describe(
+	"quality default profile validation",
+	Label("unit", "config"),
+	func() {
+		It("rejects a movie default that names no existing profile", func() {
+			c := configtest.Setup()
+			c.MovieQualityDefaultProfile = "missing"
+			err := c.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("movie_quality_default_profile"))
+			Expect(
+				err.Error(),
+			).NotTo(ContainSubstring("series_quality_default_profile"))
+		})
+
+		It("rejects a series default that names no existing profile", func() {
+			c := configtest.Setup()
+			c.SeriesQualityDefaultProfile = "missing"
+			err := c.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(
+				err.Error(),
+			).To(ContainSubstring("series_quality_default_profile"))
+			Expect(
+				err.Error(),
+			).NotTo(ContainSubstring("movie_quality_default_profile"))
+		})
+
+		It("accepts a default that exists", func() {
+			c := configtest.Setup()
+			Expect(c.Validate()).To(Succeed())
+		})
+	},
+)
+
+var _ = Describe(
+	"quality profile resolution band validation",
+	Label("unit", "config"),
+	func() {
+		It("rejects a min_resolution above preferred_resolution", func() {
+			c := configtest.Setup()
+			Expect(c.QualityProfiles).NotTo(BeEmpty())
+			c.QualityProfiles[0].MinResolution = "1080p"
+			c.QualityProfiles[0].PreferredResolution = "720p"
+
+			err := c.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("min_resolution"))
+			Expect(err.Error()).To(ContainSubstring("preferred_resolution"))
+		})
+
+		It("accepts an equal min and preferred", func() {
+			c := configtest.Setup()
+			c.QualityProfiles[0].MinResolution = "1080p"
+			c.QualityProfiles[0].PreferredResolution = "1080p"
+			Expect(c.Validate()).To(Succeed())
+		})
+
+		It("accepts a min below preferred", func() {
+			c := configtest.Setup()
+			c.QualityProfiles[0].MinResolution = "720p"
+			c.QualityProfiles[0].PreferredResolution = "2160p"
+			Expect(c.Validate()).To(Succeed())
+		})
+	},
+)
+
+var _ = Describe("ResolveQualityProfile", Label("unit", "config"), func() {
+	BeforeEach(func() {
+		configtest.Setup(map[string]any{
+			"quality_profiles": []map[string]any{
+				{
+					"name":                 "default",
+					"preferred_resolution": "1080p",
+					"min_resolution":       "720p",
+					"upgrade_allowed":      true,
+				},
+				{
+					"name":                 "uhd",
+					"preferred_resolution": "2160p",
+					"min_resolution":       "1080p",
+				},
+			},
+			"movie_quality_default_profile":  "default",
+			"series_quality_default_profile": "default",
+		})
+	})
+
+	It("returns the named profile", func() {
+		p, ok := config.ResolveQualityProfile(config.MediaMovie, "uhd")
+		Expect(ok).To(BeTrue())
+		Expect(p.PreferredResolution).To(Equal("2160p"))
+	})
+
+	It("falls back to default when empty", func() {
+		p, ok := config.ResolveQualityProfile(config.MediaMovie, "")
+		Expect(ok).To(BeTrue())
+		Expect(p.Name).To(Equal("default"))
+	})
+
+	It("falls back to default when unknown", func() {
+		p, ok := config.ResolveQualityProfile(config.MediaMovie, "nope")
+		Expect(ok).To(BeTrue())
+		Expect(p.Name).To(Equal("default"))
+	})
+})
+
+var _ = Describe("Resource pick helpers", Label("unit", "config"), func() {
+	BeforeEach(func() {
+		configtest.Setup(map[string]any{
+			"download_clients": []map[string]any{
+				{
+					"name":        "low",
+					"client_type": "qbittorrent",
+					"host":        "a",
+					"port":        1,
+					"auth_method": "password",
+					"priority":    1,
+					"enabled":     true,
+				},
+				{
+					"name":        "high",
+					"client_type": "qbittorrent",
+					"host":        "b",
+					"port":        2,
+					"auth_method": "password",
+					"priority":    9,
+					"enabled":     true,
+				},
+				{
+					"name":        "off",
+					"client_type": "qbittorrent",
+					"host":        "c",
+					"port":        3,
+					"auth_method": "password",
+					"priority":    99,
+					"enabled":     false,
+				},
+			},
+			"indexers": []map[string]any{
+				{
+					"name":     "on",
+					"host":     "i",
+					"port":     1,
+					"api_key":  "k",
+					"protocol": "torznab",
+					"enabled":  true,
+				},
+				{
+					"name":     "off",
+					"host":     "j",
+					"port":     2,
+					"api_key":  "k",
+					"protocol": "torznab",
+					"enabled":  false,
+				},
+			},
+		})
+	})
+
+	It("picks the highest-priority enabled download client", func() {
+		dc, ok := config.PickDownloadClient()
+		Expect(ok).To(BeTrue())
+		Expect(dc.Name).To(Equal("high"))
+	})
+
+	It("lists only enabled indexers", func() {
+		Expect(config.EnabledIndexers()).To(HaveLen(1))
+		Expect(config.EnabledIndexers()[0].Name).To(Equal("on"))
+	})
+
+	It("finds a download client by name", func() {
+		dc, ok := config.FindDownloadClient("low")
+		Expect(ok).To(BeTrue())
+		Expect(dc.Host).To(Equal("a"))
+		_, ok = config.FindDownloadClient("ghost")
+		Expect(ok).To(BeFalse())
+	})
+})
+
+var _ = Describe("builtin download client", Label("unit", "config"), func() {
+	var ctx context.Context
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		configtest.SetupFile()
+	})
+
+	It("accepts a builtin entry without host/port/auth", func() {
+		err := config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "embedded", ClientType: "builtin",
+			DownloadDir: "/downloads", Enabled: true,
+		})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("rejects a builtin entry without download_dir", func() {
+		err := config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "embedded", ClientType: "builtin", Enabled: true,
+		})
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("still rejects an external entry without host", func() {
+		err := config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "qbt", ClientType: "qbittorrent", Port: 8080,
+			AuthMethod: "password", Enabled: true,
+		})
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("rejects a second builtin entry", func() {
+		Expect(config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "one", ClientType: "builtin", DownloadDir: "/d1",
+		})).To(Succeed())
+		err := config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "two", ClientType: "builtin", DownloadDir: "/d2",
+		})
+		Expect(err).To(MatchError(ContainSubstring("builtin")))
+	})
+
+	It("finds the enabled builtin entry", func() {
+		Expect(config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "embedded", ClientType: "builtin",
+			DownloadDir: "/downloads", Enabled: true,
+		})).To(Succeed())
+		e, ok := config.BuiltinDownloadClient()
+		Expect(ok).To(BeTrue())
+		Expect(e.Name).To(Equal("embedded"))
+	})
+
+	It("reports no builtin entry when the only one is disabled", func() {
+		Expect(config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "embedded", ClientType: "builtin", DownloadDir: "/downloads",
+		})).To(Succeed())
+		_, ok := config.BuiltinDownloadClient()
+		Expect(ok).To(BeFalse())
+	})
+})
+
+var _ = Describe("torrent_listen_port", Label("unit", "config"), func() {
+	builtin := map[string]any{
+		"name": "embedded", "client_type": "builtin",
+		"download_dir": "/downloads", "enabled": true, "listen_port": 12345,
+	}
+
+	It("leaves the entry's own listen_port alone when unset", func() {
+		configtest.Setup(map[string]any{
+			"download_clients": []map[string]any{builtin},
+		})
+		e, ok := config.BuiltinDownloadClient()
+		Expect(ok).To(BeTrue())
+		Expect(e.ListenPort).To(Equal(uint16(12345)))
+	})
+
+	It("overrides the entry's listen_port when set", func() {
+		configtest.Setup(map[string]any{
+			"torrent_listen_port": 61847,
+			"download_clients":    []map[string]any{builtin},
+		})
+		e, ok := config.BuiltinDownloadClient()
+		Expect(ok).To(BeTrue())
+		Expect(e.ListenPort).To(Equal(uint16(61847)))
+	})
+
+	It("supplies a port when the entry names none", func() {
+		bare := map[string]any{
+			"name": "embedded", "client_type": "builtin",
+			"download_dir": "/downloads", "enabled": true,
+		}
+		configtest.Setup(map[string]any{
+			"torrent_listen_port": 61847,
+			"download_clients":    []map[string]any{bare},
+		})
+		e, ok := config.BuiltinDownloadClient()
+		Expect(ok).To(BeTrue())
+		Expect(e.ListenPort).To(Equal(uint16(61847)))
+	})
+
+	// The environment is the reason this key is top-level: a single underscore
+	// is literal and "__" is the path separator, so STREAMLINE_TORRENT_LISTEN_PORT
+	// names torrent_listen_port exactly. Nothing inside download_clients[] can
+	// be reached this way, which is what forced the key out of the array.
+	It("is reachable as STREAMLINE_TORRENT_LISTEN_PORT", func() {
+		GinkgoT().Setenv("STREAMLINE_TORRENT_LISTEN_PORT", "61847")
+		configtest.Setup(map[string]any{
+			"download_clients": []map[string]any{builtin},
+		})
+		e, ok := config.BuiltinDownloadClient()
+		Expect(ok).To(BeTrue())
+		Expect(e.ListenPort).To(Equal(uint16(61847)))
+	})
+})
+
+var _ = Describe("Custom formats", Label("unit", "config"), func() {
+	It("loads a valid custom_formats entry and finds it by name", func() {
+		configtest.Setup(map[string]any{
+			"custom_formats": []map[string]any{
+				{
+					"name": "french-vf",
+					"conditions": []map[string]any{
+						{
+							"type":     "release_title",
+							"pattern":  `(?i)\bVFF\b`,
+							"required": true,
+						},
+					},
+				},
+			},
+		})
+		e, ok := config.FindCustomFormat("french-vf")
+		Expect(ok).To(BeTrue())
+		Expect(e.Conditions).To(HaveLen(1))
+		Expect(e.Conditions[0].Type).To(Equal("release_title"))
+
+		_, ok = config.FindCustomFormat("ghost")
+		Expect(ok).To(BeFalse())
+	})
+
+	It("rejects duplicate custom format names", func() {
+		c := configtest.Setup()
+		c.CustomFormats = []config.CustomFormatEntry{
+			{
+				Name: "dup",
+				Conditions: []config.CustomFormatConditionEntry{
+					{Type: "release_title", Pattern: "a", Required: true},
+				},
+			},
+			{
+				Name: "dup",
+				Conditions: []config.CustomFormatConditionEntry{
+					{Type: "release_title", Pattern: "b", Required: true},
+				},
+			},
+		}
+		Expect(c.Validate()).To(HaveOccurred())
+	})
+
+	It("rejects a user format named like a built-in", func() {
+		c := configtest.Setup()
+		c.CustomFormats = []config.CustomFormatEntry{
+			{
+				Name: "x265",
+				Conditions: []config.CustomFormatConditionEntry{
+					{Type: "release_title", Pattern: "a", Required: true},
+				},
+			},
+		}
+		err := c.Validate()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("x265"))
+	})
+
+	It("rejects an uncompilable regex pattern", func() {
+		c := configtest.Setup()
+		c.CustomFormats = []config.CustomFormatEntry{
+			{
+				Name: "bad-regex",
+				Conditions: []config.CustomFormatConditionEntry{
+					{Type: "release_title", Pattern: "(", Required: true},
+				},
+			},
+		}
+		Expect(c.Validate()).To(HaveOccurred())
+	})
+
+	It("rejects a condition with an unknown type", func() {
+		c := configtest.Setup()
+		c.CustomFormats = []config.CustomFormatEntry{
+			{
+				Name: "unknown-type",
+				Conditions: []config.CustomFormatConditionEntry{
+					{Type: "bogus", Required: true},
+				},
+			},
+		}
+		Expect(c.Validate()).To(HaveOccurred())
+	})
+
+	It("rejects a resolution condition with a bad value", func() {
+		c := configtest.Setup()
+		c.CustomFormats = []config.CustomFormatEntry{
+			{
+				Name: "bad-res",
+				Conditions: []config.CustomFormatConditionEntry{
+					{Type: "resolution", Value: "8K", Required: true},
+				},
+			},
+		}
+		Expect(c.Validate()).To(HaveOccurred())
+	})
+
+	It("rejects a format with zero conditions", func() {
+		c := configtest.Setup()
+		c.CustomFormats = []config.CustomFormatEntry{
+			{Name: "empty", Conditions: nil},
+		}
+		Expect(c.Validate()).To(HaveOccurred())
+	})
+
+	It(
+		"rejects a profile format reference naming neither a built-in nor a user format",
+		func() {
+			c := configtest.Setup()
+			c.QualityProfiles = []config.QualityProfileEntry{
+				{
+					Name:                "default",
+					PreferredResolution: "1080p",
+					MinResolution:       "720p",
+					Formats: []config.QualityProfileFormatScore{
+						{Name: "nonexistent", Score: 10},
+					},
+				},
+			}
+			c.MovieQualityDefaultProfile = "default"
+			err := c.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("nonexistent"))
+		},
+	)
+
+	It(
+		"still validates a config with no custom_formats or scored-profile fields",
+		func() {
+			c := configtest.Setup()
+			Expect(c.Validate()).To(Succeed())
+			Expect(c.CustomFormats).To(BeEmpty())
+		},
+	)
+})
+
+var _ = Describe("Transcoding config", Label("unit", "config"), func() {
+	It("defaults to disabled with max_concurrent=1, max_failures=3", func() {
+		c := configtest.Setup()
+		Expect(c.Transcoding.Enabled).To(BeFalse())
+		Expect(c.Transcoding.MaxConcurrent).To(Equal(uint8(1)))
+		Expect(c.Transcoding.MaxFailures).To(Equal(uint8(3)))
+		Expect(c.Transcoding.DeferSeeding).To(BeFalse())
+	})
+
+	It("round-trips defer_seeding through a patch", func() {
+		configtest.SetupFile()
+		on := true
+		got, err := config.UpdateTranscoding(
+			context.Background(),
+			config.TranscodingPatch{DeferSeeding: &on},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got.DeferSeeding).To(BeTrue())
+		Expect(config.Get().Transcoding.DeferSeeding).To(BeTrue())
+	})
+
+	It(
+		"round-trips a transcode policy and fills the default audio passthrough",
+		func() {
+			configtest.Setup(map[string]any{
+				"quality_profiles": []map[string]any{
+					{
+						"name":                 "default",
+						"preferred_resolution": "1080p",
+						"min_resolution":       "1080p",
+						"transcode": map[string]any{
+							"if": map[string]any{
+								"video_codecs": []string{"hevc"},
+							},
+							"to": map[string]any{
+								"container":   "mkv",
+								"video_codec": "hevc",
+								"crf":         20,
+								"preset":      "medium",
+								"audio_codec": "aac",
+							},
+						},
+					},
+				},
+			})
+
+			p, ok := config.ResolveQualityProfile(config.MediaMovie, "default")
+			Expect(ok).To(BeTrue())
+			Expect(p.Transcode).NotTo(BeNil())
+			Expect(p.Transcode.If.VideoCodecs).To(Equal([]string{"hevc"}))
+			Expect(p.Transcode.To.Container).To(Equal("mkv"))
+			Expect(p.Transcode.To.CRF).To(Equal(uint8(20)))
+			Expect(p.Transcode.To.AudioPassthrough).
+				To(Equal(config.DefaultAudioPassthrough))
+		},
+	)
+
+	Describe("TranscodeEligible", func() {
+		It("is false when the profile carries no transcode policy", func() {
+			configtest.Setup(map[string]any{
+				"transcoding": map[string]any{"enabled": true},
+			})
+			Expect(
+				config.TranscodeEligible(config.MediaMovie, "default"),
+			).To(BeFalse())
+		})
+
+		It(
+			"is false when transcoding is disabled globally, even with a policy",
+			func() {
+				configtest.Setup(map[string]any{
+					"quality_profiles": []map[string]any{
+						{
+							"name":                 "default",
+							"preferred_resolution": "1080p",
+							"min_resolution":       "1080p",
+							"transcode": map[string]any{
+								"to": map[string]any{
+									"container":   "mkv",
+									"video_codec": "hevc",
+									"preset":      "medium",
+									"audio_codec": "aac",
+								},
+							},
+						},
+					},
+				})
+				Expect(
+					config.TranscodeEligible(config.MediaMovie, "default"),
+				).To(BeFalse())
+			},
+		)
+
+		It(
+			"is true when transcoding is enabled and the profile carries a policy",
+			func() {
+				configtest.Setup(map[string]any{
+					"transcoding": map[string]any{"enabled": true},
+					"quality_profiles": []map[string]any{
+						{
+							"name":                 "default",
+							"preferred_resolution": "1080p",
+							"min_resolution":       "1080p",
+							"transcode": map[string]any{
+								"to": map[string]any{
+									"container":   "mkv",
+									"video_codec": "hevc",
+									"preset":      "medium",
+									"audio_codec": "aac",
+								},
+							},
+						},
+					},
+				})
+				Expect(
+					config.TranscodeEligible(config.MediaMovie, "default"),
+				).To(BeTrue())
+			},
+		)
+	})
+
+	It("rejects a max_video_bitrate value ParseBitrate cannot read", func() {
+		c := configtest.Setup()
+		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{
+			If: config.TranscodeIf{MaxVideoBitrate: "nope"},
+			To: config.TranscodeTo{
+				Container:  "mkv",
+				VideoCodec: "hevc",
+				Preset:     "medium",
+				AudioCodec: "aac",
+			},
+		}
+		err := c.Validate()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("max_video_bitrate"))
+	})
+
+	It("rejects a min_video_bitrate value ParseBitrate cannot read", func() {
+		c := configtest.Setup()
+		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{
+			If: config.TranscodeIf{MinVideoBitrate: "nope"},
+			To: config.TranscodeTo{
+				Container:  "mkv",
+				VideoCodec: "hevc",
+				Preset:     "medium",
+				AudioCodec: "aac",
+			},
+		}
+		err := c.Validate()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("min_video_bitrate"))
+	})
+
+	It("rejects a min_video_bitrate at or above max_video_bitrate", func() {
+		c := configtest.Setup()
+		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{
+			If: config.TranscodeIf{
+				MaxVideoBitrate: "8M",
+				MinVideoBitrate: "8M",
+			},
+			To: config.TranscodeTo{
+				Container:  "mkv",
+				VideoCodec: "hevc",
+				Preset:     "medium",
+				AudioCodec: "aac",
+			},
+		}
+		err := c.Validate()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("min_video_bitrate"))
+		Expect(err.Error()).To(ContainSubstring("max_video_bitrate"))
+	})
+
+	It("accepts a min_video_bitrate below max_video_bitrate", func() {
+		c := configtest.Setup()
+		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{
+			If: config.TranscodeIf{
+				MaxVideoBitrate: "12M",
+				MinVideoBitrate: "2M",
+			},
+			To: config.TranscodeTo{
+				Container:  "mkv",
+				VideoCodec: "hevc",
+				Preset:     "medium",
+				AudioCodec: "aac",
+			},
+		}
+		Expect(c.Validate()).To(Succeed())
+	})
+
+	It("rejects a to.video_codec its own if.video_codecs rejects", func() {
+		c := configtest.Setup()
+		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{
+			If: config.TranscodeIf{VideoCodecs: []string{"hevc", "av1"}},
+			To: config.TranscodeTo{
+				Container:  "mkv",
+				VideoCodec: "h264",
+				Preset:     "medium",
+				AudioCodec: "aac",
+			},
+		}
+		err := c.Validate()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("transcode.to.video_codec"))
+	})
+
+	It("rejects a to.container its own if.containers rejects", func() {
+		c := configtest.Setup()
+		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{
+			If: config.TranscodeIf{Containers: []string{"mkv"}},
+			To: config.TranscodeTo{
+				Container:  "mp4",
+				VideoCodec: "hevc",
+				Preset:     "medium",
+				AudioCodec: "aac",
+			},
+		}
+		err := c.Validate()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("transcode.to.container"))
+	})
+
+	DescribeTable("ParseBitrate",
+		func(input string, want int64, wantErr bool) {
+			got, err := config.ParseBitrate(input)
+			if wantErr {
+				Expect(err).To(HaveOccurred())
+				return
+			}
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(Equal(want))
+		},
+		Entry("megabit shorthand", "12M", int64(12_000_000), false),
+		Entry("kilobit shorthand lowercase", "8000k", int64(8_000_000), false),
+		Entry("bare byte count", "500000", int64(500_000), false),
+		Entry("case-insensitive suffix", "8000K", int64(8_000_000), false),
+		Entry("non-numeric", "nope", int64(0), true),
+		Entry("zero", "0", int64(0), true),
+		Entry("negative", "-1M", int64(0), true),
+	)
+})
+
+var _ = Describe("ResolveScoredProfile", Label("unit", "config"), func() {
+	BeforeEach(func() {
+		configtest.Setup(map[string]any{
+			"custom_formats": []map[string]any{
+				{
+					"name": "french-vf",
+					"conditions": []map[string]any{
+						{
+							"type":     "release_title",
+							"pattern":  `(?i)\bVFF\b`,
+							"required": true,
+						},
+					},
+				},
+			},
+			"quality_profiles": []map[string]any{
+				{
+					"name":                 "default",
+					"preferred_resolution": "1080p",
+					"min_resolution":       "720p",
+					"upgrade_allowed":      true,
+					"min_score":            5,
+					"upgrade_until_score":  100,
+					"formats": []map[string]any{
+						{"name": "x265", "score": 10},
+						{"name": "french-vf", "score": 20},
+					},
+				},
+			},
+			"movie_quality_default_profile":  "default",
+			"series_quality_default_profile": "default",
+		})
+	})
+
+	It(
+		"resolves min/max resolution, thresholds, and scored formats",
+		func() {
+			p, ok := config.ResolveScoredProfile(config.MediaMovie, "default")
+			Expect(ok).To(BeTrue())
+			Expect(p.MinResolution).To(Equal("720p"))
+			Expect(p.MaxResolution).To(Equal("1080p"))
+			Expect(p.UpgradeAllowed).To(BeTrue())
+			Expect(p.MinScore).To(Equal(5))
+			Expect(p.UpgradeUntilScore).To(Equal(100))
+			Expect(p.Formats).To(HaveLen(2))
+
+			scores := map[string]int{}
+			for _, sf := range p.Formats {
+				scores[sf.Format.Name] = sf.Score
+			}
+			Expect(scores).To(HaveKeyWithValue("x265", 10))
+			Expect(scores).To(HaveKeyWithValue("french-vf", 20))
+		},
+	)
+
+	It("falls back to the default profile for an unknown name", func() {
+		p, ok := config.ResolveScoredProfile(config.MediaMovie, "nope")
+		Expect(ok).To(BeTrue())
+		Expect(p.MaxResolution).To(Equal("1080p"))
+	})
+
+	It("reports ok=false when no profiles are configured", func() {
+		c := config.Get()
+		c.QualityProfiles = nil
+		c.MovieQualityDefaultProfile = ""
+		_, ok := config.ResolveScoredProfile(config.MediaMovie, "anything")
+		Expect(ok).To(BeFalse())
+	})
+
+	It("returns the same assembled profile on a repeat call", func() {
+		// The formats slice is built once per config generation; identical
+		// backing arrays are the observable evidence nothing recompiled.
+		a, ok := config.ResolveScoredProfile(config.MediaMovie, "default")
+		Expect(ok).To(BeTrue())
+		b, ok := config.ResolveScoredProfile(config.MediaMovie, "default")
+		Expect(ok).To(BeTrue())
+		Expect(&b.Formats[0]).To(BeIdenticalTo(&a.Formats[0]))
+	})
+
+	It(
+		"serves a fallback resolution from the resolved name, not the requested one",
+		func() {
+			// Cache keys are the resolved entry's name, so an arbitrary stored
+			// profile string cannot grow the map — and must still resolve.
+			a, ok := config.ResolveScoredProfile(config.MediaMovie, "nope")
+			Expect(ok).To(BeTrue())
+			b, ok := config.ResolveScoredProfile(config.MediaMovie, "also-nope")
+			Expect(ok).To(BeTrue())
+			Expect(&b.Formats[0]).To(BeIdenticalTo(&a.Formats[0]))
+		},
+	)
+
+	It("rebuilds after a config commit so a hot edit takes effect", func() {
+		before, ok := config.ResolveScoredProfile(config.MediaMovie, "default")
+		Expect(ok).To(BeTrue())
+		Expect(before.Formats).To(HaveLen(2))
+
+		// Any commit of the singleton — which is what every mutate_* path
+		// ends in — must drop the cache, or a custom format edited through
+		// the API keeps scoring by its old pattern until a restart.
+		configtest.Setup(map[string]any{
+			"quality_profiles": []map[string]any{
+				{
+					"name":                 "default",
+					"preferred_resolution": "2160p",
+					"min_resolution":       "1080p",
+					"formats": []map[string]any{
+						{"name": "x265", "score": 10},
+					},
+				},
+			},
+			"movie_quality_default_profile":  "default",
+			"series_quality_default_profile": "default",
+		})
+
+		after, ok := config.ResolveScoredProfile(config.MediaMovie, "default")
+		Expect(ok).To(BeTrue())
+		Expect(after.Formats).To(HaveLen(1))
+		Expect(after.MaxResolution).To(Equal("2160p"))
+	})
+})
+
+var _ = Describe("ResolveMusicQualityProfile", Label("unit", "config"), func() {
+	BeforeEach(func() {
+		configtest.Setup(map[string]any{
+			"music_quality_profiles": []map[string]any{
+				{
+					"name":      "lossless",
+					"tiers":     []string{"hires", "lossless"},
+					"preferred": "lossless",
+				},
+				{
+					"name":      "lossy",
+					"tiers":     []string{"high", "standard"},
+					"preferred": "high",
+				},
+			},
+			"music_quality_default_profile": "lossless",
+		})
+	})
+
+	It("returns the named profile", func() {
+		p, ok := config.ResolveMusicQualityProfile("lossy")
+		Expect(ok).To(BeTrue())
+		Expect(p.Preferred).To(Equal("high"))
+	})
+
+	It("falls back to the default profile on unknown name", func() {
+		p, ok := config.ResolveMusicQualityProfile("nope")
+		Expect(ok).To(BeTrue())
+		Expect(p.Name).To(Equal("lossless"))
+	})
+
+	It("reports ok=false when no music profiles exist", func() {
+		configtest.Setup(map[string]any{
+			"music_quality_profiles":        []any{},
+			"music_quality_default_profile": "",
+		})
+		_, ok := config.ResolveMusicQualityProfile("")
+		Expect(ok).To(BeFalse())
+	})
+})
+
+var _ = Describe("ResolveBookQualityProfile", Label("unit", "config"), func() {
+	profile := func(name string) map[string]any {
+		return map[string]any{
+			"name": name,
+			"ebook": map[string]any{
+				"formats":   []string{"EPUB", "AZW3"},
+				"preferred": "EPUB",
+			},
+			"audiobook": map[string]any{
+				"formats":     []string{"M4B"},
+				"preferred":   "M4B",
+				"min_bitrate": 64,
+			},
+		}
+	}
+
+	BeforeEach(func() {
+		configtest.Setup(map[string]any{
+			"book_quality_profiles": []map[string]any{
+				profile("retail"), profile("comics"),
+			},
+			"book_quality_default_profiles": map[string]any{
+				"novel": "retail",
+				"bd":    "comics",
+				"comic": "comics",
+				"manga": "retail",
+			},
+		})
+	})
+
+	It("returns the named profile whatever the kind", func() {
+		p, ok := config.ResolveBookQualityProfile("comics", "novel")
+		Expect(ok).To(BeTrue())
+		Expect(p.Name).To(Equal("comics"))
+		Expect(p.Audiobook.MinBitrate).To(Equal(uint16(64)))
+	})
+
+	It("falls back to the default of the book's kind", func() {
+		for kind, want := range map[string]string{
+			"novel": "retail", "bd": "comics", "comic": "comics", "manga": "retail",
+		} {
+			p, ok := config.ResolveBookQualityProfile("nope", kind)
+			Expect(ok).To(BeTrue())
+			Expect(p.Name).To(Equal(want), kind)
+		}
+	})
+
+	It("reads an empty kind as novel", func() {
+		p, ok := config.ResolveBookQualityProfile("", "")
+		Expect(ok).To(BeTrue())
+		Expect(p.Name).To(Equal("retail"))
+	})
+})
+
+var _ = Describe("stock music profile", Label("unit", "config"), func() {
+	It("resolves a default music profile on a stock install", func() {
+		configtest.Setup()
+		p, ok := config.ResolveMusicQualityProfile("")
+		Expect(ok).To(BeTrue())
+		Expect(p.Name).To(Equal("default"))
+		Expect(p.Tiers).To(Equal([]string{"lossless", "high"}))
+	})
+})

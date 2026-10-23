@@ -1,0 +1,163 @@
+# Scheduled Jobs
+
+Everything Streamline does on its own is a named job on a fixed interval. All of them are visible, retimeable, pausable and runnable on demand at **Settings → Schedules** or via `/api/v1/schedules`.
+
+- [The jobs](#the-jobs)
+- [Driving them](#driving-them)
+- [Job state](#job-state)
+- [Tuning intervals](#tuning-intervals)
+- [Deprecated config keys](#deprecated-config-keys)
+
+---
+
+## The jobs
+
+| Job | Default | Config key | What it does | Trigger |
+| --- | --- | --- | --- | --- |
+| `download-monitor` | `30s` | `schedules.download_monitor` | Polls download clients for progress; hands finished torrents to the importer; adopts manually-added `streamline`-tagged torrents | UI / API |
+| `import-scan` | `60s` | `schedules.import_scan` | Recovery sweep: re-queues any download record stuck in `importing` state, so work isn't lost across a restart or transient failure | UI / API |
+| `movie-rss-sync` | `15m` | `schedules.movie_rss_sync` | Reads indexer RSS feeds, grabs matching wanted movies, albums and books (one pass over the feeds serves all three) | UI / API |
+| `tv-rss-sync` | `15m` | `schedules.tv_rss_sync` | Same, for episodes | UI / API |
+| `movie-missing-search` | `12h` | `schedules.movie_missing_search` | Actively searches indexers for every still-wanted movie | UI / API |
+| `tv-missing-search` | `12h` | `schedules.tv_missing_search` | Same, for episodes | UI / API |
+| `music-missing-search` | `12h` | `schedules.music_missing_search` | Same, for wanted albums | UI / API |
+| `book-missing-search` | `12h` | `schedules.book_missing_search` | Same, for wanted book slots (ebook and audiobook searched separately; one query per series) | UI / API |
+| `movie-metadata-refresh` | `24h` | `schedules.movie_metadata_refresh` | Re-pulls TMDB metadata, posters, release dates | UI / API |
+| `tv-metadata-refresh` | `24h` | `schedules.tv_metadata_refresh` | Re-pulls TVDB metadata; discovers new seasons and episodes | UI / API |
+| `music-metadata-refresh` | `24h` | `schedules.music_metadata_refresh` | Refreshes artists from MusicBrainz (at most 10 per run, oldest first) and retries missing album credits | UI / API |
+| `book-metadata-refresh` | `24h` | `schedules.book_metadata_refresh` | Refreshes books and series from Hardcover: series placeholders first, then up to 100 stale books in batches of twenty and up to 5 stale series per run, stopping when the day's request reserve is reached | UI / API |
+| `movie-orphan-scan` | `6h` | `schedules.movie_orphan_scan` | Finds untracked video files under `movie_path` and queues them for review | UI / API |
+| `tv-orphan-scan` | `6h` | `schedules.tv_orphan_scan` | Same, under `series_path` | UI / API |
+| `drift-check` | `15m` | `schedules.drift_check` | Detects tracked files that have vanished from disk | UI / API |
+| `media-probe` | `15m` | `schedules.media_probe` | Backfills ffprobe technical info (`media_info`) onto `MediaFile` rows the importer didn't probe inline — adoption, orphan scan, bulk import. 25 rows/tick, oldest first. No-ops when `ffmpeg.enabled` is false or ffprobe isn't found | UI / API |
+| `file-selection` | `30s` | `schedules.file_selection` | Resolves magnet-sourced [selective file downloads](First-Run-Setup#selective-file-download) still waiting to learn what's inside the torrent. While records are actually pending the job re-checks every 5 seconds from inside its own run, so a magnet resolves at that cadence rather than this one; the interval here is only how often it looks for work when there is none. It keeps draining pending records regardless of `download.selective_files` — turning the setting off stops new pending records being created, but records already waiting still have to be resolved | UI / API |
+| `music-tag-sync` | `30m` | `schedules.music_tag_sync` | Writes the tags of every music file waiting for them (500 a run; a manual run takes all), retries files waiting on a torrent still seeding, and asks the media servers to rescan when something was written. Does nothing when `library.music_tags.mode` is `off`. See [Tags and artwork](Music-and-Books#tags-and-artwork) | UI / API |
+| `cleanup` | `24h` | `schedules.cleanup` | Prunes completed download records and aged-out events | UI / API |
+| `purge-sessions` | `1h` | — | Deletes expired sessions | System job — not controllable |
+
+### RSS sync vs missing search
+
+These are complementary, not redundant, and the distinction explains most latency questions.
+
+**RSS sync** is *reactive*: it reads the newest items from each indexer's feed and checks them against what you want. Cheap, frequent, catches new releases within minutes. But a feed only carries recent items — an RSS sync will never find a film from 2011.
+
+**Missing search** is *active*: it walks everything still marked Wanted and issues a real search query per item. Expensive, infrequent, and it's what eventually finds back-catalogue titles.
+
+So a new release typically lands in minutes; something old can take up to 12 hours unless you hit **Search now**.
+
+### Orphan scan and drift check
+
+Two halves of keeping the database honest against the filesystem.
+
+**Orphan scan** finds files on disk that Streamline doesn't know about. A confident match for a movie already in the library with no file is adopted where it lies — no copy, no link, no rename — and everything else is queued for review rather than imported blind, with the same accept/match/exclude flow as an import scan.
+
+**Drift check** finds records whose files have gone. It doesn't act immediately: a file must be missing for `library.drift_grace_ticks` consecutive checks (default 3) before its row is deleted. At the default 15-minute interval that's 45 minutes of tolerance, which is what stops a brief NFS outage from erasing your library metadata.
+
+If your storage is flaky, raise `drift_grace_ticks` (max 20) rather than lengthening the interval — you keep prompt detection while widening the tolerance.
+
+### Download monitor
+
+The busiest job, and the one that does the most. Every 30 seconds it polls each enabled client for the state of `streamline`-tagged torrents, updates the queue, hands anything complete to the importer, and notices torrents *you* added into the `streamline` category — producing the proposals described in [Activity and Calendar](Activity-and-Calendar#adopted-torrents).
+
+Raising the interval above 30s makes imports feel sluggish. Lowering it mostly generates API traffic against your download client.
+
+---
+
+## Driving them
+
+**In the UI:** Settings → Schedules.
+
+**Via the API** (all admin-only):
+
+```bash
+# List every job with its state
+curl -H "X-API-Key: $KEY" https://streamline.example.com/api/v1/schedules
+
+# One job
+curl -H "X-API-Key: $KEY" https://streamline.example.com/api/v1/schedules/movie-rss-sync
+
+# Retime it — minimum 10s
+curl -X PATCH -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
+  -d '{"interval":"5m"}' \
+  https://streamline.example.com/api/v1/schedules/movie-rss-sync
+
+# Pause / resume
+curl -X POST -H "X-API-Key: $KEY" .../api/v1/schedules/movie-rss-sync/pause
+curl -X POST -H "X-API-Key: $KEY" .../api/v1/schedules/movie-rss-sync/resume
+
+# Run once, right now
+curl -X POST -H "X-API-Key: $KEY" .../api/v1/schedules/movie-missing-search/run
+```
+
+A manual run does the work the ticker would defer: the missing searches ignore `library.no_match_cooldown` and the grab-failure cap, and the metadata refreshes revisit every title instead of only those not refreshed in the last 24 hours.
+
+Intervals have a **10 second floor**. Pause state is persisted to the database, so a paused job stays paused across restarts.
+
+`purge-sessions` is flagged `system: true` and rejects PATCH, pause, resume and run.
+
+---
+
+## Job state
+
+Each job reports:
+
+| Field | Meaning |
+| --- | --- |
+| `name` | Job identifier |
+| `interval` | Current interval |
+| `paused` | Whether it's suspended |
+| `system` | Read-only system job |
+| `running` | Currently executing |
+| `status` | `never` \| `success` \| `error` \| `skipped` |
+| `last_started_at`, `last_finished_at` | Timestamps |
+| `next_run_at` | Next scheduled fire |
+| `last_duration_ms` | How long the last run took |
+| `last_error` | Failure message, when `status` is `error` |
+| `progress` | `{done, total}` while a run is in flight and the job counts its work; `null` otherwise |
+
+`progress` comes from the jobs that loop over a known list — both metadata refreshes, both missing searches, the series orphan scan and the media probe report `done` out of `total`. The movie orphan scan and `drift-check` walk without knowing the size up front, so they report `done` with `total: 0`. The Schedules page shows it as "Running 12/240" with a bar under the status, or a bare count where there is no total.
+
+### Live updates
+
+`GET /api/v1/schedules/events` is a `text/event-stream` that sends the full schedule list on connect and again whenever anything changes — a run starting, reporting progress or finishing, a pause, resume or interval change. Frames are coalesced to at most four a second and a comment line every 15 seconds keeps idle connections open. The Schedules page uses it instead of polling; it falls back to a 10-second poll while the stream is down.
+
+> [!IMPORTANT]
+> `skipped` is the status worth watching for. It means the job ran but bailed out because a precondition wasn't met — most often **no enabled download client**, which causes all three acquisition jobs (`*-rss-sync`, `*-missing-search`) to give up immediately. A library that never grabs anything, with jobs reporting `skipped`, is almost always this.
+
+A rising `last_duration_ms` on `*-missing-search` is normal as your wanted list grows; on `drift-check` it usually means slow storage.
+
+---
+
+## Tuning intervals
+
+Sensible directions, if the defaults don't suit:
+
+| Situation | Change |
+| --- | --- |
+| Want new releases faster | `movie_rss_sync` / `tv_rss_sync` → `5m`. Check your indexers' rate limits first |
+| Large library, missing-search takes too long | Lengthen to `24h`; RSS still catches new releases |
+| Aggressive indexer rate limits | Lengthen RSS sync; consider pausing missing-search and running it manually |
+| Slow or networked storage | Lengthen `drift_check`, or raise `library.drift_grace_ticks` |
+| Library never changes outside Streamline | Pause both orphan scans entirely |
+| Metadata churn matters (new seasons) | Shorten `tv_metadata_refresh` to `12h` |
+
+> [!TIP]
+> Pausing a job is a legitimate long-term configuration, not just a debugging step. If nothing ever touches your library outside Streamline, the orphan scans are pure I/O for no benefit.
+
+---
+
+## Deprecated config keys
+
+<details>
+<summary><b>Four older keys, still honoured with a warning logged at boot</b></summary>
+
+| Old key | Now |
+| --- | --- |
+| `schedules.rss_sync` | `schedules.movie_rss_sync` |
+| `schedules.missing_search` | Applied to `movie_missing_search`, `tv_missing_search`, `music_missing_search` and `book_missing_search` |
+| `schedules.metadata_refresh` | Applied to `movie_metadata_refresh`, `tv_metadata_refresh`, `music_metadata_refresh` and `book_metadata_refresh` |
+| `schedules.orphan_scan` | Applied to **both** `movie_orphan_scan` and `tv_orphan_scan` |
+
+Migrate to the split keys — you almost certainly want TV metadata refreshed more often than movie metadata, and the merged keys can't express that.
+
+</details>

@@ -1,0 +1,1463 @@
+package restapi
+
+import (
+	"cmp"
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/url"
+	"path/filepath"
+	"slices"
+	"strings"
+	"time"
+
+	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
+	entbook "github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/media/tvshow"
+	"github.com/datahearth/streamline/internal/mediaserver"
+	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/quality"
+	"github.com/datahearth/streamline/internal/quality/qualityctx"
+	"github.com/datahearth/streamline/internal/utils/numeric"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
+)
+
+// --- response-body helpers -------------------------------------------------
+//
+// Strict-server generates a per-operation response type (e.g.
+// UpdateMe401JSONResponse) that embeds the shared payload struct (e.g.
+// UnauthorizedJSONResponse). Handlers assemble the wrapper at the call site;
+// these helpers cover the shared inner payload so the message lives in one
+// place per status code.
+
+// optString renders an optional string field: empty becomes an absent key
+// rather than `""`. The SPA treats the two the same, so an empty string in a
+// response is noise on every row that has one.
+func optString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func unauthorizedResp(msg string) UnauthorizedJSONResponse {
+	return UnauthorizedJSONResponse{Message: msg}
+}
+
+func notFoundResp(msg string) NotFoundJSONResponse {
+	return NotFoundJSONResponse{Message: msg}
+}
+
+func unprocessableResp(msg string) UnprocessableEntityJSONResponse {
+	return UnprocessableEntityJSONResponse{Message: msg}
+}
+
+func forbiddenResp(msg string) ForbiddenJSONResponse {
+	return ForbiddenJSONResponse{Message: msg}
+}
+
+// configLocked reports whether err means the configuration can't be mutated
+// through the API: the instance runs read-only, or the targeted secret or
+// trust setting is file-managed. All map to 403.
+func configLocked(err error) bool {
+	return errors.Is(err, config.ErrReadOnly) ||
+		errors.Is(err, config.ErrSecretFileManaged) ||
+		errors.Is(err, config.ErrOIDCTrustFileManaged)
+}
+
+func conflictResp(code, msg string) ConflictJSONResponse {
+	return ConflictJSONResponse{Code: &code, Message: msg}
+}
+
+func movieToAPI(m *ent.Movie) Movie {
+	mov := Movie{
+		Id:            m.ID,
+		Title:         m.Title,
+		OriginalTitle: m.OriginalTitle,
+		Year:          m.Year,
+		Status:        MovieStatus(m.Status),
+		Monitored:     m.Monitored,
+		TmdbId:        m.TmdbID,
+		AddedAt:       &m.CreateTime,
+	}
+	if m.ReleaseDate != nil {
+		mov.ReleaseDate = &openapi_types.Date{Time: *m.ReleaseDate}
+	}
+	if m.Overview != "" {
+		mov.Overview = &m.Overview
+	}
+	if m.QualityProfile != "" {
+		mov.QualityProfile = &m.QualityProfile
+	}
+	if m.Runtime != 0 {
+		rt := m.Runtime
+		mov.Runtime = &rt
+	}
+	// The detail handler attaches files from its own query, so an unloaded
+	// edge here is not an empty library — only the list path eager-loads.
+	if len(m.Edges.MediaFiles) > 0 {
+		files := make([]MediaFile, 0, len(m.Edges.MediaFiles))
+		for _, f := range m.Edges.MediaFiles {
+			files = append(files, mediaFileToAPI(f))
+		}
+		mov.MediaFiles = &files
+	}
+	return mov
+}
+
+// movieListToAPI renders a list entry: the base movie plus the file rollup
+// that stands in for media_files. The row's media_files edge is deliberately
+// not loaded on this path, so movieToAPI emits no files and nothing has to
+// suppress them.
+func movieListToAPI(m *ent.Movie, sum db.MovieFileSummary) Movie {
+	out := movieToAPI(m)
+	if sum.FileCount == 0 {
+		return out
+	}
+	fs := MovieFileSummary{
+		FileCount:  sum.FileCount,
+		SizeBytes:  sum.SizeBytes,
+		ImportedAt: sum.ImportedAt,
+	}
+	// Resolution and codec are parsed from the filename, not stored, so the
+	// rollup parses once for the primary file rather than once per file.
+	parsed := library.Parse(filepath.Base(sum.PrimaryPath))
+	if parsed.Resolution != "" {
+		r := parsed.Resolution
+		fs.Resolution = &r
+	}
+	if parsed.Codec != "" {
+		c := parsed.Codec
+		fs.Codec = &c
+	}
+	out.FileSummary = &fs
+	return out
+}
+
+// libraryCastToAPI renders the cast credited on a stored Movie/TVShow. Detail
+// views read cast from the credits table, so nothing on that path calls a
+// provider.
+//
+// person_id is what separates this from castToAPI: it is the only key
+// /people/{id} accepts, and a series actor comes from TVDB with no tmdb id at
+// all, so nothing else on the entry can address them.
+func libraryCastToAPI(cast []db.CastEntry) []CastMember {
+	out := make([]CastMember, 0, len(cast))
+	for _, c := range cast {
+		m := CastMember{Name: c.Name, PersonId: &c.PersonID}
+		if c.TMDBID != 0 {
+			m.TmdbId = &c.TMDBID
+		}
+		if c.Character != "" {
+			m.Character = &c.Character
+		}
+		if c.ProfileURL != "" {
+			m.ProfileUrl = &c.ProfileURL
+		}
+		if url := providerPersonURL(c.TMDBID, c.TVDBID); url != "" {
+			m.PersonUrl = &url
+		}
+		out = append(out, m)
+	}
+	return out
+}
+
+// castToAPI renders a live provider lookup — a title the library does not
+// hold — so there is no persons row and no person_id to link by.
+func castToAPI(cast []metadata.CastMember) []CastMember {
+	out := make([]CastMember, 0, len(cast))
+	for _, c := range cast {
+		m := CastMember{Name: c.Name}
+		if c.TMDBID != 0 {
+			id := c.TMDBID
+			m.TmdbId = &id
+		}
+		if c.Character != "" {
+			m.Character = &c.Character
+		}
+		if c.ProfileURL != "" {
+			m.ProfileUrl = &c.ProfileURL
+		}
+		// TVDB cast carries the link directly; TMDB cast derives it.
+		personURL := c.PersonURL
+		if personURL == "" {
+			personURL = providerPersonURL(c.TMDBID, c.TVDBID)
+		}
+		if personURL != "" {
+			m.PersonUrl = &personURL
+		}
+		out = append(out, m)
+	}
+	return out
+}
+
+// providerPersonURL builds the person's page on whichever provider supplied
+// them. tmdb first: a person carrying both ids was matched on the tmdb one.
+func providerPersonURL(tmdbID, tvdbID uint32) string {
+	switch {
+	case tmdbID != 0:
+		return fmt.Sprintf("https://www.themoviedb.org/person/%d", tmdbID)
+	case tvdbID != 0:
+		return fmt.Sprintf("https://www.thetvdb.com/dereferrer/people/%d", tvdbID)
+	default:
+		return ""
+	}
+}
+
+func toAPIUserWithSend(u *ent.User) User {
+	out := toAPIUser(u)
+	smtp := config.Get().SMTP
+	send := UserSend{Configured: smtp.Enabled()}
+	if send.Configured {
+		send.From = smtp.From
+	}
+	out.Send = &send
+	return out
+}
+
+func toAPIUser(u *ent.User) User {
+	var dn *string
+	if u.DisplayName != "" {
+		d := u.DisplayName
+		dn = &d
+	}
+	email := openapi_types.Email(u.Email)
+	return User{
+		Id:          u.ID,
+		Email:       email,
+		Role:        UserRole(u.Role),
+		AuthMethod:  UserAuthMethod(u.AuthMethod),
+		DisplayName: dn,
+		DeviceEmail: &u.DeviceEmail,
+		Subsonic: &SubsonicAccess{
+			CanStream:          u.SubsonicCanStream,
+			CanDownload:        u.SubsonicCanDownload,
+			CanManagePlaylists: u.SubsonicCanManagePlaylists,
+			CanShare:           u.SubsonicCanShare,
+			CanRate:            u.SubsonicCanRate,
+			CanChangePassword:  u.SubsonicCanChangePassword,
+			MaxBitRate:         u.SubsonicMaxBitRate,
+		},
+		CreatedAt: u.CreateTime,
+	}
+}
+
+func toAPIInvite(i *ent.Invite) Invite {
+	var email *openapi_types.Email
+	if i.Email != "" {
+		e := openapi_types.Email(i.Email)
+		email = &e
+	}
+	return Invite{
+		Id:        i.ID,
+		Email:     email,
+		Role:      InviteRole(i.Role),
+		ExpiresAt: i.ExpiresAt,
+		UsedAt:    i.UsedAt,
+		CreatedAt: i.CreateTime,
+	}
+}
+
+func downloadClientToAPI(e config.DownloadClientEntry) DownloadClient {
+	useSSL := e.UseSSL
+	prio := e.Priority
+	d := DownloadClient{
+		Name:        e.Name,
+		ClientType:  DownloadClientClientType(e.ClientType),
+		Host:        e.Host,
+		Port:        e.Port,
+		AuthMethod:  DownloadClientAuthMethod(e.AuthMethod),
+		Enabled:     e.Enabled,
+		ApiKeySet:   e.APIKey != "" || e.APIKeyFile != "",
+		PasswordSet: e.Password != "" || e.PasswordFile != "",
+		UseSsl:      &useSSL,
+		Priority:    &prio,
+	}
+	if e.Username != "" {
+		username := e.Username
+		d.Username = &username
+	}
+	// builtin entries carry no auth; the read schema still requires a valid
+	// enum value, so default it.
+	if e.AuthMethod == "" {
+		d.AuthMethod = DownloadClientAuthMethod("password")
+	}
+	if e.DownloadDir != "" {
+		v := e.DownloadDir
+		d.DownloadDir = &v
+	}
+	if e.ListenPort != 0 {
+		v := e.ListenPort
+		d.ListenPort = &v
+	}
+	// BuiltinDownloadClient resolves torrent_listen_port over this entry's own
+	// listen_port, so on the deployment the override exists for — a VPN whose
+	// forwarded port rotates — the settings form was showing, and happily
+	// saving, a value the engine never binds. Reporting the override is what
+	// lets the form say so instead of lying by omission.
+	if e.ClientType == "builtin" {
+		if c := config.Get(); c != nil && c.TorrentListenPort != 0 {
+			v := c.TorrentListenPort
+			d.ListenPortOverride = &v
+		}
+	}
+	if e.MaxUploadKbps != 0 {
+		v := e.MaxUploadKbps
+		d.MaxUploadKbps = &v
+	}
+	if e.MaxDownloadKbps != 0 {
+		v := e.MaxDownloadKbps
+		d.MaxDownloadKbps = &v
+	}
+	if e.SeedRatio != 0 {
+		v := e.SeedRatio
+		d.SeedRatio = &v
+	}
+	if e.SeedTime != "" {
+		v := e.SeedTime
+		d.SeedTime = &v
+	}
+	if e.DisableDHT {
+		v := true
+		d.DisableDht = &v
+	}
+	if e.BindInterface != "" {
+		v := e.BindInterface
+		d.BindInterface = &v
+	}
+	return d
+}
+
+func toAPIApiKey(k *ent.ApiKey) ApiKey {
+	return ApiKey{
+		Id:         k.ID,
+		Name:       k.Name,
+		CreatedAt:  k.CreateTime,
+		LastUsedAt: k.LastUsedAt,
+	}
+}
+
+func toAPISession(sess *ent.Session, currentJTI string) Session {
+	out := Session{
+		Id:         sess.ID,
+		CreatedAt:  sess.CreateTime,
+		ExpiresAt:  sess.ExpiresAt,
+		IsCurrent:  sess.Jti == currentJTI,
+		LastSeenAt: sess.LastSeenAt,
+	}
+	if sess.IP != "" {
+		ip := sess.IP
+		out.Ip = &ip
+	}
+	if sess.UserAgent != "" {
+		ua := sess.UserAgent
+		out.UserAgent = &ua
+	}
+	return out
+}
+
+func playOnToAPI(r mediaserver.PlayOnResult) PlayOnLink {
+	out := PlayOnLink{
+		Name:       r.Name,
+		ServerType: PlayOnLinkServerType(r.ServerType),
+		Fallback:   r.Fallback,
+		Status:     PlayOnLinkStatus(string(r.Status)),
+	}
+	if r.URL != "" {
+		u := r.URL
+		out.Url = &u
+	}
+	return out
+}
+
+// parsedFieldsOf returns a file's parsed source/resolution/codec, preferring
+// the stored columns and falling back to parsing the basename for rows written
+// before those columns existed. Parsing is ~12 regex passes, and this used to
+// run per file per response — per episode of a series detail, on every poll.
+// The fallback is what makes the migration need no data backfill: an old row
+// keeps working and gets its values the next time it is written.
+func parsedFieldsOf(f *ent.MediaFile) library.ParseResult {
+	if f.ParsedSource != "" || f.ParsedResolution != "" || f.ParsedCodec != "" {
+		return library.ParseResult{
+			Source:     f.ParsedSource,
+			Resolution: f.ParsedResolution,
+			Codec:      f.ParsedCodec,
+		}
+	}
+	return library.Parse(filepath.Base(f.Path))
+}
+
+func mediaFileToAPI(f *ent.MediaFile) MediaFile {
+	parsed := parsedFieldsOf(f)
+	out := MediaFile{
+		Id:   f.ID,
+		Path: f.Path,
+		Size: f.Size,
+	}
+	if f.Quality != "" {
+		q := f.Quality
+		out.Quality = &q
+	}
+	if f.Format != "" {
+		fmtStr := f.Format
+		out.Format = &fmtStr
+	}
+	if f.ReleaseGroup != "" {
+		rg := f.ReleaseGroup
+		out.ReleaseGroup = &rg
+	}
+	if parsed.Source != "" {
+		ps := parsed.Source
+		out.ParsedSource = &ps
+	}
+	if parsed.Resolution != "" {
+		pr := parsed.Resolution
+		out.ParsedResolution = &pr
+	}
+	if parsed.Codec != "" {
+		pc := parsed.Codec
+		out.ParsedCodec = &pc
+	}
+	out.MediaInfo = mediaInfoToAPI(f)
+	out.TranscodedAt, out.SizeBefore = transcodeSavingOf(f)
+	return out
+}
+
+// transcodeSavingOf reports when the transcode worker replaced a file and
+// what it weighed before, both absent for a file it never touched.
+func transcodeSavingOf(f *ent.MediaFile) (*time.Time, *int64) {
+	if f.TranscodedAt == nil {
+		return nil, nil
+	}
+	at := *f.TranscodedAt
+	before := f.SizeBefore
+	return &at, &before
+}
+
+func mediaInfoToAPI(f *ent.MediaFile) *MediaInfo {
+	if f.ProbedAt == nil || f.VideoCodec == "" {
+		return nil
+	}
+	out := &MediaInfo{
+		Container:       f.Container,
+		VideoCodec:      f.VideoCodec,
+		Width:           int(f.Width),
+		Height:          int(f.Height),
+		DurationSeconds: int(f.DurationSeconds),
+		ProbedAt:        *f.ProbedAt,
+	}
+	if f.AudioCodec != "" {
+		ac := f.AudioCodec
+		out.AudioCodec = &ac
+	}
+	if f.AudioChannels != 0 {
+		ch := int(f.AudioChannels)
+		out.AudioChannels = &ch
+	}
+	if f.Bitrate != 0 {
+		b := int(f.Bitrate)
+		out.Bitrate = &b
+	}
+	if f.AudioTracks != 0 {
+		t := int(f.AudioTracks)
+		out.AudioTrackCount = &t
+	}
+	// Emitted only when non-empty, like every other optional here. An empty
+	// list does mean something internally — the probe found no tagged track,
+	// which a negated condition may act on — but this whole object is already
+	// absent unless the file was probed, so a reader seeing the object without
+	// the field can draw the same conclusion.
+	if f.AudioLangs != "" {
+		l := strings.Split(f.AudioLangs, ",")
+		out.AudioLanguages = &l
+	}
+	if f.SubLangs != "" {
+		l := strings.Split(f.SubLangs, ",")
+		out.SubtitleLanguages = &l
+	}
+	return out
+}
+
+func mediaServerToAPI(e config.MediaServerEntry) MediaServer {
+	out := MediaServer{
+		Name:       e.Name,
+		ServerType: MediaServerServerType(e.ServerType),
+		Host:       e.Host,
+		Enabled:    e.Enabled,
+		ApiKeySet:  e.APIKey != "" || e.APIKeyFile != "",
+	}
+	if e.LibrarySection != nil {
+		out.LibrarySection = e.LibrarySection
+	}
+	if e.LibrarySectionTV != nil {
+		out.LibrarySectionTv = e.LibrarySectionTV
+	}
+	return out
+}
+
+func indexerToAPI(e config.IndexerEntry) Indexer {
+	useSSL := e.UseSSL
+	prio := e.Priority
+	i := Indexer{
+		Name:      e.Name,
+		Host:      e.Host,
+		Port:      e.Port,
+		Protocol:  IndexerProtocol(e.Protocol),
+		Enabled:   e.Enabled,
+		Private:   e.Private,
+		ApiKeySet: e.APIKey != "" || e.APIKeyFile != "",
+		UseSsl:    &useSSL,
+		Priority:  &prio,
+	}
+	if e.Path != "" {
+		path := e.Path
+		i.Path = &path
+	}
+	return i
+}
+
+func toAPIImportScan(s *ent.ImportScan) ImportScan {
+	out := ImportScan{
+		Id:                 s.ID,
+		SourcePath:         s.SourcePath,
+		Kind:               ImportScanKind(s.Kind),
+		Mode:               ImportScanMode(s.Mode),
+		Status:             ImportScanStatus(s.Status),
+		TotalCount:         s.TotalCount,
+		ProcessedCount:     s.ProcessedCount,
+		CommitSuccessCount: s.CommitSuccessCount,
+		CommitFailedCount:  s.CommitFailedCount,
+		CreatedAt:          s.CreateTime,
+	}
+	ut := s.UpdateTime
+	out.UpdatedAt = &ut
+	if s.ImportMode != "" {
+		im := ImportScanImportMode(s.ImportMode)
+		out.ImportMode = &im
+	}
+	if s.FailureReason != "" {
+		fr := s.FailureReason
+		out.FailureReason = &fr
+	}
+	if s.FailureCode != "" {
+		fc := s.FailureCode
+		out.FailureCode = &fc
+	}
+	if s.ScannedAt != nil {
+		out.ScannedAt = s.ScannedAt
+	}
+	if s.CommittedAt != nil {
+		out.CommittedAt = s.CommittedAt
+	}
+	return out
+}
+
+func toActivityEvent(e *ent.MediaEvent) ActivityEvent {
+	out := ActivityEvent{
+		Id:        e.ID,
+		Type:      ActivityEventType(e.Type),
+		CreatedAt: e.CreateTime,
+	}
+	if len(e.Payload) > 0 {
+		p := e.Payload
+		out.Payload = &p
+	}
+	switch {
+	case e.Edges.Movie != nil:
+		m := movieToAPI(e.Edges.Movie)
+		out.Movie = &m
+	case e.Edges.Episode != nil:
+		out.Episode = episodeRefFor(e.Edges.Episode)
+	case e.Edges.TvShow != nil:
+		out.Series = &SeriesRef{
+			Id:    e.Edges.TvShow.ID,
+			Title: e.Edges.TvShow.Title,
+		}
+	case e.Edges.Artist != nil:
+		out.Artist = &ArtistRef{Id: e.Edges.Artist.ID, Name: e.Edges.Artist.Name}
+	case e.Edges.Album != nil:
+		out.Album = activityAlbumRef(e.Edges.Album)
+	case e.Edges.Book != nil:
+		kind, _ := e.Payload["book_kind"].(string)
+		out.Book = activityBookRef(e.Edges.Book, kind)
+	case e.Edges.BookSeries != nil:
+		out.BookSeries = &SeriesRef{
+			Id:    e.Edges.BookSeries.ID,
+			Title: e.Edges.BookSeries.Title,
+		}
+	}
+	return out
+}
+
+// episodeRefFor renders "<show> · SxxExx" context from an episode loaded with
+// its season and show. A row missing either edge would show a bare number, so
+// it degrades to nil rather than half a label.
+func episodeRefFor(ep *ent.Episode) *EpisodeRef {
+	se := ep.Edges.Season
+	if se == nil || se.Edges.TvShow == nil {
+		return nil
+	}
+	show := se.Edges.TvShow
+	return &EpisodeRef{
+		ShowTitle: show.Title,
+		Season:    se.Number,
+		Episode:   ep.Number,
+		SeriesId:  &show.ID,
+	}
+}
+
+func toUpcomingEpisode(e *ent.Episode, now time.Time) UpcomingEpisode {
+	out := UpcomingEpisode{
+		Episode:   e.Number,
+		Status:    episodeStatus(e, now),
+		Monitored: &e.Monitored,
+	}
+	if !e.AirDate.IsZero() {
+		out.AirDate = e.AirDate
+	}
+	if e.Title != "" {
+		out.Title = &e.Title
+	}
+	if se := e.Edges.Season; se != nil {
+		out.Season = se.Number
+		if show := se.Edges.TvShow; show != nil {
+			out.SeriesId = show.ID
+			out.SeriesTitle = show.Title
+		}
+	}
+	return out
+}
+
+func toUpcomingAlbum(a *ent.Album) UpcomingAlbum {
+	out := UpcomingAlbum{
+		Id:     a.ID,
+		Title:  a.Title,
+		Type:   MusicAlbumType(a.Type),
+		Status: UpcomingAlbumStatus(a.Status),
+	}
+	if a.ReleaseDate != nil {
+		out.ReleaseDate = openapi_types.Date{Time: a.ReleaseDate.UTC()}
+	}
+	if ar := a.Edges.Artist; ar != nil {
+		out.ArtistId = ar.ID
+		out.ArtistName = ar.Name
+	}
+	return out
+}
+
+func toUpcomingBook(b *ent.Book) UpcomingBook {
+	out := UpcomingBook{
+		Id:       b.ID,
+		Title:    b.Title,
+		Author:   b.AuthorName,
+		Status:   upcomingBookStatus(b),
+		Position: b.SeriesPosition,
+	}
+	if b.ReleaseDate != nil {
+		out.ReleaseDate = openapi_types.Date{Time: b.ReleaseDate.UTC()}
+	}
+	if sr := b.Edges.Series; sr != nil {
+		out.SeriesId = &sr.ID
+		out.SeriesTitle = &sr.Title
+	}
+	return out
+}
+
+// upcomingBookStatus folds the two slots into the one word a calendar entry
+// carries, over the monitored slots only and total over the five statuses. A
+// skipped slot is set aside first, so a book whose only monitored slot is
+// skipped reads skipped, and a paused slot never reads available.
+func upcomingBookStatus(b *ent.Book) UpcomingBookStatus {
+	var slots []string
+	if b.EbookMonitored {
+		slots = append(slots, string(b.EbookStatus))
+	}
+	if b.AudiobookMonitored {
+		slots = append(slots, string(b.AudiobookStatus))
+	}
+	slots = slices.DeleteFunc(slots, func(st string) bool { return st == "skipped" })
+	for _, want := range []UpcomingBookStatus{
+		UpcomingBookStatusDownloading,
+		UpcomingBookStatusWanted,
+		UpcomingBookStatusPaused,
+		UpcomingBookStatusAvailable,
+	} {
+		if slices.Contains(slots, string(want)) {
+			return want
+		}
+	}
+	return UpcomingBookStatusSkipped
+}
+
+func toUpcomingMovie(m *ent.Movie) UpcomingMovie {
+	out := UpcomingMovie{
+		Id:     m.ID,
+		Title:  m.Title,
+		Year:   m.Year,
+		TmdbId: m.TmdbID,
+	}
+	out.DigitalReleaseDate = db.UpcomingReleaseDate(m)
+	out.ReleaseType = UpcomingMovieReleaseTypeTheatrical
+	if m.DigitalReleaseDate != nil {
+		out.ReleaseType = UpcomingMovieReleaseTypeDigital
+	}
+	return out
+}
+
+func toAPIImportScanFile(f *ent.ImportScanFile) ImportScanFile {
+	out := ImportScanFile{
+		Id:             f.ID,
+		SourcePath:     f.SourcePath,
+		Size:           f.Size,
+		Classification: ImportScanFileClassification(f.Classification),
+		Decision:       ImportScanFileDecision(f.Decision),
+		Outcome:        ImportScanFileOutcome(f.Outcome),
+	}
+	if f.ParsedTitle != "" {
+		pt := f.ParsedTitle
+		out.ParsedTitle = &pt
+	}
+	if f.ParsedYear != nil {
+		out.ParsedYear = f.ParsedYear
+	}
+	if f.ParsedQuality != "" {
+		pq := f.ParsedQuality
+		out.ParsedQuality = &pq
+	}
+	if f.ParsedReleaseGroup != "" {
+		prg := f.ParsedReleaseGroup
+		out.ParsedReleaseGroup = &prg
+	}
+	if len(f.Candidates) > 0 {
+		cands := make([]ImportScanCandidate, 0, len(f.Candidates))
+		for _, c := range f.Candidates {
+			cands = append(cands, ImportScanCandidate{
+				TmdbId: c.TMDBID,
+				Title:  c.Title,
+				Year:   c.Year,
+			})
+		}
+		out.Candidates = &cands
+	}
+	if f.TmdbID != 0 {
+		v := f.TmdbID
+		out.TmdbId = &v
+	}
+	if f.ExistingMovieID != 0 {
+		v := f.ExistingMovieID
+		out.ExistingMovieId = &v
+	}
+	if f.DecisionTmdbID != 0 {
+		v := f.DecisionTmdbID
+		out.DecisionTmdbId = &v
+	}
+	if f.OutcomeMessage != "" {
+		om := f.OutcomeMessage
+		out.OutcomeMessage = &om
+	}
+	if f.CreatedMovieID != 0 {
+		v := f.CreatedMovieID
+		out.CreatedMovieId = &v
+	}
+	ct := f.CreateTime
+	out.CreatedAt = &ct
+	ut := f.UpdateTime
+	out.UpdatedAt = &ut
+	return out
+}
+
+func toAPIImportScanShow(sh *ent.ImportScanShow) ImportScanShow {
+	out := ImportScanShow{
+		Id:             sh.ID,
+		FolderPath:     sh.FolderPath,
+		Classification: ImportScanShowClassification(sh.Classification),
+		FileCount:      sh.FileCount,
+		Decision:       ImportScanShowDecision(sh.Decision),
+		Outcome:        ImportScanShowOutcome(sh.Outcome),
+	}
+	if sh.ParsedTitle != "" {
+		pt := sh.ParsedTitle
+		out.ParsedTitle = &pt
+	}
+	out.ParsedYear = sh.ParsedYear
+	out.TvdbId = sh.TvdbID
+	out.ExistingTvshowId = sh.ExistingTvshowID
+	out.DecisionTvdbId = sh.DecisionTvdbID
+	out.CreatedTvshowId = sh.CreatedTvshowID
+	if sh.OutcomeMessage != "" {
+		om := sh.OutcomeMessage
+		out.OutcomeMessage = &om
+	}
+	if len(sh.Candidates) > 0 {
+		cands := make([]ImportScanShowCandidate, 0, len(sh.Candidates))
+		for _, c := range sh.Candidates {
+			cand := ImportScanShowCandidate{TvdbId: c.TVDBID, Title: c.Title}
+			if c.Year != 0 {
+				y := c.Year
+				cand.Year = &y
+			}
+			cands = append(cands, cand)
+		}
+		out.Candidates = &cands
+	}
+	ct := sh.CreateTime
+	out.CreatedAt = &ct
+	ut := sh.UpdateTime
+	out.UpdatedAt = &ut
+	return out
+}
+
+func toQueueEntry(e download.QueueEntry) QueueEntry {
+	out := QueueEntry{
+		Id:        e.RecordID,
+		Status:    QueueEntryStatus(e.Status),
+		Title:     e.Title,
+		Size:      e.Size,
+		Progress:  e.Progress,
+		CreatedAt: e.CreatedAt,
+	}
+	if e.Movie != nil {
+		out.Movie = movieToAPI(e.Movie)
+	}
+	out.Episode = episodeRef(e.Episode)
+	out.Album = activityAlbumRef(e.Album)
+	out.Artist = activityArtistRef(e.Artist, len(e.PackAlbumIDs))
+	out.Book = activityBookRef(e.Book, e.BookKind)
+	if e.DownloadSpeed != 0 {
+		ds := e.DownloadSpeed
+		out.DownloadSpeed = &ds
+	}
+	if e.ETA != 0 {
+		eta := e.ETA
+		out.Eta = &eta
+	}
+	if e.Quality != "" {
+		out.Quality = &e.Quality
+	}
+	if e.ReleaseGroup != "" {
+		out.ReleaseGroup = &e.ReleaseGroup
+	}
+	if e.Indexer != "" {
+		out.Indexer = &e.Indexer
+	}
+	if e.DownloadClient != "" {
+		out.DownloadClient = &e.DownloadClient
+	}
+	if e.FailureReason != "" {
+		out.FailureReason = &e.FailureReason
+	}
+	if len(e.HoldReasons) > 0 {
+		reasons := make([]HoldReason, 0, len(e.HoldReasons))
+		for _, r := range e.HoldReasons {
+			reasons = append(reasons, HoldReason{
+				File:     r.File,
+				Check:    HoldReasonCheck(r.Check),
+				Expected: &r.Expected,
+				Actual:   &r.Actual,
+			})
+		}
+		out.HoldReasons = &reasons
+	}
+	if e.SelectionState != "" && e.SelectionState != "skipped" {
+		state := QueueEntrySelectionState(e.SelectionState)
+		out.SelectionState = &state
+	}
+	if e.SelectionState == "applied" {
+		count := len(e.SelectedFiles)
+		out.SelectedFilesCount = &count
+		bytes := e.SelectedBytes
+		out.SelectedBytes = &bytes
+	}
+	return out
+}
+
+func toHistoryEntry(r *ent.DownloadRecord) HistoryEntry {
+	out := HistoryEntry{
+		Id:        r.ID,
+		Status:    HistoryEntryStatus(r.Status),
+		Title:     r.Title,
+		Size:      r.Size,
+		CreatedAt: r.CreateTime,
+		UpdatedAt: r.UpdateTime,
+	}
+	if r.Edges.Movie != nil {
+		out.Movie = movieToAPI(r.Edges.Movie)
+	}
+	out.Episode = episodeRef(r.Edges.AnchorEpisode)
+	out.Album = activityAlbumRef(r.Edges.Album)
+	out.Artist = activityArtistRef(r.Edges.Artist, len(r.Edges.Albums))
+	out.Book = activityBookRef(r.Edges.Book, string(r.BookKind))
+	if r.Quality != "" {
+		out.Quality = &r.Quality
+	}
+	if r.ReleaseGroup != "" {
+		out.ReleaseGroup = &r.ReleaseGroup
+	}
+	if r.IndexerName != "" {
+		name := r.IndexerName
+		out.Indexer = &name
+	}
+	if r.DownloadClientName != "" {
+		name := r.DownloadClientName
+		out.DownloadClient = &name
+	}
+	if r.FailureReason != "" {
+		out.FailureReason = &r.FailureReason
+	}
+	if r.ImportedAt != nil {
+		out.ImportedAt = r.ImportedAt
+	}
+	return out
+}
+
+// episodeRef builds the show + S/E context for a TV download record's queue or
+// history row, or nil for a movie record. Expects season + show eager-loaded.
+func episodeRef(ep *ent.Episode) *EpisodeRef {
+	if ep == nil {
+		return nil
+	}
+	ref := &EpisodeRef{Episode: ep.Number}
+	if se := ep.Edges.Season; se != nil {
+		ref.Season = se.Number
+		if sh := se.Edges.TvShow; sh != nil {
+			ref.ShowTitle = sh.Title
+		}
+	}
+	return ref
+}
+
+// activityAlbumRef titles an album download's queue or history row, or nil
+// for any other record. Expects the album's artist eager-loaded.
+func activityAlbumRef(a *ent.Album) *ActivityAlbumRef {
+	if a == nil {
+		return nil
+	}
+	ref := &ActivityAlbumRef{Id: a.ID, Title: a.Title}
+	if ar := a.Edges.Artist; ar != nil {
+		ref.ArtistId = ar.ID
+		ref.ArtistName = ar.Name
+	}
+	return ref
+}
+
+// activityArtistRef titles a discography pack's row, with the number of
+// albums the pack is expected to cover, or nil for any other record.
+func activityArtistRef(a *ent.Artist, albums int) *ActivityArtistRef {
+	if a == nil {
+		return nil
+	}
+	return &ActivityArtistRef{Id: a.ID, Name: a.Name, AlbumCount: albums}
+}
+
+// activityBookRef titles a book download's row with the slot it fills, or nil
+// for any other record. Expects the book's series eager-loaded for a volume.
+func activityBookRef(b *ent.Book, kind string) *ActivityBookRef {
+	if b == nil {
+		return nil
+	}
+	ref := &ActivityBookRef{
+		Id:     b.ID,
+		Title:  b.Title,
+		Author: b.AuthorName,
+		Series: bookSeriesRef(b),
+	}
+	if kind != "" {
+		slot := ActivityBookRefSlot(kind)
+		ref.Slot = &slot
+	}
+	return ref
+}
+
+// toPendingItem maps a pending DownloadRecord (with movie/episode edges
+// eager-loaded) to its API view.
+func toPendingItem(r *ent.DownloadRecord) PendingItem {
+	item := PendingItem{
+		Id:      r.ID,
+		Title:   r.Title,
+		Quality: r.Quality,
+		Reason:  r.FailureReason,
+	}
+	switch {
+	case r.Edges.Movie != nil:
+		m := r.Edges.Movie
+		item.HasFile = len(m.Edges.MediaFiles) > 0
+		y := m.Year
+		item.Media = &PendingMedia{
+			Type:  PendingMediaTypeMovie,
+			Id:    m.ID,
+			Title: m.Title,
+			Year:  &y,
+		}
+	case r.Edges.AnchorEpisode != nil:
+		ep := r.Edges.AnchorEpisode
+		item.HasFile = len(ep.Edges.MediaFiles) > 0
+		epNum := ep.Number
+		media := &PendingMedia{
+			Type:    PendingMediaTypeEpisode,
+			Id:      ep.ID,
+			Episode: &epNum,
+		}
+		if se := ep.Edges.Season; se != nil {
+			sNum := se.Number
+			media.Season = &sNum
+			if show := se.Edges.TvShow; show != nil {
+				media.Title = show.Title
+				y := show.Year
+				media.Year = &y
+			}
+		}
+		item.Media = media
+	case r.Edges.Album != nil:
+		al := r.Edges.Album
+		item.HasFile = al.Status == album.StatusAvailable
+		item.Media = &PendingMedia{
+			Type:  PendingMediaTypeAlbum,
+			Id:    al.ID,
+			Title: al.Title,
+		}
+		if al.ReleaseDate != nil {
+			y := numeric.SaturateU16(al.ReleaseDate.Year())
+			item.Media.Year = &y
+		}
+	case r.Edges.Book != nil:
+		b := r.Edges.Book
+		if r.BookKind == downloadrecord.BookKindAudiobook {
+			item.HasFile = b.AudiobookStatus == entbook.AudiobookStatusAvailable
+		} else {
+			item.HasFile = b.EbookStatus == entbook.EbookStatusAvailable
+		}
+		item.Media = &PendingMedia{
+			Type:  PendingMediaTypeBook,
+			Id:    b.ID,
+			Title: b.Title,
+			Year:  b.ReleaseYear,
+		}
+	default:
+		// Nothing matched at adoption time. The raw release name is useless as
+		// a search seed, so hand the SPA what the parser made of it.
+		parsed := library.Parse(r.Title).Title
+		item.ParsedTitle = &parsed
+	}
+	return item
+}
+
+// tvShowToAPI maps an eager-loaded TV show (seasons → episodes → media files)
+// to the API shape, rolling up per-season availability into show totals via
+// tvshow.DeriveSeasonViews. Seasons/episodes are only present when the show
+// was loaded with those edges (GET /series/{id}); list responses omit them.
+// tvShowBaseToAPI maps the row's own columns. The episode rollup is left to
+// the caller: the detail view derives it from the loaded tree, the list view
+// takes it from SQL.
+func tvShowBaseToAPI(s *ent.TVShow) TVShow {
+	out := TVShow{
+		Id:           s.ID,
+		Title:        s.Title,
+		Year:         s.Year,
+		SeriesStatus: TVShowSeriesStatus(s.SeriesStatus),
+		Type:         TVShowType(s.Type),
+		Monitored:    s.Monitored,
+		TvdbId:       s.TvdbID,
+		AddedAt:      &s.CreateTime,
+	}
+	if s.FirstAired != nil {
+		out.FirstAired = &openapi_types.Date{Time: *s.FirstAired}
+	}
+	if s.OriginalTitle != "" {
+		out.OriginalTitle = &s.OriginalTitle
+	}
+	if s.Overview != "" {
+		out.Overview = &s.Overview
+	}
+	if s.Network != "" {
+		out.Network = &s.Network
+	}
+	if s.Creator != "" {
+		out.Creator = &s.Creator
+	}
+	if s.Runtime != 0 {
+		rt := s.Runtime
+		out.Runtime = &rt
+	}
+	if s.Rating > 0 {
+		r := float32(s.Rating)
+		out.Rating = &r
+	}
+	if len(s.Genres) > 0 {
+		g := s.Genres
+		out.Genres = &g
+	}
+	if s.QualityProfile != "" {
+		out.QualityProfile = &s.QualityProfile
+	}
+	return out
+}
+
+func tvShowToAPI(s *ent.TVShow) TVShow {
+	out := tvShowBaseToAPI(s)
+
+	now := time.Now()
+	views := tvshow.DeriveSeasonViews(s, now)
+	var seasonCount, have, total, wanted uint32
+	seasons := make([]Season, 0, len(s.Edges.Seasons))
+	for i, se := range s.Edges.Seasons {
+		v := views[i]
+		// Specials stay in the season list — the page draws them — but out of
+		// the show's headline numbers, matching db.EpisodeCounts.
+		if se.Number > 0 {
+			seasonCount++
+			have += numeric.SaturateU32(v.Available)
+			total += numeric.SaturateU32(v.Total)
+			wanted += numeric.SaturateU32(v.Missing)
+		}
+		seasons = append(seasons, seasonToAPI(se, v, now, s.QualityProfile))
+	}
+	out.TotalSeasons = &seasonCount
+	out.HaveEpisodes = &have
+	out.TotalEpisodes = &total
+	out.WantedEpisodes = &wanted
+	if len(seasons) > 0 {
+		out.Seasons = &seasons
+	}
+	return out
+}
+
+// tvShowListToAPI renders a list row. The rollup arrives pre-aggregated from
+// SQL because the list query deliberately leaves the season/episode tree
+// unloaded — serializing it was 121 KB per show. `seasons` stays absent here;
+// the detail view (tvShowToAPI) is what carries it.
+// progress is the mean over the show's live queue entries, or nil when the
+// show has nothing downloading or the queue could not be read — the card
+// draws an indeterminate bar for a nil, which is the honest reading.
+func tvShowListToAPI(s *ent.TVShow, c db.EpisodeCounts, progress *float32) TVShow {
+	out := tvShowBaseToAPI(s)
+	have, total, wanted := c.Have, c.Total, c.Wanted
+	downloading, importing := c.Downloading, c.Importing
+	out.TotalSeasons = &c.Seasons
+	out.HaveEpisodes = &have
+	out.TotalEpisodes = &total
+	out.WantedEpisodes = &wanted
+	out.DownloadingEpisodes = &downloading
+	out.ImportingEpisodes = &importing
+	out.DownloadProgress = progress
+	if c.Scope != "" {
+		scope := SeriesDownloadScope(c.Scope)
+		out.DownloadingScope = &scope
+		// Season 0 is the specials, a real season — only the series scope
+		// licenses no season at all.
+		if scope != SeriesDownloadScopeSeries {
+			season := c.Season
+			out.DownloadingSeason = &season
+		}
+		if scope == SeriesDownloadScopeEpisode {
+			number := c.Episode
+			out.DownloadingEpisode = &number
+		}
+	}
+	out.LastAdded = seriesAdditionToAPI(c.LastAdded)
+	return out
+}
+
+func seriesAdditionToAPI(a *db.Addition) *SeriesAddition {
+	if a == nil {
+		return nil
+	}
+	add := SeriesAddition{At: a.At, Seasons: a.Seasons, Count: a.Count}
+	if len(a.Episodes) > 0 {
+		add.Episodes = &a.Episodes
+	}
+	if a.EpisodeTitle != "" {
+		add.EpisodeTitle = &a.EpisodeTitle
+	}
+	if a.WholeSeason {
+		add.WholeSeason = &a.WholeSeason
+	}
+	return &add
+}
+
+func seasonToAPI(
+	se *ent.Season,
+	v tvshow.SeasonView,
+	now time.Time,
+	profile string,
+) Season {
+	avail, miss, un, tot := v.Available, v.Missing, v.Unaired, v.Total
+	out := Season{
+		Id:        se.ID,
+		Number:    se.Number,
+		Monitored: se.Monitored,
+		Available: &avail,
+		Missing:   &miss,
+		Unaired:   &un,
+		Total:     &tot,
+	}
+	if se.Name != "" {
+		out.Name = &se.Name
+	}
+	eps := make([]Episode, 0, len(se.Edges.Episodes))
+	for _, e := range se.Edges.Episodes {
+		eps = append(eps, episodeToAPI(e, now, profile))
+	}
+	if len(eps) > 0 {
+		out.Episodes = &eps
+	}
+	return out
+}
+
+// episodeStatus derives the presentation status. "unaired" has no ent enum
+// value: it is an episode with no file whose air_date is still ahead or is
+// missing entirely — a provider announces a future season as dateless "TBA"
+// placeholders. Callers must have eager-loaded the media-files edge, or a
+// stored file reads as unaired.
+func episodeStatus(e *ent.Episode, now time.Time) EpisodeStatus {
+	if len(e.Edges.MediaFiles) == 0 &&
+		(e.AirDate.IsZero() || e.AirDate.After(now)) {
+		return EpisodeStatusUnaired
+	}
+	return EpisodeStatus(e.Status)
+}
+
+func episodeToAPI(e *ent.Episode, now time.Time, profile string) Episode {
+	out := Episode{
+		Id:        e.ID,
+		Number:    e.Number,
+		Status:    episodeStatus(e, now),
+		Monitored: e.Monitored,
+	}
+	if e.AbsoluteNumber > 0 {
+		out.AbsoluteNumber = &e.AbsoluteNumber
+	}
+	// Absent means zero: the counter only matters as it climbs toward
+	// library.max_grab_failures, past which nothing searches this episode again.
+	if e.GrabFailures > 0 {
+		out.GrabFailures = &e.GrabFailures
+	}
+	if e.Title != "" {
+		out.Title = &e.Title
+	}
+	if e.Overview != "" {
+		out.Overview = &e.Overview
+	}
+	if !e.AirDate.IsZero() {
+		ad := e.AirDate
+		out.AirDate = &ad
+	}
+	hasFile := len(e.Edges.MediaFiles) > 0
+	out.HasFile = &hasFile
+	if len(e.Edges.MediaFiles) > 0 {
+		f := e.Edges.MediaFiles[0]
+		out.Quality = &f.Quality
+		out.Path = &f.Path
+		sz := f.Size
+		out.Size = &sz
+		out.FileScore = mediaFileScore(config.MediaSeries, profile, f)
+		out.MediaInfo = mediaInfoToAPI(f)
+		out.TranscodedAt, out.SizeBefore = transcodeSavingOf(f)
+		if f.ReleaseGroup != "" {
+			rg := f.ReleaseGroup
+			out.ReleaseGroup = &rg
+		}
+		// Only the source: resolution and codec come off the probe here, which
+		// measured them instead of reading them off a filename.
+		if src := parsedFieldsOf(f).Source; src != "" {
+			out.ParsedSource = &src
+		}
+	}
+	return out
+}
+
+func requestUserToAPI(u *ent.User) RequestUser {
+	ru := RequestUser{Id: u.ID, Email: u.Email}
+	if u.DisplayName != "" {
+		ru.DisplayName = &u.DisplayName
+	}
+	return ru
+}
+
+// toSearchResult maps an indexer search result to the API shape, enriching it
+// with release metadata parsed from the release title.
+func toSearchResult(r indexer.SearchResult) SearchResult {
+	item := SearchResult{
+		Title:       r.Title,
+		DownloadUrl: sealReleaseLink(r.Download),
+		Size:        r.Size,
+		Seeders:     r.Seeders,
+	}
+	parsed := library.Parse(filepath.Base(r.Title))
+	if r.InfoURL != "" {
+		// A details page, for a human to open: the host and path are the
+		// point, and a query can carry the same key the download link does.
+		if u, err := url.Parse(r.InfoURL); err == nil {
+			info := otelx.RedactURL(u)
+			item.InfoUrl = &info
+		}
+	}
+	if r.Leechers > 0 {
+		item.Leechers = &r.Leechers
+	}
+	if !r.PublishDate.IsZero() {
+		pub := r.PublishDate
+		item.PublishedAt = &pub
+	}
+	if r.Indexer != "" {
+		idx := r.Indexer
+		item.Indexer = &idx
+	}
+	if parsed.Group != "" {
+		g := parsed.Group
+		item.ReleaseGroup = &g
+	}
+	if parsed.Resolution != "" {
+		res := parsed.Resolution
+		item.Resolution = &res
+	}
+	if parsed.Source != "" {
+		src := parsed.Source
+		item.Source = &src
+	}
+	if parsed.Codec != "" {
+		cdc := parsed.Codec
+		item.Codec = &cdc
+	}
+	return item
+}
+
+// annotateResults scores every browsed release against the queried item's
+// quality profile, then reorders the slice best-first so each client sees the
+// same ranking. Rejected releases keep their place in the list — the operator
+// may still grab one by hand — and carry the reason instead.
+//
+// With no quality profile configured at all the annotation is skipped
+// entirely: the zero profile's empty resolution band rejects every release,
+// which is the right call when grabbing automatically (internal/rss) and a
+// lie on screen.
+// seasonLengths is one show's real per-season episode totals, for sizing a
+// pack. A lookup failure degrades to a nil map, which leaves every size bound
+// unscaled — annotating a search with slightly generous scores beats failing
+// the browse over a count.
+func (s *Server) seasonLengths(ctx context.Context, showID uint32) map[uint16]int {
+	counts, err := s.store.SeasonEpisodeCounts(ctx, []uint32{showID})
+	if err != nil {
+		slog.WarnContext(ctx, "season counts unavailable, size bounds unscaled",
+			"tvshow.id", showID, "error", err)
+		return nil
+	}
+	return counts[showID]
+}
+
+// singleReleaseEpisodes is the count for a scope that carries one thing: a
+// movie, or one episode. Size bounds are multiplied by the count, so this
+// leaves them reading exactly as the operator typed them.
+func singleReleaseEpisodes(SearchResult) int { return 1 }
+
+// spanEpisodes sizes each result by the seasons its own name claims, against
+// the show's real per-season lengths. A season browse and a series browse both
+// use it: the latter's results are the mixed ones, where "S01-S03" and a lone
+// season sit in the same list and cannot share a count.
+//
+// A season the library tracks no episodes for contributes nothing, and a
+// result that resolves to nothing at all falls back to 1 — an unscaled bound,
+// which is how these behaved before they scaled, rather than a tighter one
+// invented from a partial count.
+func spanEpisodes(perSeason map[uint16]int) func(SearchResult) int {
+	return func(r SearchResult) int {
+		if n := library.ParseSeasonSpan(r.Title).EpisodeCount(perSeason); n > 0 {
+			return n
+		}
+		return 1
+	}
+}
+
+// episodes reports how many episodes each result carries, which scales the
+// profile's size bounds. Pass singleReleaseEpisodes for a movie or an episode
+// scope; a series or season browse hands in the show's real season lengths,
+// since a whole-series pack costs every episode it holds and the release
+// itself only names its scope, never its file count.
+func annotateResults(
+	media config.Media,
+	profileName string,
+	items []SearchResult,
+	episodes func(SearchResult) int,
+) {
+	p, ok := config.ResolveScoredProfile(media, profileName)
+	if !ok {
+		return
+	}
+	for i := range items {
+		res := quality.Evaluate(p, qualityctx.ContextFromRelease(
+			items[i].Title, items[i].Size, items[i].Seeders, episodes(items[i]),
+		))
+		items[i].Score = &res.Score
+		items[i].Rejected = &res.Rejected
+		if res.RejectReason != "" {
+			items[i].RejectReason = &res.RejectReason
+		}
+		if len(res.Matched) > 0 {
+			items[i].MatchedFormats = &res.Matched
+		}
+	}
+	slices.SortStableFunc(items, func(a, b SearchResult) int {
+		return cmp.Compare(*b.Score, *a.Score)
+	})
+}
+
+// mediaFileScore scores a file already on disk against profileName, for the
+// detail views only. A file outside the profile's resolution band scores 0 —
+// the same number the upgrade decision reads — rather than being hidden.
+func mediaFileScore(media config.Media, profileName string, f *ent.MediaFile) *int {
+	p, ok := config.ResolveScoredProfile(media, profileName)
+	if !ok {
+		return nil
+	}
+	res := quality.Evaluate(p, qualityctx.ContextFromRow(f))
+	return &res.Score
+}
+
+var errReleaseBodyIncomplete = errors.New(
+	"release title and download_url are required",
+)
+
+// toIndexerResult validates a grab request body (title + download_url required)
+// and maps it to an indexer.SearchResult. It fails with
+// errReleaseBodyIncomplete or errBadReleaseHandle; the caller emits the
+// operation-specific 422.
+func toIndexerResult(body *SearchResult) (indexer.SearchResult, error) {
+	if body == nil || body.DownloadUrl == "" || body.Title == "" {
+		return indexer.SearchResult{}, errReleaseBodyIncomplete
+	}
+	link, err := openReleaseLink(body.DownloadUrl)
+	if err != nil {
+		return indexer.SearchResult{}, err
+	}
+	sr := indexer.SearchResult{
+		Title:    body.Title,
+		Download: link,
+		Size:     body.Size,
+		Seeders:  body.Seeders,
+	}
+	if body.InfoUrl != nil {
+		sr.InfoURL = *body.InfoUrl
+	}
+	if body.Leechers != nil {
+		sr.Leechers = *body.Leechers
+	}
+	if body.Indexer != nil {
+		sr.Indexer = *body.Indexer
+	}
+	return sr, nil
+}
+
+// replaceExisting reports whether a manual-grab body asked to overwrite
+// already-present file(s) for the covered media.
+func replaceExisting(body *SearchResult) bool {
+	return body != nil && body.ReplaceExisting != nil && *body.ReplaceExisting
+}

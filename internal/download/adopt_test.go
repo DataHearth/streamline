@@ -1,0 +1,747 @@
+package download
+
+import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
+	enttvshow "github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/db"
+	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
+)
+
+// adoptClient serves the adoption pass one canned listing.
+type adoptClient struct {
+	stubClient
+
+	torrents []Torrent
+}
+
+func (c *adoptClient) ListTorrents(context.Context) ([]Torrent, error) {
+	return c.torrents, nil
+}
+
+// adoptRoot returns a download root holding a directory per named torrent, so
+// the sweep's stat finds a payload where the convention puts it. Adoption
+// downgrades a torrent it cannot locate to a proposal, so a spec asserting any
+// other outcome has to put the files somewhere real.
+func adoptRoot(names ...string) string {
+	GinkgoHelper()
+	root := GinkgoT().TempDir()
+	for _, n := range names {
+		Expect(os.MkdirAll(filepath.Join(root, n), 0o755)).To(Succeed())
+	}
+	return root
+}
+
+// adoptHash is a well-formed infohash; the pass skips anything that is not.
+const adoptHash = "0123456789abcdef0123456789abcdef01234567"
+
+var _ = Describe("Adoption", Label("unit", "downloads"), func() {
+	Describe("classifyMovieAdoption", func() {
+		candidates := []*ent.Movie{
+			{ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906},
+		}
+
+		BeforeEach(func() {
+			configtest.Setup(map[string]any{
+				"quality_profiles": []any{
+					map[string]any{
+						"name": "HD", "preferred_resolution": "1080p",
+						"min_resolution": "1080p",
+					},
+				},
+				"movie_quality_default_profile":  "HD",
+				"series_quality_default_profile": "HD",
+			})
+		})
+
+		It("auto-imports a fileless movie at OK resolution", func() {
+			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
+			dec, ok := classifyMovieAdoption(parsed, 0, candidates)
+			Expect(ok).To(BeTrue())
+			Expect(dec.autoImport).To(BeTrue())
+			Expect(dec.movieID).To(Equal(uint32(3)))
+			Expect(dec.quality).To(Equal("1080p"))
+			Expect(dec.reason).To(BeEmpty())
+		})
+
+		It("matches a localized title through its aliases", func() {
+			localized := []*ent.Movie{{
+				ID: 7, Title: "Hellboy II : Les Légions d'or maudites",
+				OriginalTitle: "Hellboy II: The Golden Army", Year: 2008,
+				Aliases: []string{"Hellboy: The Golden Army", "Hellboy 2"},
+			}}
+			parsed := library.Parse(
+				"Hellboy.II.The.Golden.Army.2008.MULTi.1080p.BluRay.x264-X",
+			)
+
+			dec, ok := classifyMovieAdoption(parsed, 0, localized)
+
+			Expect(ok).To(BeTrue())
+			Expect(dec.movieID).To(Equal(uint32(7)))
+			Expect(dec.reason).To(BeEmpty())
+		})
+
+		withFile := []*ent.Movie{{
+			ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+			Edges: ent.MovieEdges{MediaFiles: []*ent.MediaFile{{ID: 9, Size: 4096}}},
+		}}
+
+		It("proposes when the movie already has a different file", func() {
+			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
+			dec, ok := classifyMovieAdoption(parsed, 4096+2<<20, withFile)
+			Expect(ok).To(BeTrue())
+			Expect(dec.autoImport).To(BeFalse())
+			Expect(dec.completed).To(BeFalse())
+			Expect(dec.reason).To(Equal("already have a file"))
+		})
+
+		It("adopts as completed when the torrent is the movie's own file", func() {
+			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
+			dec, ok := classifyMovieAdoption(parsed, 4096, withFile)
+			Expect(ok).To(BeTrue())
+			Expect(dec.completed).To(BeTrue())
+			Expect(dec.autoImport).To(BeFalse())
+			Expect(dec.movieID).To(Equal(uint32(3)))
+			Expect(dec.reason).To(BeEmpty())
+		})
+
+		It("tolerates a sidecar beside the video in a folder torrent", func() {
+			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
+			dec, _ := classifyMovieAdoption(parsed, 4096+4769, withFile)
+			Expect(dec.completed).To(BeTrue())
+
+			dec, _ = classifyMovieAdoption(parsed, 4096+2<<20, withFile)
+			Expect(dec.completed).To(BeFalse())
+			Expect(dec.reason).To(Equal("already have a file"))
+
+			dec, _ = classifyMovieAdoption(parsed, 4000, withFile)
+			Expect(
+				dec.completed,
+			).To(BeFalse(), "a torrent smaller than the file is not it")
+		})
+
+		It(
+			"proposes on a same-size file whose stored release facts disagree",
+			func() {
+				other := []*ent.Movie{{
+					ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+					Edges: ent.MovieEdges{MediaFiles: []*ent.MediaFile{
+						{
+							ID:               9,
+							Size:             4096,
+							ParsedSource:     "WEB-DL",
+							ParsedResolution: "1080p",
+						},
+					}},
+				}}
+				parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
+				dec, ok := classifyMovieAdoption(parsed, 4096, other)
+				Expect(ok).To(BeTrue())
+				Expect(dec.completed).To(BeFalse())
+				Expect(dec.reason).To(Equal("already have a file"))
+			},
+		)
+
+		It("proposes when resolution is below the profile minimum", func() {
+			parsed := library.Parse("The.Batman.2022.720p.WEB-X")
+			dec, ok := classifyMovieAdoption(parsed, 0, candidates)
+			Expect(ok).To(BeTrue())
+			Expect(dec.autoImport).To(BeFalse())
+			Expect(dec.reason).To(ContainSubstring("below minimum"))
+		})
+
+		It("proposes on an ambiguous (multi) title match", func() {
+			multi := []*ent.Movie{
+				{ID: 3, Title: "The Batman", Year: 2022, TmdbID: 1},
+				{ID: 4, Title: "The Batman", Year: 2022, TmdbID: 2},
+			}
+			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
+			dec, ok := classifyMovieAdoption(parsed, 0, multi)
+			Expect(ok).To(BeTrue())
+			Expect(dec.autoImport).To(BeFalse())
+			Expect(dec.reason).To(Equal("ambiguous match"))
+		})
+
+		It("skips when no movie matches", func() {
+			parsed := library.Parse("Some.Other.Film.2019.1080p-X")
+			_, ok := classifyMovieAdoption(parsed, 0, candidates)
+			Expect(ok).To(BeFalse())
+		})
+	})
+
+	Describe("resolutionOK", func() {
+		It("ranks the resolution ladder (4K == 2160p)", func() {
+			Expect(resolutionOK("720p", "1080p")).To(BeFalse())
+			Expect(resolutionOK("1080p", "1080p")).To(BeTrue())
+			Expect(resolutionOK("2160p", "1080p")).To(BeTrue())
+			Expect(resolutionOK("4K", "2160p")).To(BeTrue())
+			Expect(resolutionOK("", "1080p")).To(BeFalse())
+			Expect(resolutionOK("1080p", "")).To(BeTrue())
+		})
+	})
+
+	Describe("classifyEpisodeAdoption", func() {
+		// buildShow wires one season with two episodes; ep2 optionally carries a
+		// media file. anime toggles the show type.
+		buildShow := func(anime, ep2HasFile bool) *ent.TVShow {
+			ep1 := &ent.Episode{ID: 101, Number: 1, AbsoluteNumber: 1}
+			ep2 := &ent.Episode{ID: 102, Number: 2, AbsoluteNumber: 2}
+			if ep2HasFile {
+				ep2.Edges.MediaFiles = []*ent.MediaFile{{ID: 9, Size: 4096}}
+			}
+			season := &ent.Season{
+				Number: 1,
+				Edges:  ent.SeasonEdges{Episodes: []*ent.Episode{ep1, ep2}},
+			}
+			typ := enttvshow.TypeStandard
+			if anime {
+				typ = enttvshow.TypeAnime
+			}
+			return &ent.TVShow{
+				ID: 1, Title: "The Bear", Type: typ,
+				Edges: ent.TVShowEdges{Seasons: []*ent.Season{season}},
+			}
+		}
+
+		BeforeEach(func() {
+			configtest.Setup(map[string]any{
+				"quality_profiles": []any{
+					map[string]any{
+						"name": "HD", "preferred_resolution": "1080p",
+						"min_resolution": "1080p",
+					},
+				},
+				"movie_quality_default_profile":  "HD",
+				"series_quality_default_profile": "HD",
+			})
+		})
+
+		It("auto-imports a fileless episode at OK resolution", func() {
+			shows := []*ent.TVShow{buildShow(false, false)}
+			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.autoImport).To(BeTrue())
+			Expect(dec.episodeID).To(Equal(uint32(102)))
+		})
+
+		It("claims only the matched episode for a single-episode release", func() {
+			shows := []*ent.TVShow{buildShow(false, false)}
+			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.episodeIDs).To(Equal([]uint32{102}))
+		})
+
+		It("claims a season pack's whole season, not just its anchor", func() {
+			// Without a claim the record speaks for one episode, and every
+			// write scoped to "this record's episodes" — the pause mirror, the
+			// move to importing — reaches only that one.
+			shows := []*ent.TVShow{buildShow(false, false)}
+			parsed := library.Parse("The.Bear.S01.1080p.WEB-X")
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.episodeID).To(Equal(uint32(101)))
+			Expect(dec.episodeIDs).To(ConsistOf(uint32(101), uint32(102)))
+		})
+
+		It("keeps an episode that already has a file in a pack's claim", func() {
+			shows := []*ent.TVShow{buildShow(false, true)}
+			parsed := library.Parse("The.Bear.S01.1080p.WEB-X")
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.episodeIDs).To(ConsistOf(uint32(101), uint32(102)))
+		})
+
+		It("matches a release named by one of the show's aliases", func() {
+			show := buildShow(false, false)
+			show.Title = "L'Ours"
+			show.Aliases = []string{"The Bear", "Der Bär"}
+			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
+			dec, ok := classifyEpisodeAdoption(parsed, 0, []*ent.TVShow{show})
+			Expect(ok).To(BeTrue())
+			Expect(dec.episodeID).To(Equal(uint32(102)))
+		})
+
+		It("proposes when the matched episode already has a different file", func() {
+			shows := []*ent.TVShow{buildShow(false, true)}
+			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
+			dec, ok := classifyEpisodeAdoption(parsed, 4096+2<<20, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.autoImport).To(BeFalse())
+			Expect(dec.completed).To(BeFalse())
+			Expect(dec.reason).To(Equal("already have a file"))
+		})
+
+		It("adopts as completed when the torrent is the episode's own file", func() {
+			shows := []*ent.TVShow{buildShow(false, true)}
+			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
+			dec, ok := classifyEpisodeAdoption(parsed, 4096, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.completed).To(BeTrue())
+			Expect(dec.autoImport).To(BeFalse())
+			Expect(dec.episodeID).To(Equal(uint32(102)))
+			Expect(dec.reason).To(BeEmpty())
+		})
+
+		It("proposes a season pack linked to the season's first episode", func() {
+			shows := []*ent.TVShow{buildShow(false, false)}
+			parsed := library.ParseResult{
+				Title: "The Bear", Season: 1, SeasonPack: true, Resolution: "1080p",
+			}
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.autoImport).To(BeFalse())
+			Expect(dec.reason).To(Equal("season pack, review manually"))
+			Expect(dec.episodeID).To(Equal(uint32(101)))
+		})
+
+		// The spec above hands classifyEpisodeAdoption a ParseResult it built
+		// itself, so it never exercised the title extraction a real pack name
+		// goes through — which is where the language tags between the season
+		// and the resolution used to end up glued onto the title.
+		It("proposes a pack whose name carries language tags", func() {
+			shows := []*ent.TVShow{buildShow(false, false)}
+			parsed := library.Parse("The.Bear.S01.MULTi.VF2.1080p.WEB.H264-FW")
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.reason).To(Equal("season pack, review manually"))
+			Expect(dec.episodeID).To(Equal(uint32(101)))
+		})
+
+		// A whole-series pack names no season, so parsed.Season is 0 — the
+		// specials season. Anchoring there filed a Kaamelott integrale
+		// against S00E01.
+		It("anchors a whole-series pack past the specials", func() {
+			show := buildShow(false, false)
+			show.Edges.Seasons = append(
+				[]*ent.Season{{
+					Number: 0,
+					Edges: ent.SeasonEdges{
+						Episodes: []*ent.Episode{{ID: 900, Number: 1}},
+					},
+				}},
+				show.Edges.Seasons...,
+			)
+			parsed := library.Parse(
+				"Kaamelott Integrale (Livres I a VI + Bonus) FRENCH " +
+					"[1080p] BDRIP HEVC-H265 10bits - Themouche",
+			)
+			Expect(AdoptionEpisode(parsed, show).ID).To(Equal(uint32(101)))
+		})
+
+		// A pack is fetched for what the library is missing, so anchoring it on
+		// the season's first episode names one the operator already has.
+		It("anchors a pack on the first episode with no file", func() {
+			show := buildShow(false, false)
+			eps := show.Edges.Seasons[0].Edges.Episodes
+			eps[0].Edges.MediaFiles = []*ent.MediaFile{{ID: 9}}
+			parsed := library.Parse("The.Bear.S01.MULTi.1080p.WEB.H264-FW")
+			Expect(AdoptionEpisode(parsed, show).ID).To(Equal(uint32(102)))
+		})
+
+		It("matches an anime release on its absolute number", func() {
+			shows := []*ent.TVShow{buildShow(true, false)}
+			parsed := library.ParseResult{
+				Title: "The Bear", AbsoluteNumber: 2, Resolution: "1080p",
+			}
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.episodeID).To(Equal(uint32(102)))
+			Expect(dec.autoImport).To(BeTrue())
+		})
+
+		It("skips when no show title matches", func() {
+			shows := []*ent.TVShow{buildShow(false, false)}
+			parsed := library.Parse("Other.Show.S01E01.1080p-X")
+			_, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			Expect(ok).To(BeFalse())
+		})
+	})
+
+	Describe("AdoptManualTorrents", func() {
+		var (
+			ctx   context.Context
+			store *dbmocks.MockStore
+			mgr   Adopter
+		)
+		BeforeEach(func() {
+			ctx = context.Background()
+			store = dbmocks.NewMockStore(GinkgoT())
+			mgr = New(store, nil).(Adopter)
+		})
+
+		It("returns the error when listing known hashes fails", func() {
+			// Needs an enabled client, or the pass short-circuits before the
+			// query this spec is about.
+			configtest.Setup(map[string]any{
+				"download_clients": []map[string]any{{
+					"name": "embedded", "client_type": "builtin",
+					"download_dir": "/downloads", "enabled": true,
+				}},
+			})
+			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+				Return(nil, errors.New("db boom")).Once()
+			_, err := mgr.AdoptManualTorrents(ctx)
+			Expect(err).To(MatchError(ContainSubstring("db boom")))
+		})
+
+		It("refuses to resolve a path for a traversing name", func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{"download_path": "/downloads"},
+			})
+			path, found := adoptionPath(Torrent{Name: "../../etc/passwd"})
+			Expect(path).To(BeEmpty())
+			Expect(found).To(BeFalse())
+		})
+
+		It("no-ops when no download clients are configured", func() {
+			configtest.Setup()
+			// No EXPECT: with nothing to adopt from, the pass must not even
+			// reach the hash query — a full scan of download_records that the
+			// 30s monitor tick would otherwise pay for an empty loop. The
+			// mock fails the spec on any call, which is the assertion.
+			ids, err := mgr.AdoptManualTorrents(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(BeEmpty())
+		})
+
+		It("skips a listing entry whose hash is not an infohash", func() {
+			root := adoptRoot("The.Batman.2022.1080p.BluRay-X")
+			configtest.Setup(map[string]any{
+				"library": map[string]any{"download_path": root},
+				"download_clients": []map[string]any{{
+					"name": "embedded", "client_type": "builtin",
+					"download_dir": root, "enabled": true,
+				}},
+			})
+			client := &adoptClient{torrents: []Torrent{{
+				Hash:   "a-0",
+				Name:   "The.Batman.2022.1080p.BluRay-X",
+				Status: StatusSeeding,
+				Size:   4096,
+			}}}
+			mgr = New(store, client).(Adopter)
+
+			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+				Return(map[string]struct{}{}, nil).Once()
+			store.EXPECT().
+				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{"a-0"}).
+				Return(0, nil).Once()
+			store.EXPECT().
+				DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
+				Return(0, nil).Once()
+
+			// Nothing is untracked once the entry is dropped, so the pass
+			// exits before loading the library; any further call fails.
+			ids, err := mgr.AdoptManualTorrents(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(BeEmpty())
+		})
+
+		It("files a torrent that is the library's own file as completed", func() {
+			root := adoptRoot("The.Batman.2022.1080p.BluRay-X")
+			configtest.Setup(map[string]any{
+				"library": map[string]any{"download_path": root},
+				"download_clients": []map[string]any{{
+					"name": "embedded", "client_type": "builtin",
+					"download_dir": root, "enabled": true,
+				}},
+			})
+			client := &adoptClient{torrents: []Torrent{{
+				Hash:   adoptHash,
+				Name:   "The.Batman.2022.1080p.BluRay-X",
+				Status: StatusSeeding,
+				Size:   4096,
+			}}}
+			mgr = New(store, client).(Adopter)
+
+			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+				Return(map[string]struct{}{}, nil).Once()
+			store.EXPECT().
+				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{adoptHash}).
+				Return(0, nil).Once()
+			store.EXPECT().
+				DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
+				Return(0, nil).Once()
+			store.EXPECT().ListMoviesForAdoption(mock.Anything).
+				Return([]*ent.Movie{{
+					ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+					Edges: ent.MovieEdges{
+						MediaFiles: []*ent.MediaFile{{ID: 9, Size: 4096}},
+					},
+				}}, nil).Once()
+			store.EXPECT().ListTvShowsForAdoption(mock.Anything).
+				Return(nil, nil).Once()
+
+			var got db.CreateDownloadRecordParams
+			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, p db.CreateDownloadRecordParams) {
+					got = p
+				}).
+				Return(&ent.DownloadRecord{ID: 7}, nil).Once()
+
+			ids, err := mgr.AdoptManualTorrents(ctx)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(BeEmpty(), "nothing to import: the file is already there")
+			Expect(got.Status).To(Equal(downloadrecord.StatusCompleted))
+			Expect(got.MovieID).To(Equal(uint32(3)))
+			Expect(got.ImportedAt).NotTo(BeNil())
+			Expect(got.FailureReason).To(BeEmpty())
+		})
+
+		It(
+			"files an unidentified proposal when nothing in the library matches",
+			func() {
+				root := adoptRoot("Good.Omens.S03.MULTi.VF2.1080p.WEB.H264-FW")
+				configtest.Setup(map[string]any{
+					"library": map[string]any{"download_path": root},
+					"download_clients": []map[string]any{{
+						"name": "embedded", "client_type": "builtin",
+						"download_dir": root, "enabled": true,
+					}},
+				})
+				client := &adoptClient{torrents: []Torrent{{
+					Hash:   adoptHash,
+					Name:   "Good.Omens.S03.MULTi.VF2.1080p.WEB.H264-FW",
+					Status: StatusSeeding,
+					Size:   100,
+				}}}
+				mgr = New(store, client).(Adopter)
+
+				store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+					Return(map[string]struct{}{}, nil).Once()
+				store.EXPECT().
+					DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{adoptHash}).
+					Return(0, nil).Once()
+				store.EXPECT().
+					DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
+					Return(0, nil).Once()
+				store.EXPECT().
+					ListMoviesForAdoption(mock.Anything).
+					Return(nil, nil).
+					Once()
+				store.EXPECT().
+					ListTvShowsForAdoption(mock.Anything).
+					Return(nil, nil).
+					Once()
+
+				var got db.CreateDownloadRecordParams
+				store.EXPECT().CreateDownloadRecord(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, p db.CreateDownloadRecordParams) {
+						got = p
+					}).
+					Return(&ent.DownloadRecord{ID: 7}, nil).Once()
+
+				ids, err := mgr.AdoptManualTorrents(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(
+					ids,
+				).To(BeEmpty(), "an unidentified torrent is never auto-imported")
+				Expect(got.Status).To(Equal(downloadrecord.StatusPending))
+				Expect(got.MovieID).To(BeZero())
+				Expect(got.EpisodeID).To(BeZero())
+				Expect(got.FailureReason).To(Equal(reasonUnidentified))
+			},
+		)
+
+		It(
+			"proposes rather than imports a match whose files are missing",
+			func() {
+				// The torrent is tagged with the managed category but was
+				// never moved into its save path, so the convention path holds
+				// nothing. Auto-importing here spends every import attempt on
+				// a stat that cannot succeed and lands terminal, which is
+				// unreachable afterwards.
+				configtest.Setup(map[string]any{
+					"library": map[string]any{"download_path": GinkgoT().TempDir()},
+					"download_clients": []map[string]any{{
+						"name": "embedded", "client_type": "builtin",
+						"download_dir": "/downloads", "enabled": true,
+					}},
+				})
+				client := &adoptClient{torrents: []Torrent{{
+					Hash:     adoptHash,
+					Name:     "The.Batman.2022.1080p.BluRay-X",
+					Status:   StatusSeeding,
+					Size:     4096,
+					SavePath: "/elsewhere/complete",
+				}}}
+				mgr = New(store, client).(Adopter)
+
+				store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+					Return(map[string]struct{}{}, nil).Once()
+				store.EXPECT().
+					DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{adoptHash}).
+					Return(0, nil).Once()
+				store.EXPECT().
+					DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
+					Return(0, nil).Once()
+				store.EXPECT().ListMoviesForAdoption(mock.Anything).
+					Return([]*ent.Movie{{
+						ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+					}}, nil).Once()
+				store.EXPECT().ListTvShowsForAdoption(mock.Anything).
+					Return(nil, nil).Once()
+
+				var got db.CreateDownloadRecordParams
+				store.EXPECT().CreateDownloadRecord(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, p db.CreateDownloadRecordParams) {
+						got = p
+					}).
+					Return(&ent.DownloadRecord{ID: 7}, nil).Once()
+
+				ids, err := mgr.AdoptManualTorrents(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids).To(BeEmpty(), "nothing may be handed to the importer")
+				Expect(got.Status).To(Equal(downloadrecord.StatusPending))
+				Expect(got.MovieID).To(Equal(uint32(3)))
+				Expect(got.FailureReason).To(
+					ContainSubstring("/elsewhere/complete"),
+					"the reason has to name where the client says the files are",
+				)
+			},
+		)
+
+		It("marks the episodes importing when it auto-imports", func() {
+			// Without this the record reads "importing" while every episode
+			// behind it still reads "wanted", and the series list — which
+			// counts a show as importing off its episodes — shows nothing at
+			// all while the import runs.
+			root := adoptRoot("The.Bear.S01E02.1080p.WEB-X")
+			configtest.Setup(map[string]any{
+				"library": map[string]any{"download_path": root},
+				"quality_profiles": []any{
+					map[string]any{
+						"name": "HD", "preferred_resolution": "1080p",
+						"min_resolution": "1080p",
+					},
+				},
+				"movie_quality_default_profile":  "HD",
+				"series_quality_default_profile": "HD",
+				"download_clients": []map[string]any{{
+					"name": "embedded", "client_type": "builtin",
+					"download_dir": root, "enabled": true,
+				}},
+			})
+			client := &adoptClient{torrents: []Torrent{{
+				Hash:   adoptHash,
+				Name:   "The.Bear.S01E02.1080p.WEB-X",
+				Status: StatusSeeding,
+			}}}
+			mgr = New(store, client).(Adopter)
+
+			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+				Return(map[string]struct{}{}, nil).Once()
+			store.EXPECT().
+				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{adoptHash}).
+				Return(0, nil).Once()
+			store.EXPECT().
+				DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
+				Return(0, nil).Once()
+			store.EXPECT().ListMoviesForAdoption(mock.Anything).
+				Return(nil, nil).Once()
+			store.EXPECT().ListTvShowsForAdoption(mock.Anything).
+				Return([]*ent.TVShow{{
+					ID: 1, Title: "The Bear", Type: enttvshow.TypeStandard,
+					Edges: ent.TVShowEdges{Seasons: []*ent.Season{{
+						Number: 1,
+						Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+							{ID: 101, Number: 1, AbsoluteNumber: 1},
+							{ID: 102, Number: 2, AbsoluteNumber: 2},
+						}},
+					}}},
+				}}, nil).Once()
+			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.Anything).
+				Return(&ent.DownloadRecord{ID: 7}, nil).Once()
+			store.EXPECT().
+				MarkWantedRecordEpisodesImporting(mock.Anything, uint32(7)).
+				Return(nil).Once()
+
+			ids, err := mgr.AdoptManualTorrents(ctx)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(ConsistOf(uint32(7)))
+		})
+
+		It("resolves a payload through a configured path mapping", func() {
+			// The client and streamline mount one volume at two roots, so the
+			// save path the client reports is not one this process can stat
+			// until it is translated.
+			root := GinkgoT().TempDir()
+			local := filepath.Join(root, "srv", "complete")
+			Expect(os.MkdirAll(
+				filepath.Join(local, "The.Batman.2022.1080p.BluRay-X"), 0o755,
+			)).To(Succeed())
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"download_path": filepath.Join(root, "unused"),
+				},
+				"download": map[string]any{
+					"path_mappings": []map[string]any{
+						{"from": "/data/complete", "to": local},
+					},
+				},
+				"download_clients": []map[string]any{{
+					"name": "embedded", "client_type": "builtin",
+					"download_dir": "/downloads", "enabled": true,
+				}},
+			})
+			client := &adoptClient{torrents: []Torrent{{
+				Hash:     adoptHash,
+				Name:     "The.Batman.2022.1080p.BluRay-X",
+				Status:   StatusSeeding,
+				Size:     4096,
+				SavePath: "/data/complete",
+			}}}
+			mgr = New(store, client).(Adopter)
+
+			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+				Return(map[string]struct{}{}, nil).Once()
+			store.EXPECT().
+				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{adoptHash}).
+				Return(0, nil).Once()
+			store.EXPECT().
+				DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
+				Return(0, nil).Once()
+			store.EXPECT().ListMoviesForAdoption(mock.Anything).
+				Return([]*ent.Movie{{
+					ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+					Edges: ent.MovieEdges{
+						MediaFiles: []*ent.MediaFile{{ID: 9, Size: 4096}},
+					},
+				}}, nil).Once()
+			store.EXPECT().ListTvShowsForAdoption(mock.Anything).
+				Return(nil, nil).Once()
+
+			var got db.CreateDownloadRecordParams
+			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, p db.CreateDownloadRecordParams) {
+					got = p
+				}).
+				Return(&ent.DownloadRecord{ID: 7}, nil).Once()
+
+			_, err := mgr.AdoptManualTorrents(ctx)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusCompleted))
+			Expect(got.SavePath).To(Equal(
+				filepath.Join(local, "The.Batman.2022.1080p.BluRay-X"),
+			))
+		})
+	})
+})

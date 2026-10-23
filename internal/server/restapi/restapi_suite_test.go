@@ -1,0 +1,272 @@
+package restapi
+
+import (
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/datahearth/streamline/internal/auth"
+	authmocks "github.com/datahearth/streamline/internal/auth/mocks"
+	bittorrentmocks "github.com/datahearth/streamline/internal/bittorrent/mocks"
+	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	downloadmocks "github.com/datahearth/streamline/internal/download/mocks"
+	ffmpegmocks "github.com/datahearth/streamline/internal/ffmpeg/mocks"
+	importermocks "github.com/datahearth/streamline/internal/importer/mocks"
+	indexermocks "github.com/datahearth/streamline/internal/indexer/mocks"
+	bulkimportmocks "github.com/datahearth/streamline/internal/library/bulkimport/mocks"
+	librarymocks "github.com/datahearth/streamline/internal/library/mocks"
+	"github.com/datahearth/streamline/internal/library/pathmigrate"
+	bookmocks "github.com/datahearth/streamline/internal/media/book/mocks"
+	moviemocks "github.com/datahearth/streamline/internal/media/movie/mocks"
+	musicmocks "github.com/datahearth/streamline/internal/media/music/mocks"
+	tvshowmocks "github.com/datahearth/streamline/internal/media/tvshow/mocks"
+	mediaservermocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
+	metadatamocks "github.com/datahearth/streamline/internal/metadata/mocks"
+	reqmocks "github.com/datahearth/streamline/internal/request/mocks"
+	"github.com/datahearth/streamline/internal/testutil"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/transcoding"
+)
+
+func TestRestAPI(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "RestAPI Suite")
+}
+
+var _ = BeforeSuite(func() {
+	DeferCleanup(testutil.InstallSlog())
+})
+
+// Seed the config singleton with sane defaults for every spec.
+var _ = BeforeEach(func() {
+	configtest.Setup(map[string]any{
+		"auth": map[string]any{
+			"session_secret": "test-secret-key-for-jwt",
+			"session_ttl":    "1h",
+		},
+		"metadata": map[string]any{
+			"tmdb_api_key": "test-key",
+		},
+	})
+})
+
+// apiKeyApp is the restapi unit-test harness: a chi router mounted with
+// restapi.Mount + a tiny identity-injecting middleware. Every service in
+// restapi.Deps is a mockery mock; tests set EXPECT() per spec. There is no
+// database — the harness exists so handlers can be exercised over real HTTP
+// without ent, sqlite, or any real auth.Service.
+//
+// Identity is selected per-request via the X-API-Key header. The two
+// well-known values seeded at construction time are `adminKey` and (when
+// addMember is called) `memberKey`. Any other value or an empty header
+// produces an unauthenticated request.
+type apiKeyApp struct {
+	srv *httptest.Server
+
+	// Mocks. Tests set expectations directly on these.
+	auth          *authmocks.MockManager
+	movies        *moviemocks.MockManager
+	metadata      *metadatamocks.MockProvider
+	indexers      *indexermocks.MockManager
+	downloads     *downloadmocks.MockDownloader
+	mediaServers  *mediaservermocks.MockManager
+	tvshows       *tvshowmocks.MockManager
+	metadataTV    *metadatamocks.MockTVProvider
+	music         *musicmocks.MockManager
+	books         *bookmocks.MockManager
+	metadataBook  *metadatamocks.MockBookProvider
+	metadataMusic *metadatamocks.MockMusicProvider
+	requests      *reqmocks.MockManager
+	torrents      *bittorrentmocks.MockManager
+	bulkImports   *bulkimportmocks.MockManager
+	store         *dbmocks.MockStore
+	renamer       *librarymocks.MockRenamer
+	seriesRenamer *librarymocks.MockRenamer
+	musicRenamer  *librarymocks.MockRenamer
+	prober        *ffmpegmocks.MockProber
+	importer      *importermocks.MockEnqueuer
+
+	// Identity tokens consumed by the synthetic auth middleware.
+	adminKey       string
+	memberKey      string
+	requestOnlyKey string
+	// adminAPIKey mimics API-key auth for the admin: same claims, no JTI.
+	adminAPIKey   string
+	adminID       uint32
+	memberID      uint32
+	requestOnlyID uint32
+}
+
+// newAPIKeyApp constructs the test harness. The caller receives cleanup
+// registered via DeferCleanup.
+func newAPIKeyApp() *apiKeyApp {
+	GinkgoHelper()
+	t := GinkgoT()
+
+	a := &apiKeyApp{
+		auth:           authmocks.NewMockManager(t),
+		movies:         moviemocks.NewMockManager(t),
+		metadata:       metadatamocks.NewMockProvider(t),
+		indexers:       indexermocks.NewMockManager(t),
+		downloads:      downloadmocks.NewMockDownloader(t),
+		mediaServers:   mediaservermocks.NewMockManager(t),
+		tvshows:        tvshowmocks.NewMockManager(t),
+		metadataTV:     metadatamocks.NewMockTVProvider(t),
+		music:          musicmocks.NewMockManager(t),
+		books:          bookmocks.NewMockManager(t),
+		metadataBook:   metadatamocks.NewMockBookProvider(t),
+		metadataMusic:  metadatamocks.NewMockMusicProvider(t),
+		requests:       reqmocks.NewMockManager(t),
+		torrents:       bittorrentmocks.NewMockManager(t),
+		bulkImports:    bulkimportmocks.NewMockManager(t),
+		store:          dbmocks.NewMockStore(t),
+		renamer:        librarymocks.NewMockRenamer(t),
+		seriesRenamer:  librarymocks.NewMockRenamer(t),
+		musicRenamer:   librarymocks.NewMockRenamer(t),
+		prober:         ffmpegmocks.NewMockProber(t),
+		importer:       importermocks.NewMockEnqueuer(t),
+		adminKey:       "test-admin-token",
+		adminAPIKey:    "test-admin-apikey",
+		adminID:        1,
+		requestOnlyKey: "test-requestonly-token",
+		requestOnlyID:  3,
+	}
+
+	// Every library PATCH tells the music service what changed in
+	// music_tags; the specs that care assert it themselves.
+	a.music.EXPECT().
+		TagSettingsChanged(mock.Anything, mock.Anything, mock.Anything).
+		Maybe()
+
+	rsrv := New(Deps{
+		Auth:           a.auth,
+		Movies:         a.movies,
+		Metadata:       a.metadata,
+		Indexers:       a.indexers,
+		Downloads:      a.downloads,
+		MediaServers:   a.mediaServers,
+		TVShows:        a.tvshows,
+		MetadataTV:     a.metadataTV,
+		Music:          a.music,
+		Books:          a.books,
+		MetadataBook:   a.metadataBook,
+		MetadataMusic:  a.metadataMusic,
+		Requests:       a.requests,
+		Torrents:       a.torrents,
+		BulkImports:    a.bulkImports,
+		Store:          a.store,
+		Renamer:        a.renamer,
+		SeriesRenamer:  a.seriesRenamer,
+		MusicRenamer:   a.musicRenamer,
+		PathMigrations: pathmigrate.NewService(a.store),
+		Prober:         a.prober,
+		Importer:       a.importer,
+		// A real worker, never started: the handlers only ever ask it for
+		// progress of a job this process is encoding (none) and for a scan,
+		// which drives the store mock.
+		Transcoder: transcoding.NewWorker(transcoding.Deps{
+			DB:     a.store,
+			Prober: a.prober,
+		}),
+	})
+
+	r := chi.NewRouter()
+	r.Use(a.identityMiddleware())
+	Mount(r, rsrv)
+
+	ts := httptest.NewServer(r)
+	DeferCleanup(ts.Close)
+	a.srv = ts
+	return a
+}
+
+// identityMiddleware mimics what the real auth middleware places on the
+// request context on success: an *auth.Claims with the caller's UserID,
+// Email, Role, and JTI. The handler-level requireAdmin/ClaimsFromContext
+// checks therefore see exactly the same shape they see in production.
+func (a *apiKeyApp) identityMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			key := r.Header.Get("X-API-Key")
+			var claims *auth.Claims
+			switch {
+			case key == "" || key == a.adminKey:
+				// Default test identity: an authenticated admin. Most domain
+				// tests assume an authenticated admin session; tests exercising
+				// RBAC pass an explicit member/request-only key, and no-auth
+				// (401) tests pass an explicit unknown token.
+				claims = &auth.Claims{
+					UserID: a.adminID,
+					Email:  "admin@test.com",
+					Role:   "admin",
+					JTI:    "admin-jti",
+				}
+			case key == a.adminAPIKey:
+				claims = &auth.Claims{
+					UserID: a.adminID,
+					Email:  "admin@test.com",
+					Role:   "admin",
+				}
+			case a.memberKey != "" && key == a.memberKey:
+				claims = &auth.Claims{
+					UserID: a.memberID,
+					Email:  "member@test.com",
+					Role:   "member",
+					JTI:    "member-jti",
+				}
+			case key == a.requestOnlyKey:
+				claims = &auth.Claims{
+					UserID: a.requestOnlyID,
+					Email:  "requestonly@test.com",
+					Role:   "request_only",
+					JTI:    "requestonly-jti",
+				}
+			}
+			if claims != nil {
+				ctx := auth.ContextWithClaims(r.Context(), claims)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+			// An explicit unknown token → no claims attached. Handlers that gate
+			// on claims return 401/403 themselves; handlers that don't run
+			// normally.
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// addMember registers a non-admin identity. The token is returned and also
+// stored on a.memberKey. Pass the resulting key in subsequent requests to
+// authenticate as the member.
+func (a *apiKeyApp) addMember(_ string) {
+	GinkgoHelper()
+	a.memberID = 2
+	a.memberKey = "test-member-token"
+}
+
+// req builds a request against the test server with the given API key set.
+// Passing an empty key produces an unauthenticated request.
+func (a *apiKeyApp) req(method, path, apiKey string, body io.Reader) *http.Request {
+	GinkgoHelper()
+	req, err := http.NewRequest(method, a.srv.URL+path, body)
+	Expect(err).NotTo(HaveOccurred())
+	if apiKey != "" {
+		req.Header.Set("X-API-Key", apiKey)
+	}
+	return req
+}
+
+// do executes req through the default client.
+func (a *apiKeyApp) do(req *http.Request) *http.Response {
+	GinkgoHelper()
+	resp, err := http.DefaultClient.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+	return resp
+}

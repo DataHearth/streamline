@@ -1,0 +1,106 @@
+<script lang="ts" module>
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	export type StatusKind =
+		| "downloading"
+		| "grabbing"
+		| "importing"
+		| "held"
+		| "available"
+		| "wanted"
+		| "missing"
+		| "failed"
+		| "paused"
+		| "seeding"
+		| "completed"
+		| "fetching"
+		| "stalled"
+		| "unaired"
+		| "skipped"
+		// Transcode job states. Each aliases an existing --status-* hue in
+		// tokens.css rather than reusing the kind itself, so the label reads
+		// "Queued" and not "Wanted" — the same reason `importing` exists beside
+		// `grabbing`.
+		| "queued"
+		| "running"
+		| "succeeded"
+		| "canceled"
+		| "rejected";
+
+	const LABELS: Record<StatusKind, string> = {
+		downloading: i18n.status_downloading(),
+		grabbing: i18n.status_grabbing(),
+		importing: i18n.status_importing(),
+		held: i18n.status_held(),
+		available: i18n.status_available(),
+		wanted: i18n.status_wanted(),
+		missing: i18n.status_missing(),
+		failed: i18n.status_failed(),
+		paused: i18n.status_paused(),
+		seeding: i18n.status_seeding(),
+		completed: i18n.status_completed(),
+		fetching: i18n.status_fetching_metadata(),
+		stalled: i18n.status_stalled(),
+		unaired: i18n.status_unaired(),
+		skipped: i18n.status_skipped(),
+		queued: i18n.status_queued(),
+		running: i18n.status_running(),
+		succeeded: i18n.status_succeeded(),
+		canceled: i18n.status_canceled(),
+		rejected: i18n.status_rejected(),
+	};
+</script>
+
+<script lang="ts">
+	import { cn } from "@lib/cn";
+
+	let {
+		status,
+		size = "md",
+		live = false,
+		variant = "solid",
+	}: {
+		status: StatusKind;
+		size?: "sm" | "md";
+		live?: boolean;
+		variant?: "solid" | "translucent";
+	} = $props();
+
+	let label = $derived(LABELS[status]);
+</script>
+
+<span
+	data-variant={variant}
+	class={cn(
+		"pill inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border font-semibold tracking-[0.02em]",
+		size === "sm" ? "px-1.5 py-[1px] text-[10px] gap-1" : "px-2 py-0.5 text-[11px]",
+	)}
+	style:--c="var(--status-{status})"
+>
+	<span
+		class={cn(
+			"dot shrink-0 rounded-full",
+			size === "sm" ? "h-[5px] w-[5px]" : "h-1.5 w-1.5",
+			live && "motion-safe:animate-pulse",
+		)}
+	></span>
+	<span>{label}</span>
+</span>
+
+<style>
+	.pill[data-variant="solid"] {
+		background-color: var(--c);
+		border-color: var(--c);
+		color: var(--bg-deep);
+	}
+	.pill[data-variant="solid"] .dot {
+		background-color: var(--bg-deep);
+	}
+	.pill[data-variant="translucent"] {
+		background-color: color-mix(in srgb, var(--c) 15%, transparent);
+		border-color: color-mix(in srgb, var(--c) 25%, transparent);
+		color: var(--c);
+	}
+	.pill[data-variant="translucent"] .dot {
+		background-color: var(--c);
+	}
+</style>

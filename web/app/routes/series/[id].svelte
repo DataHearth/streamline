@@ -1,0 +1,1099 @@
+<script lang="ts">
+	import { around } from "@lib/message-parts";
+	import {
+		NOUN_EPISODE,
+		countAvailable,
+		countMissing,
+		countUnaired,
+		countWanted,
+	} from "@lib/nouns";
+	import { auth } from "@lib/auth.svelte";
+	import {
+		createQuery,
+	} from "@tanstack/svelte-query";
+	import { params, goto } from "@roxi/routify";
+	import { onMount } from "svelte";
+	import {
+		Tv,
+		ArrowLeft,
+		Eye,
+		Search,
+		ExternalLink,
+		Trash2,
+	} from "@lucide/svelte";
+	import { api, errorText } from "@lib/api";
+	import { createAction, deleteFailed, monitorToast, refreshFailed, searchFailed, SERIES, updateFailed } from "@lib/actions";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
+	import { cn } from "@lib/cn";
+	import { missingEpisodes } from "@lib/status";
+	import { tvPosterUrl } from "@lib/posters";
+	import { listHref, SERIES_SEARCH } from "@lib/prefs";
+	import { formatDate } from "@lib/dates";
+	import Poster from "@components/shared/Poster.svelte";
+	import StatusPill from "@components/shared/StatusPill.svelte";
+	import type { StatusKind } from "@components/shared/StatusPill.svelte";
+	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import Checkbox from "@components/forms/Checkbox.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
+	import ReidentifyDialog from "@components/shared/ReidentifyDialog.svelte";
+	import SeriesRenamePreviewModal from "@components/series/SeriesRenamePreviewModal.svelte";
+	import { defaultProfileName } from "@lib/quality-profiles";
+	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
+	import SeriesTypeModal from "@components/series/SeriesTypeModal.svelte";
+	import SeasonStrip from "@components/series/SeasonStrip.svelte";
+	import SeasonAccordion from "@components/series/SeasonAccordion.svelte";
+	import EpisodeTable from "@components/series/EpisodeTable.svelte";
+	import SeriesManualSearchModal from "@components/series/SeriesManualSearchModal.svelte";
+	import SeriesReleaseSearchModal from "@components/series/SeriesReleaseSearchModal.svelte";
+	import { existingFromEpisode } from "@lib/release-facts";
+	import SeriesKebabMenu from "@components/series/SeriesKebabMenu.svelte";
+	import DetailCast from "@components/shared/DetailCast.svelte";
+	import DetailHistory from "@components/shared/DetailHistory.svelte";
+	import { swipeTabs } from "@lib/swipe-tabs";
+	import DetailAbout from "@components/shared/DetailAbout.svelte";
+	import PlayOnMenu from "@components/shared/PlayOnMenu.svelte";
+	import type { SeriesAction } from "@components/series/SeriesKebabMenu.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import Img from "@components/shared/Img.svelte";
+	import type {
+		Episode,
+		MonitoringPreset,
+		QualityProfile,
+		Season,
+		SeriesType,
+		TVShow,
+	} from "@lib/types";
+
+	type Tab = "overview" | "episodes" | "history" | "cast";
+	const TABS: { key: Tab; label: string }[] = [
+		{ key: "overview", label: i18n.common_overview() },
+		{ key: "episodes", label: i18n.series_episodes() },
+		{ key: "history", label: i18n.common_history() },
+		{ key: "cast", label: i18n.detail_cast() },
+	];
+	const VALID_TABS = new Set<Tab>(["overview", "episodes", "history", "cast"]);
+
+	let routeParams = $state<Record<string, string>>({});
+	let navigate = $state<(path: string) => void>(() => {});
+	onMount(() => {
+		// Routify reuses this component instance across /series/[id] param
+		// changes, so per-series UI state has to be cleared by hand. The first
+		// emission only records the id — resetting on it would clobber a
+		// deep-linked ?tab= before the user has navigated anywhere.
+		let currentId: string | undefined;
+		const u1 = params.subscribe((p) => {
+			if (currentId !== undefined && p.id !== currentId) resetSeriesState();
+			currentId = p.id;
+			routeParams = p;
+		});
+		const u2 = goto.subscribe((fn) => (navigate = fn));
+		return () => {
+			u1();
+			u2();
+		};
+	});
+	const seriesId = $derived(Number(routeParams.id));
+
+	function readTab(): Tab {
+		if (typeof window === "undefined") return "overview";
+		const t = new URLSearchParams(window.location.search).get("tab");
+		return t && VALID_TABS.has(t as Tab) ? (t as Tab) : "overview";
+	}
+	let tab = $state<Tab>(readTab());
+	let tabTrack = $state<HTMLElement | null>(null);
+
+	$effect(() => {
+		if (typeof window === "undefined") return;
+		const p = new URLSearchParams(window.location.search);
+		if (tab === "overview") p.delete("tab");
+		else p.set("tab", tab);
+		const search = p.toString();
+		const next = `${window.location.pathname}${search ? `?${search}` : ""}`;
+		if (next !== window.location.pathname + window.location.search) {
+			window.history.replaceState(null, "", next);
+		}
+	});
+
+	const seriesQuery = createQuery<TVShow>(() => ({
+		queryKey: ["series", seriesId],
+		queryFn: () => api<TVShow>(`/series/${seriesId}`),
+		enabled: Number.isFinite(seriesId) && seriesId > 0,
+	}));
+
+	let show = $derived(seriesQuery.data);
+	let seasons = $derived<Season[]>(show?.seasons ?? []);
+	// Specials are a season of the show but not of its run: every headline
+	// number here counts the numbered seasons only, as the API's rollups do.
+	let regularSeasons = $derived(seasons.filter((s) => s.number > 0));
+
+	let selectedSeason = $state<number | null>(null);
+	$effect(() => {
+		if (seasons.length === 0) return;
+		// Re-pick whenever the selection is not a season this show actually has
+		// — covers both the initial default and a carry-over from the previously
+		// viewed series, which would otherwise render an empty season strip.
+		if (seasons.some((s) => s.number === selectedSeason)) return;
+		// Default to the latest non-special season, falling back to whatever
+		// the last entry is (e.g. a specials-only show).
+		const pool = regularSeasons.length > 0 ? regularSeasons : seasons;
+		const last = pool[pool.length - 1];
+		if (last) selectedSeason = last.number;
+	});
+	let currentSeason = $derived(
+		seasons.find((s) => s.number === selectedSeason) ?? null,
+	);
+	let currentEpisodes = $derived<Episode[]>(currentSeason?.episodes ?? []);
+
+	// The API's season.missing counts only *monitored* fileless episodes — the
+	// ones a search will chase — so it reads as "wanted" here. Episodes nobody
+	// monitors are the missing ones, and only the client knows that split.
+	let showMonitored = $derived(show?.monitored ?? true);
+	let seasonMissing = $derived(missingEpisodes(currentEpisodes, showMonitored));
+	let showMissing = $derived(
+		regularSeasons.reduce(
+			(n, s) => n + missingEpisodes(s.episodes ?? [], showMonitored),
+			0,
+		),
+	);
+
+	let seriesAvail = $derived<StatusKind>(
+		(show?.wanted_episodes ?? 0) > 0
+			? "wanted"
+			: // Unmonitored shows report zero wanted episodes, so "nothing wanted"
+				// alone would call an empty series available.
+				(show?.have_episodes ?? 0) > 0
+				? "available"
+				: "missing",
+	);
+
+	let airedTotal = $derived.by(() => {
+		if (regularSeasons.length > 0) {
+			return regularSeasons.reduce(
+				(n, s) => n + Math.max(0, (s.total ?? 0) - (s.unaired ?? 0)),
+				0,
+			);
+		}
+		return show?.total_episodes ?? 0;
+	});
+	// Named as First aired where it is labelled, and printed bare in the hero's
+	// dotted meta line — the same date either way.
+	let airedText = $derived(formatDate(show?.first_aired));
+	let unairedTotal = $derived(
+		regularSeasons.reduce((n, s) => n + (s.unaired ?? 0), 0),
+	);
+	let seriesProgress = $derived(
+		(show?.have_episodes ?? 0) / Math.max(1, airedTotal),
+	);
+
+	let metaParts = $derived.by(() => {
+		if (!show) return [] as string[];
+		const p: string[] = [];
+		// The date carries its own year, so the two never both appear.
+		p.push(airedText || String(show.year));
+		const n = regularSeasons.length;
+		if (n > 0) p.push(`${n} season${n === 1 ? "" : "s"}`);
+		if (show.total_episodes) p.push(`${show.total_episodes} episodes`);
+		if (show.rating && show.rating > 0) p.push(`★ ${show.rating.toFixed(1)}`);
+		if (show.runtime) p.push(`${show.runtime}m`);
+		if (show.genres?.length) p.push(show.genres.join(" / "));
+		return p;
+	});
+
+	const presetOptions: { value: MonitoringPreset; label: string }[] = [
+		{ value: "all", label: i18n.series_monitor_all() },
+		{ value: "future", label: i18n.series_monitor_future() },
+		{ value: "missing", label: i18n.series_monitor_missing() },
+		{ value: "existing", label: i18n.series_monitor_existing() },
+		{ value: "pilot", label: i18n.series_monitor_pilot() },
+		{ value: "none", label: i18n.common_none() },
+	];
+	// The backend applies a preset as a one-shot bulk toggle; it stores no
+	// ongoing "monitoring mode", so this control has no persisted value to
+	// reflect. Start unselected-ish on "all" and treat each pick as an action.
+	let presetValue = $state<MonitoringPreset>("all");
+
+	let deleteOpen = $state(false);
+	let reidentifyOpen = $state(false);
+	let renameOpen = $state(false);
+	let qpOpen = $state(false);
+	let typeOpen = $state(false);
+	let manualOpen = $state(false);
+	let manualEpisode = $state<Episode | null>(null);
+	let packSearchOpen = $state(false);
+	// Scope the pack-search modal opens on: "series" from the header actions, a
+	// season number from the episodes tab's per-season button.
+	let packSearchScope = $state("series");
+	function openPackSearch(scope: string) {
+		packSearchScope = scope;
+		packSearchOpen = true;
+	}
+	// One delete flow drives episode / season / series scope: the target holds
+	// a label for the confirm copy plus the episodes whose files get removed.
+	let deleteFiles = $state<{ label: string; episodes: Episode[] } | null>(null);
+	let removeFilesTorrent = $state(false);
+
+	// Clears everything scoped to the show being navigated away from. `tab` is
+	// re-read from the URL rather than reset to a constant so browser
+	// back/forward onto /series/x?tab=cast lands on the tab it was left on.
+	function resetSeriesState() {
+		tab = readTab();
+		selectedSeason = null;
+		presetValue = "all";
+		deleteOpen = false;
+		qpOpen = false;
+		typeOpen = false;
+		manualOpen = false;
+		manualEpisode = null;
+		packSearchOpen = false;
+		deleteFiles = null;
+		removeFilesTorrent = false;
+	}
+
+	function pad2(n: number): string {
+		return String(n).padStart(2, "0");
+	}
+	function openManualSearch(ep: Episode) {
+		manualEpisode = ep;
+		manualOpen = true;
+	}
+	// The delete-files confirm highlights the status word inside one sentence.
+	const [filesRevertOnePre, filesRevertOnePost] = around((status) =>
+		i18n.series_files_delete_body_one({ status }),
+	);
+	const [filesRevertManyPre, filesRevertManyPost] = around((status) =>
+		i18n.series_files_delete_body_other({ status }),
+	);
+	function openDeleteFiles(label: string, episodes: Episode[]) {
+		if (episodes.length === 0) return;
+		deleteFiles = { label, episodes };
+		removeFilesTorrent = false;
+	}
+	function episodeCode(ep: Episode): string {
+		return currentSeason
+			? `S${pad2(currentSeason.number)}E${pad2(ep.number)}`
+			: i18n.episode_number({ number: ep.number });
+	}
+	let manualScope = $derived.by(() => {
+		if (!manualEpisode || currentSeason === null) return undefined;
+		const code = `S${pad2(currentSeason.number)}E${pad2(manualEpisode.number)}`;
+		const scope = manualEpisode.title
+			? `${code} — ${manualEpisode.title}`
+			: code;
+		return show ? `${show.title} · ${scope}` : scope;
+	});
+
+	const monitor = createAction<boolean>(() => ({
+		run: (next) => api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { monitored: next } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: (next) => monitorToast(next),
+	}));
+
+	const applyPreset = createAction<MonitoringPreset>(() => ({
+		run: (preset) => api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { preset } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: (p) => i18n.monitor_set_to({ mode: (presetOptions.find((o) => o.value === p)?.label ?? p).toLowerCase() }),
+	}));
+
+	const saveProfile = createAction<string>(() => ({
+		run: (profile) => api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { quality_profile: profile } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: () => i18n.quality_updated(),
+		then: () => (qpOpen = false),
+	}));
+
+	const saveType = createAction<SeriesType>(() => ({
+		run: (type) => api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { type } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: () => i18n.series_type_updated(),
+		then: () => (typeOpen = false),
+	}));
+
+	const refresh = createAction(() => ({
+		run: () => api<TVShow>(`/series/${seriesId}/refresh-metadata`, { method: "POST" }),
+		refresh: SERIES,
+		failed: refreshFailed,
+		succeeded: () => i18n.series_refresh_requested(),
+	}));
+
+	const searchSeries = createAction(() => ({
+		run: () => api(`/series/${seriesId}/search`, { method: "POST" }),
+		refresh: [],
+		failed: searchFailed,
+		succeeded: () => i18n.series_search_dispatched_wanted(),
+	}));
+
+	const del = createAction<boolean>(() => ({
+		run: (withFiles) => api(`/series/${seriesId}?delete_files=${withFiles}`, { method: "DELETE" }),
+		refresh: SERIES,
+		failed: deleteFailed,
+		succeeded: () => i18n.series_deleted(),
+		then: () => navigate("/series"),
+	}));
+
+	const monitorSeason = createAction<Season>(() => ({
+		run: (s) => api(`/series/${seriesId}/seasons/${s.number}`, { method: "PATCH", body: { monitored: !s.monitored } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: (s) => (s.monitored ? i18n.monitor_season_unmonitored() : i18n.monitor_season_monitored()),
+	}));
+
+	// No toast: episodes are toggled in runs, and the bookmark says it.
+	const monitorEpisode = createAction<Episode>(() => ({
+		run: (ep) => api(`/series/${seriesId}/episodes/${ep.id}`, { method: "PATCH", body: { monitored: !ep.monitored } }),
+		refresh: SERIES,
+		failed: updateFailed,
+	}));
+
+	const delFiles = createAction<{ episodes: Episode[]; remove: boolean }>(() => ({
+		// ponytail: sequential per-episode DELETEs (no bulk endpoint). Fine for a
+		// season; add DELETE /series/{id}/files if a whole downloaded series is
+		// too slow.
+		run: async ({ episodes, remove }) => {
+			for (const ep of episodes) {
+				await api(`/series/${seriesId}/episodes/${ep.id}/file`, {
+					method: "DELETE",
+					body: { remove_torrent: remove },
+				});
+			}
+		},
+		refresh: SERIES,
+		failed: deleteFailed,
+		succeeded: ({ episodes }) => (episodes.length > 1 ? i18n.files_deleted() : i18n.file_deleted()),
+		then: () => (deleteFiles = null),
+	}));
+
+	// A switch with a `never` default, not an if-chain: the menu owns the item
+	// list, so a new SeriesAction that nothing here handles renders as a menu
+	// entry that silently does nothing. This makes that a compile error.
+	function onKebabPick(a: SeriesAction) {
+		switch (a) {
+			case "search":
+				searchSeries.mutate();
+				break;
+			case "quality":
+				qpOpen = true;
+				break;
+			case "type":
+				typeOpen = true;
+				break;
+			case "refresh":
+				refresh.mutate();
+				break;
+			case "reidentify":
+				reidentifyOpen = true;
+				break;
+			case "rename":
+				renameOpen = true;
+				break;
+			case "delete":
+				deleteOpen = true;
+				break;
+			default: {
+				const unhandled: never = a;
+				void unhandled;
+			}
+		}
+	}
+
+	let seasonFileEpisodes = $derived(
+		currentEpisodes.filter((e) => (e.size ?? 0) > 0),
+	);
+	let seriesFileEpisodes = $derived(
+		seasons.flatMap((s) => s.episodes ?? []).filter((e) => (e.size ?? 0) > 0),
+	);
+	// Not have_episodes: that rollup excludes specials by design, so a
+	// specials-only show reported 0 and greyed out the two actions whose input
+	// set — seriesFileEpisodes, which spans every season — was non-empty.
+	let hasFiles = $derived(seriesFileEpisodes.length > 0);
+	const seasonTitle = (n: number | string) => i18n.series_season_n({ n });
+	let searchSeasons = $derived(
+		seasons
+			.filter((s) => (s.total ?? 0) > 0)
+			.map((s) => ({
+				number: s.number,
+				label: s.number === 0 ? i18n.series_specials() : seasonTitle(s.number),
+			})),
+	);
+	// Files a pack search would replace, per scope: the whole show, or a season.
+	let packFileCounts = $derived.by(() => {
+		const counts: Record<string, number> = { series: seriesFileEpisodes.length };
+		for (const s of seasons)
+			counts[String(s.number)] = (s.episodes ?? []).filter((e) => (e.size ?? 0) > 0).length;
+		return counts;
+	});
+	// Episodes a pack grabbed without replace_existing is for, per scope: the
+	// server's wantedAiredEpisodes (still wanted, not dated in the future).
+	// Above zero beside files on disk, the grab can fill only these.
+	const fillable = (eps: Episode[]) =>
+		eps.filter((e) => e.status === "wanted" && !(e.air_date && Date.parse(e.air_date) > Date.now()))
+			.length;
+	let packMissingCounts = $derived.by(() => {
+		const counts: Record<string, number> = {
+			series: fillable(seasons.flatMap((s) => s.episodes ?? [])),
+		};
+		for (const s of seasons) counts[String(s.number)] = fillable(s.episodes ?? []);
+		return counts;
+	});
+	const qpQuery = createQuery<QualityProfile[]>(() => ({
+		queryKey: ["quality-profiles"],
+		queryFn: () => api<QualityProfile[]>("/quality-profiles"),
+	}));
+	let qpName = $derived(
+		show?.quality_profile ||
+			defaultProfileName(qpQuery.data, "series") ||
+			i18n.quality_server_default(),
+	);
+</script>
+
+{#if seriesQuery.isLoading}
+	<section class="relative overflow-hidden bg-bg-deep">
+		<div class="flex w-full items-stretch gap-10 px-4 py-16 md:px-8">
+			<div
+				class="aspect-[2/3] w-[200px] animate-pulse rounded-lg bg-bg-card/60 motion-reduce:animate-none"
+			></div>
+			<div class="flex flex-1 flex-col gap-3">
+				<div
+					class="h-8 w-2/3 animate-pulse rounded bg-bg-card/60 motion-reduce:animate-none"
+				></div>
+				<div
+					class="h-5 w-1/3 animate-pulse rounded bg-bg-card/60 motion-reduce:animate-none"
+				></div>
+				<div
+					class="mt-auto h-24 w-full animate-pulse rounded bg-bg-card/60 motion-reduce:animate-none"
+				></div>
+			</div>
+		</div>
+	</section>
+{:else if seriesQuery.isError}
+	<div
+		class="mx-4 mt-4 rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 py-12 text-center md:mx-8"
+	>
+		<p class="text-sm font-semibold text-status-failed">{i18n.series_load_failed()}</p>
+		<p class="mt-1 text-xs text-fg-subtle">
+			{errorText(seriesQuery.error, i18n.common_unknown_error())}
+		</p>
+	</div>
+{:else if show}
+	<section class="hero relative" aria-labelledby="series-title">
+		<div class="absolute inset-0 z-0 overflow-hidden bg-bg-deep">
+			<Img
+				src={tvPosterUrl(show.id)}
+				alt=""
+				aria-hidden="true"
+				class="h-full w-full scale-110 object-cover opacity-70 blur-md"
+			/>
+			<div class="absolute inset-0 hero-overlay"></div>
+		</div>
+
+		<div class="relative w-full px-4 pt-6 md:px-8">
+			<a
+				href={listHref("/series", SERIES_SEARCH)}
+				class="touch-hit inline-flex items-center gap-1.5 rounded-full border border-border bg-black/40 px-3 py-1.5 text-[11.5px] font-medium text-fg-muted backdrop-blur-sm transition hover:bg-black/60 hover:text-fg"
+			>
+				<ArrowLeft size={13} aria-hidden="true" />
+				{i18n.settings_series()}
+			</a>
+		</div>
+
+		<div
+			class="relative grid w-full items-end gap-5 px-4 pb-6 pt-4 md:grid-cols-[200px_1fr] md:gap-8 md:px-8 md:pb-14 md:pt-10 lg:grid-cols-[260px_1fr] lg:gap-10 lg:pb-16"
+		>
+			<div
+				class="relative mx-auto aspect-[2/3] w-60 overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:mx-0 md:w-auto"
+			>
+				<div class="absolute inset-0 bg-bg-card"></div>
+				<div class="absolute inset-0 grid place-items-center text-fg-faint">
+					<Tv class="h-10 w-10" aria-hidden="true" />
+				</div>
+				<Poster
+					src={tvPosterUrl(show.id)}
+					alt={i18n.common_poster_alt({ title: show.title })}
+					loading="eager"
+					class="relative h-full w-full object-cover"
+				/>
+			</div>
+
+			<div class="min-w-0 text-left">
+				<div
+					class="mb-3 flex flex-wrap items-center gap-2 font-mono text-xs text-fg-muted"
+				>
+					<StatusPill status={seriesAvail} size="md" variant="translucent" />
+					<span class="uppercase tracking-wide">{show.series_status}</span>
+					{#if show.network}
+						<span class="text-fg-faint" aria-hidden="true">·</span>
+						<span>{show.network}</span>
+					{/if}
+					{#if show.creator}
+						<span class="text-fg-faint" aria-hidden="true">·</span>
+						<span>{show.creator}</span>
+					{/if}
+					<span
+						class={cn(
+							"rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
+							show.type === "anime"
+								? "bg-accent-soft text-accent-text"
+								: show.type === "daily"
+									? "bg-status-grabbing/15 text-status-grabbing"
+									: "bg-white/[0.06] text-fg-subtle",
+						)}
+					>
+						{show.type}
+					</span>
+				</div>
+
+				<h1
+					id="series-title"
+					class="text-[23px] font-bold leading-[1.05] tracking-tight text-fg md:text-4xl lg:text-5xl"
+					title={show.title}
+				>
+					{show.title}
+				</h1>
+
+				{#if metaParts.length > 0}
+					<div
+						class="mt-3 flex flex-wrap items-center gap-2 font-mono text-xs text-fg-muted"
+					>
+						{#each metaParts as part, i (i)}
+							{#if i > 0}
+								<span class="text-fg-faint" aria-hidden="true">·</span>
+							{/if}
+							<span>{part}</span>
+						{/each}
+					</div>
+				{/if}
+
+				{#if show.overview}
+					<p
+						class="mt-4 line-clamp-3 max-w-[680px] text-sm leading-relaxed text-fg-muted [text-wrap:pretty]"
+					>
+						{show.overview}
+					</p>
+				{/if}
+
+				<div class="mt-5 max-w-[680px]">
+					<div
+						class="mb-1.5 flex items-center gap-1.5 font-mono text-xs text-fg-muted"
+					>
+						<span class="text-fg">{show.have_episodes ?? 0}</span>
+						<span class="text-fg-faint">/</span>
+						<span>{show.total_episodes ?? 0}</span>
+						<span class="text-fg-subtle">{i18n.lc_episodes()}</span>
+						{#if (show.wanted_episodes ?? 0) > 0}
+							<span class="text-status-wanted">· {countWanted(show.wanted_episodes ?? 0)}</span>
+						{/if}
+						{#if showMissing > 0}
+							<span class="text-status-missing">· {countMissing(showMissing)}</span>
+						{/if}
+						{#if unairedTotal > 0}
+							<span class="text-fg-faint">· {countUnaired(unairedTotal)}</span>
+						{/if}
+					</div>
+					<ProgressBar
+						value={seriesProgress}
+						status="available"
+						height={4}
+						label={i18n.series_progress()}
+					/>
+				</div>
+
+				{#if auth.canAddDirectly}
+					<!-- Phone: one row of the actions that matter, then the monitoring
+					     preset on its own line. The md row below carries all of it inline. -->
+					<div class="mt-4 flex flex-col gap-2.5 md:hidden">
+						<div class="flex items-center gap-2">
+							<button
+								type="button"
+								onclick={() => openPackSearch("series")}
+								class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-fg-on-accent transition active:bg-accent-pressed"
+							>
+								<Search size={15} aria-hidden="true" />
+								{(show.wanted_episodes ?? 0) > 0
+									? i18n.series_search_wanted({ count: show.wanted_episodes ?? 0 })
+									: i18n.action_manual_search()}
+							</button>
+							<PlayOnMenu
+								compact
+								path={`/series/${show.id}/play-on`}
+								queryKey={["series", show.id, "play-on"]}
+								disabled={!hasFiles}
+								disabledTitle={i18n.series_available_after_import()}
+							/>
+							<MonitorToggle monitored={show.monitored ?? false} onToggle={() => monitor.mutate(!(show.monitored ?? false))} pending={monitor.isPending} backdrop />
+							<SeriesKebabMenu
+								onPick={onKebabPick}
+								disabledActions={hasFiles ? [] : ["rename"]}
+							/>
+						</div>
+						<div class="flex items-center gap-2">
+							<label
+								for="series-monitor-preset-phone"
+								class="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle"
+							>
+								<Eye size={14} aria-hidden="true" />
+								{i18n.action_monitor()}
+							</label>
+							<div class="min-w-0 flex-1">
+								<Select
+									id="series-monitor-preset-phone"
+									value={presetValue}
+									options={presetOptions}
+									onChange={(v) => {
+										presetValue = v;
+										applyPreset.mutate(v);
+									}}
+								/>
+							</div>
+						</div>
+					</div>
+
+					<div
+						class="mt-5 hidden flex-wrap items-center gap-x-2.5 gap-y-3 md:flex"
+						aria-label={i18n.series_actions()}
+					>
+						<!-- Two lines, as on the music and book heroes: what the show
+						     follows (preset + bookmark), then playing, searching and the
+						     menu. The spacer is what breaks the line. -->
+						<div class="flex items-center gap-2">
+							<label
+								for="series-monitor-preset"
+								class="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle"
+							>
+								<Eye size={14} aria-hidden="true" />
+								{i18n.action_monitor()}
+							</label>
+							<div class="w-40">
+								<Select
+									id="series-monitor-preset"
+									value={presetValue}
+									options={presetOptions}
+									onChange={(v) => {
+										presetValue = v;
+										applyPreset.mutate(v);
+									}}
+								/>
+							</div>
+						</div>
+
+						<MonitorToggle monitored={show.monitored ?? false} onToggle={() => monitor.mutate(!(show.monitored ?? false))} pending={monitor.isPending} size="md" backdrop />
+
+						<span class="h-0 basis-full" aria-hidden="true"></span>
+
+						<PlayOnMenu
+							path={`/series/${show.id}/play-on`}
+							queryKey={["series", show.id, "play-on"]}
+							disabled={!hasFiles}
+							disabledTitle={i18n.series_available_after_import()}
+						/>
+
+						<button
+							type="button"
+							onclick={() => openPackSearch("series")}
+							class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
+						>
+							<Search size={14} aria-hidden="true" />
+							{i18n.action_manual_search()}
+						</button>
+
+						<SeriesKebabMenu
+							onPick={onKebabPick}
+							disabledActions={hasFiles ? [] : ["rename"]}
+						/>
+					</div>
+				{/if}
+			</div>
+		</div>
+	</section>
+
+	<nav
+		aria-label={i18n.series_sections()}
+		class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
+	>
+		<div bind:this={tabTrack} class="tabs-track flex w-full gap-0.5">
+			{#each TABS as t (t.key)}
+				{@const active = tab === t.key}
+				<button
+					type="button"
+					onclick={() => (tab = t.key)}
+					aria-current={active ? "page" : undefined}
+					class={cn(
+						"relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4",
+						active ? "text-fg" : "text-fg-subtle hover:text-fg",
+					)}
+				>
+					<span>{t.label}</span>
+					{#if t.key === "episodes"}
+						<span class="ml-1.5 font-mono text-[11px] text-fg-faint">
+							{show.have_episodes ?? 0}/{show.total_episodes ?? 0}
+						</span>
+					{/if}
+					{#if active}
+						<span
+							aria-hidden="true"
+							class="absolute inset-x-3 -bottom-px h-0.5 rounded-t-sm bg-accent"
+						></span>
+					{/if}
+				</button>
+			{/each}
+		</div>
+	</nav>
+
+	<div
+		use:swipeTabs={{ keys: TABS.map((t) => t.key), current: tab, onChange: (k) => (tab = k), track: tabTrack }}
+		class="min-h-[60dvh] w-full px-4 py-6 md:px-8"
+	>
+		{#if tab === "overview"}
+			<div
+				class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px] md:gap-7 lg:grid-cols-[1fr_320px] lg:gap-10"
+			>
+				<DetailAbout
+					overview={show.overview}
+					cast={show.cast ?? []}
+					onViewAllCast={() => (tab = "cast")}
+				/>
+
+				<aside class="flex flex-col gap-4">
+					<section
+						class="rounded-lg border border-border bg-bg-elevated p-5"
+						aria-labelledby="series-info-library"
+					>
+						<h4
+							id="series-info-library"
+							class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+						>
+							{i18n.nav_library()}
+						</h4>
+						<dl
+							class="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[12px]"
+						>
+							<dt class="text-fg-subtle">{i18n.quality_profile()}</dt>
+							<dd class="text-right font-mono text-fg">{qpName}</dd>
+							<dt class="text-fg-subtle">{i18n.common_status()}</dt>
+							<dd class="text-right font-mono text-fg capitalize">
+								{show.series_status}
+							</dd>
+							<dt class="text-fg-subtle">{i18n.monitor_monitored()}</dt>
+							<dd class="text-right font-mono text-fg">
+								{show.monitored ? i18n.common_yes() : i18n.common_no()}
+							</dd>
+							<dt class="text-fg-subtle">{i18n.series_episodes()}</dt>
+							<dd class="text-right font-mono text-fg">
+								{show.have_episodes ?? 0}/{show.total_episodes ?? 0}
+							</dd>
+							{#if (show.wanted_episodes ?? 0) > 0}
+								<dt class="text-fg-subtle">{i18n.status_wanted()}</dt>
+								<dd class="text-right font-mono text-status-wanted">
+									{show.wanted_episodes}
+								</dd>
+							{/if}
+							{#if showMissing > 0}
+								<dt class="text-fg-subtle">{i18n.status_missing()}</dt>
+								<dd class="text-right font-mono text-status-missing">
+									{showMissing}
+								</dd>
+							{/if}
+							{#if show.network}
+								<dt class="text-fg-subtle">{i18n.builtin_network()}</dt>
+								<dd class="text-right font-mono text-fg">{show.network}</dd>
+							{/if}
+							{#if airedText}
+								<dt class="text-fg-subtle">{i18n.detail_first_aired()}</dt>
+								<dd class="text-right font-mono text-fg">{airedText}</dd>
+							{:else if show.year}
+								<dt class="text-fg-subtle">{i18n.common_year()}</dt>
+								<dd class="text-right font-mono text-fg">{show.year}</dd>
+							{/if}
+							{#if show.runtime}
+								<dt class="text-fg-subtle">{i18n.detail_runtime()}</dt>
+								<dd class="text-right font-mono text-fg">{show.runtime}m</dd>
+							{/if}
+							<dt class="text-fg-subtle">TVDB</dt>
+							<dd class="text-right">
+								<a
+									href="https://www.thetvdb.com/dereferrer/series/{show.tvdb_id}"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="inline-flex items-center gap-1 font-mono text-accent-text transition hover:text-accent"
+								>
+									{show.tvdb_id}
+									<ExternalLink size={11} aria-hidden="true" />
+								</a>
+							</dd>
+						</dl>
+					</section>
+				</aside>
+			</div>
+		{:else if tab === "episodes"}
+			{#if seasons.length === 0}
+				<p class="py-12 text-center text-sm text-fg-subtle">
+					{i18n.series_no_seasons()}
+				</p>
+			{:else}
+				<!-- Phone: every season is a row with its own progress, one open at a
+				     time — a five-season show would turn the strip into a second scroll
+				     direction, and the table has no room for its columns here. -->
+				<div class="md:hidden">
+					<SeasonAccordion
+						{seasons}
+						selected={selectedSeason ?? seasons[0]?.number ?? 0}
+						onSelect={(n) => (selectedSeason = n)}
+						{showMonitored}
+						seriesType={show.type}
+						onMonitorSeason={(s) => monitorSeason.mutate(s)}
+						onMonitorEpisode={(ep) => monitorEpisode.mutate(ep)}
+						pendingSeason={monitorSeason.isPending ? monitorSeason.variables?.number : null}
+						pendingEpisode={monitorEpisode.isPending ? monitorEpisode.variables?.id : null}
+						onManualSearch={openManualSearch}
+						onSearchSeason={(s) => openPackSearch(String(s.number))}
+						onDeleteFile={(ep) => openDeleteFiles(episodeCode(ep), [ep])}
+						onDeleteSeasonFiles={(s) =>
+							openDeleteFiles(
+								s.number === 0
+									? i18n.series_specials()
+									: seasonTitle(String(s.number).padStart(2, "0")),
+								(s.episodes ?? []).filter((e) => (e.size ?? 0) > 0),
+							)}
+					/>
+				</div>
+
+				<!-- md and up: seasons down the left, episodes beside them, so choosing a
+				     season never pushes the table off screen. -->
+				<div class="hidden gap-6 md:grid md:grid-cols-[200px_1fr] lg:grid-cols-[250px_1fr]">
+					<SeasonStrip
+						vertical
+						{seasons}
+						selected={selectedSeason ?? seasons[0]?.number ?? 0}
+						onSelect={(n) => (selectedSeason = n)}
+						{showMonitored}
+					/>
+
+					<div class="flex min-w-0 flex-col gap-4">
+
+					{#if currentSeason}
+						<div class="flex flex-wrap items-center justify-between gap-3">
+							<div class="flex items-center gap-3">
+								{#if auth.canAddDirectly}
+									<MonitorToggle
+										monitored={currentSeason.monitored}
+										onToggle={() => monitorSeason.mutate(currentSeason)}
+										pending={monitorSeason.isPending}
+										size="sm"
+										startLabel={i18n.action_monitor_season()}
+										stopLabel={i18n.action_stop_monitoring_season()}
+									/>
+								{/if}
+								<div>
+									<h2 class="text-lg font-semibold text-fg">
+										{currentSeason.number === 0
+											? i18n.series_specials()
+											: seasonTitle(currentSeason.number)}
+										{#if currentSeason.name && currentSeason.number !== 0}
+											<span class="text-fg-subtle">· {currentSeason.name}</span>
+										{/if}
+									</h2>
+									<p class="mt-0.5 font-mono text-xs text-fg-muted">
+										{NOUN_EPISODE.count(currentSeason.total ?? 0)}
+										<span class="text-fg-faint">·</span>
+										{countAvailable(currentSeason.available ?? 0)}
+										{#if (currentSeason.missing ?? 0) > 0}
+											<span class="text-fg-faint">·</span>
+											<span class="text-status-wanted"
+												>{countWanted(currentSeason.missing ?? 0)}</span
+											>
+										{/if}
+										{#if seasonMissing > 0}
+											<span class="text-fg-faint">·</span>
+											<span class="text-status-missing">{countMissing(seasonMissing)}</span>
+										{/if}
+										{#if (currentSeason.unaired ?? 0) > 0}
+											<span class="text-fg-faint">·</span>
+											<span class="text-fg-faint">{countUnaired(currentSeason.unaired ?? 0)}</span>
+										{/if}
+									</p>
+								</div>
+							</div>
+							{#if auth.canAddDirectly}
+								<div class="flex items-center gap-2">
+									<button
+										type="button"
+										onclick={() =>
+											currentSeason && openPackSearch(String(currentSeason.number))}
+										class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-border-strong hover:text-fg"
+									>
+										<Search size={15} aria-hidden="true" />
+										{i18n.series_search_season()}
+									</button>
+									{#if seasonFileEpisodes.length > 0}
+										<button
+											type="button"
+											onclick={() =>
+												currentSeason &&
+												openDeleteFiles(
+													currentSeason.number === 0
+														? i18n.series_specials()
+														: seasonTitle(currentSeason.number),
+													seasonFileEpisodes,
+												)}
+											class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
+										>
+											<Trash2 size={15} aria-hidden="true" />
+											{i18n.action_delete_files()}
+										</button>
+									{/if}
+								</div>
+							{/if}
+						</div>
+
+						<EpisodeTable
+							episodes={currentEpisodes}
+							seasonNumber={currentSeason.number}
+							seriesType={show.type}
+							seasonMonitored={currentSeason.monitored}
+							onMonitorEpisode={(ep) => monitorEpisode.mutate(ep)}
+							pendingEpisode={monitorEpisode.isPending ? monitorEpisode.variables?.id : null}
+							onManualSearch={openManualSearch}
+							onDeleteFile={(ep) => openDeleteFiles(episodeCode(ep), [ep])}
+						/>
+					{/if}
+					</div>
+				</div>
+			{/if}
+		{:else if tab === "history"}
+			<DetailHistory seriesId={show.id} />
+		{:else if tab === "cast"}
+			<DetailCast cast={show.cast ?? []} />
+		{/if}
+	</div>
+
+	<ReidentifyDialog
+		open={reidentifyOpen}
+		kind="series"
+		id={show.id}
+		currentTitle={show.title}
+		onClose={() => (reidentifyOpen = false)}
+	/>
+
+	<SeriesRenamePreviewModal
+		open={renameOpen}
+		seriesId={show.id}
+		onClose={() => (renameOpen = false)}
+	/>
+
+	<QualityProfileModal
+		open={qpOpen}
+		current={show.quality_profile}
+		profiles={qpQuery.data ?? []}
+		saving={saveProfile.isPending}
+		onClose={() => (qpOpen = false)}
+		onSave={(p) => saveProfile.mutate(p)}
+	/>
+
+	<SeriesTypeModal
+		open={typeOpen}
+		current={show.type}
+		saving={saveType.isPending}
+		onClose={() => (typeOpen = false)}
+		onSave={(t) => saveType.mutate(t)}
+	/>
+
+	<DeleteTitleDialog
+		open={deleteOpen}
+		title={i18n.series_remove_title({ title: show.title })}
+		body={i18n.series_remove_body()}
+		filesLabel={i18n.series_delete_files_label()}
+		filesNote={i18n.common_cannot_undo()}
+		canDeleteFiles={hasFiles}
+		pending={del.isPending}
+		onClose={() => (deleteOpen = false)}
+		onConfirm={(withFiles) => del.mutate(withFiles)}
+	/>
+	<SeriesManualSearchModal
+		open={manualOpen}
+		seriesId={show.id}
+		episodeId={manualEpisode?.id ?? 0}
+		scopeLabel={manualScope}
+		existing={manualEpisode ? existingFromEpisode(manualEpisode) : null}
+		onClose={() => (manualOpen = false)}
+	/>
+	<SeriesReleaseSearchModal
+		open={packSearchOpen}
+		seriesId={show.id}
+		seasons={searchSeasons}
+		initialScope={packSearchScope}
+		fileCounts={packFileCounts}
+		missingCounts={packMissingCounts}
+		scopeLabel={show.year ? `${show.title} (${show.year})` : show.title}
+		onClose={() => (packSearchOpen = false)}
+	/>
+	<Dialog
+		open={deleteFiles !== null}
+		title={deleteFiles && deleteFiles.episodes.length > 1
+			? i18n.series_delete_all_files({
+					count: deleteFiles.episodes.length,
+					label: deleteFiles.label,
+				})
+			: i18n.series_delete_episode_confirm()}
+		onClose={() => (deleteFiles = null)}
+		actions={[
+			{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+			{
+				label:
+					deleteFiles && deleteFiles.episodes.length > 1
+						? i18n.action_delete_files()
+						: i18n.action_delete_file(),
+				variant: "danger",
+				dismiss: false,
+				pending: delFiles.isPending,
+				onClick: () =>
+					deleteFiles &&
+					delFiles.mutate({
+						episodes: deleteFiles.episodes,
+						remove: removeFilesTorrent,
+					}),
+			},
+		]}
+	>
+		<p class="text-sm leading-relaxed text-fg-muted">
+			{#if deleteFiles && deleteFiles.episodes.length > 1}
+				{filesRevertManyPre}<span class="font-medium text-fg">{i18n.lc_wanted()}</span
+				>{filesRevertManyPost}
+			{:else}
+				{filesRevertOnePre}<span class="font-medium text-fg">{i18n.lc_wanted()}</span
+				>{filesRevertOnePost}
+			{/if}
+		</p>
+		<Checkbox
+			checked={removeFilesTorrent}
+			onChange={(v) => (removeFilesTorrent = v)}
+			class="mt-4 text-sm text-fg"
+		>
+			{deleteFiles && deleteFiles.episodes.length > 1
+				? i18n.series_remove_torrents()
+				: i18n.file_also_remove_torrent()}
+		</Checkbox>
+	</Dialog>
+{/if}
+
+<style>
+	.hero-overlay {
+		background-image: linear-gradient(
+			180deg,
+			rgb(11 11 16 / 0.3) 0%,
+			rgb(11 11 16 / 0.7) 60%,
+			var(--bg-deep) 100%
+		);
+	}
+	.tabs-track {
+		overflow-x: auto;
+		overflow-y: hidden;
+		scrollbar-width: none;
+	}
+	.tabs-track::-webkit-scrollbar {
+		display: none;
+	}
+</style>

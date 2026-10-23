@@ -1,0 +1,405 @@
+package quality_test
+
+import (
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/quality"
+)
+
+var _ = Describe("Format.Matches", Label("unit", "quality"), func() {
+	title := func(pat string, req, neg bool) quality.Condition {
+		return quality.Condition{
+			Type: quality.ConditionReleaseTitle, Pattern: pat,
+			Required: req, Negate: neg,
+		}
+	}
+	mk := func(conds ...quality.Condition) quality.Format {
+		f, err := quality.NewFormat("t", conds)
+		Expect(err).NotTo(HaveOccurred())
+		return f
+	}
+	rel := quality.ReleaseContext{
+		Title: "Movie.2024.2160p.BluRay.REMUX.HDR.x265-GRP",
+		Size:  8 << 30, Seeders: 50, HasSeeders: true,
+	}
+
+	It("passes when all required conditions match", func() {
+		Expect(mk(title(`(?i)remux`, true, false)).Matches(rel)).To(BeTrue())
+	})
+	It("fails when a required condition misses", func() {
+		Expect(mk(title(`(?i)webrip`, true, false)).Matches(rel)).To(BeFalse())
+	})
+	It("needs at least one optional hit when optionals exist", func() {
+		f := mk(title(`(?i)remux`, true, false),
+			title(`(?i)webrip`, false, false), title(`(?i)hdr`, false, false))
+		Expect(f.Matches(rel)).To(BeTrue())
+		f2 := mk(title(`(?i)remux`, true, false),
+			title(`(?i)webrip`, false, false), title(`(?i)cam`, false, false))
+		Expect(f2.Matches(rel)).To(BeFalse())
+	})
+	It("negate inverts a condition", func() {
+		Expect(mk(title(`(?i)remux`, true, true)).Matches(rel)).To(BeFalse())
+	})
+	It("unrecorded data matches neither way, negated or not", func() {
+		noSeed := rel
+		noSeed.HasSeeders = false
+		c := quality.Condition{
+			Type: quality.ConditionSeeders, Min: 1, Required: true,
+		}
+		Expect(mk(c).Matches(noSeed)).To(BeFalse())
+		c.Negate = true
+		Expect(mk(c).Matches(noSeed)).To(BeFalse())
+	})
+})
+
+// The regression this whole tri-state exists for: `negate` on a field nobody
+// filled in scored a match out of ignorance. On a real library every imported
+// file hit the idiomatic "release carries no group" format for -100 apiece,
+// because the scorer was reading a renamed path that never had a group in it.
+var _ = Describe("unknown vs absent input", Label("unit", "quality"), func() {
+	noGroup := quality.Condition{
+		Type: quality.ConditionReleaseGroup, Pattern: `.`,
+		Negate: true, Required: true,
+	}
+	mk := func(c quality.Condition) quality.Format {
+		f, err := quality.NewFormat("no-release-group", []quality.Condition{c})
+		Expect(err).NotTo(HaveOccurred())
+		return f
+	}
+
+	It("does not fire on a row whose group was never recorded", func() {
+		row := quality.ReleaseContext{Size: 1 << 30, EmptyIsUnknown: true}
+		Expect(mk(noGroup).Matches(row)).To(BeFalse())
+	})
+
+	It("still fires on a release name that carries no group", func() {
+		rel := quality.ReleaseContext{Title: "Movie 2024 1080p", Size: 1 << 30}
+		Expect(mk(noGroup).Matches(rel)).To(BeTrue())
+	})
+
+	It("does not fire on a row that did record a group", func() {
+		row := quality.ReleaseContext{
+			Size: 1 << 30, Group: "GRP", EmptyIsUnknown: true,
+		}
+		Expect(mk(noGroup).Matches(row)).To(BeFalse())
+	})
+
+	It("skips a release_title condition on a row, which has no name", func() {
+		row := quality.ReleaseContext{
+			Size: 1 << 30, Source: "BluRay", EmptyIsUnknown: true,
+		}
+		for _, neg := range []bool{false, true} {
+			f, err := quality.NewFormat("vff", []quality.Condition{{
+				Type: quality.ConditionReleaseTitle, Pattern: `(?i)\bvff\b`,
+				Negate: neg, Required: true,
+			}})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Matches(row)).To(BeFalse(), "negate=%v", neg)
+		}
+	})
+
+	It("scores a row off its stored columns, not its renamed path", func() {
+		bluray, err := quality.NewFormat("source-bluray", []quality.Condition{{
+			Type: quality.ConditionSource, Value: "BluRay", Required: true,
+		}})
+		Expect(err).NotTo(HaveOccurred())
+		p := quality.Profile{
+			MinResolution: "1080p", MaxResolution: "2160p",
+			Formats: []quality.ScoredFormat{
+				{Format: mk(noGroup), Score: -100},
+				{Format: bluray, Score: 50},
+			},
+		}
+		row := quality.ReleaseContext{
+			Size: 8 << 30, Resolution: "2160p", Source: "BluRay",
+			Group: "FraMeSToR", EmptyIsUnknown: true,
+		}
+		res := quality.Evaluate(p, row)
+		Expect(res.Rejected).To(BeFalse())
+		Expect(res.Score).To(Equal(50))
+		Expect(res.Matched).To(ConsistOf("source-bluray"))
+	})
+})
+
+var _ = Describe("condition evaluation per type", Label("unit", "quality"), func() {
+	mk := func(c quality.Condition) quality.Format {
+		f, err := quality.NewFormat("t", []quality.Condition{c})
+		Expect(err).NotTo(HaveOccurred())
+		return f
+	}
+
+	It("matches resolution exactly and case-insensitively", func() {
+		r := quality.ReleaseContext{Resolution: "1080p"}
+		c := quality.Condition{
+			Type:     quality.ConditionResolution,
+			Value:    "1080p",
+			Required: true,
+		}
+		Expect(mk(c).Matches(r)).To(BeTrue())
+
+		r2 := quality.ReleaseContext{Resolution: "2160p"}
+		Expect(mk(c).Matches(r2)).To(BeFalse())
+	})
+
+	It("matches source exactly and case-insensitively", func() {
+		r := quality.ReleaseContext{Source: "bluray"}
+		c := quality.Condition{
+			Type:     quality.ConditionSource,
+			Value:    "BluRay",
+			Required: true,
+		}
+		Expect(mk(c).Matches(r)).To(BeTrue())
+
+		r2 := quality.ReleaseContext{Source: "WEB-DL"}
+		Expect(mk(c).Matches(r2)).To(BeFalse())
+	})
+
+	It("matches codec exactly and case-insensitively", func() {
+		r := quality.ReleaseContext{Codec: "hevc"}
+		c := quality.Condition{
+			Type:     quality.ConditionCodec,
+			Value:    "HEVC",
+			Required: true,
+		}
+		Expect(mk(c).Matches(r)).To(BeTrue())
+
+		r2 := quality.ReleaseContext{Codec: "x264"}
+		Expect(mk(c).Matches(r2)).To(BeFalse())
+	})
+
+	It("matches release_group by regex against Group", func() {
+		r := quality.ReleaseContext{Group: "FraMeSToR"}
+		c := quality.Condition{
+			Type:     quality.ConditionReleaseGroup,
+			Pattern:  `(?i)^framestor$`,
+			Required: true,
+		}
+		Expect(mk(c).Matches(r)).To(BeTrue())
+
+		r2 := quality.ReleaseContext{Group: "OTHER"}
+		Expect(mk(c).Matches(r2)).To(BeFalse())
+	})
+
+	It("matches size within an inclusive [MinGB, MaxGB] band", func() {
+		c := quality.Condition{
+			Type:     quality.ConditionSize,
+			MinGB:    4,
+			MaxGB:    10,
+			Required: true,
+		}
+		f := mk(c)
+		Expect(f.Matches(quality.ReleaseContext{Size: 8 << 30})).To(BeTrue())
+		Expect(f.Matches(quality.ReleaseContext{Size: 2 << 30})).To(BeFalse())
+		Expect(f.Matches(quality.ReleaseContext{Size: 20 << 30})).To(BeFalse())
+	})
+
+	It("treats a zero MinGB/MaxGB as unbounded on that side", func() {
+		lower := mk(
+			quality.Condition{Type: quality.ConditionSize, MinGB: 4, Required: true},
+		)
+		Expect(lower.Matches(quality.ReleaseContext{Size: 100 << 30})).To(BeTrue())
+		Expect(lower.Matches(quality.ReleaseContext{Size: 1 << 30})).To(BeFalse())
+
+		upper := mk(
+			quality.Condition{
+				Type:     quality.ConditionSize,
+				MaxGB:    10,
+				Required: true,
+			},
+		)
+		Expect(upper.Matches(quality.ReleaseContext{Size: 1 << 30})).To(BeTrue())
+		Expect(upper.Matches(quality.ReleaseContext{Size: 20 << 30})).To(BeFalse())
+	})
+
+	It("scales both size bounds by the episode count", func() {
+		f := mk(quality.Condition{
+			Type:     quality.ConditionSize,
+			MinGB:    1,
+			MaxGB:    5,
+			Required: true,
+		})
+		// One episode reads the bounds as typed.
+		Expect(f.Matches(quality.ReleaseContext{
+			Size: 3 << 30, EpisodeCount: 1,
+		})).To(BeTrue())
+		Expect(f.Matches(quality.ReleaseContext{
+			Size: 20 << 30, EpisodeCount: 1,
+		})).To(BeFalse())
+
+		// A 12-episode pack gets a 12..60 GB band from the same numbers: the
+		// season at 17 GB fits, the remux at 155 GB does not.
+		Expect(f.Matches(quality.ReleaseContext{
+			Size: 17 << 30, EpisodeCount: 12,
+		})).To(BeTrue())
+		Expect(f.Matches(quality.ReleaseContext{
+			Size: 155 << 30, EpisodeCount: 12,
+		})).To(BeFalse())
+		// And the lower bound scales too: one episode's worth of bytes is
+		// suspiciously small for twelve of them.
+		Expect(f.Matches(quality.ReleaseContext{
+			Size: 3 << 30, EpisodeCount: 12,
+		})).To(BeFalse())
+	})
+
+	It("leaves size bounds unscaled when the episode count is unknown", func() {
+		f := mk(quality.Condition{
+			Type:     quality.ConditionSize,
+			MaxGB:    5,
+			Required: true,
+		})
+		// Zero and negative both mean "the library could not say", and must
+		// read as a plain whole-release bound rather than collapsing it.
+		for _, n := range []int{0, -1} {
+			Expect(f.Matches(quality.ReleaseContext{
+				Size: 3 << 30, EpisodeCount: n,
+			})).To(BeTrue())
+			Expect(f.Matches(quality.ReleaseContext{
+				Size: 20 << 30, EpisodeCount: n,
+			})).To(BeFalse())
+		}
+	})
+
+	It("requires seeders >= Min only when HasSeeders", func() {
+		c := quality.Condition{
+			Type:     quality.ConditionSeeders,
+			Min:      10,
+			Required: true,
+		}
+		f := mk(c)
+		Expect(
+			f.Matches(quality.ReleaseContext{Seeders: 10, HasSeeders: true}),
+		).To(BeTrue())
+		Expect(
+			f.Matches(quality.ReleaseContext{Seeders: 9, HasSeeders: true}),
+		).To(BeFalse())
+		Expect(
+			f.Matches(quality.ReleaseContext{Seeders: 50, HasSeeders: false}),
+		).To(BeFalse())
+	})
+})
+
+var _ = Describe("NewFormat validation", Label("unit", "quality"), func() {
+	It("errors on an uncompilable pattern", func() {
+		_, err := quality.NewFormat("t", []quality.Condition{{
+			Type: quality.ConditionReleaseTitle, Pattern: "(unterminated",
+		}})
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("errors on an unknown condition type", func() {
+		_, err := quality.NewFormat("t", []quality.Condition{{
+			Type: quality.ConditionType("bogus"),
+		}})
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("errors on a regex type with an empty pattern", func() {
+		_, err := quality.NewFormat("t", []quality.Condition{{
+			Type: quality.ConditionReleaseTitle,
+		}})
+		Expect(err).To(HaveOccurred())
+
+		_, err = quality.NewFormat("t", []quality.Condition{{
+			Type: quality.ConditionReleaseGroup,
+		}})
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("errors on a resolution condition whose Value isn't a known bucket", func() {
+		_, err := quality.NewFormat("t", []quality.Condition{{
+			Type: quality.ConditionResolution, Value: "4000p",
+		}})
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("locates the condition by name when the format has one", func() {
+		_, err := quality.NewFormat("t", []quality.Condition{{
+			Type: quality.ConditionReleaseTitle, Pattern: "([",
+		}})
+		Expect(err).To(MatchError(ContainSubstring(`format "t" condition 0`)))
+	})
+
+	It("omits the empty name prefix for an unnamed draft", func() {
+		_, err := quality.NewFormat("", []quality.Condition{{
+			Type: quality.ConditionReleaseTitle, Pattern: "([",
+		}})
+		Expect(err).To(MatchError(ContainSubstring("condition 0")))
+		Expect(err.Error()).NotTo(ContainSubstring("format"))
+	})
+})
+
+var _ = Describe("stream conditions", Label("unit", "quality"), func() {
+	row := func(mut func(*quality.ReleaseContext)) quality.ReleaseContext {
+		r := quality.ReleaseContext{
+			Title: "Show - S01E01 - Title [].mkv", EmptyIsUnknown: true,
+		}
+		mut(&r)
+		return r
+	}
+
+	It("reports a release_title condition unknown for a row", func() {
+		// The basename is non-empty, so without the EmptyIsUnknown arm this
+		// is a confident false for every file in the library — which is how a
+		// file scored 0 against a release's vostfr and the scanner read the
+		// whole library as upgradable.
+		f := mustFmt("t", quality.Condition{
+			Type: quality.ConditionReleaseTitle, Pattern: `(?i)\bvostfr\b`,
+		})
+		Expect(f.Matches(row(func(*quality.ReleaseContext) {}))).To(BeFalse())
+		Expect(f.Explain(row(func(*quality.ReleaseContext) {}))).
+			To(Equal([]bool{false}))
+	})
+
+	It("still matches a release_title condition on a release", func() {
+		f := mustFmt("t", quality.Condition{
+			Type: quality.ConditionReleaseTitle, Pattern: `(?i)\bvostfr\b`,
+		})
+		Expect(f.Matches(quality.ReleaseContext{
+			Title: "Show.S01E01.VOSTFR.1080p-GRP",
+		})).To(BeTrue())
+	})
+
+	It("matches audio_tracks against the minimum", func() {
+		f := mustFmt("m", quality.Condition{
+			Type: quality.ConditionAudioTracks, Min: 2,
+		})
+		two, one := 2, 1
+		Expect(f.Matches(row(func(r *quality.ReleaseContext) {
+			r.AudioTracks = &two
+		}))).To(BeTrue())
+		Expect(f.Matches(row(func(r *quality.ReleaseContext) {
+			r.AudioTracks = &one
+		}))).To(BeFalse())
+	})
+
+	It("canonicalises a language condition's value at compile time", func() {
+		// An operator writing the spelling their own library uses must not
+		// silently match nothing.
+		f := mustFmt("s", quality.Condition{
+			Type: quality.ConditionSubtitleLanguage, Value: "FRE",
+		})
+		Expect(f.Matches(row(func(r *quality.ReleaseContext) {
+			r.SubLangs = []string{"fra"}
+		}))).To(BeTrue())
+	})
+
+	It("treats a nil list as unknown and an empty list as a real answer", func() {
+		f := mustFmt("s", quality.Condition{
+			Type: quality.ConditionAudioLanguage, Value: "fra", Negate: true,
+		})
+		// nil: nobody looked, so the negation must not score a positive.
+		Expect(f.Matches(row(func(*quality.ReleaseContext) {}))).To(BeFalse())
+		// empty: probed, no French track — the negation is earned.
+		Expect(f.Matches(row(func(r *quality.ReleaseContext) {
+			r.AudioLangs = []string{}
+		}))).To(BeTrue())
+	})
+
+	It("rejects a language condition with no value", func() {
+		_, err := quality.NewFormat("x", []quality.Condition{
+			{Type: quality.ConditionAudioLanguage},
+		})
+		Expect(err).To(MatchError(ContainSubstring("value required")))
+	})
+})

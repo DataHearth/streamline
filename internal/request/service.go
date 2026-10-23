@@ -1,0 +1,581 @@
+// Package request is the media-request subsystem: users request movies/shows,
+// admins approve (creating the monitored library item) or deny. It serves both
+// verticals and is the purpose of the request_only role.
+package request
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"regexp"
+	"unicode/utf8"
+
+	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/otelx"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+)
+
+var tracer = otel.Tracer("github.com/datahearth/streamline/internal/request")
+
+var (
+	// ErrDuplicate is returned when the media is already requested (active) or
+	// already in the library.
+	ErrDuplicate = errors.New("request: already requested or in library")
+	// ErrInvalidRequest is returned by Create when the media identity does not
+	// fit the type: music types are keyed by MBID, every other type by id.
+	ErrInvalidRequest = errors.New("request: invalid request")
+	// ErrRequestNotFound is returned by Approve/Deny/Reopen for an unknown id
+	// so callers can answer 404 instead of 500.
+	ErrRequestNotFound = errors.New("request not found")
+	// ErrUnknownProfile is returned by Approve for a quality profile that is
+	// not in the request's medium family. The request stays pending.
+	ErrUnknownProfile = errors.New("request: unknown quality profile")
+	// ErrAlreadyInLibrary is what an adder returns for an item the library
+	// already holds; approving then only has to mark the request available.
+	ErrAlreadyInLibrary = errors.New("request: already in library")
+	// ErrAlbumNotFound is returned by Approve for an album request whose
+	// release group MusicBrainz does not know, or does not list on its artist.
+	// The request stays pending.
+	ErrAlbumNotFound = errors.New("request: album not found on its artist")
+	// ErrUnavailable is what an adder returns for a medium the library cannot
+	// hold yet; Approve leaves the request pending.
+	ErrUnavailable = errors.New("request: adding this item is not available yet")
+)
+
+// Monitor values an approval adds with. A requester never chooses one.
+const (
+	artistMonitor = "all"
+	bookMonitor   = "both"
+	seriesMonitor = "all"
+
+	// albumArtistMonitor adds the artist of a requested album with every other
+	// release group unmonitored, so the rest of its discography stays out of
+	// the want list.
+	albumArtistMonitor = "manual"
+
+	artistNameMaxLen = 200
+)
+
+var mbidRe = regexp.MustCompile(
+	`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,
+)
+
+// MovieAdder / ShowAdder are the slices of the media services this needs —
+// declared at the consumer so the request service depends only on what it uses.
+type MovieAdder interface {
+	Add(
+		ctx context.Context,
+		tmdbID uint32,
+		qualityProfile string,
+	) (*ent.Movie, string, error)
+	GetByTMDBID(ctx context.Context, tmdbID uint32) (*ent.Movie, error)
+}
+
+type ShowAdder interface {
+	Add(
+		ctx context.Context,
+		tvdbID uint32,
+		qualityProfile string,
+	) (*ent.TVShow, error)
+}
+
+// ArtistAdder adds a requested artist to the library. An artist the library
+// already holds is reported as ErrAlreadyInLibrary.
+type ArtistAdder interface {
+	AddArtist(
+		ctx context.Context,
+		mbid, monitor, qualityProfile string,
+	) error
+}
+
+// AlbumMonitor monitors one album of an artist the library already holds. An
+// album the artist's stored release groups lack is looked for once after a
+// refresh and reported as ErrAlbumNotFound when it is still absent; held says
+// the album was already monitored and has its files, so approving it has
+// nothing left to do.
+type AlbumMonitor interface {
+	MonitorAlbum(
+		ctx context.Context,
+		artistMBID, albumMBID string,
+	) (held bool, err error)
+}
+
+// BookAdder adds a requested book or series to the library and answers the two
+// in-library questions Create asks. AddBook and AddSeries report an item the
+// library already holds as ErrAlreadyInLibrary, and an unconfigured Hardcover
+// provider as book.ErrNotConfigured.
+type BookAdder interface {
+	AddBook(
+		ctx context.Context,
+		hardcoverID uint32,
+		monitor, qualityProfile string,
+	) error
+	AddSeries(
+		ctx context.Context,
+		hardcoverID uint32,
+		monitor, qualityProfile string,
+	) error
+	HasBook(ctx context.Context, hardcoverID uint32) (bool, error)
+	HasSeries(ctx context.Context, hardcoverID uint32) (bool, error)
+}
+
+type Service struct {
+	db        db.Store
+	movies    MovieAdder
+	shows     ShowAdder
+	artists   ArtistAdder
+	albums    AlbumMonitor
+	books     BookAdder
+	musicMeta metadata.MusicProvider
+}
+
+func NewService(
+	store db.Store,
+	movies MovieAdder,
+	shows ShowAdder,
+	artists ArtistAdder,
+	albums AlbumMonitor,
+	books BookAdder,
+	musicMeta metadata.MusicProvider,
+) *Service {
+	return &Service{
+		db:        store,
+		movies:    movies,
+		shows:     shows,
+		artists:   artists,
+		albums:    albums,
+		books:     books,
+		musicMeta: musicMeta,
+	}
+}
+
+type CreateParams struct {
+	MediaType      string
+	MediaID        uint32
+	MediaMBID      string
+	Title          string
+	RequesterID    uint32
+	QualityProfile string
+	// ArtistMBID and ArtistName are an album request's hints: display data
+	// from the requester, never trusted for approval.
+	ArtistMBID string
+	ArtistName string
+}
+
+func isMusicType(mediaType string) bool {
+	return mediaType == "artist" || mediaType == "album"
+}
+
+// validate checks the media identity fits the type: an artist or album is keyed
+// by MBID, every other type by id.
+func validate(p CreateParams) error {
+	if p.MediaType != "album" && (p.ArtistMBID != "" || p.ArtistName != "") {
+		return fmt.Errorf(
+			"%w: artist_mbid and artist_name only apply to an album",
+			ErrInvalidRequest,
+		)
+	}
+	switch p.MediaType {
+	case "artist":
+		if p.MediaMBID == "" || p.MediaID != 0 {
+			return fmt.Errorf(
+				"%w: artist needs a media_mbid and no media_id", ErrInvalidRequest,
+			)
+		}
+	case "album":
+		if p.MediaMBID == "" || p.MediaID != 0 {
+			return fmt.Errorf(
+				"%w: album needs a media_mbid and no media_id", ErrInvalidRequest,
+			)
+		}
+		if !mbidRe.MatchString(p.ArtistMBID) {
+			return fmt.Errorf(
+				"%w: album needs an artist_mbid that is a UUID", ErrInvalidRequest,
+			)
+		}
+		if n := utf8.RuneCountInString(p.ArtistName); n < 1 || n > artistNameMaxLen {
+			return fmt.Errorf(
+				"%w: album needs an artist_name of 1 to %d characters",
+				ErrInvalidRequest, artistNameMaxLen,
+			)
+		}
+	case "movie", "tvshow", "book", "book_series":
+		if p.MediaID == 0 || p.MediaMBID != "" {
+			return fmt.Errorf(
+				"%w: %s needs a media_id and no media_mbid",
+				ErrInvalidRequest, p.MediaType,
+			)
+		}
+	default:
+		return fmt.Errorf(
+			"%w: unknown media_type %q", ErrInvalidRequest, p.MediaType,
+		)
+	}
+	return nil
+}
+
+func (s *Service) Create(
+	ctx context.Context,
+	p CreateParams,
+) (*ent.Request, error) {
+	ctx, span := tracer.Start(ctx, "request.create",
+		trace.WithAttributes(
+			attribute.String("media.type", p.MediaType),
+			attribute.Int("media.id", int(p.MediaID)),
+			attribute.String("media.mbid", p.MediaMBID),
+		))
+	defer span.End()
+
+	if err := validate(p); err != nil {
+		return nil, err
+	}
+
+	var (
+		existing *ent.Request
+		err      error
+	)
+	if isMusicType(p.MediaType) {
+		existing, err = s.db.FindActiveRequestByMBID(
+			ctx, p.MediaType, p.MediaMBID,
+		)
+	} else {
+		existing, err = s.db.FindActiveRequest(ctx, p.MediaType, p.MediaID)
+	}
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	if existing != nil {
+		return nil, ErrDuplicate
+	}
+	switch p.MediaType {
+	case "movie":
+		if m, err := s.movies.GetByTMDBID(ctx, p.MediaID); err == nil && m != nil {
+			return nil, ErrDuplicate
+		}
+	case "tvshow":
+		if sh, err := s.db.FindTVShowByTVDBID(ctx, p.MediaID); err == nil &&
+			sh != nil {
+			return nil, ErrDuplicate
+		}
+	case "artist":
+		a, err := s.db.FindArtistByMBID(ctx, p.MediaMBID)
+		if err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+		if a != nil {
+			return nil, ErrDuplicate
+		}
+	case "album":
+		monitored, err := s.db.IsAlbumMonitoredByMBID(ctx, p.MediaMBID)
+		if err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+		if monitored {
+			return nil, ErrDuplicate
+		}
+	case "book":
+		in, err := s.books.HasBook(ctx, p.MediaID)
+		if err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+		if in {
+			return nil, ErrDuplicate
+		}
+	case "book_series":
+		in, err := s.books.HasSeries(ctx, p.MediaID)
+		if err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+		if in {
+			return nil, ErrDuplicate
+		}
+	}
+	row, err := s.db.CreateRequest(ctx, db.CreateRequestParams{
+		MediaType:      p.MediaType,
+		MediaID:        p.MediaID,
+		MediaMBID:      p.MediaMBID,
+		Title:          p.Title,
+		RequesterID:    p.RequesterID,
+		QualityProfile: p.QualityProfile,
+		ArtistMBID:     p.ArtistMBID,
+		ArtistName:     p.ArtistName,
+		RequestedAs:    p.ArtistName,
+	})
+	if err != nil {
+		// The partial unique indexes over active (media_type, media_id) and
+		// (media_type, media_mbid) are the real dedup gate — the lookups above
+		// only save a round-trip and lose to a concurrent request that inserts
+		// between them and this write.
+		if ent.IsConstraintError(err) {
+			return nil, ErrDuplicate
+		}
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	// The request system is the only bridge between a user's ask and a library
+	// change, and none of its four transitions logged anything — so "who
+	// requested this, who approved it, and why was that one denied" was
+	// unanswerable from the log stream.
+	slog.InfoContext(ctx, "media requested",
+		"request.id", row.ID,
+		"media.type", p.MediaType,
+		"media.id", p.MediaID,
+		"media.mbid", p.MediaMBID,
+		"user.id", p.RequesterID)
+	return row, nil
+}
+
+// Approve adds the requested item to the library with qualityProfile (empty
+// resolves to the medium's default) and marks the request approved. A profile
+// that is not in the request's medium family fails with ErrUnknownProfile
+// before anything is added.
+func (s *Service) Approve(
+	ctx context.Context,
+	id, adminID uint32,
+	qualityProfile string,
+) (*ent.Request, error) {
+	ctx, span := tracer.Start(ctx, "request.approve",
+		trace.WithAttributes(attribute.Int("request.id", int(id))))
+	defer span.End()
+
+	req, err := s.db.GetRequest(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("request %d: %w", id, ErrRequestNotFound)
+		}
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	if err := checkProfile(string(req.MediaType), qualityProfile); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	// The library row Add creates carries its own `added` event via the ent
+	// hook. This one is the half the hook cannot see: that the addition came
+	// from a request, and which one.
+	var (
+		scope            events.Scope
+		ownerID          uint32
+		alreadyInLibrary bool
+		verifiedArtist   *metadata.ReleaseGroupDetails
+	)
+	switch req.MediaType {
+	case "movie":
+		m, _, err := s.movies.Add(ctx, req.MediaID, qualityProfile)
+		if err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("approve: add movie: %w", err),
+			)
+		}
+		scope, ownerID = events.ScopeMovie, m.ID
+	case "tvshow":
+		show, err := s.shows.Add(ctx, req.MediaID, qualityProfile)
+		if err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("approve: add show: %w", err),
+			)
+		}
+		scope, ownerID = events.ScopeSeries, show.ID
+	case "artist":
+		err := s.artists.AddArtist(ctx, req.MediaMbid, artistMonitor, qualityProfile)
+		if errors.Is(err, ErrAlreadyInLibrary) {
+			alreadyInLibrary = true
+		} else if err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("approve: add artist: %w", err),
+			)
+		}
+	case "album":
+		rg, held, err := s.approveAlbum(ctx, req.MediaMbid, qualityProfile)
+		if err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+		verifiedArtist, alreadyInLibrary = rg, held
+	case "book":
+		err := s.books.AddBook(ctx, req.MediaID, bookMonitor, qualityProfile)
+		if errors.Is(err, ErrAlreadyInLibrary) {
+			alreadyInLibrary = true
+		} else if err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("approve: add book: %w", err),
+			)
+		}
+	case "book_series":
+		err := s.books.AddSeries(ctx, req.MediaID, seriesMonitor, qualityProfile)
+		if errors.Is(err, ErrAlreadyInLibrary) {
+			alreadyInLibrary = true
+		} else if err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("approve: add book series: %w", err),
+			)
+		}
+	}
+	if verifiedArtist != nil {
+		err = s.db.ApproveAlbumRequest(
+			ctx, id, adminID, verifiedArtist.ArtistMBID, verifiedArtist.ArtistName,
+		)
+	} else {
+		err = s.db.ApproveRequest(ctx, id, adminID)
+	}
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	if alreadyInLibrary {
+		if err := s.db.MarkRequestAvailable(ctx, id); err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+	}
+	if ownerID != 0 {
+		if err := events.Record(
+			ctx, nil, events.TypeRequestApproved, scope, ownerID,
+			map[string]any{
+				"request_id":  id,
+				"approved_by": adminID,
+			},
+		); err != nil {
+			slog.WarnContext(ctx, "record request approval event failed",
+				"request.id", id, "error", err)
+		}
+	}
+	slog.InfoContext(ctx, "request approved",
+		"request.id", id, "media.type", req.MediaType, "user.id", adminID)
+	return s.db.GetRequest(ctx, id)
+}
+
+// approveAlbum makes exactly one album monitored. The artist is the one
+// MusicBrainz names for the release group, never the requester's hint; a
+// missing artist is added with every other album unmonitored, and an artist
+// already held keeps its own profile.
+func (s *Service) approveAlbum(
+	ctx context.Context,
+	albumMBID, qualityProfile string,
+) (*metadata.ReleaseGroupDetails, bool, error) {
+	rg, err := s.musicMeta.GetReleaseGroup(ctx, albumMBID)
+	if errors.Is(err, metadata.ErrNotFound) {
+		return nil, false, fmt.Errorf("%w: %s", ErrAlbumNotFound, albumMBID)
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("approve: get release group: %w", err)
+	}
+	if rg.ArtistMBID == "" {
+		return nil, false, fmt.Errorf(
+			"%w: %s has no artist",
+			ErrAlbumNotFound,
+			albumMBID,
+		)
+	}
+	held, err := s.db.FindArtistByMBID(ctx, rg.ArtistMBID)
+	if err != nil {
+		return nil, false, fmt.Errorf("approve: find artist: %w", err)
+	}
+	if held == nil {
+		err = s.artists.AddArtist(
+			ctx, rg.ArtistMBID, albumArtistMonitor, qualityProfile,
+		)
+		if err != nil && !errors.Is(err, ErrAlreadyInLibrary) {
+			return nil, false, fmt.Errorf("approve: add artist: %w", err)
+		}
+	}
+	monitoredAndHeld, err := s.albums.MonitorAlbum(ctx, rg.ArtistMBID, albumMBID)
+	if err != nil {
+		return nil, false, fmt.Errorf("approve: monitor album: %w", err)
+	}
+	return rg, monitoredAndHeld, nil
+}
+
+// checkProfile rejects a non-empty profile name that the request's medium
+// family does not hold. Empty is the family default and always passes.
+func checkProfile(mediaType, name string) error {
+	if name == "" {
+		return nil
+	}
+	var ok bool
+	switch mediaType {
+	case "artist", "album":
+		_, ok = config.LookupMusicQualityProfile(name)
+	case "book", "book_series":
+		_, ok = config.LookupBookQualityProfile(name)
+	default:
+		_, ok = config.LookupQualityProfile(name)
+	}
+	if !ok {
+		return fmt.Errorf("%w: %q", ErrUnknownProfile, name)
+	}
+	return nil
+}
+
+// Deny and Reopen are the negative half of the same workflow as Approve, and
+// were the untraced half — a slow or failing denial showed up in no span at
+// all while its sibling was fully covered.
+func (s *Service) Deny(
+	ctx context.Context,
+	id, adminID uint32,
+	reason string,
+) (*ent.Request, error) {
+	ctx, span := tracer.Start(ctx, "request.deny",
+		trace.WithAttributes(attribute.Int("request.id", int(id))))
+	defer span.End()
+
+	if err := s.db.DenyRequest(ctx, id, adminID, reason); err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("request %d: %w", id, ErrRequestNotFound)
+		}
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	slog.InfoContext(ctx, "request denied",
+		"request.id", id, "user.id", adminID, "reason", reason)
+	return s.db.GetRequest(ctx, id)
+}
+
+func (s *Service) Reopen(ctx context.Context, id uint32) (*ent.Request, error) {
+	ctx, span := tracer.Start(ctx, "request.reopen",
+		trace.WithAttributes(attribute.Int("request.id", int(id))))
+	defer span.End()
+
+	if err := s.db.ReopenRequest(ctx, id); err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("request %d: %w", id, ErrRequestNotFound)
+		}
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	slog.InfoContext(ctx, "request reopened", "request.id", id)
+	return s.db.GetRequest(ctx, id)
+}
+
+func (s *Service) List(
+	ctx context.Context,
+	p db.ListRequestsParams,
+) ([]*ent.Request, int, error) {
+	return s.db.ListRequests(ctx, p)
+}
+
+func (s *Service) Get(ctx context.Context, id uint32) (*ent.Request, error) {
+	return s.db.GetRequest(ctx, id)
+}
+
+// Manager is the request service surface consumed by REST handlers.
+type Manager interface {
+	Create(ctx context.Context, p CreateParams) (*ent.Request, error)
+	Approve(
+		ctx context.Context,
+		id, adminID uint32,
+		qualityProfile string,
+	) (*ent.Request, error)
+	Get(ctx context.Context, id uint32) (*ent.Request, error)
+	Deny(
+		ctx context.Context,
+		id, adminID uint32,
+		reason string,
+	) (*ent.Request, error)
+	Reopen(ctx context.Context, id uint32) (*ent.Request, error)
+	List(
+		ctx context.Context,
+		p db.ListRequestsParams,
+	) ([]*ent.Request, int, error)
+}
+
+var _ Manager = (*Service)(nil)

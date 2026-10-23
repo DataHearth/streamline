@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "streamline.fullname" . }}-test-health"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "streamline.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    # Not hook-succeeded: helm deletes the pod before `helm test --logs` reads
+    # it, so the run fails on "pods not found" even when the test passed. The
+    # pod is cleaned up at the start of the next run instead.
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  restartPolicy: Never
+  containers:
+    - name: curl
+      image: curlimages/curl:8.10.1
+      command: ["sh", "-c"]
+      args:
+        - |
+          set -eu
+          for i in $(seq 1 30); do
+            if curl -fsS "http://{{ include "streamline.fullname" . }}:{{ .Values.service.port }}/health"; then
+              exit 0
+            fi
+            echo "health not ready, retry $i"; sleep 2
+          done
+          exit 1

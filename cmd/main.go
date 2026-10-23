@@ -1,0 +1,309 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/datahearth/streamline/internal/buildinfo"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/observability"
+	"github.com/datahearth/streamline/internal/server"
+	"github.com/urfave/cli/v3"
+)
+
+// otelFlushTimeout is how long the final telemetry flush gets, on top of the
+// shutdown budget the application teardown spends.
+const otelFlushTimeout = 5 * time.Second
+
+// versionString assembles the --version line. buildinfo holds the goreleaser
+// ldflag values; we fall back to placeholders so the CLI stays readable when
+// built via plain go run / go build.
+func versionString() string {
+	v := buildinfo.Version
+	if v == "" {
+		v = "dev"
+	}
+	c := buildinfo.Commit
+	if c == "" {
+		c = "none"
+	}
+	d := buildinfo.Date
+	if d == "" {
+		d = "unknown"
+	}
+	return fmt.Sprintf("%s (commit %s, built %s)", v, c, d)
+}
+
+func rootCommand() *cli.Command {
+	return &cli.Command{
+		Name:        "streamline",
+		Usage:       "unified media management platform",
+		Description: "Self-hosted unified media manager. Replaces the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr with a single binary.",
+		Version:     versionString(),
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "config",
+				Aliases: []string{"c"},
+				Usage:   "path to config file",
+			},
+		},
+		Action: run,
+		Commands: []*cli.Command{
+			{
+				Name:  "auth",
+				Usage: "auth and user administration commands",
+				Commands: []*cli.Command{
+					{
+						Name:      "unlock",
+						Usage:     "clear lockout state on a user account",
+						ArgsUsage: "<email>",
+						Action:    authUnlock,
+					},
+					{
+						Name:  "list",
+						Usage: "list user accounts",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:  "role",
+								Usage: "only list users with this role",
+							},
+							&cli.UintFlag{
+								Name:  "limit",
+								Usage: "maximum number of users to print (default: all)",
+							},
+						},
+						Action: authList,
+					},
+					{
+						Name:      "set-role",
+						Usage:     "change a user's role",
+						ArgsUsage: "<email> <role>",
+						Action:    authSetRole,
+					},
+					{
+						Name:      "set-password",
+						Usage:     "set a user's password",
+						ArgsUsage: "<email>",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:  "password",
+								Usage: "new password (lands in shell history; prefer --generate)",
+							},
+							&cli.BoolFlag{
+								Name:  "generate",
+								Usage: "mint a random password and print it once to stdout",
+							},
+						},
+						Action: authSetPassword,
+					},
+				},
+			},
+			{
+				Name:  "config",
+				Usage: "manage configuration",
+				Commands: []*cli.Command{
+					{
+						Name:  "init",
+						Usage: "write a default config to stdout or a file",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "output",
+								Aliases: []string{"o"},
+								Usage:   "output path (default: stdout)",
+							},
+						},
+						Action: configInit,
+					},
+					{
+						Name:  "validate",
+						Usage: "load a config file (or stdin) and report any errors",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "config",
+								Aliases: []string{"c"},
+								Usage:   "path to config file (default: stdin)",
+							},
+						},
+						Action: configValidate,
+					},
+				},
+			},
+		},
+	}
+}
+
+func main() {
+	if err := rootCommand().Run(context.Background(), os.Args); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func configInit(_ context.Context, cmd *cli.Command) error {
+	out := cmd.String("output")
+	if out == "" {
+		return config.DumpDefaults(os.Stdout)
+	}
+	// Owner-only: the file goes on to hold the session secret and every
+	// integration's credentials, and a write-back keeps whatever mode it has.
+	//nolint:gosec // out is the operator's own --output flag
+	f, err := os.OpenFile(out, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return fmt.Errorf("create %s: %w", out, err)
+	}
+	defer f.Close()
+	if err := config.DumpDefaults(f); err != nil {
+		return fmt.Errorf("write defaults: %w", err)
+	}
+	fmt.Fprintf(os.Stderr, "wrote default config to %s\n", out)
+	return nil
+}
+
+func configValidate(_ context.Context, cmd *cli.Command) error {
+	path := cmd.String("config")
+	var err error
+	if path == "" {
+		err = config.LoadReader(os.Stdin)
+	} else {
+		_, err = config.Load(path)
+	}
+	if err != nil {
+		return fmt.Errorf("invalid config: %w", err)
+	}
+	fmt.Fprintln(os.Stderr, "configuration is valid")
+	return nil
+}
+
+func run(ctx context.Context, cmd *cli.Command) error {
+	// Unknown subcommands arrive here as arguments; never boot on them.
+	if cmd.NArg() > 0 {
+		return fmt.Errorf("unknown command %q (see --help)", cmd.Args().First())
+	}
+
+	// 1. Load configuration
+	cfg, err := config.Load(cmd.String("config"))
+	if err != nil {
+		return fmt.Errorf("config: %w", err)
+	}
+
+	// 2. Set up OpenTelemetry + unified slog handler (stderr + OTel bridge).
+	//    Install as process-wide default so every package logs through the
+	//    same pipeline via slog.Default()/slog.XContext. log.level/format and
+	//    otel.endpoint are read from the config singleton internally.
+	handler, otelShutdown, err := observability.Setup(
+		ctx,
+		observability.Config{
+			ServiceName:      "streamline",
+			ServiceVersion:   buildinfo.Version,
+			ServiceCommit:    buildinfo.Commit,
+			ServiceBuildDate: buildinfo.Date,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("otel: %w", err)
+	}
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
+
+	if limit := applyMemoryLimit(); limit > 0 {
+		slog.InfoContext(ctx, "derived GOMEMLIMIT from the cgroup memory limit",
+			"gomemlimit_bytes", limit)
+	}
+
+	// 3. Wire application
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	app, err := server.NewFromConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("startup: %w", err)
+	}
+	defer app.DB.Close()
+
+	// The two goroutines below run for the life of the process, so a panic in
+	// either is an unrecovered panic that kills it outright — skipping the
+	// deferred shutdown below, and with it the final flush of the telemetry
+	// describing the crash. Both hand stop() to the recovery, which takes the
+	// ordinary shutdown path instead.
+
+	// 5. Start scheduler in background
+	go func() {
+		defer observability.RecoverPanic(ctx, "scheduler", stop)
+		app.Scheduler.Start(ctx)
+	}()
+
+	// 6. Start HTTP server
+	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	httpSrv := server.NewHTTPServer(addr, app.Server.Router())
+
+	logger.InfoContext(ctx, "streamline starting",
+		"version", versionString(),
+		"addr", addr,
+		"config_path", config.Path(),
+		"database_path", cfg.DatabasePath(),
+		"data_dir", cfg.DataDir,
+		"otel_endpoint", cfg.OTel.Endpoint,
+		"read_only", cfg.ReadOnly,
+	)
+
+	go func() {
+		defer observability.RecoverPanic(ctx, "http server", stop)
+		if err := httpSrv.ListenAndServe(); err != nil &&
+			!errors.Is(err, http.ErrServerClosed) {
+			logger.ErrorContext(ctx, "server error", "error", err)
+			stop()
+		}
+	}()
+
+	// 7. Wait for shutdown signal
+	<-ctx.Done()
+	logger.InfoContext(ctx, "shutting down")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+		logger.ErrorContext(shutdownCtx, "http shutdown error", "error", err)
+	}
+	// Wait for in-flight background touches before closing the DB so SQLite's
+	// WAL checkpoint on last connection close is not raced by a late writer.
+	if err := app.Auth.Shutdown(shutdownCtx); err != nil {
+		logger.ErrorContext(shutdownCtx, "auth shutdown error", "error", err)
+	}
+	if app.Torrents != nil {
+		if err := app.Torrents.Close(); err != nil {
+			logger.ErrorContext(
+				shutdownCtx,
+				"torrent engine shutdown failed",
+				"error",
+				err,
+			)
+		}
+	}
+	if err := app.HTTPLogger.Close(); err != nil {
+		logger.ErrorContext(shutdownCtx, "http access log close error", "error", err)
+	}
+
+	// Its own budget, not what the steps above left behind. The shutdowns most
+	// likely to run long — a torrent engine under load, a WAL checkpoint on a
+	// busy disk — are exactly the ones whose telemetry is worth keeping, and
+	// sharing the deadline meant the final batch was dropped precisely then.
+	otelCtx, otelCancel := context.WithTimeout(
+		context.Background(),
+		otelFlushTimeout,
+	)
+	defer otelCancel()
+	if err := otelShutdown(otelCtx); err != nil {
+		logger.ErrorContext(otelCtx, "otel shutdown error", "error", err)
+	}
+
+	logger.InfoContext(shutdownCtx, "shutdown complete")
+	return nil
+}

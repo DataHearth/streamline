@@ -1,0 +1,442 @@
+package bulkimport
+
+import (
+	"context"
+	"fmt"
+	"io/fs"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/datahearth/streamline/ent"
+	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/otelx"
+)
+
+var tracer = otel.Tracer(
+	"github.com/datahearth/streamline/internal/library/bulkimport",
+)
+
+// StartScan validates params, creates the ImportScan row, and kicks off the scan
+// goroutine. The goroutine uses context.WithoutCancel because the originating
+// HTTP request ends within milliseconds; cancellation flows through DB state.
+func (s *Service) StartScan(
+	ctx context.Context,
+	p StartScanParams,
+) (*ent.ImportScan, error) {
+	ctx, span := tracer.Start(ctx, "bulkimport.start_scan",
+		trace.WithAttributes(attribute.String("scan.mode", string(p.Mode))),
+	)
+	defer span.End()
+
+	if p.Kind == "" {
+		p.Kind = entimportscan.KindMovie
+	}
+	switch p.Kind {
+	case entimportscan.KindMovie, entimportscan.KindSeries:
+	case entimportscan.KindMusic:
+		if p.Mode == entimportscan.ModeRename {
+			return nil, otelx.RecordSpanError(span, ErrRenameUnsupported)
+		}
+	case entimportscan.KindBook:
+		if p.Mode == entimportscan.ModeRename {
+			return nil, otelx.RecordSpanError(span, ErrRenameUnsupported)
+		}
+		if s.bookmeta == nil {
+			return nil, otelx.RecordSpanError(span, book.ErrNotConfigured)
+		}
+	default:
+		return nil, otelx.RecordSpanError(
+			span, fmt.Errorf("%w: %s", ErrUnsupportedKind, p.Kind),
+		)
+	}
+	resolved, err := s.validateScanParams(p)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	// import_mode override only meaningful in rename mode; silently clear otherwise
+	// so callers don't have to special-case it in the UI.
+	if p.Mode != entimportscan.ModeRename {
+		p.ImportMode = ""
+	}
+
+	n, err := s.store.CountActiveImportScans(ctx)
+	if err != nil {
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("count active scans: %w", err),
+		)
+	}
+	if n > 0 {
+		return nil, otelx.RecordSpanError(span, ErrScanRunning)
+	}
+
+	scan, err := s.store.CreateImportScan(ctx, db.CreateImportScanParams{
+		SourcePath: resolved,
+		Kind:       p.Kind,
+		Mode:       p.Mode,
+		ImportMode: p.ImportMode,
+	})
+	if err != nil {
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("create import scan: %w", err),
+		)
+	}
+	span.SetAttributes(attribute.Int64("scan.id", int64(scan.ID)))
+
+	bg := context.WithoutCancel(ctx)
+	switch p.Kind {
+	case entimportscan.KindSeries:
+		go s.runScanSeries(bg, scan)
+	case entimportscan.KindMusic:
+		go s.runScanMusic(bg, scan)
+	case entimportscan.KindBook:
+		go s.runScanBooks(bg, scan)
+	default:
+		go s.runScan(bg, scan)
+	}
+	slog.InfoContext(ctx, "bulk import scan started",
+		"scan.id", scan.ID, "scan.kind", scan.Kind,
+		"scan.mode", scan.Mode, "scan.source_path", resolved)
+
+	return scan, nil
+}
+
+func (s *Service) validateScanParams(p StartScanParams) (string, error) {
+	if !filepath.IsAbs(p.SourcePath) {
+		return "", ErrInvalidPath
+	}
+	resolved, err := filepath.EvalSymlinks(p.SourcePath)
+	if err != nil {
+		return "", ErrInvalidPath
+	}
+	info, err := os.Stat(resolved)
+	if err != nil || !info.IsDir() {
+		return "", ErrInvalidPath
+	}
+
+	// in_place/rename are defined relative to the library root for the media type
+	// being scanned — a TV folder is "outside" the movie library and vice versa.
+	var roots []string
+	switch p.Kind {
+	case entimportscan.KindSeries:
+		roots = []string{s.seriesPath}
+	case entimportscan.KindMusic:
+		roots = []string{config.Get().Library.MusicPath}
+	case entimportscan.KindBook:
+		lib := config.Get().Library
+		roots = []string{lib.EbookPath, lib.AudiobookPath}
+	default:
+		roots = []string{s.moviePath}
+	}
+	inside, resolvedAny := false, false
+	for _, root := range roots {
+		libAbs, rerr := filepath.EvalSymlinks(root)
+		if rerr != nil {
+			continue
+		}
+		resolvedAny = true
+		if strings.HasPrefix(resolved, libAbs+string(filepath.Separator)) ||
+			resolved == libAbs {
+			inside = true
+		}
+	}
+	if !resolvedAny {
+		return "", ErrLibraryPathMissing
+	}
+
+	switch p.Mode {
+	case entimportscan.ModeInPlace:
+		if !inside {
+			return "", ErrPathOutsideLibrary
+		}
+	case entimportscan.ModeRename:
+		if inside {
+			return "", ErrPathOutsideLibrary
+		}
+	}
+	return resolved, nil
+}
+
+type scannedCandidate struct {
+	path string
+	size int64
+}
+
+func (s *Service) runScan(ctx context.Context, scan *ent.ImportScan) {
+	ctx, span := tracer.Start(ctx, "bulkimport.scan",
+		trace.WithAttributes(
+			attribute.Int64("scan.id", int64(scan.ID)),
+			attribute.String("scan.mode", string(scan.Mode)),
+		))
+	defer span.End()
+
+	defer func() {
+		if r := recover(); r != nil {
+			reason := fmt.Sprintf("panic: %v", r)
+			now := time.Now()
+			if err := s.store.UpdateImportScanStatus(
+				ctx,
+				scan.ID,
+				entimportscan.StatusFailed,
+				db.UpdateScanStatusOpts{
+					FailureReason: &reason,
+					ScannedAt:     &now,
+				},
+			); err != nil {
+				slog.ErrorContext(
+					ctx,
+					"bulk import: failed to mark scan failed after panic",
+					"scan.id",
+					scan.ID,
+					"panic",
+					r,
+					"error",
+					err,
+				)
+			}
+		}
+	}()
+
+	candidates, err := walkSourceDir(ctx, scan.SourcePath)
+	if err != nil {
+		reason := err.Error()
+		now := time.Now()
+		if uerr := s.store.UpdateImportScanStatus(
+			ctx,
+			scan.ID,
+			entimportscan.StatusFailed,
+			db.UpdateScanStatusOpts{
+				FailureReason: &reason,
+				ScannedAt:     &now,
+			},
+		); uerr != nil {
+			slog.ErrorContext(
+				ctx,
+				"bulk import: failed to mark scan failed after walk error",
+				"scan.id",
+				scan.ID,
+				"walk.error",
+				err,
+				"update.error",
+				uerr,
+			)
+		}
+		return
+	}
+	total := len(candidates)
+	if err := s.store.UpdateImportScanStatus(
+		ctx,
+		scan.ID,
+		entimportscan.StatusRunning,
+		db.UpdateScanStatusOpts{TotalCount: &total},
+	); err != nil {
+		slog.WarnContext(ctx, "bulk import: failed to set total_count",
+			"scan.id", scan.ID, "error", err)
+	}
+
+	alreadyAdded, err := s.store.MovieTMDBIndex(ctx)
+	if err != nil {
+		slog.WarnContext(
+			ctx,
+			"bulk import: existing-map lookup failed",
+			"scan.id",
+			scan.ID,
+			"error",
+			err,
+		)
+		alreadyAdded = map[uint32]uint32{}
+	}
+
+	tally, ok := s.runMatchPhase(ctx, scan, candidates, alreadyAdded)
+	if !ok {
+		return
+	}
+
+	scannedAt := time.Now()
+	if err := s.store.UpdateImportScanStatus(
+		ctx,
+		scan.ID,
+		entimportscan.StatusAwaitingReview,
+		db.UpdateScanStatusOpts{ScannedAt: &scannedAt},
+	); err != nil {
+		slog.ErrorContext(ctx, "bulk import: failed to flip scan to awaiting_review",
+			"scan.id", scan.ID, "error", err)
+	}
+	// The split is what says whether TMDB matching is broadly failing (mostly
+	// unmatched/ambiguous) or the folder is simply full of things the library
+	// already has (mostly existing). A bare total says only that 400 files
+	// need review, which is the same number in both cases and points nowhere.
+	slog.InfoContext(
+		ctx,
+		"bulk import scan finished",
+		"scan.id", scan.ID,
+		"scan.outcome", "awaiting_review",
+		"scan.total_count", total,
+		"scan.confirmed", tally[entimportscanfile.ClassificationConfirmed],
+		"scan.existing", tally[entimportscanfile.ClassificationExisting],
+		"scan.ambiguous", tally[entimportscanfile.ClassificationAmbiguous],
+		"scan.unmatched", tally[entimportscanfile.ClassificationUnmatched],
+	)
+	for kind, n := range tally {
+		scanClassified.Add(ctx, int64(n), metric.WithAttributes(
+			attribute.String("classification", string(kind)),
+			attribute.String("kind", "movie"),
+		))
+	}
+}
+
+func walkSourceDir(ctx context.Context, root string) ([]scannedCandidate, error) {
+	var out []scannedCandidate
+	err := filepath.WalkDir(
+		root,
+		func(path string, d fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				slog.WarnContext(
+					ctx,
+					"bulk import scan walk error skipped",
+					"path",
+					path,
+					"error",
+					walkErr,
+				)
+				return nil
+			}
+			if d.IsDir() {
+				return nil
+			}
+			if !library.MediaExts[strings.ToLower(filepath.Ext(path))] {
+				return nil
+			}
+			info, err := d.Info()
+			if err != nil || info.Size() < library.MinMediaSize {
+				return nil
+			}
+			if library.SampleRe.MatchString(filepath.Base(path)) {
+				return nil
+			}
+			out = append(out, scannedCandidate{path: path, size: info.Size()})
+			return nil
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("walk source dir: %w", err)
+	}
+	return out, nil
+}
+
+func (s *Service) runMatchPhase(
+	ctx context.Context,
+	scan *ent.ImportScan,
+	candidates []scannedCandidate,
+	alreadyAdded map[uint32]uint32,
+) (map[entimportscanfile.Classification]int, bool) {
+	sem := make(chan struct{}, scanConcurrency)
+	tally := map[entimportscanfile.Classification]int{}
+	var batchMu sync.Mutex
+	batch := make([]db.CreateImportScanFileParams, 0, bulkInsertBatchSize)
+	var wg sync.WaitGroup
+	lastPoll := time.Now()
+	stillActive := true
+
+	flush := func() {
+		if len(batch) == 0 {
+			return
+		}
+		toFlush := batch
+		batch = make([]db.CreateImportScanFileParams, 0, bulkInsertBatchSize)
+		batchMu.Unlock()
+		if err := s.store.BulkCreateImportScanFiles(
+			ctx,
+			scan.ID,
+			toFlush,
+		); err != nil {
+			slog.ErrorContext(ctx, "bulk import: failed to persist file batch",
+				"scan.id", scan.ID, "batch.size", len(toFlush), "error", err)
+		}
+		if err := s.store.IncrementImportScanProgress(
+			ctx,
+			scan.ID,
+			len(toFlush),
+		); err != nil {
+			slog.WarnContext(ctx, "bulk import: failed to increment progress",
+				"scan.id", scan.ID, "delta", len(toFlush), "error", err)
+		}
+		batchMu.Lock()
+	}
+
+	for _, c := range candidates {
+		if time.Since(lastPoll) > cancellationPollEvery {
+			lastPoll = time.Now()
+			cur, err := s.store.FindImportScan(ctx, scan.ID)
+			if err == nil && cur.Status != entimportscan.StatusRunning {
+				stillActive = false
+				break
+			}
+		}
+		sem <- struct{}{}
+		wg.Add(1)
+		go func(c scannedCandidate) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			row := s.classifyOne(ctx, c, alreadyAdded)
+			batchMu.Lock()
+			tally[row.Classification]++
+			batch = append(batch, row)
+			if len(batch) >= bulkInsertBatchSize {
+				flush()
+			}
+			batchMu.Unlock()
+		}(c)
+	}
+	wg.Wait()
+	batchMu.Lock()
+	flush()
+	batchMu.Unlock()
+	return tally, stillActive
+}
+
+func (s *Service) classifyOne(
+	ctx context.Context,
+	c scannedCandidate,
+	alreadyAdded map[uint32]uint32,
+) db.CreateImportScanFileParams {
+	parsed := library.Parse(filepath.Base(c.path))
+	hits, err := s.metadata.SearchMovie(ctx, parsed.Title, parsed.Year)
+	if err != nil {
+		slog.WarnContext(ctx, "bulk import tmdb lookup failed",
+			"file.basename", filepath.Base(c.path), "error", err)
+	}
+	cls := Classify(c.path, parsed, hits, alreadyAdded)
+
+	row := db.CreateImportScanFileParams{
+		SourcePath:         c.path,
+		Size:               c.size,
+		ParsedTitle:        parsed.Title,
+		ParsedQuality:      parsed.Resolution,
+		ParsedReleaseGroup: parsed.Group,
+		Classification:     cls.Kind,
+		Candidates:         cls.Candidates,
+		TMDBID:             cls.TMDBID,
+		ExistingMovieID:    cls.ExistingMovieID,
+	}
+	if parsed.Year != 0 {
+		y := parsed.Year
+		row.ParsedYear = &y
+	}
+	return row
+}

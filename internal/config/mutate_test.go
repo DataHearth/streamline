@@ -1,0 +1,419 @@
+package config_test
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
+)
+
+// startDiscoveryServer spins up an httptest.Server that serves a minimal
+// OIDC discovery document at /.well-known/openid-configuration. Returns the
+// server (for cleanup) and its base URL (the "issuer").
+func startDiscoveryServer() *httptest.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/.well-known/openid-configuration",
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(
+				[]byte(
+					`{"issuer":"x","authorization_endpoint":"y","token_endpoint":"z","jwks_uri":"w"}`,
+				),
+			)
+		})
+	return httptest.NewServer(mux)
+}
+
+var _ = Describe("Config mutate", Label("unit", "config"), func() {
+	BeforeEach(func() {
+		configtest.SetupFile()
+	})
+
+	Describe("UpdateAuth", func() {
+		It("changes registration_mode and persists to singleton", func() {
+			mode := "open"
+			got, err := config.UpdateAuth(context.Background(), config.AuthPatch{
+				RegistrationMode: &mode,
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.RegistrationMode).To(Equal("open"))
+			Expect(config.Get().Auth.RegistrationMode).To(Equal("open"))
+		})
+
+		It("rejects invalid registration_mode via validator", func() {
+			bad := "nope"
+			_, err := config.UpdateAuth(context.Background(), config.AuthPatch{
+				RegistrationMode: &bad,
+			})
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("rejects session_ttl that can't parse as duration", func() {
+			bad := "not-a-duration"
+			_, err := config.UpdateAuth(
+				context.Background(),
+				config.AuthPatch{SessionTTL: &bad},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("session_ttl"))
+		})
+
+		It("accepts a well-formed session_ttl", func() {
+			ttl := "30m"
+			got, err := config.UpdateAuth(
+				context.Background(),
+				config.AuthPatch{SessionTTL: &ttl},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.SessionTTL).To(Equal("30m"))
+		})
+
+		It("rejects invalid default_role via validator", func() {
+			bad := "bogus"
+			_, err := config.UpdateAuth(context.Background(), config.AuthPatch{
+				DefaultRole: &bad,
+			})
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("UpdateLibrary probe patch", func() {
+		It("defaults always_ask=false and min_duration_ratio=0.5", func() {
+			Expect(config.Get().Library.Probe.AlwaysAsk).To(BeFalse())
+			Expect(config.Get().Library.Probe.MinDurationRatio).To(Equal(0.5))
+		})
+
+		It("applies always_ask without disturbing min_duration_ratio", func() {
+			t := true
+			got, err := config.UpdateLibrary(
+				context.Background(),
+				config.LibraryPatch{
+					Probe: &config.ProbePatch{AlwaysAsk: &t},
+				},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.Probe.AlwaysAsk).To(BeTrue())
+			Expect(got.Probe.MinDurationRatio).To(Equal(0.5))
+		})
+
+		It("applies min_duration_ratio without disturbing always_ask", func() {
+			t := true
+			_, err := config.UpdateLibrary(context.Background(), config.LibraryPatch{
+				Probe: &config.ProbePatch{AlwaysAsk: &t},
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			ratio := 0.75
+			got, err := config.UpdateLibrary(
+				context.Background(),
+				config.LibraryPatch{
+					Probe: &config.ProbePatch{MinDurationRatio: &ratio},
+				},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.Probe.MinDurationRatio).To(Equal(0.75))
+			Expect(got.Probe.AlwaysAsk).To(BeTrue())
+		})
+
+		It("leaves probe untouched when the patch names no probe fields", func() {
+			specials := true
+			got, err := config.UpdateLibrary(
+				context.Background(),
+				config.LibraryPatch{
+					MonitorSpecials: &specials,
+				},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.Probe.MinDurationRatio).To(Equal(0.5))
+			Expect(got.MonitorSpecials).To(BeTrue())
+		})
+
+		It("rejects a min_duration_ratio above 1", func() {
+			ratio := 1.5
+			_, err := config.UpdateLibrary(context.Background(), config.LibraryPatch{
+				Probe: &config.ProbePatch{MinDurationRatio: &ratio},
+			})
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("rejects a min_duration_ratio of 0", func() {
+			ratio := 0.0
+			_, err := config.UpdateLibrary(context.Background(), config.LibraryPatch{
+				Probe: &config.ProbePatch{MinDurationRatio: &ratio},
+			})
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("UpdateTranscoding", func() {
+		It("defaults to disabled, max_concurrent=1, max_failures=3", func() {
+			Expect(config.Get().Transcoding.Enabled).To(BeFalse())
+			Expect(config.Get().Transcoding.MaxConcurrent).To(Equal(uint8(1)))
+			Expect(config.Get().Transcoding.MaxFailures).To(Equal(uint8(3)))
+		})
+
+		It("applies enabled without disturbing the other fields", func() {
+			t := true
+			got, err := config.UpdateTranscoding(
+				context.Background(),
+				config.TranscodingPatch{Enabled: &t},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.Enabled).To(BeTrue())
+			Expect(got.MaxConcurrent).To(Equal(uint8(1)))
+			Expect(got.MaxFailures).To(Equal(uint8(3)))
+		})
+
+		It(
+			"applies max_concurrent and max_failures without disturbing enabled",
+			func() {
+				t := true
+				_, err := config.UpdateTranscoding(
+					context.Background(),
+					config.TranscodingPatch{Enabled: &t},
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				concurrent := uint8(4)
+				failures := uint8(7)
+				got, err := config.UpdateTranscoding(
+					context.Background(),
+					config.TranscodingPatch{
+						MaxConcurrent: &concurrent,
+						MaxFailures:   &failures,
+					},
+				)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(got.MaxConcurrent).To(Equal(uint8(4)))
+				Expect(got.MaxFailures).To(Equal(uint8(7)))
+				Expect(got.Enabled).To(BeTrue())
+			},
+		)
+
+		It("rejects max_concurrent above 8", func() {
+			bad := uint8(9)
+			_, err := config.UpdateTranscoding(
+				context.Background(),
+				config.TranscodingPatch{MaxConcurrent: &bad},
+			)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("rejects max_failures of 0", func() {
+			bad := uint8(0)
+			_, err := config.UpdateTranscoding(
+				context.Background(),
+				config.TranscodingPatch{MaxFailures: &bad},
+			)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("AddOIDCProvider", func() {
+		var srv *httptest.Server
+
+		BeforeEach(func() {
+			srv = startDiscoveryServer()
+			DeferCleanup(srv.Close)
+		})
+
+		It("persists a valid provider", func() {
+			err := config.AddOIDCProvider(context.Background(), config.OIDCConfig{
+				Name:         "test",
+				Issuer:       srv.URL,
+				ClientID:     "cid",
+				ClientSecret: "secret",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(config.Get().Auth.OIDC).To(HaveLen(1))
+			Expect(config.Get().Auth.OIDC[0].Name).To(Equal("test"))
+		})
+
+		It("rejects duplicate name", func() {
+			p := config.OIDCConfig{
+				Name:         "dup",
+				Issuer:       srv.URL,
+				ClientID:     "cid",
+				ClientSecret: "secret",
+			}
+			Expect(config.AddOIDCProvider(context.Background(), p)).To(Succeed())
+			err := config.AddOIDCProvider(context.Background(), p)
+			Expect(errors.Is(err, config.ErrOIDCProviderExists)).To(BeTrue())
+		})
+
+		It("rejects unreachable issuer", func() {
+			err := config.AddOIDCProvider(context.Background(), config.OIDCConfig{
+				Name:         "bad",
+				Issuer:       "http://127.0.0.1:1",
+				ClientID:     "cid",
+				ClientSecret: "secret",
+			})
+			Expect(errors.Is(err, config.ErrOIDCDiscoveryFailed)).To(BeTrue())
+		})
+
+		// Neither trust axis is on the REST surface, so a provider added by an
+		// admin over the API arrives adopting nothing and granting no admin —
+		// opening either one is a deliberate edit to the config file.
+		It("adds a provider closed on both trust axes", func() {
+			Expect(config.AddOIDCProvider(context.Background(),
+				config.OIDCConfig{
+					Name:         "closed",
+					Issuer:       srv.URL,
+					ClientID:     "cid",
+					ClientSecret: "secret",
+				})).To(Succeed())
+			added := config.Get().Auth.OIDC[0]
+			Expect(added.EmailLinking).To(Equal(config.OIDCEmailLinkingDisabled))
+			Expect(added.AllowAdmin).To(BeFalse())
+		})
+	})
+
+	Describe("UpdateOIDCProvider", func() {
+		var srv *httptest.Server
+
+		BeforeEach(func() {
+			srv = startDiscoveryServer()
+			DeferCleanup(srv.Close)
+			Expect(config.AddOIDCProvider(context.Background(), config.OIDCConfig{
+				Name:         "acme",
+				Issuer:       srv.URL,
+				ClientID:     "cid",
+				ClientSecret: "secret",
+			})).To(Succeed())
+		})
+
+		It("keeps existing secret when patch leaves client_secret blank", func() {
+			blank := ""
+			newID := "new-cid"
+			Expect(config.UpdateOIDCProvider(
+				context.Background(),
+				"acme",
+				config.OIDCProviderPatch{
+					ClientID:     &newID,
+					ClientSecret: &blank,
+				},
+			)).To(Succeed())
+			got := config.Get().Auth.OIDC[0]
+			Expect(got.ClientID).To(Equal("new-cid"))
+			Expect(got.ClientSecret).To(Equal("secret"))
+		})
+
+		// The patch is applied in place, so what the file set on either trust
+		// axis survives an API edit that never mentions it. Losing allow_admin
+		// here would silently strip the operator's admin grant on the next
+		// unrelated client_id change; gaining it would be worse.
+		It("preserves both trust axes across an unrelated patch", func() {
+			Expect(config.Update(context.Background(), func(c *config.Config) error {
+				c.Auth.OIDC[0].EmailLinking = config.OIDCEmailLinkingNonAdmin
+				c.Auth.OIDC[0].AllowAdmin = true
+				return nil
+			})).To(Succeed())
+
+			newID := "patched-cid"
+			Expect(config.UpdateOIDCProvider(
+				context.Background(),
+				"acme",
+				config.OIDCProviderPatch{ClientID: &newID},
+			)).To(Succeed())
+
+			got := config.Get().Auth.OIDC[0]
+			Expect(got.ClientID).To(Equal("patched-cid"))
+			Expect(got.EmailLinking).To(Equal(config.OIDCEmailLinkingNonAdmin))
+			Expect(got.AllowAdmin).To(BeTrue())
+		})
+
+		It("rejects not-found name", func() {
+			v := "x"
+			err := config.UpdateOIDCProvider(
+				context.Background(),
+				"ghost",
+				config.OIDCProviderPatch{ClientID: &v},
+			)
+			Expect(errors.Is(err, config.ErrOIDCProviderNotFound)).To(BeTrue())
+		})
+
+		DescribeTable("refuses to re-point a provider the file trusts",
+			func(linking string, allowAdmin bool) {
+				Expect(
+					config.Update(
+						context.Background(),
+						func(c *config.Config) error {
+							c.Auth.OIDC[0].EmailLinking = linking
+							c.Auth.OIDC[0].AllowAdmin = allowAdmin
+							return nil
+						},
+					),
+				).To(Succeed())
+				other := startDiscoveryServer()
+				DeferCleanup(other.Close)
+
+				err := config.UpdateOIDCProvider(
+					context.Background(),
+					"acme",
+					config.OIDCProviderPatch{Issuer: &other.URL},
+				)
+
+				Expect(err).To(MatchError(config.ErrOIDCTrustFileManaged))
+				Expect(config.Get().Auth.OIDC[0].Issuer).To(Equal(srv.URL))
+			},
+			Entry("allow_admin", config.OIDCEmailLinkingDisabled, true),
+			Entry("email linking", config.OIDCEmailLinkingNonAdmin, false),
+		)
+
+		It("re-points an untrusted provider", func() {
+			other := startDiscoveryServer()
+			DeferCleanup(other.Close)
+
+			Expect(config.UpdateOIDCProvider(
+				context.Background(),
+				"acme",
+				config.OIDCProviderPatch{Issuer: &other.URL},
+			)).To(Succeed())
+
+			Expect(config.Get().Auth.OIDC[0].Issuer).To(Equal(other.URL))
+		})
+
+		It("probes new issuer when patched", func() {
+			bad := "http://127.0.0.1:1"
+			err := config.UpdateOIDCProvider(
+				context.Background(),
+				"acme",
+				config.OIDCProviderPatch{Issuer: &bad},
+			)
+			Expect(errors.Is(err, config.ErrOIDCDiscoveryFailed)).To(BeTrue())
+		})
+	})
+
+	Describe("DeleteOIDCProvider", func() {
+		var srv *httptest.Server
+
+		BeforeEach(func() {
+			srv = startDiscoveryServer()
+			DeferCleanup(srv.Close)
+			Expect(config.AddOIDCProvider(context.Background(), config.OIDCConfig{
+				Name:         "to-delete",
+				Issuer:       srv.URL,
+				ClientID:     "cid",
+				ClientSecret: "secret",
+			})).To(Succeed())
+		})
+
+		It("removes the named provider", func() {
+			Expect(
+				config.DeleteOIDCProvider(context.Background(), "to-delete"),
+			).To(Succeed())
+			Expect(config.Get().Auth.OIDC).To(BeEmpty())
+		})
+
+		It("returns not-found for missing name", func() {
+			err := config.DeleteOIDCProvider(context.Background(), "nobody")
+			Expect(errors.Is(err, config.ErrOIDCProviderNotFound)).To(BeTrue())
+		})
+	})
+})

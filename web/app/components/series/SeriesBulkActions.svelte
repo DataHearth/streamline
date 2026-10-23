@@ -1,0 +1,341 @@
+<script lang="ts">
+	import { NOUN_EPISODE, NOUN_SERIES } from "@lib/nouns";
+	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
+	import {
+		Bookmark,
+		BookmarkX,
+		Radar,
+		SlidersHorizontal,
+		FileEdit,
+		RefreshCw,
+		Trash2,
+	} from "@lucide/svelte";
+	import { api } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { runBulk } from "@lib/bulk";
+	import BulkActionBar from "@components/shared/BulkActionBar.svelte";
+	import BulkTouchBar from "@components/shared/BulkTouchBar.svelte";
+	import type {
+		TouchAction,
+		TouchMenuRow,
+	} from "@components/shared/BulkTouchBar.svelte";
+	import KebabMenu from "@components/shared/KebabMenu.svelte";
+	import type { KebabItem } from "@components/shared/KebabMenu.svelte";
+	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
+	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import type { TVShow, QualityProfile } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	let {
+		series,
+		selected,
+		total,
+		onSelectAll,
+		onClear,
+	}: {
+		series: TVShow[];
+		selected: Set<number>;
+		total: number;
+		onSelectAll: () => void;
+		onClear: () => void;
+	} = $props();
+
+	let count = $derived(selected.size);
+	let active = $derived(count > 0);
+	let picked = $derived(series.filter((s) => selected.has(s.id)));
+	let episodeCount = $derived(
+		picked.reduce((n, s) => n + (s.have_episodes ?? 0), 0),
+	);
+	let wantedCount = $derived(
+		picked.reduce((n, s) => n + (s.wanted_episodes ?? 0), 0),
+	);
+	let monitoredPicked = $derived(picked.filter((s) => s.monitored).length);
+	// A show with no episode on disk can only come back with an empty rename
+	// plan, so it is dropped from the request set rather than counted in the
+	// toast. have_episodes is the list rollup; the episode tree is detail-only.
+	let renamable = $derived(picked.filter((s) => (s.have_episodes ?? 0) > 0));
+	let qpOpen = $state(false);
+	let deleteOpen = $state(false);
+	let renameOpen = $state(false);
+	let busy = $state(false);
+
+	const qc = useQueryClient();
+
+	const profilesQuery = createQuery<QualityProfile[]>(() => ({
+		queryKey: ["quality-profiles"],
+		queryFn: () => api<QualityProfile[]>("/quality-profiles"),
+		enabled: qpOpen,
+	}));
+
+	// done renders the success toast around the counted shows, so each
+	// language orders the sentence itself.
+	type Done = (inputs: { items: string }) => string;
+
+	function report(
+		done: Done,
+		res: { ok: number; failed: number; firstError?: string },
+	) {
+		if (res.failed === 0) toast.ok(done({ items: NOUN_SERIES.count(res.ok) }));
+		else if (res.ok === 0) toast.err(res.firstError ?? i18n.bulk_failed_all());
+		else toast.err(i18n.bulk_partial({ ok: res.ok, failed: res.failed }));
+	}
+
+	// items defaults to the whole selection; rename passes the subset that has
+	// episodes on disk, so the count the toast reports is what was acted on.
+	async function run(
+		done: Done,
+		fn: (s: TVShow) => Promise<unknown>,
+		after?: () => void,
+		items: TVShow[] = picked,
+	) {
+		if (busy) return;
+		busy = true;
+		try {
+			const res = await runBulk(items, fn);
+			qc.invalidateQueries({ queryKey: ["series"] });
+			report(done, res);
+			after?.();
+			if (res.failed === 0) onClear();
+		} finally {
+			busy = false;
+		}
+	}
+
+	const patch = (s: TVShow, body: Record<string, unknown>) =>
+		api(`/series/${s.id}`, { method: "PATCH", body });
+
+	function setMonitored(v: boolean) {
+		run(v ? i18n.bulk_monitoring : i18n.bulk_unmonitoring, (s) =>
+			patch(s, { monitored: v }),
+		);
+	}
+	function searchNow() {
+		run(i18n.bulk_search_dispatched, (s) =>
+			api(`/series/${s.id}/search`, { method: "POST" }),
+		);
+	}
+	function refresh() {
+		run(i18n.bulk_refresh_requested, (s) =>
+			api(`/series/${s.id}/refresh-metadata`, { method: "POST" }),
+		);
+	}
+	// No preview: one per selected show is a request each to render a list
+	// nobody can read at that length, and a show's plan is every episode it
+	// holds. The single-show kebab keeps its preview for when the moves matter.
+	function renameFiles() {
+		run(
+			i18n.bulk_renamed,
+			(s) => api(`/series/${s.id}/rename`, { method: "POST" }),
+			() => (renameOpen = false),
+			renamable,
+		);
+	}
+	function saveProfile(profile: string) {
+		run(i18n.bulk_reprofiled, (s) => patch(s, { quality_profile: profile }), () => {
+			qpOpen = false;
+		});
+	}
+	function remove(withFiles: boolean) {
+		run(
+			i18n.bulk_deleted,
+			(s) => api(`/series/${s.id}?delete_files=${withFiles}`, { method: "DELETE" }),
+			() => {
+				qc.invalidateQueries({ queryKey: ["series", "counts"] });
+				deleteOpen = false;
+			},
+		);
+	}
+
+	let menuItems = $derived<KebabItem[]>([
+		{
+			key: "rename",
+			label: i18n.action_rename_files_ellipsis(),
+			icon: FileEdit,
+			disabled: renamable.length === 0,
+			title:
+				renamable.length === 0
+					? i18n.series_available_after_import()
+					: undefined,
+			onSelect: () => (renameOpen = true),
+		},
+		{
+			key: "refresh",
+			label: i18n.action_refresh_metadata(),
+			icon: RefreshCw,
+			onSelect: refresh,
+		},
+		{
+			key: "delete",
+			label: i18n.action_remove_from_library(),
+			icon: Trash2,
+			danger: true,
+			dividerBefore: true,
+			onSelect: () => (deleteOpen = true),
+		},
+	]);
+
+	const btn =
+		"inline-flex min-h-11 lg:h-9 lg:min-h-0 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-50";
+
+	let touchActions = $derived<TouchAction[]>([
+		{
+			key: "monitor",
+			label: i18n.action_monitor(),
+			icon: Bookmark,
+			onSelect: () => setMonitored(true),
+		},
+		{ key: "search", label: i18n.common_search(), icon: Radar, onSelect: searchNow },
+	]);
+
+	let touchMenu = $derived<TouchMenuRow[]>([
+		{
+			key: "monitor",
+			label: i18n.action_monitor(),
+			icon: Bookmark,
+			line: i18n.bulk_already_monitored({ done: monitoredPicked, total: count }),
+			onSelect: () => setMonitored(true),
+		},
+		{
+			key: "unmonitor",
+			label: i18n.action_stop_monitoring(),
+			icon: BookmarkX,
+			onSelect: () => setMonitored(false),
+		},
+		{
+			key: "search",
+			label: i18n.action_search_wanted_episodes(),
+			icon: Radar,
+			line: wantedCount
+				? (wantedCount === 1
+						? i18n.nav_count_episodes_wanted_one
+						: i18n.nav_count_episodes_wanted_other)({ count: wantedCount.toLocaleString() })
+				: i18n.bulk_nothing_wanted(),
+			onSelect: searchNow,
+		},
+		{
+			key: "quality",
+			label: i18n.action_change_quality_profile(),
+			icon: SlidersHorizontal,
+			onSelect: () => (qpOpen = true),
+		},
+		{
+			key: "rename",
+			label: i18n.action_rename_files_ellipsis(),
+			icon: FileEdit,
+			disabled: renamable.length === 0,
+			line:
+				renamable.length === 0
+					? i18n.bulk_no_episodes()
+					: i18n.bulk_with_episodes({ items: NOUN_SERIES.count(renamable.length) }),
+			onSelect: () => (renameOpen = true),
+		},
+		{
+			key: "refresh",
+			label: i18n.action_refresh_metadata(),
+			icon: RefreshCw,
+			onSelect: refresh,
+		},
+		{
+			key: "delete",
+			label: i18n.action_remove_from_library(),
+			icon: Trash2,
+			danger: true,
+			dividerBefore: true,
+			line:
+				episodeCount === 0
+					? i18n.bulk_no_episodes()
+					: i18n.bulk_on_disk({ items: NOUN_EPISODE.count(episodeCount) }),
+			onSelect: () => (deleteOpen = true),
+		},
+	]);
+</script>
+
+{#if active}
+	<div class="hidden md:block">
+		<BulkActionBar
+		{count}
+		{total}
+		{busy}
+		noun={NOUN_SERIES}
+		{onSelectAll}
+		{onClear}
+	>
+		<button
+			type="button"
+			disabled={busy}
+			onclick={() => setMonitored(true)}
+			class={btn}
+		>
+			<Bookmark size={14} aria-hidden="true" />
+			{i18n.action_monitor()}
+		</button>
+		<button
+			type="button"
+			disabled={busy}
+			onclick={() => setMonitored(false)}
+			class={btn}
+		>
+			<BookmarkX size={14} aria-hidden="true" />
+			{i18n.action_unmonitor()}
+		</button>
+		<button type="button" disabled={busy} onclick={searchNow} class={btn}>
+			<Radar size={14} aria-hidden="true" />
+			{i18n.common_search()}
+		</button>
+		<button
+			type="button"
+			disabled={busy}
+			onclick={() => (qpOpen = true)}
+			class={btn}
+		>
+			<SlidersHorizontal size={14} aria-hidden="true" />
+			{i18n.common_quality()}
+		</button>
+		<KebabMenu items={menuItems} variant="bar" />
+	</BulkActionBar>
+	</div>
+
+	<BulkTouchBar
+		{count}
+		{busy}
+		noun={NOUN_SERIES}
+		actions={touchActions}
+		menu={touchMenu}
+	/>
+{/if}
+
+<QualityProfileModal
+	open={qpOpen}
+	profiles={profilesQuery.data ?? []}
+	saving={busy}
+	onClose={() => (qpOpen = false)}
+	onSave={saveProfile}
+/>
+<Dialog
+	open={renameOpen}
+	title={i18n.bulk_rename_title({ items: NOUN_SERIES.count(renamable.length) })}
+	body={i18n.bulk_rename_series_body()}
+	onClose={() => (renameOpen = false)}
+	actions={[
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+		{
+			label: busy ? i18n.common_applying() : i18n.action_rename_files(),
+			variant: "primary",
+			dismiss: false,
+			pending: busy,
+			onClick: renameFiles,
+		},
+	]}
+/>
+<DeleteTitleDialog
+	open={deleteOpen}
+	title={i18n.bulk_remove_title({ items: NOUN_SERIES.count(count) })}
+	body={i18n.bulk_remove_series_body()}
+	filesLabel={i18n.bulk_delete_files_label({ items: NOUN_EPISODE.count(episodeCount) })}
+	filesNote={i18n.common_cannot_undo()}
+	canDeleteFiles={episodeCount > 0}
+	pending={busy}
+	onClose={() => (deleteOpen = false)}
+	onConfirm={(withFiles) => remove(withFiles)}
+/>

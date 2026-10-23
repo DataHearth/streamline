@@ -1,0 +1,179 @@
+package movie
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
+	"github.com/datahearth/streamline/internal/otelx"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+)
+
+// RenameService computes and applies media-file renames for a movie using the
+// library naming pattern. libraryRoot is config.Library.MoviePath; naming is
+// config.Library.MovieNaming (passed in at construction so tests don't depend
+// on the singleton).
+type RenameService struct {
+	db          db.Store
+	ms          mediaserver.Refresher
+	libraryRoot string
+	naming      string
+}
+
+func NewRenameService(
+	store db.Store, ms mediaserver.Refresher, libraryRoot, naming string,
+) *RenameService {
+	return &RenameService{
+		db:          store,
+		ms:          ms,
+		libraryRoot: libraryRoot,
+		naming:      naming,
+	}
+}
+
+// Preview returns the rename plan without applying it. Empty Operations means
+// every file already matches its target.
+func (r *RenameService) Preview(
+	ctx context.Context, movieID uint32,
+) (library.RenamePlan, error) {
+	ctx, span := tracer.Start(ctx, "movie.rename.preview",
+		trace.WithAttributes(attribute.Int64("movie.id", int64(movieID))))
+	defer span.End()
+
+	plan, err := r.buildPlan(ctx, movieID)
+	if err != nil {
+		return library.RenamePlan{}, otelx.RecordSpanError(span, err)
+	}
+	span.SetAttributes(attribute.Int("rename.op_count", len(plan.Operations)))
+	return plan, nil
+}
+
+// Apply runs the rename plan: moves files on disk and updates the DB rows.
+// Per-operation errors halt the loop with a partial-state error message; the
+// caller is expected to surface the message to the user and let them retry.
+func (r *RenameService) Apply(
+	ctx context.Context, movieID uint32,
+) (library.RenamePlan, error) {
+	ctx, span := tracer.Start(ctx, "movie.rename.apply",
+		trace.WithAttributes(attribute.Int64("movie.id", int64(movieID))))
+	defer span.End()
+
+	plan, err := r.buildPlan(ctx, movieID)
+	if err != nil {
+		return library.RenamePlan{}, otelx.RecordSpanError(span, err)
+	}
+	// Deferred so a plan that fails halfway still rescans for the files it
+	// already moved.
+	if len(plan.Operations) > 0 {
+		defer mediaserver.RefreshInBackground(ctx, r.ms, "movie", r.libraryRoot)
+	}
+	for _, op := range plan.Operations {
+		if err := library.MkdirLibraryDir(filepath.Dir(op.To)); err != nil {
+			return library.RenamePlan{}, otelx.RecordSpanError(span,
+				fmt.Errorf("mkdir %s: %w", filepath.Dir(op.To), err))
+		}
+		if err := os.Rename(op.From, op.To); err != nil {
+			return library.RenamePlan{}, otelx.RecordSpanError(span,
+				fmt.Errorf("rename %s → %s: %w", op.From, op.To, err))
+		}
+		// The move can empty the directory the file came from — every colon in a
+		// title used to render one, so a re-rename pass leaves one behind per
+		// title. Prune before the DB write: the file is already at op.To, so a
+		// failure here must not abort the rename.
+		library.PruneEmptyDirs(ctx, filepath.Dir(op.From), r.libraryRoot)
+		if err := r.db.UpdateMediaFilePath(ctx, op.MediaFileID, op.To); err != nil {
+			return library.RenamePlan{}, otelx.RecordSpanError(span,
+				fmt.Errorf("update media_file %d: %w", op.MediaFileID, err))
+		}
+		if err := events.Record(
+			ctx, nil, events.TypeFileRenamed, events.ScopeMovie, movieID,
+			map[string]any{
+				"old_path":      op.From,
+				"new_path":      op.To,
+				"media_file_id": op.MediaFileID,
+			},
+		); err != nil {
+			slog.WarnContext(ctx, "record rename event failed",
+				"movie.id", movieID, "media_file.id", op.MediaFileID,
+				"error", err)
+		}
+	}
+	span.SetAttributes(attribute.Int("rename.op_count", len(plan.Operations)))
+	return plan, nil
+}
+
+func (r *RenameService) buildPlan(
+	ctx context.Context, movieID uint32,
+) (library.RenamePlan, error) {
+	m, err := r.db.FindMovieByID(ctx, movieID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return library.RenamePlan{}, fmt.Errorf(
+				"movie %d: %w", movieID, ErrMovieNotFound,
+			)
+		}
+		return library.RenamePlan{}, fmt.Errorf("find movie: %w", err)
+	}
+	files, err := r.db.ListMediaFilesByMovieID(ctx, movieID)
+	if err != nil {
+		return library.RenamePlan{}, fmt.Errorf("list media_files: %w", err)
+	}
+	var plan library.RenamePlan
+	for _, f := range files {
+		target := r.target(m, f)
+		if target == f.Path {
+			continue
+		}
+		// Values are sanitized, but the template is the admin's, and a
+		// literal ".." in it walks every file out of the root. The importer
+		// refuses the same template; a rename leaves the file where it is.
+		if !library.PathUnderRoot(target, r.libraryRoot) {
+			slog.WarnContext(
+				ctx,
+				"rename skipped: the naming template puts this file outside the library",
+				"movie.id",
+				movieID,
+				"path",
+				f.Path,
+				"target",
+				target,
+			)
+			continue
+		}
+		plan.Operations = append(plan.Operations, library.RenameOperation{
+			MediaFileID: f.ID,
+			From:        f.Path,
+			To:          target,
+		})
+	}
+	return plan, nil
+}
+
+// target computes the canonical path using the same primitives the importer
+// relies on (library.ApplyTemplate + BuildMovieVars + SanitizePath) so that
+// renames land at the importer's destination. The sanitisation pass is
+// per-segment to preserve directory separators.
+//
+// The release facts come from the row rather than from the current basename:
+// re-parsing a name this service wrote loses every token the template omits,
+// which for the default template is all of them but the quality — and then
+// loses the quality too on the pass after that.
+func (r *RenameService) target(m *ent.Movie, f *ent.MediaFile) string {
+	parsed := library.ParsedFromMediaFile(f)
+	vars := library.BuildMovieVars(m.Title, m.Year, m.TmdbID, parsed)
+	rel := library.ApplyTemplate(r.naming, vars)
+	segments := strings.Split(rel, "/")
+	for i, seg := range segments {
+		segments[i] = library.SanitizePath(seg)
+	}
+	return filepath.Join(append([]string{r.libraryRoot}, segments...)...)
+}

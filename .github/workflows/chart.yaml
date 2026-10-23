@@ -1,0 +1,120 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Chart
+
+# The chart versions independently of the app: a values/template fix ships
+# without an app release, and an app release ships without a chart bump.
+# App releases are tags v*.*.* (see release.yaml) — these are chart-v*.*.*.
+on:
+  push:
+    tags: ["chart-v*.*.*"]
+
+permissions: {}
+
+jobs:
+  # Its own job, holding nothing, for the reason release.yaml gives: the notes
+  # step pipes an unpinned installer into bash.
+  notes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Version
+        run: echo "version=${GITHUB_REF_NAME#chart-v}" >> "$GITHUB_ENV"
+
+      - name: Build release notes
+        id: notes
+        uses: ./.github/actions/release-notes
+        with:
+          changelog: deploy/helm/streamline/CHANGELOG.md
+          version: ${{ env.version }}
+          subject: the Streamline Helm chart
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          footer: |
+
+            ---
+            Install: `helm install streamline oci://ghcr.io/datahearth/charts/streamline --version ${{ env.version }}`
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-notes
+          path: ${{ steps.notes.outputs.file }}
+          if-no-files-found: error
+
+  publish:
+    needs: notes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Task
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+
+      # The tag names the release; Chart.yaml is what actually gets packaged.
+      # If they disagree the push lands on a version nobody asked for.
+      - name: Verify tag matches Chart.yaml
+        run: |
+          chart_version=$(sed -n 's/^version: *//p' deploy/helm/streamline/Chart.yaml)
+          tag_version="${GITHUB_REF_NAME#chart-v}"
+          if [ "$chart_version" != "$tag_version" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} wants chart ${tag_version}, but Chart.yaml says ${chart_version}"
+            exit 1
+          fi
+          echo "version=${chart_version}" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package + push chart
+        run: task release:helm
+
+      - name: Download release notes
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-notes
+          path: ${{ runner.temp }}/notes
+
+      # --latest=false, or a chart release displaces the app release as the
+      # repo's "Latest" — the two version lines share one releases page.
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Helm chart v${{ env.version }}" \
+            --notes-file "${{ runner.temp }}/notes/release-notes.md" \
+            --latest=false
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Helm Chart" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Chart \`${{ env.version }}\` published → \`oci://ghcr.io/datahearth/charts/streamline\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```bash' >> "$GITHUB_STEP_SUMMARY"
+            echo "helm install streamline oci://ghcr.io/datahearth/charts/streamline --version ${{ env.version }}" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Chart publish failed" >> "$GITHUB_STEP_SUMMARY"
+          fi

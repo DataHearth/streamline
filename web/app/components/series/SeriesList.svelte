@@ -1,0 +1,230 @@
+<script lang="ts">
+	import { countWanted } from "@lib/nouns";
+	import { auth } from "@lib/auth.svelte";
+	import { Tv } from "@lucide/svelte";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
+	import { cn } from "@lib/cn";
+	import { dragScroll } from "@lib/drag-scroll";
+	import { api } from "@lib/api";
+	import { createAction, monitorToast, SERIES, updateFailed } from "@lib/actions";
+	import { tvPosterUrl } from "@lib/posters";
+	import Poster from "@components/shared/Poster.svelte";
+	import SelectBox from "@components/shared/SelectBox.svelte";
+	import SeriesActionsMenu from "./SeriesActionsMenu.svelte";
+	import type { TVShow } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	let {
+		series,
+		selected,
+		onToggle,
+		onToggleAll,
+	}: {
+		series: TVShow[];
+		selected: Set<number>;
+		onToggle: (id: number, v: boolean) => void;
+		onToggleAll: (v: boolean) => void;
+	} = $props();
+
+	let pageSelected = $derived(series.filter((s) => selected.has(s.id)).length);
+	let allSelected = $derived(series.length > 0 && pageSelected === series.length);
+
+	const monitor = createAction<TVShow>(() => ({
+		run: (s) => api<TVShow>(`/series/${s.id}`, { method: "PATCH", body: { monitored: !s.monitored } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: (s) => monitorToast(!s.monitored),
+	}));
+
+	function availability(
+		s: TVShow,
+	): "downloading" | "importing" | "wanted" | "available" | "missing" {
+		// Same precedence the grid cards use: in flight beats the gap it fills.
+		if ((s.downloading_episodes ?? 0) > 0) return "downloading";
+		if ((s.importing_episodes ?? 0) > 0) return "importing";
+		if ((s.wanted_episodes ?? 0) > 0) return "wanted";
+		// Unmonitored shows report zero wanted episodes, so "nothing wanted" alone
+		// would badge an empty library entry as available.
+		return (s.have_episodes ?? 0) > 0 ? "available" : "missing";
+	}
+</script>
+
+<!-- Columns hide on CONTAINER width, not viewport width: at tablet the table has
+     ~700px of page (and less inside a pane), where viewport media queries kept
+     every column and the right-hand ones fell outside the box. -->
+<div
+	use:dragScroll
+	class="@container overflow-x-auto overflow-y-hidden rounded-lg border border-border bg-bg-elevated/70 backdrop-blur-md"
+>
+	<table class="w-full text-sm">
+		<thead
+			class="bg-bg-elevated/95 text-[10px] uppercase tracking-[0.12em] text-fg-faint"
+		>
+			<tr class="border-b border-border">
+				{#if auth.canAddDirectly}
+					<th scope="col" class="w-10 pl-3 pr-0 py-2.5">
+						<SelectBox
+							checked={allSelected}
+							indeterminate={pageSelected > 0 && !allSelected}
+							onChange={(v) => onToggleAll(v)}
+							label={allSelected ? i18n.common_deselect_all() : i18n.common_select_all()}
+						/>
+					</th>
+				{/if}
+				<th scope="col" class="w-12 px-3 py-2.5" aria-hidden="true"></th>
+				<th scope="col" class="px-3 py-2.5 text-left font-medium">{i18n.common_title()}</th>
+				<th
+					scope="col"
+					class="hidden w-28 px-3 py-2.5 text-left font-medium @4xl:table-cell"
+				>
+					{i18n.builtin_network()}
+				</th>
+				<th
+					scope="col"
+					class="hidden w-20 px-3 py-2.5 text-left font-medium @3xl:table-cell"
+				>
+					{i18n.common_type()}
+				</th>
+				<th scope="col" class="w-32 px-3 py-2.5 text-left font-medium">{i18n.common_status()}</th>
+				<th scope="col" class="w-44 px-3 py-2.5 text-left font-medium @2xl:w-52">
+					{i18n.series_episodes()}
+				</th>
+				<th
+					scope="col"
+					class="hidden w-20 px-3 py-2.5 text-right font-medium @2xl:table-cell"
+				>
+					{i18n.series_rating()}
+				</th>
+				<th scope="col" class="w-20 px-3 py-2.5" aria-hidden="true"></th>
+			</tr>
+		</thead>
+		<tbody>
+			{#each series as show (show.id)}
+				{@const avail = availability(show)}
+				{@const isSel = selected.has(show.id)}
+				<tr
+					class={cn(
+						"group border-b border-border last:border-b-0 transition",
+						isSel ? "bg-accent-soft" : "hover:bg-surface",
+					)}
+				>
+					{#if auth.canAddDirectly}
+						<td class="pl-3 pr-0 py-2.5">
+							<SelectBox
+								checked={isSel}
+								onChange={(v) => onToggle(show.id, v)}
+								label={isSel
+					? i18n.a11y_deselect_item({ title: show.title })
+					: i18n.a11y_select_item({ title: show.title })}
+							/>
+						</td>
+					{/if}
+					<td class="px-3 py-2.5">
+						<a
+							href="/series/{show.id}"
+							class="relative block aspect-[2/3] w-10 overflow-hidden rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+						>
+							<div class="absolute inset-0 bg-bg-card"></div>
+							<div
+								class="absolute inset-0 grid place-items-center text-fg-faint"
+							>
+								<Tv class="h-4 w-4" aria-hidden="true" />
+							</div>
+							<Poster
+								src={tvPosterUrl(show.id)}
+								alt=""
+								class="relative h-full w-full object-cover"
+							/>
+						</a>
+					</td>
+					<td class="min-w-0 px-3 py-2.5">
+						<a
+							href="/series/{show.id}"
+							class="block truncate font-medium text-fg transition hover:text-accent-text focus:outline-none focus-visible:underline"
+						>
+							{show.title}
+						</a>
+						{#if show.original_title?.trim() && show.original_title.trim() !== show.title.trim()}
+							<p class="truncate text-xs italic text-fg-faint">
+								{show.original_title}
+							</p>
+						{/if}
+					</td>
+					<td
+						class="hidden px-3 py-2.5 font-mono text-xs text-fg-muted @4xl:table-cell"
+					>
+						{show.network ?? "—"}
+					</td>
+					<td
+						class={cn(
+							"hidden px-3 py-2.5 font-mono text-xs lowercase @3xl:table-cell",
+							show.type === "anime"
+								? "text-accent-text"
+								: show.type === "daily"
+									? "text-status-grabbing"
+									: "text-fg-muted",
+						)}
+					>
+						{show.type}
+					</td>
+					<td class="px-3 py-2.5">
+						<span class="inline-flex items-center gap-2">
+							<span
+								class="h-[7px] w-[7px] shrink-0 rounded-full"
+								style:background-color={`var(--status-${avail})`}
+							></span>
+							<span class="font-mono text-xs text-fg-muted">
+								{show.series_status}
+							</span>
+						</span>
+					</td>
+					<td
+						class="whitespace-nowrap px-3 py-2.5 font-mono text-xs tabular text-fg"
+					>
+						{show.have_episodes ?? 0}<span class="text-fg-muted"
+							>/{show.total_episodes ?? 0}</span
+						>
+						{#if (show.wanted_episodes ?? 0) > 0}
+							<span class="ml-1.5 text-status-wanted"
+								>· {countWanted(show.wanted_episodes ?? 0)}</span
+							>
+						{/if}
+						{#if (show.downloading_episodes ?? 0) > 0}
+							<span class="ml-1.5 lowercase text-status-downloading"
+								>· {show.downloading_episodes} {i18n.status_downloading()}</span
+							>
+						{/if}
+						{#if (show.importing_episodes ?? 0) > 0}
+							<span class="ml-1.5 lowercase text-status-importing"
+								>· {show.importing_episodes} {i18n.status_importing()}</span
+							>
+						{/if}
+					</td>
+					<td
+						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted @2xl:table-cell"
+					>
+						{#if show.rating && show.rating > 0}
+							★ {show.rating.toFixed(1)}
+						{:else}
+							—
+						{/if}
+					</td>
+					<td class="px-3 py-2.5">
+						<div class="flex items-center justify-end gap-1">
+							{#if auth.canAddDirectly}
+								<MonitorToggle
+									monitored={show.monitored ?? false}
+									onToggle={() => monitor.mutate(show)}
+									pending={monitor.isPending && monitor.variables?.id === show.id}
+									variant="ghost"
+									size="row"
+								/>
+								<SeriesActionsMenu {show} variant="toolbar" />
+							{/if}
+						</div>
+					</td>
+				</tr>
+			{/each}
+		</tbody>
+	</table>
+</div>

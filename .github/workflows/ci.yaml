@@ -1,0 +1,334 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: read
+
+jobs:
+  lint-go:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.0
+          cache: pnpm
+      - name: Install Task
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Lint Go
+        run: task lint:go
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Go Lint" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ golangci-lint passed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ golangci-lint found issues" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  vulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.0
+          cache: pnpm
+      - name: Install Task
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Scan dependencies
+        run: task vulncheck
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Vulnerability Scan" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ govulncheck found no reachable vulnerabilities" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ govulncheck reported vulnerabilities" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  lint-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Task
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Biome
+        uses: biomejs/setup-biome@4c91541eaada48f67d7dbd7833600ce162b68f51 # v2.7.1
+        with:
+          version: latest
+      - name: Lint frontend
+        run: task lint:frontend
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Frontend Lint" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Biome passed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Lint issues — run \`task fmt\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.0
+          cache: pnpm
+      - name: Install Task
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Build frontend assets
+        run: task build:js build:css
+      - name: Run tests
+        run: task test -- --keep-going
+          --junit-report=/tmp/streamline/junit-report.xml
+      - name: Publish test report
+        if: success() || failure()
+        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
+        with:
+          report_paths: /tmp/streamline/junit-report.xml
+          check_name: Test Results
+          detailed_summary: true
+          fail_on_failure: false
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.0
+          cache: pnpm
+      - name: Install Task
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Build binary + assets
+        run: task build:app
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Build" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Binary + frontend assets compiled" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Build failed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  lint-helm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Detect helm changes
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            helm:
+              - 'deploy/helm/**'
+              - 'deploy/grafana/dashboards/**'
+
+      # A published chart version is immutable in practice — re-pushing it
+      # silently swaps the artifact under everyone who pinned it. Touch the
+      # chart, bump the chart.
+      - name: Chart version must be bumped
+        if: steps.filter.outputs.helm == 'true' && github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin "${GITHUB_BASE_REF}"
+          chart=deploy/helm/streamline/Chart.yaml
+          read_version() { sed -n 's/^version: *//p'; }
+          head_v=$(read_version < "$chart")
+          base_v=$(git show "origin/${GITHUB_BASE_REF}:${chart}" | read_version)
+
+          if [ "$head_v" = "$base_v" ]; then
+            echo "::error file=${chart}::chart changed but version is still ${head_v} — bump it"
+            exit 1
+          fi
+          # sort -V so 0.10.0 > 0.9.0; a backwards bump is as broken as none.
+          newest=$(printf '%s\n%s\n' "$base_v" "$head_v" | sort -V | tail -1)
+          if [ "$newest" != "$head_v" ]; then
+            echo "::error file=${chart}::version went backwards: ${base_v} -> ${head_v}"
+            exit 1
+          fi
+          echo "chart version ${base_v} -> ${head_v}"
+
+      - name: Install Task
+        if: steps.filter.outputs.helm == 'true'
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Helm
+        if: steps.filter.outputs.helm == 'true'
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+
+      - name: Helm prep + lint
+        if: steps.filter.outputs.helm == 'true'
+        run: |
+          mkdir -p /tmp/streamline
+          task helm:lint
+
+      - name: Helm template (default + observability)
+        if: steps.filter.outputs.helm == 'true'
+        run: task helm:template
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Helm" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.filter.outputs.helm }}" != "true" ]; then
+            echo "⏭️ No helm changes — skipped" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Helm lint + template passed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Helm validation failed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The flake checks build the package, both NixOS VM tests and the
+      # home-manager activation — twenty minutes of runner when it has to run.
+      # The filter is every input those outputs hash over: a pnpm-lock or go.sum
+      # change moves pnpmDeps/vendorHash, and a stale hash only ever shows up
+      # here.
+      - name: Detect nix-relevant changes
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            nix:
+              - 'nix/**'
+              - 'flake.nix'
+              - 'flake.lock'
+              - 'go.mod'
+              - 'go.sum'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/ci.yaml'
+
+      - name: Install Nix
+        if: steps.filter.outputs.nix == 'true'
+        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+        with:
+          # `nix copy --no-check-sigs` below needs the runner to be trusted.
+          extra_nix_config: trusted-users = root runner
+
+      - name: Remote builder
+        if: steps.filter.outputs.nix == 'true'
+        uses: ./.github/actions/nix-builder
+        with:
+          ssh-key: ${{ secrets.NIX_BUILDER_SSH_KEY }}
+
+      # Everything `nix flake check` evaluates, without building any of it.
+      - name: Evaluate the flake
+        if: steps.filter.outputs.nix == 'true'
+        run: nix flake check --no-build
+
+      # The builder's `ci` account is not a trusted user: it can have the
+      # daemon build what it sends (`--store`), not act as a remote builder.
+      # The package is copied back so the VM test does not build it again.
+      - name: Package, lint and home-manager
+        if: steps.filter.outputs.nix == 'true'
+        run: |
+          set -euo pipefail
+          checks=(.#checks.x86_64-linux.build .#checks.x86_64-linux.home-manager .#checks.x86_64-linux.lint)
+          if [ -n "${NIX_BUILDER_STORE:-}" ]; then
+            nix build --no-link --print-build-logs --store "$NIX_BUILDER_STORE" --eval-store auto "${checks[@]}"
+            nix copy --no-check-sigs --from "$NIX_BUILDER_STORE" .#checks.x86_64-linux.build
+          else
+            nix build --no-link --print-build-logs "${checks[@]}"
+          fi
+
+      # Needs KVM, which the builder does not have.
+      - name: NixOS VM test
+        if: steps.filter.outputs.nix == 'true'
+        run: nix build --no-link --print-build-logs .#checks.x86_64-linux.nixos
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Nix" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.filter.outputs.nix }}" != "true" ]; then
+            echo "⏭️ No nix-relevant changes — skipped" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Package, lint, NixOS VM test and home-manager module all built" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ nix checks failed" >> "$GITHUB_STEP_SUMMARY"
+          fi

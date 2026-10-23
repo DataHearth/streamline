@@ -1,0 +1,714 @@
+package restapi
+
+import (
+	"context"
+	"errors"
+	"sync"
+	"time"
+
+	"github.com/datahearth/streamline/ent"
+	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
+	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
+	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
+	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/library/bulkimport"
+	"github.com/datahearth/streamline/internal/media/book"
+)
+
+func (s *Server) StartImport(
+	ctx context.Context,
+	req StartImportRequestObject,
+) (StartImportResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return StartImport403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
+	}
+	params := bulkimport.StartScanParams{
+		SourcePath: req.Body.SourcePath,
+		Mode:       entimportscan.Mode(req.Body.Mode),
+	}
+	if req.Body.Kind != nil {
+		params.Kind = entimportscan.Kind(*req.Body.Kind)
+	}
+	if req.Body.ImportMode != nil {
+		params.ImportMode = entimportscan.ImportMode(*req.Body.ImportMode)
+	}
+	scan, err := s.bulkImports.StartScan(ctx, params)
+	if err != nil {
+		switch {
+		case errors.Is(err, bulkimport.ErrInvalidPath),
+			errors.Is(err, bulkimport.ErrPathOutsideLibrary),
+			errors.Is(err, bulkimport.ErrLibraryPathMissing),
+			errors.Is(err, bulkimport.ErrUnsupportedKind),
+			errors.Is(err, bulkimport.ErrRenameUnsupported):
+			return StartImport422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		case errors.Is(err, bulkimport.ErrScanRunning):
+			return StartImport409JSONResponse{
+				ConflictJSONResponse: errConflict(err.Error()),
+			}, nil
+		case errors.Is(err, book.ErrNotConfigured):
+			return StartImport503JSONResponse{
+				ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
+			}, nil
+		default:
+			return nil, err
+		}
+	}
+	return StartImport201JSONResponse{
+		ImportScanJSONResponse: ImportScanJSONResponse(toAPIImportScan(scan)),
+	}, nil
+}
+
+func (s *Server) GetImport(
+	ctx context.Context,
+	req GetImportRequestObject,
+) (GetImportResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return GetImport403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
+	}
+	scan, err := s.bulkImports.Get(ctx, req.Id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return GetImport404JSONResponse{
+				NotFoundJSONResponse: errNotFound("scan not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	return GetImport200JSONResponse{
+		ImportScanJSONResponse: ImportScanJSONResponse(toAPIImportScan(scan)),
+	}, nil
+}
+
+func (s *Server) ListImports(
+	ctx context.Context,
+	req ListImportsRequestObject,
+) (ListImportsResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ListImports403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
+	}
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListImports400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(req.Params.Limit, 20, importMaxLimit)
+	if !ok {
+		return ListImports400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(importMaxLimit)),
+		}, nil
+	}
+	items, total, err := s.bulkImports.List(ctx, page, limit)
+	if err != nil {
+		return nil, err
+	}
+	apiItems := make([]ImportScan, 0, len(items))
+	for _, it := range items {
+		apiItems = append(apiItems, toAPIImportScan(it))
+	}
+	return ListImports200JSONResponse{
+		Items: apiItems,
+		Total: total,
+	}, nil
+}
+
+func (s *Server) CancelImport(
+	ctx context.Context,
+	req CancelImportRequestObject,
+) (CancelImportResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return CancelImport403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
+	}
+	if err := s.bulkImports.Cancel(ctx, req.Id); err != nil {
+		switch {
+		case errors.Is(err, bulkimport.ErrScanNotFound):
+			return CancelImport404JSONResponse{
+				NotFoundJSONResponse: errNotFound(err.Error()),
+			}, nil
+		case errors.Is(err, bulkimport.ErrScanNotCancellable):
+			return CancelImport422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		default:
+			return nil, err
+		}
+	}
+	return CancelImport204Response{}, nil
+}
+
+func (s *Server) DeleteImport(
+	ctx context.Context,
+	req DeleteImportRequestObject,
+) (DeleteImportResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return DeleteImport403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
+	}
+	if err := s.bulkImports.Delete(ctx, req.Id); err != nil {
+		switch {
+		case errors.Is(err, bulkimport.ErrScanNotFound):
+			return DeleteImport404JSONResponse{
+				NotFoundJSONResponse: errNotFound(err.Error()),
+			}, nil
+		case errors.Is(err, bulkimport.ErrScanNotDeletable):
+			return DeleteImport422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		default:
+			return nil, err
+		}
+	}
+	return DeleteImport204Response{}, nil
+}
+
+func (s *Server) CommitImport(
+	ctx context.Context,
+	req CommitImportRequestObject,
+) (CommitImportResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return CommitImport403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
+	}
+	var opts bulkimport.CommitOptions
+	if req.Body != nil {
+		opts.WriteTags = req.Body.WriteTags
+	}
+	if err := s.bulkImports.CommitWith(ctx, req.Id, opts); err != nil {
+		switch {
+		case errors.Is(err, bulkimport.ErrScanNotFound):
+			return CommitImport404JSONResponse{
+				NotFoundJSONResponse: errNotFound(err.Error()),
+			}, nil
+		case errors.Is(err, bulkimport.ErrScanNotReviewable):
+			return CommitImport422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		case errors.Is(err, book.ErrNotConfigured):
+			return CommitImport503JSONResponse{
+				ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
+			}, nil
+		default:
+			return nil, err
+		}
+	}
+	scan, err := s.bulkImports.Get(ctx, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	return CommitImport202JSONResponse{
+		ImportScanJSONResponse: ImportScanJSONResponse(toAPIImportScan(scan)),
+	}, nil
+}
+
+func (s *Server) ListImportFiles(
+	ctx context.Context,
+	req ListImportFilesRequestObject,
+) (ListImportFilesResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ListImportFiles403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListImportFiles400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(req.Params.Limit, 50, importMaxLimit)
+	if !ok {
+		return ListImportFiles400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(importMaxLimit)),
+		}, nil
+	}
+	cls := entimportscanfile.Classification("")
+	if req.Params.Classification != nil {
+		cls = entimportscanfile.Classification(*req.Params.Classification)
+	}
+	q := ""
+	if req.Params.Q != nil {
+		q = *req.Params.Q
+	}
+	items, total, err := s.bulkImports.Files(ctx, bulkimport.FilesParams{
+		ScanID: req.Id, Classification: cls, Query: q, Page: page, Limit: limit,
+	})
+	if err != nil {
+		if errors.Is(err, bulkimport.ErrScanNotFound) {
+			return ListImportFiles404JSONResponse{
+				NotFoundJSONResponse: errNotFound(err.Error()),
+			}, nil
+		}
+		return nil, err
+	}
+	apiItems := make([]ImportScanFile, 0, len(items))
+	for _, it := range items {
+		apiItems = append(apiItems, toAPIImportScanFile(it))
+	}
+	return ListImportFiles200JSONResponse{
+		Items: apiItems,
+		Total: total,
+	}, nil
+}
+
+func (s *Server) UpdateImportFileDecision(
+	ctx context.Context,
+	req UpdateImportFileDecisionRequestObject,
+) (UpdateImportFileDecisionResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return UpdateImportFileDecision403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	var tmdbID *uint32
+	if req.Body.TmdbId != nil {
+		v := *req.Body.TmdbId
+		tmdbID = &v
+	}
+	f, err := s.bulkImports.UpdateFileDecision(
+		ctx,
+		req.Id,
+		req.FileId,
+		entimportscanfile.Decision(req.Body.Decision),
+		tmdbID,
+	)
+	if err != nil {
+		if errors.Is(err, bulkimport.ErrScanFileNotFound) {
+			return UpdateImportFileDecision404JSONResponse{
+				NotFoundJSONResponse: errNotFound(err.Error()),
+			}, nil
+		}
+		return nil, err
+	}
+	return UpdateImportFileDecision200JSONResponse{
+		ImportScanFileJSONResponse: ImportScanFileJSONResponse(
+			toAPIImportScanFile(f),
+		),
+	}, nil
+}
+
+func (s *Server) ListImportShows(
+	ctx context.Context,
+	req ListImportShowsRequestObject,
+) (ListImportShowsResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ListImportShows403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	// Query bounds are checked before the scan lookup, so a malformed page or
+	// limit answers 400 here exactly as it does on the sibling /files listing.
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListImportShows400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(req.Params.Limit, 50, importMaxLimit)
+	if !ok {
+		return ListImportShows400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(importMaxLimit)),
+		}, nil
+	}
+	if _, err := s.store.FindImportScan(ctx, req.Id); err != nil {
+		if ent.IsNotFound(err) {
+			return ListImportShows404JSONResponse{
+				NotFoundJSONResponse: errNotFound("scan not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	cls := entimportscanshow.Classification("")
+	if req.Params.Classification != nil {
+		cls = entimportscanshow.Classification(*req.Params.Classification)
+	}
+	q := ""
+	if req.Params.Q != nil {
+		q = *req.Params.Q
+	}
+	items, total, err := s.store.ListImportScanShows(
+		ctx,
+		db.ListImportScanShowsParams{
+			ScanID:         req.Id,
+			Classification: cls,
+			Query:          q,
+			Offset:         uint32(page-1) * uint32(limit),
+			Limit:          uint32(limit),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	apiItems := make([]ImportScanShow, 0, len(items))
+	for _, it := range items {
+		apiItems = append(apiItems, toAPIImportScanShow(it))
+	}
+	return ListImportShows200JSONResponse{
+		Items: apiItems,
+		Total: total,
+	}, nil
+}
+
+func (s *Server) UpdateImportShowDecision(
+	ctx context.Context,
+	req UpdateImportShowDecisionRequestObject,
+) (UpdateImportShowDecisionResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return UpdateImportShowDecision403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	var tvdbID *uint32
+	if req.Body.TvdbId != nil {
+		v := *req.Body.TvdbId
+		tvdbID = &v
+	}
+	if err := s.store.UpdateImportScanShowDecision(
+		ctx,
+		req.Id,
+		req.ShowId,
+		entimportscanshow.Decision(req.Body.Decision),
+		tvdbID,
+	); err != nil {
+		if errors.Is(err, db.ErrImportScanShowNotFound) {
+			return UpdateImportShowDecision404JSONResponse{
+				NotFoundJSONResponse: errNotFound("import scan show not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	row, err := s.store.FindImportScanShow(ctx, req.Id, req.ShowId)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return UpdateImportShowDecision404JSONResponse{
+				NotFoundJSONResponse: errNotFound("import scan show not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	return UpdateImportShowDecision200JSONResponse{
+		ImportScanShowJSONResponse: ImportScanShowJSONResponse(
+			toAPIImportScanShow(row),
+		),
+	}, nil
+}
+
+func (s *Server) BulkUpdateImportDecisions(
+	ctx context.Context,
+	req BulkUpdateImportDecisionsRequestObject,
+) (BulkUpdateImportDecisionsResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return BulkUpdateImportDecisions403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	p := bulkimport.BulkDecisionParams{
+		ScanID:   req.Id,
+		Decision: string(req.Body.Decision),
+	}
+	if req.Body.Classification != nil {
+		p.Classification = string(*req.Body.Classification)
+	}
+	if req.Body.Ids != nil {
+		p.IDs = *req.Body.Ids
+	}
+	n, err := s.bulkImports.BulkDecide(ctx, p)
+	if err != nil {
+		switch {
+		case errors.Is(err, bulkimport.ErrScanNotFound):
+			return BulkUpdateImportDecisions404JSONResponse{
+				NotFoundJSONResponse: errNotFound(err.Error()),
+			}, nil
+		case errors.Is(err, bulkimport.ErrScanNotReviewable):
+			return BulkUpdateImportDecisions422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		default:
+			return nil, err
+		}
+	}
+	return BulkUpdateImportDecisions200JSONResponse{
+		Updated: n,
+	}, nil
+}
+
+func (s *Server) ListImportAlbums(
+	ctx context.Context,
+	req ListImportAlbumsRequestObject,
+) (ListImportAlbumsResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ListImportAlbums403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListImportAlbums400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(req.Params.Limit, 50, importMaxLimit)
+	if !ok {
+		return ListImportAlbums400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(importMaxLimit)),
+		}, nil
+	}
+	scan, err := s.store.FindImportScan(ctx, req.Id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return ListImportAlbums404JSONResponse{
+				NotFoundJSONResponse: errNotFound("scan not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	cls := entimportscanalbum.Classification("")
+	if req.Params.Classification != nil {
+		cls = entimportscanalbum.Classification(*req.Params.Classification)
+	}
+	q := ""
+	if req.Params.Q != nil {
+		q = *req.Params.Q
+	}
+	items, total, err := s.store.ListImportScanAlbums(
+		ctx,
+		db.ListImportScanAlbumsParams{
+			ScanID:         req.Id,
+			Classification: cls,
+			Query:          q,
+			Offset:         uint32(page-1) * uint32(limit),
+			Limit:          uint32(limit),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	artistIDs, err := s.libraryArtistIDs(ctx, items)
+	if err != nil {
+		return nil, err
+	}
+	apiItems := make([]ImportScanAlbum, 0, len(items))
+	// seeding_files is only worth a listing while the review is open and
+	// something will be tagged: a committed scan, or tagging off, gets none.
+	var seeding *download.SeedingSet
+	if len(items) > 0 && s.downloads != nil &&
+		scan.Status == entimportscan.StatusAwaitingReview &&
+		config.Get().Library.MusicTags.Mode != config.MusicTagsOff {
+		set := s.seedingSnapshot(ctx)
+		seeding = &set
+	}
+	for _, it := range items {
+		row := toAPIImportScanAlbum(it, artistIDs)
+		if seeding != nil {
+			n := bulkimport.SeedingFiles(*seeding, it.FolderPath)
+			row.SeedingFiles = &n
+		}
+		apiItems = append(apiItems, row)
+	}
+	return ListImportAlbums200JSONResponse{
+		Items: apiItems,
+		Total: total,
+	}, nil
+}
+
+func (s *Server) UpdateImportAlbumDecision(
+	ctx context.Context,
+	req UpdateImportAlbumDecisionRequestObject,
+) (UpdateImportAlbumDecisionResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return UpdateImportAlbumDecision403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	var releaseGroupMBID *string
+	if req.Body.ReleaseGroupMbid != nil {
+		v := *req.Body.ReleaseGroupMbid
+		releaseGroupMBID = &v
+	}
+	if err := s.store.UpdateImportScanAlbumDecision(
+		ctx,
+		req.Id,
+		req.AlbumId,
+		entimportscanalbum.Decision(req.Body.Decision),
+		releaseGroupMBID,
+	); err != nil {
+		if errors.Is(err, db.ErrImportScanAlbumNotFound) {
+			return UpdateImportAlbumDecision404JSONResponse{
+				NotFoundJSONResponse: errNotFound("import scan album not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	row, err := s.store.FindImportScanAlbum(ctx, req.Id, req.AlbumId)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return UpdateImportAlbumDecision404JSONResponse{
+				NotFoundJSONResponse: errNotFound("import scan album not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	artistIDs, err := s.libraryArtistIDs(ctx, []*ent.ImportScanAlbum{row})
+	if err != nil {
+		return nil, err
+	}
+	return UpdateImportAlbumDecision200JSONResponse{
+		ImportScanAlbumJSONResponse: ImportScanAlbumJSONResponse(
+			toAPIImportScanAlbum(row, artistIDs),
+		),
+	}, nil
+}
+
+// libraryArtistIDs maps the artists of a page of scan rows to the library
+// artists holding them, in one query.
+func (s *Server) libraryArtistIDs(
+	ctx context.Context,
+	rows []*ent.ImportScanAlbum,
+) (map[string]uint32, error) {
+	mbids := make([]string, 0, len(rows))
+	for _, r := range rows {
+		if r.ArtistMbid != "" {
+			mbids = append(mbids, r.ArtistMbid)
+		}
+	}
+	if len(mbids) == 0 {
+		return nil, nil
+	}
+	return s.store.ArtistIDsByMBID(ctx, mbids)
+}
+
+func (s *Server) ListImportBooks(
+	ctx context.Context,
+	req ListImportBooksRequestObject,
+) (ListImportBooksResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ListImportBooks403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListImportBooks400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(req.Params.Limit, 50, importMaxLimit)
+	if !ok {
+		return ListImportBooks400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(importMaxLimit)),
+		}, nil
+	}
+	if _, err := s.store.FindImportScan(ctx, req.Id); err != nil {
+		if ent.IsNotFound(err) {
+			return ListImportBooks404JSONResponse{
+				NotFoundJSONResponse: errNotFound("scan not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	cls := entimportscanbook.Classification("")
+	if req.Params.Classification != nil {
+		cls = entimportscanbook.Classification(*req.Params.Classification)
+	}
+	q := ""
+	if req.Params.Q != nil {
+		q = *req.Params.Q
+	}
+	items, total, err := s.store.ListImportScanBooks(
+		ctx,
+		db.ListImportScanBooksParams{
+			ScanID:         req.Id,
+			Classification: cls,
+			Query:          q,
+			Offset:         uint32(page-1) * uint32(limit),
+			Limit:          uint32(limit),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	apiItems := make([]ImportScanBook, 0, len(items))
+	for _, it := range items {
+		apiItems = append(apiItems, toAPIImportScanBook(it))
+	}
+	return ListImportBooks200JSONResponse{
+		Items: apiItems,
+		Total: total,
+	}, nil
+}
+
+func (s *Server) UpdateImportBookDecision(
+	ctx context.Context,
+	req UpdateImportBookDecisionRequestObject,
+) (UpdateImportBookDecisionResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return UpdateImportBookDecision403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	var hardcoverID *uint32
+	if req.Body.BookHardcoverId != nil {
+		v := *req.Body.BookHardcoverId
+		hardcoverID = &v
+	}
+	if err := s.store.UpdateImportScanBookDecision(
+		ctx,
+		req.Id,
+		req.BookId,
+		entimportscanbook.Decision(req.Body.Decision),
+		hardcoverID,
+	); err != nil {
+		if errors.Is(err, db.ErrImportScanBookNotFound) {
+			return UpdateImportBookDecision404JSONResponse{
+				NotFoundJSONResponse: errNotFound("import scan book not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	row, err := s.store.FindImportScanBook(ctx, req.Id, req.BookId)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return UpdateImportBookDecision404JSONResponse{
+				NotFoundJSONResponse: errNotFound("import scan book not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	return UpdateImportBookDecision200JSONResponse{
+		ImportScanBookJSONResponse: ImportScanBookJSONResponse(
+			toAPIImportScanBook(row),
+		),
+	}, nil
+}
+
+// seedingTTL is how long one listing of the download clients serves the
+// import review's seeding_files: the page is fetched again as the admin pages
+// and decides, and every client listed on each fetch stalls the page on the
+// slowest of them.
+const seedingTTL = 30 * time.Second
+
+// seedingCache is the last listing of the download clients' torrents.
+type seedingCache struct {
+	mu  sync.Mutex
+	at  time.Time
+	set download.SeedingSet
+}
+
+// seedingSnapshot returns the clients' torrents as listed at most seedingTTL
+// ago. An incomplete listing is not kept: the next fetch asks again.
+func (s *Server) seedingSnapshot(ctx context.Context) download.SeedingSet {
+	s.seeding.mu.Lock()
+	defer s.seeding.mu.Unlock()
+	if !s.seeding.at.IsZero() && time.Since(s.seeding.at) < seedingTTL {
+		return s.seeding.set
+	}
+	set := s.downloads.SeedingTorrents(ctx)
+	s.seeding.set, s.seeding.at = set, time.Time{}
+	if set.Complete {
+		s.seeding.at = time.Now()
+	}
+	return set
+}

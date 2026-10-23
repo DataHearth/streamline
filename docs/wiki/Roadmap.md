@@ -1,0 +1,77 @@
+# Roadmap
+
+What Streamline does today and what's planned. No dates — this says *whether* a feature is coming, not when.
+
+Missing something you need? [Open an issue](https://github.com/datahearth/streamline/issues).
+
+## Media types
+
+| Feature | Status |
+| --- | --- |
+| Movies | ✅ Shipped |
+| TV shows | ✅ Shipped |
+| Music | ✅ Shipped — library management with background hydration of tracks and credits, Wikipedia overviews and artist photos, monitor policies, adoption of existing files, a Subsonic server (playlists, stars and play counts, queue sync, share links, lyrics, transcoding), searching and grabbing albums and discography packs with tag writing, RSS and scheduled searches, and requests |
+| Books | ✅ Shipped — a book-first library (books and series with volumes, editions per language and publisher, an ebook and an audiobook slot each), adoption of existing files, an OPDS catalog, searching and grabbing per slot, RSS and scheduled searches, and requests |
+| Send to e-reader by email (EPUB and PDF) | ✅ Shipped |
+| CBZ → PDF for send to e-reader | 📋 Planned |
+| Music tag engine (Streamline keeps every file's tags and artwork in step with its library) | 🚧 In progress — full MusicBrainz tag set with composers, performers and production credits, the album cover in each file and `cover.jpg`/`folder.jpg` beside them, a per-release tag panel with hand-set tags, and edits made elsewhere undone under *Managed* — without losing ReplayGain, lyrics or a release's own art |
+
+Music and books work like movies and TV: adopt your existing library, then let automatic searching, grabbing and requests fill the gaps. Music is reachable from Subsonic clients and books from OPDS readers; see [Music and Books](Music-and-Books).
+
+## Downloading
+
+| Feature | Status |
+| --- | --- |
+| qBittorrent, Transmission, Deluge | ✅ Shipped |
+| Torznab indexers | ✅ Shipped |
+| Prowlarr | ✅ Shipped |
+| Built-in torrent client (no external download client needed) | ✅ Shipped |
+| Media info from ffprobe (codec, resolution, duration, bitrate) | ✅ Shipped |
+| Import verification — hold a download that doesn't match what it claimed | ✅ Shipped |
+| Transcoding — re-encode or remux imported files to a quality profile's rules | ✅ Shipped |
+| Custom-format quality scoring (Radarr-style profiles, RSS-driven upgrades for movies and series) | ✅ Shipped |
+| Selective file download (grab a pack, download only the episode you need) | ✅ Shipped |
+| Adopt torrents you added by hand, into the right title | ✅ Shipped |
+| Usenet (NZB indexers + SABnzbd/NZBGet) | 📋 Planned |
+
+> [!WARNING]
+> The built-in torrent client is the newest of these and still has a rough edge: a download can occasionally stall while a seeder is connected. It usually clears itself within seconds; one that doesn't can be nudged with pause and resume.
+
+If you already run qBittorrent, Transmission or Deluge, there's no need to switch.
+
+Selective file download works with all four clients and is off by default behind [`download.selective_files`](Configuration-Reference) — a whole-torrent grab is what you get until you turn it on. Turn it on and a season pack downloads only the episodes you're missing, plus any whose file the release beats.
+
+Transcoding rewrites files on disk after import, to shrink a library or normalise its containers — it is not playback transcoding, which belongs to the built-in player below.
+
+> [!NOTE]
+> Transcoding is off by default ([`transcoding.enabled`](Configuration-Reference)) and never re-encodes HDR or Dolby Vision content.
+
+Every encode is verified against its source before it replaces the file — duration, resolution, audio and subtitle tracks, a size band, and optionally a full decode pass and a VMAF score — and one that fails is rejected rather than swapped in.
+
+Hardware encoding through VAAPI is shipped on Linux (`transcoding.hw_accel`, with the [`-vaapi` image variant](Installation) or any ffmpeg built with VAAPI); under `auto` it falls back to the CPU per job when the GPU cannot take the codec, while `vaapi` holds the job instead. VideoToolbox on macOS remains planned.
+
+## Playback
+
+| Feature | Status |
+| --- | --- |
+| Plex, Jellyfin, Emby notifications + deep links | ✅ Shipped |
+| Built-in player (stream from Streamline itself, no media server) | 📋 Planned |
+
+## Platform
+
+| Feature | Status |
+| --- | --- |
+| Multi-user, SSO (OIDC), invites | ✅ Shipped |
+| Request system | ✅ Shipped |
+| REST API (OpenAPI 3.0) | ✅ Shipped |
+| OpenTelemetry traces, metrics, logs | ✅ Shipped |
+| Docker images, Helm chart, single binary | ✅ Shipped |
+| Nix flake — package, NixOS module, home-manager module | ✅ Shipped |
+| Import an existing library (scan, match, review, rename) | ✅ Shipped |
+| Library path migration (re-root a moved library) | ✅ Shipped |
+| Installable web app (home-screen manifest) | ✅ Shipped |
+| Re-identify a title matched to the wrong movie or show | ✅ Shipped |
+
+---
+
+Everything marked Shipped is documented here — start from [Home](Home), or go straight to [Installation](Installation) if you have nothing running yet. Quality scoring and transcoding rules live in [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats); every key named above is in the [Configuration Reference](Configuration-Reference).

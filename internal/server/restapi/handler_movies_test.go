@@ -1,0 +1,1185 @@
+package restapi
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/stretchr/testify/mock"
+
+	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/library"
+	moviesvc "github.com/datahearth/streamline/internal/media/movie"
+	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/mediafiletest"
+)
+
+var _ = Describe(
+	"Handler: Movies",
+	Label("unit", "server", "movies"),
+	func() {
+		var app *apiKeyApp
+
+		BeforeEach(func() {
+			app = newAPIKeyApp()
+		})
+
+		Describe("ListMovies", func() {
+			It("rejects an explicit page=0 with a JSON 400", func() {
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?page=0",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(Equal("page must be >= 1"))
+			})
+
+			It("rejects an explicit limit=0 with a JSON 400", func() {
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?limit=0",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(Equal("limit must be between 1 and 100"))
+			})
+
+			It("rejects an out-of-range page with a JSON 400", func() {
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?page=70000",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(resp.Header.Get("Content-Type")).
+					To(HavePrefix("application/json"))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(ContainSubstring("page"))
+			})
+
+			It("rejects a limit above the documented maximum", func() {
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?limit=65535",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(Equal("limit must be between 1 and 100"))
+			})
+
+			It("returns paginated list when movies exist", func() {
+				app.movies.EXPECT().
+					FilterList(mock.Anything, mock.AnythingOfType("movie.FilterParams")).
+					Return([]*ent.Movie{
+						{
+							ID:     1,
+							Title:  "Movie A",
+							Year:   2020,
+							TmdbID: 100,
+							Status: movie.StatusWanted,
+						},
+						{
+							ID:     2,
+							Title:  "Movie B",
+							Year:   2021,
+							TmdbID: 101,
+							Status: movie.StatusWanted,
+						},
+					}, nil, uint32(2), nil).
+					Once()
+
+				resp, err := http.Get(app.srv.URL + "/api/v1/movies?page=1&limit=10")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body struct {
+					Items []map[string]any `json:"items"`
+					Total int              `json:"total"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Items).To(HaveLen(2))
+				Expect(body.Total).To(Equal(2))
+			})
+
+			It("round-trips a failed movie's status", func() {
+				app.movies.EXPECT().
+					FilterList(mock.Anything, mock.AnythingOfType("movie.FilterParams")).
+					Return([]*ent.Movie{
+						{
+							ID:             3,
+							Title:          "Broken Import",
+							Year:           2019,
+							TmdbID:         102,
+							Status:         movie.StatusFailed,
+							QualityProfile: "uhd",
+						},
+					}, nil, uint32(1), nil).
+					Once()
+
+				resp, err := http.Get(app.srv.URL + "/api/v1/movies?page=1&limit=10")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body struct {
+					Items []Movie `json:"items"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Items).To(HaveLen(1))
+				Expect(body.Items[0].Status).To(Equal(MovieStatusFailed))
+				Expect(body.Items[0].Status.Valid()).To(BeTrue())
+				Expect(body.Items[0].QualityProfile).To(HaveValue(Equal("uhd")))
+			})
+
+			It("returns empty page when no movies exist", func() {
+				app.movies.EXPECT().
+					FilterList(mock.Anything, mock.AnythingOfType("movie.FilterParams")).
+					Return(nil, nil, uint32(0), nil).
+					Once()
+
+				resp, err := http.Get(app.srv.URL + "/api/v1/movies?page=1&limit=10")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body struct {
+					Items []map[string]any `json:"items"`
+					Total int              `json:"total"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Items).To(BeEmpty())
+				Expect(body.Total).To(Equal(0))
+			})
+		})
+
+		Describe("GetMovieCounts", func() {
+			It("exposes the per-status counts including failed", func() {
+				app.movies.EXPECT().Counts(mock.Anything, mock.Anything).
+					Return(moviesvc.Counts{
+						Total:          10,
+						StatusTotal:    9,
+						Wanted:         4,
+						Downloading:    2,
+						Available:      3,
+						Failed:         1,
+						MonitoredTotal: 8,
+						Trend:          []int{9, 10},
+					}, nil).
+					Once()
+
+				resp, err := http.Get(app.srv.URL + "/api/v1/movies/counts")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body MovieCounts
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Total).To(Equal(uint32(10)))
+				Expect(body.Wanted).To(Equal(uint32(4)))
+				Expect(body.Downloading).To(Equal(uint32(2)))
+				Expect(body.Available).To(Equal(uint32(3)))
+				Expect(body.Failed).To(Equal(uint32(1)))
+				Expect(body.Trend).To(Equal([]uint32{9, 10}))
+				// Each facet's "all" row travels separately from the library
+				// total: they diverge as soon as the other facet is filtered.
+				Expect(body.StatusTotal).To(Equal(uint32(9)))
+				Expect(body.MonitoredTotal).To(Equal(uint32(8)))
+			})
+
+			It("forwards the list's filters", func() {
+				var got moviesvc.FilterParams
+				app.movies.EXPECT().Counts(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, p moviesvc.FilterParams) { got = p }).
+					Return(moviesvc.Counts{}, nil).
+					Once()
+
+				resp, err := http.Get(
+					app.srv.URL +
+						"/api/v1/movies/counts?status=wanted&monitored=monitored&query=dune",
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				Expect(got.Status).To(Equal("wanted"))
+				Expect(got.Query).To(Equal("dune"))
+				Expect(got.Monitored).To(HaveValue(BeTrue()))
+			})
+		})
+
+		Describe("DeleteMovie", func() {
+			It("deletes existing movie and returns 204", func() {
+				app.movies.EXPECT().
+					Delete(mock.Anything, uint32(1), mock.AnythingOfType("movie.DeleteOptions")).
+					Return(nil).
+					Once()
+
+				req, err := http.NewRequest(
+					http.MethodDelete,
+					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, 1),
+					nil,
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				resp, err := http.DefaultClient.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			})
+
+			It("returns 404 for nonexistent movie", func() {
+				app.movies.EXPECT().
+					Delete(mock.Anything, uint32(999), mock.AnythingOfType("movie.DeleteOptions")).
+					Return(fmt.Errorf("movie not found")).
+					Once()
+
+				req, err := http.NewRequest(
+					http.MethodDelete,
+					app.srv.URL+"/api/v1/movies/999",
+					nil,
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				resp, err := http.DefaultClient.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			})
+		})
+
+		Describe("SearchMovie (indexer search)", func() {
+			It("returns 404 when movie does not exist", func() {
+				app.movies.EXPECT().
+					Get(mock.Anything, uint32(999)).
+					Return(nil, fmt.Errorf("not found")).
+					Once()
+
+				req, err := http.NewRequest(
+					http.MethodPost,
+					app.srv.URL+"/api/v1/movies/999/search",
+					nil,
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				resp, err := http.DefaultClient.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			})
+
+			It("returns search results from indexer", func() {
+				app.movies.EXPECT().
+					Get(mock.Anything, uint32(5)).
+					Return(&ent.Movie{
+						ID:     5,
+						Title:  "Fight Club",
+						Year:   1999,
+						TmdbID: 550,
+						Status: movie.StatusWanted,
+					}, nil).
+					Once()
+				app.indexers.EXPECT().
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					Return([]indexer.SearchResult{
+						{
+							Title:    "Fight.Club.1999.1080p.BluRay.x264",
+							Download: "magnet:?xt=urn:btih:abc123",
+							Size:     5_000_000_000,
+							Seeders:  50,
+							Leechers: 10,
+						},
+					}, nil).
+					Once()
+				app.store.EXPECT().
+					ListReleaseGrabs(mock.Anything, uint32(5), uint32(0), mock.Anything, mock.Anything).
+					Return(nil, nil).Once()
+
+				req, err := http.NewRequest(
+					http.MethodPost,
+					fmt.Sprintf("%s/api/v1/movies/%d/search", app.srv.URL, 5),
+					nil,
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				resp, err := http.DefaultClient.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var results []SearchResult
+				Expect(json.NewDecoder(resp.Body).Decode(&results)).To(Succeed())
+				Expect(results).To(HaveLen(1))
+				Expect(results[0].Seeders).To(Equal(uint32(50)))
+				Expect(results[0].Leechers).NotTo(BeNil())
+				Expect(*results[0].Leechers).To(Equal(uint32(10)))
+			})
+		})
+
+		Describe("SearchMovie release facts", func() {
+			It("stamps indexer privacy and the movie's grab history", func() {
+				configtest.Setup(map[string]any{
+					"indexers": []map[string]any{{
+						"name": "tracker", "host": "h", "port": 9117,
+						"protocol": "torznab", "api_key": "k", "private": true,
+					}},
+				})
+				grabbed := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+				app.movies.EXPECT().
+					Get(mock.Anything, uint32(5)).
+					Return(&ent.Movie{ID: 5, Title: "Fight Club", TmdbID: 550}, nil).
+					Once()
+				app.indexers.EXPECT().
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					Return([]indexer.SearchResult{{
+						Title:             "Fight.Club.1999.1080p.BluRay.x264",
+						Download:          "magnet:a",
+						Seeders:           5,
+						Indexer:           "tracker",
+						ConfiguredIndexer: "tracker",
+					}}, nil).
+					Once()
+				app.store.EXPECT().
+					ListReleaseGrabs(mock.Anything, uint32(5), uint32(0),
+						[]string{}, []string{"Fight.Club.1999.1080p.BluRay.x264"}).
+					Return([]*ent.DownloadRecord{{
+						Title:      "fight.club.1999.1080p.bluray.x264",
+						CreateTime: grabbed,
+					}}, nil).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/5/search",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var results []SearchResult
+				Expect(json.NewDecoder(resp.Body).Decode(&results)).To(Succeed())
+				Expect(results).To(HaveLen(1))
+				Expect(results[0].IndexerPrivate).To(HaveValue(BeTrue()))
+				Expect(results[0].PreviouslyGrabbedAt).
+					To(HaveValue(BeTemporally("==", grabbed)))
+			})
+		})
+
+		Describe("SearchMovie scoring", func() {
+			BeforeEach(func() {
+				configtest.Setup(map[string]any{
+					"quality_profiles": []map[string]any{
+						{
+							"name":                 "default",
+							"min_resolution":       "720p",
+							"preferred_resolution": "1080p",
+							"formats": []map[string]any{
+								{"name": "remux", "score": 50},
+								{"name": "x265", "score": 10},
+							},
+						},
+					},
+					"movie_quality_default_profile":  "default",
+					"series_quality_default_profile": "default",
+				})
+			})
+
+			It("scores, flags and orders the browsed releases", func() {
+				app.movies.EXPECT().
+					Get(mock.Anything, uint32(5)).
+					Return(&ent.Movie{
+						ID:             5,
+						Title:          "Fight Club",
+						Year:           1999,
+						TmdbID:         550,
+						Status:         movie.StatusWanted,
+						QualityProfile: "default",
+					}, nil).
+					Once()
+				app.indexers.EXPECT().
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					Return([]indexer.SearchResult{
+						{
+							Title:    "Fight.Club.1999.1080p.WEB-DL.x264",
+							Download: "magnet:a",
+							Size:     4_000_000_000,
+							Seeders:  10,
+						},
+						{
+							Title:    "Fight.Club.1999.1080p.BluRay.Remux.x265",
+							Download: "magnet:b",
+							Size:     40_000_000_000,
+							Seeders:  5,
+						},
+						{
+							Title:    "Fight.Club.1999.480p.WEB-DL.x264",
+							Download: "magnet:c",
+							Size:     700_000_000,
+							Seeders:  99,
+						},
+					}, nil).
+					Once()
+				app.store.EXPECT().
+					ListReleaseGrabs(mock.Anything, uint32(5), uint32(0), mock.Anything, mock.Anything).
+					Return(nil, nil).Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/5/search",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var results []SearchResult
+				Expect(json.NewDecoder(resp.Body).Decode(&results)).To(Succeed())
+				Expect(results).To(HaveLen(3))
+
+				Expect(results[0].Title).
+					To(Equal("Fight.Club.1999.1080p.BluRay.Remux.x265"))
+				Expect(results[0].Score).To(HaveValue(Equal(60)))
+				Expect(results[0].MatchedFormats).
+					To(HaveValue(ConsistOf("remux", "x265")))
+				Expect(results[0].Rejected).To(HaveValue(BeFalse()))
+
+				Expect(results[1].Title).
+					To(Equal("Fight.Club.1999.1080p.WEB-DL.x264"))
+				Expect(results[1].Score).To(HaveValue(Equal(0)))
+
+				// A rejected release stays in the list: the operator may
+				// still grab it by hand.
+				Expect(results[2].Title).
+					To(Equal("Fight.Club.1999.480p.WEB-DL.x264"))
+				Expect(results[2].Rejected).To(HaveValue(BeTrue()))
+				Expect(results[2].RejectReason).
+					To(HaveValue(ContainSubstring("resolution")))
+			})
+		})
+
+		Describe("SearchTMDBMovie", func() {
+			It("flags results already in the library", func() {
+				results := []metadata.MovieResult{
+					{
+						TMDBID:        550,
+						Title:         "Fight Club",
+						OriginalTitle: "Fight Club",
+						Year:          1999,
+					},
+					{
+						TMDBID:        807,
+						Title:         "Se7en",
+						OriginalTitle: "Se7en",
+						Year:          1995,
+					},
+				}
+				app.metadata.EXPECT().
+					SearchMovie(mock.Anything, "fincher", uint16(0)).
+					Return(results, nil).
+					Once()
+				app.movies.EXPECT().
+					AnnotateTMDBResults(mock.Anything, results).
+					Return([]moviesvc.AnnotatedTMDBResult{
+						{MovieResult: results[0], AlreadyAdded: true},
+						{MovieResult: results[1]},
+					}, nil).
+					Once()
+
+				resp, err := http.Get(app.srv.URL + "/api/v1/search/movie?q=fincher")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var items []struct {
+					TmdbID       uint32 `json:"tmdb_id"`
+					AlreadyAdded bool   `json:"already_added"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&items)).To(Succeed())
+				Expect(items).To(HaveLen(2))
+				Expect(items[0].TmdbID).To(Equal(uint32(550)))
+				Expect(items[0].AlreadyAdded).To(BeTrue())
+				Expect(items[1].TmdbID).To(Equal(uint32(807)))
+				Expect(items[1].AlreadyAdded).To(BeFalse())
+			})
+
+			It("returns 500 when the library lookup fails", func() {
+				app.metadata.EXPECT().
+					SearchMovie(mock.Anything, "fincher", uint16(0)).
+					Return([]metadata.MovieResult{{TMDBID: 550, Title: "Fight Club"}}, nil).
+					Once()
+				app.movies.EXPECT().
+					AnnotateTMDBResults(mock.Anything, mock.Anything).
+					Return(nil, errors.New("db down")).
+					Once()
+
+				resp, err := http.Get(app.srv.URL + "/api/v1/search/movie?q=fincher")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+			})
+		})
+
+		Describe("GetMovie", func() {
+			It("returns media_files for the movie", func() {
+				const movieID uint32 = 42
+				app.movies.EXPECT().
+					Get(mock.Anything, movieID).
+					Return(&ent.Movie{
+						ID:     movieID,
+						Title:  "Some Movie",
+						Year:   2020,
+						TmdbID: 42,
+						Status: movie.StatusAvailable,
+					}, nil).
+					Once()
+				app.store.EXPECT().
+					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(nil, nil).
+					Once()
+				app.store.EXPECT().
+					ListMediaFilesByMovieID(mock.Anything, movieID).
+					Return([]*ent.MediaFile{
+						{
+							ID:           1,
+							Path:         "/data/movies/Some Movie (2020)/Some.Movie.2020.1080p.Remux.x264-GROUP.mkv",
+							Size:         8_400_000_000,
+							ReleaseGroup: "GROUP",
+						},
+					}, nil).
+					Once()
+
+				resp, err := http.Get(
+					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, movieID),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body map[string]any
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				files, ok := body["media_files"].([]any)
+				Expect(ok).To(BeTrue())
+				Expect(files).To(HaveLen(1))
+				f := files[0].(map[string]any)
+				Expect(
+					f["path"],
+				).To(Equal("/data/movies/Some Movie (2020)/Some.Movie.2020.1080p.Remux.x264-GROUP.mkv"))
+				Expect(f["parsed_source"]).To(Equal("Remux"))
+				Expect(f["parsed_resolution"]).To(Equal("1080p"))
+				Expect(f["release_group"]).To(Equal("GROUP"))
+			})
+
+			It("omits media_files when the movie has none", func() {
+				const movieID uint32 = 43
+				app.movies.EXPECT().
+					Get(mock.Anything, movieID).
+					Return(&ent.Movie{
+						ID:     movieID,
+						Title:  "Empty",
+						Year:   2021,
+						TmdbID: 43,
+						Status: movie.StatusWanted,
+					}, nil).
+					Once()
+				app.store.EXPECT().
+					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(nil, nil).
+					Once()
+				app.store.EXPECT().
+					ListMediaFilesByMovieID(mock.Anything, movieID).
+					Return(nil, nil).
+					Once()
+
+				resp, err := http.Get(
+					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, movieID),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				var body map[string]any
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				_, present := body["media_files"]
+				Expect(present).To(BeFalse())
+			})
+		})
+
+		Describe("file_score on media files", func() {
+			const movieID uint32 = 44
+			const filePath = "/data/movies/Some Movie (2020)/" +
+				"Some.Movie.2020.1080p.BluRay.Remux.x265-GRP.mkv"
+
+			BeforeEach(func() {
+				configtest.Setup(map[string]any{
+					"quality_profiles": []map[string]any{
+						{
+							"name":                 "default",
+							"min_resolution":       "720p",
+							"preferred_resolution": "1080p",
+							"formats": []map[string]any{
+								{"name": "remux", "score": 50},
+								{"name": "x265", "score": 10},
+							},
+						},
+					},
+					"movie_quality_default_profile":  "default",
+					"series_quality_default_profile": "default",
+				})
+			})
+
+			It("scores the file on the detail view", func() {
+				app.movies.EXPECT().
+					Get(mock.Anything, movieID).
+					Return(&ent.Movie{
+						ID:             movieID,
+						Title:          "Some Movie",
+						Year:           2020,
+						TmdbID:         44,
+						Status:         movie.StatusAvailable,
+						QualityProfile: "default",
+					}, nil).
+					Once()
+				app.store.EXPECT().
+					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(nil, nil).
+					Once()
+				app.store.EXPECT().
+					ListMediaFilesByMovieID(mock.Anything, movieID).
+					Return([]*ent.MediaFile{mediafiletest.StoredParse(
+						&ent.MediaFile{
+							ID: 1, Path: filePath, Size: 8_400_000_000,
+						}, filePath,
+					)}, nil).
+					Once()
+
+				resp, err := http.Get(
+					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, movieID),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body map[string]any
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				files, ok := body["media_files"].([]any)
+				Expect(ok).To(BeTrue())
+				Expect(files).To(HaveLen(1))
+				Expect(files[0].(map[string]any)["file_score"]).
+					To(BeEquivalentTo(60))
+			})
+
+			It("leaves the list view unscored", func() {
+				app.movies.EXPECT().
+					FilterList(mock.Anything, mock.AnythingOfType("movie.FilterParams")).
+					Return([]*ent.Movie{
+						{
+							ID:             movieID,
+							Title:          "Some Movie",
+							Year:           2020,
+							TmdbID:         44,
+							Status:         movie.StatusAvailable,
+							QualityProfile: "default",
+							Edges: ent.MovieEdges{
+								MediaFiles: []*ent.MediaFile{
+									{
+										ID:   1,
+										Path: filePath,
+										Size: 8_400_000_000,
+									},
+								},
+							},
+						},
+					}, nil, uint32(1), nil).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?limit=10",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body struct {
+					Items []map[string]any `json:"items"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Items).To(HaveLen(1))
+				files, ok := body.Items[0]["media_files"].([]any)
+				Expect(ok).To(BeTrue())
+				Expect(files).To(HaveLen(1))
+				_, present := files[0].(map[string]any)["file_score"]
+				Expect(present).To(BeFalse())
+			})
+		})
+
+		Describe("GetMovie metadata", func() {
+			// The strict provider mock carries no GetMovie expectation here:
+			// the detail view must serve genres/rating/cast from the stored
+			// row without touching TMDB.
+			It("serves genres, rating and cast from the stored row", func() {
+				const movieID uint32 = 44
+				app.movies.EXPECT().
+					Get(mock.Anything, movieID).
+					Return(&ent.Movie{
+						ID:     movieID,
+						Title:  "Rated",
+						Year:   2022,
+						TmdbID: 77,
+						Status: movie.StatusAvailable,
+						Rating: 8.2,
+						Genres: []string{"Thriller", "Mystery"},
+					}, nil).
+					Once()
+				app.store.EXPECT().
+					ListMediaFilesByMovieID(mock.Anything, movieID).
+					Return(nil, nil).
+					Once()
+				app.store.EXPECT().
+					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
+					Return([]db.CastEntry{{
+						PersonID:  91,
+						TMDBID:    3001,
+						Name:      "Yara Osei",
+						Character: "The Broker",
+					}}, nil).
+					Once()
+
+				resp, err := http.Get(
+					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, movieID),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body struct {
+					Genres []string `json:"genres"`
+					Rating float32  `json:"rating"`
+					Cast   []struct {
+						PersonID  uint32 `json:"person_id"`
+						Name      string `json:"name"`
+						Character string `json:"character"`
+						PersonURL string `json:"person_url"`
+					} `json:"cast"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Genres).To(ConsistOf("Thriller", "Mystery"))
+				Expect(body.Rating).To(BeNumerically("~", 8.2, 0.001))
+				Expect(body.Cast).To(HaveLen(1))
+				Expect(body.Cast[0].Name).To(Equal("Yara Osei"))
+				Expect(body.Cast[0].Character).To(Equal("The Broker"))
+				// person_id is what the cast grid links to /people/{id} by;
+				// without it a cast entry has no way to address the person.
+				Expect(body.Cast[0].PersonID).To(Equal(uint32(91)))
+				Expect(body.Cast[0].PersonURL).
+					To(Equal("https://www.themoviedb.org/person/3001"))
+			})
+		})
+
+		Describe("GetMovieRecommendations", func() {
+			It("returns mapped TMDB recommendations", func() {
+				const movieID uint32 = 42
+				app.movies.EXPECT().
+					Get(mock.Anything, movieID).
+					Return(&ent.Movie{
+						ID:     movieID,
+						Title:  "Some Movie",
+						Year:   2020,
+						TmdbID: 99,
+						Status: movie.StatusAvailable,
+					}, nil).
+					Once()
+				app.metadata.EXPECT().
+					Recommendations(mock.Anything, uint32(99)).
+					Return([]metadata.MovieResult{
+						{
+							TMDBID:     27205,
+							Title:      "Inception",
+							Year:       2010,
+							Overview:   "A thief.",
+							PosterPath: "/inception.jpg",
+						},
+					}, nil).
+					Once()
+
+				resp, err := http.Get(fmt.Sprintf(
+					"%s/api/v1/movies/%d/recommendations",
+					app.srv.URL, movieID,
+				))
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body map[string]any
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				items, ok := body["items"].([]any)
+				Expect(ok).To(BeTrue())
+				Expect(items).To(HaveLen(1))
+				it := items[0].(map[string]any)
+				Expect(it["tmdb_id"]).To(BeEquivalentTo(27205))
+				Expect(it["title"]).To(Equal("Inception"))
+				Expect(it["poster_url"]).To(
+					Equal("https://image.tmdb.org/t/p/w342/inception.jpg"),
+				)
+			})
+
+			It("returns 404 when the movie does not exist", func() {
+				const movieID uint32 = 7
+				app.movies.EXPECT().
+					Get(mock.Anything, movieID).
+					Return(nil, errors.New("not found")).
+					Once()
+
+				resp, err := http.Get(fmt.Sprintf(
+					"%s/api/v1/movies/%d/recommendations",
+					app.srv.URL, movieID,
+				))
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			})
+
+			It("returns 500 when TMDB lookup fails", func() {
+				const movieID uint32 = 8
+				app.movies.EXPECT().
+					Get(mock.Anything, movieID).
+					Return(&ent.Movie{
+						ID:     movieID,
+						Title:  "X",
+						Year:   2020,
+						TmdbID: 12,
+						Status: movie.StatusWanted,
+					}, nil).
+					Once()
+				app.metadata.EXPECT().
+					Recommendations(mock.Anything, uint32(12)).
+					Return(nil, errors.New("tmdb down")).
+					Once()
+
+				resp, err := http.Get(fmt.Sprintf(
+					"%s/api/v1/movies/%d/recommendations",
+					app.srv.URL, movieID,
+				))
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(
+					Equal(http.StatusInternalServerError),
+				)
+			})
+		})
+
+		Describe("PatchMovie", func() {
+			It("updates status and returns 200", func() {
+				const movieID uint32 = 7
+				app.movies.EXPECT().
+					Update(mock.Anything, movieID, mock.AnythingOfType("movie.UpdateParams")).
+					Return(&ent.Movie{
+						ID:     movieID,
+						Title:  "Fight Club",
+						Year:   1999,
+						TmdbID: 550,
+						Status: movie.StatusAvailable,
+					}, nil).
+					Once()
+
+				body := `{"status": "available"}`
+				req, err := http.NewRequest(
+					http.MethodPatch,
+					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, movieID),
+					strings.NewReader(body),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := http.DefaultClient.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var updated Movie
+				Expect(json.NewDecoder(resp.Body).Decode(&updated)).To(Succeed())
+				Expect(string(updated.Status)).To(Equal("available"))
+			})
+
+			It("accepts the failed status", func() {
+				const movieID uint32 = 11
+				app.movies.EXPECT().
+					Update(mock.Anything, movieID,
+						mock.MatchedBy(func(p moviesvc.UpdateParams) bool {
+							return p.Status != nil && *p.Status == movie.StatusFailed
+						})).
+					Return(&ent.Movie{
+						ID:     movieID,
+						Title:  "Broken Import",
+						Year:   2019,
+						TmdbID: 102,
+						Status: movie.StatusFailed,
+					}, nil).
+					Once()
+
+				req, err := http.NewRequest(
+					http.MethodPatch,
+					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, movieID),
+					strings.NewReader(`{"status": "failed"}`),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := http.DefaultClient.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var updated Movie
+				Expect(json.NewDecoder(resp.Body).Decode(&updated)).To(Succeed())
+				Expect(updated.Status).To(Equal(MovieStatusFailed))
+			})
+
+			It("returns 404 for nonexistent movie", func() {
+				app.movies.EXPECT().
+					Update(mock.Anything, uint32(999), mock.AnythingOfType("movie.UpdateParams")).
+					Return(nil, fmt.Errorf("movie not found")).
+					Once()
+
+				body := `{"status": "wanted"}`
+				req, err := http.NewRequest(
+					http.MethodPatch,
+					app.srv.URL+"/api/v1/movies/999",
+					strings.NewReader(body),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := http.DefaultClient.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			})
+		})
+
+		Describe("RefreshMovieMetadata", func() {
+			It("returns 404 when the movie does not exist", func() {
+				app.movies.EXPECT().
+					RefreshOne(mock.Anything, uint32(999)).
+					Return(nil, fmt.Errorf(
+						"movie 999: %w", moviesvc.ErrMovieNotFound,
+					)).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/999/refresh-metadata",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+
+				var body map[string]any
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body["message"]).To(Equal("movie not found"))
+			})
+
+			It("returns 500 when the refresh itself fails", func() {
+				app.movies.EXPECT().
+					RefreshOne(mock.Anything, uint32(5)).
+					Return(nil, errors.New("tmdb down")).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/5/refresh-metadata",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+			})
+
+			It("returns the refreshed movie on success", func() {
+				app.movies.EXPECT().
+					RefreshOne(mock.Anything, uint32(5)).
+					Return(&ent.Movie{
+						ID:     5,
+						Title:  "Fight Club",
+						Year:   1999,
+						TmdbID: 550,
+						Status: movie.StatusAvailable,
+					}, nil).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/5/refresh-metadata",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var refreshed Movie
+				Expect(json.NewDecoder(resp.Body).Decode(&refreshed)).To(Succeed())
+				Expect(refreshed.Title).To(Equal("Fight Club"))
+			})
+		})
+
+		Describe("RenameMovieFiles", func() {
+			notFound := fmt.Errorf("movie 999: %w", moviesvc.ErrMovieNotFound)
+
+			It("returns 404 when the previewed movie does not exist", func() {
+				app.renamer.EXPECT().
+					Preview(mock.Anything, uint32(999)).
+					Return(library.RenamePlan{}, notFound).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/999/rename?preview=true",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+
+				var body map[string]any
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body["message"]).To(Equal("movie not found"))
+			})
+
+			It("returns 404 when the applied movie does not exist", func() {
+				app.renamer.EXPECT().
+					Apply(mock.Anything, uint32(999)).
+					Return(library.RenamePlan{}, notFound).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/999/rename",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			})
+
+			It("returns 500 when the rename itself fails", func() {
+				app.renamer.EXPECT().
+					Apply(mock.Anything, uint32(5)).
+					Return(library.RenamePlan{}, errors.New("disk full")).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/5/rename",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+			})
+
+			It("returns the plan on success", func() {
+				app.renamer.EXPECT().
+					Preview(mock.Anything, uint32(5)).
+					Return(library.RenamePlan{
+						Operations: []library.RenameOperation{
+							{
+								MediaFileID: 10,
+								From:        "/library/movies/old.mkv",
+								To:          "/library/movies/Dune (2021)/Dune (2021).mkv",
+							},
+						},
+					}, nil).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/5/rename?preview=true",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var plan RenamePlan
+				Expect(json.NewDecoder(resp.Body).Decode(&plan)).To(Succeed())
+				Expect(plan.MovieId).To(Equal(uint32(5)))
+				Expect(plan.Operations).To(HaveLen(1))
+				Expect(plan.Operations[0].MediaFileId).To(Equal(uint32(10)))
+			})
+		})
+
+		Describe("DeleteMovieFile", func() {
+			It("deletes a movie file and returns 204", func() {
+				app.movies.EXPECT().
+					DeleteFile(mock.Anything, uint32(3), uint32(7),
+						moviesvc.DeleteFileOptions{RemoveTorrent: true}).
+					Return(nil).Once()
+
+				req := app.req(http.MethodDelete, "/api/v1/movies/3/files/7",
+					app.adminKey, strings.NewReader(`{"remove_torrent":true}`))
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			})
+
+			It(
+				"defaults remove_torrent to false with no body and maps errors to 404",
+				func() {
+					app.movies.EXPECT().
+						DeleteFile(mock.Anything, uint32(3), uint32(9),
+							moviesvc.DeleteFileOptions{RemoveTorrent: false}).
+						Return(errors.New("media file 9 not found")).Once()
+
+					req := app.req(http.MethodDelete, "/api/v1/movies/3/files/9",
+						app.adminKey, nil)
+					resp := app.do(req)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+				},
+			)
+
+			It("answers 409 for a file outside the library root", func() {
+				app.movies.EXPECT().
+					DeleteFile(mock.Anything, uint32(3), uint32(9),
+						moviesvc.DeleteFileOptions{RemoveTorrent: false}).
+					Return(fmt.Errorf("remove /x: %w", library.ErrOutsideRoot)).
+					Once()
+
+				req := app.req(http.MethodDelete, "/api/v1/movies/3/files/9",
+					app.adminKey, nil)
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+			})
+		})
+	},
+)

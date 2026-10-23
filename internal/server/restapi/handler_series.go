@@ -1,0 +1,959 @@
+package restapi
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+
+	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/media/tvshow"
+	"github.com/datahearth/streamline/internal/metadata"
+)
+
+func (s *Server) ListSeries(
+	ctx context.Context,
+	request ListSeriesRequestObject,
+) (ListSeriesResponseObject, error) {
+	page, ok := positiveOr(request.Params.Page, uint16(1))
+	if !ok {
+		return ListSeries400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(request.Params.Limit, 20, seriesMaxLimit)
+	if !ok {
+		return ListSeries400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(seriesMaxLimit)),
+		}, nil
+	}
+	p := tvshow.FilterParams{
+		Page:  page,
+		Limit: limit,
+	}
+	if request.Params.Status != nil {
+		p.Status = *request.Params.Status
+	}
+	if request.Params.Type != nil {
+		p.Type = *request.Params.Type
+	}
+	if request.Params.Query != nil {
+		p.Query = *request.Params.Query
+	}
+	if request.Params.Sort != nil {
+		p.Sort = *request.Params.Sort
+	}
+	if request.Params.Order != nil {
+		p.Order = string(*request.Params.Order)
+	}
+	if request.Params.Monitored != nil {
+		on := *request.Params.Monitored == ListSeriesParamsMonitoredMonitored
+		p.Monitored = &on
+	}
+
+	rows, counts, total, err := s.tvshows.FilterList(ctx, p)
+	if err != nil {
+		return ListSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	progress := s.seriesDownloadProgress(ctx, counts)
+	items := make([]TVShow, 0, len(rows))
+	for _, r := range rows {
+		items = append(items, tvShowListToAPI(r, counts[r.ID], progress[r.ID]))
+	}
+	return ListSeries200JSONResponse{
+		Items: items,
+		Total: total,
+		Page:  uint32(p.Page),
+		Limit: p.Limit,
+	}, nil
+}
+
+// seriesDownloadProgress returns the mean live progress per show over the
+// page's downloading episodes. The queue is a short-TTL cached snapshot
+// shared with /activity, and it is only asked for when some show on the page
+// is actually downloading — an idle library pays nothing, and a library page
+// must never be the thing that wakes every download client.
+//
+// A queue that cannot be read is not an error here: the shows keep their
+// counts and scope and the card falls back to an indeterminate bar. Importing
+// contributes nothing by design — there is no percentage behind it.
+func (s *Server) seriesDownloadProgress(
+	ctx context.Context,
+	counts map[uint32]db.EpisodeCounts,
+) map[uint32]*float32 {
+	out := make(map[uint32]*float32, len(counts))
+	owner := make(map[uint32]uint32) // in-flight episode id -> show id
+	for showID, c := range counts {
+		if c.Downloading == 0 {
+			continue
+		}
+		for _, epID := range c.InFlightEpisodes {
+			owner[epID] = showID
+		}
+	}
+	if len(owner) == 0 {
+		return out
+	}
+	snap, err := s.downloads.Queue(ctx)
+	if err != nil {
+		slog.WarnContext(ctx,
+			"series list: live queue unavailable, omitting progress",
+			"error", err)
+		return out
+	}
+
+	sum := make(map[uint32]float64)
+	n := make(map[uint32]int)
+	for _, e := range snap.Items {
+		if e.Episode == nil {
+			continue
+		}
+		showID, ok := owner[e.Episode.ID]
+		if !ok {
+			continue
+		}
+		sum[showID] += e.Progress
+		n[showID]++
+	}
+	for showID, count := range n {
+		mean := float32(sum[showID] / float64(count))
+		out[showID] = &mean
+	}
+	return out
+}
+
+func (s *Server) AddSeries(
+	ctx context.Context,
+	request AddSeriesRequestObject,
+) (AddSeriesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return AddSeries403JSONResponse{ForbiddenJSONResponse: requestOnlyResp}, nil
+	}
+
+	qp := ""
+	if request.Body.QualityProfile != nil {
+		qp = *request.Body.QualityProfile
+	}
+	show, err := s.tvshows.Add(ctx, request.Body.TvdbId, qp)
+	if err != nil {
+		return AddSeries409JSONResponse{
+			ConflictJSONResponse: errConflict(err.Error()),
+		}, nil
+	}
+	if request.Body.Preset != nil && *request.Body.Preset != "" {
+		updated, uerr := s.tvshows.Update(ctx, show.ID, tvshow.UpdateParams{
+			Preset: string(*request.Body.Preset),
+		})
+		if uerr != nil {
+			return AddSeries500JSONResponse{
+				InternalErrorJSONResponse: errInternal(ctx, uerr),
+			}, nil
+		}
+		show = updated
+	}
+	return AddSeries201JSONResponse{
+		SeriesCreatedJSONResponse: SeriesCreatedJSONResponse(tvShowToAPI(show)),
+	}, nil
+}
+
+func (s *Server) GetSeriesCounts(
+	ctx context.Context,
+	request GetSeriesCountsRequestObject,
+) (GetSeriesCountsResponseObject, error) {
+	// Same filter params the list takes, so each facet's tallies are counted
+	// against what the other facets are currently filtered to.
+	p := tvshow.FilterParams{}
+	if v := request.Params.Status; v != nil {
+		p.Status = *v
+	}
+	if v := request.Params.Type; v != nil {
+		p.Type = *v
+	}
+	if v := request.Params.Query; v != nil {
+		p.Query = *v
+	}
+	if v := request.Params.Monitored; v != nil {
+		on := *v == GetSeriesCountsParamsMonitoredMonitored
+		p.Monitored = &on
+	}
+	c, err := s.tvshows.Counts(ctx, p)
+	if err != nil {
+		return GetSeriesCounts500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return GetSeriesCounts200JSONResponse{
+		Total:               c.Total,
+		StatusTotal:         c.StatusTotal,
+		Continuing:          c.Continuing,
+		Ended:               c.Ended,
+		Missing:             c.Missing,
+		Downloading:         c.Downloading,
+		Importing:           c.Importing,
+		TypeTotal:           c.TypeTotal,
+		Standard:            c.Standard,
+		Anime:               c.Anime,
+		Daily:               c.Daily,
+		MonitoredTotal:      c.MonitoredTotal,
+		Monitored:           c.Monitored,
+		Unmonitored:         c.Unmonitored,
+		WantedEpisodes:      c.WantedEpisodes,
+		DownloadingEpisodes: c.DownloadingEpisodes,
+	}, nil
+}
+
+func (s *Server) LookupSeries(
+	ctx context.Context,
+	request LookupSeriesRequestObject,
+) (LookupSeriesResponseObject, error) {
+	results, err := s.metadataTV.SearchSeries(ctx, request.Params.Query)
+	if err != nil {
+		return LookupSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	out := make([]SeriesLookupResult, 0, len(results))
+	for _, r := range results {
+		item := SeriesLookupResult{TvdbId: r.TVDBID, Title: r.Title, Year: r.Year}
+		if r.Network != "" {
+			n := r.Network
+			item.Network = &n
+		}
+		if r.Overview != "" {
+			o := r.Overview
+			item.Overview = &o
+		}
+		if url := metadata.TVDBArtworkURL(r.PosterPath); url != "" {
+			item.PosterUrl = &url
+		}
+		if existing, _ := s.store.FindTVShowByTVDBID(
+			ctx,
+			r.TVDBID,
+		); existing != nil {
+			added := true
+			item.AlreadyAdded = &added
+		}
+		out = append(out, item)
+	}
+	return LookupSeries200JSONResponse{
+		Items: out,
+	}, nil
+}
+
+func (s *Server) GetSeriesLookupDetail(
+	ctx context.Context,
+	request GetSeriesLookupDetailRequestObject,
+) (GetSeriesLookupDetailResponseObject, error) {
+	d, err := s.seriesWithCast(ctx, request.TvdbId)
+	if err != nil {
+		return GetSeriesLookupDetail500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return GetSeriesLookupDetail200JSONResponse{
+		LookupDetailResponseJSONResponse: LookupDetailResponseJSONResponse(
+			toLookupDetail(seriesDetailsToRequestMedia(d)),
+		),
+	}, nil
+}
+
+// seriesWithCast is GetSeries plus the top-billed actors GetSeries leaves out,
+// as both the add/request lookup panel and the expanded request row show them.
+//
+// ponytail: second hit on the same /series/{id}/extended record GetSeries
+// already fetched — it drops `characters`. Parse cast inside GetSeries if this
+// ever shows up hot.
+func (s *Server) seriesWithCast(
+	ctx context.Context,
+	tvdbID uint32,
+) (*metadata.TVDetails, error) {
+	d, err := s.metadataTV.GetSeries(ctx, tvdbID)
+	if err != nil {
+		return nil, err
+	}
+	cast, err := s.metadataTV.GetSeriesCast(ctx, tvdbID)
+	if err != nil {
+		return nil, err
+	}
+	d.Cast = cast
+	return d, nil
+}
+
+func (s *Server) GetSeries(
+	ctx context.Context,
+	request GetSeriesRequestObject,
+) (GetSeriesResponseObject, error) {
+	show, err := s.tvshows.Get(ctx, request.Id)
+	if err != nil {
+		return GetSeries404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	credits, err := s.store.TitleCast(ctx, db.CastOwnerSeries, show.ID)
+	if err != nil {
+		return GetSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	result := tvShowToAPI(show)
+	if len(credits) > 0 {
+		apiCast := libraryCastToAPI(credits)
+		result.Cast = &apiCast
+	}
+	return GetSeries200JSONResponse{
+		SeriesDetailJSONResponse: SeriesDetailJSONResponse(result),
+	}, nil
+}
+
+func (s *Server) PatchSeries(
+	ctx context.Context,
+	request PatchSeriesRequestObject,
+) (PatchSeriesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return PatchSeries403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
+		return PatchSeries404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	p := tvshow.UpdateParams{
+		Monitored:      request.Body.Monitored,
+		QualityProfile: request.Body.QualityProfile,
+	}
+	if request.Body.Preset != nil {
+		p.Preset = string(*request.Body.Preset)
+	}
+	if request.Body.Type != nil {
+		t := string(*request.Body.Type)
+		p.Type = &t
+	}
+	show, err := s.tvshows.Update(ctx, request.Id, p)
+	if err != nil {
+		if errors.Is(err, tvshow.ErrInvalidSeriesType) {
+			return PatchSeries422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		}
+		return PatchSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return PatchSeries200JSONResponse{
+		SeriesDetailJSONResponse: SeriesDetailJSONResponse(tvShowToAPI(show)),
+	}, nil
+}
+
+func (s *Server) DeleteSeries(
+	ctx context.Context,
+	request DeleteSeriesRequestObject,
+) (DeleteSeriesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return DeleteSeries403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
+		return DeleteSeries404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	deleteFiles := request.Params.DeleteFiles != nil && *request.Params.DeleteFiles
+	if err := s.tvshows.Delete(
+		ctx,
+		request.Id,
+		tvshow.DeleteOptions{DeleteFiles: deleteFiles},
+	); err != nil {
+		return DeleteSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return DeleteSeries204Response{}, nil
+}
+
+func (s *Server) DeleteEpisodeFile(
+	ctx context.Context,
+	request DeleteEpisodeFileRequestObject,
+) (DeleteEpisodeFileResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return DeleteEpisodeFile403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	remove := request.Body != nil &&
+		request.Body.RemoveTorrent != nil &&
+		*request.Body.RemoveTorrent
+	err := s.tvshows.DeleteEpisodeFile(ctx, request.EpisodeId,
+		tvshow.DeleteFileOptions{RemoveTorrent: remove})
+	if errors.Is(err, library.ErrOutsideRoot) {
+		return DeleteEpisodeFile409JSONResponse{
+			ConflictJSONResponse: conflictResp("outside_library", err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return DeleteEpisodeFile404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	return DeleteEpisodeFile204Response{}, nil
+}
+
+func (s *Server) PatchSeason(
+	ctx context.Context,
+	request PatchSeasonRequestObject,
+) (PatchSeasonResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return PatchSeason403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	show, err := s.tvshows.Get(ctx, request.Id)
+	if err != nil {
+		return PatchSeason404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	for _, se := range show.Edges.Seasons {
+		if se.Number != request.Number {
+			continue
+		}
+		if err := s.tvshows.SetSeasonMonitored(
+			ctx,
+			se.ID,
+			request.Body.Monitored,
+		); err != nil {
+			return PatchSeason500JSONResponse{
+				InternalErrorJSONResponse: errInternal(ctx, err),
+			}, nil
+		}
+		return PatchSeason204Response{}, nil
+	}
+	return PatchSeason404JSONResponse{
+		NotFoundJSONResponse: errNotFound("season not found"),
+	}, nil
+}
+
+func (s *Server) PatchEpisode(
+	ctx context.Context,
+	request PatchEpisodeRequestObject,
+) (PatchEpisodeResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return PatchEpisode403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
+		return PatchEpisode404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	if err := s.tvshows.SetEpisodeMonitored(
+		ctx,
+		request.EpisodeId,
+		request.Body.Monitored,
+	); err != nil {
+		return PatchEpisode500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return PatchEpisode204Response{}, nil
+}
+
+func (s *Server) SearchSeries(
+	ctx context.Context,
+	request SearchSeriesRequestObject,
+) (SearchSeriesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return SearchSeries403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
+		return SearchSeries404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	if s.tvSearcher == nil {
+		return SearchSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, errTVSearchNotConfigured),
+		}, nil
+	}
+	if err := s.tvSearcher.SearchShow(ctx, request.Id); err != nil {
+		return SearchSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return SearchSeries202Response{}, nil
+}
+
+func (s *Server) BrowseEpisodeReleases(
+	ctx context.Context,
+	request BrowseEpisodeReleasesRequestObject,
+) (BrowseEpisodeReleasesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return BrowseEpisodeReleases403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	show, err := s.tvshows.Get(ctx, request.Id)
+	if err != nil {
+		return BrowseEpisodeReleases404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	var season, episode uint16
+	found := false
+	for _, se := range show.Edges.Seasons {
+		for _, ep := range se.Edges.Episodes {
+			if ep.ID == request.EpisodeId {
+				season = se.Number
+				episode = ep.Number
+				found = true
+			}
+		}
+	}
+	if !found {
+		return BrowseEpisodeReleases404JSONResponse{
+			NotFoundJSONResponse: errNotFound("episode not found"),
+		}, nil
+	}
+	results, hiddenPacks, err := s.indexers.SearchEpisode(
+		ctx,
+		[]string{show.Title, show.OriginalTitle},
+		show.Aliases,
+		show.TvdbID,
+		season,
+		episode,
+	)
+	if err != nil {
+		return BrowseEpisodeReleases500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	items := s.toSearchResults(ctx, results, 0, show.ID)
+	annotateResults(
+		config.MediaSeries,
+		show.QualityProfile,
+		items,
+		singleReleaseEpisodes,
+	)
+	out := SearchResultsJSONResponse{Items: items}
+	if hiddenPacks > 0 {
+		out.HiddenPacks = &hiddenPacks
+	}
+	return BrowseEpisodeReleases200JSONResponse{
+		SearchResultsJSONResponse: out,
+	}, nil
+}
+
+func (s *Server) GrabEpisodeRelease(
+	ctx context.Context,
+	request GrabEpisodeReleaseRequestObject,
+) (GrabEpisodeReleaseResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GrabEpisodeRelease403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
+		return GrabEpisodeRelease404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
+		return GrabEpisodeRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabEpisodeRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
+		}, nil
+	}
+	rec, err := s.downloads.GrabEpisode(
+		ctx, sr, request.EpisodeId, []uint32{request.EpisodeId},
+	)
+	switch {
+	case errors.Is(err, download.ErrUntrustedSource),
+		errors.Is(err, download.ErrNoWantedFiles),
+		errors.Is(err, download.ErrClientFull),
+		errors.Is(err, download.ErrUnsafeTorrentName):
+		return GrabEpisodeRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabEpisodeRelease500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	if replaceExisting(request.Body) {
+		if err := s.store.SetDownloadRecordReplaceMode(
+			ctx,
+			rec.ID,
+			downloadrecord.ReplaceModeAll,
+		); err != nil {
+			slog.WarnContext(ctx, "grab episode: set replace mode failed",
+				"download_record.id", rec.ID, "error", err)
+		}
+	}
+	// The pack and RSS paths mark their episodes; a single manual grab is the
+	// one that didn't, so the row sat on "Wanted" until the import landed.
+	if _, err := s.store.MarkEpisodeDownloading(
+		ctx, request.EpisodeId,
+	); err != nil {
+		slog.WarnContext(ctx, "grab episode: mark downloading failed",
+			"episode.id", request.EpisodeId, "error", err)
+	}
+	return GrabEpisodeRelease202Response{}, nil
+}
+
+func (s *Server) BrowseSeasonReleases(
+	ctx context.Context,
+	request BrowseSeasonReleasesRequestObject,
+) (BrowseSeasonReleasesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return BrowseSeasonReleases403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	show, err := s.tvshows.Get(ctx, request.Id)
+	if err != nil {
+		return BrowseSeasonReleases404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	results, err := s.indexers.SearchSeason(
+		ctx,
+		[]string{show.Title, show.OriginalTitle},
+		show.Aliases,
+		show.TvdbID,
+		request.Number,
+	)
+	if err != nil {
+		return BrowseSeasonReleases500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	items := s.toSearchResults(ctx, results, 0, show.ID)
+	annotateResults(
+		config.MediaSeries,
+		show.QualityProfile,
+		items,
+		spanEpisodes(s.seasonLengths(ctx, show.ID)),
+	)
+	return BrowseSeasonReleases200JSONResponse{
+		Items: items,
+	}, nil
+}
+
+func (s *Server) GrabSeasonRelease(
+	ctx context.Context,
+	request GrabSeasonReleaseRequestObject,
+) (GrabSeasonReleaseResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GrabSeasonRelease403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
+		return GrabSeasonRelease404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
+		return GrabSeasonRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabSeasonRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
+		}, nil
+	}
+	err = s.tvshows.GrabSeasonRelease(
+		ctx, request.Id, request.Number, sr, replaceExisting(request.Body),
+	)
+	switch {
+	case errors.Is(err, download.ErrUntrustedSource),
+		errors.Is(err, download.ErrNoWantedFiles),
+		errors.Is(err, download.ErrClientFull),
+		errors.Is(err, download.ErrUnsafeTorrentName):
+		return GrabSeasonRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabSeasonRelease500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return GrabSeasonRelease202Response{}, nil
+}
+
+func (s *Server) ReidentifySeries(
+	ctx context.Context,
+	request ReidentifySeriesRequestObject,
+) (ReidentifySeriesResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ReidentifySeries403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	show, unmatched, err := s.tvshows.Reidentify(
+		ctx, request.Id, request.Body.TvdbId,
+	)
+	switch {
+	case errors.Is(err, tvshow.ErrSeriesNotFound):
+		return ReidentifySeries404JSONResponse{
+			NotFoundJSONResponse: errNotFound("series not found"),
+		}, nil
+	case errors.Is(err, tvshow.ErrInvalidTVDBID),
+		errors.Is(err, tvshow.ErrSameTVDBID):
+		return ReidentifySeries400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(err.Error()),
+		}, nil
+	case errors.Is(err, tvshow.ErrSeriesExists):
+		return ReidentifySeries409JSONResponse{
+			ConflictJSONResponse: errConflict(
+				"that series is already in the library; delete it first",
+			),
+		}, nil
+	case err != nil:
+		return ReidentifySeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+
+	out := ReidentifyResult{Id: show.ID, Title: show.Title}
+	if len(unmatched) > 0 {
+		out.Unmatched = &unmatched
+	}
+	if s.seriesRenamer != nil {
+		plan, err := s.seriesRenamer.Apply(ctx, show.ID)
+		if err != nil {
+			slog.WarnContext(ctx, "rename after re-identify failed",
+				"tvshow.id", show.ID, "error", err)
+		}
+		out.Renamed = len(plan.Operations)
+	}
+	return ReidentifySeries200JSONResponse{
+		ReidentifyResultJSONResponse: ReidentifyResultJSONResponse(out),
+	}, nil
+}
+
+func (s *Server) BrowseSeriesReleases(
+	ctx context.Context,
+	request BrowseSeriesReleasesRequestObject,
+) (BrowseSeriesReleasesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return BrowseSeriesReleases403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	show, err := s.tvshows.Get(ctx, request.Id)
+	if err != nil {
+		return BrowseSeriesReleases404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	results, err := s.indexers.SearchSeries(
+		ctx,
+		[]string{show.Title, show.OriginalTitle},
+		show.Aliases,
+		show.TvdbID,
+	)
+	if err != nil {
+		return BrowseSeriesReleases500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	items := s.toSearchResults(ctx, results, 0, show.ID)
+	annotateResults(
+		config.MediaSeries,
+		show.QualityProfile,
+		items,
+		spanEpisodes(s.seasonLengths(ctx, show.ID)),
+	)
+	return BrowseSeriesReleases200JSONResponse{
+		Items: items,
+	}, nil
+}
+
+func (s *Server) GrabSeriesRelease(
+	ctx context.Context,
+	request GrabSeriesReleaseRequestObject,
+) (GrabSeriesReleaseResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GrabSeriesRelease403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
+		return GrabSeriesRelease404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
+		return GrabSeriesRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabSeriesRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
+		}, nil
+	}
+	err = s.tvshows.GrabSeriesRelease(
+		ctx, request.Id, sr, replaceExisting(request.Body),
+	)
+	switch {
+	case errors.Is(err, download.ErrUntrustedSource),
+		errors.Is(err, download.ErrNoWantedFiles),
+		errors.Is(err, download.ErrClientFull),
+		errors.Is(err, download.ErrUnsafeTorrentName):
+		return GrabSeriesRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabSeriesRelease500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return GrabSeriesRelease202Response{}, nil
+}
+
+func (s *Server) GetSeriesPlayOnLinks(
+	ctx context.Context,
+	request GetSeriesPlayOnLinksRequestObject,
+) (GetSeriesPlayOnLinksResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GetSeriesPlayOnLinks403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	show, err := s.tvshows.Get(ctx, request.Id)
+	if err != nil {
+		return GetSeriesPlayOnLinks404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	if s.deepLinker == nil {
+		return GetSeriesPlayOnLinks500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, errPlayOnNotConfigured),
+		}, nil
+	}
+	results := s.deepLinker.ResolveTV(ctx, show.TvdbID, show.Title, show.Year)
+	items := make([]PlayOnLink, 0, len(results))
+	for _, r := range results {
+		items = append(items, playOnToAPI(r))
+	}
+	return GetSeriesPlayOnLinks200JSONResponse{
+		Items: items,
+	}, nil
+}
+
+// ApplySpecialsToExisting retro-applies library.monitor_specials to series
+// already in the library. Admin only — it is a library-wide bulk mutation
+// driven from the settings page.
+func (s *Server) ApplySpecialsToExisting(
+	ctx context.Context,
+	_ ApplySpecialsToExistingRequestObject,
+) (ApplySpecialsToExistingResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ApplySpecialsToExisting403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	n, err := s.tvshows.ApplySpecialsToExisting(ctx)
+	if err != nil {
+		return ApplySpecialsToExisting500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return ApplySpecialsToExisting200JSONResponse{
+		SeasonsUpdated: n,
+		Monitored:      config.Get().Library.MonitorSpecials,
+	}, nil
+}
+
+func (s *Server) RefreshSeriesMetadata(
+	ctx context.Context,
+	request RefreshSeriesMetadataRequestObject,
+) (RefreshSeriesMetadataResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return RefreshSeriesMetadata403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
+		return RefreshSeriesMetadata404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	show, err := s.tvshows.RefreshOne(ctx, request.Id)
+	if err != nil {
+		return RefreshSeriesMetadata500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return RefreshSeriesMetadata200JSONResponse{
+		SeriesDetailJSONResponse: SeriesDetailJSONResponse(tvShowToAPI(show)),
+	}, nil
+}
+
+func (s *Server) RenameSeriesFiles(
+	ctx context.Context,
+	request RenameSeriesFilesRequestObject,
+) (RenameSeriesFilesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return RenameSeriesFiles403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if s.seriesRenamer == nil {
+		return RenameSeriesFiles500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, errRenamerNotConfigured),
+		}, nil
+	}
+	preview := request.Params.Preview != nil && *request.Params.Preview
+	var plan library.RenamePlan
+	var err error
+	if preview {
+		plan, err = s.seriesRenamer.Preview(ctx, request.Id)
+	} else {
+		plan, err = s.seriesRenamer.Apply(ctx, request.Id)
+	}
+	switch {
+	case errors.Is(err, tvshow.ErrSeriesNotFound):
+		return RenameSeriesFiles404JSONResponse{
+			NotFoundJSONResponse: errNotFound("series not found"),
+		}, nil
+	case err != nil:
+		return RenameSeriesFiles500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	out := SeriesRenamePlan{
+		SeriesId:   request.Id,
+		Operations: make([]RenameOperation, 0, len(plan.Operations)),
+	}
+	for _, op := range plan.Operations {
+		out.Operations = append(out.Operations, RenameOperation{
+			MediaFileId: op.MediaFileID,
+			From:        op.From,
+			To:          op.To,
+		})
+	}
+	return RenameSeriesFiles200JSONResponse{
+		SeriesRenamePlanJSONResponse: SeriesRenamePlanJSONResponse(out),
+	}, nil
+}
