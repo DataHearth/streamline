@@ -295,6 +295,7 @@ jobs:
         uses: ./.github/actions/nix-builder
         with:
           ssh-key: ${{ secrets.NIX_BUILDER_SSH_KEY }}
+          attic-token: ${{ secrets.ATTIC_PULL_TOKEN }}
 
       # Everything `nix flake check` evaluates, without building any of it.
       - name: Evaluate the flake
