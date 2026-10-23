@@ -45,6 +45,13 @@ logo_alpha = ImageChops.multiply(logo_alpha, chroma)
 logo_alpha = ImageChops.multiply(logo_alpha, fav.getchannel("A"))
 
 
+# Optical centring: the box is centred but the ink sits 21 px left of centre
+# (the play glyph's heavy left bar vs its thin point). Shift halfway.
+SHIFT_X = 10
+logo_alpha_cur = logo_alpha
+logo_alpha = ImageChops.offset(logo_alpha, SHIFT_X, 0)
+
+
 def solid(size, color, alpha=None):
     im = Image.new("RGBA", size, color + (255,))
     if alpha is not None:
