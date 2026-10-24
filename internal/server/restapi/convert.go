@@ -94,7 +94,9 @@ func movieToAPI(m *ent.Movie) Movie {
 		mov.ReleaseDate = &openapi_types.Date{Time: *m.ReleaseDate}
 	}
 	if m.DigitalReleaseDate != nil {
-		mov.DigitalReleaseDate = &openapi_types.Date{Time: m.DigitalReleaseDate.UTC()}
+		mov.DigitalReleaseDate = &openapi_types.Date{
+			Time: m.DigitalReleaseDate.UTC(),
+		}
 	}
 	if m.Overview != "" {
 		mov.Overview = &m.Overview

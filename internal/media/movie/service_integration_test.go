@@ -97,7 +97,9 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		)
 
 		It("returns the digital release date it just stored", func() {
-			configtest.Setup(map[string]any{"metadata": map[string]any{"tmdb_region": "FR"}})
+			configtest.Setup(
+				map[string]any{"metadata": map[string]any{"tmdb_region": "FR"}},
+			)
 			drd := time.Date(2026, 10, 29, 0, 0, 0, 0, time.UTC)
 			meta.EXPECT().GetMovie(mock.Anything, uint32(1165369)).
 				Return(&metadata.MovieDetails{
