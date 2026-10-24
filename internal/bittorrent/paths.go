@@ -1,8 +1,11 @@
 package bittorrent
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -140,6 +143,54 @@ func fitsOnDisk(base string, info *metainfo.Info) bool {
 		}
 	}
 	return true
+}
+
+// removeTorrentData deletes the files info lists under base, each with the
+// ".part" anacrolix keeps an incomplete one at, then every directory they
+// leave empty, up to and including the torrent's own. It never removes the
+// torrent's folder whole: two torrents named alike share <base>/<name> —
+// RuTracker roots many uploads at the artist's name — and removing an Omens
+// LP that way would have taken the Resolution album another torrent had left
+// beside it.
+func removeTorrentData(base string, info *metainfo.Info) error {
+	name := info.BestName()
+	root := filepath.Join(base, name)
+	dirs := map[string]struct{}{}
+	for _, fi := range info.UpvertedFiles() {
+		rel := filepath.Join(append([]string{name}, fi.BestPath()...)...)
+		// filePath's rule: a path walking out of the torrent's directory was
+		// never written there, so it is never deleted either.
+		if rel != name && !strings.HasPrefix(rel, name+string(filepath.Separator)) {
+			continue
+		}
+		path := filepath.Join(base, rel)
+		for _, f := range []string{path, path + ".part"} {
+			// A directory standing where a single-file torrent's file would
+			// be is some other torrent's folder; the file was never stored.
+			if st, err := os.Lstat(f); err != nil || st.IsDir() {
+				continue
+			}
+			if err := os.Remove(f); err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+		}
+		for d := filepath.Dir(path); d == root ||
+			strings.HasPrefix(d, root+string(filepath.Separator)); d = filepath.Dir(d) {
+			dirs[d] = struct{}{}
+		}
+	}
+	// Deepest first, so each parent is tried after its children. os.Remove
+	// refuses a directory that still holds anything, which is what keeps the
+	// files and folders no torrent here listed.
+	ordered := make([]string, 0, len(dirs))
+	for d := range dirs {
+		ordered = append(ordered, d)
+	}
+	slices.SortFunc(ordered, func(a, b string) int { return len(b) - len(a) })
+	for _, d := range ordered {
+		_ = os.Remove(d)
+	}
+	return nil
 }
 
 func (p *contentPaths) filePath(opts storage.FilePathMakerOpts) string {

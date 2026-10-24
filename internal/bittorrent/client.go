@@ -9,8 +9,6 @@ import (
 	"math"
 	"net"
 	"net/url"
-	"os"
-	"path/filepath"
 	"time"
 
 	antorrent "github.com/anacrolix/torrent"
@@ -267,13 +265,11 @@ func (e *Engine) RemoveTorrent(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	var contentPath string
-	if info := t.Info(); info != nil {
-		// The same rule storage placed it by: a name it would have refused
-		// is never a path to delete.
-		if name := info.BestName(); safeContentName(name) {
-			contentPath = filepath.Join(e.downloadDir, name)
-		}
+	// The same rule storage placed it by: a name it would have refused is
+	// never a path to delete.
+	info := t.Info()
+	if info != nil && !safeContentName(info.BestName()) {
+		info = nil
 	}
 	// The row goes first. Dropped first, a failed row delete left a torrent
 	// no API could reach any more (every call looks it up live) whose row the
@@ -286,17 +282,11 @@ func (e *Engine) RemoveTorrent(
 	}
 	t.Drop()
 	e.forget(hash)
-	if deleteFiles && contentPath != "" {
-		// An incomplete single-file torrent stores its partial data at
-		// "<name>.part" (anacrolix UsePartFiles), a sibling of contentPath that
-		// os.RemoveAll(contentPath) would miss. Remove both; the .part path is a
-		// harmless no-op for a completed or multi-file torrent.
-		for _, p := range []string{contentPath, contentPath + ".part"} {
-			if err := os.RemoveAll(p); err != nil {
-				return otelx.RecordSpanError(
-					span, fmt.Errorf("delete torrent data: %w", err),
-				)
-			}
+	if deleteFiles && info != nil {
+		if err := removeTorrentData(e.downloadDir, info); err != nil {
+			return otelx.RecordSpanError(
+				span, fmt.Errorf("delete torrent data: %w", err),
+			)
 		}
 	}
 	return nil
