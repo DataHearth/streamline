@@ -8,7 +8,11 @@
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { cn } from "@lib/cn";
-	import { episodeStatus, missingEpisodes } from "@lib/status";
+	import {
+		episodeStatus,
+		episodeTitle,
+		missingEpisodes,
+	} from "@lib/status";
 	import { formatBytes } from "@lib/format";
 	import { episodeMedia } from "@lib/media-info";
 	import { formatDateShort } from "@lib/dates";
@@ -301,7 +305,7 @@
 										st === "unaired" ? "text-fg-subtle" : "text-fg",
 									)}
 								>
-									{ep.title || "TBA"}
+									{episodeTitle(ep)}
 								</span>
 								<span
 									class={cn(

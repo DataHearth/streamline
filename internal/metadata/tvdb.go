@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -441,17 +442,35 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 		t.translateSeasons(ctx, d.Seasons, seasonIDs)
 	}
 
-	// Episodes (paginated). The /{lang} variant returns translated episode
-	// titles/overviews; episodes lacking a translation come back with empty
-	// fields (TVDB has no per-episode fallback).
-	// ponytail: no default-language fallback fetch — a missing episode
-	// translation shows blank until TVDB fills it in.
-	langSeg := ""
-	if t.language != "" {
-		langSeg = "/" + t.language
+	eps, err := t.episodes(ctx, tvdbID, t.language)
+	if err != nil {
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("tvdb episodes: %w", err),
+		)
 	}
-	page := 0
-	for {
+	d.Episodes = eps
+	t.fillUntranslatedEpisodes(ctx, tvdbID, d.Episodes)
+
+	return d, nil
+}
+
+// episodes walks a series' default-order episode pages in one language. lang
+// is a TVDB ISO 639-3 code; empty reads the base records, which TVDB keeps in
+// the series' original language. A language variant answers an episode it
+// holds no translation for with an empty name and overview — TVDB has no
+// per-episode fallback of its own.
+func (t *TVDB) episodes(
+	ctx context.Context,
+	tvdbID uint32,
+	lang string,
+) ([]EpisodeInfo, error) {
+	langSeg := ""
+	if lang != "" {
+		langSeg = "/" + lang
+	}
+	var out []EpisodeInfo
+	for page := 0; ; page++ {
 		var epResp struct {
 			Data struct {
 				Episodes []struct {
@@ -474,13 +493,10 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 			page,
 		)
 		if err := t.get(ctx, p, &epResp); err != nil {
-			return nil, otelx.RecordSpanError(
-				span,
-				fmt.Errorf("tvdb episodes: %w", err),
-			)
+			return nil, err
 		}
 		for _, e := range epResp.Data.Episodes {
-			d.Episodes = append(d.Episodes, EpisodeInfo{
+			out = append(out, EpisodeInfo{
 				SeasonNumber:   e.SeasonNumber,
 				Number:         e.Number,
 				AbsoluteNumber: e.AbsoluteNumber,
@@ -490,12 +506,69 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 			})
 		}
 		if epResp.Links.Next == nil || *epResp.Links.Next == "" {
-			break
+			return out, nil
 		}
-		page++
 	}
+}
 
-	return d, nil
+// fillUntranslatedEpisodes gives an aired episode the configured language has
+// no title for the title and overview of a fallback, in place: English, then
+// the original-language base record. Translations trail the original airing by
+// weeks, so on a French install a running English show's new season read as
+// a column of blank titles — rendered "TBA" — over episodes already
+// downloaded. A later refresh replaces the fallback once TVDB has the
+// translation, since reconciliation overwrites any changed title.
+//
+// Each fallback costs one more pass over the episode pages and is spent only
+// while an aired episode is still untitled: an announced future episode is
+// often untitled in every language, and checking those would re-fetch every
+// running show on every refresh. A failed fallback keeps the blanks rather
+// than failing the refresh.
+func (t *TVDB) fillUntranslatedEpisodes(
+	ctx context.Context,
+	tvdbID uint32,
+	eps []EpisodeInfo,
+) {
+	if t.language == "" {
+		return // already the base records
+	}
+	fallbacks := []string{"eng", ""}
+	if t.language == "eng" {
+		fallbacks = fallbacks[1:]
+	}
+	now := time.Now()
+	for _, lang := range fallbacks {
+		if !slices.ContainsFunc(eps, func(e EpisodeInfo) bool {
+			return untitledAired(e, now)
+		}) {
+			return
+		}
+		alt, err := t.episodes(ctx, tvdbID, lang)
+		if err != nil {
+			slog.WarnContext(ctx, "tvdb episode title fallback failed",
+				"tvdb.id", tvdbID, "fallback.language", lang, "error", err)
+			continue
+		}
+		type key struct{ season, number uint16 }
+		byKey := make(map[key]EpisodeInfo, len(alt))
+		for _, a := range alt {
+			byKey[key{a.SeasonNumber, a.Number}] = a
+		}
+		for i := range eps {
+			if !untitledAired(eps[i], now) {
+				continue
+			}
+			a := byKey[key{eps[i].SeasonNumber, eps[i].Number}]
+			eps[i].Title = a.Title
+			if eps[i].Overview == "" {
+				eps[i].Overview = a.Overview
+			}
+		}
+	}
+}
+
+func untitledAired(e EpisodeInfo, now time.Time) bool {
+	return e.Title == "" && e.AirDate != nil && !e.AirDate.After(now)
 }
 
 // GetSeriesCast returns up to maxCastMembers actors for a series, ordered by

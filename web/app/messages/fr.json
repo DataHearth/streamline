@@ -727,6 +727,7 @@
 	"ep_state_wanted": "souhaité",
 	"ep_wanted_aired": "souhaité · diffusé le {date}",
 	"episode_number": "Épisode {number}",
+	"episode_title_tba": "À annoncer",
 	"err_bad_request": "Cette requête n'est pas valide.",
 	"err_body_too_large": "C'est trop volumineux pour être envoyé. Vérifiez la limite de taille.",
 	"err_conflict": "Cela entre en conflit avec un élément existant.",

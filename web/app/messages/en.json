@@ -727,6 +727,7 @@
 	"ep_state_wanted": "wanted",
 	"ep_wanted_aired": "wanted · aired {date}",
 	"episode_number": "Episode {number}",
+	"episode_title_tba": "TBA",
 	"err_bad_request": "That request wasn't valid.",
 	"err_body_too_large": "That's too large to send. Check the upload size limit.",
 	"err_conflict": "That conflicts with something that already exists.",
