@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -256,6 +257,24 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 		"errors", errCount.Load(),
 	)
 	return nil
+}
+
+// SearchNow runs SearchOne for a user who asked for it, detached from their
+// request: an indexer query can outlast the client, and the outcome reaches
+// them as the movie's `searched` event either way.
+func (s *MissingSearcher) SearchNow(ctx context.Context, m *ent.Movie) {
+	bg := trace.ContextWithSpanContext(
+		context.WithoutCancel(ctx),
+		trace.SpanContext{},
+	)
+	go func() {
+		defer observability.RecoverPanic(bg, "rss.search_movie_now", nil)
+		err := s.SearchOne(bg, m)
+		if err != nil && !errors.Is(err, ErrNoEligibleRelease) {
+			slog.WarnContext(bg, "movie search-now failed",
+				"movie.id", m.ID, "error", err)
+		}
+	}()
 }
 
 // SearchOne runs one indexer query for movie m, scores every result against

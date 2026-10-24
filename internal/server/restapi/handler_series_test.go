@@ -124,10 +124,8 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 	})
 
 	Describe("AddSeries", func() {
-		It("409s when no quality profile resolves", func() {
-			app.tvshows.EXPECT().Add(mock.Anything, uint32(9), "gone").
-				Return(nil, tvshow.ErrNoQualityProfile).Once()
-
+		post := func() *http.Response {
+			GinkgoHelper()
 			req := app.req(
 				http.MethodPost,
 				"/api/v1/series",
@@ -136,8 +134,27 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			)
 			req.Header.Set("Content-Type", "application/json")
 			resp := app.do(req)
-			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+			DeferCleanup(resp.Body.Close)
+			return resp
+		}
+
+		It("422s with no_quality_profile when no profile resolves", func() {
+			app.tvshows.EXPECT().Add(mock.Anything, uint32(9), "gone").
+				Return(nil, tvshow.ErrNoQualityProfile).Once()
+
+			resp := post()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			var body map[string]any
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body).To(HaveKeyWithValue("code", "no_quality_profile"))
+		})
+
+		It("500s, not 409s, when the add fails for any other reason", func() {
+			app.tvshows.EXPECT().Add(mock.Anything, uint32(9), "gone").
+				Return(nil, fmt.Errorf("create tv show: %w", context.Canceled)).
+				Once()
+
+			Expect(post().StatusCode).To(Equal(http.StatusInternalServerError))
 		})
 	})
 

@@ -106,6 +106,9 @@ paths:
       description: |
         Fetches metadata from TMDB by ID and adds the movie to the library
         with the specified quality profile. The movie starts in "wanted" status.
+
+        Conflicts (409) only when the movie is already in the library; a
+        profile that resolves to nothing is a 422 with `code: no_quality_profile`.
       tags: [movies]
       requestBody:
         $ref: "#/components/requestBodies/AddMovie"
@@ -120,6 +123,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
         "500":
@@ -245,9 +250,10 @@ paths:
       operationId: searchMovieNow
       summary: Dispatch an indexer search and grab for a single movie
       description: |
-        Runs one indexer search-and-grab pass against the movie. On a
-        matching release the download manager is invoked; otherwise the
-        movie's cooldown timer is bumped.
+        Starts one indexer search-and-grab pass against the movie in the
+        background and answers 202 straight away. On a matching release the
+        download manager is invoked; otherwise the movie's cooldown timer is
+        bumped. Either way the outcome lands as the movie's `searched` event.
       tags: [movies]
       responses:
         "202":
@@ -507,6 +513,9 @@ paths:
       description: |
         Fetches metadata from TVDB by ID and adds the series to the library
         with the specified quality profile and an optional monitoring preset.
+
+        Conflicts (409) only when the series is already in the library; a
+        profile that resolves to nothing is a 422 with `code: no_quality_profile`.
       tags: [series]
       requestBody:
         $ref: "#/components/requestBodies/AddSeries"
@@ -517,6 +526,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
         "500":
@@ -811,8 +822,9 @@ paths:
       operationId: searchSeries
       summary: Auto-search all wanted episodes for this series
       description: |
-        Dispatches one indexer search-and-grab pass over the series' wanted
-        episodes, preferring season packs when a whole season is wanted.
+        Starts one indexer search-and-grab pass over the series' wanted
+        episodes in the background, preferring season packs when a whole
+        season is wanted, and answers 202 once the wanted set is known.
       tags: [series]
       responses:
         "202":

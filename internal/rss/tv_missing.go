@@ -12,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/quality/qualityctx"
@@ -78,8 +79,9 @@ func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
 	return nil
 }
 
-// SearchShow runs one search-and-grab pass scoped to a single series, so a
-// show with nothing searchable is a no-op. Powers POST /series/{id}/search.
+// SearchShow starts one search-and-grab pass scoped to a single series in the
+// background and returns once the eligibility query has answered, so a show
+// with nothing searchable is a no-op. Powers POST /series/{id}/search.
 // A user asked for this pass, so the operator throttles are waived — matching
 // the movie twin, where SearchMovieNow calls SearchOne directly instead of
 // going through the eligibility query. The hard guards still apply.
@@ -96,12 +98,25 @@ func (s *EpisodeMissingSearcher) SearchShow(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	grabbed := make(map[uint32]struct{})
 	for _, show := range shows {
 		if show.ID != showID {
 			continue
 		}
-		s.searchShow(ctx, show, grabbed)
+		// One indexer query per season, each as slow as the slowest tracker
+		// behind Prowlarr: on the request ctx the pass died with the client
+		// that asked for it, a phone locking or a proxy timing out included.
+		bg := trace.ContextWithSpanContext(
+			context.WithoutCancel(ctx),
+			trace.SpanContext{},
+		)
+		go func() {
+			defer observability.RecoverPanic(bg, "rss.tv_search_show", nil)
+			bg, span := tracer.Start(bg, "rss.tv_search_show_pass",
+				trace.WithAttributes(attribute.Int64("tvshow.id", int64(showID))),
+			)
+			defer span.End()
+			s.searchShow(bg, show, make(map[uint32]struct{}))
+		}()
 	}
 	return nil
 }

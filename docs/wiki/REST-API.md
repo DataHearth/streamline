@@ -143,7 +143,7 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 | `GET` | `/movies/counts` | Faceted counts (same filter params as the list) | Authenticated |
 | `GET` | `/movies/{id}` | Fetch a movie | Authenticated |
 | `PATCH` `DELETE` | `/movies/{id}` | Update / delete a movie | Member |
-| `POST` | `/movies/{id}/search` · `/search-now` · `/grab` · `/refresh-metadata` · `/rename` | Search, force a search, grab, refresh metadata, or rename to the naming template | Member |
+| `POST` | `/movies/{id}/search` · `/search-now` · `/grab` · `/refresh-metadata` · `/rename` | Search, force a search (`/search-now` runs in the background and answers `202`; the outcome lands in the movie's history), grab, refresh metadata, or rename to the naming template | Member |
 | `GET` | `/movies/{id}/play-on` | Links to play the movie on a media server | Member |
 | `POST` | `/movies/{id}/reidentify` | Point the entry at a different TMDB title | 🔒 Admin |
 | `GET` | `/movies/{id}/recommendations` | TMDB recommendations | Authenticated |
@@ -162,7 +162,7 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 | `PATCH` `DELETE` | `/series/{id}` | Update (`monitored`, `quality_profile`, `preset`, `type`) / delete a series | Member |
 | `POST` | `/series/{id}/browse` · `/grab` | Search for complete/multi-season packs, or grab one | Member |
 | `POST` | `/series/{id}/release-files` · `/series/{id}/seasons/{number}/release-files` | List a search item's files before grabbing it: the body is the item, unchanged. Fetches the `.torrent` from its indexer (one request) and answers each video file of at least 5 MiB with the `episode_id` its name points at (the matcher the import and file selection use), and every episode of the scope with `has_file`, `wanted` (what a grab without `replace_existing` fetches) and `in_release`. `404` for an unknown show or season; `422 code: files_unavailable` for a magnet, `torrent_unreadable` when the indexer does not hand the `.torrent` over | Member |
-| `POST` | `/series/{id}/search` · `/refresh-metadata` · `/rename` | Search, refresh metadata, or rename | Member |
+| `POST` | `/series/{id}/search` · `/refresh-metadata` · `/rename` | Search the wanted episodes in the background (`202`), refresh metadata, or rename | Member |
 | `GET` | `/series/{id}/play-on` | Links to play the series on a media server | Member |
 | `POST` | `/series/{id}/reidentify` | Point the entry at a different TVDB show | 🔒 Admin |
 | `PATCH` | `/series/{id}/seasons/{number}` | Update a season | Member |

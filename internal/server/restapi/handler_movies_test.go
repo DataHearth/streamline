@@ -35,6 +35,34 @@ var _ = Describe(
 			app = newAPIKeyApp()
 		})
 
+		DescribeTable(
+			"AddMovie maps the service error",
+			func(err error, status int) {
+				app.movies.EXPECT().Add(mock.Anything, uint32(550), "").
+					Return(nil, "", err).Once()
+
+				req := app.req(
+					http.MethodPost,
+					"/api/v1/movies",
+					app.adminKey,
+					strings.NewReader(`{"tmdb_id":550}`),
+				)
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(status))
+			},
+			Entry(
+				"already in the library",
+				fmt.Errorf("%w: tmdb_id 550", moviesvc.ErrMovieExists),
+				http.StatusConflict,
+			),
+			Entry("no quality profile", moviesvc.ErrNoQualityProfile,
+				http.StatusUnprocessableEntity),
+			Entry("anything else", fmt.Errorf("create movie: %w", context.Canceled),
+				http.StatusInternalServerError),
+		)
+
 		Describe("ListMovies", func() {
 			It("rejects an explicit page=0 with a JSON 400", func() {
 				resp := app.do(app.req(

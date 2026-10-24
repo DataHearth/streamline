@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/config"
@@ -128,9 +129,19 @@ func (s *Server) AddMovie(
 	}
 
 	m, _, err := s.movies.Add(ctx, request.Body.TmdbId, qpName)
-	if err != nil {
+	switch {
+	case err == nil:
+	case errors.Is(err, moviesvc.ErrMovieExists), ent.IsConstraintError(err):
 		return AddMovie409JSONResponse{
 			ConflictJSONResponse: errConflict(err.Error()),
+		}, nil
+	case errors.Is(err, moviesvc.ErrNoQualityProfile):
+		return AddMovie422JSONResponse{
+			UnprocessableEntityJSONResponse: errNoQualityProfile(err.Error()),
+		}, nil
+	default:
+		return AddMovie500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 
@@ -278,11 +289,7 @@ func (s *Server) SearchMovieNow(
 			InternalErrorJSONResponse: errInternal(ctx, errSearchNotConfigured),
 		}, nil
 	}
-	if err := s.missingSearcher.SearchOne(ctx, m); err != nil {
-		return SearchMovieNow500JSONResponse{
-			InternalErrorJSONResponse: errInternal(ctx, err),
-		}, nil
-	}
+	s.missingSearcher.SearchNow(ctx, m)
 	return SearchMovieNow202JSONResponse{
 		MovieId:      request.Id,
 		DispatchedAt: time.Now().UTC(),

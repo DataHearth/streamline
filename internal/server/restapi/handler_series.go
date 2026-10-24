@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
@@ -140,9 +141,19 @@ func (s *Server) AddSeries(
 		qp = *request.Body.QualityProfile
 	}
 	show, err := s.tvshows.Add(ctx, request.Body.TvdbId, qp)
-	if err != nil {
+	switch {
+	case err == nil:
+	case ent.IsConstraintError(err):
 		return AddSeries409JSONResponse{
 			ConflictJSONResponse: errConflict(err.Error()),
+		}, nil
+	case errors.Is(err, tvshow.ErrNoQualityProfile):
+		return AddSeries422JSONResponse{
+			UnprocessableEntityJSONResponse: errNoQualityProfile(err.Error()),
+		}, nil
+	default:
+		return AddSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	if request.Body.Preset != nil && *request.Body.Preset != "" {

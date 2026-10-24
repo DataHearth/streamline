@@ -29582,6 +29582,22 @@ func (response AddMovie413JSONResponse) VisitAddMovieResponse(w http.ResponseWri
 	return err
 }
 
+type AddMovie422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response AddMovie422JSONResponse) VisitAddMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddMovie500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response AddMovie500JSONResponse) VisitAddMovieResponse(w http.ResponseWriter) error {
@@ -34580,6 +34596,22 @@ func (response AddSeries413JSONResponse) VisitAddSeriesResponse(w http.ResponseW
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddSeries422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response AddSeries422JSONResponse) VisitAddSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }

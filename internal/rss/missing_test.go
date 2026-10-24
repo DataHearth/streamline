@@ -320,6 +320,46 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 		Expect(syncer.SearchOne(ctx, movie)).To(Succeed())
 	})
 
+	It(
+		"keeps a search-now running after the request that asked for it is gone",
+		func() {
+			reqCtx, cancel := context.WithCancel(ctx)
+			release := make(chan struct{})
+			DeferCleanup(func() {
+				select {
+				case <-release:
+				default:
+					close(release)
+				}
+			})
+			searchErr := make(chan error, 1)
+			indexerM.EXPECT().
+				SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+				Run(func(c context.Context, _, _ []string, _ uint32) {
+					<-release
+					searchErr <- c.Err()
+				}).
+				Return(nil, nil).Once()
+			stamped := make(chan struct{})
+			store.EXPECT().
+				SetMovieLastSearchAt(mock.Anything, uint32(7), mock.AnythingOfType("time.Time")).
+				Run(func(context.Context, uint32, time.Time) { close(stamped) }).
+				Return(nil).Once()
+
+			returned := make(chan struct{})
+			go func() {
+				syncer.SearchNow(reqCtx, movie)
+				close(returned)
+			}()
+			Eventually(returned).Should(BeClosed())
+			cancel()
+			close(release)
+
+			Eventually(searchErr).Should(Receive(BeNil()))
+			Eventually(stamped).Should(BeClosed())
+		},
+	)
+
 	It("returns ErrNoEligibleRelease when nothing matches filters", func() {
 		indexerM.EXPECT().
 			SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
