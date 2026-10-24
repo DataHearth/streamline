@@ -96,6 +96,26 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			},
 		)
 
+		It("returns the digital release date it just stored", func() {
+			configtest.Setup(map[string]any{"metadata": map[string]any{"tmdb_region": "FR"}})
+			drd := time.Date(2026, 10, 29, 0, 0, 0, 0, time.UTC)
+			meta.EXPECT().GetMovie(mock.Anything, uint32(1165369)).
+				Return(&metadata.MovieDetails{
+					TMDBID:        1165369,
+					Title:         "La Bataille de Gaulle",
+					OriginalTitle: "La Bataille de Gaulle",
+					Year:          2026,
+				}, nil).Once()
+			meta.EXPECT().
+				FetchDigitalRelease(mock.Anything, uint32(1165369), "FR").
+				Return(&drd, nil).Once()
+
+			m, _, err := svc.Add(ctx, 1165369, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.DigitalReleaseDate).NotTo(BeNil())
+			Expect(m.DigitalReleaseDate.UTC()).To(Equal(drd))
+		})
+
 		It("returns ErrNoQualityProfile when no profile exists", func() {
 			configtest.Setup(map[string]any{
 				"quality_profiles":               []any{},

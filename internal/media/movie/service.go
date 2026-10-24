@@ -717,9 +717,9 @@ func (s *Service) updateMetadata(
 }
 
 // fetchDigitalRelease persists m's configured-region digital (TMDB type-4)
-// release date. Best-effort: an unset region or a failed TMDB lookup is
-// swallowed (the metadata-refresh tick retries later); only the DB write
-// surfaces an error.
+// release date and mirrors it onto m, which Add hands back as the response.
+// Best-effort: an unset region or a failed TMDB lookup is swallowed (the
+// metadata-refresh tick retries later); only the DB write surfaces an error.
 func (s *Service) fetchDigitalRelease(ctx context.Context, m *ent.Movie) error {
 	region := config.Get().Metadata.TMDBRegion
 	if region == "" {
@@ -731,7 +731,11 @@ func (s *Service) fetchDigitalRelease(ctx context.Context, m *ent.Movie) error {
 			"movie.id", m.ID, "movie.tmdb_id", m.TmdbID, "error", err)
 		return nil
 	}
-	return s.db.SetMovieDigitalReleaseDate(ctx, m.ID, date)
+	if err := s.db.SetMovieDigitalReleaseDate(ctx, m.ID, date); err != nil {
+		return err
+	}
+	m.DigitalReleaseDate = date
+	return nil
 }
 
 // AnnotateTMDBResults batches the AlreadyAdded lookup so callers avoid a
