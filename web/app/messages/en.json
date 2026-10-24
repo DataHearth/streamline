@@ -840,7 +840,7 @@
 	"hold_import_anyway": "Import anyway",
 	"hold_imported": "Imported",
 	"hold_search_replacement": "Search for a replacement after deleting",
-	"hold_search_replacement_help": "The release goes on the blocklist so the same one is not grabbed again.",
+	"hold_search_replacement_help": "Automatic searches skip this release for this title from now on, so the same one is not grabbed again.",
 	"hold_searching_again": "Deleted — searching for a replacement",
 	"imports_accept": "Accept",
 	"imports_adopt": "Adopt",

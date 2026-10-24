@@ -702,7 +702,9 @@ func (db *DB) ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error {
 		Exec(ctx)
 }
 
-// FailHeldDownloadRecord finalizes a held record the user rejected. requeue
+// FailHeldDownloadRecord finalizes a held record the user rejected, and marks
+// it rejected: RejectedReleases reads it back so the automatic grab paths
+// never take the same release for the same item again. requeue
 // reverts the movie to wanted so a search finds a replacement; without it the
 // movie stays failed, the user having judged the release themselves. Episodes
 // revert to wanted either way, mirroring RecordImportFailure — unless the
@@ -728,6 +730,7 @@ func (db *DB) FailHeldDownloadRecord(
 	if err := tx.DownloadRecord.UpdateOneID(id).
 		SetStatus(downloadrecord.StatusFailed).
 		SetFailureReason(reason).
+		SetRejected(true).
 		ClearHoldReasons().
 		Exec(ctx); err != nil {
 		tx.Rollback()
@@ -1269,6 +1272,9 @@ func (db *DB) MarkWantedRecordEpisodesImporting(
 // MarkRecordEpisodesImporting deliberately leaves "wanted" alone because a
 // wanted episode is usually none of a running grab's business — here "wanted"
 // is precisely what this record's own failure wrote.
+//
+// A rejected record loses the mark: retrying it is the user taking the
+// rejection back, and the release is once again one a search may grab.
 func (db *DB) RetryFailedDownloadRecord(ctx context.Context, id uint32) error {
 	rec, err := db.client.DownloadRecord.Query().
 		Where(
@@ -1291,6 +1297,7 @@ func (db *DB) RetryFailedDownloadRecord(ctx context.Context, id uint32) error {
 		SetStatus(downloadrecord.StatusImporting).
 		SetImportAttempts(0).
 		SetFailureReason("").
+		SetRejected(false).
 		Exec(ctx); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("update download record: %w", err)
@@ -1356,6 +1363,9 @@ func (db *DB) DeleteCompletedDownloadRecordsBefore(
 
 // DeleteFailedDownloadRecordsBefore deletes records whose status is failed and
 // whose update_time is older than cutoff. Returns the number of rows deleted.
+// A rejected record is kept however old it is: it is the blocklist entry, and
+// purging it would hand the release back to the next automatic search. The
+// user forgets one by deleting it from the history.
 func (db *DB) DeleteFailedDownloadRecordsBefore(
 	ctx context.Context,
 	cutoff time.Time,
@@ -1364,6 +1374,7 @@ func (db *DB) DeleteFailedDownloadRecordsBefore(
 		Where(
 			downloadrecord.StatusEQ(downloadrecord.StatusFailed),
 			downloadrecord.UpdateTimeLT(cutoff),
+			downloadrecord.Rejected(false),
 		).
 		Exec(ctx)
 }

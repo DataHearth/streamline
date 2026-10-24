@@ -45,6 +45,8 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
+		// Nothing rejected; blocklist_integration_test.go covers the filter.
+		store.EXPECT().RejectedReleases(mock.Anything).Return(nil, nil).Maybe()
 		indexerM = mocks.NewMockTVIndexerSearcher(GinkgoT())
 		dlM = mocks.NewMockEpisodeGrabber(GinkgoT())
 		// Season lengths are looked up once per pass to size packs; the specs

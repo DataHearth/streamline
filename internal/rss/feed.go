@@ -57,14 +57,16 @@ func NewFeedScanner(
 }
 
 // feedPass carries one tick's state: the two title+year indexes items are
-// matched against, the profiles resolved for the movies in them, and the
-// movie IDs already grabbed. grabbed is shared by both branches so a wanted
-// grab and an upgrade grab never both fire for one movie.
+// matched against, the profiles resolved for the movies in them, the movie IDs
+// already grabbed and the releases the user rejected. grabbed is shared by
+// both branches so a wanted grab and an upgrade grab never both fire for one
+// movie.
 type feedPass struct {
 	wanted   map[string]*ent.Movie
 	upgrades map[string]*ent.Movie
 	profiles map[string]quality.Profile
 	grabbed  map[uint32]struct{}
+	rejected *db.ReleaseBlocklist
 }
 
 func (s *FeedScanner) Run(ctx context.Context) error {
@@ -96,20 +98,31 @@ func (s *FeedScanner) Run(ctx context.Context) error {
 		return otelx.RecordSpanError(span, err)
 	}
 
+	// One read for the tick, shared by the three passes: every grab below is
+	// automatic, and without it any of them could be a release the user
+	// rejected.
+	blocklist, err := s.store.RejectedReleases(ctx)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+
 	pass := &feedPass{
 		wanted:   buildWantedIndex(wanted),
 		upgrades: buildWantedIndex(upgradable),
 		profiles: resolveProfiles(ctx, wanted, upgradable),
 		grabbed:  make(map[uint32]struct{}, len(wanted)+len(upgradable)),
+		rejected: blocklist,
 	}
 	musicPass, err := s.newMusicPass(ctx)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
+	musicPass.rejected = blocklist
 	bookPass, err := s.newBookPass(ctx)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
+	bookPass.rejected = blocklist
 	var matched, albumsMatched, booksMatched int
 	for _, idx := range indexers {
 		items, err := s.indexers.Feed(ctx, idx.Name)
@@ -144,6 +157,9 @@ func (s *FeedScanner) processItems(
 	for _, item := range items {
 		if m := matchItem(item, pass.wanted); m != nil {
 			if _, already := pass.grabbed[m.ID]; already {
+				continue
+			}
+			if rejected(ctx, item, pass.rejected.Movie, m.ID) {
 				continue
 			}
 			res := evaluateRelease(
@@ -199,6 +215,9 @@ func (s *FeedScanner) tryUpgrade(
 	}
 	p := pass.profiles[m.QualityProfile]
 	if !p.UpgradeAllowed || len(m.Edges.MediaFiles) == 0 {
+		return false
+	}
+	if rejected(ctx, item, pass.rejected.Movie, m.ID) {
 		return false
 	}
 	rel := evaluateRelease(p, item, singleRelease)

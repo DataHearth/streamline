@@ -203,6 +203,8 @@ func namingBook(releases []ReleaseResult, b *ent.Book) []ReleaseResult {
 
 // grabBest grabs the first accepted release of a sorted list, counts a strike
 // on a refusal that is about the release, and clears the strikes on success.
+// A release the user rejected for the book from the held-download dialog is
+// passed over for the next one; without the blocklist nothing is grabbed.
 func (s *Service) grabBest(
 	ctx context.Context,
 	span trace.Span,
@@ -210,12 +212,31 @@ func (s *Service) grabBest(
 	kind string,
 	releases []ReleaseResult,
 ) bool {
+	if !slices.ContainsFunc(releases, func(r ReleaseResult) bool {
+		return !r.Rejected
+	}) {
+		return false
+	}
+	blocklist, err := s.db.RejectedReleases(ctx)
+	if err != nil {
+		otelx.RecordSpanError(span, err)
+		slog.WarnContext(ctx, "book missing-search: rejected releases unavailable",
+			"book.id", b.ID, "error", err)
+		return false
+	}
 	var pick *ReleaseResult
 	for i := range releases {
-		if !releases[i].Rejected {
-			pick = &releases[i]
-			break
+		if releases[i].Rejected {
+			continue
 		}
+		if blocklist.Book(b.ID, releases[i].InfoHash, releases[i].Title) {
+			slog.InfoContext(ctx,
+				"book missing-search: skipping a release the user rejected",
+				"book.id", b.ID, "release", releases[i].Title)
+			continue
+		}
+		pick = &releases[i]
+		break
 	}
 	if pick == nil {
 		return false

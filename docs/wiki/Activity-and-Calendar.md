@@ -88,7 +88,7 @@ A queue entry is in one of five states:
 | **Paused** | Suspended, by you or by the client |
 | **Error** | Something failed — the entry carries a failure reason |
 
-**Held** entries are the only ones whose next move is yours. Streamline probed the finished file and it disagrees with what the release claimed — a 720p file sold as 1080p, a truncated runtime, a codec your profile doesn't allow, or a file ffprobe cannot read at all. Nothing was moved into your library. Open the entry and choose: **import anyway**, or delete it — with or without searching for a replacement. A season pack is held whole, listing every file that failed.
+**Held** entries are the only ones whose next move is yours. Streamline probed the finished file and it disagrees with what the release claimed — a 720p file sold as 1080p, a truncated runtime, a codec your profile doesn't allow, or a file ffprobe cannot read at all. Nothing was moved into your library. Open the entry and choose: **import anyway**, or delete it — with or without searching for a replacement. Deleting it marks the release as rejected for that title: the automatic searches and the RSS feeds skip it from then on and take the next-best release, while a manual search still lists it if you want it after all. Retrying or removing the entry in **History** lifts the rejection. A season pack is held whole, listing every file that failed.
 
 See [Configuration Reference](Configuration-Reference#import-verification) for the checks and how to turn them up or off (including `always_ask`, which holds every import for review).
 

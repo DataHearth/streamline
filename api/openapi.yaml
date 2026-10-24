@@ -5161,8 +5161,12 @@ paths:
       summary: Release a download held by import verification.
       description: |
         Imports the held files as-is, or deletes them from the client and
-        either re-searches (regrab) or stops (delete). 400 when the action is
-        missing or unrecognised, 409 when the record exists but is not held.
+        either re-searches (regrab) or stops (delete). Both deleting actions
+        mark the release rejected: the missing searches and the RSS feeds skip
+        it for that title from then on (matched by info hash, else by title),
+        until the record is retried or removed from the history. Manual search
+        and grab are unaffected. 400 when the action is missing or
+        unrecognised, 409 when the record exists but is not held.
       tags: [activity]
       requestBody:
         required: true

@@ -363,6 +363,10 @@ func init() {
 	downloadrecordDescVerificationBypassed := downloadrecordFields[14].Descriptor()
 	// downloadrecord.DefaultVerificationBypassed holds the default value on creation for the verification_bypassed field.
 	downloadrecord.DefaultVerificationBypassed = downloadrecordDescVerificationBypassed.Default.(bool)
+	// downloadrecordDescRejected is the schema descriptor for rejected field.
+	downloadrecordDescRejected := downloadrecordFields[19].Descriptor()
+	// downloadrecord.DefaultRejected holds the default value on creation for the rejected field.
+	downloadrecord.DefaultRejected = downloadrecordDescRejected.Default.(bool)
 	episodeMixin := schema.Episode{}.Mixin()
 	episodeMixinFields1 := episodeMixin[1].Fields()
 	_ = episodeMixinFields1

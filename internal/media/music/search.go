@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
@@ -89,6 +90,24 @@ func namingAlbum(releases []AlbumRelease, a *ent.Album) []AlbumRelease {
 	}
 	return slices.DeleteFunc(slices.Clone(releases), func(r AlbumRelease) bool {
 		return !library.ReleaseNamesWork(r.Result.Title, artist.Name, a.Title)
+	})
+}
+
+// notRejected drops the releases the user rejected for the album from the
+// held-download dialog, so an automatic pick takes the next-best one instead.
+func notRejected(
+	ctx context.Context,
+	releases []AlbumRelease,
+	blocklist *db.ReleaseBlocklist,
+	albumID uint32,
+) []AlbumRelease {
+	return slices.DeleteFunc(slices.Clone(releases), func(r AlbumRelease) bool {
+		if !blocklist.Album(albumID, r.Result.InfoHash, r.Result.Title) {
+			return false
+		}
+		slog.InfoContext(ctx, "music search: skipping a release the user rejected",
+			"album.id", albumID, "release", r.Result.Title)
+		return true
 	})
 }
 
@@ -248,6 +267,16 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		}
 	}()
 
+	// Read before the query, so a failing database does not cost an indexer
+	// request; without it the pick could be the release the user rejected.
+	blocklist, err := s.db.RejectedReleases(ctx)
+	if err != nil {
+		outcome = "blocklist_failed"
+		otelx.RecordSpanError(span, err)
+		slog.WarnContext(ctx, "music search: rejected releases unavailable",
+			"album.id", a.ID, "error", err)
+		return false
+	}
 	releases, err := s.SearchAlbumReleases(ctx, a.ID)
 	if err != nil {
 		outcome = "search_failed"
@@ -262,7 +291,9 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		slog.WarnContext(ctx, "music search: stamp last_search_at failed",
 			"album.id", a.ID, "error", err)
 	}
-	best := firstAccepted(namingAlbum(releases, a))
+	best := firstAccepted(
+		notRejected(ctx, namingAlbum(releases, a), blocklist, a.ID),
+	)
 	if best == nil {
 		return false
 	}

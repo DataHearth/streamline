@@ -17915,6 +17915,68 @@ func (_c *MockStore_RejectTranscodeJob_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
+// RejectedReleases provides a mock function for the type MockStore
+func (_mock *MockStore) RejectedReleases(ctx context.Context) (*db.ReleaseBlocklist, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RejectedReleases")
+	}
+
+	var r0 *db.ReleaseBlocklist
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (*db.ReleaseBlocklist, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) *db.ReleaseBlocklist); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*db.ReleaseBlocklist)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_RejectedReleases_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RejectedReleases'
+type MockStore_RejectedReleases_Call struct {
+	*mock.Call
+}
+
+// RejectedReleases is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockStore_Expecter) RejectedReleases(ctx any) *MockStore_RejectedReleases_Call {
+	return &MockStore_RejectedReleases_Call{Call: _e.mock.On("RejectedReleases", ctx)}
+}
+
+func (_c *MockStore_RejectedReleases_Call) Run(run func(ctx context.Context)) *MockStore_RejectedReleases_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_RejectedReleases_Call) Return(releaseBlocklist *db.ReleaseBlocklist, err error) *MockStore_RejectedReleases_Call {
+	_c.Call.Return(releaseBlocklist, err)
+	return _c
+}
+
+func (_c *MockStore_RejectedReleases_Call) RunAndReturn(run func(ctx context.Context) (*db.ReleaseBlocklist, error)) *MockStore_RejectedReleases_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ReleaseHeldDownloadRecord provides a mock function for the type MockStore
 func (_mock *MockStore) ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error {
 	ret := _mock.Called(ctx, id)

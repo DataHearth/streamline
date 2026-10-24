@@ -28,8 +28,8 @@ import (
 )
 
 // ErrNoEligibleRelease is returned by SearchOne when no indexer result passes
-// the quality filter. last_search_at is still bumped so the cooldown counter
-// advances.
+// the quality filter, the user's rejected releases set aside. last_search_at is
+// still bumped so the cooldown counter advances.
 var ErrNoEligibleRelease = errors.New("rss: no eligible release for movie")
 
 // defaultRSSWorkers caps the number of parallel per-movie indexer searches
@@ -278,7 +278,8 @@ func (s *MissingSearcher) SearchNow(ctx context.Context, m *ent.Movie) {
 }
 
 // SearchOne runs one indexer query for movie m, scores every result against
-// its quality profile, and dispatches a grab on the highest-scoring one.
+// its quality profile, and dispatches a grab on the highest-scoring one that
+// the user has not rejected for this movie.
 //
 // Returns nil on a successful grab, ErrNoEligibleRelease when nothing matches
 // the quality bar, or a wrapped error on indexer / downloader failure.
@@ -308,6 +309,14 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 		}
 	}()
 
+	// Read before the query, so a failing database does not cost an indexer
+	// request; without it the pick could be the release the user rejected.
+	blocklist, err := s.db.RejectedReleases(ctx)
+	if err != nil {
+		movieOutcome = "blocklist_failed"
+		return otelx.RecordSpanError(span, err)
+	}
+
 	results, err := s.indexers.SearchMovie(
 		ctx,
 		[]string{m.Title, m.OriginalTitle},
@@ -325,7 +334,7 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	resultCount = len(results)
 	match, ok := scoreBest(
 		qualityFor(ctx, config.MediaMovie, m.QualityProfile),
-		results,
+		dropRejected(ctx, results, blocklist.Movie, m.ID),
 	)
 	if e := s.db.SetMovieLastSearchAt(ctx, m.ID, time.Now()); e != nil {
 		slog.WarnContext(ctx,

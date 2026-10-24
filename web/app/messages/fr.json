@@ -840,7 +840,7 @@
 	"hold_import_anyway": "Importer quand même",
 	"hold_imported": "Importé",
 	"hold_search_replacement": "Rechercher un remplacement après la suppression",
-	"hold_search_replacement_help": "La release est ajoutée à la liste de blocage afin de ne pas être reprise.",
+	"hold_search_replacement_help": "Les recherches automatiques ignorent désormais cette release pour ce titre, afin de ne pas la reprendre.",
 	"hold_searching_again": "Supprimé — recherche d'un remplacement",
 	"imports_accept": "Accepter",
 	"imports_adopt": "Adopter",

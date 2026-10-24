@@ -741,6 +741,9 @@ type Store interface {
 	) error
 	RecordImportFailure(ctx context.Context, p RecordImportFailureParams) error
 	RetryFailedDownloadRecord(ctx context.Context, id uint32) error
+	// RejectedReleases is the blocklist the automatic grab paths filter on:
+	// the releases a user rejected from the held-download dialog, per item.
+	RejectedReleases(ctx context.Context) (*ReleaseBlocklist, error)
 	SetDownloadRecordSavePath(ctx context.Context, id uint32, path string) error
 	CountLiveDownloadRecords(ctx context.Context) (int, error)
 	// ListDownloadRecordsByPathPrefix returns records whose save_path sits

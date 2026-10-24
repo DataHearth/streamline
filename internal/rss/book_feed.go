@@ -10,6 +10,7 @@ import (
 	entbook "github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/bookcontribution"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/book"
@@ -45,6 +46,7 @@ type bookPass struct {
 	wanted   bookIndex
 	upgrades bookIndex
 	grabbed  map[bookSlot]struct{}
+	rejected *db.ReleaseBlocklist
 }
 
 // bookKindForCategory maps a Torznab category to the slot it fills: exactly
@@ -221,6 +223,9 @@ func (s *FeedScanner) processBookItems(
 		}
 		slot := bookSlot{id: b.ID, kind: kind}
 		if _, already := pass.grabbed[slot]; already {
+			continue
+		}
+		if rejected(ctx, item, pass.rejected.Book, b.ID) {
 			continue
 		}
 		if bookScore(ctx, b, kind, parsed) < 0 {

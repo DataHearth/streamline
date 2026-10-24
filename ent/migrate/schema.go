@@ -536,6 +536,7 @@ var (
 		{Name: "selected_bytes", Type: field.TypeInt64, Nullable: true},
 		{Name: "selection_state", Type: field.TypeEnum, Enums: []string{"pending", "applied", "unsupported", "skipped"}, Default: "skipped"},
 		{Name: "book_kind", Type: field.TypeEnum, Nullable: true, Enums: []string{"ebook", "audiobook"}},
+		{Name: "rejected", Type: field.TypeBool, Default: false},
 		{Name: "album_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "artist_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "book_download_records", Type: field.TypeUint32, Nullable: true},
@@ -550,31 +551,31 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "download_records_albums_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[22]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[23]},
 				RefColumns: []*schema.Column{AlbumsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_artists_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[23]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[24]},
 				RefColumns: []*schema.Column{ArtistsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_books_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[24]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[25]},
 				RefColumns: []*schema.Column{BooksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_episodes_anchored_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[25]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[26]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_movies_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[26]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[27]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -601,19 +602,24 @@ var (
 				Columns: []*schema.Column{DownloadRecordsColumns[2], DownloadRecordsColumns[0]},
 			},
 			{
+				Name:    "downloadrecord_rejected",
+				Unique:  false,
+				Columns: []*schema.Column{DownloadRecordsColumns[22]},
+			},
+			{
 				Name:    "downloadrecord_movie_download_records",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[26]},
+				Columns: []*schema.Column{DownloadRecordsColumns[27]},
 			},
 			{
 				Name:    "downloadrecord_episode_download_records",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[25]},
+				Columns: []*schema.Column{DownloadRecordsColumns[26]},
 			},
 			{
 				Name:    "downloadrecord_artist_download_records",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[23]},
+				Columns: []*schema.Column{DownloadRecordsColumns[24]},
 			},
 		},
 	}

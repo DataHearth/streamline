@@ -113,6 +113,8 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 		ctx = context.Background()
 		upgradeBooks = nil
 		store = dbmocks.NewMockStore(GinkgoT())
+		// Nothing rejected; blocklist_integration_test.go covers the filter.
+		store.EXPECT().RejectedReleases(mock.Anything).Return(nil, nil).Maybe()
 		feeder = mocks.NewMockIndexerFeeder(GinkgoT())
 		grabber = mocks.NewMockDownloader(GinkgoT())
 		books = mocks.NewMockBookGrabber(GinkgoT())

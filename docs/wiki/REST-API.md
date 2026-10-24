@@ -776,11 +776,18 @@ api -X POST -d '{"action":"delete"}' "$SL/api/v1/downloads/42/resolve"
 
 `regrab` and `delete` both remove the torrent **and its files** from the download
 client; they differ only in whether the title goes back to wanted for another
-search. Admin only. `204` on success, `400` for an action other than the three
-above, `409` when the record exists but is not held. A held record also answers
-`409` to the queue verbs (pause, resume, `DELETE /activity/queue/{id}`) — its
-download is finished, so resolving is the only action it accepts. There is no
-release blocklist yet, so a `regrab` may find the same release again.
+search. Both mark the release **rejected**: the missing searches and the RSS
+feeds skip it for that title from then on — matched by info hash, or by title
+when either side has none — so a `regrab` takes the next-best release instead
+of the same one. A manual search still lists it and a manual grab still takes
+it. The rejection lasts as long as the history entry: retrying it
+(`POST /activity/history/{id}/retry`) or deleting it
+(`DELETE /activity/history/{id}`) lets the release be grabbed again, and the
+failed-record cleanup leaves rejected entries alone. Admin only. `204` on
+success, `400` for an action other than the three above, `409` when the record
+exists but is not held. A held record also answers `409` to the queue verbs
+(pause, resume, `DELETE /activity/queue/{id}`) — its download is finished, so
+resolving is the only action it accepts.
 
 ### Driving a bulk import from the API
 

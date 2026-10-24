@@ -15948,6 +15948,7 @@ type DownloadRecordMutation struct {
 	addselected_bytes     *int64
 	selection_state       *downloadrecord.SelectionState
 	book_kind             *downloadrecord.BookKind
+	rejected              *bool
 	clearedFields         map[string]struct{}
 	movie                 *uint32
 	clearedmovie          bool
@@ -17093,6 +17094,42 @@ func (m *DownloadRecordMutation) ResetBookKind() {
 	delete(m.clearedFields, downloadrecord.FieldBookKind)
 }
 
+// SetRejected sets the "rejected" field.
+func (m *DownloadRecordMutation) SetRejected(b bool) {
+	m.rejected = &b
+}
+
+// Rejected returns the value of the "rejected" field in the mutation.
+func (m *DownloadRecordMutation) Rejected() (r bool, exists bool) {
+	v := m.rejected
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRejected returns the old "rejected" field's value of the DownloadRecord entity.
+// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DownloadRecordMutation) OldRejected(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRejected is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRejected requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRejected: %w", err)
+	}
+	return oldValue.Rejected, nil
+}
+
+// ResetRejected resets all changes to the "rejected" field.
+func (m *DownloadRecordMutation) ResetRejected() {
+	m.rejected = nil
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by id.
 func (m *DownloadRecordMutation) SetMovieID(id uint32) {
 	m.movie = &id
@@ -17430,7 +17467,7 @@ func (m *DownloadRecordMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DownloadRecordMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 22)
 	if m.create_time != nil {
 		fields = append(fields, downloadrecord.FieldCreateTime)
 	}
@@ -17494,6 +17531,9 @@ func (m *DownloadRecordMutation) Fields() []string {
 	if m.book_kind != nil {
 		fields = append(fields, downloadrecord.FieldBookKind)
 	}
+	if m.rejected != nil {
+		fields = append(fields, downloadrecord.FieldRejected)
+	}
 	return fields
 }
 
@@ -17544,6 +17584,8 @@ func (m *DownloadRecordMutation) Field(name string) (ent.Value, bool) {
 		return m.SelectionState()
 	case downloadrecord.FieldBookKind:
 		return m.BookKind()
+	case downloadrecord.FieldRejected:
+		return m.Rejected()
 	}
 	return nil, false
 }
@@ -17595,6 +17637,8 @@ func (m *DownloadRecordMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldSelectionState(ctx)
 	case downloadrecord.FieldBookKind:
 		return m.OldBookKind(ctx)
+	case downloadrecord.FieldRejected:
+		return m.OldRejected(ctx)
 	}
 	return nil, fmt.Errorf("unknown DownloadRecord field %s", name)
 }
@@ -17750,6 +17794,13 @@ func (m *DownloadRecordMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetBookKind(v)
+		return nil
+	case downloadrecord.FieldRejected:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRejected(v)
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord field %s", name)
@@ -17982,6 +18033,9 @@ func (m *DownloadRecordMutation) ResetField(name string) error {
 		return nil
 	case downloadrecord.FieldBookKind:
 		m.ResetBookKind()
+		return nil
+	case downloadrecord.FieldRejected:
+		m.ResetRejected()
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord field %s", name)

@@ -32,6 +32,8 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
+		// Nothing rejected; blocklist_integration_test.go covers the filter.
+		store.EXPECT().RejectedReleases(mock.Anything).Return(nil, nil).Maybe()
 		indexerM = mocks.NewMockIndexerSearcher(GinkgoT())
 		dlM = mocks.NewMockDownloader(GinkgoT())
 
@@ -290,6 +292,8 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
+		// Nothing rejected; blocklist_integration_test.go covers the filter.
+		store.EXPECT().RejectedReleases(mock.Anything).Return(nil, nil).Maybe()
 		indexerM = mocks.NewMockIndexerSearcher(GinkgoT())
 		dlM = mocks.NewMockDownloader(GinkgoT())
 

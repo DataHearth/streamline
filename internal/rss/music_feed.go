@@ -8,6 +8,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 )
@@ -26,6 +27,7 @@ type musicPass struct {
 	upgrades map[string][]*ent.Album
 	profiles map[string]config.MusicQualityProfileEntry
 	grabbed  map[uint32]struct{}
+	rejected *db.ReleaseBlocklist
 }
 
 // musicCategory reports whether a Torznab category is music. 3030 is the
@@ -123,6 +125,9 @@ func (s *FeedScanner) processMusicItems(
 			continue
 		}
 		if _, already := pass.grabbed[a.ID]; already {
+			continue
+		}
+		if rejected(ctx, item, pass.rejected.Album, a.ID) {
 			continue
 		}
 		profile := pass.profiles[a.Edges.Artist.QualityProfile]
