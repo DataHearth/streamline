@@ -7919,6 +7919,15 @@ components:
             waits on; this is what the library displays. Absent for an
             announced title with no date set, which is why `year` stays
             required.
+        digital_release_date:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            Earliest digital (TMDB type 4) release in `metadata.tmdb_region`,
+            ISO yyyy-mm-dd. Fetched on add and on every metadata refresh;
+            absent when no region is configured or TMDB has published no
+            digital date for it yet.
         overview:
           type: string
         runtime:

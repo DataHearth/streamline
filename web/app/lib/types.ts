@@ -279,6 +279,9 @@ export type Movie = {
 	// name a day rather than a year. Absent for an announced title with no date
 	// set yet, which is why `year` stays and stays required.
 	release_date?: string | null;
+	// Earliest digital release in the configured TMDB region, ISO yyyy-mm-dd.
+	// Absent until TMDB publishes one (or with no region configured).
+	digital_release_date?: string | null;
 	status: MovieStatus;
 	tmdb_id: number;
 	overview?: string;

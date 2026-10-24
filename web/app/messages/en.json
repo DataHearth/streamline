@@ -685,6 +685,8 @@
 	"detail_first_aired": "First aired",
 	"detail_no_overview": "No overview available.",
 	"detail_released": "Released",
+	"detail_digital_release": "Digital release",
+	"detail_digital_release_on": "Digital {date}",
 	"detail_runtime": "Runtime",
 	"detail_synopsis": "Synopsis",
 	"detail_top_billed": "Top billed",

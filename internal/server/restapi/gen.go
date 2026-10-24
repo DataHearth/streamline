@@ -6096,6 +6096,12 @@ type Movie struct {
 	// absent in list responses.
 	Cast *[]CastMember `json:"cast,omitempty"`
 
+	// DigitalReleaseDate Earliest digital (TMDB type 4) release in `metadata.tmdb_region`,
+	// ISO yyyy-mm-dd. Fetched on add and on every metadata refresh;
+	// absent when no region is configured or TMDB has published no
+	// digital date for it yet.
+	DigitalReleaseDate *openapi_types.Date `json:"digital_release_date,omitempty"`
+
 	// FileSummary Per-movie rollup of the files on disk, carried by list responses in
 	// place of the full media_files array. Absent when the movie has no
 	// files. The library grid's size and quality columns and the bulk-action

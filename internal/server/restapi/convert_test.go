@@ -40,6 +40,23 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 			Expect(api.Overview).NotTo(BeNil())
 			Expect(*api.Overview).To(Equal("dream heist"))
 		})
+
+		It("carries the digital release date when TMDB published one", func() {
+			digital := time.Date(2026, 10, 29, 0, 0, 0, 0, time.UTC)
+			m := &ent.Movie{
+				ID:                 3,
+				Title:              "La bataille de Gaulle",
+				Status:             movie.StatusWanted,
+				TmdbID:             1165369,
+				DigitalReleaseDate: &digital,
+			}
+			api := movieToAPI(m)
+			Expect(api.DigitalReleaseDate).NotTo(BeNil())
+			Expect(api.DigitalReleaseDate.String()).To(Equal("2026-10-29"))
+
+			m.DigitalReleaseDate = nil
+			Expect(movieToAPI(m).DigitalReleaseDate).To(BeNil())
+		})
 	})
 
 	Describe("toAPIUser", func() {

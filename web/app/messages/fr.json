@@ -685,6 +685,8 @@
 	"detail_first_aired": "Première diffusion",
 	"detail_no_overview": "Aucun résumé disponible.",
 	"detail_released": "Sortie",
+	"detail_digital_release": "Sortie numérique",
+	"detail_digital_release_on": "Numérique {date}",
 	"detail_runtime": "Durée",
 	"detail_synopsis": "Synopsis",
 	"detail_top_billed": "Têtes d'affiche",
