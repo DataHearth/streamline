@@ -76,14 +76,37 @@ var _ = Describe("REST API media servers", Label("e2e"), func() {
 		decode(read, &server)
 		Expect(server.Host).To(Equal("http://127.0.0.1:1"))
 
+		// A blank api_key preserves the stored secret on the same address.
 		patched := patch("/api/v1/media-servers/e2e-ms", adminAuth, map[string]any{
-			"host": "http://127.0.0.2:1",
+			"host":    "http://127.0.0.1:1/",
+			"api_key": "",
 		})
 		defer patched.Body.Close()
 		Expect(patched.StatusCode).To(Equal(http.StatusOK))
 		decode(patched, &server)
+		Expect(server.ApiKeySet).To(BeTrue())
+
+		// Moving it without the token would send the stored one to the new
+		// address, so the move is refused until the token comes with it.
+		refused := patch("/api/v1/media-servers/e2e-ms", adminAuth, map[string]any{
+			"host": "http://127.0.0.2:1",
+		})
+		defer refused.Body.Close()
+		Expect(refused.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+		var refusal struct {
+			Code string `json:"code"`
+		}
+		decode(refused, &refusal)
+		Expect(refusal.Code).To(Equal("secret_required"))
+
+		moved := patch("/api/v1/media-servers/e2e-ms", adminAuth, map[string]any{
+			"host":    "http://127.0.0.2:1",
+			"api_key": "new-token",
+		})
+		defer moved.Body.Close()
+		Expect(moved.StatusCode).To(Equal(http.StatusOK))
+		decode(moved, &server)
 		Expect(server.Host).To(Equal("http://127.0.0.2:1"))
-		// A blank api_key preserves the stored secret.
 		Expect(server.ApiKeySet).To(BeTrue())
 
 		deleted := del("/api/v1/media-servers/e2e-ms", adminAuth, nil)

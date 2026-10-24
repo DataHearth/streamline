@@ -97,21 +97,47 @@ var _ = Describe("REST API download clients", Label("e2e"), func() {
 		Expect(dc.PasswordSet).To(BeTrue())
 		Expect(dc.Enabled).To(BeFalse())
 
-		updated := put("/api/v1/download-clients/e2e-dc", adminAuth, map[string]any{
-			"name":        "e2e-dc",
-			"client_type": "qbittorrent",
-			"host":        "127.0.0.2",
-			"port":        2,
-			"auth_method": "password",
-			"priority":    9,
-			"enabled":     false,
-		})
+		body := func(host string, port int, password string) map[string]any {
+			return map[string]any{
+				"name":        "e2e-dc",
+				"client_type": "qbittorrent",
+				"host":        host,
+				"port":        port,
+				"auth_method": "password",
+				"password":    password,
+				"priority":    9,
+				"enabled":     false,
+			}
+		}
+
+		// A blank password preserves the stored secret on the same address.
+		updated := put("/api/v1/download-clients/e2e-dc", adminAuth,
+			body("127.0.0.1", 1, ""))
 		defer updated.Body.Close()
 		Expect(updated.StatusCode).To(Equal(http.StatusOK))
 		decode(updated, &dc)
-		Expect(dc.Host).To(Equal("127.0.0.2"))
 		Expect(dc.Priority).To(BeEquivalentTo(9))
-		// A blank password preserves the stored secret.
+		Expect(dc.PasswordSet).To(BeTrue())
+
+		// Moving it without the password would send the stored one to the new
+		// address, so the move is refused until the password comes with it.
+		refused := put("/api/v1/download-clients/e2e-dc", adminAuth,
+			body("127.0.0.2", 2, ""))
+		defer refused.Body.Close()
+		Expect(refused.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+		var refusal struct {
+			Code string `json:"code"`
+		}
+		decode(refused, &refusal)
+		Expect(refusal.Code).To(Equal("secret_required"))
+
+		moved := put("/api/v1/download-clients/e2e-dc", adminAuth,
+			body("127.0.0.2", 2, "new-secret"))
+		defer moved.Body.Close()
+		Expect(moved.StatusCode).To(Equal(http.StatusOK))
+		decode(moved, &dc)
+		Expect(dc.Host).To(Equal("127.0.0.2"))
+		Expect(dc.Port).To(BeEquivalentTo(2))
 		Expect(dc.PasswordSet).To(BeTrue())
 
 		deleted := del("/api/v1/download-clients/e2e-dc", adminAuth, nil)
