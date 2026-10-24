@@ -156,7 +156,9 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			Once()
 		movies.EXPECT().
 			Add(mock.Anything, uint32(550), "").
-			Return(nil, "", fmt.Errorf("movie already exists")).
+			// What movie.Service.Add returns on a duplicate: the handler maps
+			// the sentinel to 409, and any other error to 500.
+			Return(nil, "", fmt.Errorf("%w: tmdb_id %d", moviesvc.ErrMovieExists, 550)).
 			Once()
 
 		body := `{"tmdb_id": 550}`
