@@ -1902,6 +1902,32 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("DownloadRecordTitlesByHash", func() {
+		titled := func(hash, title string) {
+			GinkgoHelper()
+			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: title, Size: 1,
+				TorrentHash: hash, Status: downloadrecord.StatusCompleted,
+				MovieID: movieID, DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		It("maps each hash to its newest record's title", func() {
+			titled("H1", "Lamb Of God - Omens - 2022, FLAC")
+			titled("H2", "Old grab")
+			titled("H2", "New grab")
+			titled("", "No hash")
+
+			titles, err := store.DownloadRecordTitlesByHash(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles).To(Equal(map[string]string{
+				"H1": "Lamb Of God - Omens - 2022, FLAC",
+				"H2": "New grab",
+			}))
+		})
+	})
+
 	Describe("DeletePendingDownloadRecord", func() {
 		// The hash set is what the adoption sweep calls "already tracked", and
 		// it does not look at status. That is why forgetting a proposal has to

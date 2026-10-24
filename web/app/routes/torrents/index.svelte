@@ -18,6 +18,7 @@
 	import {
 		TORRENT_SORT_CHIPS,
 		sortTorrents,
+		torrentMatches,
 		torrentSortChipKey,
 		type SortOrder,
 		type TorrentSortKey,
@@ -229,10 +230,7 @@
 			out = out.filter((t) => statusFilter.includes(t.status));
 		if (search.trim()) {
 			const q = fold(search);
-			out = out.filter(
-				(t) =>
-					fold(t.name).includes(q) || fold(t.hash).includes(q),
-			);
+			out = out.filter((t) => torrentMatches(t, q));
 		}
 		return out;
 	});

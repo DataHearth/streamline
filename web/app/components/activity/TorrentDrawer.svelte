@@ -31,6 +31,7 @@
 		formatRatio,
 	} from "@lib/format";
 	import { formatRelative, formatDateTime } from "@lib/dates";
+	import { torrentRelease } from "@lib/activity-touch";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		Torrent,
@@ -183,6 +184,11 @@
 									{torrent.name}
 								{/if}
 							</h2>
+							{#if torrentRelease(torrent)}
+								<p class="mt-0.5 break-words text-xs text-fg-muted">
+									{torrentRelease(torrent)}
+								</p>
+							{/if}
 							<!-- infohash · click to copy -->
 							<button
 								type="button"

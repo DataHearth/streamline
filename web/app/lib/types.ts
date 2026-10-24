@@ -1358,6 +1358,10 @@ export type Torrent = {
 	seeding_stopped: boolean;
 	// False for arbitrary adds not tied to a library item.
 	tracked: boolean;
+	// The release the newest download record holding it was grabbed as;
+	// absent when untracked. `name` is the uploader's and can name no
+	// release at all.
+	release_title?: string;
 };
 
 export type TorrentFile = {

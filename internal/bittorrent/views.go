@@ -73,6 +73,9 @@ type TorrentView struct {
 	SeedingStopped bool
 	// Tracked is false for arbitrary adds with no download_record.
 	Tracked bool
+	// ReleaseTitle is the title of the release the newest download_record
+	// holding the torrent was grabbed as; empty when untracked.
+	ReleaseTitle string
 }
 
 type FileView struct {
@@ -104,7 +107,7 @@ type FilePriority struct {
 }
 
 func (e *Engine) ListViews(ctx context.Context) []TorrentView {
-	tracked := e.trackedHashes(ctx)
+	tracked := e.recordTitles(ctx)
 	live := e.client.Torrents()
 	out := make([]TorrentView, 0, len(live))
 	for _, t := range live {
@@ -133,10 +136,10 @@ func sortViews(views []TorrentView) {
 // torrentView maps one live snapshot onto the management view.
 func (e *Engine) torrentView(
 	t *antorrent.Torrent,
-	tracked map[string]struct{},
+	tracked map[string]string,
 ) TorrentView {
 	l := e.live(t)
-	_, isTracked := tracked[l.hash]
+	title, isTracked := tracked[l.hash]
 	return TorrentView{
 		Hash:           l.hash,
 		Name:           l.name,
@@ -155,19 +158,20 @@ func (e *Engine) torrentView(
 		AddedAt:        l.addedAt,
 		SeedingStopped: l.seedingStopped,
 		Tracked:        isTracked,
+		ReleaseTitle:   title,
 	}
 }
 
-// trackedHashes is the set of torrent hashes some download_record owns.
-// A lookup failure degrades to "nothing tracked" (badge-only data, and the
-// list refreshes every poll) rather than failing the view.
-func (e *Engine) trackedHashes(ctx context.Context) map[string]struct{} {
-	set, err := e.store.AllDownloadRecordHashes(ctx)
+// recordTitles maps the torrent hashes some download_record owns to its
+// release title. A lookup failure degrades to "nothing tracked" (display-only
+// data, and the list refreshes every poll) rather than failing the view.
+func (e *Engine) recordTitles(ctx context.Context) map[string]string {
+	titles, err := e.store.DownloadRecordTitlesByHash(ctx)
 	if err != nil {
 		slog.WarnContext(ctx, "listing tracked torrent hashes failed", "error", err)
-		return map[string]struct{}{}
+		return map[string]string{}
 	}
-	return set
+	return titles
 }
 
 func (e *Engine) Details(
@@ -179,7 +183,7 @@ func (e *Engine) Details(
 		return TorrentDetails{}, err
 	}
 	d := TorrentDetails{
-		TorrentView: e.torrentView(t, e.trackedHashes(ctx)),
+		TorrentView: e.torrentView(t, e.recordTitles(ctx)),
 		Files:       []FileView{},
 		Trackers:    []string{},
 		Peers:       []PeerView{},

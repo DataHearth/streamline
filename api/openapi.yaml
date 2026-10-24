@@ -11473,6 +11473,13 @@ components:
         tracked:
           type: boolean
           description: False for arbitrary adds not tied to a library item.
+        release_title:
+          type: string
+          description: |
+            The release the newest download record holding this torrent was
+            grabbed as. `name` is the torrent's own, which its uploader
+            chose and which can name no release at all ("Lamb Of God" for an
+            Omens LP). Absent when the torrent is untracked.
 
     TorrentFile:
       type: object

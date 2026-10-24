@@ -8364,7 +8364,13 @@ type TorrentDetails struct {
 	// Progress Fraction complete, 0..1.
 	Progress float64 `json:"progress"`
 	Ratio    float64 `json:"ratio"`
-	SavePath string  `json:"save_path"`
+
+	// ReleaseTitle The release the newest download record holding this torrent was
+	// grabbed as. `name` is the torrent's own, which its uploader
+	// chose and which can name no release at all ("Lamb Of God" for an
+	// Omens LP). Absent when the torrent is untracked.
+	ReleaseTitle *string `json:"release_title,omitempty"`
+	SavePath     string  `json:"save_path"`
 
 	// SeedingStopped True once the ratio/seed-time limit stopped seeding.
 	SeedingStopped bool `json:"seeding_stopped"`
@@ -8433,7 +8439,13 @@ type TorrentInfo struct {
 	// Progress Fraction complete, 0..1.
 	Progress float64 `json:"progress"`
 	Ratio    float64 `json:"ratio"`
-	SavePath string  `json:"save_path"`
+
+	// ReleaseTitle The release the newest download record holding this torrent was
+	// grabbed as. `name` is the torrent's own, which its uploader
+	// chose and which can name no release at all ("Lamb Of God" for an
+	// Omens LP). Absent when the torrent is untracked.
+	ReleaseTitle *string `json:"release_title,omitempty"`
+	SavePath     string  `json:"save_path"`
 
 	// SeedingStopped True once the ratio/seed-time limit stopped seeding.
 	SeedingStopped bool `json:"seeding_stopped"`

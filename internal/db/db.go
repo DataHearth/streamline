@@ -812,6 +812,10 @@ type Store interface {
 	// across every record. The adoption pass uses it to skip already-tracked
 	// torrents.
 	AllDownloadRecordHashes(ctx context.Context) (map[string]struct{}, error)
+	// DownloadRecordTitlesByHash maps every non-empty torrent hash to the
+	// release title of the newest record holding it. The builtin torrent list
+	// reads it for its tracked flag and to show the release a torrent is for.
+	DownloadRecordTitlesByHash(ctx context.Context) (map[string]string, error)
 	ListPendingDownloadRecords(
 		ctx context.Context,
 		limit, offset uint32,

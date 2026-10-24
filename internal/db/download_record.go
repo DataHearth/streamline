@@ -165,6 +165,32 @@ func (db *DB) AllDownloadRecordHashes(
 	return set, nil
 }
 
+// DownloadRecordTitlesByHash maps every non-empty torrent hash to the release
+// title of the newest record holding it. A torrent's own name is its
+// uploader's choice and can say nothing of the release — a RuTracker Omens LP
+// is named "Lamb Of God" — so the builtin torrent list shows this beside it.
+func (db *DB) DownloadRecordTitlesByHash(
+	ctx context.Context,
+) (map[string]string, error) {
+	var rows []struct {
+		TorrentHash string `json:"torrent_hash"`
+		Title       string `json:"title"`
+	}
+	err := db.client.DownloadRecord.Query().
+		Where(downloadrecord.TorrentHashNEQ("")).
+		Order(ent.Asc(downloadrecord.FieldID)).
+		Select(downloadrecord.FieldTorrentHash, downloadrecord.FieldTitle).
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, fmt.Errorf("list download record titles: %w", err)
+	}
+	titles := make(map[string]string, len(rows))
+	for _, r := range rows {
+		titles[r.TorrentHash] = r.Title
+	}
+	return titles, nil
+}
+
 // ListPendingDownloadRecords returns one page of status=pending records with
 // Movie and Episode (+ its season and show) edges eager-loaded for the
 // needs-attention queue, newest first, and the count of all of them.

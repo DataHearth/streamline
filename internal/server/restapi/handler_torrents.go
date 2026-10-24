@@ -235,6 +235,10 @@ func (s *Server) SetTorrentListenPort(
 }
 
 func torrentInfoToAPI(v bittorrent.TorrentView) TorrentInfo {
+	var releaseTitle *string
+	if v.ReleaseTitle != "" {
+		releaseTitle = &v.ReleaseTitle
+	}
 	return TorrentInfo{
 		Hash:           v.Hash,
 		Name:           v.Name,
@@ -253,6 +257,7 @@ func torrentInfoToAPI(v bittorrent.TorrentView) TorrentInfo {
 		AddedAt:        v.AddedAt,
 		SeedingStopped: v.SeedingStopped,
 		Tracked:        v.Tracked,
+		ReleaseTitle:   releaseTitle,
 	}
 }
 
@@ -285,6 +290,10 @@ func torrentDetailsToAPI(d bittorrent.TorrentDetails) TorrentDetails {
 		}
 		peers = append(peers, peer)
 	}
+	var releaseTitle *string
+	if d.ReleaseTitle != "" {
+		releaseTitle = &d.ReleaseTitle
+	}
 	return TorrentDetails{
 		Hash:           d.Hash,
 		Name:           d.Name,
@@ -302,6 +311,7 @@ func torrentDetailsToAPI(d bittorrent.TorrentDetails) TorrentDetails {
 		AddedAt:        d.AddedAt,
 		SeedingStopped: d.SeedingStopped,
 		Tracked:        d.Tracked,
+		ReleaseTitle:   releaseTitle,
 		Files:          files,
 		Trackers:       d.Trackers,
 		Peers:          peers,

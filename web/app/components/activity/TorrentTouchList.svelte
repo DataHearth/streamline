@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Magnet, Pause, Play, Trash2 } from "@lucide/svelte";
 	import TouchRow, { type RowSwipe } from "./TouchRow.svelte";
-	import { torrentMeta } from "@lib/activity-touch";
+	import { torrentMeta, torrentRelease } from "@lib/activity-touch";
 	import type { Torrent } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { errorText } from "@lib/api";
@@ -116,7 +116,7 @@
 					progress={t.progress}
 					title={fetching(t) ? i18n.torrent_fetching_metadata() : t.name}
 					placeholderTitle={fetching(t)}
-					release={`${t.hash.slice(0, 24)}…`}
+					release={torrentRelease(t) ?? `${t.hash.slice(0, 24)}…`}
 					badge={t.tracked ? undefined : "untracked"}
 					meta={torrentMeta(t)}
 					selected={selecting ? (selected?.has(t.hash) ?? false) : undefined}
