@@ -1111,8 +1111,9 @@ paths:
       description: |
         Every episode of every series in the library whose title holds
         `query`, with accents, case and punctuation folded on both sides.
-        Episodes holding a file come first, then the most recently aired; an
-        episode with no air date sorts last. Each hit names its show and
+        A title equal to the query ranks first, then one starting with it,
+        then the rest; among equal matches the episodes holding a file come
+        first, then the most recently aired, and one with no air date last. Each hit names its show and
         season, so it can be shown and linked without loading the series.
       tags: [series]
       parameters:
@@ -1531,9 +1532,11 @@ paths:
       summary: Search the library's albums by title
       description: |
         Every album row in the library whose title holds `query`, with
-        accents, case and punctuation folded on both sides. An artist's whole
-        discography is album rows, so the albums holding at least one track
-        file come first, then the monitored ones, then the newest. This is
+        accents, case and punctuation folded on both sides. A title equal to
+        the query ranks first, then one starting with it, then the rest; among
+        equal matches the albums holding at least one track file come first
+        (an artist's whole discography is album rows), then the monitored
+        ones, then the newest. This is
         the search surfaces' album list: `GET /music/artists` matches album
         titles too, but answers with the artist.
       tags: [music]

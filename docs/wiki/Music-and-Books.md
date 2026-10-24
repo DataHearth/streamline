@@ -136,7 +136,7 @@ Users can request an artist (its whole discography), a single album, a single bo
 
 ## Finding an artist, an album or a book
 
-The command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>), the phone search screen and the tablet search panel search your music and books next to movies and series. An artist is found by name, genre or the title of any of its albums. Albums are results of their own, with their artist and year: picking one opens the artist's discography on that album, and the albums you hold files for come first. An artist found only through an album that is already listed is left out; when the album is not among the results, the artist row says which one matched (*via “The Album”*). A book is found by its title, any edition's title or an author's name. A series is one row, with its volume count where a book shows its year.
+The command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>), the phone search screen and the tablet search panel search your music and books next to movies and series. An artist is found by name, genre or the title of any of its albums. Albums are results of their own, with their artist and year: picking one opens the artist's discography on that album. An album titled exactly what you typed comes first, so *discovery* finds Daft Punk's album before its remixes; after that, the albums you hold files for. An artist found only through an album that is already listed is left out; when the album is not among the results, the artist row says which one matched (*via “The Album”*). A book is found by its title, any edition's title or an author's name. A series is one row, with its volume count where a book shows its year.
 
 ## Known gaps
 

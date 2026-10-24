@@ -27,9 +27,32 @@ type countRow struct {
 	Total uint32 `sql:"total"`
 }
 
+// byMatch ranks a title equal to the query first, then one starting with it,
+// then the rest. Without it a bare "discovery" listed five remixes and a
+// bootleg of Daft Punk's, newest first, and not the album itself. An empty
+// query ranks nothing.
+func byMatch(col, query string) func(*entsql.Selector) {
+	return func(s *entsql.Selector) {
+		if query == "" {
+			return
+		}
+		f := foldText(query)
+		s.OrderExpr(entsql.ExprP(
+			"CASE WHEN fold("+s.C(
+				col,
+			)+") = ? THEN 0 WHEN fold("+s.C(
+				col,
+			)+") LIKE ? THEN 1 ELSE 2 END",
+			f,
+			f+"%",
+		))
+	}
+}
+
 // SearchAlbums pages the albums whose title holds the query, each with its
-// artist loaded. An artist's whole discography is album rows, so the albums
-// holding a file come first: those are the ones a search is usually for.
+// artist loaded, the closest title first. An artist's whole discography is
+// album rows, so among equal matches the albums holding a file come first:
+// those are the ones a search is usually for.
 func (db *DB) SearchAlbums(
 	ctx context.Context,
 	p TitleSearchParams,
@@ -53,6 +76,7 @@ func (db *DB) SearchAlbums(
 	total := counted[0].Total
 	rows, err := q.
 		Order(
+			byMatch(album.FieldTitle, p.Query),
 			func(s *entsql.Selector) {
 				s.OrderExpr(entsql.Expr(fmt.Sprintf(
 					"EXISTS (SELECT 1 FROM %s t JOIN %s f ON f.%s = t.id WHERE t.%s = %s) DESC",
@@ -78,8 +102,9 @@ func (db *DB) SearchAlbums(
 }
 
 // SearchEpisodes pages the episodes whose title holds the query, each with
-// its season and show loaded. Episodes holding a file come first, then the
-// most recently aired; an undated one sorts last, as SQLite orders NULL lowest.
+// its season and show loaded, the closest title first. Among equal matches the
+// episodes holding a file come first, then the most recently aired; an
+// undated one sorts last, as SQLite orders NULL lowest.
 func (db *DB) SearchEpisodes(
 	ctx context.Context,
 	p TitleSearchParams,
@@ -103,6 +128,7 @@ func (db *DB) SearchEpisodes(
 	total := counted[0].Total
 	rows, err := q.
 		Order(
+			byMatch(episode.FieldTitle, p.Query),
 			func(s *entsql.Selector) {
 				s.OrderExpr(entsql.Expr(fmt.Sprintf(
 					"EXISTS (SELECT 1 FROM %s f WHERE f.%s = %s) DESC",

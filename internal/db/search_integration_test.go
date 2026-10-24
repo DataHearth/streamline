@@ -94,6 +94,30 @@ var _ = Describe("Title search", Label("integration", "db"), func() {
 			Expect(ids).To(Equal([]uint32{held.ID, newest.ID, undated.ID}))
 		})
 
+		It(
+			"ranks the exact title, then a title starting with it, then the rest",
+			func() {
+				// Daft Punk's discography: remixes and bootlegs are newer and
+				// would otherwise bury the album the query names.
+				bootleg := seedAlbum("Re-Discovery", day(2024, 1, 1), true)
+				remixed := seedAlbum("Discovery Remixed", day(2021, 1, 1), true)
+				exact := seedAlbum("Discovery", day(2001, 3, 12), false)
+				hold(bootleg)
+
+				rows, _, err := store.SearchAlbums(ctx, TitleSearchParams{
+					Query: "DISCOVERY", Limit: 5,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				ids := make([]uint32, 0, len(rows))
+				for _, r := range rows {
+					ids = append(ids, r.ID)
+				}
+				// The held bootleg only contains the query, so it ranks last
+				// despite holding the only file.
+				Expect(ids).To(Equal([]uint32{exact.ID, remixed.ID, bootleg.ID}))
+			},
+		)
+
 		It("pages with limit and offset while total counts every match", func() {
 			for _, t := range []string{"Love A", "Love B", "Love C"} {
 				seedAlbum(t, nil, true)
@@ -157,24 +181,42 @@ var _ = Describe("Title search", Label("integration", "db"), func() {
 				To(Equal("Dune: Prophecy"))
 		})
 
-		It("puts held episodes first, then the latest aired, undated last", func() {
-			undated := seedEpisode(6, "Sisterhood Above All", nil)
-			older := seedEpisode(1, "Sisterhood Rising", day(2024, 11, 17))
-			newer := seedEpisode(5, "The Sisterhood's Fall", day(2024, 12, 15))
-			held := seedEpisode(3, "Sisterhood Sworn", day(2024, 12, 1))
-			client.MediaFile.Create().
-				SetPath("/tv/s01e03.mkv").SetSize(10).
-				SetEpisodeID(held.ID).ExecX(ctx)
+		It("ranks an episode titled exactly the query first", func() {
+			older := seedEpisode(1, "Half Loop", day(2022, 2, 18))
+			newer := seedEpisode(2, "The Half Loop Returns", day(2025, 1, 1))
 
 			rows, _, err := store.SearchEpisodes(ctx, TitleSearchParams{
-				Query: "sisterhood", Limit: 10,
+				Query: "half loop", Limit: 5,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			ids := make([]uint32, 0, len(rows))
-			for _, r := range rows {
-				ids = append(ids, r.ID)
-			}
-			Expect(ids).To(Equal([]uint32{held.ID, newer.ID, older.ID, undated.ID}))
+			Expect(rows).To(HaveLen(2))
+			Expect(rows[0].ID).To(Equal(older.ID))
+			Expect(rows[1].ID).To(Equal(newer.ID))
 		})
+
+		It(
+			"among equal matches, puts held episodes first, then the latest aired, undated last",
+			func() {
+				undated := seedEpisode(6, "Sisterhood Above All", nil)
+				older := seedEpisode(1, "Sisterhood Rising", day(2024, 11, 17))
+				newer := seedEpisode(5, "Sisterhood's Fall", day(2024, 12, 15))
+				held := seedEpisode(3, "Sisterhood Sworn", day(2024, 12, 1))
+				client.MediaFile.Create().
+					SetPath("/tv/s01e03.mkv").SetSize(10).
+					SetEpisodeID(held.ID).ExecX(ctx)
+
+				rows, _, err := store.SearchEpisodes(ctx, TitleSearchParams{
+					Query: "sisterhood", Limit: 10,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				ids := make([]uint32, 0, len(rows))
+				for _, r := range rows {
+					ids = append(ids, r.ID)
+				}
+				Expect(
+					ids,
+				).To(Equal([]uint32{held.ID, newer.ID, older.ID, undated.ID}))
+			},
+		)
 	})
 })
