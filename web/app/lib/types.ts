@@ -31,6 +31,19 @@ export type MonitoringPreset =
 	| "pilot"
 	| "none";
 
+// A search hit for one episode (GET /episodes): enough to name and link it
+// without loading its series.
+export type EpisodeSearchHit = {
+	id: number;
+	title: string;
+	series_id: number;
+	series_title: string;
+	series_type: SeriesType;
+	season: number;
+	episode: number;
+	air_date?: string;
+};
+
 export type Episode = {
 	id: number;
 	number: number;

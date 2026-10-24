@@ -153,7 +153,7 @@ Every name in a title's **Cast** tab is a link. Click one and you get that perso
 
 Cast members also show up in search — the command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>), the phone search screen and the tablet search panel all list matching people under the title hits, with the number of library titles each appears in.
 
-The same search also finds artists and books (see [Music and Books](Music-and-Books#finding-an-artist-or-a-book)), and an admin can type the name of a settings section, such as *indexers* or *quality profiles*, to jump straight to it.
+The same search finds episodes by their title, each with its show and SxxExx code: picking one opens the series on that episode's season with its details sheet open. It also finds artists, albums and books (see [Music and Books](Music-and-Books#finding-an-artist-an-album-or-a-book)), and an admin can type the name of a settings section, such as *indexers* or *quality profiles*, to jump straight to it.
 
 There is no people database: a person exists exactly as long as a title crediting them does. Someone who appears in nothing you have is not findable, and delete their only title and their page goes with it.
 

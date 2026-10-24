@@ -717,6 +717,27 @@ func (e EbookFormat) Valid() bool {
 	}
 }
 
+// Defines values for EpisodeSearchHitSeriesType.
+const (
+	EpisodeSearchHitSeriesTypeAnime    EpisodeSearchHitSeriesType = "anime"
+	EpisodeSearchHitSeriesTypeDaily    EpisodeSearchHitSeriesType = "daily"
+	EpisodeSearchHitSeriesTypeStandard EpisodeSearchHitSeriesType = "standard"
+)
+
+// Valid indicates whether the value is a known member of the EpisodeSearchHitSeriesType enum.
+func (e EpisodeSearchHitSeriesType) Valid() bool {
+	switch e {
+	case EpisodeSearchHitSeriesTypeAnime:
+		return true
+	case EpisodeSearchHitSeriesTypeDaily:
+		return true
+	case EpisodeSearchHitSeriesTypeStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EpisodeStatus.
 const (
 	EpisodeStatusAvailable   EpisodeStatus = "available"
@@ -4108,6 +4129,28 @@ type AddTorrentRequest struct {
 	Torrent *[]byte `json:"torrent,omitempty"`
 }
 
+// AlbumSearchHit defines model for AlbumSearchHit.
+type AlbumSearchHit struct {
+	ArtistId   uint32 `json:"artist_id"`
+	ArtistName string `json:"artist_name"`
+	Id         uint32 `json:"id"`
+
+	// ReleaseDate Absent for an undated album.
+	ReleaseDate *openapi_types.Date `json:"release_date,omitempty"`
+	Title       string              `json:"title"`
+	Type        MusicAlbumType      `json:"type"`
+}
+
+// AlbumSearchList defines model for AlbumSearchList.
+type AlbumSearchList struct {
+	Items  []AlbumSearchHit `json:"items"`
+	Limit  uint16           `json:"limit"`
+	Offset uint32           `json:"offset"`
+
+	// Total Total number of albums matching the query.
+	Total uint32 `json:"total"`
+}
+
 // ApiKey defines model for ApiKey.
 type ApiKey struct {
 	CreatedAt  time.Time  `json:"created_at"`
@@ -5111,6 +5154,36 @@ type EpisodeRef struct {
 	// SeriesId Set where the row links back to the series page.
 	SeriesId  *uint32 `json:"series_id,omitempty"`
 	ShowTitle string  `json:"show_title"`
+}
+
+// EpisodeSearchHit defines model for EpisodeSearchHit.
+type EpisodeSearchHit struct {
+	// AirDate Absent for an episode with no air date.
+	AirDate     *time.Time `json:"air_date,omitempty"`
+	Episode     uint16     `json:"episode"`
+	Id          uint32     `json:"id"`
+	Season      uint16     `json:"season"`
+	SeriesId    uint32     `json:"series_id"`
+	SeriesTitle string     `json:"series_title"`
+
+	// SeriesType The show's type: a `daily` show numbers its episodes by air date
+	// rather than as SxxExx.
+	SeriesType EpisodeSearchHitSeriesType `json:"series_type"`
+	Title      string                     `json:"title"`
+}
+
+// EpisodeSearchHitSeriesType The show's type: a `daily` show numbers its episodes by air date
+// rather than as SxxExx.
+type EpisodeSearchHitSeriesType string
+
+// EpisodeSearchList defines model for EpisodeSearchList.
+type EpisodeSearchList struct {
+	Items  []EpisodeSearchHit `json:"items"`
+	Limit  uint16             `json:"limit"`
+	Offset uint32             `json:"offset"`
+
+	// Total Total number of episodes matching the query.
+	Total uint32 `json:"total"`
 }
 
 // EpisodeStatus Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead or is not yet known (a provider announces a future season as dateless "TBA" placeholders).
@@ -9139,6 +9212,15 @@ type TMDBID = uint32
 // TVDBID defines model for TVDBID.
 type TVDBID = uint32
 
+// TitleSearchLimit defines model for TitleSearchLimit.
+type TitleSearchLimit = uint16
+
+// TitleSearchOffset defines model for TitleSearchOffset.
+type TitleSearchOffset = uint32
+
+// TitleSearchQuery defines model for TitleSearchQuery.
+type TitleSearchQuery = string
+
 // TorrentFileIndex defines model for TorrentFileIndex.
 type TorrentFileIndex = int
 
@@ -9722,6 +9804,18 @@ type ListUpcomingReleasesParams struct {
 	To   CalendarTo   `form:"to" json:"to"`
 }
 
+// ListEpisodesParams defines parameters for ListEpisodes.
+type ListEpisodesParams struct {
+	// Query Substring filter over the title, accent-, case- and punctuation-folded.
+	Query *TitleSearchQuery `form:"query,omitempty" json:"query,omitempty"`
+
+	// Limit Max items per page (1..100).
+	Limit *TitleSearchLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Zero-based offset for pagination.
+	Offset *TitleSearchOffset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // ListImportsParams defines parameters for ListImports.
 type ListImportsParams struct {
 	Page  *ImportPage  `form:"page,omitempty" json:"page,omitempty"`
@@ -9853,6 +9947,18 @@ type ReidentifyMovieJSONBody struct {
 type RenameMovieFilesParams struct {
 	// Preview When true, returns the rename plan without applying it.
 	Preview *RenamePreview `form:"preview,omitempty" json:"preview,omitempty"`
+}
+
+// ListMusicAlbumsParams defines parameters for ListMusicAlbums.
+type ListMusicAlbumsParams struct {
+	// Query Substring filter over the title, accent-, case- and punctuation-folded.
+	Query *TitleSearchQuery `form:"query,omitempty" json:"query,omitempty"`
+
+	// Limit Max items per page (1..100).
+	Limit *TitleSearchLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Zero-based offset for pagination.
+	Offset *TitleSearchOffset `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
 // ListMusicArtistsParams defines parameters for ListMusicArtists.
@@ -10733,6 +10839,9 @@ type ServerInterface interface {
 	// ResolveHeldDownload Release a download held by import verification.
 	// (POST /downloads/{id}/resolve)
 	ResolveHeldDownload(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ListEpisodes Search the library's episodes by title
+	// (GET /episodes)
+	ListEpisodes(w http.ResponseWriter, r *http.Request, params ListEpisodesParams)
 	// ListIndexers List configured indexers
 	// (GET /indexers)
 	ListIndexers(w http.ResponseWriter, r *http.Request)
@@ -10883,6 +10992,9 @@ type ServerInterface interface {
 	// SearchMovieNow Dispatch an indexer search and grab for a single movie
 	// (POST /movies/{id}/search-now)
 	SearchMovieNow(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ListMusicAlbums Search the library's albums by title
+	// (GET /music/albums)
+	ListMusicAlbums(w http.ResponseWriter, r *http.Request, params ListMusicAlbumsParams)
 	// GetMusicAlbum Get album details
 	// (GET /music/albums/{id})
 	GetMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -11762,6 +11874,12 @@ func (_ Unimplemented) ResolveHeldDownload(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ListEpisodes Search the library's episodes by title
+// (GET /episodes)
+func (_ Unimplemented) ListEpisodes(w http.ResponseWriter, r *http.Request, params ListEpisodesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListIndexers List configured indexers
 // (GET /indexers)
 func (_ Unimplemented) ListIndexers(w http.ResponseWriter, r *http.Request) {
@@ -12045,6 +12163,12 @@ func (_ Unimplemented) SearchMovie(w http.ResponseWriter, r *http.Request, id Re
 // SearchMovieNow Dispatch an indexer search and grab for a single movie
 // (POST /movies/{id}/search-now)
 func (_ Unimplemented) SearchMovieNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListMusicAlbums Search the library's albums by title
+// (GET /music/albums)
+func (_ Unimplemented) ListMusicAlbums(w http.ResponseWriter, r *http.Request, params ListMusicAlbumsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -15121,6 +15245,65 @@ func (siw *ServerInterfaceWrapper) ResolveHeldDownload(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// ListEpisodes operation middleware
+func (siw *ServerInterfaceWrapper) ListEpisodes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListEpisodesParams
+
+	// ------------- Optional query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListEpisodes(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListIndexers operation middleware
 func (siw *ServerInterfaceWrapper) ListIndexers(w http.ResponseWriter, r *http.Request) {
 
@@ -16698,6 +16881,65 @@ func (siw *ServerInterfaceWrapper) SearchMovieNow(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SearchMovieNow(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMusicAlbums operation middleware
+func (siw *ServerInterfaceWrapper) ListMusicAlbums(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMusicAlbumsParams
+
+	// ------------- Optional query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMusicAlbums(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -20124,6 +20366,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/series/{id}/play-on", wrapper.GetSeriesPlayOnLinks)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/episodes", wrapper.ListEpisodes)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/people", wrapper.ListPeople)
 	})
 	r.Group(func(r chi.Router) {
@@ -20170,6 +20415,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/artists/{id}/grab", wrapper.GrabMusicArtistRelease)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/albums", wrapper.ListMusicAlbums)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/music/albums/{id}", wrapper.GetMusicAlbum)
@@ -27126,6 +27374,56 @@ func (response ResolveHeldDownload500JSONResponse) VisitResolveHeldDownloadRespo
 	return err
 }
 
+type ListEpisodesRequestObject struct {
+	Params ListEpisodesParams
+}
+
+type ListEpisodesResponseObject interface {
+	VisitListEpisodesResponse(w http.ResponseWriter) error
+}
+
+type ListEpisodes200JSONResponse EpisodeSearchList
+
+func (response ListEpisodes200JSONResponse) VisitListEpisodesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListEpisodes400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListEpisodes400JSONResponse) VisitListEpisodesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListEpisodes500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListEpisodes500JSONResponse) VisitListEpisodesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListIndexersRequestObject struct {
 }
 
@@ -30506,6 +30804,56 @@ func (response SearchMovieNow404JSONResponse) VisitSearchMovieNowResponse(w http
 type SearchMovieNow500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response SearchMovieNow500JSONResponse) VisitSearchMovieNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicAlbumsRequestObject struct {
+	Params ListMusicAlbumsParams
+}
+
+type ListMusicAlbumsResponseObject interface {
+	VisitListMusicAlbumsResponse(w http.ResponseWriter) error
+}
+
+type ListMusicAlbums200JSONResponse AlbumSearchList
+
+func (response ListMusicAlbums200JSONResponse) VisitListMusicAlbumsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicAlbums400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListMusicAlbums400JSONResponse) VisitListMusicAlbumsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicAlbums500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListMusicAlbums500JSONResponse) VisitListMusicAlbumsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -37770,6 +38118,9 @@ type StrictServerInterface interface {
 	// ResolveHeldDownload Release a download held by import verification.
 	// (POST /downloads/{id}/resolve)
 	ResolveHeldDownload(ctx context.Context, request ResolveHeldDownloadRequestObject) (ResolveHeldDownloadResponseObject, error)
+	// ListEpisodes Search the library's episodes by title
+	// (GET /episodes)
+	ListEpisodes(ctx context.Context, request ListEpisodesRequestObject) (ListEpisodesResponseObject, error)
 	// ListIndexers List configured indexers
 	// (GET /indexers)
 	ListIndexers(ctx context.Context, request ListIndexersRequestObject) (ListIndexersResponseObject, error)
@@ -37920,6 +38271,9 @@ type StrictServerInterface interface {
 	// SearchMovieNow Dispatch an indexer search and grab for a single movie
 	// (POST /movies/{id}/search-now)
 	SearchMovieNow(ctx context.Context, request SearchMovieNowRequestObject) (SearchMovieNowResponseObject, error)
+	// ListMusicAlbums Search the library's albums by title
+	// (GET /music/albums)
+	ListMusicAlbums(ctx context.Context, request ListMusicAlbumsRequestObject) (ListMusicAlbumsResponseObject, error)
 	// GetMusicAlbum Get album details
 	// (GET /music/albums/{id})
 	GetMusicAlbum(ctx context.Context, request GetMusicAlbumRequestObject) (GetMusicAlbumResponseObject, error)
@@ -40863,6 +41217,32 @@ func (sh *strictHandler) ResolveHeldDownload(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// ListEpisodes operation middleware
+func (sh *strictHandler) ListEpisodes(w http.ResponseWriter, r *http.Request, params ListEpisodesParams) {
+	var request ListEpisodesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListEpisodes(ctx, request.(ListEpisodesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListEpisodes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListEpisodesResponseObject); ok {
+		if err := validResponse.VisitListEpisodesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListIndexers operation middleware
 func (sh *strictHandler) ListIndexers(w http.ResponseWriter, r *http.Request) {
 	var request ListIndexersRequestObject
@@ -42294,6 +42674,32 @@ func (sh *strictHandler) SearchMovieNow(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchMovieNowResponseObject); ok {
 		if err := validResponse.VisitSearchMovieNowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMusicAlbums operation middleware
+func (sh *strictHandler) ListMusicAlbums(w http.ResponseWriter, r *http.Request, params ListMusicAlbumsParams) {
+	var request ListMusicAlbumsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMusicAlbums(ctx, request.(ListMusicAlbumsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMusicAlbums")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMusicAlbumsResponseObject); ok {
+		if err := validResponse.VisitListMusicAlbumsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -115,6 +115,16 @@ export type Artist = {
 	albums: Release[];
 };
 
+// A search hit for one album (GET /music/albums), named with its artist.
+export type AlbumSearchHit = {
+	id: number;
+	title: string;
+	type: ReleaseType;
+	artist_id: number;
+	artist_name: string;
+	release_date?: string;
+};
+
 export type ArtistList = { items: Artist[]; total: number; page: number; limit: number };
 export type ArtistCounts = {
 	total: number;

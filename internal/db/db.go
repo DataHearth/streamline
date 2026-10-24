@@ -1391,6 +1391,20 @@ type Store interface {
 		d metadata.PersonDetails,
 	) error
 
+	// title search
+	// SearchAlbums pages the albums whose title holds the query, folded, the
+	// ones holding a file first, each with its artist loaded.
+	SearchAlbums(
+		ctx context.Context,
+		p TitleSearchParams,
+	) ([]*ent.Album, uint32, error)
+	// SearchEpisodes pages the episodes whose title holds the query, folded,
+	// the ones holding a file first, each with its season and show loaded.
+	SearchEpisodes(
+		ctx context.Context,
+		p TitleSearchParams,
+	) ([]*ent.Episode, uint32, error)
+
 	// requests
 	CreateRequest(ctx context.Context, p CreateRequestParams) (*ent.Request, error)
 	FindActiveRequest(

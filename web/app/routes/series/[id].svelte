@@ -45,6 +45,7 @@
 	import SeasonStrip from "@components/series/SeasonStrip.svelte";
 	import SeasonAccordion from "@components/series/SeasonAccordion.svelte";
 	import EpisodeTable from "@components/series/EpisodeTable.svelte";
+	import EpisodeDetailModal from "@components/series/EpisodeDetailModal.svelte";
 	import SeriesManualSearchModal from "@components/series/SeriesManualSearchModal.svelte";
 	import SeriesReleaseSearchModal from "@components/series/SeriesReleaseSearchModal.svelte";
 	import { existingFromEpisode } from "@lib/release-facts";
@@ -87,6 +88,7 @@
 			if (currentId !== undefined && p.id !== currentId) resetSeriesState();
 			currentId = p.id;
 			routeParams = p;
+			focusFrom(p);
 		});
 		const u2 = goto.subscribe((fn) => (navigate = fn));
 		return () => {
@@ -106,6 +108,10 @@
 
 	$effect(() => {
 		if (typeof window === "undefined") return;
+		// At mount window.location still names the outgoing page: writing ?tab=
+		// onto it sent a search hit that opens on the episodes tab back to the
+		// page it came from.
+		if (window.location.pathname !== `/series/${routeParams.id}`) return;
 		const p = new URLSearchParams(window.location.search);
 		if (tab === "overview") p.delete("tab");
 		else p.set("tab", tab);
@@ -237,9 +243,45 @@
 	// Clears everything scoped to the show being navigated away from. `tab` is
 	// re-read from the URL rather than reset to a constant so browser
 	// back/forward onto /series/x?tab=cast lands on the tab it was left on.
+	// A search hit for one episode lands here as ?season=N&episode=ID: the
+	// season is selected and the episode's sheet opens. Read off the route
+	// params, since window.location still names the outgoing page at mount.
+	let focusEpisodeId = $state<number | null>(null);
+	function focusFrom(p: Record<string, string>) {
+		const ep = Number(p.episode);
+		if (!ep) return;
+		tab = "episodes";
+		const n = Number(p.season);
+		if (Number.isInteger(n)) selectedSeason = n;
+		focusEpisodeId = ep;
+	}
+	// One sheet at the route rather than one per list: the phone accordion and
+	// the md+ table are both mounted, so each opening its own would show two.
+	let focused = $derived.by(() => {
+		if (focusEpisodeId === null) return null;
+		for (const s of seasons) {
+			const ep = s.episodes?.find((e) => e.id === focusEpisodeId);
+			if (ep) {
+				const code =
+					show?.type === "daily" ? `#${ep.number}` : `S${pad2(s.number)}E${pad2(ep.number)}`;
+				return { ep, code };
+			}
+		}
+		return null;
+	});
+	function closeFocus() {
+		focusEpisodeId = null;
+		// Consumed: a reload or a season change should not reopen the sheet.
+		const u = new URL(window.location.href);
+		u.searchParams.delete("season");
+		u.searchParams.delete("episode");
+		window.history.replaceState(null, "", u.pathname + u.search);
+	}
+
 	function resetSeriesState() {
 		tab = readTab();
 		selectedSeason = null;
+		focusEpisodeId = null;
 		presetValue = "all";
 		deleteOpen = false;
 		qpOpen = false;
@@ -1011,6 +1053,14 @@
 		pending={del.isPending}
 		onClose={() => (deleteOpen = false)}
 		onConfirm={(withFiles) => del.mutate(withFiles)}
+	/>
+	<EpisodeDetailModal
+		episode={focused?.ep ?? null}
+		code={focused?.code ?? ""}
+		onClose={closeFocus}
+		onManualSearch={openManualSearch}
+		onDeleteFile={(ep) => openDeleteFiles(episodeCode(ep), [ep])}
+		{showMonitored}
 	/>
 	<SeriesManualSearchModal
 		open={manualOpen}
