@@ -192,8 +192,8 @@ var _ = Describe(
 				body := `{
 					"name": "qbt",
 					"client_type": "qbittorrent",
-					"host": "new",
-					"port": 2222,
+					"host": "old",
+					"port": 8080,
 					"enabled": false,
 					"priority": 7
 				}`
@@ -206,8 +206,6 @@ var _ = Describe(
 
 				var updated DownloadClient
 				Expect(json.NewDecoder(resp.Body).Decode(&updated)).To(Succeed())
-				Expect(updated.Host).To(Equal("new"))
-				Expect(updated.Port).To(Equal(uint16(2222)))
 				Expect(updated.Enabled).To(BeFalse())
 				Expect(updated.Priority).NotTo(BeNil())
 				Expect(*updated.Priority).To(Equal(uint8(7)))
@@ -216,6 +214,48 @@ var _ = Describe(
 				got, _ := config.FindDownloadClient("qbt")
 				Expect(got.Password).To(Equal("keep"))
 			})
+
+			It(
+				"refuses a new address without the password, 422 secret_required",
+				func() {
+					configtest.SetupFile(dlClientOverride(map[string]any{
+						"name": "qbt", "client_type": "qbittorrent",
+						"host": "old", "port": 8080, "auth_method": "password",
+						"password": "keep", "enabled": true,
+					}))
+
+					put := func(body string) *http.Response {
+						req := app.req(
+							http.MethodPut,
+							"/api/v1/download-clients/qbt",
+							"",
+							strings.NewReader(body),
+						)
+						req.Header.Set("Content-Type", "application/json")
+						return app.do(req)
+					}
+
+					resp := put(
+						`{"name": "qbt", "client_type": "qbittorrent", "host": "new", "port": 2222}`,
+					)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+					var e Error
+					Expect(json.NewDecoder(resp.Body).Decode(&e)).To(Succeed())
+					Expect(e.Code).To(HaveValue(Equal("secret_required")))
+					got, _ := config.FindDownloadClient("qbt")
+					Expect(got.Host).To(Equal("old"))
+
+					resp2 := put(
+						`{"name": "qbt", "client_type": "qbittorrent", "host": "new", "port": 2222, "password": "fresh"}`,
+					)
+					defer resp2.Body.Close()
+					Expect(resp2.StatusCode).To(Equal(http.StatusOK))
+					got, _ = config.FindDownloadClient("qbt")
+					Expect(got.Host).To(Equal("new"))
+					Expect(got.Password).To(Equal("fresh"))
+				},
+			)
 
 			It("returns 404 for nonexistent client", func() {
 				body := `{"name": "x", "client_type": "qbittorrent", "host": "x", "port": 1}`

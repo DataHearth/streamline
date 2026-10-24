@@ -65,7 +65,8 @@ func EnsurePlexClientID(ctx context.Context) error {
 }
 
 // MediaServerPatch carries optional field updates. A blank APIKey preserves
-// the existing token.
+// the existing token, unless the host moves to another destination: then the
+// token must be entered again (ErrSecretRequired).
 type MediaServerPatch struct {
 	ServerType       *string
 	Host             *string
@@ -149,6 +150,20 @@ func UpdateMediaServer(ctx context.Context, name string, p MediaServerPatch) err
 		}
 		if p.LibrarySectionTV != nil {
 			e.LibrarySectionTV = p.LibrarySectionTV
+		}
+		if urlDestination(
+			e.Host,
+		) != urlDestination(
+			c.MediaServer.Servers[idx].Host,
+		) {
+			if err := guardMovedSecret(
+				&e.APIKey,
+				e.APIKeyFile,
+				p.APIKey,
+				true,
+			); err != nil {
+				return err
+			}
 		}
 		if err := validateMediaServer(&e); err != nil {
 			return err

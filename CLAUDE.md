@@ -55,7 +55,7 @@ The middleware splits transport by path prefix: `/api/v1/*` takes Bearer, `X-API
 
 ## Config surface
 
-Seven sections are readable and patchable at runtime (`/config/{auth,library,ffmpeg,download,metadata,system,transcoding}`, admin-only, partial-patch); everything else is file-only and needs a restart. The trust boundary and every secret are deliberately file-only — a key the API can reach is a key the API can be made to grant. Media servers, download clients, indexers and quality profiles live in the YAML config, name-keyed and hot-editable, not in ent/SQLite.
+Seven sections are readable and patchable at runtime (`/config/{auth,library,ffmpeg,download,metadata,system,transcoding}`, admin-only, partial-patch); everything else is file-only and needs a restart. The trust boundary and every secret are deliberately file-only — a key the API can reach is a key the API can be made to grant. Media servers, download clients, indexers and quality profiles live in the YAML config, name-keyed and hot-editable, not in ent/SQLite. A blank secret on their update keeps the stored one **unless the update moves the entry to another scheme, host or port**: then the secret must be sent again (422 `secret_required`; a `*_file` secret refuses the move, 403 `secret_file_managed`).
 
 **Adding or removing a config field means `defaults()` AND `api/config.schema.json`.** Bounded ints go through `narrowUint8` and durations through `checkDuration` — both must reject *before* conversion, since nothing validates a request body against the spec.
 

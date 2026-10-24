@@ -5195,7 +5195,8 @@ type Error struct {
 	// self_delete_forbidden, email_exists, connection_failed,
 	// invalid_condition, grab_rejected, rate_limited, worker_unavailable,
 	// hardcover_not_configured, hardcover_key_rejected, not_sendable,
-	// no_device_email, smtp_not_configured, send_failed). Present for domain errors
+	// no_device_email, smtp_not_configured, send_failed,
+	// secret_required, secret_file_managed). Present for domain errors
 	// where the caller needs to branch on the specific reason; absent
 	// for generic errors where the message is sufficient.
 	Code *string `json:"code,omitempty"`

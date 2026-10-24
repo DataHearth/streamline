@@ -64,6 +64,12 @@ const BY_CODE: Record<string, () => string> = {
 	// A release's file list, read before grabbing it.
 	files_unavailable: i18n.release_files_magnet,
 	torrent_unreadable: i18n.release_files_failed,
+	// A media server, download client or indexer moved to another address with
+	// its secret left blank: the stored one is never sent to the new address.
+	secret_required: i18n.err_secret_required,
+	// A 403 an admin gets for a secret the config file owns, not for a missing
+	// permission.
+	secret_file_managed: i18n.err_secret_file_managed,
 };
 
 function byStatus(status: number): string {

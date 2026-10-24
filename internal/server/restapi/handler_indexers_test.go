@@ -294,7 +294,7 @@ var _ = Describe(
 					"api_key": "keep", "protocol": "torznab", "enabled": true,
 				}))
 
-				body := `{"name": "tz", "host": "new", "port": 9200, "protocol": "torznab", "enabled": false, "priority": 3}`
+				body := `{"name": "tz", "host": "old", "port": 9117, "protocol": "torznab", "enabled": false, "priority": 3}`
 				req := app.req(http.MethodPut, "/api/v1/indexers/tz", "",
 					strings.NewReader(body))
 				req.Header.Set("Content-Type", "application/json")
@@ -303,8 +303,42 @@ var _ = Describe(
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 				got, _ := config.FindIndexer("tz")
-				Expect(got.Host).To(Equal("new"))
+				Expect(got.Enabled).To(BeFalse())
 				Expect(got.APIKey).To(Equal("keep")) // blank api_key preserves
+			})
+
+			It("refuses a new address without the key, 422 secret_required", func() {
+				configtest.SetupFile(indexerOverride(map[string]any{
+					"name": "tz", "host": "old", "port": 9117,
+					"api_key": "keep", "protocol": "torznab", "enabled": true,
+				}))
+
+				put := func(body string) *http.Response {
+					req := app.req(http.MethodPut, "/api/v1/indexers/tz", "",
+						strings.NewReader(body))
+					req.Header.Set("Content-Type", "application/json")
+					return app.do(req)
+				}
+
+				resp := put(
+					`{"name": "tz", "host": "new", "port": 9200, "protocol": "torznab"}`,
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				var e Error
+				Expect(json.NewDecoder(resp.Body).Decode(&e)).To(Succeed())
+				Expect(e.Code).To(HaveValue(Equal("secret_required")))
+				got, _ := config.FindIndexer("tz")
+				Expect(got.Host).To(Equal("old"))
+
+				resp2 := put(
+					`{"name": "tz", "host": "new", "port": 9200, "protocol": "torznab", "api_key": "fresh"}`,
+				)
+				defer resp2.Body.Close()
+				Expect(resp2.StatusCode).To(Equal(http.StatusOK))
+				got, _ = config.FindIndexer("tz")
+				Expect(got.Host).To(Equal("new"))
+				Expect(got.APIKey).To(Equal("fresh"))
 			})
 
 			It("sets private when given and leaves it alone when omitted", func() {

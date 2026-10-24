@@ -3,6 +3,8 @@ package restapi
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -146,7 +148,7 @@ var _ = Describe(
 					"host": "http://old", "api_key": "keep", "enabled": true,
 				}))
 
-				body := `{"name": "home", "server_type": "plex", "host": "http://new", "enabled": false}`
+				body := `{"name": "home", "server_type": "plex", "host": "http://old/", "enabled": false}`
 				req := app.req(http.MethodPatch, "/api/v1/media-servers/home", "",
 					strings.NewReader(body))
 				req.Header.Set("Content-Type", "application/json")
@@ -155,9 +157,78 @@ var _ = Describe(
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 				got, _ := config.FindMediaServer("home")
-				Expect(got.Host).To(Equal("http://new"))
+				Expect(got.Host).To(Equal("http://old/"))
+				Expect(got.Enabled).To(BeFalse())
 				Expect(got.APIKey).To(Equal("keep"))
 			})
+
+			It(
+				"refuses a new address without the token, 422 secret_required",
+				func() {
+					configtest.SetupFile(mediaServerOverride(map[string]any{
+						"name": "home", "server_type": "plex",
+						"host": "http://old", "api_key": "keep", "enabled": true,
+					}))
+
+					patch := func(body string) *http.Response {
+						req := app.req(
+							http.MethodPatch,
+							"/api/v1/media-servers/home",
+							"",
+							strings.NewReader(body),
+						)
+						req.Header.Set("Content-Type", "application/json")
+						return app.do(req)
+					}
+
+					resp := patch(`{"host": "http://new"}`)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+					var e Error
+					Expect(json.NewDecoder(resp.Body).Decode(&e)).To(Succeed())
+					Expect(e.Code).To(HaveValue(Equal("secret_required")))
+					got, _ := config.FindMediaServer("home")
+					Expect(got.Host).To(Equal("http://old"))
+
+					resp2 := patch(`{"host": "http://new", "api_key": "fresh"}`)
+					defer resp2.Body.Close()
+					Expect(resp2.StatusCode).To(Equal(http.StatusOK))
+					got, _ = config.FindMediaServer("home")
+					Expect(got.Host).To(Equal("http://new"))
+					Expect(got.APIKey).To(Equal("fresh"))
+				},
+			)
+
+			It(
+				"refuses moving a file-backed token, 403 secret_file_managed",
+				func() {
+					keyPath := filepath.Join(GinkgoT().TempDir(), "plex.key")
+					Expect(
+						os.WriteFile(keyPath, []byte("tok\n"), 0o600),
+					).To(Succeed())
+					configtest.SetupFile(mediaServerOverride(map[string]any{
+						"name":         "home",
+						"server_type":  "plex",
+						"host":         "http://old",
+						"api_key_file": keyPath,
+						"enabled":      true,
+					}))
+
+					req := app.req(
+						http.MethodPatch,
+						"/api/v1/media-servers/home",
+						"",
+						strings.NewReader(`{"host": "http://new"}`),
+					)
+					req.Header.Set("Content-Type", "application/json")
+					resp := app.do(req)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+					var e Error
+					Expect(json.NewDecoder(resp.Body).Decode(&e)).To(Succeed())
+					Expect(e.Code).To(HaveValue(Equal("secret_file_managed")))
+				},
+			)
 
 			It("rejects library_section on non-Plex types with 422", func() {
 				configtest.SetupFile(mediaServerOverride(map[string]any{

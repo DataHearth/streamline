@@ -3049,6 +3049,12 @@ paths:
       operationId: updateIndexer
       summary: Update an indexer
       tags: [indexers]
+      description: |
+        A blank `api_key` keeps the stored key, unless `host`, `port` or
+        `use_ssl` move the indexer to another destination: then the update is
+        refused with `422` `code: secret_required` until the key is sent again,
+        and with `403` `code: secret_file_managed` when the key comes from
+        `api_key_file`.
       requestBody:
         $ref: "#/components/requestBodies/CreateIndexer"
       responses:
@@ -3176,6 +3182,13 @@ paths:
       operationId: updateDownloadClient
       summary: Update a download client
       tags: [download-clients]
+      description: |
+        A blank `password` or `api_key` keeps the stored secret, unless `host`,
+        `port` or `use_ssl` move the client to another destination: then the
+        update is refused with `422` `code: secret_required` until the secret
+        the client authenticates with is sent again (the other one, unused, is
+        dropped), and with `403` `code: secret_file_managed` when either comes
+        from a `*_file` path.
       requestBody:
         $ref: "#/components/requestBodies/CreateDownloadClient"
       responses:
@@ -3447,6 +3460,12 @@ paths:
       operationId: updateMediaServer
       summary: Update a media server
       tags: [media-servers]
+      description: |
+        A blank `api_key` keeps the stored token, unless `host` moves the server
+        to another destination (scheme, host or port; a path or letter case
+        change is not a move): then the update is refused with `422`
+        `code: secret_required` until the token is sent again, and with `403`
+        `code: secret_file_managed` when it comes from `api_key_file`.
       requestBody:
         $ref: "#/components/requestBodies/UpdateMediaServer"
       responses:
@@ -7778,7 +7797,8 @@ components:
             self_delete_forbidden, email_exists, connection_failed,
             invalid_condition, grab_rejected, rate_limited, worker_unavailable,
             hardcover_not_configured, hardcover_key_rejected, not_sendable,
-            no_device_email, smtp_not_configured, send_failed). Present for domain errors
+            no_device_email, smtp_not_configured, send_failed,
+            secret_required, secret_file_managed). Present for domain errors
             where the caller needs to branch on the specific reason; absent
             for generic errors where the message is sufficient.
 

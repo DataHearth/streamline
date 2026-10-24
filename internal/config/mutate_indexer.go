@@ -12,7 +12,8 @@ var (
 )
 
 // IndexerPatch carries optional field updates. A blank APIKey preserves the
-// existing key.
+// existing key, unless host, port or TLS move it to another destination: then
+// the key must be entered again (ErrSecretRequired).
 type IndexerPatch struct {
 	Host     *string
 	Port     *uint16
@@ -80,6 +81,18 @@ func UpdateIndexer(ctx context.Context, name string, p IndexerPatch) error {
 		}
 		if p.Private != nil {
 			e.Private = *p.Private
+		}
+		prev := c.Indexers[idx]
+		if hostDestination(e.Host, e.Port, e.UseSSL) !=
+			hostDestination(prev.Host, prev.Port, prev.UseSSL) {
+			if err := guardMovedSecret(
+				&e.APIKey,
+				e.APIKeyFile,
+				p.APIKey,
+				true,
+			); err != nil {
+				return err
+			}
 		}
 		c.Indexers[idx] = e
 		slog.InfoContext(ctx, "indexer updated", "name", name)

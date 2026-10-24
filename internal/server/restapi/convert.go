@@ -72,6 +72,7 @@ func forbiddenResp(msg string) ForbiddenJSONResponse {
 func configLocked(err error) bool {
 	return errors.Is(err, config.ErrReadOnly) ||
 		errors.Is(err, config.ErrSecretFileManaged) ||
+		errors.Is(err, config.ErrSecretFileDestination) ||
 		errors.Is(err, config.ErrOIDCTrustFileManaged)
 }
 

@@ -11,6 +11,7 @@
 	import PlexSectionsModal from "@components/settings/PlexSectionsModal.svelte";
 	import { api, errorText } from "@lib/api";
 	import { readOnlyLock } from "@lib/config.svelte";
+	import { urlDestination } from "@lib/destination";
 	import { toast } from "@lib/toast";
 	import type { AppForm } from "@lib/form";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -51,6 +52,14 @@
 	// hitting Discover before saving would otherwise 404 against a name the
 	// server was never saved as.
 	const originalName = untrack(() => form.state.values.name);
+	// The address the server was saved under, captured once for the same reason.
+	// Moving it makes the server refuse a blank token, so the token field says
+	// to enter it again instead of "leave blank to keep".
+	const savedDestination = untrack(() => urlDestination(form.state.values.host));
+	const destination = untrack(() =>
+		form.useSelector((s) => urlDestination(s.values.host)),
+	);
+	const moved = $derived(isEdit && destination.current !== savedDestination);
 	const movieSection = untrack(() =>
 		form.useSelector((s) => s.values.library_section),
 	);
@@ -243,6 +252,9 @@
 						token={field.state.value ?? ""}
 						onToken={(t) => field.handleChange(t)}
 					/>
+					{#if moved && !field.state.value}
+						<p class="mt-1 text-xs text-fg-muted">{i18n.settings_secret_reenter()}</p>
+					{/if}
 				{/snippet}
 			</form.Field>
 		{:else}
@@ -253,9 +265,11 @@
 						label={i18n.mediaserver_token()}
 						type="password"
 						autocomplete="off"
-						help={isEdit
-							? i18n.mediaserver_token_keep()
-							: (KEY_HINTS[serverType.current] ?? "")}
+						help={moved
+							? i18n.settings_secret_reenter()
+							: isEdit
+								? i18n.mediaserver_token_keep()
+								: (KEY_HINTS[serverType.current] ?? "")}
 					/>
 				{/snippet}
 			</form.Field>

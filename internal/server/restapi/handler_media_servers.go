@@ -117,13 +117,15 @@ func (s *Server) UpdateMediaServer(
 		return UpdateMediaServer404JSONResponse{
 			NotFoundJSONResponse: errNotFound("media server not found"),
 		}, nil
-	case configLocked(err):
-		return UpdateMediaServer403JSONResponse{
-			ForbiddenJSONResponse: forbiddenResp(err.Error()),
-		}, nil
 	case err != nil:
+		forbidden, unprocessable := errResourceUpdate(err)
+		if forbidden != nil {
+			return UpdateMediaServer403JSONResponse{
+				ForbiddenJSONResponse: *forbidden,
+			}, nil
+		}
 		return UpdateMediaServer422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			UnprocessableEntityJSONResponse: *unprocessable,
 		}, nil
 	}
 	ms, _ := config.FindMediaServer(request.Name)

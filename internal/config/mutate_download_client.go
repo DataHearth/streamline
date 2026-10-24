@@ -12,7 +12,9 @@ var (
 )
 
 // DownloadClientPatch carries optional field updates. Blank Password/APIKey
-// preserve the existing secret.
+// preserve the existing secret, unless host, port or TLS move the client to
+// another destination: then the secret it sends must be entered again
+// (ErrSecretRequired) and the one it does not send is dropped.
 type DownloadClientPatch struct {
 	ClientType *string
 	Host       *string
@@ -126,10 +128,40 @@ func UpdateDownloadClient(
 		if p.BindInterface != nil {
 			e.BindInterface = *p.BindInterface
 		}
+		if downloadClientDestination(
+			e,
+		) != downloadClientDestination(
+			c.DownloadClients[idx],
+		) {
+			usesKey := e.ClientType == "qbittorrent" && e.AuthMethod == "api_key"
+			usesPassword := e.ClientType != "builtin" && !usesKey
+			if err := guardMovedSecret(
+				&e.Password, e.PasswordFile, p.Password, usesPassword,
+			); err != nil {
+				return err
+			}
+			if err := guardMovedSecret(
+				&e.APIKey,
+				e.APIKeyFile,
+				p.APIKey,
+				usesKey,
+			); err != nil {
+				return err
+			}
+		}
 		c.DownloadClients[idx] = e
 		slog.InfoContext(ctx, "download client updated", "name", name)
 		return nil
 	})
+}
+
+// downloadClientDestination is where the client's requests go. The builtin
+// engine sends none, whatever host an earlier client type left behind.
+func downloadClientDestination(e DownloadClientEntry) string {
+	if e.ClientType == "builtin" {
+		return ""
+	}
+	return hostDestination(e.Host, e.Port, e.UseSSL)
 }
 
 func DeleteDownloadClient(ctx context.Context, name string) error {

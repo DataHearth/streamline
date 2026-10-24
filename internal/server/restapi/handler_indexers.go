@@ -100,13 +100,15 @@ func (s *Server) UpdateIndexer(
 		return UpdateIndexer404JSONResponse{
 			NotFoundJSONResponse: errNotFound("indexer not found"),
 		}, nil
-	case configLocked(err):
-		return UpdateIndexer403JSONResponse{
-			ForbiddenJSONResponse: forbiddenResp(err.Error()),
-		}, nil
 	case err != nil:
+		forbidden, unprocessable := errResourceUpdate(err)
+		if forbidden != nil {
+			return UpdateIndexer403JSONResponse{
+				ForbiddenJSONResponse: *forbidden,
+			}, nil
+		}
 		return UpdateIndexer422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			UnprocessableEntityJSONResponse: *unprocessable,
 		}, nil
 	}
 	e, _ := config.FindIndexer(request.Name)
