@@ -254,7 +254,7 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.book_language` | string | `en` | ISO 639-1 language a new book prefers; picks the edition of each slot. Editable at runtime |
 | `library.audiobook_path` | path | `/data/audiobooks` | Audiobook library root. File-only |
 | `library.audiobook_naming` | template | `{Author}/{Title} ({Year})` | Folder only; chapter files keep their names. File-only |
-| `library.download_path` | path | `/downloads` | Where Streamline reads finished torrents from. Combined with the torrent name: `<download_path>/<torrent.Name>` |
+| `library.download_path` | path | `/downloads` | Where Streamline reads finished torrents from. Combined with the torrent name: `<download_path>/<torrent.Name>`. Two torrents with the same name share that folder; an import only takes the files its own torrent lists |
 | `library.movie_naming` | template | `{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}` | See [Quality Profiles and Naming](Quality-Profiles-and-Naming#file-naming) |
 | `library.series_naming` | template | `{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}` | |
 | `library.import_mode` | enum | `hardlink` | `hardlink` \| `copy` \| `move`. `move` also removes the torrent from its client once the import lands, since it can no longer seed. Music always copies instead of hardlinking, and instead of moving while `keep_torrent_seeding` is on: tags are written into the library copy, which must not be the file the torrent is seeding |

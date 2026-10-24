@@ -40,6 +40,7 @@ func (w *Worker) importPackRecord(
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("list pack files: %w", err))
 	}
+	files = w.sourceFilter(ctx, rec).Filter(files)
 	byDir := map[string][]string{}
 	for _, f := range files {
 		d := library.PackAlbumDir(f)

@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/ebookmeta"
 	"github.com/datahearth/streamline/internal/quality"
 )
@@ -120,9 +121,11 @@ func dominantFormat(files []string) string {
 func (w *Worker) audiobookHoldReasons(
 	ctx context.Context,
 	savePath string,
+	keep library.SourceFilter,
 	profile config.BookQualityProfileEntry,
 ) ([]schema.HoldReason, *ffmpeg.Info) {
 	files, err := audiobookFiles(savePath)
+	files = keep.Filter(files)
 	if err != nil || len(files) == 0 {
 		return nil, nil
 	}

@@ -161,6 +161,8 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				Return(nil).Once()
 			msMk.EXPECT().RefreshAll(mock.Anything, mock.Anything, libDir).
 				Return(nil).Once()
+			dlMk.EXPECT().ListTorrentFiles(mock.Anything, "qbit", "hash").
+				Return(nil, nil).Once()
 			dlMk.EXPECT().RemoveTorrent(mock.Anything, "qbit", "hash", true).
 				Return(nil).Once()
 

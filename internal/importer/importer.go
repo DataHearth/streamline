@@ -388,7 +388,7 @@ func (w *Worker) importMovieRecord(
 
 	var probeInfo *ffmpeg.Info
 	var probeErr error
-	src, srcErr := library.ResolveMediaFile(rec.SavePath)
+	src, srcErr := library.ResolveMediaFile(rec.SavePath, w.sourceFilter(ctx, rec))
 	if srcErr == nil {
 		probeInfo, probeErr = w.probeSource(ctx, src)
 	}
@@ -420,7 +420,7 @@ func (w *Worker) importMovieRecord(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	imported, err := w.lib.ImportMovie(ctx, rec.SavePath, m)
+	imported, err := w.lib.ImportMovie(ctx, src, m)
 	if err != nil {
 		putBack(ctx, aside)
 		return otelx.RecordSpanError(span, err)
@@ -617,8 +617,11 @@ func (w *Worker) importEpisodeRecord(
 	// Single file (or a dir resolving to exactly one file) → import directly to
 	// the record's own episode. Otherwise treat it as a season pack.
 	if !info.IsDir() {
-		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep, libCfg)
+		return w.importSingleEpisode(
+			ctx, span, rec, show, season.Number, ep, nil, libCfg,
+		)
 	}
+	keep := w.sourceFilter(ctx, rec)
 	files, err := library.ListVideoFilesRecursive(rec.SavePath)
 	if err != nil {
 		return otelx.RecordSpanError(
@@ -626,8 +629,11 @@ func (w *Worker) importEpisodeRecord(
 			fmt.Errorf("list pack files: %w", err),
 		)
 	}
+	files = keep.Filter(files)
 	if len(files) <= 1 {
-		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep, libCfg)
+		return w.importSingleEpisode(
+			ctx, span, rec, show, season.Number, ep, keep, libCfg,
+		)
 	}
 
 	profile, hasProfile := config.ResolveScoredProfile(
@@ -806,6 +812,7 @@ func (w *Worker) importSingleEpisode(
 	show *ent.TVShow,
 	seasonNumber uint16,
 	ep *ent.Episode,
+	keep library.SourceFilter,
 	libCfg config.LibraryConfig,
 ) error {
 	// An episode holds at most one media file: a grab arriving while one
@@ -821,7 +828,7 @@ func (w *Worker) importSingleEpisode(
 
 	var probeInfo *ffmpeg.Info
 	var probeErr error
-	src, srcErr := library.ResolveEpisodeFile(rec.SavePath)
+	src, srcErr := library.ResolveEpisodeFile(rec.SavePath, keep)
 	if srcErr == nil {
 		probeInfo, probeErr = w.probeSource(ctx, src)
 	}
@@ -857,7 +864,7 @@ func (w *Worker) importSingleEpisode(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	imported, err := w.lib.ImportEpisode(ctx, rec.SavePath, show, seasonNumber, ep)
+	imported, err := w.lib.ImportEpisode(ctx, src, show, seasonNumber, ep)
 	if err != nil {
 		putBack(ctx, aside)
 		return otelx.RecordSpanError(span, err)

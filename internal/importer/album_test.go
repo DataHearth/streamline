@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/db"
 	mockdb "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/download"
 	mockdl "github.com/datahearth/streamline/internal/download/mocks"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
@@ -102,6 +103,9 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		logs     *bytes.Buffer
 		alb      *ent.Album
 		tagger   *recordingTagger
+		// torrentFiles is what the client lists for the record's torrent;
+		// empty leaves the import reading the whole save path.
+		torrentFiles []download.TorrentFile
 	)
 
 	setup := func(mode string, keepSeeding bool, tags ...map[string]any) {
@@ -153,6 +157,13 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		dlMk = mockdl.NewMockDownloader(GinkgoT())
 		alb = fixtureAlbum()
 		setup("copy", true)
+		torrentFiles = nil
+		dlMk.EXPECT().
+			ListTorrentFiles(mock.Anything, "qbit", "hash").
+			RunAndReturn(func(context.Context, string, string) ([]download.TorrentFile, error) {
+				return torrentFiles, nil
+			}).
+			Maybe()
 		storeMk.EXPECT().
 			MarkRequestsAvailableByMBID(mock.Anything, "artist", "artist-4").
 			Return(nil).Maybe()
@@ -578,6 +589,68 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 
 		Expect(err).To(MatchError(ErrCueImage))
 		Expect(classify(err)).To(Equal(terminal))
+	})
+
+	Context("when another download shares the torrent's folder", func() {
+		// Two torrents named alike share <download_path>/<name>: the Omens LP
+		// held on ten tracks of Resolution that sat beside it.
+		var foreign string
+
+		BeforeEach(func() {
+			Expect(os.MkdirAll(filepath.Join(dlDir, "own"), 0o755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(dlDir, "other"), 0o755)).To(Succeed())
+			foreign = seedTrackFile(
+				filepath.Join(dlDir, "other"), "02.flac", "tagged.flac",
+				2, albumTracks[1].title,
+			)
+		})
+
+		DescribeTable("imports only the torrent's own files",
+			func(prefix string) {
+				seedTrackFile(
+					filepath.Join(dlDir, "own"), "01.mp3", "tagged.mp3",
+					1, albumTracks[0].title,
+				)
+				torrentFiles = []download.TorrentFile{{Path: prefix + "own/01.mp3"}}
+				rec := fixtureAlbumRecord(dlDir, alb)
+				expectFind(rec)
+				var got db.RecordAlbumImportSuccessParams
+				storeMk.EXPECT().
+					RecordAlbumImportSuccess(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
+					Return(nil).Once()
+				msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).
+					Return(nil).Once()
+
+				Expect(w.runImport(context.Background(), 1)).To(Succeed())
+
+				Expect(got.Files).To(ConsistOf(HaveField("TrackID", uint32(11))))
+				Expect(foreign).To(BeAnExistingFile())
+			},
+			// The builtin engine lists a path inside the torrent's folder,
+			// the external clients lead with the folder's own name.
+			Entry("as the builtin engine lists it", ""),
+			Entry("as qBittorrent lists it", "dl/"),
+		)
+
+		It("still refuses the torrent's own single-file CUE image", func() {
+			seedTrackFile(
+				filepath.Join(dlDir, "own"), "Nirvana - Nevermind.flac",
+				"tagged.flac", 1, albumTracks[0].title,
+			)
+			Expect(os.WriteFile(
+				filepath.Join(dlDir, "own", "Nirvana - Nevermind.cue"),
+				[]byte("x"), 0o600,
+			)).To(Succeed())
+			torrentFiles = []download.TorrentFile{
+				{Path: "own/Nirvana - Nevermind.flac"},
+				{Path: "own/Nirvana - Nevermind.cue"},
+			}
+			rec := fixtureAlbumRecord(dlDir, alb)
+			expectFind(rec)
+
+			Expect(w.runImport(context.Background(), 1)).To(MatchError(ErrCueImage))
+		})
 	})
 
 	It("hands the album to the failure write on a terminal outcome", func() {

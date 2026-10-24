@@ -109,6 +109,9 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 			DB: storeMk, Library: library.NewImportService(),
 			MediaServer: msMk, Download: dlMk,
 		})
+		// No listing: the pack reads its whole save path.
+		dlMk.EXPECT().ListTorrentFiles(mock.Anything, "qbit", "hash").
+			Return(nil, nil).Maybe()
 		storeMk.EXPECT().
 			MarkRequestsAvailableByMBID(mock.Anything, "artist", "artist-4").
 			Return(nil).Maybe()

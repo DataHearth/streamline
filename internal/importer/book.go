@@ -69,6 +69,7 @@ func (w *Worker) importBookRecord(
 		placed []library.ImportedFile
 		aside  []string
 		probed *ffmpeg.Info
+		keep   = w.sourceFilter(ctx, rec)
 	)
 	switch rec.BookKind {
 	case downloadrecord.BookKindEbook:
@@ -80,7 +81,7 @@ func (w *Worker) importBookRecord(
 		if err != nil {
 			return otelx.RecordSpanError(span, err)
 		}
-		f, err := w.lib.ImportEbook(ctx, rec.SavePath, b, profile, replace)
+		f, err := w.lib.ImportEbook(ctx, rec.SavePath, keep, b, profile, replace)
 		if err != nil {
 			putBack(ctx, aside)
 			return otelx.RecordSpanError(span, err)
@@ -92,7 +93,9 @@ func (w *Worker) importBookRecord(
 			return otelx.RecordSpanError(span, ErrNoBookProfile)
 		}
 		if !rec.VerificationBypassed {
-			reasons, measured := w.audiobookHoldReasons(ctx, rec.SavePath, profile)
+			reasons, measured := w.audiobookHoldReasons(
+				ctx, rec.SavePath, keep, profile,
+			)
 			if len(reasons) > 0 {
 				return w.hold(ctx, span, rec, reasons)
 			}
@@ -102,7 +105,7 @@ func (w *Worker) importBookRecord(
 		if err != nil {
 			return otelx.RecordSpanError(span, err)
 		}
-		placed, err = w.lib.ImportAudiobook(ctx, rec.SavePath, b, replace)
+		placed, err = w.lib.ImportAudiobook(ctx, rec.SavePath, keep, b, replace)
 		if err != nil {
 			putBack(ctx, aside)
 			return otelx.RecordSpanError(span, err)

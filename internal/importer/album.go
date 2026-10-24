@@ -95,6 +95,7 @@ func (w *Worker) importAlbumRecord(
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("list album files: %w", err))
 	}
+	files = w.sourceFilter(ctx, rec).Filter(files)
 	held, err := w.importAlbumFiles(
 		ctx, span, rec, rec.Edges.Album, files, libCfg, false,
 	)

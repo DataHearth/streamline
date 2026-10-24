@@ -27,10 +27,12 @@ type bookCandidate struct {
 }
 
 // ImportEbook places the best-scoring ebook under srcPath (a file or a
-// directory) into the ebook library. Does not touch the DB.
+// directory, of which only the files keep passes are candidates) into the
+// ebook library. Does not touch the DB.
 func (s *ImportService) ImportEbook(
 	ctx context.Context,
 	srcPath string,
+	keep SourceFilter,
 	b *ent.Book,
 	profile config.BookQualityProfileEntry,
 	replace bool,
@@ -46,7 +48,11 @@ func (s *ImportService) ImportEbook(
 	outcome := "success"
 	defer recordBookImport(ctx, "ebook", lib.ImportMode, time.Now(), &outcome)
 
-	cands, sawSample, err := collectBookFiles(srcPath, ebookmeta.EbookExtensions)
+	cands, sawSample, err := collectBookFiles(
+		srcPath,
+		ebookmeta.EbookExtensions,
+		keep,
+	)
 	if err != nil {
 		outcome = "stat_failed"
 		return ImportedFile{}, otelx.RecordSpanError(span, err)
@@ -134,12 +140,13 @@ func (s *ImportService) ImportEbook(
 	}, nil
 }
 
-// ImportAudiobook places every audio file under srcPath into one folder of
-// the audiobook library, keeping each file's name and relative sub-path.
-// Does not touch the DB.
+// ImportAudiobook places every audio file under srcPath that keep passes into
+// one folder of the audiobook library, keeping each file's name and relative
+// sub-path. Does not touch the DB.
 func (s *ImportService) ImportAudiobook(
 	ctx context.Context,
 	srcPath string,
+	keep SourceFilter,
 	b *ent.Book,
 	replace bool,
 ) ([]ImportedFile, error) {
@@ -154,7 +161,11 @@ func (s *ImportService) ImportAudiobook(
 	outcome := "success"
 	defer recordBookImport(ctx, "audiobook", lib.ImportMode, time.Now(), &outcome)
 
-	cands, sawSample, err := collectBookFiles(srcPath, ebookmeta.AudiobookExtensions)
+	cands, sawSample, err := collectBookFiles(
+		srcPath,
+		ebookmeta.AudiobookExtensions,
+		keep,
+	)
 	if err != nil {
 		outcome = "stat_failed"
 		return nil, otelx.RecordSpanError(span, err)
@@ -301,11 +312,12 @@ func bookParsed(path string) ParseResult {
 }
 
 // collectBookFiles lists the non-sample files under srcPath (or srcPath
-// itself when it is a file) whose lowercase extension is in exts, sorted by
-// relative path.
+// itself when it is a file) whose lowercase extension is in exts and that
+// keep passes, sorted by relative path.
 func collectBookFiles(
 	srcPath string,
 	exts map[string]struct{},
+	keep SourceFilter,
 ) ([]bookCandidate, bool, error) {
 	info, err := os.Stat(srcPath)
 	if err != nil {
@@ -338,7 +350,7 @@ func collectBookFiles(
 				}
 				return nil
 			}
-			if d.IsDir() {
+			if d.IsDir() || !keep.Keep(p) {
 				return nil
 			}
 			fi, err := d.Info()
