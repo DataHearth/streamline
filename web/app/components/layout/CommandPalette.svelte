@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from "svelte";
-	import { Search, Film, Tv, ArrowRight, Music, BookOpen } from "@lucide/svelte";
+	import { Search, Film, Tv, ArrowRight, Music, BookOpen, LoaderCircle } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { initials } from "@lib/people";
 	import { posterUrl, tvPosterUrl } from "@lib/posters";
@@ -181,11 +181,19 @@
 			<div
 				class="search-row flex items-center gap-3 border-b border-border px-4 py-3"
 			>
-				<Search
-					size={16}
-					class="search-icon shrink-0 text-fg-subtle"
-					aria-hidden="true"
-				/>
+				{#if model.pending}
+					<LoaderCircle
+						size={16}
+						class="search-icon shrink-0 animate-spin text-accent"
+						aria-hidden="true"
+					/>
+				{:else}
+					<Search
+						size={16}
+						class="search-icon shrink-0 text-fg-subtle"
+						aria-hidden="true"
+					/>
+				{/if}
 				<input
 					bind:this={inputEl}
 					bind:value={query}
@@ -332,8 +340,10 @@
 				{/each}
 
 				{#if flat.length === 0}
-					<div class="px-3 py-8 text-center text-[12.5px] text-fg-subtle">
-						{i18n.search_no_matches_for({ query: query.trim() })}
+					<div role="status" class="px-3 py-8 text-center text-[12.5px] text-fg-subtle">
+						{model.pending
+							? i18n.common_searching()
+							: i18n.search_no_matches_for({ query: query.trim() })}
 					</div>
 				{/if}
 			</div>

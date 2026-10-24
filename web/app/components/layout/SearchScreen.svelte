@@ -2,7 +2,7 @@
 	import { onMount, tick } from "svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { Search, SearchX, X } from "@lucide/svelte";
+	import { LoaderCircle, Search, SearchX, X } from "@lucide/svelte";
 	import {
 		createSearchModel,
 		searchNav,
@@ -87,11 +87,19 @@
 			<div
 				class="search-box flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-border-strong bg-surface px-3"
 			>
-				<Search
-					size={17}
-					class="search-icon shrink-0 text-fg-subtle"
-					aria-hidden="true"
-				/>
+				{#if model.pending}
+					<LoaderCircle
+						size={17}
+						class="search-icon shrink-0 animate-spin text-accent"
+						aria-hidden="true"
+					/>
+				{:else}
+					<Search
+						size={17}
+						class="search-icon shrink-0 text-fg-subtle"
+						aria-hidden="true"
+					/>
+				{/if}
 				<input
 					bind:this={inputEl}
 					bind:value={query}
@@ -150,11 +158,16 @@
 			{/each}
 
 			{#if model.flat.length === 0}
-				<div class="flex flex-col items-center gap-2.5 px-6 py-14 text-center">
-					<SearchX size={26} class="text-fg-faint" aria-hidden="true" />
-					<p class="text-[13.5px] text-fg-subtle">
-						{i18n.search_no_matches_for({ query: query.trim() })}
-					</p>
+				<div role="status" class="flex flex-col items-center gap-2.5 px-6 py-14 text-center">
+					{#if model.pending}
+						<LoaderCircle size={26} class="animate-spin text-fg-faint" aria-hidden="true" />
+						<p class="text-[13.5px] text-fg-subtle">{i18n.common_searching()}</p>
+					{:else}
+						<SearchX size={26} class="text-fg-faint" aria-hidden="true" />
+						<p class="text-[13.5px] text-fg-subtle">
+							{i18n.search_no_matches_for({ query: query.trim() })}
+						</p>
+					{/if}
 				</div>
 			{/if}
 		</div>

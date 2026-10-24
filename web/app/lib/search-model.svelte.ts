@@ -501,7 +501,29 @@ export function createSearchModel(
 		return totals.reduce<number>((n, t) => n + (t ?? 0), 0) - hiddenArtists.size;
 	});
 
+	// True from the keystroke until every search has answered for what is
+	// typed: the debounce is still running, or a fetch is. Until then an empty
+	// list is no verdict, and "No matches" read as one for a query the server
+	// had not been asked about yet.
+	let pending = $derived.by(() => {
+		const q = getQuery().trim();
+		if (q.length < TITLE_MIN) return false;
+		if (q !== typed) return true;
+		return [
+			moviesQuery,
+			seriesQuery,
+			episodesQuery,
+			artistsQuery,
+			albumsQuery,
+			booksQuery,
+			peopleQuery,
+		].some((x) => x.isFetching);
+	});
+
 	return {
+		get pending(): boolean {
+			return pending;
+		},
 		get sections(): SearchSection[] {
 			return sections;
 		},
