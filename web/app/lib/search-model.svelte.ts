@@ -25,15 +25,16 @@ import {
 	CalendarDays,
 	Settings,
 	User,
-	Users,
 	LogOut,
 } from "@lucide/svelte";
 import { api, type Paginated } from "./api";
 import { artistPosterUrl, bookPosterUrl } from "./posters";
 import { auth } from "./auth.svelte";
+import { SETTINGS_SECTIONS } from "./settings-nav.svelte";
 import { fold } from "./text";
 import type { Movie, Person, TVShow } from "./types";
 import { kindLabel, type Artist, type BookKind, type ShelfItem } from "./music-books";
+import { volumesCount } from "./music-books-lookup";
 import { m as i18n } from "./paraglide/messages.js";
 
 export type PageItem = {
@@ -75,6 +76,9 @@ export type ArtistItem = {
 	label: string;
 	image?: string;
 	genre?: string;
+	// The album the query matched when the name did not: the list searches
+	// album titles too, and an artist row with no reason on it reads as noise.
+	album?: string;
 };
 export type BookItem = {
 	kind: "book";
@@ -84,8 +88,10 @@ export type BookItem = {
 	author: string;
 	year?: number;
 	bookKind: BookKind;
-	// A series folds into one row, as it folds into one card on the shelf.
+	// A series folds into one row, as it folds into one card on the shelf, and
+	// says how many volumes it has where a book says its year.
 	series: boolean;
+	volumes?: number;
 };
 export type SearchItem =
 	| PageItem
@@ -147,14 +153,24 @@ export function itemKindLabel(item: SearchItem): string {
 	if (item.kind === "person") return i18n.common_person();
 	if (item.kind === "artist") return i18n.common_artist();
 	if (item.kind === "book") return kindLabel(item.bookKind);
-	return item.kind === "movie" ? i18n.common_movie() : i18n.settings_series();
+	// The singular: the plural "Séries" is the section, not one show.
+	return item.kind === "movie" ? i18n.common_movie() : i18n.lc_series();
 }
 
 // The line under a title row: its year, and for music and books who or what.
 export function itemSubline(item: SearchItem): string {
 	if (item.kind === "movie" || item.kind === "series") return item.year ? String(item.year) : "";
-	if (item.kind === "artist") return item.genre ?? "";
-	if (item.kind === "book") return [item.author, item.year].filter(Boolean).join(" · ");
+	if (item.kind === "artist")
+		return item.album ? i18n.search_via({ title: item.album }) : (item.genre ?? "");
+	if (item.kind === "book") {
+		// A series none of whose volumes is out yet still says it is one.
+		const tail = item.series
+			? item.volumes
+				? volumesCount(item.volumes)
+				: i18n.books_series()
+			: item.year;
+		return [item.author, tail].filter(Boolean).join(" · ");
+	}
 	return "";
 }
 
@@ -176,6 +192,13 @@ async function signOut() {
 	} finally {
 		window.location.href = "/login";
 	}
+}
+
+// The server matches an artist on its name, sort name, genre or any album
+// title; only the last needs saying on the row.
+function matchedAlbum(a: Artist, q: string): string | undefined {
+	if (!q || fold(a.name).includes(q) || fold(a.genre ?? "").includes(q)) return undefined;
+	return a.albums.find((al) => fold(al.title).includes(q))?.title;
 }
 
 export function createSearchModel(
@@ -219,16 +242,20 @@ export function createSearchModel(
 	const booksQuery = titleSearch<ShelfItem>("/books");
 	const peopleQuery = titleSearch<Person>("/people");
 
-	function pages(): PageItem[] {
+	// Settings sections join the pages once something is typed: listed on an
+	// empty palette they would bury every other page under eighteen rows.
+	function pages(typed: boolean): PageItem[] {
 		const isAdmin = auth.user?.role === "admin";
 		const base = PAGES.filter((p) => isAdmin || !ADMIN_PAGES.has(p.path));
-		if (isAdmin) {
-			base.push({
-				kind: "page",
-				label: i18n.settings_users(),
-				path: "/settings/users",
-				icon: Users,
-			});
+		if (isAdmin && typed) {
+			for (const [path, { Icon, title }] of Object.entries(SETTINGS_SECTIONS)) {
+				base.push({
+					kind: "page",
+					label: i18n.search_settings_section({ section: title() }),
+					path,
+					icon: Icon,
+				});
+			}
 		}
 		return base;
 	}
@@ -299,6 +326,7 @@ export function createSearchModel(
 					label: a.name,
 					image: artistPosterUrl(a.id),
 					genre: a.genre,
+					album: matchedAlbum(a, q),
 				}))
 			: [];
 		const bookHits: BookItem[] = enabled
@@ -311,9 +339,10 @@ export function createSearchModel(
 					year: b.year,
 					bookKind: b.kind,
 					series: b.type === "series",
+					volumes: b.volumes_out,
 				}))
 			: [];
-		const matchedPages = pages().filter((p) => fold(p.label).includes(q));
+		const matchedPages = pages(q !== "").filter((p) => fold(p.label).includes(q));
 		const matchedActions = actions().filter((a) => fold(a.label).includes(q));
 
 		// People sit under the titles on every surface: a name typed into search

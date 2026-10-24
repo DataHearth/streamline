@@ -122,11 +122,7 @@
 		>
 			{item.label}
 		</span>
-		{#if item.kind === "movie" || item.kind === "series"}
-			<span class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle">
-				{item.year ? `${item.year} · ` : ""}{item.kind}
-			</span>
-		{:else if item.kind === "artist" || item.kind === "book"}
+		{#if isTitle}
 			<span class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle">
 				{[itemSubline(item), itemKindLabel(item).toLowerCase()].filter(Boolean).join(" · ")}
 			</span>

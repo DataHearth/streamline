@@ -134,6 +134,10 @@ RSS sync, the missing search and the metadata refresh ([Scheduled Jobs](Schedule
 
 Users can request an artist (its whole discography), a single album, a single book or a whole series. Approving an artist adds it monitored for all releases (so every album of a type ticked under Settings → Music), and the request turns available on the artist's first imported album. Approving an album asks MusicBrainz which artist the release group belongs to (never the requester's typed wording), adds that artist with every other album unmonitored if the library lacks it, and monitors just that album; an artist already in the library keeps its own profile, and a release group missing from the artist's list answers `422` with the request left pending; approving a book adds it with both slots monitored, and a series with every volume monitored. Change that on the title's page afterwards. See [Requests and Users](Requests-and-Users).
 
+## Finding an artist or a book
+
+The command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>), the phone search screen and the tablet search panel search your music and books next to movies and series. An artist is found by name, genre or the title of any of its albums; when it is an album that matched, the row says so (*via “The Album”*) and opens the artist. A book is found by its title, any edition's title or an author's name. A series is one row, with its volume count where a book shows its year.
+
 ## Known gaps
 
 - A big bulk import hydrates in the background at one album every four seconds, so an artist's tracks can take a while to fill in.

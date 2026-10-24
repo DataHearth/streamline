@@ -42,28 +42,40 @@ export type SettingsItem = {
 };
 export type SettingsGroup = { name: string; items: SettingsItem[] };
 
-// Section titles for the drill-in top bar, keyed by path. Static so a page can
-// name itself without instantiating the count queries.
-export const SETTINGS_TITLES: Record<string, () => string> = {
-	"/settings/general": () => i18n.settings_general(),
-	"/settings/logs": () => i18n.settings_logs(),
-	"/settings/advanced": () => i18n.settings_advanced(),
-	"/settings/quality-profiles": () => i18n.settings_quality_profiles(),
-	"/settings/custom-formats": () => i18n.settings_custom_formats(),
-	"/settings/library": () => i18n.settings_library(),
-	"/settings/series": () => i18n.settings_series(),
-	"/settings/music": () => i18n.settings_music(),
-	"/settings/media-probe": () => i18n.settings_media_probe(),
-	"/settings/transcoding": () => i18n.settings_transcoding(),
-	"/settings/metadata": () => i18n.settings_metadata(),
-	"/settings/indexers": () => i18n.settings_indexers(),
-	"/settings/download-clients": () => i18n.settings_download_clients(),
-	"/settings/media-servers": () => i18n.settings_media_servers(),
-	"/settings/schedules": () => i18n.settings_schedules(),
-	"/settings/auth": () => i18n.settings_authentication(),
-	"/settings/oidc": () => i18n.settings_sso(),
-	"/settings/users": () => i18n.settings_users(),
-};
+// Every section once, keyed by path: its icon and title. The sidebar and the
+// touch index group them, the drill-in top bar names one, and the search
+// surfaces list them — none of them needs the count queries for that.
+export const SETTINGS_SECTIONS = {
+	"/settings/general": { Icon: SlidersHorizontal, title: () => i18n.settings_general() },
+	"/settings/logs": { Icon: FileText, title: () => i18n.settings_logs() },
+	"/settings/advanced": { Icon: Wrench, title: () => i18n.settings_advanced() },
+	"/settings/library": { Icon: FolderTree, title: () => i18n.settings_library() },
+	"/settings/quality-profiles": { Icon: Gauge, title: () => i18n.settings_quality_profiles() },
+	"/settings/custom-formats": { Icon: Tags, title: () => i18n.settings_custom_formats() },
+	"/settings/series": { Icon: Tv, title: () => i18n.settings_series() },
+	"/settings/music": { Icon: Music, title: () => i18n.settings_music() },
+	"/settings/media-probe": { Icon: Film, title: () => i18n.settings_media_probe() },
+	"/settings/transcoding": { Icon: Replace, title: () => i18n.settings_transcoding() },
+	"/settings/metadata": { Icon: Languages, title: () => i18n.settings_metadata() },
+	"/settings/indexers": { Icon: Search, title: () => i18n.settings_indexers() },
+	"/settings/download-clients": { Icon: Download, title: () => i18n.settings_download_clients() },
+	"/settings/media-servers": { Icon: Cast, title: () => i18n.settings_media_servers() },
+	"/settings/schedules": { Icon: Clock, title: () => i18n.settings_schedules() },
+	"/settings/auth": { Icon: Shield, title: () => i18n.settings_authentication() },
+	"/settings/oidc": { Icon: KeyRound, title: () => i18n.settings_sso() },
+	"/settings/users": { Icon: Users, title: () => i18n.settings_users() },
+} satisfies Record<string, { Icon: typeof SlidersHorizontal; title: () => string }>;
+type SettingsPath = keyof typeof SETTINGS_SECTIONS;
+
+// Section titles for the drill-in top bar, keyed by path.
+export const SETTINGS_TITLES: Record<string, () => string> = Object.fromEntries(
+	Object.entries(SETTINGS_SECTIONS).map(([path, s]) => [path, s.title]),
+);
+
+function section(path: SettingsPath, count?: number): SettingsItem {
+	const { Icon, title } = SETTINGS_SECTIONS[path];
+	return { path, Icon, label: title(), count };
+}
 
 // createSettingsNav builds the grouped section list shared by the desktop
 // sidebar and the touch index page. The count queries are the same ones the
@@ -135,143 +147,58 @@ export function createSettingsNav(withCounts = true) {
 			{
 				name: i18n.settings_system(),
 				items: [
-					{
-						path: "/settings/general",
-						Icon: SlidersHorizontal,
-						label: i18n.settings_general(),
-					},
+					section("/settings/general"),
 					// The application and HTTP access logs: what streamline writes, at
 					// what level, where to, and how a log file rotates.
-					{
-						path: "/settings/logs",
-						Icon: FileText,
-						label: i18n.settings_logs(),
-					},
-					{
-						path: "/settings/advanced",
-						Icon: Wrench,
-						label: i18n.settings_advanced(),
-					},
+					section("/settings/logs"),
+					section("/settings/advanced"),
 				],
 			},
 			{
 				name: i18n.nav_library(),
 				items: [
-					{
-						path: "/settings/library",
-						Icon: FolderTree,
-						label: i18n.settings_library(),
-					},
-					{
-						path: "/settings/quality-profiles",
-						Icon: Gauge,
-						label: i18n.settings_quality_profiles(),
-						count: profileCount,
-					},
+					section("/settings/library"),
+					section("/settings/quality-profiles", profileCount),
 					// Counts what the operator can act on: the shipped library is a
 					// constant, so including builtins would show the same 13 on every
 					// install and never move.
-					{
-						path: "/settings/custom-formats",
-						Icon: Tags,
-						label: i18n.settings_custom_formats(),
-						count: customFormats.data?.filter((f) => !f.builtin).length,
-					},
-					{
-						path: "/settings/series",
-						Icon: Tv,
-						label: i18n.settings_series(),
-					},
-					{
-						path: "/settings/music",
-						Icon: Music,
-						label: i18n.settings_music(),
-					},
+					section("/settings/custom-formats", customFormats.data?.filter((f) => !f.builtin).length),
+					section("/settings/series"),
+					section("/settings/music"),
 					// Probing is what happens to files entering the library, so it
 					// belongs here rather than under Connections — there is no host to
 					// reach and nothing to test a connection to.
-					{
-						path: "/settings/media-probe",
-						Icon: Film,
-						label: i18n.settings_media_probe(),
-					},
+					section("/settings/media-probe"),
 					// Sits next to probing because it is the other thing that happens
 					// to a file entering the library, and it reads the same binary.
 					// Admin-only, like every transcoding surface.
-					...(isAdmin
-						? [
-								{
-									path: "/settings/transcoding",
-									Icon: Replace,
-									label: i18n.settings_transcoding(),
-								},
-							]
-						: []),
+					...(isAdmin ? [section("/settings/transcoding")] : []),
 					// The provider keys and the language they answer in decide what
 					// every title in the library is called, so this is a library
 					// setting rather than a connection — there is no host to reach.
-					{
-						path: "/settings/metadata",
-						Icon: Languages,
-						label: i18n.settings_metadata(),
-					},
+					section("/settings/metadata"),
 				],
 			},
 			{
 				name: i18n.settings_connections(),
 				items: [
-					{
-						path: "/settings/indexers",
-						Icon: Search,
-						label: i18n.settings_indexers(),
-						count: indexers.data?.length,
-					},
-					{
-						path: "/settings/download-clients",
-						Icon: Download,
-						label: i18n.settings_download_clients(),
-						count: downloadClients.data?.length,
-					},
-					{
-						path: "/settings/media-servers",
-						Icon: Cast,
-						label: i18n.settings_media_servers(),
-						count: mediaServers.data?.items.length,
-					},
+					section("/settings/indexers", indexers.data?.length),
+					section("/settings/download-clients", downloadClients.data?.length),
+					section("/settings/media-servers", mediaServers.data?.items.length),
 				],
 			},
 			{
 				name: i18n.settings_automation(),
-				items: [
-					{
-						path: "/settings/schedules",
-						Icon: Clock,
-						label: i18n.settings_schedules(),
-						count: schedules.data?.items.length,
-					},
-				],
+				items: [section("/settings/schedules", schedules.data?.items.length)],
 			},
 		];
 		if (isAdmin) {
 			base.push({
 				name: i18n.settings_security(),
 				items: [
-					{
-						path: "/settings/auth",
-						Icon: Shield,
-						label: i18n.settings_authentication(),
-					},
-					{
-						path: "/settings/oidc",
-						Icon: KeyRound,
-						label: i18n.settings_sso(),
-					},
-					{
-						path: "/settings/users",
-						Icon: Users,
-						label: i18n.settings_users(),
-						count: users.data?.total,
-					},
+					section("/settings/auth"),
+					section("/settings/oidc"),
+					section("/settings/users", users.data?.total),
 				],
 			});
 		}
