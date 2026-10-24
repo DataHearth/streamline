@@ -8,7 +8,12 @@ import { api, ApiError } from "./api";
 import { auth } from "./auth.svelte";
 import { transcodingDisabled } from "./transcoding";
 import { NAV_POLL_MS, SILENT } from "./query";
-import type { DownloadClient, TorrentList, TranscodeJob } from "./types";
+import type {
+	DownloadClient,
+	TorrentList,
+	TranscodeConfig,
+	TranscodeJob,
+} from "./types";
 
 // /torrents 404s while the built-in engine is off, and it can't come back
 // without a config change. Refetching a query that has never held data resets
@@ -33,12 +38,16 @@ export type TranscodeCounts = {
 	failed: number;
 };
 
-// The builtin engine's torrent list under the torrents page's own key, polled
-// only while a builtin client is configured. The nav counts read it, and the
-// activity page reads it to know which queue rows still have a torrent to open.
-export function builtinTorrentsQuery() {
-	// The engine is a download-clients entry; with it off, /torrents only ever
-	// 404s. Shares the settings sidebar's cached list rather than probing.
+// Which of the two admin Activity routes have anything behind them. The
+// torrents page shows the builtin engine only, so with no enabled builtin
+// client it is a permanent 404; transcoding is a permanent 409 while
+// `transcoding.enabled` is off. Every nav surface and the search pages hide a
+// route that is off — a link to a page that can only say "this is off" is
+// clutter on an instance that chose not to run it. Both read as off until the
+// config has answered, so a disabled row never flashes in and out at load.
+// The keys are the settings pages' own, so a toggle there updates the nav in
+// the same tick.
+export function activityFeatures() {
 	const clients = createQuery<DownloadClient[]>(() => ({
 		queryKey: ["download-clients"],
 		queryFn: () => api<DownloadClient[]>("/download-clients"),
@@ -47,6 +56,34 @@ export function builtinTorrentsQuery() {
 		retry: false,
 		staleTime: 300000,
 	}));
+	const transcoding = createQuery<TranscodeConfig>(() => ({
+		queryKey: ["config", "transcoding"],
+		queryFn: () => api<TranscodeConfig>("/config/transcoding"),
+		meta: SILENT,
+		enabled: auth.isAdmin,
+		retry: false,
+		staleTime: 300000,
+	}));
+	return {
+		get torrents(): boolean {
+			return (
+				auth.isAdmin &&
+				!!clients.data?.some((c) => c.client_type === "builtin" && c.enabled)
+			);
+		},
+		get transcoding(): boolean {
+			return auth.isAdmin && transcoding.data?.enabled === true;
+		},
+	};
+}
+
+// The builtin engine's torrent list under the torrents page's own key, polled
+// only while a builtin client is configured. The nav counts read it, and the
+// activity page reads it to know which queue rows still have a torrent to open.
+export function builtinTorrentsQuery() {
+	// The engine is a download-clients entry; with it off, /torrents only ever
+	// 404s. Shares the settings sidebar's cached list rather than probing.
+	const features = activityFeatures();
 	// Same key as the torrents page, so there is never a second request in
 	// flight — but the interval below is not the whole story: refetchInterval
 	// lives on the cache entry, so whichever observer is mounted sets the rate.
@@ -55,9 +92,7 @@ export function builtinTorrentsQuery() {
 		queryKey: ["activity", "torrents"],
 		queryFn: () => api<TorrentList>("/torrents"),
 		meta: SILENT,
-		enabled: !!clients.data?.some(
-			(c) => c.client_type === "builtin" && c.enabled,
-		),
+		enabled: features.torrents,
 		retry: false,
 		refetchInterval: (q) =>
 			engineDisabled(q.state.error) ? false : NAV_POLL_MS,
@@ -90,14 +125,16 @@ export function torrentCountsQuery() {
 
 // The queue route's own query polls every 2 s while something is live; away
 // from it this is the nav's cadence. Admin-only endpoint, and it 409s while
-// transcoding is disabled — which no refetch can clear — so both cases stop the
-// poll rather than retrying forever.
+// transcoding is disabled — which no refetch can clear — so it is not asked at
+// all until the config says transcoding is on, and a 409 that still lands
+// (switched off since) stops the poll rather than retrying forever.
 export function transcodeCountsQuery() {
+	const features = activityFeatures();
 	const q = createQuery<TranscodeJob[]>(() => ({
 		queryKey: ["transcoding", "queue", ""],
 		queryFn: () => api<TranscodeJob[]>("/transcoding/queue"),
 		meta: SILENT,
-		enabled: auth.isAdmin,
+		enabled: features.transcoding,
 		retry: false,
 		refetchInterval: (q) =>
 			transcodingDisabled(q.state.error) ? false : NAV_POLL_MS,

@@ -29,6 +29,7 @@ import {
 } from "@lucide/svelte";
 import { api, type Paginated } from "./api";
 import { albumPosterUrl, artistPosterUrl, bookPosterUrl, tvPosterUrl } from "./posters";
+import { activityFeatures } from "./activity-nav";
 import { auth } from "./auth.svelte";
 import { SETTINGS_SECTIONS } from "./settings-nav.svelte";
 import { fold } from "./text";
@@ -301,12 +302,20 @@ export function createSearchModel(
 	const albumsQuery = titleSearch<AlbumSearchHit>("/music/albums");
 	const booksQuery = titleSearch<ShelfItem>("/books");
 	const peopleQuery = titleSearch<Person>("/people");
+	// Torrents and transcoding are pages only while their feature is on, as in
+	// the nav.
+	const features = activityFeatures();
 
 	// Settings sections join the pages once something is typed: listed on an
 	// empty palette they would bury every other page under eighteen rows.
 	function pages(typed: boolean): PageItem[] {
 		const isAdmin = auth.user?.role === "admin";
-		const base = PAGES.filter((p) => isAdmin || !ADMIN_PAGES.has(p.path));
+		const base = PAGES.filter(
+			(p) =>
+				(isAdmin || !ADMIN_PAGES.has(p.path)) &&
+				(p.path !== "/torrents" || features.torrents) &&
+				(p.path !== "/transcoding" || features.transcoding),
+		);
 		if (isAdmin && typed) {
 			for (const [path, { Icon, title }] of Object.entries(SETTINGS_SECTIONS)) {
 				base.push({

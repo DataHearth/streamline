@@ -32,6 +32,7 @@
 	import { cn } from "@lib/cn";
 	import {
 		TORRENT_PILLS,
+		activityFeatures,
 		torrentCountsQuery,
 		transcodeCountsQuery,
 		activityCurrent,
@@ -50,6 +51,7 @@
 
 	const counts = navCountsQuery();
 	const torrentCounts = torrentCountsQuery();
+	const features = activityFeatures();
 
 	const requestCountsQuery = createQuery<RequestCounts>(() => ({
 		queryKey: ["requests", "counts"],
@@ -136,7 +138,8 @@
 			line: counts.queueLine,
 			badge: pendingAdoptions,
 		},
-		...(auth.isAdmin
+		// Each only while its feature is on (activityFeatures).
+		...(features.torrents
 			? [
 					{
 						label: i18n.torrent_label(),
@@ -144,6 +147,10 @@
 						icon: Magnet,
 						torrents: true,
 					},
+				]
+			: []),
+		...(features.transcoding
+			? [
 					{
 						label: i18n.transcode_label(),
 						href: "/transcoding",

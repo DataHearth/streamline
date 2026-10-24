@@ -154,7 +154,7 @@ Adding a series this way monitors it, exactly as adding it by hand would, so Str
 
 ## Torrents (built-in client)
 
-**Activity → Torrents.** Only relevant if you're running Streamline's built-in torrent engine (`client_type: builtin`).
+**Activity → Torrents.** Only relevant if you're running Streamline's built-in torrent engine (`client_type: builtin`). The entry appears in the navigation only while an enabled built-in client is configured.
 
 Live view of the engine's torrents: peers, pieces, ratio, up/down rates. You can pause and resume individual torrents, and toggle individual **files** within a torrent on and off — handy for a season pack where you only want three episodes.
 
@@ -175,7 +175,7 @@ If you're using qBittorrent or Transmission, this page will be empty; manage tho
 **Activity → Transcoding.** Admin only. The queue of files being re-encoded in the background, driven by the `transcode` block on a [quality profile](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files).
 
 > [!NOTE]
-> Transcoding is **off by default**. Until you turn it on under Settings → Transcoding this page shows an off state rather than an empty queue — there's a difference between "nothing to do" and "not running", and the page says which.
+> Transcoding is **off by default**, and the Activity → Transcoding entry is left out of the navigation and the search until you turn it on under Settings → Transcoding. Opened by its address while off, the page shows an off state rather than an empty queue — there's a difference between "nothing to do" and "not running", and the page says which.
 
 Each row names the movie or episode, the file on disk, and where the job got to:
 
