@@ -162,6 +162,8 @@ Tick several torrents (or press and hold one on a phone) to **pause**, **resume*
 
 On a phone, swipe a torrent right to **pause** or **resume** it, or left to **remove** it, which asks the same question about its files.
 
+A torrent's details open at their own address (`/torrents?hash=<info hash>`), so a reload keeps the drawer open and the link can be shared or bookmarked. From the **Queue** or **History**, an admin opens a download's details (expand the row, or tap it on a phone) and follows **Open torrent** to land on that torrent's drawer. The button shows only while the built-in engine still lists the torrent.
+
 If you're using qBittorrent or Transmission, this page will be empty; manage those torrents in their own UI or from the Queue.
 
 ---

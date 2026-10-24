@@ -13997,6 +13997,12 @@ components:
         book: { $ref: "#/components/schemas/ActivityBookRef" }
         indexer: { type: string }
         download_client: { type: string }
+        torrent_hash:
+          type: string
+          description: |
+            Info hash of the torrent behind the record in download_client,
+            lower-case hex. Absent when the record carries none. Under the
+            builtin client it is the key of GET /torrents/{hash}.
         size: { type: integer, format: int64 }
         progress: { type: number, format: double }
         download_speed: { type: integer, format: int64 }
@@ -14087,6 +14093,11 @@ components:
         book: { $ref: "#/components/schemas/ActivityBookRef" }
         indexer: { type: string }
         download_client: { type: string }
+        torrent_hash:
+          type: string
+          description: |
+            Info hash of the torrent behind the record, lower-case hex. The
+            torrent may since have been removed from download_client.
         size: { type: integer, format: int64 }
         failure_reason: { type: string }
         imported_at: { type: string, format: date-time, nullable: true }

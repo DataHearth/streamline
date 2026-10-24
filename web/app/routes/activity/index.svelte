@@ -13,6 +13,7 @@
 	import { api, apiAllPages, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { entryHeading } from "@lib/activity-touch";
+	import { builtinTorrentsQuery, torrentHref } from "@lib/activity-nav";
 	import { toast } from "@lib/toast";
 	import { pullRefresh } from "@lib/pull-refresh";
 	import { formatEta, formatSpeed } from "@lib/format";
@@ -73,6 +74,16 @@
 		queryFn: () => api<DownloadQueue>("/activity/queue"),
 		refetchInterval: 2000,
 	}));
+
+	// "Open torrent" on a row's detail needs the torrent to be on the torrents
+	// page, which lists the builtin engine only. The nav already polls that list
+	// for its counts; this is one more observer of the same cache entry.
+	const engineTorrents = builtinTorrentsQuery();
+	let listedHashes = $derived(
+		new Set((engineTorrents.data?.items ?? []).map((t) => t.hash.toLowerCase())),
+	);
+	const rowTorrentHref = (item: QueueEntry | HistoryEntry) =>
+		auth.isAdmin ? torrentHref(item.torrent_hash, listedHashes) : null;
 
 	const PAGE = 50;
 	const history = createInfiniteQuery<
@@ -699,6 +710,7 @@
 		hasMore={view === "history" && (history.hasNextPage ?? false)}
 		loadingMore={history.isFetchingNextPage}
 		canControl={auth.isAdmin}
+		torrentHref={rowTorrentHref}
 		onLoadMore={() => history.fetchNextPage()}
 		onCancel={(id) => cancel.mutate(id)}
 		onPause={(id) => pause.mutate(id)}
@@ -791,6 +803,7 @@
 	view={tableView}
 	busy={detailId !== null && busyId === detailId}
 	canControl={auth.isAdmin}
+	torrentHref={detailItem ? rowTorrentHref(detailItem) : null}
 	onClose={() => (detailId = null)}
 	onCancel={(id) => cancel.mutate(id)}
 	onPause={(id) => pause.mutate(id)}

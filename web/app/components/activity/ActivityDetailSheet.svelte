@@ -1,7 +1,16 @@
 <script lang="ts">
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { Ban, LoaderCircle, Pause, Play, RotateCw, Trash2, X } from "@lucide/svelte";
+	import {
+		ArrowUpRight,
+		Ban,
+		LoaderCircle,
+		Pause,
+		Play,
+		RotateCw,
+		Trash2,
+		X,
+	} from "@lucide/svelte";
 	import DownloadConfirmDialog, {
 		type DownloadConfirm,
 	} from "./DownloadConfirmDialog.svelte";
@@ -24,6 +33,7 @@
 		view,
 		busy = false,
 		canControl = false,
+		torrentHref = null,
 		onClose,
 		onCancel,
 		onPause,
@@ -35,6 +45,8 @@
 		view: "queue" | "history";
 		busy?: boolean;
 		canControl?: boolean;
+		// The torrents page entry for this record's torrent; null hides the link.
+		torrentHref?: string | null;
 		onClose: () => void;
 		onCancel: (id: number) => void;
 		onPause: (id: number) => void;
@@ -229,6 +241,16 @@
 						</dd>
 					{/each}
 				</dl>
+
+				{#if torrentHref}
+					<a
+						href={torrentHref}
+						class="mt-3.5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface text-[14px] font-semibold text-fg transition active:bg-surface-2"
+					>
+						<ArrowUpRight size={16} aria-hidden="true" />
+						{i18n.activity_open_torrent()}
+					</a>
+				{/if}
 			</div>
 
 			{#if canControl && !isHeld}

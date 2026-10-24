@@ -445,12 +445,15 @@ type QueueEntry struct {
 	Episode        *ent.Episode
 	Indexer        string
 	DownloadClient string
-	Size           int64
-	Progress       float64
-	DownloadSpeed  int64
-	ETA            int64
-	FailureReason  string
-	CreatedAt      time.Time
+	// TorrentHash is the record's info hash in DownloadClient, empty when it
+	// has none; the activity page links it to the torrent's own details.
+	TorrentHash   string
+	Size          int64
+	Progress      float64
+	DownloadSpeed int64
+	ETA           int64
+	FailureReason string
+	CreatedAt     time.Time
 	// SelectionState mirrors download_record.selection_state.
 	SelectionState string
 	// SelectedFiles is the kept indexes when SelectionState is "applied"; nil
@@ -604,6 +607,7 @@ func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 	}
 	e.Indexer = rec.IndexerName
 	e.DownloadClient = rec.DownloadClientName
+	e.TorrentHash = rec.TorrentHash
 	return e
 }
 

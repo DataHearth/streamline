@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { parts } from "@lib/message-parts";
 	import { slide } from "svelte/transition";
-	import { Pause, Play, Ban, Trash2, RotateCw, LoaderCircle } from "@lucide/svelte";
+	import {
+		Pause,
+		Play,
+		Ban,
+		Trash2,
+		RotateCw,
+		LoaderCircle,
+		ArrowUpRight,
+	} from "@lucide/svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import { cn } from "@lib/cn";
 	import { formatBytes } from "@lib/format";
@@ -20,6 +28,7 @@
 		colspan,
 		busy = false,
 		canControl = false,
+		torrentHref = null,
 		onCancel,
 		onPause,
 		onResume,
@@ -31,6 +40,8 @@
 		colspan: number;
 		busy?: boolean;
 		canControl?: boolean;
+		// The torrents page entry for this record's torrent; null hides the link.
+		torrentHref?: string | null;
 		onCancel: (id: number) => void;
 		onPause: (id: number) => void;
 		onResume: (id: number) => void;
@@ -51,6 +62,9 @@
 	// client for a torrent that is already done, and the backend refuses them.
 	// Resolve is the only move, and the row itself carries that button.
 	let isHeld = $derived(view === "queue" && item.status === "held");
+	// The record's own verbs. The torrent link is not one of them: it shows on
+	// a held record too, whose torrent is still there to inspect.
+	let controls = $derived(canControl && !isHeld);
 	let queue = $derived(item as QueueEntry);
 
 	// Applied: the file selection kept a subset of the torrent, so the
@@ -126,9 +140,18 @@
 				{/if}
 			</dl>
 
-			{#if canControl && !isHeld}
-			<div class="flex items-start gap-2">
-				{#if view === "queue"}
+			{#if torrentHref || controls}
+			<div class="flex flex-wrap items-start gap-2">
+				{#if torrentHref}
+					<a
+						href={torrentHref}
+						class={cn(btn, "bg-bg-subtle text-fg hover:bg-surface")}
+					>
+						<ArrowUpRight size={13} aria-hidden="true" />
+						{i18n.activity_open_torrent()}
+					</a>
+				{/if}
+				{#if controls && view === "queue"}
 					{#if isPaused}
 						<button
 							type="button"
@@ -178,7 +201,7 @@
 						<Ban size={13} aria-hidden="true" />
 						{i18n.common_cancel()}
 					</button>
-				{:else}
+				{:else if controls}
 					{#if canRetry}
 						<button
 							type="button"

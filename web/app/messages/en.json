@@ -133,6 +133,7 @@
 	"activity_none_completed": "Completed and failed downloads will appear here.",
 	"activity_nothing_downloading": "Nothing is downloading right now.",
 	"activity_nothing_waiting": "Nothing is waiting on a decision.",
+	"activity_open_torrent": "Open torrent",
 	"activity_queue": "Queue",
 	"activity_queue_and_history": "Queue & History",
 	"activity_queue_help": "Active and queued downloads will appear here.",

@@ -44,6 +44,37 @@ var _ = Describe("Handler: Activity queue/history",
 			Expect(body.Items[0].Status).To(Equal(QueueEntryStatus("downloading")))
 		})
 
+		It("carries the torrent hash lower-cased, omitting an empty one", func() {
+			app.downloads.EXPECT().Queue(mock.Anything).Return(
+				download.QueueSnapshot{
+					RefreshedAt: time.Now(),
+					Items: []download.QueueEntry{
+						{
+							RecordID:       1,
+							Status:         "downloading",
+							Title:          "rel",
+							Movie:          &ent.Movie{ID: 2, Title: "Dune"},
+							DownloadClient: "builtin",
+							TorrentHash:    "ABCDEF0123456789ABCDEF0123456789ABCDEF01",
+						},
+						{
+							RecordID: 3, Status: "downloading", Title: "magnet",
+							Movie: &ent.Movie{ID: 4, Title: "Arrival"},
+						},
+					},
+				}, nil).Once()
+
+			resp, err := http.Get(app.srv.URL + "/api/v1/activity/queue")
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			var body DownloadQueue
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Items).To(HaveLen(2))
+			Expect(body.Items[0].TorrentHash).To(HaveValue(
+				Equal("abcdef0123456789abcdef0123456789abcdef01")))
+			Expect(body.Items[1].TorrentHash).To(BeNil())
+		})
+
 		It("names the album, the pack's artist and the book a row is for", func() {
 			album := &ent.Album{ID: 24, Title: "L'Enfant sauvage"}
 			album.Edges.Artist = &ent.Artist{ID: 1, Name: "Gojira"}
@@ -239,6 +270,7 @@ var _ = Describe("Handler: Activity queue/history",
 			rec := &ent.DownloadRecord{
 				ID: 1, Title: "rel", Status: "completed",
 				Size: 10, CreateTime: time.Now(), UpdateTime: time.Now(),
+				TorrentHash: "abcdef0123456789abcdef0123456789abcdef01",
 			}
 			rec.Edges.Movie = &ent.Movie{ID: 2, Title: "Dune"}
 			app.store.EXPECT().ListDownloadHistory(
@@ -257,6 +289,8 @@ var _ = Describe("Handler: Activity queue/history",
 			Expect(body.Items).To(HaveLen(1))
 			Expect(body.Items[0].Status).To(
 				Equal(HistoryEntryStatus("completed")))
+			Expect(body.Items[0].TorrentHash).To(HaveValue(
+				Equal("abcdef0123456789abcdef0123456789abcdef01")))
 		})
 
 		It("GET /activity/history counts a pack's albums", func() {

@@ -858,6 +858,7 @@ func toQueueEntry(e download.QueueEntry) QueueEntry {
 	if e.DownloadClient != "" {
 		out.DownloadClient = &e.DownloadClient
 	}
+	out.TorrentHash = torrentHashRef(e.TorrentHash)
 	if e.FailureReason != "" {
 		out.FailureReason = &e.FailureReason
 	}
@@ -916,6 +917,7 @@ func toHistoryEntry(r *ent.DownloadRecord) HistoryEntry {
 		name := r.DownloadClientName
 		out.DownloadClient = &name
 	}
+	out.TorrentHash = torrentHashRef(r.TorrentHash)
 	if r.FailureReason != "" {
 		out.FailureReason = &r.FailureReason
 	}
@@ -923,6 +925,17 @@ func toHistoryEntry(r *ent.DownloadRecord) HistoryEntry {
 		out.ImportedAt = r.ImportedAt
 	}
 	return out
+}
+
+// torrentHashRef is a record's info hash for a queue or history row, nil when
+// it has none. Lower-cased: the clients differ in the case they report, and the
+// SPA matches it against the builtin engine's list and puts it in a URL.
+func torrentHashRef(hash string) *string {
+	if hash == "" {
+		return nil
+	}
+	h := strings.ToLower(hash)
+	return &h
 }
 
 // episodeRef builds the show + S/E context for a TV download record's queue or

@@ -19,6 +19,7 @@
 		hasMore = false,
 		loadingMore = false,
 		canControl = false,
+		torrentHref,
 		onLoadMore,
 		onCancel,
 		onPause,
@@ -38,6 +39,8 @@
 		hasMore?: boolean;
 		loadingMore?: boolean;
 		canControl?: boolean;
+		// Where a row's torrent opens on the torrents page, null when it has none.
+		torrentHref?: (item: QueueEntry | HistoryEntry) => string | null;
 		onLoadMore: () => void;
 		onCancel: (id: number) => void;
 		onPause: (id: number) => void;
@@ -333,6 +336,7 @@
 							{colspan}
 							busy={busyId === row.id}
 							{canControl}
+							torrentHref={torrentHref?.(row) ?? null}
 							{onCancel}
 							{onPause}
 							{onResume}

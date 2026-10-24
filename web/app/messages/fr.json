@@ -133,6 +133,7 @@
 	"activity_none_completed": "Les téléchargements terminés et échoués apparaîtront ici.",
 	"activity_nothing_downloading": "Aucun téléchargement en cours.",
 	"activity_nothing_waiting": "Rien n'attend de décision.",
+	"activity_open_torrent": "Ouvrir le torrent",
 	"activity_queue": "File",
 	"activity_queue_and_history": "File et historique",
 	"activity_queue_help": "Les téléchargements actifs et en file apparaîtront ici.",

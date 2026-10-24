@@ -5207,7 +5207,11 @@ type HistoryEntry struct {
 	Size          int64              `json:"size"`
 	Status        HistoryEntryStatus `json:"status"`
 	Title         string             `json:"title"`
-	UpdatedAt     time.Time          `json:"updated_at"`
+
+	// TorrentHash Info hash of the torrent behind the record, lower-case hex. The
+	// torrent may since have been removed from download_client.
+	TorrentHash *string   `json:"torrent_hash,omitempty"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // HistoryEntryStatus defines model for HistoryEntry.Status.
@@ -7556,6 +7560,11 @@ type QueueEntry struct {
 	// and is waiting on a decision (POST /downloads/{id}/resolve).
 	Status QueueEntryStatus `json:"status"`
 	Title  string           `json:"title"`
+
+	// TorrentHash Info hash of the torrent behind the record in download_client,
+	// lower-case hex. Absent when the record carries none. Under the
+	// builtin client it is the key of GET /torrents/{hash}.
+	TorrentHash *string `json:"torrent_hash,omitempty"`
 }
 
 // QueueEntrySelectionState File-selection outcome for this grab. Omitted when "skipped" — no

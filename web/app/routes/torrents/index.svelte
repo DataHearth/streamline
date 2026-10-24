@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from "svelte";
+	import { params } from "@roxi/routify";
 	import {
 		createQuery,
 		createMutation,
@@ -86,7 +87,34 @@
 
 	let statusFilter = $state<string[]>([]);
 	let search = $state("");
+	// The open drawer is in the URL (?hash=), so it survives a reload and the
+	// activity page can link a download straight to its torrent. Seeded from
+	// Routify's params, which carry the query string: on an in-app navigation
+	// the page mounts before window.location holds the new URL, so reading it
+	// here found the page being left and the drawer never opened.
 	let selectedHash = $state<string | null>(null);
+	onMount(() => {
+		let seeded = false;
+		return params.subscribe((p) => {
+			if (seeded) return;
+			seeded = true;
+			if (typeof p.hash === "string" && p.hash)
+				selectedHash = p.hash.toLowerCase();
+		});
+	});
+	$effect(() => {
+		// Never rewrite another page's URL while this one is still mounting.
+		if (typeof window === "undefined" || window.location.pathname !== "/torrents")
+			return;
+		const p = new URLSearchParams(window.location.search);
+		if (selectedHash) p.set("hash", selectedHash);
+		else p.delete("hash");
+		const qs = p.toString();
+		const next = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+		if (next !== window.location.pathname + window.location.search) {
+			window.history.replaceState(null, "", next);
+		}
+	});
 	let addOpen = $state(false);
 	let filtersOpen = $state(false);
 	// One sort for both surfaces — the table's headers set it from md up, the
@@ -223,6 +251,19 @@
 	let selectedTorrent = $derived(
 		torrentItems.find((t) => t.hash === selectedHash) ?? null,
 	);
+	// A torrent that is not in a fresh listing has nothing to open: a stale
+	// link, or one removed elsewhere while its drawer was up. Waiting for a
+	// settled fetch keeps a cached list from dropping a hash the refetch on
+	// arrival is about to bring in.
+	$effect(() => {
+		if (
+			selectedHash &&
+			torrents.isSuccess &&
+			!torrents.isFetching &&
+			!selectedTorrent
+		)
+			selectedHash = null;
+	});
 	let selectedDetail = $derived<TorrentDetails | null>(
 		selectedHash && torrentDetail.data?.hash === selectedHash
 			? torrentDetail.data

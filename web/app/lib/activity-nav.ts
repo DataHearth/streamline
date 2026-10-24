@@ -33,7 +33,10 @@ export type TranscodeCounts = {
 	failed: number;
 };
 
-export function torrentCountsQuery() {
+// The builtin engine's torrent list under the torrents page's own key, polled
+// only while a builtin client is configured. The nav counts read it, and the
+// activity page reads it to know which queue rows still have a torrent to open.
+export function builtinTorrentsQuery() {
 	// The engine is a download-clients entry; with it off, /torrents only ever
 	// 404s. Shares the settings sidebar's cached list rather than probing.
 	const clients = createQuery<DownloadClient[]>(() => ({
@@ -48,7 +51,7 @@ export function torrentCountsQuery() {
 	// flight — but the interval below is not the whole story: refetchInterval
 	// lives on the cache entry, so whichever observer is mounted sets the rate.
 	// On the torrents page that is its own 2 s; everywhere else, this 15 s.
-	const q = createQuery<TorrentList>(() => ({
+	return createQuery<TorrentList>(() => ({
 		queryKey: ["activity", "torrents"],
 		queryFn: () => api<TorrentList>("/torrents"),
 		meta: SILENT,
@@ -59,6 +62,22 @@ export function torrentCountsQuery() {
 		refetchInterval: (q) =>
 			engineDisabled(q.state.error) ? false : NAV_POLL_MS,
 	}));
+}
+
+// Where a download record's torrent opens, or null when the builtin engine
+// does not list it: the torrents page shows that engine only, so a record
+// held by another client, or one whose torrent is gone, has nowhere to go.
+export function torrentHref(
+	hash: string | undefined,
+	listed: ReadonlySet<string>,
+): string | null {
+	if (!hash) return null;
+	const h = hash.toLowerCase();
+	return listed.has(h) ? `/torrents?hash=${encodeURIComponent(h)}` : null;
+}
+
+export function torrentCountsQuery() {
+	const q = builtinTorrentsQuery();
 	return {
 		get counts(): TorrentCounts {
 			const out: TorrentCounts = {};

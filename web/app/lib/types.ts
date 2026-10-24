@@ -740,6 +740,9 @@ export type QueueEntry = {
 	book?: ActivityBookRef;
 	indexer?: string;
 	download_client?: string;
+	// Lower-case info hash in download_client. Under the builtin engine it is
+	// the torrent page's key (/torrents?hash=…).
+	torrent_hash?: string;
 	size: number;
 	progress: number;
 	download_speed?: number;
@@ -802,6 +805,7 @@ export type HistoryEntry = {
 	book?: ActivityBookRef;
 	indexer?: string;
 	download_client?: string;
+	torrent_hash?: string;
 	size: number;
 	failure_reason?: string;
 	imported_at?: string | null;
