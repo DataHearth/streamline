@@ -298,6 +298,8 @@ Callback failures redirect to `/login?error=<code>`:
 
 A provider whose config entry sets `allow_admin: true` or an `email_linking` other than `disabled` can't have its issuer changed from the UI or the API (`403`). That trust was granted to the issuer you named in the file, so move it there.
 
+Changing the issuer of any other provider through the API needs its client secret in the same request (`422`, `code: secret_required`, otherwise). Streamline sends that secret to the issuer at every login, and keeping it across an issuer change would hand it to an identity provider that never issued it. A secret read from `client_secret_file` can't follow an issuer change through the API at all (`403`): change both in the config file.
+
 ### OIDC from an installed app
 
 When Streamline is opened from a phone's home screen (see [Install as an app](Installation#install-as-an-app)), an OIDC login navigates to the IdP, which iOS opens in an in-app browser sheet. Recent iOS versions hand the session cookie back to the installed app when the sheet closes; older ones did not, and the login appeared to succeed in the sheet and then land on `/login` again. Local username-and-password login is unaffected. If a standalone OIDC login loops, sign in once from Safari — the installed app shares that session.

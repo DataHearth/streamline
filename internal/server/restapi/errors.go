@@ -80,9 +80,9 @@ func errConnectionFailed(msg string) UnprocessableEntityJSONResponse {
 }
 
 // codeSecretRequired marks a 422 raised because an edit moved a media server,
-// download client or indexer to another address without its secret. The
-// form keeps a blank secret field as "unchanged", so the generic 422 says
-// nothing about the one field the operator has to fill in.
+// download client, indexer or OIDC provider to another address without its
+// secret. The form keeps a blank secret field as "unchanged", so the generic
+// 422 says nothing about the one field the operator has to fill in.
 const codeSecretRequired = "secret_required"
 
 // codeSecretFileManaged marks a 403 raised because the secret the edit would
@@ -91,8 +91,9 @@ const codeSecretRequired = "secret_required"
 // and needs to edit the config file instead.
 const codeSecretFileManaged = "secret_file_managed"
 
-// errResourceUpdate maps a media server, download client or indexer update
-// error that is not a 404 onto its 403 or its 422; exactly one is non-nil.
+// errResourceUpdate maps a media server, download client, indexer or OIDC
+// provider update error that is not a 404 onto its 403 or its 422; exactly one
+// is non-nil.
 func errResourceUpdate(
 	err error,
 ) (forbidden *ForbiddenJSONResponse, unprocessable *UnprocessableEntityJSONResponse) {

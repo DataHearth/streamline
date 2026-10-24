@@ -10,10 +10,10 @@ import (
 
 var (
 	// ErrSecretRequired refuses an edit that moves a media server, download
-	// client or indexer to another address while keeping its stored secret.
-	// A blank secret in a patch means "keep the stored one", so without this a
-	// typo in the host, or a stale address, handed the token, password or API
-	// key to a machine it was never meant for on the next call.
+	// client, indexer or OIDC provider to another address while keeping its
+	// stored secret. A blank secret in a patch means "keep the stored one", so
+	// without this a typo in the host, or a stale address, handed the token,
+	// password or API key to a machine it was never meant for on the next call.
 	ErrSecretRequired = errors.New(
 		"the address changed: enter the secret again to send it to the new address",
 	)
@@ -48,6 +48,18 @@ func urlDestination(raw string) string {
 		}
 	}
 	return scheme + "://" + net.JoinHostPort(strings.ToLower(u.Hostname()), port)
+}
+
+// issuerDestination is urlDestination keeping the path: an OIDC issuer names
+// a tenant or a realm by path as often as by host
+// (login.microsoftonline.com/{tenant}, /realms/{name}), and each is a party of
+// its own. Only a trailing slash is ignored.
+func issuerDestination(raw string) string {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Host == "" {
+		return urlDestination(raw)
+	}
+	return urlDestination(raw) + strings.TrimRight(u.EscapedPath(), "/")
 }
 
 // hostDestination is urlDestination for an entry that stores host, port and

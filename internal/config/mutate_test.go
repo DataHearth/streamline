@@ -5,6 +5,9 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -16,10 +19,16 @@ import (
 // startDiscoveryServer spins up an httptest.Server that serves a minimal
 // OIDC discovery document at /.well-known/openid-configuration. Returns the
 // server (for cleanup) and its base URL (the "issuer").
+// startDiscoveryServer answers discovery under any issuer path on its origin,
+// so a spec can move an issuer to another realm of the same server.
 func startDiscoveryServer() *httptest.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/.well-known/openid-configuration",
-		func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/{path...}",
+		func(w http.ResponseWriter, r *http.Request) {
+			if !strings.HasSuffix(r.URL.Path, "/.well-known/openid-configuration") {
+				http.NotFound(w, r)
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write(
 				[]byte(
@@ -366,17 +375,68 @@ var _ = Describe("Config mutate", Label("unit", "config"), func() {
 			Entry("email linking", config.OIDCEmailLinkingNonAdmin, false),
 		)
 
-		It("re-points an untrusted provider", func() {
+		It("re-points an untrusted provider with its client secret", func() {
 			other := startDiscoveryServer()
 			DeferCleanup(other.Close)
 
+			secret := "other-secret"
 			Expect(config.UpdateOIDCProvider(
 				context.Background(),
 				"acme",
-				config.OIDCProviderPatch{Issuer: &other.URL},
+				config.OIDCProviderPatch{Issuer: &other.URL, ClientSecret: &secret},
 			)).To(Succeed())
 
-			Expect(config.Get().Auth.OIDC[0].Issuer).To(Equal(other.URL))
+			got := config.Get().Auth.OIDC[0]
+			Expect(got.Issuer).To(Equal(other.URL))
+			Expect(got.ClientSecret).To(Equal("other-secret"))
+		})
+
+		// The secret is presented to the issuer's token endpoint at the next
+		// login: kept across a re-point, it goes to an IdP that never issued it.
+		It("refuses to re-point without the client secret", func() {
+			other := startDiscoveryServer()
+			DeferCleanup(other.Close)
+
+			blank := ""
+			for _, p := range []config.OIDCProviderPatch{
+				{Issuer: &other.URL},
+				{Issuer: &other.URL, ClientSecret: &blank},
+			} {
+				Expect(config.UpdateOIDCProvider(context.Background(), "acme", p)).
+					To(MatchError(config.ErrSecretRequired))
+			}
+			got := config.Get().Auth.OIDC[0]
+			Expect(got.Issuer).To(Equal(srv.URL))
+			Expect(got.ClientSecret).To(Equal("secret"))
+		})
+
+		It("counts a path change as a re-point, not a trailing slash", func() {
+			slash := srv.URL + "/"
+			Expect(config.UpdateOIDCProvider(context.Background(), "acme",
+				config.OIDCProviderPatch{Issuer: &slash})).To(Succeed())
+			Expect(config.Get().Auth.OIDC[0].ClientSecret).To(Equal("secret"))
+
+			realm := srv.URL + "/realms/other"
+			Expect(config.UpdateOIDCProvider(context.Background(), "acme",
+				config.OIDCProviderPatch{Issuer: &realm})).
+				To(MatchError(config.ErrSecretRequired))
+		})
+
+		It("refuses any re-point of a file-backed client secret", func() {
+			secretPath := filepath.Join(GinkgoT().TempDir(), "oidc.secret")
+			Expect(os.WriteFile(secretPath, []byte("secret\n"), 0o600)).To(Succeed())
+			Expect(config.Update(context.Background(), func(c *config.Config) error {
+				c.Auth.OIDC[0].ClientSecret = ""
+				c.Auth.OIDC[0].ClientSecretFile = secretPath
+				return nil
+			})).To(Succeed())
+			other := startDiscoveryServer()
+			DeferCleanup(other.Close)
+
+			Expect(config.UpdateOIDCProvider(context.Background(), "acme",
+				config.OIDCProviderPatch{Issuer: &other.URL})).
+				To(MatchError(config.ErrSecretFileDestination))
+			Expect(config.Get().Auth.OIDC[0].Issuer).To(Equal(srv.URL))
 		})
 
 		It("probes new issuer when patched", func() {

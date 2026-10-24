@@ -626,7 +626,8 @@ func (s *Server) CreateOIDCProvider(
 }
 
 // UpdateOIDCProvider merges patch fields into the named provider. Blank
-// client_secret preserves the existing secret. Flips the restart flag.
+// client_secret preserves the existing secret, except across an issuer change
+// (422 secret_required). Flips the restart flag.
 func (s *Server) UpdateOIDCProvider(
 	ctx context.Context,
 	req UpdateOIDCProviderRequestObject,
@@ -650,9 +651,15 @@ func (s *Server) UpdateOIDCProvider(
 		return UpdateOIDCProvider422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
-	case configLocked(err):
-		return UpdateOIDCProvider403JSONResponse{
-			ForbiddenJSONResponse: forbiddenResp(err.Error()),
+	case errors.Is(err, config.ErrSecretRequired), configLocked(err):
+		forbidden, unprocessable := errResourceUpdate(err)
+		if forbidden != nil {
+			return UpdateOIDCProvider403JSONResponse{
+				ForbiddenJSONResponse: *forbidden,
+			}, nil
+		}
+		return UpdateOIDCProvider422JSONResponse{
+			UnprocessableEntityJSONResponse: *unprocessable,
 		}, nil
 	case err != nil:
 		return nil, err

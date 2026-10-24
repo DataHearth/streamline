@@ -684,9 +684,11 @@ func AddOIDCProvider(ctx context.Context, p OIDCConfig) error {
 }
 
 // UpdateOIDCProvider merges the patch into the named provider. An empty/nil
-// ClientSecret is treated as "keep existing" so the UI doesn't have to
-// re-surface the secret just to let the admin change the issuer. When Issuer
-// is patched the new URL is probed before the Update is written.
+// ClientSecret is treated as "keep existing", except across an issuer change:
+// the secret is presented to the issuer's token endpoint at the next login, so
+// keeping it would hand it to an IdP it was never issued by (ErrSecretRequired,
+// or ErrSecretFileDestination for a client_secret_file). When Issuer is patched
+// the new URL is probed before the Update is written.
 func UpdateOIDCProvider(
 	ctx context.Context,
 	name string,
@@ -733,9 +735,22 @@ func UpdateOIDCProvider(
 		if patch.ClientID != nil {
 			p.ClientID = *patch.ClientID
 		}
+		var secret *string
 		if patch.ClientSecret != nil &&
 			strings.TrimSpace(*patch.ClientSecret) != "" {
 			p.ClientSecret = *patch.ClientSecret
+			secret = patch.ClientSecret
+		}
+		if issuerDestination(
+			p.Issuer,
+		) != issuerDestination(
+			c.Auth.OIDC[idx].Issuer,
+		) {
+			if err := guardMovedSecret(
+				&p.ClientSecret, p.ClientSecretFile, secret, true,
+			); err != nil {
+				return err
+			}
 		}
 		c.Auth.OIDC[idx] = p
 		return nil

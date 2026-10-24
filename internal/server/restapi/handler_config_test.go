@@ -612,6 +612,42 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 			Expect(config.Get().Auth.OIDC[0].ClientID).To(Equal("new-cid"))
 			Expect(config.Get().Auth.OIDC[0].ClientSecret).To(Equal("s"))
 
+			By(
+				"PATCH moving the issuer without client_secret is 422 secret_required",
+			)
+			other := startFakeOIDC()
+			DeferCleanup(other.Close)
+			respM := app.do(
+				jsonReq(
+					app,
+					http.MethodPatch,
+					"/api/v1/config/oidc/acme",
+					strings.NewReader(`{"issuer":"`+other.URL+`"}`),
+				),
+			)
+			defer respM.Body.Close()
+			Expect(respM.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			var refused Error
+			Expect(json.NewDecoder(respM.Body).Decode(&refused)).To(Succeed())
+			Expect(refused.Code).To(HaveValue(Equal("secret_required")))
+			Expect(config.Get().Auth.OIDC[0].Issuer).To(Equal(oidc.URL))
+
+			By("PATCH moving the issuer with client_secret succeeds")
+			respM2 := app.do(
+				jsonReq(
+					app,
+					http.MethodPatch,
+					"/api/v1/config/oidc/acme",
+					strings.NewReader(
+						`{"issuer":"`+other.URL+`","client_secret":"s2"}`,
+					),
+				),
+			)
+			defer respM2.Body.Close()
+			Expect(respM2.StatusCode).To(Equal(http.StatusOK))
+			Expect(config.Get().Auth.OIDC[0].Issuer).To(Equal(other.URL))
+			Expect(config.Get().Auth.OIDC[0].ClientSecret).To(Equal("s2"))
+
 			By("DELETE /config/oidc/acme removes it")
 			respD := app.do(
 				app.req(

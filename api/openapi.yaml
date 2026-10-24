@@ -4248,8 +4248,12 @@ paths:
       summary: Update an OIDC provider (admin)
       description: |
         Updates issuer/client_id/client_secret on an existing provider.
-        Leaving client_secret blank preserves the current secret. Takes effect
-        after the process restarts.
+        Leaving client_secret blank preserves the current secret, except when
+        `issuer` changes (a trailing slash aside): the secret is presented to
+        the issuer's token endpoint, so the update is refused with `422`
+        `code: secret_required` until it is sent again, and with `403`
+        `code: secret_file_managed` when it comes from `client_secret_file`.
+        Takes effect after the process restarts.
       tags: [config, admin]
       security:
         - BearerAuth: []
