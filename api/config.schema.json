@@ -51,7 +51,26 @@
         "api_key_file": { "type": "string" },
         "enabled": { "type": "boolean" },
         "library_section": { "type": ["string", "null"] },
-        "library_section_tv": { "type": ["string", "null"] }
+        "library_section_tv": { "type": ["string", "null"] },
+        "path_mappings": {
+          "type": "array",
+          "description": "Rewrites a folder as streamline sees it into the path the media server knows it by, before a targeted rescan is sent and before Plex sections are matched. First matching prefix wins; empty means both see the same paths. A folder no section or library of the server contains falls back to rescanning the whole library.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to"],
+            "properties": {
+              "from": {
+                "type": "string",
+                "description": "Absolute prefix as streamline sees it."
+              },
+              "to": {
+                "type": "string",
+                "description": "Absolute prefix as the media server sees it (a Windows path such as D:\\Movies is accepted)."
+              }
+            }
+          }
+        }
       }
     },
     "downloadClientEntry": {

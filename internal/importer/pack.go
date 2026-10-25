@@ -53,7 +53,10 @@ func (w *Worker) importPackRecord(
 	slices.Sort(dirs)
 
 	matched := map[uint32]struct{}{}
-	var errs []error
+	var (
+		errs    []error
+		changed []string
+	)
 	for _, d := range dirs {
 		alb := library.MatchPackDir(d, linked)
 		if alb == nil {
@@ -65,7 +68,10 @@ func (w *Worker) importPackRecord(
 			continue
 		}
 		matched[alb.ID] = struct{}{}
-		held, err := w.importAlbumFiles(ctx, span, rec, alb, byDir[d], libCfg, true)
+		placed, held, err := w.importAlbumFiles(
+			ctx, span, rec, alb, byDir[d], libCfg, true,
+		)
+		changed = append(changed, placed...)
 		switch {
 		case held:
 			return nil
@@ -102,6 +108,6 @@ func (w *Worker) importPackRecord(
 
 	libCfg.ImportMode = albumImportMode(libCfg)
 	w.cleanupTorrent(ctx, rec, libCfg)
-	w.refreshMediaServers(ctx, mediaserver.KindMusic, libCfg.MusicPath)
+	w.refreshMediaServers(ctx, mediaserver.KindMusic, libCfg.MusicPath, changed...)
 	return nil
 }

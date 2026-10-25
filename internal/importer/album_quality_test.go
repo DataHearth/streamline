@@ -225,7 +225,7 @@ var _ = Describe(
 					MarkRequestsAvailableByMBID(mock.Anything, "album", mock.Anything).
 					Return(nil).Maybe()
 				msMk.EXPECT().
-					RefreshAll(mock.Anything, "music", musicDir).
+					RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
 					Return(nil).
 					Once()
 
@@ -255,7 +255,7 @@ var _ = Describe(
 				MarkRequestsAvailableByMBID(mock.Anything, "album", mock.Anything).
 				Return(nil).Maybe()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, "music", musicDir).
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -283,7 +283,7 @@ var _ = Describe(
 				MarkRequestsAvailableByMBID(mock.Anything, "album", mock.Anything).
 				Return(nil).Maybe()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, "music", musicDir).
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
 				Return(nil).
 				Once()
 

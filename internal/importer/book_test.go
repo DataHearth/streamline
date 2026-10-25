@@ -112,7 +112,10 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 		w = NewWorker(Deps{
 			DB: db.New(client), Library: library.NewImportService(), MediaServer: ms,
 		})
-		ms.EXPECT().RefreshAll(mock.Anything, "book", ebooks).Return(nil).Once()
+		ms.EXPECT().
+			RefreshAll(mock.Anything, "book", ebooks, mock.Anything).
+			Return(nil).
+			Once()
 		src := filepath.Join(tmp, "dl")
 		write(src, "elantris.epub", "epub bytes")
 

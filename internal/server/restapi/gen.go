@@ -1734,6 +1734,42 @@ func (e MediaServerDiscoveryRequestServerType) Valid() bool {
 	}
 }
 
+// Defines values for MediaServerRefreshStatusOutcome.
+const (
+	MediaServerRefreshStatusOutcomeError MediaServerRefreshStatusOutcome = "error"
+	MediaServerRefreshStatusOutcomeOk    MediaServerRefreshStatusOutcome = "ok"
+)
+
+// Valid indicates whether the value is a known member of the MediaServerRefreshStatusOutcome enum.
+func (e MediaServerRefreshStatusOutcome) Valid() bool {
+	switch e {
+	case MediaServerRefreshStatusOutcomeError:
+		return true
+	case MediaServerRefreshStatusOutcomeOk:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaServerRefreshStatusScope.
+const (
+	MediaServerRefreshStatusScopeFolders MediaServerRefreshStatusScope = "folders"
+	MediaServerRefreshStatusScopeLibrary MediaServerRefreshStatusScope = "library"
+)
+
+// Valid indicates whether the value is a known member of the MediaServerRefreshStatusScope enum.
+func (e MediaServerRefreshStatusScope) Valid() bool {
+	switch e {
+	case MediaServerRefreshStatusScopeFolders:
+		return true
+	case MediaServerRefreshStatusScopeLibrary:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MediaServerUpdateServerType.
 const (
 	MediaServerUpdateServerTypeEmby     MediaServerUpdateServerType = "emby"
@@ -6061,13 +6097,19 @@ type MediaServer struct {
 	Enabled   bool   `json:"enabled"`
 	Host      string `json:"host"`
 
+	// LastRefresh The last rescan streamline sent this server since it started, null before the first. Refreshes are collected for 30 seconds and sent together, so a fresh import shows here up to that long after.
+	LastRefresh *MediaServerRefreshStatus `json:"last_refresh,omitempty"`
+
 	// LibrarySection Plex section key holding movies. Null on Jellyfin / Emby.
 	LibrarySection *string `json:"library_section,omitempty"`
 
 	// LibrarySectionTv Plex section key holding TV. Null on Jellyfin / Emby.
-	LibrarySectionTv *string               `json:"library_section_tv,omitempty"`
-	Name             string                `json:"name"`
-	ServerType       MediaServerServerType `json:"server_type"`
+	LibrarySectionTv *string `json:"library_section_tv,omitempty"`
+	Name             string  `json:"name"`
+
+	// PathMappings Rewrites a folder as streamline sees it into the path the server knows it by, before a targeted rescan is sent and before Plex sections are matched. First matching prefix wins; empty means both see the same paths.
+	PathMappings *[]MediaServerPathMapping `json:"path_mappings,omitempty"`
+	ServerType   MediaServerServerType     `json:"server_type"`
 }
 
 // MediaServerServerType defines model for MediaServer.ServerType.
@@ -6075,13 +6117,16 @@ type MediaServerServerType string
 
 // MediaServerCreate defines model for MediaServerCreate.
 type MediaServerCreate struct {
-	ApiKey           string                      `json:"api_key"`
-	Enabled          *bool                       `json:"enabled,omitempty"`
-	Host             string                      `json:"host"`
-	LibrarySection   *string                     `json:"library_section,omitempty"`
-	LibrarySectionTv *string                     `json:"library_section_tv,omitempty"`
-	Name             string                      `json:"name"`
-	ServerType       MediaServerCreateServerType `json:"server_type"`
+	ApiKey           string  `json:"api_key"`
+	Enabled          *bool   `json:"enabled,omitempty"`
+	Host             string  `json:"host"`
+	LibrarySection   *string `json:"library_section,omitempty"`
+	LibrarySectionTv *string `json:"library_section_tv,omitempty"`
+	Name             string  `json:"name"`
+
+	// PathMappings Replaces the whole list when present; an empty list clears it.
+	PathMappings *[]MediaServerPathMapping   `json:"path_mappings,omitempty"`
+	ServerType   MediaServerCreateServerType `json:"server_type"`
 }
 
 // MediaServerCreateServerType defines model for MediaServerCreate.ServerType.
@@ -6107,6 +6152,36 @@ type MediaServerListView struct {
 	Items []MediaServer `json:"items"`
 }
 
+// MediaServerPathMapping defines model for MediaServerPathMapping.
+type MediaServerPathMapping struct {
+	// From Absolute prefix as streamline sees it.
+	From string `json:"from"`
+
+	// To Absolute prefix as the media server sees it. A Windows path (`D:\Movies`, `\\nas\movies`) is accepted for a server running on Windows.
+	To string `json:"to"`
+}
+
+// MediaServerRefreshStatus The last rescan streamline sent this server since it started, null before the first. Refreshes are collected for 30 seconds and sent together, so a fresh import shows here up to that long after.
+type MediaServerRefreshStatus struct {
+	At time.Time `json:"at"`
+
+	// Error What the server or the connection answered, on an error.
+	Error *string `json:"error,omitempty"`
+
+	// Folders How many folders a folders-scope rescan named.
+	Folders int                             `json:"folders"`
+	Outcome MediaServerRefreshStatusOutcome `json:"outcome"`
+
+	// Scope folders when only the changed folders were rescanned, library when the whole section (Plex) or every library (Jellyfin, Emby) was — no folder given, or one lay outside everything the server reports, which usually means a missing path mapping. Absent when the request failed before the server was asked.
+	Scope *MediaServerRefreshStatusScope `json:"scope,omitempty"`
+}
+
+// MediaServerRefreshStatusOutcome defines model for MediaServerRefreshStatus.Outcome.
+type MediaServerRefreshStatusOutcome string
+
+// MediaServerRefreshStatusScope folders when only the changed folders were rescanned, library when the whole section (Plex) or every library (Jellyfin, Emby) was — no folder given, or one lay outside everything the server reports, which usually means a missing path mapping. Absent when the request failed before the server was asked.
+type MediaServerRefreshStatusScope string
+
 // MediaServerSection defines model for MediaServerSection.
 type MediaServerSection struct {
 	Key       string   `json:"key"`
@@ -6117,13 +6192,16 @@ type MediaServerSection struct {
 
 // MediaServerUpdate defines model for MediaServerUpdate.
 type MediaServerUpdate struct {
-	ApiKey           *string                      `json:"api_key,omitempty"`
-	Enabled          *bool                        `json:"enabled,omitempty"`
-	Host             *string                      `json:"host,omitempty"`
-	LibrarySection   *string                      `json:"library_section,omitempty"`
-	LibrarySectionTv *string                      `json:"library_section_tv,omitempty"`
-	Name             *string                      `json:"name,omitempty"`
-	ServerType       *MediaServerUpdateServerType `json:"server_type,omitempty"`
+	ApiKey           *string `json:"api_key,omitempty"`
+	Enabled          *bool   `json:"enabled,omitempty"`
+	Host             *string `json:"host,omitempty"`
+	LibrarySection   *string `json:"library_section,omitempty"`
+	LibrarySectionTv *string `json:"library_section_tv,omitempty"`
+	Name             *string `json:"name,omitempty"`
+
+	// PathMappings Replaces the whole list when present; an empty list clears it.
+	PathMappings *[]MediaServerPathMapping    `json:"path_mappings,omitempty"`
+	ServerType   *MediaServerUpdateServerType `json:"server_type,omitempty"`
 }
 
 // MediaServerUpdateServerType defines model for MediaServerUpdate.ServerType.

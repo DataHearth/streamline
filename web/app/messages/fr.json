@@ -2778,5 +2778,15 @@
 	"users_subsonic_max_bitrate_help": "Les flux au-delà sont convertis, même quand l'application demande le fichier d'origine. Nécessite ffmpeg.",
 	"users_subsonic_no_limit": "Sans limite",
 	"users_subsonic_kbps": "{kbps} kb/s",
-	"users_subsonic_permissions": "Autorisations"
+	"users_subsonic_permissions": "Autorisations",
+	"mediaserver_path_add": "Ajouter une correspondance",
+	"mediaserver_path_from": "Chemin dans Streamline",
+	"mediaserver_path_mappings": "Correspondance des chemins",
+	"mediaserver_path_mappings_help": "Après un import, un renommage ou une suppression, Streamline demande à ce serveur de ne réanalyser que le dossier modifié. Si le serveur voit la bibliothèque sous d’autres chemins (un conteneur qui la monte ailleurs), associez chaque dossier de Streamline à celui du serveur. Un dossier que le serveur ne connaît pas entraîne la réanalyse de toute sa bibliothèque.",
+	"mediaserver_path_remove": "Supprimer la correspondance",
+	"mediaserver_path_to": "Chemin sur le serveur",
+	"mediaserver_refresh_failed": "Dernière réanalyse {when} en échec : {error}",
+	"mediaserver_refresh_folders_one": "Dernière réanalyse {when} : 1 dossier",
+	"mediaserver_refresh_folders_other": "Dernière réanalyse {when} : {count} dossiers",
+	"mediaserver_refresh_library": "Dernière réanalyse {when} : toute la bibliothèque"
 }

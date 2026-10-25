@@ -5,7 +5,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log/slog"
+	"path/filepath"
+	"regexp"
+	"strings"
 )
 
 var (
@@ -74,6 +78,9 @@ type MediaServerPatch struct {
 	Enabled          *bool
 	LibrarySection   *string
 	LibrarySectionTV *string
+	// PathMappings replaces the whole list when non-nil; a pointer to an empty
+	// slice clears it.
+	PathMappings *[]MediaServerPathMapping
 }
 
 // validateMediaServer enforces cross-field invariants on the resulting entry.
@@ -94,6 +101,38 @@ func validateMediaServer(e *MediaServerEntry) error {
 	if (e.LibrarySection != nil || e.LibrarySectionTV != nil) &&
 		e.ServerType != "plex" {
 		return ErrLibrarySectionNotPlex
+	}
+	return checkMediaServerPathMappings(e.PathMappings)
+}
+
+// windowsAbsPath matches a drive-rooted (D:\Movies, D:/Movies) or UNC
+// (\\nas\movies) path: a media server on Windows reports its folders that way,
+// and filepath.IsAbs on this side would refuse them.
+var windowsAbsPath = regexp.MustCompile(`^([A-Za-z]:[\\/]|\\\\[^\\])`)
+
+// checkMediaServerPathMappings rejects a mapping list before it is stored.
+// from is matched against paths this process builds, so it must be absolute
+// here; to only travels to the server, so a Windows path is accepted for it.
+func checkMediaServerPathMappings(v []MediaServerPathMapping) error {
+	for i, m := range v {
+		if strings.TrimSpace(m.From) == "" {
+			return fmt.Errorf("path_mappings[%d].from: must not be empty", i)
+		}
+		if !filepath.IsAbs(m.From) {
+			return fmt.Errorf(
+				"path_mappings[%d].from: must be an absolute path, got %q",
+				i, m.From,
+			)
+		}
+		if strings.TrimSpace(m.To) == "" {
+			return fmt.Errorf("path_mappings[%d].to: must not be empty", i)
+		}
+		if !strings.HasPrefix(m.To, "/") && !windowsAbsPath.MatchString(m.To) {
+			return fmt.Errorf(
+				"path_mappings[%d].to: must be an absolute path, got %q",
+				i, m.To,
+			)
+		}
 	}
 	return nil
 }
@@ -150,6 +189,9 @@ func UpdateMediaServer(ctx context.Context, name string, p MediaServerPatch) err
 		}
 		if p.LibrarySectionTV != nil {
 			e.LibrarySectionTV = p.LibrarySectionTV
+		}
+		if p.PathMappings != nil {
+			e.PathMappings = *p.PathMappings
 		}
 		if urlDestination(
 			e.Host,

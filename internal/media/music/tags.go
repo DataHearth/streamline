@@ -123,9 +123,10 @@ func (s *Service) SyncTags(ctx context.Context) error {
 		"unchanged", res.counts[tagUnchanged],
 		"deferred", res.counts[tagDeferred],
 		"failed", res.counts[tagFailed])
-	if (res.counts[tagWritten] > 0 || res.sidecars) && s.ms != nil {
+	if len(res.changed) > 0 && s.ms != nil {
 		mediaserver.RefreshInBackground(
 			ctx, s.ms, mediaserver.KindMusic, config.Get().Library.MusicPath,
+			res.changed...,
 		)
 	}
 	return nil
@@ -273,8 +274,9 @@ func (s *Service) tagsChanged(ctx context.Context, albumIDs ...uint32) {
 type tagResult struct {
 	counts map[string]int
 	albums map[uint32]bool
-	// sidecars is whether a cover or folder image was written or removed.
-	sidecars bool
+	// changed holds every file written and every folder whose cover or
+	// folder image was written or removed: what the media servers rescan.
+	changed []string
 }
 
 // tagFiles writes each file's tags, album by album so an album's tree is
@@ -320,6 +322,7 @@ func (s *Service) tagFiles(
 				attribute.String("outcome", outcome)))
 			if outcome == tagWritten {
 				res.albums[albumID] = true
+				res.changed = append(res.changed, mf.Path)
 			}
 			done++
 			if progress != nil {
@@ -328,8 +331,8 @@ func (s *Service) tagFiles(
 		}
 		// The folder images follow the files: an album whose every file a
 		// torrent still holds waits for them.
-		if reached && at.sidecars(ctx, artistsDone) {
-			res.sidecars = true
+		if reached {
+			res.changed = append(res.changed, at.sidecars(ctx, artistsDone)...)
 		}
 	}
 	return res

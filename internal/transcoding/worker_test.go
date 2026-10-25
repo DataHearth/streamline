@@ -207,7 +207,7 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		mf := seedMovieFile("hevc")
 		job := queueJob(mf)
 		ms.EXPECT().
-			RefreshAll(mock.Anything, "movie", movieRoot).
+			RefreshAll(mock.Anything, "movie", movieRoot, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -399,7 +399,10 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		GinkgoT().Setenv("FAKE_VMAF_MISSING", "1")
 		mf := seedMovieFile("hevc")
 		job := queueJob(mf)
-		ms.EXPECT().RefreshAll(mock.Anything, "movie", movieRoot).Return(nil).Once()
+		ms.EXPECT().
+			RefreshAll(mock.Anything, "movie", movieRoot, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(worker.tick(ctx)).To(BeTrue())
 
@@ -478,7 +481,7 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		seedTorrent(mf, "abc")
 		job := queueJob(mf)
 		ms.EXPECT().
-			RefreshAll(mock.Anything, "movie", movieRoot).
+			RefreshAll(mock.Anything, "movie", movieRoot, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -492,7 +495,7 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		mf := seedMovieFile("hevc")
 		job := queueJob(mf)
 		ms.EXPECT().
-			RefreshAll(mock.Anything, "movie", movieRoot).
+			RefreshAll(mock.Anything, "movie", movieRoot, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -513,7 +516,7 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 				Return(status, lookupErr).
 				Once()
 			ms.EXPECT().
-				RefreshAll(mock.Anything, "movie", movieRoot).
+				RefreshAll(mock.Anything, "movie", movieRoot, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -576,7 +579,7 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		mf := seedMovieFile("hevc")
 		job := queueJob(mf)
 		ms.EXPECT().
-			RefreshAll(mock.Anything, "movie", movieRoot).
+			RefreshAll(mock.Anything, "movie", movieRoot, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -612,7 +615,7 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 			mf := seedMovieFileExt("hevc", ".avi")
 			job := queueJob(mf)
 			ms.EXPECT().
-				RefreshAll(mock.Anything, "movie", movieRoot).
+				RefreshAll(mock.Anything, "movie", movieRoot, mock.Anything).
 				Return(nil).
 				Once()
 

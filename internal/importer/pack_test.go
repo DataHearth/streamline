@@ -143,7 +143,7 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 				Return(nil).
 				Once()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, "music", musicDir).
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -182,7 +182,10 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		)).Return(nil).Once()
 		storeMk.EXPECT().CompletePackRecord(mock.Anything, uint32(1), []uint32(nil)).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -238,7 +241,10 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		expectFind(rec)
 		storeMk.EXPECT().CompletePackRecord(mock.Anything, uint32(1), []uint32(nil)).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -259,7 +265,10 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		)).Return(nil).Once()
 		storeMk.EXPECT().CompletePackRecord(mock.Anything, uint32(1), []uint32(nil)).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -282,7 +291,10 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		)).Return(nil).Once()
 		storeMk.EXPECT().CompletePackRecord(mock.Anything, uint32(1), []uint32(nil)).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -305,7 +317,10 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 				return !p.KeepRecord && len(p.Files) == 1
 			},
 		)).Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})

@@ -138,8 +138,8 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 					mock.Anything, uint32(20), mock.AnythingOfType("string"),
 				).Return(nil).Once()
 				refreshed := make(chan struct{})
-				msMk.RefreshAll(mock.Anything, "series", tmp).
-					Run(func(context.Context, string, string) { close(refreshed) }).
+				msMk.RefreshAll(mock.Anything, "series", tmp, mock.Anything).
+					Run(func(context.Context, string, string, ...string) { close(refreshed) }).
 					Return(nil).Once()
 
 				plan, err := svc.Apply(ctx, showID)

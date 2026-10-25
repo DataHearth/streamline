@@ -82,19 +82,23 @@ var _ = Describe("Book lifecycle", Label("unit", "integration", "books"), func()
 			ms := msmocks.NewMockRefresher(GinkgoT())
 			f.svc.ms = ms
 			done := make(chan struct{}, 2)
-			ms.EXPECT().RefreshAll(mock.Anything, "book", mock.Anything).
-				RunAndReturn(func(context.Context, string, string) error {
+			file := filepath.Join(f.dir, "ebooks", "x.epub")
+			// The ebook root only: nothing changed under the audiobook one.
+			ms.EXPECT().RefreshAll(
+				mock.Anything, "book", filepath.Join(f.dir, "ebooks"),
+				[]string{file},
+			).
+				RunAndReturn(func(context.Context, string, string, ...string) error {
 					done <- struct{}{}
 					return nil
-				}).Times(2)
+				}).Once()
 			b := f.addBook(1, "Elantris", "")
-			attach(b, mediafile.BookKindEbook,
-				write(filepath.Join(f.dir, "ebooks", "x.epub")))
+			attach(b, mediafile.BookKindEbook, write(file))
 
 			Expect(f.svc.DeleteBook(f.ctx, b.ID, true)).To(Succeed())
 
 			Eventually(done).Should(Receive())
-			Eventually(done).Should(Receive())
+			Consistently(done, "50ms").ShouldNot(Receive())
 		})
 
 		It("keeps the files unless asked", func() {

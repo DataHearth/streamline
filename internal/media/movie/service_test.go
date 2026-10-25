@@ -65,8 +65,8 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 	// channel rather than racing the mock's end-of-spec assertion.
 	expectRefresh := func(root string) chan struct{} {
 		done := make(chan struct{})
-		msMock.RefreshAll(mock.Anything, "movie", root).
-			Run(func(context.Context, string, string) { close(done) }).
+		msMock.RefreshAll(mock.Anything, "movie", root, mock.Anything).
+			Run(func(context.Context, string, string, ...string) { close(done) }).
 			Return(nil).Once()
 		return done
 	}

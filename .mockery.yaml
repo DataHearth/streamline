@@ -65,7 +65,12 @@ packages:
   github.com/datahearth/streamline/internal/mediaserver:
     interfaces:
       Manager: {}
-      Refresher: {}
+      # paths stays one argument, so an expectation matches any of them with
+      # a single mock.Anything instead of naming every path.
+      Refresher:
+        config:
+          template-data:
+            unroll-variadic: false
       Server: {}
   github.com/datahearth/streamline/internal/mailer:
     interfaces:

@@ -186,7 +186,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 				Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
 				Return(nil).Once()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, "music", musicDir).
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -233,7 +233,10 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		expectFind(rec)
 		storeMk.EXPECT().
 			RecordAlbumImportSuccess(mock.Anything, mock.Anything).Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 		covers.EXPECT().ResolveCoversInBackground(mock.Anything, uint32(5)).Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
@@ -252,7 +255,10 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		expectFind(rec)
 		storeMk.EXPECT().
 			RecordAlbumImportSuccess(mock.Anything, mock.Anything).Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 		Expect(tagger.calls).To(Equal([]uint32{alb.ID}))
@@ -271,7 +277,10 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 			RecordAlbumImportSuccess(mock.Anything, mock.MatchedBy(
 				func(p db.RecordAlbumImportSuccessParams) bool { return len(p.Files) == 3 },
 			)).Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 		Expect(logs.String()).NotTo(ContainSubstring("tracks still missing"))
@@ -287,7 +296,10 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 			RecordAlbumImportSuccess(mock.Anything, mock.MatchedBy(
 				func(p db.RecordAlbumImportSuccessParams) bool { return len(p.Files) == 1 },
 			)).Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -319,7 +331,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 					Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
 					Return(nil).Once()
 				msMk.EXPECT().
-					RefreshAll(mock.Anything, "music", musicDir).
+					RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
 					Return(nil).
 					Once()
 
@@ -358,7 +370,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 					Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
 					Return(nil).Once()
 				msMk.EXPECT().
-					RefreshAll(mock.Anything, "music", musicDir).
+					RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
 					Return(nil).
 					Once()
 
@@ -389,7 +401,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 				RecordAlbumImportSuccess(mock.Anything, mock.Anything).
 				Return(nil).Once()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, "music", musicDir).
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -413,7 +425,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 				RecordAlbumImportSuccess(mock.Anything, mock.Anything).
 				Return(nil).Once()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, "music", musicDir).
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
 				Return(nil).
 				Once()
 			dlMk.EXPECT().RemoveTorrent(mock.Anything, "qbit", "hash", true).
@@ -437,9 +449,11 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 				Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
 				Return(nil).Once()
 			refreshed := false
-			msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).
-				Run(func(context.Context, string, string) { refreshed = true }).
-				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+				Run(func(context.Context, string, string, ...string) { refreshed = true }).
+				Return(nil).
+				Once()
 			tagger.onCall = func() { Expect(refreshed).To(BeFalse()) }
 
 			Expect(w.runImport(context.Background(), 1)).To(Succeed())
@@ -463,7 +477,10 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 			RecordAlbumImportSuccess(mock.Anything, mock.Anything).
 			Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 
@@ -522,7 +539,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 					RecordAlbumImportSuccess(mock.Anything, mock.Anything).
 					Return(nil).Once()
 				msMk.EXPECT().
-					RefreshAll(mock.Anything, "music", musicDir).
+					RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
 					Return(nil).
 					Once()
 
@@ -619,8 +636,10 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 					RecordAlbumImportSuccess(mock.Anything, mock.Anything).
 					Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
 					Return(nil).Once()
-				msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).
-					Return(nil).Once()
+				msMk.EXPECT().
+					RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+					Return(nil).
+					Once()
 
 				Expect(w.runImport(context.Background(), 1)).To(Succeed())
 

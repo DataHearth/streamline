@@ -142,6 +142,47 @@ var _ = Describe(
 		})
 
 		Describe("UpdateMediaServer", func() {
+			It("replaces path_mappings and reads them back", func() {
+				configtest.SetupFile(mediaServerOverride(map[string]any{
+					"name": "home", "server_type": "jellyfin",
+					"host": "http://jf", "api_key": "keep", "enabled": true,
+				}))
+
+				body := `{"path_mappings": [{"from": "/srv/movies", "to": "/data/movies"}]}`
+				req := app.req(http.MethodPatch, "/api/v1/media-servers/home", "",
+					strings.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var view MediaServer
+				Expect(json.NewDecoder(resp.Body).Decode(&view)).To(Succeed())
+				Expect(
+					view.PathMappings,
+				).To(HaveValue(Equal([]MediaServerPathMapping{
+					{From: "/srv/movies", To: "/data/movies"},
+				})))
+				Expect(view.LastRefresh).To(BeNil())
+
+				resp2 := app.do(func() *http.Request {
+					r := app.req(
+						http.MethodPatch,
+						"/api/v1/media-servers/home",
+						"",
+						strings.NewReader(
+							`{"path_mappings": [{"from": "rel", "to": "/x"}]}`,
+						),
+					)
+					r.Header.Set("Content-Type", "application/json")
+					return r
+				}())
+				defer resp2.Body.Close()
+				Expect(resp2.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				got, _ := config.FindMediaServer("home")
+				Expect(got.PathMappings).To(HaveLen(1))
+			})
+
 			It("updates fields and returns 200, preserving blank api_key", func() {
 				configtest.SetupFile(mediaServerOverride(map[string]any{
 					"name": "home", "server_type": "plex",

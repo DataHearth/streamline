@@ -1,7 +1,9 @@
 package mediaserver
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -26,6 +28,14 @@ func NewJellyfin(baseURL, apiKey string) *Jellyfin {
 	}
 }
 
+// authorize sets the API key in both forms. Jellyfin 12 accepts only the
+// Authorization header and answers 401 to X-Emby-Token alone; Emby takes
+// either, and an older Emby only the X- header.
+func (j *Jellyfin) authorize(req *http.Request) {
+	req.Header.Set("Authorization", fmt.Sprintf("MediaBrowser Token=%q", j.apiKey))
+	req.Header.Set("X-Emby-Token", j.apiKey)
+}
+
 func (j *Jellyfin) TestConnection(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -36,7 +46,7 @@ func (j *Jellyfin) TestConnection(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("X-Emby-Token", j.apiKey)
+	j.authorize(req)
 
 	resp, err := j.client.Do(req)
 	if err != nil {
@@ -50,7 +60,49 @@ func (j *Jellyfin) TestConnection(ctx context.Context) error {
 	return nil
 }
 
-func (j *Jellyfin) RefreshLibrary(ctx context.Context, _, _ string) error {
+// RefreshLibrary reports the folders through /Library/Media/Updated, which
+// rescans just those, when every one lies under a location of the server's
+// libraries; otherwise, or without folders, it falls back to /Library/Refresh,
+// a scan of every library. Jellyfin and Emby share both endpoints. A path
+// outside every library is dropped silently by the server, so the locations
+// are checked here first.
+func (j *Jellyfin) RefreshLibrary(
+	ctx context.Context,
+	req RefreshRequest,
+) (RefreshScope, error) {
+	if len(req.Folders) > 0 {
+		locs, err := j.libraryLocations(ctx)
+		switch {
+		case err != nil:
+			slog.WarnContext(ctx,
+				"jellyfin: listing the libraries failed, rescanning all of them",
+				"error", err)
+		case allContained(req.Folders, locs):
+			return ScopeFolders, j.reportUpdated(ctx, req.Folders)
+		default:
+			slog.InfoContext(
+				ctx,
+				"jellyfin: a folder lies outside every library, rescanning all of them",
+				"folders",
+				req.Folders,
+				"path",
+				req.Root,
+			)
+		}
+	}
+	return ScopeLibrary, j.refreshAll(ctx)
+}
+
+func allContained(folders, locs []string) bool {
+	for _, f := range folders {
+		if longestContaining(f, locs) < 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func (j *Jellyfin) refreshAll(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
@@ -60,7 +112,7 @@ func (j *Jellyfin) RefreshLibrary(ctx context.Context, _, _ string) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("X-Emby-Token", j.apiKey)
+	j.authorize(req)
 
 	resp, err := j.client.Do(req)
 	if err != nil {
@@ -74,6 +126,104 @@ func (j *Jellyfin) RefreshLibrary(ctx context.Context, _, _ string) error {
 
 	slog.InfoContext(ctx, "jellyfin library refresh triggered")
 	return nil
+}
+
+type jellyfinMediaUpdate struct {
+	Path       string `json:"Path"`
+	UpdateType string `json:"UpdateType"`
+}
+
+type jellyfinMediaUpdated struct {
+	Updates []jellyfinMediaUpdate `json:"Updates"`
+}
+
+// reportUpdated tells the server these folders changed, in one request. The
+// update type is always Modified: a folder Streamline names still exists (a
+// removal is reported through its parent), and the server rescans the folder
+// whatever the type says.
+func (j *Jellyfin) reportUpdated(ctx context.Context, folders []string) error {
+	body := jellyfinMediaUpdated{
+		Updates: make([]jellyfinMediaUpdate, 0, len(folders)),
+	}
+	for _, f := range folders {
+		body.Updates = append(body.Updates, jellyfinMediaUpdate{
+			Path:       f,
+			UpdateType: "Modified",
+		})
+	}
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		j.baseURL+"/Library/Media/Updated",
+		bytes.NewReader(raw),
+	)
+	if err != nil {
+		return err
+	}
+	j.authorize(req)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := j.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(
+			"jellyfin media updated: unexpected status %d",
+			resp.StatusCode,
+		)
+	}
+
+	slog.InfoContext(ctx, "jellyfin folders rescan triggered", "folders", folders)
+	return nil
+}
+
+type jellyfinVirtualFolder struct {
+	Name      string   `json:"Name"`
+	Locations []string `json:"Locations"`
+}
+
+// libraryLocations lists every folder the server's libraries are built on,
+// in the server's own view.
+func (j *Jellyfin) libraryLocations(ctx context.Context) ([]string, error) {
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		j.baseURL+"/Library/VirtualFolders",
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+	j.authorize(req)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := j.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(
+			"jellyfin libraries: unexpected status %d",
+			resp.StatusCode,
+		)
+	}
+	var folders []jellyfinVirtualFolder
+	if err := otelx.DecodeJSON(resp.Body, maxSmallResponse, &folders); err != nil {
+		return nil, fmt.Errorf("jellyfin libraries decode: %w", err)
+	}
+	var out []string
+	for _, f := range folders {
+		out = append(out, f.Locations...)
+	}
+	return out, nil
 }
 
 type jellyfinItemsResponse struct {
@@ -226,7 +376,7 @@ func (j *Jellyfin) fetchItems(
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("X-Emby-Token", j.apiKey)
+	j.authorize(req)
 	req.Header.Set("Accept", "application/json")
 	resp, err := j.client.Do(req)
 	if err != nil {

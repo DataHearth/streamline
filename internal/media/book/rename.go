@@ -121,7 +121,9 @@ func (s *Service) applyRenames(
 ) error {
 	lib := config.Get().Library
 	if len(ops) > 0 {
-		defer s.refreshLibraries(ctx)
+		defer s.refreshLibraries(
+			ctx, library.RenamePlan{Operations: ops}.Paths(),
+		)
 	}
 	for _, op := range ops {
 		if err := library.MkdirLibraryDir(filepath.Dir(op.To)); err != nil {
@@ -144,7 +146,6 @@ func (s *Service) applyRenames(
 
 // RenameBook returns the rename plan of a book and, unless preview is set,
 // applies it. Empty operations means every file is already where it belongs.
-// Books have no media-server refresh to trigger.
 func (s *Service) RenameBook(
 	ctx context.Context,
 	id uint32,

@@ -67,6 +67,7 @@ type Config struct {
 	Indexers        indexer.Manager
 	Downloads       download.Downloader
 	MediaServers    mediaserver.Manager
+	RefreshStatus   mediaserver.RefreshStatuses
 	DeepLinker      *mediaserver.DeepLinker
 	Renamer         library.Renamer
 	SeriesRenamer   library.Renamer
@@ -116,6 +117,7 @@ func New(cfg Config) *Server {
 		Indexers:        cfg.Indexers,
 		Downloads:       cfg.Downloads,
 		MediaServers:    cfg.MediaServers,
+		RefreshStatus:   cfg.RefreshStatus,
 		DeepLinker:      cfg.DeepLinker,
 		Renamer:         cfg.Renamer,
 		SeriesRenamer:   cfg.SeriesRenamer,

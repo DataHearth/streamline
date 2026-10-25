@@ -463,7 +463,8 @@ func (w *Worker) importMovieRecord(
 	)
 
 	w.markRequestsAvailable(ctx, "movie", m.TmdbID)
-	w.refreshMediaServers(ctx, "movie", libCfg.MoviePath)
+	w.refreshMediaServers(ctx, "movie", libCfg.MoviePath,
+		append(mediaFilePaths(existing), imported.Path)...)
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
 }
@@ -697,6 +698,7 @@ func (w *Worker) importEpisodeRecord(
 
 	matched, skippedExisting := 0, 0
 	touched := map[uint16]struct{}{}
+	var changed []string
 	// One imported event stands for the whole pack, recorded below. Without
 	// this the per-file create hook wrote an activity row per episode, so a
 	// full-season grab read as twenty-odd unrelated imports.
@@ -767,6 +769,8 @@ func (w *Worker) importEpisodeRecord(
 		}
 		dropAside(ctx, aside)
 		touched[pf.season] = struct{}{}
+		changed = append(changed, imported.Path)
+		changed = append(changed, mediaFilePaths(replaced)...)
 		matched++
 	}
 	if matched == 0 {
@@ -800,7 +804,7 @@ func (w *Worker) importEpisodeRecord(
 	}
 
 	w.markRequestsAvailable(ctx, "tvshow", show.TvdbID)
-	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath)
+	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath, changed...)
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
 }
@@ -911,18 +915,35 @@ func (w *Worker) importSingleEpisode(
 		"tvshow.id", show.ID, "episode.id", ep.ID)
 
 	w.markRequestsAvailable(ctx, "tvshow", show.TvdbID)
-	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath)
+	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath,
+		append(mediaFilePaths(replaced), imported.Path)...)
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
 }
 
-func (w *Worker) refreshMediaServers(ctx context.Context, kind, libraryPath string) {
+// refreshMediaServers asks the media servers to rescan the folders of paths,
+// the files an import placed and the ones it replaced: a replaced file can
+// sit in another folder when the naming template moved since.
+func (w *Worker) refreshMediaServers(
+	ctx context.Context,
+	kind, libraryPath string,
+	paths ...string,
+) {
 	if w.ms == nil {
 		return
 	}
-	if err := w.ms.RefreshAll(ctx, kind, libraryPath); err != nil {
+	if err := w.ms.RefreshAll(ctx, kind, libraryPath, paths...); err != nil {
 		slog.WarnContext(ctx, "media server refresh reported errors", "error", err)
 	}
+}
+
+// mediaFilePaths lists the paths of files.
+func mediaFilePaths(files []*ent.MediaFile) []string {
+	out := make([]string, 0, len(files))
+	for _, mf := range files {
+		out = append(out, mf.Path)
+	}
+	return out
 }
 
 // markRequestsAvailable best-effort flips any approved requests for this media

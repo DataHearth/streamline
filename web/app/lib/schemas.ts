@@ -353,6 +353,24 @@ export const mediaServerType = v.picklist(
 	i18n.validation_pick_server_type(),
 );
 
+// A media server on Windows reports D:\Movies or \\nas\movies.
+const WINDOWS_ABS_PATH = /^([A-Za-z]:[\\/]|\\\\[^\\])/;
+
+// What is wrong with one path mapping row, "" when nothing is. A row left
+// wholly empty is fine: it is dropped on save. from must be absolute here,
+// to on the server, where a Windows path is absolute too.
+export function pathMappingIssue(m: { from: string; to: string }): string {
+	const from = m.from.trim();
+	const to = m.to.trim();
+	if (!from && !to) return "";
+	if (!from || !to) return i18n.validation_required();
+	if (!from.startsWith("/")) return i18n.validation_absolute_path();
+	if (!to.startsWith("/") && !WINDOWS_ABS_PATH.test(to)) {
+		return i18n.validation_absolute_path();
+	}
+	return "";
+}
+
 export const mediaServerForm = v.object({
 	name: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
 	server_type: mediaServerType,
@@ -361,6 +379,13 @@ export const mediaServerForm = v.object({
 	library_section: v.string(),
 	library_section_tv: v.string(),
 	enabled: v.boolean(),
+	path_mappings: v.pipe(
+		v.array(v.object({ from: v.string(), to: v.string() })),
+		v.check(
+			(rows) => rows.every((m) => pathMappingIssue(m) === ""),
+			i18n.validation_absolute_path(),
+		),
+	),
 });
 
 export const scheduleInterval = goDuration;

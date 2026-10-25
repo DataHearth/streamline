@@ -494,13 +494,23 @@ func mediaInfoToAPI(f *ent.MediaFile) *MediaInfo {
 	return out
 }
 
-func mediaServerToAPI(e config.MediaServerEntry) MediaServer {
+// mediaServerToAPI is the read view of an entry; statuses, when set, fills
+// its last refresh.
+func mediaServerToAPI(
+	e config.MediaServerEntry,
+	statuses mediaserver.RefreshStatuses,
+) MediaServer {
+	mappings := make([]MediaServerPathMapping, 0, len(e.PathMappings))
+	for _, m := range e.PathMappings {
+		mappings = append(mappings, MediaServerPathMapping{From: m.From, To: m.To})
+	}
 	out := MediaServer{
-		Name:       e.Name,
-		ServerType: MediaServerServerType(e.ServerType),
-		Host:       e.Host,
-		Enabled:    e.Enabled,
-		ApiKeySet:  e.APIKey != "" || e.APIKeyFile != "",
+		Name:         e.Name,
+		ServerType:   MediaServerServerType(e.ServerType),
+		Host:         e.Host,
+		Enabled:      e.Enabled,
+		ApiKeySet:    e.APIKey != "" || e.APIKeyFile != "",
+		PathMappings: &mappings,
 	}
 	if e.LibrarySection != nil {
 		out.LibrarySection = e.LibrarySection
@@ -508,7 +518,43 @@ func mediaServerToAPI(e config.MediaServerEntry) MediaServer {
 	if e.LibrarySectionTV != nil {
 		out.LibrarySectionTv = e.LibrarySectionTV
 	}
+	if statuses != nil {
+		if st, ok := statuses.LastRefresh(e.Name); ok {
+			out.LastRefresh = refreshStatusToAPI(st)
+		}
+	}
 	return out
+}
+
+func refreshStatusToAPI(st mediaserver.RefreshStatus) *MediaServerRefreshStatus {
+	out := &MediaServerRefreshStatus{
+		At:      st.At,
+		Outcome: MediaServerRefreshStatusOutcome(st.Outcome),
+		Folders: st.Folders,
+	}
+	if st.Scope != "" {
+		scope := MediaServerRefreshStatusScope(st.Scope)
+		out.Scope = &scope
+	}
+	if st.Error != "" {
+		out.Error = &st.Error
+	}
+	return out
+}
+
+// mediaServerPathMappings converts a request's mapping list; nil stays nil,
+// which a patch reads as "unchanged".
+func mediaServerPathMappings(
+	in *[]MediaServerPathMapping,
+) *[]config.MediaServerPathMapping {
+	if in == nil {
+		return nil
+	}
+	out := make([]config.MediaServerPathMapping, 0, len(*in))
+	for _, m := range *in {
+		out = append(out, config.MediaServerPathMapping{From: m.From, To: m.To})
+	}
+	return &out
 }
 
 func indexerToAPI(e config.IndexerEntry) Indexer {

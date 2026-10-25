@@ -22,6 +22,24 @@ type MediaServerEntry struct {
 	LibrarySection *string `koanf:"library_section"`
 	// LibrarySectionTV is the Plex TV-library section key (play-on hint).
 	LibrarySectionTV *string `koanf:"library_section_tv"`
+	// PathMappings translate a folder as Streamline sees it into the path the
+	// media server knows it by, before a targeted rescan is sent and before
+	// Plex sections are matched. Empty means both see the same paths.
+	PathMappings []MediaServerPathMapping `koanf:"path_mappings" validate:"dive"`
+}
+
+// MediaServerPathMapping rewrites one prefix of Streamline's view of the
+// library into a media server's. It runs the other way from
+// download.path_mappings: From is the local prefix and To the server's, since
+// the path travels from here to the server. A Plex container mounting the
+// movies at /data/movies is sent /data/movies/Heat (1995) for what Streamline
+// placed at /srv/streamline/movies/Heat (1995).
+type MediaServerPathMapping struct {
+	// From is the absolute prefix as Streamline sees it.
+	From string `koanf:"from" validate:"required"`
+	// To is the absolute prefix as the media server sees it: a POSIX path, or
+	// a Windows one (D:\Movies, \\nas\movies) for a server on Windows.
+	To string `koanf:"to" validate:"required"`
 }
 
 type DownloadClientEntry struct {
