@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { roleLabel } from "@lib/roles";
 	import { onMount } from "svelte";
 	import { fly, fade } from "svelte/transition";
@@ -234,6 +235,7 @@
 	function toggleSheet(s: Section) {
 		sheet = sheet === s ? "" : s;
 	}
+	closeOnBack(() => sheet !== "", closeSheet);
 
 	// Routify intercepts internal <a> clicks and navigates client-side; close
 	// the sheet on any click inside it so a tapped link doesn't leave the

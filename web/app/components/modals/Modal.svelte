@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import type { Snippet } from "svelte";
 	import { tick } from "svelte";
 	import { fade } from "svelte/transition";
@@ -22,6 +23,8 @@
 	};
 
 	let { open, title, size = "lg", onClose, children, footer }: Props = $props();
+
+	closeOnBack(() => open, () => onClose());
 
 	let modalRoot = $state<HTMLDivElement | null>(null);
 	let lastFocused: HTMLElement | null = null;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X, Zap, Pause, Play, Pencil, TriangleAlert } from "@lucide/svelte";
@@ -23,6 +24,9 @@
 		onClose: () => void;
 		onEditInterval: (s: Schedule) => void;
 	} = $props();
+
+	// Mounted only while open.
+	closeOnBack(() => true, () => onClose());
 
 	const actions = createScheduleActions();
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Check, Search, X } from "@lucide/svelte";
@@ -40,6 +41,9 @@
 		onSearch: (entry: TouchEntry) => void;
 		onSkipToggle: (entry: TouchEntry) => void;
 	} = $props();
+
+	// Mounted only while open.
+	closeOnBack(() => true, () => onClose());
 
 	$effect(() => {
 		if (!entry) return;

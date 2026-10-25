@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { parts } from "@lib/message-parts";
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -27,6 +28,8 @@
 		onClose: () => void;
 		onAdd: (payload: AddTorrentRequest) => void;
 	} = $props();
+
+	closeOnBack(() => open, () => onClose());
 
 	let magnet = $state("");
 	let fileName = $state("");

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { onMount } from "svelte";
 	import { fly, fade } from "svelte/transition";
@@ -64,6 +65,8 @@
 		onRemove: (hash: string, deleteFiles: boolean) => void;
 		onSetPriority: (hash: string, index: number, priority: TorrentFilePriority) => void;
 	} = $props();
+
+	closeOnBack(() => open, () => onClose());
 
 	type Tab = "files" | "peers" | "trackers";
 	let tab = $state<Tab>("files");

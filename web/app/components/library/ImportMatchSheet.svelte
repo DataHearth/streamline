@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -56,6 +57,8 @@
 		onClose: () => void;
 		onPick: (id: MatchId) => void;
 	} = $props();
+
+	closeOnBack(() => open, () => onClose());
 
 	let q = $state("");
 	let debounced = $state("");
