@@ -39,7 +39,7 @@ jobs:
 
             ---
             Image: `ghcr.io/datahearth/streamline:${{ steps.v.outputs.v }}`
-            Verify: `cosign verify ghcr.io/datahearth/streamline:${{ steps.v.outputs.v }} --certificate-identity-regexp="https://github.com/datahearth/streamline/.github/workflows/image.yaml@.*" --certificate-oidc-issuer=https://token.actions.githubusercontent.com`
+            Verify: `cosign verify ghcr.io/datahearth/streamline:${{ steps.v.outputs.v }} --certificate-identity-regexp="https://github.com/DataHearth/streamline/.github/workflows/image.yaml@.*" --certificate-oidc-issuer=https://token.actions.githubusercontent.com`
 
       - name: Upload release notes
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
