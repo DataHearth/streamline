@@ -1,6 +1,6 @@
 name: Bug report
 description: Something is broken
-labels: [bug]
+labels: [bug, needs-triage]
 body:
   - type: textarea
     id: what
@@ -26,6 +26,7 @@ body:
       options:
         - Docker / Compose
         - Helm / Kubernetes
+        - NixOS / home-manager module
         - Binary from releases
         - Built from source
     validations:
