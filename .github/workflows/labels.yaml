@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Labels
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/labels.yml', '.github/scripts/sync-labels.sh']
+  workflow_dispatch:
+
+concurrency:
+  group: labels
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # .github/labels.yml is the source of truth. The sync creates, updates
+      # and renames, never deletes: a label made through the UI survives until
+      # someone removes it there, rather than vanishing off every issue on the
+      # next push here.
+      - name: Sync labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: .github/scripts/sync-labels.sh .github/labels.yml | tee -a "$GITHUB_STEP_SUMMARY"

@@ -1,12 +1,12 @@
 name: Feature request
 description: Suggest something new
-labels: [enhancement]
+labels: [enhancement, needs-triage]
 body:
   - type: markdown
     attributes:
       value: >
         Check [the roadmap](https://github.com/datahearth/streamline/wiki/Roadmap)
-        first — music, books and the player are already planned.
+        first — the built-in player is already planned, and music and books have shipped.
 
   - type: textarea
     id: problem
