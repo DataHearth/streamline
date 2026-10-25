@@ -39,8 +39,6 @@ jobs:
     permissions:
       contents: read
       issues: write
-    outputs:
-      issues: ${{ steps.ctx.outputs.issues }}
     env:
       GH_REPO: ${{ github.repository }}
     steps:
@@ -182,36 +180,10 @@ jobs:
             Finish with one line per issue you changed: the number, labels added and removed,
             and a short reason.
 
-  # Sets the native Issue Type and clears needs-triage, after the triage job
-  # succeeded. Its own job because a type takes push access (REST drops it
-  # silently otherwise), and the job that holds the Claude token must not
-  # hold repository write. This one holds no Claude token, runs no model and
-  # reads no issue text: its inputs are issue numbers and the labels Claude
-  # could only pick from .github/labels.yml.
-  finish:
-    needs: triage
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    concurrency:
-      group: issue-triage-finish-${{ github.event.issue.number || github.run_id }}
-      cancel-in-progress: false
-    permissions:
-      contents: write
-      issues: write
-    env:
-      GH_REPO: ${{ github.repository }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          sparse-checkout: .github/scripts/triage/
-          sparse-checkout-cone-mode: false
-
       - name: Finish
         env:
           GH_TOKEN: ${{ github.token }}
-          ISSUES: ${{ needs.triage.outputs.issues }}
+          ISSUES: ${{ steps.ctx.outputs.issues }}
         run: |
           # $ISSUES is space-separated numbers; splitting it is the point.
           # shellcheck disable=SC2086
