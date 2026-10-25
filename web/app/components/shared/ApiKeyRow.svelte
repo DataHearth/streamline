@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Key, Trash2 } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
-	import { formatDateTime, formatRelative } from "@lib/dates";
+	import { formatDate, formatDateTime, formatRelative } from "@lib/dates";
 	import type { ApiKey } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -20,6 +20,15 @@
 	let expired = $derived(
 		!!apiKey.expires_at && new Date(apiKey.expires_at).getTime() <= Date.now(),
 	);
+
+	// Inside a month a relative "in 12 days" says more than a date; past it a
+	// 90- or 365-day key reads better as the day it stops working.
+	const MONTH_MS = 30 * 86_400_000;
+	function expiryText(iso: string): string {
+		return Math.abs(new Date(iso).getTime() - Date.now()) < MONTH_MS
+			? formatRelative(iso)
+			: formatDate(iso);
+	}
 </script>
 
 <li class="flex items-start gap-3.5 px-5 py-3.5">
@@ -73,7 +82,7 @@
 						? formatDateTime(apiKey.expires_at)
 						: undefined}
 				>
-					{apiKey.expires_at ? formatRelative(apiKey.expires_at) : i18n.lc_never()}
+					{apiKey.expires_at ? expiryText(apiKey.expires_at) : i18n.lc_never()}
 				</dd>
 			</div>
 			<div class="flex items-center gap-1">
