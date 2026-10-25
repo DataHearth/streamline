@@ -52,6 +52,10 @@ tasks:
     desc: Generate a new versioned migration from the ent schema (usage - task migrate:diff -- NAME)
     cmd: go run -mod=mod ./ent/migrate/main.go {{.CLI_ARGS}}
 
+  migrate:check:
+    desc: Check every down migration restores the schema before it, replacing any that does not
+    cmd: go run -mod=mod ./ent/migrate/main.go -check-history
+
   generate:
     desc: Regenerate all generated code
     cmds:

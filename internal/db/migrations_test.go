@@ -681,3 +681,57 @@ var _ = Describe("album tags_managed backfill", Label("integration", "db"), func
 		Expect(managed(4)).To(BeTrue())
 	})
 })
+
+// Every down step used to be Atlas's own reverse, and for a table rebuild that
+// is only "DROP TABLE new_<table>", a table that no longer exists by then:
+// nine migrations could not be rolled back past, and the init one dropped
+// parent tables under enforced foreign keys. ent/migrate now checks each down
+// against the replayed schema; this runs the whole chain the way a rollback
+// would, with foreign keys on and rows in the rebuilt tables.
+var _ = Describe("down migrations", Label("integration", "db"), func() {
+	It("roll a populated database all the way back", func() {
+		sqlDB, err := sql.Open(
+			"sqlite",
+			"file:"+filepath.Join(GinkgoT().TempDir(), "down.db")+
+				"?_pragma=foreign_keys(1)",
+		)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(sqlDB.Close()).To(Succeed()) })
+		sqlDB.SetMaxOpenConns(1)
+
+		src, err := iofs.New(migrationsFS, "migrations")
+		Expect(err).NotTo(HaveOccurred())
+		drv, err := sqlite.WithInstance(sqlDB, &sqlite.Config{})
+		Expect(err).NotTo(HaveOccurred())
+		m, err := migrate.NewWithInstance("iofs", src, "sqlite", drv)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+
+		_, err = sqlDB.Exec(
+			"INSERT INTO movies (id, create_time, update_time, title," +
+				" original_title, year, tmdb_id) VALUES" +
+				" (1, datetime('now'), datetime('now'), 'm', 'm', 2026, 1)",
+		)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = sqlDB.Exec(
+			"INSERT INTO download_records (id, create_time, update_time, title," +
+				" movie_download_records, rejected) VALUES" +
+				" (1, datetime('now'), datetime('now'), 'r', 1, true)",
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		// As runMigrations does it: a file's own PRAGMA foreign_keys is a no-op
+		// inside golang-migrate's per-file transaction, so enforcement goes off
+		// on the one connection first.
+		_, err = sqlDB.Exec("PRAGMA foreign_keys = off")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(m.Down()).To(Succeed())
+
+		var tables int
+		Expect(sqlDB.QueryRow(
+			"SELECT count(*) FROM sqlite_master WHERE type = 'table'" +
+				" AND name NOT IN ('schema_migrations', 'sqlite_sequence')",
+		).Scan(&tables)).To(Succeed())
+		Expect(tables).To(BeZero())
+	})
+})
