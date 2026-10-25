@@ -1,3 +1,4 @@
+import { m as i18n } from "./paraglide/messages.js";
 import { getLocale } from "./paraglide/runtime.js";
 
 // Bound to the app locale, not the browser's: a French UI in an English
@@ -62,9 +63,16 @@ const DAY = 86_400_000;
 const MONTH = 30 * DAY;
 const YEAR = 365 * DAY;
 
-function unit(n: number, name: string): string {
-	return n === 0 ? "" : `${n} ${name}${n === 1 ? "" : "s"}`;
-}
+// One formatter per unit, so the number and its noun agree in the locale's own
+// grammar ("1 year" / "2 years", "1 an" / "2 ans") rather than an English "s".
+const unitFormat = {
+	year: new Intl.NumberFormat(locale, { style: "unit", unit: "year", unitDisplay: "long" }),
+	month: new Intl.NumberFormat(locale, { style: "unit", unit: "month", unitDisplay: "long" }),
+	day: new Intl.NumberFormat(locale, { style: "unit", unit: "day", unitDisplay: "long" }),
+};
+// "narrow" joins with a plain space in both locales ("1 year 2 days",
+// "1 an 2 jours"), the reading the hand-built English span always had.
+const unitList = new Intl.ListFormat(locale, { type: "unit", style: "narrow" });
 
 // The two largest non-zero units, so "1 year 2 days" keeps the days a
 // year/month pairing would swallow. Years and months are nominal (365 / 30
@@ -72,14 +80,17 @@ function unit(n: number, name: string): string {
 // with the absolute date shown next to it.
 function span(abs: number): string {
 	const sub = abs % YEAR;
-	return [
-		unit(Math.floor(abs / YEAR), "year"),
-		unit(Math.floor(sub / MONTH), "month"),
-		unit(Math.floor((sub % MONTH) / DAY), "day"),
-	]
-		.filter(Boolean)
+	const parts = (
+		[
+			["year", Math.floor(abs / YEAR)],
+			["month", Math.floor(sub / MONTH)],
+			["day", Math.floor((sub % MONTH) / DAY)],
+		] as const
+	)
+		.filter(([, n]) => n > 0)
 		.slice(0, 2)
-		.join(" ");
+		.map(([name, n]) => unitFormat[name].format(n));
+	return unitList.format(parts);
 }
 
 export function formatRelative(iso: string | null | undefined): string {
@@ -90,8 +101,11 @@ export function formatRelative(iso: string | null | undefined): string {
 	if (abs < DAY) return rtf.format(Math.round(diffMs / HR), "hour");
 	if (abs < MONTH) return rtf.format(Math.round(diffMs / DAY), "day");
 	// Past a month, a single unit reads as noise ("5,066 days ago"), so build a
-	// two-part span instead of leaning on Intl.RelativeTimeFormat.
-	return diffMs < 0 ? `${span(abs)} ago` : `in ${span(abs)}`;
+	// two-part span instead of leaning on Intl.RelativeTimeFormat. Which side of
+	// the span "in" or "ago" goes is the language's call, hence a message.
+	return diffMs < 0
+		? i18n.relative_past({ span: span(abs) })
+		: i18n.relative_future({ span: span(abs) });
 }
 
 // When something landed, short enough for a card caption: minutes, then hours

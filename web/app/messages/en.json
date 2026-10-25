@@ -1101,6 +1101,8 @@
 	"lc_movie": "movie",
 	"lc_movies": "movies",
 	"lc_never": "never",
+	"relative_future": "in {span}",
+	"relative_past": "{span} ago",
 	"lc_next_30_days": "next 30 days",
 	"lc_not_monitored": "not monitored",
 	"lc_overview": "overview",
