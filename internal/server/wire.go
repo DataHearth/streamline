@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/dbbackup"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
@@ -485,6 +486,23 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			"music-tag-sync",
 			cfg.Schedule.MusicTagSync,
 			func(time.Duration) scheduler.JobFunc { return musicSvc.SyncTags },
+		},
+		{
+			"database-backup",
+			cfg.Schedule.DatabaseBackup,
+			func(d time.Duration) scheduler.JobFunc {
+				interval := func() time.Duration {
+					if info, err := sched.Get("database-backup"); err == nil {
+						return info.Interval
+					}
+					return d
+				}
+				return jobs.DatabaseBackup(
+					cfg.DatabasePath(),
+					dbbackup.Dir(cfg.DataDir),
+					interval,
+				)
+			},
 		},
 	}
 	for _, j := range jobsToRegister {

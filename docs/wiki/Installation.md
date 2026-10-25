@@ -344,9 +344,9 @@ key is absent: you opted out, so it isn't a warning.
 
 ## Upgrading
 
-Install the new version and start it: it updates the database on its own at boot. **[Back up the database](GitOps-and-Kubernetes#backups) first.**
+Install the new version and start it: it updates the database on its own at boot, and backs it up into `<data_dir>/backups` first ([Backups](GitOps-and-Kubernetes#backups)). If that backup cannot be written — a full disk, most often — it refuses to update the database and stops, with the reason in its log.
 
-The update only goes forward. An older version will not start on a database a newer one has updated (it logs `no migration found for version …`); nothing is changed, but to go back you restore the backup you took before upgrading, and lose whatever happened since.
+The update only goes forward. An older version will not start on a database a newer one has updated (it logs `no migration found for version …`); nothing is changed, but to go back you stop Streamline, restore the backup taken before the update with the older version (`streamline restore <file>`, see [Backups](GitOps-and-Kubernetes#backups)), and lose whatever happened since.
 
 ---
 

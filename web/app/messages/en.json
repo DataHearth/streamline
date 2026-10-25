@@ -1652,6 +1652,7 @@
 	"schedule_updated": "Schedule updated",
 	"schedule_verify_files": "Verify tracked files still exist on disk; revert missing movies and episodes to wanted",
 	"schedule_file_selection": "Resolve which files to keep for magnet downloads still waiting on their torrent metadata",
+	"schedule_database_backup": "Back up the database into the data directory's backups folder and prune the oldest",
 	"schedule_running_progress": "Running {done}/{total}",
 	"schedule_running_count": "Running {done}",
 	"schedule_started": "Started {when}",

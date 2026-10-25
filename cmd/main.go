@@ -106,6 +106,35 @@ func rootCommand() *cli.Command {
 				},
 			},
 			{
+				Name:  "backup",
+				Usage: "back up the database into <data_dir>/backups (server running or stopped)",
+				Description: "Writes a consistent copy of the database with VACUUM INTO, as a manual backup " +
+					"kept up to backup.retention.manual, and prints its path.",
+				Action: backupCreate,
+				Commands: []*cli.Command{
+					{
+						Name:   "list",
+						Usage:  "list the backups in <data_dir>/backups, newest first",
+						Action: backupList,
+					},
+				},
+			},
+			{
+				Name:      "restore",
+				Usage:     "replace the database with a backup (stop the server first)",
+				ArgsUsage: "<file>",
+				Description: "Takes a path, or the name of a file in <data_dir>/backups. The backup must open, pass " +
+					"SQLite's integrity check and hold a schema version no newer than this binary's. The " +
+					"database it replaces is kept in <data_dir>/backups as a pre-restore backup.",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "force",
+						Usage: "restore even though data_dir holds no database yet",
+					},
+				},
+				Action: restoreCmd,
+			},
+			{
 				Name:  "config",
 				Usage: "manage configuration",
 				Commands: []*cli.Command{

@@ -306,45 +306,59 @@ Migration also re-points the config at the new root, which under `read_only: tru
 
 ## Backups
 
-Back up **`data_dir`**. That's the SQLite database and cached posters — the entire application state.
+The database, `<data_dir>/streamline.db`, is the irreplaceable part: library contents, request history, users, API keys, monitoring state. Your config file lives in git (or is rendered by the chart), and your media is your media.
 
-Your config file lives in git (or is rendered by the chart), and your media is your media. The database is the irreplaceable part: library contents, request history, users, API keys, monitoring state.
+Streamline backs the database up itself, into **`<data_dir>/backups`**:
 
-The database is `<data_dir>/streamline.db`.
+| Kind | When | Kept (default) |
+| --- | --- | --- |
+| `pre-migration` | At boot, before a new version applies its database migrations — only when there is something to apply | 5 (`backup.retention.pre_migration`) |
+| `scheduled` | Daily, by the `database-backup` job ([Scheduled Jobs](Scheduled-Jobs)) | 7 (`backup.retention.scheduled`) |
+| `manual` | `streamline backup` | 10 (`backup.retention.manual`) |
+| `pre-restore` | The database a `streamline restore` replaced | never pruned |
 
-> [!NOTE]
-> There is no `sqlite3` binary in the container. The runtime image is `debian:bookworm-slim` carrying only `ca-certificates` and the Streamline binary, so `.backup` inside the container is not an option. Back up from the outside.
+Each backup is one self-contained file written with SQLite's `VACUUM INTO`: consistent, safe to take while Streamline runs, and with no `-wal`/`-shm` to carry along. It is named `streamline-<kind>-<schema version>-<UTC time>.db`, owner-only (`0600`, in a `0700` directory), since it holds password hashes, API key hashes and sessions.
 
-**The clean way — stop it first:**
+**The pre-migration backup is what makes automated updates safe.** With Renovate, Flux or Argo CD rolling out new images, a new version boots and migrates with nobody there to take a copy. Streamline takes it first; if the copy fails (a full disk, most often) it **refuses to migrate** and the pod fails to start with the reason in its log, rather than migrating without a way back. For a database too large to copy on every upgrade, set `backup.pre_migration: false` and back up some other way.
+
+### From the command line
+
+Both commands need the same configuration as the server — pass the same `--config` (or the same `STREAMLINE_*` environment), since that is where `data_dir` comes from.
+
+```bash
+streamline --config config.yaml backup          # a manual backup; prints its path
+streamline --config config.yaml backup list     # every backup, newest first
+streamline --config config.yaml restore <file>  # a path, or a name from `backup list`
+```
+
+`streamline backup` works with the server running or stopped, and never migrates the database: a newer binary run for a backup before an upgrade copies the database as it stands.
+
+`streamline restore` needs the server **stopped** — it refuses while anything holds the database open. It checks the file before touching anything: it must open, pass SQLite's integrity check, and hold a schema version no newer than the binary's (restore a newer backup with the release that wrote it). The database it replaces is kept in `<data_dir>/backups` as a `pre-restore` backup, so restoring the wrong file can be undone with another restore. Restoring an older backup with a newer binary is fine: the next start migrates it forward, taking a pre-migration backup first. Into a `data_dir` that holds no database yet (a new machine), add `--force` — without it, a restore pointed at the wrong configuration would land where nothing reads it.
 
 ```bash
 docker compose stop streamline
-cp -a ./data ./backup/data-$(date +%F)
+docker compose run --rm streamline --config /etc/streamline/config.yaml restore streamline-pre-migration-20261021140000-20261026T020000Z.db
 docker compose start streamline
 ```
 
-**Hot copy** — if you copy while it's running, you **must take the `-wal` and `-shm` files too**. `streamline.db` alone will be missing recent writes:
-
-```bash
-cp -a data/streamline.db data/streamline.db-wal data/streamline.db-shm /backup/
-```
-
-Restore all three together, or none.
-
-**On Kubernetes**, prefer a PVC volume snapshot — it's atomic and doesn't need the pod stopped. Failing that, scale to zero and copy:
+On Kubernetes, scale to zero and run the restore from a pod mounting the same PVC, with the same image and config:
 
 ```bash
 kubectl scale -n streamline deploy/streamline --replicas=0
-# copy from a helper pod mounting the same PVC, then:
+# in a helper pod using the streamline image, the config and the data PVC:
+streamline --config /etc/streamline/config.yaml restore <file>
 kubectl scale -n streamline deploy/streamline --replicas=1
 ```
 
-To pull the files out of a running pod, `kubectl cp` works (the image is Debian-based, so `tar` is present), but streaming each file with `exec` avoids `cp`'s whole-directory semantics:
+### Off the machine
+
+`<data_dir>/backups` sits on the same disk as the database, so it protects against a bad migration or a mistake, not against losing the disk. Copy it elsewhere too — any backup file can be copied while Streamline runs, since each is complete once it appears under its final name. On Kubernetes, a PVC volume snapshot (CSI snapshots, Velero) of the data volume carries it along.
+
+To pull the newest backup out of a running pod (the image has no `sqlite3`, but it does not need one):
 
 ```bash
-for f in streamline.db streamline.db-wal streamline.db-shm; do
-  kubectl exec -n streamline deploy/streamline -- cat /data/$f > "./$f"
-done
+f=$(kubectl exec -n streamline deploy/streamline -- streamline --config /etc/streamline/config.yaml backup)
+kubectl exec -n streamline deploy/streamline -- cat "$f" > "./$(basename "$f")"
 ```
 
-Accept that a hot copy is only crash-consistent. For anything you'd be upset to lose, snapshot or stop.
+Copying `streamline.db` by hand instead needs the server stopped, or its `-wal` and `-shm` files taken at the same instant — a hot copy of `streamline.db` alone is missing recent writes. `streamline restore` refuses a file with a non-empty `-wal` beside it for that reason.

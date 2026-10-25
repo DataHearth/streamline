@@ -648,6 +648,7 @@
         "media_probe": { "$ref": "#/definitions/duration" },
         "file_selection": { "$ref": "#/definitions/duration" },
         "music_tag_sync": { "$ref": "#/definitions/duration" },
+        "database_backup": { "$ref": "#/definitions/duration" },
         "rss_sync": {
           "$ref": "#/definitions/duration",
           "description": "Deprecated: renamed to movie_rss_sync. Still honoured, with a warning on boot."
@@ -691,6 +692,27 @@
       "additionalProperties": false,
       "properties": {
         "retention": { "$ref": "#/definitions/duration" }
+      }
+    },
+    "backup": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Database snapshots under <data_dir>/backups (file-only). The database-backup job takes the scheduled ones; `streamline backup` the manual ones.",
+      "properties": {
+        "pre_migration": {
+          "type": "boolean",
+          "description": "Snapshot the database before applying pending migrations, and refuse to migrate if the snapshot fails. Turn off only for a database too large to copy on every upgrade."
+        },
+        "retention": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Backups kept per kind, newest first; 0 keeps every one. A database replaced by a restore is never pruned.",
+          "properties": {
+            "scheduled": { "type": "integer", "minimum": 0, "maximum": 65535 },
+            "pre_migration": { "type": "integer", "minimum": 0, "maximum": 65535 },
+            "manual": { "type": "integer", "minimum": 0, "maximum": 65535 }
+          }
+        }
       }
     },
     "ffmpeg": {

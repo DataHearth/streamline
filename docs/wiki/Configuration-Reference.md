@@ -188,6 +188,9 @@ GLOBAL OPTIONS
 | `config init [--output <path>]` | Write a default config to stdout or a file |
 | `config validate [--config <path>]` | Load a config (or stdin) and report errors |
 | `auth unlock <email>` | Clear lockout state on an account |
+| `backup` | Back up the database into `<data_dir>/backups` and print the file's path. Works with the server running or stopped. See [Backups](GitOps-and-Kubernetes#backups) |
+| `backup list` | List the backups, newest first |
+| `restore <file>` | Replace the database with a backup (a path, or a name from `backup list`), keeping the one it replaces. **Stop the server first** |
 
 Running `streamline` with no command starts the server.
 
@@ -327,6 +330,7 @@ All values are Go duration strings, runtime-editable, pausable and runnable on d
 | `schedules.book_metadata_refresh` | duration | `24h` | |
 | `schedules.file_selection` | duration | `30s` | |
 | `schedules.music_tag_sync` | duration | `30m` | The music tag writer: writes every file waiting for its tags, and retries the ones waiting on a torrent |
+| `schedules.database_backup` | duration | `24h` | Backs the database up into `<data_dir>/backups`; see [`backup`](#backup) |
 
 **Deprecated aliases**, still honoured with a warning at boot: `rss_sync` (→ `movie_rss_sync`), `orphan_scan` (→ both the `movie_*` and `tv_*` keys), `missing_search` and `metadata_refresh` (each → the `movie_*`, `tv_*`, `music_*` and `book_*` keys).
 
@@ -434,6 +438,19 @@ File-only and read at startup: it is not reachable through the settings API, and
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `events.retention` | duration | `2160h` | 90 days. How long activity events are kept |
+
+### backup
+
+Database backups under `<data_dir>/backups` — see [Backups](GitOps-and-Kubernetes#backups). File-only.
+
+| Key | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `backup.pre_migration` | bool | `true` | Back up the database at boot before applying pending migrations, and refuse to migrate when the backup fails. Turn off only for a database too large to copy on every upgrade |
+| `backup.retention.scheduled` | int | `7` | Backups the `database-backup` job keeps, newest first. `0` keeps every one |
+| `backup.retention.pre_migration` | int | `5` | Pre-migration backups kept. `0` keeps every one |
+| `backup.retention.manual` | int | `10` | Backups `streamline backup` keeps. `0` keeps every one |
+
+A database replaced by `streamline restore` is kept as a `pre-restore` backup and never pruned.
 
 ### media_server
 

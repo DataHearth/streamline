@@ -49,6 +49,7 @@ type Config struct {
 	Download    DownloadConfig    `koanf:"download"`
 	Transcoding TranscodingConfig `koanf:"transcoding"`
 	SMTP        SMTPConfig        `koanf:"smtp"`
+	Backup      BackupConfig      `koanf:"backup"`
 	// TorrentListenPort overrides the builtin download client's own
 	// listen_port, and is a top-level scalar so the environment can reach it:
 	// STREAMLINE_TORRENT_LISTEN_PORT lands here, while nothing in
@@ -357,6 +358,7 @@ type ScheduleConfig struct {
 	MediaProbe           string `koanf:"media_probe"            validate:"required"`
 	FileSelection        string `koanf:"file_selection"         validate:"required"`
 	MusicTagSync         string `koanf:"music_tag_sync"         validate:"required"`
+	DatabaseBackup       string `koanf:"database_backup"        validate:"required"`
 }
 
 type MetadataConfig struct {
@@ -374,6 +376,25 @@ type MetadataConfig struct {
 // by the cleanup job after Retention.
 type EventsConfig struct {
 	Retention string `koanf:"retention" validate:"required"`
+}
+
+// BackupConfig governs the database snapshots under <data_dir>/backups. File-only
+// and read where it is used: PreMigration at boot, before the migrations run,
+// and the retention counts by each pass that writes a backup of that kind.
+type BackupConfig struct {
+	// PreMigration snapshots the database before applying pending migrations,
+	// and refuses to migrate when the snapshot fails. Off only for a database
+	// too large to copy on every upgrade, with a backup taken some other way.
+	PreMigration bool            `koanf:"pre_migration"`
+	Retention    BackupRetention `koanf:"retention"`
+}
+
+// BackupRetention is how many backups of each kind are kept, newest first; 0
+// keeps every one. A database replaced by a restore is never pruned.
+type BackupRetention struct {
+	Scheduled    uint16 `koanf:"scheduled"`
+	PreMigration uint16 `koanf:"pre_migration"`
+	Manual       uint16 `koanf:"manual"`
 }
 
 // FFmpegConfig owns the ffmpeg-suite dependency (ffprobe today, the player's
@@ -979,6 +1000,7 @@ func defaults() map[string]any {
 		"schedules.media_probe":            "15m",
 		"schedules.file_selection":         "30s",
 		"schedules.music_tag_sync":         "30m",
+		"schedules.database_backup":        "24h",
 		"library.drift_grace_ticks":        3,
 		"library.probe.always_ask":         false,
 		"library.probe.min_duration_ratio": 0.5,
@@ -1051,6 +1073,10 @@ func defaults() map[string]any {
 		"book_quality_default_profiles.comic": "default",
 		"book_quality_default_profiles.manga": "default",
 		"events.retention":                    "2160h",
+		"backup.pre_migration":                true,
+		"backup.retention.scheduled":          7,
+		"backup.retention.pre_migration":      5,
+		"backup.retention.manual":             10,
 		"ffmpeg.enabled":                      true,
 		"ffmpeg.path":                         "",
 		"download.selective_files":            false,

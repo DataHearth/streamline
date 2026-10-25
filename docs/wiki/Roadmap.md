@@ -73,6 +73,7 @@ Hardware encoding through VAAPI is shipped on Linux (`transcoding.hw_accel`, wit
 | Library path migration (re-root a moved library) | ✅ Shipped |
 | Installable web app (home-screen manifest) | ✅ Shipped |
 | Re-identify a title matched to the wrong movie or show | ✅ Shipped |
+| Database backups — before every upgrade, daily, and from the CLI, with restore | ✅ Shipped |
 
 ---
 

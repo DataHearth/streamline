@@ -16,6 +16,7 @@ Find what you're seeing in the table below, then jump straight to the fix. Order
 | Torrents show **Seeding** but upload is `0 B/s`, 0 peers | Nothing can open an inbound connection to you (NAT/port forward) | [Torrents seed forever but upload nothing](#torrents-seed-forever-but-upload-nothing) |
 | Plex/Jellyfin/Emby doesn't pick up new files | Refresh failed, wrong library section, or separate mounts | [My media server doesn't notice new files](#my-media-server-doesnt-notice-new-files) |
 | Library looks empty after a mount/volume change | Stored paths no longer match reality | [My library emptied itself after a remount](#my-library-emptied-itself-after-a-remount) |
+| Won't start after an update: `back up the database before migrating` | The pre-migration backup could not be written | [Won't start: backup before migrating failed](#wont-start-backup-before-migrating-failed) |
 | `unable to open database file` / general DB errors | More than one writer, or the DB is on a network filesystem | [Database is locked](#database-is-locked) |
 | Need to see what's actually happening | — | [Where the logs are](#where-the-logs-are) |
 | Ready to report a bug | — | [Filing a good bug report](#filing-a-good-bug-report) |
@@ -356,7 +357,17 @@ Streamline uses SQLite, which allows exactly one writer.
 
 **Your data directory is on a network filesystem.** SQLite locking over NFS or SMB is unreliable and will corrupt your database. Put `data_dir` on local storage. Your *media* can live on the network; your database can't.
 
-The database is `<data_dir>/streamline.db`, accompanied by `-wal` and `-shm` files. If you ever copy it, copy all three.
+The database is `<data_dir>/streamline.db`, accompanied by `-wal` and `-shm` files. If you ever copy it, copy all three — or use `streamline backup`, which writes one consistent file ([Backups](GitOps-and-Kubernetes#backups)).
+
+---
+
+## Won't start: backup before migrating failed
+
+A new version backs the database up into `<data_dir>/backups` before updating it, and refuses to update it when that fails. Nothing was changed: the log line names the cause, which is nearly always a full disk.
+
+- **Free space** on the volume holding `data_dir` — the backup needs about as much as the database itself. Old backups in `<data_dir>/backups` can go; lowering `backup.retention.*` keeps fewer from now on.
+- **Permissions**: Streamline's user must be able to create `<data_dir>/backups`.
+- For a database too large to copy on every upgrade, set `backup.pre_migration: false` and take your own backup before each update.
 
 ---
 

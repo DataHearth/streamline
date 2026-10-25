@@ -1652,6 +1652,7 @@
 	"schedule_updated": "Planification mise à jour",
 	"schedule_verify_files": "Vérifier que les fichiers suivis existent toujours ; repasser en souhaité les films et épisodes manquants",
 	"schedule_file_selection": "Choisir les fichiers à garder pour les magnets qui attendent encore les métadonnées de leur torrent",
+	"schedule_database_backup": "Sauvegarder la base de données dans le dossier backups du répertoire de données et supprimer les plus anciennes",
 	"schedule_running_progress": "Exécution {done}/{total}",
 	"schedule_running_count": "Exécution {done}",
 	"schedule_started": "Démarré {when}",

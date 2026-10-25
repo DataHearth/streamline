@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/dbbackup"
 
 	_ "modernc.org/sqlite"
 )
@@ -95,7 +98,7 @@ var _ = Describe("runMigrations", Label("integration", "db"), func() {
 		seed(6, "tvshow", 7, "pending")   // duplicate — collapsed
 		seed(7, "movie", 99, "pending")   // no duplicate — survives
 
-		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+		Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 		Expect(ids()).To(Equal([]int{1, 4, 5, 7}))
 
 		By("rejecting a second active row for media the index now covers")
@@ -118,7 +121,7 @@ var _ = Describe("runMigrations", Label("integration", "db"), func() {
 		seed(2, "movie", 42, "denied")
 		seed(3, "tvshow", 7, "approved")
 
-		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+		Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 		Expect(ids()).To(Equal([]int{1, 2, 3}))
 	})
 })
@@ -219,7 +222,7 @@ var _ = Describe("person credits backfill", Label("integration", "db"), func() {
 		seedShow(2, "Delta", 4, `[{"tmdb_id":0,"name":"Nina Meurisse",`+
 			`"character":"Claire","profile_url":""}]`)
 
-		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+		Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 
 		Expect(people()).To(ConsistOf(
 			"Nina Meurisse/0/0/",
@@ -241,7 +244,7 @@ var _ = Describe("person credits backfill", Label("integration", "db"), func() {
 		seedShow(3, "Gamma", 13, `[{"tmdb_id":0,"name":"Ada Lovelace",`+
 			`"character":"The Analyst","profile_url":""}]`)
 
-		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+		Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 
 		// The series entry carries no id, so it keys on the name and lands on
 		// the same person the tmdb-keyed movie entries did.
@@ -263,7 +266,7 @@ var _ = Describe("person credits backfill", Label("integration", "db"), func() {
 		seedShow(2, "Delta", 4, `[{"tmdb_id":0,"name":"ada m lovelace",`+
 			`"character":"The Analyst","profile_url":"https://img/ada.jpg"}]`)
 
-		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+		Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 
 		Expect(people()).To(HaveLen(1))
 		Expect(credits()).To(HaveLen(2))
@@ -274,7 +277,7 @@ var _ = Describe("person credits backfill", Label("integration", "db"), func() {
 		seedMovie(2, "Beta", 12, `[]`)
 		seedShow(3, "Gamma", 3, `[{"tmdb_id":0,"name":"","character":"Extra"}]`)
 
-		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+		Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 
 		Expect(people()).To(BeEmpty())
 		Expect(credits()).To(BeEmpty())
@@ -283,7 +286,7 @@ var _ = Describe("person credits backfill", Label("integration", "db"), func() {
 	It("empties both tables on the way down", func() {
 		seedMovie(1, "Alpha", 11, `[{"tmdb_id":10,"name":"Ada Lovelace",`+
 			`"character":"Herself","profile_url":""}]`)
-		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+		Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 		Expect(people()).To(HaveLen(1))
 
 		src, err := iofs.New(migrationsFS, "migrations")
@@ -401,7 +404,7 @@ var _ = Describe("runMigrations against a table rebuild",
 		      (id, create_time, update_time, media_file_transcode_jobs)
 		      VALUES (1, datetime('now'), datetime('now'), 1)`)
 
-			Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+			Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 
 			By("leaving the rebuilt parents and everything hanging off them intact")
 			Expect(counts()).To(Equal(map[string]int{
@@ -501,7 +504,7 @@ var _ = Describe(
 			seedRecord(3, 3, `[2]`)     // a set that omits its own anchor
 			seedRecord(4, nil, nil)     // a movie record
 
-			Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+			Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 
 			Expect(links()).To(ConsistOf("1/1", "1/2", "1/3", "2/2", "3/2", "3/3"))
 		})
@@ -509,7 +512,7 @@ var _ = Describe(
 		It("skips an id the set names for an episode since deleted", func() {
 			seedRecord(1, 1, `[1,99]`)
 
-			Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+			Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 
 			Expect(links()).To(ConsistOf("1/1"))
 			var dangling int
@@ -521,7 +524,7 @@ var _ = Describe(
 
 		It("carries the set back into wanted_episodes on the way down", func() {
 			seedRecord(1, 1, `[1,2]`)
-			Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+			Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 
 			src, err := iofs.New(migrationsFS, "migrations")
 			Expect(err).NotTo(HaveOccurred())
@@ -705,7 +708,7 @@ var _ = Describe("down migrations", Label("integration", "db"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		m, err := migrate.NewWithInstance("iofs", src, "sqlite", drv)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+		Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 
 		_, err = sqlDB.Exec(
 			"INSERT INTO movies (id, create_time, update_time, title," +
@@ -733,5 +736,107 @@ var _ = Describe("down migrations", Label("integration", "db"), func() {
 				" AND name NOT IN ('schema_migrations', 'sqlite_sequence')",
 		).Scan(&tables)).To(Succeed())
 		Expect(tables).To(BeZero())
+	})
+})
+
+var _ = Describe("pre-migration snapshot", Label("integration", "db"), func() {
+	var (
+		sqlDB  *sql.DB
+		dbPath string
+		calls  []uint
+	)
+
+	BeforeEach(func() {
+		dbPath = filepath.Join(GinkgoT().TempDir(), "streamline.db")
+		var err error
+		sqlDB, err = sql.Open("sqlite", "file:"+dbPath)
+		Expect(err).NotTo(HaveOccurred())
+		sqlDB.SetMaxOpenConns(1)
+		DeferCleanup(func() { Expect(sqlDB.Close()).To(Succeed()) })
+		calls = nil
+	})
+
+	//nolint:unparam // the hook's signature
+	record := func(_ context.Context, from uint) error {
+		calls = append(calls, from)
+		return nil
+	}
+
+	migrateTo := func(version uint) {
+		GinkgoHelper()
+		src, err := iofs.New(migrationsFS, "migrations")
+		Expect(err).NotTo(HaveOccurred())
+		drv, err := sqlite.WithInstance(sqlDB, &sqlite.Config{})
+		Expect(err).NotTo(HaveOccurred())
+		m, err := migrate.NewWithInstance("iofs", src, "sqlite", drv)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(m.Migrate(version)).To(Succeed())
+	}
+
+	previousVersion := func() uint {
+		GinkgoHelper()
+		latest, err := LatestSchemaVersion()
+		Expect(err).NotTo(HaveOccurred())
+		src, err := iofs.New(migrationsFS, "migrations")
+		Expect(err).NotTo(HaveOccurred())
+		prev, err := src.Prev(latest)
+		Expect(err).NotTo(HaveOccurred())
+		return prev
+	}
+
+	version := func() uint {
+		GinkgoHelper()
+		var v uint
+		Expect(
+			sqlDB.QueryRow(`SELECT version FROM schema_migrations`).Scan(&v),
+		).To(Succeed())
+		return v
+	}
+
+	It("skips a fresh database, which holds nothing to keep", func() {
+		Expect(runMigrations(context.Background(), sqlDB, record)).To(Succeed())
+		Expect(calls).To(BeEmpty())
+	})
+
+	It("skips a database with nothing to apply", func() {
+		Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
+		Expect(runMigrations(context.Background(), sqlDB, record)).To(Succeed())
+		Expect(calls).To(BeEmpty())
+	})
+
+	It("runs with the version it migrates from when something is pending", func() {
+		prev := previousVersion()
+		migrateTo(prev)
+		Expect(runMigrations(context.Background(), sqlDB, record)).To(Succeed())
+		Expect(calls).To(Equal([]uint{prev}))
+		latest, err := LatestSchemaVersion()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(version()).To(Equal(latest))
+	})
+
+	It("migrates nothing when the snapshot fails", func() {
+		prev := previousVersion()
+		migrateTo(prev)
+		err := runMigrations(context.Background(), sqlDB,
+			func(context.Context, uint) error { return errors.New("disk full") })
+		Expect(err).To(MatchError("disk full"))
+		Expect(version()).To(Equal(prev))
+	})
+
+	It("writes a restorable copy through the real hook", func() {
+		prev := previousVersion()
+		migrateTo(prev)
+		Expect(runMigrations(context.Background(), sqlDB,
+			preMigrationSnapshot(dbPath, sqlDB))).To(Succeed())
+		all, err := dbbackup.List(dbbackup.Dir(filepath.Dir(dbPath)))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(all).To(HaveLen(1))
+		Expect(all[0].Kind).To(Equal(dbbackup.KindPreMigration))
+		Expect(all[0].Version).To(Equal(prev))
+		latest, err := LatestSchemaVersion()
+		Expect(err).NotTo(HaveOccurred())
+		v, err := dbbackup.Validate(context.Background(), all[0].Path, latest)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(v.Version).To(Equal(prev))
 	})
 })

@@ -7,12 +7,14 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/XSAM/otelsql"
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/dbbackup"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 
 	_ "modernc.org/sqlite"
@@ -115,7 +117,7 @@ func Open(ctx context.Context, dsn string) (*ent.Client, error) {
 	}
 
 	if !memory {
-		if err := runMigrations(ctx, db); err != nil {
+		if err := runMigrations(ctx, db, preMigrationSnapshot(dsn, db)); err != nil {
 			db.Close()
 			return nil, fmt.Errorf("apply migrations: %w", err)
 		}
@@ -144,4 +146,53 @@ func Open(ctx context.Context, dsn string) (*ent.Client, error) {
 	}
 
 	return client, nil
+}
+
+// preMigrationSnapshot returns the hook runMigrations calls before applying
+// anything: a VACUUM INTO copy under <data_dir>/backups, then the pre-migration
+// retention pass. Nil when backup.pre_migration is off. Without a loaded config
+// (tests, tools) it follows the defaults: snapshot, keep five.
+//
+// A failed snapshot fails the boot rather than migrating without one. That is
+// the point of it: with automated image updates nobody is there to take a copy
+// by hand, and a bad migration would leave nothing to roll back to.
+func preMigrationSnapshot(
+	dsn string,
+	db *sql.DB,
+) func(context.Context, uint) error {
+	keep := 5
+	if cfg := config.Get(); cfg != nil {
+		if !cfg.Backup.PreMigration {
+			return nil
+		}
+		keep = int(cfg.Backup.Retention.PreMigration)
+	}
+	dir := dbbackup.Dir(filepath.Dir(dsn))
+	return func(ctx context.Context, from uint) error {
+		slog.InfoContext(ctx, "backing up the database before migrating",
+			"schema.version_before", from, "backup.dir", dir)
+		b, err := dbbackup.Snapshot(ctx, db, dir, dbbackup.KindPreMigration, from)
+		if err != nil {
+			return fmt.Errorf(
+				"back up the database before migrating (nothing was migrated; "+
+					"check free space and permissions in %s, or set backup.pre_migration: false "+
+					"to migrate without a copy): %w",
+				dir, err)
+		}
+		slog.InfoContext(ctx, "database backed up before migrating",
+			"backup.path", b.Path, "backup.size_bytes", b.Size)
+		removed, err := dbbackup.Prune(dir, dbbackup.KindPreMigration, keep)
+		if err != nil {
+			slog.WarnContext(
+				ctx,
+				"could not prune pre-migration backups",
+				"error",
+				err,
+			)
+		}
+		if len(removed) > 0 {
+			slog.InfoContext(ctx, "pruned pre-migration backups", "removed", removed)
+		}
+		return nil
+	}
 }
