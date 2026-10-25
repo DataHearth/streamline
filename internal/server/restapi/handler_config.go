@@ -921,6 +921,8 @@ func downloadConfigView(d config.DownloadConfig) DownloadConfigJSONResponse {
 	return DownloadConfigJSONResponse{
 		SelectiveFiles: d.SelectiveFiles,
 		SelectionGrace: d.SelectionGrace,
+		SpaceCheck:     d.SpaceCheck,
+		SpaceReserveGb: int(d.SpaceReserveGB),
 		PathMappings:   mappings,
 	}
 }
@@ -998,9 +1000,19 @@ func (s *Server) UpdateConfigDownload(
 		}
 		mappings = &converted
 	}
+	reserve, err := narrowUint8Range(
+		"space_reserve_gb", req.Body.SpaceReserveGb, 0, math.MaxUint8,
+	)
+	if err != nil {
+		return UpdateConfigDownload422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	}
 	updated, err := config.UpdateDownload(ctx, config.DownloadPatch{
 		SelectiveFiles: req.Body.SelectiveFiles,
 		SelectionGrace: req.Body.SelectionGrace,
+		SpaceCheck:     req.Body.SpaceCheck,
+		SpaceReserveGB: reserve,
 		PathMappings:   mappings,
 	})
 	if configLocked(err) {
@@ -1016,6 +1028,8 @@ func (s *Server) UpdateConfigDownload(
 	slog.InfoContext(ctx, "download config updated",
 		"selective_files", updated.SelectiveFiles,
 		"selection_grace", updated.SelectionGrace,
+		"space_check", updated.SpaceCheck,
+		"space_reserve_gb", updated.SpaceReserveGB,
 	)
 	return UpdateConfigDownload200JSONResponse{
 		DownloadConfigJSONResponse: downloadConfigView(updated),

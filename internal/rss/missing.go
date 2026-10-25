@@ -123,7 +123,8 @@ func currentSearchWindow(ctx context.Context) (searchWindow, error) {
 }
 
 // transportFailure reports whether err is the indexer or the download client
-// being unreachable, rather than anything about the release.
+// being unreachable, or the download disk being full, rather than anything
+// about the release.
 //
 // grab_failures is a strike count against a *release choice*, and nothing
 // resets it but a successful grab — so counting a timeout retires the item
@@ -134,6 +135,7 @@ func currentSearchWindow(ctx context.Context) (searchWindow, error) {
 // "wanted" forever.
 func transportFailure(err error) bool {
 	return errors.Is(err, download.ErrUnreachable) ||
+		errors.Is(err, download.ErrNoSpace) ||
 		errors.Is(err, indexer.ErrUnreachable)
 }
 

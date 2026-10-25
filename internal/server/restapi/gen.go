@@ -5083,6 +5083,8 @@ type DownloadConfigPatch struct {
 	PathMappings   *[]PathMapping `json:"path_mappings,omitempty"`
 	SelectionGrace *string        `json:"selection_grace,omitempty"`
 	SelectiveFiles *bool          `json:"selective_files,omitempty"`
+	SpaceCheck     *bool          `json:"space_check,omitempty"`
+	SpaceReserveGb *int           `json:"space_reserve_gb,omitempty"`
 }
 
 // DownloadConfigView defines model for DownloadConfigView.
@@ -5095,6 +5097,12 @@ type DownloadConfigView struct {
 
 	// SelectiveFiles Grab only the files a release is wanted for. Off is a whole-torrent grab, the pre-feature behaviour.
 	SelectiveFiles bool `json:"selective_files"`
+
+	// SpaceCheck Refuse a grab (`422 grab_rejected`) that would not fit on the download client's disk once its active downloads finish, keeping `space_reserve_gb` free. A client that cannot report its free space is not checked.
+	SpaceCheck bool `json:"space_check"`
+
+	// SpaceReserveGb Gigabytes the space check keeps free on the download disk.
+	SpaceReserveGb int `json:"space_reserve_gb"`
 }
 
 // DownloadHistory defines model for DownloadHistory.

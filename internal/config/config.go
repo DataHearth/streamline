@@ -406,11 +406,15 @@ type FFmpegConfig struct {
 	Path    string `koanf:"path"`
 }
 
-// DownloadConfig gates selective file download (spec §7). Off is bit-for-bit
-// today's behaviour and the rollback path; runtime-toggleable.
+// DownloadConfig gates selective file download (spec §7; off is bit-for-bit
+// the whole-torrent grab) and the free-space check on grab. Runtime-editable.
 type DownloadConfig struct {
 	SelectiveFiles bool   `koanf:"selective_files"`
 	SelectionGrace string `koanf:"selection_grace" validate:"required"`
+	// SpaceCheck refuses a grab that would leave less than SpaceReserveGB free
+	// on the download client's disk once every active download has finished.
+	SpaceCheck     bool  `koanf:"space_check"`
+	SpaceReserveGB uint8 `koanf:"space_reserve_gb"`
 	// PathMappings translate a save path a download client reports into one
 	// streamline can open. Empty means both processes see the same paths,
 	// which is the single-host case.
@@ -1081,6 +1085,8 @@ func defaults() map[string]any {
 		"ffmpeg.path":                         "",
 		"download.selective_files":            false,
 		"download.selection_grace":            "10m",
+		"download.space_check":                true,
+		"download.space_reserve_gb":           10,
 		"download.path_mappings":              []PathMapping{},
 		"transcoding.enabled":                 false,
 		"transcoding.max_concurrent":          1,

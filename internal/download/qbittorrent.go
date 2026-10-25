@@ -808,6 +808,34 @@ func (q *QBittorrent) testAPIKey(ctx context.Context) error {
 	return nil
 }
 
+// FreeSpace reads server_state from a full sync. qBittorrent reports it for
+// its default save path only, so a streamline category saving to another
+// volume is judged by the default one's disk.
+func (q *QBittorrent) FreeSpace(ctx context.Context) (int64, error) {
+	resp, err := q.doRequest(ctx, http.MethodGet, "/api/v2/sync/maindata", nil)
+	if err != nil {
+		return 0, fmt.Errorf("qbittorrent free space: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("qbittorrent free space: %w: status %d",
+			ErrUnexpectedStatus, resp.StatusCode)
+	}
+	var data struct {
+		ServerState struct {
+			FreeSpaceOnDisk *int64 `json:"free_space_on_disk"`
+		} `json:"server_state"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return 0, fmt.Errorf("qbittorrent free space: %w: %w", ErrBadResponse, err)
+	}
+	if data.ServerState.FreeSpaceOnDisk == nil {
+		return 0, fmt.Errorf("qbittorrent free space: %w: no free_space_on_disk",
+			ErrBadResponse)
+	}
+	return *data.ServerState.FreeSpaceOnDisk, nil
+}
+
 // mapQBState maps a qBittorrent state string to a TorrentStatus. The `UP`
 // suffix means the torrent already finished downloading and is in its
 // upload phase, so idle `UP` states report Completed (not Paused) and the

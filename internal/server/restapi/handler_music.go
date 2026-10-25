@@ -678,6 +678,7 @@ func grabRefused(err error) bool {
 	return errors.Is(err, download.ErrUntrustedSource) ||
 		errors.Is(err, download.ErrNoWantedFiles) ||
 		errors.Is(err, download.ErrClientFull) ||
+		errors.Is(err, download.ErrNoSpace) ||
 		errors.Is(err, download.ErrUnsafeTorrentName)
 }
 

@@ -966,6 +966,8 @@ export type MusicTagsConfig = {
 export type DownloadConfig = {
 	selective_files: boolean;
 	selection_grace: string;
+	space_check: boolean;
+	space_reserve_gb: number;
 };
 
 // The api keys are write-only: the response says whether one is configured

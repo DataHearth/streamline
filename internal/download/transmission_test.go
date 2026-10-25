@@ -71,6 +71,39 @@ var _ = Describe("Transmission Client", Label("unit", "downloads"), func() {
 		})
 	})
 
+	Describe("FreeSpace", func() {
+		It("measures the daemon's own download-dir", func() {
+			srv := trServer(func(method string, args json.RawMessage) (string, any) {
+				switch method {
+				case "session-get":
+					return "success", map[string]any{
+						"download-dir": "/data/torrents",
+					}
+				case "free-space":
+					var a struct {
+						Path string `json:"path"`
+					}
+					Expect(json.Unmarshal(args, &a)).To(Succeed())
+					Expect(a.Path).To(Equal("/data/torrents"))
+					return "success", map[string]any{
+						"path": a.Path, "size-bytes": 123456789,
+					}
+				}
+				Fail("unexpected method " + method)
+				return "", nil
+			})
+			DeferCleanup(srv.Close)
+
+			free, err := NewTransmission(
+				srv.URL,
+				"",
+				"",
+			).FreeSpace(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(free).To(Equal(int64(123456789)))
+		})
+	})
+
 	Describe("AddTorrent", func() {
 		It("uploads metainfo and returns the lowercased hash", func() {
 			srv := trServer(func(method string, args json.RawMessage) (string, any) {

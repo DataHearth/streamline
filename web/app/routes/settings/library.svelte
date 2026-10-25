@@ -96,13 +96,14 @@
 		stored: number,
 		max: number,
 		save: (v: number) => void,
+		min = 1,
 	) {
 		const raw = drafts[key];
 		delete drafts[key];
 		if (raw === undefined) return;
 		const n = Math.round(Number(raw));
 		if (!Number.isFinite(n)) return;
-		const clamped = Math.min(max, Math.max(1, n));
+		const clamped = Math.min(max, Math.max(min, n));
 		if (clamped === stored) return;
 		save(clamped);
 	}
@@ -344,6 +345,32 @@
 							saveDownload.mutate({ selection_grace: v }),
 						),
 					{ mono: true, width: "w-32" },
+				)}
+			{/if}
+
+			<Checkbox
+				checked={dl.space_check}
+				disabled={saveDownload.isPending}
+				onChange={(v) => saveDownload.mutate({ space_check: v })}
+				label={i18n.library_space_check()}
+				description={i18n.library_space_check_help()}
+			/>
+
+			{#if dl.space_check}
+				{@render field(
+					"space_reserve_gb",
+					i18n.library_space_reserve_gb(),
+					i18n.library_space_reserve_gb_help(),
+					draftOf("space_reserve_gb", dl.space_reserve_gb),
+					() =>
+						commitNumber(
+							"space_reserve_gb",
+							dl.space_reserve_gb,
+							255,
+							(v) => saveDownload.mutate({ space_reserve_gb: v }),
+							0,
+						),
+					{ numeric: true, width: "w-28" },
 				)}
 			{/if}
 

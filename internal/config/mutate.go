@@ -68,6 +68,8 @@ type LibraryPatch struct {
 type DownloadPatch struct {
 	SelectiveFiles *bool
 	SelectionGrace *string
+	SpaceCheck     *bool
+	SpaceReserveGB *uint8
 	// PathMappings replaces the whole list when non-nil. A pointer to an empty
 	// slice is how the list is cleared; nil leaves it alone.
 	PathMappings *[]PathMapping
@@ -486,6 +488,12 @@ func UpdateDownload(
 		}
 		if patch.SelectionGrace != nil {
 			c.Download.SelectionGrace = *patch.SelectionGrace
+		}
+		if patch.SpaceCheck != nil {
+			c.Download.SpaceCheck = *patch.SpaceCheck
+		}
+		if patch.SpaceReserveGB != nil {
+			c.Download.SpaceReserveGB = *patch.SpaceReserveGB
 		}
 		if patch.PathMappings != nil {
 			c.Download.PathMappings = *patch.PathMappings

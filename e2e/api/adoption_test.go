@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
-	"strconv"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -63,31 +61,6 @@ var _ = Describe("Manual torrent adoption", Label("e2e", "api"), func() {
 		}
 		DeferCleanup(func() {
 			app.DB.TVShow.DeleteOneID(show.ID).ExecX(context.Background())
-		})
-	}
-
-	// registerClient points streamline at the fake for the duration of one
-	// spec. Config-backed resources are global, so it is removed again rather
-	// than left for whichever spec runs next.
-	registerClient := func(fakeURL string) {
-		GinkgoHelper()
-		u, err := url.Parse(fakeURL)
-		Expect(err).NotTo(HaveOccurred())
-		port, err := strconv.ParseUint(u.Port(), 10, 16)
-		Expect(err).NotTo(HaveOccurred())
-
-		resp := post("/api/v1/download-clients", adminAuth, map[string]any{
-			"name": "e2e-qbit", "client_type": "qbittorrent",
-			"host": u.Hostname(), "port": port,
-			"auth_method": "password",
-			"username":    fakes.QBUsername, "password": fakes.QBPassword,
-			"enabled": true,
-		})
-		defer resp.Body.Close()
-		Expect(resp.StatusCode).To(Equal(http.StatusCreated), bodyText(resp))
-		DeferCleanup(func() {
-			del("/api/v1/download-clients/e2e-qbit", adminAuth, nil).
-				Body.Close()
 		})
 	}
 
@@ -162,7 +135,7 @@ var _ = Describe("Manual torrent adoption", Label("e2e", "api"), func() {
 			Hash: "e2eadd000000000000000000000000000000abcd",
 			Name: integraleName, Files: files,
 		})
-		registerClient(qb.URL)
+		registerFakeQBittorrent(qb.URL)
 
 		// The download poll job's own call, made directly so the spec does not
 		// wait on a scheduler tick. App.Downloads is the same value.
@@ -232,7 +205,7 @@ var _ = Describe("Manual torrent adoption", Label("e2e", "api"), func() {
 
 	It("previews nothing for a proposal with no episode", func() {
 		qb := fakes.NewQBittorrent()
-		registerClient(qb.URL)
+		registerFakeQBittorrent(qb.URL)
 
 		resp := get("/api/v1/activity/pending/999999/preview", adminAuth)
 		defer resp.Body.Close()

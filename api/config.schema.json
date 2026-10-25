@@ -733,7 +733,7 @@
     "download": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Gates selective file download. Off is bit-for-bit today's behaviour.",
+      "description": "Selective file download, the free-space check on grab, and client path mappings.",
       "properties": {
         "selective_files": {
           "type": "boolean",
@@ -742,6 +742,16 @@
         "selection_grace": {
           "$ref": "#/definitions/duration",
           "description": "How long file selection stays open after grab."
+        },
+        "space_check": {
+          "type": "boolean",
+          "description": "Refuses a grab that would not fit on the download client's disk, counting what its active downloads still have to write and keeping space_reserve_gb free."
+        },
+        "space_reserve_gb": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Gigabytes the space check keeps free on the download disk."
         },
         "path_mappings": {
           "type": "array",

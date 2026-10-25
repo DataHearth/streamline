@@ -88,6 +88,10 @@ var (
 	ErrClientFull = errors.New(
 		"download client holds its maximum number of torrents",
 	)
+	// ErrNoSpace is returned by grab when the release would not fit on the
+	// download client's disk beside what its active downloads still have to
+	// write, keeping download.space_reserve_gb free.
+	ErrNoSpace = errors.New("not enough space on the download disk")
 )
 
 // downloadSavePath joins a client-supplied torrent name onto the configured
@@ -1114,6 +1118,18 @@ func (d *download) grabWith(
 			src.Selective = true
 			selectivePending = true
 		}
+	}
+
+	size := result.Size
+	if selection != nil {
+		size = selection.bytes
+	}
+	if err := checkFreeSpace(ctx, client, size); err != nil {
+		outcome = "no_space"
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("%w: %s", err, result.Title),
+		)
 	}
 
 	hash, err := client.AddTorrent(ctx, src)

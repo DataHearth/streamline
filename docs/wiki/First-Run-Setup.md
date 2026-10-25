@@ -160,6 +160,16 @@ If nothing in a release actually matches what's wanted, the grab is dropped rath
 
 The torrent drawer (**Activity → Torrents**) still shows every file with its priority and lets you flip one back on manually before the download finishes — the same control that existed before this feature, now driven automatically as well.
 
+### Free-space check
+
+On by default (`download.space_check: true`, runtime-editable). Before a release goes to your download client, Streamline asks the client how much space its disk has free and refuses the grab if the release would not fit once the client's active downloads finish, leaving `download.space_reserve_gb` (10 GB by default) untouched. The reserve matters because downloads and the library usually share one disk for hardlinks — and often the database too — so a download disk that fills to the last byte breaks imports along with the downloads.
+
+The client measures the space itself, so the check is right even when the client runs on another machine: qBittorrent's free space on disk, Transmission's `free-space` for its download directory, Deluge's free space, or the built-in client's own download folder. qBittorrent only reports its **default** save path — if the `streamline` category saves to a different disk, that disk is not the one being checked.
+
+A grab you make by hand answers with the reason, sizes included. A search or RSS grab skips the release, logs a warning and tries again on its next pass; a refusal never counts as a failed grab. If the client cannot report its free space, or the release's size is unknown, the grab goes ahead unchecked.
+
+Torrents are never paused or resumed by this check, and it cannot see space taken on that disk by anything other than the download client.
+
 ---
 
 ## 5. Add an indexer

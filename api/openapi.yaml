@@ -12395,7 +12395,8 @@ components:
 
     DownloadConfigView:
       type: object
-      required: [selective_files, selection_grace, path_mappings]
+      required:
+        [selective_files, selection_grace, space_check, space_reserve_gb, path_mappings]
       properties:
         selective_files:
           type: boolean
@@ -12407,6 +12408,18 @@ components:
           description: >-
             Go duration string. How long a magnet-sourced selection may sit
             pending before giving up and downloading whole.
+        space_check:
+          type: boolean
+          description: >-
+            Refuse a grab (`422 grab_rejected`) that would not fit on the
+            download client's disk once its active downloads finish, keeping
+            `space_reserve_gb` free. A client that cannot report its free space
+            is not checked.
+        space_reserve_gb:
+          type: integer
+          minimum: 0
+          maximum: 255
+          description: Gigabytes the space check keeps free on the download disk.
         path_mappings:
           type: array
           items:
@@ -12425,6 +12438,12 @@ components:
           type: boolean
         selection_grace:
           type: string
+        space_check:
+          type: boolean
+        space_reserve_gb:
+          type: integer
+          minimum: 0
+          maximum: 255
         path_mappings:
           type: array
           items:

@@ -21,11 +21,15 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/sysinfo"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
-var _ download.Client = (*Engine)(nil)
+var (
+	_ download.Client     = (*Engine)(nil)
+	_ download.FreeSpacer = (*Engine)(nil)
+)
 
 // dropUnusableTrackers removes announce URLs anacrolix would assert on, and
 // reports how many went.
@@ -391,6 +395,14 @@ func (e *Engine) ResumeTorrent(ctx context.Context, hash string) error {
 
 // TestConnection is a no-op: a constructed engine is by definition running.
 func (e *Engine) TestConnection(ctx context.Context) error { return nil }
+
+func (e *Engine) FreeSpace(context.Context) (int64, error) {
+	usage := sysinfo.DiskUsageFor(e.downloadDir)
+	if usage == nil {
+		return 0, fmt.Errorf("stat %s: free space unavailable", e.downloadDir)
+	}
+	return usage.FreeBytes, nil
+}
 
 // ListFiles returns the torrent's files, empty (nil error) when metadata
 // hasn't resolved yet — the same "not an error" shape GetTorrent's

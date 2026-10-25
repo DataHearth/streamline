@@ -2,7 +2,7 @@
 
 > **Read before touching** `internal/bittorrent/`, `internal/importer/`, `internal/download/adopt.go`, or `internal/mediaserver/`.
 >
-> **Covers** — which episodes a record is for; the builtin engine's memory bounds, peer-socket ownership and port rebinding; import verification and the `held` record lifecycle; adopting a manually-added torrent (proposals, identify, preview, replace); and the media-server refresh (targeted folders, path mappings, coalescing).
+> **Covers** — which episodes a record is for; the builtin engine's memory bounds, peer-socket ownership and port rebinding; import verification and the `held` record lifecycle; adopting a manually-added torrent (proposals, identify, preview, replace); the free-space check on grab; and the media-server refresh (targeted folders, path mappings, coalescing).
 >
 > **Not here** — which files a grab asks for (`selective-file-download.md`), whether a release beats a file (`quality-scoring.md`).
 
@@ -99,6 +99,12 @@
 - **Discovery has two endpoints, and the saved-server one is not optional.** `POST /media-servers/discover` takes `{server_type, host, api_key}` and serves the *create* form, where the row does not exist yet. A saved server's token never reaches the browser (the read view carries only `api_key_set`), so the edit form has no key to send and that endpoint would be handed an empty one — which is why `POST /media-servers/{name}/discover` (`DiscoverSectionsByName`, mirroring `TestByName`) runs against the stored secret instead. Before it existed the edit form's Discover button was permanently disabled behind `!api_key`, so section keys were unobtainable for any configured Plex server.
 - Discovery always fills the pickers — `discover.onSuccess` only assigns `sections`, and the section `Select`s are marked `readOnlyExempt` so they stay usable under `read_only` even though the rest of the form is locked. What `read_only` blocks is *saving*, not picking, so the pickers stay useful for figuring out which section is which. A separate "Show config snippet" button (visible once `lock() && sections.length > 0`) opens `PlexSectionsModal`, which shows the section keys the operator picked plus a paste-ready YAML block to commit by hand — same shape as `PlexCredentialsModal` for the PIN token. Discovery and PIN sign-in deliberately skip `readOnlyLock` — they only read remote state (see the note on the function itself).
 
+
+## Free-space check on grab
+
+`grabWith` calls `checkFreeSpace` (`internal/download/space.go`) right before `AddTorrent`, after Flow A, so a selective grab is weighed at its keep-set's bytes and everything else at the indexer's `Size`. It refuses with `ErrNoSpace` when `size + Σ client torrents' Size×(1−Progress) + space_reserve_gb > free`. The in-flight remainder is what keeps two grabs a minute apart from claiming the same space; free space comes from the client (`FreeSpacer`, an optional interface all four clients implement; only the builtin's is a statfs, of its own download dir), so a client on another host is judged by its own disk. Every way the check cannot be made — off, size 0, no `FreeSpacer`, a `FreeSpace` or `ListTorrents` error — lets the grab through: a broken check must not stop every download.
+
+`ErrNoSpace` is in every grab handler's `grab_rejected` list and in both "not the release's fault" predicates (`rss.transportFailure`, `searchwindow.TransportFailure`), so an automatic grab refused for space never takes a `grab_failures` strike and the item is retried next pass. The grab counter's `outcome="no_space"` is the metric. Nothing pauses or resumes torrents; pre-allocation was ruled out (ZFS does not honour `fallocate`, qBittorrent's and Transmission's switches are client-global, and reserving exactly the release still fills the disk to zero).
 
 ## Concurrent grabs of one hash
 

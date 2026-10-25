@@ -143,7 +143,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `library.{movie,series}_naming` | ✅ Applies to the next import or rename | Settings → Library |
 | `library.import_mode`, `keep_torrent_seeding`, `import_max_attempts`, `allowed_download_roots` | ✅ | Settings → Library |
 | `library.no_match_cooldown`, `max_grab_failures`, `drift_grace_ticks` | ✅ | Settings → Library |
-| `download.selective_files`, `download.selection_grace`, `download.path_mappings` | ✅ | Settings → Library |
+| `download.selective_files`, `download.selection_grace`, `download.space_check`, `download.space_reserve_gb`, `download.path_mappings` | ✅ | Settings → Library |
 | `ffmpeg.enabled` | ✅ | Settings → Media probe |
 | `ffmpeg.path` | ⚠️ Accepted immediately, but only picked up by the process's prober on the next restart | Settings → Media probe |
 | `transcoding.{enabled,max_concurrent,max_failures,defer_seeding,hw_accel,hw_device,verify.*}` | ✅ Read on every worker tick — no restart | Settings → Transcoding |
@@ -478,12 +478,14 @@ Both section keys are Plex-only. Leave them unset and Streamline looks the secti
 
 ### download
 
-Governs [selective file download](First-Run-Setup#selective-file-download) — grabbing an episode-scoped pack downloads only the files that episode needs.
+Governs [selective file download](First-Run-Setup#selective-file-download) — grabbing an episode-scoped pack downloads only the files that episode needs — and the [free-space check](First-Run-Setup#free-space-check) on every grab.
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `download.selective_files` | bool | `false` | Off is bit-for-bit today's whole-torrent grab, and the rollback path. **Runtime-editable** |
 | `download.selection_grace` | duration | `10m` | How long a magnet-sourced selection may sit unresolved before giving up and downloading the release whole |
+| `download.space_check` | bool | `true` | Refuse a grab that would not fit on the download client's disk once its active downloads finish. **Runtime-editable** |
+| `download.space_reserve_gb` | int (0–255) | `10` | Gigabytes the space check always leaves free on the download disk. **Runtime-editable** |
 | `download.path_mappings` | list of `{from, to}` | `[]` | Translates a save path your download client reports into one Streamline can open. First matching prefix wins. Both sides must be absolute. **Runtime-editable** |
 
 #### Path mappings

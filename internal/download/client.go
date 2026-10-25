@@ -87,3 +87,16 @@ type Client interface {
 	// every other file. ErrNotSupported flips the record to unsupported.
 	SetWantedFiles(ctx context.Context, hash string, wanted []int) error
 }
+
+// FreeSpacer is an optional Client capability: the bytes free on the disk the
+// client downloads to, as the client measures it, since it may run on another
+// host. A client without it is never refused a grab for space.
+type FreeSpacer interface {
+	FreeSpace(ctx context.Context) (int64, error)
+}
+
+var (
+	_ FreeSpacer = (*QBittorrent)(nil)
+	_ FreeSpacer = (*Transmission)(nil)
+	_ FreeSpacer = (*Deluge)(nil)
+)

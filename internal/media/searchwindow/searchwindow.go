@@ -44,10 +44,12 @@ func Current(ctx context.Context) (Window, error) {
 }
 
 // TransportFailure reports whether err is the indexer or the download client
-// being unreachable rather than anything about the release. grab_failures is
+// being unreachable, or the download disk being full, rather than anything
+// about the release. grab_failures is
 // a strike count against a release choice and only a successful grab resets
 // it, so counting a timeout would retire an item after a few flaky ticks.
 func TransportFailure(err error) bool {
 	return errors.Is(err, download.ErrUnreachable) ||
+		errors.Is(err, download.ErrNoSpace) ||
 		errors.Is(err, indexer.ErrUnreachable)
 }

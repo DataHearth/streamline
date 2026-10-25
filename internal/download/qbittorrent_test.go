@@ -72,9 +72,27 @@ var _ = Describe("qBittorrent Client", Label("unit", "downloads"), func() {
 				w.WriteHeader(http.StatusOK)
 			},
 		)
+		mux.HandleFunc(
+			"/api/v2/sync/maindata",
+			func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write(jsonBytes(map[string]any{
+					"rid":          1,
+					"server_state": map[string]any{"free_space_on_disk": 987654321},
+				}))
+			},
+		)
 		ts = httptest.NewServer(mux)
 		DeferCleanup(func() { ts.Close() })
 		client = NewQBittorrentPassword(ts.URL, "admin", "password")
+	})
+
+	Describe("FreeSpace", func() {
+		It("reads free_space_on_disk from the sync state", func() {
+			free, err := client.(FreeSpacer).FreeSpace(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(free).To(Equal(int64(987654321)))
+		})
 	})
 
 	Describe("ListTorrents", func() {
