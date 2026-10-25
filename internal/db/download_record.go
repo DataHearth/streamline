@@ -707,7 +707,8 @@ func (db *DB) ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error {
 // never take the same release for the same item again. requeue
 // reverts the movie to wanted so a search finds a replacement; without it the
 // movie stays failed, the user having judged the release themselves. Episodes
-// revert to wanted either way, mirroring RecordImportFailure — unless the
+// revert to wanted either way, mirroring RecordImportFailure, every episode a
+// pack left in flight included (settleRecordEpisodes) — unless the
 // episode still holds a file: an upgrade grab anchors its record on an
 // episode it was replacing, and rejecting the replacement leaves that file in
 // place, so "wanted" would claim we have nothing. Albums follow the movie rule,
@@ -760,6 +761,10 @@ func (db *DB) FailHeldDownloadRecord(
 			tx.Rollback()
 			return fmt.Errorf("update episode: %w", err)
 		}
+	}
+	if err := settleRecordEpisodes(ctx, tx, id); err != nil {
+		tx.Rollback()
+		return err
 	}
 	var albumIDs []uint32
 	if rec.Edges.Album != nil {
@@ -1124,8 +1129,9 @@ func (db *DB) RecordBookImportSuccess(
 }
 
 // RecordImportFailure writes attempt counter on retryable; on terminal also
-// flips DownloadRecord + Movie to failed with reason, and settles the album
-// (or each album a pack expected) through settleFailedAlbums.
+// flips DownloadRecord + Movie to failed with reason, walks the record's
+// episodes back (settleRecordEpisodes), and settles the album (or each album
+// a pack expected) through settleFailedAlbums.
 func (db *DB) RecordImportFailure(
 	ctx context.Context,
 	p RecordImportFailureParams,
@@ -1172,6 +1178,12 @@ func (db *DB) RecordImportFailure(
 				tx.Rollback()
 				return fmt.Errorf("update episode: %w", err)
 			}
+		}
+	}
+	if p.Terminal {
+		if err := settleRecordEpisodes(ctx, tx, p.RecordID); err != nil {
+			tx.Rollback()
+			return err
 		}
 	}
 	if p.Terminal {
@@ -1794,6 +1806,36 @@ var inFlightRecordStatuses = []downloadrecord.Status{
 // recordEpisodes selects every episode a record's download is for.
 func recordEpisodes(recordID uint32) predicate.Episode {
 	return episode.HasDownloadRecordsWith(downloadrecord.ID(recordID))
+}
+
+// settleRecordEpisodes walks a record that just failed back off the episodes
+// it left in flight: RevertOrphanedDownloadingEpisodes' rule, scoped to the
+// record's own set and run in the failing transaction. A pack marks every
+// episode it is for, and only the anchor used to be walked back, so the rest
+// read "importing" until the next monitor tick's sweep found them stranded.
+// An episode another in-flight record still covers is left to it; the caller
+// has already moved this record out of flight.
+func settleRecordEpisodes(ctx context.Context, tx *ent.Tx, recordID uint32) error {
+	stranded := episode.And(
+		recordEpisodes(recordID),
+		episode.StatusIn(inFlightEpisodeStatuses...),
+		episode.Not(episode.HasDownloadRecordsWith(
+			downloadrecord.StatusIn(inFlightRecordStatuses...),
+		)),
+	)
+	if _, err := tx.Episode.Update().
+		Where(stranded, episode.Not(episode.HasMediaFiles())).
+		SetStatus(episode.StatusWanted).
+		Save(ctx); err != nil {
+		return fmt.Errorf("revert record episodes to wanted: %w", err)
+	}
+	if _, err := tx.Episode.Update().
+		Where(stranded, episode.HasMediaFiles()).
+		SetStatus(episode.StatusAvailable).
+		Save(ctx); err != nil {
+		return fmt.Errorf("revert record episodes to available: %w", err)
+	}
+	return nil
 }
 
 // RevertOrphanedDownloadingEpisodes reconciles episodes stuck in flight with

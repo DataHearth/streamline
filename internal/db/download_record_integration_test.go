@@ -2212,6 +2212,101 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			Expect(e.Status).To(Equal(episode.StatusAvailable))
 		})
 
+		// A pack marks every episode it is for; failing it must walk them all
+		// back, not just the anchor, and leave one another live record covers.
+		createPackRec := func(tvdb uint32) (*ent.DownloadRecord, []uint32, uint32) {
+			GinkgoHelper()
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Pack", Year: 2024, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{
+					Number: 1,
+					Episodes: []EpisodeSeed{
+						{Number: 1, Title: "One"},
+						{Number: 2, Title: "Two"},
+						{Number: 3, Title: "Three"},
+						{Number: 4, Title: "Four"},
+					},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			eps := show.Edges.Seasons[0].Edges.Episodes
+			ids := make([]uint32, 0, len(eps))
+			for _, e := range eps {
+				ids = append(ids, e.ID)
+			}
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "Pack.S01", Size: 1, TorrentHash: fmt.Sprintf("pack%d", tvdb),
+				Status:             downloadrecord.StatusImporting,
+				EpisodeID:          ids[0],
+				EpisodeIDs:         ids[:3],
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			// The fourth is another record's, still downloading; the third is
+			// covered by both.
+			_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title:              "Pack.S01E03E04",
+				Size:               1,
+				TorrentHash:        fmt.Sprintf("other%d", tvdb),
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          ids[2],
+				EpisodeIDs:         ids[2:],
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(client.Episode.Update().Where(episode.IDIn(ids...)).
+				SetStatus(episode.StatusImporting).Exec(ctx)).To(Succeed())
+			return rec, ids, show.ID
+		}
+		statuses := func(ids []uint32) []episode.Status {
+			GinkgoHelper()
+			out := make([]episode.Status, len(ids))
+			for i, id := range ids {
+				e, err := client.Episode.Get(ctx, id)
+				Expect(err).NotTo(HaveOccurred())
+				out[i] = e.Status
+			}
+			return out
+		}
+
+		It(
+			"walks every episode of a rejected pack back, not just its anchor",
+			func() {
+				rec, ids, _ := createPackRec(9230)
+				Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+				Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", true)).
+					To(Succeed())
+
+				Expect(statuses(ids)).To(Equal([]episode.Status{
+					episode.StatusWanted, episode.StatusWanted,
+					episode.StatusImporting, episode.StatusImporting,
+				}))
+			},
+		)
+
+		It("walks every episode of a pack that failed for good back", func() {
+			rec, ids, _ := createPackRec(9231)
+			Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+				RecordID: rec.ID, Attempts: 3, Terminal: true,
+				Reason: "broken", EpisodeID: ids[0],
+			})).To(Succeed())
+
+			Expect(statuses(ids)).To(Equal([]episode.Status{
+				episode.StatusWanted, episode.StatusWanted,
+				episode.StatusImporting, episode.StatusImporting,
+			}))
+		})
+
+		It("leaves a pack's episodes in flight on a retryable failure", func() {
+			rec, ids, _ := createPackRec(9232)
+			Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+				RecordID: rec.ID, Attempts: 1, Reason: "not yet",
+				EpisodeID: ids[0],
+			})).To(Succeed())
+
+			Expect(statuses(ids)).To(HaveEach(episode.StatusImporting))
+		})
+
 		It("blocklists a rejected movie release by hash, else by title", func() {
 			for _, requeue := range []bool{true, false} {
 				hash := fmt.Sprintf("Rej%t", requeue)
