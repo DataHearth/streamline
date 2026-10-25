@@ -11,6 +11,7 @@
 		type SearchItem,
 	} from "@lib/search-model.svelte";
 	import { onRouteQuery } from "@lib/route-query";
+	import { restoreScrollOnBack } from "@lib/scroll-restore";
 	import SearchResultRow from "@components/layout/SearchResultRow.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -28,6 +29,7 @@
 	// what's left.
 	let query = $state("");
 	let inputEl = $state<HTMLInputElement | null>(null);
+	let listEl = $state<HTMLDivElement | null>(null);
 
 	const model = createSearchModel(() => query, { compact: true });
 	const navigateTo = searchNav();
@@ -102,6 +104,10 @@
 		}
 	});
 
+	// The results scroll on their own, under the fixed field: Back from a picked
+	// result puts them where they were, as AppShell does for #main.
+	onMount(() => (listEl ? restoreScrollOnBack(listEl, "search") : undefined));
+
 	onMount(() => {
 		const onKey = (e: KeyboardEvent) => {
 			if (e.key === "Escape") leave();
@@ -173,6 +179,7 @@
 	</form>
 
 	<div
+		bind:this={listEl}
 		class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 pb-[max(env(safe-area-inset-bottom),16px)]"
 	>
 		{#each model.sections as section (section.id)}

@@ -4,6 +4,9 @@ import { activeRoute } from "@roxi/routify";
 // scroller and outlives every route, and Routify scrolls it to the top after
 // each route renders, so without this Back from a movie, or from the phone's
 // search page, came up at the top of a list scrolled a hundred posters deep.
+// A page with a scroller of its own (the phone search page's results) passes
+// it under its own `name`; that one mounts with its route, and the store's
+// first emission is the traversal that brought it back.
 //
 // Positions are keyed by the route's URL, query included: a list's filters are
 // in its query string, and a different filter is a different list. A link or
@@ -14,8 +17,11 @@ const KEEP = 50;
 // the route renders, and the first paint of a cached list.
 const SETTLE_MS = 1000;
 
-export function restoreScrollOnBack(main: HTMLElement): () => void {
-	const saved = new Map<string, number>();
+const stores = new Map<string, Map<string, number>>();
+
+export function restoreScrollOnBack(scroller: HTMLElement, name = "main"): () => void {
+	const saved = stores.get(name) ?? new Map<string, number>();
+	stores.set(name, saved);
 	let current: string | null = null;
 	let cancel: (() => void) | null = null;
 
@@ -27,13 +33,13 @@ export function restoreScrollOnBack(main: HTMLElement): () => void {
 		// the next flush, after this store update.
 		if (current !== null) {
 			saved.delete(current);
-			saved.set(current, main.scrollTop);
+			saved.set(current, scroller.scrollTop);
 			if (saved.size > KEEP) saved.delete(saved.keys().next().value as string);
 		}
 		current = r.url ?? "";
 		if (r.mode !== "popState") return;
 		const top = saved.get(current);
-		if (top) cancel = settle(main, top);
+		if (top) cancel = settle(scroller, top);
 	});
 
 	return () => {
@@ -45,7 +51,7 @@ export function restoreScrollOnBack(main: HTMLElement): () => void {
 // Keeps putting the scroller back at `top` until the window closes: the page
 // may still be growing to that height, and Routify scrolls to the top once
 // after rendering. Any input of the user's own ends it at once.
-function settle(main: HTMLElement, top: number): () => void {
+function settle(scroller: HTMLElement, top: number): () => void {
 	const until = performance.now() + SETTLE_MS;
 	let frame = 0;
 	const stop = () => {
@@ -53,7 +59,7 @@ function settle(main: HTMLElement, top: number): () => void {
 		for (const ev of INPUT) window.removeEventListener(ev, stop, true);
 	};
 	const step = () => {
-		if (main.scrollTop !== top) main.scrollTo({ top, behavior: "instant" });
+		if (scroller.scrollTop !== top) scroller.scrollTo({ top, behavior: "instant" });
 		if (performance.now() < until) frame = requestAnimationFrame(step);
 		else stop();
 	};
