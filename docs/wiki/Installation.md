@@ -10,14 +10,18 @@ A couple of features are gated behind the `ffmpeg`/`ffprobe` binaries, but they 
 | --- | --- |
 | [Docker Compose](#docker-compose) | You want the simplest self-hosted setup, with ffmpeg included out of the box |
 | [Plain binary](#plain-binary) | You'd rather not run a container, or your hardware doesn't suit one |
-| [Unraid, Synology, TrueNAS](#unraid-synology-truenas) | You run one of these NAS OSes and prefer its own Docker UI |
+| [Unraid](#unraid) | You run Unraid: there is a template for its Docker page |
+| [Synology, TrueNAS](#synology-truenas) | You run one of these NAS OSes and prefer its own Docker UI |
+| [Proxmox VE (LXC)](Proxmox) | You run Proxmox and want Streamline in its own LXC container, without Docker |
 | [Kubernetes / Helm](#kubernetes--helm) | You already run Kubernetes and want a GitOps-style, declarative deploy |
 | [NixOS / Nix](NixOS) | You run NixOS, or want the service declared in a flake |
 
 - [Before you start: the folder rule](#before-you-start-the-folder-rule)
 - [Docker Compose](#docker-compose) — recommended for most people
 - [Plain binary](#plain-binary)
-- [Unraid, Synology, TrueNAS](#unraid-synology-truenas)
+- [Unraid](#unraid)
+- [Synology, TrueNAS](#synology-truenas)
+- [Proxmox VE (LXC)](Proxmox) — install script, media mounts, ID mapping, GPU passthrough
 - [Kubernetes / Helm](#kubernetes--helm)
 - [NixOS / Nix](NixOS) — package, NixOS module and home-manager module
 - [Optional: ffmpeg](#optional-ffmpeg)
@@ -74,6 +78,8 @@ docker run --rm -v "$PWD/config:/etc/streamline" \
 
 This writes a fully-commented config file with every key at its default. You'll edit it in [First-Run Setup](First-Run-Setup).
 
+You can also skip this step: when the file `--config` names does not exist, Streamline writes the same defaults there on its first start, as long as the directory is writable by the container's user (uid 1000 in the official image). The default library folders (`/media/movies` and friends) are not writable by that user, though, so that first start then stops on `create library path …: permission denied` until you set them — in the file, or as `STREAMLINE_LIBRARY__MOVIE_PATH`-style variables, which are written into the file when it is created. Doing this step first lets you edit the file before anything reads it.
+
 ### 2. Write `compose.yaml`
 
 ```yaml
@@ -110,7 +116,7 @@ docker compose logs -f streamline
 Open <http://localhost:8080>.
 
 > [!IMPORTANT]
-> Mounting the config read-only? `:ro` is safe for a GitOps-style deploy, but Streamline writes a few generated values back on first boot (session signing secret, Plex client ID, and a generated admin password if you didn't set one). With a read-only mount you must supply those yourself — see [GitOps and Kubernetes](GitOps-and-Kubernetes).
+> Mounting the config read-only? `:ro` is safe for a GitOps-style deploy, but Streamline writes a few generated values back on first boot (session signing secret, Plex client ID). With a read-only mount you must supply those yourself — see [GitOps and Kubernetes](GitOps-and-Kubernetes).
 
 ### Image tags
 
@@ -213,7 +219,38 @@ Set `data_dir: /var/lib/streamline` in your config so the database lands somewhe
 
 ---
 
-## Unraid, Synology, TrueNAS
+## Unraid
+
+Install from the template, which fills in everything below:
+
+```bash
+wget -O /boot/config/plugins/dockerMan/templates-user/my-streamline.xml \
+  https://raw.githubusercontent.com/DataHearth/streamline/main/deploy/unraid/streamline.xml
+```
+
+Then **Docker → Add Container → Template → streamline**, check the paths and **Apply**. It is not in Community Applications yet; once it is, searching for *Streamline* there installs the same template.
+
+| Template field | Default | What it is |
+| --- | --- | --- |
+| Web UI port | `8080` | Web UI, REST API, Subsonic and OPDS |
+| Data share | `/mnt/user/data` → `/mnt/user/data` | **One** share holding both downloads and media, at the same path inside the container — the folder rule above applies with full force, and Unraid users hit it constantly |
+| Config | `/mnt/user/appdata/streamline/config` → `/etc/streamline` | `config.yaml`, written with the defaults on first start |
+| App data | `/mnt/user/appdata/streamline/data` → `/data` | Database, poster cache, built-in torrent state — back this up |
+| Download, Movies, TV, Music, Ebooks, Audiobooks folders | `/mnt/user/data/downloads`, `/mnt/user/data/media/…` | The library folders, as `STREAMLINE_LIBRARY__*_PATH` variables |
+| Extra parameters | `--user 99:100` | Runs as `nobody:users`, who owns Unraid's shares and appdata |
+
+On first start Streamline writes `config.yaml` into the Config folder, with the folders from the template already in it, and creates the admin account `admin@streamline.local` with a generated password, printed **once** in the container's log: **Docker → streamline → Logs**, the line reading `default admin credentials` (or `docker logs streamline 2>&1 | grep 'default admin'` in the terminal). Log in and continue with [First-Run Setup](First-Run-Setup). Metadata keys and the rest are edited in that file or in the web UI; the library folders are fixed by the template, so change them there.
+
+Map the share identically in your torrent client's container, and point its `streamline` category at the Download folder.
+
+> [!NOTE]
+> **Permission denied on first start?** A folder Docker had to create itself belongs to `root`, and the container runs as `99:100`. Fix it once from the Unraid terminal: `chown -R 99:100 /mnt/user/appdata/streamline`.
+
+**Hardware transcoding.** Switch the repository to `ghcr.io/datahearth/streamline:latest-vaapi`, add `/dev/dri` as a device, and add `--group-add <gid>` to Extra parameters with the group of the render node (`stat -c %g /dev/dri/renderD128` in the Unraid terminal). See [Hardware encoding](#hardware-encoding-vaapi).
+
+---
+
+## Synology, TrueNAS
 
 There's no first-party app-store package for these yet — you install the Docker image through whatever container UI your NAS provides.
 
@@ -228,16 +265,16 @@ The settings translate like this:
 | Port | `8080` → `8080` |
 | Volume: config | host `…/streamline/config` → container `/etc/streamline` |
 | Volume: data | host `…/streamline/data` → container `/data` |
-| Volume: media + downloads | **one** host share (e.g. `/mnt/user/data`) → same path in container |
+| Volume: media + downloads | **one** host share (e.g. `/volume1/data`) → same path in container |
 | Restart policy | Unless stopped |
 
-**Unraid specifics.** Use `/mnt/user/data` as the single mount rather than separate `/mnt/user/media` and `/mnt/user/downloads` shares — the folder rule above applies with full force, and Unraid users hit it constantly. Set the container path identical to the host path so paths reported by your torrent client resolve unchanged.
+Set the container path identical to the host path so paths reported by your torrent client resolve unchanged.
 
 **Synology specifics.** Container Manager (or Docker on older DSM) works fine. Create one shared folder holding both `media` and `downloads` subfolders. Note that Synology's Btrfs shares do support hardlinks, but only within a single shared folder — across two shared folders they'll fail.
 
 **TrueNAS SCALE specifics.** Either use the Docker/Apps custom-app flow with the same mounts, or install the [Helm chart](#kubernetes--helm) directly since SCALE runs Kubernetes underneath.
 
-You'll then need to generate a config file. The simplest route is to start the container once, let it fail or come up on defaults, then edit `config/config.yaml` on the NAS filesystem directly and restart.
+You don't need to create a config file first: on its first start Streamline writes the defaults to `config/config.yaml`. Give it the six library folders as environment variables on that first start — `STREAMLINE_LIBRARY__DOWNLOAD_PATH`, `…__MOVIE_PATH`, `…__SERIES_PATH`, `…__MUSIC_PATH`, `…__EBOOK_PATH`, `…__AUDIOBOOK_PATH`, all under the shared folder — and they are written into the file; without them it writes the file and stops on `create library path /media/movies: permission denied` until you set them there. The container runs as uid/gid 1000, so the host folders must be writable by that user, or set the container's user to the one owning your share.
 
 </details>
 
@@ -335,17 +372,17 @@ curl -fsSL -O https://github.com/datahearth/streamline/releases/latest/download/
 curl -fsSL -O https://github.com/datahearth/streamline/releases/latest/download/checksums.txt.bundle
 
 cosign verify-blob checksums.txt --bundle checksums.txt.bundle \
-  --certificate-identity-regexp="https://github.com/datahearth/streamline/.github/workflows/release.yaml@.*" \
+  --certificate-identity-regexp="https://github.com/DataHearth/streamline/.github/workflows/release.yaml@.*" \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com
 
 sha256sum -c checksums.txt --ignore-missing
 ```
 
-**Images.**
+**Images.** Signed in cosign's bundle format, which takes cosign 3 or later to read (cosign 2 reports `no signatures found`):
 
 ```bash
 cosign verify ghcr.io/datahearth/streamline:latest \
-  --certificate-identity-regexp="https://github.com/datahearth/streamline/.github/workflows/image.yaml@.*" \
+  --certificate-identity-regexp="https://github.com/DataHearth/streamline/.github/workflows/image.yaml@.*" \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com
 ```
 

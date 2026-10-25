@@ -35,16 +35,17 @@ auth:
     # password_file: /run/secrets/streamline-admin-password
 ```
 
-**If you didn't**, Streamline created `admin@streamline.local` with a randomly generated password and **wrote that password back into your config file**. Open `config.yaml` and read it out of `auth.seed_admin.password`:
+**If you didn't**, Streamline created `admin@streamline.local` with a randomly generated password and printed it **once** to standard output, on a line reading `default admin credentials`. It is never written to the config file and never sent to the log pipeline:
 
 ```bash
-grep -A 3 seed_admin config/config.yaml
+docker logs streamline 2>&1 | grep 'default admin'      # Docker
+journalctl -u streamline | grep 'default admin'         # systemd (plain binary, Proxmox LXC)
 ```
 
 Log in, then change the password from the account menu (top right → **Account settings**).
 
 > [!WARNING]
-> The generated password is sitting in a plaintext config file. Treat it as a bootstrap credential, not a permanent one — change it as soon as you've logged in.
+> Anything that captures the container's or the service's output captured the password too. Treat it as a bootstrap credential, not a permanent one — change it as soon as you've logged in.
 
 > [!NOTE]
 > Locked yourself out by fat-fingering the password? Streamline rate-limits logins per IP (5 attempts / 15 minutes) *and* locks the account after 10 failures in a 15-minute window. Clear the account lock from the command line:

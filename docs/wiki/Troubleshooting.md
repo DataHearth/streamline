@@ -7,6 +7,7 @@ Find what you're seeing in the table below, then jump straight to the fix. Order
 | Title search returns nothing at all, not just no releases | No metadata API key configured | [Searching finds nothing at all](#searching-finds-nothing-at-all) |
 | Titles sit at **Wanted** forever | No working indexer/client, or quality profile rejecting every release | [Nothing ever gets grabbed](#nothing-ever-gets-grabbed) |
 | Torrent completes in the client but Streamline does nothing with it | Held for review, or a path/mount mismatch | [Downloads finish but never import](#downloads-finish-but-never-import) |
+| Container exits on first start: `config file … does not exist and cannot be created` | The config directory is not writable by Streamline's uid/gid | [The config file cannot be created](#the-config-file-cannot-be-created) |
 | Import fails writing to disk | Streamline's uid/gid can't write to your media directories | [Permission denied on import](#permission-denied-on-import) |
 | No password, or too many failed logins | Seed password never seen, or account/IP locked out | [I can't log in](#i-cant-log-in) |
 | Login redirects back to the login form | Proxy not forwarding scheme, untrusted proxy, or clock skew | [Login loops back to the login page](#login-loops-back-to-the-login-page) |
@@ -121,6 +122,22 @@ Either way, the proposal re-resolves on the next monitor tick.
 
 ---
 
+## The config file cannot be created
+
+```
+error: config: config file /etc/streamline/config.yaml does not exist and cannot be created (this process runs as uid 1000, gid 1000): … permission denied
+```
+
+With no config file, Streamline writes the defaults to the `--config` path on its first start, and here it could not. The usual cause is a bind-mounted config folder Docker created itself: a missing host directory is created as `root`, and the container runs as someone else. Give the folder to the uid and gid the message names, then start again:
+
+```bash
+sudo chown -R 1000:1000 ./config      # Unraid: chown -R 99:100 /mnt/user/appdata/streamline
+```
+
+Or create the file yourself with `streamline config init --output …`, as [Installation](Installation#1-create-the-config) shows.
+
+---
+
 ## Permission denied on import
 
 Streamline runs as **uid/gid 1000** in the official image. If your media directories are owned by someone else, it can't write.
@@ -149,11 +166,14 @@ On Kubernetes this shows up as a crashloop with `unable to open database file (1
 
 ## I can't log in
 
-**You never saw a password.** Streamline generated one and wrote it into your config file:
+**You never saw a password.** Streamline generated one and printed it once to standard output, on a line reading `default admin credentials`:
 
 ```bash
-grep -A 3 seed_admin config/config.yaml
+docker logs streamline 2>&1 | grep 'default admin'      # Docker
+journalctl -u streamline | grep 'default admin'         # systemd
 ```
+
+Gone from the logs? Set a new one from the command line, with the service stopped: `streamline -c /etc/streamline/config.yaml auth set-password admin@streamline.local --generate` prints a fresh password once.
 
 **Too many failed attempts.** Two separate limits apply. The account locks after 10 failures in 15 minutes; clear it with:
 

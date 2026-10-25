@@ -12,6 +12,7 @@
 - [Subsonic](Subsonic)
 - [Send to Kindle](Send-to-Kindle)
 - [NixOS and Nix](NixOS)
+- [Proxmox VE (LXC)](Proxmox)
 - [Troubleshooting](Troubleshooting)
 - [Roadmap](Roadmap)
 

@@ -44,7 +44,7 @@ Three values are normally generated on first boot and persisted back into the co
 | --- | --- |
 | **`auth.session_secret`** | Falls back to an ephemeral secret regenerated at every start — every user is logged out on every restart and every pod reschedule |
 | **`media_server.plex_client_id`** | A new client identity per restart; Plex sees a new device each time |
-| **`auth.seed_admin.password`** | You'll never learn the generated password |
+| **`auth.seed_admin.password`** | A generated password is printed once to the pod's stdout (`kubectl logs … \| grep 'default admin'`) and never persisted |
 
 > [!WARNING]
 > `auth.session_secret` is the one that will actually bite you — it's the row above, but easy to skip past in a table. Generate one and store it:
