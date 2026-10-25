@@ -212,6 +212,7 @@ Convention for landing a batch of independent fixes (audit findings, review comm
 - API: `go tool oapi-codegen --config api/oapi-codegen.yaml api/openapi.yaml` → `internal/server/restapi/gen.go` (package `restapi`) — regenerate after spec changes
 - ORM: `go generate ./ent` — regenerate after schema changes
 - All codegen: `task generate` (runs `go tool oapi-codegen`, `go generate ./ent`, `go tool mockery`). Versioned migrations: `task migrate:diff -- NAME` diffs the ent schema into a new migration.
+- **Never hand-write or hand-edit a migration file, the down step included.** `ent/migrate/main.go` runs every new down file on the replayed history and checks it restores the previous schema. Atlas's own reverse of a SQLite table rebuild (any change `ALTER TABLE` cannot express — an added column that carries an index included) is just `DROP TABLE new_<table>`, a table that no longer exists on the way down; when the check fails the generator replaces the down with Atlas's plan from the new schema back to the old one, checks that too, and says so in its output. The hand-written `replace_mode` down predates this.
 - Prefer the narrowest integer type on ent schema fields (`field.Uint8` for bounded counters like `grab_failures`, `field.Uint16` for small ranges like `number`/`year`) — sqlite storage is identical but Go structs stay memory-efficient.
 - After ent regen the LSP may report "undefined" for new fields/methods briefly; `task build:go` is the source of truth.
 
