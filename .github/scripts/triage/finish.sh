@@ -23,10 +23,13 @@ for n in "$@"; do
     elif grep -qxF documentation <<<"$labels"; then want=Task
     fi
     if [[ -n "$want" ]]; then
-      if gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/$n" -f type="$want" >/dev/null; then
+      # REST answers 200 and drops a field the token may not set, so the
+      # type is read back from the response rather than trusted.
+      got=$(gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/$n" -f type="$want" --jq '.type.name // ""' || true)
+      if [[ "$got" == "$want" ]]; then
         echo "#$n type: $want"
       else
-        echo "::warning::could not set the Issue Type of #$n to $want"
+        echo "::warning::could not set the Issue Type of #$n to $want (GitHub kept '${got:-none}')"
       fi
     fi
   fi
