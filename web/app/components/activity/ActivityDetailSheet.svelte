@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import {
@@ -54,6 +55,9 @@
 		onRemove: (id: number) => void;
 		onRetry: (id: number) => void;
 	} = $props();
+
+	// Mounted only while open.
+	closeOnBack(() => true, () => onClose());
 
 	let confirm = $state<DownloadConfirm | null>(null);
 

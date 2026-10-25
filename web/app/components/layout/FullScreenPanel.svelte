@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type { Snippet } from "svelte";
 	import { fade } from "svelte/transition";
@@ -20,6 +21,8 @@
 		onClose: () => void;
 		children: Snippet;
 	} = $props();
+
+	closeOnBack(() => open, () => onClose());
 
 	let panel = $state<HTMLDivElement | null>(null);
 	let lastFocused: HTMLElement | null = null;

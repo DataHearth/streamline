@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { tick } from "svelte";
 	import { createQuery, createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { ArrowUpRight, BookOpen, Check, ChevronLeft, LoaderCircle, Music, Plus, Search, X } from "@lucide/svelte";
@@ -43,6 +44,8 @@
 	// worth the extra control.
 	type Props = { kind: LookupKind; open: boolean; onClose: () => void };
 	let { kind, open, onClose }: Props = $props();
+
+	closeOnBack(() => open, () => onClose());
 
 	let isArtist = $derived(kind === "artist");
 	let canAdd = $derived(auth.canAddDirectly);

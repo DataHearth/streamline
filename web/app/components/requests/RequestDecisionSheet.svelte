@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Check, RotateCcw, TriangleAlert, X } from "@lucide/svelte";
@@ -68,6 +69,9 @@
 		onReject: (r: MediaRequest) => void;
 		onReopen: (r: MediaRequest) => void;
 	} = $props();
+
+	// Mounted only while open.
+	closeOnBack(() => true, () => onClose());
 
 	$effect(() => {
 		if (!request) return;

@@ -1,5 +1,5 @@
 // One result model behind three search surfaces: the desktop command palette,
-// the phone SearchScreen and the tablet SearchField panel. Each renders its
+// the phone search page (routes/search.svelte) and the tablet SearchField panel. Each renders its
 // rows differently; none of them decides what a match is.
 //
 // `compact: true` is the touch shape. Movie and series hits merge into one

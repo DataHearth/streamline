@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X } from "@lucide/svelte";
@@ -15,6 +16,8 @@
 		open,
 		onClose,
 	}: { open: boolean; onClose: () => void } = $props();
+
+	closeOnBack(() => open, () => onClose());
 
 	$effect(() => {
 		if (!open) return;
