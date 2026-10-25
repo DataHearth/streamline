@@ -187,8 +187,14 @@ func run(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("unknown command %q (see --help)", cmd.Args().First())
 	}
 
-	// 1. Load configuration
-	cfg, err := config.Load(cmd.String("config"))
+	// 1. Load configuration, writing the defaults first when the file is
+	//    missing — a container's fresh config volume starts empty.
+	cfgPath := cmd.String("config")
+	seeded, err := config.Seed(cfgPath)
+	if err != nil {
+		return fmt.Errorf("config: %w", err)
+	}
+	cfg, err := config.Load(cfgPath)
 	if err != nil {
 		return fmt.Errorf("config: %w", err)
 	}
@@ -211,6 +217,11 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	}
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
+
+	if seeded {
+		slog.InfoContext(ctx, "no config file found; wrote one with the defaults",
+			"config_path", cfgPath)
+	}
 
 	if limit := applyMemoryLimit(); limit > 0 {
 		slog.InfoContext(ctx, "derived GOMEMLIMIT from the cgroup memory limit",

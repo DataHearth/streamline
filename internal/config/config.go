@@ -1213,10 +1213,12 @@ func applyRenamedKeys(k *koanf.Koanf) (map[string][]string, error) {
 	return applied, nil
 }
 
-func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
-	// Double-underscore is the path separator; a single underscore is literal
-	// so keys with underscore segments (data_dir, session_secret, tmdb_api_key)
-	// stay reachable: STREAMLINE_AUTH__SESSION_SECRET -> auth.session_secret.
+// loadEnv reads every STREAMLINE_* variable as a config key.
+//
+// Double-underscore is the path separator; a single underscore is literal
+// so keys with underscore segments (data_dir, session_secret, tmdb_api_key)
+// stay reachable: STREAMLINE_AUTH__SESSION_SECRET -> auth.session_secret.
+func loadEnv() (*koanf.Koanf, error) {
 	envProvider := env.Provider(".", env.Opt{
 		Prefix: "STREAMLINE_",
 		TransformFunc: func(k, v string) (string, any) {
@@ -1226,6 +1228,14 @@ func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
 	})
 	envK := koanf.New(".")
 	if err := envK.Load(envProvider, nil); err != nil {
+		return nil, err
+	}
+	return envK, nil
+}
+
+func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
+	envK, err := loadEnv()
+	if err != nil {
 		return nil, nil, err
 	}
 	if err := k.Merge(envK); err != nil {

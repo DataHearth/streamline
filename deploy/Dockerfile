@@ -96,9 +96,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
       -ldflags="-s -w -X github.com/datahearth/streamline/internal/buildinfo.Version=${VERSION} -X github.com/datahearth/streamline/internal/buildinfo.Commit=${COMMIT} -X github.com/datahearth/streamline/internal/buildinfo.Date=${BUILD_DATE}" \
       -o /out/streamline ./cmd
 
-# The runtime image has no shell to mkdir with, so stage the data dir here and
-# copy it over with the right ownership.
-RUN mkdir -p /out/data
+# The runtime image has no shell to mkdir with, so stage the data and config
+# dirs here and copy them over with the right ownership. The config dir is not
+# a VOLUME, but a fresh named volume mounted there copies this ownership: owned
+# by root, it would refuse the config file Streamline writes on first start.
+RUN mkdir -p /out/data /out/config
 
 # --- Runtime, VAAPI variant (`--target vaapi`, published as `<tag>-vaapi`) ---
 # The default image below cannot hardware-encode: static-ffmpeg is built without
@@ -162,6 +164,7 @@ RUN apt-get update && \
 WORKDIR /
 
 COPY --from=builder --chown=1000:1000 /out/data /data
+COPY --from=builder --chown=1000:1000 /out/config /etc/streamline
 COPY --from=builder /out/streamline /usr/local/bin/streamline
 
 EXPOSE 8080
@@ -190,6 +193,7 @@ FROM gcr.io/distroless/static-debian12:nonroot@sha256:1b7b9f0f0e0a1d2155f531db58
 WORKDIR /
 
 COPY --from=builder --chown=1000:1000 /out/data /data
+COPY --from=builder --chown=1000:1000 /out/config /etc/streamline
 COPY --from=builder /out/streamline /usr/local/bin/streamline
 
 # /usr/local/bin is on distroless' default PATH, so this satisfies

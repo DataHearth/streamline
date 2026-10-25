@@ -29,6 +29,8 @@ Generate a file containing every key at its default:
 streamline config init --output ~/.config/streamline/config.yaml
 ```
 
+Or let the server do it: when the file `--config` names does not exist, Streamline writes the same defaults there on start (mode 0600, creating the directory if it must) and boots on them. The library folders (`library.*_path`) and `data_dir` are written from their `STREAMLINE_` variables when those are set, so the file agrees with the environment that seeded it; no other variable, and never a secret, is written. An existing file is never touched, even an empty one, and a directory the process cannot write to stops the boot with a message saying so.
+
 Validate one before restarting into it:
 
 ```bash
