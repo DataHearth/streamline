@@ -263,7 +263,7 @@ Streamline pokes Plex/Jellyfin/Emby to rescan whenever it changes your library: 
 
 - **Test the connection.** Settings → Media servers → Test.
 - **Check your media server can see the files.** Streamline importing successfully doesn't mean Plex has the path mounted. They're separate containers with separate mounts.
-- **Look at the server's card.** Settings → Media servers shows the last rescan Streamline sent — when, whether it failed, and whether it covered just the changed folders or the whole library. Rescans are collected for 30 seconds before they are sent, so a fresh import shows up there a little later.
+- **Look at the server's card.** Settings → Media servers shows the last rescan Streamline sent — when, whether it failed, and whether it covered just the changed folders or the whole library. Rescans are collected for 30 seconds before they are sent, so a fresh import shows up there a little later. Jellyfin and Emby then wait on their own library-monitor delay (a minute or so) before rescanning the folders they were sent; Plex starts at once.
 - **Add path mappings when the server mounts the library elsewhere.** Streamline sends the changed folder by its own path; a server in another container knows it by another one (Streamline's `/srv/streamline/movies` is Plex's `/data/movies`). Without a mapping Streamline cannot find the folder among the server's libraries and rescans the whole library instead — the card then reads "whole library" after every import, and the log says so:
 
   ```

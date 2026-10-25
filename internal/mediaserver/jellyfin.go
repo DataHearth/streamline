@@ -28,6 +28,14 @@ func NewJellyfin(baseURL, apiKey string) *Jellyfin {
 	}
 }
 
+// authorize sets the API key in both forms. Jellyfin 12 accepts only the
+// Authorization header and answers 401 to X-Emby-Token alone; Emby takes
+// either, and an older Emby only the X- header.
+func (j *Jellyfin) authorize(req *http.Request) {
+	req.Header.Set("Authorization", fmt.Sprintf("MediaBrowser Token=%q", j.apiKey))
+	req.Header.Set("X-Emby-Token", j.apiKey)
+}
+
 func (j *Jellyfin) TestConnection(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -38,7 +46,7 @@ func (j *Jellyfin) TestConnection(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("X-Emby-Token", j.apiKey)
+	j.authorize(req)
 
 	resp, err := j.client.Do(req)
 	if err != nil {
@@ -104,7 +112,7 @@ func (j *Jellyfin) refreshAll(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("X-Emby-Token", j.apiKey)
+	j.authorize(req)
 
 	resp, err := j.client.Do(req)
 	if err != nil {
@@ -156,7 +164,7 @@ func (j *Jellyfin) reportUpdated(ctx context.Context, folders []string) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("X-Emby-Token", j.apiKey)
+	j.authorize(req)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := j.client.Do(req)
@@ -193,7 +201,7 @@ func (j *Jellyfin) libraryLocations(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("X-Emby-Token", j.apiKey)
+	j.authorize(req)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := j.client.Do(req)
@@ -368,7 +376,7 @@ func (j *Jellyfin) fetchItems(
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("X-Emby-Token", j.apiKey)
+	j.authorize(req)
 	req.Header.Set("Accept", "application/json")
 	resp, err := j.client.Do(req)
 	if err != nil {

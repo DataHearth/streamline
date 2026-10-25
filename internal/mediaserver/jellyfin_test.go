@@ -16,6 +16,9 @@ var _ = Describe("Jellyfin Client", Label("unit", "mediaserver"), func() {
 			ts := httptest.NewServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					Expect(r.Header.Get("X-Emby-Token")).To(Equal("test-key"))
+					// Jellyfin 12 reads the key from here only.
+					Expect(r.Header.Get("Authorization")).
+						To(Equal(`MediaBrowser Token="test-key"`))
 					Expect(r.URL.Path).To(Equal("/Library/Refresh"))
 					Expect(r.Method).To(Equal(http.MethodPost))
 					refreshCalled = true
