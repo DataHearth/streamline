@@ -460,6 +460,7 @@ type Store interface {
 	ListAPIKeysByUser(ctx context.Context, userID uint32) ([]*ent.ApiKey, error)
 	DeleteAPIKeyByID(ctx context.Context, userID, keyID uint32) (int, error)
 	DeleteAPIKeysByUser(ctx context.Context, userID uint32) (int, error)
+	PurgeExpiredAPIKeys(ctx context.Context, before time.Time) (int, error)
 
 	// torrent sessions (builtin BitTorrent engine persistence)
 	CreateTorrentSession(

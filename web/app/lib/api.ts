@@ -70,6 +70,9 @@ const BY_CODE: Record<string, () => string> = {
 	// A 403 an admin gets for a secret the config file owns, not for a missing
 	// permission.
 	secret_file_managed: i18n.err_secret_file_managed,
+	// Creating an API key past the per-account cap: the fix is revoking one,
+	// not anything in the form.
+	api_key_quota: i18n.err_api_key_quota,
 };
 
 function byStatus(status: number): string {

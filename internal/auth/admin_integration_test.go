@@ -66,7 +66,7 @@ var _ = Describe("Admin end-to-end", Label("integration", "auth"), func() {
 		"DeleteUser cascades to api keys, sessions, oidc identities, and invites",
 		func() {
 			u := seedUser("cascade@x.com", entuser.RoleAdmin)
-			_, _, err := svc.CreateAPIKey(ctx, u.ID, "k1")
+			_, _, err := svc.CreateAPIKey(ctx, u.ID, APIKeySpec{Name: "k1"})
 			Expect(err).NotTo(HaveOccurred())
 			_, err = svc.Login(ctx, u.Email, "password123", SessionMeta{})
 			Expect(err).NotTo(HaveOccurred())
@@ -182,12 +182,12 @@ var _ = Describe("Admin end-to-end", Label("integration", "auth"), func() {
 
 	It("AdminResetPassword end-to-end revokes API keys", func() {
 		u := seedUser("resetkeys@x.com", entuser.RoleMember)
-		raw, _, err := svc.CreateAPIKey(ctx, u.ID, "k1")
+		raw, _, err := svc.CreateAPIKey(ctx, u.ID, APIKeySpec{Name: "k1"})
 		Expect(err).NotTo(HaveOccurred())
 
-		owner, err := svc.ValidateAPIKey(ctx, raw)
+		key, err := svc.ValidateAPIKey(ctx, raw)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(owner.ID).To(Equal(u.ID))
+		Expect(key.Edges.Owner.ID).To(Equal(u.ID))
 
 		Expect(svc.AdminResetPassword(ctx, u.ID, "newpassword456")).To(Succeed())
 

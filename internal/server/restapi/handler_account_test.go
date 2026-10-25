@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/apikey"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
@@ -240,7 +241,10 @@ var _ = Describe(
 				func() {
 					createdAt := time.Now()
 					app.auth.EXPECT().
-						CreateAPIKey(mock.Anything, app.adminID, "cli").
+						CreateAPIKey(mock.Anything, app.adminID, auth.APIKeySpec{
+							Name:  "cli",
+							Scope: apikey.ScopeFull,
+						}).
 						Return("raw-cli-token", &ent.ApiKey{
 							ID:         2,
 							Name:       "cli",
@@ -278,6 +282,71 @@ var _ = Describe(
 					Expect(keys).To(HaveLen(2))
 				},
 			)
+
+			It("POST passes the scope and preset lifetime through", func() {
+				expires := time.Now().Add(90 * 24 * time.Hour)
+				app.auth.EXPECT().
+					CreateAPIKey(mock.Anything, app.adminID, auth.APIKeySpec{
+						Name:  "ha",
+						Scope: apikey.ScopeRead,
+						TTL:   90 * 24 * time.Hour,
+					}).
+					Return("raw-ha", &ent.ApiKey{
+						ID:         3,
+						Name:       "ha",
+						Scope:      apikey.ScopeRead,
+						ExpiresAt:  &expires,
+						CreateTime: time.Now(),
+					}, nil).
+					Once()
+
+				resp := postJSON(
+					app, app.adminKey,
+					"/api/v1/auth/me/api-keys",
+					`{"name":"ha","scope":"read","expires_in_days":90}`,
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				var created ApiKeyCreated
+				Expect(json.NewDecoder(resp.Body).Decode(&created)).To(Succeed())
+				Expect(created.Scope).To(Equal(ApiKeyScopeRead))
+				Expect(created.ExpiresAt).NotTo(BeNil())
+				Expect(
+					*created.ExpiresAt,
+				).To(BeTemporally("~", expires, time.Second))
+			})
+
+			DescribeTable("POST refuses a body outside the presets with 422",
+				func(body string) {
+					resp := postJSON(
+						app, app.adminKey, "/api/v1/auth/me/api-keys", body,
+					)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				},
+				Entry("unknown scope", `{"name":"x","scope":"admin"}`),
+				Entry("arbitrary lifetime", `{"name":"x","expires_in_days":7}`),
+				Entry("zero lifetime", `{"name":"x","expires_in_days":0}`),
+			)
+
+			It("POST at the key quota answers 422 api_key_quota", func() {
+				app.auth.EXPECT().
+					CreateAPIKey(mock.Anything, app.adminID, mock.Anything).
+					Return("", nil, auth.ErrAPIKeyQuotaExceeded).
+					Once()
+
+				resp := postJSON(
+					app, app.adminKey,
+					"/api/v1/auth/me/api-keys",
+					`{"name":"one-too-many"}`,
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Code).NotTo(BeNil())
+				Expect(*body.Code).To(Equal("api_key_quota"))
+			})
 
 			It("POST authenticated via API key returns 401", func() {
 				resp := postJSON(

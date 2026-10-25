@@ -79,6 +79,11 @@ func errConnectionFailed(msg string) UnprocessableEntityJSONResponse {
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
 
+// codeAPIKeyQuota marks a 422 raised because the caller already holds the
+// maximum number of unexpired API keys. The generic 422 would blame the name
+// just typed; the fix is revoking a key.
+const codeAPIKeyQuota = "api_key_quota" //nolint:gosec // an error code, not a credential
+
 // codeSecretRequired marks a 422 raised because an edit moved a media server,
 // download client, indexer or OIDC provider to another address without its
 // secret. The form keeps a blank secret field as "unchanged", so the generic

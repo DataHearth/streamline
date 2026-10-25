@@ -89,23 +89,23 @@ func (_c *MockAuthenticator_TouchSessionAsync_Call) RunAndReturn(run func(jti st
 }
 
 // ValidateAPIKey provides a mock function for the type MockAuthenticator
-func (_mock *MockAuthenticator) ValidateAPIKey(ctx context.Context, key string) (*ent.User, error) {
+func (_mock *MockAuthenticator) ValidateAPIKey(ctx context.Context, key string) (*ent.ApiKey, error) {
 	ret := _mock.Called(ctx, key)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ValidateAPIKey")
 	}
 
-	var r0 *ent.User
+	var r0 *ent.ApiKey
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ent.User, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ent.ApiKey, error)); ok {
 		return returnFunc(ctx, key)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ent.User); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ent.ApiKey); ok {
 		r0 = returnFunc(ctx, key)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ent.User)
+			r0 = ret.Get(0).(*ent.ApiKey)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
@@ -146,12 +146,12 @@ func (_c *MockAuthenticator_ValidateAPIKey_Call) Run(run func(ctx context.Contex
 	return _c
 }
 
-func (_c *MockAuthenticator_ValidateAPIKey_Call) Return(user *ent.User, err error) *MockAuthenticator_ValidateAPIKey_Call {
-	_c.Call.Return(user, err)
+func (_c *MockAuthenticator_ValidateAPIKey_Call) Return(apiKey *ent.ApiKey, err error) *MockAuthenticator_ValidateAPIKey_Call {
+	_c.Call.Return(apiKey, err)
 	return _c
 }
 
-func (_c *MockAuthenticator_ValidateAPIKey_Call) RunAndReturn(run func(ctx context.Context, key string) (*ent.User, error)) *MockAuthenticator_ValidateAPIKey_Call {
+func (_c *MockAuthenticator_ValidateAPIKey_Call) RunAndReturn(run func(ctx context.Context, key string) (*ent.ApiKey, error)) *MockAuthenticator_ValidateAPIKey_Call {
 	_c.Call.Return(run)
 	return _c
 }

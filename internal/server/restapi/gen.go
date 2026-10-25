@@ -141,6 +141,24 @@ func (e AddSeriesRequestPreset) Valid() bool {
 	}
 }
 
+// Defines values for ApiKeyScope.
+const (
+	ApiKeyScopeFull ApiKeyScope = "full"
+	ApiKeyScopeRead ApiKeyScope = "read"
+)
+
+// Valid indicates whether the value is a known member of the ApiKeyScope enum.
+func (e ApiKeyScope) Valid() bool {
+	switch e {
+	case ApiKeyScopeFull:
+		return true
+	case ApiKeyScopeRead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AppLogConfigFormat.
 const (
 	AppLogConfigFormatJson AppLogConfigFormat = "json"
@@ -492,6 +510,27 @@ func (e BookVolumeStatus) Valid() bool {
 	case BookVolumeStatusUpcoming:
 		return true
 	case BookVolumeStatusWanted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateApiKeyRequestExpiresInDays.
+const (
+	CreateApiKeyRequestExpiresInDaysN30  CreateApiKeyRequestExpiresInDays = 30
+	CreateApiKeyRequestExpiresInDaysN365 CreateApiKeyRequestExpiresInDays = 365
+	CreateApiKeyRequestExpiresInDaysN90  CreateApiKeyRequestExpiresInDays = 90
+)
+
+// Valid indicates whether the value is a known member of the CreateApiKeyRequestExpiresInDays enum.
+func (e CreateApiKeyRequestExpiresInDays) Valid() bool {
+	switch e {
+	case CreateApiKeyRequestExpiresInDaysN30:
+		return true
+	case CreateApiKeyRequestExpiresInDaysN365:
+		return true
+	case CreateApiKeyRequestExpiresInDaysN90:
 		return true
 	default:
 		return false
@@ -4189,20 +4228,35 @@ type AlbumSearchList struct {
 
 // ApiKey defines model for ApiKey.
 type ApiKey struct {
-	CreatedAt  time.Time  `json:"created_at"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// ExpiresAt When the key stops authenticating; null never expires. An expired key is still listed until the hourly `purge-api-keys` job drops it, seven days after it expired.
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
 	Id         uint32     `json:"id"`
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 	Name       string     `json:"name"`
+
+	// Scope `read` may only send GET and HEAD, whatever the owner's role; `full` acts with the owner's current role.
+	Scope ApiKeyScope `json:"scope"`
 }
 
 // ApiKeyCreated defines model for ApiKeyCreated.
 type ApiKeyCreated struct {
-	CreatedAt  time.Time  `json:"created_at"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// ExpiresAt When the key stops authenticating; null never expires. An expired key is still listed until the hourly `purge-api-keys` job drops it, seven days after it expired.
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
 	Id         uint32     `json:"id"`
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 	Name       string     `json:"name"`
 	RawToken   string     `json:"raw_token"`
+
+	// Scope `read` may only send GET and HEAD, whatever the owner's role; `full` acts with the owner's current role.
+	Scope ApiKeyScope `json:"scope"`
 }
+
+// ApiKeyScope `read` may only send GET and HEAD, whatever the owner's role; `full` acts with the owner's current role.
+type ApiKeyScope string
 
 // AppAccess One Subsonic or OPDS credential of the caller. Never carries the secret.
 type AppAccess struct {
@@ -4797,8 +4851,16 @@ type ClearCompletedResult struct {
 
 // CreateApiKeyRequest defines model for CreateApiKeyRequest.
 type CreateApiKeyRequest struct {
-	Name string `json:"name"`
+	// ExpiresInDays Lifetime of the key from now. Omitted or null, the key never expires.
+	ExpiresInDays *CreateApiKeyRequestExpiresInDays `json:"expires_in_days,omitempty"`
+	Name          string                            `json:"name"`
+
+	// Scope Defaults to `full` when omitted.
+	Scope *ApiKeyScope `json:"scope,omitempty"`
 }
+
+// CreateApiKeyRequestExpiresInDays Lifetime of the key from now. Omitted or null, the key never expires.
+type CreateApiKeyRequestExpiresInDays int
 
 // CreateInviteRequest defines model for CreateInviteRequest.
 type CreateInviteRequest struct {
@@ -5240,8 +5302,9 @@ type Error struct {
 	// invalid_condition, grab_rejected, rate_limited, worker_unavailable,
 	// hardcover_not_configured, hardcover_key_rejected, not_sendable,
 	// no_device_email, smtp_not_configured, send_failed,
-	// secret_required, secret_file_managed). Present for domain errors
-	// where the caller needs to branch on the specific reason; absent
+	// secret_required, secret_file_managed, api_key_quota). Present
+	// for domain errors where the caller needs to branch on the
+	// specific reason; absent
 	// for generic errors where the message is sufficient.
 	Code *string `json:"code,omitempty"`
 
@@ -23012,6 +23075,22 @@ func (response CreateMyApiKey413JSONResponse) VisitCreateMyApiKeyResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMyApiKey422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response CreateMyApiKey422JSONResponse) VisitCreateMyApiKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }

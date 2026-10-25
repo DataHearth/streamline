@@ -488,8 +488,8 @@ func (_c *MockManager_ConfirmJWTRotation_Call) RunAndReturn(run func(ctx context
 }
 
 // CreateAPIKey provides a mock function for the type MockManager
-func (_mock *MockManager) CreateAPIKey(ctx context.Context, userID uint32, name string) (string, *ent.ApiKey, error) {
-	ret := _mock.Called(ctx, userID, name)
+func (_mock *MockManager) CreateAPIKey(ctx context.Context, userID uint32, spec auth.APIKeySpec) (string, *ent.ApiKey, error) {
+	ret := _mock.Called(ctx, userID, spec)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateAPIKey")
@@ -498,23 +498,23 @@ func (_mock *MockManager) CreateAPIKey(ctx context.Context, userID uint32, name 
 	var r0 string
 	var r1 *ent.ApiKey
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (string, *ent.ApiKey, error)); ok {
-		return returnFunc(ctx, userID, name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, auth.APIKeySpec) (string, *ent.ApiKey, error)); ok {
+		return returnFunc(ctx, userID, spec)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) string); ok {
-		r0 = returnFunc(ctx, userID, name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, auth.APIKeySpec) string); ok {
+		r0 = returnFunc(ctx, userID, spec)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) *ent.ApiKey); ok {
-		r1 = returnFunc(ctx, userID, name)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, auth.APIKeySpec) *ent.ApiKey); ok {
+		r1 = returnFunc(ctx, userID, spec)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(*ent.ApiKey)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, string) error); ok {
-		r2 = returnFunc(ctx, userID, name)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, auth.APIKeySpec) error); ok {
+		r2 = returnFunc(ctx, userID, spec)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -529,12 +529,12 @@ type MockManager_CreateAPIKey_Call struct {
 // CreateAPIKey is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID uint32
-//   - name string
-func (_e *MockManager_Expecter) CreateAPIKey(ctx any, userID any, name any) *MockManager_CreateAPIKey_Call {
-	return &MockManager_CreateAPIKey_Call{Call: _e.mock.On("CreateAPIKey", ctx, userID, name)}
+//   - spec auth.APIKeySpec
+func (_e *MockManager_Expecter) CreateAPIKey(ctx any, userID any, spec any) *MockManager_CreateAPIKey_Call {
+	return &MockManager_CreateAPIKey_Call{Call: _e.mock.On("CreateAPIKey", ctx, userID, spec)}
 }
 
-func (_c *MockManager_CreateAPIKey_Call) Run(run func(ctx context.Context, userID uint32, name string)) *MockManager_CreateAPIKey_Call {
+func (_c *MockManager_CreateAPIKey_Call) Run(run func(ctx context.Context, userID uint32, spec auth.APIKeySpec)) *MockManager_CreateAPIKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -544,9 +544,9 @@ func (_c *MockManager_CreateAPIKey_Call) Run(run func(ctx context.Context, userI
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		var arg2 string
+		var arg2 auth.APIKeySpec
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(auth.APIKeySpec)
 		}
 		run(
 			arg0,
@@ -562,7 +562,7 @@ func (_c *MockManager_CreateAPIKey_Call) Return(s string, apiKey *ent.ApiKey, er
 	return _c
 }
 
-func (_c *MockManager_CreateAPIKey_Call) RunAndReturn(run func(ctx context.Context, userID uint32, name string) (string, *ent.ApiKey, error)) *MockManager_CreateAPIKey_Call {
+func (_c *MockManager_CreateAPIKey_Call) RunAndReturn(run func(ctx context.Context, userID uint32, spec auth.APIKeySpec) (string, *ent.ApiKey, error)) *MockManager_CreateAPIKey_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1668,6 +1668,72 @@ func (_c *MockManager_PrepareJWTRotation_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// PurgeExpiredAPIKeys provides a mock function for the type MockManager
+func (_mock *MockManager) PurgeExpiredAPIKeys(ctx context.Context, before time.Time) (int, error) {
+	ret := _mock.Called(ctx, before)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PurgeExpiredAPIKeys")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) (int, error)); ok {
+		return returnFunc(ctx, before)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) int); ok {
+		r0 = returnFunc(ctx, before)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time) error); ok {
+		r1 = returnFunc(ctx, before)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_PurgeExpiredAPIKeys_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PurgeExpiredAPIKeys'
+type MockManager_PurgeExpiredAPIKeys_Call struct {
+	*mock.Call
+}
+
+// PurgeExpiredAPIKeys is a helper method to define mock.On call
+//   - ctx context.Context
+//   - before time.Time
+func (_e *MockManager_Expecter) PurgeExpiredAPIKeys(ctx any, before any) *MockManager_PurgeExpiredAPIKeys_Call {
+	return &MockManager_PurgeExpiredAPIKeys_Call{Call: _e.mock.On("PurgeExpiredAPIKeys", ctx, before)}
+}
+
+func (_c *MockManager_PurgeExpiredAPIKeys_Call) Run(run func(ctx context.Context, before time.Time)) *MockManager_PurgeExpiredAPIKeys_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 time.Time
+		if args[1] != nil {
+			arg1 = args[1].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_PurgeExpiredAPIKeys_Call) Return(n int, err error) *MockManager_PurgeExpiredAPIKeys_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockManager_PurgeExpiredAPIKeys_Call) RunAndReturn(run func(ctx context.Context, before time.Time) (int, error)) *MockManager_PurgeExpiredAPIKeys_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PurgeExpiredSessions provides a mock function for the type MockManager
 func (_mock *MockManager) PurgeExpiredSessions(ctx context.Context, before time.Time) (int, error) {
 	ret := _mock.Called(ctx, before)
@@ -2723,23 +2789,23 @@ func (_c *MockManager_UpdateUser_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // ValidateAPIKey provides a mock function for the type MockManager
-func (_mock *MockManager) ValidateAPIKey(ctx context.Context, key string) (*ent.User, error) {
+func (_mock *MockManager) ValidateAPIKey(ctx context.Context, key string) (*ent.ApiKey, error) {
 	ret := _mock.Called(ctx, key)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ValidateAPIKey")
 	}
 
-	var r0 *ent.User
+	var r0 *ent.ApiKey
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ent.User, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ent.ApiKey, error)); ok {
 		return returnFunc(ctx, key)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ent.User); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ent.ApiKey); ok {
 		r0 = returnFunc(ctx, key)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ent.User)
+			r0 = ret.Get(0).(*ent.ApiKey)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
@@ -2780,12 +2846,12 @@ func (_c *MockManager_ValidateAPIKey_Call) Run(run func(ctx context.Context, key
 	return _c
 }
 
-func (_c *MockManager_ValidateAPIKey_Call) Return(user *ent.User, err error) *MockManager_ValidateAPIKey_Call {
-	_c.Call.Return(user, err)
+func (_c *MockManager_ValidateAPIKey_Call) Return(apiKey *ent.ApiKey, err error) *MockManager_ValidateAPIKey_Call {
+	_c.Call.Return(apiKey, err)
 	return _c
 }
 
-func (_c *MockManager_ValidateAPIKey_Call) RunAndReturn(run func(ctx context.Context, key string) (*ent.User, error)) *MockManager_ValidateAPIKey_Call {
+func (_c *MockManager_ValidateAPIKey_Call) RunAndReturn(run func(ctx context.Context, key string) (*ent.ApiKey, error)) *MockManager_ValidateAPIKey_Call {
 	_c.Call.Return(run)
 	return _c
 }

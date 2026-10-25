@@ -13,27 +13,43 @@ type CreateAPIKeyParams struct {
 	Name    string
 	KeyHash string
 	OwnerID uint32
+	// Scope is read or full; empty takes the schema default (full).
+	Scope apikey.Scope
+	// ExpiresAt is nil for a key that never expires.
+	ExpiresAt *time.Time
 }
 
 func (db *DB) CreateAPIKey(
 	ctx context.Context,
 	p CreateAPIKeyParams,
 ) (*ent.ApiKey, error) {
-	return db.client.ApiKey.Create().
+	c := db.client.ApiKey.Create().
 		SetName(p.Name).
 		SetKeyHash(p.KeyHash).
 		SetOwnerID(p.OwnerID).
-		Save(ctx)
+		SetNillableExpiresAt(p.ExpiresAt)
+	if p.Scope != "" {
+		c.SetScope(p.Scope)
+	}
+	return c.Save(ctx)
 }
 
-// CountAPIKeysByUser returns how many API keys userID currently owns, for
-// enforcing a per-user creation quota before inserting another one.
+// CountAPIKeysByUser returns how many live API keys userID currently owns, for
+// enforcing a per-user creation quota before inserting another one. A key past
+// its expiry no longer counts: it authenticates nothing, and it lingers only
+// until the purge job's grace runs out.
 func (db *DB) CountAPIKeysByUser(
 	ctx context.Context,
 	userID uint32,
 ) (int, error) {
 	return db.client.ApiKey.Query().
-		Where(apikey.HasOwnerWith(user.IDEQ(userID))).
+		Where(
+			apikey.HasOwnerWith(user.IDEQ(userID)),
+			apikey.Or(
+				apikey.ExpiresAtIsNil(),
+				apikey.ExpiresAtGT(time.Now()),
+			),
+		).
 		Count(ctx)
 }
 
@@ -80,10 +96,22 @@ func (db *DB) DeleteAPIKeyByID(
 
 // DeleteAPIKeysByUser deletes every API key owned by userID and returns the
 // number of rows deleted. Password rotation calls it: an API key carries no
-// expiry and no epoch marker, so a key minted before the rotation would
+// epoch marker and need not expire, so a key minted before the rotation would
 // otherwise keep authenticating as the user for the lifetime of its row.
 func (db *DB) DeleteAPIKeysByUser(ctx context.Context, userID uint32) (int, error) {
 	return db.client.ApiKey.Delete().
 		Where(apikey.HasOwnerWith(user.IDEQ(userID))).
+		Exec(ctx)
+}
+
+// PurgeExpiredAPIKeys deletes every key whose expires_at is before the cutoff
+// and returns the number of rows deleted. A key without an expiry is never
+// touched.
+func (db *DB) PurgeExpiredAPIKeys(
+	ctx context.Context,
+	before time.Time,
+) (int, error) {
+	return db.client.ApiKey.Delete().
+		Where(apikey.ExpiresAtLT(before)).
 		Exec(ctx)
 }

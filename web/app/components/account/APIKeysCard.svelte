@@ -8,12 +8,22 @@
 	import { Key, Plus, Clipboard, X, ShieldAlert } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { toast } from "@lib/toast";
-	import type { ApiKey } from "@lib/types";
+	import type { ApiKey, ApiKeyScope } from "@lib/types";
 	import Dialog from "@components/modals/Dialog.svelte";
+	import Select from "@components/forms/Select.svelte";
 	import ApiKeyRow from "@components/shared/ApiKeyRow.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type ApiKeyCreated = ApiKey & { raw_token: string };
+	type NewKey = {
+		name: string;
+		scope: ApiKeyScope;
+		expires_in_days: number | null;
+	};
+
+	// The server accepts exactly these lifetimes; "never" sends null.
+	type Expiry = "never" | "30" | "90" | "365";
+	const EXPIRY_DAYS = [30, 90, 365] as const;
 
 	const qc = useQueryClient();
 
@@ -25,13 +35,37 @@
 	}));
 
 	let newName = $state("");
+	// Least privilege by default: most integrations (a dashboard widget, a
+	// Home Assistant sensor, a monitoring script) only ever read.
+	let newScope = $state<ApiKeyScope>("read");
+	let newExpiry = $state<Expiry>("90");
 	let revealed = $state<ApiKeyCreated | null>(null);
 
-	const create = createMutation<ApiKeyCreated, Error, string>(() => ({
-		mutationFn: (name) =>
+	const scopeOptions: { value: ApiKeyScope; label: string; hint: string }[] = [
+		{
+			value: "read",
+			label: i18n.apikey_scope_read(),
+			hint: i18n.apikey_scope_read_hint(),
+		},
+		{
+			value: "full",
+			label: i18n.apikey_scope_full(),
+			hint: i18n.apikey_scope_full_hint(),
+		},
+	];
+	const expiryOptions: { value: Expiry; label: string }[] = [
+		...EXPIRY_DAYS.map((days) => ({
+			value: String(days) as Expiry,
+			label: i18n.apikey_expiry_days({ days }),
+		})),
+		{ value: "never", label: i18n.apikey_expiry_never() },
+	];
+
+	const create = createMutation<ApiKeyCreated, Error, NewKey>(() => ({
+		mutationFn: (body) =>
 			api<ApiKeyCreated>("/auth/me/api-keys", {
 				method: "POST",
-				body: { name },
+				body,
 			}),
 		onSuccess: (resp) => {
 			revealed = resp;
@@ -83,19 +117,39 @@
 			onsubmit={(e) => {
 				e.preventDefault();
 				if (newName.trim().length === 0) return;
-				create.mutate(newName.trim());
+				create.mutate({
+					name: newName.trim(),
+					scope: newScope,
+					expires_in_days: newExpiry === "never" ? null : Number(newExpiry),
+				});
 			}}
 		>
 			<label class="min-w-[200px] flex-1">
-				<span class="mb-1 block text-xs font-medium text-fg-muted"
+				<span class="mb-1 block text-sm font-medium text-fg"
 					>{i18n.account_new_key_name()}</span
 				>
 				<input
 					bind:value={newName}
 					placeholder={i18n.account_key_name_example()}
-					class="h-9 w-full rounded-md border border-border bg-bg px-3 text-sm text-fg placeholder:text-fg-faint focus-visible:outline-2 focus-visible:outline-accent"
+					class="min-h-11 lg:h-9 lg:min-h-0 w-full rounded-md border border-border bg-bg px-3 text-sm text-fg placeholder:text-fg-faint focus-visible:outline-2 focus-visible:outline-accent"
 				/>
 			</label>
+			<div class="w-full sm:w-44">
+				<Select
+					label={i18n.apikey_scope()}
+					value={newScope}
+					options={scopeOptions}
+					onChange={(v) => (newScope = v)}
+				/>
+			</div>
+			<div class="w-full sm:w-36">
+				<Select
+					label={i18n.apikey_expiry()}
+					value={newExpiry}
+					options={expiryOptions}
+					onChange={(v) => (newExpiry = v)}
+				/>
+			</div>
 			<button
 				type="submit"
 				disabled={create.isPending || newName.trim().length === 0}

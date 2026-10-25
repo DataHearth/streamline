@@ -864,9 +864,16 @@ export type SubsonicAccess = {
 	max_bit_rate: number;
 };
 
+// read: GET and HEAD only, whatever the owner's role. full: the owner's role.
+export type ApiKeyScope = "read" | "full";
+
 export type ApiKey = {
 	id: number;
 	name: string;
+	scope: ApiKeyScope;
+	// null never expires. An expired key stays listed until the purge job
+	// drops it, a week later.
+	expires_at?: string | null;
 	created_at: string;
 	last_used_at: string | null;
 };

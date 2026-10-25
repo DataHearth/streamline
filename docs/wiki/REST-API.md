@@ -47,7 +47,7 @@ Cookies are ignored on `/api/v1` **except** for same-origin browser requests car
 Failures return `401` with a JSON body. No redirects on the API surface.
 
 > [!WARNING]
-> API keys are **read-only on the identity surface**: any non-GET request under `/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, `/account`, or `/users` returns `403` with a key — those actions need a session (Bearer JWT or the SPA cookie). The two credentials are otherwise equal on media and settings endpoints. That's why the key-creation example below authenticates with a JWT, not a key.
+> API keys are **read-only on the identity surface**: any non-GET request under `/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, `/account`, `/users`, `/config/auth` or `/config/oidc` returns `403` with a key — those actions need a session (Bearer JWT or the SPA cookie). The two credentials are otherwise equal on media and settings endpoints. That's why the key-creation example below authenticates with a JWT, not a key.
 
 ### Getting an API key
 
@@ -55,11 +55,11 @@ Failures return `401` with a JSON body. No redirects on the API surface.
 
 ```bash
 curl -X POST -H "Authorization: Bearer $JWT" -H 'Content-Type: application/json' \
-  -d '{"name":"my-script"}' \
+  -d '{"name":"my-script","scope":"read","expires_in_days":90}' \
   https://streamline.example.com/api/v1/auth/me/api-keys
 ```
 
-The raw key is returned **once**. A key inherits its owner's permissions — an admin's key is an admin key, so create read-only integrations under a `member` account.
+The raw key is returned **once**. `scope` is `read` (`GET` and `HEAD` only, whatever the owner's role — anything else answers `403`) or `full` (the owner's current role; an admin's full key is an admin key), and defaults to `full` when omitted. `expires_in_days` is `30`, `90` or `365`; omitted or `null`, the key never expires. Any other value answers `422`, as does a 21st unexpired key (`code: api_key_quota`). An expired key answers `401` like an unknown one. See [API keys](Authentication-and-SSO#api-keys).
 
 ### Getting a JWT
 

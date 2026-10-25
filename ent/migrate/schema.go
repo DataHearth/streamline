@@ -81,6 +81,8 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "key_hash", Type: field.TypeString},
 		{Name: "last_used_at", Type: field.TypeTime, Nullable: true},
+		{Name: "scope", Type: field.TypeEnum, Enums: []string{"read", "full"}, Default: "full"},
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
 		{Name: "user_api_keys", Type: field.TypeUint32},
 	}
 	// APIKeysTable holds the schema information for the "api_keys" table.
@@ -91,7 +93,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "api_keys_users_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[6]},
+				Columns:    []*schema.Column{APIKeysColumns[8]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -105,7 +107,12 @@ var (
 			{
 				Name:    "apikey_user_api_keys",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[6]},
+				Columns: []*schema.Column{APIKeysColumns[8]},
+			},
+			{
+				Name:    "apikey_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{APIKeysColumns[7]},
 			},
 		},
 	}

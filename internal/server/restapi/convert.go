@@ -348,6 +348,8 @@ func toAPIApiKey(k *ent.ApiKey) ApiKey {
 	return ApiKey{
 		Id:         k.ID,
 		Name:       k.Name,
+		Scope:      ApiKeyScope(k.Scope),
+		ExpiresAt:  k.ExpiresAt,
 		CreatedAt:  k.CreateTime,
 		LastUsedAt: k.LastUsedAt,
 	}

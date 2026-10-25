@@ -16973,6 +16973,72 @@ func (_c *MockTx_PersonCredits_Call) RunAndReturn(run func(ctx context.Context, 
 	return _c
 }
 
+// PurgeExpiredAPIKeys provides a mock function for the type MockTx
+func (_mock *MockTx) PurgeExpiredAPIKeys(ctx context.Context, before time.Time) (int, error) {
+	ret := _mock.Called(ctx, before)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PurgeExpiredAPIKeys")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) (int, error)); ok {
+		return returnFunc(ctx, before)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) int); ok {
+		r0 = returnFunc(ctx, before)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time) error); ok {
+		r1 = returnFunc(ctx, before)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_PurgeExpiredAPIKeys_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PurgeExpiredAPIKeys'
+type MockTx_PurgeExpiredAPIKeys_Call struct {
+	*mock.Call
+}
+
+// PurgeExpiredAPIKeys is a helper method to define mock.On call
+//   - ctx context.Context
+//   - before time.Time
+func (_e *MockTx_Expecter) PurgeExpiredAPIKeys(ctx any, before any) *MockTx_PurgeExpiredAPIKeys_Call {
+	return &MockTx_PurgeExpiredAPIKeys_Call{Call: _e.mock.On("PurgeExpiredAPIKeys", ctx, before)}
+}
+
+func (_c *MockTx_PurgeExpiredAPIKeys_Call) Run(run func(ctx context.Context, before time.Time)) *MockTx_PurgeExpiredAPIKeys_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 time.Time
+		if args[1] != nil {
+			arg1 = args[1].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_PurgeExpiredAPIKeys_Call) Return(n int, err error) *MockTx_PurgeExpiredAPIKeys_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockTx_PurgeExpiredAPIKeys_Call) RunAndReturn(run func(ctx context.Context, before time.Time) (int, error)) *MockTx_PurgeExpiredAPIKeys_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PurgeExpiredSessions provides a mock function for the type MockTx
 func (_mock *MockTx) PurgeExpiredSessions(ctx context.Context, before time.Time) (int, error) {
 	ret := _mock.Called(ctx, before)

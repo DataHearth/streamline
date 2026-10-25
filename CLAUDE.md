@@ -47,7 +47,7 @@ Svelte 5 SPA in `web/app/` (TypeScript everywhere), Routify v3 file-routing over
 
 ## Auth, sessions & OIDC
 
-The middleware splits transport by path prefix: `/api/v1/*` takes Bearer, `X-API-Key`, or a same-origin `streamline_session` cookie; everything else is cookie-only and 302s to `/login`. API keys are read-only on the identity band. OIDC is multi-provider, and provider trust is **two independent axes** — `email_linking` (which accounts it may adopt) and `allow_admin` (whether it may grant admin).
+The middleware splits transport by path prefix: `/api/v1/*` takes Bearer, `X-API-Key`, or a same-origin `streamline_session` cookie; everything else is cookie-only and 302s to `/login`. API keys are read-only on the identity band, and each carries a `scope` (`read` keys send GET/HEAD only, refused in the middleware before RBAC, so no role widens them) and an optional `expires_at` (an expired key gets the unknown-key 401; the `purge-api-keys` system job drops it a week later). OIDC is multi-provider, and provider trust is **two independent axes** — `email_linking` (which accounts it may adopt) and `allow_admin` (whether it may grant admin).
 
 `role.Federated` in `internal/role/` is the single admin ceiling, enforced by a package boundary that makes skipping it a compile error, plus type-resolved specs over package `auth`. **Never merge the two trust keys, never export the role field, never move the type back into `auth`** — four rounds of weaker guards were each bypassed.
 

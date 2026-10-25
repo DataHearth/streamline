@@ -35,6 +35,7 @@ Everything Streamline does on its own is a named job on a fixed interval. All of
 | `database-backup` | `24h` | `schedules.database_backup` | Backs the database up into `<data_dir>/backups` and keeps the newest `backup.retention.scheduled` (7). The run at boot, or after a resume or retime, skips when a backup from within the interval already exists, so restarts do not rotate the week out; a manual run always takes one. See [Backups](GitOps-and-Kubernetes#backups) | UI / API |
 | `cleanup` | `24h` | `schedules.cleanup` | Prunes completed download records and aged-out events | UI / API |
 | `purge-sessions` | `1h` | — | Deletes expired sessions | System job — not controllable |
+| `purge-api-keys` | `1h` | — | Deletes API keys that expired more than a week ago | System job — not controllable |
 
 ### RSS sync vs missing search
 
@@ -94,7 +95,7 @@ A manual run does the work the ticker would defer: the missing searches ignore `
 
 Intervals have a **10 second floor**. Pause state is persisted to the database, so a paused job stays paused across restarts.
 
-`purge-sessions` is flagged `system: true` and rejects PATCH, pause, resume and run.
+`purge-sessions` and `purge-api-keys` are flagged `system: true` and reject PATCH, pause, resume and run.
 
 ---
 

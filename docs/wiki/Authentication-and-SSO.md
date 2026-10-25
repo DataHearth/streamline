@@ -135,10 +135,19 @@ Created per user at **Account settings → API keys**, or `POST /api/v1/auth/me/
 curl -H "X-API-Key: $KEY" https://streamline.example.com/api/v1/movies
 ```
 
-An API key inherits the full permissions of its owning user — an admin's key is an admin key. Scripts that only need read access should use a key on a member account.
+Each key is created with an **access scope** and an **expiry**, both fixed for its lifetime:
+
+| Scope | What it may do |
+|---|---|
+| **Read only** (`read`) | `GET` and `HEAD` only. Every other method answers `403`, checked before the owner's role is consulted — an admin's read-only key still cannot write anything. Fits a dashboard widget, a Home Assistant sensor or a monitoring script. |
+| **Full access** (`full`) | Everything its owner's *current* role allows — an admin's full key is an admin key. |
+
+The expiry is 30, 90 or 365 days from creation, or never. Past it the key is refused with the same `401` as an unknown key. It stays listed (marked expired) for a week, then the hourly `purge-api-keys` system job deletes it; expired keys do not count against the limit of 20 keys per account. The account page shows each key's scope, expiry and last use; the create form defaults to read only, 90 days.
+
+Keys created before scopes existed are full-access keys with no expiry, exactly what they could already do.
 
 > [!WARNING]
-> Keys are **read-only on the identity surface**. Any non-GET request under `/api/v1/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, `/users`, `/config/auth` or `/config/oidc` returns `403` when authenticated with a key — creating or revoking keys, changing passwords, managing sessions, administering users, and rotating the JWT secret, changing the registration mode and editing OIDC providers all require a logged-in session (Bearer JWT or the browser cookie). A leaked key therefore can't mint replacement credentials or reshape accounts; it grabs and browses, nothing more. Media endpoints and the other settings sections are unaffected.
+> Keys are **read-only on the identity surface**. Any non-GET request under `/api/v1/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, `/account`, `/users`, `/config/auth` or `/config/oidc` returns `403` when authenticated with a key, whatever the key's scope — creating or revoking keys, changing passwords, managing sessions, administering users, and rotating the JWT secret, changing the registration mode and editing OIDC providers all require a logged-in session (Bearer JWT or the browser cookie). A leaked key therefore can't mint replacement credentials or reshape accounts; it grabs and browses, nothing more. Media endpoints and the other settings sections are unaffected.
 
 Admins can revoke any user's keys from Settings → Users.
 

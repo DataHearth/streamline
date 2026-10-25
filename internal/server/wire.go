@@ -520,6 +520,12 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		jobs.PurgeSessions(authSvc),
 		scheduler.WithSystem(),
 	)
+	sched.Register(
+		"purge-api-keys",
+		time.Hour,
+		jobs.PurgeAPIKeys(authSvc),
+		scheduler.WithSystem(),
+	)
 
 	if err := jobsstate.Seed(ctx, dbClient, sched.List()); err != nil {
 		dbClient.Close()

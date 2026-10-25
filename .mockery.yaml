@@ -11,6 +11,7 @@ packages:
     interfaces:
       Manager: {}
       SessionPurger: {}
+      APIKeyPurger: {}
   github.com/datahearth/streamline/internal/bittorrent:
     interfaces:
       Manager: {}

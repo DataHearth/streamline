@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/apikey"
 	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
@@ -88,12 +89,12 @@ type Manager interface {
 		meta SessionMeta,
 	) (string, error)
 	ValidateToken(token string) (*Claims, error)
-	ValidateAPIKey(ctx context.Context, key string) (*ent.User, error)
+	ValidateAPIKey(ctx context.Context, key string) (*ent.ApiKey, error)
 	GetUserByID(ctx context.Context, id uint32) (*ent.User, error)
 	CreateAPIKey(
 		ctx context.Context,
 		userID uint32,
-		name string,
+		spec APIKeySpec,
 	) (string, *ent.ApiKey, error)
 	RotateJWTSecret(ctx context.Context, callerID uint32) (string, error)
 	PrepareJWTRotation(ctx context.Context, callerID uint32) (string, error)
@@ -177,6 +178,7 @@ type Manager interface {
 	RevokeSessionByID(ctx context.Context, userID, sessionID uint32) error
 	ListUserSessions(ctx context.Context, userID uint32) ([]*ent.Session, error)
 	PurgeExpiredSessions(ctx context.Context, before time.Time) (int, error)
+	PurgeExpiredAPIKeys(ctx context.Context, before time.Time) (int, error)
 }
 
 // auth handles user authentication and API key management. jwtSecret is held
@@ -748,16 +750,25 @@ func (s *auth) ValidateToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
-// ValidateAPIKey checks an API key against stored SHA-256 hashes.
+// ValidateAPIKey checks an API key against stored SHA-256 hashes and returns
+// the key row with its owner loaded; the caller enforces the key's scope.
+//
+// An expired key is refused with the same error as an unknown one: a caller
+// probing keys learns nothing from the difference, and the row stays only
+// until the purge job drops it.
 func (s *auth) ValidateAPIKey(
 	ctx context.Context,
 	key string,
-) (*ent.User, error) {
+) (*ent.ApiKey, error) {
 	hash := hashAPIKey(key)
 
 	ak, err := s.db.FindAPIKeyByHash(ctx, hash)
 	if err != nil {
-		return nil, fmt.Errorf("invalid API key")
+		return nil, errInvalidAPIKey
+	}
+	now := time.Now()
+	if ak.ExpiresAt != nil && !now.Before(*ak.ExpiresAt) {
+		return nil, errInvalidAPIKey
 	}
 
 	// Best-effort: a failed stamp must not reject an otherwise valid key.
@@ -765,14 +776,14 @@ func (s *auth) ValidateAPIKey(
 	// request path, so a bulk consumer used to pay a full row rewrite per
 	// request for a column nothing branches on. At one write per
 	// touchInterval it is rare enough not to be worth detaching.
-	if s.touches.allow(fmt.Sprintf("apikey:%d", ak.ID), time.Now()) {
-		if err := s.db.TouchAPIKey(ctx, ak.ID, time.Now()); err != nil {
+	if s.touches.allow(fmt.Sprintf("apikey:%d", ak.ID), now) {
+		if err := s.db.TouchAPIKey(ctx, ak.ID, now); err != nil {
 			slog.WarnContext(ctx, "failed to record API key usage",
 				"api_key.id", ak.ID, "error", err)
 		}
 	}
 
-	return ak.Edges.Owner, nil
+	return ak, nil
 }
 
 // GetUserByID returns the user with the given id. Returns ErrUserNotFound when
@@ -792,6 +803,15 @@ func (s *auth) GetUserByID(
 	return u, nil
 }
 
+// APIKeySpec is what a caller chooses when minting an API key.
+type APIKeySpec struct {
+	Name string
+	// Scope is apikey.ScopeRead or apikey.ScopeFull; empty means full.
+	Scope apikey.Scope
+	// TTL is how long the key authenticates; zero never expires.
+	TTL time.Duration
+}
+
 // CreateAPIKey generates a new API key for a user.
 // Returns the raw key (shown once to the user) plus the persisted record —
 // only the hash is stored. Callers surface rec.ID/CreatedAt in UI responses;
@@ -799,8 +819,18 @@ func (s *auth) GetUserByID(
 func (s *auth) CreateAPIKey(
 	ctx context.Context,
 	userID uint32,
-	name string,
+	spec APIKeySpec,
 ) (string, *ent.ApiKey, error) {
+	if spec.Scope == "" {
+		spec.Scope = apikey.ScopeFull
+	}
+	if err := apikey.ScopeValidator(spec.Scope); err != nil {
+		return "", nil, fmt.Errorf("%w: %w", ErrAPIKeyInvalid, err)
+	}
+	if spec.TTL < 0 {
+		return "", nil, fmt.Errorf("%w: negative lifetime", ErrAPIKeyInvalid)
+	}
+
 	count, err := s.db.CountAPIKeysByUser(ctx, userID)
 	if err != nil {
 		return "", nil, fmt.Errorf("count API keys: %w", err)
@@ -814,17 +844,26 @@ func (s *auth) CreateAPIKey(
 		return "", nil, fmt.Errorf("generate API key: %w", err)
 	}
 
+	var expiresAt *time.Time
+	if spec.TTL > 0 {
+		at := time.Now().Add(spec.TTL)
+		expiresAt = &at
+	}
 	rec, err := s.db.CreateAPIKey(ctx, db.CreateAPIKeyParams{
-		Name:    name,
-		KeyHash: hashAPIKey(key),
-		OwnerID: userID,
+		Name:      spec.Name,
+		KeyHash:   hashAPIKey(key),
+		OwnerID:   userID,
+		Scope:     spec.Scope,
+		ExpiresAt: expiresAt,
 	})
 	if err != nil {
 		return "", nil, fmt.Errorf("create API key: %w", err)
 	}
 
 	apiKeys.Add(ctx, 1)
-	slog.InfoContext(ctx, "API key created", "user_id", userID, "name", name)
+	slog.InfoContext(ctx, "API key created", "user_id", userID,
+		"name", spec.Name, "api_key.scope", spec.Scope,
+		"api_key.expires_at", expiresAt)
 	return key, rec, nil
 }
 

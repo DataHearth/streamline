@@ -39,6 +39,14 @@ var (
 	// key past maxAPIKeysPerUser. Handlers map to a 4xx.
 	ErrAPIKeyQuotaExceeded = errors.New("api key quota exceeded")
 
+	// ErrAPIKeyInvalid is returned when a key is requested with an unknown
+	// scope or a negative lifetime. Handlers map to 422.
+	ErrAPIKeyInvalid = errors.New("invalid api key request")
+
+	// errInvalidAPIKey is ValidateAPIKey's one refusal, for an unknown and an
+	// expired key alike.
+	errInvalidAPIKey = errors.New("invalid API key")
+
 	// ErrInvalidDeviceEmail is returned when a device address is not a bare
 	// email address. Handlers map to 422.
 	ErrInvalidDeviceEmail = errors.New("device email is not a valid address")

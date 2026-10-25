@@ -44,6 +44,7 @@
 		"media-probe": i18n.schedule_media_probe(),
 		cleanup: i18n.schedule_purge_downloads(),
 		"purge-sessions": i18n.schedule_purge_sessions(),
+		"purge-api-keys": i18n.schedule_purge_api_keys(),
 		"drift-check":
 			i18n.schedule_verify_files(),
 		"file-selection": i18n.schedule_file_selection(),

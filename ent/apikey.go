@@ -28,6 +28,10 @@ type ApiKey struct {
 	KeyHash string `json:"-"`
 	// LastUsedAt holds the value of the "last_used_at" field.
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+	// Scope holds the value of the "scope" field.
+	Scope apikey.Scope `json:"scope,omitempty"`
+	// ExpiresAt holds the value of the "expires_at" field.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ApiKeyQuery when eager-loading is set.
 	Edges         ApiKeyEdges `json:"edges"`
@@ -62,9 +66,9 @@ func (*ApiKey) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case apikey.FieldID:
 			values[i] = new(sql.NullInt64)
-		case apikey.FieldName, apikey.FieldKeyHash:
+		case apikey.FieldName, apikey.FieldKeyHash, apikey.FieldScope:
 			values[i] = new(sql.NullString)
-		case apikey.FieldCreateTime, apikey.FieldUpdateTime, apikey.FieldLastUsedAt:
+		case apikey.FieldCreateTime, apikey.FieldUpdateTime, apikey.FieldLastUsedAt, apikey.FieldExpiresAt:
 			values[i] = new(sql.NullTime)
 		case apikey.ForeignKeys[0]: // user_api_keys
 			values[i] = new(sql.NullInt64)
@@ -119,6 +123,19 @@ func (_m *ApiKey) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.LastUsedAt = new(time.Time)
 				*_m.LastUsedAt = value.Time
+			}
+		case apikey.FieldScope:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field scope", values[i])
+			} else if value.Valid {
+				_m.Scope = apikey.Scope(value.String)
+			}
+		case apikey.FieldExpiresAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field expires_at", values[i])
+			} else if value.Valid {
+				_m.ExpiresAt = new(time.Time)
+				*_m.ExpiresAt = value.Time
 			}
 		case apikey.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -181,6 +198,14 @@ func (_m *ApiKey) String() string {
 	builder.WriteString(", ")
 	if v := _m.LastUsedAt; v != nil {
 		builder.WriteString("last_used_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("scope=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Scope))
+	builder.WriteString(", ")
+	if v := _m.ExpiresAt; v != nil {
+		builder.WriteString("expires_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteByte(')')

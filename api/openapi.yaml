@@ -3684,6 +3684,11 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          # Unknown `scope`, an `expires_in_days` other than 30, 90 or 365, or
+          # (`code: api_key_quota`) the caller already holds the maximum of 20
+          # unexpired keys.
+          $ref: "#/components/responses/UnprocessableEntity"
   /auth/me/api-keys/{id}:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -5810,9 +5815,16 @@ components:
 
         API keys may read the identity endpoints but never mutate them: any
         non-GET request under `/auth/me`, `/auth/password`, `/auth/invites`,
-        `/auth/jwt`, or `/users` is refused with `403` — those actions require
-        session authentication (JWT or cookie). Media and configuration
-        endpoints are unaffected.
+        `/auth/jwt`, `/account`, `/users`, `/config/auth` or `/config/oidc` is
+        refused with `403` — those actions require session authentication (JWT
+        or cookie). Media and configuration endpoints are unaffected.
+
+        A key carries a `scope` chosen at creation. A `read` key may only send
+        `GET` and `HEAD`; any other method is refused with `403` before the
+        owner's role is consulted, so an admin's read key cannot write. A
+        `full` key acts with its owner's current role. A key may also carry
+        an `expires_at`: once past it, the key is refused with `401` exactly
+        like an unknown key.
 
   parameters:
     ResourceID:
@@ -7806,8 +7818,9 @@ components:
             invalid_condition, grab_rejected, rate_limited, worker_unavailable,
             hardcover_not_configured, hardcover_key_rejected, not_sendable,
             no_device_email, smtp_not_configured, send_failed,
-            secret_required, secret_file_managed). Present for domain errors
-            where the caller needs to branch on the specific reason; absent
+            secret_required, secret_file_managed, api_key_quota). Present
+            for domain errors where the caller needs to branch on the
+            specific reason; absent
             for generic errors where the message is sufficient.
 
     DeleteFileRequest:
@@ -11919,13 +11932,23 @@ components:
 
     ApiKey:
       type: object
-      required: [id, name, created_at]
+      required: [id, name, scope, created_at]
       properties:
         id:
           type: integer
           x-go-type: uint32
         name:
           type: string
+        scope:
+          $ref: "#/components/schemas/ApiKeyScope"
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: >-
+            When the key stops authenticating; null never expires. An expired
+            key is still listed until the hourly `purge-api-keys` job drops
+            it, seven days after it expired.
         last_used_at:
           type: string
           format: date-time
@@ -11933,6 +11956,13 @@ components:
         created_at:
           type: string
           format: date-time
+
+    ApiKeyScope:
+      type: string
+      enum: [read, full]
+      description: >-
+        `read` may only send GET and HEAD, whatever the owner's role; `full`
+        acts with the owner's current role.
 
     ApiKeyCreated:
       allOf:
@@ -12038,6 +12068,17 @@ components:
           type: string
           minLength: 1
           maxLength: 100
+        scope:
+          allOf:
+            - $ref: "#/components/schemas/ApiKeyScope"
+          description: Defaults to `full` when omitted.
+        expires_in_days:
+          type: integer
+          enum: [30, 90, 365]
+          nullable: true
+          description: >-
+            Lifetime of the key from now. Omitted or null, the key never
+            expires.
 
     UserList:
       type: object
