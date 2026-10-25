@@ -61,6 +61,7 @@
 		{ prefix: "/imports", label: i18n.imports_label() },
 		{ prefix: "/account", label: i18n.common_account() },
 		{ prefix: "/settings", label: i18n.nav_settings() },
+		{ prefix: "/search", label: i18n.common_search() },
 	];
 
 	// Sub-pages are named by their full path, from the same titles their own
@@ -388,14 +389,15 @@
 	     a flex-1 here took half the header from the breadcrumbs. -->
 	<div class={cn("flex flex-none items-center justify-end gap-2 lg:flex-1", hideForSelection)}>
 		<SearchField />
-		<button
-			type="button"
-			onclick={openPalette}
+		<!-- A link, not the palette: below md search is a page of its own, so
+		     Back closes it (routes/search.svelte). -->
+		<a
+			href="/search"
 			aria-label={i18n.common_search()}
 			class="grid h-11 w-11 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg md:hidden"
 		>
 			<Search size={19} aria-hidden="true" />
-		</button>
+		</a>
 		<button
 			bind:this={addTrigger}
 			type="button"
