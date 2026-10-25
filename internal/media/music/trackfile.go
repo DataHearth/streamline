@@ -49,7 +49,13 @@ func (s *Service) DeleteTrackFile(ctx context.Context, trackID uint32) error {
 		}
 	}
 	if len(t.Edges.MediaFiles) > 0 {
-		defer mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindMusic, root)
+		removed := make([]string, 0, len(t.Edges.MediaFiles))
+		for _, f := range t.Edges.MediaFiles {
+			removed = append(removed, f.Path)
+		}
+		defer mediaserver.RefreshInBackground(
+			ctx, s.ms, mediaserver.KindMusic, root, removed...,
+		)
 	}
 	for _, f := range t.Edges.MediaFiles {
 		// A file already gone (or taken with a same-named sibling's sidecars)

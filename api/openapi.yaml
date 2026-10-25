@@ -13145,6 +13145,63 @@ components:
         api_key_set:
           type: boolean
           description: True when an API key/token is stored. The value itself is never returned.
+        path_mappings:
+          type: array
+          description: >-
+            Rewrites a folder as streamline sees it into the path the server
+            knows it by, before a targeted rescan is sent and before Plex
+            sections are matched. First matching prefix wins; empty means
+            both see the same paths.
+          items:
+            $ref: "#/components/schemas/MediaServerPathMapping"
+        last_refresh:
+          $ref: "#/components/schemas/MediaServerRefreshStatus"
+
+    MediaServerPathMapping:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+          description: Absolute prefix as streamline sees it.
+        to:
+          type: string
+          description: >-
+            Absolute prefix as the media server sees it. A Windows path
+            (`D:\Movies`, `\\nas\movies`) is accepted for a server running
+            on Windows.
+
+    MediaServerRefreshStatus:
+      type: object
+      nullable: true
+      description: >-
+        The last rescan streamline sent this server since it started, null
+        before the first. Refreshes are collected for 30 seconds and sent
+        together, so a fresh import shows here up to that long after.
+      required: [at, outcome, folders]
+      properties:
+        at:
+          type: string
+          format: date-time
+        outcome:
+          type: string
+          enum: [ok, error]
+        scope:
+          type: string
+          description: >-
+            folders when only the changed folders were rescanned, library
+            when the whole section (Plex) or every library (Jellyfin, Emby)
+            was — no folder given, or one lay outside everything the server
+            reports, which usually means a missing path mapping. Absent when
+            the request failed before the server was asked.
+          enum: [folders, library]
+        folders:
+          type: integer
+          minimum: 0
+          description: How many folders a folders-scope rescan named.
+        error:
+          type: string
+          description: What the server or the connection answered, on an error.
 
     MediaServerCreate:
       type: object
@@ -13167,6 +13224,11 @@ components:
           nullable: true
         enabled:
           type: boolean
+        path_mappings:
+          type: array
+          description: Replaces the whole list when present; an empty list clears it.
+          items:
+            $ref: "#/components/schemas/MediaServerPathMapping"
 
     MediaServerUpdate:
       type: object
@@ -13188,6 +13250,11 @@ components:
           nullable: true
         enabled:
           type: boolean
+        path_mappings:
+          type: array
+          description: Replaces the whole list when present; an empty list clears it.
+          items:
+            $ref: "#/components/schemas/MediaServerPathMapping"
 
     MediaServerDiscoveryRequest:
       type: object

@@ -153,7 +153,7 @@ var _ = Describe("Service.runCommit", Label("unit", "bulkimport"), func() {
 			Once()
 		refreshed := make(chan struct{})
 		ms.EXPECT().RefreshAll(mock.Anything, "movie", "/lib").
-			Run(func(context.Context, string, string) { close(refreshed) }).
+			Run(func(context.Context, string, string, ...string) { close(refreshed) }).
 			Return(nil).Once()
 
 		svc.runCommit(ctx, scan)
@@ -166,7 +166,7 @@ var _ = Describe("Service.runCommit", Label("unit", "bulkimport"), func() {
 			Once()
 		refreshed := make(chan struct{})
 		ms.EXPECT().RefreshAll(mock.Anything, mock.Anything, mock.Anything).
-			Run(func(context.Context, string, string) { close(refreshed) }).
+			Run(func(context.Context, string, string, ...string) { close(refreshed) }).
 			Return(nil).Maybe()
 
 		svc.runCommit(ctx, scan)

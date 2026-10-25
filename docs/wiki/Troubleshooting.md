@@ -263,13 +263,15 @@ Streamline pokes Plex/Jellyfin/Emby to rescan whenever it changes your library: 
 
 - **Test the connection.** Settings → Media servers → Test.
 - **Check your media server can see the files.** Streamline importing successfully doesn't mean Plex has the path mounted. They're separate containers with separate mounts.
-- **For Plex, set both section keys.** Settings → Media servers → **Discover**, then fill in **Movie library section** and **TV library section**. Left blank, Streamline falls back to rescanning every section — so the scan does happen, but it is broader than it needs to be, and a log line will say so:
+- **Look at the server's card.** Settings → Media servers shows the last rescan Streamline sent — when, whether it failed, and whether it covered just the changed folders or the whole library. Rescans are collected for 30 seconds before they are sent, so a fresh import shows up there a little later.
+- **Add path mappings when the server mounts the library elsewhere.** Streamline sends the changed folder by its own path; a server in another container knows it by another one (Streamline's `/srv/streamline/movies` is Plex's `/data/movies`). Without a mapping Streamline cannot find the folder among the server's libraries and rescans the whole library instead — the card then reads "whole library" after every import, and the log says so:
 
   ```
+  INFO plex: a folder lies outside every section, rescanning the library
   WARN plex: no section matches the library path, refreshing all sections
   ```
 
-  That message is expected on any containerised install: Plex reports its *own* mount paths, which don't match Streamline's. Setting the two keys is the fix.
+  Add a mapping for each library root in the server's form ([Path mappings](First-Run-Setup#path-mappings)). For Plex, setting **Movie library section** and **TV library section** (**Discover**) also keeps that fallback to one section instead of all of them.
 
 Check the log for the import itself too. A refresh that failed outright logs at WARN and never stops the import, so the file lands on disk with nothing to show for it:
 

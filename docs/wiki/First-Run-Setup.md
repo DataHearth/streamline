@@ -218,7 +218,7 @@ Full detail — including how 720p/1080p/2160p rank against each other — in [Q
 
 **Settings → Media servers → Add.** Optional, but it's what makes "Play on…" buttons appear and stops you waiting on Plex's own scan timer.
 
-Streamline supports Plex, Jellyfin and Emby. Whenever it imports, renames or deletes something it pokes the server to rescan the affected library, and it can deep-link you straight into playback.
+Streamline supports Plex, Jellyfin and Emby. Whenever it imports, renames or deletes something it asks the server to rescan just the folder that changed — the movie's folder, the season's, the album's — and it can deep-link you straight into playback. Changes that land close together (several downloads finishing in one go) are collected for 30 seconds and sent as one request, so a burst of imports costs the server one scan instead of one each.
 
 For **Plex**, authentication is a PIN pop-up rather than a pasted token — click **Connect**, approve at plex.tv, done. Then click **Discover** and fill in the two section fields:
 
@@ -229,9 +229,22 @@ For **Plex**, authentication is a PIN pop-up rather than a pasted token — clic
 
 Plex rescans one library at a time, so these are what let a film import poke only your film library and an episode import poke only your TV one. Each dropdown lists only sections of the matching type, so you can't pick a TV library as your movie one by accident.
 
-Both are optional. Left blank, Streamline tries to work the section out by matching your library path against the paths Plex reports — which only lines up when Plex sees the library at the same path Streamline does. In Docker or Kubernetes it usually doesn't (Streamline's `/srv/streamline/movies` is Plex's `/data/movies`), and Streamline falls back to rescanning **every** section. That works, but it means each import also kicks a scan of libraries that have nothing to do with Streamline. Fill the two fields in and it stops guessing.
+Both are optional. Left blank, Streamline works the section out by matching the changed folder against the paths Plex reports.
 
-For **Jellyfin/Emby**, generate an API key in that server's dashboard and paste it in. Neither has a section concept — they take a single "rescan everything" call, so there is nothing to pick.
+For **Jellyfin/Emby**, generate an API key in that server's dashboard and paste it in. Neither has a section concept, so there is nothing to pick.
+
+### Path mappings
+
+A folder-only rescan works when the server knows the folder by the path Streamline sends. In Docker or Kubernetes it usually doesn't: Streamline's `/srv/streamline/movies` is Plex's `/data/movies`. Add a **path mapping** for each library root in the server's form:
+
+| Path in Streamline | Path on the server |
+| --- | --- |
+| `/srv/streamline/movies` | `/data/movies` |
+| `/srv/streamline/tv` | `/data/tv` |
+
+A server on Windows takes Windows paths on the right (`D:\Movies`, `\\nas\movies`). In YAML it is `path_mappings: [{from: /srv/streamline/movies, to: /data/movies}]` under the server's entry.
+
+Without a mapping that matches, nothing breaks: a folder the server does not know is rescanned as the whole library (for Plex the configured section, else every section), which is how every refresh worked before. The server's card in **Settings → Media servers** shows the last rescan and whether it covered folders or the whole library — "whole library" after an import is the sign a mapping is missing.
 
 ---
 

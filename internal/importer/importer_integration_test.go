@@ -61,7 +61,11 @@ func qbitStub(savePath string) *httptest.Server {
 	return httptest.NewServer(mux)
 }
 
-func plexStub(libPath string, refreshes *atomic.Int32) *httptest.Server {
+func plexStub(
+	libPath string,
+	refreshes *atomic.Int32,
+	folder *atomic.Value,
+) *httptest.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc(
 		"/library/sections",
@@ -79,7 +83,8 @@ func plexStub(libPath string, refreshes *atomic.Int32) *httptest.Server {
 	)
 	mux.HandleFunc(
 		"/library/sections/1/refresh",
-		func(w http.ResponseWriter, _ *http.Request) {
+		func(w http.ResponseWriter, r *http.Request) {
+			folder.Store(r.URL.Query().Get("path"))
 			refreshes.Add(1)
 			w.WriteHeader(http.StatusOK)
 		},
@@ -110,8 +115,11 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 			DeferCleanup(entClient.Close)
 			store := db.New(entClient)
 
-			var refreshes atomic.Int32
-			msSrv := plexStub(libPath, &refreshes)
+			var (
+				refreshes atomic.Int32
+				folder    atomic.Value
+			)
+			msSrv := plexStub(libPath, &refreshes, &folder)
 			DeferCleanup(msSrv.Close)
 			qbit := qbitStub(savePath)
 			DeferCleanup(qbit.Close)
@@ -195,11 +203,18 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 			Expect(recs).To(HaveLen(1))
 			Expect(recs[0].Status).To(Equal(entdr.StatusCompleted))
 
-			// The media-server refresh fires after the movie is marked
-			// available, so poll rather than assert synchronously.
-			Eventually(refreshes.Load).
+			// The media-server refresh is queued after the movie is marked
+			// available and sent when the dispatcher's window closes, which
+			// Flush brings forward.
+			Eventually(func() int32 {
+				dispatcher.Flush(ctx)
+				return refreshes.Load()
+			}).
 				WithTimeout(10 * time.Second).WithPolling(50 * time.Millisecond).
 				Should(BeNumerically(">=", 1))
+			Expect(folder.Load()).To(Equal(
+				filepath.Join(libPath, "Test Movie (2024) {tmdb-999}"),
+			), "only the movie's folder is rescanned")
 
 			expectedPath := filepath.Join(
 				libPath,

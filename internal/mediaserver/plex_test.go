@@ -11,6 +11,15 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+// libraryRefresh is RefreshLibrary with no folders: a whole-library rescan.
+func libraryRefresh(s Server, ctx context.Context, root, sectionKey string) error {
+	_, err := s.RefreshLibrary(
+		ctx,
+		RefreshRequest{Root: root, SectionKey: sectionKey},
+	)
+	return err
+}
+
 func jsonBytes(v any) []byte {
 	GinkgoHelper()
 	b, err := json.Marshal(v)
@@ -55,7 +64,7 @@ var _ = Describe("Plex Client", Label("unit", "mediaserver"), func() {
 
 			client := NewPlex(ts.URL, "test-token")
 			Expect(
-				client.RefreshLibrary(context.Background(), "/media/movies", ""),
+				libraryRefresh(client, context.Background(), "/media/movies", ""),
 			).To(Succeed())
 			Expect(refreshCalled).To(BeTrue())
 		})
@@ -69,7 +78,7 @@ var _ = Describe("Plex Client", Label("unit", "mediaserver"), func() {
 			defer ts.Close()
 
 			client := NewPlex(ts.URL, "bad-token")
-			err := client.RefreshLibrary(context.Background(), "/media/movies", "")
+			err := libraryRefresh(client, context.Background(), "/media/movies", "")
 			Expect(
 				err,
 			).To(MatchError(ContainSubstring("plex sections: unexpected status 401")))
@@ -86,7 +95,7 @@ var _ = Describe("Plex Client", Label("unit", "mediaserver"), func() {
 			defer ts.Close()
 
 			client := NewPlex(ts.URL, "test-token")
-			err := client.RefreshLibrary(context.Background(), "/media/movies", "")
+			err := libraryRefresh(client, context.Background(), "/media/movies", "")
 			Expect(err).To(MatchError(ContainSubstring("plex sections decode")))
 		})
 
@@ -125,7 +134,7 @@ var _ = Describe("Plex Client", Label("unit", "mediaserver"), func() {
 
 			client := NewPlex(ts.URL, "test-token")
 			Expect(
-				client.RefreshLibrary(context.Background(), "/media/movies", ""),
+				libraryRefresh(client, context.Background(), "/media/movies", ""),
 			).To(Succeed())
 			Expect(refreshed).To(ConsistOf(
 				"/library/sections/1/refresh",
@@ -160,7 +169,7 @@ var _ = Describe("Plex Client", Label("unit", "mediaserver"), func() {
 			defer ts.Close()
 
 			client := NewPlex(ts.URL, "test-token")
-			err := client.RefreshLibrary(context.Background(), "/media/movies", "")
+			err := libraryRefresh(client, context.Background(), "/media/movies", "")
 			Expect(
 				err,
 			).To(MatchError(ContainSubstring("plex refresh: unexpected status 500")))
@@ -173,7 +182,7 @@ var _ = Describe("Plex Client", Label("unit", "mediaserver"), func() {
 			ts.Close()
 
 			client := NewPlex(ts.URL, "test-token")
-			err := client.RefreshLibrary(context.Background(), "/media/movies", "")
+			err := libraryRefresh(client, context.Background(), "/media/movies", "")
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -188,7 +197,7 @@ var _ = Describe("Plex Client", Label("unit", "mediaserver"), func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 			client := NewPlex(ts.URL, "test-token")
-			err := client.RefreshLibrary(ctx, "/media/movies", "")
+			err := libraryRefresh(client, ctx, "/media/movies", "")
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -204,7 +213,7 @@ var _ = Describe("Plex Client", Label("unit", "mediaserver"), func() {
 
 			client := NewPlex(ts.URL, "tok")
 			Expect(
-				client.RefreshLibrary(context.Background(), "/ignored", "7"),
+				libraryRefresh(client, context.Background(), "/ignored", "7"),
 			).To(Succeed())
 			Expect(calls).To(ConsistOf("/library/sections/7/refresh"))
 		})

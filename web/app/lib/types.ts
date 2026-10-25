@@ -1413,6 +1413,20 @@ export type TorrentAddResult = { hash: string };
 
 export type MediaServerType = "plex" | "jellyfin" | "emby";
 
+// from is the folder as Streamline sees it, to as the media server does.
+export type MediaServerPathMapping = { from: string; to: string };
+
+// The last rescan sent to a server since Streamline started.
+export type MediaServerRefreshStatus = {
+	at: string;
+	outcome: "ok" | "error";
+	// folders: only the changed folders; library: the whole section or
+	// library. Absent when the request failed before the server was asked.
+	scope?: "folders" | "library";
+	folders: number;
+	error?: string;
+};
+
 export type MediaServer = {
 	name: string;
 	server_type: MediaServerType;
@@ -1421,6 +1435,8 @@ export type MediaServer = {
 	library_section_tv?: string | null;
 	enabled: boolean;
 	api_key_set: boolean;
+	path_mappings?: MediaServerPathMapping[];
+	last_refresh?: MediaServerRefreshStatus | null;
 };
 
 export type MediaServerSection = {

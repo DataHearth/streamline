@@ -88,22 +88,22 @@ func (sc sidecar) place(seeding download.SeedingSet) (string, bool, error) {
 }
 
 // sidecars keeps the album's cover file and, once per pass, its artist's
-// folder image. It reports whether anything on disk changed.
+// folder image. It returns the folders whose image changed on disk.
 func (a *albumTagging) sidecars(
 	ctx context.Context,
 	artistsDone map[uint32]bool,
-) bool {
+) []string {
 	root := config.Get().Library.MusicPath
 	dir := albumDir(a.alb)
 	if dir == "" || !strictlyUnder(dir, root) {
-		return false
+		return nil
 	}
 	art := a.artwork(ctx)
 	var data []byte
 	if a.cfg.SidecarArt {
 		data = art.cover
 	}
-	changed := false
+	var changed []string
 	hash, did, err := sidecar{
 		dir: dir, names: folderCoverNames, base: "cover",
 		ours: a.alb.ArtSidecarHash, data: data,
@@ -119,7 +119,9 @@ func (a *albumTagging) sidecars(
 		}
 		a.alb.ArtSidecarHash = hash
 	}
-	changed = changed || did
+	if did {
+		changed = append(changed, dir)
+	}
 
 	ar := a.alb.Edges.Artist
 	if ar == nil || artistsDone[ar.ID] {
@@ -153,7 +155,10 @@ func (a *albumTagging) sidecars(
 		}
 		ar.ArtSidecarHash = hash
 	}
-	return changed || did
+	if did {
+		changed = append(changed, parent)
+	}
+	return changed
 }
 
 // albumDir is the folder holding the album's files: their common directory,

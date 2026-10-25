@@ -637,11 +637,15 @@ func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) err
 			return otelx.RecordSpanError(span, err)
 		}
 		root := config.Get().Library.SeriesPath
-		var requested, kept int
+		var (
+			requested, kept int
+			removed         []string
+		)
 		for _, se := range show.Edges.Seasons {
 			for _, e := range se.Edges.Episodes {
 				for _, f := range e.Edges.MediaFiles {
 					requested++
+					removed = append(removed, f.Path)
 					if err := library.RemoveMediaFile(
 						ctx,
 						f.Path,
@@ -671,7 +675,7 @@ func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) err
 			attribute.Int("files.kept", kept),
 		)
 		if requested > 0 {
-			mediaserver.RefreshInBackground(ctx, s.ms, "series", root)
+			mediaserver.RefreshInBackground(ctx, s.ms, "series", root, removed...)
 		}
 	}
 	if err := s.db.DeleteTVShow(ctx, id); err != nil {
@@ -738,7 +742,7 @@ func (s *Service) DeleteEpisodeFile(
 		slog.WarnContext(ctx, "delete episode file from disk failed",
 			"path", mf.Path, "error", err)
 	}
-	mediaserver.RefreshInBackground(ctx, s.ms, "series", root)
+	mediaserver.RefreshInBackground(ctx, s.ms, "series", root, mf.Path)
 	if err := s.db.DeleteMediaFileAndRevertEpisode(
 		ctx, mf.ID, episodeID,
 	); err != nil {

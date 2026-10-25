@@ -71,7 +71,9 @@ func (r *Renamer) Apply(
 	}
 	root := config.Get().Library.MusicPath
 	if len(plan.Operations) > 0 {
-		defer mediaserver.RefreshInBackground(ctx, r.ms, mediaserver.KindMusic, root)
+		defer mediaserver.RefreshInBackground(
+			ctx, r.ms, mediaserver.KindMusic, root, plan.Paths()...,
+		)
 	}
 	for _, op := range plan.Operations {
 		if err := r.move(ctx, op, root); err != nil {

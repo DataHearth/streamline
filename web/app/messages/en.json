@@ -2778,5 +2778,15 @@
 	"users_subsonic_max_bitrate_help": "Streams above it are converted, even when the app asks for the original file. Needs ffmpeg.",
 	"users_subsonic_no_limit": "No limit",
 	"users_subsonic_kbps": "{kbps} kbps",
-	"users_subsonic_permissions": "Permissions"
+	"users_subsonic_permissions": "Permissions",
+	"mediaserver_path_add": "Add mapping",
+	"mediaserver_path_from": "Path in Streamline",
+	"mediaserver_path_mappings": "Path mappings",
+	"mediaserver_path_mappings_help": "After an import, a rename or a delete, Streamline asks this server to rescan only the folder that changed. If the server sees the library under other paths (a container mounting it elsewhere), map each Streamline folder to the server's. A folder the server does not know is rescanned as its whole library instead.",
+	"mediaserver_path_remove": "Remove mapping",
+	"mediaserver_path_to": "Path on the server",
+	"mediaserver_refresh_failed": "Last rescan {when} failed: {error}",
+	"mediaserver_refresh_folders_one": "Last rescan {when}: 1 folder",
+	"mediaserver_refresh_folders_other": "Last rescan {when}: {count} folders",
+	"mediaserver_refresh_library": "Last rescan {when}: whole library"
 }

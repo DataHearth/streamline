@@ -9,6 +9,7 @@
 	import BrandLogo from "@components/settings/BrandLogo.svelte";
 	import PlexPINFlow from "@components/settings/PlexPINFlow.svelte";
 	import PlexSectionsModal from "@components/settings/PlexSectionsModal.svelte";
+	import PathMappingsField from "@components/settings/PathMappingsField.svelte";
 	import { api, errorText } from "@lib/api";
 	import { readOnlyLock } from "@lib/config.svelte";
 	import { urlDestination } from "@lib/destination";
@@ -16,6 +17,7 @@
 	import type { AppForm } from "@lib/form";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
+		MediaServerPathMapping,
 		MediaServerType,
 		MediaServerSection,
 	} from "@lib/types";
@@ -28,6 +30,7 @@
 		library_section: string;
 		library_section_tv: string;
 		enabled: boolean;
+		path_mappings: MediaServerPathMapping[];
 	};
 
 	type Props = {
@@ -318,6 +321,19 @@
 				</div>
 			</div>
 		{/if}
+	</div>
+
+	<!-- Every type: a targeted rescan names folders, and a server mounting the
+	     library elsewhere only knows them under its own paths. -->
+	<div class="rounded-lg border border-border bg-bg-card p-5">
+		<form.Field name="path_mappings">
+			{#snippet children(field)}
+				<PathMappingsField
+					value={field.state.value ?? []}
+					onChange={(v) => field.handleChange(v)}
+				/>
+			{/snippet}
+		</form.Field>
 	</div>
 </div>
 

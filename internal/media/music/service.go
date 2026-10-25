@@ -488,7 +488,14 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 	}
 	if deleteFiles {
 		root := config.Get().Library.MusicPath
-		defer mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindMusic, root)
+		var removed []string
+		defer func() {
+			if len(removed) > 0 {
+				mediaserver.RefreshInBackground(
+					ctx, s.ms, mediaserver.KindMusic, root, removed...,
+				)
+			}
+		}()
 		for _, a := range row.Edges.Albums {
 			unlock := library.LockAlbumFiles(a.ID)
 			// Read again under the lock: the renamer may have moved a
@@ -498,6 +505,7 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 			}
 			for _, t := range a.Edges.Tracks {
 				for _, f := range t.Edges.MediaFiles {
+					removed = append(removed, f.Path)
 					if err := library.RemoveMediaFile(
 						ctx,
 						f.Path,

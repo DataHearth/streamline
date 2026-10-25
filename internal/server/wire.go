@@ -59,6 +59,9 @@ type App struct {
 	Importer   *importer.Worker
 	HTTPLogger *observability.HTTPLogger
 	Torrents   *bittorrent.Engine
+	// MediaServers holds the refreshes collected over its window; shutdown
+	// flushes it, or the last imports would never reach the servers.
+	MediaServers *mediaserver.Dispatcher
 }
 
 // httpAccessSkip filters which requests bypass the HTTP access log.
@@ -539,6 +542,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Indexers:        indexerSvc,
 		Downloads:       dlManager,
 		MediaServers:    mediaServerSvc,
+		RefreshStatus:   dispatcher,
 		DeepLinker:      deepLinker,
 		Renamer:         renamer,
 		SeriesRenamer:   seriesRenamer,
@@ -580,6 +584,8 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Importer:   imp,
 		HTTPLogger: httpLogger,
 		Torrents:   torrentEngine,
+
+		MediaServers: dispatcher,
 	}, nil
 }
 

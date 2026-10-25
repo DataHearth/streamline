@@ -74,7 +74,9 @@ func (r *RenameService) Apply(
 	}
 	// See the movie twin: deferred so a half-applied plan still rescans.
 	if len(plan.Operations) > 0 {
-		defer mediaserver.RefreshInBackground(ctx, r.ms, "series", r.libraryRoot)
+		defer mediaserver.RefreshInBackground(
+			ctx, r.ms, "series", r.libraryRoot, plan.Paths()...,
+		)
 	}
 	for _, op := range plan.Operations {
 		if err := library.MkdirLibraryDir(filepath.Dir(op.To)); err != nil {

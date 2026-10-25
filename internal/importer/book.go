@@ -152,8 +152,12 @@ func (w *Worker) importBookRecord(
 		w.markRequestsAvailable(ctx, "book_series", series.HardcoverID)
 	}
 	w.cleanupTorrent(ctx, rec, libCfg)
+	changed := mediaFilePaths(existing)
+	for _, f := range placed {
+		changed = append(changed, f.Path)
+	}
 	w.refreshMediaServers(ctx, mediaserver.KindBook,
-		library.BookRoot(libCfg, string(rec.BookKind)))
+		library.BookRoot(libCfg, string(rec.BookKind)), changed...)
 	return nil
 }
 

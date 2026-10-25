@@ -53,6 +53,80 @@ var _ = Describe("Media server CRUD", Label("unit", "config"), func() {
 		},
 	)
 
+	Describe("path_mappings", func() {
+		ctx := context.Background()
+
+		It(
+			"stores a list, keeps it across an unrelated patch, and clears it",
+			func() {
+				e := entry("home-plex")
+				e.PathMappings = []config.MediaServerPathMapping{
+					{From: "/srv/movies", To: "/data/movies"},
+					{From: "/srv/tv", To: `D:\TV`},
+					{From: "/srv/music", To: `\\nas\music`},
+				}
+				Expect(config.AddMediaServer(ctx, e)).To(Succeed())
+				got, _ := config.FindMediaServer("home-plex")
+				Expect(got.PathMappings).To(Equal(e.PathMappings))
+
+				enabled := false
+				Expect(
+					config.UpdateMediaServer(
+						ctx,
+						"home-plex",
+						config.MediaServerPatch{
+							Enabled: &enabled,
+						},
+					),
+				).To(Succeed())
+				got, _ = config.FindMediaServer("home-plex")
+				Expect(got.PathMappings).To(HaveLen(3))
+
+				Expect(
+					config.UpdateMediaServer(
+						ctx,
+						"home-plex",
+						config.MediaServerPatch{
+							PathMappings: &[]config.MediaServerPathMapping{},
+						},
+					),
+				).To(Succeed())
+				got, _ = config.FindMediaServer("home-plex")
+				Expect(got.PathMappings).To(BeEmpty())
+			},
+		)
+
+		DescribeTable("rejects a mapping that is not absolute on its side",
+			func(m config.MediaServerPathMapping, field string) {
+				Expect(config.AddMediaServer(ctx, entry("home-plex"))).To(Succeed())
+				err := config.UpdateMediaServer(
+					ctx,
+					"home-plex",
+					config.MediaServerPatch{
+						PathMappings: &[]config.MediaServerPathMapping{m},
+					},
+				)
+				Expect(
+					err,
+				).To(MatchError(ContainSubstring("path_mappings[0]." + field)))
+				got, _ := config.FindMediaServer("home-plex")
+				Expect(got.PathMappings).To(BeEmpty())
+			},
+			Entry("relative from", config.MediaServerPathMapping{
+				From: "movies", To: "/data/movies",
+			}, "from"),
+			Entry("Windows from", config.MediaServerPathMapping{
+				From: `D:\Movies`, To: "/data/movies",
+			}, "from"),
+			Entry("empty to", config.MediaServerPathMapping{
+				From: "/srv/movies", To: " ",
+			}, "to"),
+			Entry("relative to", config.MediaServerPathMapping{
+				From: "/srv/movies", To: "data/movies",
+			}, "to"),
+		)
+	})
+
 	Describe("library_section is Plex-only", func() {
 		ctx := context.Background()
 		section := "Movies"

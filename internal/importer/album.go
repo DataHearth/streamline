@@ -96,7 +96,7 @@ func (w *Worker) importAlbumRecord(
 		return otelx.RecordSpanError(span, fmt.Errorf("list album files: %w", err))
 	}
 	files = w.sourceFilter(ctx, rec).Filter(files)
-	held, err := w.importAlbumFiles(
+	changed, held, err := w.importAlbumFiles(
 		ctx, span, rec, rec.Edges.Album, files, libCfg, false,
 	)
 	if err != nil || held {
@@ -106,7 +106,7 @@ func (w *Worker) importAlbumRecord(
 	// the source untouched, so a configured "move" must not delete it.
 	libCfg.ImportMode = albumImportMode(libCfg)
 	w.cleanupTorrent(ctx, rec, libCfg)
-	w.refreshMediaServers(ctx, mediaserver.KindMusic, libCfg.MusicPath)
+	w.refreshMediaServers(ctx, mediaserver.KindMusic, libCfg.MusicPath, changed...)
 	return nil
 }
 
@@ -154,14 +154,14 @@ func (w *Worker) importAlbumFiles(
 	files []string,
 	libCfg config.LibraryConfig,
 	pack bool,
-) (bool, error) {
-	alb, err := w.hydratedAlbum(ctx, alb)
+) (changed []string, held bool, err error) {
+	alb, err = w.hydratedAlbum(ctx, alb)
 	if err != nil {
-		return false, otelx.RecordSpanError(span, err)
+		return nil, false, otelx.RecordSpanError(span, err)
 	}
 	artist := alb.Edges.Artist
 	if artist == nil {
-		return false, otelx.RecordSpanError(
+		return nil, false, otelx.RecordSpanError(
 			span,
 			fmt.Errorf("album %d missing artist context", alb.ID),
 		)
@@ -175,16 +175,16 @@ func (w *Worker) importAlbumFiles(
 	// Checked before matching: the image's tags can name the first track, and
 	// the whole disc would then be imported as that one track.
 	if len(alb.Edges.Tracks) > 1 && cueImage(files) {
-		return false, otelx.RecordSpanError(span, ErrCueImage)
+		return nil, false, otelx.RecordSpanError(span, ErrCueImage)
 	}
 
 	profile, haveProfile := config.ResolveMusicQualityProfile(artist.QualityProfile)
 	plan, skippedCovered := w.planAlbumImport(ctx, rec, alb, files, profile)
 	if len(plan) == 0 {
 		if skippedCovered > 0 {
-			return false, otelx.RecordSpanError(span, ErrTracksHeld)
+			return nil, false, otelx.RecordSpanError(span, ErrTracksHeld)
 		}
-		return false, otelx.RecordSpanError(span, ErrNoAlbumTracks)
+		return nil, false, otelx.RecordSpanError(span, ErrNoAlbumTracks)
 	}
 	// Verified before anything is set aside or transferred, so a hold leaves
 	// the library exactly as it was.
@@ -194,7 +194,7 @@ func (w *Worker) importAlbumFiles(
 			reasons = append(reasons, tierHoldReasons(plan, profile)...)
 		}
 		if len(reasons) > 0 {
-			return true, w.hold(ctx, span, rec, reasons)
+			return nil, true, w.hold(ctx, span, rec, reasons)
 		}
 	}
 
@@ -247,12 +247,12 @@ func (w *Worker) importAlbumFiles(
 		})
 	}
 	if len(rows) == 0 {
-		return false, otelx.RecordSpanError(span, firstErr)
+		return nil, false, otelx.RecordSpanError(span, firstErr)
 	}
 
 	for _, mf := range replaced {
 		if err := w.db.DeleteMediaFile(ctx, mf.ID); err != nil {
-			return false, otelx.RecordSpanError(
+			return nil, false, otelx.RecordSpanError(
 				span, fmt.Errorf("delete replaced track media file: %w", err),
 			)
 		}
@@ -263,7 +263,7 @@ func (w *Worker) importAlbumFiles(
 		Files:      rows,
 		KeepRecord: pack,
 	}); err != nil {
-		return false, otelx.RecordSpanError(
+		return nil, false, otelx.RecordSpanError(
 			span, fmt.Errorf("record album import success: %w", err),
 		)
 	}
@@ -301,7 +301,11 @@ func (w *Worker) importAlbumFiles(
 
 	w.markRequestsAvailableByMBID(ctx, "artist", artist.Mbid)
 	w.markRequestsAvailableByMBID(ctx, "album", alb.Mbid)
-	return false, nil
+	changed = mediaFilePaths(replaced)
+	for _, r := range rows {
+		changed = append(changed, r.Path)
+	}
+	return changed, false, nil
 }
 
 // planAlbumImport binds each source file to the track it fills. A track

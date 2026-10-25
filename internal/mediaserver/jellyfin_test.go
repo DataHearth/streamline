@@ -26,7 +26,7 @@ var _ = Describe("Jellyfin Client", Label("unit", "mediaserver"), func() {
 
 			client := NewJellyfin(ts.URL, "test-key")
 			Expect(
-				client.RefreshLibrary(context.Background(), "/media/movies", ""),
+				libraryRefresh(client, context.Background(), "/media/movies", ""),
 			).To(Succeed())
 			Expect(refreshCalled).To(BeTrue())
 		})
@@ -41,7 +41,7 @@ var _ = Describe("Jellyfin Client", Label("unit", "mediaserver"), func() {
 
 			client := NewJellyfin(ts.URL, "test-key")
 			Expect(
-				client.RefreshLibrary(context.Background(), "/x", ""),
+				libraryRefresh(client, context.Background(), "/x", ""),
 			).To(Succeed())
 		})
 
@@ -54,7 +54,7 @@ var _ = Describe("Jellyfin Client", Label("unit", "mediaserver"), func() {
 			defer ts.Close()
 
 			client := NewJellyfin(ts.URL, "bad-key")
-			err := client.RefreshLibrary(context.Background(), "/x", "")
+			err := libraryRefresh(client, context.Background(), "/x", "")
 			Expect(
 				err,
 			).To(MatchError(ContainSubstring("jellyfin refresh: unexpected status 401")))
@@ -69,7 +69,7 @@ var _ = Describe("Jellyfin Client", Label("unit", "mediaserver"), func() {
 			defer ts.Close()
 
 			client := NewJellyfin(ts.URL, "tok")
-			err := client.RefreshLibrary(context.Background(), "/x", "")
+			err := libraryRefresh(client, context.Background(), "/x", "")
 			Expect(
 				err,
 			).To(MatchError(ContainSubstring("jellyfin refresh: unexpected status 502")))
@@ -82,7 +82,7 @@ var _ = Describe("Jellyfin Client", Label("unit", "mediaserver"), func() {
 			ts.Close()
 
 			client := NewJellyfin(ts.URL, "tok")
-			err := client.RefreshLibrary(context.Background(), "/x", "")
+			err := libraryRefresh(client, context.Background(), "/x", "")
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -97,7 +97,7 @@ var _ = Describe("Jellyfin Client", Label("unit", "mediaserver"), func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 			client := NewJellyfin(ts.URL, "tok")
-			Expect(client.RefreshLibrary(ctx, "/x", "")).To(HaveOccurred())
+			Expect(libraryRefresh(client, ctx, "/x", "")).To(HaveOccurred())
 		})
 	})
 

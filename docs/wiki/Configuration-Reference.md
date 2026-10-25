@@ -451,8 +451,11 @@ Per entry:
 | `enabled` | | |
 | `library_section` | | Plex section key holding movies |
 | `library_section_tv` | | Plex section key holding TV |
+| `path_mappings[]` | | `{from, to}`: `from` a folder as Streamline sees it (absolute), `to` the same folder as the server sees it (absolute; a Windows path such as `D:\Movies` is accepted). First matching prefix wins |
 
-Both section keys are Plex-only. Leave them unset and Streamline looks the section up by matching your library path against the paths Plex reports — which only works when Plex sees the library at the same path Streamline does. In Docker or Kubernetes it usually doesn't (Streamline's `/srv/streamline/movies` is Plex's `/data/movies`), so the lookup misses and Streamline falls back to rescanning **every** section. That works, but it is a bigger scan than you need: set the two keys to scope it. Settings → Media Servers lists the available sections (`POST /api/v1/media-servers/discover`).
+Streamline asks a server to rescan only the folders a change touched, collecting changes for 30 seconds into one request. Each folder goes through `path_mappings` first; if one still lies outside every library the server reports, that request rescans the whole library instead (for Plex the configured section, else every section). In Docker or Kubernetes the server usually sees the library elsewhere (Streamline's `/srv/streamline/movies` is Plex's `/data/movies`), so add a mapping per library root — see [Path mappings](First-Run-Setup#path-mappings).
+
+Both section keys are Plex-only. Leave them unset and Streamline looks the section up by matching the folder (or, for a whole-library rescan, the mapped library root) against the paths Plex reports. When even that misses, Streamline falls back to rescanning **every** section: set the two keys to scope it. Settings → Media Servers lists the available sections (`POST /api/v1/media-servers/discover`).
 
 ### download
 

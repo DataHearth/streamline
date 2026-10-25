@@ -277,6 +277,9 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	if err := app.Auth.Shutdown(shutdownCtx); err != nil {
 		logger.ErrorContext(shutdownCtx, "auth shutdown error", "error", err)
 	}
+	// The refreshes still inside the coalescing window: the imports they
+	// describe have landed, and nothing else would tell the servers.
+	app.MediaServers.Flush(shutdownCtx)
 	if app.Torrents != nil {
 		if err := app.Torrents.Close(); err != nil {
 			logger.ErrorContext(
