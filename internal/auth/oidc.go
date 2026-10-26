@@ -87,7 +87,7 @@ func (m *oidcManager) Init(ctx context.Context, redirectBase string) {
 				ClientID:     p.ClientID,
 				ClientSecret: config.SecretValue(p.ClientSecret, p.ClientSecretFile),
 				Endpoint:     prv.Endpoint(),
-				Scopes:       []string{oidc.ScopeOpenID, "email", "profile"},
+				Scopes:       []string{oidc.ScopeOpenID, "email", "profile", "groups"},
 				RedirectURL:  redirectBase + "/auth/oidc/" + p.Name + "/callback",
 			},
 		}
