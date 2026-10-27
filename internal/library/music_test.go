@@ -1,6 +1,9 @@
 package library
 
 import (
+	"os"
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -41,6 +44,39 @@ var _ = Describe("TrackInfoFromName", Label("unit", "library"), func() {
 		Entry("a year is not a track number",
 			"Album/1984.flac", uint8(0), uint16(0), "1984"),
 	)
+})
+
+var _ = Describe("ReadTrackInfo", Label("unit", "library"), func() {
+	copyFixture := func(fixture, name string) string {
+		GinkgoHelper()
+		data, err := os.ReadFile(filepath.Join("audiotags", "testdata", fixture))
+		Expect(err).NotTo(HaveOccurred())
+		p := filepath.Join(GinkgoT().TempDir(), "CD2", name)
+		Expect(os.MkdirAll(filepath.Dir(p), 0o755)).To(Succeed())
+		Expect(os.WriteFile(p, data, 0o600)).To(Succeed())
+		return p
+	}
+
+	It("reads an untagged file's disc, number and title off its path", func() {
+		info, err := ReadTrackInfo(
+			copyFixture("untagged.mp3", "7 - Gotta Get Away.mp3"),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.Disc).To(Equal(uint8(2)))
+		Expect(info.Track).To(Equal(uint16(7)))
+		Expect(info.Title).To(Equal("Gotta Get Away"))
+	})
+
+	It("fills only the fields the tags lack", func() {
+		p := copyFixture("untagged.mp3", "7 - Name Title.mp3")
+		Expect(audiotags.Write(p, audiotags.Tags{
+			audiotags.KeyTitle: {"Tag Title"},
+		}, audiotags.Policy{})).To(Succeed())
+		info, err := ReadTrackInfo(p)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.Title).To(Equal("Tag Title"))
+		Expect(info.Track).To(Equal(uint16(7)))
+	})
 })
 
 var _ = Describe("TrackMatcher", Label("unit", "library"), func() {

@@ -257,6 +257,30 @@ func TrackInfoFromName(p string) audiotags.Info {
 	return info
 }
 
+// ReadTrackInfo is audiotags.Read with the disc, track number and title the
+// tags lack taken from the file's path, field by field: a vinyl rip often
+// carries no tags at all, or a TRACKNUMBER like "A1" that reads as no number.
+func ReadTrackInfo(p string) (audiotags.Info, error) {
+	info, err := audiotags.Read(p)
+	if err != nil {
+		return info, err
+	}
+	if info.Track != 0 && info.Disc != 0 && info.Title != "" {
+		return info, nil
+	}
+	named := TrackInfoFromName(p)
+	if info.Track == 0 {
+		info.Track = named.Track
+	}
+	if info.Disc == 0 {
+		info.Disc = named.Disc
+	}
+	if info.Title == "" {
+		info.Title = named.Title
+	}
+	return info, nil
+}
+
 // MatchTrackByName is MatchTrack for a file known by its name only. The
 // number wins as MatchTrack's tagged pair does; the title, compared loosely
 // since a file name drops the characters a file system refuses, decides when

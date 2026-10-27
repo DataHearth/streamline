@@ -344,7 +344,7 @@ func (w *Worker) planAlbumImport(
 	paths := make([]string, 0, len(files))
 	infos := make([]audiotags.Info, 0, len(files))
 	for _, path := range files {
-		info, err := audiotags.Read(path)
+		info, err := library.ReadTrackInfo(path)
 		if err != nil {
 			slog.WarnContext(ctx, "album import: tag read failed",
 				"file", path, "error", err)
