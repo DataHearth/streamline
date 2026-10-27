@@ -109,10 +109,10 @@ func (w *Worker) importAlbumRecord(
 	return nil
 }
 
-// cueImage reports whether the folders holding files are a disc ripped to a
-// single image, its tracks only marked by the CUE sheet beside it — the rule
+// cueImage reports whether the folders holding files are images of an album
+// of tracks, its tracks only marked by the CUE sheet beside them — the rule
 // the grab applies to a torrent's file list, read here off the disk.
-func cueImage(files []string) bool {
+func cueImage(files []string, tracks int) bool {
 	var listing []string
 	seen := map[string]bool{}
 	for _, f := range files {
@@ -131,7 +131,7 @@ func cueImage(files []string) bool {
 			}
 		}
 	}
-	return library.CueImage(listing)
+	return library.CueImage(listing, tracks)
 }
 
 // hydratedAlbum returns the album with its tracks: one added as a stub has
@@ -183,7 +183,7 @@ func (w *Worker) importAlbumFiles(
 
 	// Checked before matching: the image's tags can name the first track, and
 	// the whole disc would then be imported as that one track.
-	if len(alb.Edges.Tracks) > 1 && cueImage(files) {
+	if cueImage(files, len(alb.Edges.Tracks)) {
 		return nil, false, otelx.RecordSpanError(span, ErrCueImage)
 	}
 

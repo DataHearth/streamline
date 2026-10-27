@@ -291,7 +291,7 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		return false
 	}
 
-	// A single-file CD image is only known once the release's own .torrent is
+	// A CUE disc image is only known once the release's own .torrent is
 	// read, so its refusal costs no strike and the next release is tried in
 	// the same pass.
 	// ponytail: the image is fetched again next pass; blocklist it if those

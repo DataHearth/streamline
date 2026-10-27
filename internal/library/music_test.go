@@ -140,9 +140,9 @@ var _ = Describe("MatchTrackByName", Label("unit", "library"), func() {
 })
 
 var _ = Describe("CueImage", Label("unit", "library"), func() {
-	DescribeTable("one audio file beside a CUE sheet",
-		func(paths []string, want bool) {
-			Expect(CueImage(paths)).To(Equal(want))
+	DescribeTable("audio files beside a CUE sheet, against the album's tracks",
+		func(paths []string, tracks int, want bool) {
+			Expect(CueImage(paths, tracks)).To(Equal(want))
 		},
 		Entry(
 			"flac image",
@@ -151,10 +151,11 @@ var _ = Describe("CueImage", Label("unit", "library"), func() {
 				"Album/Album.cue",
 				"Album/Album.log",
 			},
+			10,
 			true,
 		),
 		Entry("ape image, a format the library never imports",
-			[]string{"Album/CD.ape", "Album/CD.cue"}, true),
+			[]string{"Album/CD.ape", "Album/CD.cue"}, 10, true),
 		Entry(
 			"one image per disc folder",
 			[]string{
@@ -163,13 +164,32 @@ var _ = Describe("CueImage", Label("unit", "library"), func() {
 				"A/CD2/b.flac",
 				"A/CD2/b.cue",
 			},
+			20,
 			true,
 		),
+		Entry(
+			"one image per vinyl side beside one sheet",
+			[]string{
+				"Rammstein – Zeit [2LP] 2022.cue",
+				"Side A.flac",
+				"Side B.flac",
+				"Side C.flac",
+				"Side D.flac",
+			},
+			12,
+			true,
+		),
+		Entry("tracks not fetched yet: one file beside a sheet",
+			[]string{"A/A.flac", "A/A.cue"}, 0, true),
+		Entry("tracks not fetched yet: sides cannot be told from tracks",
+			[]string{"A/Side A.flac", "A/Side B.flac", "A/A.cue"}, 0, false),
+		Entry("a one-track album's image is its track",
+			[]string{"A/A.flac", "A/A.cue"}, 1, false),
 		Entry("tracks with a sheet",
-			[]string{"A/01.flac", "A/02.flac", "A/A.cue"}, false),
-		Entry("one file, no sheet", []string{"A/A.flac"}, false),
+			[]string{"A/01.flac", "A/02.flac", "A/A.cue"}, 2, false),
+		Entry("one file, no sheet", []string{"A/A.flac"}, 10, false),
 		Entry("sheet in another folder",
-			[]string{"A/A.flac", "A/Scans/A.cue"}, false),
-		Entry("OS separators", []string{`A\A.wv`, `A\A.CUE`}, true),
+			[]string{"A/A.flac", "A/Scans/A.cue"}, 10, false),
+		Entry("OS separators", []string{`A\A.wv`, `A\A.CUE`}, 10, true),
 	)
 })

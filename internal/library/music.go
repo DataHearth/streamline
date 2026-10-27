@@ -15,9 +15,9 @@ import (
 
 var discFolderRe = regexp.MustCompile(`(?i)^(?:cd|dis[ck])\s*(\d+)$`)
 
-// CueImageReason is the one wording of a single-file CD image refusal, from
-// the release name, the torrent's file list or the importer.
-const CueImageReason = "single-file CD image with a CUE sheet; splitting it into tracks is not supported"
+// CueImageReason is the one wording of a disc image refusal, from the release
+// name, the torrent's file list or the importer.
+const CueImageReason = "disc image with a CUE sheet; splitting it into tracks is not supported"
 
 // cueImageAudio is wider than audiotags.AudioExtensions: an image is as often
 // APE, WavPack or WAV, formats the library never imports.
@@ -26,10 +26,17 @@ var cueImageAudio = map[string]struct{}{
 	".aiff": {}, ".m4a": {}, ".mp3": {}, ".ogg": {}, ".opus": {},
 }
 
-// CueImage reports a disc ripped to a single image: a folder whose only audio
-// file sits beside a CUE sheet. paths are every file of the release, slash or
-// OS separated. One image per disc folder of a set counts too.
-func CueImage(paths []string) bool {
+// CueImage reports an album of tracks ripped to images its CUE sheets split:
+// the folders holding a sheet hold at most half as many audio files as the
+// album has tracks. paths are every file of the release, slash or OS
+// separated. Counting against the album catches one image per disc and one
+// per vinyl side alike ("Side A.flac" … "Side D.flac" beside one sheet), which
+// a one-file-per-folder rule let through to fail as unmatched; a tracks+cue
+// release missing more than half its tracks reads as an image too. tracks 0
+// means the album's tracks are not fetched yet, and a manual grab can come
+// before them: only a folder whose one audio file sits beside a sheet is then
+// known to be an image.
+func CueImage(paths []string, tracks int) bool {
 	audio := map[string]int{}
 	sheets := map[string]bool{}
 	for _, p := range paths {
@@ -41,12 +48,17 @@ func CueImage(paths []string) bool {
 			audio[path.Dir(p)]++
 		}
 	}
+	images, single := 0, false
 	for dir, n := range audio {
-		if n == 1 && sheets[dir] {
-			return true
+		if sheets[dir] {
+			images += n
+			single = single || n == 1
 		}
 	}
-	return false
+	if tracks == 0 {
+		return single
+	}
+	return images > 0 && 2*images <= tracks
 }
 
 // DiscFolderNumber reads the disc number off a folder name such as "CD1",

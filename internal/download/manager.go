@@ -92,8 +92,8 @@ var (
 	// download client's disk beside what its active downloads still have to
 	// write, keeping download.space_reserve_gb free.
 	ErrNoSpace = errors.New("not enough space on the download disk")
-	// ErrCueImage is returned by an album grab whose .torrent lists a disc
-	// ripped to a single image, which the album importer refuses: grabbing it
+	// ErrCueImage is returned by an album grab whose .torrent lists disc
+	// images split by a CUE sheet, which the album importer refuses: grabbing it
 	// would only download a release that cannot be imported.
 	ErrCueImage = errors.New(library.CueImageReason)
 )

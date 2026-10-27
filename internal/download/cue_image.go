@@ -3,6 +3,9 @@ package download
 import (
 	"context"
 	"log/slog"
+	"path"
+	"slices"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 
@@ -11,16 +14,17 @@ import (
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
-// cueImageFor reports a release whose files are a single-file CD image of the
-// album: what the album importer refuses. A one-track album's image is its
-// track, so it passes; an album that cannot be read is given the benefit of
-// the doubt, since the importer still checks it.
+// cueImageFor reports a release whose files are disc images of the album:
+// what the album importer refuses. An album that cannot be read is given the
+// benefit of the doubt, since the importer still checks it.
 func (d *download) cueImageFor(
 	ctx context.Context,
 	albumID uint32,
 	paths []string,
 ) bool {
-	if !library.CueImage(paths) {
+	if !slices.ContainsFunc(paths, func(p string) bool {
+		return strings.EqualFold(path.Ext(p), ".cue")
+	}) {
 		return false
 	}
 	alb, err := d.db.FindAlbumByID(ctx, albumID)
@@ -29,11 +33,11 @@ func (d *download) cueImageFor(
 			"album.id", albumID, "error", err)
 		return false
 	}
-	return len(alb.Edges.Tracks) != 1
+	return library.CueImage(paths, len(alb.Edges.Tracks))
 }
 
 // RejectCueImages drops every album download whose files, once its client
-// knows them, are a single-file CD image: the torrent and its data are
+// knows them, are disc images split by a CUE sheet: the torrent and its data are
 // removed, the record is failed as rejected so the automatic searches skip
 // that release, and the album goes back to wanted with no strike. A .torrent
 // grab is checked before it is added; this is the magnet's check, which can
@@ -79,7 +83,7 @@ func (d *download) RejectCueImages(ctx context.Context) error {
 		if !d.cueImageFor(ctx, rec.Edges.Album.ID, paths) {
 			continue
 		}
-		slog.InfoContext(ctx, "rejecting a single-file CD image download",
+		slog.InfoContext(ctx, "rejecting a CUE disc image download",
 			"record.id", rec.ID, "album.id", rec.Edges.Album.ID,
 			"torrent", rec.Title, "hash", rec.TorrentHash)
 		if err := client.RemoveTorrent(ctx, rec.TorrentHash, true); err != nil {
