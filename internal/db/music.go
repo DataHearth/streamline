@@ -1365,8 +1365,10 @@ func (db *DB) ListAlbumsAwaitingCredits(
 // ListAlbumsAwaitingDetails returns up to limit hydrated albums holding at
 // least one file whose release data predates what the tag writer reads:
 // genres never fetched (hydrated before the genres and edition date were
-// part of hydration), or credits stored under an older layout than
-// library.MusicCreditsVersion. Albums without files wait for their import.
+// part of hydration), credits stored under an older layout than
+// library.MusicCreditsVersion, or tracks carrying no credited artist
+// (hydrated before those were stored; listed at any size, once its retry is
+// due). Albums without files wait for their import.
 //
 // An album waiting on its credits layout is listed only when its release is
 // small enough for the heavy call (the credits sweep's own cap) and its last
@@ -1389,6 +1391,15 @@ func (db *DB) ListAlbumsAwaitingDetails(
 					album.CreditsVersionLT(library.MusicCreditsVersion),
 					album.MetadataFetchedAtLT(retryBefore),
 					smallRelease(),
+				),
+				// Hydrated before track artists were stored. The light call
+				// carries them too, so a release too large for the heavy one
+				// still gets them.
+				album.And(
+					album.MetadataFetchedAtLT(retryBefore),
+					album.Not(album.HasTracksWith(track.HasCreditsWith(
+						musiccredit.KindEQ(musiccredit.KindArtist),
+					))),
 				),
 			),
 			album.HasTracksWith(track.HasMediaFiles()),

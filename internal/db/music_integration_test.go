@@ -622,6 +622,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 						Title:    "Scentless Apprentice",
 						Disc:     1,
 						Position: 2,
+						Artists:  []PersonSeed{{Name: "Nirvana", MBID: "a-1"}},
 					},
 				},
 				Credits: []MusicCreditSeed{
@@ -777,6 +778,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
 			Expect(client.MusicCredit.Query().Where(
 				musiccredit.KindEQ(musiccredit.KindArtist),
+				musiccredit.HasTrackWith(track.MbidEQ("r-1")),
 			).CountX(ctx)).To(BeZero(), "the light call carries artists too")
 		})
 
@@ -835,6 +837,41 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				Expect(
 					waiting(),
 				).To(BeEmpty(), "a heavy call that never succeeded is the credits sweep's")
+			},
+		)
+
+		It(
+			"lists a held album whose tracks carry no artists, however large, once its retry is due",
+			func() {
+				p := heavy()
+				p.Tracks[1].Artists = nil
+				Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
+				tr := client.Track.Query().Where(track.MbidEQ("r-1")).OnlyX(ctx)
+				client.MediaFile.Create().SetPath("/m/1.flac").SetSize(10).
+					SetTrackID(tr.ID).ExecX(ctx)
+				creates := make([]*ent.TrackCreate, MaxCreditsTracks)
+				for i := range creates {
+					creates[i] = client.Track.Create().SetTitle(fmt.Sprint(i)).
+						SetPosition(uint16(i + 3)).SetAlbumID(rg2.ID)
+				}
+				client.Track.CreateBulk(creates...).ExecX(ctx)
+				list := func(retryBefore time.Time) []*ent.Album {
+					GinkgoHelper()
+					rows, err := store.ListAlbumsAwaitingDetails(
+						ctx,
+						retryBefore,
+						10,
+					)
+					Expect(err).NotTo(HaveOccurred())
+					return rows
+				}
+
+				Expect(list(now.Add(-time.Hour))).To(BeEmpty())
+				Expect(list(now.Add(time.Minute))).To(HaveLen(1))
+
+				p.Tracks[1].Artists = []PersonSeed{{Name: "Nirvana", MBID: "a-1"}}
+				Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
+				Expect(list(now.Add(time.Minute))).To(BeEmpty())
 			},
 		)
 

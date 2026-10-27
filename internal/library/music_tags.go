@@ -13,10 +13,10 @@ import (
 )
 
 // MusicCreditsVersion is the layout an album's credits are stored under
-// today: writer roles, and each track's own credited artists, production
-// credits and performers. An album stamped with an older one is fetched again in the
+// today: writer roles, and each track's own production credits and
+// performers. An album stamped with an older one is fetched again in the
 // background, and until then its credit tags are left as the file has them.
-const MusicCreditsVersion uint8 = 2
+const MusicCreditsVersion uint8 = 1
 
 // VariousArtistsMBID is MusicBrainz's special "Various Artists" artist, the
 // album artist of a multi-artist compilation.
