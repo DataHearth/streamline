@@ -351,7 +351,9 @@ func (s *Service) afterAdd(ctx context.Context, a *ent.Artist, force bool) {
 		}
 	}
 	s.enqueueHydration(a.ID, items...)
-	s.fillDetailsInBackground(ctx, a.ID, force)
+	// Nobody waits on the photo of an artist just added, so its MusicBrainz
+	// calls go behind any lookup a person makes meanwhile.
+	s.fillDetailsInBackground(metadata.Prefetch(ctx), a.ID, force)
 }
 
 func (s *Service) Get(ctx context.Context, id uint32) (*ent.Artist, error) {

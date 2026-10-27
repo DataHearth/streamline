@@ -98,16 +98,16 @@ func (s *Service) fillDetails(ctx context.Context, artistID uint32, force bool) 
 // link, the name is searched, accepted only when exactly one hit folds equal
 // to it; the first hit never wins. Whatever that leaves unsettled falls back
 // to the image MusicBrainz links for this artist, a Wikimedia Commons file,
-// and otherwise to no photo. The MusicBrainz calls run at prefetch priority,
-// behind anything a person waits on.
+// and otherwise to no photo. The MusicBrainz calls run at ctx's priority: a
+// person's refresh must not wait out a 503 hold, which keeps prefetch and
+// background calls refused for as long as MusicBrainz sheds load.
 func (s *Service) photoURL(ctx context.Context, a *ent.Artist) string {
-	mbCtx := metadata.Prefetch(ctx)
 	if a.DeezerID != 0 {
 		shared := false
 		if s.links != nil {
 			var err error
 			if shared, err = s.links.DeezerArtistShared(
-				mbCtx,
+				ctx,
 				a.DeezerID,
 			); err != nil {
 				slog.WarnContext(ctx, "deezer link check failed",
@@ -128,7 +128,7 @@ func (s *Service) photoURL(ctx context.Context, a *ent.Artist) string {
 				}
 			}
 		}
-		return s.linkedImage(mbCtx, a)
+		return s.linkedImage(ctx, a)
 	}
 	hits, err := s.photos.SearchArtists(ctx, a.Name)
 	if err != nil {
@@ -142,12 +142,12 @@ func (s *Service) photoURL(ctx context.Context, a *ent.Artist) string {
 			continue
 		}
 		if match != nil {
-			return s.linkedImage(mbCtx, a)
+			return s.linkedImage(ctx, a)
 		}
 		match = &hits[i]
 	}
 	if match == nil {
-		return s.linkedImage(mbCtx, a)
+		return s.linkedImage(ctx, a)
 	}
 	return match.PictureURL
 }
