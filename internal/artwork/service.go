@@ -22,6 +22,7 @@ import (
 	"golang.org/x/sync/singleflight"
 	"golang.org/x/time/rate"
 
+	"github.com/datahearth/streamline/internal/buildinfo"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -83,6 +84,8 @@ var (
 		"coverartarchive.org",
 		"archive.org",
 		"assets.hardcover.app",
+		"commons.wikimedia.org",
+		"upload.wikimedia.org",
 	}
 
 	errNoArt = errors.New("artwork: no art for the key")
@@ -100,6 +103,14 @@ type ArtistPictures interface {
 	SearchArtists(ctx context.Context, name string) ([]metadata.DeezerArtist, error)
 }
 
+// ArtistLinks is the MusicBrainz surface that tells namesakes apart: what one
+// artist links as its picture, and whether another artist links the same
+// Deezer page.
+type ArtistLinks interface {
+	ArtistArt(ctx context.Context, mbid string) (metadata.ArtistArt, error)
+	DeezerArtistShared(ctx context.Context, id uint32) (bool, error)
+}
+
 // Deps wires a Service. Sources and Client default to the process-wide
 // remembered sources and a copy of otelx.HTTPClient; they are fields so a test
 // can swap the transport.
@@ -108,6 +119,7 @@ type Deps struct {
 	Posters posters.Manager
 	Library Library
 	Deezer  ArtistPictures
+	Links   ArtistLinks
 	Sources *Sources
 	Client  *http.Client
 }
@@ -117,6 +129,7 @@ type Service struct {
 	posters posters.Manager
 	library Library
 	deezer  ArtistPictures
+	links   ArtistLinks
 	sources *Sources
 	client  *http.Client
 
@@ -124,7 +137,15 @@ type Service struct {
 	limiter *rate.Limiter
 
 	mu     sync.Mutex
-	failed map[sourceKey]time.Time
+	failed map[failKey]time.Time
+}
+
+// failKey is a failed resolve: the key and the source it was tried with, so
+// a source remembered with more to go on (a Deezer link a detail lookup found)
+// is tried again at once rather than an hour later.
+type failKey struct {
+	sourceKey
+	src Source
 }
 
 func New(d Deps) (*Service, error) {
@@ -137,8 +158,9 @@ func New(d Deps) (*Service, error) {
 		posters: d.Posters,
 		library: d.Library,
 		deezer:  d.Deezer,
+		links:   d.Links,
 		sources: d.Sources,
-		failed:  make(map[sourceKey]time.Time),
+		failed:  make(map[failKey]time.Time),
 		limiter: rate.NewLimiter(fetchRate, fetchBurst),
 	}
 	if s.sources == nil {
@@ -290,7 +312,8 @@ func serveFile(w http.ResponseWriter, r *http.Request, path string) {
 // resolve fetches and caches the image of (kind, key). Concurrent requests for
 // one key collapse into one fetch.
 func (s *Service) resolve(ctx context.Context, kind Kind, key string) error {
-	sk := sourceKey{kind, key}
+	sk := failKey{sourceKey: sourceKey{kind, key}}
+	sk.src, _ = s.sources.Lookup(kind, key)
 	if s.recentlyFailed(sk) {
 		return errNoArt
 	}
@@ -303,7 +326,7 @@ func (s *Service) resolve(ctx context.Context, kind Kind, key string) error {
 	return err
 }
 
-func (s *Service) recentlyFailed(k sourceKey) bool {
+func (s *Service) recentlyFailed(k failKey) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	at, ok := s.failed[k]
@@ -317,7 +340,7 @@ func (s *Service) recentlyFailed(k sourceKey) bool {
 	return true
 }
 
-func (s *Service) markFailed(k sourceKey) {
+func (s *Service) markFailed(k failKey) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if len(s.failed) >= maxCacheEntries {
@@ -328,7 +351,7 @@ func (s *Service) markFailed(k sourceKey) {
 		}
 	}
 	for len(s.failed) >= maxCacheEntries {
-		var oldest sourceKey
+		var oldest failKey
 		var oldestAt time.Time
 		for key, at := range s.failed {
 			if oldestAt.IsZero() || at.Before(oldestAt) {
@@ -397,50 +420,117 @@ func (s *Service) imageURL(
 		if !ok {
 			return "", errNoArt
 		}
-		return s.artistPicture(ctx, src)
+		return s.artistPicture(ctx, key, src)
 	}
 	return "", errNoArt
 }
 
-// artistPicture prefers MusicBrainz's own Deezer link, and otherwise searches
-// by name, accepting only a search with exactly one hit that folds equal to the
-// name: a namesake makes the answer a guess, and a wrong face is worse than a
-// monogram.
-func (s *Service) artistPicture(ctx context.Context, src Source) (string, error) {
-	if s.deezer == nil {
-		return "", errNoArt
-	}
-	if src.DeezerID != 0 {
-		a, err := s.deezer.ArtistByID(ctx, src.DeezerID)
+// artistPicture settles a name Deezer knows exactly one artist by without
+// asking MusicBrainz; a namesake makes that answer a guess, and a wrong face is
+// worse than none. Otherwise it reads what MusicBrainz links for this very
+// artist, at prefetch priority, behind any request a person is waiting on: its
+// Deezer page unless another MusicBrainz artist links the same one (Deezer
+// files namesakes under one page, whose picture is only ever one of them),
+// else its own Commons image. A search result never carries those links, and
+// without them a common name ("Nirvana") left every hit faceless, the famous
+// one included.
+func (s *Service) artistPicture(
+	ctx context.Context,
+	mbid string,
+	src Source,
+) (string, error) {
+	if src.DeezerID == 0 && src.Name != "" && s.deezer != nil {
+		hits, err := s.deezer.SearchArtists(ctx, src.Name)
 		if err != nil {
 			return "", err
 		}
-		if a != nil && a.PictureURL != "" {
-			return a.PictureURL, nil
+		if match := soleNameMatch(hits, src.Name); match != nil {
+			if match.PictureURL == "" {
+				return "", errNoArt
+			}
+			return match.PictureURL, nil
 		}
-		return "", errNoArt
 	}
-	if src.Name == "" {
-		return "", errNoArt
+	if s.links == nil {
+		return s.deezerPicture(ctx, src.DeezerID)
 	}
-	hits, err := s.deezer.SearchArtists(ctx, src.Name)
+
+	mbCtx := metadata.Prefetch(ctx)
+	var art *metadata.ArtistArt
+	links := func() (metadata.ArtistArt, error) {
+		if art == nil {
+			a, err := s.links.ArtistArt(mbCtx, mbid)
+			if errors.Is(err, metadata.ErrNotFound) {
+				err = errNoArt
+			}
+			if err != nil {
+				return metadata.ArtistArt{}, err
+			}
+			art = &a
+		}
+		return *art, nil
+	}
+	id := src.DeezerID
+	if id == 0 {
+		a, err := links()
+		if err != nil {
+			return "", err
+		}
+		id = a.DeezerID
+	}
+	if id != 0 {
+		shared, err := s.links.DeezerArtistShared(mbCtx, id)
+		if err != nil {
+			return "", err
+		}
+		if !shared {
+			u, err := s.deezerPicture(ctx, id)
+			if !errors.Is(err, errNoArt) {
+				return u, err
+			}
+		}
+	}
+	a, err := links()
 	if err != nil {
 		return "", err
 	}
+	if a.ImageURL == "" {
+		return "", errNoArt
+	}
+	return a.ImageURL, nil
+}
+
+func (s *Service) deezerPicture(ctx context.Context, id uint32) (string, error) {
+	if id == 0 || s.deezer == nil {
+		return "", errNoArt
+	}
+	a, err := s.deezer.ArtistByID(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	if a == nil || a.PictureURL == "" {
+		return "", errNoArt
+	}
+	return a.PictureURL, nil
+}
+
+// soleNameMatch is the one hit whose name folds equal to name, nil when there
+// is none or more than one.
+func soleNameMatch(
+	hits []metadata.DeezerArtist,
+	name string,
+) *metadata.DeezerArtist {
 	var match *metadata.DeezerArtist
 	for i := range hits {
-		if !library.TitleMatchesStrict(hits[i].Name, src.Name) {
+		if !library.TitleMatchesStrict(hits[i].Name, name) {
 			continue
 		}
 		if match != nil {
-			return "", errNoArt
+			return nil
 		}
 		match = &hits[i]
 	}
-	if match == nil || match.PictureURL == "" {
-		return "", errNoArt
-	}
-	return match.PictureURL, nil
+	return match
 }
 
 func (s *Service) download(ctx context.Context, src, dst string) error {
@@ -452,6 +542,13 @@ func (s *Service) download(ctx context.Context, src, dst string) error {
 	if err != nil {
 		return err
 	}
+	// Wikimedia refuses a generic client; the header follows every redirect.
+	version := buildinfo.Version
+	if version == "" {
+		version = "dev"
+	}
+	req.Header.Set("User-Agent",
+		"streamline/"+version+" (https://github.com/datahearth/streamline)")
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return err

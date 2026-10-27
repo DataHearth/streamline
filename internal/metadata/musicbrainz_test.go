@@ -284,6 +284,99 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 		})
 	})
 
+	Describe("ArtistArt", func() {
+		It("reads the Deezer link and Commons image off the url-rels alone", func() {
+			var calls []string
+			var gotInc string
+			mb.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					calls = append(calls, r.URL.Path)
+					gotInc = r.URL.Query().Get("inc")
+					return jsonResponse(
+						200,
+						`{"id":"mbid-1","name":"Nirvana","relations":[
+						{"type":"image","url":{"resource":"https://commons.wikimedia.org/wiki/File:Nirvana_around_1992.jpg"}},
+						{"type":"wikidata","url":{"resource":"https://www.wikidata.org/wiki/Q11649"}},
+						{"type":"streaming","url":{"resource":"https://www.deezer.com/artist/415"}}
+					]}`,
+					), nil
+				},
+			)
+			art, err := mb.ArtistArt(ctx, "mbid-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(art).To(Equal(ArtistArt{
+				DeezerID: 415,
+				ImageURL: "https://commons.wikimedia.org/wiki/Special:FilePath/" +
+					"Nirvana_around_1992.jpg?width=500",
+			}))
+			Expect(gotInc).To(Equal("url-rels"))
+			Expect(calls).To(Equal([]string{"/ws/2/artist/mbid-1"}))
+		})
+
+		It("ignores an image hosted anywhere but Commons", func() {
+			mb.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(200, `{"id":"mbid-1","name":"X","relations":[
+						{"type":"image","url":{"resource":"https://example.com/x.jpg"}}
+					]}`), nil
+				},
+			)
+			art, err := mb.ArtistArt(ctx, "mbid-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(art).To(BeZero())
+		})
+	})
+
+	Describe("DeezerArtistShared", func() {
+		It("reports a page two artists link, and remembers the answer", func() {
+			var calls int
+			var gotResource string
+			mb.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					calls++
+					gotResource = r.URL.Query().Get("resource")
+					return jsonResponse(
+						200,
+						`{"resource":"https://www.deezer.com/artist/415","relations":[
+						{"type":"streaming","artist":{"id":"grunge","name":"Nirvana"}},
+						{"type":"streaming","artist":{"id":"uk-60s","name":"Nirvana"}}
+					]}`,
+					), nil
+				},
+			)
+			shared, err := mb.DeezerArtistShared(ctx, 415)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shared).To(BeTrue())
+			Expect(gotResource).To(Equal("https://www.deezer.com/artist/415"))
+
+			shared, err = mb.DeezerArtistShared(ctx, 415)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shared).To(BeTrue())
+			Expect(calls).To(Equal(1))
+		})
+
+		It("counts one artist linking the page twice as one", func() {
+			mb.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(200, `{"relations":[
+						{"type":"streaming","artist":{"id":"a","name":"A"}},
+						{"type":"free streaming","artist":{"id":"a","name":"A"}}
+					]}`), nil
+				},
+			)
+			Expect(mb.DeezerArtistShared(ctx, 1)).To(BeFalse())
+		})
+
+		It("reads a page MusicBrainz does not know as not shared", func() {
+			mb.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(404, `{}`), nil
+				},
+			)
+			Expect(mb.DeezerArtistShared(ctx, 1)).To(BeFalse())
+		})
+	})
+
 	Describe("GetReleaseGroup", func() {
 		const heavyRelease = `{"id":"rel-1","status":"Official","date":"1991-09-24","barcode":"0720642442524","country":"US",
 			"label-info":[{"catalog-number":"DGCD-24425","label":{"name":"DGC"}}],

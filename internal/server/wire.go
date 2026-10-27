@@ -207,6 +207,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Posters: postersSvc,
 		Library: artwork.EntLibrary{Client: dbClient},
 		Deezer:  deezer,
+		Links:   mb,
 	})
 	if err != nil {
 		dbClient.Close()

@@ -49,7 +49,10 @@ var (
 
 	deezerArtistRe = regexp.MustCompile(`deezer\.com/(?:[a-z]{2}/)?artist/(\d+)`)
 	wikidataIDRe   = regexp.MustCompile(`/(Q\d+)$`)
-	featJoinRe     = regexp.MustCompile(`(?i)\b(feat\.?|featuring|ft\.?)(\s|$)`)
+	commonsFileRe  = regexp.MustCompile(
+		`^https://commons\.wikimedia\.org/wiki/File:([^/?#]+)$`,
+	)
+	featJoinRe = regexp.MustCompile(`(?i)\b(feat\.?|featuring|ft\.?)(\s|$)`)
 )
 
 // MusicBrainz is the MusicProvider implementation. No API key; MusicBrainz
@@ -62,6 +65,8 @@ type MusicBrainz struct {
 	genreMu      sync.Mutex
 	genres       map[string]struct{}
 	genresLoaded time.Time
+
+	deezerShared memo[bool]
 }
 
 func NewMusicBrainz() *MusicBrainz {
@@ -548,6 +553,99 @@ func (m *MusicBrainz) GetArtist(
 		}
 	}
 	return details, nil
+}
+
+// ArtistArt is what MusicBrainz links as one artist's picture: its Deezer
+// page and its own image (a Wikimedia Commons file), each empty when none.
+type ArtistArt struct {
+	DeezerID uint32
+	ImageURL string
+}
+
+// ArtistArt reads one artist's url-rels for the links a search result never
+// carries: the lookup art proxy's way to tell namesakes apart.
+func (m *MusicBrainz) ArtistArt(
+	ctx context.Context,
+	mbid string,
+) (ArtistArt, error) {
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.artist_art",
+		trace.WithAttributes(attribute.String("musicbrainz.mbid", mbid)))
+	defer span.End()
+
+	var artist mbArtist
+	if err := m.get(
+		ctx,
+		"/artist/"+url.PathEscape(mbid),
+		url.Values{"inc": {"url-rels"}},
+		&artist,
+	); err != nil {
+		return ArtistArt{}, otelx.RecordSpanError(span, err)
+	}
+	var d ArtistDetails
+	var art ArtistArt
+	for _, rel := range artist.Relations {
+		if rel.URL == nil {
+			continue
+		}
+		readURLRel(rel, &d)
+		if rel.Type == "image" && art.ImageURL == "" {
+			art.ImageURL = commonsImageURL(rel.URL.Resource)
+		}
+	}
+	art.DeezerID = d.DeezerID
+	return art, nil
+}
+
+// commonsImageURL turns a Wikimedia Commons file page into a 500 px
+// rendition of the file, "" for any other address.
+func commonsImageURL(resource string) string {
+	m := commonsFileRe.FindStringSubmatch(resource)
+	if m == nil {
+		return ""
+	}
+	return "https://commons.wikimedia.org/wiki/Special:FilePath/" + m[1] + "?width=500"
+}
+
+// deezerSharedTTL is how long DeezerArtistShared remembers an answer: the
+// tiles of one search ask about the same page, and editors rarely move it.
+const deezerSharedTTL = 24 * time.Hour
+
+// DeezerArtistShared reports whether more than one MusicBrainz artist links
+// the Deezer artist page id. Deezer files namesakes under one page, and
+// MusicBrainz then links the grunge Nirvana and the 60s UK band to the same
+// one, whose picture is only ever one of them. A page MusicBrainz does not
+// know is not shared.
+func (m *MusicBrainz) DeezerArtistShared(
+	ctx context.Context,
+	id uint32,
+) (bool, error) {
+	key := strconv.FormatUint(uint64(id), 10)
+	if shared, ok := m.deezerShared.get(key); ok {
+		return shared, nil
+	}
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.deezer_artist_shared",
+		trace.WithAttributes(attribute.Int64("deezer.artist_id", int64(id))))
+	defer span.End()
+
+	var payload struct {
+		Relations []mbRel `json:"relations"`
+	}
+	err := m.get(ctx, "/url", url.Values{
+		"resource": {"https://www.deezer.com/artist/" + key},
+		"inc":      {"artist-rels"},
+	}, &payload)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return false, otelx.RecordSpanError(span, err)
+	}
+	artists := map[string]struct{}{}
+	for _, rel := range payload.Relations {
+		if rel.Artist != nil {
+			artists[rel.Artist.ID] = struct{}{}
+		}
+	}
+	shared := len(artists) > 1
+	m.deezerShared.put(key, shared, deezerSharedTTL)
+	return shared, nil
 }
 
 var ignoredMemberAttributes = []string{"original", "additional"}
