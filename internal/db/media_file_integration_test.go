@@ -249,6 +249,17 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 			Expect(rows[0].ID).To(Equal(b.ID))
 		})
 
+		It("leaves out a file that is neither a movie's nor an episode's", func() {
+			client.MediaFile.Create().SetPath("/lib/01 - Track.flac").SetSize(1).
+				SetFormat("flac").SaveX(ctx)
+			movie := createMovieFile()
+
+			rows, err := store.ListUnprobedMediaFiles(ctx, 10)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].ID).To(Equal(movie.ID))
+		})
+
 		It("returns unprobed rows ordered oldest first", func() {
 			a := createMovieFile()
 			b := createMovieFile()

@@ -923,9 +923,9 @@ type Store interface {
 		ctx context.Context,
 		prefix string,
 	) ([]*ent.MediaFile, error)
-	// ListUnprobedMediaFiles returns up to limit rows that have never been
-	// probed (probed_at IS NULL), oldest-first, for the media-probe backfill
-	// job to work through.
+	// ListUnprobedMediaFiles returns up to limit movie and episode rows that
+	// have never been probed (probed_at IS NULL), oldest-first, for the
+	// media-probe backfill job to work through.
 	ListUnprobedMediaFiles(ctx context.Context, limit int) ([]*ent.MediaFile, error)
 	// StampMediaFileProbe records a probe attempt's result. A nil info
 	// (failed probe) still sets probed_at, so ListUnprobedMediaFiles never
