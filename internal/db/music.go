@@ -586,13 +586,9 @@ func (db *DB) ListArtists(
 	var order []artist.OrderOption
 	switch p.Sort {
 	case "name":
-		if desc {
-			order = append(order,
-				artist.BySortName(entsql.OrderDesc()),
-				artist.ByName(entsql.OrderDesc()))
-		} else {
-			order = append(order, artist.BySortName(), artist.ByName())
-		}
+		order = append(order,
+			orderFold(artist.FieldSortName, desc),
+			orderFold(artist.FieldName, desc))
 	default:
 		if p.Order == "asc" {
 			order = append(order, artist.ByCreateTime())
