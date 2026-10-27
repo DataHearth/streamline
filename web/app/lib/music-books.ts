@@ -421,13 +421,17 @@ export function releaseGroups(releases: Release[]) {
 	})).filter((g) => g.releases.length > 0);
 }
 
-// The release an artist page opens on: the newest with something missing,
-// else the newest that is out.
+// The release an artist page opens on, read in the list's own order (albums
+// first): the newest monitored one with something missing, else the newest
+// held, else the newest that is out. The API's order mixes every type, and an
+// unmonitored single was opened over the albums the list starts with.
 export function defaultRelease(releases: Release[]): Release | undefined {
+	const listed = releaseGroups(releases).flatMap((g) => g.releases);
 	return (
-		releases.find((r) => ["wanted", "downloading", "paused", "failed"].includes(r.status)) ??
-		releases.find((r) => r.status !== "upcoming") ??
-		releases[0]
+		listed.find((r) => r.monitored && ["wanted", "downloading", "paused", "failed"].includes(r.status)) ??
+		listed.find((r) => r.status === "available") ??
+		listed.find((r) => r.status !== "upcoming") ??
+		listed[0]
 	);
 }
 
