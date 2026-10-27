@@ -54,22 +54,34 @@ var albumReleaseType = map[album.Type]string{
 // MusicBrainz writes them and the release track ids. Those keys are left out,
 // so the file keeps what it carries until the backfill lands.
 func AlbumTrackTags(ar *ent.Artist, al *ent.Album, tr *ent.Track) audiotags.Tags {
-	var featured []*ent.MusicCredit
+	var credited, featured []*ent.MusicCredit
 	for _, c := range tr.Edges.Credits {
-		if c.Kind == musiccredit.KindFeaturing {
+		switch c.Kind {
+		case musiccredit.KindArtist:
+			credited = append(credited, c)
+		case musiccredit.KindFeaturing:
 			featured = append(featured, c)
 		}
 	}
 
-	artists := make([]string, 0, 1+len(featured))
-	artists = append(artists, ar.Name)
+	// A track of a split release is another artist's: its own credit leads,
+	// the album artist only when it has none.
+	lead := []string{ar.Name}
 	artistIDs := nonEmpty(ar.Mbid)
+	artistSort := ar.SortName
+	if len(credited) > 0 && (len(credited) > 1 || credited[0].Mbid != ar.Mbid) {
+		lead, artistIDs, artistSort = make([]string, 0, len(credited)), nil, ""
+		for _, c := range credited {
+			lead = append(lead, c.Name)
+			artistIDs = append(artistIDs, nonEmpty(c.Mbid)...)
+		}
+	}
+	artists := slices.Clone(lead)
 	for _, c := range featured {
 		artists = append(artists, c.Name)
 		artistIDs = append(artistIDs, nonEmpty(c.Mbid)...)
 	}
-	artist := ar.Name
-	artistSort := ar.SortName
+	artist := joinNames(lead)
 	if len(featured) > 0 {
 		names := make([]string, len(featured))
 		for i, c := range featured {

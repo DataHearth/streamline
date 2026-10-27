@@ -101,6 +101,43 @@ var _ = Describe("AlbumTrackTags", Label("unit", "library"), func() {
 		Expect(t[audiotags.KeyAlbumArtistSort]).To(Equal([]string{"Nirvana"}))
 	})
 
+	It("tags a track with its own artists", func() {
+		tr.Edges.Credits = []*ent.MusicCredit{
+			{Kind: musiccredit.KindArtist, Name: "311", Mbid: "a-311"},
+		}
+
+		t := library.AlbumTrackTags(ar, al, tr)
+
+		Expect(t[audiotags.KeyArtist]).To(Equal([]string{"311"}))
+		Expect(t[audiotags.KeyArtists]).To(Equal([]string{"311"}))
+		Expect(t[audiotags.KeyMBArtistID]).To(Equal([]string{"a-311"}))
+		Expect(t).To(HaveKeyWithValue(audiotags.KeyArtistSort, BeNil()))
+		Expect(t[audiotags.KeyAlbumArtist]).To(Equal([]string{"Nirvana"}))
+	})
+
+	It("keeps the album artist when the track is credited to it", func() {
+		plain := library.AlbumTrackTags(ar, al, tr)
+		tr.Edges.Credits = []*ent.MusicCredit{
+			{Kind: musiccredit.KindArtist, Name: "Nirvana", Mbid: "art-1"},
+		}
+
+		Expect(library.AlbumTrackTags(ar, al, tr)).To(Equal(plain))
+	})
+
+	It("joins several track artists", func() {
+		tr.Edges.Credits = []*ent.MusicCredit{
+			{Kind: musiccredit.KindArtist, Name: "A", Mbid: "a"},
+			{Kind: musiccredit.KindArtist, Name: "B", Mbid: "b"},
+			{Kind: musiccredit.KindFeaturing, Name: "C", Mbid: "c"},
+		}
+
+		t := library.AlbumTrackTags(ar, al, tr)
+
+		Expect(t[audiotags.KeyArtist]).To(Equal([]string{"A & B feat. C"}))
+		Expect(t[audiotags.KeyArtists]).To(Equal([]string{"A", "B", "C"}))
+		Expect(t[audiotags.KeyMBArtistID]).To(Equal([]string{"a", "b", "c"}))
+	})
+
 	It(
 		"leaves the release details out for an album hydrated before they were fetched",
 		func() {
