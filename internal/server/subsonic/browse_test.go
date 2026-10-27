@@ -431,6 +431,9 @@ var _ = g.Describe("browse", g.Label("integration"), func() {
 		resp := f.call("search3", url.Values{"query": {"nirv"}})
 		result := resp["searchResult3"].(map[string]any)
 		Expect(result["artist"]).To(HaveLen(1))
+		g.By("listing the artist's albums and songs under their name")
+		Expect(ids(list(result, "album"))).To(Equal([]string{al(f.album)}))
+		Expect(result["song"]).NotTo(BeEmpty())
 
 		resp = f.call("search3", url.Values{"query": {"smells"}})
 		result = resp["searchResult3"].(map[string]any)
