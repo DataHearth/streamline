@@ -192,17 +192,14 @@ var _ = Describe(
 				})
 
 				It(
-					"falls back to MusicBrainz's image over an empty Deezer hash",
+					"falls back to MusicBrainz's image when Deezer has no picture",
 					func() {
 						e.links.EXPECT().
 							DeezerArtistShared(mock.Anything, uint32(415)).
 							Return(false, nil).
 							Once()
 						e.photos.EXPECT().ArtistByID(mock.Anything, uint32(415)).
-							Return(&metadata.DeezerArtist{
-								ID:         415,
-								PictureURL: "https://cdn-images.dzcdn.net/images/artist//1000x1000.jpg",
-							}, nil).Once()
+							Return(&metadata.DeezerArtist{ID: 415}, nil).Once()
 						linkedArt(metadata.ArtistArt{})
 
 						e.svc.fillDetails(e.ctx, a.ID, false)

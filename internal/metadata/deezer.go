@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -95,6 +96,25 @@ type DeezerArtist struct {
 	PictureURL string `json:"picture_xl"`
 }
 
+// deezerStockPictures are the hash segments of the picture Deezer serves for
+// an artist page with no photo, a grey silhouette: an empty hash, and the MD5
+// of an empty string, which a duplicate page of The Glitch Mob carries.
+var deezerStockPictures = []string{
+	"/images/artist//",
+	"/images/artist/d41d8cd98f00b204e9800998ecf8427e/",
+}
+
+// dropStockPicture blanks a stock picture, so no caller takes the silhouette
+// for the artist's photo.
+func (a *DeezerArtist) dropStockPicture() {
+	for _, p := range deezerStockPictures {
+		if strings.Contains(a.PictureURL, p) {
+			a.PictureURL = ""
+			return
+		}
+	}
+}
+
 // ArtistByID returns the artist with the Deezer id, or nil when Deezer has
 // none. The id comes from MusicBrainz's own url-rel, so no name guess is
 // involved.
@@ -104,6 +124,7 @@ func (d *Deezer) ArtistByID(ctx context.Context, id uint32) (*DeezerArtist, erro
 	if err != nil || !found || a.ID == 0 {
 		return nil, err
 	}
+	a.dropStockPicture()
 	return &a, nil
 }
 
@@ -120,6 +141,9 @@ func (d *Deezer) SearchArtists(
 	found, err := d.get(ctx, "/search/artist", url.Values{"q": {name}}, &payload)
 	if err != nil || !found {
 		return nil, err
+	}
+	for i := range payload.Data {
+		payload.Data[i].dropStockPicture()
 	}
 	return payload.Data, nil
 }

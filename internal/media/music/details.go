@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -17,10 +16,6 @@ import (
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 )
-
-// emptyDeezerPicture is the path Deezer builds for an artist with no photo: an
-// empty hash segment.
-const emptyDeezerPicture = "/images/artist//"
 
 // fillDetailsInBackground runs the overview and photo steps off the caller's
 // goroutine and never reports failure: neither may fail an add or a refresh.
@@ -128,8 +123,8 @@ func (s *Service) photoURL(ctx context.Context, a *ent.Artist) string {
 				return ""
 			}
 			if hit != nil {
-				if u := usablePicture(hit.PictureURL); u != "" {
-					return u
+				if hit.PictureURL != "" {
+					return hit.PictureURL
 				}
 			}
 		}
@@ -154,7 +149,7 @@ func (s *Service) photoURL(ctx context.Context, a *ent.Artist) string {
 	if match == nil {
 		return s.linkedImage(mbCtx, a)
 	}
-	return usablePicture(match.PictureURL)
+	return match.PictureURL
 }
 
 // linkedImage is the Commons image MusicBrainz links for the artist, "" when
@@ -170,11 +165,4 @@ func (s *Service) linkedImage(ctx context.Context, a *ent.Artist) string {
 		return ""
 	}
 	return art.ImageURL
-}
-
-func usablePicture(u string) string {
-	if u == "" || strings.Contains(u, emptyDeezerPicture) {
-		return ""
-	}
-	return u
 }
