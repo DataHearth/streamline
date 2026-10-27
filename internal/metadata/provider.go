@@ -247,6 +247,9 @@ type TrackInfo struct {
 	Disc             uint8
 	Position         uint16
 	Duration         uint32 // seconds, 0 when unknown
+	// Artists are the artists the track is credited to, before any "feat."
+	// join phrase; on a split release they differ from the album's.
+	Artists []PersonInfo
 	// Featuring are the artists credited after a "feat." join phrase.
 	Featuring []PersonInfo
 	// Writers are the people credited on the recorded work, each under one

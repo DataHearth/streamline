@@ -1063,6 +1063,7 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 				Disc:             disc,
 				Position:         t.Position,
 				Duration:         t.Length / 1000,
+				Artists:          trackArtists(t.ArtistCredit),
 				Featuring:        featuring(t.ArtistCredit),
 				Bonus: mediumBonus || strings.HasSuffix(
 					strings.ToLower(strings.TrimSpace(t.Title)), "(bonus track)"),
@@ -1178,21 +1179,34 @@ func creditKey(mbid, name string) string {
 // featuring returns the credited artists after the first "feat." join phrase.
 // Artists before it are co-primary credits of a collaboration, not guests.
 func featuring(credits []mbCredit) []PersonInfo {
+	return creditedPeople(credits[featStart(credits):])
+}
+
+// trackArtists returns the credited artists before the first "feat." join
+// phrase, all of them when there is none.
+func trackArtists(credits []mbCredit) []PersonInfo {
+	return creditedPeople(credits[:featStart(credits)])
+}
+
+func featStart(credits []mbCredit) int {
 	for i := 1; i < len(credits); i++ {
-		if !featJoinRe.MatchString(credits[i-1].JoinPhrase) {
-			continue
+		if featJoinRe.MatchString(credits[i-1].JoinPhrase) {
+			return i
 		}
-		out := make([]PersonInfo, 0, len(credits)-i)
-		for _, c := range credits[i:] {
-			name := c.Artist.Name
-			if name == "" {
-				name = c.Name
-			}
-			if name != "" && utf8.ValidString(name) {
-				out = append(out, PersonInfo{Name: name, MBID: c.Artist.ID})
-			}
-		}
-		return out
 	}
-	return nil
+	return len(credits)
+}
+
+func creditedPeople(credits []mbCredit) []PersonInfo {
+	var out []PersonInfo
+	for _, c := range credits {
+		name := c.Artist.Name
+		if name == "" {
+			name = c.Name
+		}
+		if name != "" && utf8.ValidString(name) {
+			out = append(out, PersonInfo{Name: name, MBID: c.Artist.ID})
+		}
+	}
+	return out
 }

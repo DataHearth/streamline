@@ -577,6 +577,57 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(rg.Tracks[0].Featuring).To(BeEmpty())
 		})
 
+		It("reads each track's credited artists", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(
+					200,
+					`{"id":"rel-1","media":[{"position":1,"tracks":[
+						{"position":1,"title":"Self Esteem","recording":{"id":"r1"},"artist-credit":[{"name":"311","joinphrase":"","artist":{"id":"a-311","name":"311"}}]},
+						{"position":2,"title":"Down","recording":{"id":"r2"},"artist-credit":[{"name":"The Offspring","joinphrase":"","artist":{"id":"a-off","name":"The Offspring"}}]}]}]}`,
+				)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				rg.Tracks[0].Artists,
+			).To(Equal([]PersonInfo{{Name: "311", MBID: "a-311"}}))
+			Expect(
+				rg.Tracks[1].Artists,
+			).To(Equal([]PersonInfo{{Name: "The Offspring", MBID: "a-off"}}))
+		})
+
+		It("splits a track's artists from its featured ones", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(
+					200,
+					`{"id":"rel-1","media":[{"position":1,"tracks":[{"position":1,"title":"T","recording":{"id":"r"},"artist-credit":[
+						{"name":"A","joinphrase":" & ","artist":{"id":"a","name":"A"}},
+						{"name":"B","joinphrase":" feat. ","artist":{"id":"b","name":"B"}},
+						{"name":"C","joinphrase":"","artist":{"id":"c","name":"C"}}]}]}]}`,
+				)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.Tracks[0].Artists).To(Equal([]PersonInfo{
+				{Name: "A", MBID: "a"}, {Name: "B", MBID: "b"},
+			}))
+			Expect(
+				rg.Tracks[0].Featuring,
+			).To(Equal([]PersonInfo{{Name: "C", MBID: "c"}}))
+		})
+
+		It("names a track's artist canonically", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(
+					200,
+					`{"id":"rel-1","media":[{"position":1,"tracks":[{"position":1,"title":"T","recording":{"id":"r"},"artist-credit":[{"name":"Offspring","joinphrase":"","artist":{"id":"a-off","name":"The Offspring"}}]}]}]}`,
+				)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.Tracks[0].Artists[0].Name).To(Equal("The Offspring"))
+		})
+
 		It("marks bonus tracks only when MusicBrainz says so", func() {
 			serve(
 				func(string) *http.Response { return jsonResponse(200, heavyRelease) },
