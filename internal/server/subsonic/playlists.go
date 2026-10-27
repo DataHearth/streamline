@@ -101,7 +101,7 @@ func toPlaylist(p *ent.Playlist, entries []child) playlistInfo {
 	out.SongCount = len(entries)
 	out.Duration = duration
 	if len(entries) > 0 {
-		out.CoverArt = entries[0].CoverArt
+		out.CoverArt = out.ID
 	}
 	return out
 }
