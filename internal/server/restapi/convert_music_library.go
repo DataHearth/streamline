@@ -87,9 +87,18 @@ func toMusicProgress(a music.AlbumView) *float32 {
 	return &p
 }
 
+// albumOwnerID is the artist whose folder holds the album: its owner when
+// loaded, else the artist it was read through.
+func albumOwnerID(a music.AlbumView, readThrough uint32) uint32 {
+	if a.Album.Edges.Artist != nil {
+		return a.Album.Edges.Artist.ID
+	}
+	return readThrough
+}
+
 func toMusicAlbumSummary(a music.AlbumView, artistID uint32) MusicAlbumSummary {
 	return MusicAlbumSummary{
-		ArtistId:      artistID,
+		ArtistId:      albumOwnerID(a, artistID),
 		Artists:       toMusicPeople(a.Artists),
 		FailureReason: optString(a.Album.FailureReason),
 		Id:            a.Album.ID,
@@ -108,7 +117,7 @@ func toMusicAlbumSummary(a music.AlbumView, artistID uint32) MusicAlbumSummary {
 func toMusicAlbum(a music.AlbumView, artistID uint32) MusicAlbum {
 	row := a.Album
 	out := MusicAlbum{
-		ArtistId:      artistID,
+		ArtistId:      albumOwnerID(a, artistID),
 		Artists:       toMusicPeople(a.Artists),
 		CatalogNumber: optString(row.CatalogNumber),
 		Country:       optString(row.Country),

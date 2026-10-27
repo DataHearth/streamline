@@ -9208,6 +9208,9 @@ components:
         artist_id:
           type: integer
           x-go-type: uint32
+          description: |
+            The album's owner, whose folder holds its files. A shared album
+            names the same owner on every artist it is listed under.
         title:
           type: string
         type:

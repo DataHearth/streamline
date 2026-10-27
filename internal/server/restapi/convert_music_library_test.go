@@ -32,6 +32,17 @@ var _ = Describe(
 			Expect(toMusicAlbum(v, 2).Artists).To(Equal(got.Artists))
 		})
 
+		It(
+			"names a co-album's owner as its artist, whichever page it is read on",
+			func() {
+				v := music.AlbumView{Album: &ent.Album{
+					ID: 3, Edges: ent.AlbumEdges{Artist: &ent.Artist{ID: 1}},
+				}}
+				Expect(toMusicAlbumSummary(v, 2).ArtistId).To(Equal(uint32(1)))
+				Expect(toMusicAlbum(v, 2).ArtistId).To(Equal(uint32(1)))
+			},
+		)
+
 		It("carries a track's artists with their library ids", func() {
 			got := toMusicTrack(music.TrackView{
 				Track: &ent.Track{ID: 9, Title: "Self Esteem"},

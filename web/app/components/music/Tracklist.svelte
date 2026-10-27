@@ -15,6 +15,7 @@
 	let {
 		tracks,
 		release,
+		artistId,
 		qualityNote = "",
 		markMissing = false,
 		compact = false,
@@ -24,6 +25,8 @@
 	}: {
 		tracks: Track[];
 		release?: Release;
+		// The artist whose page the list is on; a track by anyone else says so.
+		artistId?: number;
 		qualityNote?: string;
 		markMissing?: boolean;
 		compact?: boolean;
@@ -85,7 +88,7 @@
 					)}
 					title={t.title}
 				>
-					{t.title}{#if otherTrackArtists(t, release).length}{" "}<span class="text-fg-subtle">{i18n.music_track_by({ name: peopleList(otherTrackArtists(t, release)) })}</span>{/if}{#if t.featuring?.length && !compact}<span class="text-fg-subtle"> {i18n.music_featuring({ name: peopleList(t.featuring) })}</span>{/if}
+					{t.title}{#if otherTrackArtists(t, artistId).length}{" "}<span class="text-fg-subtle">{i18n.music_track_by({ name: peopleList(otherTrackArtists(t, artistId)) })}</span>{/if}{#if t.featuring?.length && !compact}{" "}<span class="text-fg-subtle">{i18n.music_featuring({ name: peopleList(t.featuring) })}</span>{/if}
 				</button>
 				{#if t.bonus && !compact}
 					<span class="shrink-0 rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px] font-medium text-fg-muted">

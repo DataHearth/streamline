@@ -20,6 +20,7 @@
 	// beside it, the way the book page's pinned bar carries it.
 	let {
 		releases,
+		artistId,
 		openId,
 		onToggle,
 		canEdit = false,
@@ -32,6 +33,8 @@
 		onTags,
 	}: {
 		releases: Release[];
+		// The artist whose page the releases are on.
+		artistId: number;
 		openId: number | undefined;
 		onToggle: (id: number) => void;
 		canEdit?: boolean;
@@ -71,8 +74,8 @@
 			</div>
 			<div class="min-w-0 flex-1">
 				<p class="truncate text-[14px] font-medium text-fg">{r.title}</p>
-				{#if sharedWith(r).length}
-					<p class="truncate text-[12px] text-fg-muted">{i18n.music_shared_with({ names: peopleList(sharedWith(r)) })}</p>
+				{#if sharedWith(r, artistId).length}
+					<p class="truncate text-[12px] text-fg-muted">{i18n.music_shared_with({ names: peopleList(sharedWith(r, artistId)) })}</p>
 				{/if}
 				<p class="truncate font-mono text-[11px] text-fg-subtle">
 					{up
@@ -146,6 +149,7 @@
 						<Tracklist
 							tracks={r.tracks}
 							release={r}
+							{artistId}
 							qualityNote={qualityNote(r)}
 							compact
 							markMissing={r.status === "wanted" && r.tracks_have > 0}

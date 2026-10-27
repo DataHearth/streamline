@@ -15,6 +15,7 @@
 	// release too.
 	let {
 		release: r,
+		artistId,
 		canEdit = false,
 		onSearch,
 		onManualSearch,
@@ -25,6 +26,8 @@
 		onTags,
 	}: {
 		release: Release;
+		// The artist whose page the release is on.
+		artistId: number;
 		canEdit?: boolean;
 		onSearch: () => void;
 		onManualSearch: () => void;
@@ -43,7 +46,7 @@
 	let failed = $derived(r.status === "failed");
 	let pill = $derived(releasePill(r));
 	let facts = $derived(releaseFacts(r));
-	let shared = $derived(sharedWith(r));
+	let shared = $derived(sharedWith(r, artistId));
 	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
 </script>
 
@@ -142,6 +145,7 @@
 			<Tracklist
 				tracks={r.tracks}
 				release={r}
+				{artistId}
 				qualityNote={qualityNote(r)}
 				markMissing={r.status === "wanted" && r.tracks_have > 0}
 				{canEdit}

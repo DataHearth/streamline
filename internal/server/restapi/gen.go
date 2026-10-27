@@ -6449,6 +6449,8 @@ type MovieSearchAccepted struct {
 
 // MusicAlbum defines model for MusicAlbum.
 type MusicAlbum struct {
+	// ArtistId The album's owner, whose folder holds its files. A shared album
+	// names the same owner on every artist it is listed under.
 	ArtistId uint32 `json:"artist_id"`
 
 	// Artists Every library artist a shared release group is listed under, the
@@ -6522,6 +6524,8 @@ type MusicAlbumStatus string
 
 // MusicAlbumSummary defines model for MusicAlbumSummary.
 type MusicAlbumSummary struct {
+	// ArtistId The album's owner, whose folder holds its files. A shared album
+	// names the same owner on every artist it is listed under.
 	ArtistId uint32 `json:"artist_id"`
 
 	// Artists Every library artist a shared release group is listed under, the

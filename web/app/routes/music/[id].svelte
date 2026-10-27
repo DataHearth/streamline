@@ -392,6 +392,7 @@
 			<div class="md:hidden">
 				<ReleaseAccordion
 					releases={artist.albums}
+					artistId={artist.id}
 					openId={open}
 					onToggle={(rid) => (openId = open === rid ? -1 : rid)}
 					{canEdit}
@@ -412,6 +413,7 @@
 				{#if selected}
 					<ReleasePanel
 						release={selected}
+						artistId={artist.id}
 						{canEdit}
 						onSearch={() => searchRelease(selected)}
 						onManualSearch={() => openManual(String(selected.id))}
