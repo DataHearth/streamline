@@ -242,6 +242,39 @@ var _ = Describe(
 				}))
 			})
 
+			It(
+				"resolves a track artist credited under a merged id by its name",
+				func() {
+					queue()
+					a, albums := e.seedArtist("Nirvana",
+						albumSeed{mbid: "rg-1", title: "Nevermind"})
+					Expect(
+						e.store.SetAlbumHydration(
+							e.ctx,
+							albums[0].ID,
+							db.HydrationParams{
+								Tracks: []db.TrackSeed{
+									{
+										MBID:     "r-1",
+										Title:    "Lithium",
+										Disc:     1,
+										Position: 1,
+										Artists: []db.PersonSeed{
+											{Name: "Nirvana", MBID: "merged-id"},
+										},
+									},
+								},
+							},
+							time.Now(),
+						),
+					).To(Succeed())
+
+					v, err := e.svc.Detail(e.ctx, a.ID, "en")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(v.Albums[0].Tracks[0].Artists[0].ArtistID).To(Equal(a.ID))
+				},
+			)
+
 			It("shows a co-album on the co-artist's page and status", func() {
 				queue()
 				_, albums := e.seedArtist("Nirvana",

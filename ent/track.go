@@ -37,6 +37,8 @@ type Track struct {
 	Duration uint32 `json:"duration,omitempty"`
 	// Bonus holds the value of the "bonus" field.
 	Bonus bool `json:"bonus,omitempty"`
+	// ArtistCredit holds the value of the "artist_credit" field.
+	ArtistCredit string `json:"artist_credit,omitempty"`
 	// TagOverrides holds the value of the "tag_overrides" field.
 	TagOverrides map[string][]string `json:"tag_overrides,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -121,7 +123,7 @@ func (*Track) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case track.FieldID, track.FieldDisc, track.FieldPosition, track.FieldDuration:
 			values[i] = new(sql.NullInt64)
-		case track.FieldMbid, track.FieldReleaseTrackMbid, track.FieldTitle:
+		case track.FieldMbid, track.FieldReleaseTrackMbid, track.FieldTitle, track.FieldArtistCredit:
 			values[i] = new(sql.NullString)
 		case track.FieldCreateTime, track.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -201,6 +203,12 @@ func (_m *Track) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field bonus", values[i])
 			} else if value.Valid {
 				_m.Bonus = value.Bool
+			}
+		case track.FieldArtistCredit:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field artist_credit", values[i])
+			} else if value.Valid {
+				_m.ArtistCredit = value.String
 			}
 		case track.FieldTagOverrides:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -304,6 +312,9 @@ func (_m *Track) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("bonus=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Bonus))
+	builder.WriteString(", ")
+	builder.WriteString("artist_credit=")
+	builder.WriteString(_m.ArtistCredit)
 	builder.WriteString(", ")
 	builder.WriteString("tag_overrides=")
 	builder.WriteString(fmt.Sprintf("%v", _m.TagOverrides))

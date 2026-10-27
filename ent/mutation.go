@@ -49910,6 +49910,7 @@ type TrackMutation struct {
 	duration           *uint32
 	addduration        *int32
 	bonus              *bool
+	artist_credit      *string
 	tag_overrides      *map[string][]string
 	clearedFields      map[string]struct{}
 	album              *uint32
@@ -50459,6 +50460,55 @@ func (m *TrackMutation) ResetBonus() {
 	m.bonus = nil
 }
 
+// SetArtistCredit sets the "artist_credit" field.
+func (m *TrackMutation) SetArtistCredit(s string) {
+	m.artist_credit = &s
+}
+
+// ArtistCredit returns the value of the "artist_credit" field in the mutation.
+func (m *TrackMutation) ArtistCredit() (r string, exists bool) {
+	v := m.artist_credit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldArtistCredit returns the old "artist_credit" field's value of the Track entity.
+// If the Track object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TrackMutation) OldArtistCredit(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldArtistCredit is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldArtistCredit requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldArtistCredit: %w", err)
+	}
+	return oldValue.ArtistCredit, nil
+}
+
+// ClearArtistCredit clears the value of the "artist_credit" field.
+func (m *TrackMutation) ClearArtistCredit() {
+	m.artist_credit = nil
+	m.clearedFields[track.FieldArtistCredit] = struct{}{}
+}
+
+// ArtistCreditCleared returns if the "artist_credit" field was cleared in this mutation.
+func (m *TrackMutation) ArtistCreditCleared() bool {
+	_, ok := m.clearedFields[track.FieldArtistCredit]
+	return ok
+}
+
+// ResetArtistCredit resets all changes to the "artist_credit" field.
+func (m *TrackMutation) ResetArtistCredit() {
+	m.artist_credit = nil
+	delete(m.clearedFields, track.FieldArtistCredit)
+}
+
 // SetTagOverrides sets the "tag_overrides" field.
 func (m *TrackMutation) SetTagOverrides(value map[string][]string) {
 	m.tag_overrides = &value
@@ -50797,7 +50847,7 @@ func (m *TrackMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TrackMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.create_time != nil {
 		fields = append(fields, track.FieldCreateTime)
 	}
@@ -50824,6 +50874,9 @@ func (m *TrackMutation) Fields() []string {
 	}
 	if m.bonus != nil {
 		fields = append(fields, track.FieldBonus)
+	}
+	if m.artist_credit != nil {
+		fields = append(fields, track.FieldArtistCredit)
 	}
 	if m.tag_overrides != nil {
 		fields = append(fields, track.FieldTagOverrides)
@@ -50854,6 +50907,8 @@ func (m *TrackMutation) Field(name string) (ent.Value, bool) {
 		return m.Duration()
 	case track.FieldBonus:
 		return m.Bonus()
+	case track.FieldArtistCredit:
+		return m.ArtistCredit()
 	case track.FieldTagOverrides:
 		return m.TagOverrides()
 	}
@@ -50883,6 +50938,8 @@ func (m *TrackMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldDuration(ctx)
 	case track.FieldBonus:
 		return m.OldBonus(ctx)
+	case track.FieldArtistCredit:
+		return m.OldArtistCredit(ctx)
 	case track.FieldTagOverrides:
 		return m.OldTagOverrides(ctx)
 	}
@@ -50956,6 +51013,13 @@ func (m *TrackMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetBonus(v)
+		return nil
+	case track.FieldArtistCredit:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArtistCredit(v)
 		return nil
 	case track.FieldTagOverrides:
 		v, ok := value.(map[string][]string)
@@ -51042,6 +51106,9 @@ func (m *TrackMutation) ClearedFields() []string {
 	if m.FieldCleared(track.FieldDuration) {
 		fields = append(fields, track.FieldDuration)
 	}
+	if m.FieldCleared(track.FieldArtistCredit) {
+		fields = append(fields, track.FieldArtistCredit)
+	}
 	if m.FieldCleared(track.FieldTagOverrides) {
 		fields = append(fields, track.FieldTagOverrides)
 	}
@@ -51067,6 +51134,9 @@ func (m *TrackMutation) ClearField(name string) error {
 		return nil
 	case track.FieldDuration:
 		m.ClearDuration()
+		return nil
+	case track.FieldArtistCredit:
+		m.ClearArtistCredit()
 		return nil
 	case track.FieldTagOverrides:
 		m.ClearTagOverrides()
@@ -51105,6 +51175,9 @@ func (m *TrackMutation) ResetField(name string) error {
 		return nil
 	case track.FieldBonus:
 		m.ResetBonus()
+		return nil
+	case track.FieldArtistCredit:
+		m.ResetArtistCredit()
 		return nil
 	case track.FieldTagOverrides:
 		m.ResetTagOverrides()

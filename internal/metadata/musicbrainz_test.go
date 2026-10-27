@@ -611,9 +611,24 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(rg.Tracks[0].Artists).To(Equal([]PersonInfo{
 				{Name: "A", MBID: "a"}, {Name: "B", MBID: "b"},
 			}))
+			Expect(rg.Tracks[0].ArtistCredit).To(Equal("A & B"))
 			Expect(
 				rg.Tracks[0].Featuring,
 			).To(Equal([]PersonInfo{{Name: "C", MBID: "c"}}))
+		})
+
+		It("keeps MusicBrainz's join phrase in a track's artist credit", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(
+					200,
+					`{"id":"rel-1","media":[{"position":1,"tracks":[{"position":1,"title":"T","recording":{"id":"r"},"artist-credit":[
+						{"name":"A","joinphrase":" x ","artist":{"id":"a","name":"A"}},
+						{"name":"Bee","joinphrase":"","artist":{"id":"b","name":"B"}}]}]}]}`,
+				)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.Tracks[0].ArtistCredit).To(Equal("A x B"))
 		})
 
 		It("names a track's artist canonically", func() {

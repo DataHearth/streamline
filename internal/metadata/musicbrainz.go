@@ -1064,6 +1064,7 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 				Position:         t.Position,
 				Duration:         t.Length / 1000,
 				Artists:          trackArtists(t.ArtistCredit),
+				ArtistCredit:     trackArtistCredit(t.ArtistCredit),
 				Featuring:        featuring(t.ArtistCredit),
 				Bonus: mediumBonus || strings.HasSuffix(
 					strings.ToLower(strings.TrimSpace(t.Title)), "(bonus track)"),
@@ -1186,6 +1187,23 @@ func featuring(credits []mbCredit) []PersonInfo {
 // phrase, all of them when there is none.
 func trackArtists(credits []mbCredit) []PersonInfo {
 	return creditedPeople(credits[:featStart(credits)])
+}
+
+// trackArtistCredit joins the artists before the first "feat." with
+// MusicBrainz's own join phrases, the last one (the "feat." itself) dropped.
+func trackArtistCredit(credits []mbCredit) string {
+	var b strings.Builder
+	join := ""
+	for _, c := range credits[:featStart(credits)] {
+		people := creditedPeople([]mbCredit{c})
+		if len(people) == 0 {
+			continue
+		}
+		b.WriteString(join)
+		b.WriteString(people[0].Name)
+		join = c.JoinPhrase
+	}
+	return b.String()
 }
 
 func featStart(credits []mbCredit) int {

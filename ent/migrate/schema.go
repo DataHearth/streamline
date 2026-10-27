@@ -1788,6 +1788,7 @@ var (
 		{Name: "position", Type: field.TypeUint16},
 		{Name: "duration", Type: field.TypeUint32, Nullable: true, Default: 0},
 		{Name: "bonus", Type: field.TypeBool, Default: false},
+		{Name: "artist_credit", Type: field.TypeString, Nullable: true},
 		{Name: "tag_overrides", Type: field.TypeJSON, Nullable: true},
 		{Name: "album_tracks", Type: field.TypeUint32},
 	}
@@ -1799,7 +1800,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tracks_albums_tracks",
-				Columns:    []*schema.Column{TracksColumns[11]},
+				Columns:    []*schema.Column{TracksColumns[12]},
 				RefColumns: []*schema.Column{AlbumsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1808,7 +1809,7 @@ var (
 			{
 				Name:    "track_album_tracks",
 				Unique:  false,
-				Columns: []*schema.Column{TracksColumns[11]},
+				Columns: []*schema.Column{TracksColumns[12]},
 			},
 		},
 	}

@@ -764,7 +764,14 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 		It("stores each track's artists", func() {
 			p := heavy()
 			p.Tracks[0].Artists = []PersonSeed{{Name: "311", MBID: "a-311"}}
+			p.Tracks[0].ArtistCredit = "311"
 			Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
+			Expect(
+				client.Track.Query().
+					Where(track.MbidEQ("r-1")).
+					OnlyX(ctx).
+					ArtistCredit,
+			).To(Equal("311"))
 			rows := client.MusicCredit.Query().Where(
 				musiccredit.KindEQ(musiccredit.KindArtist),
 				musiccredit.HasTrackWith(track.MbidEQ("r-1")),

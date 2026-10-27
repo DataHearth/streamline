@@ -250,6 +250,9 @@ type TrackInfo struct {
 	// Artists are the artists the track is credited to, before any "feat."
 	// join phrase; on a split release they differ from the album's.
 	Artists []PersonInfo
+	// ArtistCredit is Artists as MusicBrainz joins them ("A x B", "A & B"),
+	// canonical names, no "feat." part.
+	ArtistCredit string
 	// Featuring are the artists credited after a "feat." join phrase.
 	Featuring []PersonInfo
 	// Writers are the people credited on the recorded work, each under one

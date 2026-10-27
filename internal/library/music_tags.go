@@ -65,15 +65,23 @@ func AlbumTrackTags(ar *ent.Artist, al *ent.Album, tr *ent.Track) audiotags.Tags
 	}
 
 	// A track of a split release is another artist's: its own credit leads,
-	// the album artist only when it has none.
+	// the album artist only when it has none or is credited alone. The name
+	// counts as well as the id, since MusicBrainz may have merged the id the
+	// artist was added under.
 	lead := []string{ar.Name}
 	artistIDs := nonEmpty(ar.Mbid)
 	artistSort := ar.SortName
-	if len(credited) > 0 && (len(credited) > 1 || credited[0].Mbid != ar.Mbid) {
+	artist := ar.Name
+	if len(credited) > 1 || len(credited) == 1 &&
+		credited[0].Mbid != ar.Mbid && !strings.EqualFold(credited[0].Name, ar.Name) {
 		lead, artistIDs, artistSort = make([]string, 0, len(credited)), nil, ""
 		for _, c := range credited {
 			lead = append(lead, c.Name)
 			artistIDs = append(artistIDs, nonEmpty(c.Mbid)...)
+		}
+		artist = tr.ArtistCredit
+		if artist == "" {
+			artist = joinNames(lead)
 		}
 	}
 	artists := slices.Clone(lead)
@@ -81,7 +89,6 @@ func AlbumTrackTags(ar *ent.Artist, al *ent.Album, tr *ent.Track) audiotags.Tags
 		artists = append(artists, c.Name)
 		artistIDs = append(artistIDs, nonEmpty(c.Mbid)...)
 	}
-	artist := joinNames(lead)
 	if len(featured) > 0 {
 		names := make([]string, len(featured))
 		for i, c := range featured {

@@ -124,7 +124,18 @@ var _ = Describe("AlbumTrackTags", Label("unit", "library"), func() {
 		Expect(library.AlbumTrackTags(ar, al, tr)).To(Equal(plain))
 	})
 
-	It("joins several track artists", func() {
+	It("keeps the album artist when a merged id credits it by name", func() {
+		plain := library.AlbumTrackTags(ar, al, tr)
+		tr.ArtistCredit = "Nirvana"
+		tr.Edges.Credits = []*ent.MusicCredit{
+			{Kind: musiccredit.KindArtist, Name: "Nirvana", Mbid: "art-merged"},
+		}
+
+		Expect(library.AlbumTrackTags(ar, al, tr)).To(Equal(plain))
+	})
+
+	It("joins several track artists as MusicBrainz does", func() {
+		tr.ArtistCredit = "A x B"
 		tr.Edges.Credits = []*ent.MusicCredit{
 			{Kind: musiccredit.KindArtist, Name: "A", Mbid: "a"},
 			{Kind: musiccredit.KindArtist, Name: "B", Mbid: "b"},
@@ -133,7 +144,7 @@ var _ = Describe("AlbumTrackTags", Label("unit", "library"), func() {
 
 		t := library.AlbumTrackTags(ar, al, tr)
 
-		Expect(t[audiotags.KeyArtist]).To(Equal([]string{"A & B feat. C"}))
+		Expect(t[audiotags.KeyArtist]).To(Equal([]string{"A x B feat. C"}))
 		Expect(t[audiotags.KeyArtists]).To(Equal([]string{"A", "B", "C"}))
 		Expect(t[audiotags.KeyMBArtistID]).To(Equal([]string{"a", "b", "c"}))
 	})

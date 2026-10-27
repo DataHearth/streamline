@@ -50,6 +50,7 @@ type TrackSeed struct {
 	Duration         uint32
 	Bonus            bool
 	Artists          []PersonSeed
+	ArtistCredit     string
 	Featuring        []PersonSeed
 	// Writers, Credits and Performers are stored only when the release
 	// call's credits are complete.
@@ -1181,6 +1182,7 @@ func (db *DB) SetAlbumHydration(
 				SetTitle(t.Title).
 				SetDuration(t.Duration).
 				SetBonus(t.Bonus).
+				SetArtistCredit(t.ArtistCredit).
 				Exec(ctx); err != nil {
 				tx.Rollback()
 				return err
@@ -1194,6 +1196,7 @@ func (db *DB) SetAlbumHydration(
 				SetPosition(t.Position).
 				SetDuration(t.Duration).
 				SetBonus(t.Bonus).
+				SetArtistCredit(t.ArtistCredit).
 				SetAlbumID(albumID).
 				Save(ctx)
 			if err != nil {

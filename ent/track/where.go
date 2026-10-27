@@ -100,6 +100,11 @@ func Bonus(v bool) predicate.Track {
 	return predicate.Track(sql.FieldEQ(FieldBonus, v))
 }
 
+// ArtistCredit applies equality check predicate on the "artist_credit" field. It's identical to ArtistCreditEQ.
+func ArtistCredit(v string) predicate.Track {
+	return predicate.Track(sql.FieldEQ(FieldArtistCredit, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.Track {
 	return predicate.Track(sql.FieldEQ(FieldCreateTime, v))
@@ -533,6 +538,81 @@ func BonusEQ(v bool) predicate.Track {
 // BonusNEQ applies the NEQ predicate on the "bonus" field.
 func BonusNEQ(v bool) predicate.Track {
 	return predicate.Track(sql.FieldNEQ(FieldBonus, v))
+}
+
+// ArtistCreditEQ applies the EQ predicate on the "artist_credit" field.
+func ArtistCreditEQ(v string) predicate.Track {
+	return predicate.Track(sql.FieldEQ(FieldArtistCredit, v))
+}
+
+// ArtistCreditNEQ applies the NEQ predicate on the "artist_credit" field.
+func ArtistCreditNEQ(v string) predicate.Track {
+	return predicate.Track(sql.FieldNEQ(FieldArtistCredit, v))
+}
+
+// ArtistCreditIn applies the In predicate on the "artist_credit" field.
+func ArtistCreditIn(vs ...string) predicate.Track {
+	return predicate.Track(sql.FieldIn(FieldArtistCredit, vs...))
+}
+
+// ArtistCreditNotIn applies the NotIn predicate on the "artist_credit" field.
+func ArtistCreditNotIn(vs ...string) predicate.Track {
+	return predicate.Track(sql.FieldNotIn(FieldArtistCredit, vs...))
+}
+
+// ArtistCreditGT applies the GT predicate on the "artist_credit" field.
+func ArtistCreditGT(v string) predicate.Track {
+	return predicate.Track(sql.FieldGT(FieldArtistCredit, v))
+}
+
+// ArtistCreditGTE applies the GTE predicate on the "artist_credit" field.
+func ArtistCreditGTE(v string) predicate.Track {
+	return predicate.Track(sql.FieldGTE(FieldArtistCredit, v))
+}
+
+// ArtistCreditLT applies the LT predicate on the "artist_credit" field.
+func ArtistCreditLT(v string) predicate.Track {
+	return predicate.Track(sql.FieldLT(FieldArtistCredit, v))
+}
+
+// ArtistCreditLTE applies the LTE predicate on the "artist_credit" field.
+func ArtistCreditLTE(v string) predicate.Track {
+	return predicate.Track(sql.FieldLTE(FieldArtistCredit, v))
+}
+
+// ArtistCreditContains applies the Contains predicate on the "artist_credit" field.
+func ArtistCreditContains(v string) predicate.Track {
+	return predicate.Track(sql.FieldContains(FieldArtistCredit, v))
+}
+
+// ArtistCreditHasPrefix applies the HasPrefix predicate on the "artist_credit" field.
+func ArtistCreditHasPrefix(v string) predicate.Track {
+	return predicate.Track(sql.FieldHasPrefix(FieldArtistCredit, v))
+}
+
+// ArtistCreditHasSuffix applies the HasSuffix predicate on the "artist_credit" field.
+func ArtistCreditHasSuffix(v string) predicate.Track {
+	return predicate.Track(sql.FieldHasSuffix(FieldArtistCredit, v))
+}
+
+// ArtistCreditIsNil applies the IsNil predicate on the "artist_credit" field.
+func ArtistCreditIsNil() predicate.Track {
+	return predicate.Track(sql.FieldIsNull(FieldArtistCredit))
+}
+
+// ArtistCreditNotNil applies the NotNil predicate on the "artist_credit" field.
+func ArtistCreditNotNil() predicate.Track {
+	return predicate.Track(sql.FieldNotNull(FieldArtistCredit))
+}
+
+// ArtistCreditEqualFold applies the EqualFold predicate on the "artist_credit" field.
+func ArtistCreditEqualFold(v string) predicate.Track {
+	return predicate.Track(sql.FieldEqualFold(FieldArtistCredit, v))
+}
+
+// ArtistCreditContainsFold applies the ContainsFold predicate on the "artist_credit" field.
+func ArtistCreditContainsFold(v string) predicate.Track {
+	return predicate.Track(sql.FieldContainsFold(FieldArtistCredit, v))
 }
 
 // TagOverridesIsNil applies the IsNil predicate on the "tag_overrides" field.

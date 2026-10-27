@@ -124,6 +124,24 @@ func tile(
 	return v
 }
 
+// trackArtist resolves a track's credited artist to the library, falling back
+// to a same-named artist the album is listed under: MusicBrainz may have
+// merged the id the artist was added with, and the track then reads as
+// someone else's on that artist's own page.
+func trackArtist(a *ent.Album, people peopleIndex, c *ent.MusicCredit) PersonView {
+	v := people.person(c.Name, c.Mbid)
+	if v.ArtistID != 0 {
+		return v
+	}
+	for _, ar := range append([]*ent.Artist{a.Edges.Artist}, a.Edges.CoArtists...) {
+		if ar != nil && strings.EqualFold(ar.Name, c.Name) {
+			v.ArtistID = ar.ID
+			break
+		}
+	}
+	return v
+}
+
 // albumArtists is the library artists a shared album is listed under, owner
 // first, or nil when only its owner is credited on it.
 func albumArtists(a *ent.Album) []PersonView {
@@ -295,7 +313,7 @@ func fullAlbum(
 		}
 		v.Duration += t.Duration
 		for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindArtist) {
-			tv.Artists = append(tv.Artists, people.person(c.Name, c.Mbid))
+			tv.Artists = append(tv.Artists, trackArtist(a, people, c))
 		}
 		for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindFeaturing) {
 			tv.Featuring = append(tv.Featuring, people.person(c.Name, c.Mbid))
