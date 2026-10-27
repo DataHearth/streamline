@@ -159,7 +159,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			).To(Equal(b.ID))
 		})
 
-		It("hands a shared album to a co-artist", func() {
+		It("hands a shared album to a co-artist as the artist is deleted", func() {
 			a := seed()
 			mk := func(mbid string) *ent.Artist {
 				GinkgoHelper()
@@ -172,15 +172,16 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			}
 			b, c := mk("a-b"), mk("a-c")
 
-			moved, err := store.HandOverSharedAlbums(ctx, a.ID)
+			moved, err := store.DeleteArtist(ctx, a.ID)
 			Expect(err).NotTo(HaveOccurred())
 			rg1 := albumByMBID("rg-1")
 			Expect(moved).To(Equal([]uint32{rg1.ID}))
 			Expect(rg1.QueryArtist().OnlyIDX(ctx)).To(Equal(b.ID))
 			Expect(rg1.QueryCoArtists().IDsX(ctx)).To(Equal([]uint32{c.ID}))
-			Expect(
-				albumByMBID("rg-2").QueryArtist().OnlyIDX(ctx),
-			).To(Equal(a.ID), "an unshared album stays")
+			Expect(client.Album.Query().Where(album.MbidEQ("rg-2")).ExistX(ctx)).
+				To(BeFalse(), "an unshared album goes with its artist")
+			Expect(client.Artist.Query().Where(entartist.IDEQ(a.ID)).ExistX(ctx)).
+				To(BeFalse())
 		})
 
 		It("orders the albums newest first and the tracks by position", func() {
@@ -1609,7 +1610,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				Featuring: []PersonSeed{{Name: "F"}},
 			}},
 		}, now)).To(Succeed())
-		Expect(store.DeleteArtist(ctx, a.ID)).To(Succeed())
+		Expect(store.DeleteArtist(ctx, a.ID)).Error().To(Succeed())
 		Expect(client.Album.Query().Count(ctx)).To(BeZero())
 		Expect(client.Track.Query().Count(ctx)).To(BeZero())
 		Expect(client.ArtistMember.Query().Count(ctx)).To(BeZero())

@@ -4737,20 +4737,31 @@ func (_c *MockStore_DeleteAllCompletedDownloadRecords_Call) RunAndReturn(run fun
 }
 
 // DeleteArtist provides a mock function for the type MockStore
-func (_mock *MockStore) DeleteArtist(ctx context.Context, id uint32) error {
+func (_mock *MockStore) DeleteArtist(ctx context.Context, id uint32) ([]uint32, error) {
 	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteArtist")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+	var r0 []uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]uint32, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []uint32); ok {
 		r0 = returnFunc(ctx, id)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]uint32)
+		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockStore_DeleteArtist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteArtist'
@@ -4783,12 +4794,12 @@ func (_c *MockStore_DeleteArtist_Call) Run(run func(ctx context.Context, id uint
 	return _c
 }
 
-func (_c *MockStore_DeleteArtist_Call) Return(err error) *MockStore_DeleteArtist_Call {
-	_c.Call.Return(err)
+func (_c *MockStore_DeleteArtist_Call) Return(uint32s []uint32, err error) *MockStore_DeleteArtist_Call {
+	_c.Call.Return(uint32s, err)
 	return _c
 }
 
-func (_c *MockStore_DeleteArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockStore_DeleteArtist_Call {
+func (_c *MockStore_DeleteArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32) ([]uint32, error)) *MockStore_DeleteArtist_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -9725,74 +9736,6 @@ func (_c *MockStore_GetRequest_Call) Return(request1 *ent.Request, err error) *M
 }
 
 func (_c *MockStore_GetRequest_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Request, error)) *MockStore_GetRequest_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// HandOverSharedAlbums provides a mock function for the type MockStore
-func (_mock *MockStore) HandOverSharedAlbums(ctx context.Context, artistID uint32) ([]uint32, error) {
-	ret := _mock.Called(ctx, artistID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for HandOverSharedAlbums")
-	}
-
-	var r0 []uint32
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]uint32, error)); ok {
-		return returnFunc(ctx, artistID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []uint32); ok {
-		r0 = returnFunc(ctx, artistID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]uint32)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
-		r1 = returnFunc(ctx, artistID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockStore_HandOverSharedAlbums_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandOverSharedAlbums'
-type MockStore_HandOverSharedAlbums_Call struct {
-	*mock.Call
-}
-
-// HandOverSharedAlbums is a helper method to define mock.On call
-//   - ctx context.Context
-//   - artistID uint32
-func (_e *MockStore_Expecter) HandOverSharedAlbums(ctx any, artistID any) *MockStore_HandOverSharedAlbums_Call {
-	return &MockStore_HandOverSharedAlbums_Call{Call: _e.mock.On("HandOverSharedAlbums", ctx, artistID)}
-}
-
-func (_c *MockStore_HandOverSharedAlbums_Call) Run(run func(ctx context.Context, artistID uint32)) *MockStore_HandOverSharedAlbums_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uint32
-		if args[1] != nil {
-			arg1 = args[1].(uint32)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_HandOverSharedAlbums_Call) Return(uint32s []uint32, err error) *MockStore_HandOverSharedAlbums_Call {
-	_c.Call.Return(uint32s, err)
-	return _c
-}
-
-func (_c *MockStore_HandOverSharedAlbums_Call) RunAndReturn(run func(ctx context.Context, artistID uint32) ([]uint32, error)) *MockStore_HandOverSharedAlbums_Call {
 	_c.Call.Return(run)
 	return _c
 }

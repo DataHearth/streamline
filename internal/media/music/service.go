@@ -486,23 +486,18 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 		))
 	defer span.End()
 
-	if _, err := s.db.FindArtistByID(ctx, id); err != nil {
-		return otelx.RecordSpanError(span, notFound(err))
-	}
-	// Before the files: a shared album is still another artist's, so it
-	// leaves with its files instead of being deleted with this one.
-	moved, err := s.db.HandOverSharedAlbums(ctx, id)
-	if err != nil {
-		return otelx.RecordSpanError(span, err)
-	}
-	if len(moved) > 0 {
-		slog.InfoContext(ctx, "shared albums handed to a co-artist",
-			"artist.id", id, "albums", moved)
-	}
 	row, err := s.db.FindArtistByID(ctx, id)
 	if err != nil {
 		return otelx.RecordSpanError(span, notFound(err))
 	}
+	// A shared album is still another artist's: DeleteArtist hands it to
+	// them, so neither its files nor its cover go with this artist.
+	owned := slices.DeleteFunc(
+		slices.Clone(row.Edges.Albums),
+		func(a *ent.Album) bool {
+			return len(a.Edges.CoArtists) > 0
+		},
+	)
 	if deleteFiles {
 		root := config.Get().Library.MusicPath
 		var removed []string
@@ -513,7 +508,7 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 				)
 			}
 		}()
-		for _, a := range row.Edges.Albums {
+		for _, a := range owned {
 			unlock := library.LockAlbumFiles(a.ID)
 			// Read again under the lock: the renamer may have moved a
 			// file since the artist was loaded.
@@ -544,14 +539,21 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 			unlock()
 		}
 	}
-	if err := s.db.DeleteArtist(ctx, id); err != nil {
+	moved, err := s.db.DeleteArtist(ctx, id)
+	if err != nil {
 		return otelx.RecordSpanError(span, notFound(err))
+	}
+	if len(moved) > 0 {
+		slog.InfoContext(ctx, "shared albums handed to a co-artist",
+			"artist.id", id, "albums", moved)
+		// Their files name the deleted owner as the album artist.
+		s.tagsChanged(ctx, moved...)
 	}
 	if err := s.posters.Remove(artistKind, id); err != nil {
 		slog.WarnContext(ctx, "artist poster was not removed",
 			"artist.id", id, "error", err)
 	}
-	for _, a := range row.Edges.Albums {
+	for _, a := range owned {
 		if err := s.posters.Remove(coverKind, a.ID); err != nil {
 			slog.WarnContext(ctx, "album poster was not removed",
 				"album.id", a.ID, "error", err)
