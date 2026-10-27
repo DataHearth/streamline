@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
+	"github.com/datahearth/streamline/internal/db"
 )
 
 const (
@@ -76,9 +77,28 @@ func listed() predicate.Album {
 	return album.HasTracksWith(playable())
 }
 
-// listedArtist keeps artists with at least one listed album.
+// listedArtist keeps artists with at least one listed album, owned or
+// co-credited.
 func listedArtist() predicate.Artist {
-	return artist.HasAlbumsWith(listed())
+	return artist.Or(
+		artist.HasAlbumsWith(listed()),
+		artist.HasCoAlbumsWith(listed()),
+	)
+}
+
+// withListedAlbums loads every listed album under the artist, owned and
+// co-credited, which is what albumCount counts.
+func withListedAlbums(q *ent.ArtistQuery) *ent.ArtistQuery {
+	return q.WithAlbums(listedAlbums).WithCoAlbums(listedAlbums)
+}
+
+// albumOwner is the artist an album is filed under: its owner when loaded,
+// else the artist it was read through.
+func albumOwner(al *ent.Album, through *ent.Artist) *ent.Artist {
+	if al.Edges.Artist != nil {
+		return al.Edges.Artist
+	}
+	return through
 }
 
 // onDisk loads an album's playable tracks only: songCount and duration count
@@ -128,7 +148,7 @@ func toArtist(ar *ent.Artist) artistID3 {
 	return artistID3{
 		ID:            artistID(ar.ID),
 		Name:          ar.Name,
-		AlbumCount:    len(ar.Edges.Albums),
+		AlbumCount:    len(db.ArtistAlbums(ar)),
 		CoverArt:      artistID(ar.ID),
 		MusicBrainzID: ar.Mbid,
 		SortName:      ar.SortName,
@@ -319,9 +339,8 @@ func indexLetter(key string) string {
 }
 
 func (h *Handler) sortedArtists(r *http.Request) ([]*ent.Artist, error) {
-	artists, err := h.ent.Artist.Query().
-		Where(listedArtist()).
-		WithAlbums(listedAlbums).
+	artists, err := withListedAlbums(h.ent.Artist.Query().
+		Where(listedArtist())).
 		Order(artist.ByID()).
 		All(r.Context())
 	if err != nil {
@@ -401,6 +420,10 @@ func (h *Handler) loadArtist(ctx context.Context, id uint32) (*ent.Artist, error
 			q.Where(listed()).WithTracks(onDisk).
 				Order(album.ByReleaseDate(), album.ByTitle())
 		}).
+		WithCoAlbums(func(q *ent.AlbumQuery) {
+			q.Where(listed()).WithTracks(onDisk).WithArtist().
+				Order(album.ByReleaseDate(), album.ByTitle())
+		}).
 		Only(ctx)
 	return ar, lookupErr(err)
 }
@@ -432,10 +455,10 @@ func (h *Handler) getArtist(
 	}
 	out := &artistWith{
 		artistID3: toArtist(ar),
-		Album:     make([]albumID3, 0, len(ar.Edges.Albums)),
+		Album:     make([]albumID3, 0, len(db.ArtistAlbums(ar))),
 	}
-	for _, al := range ar.Edges.Albums {
-		out.Album = append(out.Album, toAlbum(al, ar))
+	for _, al := range db.ArtistAlbums(ar) {
+		out.Album = append(out.Album, toAlbum(al, albumOwner(al, ar)))
 	}
 	return h.respond(w, r, u, &body{Artist: out})
 }
@@ -499,8 +522,10 @@ func (h *Handler) getMusicDirectory(
 			return err
 		}
 		dir = &directory{ID: artistID(ar.ID), Name: ar.Name, Child: []child{}}
-		for _, al := range ar.Edges.Albums {
-			dir.Child = append(dir.Child, toAlbumChild(al, ar))
+		for _, al := range db.ArtistAlbums(ar) {
+			c := toAlbumChild(al, albumOwner(al, ar))
+			c.Parent = dir.ID
+			dir.Child = append(dir.Child, c)
 		}
 	case kindAlbum:
 		al, err := h.loadAlbum(r.Context(), id)
@@ -625,9 +650,8 @@ func (h *Handler) similarArtists(
 	if ar.Genre == "" || n == 0 {
 		return nil, nil
 	}
-	return h.ent.Artist.Query().
-		Where(artist.GenreEQ(ar.Genre), artist.IDNEQ(ar.ID), listedArtist()).
-		WithAlbums(listedAlbums).
+	return withListedAlbums(h.ent.Artist.Query().
+		Where(artist.GenreEQ(ar.Genre), artist.IDNEQ(ar.ID), listedArtist())).
 		Order(func(s *sql.Selector) { s.OrderBy("RANDOM()") }).
 		Limit(n).
 		All(ctx)
@@ -725,10 +749,11 @@ func (h *Handler) similarSongs(r *http.Request) ([]child, error) {
 	if err != nil {
 		return nil, err
 	}
-	owner := track.HasAlbumWith(album.HasArtistWith(artist.IDEQ(ar.ID)))
+	owner := track.HasAlbumWith(db.AlbumOfArtist(ar.ID))
 	if ar.Genre != "" {
-		owner = track.HasAlbumWith(album.HasArtistWith(
-			artist.Or(artist.IDEQ(ar.ID), artist.GenreEQ(ar.Genre)),
+		owner = track.HasAlbumWith(album.Or(
+			db.AlbumOfArtist(ar.ID),
+			album.HasArtistWith(artist.GenreEQ(ar.Genre)),
 		))
 	}
 	ts, err := songEdges(h.ent.Track.Query().Where(playable(), owner)).

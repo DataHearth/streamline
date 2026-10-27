@@ -226,6 +226,44 @@ var _ = g.Describe("browse", g.Label("integration"), func() {
 		Expect(entry["year"]).To(BeEquivalentTo(1991))
 	})
 
+	g.Context("with a co-credited artist", func() {
+		var guest *ent.Artist
+
+		g.BeforeEach(func() {
+			var err error
+			guest, err = db.New(f.client).
+				CreateArtist(context.Background(), db.CreateArtistParams{
+					MBID: "a-2",
+					Name: "Guest",
+					Albums: []db.AlbumSeed{
+						{MBID: "rg-1", Title: "Nevermind", Type: "album"},
+					},
+				})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		g.It("lists a co-album under getArtist, keeping its owner", func() {
+			got := obj(
+				okResp(f.call("getArtist", url.Values{"id": {ar(guest)}})),
+				"artist",
+			)
+			Expect(got["albumCount"]).To(BeEquivalentTo(1))
+			albums := got["album"].([]any)
+			Expect(albums).To(HaveLen(1))
+			entry := albums[0].(map[string]any)
+			Expect(entry["id"]).To(Equal(al(f.album)))
+			Expect(entry["artistId"]).To(Equal(ar(f.artist)))
+			Expect(entry["artist"]).To(Equal("Nirvana"))
+		})
+
+		g.It("counts a co-album's songs under the artist", func() {
+			got := obj(okResp(f.call("getSimilarSongs2", url.Values{
+				"id": {ar(guest)}, "count": {"10"},
+			})), "similarSongs2")
+			Expect(got["song"]).To(HaveLen(1))
+		})
+	})
+
 	g.It("lists an album's songs, omitting tracks with no file", func() {
 		resp := f.call(
 			"getAlbum",
