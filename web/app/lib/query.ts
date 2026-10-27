@@ -1,4 +1,5 @@
 import { MutationCache, QueryClient } from "@tanstack/svelte-query";
+import { ApiError } from "./api";
 
 // Keys the nav badges read (lib/nav-counts.ts). They are always-mounted
 // queries on their own poll — 30 s for the queue, 60 s for imports — so a scan
@@ -37,7 +38,9 @@ export const queryClient = new QueryClient({
 			staleTime: 30_000,
 			gcTime: 5 * 60_000,
 			refetchOnWindowFocus: true,
-			retry: 1,
+			// A 429 says when to come back; asking again sooner spends the
+			// provider budget it is waiting on and is refused anyway.
+			retry: (failures, err) => failures < 1 && !(err instanceof ApiError && err.status === 429),
 		},
 		mutations: {
 			retry: 0,

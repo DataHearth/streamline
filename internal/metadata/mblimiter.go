@@ -63,6 +63,20 @@ type mbLimiter struct {
 	interactive int
 	prefetch    int
 	lastBG      time.Time
+	heldUntil   time.Time
+}
+
+// hold refuses prefetch and background callers for d, after MusicBrainz
+// refused a call. Calls sent into a refusal are refused too and keep the
+// budget drained, so a page of art tiles turned one 503 into a run of them
+// that a person's own lookup kept landing on. Interactive callers are not
+// held: freeing the budget for them is the point.
+func (l *mbLimiter) hold(d time.Duration) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if until := time.Now().Add(d); until.After(l.heldUntil) {
+		l.heldUntil = until
+	}
 }
 
 func newMBLimiter(interval, gap time.Duration) *mbLimiter {
@@ -102,12 +116,21 @@ func (l *mbLimiter) Wait(ctx context.Context) error {
 
 func (l *mbLimiter) poll(ctx context.Context, background bool) error {
 	for {
+		if held := l.heldFor(); held > 0 {
+			return &RateLimitedError{RetryAfter: held}
+		}
 		if wait, ok := l.tryLow(background); ok {
 			return nil
 		} else if err := sleepCtx(ctx, wait); err != nil {
 			return err
 		}
 	}
+}
+
+func (l *mbLimiter) heldFor() time.Duration {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return time.Until(l.heldUntil)
 }
 
 // tryLow takes a token for a prefetch or background caller when no caller of

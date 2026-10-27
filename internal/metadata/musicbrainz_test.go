@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -113,6 +114,41 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(errors.As(err, &limited)).To(BeTrue())
 			Expect(limited.RetryAfter).To(Equal(time.Minute))
 		})
+
+		It(
+			"holds prefetch and background calls after a 503, not interactive ones",
+			func() {
+				calls := 0
+				mb.client.Transport = mbRoundTripper(
+					func(*http.Request) (*http.Response, error) {
+						calls++
+						if calls == 1 {
+							resp := jsonResponse(503, `{}`)
+							resp.Header.Set("Retry-After", "7")
+							return resp, nil
+						}
+						return jsonResponse(200, `{}`), nil
+					},
+				)
+				var out struct{}
+				Expect(
+					mb.get(ctx, "/artist", url.Values{}, &out),
+				).To(MatchError(ErrRateLimited))
+
+				for _, low := range []context.Context{Prefetch(ctx), Background(ctx)} {
+					err := mb.get(low, "/artist", url.Values{}, &out)
+					var limited *RateLimitedError
+					Expect(errors.As(err, &limited)).To(BeTrue())
+					Expect(
+						limited.RetryAfter,
+					).To(BeNumerically("~", 7*time.Second, time.Second))
+				}
+				Expect(calls).To(Equal(1))
+
+				Expect(mb.get(ctx, "/artist", url.Values{}, &out)).To(Succeed())
+				Expect(calls).To(Equal(2))
+			},
+		)
 
 		It("reads type, area, start year and the most voted real genre", func() {
 			genreCalls := 0

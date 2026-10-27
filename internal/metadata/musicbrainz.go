@@ -133,7 +133,11 @@ func (m *MusicBrainz) fetch(
 		}
 		slog.WarnContext(ctx, "musicbrainz rate limited",
 			"musicbrainz.endpoint", path, "http.status_code", resp.StatusCode,
+			// "global" is MusicBrainz shedding load for every client, not a
+			// limit on this instance.
+			"musicbrainz.ratelimit_zone", resp.Header.Get("X-RateLimit-Zone"),
 			"retry_after", retry.Round(time.Second))
+		m.limiter.hold(retry)
 		return otelx.RecordSpanError(span, &RateLimitedError{RetryAfter: retry})
 	}
 	slog.WarnContext(ctx, "musicbrainz request non-200",
