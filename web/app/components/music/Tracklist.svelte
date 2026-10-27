@@ -4,7 +4,7 @@
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import KebabMenu, { type KebabItem } from "@components/shared/KebabMenu.svelte";
 	import TrackDetailModal from "./TrackDetailModal.svelte";
-	import { peopleList, trackTime, type Release, type Track } from "@lib/music-books";
+	import { otherTrackArtists, peopleList, trackTime, type Release, type Track } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// A plain numbered tracklist. Quality is stated once in the header rather
@@ -85,7 +85,7 @@
 					)}
 					title={t.title}
 				>
-					{t.title}{#if t.featuring?.length && !compact}<span class="text-fg-subtle"> {i18n.music_featuring({ name: peopleList(t.featuring) })}</span>{/if}
+					{t.title}{#if otherTrackArtists(t, release).length}{" "}<span class="text-fg-subtle">{i18n.music_track_by({ name: peopleList(otherTrackArtists(t, release)) })}</span>{/if}{#if t.featuring?.length && !compact}<span class="text-fg-subtle"> {i18n.music_featuring({ name: peopleList(t.featuring) })}</span>{/if}
 				</button>
 				{#if t.bonus && !compact}
 					<span class="shrink-0 rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px] font-medium text-fg-muted">

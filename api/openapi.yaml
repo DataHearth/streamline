@@ -9239,6 +9239,14 @@ components:
         tracks_pending:
           type: boolean
           description: True until the album's tracks have been fetched.
+        artists:
+          type: array
+          description: |
+            Every library artist a shared release group is listed under, the
+            owner (whose folder holds the files) first. Omitted for an album
+            only its owner is credited on.
+          items:
+            $ref: "#/components/schemas/MusicPerson"
 
     MusicAlbum:
       allOf:
@@ -9313,6 +9321,14 @@ components:
           type: integer
           x-go-type: uint32
           description: Length in seconds, 0 when unknown.
+        artists:
+          type: array
+          description: |
+            The artists the track is credited to, before any "feat."; on a
+            split release they are not the album's. Omitted until the album
+            is hydrated with them.
+          items:
+            $ref: "#/components/schemas/MusicPerson"
         featuring:
           type: array
           items:

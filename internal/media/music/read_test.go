@@ -199,6 +199,49 @@ var _ = Describe(
 		})
 
 		Describe("Detail", func() {
+			It("resolves a track artist held in the library", func() {
+				queue()
+				a, albums := e.seedArtist("Nirvana",
+					albumSeed{mbid: "rg-1", title: "Split"})
+				b, _ := e.seedArtist("Guest")
+				Expect(
+					e.store.SetAlbumHydration(
+						e.ctx,
+						albums[0].ID,
+						db.HydrationParams{
+							Tracks: []db.TrackSeed{
+								{
+									MBID:     "r-1",
+									Title:    "Theirs",
+									Disc:     1,
+									Position: 1,
+									Artists: []db.PersonSeed{
+										{Name: "Guest", MBID: "mbid-Guest"},
+									},
+								},
+							},
+						},
+						time.Now(),
+					),
+				).To(Succeed())
+				_, err := e.store.RefreshArtist(e.ctx, b.ID, db.RefreshArtistParams{
+					Name: "Guest", RefreshedAt: time.Now(),
+					Albums: []db.AlbumSeed{{MBID: "rg-1", Title: "Split"}},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				v, err := e.svc.Detail(e.ctx, a.ID, "en")
+				Expect(err).NotTo(HaveOccurred())
+				tr := v.Albums[0].Tracks[0]
+				Expect(tr.Artists).To(Equal([]PersonView{
+					{Name: "Guest", MBID: "mbid-Guest", ArtistID: b.ID},
+				}))
+				Expect(v.Albums[0].Artists).To(Equal([]PersonView{
+					{Name: "Nirvana", MBID: "mbid-Nirvana", ArtistID: a.ID},
+					{Name: "Guest", MBID: "mbid-Guest", ArtistID: b.ID},
+				}))
+			})
+
 			It("shows a co-album on the co-artist's page and status", func() {
 				queue()
 				_, albums := e.seedArtist("Nirvana",

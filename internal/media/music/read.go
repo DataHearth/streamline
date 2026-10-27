@@ -114,6 +114,7 @@ func tile(
 		Size:          r.Size,
 		Duration:      r.Duration,
 		TracksPending: a.MetadataFetchedAt == nil,
+		Artists:       albumArtists(a),
 	}
 	if a.Status == album.StatusDownloading {
 		if pct, ok := progress[a.ID]; ok {
@@ -121,6 +122,19 @@ func tile(
 		}
 	}
 	return v
+}
+
+// albumArtists is the library artists a shared album is listed under, owner
+// first, or nil when only its owner is credited on it.
+func albumArtists(a *ent.Album) []PersonView {
+	if len(a.Edges.CoArtists) == 0 || a.Edges.Artist == nil {
+		return nil
+	}
+	out := make([]PersonView, 0, 1+len(a.Edges.CoArtists))
+	for _, ar := range append([]*ent.Artist{a.Edges.Artist}, a.Edges.CoArtists...) {
+		out = append(out, PersonView{Name: ar.Name, MBID: ar.Mbid, ArtistID: ar.ID})
+	}
+	return out
 }
 
 func (s *Service) Counts(
@@ -264,6 +278,7 @@ func fullAlbum(
 		Status:        albumStatusAt(a, now),
 		TrackCount:    numeric.SaturateU32(len(a.Edges.Tracks)),
 		TracksPending: a.MetadataFetchedAt == nil,
+		Artists:       albumArtists(a),
 	}
 	if a.Status == album.StatusDownloading {
 		if pct, ok := progress[a.ID]; ok {
@@ -279,6 +294,9 @@ func fullAlbum(
 			v.Size += f.Size
 		}
 		v.Duration += t.Duration
+		for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindArtist) {
+			tv.Artists = append(tv.Artists, people.person(c.Name, c.Mbid))
+		}
 		for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindFeaturing) {
 			tv.Featuring = append(tv.Featuring, people.person(c.Name, c.Mbid))
 		}

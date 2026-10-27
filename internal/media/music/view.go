@@ -48,7 +48,10 @@ type MemberView struct {
 }
 
 type TrackView struct {
-	Track     *ent.Track
+	Track *ent.Track
+	// Artists are the track's own credited artists, which on a split
+	// release are not the album's.
+	Artists   []PersonView
 	Featuring []PersonView
 	Writers   []PersonView
 	HasFile   bool
@@ -71,8 +74,11 @@ type AlbumView struct {
 	TracksPending bool
 	// Quality is the weakest tier among the album's files, empty with no
 	// tiered file; Format is the label of the weakest file.
-	Quality   string
-	Format    string
+	Quality string
+	Format  string
+	// Artists is every library artist a shared album is listed under, owner
+	// first; nil for an album only its owner is credited on.
+	Artists   []PersonView
 	Tracks    []TrackView
 	Credits   []CreditView
 	Personnel []PerformerView

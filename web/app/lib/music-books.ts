@@ -47,6 +47,8 @@ export type Track = {
 	disc: number;
 	number: number;
 	title: string;
+	// The artist credit before any "feat."; on a split release not the album's.
+	artists?: Person[];
 	// The artist credit's "feat." part, one entry per guest.
 	featuring?: Person[];
 	writers?: Person[];
@@ -75,6 +77,9 @@ export type Release = {
 	progress?: number;
 	// Why the import was refused, while status is failed.
 	failure_reason?: string;
+	// Every library artist a shared release is listed under, owner first;
+	// absent when only its owner is credited.
+	artists?: Person[];
 	// Detail only; the list leaves them out.
 	tracks?: Track[];
 	mbid?: string;
@@ -436,6 +441,19 @@ export function personHref(p: Person): string | undefined {
 	if (p.artist_id) return `/music/${p.artist_id}`;
 	if (p.shelf) return `/books?author=${encodeURIComponent(p.shelf)}`;
 	return undefined;
+}
+
+// The other library artists a shared release is listed under, seen from the
+// artist whose page it is on.
+export function sharedWith(r: Release): Person[] {
+	return (r.artists ?? []).filter((p) => p.artist_id !== r.artist_id);
+}
+
+// A track's own artists when they are not the page's artist: the other side
+// of a split single. Empty when the track is the page artist's.
+export function otherTrackArtists(t: Track, r?: Release): Person[] {
+	const artists = t.artists ?? [];
+	return artists.some((p) => p.artist_id !== undefined && p.artist_id === r?.artist_id) ? [] : artists;
 }
 
 export function peopleList(ps: Person[]): string {

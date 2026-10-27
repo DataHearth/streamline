@@ -6449,8 +6449,13 @@ type MovieSearchAccepted struct {
 
 // MusicAlbum defines model for MusicAlbum.
 type MusicAlbum struct {
-	ArtistId      uint32  `json:"artist_id"`
-	CatalogNumber *string `json:"catalog_number,omitempty"`
+	ArtistId uint32 `json:"artist_id"`
+
+	// Artists Every library artist a shared release group is listed under, the
+	// owner (whose folder holds the files) first. Omitted for an album
+	// only its owner is credited on.
+	Artists       *[]MusicPerson `json:"artists,omitempty"`
+	CatalogNumber *string        `json:"catalog_number,omitempty"`
 
 	// Country Two-letter region code of the canonical release.
 	Country *string       `json:"country,omitempty"`
@@ -6518,6 +6523,11 @@ type MusicAlbumStatus string
 // MusicAlbumSummary defines model for MusicAlbumSummary.
 type MusicAlbumSummary struct {
 	ArtistId uint32 `json:"artist_id"`
+
+	// Artists Every library artist a shared release group is listed under, the
+	// owner (whose folder holds the files) first. Omitted for an album
+	// only its owner is credited on.
+	Artists *[]MusicPerson `json:"artists,omitempty"`
 
 	// FailureReason Present while `status` is `failed`; why the import was refused.
 	FailureReason *string `json:"failure_reason,omitempty"`
@@ -7085,6 +7095,11 @@ type MusicTier string
 
 // MusicTrack defines model for MusicTrack.
 type MusicTrack struct {
+	// Artists The artists the track is credited to, before any "feat."; on a
+	// split release they are not the album's. Omitted until the album
+	// is hydrated with them.
+	Artists *[]MusicPerson `json:"artists,omitempty"`
+
 	// Bonus Set only when MusicBrainz says so; never guessed.
 	Bonus *bool `json:"bonus,omitempty"`
 	Disc  uint8 `json:"disc"`

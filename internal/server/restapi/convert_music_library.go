@@ -54,6 +54,7 @@ func toMusicPeople(in []music.PersonView) *[]MusicPerson {
 
 func toMusicTrack(t music.TrackView) MusicTrack {
 	out := MusicTrack{
+		Artists:   toMusicPeople(t.Artists),
 		Disc:      t.Track.Disc,
 		Duration:  t.Track.Duration,
 		Featuring: toMusicPeople(t.Featuring),
@@ -89,6 +90,7 @@ func toMusicProgress(a music.AlbumView) *float32 {
 func toMusicAlbumSummary(a music.AlbumView, artistID uint32) MusicAlbumSummary {
 	return MusicAlbumSummary{
 		ArtistId:      artistID,
+		Artists:       toMusicPeople(a.Artists),
 		FailureReason: optString(a.Album.FailureReason),
 		Id:            a.Album.ID,
 		Monitored:     a.Album.Monitored,
@@ -107,6 +109,7 @@ func toMusicAlbum(a music.AlbumView, artistID uint32) MusicAlbum {
 	row := a.Album
 	out := MusicAlbum{
 		ArtistId:      artistID,
+		Artists:       toMusicPeople(a.Artists),
 		CatalogNumber: optString(row.CatalogNumber),
 		Country:       optString(row.Country),
 		Credits:       make([]MusicCredit, 0, len(a.Credits)),

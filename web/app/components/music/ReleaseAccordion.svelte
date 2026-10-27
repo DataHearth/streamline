@@ -10,7 +10,7 @@
 	import ReleaseMark from "./ReleaseMark.svelte";
 	import Tracklist from "./Tracklist.svelte";
 	import ReleaseCredits from "./ReleaseCredits.svelte";
-	import { qualityNote, releaseFacts, releaseGroups, releaseLine, releasePill, releaseTypeLabel, type Release, type Track } from "@lib/music-books";
+	import { peopleList, qualityNote, releaseFacts, releaseGroups, releaseLine, releasePill, releaseTypeLabel, sharedWith, type Release, type Track } from "@lib/music-books";
 	import { albumPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -71,6 +71,9 @@
 			</div>
 			<div class="min-w-0 flex-1">
 				<p class="truncate text-[14px] font-medium text-fg">{r.title}</p>
+				{#if sharedWith(r).length}
+					<p class="truncate text-[12px] text-fg-muted">{i18n.music_shared_with({ names: peopleList(sharedWith(r)) })}</p>
+				{/if}
 				<p class="truncate font-mono text-[11px] text-fg-subtle">
 					{up
 						? [releaseTypeLabel(r.type), formatDateShort(r.release_date)].filter(Boolean).join(" · ")

@@ -2439,6 +2439,8 @@
 	"music_fact_releases": "Releases",
 	"music_fact_since": "Active since",
 	"music_featuring": "feat. {name}",
+	"music_track_by": "by {name}",
+	"music_shared_with": "with {names}",
 	"music_group_albums": "Albums",
 	"music_group_others": "EPs & singles",
 	"music_group_live": "Live",
