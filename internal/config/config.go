@@ -373,6 +373,19 @@ type MetadataConfig struct {
 	// MusicBrainzURL is the server root, without /ws/2: a self-hosted mirror
 	// is reached at its own address instead of musicbrainz.org.
 	MusicBrainzURL string `koanf:"musicbrainz_url" validate:"required,http_url"`
+	// MusicBrainzInterval is the least time between two MusicBrainz calls:
+	// musicbrainz.org allows one a second, a mirror none ("0s").
+	MusicBrainzInterval string `koanf:"musicbrainz_interval" validate:"required"`
+}
+
+// MusicBrainzIntervalDuration parses MusicBrainzInterval, falling back to the
+// one second musicbrainz.org allows on an unparseable or negative value, so a
+// typo never lifts the limit against the public server.
+func (m MetadataConfig) MusicBrainzIntervalDuration() time.Duration {
+	if d, err := time.ParseDuration(m.MusicBrainzInterval); err == nil && d >= 0 {
+		return d
+	}
+	return time.Second
 }
 
 // EventsConfig governs the MediaEvent retention window. Old rows are deleted
@@ -1033,6 +1046,7 @@ func defaults() map[string]any {
 		"metadata.language":               "en",
 		"metadata.tmdb_region":            "FR",
 		"metadata.musicbrainz_url":        "https://musicbrainz.org",
+		"metadata.musicbrainz_interval":   "1s",
 		"otel.endpoint":                   "",
 		"otel.insecure":                   false,
 		"otel.sample_ratio":               0.05,

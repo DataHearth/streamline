@@ -11,6 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"golang.org/x/time/rate"
 
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
@@ -60,6 +61,26 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(got).To(Equal("http://mb.lan:5000/ws/2/artist"))
 	})
+
+	DescribeTable(
+		"paces calls by the configured interval, background at twice it",
+		func(raw string, limit rate.Limit, gap time.Duration) {
+			configtest.Setup(map[string]any{
+				"metadata": map[string]any{"musicbrainz_interval": raw},
+			})
+			l := NewMusicBrainz().limiter
+			Expect(l.lim.Limit()).To(Equal(limit))
+			Expect(l.gap).To(Equal(gap))
+		},
+		Entry("musicbrainz.org", "1s", rate.Every(time.Second), 2*time.Second),
+		Entry(
+			"a mirror",
+			"250ms",
+			rate.Every(250*time.Millisecond),
+			500*time.Millisecond,
+		),
+		Entry("a mirror without a limit", "0s", rate.Inf, time.Duration(0)),
+	)
 
 	Describe("SearchArtists", func() {
 		It("maps search hits and sends the mandatory User-Agent", func() {

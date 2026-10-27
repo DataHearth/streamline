@@ -55,8 +55,9 @@ var (
 )
 
 // MusicBrainz is the MusicProvider implementation. No API key; MusicBrainz
-// mandates a descriptive User-Agent and at most 1 request/second, shared by
-// every caller through one two-class limiter.
+// mandates a descriptive User-Agent and at most 1 request/second
+// (metadata.musicbrainz_interval, lifted for a mirror), shared by every
+// caller through one limiter.
 type MusicBrainz struct {
 	client  *http.Client
 	limiter *mbLimiter
@@ -71,13 +72,12 @@ type MusicBrainz struct {
 
 func NewMusicBrainz() *MusicBrainz {
 	c := *otelx.HTTPClient
+	m := config.Get().Metadata
+	interval := m.MusicBrainzIntervalDuration()
 	return &MusicBrainz{
 		client:  &c,
-		limiter: newMBLimiter(mbInterval, musicBackgroundGap),
-		baseURL: strings.TrimRight(
-			config.Get().Metadata.MusicBrainzURL,
-			"/",
-		) + "/ws/2",
+		limiter: newMBLimiter(interval, backgroundGapFactor*interval),
+		baseURL: strings.TrimRight(m.MusicBrainzURL, "/") + "/ws/2",
 	}
 }
 

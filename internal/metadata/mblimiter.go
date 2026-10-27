@@ -9,12 +9,10 @@ import (
 )
 
 const (
-	mbInterval = time.Second
-
-	// musicBackgroundGap is the least time between two background MusicBrainz
-	// calls, so bulk hydration spends at most half the budget even when nobody
-	// is interacting.
-	musicBackgroundGap = 2 * time.Second
+	// backgroundGapFactor sets the least time between two background
+	// MusicBrainz calls to that many intervals, so bulk hydration spends at
+	// most half the budget even when nobody is interacting.
+	backgroundGapFactor = 2
 
 	backgroundPoll = 100 * time.Millisecond
 )
@@ -26,7 +24,8 @@ type (
 
 // Background marks ctx as bulk work: the hydration worker, the credits sweep
 // and the trackless re-hydration. MusicBrainz calls made under it wait behind
-// any interactive request and keep musicBackgroundGap between themselves.
+// any interactive request and keep backgroundGapFactor intervals between
+// themselves.
 func Background(ctx context.Context) context.Context {
 	return context.WithValue(ctx, backgroundKey{}, true)
 }
@@ -50,7 +49,7 @@ func isPrefetch(ctx context.Context) bool {
 	return v
 }
 
-// mbLimiter is the one 1 req/s limiter every MusicBrainz call shares, with
+// mbLimiter is the one limiter every MusicBrainz call shares, with
 // three classes in front of it: an interactive caller takes the next token, a
 // prefetch caller takes one only while no interactive caller is waiting, and a
 // background caller only while neither is. A person on a screen therefore
