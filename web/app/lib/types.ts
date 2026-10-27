@@ -742,7 +742,7 @@ export type QueueEntry = {
 	// "held": the download finished and failed verification, so it is waiting on
 	// a decision rather than on the network. The only queue state whose next move
 	// belongs to a person.
-	status: "downloading" | "importing" | "paused" | "error" | "held";
+	status: "downloading" | "stalled" | "importing" | "paused" | "error" | "held";
 	title: string;
 	quality?: string;
 	release_group?: string;

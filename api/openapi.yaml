@@ -14342,7 +14342,8 @@ components:
           description: |
             "held" means the download finished but failed import verification
             and is waiting on a decision (POST /downloads/{id}/resolve).
-          enum: [downloading, importing, paused, error, held]
+            "stalled" means the client reports the download is not moving.
+          enum: [downloading, stalled, importing, paused, error, held]
         title: { type: string }
         quality: { type: string }
         release_group: { type: string }

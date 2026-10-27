@@ -579,7 +579,7 @@ func queueRank(status string) int {
 		return 1
 	case "error":
 		return 2
-	case "downloading":
+	case "downloading", "stalled":
 		return 3
 	default:
 		return 4
@@ -628,6 +628,8 @@ func liveQueueStatus(s TorrentStatus) string {
 	switch s {
 	case StatusPaused:
 		return "paused"
+	case StatusStalled:
+		return "stalled"
 	case StatusError:
 		return "error"
 	default:

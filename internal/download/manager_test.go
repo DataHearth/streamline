@@ -650,13 +650,18 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 					CreatedAt: now.Add(time.Minute),
 				},
 				{RecordID: 7, Status: "error", Progress: 0.1, CreatedAt: now},
+				{RecordID: 8, Status: "stalled", Progress: 0.5, CreatedAt: now},
 			}
 			sortQueue(entries)
 			ids := make([]uint32, 0, len(entries))
 			for _, e := range entries {
 				ids = append(ids, e.RecordID)
 			}
-			Expect(ids).To(Equal([]uint32{4, 5, 7, 3, 6, 1, 2}))
+			Expect(ids).To(Equal([]uint32{4, 5, 7, 3, 8, 6, 1, 2}))
+		})
+
+		It("keeps a stalled torrent stalled rather than downloading", func() {
+			Expect(liveQueueStatus(StatusStalled)).To(Equal("stalled"))
 		})
 
 		It("maps importing records to progress 1.0 without polling", func() {

@@ -2491,6 +2491,7 @@ const (
 	QueueEntryStatusHeld        QueueEntryStatus = "held"
 	QueueEntryStatusImporting   QueueEntryStatus = "importing"
 	QueueEntryStatusPaused      QueueEntryStatus = "paused"
+	QueueEntryStatusStalled     QueueEntryStatus = "stalled"
 )
 
 // Valid indicates whether the value is a known member of the QueueEntryStatus enum.
@@ -2505,6 +2506,8 @@ func (e QueueEntryStatus) Valid() bool {
 	case QueueEntryStatusImporting:
 		return true
 	case QueueEntryStatusPaused:
+		return true
+	case QueueEntryStatusStalled:
 		return true
 	default:
 		return false
@@ -7800,6 +7803,7 @@ type QueueEntry struct {
 
 	// Status "held" means the download finished but failed import verification
 	// and is waiting on a decision (POST /downloads/{id}/resolve).
+	// "stalled" means the client reports the download is not moving.
 	Status QueueEntryStatus `json:"status"`
 	Title  string           `json:"title"`
 
@@ -7815,6 +7819,7 @@ type QueueEntrySelectionState string
 
 // QueueEntryStatus "held" means the download finished but failed import verification
 // and is waiting on a decision (POST /downloads/{id}/resolve).
+// "stalled" means the client reports the download is not moving.
 type QueueEntryStatus string
 
 // ReidentifyResult defines model for ReidentifyResult.

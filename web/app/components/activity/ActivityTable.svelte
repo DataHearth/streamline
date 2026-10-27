@@ -132,6 +132,7 @@
 		error: 1,
 		failed: 1,
 		downloading: 2,
+		stalled: 2,
 		importing: 3,
 		paused: 4,
 		completed: 5,
