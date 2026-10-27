@@ -11,6 +11,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 type mbRoundTripper func(*http.Request) (*http.Response, error)
@@ -39,6 +41,24 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 		ctx = context.Background()
 		mb = NewMusicBrainz()
 		mb.limiter = newMBLimiter(0, 0)
+	})
+
+	It("sends requests to a configured mirror", func() {
+		configtest.Setup(map[string]any{
+			"metadata": map[string]any{"musicbrainz_url": "http://mb.lan:5000/"},
+		})
+		mb = NewMusicBrainz()
+		mb.limiter = newMBLimiter(0, 0)
+		var got string
+		mb.client.Transport = mbRoundTripper(
+			func(r *http.Request) (*http.Response, error) {
+				got = r.URL.Scheme + "://" + r.URL.Host + r.URL.Path
+				return jsonResponse(200, `{"artists":[]}`), nil
+			},
+		)
+		_, err := mb.SearchArtists(ctx, "nirvana")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(Equal("http://mb.lan:5000/ws/2/artist"))
 	})
 
 	Describe("SearchArtists", func() {

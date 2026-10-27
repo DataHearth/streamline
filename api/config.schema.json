@@ -684,6 +684,11 @@
         "tmdb_region": {
           "type": "string",
           "description": "ISO 3166-1 alpha-2 uppercase region code, e.g. \"FR\"."
+        },
+        "musicbrainz_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "MusicBrainz server root, without /ws/2 (default https://musicbrainz.org). Point it at a self-hosted mirror. Restart required."
         }
       }
     },

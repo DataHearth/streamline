@@ -23,12 +23,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/datahearth/streamline/internal/buildinfo"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
 const (
-	mbBaseURL = "https://musicbrainz.org/ws/2"
-
 	// maxMusicReleaseResponse bounds the heavy release call, whose
 	// relationship expansion of a large release outgrows maxProviderResponse's
 	// intent while staying far below it in practice.
@@ -61,6 +60,7 @@ var (
 type MusicBrainz struct {
 	client  *http.Client
 	limiter *mbLimiter
+	baseURL string
 
 	genreMu      sync.Mutex
 	genres       map[string]struct{}
@@ -74,6 +74,10 @@ func NewMusicBrainz() *MusicBrainz {
 	return &MusicBrainz{
 		client:  &c,
 		limiter: newMBLimiter(mbInterval, musicBackgroundGap),
+		baseURL: strings.TrimRight(
+			config.Get().Metadata.MusicBrainzURL,
+			"/",
+		) + "/ws/2",
 	}
 }
 
@@ -102,7 +106,7 @@ func (m *MusicBrainz) fetch(
 		return otelx.RecordSpanError(span, err)
 	}
 	req, err := http.NewRequestWithContext(
-		ctx, http.MethodGet, mbBaseURL+path+"?"+params.Encode(), nil,
+		ctx, http.MethodGet, m.baseURL+path+"?"+params.Encode(), nil,
 	)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
