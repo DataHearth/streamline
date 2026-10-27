@@ -124,8 +124,12 @@ func (m *MusicBrainz) fetch(
 			fmt.Errorf("musicbrainz: %s: %w", path, ErrNotFound))
 	case http.StatusServiceUnavailable, http.StatusTooManyRequests:
 		retry := mbDefaultRetryAfter
+		// MusicBrainz's busy 503 can carry Retry-After: 0, which taken at its
+		// word leaves the hydration worker retrying every 2s.
 		if v := resp.Header.Get("Retry-After"); v != "" {
-			retry = parseRetryAfter(v, time.Now())
+			if d := parseRetryAfter(v, time.Now()); d > 0 {
+				retry = d
+			}
 		}
 		slog.WarnContext(ctx, "musicbrainz rate limited",
 			"musicbrainz.endpoint", path, "http.status_code", resp.StatusCode,

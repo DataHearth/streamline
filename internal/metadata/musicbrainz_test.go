@@ -100,6 +100,20 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(limited.RetryAfter).To(Equal(time.Minute))
 		})
 
+		It("waits a minute when a 503 names a zero Retry-After", func() {
+			mb.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					resp := jsonResponse(503, `{}`)
+					resp.Header.Set("Retry-After", "0")
+					return resp, nil
+				},
+			)
+			_, err := mb.SearchArtists(ctx, "nirvana")
+			var limited *RateLimitedError
+			Expect(errors.As(err, &limited)).To(BeTrue())
+			Expect(limited.RetryAfter).To(Equal(time.Minute))
+		})
+
 		It("reads type, area, start year and the most voted real genre", func() {
 			genreCalls := 0
 			mb.client.Transport = mbRoundTripper(
