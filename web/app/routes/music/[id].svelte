@@ -157,7 +157,7 @@
 
 	let meta = $derived.by(() => {
 		if (!artist || !tally) return [];
-		const p: string[] = [releasesCount(tally.released)];
+		const p: string[] = [releasesCount(tally.listed)];
 		if (tally.upcoming) p.push(i18n.music_n_upcoming({ count: String(tally.upcoming) }));
 		p.push(tracksCount(artist.tracks_have));
 		if (artist.size) p.push(formatBytes(artist.size, ""));

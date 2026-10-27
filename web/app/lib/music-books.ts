@@ -389,7 +389,11 @@ export function qualityNote(r: Release): string {
 export function artistTally(a: Artist) {
 	const out = a.albums.filter((r) => r.status !== "upcoming");
 	return {
-		released: out.length,
+		listed: out.length,
+		// Owed releases only, as the status rollup counts them: the singles and
+		// live records a discography lists unmonitored kept a fully held
+		// artist at 10 / 62.
+		released: out.filter((r) => r.monitored || r.status === "available").length,
 		have: out.filter((r) => r.status === "available").length,
 		// What the missing search would look for: an unmonitored release is
 		// never searched, so it is not counted as wanted.
