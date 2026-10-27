@@ -256,6 +256,52 @@ var _ = g.Describe("browse", g.Label("integration"), func() {
 			Expect(entry["artist"]).To(Equal("Nirvana"))
 		})
 
+		g.It("names a song by its own credited artist on a split release", func() {
+			song := func() map[string]any {
+				g.GinkgoHelper()
+				return obj(
+					okResp(f.call("getSong", url.Values{"id": {tr(f.withFile)}})),
+					"song",
+				)
+			}
+			Expect(song()["artist"]).To(Equal("Nirvana"))
+
+			f.client.Track.UpdateOne(f.withFile).
+				SetArtistCredit("Guest").
+				ExecX(context.Background())
+			got := song()
+			Expect(got["artist"]).To(Equal("Guest"))
+			Expect(got["artistId"]).To(Equal(ar(guest)))
+			Expect(got["albumId"]).To(Equal(al(f.album)))
+		})
+
+		g.It("orders owned and co-albums together by date", func() {
+			ctx := context.Background()
+			store := db.New(f.client)
+			later := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+			_, err := store.RefreshArtist(ctx, guest.ID, db.RefreshArtistParams{
+				Name: "Guest", RefreshedAt: time.Now(),
+				Albums: []db.AlbumSeed{
+					{MBID: "rg-1", Title: "Nevermind"},
+					{MBID: "rg-g", Title: "Own", Type: "album", ReleaseDate: &later},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			own := f.client.Album.Query().Where(album.MbidEQ("rg-g")).OnlyX(ctx)
+			Expect(store.SetAlbumHydration(ctx, own.ID, db.HydrationParams{
+				Tracks: []db.TrackSeed{
+					{MBID: "g-1", Title: "Mine", Disc: 1, Position: 1},
+				},
+			}, time.Now())).To(Succeed())
+			f.client.MediaFile.Create().SetPath("/music/guest/01.flac").SetSize(1).
+				SetTrackID(own.QueryTracks().OnlyX(ctx).ID).ExecX(ctx)
+
+			albums := obj(okResp(f.call("getArtist", url.Values{"id": {ar(guest)}})), "artist")["album"].([]any)
+			Expect(albums).To(HaveLen(2))
+			Expect(albums[0].(map[string]any)["id"]).To(Equal(al(f.album)))
+			Expect(albums[1].(map[string]any)["id"]).To(Equal(al(own)))
+		})
+
 		g.It("counts a co-album's songs under the artist", func() {
 			got := obj(okResp(f.call("getSimilarSongs2", url.Values{
 				"id": {ar(guest)}, "count": {"10"},

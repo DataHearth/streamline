@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -92,6 +93,23 @@ func withListedAlbums(q *ent.ArtistQuery) *ent.ArtistQuery {
 	return q.WithAlbums(listedAlbums).WithCoAlbums(listedAlbums)
 }
 
+// byDate orders an artist's owned and co-albums together the way loadArtist
+// orders each edge: release date, undated first, then title.
+func byDate(albums []*ent.Album) []*ent.Album {
+	slices.SortStableFunc(albums, func(a, b *ent.Album) int {
+		switch {
+		case a.ReleaseDate == nil && b.ReleaseDate != nil:
+			return -1
+		case a.ReleaseDate != nil && b.ReleaseDate == nil:
+			return 1
+		case a.ReleaseDate != nil && !a.ReleaseDate.Equal(*b.ReleaseDate):
+			return a.ReleaseDate.Compare(*b.ReleaseDate)
+		}
+		return strings.Compare(a.Title, b.Title)
+	})
+	return albums
+}
+
 // albumOwner is the artist an album is filed under: its owner when loaded,
 // else the artist it was read through.
 func albumOwner(al *ent.Album, through *ent.Artist) *ent.Artist {
@@ -126,7 +144,7 @@ func byLatestFile(s *sql.Selector) {
 
 // songEdges loads what toSong reads.
 func songEdges(q *ent.TrackQuery) *ent.TrackQuery {
-	return q.WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
+	return q.WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist().WithCoArtists() }).
 		WithMediaFiles(liveFiles)
 }
 
@@ -245,7 +263,23 @@ func toSong(t *ent.Track, al *ent.Album, ar *ent.Artist, mf *ent.MediaFile) chil
 		Type:          "music",
 		MediaType:     "song",
 		MusicBrainzID: t.Mbid,
+	}.byTrackArtist(t, al, ar)
+}
+
+// byTrackArtist names a song of a split release by its own credited artist,
+// with that artist's id when the album is listed under them; a song credited
+// to the album's owner keeps it.
+func (c child) byTrackArtist(t *ent.Track, al *ent.Album, owner *ent.Artist) child {
+	if t.ArtistCredit == "" || strings.EqualFold(t.ArtistCredit, owner.Name) {
+		return c
 	}
+	c.Artist, c.ArtistID = t.ArtistCredit, ""
+	for _, co := range al.Edges.CoArtists {
+		if strings.EqualFold(co.Name, t.ArtistCredit) {
+			c.ArtistID = artistID(co.ID)
+		}
+	}
+	return c
 }
 
 // songOf renders a track loaded through songEdges.
@@ -432,6 +466,7 @@ func (h *Handler) loadAlbum(ctx context.Context, id uint32) (*ent.Album, error) 
 	al, err := h.ent.Album.Query().
 		Where(album.IDEQ(id)).
 		WithArtist().
+		WithCoArtists().
 		WithTracks(func(q *ent.TrackQuery) {
 			q.Where(playable()).Order(track.ByDisc(), track.ByPosition()).
 				WithMediaFiles(liveFiles)
@@ -457,7 +492,7 @@ func (h *Handler) getArtist(
 		artistID3: toArtist(ar),
 		Album:     make([]albumID3, 0, len(db.ArtistAlbums(ar))),
 	}
-	for _, al := range db.ArtistAlbums(ar) {
+	for _, al := range byDate(db.ArtistAlbums(ar)) {
 		out.Album = append(out.Album, toAlbum(al, albumOwner(al, ar)))
 	}
 	return h.respond(w, r, u, &body{Artist: out})
@@ -522,7 +557,7 @@ func (h *Handler) getMusicDirectory(
 			return err
 		}
 		dir = &directory{ID: artistID(ar.ID), Name: ar.Name, Child: []child{}}
-		for _, al := range db.ArtistAlbums(ar) {
+		for _, al := range byDate(db.ArtistAlbums(ar)) {
 			c := toAlbumChild(al, albumOwner(al, ar))
 			c.Parent = dir.ID
 			dir.Child = append(dir.Child, c)
