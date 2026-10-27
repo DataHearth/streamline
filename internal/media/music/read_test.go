@@ -199,6 +199,26 @@ var _ = Describe(
 		})
 
 		Describe("Detail", func() {
+			It("shows a co-album on the co-artist's page and status", func() {
+				queue()
+				_, albums := e.seedArtist("Nirvana",
+					albumSeed{mbid: "rg-1", title: "Nevermind", monitored: true})
+				b, _ := e.seedArtist("Guest",
+					albumSeed{mbid: "rg-9", title: "Own", tracks: []string{"A"}})
+				_, err := e.store.RefreshArtist(e.ctx, b.ID, db.RefreshArtistParams{
+					Name: "Guest", RefreshedAt: time.Now(),
+					Albums: []db.AlbumSeed{{MBID: "rg-1", Title: "Nevermind"}},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				v, err := e.svc.Detail(e.ctx, b.ID, "en")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(v.AlbumCount).To(Equal(uint32(2)))
+				ids := []uint32{v.Albums[0].Album.ID, v.Albums[1].Album.ID}
+				Expect(ids).To(ContainElement(albums[0].ID))
+				Expect(v.Status).To(Equal("wanted"))
+			})
+
 			It(
 				"reads the full tree with the overview in the requested language",
 				func() {

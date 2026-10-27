@@ -52,7 +52,8 @@ func withBookContext(q *ent.BookQuery) {
 // order, each with the files it already holds. Mirrors FindAlbumByID: the
 // album importer matches downloaded files to tracks and skips covered ones.
 func withAlbumContext(q *ent.AlbumQuery) {
-	q.WithArtist().WithTracks(func(tq *ent.TrackQuery) {
+	withAlbumArtists(q)
+	q.WithTracks(func(tq *ent.TrackQuery) {
 		tq.Order(ent.Asc(track.FieldDisc), ent.Asc(track.FieldPosition)).
 			WithMediaFiles()
 	})

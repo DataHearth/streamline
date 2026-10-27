@@ -200,6 +200,9 @@ type Store interface {
 		maxGrabFailures uint8,
 	) ([]*ent.Album, error)
 	DeleteArtist(ctx context.Context, id uint32) error
+	// HandOverSharedAlbums gives each shared album the artist owns to its
+	// lowest-id co-artist and returns the moved album ids.
+	HandOverSharedAlbums(ctx context.Context, artistID uint32) ([]uint32, error)
 	// ListEligibleAlbumsForSync returns wanted, monitored, released, hydrated
 	// albums under the failure cap and past cooldown with no in-flight record,
 	// least recently searched first. The artist is eager-loaded.

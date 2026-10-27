@@ -81,12 +81,12 @@ func (s *Service) List(
 	for i, r := range rows {
 		v := ArtistView{
 			Artist:     r,
-			Status:     artistStatusAt(r.Edges.Albums, p.Now),
-			AlbumCount: numeric.SaturateU32(len(r.Edges.Albums)),
+			Status:     artistStatusAt(db.ArtistAlbums(r), p.Now),
+			AlbumCount: numeric.SaturateU32(len(db.ArtistAlbums(r))),
 			Hydrating:  hydrating[r.ID],
 		}
 		v.Overview, v.OverviewSource = pickOverview(r, "en")
-		albums := slices.Clone(r.Edges.Albums)
+		albums := db.ArtistAlbums(r)
 		slices.SortStableFunc(albums, byNewest)
 		for _, a := range albums {
 			t := tile(a, rollups[a.ID], progress, p.Now)
@@ -156,7 +156,7 @@ func (s *Service) Detail(
 	}
 	progress := s.progressByAlbum(ctx)
 
-	albums := slices.Clone(row.Edges.Albums)
+	albums := db.ArtistAlbums(row)
 	slices.SortStableFunc(albums, byNewest)
 	people, err := s.libraryPeople(ctx, row, albums)
 	if err != nil {

@@ -1069,6 +1069,43 @@ func (db *DB) SetAlbumStatus(
 	return n > 0, err
 }
 
+// HandOverSharedAlbums gives every album the artist owns that another artist
+// is co-credited on to its lowest-id co-artist, in one transaction, and
+// returns the moved albums' ids: deleting the owner must not delete an album
+// that is still another artist's. The files stay where they are.
+func (db *DB) HandOverSharedAlbums(
+	ctx context.Context,
+	artistID uint32,
+) ([]uint32, error) {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Album.Query().
+		Where(album.HasArtistWith(artist.IDEQ(artistID)), album.HasCoArtists()).
+		WithCoArtists(func(q *ent.ArtistQuery) {
+			q.Select(artist.FieldID).Order(ent.Asc(artist.FieldID))
+		}).
+		All(ctx)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	moved := make([]uint32, 0, len(rows))
+	for _, a := range rows {
+		heir := a.Edges.CoArtists[0].ID
+		if err := tx.Album.UpdateOne(a).
+			SetArtistID(heir).
+			RemoveCoArtistIDs(heir).
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+		moved = append(moved, a.ID)
+	}
+	return moved, tx.Commit()
+}
+
 func (db *DB) DeleteArtist(ctx context.Context, id uint32) error {
 	return db.client.Artist.DeleteOneID(id).Exec(ctx)
 }

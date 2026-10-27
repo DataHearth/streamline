@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
@@ -85,7 +86,7 @@ func (s *Service) ArtistPackFiles(
 
 	// The tree carries tracks and files; the waiting list says which albums
 	// the grab links, and so which the import matches folders against.
-	all := art.Edges.Albums
+	all := db.ArtistAlbums(art)
 	byID := make(map[uint32]*ent.Album, len(all))
 	for _, a := range all {
 		byID[a.ID] = a

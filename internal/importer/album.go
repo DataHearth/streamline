@@ -300,6 +300,9 @@ func (w *Worker) importAlbumFiles(
 		"album.id", alb.ID, "artist.id", artist.ID, "files", len(rows))
 
 	w.markRequestsAvailableByMBID(ctx, "artist", artist.Mbid)
+	for _, co := range alb.Edges.CoArtists {
+		w.markRequestsAvailableByMBID(ctx, "artist", co.Mbid)
+	}
 	w.markRequestsAvailableByMBID(ctx, "album", alb.Mbid)
 	changed = mediaFilePaths(replaced)
 	for _, r := range rows {

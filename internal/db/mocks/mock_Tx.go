@@ -9773,6 +9773,74 @@ func (_c *MockTx_GetRequest_Call) RunAndReturn(run func(ctx context.Context, id 
 	return _c
 }
 
+// HandOverSharedAlbums provides a mock function for the type MockTx
+func (_mock *MockTx) HandOverSharedAlbums(ctx context.Context, artistID uint32) ([]uint32, error) {
+	ret := _mock.Called(ctx, artistID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HandOverSharedAlbums")
+	}
+
+	var r0 []uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]uint32, error)); ok {
+		return returnFunc(ctx, artistID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []uint32); ok {
+		r0 = returnFunc(ctx, artistID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]uint32)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, artistID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_HandOverSharedAlbums_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandOverSharedAlbums'
+type MockTx_HandOverSharedAlbums_Call struct {
+	*mock.Call
+}
+
+// HandOverSharedAlbums is a helper method to define mock.On call
+//   - ctx context.Context
+//   - artistID uint32
+func (_e *MockTx_Expecter) HandOverSharedAlbums(ctx any, artistID any) *MockTx_HandOverSharedAlbums_Call {
+	return &MockTx_HandOverSharedAlbums_Call{Call: _e.mock.On("HandOverSharedAlbums", ctx, artistID)}
+}
+
+func (_c *MockTx_HandOverSharedAlbums_Call) Run(run func(ctx context.Context, artistID uint32)) *MockTx_HandOverSharedAlbums_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_HandOverSharedAlbums_Call) Return(uint32s []uint32, err error) *MockTx_HandOverSharedAlbums_Call {
+	_c.Call.Return(uint32s, err)
+	return _c
+}
+
+func (_c *MockTx_HandOverSharedAlbums_Call) RunAndReturn(run func(ctx context.Context, artistID uint32) ([]uint32, error)) *MockTx_HandOverSharedAlbums_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // HoldDownloadRecord provides a mock function for the type MockTx
 func (_mock *MockTx) HoldDownloadRecord(ctx context.Context, id uint32, reasons []schema.HoldReason) error {
 	ret := _mock.Called(ctx, id, reasons)

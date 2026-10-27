@@ -159,6 +159,30 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			).To(Equal(b.ID))
 		})
 
+		It("hands a shared album to a co-artist", func() {
+			a := seed()
+			mk := func(mbid string) *ent.Artist {
+				GinkgoHelper()
+				x, err := store.CreateArtist(ctx, CreateArtistParams{
+					MBID: mbid, Name: mbid,
+					Albums: []AlbumSeed{{MBID: "rg-1", Title: "Nevermind"}},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				return x
+			}
+			b, c := mk("a-b"), mk("a-c")
+
+			moved, err := store.HandOverSharedAlbums(ctx, a.ID)
+			Expect(err).NotTo(HaveOccurred())
+			rg1 := albumByMBID("rg-1")
+			Expect(moved).To(Equal([]uint32{rg1.ID}))
+			Expect(rg1.QueryArtist().OnlyIDX(ctx)).To(Equal(b.ID))
+			Expect(rg1.QueryCoArtists().IDsX(ctx)).To(Equal([]uint32{c.ID}))
+			Expect(
+				albumByMBID("rg-2").QueryArtist().OnlyIDX(ctx),
+			).To(Equal(a.ID), "an unshared album stays")
+		})
+
 		It("orders the albums newest first and the tracks by position", func() {
 			a, err := store.FindArtistByID(ctx, seed().ID)
 			Expect(err).NotTo(HaveOccurred())

@@ -486,6 +486,19 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 		))
 	defer span.End()
 
+	if _, err := s.db.FindArtistByID(ctx, id); err != nil {
+		return otelx.RecordSpanError(span, notFound(err))
+	}
+	// Before the files: a shared album is still another artist's, so it
+	// leaves with its files instead of being deleted with this one.
+	moved, err := s.db.HandOverSharedAlbums(ctx, id)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if len(moved) > 0 {
+		slog.InfoContext(ctx, "shared albums handed to a co-artist",
+			"artist.id", id, "albums", moved)
+	}
 	row, err := s.db.FindArtistByID(ctx, id)
 	if err != nil {
 		return otelx.RecordSpanError(span, notFound(err))
