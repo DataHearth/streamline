@@ -320,7 +320,10 @@ func (s *Service) resolve(ctx context.Context, kind Kind, key string) error {
 	_, err, _ := s.flight.Do(string(kind)+"/"+key, func() (any, error) {
 		return nil, s.fetch(ctx, kind, key)
 	})
-	if err != nil && !errors.Is(err, context.Canceled) {
+	// A provider asking to be left alone has said nothing about the art: the
+	// next request tries again rather than an hour later.
+	if err != nil && !errors.Is(err, context.Canceled) &&
+		!errors.Is(err, metadata.ErrRateLimited) {
 		s.markFailed(sk)
 	}
 	return err

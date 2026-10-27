@@ -72,6 +72,7 @@ func (d *fakeDeezer) SearchArtists(
 type fakeLinks struct {
 	art    map[string]metadata.ArtistArt
 	shared map[uint32]bool
+	err    error
 	calls  atomic.Int32
 }
 
@@ -80,7 +81,7 @@ func (l *fakeLinks) ArtistArt(
 	mbid string,
 ) (metadata.ArtistArt, error) {
 	l.calls.Add(1)
-	return l.art[mbid], nil
+	return l.art[mbid], l.err
 }
 
 func (l *fakeLinks) DeezerArtistShared(_ context.Context, id uint32) (bool, error) {
@@ -457,6 +458,19 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 				).To(Equal(http.StatusNotFound))
 				Expect(fetched).To(BeEmpty())
 				Expect(links.calls.Load()).To(Equal(int32(1)))
+			})
+
+			It("does not remember a miss MusicBrainz rate limited", func() {
+				links.err = &metadata.RateLimitedError{RetryAfter: time.Second}
+				Expect(
+					get("artists", artistMBID).Code,
+				).To(Equal(http.StatusNotFound))
+
+				links.err = nil
+				links.art[artistMBID] = metadata.ArtistArt{DeezerID: 2}
+
+				Expect(get("artists", artistMBID).Code).To(Equal(http.StatusOK))
+				Expect(links.calls.Load()).To(Equal(int32(2)))
 			})
 
 			It("retries at once when a lookup remembers a Deezer link", func() {

@@ -583,7 +583,10 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 		   "book_series": [
 		     {"position": 1, "book": {"id": 21, "users_count": 10, "compilation": true, "cached_image": "https://img/21.jpg"}},
 		     {"position": 1, "book": {"id": 22, "users_count": null, "compilation": null, "cached_image": null}},
-		     {"position": 2, "book": null}]}]}}`
+		     {"position": 2, "book": null}],
+		   "loose": [
+		     {"position": null, "book": {"id": 31, "users_count": 117, "compilation": false, "cached_image": {"url": "https://img/31.jpg"}}},
+		     {"position": null, "book": null}]}]}}`
 
 		It("reads many series in one request, ordered by id", func() {
 			hc.client.Transport = srv.transport(body)
@@ -616,7 +619,15 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 					},
 					{Position: 1, BookHardcoverID: 22},
 				},
+				Loose: []SeriesLookupVolume{
+					{
+						BookHardcoverID: 31,
+						UsersCount:      117,
+						ImageURL:        "https://img/31.jpg",
+					},
+				},
 			}))
+			Expect(srv.queries[0]).To(ContainSubstring("loose: book_series("))
 			Expect(recs[1].HardcoverID).To(Equal(uint32(60563)))
 			Expect(recs[1].Slug).To(Equal("greater-foundation-universe"))
 			Expect(recs[1].Ongoing).To(BeNil())

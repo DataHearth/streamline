@@ -332,7 +332,7 @@
 								</div>
 								<p class="mt-1.5 truncate text-[12.5px] font-medium text-fg {isArtist ? 'text-center' : ''}">{r.title}</p>
 								<p class="mt-0.5 truncate font-mono text-[10.5px] text-fg-subtle {isArtist ? 'text-center' : ''}">
-									{isArtist ? (r.artist?.genre ?? "—") : (r.subtitle ?? "—")}
+									{(isArtist ? r.aside : undefined) ?? r.subtitle ?? "—"}
 								</p>
 								{#if r.series && r.book?.volumes}
 									<p class="mt-1 truncate font-mono text-[10px] uppercase tracking-[0.1em] text-accent-text">
