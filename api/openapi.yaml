@@ -12535,6 +12535,8 @@ components:
         - tmdb_api_key_set
         - tvdb_api_key_set
         - hardcover_api_key_set
+        - musicbrainz_url
+        - musicbrainz_interval
         - restart_required
       properties:
         language:
@@ -12542,6 +12544,16 @@ components:
           description: >-
             BCP-47 tag. The language TMDB and TVDB answer in — so also the
             titles the library stores and matches releases against.
+        musicbrainz_url:
+          type: string
+          description: >-
+            MusicBrainz server root, without /ws/2. https://musicbrainz.org, or
+            a self-hosted mirror.
+        musicbrainz_interval:
+          type: string
+          description: >-
+            Go duration: the least time between two MusicBrainz calls. 1s is
+            what musicbrainz.org allows; 0s removes the limit, for a mirror.
         tmdb_region:
           type: string
           description: Two-letter uppercase region code, for TMDB release dates.
@@ -12586,6 +12598,12 @@ components:
         hardcover_api_key:
           type: string
           format: password
+        musicbrainz_url:
+          type: string
+          description: An http(s) URL; anything else answers 422.
+        musicbrainz_interval:
+          type: string
+          description: A non-negative Go duration; anything else answers 422.
 
     SystemConfigView:
       type: object

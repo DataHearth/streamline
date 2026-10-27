@@ -6285,9 +6285,15 @@ type MediaServerUpdateServerType string
 type MetadataConfigPatch struct {
 	HardcoverApiKey *string `json:"hardcover_api_key,omitempty"`
 	Language        *string `json:"language,omitempty"`
-	TmdbApiKey      *string `json:"tmdb_api_key,omitempty"`
-	TmdbRegion      *string `json:"tmdb_region,omitempty"`
-	TvdbApiKey      *string `json:"tvdb_api_key,omitempty"`
+
+	// MusicbrainzInterval A non-negative Go duration; anything else answers 422.
+	MusicbrainzInterval *string `json:"musicbrainz_interval,omitempty"`
+
+	// MusicbrainzUrl An http(s) URL; anything else answers 422.
+	MusicbrainzUrl *string `json:"musicbrainz_url,omitempty"`
+	TmdbApiKey     *string `json:"tmdb_api_key,omitempty"`
+	TmdbRegion     *string `json:"tmdb_region,omitempty"`
+	TvdbApiKey     *string `json:"tvdb_api_key,omitempty"`
 }
 
 // MetadataConfigView defines model for MetadataConfigView.
@@ -6298,6 +6304,12 @@ type MetadataConfigView struct {
 
 	// Language BCP-47 tag. The language TMDB and TVDB answer in — so also the titles the library stores and matches releases against.
 	Language string `json:"language"`
+
+	// MusicbrainzInterval Go duration: the least time between two MusicBrainz calls. 1s is what musicbrainz.org allows; 0s removes the limit, for a mirror.
+	MusicbrainzInterval string `json:"musicbrainz_interval"`
+
+	// MusicbrainzUrl MusicBrainz server root, without /ws/2. https://musicbrainz.org, or a self-hosted mirror.
+	MusicbrainzUrl string `json:"musicbrainz_url"`
 
 	// RestartRequired True when a metadata change is pending a process restart. The same process-wide flag OIDC provider mutations set.
 	RestartRequired bool `json:"restart_required"`

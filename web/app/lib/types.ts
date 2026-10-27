@@ -989,6 +989,8 @@ export type MetadataConfig = {
 	tmdb_api_key_file_managed?: boolean;
 	tvdb_api_key_file_managed?: boolean;
 	hardcover_api_key_file_managed?: boolean;
+	musicbrainz_url: string;
+	musicbrainz_interval: string;
 	restart_required: boolean;
 };
 
@@ -1038,6 +1040,8 @@ export type MetadataConfigPatch = {
 	tmdb_api_key?: string;
 	tvdb_api_key?: string;
 	hardcover_api_key?: string;
+	musicbrainz_url?: string;
+	musicbrainz_interval?: string;
 };
 
 export type ProbeConfig = {

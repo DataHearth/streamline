@@ -149,7 +149,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `transcoding.{enabled,max_concurrent,max_failures,defer_seeding,hw_accel,hw_device,verify.*}` | ✅ Read on every worker tick — no restart | Settings → Transcoding |
 | `quality_profiles[].transcode` | ⚠️ API and YAML only — the profile form does not edit it | — |
 | `events.retention` | ✅ Applies on the next cleanup run | Settings → General |
-| `metadata.*` | ⚠️ Accepted immediately, but the TMDB, TVDB and Hardcover clients are built at boot — restart required | Settings → Metadata |
+| `metadata.*` | ⚠️ Accepted immediately, but the TMDB, TVDB, Hardcover and MusicBrainz clients are built at boot — restart required | Settings → Metadata |
 | `log.*`, `otel.endpoint` | ⚠️ Accepted immediately, but the log handlers and OTLP exporters are built at boot — restart required | Settings → General |
 | OIDC providers | ⚠️ CRUD works, but only loaded at startup — restart required | Settings → Single Sign-On |
 | Everything else | ❌ File only, restart required | — |
@@ -343,8 +343,8 @@ All values are Go duration strings, runtime-editable, pausable and runnable on d
 | `metadata.hardcover_api_key` | string | `""` | **Required for books.** Settable in Settings → Metadata (write-only, restart required) |
 | `metadata.language` | BCP-47 | `en` | Empty lets the provider pick its own default |
 | `metadata.tmdb_region` | ISO 3166-1 α-2 | `FR` | Uppercase. Drives which country's digital release dates feed the calendar — set it to yours |
-| `metadata.musicbrainz_url` | URL | `https://musicbrainz.org` | The MusicBrainz server root, without `/ws/2`. Point it at a [self-hosted mirror](https://musicbrainz.org/doc/MusicBrainz_Server/Setup) (e.g. `http://musicbrainz:5000`) to stop sharing musicbrainz.org's load shedding. File only, restart required |
-| `metadata.musicbrainz_interval` | duration | `1s` | Least time between two MusicBrainz calls; background work (filling in tracks and credits) keeps twice that. `1s` is what musicbrainz.org allows; lower it, or set `0s` for no limit, **only** against your own mirror. File only, restart required |
+| `metadata.musicbrainz_url` | URL | `https://musicbrainz.org` | The MusicBrainz server root, without `/ws/2`. Point it at a [self-hosted mirror](https://musicbrainz.org/doc/MusicBrainz_Server/Setup) (e.g. `http://musicbrainz:5000`) to stop sharing musicbrainz.org's load shedding. Settable in Settings → Metadata, restart required |
+| `metadata.musicbrainz_interval` | duration | `1s` | Least time between two MusicBrainz calls; background work (filling in tracks and credits) keeps twice that. `1s` is what musicbrainz.org allows; lower it, or set `0s` for no limit, **only** against your own mirror. Settable in Settings → Metadata, restart required |
 
 All three API keys have `_file` twins.
 
