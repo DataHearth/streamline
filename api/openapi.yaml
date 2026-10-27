@@ -5256,12 +5256,18 @@ paths:
     post:
       operationId: clearCompletedHistory
       summary: Delete all completed history records.
+      description: |
+        A record whose torrent an enabled download client still lists is
+        kept: without it, the next adoption pass would file that torrent as
+        a proposal. Nothing is deleted when a client cannot be listed (503).
       tags: [activity]
       responses:
         "200":
           $ref: "#/components/responses/ClearCompletedResult"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /activity/pending:
     get:

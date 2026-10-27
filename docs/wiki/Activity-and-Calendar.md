@@ -107,7 +107,7 @@ Filter by event type or by title, and page back through time. This is where you 
 
 Select entries the same way as on the queue to **remove** several history records at once; the titles and their files are not touched.
 
-**Clear completed** tidies out successful entries and leaves the failures. Events also age out on their own after `events.retention` (default 90 days).
+**Clear completed** tidies out successful entries and leaves the failures. An entry whose torrent is still seeding stays, completed or failed, both here and in the automatic clean-up (completed entries after 30 days, failed ones after 14): without it, Streamline would no longer recognise the torrent as its own and list it under *Needs attention*. Events also age out on their own after `events.retention` (default 90 days).
 
 ---
 

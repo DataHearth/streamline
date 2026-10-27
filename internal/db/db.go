@@ -764,6 +764,7 @@ type Store interface {
 	DeleteFailedDownloadRecordsBefore(
 		ctx context.Context,
 		cutoff time.Time,
+		keepHashes []string,
 	) (int, error)
 	ListActiveDownloadRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
 	FindActiveDownloadRecordByID(
@@ -806,7 +807,10 @@ type Store interface {
 		cursor string,
 	) (*DownloadHistoryResult, error)
 	DeleteDownloadRecord(ctx context.Context, id uint32) error
-	DeleteAllCompletedDownloadRecords(ctx context.Context) (int, error)
+	DeleteAllCompletedDownloadRecords(
+		ctx context.Context,
+		keepHashes []string,
+	) (int, error)
 	RevertMovieToWantedIfNoFile(ctx context.Context, movieID uint32) error
 	RevertOrphanedDownloadingEpisodes(ctx context.Context) (int, error)
 	RevertOrphanedDownloadingAlbumsAndBooks(ctx context.Context) (int, error)

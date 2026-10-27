@@ -1777,24 +1777,30 @@ func (d *download) ReconcileStrandedMedia(ctx context.Context) error {
 // failed records past failedRecordRetention. Both deletes run independently;
 // one failing does not block the other. Errors are joined.
 //
-// A completed record whose torrent the builtin engine still holds is kept
-// however old it is: it is RemoveSeedCompleteTorrents' only permission to
-// reap that torrent, and a seed_time at or past the retention window would
-// otherwise lose the record first and strand the files for good.
+// A record whose torrent an enabled client still lists is kept however old it
+// is. Without it the next adoption pass finds a managed torrent no record
+// claims and files it as a proposal: a music or book torrent as
+// "unidentified", for a title the library may already hold. A completed
+// builtin record is also RemoveSeedCompleteTorrents' only permission to reap
+// its torrent. When a client cannot be listed nothing is purged, since any of
+// its torrents could be one of the records.
 func (d *download) PurgeOldRecords(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "download.purge_old_records")
 	defer span.End()
 
-	now := time.Now()
-	var compN int
-	keep, compErr := d.builtinTorrentHashes(ctx)
-	if compErr == nil {
-		compN, compErr = d.db.DeleteCompletedDownloadRecordsBefore(
-			ctx, now.Add(-completedRecordRetention), keep,
-		)
+	live := d.SeedingTorrents(ctx)
+	if !live.Complete {
+		return otelx.RecordSpanError(span, errors.New(
+			"a download client could not be listed; old records kept",
+		))
 	}
+	keep := live.Hashes()
+	now := time.Now()
+	compN, compErr := d.db.DeleteCompletedDownloadRecordsBefore(
+		ctx, now.Add(-completedRecordRetention), keep,
+	)
 	failN, failErr := d.db.DeleteFailedDownloadRecordsBefore(
-		ctx, now.Add(-failedRecordRetention),
+		ctx, now.Add(-failedRecordRetention), keep,
 	)
 
 	span.SetAttributes(attribute.Int("cleanup.deleted_count", compN+failN))
@@ -1802,27 +1808,7 @@ func (d *download) PurgeOldRecords(ctx context.Context) error {
 		slog.InfoContext(ctx, "cleanup deleted download records",
 			"completed", compN, "failed", failN)
 	}
-	return errors.Join(compErr, failErr)
-}
-
-func (d *download) builtinTorrentHashes(ctx context.Context) ([]string, error) {
-	dc, ok := config.BuiltinDownloadClient()
-	if !ok {
-		return nil, nil
-	}
-	client, err := d.buildClient(dc)
-	if err != nil {
-		return nil, fmt.Errorf("build builtin client: %w", err)
-	}
-	torrents, err := client.ListTorrents(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list builtin torrents: %w", err)
-	}
-	hashes := make([]string, len(torrents))
-	for i, t := range torrents {
-		hashes[i] = t.Hash
-	}
-	return hashes, nil
+	return otelx.RecordSpanError(span, errors.Join(compErr, failErr))
 }
 
 // PurgeOrphanedTorrents deletes "downloading" records whose torrent is no

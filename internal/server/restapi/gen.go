@@ -21780,6 +21780,20 @@ func (response ClearCompletedHistory403JSONResponse) VisitClearCompletedHistoryR
 	return err
 }
 
+type ClearCompletedHistory503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ClearCompletedHistory503JSONResponse) VisitClearCompletedHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteHistoryItemRequestObject struct {
 	Id ResourceID `json:"id"`
 }
