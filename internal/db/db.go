@@ -723,6 +723,8 @@ type Store interface {
 		reason string,
 		requeue bool,
 	) error
+	RejectDownloadingRecord(ctx context.Context, id uint32, reason string) error
+	ListDownloadingAlbumRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
 	RecordImportSuccess(ctx context.Context, p RecordImportSuccessParams) error
 	RecordEpisodeImportSuccess(
 		ctx context.Context,

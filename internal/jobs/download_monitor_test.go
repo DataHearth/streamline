@@ -32,6 +32,7 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 	})
 
 	It("enqueues each completed download then runs adoption", func() {
+		checker.EXPECT().RejectCueImages(mock.Anything).Return(nil).Once()
 		checker.EXPECT().
 			CheckStatus(mock.Anything).
 			Return([]download.CompletedDownload{
@@ -52,6 +53,7 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 	})
 
 	It("enqueues adopted record ids after the completion pass", func() {
+		checker.EXPECT().RejectCueImages(mock.Anything).Return(nil).Once()
 		checker.EXPECT().CheckStatus(mock.Anything).Return(nil, nil).Once()
 		checker.EXPECT().ReconcileStrandedMedia(mock.Anything).Return(nil).Once()
 		reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
@@ -64,6 +66,7 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 	})
 
 	It("returns nil and enqueues nothing on an empty result", func() {
+		checker.EXPECT().RejectCueImages(mock.Anything).Return(nil).Once()
 		checker.EXPECT().CheckStatus(mock.Anything).Return(nil, nil).Once()
 		checker.EXPECT().ReconcileStrandedMedia(mock.Anything).Return(nil).Once()
 		reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
@@ -74,6 +77,7 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 	})
 
 	It("swallows a reconcile failure (completion pass must not die)", func() {
+		checker.EXPECT().RejectCueImages(mock.Anything).Return(nil).Once()
 		checker.EXPECT().CheckStatus(mock.Anything).Return(nil, nil).Once()
 		checker.EXPECT().ReconcileStrandedMedia(mock.Anything).
 			Return(errors.New("reconcile boom")).Once()
@@ -85,6 +89,7 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 	})
 
 	It("swallows an adoption failure (completion pass must not die)", func() {
+		checker.EXPECT().RejectCueImages(mock.Anything).Return(nil).Once()
 		checker.EXPECT().CheckStatus(mock.Anything).Return(nil, nil).Once()
 		checker.EXPECT().ReconcileStrandedMedia(mock.Anything).Return(nil).Once()
 		reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
@@ -96,6 +101,7 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 	})
 
 	It("swallows a seed-reap failure (adoption must still run)", func() {
+		checker.EXPECT().RejectCueImages(mock.Anything).Return(nil).Once()
 		checker.EXPECT().CheckStatus(mock.Anything).Return(nil, nil).Once()
 		checker.EXPECT().ReconcileStrandedMedia(mock.Anything).Return(nil).Once()
 		reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
@@ -106,10 +112,30 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 	})
 
 	It("propagates checker error and skips adoption + enqueue", func() {
+		checker.EXPECT().RejectCueImages(mock.Anything).Return(nil).Once()
 		boom := errors.New("poll failed")
 		checker.EXPECT().CheckStatus(mock.Anything).Return(nil, boom).Once()
 
 		err := DownloadMonitor(checker, reaper, adopter, enq)(ctx)
 		Expect(err).To(MatchError(boom))
 	})
+
+	It(
+		"rejects CD images before the completion pass and survives its failure",
+		func() {
+			reject := checker.EXPECT().RejectCueImages(mock.Anything).
+				Return(errors.New("reject boom")).Once()
+			checker.EXPECT().CheckStatus(mock.Anything).Return(nil, nil).Once().
+				NotBefore(reject)
+			checker.EXPECT().ReconcileStrandedMedia(mock.Anything).Return(nil).Once()
+			reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
+				Return(nil).Once()
+			adopter.EXPECT().
+				AdoptManualTorrents(mock.Anything).
+				Return(nil, nil).
+				Once()
+
+			Expect(DownloadMonitor(checker, reaper, adopter, enq)(ctx)).To(Succeed())
+		},
+	)
 })

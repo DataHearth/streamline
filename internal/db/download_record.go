@@ -724,7 +724,56 @@ func (db *DB) FailHeldDownloadRecord(
 	if err != nil {
 		return err
 	}
+	return db.rejectRecord(ctx, rec, reason, requeue)
+}
 
+// RejectDownloadingRecord fails a record still downloading as rejected and
+// sends what it was for back to wanted: a release found unimportable before it
+// finished, which the automatic searches must not pick again.
+func (db *DB) RejectDownloadingRecord(
+	ctx context.Context,
+	id uint32,
+	reason string,
+) error {
+	rec, err := db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.ID(id),
+			downloadrecord.StatusEQ(downloadrecord.StatusDownloading),
+		).
+		WithMovie().
+		WithAnchorEpisode(withEpisodeContext).
+		WithAlbum(withAlbumContext).
+		WithArtist().
+		WithAlbums(withAlbumContext).
+		Only(ctx)
+	if err != nil {
+		return err
+	}
+	return db.rejectRecord(ctx, rec, reason, true)
+}
+
+// ListDownloadingAlbumRecords returns the album records still downloading,
+// each with its album's id.
+func (db *DB) ListDownloadingAlbumRecords(
+	ctx context.Context,
+) ([]*ent.DownloadRecord, error) {
+	return db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.StatusEQ(downloadrecord.StatusDownloading),
+			downloadrecord.HasAlbum(),
+			downloadrecord.TorrentHashNEQ(""),
+		).
+		WithAlbum(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
+		All(ctx)
+}
+
+func (db *DB) rejectRecord(
+	ctx context.Context,
+	rec *ent.DownloadRecord,
+	reason string,
+	requeue bool,
+) error {
+	id := rec.ID
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
 		return err

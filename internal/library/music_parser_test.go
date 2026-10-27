@@ -142,6 +142,31 @@ var _ = Describe("ScoreMusicRelease", Label("unit", "library"), func() {
 		Expect(s).To(BeNumerically(">", 0))
 	})
 
+	It("rejects a single-file CD image named as one, at either scope", func() {
+		for _, name := range []string{
+			"(Metal) [CD] X - Y - 2016, FLAC (image+.cue), lossless",
+			"X - Y - 1994, APE (image + .cue)",
+			"X - Y [FLAC] (img+cue)",
+		} {
+			Expect(ParseMusicRelease(name).CueImage).To(BeTrue(), name)
+			s, reason := score(name, MusicScopeAlbum)
+			Expect(s).To(Equal(-1), name)
+			Expect(reason).To(Equal(CueImageReason))
+		}
+		s, _ := score(
+			"X - Discography (1990-2000) FLAC (image+.cue)",
+			MusicScopeArtist,
+		)
+		Expect(s).To(Equal(-1))
+	})
+
+	It("keeps tracks with a CUE sheet", func() {
+		name := "X - Y - 1994, FLAC (tracks+.cue), lossless"
+		Expect(ParseMusicRelease(name).CueImage).To(BeFalse())
+		s, _ := score(name, MusicScopeAlbum)
+		Expect(s).To(BeNumerically(">", 0))
+	})
+
 	It("scores through ScoreMusicRelease", func() {
 		Expect(ScoreMusicRelease(
 			ParseMusicRelease("X - Y FLAC"), profile, MusicScopeAlbum,

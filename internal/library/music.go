@@ -3,6 +3,7 @@ package library
 import (
 	"math"
 	"path"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -13,6 +14,40 @@ import (
 )
 
 var discFolderRe = regexp.MustCompile(`(?i)^(?:cd|dis[ck])\s*(\d+)$`)
+
+// CueImageReason is the one wording of a single-file CD image refusal, from
+// the release name, the torrent's file list or the importer.
+const CueImageReason = "single-file CD image with a CUE sheet; splitting it into tracks is not supported"
+
+// cueImageAudio is wider than audiotags.AudioExtensions: an image is as often
+// APE, WavPack or WAV, formats the library never imports.
+var cueImageAudio = map[string]struct{}{
+	".flac": {}, ".ape": {}, ".wv": {}, ".wav": {}, ".tta": {}, ".tak": {},
+	".aiff": {}, ".m4a": {}, ".mp3": {}, ".ogg": {}, ".opus": {},
+}
+
+// CueImage reports a disc ripped to a single image: a folder whose only audio
+// file sits beside a CUE sheet. paths are every file of the release, slash or
+// OS separated. One image per disc folder of a set counts too.
+func CueImage(paths []string) bool {
+	audio := map[string]int{}
+	sheets := map[string]bool{}
+	for _, p := range paths {
+		p = filepath.ToSlash(p)
+		ext := strings.ToLower(path.Ext(p))
+		if ext == ".cue" {
+			sheets[path.Dir(p)] = true
+		} else if _, ok := cueImageAudio[ext]; ok {
+			audio[path.Dir(p)]++
+		}
+	}
+	for dir, n := range audio {
+		if n == 1 && sheets[dir] {
+			return true
+		}
+	}
+	return false
+}
 
 // DiscFolderNumber reads the disc number off a folder name such as "CD1",
 // "Disc 2" or "Disk3".

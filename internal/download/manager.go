@@ -92,6 +92,10 @@ var (
 	// download client's disk beside what its active downloads still have to
 	// write, keeping download.space_reserve_gb free.
 	ErrNoSpace = errors.New("not enough space on the download disk")
+	// ErrCueImage is returned by an album grab whose .torrent lists a disc
+	// ripped to a single image, which the album importer refuses: grabbing it
+	// would only download a release that cannot be imported.
+	ErrCueImage = errors.New(library.CueImageReason)
 )
 
 // downloadSavePath joins a client-supplied torrent name onto the configured
@@ -233,6 +237,7 @@ type CompletedDownload struct {
 type Checker interface {
 	CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 	ReconcileStrandedMedia(ctx context.Context) error
+	RejectCueImages(ctx context.Context) error
 }
 
 // SelectionResolver is the consumer-facing surface for the file_selection
@@ -285,6 +290,7 @@ type Downloader interface {
 	) (*ent.DownloadRecord, error)
 	CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 	ReconcileStrandedMedia(ctx context.Context) error
+	RejectCueImages(ctx context.Context) error
 	RemoveTorrent(
 		ctx context.Context,
 		downloadClientName string,
@@ -374,6 +380,9 @@ type download struct {
 	gaugesOnce sync.Once
 
 	grabbing hashLocks
+
+	cueMu      sync.Mutex
+	cueChecked map[uint32]struct{}
 }
 
 // hashLocks serialises grabs of one info hash. The in-flight lookup and the
@@ -969,6 +978,23 @@ func (d *download) grabWith(
 	localHash := localInfoHash(src)
 	if localHash != "" {
 		defer d.grabbing.lock(localHash)()
+	}
+
+	// A magnet's files are unknown until a client fetches them; the monitor's
+	// RejectCueImages pass catches those once they are.
+	if albumID != 0 && len(src.Bytes) > 0 {
+		if files, ferr := decodeTorrentFiles(src.Bytes); ferr == nil {
+			paths := make([]string, len(files))
+			for i, f := range files {
+				paths[i] = f.Path
+			}
+			if d.cueImageFor(ctx, albumID, paths) {
+				outcome = "cue_image"
+				return nil, otelx.RecordSpanError(
+					span, fmt.Errorf("%w: %s", ErrCueImage, result.Title),
+				)
+			}
+		}
 	}
 
 	// spec §4.6: a re-grab landing on a hash already tracked by a live record

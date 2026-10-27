@@ -138,3 +138,38 @@ var _ = Describe("MatchTrackByName", Label("unit", "library"), func() {
 		Expect(MatchTrackByName(tracks, "A/09 - Bonus.flac")).To(BeNil())
 	})
 })
+
+var _ = Describe("CueImage", Label("unit", "library"), func() {
+	DescribeTable("one audio file beside a CUE sheet",
+		func(paths []string, want bool) {
+			Expect(CueImage(paths)).To(Equal(want))
+		},
+		Entry(
+			"flac image",
+			[]string{
+				"Album/Album.flac",
+				"Album/Album.cue",
+				"Album/Album.log",
+			},
+			true,
+		),
+		Entry("ape image, a format the library never imports",
+			[]string{"Album/CD.ape", "Album/CD.cue"}, true),
+		Entry(
+			"one image per disc folder",
+			[]string{
+				"A/CD1/a.flac",
+				"A/CD1/a.cue",
+				"A/CD2/b.flac",
+				"A/CD2/b.cue",
+			},
+			true,
+		),
+		Entry("tracks with a sheet",
+			[]string{"A/01.flac", "A/02.flac", "A/A.cue"}, false),
+		Entry("one file, no sheet", []string{"A/A.flac"}, false),
+		Entry("sheet in another folder",
+			[]string{"A/A.flac", "A/Scans/A.cue"}, false),
+		Entry("OS separators", []string{`A\A.wv`, `A\A.CUE`}, true),
+	)
+})
