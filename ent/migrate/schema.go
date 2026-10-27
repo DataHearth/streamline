@@ -1327,7 +1327,7 @@ var (
 		{Name: "id", Type: field.TypeUint32, Increment: true},
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
-		{Name: "kind", Type: field.TypeEnum, Enums: []string{"credit", "performer", "featuring", "writer"}},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"credit", "performer", "featuring", "writer", "artist"}},
 		{Name: "role", Type: field.TypeEnum, Nullable: true, Enums: []string{"producer", "recording", "mix", "mastering", "artwork", "conductor", "remixer", "arranger", "composer", "lyricist", "writer"}},
 		{Name: "name", Type: field.TypeString},
 		{Name: "mbid", Type: field.TypeString, Nullable: true},
@@ -1889,6 +1889,31 @@ var (
 		Columns:    UsersColumns,
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
 	}
+	// ArtistCoAlbumsColumns holds the columns for the "artist_co_albums" table.
+	ArtistCoAlbumsColumns = []*schema.Column{
+		{Name: "artist_id", Type: field.TypeUint32},
+		{Name: "album_id", Type: field.TypeUint32},
+	}
+	// ArtistCoAlbumsTable holds the schema information for the "artist_co_albums" table.
+	ArtistCoAlbumsTable = &schema.Table{
+		Name:       "artist_co_albums",
+		Columns:    ArtistCoAlbumsColumns,
+		PrimaryKey: []*schema.Column{ArtistCoAlbumsColumns[0], ArtistCoAlbumsColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "artist_co_albums_artist_id",
+				Columns:    []*schema.Column{ArtistCoAlbumsColumns[0]},
+				RefColumns: []*schema.Column{ArtistsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "artist_co_albums_album_id",
+				Columns:    []*schema.Column{ArtistCoAlbumsColumns[1]},
+				RefColumns: []*schema.Column{AlbumsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// DownloadRecordAlbumsColumns holds the columns for the "download_record_albums" table.
 	DownloadRecordAlbumsColumns = []*schema.Column{
 		{Name: "download_record_id", Type: field.TypeUint32},
@@ -1980,6 +2005,7 @@ var (
 		TracksTable,
 		TranscodeJobsTable,
 		UsersTable,
+		ArtistCoAlbumsTable,
 		DownloadRecordAlbumsTable,
 		DownloadRecordEpisodesTable,
 	}
@@ -2040,6 +2066,8 @@ func init() {
 	SharesTable.ForeignKeys[0].RefTable = UsersTable
 	TracksTable.ForeignKeys[0].RefTable = AlbumsTable
 	TranscodeJobsTable.ForeignKeys[0].RefTable = MediaFilesTable
+	ArtistCoAlbumsTable.ForeignKeys[0].RefTable = ArtistsTable
+	ArtistCoAlbumsTable.ForeignKeys[1].RefTable = AlbumsTable
 	DownloadRecordAlbumsTable.ForeignKeys[0].RefTable = DownloadRecordsTable
 	DownloadRecordAlbumsTable.ForeignKeys[1].RefTable = AlbumsTable
 	DownloadRecordEpisodesTable.ForeignKeys[0].RefTable = EpisodesTable

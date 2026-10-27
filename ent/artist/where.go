@@ -1550,6 +1550,29 @@ func HasEventsWith(preds ...predicate.MediaEvent) predicate.Artist {
 	})
 }
 
+// HasCoAlbums applies the HasEdge predicate on the "co_albums" edge.
+func HasCoAlbums() predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, CoAlbumsTable, CoAlbumsPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCoAlbumsWith applies the HasEdge predicate on the "co_albums" edge with a given conditions (other predicates).
+func HasCoAlbumsWith(preds ...predicate.Album) predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := newCoAlbumsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Artist) predicate.Artist {
 	return predicate.Artist(sql.AndPredicates(predicates...))

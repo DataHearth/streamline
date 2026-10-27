@@ -491,6 +491,21 @@ func (_u *ArtistUpdate) AddEvents(v ...*MediaEvent) *ArtistUpdate {
 	return _u.AddEventIDs(ids...)
 }
 
+// AddCoAlbumIDs adds the "co_albums" edge to the Album entity by IDs.
+func (_u *ArtistUpdate) AddCoAlbumIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.AddCoAlbumIDs(ids...)
+	return _u
+}
+
+// AddCoAlbums adds the "co_albums" edges to the Album entity.
+func (_u *ArtistUpdate) AddCoAlbums(v ...*Album) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCoAlbumIDs(ids...)
+}
+
 // Mutation returns the ArtistMutation object of the builder.
 func (_u *ArtistUpdate) Mutation() *ArtistMutation {
 	return _u.mutation
@@ -599,6 +614,27 @@ func (_u *ArtistUpdate) RemoveEvents(v ...*MediaEvent) *ArtistUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearCoAlbums clears all "co_albums" edges to the Album entity.
+func (_u *ArtistUpdate) ClearCoAlbums() *ArtistUpdate {
+	_u.mutation.ClearCoAlbums()
+	return _u
+}
+
+// RemoveCoAlbumIDs removes the "co_albums" edge to Album entities by IDs.
+func (_u *ArtistUpdate) RemoveCoAlbumIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.RemoveCoAlbumIDs(ids...)
+	return _u
+}
+
+// RemoveCoAlbums removes "co_albums" edges to Album entities.
+func (_u *ArtistUpdate) RemoveCoAlbums(v ...*Album) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCoAlbumIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1012,6 +1048,51 @@ func (_u *ArtistUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CoAlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCoAlbumsIDs(); len(nodes) > 0 && !_u.mutation.CoAlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CoAlbumsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1498,6 +1579,21 @@ func (_u *ArtistUpdateOne) AddEvents(v ...*MediaEvent) *ArtistUpdateOne {
 	return _u.AddEventIDs(ids...)
 }
 
+// AddCoAlbumIDs adds the "co_albums" edge to the Album entity by IDs.
+func (_u *ArtistUpdateOne) AddCoAlbumIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.AddCoAlbumIDs(ids...)
+	return _u
+}
+
+// AddCoAlbums adds the "co_albums" edges to the Album entity.
+func (_u *ArtistUpdateOne) AddCoAlbums(v ...*Album) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCoAlbumIDs(ids...)
+}
+
 // Mutation returns the ArtistMutation object of the builder.
 func (_u *ArtistUpdateOne) Mutation() *ArtistMutation {
 	return _u.mutation
@@ -1606,6 +1702,27 @@ func (_u *ArtistUpdateOne) RemoveEvents(v ...*MediaEvent) *ArtistUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearCoAlbums clears all "co_albums" edges to the Album entity.
+func (_u *ArtistUpdateOne) ClearCoAlbums() *ArtistUpdateOne {
+	_u.mutation.ClearCoAlbums()
+	return _u
+}
+
+// RemoveCoAlbumIDs removes the "co_albums" edge to Album entities by IDs.
+func (_u *ArtistUpdateOne) RemoveCoAlbumIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.RemoveCoAlbumIDs(ids...)
+	return _u
+}
+
+// RemoveCoAlbums removes "co_albums" edges to Album entities.
+func (_u *ArtistUpdateOne) RemoveCoAlbums(v ...*Album) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCoAlbumIDs(ids...)
 }
 
 // Where appends a list predicates to the ArtistUpdate builder.
@@ -2049,6 +2166,51 @@ func (_u *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CoAlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCoAlbumsIDs(); len(nodes) > 0 && !_u.mutation.CoAlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CoAlbumsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

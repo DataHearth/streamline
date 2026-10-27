@@ -743,6 +743,22 @@ func (c *AlbumClient) QueryPackRecords(_m *Album) *DownloadRecordQuery {
 	return query
 }
 
+// QueryCoArtists queries the co_artists edge of a Album.
+func (c *AlbumClient) QueryCoArtists(_m *Album) *ArtistQuery {
+	query := (&ArtistClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(album.Table, album.FieldID, id),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, album.CoArtistsTable, album.CoArtistsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *AlbumClient) Hooks() []Hook {
 	return c.hooks.Album
@@ -1098,6 +1114,22 @@ func (c *ArtistClient) QueryEvents(_m *Artist) *MediaEventQuery {
 			sqlgraph.From(artist.Table, artist.FieldID, id),
 			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, artist.EventsTable, artist.EventsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCoAlbums queries the co_albums edge of a Artist.
+func (c *ArtistClient) QueryCoAlbums(_m *Artist) *AlbumQuery {
+	query := (&AlbumClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, artist.CoAlbumsTable, artist.CoAlbumsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
