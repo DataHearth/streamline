@@ -189,18 +189,29 @@ func createAlbum(
 	return row.ID, nil
 }
 
+// sharedLink is one album linkSharedAlbums listed under an artist, logged by
+// the caller once its transaction commits.
+type sharedLink struct{ albumID, ownerID uint32 }
+
+func logSharedLinks(ctx context.Context, artistID uint32, links []sharedLink) {
+	for _, l := range links {
+		slog.InfoContext(ctx, "listed shared album under artist",
+			"album.id", l.albumID, "artist.id", artistID, "owner.id", l.ownerID)
+	}
+}
+
 // linkSharedAlbums lists under the artist every seeded release group another
 // artist already owns, since the mbid is one row however many artists it
 // credits, and returns the mbids it handled so the caller neither inserts nor
-// refreshes them: the owner keeps the row up to date.
+// refreshes them (the owner keeps the row up to date), with the new links.
 func linkSharedAlbums(
 	ctx context.Context,
 	c *ent.Client,
 	artistID uint32,
 	seeds []AlbumSeed,
-) (map[string]bool, error) {
+) (map[string]bool, []sharedLink, error) {
 	if len(seeds) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	mbids := make([]string, len(seeds))
 	for i, a := range seeds {
@@ -215,9 +226,10 @@ func linkSharedAlbums(
 		WithCoArtists(func(q *ent.ArtistQuery) { q.Select(artist.FieldID) }).
 		All(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	shared := make(map[string]bool, len(rows))
+	var links []sharedLink
 	for _, a := range rows {
 		shared[a.Mbid] = true
 		if slices.ContainsFunc(a.Edges.CoArtists, func(co *ent.Artist) bool {
@@ -228,12 +240,11 @@ func linkSharedAlbums(
 		if err := c.Album.UpdateOne(a).
 			AddCoArtistIDs(artistID).
 			Exec(ctx); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		slog.InfoContext(ctx, "listed shared album under artist",
-			"album.id", a.ID, "artist.id", artistID, "owner.id", a.Edges.Artist.ID)
+		links = append(links, sharedLink{albumID: a.ID, ownerID: a.Edges.Artist.ID})
 	}
-	return shared, nil
+	return shared, links, nil
 }
 
 // AlbumOfArtist matches the albums listed under the artist: the ones it owns
@@ -322,7 +333,7 @@ func (db *DB) CreateArtist(
 		tx.Rollback()
 		return nil, err
 	}
-	shared, err := linkSharedAlbums(ctx, tx.Client(), row.ID, p.Albums)
+	shared, links, err := linkSharedAlbums(ctx, tx.Client(), row.ID, p.Albums)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -339,6 +350,7 @@ func (db *DB) CreateArtist(
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
+	logSharedLinks(ctx, row.ID, links)
 	return db.FindArtistByID(ctx, row.ID)
 }
 
@@ -845,7 +857,7 @@ func (db *DB) RefreshArtist(
 	for _, a := range existing {
 		byMBID[a.Mbid] = a
 	}
-	shared, err := linkSharedAlbums(ctx, c, id, p.Albums)
+	shared, links, err := linkSharedAlbums(ctx, c, id, p.Albums)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -881,6 +893,7 @@ func (db *DB) RefreshArtist(
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
+	logSharedLinks(ctx, id, links)
 	return created, nil
 }
 

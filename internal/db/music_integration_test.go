@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -182,6 +183,30 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				To(BeFalse(), "an unshared album goes with its artist")
 			Expect(client.Artist.Query().Where(entartist.IDEQ(a.ID)).ExistX(ctx)).
 				To(BeFalse())
+		})
+
+		It("logs a shared album's link only once the add commits", func() {
+			seed()
+			var logs strings.Builder
+			GinkgoWriter.TeeTo(&logs)
+			DeferCleanup(GinkgoWriter.ClearTeeWriters)
+
+			_, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-2", Name: "Guest",
+				Albums: []AlbumSeed{
+					{MBID: "rg-1", Title: "Nevermind"},
+					{MBID: "rg-x", Title: "Broken", Type: "not-a-type"},
+				},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(logs.String()).NotTo(ContainSubstring("listed shared album"))
+
+			_, err = store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-2", Name: "Guest",
+				Albums: []AlbumSeed{{MBID: "rg-1", Title: "Nevermind"}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(logs.String()).To(ContainSubstring("listed shared album"))
 		})
 
 		It("orders the albums newest first and the tracks by position", func() {
