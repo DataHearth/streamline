@@ -379,6 +379,18 @@ type Overview struct {
 	SourceURL string
 }
 
+// ArtistLinkProvider reads what MusicBrainz links as an artist's picture,
+// which is how namesakes are told apart. Implemented by *MusicBrainz.
+type ArtistLinkProvider interface {
+	// ArtistArt returns the Deezer page and Commons image MusicBrainz links
+	// for the artist, each empty when it links none.
+	ArtistArt(ctx context.Context, mbid string) (ArtistArt, error)
+	// DeezerArtistShared reports whether more than one MusicBrainz artist
+	// links the Deezer artist page: Deezer files namesakes under one page,
+	// whose picture is only ever one of them.
+	DeezerArtistShared(ctx context.Context, id uint32) (bool, error)
+}
+
 // OverviewProvider fetches artist overviews. Implemented by *Wikipedia.
 type OverviewProvider interface {
 	// Overviews returns the extract of the Wikidata item's article in each of

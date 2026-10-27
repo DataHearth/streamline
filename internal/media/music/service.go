@@ -137,6 +137,7 @@ type Service struct {
 	download  download.Downloader
 	overviews metadata.OverviewProvider
 	photos    metadata.ArtistPhotoProvider
+	links     metadata.ArtistLinkProvider
 	ms        mediaserver.Refresher
 
 	details         *memo[*metadata.ArtistDetails]
@@ -147,7 +148,8 @@ type Service struct {
 }
 
 // NewService wires the music service. overviews and photos may be nil, which
-// turns the Wikipedia and Deezer steps of an add off.
+// turns the Wikipedia and Deezer steps of an add off; links may be nil, which
+// leaves the photo step unable to tell namesakes sharing a Deezer page apart.
 func NewService(
 	store db.Store,
 	meta metadata.MusicProvider,
@@ -157,11 +159,13 @@ func NewService(
 	dl download.Downloader,
 	overviews metadata.OverviewProvider,
 	photos metadata.ArtistPhotoProvider,
+	links metadata.ArtistLinkProvider,
 	ms mediaserver.Refresher,
 ) *Service {
 	return &Service{
 		db: store, metadata: meta, posters: p, covers: covers,
-		indexer: idx, download: dl, overviews: overviews, photos: photos, ms: ms,
+		indexer: idx, download: dl, overviews: overviews, photos: photos,
+		links: links, ms: ms,
 		details: newMemo[*metadata.ArtistDetails](detailsTTL, detailsCacheLimit),
 		lookups: newMemo[*lookupBody](detailsTTL, detailsCacheLimit),
 		releaseSearches: newMemo[[]metadata.ReleaseGroupSearchResult](
