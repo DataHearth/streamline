@@ -1250,6 +1250,18 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			Expect(got[a.ID]).To(BeFalse())
 		})
 
+		It("flags a co-artist while a shared album waits for its tracks", func() {
+			seed()
+			guest, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-2", Name: "Guest",
+				Albums: []AlbumSeed{{MBID: "rg-2", Title: "In Utero"}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			got, err := store.HydratingArtists(ctx, []uint32{guest.ID}, now)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got[guest.ID]).To(BeTrue())
+		})
+
 		It("does not flag an artist whose albums are all done", func() {
 			a := seed()
 			client.Album.Update().SetMetadataFetchedAt(now).

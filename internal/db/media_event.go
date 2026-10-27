@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
-	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/bookseries"
@@ -87,7 +86,7 @@ func (db *DB) RecentActivity(
 	if f.ArtistID != nil {
 		q = q.Where(mediaevent.Or(
 			mediaevent.HasArtistWith(artist.ID(*f.ArtistID)),
-			mediaevent.HasAlbumWith(album.HasArtistWith(artist.ID(*f.ArtistID))),
+			mediaevent.HasAlbumWith(AlbumOfArtist(*f.ArtistID)),
 		))
 	}
 	if f.BookID != nil {

@@ -770,8 +770,9 @@ func smallRelease() predicate.Album {
 	}
 }
 
-// HydratingArtists reports, for each of the artists, whether any album is
-// still being filled in. It drives the SPA's polling.
+// HydratingArtists reports, for each of the artists, whether any album listed
+// under it, owned or co-credited, is still being filled in. It drives the
+// SPA's polling.
 func (db *DB) HydratingArtists(
 	ctx context.Context,
 	artistIDs []uint32,
@@ -784,7 +785,7 @@ func (db *DB) HydratingArtists(
 	ids, err := db.client.Artist.Query().
 		Where(
 			artist.IDIn(artistIDs...),
-			artist.HasAlbumsWith(albumHydrating(now)),
+			artistHasAlbum(albumHydrating(now)),
 		).
 		IDs(ctx)
 	if err != nil {
