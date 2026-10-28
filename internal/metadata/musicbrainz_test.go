@@ -32,6 +32,21 @@ func jsonResponse(status int, body string) *http.Response {
 	}
 }
 
+var _ = DescribeTable("mapAlbumType", Label("unit", "metadata"),
+	func(primary string, secondary []string, want AlbumType) {
+		Expect(mapAlbumType(mbReleaseGroup{
+			PrimaryType: primary, SecondaryTypes: secondary,
+		})).To(Equal(want))
+	},
+	Entry("a plain album", "Album", nil, AlbumTypeAlbum),
+	Entry("a live album", "Album", []string{"Live"}, AlbumTypeLive),
+	Entry("a compilation", "Album", []string{"Compilation"}, AlbumTypeCompilation),
+	Entry("a remix album", "Album", []string{"Remix"}, AlbumTypeOther),
+	Entry("a DJ mix", "Album", []string{"DJ-mix"}, AlbumTypeOther),
+	Entry("a mixtape", "Album", []string{"Mixtape/Street"}, AlbumTypeOther),
+	Entry("a demo EP", "EP", []string{"Demo"}, AlbumTypeOther),
+)
+
 var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 	var (
 		mb  *MusicBrainz

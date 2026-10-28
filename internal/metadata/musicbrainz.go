@@ -470,6 +470,8 @@ func mapAlbumType(rg mbReleaseGroup) AlbumType {
 			return AlbumTypeCompilation
 		case "Live":
 			return AlbumTypeLive
+		case "Remix", "DJ-mix", "Mixtape/Street", "Demo":
+			return AlbumTypeOther
 		}
 	}
 	switch rg.PrimaryType {
