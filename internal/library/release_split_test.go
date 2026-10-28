@@ -90,6 +90,16 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 			false,
 		),
 		Entry("a bare artist name", "Gojira FLAC", false),
+		Entry(
+			"a covers album naming the artist inside",
+			"Williams.Joshua.Gojira.Relaxing.Acoustic.Covers.2024.FLAC",
+			true,
+		),
+		Entry(
+			"a scene name holding the album after the artist's name elsewhere",
+			"Live.Gojira.From.Mars.to.Sirius.FLAC",
+			false,
+		),
 	)
 
 	DescribeTable(
