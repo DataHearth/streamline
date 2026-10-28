@@ -91,7 +91,7 @@ let
       inherit (finalAttrs) version src;
       inherit pnpm;
       fetcherVersion = 4;
-      hash = "sha256-tmE3zxjKAPFfaRjtKvZbOoR1S+9nHJ0RTovDGdT5l4Q=";
+      hash = "sha256-k6g47X6e0cGpyjrHe8CuftftUjKwa8qjL0dLX1V1BSM=";
     };
 
     # Mirrors `task build:js` + `task build:css`. Keep the two in step: the Go
