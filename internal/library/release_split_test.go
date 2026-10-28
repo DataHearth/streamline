@@ -144,6 +144,21 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 			true,
 		),
 		Entry(
+			"the year between the artist and the album",
+			"The Glitch Mob - 2021 - Revisions [FLAC]",
+			"The Glitch Mob", "Revisions", false,
+		),
+		Entry(
+			"another album behind a leading year",
+			"The Glitch Mob - 2014 - Love Death Immortality [FLAC]",
+			"The Glitch Mob", "Revisions", true,
+		),
+		Entry(
+			"an album named after a year",
+			"Some Band - 1984 [FLAC]",
+			"Some Band", "1984", false,
+		),
+		Entry(
 			"an artist whose name opens on brackets",
 			"(hed) p.e. - Blackout (2003) [FLAC]",
 			"(hed) p.e.", "Blackout", false,
