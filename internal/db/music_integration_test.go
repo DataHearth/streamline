@@ -1051,11 +1051,23 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			})
 		})
 
-		It("sorts by name on sort_name then name, and flips with order", func() {
-			Expect(names(ListArtistsParams{Sort: "name"})).
-				To(Equal([]string{"Björk", "Nirvana", "Zebra"}))
-			Expect(names(ListArtistsParams{Sort: "name", Order: "desc"})).
-				To(Equal([]string{"Zebra", "Nirvana", "Björk"}))
+		It(
+			"sorts by the displayed name, not sort_name, and flips with order",
+			func() {
+				client.Artist.Update().Where(entartist.NameEQ("Zebra")).
+					SetSortName("Aardvark, Zebra").ExecX(ctx)
+				Expect(names(ListArtistsParams{Sort: "name"})).
+					To(Equal([]string{"Björk", "Nirvana", "Zebra"}))
+				Expect(names(ListArtistsParams{Sort: "name", Order: "desc"})).
+					To(Equal([]string{"Zebra", "Nirvana", "Björk"}))
+			},
+		)
+
+		It("sorts by recently added by default, newest first", func() {
+			Expect(names(ListArtistsParams{})).
+				To(Equal([]string{"Zebra", "Björk", "Nirvana"}))
+			Expect(names(ListArtistsParams{Sort: "recent", Order: "asc"})).
+				To(Equal([]string{"Nirvana", "Björk", "Zebra"}))
 		})
 
 		It("sorts by recently added by default, newest first", func() {

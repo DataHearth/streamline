@@ -586,9 +586,7 @@ func (db *DB) ListArtists(
 	var order []artist.OrderOption
 	switch p.Sort {
 	case "name":
-		order = append(order,
-			orderFold(artist.FieldSortName, desc),
-			orderFold(artist.FieldName, desc))
+		order = append(order, orderFold(artist.FieldName, desc))
 	default:
 		if p.Order == "asc" {
 			order = append(order, artist.ByCreateTime())
