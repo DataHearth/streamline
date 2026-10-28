@@ -135,6 +135,20 @@ func (_c *TrackCreate) SetNillableBonus(v *bool) *TrackCreate {
 	return _c
 }
 
+// SetArtistCredit sets the "artist_credit" field.
+func (_c *TrackCreate) SetArtistCredit(v string) *TrackCreate {
+	_c.mutation.SetArtistCredit(v)
+	return _c
+}
+
+// SetNillableArtistCredit sets the "artist_credit" field if the given value is not nil.
+func (_c *TrackCreate) SetNillableArtistCredit(v *string) *TrackCreate {
+	if v != nil {
+		_c.SetArtistCredit(*v)
+	}
+	return _c
+}
+
 // SetTagOverrides sets the "tag_overrides" field.
 func (_c *TrackCreate) SetTagOverrides(v map[string][]string) *TrackCreate {
 	_c.mutation.SetTagOverrides(v)
@@ -370,6 +384,10 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Bonus(); ok {
 		_spec.SetField(track.FieldBonus, field.TypeBool, value)
 		_node.Bonus = value
+	}
+	if value, ok := _c.mutation.ArtistCredit(); ok {
+		_spec.SetField(track.FieldArtistCredit, field.TypeString, value)
+		_node.ArtistCredit = value
 	}
 	if value, ok := _c.mutation.TagOverrides(); ok {
 		_spec.SetField(track.FieldTagOverrides, field.TypeJSON, value)

@@ -122,9 +122,11 @@ type MetadataPatch struct {
 	TVDBAPIKey *string
 	// HardcoverAPIKey is restart-required like the other two: wire.go builds
 	// the Hardcover client once.
-	HardcoverAPIKey *string
-	Language        *string
-	TMDBRegion      *string
+	HardcoverAPIKey     *string
+	Language            *string
+	TMDBRegion          *string
+	MusicBrainzURL      *string
+	MusicBrainzInterval *string
 }
 
 // ProbePatch carries optional field updates to the library.probe section.
@@ -519,6 +521,16 @@ func UpdateMetadata(
 	ctx context.Context,
 	patch MetadataPatch,
 ) (MetadataConfig, error) {
+	if err := checkDuration(
+		"metadata.musicbrainz_interval", patch.MusicBrainzInterval,
+	); err != nil {
+		return MetadataConfig{}, err
+	}
+	if v := patch.MusicBrainzInterval; v != nil && strings.HasPrefix(*v, "-") {
+		return MetadataConfig{}, errors.New(
+			"metadata.musicbrainz_interval: must not be negative",
+		)
+	}
 	var out MetadataConfig
 	err := Update(ctx, func(c *Config) error {
 		set := func(dst *string, file string, v *string) error {
@@ -553,6 +565,12 @@ func UpdateMetadata(
 		}
 		if patch.TMDBRegion != nil {
 			c.Metadata.TMDBRegion = *patch.TMDBRegion
+		}
+		if patch.MusicBrainzURL != nil {
+			c.Metadata.MusicBrainzURL = *patch.MusicBrainzURL
+		}
+		if patch.MusicBrainzInterval != nil {
+			c.Metadata.MusicBrainzInterval = *patch.MusicBrainzInterval
 		}
 		out = c.Metadata
 		return nil

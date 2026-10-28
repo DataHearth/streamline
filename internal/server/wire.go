@@ -207,6 +207,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Posters: postersSvc,
 		Library: artwork.EntLibrary{Client: dbClient},
 		Deezer:  deezer,
+		Links:   mb,
 	})
 	if err != nil {
 		dbClient.Close()
@@ -214,7 +215,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	}
 	musicSvc := music.NewService(
 		store, mb, postersSvc, deezer, indexerSvc, dlManager,
-		metadata.NewWikipedia(), deezer, dispatcher,
+		metadata.NewWikipedia(), deezer, mb, dispatcher,
 	)
 	var mail mailer.Sender
 	if cfg.SMTP.Enabled() {

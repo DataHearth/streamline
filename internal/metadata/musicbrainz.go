@@ -23,12 +23,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/datahearth/streamline/internal/buildinfo"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
 const (
-	mbBaseURL = "https://musicbrainz.org/ws/2"
-
 	// maxMusicReleaseResponse bounds the heavy release call, whose
 	// relationship expansion of a large release outgrows maxProviderResponse's
 	// intent while staying far below it in practice.
@@ -49,26 +48,36 @@ var (
 
 	deezerArtistRe = regexp.MustCompile(`deezer\.com/(?:[a-z]{2}/)?artist/(\d+)`)
 	wikidataIDRe   = regexp.MustCompile(`/(Q\d+)$`)
-	featJoinRe     = regexp.MustCompile(`(?i)\b(feat\.?|featuring|ft\.?)(\s|$)`)
+	commonsFileRe  = regexp.MustCompile(
+		`^https://commons\.wikimedia\.org/wiki/File:([^/?#]+)$`,
+	)
+	featJoinRe = regexp.MustCompile(`(?i)\b(feat\.?|featuring|ft\.?)(\s|$)`)
 )
 
 // MusicBrainz is the MusicProvider implementation. No API key; MusicBrainz
-// mandates a descriptive User-Agent and at most 1 request/second, shared by
-// every caller through one two-class limiter.
+// mandates a descriptive User-Agent and at most 1 request/second
+// (metadata.musicbrainz_interval, lifted for a mirror), shared by every
+// caller through one limiter.
 type MusicBrainz struct {
 	client  *http.Client
 	limiter *mbLimiter
+	baseURL string
 
 	genreMu      sync.Mutex
 	genres       map[string]struct{}
 	genresLoaded time.Time
+
+	deezerShared memo[bool]
 }
 
 func NewMusicBrainz() *MusicBrainz {
 	c := *otelx.HTTPClient
+	m := config.Get().Metadata
+	interval := m.MusicBrainzIntervalDuration()
 	return &MusicBrainz{
 		client:  &c,
-		limiter: newMBLimiter(mbInterval, musicBackgroundGap),
+		limiter: newMBLimiter(interval, backgroundGapFactor*interval),
+		baseURL: strings.TrimRight(m.MusicBrainzURL, "/") + "/ws/2",
 	}
 }
 
@@ -97,7 +106,7 @@ func (m *MusicBrainz) fetch(
 		return otelx.RecordSpanError(span, err)
 	}
 	req, err := http.NewRequestWithContext(
-		ctx, http.MethodGet, mbBaseURL+path+"?"+params.Encode(), nil,
+		ctx, http.MethodGet, m.baseURL+path+"?"+params.Encode(), nil,
 	)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
@@ -119,12 +128,20 @@ func (m *MusicBrainz) fetch(
 			fmt.Errorf("musicbrainz: %s: %w", path, ErrNotFound))
 	case http.StatusServiceUnavailable, http.StatusTooManyRequests:
 		retry := mbDefaultRetryAfter
+		// MusicBrainz's busy 503 can carry Retry-After: 0, which taken at its
+		// word leaves the hydration worker retrying every 2s.
 		if v := resp.Header.Get("Retry-After"); v != "" {
-			retry = parseRetryAfter(v, time.Now())
+			if d := parseRetryAfter(v, time.Now()); d > 0 {
+				retry = d
+			}
 		}
 		slog.WarnContext(ctx, "musicbrainz rate limited",
 			"musicbrainz.endpoint", path, "http.status_code", resp.StatusCode,
+			// "global" is MusicBrainz shedding load for every client, not a
+			// limit on this instance.
+			"musicbrainz.ratelimit_zone", resp.Header.Get("X-RateLimit-Zone"),
 			"retry_after", retry.Round(time.Second))
+		m.limiter.hold(retry)
 		return otelx.RecordSpanError(span, &RateLimitedError{RetryAfter: retry})
 	}
 	slog.WarnContext(ctx, "musicbrainz request non-200",
@@ -453,6 +470,8 @@ func mapAlbumType(rg mbReleaseGroup) AlbumType {
 			return AlbumTypeCompilation
 		case "Live":
 			return AlbumTypeLive
+		case "Remix", "DJ-mix", "Mixtape/Street", "Demo":
+			return AlbumTypeOther
 		}
 	}
 	switch rg.PrimaryType {
@@ -531,10 +550,14 @@ func (m *MusicBrainz) GetArtist(
 			Count         int              `json:"release-group-count"`
 			ReleaseGroups []mbReleaseGroup `json:"release-groups"`
 		}
+		// website-default leaves out the release groups with no official
+		// release (fan remix compilations, bootleg live recordings), as the
+		// MusicBrainz site does: as albums they were wanted and searched for.
 		params := url.Values{
-			"artist": {mbid},
-			"limit":  {"100"},
-			"offset": {fmt.Sprint(offset)},
+			"artist":               {mbid},
+			"limit":                {"100"},
+			"offset":               {fmt.Sprint(offset)},
+			"release-group-status": {"website-default"},
 		}
 		if err := m.get(ctx, "/release-group", params, &page); err != nil {
 			return nil, otelx.RecordSpanError(span, err)
@@ -548,6 +571,99 @@ func (m *MusicBrainz) GetArtist(
 		}
 	}
 	return details, nil
+}
+
+// ArtistArt is what MusicBrainz links as one artist's picture: its Deezer
+// page and its own image (a Wikimedia Commons file), each empty when none.
+type ArtistArt struct {
+	DeezerID uint32
+	ImageURL string
+}
+
+// ArtistArt reads one artist's url-rels for the links a search result never
+// carries: the lookup art proxy's way to tell namesakes apart.
+func (m *MusicBrainz) ArtistArt(
+	ctx context.Context,
+	mbid string,
+) (ArtistArt, error) {
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.artist_art",
+		trace.WithAttributes(attribute.String("musicbrainz.mbid", mbid)))
+	defer span.End()
+
+	var artist mbArtist
+	if err := m.get(
+		ctx,
+		"/artist/"+url.PathEscape(mbid),
+		url.Values{"inc": {"url-rels"}},
+		&artist,
+	); err != nil {
+		return ArtistArt{}, otelx.RecordSpanError(span, err)
+	}
+	var d ArtistDetails
+	var art ArtistArt
+	for _, rel := range artist.Relations {
+		if rel.URL == nil {
+			continue
+		}
+		readURLRel(rel, &d)
+		if rel.Type == "image" && art.ImageURL == "" {
+			art.ImageURL = commonsImageURL(rel.URL.Resource)
+		}
+	}
+	art.DeezerID = d.DeezerID
+	return art, nil
+}
+
+// commonsImageURL turns a Wikimedia Commons file page into a 500 px
+// rendition of the file, "" for any other address.
+func commonsImageURL(resource string) string {
+	m := commonsFileRe.FindStringSubmatch(resource)
+	if m == nil {
+		return ""
+	}
+	return "https://commons.wikimedia.org/wiki/Special:FilePath/" + m[1] + "?width=500"
+}
+
+// deezerSharedTTL is how long DeezerArtistShared remembers an answer: the
+// tiles of one search ask about the same page, and editors rarely move it.
+const deezerSharedTTL = 24 * time.Hour
+
+// DeezerArtistShared reports whether more than one MusicBrainz artist links
+// the Deezer artist page id. Deezer files namesakes under one page, and
+// MusicBrainz then links the grunge Nirvana and the 60s UK band to the same
+// one, whose picture is only ever one of them. A page MusicBrainz does not
+// know is not shared.
+func (m *MusicBrainz) DeezerArtistShared(
+	ctx context.Context,
+	id uint32,
+) (bool, error) {
+	key := strconv.FormatUint(uint64(id), 10)
+	if shared, ok := m.deezerShared.get(key); ok {
+		return shared, nil
+	}
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.deezer_artist_shared",
+		trace.WithAttributes(attribute.Int64("deezer.artist_id", int64(id))))
+	defer span.End()
+
+	var payload struct {
+		Relations []mbRel `json:"relations"`
+	}
+	err := m.get(ctx, "/url", url.Values{
+		"resource": {"https://www.deezer.com/artist/" + key},
+		"inc":      {"artist-rels"},
+	}, &payload)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return false, otelx.RecordSpanError(span, err)
+	}
+	artists := map[string]struct{}{}
+	for _, rel := range payload.Relations {
+		if rel.Artist != nil {
+			artists[rel.Artist.ID] = struct{}{}
+		}
+	}
+	shared := len(artists) > 1
+	m.deezerShared.put(key, shared, deezerSharedTTL)
+	return shared, nil
 }
 
 var ignoredMemberAttributes = []string{"original", "additional"}
@@ -961,6 +1077,8 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 				Disc:             disc,
 				Position:         t.Position,
 				Duration:         t.Length / 1000,
+				Artists:          trackArtists(t.ArtistCredit),
+				ArtistCredit:     trackArtistCredit(t.ArtistCredit),
 				Featuring:        featuring(t.ArtistCredit),
 				Bonus: mediumBonus || strings.HasSuffix(
 					strings.ToLower(strings.TrimSpace(t.Title)), "(bonus track)"),
@@ -1076,21 +1194,51 @@ func creditKey(mbid, name string) string {
 // featuring returns the credited artists after the first "feat." join phrase.
 // Artists before it are co-primary credits of a collaboration, not guests.
 func featuring(credits []mbCredit) []PersonInfo {
-	for i := 1; i < len(credits); i++ {
-		if !featJoinRe.MatchString(credits[i-1].JoinPhrase) {
+	return creditedPeople(credits[featStart(credits):])
+}
+
+// trackArtists returns the credited artists before the first "feat." join
+// phrase, all of them when there is none.
+func trackArtists(credits []mbCredit) []PersonInfo {
+	return creditedPeople(credits[:featStart(credits)])
+}
+
+// trackArtistCredit joins the artists before the first "feat." with
+// MusicBrainz's own join phrases, the last one (the "feat." itself) dropped.
+func trackArtistCredit(credits []mbCredit) string {
+	var b strings.Builder
+	join := ""
+	for _, c := range credits[:featStart(credits)] {
+		people := creditedPeople([]mbCredit{c})
+		if len(people) == 0 {
 			continue
 		}
-		out := make([]PersonInfo, 0, len(credits)-i)
-		for _, c := range credits[i:] {
-			name := c.Artist.Name
-			if name == "" {
-				name = c.Name
-			}
-			if name != "" && utf8.ValidString(name) {
-				out = append(out, PersonInfo{Name: name, MBID: c.Artist.ID})
-			}
-		}
-		return out
+		b.WriteString(join)
+		b.WriteString(people[0].Name)
+		join = c.JoinPhrase
 	}
-	return nil
+	return b.String()
+}
+
+func featStart(credits []mbCredit) int {
+	for i := 1; i < len(credits); i++ {
+		if featJoinRe.MatchString(credits[i-1].JoinPhrase) {
+			return i
+		}
+	}
+	return len(credits)
+}
+
+func creditedPeople(credits []mbCredit) []PersonInfo {
+	var out []PersonInfo
+	for _, c := range credits {
+		name := c.Artist.Name
+		if name == "" {
+			name = c.Name
+		}
+		if name != "" && utf8.ValidString(name) {
+			out = append(out, PersonInfo{Name: name, MBID: c.Artist.ID})
+		}
+	}
+	return out
 }

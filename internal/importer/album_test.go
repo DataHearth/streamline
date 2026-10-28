@@ -286,6 +286,37 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		Expect(logs.String()).NotTo(ContainSubstring("tracks still missing"))
 	})
 
+	It("matches untagged files by the number and title their names state", func() {
+		data, err := os.ReadFile(
+			filepath.Join("..", "library", "audiotags", "testdata", "untagged.mp3"),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		for _, t := range albumTracks {
+			name := fmt.Sprintf("%d - %s.mp3", t.position, t.title)
+			Expect(
+				os.WriteFile(filepath.Join(dlDir, name), data, 0o600),
+			).To(Succeed())
+		}
+		rec := fixtureAlbumRecord(dlDir, alb)
+		expectFind(rec)
+		var got db.RecordAlbumImportSuccessParams
+		storeMk.EXPECT().
+			RecordAlbumImportSuccess(mock.Anything, mock.Anything).
+			Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		Expect(got.Files).To(ConsistOf(
+			HaveField("Path", destOf(1, albumTracks[0].title, "mp3")),
+			HaveField("Path", destOf(2, albumTracks[1].title, "mp3")),
+			HaveField("Path", destOf(3, albumTracks[2].title, "mp3")),
+		))
+	})
+
 	It("lets the first file claim a track and ignores unmatched ones", func() {
 		seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 1, albumTracks[0].title)
 		seedTrackFile(dlDir, "b.mp3", "tagged.mp3", 1, albumTracks[0].title)

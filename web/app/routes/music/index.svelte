@@ -192,6 +192,10 @@
 		{sort}
 		onSortChange={(k) => (sort = k)}
 		onReset={reset}
+		add={{
+			label: auth.canAddDirectly ? i18n.action_add_artist() : i18n.action_request_artist_title(),
+			onClick: () => window.dispatchEvent(new CustomEvent("streamline:open-add-artist")),
+		}}
 	/>
 
 	<div class="hidden w-full flex-wrap items-baseline justify-between gap-2 px-6 pb-2 pt-4 font-mono text-[11px] text-fg-subtle md:flex">

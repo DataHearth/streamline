@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -110,19 +109,29 @@ func (w *Worker) importAlbumRecord(
 	return nil
 }
 
-// cueImage reports whether files are one audio file with a CUE sheet in its
-// folder: a disc ripped to a single image, its tracks only marked by the sheet.
-func cueImage(files []string) bool {
-	if len(files) != 1 {
-		return false
+// cueImage reports whether the folders holding files are images of an album
+// of tracks, its tracks only marked by the CUE sheet beside them — the rule
+// the grab applies to a torrent's file list, read here off the disk.
+func cueImage(files []string, tracks int) bool {
+	var listing []string
+	seen := map[string]bool{}
+	for _, f := range files {
+		dir := filepath.Dir(f)
+		if seen[dir] {
+			continue
+		}
+		seen[dir] = true
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			if !e.IsDir() {
+				listing = append(listing, filepath.Join(dir, e.Name()))
+			}
+		}
 	}
-	entries, err := os.ReadDir(filepath.Dir(files[0]))
-	if err != nil {
-		return false
-	}
-	return slices.ContainsFunc(entries, func(e os.DirEntry) bool {
-		return !e.IsDir() && strings.EqualFold(filepath.Ext(e.Name()), ".cue")
-	})
+	return library.CueImage(listing, tracks)
 }
 
 // hydratedAlbum returns the album with its tracks: one added as a stub has
@@ -174,7 +183,7 @@ func (w *Worker) importAlbumFiles(
 
 	// Checked before matching: the image's tags can name the first track, and
 	// the whole disc would then be imported as that one track.
-	if len(alb.Edges.Tracks) > 1 && cueImage(files) {
+	if cueImage(files, len(alb.Edges.Tracks)) {
 		return nil, false, otelx.RecordSpanError(span, ErrCueImage)
 	}
 
@@ -300,6 +309,9 @@ func (w *Worker) importAlbumFiles(
 		"album.id", alb.ID, "artist.id", artist.ID, "files", len(rows))
 
 	w.markRequestsAvailableByMBID(ctx, "artist", artist.Mbid)
+	for _, co := range alb.Edges.CoArtists {
+		w.markRequestsAvailableByMBID(ctx, "artist", co.Mbid)
+	}
 	w.markRequestsAvailableByMBID(ctx, "album", alb.Mbid)
 	changed = mediaFilePaths(replaced)
 	for _, r := range rows {
@@ -332,7 +344,7 @@ func (w *Worker) planAlbumImport(
 	paths := make([]string, 0, len(files))
 	infos := make([]audiotags.Info, 0, len(files))
 	for _, path := range files {
-		info, err := audiotags.Read(path)
+		info, err := library.ReadTrackInfo(path)
 		if err != nil {
 			slog.WarnContext(ctx, "album import: tag read failed",
 				"file", path, "error", err)

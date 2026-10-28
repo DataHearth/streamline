@@ -5256,12 +5256,18 @@ paths:
     post:
       operationId: clearCompletedHistory
       summary: Delete all completed history records.
+      description: |
+        A record whose torrent an enabled download client still lists is
+        kept: without it, the next adoption pass would file that torrent as
+        a proposal. Nothing is deleted when a client cannot be listed (503).
       tags: [activity]
       responses:
         "200":
           $ref: "#/components/responses/ClearCompletedResult"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /activity/pending:
     get:
@@ -9208,6 +9214,9 @@ components:
         artist_id:
           type: integer
           x-go-type: uint32
+          description: |
+            The album's owner, whose folder holds its files. A shared album
+            names the same owner on every artist it is listed under.
         title:
           type: string
         type:
@@ -9239,6 +9248,14 @@ components:
         tracks_pending:
           type: boolean
           description: True until the album's tracks have been fetched.
+        artists:
+          type: array
+          description: |
+            Every library artist a shared release group is listed under, the
+            owner (whose folder holds the files) first. Omitted for an album
+            only its owner is credited on.
+          items:
+            $ref: "#/components/schemas/MusicPerson"
 
     MusicAlbum:
       allOf:
@@ -9313,6 +9330,14 @@ components:
           type: integer
           x-go-type: uint32
           description: Length in seconds, 0 when unknown.
+        artists:
+          type: array
+          description: |
+            The artists the track is credited to, before any "feat."; on a
+            split release they are not the album's. Omitted until the album
+            is hydrated with them.
+          items:
+            $ref: "#/components/schemas/MusicPerson"
         featuring:
           type: array
           items:
@@ -12510,6 +12535,8 @@ components:
         - tmdb_api_key_set
         - tvdb_api_key_set
         - hardcover_api_key_set
+        - musicbrainz_url
+        - musicbrainz_interval
         - restart_required
       properties:
         language:
@@ -12517,6 +12544,16 @@ components:
           description: >-
             BCP-47 tag. The language TMDB and TVDB answer in — so also the
             titles the library stores and matches releases against.
+        musicbrainz_url:
+          type: string
+          description: >-
+            MusicBrainz server root, without /ws/2. https://musicbrainz.org, or
+            a self-hosted mirror.
+        musicbrainz_interval:
+          type: string
+          description: >-
+            Go duration: the least time between two MusicBrainz calls. 1s is
+            what musicbrainz.org allows; 0s removes the limit, for a mirror.
         tmdb_region:
           type: string
           description: Two-letter uppercase region code, for TMDB release dates.
@@ -12561,6 +12598,12 @@ components:
         hardcover_api_key:
           type: string
           format: password
+        musicbrainz_url:
+          type: string
+          description: An http(s) URL; anything else answers 422.
+        musicbrainz_interval:
+          type: string
+          description: A non-negative Go duration; anything else answers 422.
 
     SystemConfigView:
       type: object
@@ -14317,7 +14360,8 @@ components:
           description: |
             "held" means the download finished but failed import verification
             and is waiting on a decision (POST /downloads/{id}/resolve).
-          enum: [downloading, importing, paused, error, held]
+            "stalled" means the client reports the download is not moving.
+          enum: [downloading, stalled, importing, paused, error, held]
         title: { type: string }
         quality: { type: string }
         release_group: { type: string }

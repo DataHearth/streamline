@@ -3,6 +3,7 @@ package library
 import (
 	"math"
 	"path"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -13,6 +14,52 @@ import (
 )
 
 var discFolderRe = regexp.MustCompile(`(?i)^(?:cd|dis[ck])\s*(\d+)$`)
+
+// CueImageReason is the one wording of a disc image refusal, from the release
+// name, the torrent's file list or the importer.
+const CueImageReason = "disc image with a CUE sheet; splitting it into tracks is not supported"
+
+// cueImageAudio is wider than audiotags.AudioExtensions: an image is as often
+// APE, WavPack or WAV, formats the library never imports.
+var cueImageAudio = map[string]struct{}{
+	".flac": {}, ".ape": {}, ".wv": {}, ".wav": {}, ".tta": {}, ".tak": {},
+	".aiff": {}, ".m4a": {}, ".mp3": {}, ".ogg": {}, ".opus": {},
+}
+
+// CueImage reports an album of tracks ripped to images its CUE sheets split:
+// the folders holding a sheet hold at most half as many audio files as the
+// album has tracks. paths are every file of the release, slash or OS
+// separated. Counting against the album catches one image per disc and one
+// per vinyl side alike ("Side A.flac" … "Side D.flac" beside one sheet), which
+// a one-file-per-folder rule let through to fail as unmatched; a tracks+cue
+// release missing more than half its tracks reads as an image too. tracks 0
+// means the album's tracks are not fetched yet, and a manual grab can come
+// before them: only a folder whose one audio file sits beside a sheet is then
+// known to be an image.
+func CueImage(paths []string, tracks int) bool {
+	audio := map[string]int{}
+	sheets := map[string]bool{}
+	for _, p := range paths {
+		p = filepath.ToSlash(p)
+		ext := strings.ToLower(path.Ext(p))
+		if ext == ".cue" {
+			sheets[path.Dir(p)] = true
+		} else if _, ok := cueImageAudio[ext]; ok {
+			audio[path.Dir(p)]++
+		}
+	}
+	images, single := 0, false
+	for dir, n := range audio {
+		if sheets[dir] {
+			images += n
+			single = single || n == 1
+		}
+	}
+	if tracks == 0 {
+		return single
+	}
+	return images > 0 && 2*images <= tracks
+}
 
 // DiscFolderNumber reads the disc number off a folder name such as "CD1",
 // "Disc 2" or "Disk3".
@@ -208,6 +255,30 @@ func TrackInfoFromName(p string) audiotags.Info {
 	}
 	info.Title = strings.TrimSpace(rest)
 	return info
+}
+
+// ReadTrackInfo is audiotags.Read with the disc, track number and title the
+// tags lack taken from the file's path, field by field: a vinyl rip often
+// carries no tags at all, or a TRACKNUMBER like "A1" that reads as no number.
+func ReadTrackInfo(p string) (audiotags.Info, error) {
+	info, err := audiotags.Read(p)
+	if err != nil {
+		return info, err
+	}
+	if info.Track != 0 && info.Disc != 0 && info.Title != "" {
+		return info, nil
+	}
+	named := TrackInfoFromName(p)
+	if info.Track == 0 {
+		info.Track = named.Track
+	}
+	if info.Disc == 0 {
+		info.Disc = named.Disc
+	}
+	if info.Title == "" {
+		info.Title = named.Title
+	}
+	return info, nil
 }
 
 // MatchTrackByName is MatchTrack for a file known by its name only. The

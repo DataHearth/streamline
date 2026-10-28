@@ -459,10 +459,12 @@ func (s *Service) hydrationParams(
 			MBID: t.MBID, ReleaseTrackMBID: t.ReleaseTrackMBID,
 			Title: t.Title, Disc: t.Disc, Position: t.Position,
 			Duration: t.Duration, Bonus: t.Bonus,
-			Featuring:  personSeeds(t.Featuring),
-			Writers:    creditSeeds(t.Writers),
-			Credits:    creditSeeds(t.Credits),
-			Performers: performerSeeds(t.Performers),
+			Artists:      personSeeds(t.Artists),
+			ArtistCredit: t.ArtistCredit,
+			Featuring:    personSeeds(t.Featuring),
+			Writers:      creditSeeds(t.Writers),
+			Credits:      creditSeeds(t.Credits),
+			Performers:   performerSeeds(t.Performers),
 		})
 	}
 	if !d.CreditsComplete {

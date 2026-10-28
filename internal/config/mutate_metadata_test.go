@@ -48,4 +48,35 @@ var _ = Describe("UpdateMetadata", Label("unit", "config"), func() {
 		)
 		Expect(err).To(MatchError(config.ErrSecretFileManaged))
 	})
+
+	It("stores a MusicBrainz mirror and its interval", func() {
+		configtest.SetupFile()
+		url, interval := "http://musicbrainz:5000", "0s"
+		out, err := config.UpdateMetadata(ctx, config.MetadataPatch{
+			MusicBrainzURL: &url, MusicBrainzInterval: &interval,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out.MusicBrainzURL).To(Equal("http://musicbrainz:5000"))
+		Expect(out.MusicBrainzIntervalDuration()).To(BeZero())
+	})
+
+	DescribeTable("refuses a MusicBrainz value it could not use",
+		func(patch config.MetadataPatch, want string) {
+			configtest.SetupFile()
+			_, err := config.UpdateMetadata(ctx, patch)
+			Expect(err).To(MatchError(ContainSubstring(want)))
+			Expect(config.Get().Metadata.MusicBrainzURL).
+				To(Equal("https://musicbrainz.org"))
+			Expect(config.Get().Metadata.MusicBrainzInterval).To(Equal("1s"))
+		},
+		Entry("an interval that is not a duration",
+			config.MetadataPatch{MusicBrainzInterval: new("1 second")},
+			"metadata.musicbrainz_interval"),
+		Entry("a negative interval",
+			config.MetadataPatch{MusicBrainzInterval: new("-1s")},
+			"must not be negative"),
+		Entry("a URL that is not http(s)",
+			config.MetadataPatch{MusicBrainzURL: new("musicbrainz:5000")},
+			"MusicBrainzURL"),
+	)
 })

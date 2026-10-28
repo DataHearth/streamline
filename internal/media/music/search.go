@@ -2,6 +2,7 @@ package music
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -15,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
@@ -109,16 +111,6 @@ func notRejected(
 			"album.id", albumID, "release", r.Result.Title)
 		return true
 	})
-}
-
-// firstAccepted is the best release the profile accepts, nil when none is.
-func firstAccepted(releases []AlbumRelease) *AlbumRelease {
-	for i := range releases {
-		if !releases[i].Rejected() {
-			return &releases[i]
-		}
-	}
-	return nil
 }
 
 // SearchAlbumReleases queries the indexers for the album and judges every
@@ -291,14 +283,33 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		slog.WarnContext(ctx, "music search: stamp last_search_at failed",
 			"album.id", a.ID, "error", err)
 	}
-	best := firstAccepted(
+	accepted := slices.DeleteFunc(
 		notRejected(ctx, namingAlbum(releases, a), blocklist, a.ID),
+		AlbumRelease.Rejected,
 	)
-	if best == nil {
+	if len(accepted) == 0 {
 		return false
 	}
 
-	if err := s.GrabAlbumRelease(ctx, a.ID, best.Result); err != nil {
+	// A CUE disc image is only known once the release's own .torrent is
+	// read, so its refusal costs no strike and the next release is tried in
+	// the same pass.
+	// ponytail: the image is fetched again next pass; blocklist it if those
+	// requests ever matter against a rate-limited tracker.
+	for _, r := range accepted {
+		if err = s.GrabAlbumRelease(ctx, a.ID, r.Result); !errors.Is(
+			err, download.ErrCueImage,
+		) {
+			break
+		}
+		slog.InfoContext(ctx, "music search: release is a CD image, trying the next",
+			"album.id", a.ID, "release", r.Result.Title)
+	}
+	if errors.Is(err, download.ErrCueImage) {
+		outcome = "cue_image"
+		return false
+	}
+	if err != nil {
 		outcome = "grab_failed"
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "music search: grab failed",

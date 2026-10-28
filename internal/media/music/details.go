@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -17,10 +16,6 @@ import (
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 )
-
-// emptyDeezerPicture is the path Deezer builds for an artist with no photo: an
-// empty hash segment.
-const emptyDeezerPicture = "/images/artist//"
 
 // fillDetailsInBackground runs the overview and photo steps off the caller's
 // goroutine and never reports failure: neither may fail an add or a refresh.
@@ -96,22 +91,44 @@ func (s *Service) fillDetails(ctx context.Context, artistID uint32, force bool) 
 	}
 }
 
-// photoURL finds the artist's picture: through MusicBrainz's own Deezer link
-// when it has one, which cannot confuse namesakes, otherwise by name, accepted
-// only when exactly one hit folds equal to the artist's name. Two equal hits,
-// or none, mean no photo; the first hit never wins.
+// photoURL finds the artist's picture. MusicBrainz's own Deezer link is taken
+// unless another MusicBrainz artist links the same page: Deezer files
+// namesakes under one page, and MusicBrainz links the grunge Nirvana and the
+// 60s UK band to the same one, whose picture is the grunge band's. With no
+// link, the name is searched, accepted only when exactly one hit folds equal
+// to it; the first hit never wins. Whatever that leaves unsettled falls back
+// to the image MusicBrainz links for this artist, a Wikimedia Commons file,
+// and otherwise to no photo. The MusicBrainz calls run at ctx's priority: a
+// person's refresh must not wait out a 503 hold, which keeps prefetch and
+// background calls refused for as long as MusicBrainz sheds load.
 func (s *Service) photoURL(ctx context.Context, a *ent.Artist) string {
 	if a.DeezerID != 0 {
-		hit, err := s.photos.ArtistByID(ctx, a.DeezerID)
-		if err != nil {
-			slog.WarnContext(ctx, "deezer artist lookup failed",
-				"artist.id", a.ID, "error", err)
-			return ""
+		shared := false
+		if s.links != nil {
+			var err error
+			if shared, err = s.links.DeezerArtistShared(
+				ctx,
+				a.DeezerID,
+			); err != nil {
+				slog.WarnContext(ctx, "deezer link check failed",
+					"artist.id", a.ID, "error", err)
+				return ""
+			}
 		}
-		if hit != nil {
-			return usablePicture(hit.PictureURL)
+		if !shared {
+			hit, err := s.photos.ArtistByID(ctx, a.DeezerID)
+			if err != nil {
+				slog.WarnContext(ctx, "deezer artist lookup failed",
+					"artist.id", a.ID, "error", err)
+				return ""
+			}
+			if hit != nil {
+				if hit.PictureURL != "" {
+					return hit.PictureURL
+				}
+			}
 		}
-		return ""
+		return s.linkedImage(ctx, a)
 	}
 	hits, err := s.photos.SearchArtists(ctx, a.Name)
 	if err != nil {
@@ -125,19 +142,27 @@ func (s *Service) photoURL(ctx context.Context, a *ent.Artist) string {
 			continue
 		}
 		if match != nil {
-			return ""
+			return s.linkedImage(ctx, a)
 		}
 		match = &hits[i]
 	}
 	if match == nil {
-		return ""
+		return s.linkedImage(ctx, a)
 	}
-	return usablePicture(match.PictureURL)
+	return match.PictureURL
 }
 
-func usablePicture(u string) string {
-	if u == "" || strings.Contains(u, emptyDeezerPicture) {
+// linkedImage is the Commons image MusicBrainz links for the artist, "" when
+// it links none or cannot be asked.
+func (s *Service) linkedImage(ctx context.Context, a *ent.Artist) string {
+	if s.links == nil || a.Mbid == "" {
 		return ""
 	}
-	return u
+	art, err := s.links.ArtistArt(ctx, a.Mbid)
+	if err != nil {
+		slog.WarnContext(ctx, "musicbrainz artist links not read",
+			"artist.id", a.ID, "error", err)
+		return ""
+	}
+	return art.ImageURL
 }

@@ -109,6 +109,7 @@ func (Album) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		// Records of discography packs expected to cover this album.
 		edge.From("pack_records", DownloadRecord.Type).Ref("albums"),
+		edge.From("co_artists", Artist.Type).Ref("co_albums"),
 	}
 }
 

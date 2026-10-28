@@ -520,6 +520,58 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 			Expect(f).NotTo(BeAnExistingFile())
 		})
 
+		It(
+			"keeps a shared album's files when its owner is deleted with files",
+			func() {
+				a, albums := e.seedArtist(
+					"Nirvana",
+					albumSeed{
+						mbid:   "rg-1",
+						title:  "Nevermind",
+						tracks: []string{"A"},
+					},
+				)
+				b, _ := e.seedArtist(
+					"Guest",
+					albumSeed{mbid: "rg-1", title: "Nevermind"},
+				)
+				f := seedFile(albums)
+				e.posters.EXPECT().Remove("artists", a.ID).Return(nil).Once()
+
+				Expect(e.svc.Delete(e.ctx, a.ID, true)).To(Succeed())
+				Expect(f).To(BeAnExistingFile())
+				Expect(
+					e.client.Album.GetX(e.ctx, albums[0].ID).
+						QueryArtist().
+						OnlyIDX(e.ctx),
+				).To(Equal(b.ID))
+			},
+		)
+
+		It(
+			"keeps a shared album's files when a co-artist is deleted with files",
+			func() {
+				_, albums := e.seedArtist(
+					"Nirvana",
+					albumSeed{
+						mbid:   "rg-1",
+						title:  "Nevermind",
+						tracks: []string{"A"},
+					},
+				)
+				b, _ := e.seedArtist(
+					"Guest",
+					albumSeed{mbid: "rg-1", title: "Nevermind"},
+				)
+				f := seedFile(albums)
+				e.posters.EXPECT().Remove("artists", b.ID).Return(nil).Once()
+
+				Expect(e.svc.Delete(e.ctx, b.ID, true)).To(Succeed())
+				Expect(f).To(BeAnExistingFile())
+				Expect(e.client.Album.Query().Count(e.ctx)).To(Equal(1))
+			},
+		)
+
 		It("maps a missing artist to ErrArtistNotFound", func() {
 			Expect(e.svc.Delete(e.ctx, 999, false)).To(MatchError(ErrArtistNotFound))
 		})

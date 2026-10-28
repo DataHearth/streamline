@@ -36,6 +36,7 @@ type AlbumQuery struct {
 	withAnnotations     *MusicAnnotationQuery
 	withEvents          *MediaEventQuery
 	withPackRecords     *DownloadRecordQuery
+	withCoArtists       *ArtistQuery
 	withFKs             bool
 	modifiers           []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -221,6 +222,28 @@ func (_q *AlbumQuery) QueryPackRecords() *DownloadRecordQuery {
 			sqlgraph.From(album.Table, album.FieldID, selector),
 			sqlgraph.To(downloadrecord.Table, downloadrecord.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, album.PackRecordsTable, album.PackRecordsPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCoArtists chains the current query on the "co_artists" edge.
+func (_q *AlbumQuery) QueryCoArtists() *ArtistQuery {
+	query := (&ArtistClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(album.Table, album.FieldID, selector),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, album.CoArtistsTable, album.CoArtistsPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -427,6 +450,7 @@ func (_q *AlbumQuery) Clone() *AlbumQuery {
 		withAnnotations:     _q.withAnnotations.Clone(),
 		withEvents:          _q.withEvents.Clone(),
 		withPackRecords:     _q.withPackRecords.Clone(),
+		withCoArtists:       _q.withCoArtists.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -511,6 +535,17 @@ func (_q *AlbumQuery) WithPackRecords(opts ...func(*DownloadRecordQuery)) *Album
 	return _q
 }
 
+// WithCoArtists tells the query-builder to eager-load the nodes that are connected to
+// the "co_artists" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AlbumQuery) WithCoArtists(opts ...func(*ArtistQuery)) *AlbumQuery {
+	query := (&ArtistClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCoArtists = query
+	return _q
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -590,7 +625,7 @@ func (_q *AlbumQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Album,
 		nodes       = []*Album{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [7]bool{
+		loadedTypes = [8]bool{
 			_q.withArtist != nil,
 			_q.withTracks != nil,
 			_q.withDownloadRecords != nil,
@@ -598,6 +633,7 @@ func (_q *AlbumQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Album,
 			_q.withAnnotations != nil,
 			_q.withEvents != nil,
 			_q.withPackRecords != nil,
+			_q.withCoArtists != nil,
 		}
 	)
 	if _q.withArtist != nil {
@@ -672,6 +708,13 @@ func (_q *AlbumQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Album,
 		if err := _q.loadPackRecords(ctx, query, nodes,
 			func(n *Album) { n.Edges.PackRecords = []*DownloadRecord{} },
 			func(n *Album, e *DownloadRecord) { n.Edges.PackRecords = append(n.Edges.PackRecords, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCoArtists; query != nil {
+		if err := _q.loadCoArtists(ctx, query, nodes,
+			func(n *Album) { n.Edges.CoArtists = []*Artist{} },
+			func(n *Album, e *Artist) { n.Edges.CoArtists = append(n.Edges.CoArtists, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -921,6 +964,67 @@ func (_q *AlbumQuery) loadPackRecords(ctx context.Context, query *DownloadRecord
 		nodes, ok := nids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected "pack_records" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
+	}
+	return nil
+}
+func (_q *AlbumQuery) loadCoArtists(ctx context.Context, query *ArtistQuery, nodes []*Album, init func(*Album), assign func(*Album, *Artist)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uint32]*Album)
+	nids := make(map[uint32]map[*Album]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(album.CoArtistsTable)
+		s.Join(joinT).On(s.C(artist.FieldID), joinT.C(album.CoArtistsPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(album.CoArtistsPrimaryKey[1]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(album.CoArtistsPrimaryKey[1]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(sql.NullInt64)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := uint32(values[0].(*sql.NullInt64).Int64)
+				inValue := uint32(values[1].(*sql.NullInt64).Int64)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Album]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Artist](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "co_artists" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)

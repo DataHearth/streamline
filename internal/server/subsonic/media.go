@@ -368,8 +368,8 @@ func serveFile(
 	return nil
 }
 
-// getCoverArt serves an album's cover for an album, a song or a playlist
-// (its first playable entry's), and an artist's photo.
+// getCoverArt serves an album's cover for an album or a song, a grid of its
+// albums' covers for a playlist, and an artist's photo.
 func (h *Handler) getCoverArt(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -403,7 +403,7 @@ func (h *Handler) getCoverArt(
 		if len(ts) == 0 {
 			return errNotFoundErr
 		}
-		h.posters.Serve(w, r, "albums", ts[0].Edges.Album.ID)
+		return h.servePlaylistCover(w, r, ts)
 	default:
 		return errNotFoundErr
 	}

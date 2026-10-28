@@ -65,6 +65,9 @@ func (Artist) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("events", MediaEvent.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		// Albums another artist owns that this one is also credited on: a
+		// release group is one row, listed under every library artist it names.
+		edge.To("co_albums", Album.Type),
 	}
 }
 

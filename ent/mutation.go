@@ -162,6 +162,9 @@ type AlbumMutation struct {
 	pack_records            map[uint32]struct{}
 	removedpack_records     map[uint32]struct{}
 	clearedpack_records     bool
+	co_artists              map[uint32]struct{}
+	removedco_artists       map[uint32]struct{}
+	clearedco_artists       bool
 	done                    bool
 	oldValue                func(context.Context) (*Album, error)
 	predicates              []predicate.Album
@@ -1919,6 +1922,60 @@ func (m *AlbumMutation) ResetPackRecords() {
 	m.removedpack_records = nil
 }
 
+// AddCoArtistIDs adds the "co_artists" edge to the Artist entity by ids.
+func (m *AlbumMutation) AddCoArtistIDs(ids ...uint32) {
+	if m.co_artists == nil {
+		m.co_artists = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.co_artists[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCoArtists clears the "co_artists" edge to the Artist entity.
+func (m *AlbumMutation) ClearCoArtists() {
+	m.clearedco_artists = true
+}
+
+// CoArtistsCleared reports if the "co_artists" edge to the Artist entity was cleared.
+func (m *AlbumMutation) CoArtistsCleared() bool {
+	return m.clearedco_artists
+}
+
+// RemoveCoArtistIDs removes the "co_artists" edge to the Artist entity by IDs.
+func (m *AlbumMutation) RemoveCoArtistIDs(ids ...uint32) {
+	if m.removedco_artists == nil {
+		m.removedco_artists = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.co_artists, ids[i])
+		m.removedco_artists[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCoArtists returns the removed IDs of the "co_artists" edge to the Artist entity.
+func (m *AlbumMutation) RemovedCoArtistsIDs() (ids []uint32) {
+	for id := range m.removedco_artists {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CoArtistsIDs returns the "co_artists" edge IDs in the mutation.
+func (m *AlbumMutation) CoArtistsIDs() (ids []uint32) {
+	for id := range m.co_artists {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCoArtists resets all changes to the "co_artists" edge.
+func (m *AlbumMutation) ResetCoArtists() {
+	m.co_artists = nil
+	m.clearedco_artists = false
+	m.removedco_artists = nil
+}
+
 // Where appends a list predicates to the AlbumMutation builder.
 func (m *AlbumMutation) Where(ps ...predicate.Album) {
 	m.predicates = append(m.predicates, ps...)
@@ -2643,7 +2700,7 @@ func (m *AlbumMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AlbumMutation) AddedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.artist != nil {
 		edges = append(edges, album.EdgeArtist)
 	}
@@ -2664,6 +2721,9 @@ func (m *AlbumMutation) AddedEdges() []string {
 	}
 	if m.pack_records != nil {
 		edges = append(edges, album.EdgePackRecords)
+	}
+	if m.co_artists != nil {
+		edges = append(edges, album.EdgeCoArtists)
 	}
 	return edges
 }
@@ -2712,13 +2772,19 @@ func (m *AlbumMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case album.EdgeCoArtists:
+		ids := make([]ent.Value, 0, len(m.co_artists))
+		for id := range m.co_artists {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AlbumMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.removedtracks != nil {
 		edges = append(edges, album.EdgeTracks)
 	}
@@ -2736,6 +2802,9 @@ func (m *AlbumMutation) RemovedEdges() []string {
 	}
 	if m.removedpack_records != nil {
 		edges = append(edges, album.EdgePackRecords)
+	}
+	if m.removedco_artists != nil {
+		edges = append(edges, album.EdgeCoArtists)
 	}
 	return edges
 }
@@ -2780,13 +2849,19 @@ func (m *AlbumMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case album.EdgeCoArtists:
+		ids := make([]ent.Value, 0, len(m.removedco_artists))
+		for id := range m.removedco_artists {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AlbumMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.clearedartist {
 		edges = append(edges, album.EdgeArtist)
 	}
@@ -2807,6 +2882,9 @@ func (m *AlbumMutation) ClearedEdges() []string {
 	}
 	if m.clearedpack_records {
 		edges = append(edges, album.EdgePackRecords)
+	}
+	if m.clearedco_artists {
+		edges = append(edges, album.EdgeCoArtists)
 	}
 	return edges
 }
@@ -2829,6 +2907,8 @@ func (m *AlbumMutation) EdgeCleared(name string) bool {
 		return m.clearedevents
 	case album.EdgePackRecords:
 		return m.clearedpack_records
+	case album.EdgeCoArtists:
+		return m.clearedco_artists
 	}
 	return false
 }
@@ -2868,6 +2948,9 @@ func (m *AlbumMutation) ResetEdge(name string) error {
 		return nil
 	case album.EdgePackRecords:
 		m.ResetPackRecords()
+		return nil
+	case album.EdgeCoArtists:
+		m.ResetCoArtists()
 		return nil
 	}
 	return fmt.Errorf("unknown Album edge %s", name)
@@ -3682,6 +3765,9 @@ type ArtistMutation struct {
 	events                  map[uint32]struct{}
 	removedevents           map[uint32]struct{}
 	clearedevents           bool
+	co_albums               map[uint32]struct{}
+	removedco_albums        map[uint32]struct{}
+	clearedco_albums        bool
 	done                    bool
 	oldValue                func(context.Context) (*Artist, error)
 	predicates              []predicate.Artist
@@ -5067,6 +5153,60 @@ func (m *ArtistMutation) ResetEvents() {
 	m.removedevents = nil
 }
 
+// AddCoAlbumIDs adds the "co_albums" edge to the Album entity by ids.
+func (m *ArtistMutation) AddCoAlbumIDs(ids ...uint32) {
+	if m.co_albums == nil {
+		m.co_albums = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.co_albums[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCoAlbums clears the "co_albums" edge to the Album entity.
+func (m *ArtistMutation) ClearCoAlbums() {
+	m.clearedco_albums = true
+}
+
+// CoAlbumsCleared reports if the "co_albums" edge to the Album entity was cleared.
+func (m *ArtistMutation) CoAlbumsCleared() bool {
+	return m.clearedco_albums
+}
+
+// RemoveCoAlbumIDs removes the "co_albums" edge to the Album entity by IDs.
+func (m *ArtistMutation) RemoveCoAlbumIDs(ids ...uint32) {
+	if m.removedco_albums == nil {
+		m.removedco_albums = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.co_albums, ids[i])
+		m.removedco_albums[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCoAlbums returns the removed IDs of the "co_albums" edge to the Album entity.
+func (m *ArtistMutation) RemovedCoAlbumsIDs() (ids []uint32) {
+	for id := range m.removedco_albums {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CoAlbumsIDs returns the "co_albums" edge IDs in the mutation.
+func (m *ArtistMutation) CoAlbumsIDs() (ids []uint32) {
+	for id := range m.co_albums {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCoAlbums resets all changes to the "co_albums" edge.
+func (m *ArtistMutation) ResetCoAlbums() {
+	m.co_albums = nil
+	m.clearedco_albums = false
+	m.removedco_albums = nil
+}
+
 // Where appends a list predicates to the ArtistMutation builder.
 func (m *ArtistMutation) Where(ps ...predicate.Artist) {
 	m.predicates = append(m.predicates, ps...)
@@ -5666,7 +5806,7 @@ func (m *ArtistMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ArtistMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.albums != nil {
 		edges = append(edges, artist.EdgeAlbums)
 	}
@@ -5681,6 +5821,9 @@ func (m *ArtistMutation) AddedEdges() []string {
 	}
 	if m.events != nil {
 		edges = append(edges, artist.EdgeEvents)
+	}
+	if m.co_albums != nil {
+		edges = append(edges, artist.EdgeCoAlbums)
 	}
 	return edges
 }
@@ -5719,13 +5862,19 @@ func (m *ArtistMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case artist.EdgeCoAlbums:
+		ids := make([]ent.Value, 0, len(m.co_albums))
+		for id := range m.co_albums {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ArtistMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.removedalbums != nil {
 		edges = append(edges, artist.EdgeAlbums)
 	}
@@ -5740,6 +5889,9 @@ func (m *ArtistMutation) RemovedEdges() []string {
 	}
 	if m.removedevents != nil {
 		edges = append(edges, artist.EdgeEvents)
+	}
+	if m.removedco_albums != nil {
+		edges = append(edges, artist.EdgeCoAlbums)
 	}
 	return edges
 }
@@ -5778,13 +5930,19 @@ func (m *ArtistMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case artist.EdgeCoAlbums:
+		ids := make([]ent.Value, 0, len(m.removedco_albums))
+		for id := range m.removedco_albums {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ArtistMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.clearedalbums {
 		edges = append(edges, artist.EdgeAlbums)
 	}
@@ -5799,6 +5957,9 @@ func (m *ArtistMutation) ClearedEdges() []string {
 	}
 	if m.clearedevents {
 		edges = append(edges, artist.EdgeEvents)
+	}
+	if m.clearedco_albums {
+		edges = append(edges, artist.EdgeCoAlbums)
 	}
 	return edges
 }
@@ -5817,6 +5978,8 @@ func (m *ArtistMutation) EdgeCleared(name string) bool {
 		return m.clearedannotations
 	case artist.EdgeEvents:
 		return m.clearedevents
+	case artist.EdgeCoAlbums:
+		return m.clearedco_albums
 	}
 	return false
 }
@@ -5847,6 +6010,9 @@ func (m *ArtistMutation) ResetEdge(name string) error {
 		return nil
 	case artist.EdgeEvents:
 		m.ResetEvents()
+		return nil
+	case artist.EdgeCoAlbums:
+		m.ResetCoAlbums()
 		return nil
 	}
 	return fmt.Errorf("unknown Artist edge %s", name)
@@ -49744,6 +49910,7 @@ type TrackMutation struct {
 	duration           *uint32
 	addduration        *int32
 	bonus              *bool
+	artist_credit      *string
 	tag_overrides      *map[string][]string
 	clearedFields      map[string]struct{}
 	album              *uint32
@@ -50293,6 +50460,55 @@ func (m *TrackMutation) ResetBonus() {
 	m.bonus = nil
 }
 
+// SetArtistCredit sets the "artist_credit" field.
+func (m *TrackMutation) SetArtistCredit(s string) {
+	m.artist_credit = &s
+}
+
+// ArtistCredit returns the value of the "artist_credit" field in the mutation.
+func (m *TrackMutation) ArtistCredit() (r string, exists bool) {
+	v := m.artist_credit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldArtistCredit returns the old "artist_credit" field's value of the Track entity.
+// If the Track object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TrackMutation) OldArtistCredit(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldArtistCredit is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldArtistCredit requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldArtistCredit: %w", err)
+	}
+	return oldValue.ArtistCredit, nil
+}
+
+// ClearArtistCredit clears the value of the "artist_credit" field.
+func (m *TrackMutation) ClearArtistCredit() {
+	m.artist_credit = nil
+	m.clearedFields[track.FieldArtistCredit] = struct{}{}
+}
+
+// ArtistCreditCleared returns if the "artist_credit" field was cleared in this mutation.
+func (m *TrackMutation) ArtistCreditCleared() bool {
+	_, ok := m.clearedFields[track.FieldArtistCredit]
+	return ok
+}
+
+// ResetArtistCredit resets all changes to the "artist_credit" field.
+func (m *TrackMutation) ResetArtistCredit() {
+	m.artist_credit = nil
+	delete(m.clearedFields, track.FieldArtistCredit)
+}
+
 // SetTagOverrides sets the "tag_overrides" field.
 func (m *TrackMutation) SetTagOverrides(value map[string][]string) {
 	m.tag_overrides = &value
@@ -50631,7 +50847,7 @@ func (m *TrackMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TrackMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.create_time != nil {
 		fields = append(fields, track.FieldCreateTime)
 	}
@@ -50658,6 +50874,9 @@ func (m *TrackMutation) Fields() []string {
 	}
 	if m.bonus != nil {
 		fields = append(fields, track.FieldBonus)
+	}
+	if m.artist_credit != nil {
+		fields = append(fields, track.FieldArtistCredit)
 	}
 	if m.tag_overrides != nil {
 		fields = append(fields, track.FieldTagOverrides)
@@ -50688,6 +50907,8 @@ func (m *TrackMutation) Field(name string) (ent.Value, bool) {
 		return m.Duration()
 	case track.FieldBonus:
 		return m.Bonus()
+	case track.FieldArtistCredit:
+		return m.ArtistCredit()
 	case track.FieldTagOverrides:
 		return m.TagOverrides()
 	}
@@ -50717,6 +50938,8 @@ func (m *TrackMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldDuration(ctx)
 	case track.FieldBonus:
 		return m.OldBonus(ctx)
+	case track.FieldArtistCredit:
+		return m.OldArtistCredit(ctx)
 	case track.FieldTagOverrides:
 		return m.OldTagOverrides(ctx)
 	}
@@ -50790,6 +51013,13 @@ func (m *TrackMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetBonus(v)
+		return nil
+	case track.FieldArtistCredit:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArtistCredit(v)
 		return nil
 	case track.FieldTagOverrides:
 		v, ok := value.(map[string][]string)
@@ -50876,6 +51106,9 @@ func (m *TrackMutation) ClearedFields() []string {
 	if m.FieldCleared(track.FieldDuration) {
 		fields = append(fields, track.FieldDuration)
 	}
+	if m.FieldCleared(track.FieldArtistCredit) {
+		fields = append(fields, track.FieldArtistCredit)
+	}
 	if m.FieldCleared(track.FieldTagOverrides) {
 		fields = append(fields, track.FieldTagOverrides)
 	}
@@ -50901,6 +51134,9 @@ func (m *TrackMutation) ClearField(name string) error {
 		return nil
 	case track.FieldDuration:
 		m.ClearDuration()
+		return nil
+	case track.FieldArtistCredit:
+		m.ClearArtistCredit()
 		return nil
 	case track.FieldTagOverrides:
 		m.ClearTagOverrides()
@@ -50939,6 +51175,9 @@ func (m *TrackMutation) ResetField(name string) error {
 		return nil
 	case track.FieldBonus:
 		m.ResetBonus()
+		return nil
+	case track.FieldArtistCredit:
+		m.ResetArtistCredit()
 		return nil
 	case track.FieldTagOverrides:
 		m.ResetTagOverrides()

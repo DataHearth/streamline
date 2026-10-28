@@ -679,7 +679,8 @@ func grabRefused(err error) bool {
 		errors.Is(err, download.ErrNoWantedFiles) ||
 		errors.Is(err, download.ErrClientFull) ||
 		errors.Is(err, download.ErrNoSpace) ||
-		errors.Is(err, download.ErrUnsafeTorrentName)
+		errors.Is(err, download.ErrUnsafeTorrentName) ||
+		errors.Is(err, download.ErrCueImage)
 }
 
 func (s *Server) GrabMusicArtistRelease(

@@ -137,6 +137,7 @@ type Service struct {
 	download  download.Downloader
 	overviews metadata.OverviewProvider
 	photos    metadata.ArtistPhotoProvider
+	links     metadata.ArtistLinkProvider
 	ms        mediaserver.Refresher
 
 	details         *memo[*metadata.ArtistDetails]
@@ -147,7 +148,8 @@ type Service struct {
 }
 
 // NewService wires the music service. overviews and photos may be nil, which
-// turns the Wikipedia and Deezer steps of an add off.
+// turns the Wikipedia and Deezer steps of an add off; links may be nil, which
+// leaves the photo step unable to tell namesakes sharing a Deezer page apart.
 func NewService(
 	store db.Store,
 	meta metadata.MusicProvider,
@@ -157,11 +159,13 @@ func NewService(
 	dl download.Downloader,
 	overviews metadata.OverviewProvider,
 	photos metadata.ArtistPhotoProvider,
+	links metadata.ArtistLinkProvider,
 	ms mediaserver.Refresher,
 ) *Service {
 	return &Service{
 		db: store, metadata: meta, posters: p, covers: covers,
-		indexer: idx, download: dl, overviews: overviews, photos: photos, ms: ms,
+		indexer: idx, download: dl, overviews: overviews, photos: photos,
+		links: links, ms: ms,
 		details: newMemo[*metadata.ArtistDetails](detailsTTL, detailsCacheLimit),
 		lookups: newMemo[*lookupBody](detailsTTL, detailsCacheLimit),
 		releaseSearches: newMemo[[]metadata.ReleaseGroupSearchResult](
@@ -347,7 +351,9 @@ func (s *Service) afterAdd(ctx context.Context, a *ent.Artist, force bool) {
 		}
 	}
 	s.enqueueHydration(a.ID, items...)
-	s.fillDetailsInBackground(ctx, a.ID, force)
+	// Nobody waits on the photo of an artist just added, so its MusicBrainz
+	// calls go behind any lookup a person makes meanwhile.
+	s.fillDetailsInBackground(metadata.Prefetch(ctx), a.ID, force)
 }
 
 func (s *Service) Get(ctx context.Context, id uint32) (*ent.Artist, error) {
@@ -486,6 +492,14 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 	if err != nil {
 		return otelx.RecordSpanError(span, notFound(err))
 	}
+	// A shared album is still another artist's: DeleteArtist hands it to
+	// them, so neither its files nor its cover go with this artist.
+	owned := slices.DeleteFunc(
+		slices.Clone(row.Edges.Albums),
+		func(a *ent.Album) bool {
+			return len(a.Edges.CoArtists) > 0
+		},
+	)
 	if deleteFiles {
 		root := config.Get().Library.MusicPath
 		var removed []string
@@ -496,7 +510,7 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 				)
 			}
 		}()
-		for _, a := range row.Edges.Albums {
+		for _, a := range owned {
 			unlock := library.LockAlbumFiles(a.ID)
 			// Read again under the lock: the renamer may have moved a
 			// file since the artist was loaded.
@@ -527,14 +541,21 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 			unlock()
 		}
 	}
-	if err := s.db.DeleteArtist(ctx, id); err != nil {
+	moved, err := s.db.DeleteArtist(ctx, id)
+	if err != nil {
 		return otelx.RecordSpanError(span, notFound(err))
+	}
+	if len(moved) > 0 {
+		slog.InfoContext(ctx, "shared albums handed to a co-artist",
+			"artist.id", id, "albums", moved)
+		// Their files name the deleted owner as the album artist.
+		s.tagsChanged(ctx, moved...)
 	}
 	if err := s.posters.Remove(artistKind, id); err != nil {
 		slog.WarnContext(ctx, "artist poster was not removed",
 			"artist.id", id, "error", err)
 	}
-	for _, a := range row.Edges.Albums {
+	for _, a := range owned {
 		if err := s.posters.Remove(coverKind, a.ID); err != nil {
 			slog.WarnContext(ctx, "album poster was not removed",
 				"album.id", a.ID, "error", err)
@@ -575,7 +596,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 	s.details.put(row.Mbid, details)
 
 	now := time.Now()
-	created, err := s.db.RefreshArtist(ctx, id, db.RefreshArtistParams{
+	created, removed, err := s.db.RefreshArtist(ctx, id, db.RefreshArtistParams{
 		Name:        details.Name,
 		SortName:    details.SortName,
 		Type:        details.Type,
@@ -590,6 +611,16 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 	})
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
+	}
+	if len(removed) > 0 {
+		slog.InfoContext(ctx, "albums no longer in the discography removed",
+			"artist.id", id, "albums", removed)
+	}
+	for _, albumID := range removed {
+		if err := s.posters.Remove(coverKind, albumID); err != nil {
+			slog.WarnContext(ctx, "album poster was not removed",
+				"album.id", albumID, "error", err)
+		}
 	}
 
 	updated, err := s.db.FindArtistByID(ctx, id)

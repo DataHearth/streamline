@@ -85,6 +85,21 @@ var _ = Describe("Store.RecentActivity", Label("integration", "db"), func() {
 		Expect(res.Events[0].Edges.Movie.ID).To(Equal(mid1))
 	})
 
+	It("matches the events of an album the artist is co-credited on", func() {
+		owner := client.Artist.Create().SetMbid("a1").SetName("311").SaveX(ctx)
+		guest := client.Artist.Create().
+			SetMbid("a2").
+			SetName("The Offspring").
+			SaveX(ctx)
+		split := client.Album.Create().SetMbid("rg1").SetTitle("Self Esteem / Down").
+			SetArtist(owner).AddCoArtists(guest).SaveX(ctx)
+		client.MediaEvent.Create().SetType("imported").SetAlbum(split).SaveX(ctx)
+
+		res, err := store.RecentActivity(ctx, ActivityFilter{ArtistID: &guest.ID})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res.Events).To(HaveLen(1))
+	})
+
 	It("matches an artist's own rows and its albums'", func() {
 		gojira := client.Artist.Create().SetMbid("a1").SetName("Gojira").SaveX(ctx)
 		other := client.Artist.Create().SetMbid("a2").SetName("Other").SaveX(ctx)

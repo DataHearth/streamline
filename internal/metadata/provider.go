@@ -247,6 +247,12 @@ type TrackInfo struct {
 	Disc             uint8
 	Position         uint16
 	Duration         uint32 // seconds, 0 when unknown
+	// Artists are the artists the track is credited to, before any "feat."
+	// join phrase; on a split release they differ from the album's.
+	Artists []PersonInfo
+	// ArtistCredit is Artists as MusicBrainz joins them ("A x B", "A & B"),
+	// canonical names, no "feat." part.
+	ArtistCredit string
 	// Featuring are the artists credited after a "feat." join phrase.
 	Featuring []PersonInfo
 	// Writers are the people credited on the recorded work, each under one
@@ -377,6 +383,18 @@ type ArtistPhotoProvider interface {
 type Overview struct {
 	Text      string
 	SourceURL string
+}
+
+// ArtistLinkProvider reads what MusicBrainz links as an artist's picture,
+// which is how namesakes are told apart. Implemented by *MusicBrainz.
+type ArtistLinkProvider interface {
+	// ArtistArt returns the Deezer page and Commons image MusicBrainz links
+	// for the artist, each empty when it links none.
+	ArtistArt(ctx context.Context, mbid string) (ArtistArt, error)
+	// DeezerArtistShared reports whether more than one MusicBrainz artist
+	// links the Deezer artist page: Deezer files namesakes under one page,
+	// whose picture is only ever one of them.
+	DeezerArtistShared(ctx context.Context, id uint32) (bool, error)
 }
 
 // OverviewProvider fetches artist overviews. Implemented by *Wikipedia.

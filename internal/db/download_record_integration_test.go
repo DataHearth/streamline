@@ -1416,7 +1416,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			createRec("comp", downloadrecord.StatusCompleted)
 
 			n, err := store.DeleteFailedDownloadRecordsBefore(
-				ctx, time.Now().Add(-14*24*time.Hour),
+				ctx, time.Now().Add(-14*24*time.Hour), nil,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(n).To(Equal(1))
@@ -1425,6 +1425,27 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			Expect(ent.IsNotFound(err)).To(BeTrue())
 			_, err = client.DownloadRecord.Get(ctx, fresh.ID)
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("keeps a failed record whose torrent is still listed", func() {
+			aged := time.Now().Add(-20 * 24 * time.Hour)
+			kept := createRec("seeding", downloadrecord.StatusFailed)
+			gone := createRec("removed", downloadrecord.StatusFailed)
+			for _, id := range []uint32{kept.ID, gone.ID} {
+				_, err := client.DownloadRecord.UpdateOneID(id).
+					SetUpdateTime(aged).Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			n, err := store.DeleteFailedDownloadRecordsBefore(
+				ctx, time.Now().Add(-14*24*time.Hour), []string{"seeding"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+			_, err = client.DownloadRecord.Get(ctx, kept.ID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.DownloadRecord.Get(ctx, gone.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
 	})
 
@@ -1522,7 +1543,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			createRec("c2", downloadrecord.StatusCompleted)
 			createRec("f1", downloadrecord.StatusFailed)
 
-			n, err := store.DeleteAllCompletedDownloadRecords(ctx)
+			n, err := store.DeleteAllCompletedDownloadRecords(ctx, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(n).To(Equal(2))
 
@@ -1531,6 +1552,21 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			for _, r := range rest.Records {
 				Expect(r.Status).To(Equal(downloadrecord.StatusFailed))
 			}
+		})
+
+		It("keeps a completed record whose torrent is still listed", func() {
+			kept := createRec("seeding", downloadrecord.StatusCompleted)
+			gone := createRec("removed", downloadrecord.StatusCompleted)
+
+			n, err := store.DeleteAllCompletedDownloadRecords(
+				ctx, []string{"seeding"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+			_, err = client.DownloadRecord.Get(ctx, kept.ID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.DownloadRecord.Get(ctx, gone.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
 	})
 
@@ -2383,7 +2419,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			plain := createRec("plain", downloadrecord.StatusFailed)
 
 			n, err := store.DeleteFailedDownloadRecordsBefore(
-				ctx, time.Now().Add(time.Hour),
+				ctx, time.Now().Add(time.Hour), nil,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(n).To(Equal(1))

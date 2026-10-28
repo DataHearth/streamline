@@ -177,6 +177,26 @@ func (_u *TrackUpdate) SetNillableBonus(v *bool) *TrackUpdate {
 	return _u
 }
 
+// SetArtistCredit sets the "artist_credit" field.
+func (_u *TrackUpdate) SetArtistCredit(v string) *TrackUpdate {
+	_u.mutation.SetArtistCredit(v)
+	return _u
+}
+
+// SetNillableArtistCredit sets the "artist_credit" field if the given value is not nil.
+func (_u *TrackUpdate) SetNillableArtistCredit(v *string) *TrackUpdate {
+	if v != nil {
+		_u.SetArtistCredit(*v)
+	}
+	return _u
+}
+
+// ClearArtistCredit clears the value of the "artist_credit" field.
+func (_u *TrackUpdate) ClearArtistCredit() *TrackUpdate {
+	_u.mutation.ClearArtistCredit()
+	return _u
+}
+
 // SetTagOverrides sets the "tag_overrides" field.
 func (_u *TrackUpdate) SetTagOverrides(v map[string][]string) *TrackUpdate {
 	_u.mutation.SetTagOverrides(v)
@@ -463,6 +483,12 @@ func (_u *TrackUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Bonus(); ok {
 		_spec.SetField(track.FieldBonus, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ArtistCredit(); ok {
+		_spec.SetField(track.FieldArtistCredit, field.TypeString, value)
+	}
+	if _u.mutation.ArtistCreditCleared() {
+		_spec.ClearField(track.FieldArtistCredit, field.TypeString)
 	}
 	if value, ok := _u.mutation.TagOverrides(); ok {
 		_spec.SetField(track.FieldTagOverrides, field.TypeJSON, value)
@@ -844,6 +870,26 @@ func (_u *TrackUpdateOne) SetNillableBonus(v *bool) *TrackUpdateOne {
 	return _u
 }
 
+// SetArtistCredit sets the "artist_credit" field.
+func (_u *TrackUpdateOne) SetArtistCredit(v string) *TrackUpdateOne {
+	_u.mutation.SetArtistCredit(v)
+	return _u
+}
+
+// SetNillableArtistCredit sets the "artist_credit" field if the given value is not nil.
+func (_u *TrackUpdateOne) SetNillableArtistCredit(v *string) *TrackUpdateOne {
+	if v != nil {
+		_u.SetArtistCredit(*v)
+	}
+	return _u
+}
+
+// ClearArtistCredit clears the value of the "artist_credit" field.
+func (_u *TrackUpdateOne) ClearArtistCredit() *TrackUpdateOne {
+	_u.mutation.ClearArtistCredit()
+	return _u
+}
+
 // SetTagOverrides sets the "tag_overrides" field.
 func (_u *TrackUpdateOne) SetTagOverrides(v map[string][]string) *TrackUpdateOne {
 	_u.mutation.SetTagOverrides(v)
@@ -1160,6 +1206,12 @@ func (_u *TrackUpdateOne) sqlSave(ctx context.Context) (_node *Track, err error)
 	}
 	if value, ok := _u.mutation.Bonus(); ok {
 		_spec.SetField(track.FieldBonus, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ArtistCredit(); ok {
+		_spec.SetField(track.FieldArtistCredit, field.TypeString, value)
+	}
+	if _u.mutation.ArtistCreditCleared() {
+		_spec.ClearField(track.FieldArtistCredit, field.TypeString)
 	}
 	if value, ok := _u.mutation.TagOverrides(); ok {
 		_spec.SetField(track.FieldTagOverrides, field.TypeJSON, value)

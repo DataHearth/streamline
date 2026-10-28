@@ -319,7 +319,7 @@ func (h *Handler) allowAttempt(w http.ResponseWriter, r *http.Request) bool {
 		r,
 		http.StatusTooManyRequests,
 		"Too many attempts. Try again later.",
-		"rate_limited",
+		"too_many_attempts",
 	)
 	return false
 }

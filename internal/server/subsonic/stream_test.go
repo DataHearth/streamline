@@ -1,8 +1,13 @@
 package subsonic
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
+	"image/color"
+	"image/jpeg"
+	"image/png"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +19,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/internal/appaccess"
 	postersmocks "github.com/datahearth/streamline/internal/posters/mocks"
 )
@@ -101,6 +108,73 @@ var _ = g.Describe("stream", g.Label("integration"), func() {
 			Serve(mock.Anything, mock.Anything, "albums", f.album.ID).
 			Once()
 		serve("getCoverArt", fmt.Sprintf("tr-%d", f.withFile.ID), nil)
+	})
+
+	g.Context("for a playlist", func() {
+		solid := func(c color.Color, w, h int) string {
+			g.GinkgoHelper()
+			img := image.NewRGBA(image.Rect(0, 0, w, h))
+			for y := range h {
+				for x := range w {
+					img.Set(x, y, c)
+				}
+			}
+			path := filepath.Join(g.GinkgoT().TempDir(), "poster.png")
+			out, err := os.Create(path)
+			Expect(err).NotTo(HaveOccurred())
+			defer out.Close()
+			Expect(png.Encode(out, img)).To(Succeed())
+			return path
+		}
+		playlist := func(songs ...string) string {
+			g.GinkgoHelper()
+			p := obj(okResp(f.call("createPlaylist", url.Values{
+				"name": {"Mix"}, "songId": songs,
+			})), "playlist")
+			Expect(p["coverArt"]).To(Equal(p["id"]))
+			return p["id"].(string)
+		}
+
+		g.It("draws two albums' covers on the diagonals of a grid", func() {
+			other := f.addAlbum(
+				f.artist,
+				"rg-other",
+				"Other",
+				"/music/other/01.flac",
+			)
+			otherTrack := f.client.Track.Query().
+				Where(track.HasAlbumWith(album.IDEQ(other.ID))).
+				OnlyX(context.Background())
+			red := color.RGBA{R: 255, A: 255}
+			blue := color.RGBA{B: 255, A: 255}
+			posters.EXPECT().Path("albums", f.album.ID).
+				Return(solid(red, 400, 300)).Once()
+			posters.EXPECT().Path("albums", other.ID).
+				Return(solid(blue, 100, 100)).Once()
+			id := playlist(tr(f.withFile), tr(otherTrack), tr(f.withFile))
+
+			rec := serve("getCoverArt", id, nil)
+			Expect(rec.Header().Get("Content-Type")).To(Equal("image/jpeg"))
+			img, err := jpeg.Decode(bytes.NewReader(rec.Body.Bytes()))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(img.Bounds().Size()).To(Equal(image.Pt(600, 600)))
+			isRed := func(x, y int) bool {
+				r, _, b, _ := img.At(x, y).RGBA()
+				return r > b
+			}
+			Expect([]bool{
+				isRed(150, 150), isRed(450, 150), isRed(150, 450), isRed(450, 450),
+			}).To(Equal([]bool{true, false, false, true}))
+		})
+
+		g.It("serves the one album's cover as it is", func() {
+			posters.EXPECT().Path("albums", f.album.ID).
+				Return(solid(color.Black, 10, 10)).Once()
+			posters.EXPECT().
+				Serve(mock.Anything, mock.Anything, "albums", f.album.ID).
+				Once()
+			serve("getCoverArt", playlist(tr(f.withFile)), nil)
+		})
 	})
 
 	g.It("answers 70 for cover art of a track that does not exist", func() {

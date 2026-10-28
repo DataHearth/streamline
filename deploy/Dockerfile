@@ -11,7 +11,7 @@
 # drift between builds independently of our code. The cost is that stdlib CVE
 # fixes now require bumping this by hand — grype failing on `stdlib` is the signal.
 ARG GO_VERSION=1.27.3
-ARG GO_DIGEST=sha256:b8c9b82affbbb82a020bbcf998dad2ba9516944ac7e883524642a481a9505e9c
+ARG GO_DIGEST=sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb
 
 # static-ffmpeg publishes hardened static PIE builds with no external deps,
 # which is what lets a bare COPY of the binaries into distroless (no package

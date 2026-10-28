@@ -157,7 +157,7 @@
 
 	let meta = $derived.by(() => {
 		if (!artist || !tally) return [];
-		const p: string[] = [releasesCount(tally.released)];
+		const p: string[] = [releasesCount(tally.listed)];
 		if (tally.upcoming) p.push(i18n.music_n_upcoming({ count: String(tally.upcoming) }));
 		p.push(tracksCount(artist.tracks_have));
 		if (artist.size) p.push(formatBytes(artist.size, ""));
@@ -392,6 +392,7 @@
 			<div class="md:hidden">
 				<ReleaseAccordion
 					releases={artist.albums}
+					artistId={artist.id}
 					openId={open}
 					onToggle={(rid) => (openId = open === rid ? -1 : rid)}
 					{canEdit}
@@ -408,10 +409,15 @@
 			     an arbitrary grid template that ends in `minmax(0,1fr)]`. The panel is
 			     min-w-0, which gives the same floor. -->
 			<div class="hidden gap-6 px-8 py-6 md:grid md:grid-cols-[200px_1fr] lg:grid-cols-[250px_1fr]">
-				<ReleaseList releases={artist.albums} selectedId={selected?.id} onSelect={select} />
+				<!-- The top bar (4rem), the sticky tab strip and the grid's own padding
+				     sit above it, so the list scrolls on its own beside a long panel. -->
+				<div class="sticky top-[8.5rem] max-h-[calc(100dvh-10rem)] self-start overflow-y-auto overscroll-contain">
+					<ReleaseList releases={artist.albums} selectedId={selected?.id} onSelect={select} />
+				</div>
 				{#if selected}
 					<ReleasePanel
 						release={selected}
+						artistId={artist.id}
 						{canEdit}
 						onSearch={() => searchRelease(selected)}
 						onManualSearch={() => openManual(String(selected.id))}

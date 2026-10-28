@@ -401,7 +401,7 @@ func (s *Service) planAlbumFiles(
 			adopted++
 			continue
 		}
-		info, err := audiotags.Read(path)
+		info, err := library.ReadTrackInfo(path)
 		if err != nil {
 			slog.WarnContext(ctx, "music adopt: tag read failed",
 				"file", path, "error", err)

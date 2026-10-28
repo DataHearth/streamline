@@ -684,6 +684,15 @@
         "tmdb_region": {
           "type": "string",
           "description": "ISO 3166-1 alpha-2 uppercase region code, e.g. \"FR\"."
+        },
+        "musicbrainz_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "MusicBrainz server root, without /ws/2 (default https://musicbrainz.org). Point it at a self-hosted mirror. Restart required."
+        },
+        "musicbrainz_interval": {
+          "$ref": "#/definitions/duration",
+          "description": "Least time between two MusicBrainz calls (default 1s, what musicbrainz.org allows). Background work keeps twice this between its own calls. \"0s\" removes the limit, for a self-hosted mirror only. Restart required."
         }
       }
     },

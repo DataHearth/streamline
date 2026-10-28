@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
+	"github.com/datahearth/streamline/internal/db"
 )
 
 func randomOrder(s *sql.Selector) { s.OrderBy("RANDOM()") }
@@ -275,9 +276,8 @@ func (h *Handler) starredItems(
 			arIDs = append(arIDs, *a.ArtistID)
 		}
 	}
-	ars, err := h.ent.Artist.Query().
-		Where(artist.IDIn(arIDs...), listedArtist()).
-		WithAlbums(listedAlbums).
+	ars, err := withListedAlbums(h.ent.Artist.Query().
+		Where(artist.IDIn(arIDs...), listedArtist())).
 		All(ctx)
 	if err != nil {
 		return nil, nil, nil, err
@@ -360,7 +360,7 @@ func (h *Handler) topTracks(
 			// take a slot getTopSongs then drops.
 			musicannotation.HasTrackWith(
 				playable(),
-				track.HasAlbumWith(album.HasArtistWith(artist.IDEQ(artistID))),
+				track.HasAlbumWith(db.AlbumOfArtist(artistID)),
 			),
 		).
 		GroupBy(musicannotation.FieldTrackID).

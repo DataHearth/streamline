@@ -154,8 +154,9 @@ export function queueMeta(item: QueueEntry): MetaLine {
 	// 0% with nothing moving otherwise read as the client's name and nothing else.
 	const eta = formatEta(item.eta);
 	return {
+		color: item.status === "stalled" ? "var(--status-stalled)" : undefined,
 		text: joinDot([
-			formatSpeed(item.download_speed),
+			item.status === "stalled" ? i18n.lc_stalled() : formatSpeed(item.download_speed),
 			eta ? i18n.queue_time_left({ eta }) : "",
 			total > 0
 				? i18n.queue_of_total({

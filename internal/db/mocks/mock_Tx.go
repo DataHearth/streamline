@@ -4721,8 +4721,8 @@ func (_c *MockTx_DeleteAPIKeysByUser_Call) RunAndReturn(run func(ctx context.Con
 }
 
 // DeleteAllCompletedDownloadRecords provides a mock function for the type MockTx
-func (_mock *MockTx) DeleteAllCompletedDownloadRecords(ctx context.Context) (int, error) {
-	ret := _mock.Called(ctx)
+func (_mock *MockTx) DeleteAllCompletedDownloadRecords(ctx context.Context, keepHashes []string) (int, error) {
+	ret := _mock.Called(ctx, keepHashes)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteAllCompletedDownloadRecords")
@@ -4730,16 +4730,16 @@ func (_mock *MockTx) DeleteAllCompletedDownloadRecords(ctx context.Context) (int
 
 	var r0 int
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
-		return returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) (int, error)); ok {
+		return returnFunc(ctx, keepHashes)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) int); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) int); ok {
+		r0 = returnFunc(ctx, keepHashes)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string) error); ok {
+		r1 = returnFunc(ctx, keepHashes)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -4753,18 +4753,24 @@ type MockTx_DeleteAllCompletedDownloadRecords_Call struct {
 
 // DeleteAllCompletedDownloadRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockTx_Expecter) DeleteAllCompletedDownloadRecords(ctx any) *MockTx_DeleteAllCompletedDownloadRecords_Call {
-	return &MockTx_DeleteAllCompletedDownloadRecords_Call{Call: _e.mock.On("DeleteAllCompletedDownloadRecords", ctx)}
+//   - keepHashes []string
+func (_e *MockTx_Expecter) DeleteAllCompletedDownloadRecords(ctx any, keepHashes any) *MockTx_DeleteAllCompletedDownloadRecords_Call {
+	return &MockTx_DeleteAllCompletedDownloadRecords_Call{Call: _e.mock.On("DeleteAllCompletedDownloadRecords", ctx, keepHashes)}
 }
 
-func (_c *MockTx_DeleteAllCompletedDownloadRecords_Call) Run(run func(ctx context.Context)) *MockTx_DeleteAllCompletedDownloadRecords_Call {
+func (_c *MockTx_DeleteAllCompletedDownloadRecords_Call) Run(run func(ctx context.Context, keepHashes []string)) *MockTx_DeleteAllCompletedDownloadRecords_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -4775,26 +4781,37 @@ func (_c *MockTx_DeleteAllCompletedDownloadRecords_Call) Return(n int, err error
 	return _c
 }
 
-func (_c *MockTx_DeleteAllCompletedDownloadRecords_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockTx_DeleteAllCompletedDownloadRecords_Call {
+func (_c *MockTx_DeleteAllCompletedDownloadRecords_Call) RunAndReturn(run func(ctx context.Context, keepHashes []string) (int, error)) *MockTx_DeleteAllCompletedDownloadRecords_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteArtist provides a mock function for the type MockTx
-func (_mock *MockTx) DeleteArtist(ctx context.Context, id uint32) error {
+func (_mock *MockTx) DeleteArtist(ctx context.Context, id uint32) ([]uint32, error) {
 	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteArtist")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+	var r0 []uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]uint32, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []uint32); ok {
 		r0 = returnFunc(ctx, id)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]uint32)
+		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockTx_DeleteArtist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteArtist'
@@ -4827,12 +4844,12 @@ func (_c *MockTx_DeleteArtist_Call) Run(run func(ctx context.Context, id uint32)
 	return _c
 }
 
-func (_c *MockTx_DeleteArtist_Call) Return(err error) *MockTx_DeleteArtist_Call {
-	_c.Call.Return(err)
+func (_c *MockTx_DeleteArtist_Call) Return(uint32s []uint32, err error) *MockTx_DeleteArtist_Call {
+	_c.Call.Return(uint32s, err)
 	return _c
 }
 
-func (_c *MockTx_DeleteArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_DeleteArtist_Call {
+func (_c *MockTx_DeleteArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32) ([]uint32, error)) *MockTx_DeleteArtist_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -5092,8 +5109,8 @@ func (_c *MockTx_DeleteDownloadRecord_Call) RunAndReturn(run func(ctx context.Co
 }
 
 // DeleteFailedDownloadRecordsBefore provides a mock function for the type MockTx
-func (_mock *MockTx) DeleteFailedDownloadRecordsBefore(ctx context.Context, cutoff time.Time) (int, error) {
-	ret := _mock.Called(ctx, cutoff)
+func (_mock *MockTx) DeleteFailedDownloadRecordsBefore(ctx context.Context, cutoff time.Time, keepHashes []string) (int, error) {
+	ret := _mock.Called(ctx, cutoff, keepHashes)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteFailedDownloadRecordsBefore")
@@ -5101,16 +5118,16 @@ func (_mock *MockTx) DeleteFailedDownloadRecordsBefore(ctx context.Context, cuto
 
 	var r0 int
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) (int, error)); ok {
-		return returnFunc(ctx, cutoff)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, []string) (int, error)); ok {
+		return returnFunc(ctx, cutoff, keepHashes)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) int); ok {
-		r0 = returnFunc(ctx, cutoff)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, []string) int); ok {
+		r0 = returnFunc(ctx, cutoff, keepHashes)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time) error); ok {
-		r1 = returnFunc(ctx, cutoff)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time, []string) error); ok {
+		r1 = returnFunc(ctx, cutoff, keepHashes)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -5125,11 +5142,12 @@ type MockTx_DeleteFailedDownloadRecordsBefore_Call struct {
 // DeleteFailedDownloadRecordsBefore is a helper method to define mock.On call
 //   - ctx context.Context
 //   - cutoff time.Time
-func (_e *MockTx_Expecter) DeleteFailedDownloadRecordsBefore(ctx any, cutoff any) *MockTx_DeleteFailedDownloadRecordsBefore_Call {
-	return &MockTx_DeleteFailedDownloadRecordsBefore_Call{Call: _e.mock.On("DeleteFailedDownloadRecordsBefore", ctx, cutoff)}
+//   - keepHashes []string
+func (_e *MockTx_Expecter) DeleteFailedDownloadRecordsBefore(ctx any, cutoff any, keepHashes any) *MockTx_DeleteFailedDownloadRecordsBefore_Call {
+	return &MockTx_DeleteFailedDownloadRecordsBefore_Call{Call: _e.mock.On("DeleteFailedDownloadRecordsBefore", ctx, cutoff, keepHashes)}
 }
 
-func (_c *MockTx_DeleteFailedDownloadRecordsBefore_Call) Run(run func(ctx context.Context, cutoff time.Time)) *MockTx_DeleteFailedDownloadRecordsBefore_Call {
+func (_c *MockTx_DeleteFailedDownloadRecordsBefore_Call) Run(run func(ctx context.Context, cutoff time.Time, keepHashes []string)) *MockTx_DeleteFailedDownloadRecordsBefore_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -5139,9 +5157,14 @@ func (_c *MockTx_DeleteFailedDownloadRecordsBefore_Call) Run(run func(ctx contex
 		if args[1] != nil {
 			arg1 = args[1].(time.Time)
 		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -5152,7 +5175,7 @@ func (_c *MockTx_DeleteFailedDownloadRecordsBefore_Call) Return(n int, err error
 	return _c
 }
 
-func (_c *MockTx_DeleteFailedDownloadRecordsBefore_Call) RunAndReturn(run func(ctx context.Context, cutoff time.Time) (int, error)) *MockTx_DeleteFailedDownloadRecordsBefore_Call {
+func (_c *MockTx_DeleteFailedDownloadRecordsBefore_Call) RunAndReturn(run func(ctx context.Context, cutoff time.Time, keepHashes []string) (int, error)) *MockTx_DeleteFailedDownloadRecordsBefore_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -11666,6 +11689,68 @@ func (_c *MockTx_ListDownloadRecordsByPathPrefix_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
+// ListDownloadingAlbumRecords provides a mock function for the type MockTx
+func (_mock *MockTx) ListDownloadingAlbumRecords(ctx context.Context) ([]*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListDownloadingAlbumRecords")
+	}
+
+	var r0 []*ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []*ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListDownloadingAlbumRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListDownloadingAlbumRecords'
+type MockTx_ListDownloadingAlbumRecords_Call struct {
+	*mock.Call
+}
+
+// ListDownloadingAlbumRecords is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTx_Expecter) ListDownloadingAlbumRecords(ctx any) *MockTx_ListDownloadingAlbumRecords_Call {
+	return &MockTx_ListDownloadingAlbumRecords_Call{Call: _e.mock.On("ListDownloadingAlbumRecords", ctx)}
+}
+
+func (_c *MockTx_ListDownloadingAlbumRecords_Call) Run(run func(ctx context.Context)) *MockTx_ListDownloadingAlbumRecords_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListDownloadingAlbumRecords_Call) Return(downloadRecords []*ent.DownloadRecord, err error) *MockTx_ListDownloadingAlbumRecords_Call {
+	_c.Call.Return(downloadRecords, err)
+	return _c
+}
+
+func (_c *MockTx_ListDownloadingAlbumRecords_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.DownloadRecord, error)) *MockTx_ListDownloadingAlbumRecords_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListDownloadingRecordsWithMovie provides a mock function for the type MockTx
 func (_mock *MockTx) ListDownloadingRecordsWithMovie(ctx context.Context) ([]*ent.DownloadRecord, error) {
 	ret := _mock.Called(ctx)
@@ -17820,7 +17905,7 @@ func (_c *MockTx_RecordMediaFileTagFailure_Call) RunAndReturn(run func(ctx conte
 }
 
 // RefreshArtist provides a mock function for the type MockTx
-func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshArtistParams) ([]uint32, error) {
+func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshArtistParams) ([]uint32, []uint32, error) {
 	ret := _mock.Called(ctx, id, p)
 
 	if len(ret) == 0 {
@@ -17828,8 +17913,9 @@ func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshA
 	}
 
 	var r0 []uint32
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.RefreshArtistParams) ([]uint32, error)); ok {
+	var r1 []uint32
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.RefreshArtistParams) ([]uint32, []uint32, error)); ok {
 		return returnFunc(ctx, id, p)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.RefreshArtistParams) []uint32); ok {
@@ -17839,12 +17925,19 @@ func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshA
 			r0 = ret.Get(0).([]uint32)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, db.RefreshArtistParams) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, db.RefreshArtistParams) []uint32); ok {
 		r1 = returnFunc(ctx, id, p)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]uint32)
+		}
 	}
-	return r0, r1
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, db.RefreshArtistParams) error); ok {
+		r2 = returnFunc(ctx, id, p)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
 }
 
 // MockTx_RefreshArtist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshArtist'
@@ -17883,12 +17976,12 @@ func (_c *MockTx_RefreshArtist_Call) Run(run func(ctx context.Context, id uint32
 	return _c
 }
 
-func (_c *MockTx_RefreshArtist_Call) Return(uint32s []uint32, err error) *MockTx_RefreshArtist_Call {
-	_c.Call.Return(uint32s, err)
+func (_c *MockTx_RefreshArtist_Call) Return(uint32s []uint32, uint32s1 []uint32, err error) *MockTx_RefreshArtist_Call {
+	_c.Call.Return(uint32s, uint32s1, err)
 	return _c
 }
 
-func (_c *MockTx_RefreshArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32, p db.RefreshArtistParams) ([]uint32, error)) *MockTx_RefreshArtist_Call {
+func (_c *MockTx_RefreshArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32, p db.RefreshArtistParams) ([]uint32, []uint32, error)) *MockTx_RefreshArtist_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -17946,6 +18039,69 @@ func (_c *MockTx_RefreshSeriesStats_Call) Return(err error) *MockTx_RefreshSerie
 }
 
 func (_c *MockTx_RefreshSeriesStats_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_RefreshSeriesStats_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RejectDownloadingRecord provides a mock function for the type MockTx
+func (_mock *MockTx) RejectDownloadingRecord(ctx context.Context, id uint32, reason string) error {
+	ret := _mock.Called(ctx, id, reason)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RejectDownloadingRecord")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
+		r0 = returnFunc(ctx, id, reason)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_RejectDownloadingRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RejectDownloadingRecord'
+type MockTx_RejectDownloadingRecord_Call struct {
+	*mock.Call
+}
+
+// RejectDownloadingRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - reason string
+func (_e *MockTx_Expecter) RejectDownloadingRecord(ctx any, id any, reason any) *MockTx_RejectDownloadingRecord_Call {
+	return &MockTx_RejectDownloadingRecord_Call{Call: _e.mock.On("RejectDownloadingRecord", ctx, id, reason)}
+}
+
+func (_c *MockTx_RejectDownloadingRecord_Call) Run(run func(ctx context.Context, id uint32, reason string)) *MockTx_RejectDownloadingRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_RejectDownloadingRecord_Call) Return(err error) *MockTx_RejectDownloadingRecord_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_RejectDownloadingRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32, reason string) error) *MockTx_RejectDownloadingRecord_Call {
 	_c.Call.Return(run)
 	return _c
 }

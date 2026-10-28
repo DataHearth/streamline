@@ -260,6 +260,10 @@
 		{sort}
 		onSortChange={(k) => (sort = k)}
 		onReset={reset}
+		add={{
+			label: auth.canAddDirectly ? i18n.action_add_book() : i18n.action_request_book_title(),
+			onClick: () => window.dispatchEvent(new CustomEvent("streamline:open-add-book")),
+		}}
 	/>
 
 	<div class="hidden w-full flex-wrap items-baseline justify-between gap-2 px-6 pb-1 pt-4 font-mono text-[11px] text-fg-subtle md:flex">

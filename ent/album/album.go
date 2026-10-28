@@ -85,6 +85,8 @@ const (
 	EdgeEvents = "events"
 	// EdgePackRecords holds the string denoting the pack_records edge name in mutations.
 	EdgePackRecords = "pack_records"
+	// EdgeCoArtists holds the string denoting the co_artists edge name in mutations.
+	EdgeCoArtists = "co_artists"
 	// Table holds the table name of the album in the database.
 	Table = "albums"
 	// ArtistTable is the table that holds the artist relation/edge.
@@ -134,6 +136,11 @@ const (
 	// PackRecordsInverseTable is the table name for the DownloadRecord entity.
 	// It exists in this package in order to avoid circular dependency with the "downloadrecord" package.
 	PackRecordsInverseTable = "download_records"
+	// CoArtistsTable is the table that holds the co_artists relation/edge. The primary key declared below.
+	CoArtistsTable = "artist_co_albums"
+	// CoArtistsInverseTable is the table name for the Artist entity.
+	// It exists in this package in order to avoid circular dependency with the "artist" package.
+	CoArtistsInverseTable = "artists"
 )
 
 // Columns holds all SQL columns for album fields.
@@ -179,6 +186,9 @@ var (
 	// PackRecordsPrimaryKey and PackRecordsColumn2 are the table columns denoting the
 	// primary key for the pack_records relation (M2M).
 	PackRecordsPrimaryKey = []string{"download_record_id", "album_id"}
+	// CoArtistsPrimaryKey and CoArtistsColumn2 are the table columns denoting the
+	// primary key for the co_artists relation (M2M).
+	CoArtistsPrimaryKey = []string{"artist_id", "album_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -507,6 +517,20 @@ func ByPackRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newPackRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByCoArtistsCount orders the results by co_artists count.
+func ByCoArtistsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCoArtistsStep(), opts...)
+	}
+}
+
+// ByCoArtists orders the results by co_artists terms.
+func ByCoArtists(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCoArtistsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newArtistStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -554,5 +578,12 @@ func newPackRecordsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PackRecordsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2M, true, PackRecordsTable, PackRecordsPrimaryKey...),
+	)
+}
+func newCoArtistsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CoArtistsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, CoArtistsTable, CoArtistsPrimaryKey...),
 	)
 }

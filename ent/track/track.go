@@ -32,6 +32,8 @@ const (
 	FieldDuration = "duration"
 	// FieldBonus holds the string denoting the bonus field in the database.
 	FieldBonus = "bonus"
+	// FieldArtistCredit holds the string denoting the artist_credit field in the database.
+	FieldArtistCredit = "artist_credit"
 	// FieldTagOverrides holds the string denoting the tag_overrides field in the database.
 	FieldTagOverrides = "tag_overrides"
 	// EdgeAlbum holds the string denoting the album edge name in mutations.
@@ -95,6 +97,7 @@ var Columns = []string{
 	FieldPosition,
 	FieldDuration,
 	FieldBonus,
+	FieldArtistCredit,
 	FieldTagOverrides,
 }
 
@@ -187,6 +190,11 @@ func ByDuration(opts ...sql.OrderTermOption) OrderOption {
 // ByBonus orders the results by the bonus field.
 func ByBonus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBonus, opts...).ToFunc()
+}
+
+// ByArtistCredit orders the results by the artist_credit field.
+func ByArtistCredit(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldArtistCredit, opts...).ToFunc()
 }
 
 // ByAlbumField orders the results by album field.

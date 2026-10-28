@@ -12,7 +12,7 @@
 </script>
 
 <script lang="ts">
-	import { ChevronDown, Search, SlidersHorizontal, X } from "@lucide/svelte";
+	import { ChevronDown, Plus, Search, SlidersHorizontal, X } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { dragScroll } from "@lib/drag-scroll";
 	import DropdownMenu from "@components/shared/DropdownMenu.svelte";
@@ -37,6 +37,7 @@
 		sort,
 		onSortChange,
 		onReset,
+		add,
 	}: {
 		statusLabel: string;
 		tabs: ToolbarTab[];
@@ -50,6 +51,7 @@
 		sort: string;
 		onSortChange: (key: string) => void;
 		onReset: () => void;
+		add?: { label: string; onClick: () => void };
 	} = $props();
 
 	let menu = $state<string | null>(null);
@@ -211,6 +213,17 @@
 			/>
 		{/each}
 	</DropdownMenu>
+
+	{#if add}
+		<button
+			type="button"
+			onclick={add.onClick}
+			class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
+		>
+			<Plus size={14} aria-hidden="true" />
+			{add.label}
+		</button>
+	{/if}
 </div>
 
 <div class="sticky top-16 z-20 bg-bg-deep/85 backdrop-blur-md md:hidden">
