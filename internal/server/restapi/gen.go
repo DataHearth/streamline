@@ -2491,6 +2491,7 @@ const (
 	QueueEntryStatusHeld        QueueEntryStatus = "held"
 	QueueEntryStatusImporting   QueueEntryStatus = "importing"
 	QueueEntryStatusPaused      QueueEntryStatus = "paused"
+	QueueEntryStatusStalled     QueueEntryStatus = "stalled"
 )
 
 // Valid indicates whether the value is a known member of the QueueEntryStatus enum.
@@ -2505,6 +2506,8 @@ func (e QueueEntryStatus) Valid() bool {
 	case QueueEntryStatusImporting:
 		return true
 	case QueueEntryStatusPaused:
+		return true
+	case QueueEntryStatusStalled:
 		return true
 	default:
 		return false
@@ -6282,9 +6285,15 @@ type MediaServerUpdateServerType string
 type MetadataConfigPatch struct {
 	HardcoverApiKey *string `json:"hardcover_api_key,omitempty"`
 	Language        *string `json:"language,omitempty"`
-	TmdbApiKey      *string `json:"tmdb_api_key,omitempty"`
-	TmdbRegion      *string `json:"tmdb_region,omitempty"`
-	TvdbApiKey      *string `json:"tvdb_api_key,omitempty"`
+
+	// MusicbrainzInterval A non-negative Go duration; anything else answers 422.
+	MusicbrainzInterval *string `json:"musicbrainz_interval,omitempty"`
+
+	// MusicbrainzUrl An http(s) URL; anything else answers 422.
+	MusicbrainzUrl *string `json:"musicbrainz_url,omitempty"`
+	TmdbApiKey     *string `json:"tmdb_api_key,omitempty"`
+	TmdbRegion     *string `json:"tmdb_region,omitempty"`
+	TvdbApiKey     *string `json:"tvdb_api_key,omitempty"`
 }
 
 // MetadataConfigView defines model for MetadataConfigView.
@@ -6295,6 +6304,12 @@ type MetadataConfigView struct {
 
 	// Language BCP-47 tag. The language TMDB and TVDB answer in — so also the titles the library stores and matches releases against.
 	Language string `json:"language"`
+
+	// MusicbrainzInterval Go duration: the least time between two MusicBrainz calls. 1s is what musicbrainz.org allows; 0s removes the limit, for a mirror.
+	MusicbrainzInterval string `json:"musicbrainz_interval"`
+
+	// MusicbrainzUrl MusicBrainz server root, without /ws/2. https://musicbrainz.org, or a self-hosted mirror.
+	MusicbrainzUrl string `json:"musicbrainz_url"`
 
 	// RestartRequired True when a metadata change is pending a process restart. The same process-wide flag OIDC provider mutations set.
 	RestartRequired bool `json:"restart_required"`
@@ -6449,8 +6464,15 @@ type MovieSearchAccepted struct {
 
 // MusicAlbum defines model for MusicAlbum.
 type MusicAlbum struct {
-	ArtistId      uint32  `json:"artist_id"`
-	CatalogNumber *string `json:"catalog_number,omitempty"`
+	// ArtistId The album's owner, whose folder holds its files. A shared album
+	// names the same owner on every artist it is listed under.
+	ArtistId uint32 `json:"artist_id"`
+
+	// Artists Every library artist a shared release group is listed under, the
+	// owner (whose folder holds the files) first. Omitted for an album
+	// only its owner is credited on.
+	Artists       *[]MusicPerson `json:"artists,omitempty"`
+	CatalogNumber *string        `json:"catalog_number,omitempty"`
 
 	// Country Two-letter region code of the canonical release.
 	Country *string       `json:"country,omitempty"`
@@ -6517,7 +6539,14 @@ type MusicAlbumStatus string
 
 // MusicAlbumSummary defines model for MusicAlbumSummary.
 type MusicAlbumSummary struct {
+	// ArtistId The album's owner, whose folder holds its files. A shared album
+	// names the same owner on every artist it is listed under.
 	ArtistId uint32 `json:"artist_id"`
+
+	// Artists Every library artist a shared release group is listed under, the
+	// owner (whose folder holds the files) first. Omitted for an album
+	// only its owner is credited on.
+	Artists *[]MusicPerson `json:"artists,omitempty"`
 
 	// FailureReason Present while `status` is `failed`; why the import was refused.
 	FailureReason *string `json:"failure_reason,omitempty"`
@@ -7085,6 +7114,11 @@ type MusicTier string
 
 // MusicTrack defines model for MusicTrack.
 type MusicTrack struct {
+	// Artists The artists the track is credited to, before any "feat."; on a
+	// split release they are not the album's. Omitted until the album
+	// is hydrated with them.
+	Artists *[]MusicPerson `json:"artists,omitempty"`
+
 	// Bonus Set only when MusicBrainz says so; never guessed.
 	Bonus *bool `json:"bonus,omitempty"`
 	Disc  uint8 `json:"disc"`
@@ -7781,6 +7815,7 @@ type QueueEntry struct {
 
 	// Status "held" means the download finished but failed import verification
 	// and is waiting on a decision (POST /downloads/{id}/resolve).
+	// "stalled" means the client reports the download is not moving.
 	Status QueueEntryStatus `json:"status"`
 	Title  string           `json:"title"`
 
@@ -7796,6 +7831,7 @@ type QueueEntrySelectionState string
 
 // QueueEntryStatus "held" means the download finished but failed import verification
 // and is waiting on a decision (POST /downloads/{id}/resolve).
+// "stalled" means the client reports the download is not moving.
 type QueueEntryStatus string
 
 // ReidentifyResult defines model for ReidentifyResult.
@@ -21757,6 +21793,20 @@ func (response ClearCompletedHistory403JSONResponse) VisitClearCompletedHistoryR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClearCompletedHistory503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ClearCompletedHistory503JSONResponse) VisitClearCompletedHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }

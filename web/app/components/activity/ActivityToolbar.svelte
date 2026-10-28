@@ -10,6 +10,7 @@
 	> = {
 		queue: [
 			{ key: "downloading", label: i18n.lc_downloading(), dot: "downloading" },
+			{ key: "stalled", label: i18n.lc_stalled(), dot: "stalled" },
 			{ key: "importing", label: i18n.lc_importing(), dot: "grabbing" },
 			{ key: "paused", label: i18n.lc_paused(), dot: "paused" },
 			{ key: "error", label: i18n.lc_error(), dot: "failed" },

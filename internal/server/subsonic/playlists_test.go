@@ -27,7 +27,7 @@ var _ = g.Describe("playlists", g.Label("integration"), func() {
 		p := create("Mix", tr(f.withFile), tr(f.noFile), tr(f.withFile))
 		Expect(p["songCount"]).To(BeEquivalentTo(3))
 		Expect(p["owner"]).To(Equal("listener@example.com"))
-		Expect(p["coverArt"]).To(Equal(al(f.album)))
+		Expect(p["coverArt"]).To(Equal(p["id"]))
 		Expect(ids(list(p, "entry"))).To(Equal([]string{
 			tr(f.withFile), tr(f.noFile), tr(f.withFile),
 		}))

@@ -35,6 +35,9 @@ var (
 	musicDiscoRe        = regexp.MustCompile(
 		`(?i)\bdiscograph|complete collection|\banthology\b|\b(?:19|20)\d{2}\s?[-–]\s?(?:19|20)\d{2}\b`,
 	)
+	// RuTracker's "(image+.cue)", "(image + .cue)", "img+cue"; never
+	// "tracks+.cue", which is one file per track with a sheet beside them.
+	musicCueImageRe = regexp.MustCompile(`(?i)\b(?:image|img)\s*\+\s*\.?cue\b`)
 	// A bare number is never a bit rate; it needs a codec or CBR next to it, a
 	// kbps unit, or brackets, so year-like and group-name tokens never match.
 	musicRateRes = []*regexp.Regexp{
@@ -61,6 +64,9 @@ type ParsedMusicRelease struct {
 	TierKnown   bool
 	Source      string
 	Discography bool
+	// CueImage is a name stating a disc ripped to one file with a CUE sheet,
+	// which the album importer cannot split into tracks.
+	CueImage bool
 }
 
 // ParseMusicRelease reads codec, bit depth, sample rate, bit rate and VBR
@@ -69,6 +75,7 @@ func ParseMusicRelease(name string) ParsedMusicRelease {
 	p := ParsedMusicRelease{
 		Title:       name,
 		Discography: musicDiscoRe.MatchString(name),
+		CueImage:    musicCueImageRe.MatchString(name),
 	}
 	if m := yearRe.FindString(name); m != "" {
 		if y, err := strconv.ParseUint(m, 10, 16); err == nil {
@@ -184,6 +191,9 @@ func JudgeMusicRelease(
 	}
 	if p.Discography && scope == MusicScopeAlbum {
 		return -1, "discography pack, not a single album"
+	}
+	if p.CueImage {
+		return -1, CueImageReason
 	}
 	return score, ""
 }

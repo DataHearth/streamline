@@ -27,8 +27,14 @@ function retryAfterOf(res: Response): number | undefined {
 	const s = /^\d+$/.test(v) ? Number(v) : Math.ceil((Date.parse(v) - Date.now()) / 1000);
 	return Number.isFinite(s) && s > 0 ? s : undefined;
 }
-const waitText = (s: number) =>
-	s < 60 ? i18n.err_rate_limited_seconds({ seconds: s }) : i18n.err_rate_limited_minutes({ minutes: Math.ceil(s / 60) });
+// `rate_limited` is an upstream metadata provider (MusicBrainz, Hardcover);
+// a login or API-key lockout is `too_many_attempts` or a bare 429.
+const waitText = (s: number, provider: boolean) => {
+	const minutes = Math.ceil(s / 60);
+	if (provider)
+		return s < 60 ? i18n.err_provider_rate_limited_seconds({ seconds: s }) : i18n.err_provider_rate_limited_minutes({ minutes });
+	return s < 60 ? i18n.err_rate_limited_seconds({ seconds: s }) : i18n.err_rate_limited_minutes({ minutes });
+};
 
 export type ApiOptions = {
 	method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -51,7 +57,8 @@ const BY_CODE: Record<string, () => string> = {
 	password_mismatch: i18n.err_password_mismatch,
 	registration_disabled: i18n.err_registration_disabled,
 	register_failed: i18n.err_register_failed,
-	rate_limited: i18n.err_rate_limited,
+	too_many_attempts: i18n.err_rate_limited,
+	rate_limited: i18n.err_provider_rate_limited,
 	no_quality_profile: i18n.err_no_quality_profile,
 	smtp_not_configured: i18n.account_device_unconfigured,
 	series_volume: i18n.err_series_volume,
@@ -130,7 +137,7 @@ export function errorText(err: unknown, fallback?: string): string {
 		if ((code === "send_failed" || code === "not_sendable" || code === "no_device_email") && err.message) return err.message;
 		// A 429 that says how long to wait: the sentence says it too (a login,
 		// a Hardcover add or approve).
-		if (err.status === 429 && err.retryAfter) return waitText(err.retryAfter);
+		if (err.status === 429 && err.retryAfter) return waitText(err.retryAfter, code === "rate_limited");
 		// Every 403 streamline writes carries a body. A bare one is a reverse
 		// proxy or WAF refusing the request before it arrived — typically a
 		// method allow-list without PATCH or DELETE — and "you don't have

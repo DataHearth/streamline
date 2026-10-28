@@ -21,6 +21,11 @@ func DownloadMonitor(
 	imp importer.Enqueuer,
 ) scheduler.JobFunc {
 	return func(ctx context.Context) error {
+		// Before the completion pass: an image small enough to finish within a
+		// tick would otherwise reach the importer, which refuses it.
+		if err := c.RejectCueImages(ctx); err != nil {
+			slog.WarnContext(ctx, "reject cue images failed", "error", err)
+		}
 		completed, err := c.CheckStatus(ctx)
 		if err != nil {
 			return err

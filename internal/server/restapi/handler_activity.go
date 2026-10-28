@@ -217,7 +217,18 @@ func (s *Server) ClearCompletedHistory(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	n, err := s.store.DeleteAllCompletedDownloadRecords(ctx)
+	// A record whose torrent still seeds is kept, or the adoption pass files
+	// that torrent as an unidentified proposal on its next tick.
+	live := s.downloads.SeedingTorrents(ctx)
+	if !live.Complete {
+		return ClearCompletedHistory503JSONResponse{
+			ServiceUnavailableJSONResponse: errServiceUnavailable(
+				"a download client could not be listed, so nothing was cleared: " +
+					"the records of torrents it still seeds cannot be told apart",
+			),
+		}, nil
+	}
+	n, err := s.store.DeleteAllCompletedDownloadRecords(ctx, live.Hashes())
 	if err != nil {
 		return nil, err
 	}

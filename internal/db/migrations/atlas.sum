@@ -1,4 +1,4 @@
-h1:Oi5RZrXr9ktsKk06nzZUiBVbKbtf0rrb+X3hhxgViQc=
+h1:EqE0HRbJO4AN/RoJ+sCmfvQuALfSQ/1BLtQYvry9drE=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -68,3 +68,5 @@ h1:Oi5RZrXr9ktsKk06nzZUiBVbKbtf0rrb+X3hhxgViQc=
 20261021140000_repick_video_editions.up.sql h1:mK7hkojw4zwjU35oPhiIUuuAvrC9A7SMGdMOondfzm8=
 20261025050514_download_record_rejected.up.sql h1:BqvQYZrBH2ofbV4wMDd1vfhIDff0iBirHeZqccQ5IcI=
 20261025155317_api_key_scope_expiry.up.sql h1:MpIKr59k10fzW8qYhXRMh5U5b/2eoNF7wd+WGLJ/49A=
+20261027014627_shared_albums.up.sql h1:JhBs2G3gBIkXqPe84F4141AWoBHMljGg72nzhCwFgfg=
+20261027120150_track_artist_credit.up.sql h1:rp5wSUdGG+kdOFhAguCbQ8xkqrDuDZ4aLBCXb/8spHs=

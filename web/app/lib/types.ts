@@ -742,7 +742,7 @@ export type QueueEntry = {
 	// "held": the download finished and failed verification, so it is waiting on
 	// a decision rather than on the network. The only queue state whose next move
 	// belongs to a person.
-	status: "downloading" | "importing" | "paused" | "error" | "held";
+	status: "downloading" | "stalled" | "importing" | "paused" | "error" | "held";
 	title: string;
 	quality?: string;
 	release_group?: string;
@@ -989,6 +989,8 @@ export type MetadataConfig = {
 	tmdb_api_key_file_managed?: boolean;
 	tvdb_api_key_file_managed?: boolean;
 	hardcover_api_key_file_managed?: boolean;
+	musicbrainz_url: string;
+	musicbrainz_interval: string;
 	restart_required: boolean;
 };
 
@@ -1038,6 +1040,8 @@ export type MetadataConfigPatch = {
 	tmdb_api_key?: string;
 	tvdb_api_key?: string;
 	hardcover_api_key?: string;
+	musicbrainz_url?: string;
+	musicbrainz_interval?: string;
 };
 
 export type ProbeConfig = {

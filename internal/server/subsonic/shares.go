@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/share"
 	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/user"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/utils/httputil"
 )
 
@@ -112,7 +113,7 @@ func (h *Handler) shareTrackIDs(
 			if kind == kindAlbum {
 				q.Where(track.HasAlbumWith(album.IDEQ(id)))
 			} else {
-				q.Where(track.HasAlbumWith(album.HasArtistWith(artist.IDEQ(id))))
+				q.Where(track.HasAlbumWith(db.AlbumOfArtist(id)))
 			}
 			got, err := q.IDs(ctx)
 			if err != nil {

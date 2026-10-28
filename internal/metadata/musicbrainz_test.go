@@ -5,11 +5,15 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"golang.org/x/time/rate"
+
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 type mbRoundTripper func(*http.Request) (*http.Response, error)
@@ -28,6 +32,21 @@ func jsonResponse(status int, body string) *http.Response {
 	}
 }
 
+var _ = DescribeTable("mapAlbumType", Label("unit", "metadata"),
+	func(primary string, secondary []string, want AlbumType) {
+		Expect(mapAlbumType(mbReleaseGroup{
+			PrimaryType: primary, SecondaryTypes: secondary,
+		})).To(Equal(want))
+	},
+	Entry("a plain album", "Album", nil, AlbumTypeAlbum),
+	Entry("a live album", "Album", []string{"Live"}, AlbumTypeLive),
+	Entry("a compilation", "Album", []string{"Compilation"}, AlbumTypeCompilation),
+	Entry("a remix album", "Album", []string{"Remix"}, AlbumTypeOther),
+	Entry("a DJ mix", "Album", []string{"DJ-mix"}, AlbumTypeOther),
+	Entry("a mixtape", "Album", []string{"Mixtape/Street"}, AlbumTypeOther),
+	Entry("a demo EP", "EP", []string{"Demo"}, AlbumTypeOther),
+)
+
 var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 	var (
 		mb  *MusicBrainz
@@ -39,6 +58,44 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 		mb = NewMusicBrainz()
 		mb.limiter = newMBLimiter(0, 0)
 	})
+
+	It("sends requests to a configured mirror", func() {
+		configtest.Setup(map[string]any{
+			"metadata": map[string]any{"musicbrainz_url": "http://mb.lan:5000/"},
+		})
+		mb = NewMusicBrainz()
+		mb.limiter = newMBLimiter(0, 0)
+		var got string
+		mb.client.Transport = mbRoundTripper(
+			func(r *http.Request) (*http.Response, error) {
+				got = r.URL.Scheme + "://" + r.URL.Host + r.URL.Path
+				return jsonResponse(200, `{"artists":[]}`), nil
+			},
+		)
+		_, err := mb.SearchArtists(ctx, "nirvana")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(Equal("http://mb.lan:5000/ws/2/artist"))
+	})
+
+	DescribeTable(
+		"paces calls by the configured interval, background at twice it",
+		func(raw string, limit rate.Limit, gap time.Duration) {
+			configtest.Setup(map[string]any{
+				"metadata": map[string]any{"musicbrainz_interval": raw},
+			})
+			l := NewMusicBrainz().limiter
+			Expect(l.lim.Limit()).To(Equal(limit))
+			Expect(l.gap).To(Equal(gap))
+		},
+		Entry("musicbrainz.org", "1s", rate.Every(time.Second), 2*time.Second),
+		Entry(
+			"a mirror",
+			"250ms",
+			rate.Every(250*time.Millisecond),
+			500*time.Millisecond,
+		),
+		Entry("a mirror without a limit", "0s", rate.Inf, time.Duration(0)),
+	)
 
 	Describe("SearchArtists", func() {
 		It("maps search hits and sends the mandatory User-Agent", func() {
@@ -99,6 +156,55 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(errors.As(err, &limited)).To(BeTrue())
 			Expect(limited.RetryAfter).To(Equal(time.Minute))
 		})
+
+		It("waits a minute when a 503 names a zero Retry-After", func() {
+			mb.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					resp := jsonResponse(503, `{}`)
+					resp.Header.Set("Retry-After", "0")
+					return resp, nil
+				},
+			)
+			_, err := mb.SearchArtists(ctx, "nirvana")
+			var limited *RateLimitedError
+			Expect(errors.As(err, &limited)).To(BeTrue())
+			Expect(limited.RetryAfter).To(Equal(time.Minute))
+		})
+
+		It(
+			"holds prefetch and background calls after a 503, not interactive ones",
+			func() {
+				calls := 0
+				mb.client.Transport = mbRoundTripper(
+					func(*http.Request) (*http.Response, error) {
+						calls++
+						if calls == 1 {
+							resp := jsonResponse(503, `{}`)
+							resp.Header.Set("Retry-After", "7")
+							return resp, nil
+						}
+						return jsonResponse(200, `{}`), nil
+					},
+				)
+				var out struct{}
+				Expect(
+					mb.get(ctx, "/artist", url.Values{}, &out),
+				).To(MatchError(ErrRateLimited))
+
+				for _, low := range []context.Context{Prefetch(ctx), Background(ctx)} {
+					err := mb.get(low, "/artist", url.Values{}, &out)
+					var limited *RateLimitedError
+					Expect(errors.As(err, &limited)).To(BeTrue())
+					Expect(
+						limited.RetryAfter,
+					).To(BeNumerically("~", 7*time.Second, time.Second))
+				}
+				Expect(calls).To(Equal(1))
+
+				Expect(mb.get(ctx, "/artist", url.Values{}, &out)).To(Succeed())
+				Expect(calls).To(Equal(2))
+			},
+		)
 
 		It("reads type, area, start year and the most voted real genre", func() {
 			genreCalls := 0
@@ -185,7 +291,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			"merges the artist lookup with the paginated release-group browse",
 			func() {
 				var calls []string
-				var gotInc string
+				var gotInc, gotStatus string
 				mb.client.Transport = mbRoundTripper(
 					func(r *http.Request) (*http.Response, error) {
 						calls = append(calls, r.URL.Path)
@@ -193,6 +299,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 							gotInc = r.URL.Query().Get("inc")
 							return jsonResponse(200, artistJSON), nil
 						}
+						gotStatus = r.URL.Query().Get("release-group-status")
 						return jsonResponse(
 							200,
 							`{"release-group-count":1,"release-groups":[{"id":"rg-1","title":"Nevermind","primary-type":"Album","first-release-date":"1991-09-24"}]}`,
@@ -206,6 +313,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				Expect(a.ReleaseGroups[0].Type).To(Equal(AlbumTypeAlbum))
 				Expect(a.ReleaseGroups[0].ReleaseDate.Year()).To(Equal(1991))
 				Expect(calls).To(ContainElement("/ws/2/release-group"))
+				Expect(gotStatus).To(Equal("website-default"))
 
 				Expect(a.Type).To(Equal("group"))
 				Expect(a.Origin).To(Equal("Aberdeen, United States"))
@@ -281,6 +389,99 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			)
 			_, err := mb.GetArtist(ctx, "mbid-1")
 			Expect(err).To(MatchError(ErrNotFound))
+		})
+	})
+
+	Describe("ArtistArt", func() {
+		It("reads the Deezer link and Commons image off the url-rels alone", func() {
+			var calls []string
+			var gotInc string
+			mb.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					calls = append(calls, r.URL.Path)
+					gotInc = r.URL.Query().Get("inc")
+					return jsonResponse(
+						200,
+						`{"id":"mbid-1","name":"Nirvana","relations":[
+						{"type":"image","url":{"resource":"https://commons.wikimedia.org/wiki/File:Nirvana_around_1992.jpg"}},
+						{"type":"wikidata","url":{"resource":"https://www.wikidata.org/wiki/Q11649"}},
+						{"type":"streaming","url":{"resource":"https://www.deezer.com/artist/415"}}
+					]}`,
+					), nil
+				},
+			)
+			art, err := mb.ArtistArt(ctx, "mbid-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(art).To(Equal(ArtistArt{
+				DeezerID: 415,
+				ImageURL: "https://commons.wikimedia.org/wiki/Special:FilePath/" +
+					"Nirvana_around_1992.jpg?width=500",
+			}))
+			Expect(gotInc).To(Equal("url-rels"))
+			Expect(calls).To(Equal([]string{"/ws/2/artist/mbid-1"}))
+		})
+
+		It("ignores an image hosted anywhere but Commons", func() {
+			mb.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(200, `{"id":"mbid-1","name":"X","relations":[
+						{"type":"image","url":{"resource":"https://example.com/x.jpg"}}
+					]}`), nil
+				},
+			)
+			art, err := mb.ArtistArt(ctx, "mbid-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(art).To(BeZero())
+		})
+	})
+
+	Describe("DeezerArtistShared", func() {
+		It("reports a page two artists link, and remembers the answer", func() {
+			var calls int
+			var gotResource string
+			mb.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					calls++
+					gotResource = r.URL.Query().Get("resource")
+					return jsonResponse(
+						200,
+						`{"resource":"https://www.deezer.com/artist/415","relations":[
+						{"type":"streaming","artist":{"id":"grunge","name":"Nirvana"}},
+						{"type":"streaming","artist":{"id":"uk-60s","name":"Nirvana"}}
+					]}`,
+					), nil
+				},
+			)
+			shared, err := mb.DeezerArtistShared(ctx, 415)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shared).To(BeTrue())
+			Expect(gotResource).To(Equal("https://www.deezer.com/artist/415"))
+
+			shared, err = mb.DeezerArtistShared(ctx, 415)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shared).To(BeTrue())
+			Expect(calls).To(Equal(1))
+		})
+
+		It("counts one artist linking the page twice as one", func() {
+			mb.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(200, `{"relations":[
+						{"type":"streaming","artist":{"id":"a","name":"A"}},
+						{"type":"free streaming","artist":{"id":"a","name":"A"}}
+					]}`), nil
+				},
+			)
+			Expect(mb.DeezerArtistShared(ctx, 1)).To(BeFalse())
+		})
+
+		It("reads a page MusicBrainz does not know as not shared", func() {
+			mb.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(404, `{}`), nil
+				},
+			)
+			Expect(mb.DeezerArtistShared(ctx, 1)).To(BeFalse())
 		})
 	})
 
@@ -468,6 +669,72 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rg.Tracks[0].Featuring).To(BeEmpty())
+		})
+
+		It("reads each track's credited artists", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(
+					200,
+					`{"id":"rel-1","media":[{"position":1,"tracks":[
+						{"position":1,"title":"Self Esteem","recording":{"id":"r1"},"artist-credit":[{"name":"311","joinphrase":"","artist":{"id":"a-311","name":"311"}}]},
+						{"position":2,"title":"Down","recording":{"id":"r2"},"artist-credit":[{"name":"The Offspring","joinphrase":"","artist":{"id":"a-off","name":"The Offspring"}}]}]}]}`,
+				)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				rg.Tracks[0].Artists,
+			).To(Equal([]PersonInfo{{Name: "311", MBID: "a-311"}}))
+			Expect(
+				rg.Tracks[1].Artists,
+			).To(Equal([]PersonInfo{{Name: "The Offspring", MBID: "a-off"}}))
+		})
+
+		It("splits a track's artists from its featured ones", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(
+					200,
+					`{"id":"rel-1","media":[{"position":1,"tracks":[{"position":1,"title":"T","recording":{"id":"r"},"artist-credit":[
+						{"name":"A","joinphrase":" & ","artist":{"id":"a","name":"A"}},
+						{"name":"B","joinphrase":" feat. ","artist":{"id":"b","name":"B"}},
+						{"name":"C","joinphrase":"","artist":{"id":"c","name":"C"}}]}]}]}`,
+				)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.Tracks[0].Artists).To(Equal([]PersonInfo{
+				{Name: "A", MBID: "a"}, {Name: "B", MBID: "b"},
+			}))
+			Expect(rg.Tracks[0].ArtistCredit).To(Equal("A & B"))
+			Expect(
+				rg.Tracks[0].Featuring,
+			).To(Equal([]PersonInfo{{Name: "C", MBID: "c"}}))
+		})
+
+		It("keeps MusicBrainz's join phrase in a track's artist credit", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(
+					200,
+					`{"id":"rel-1","media":[{"position":1,"tracks":[{"position":1,"title":"T","recording":{"id":"r"},"artist-credit":[
+						{"name":"A","joinphrase":" x ","artist":{"id":"a","name":"A"}},
+						{"name":"Bee","joinphrase":"","artist":{"id":"b","name":"B"}}]}]}]}`,
+				)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.Tracks[0].ArtistCredit).To(Equal("A x B"))
+		})
+
+		It("names a track's artist canonically", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(
+					200,
+					`{"id":"rel-1","media":[{"position":1,"tracks":[{"position":1,"title":"T","recording":{"id":"r"},"artist-credit":[{"name":"Offspring","joinphrase":"","artist":{"id":"a-off","name":"The Offspring"}}]}]}]}`,
+				)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.Tracks[0].Artists[0].Name).To(Equal("The Offspring"))
 		})
 
 		It("marks bonus tracks only when MusicBrainz says so", func() {

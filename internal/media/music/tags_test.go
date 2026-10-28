@@ -419,6 +419,31 @@ var _ = Describe("Music tag sync", Label("unit", "integration", "music"), func()
 		)
 
 		It(
+			"queues a shared album's files when its owner is deleted, under managed",
+			func() {
+				noTorrents()
+				mf := placeFile("Nirvana/Nevermind/01.flac", pending())
+				Expect(e.svc.SyncTags(e.ctx)).To(Succeed())
+				Expect(
+					*reload(mf).TagsState,
+				).To(Equal(entmediafile.TagsStateWritten))
+				e.seedArtist("Guest", albumSeed{mbid: "rg-1", title: "Nevermind"})
+				e.posters.EXPECT().
+					Remove(mock.Anything, mock.Anything).
+					Return(nil).
+					Maybe()
+
+				tagConfig(map[string]any{"mode": config.MusicTagsManaged})
+				Expect(
+					e.svc.Delete(e.ctx, alb.QueryArtist().OnlyIDX(e.ctx), false),
+				).To(Succeed())
+				Expect(
+					*reload(mf).TagsState,
+				).To(Equal(entmediafile.TagsStatePending))
+			},
+		)
+
+		It(
 			"queues every file when the settings change what a file carries, under managed",
 			func() {
 				noTorrents()

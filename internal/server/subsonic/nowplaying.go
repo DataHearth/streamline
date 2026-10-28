@@ -123,10 +123,9 @@ func (h *Handler) getNowPlaying(
 	out := &nowPlayingList{Entry: []nowPlayingEntry{}}
 	now := h.playing.now()
 	for i, e := range h.playing.list() {
-		t, err := h.ent.Track.Query().
-			Where(track.IDEQ(e.trackID), track.HasMediaFilesWith(mediafile.MissingSinceIsNil())).
-			WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
-			WithMediaFiles(liveFiles).
+		t, err := songEdges(h.ent.Track.Query().
+			Where(track.IDEQ(e.trackID), track.HasMediaFilesWith(mediafile.MissingSinceIsNil())),
+		).
 			Only(r.Context())
 		if ent.IsNotFound(err) {
 			continue

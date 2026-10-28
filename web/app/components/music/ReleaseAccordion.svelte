@@ -10,7 +10,7 @@
 	import ReleaseMark from "./ReleaseMark.svelte";
 	import Tracklist from "./Tracklist.svelte";
 	import ReleaseCredits from "./ReleaseCredits.svelte";
-	import { qualityNote, releaseFacts, releaseGroups, releaseLine, releasePill, releaseTypeLabel, type Release, type Track } from "@lib/music-books";
+	import { peopleList, qualityNote, releaseFacts, releaseGroups, releaseLine, releasePill, releaseTypeLabel, sharedWith, type Release, type Track } from "@lib/music-books";
 	import { albumPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -20,6 +20,7 @@
 	// beside it, the way the book page's pinned bar carries it.
 	let {
 		releases,
+		artistId,
 		openId,
 		onToggle,
 		canEdit = false,
@@ -32,6 +33,8 @@
 		onTags,
 	}: {
 		releases: Release[];
+		// The artist whose page the releases are on.
+		artistId: number;
 		openId: number | undefined;
 		onToggle: (id: number) => void;
 		canEdit?: boolean;
@@ -71,6 +74,9 @@
 			</div>
 			<div class="min-w-0 flex-1">
 				<p class="truncate text-[14px] font-medium text-fg">{r.title}</p>
+				{#if sharedWith(r, artistId).length}
+					<p class="truncate text-[12px] text-fg-muted">{i18n.music_shared_with({ names: peopleList(sharedWith(r, artistId)) })}</p>
+				{/if}
 				<p class="truncate font-mono text-[11px] text-fg-subtle">
 					{up
 						? [releaseTypeLabel(r.type), formatDateShort(r.release_date)].filter(Boolean).join(" · ")
@@ -143,6 +149,7 @@
 						<Tracklist
 							tracks={r.tracks}
 							release={r}
+							{artistId}
 							qualityNote={qualityNote(r)}
 							compact
 							markMissing={r.status === "wanted" && r.tracks_have > 0}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/fs"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -51,6 +52,11 @@ func NewSeedingSet(complete bool, roots, hashes []string) SeedingSet {
 		s.hashes[strings.ToLower(h)] = struct{}{}
 	}
 	return s
+}
+
+// Hashes is every listed torrent's info hash, lowercase and sorted.
+func (s SeedingSet) Hashes() []string {
+	return slices.Sorted(maps.Keys(s.hashes))
 }
 
 // Owns reports a path inside the content of a listed torrent: the torrent's

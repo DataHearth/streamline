@@ -493,6 +493,21 @@ func (_c *AlbumCreate) AddPackRecords(v ...*DownloadRecord) *AlbumCreate {
 	return _c.AddPackRecordIDs(ids...)
 }
 
+// AddCoArtistIDs adds the "co_artists" edge to the Artist entity by IDs.
+func (_c *AlbumCreate) AddCoArtistIDs(ids ...uint32) *AlbumCreate {
+	_c.mutation.AddCoArtistIDs(ids...)
+	return _c
+}
+
+// AddCoArtists adds the "co_artists" edges to the Artist entity.
+func (_c *AlbumCreate) AddCoArtists(v ...*Artist) *AlbumCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCoArtistIDs(ids...)
+}
+
 // Mutation returns the AlbumMutation object of the builder.
 func (_c *AlbumCreate) Mutation() *AlbumMutation {
 	return _c.mutation
@@ -874,6 +889,22 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CoArtistsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   album.CoArtistsTable,
+			Columns: album.CoArtistsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

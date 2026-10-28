@@ -6,8 +6,9 @@ import (
 )
 
 var (
-	releaseYearRe  = regexp.MustCompile(`\b(?:19|20)\d{2}\b`)
-	releaseDelimRe = regexp.MustCompile(`[._]+`)
+	releaseYearRe     = regexp.MustCompile(`\b(?:19|20)\d{2}\b`)
+	releaseLeadYearRe = regexp.MustCompile(`^\s*(?:19|20)\d{2}\s+-\s+`)
+	releaseDelimRe    = regexp.MustCompile(`[._]+`)
 	// releaseTagRe finds the first format or quality word after an audio or book
 	// title that carries no brackets ("Elantris Unabridged M4B 128kbps", "Hi
 	// Scores FLAC 24bit"). It is anchored on word boundaries so a title word
@@ -31,6 +32,9 @@ func SplitCreatorTitle(name string) (string, string, bool) {
 	if !found {
 		return "", "", false
 	}
+	// "Artist - 2021 - Album": the year leads the title. An album named
+	// after a year ("Artist - 1984") has no " - " after it and stays whole.
+	rest = releaseLeadYearRe.ReplaceAllString(rest, "")
 	if i := strings.IndexAny(rest, "(["); i >= 0 {
 		rest = rest[:i]
 	}
@@ -72,17 +76,27 @@ func ReleaseNamedByCreator(name, creator string) bool {
 	return false
 }
 
-// ReleaseNamesOtherWork reports whether a release name can be read as
-// "creator - title" and names a different creator or a different work than the
-// one searched for. Anything it cannot read answers false — a name that does
-// not start with the creator, a creator or title that normalizes to nothing —
-// since an interactive search shows every result and unsure is not "other".
+// ReleaseNamesOtherWork reports whether a release name names a different
+// creator or a different work than the one searched for. A name read as
+// "creator - title" is judged on both. A name it cannot read is other only
+// when it neither opens on the creator nor holds the title anywhere: an
+// indexer matched "Williams.Joshua.Rammstein.Relaxing.Acoustic", a covers
+// album, on the artist's name alone, while "From.Mars.to.Sirius.FLAC-GRP" or
+// "Gojira FLAC" may well be the album. A creator or title that normalizes to
+// nothing answers false, since an interactive search shows every result and
+// unsure is not "other".
 func ReleaseNamesOtherWork(name, creator, title string) bool {
-	if normalizeTitle(creator) == "" || normalizeTitle(title) == "" {
+	c, t := normalizeTitle(creator), normalizeTitle(title)
+	if c == "" || t == "" {
 		return false
 	}
-	readings := releaseReadings(name, creator)
-	return len(readings) > 0 && !ReleaseNamesWork(name, creator, title)
+	if len(releaseReadings(name, creator)) > 0 {
+		return !ReleaseNamesWork(name, creator, title)
+	}
+	n := normalizeTitle(name)
+	bare := normalizeTitle(releaseLeadTagsRe.ReplaceAllString(name, ""))
+	return !strings.Contains(n, t) &&
+		!strings.HasPrefix(n, c) && !strings.HasPrefix(bare, c)
 }
 
 // releaseReadings is every (creator, title) pair a release name can be read

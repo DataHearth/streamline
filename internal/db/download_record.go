@@ -52,7 +52,8 @@ func withBookContext(q *ent.BookQuery) {
 // order, each with the files it already holds. Mirrors FindAlbumByID: the
 // album importer matches downloaded files to tracks and skips covered ones.
 func withAlbumContext(q *ent.AlbumQuery) {
-	q.WithArtist().WithTracks(func(tq *ent.TrackQuery) {
+	withAlbumArtists(q)
+	q.WithTracks(func(tq *ent.TrackQuery) {
 		tq.Order(ent.Asc(track.FieldDisc), ent.Asc(track.FieldPosition)).
 			WithMediaFiles()
 	})
@@ -723,7 +724,56 @@ func (db *DB) FailHeldDownloadRecord(
 	if err != nil {
 		return err
 	}
+	return db.rejectRecord(ctx, rec, reason, requeue)
+}
 
+// RejectDownloadingRecord fails a record still downloading as rejected and
+// sends what it was for back to wanted: a release found unimportable before it
+// finished, which the automatic searches must not pick again.
+func (db *DB) RejectDownloadingRecord(
+	ctx context.Context,
+	id uint32,
+	reason string,
+) error {
+	rec, err := db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.ID(id),
+			downloadrecord.StatusEQ(downloadrecord.StatusDownloading),
+		).
+		WithMovie().
+		WithAnchorEpisode(withEpisodeContext).
+		WithAlbum(withAlbumContext).
+		WithArtist().
+		WithAlbums(withAlbumContext).
+		Only(ctx)
+	if err != nil {
+		return err
+	}
+	return db.rejectRecord(ctx, rec, reason, true)
+}
+
+// ListDownloadingAlbumRecords returns the album records still downloading,
+// each with its album's id.
+func (db *DB) ListDownloadingAlbumRecords(
+	ctx context.Context,
+) ([]*ent.DownloadRecord, error) {
+	return db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.StatusEQ(downloadrecord.StatusDownloading),
+			downloadrecord.HasAlbum(),
+			downloadrecord.TorrentHashNEQ(""),
+		).
+		WithAlbum(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
+		All(ctx)
+}
+
+func (db *DB) rejectRecord(
+	ctx context.Context,
+	rec *ent.DownloadRecord,
+	reason string,
+	requeue bool,
+) error {
+	id := rec.ID
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
 		return err
@@ -1358,37 +1408,44 @@ func (db *DB) DeleteCompletedDownloadRecordsBefore(
 	cutoff time.Time,
 	keepHashes []string,
 ) (int, error) {
-	preds := []predicate.DownloadRecord{
+	return db.client.DownloadRecord.Delete().Where(sparingHashes(keepHashes,
 		downloadrecord.StatusEQ(downloadrecord.StatusCompleted),
 		downloadrecord.ImportedAtLT(cutoff),
-	}
-	if len(keepHashes) > 0 {
-		// torrent_hash is nullable and NULL NOT IN (...) is NULL, so without
-		// the IsNil arm a hashless record would never be purged again.
-		preds = append(preds, downloadrecord.Or(
-			downloadrecord.TorrentHashIsNil(),
-			downloadrecord.TorrentHashNotIn(keepHashes...),
-		))
-	}
-	return db.client.DownloadRecord.Delete().Where(preds...).Exec(ctx)
+	)...).Exec(ctx)
 }
 
 // DeleteFailedDownloadRecordsBefore deletes records whose status is failed and
-// whose update_time is older than cutoff. Returns the number of rows deleted.
-// A rejected record is kept however old it is: it is the blocklist entry, and
-// purging it would hand the release back to the next automatic search. The
-// user forgets one by deleting it from the history.
+// whose update_time is older than cutoff, sparing any whose torrent_hash is in
+// keepHashes. Returns the number of rows deleted. A rejected record is kept
+// however old it is: it is the blocklist entry, and purging it would hand the
+// release back to the next automatic search. The user forgets one by deleting
+// it from the history.
 func (db *DB) DeleteFailedDownloadRecordsBefore(
 	ctx context.Context,
 	cutoff time.Time,
+	keepHashes []string,
 ) (int, error) {
-	return db.client.DownloadRecord.Delete().
-		Where(
-			downloadrecord.StatusEQ(downloadrecord.StatusFailed),
-			downloadrecord.UpdateTimeLT(cutoff),
-			downloadrecord.Rejected(false),
-		).
-		Exec(ctx)
+	return db.client.DownloadRecord.Delete().Where(sparingHashes(keepHashes,
+		downloadrecord.StatusEQ(downloadrecord.StatusFailed),
+		downloadrecord.UpdateTimeLT(cutoff),
+		downloadrecord.Rejected(false),
+	)...).Exec(ctx)
+}
+
+// sparingHashes appends to preds the condition that a record's torrent is not
+// one of keepHashes. torrent_hash is nullable and NULL NOT IN (...) is NULL, so
+// without the IsNil arm a hashless record would never be purged again.
+func sparingHashes(
+	keepHashes []string,
+	preds ...predicate.DownloadRecord,
+) []predicate.DownloadRecord {
+	if len(keepHashes) == 0 {
+		return preds
+	}
+	return append(preds, downloadrecord.Or(
+		downloadrecord.TorrentHashIsNil(),
+		downloadrecord.TorrentHashNotIn(keepHashes...),
+	))
 }
 
 // SetDownloadRecordSavePath persists save_path so import_scan can resume
@@ -1754,13 +1811,15 @@ func (db *DB) DeleteDownloadRecord(ctx context.Context, id uint32) error {
 }
 
 // DeleteAllCompletedDownloadRecords removes every completed record (the
-// "Clear completed" action). Returns the number of rows deleted.
+// "Clear completed" action) but those whose torrent_hash is in keepHashes.
+// Returns the number of rows deleted.
 func (db *DB) DeleteAllCompletedDownloadRecords(
 	ctx context.Context,
+	keepHashes []string,
 ) (int, error) {
-	return db.client.DownloadRecord.Delete().
-		Where(downloadrecord.StatusEQ(downloadrecord.StatusCompleted)).
-		Exec(ctx)
+	return db.client.DownloadRecord.Delete().Where(sparingHashes(keepHashes,
+		downloadrecord.StatusEQ(downloadrecord.StatusCompleted),
+	)...).Exec(ctx)
 }
 
 // RevertMovieToWantedIfNoFile flips a movie back to "wanted" only when it has

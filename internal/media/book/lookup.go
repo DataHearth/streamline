@@ -121,6 +121,12 @@ func (s *Service) Lookup(
 			if len(out) == limit {
 				break
 			}
+			// A book with neither a credited maker nor a cover is a stray
+			// Hardcover row nobody can tell apart, and one the importer would
+			// hold for want of an author anyway.
+			if b.Author == "" && b.ImageURL == "" {
+				continue
+			}
 			out = append(out, hitFrom(b))
 			rememberCover(b.HardcoverID, b.ImageURL)
 		}
@@ -290,13 +296,16 @@ func seriesHit(
 	if rec.Ongoing != nil {
 		h.Ongoing = rec.Ongoing
 	}
-	h.CoverBookIDs = coverBooks(rec.Volumes)
+	h.CoverBookIDs = coverBooks(rec.Volumes, rec.Loose)
 	return h
 }
 
 // coverBooks is the book adding the series would pick at each of its first
-// positions, up to lookupCovers of them, each cover remembered for the proxy.
-func coverBooks(vols []metadata.SeriesLookupVolume) []uint32 {
+// positions that has a cover, up to lookupCovers of them, each cover
+// remembered for the proxy. A series none of whose numbered volumes has a
+// cover fans its most read unnumbered books instead, so a hit is never drawn
+// as blank tiles while Hardcover holds pictures of its books.
+func coverBooks(vols, loose []metadata.SeriesLookupVolume) []uint32 {
 	cands := make([]volumeCandidate, 0, len(vols))
 	urls := make(map[uint32]string, len(vols))
 	for _, v := range vols {
@@ -314,7 +323,18 @@ func coverBooks(vols []metadata.SeriesLookupVolume) []uint32 {
 			cmp.Compare(a.bookID, b.bookID),
 		)
 	})
-	win := winnersByPosition(cands)
+	win := slices.DeleteFunc(winnersByPosition(cands), func(id uint32) bool {
+		return urls[id] == ""
+	})
+	if len(win) == 0 {
+		for _, v := range loose {
+			if !v.Compilation && v.ImageURL != "" &&
+				!slices.Contains(win, v.BookHardcoverID) {
+				win = append(win, v.BookHardcoverID)
+				urls[v.BookHardcoverID] = v.ImageURL
+			}
+		}
+	}
 	win = win[:min(len(win), lookupCovers)]
 	for _, id := range win {
 		rememberCover(id, urls[id])

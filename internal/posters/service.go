@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/buildinfo"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -148,6 +149,14 @@ func (p *posters) Fetch(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
+	// Wikimedia, where an artist photo can come from, refuses a generic
+	// client; the header follows every redirect.
+	version := buildinfo.Version
+	if version == "" {
+		version = "dev"
+	}
+	req.Header.Set("User-Agent",
+		"streamline/"+version+" (https://github.com/datahearth/streamline)")
 	resp, err := p.client.Do(req)
 	if err != nil {
 		outcome = "transport_error"

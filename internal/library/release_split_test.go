@@ -90,6 +90,16 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 			false,
 		),
 		Entry("a bare artist name", "Gojira FLAC", false),
+		Entry(
+			"a covers album naming the artist inside",
+			"Williams.Joshua.Gojira.Relaxing.Acoustic.Covers.2024.FLAC",
+			true,
+		),
+		Entry(
+			"a scene name holding the album after the artist's name elsewhere",
+			"Live.Gojira.From.Mars.to.Sirius.FLAC",
+			false,
+		),
 	)
 
 	DescribeTable(
@@ -132,6 +142,21 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 			"Meshuggah",
 			"Nothing",
 			true,
+		),
+		Entry(
+			"the year between the artist and the album",
+			"The Glitch Mob - 2021 - Revisions [FLAC]",
+			"The Glitch Mob", "Revisions", false,
+		),
+		Entry(
+			"another album behind a leading year",
+			"The Glitch Mob - 2014 - Love Death Immortality [FLAC]",
+			"The Glitch Mob", "Revisions", true,
+		),
+		Entry(
+			"an album named after a year",
+			"Some Band - 1984 [FLAC]",
+			"Some Band", "1984", false,
 		),
 		Entry(
 			"an artist whose name opens on brackets",

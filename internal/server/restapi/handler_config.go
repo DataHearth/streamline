@@ -933,14 +933,16 @@ func downloadConfigView(d config.DownloadConfig) DownloadConfigJSONResponse {
 // offer the field read-only rather than accept an edit UpdateMetadata refuses.
 //
 // restart_required is the same process-wide flag the ffmpeg and OIDC views
-// report: these six keys are read once, at client construction.
+// report: every key here is read once, at client construction.
 func metadataConfigView(m config.MetadataConfig) MetadataConfigJSONResponse {
 	tmdbFile := m.TMDBAPIKeyFile != ""
 	tvdbFile := m.TVDBAPIKeyFile != ""
 	hardcoverFile := m.HardcoverAPIKeyFile != ""
 	return MetadataConfigJSONResponse{
-		Language:   m.Language,
-		TmdbRegion: m.TMDBRegion,
+		Language:            m.Language,
+		TmdbRegion:          m.TMDBRegion,
+		MusicbrainzUrl:      m.MusicBrainzURL,
+		MusicbrainzInterval: m.MusicBrainzInterval,
 		TmdbApiKeySet: config.SecretValue(
 			m.TMDBAPIKey,
 			m.TMDBAPIKeyFile,
@@ -1067,11 +1069,13 @@ func (s *Server) UpdateConfigMetadata(
 
 	prev := config.Get().Metadata
 	updated, err := config.UpdateMetadata(ctx, config.MetadataPatch{
-		TMDBAPIKey:      req.Body.TmdbApiKey,
-		TVDBAPIKey:      req.Body.TvdbApiKey,
-		HardcoverAPIKey: req.Body.HardcoverApiKey,
-		Language:        req.Body.Language,
-		TMDBRegion:      req.Body.TmdbRegion,
+		TMDBAPIKey:          req.Body.TmdbApiKey,
+		TVDBAPIKey:          req.Body.TvdbApiKey,
+		HardcoverAPIKey:     req.Body.HardcoverApiKey,
+		Language:            req.Body.Language,
+		TMDBRegion:          req.Body.TmdbRegion,
+		MusicBrainzURL:      req.Body.MusicbrainzUrl,
+		MusicBrainzInterval: req.Body.MusicbrainzInterval,
 	})
 	if configLocked(err) {
 		return UpdateConfigMetadata403JSONResponse{

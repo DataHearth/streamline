@@ -44,6 +44,8 @@
 			tmdb_api_key: "",
 			tvdb_api_key: "",
 			hardcover_api_key: "",
+			musicbrainz_url: cfg.data?.musicbrainz_url ?? "https://musicbrainz.org",
+			musicbrainz_interval: cfg.data?.musicbrainz_interval ?? "1s",
 		},
 		validators: { onChange: metadataConfigPatch },
 		onSubmit: ({ value }) => save.mutate(value),
@@ -58,6 +60,8 @@
 			tmdb_api_key: "",
 			tvdb_api_key: "",
 			hardcover_api_key: "",
+			musicbrainz_url: data.musicbrainz_url,
+			musicbrainz_interval: data.musicbrainz_interval,
 		});
 	}
 
@@ -225,6 +229,41 @@
 									label={i18n.metadata_region()}
 									placeholder="FR"
 									help={i18n.metadata_region_help()}
+								/>
+							{/snippet}
+						</form.Field>
+					</div>
+				</section>
+
+				<section class="space-y-4 rounded-lg border border-border bg-bg-card p-4">
+					<div>
+						<h2 class="text-sm font-semibold text-fg">
+							{i18n.metadata_musicbrainz()}
+						</h2>
+						<p class="mt-0.5 text-xs leading-relaxed text-fg-subtle">
+							{i18n.metadata_musicbrainz_help()}
+						</p>
+					</div>
+
+					<div class="grid gap-4 sm:grid-cols-2">
+						<form.Field name="musicbrainz_url">
+							{#snippet children(field)}
+								<TextField
+									{field}
+									label={i18n.metadata_musicbrainz_url()}
+									placeholder="https://musicbrainz.org"
+									help={i18n.metadata_musicbrainz_url_help()}
+								/>
+							{/snippet}
+						</form.Field>
+
+						<form.Field name="musicbrainz_interval">
+							{#snippet children(field)}
+								<TextField
+									{field}
+									label={i18n.metadata_musicbrainz_interval()}
+									placeholder="1s"
+									help={i18n.metadata_musicbrainz_interval_help()}
 								/>
 							{/snippet}
 						</form.Field>

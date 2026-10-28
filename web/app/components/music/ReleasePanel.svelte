@@ -5,7 +5,7 @@
 	import ReleaseCover from "./ReleaseCover.svelte";
 	import Tracklist from "./Tracklist.svelte";
 	import ReleaseCredits from "./ReleaseCredits.svelte";
-	import { qualityNote, releaseFacts, releasePill, releaseTypeLabel, releaseYear, type Release, type Track } from "@lib/music-books";
+	import { peopleList, qualityNote, releaseFacts, releasePill, releaseTypeLabel, releaseYear, sharedWith, type Release, type Track } from "@lib/music-books";
 	import { albumPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -15,6 +15,7 @@
 	// release too.
 	let {
 		release: r,
+		artistId,
 		canEdit = false,
 		onSearch,
 		onManualSearch,
@@ -25,6 +26,8 @@
 		onTags,
 	}: {
 		release: Release;
+		// The artist whose page the release is on.
+		artistId: number;
 		canEdit?: boolean;
 		onSearch: () => void;
 		onManualSearch: () => void;
@@ -43,6 +46,7 @@
 	let failed = $derived(r.status === "failed");
 	let pill = $derived(releasePill(r));
 	let facts = $derived(releaseFacts(r));
+	let shared = $derived(sharedWith(r, artistId));
 	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
 </script>
 
@@ -70,6 +74,9 @@
 				{/if}
 			</div>
 			<h2 id="release-title" class="mt-2 text-xl font-bold tracking-tight text-fg lg:text-2xl">{r.title}</h2>
+			{#if shared.length}
+				<p class="mt-1 text-[13px] text-fg-muted">{i18n.music_shared_with({ names: peopleList(shared) })}</p>
+			{/if}
 			<div class="mt-1.5 flex flex-wrap items-center gap-2 font-mono text-xs text-fg-muted">
 				{#each facts as f, i (i)}
 					{#if i > 0}<span class="text-fg-faint" aria-hidden="true">·</span>{/if}
@@ -138,6 +145,7 @@
 			<Tracklist
 				tracks={r.tracks}
 				release={r}
+				{artistId}
 				qualityNote={qualityNote(r)}
 				markMissing={r.status === "wanted" && r.tracks_have > 0}
 				{canEdit}

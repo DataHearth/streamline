@@ -47,6 +47,8 @@ export type Track = {
 	disc: number;
 	number: number;
 	title: string;
+	// The artist credit before any "feat."; on a split release not the album's.
+	artists?: Person[];
 	// The artist credit's "feat." part, one entry per guest.
 	featuring?: Person[];
 	writers?: Person[];
@@ -75,6 +77,9 @@ export type Release = {
 	progress?: number;
 	// Why the import was refused, while status is failed.
 	failure_reason?: string;
+	// Every library artist a shared release is listed under, owner first;
+	// absent when only its owner is credited.
+	artists?: Person[];
 	// Detail only; the list leaves them out.
 	tracks?: Track[];
 	mbid?: string;
@@ -384,7 +389,11 @@ export function qualityNote(r: Release): string {
 export function artistTally(a: Artist) {
 	const out = a.albums.filter((r) => r.status !== "upcoming");
 	return {
-		released: out.length,
+		listed: out.length,
+		// Owed releases only, as the status rollup counts them: the singles and
+		// live records a discography lists unmonitored kept a fully held
+		// artist at 10 / 62.
+		released: out.filter((r) => r.monitored || r.status === "available").length,
 		have: out.filter((r) => r.status === "available").length,
 		// What the missing search would look for: an unmonitored release is
 		// never searched, so it is not counted as wanted.
@@ -412,13 +421,17 @@ export function releaseGroups(releases: Release[]) {
 	})).filter((g) => g.releases.length > 0);
 }
 
-// The release an artist page opens on: the newest with something missing,
-// else the newest that is out.
+// The release an artist page opens on, read in the list's own order (albums
+// first): the newest monitored one with something missing, else the newest
+// held, else the newest that is out. The API's order mixes every type, and an
+// unmonitored single was opened over the albums the list starts with.
 export function defaultRelease(releases: Release[]): Release | undefined {
+	const listed = releaseGroups(releases).flatMap((g) => g.releases);
 	return (
-		releases.find((r) => ["wanted", "downloading", "paused", "failed"].includes(r.status)) ??
-		releases.find((r) => r.status !== "upcoming") ??
-		releases[0]
+		listed.find((r) => r.monitored && ["wanted", "downloading", "paused", "failed"].includes(r.status)) ??
+		listed.find((r) => r.status === "available") ??
+		listed.find((r) => r.status !== "upcoming") ??
+		listed[0]
 	);
 }
 
@@ -436,6 +449,19 @@ export function personHref(p: Person): string | undefined {
 	if (p.artist_id) return `/music/${p.artist_id}`;
 	if (p.shelf) return `/books?author=${encodeURIComponent(p.shelf)}`;
 	return undefined;
+}
+
+// The other library artists a shared release is listed under, seen from the
+// artist whose page it is on.
+export function sharedWith(r: Release, artistId: number): Person[] {
+	return (r.artists ?? []).filter((p) => p.artist_id !== artistId);
+}
+
+// A track's own artists when they are not the page's artist: the other side
+// of a split single. Empty when the track is the page artist's.
+export function otherTrackArtists(t: Track, artistId?: number): Person[] {
+	const artists = t.artists ?? [];
+	return artists.some((p) => p.artist_id !== undefined && p.artist_id === artistId) ? [] : artists;
 }
 
 export function peopleList(ps: Person[]): string {

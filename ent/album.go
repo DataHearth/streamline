@@ -98,9 +98,11 @@ type AlbumEdges struct {
 	Events []*MediaEvent `json:"events,omitempty"`
 	// PackRecords holds the value of the pack_records edge.
 	PackRecords []*DownloadRecord `json:"pack_records,omitempty"`
+	// CoArtists holds the value of the co_artists edge.
+	CoArtists []*Artist `json:"co_artists,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [8]bool
 }
 
 // ArtistOrErr returns the Artist value or an error if the edge
@@ -166,6 +168,15 @@ func (e AlbumEdges) PackRecordsOrErr() ([]*DownloadRecord, error) {
 		return e.PackRecords, nil
 	}
 	return nil, &NotLoadedError{edge: "pack_records"}
+}
+
+// CoArtistsOrErr returns the CoArtists value or an error if the edge
+// was not loaded in eager-loading.
+func (e AlbumEdges) CoArtistsOrErr() ([]*Artist, error) {
+	if e.loadedTypes[7] {
+		return e.CoArtists, nil
+	}
+	return nil, &NotLoadedError{edge: "co_artists"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -435,6 +446,11 @@ func (_m *Album) QueryEvents() *MediaEventQuery {
 // QueryPackRecords queries the "pack_records" edge of the Album entity.
 func (_m *Album) QueryPackRecords() *DownloadRecordQuery {
 	return NewAlbumClient(_m.config).QueryPackRecords(_m)
+}
+
+// QueryCoArtists queries the "co_artists" edge of the Album entity.
+func (_m *Album) QueryCoArtists() *ArtistQuery {
+	return NewAlbumClient(_m.config).QueryCoArtists(_m)
 }
 
 // Update returns a builder for updating this Album.

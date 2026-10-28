@@ -391,7 +391,7 @@ func (db *DB) FilterTVShows(
 	// overrides it.
 	switch p.Sort {
 	case "title":
-		q = q.Order(orderBy(tvshow.FieldTitle, descending(p.Order, false)))
+		q = q.Order(orderFold(tvshow.FieldTitle, descending(p.Order, false)))
 	case "year":
 		q = q.Order(orderBy(tvshow.FieldYear, descending(p.Order, true)))
 	case "rating":

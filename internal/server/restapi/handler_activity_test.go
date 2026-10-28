@@ -253,8 +253,11 @@ var _ = Describe("Handler: Activity queue/history",
 		})
 
 		It("POST /activity/history/clear-completed returns the count", func() {
-			app.store.EXPECT().DeleteAllCompletedDownloadRecords(mock.Anything).
-				Return(4, nil).Once()
+			app.downloads.EXPECT().SeedingTorrents(mock.Anything).
+				Return(download.NewSeedingSet(true, nil, []string{"B", "a"})).Once()
+			app.store.EXPECT().DeleteAllCompletedDownloadRecords(
+				mock.Anything, []string{"a", "b"},
+			).Return(4, nil).Once()
 			resp, err := http.Post(
 				app.srv.URL+"/api/v1/activity/history/clear-completed",
 				"application/json", nil)
@@ -265,6 +268,20 @@ var _ = Describe("Handler: Activity queue/history",
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 			Expect(body.Deleted).To(Equal(4))
 		})
+
+		It(
+			"POST /activity/history/clear-completed clears nothing when a client cannot be listed",
+			func() {
+				app.downloads.EXPECT().SeedingTorrents(mock.Anything).
+					Return(download.NewSeedingSet(false, nil, nil)).Once()
+				resp, err := http.Post(
+					app.srv.URL+"/api/v1/activity/history/clear-completed",
+					"application/json", nil)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
+			},
+		)
 
 		It("GET /activity/history maps records and status", func() {
 			rec := &ent.DownloadRecord{

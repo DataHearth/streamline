@@ -67,6 +67,8 @@ const (
 	EdgeAnnotations = "annotations"
 	// EdgeEvents holds the string denoting the events edge name in mutations.
 	EdgeEvents = "events"
+	// EdgeCoAlbums holds the string denoting the co_albums edge name in mutations.
+	EdgeCoAlbums = "co_albums"
 	// Table holds the table name of the artist in the database.
 	Table = "artists"
 	// AlbumsTable is the table that holds the albums relation/edge.
@@ -104,6 +106,11 @@ const (
 	EventsInverseTable = "media_events"
 	// EventsColumn is the table column denoting the events relation/edge.
 	EventsColumn = "artist_events"
+	// CoAlbumsTable is the table that holds the co_albums relation/edge. The primary key declared below.
+	CoAlbumsTable = "artist_co_albums"
+	// CoAlbumsInverseTable is the table name for the Album entity.
+	// It exists in this package in order to avoid circular dependency with the "album" package.
+	CoAlbumsInverseTable = "albums"
 )
 
 // Columns holds all SQL columns for artist fields.
@@ -131,6 +138,12 @@ var Columns = []string{
 	FieldDetailsFetchedAt,
 	FieldArtSidecarHash,
 }
+
+var (
+	// CoAlbumsPrimaryKey and CoAlbumsColumn2 are the table columns denoting the
+	// primary key for the co_albums relation (M2M).
+	CoAlbumsPrimaryKey = []string{"artist_id", "album_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -388,6 +401,20 @@ func ByEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByCoAlbumsCount orders the results by co_albums count.
+func ByCoAlbumsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCoAlbumsStep(), opts...)
+	}
+}
+
+// ByCoAlbums orders the results by co_albums terms.
+func ByCoAlbums(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCoAlbumsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newAlbumsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -421,5 +448,12 @@ func newEventsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(EventsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
+	)
+}
+func newCoAlbumsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CoAlbumsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, CoAlbumsTable, CoAlbumsPrimaryKey...),
 	)
 }

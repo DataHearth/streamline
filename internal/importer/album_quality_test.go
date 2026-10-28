@@ -265,6 +265,35 @@ var _ = Describe(
 			Expect(got.Files[0].Quality).To(Equal("lossless"))
 		})
 
+		It("flips a co-artist's artist request on import", func() {
+			alb.Edges.CoArtists = []*ent.Artist{
+				{ID: 8, Name: "Guest", Mbid: "artist-8"},
+			}
+			seedTrackFile(dlDir, "a.flac", "tagged.flac", 1, albumTracks[0].title)
+			rec := fixtureAlbumRecord(dlDir, alb)
+			storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, rec.ID).
+				Return(rec, nil).Once()
+			prober.EXPECT().ProbeAudio(mock.Anything, mock.Anything).
+				Return(nil, ffmpeg.ErrUnreadable).Once()
+			storeMk.EXPECT().RecordAlbumImportSuccess(mock.Anything, mock.Anything).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailableByMBID(mock.Anything, "artist", "artist-4").
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailableByMBID(mock.Anything, "artist", "artist-8").
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailableByMBID(mock.Anything, "album", mock.Anything).
+				Return(nil).Maybe()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+				Return(nil).
+				Once()
+
+			Expect(w.runImport(context.Background(), rec.ID)).To(Succeed())
+		})
+
 		It("lets a bypassed record through whatever the measurement says", func() {
 			seedTrackFile(dlDir, "a.flac", "tagged.flac", 1, albumTracks[0].title)
 			rec := fixtureAlbumRecord(dlDir, alb)

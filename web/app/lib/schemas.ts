@@ -66,6 +66,12 @@ export const metadataConfigPatch = v.object({
 	tmdb_api_key: optionalSecret,
 	tvdb_api_key: optionalSecret,
 	hardcover_api_key: optionalSecret,
+	musicbrainz_url: v.pipe(
+		v.string(),
+		v.url(i18n.validation_url()),
+		v.regex(/^https?:\/\//, i18n.validation_url()),
+	),
+	musicbrainz_interval: goDuration,
 });
 
 export const oidcProviderCreate = v.object({

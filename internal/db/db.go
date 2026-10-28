@@ -80,12 +80,13 @@ type Store interface {
 		artistIDs []uint32,
 		now time.Time,
 	) (map[uint32]bool, error)
-	// RefreshArtist reconciles the discography and returns the created albums.
+	// RefreshArtist reconciles the discography and returns the created and
+	// the deleted albums.
 	RefreshArtist(
 		ctx context.Context,
 		id uint32,
 		p RefreshArtistParams,
-	) ([]uint32, error)
+	) ([]uint32, []uint32, error)
 	SetArtistDetails(
 		ctx context.Context,
 		id uint32,
@@ -199,7 +200,10 @@ type Store interface {
 		ctx context.Context,
 		maxGrabFailures uint8,
 	) ([]*ent.Album, error)
-	DeleteArtist(ctx context.Context, id uint32) error
+	// DeleteArtist hands each shared album the artist owns to its lowest-id
+	// co-artist and deletes the artist, in one transaction, returning the
+	// moved album ids.
+	DeleteArtist(ctx context.Context, id uint32) ([]uint32, error)
 	// ListEligibleAlbumsForSync returns wanted, monitored, released, hydrated
 	// albums under the failure cap and past cooldown with no in-flight record,
 	// least recently searched first. The artist is eager-loaded.
@@ -720,6 +724,8 @@ type Store interface {
 		reason string,
 		requeue bool,
 	) error
+	RejectDownloadingRecord(ctx context.Context, id uint32, reason string) error
+	ListDownloadingAlbumRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
 	RecordImportSuccess(ctx context.Context, p RecordImportSuccessParams) error
 	RecordEpisodeImportSuccess(
 		ctx context.Context,
@@ -761,6 +767,7 @@ type Store interface {
 	DeleteFailedDownloadRecordsBefore(
 		ctx context.Context,
 		cutoff time.Time,
+		keepHashes []string,
 	) (int, error)
 	ListActiveDownloadRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
 	FindActiveDownloadRecordByID(
@@ -803,7 +810,10 @@ type Store interface {
 		cursor string,
 	) (*DownloadHistoryResult, error)
 	DeleteDownloadRecord(ctx context.Context, id uint32) error
-	DeleteAllCompletedDownloadRecords(ctx context.Context) (int, error)
+	DeleteAllCompletedDownloadRecords(
+		ctx context.Context,
+		keepHashes []string,
+	) (int, error)
 	RevertMovieToWantedIfNoFile(ctx context.Context, movieID uint32) error
 	RevertOrphanedDownloadingEpisodes(ctx context.Context) (int, error)
 	RevertOrphanedDownloadingAlbumsAndBooks(ctx context.Context) (int, error)
@@ -914,9 +924,9 @@ type Store interface {
 		ctx context.Context,
 		prefix string,
 	) ([]*ent.MediaFile, error)
-	// ListUnprobedMediaFiles returns up to limit rows that have never been
-	// probed (probed_at IS NULL), oldest-first, for the media-probe backfill
-	// job to work through.
+	// ListUnprobedMediaFiles returns up to limit movie and episode rows that
+	// have never been probed (probed_at IS NULL), oldest-first, for the
+	// media-probe backfill job to work through.
 	ListUnprobedMediaFiles(ctx context.Context, limit int) ([]*ent.MediaFile, error)
 	// StampMediaFileProbe records a probe attempt's result. A nil info
 	// (failed probe) still sets probed_at, so ListUnprobedMediaFiles never
