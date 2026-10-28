@@ -38,8 +38,10 @@ tasks:
       # the bookmark whenever it holds anything. Tag what is being released.
       - jj tag set {{.TAG}} -r main
       # --remote origin, not the default: there is a second remote (fork).
-      # This push is the trigger — it fans out to .github/workflows/.
-      - jj git push --remote origin --tag {{.TAG}}
+      # This push is the trigger — it fans out to .github/workflows/. main goes
+      # in the same push: pushing the tag alone left main local, renovate moved
+      # origin's main underneath it, and the next fetch made main conflicted.
+      - jj git push --remote origin -b main --tag {{.TAG}}
 
   # Both changelogs are one procedure with different scope: render the file
   # with git-cliff, commit it on its own revision, advance main. Only CONFIG,
@@ -55,6 +57,10 @@ tasks:
   # main ends up pointing at. Both tag tasks read main:<file>, so an edit left
   # in the working copy must not pass. FILE is the git path only: jj snapshots
   # the whole working copy and needs no equivalent.
+  #
+  # The revision is cut from a freshly fetched main@origin, never from @: @ is
+  # usually an empty working-copy commit, and `jj new` on top of it sealed that
+  # empty commit into the released history.
   _changelog:
     internal: true
     requires:
@@ -65,7 +71,8 @@ tasks:
         --tag {{.TAG}} {{.SCOPE}} -o {{.OUT}}
     cmd: |
       if command -v jj >/dev/null 2>&1; then
-        jj new -m "{{.MESSAGE}}"
+        jj git fetch --remote origin
+        jj new main@origin -m "{{.MESSAGE}}"
         {{.GEN}}
         jj bookmark set main -r @
       else
