@@ -805,15 +805,17 @@ func (db *DB) HydratingArtists(
 
 // RefreshArtist rewrites the artist's provider-sourced fields and members and
 // reconciles its release groups: stored albums update title, type and date
-// only, new ones are created. It returns the ids of the created albums.
+// only, new ones are created, and those no longer listed are pruned
+// (pruneUnlistedAlbums). It returns the ids of the created and of the deleted
+// albums.
 func (db *DB) RefreshArtist(
 	ctx context.Context,
 	id uint32,
 	p RefreshArtistParams,
-) ([]uint32, error) {
+) ([]uint32, []uint32, error) {
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	c := tx.Client()
 	u := c.Artist.UpdateOneID(id).
@@ -834,18 +836,18 @@ func (db *DB) RefreshArtist(
 	}
 	if err := u.Exec(ctx); err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, nil, err
 	}
 	if err := replaceMembers(ctx, c, id, p.Members); err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, nil, err
 	}
 	existing, err := c.Album.Query().
 		Where(album.HasArtistWith(artist.IDEQ(id))).
 		All(ctx)
 	if err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, nil, err
 	}
 	byMBID := make(map[string]*ent.Album, len(existing))
 	for _, a := range existing {
@@ -854,7 +856,7 @@ func (db *DB) RefreshArtist(
 	shared, links, err := linkSharedAlbums(ctx, c, id, p.Albums)
 	if err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, nil, err
 	}
 	var created []uint32
 	for _, a := range p.Albums {
@@ -873,22 +875,82 @@ func (db *DB) RefreshArtist(
 			}
 			if err := u.Exec(ctx); err != nil {
 				tx.Rollback()
-				return nil, err
+				return nil, nil, err
 			}
 			continue
 		}
 		newID, err := createAlbum(ctx, c, id, a)
 		if err != nil {
 			tx.Rollback()
-			return nil, err
+			return nil, nil, err
 		}
 		created = append(created, newID)
 	}
+	removed, err := pruneUnlistedAlbums(ctx, c, id, p.Albums)
+	if err != nil {
+		tx.Rollback()
+		return nil, nil, err
+	}
 	if err := tx.Commit(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	logSharedLinks(ctx, id, links)
-	return created, nil
+	return created, removed, nil
+}
+
+// pruneUnlistedAlbums handles the albums the artist owns that its discography
+// no longer lists — a release group MusicBrainz merged away, or one the
+// discography fetch now leaves out, like a bootleg-only one. An album nothing
+// was ever done with is deleted. One holding files, download history, events
+// or a co-artist is kept, and unmonitored unless its flag was set by hand.
+// An empty listing prunes nothing: it says nothing about the stored albums.
+// It returns the deleted albums' ids.
+func pruneUnlistedAlbums(
+	ctx context.Context,
+	c *ent.Client,
+	artistID uint32,
+	listed []AlbumSeed,
+) ([]uint32, error) {
+	if len(listed) == 0 {
+		return nil, nil
+	}
+	mbids := make([]string, 0, len(listed))
+	for _, a := range listed {
+		mbids = append(mbids, a.MBID)
+	}
+	unlisted := album.And(
+		album.HasArtistWith(artist.IDEQ(artistID)),
+		album.MbidNotIn(mbids...),
+	)
+	used := album.Or(
+		album.HasTracksWith(track.HasMediaFiles()),
+		album.HasDownloadRecords(),
+		album.HasPackRecords(),
+		album.HasEvents(),
+		album.HasCoArtists(),
+		album.MonitorPinned(true),
+	)
+	ids, err := c.Album.Query().Where(unlisted, album.Not(used)).IDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) > 0 {
+		if _, err := c.Album.Delete().
+			Where(album.IDIn(ids...)).
+			Exec(ctx); err != nil {
+			return nil, err
+		}
+	}
+	err = c.Album.Update().
+		Where(
+			unlisted,
+			album.Monitored(true),
+			album.MonitorPinned(false),
+			album.Not(album.HasCoArtists()),
+		).
+		SetMonitored(false).
+		Exec(ctx)
+	return ids, err
 }
 
 // SetArtistDetails writes the overview fields that are non-empty and stamps

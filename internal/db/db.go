@@ -80,12 +80,13 @@ type Store interface {
 		artistIDs []uint32,
 		now time.Time,
 	) (map[uint32]bool, error)
-	// RefreshArtist reconciles the discography and returns the created albums.
+	// RefreshArtist reconciles the discography and returns the created and
+	// the deleted albums.
 	RefreshArtist(
 		ctx context.Context,
 		id uint32,
 		p RefreshArtistParams,
-	) ([]uint32, error)
+	) ([]uint32, []uint32, error)
 	SetArtistDetails(
 		ctx context.Context,
 		id uint32,

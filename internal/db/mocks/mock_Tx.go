@@ -17905,7 +17905,7 @@ func (_c *MockTx_RecordMediaFileTagFailure_Call) RunAndReturn(run func(ctx conte
 }
 
 // RefreshArtist provides a mock function for the type MockTx
-func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshArtistParams) ([]uint32, error) {
+func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshArtistParams) ([]uint32, []uint32, error) {
 	ret := _mock.Called(ctx, id, p)
 
 	if len(ret) == 0 {
@@ -17913,8 +17913,9 @@ func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshA
 	}
 
 	var r0 []uint32
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.RefreshArtistParams) ([]uint32, error)); ok {
+	var r1 []uint32
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.RefreshArtistParams) ([]uint32, []uint32, error)); ok {
 		return returnFunc(ctx, id, p)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.RefreshArtistParams) []uint32); ok {
@@ -17924,12 +17925,19 @@ func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshA
 			r0 = ret.Get(0).([]uint32)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, db.RefreshArtistParams) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, db.RefreshArtistParams) []uint32); ok {
 		r1 = returnFunc(ctx, id, p)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]uint32)
+		}
 	}
-	return r0, r1
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, db.RefreshArtistParams) error); ok {
+		r2 = returnFunc(ctx, id, p)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
 }
 
 // MockTx_RefreshArtist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshArtist'
@@ -17968,12 +17976,12 @@ func (_c *MockTx_RefreshArtist_Call) Run(run func(ctx context.Context, id uint32
 	return _c
 }
 
-func (_c *MockTx_RefreshArtist_Call) Return(uint32s []uint32, err error) *MockTx_RefreshArtist_Call {
-	_c.Call.Return(uint32s, err)
+func (_c *MockTx_RefreshArtist_Call) Return(uint32s []uint32, uint32s1 []uint32, err error) *MockTx_RefreshArtist_Call {
+	_c.Call.Return(uint32s, uint32s1, err)
 	return _c
 }
 
-func (_c *MockTx_RefreshArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32, p db.RefreshArtistParams) ([]uint32, error)) *MockTx_RefreshArtist_Call {
+func (_c *MockTx_RefreshArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32, p db.RefreshArtistParams) ([]uint32, []uint32, error)) *MockTx_RefreshArtist_Call {
 	_c.Call.Return(run)
 	return _c
 }

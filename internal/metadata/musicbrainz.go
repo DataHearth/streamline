@@ -550,10 +550,14 @@ func (m *MusicBrainz) GetArtist(
 			Count         int              `json:"release-group-count"`
 			ReleaseGroups []mbReleaseGroup `json:"release-groups"`
 		}
+		// website-default leaves out the release groups with no official
+		// release (fan remix compilations, bootleg live recordings), as the
+		// MusicBrainz site does: as albums they were wanted and searched for.
 		params := url.Values{
-			"artist": {mbid},
-			"limit":  {"100"},
-			"offset": {fmt.Sprint(offset)},
+			"artist":               {mbid},
+			"limit":                {"100"},
+			"offset":               {fmt.Sprint(offset)},
+			"release-group-status": {"website-default"},
 		}
 		if err := m.get(ctx, "/release-group", params, &page); err != nil {
 			return nil, otelx.RecordSpanError(span, err)

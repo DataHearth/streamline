@@ -224,10 +224,14 @@ var _ = Describe(
 						time.Now(),
 					),
 				).To(Succeed())
-				_, err := e.store.RefreshArtist(e.ctx, b.ID, db.RefreshArtistParams{
-					Name: "Guest", RefreshedAt: time.Now(),
-					Albums: []db.AlbumSeed{{MBID: "rg-1", Title: "Split"}},
-				})
+				_, _, err := e.store.RefreshArtist(
+					e.ctx,
+					b.ID,
+					db.RefreshArtistParams{
+						Name: "Guest", RefreshedAt: time.Now(),
+						Albums: []db.AlbumSeed{{MBID: "rg-1", Title: "Split"}},
+					},
+				)
 				Expect(err).NotTo(HaveOccurred())
 
 				v, err := e.svc.Detail(e.ctx, a.ID, "en")
@@ -281,10 +285,17 @@ var _ = Describe(
 					albumSeed{mbid: "rg-1", title: "Nevermind", monitored: true})
 				b, _ := e.seedArtist("Guest",
 					albumSeed{mbid: "rg-9", title: "Own", tracks: []string{"A"}})
-				_, err := e.store.RefreshArtist(e.ctx, b.ID, db.RefreshArtistParams{
-					Name: "Guest", RefreshedAt: time.Now(),
-					Albums: []db.AlbumSeed{{MBID: "rg-1", Title: "Nevermind"}},
-				})
+				_, _, err := e.store.RefreshArtist(
+					e.ctx,
+					b.ID,
+					db.RefreshArtistParams{
+						Name: "Guest", RefreshedAt: time.Now(),
+						Albums: []db.AlbumSeed{
+							{MBID: "rg-1", Title: "Nevermind"},
+							{MBID: "rg-9", Title: "Own"},
+						},
+					},
+				)
 				Expect(err).NotTo(HaveOccurred())
 
 				v, err := e.svc.Detail(e.ctx, b.ID, "en")

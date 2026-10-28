@@ -596,7 +596,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 	s.details.put(row.Mbid, details)
 
 	now := time.Now()
-	created, err := s.db.RefreshArtist(ctx, id, db.RefreshArtistParams{
+	created, removed, err := s.db.RefreshArtist(ctx, id, db.RefreshArtistParams{
 		Name:        details.Name,
 		SortName:    details.SortName,
 		Type:        details.Type,
@@ -611,6 +611,16 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 	})
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
+	}
+	if len(removed) > 0 {
+		slog.InfoContext(ctx, "albums no longer in the discography removed",
+			"artist.id", id, "albums", removed)
+	}
+	for _, albumID := range removed {
+		if err := s.posters.Remove(coverKind, albumID); err != nil {
+			slog.WarnContext(ctx, "album poster was not removed",
+				"album.id", albumID, "error", err)
+		}
 	}
 
 	updated, err := s.db.FindArtistByID(ctx, id)

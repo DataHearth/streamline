@@ -279,7 +279,7 @@ var _ = g.Describe("browse", g.Label("integration"), func() {
 			ctx := context.Background()
 			store := db.New(f.client)
 			later := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
-			_, err := store.RefreshArtist(ctx, guest.ID, db.RefreshArtistParams{
+			_, _, err := store.RefreshArtist(ctx, guest.ID, db.RefreshArtistParams{
 				Name: "Guest", RefreshedAt: time.Now(),
 				Albums: []db.AlbumSeed{
 					{MBID: "rg-1", Title: "Nevermind"},

@@ -502,7 +502,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			client.Album.UpdateOneID(rg1.ID).
 				SetStatus(album.StatusAvailable).ExecX(ctx)
 
-			created, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
+			created, _, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
 				Name: "Nirvana", Type: "group", Origin: "Aberdeen, United States",
 				Since: 1987, Genre: "Rock", DeezerID: 415, WikidataID: "Q11649",
 				RefreshedAt: now,
@@ -567,7 +567,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				},
 			}
 			for range 2 {
-				created, err := store.RefreshArtist(ctx, b.ID, params)
+				created, _, err := store.RefreshArtist(ctx, b.ID, params)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(created).To(BeEmpty())
 			}
@@ -576,9 +576,53 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			Expect(albumByMBID("rg-1").Title).To(Equal("Nevermind"))
 		})
 
+		It(
+			"deletes an unlisted album nothing was done with and unmonitors a used one",
+			func() {
+				a := seed()
+				client.Album.Create().SetMbid("bootleg").SetTitle("Super Punk").
+					SetArtistID(a.ID).SetMonitored(true).ExecX(ctx)
+				tr := client.Track.Create().SetTitle("Time to Relax").SetPosition(1).
+					SetAlbumID(albumByMBID("rg-2").ID).SaveX(ctx)
+				client.MediaFile.Create().SetPath("/m/1.flac").SetSize(10).
+					SetTrackID(tr.ID).ExecX(ctx)
+				gone := albumByMBID("bootleg").ID
+
+				_, removed, err := store.RefreshArtist(
+					ctx,
+					a.ID,
+					RefreshArtistParams{
+						Name:        "Nirvana",
+						RefreshedAt: now,
+						Albums: []AlbumSeed{
+							{MBID: "rg-1", Title: "Nevermind", Type: "album"},
+						},
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(removed).To(Equal([]uint32{gone}))
+				Expect(
+					client.Album.Query().Where(album.MbidEQ("bootleg")).ExistX(ctx),
+				).
+					To(BeFalse())
+				Expect(albumByMBID("rg-2").Monitored).To(BeFalse(), "holds a file")
+				Expect(albumByMBID("rg-1").Monitored).To(BeTrue(), "still listed")
+			},
+		)
+
+		It("prunes nothing on an empty listing", func() {
+			a := seed()
+			_, removed, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
+				Name: "Nirvana", RefreshedAt: now,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(removed).To(BeEmpty())
+			Expect(albumByMBID("rg-2").Monitored).To(BeTrue())
+		})
+
 		It("clears the type when MusicBrainz states none", func() {
 			a := seed()
-			_, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
+			_, _, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
 				Name: "Nirvana", RefreshedAt: now,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -1025,10 +1069,11 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			BeforeEach(func() {
 				zebra = client.Artist.Query().
 					Where(entartist.MbidEQ("a-3")).OnlyX(ctx)
-				_, err := store.RefreshArtist(ctx, zebra.ID, RefreshArtistParams{
+				_, _, err := store.RefreshArtist(ctx, zebra.ID, RefreshArtistParams{
 					Name: "Zebra", SortName: "Zebra", RefreshedAt: now,
 					Albums: []AlbumSeed{
 						{MBID: "rg-2", Title: "In Utero", Type: "album"},
+						{MBID: "z-1", Title: "Coming", Type: "album"},
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -1062,13 +1107,6 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 					To(Equal([]string{"Zebra", "Nirvana", "Björk"}))
 			},
 		)
-
-		It("sorts by recently added by default, newest first", func() {
-			Expect(names(ListArtistsParams{})).
-				To(Equal([]string{"Zebra", "Björk", "Nirvana"}))
-			Expect(names(ListArtistsParams{Sort: "recent", Order: "asc"})).
-				To(Equal([]string{"Nirvana", "Björk", "Zebra"}))
-		})
 
 		It("sorts by recently added by default, newest first", func() {
 			Expect(names(ListArtistsParams{})).

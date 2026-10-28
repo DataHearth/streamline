@@ -291,7 +291,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			"merges the artist lookup with the paginated release-group browse",
 			func() {
 				var calls []string
-				var gotInc string
+				var gotInc, gotStatus string
 				mb.client.Transport = mbRoundTripper(
 					func(r *http.Request) (*http.Response, error) {
 						calls = append(calls, r.URL.Path)
@@ -299,6 +299,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 							gotInc = r.URL.Query().Get("inc")
 							return jsonResponse(200, artistJSON), nil
 						}
+						gotStatus = r.URL.Query().Get("release-group-status")
 						return jsonResponse(
 							200,
 							`{"release-group-count":1,"release-groups":[{"id":"rg-1","title":"Nevermind","primary-type":"Album","first-release-date":"1991-09-24"}]}`,
@@ -312,6 +313,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				Expect(a.ReleaseGroups[0].Type).To(Equal(AlbumTypeAlbum))
 				Expect(a.ReleaseGroups[0].ReleaseDate.Year()).To(Equal(1991))
 				Expect(calls).To(ContainElement("/ws/2/release-group"))
+				Expect(gotStatus).To(Equal("website-default"))
 
 				Expect(a.Type).To(Equal("group"))
 				Expect(a.Origin).To(Equal("Aberdeen, United States"))
