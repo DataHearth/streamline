@@ -587,6 +587,8 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				client.MediaFile.Create().SetPath("/m/1.flac").SetSize(10).
 					SetTrackID(tr.ID).ExecX(ctx)
 				gone := albumByMBID("bootleg").ID
+				client.MediaEvent.Create().SetType("searched").SetAlbumID(gone).
+					ExecX(ctx)
 
 				_, removed, err := store.RefreshArtist(
 					ctx,

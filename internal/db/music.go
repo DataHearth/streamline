@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -901,8 +902,11 @@ func (db *DB) RefreshArtist(
 // pruneUnlistedAlbums handles the albums the artist owns that its discography
 // no longer lists — a release group MusicBrainz merged away, or one the
 // discography fetch now leaves out, like a bootleg-only one. An album nothing
-// was ever done with is deleted. One holding files, download history, events
-// or a co-artist is kept, and unmonitored unless its flag was set by hand.
+// was ever done with is deleted. One holding files, download history, an
+// acquisition event or a co-artist is kept, and unmonitored unless its flag
+// was set by hand. The events written for every album (added, searched by the
+// missing-album job, metadata or monitoring changes) are not use: counting
+// them kept nearly every bootleg album a scheduled search had tried.
 // An empty listing prunes nothing: it says nothing about the stored albums.
 // It returns the deleted albums' ids.
 func pruneUnlistedAlbums(
@@ -926,7 +930,19 @@ func pruneUnlistedAlbums(
 		album.HasTracksWith(track.HasMediaFiles()),
 		album.HasDownloadRecords(),
 		album.HasPackRecords(),
-		album.HasEvents(),
+		album.HasEventsWith(mediaevent.TypeIn(
+			mediaevent.TypeGrabbed,
+			mediaevent.TypeDownloadCompleted,
+			mediaevent.TypeDownloadFailed,
+			mediaevent.TypeDownloadCancelled,
+			mediaevent.TypeGrabWidened,
+			mediaevent.TypeImported,
+			mediaevent.TypeImportFailed,
+			mediaevent.TypeImportHeldForReview,
+			mediaevent.TypeFileRenamed,
+			mediaevent.TypeFileRemoved,
+			mediaevent.TypeRequestApproved,
+		)),
 		album.HasCoArtists(),
 		album.MonitorPinned(true),
 	)
