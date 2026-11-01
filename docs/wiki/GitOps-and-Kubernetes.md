@@ -145,17 +145,17 @@ library:
     size: 50Gi
 ```
 
-The chart then points `config.library` at conventional subdirectories: `<mountPath>/media/movies`, `<mountPath>/media/series`, `<mountPath>/downloads`. Set those keys explicitly if you want a different layout and the chart leaves them alone.
+The chart then points `config.library` at conventional subdirectories: `<mountPath>/media/movies`, `<mountPath>/media/series`, `<mountPath>/media/music`, `<mountPath>/media/books`, `<mountPath>/media/audiobooks` and `<mountPath>/downloads`. Set any of those keys explicitly if you want a different layout and the chart leaves it alone. With separate `library.media` and `library.downloads` volumes instead, the music and book roots default to `<media.mountPath>/music`, `/books` and `/audiobooks`.
 
 > [!WARNING]
-> The music and book roots are **not** pointed at the shared volume. Left unset they keep the binary's defaults, `/data/music`, `/data/books` and `/data/audiobooks` — on the data PVC, a different filesystem from the downloads, so a hardlink import of an album or a book fails. Set them under the shared mount if you use either library:
+> **Upgrading from chart 2.4.0 or older:** those versions left the music and book roots at the binary's defaults, `/data/music`, `/data/books` and `/data/audiobooks`. That is the data PVC, a different filesystem from the downloads, where a hardlink import of an album or a book failed. Newer charts point them at the shared volume. If you already keep albums or books under `/data`, pin the old paths before upgrading, or move the folders to the new ones:
 >
 > ```yaml
 > config:
 >   library:
->     music_path: /srv/media/music
->     ebook_path: /srv/media/books
->     audiobook_path: /srv/media/audiobooks
+>     music_path: /data/music
+>     ebook_path: /data/books
+>     audiobook_path: /data/audiobooks
 > ```
 
 Separate media and downloads volumes are available:

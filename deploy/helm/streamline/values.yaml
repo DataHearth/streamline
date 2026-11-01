@@ -355,14 +355,20 @@ library:
   # config.library.import_mode "hardlink" works out of the box. The chart points
   # config.library at conventional subdirs of this mount:
   #   movie_path=<mountPath>/media/movies, series_path=<mountPath>/media/series,
+  #   music_path=<mountPath>/media/music, ebook_path=<mountPath>/media/books,
+  #   audiobook_path=<mountPath>/media/audiobooks,
   #   download_path=<mountPath>/downloads.
-  # Want a different layout? Set config.library.{movie,series,download}_path
-  # explicitly above and the chart leaves it as-is.
-  # music_path, ebook_path and audiobook_path are NOT pointed here: they keep
-  # the binary defaults /data/music, /data/books and /data/audiobooks, on the
-  # persistence PVC — a different filesystem from the downloads, so a hardlink
-  # import of an album or a book fails. Set them under this mount, e.g.
-  # config.library.music_path: /srv/media/music.
+  # Want a different layout? Set any config.library.*_path explicitly above and
+  # the chart leaves it as-is.
+  #
+  # UPGRADING from chart 2.4.0 or older: those versions left music_path,
+  # ebook_path and audiobook_path at the binary defaults (/data/music,
+  # /data/books, /data/audiobooks) on the persistence PVC, where a hardlink
+  # import from the shared downloads failed. If you already keep albums or
+  # books there, pin the old paths (config.library.music_path: /data/music,
+  # and so on) or move the folders under this mount before upgrading.
+  # With media/downloads below instead, the three default to
+  # <media.mountPath>/music, /books and /audiobooks.
   shared:
     enabled: true
     existingClaim: "" # empty = create the PVC below
