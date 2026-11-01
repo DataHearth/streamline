@@ -2,7 +2,7 @@
 
 Streamline is a single binary with no external dependencies — no database server, no runtime, no CGO. Pick whichever install method matches how you already run things.
 
-A couple of features are gated behind the `ffmpeg`/`ffprobe` binaries, but they are opt-in extras and never a requirement: without them Streamline installs, boots and runs the same, just without media info and import verification. See [Optional: ffmpeg](#optional-ffmpeg).
+A few features are gated behind the `ffmpeg`/`ffprobe` binaries, but they are opt-in extras and never a requirement: without them Streamline installs, boots and runs the same, just without media info, import verification, transcoding and converted Subsonic streams. See [Optional: ffmpeg](#optional-ffmpeg).
 
 ## Which install method?
 
@@ -25,6 +25,8 @@ A couple of features are gated behind the `ffmpeg`/`ffprobe` binaries, but they 
 - [Kubernetes / Helm](#kubernetes--helm)
 - [NixOS / Nix](NixOS) — package, NixOS module and home-manager module
 - [Optional: ffmpeg](#optional-ffmpeg)
+- [Upgrading](#upgrading)
+- [Install as an app](#install-as-an-app)
 - [Verifying what you downloaded](#verifying-what-you-downloaded)
 
 ---
@@ -103,8 +105,13 @@ Then tell Streamline where things live, in `config/config.yaml`:
 library:
   movie_path: /srv/data/media/movies
   series_path: /srv/data/media/series
+  music_path: /srv/data/media/music
+  ebook_path: /srv/data/media/books
+  audiobook_path: /srv/data/media/audiobooks
   download_path: /srv/data/downloads
 ```
+
+Set the music and book roots even if you start with films only: their defaults (`/data/music`, `/data/books`, `/data/audiobooks`) sit inside the container's `/data` volume, beside the database rather than under your media share.
 
 ### 3. Start it
 
@@ -303,14 +310,17 @@ Two things about the chart that surprise people:
 
 ## Optional: ffmpeg
 
-Streamline runs perfectly well with no `ffmpeg` or `ffprobe` anywhere on the machine. Three features
-are gated behind them, and only those three:
+Streamline runs perfectly well with no `ffmpeg` or `ffprobe` anywhere on the machine. These features
+are gated behind them, and only these:
 
-| Feature | What you lose without ffprobe |
+| Feature | What you lose without them |
 | --- | --- |
 | **Media info** | Resolution, codecs, duration, channels, bitrate and stream languages on files and episodes. The rest of the page is unaffected |
 | **Import verification** | Downloads are imported on the strength of the release name alone. With ffprobe, a file whose real resolution, duration or codec contradicts the claim is *held* for you to resolve instead of landing in your library |
 | **Scoring a file you already have** | The `audio_tracks`, `audio_language` and `subtitle_language` conditions are answerable only from a probe. Without one they are unanswerable for a file on disk, so automatic upgrades compare the two sides on the parsed release name alone — see [What a file can be scored on](Quality-Profiles-and-Custom-Formats#what-a-file-can-be-scored-on) |
+| **Measured music and audiobook quality** | An imported album's real tier (a "FLAC" that is a 128k transcode) and an audiobook's real bit rate are checked against the profile only when they can be measured; the import review shows a file's extension instead of `FLAC 24/96` |
+| **[Transcoding](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files)** | Needs `ffmpeg` itself, not just `ffprobe`. Without it the transcode worker stays idle and **Scan library** refuses |
+| **Converted [Subsonic](Subsonic#transcoding) streams** | Apps always get the original file, whatever bitrate or format they ask for, and an account's maximum bitrate cannot be enforced |
 
 Everything else — searching, grabbing, importing, renaming, requests, notifications — works
 identically either way. Missing binaries are a **graceful degrade, never a boot error**: nothing
@@ -351,6 +361,8 @@ The update only goes forward. An older version will not start on a database a ne
 ---
 
 ## Install as an app
+
+[![Streamline on a phone](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/mobile.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/mobile.png)
 
 Streamline ships a web-app manifest, so the browser can pin it to a home screen and open it full-screen without browser chrome. Nothing runs offline: it is the same web UI, just without the address bar.
 

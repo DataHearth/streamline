@@ -301,7 +301,7 @@ quality_profiles:
         audio_passthrough: [truehd, eac3, dts]   # optional; see below
 ```
 
-**`if` is the compliance test, `to` is the destination.** Each new import on this profile is probed, checked against `if`, and queued when it fails. Files that were already in the library when you wrote the rules aren't reached automatically — **Scan library** on [Activity → Transcoding](Activity-and-Calendar#transcoding) is the pass that catches them up.
+**`if` is the compliance test, `to` is the destination.** Each new import on this profile is probed, checked against `if`, and queued when it fails. Files that were already in the library when you wrote the rules aren't reached automatically — **Scan library** on the [Transcoding page](Activity-and-Calendar#transcoding) is the pass that catches them up.
 
 **Failing only the container is a remux, not a re-encode.** The streams are copied into the new container untouched: seconds instead of hours, and no quality lost. Only a codec or bitrate failure re-encodes.
 
@@ -330,7 +330,9 @@ Failed jobs retry up to `transcoding.max_failures` times and then park in the qu
 
 **Transcoding and seeding.** When you import with `library.import_mode: hardlink`, the library file and the torrent's copy share one inode. A transcode renames the encode over the library path only, so the torrent keeps seeding from the original — but from then on the original and the encode each take their own space on disk for as long as the torrent's copy stays. To hold that cost off while it still buys you something, turn on `transcoding.defer_seeding` (Settings → Transcoding). A deferred job asks the download client about its torrent every hour and runs as soon as the torrent is no longer downloading or seeding there — stopped at its ratio, paused, or removed. Files Streamline did not download itself (a bulk import, a retroactive scan) have no torrent to wait on and encode right away, and so does a file whose download record has aged out of the activity history. **Caveat:** the flag waits for seeding to end, not for the torrent's copy to be deleted; a torrent that stopped seeding but was kept with its files still costs the second copy until you remove it.
 
-**Not supported:** VideoToolbox on macOS and NVENC/QSV/AMF (VAAPI is the only hardware backend), a Dolby-Vision-preserving re-encode, and editing `transcode` from the profile form in the UI — this block is YAML and API only. There is also no way to *remove* a policy over the API: omitting the field on an update keeps the stored one, so clearing it is a config-file edit.
+**Editing it.** The quality-profile form in **Settings → Quality profiles** has a *Re-encode files that fail these rules* switch that reveals the `if` and `to` fields, and saves the policy with the profile. There is no way to *remove* a policy over the API — omitting the field on an update keeps the stored one — so for a profile that already has one the switch stays on and says so; clearing it is a config-file edit.
+
+**Not supported:** VideoToolbox on macOS and NVENC/QSV/AMF (VAAPI is the only hardware backend), and a Dolby-Vision-preserving re-encode.
 
 ---
 

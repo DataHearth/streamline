@@ -6,7 +6,7 @@ Streamline's API is the same one its own web UI uses — there's no privileged i
 - [Authentication](#authentication)
 - [Conventions](#conventions)
 - [Endpoint map](#endpoint-map)
-  - [Movies](#movies) · [Series](#series) · [Activity](#activity) · [Requests](#requests)
+  - [Movies](#movies) · [Series](#series) · [Music](#music) · [Books](#books) · [People (cast)](#people-cast) · [Activity](#activity) · [Requests](#requests)
   - [Config-backed resources](#config-backed-resources) · [Torrents](#torrents-built-in-client) · [Transcoding endpoints](#transcoding-endpoints) · [Library](#library)
   - [Auth and users](#auth-and-users) · [Config, schedules, system](#config-schedules-system) · [Calendar](#calendar) · [Outside `/api/v1`](#outside-apiv1)
 - [Media probe](#media-probe)
@@ -126,13 +126,13 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `monitored_total`); the three diverge as soon as two facets are filtered, so read each from its own. `total` is separate again: the library, filtered by nothing. So are `wanted_episodes`, `downloading_episodes` and the movie `trend`. Called with no parameters the whole response is the unfiltered library, which is the shape older clients already expected.
 
-**Errors** are `{"message": "..."}` with a conventional status: `400` bad request, `401` unauthenticated, `403` forbidden (usually not an admin), `404`, `409` conflict (already exists), `422` unprocessable, `500`. Some carry a stable `code` alongside the message when the caller needs to branch on the specific reason — `last_admin`, `email_exists`, `connection_failed` (a connection test's upstream diagnostic), `invalid_condition` (a custom-format condition that would not compile), `grab_rejected` (a grab the server refused — an untrusted download host, a release whose files match no wanted episode, a built-in client already holding its maximum of 500 torrents, or a search result whose handle expired when the session secret rotated). Those last three carry a message composed for display, which the web UI shows verbatim; a coded error's `message` is otherwise still advisory.
+**Errors** are `{"message": "..."}` with a conventional status: `400` bad request, `401` unauthenticated, `403` forbidden (usually not an admin), `404`, `409` conflict (already exists), `422` unprocessable, `500`. Some carry a stable `code` alongside the message when the caller needs to branch on the specific reason — `last_admin`, `email_exists`, `connection_failed` (a connection test's upstream diagnostic), `invalid_condition` (a custom-format condition that would not compile), `grab_rejected` (a grab the server refused — an untrusted download host, a release whose files match no wanted episode, a built-in client already holding its maximum of 500 torrents, a release that would not fit on the download client's disk (the [free-space check](First-Run-Setup#free-space-check)), a `.torrent` whose name the built-in engine refuses, an album `.torrent` that is one CUE disc image, or a search result whose handle expired when the session secret rotated), `no_quality_profile`, `rate_limited` (a metadata provider's limit, with `Retry-After`), `hardcover_not_configured` / `hardcover_key_rejected`. Those last three carry a message composed for display, which the web UI shows verbatim; a coded error's `message` is otherwise still advisory.
 
 ---
 
 ## Endpoint map
 
-117 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential, `request_only` included), `Member` (`admin` or `member` — a `request_only` caller gets 403) or `🔒 Admin`; the Requests group spells out the exact roles.
+191 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential, `request_only` included), `Member` (`admin` or `member` — a `request_only` caller gets 403) or `🔒 Admin`; the Requests group spells out the exact roles.
 
 ### Movies
 
@@ -242,6 +242,8 @@ A music release in a search result carries `source` as a display label (`FLAC 24
 | `POST` | `/books/series/{id}/refresh-metadata` | Re-read the series and its volumes (`1 + ceil(N/20)` requests), adding volumes the skeleton gained | Member |
 | `POST` | `/books/series/{id}/rename?preview=` | The rename plan over every volume | Member |
 | `POST` | `/books/series/{id}/search-now` | Search the wanted volumes with one series query; `202 {queued}` | Member |
+| `POST` | `/books/{id}/send` | Email the book's ebook (EPUB, else PDF) to the caller's `device_email`. `204`; `422` `not_sendable` or `no_device_email`, `503` `smtp_not_configured`, `502` `send_failed` with the mail server's reply | Authenticated |
+| `POST` | `/books/series/{id}/send` | Plan the series' sendable volumes into emails (first fit under `smtp.max_message_size_mb` and 25 attachments), answer with the plan and the `skipped` volumes, and send in the background; a failed email is only logged. `422` `not_sendable` when no volume can be sent. See [Send to Kindle](Send-to-Kindle) | Authenticated |
 | `GET` `POST` | `/books/quality-profiles` | List / create book quality profiles | Authenticated / 🔒 Admin |
 | `PUT` `DELETE` | `/books/quality-profiles/{name}` | Update / delete a book quality profile | 🔒 Admin |
 | `POST` | `/books/quality-profiles/{name}/default?kind=novel\|bd\|comic\|manga` | Make this the default profile for one book kind (`kind` is required) | 🔒 Admin |
@@ -366,7 +368,9 @@ Built-in custom formats are listed alongside user-defined ones (`builtin: true`)
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` | `/torrents` · `/torrents/{hash}` | List / fetch a torrent | 🔒 Admin |
+| `GET` | `/torrents` · `/torrents/{hash}` | List / fetch a torrent (files, trackers, peers) | 🔒 Admin |
+| `POST` | `/torrents` | Add a torrent by magnet link or base64 `.torrent` (body cap 24 MiB, `413` past it) | 🔒 Admin |
+| `DELETE` | `/torrents/{hash}` | Remove a torrent, optionally with its data. Also drops the download record tracking it and puts its media back to wanted at once, without waiting for the monitor's orphan sweep | 🔒 Admin |
 | `POST` | `/torrents/{hash}/pause` · `/resume` | Pause / resume | 🔒 Admin |
 | `PATCH` | `/torrents/{hash}/files/{index}` | Toggle a file | 🔒 Admin |
 | `PUT` | `/torrents/listen-port` | Move the running engine's peer sockets; not persisted | 🔒 Admin |
@@ -402,9 +406,10 @@ An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` and 
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` `PATCH` | `/auth/me` | Fetch / update your profile | Any |
-| `PUT` | `/auth/password` | Change your password | Any |
-| `GET` `POST` | `/auth/me/api-keys` · `/auth/me/sessions` | List / create your API keys or sessions | Any |
+| `GET` `PATCH` | `/auth/me` | Fetch / update your profile (`display_name`, and `device_email`, the e-reader address [Send to Kindle](Send-to-Kindle) mails to; an empty string clears it) | Any |
+| `POST` | `/auth/password` | Change your password; revokes your other sessions **and every API key you hold** | Any |
+| `GET` `POST` | `/auth/me/api-keys` | List / create your API keys | Any |
+| `GET` | `/auth/me/sessions` | List your sessions | Any |
 | `DELETE` | `/auth/me/api-keys/{id}` · `/auth/me/sessions/{id}` | Revoke your own key or session | Any |
 | `GET` `POST` `DELETE` | `/account/subsonic-password` | State (`enabled`, `username`, `created_at`, `last_used_at`, `last_client`, never the secret) / generate-or-rotate (the only response carrying `secret`) / disable your Subsonic password | Any, session only |
 | `GET` `POST` `DELETE` | `/account/opds-token` | The same shape for your OPDS token; `username` is your email and `secret` is the Basic password. Only a hash is stored | Any, session only |
@@ -585,14 +590,16 @@ api -X PATCH -d '{"selective_files":true}'                     "$SL/api/v1/confi
 api -X PATCH -d '{"lockout":{"threshold":5}}'                  "$SL/api/v1/config/auth"
 ```
 
-**`/config/library`** also returns `movie_path`, `series_path` and `download_path` — read-only, because a root only moves through [path migration](Importing-an-Existing-Library), which rewrites every stored path before it repoints the config. Sending them in the body has no effect. The bounded counters (`max_grab_failures`, `import_max_attempts` 1–255; `drift_grace_ticks` 1–20) answer `422` outside their range rather than wrapping.
+**`/config/library`** also returns `movie_path`, `series_path` and `download_path` — read-only, because a root only moves through [path migration](GitOps-and-Kubernetes#library-path-migration), which rewrites every stored path before it repoints the config. Sending them in the body has no effect. The bounded counters (`max_grab_failures`, `import_max_attempts` 1–255; `drift_grace_ticks` 1–20) answer `422` outside their range rather than wrapping.
 
-**`/config/metadata`** never echoes an api key. The read view carries `tmdb_api_key_set`/`tvdb_api_key_set` and, when the key comes from a `*_file` path, `tmdb_api_key_file_managed`/`tvdb_api_key_file_managed`. On a `PATCH`, a blank or omitted key **keeps the stored one** — there's no way to clear a key over the API — and setting one inline while the matching `*_file` is configured is a `422`: the file is the source of truth. `musicbrainz_url` (an http(s) server root, without `/ws/2`) and `musicbrainz_interval` (a non-negative Go duration, `0s` for no limit) are plain fields; anything else for either is a `422`. Every field here is read once at boot, so a real change comes back with `restart_required: true`.
+**`/config/metadata`** never echoes an api key. The read view carries `tmdb_api_key_set`/`tvdb_api_key_set`/`hardcover_api_key_set` and, when the key comes from a `*_file` path, `tmdb_api_key_file_managed`/`tvdb_api_key_file_managed`/`hardcover_api_key_file_managed`. On a `PATCH`, a blank or omitted key **keeps the stored one** — there's no way to clear a key over the API — and setting one inline while the matching `*_file` is configured is a `422`: the file is the source of truth. `musicbrainz_url` (an http(s) server root, without `/ws/2`) and `musicbrainz_interval` (a non-negative Go duration, `0s` for no limit) are plain fields; anything else for either is a `422`. Every field here is read once at boot, so a real change comes back with `restart_required: true`.
 
 ```bash
 api "$SL/api/v1/config/metadata"
 # {"language":"en","tmdb_region":"US","tmdb_api_key_set":true,"tvdb_api_key_set":true,
-#  "tmdb_api_key_file_managed":false,"tvdb_api_key_file_managed":false,"restart_required":false}
+#  "hardcover_api_key_set":false,"tmdb_api_key_file_managed":false,"tvdb_api_key_file_managed":false,
+#  "hardcover_api_key_file_managed":false,"musicbrainz_url":"https://musicbrainz.org",
+#  "musicbrainz_interval":"1s","restart_required":false}
 
 api -X PATCH -d '{"language":"fr","tmdb_region":"FR"}' "$SL/api/v1/config/metadata"
 ```
@@ -606,7 +613,7 @@ api -X PATCH -d '{"log":{"app":{"level":"debug"}}}' "$SL/api/v1/config/system"
 
 `events_retention` is the only field here that reaches this process on its own — the cleanup job reads it per tick. Everything else is read once at boot, so changing it comes back with `restart_required: true`; a patch that only moves retention does not raise the flag.
 
-`log.app.output` and `log.http.output` are each `stderr`, `stdout`, or a file path. `log.*.rotate` applies only to a file path, and `0` on any of its bounds disables that bound — the settings page shows the rotation fields only once the output is a file, for the same reason.
+`log.app.output` and `log.http.output` are each `stderr` or a file path (a relative one lands under `data_dir`; `stdout` is not special and is read as a file name). `log.*.rotate` applies only to a file path, and `0` on any of its bounds disables that bound — the settings page shows the rotation fields only once the output is a file, for the same reason.
 
 ---
 
@@ -750,9 +757,12 @@ watch -n5 "curl -sS -H 'X-API-Key: $KEY' $SL/api/v1/activity/queue \
 ### Resolving a held download
 
 A download that fails import verification sits in the queue with
-`"status": "held"` and a `hold_reasons` array — one entry per failed check
-(`corrupt`, `resolution`, `duration`, `codec`, `always_ask`), each naming the
-file, what was expected and what was found. See
+`"status": "held"` and a `hold_reasons` array — one entry per failed check,
+each naming the file, what was expected and what was found. `corrupt`,
+`resolution`, `duration`, `codec` and `always_ask` are the video checks; `tier`
+(a measured audio tier the profile does not tick) and `album` (files tagged as
+another album) hold a music download; `format`, `bitrate` and `metadata` (a
+series placeholder, or a book with no author yet) hold a book. See
 [Configuration Reference](Configuration-Reference#import-verification) for the
 rules and the knobs.
 

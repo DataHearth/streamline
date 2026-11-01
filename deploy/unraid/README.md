@@ -11,7 +11,7 @@
 | `/mnt/user/data` → `/mnt/user/data` | the data share | downloads and media on one share, same path inside and out, so imports hardlink and the torrent client's paths resolve unchanged |
 | `/etc/streamline` → `appdata/streamline/config` | config | `config.yaml` is written there on first start |
 | `/data` → `appdata/streamline/data` | app data | database, posters, built-in torrent state |
-| `STREAMLINE_LIBRARY__*_PATH` | library folders | the six library paths are config-file only; set by environment, they are fixed by the template |
+| `STREAMLINE_LIBRARY__*_PATH` | library folders | the six library folders, all on the data share; set by environment, they are fixed by the template (Settings refuses to change a key the environment supplies) |
 
 First start needs nothing else: when `--config` names a missing file, Streamline writes the `config init` defaults there, with the library folders the environment sets (`config.Seed`), then generates the session secret into it. The seed admin's generated password is printed once to the container log, never to the file.
 

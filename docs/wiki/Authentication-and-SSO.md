@@ -41,10 +41,10 @@ auth:
   trusted_role: member
 ```
 
-The client IP is resolved by chi's `ClientIPFromXFFTrustedProxies(1)` middleware — it derives the client from `X-Forwarded-For` **assuming exactly one trusted proxy in front of Streamline**.
+The client IP is the TCP peer's address unless that peer is one of the reverse proxies listed in `server.trusted_proxies`. Only then is `X-Forwarded-For` read, walked from the right with every trusted-proxy hop skipped, so the address used is the one the outermost of your own proxies saw — the last entry nobody outside can forge. With `server.trusted_proxies` empty (the default) the header is ignored entirely.
 
 > [!WARNING]
-> That assumption is load-bearing. If Streamline is exposed directly, or sits behind a different number of proxies, or behind one that appends to a client-supplied `X-Forwarded-For` instead of overwriting it, **a client can forge a trusted source IP and be granted `trusted_role` with no credentials at all.** Only use this mode when you control the proxy chain, and set `trusted_role` to the least-privileged role that does the job. The default is `member`; `admin` is rarely what you want here.
+> List the proxies themselves in `server.trusted_proxies`, ideally one `/32` (or `/128`) each — **never a client subnet**. Every host inside a listed range counts as a proxy, so naming `192.168.0.0/16` or a Kubernetes pod CIDR lets any machine in it send an `X-Forwarded-For` naming an address in `auth.trusted_networks` and be granted `trusted_role` with no credentials at all. Set `trusted_role` to the least-privileged role that does the job. The default is `member`; `admin` is rarely what you want here.
 
 ### `disabled`
 
@@ -77,9 +77,16 @@ These bypass auth entirely:
 | Path | Purpose |
 | --- | --- |
 | `/health` | Liveness/readiness probe. Bare JSON, not in the OpenAPI spec |
+| `/api/docs`, `/api/v1/openapi.yaml` | The Scalar API browser and the spec it reads |
+| `/static/` | Prefix match — the SPA's scripts, styles, fonts and icons |
 | `/login`, `/register` | SPA shell |
 | `/auth/login`, `/auth/register` | The POST endpoints behind them |
+| `/auth/config`, `/auth/invite/` | What the login page needs before anyone is signed in: the registration mode and SSO buttons, and an invite's bound email |
 | `/auth/oidc/` | Prefix match — the whole OIDC start/callback flow |
+| `/rest/`, `/share/` | The [Subsonic](Subsonic) API and its public share pages. Subsonic authenticates every request itself, from the user name and Subsonic password in the query; a share link is its own credential |
+| `/opds`, `/opds/` | The OPDS catalogue, which authenticates itself by HTTP Basic with your email and OPDS token (both forms are listed because a path ending in `/` matches as a prefix and anything else exactly) |
+
+Neither the Subsonic password nor the OPDS token works anywhere else, and no session cookie, Bearer token or API key works on `/rest` or `/opds`.
 
 ---
 
@@ -98,7 +105,9 @@ Three roles, ranked `admin` (3) > `member` (2) > `request_only` (1):
 | Manage own API keys, sessions, password | ✅ | ✅ | ✅ |
 | Settings, users, indexers, download clients, media servers, quality profiles, schedules, library admin, torrents, transcoding, queue control, adoption review | ✅ | ❌ | ❌ |
 
-That last row is admin-gated end to end: `/config/*`, `/users/*`, `/indexers/*`, `/download-clients/*`, `/media-servers/*`, `/schedules/*`, `/library/*`, `/torrents/*`, `/transcoding/*`, every write under `/quality-profiles/*` and `/activity/*` (pausing, cancelling, clearing, retrying and deciding adoption proposals), plus invites and system info. The reads under `/quality-profiles` and `/activity` stay open to every role.
+That last row is admin-gated end to end: `/config/*`, `/users/*`, `/indexers/*`, `/download-clients/*`, `/media-servers/*`, `/schedules/*`, `/library/*` (except `/library/recent`, the dashboard's arrivals), `/torrents/*`, `/transcoding/*`, every write under `/quality-profiles/*`, `/music/quality-profiles/*`, `/books/quality-profiles/*` and `/activity/*` (pausing, cancelling, clearing, retrying and deciding adoption proposals), the library-wide music actions (`/music/tags/retag`, `/music/monitored-types/apply`), plus invites and system info. The reads under the three quality-profile families and `/activity` stay open to every role.
+
+Music and books follow the same split as movies and series: browsing is open to every role, while adding, editing, searching, grabbing, renaming and a release's tag panel need `member`. Sending a book to your own e-reader is open to every role, `request_only` included.
 
 > [!IMPORTANT]
 > Streamline refuses to delete or demote the **last remaining admin** — regardless of who's asking.
@@ -111,7 +120,7 @@ Sessions are JWTs signed with HMAC using `auth.session_secret`, carried in the `
 
 - `HttpOnly`
 - `SameSite=Lax`
-- `Secure` when the request arrived over TLS **or** carried `X-Forwarded-Proto: https`
+- `Secure` when the request arrived over TLS, when a proxy listed in `server.trusted_proxies` reported `https` (`Forwarded: proto=https`, `X-Forwarded-Proto` or `X-Forwarded-Ssl: on`), or when `STREAMLINE_PUBLIC_URL` is an `https://` address
 
 Each JWT carries a `jti` matched against a server-side session row, so sessions are genuinely revocable rather than merely expiring. Every authenticated request touches the row asynchronously to refresh last-seen.
 
@@ -317,7 +326,13 @@ When Streamline is opened from a phone's home screen (see [Install as an app](In
 
 ## Reverse proxies
 
-Forward the scheme, or the `Secure` cookie will be set and then never returned by the browser — producing a login that silently loops.
+List the proxy in `server.trusted_proxies` (its own address, not your LAN) and have it forward the scheme. Streamline believes `X-Forwarded-*` and `Forwarded` headers only from an address in that list; from anyone else they are ignored, so behind an unlisted proxy every client looks like the proxy, and an https login can loop because the cookie's `Secure` flag and the scheme disagree.
+
+```yaml
+server:
+  trusted_proxies:
+    - 10.0.0.5/32      # the reverse proxy itself
+```
 
 ```nginx
 location / {
@@ -334,4 +349,4 @@ Caddy and Traefik set these by default.
 
 Set `STREAMLINE_PUBLIC_URL=https://streamline.example.com` so invite links are absolute and correct.
 
-**If you use `trusted-network` mode behind a proxy**, ensure the proxy *overwrites* `X-Forwarded-For` rather than appending to a client-supplied value. Otherwise a client can forge a trusted source IP and be handed `trusted_role` without credentials.
+**If you use `trusted-network` mode behind a proxy**, the `server.trusted_proxies` entry is what makes the forwarded client address count at all; keep it to the proxy's own address, for the reason in the warning under [`trusted-network`](#trusted-network).

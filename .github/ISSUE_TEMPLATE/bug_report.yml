@@ -15,7 +15,7 @@ body:
     attributes:
       label: Version
       description: "`streamline --version`, the image tag, or the chart version."
-      placeholder: v1.2.0
+      placeholder: 3.3.0
     validations:
       required: true
 
@@ -27,6 +27,8 @@ body:
         - Docker / Compose
         - Helm / Kubernetes
         - NixOS / home-manager module
+        - Unraid template
+        - Proxmox LXC script
         - Binary from releases
         - Built from source
     validations:
@@ -56,5 +58,5 @@ body:
     attributes:
       label: Anything else?
       description: >
-        Integrations involved (which indexer, download client, media server),
-        screenshots, browser console output for UI bugs.
+        Integrations involved (which indexer, download client, media server,
+        Subsonic or OPDS app), screenshots, browser console output for UI bugs.

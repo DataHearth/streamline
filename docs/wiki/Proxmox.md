@@ -72,6 +72,9 @@ Then in `/etc/streamline/config.yaml`:
 library:
   movie_path: /mnt/data/media/movies
   series_path: /mnt/data/media/series
+  music_path: /mnt/data/media/music          # if you use music
+  ebook_path: /mnt/data/media/books          # if you use books
+  audiobook_path: /mnt/data/media/audiobooks
   download_path: /mnt/data/downloads
 ```
 
@@ -121,7 +124,7 @@ Debian's `ffmpeg` has VAAPI but no `libvmaf`, so [`transcoding.verify.min_vmaf`]
 streamline-update
 ```
 
-It fetches and verifies the latest release *before* stopping anything, so a failed download leaves the running version alone; then it stops the service, copies the database to `/var/lib/streamline/backups/` (the five newest are kept), swaps the binary, refreshes the unit and starts it again. The new version migrates the database on boot, and migrations only go forward: the backup is how you go back. `streamline-update` is the same script as the install with `update`, so `curl -fsSL …/streamline.sh | bash -s -- update` does the same thing.
+It fetches and verifies the latest release *before* stopping anything, so a failed download leaves the running version alone; then it stops the service, copies the database to `/var/lib/streamline/backups/` (the five newest are kept), swaps the binary, refreshes the unit and starts it again. The new version migrates the database on boot, and migrations only go forward: the backup is how you go back. Streamline also takes its own pre-migration backup into the same folder before migrating ([Backups](GitOps-and-Kubernetes#backups)), and `streamline restore` puts either kind back. `streamline-update` is the same script as the install with `update`, so `curl -fsSL …/streamline.sh | bash -s -- update` does the same thing.
 
 Take a [Proxmox backup](https://pve.proxmox.com/wiki/Backup_and_Restore) of the container now and then too: the backup above covers a bad migration, not a lost disk.
 

@@ -10,6 +10,7 @@ Import scans are **admin-only** and live under **Imports** in the sidebar.
 - [Running a scan](#running-a-scan)
 - [Reviewing the results](#reviewing-the-results)
 - [Committing](#committing)
+- [Music and books](#music-and-books)
 - [Ongoing orphan scans](#ongoing-orphan-scans)
 
 ---
@@ -54,8 +55,8 @@ Chose in-place and later changed your mind? Adopted files can be renamed afterwa
 | Field | Notes |
 | --- | --- |
 | **Path** | An absolute path *on the server*, e.g. `/srv/data/media/movies`. In Docker this is the path inside the container, not on your host |
-| **Media type** | Movies or Series — they're scanned differently, so you need one scan per type |
-| **Mode** | Adopt in place, or Import & rename |
+| **Media type** | Movies, Series, Music or Books — they're scanned differently, so you need one scan per type |
+| **Mode** | Adopt in place, or Import & rename. Music and Books adopt in place only |
 | **Import mode** | Only for rename mode; overrides the global setting for this scan |
 
 The scan runs in the background through four visible phases — **Scanning**, **Discovery**, **Parsing**, **Matching** — and you can watch progress, or leave and come back.
@@ -128,7 +129,9 @@ You can also **Discard** a scan under review, which throws away every decision y
 
 ## Music and books
 
-A scan with `kind: music` or `kind: book` adopts an existing music or book collection in place. Music scans group album folders and match their tags against MusicBrainz; book scans group ebook files and audiobook folders and match through Hardcover, so they need a Hardcover key. Rename mode is not available for music. Details are on the [Music and Books](Music-and-Books) page.
+A scan with the **Music** or **Books** media type (`kind: music` / `kind: book` over the API) adopts an existing music or book collection in place. Music scans group album folders (a multi-disc album's `CD1`/`Disc 2` subfolders fold into one candidate) and match their tags against MusicBrainz; book scans group ebook files and audiobook folders and match through Hardcover, so they need a Hardcover key. Rename mode is not available for either: the files stay where they are, and **Rename files** on the artist, book or series page moves them to the naming template afterwards if you want that. A music commit also asks whether to write Streamline's tags into the adopted files (off by default). Details are on the [Music and Books](Music-and-Books#adopting-an-existing-collection) page.
+
+The orphan scans below cover movies and series only; music and books arrive through downloads and these import scans.
 
 ## Ongoing orphan scans
 

@@ -96,7 +96,7 @@ Traces, metrics and logs are all batch-exported to that single endpoint.
 `otel.environment` fills `deployment.environment` on the resource. Two installs exporting to one collector are otherwise indistinguishable; the resource also carries host and OS attributes, and honours `OTEL_RESOURCE_ATTRIBUTES`.
 
 > [!NOTE]
-> `log.app.enabled: false` disables the **stderr sink only**. Traces, metrics and OTLP-exported logs continue as long as `otel.endpoint` is set. (Before v1.1 it disabled the whole pipeline.)
+> `log.app.enabled: false` disables the **stderr sink only**. Traces, metrics and OTLP-exported logs continue as long as `otel.endpoint` is set. (Before v3.1 it disabled the whole pipeline.)
 
 If the collector is unreachable, the export failure is logged to stderr as `opentelemetry export failed`, at most once a minute. Silence there means export is working — or that `log.app.enabled` is false.
 
@@ -134,6 +134,11 @@ Beyond those, the series worth building alerts on:
 | `streamline.auth.api_rejections` | Rejected `/api/v1` authentication by method and reason. |
 | `streamline.auth.ratelimit.table_full` | **Any non-zero rate means the login rate limiter has stopped limiting.** |
 | `streamline_requests_by_status{status="pending"}` | Request backlog. `streamline_movies_by_status` and `streamline_episodes_by_status` cover wanted/downloading counts. |
+| `streamline.metadata.hardcover.requests` | Hardcover calls by `outcome` — a climbing rate-limited count means the day's budget is going to scans or refreshes. |
+| `streamline.music.hydrations` / `streamline.books.hydrations` | Background filling-in of albums and series volumes by outcome; a stuck artist page shows up here as failures. |
+| `streamline.music.tag_writes` | Music tag writes by outcome — failures are usually file ownership, see [Tags and artwork](Music-and-Books#tags-and-artwork). |
+| `streamline.music.cover_resolutions` | Which source each album cover came from (`source`). |
+| `streamline.mailer.sends` | [Send to Kindle](Send-to-Kindle) emails by outcome — the only signal a background series send failed, besides its `WARN` line. |
 
 ### Logs
 

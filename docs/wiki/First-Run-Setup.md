@@ -60,19 +60,23 @@ Log in, then change the password from the account menu (top right → **Account 
 
 Streamline doesn't ship with metadata credentials. Without them it can't look up titles, posters, or episode lists — searching for a film returns nothing and the library stays empty. **This step is not optional.**
 
-You need two free keys:
+You need a free key per library you want:
 
 | Service | Used for | Where to get one |
 | --- | --- | --- |
 | **TMDB** | Movies | <https://www.themoviedb.org/settings/api> — free, requires an account |
 | **TVDB** | TV shows | <https://thetvdb.com/api-information> — free tier available |
+| **Hardcover** | Books (optional) | <https://hardcover.app/account/api> — free, requires an account. Without it the Books pages say Hardcover is not configured, and nothing else is affected |
 
-If you only ever want films, TMDB alone is enough. Put them in `config.yaml`:
+Music needs no key: it uses MusicBrainz, which is open. Streamline paces itself at one MusicBrainz request a second, which is what musicbrainz.org allows; if you run your own MusicBrainz mirror, point `metadata.musicbrainz_url` at it and lower `metadata.musicbrainz_interval` (see [Configuration Reference](Configuration-Reference#metadata)).
+
+If you only ever want films, TMDB alone is enough. Set the keys on **Settings → Metadata** (they are write-only there, and need a restart to take effect), or put them in `config.yaml`:
 
 ```yaml
 metadata:
   tmdb_api_key: "your-tmdb-key"
   tvdb_api_key: "your-tvdb-key"
+  hardcover_api_key: "your-hardcover-key"   # only for books
   language: en          # BCP-47 tag: en, fr, de…
   tmdb_region: US       # ISO 3166-1 alpha-2, uppercase — affects release dates
 ```
@@ -81,25 +85,28 @@ metadata:
 
 Restart Streamline after adding these.
 
-Prefer keeping secrets out of the config file? Every key has a `_file` twin — `tmdb_api_key_file`, `tvdb_api_key_file` — that reads the value from a path. See [Configuration Reference](Configuration-Reference#secrets).
+Prefer keeping secrets out of the config file? Every key has a `_file` twin — `tmdb_api_key_file`, `tvdb_api_key_file`, `hardcover_api_key_file` — that reads the value from a path. See [Configuration Reference](Configuration-Reference#secrets).
 
 ---
 
 ## 3. Set your library folders
 
-Streamline needs three paths, and they're **config-file only** — the Settings → General page shows them but won't let you edit them.
+Streamline needs a root folder per library plus the folder it reads finished downloads from, and the roots are set in the **config file** (or the `STREAMLINE_LIBRARY__*_PATH` variables a container template uses). Settings → Library shows the movie, series and download roots read-only; moving one later is a [path migration](GitOps-and-Kubernetes#library-path-migration) on Settings → Advanced, which rewrites every stored path along with it.
 
 ```yaml
 library:
   movie_path: /srv/data/media/movies
   series_path: /srv/data/media/series
+  music_path: /srv/data/media/music          # only if you want music
+  ebook_path: /srv/data/media/books          # only if you want books
+  audiobook_path: /srv/data/media/audiobooks
   download_path: /srv/data/downloads
-  import_mode: hardlink     # hardlink | copy | move
+  import_mode: hardlink     # hardlink | copy | move — also editable on Settings → Library
 ```
 
 `download_path` is where *Streamline* reads finished torrents from. It has to be the path as Streamline sees it, which is not necessarily the path your torrent client reports. If they're mounted differently (very common in Docker), fix the mounts rather than fighting the config — see [the folder rule](Installation#before-you-start-the-folder-rule).
 
-Restart after changing these.
+Restart after changing the roots.
 
 ---
 
@@ -139,7 +146,7 @@ download_clients:
     seed_time: 48h
 ```
 
-Live torrents get their own page at **Activity → Torrents**, with per-file control. This is the newest part of Streamline — if you have a working qBittorrent, there's no urgency to switch.
+Live torrents get their own **Torrents** page in the sidebar (admins only), with per-file control. This is the newest part of Streamline — if you have a working qBittorrent, there's no urgency to switch.
 
 ### Selective file download
 
@@ -158,7 +165,7 @@ If nothing in a release actually matches what's wanted, the grab is dropped rath
 
 **One related behavior does not depend on this flag.** When the missing-episode search grabs a season pack to fill gaps, any episode you already have that the release beats under your profile's upgrade rules is replaced on import — if it still beats yours once the file itself has been probed, since the importer re-checks each pack member rather than trusting the grab-time decision. With `selective_files` on, the pack downloads the gaps plus exactly those beaten episodes' files; with it off, the whole pack downloads and at least those episodes are replaced — the importer re-decides over every file that arrived, so it can take one the grab-time pass had excluded. See [Upgrades](Quality-Profiles-and-Custom-Formats#upgrades).
 
-The torrent drawer (**Activity → Torrents**) still shows every file with its priority and lets you flip one back on manually before the download finishes — the same control that existed before this feature, now driven automatically as well.
+The torrent drawer (on the **Torrents** page) still shows every file with its priority and lets you flip one back on manually before the download finishes — the same control that existed before this feature, now driven automatically as well.
 
 ### Free-space check
 
@@ -209,15 +216,17 @@ Tick **Private** on an indexer that is a private tracker. Neither protocol repor
 
 **Settings → Quality profiles.**
 
-A profile is deliberately small — three fields:
+A video profile starts from three fields:
 
 | Field | Meaning |
 | --- | --- |
 | **Minimum resolution** | Anything below this is refused, always |
-| **Preferred resolution** | What you actually want |
-| **Upgrade allowed** | If on, accept anything from minimum upward. If off, accept *only* the preferred resolution exactly |
+| **Preferred resolution** | The ceiling: anything above it is refused too |
+| **Upgrade allowed** | Whether a file you already have can be replaced by a better release. Off still accepts the whole band from minimum to preferred; it only stops replacements |
 
-Streamline ships one profile named `default` at 1080p / 1080p / upgrades allowed. That's a sensible starting point.
+Streamline ships one profile named `default` at 1080p / 1080p / upgrades allowed, used by both movies and series. That's a sensible starting point. Custom-format scoring sits on top of the band — see [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats).
+
+Music and books have profile families of their own on the same page: a `default` music profile (lossless and high, preferring lossless) and a `default` book profile (EPUB, AZW3, MOBI or PDF for ebooks, M4B or MP3 for audiobooks) ship too. A comic or manga needs a book profile that accepts `CBZ`; see [Music and Books](Music-and-Books#searching-and-grabbing).
 
 The one behaviour worth internalising: **a release whose title doesn't state a resolution is always rejected.** Streamline reads quality from the release name, and would rather grab nothing than grab something unknown. If a search shows results but nothing is ever grabbed, this is usually why.
 
@@ -241,6 +250,8 @@ For **Plex**, authentication is a PIN pop-up rather than a pasted token — clic
 Plex rescans one library at a time, so these are what let a film import poke only your film library and an episode import poke only your TV one. Each dropdown lists only sections of the matching type, so you can't pick a TV library as your movie one by accident.
 
 Both are optional. Left blank, Streamline works the section out by matching the changed folder against the paths Plex reports.
+
+Music needs no section field: a music change rescans the Plex music library whose folder matches, else every music (artist) library, and never a film or TV one. Plex has no book library type, so book imports refresh Jellyfin and Emby only.
 
 For **Jellyfin/Emby**, generate an API key in that server's dashboard and paste it in. Neither has a section concept, so there is nothing to pick.
 
@@ -267,21 +278,27 @@ Streamline splits configuration in two, and knowing which half you're in saves a
 
 **Editable at runtime** — change it in the web UI, takes effect immediately, no restart:
 
-- Indexers, download clients, media servers, quality profiles
+- Indexers, download clients, media servers, quality profiles (movie/series, music and book) and custom formats
 - Schedule intervals (and pausing/resuming/running jobs)
-- Registration mode, session lifetime, default OIDC role
+- Registration mode, session lifetime, default role, account lockout thresholds
 - Users, invites, API keys
-- `library.monitor_specials`
+- Import mode, naming templates for movies and series, selective file download, the free-space check, import verification, transcoding, music monitoring types and music tag writing
+
+**Editable in the UI, restart required** — the change is saved at once but only read at startup:
+
+- Metadata API keys, language, region and the MusicBrainz server (Settings → Metadata)
+- Logging and the OpenTelemetry endpoint (Settings → Logs and Settings → General)
+- OIDC providers (Settings → Single Sign-On)
 
 **Config file only** — edit `config.yaml` and restart:
 
-- All library paths and `import_mode`
-- `data_dir`, server host and port
-- Metadata API keys, language, region
-- Logging and OpenTelemetry
-- Account lockout thresholds, seed admin
+- The library roots (moved later through path migration), and the music and book naming templates
+- `data_dir`, server host and port, trusted proxies
+- The auth mode, trusted networks, seed admin and session secret
+- The `smtp` section for [Send to Kindle](Send-to-Kindle)
+- Database backup retention
 
-**OIDC providers** are a special case: you can add and edit them in the UI, but they're only discovered at process start, so a restart is required before a new provider works.
+The full key-by-key table is in [Configuration Reference](Configuration-Reference#whats-editable-at-runtime).
 
 If your Settings pages are greyed out with a *"This instance is configured externally and runs read-only"* banner, `read_only: true` is set — every runtime write is refused by design. That's the [GitOps mode](GitOps-and-Kubernetes).
 

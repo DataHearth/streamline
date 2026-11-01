@@ -58,7 +58,7 @@ secrets:
   STREAMLINE_AUTH__SESSION_SECRET: "..."
 ```
 
-Also note: **`registration_mode`, `session_ttl`, schedule intervals, indexers, download clients, media servers and quality profiles all become file-only** under read-only mode. Every change is a commit.
+Also note: **`registration_mode`, `session_ttl`, schedule intervals, indexers, download clients, media servers and every quality-profile family (movie/series, music, book) all become file-only** under read-only mode. Every change is a commit. Per-title state lives in the database, not the config, so adding titles, monitoring, requests, users and API keys keep working.
 
 ---
 
@@ -147,6 +147,17 @@ library:
 
 The chart then points `config.library` at conventional subdirectories: `<mountPath>/media/movies`, `<mountPath>/media/series`, `<mountPath>/downloads`. Set those keys explicitly if you want a different layout and the chart leaves them alone.
 
+> [!WARNING]
+> The music and book roots are **not** pointed at the shared volume. Left unset they keep the binary's defaults, `/data/music`, `/data/books` and `/data/audiobooks` — on the data PVC, a different filesystem from the downloads, so a hardlink import of an album or a book fails. Set them under the shared mount if you use either library:
+>
+> ```yaml
+> config:
+>   library:
+>     music_path: /srv/media/music
+>     ebook_path: /srv/media/books
+>     audiobook_path: /srv/media/audiobooks
+> ```
+
 Separate media and downloads volumes are available:
 
 ```yaml
@@ -183,7 +194,7 @@ Fine for flat keys. Useless for anything nested inside an array.
 
 ### Array-nested → mounted files
 
-Indexer API keys, download-client passwords and OIDC client secrets all live inside YAML arrays, which don't map onto environment variables. Mount a pre-existing (SOPS-managed, sealed, whatever) Secret as files and reference the paths:
+Indexer API keys, download-client passwords, media-server tokens and OIDC client secrets all live inside YAML arrays, which don't map onto environment variables. Mount a pre-existing (SOPS-managed, sealed, whatever) Secret as files and reference the paths:
 
 ```yaml
 secretFiles:
@@ -209,7 +220,7 @@ config:
         client_secret_file: /etc/streamline/secrets/oidc-secret
 ```
 
-Each Secret key becomes a file under `mountPath`. The ConfigMap stays free of secret values while the config itself remains fully declarative and reviewable.
+Each Secret key becomes a file under `mountPath`. The ConfigMap stays free of secret values while the config itself remains fully declarative and reviewable. The same goes for scalars you would rather not put in an environment variable — `metadata.hardcover_api_key_file`, or `smtp.password_file` for [Send to Kindle](Send-to-Kindle), whose whole `smtp` section is file-only anyway.
 
 Every secret-bearing key has a `_file` twin — the full list is in the [Configuration Reference](Configuration-Reference#secrets).
 
@@ -291,7 +302,7 @@ curl -sS -X POST -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
 
 | Field | Notes |
 | --- | --- |
-| `root` | `movies` \| `series` \| `downloads` |
+| `root` | `movies` \| `series` \| `downloads`. The music, ebook and audiobook roots are not covered |
 | `from` | Old prefix. Defaults to the root's current configured value |
 | `to` | New prefix |
 | `move_files` | If true, relocate each file first — a rename when both sides share a filesystem, a copy when they don't. **Rejected for the `downloads` root**, since that data belongs to your download client |

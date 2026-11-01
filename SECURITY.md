@@ -21,7 +21,7 @@ If that is unavailable to you, email dev@antoine-langlois.net instead.
 
 Please include:
 
-- The version and how it is deployed (Docker, Helm, binary)
+- The version and how it is deployed (Docker, Helm, Nix, binary)
 - What an attacker can do — read other users' data, escalate to admin, reach the
   host filesystem, etc.
 - Steps to reproduce, ideally with the relevant config (secrets redacted)
@@ -40,12 +40,16 @@ bug bounty.
 In scope — anything that breaks the security model of a correctly configured
 instance:
 
-- Authentication or session bypass (`streamline_session` cookie, JWT, API keys)
+- Authentication or session bypass (`streamline_session` cookie, JWT, API keys,
+  the Subsonic `/rest` and OPDS `/opds` credentials)
+- Reaching more through a public share link (`/share/{token}`) than the tracks
+  it was made for, or after its owner lost the right to share
 - Privilege escalation between users, or past RBAC on `/api/v1/*`
 - OIDC flow flaws — account takeover via identity linking, state/nonce/PKCE
   handling
 - Path traversal or arbitrary write via import, rename, or media paths
-- SSRF via indexer, download-client, media-server, or metadata endpoints
+- SSRF via indexer, download-client, media-server, or metadata endpoints, or
+  the artwork proxies (`/posters/...`)
 - SQL injection, stored XSS in the SPA, secrets leaking into API responses or
   logs
 - Supply-chain issues in the release pipeline — signing, SBOM, image build
@@ -54,6 +58,10 @@ Out of scope:
 
 - Exposing Streamline to the internet without TLS or a reverse proxy. It is
   built to sit behind one.
+- The Subsonic protocol's own design. Its token scheme is `md5(password + salt)`,
+  so the per-user Subsonic password is stored recoverable by necessity; it is
+  separate from the account password and never accepted by the web UI or the
+  REST API.
 - Anything requiring existing admin credentials. Admins can already write config
   and read the library by design.
 - Resource exhaustion from your own configuration — huge libraries, aggressive

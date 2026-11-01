@@ -1,6 +1,6 @@
 # Adding Movies and TV
 
-How a title gets from "I'd like to watch that" to a file on disk.
+How a title gets from "I'd like to watch that" to a file on disk. Artists, albums, books and series of books follow the same pattern with a few differences of their own, covered on [Music and Books](Music-and-Books).
 
 | | |
 | --- | --- |

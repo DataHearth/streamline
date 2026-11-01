@@ -6,7 +6,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/datahearth/streamline)](go.mod)
 
-Self-hosted unified media manager. Replaces the \*arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr with a single binary.
+Self-hosted media manager for movies, TV, music and books. Replaces the \*arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr with a single binary.
 
 https://github.com/user-attachments/assets/318e94d2-7571-4dda-96f6-f62bb4af8a46
 
@@ -19,21 +19,25 @@ https://github.com/user-attachments/assets/318e94d2-7571-4dda-96f6-f62bb4af8a46
 
 ## Features
 
-- Unified movie, TV, music and book library — see the [roadmap](docs/wiki/Roadmap.md) for what is shipped and what is next
-- Music reachable from Subsonic clients, books from OPDS readers
-- Adopt an existing library: scan untracked files and import them under review
+- One library for movies, TV, music and books — see the [roadmap](docs/wiki/Roadmap.md) for what is shipped and what is next
+- **Music**: MusicBrainz metadata, album and discography-pack grabs, tags and artwork written into your files, and a built-in Subsonic/OpenSubsonic server, so any Subsonic app streams the library
+- **Books**: Hardcover metadata, books and series with an ebook and an audiobook slot each, an OPDS catalog for e-reader apps, and send-to-Kindle by email
+- Adopt an existing library: scan untracked files and import them under review — and torrents you added by hand
 - Monitoring, RSS auto-grab, manual search, and a calendar of upcoming releases
-- Quality profiles, activity queue and history
+- Quality profiles with custom-format scoring and upgrades, import verification, activity queue and history
 - Multi-user with SSO (OIDC), invites, API keys
-- Built-in request system (Seerr replacement)
+- Built-in request system (Seerr replacement) for every media type
 - Indexers: Torznab, Prowlarr
-- Torrent download clients: qBittorrent, Transmission, Deluge
+- Torrent clients: qBittorrent, Transmission, Deluge, or the built-in BitTorrent engine — no external client needed; optionally download only the files a pack is wanted for
 - Media server notifications and deep links: Plex, Jellyfin, Emby
+- Optional transcoding to a quality profile's rules, verified before it replaces a file, with VAAPI hardware encoding
+- Database backups before every upgrade, daily and from the CLI, with `streamline restore`
+- Installable web app (PWA), in English and French
 - REST API (OpenAPI 3.0 spec)
 - OpenTelemetry traces, metrics, logs
 - GitOps-friendly: `read_only` config mode rejects runtime config writes
 - CGO-free SQLite — single binary, no database server, no runtime, nothing to install alongside it
-- Optional `ffprobe`: unlocks media info and import verification; without it Streamline runs exactly as before, just without those two ([details](#optional-ffmpeg))
+- Optional `ffmpeg`/`ffprobe`: unlocks media info, import verification and transcoding; without them Streamline runs exactly as before, just without those ([details](#optional-ffmpeg))
 
 ## Quick start (Docker Compose)
 
@@ -45,22 +49,32 @@ services:
     ports: ["8080:8080"]
     volumes:
       - ./data:/data
-      - ./config:/etc/streamline:ro
-      # Your media library, plus the finished-downloads dir your torrent client
-      # writes to. Keep both on one filesystem: the default import mode is
-      # `hardlink` (library.import_mode — `copy` and `move` also work).
-      - /path/to/media:/media
-      - /path/to/downloads:/downloads
+      # Writable: config.yaml is written here on first start, and the generated
+      # session secret and every change saved from Settings go back into it.
+      - ./config:/etc/streamline
+      # ONE mount holding both your library and the folder your torrent client
+      # finishes downloads in. Imports hardlink by default (library.import_mode,
+      # `copy` and `move` also work), and a hardlink cannot cross two mounts,
+      # even two of the same disk.
+      - /srv/data:/srv/data
+    environment:
+      # Written into config.yaml on first start.
+      STREAMLINE_LIBRARY__DOWNLOAD_PATH: /srv/data/downloads
+      STREAMLINE_LIBRARY__MOVIE_PATH: /srv/data/media/movies
+      STREAMLINE_LIBRARY__SERIES_PATH: /srv/data/media/series
+      STREAMLINE_LIBRARY__MUSIC_PATH: /srv/data/media/music
+      STREAMLINE_LIBRARY__EBOOK_PATH: /srv/data/media/books
+      STREAMLINE_LIBRARY__AUDIOBOOK_PATH: /srv/data/media/audiobooks
 ```
 
 ```bash
-mkdir -p config data
-docker run --rm -v "$PWD/config:/etc/streamline" \
-  ghcr.io/datahearth/streamline:latest config init --output /etc/streamline/config.yaml
+mkdir -p config data   # both must be writable by uid 1000, the image's user
 docker compose up -d
 ```
 
 Open http://localhost:8080.
+
+Your torrent client needs the same folder mounted at the same path, or the paths it reports won't resolve inside Streamline's container. A setting the environment supplies can't be changed from Settings; once the first start has written the paths into `config/config.yaml`, drop the variables to edit them there instead.
 
 ### First login
 
@@ -69,6 +83,7 @@ An admin account is seeded on first boot. Set `auth.seed_admin.email` and `auth.
 If you don't, Streamline creates `admin@streamline.local` with a generated password and prints it **once**, to stdout, on a single line mentioning `default admin`. Capture it before anything else scrolls past:
 
 ```bash
+docker compose logs streamline | grep 'default admin'                            # Compose
 docker logs streamline 2>&1 | grep 'default admin'                              # Docker
 kubectl -n streamline logs deploy/streamline-streamline | grep 'default admin'  # Helm
 ```
@@ -81,23 +96,30 @@ If you're upgrading from a release that saved those credentials into `auth.seed_
 
 ### Docker
 
-Generate a config first (the `config init` step from the Quick start above), then:
-
 ```bash
 docker run -d --name streamline \
   -p 8080:8080 \
   -v streamline-data:/data \
-  -v "$PWD/config:/etc/streamline:ro" \
-  -v /path/to/media:/media \
-  -v /path/to/downloads:/downloads \
+  -v "$PWD/config:/etc/streamline" \
+  -v /srv/data:/srv/data \
+  -e STREAMLINE_LIBRARY__DOWNLOAD_PATH=/srv/data/downloads \
+  -e STREAMLINE_LIBRARY__MOVIE_PATH=/srv/data/media/movies \
+  -e STREAMLINE_LIBRARY__SERIES_PATH=/srv/data/media/series \
+  -e STREAMLINE_LIBRARY__MUSIC_PATH=/srv/data/media/music \
+  -e STREAMLINE_LIBRARY__EBOOK_PATH=/srv/data/media/books \
+  -e STREAMLINE_LIBRARY__AUDIOBOOK_PATH=/srv/data/media/audiobooks \
   ghcr.io/datahearth/streamline:latest
 ```
 
-The media and downloads mounts are **required**, not optional extras: Streamline creates `library.movie_path` and `library.series_path` at startup and exits if it cannot. They default to `/media/movies` and `/media/series`, so dropping those two `-v` flags stops the container with `create library path /media/movies: mkdir /media: permission denied`. Point them wherever you like — just set `library.movie_path` / `library.series_path` / `library.download_path` to match. Keep media and downloads on one filesystem so the default `hardlink` import mode works (`library.import_mode` also accepts `copy` and `move`).
+When `/etc/streamline/config.yaml` does not exist, the first start writes it with the defaults and the library paths from the environment. To edit the file before anything reads it, write it first with `docker run --rm -v "$PWD/config:/etc/streamline" ghcr.io/datahearth/streamline:latest config init --output /etc/streamline/config.yaml` and set the paths there instead.
 
-Tags: `latest`, `edge` (main branch), `vX.Y.Z`, `X.Y`, `X`, `sha-<short>`.
+The library mount is **required**, not an optional extra: Streamline creates `library.movie_path` and `library.series_path` at startup and exits if it cannot. They default to `/media/movies` and `/media/series`, so without a mount and paths of your own the container stops with `create library path /media/movies: mkdir /media: permission denied`. Music and books default to `/data/music`, `/data/books` and `/data/audiobooks` — inside the data volume, a different filesystem from your downloads, where a hardlink import fails — so set all six. Keep library and downloads under one mount so the default `hardlink` import mode works (`library.import_mode` also accepts `copy` and `move`).
 
-The image ships static `ffmpeg` and `ffprobe` alongside the binary in `/usr/local/bin`, so the [optional media features](#optional-ffmpeg) work with no extra setup.
+The config directory must stay writable. A read-only mount loses the generated session secret on every restart (everyone is signed out) and fails every save from Settings; for a declarative deploy use `read_only: true` and supply the secret yourself — see [GitOps and Kubernetes](https://github.com/DataHearth/streamline/wiki/GitOps-and-Kubernetes).
+
+Tags: `latest`, `edge` (main branch), `X.Y.Z`, `X.Y`, `X`, `sha-<short>`. Each also comes as a `-vaapi` variant (`latest-vaapi`, `X.Y.Z-vaapi`, …) for hardware transcoding.
+
+The image ships static `ffmpeg` and `ffprobe` alongside the binary in `/usr/local/bin`, so the [optional media features](#optional-ffmpeg) work with no extra setup. That static build cannot open a GPU: the `-vaapi` variant is a larger Ubuntu-based image carrying an ffmpeg with VAAPI and libvmaf, and needs the render node passed in (`--device /dev/dri` plus `--group-add` with its group id).
 
 ### Docker Compose
 
@@ -109,12 +131,15 @@ For a full observability stack (VictoriaMetrics + VictoriaLogs + VictoriaTraces 
 
 ```bash
 helm install streamline oci://ghcr.io/datahearth/charts/streamline \
-  --namespace streamline --create-namespace
+  --namespace streamline --create-namespace \
+  --set image.tag=X.Y.Z
 ```
 
-Pin a version with `--version X.Y.Z`; omit it to pull the latest release.
+`image.tag` is required: the chart has no `appVersion` and refuses to render without one, so which Streamline release runs — and when it changes — is always your call. Pin the chart with `--version X.Y.Z`; omit it to pull the latest chart release.
 
-The chart is versioned independently of Streamline itself — a chart fix ships without an app release, and an app release ships without a chart bump. `--version` selects the *chart*; the app version it deploys is the chart's `appVersion` (override with `--set image.tag=X.Y.Z`). App releases are tagged `vX.Y.Z`, chart releases `chart-vX.Y.Z`.
+The chart is versioned independently of Streamline itself — a chart fix ships without an app release, and an app release ships without a chart bump. `--version` selects the *chart*, `image.tag` the app (an `X.Y.Z-vaapi` tag for hardware transcoding, with the chart's `hwAccel` block). App releases are tagged `vX.Y.Z`, chart releases `chart-vX.Y.Z`; the image tags drop the `v`.
+
+The chart points the movie, series and download paths at one shared volume, and leaves the music and book paths at their defaults under `/data`, the database volume. Set `config.library.music_path`, `ebook_path` and `audiobook_path` under the shared mount (`/srv/media/…` by default) so those imports can hardlink too.
 
 ### NixOS / Nix
 
@@ -138,7 +163,11 @@ services.streamline = {
 };
 ```
 
-`settings` is freeform YAML, so every key in the configuration reference works under its own name. By default the declaration seeds `/var/lib/streamline/config.yaml` on first start and the web UI stays editable; set `mutableSettings = false` for a fully declarative, read-only instance. See [the NixOS wiki page](https://github.com/DataHearth/streamline/wiki/NixOS) for secrets, hardware transcoding and the sandbox's writable paths.
+`settings` is freeform YAML, so every key in the configuration reference works under its own name. The sandbox's writable paths are derived from `data_dir` and the three paths above only, so music and books are read-only until you set `music_path`, `ebook_path` and `audiobook_path` (their defaults sit under `/data`) and list them in `extraReadWritePaths`. By default the declaration seeds `/var/lib/streamline/config.yaml` on first start and the web UI stays editable; set `mutableSettings = false` for a fully declarative, read-only instance. See [the NixOS wiki page](https://github.com/DataHearth/streamline/wiki/NixOS) for secrets, hardware transcoding and the sandbox's writable paths.
+
+### Unraid and Proxmox VE
+
+An Unraid Community Applications template ([deploy/unraid](deploy/unraid/streamline.xml)) and a Proxmox VE LXC installer and updater ([deploy/lxc](deploy/lxc/streamline.sh)) are in the repository; the [Installation](https://github.com/DataHearth/streamline/wiki/Installation#unraid) and [Proxmox](https://github.com/DataHearth/streamline/wiki/Proxmox) wiki pages walk through both.
 
 ### Binary (from GitHub releases)
 
@@ -153,11 +182,13 @@ Download from [Releases](https://github.com/datahearth/streamline/releases/lates
 curl -fsSL -o streamline.tar.gz \
   https://github.com/datahearth/streamline/releases/latest/download/streamline_<version>_linux_amd64.tar.gz
 tar xzf streamline.tar.gz
+mkdir -p ~/.config/streamline
 cp config.example.yaml ~/.config/streamline/config.yaml
-./streamline
+# edit data_dir and the library.*_path keys, then:
+./streamline --config ~/.config/streamline/config.yaml
 ```
 
-Each archive includes a `config.example.yaml` with default values.
+Each archive includes a `config.example.yaml` with default values. There is no default config location: without `--config` Streamline runs on the built-in defaults alone, which file movies under `/media/movies` and keep the database in `./data` relative to wherever you started it.
 
 Verify checksum:
 
@@ -179,23 +210,30 @@ Each archive also ships an SPDX SBOM (`<archive>.sbom.spdx.json`).
 
 ### From source
 
-Requires Go >= 1.26, Node >= 24, pnpm, [Task](https://taskfile.dev).
+Requires Go >= 1.27.3, Node >= 24.22.1, pnpm 12, [Task](https://taskfile.dev) — or `nix develop`, whose devshell pins all of them.
 
 ```bash
 git clone https://github.com/datahearth/streamline.git
 cd streamline
+pnpm install --frozen-lockfile
 task
-./streamline
+./streamline --config ./config.yaml   # written with the defaults if missing
 ```
+
+The defaults put the movie and series libraries under `/media`, which a non-root user cannot create: set the `library.*_path` keys to folders you can write, or pass them as `STREAMLINE_LIBRARY__*_PATH` on the first start, which writes them into the new file.
 
 ### Optional: ffmpeg
 
-Streamline needs nothing but itself to run. Two features are gated behind the `ffmpeg`/`ffprobe`
-binaries, and both are opt-in extras rather than requirements:
+Streamline needs nothing but itself to run. A few features are gated behind the `ffmpeg`/`ffprobe`
+binaries, and all are opt-in extras rather than requirements:
 
-- **Media info** — resolution, codecs, duration and bitrate shown on files and episodes
-- **Import verification** — holding a finished download whose actual resolution, duration or codec
-  contradicts what the release claimed, instead of importing it blind
+- **Media info** (`ffprobe`) — resolution, codecs, duration and bitrate shown on files and episodes
+- **Import verification** (`ffprobe`) — holding a finished download whose actual resolution, duration
+  or codec contradicts what the release claimed, instead of importing it blind
+- **Transcoding** (`ffmpeg`) — re-encoding imported files to a quality profile's rules
+  (`transcoding.enabled`, off by default); without the binary the worker stays idle
+- **Subsonic transcoding** (`ffmpeg`) — MP3/Opus/AAC for a client that asks for a format or a lower
+  bit rate; without it the original file is streamed
 
 With the binaries absent, or `ffmpeg.enabled: false` in the config, nothing errors and nothing is
 blocked: imports fall back to filename parsing exactly as they did before the feature existed, and
@@ -242,7 +280,7 @@ address seen for the first time is allowed **without being counted** rather than
 turned away.
 
 That last sentence is the trade, so here is what it costs. 262,144 keys is a
-routed IPv6 `/44`; a `/48` — what a tunnel broker or cheap VPS hands out — is
+routed IPv6 `/46`; a `/48` — what a tunnel broker or cheap VPS hands out — is
 65,536 and stays fully metered, as does anything smaller. Measured at 20
 attempts from each of a million addresses, the limiter granted 5.00 per address
 up to the cap and 16.07 across the million, so an attacker who owns enough
@@ -400,11 +438,13 @@ Direct-to-binary installs need no change.
 
 ## Supported integrations
 
-| Type             | Supported                            |
-| ---------------- | ------------------------------------ |
-| Indexers         | Torznab, Prowlarr                    |
-| Download clients | qBittorrent, Transmission, Deluge    |
-| Media servers    | Plex, Jellyfin, Emby                 |
+| Type             | Supported                                                                 |
+| ---------------- | ------------------------------------------------------------------------- |
+| Indexers         | Torznab, Prowlarr                                                         |
+| Download clients | qBittorrent, Transmission, Deluge, built-in BitTorrent engine             |
+| Media servers    | Plex, Jellyfin, Emby (books: Jellyfin and Emby — Plex has no book library) |
+| Metadata         | TMDB (movies, TV), TVDB (TV), MusicBrainz (music), Hardcover (books) — TMDB, TVDB and Hardcover take an API key of your own; Deezer, Cover Art Archive and Wikipedia for artwork and artist overviews, keyless |
+| Clients          | Subsonic / OpenSubsonic apps (`/rest`), OPDS 1.2 readers (`/opds`), e-readers by email (EPUB, PDF) |
 
 ## Verifying images
 
@@ -446,12 +486,14 @@ Found a vulnerability? Don't open an issue — see [SECURITY.md](SECURITY.md).
 
 ## Screenshots
 
-> **The library shown in every screenshot and in the demo video is fabricated.** Every title in it is
-> public domain or openly licensed — Blender Open Movies, silent and mid-century films whose copyright
-> has lapsed. Posters and metadata come from public metadata providers; the "files" behind them do not
-> exist. Streamline is a library manager — it neither hosts nor distributes media. It does not endorse
-> copyright infringement or any other unlawful use, and the authors accept no responsibility for how
-> you use it. Obtaining content you have the right to is your responsibility.
+> **The library shown in every screenshot and in the demo video is fabricated.** Every title it holds is
+> public domain or openly licensed: Blender Open Movies, silent and mid-century films and TV whose copyright
+> has lapsed, Creative Commons albums (Nine Inch Nails' *Ghosts I–IV* and *The Slip*, Kimiko Ishizaka's CC0
+> *Open Goldberg Variations*, Josh Woodward, Brad Sucks, Kai Engel and others) and public-domain books. An
+> artist's wider discography appears only as metadata. Posters, covers and metadata come from public metadata
+> providers; the "files" behind them do not exist. Streamline is a library manager — it neither hosts nor
+> distributes media. It does not endorse copyright infringement or any other unlawful use, and the authors
+> accept no responsibility for how you use it. Obtaining content you have the right to is your responsibility.
 
 |  |  |
 | --- | --- |
@@ -459,5 +501,8 @@ Found a vulnerability? Don't open an issue — see [SECURITY.md](SECURITY.md).
 | [![Series](docs/assets/series.png)](docs/assets/series.png)<br>**Series** — every show, monitored and missing counts | [![Episodes](docs/assets/series-episodes.png)](docs/assets/series-episodes.png)<br>**Episodes** — seasons, air dates, per-file quality |
 | [![Import verification](docs/assets/import-verification.png)](docs/assets/import-verification.png)<br>**Import verification** — a mismatched file is held, not imported | [![History](docs/assets/history.png)](docs/assets/history.png)<br>**History** — every grab, where it came from, what it cost |
 | [![Manual search](docs/assets/manual-search.png)](docs/assets/manual-search.png)<br>**Manual search** — every release from every indexer, one grab away | [![Library import](docs/assets/library-import.png)](docs/assets/library-import.png)<br>**Library import** — adopt an existing library under review |
-| [![Requests](docs/assets/requests.png)](docs/assets/requests.png)<br>**Requests** — a built-in Seerr, no second service | [![Calendar](docs/assets/calendar.png)](docs/assets/calendar.png)<br>**Calendar** — what lands this month |
-| [![Sign in](docs/assets/login.png)](docs/assets/login.png)<br>**Sign in** — local accounts, or SSO through any OIDC provider | [![Settings](docs/assets/settings.png)](docs/assets/settings.png)<br>**Settings** — read-only runtime snapshot; the config file stays the source of truth |
+| [![Music](docs/assets/music.png)](docs/assets/music.png)<br>**Music** — every artist with its albums, what you hold and what is wanted | [![Artist discography](docs/assets/music-artist.png)](docs/assets/music-artist.png)<br>**Discography** — albums, track lists and tiers from MusicBrainz |
+| [![Books](docs/assets/books.png)](docs/assets/books.png)<br>**Books** — one shelf of standalone books and series | [![Book detail](docs/assets/book-detail.png)](docs/assets/book-detail.png)<br>**Book** — an ebook and an audiobook slot, each with its own edition |
+| [![Book series](docs/assets/book-series.png)](docs/assets/book-series.png)<br>**Series** — every volume, monitored as a whole | [![On a phone](docs/assets/mobile.png)](docs/assets/mobile.png)<br>**On a phone** — installable web app with bottom navigation |
+| [![Requests](docs/assets/requests.png)](docs/assets/requests.png)<br>**Requests** — a built-in Seerr, no second service | [![Calendar](docs/assets/calendar.png)](docs/assets/calendar.png)<br>**Calendar** — films, episodes, albums and books landing this month |
+| [![Sign in](docs/assets/login.png)](docs/assets/login.png)<br>**Sign in** — local accounts, or SSO through any OIDC provider | [![Settings](docs/assets/settings.png)](docs/assets/settings.png)<br>**Settings** — the server at a glance; file-only settings stay in the config file |

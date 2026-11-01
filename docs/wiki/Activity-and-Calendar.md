@@ -20,7 +20,7 @@ Where to look when you want to know what Streamline is doing, what it did, and w
 
 ## Dashboard
 
-The landing page. A summary of library counts, what's downloading right now, recent activity, and anything needing your attention.
+The landing page, across all four libraries. **Needs you** lists what is waiting on a decision (held downloads, pending requests, import scans awaiting review, failed imports), the arrivals shelf shows what landed most recently — movies, episodes, albums and books alike, newest first — beside the library counts, what's downloading right now, what's coming up, and the state of your own requests.
 
 The health indicator in the top bar reflects real state — disk usage on your data and media volumes, and whether you're serving over plain HTTP. If it's not green, something on the [Troubleshooting](Troubleshooting) page probably applies.
 
@@ -28,7 +28,7 @@ The health indicator in the top bar reflects real state — disk usage on your d
 
 ## The event feed
 
-The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behind it, is the history of what happened to each title. Events cover movies, episodes, series, artists, albums, books and book series, and every detail page — movie, series, artist, book, book series — has a **History** tab showing its own slice of the feed:
+The **Events** view of the Queue & History page, and `GET /api/v1/activity` behind it, is the history of what happened to each title. Events cover movies, episodes, series, artists, albums, books and book series, and every detail page — movie, series, artist, book, book series — has a **History** tab showing its own slice of the feed:
 
 | Event | When it fires |
 | --- | --- |
@@ -70,7 +70,7 @@ Rows are purged by the `cleanup` job after `events.retention` (default 90 days).
 
 ## The queue
 
-**Activity → Queue.** A live snapshot of everything currently downloading, refreshed every 30 seconds by the `download-monitor` job. Each row shows progress, speed, ETA, size, which download client is handling it, and what it's for. Imports come first, then held and errored entries waiting on you, then downloads furthest along first, then paused ones.
+**Queue & History → Queue.** A live snapshot of everything currently downloading, refreshed every 30 seconds by the `download-monitor` job. Each row shows progress, speed, ETA, size, which download client is handling it, and what it's for. Imports come first, then held and errored entries waiting on you, then downloads furthest along first, then paused ones.
 
 You can **pause**, **resume** and **remove** items directly — these act on your actual download client, so pausing here pauses in qBittorrent. Removing asks whether to delete the downloaded data too.
 
@@ -78,11 +78,12 @@ To act on several at once, tick their checkboxes (or the header box for every ro
 
 On a phone, swipe a row sideways for a shortcut. Swipe right to **pause** or **resume** it (in the history, to **retry the import** of a failed entry), and swipe left to **cancel** the download (in the history, to **remove** the entry). Let go once the colour fills in; short of that, the row springs back. Cancel, retry and remove still ask first, in the same words as the row's sheet, and held entries have no swipe.
 
-A queue entry is in one of five states:
+A queue entry is in one of six states:
 
 | Status | Meaning |
 | --- | --- |
 | **Downloading** | Normal progress |
+| **Stalled** | The download client reports the download is not moving — usually no peers |
 | **Importing** | Downloaded; Streamline is moving it into your library |
 | **Held** | Downloaded, but it failed import verification and is waiting on your decision |
 | **Paused** | Suspended, by you or by the client |
@@ -99,7 +100,7 @@ See [Configuration Reference](Configuration-Reference#import-verification) for t
 
 ## History
 
-**Activity → History.** Everything that's happened, newest first: grabs, imports, failures, deletions, renames, metadata refreshes.
+**Queue & History → History.** Everything that's happened, newest first: grabs, imports, failures, deletions, renames, metadata refreshes.
 
 Filter by event type or by title, and page back through time. This is where you find *why* something failed — an import error records the actual reason (permission denied, cross-device link, destination exists), which is far more useful than the status word on the queue.
 
@@ -154,7 +155,7 @@ Adding a series this way monitors it, exactly as adding it by hand would, so Str
 
 ## Torrents (built-in client)
 
-**Activity → Torrents.** Only relevant if you're running Streamline's built-in torrent engine (`client_type: builtin`). The entry appears in the navigation only while an enabled built-in client is configured.
+**Torrents** (in the sidebar's Operations group, at `/torrents`). Admin only, and only relevant if you're running Streamline's built-in torrent engine (`client_type: builtin`). The entry appears in the navigation only while an enabled built-in client is configured.
 
 Live view of the engine's torrents: peers, pieces, ratio, up/down rates. You can pause and resume individual torrents, and toggle individual **files** within a torrent on and off — handy for a season pack where you only want three episodes.
 
@@ -166,16 +167,16 @@ On a phone, swipe a torrent right to **pause** or **resume** it, or left to **re
 
 A torrent's details open at their own address (`/torrents?hash=<info hash>`), so a reload keeps the drawer open and the link can be shared or bookmarked. From the **Queue** or **History**, an admin opens a download's details (expand the row, or tap it on a phone) and follows **Open torrent** to land on that torrent's drawer. The button shows only while the built-in engine still lists the torrent.
 
-If you're using qBittorrent or Transmission, this page will be empty; manage those torrents in their own UI or from the Queue.
+With only qBittorrent, Transmission or Deluge configured the page is not offered at all; manage those torrents in their own UI or from the Queue.
 
 ---
 
 ## Transcoding
 
-**Activity → Transcoding.** Admin only. The queue of files being re-encoded in the background, driven by the `transcode` block on a [quality profile](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files).
+**Transcoding** (in the sidebar's Operations group, at `/transcoding`). Admin only. The queue of files being re-encoded in the background, driven by the `transcode` block on a [quality profile](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files).
 
 > [!NOTE]
-> Transcoding is **off by default**, and the Activity → Transcoding entry is left out of the navigation and the search until you turn it on under Settings → Transcoding. Opened by its address while off, the page shows an off state rather than an empty queue — there's a difference between "nothing to do" and "not running", and the page says which.
+> Transcoding is **off by default**, and the Transcoding entry is left out of the navigation and the search until you turn it on under Settings → Transcoding. Opened by its address while off, the page shows an off state rather than an empty queue — there's a difference between "nothing to do" and "not running", and the page says which.
 
 Each row names the movie or episode, the file on disk, and where the job got to:
 
@@ -204,12 +205,14 @@ A running job's progress comes from the encoder inside the running process, so i
 
 ## Calendar
 
-**Calendar.** A month grid plus an agenda view of what's on the horizon, covering two kinds of event:
+**Calendar.** A month grid plus an agenda view of what's on the horizon, covering four kinds of event:
 
 - **Movie releases** — for wanted films, the date they become available digitally in your `metadata.tmdb_region`, labelled *Digital release*. This is why setting the region correctly matters: leave it wrong and your calendar shows another country's release schedule. TMDB only publishes a digital date once a film is actually buyable, so a title still in cinemas shows its theatrical date instead, labelled *In cinemas*.
 - **Episode air dates** — upcoming episodes of the shows you're tracking.
+- **Album releases** — monitored albums of the artists you follow, on their MusicBrainz release date.
+- **Book releases** — books with either slot monitored, series volumes included, on their Hardcover release date.
 
-Filter chips switch between all / movies / episodes. Click any day to see what lands on it; click an entry to jump to the title.
+Filter chips switch between all / movies / episodes / albums / books. Click any day to see what lands on it; click an entry to jump to the title.
 
 > [!NOTE]
 > The calendar is a *forecast*, not a queue. An entry appearing today doesn't mean Streamline has grabbed it — it means the release date has arrived and the next RSS sync or missing search is now likely to find something.

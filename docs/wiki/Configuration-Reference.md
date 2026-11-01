@@ -8,8 +8,8 @@ Every configuration key, its default, and where it can be changed from.
 - [What's editable at runtime](#whats-editable-at-runtime)
 - [CLI](#cli)
 - [Reference](#reference)
-  - [Top level](#top-level) · [server](#server) · [auth](#auth) · [library](#library) · [schedules](#schedules) · [metadata](#metadata) · [ffmpeg](#ffmpeg) · [transcoding](#transcoding) · [log](#log) · [otel](#otel) · [events](#events)
-  - [media_server](#media_server) · [download_clients](#download_clients) · [indexers](#indexers) · [quality_profiles](#quality_profiles) · [custom_formats](#custom_formats)
+  - [Top level](#top-level) · [server](#server) · [auth](#auth) · [library](#library) · [schedules](#schedules) · [metadata](#metadata) · [ffmpeg](#ffmpeg) · [transcoding](#transcoding) · [log](#log) · [otel](#otel) · [smtp](#smtp) · [events](#events) · [backup](#backup)
+  - [media_server](#media_server) · [download](#download) · [download_clients](#download_clients) · [indexers](#indexers) · [quality_profiles](#quality_profiles) · [custom_formats](#custom_formats)
 
 ---
 
@@ -130,8 +130,9 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 
 | Area | Runtime-editable? | Where in the UI |
 | --- | --- | --- |
-| Indexers, download clients, media servers | ✅ Full CRUD | Settings → Connections |
-| Quality profiles, custom formats | ✅ Full CRUD | Settings → Library |
+| Indexers, download clients, media servers | ✅ Full CRUD | Settings → Indexers / Download clients / Media servers (the Connections group) |
+| Quality profiles (movie/series, music, book), custom formats | ✅ Full CRUD | Settings → Quality profiles, Settings → Custom formats |
+| `music_quality_default_profile`, `book_quality_default_profiles.*` | ✅ The default buttons on a profile row | Settings → Quality profiles |
 | `movie_quality_default_profile`, `series_quality_default_profile` | ✅ The film / TV buttons on a profile row | Settings → Quality profiles |
 | Schedule intervals, pause/resume/run | ✅ | Settings → Schedules |
 | `auth.registration_mode`, `auth.session_ttl`, `auth.default_role` | ✅ | Settings → Authentication |
@@ -141,16 +142,17 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `library.music_tags.*` | ✅ | Settings → Music |
 | `library.probe.*` | ✅ Applies to the next import — see [Import verification](#import-verification) | Settings → Media probe |
 | `library.{movie,series}_naming` | ✅ Applies to the next import or rename | Settings → Library |
+| `library.book_language` | ✅ Applies to books added from then on | API only (`PATCH /config/library`) |
 | `library.import_mode`, `keep_torrent_seeding`, `import_max_attempts`, `allowed_download_roots` | ✅ | Settings → Library |
 | `library.no_match_cooldown`, `max_grab_failures`, `drift_grace_ticks` | ✅ | Settings → Library |
 | `download.selective_files`, `download.selection_grace`, `download.space_check`, `download.space_reserve_gb`, `download.path_mappings` | ✅ | Settings → Library |
 | `ffmpeg.enabled` | ✅ | Settings → Media probe |
 | `ffmpeg.path` | ⚠️ Accepted immediately, but only picked up by the process's prober on the next restart | Settings → Media probe |
 | `transcoding.{enabled,max_concurrent,max_failures,defer_seeding,hw_accel,hw_device,verify.*}` | ✅ Read on every worker tick — no restart | Settings → Transcoding |
-| `quality_profiles[].transcode` | ⚠️ API and YAML only — the profile form does not edit it | — |
+| `quality_profiles[].transcode` | ✅ Set or changed in the profile form. **Removing** a policy is a file edit: the API has no way to delete one, so the form's switch stays on for a profile that already has one | Settings → Quality profiles |
 | `events.retention` | ✅ Applies on the next cleanup run | Settings → General |
 | `metadata.*` | ⚠️ Accepted immediately, but the TMDB, TVDB, Hardcover and MusicBrainz clients are built at boot — restart required | Settings → Metadata |
-| `log.*`, `otel.endpoint` | ⚠️ Accepted immediately, but the log handlers and OTLP exporters are built at boot — restart required | Settings → General |
+| `log.*`, `otel.endpoint` | ⚠️ Accepted immediately, but the log handlers and OTLP exporters are built at boot — restart required | Settings → Logs (`log.*`), Settings → General (`otel.endpoint`) |
 | OIDC providers | ⚠️ CRUD works, but only loaded at startup — restart required | Settings → Single Sign-On |
 | Everything else | ❌ File only, restart required | — |
 
@@ -163,9 +165,9 @@ They are all **shown** read-only under **Server & security** on Settings → Gen
 
 [![Settings — runtime snapshot](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/settings.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/settings.png)
 
-**`torrent_listen_port` is its own thing.** It is not editable as config at all, because the value is authored by a VPN tunnel rather than by you: `PUT /api/v1/torrents/listen-port` moves the *running* engine's peer sockets and re-announces to DHT without writing anything, so a restart falls back to `STREAMLINE_TORRENT_LISTEN_PORT`. The normal caller is gluetun's `VPN_PORT_FORWARDING_UP_COMMAND` on every port rotation; **Move listening port** on Activity → Torrents is the manual re-issue for when that hook fails, since nothing retries it automatically.
+**`torrent_listen_port` is its own thing.** It is not editable as config at all, because the value is authored by a VPN tunnel rather than by you: `PUT /api/v1/torrents/listen-port` moves the *running* engine's peer sockets and re-announces to DHT without writing anything, so a restart falls back to `STREAMLINE_TORRENT_LISTEN_PORT`. The normal caller is gluetun's `VPN_PORT_FORWARDING_UP_COMMAND` on every port rotation; **Move listening port** on the Torrents page is the manual re-issue for when that hook fails, since nothing retries it automatically.
 
-**Three settings name the peer port; only one of them wins.** `download_clients[].listen_port` is what the builtin client's form edits, `torrent_listen_port` overrides it whenever it is non-zero (`BuiltinDownloadClient` resolves this), and the endpoint above moves the live socket without touching either. While an override is in force the form's **Listen port** field goes read-only and says so, because editing it there would save happily and change nothing — set the port through `STREAMLINE_TORRENT_LISTEN_PORT`, or move the running engine from Activity → Torrents.
+**Three settings name the peer port; only one of them wins.** `download_clients[].listen_port` is what the builtin client's form edits, `torrent_listen_port` overrides it whenever it is non-zero (`BuiltinDownloadClient` resolves this), and the endpoint above moves the live socket without touching either. While an override is in force the form's **Listen port** field goes read-only and says so, because editing it there would save happily and change nothing — set the port through `STREAMLINE_TORRENT_LISTEN_PORT`, or move the running engine from the Torrents page.
 
 **The three library roots are a special case.** `library.movie_path`, `series_path` and `download_path` show up read-only on Settings → Library and are changed through Settings → Advanced instead. That flow rewrites every stored path in the database and *then* repoints the config; a plain edit would leave every existing file recorded under the old prefix.
 
@@ -188,11 +190,14 @@ GLOBAL OPTIONS
 | `config init [--output <path>]` | Write a default config to stdout or a file |
 | `config validate [--config <path>]` | Load a config (or stdin) and report errors |
 | `auth unlock <email>` | Clear lockout state on an account |
+| `auth list [--role <role>] [--limit <n>]` | List user accounts, oldest first |
+| `auth set-role <email> <role>` | Change an account's role (`admin`, `member`, `request_only`). Refuses to demote the last admin |
+| `auth set-password <email> --generate` \| `--password <pw>` | Set an account's password and revoke its sessions. `--generate` prints a random one once to stdout; `--password` lands in shell history. The recovery path for a lost admin password |
 | `backup` | Back up the database into `<data_dir>/backups` and print the file's path. Works with the server running or stopped. See [Backups](GitOps-and-Kubernetes#backups) |
 | `backup list` | List the backups, newest first |
-| `restore <file>` | Replace the database with a backup (a path, or a name from `backup list`), keeping the one it replaces. **Stop the server first** |
+| `restore <file> [--force]` | Replace the database with a backup (a path, or a name from `backup list`), keeping the one it replaces. **Stop the server first**. `--force` is only needed when `data_dir` holds no database yet |
 
-Running `streamline` with no command starts the server.
+Running `streamline` with no command starts the server; an unknown command is an error rather than a server start. The `auth` commands open the database directly, like `backup`.
 
 ---
 
@@ -204,15 +209,15 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `data_dir` | string | `./data` | Runtime data (SQLite DB, posters). **Must already exist.** Pin it to an absolute path in containers |
+| `data_dir` | string | `./data` | Runtime data (SQLite DB, posters, backups, built-in torrent state). Created (mode 0700) when the config loads if it is missing; a relative path resolves against the working directory, so pin it to an absolute path in containers. Keep it on local storage, never NFS or SMB |
 | `read_only` | bool | `false` | Reject all runtime config write-backs. For GitOps deploys |
 | `torrent_listen_port` | int | `0` | Overrides the builtin download client's `listen_port`. Top-level so `STREAMLINE_TORRENT_LISTEN_PORT` can reach it — see [torrent_listen_port](#torrent_listen_port) |
 | `movie_quality_default_profile` | string | `default` | Profile used when a movie names none |
 | `series_quality_default_profile` | string | `default` | Profile used when a series names none |
 | `quality_default_profile` | string | unset | **Legacy (v1).** One default for both media. Still read: it fills whichever of the two keys above is not set itself, and is never written back |
-| `music_quality_profiles` | list | `[]` | Music quality profiles: `name`, `tiers` (non-empty, from `hires` `lossless` `high` `standard` `low`, any order, stored best first), `preferred` (one of `tiers`: the tier an upgrade stops at), `upgrade_allowed`. Edited through `/music/quality-profiles` or the file, never `/config/*` |
-| `music_quality_default_profile` | string | empty | Music profile used when an artist names none; must name an entry whenever the list has any. The first profile created through the API becomes the default |
-| `book_quality_profiles` | list | one `default` profile | Book quality profiles, one per entry for both slots: `name`, `upgrade_allowed`, `ebook` (`formats` from `EPUB` `AZW3` `MOBI` `PDF` `CBZ` `CBR`, `preferred` one of them) and `audiobook` (`formats` from `M4B` `MP3` `M4A` `FLAC`, `preferred` one of them, `min_bitrate` in kbps from `0` for no floor to `1024`). Formats are upper case. Edited through `/books/quality-profiles` or the file, never `/config/*` |
+| `music_quality_profiles` | list | one `default` profile (`tiers: [lossless, high]`, `preferred: lossless`, upgrades allowed) | Music quality profiles: `name`, `tiers` (non-empty, from `hires` `lossless` `high` `standard` `low`, any order, stored best first), `preferred` (one of `tiers`: the tier an upgrade stops at), `upgrade_allowed`. Edited through `/music/quality-profiles` or the file, never `/config/*` |
+| `music_quality_default_profile` | string | `default` | Music profile used when an artist names none; must name an entry whenever the list has any. When none resolves (a file that empties the list), the next profile created through the API becomes the default |
+| `book_quality_profiles` | list | one `default` profile (ebook `EPUB` `AZW3` `MOBI` `PDF` preferring `EPUB`, audiobook `M4B` `MP3` preferring `M4B`, no bit-rate floor, upgrades allowed) | Book quality profiles, one per entry for both slots: `name`, `upgrade_allowed`, `ebook` (`formats` from `EPUB` `AZW3` `MOBI` `PDF` `CBZ` `CBR`, `preferred` one of them) and `audiobook` (`formats` from `M4B` `MP3` `M4A` `FLAC`, `preferred` one of them, `min_bitrate` in kbps from `0` for no floor to `1024`). Formats are upper case. Edited through `/books/quality-profiles` or the file, never `/config/*` |
 | `book_quality_default_profiles` | map | all four = `default` | The profile a book takes when it and its series name none, per book kind: `novel`, `bd`, `comic`, `manga`. Each must name an entry in `book_quality_profiles` whenever that list has any |
 
 ### server
@@ -252,9 +257,9 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.movie_path` | path | `/media/movies` | Movie library root |
 | `library.series_path` | path | `/media/series` | TV library root |
 | `library.music_path` | path | `/data/music` | Music library root. File-only |
-| `library.music_naming` | template | `{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title}.{ext}` | File-only |
+| `library.music_naming` | template | `{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title}.{ext}` | File-only. Tokens: [Music and book naming](Quality-Profiles-and-Naming#music-and-book-naming) |
 | `library.ebook_path` | path | `/data/books` | Ebook library root. File-only |
-| `library.ebook_naming` | template | `{Author}/{Title} ({Year})` | Also `{Language}`, `{Series}`, `{Volume}`. File-only |
+| `library.ebook_naming` | template | `{Author}/{Title} ({Year})` | Also `{Language}`, `{Series}`, `{Volume}`; the extension is appended. File-only. Tokens: [Music and book naming](Quality-Profiles-and-Naming#music-and-book-naming) |
 | `library.book_series_naming` | template | `{Author}/{Series}/{Series} - Vol. {Volume:02}` | Ebook volumes of a book series; audiobooks keep `audiobook_naming`. Not `library.series_naming`, which is the TV template. File-only |
 | `library.book_language` | string | `en` | ISO 639-1 language a new book prefers; picks the edition of each slot. Editable at runtime |
 | `library.audiobook_path` | path | `/data/audiobooks` | Audiobook library root. File-only |
@@ -296,6 +301,8 @@ check.
 | `duration` | Probed duration is under `library.probe.min_duration_ratio` × the title's runtime. Skipped when the runtime is unknown |
 | `codec` | The profile's `allowed_codecs` is non-empty and the probed video codec is not in it |
 | `always_ask` | `library.probe.always_ask` is on and nothing else objected |
+
+Music and book downloads have checks of their own: `tier` (an album's measured tier is one its profile does not tick — a "FLAC" that is a lossy transcode), `album` (the files are tagged as another album), `format` (an audiobook mostly in an unticked format), `bitrate` (an audiobook under the profile's `min_bitrate`) and `metadata` (a book Hardcover has not delivered the details of yet, such as a series placeholder, which would otherwise be filed under a wrong name). See [Music and Books](Music-and-Books#searching-and-grabbing).
 
 A season pack is verified whole: any bad file holds the entire pack before any
 file is moved. Resolve a hold from the UI, or with

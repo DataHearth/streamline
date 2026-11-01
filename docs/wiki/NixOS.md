@@ -67,6 +67,8 @@ services.streamline = {
       movie_path = "/srv/media/movies";
       series_path = "/srv/media/series";
       download_path = "/srv/downloads";
+      # music_path, ebook_path, audiobook_path: also add them to
+      # extraReadWritePaths, see "Sandboxing and media paths"
     };
     auth.seed_admin.email = "admin@example.com";
     auth.seed_admin.password_file = "/run/credentials/streamline.service/seed-password";
@@ -122,7 +124,7 @@ A double underscore is the section separator: `STREAMLINE_AUTH__SESSION_SECRET` 
 
 ## ffmpeg and hardware transcoding
 
-`ffmpeg.enable` is on by default and puts `pkgs.ffmpeg-headless` on the unit's `PATH`, with `ffmpeg.path` pointed at its `bin` directory. That covers media probing and software transcoding. See [Optional: ffmpeg](Installation#optional-ffmpeg) for what the three gated features actually are.
+`ffmpeg.enable` is on by default and puts `pkgs.ffmpeg-headless` on the unit's `PATH`, with `ffmpeg.path` pointed at its `bin` directory. That covers media probing and software transcoding. See [Optional: ffmpeg](Installation#optional-ffmpeg) for what the gated features actually are.
 
 For VAAPI:
 
@@ -146,9 +148,20 @@ Two separate things, and both are needed:
 
 ## Sandboxing and media paths
 
-The unit runs with `ProtectSystem = "strict"`, so the only writable paths are the ones the module grants. It always grants the state dir plus the absolute `data_dir`, `library.movie_path`, `library.series_path` and `library.download_path` from your `settings` — the four Streamline actually writes through.
+The unit runs with `ProtectSystem = "strict"`, so the only writable paths are the ones the module grants. It always grants the state dir plus the absolute `data_dir`, `library.movie_path`, `library.series_path` and `library.download_path` from your `settings`.
 
-Add anything else the service must write to:
+> [!IMPORTANT]
+> The music and book roots (`library.music_path`, `library.ebook_path`, `library.audiobook_path`) are **not** in that derived set. If you use music or books, list them yourself (unless they sit under a path already granted), or every album and book import fails on a read-only filesystem:
+>
+> ```nix
+> services.streamline.extraReadWritePaths = [
+>   "/srv/media/music"
+>   "/srv/media/books"
+>   "/srv/media/audiobooks"
+> ];
+> ```
+
+Add anything else the service must write to the same way:
 
 ```nix
 services.streamline.extraReadWritePaths = [ "/mnt/media2" ];

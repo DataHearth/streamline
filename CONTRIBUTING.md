@@ -19,9 +19,10 @@ useful things you can send.
 
 ## Setup
 
-Requires Go >= 1.26, Node >= 24, [pnpm](https://pnpm.io) and
-[Task](https://taskfile.dev). Nix users get all of it from the flake devshell
-(`nix develop`, or direnv).
+Requires Go >= 1.27.3 (the `go` directive in `go.mod`), Node >= 24.22.1,
+[pnpm](https://pnpm.io) 12 (the `packageManager` in `package.json`) and
+[Task](https://taskfile.dev). Nix users get all of it, at exactly those
+versions, from the flake devshell (`nix develop`, or direnv).
 
 ```bash
 git clone https://github.com/datahearth/streamline.git
@@ -44,8 +45,8 @@ task dev                # live reload via air, serves http://localhost:8080
 ## The loop
 
 ```bash
-task lint               # golangci-lint + biome
-task fmt                # golangci-lint fmt + biome format --write
+task lint               # golangci-lint + biome + svelte-check
+task fmt                # golangci-lint fmt + biome format --write + nixfmt
 task test               # all suites
 task test:unit -- ./internal/metadata/...   # one package
 ```
@@ -80,14 +81,16 @@ skimming before a larger change. The short version:
   ignored errors.
 - **Tests**: Ginkgo + Gomega. One `_test.go` per source file, in the same
   package. Every top-level `Describe` needs a
-  `Label("unit"|"integration"|"e2e")` or the suite is silently skipped.
+  `Label("unit"|"integration"|"e2e")`, or `task test:unit`,
+  `test:integration` and `test:e2e` silently skip it.
 - **Frontend**: Svelte 5 + TypeScript (`<script lang="ts">` everywhere),
   TailwindCSS v4, TanStack Query/Form, valibot. A section's wrapping layout is
   `_module.svelte` — `_layout.svelte` renders as a sibling route instead.
 - **Comments**: only where the code cannot explain itself. No restatements, no
   section banners, no changelog notes in the source.
 - **Config-backed resources**: indexers, download clients, media servers and
-  quality profiles live in the YAML config, not in SQLite. New config keys must
+  quality profiles (video, music and book) live in the YAML config, not in
+  SQLite. New config keys must
   be added to `config.defaults()` and `api/config.schema.json` — two tests
   guard that.
 

@@ -18,7 +18,7 @@ smtp:
 ```
 
 2. Approve the `from` address in Amazon's **Content & Devices > Preferences > Personal Document Settings > Approved Personal Document E-mail List**. Amazon drops mail from any other sender without telling you.
-3. Copy your Kindle's address (`name_xxxx@kindle.com`) into the **Send to device** card on the Account page.
+3. Copy your Kindle's address (`name_xxxx@kindle.com`) into the **Send to Kindle / e-reader** card on the Account page (**Device email**).
 
 A **Send** button then appears on a book's page, and on a series page for all its volumes. The button is disabled, with the reason as its tooltip, when the book cannot be sent.
 

@@ -75,7 +75,7 @@ If you'd rather not manage passwords at all, Streamline speaks OIDC — Authenti
 
 From a request-only user's side, this is the entire app: search, find, ask.
 
-Search returns titles from TMDB (films) and TVDB (shows), including things not in the library. Pick one, optionally state a quality preference, and submit.
+Search returns titles from TMDB (films), TVDB (shows), MusicBrainz (artists and albums) and Hardcover (books and series, when a Hardcover key is configured), including things not in the library. Pick one, optionally state a quality preference, and submit.
 
 Their **Requests** page lists what they've asked for and where each one stands. They can't see anyone else's.
 
@@ -98,9 +98,9 @@ Each request shows the title, poster, synopsis, who asked, when, and any quality
 
 **Approve & add** creates the library item there and then. You pick the quality profile at approval time; leaving it blank uses your server default, and you're free to override whatever the requester asked for.
 
-**Deny** (admins) requires a reason, and that reason is shown to the requester — the placeholder text suggests the tone: *"Still in cinemas — let's revisit when it's on digital."* It's a message, not a log entry.
+**Deny** requires a reason, and that reason is shown to the requester — the placeholder text suggests the tone: *"Still in cinemas — let's revisit when it's on digital."* It's a message, not a log entry.
 
-**Reopen as pending** (admins) undoes a denial when circumstances change.
+**Reopen as pending** undoes a denial when circumstances change.
 
 Filter by status and media type, or search by title or requester.
 
@@ -115,6 +115,7 @@ Filter by status and media type, or search by title or requester.
 - **Clear a lockout** — resets the failed-login counter after too many bad password attempts
 - **Revoke individual sessions** — kick a specific device without touching the others
 - **Revoke their API keys**
+- **Set what they may do from Subsonic apps** — the **Subsonic apps** card switches streaming, downloading, playlists, share links, rating and changing their own Subsonic password on or off, and caps their stream bitrate. These limit Subsonic apps only, never the web UI; see [Subsonic](Subsonic#users)
 - **Delete the account** — permanently removes it and every resource they own
 
 Two guard rails: you can't delete your own account, and Streamline refuses to remove or demote the last remaining admin. It will not let you lock yourself out of your own instance.
@@ -133,10 +134,12 @@ The avatar menu, top right → **Account settings**.
 
 - **Change your password**
 - **Sessions** — every device you're logged in on, with the option to revoke any of them
-- **API keys** — create long-lived keys for scripts and mobile apps. Shown once at creation; store it immediately
+- **API keys** — create keys for scripts and mobile apps, each **read-only** or **full** and lasting 30, 90 or 365 days, or never expiring. Shown once at creation; store it immediately
+- **Subsonic password** and **OPDS token** — the separate credentials music players and e-readers sign in with; see [Music and Books](Music-and-Books#listening-and-reading-from-other-apps)
+- **Send to Kindle / e-reader** — your e-reader's email address, for [Send to Kindle](Send-to-Kindle)
 
 > [!IMPORTANT]
-> An API key carries the same permissions as the user that owns it. A key made by an admin is an admin key. If you're wiring up something that only needs to read, make the key on a member account. Keys can't touch account security either way — password changes, key/session management, user administration, and JWT rotation refuse keys with `403` and require a logged-in session.
+> A **full** API key carries the same permissions as the user that owns it: a full key made by an admin is an admin key. If you're wiring up something that only needs to read, give it a **read-only** key, which can send `GET` and `HEAD` requests only, whatever your role. Keys can't touch account security either way — password changes, key/session management, user administration, and JWT rotation refuse keys with `403` and require a logged-in session. Changing your password revokes every API key you hold. See [API keys](Authentication-and-SSO#api-keys).
 
 Sessions last `auth.session_ttl` (default 168h — one week) before requiring a fresh login.
 

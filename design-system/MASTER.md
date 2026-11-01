@@ -409,12 +409,12 @@ Square rounded (`--radius-md`) 32/40/48 variants. Initials in sans `font-medium`
 @import "tailwindcss";
 
 :root {
-  /* surfaces */ --bg-deep: #020203; /* ... */
+  /* surfaces */ --bg-deep: #0b0b10; /* ... */
 }
 
 /* Dialog global reset (fixes Tailwind Preflight margin wipe) */
 dialog { margin: auto; padding: 0; border: 0; background: transparent; }
-dialog::backdrop { background: rgb(2 2 3 / 0.7); backdrop-filter: blur(8px); }
+dialog::backdrop { background: var(--bg-overlay); backdrop-filter: blur(8px); }
 
 /* Global focus-visible */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
@@ -430,7 +430,7 @@ dialog::backdrop { background: rgb(2 2 3 / 0.7); backdrop-filter: blur(8px); }
   }
 }
 
-@font-face { font-family: "Fira Sans"; /* ... local woff2 */ }
+@font-face { font-family: "Inter"; /* ... local woff2 */ }
 @font-face { font-family: "JetBrains Mono"; /* ... local woff2 */ }
 ```
 
@@ -443,7 +443,7 @@ Map all tokens to `@theme` block so `bg-accent`, `text-fg-muted`, `border-border
 ```
 
 ### Favicon
-Add `<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">` in base layout.
+`<link rel="icon" type="image/png" href="/static/images/favicon-512.png">` in the SPA shell (`web/app/index.html`).
 
 ### Skip link
 First focusable element inside `<body>`: `<a href="#main" class="sr-only focus:not-sr-only ...">Skip to main content</a>`.
@@ -544,7 +544,7 @@ Lock sequence. Each stage ships independently, each verifies at 375/768/1440.
 - Serif editorial accent (deferred; all sans for v1)
 - Custom illustrations (empty states use Lucide for now)
 - Theming API (single theme shipped)
-- Multi-language beyond `lang="en"` hook
+- Locales beyond English and French (Paraglide, `web/app/messages/`)
 
 ---
 
@@ -556,31 +556,22 @@ Lock sequence. Each stage ships independently, each verifies at 375/768/1440.
 
 ---
 
-## 16. Drawer / Sheet pattern
+## 16. Dialog / Sheet pattern
 
-Drawers are the slide-in panel for add/edit flows. Use `shared/drawer.html` for every entity edit.
+The web UI is the Svelte SPA in `web/app/`; the server-rendered templates this section once described (`shared/drawer.html`, `layouts/base.html`, htmx swaps) are gone.
 
-Caller signature mirrors `shared/modal.html`:
-- `ID` (required) — DOM id, used by close-OOB swaps and auto-open hook
-- `Title` — header text
-- `BodyTmpl` (required) — name of `{{define ...}}` for body
-- `FooterTmpl` — name of `{{define ...}}` for footer (Cancel / secondary / Save row)
-- `Data` — payload
-- `Size` — `sm | md (default) | lg` → 360 / 480 / 640 px width on `≥md`, capped at 90vw
-- `Attrs` — pass-through (htmx, data, aria); `data-auto-open=""` triggers `.showModal()` on htmx swap
+- **Modal** — `components/modals/Modal.svelte`: `open`, `title`, `size` (`md | lg` default `| xl | 2xl | 3xl | 4xl`), `onClose`, `children`, optional `footer` snippet. Portalled, focus-trapped, scroll-locked, closes on Esc and backdrop. Footer buttons stretch to equal width below `sm`.
+- **Confirm** — `components/modals/Dialog.svelte` over Modal: plain `body` or `children`, and an `actions` list (`primary | danger | ghost`, `dismiss`, `pending`).
+- **Bottom sheet** — touch-only layers such as `shared/MediaFilterSheet.svelte` (below `lg`) and `shared/LookupSheet.svelte` (below `md`); a phone gets a full-screen page instead of a card through `layout/FullScreenPanel.svelte`.
 
-Native `<dialog>` element. `≥md` anchors right (`inset: 0 0 0 auto`); `<md` becomes a bottom sheet (`inset: auto 0 0 0`). Animated close: caller sets `data-closing` (or `app.js` does on Esc / backdrop / explicit close) → wait `--dur-exit` → `dialog.close()`. Reduced-motion users skip the wait.
-
-Use a single mount point `#drawer-host` in `layouts/base.html`. Form submits inside drawers return updated row HTML for the page table (OOB swap) plus an OOB close fragment.
+Every modal, bottom sheet and full-screen layer calls `closeOnBack` (`lib/close-on-back.svelte.ts`), so Android's Back closes the topmost one and a route change closes them all.
 
 ---
 
 ## 17. Brand logos
 
-Vendor / connector logos for indexer / download-client / media-server / SSO type pickers and list rows. Single source: `shared/brand_logo.html` — one router `{{define "shared/brand_logo"}}` switching on `.Name`, with one `{{define}}` per glyph.
+Vendor / connector logos for indexer / download-client / media-server / SSO type pickers and list rows. Single source: `components/settings/BrandLogo.svelte` — props `name` (required, case-insensitive), `size` (default 20) and `ariaLabel` (set it for a standalone logo; omit it when the logo sits beside its name).
 
-Names: `plex`, `jellyfin`, `emby`, `qbittorrent`, `transmission`, `deluge`, `sabnzbd`, `nzbget`, `prowlarr`, `jackett`, `nzbhydra2`, `authentik`, `keycloak`, `authelia`, `google`, `okta`, `azure`.
+Names with a vendored SVG: `plex`, `jellyfin`, `emby`, `qbittorrent`, `transmission`, `deluge`, `prowlarr`, `jackett`, `nzbhydra2`, `authentik`, `keycloak`, `authelia`, `google`, `okta`. `sabnzbd`, `nzbget` and `azure` fall back to a Lucide icon until their SVGs are vendored.
 
-Caller signature: `Name` (required), `Size` (16/20/24 — default 20), `Aria` (`label` for standalone, `hidden` for paired-with-text — caller decides).
-
-SVG glyphs lifted from the design bundle (`docs/plans/2026-05-07-streamline-recommended-bundle/project/brand-logos.jsx`). All glyphs use `fill="currentColor"` so they inherit the surrounding text color.
+The SVGs are files under `web/static/images/brand-logos/<name>.svg`, drawn through an `<img>`, so they keep their own colors — `currentColor` does not reach into an `<img>`. An unknown name draws a `Sparkles` placeholder.

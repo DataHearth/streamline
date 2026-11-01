@@ -2,10 +2,13 @@
 
 Two mechanisms, both driven by parsing the release title: what Streamline is willing to accept, and what it calls the file afterwards.
 
+This page is the first half of quality: release parsing, the resolution band and file naming. Its companion, [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats), covers the scoring layer on top of the band — custom formats, `min_score`, upgrades and the transcode policy. Music and book profiles are tiers and formats rather than resolutions, and are described on [Music and Books](Music-and-Books#searching-and-grabbing); their file naming is [below](#music-and-book-naming).
+
 - [Release parsing](#release-parsing)
 - [Quality profiles](#quality-profiles)
 - [The acceptance rule](#the-acceptance-rule)
 - [File naming](#file-naming)
+- [Music and book naming](#music-and-book-naming)
 - [Renaming existing files](#renaming-existing-files)
 
 ---
@@ -236,6 +239,47 @@ series_naming: '{title}/{title} - {air_date} - {episode_title}.{ext}'
 
 ---
 
+## Music and book naming
+
+Music and books have templates of their own, with **capitalised** tokens — a token is looked up exactly as written, so `{artist}` in a music template renders empty. These templates are file-only (edit `config.yaml` and restart).
+
+```yaml
+library:
+  music_naming: '{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title}.{ext}'
+  ebook_naming: '{Author}/{Title} ({Year})'
+  audiobook_naming: '{Author}/{Title} ({Year})'
+  book_series_naming: '{Author}/{Series}/{Series} - Vol. {Volume:02}'
+```
+
+**Music** (`library.music_naming`, under `library.music_path`):
+
+| Token | Expands to | Example |
+| --- | --- | --- |
+| `{Artist}` | The album's artist (for a release shared by several artists, the one that owns it) | `Daft Punk` |
+| `{Album}` | Album title | `Discovery` |
+| `{Year}` | Release year — omitted if unknown | `2001` |
+| `{Disc}` | Disc number followed by `-`, **only on a multi-disc album**; absent otherwise, so a single-disc file carries no prefix | `2-` |
+| `{Track}` | Track number; `{Track:02}` pads it | `03` |
+| `{Title}` | Track title | `Digital Love` |
+| `{ext}` | File extension | `flac` |
+
+**Books** (`library.ebook_naming` and `library.audiobook_naming`, under `library.ebook_path` and `library.audiobook_path`; an ebook volume of a series uses `library.book_series_naming` instead):
+
+| Token | Expands to | Example |
+| --- | --- | --- |
+| `{Author}` | The book's display author: its authors, else writers, else artists, joined with ` & ` | `Ursula K. Le Guin` |
+| `{Title}` | The title of the slot's edition, so a French edition is filed under its French title | `Le Sorcier de Terremer` |
+| `{Year}` | Release year — omitted if unknown | `1968` |
+| `{Language}` | The slot edition's language | `fr` |
+| `{Series}` | Series name, for a volume | `Terremer` |
+| `{Volume}` | Position in the series; `{Volume:02}` pads a whole number and leaves a fractional one (`1.5`) as it is | `01` |
+
+The book templates name the file **without its extension**: an ebook's own extension is appended, and an audiobook template names a **folder**, into which the release's files are placed under their original names. Not `library.series_naming`, which is the TV template.
+
+Sanitisation and the empty-token rule above apply to both.
+
+---
+
 ## Renaming existing files
 
 Changing a template does **not** rewrite files already on disk. Apply it with the per-title **Rename files…** action, or across a selection: pick titles on the Movies or Series page, then **⋯ → Rename files…** in the bulk bar. The bulk action skips titles with nothing on disk and applies without a preview — use the per-title action when you want to see the exact moves first. Or over the API:
@@ -249,5 +293,7 @@ curl -X POST -H "X-API-Key: $KEY" \
 ```
 
 This is also how you normalise files adopted in place by an [import scan](Importing-an-Existing-Library) — adoption records paths as-is; renaming is a deliberate, separate step.
+
+Music and books rename the same way, from the artist, book or series page (**Rename files**) or `POST /music/artists/{id}/rename`, `/books/{id}/rename` and `/books/series/{id}/rename` (`?preview=true` returns the plan without applying it). A music rename never touches the files' tags, and a book rename never moves onto a file that already exists.
 
 If you're re-rooting a whole library rather than renaming within it, use [path migration](GitOps-and-Kubernetes#library-path-migration) instead.

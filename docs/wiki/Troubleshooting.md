@@ -16,6 +16,8 @@ Find what you're seeing in the table below, then jump straight to the fix. Order
 | Torrents show **Seeding** but upload is `0 B/s`, 0 peers | Nothing can open an inbound connection to you (NAT/port forward) | [Torrents seed forever but upload nothing](#torrents-seed-forever-but-upload-nothing) |
 | Plex/Jellyfin/Emby doesn't pick up new files | Refresh failed, wrong library section, or separate mounts | [My media server doesn't notice new files](#my-media-server-doesnt-notice-new-files) |
 | Library looks empty after a mount/volume change | Stored paths no longer match reality | [My library emptied itself after a remount](#my-library-emptied-itself-after-a-remount) |
+| Music or book search says a provider is limiting requests, or Books says Hardcover is not configured | MusicBrainz or Hardcover rate limits, or no Hardcover key | [Music and books](#music-and-books) |
+| An album is **Failed**, or its files never get Streamline's tags | A CUE disc image, a seeding torrent, or file ownership | [Music and books](#music-and-books) |
 | Won't start after an update: `back up the database before migrating` | The pre-migration backup could not be written | [Won't start: backup before migrating failed](#wont-start-backup-before-migrating-failed) |
 | `unable to open database file` / general DB errors | More than one writer, or the DB is on a network filesystem | [Database is locked](#database-is-locked) |
 | Need to see what's actually happening | — | [Where the logs are](#where-the-logs-are) |
@@ -27,15 +29,16 @@ Find what you're seeing in the table below, then jump straight to the fix. Order
 
 Not "finds no releases" — finds no *titles*. You type "Blade Runner" and get an empty list.
 
-**You haven't set a metadata API key.** Streamline ships without one. No TMDB key, no movie search; no TVDB key, no TV search.
+**You haven't set a metadata API key.** Streamline ships without one. No TMDB key, no movie search; no TVDB key, no TV search; no Hardcover key, no book search (the Books pages say so). Music needs no key.
 
 ```yaml
 metadata:
   tmdb_api_key: "..."
   tvdb_api_key: "..."
+  hardcover_api_key: "..."   # books only
 ```
 
-Restart afterwards. Keys are free — see [First-Run Setup](First-Run-Setup#2-get-metadata-api-keys).
+Settings → Metadata takes the same keys. Restart afterwards either way. Keys are free — see [First-Run Setup](First-Run-Setup#2-get-metadata-api-keys).
 
 **One long title finds nothing while part of it finds the show.** TVDB's search scores a show's own full title badly enough to return nothing at all — "Zom 100 Bucket List of the Dead" comes back empty, "Zom 100 Bucket List" returns the show. Streamline retries an empty search with each half of what you typed, which covers most of these, but a title that survives both halves needs help: type fewer words, add the year ("Baki 2018"), or search the original-language title, which TVDB ranks best of all.
 
@@ -60,7 +63,9 @@ Titles sit at **Wanted** forever. Work down this list in order.
 **4. Does a manual search return results that are never auto-grabbed?** Then your quality profile is rejecting them. Two rules do most of the rejecting:
 
 - **A release whose title doesn't state a resolution is always rejected.** Streamline parses quality from the release name and refuses to guess.
-- **With "upgrade allowed" off, only the exact preferred resolution is accepted.** A 2160p release is rejected by a 1080p-preferred profile just as firmly as a 480p one.
+- **`preferred_resolution` is a ceiling, not a target.** A 2160p release is rejected by a 1080p-preferred profile just as firmly as a 480p one by a 1080p minimum — whatever *upgrade allowed* says, which only decides whether a file you already have can be replaced.
+- **The release scores under the profile's `min_score`**, once its custom formats are added up. A manual search shows each release's score and the reason it was rejected; see [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats).
+- **For music and books**, the release's tier or format is not ticked in the profile, its name states no quality at all, or it names another album, artist or book. A manual search keeps these at the end with the reason.
 
 Loosen the profile, or grab the release manually — a manual grab bypasses the profile entirely.
 
@@ -76,7 +81,7 @@ Failures that were never about the release do **not** count: an unreachable inde
 
 The torrent completes in your client, and then nothing.
 
-**Check the queue first — it may be waiting on you.** A finished download whose file disagrees with what the release claimed is [held](Activity-and-Calendar#the-queue), not failed: **Activity → Queue** shows it as **Held** with the checks it failed, and nothing moves until you choose import / delete / delete-and-search. From the outside this looks identical to a stall, so rule it out before reading a single log line. If holds aren't something you want, the checks are all configurable — see [Import verification](Configuration-Reference#import-verification).
+**Check the queue first — it may be waiting on you.** A finished download whose file disagrees with what the release claimed is [held](Activity-and-Calendar#the-queue), not failed: the Queue (**Queue & History**) shows it as **Held** with the checks it failed, and nothing moves until you choose import / delete / delete-and-search. From the outside this looks identical to a stall, so rule it out before reading a single log line. If holds aren't something you want, the checks are all configurable — see [Import verification](Configuration-Reference#import-verification).
 
 Otherwise this is nearly always a **path problem**, and the logs will name it.
 
@@ -102,13 +107,13 @@ Fix the mounts (one parent mount, per [the folder rule](Installation#before-you-
 
 **An import scan entry fails with `only N of M files matched an episode`.** The folder is refused rather than adopted into the wrong show. Two things cause it. Either the folder really is a different show — accept a different match in the review list. Or the filenames carry numbering the show doesn't have: `S02E23` for a season with 22 episodes is a re-numbered DVD rip, and the guard is right to refuse it. Check the season and episode numbers on the series page against the filenames before treating it as a bug.
 
-**A failed import is not a dead end any more.** Expand the row in **Activity → History** and use **Retry import** once you've fixed the cause. It clears the attempt counter and hands the record back to the importer. It reads the *same* files as before, so fixing the cause first is the whole point — retrying an unchanged failure just fails again.
+**A failed import is not a dead end any more.** Expand the row in **Queue & History → History** and use **Retry import** once you've fixed the cause. It clears the attempt counter and hands the record back to the importer. It reads the *same* files as before, so fixing the cause first is the whole point — retrying an unchanged failure just fails again.
 
 ---
 
 ## An adopted torrent says "files not found"
 
-You added a torrent in your download client yourself, tagged it `streamline` so Streamline would pick it up, and it shows in **Activity → Needs attention** as a proposal reading `files not found — client reports /some/path`.
+You added a torrent in your download client yourself, tagged it `streamline` so Streamline would pick it up, and it shows on **Queue & History** under *Needs attention* as a proposal reading `files not found — client reports /some/path`.
 
 **qBittorrent only moves files to a category's save path under Automatic Torrent Management.** A torrent added in Manual mode keeps whatever save path it was added with, forever. Setting its category changes the label and nothing else — so Streamline adopts it, looks under `library.download_path/<torrent name>`, and finds nothing.
 
@@ -184,10 +189,7 @@ streamline auth unlock you@example.com
 
 There's also a per-IP rate limit of 5 attempts per 15 minutes that is *not* clearable — wait it out.
 
-**You've genuinely lost the admin password.** `auth.seed_admin` only acts when the user table is empty, so you can't use it to reset an existing install. Another admin can reset the password from Settings → Users.
-
-> [!WARNING]
-> If there's no other admin, you're editing the database directly. Stop the service and back up `data/` first — a mistake here is not recoverable.
+**You've genuinely lost the admin password.** `auth.seed_admin` only acts when the user table is empty, so you can't use it to reset an existing install. Another admin can reset the password from Settings → Users; with no other admin, the `auth set-password` command above is the way back in. It works on any account, opens the database directly and revokes the account's sessions. Forgot which email the admin uses? `streamline -c … auth list --role admin` prints them.
 
 ---
 
@@ -344,6 +346,18 @@ drift, so its warning reads `downloads cannot import` instead — the risk is
 in-flight downloads failing to import, not data loss. Only live rows
 (downloading, importing, held, pending adoption proposals) count toward it;
 finished history can't hold the warning on after the root legitimately moved.
+
+---
+
+## Music and books
+
+**"Rate limited" on a music search or add.** MusicBrainz allows one request a second, and when it is shedding load it refuses even that. Streamline answers `429` with a retry time and does not retry on its own; wait and search again. Background work (filling in tracks and credits, covers for search tiles) pauses for as long as MusicBrainz asked, so your own searches go first. The warning in the log names MusicBrainz's rate-limit zone: `global` means MusicBrainz is limiting everyone, not you. If this is constant, a [self-hosted MusicBrainz mirror](Configuration-Reference#metadata) (`metadata.musicbrainz_url`, with `metadata.musicbrainz_interval` lowered or `0s`) removes the limit.
+
+**"Hardcover is not configured" or "key rejected" on Books.** Book search, add, refresh, request approval and book import scans all need `metadata.hardcover_api_key`. *Not configured* means no key is set; *key rejected* means Hardcover answered `401` to the one you set — make a new token on Hardcover and set it again on Settings → Metadata, then restart. A `429` from Hardcover is its own limit (60 requests a minute, 5,000 a day, with 500 held back for adds); see [Hardcover limits](Music-and-Books#hardcover-limits).
+
+**An album is marked Failed.** The import refused the download and the reason is on the album's panel. The usual one is a release that turned out to be one audio file per disc with a `.cue` sheet, which Streamline does not split. A failed album is not searched again automatically, so the same release is not grabbed twice: pick another with *Manual search*, or retry the download from History once the cause is fixed.
+
+**Music files keep their old tags.** Check the album's Tags panel. A file a torrent is still seeding is never written; under the default *Wait* it is tagged once the torrent is removed from its client (a paused torrent still counts as listed). A file marked failed with an ownership reason belongs to a user or group Streamline cannot give the rewritten copy, so it was left untouched: run Streamline as the library's owner, then *Write tags now*. And with *Writing tags* set to *Off*, or an adopted album whose *Keep these files in step* is off, nothing is written by design. See [Tags and artwork](Music-and-Books#tags-and-artwork).
 
 ---
 
