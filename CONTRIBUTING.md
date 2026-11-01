@@ -149,10 +149,11 @@ the PR template checklist.
 **A UI/UX change needs screenshots or a video in the PR.** That covers
 anything that changes what a page looks like or how it behaves: a new page or
 component, a layout, style or copy change, an interaction. Show before and
-after, at desktop width and at phone width (below `md` the app swaps to bottom
-navigation, sheets and a search page), and attach a short video or GIF for
-anything that moves. Drag the files into the PR description and GitHub hosts
-them. A UI PR without them is sent back before review: a reviewer cannot judge
+after at desktop, tablet and phone width (around 1440, 820 and 390 px). The
+app has three layouts: the full sidebar from `lg`, an icon rail with swipeable
+tabs from `md` to `lg`, and bottom navigation, sheets and a search page below
+`md`. Attach a short video or GIF for anything that moves. Drag the files into
+the PR description and GitHub hosts them. A UI PR without them is sent back before review: a reviewer cannot judge
 a visual change from the diff alone.
 
 ## License

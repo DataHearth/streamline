@@ -22,9 +22,11 @@ them is sent back before review. Delete this section only if nothing visible
 changes.
 
 - Before and after, side by side, for a change to something that exists.
-- Desktop (around 1440 px wide) AND phone width (around 390 px): below `md`
-  the app swaps to bottom navigation, sheets and a search page, so a change
-  that looks right on one can be broken on the other.
+- Desktop (around 1440 px), tablet (around 820 px) AND phone (around 390 px).
+  The app has three layouts: the full sidebar from `lg` (1024 px), an icon
+  rail with swipeable tabs from `md` to `lg` (768-1023 px), and bottom
+  navigation, sheets and a search page below `md`. A change that looks right
+  in one can be broken in the other two.
 - A short video or GIF for anything that moves: a flow, an animation, a
   sheet, a swipe, a drag, a loading or error state.
 - Drag the files into this box: GitHub uploads them and inserts the links.

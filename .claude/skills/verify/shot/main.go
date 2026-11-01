@@ -23,7 +23,7 @@ func main() {
 	email := flag.String("email", "verify@streamline.local", "login email")
 	password := flag.String("password", "Verify-Passw0rd!", "login password")
 	out := flag.String("out", ".", "directory for the screenshots")
-	width := flag.Int("width", 1440, "viewport width (390 for a phone)")
+	width := flag.Int("width", 1440, "viewport width (820 for a tablet, 390 for a phone)")
 	flag.Parse()
 	if flag.NArg() == 0 {
 		fmt.Fprintln(os.Stderr, "usage: shot [flags] /path [/path...]")
