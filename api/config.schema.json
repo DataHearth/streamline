@@ -727,11 +727,11 @@
     "ffmpeg": {
       "type": "object",
       "additionalProperties": false,
-      "description": "ffmpeg-suite dependency (ffprobe today, the player's transcoder later).",
+      "description": "The FFmpeg suite, two binaries each optional on its own: ffprobe (media info, import verification, measured audio quality) and ffmpeg (transcoding, Subsonic transcoding).",
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "false makes probing and everything built on it inert."
+          "description": "false makes probing, transcoding and Subsonic transcoding inert."
         },
         "path": {
           "type": "string",

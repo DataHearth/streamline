@@ -1,6 +1,8 @@
-// Package ffmpeg owns the ffmpeg-suite dependency: locating the binaries and
-// probing media files via ffprobe. The future player's transcode entry points
-// belong here too. Leaf package — imports nothing from internal/ but otelx.
+// Package ffmpeg owns the ffmpeg-suite dependency: locating both binaries,
+// each optional on its own, probing media files via ffprobe, and the audio
+// transcode the Subsonic stream runs through ffmpeg (the video transcode
+// worker in internal/transcoding takes FFmpegPath from here). Leaf package —
+// imports nothing from internal/ but otelx.
 package ffmpeg
 
 import (

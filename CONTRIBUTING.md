@@ -51,8 +51,10 @@ task test               # all suites
 task test:unit -- ./internal/metadata/...   # one package
 ```
 
-`task lint` and `task test` are what CI runs; if they pass locally the PR
-should be green.
+CI runs `task test` and two of the three linters, `task lint:go` and
+`task lint:frontend`. It does not run `task lint:ts` (svelte-check) yet, so run
+`task lint` locally to catch type errors in the Svelte app before review does.
+If `task lint` and `task test` pass locally, the PR should be green.
 
 ## Code generation
 

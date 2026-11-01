@@ -454,7 +454,7 @@ First focusable element inside `<body>`: `<a href="#main" class="sr-only focus:n
 
 | Page | Pattern | Card/aspect | Key components |
 |---|---|---|---|
-| Auth (login/register/invite) | Centered card + radial accent glow behind | — | form, auth-error partial, OIDC buttons |
+| Auth (login/register/invite) | Centered card + radial accent glow behind | — | form, inline auth error, OIDC buttons |
 | Dashboard | 4-stat hero row + activity feed + upcoming | — | stat card, sparkline, activity row |
 | Library (Movies/TV/Books) | Sticky filter bar + poster grid | 2:3 | media card, status pill, filter chips, empty state |
 | Library (Music) | Sticky filter bar + album grid + tracks table | 1:1 | album card, track row, play button |
@@ -484,8 +484,8 @@ Copy-paste this block into every PR description that touches UI.
 - [ ] Every button has `:focus-visible` ring
 - [ ] Touch targets ≥44×44 on mobile (`h-11` buttons, `h-11` inputs)
 - [ ] Input font-size `text-base md:text-sm` (no iOS zoom)
-- [ ] Form errors via inline partial + field border; first-invalid-field focused on submit error
-- [ ] `hx-indicator` or `aria-busy` on async actions
+- [ ] Form errors inline under the field + field border; first-invalid-field focused on submit error
+- [ ] `aria-busy` on async actions
 - [ ] Disabled states `opacity-50 pointer-events-none`
 
 **Contrast**
@@ -526,7 +526,7 @@ Lock sequence. Each stage ships independently, each verifies at 375/768/1440.
 
 1. **Tokens + base layer** — `input.css` vars, `@theme` Tailwind config, fonts bundled, favicon, global focus/dialog/reduced-motion rules
 2. **Responsive shell** — base layout responsive, sidebar (≥md) + bottom nav (<md), skip link, sticky blurred top bar
-3. **Auth pages** — login + register + invite accept with token partials, button focus, submit indicator, fixed register error container
+3. **Auth pages** — login + register + invite accept with the invite token, button focus, submit indicator, fixed register error container
 4. **Dashboard** — stat row with sparklines + tabular-nums, activity feed component, upcoming strip
 5. **Movies list + detail** — poster grid, filter bar, media card, detail hero, tabs, manual search, fixed TMDB modal (CR1 + CR2 resolved)
 6. **Activity page** — queue/history table, progress bar, expandable row

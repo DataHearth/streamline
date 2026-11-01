@@ -2,7 +2,7 @@
 
 Streamline is a single binary with no external dependencies — no database server, no runtime, no CGO. Pick whichever install method matches how you already run things.
 
-A few features are gated behind the `ffmpeg`/`ffprobe` binaries, but they are opt-in extras and never a requirement: without them Streamline installs, boots and runs the same, just without media info, import verification, transcoding and converted Subsonic streams. See [Optional: ffmpeg](#optional-ffmpeg).
+A few features are gated behind two binaries from the FFmpeg suite, `ffprobe` and `ffmpeg`. Each is an opt-in extra on its own and never a requirement. Without `ffprobe`, Streamline runs the same but has no media info and no import verification. Without `ffmpeg`, it has no transcoding and no converted Subsonic streams. See [Optional: ffmpeg and ffprobe](#optional-ffmpeg-and-ffprobe).
 
 ## Which install method?
 
@@ -24,7 +24,7 @@ A few features are gated behind the `ffmpeg`/`ffprobe` binaries, but they are op
 - [Proxmox VE (LXC)](Proxmox) — install script, media mounts, ID mapping, GPU passthrough
 - [Kubernetes / Helm](#kubernetes--helm)
 - [NixOS / Nix](NixOS) — package, NixOS module and home-manager module
-- [Optional: ffmpeg](#optional-ffmpeg)
+- [Optional: ffmpeg and ffprobe](#optional-ffmpeg-and-ffprobe)
 - [Upgrading](#upgrading)
 - [Install as an app](#install-as-an-app)
 - [Verifying what you downloaded](#verifying-what-you-downloaded)
@@ -67,7 +67,7 @@ If you genuinely can't put them on one filesystem, set `library.import_mode` to 
 
 ## Docker Compose
 
-The image is self-contained: Streamline plus static `ffmpeg` and `ffprobe` binaries in `/usr/local/bin`, so the [optional media features](#optional-ffmpeg) work out of the box with no extra config and no second container.
+The image is self-contained: Streamline plus static `ffmpeg` and `ffprobe` binaries in `/usr/local/bin`, so the [optional media features](#optional-ffmpeg-and-ffprobe) work out of the box with no extra config and no second container.
 
 ### 1. Create the config
 
@@ -177,7 +177,7 @@ Then set `transcoding.hw_accel` (default `auto`, so usually nothing to do) and `
 
 ## Plain binary
 
-Requires nothing but the binary itself — no runtime, no database server, and no ffmpeg unless you want the [optional extras](#optional-ffmpeg). Grab it from the [Releases page](https://github.com/datahearth/streamline/releases/latest) — Linux, macOS and Windows, amd64 and arm64.
+Requires nothing but the binary itself — no runtime, no database server, and no ffmpeg unless you want the [optional extras](#optional-ffmpeg-and-ffprobe). Grab it from the [Releases page](https://github.com/datahearth/streamline/releases/latest) — Linux, macOS and Windows, amd64 and arm64.
 
 ```bash
 # Linux amd64 — substitute the real version number
@@ -308,23 +308,25 @@ Two things about the chart that surprise people:
 
 ---
 
-## Optional: ffmpeg
+## Optional: ffmpeg and ffprobe
 
-Streamline runs perfectly well with no `ffmpeg` or `ffprobe` anywhere on the machine. These features
-are gated behind them, and only these:
+Streamline runs perfectly well with no `ffmpeg` or `ffprobe` anywhere on the machine. The two are
+found separately and each is optional on its own: `ffprobe` *reads* files, `ffmpeg` *writes* them.
+These features are gated behind them, and only these:
 
-| Feature | What you lose without them |
+| Feature | Needs | What you lose without it |
 | --- | --- |
-| **Media info** | Resolution, codecs, duration, channels, bitrate and stream languages on files and episodes. The rest of the page is unaffected |
-| **Import verification** | Downloads are imported on the strength of the release name alone. With ffprobe, a file whose real resolution, duration or codec contradicts the claim is *held* for you to resolve instead of landing in your library |
-| **Scoring a file you already have** | The `audio_tracks`, `audio_language` and `subtitle_language` conditions are answerable only from a probe. Without one they are unanswerable for a file on disk, so automatic upgrades compare the two sides on the parsed release name alone — see [What a file can be scored on](Quality-Profiles-and-Custom-Formats#what-a-file-can-be-scored-on) |
-| **Measured music and audiobook quality** | An imported album's real tier (a "FLAC" that is a 128k transcode) and an audiobook's real bit rate are checked against the profile only when they can be measured; the import review shows a file's extension instead of `FLAC 24/96` |
-| **[Transcoding](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files)** | Needs `ffmpeg` itself, not just `ffprobe`. Without it the transcode worker stays idle and **Scan library** refuses |
-| **Converted [Subsonic](Subsonic#transcoding) streams** | Apps always get the original file, whatever bitrate or format they ask for, and an account's maximum bitrate cannot be enforced |
+| **Media info** | `ffprobe` | Resolution, codecs, duration, channels, bitrate and stream languages on files and episodes. The rest of the page is unaffected |
+| **Import verification** | `ffprobe` | Downloads are imported on the strength of the release name alone. With ffprobe, a file whose real resolution, duration or codec contradicts the claim is *held* for you to resolve instead of landing in your library |
+| **Scoring a file you already have** | `ffprobe` | The `audio_tracks`, `audio_language` and `subtitle_language` conditions are answerable only from a probe. Without one they are unanswerable for a file on disk, so automatic upgrades compare the two sides on the parsed release name alone — see [What a file can be scored on](Quality-Profiles-and-Custom-Formats#what-a-file-can-be-scored-on) |
+| **Measured music and audiobook quality** | `ffprobe` | An imported album's real tier (a "FLAC" that is a 128k transcode) and an audiobook's real bit rate are checked against the profile only when they can be measured; the import review shows a file's extension instead of `FLAC 24/96` |
+| **[Transcoding](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files)** | `ffmpeg` | `ffprobe` alone is not enough. Without `ffmpeg` the transcode worker stays idle and **Scan library** refuses |
+| **Converted [Subsonic](Subsonic#transcoding) streams** | `ffmpeg` | Apps always get the original file, whatever bitrate or format they ask for, and an account's maximum bitrate cannot be enforced |
 
 Everything else — searching, grabbing, importing, renaming, requests, notifications — works
-identically either way. Missing binaries are a **graceful degrade, never a boot error**: nothing
-fails, nothing is retried forever, and imports simply fall back to filename parsing.
+identically either way. A missing binary is a **graceful degrade, never a boot error**: nothing
+fails, nothing is retried forever, imports fall back to filename parsing without `ffprobe`, and
+Subsonic apps get the original file without `ffmpeg`.
 
 **Where the binaries come from:**
 
@@ -332,16 +334,17 @@ fails, nothing is retried forever, and imports simply fall back to filename pars
   `ffprobe` binaries into `/usr/local/bin` from a digest-pinned
   [`mwader/static-ffmpeg`](https://hub.docker.com/r/mwader/static-ffmpeg) stage, so the default
   `ffmpeg.path: ""` finds them on `$PATH`
-- **Plain binary / from source** — install them however your OS does (`apt install ffmpeg`,
-  `brew install ffmpeg`, `pacman -S ffmpeg`, …), or drop the two static binaries in a directory of
-  your choosing
+- **Plain binary / from source** — install them however your OS does. The `ffmpeg` package of most
+  package managers carries both binaries (`apt install ffmpeg`, `brew install ffmpeg`,
+  `pacman -S ffmpeg`, …). Or drop the two static binaries in a directory of your choosing. Either one
+  alone works too: just `ffprobe` gives you every read-side feature
 
 **Turning it off, or pointing it elsewhere** — two keys, both in [Configuration
 Reference](Configuration-Reference#ffmpeg):
 
 ```yaml
 ffmpeg:
-  enabled: true    # false disables probing entirely; runtime-editable, no restart
+  enabled: true    # false switches off probing, transcoding and Subsonic transcoding; runtime-editable
   path: ""         # a DIRECTORY holding ffmpeg/ffprobe. Empty resolves via $PATH. Read at boot
 ```
 
@@ -349,6 +352,11 @@ If probing is enabled but ffprobe can't be found, `GET /api/v1/system/info` retu
 `ffmpeg_warn: true`, Settings → General shows a notice, and the header health pill goes amber.
 That's the signal that `path` is wrong or the binaries aren't installed. With `enabled: false` the
 key is absent: you opted out, so it isn't a warning.
+
+A missing `ffmpeg` with `ffprobe` present raises no such warning, since everything on the read side
+works. It shows up in three places instead: the boot log line `transcoding worker idle: ffmpeg binary
+not found`, the missing `version` on Settings → Media probe (`GET /api/v1/config/ffmpeg`), and
+**Scan library** on the Transcoding page answering `409`.
 
 ---
 

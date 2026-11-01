@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/318e94d2-7571-4dda-96f6-f62bb4af8a46
 - OpenTelemetry traces, metrics, logs
 - GitOps-friendly: `read_only` config mode rejects runtime config writes
 - CGO-free SQLite — single binary, no database server, no runtime, nothing to install alongside it
-- Optional `ffmpeg`/`ffprobe`: unlocks media info, import verification and transcoding; without them Streamline runs exactly as before, just without those ([details](#optional-ffmpeg))
+- Optional `ffprobe` and `ffmpeg`, each on its own: `ffprobe` unlocks media info and import verification, `ffmpeg` transcoding and Subsonic transcoding; without them Streamline runs exactly as before, just without those ([details](#optional-ffmpeg-and-ffprobe))
 
 ## Quick start (Docker Compose)
 
@@ -119,7 +119,7 @@ The config directory must stay writable. A read-only mount loses the generated s
 
 Tags: `latest`, `edge` (main branch), `X.Y.Z`, `X.Y`, `X`, `sha-<short>`. Each also comes as a `-vaapi` variant (`latest-vaapi`, `X.Y.Z-vaapi`, …) for hardware transcoding.
 
-The image ships static `ffmpeg` and `ffprobe` alongside the binary in `/usr/local/bin`, so the [optional media features](#optional-ffmpeg) work with no extra setup. That static build cannot open a GPU: the `-vaapi` variant is a larger Ubuntu-based image carrying an ffmpeg with VAAPI and libvmaf, and needs the render node passed in (`--device /dev/dri` plus `--group-add` with its group id).
+The image ships static `ffmpeg` and `ffprobe` alongside the binary in `/usr/local/bin`, so the [optional media features](#optional-ffmpeg-and-ffprobe) work with no extra setup. That static build cannot open a GPU: the `-vaapi` variant is a larger Ubuntu-based image carrying an ffmpeg with VAAPI and libvmaf, and needs the render node passed in (`--device /dev/dri` plus `--group-add` with its group id).
 
 ### Docker Compose
 
@@ -139,7 +139,7 @@ helm install streamline oci://ghcr.io/datahearth/charts/streamline \
 
 The chart is versioned independently of Streamline itself — a chart fix ships without an app release, and an app release ships without a chart bump. `--version` selects the *chart*, `image.tag` the app (an `X.Y.Z-vaapi` tag for hardware transcoding, with the chart's `hwAccel` block). App releases are tagged `vX.Y.Z`, chart releases `chart-vX.Y.Z`; the image tags drop the `v`.
 
-The chart points the movie, series and download paths at one shared volume, and leaves the music and book paths at their defaults under `/data`, the database volume. Set `config.library.music_path`, `ebook_path` and `audiobook_path` under the shared mount (`/srv/media/…` by default) so those imports can hardlink too.
+The chart points all six library paths (movies, series, music, ebooks, audiobooks and downloads) at one shared volume, mounted at `/srv` by default, so every import can hardlink. Chart 2.4.0 and older left the music and book paths on the database volume under `/data`: if you keep albums or books there, pin those paths or move the folders before upgrading (see the note in `values.yaml`).
 
 ### NixOS / Nix
 
@@ -163,7 +163,7 @@ services.streamline = {
 };
 ```
 
-`settings` is freeform YAML, so every key in the configuration reference works under its own name. The sandbox's writable paths are derived from `data_dir` and the three paths above only, so music and books are read-only until you set `music_path`, `ebook_path` and `audiobook_path` (their defaults sit under `/data`) and list them in `extraReadWritePaths`. By default the declaration seeds `/var/lib/streamline/config.yaml` on first start and the web UI stays editable; set `mutableSettings = false` for a fully declarative, read-only instance. See [the NixOS wiki page](https://github.com/DataHearth/streamline/wiki/NixOS) for secrets, hardware transcoding and the sandbox's writable paths.
+`settings` is freeform YAML, so every key in the configuration reference works under its own name. The sandbox's writable paths are derived from `data_dir` and every `library.*_path` you set, so add `music_path`, `ebook_path` and `audiobook_path` beside the three above if you use music or books (their defaults sit under `/data`, outside the sandbox). By default the declaration seeds `/var/lib/streamline/config.yaml` on first start and the web UI stays editable; set `mutableSettings = false` for a fully declarative, read-only instance. See [the NixOS wiki page](https://github.com/DataHearth/streamline/wiki/NixOS) for secrets, hardware transcoding and the sandbox's writable paths.
 
 ### Unraid and Proxmox VE
 
@@ -222,28 +222,36 @@ task
 
 The defaults put the movie and series libraries under `/media`, which a non-root user cannot create: set the `library.*_path` keys to folders you can write, or pass them as `STREAMLINE_LIBRARY__*_PATH` on the first start, which writes them into the new file.
 
-### Optional: ffmpeg
+### Optional: ffmpeg and ffprobe
 
-Streamline needs nothing but itself to run. A few features are gated behind the `ffmpeg`/`ffprobe`
-binaries, and all are opt-in extras rather than requirements:
+Streamline needs nothing but itself to run. Two optional binaries from the FFmpeg suite unlock extra
+features, and each is optional on its own. Streamline looks for both in `ffmpeg.path`, or on `$PATH`
+when that is empty, and uses whichever it finds:
 
-- **Media info** (`ffprobe`) — resolution, codecs, duration and bitrate shown on files and episodes
-- **Import verification** (`ffprobe`) — holding a finished download whose actual resolution, duration
-  or codec contradicts what the release claimed, instead of importing it blind
-- **Transcoding** (`ffmpeg`) — re-encoding imported files to a quality profile's rules
-  (`transcoding.enabled`, off by default); without the binary the worker stays idle
-- **Subsonic transcoding** (`ffmpeg`) — MP3/Opus/AAC for a client that asks for a format or a lower
-  bit rate; without it the original file is streamed
+- **`ffprobe`** reads files:
+  - **Media info**: resolution, codecs, duration, bitrate and stream languages on files and episodes
+  - **Import verification**: holding a finished download whose actual resolution, duration or codec
+    contradicts what the release claimed, instead of importing it blind
+  - **Measured music and audiobook quality**: an album's real tier (a "FLAC" that is a 128k
+    transcode) and an audiobook's real bit rate, checked against the profile
+- **`ffmpeg`** writes files:
+  - **Transcoding**: re-encoding imported files to a quality profile's rules (`transcoding.enabled`,
+    off by default), including VAAPI hardware encoding
+  - **Subsonic transcoding**: MP3/Opus/AAC for an app that asks for a format or a lower bit rate,
+    and the per-account maximum bit rate
 
-With the binaries absent, or `ffmpeg.enabled: false` in the config, nothing errors and nothing is
-blocked: imports fall back to filename parsing exactly as they did before the feature existed, and
-`GET /api/v1/system/info` reports `ffmpeg_warn` so you know why the extras are missing.
+Without `ffprobe`, imports fall back to the release name, exactly as before the feature existed, and
+`GET /api/v1/system/info` reports `ffmpeg_warn` so you know why media info is missing. Without
+`ffmpeg`, the transcode worker stays idle (logged at boot) and Subsonic apps get the original file.
+Neither case errors or blocks anything. `ffmpeg.enabled: false` switches off everything in both
+lists.
 
-**The official Docker image ships both binaries** — static `ffmpeg` and `ffprobe` are copied into
+**The official Docker image ships both binaries.** Static `ffmpeg` and `ffprobe` are copied into
 `/usr/local/bin` from a digest-pinned [`mwader/static-ffmpeg`](https://hub.docker.com/r/mwader/static-ffmpeg)
-stage, so Docker and Helm users get the extras with zero configuration. Binary and source installs
-use whatever `ffmpeg` your OS provides, resolved from `$PATH` or from the directory named by
-`ffmpeg.path`.
+stage, so Docker and Helm users get every extra with zero configuration (the `-vaapi` image carries
+its own build with hardware encoding). Binary and source installs use whatever your OS provides.
+Most package managers ship both binaries in one package (`apt install ffmpeg`, `brew install ffmpeg`,
+`pacman -S ffmpeg`).
 
 ## Configuration
 

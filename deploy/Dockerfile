@@ -185,10 +185,10 @@ FROM gcr.io/distroless/static-debian12:nonroot@sha256:1b7b9f0f0e0a1d2155f531db58
 # MUST stay. distroless sets WorkingDir=/home/nonroot (mode 0700, owned by
 # 65532) where debian-slim left it empty, i.e. `/`. The binary's default
 # data_dir is the RELATIVE `./data` — the exact value `streamline config init`
-# writes — and `validate:"required,dir"` fails config load before anything
-# else. Under /home/nonroot that resolves to a path uid 1000 cannot even
-# create, so the container exits at boot instead of using the /data volume
-# below. Drop this line and the documented `docker run -v streamline-data:/data`
+# writes — and config load creates data_dir (ensureDataDir) before anything
+# else, failing the boot when it cannot. Under /home/nonroot that resolves to
+# a path uid 1000 cannot create, so the container exits at boot instead of
+# using the /data volume below. Drop this line and the documented `docker run -v streamline-data:/data`
 # quick start breaks.
 WORKDIR /
 

@@ -413,9 +413,9 @@ type BackupRetention struct {
 	Manual       uint16 `koanf:"manual"`
 }
 
-// FFmpegConfig owns the ffmpeg-suite dependency (ffprobe today, the player's
-// transcoder later). Enabled=false makes probing and everything built on it
-// inert. Path is a directory holding the binaries; empty resolves via $PATH.
+// FFmpegConfig owns the ffmpeg-suite dependency: ffprobe for probing and
+// ffmpeg for transcoding and Subsonic transcoding, each resolved and optional
+// on its own. Enabled=false makes all of them inert. Path is a directory holding the binaries; empty resolves via $PATH.
 // Enabled is runtime-toggleable through config.Update; Path is read at boot.
 type FFmpegConfig struct {
 	Enabled bool   `koanf:"enabled"`
@@ -1144,7 +1144,7 @@ func defaults() map[string]any {
 
 // DumpDefaults writes the default configuration as YAML to w.
 // Output is a ready-to-use config file; running `config validate` on it
-// should succeed once data_dir exists on disk.
+// should succeed as is, since config load creates a missing data_dir.
 func DumpDefaults(w io.Writer) error {
 	k := newDefaultsKoanf()
 	out, err := k.Marshal(yaml.Parser())
