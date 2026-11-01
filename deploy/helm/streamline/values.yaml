@@ -59,9 +59,6 @@ podSecurityContext:
 #     `extraEnv: [{name: STREAMLINE_LIBRARY__MOVIE_PATH, value: /var/movies}]`
 #     renders fine and the pod dies on "mkdir /var/movies: read-only file
 #     system". If you redirect a path with env, you own checking it is mounted.
-#   * config.data_dir pointing at a SUBDIRECTORY of a mount — see the note on
-#     config.data_dir below. That one fails for an unrelated reason and fails
-#     with readOnlyRootFilesystem: false just the same.
 #
 # Two ways to trip the checked set without touching config at all:
 #   * persistence.enabled: false while config.data_dir still points at /data,
@@ -229,21 +226,9 @@ gateway:
 # rest, so this can't silently drift from them. Override any other key by adding
 # it; koanf merges this file over defaults. See `streamline config validate`.
 config:
-  # Binary default ./data is relative; MUST pin to the PVC mount.
-  #
-  # TRAP: keep this AT the mount, not in a subdirectory of it. data_dir is
-  # validated with `required,dir`, which demands the directory ALREADY EXIST at
-  # config load — and nothing creates it (posters mkdirs <data_dir>/posters, but
-  # only long after validation has run). A freshly provisioned PVC is empty, so
-  # `data_dir: /data/streamline` renders clean, passes the writable-path check
-  # above, and then the pod exits at startup with
-  #   Field validation for 'DataDir' failed on the 'dir' tag
-  # This has nothing to do with readOnlyRootFilesystem — it fails identically
-  # with a fully writable root filesystem — so the writable-path guard is the
-  # wrong place to catch it and deliberately does not try. Keep data_dir at the
-  # mount root and let the app lay out its own files under it — this chart
-  # exposes no initContainer hook and no subPath knob, so pre-creating the
-  # subdirectory would mean patching the rendered manifest yourself.
+  # Binary default ./data is relative; MUST pin to the PVC mount (or a
+  # directory under it — config load creates data_dir, mode 0700, when it is
+  # missing, so `/data/streamline` on a fresh, empty PVC works too).
   data_dir: /data
   # Declarative deploy: the app never writes config back (config.Update returns
   # ErrReadOnly). Change config through git, not the UI. Runtime-only values
@@ -373,6 +358,11 @@ library:
   #   download_path=<mountPath>/downloads.
   # Want a different layout? Set config.library.{movie,series,download}_path
   # explicitly above and the chart leaves it as-is.
+  # music_path, ebook_path and audiobook_path are NOT pointed here: they keep
+  # the binary defaults /data/music, /data/books and /data/audiobooks, on the
+  # persistence PVC — a different filesystem from the downloads, so a hardlink
+  # import of an album or a book fails. Set them under this mount, e.g.
+  # config.library.music_path: /srv/media/music.
   shared:
     enabled: true
     existingClaim: "" # empty = create the PVC below

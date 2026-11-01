@@ -75,9 +75,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
        breaches sizeLimit and the kubelet evicts the pod — a slower, noisier
        failure than EROFS but no less fatal.
 
-       NOT checked, deliberately: config.data_dir being a SUBDIRECTORY of a
-       mount rather than the mount itself. That does fail, but not because of
-       the root filesystem — see the config.data_dir note in values.yaml. */ -}}
+       A config.data_dir in a SUBDIRECTORY of a mount passes, correctly: config
+       load creates a missing data_dir, so `/data/streamline` on an empty PVC
+       boots. */ -}}
 {{- define "streamline.assertWritablePaths" -}}
 {{- /* `securityContext: null` is a supported opt-out: deployment.yaml wraps the
        block in `{{ with }}`, so null means no container securityContext and a
