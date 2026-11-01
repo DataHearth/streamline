@@ -51,4 +51,5 @@
 - TailwindCSS v4 (`@tailwindcss/cli`): `web/static/css/input.css` → `style.css`, scanning `web/app/**/*.svelte` (`task build:css`).
 - Frontend deps via pnpm (`package.json` is a manifest only, no scripts). JS/CSS lint+format is Biome (`biome.json`) over `web/static/js` + `web/static/css` only — tabs width 2, double quotes, semicolons.
 - Distribution: single binary (frontend `//go:embed`-ed), OCI images, Helm charts.
+- **A PR that changes anything visible carries screenshots or a video** (`.github/pull_request_template.md`, CONTRIBUTING → Commits and PRs): before and after, at desktop width (~1440) and phone width (~390, below `md` the shell is a different layout), plus a video for anything that moves. Take them from a throwaway instance with the `verify` skill (`go run ./.claude/skills/verify/shot … -width 390` for the phone pass), never from a real library.
 

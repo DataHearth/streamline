@@ -146,6 +146,15 @@ git-cliff, so don't hand-edit `CHANGELOG.md`.
 Keep the PR to one topic. Rebase on `main` rather than merging it in. Fill in
 the PR template checklist.
 
+**A UI/UX change needs screenshots or a video in the PR.** That covers
+anything that changes what a page looks like or how it behaves: a new page or
+component, a layout, style or copy change, an interaction. Show before and
+after, at desktop width and at phone width (below `md` the app swaps to bottom
+navigation, sheets and a search page), and attach a short video or GIF for
+anything that moves. Drag the files into the PR description and GitHub hosts
+them. A UI PR without them is sent back before review: a reviewer cannot judge
+a visual change from the diff alone.
+
 ## License
 
 Contributions are licensed under [GPL-3.0-or-later](LICENSE), same as the
