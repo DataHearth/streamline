@@ -38,7 +38,7 @@ The Helm chart sets `read_only: true` by default.
 
 ### What you must supply yourself
 
-Three values are normally generated on first boot and persisted back into the config. With read-only mode there's nowhere to persist them, so you have to provide them:
+Two values are normally generated on first boot and persisted back into the config, the session secret and the Plex client id; the seed admin's password is generated and only printed. With read-only mode there's nowhere to persist the first two, so supply all three yourself:
 
 | Value | Consequence of omitting it |
 | --- | --- |
@@ -70,7 +70,7 @@ helm install streamline oci://ghcr.io/datahearth/charts/streamline \
   --version X.Y.Z -f values.yaml
 ```
 
-The chart versions independently of the app: `--version` selects the *chart*, and `image.tag` (**required** since chart 2.2.0) selects the app — the chart has no default, so your values file pins the exact Streamline version and upgrades are an explicit `image.tag` bump in git. App releases are tagged `vX.Y.Z`, chart releases `chart-vX.Y.Z`.
+The chart versions independently of the app: `--version` selects the *chart*, and `image.tag` (**required** since chart 2.0.0) selects the app — the chart has no default, so your values file pins the exact Streamline version and upgrades are an explicit `image.tag` bump in git. App releases are tagged `vX.Y.Z`, chart releases `chart-vX.Y.Z`.
 
 ### Non-negotiables
 
@@ -260,7 +260,7 @@ config:
 
 **OIDC redirect URIs are derived per-request from the host you connect on**, so multi-domain SSO needs no configuration — just register each domain's `/auth/oidc/<name>/callback` at your IdP.
 
-`STREAMLINE_PUBLIC_URL` only sets the canonical base for **invite links**. Without it they fall back to `http://<host>:<port>`, which is ugly but harmless:
+`STREAMLINE_PUBLIC_URL` sets the canonical base for **invite links**; without it they fall back to `http://<host>:<port>`. It also marks the session cookie `Secure` when it is `https://` (the fallback for a proxy that forwards no scheme), and its host is trusted for the same-origin and trusted-network checks. It does not change the OIDC redirect URI, which is built from each request:
 
 ```yaml
 extraEnv:
@@ -355,21 +355,22 @@ docker compose start streamline
 On Kubernetes, scale to zero and run the restore from a pod mounting the same PVC, with the same image and config:
 
 ```bash
-kubectl scale -n streamline deploy/streamline --replicas=0
+kubectl scale -n streamline deploy/streamline-streamline --replicas=0
 # in a helper pod using the streamline image, the config and the data PVC:
 streamline --config /etc/streamline/config.yaml restore <file>
-kubectl scale -n streamline deploy/streamline --replicas=1
+kubectl scale -n streamline deploy/streamline-streamline --replicas=1
 ```
 
 ### Off the machine
 
 `<data_dir>/backups` sits on the same disk as the database, so it protects against a bad migration or a mistake, not against losing the disk. Copy it elsewhere too — any backup file can be copied while Streamline runs, since each is complete once it appears under its final name. On Kubernetes, a PVC volume snapshot (CSI snapshots, Velero) of the data volume carries it along.
 
-To pull the newest backup out of a running pod (the image has no `sqlite3`, but it does not need one):
+To take a fresh backup in a running pod (`deploy/<release>-streamline`; `streamline-streamline` with the documented `helm install streamline`), which prints its path:
 
 ```bash
-f=$(kubectl exec -n streamline deploy/streamline -- streamline --config /etc/streamline/config.yaml backup)
-kubectl exec -n streamline deploy/streamline -- cat "$f" > "./$(basename "$f")"
+kubectl exec -n streamline deploy/streamline-streamline -- streamline --config /etc/streamline/config.yaml backup
 ```
+
+The image is distroless: it has no shell, no `cat` and no `tar`, so neither `kubectl exec … cat` nor `kubectl cp` can copy the file out. Read it from a helper pod (busybox, say) that mounts the same data PVC (`<release>-streamline-data`) on the same node, or take a volume snapshot (CSI snapshots, Velero) of that PVC.
 
 Copying `streamline.db` by hand instead needs the server stopped, or its `-wal` and `-shm` files taken at the same instant — a hot copy of `streamline.db` alone is missing recent writes. `streamline restore` refuses a file with a non-empty `-wal` beside it for that reason.

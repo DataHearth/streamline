@@ -471,7 +471,7 @@ cosign download attestation ghcr.io/datahearth/streamline:latest \
   --predicate-type=https://spdx.dev/Document
 ```
 
-Every image push is scanned by [grype](https://github.com/anchore/grype) for known vulnerabilities (severity >= high). Results are uploaded to the repository's [Security tab](https://github.com/datahearth/streamline/security/code-scanning).
+Every image is scanned by [grype](https://github.com/anchore/grype) before it is tagged: a fixable vulnerability of severity high or above leaves the image untagged and fails the run. The report is attached to the Image workflow run and shown in its summary.
 
 ## Contributing
 

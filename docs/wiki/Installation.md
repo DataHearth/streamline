@@ -78,7 +78,7 @@ docker run --rm -v "$PWD/config:/etc/streamline" \
   config init --output /etc/streamline/config.yaml
 ```
 
-This writes a fully-commented config file with every key at its default. You'll edit it in [First-Run Setup](First-Run-Setup).
+This writes a config file with every key at its default. You'll edit it in [First-Run Setup](First-Run-Setup).
 
 You can also skip this step: when the file `--config` names does not exist, Streamline writes the same defaults there on its first start, as long as the directory is writable by the container's user (uid 1000 in the official image). The default library folders (`/media/movies` and friends) are not writable by that user, though, so that first start then stops on `create library path …: permission denied` until you set them — in the file, or as `STREAMLINE_LIBRARY__MOVIE_PATH`-style variables, which are written into the file when it is created. Doing this step first lets you edit the file before anything reads it.
 
@@ -130,12 +130,12 @@ Open <http://localhost:8080>.
 | Tag | What it tracks |
 | --- | --- |
 | `latest` | Most recent stable release |
-| `vX.Y.Z`, `X.Y`, `X` | Pinned release / minor line / major line |
+| `X.Y.Z`, `X.Y`, `X` | Pinned release / minor line / major line (no `v`: release `v3.3.0` is image `3.3.0`) |
 | `edge` | Every push to `main` — expect breakage |
 | `sha-<short>` | An exact commit |
 
 > [!TIP]
-> Pin to `vX.Y.Z` or at least `X.Y` for anything you care about.
+> Pin to `X.Y.Z` or at least `X.Y` for anything you care about.
 
 ### Hardware encoding (VAAPI)
 
@@ -152,7 +152,7 @@ The container needs the render node and the host group that owns it:
 docker run ... \
   --device /dev/dri/renderD128 \
   --group-add "$(stat -c %g /dev/dri/renderD128)" \
-  ghcr.io/datahearth/streamline:vX.Y.Z-vaapi
+  ghcr.io/datahearth/streamline:X.Y.Z-vaapi
 ```
 
 Or in `compose.yaml`:
@@ -160,7 +160,7 @@ Or in `compose.yaml`:
 ```yaml
 services:
   streamline:
-    image: ghcr.io/datahearth/streamline:vX.Y.Z-vaapi
+    image: ghcr.io/datahearth/streamline:X.Y.Z-vaapi
     devices:
       - /dev/dri/renderD128:/dev/dri/renderD128
     group_add:
@@ -187,11 +187,11 @@ tar xzf streamline.tar.gz
 
 mkdir -p ~/.config/streamline
 cp config.example.yaml ~/.config/streamline/config.yaml
-
+# edit data_dir and the library.*_path keys to folders you can write, then:
 ./streamline --config ~/.config/streamline/config.yaml
 ```
 
-Each archive ships a `config.example.yaml` with every key at its default value.
+Each archive ships a `config.example.yaml` with every key at its default value. The defaults file movies under `/media/movies` and series under `/media/series`, which an ordinary user cannot create: without your own paths the binary exits with `create library path /media/movies: … permission denied`.
 
 ### Running it as a service (systemd)
 
@@ -216,13 +216,18 @@ WantedBy=multi-user.target
 
 ```bash
 sudo useradd --system --home /var/lib/streamline --shell /usr/sbin/nologin streamline
-sudo mkdir -p /var/lib/streamline /etc/streamline
-sudo chown -R streamline:streamline /var/lib/streamline
+sudo install -D -m 0755 streamline /opt/streamline/streamline
+# Both owned by the service user: the config is written back to (the generated
+# session secret, every save from Settings), and is created on first start if missing.
+sudo install -d -o streamline -g streamline -m 0750 /var/lib/streamline /etc/streamline
+sudo -u streamline /opt/streamline/streamline config init --output /etc/streamline/config.yaml
+# edit /etc/streamline/config.yaml: data_dir: /var/lib/streamline, and every
+# library.*_path to folders the streamline user can write
 sudo systemctl enable --now streamline
 sudo journalctl -u streamline -f
 ```
 
-Set `data_dir: /var/lib/streamline` in your config so the database lands somewhere the service user can write.
+The admin password is printed once to the journal on the first start; `journalctl -u streamline | grep 'default admin'` finds it.
 
 ---
 
@@ -297,7 +302,7 @@ helm install streamline oci://ghcr.io/datahearth/charts/streamline \
 
 Pin a chart version with `--version X.Y.Z`.
 
-**`image.tag` is required** (chart 2.2.0+): the chart never picks a Streamline version for you — you choose the app release to deploy and bump it yourself to upgrade. Installing without it fails with `image.tag is required`. App releases are tagged `vX.Y.Z` (the image tag is `X.Y.Z`), chart releases `chart-vX.Y.Z`.
+**`image.tag` is required** (chart 2.0.0+): the chart never picks a Streamline version for you — you choose the app release to deploy and bump it yourself to upgrade. Installing without it fails with `image.tag is required`. App releases are tagged `vX.Y.Z` (the image tag is `X.Y.Z`), chart releases `chart-vX.Y.Z`.
 
 The chart is versioned **independently** of Streamline itself: a chart fix ships without an app release and vice versa. `--version` selects the chart; `image.tag` selects the app.
 
@@ -413,7 +418,7 @@ cosign download attestation ghcr.io/datahearth/streamline:latest \
   --predicate-type=https://spdx.dev/Document
 ```
 
-Every image push is also scanned by [grype](https://github.com/anchore/grype) at severity ≥ high, with results published to the repository's [Security tab](https://github.com/datahearth/streamline/security/code-scanning).
+Every image push is also scanned by [grype](https://github.com/anchore/grype) before it is tagged: a fixable vulnerability of severity high or above leaves the image untagged and fails the run. The report is attached to the Image workflow run and shown in its summary.
 
 ---
 

@@ -56,7 +56,7 @@ Prefix `STREAMLINE_`. **A double underscore (`__`) is the path separator; a sing
 
 Arrays (`indexers`, `download_clients`, `auth.oidc`, `quality_profiles`, `custom_formats`) can't be expressed sensibly as environment variables. Put them in the file and use [`_file` secret references](#secrets) for the sensitive parts.
 
-One non-prefixed variable is also read: **`STREAMLINE_PUBLIC_URL`** sets the canonical external base URL, used for OIDC redirect URIs and invite links. Without it, Streamline derives a base from `http://<server.host>:<server.port>`.
+One non-prefixed variable is also read: **`STREAMLINE_PUBLIC_URL`** sets the canonical external base URL: the base of invite links, the fallback that marks the session cookie `Secure` when it is `https://`, and a host trusted for same-origin and trusted-network checks. Without it, Streamline derives a base from `http://<server.host>:<server.port>`. OIDC redirect URIs do not use it: each is built from the request.
 
 ### torrent_listen_port
 
@@ -91,7 +91,7 @@ Without a forwarded port, peering is outbound-only: downloads work, uploads stay
 
 ## Secrets
 
-Every secret-bearing key has a `_file` twin that reads the value from a path instead. The file's contents are trimmed of surrounding whitespace. When both are set, **the file wins**.
+Every secret-bearing key has a `_file` twin that reads the value from a path instead. The file's contents are trimmed of surrounding whitespace. Each pair is mutually exclusive: setting both is a validation error at load.
 
 | Inline | File |
 | --- | --- |
@@ -105,6 +105,7 @@ Every secret-bearing key has a `_file` twin that reads the value from a path ins
 | `download_clients[].password` | `download_clients[].password_file` |
 | `download_clients[].api_key` | `download_clients[].api_key_file` |
 | `media_server.servers[].api_key` | `media_server.servers[].api_key_file` |
+| `smtp.password` | `smtp.password_file` |
 
 This is what makes Streamline work cleanly with Docker secrets, SOPS, sealed-secrets and Vault Agent — the config file stays in git, the values arrive as mounted files.
 
@@ -115,7 +116,7 @@ Two values are generated on first boot and **written back into your config file*
 - **`auth.session_secret`** — the JWT HMAC signing key. Regenerating it invalidates every session.
 - **`media_server.plex_client_id`** — the `X-Plex-Client-Identifier` this instance presents.
 
-A third, `auth.seed_admin.password`, is generated and persisted only when you asked for a seeded admin without supplying a password.
+`auth.seed_admin.password` is never written back: when no password is configured for the default `admin@streamline.local`, one is generated and printed once to stdout.
 
 With no writable config file (a `:ro` mount, `read_only: true`, or no file at all) the session secret falls back to an **ephemeral** value, regenerated at every start.
 
@@ -241,8 +242,8 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `auth.registration_mode` | enum | `disabled` | `disabled` \| `open` \| `invite` |
 | `auth.default_role` | enum | `member` | Role a self-registering user lands on, local or SSO. Fallback only, and `admin` is clamped to `member` — see [Authentication and SSO](Authentication-and-SSO). Renamed from `auth.oidc_default_role`, which is **no longer read at all** |
 | `auth.seed_admin.email` | string | `""` | Bootstrap admin. No-op once any user exists |
-| `auth.seed_admin.password` | string | `""` | Generated and persisted if left empty |
-| `auth.seed_admin.password_file` | path | `""` | Wins over `password` |
+| `auth.seed_admin.password` | string | `""` | Generated and printed once to stdout if left empty (default email only); never persisted |
+| `auth.seed_admin.password_file` | path | `""` | Mutually exclusive with `password` |
 | `auth.lockout.threshold` | int | `10` | Failed logins before an account locks |
 | `auth.lockout.window` | duration | `15m` | Window those failures are counted over |
 | `auth.lockout.duration` | duration | `15m` | How long the lock lasts |
@@ -267,7 +268,7 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.download_path` | path | `/downloads` | Where Streamline reads finished torrents from. Combined with the torrent name: `<download_path>/<torrent.Name>`. Two torrents with the same name share that folder; an import only takes the files its own torrent lists |
 | `library.movie_naming` | template | `{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}` | See [Quality Profiles and Naming](Quality-Profiles-and-Naming#file-naming) |
 | `library.series_naming` | template | `{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}` | |
-| `library.import_mode` | enum | `hardlink` | `hardlink` \| `copy` \| `move`. `move` also removes the torrent from its client once the import lands, since it can no longer seed. Music always copies instead of hardlinking, and instead of moving while `keep_torrent_seeding` is on: tags are written into the library copy, which must not be the file the torrent is seeding |
+| `library.import_mode` | enum | `hardlink` | `hardlink` \| `copy` \| `move`. `move` also removes the torrent from its client once the import lands, since it can no longer seed. Music copies instead of hardlinking only under `library.music_tags.seeding: copy` (with tagging on), and instead of moving while `keep_torrent_seeding` is on: tags are written into the library copy, which must not be the file the torrent is seeding |
 | `library.monitor_specials` | bool | `false` | Monitor season 0 on add/discovery. **Runtime-editable** |
 | `library.music_monitored_types` | list | `[album, ep]` | Release types an artist monitored for *all* or *future* releases monitors: any of `album`, `ep`, `single`, `live`, `compilation`, `other`. The rest are added unmonitored. Applies when a policy is applied (add, refresh, monitor change); Settings → Music can re-apply it to existing artists. **Runtime-editable** |
 | `library.probe.always_ask` | bool | `false` | Hold every import for manual approval instead of importing straight away. Needs no ffprobe. **Runtime-editable** |

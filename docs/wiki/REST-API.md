@@ -42,7 +42,7 @@ curl -H "X-API-Key: $KEY" https://streamline.example.com/api/v1/movies
 curl -H "Authorization: Bearer $JWT" https://streamline.example.com/api/v1/movies
 ```
 
-Cookies are ignored on `/api/v1` **except** for same-origin browser requests carrying `Sec-Fetch-Site: same-origin` — that's how the SPA authenticates without holding a second credential. Anything outside a browser needs a key or a token.
+Cookies are ignored on `/api/v1` **except** for same-origin browser requests (`Sec-Fetch-Site: same-origin`, or with that header absent a matching `Origin`, or for `GET`/`HEAD` a matching `Referer`) — that's how the SPA authenticates without holding a second credential. Anything outside a browser needs a key or a token.
 
 Failures return `401` with a JSON body. No redirects on the API surface.
 
@@ -349,7 +349,9 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` `POST` | `/indexers` · `/download-clients` · `/media-servers` · `/quality-profiles` · `/custom-formats` | List / create | 🔒 Admin |
+| `GET` `POST` | `/indexers` · `/download-clients` · `/media-servers` | List / create | 🔒 Admin |
+| `GET` | `/quality-profiles` · `/custom-formats` | List | Authenticated |
+| `POST` | `/quality-profiles` · `/custom-formats` | Create | 🔒 Admin |
 | `GET` `DELETE` | `/{resource}/{name}` | Fetch / delete by name | 🔒 Admin |
 | `PUT` | `/indexers/{name}` · `/download-clients/{name}` · `/quality-profiles/{name}` · `/custom-formats/{name}` | Replace | 🔒 Admin |
 | `PATCH` | `/media-servers/{name}` | Update | 🔒 Admin |

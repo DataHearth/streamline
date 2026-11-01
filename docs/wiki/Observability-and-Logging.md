@@ -217,7 +217,7 @@ Reasonable starting points:
 | Any `CRITICAL` log line | Panic or invariant violation. Always real |
 | `/health` non-200 | Process is up but unhealthy |
 | Scheduled job `status: error` | Something broke; `last_error` says what |
-| Scheduled job `status: skipped`, sustained | A precondition isn't met — usually no enabled download client, meaning nothing is being grabbed at all |
+| Scheduled job `status: skipped`, sustained | The job keeps running past its next tick: it takes longer than its interval |
 | Rising `last_duration_ms` on `drift-check` | Storage getting slow |
 | Repeated 401/403 in access logs | Someone probing, or a broken integration with a revoked key |
 | Disk usage on `data_dir` | SQLite has nowhere to grow |

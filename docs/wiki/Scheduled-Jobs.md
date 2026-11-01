@@ -117,14 +117,16 @@ Each job reports:
 | `last_error` | Failure message, when `status` is `error` |
 | `progress` | `{done, total}` while a run is in flight and the job counts its work; `null` otherwise |
 
-`progress` comes from the jobs that loop over a known list — both metadata refreshes, both missing searches, the series orphan scan and the media probe report `done` out of `total`. The movie orphan scan and `drift-check` walk without knowing the size up front, so they report `done` with `total: 0`. The Schedules page shows it as "Running 12/240" with a bar under the status, or a bare count where there is no total.
+`progress` comes from the jobs that loop over a known list — every metadata refresh and missing search, `music-tag-sync`, the series orphan scan and the media probe report `done` out of `total`. The movie orphan scan and `drift-check` walk without knowing the size up front, so they report `done` with `total: 0`. The Schedules page shows it as "Running 12/240" with a bar under the status, or a bare count where there is no total.
 
 ### Live updates
 
 `GET /api/v1/schedules/events` is a `text/event-stream` that sends the full schedule list on connect and again whenever anything changes — a run starting, reporting progress or finishing, a pause, resume or interval change. Frames are coalesced to at most four a second and a comment line every 15 seconds keeps idle connections open. The Schedules page uses it instead of polling; it falls back to a 10-second poll while the stream is down.
 
 > [!IMPORTANT]
-> `skipped` is the status worth watching for. It means the job ran but bailed out because a precondition wasn't met — most often **no enabled download client**, which causes all three acquisition jobs (`*-rss-sync`, `*-missing-search`) to give up immediately. A library that never grabs anything, with jobs reporting `skipped`, is almost always this.
+> `skipped` means a tick fired while the previous run of the same job was still going, so that tick did nothing. Sustained, it means the job takes longer than its interval.
+>
+> A missing download client does **not** show in job status: the acquisition jobs (`*-rss-sync`, `*-missing-search`) report `success` and log `…: no enabled download client` at INFO. A library that never grabs anything with no error anywhere is almost always this.
 
 A rising `last_duration_ms` on `*-missing-search` is normal as your wanted list grows; on `drift-check` it usually means slow storage.
 

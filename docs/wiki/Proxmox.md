@@ -40,7 +40,9 @@ curl -fsSL https://raw.githubusercontent.com/DataHearth/streamline/main/deploy/l
 
 It downloads the latest release for the container's architecture, checks it against the release's `checksums.txt` (and that file's cosign signature when `cosign` is installed), installs `ffmpeg`, creates a `streamline` user, writes `/etc/streamline/config.yaml` with `data_dir: /var/lib/streamline`, and starts a hardened systemd service on port **8080**.
 
-The first start creates the admin account `admin@streamline.local` with a generated password, printed **once** to the service's output, which the journal keeps:
+**The service will not stay up until the library folders point at the mount you add in [step 3](#3-mount-your-media).** The installer writes the default paths (`/media/movies`, `/media/series`), which the `streamline` user cannot create, so the journal shows `create library path /media/movies: … permission denied` and systemd keeps restarting the unit. That is expected: do step 3 now and restart.
+
+The first start that succeeds creates the admin account `admin@streamline.local` with a generated password, printed **once** to the service's output, which the journal keeps:
 
 ```bash
 journalctl -u streamline | grep 'default admin'

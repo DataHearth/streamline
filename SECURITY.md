@@ -69,9 +69,8 @@ Out of scope:
 - Vulnerabilities in Plex, Jellyfin, Emby, qBittorrent, Transmission, Deluge or
   Prowlarr themselves. Report those upstream.
 - Dependency CVEs with no demonstrated path to exploitation in Streamline. A
-  scanner's raw output is not a report; every image push is already grype-scanned
-  and results land in the
-  [Security tab](https://github.com/datahearth/streamline/security/code-scanning).
+  scanner's raw output is not a report; every image is already grype-scanned
+  before it is tagged, and a fixable high or critical finding blocks the release.
 - Missing hardening headers, cookie-flag nitpicks, or best-practice findings
   with no attack behind them.
 

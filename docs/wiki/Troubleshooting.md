@@ -235,19 +235,19 @@ Edit your config file and restart, or set `read_only: false` if you'd rather man
 
 ## OIDC changes do nothing
 
-**OIDC providers are only discovered at process start.** Adding or editing one in the UI saves it, but the provider isn't live until you restart. The Settings → SSO page says so, but it's easy to miss.
+**OIDC providers are only discovered at process start.** Adding or editing one in the UI saves it, but the provider isn't live until you restart. The Settings → Single Sign-On page says so, but it's easy to miss.
 
 Also: **a provider whose discovery fails at startup is skipped silently.** If your IdP was down, or the issuer URL is wrong, the provider simply won't appear on the login page and no error is shown in the UI. Check the startup logs.
 
 The redirect URI to register at your IdP is:
 
 ```
-<your-public-url>/auth/oidc/<provider-name>/callback
+<scheme>://<host you reached Streamline on>/auth/oidc/<provider-name>/callback
 ```
 
 using the exact `name` you gave the provider.
 
-**"Invalid parameter: redirect_uri" from the IdP.** The URI Streamline sends is built per-request from the scheme and host the request arrived on, so behind a TLS-terminating proxy it comes out as `http://…` — never matching the `https://…` you registered — unless `server.trusted_proxies` names that proxy. Same fix as [Login loops back to the login page](#login-loops-back-to-the-login-page). `STREAMLINE_PUBLIC_URL` does **not** override it; it only sets the base for invite links.
+**"Invalid parameter: redirect_uri" from the IdP.** The URI Streamline sends is built per-request from the scheme and host the request arrived on, so behind a TLS-terminating proxy it comes out as `http://…` — never matching the `https://…` you registered — unless `server.trusted_proxies` names that proxy. Same fix as [Login loops back to the login page](#login-loops-back-to-the-login-page). `STREAMLINE_PUBLIC_URL` does **not** override it.
 
 Read the failing `redirect_uri` straight out of the query string on the IdP's error page to see exactly what was sent.
 
@@ -387,7 +387,7 @@ A new version backs the database up into `<data_dir>/backups` before updating it
 
 ## Where the logs are
 
-Docker: `docker compose logs -f streamline`. systemd: `journalctl -u streamline -f`. Kubernetes: `kubectl logs -n streamline deploy/streamline -f`.
+Docker: `docker compose logs -f streamline`. systemd: `journalctl -u streamline -f`. Kubernetes: `kubectl logs -n streamline deploy/streamline-streamline -f` (`deploy/<release>-streamline`).
 
 Turn up the detail:
 

@@ -30,7 +30,7 @@ Requests originating from a CIDR in `auth.trusted_networks` are **automatically 
 
 A write (anything but `GET`/`HEAD`/`OPTIONS`) that a browser marks as coming from another site gets no grant: otherwise any web page opened on a trusted machine could post to Streamline with `trusted_role`. It falls back to ordinary authentication, so a script with a real token still works.
 
-The grant also depends on the address you typed into the browser. It applies when you reach Streamline by IP address, `localhost`, a bare machine name (`http://nas:8080`), a name under `.lan`, `.local`, `.home.arpa`, `.internal` or `.localdomain`, or the host in `STREAMLINE_PUBLIC_URL`. Any other domain name gets a login page instead. This blocks *DNS rebinding*, where a malicious site points its own domain at your server's LAN address to drive it from your browser. If you reach Streamline through a public domain, set `STREAMLINE_PUBLIC_URL` to it.
+The grant also depends on the address you typed into the browser. It applies when you reach Streamline by IP address, `localhost`, a bare machine name (`http://nas:8080`), a name under `.lan`, `.local`, `.home.arpa`, `.internal`, `.localdomain` or `.localhost`, or the host in `STREAMLINE_PUBLIC_URL`. Any other domain name gets a login page instead. This blocks *DNS rebinding*, where a malicious site points its own domain at your server's LAN address to drive it from your browser. If you reach Streamline through a public domain, set `STREAMLINE_PUBLIC_URL` to it.
 
 ```yaml
 auth:
@@ -62,11 +62,11 @@ In `full` mode, the middleware picks its credential source by path prefix. This 
 
 1. `X-API-Key: <key>`
 2. `Authorization: Bearer <jwt>`
-3. The `streamline_session` cookie — **only** when the browser sends `Sec-Fetch-Site: same-origin`
+3. The `streamline_session` cookie — **only** when the request is demonstrably same-origin: `Sec-Fetch-Site: same-origin`, or, with that header absent, a single matching `Origin`, or (`GET`/`HEAD` only) a single matching `Referer`. Any other `Sec-Fetch-Site` value is refused
 
 Failure is a `401` with a JSON body.
 
-That third case exists so the SPA can call the API without a second credential. It's gated twice: `SameSite=Lax` on the cookie already blocks cross-origin POSTs, and the `Sec-Fetch-Site` check additionally blocks cross-origin `GET`-via-`fetch`. The header being absent fails closed.
+That third case exists so the SPA can call the API without a second credential. It's gated twice: `SameSite=Lax` on the cookie already blocks cross-origin POSTs, and the same-origin check additionally blocks cross-origin `GET`-via-`fetch`. A request with none of the three headers, or one that does not match, is refused; the `Origin`/`Referer` fallback is what keeps a browser on plain-http LAN installs working, where some omit `Sec-Fetch-Site`.
 
 **Everything else** authenticates by session cookie only. Failure is a `302` to `/login?next=<escaped>`. Bearer tokens are ignored here.
 
@@ -273,12 +273,12 @@ sequenceDiagram
 Redirect URI:
 
 ```
-<STREAMLINE_PUBLIC_URL or http://server.host:server.port>/auth/oidc/<name>/callback
+<scheme>://<host you reached Streamline on>/auth/oidc/<name>/callback
 ```
 
 Register that exact URI at your IdP, using the `name` you configured.
 
-> The redirect URI is derived per-request from the host you connect on, so multi-domain SSO works without extra config — register each domain's callback at the IdP. `STREAMLINE_PUBLIC_URL` only sets the canonical base for invite links.
+> The redirect URI is derived per-request from the host you connect on, so multi-domain SSO works without extra config — register each domain's callback at the IdP. `STREAMLINE_PUBLIC_URL` does not change it.
 
 ### Account linking
 
@@ -286,7 +286,7 @@ On callback, in order:
 
 1. **Known `(provider, subject)`** → log that user in.
 2. **`email_verified` is false** → reject (`oidc_email_unverified`). Streamline will not link on an unverified email; that would let anyone who can assert an address take over the matching account.
-3. **Existing user with that (lowercased) email** → link the identity and promote `auth_method` from `local` to `both`.
+3. **Existing user with that (lowercased) email** → linked only if the provider's `email_linking` allows adopting that account (`non_admin` or `all`; the default `disabled` never does), then `auth_method` goes from `local` to `both`. Otherwise `oidc_link_not_allowed`.
 4. **New user** → apply `registration_mode`:
    - `open` → create with `auth.default_role`
    - `invite` → consume the earliest unused, unexpired invite bound to that email; no match → `oidc_no_invite`, or `auth.default_role` when the provider sets `auto_provision`
@@ -308,11 +308,12 @@ Callback failures redirect to `/login?error=<code>`:
 | `oidc_email_unverified` | IdP reported the email as unverified |
 | `oidc_registration_disabled` | New user, `registration_mode: disabled` |
 | `oidc_no_invite` | New user, `invite` mode, no matching invite, provider without `auto_provision` |
+| `oidc_link_not_allowed` | An account with that email exists, but the provider's `email_linking` does not allow adopting it |
 | `oidc_provider_error` | The IdP returned an error |
 
 ### Restart requirement
 
-**OIDC providers are only loaded at process start.** UI edits persist but don't take effect until you restart. The Settings → SSO page says so; it's the most common OIDC support question.
+**OIDC providers are only loaded at process start.** UI edits persist but don't take effect until you restart. The Settings → Single Sign-On page says so; it's the most common OIDC support question.
 
 A provider whose config entry sets `allow_admin: true` or an `email_linking` other than `disabled` can't have its issuer changed from the UI or the API (`403`). That trust was granted to the issuer you named in the file, so move it there.
 

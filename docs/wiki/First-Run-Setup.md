@@ -138,6 +138,7 @@ Set the type to `builtin` and Streamline downloads torrents itself, no external 
 download_clients:
   - name: builtin
     client_type: builtin
+    enabled: true             # a client is off unless this is set
     download_dir: /srv/data/downloads
     listen_port: 6881
     max_upload_kbps: 0        # 0 = unlimited
