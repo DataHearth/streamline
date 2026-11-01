@@ -67,8 +67,10 @@ services.streamline = {
       movie_path = "/srv/media/movies";
       series_path = "/srv/media/series";
       download_path = "/srv/downloads";
-      # music_path, ebook_path, audiobook_path: also add them to
-      # extraReadWritePaths, see "Sandboxing and media paths"
+      # only if you use music or books; granted like the paths above
+      music_path = "/srv/media/music";
+      ebook_path = "/srv/media/books";
+      audiobook_path = "/srv/media/audiobooks";
     };
     auth.seed_admin.email = "admin@example.com";
     auth.seed_admin.password_file = "/run/credentials/streamline.service/seed-password";
@@ -124,7 +126,7 @@ A double underscore is the section separator: `STREAMLINE_AUTH__SESSION_SECRET` 
 
 ## ffmpeg and hardware transcoding
 
-`ffmpeg.enable` is on by default and puts `pkgs.ffmpeg-headless` on the unit's `PATH`, with `ffmpeg.path` pointed at its `bin` directory. That covers media probing and software transcoding. See [Optional: ffmpeg](Installation#optional-ffmpeg) for what the gated features actually are.
+`ffmpeg.enable` is on by default and puts `pkgs.ffmpeg-headless` on the unit's `PATH`, with `ffmpeg.path` pointed at its `bin` directory. That covers media probing and software transcoding. See [Optional: ffmpeg and ffprobe](Installation#optional-ffmpeg-and-ffprobe) for what the gated features actually are.
 
 For VAAPI:
 
@@ -148,18 +150,10 @@ Two separate things, and both are needed:
 
 ## Sandboxing and media paths
 
-The unit runs with `ProtectSystem = "strict"`, so the only writable paths are the ones the module grants. It always grants the state dir plus the absolute `data_dir`, `library.movie_path`, `library.series_path` and `library.download_path` from your `settings`.
+The unit runs with `ProtectSystem = "strict"`, so the only writable paths are the ones the module grants. It always grants the state dir plus the absolute `data_dir`, `library.movie_path`, `library.series_path`, `library.download_path`, `library.music_path`, `library.ebook_path` and `library.audiobook_path` from your `settings`.
 
 > [!IMPORTANT]
-> The music and book roots (`library.music_path`, `library.ebook_path`, `library.audiobook_path`) are **not** in that derived set. If you use music or books, list them yourself (unless they sit under a path already granted), or every album and book import fails on a read-only filesystem:
->
-> ```nix
-> services.streamline.extraReadWritePaths = [
->   "/srv/media/music"
->   "/srv/media/books"
->   "/srv/media/audiobooks"
-> ];
-> ```
+> Set the music and book roots in `settings` if you use either library. Left unset, they keep the binary's defaults (`/data/music`, `/data/books`, `/data/audiobooks`), which the module does not grant because they sit outside the sandbox. Every album and book import would then fail on a read-only filesystem. Module versions before this change granted only the first four paths; there, list the music and book roots in `extraReadWritePaths` yourself.
 
 Add anything else the service must write to the same way:
 

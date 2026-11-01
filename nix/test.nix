@@ -35,6 +35,7 @@ let
             movie_path = "/srv/media/movies";
             series_path = "/srv/media/series";
             download_path = "/srv/downloads";
+            music_path = "/srv/media/music";
           };
           auth = {
             registration_mode = "disabled";
@@ -52,6 +53,7 @@ let
             "/srv/media/movies"
             "/srv/media/series"
             "/srv/downloads"
+            "/srv/media/music"
           ]
           (_: {
             d = {
@@ -180,7 +182,7 @@ in
         granted = declarative.succeed(
             "systemctl show streamline.service -p ReadWritePaths --value"
         )
-        for path in ["/srv/extra", "/srv/media/movies", "/srv/downloads", "/var/lib/streamline"]:
+        for path in ["/srv/extra", "/srv/media/movies", "/srv/media/music", "/srv/downloads", "/var/lib/streamline"]:
             assert path in granted, f"{path} missing from ReadWritePaths: {granted}"
 
     with subtest("hardwareAcceleration opens the render device"):

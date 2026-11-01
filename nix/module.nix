@@ -9,13 +9,19 @@ let
   common = import ./common.nix { inherit lib pkgs cfg; };
 
   # library.download_path is also where torrents land, so it needs write access
-  # alongside the two media roots. A relative path (the `./data` style default)
-  # is not something the sandbox can grant.
+  # alongside the media roots. A relative path (the `./data` style default) is
+  # not something the sandbox can grant. The music and book roots are granted
+  # only when set: their binary defaults (/data/music, …) sit outside the state
+  # dir, and an unset key must not name a directory that does not exist, which
+  # would fail the unit's mount namespace.
   derivedPaths = lib.filter (p: p != null && lib.hasPrefix "/" p) [
     cfg.settings.data_dir or null
     cfg.settings.library.movie_path or null
     cfg.settings.library.series_path or null
     cfg.settings.library.download_path or null
+    cfg.settings.library.music_path or null
+    cfg.settings.library.ebook_path or null
+    cfg.settings.library.audiobook_path or null
   ];
 in
 {
@@ -68,10 +74,11 @@ in
       example = [ "/mnt/media2" ];
       description = ''
         Extra paths the sandboxed unit may write to. The state dir and the
-        absolute `data_dir`, `library.movie_path`, `library.series_path` and
-        `library.download_path` from
-        {option}`services.streamline.settings` are always granted; this adds to
-        them rather than replacing them.
+        absolute `data_dir`, `library.movie_path`, `library.series_path`,
+        `library.download_path`, `library.music_path`, `library.ebook_path`
+        and `library.audiobook_path` from
+        {option}`services.streamline.settings` are always granted (the last
+        three only when set); this adds to them rather than replacing them.
 
         A second library root, a bind mount, or any path configured through the
         web UI rather than through `settings` belongs here — the sandbox is
