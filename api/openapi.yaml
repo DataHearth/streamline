@@ -12665,8 +12665,9 @@ components:
         output:
           type: string
           description: >-
-            "stderr", "stdout", or a file path. Rotation applies to a file
-            only.
+            "stderr", an absolute file path, or a path relative to data_dir.
+            Only "stderr" is special: "stdout" names a file of that name
+            under data_dir. Rotation applies to a file only.
         rotate:
           $ref: "#/components/schemas/LogRotateConfig"
 
@@ -12787,7 +12788,8 @@ components:
         found:
           type: boolean
           description: |
-            Whether ffprobe actually resolves in this process right now.
+            Whether ffprobe actually resolves in this process right now
+            (ffmpeg is resolved separately; see version).
             Reflects the path this process booted with, not any value from a
             PATCH that has not yet been picked up by a restart.
         resolved_path:

@@ -4302,7 +4302,7 @@ type AppLogConfig struct {
 	Format  *AppLogConfigFormat `json:"format,omitempty"`
 	Level   *AppLogConfigLevel  `json:"level,omitempty"`
 
-	// Output "stderr", "stdout", or a file path. Rotation applies to a file only.
+	// Output "stderr", an absolute file path, or a path relative to data_dir. Only "stderr" is special: "stdout" names a file of that name under data_dir. Rotation applies to a file only.
 	Output *string `json:"output,omitempty"`
 
 	// Rotate Applies only when the matching output is a file path. 0 disables that bound.
@@ -5325,7 +5325,8 @@ type FFmpegConfigPatch struct {
 type FFmpegConfigView struct {
 	Enabled bool `json:"enabled"`
 
-	// Found Whether ffprobe actually resolves in this process right now.
+	// Found Whether ffprobe actually resolves in this process right now
+	// (ffmpeg is resolved separately; see version).
 	// Reflects the path this process booted with, not any value from a
 	// PATCH that has not yet been picked up by a restart.
 	Found *bool `json:"found,omitempty"`
