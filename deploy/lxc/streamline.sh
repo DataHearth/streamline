@@ -105,30 +105,30 @@ place_binary() {
   mv -f "${BIN}.new" "$BIN"
 }
 
-# backup_database copies the database aside while the service is stopped, so an
-# update whose migration goes wrong can be undone. The five newest are kept.
+# backup_database snapshots the database while the service is stopped, so an
+# update whose migration goes wrong can be undone. It runs `streamline backup`
+# from the NEW binary in $1, before that binary is installed: the command never
+# migrates, takes a consistent snapshot through its own connection, and files
+# it the way the app files its own (<data_dir>/backups, 0700/0600, named
+# streamline-manual-<schema>-<time>.db) under backup.retention.manual. That is
+# what `streamline backup list` and `streamline restore` read. It runs as the
+# service user from the unit's WorkingDirectory, so a relative data_dir
+# resolves as the service resolves it and no root-owned -wal/-shm file is left
+# beside the database.
 backup_database() {
-  local from=$1 data_dir db stamp dest
+  local work=$1 data_dir out
   data_dir=$(awk '/^data_dir:/ {print $2}' "$CONFIG" 2>/dev/null | tr -d "\"'")
   data_dir=${data_dir:-$DATA_DIR}
-  # A relative data_dir resolves against the unit's WorkingDirectory.
   [[ $data_dir == /* ]] || data_dir="${DATA_DIR}/${data_dir#./}"
-  db="${data_dir}/streamline.db"
-  [[ -f $db ]] || return 0
+  [[ -f ${data_dir}/streamline.db ]] || return 0
 
-  stamp=$(date -u +%Y%m%dT%H%M%SZ)
-  dest="${data_dir}/backups/streamline-${from:-unknown}-${stamp}.db"
-  install -d -m 0750 -o streamline -g streamline "${data_dir}/backups"
-  local suffix
-  for suffix in "" -wal -shm; do
-    [[ -f ${db}${suffix} ]] && cp -p "${db}${suffix}" "${dest}${suffix}"
-  done
-  info "Backed up the database to ${dest}"
-  # Oldest first; everything but the five newest .db files and their -wal/-shm.
-  find "${data_dir}/backups" -maxdepth 1 -name 'streamline-*.db' -printf '%T@ %p\n' |
-    sort -n | head -n -5 | cut -d' ' -f2- | while read -r old; do
-    rm -f "$old" "${old}-wal" "${old}-shm"
-  done
+  # mktemp -d is root-only; the service user has to reach the binary.
+  chmod 0755 "$work"
+  if ! out=$(cd "$DATA_DIR" && runuser -u streamline -- "${work}/streamline" backup --config "$CONFIG"); then
+    systemctl start streamline
+    die "could not back up the database; the update was abandoned and the running version restarted"
+  fi
+  info "Backed up the database to ${out}"
 }
 
 write_unit() {
@@ -258,7 +258,7 @@ do_update() {
 
   info "Updating Streamline ${current:-unknown} -> ${version}"
   systemctl stop streamline
-  backup_database "$current"
+  backup_database "$WORK"
   place_binary "$WORK"
   # The unit is ours: refresh it so hardening changes reach old installs.
   write_unit

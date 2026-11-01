@@ -61,13 +61,17 @@ function update_script() {
     DATA_DIR="${DATA_DIR:-/var/lib/streamline}"
     [[ "$DATA_DIR" == /* ]] || DATA_DIR="/var/lib/streamline/${DATA_DIR#./}"
     if [[ -f "${DATA_DIR}/streamline.db" ]]; then
-      BACKUP="${DATA_DIR}/backups/streamline-$(cat ~/.streamline 2>/dev/null || echo unknown)-$(date -u +%Y%m%dT%H%M%SZ).db"
-      install -d -m 0750 -o streamline -g streamline "${DATA_DIR}/backups"
-      for suffix in "" -wal -shm; do
-        if [[ -f "${DATA_DIR}/streamline.db${suffix}" ]]; then
-          cp -p "${DATA_DIR}/streamline.db${suffix}" "${BACKUP}${suffix}"
-        fi
-      done
+      # The new binary's own `backup` command, run as the service user before
+      # the binary is installed: it never migrates, and it files the snapshot
+      # the way the app files its own (0700/0600, its naming and retention),
+      # so `streamline backup list` and `streamline restore` see it.
+      chmod 0755 "$TMP_DIR"
+      if ! BACKUP=$(cd /var/lib/streamline && runuser -u streamline -- "${TMP_DIR}/streamline" backup --config /etc/streamline/config.yaml); then
+        systemctl start streamline
+        rm -rf "$TMP_DIR"
+        msg_error "Could not back up the database; the update was abandoned"
+        exit 1
+      fi
       msg_ok "Backed up Database to ${BACKUP}"
     else
       msg_ok "No Database to back up"
