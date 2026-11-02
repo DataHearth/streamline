@@ -21,6 +21,22 @@ name: Renovate pins
 #
 # Renovate writes the workflow copies rather than this job because a push made
 # with the Actions token may not touch .github/workflows/; renovate's app may.
+#
+# The push goes out under a GitHub App when one is configured. A push made with
+# the Actions token does start CI on the new commit, but every run it creates
+# waits at "approval required" until someone approves it — so each derived pin
+# left its PR without checks until the owner came by. An App installation token
+# is an ordinary actor and CI starts by itself. renovate-chart.yaml pushes the
+# same way. Setup, once:
+#
+#   1. Create a GitHub App on the owning account (no webhook), repository
+#      permission Contents: Read and write, and nothing else — never Workflows,
+#      for the reason above. Install it on this repository only.
+#   2. Repository variable PINS_APP_CLIENT_ID = the App's Client ID.
+#   3. Repository secret PINS_APP_PRIVATE_KEY = a private key generated for it.
+#
+# Without the variable both jobs fall back to the Actions token and behave as
+# they did before: the commit lands, CI waits for an approval.
 on:
   pull_request:
     branches: [main]
@@ -46,10 +62,20 @@ jobs:
     if: startsWith(github.head_ref, 'renovate/')
     runs-on: ubuntu-latest
     steps:
+      - name: Push token
+        id: app
+        if: vars.PINS_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.PINS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.PINS_APP_PRIVATE_KEY }}
+          permission-contents: write
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.head_ref }}
+          token: ${{ steps.app.outputs.token || github.token }}
 
       - name: Install Nix
         uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # 31.11.3

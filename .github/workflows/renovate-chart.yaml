@@ -1,0 +1,110 @@
+name: Renovate chart
+
+# CI's lint-helm refuses a chart change whose deploy/helm/streamline/Chart.yaml
+# version did not move ("touch the chart, bump the chart"). Renovate updates
+# the observability subchart's dependencies, or an image in values.yaml, and
+# cannot bump the parent: its `bumpVersion` only rewrites the Chart.yaml it is
+# editing, which for a subchart dependency is the subchart's own. So every
+# "update helm charts" PR landed red until someone pushed the bump by hand.
+#
+# This job is that bump, on renovate's own branches: the patch of main's chart
+# version, once. It is a no-op when the version already differs from main's —
+# its own earlier push, or a renovate rebase that kept it — and renovate drops
+# the commit whenever it recreates the branch (renovate.json lists the author
+# in gitIgnoredAuthors), so the next run bumps again from the new base. The
+# release still picks the real number: `task release:chart VERSION=…` rewrites
+# it against the diff, which is why this is only ever a patch.
+#
+# It is separate from renovate-pins.yaml because that one installs Nix and
+# builds two fixed-output derivations on every run; a helm-only PR needs none
+# of it. The two never race on a branch in practice (no renovate group touches
+# both path sets), and the push below rebases once if they ever do.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - deploy/helm/**
+      - deploy/grafana/dashboards/**
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    if: startsWith(github.head_ref, 'renovate/')
+    runs-on: ubuntu-latest
+    steps:
+      # A push made with the Actions token does not start CI the normal way:
+      # the runs it creates sit at "approval required" until someone clicks.
+      # An App installation token is an ordinary actor, so CI runs on the
+      # bumped commit by itself. Without the App configured this falls back to
+      # the Actions token and still pushes — CI then waits for approval, as
+      # before. Setup: renovate-pins.yaml's header.
+      - name: Push token
+        id: app
+        if: vars.PINS_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.PINS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.PINS_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ steps.app.outputs.token || github.token }}
+
+      - name: Bump the chart patch
+        id: bump
+        run: |
+          set -euo pipefail
+
+          chart=deploy/helm/streamline/Chart.yaml
+          git fetch --depth=1 origin "${GITHUB_BASE_REF}"
+          read_version() { sed -n 's/^version: *//p'; }
+          head_v=$(read_version < "$chart")
+          base_v=$(git show "origin/${GITHUB_BASE_REF}:${chart}" | read_version)
+
+          if [ "$head_v" != "$base_v" ]; then
+            echo "Chart version already moved: ${base_v} -> ${head_v}"
+            echo "version=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! [[ "$base_v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error file=${chart}::version ${base_v} is not plain X.Y.Z — bump it by hand"
+            exit 1
+          fi
+          next="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+          sed -i "s/^version: .*/version: ${next}/" "$chart"
+          echo "Chart version ${base_v} -> ${next}"
+          echo "version=${next}" >> "$GITHUB_OUTPUT"
+
+      # `chore:` without the helm scope on purpose: cliff.chart.toml groups
+      # chore(helm) and chore(deps) under Changed, and renovate's own commit is
+      # already that entry — this one would only repeat it.
+      - name: Commit
+        if: steps.bump.outputs.version != ''
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: bump the chart to ${VERSION} for the renovate update"
+          if ! git push; then
+            git pull --rebase origin "${GITHUB_HEAD_REF}"
+            git push
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Renovate chart" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "${{ steps.bump.outputs.version }}" ] && [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Bumped the chart to ${{ steps.bump.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ job.status }}" = "success" ]; then
+            echo "⏭️ Chart version already bumped" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Could not bump the chart" >> "$GITHUB_STEP_SUMMARY"
+          fi
