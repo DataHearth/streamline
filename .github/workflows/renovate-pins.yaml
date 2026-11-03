@@ -61,6 +61,9 @@ jobs:
     # throws in nix/{go,node,pnpm}.nix name the missing line or hash.
     if: startsWith(github.head_ref, 'renovate/')
     runs-on: ubuntu-latest
+    # A healthy run takes under five minutes. Without a ceiling, a builder
+    # stalled on its disk held all three renovate PRs for 45+ minutes.
+    timeout-minutes: 20
     steps:
       - name: Push token
         id: app
@@ -80,10 +83,13 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # 31.11.3
 
-      - name: Remote builder
+      # No ssh-key on purpose: every build here only fetches dependencies,
+      # which wants the runner's network and disk, and the source-built Go
+      # goModules needs comes from the builder's attic cache instead. On the
+      # builder, `go mod vendor` into its Ceph-backed store took 40+ minutes.
+      - name: Builder cache
         uses: ./.github/actions/nix-builder
         with:
-          ssh-key: ${{ secrets.NIX_BUILDER_SSH_KEY }}
           attic-token: ${{ secrets.ATTIC_PULL_TOKEN }}
 
       # Runs before anything writes to the tree: `builtins.getFlake` on a dirty
@@ -207,29 +213,24 @@ jobs:
           # it to its own line is what keeps the two independent.
           fake="sha256-$(printf 'A%.0s' $(seq 43))="
 
-          remote=()
-          if [ -n "${NIX_BUILDER_STORE:-}" ]; then
-            remote=(--store "$NIX_BUILDER_STORE" --eval-store auto)
-          fi
-
           derive() {
-            local attr=$1 anchor=$2 log got
+            local attr=$1 anchor=$2 log="$RUNNER_TEMP/derive-$1.log" got
             sed -i "s|^\( *\)${anchor} = \"sha256-[^\"]*\";|\1${anchor} = \"${fake}\";|" nix/package.nix
 
-            if log=$(nix build --no-link "${remote[@]}" ".#streamline.${attr}" 2>&1); then
+            echo "::group::nix build .#streamline.${attr}"
+            if nix build --no-link -L ".#streamline.${attr}" 2>&1 | tee "$log"; then
+              echo "::endgroup::"
               echo "::error::${attr} built against the placeholder hash — nothing to derive"
               exit 1
             fi
+            echo "::endgroup::"
 
             # `|| true` is load-bearing: a build that failed for any other
             # reason has no `got:` line, and under `set -e -o pipefail` the
-            # empty grep would abort here — failing the job with the build log
-            # still in $log and never printed, which reads like the step itself
-            # is broken.
-            got=$(printf '%s\n' "$log" | grep -oE 'got: +sha256-[A-Za-z0-9+/=]+' | tail -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+' || true)
+            # empty grep would abort here instead of reaching the error below.
+            got=$(grep -oE 'got: +sha256-[A-Za-z0-9+/=]+' "$log" | tail -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+' || true)
             if [ -z "$got" ]; then
-              printf '%s\n' "$log" >&2
-              echo "::error::${attr} failed for a reason other than a hash mismatch"
+              echo "::error::${attr} failed for a reason other than a hash mismatch (log in the group above)"
               exit 1
             fi
 
