@@ -37,6 +37,34 @@ var _ = Describe("RemoveMediaFile", Label("unit", "library"), func() {
 		Expect(root).To(BeADirectory())
 	})
 
+	It("takes the episode's trickplay folder, so the season folder prunes", func() {
+		dir := filepath.Join(root, "Bodies (2023)", "Season 01")
+		media := touch(filepath.Join(dir, "Bodies (2023) - S01E01 [1080p].mkv"))
+		touch(
+			filepath.Join(
+				dir,
+				"Bodies (2023) - S01E01 [1080p].trickplay",
+				"320 - 10x10",
+				"0.jpg",
+			),
+		)
+
+		Expect(RemoveMediaFile(context.Background(), media, root)).To(Succeed())
+
+		Expect(filepath.Join(root, "Bodies (2023)")).NotTo(BeADirectory())
+		Expect(root).To(BeADirectory())
+	})
+
+	It("keeps any other folder named after the episode", func() {
+		dir := filepath.Join(root, "Movie (2001)")
+		media := touch(filepath.Join(dir, "Movie (2001).mkv"))
+		extras := touch(filepath.Join(dir, "Movie (2001)-extras", "behind.mkv"))
+
+		Expect(RemoveMediaFile(context.Background(), media, root)).To(Succeed())
+
+		Expect(extras).To(BeAnExistingFile())
+	})
+
 	It("refuses a path outside the root and deletes nothing", func() {
 		outside := GinkgoT().TempDir()
 		media := touch(filepath.Join(outside, "Escaped.mkv"))

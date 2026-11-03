@@ -15,7 +15,9 @@ import (
 
 // RemoveMediaFile deletes a media file together with its sidecars — the
 // non-media files beside it that share its basename, such as `<stem>.nfo`,
-// `<stem>.en.srt` or `<stem>-thumb.jpg` — then prunes the directories the
+// `<stem>.en.srt` or `<stem>-thumb.jpg`, and Jellyfin's `<stem>.trickplay`
+// folder, the only directory it removes, since that removal is recursive and
+// a left-behind one keeps the folder alive past the prune — then prunes the directories the
 // deletion left empty, stopping below root so a library root survives even
 // when it holds nothing else.
 //
@@ -61,10 +63,14 @@ func RemoveMediaFile(ctx context.Context, path, root string) error {
 		return fmt.Errorf("read %s: %w", dir, err)
 	case err == nil:
 		for _, e := range entries {
-			if e.IsDir() || !isSidecar(e.Name(), stem) {
+			remove := os.Remove
+			switch {
+			case e.IsDir() && strings.EqualFold(e.Name(), stem+".trickplay"):
+				remove = os.RemoveAll
+			case e.IsDir() || !isSidecar(e.Name(), stem):
 				continue
 			}
-			if err := os.Remove(filepath.Join(dir, e.Name())); err != nil &&
+			if err := remove(filepath.Join(dir, e.Name())); err != nil &&
 				!errors.Is(err, fs.ErrNotExist) {
 				return fmt.Errorf("remove %s: %w", e.Name(), err)
 			}
