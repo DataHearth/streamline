@@ -102,6 +102,34 @@ var _ = Describe("TVDB provider", Label("unit", "metadata"), func() {
 	})
 })
 
+var _ = DescribeTable(
+	"stripDisambiguationYear",
+	Label("unit", "metadata"),
+	func(title string, year uint16, want string) {
+		Expect(stripDisambiguationYear(title, year)).To(Equal(want))
+	},
+	Entry("drops the year TVDB added", "Bodies (2023)", uint16(2023), "Bodies"),
+	Entry(
+		"keeps a year that is not the series'",
+		"Bodies (2023)",
+		uint16(2024),
+		"Bodies (2023)",
+	),
+	Entry("leaves a title without one alone", "Bodies", uint16(2023), "Bodies"),
+	Entry(
+		"never empties a title that is only the year",
+		"(2023)",
+		uint16(2023),
+		"(2023)",
+	),
+	Entry(
+		"keeps the title when the year is unknown",
+		"Bodies (2023)",
+		uint16(0),
+		"Bodies (2023)",
+	),
+)
+
 var _ = Describe("TVDB series cast", Label("unit", "metadata"), func() {
 	It("carries TVDB's people id as TVDBID, leaving TMDBID unset", func() {
 		srv := httptest.NewServer(

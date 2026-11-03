@@ -315,11 +315,12 @@ func (t *TVDB) searchSeries(ctx context.Context, query string) ([]TVResult, erro
 		for _, v := range r.Translations {
 			aliases = append(aliases, v)
 		}
+		year := atou16(r.Year)
 		out = append(out, TVResult{
 			TVDBID:        atou32(r.TVDBID),
-			Title:         title,
-			OriginalTitle: r.Name,
-			Year:          atou16(r.Year),
+			Title:         stripDisambiguationYear(title, year),
+			OriginalTitle: stripDisambiguationYear(r.Name, year),
+			Year:          year,
 			Network:       r.Network,
 			Overview:      overview,
 			PosterPath:    r.ImageURL,
@@ -327,6 +328,22 @@ func (t *TVDB) searchSeries(ctx context.Context, query string) ([]TVResult, erro
 		})
 	}
 	return out, nil
+}
+
+// stripDisambiguationYear drops the " (YYYY)" TVDB appends to the name of a
+// series that shares it with another ("Bodies (2023)"). Year already carries
+// it, so `{title} ({year})` printed it twice, and Jellyfin found nothing
+// searching the doubled folder name. A different year is part of the title
+// itself and stays.
+func stripDisambiguationYear(title string, year uint16) string {
+	if year == 0 {
+		return title
+	}
+	t, ok := strings.CutSuffix(title, fmt.Sprintf(" (%d)", year))
+	if !ok || strings.TrimSpace(t) == "" {
+		return title
+	}
+	return t
 }
 
 func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error) {
@@ -441,6 +458,8 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 		}
 		t.translateSeasons(ctx, d.Seasons, seasonIDs)
 	}
+	d.Title = stripDisambiguationYear(d.Title, d.Year)
+	d.OriginalTitle = stripDisambiguationYear(d.OriginalTitle, d.Year)
 
 	eps, err := t.episodes(ctx, tvdbID, t.language)
 	if err != nil {
