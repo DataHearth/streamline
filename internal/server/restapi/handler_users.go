@@ -147,7 +147,7 @@ func (s *Server) GetUser(
 }
 
 // UpdateUser applies a partial patch to the user (role, display_name,
-// auth_method). Admin-only. Demoting the last admin is rejected with 409
+// auth_method, subsonic). Admin-only. Demoting the last admin is rejected with 409
 // last_admin.
 func (s *Server) UpdateUser(
 	ctx context.Context,
@@ -173,6 +173,17 @@ func (s *Server) UpdateUser(
 	if req.Body.AuthMethod != nil {
 		a := string(*req.Body.AuthMethod)
 		patch.AuthMethod = &a
+	}
+	if sa := req.Body.Subsonic; sa != nil {
+		access, ok := subsonicAccessPatch(sa)
+		if !ok {
+			return UpdateUser422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(
+					"subsonic.max_bit_rate must be 0 or between 32 and 320",
+				),
+			}, nil
+		}
+		patch.Subsonic = access
 	}
 	switch err := s.auth.UpdateUser(ctx, req.Uid, patch); {
 	case errors.Is(err, auth.ErrUserNotFound):
@@ -339,4 +350,26 @@ func (s *Server) UnlockUser(
 		return nil, err
 	}
 	return UnlockUser204Response{}, nil
+}
+
+// subsonicAccessPatch converts the request's Subsonic permissions; ok is false
+// for a bit rate cap outside 0 and 32-320 (the range a transcode can honour).
+func subsonicAccessPatch(sa *SubsonicAccessPatch) (db.SubsonicAccessParams, bool) {
+	out := db.SubsonicAccessParams{
+		CanStream:          sa.CanStream,
+		CanDownload:        sa.CanDownload,
+		CanManagePlaylists: sa.CanManagePlaylists,
+		CanShare:           sa.CanShare,
+		CanRate:            sa.CanRate,
+		CanChangePassword:  sa.CanChangePassword,
+	}
+	if sa.MaxBitRate != nil {
+		kbps := *sa.MaxBitRate
+		if kbps != 0 && (kbps < 32 || kbps > 320) {
+			return db.SubsonicAccessParams{}, false
+		}
+		n := uint16(kbps) //nolint:gosec // bounded above
+		out.MaxBitRate = &n
+	}
+	return out, true
 }

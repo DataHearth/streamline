@@ -159,9 +159,11 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 		store.EXPECT().UpdateMediaFilePath(
 			mock.Anything, uint32(10), mock.AnythingOfType("string"),
 		).Return(nil).Once()
-		refreshed := make(chan struct{})
-		ms.EXPECT().RefreshAll(mock.Anything, "movie", tmp).
-			Run(func(context.Context, string, string) { close(refreshed) }).
+		refreshed := make(chan []string, 1)
+		ms.EXPECT().RefreshAll(mock.Anything, "movie", tmp, mock.Anything).
+			Run(func(_ context.Context, _, _ string, paths ...string) {
+				refreshed <- paths
+			}).
 			Return(nil).Once()
 
 		plan, err := svc.Apply(ctx, 1)
@@ -171,7 +173,10 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 		Expect(os.IsNotExist(statErr)).To(BeTrue())
 		_, statErr = os.Stat(plan.Operations[0].To)
 		Expect(statErr).NotTo(HaveOccurred())
-		Eventually(refreshed).Should(BeClosed())
+		// Both ends: the folder the file left as well as the one it reached.
+		Eventually(refreshed).Should(Receive(Equal(
+			[]string{src, plan.Operations[0].To},
+		)))
 	})
 
 	It("prunes the directory the file left behind", func() {

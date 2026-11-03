@@ -57,6 +57,8 @@ type Artist struct {
 	LastRefreshedAt *time.Time `json:"last_refreshed_at,omitempty"`
 	// DetailsFetchedAt holds the value of the "details_fetched_at" field.
 	DetailsFetchedAt *time.Time `json:"details_fetched_at,omitempty"`
+	// ArtSidecarHash holds the value of the "art_sidecar_hash" field.
+	ArtSidecarHash string `json:"art_sidecar_hash,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ArtistQuery when eager-loading is set.
 	Edges        ArtistEdges `json:"edges"`
@@ -71,9 +73,15 @@ type ArtistEdges struct {
 	Members []*ArtistMember `json:"members,omitempty"`
 	// DownloadRecords holds the value of the download_records edge.
 	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
+	// Annotations holds the value of the annotations edge.
+	Annotations []*MusicAnnotation `json:"annotations,omitempty"`
+	// Events holds the value of the events edge.
+	Events []*MediaEvent `json:"events,omitempty"`
+	// CoAlbums holds the value of the co_albums edge.
+	CoAlbums []*Album `json:"co_albums,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [6]bool
 }
 
 // AlbumsOrErr returns the Albums value or an error if the edge
@@ -103,6 +111,33 @@ func (e ArtistEdges) DownloadRecordsOrErr() ([]*DownloadRecord, error) {
 	return nil, &NotLoadedError{edge: "download_records"}
 }
 
+// AnnotationsOrErr returns the Annotations value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArtistEdges) AnnotationsOrErr() ([]*MusicAnnotation, error) {
+	if e.loadedTypes[3] {
+		return e.Annotations, nil
+	}
+	return nil, &NotLoadedError{edge: "annotations"}
+}
+
+// EventsOrErr returns the Events value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArtistEdges) EventsOrErr() ([]*MediaEvent, error) {
+	if e.loadedTypes[4] {
+		return e.Events, nil
+	}
+	return nil, &NotLoadedError{edge: "events"}
+}
+
+// CoAlbumsOrErr returns the CoAlbums value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArtistEdges) CoAlbumsOrErr() ([]*Album, error) {
+	if e.loadedTypes[5] {
+		return e.CoAlbums, nil
+	}
+	return nil, &NotLoadedError{edge: "co_albums"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Artist) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -110,7 +145,7 @@ func (*Artist) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case artist.FieldID, artist.FieldSince, artist.FieldDeezerID:
 			values[i] = new(sql.NullInt64)
-		case artist.FieldMbid, artist.FieldName, artist.FieldSortName, artist.FieldOverview, artist.FieldOverviewSource, artist.FieldOverviewFr, artist.FieldOverviewSourceFr, artist.FieldMonitor, artist.FieldType, artist.FieldOrigin, artist.FieldGenre, artist.FieldWikidataID, artist.FieldPath, artist.FieldQualityProfile:
+		case artist.FieldMbid, artist.FieldName, artist.FieldSortName, artist.FieldOverview, artist.FieldOverviewSource, artist.FieldOverviewFr, artist.FieldOverviewSourceFr, artist.FieldMonitor, artist.FieldType, artist.FieldOrigin, artist.FieldGenre, artist.FieldWikidataID, artist.FieldPath, artist.FieldQualityProfile, artist.FieldArtSidecarHash:
 			values[i] = new(sql.NullString)
 		case artist.FieldCreateTime, artist.FieldUpdateTime, artist.FieldLastRefreshedAt, artist.FieldDetailsFetchedAt:
 			values[i] = new(sql.NullTime)
@@ -257,6 +292,12 @@ func (_m *Artist) assignValues(columns []string, values []any) error {
 				_m.DetailsFetchedAt = new(time.Time)
 				*_m.DetailsFetchedAt = value.Time
 			}
+		case artist.FieldArtSidecarHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field art_sidecar_hash", values[i])
+			} else if value.Valid {
+				_m.ArtSidecarHash = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -283,6 +324,21 @@ func (_m *Artist) QueryMembers() *ArtistMemberQuery {
 // QueryDownloadRecords queries the "download_records" edge of the Artist entity.
 func (_m *Artist) QueryDownloadRecords() *DownloadRecordQuery {
 	return NewArtistClient(_m.config).QueryDownloadRecords(_m)
+}
+
+// QueryAnnotations queries the "annotations" edge of the Artist entity.
+func (_m *Artist) QueryAnnotations() *MusicAnnotationQuery {
+	return NewArtistClient(_m.config).QueryAnnotations(_m)
+}
+
+// QueryEvents queries the "events" edge of the Artist entity.
+func (_m *Artist) QueryEvents() *MediaEventQuery {
+	return NewArtistClient(_m.config).QueryEvents(_m)
+}
+
+// QueryCoAlbums queries the "co_albums" edge of the Artist entity.
+func (_m *Artist) QueryCoAlbums() *AlbumQuery {
+	return NewArtistClient(_m.config).QueryCoAlbums(_m)
 }
 
 // Update returns a builder for updating this Artist.
@@ -371,6 +427,9 @@ func (_m *Artist) String() string {
 		builder.WriteString("details_fetched_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("art_sidecar_hash=")
+	builder.WriteString(_m.ArtSidecarHash)
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -2,7 +2,9 @@ package db
 
 import (
 	"context"
+	"time"
 
+	"github.com/datahearth/streamline/ent/apikey"
 	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/role"
 
@@ -44,6 +46,81 @@ var _ = Describe("API key store", Label("integration", "db"), func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(key.Name).To(Equal("ci"))
+		})
+
+		It("defaults to a full key with no expiry", func() {
+			key, err := store.CreateAPIKey(ctx, CreateAPIKeyParams{
+				Name: "ci", KeyHash: "h0", OwnerID: userID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(key.Scope).To(Equal(apikey.ScopeFull))
+			Expect(key.ExpiresAt).To(BeNil())
+		})
+
+		It("stores the scope and expiry it is given", func() {
+			at := time.Now().Add(90 * 24 * time.Hour).Truncate(time.Second)
+			key, err := store.CreateAPIKey(ctx, CreateAPIKeyParams{
+				Name: "ha", KeyHash: "h3", OwnerID: userID,
+				Scope: apikey.ScopeRead, ExpiresAt: &at,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			got, err := store.FindAPIKeyByHash(ctx, "h3")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.ID).To(Equal(key.ID))
+			Expect(got.Scope).To(Equal(apikey.ScopeRead))
+			Expect(got.ExpiresAt).NotTo(BeNil())
+			Expect(*got.ExpiresAt).To(BeTemporally("==", at))
+		})
+	})
+
+	Describe("CountAPIKeysByUser", func() {
+		It("leaves expired keys out of the quota", func() {
+			past := time.Now().Add(-time.Hour)
+			future := time.Now().Add(time.Hour)
+			for h, exp := range map[string]*time.Time{
+				"c1": nil, "c2": &future, "c3": &past,
+			} {
+				_, err := store.CreateAPIKey(ctx, CreateAPIKeyParams{
+					Name: h, KeyHash: h, OwnerID: userID, ExpiresAt: exp,
+				})
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			n, err := store.CountAPIKeysByUser(ctx, userID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(2))
+		})
+	})
+
+	Describe("PurgeExpiredAPIKeys", func() {
+		It("deletes keys expired before the cutoff and nothing else", func() {
+			longAgo := time.Now().Add(-30 * 24 * time.Hour)
+			recent := time.Now().Add(-time.Hour)
+			future := time.Now().Add(time.Hour)
+			for h, exp := range map[string]*time.Time{
+				"p-old": &longAgo, "p-recent": &recent,
+				"p-future": &future, "p-never": nil,
+			} {
+				_, err := store.CreateAPIKey(ctx, CreateAPIKeyParams{
+					Name: h, KeyHash: h, OwnerID: userID, ExpiresAt: exp,
+				})
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			n, err := store.PurgeExpiredAPIKeys(
+				ctx, time.Now().Add(-7*24*time.Hour),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			keys, err := store.ListAPIKeysByUser(ctx, userID)
+			Expect(err).NotTo(HaveOccurred())
+			names := make([]string, 0, len(keys))
+			for _, k := range keys {
+				names = append(names, k.Name)
+			}
+			Expect(names).To(ConsistOf("p-recent", "p-future", "p-never"))
 		})
 	})
 

@@ -11,7 +11,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/bookmark"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/track"
 )
@@ -61,6 +63,20 @@ func (_c *TrackCreate) SetMbid(v string) *TrackCreate {
 func (_c *TrackCreate) SetNillableMbid(v *string) *TrackCreate {
 	if v != nil {
 		_c.SetMbid(*v)
+	}
+	return _c
+}
+
+// SetReleaseTrackMbid sets the "release_track_mbid" field.
+func (_c *TrackCreate) SetReleaseTrackMbid(v string) *TrackCreate {
+	_c.mutation.SetReleaseTrackMbid(v)
+	return _c
+}
+
+// SetNillableReleaseTrackMbid sets the "release_track_mbid" field if the given value is not nil.
+func (_c *TrackCreate) SetNillableReleaseTrackMbid(v *string) *TrackCreate {
+	if v != nil {
+		_c.SetReleaseTrackMbid(*v)
 	}
 	return _c
 }
@@ -119,6 +135,26 @@ func (_c *TrackCreate) SetNillableBonus(v *bool) *TrackCreate {
 	return _c
 }
 
+// SetArtistCredit sets the "artist_credit" field.
+func (_c *TrackCreate) SetArtistCredit(v string) *TrackCreate {
+	_c.mutation.SetArtistCredit(v)
+	return _c
+}
+
+// SetNillableArtistCredit sets the "artist_credit" field if the given value is not nil.
+func (_c *TrackCreate) SetNillableArtistCredit(v *string) *TrackCreate {
+	if v != nil {
+		_c.SetArtistCredit(*v)
+	}
+	return _c
+}
+
+// SetTagOverrides sets the "tag_overrides" field.
+func (_c *TrackCreate) SetTagOverrides(v map[string][]string) *TrackCreate {
+	_c.mutation.SetTagOverrides(v)
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *TrackCreate) SetID(v uint32) *TrackCreate {
 	_c.mutation.SetID(v)
@@ -164,6 +200,36 @@ func (_c *TrackCreate) AddCredits(v ...*MusicCredit) *TrackCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddCreditIDs(ids...)
+}
+
+// AddAnnotationIDs adds the "annotations" edge to the MusicAnnotation entity by IDs.
+func (_c *TrackCreate) AddAnnotationIDs(ids ...uint32) *TrackCreate {
+	_c.mutation.AddAnnotationIDs(ids...)
+	return _c
+}
+
+// AddAnnotations adds the "annotations" edges to the MusicAnnotation entity.
+func (_c *TrackCreate) AddAnnotations(v ...*MusicAnnotation) *TrackCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAnnotationIDs(ids...)
+}
+
+// AddBookmarkIDs adds the "bookmarks" edge to the Bookmark entity by IDs.
+func (_c *TrackCreate) AddBookmarkIDs(ids ...uint32) *TrackCreate {
+	_c.mutation.AddBookmarkIDs(ids...)
+	return _c
+}
+
+// AddBookmarks adds the "bookmarks" edges to the Bookmark entity.
+func (_c *TrackCreate) AddBookmarks(v ...*Bookmark) *TrackCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddBookmarkIDs(ids...)
 }
 
 // Mutation returns the TrackMutation object of the builder.
@@ -295,6 +361,10 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 		_spec.SetField(track.FieldMbid, field.TypeString, value)
 		_node.Mbid = value
 	}
+	if value, ok := _c.mutation.ReleaseTrackMbid(); ok {
+		_spec.SetField(track.FieldReleaseTrackMbid, field.TypeString, value)
+		_node.ReleaseTrackMbid = value
+	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(track.FieldTitle, field.TypeString, value)
 		_node.Title = value
@@ -314,6 +384,14 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Bonus(); ok {
 		_spec.SetField(track.FieldBonus, field.TypeBool, value)
 		_node.Bonus = value
+	}
+	if value, ok := _c.mutation.ArtistCredit(); ok {
+		_spec.SetField(track.FieldArtistCredit, field.TypeString, value)
+		_node.ArtistCredit = value
+	}
+	if value, ok := _c.mutation.TagOverrides(); ok {
+		_spec.SetField(track.FieldTagOverrides, field.TypeJSON, value)
+		_node.TagOverrides = value
 	}
 	if nodes := _c.mutation.AlbumIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -357,6 +435,38 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.AnnotationsTable,
+			Columns: []string{track.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.BookmarksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.BookmarksTable,
+			Columns: []string{track.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

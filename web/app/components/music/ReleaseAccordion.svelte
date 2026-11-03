@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronRight, Radar, Search } from "@lucide/svelte";
+	import { ChevronRight, Radar, Search, Tags } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -10,7 +10,7 @@
 	import ReleaseMark from "./ReleaseMark.svelte";
 	import Tracklist from "./Tracklist.svelte";
 	import ReleaseCredits from "./ReleaseCredits.svelte";
-	import { qualityNote, releaseFacts, releaseGroups, releaseLine, releasePill, releaseTypeLabel, type Release, type Track } from "@lib/music-books";
+	import { peopleList, qualityNote, releaseFacts, releaseGroups, releaseLine, releasePill, releaseTypeLabel, sharedWith, type Release, type Track } from "@lib/music-books";
 	import { albumPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -20,6 +20,7 @@
 	// beside it, the way the book page's pinned bar carries it.
 	let {
 		releases,
+		artistId,
 		openId,
 		onToggle,
 		canEdit = false,
@@ -29,8 +30,11 @@
 		monitorPending = false,
 		onManualSearchTrack,
 		onDeleteTrack,
+		onTags,
 	}: {
 		releases: Release[];
+		// The artist whose page the releases are on.
+		artistId: number;
 		openId: number | undefined;
 		onToggle: (id: number) => void;
 		canEdit?: boolean;
@@ -43,6 +47,7 @@
 		// releases of its album.
 		onManualSearchTrack?: (r: Release) => void;
 		onDeleteTrack?: (t: Track) => void;
+		onTags?: (r: Release) => void;
 	} = $props();
 
 	let groups = $derived(releaseGroups(releases));
@@ -69,6 +74,9 @@
 			</div>
 			<div class="min-w-0 flex-1">
 				<p class="truncate text-[14px] font-medium text-fg">{r.title}</p>
+				{#if sharedWith(r, artistId).length}
+					<p class="truncate text-[12px] text-fg-muted">{i18n.music_shared_with({ names: peopleList(sharedWith(r, artistId)) })}</p>
+				{/if}
 				<p class="truncate font-mono text-[11px] text-fg-subtle">
 					{up
 						? [releaseTypeLabel(r.type), formatDateShort(r.release_date)].filter(Boolean).join(" · ")
@@ -118,6 +126,17 @@
 							</button>
 						{/if}
 						<MonitorToggle monitored={r.monitored} onToggle={() => onMonitor(r)} pending={monitorPending} />
+						{#if onTags && r.tracks_have > 0}
+							<button
+								type="button"
+								onclick={() => onTags(r)}
+								aria-label={i18n.music_tags_panel_button()}
+								title={i18n.music_tags_panel_button()}
+								class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg-muted transition active:bg-surface"
+							>
+								<Tags size={16} aria-hidden="true" />
+							</button>
+						{/if}
 						{#if up}
 							<p class="self-center text-[12.5px] leading-snug text-fg-muted">
 								{r.monitored ? i18n.music_upcoming_monitored() : i18n.music_upcoming_unmonitored()}
@@ -130,6 +149,7 @@
 						<Tracklist
 							tracks={r.tracks}
 							release={r}
+							{artistId}
 							qualityNote={qualityNote(r)}
 							compact
 							markMissing={r.status === "wanted" && r.tracks_have > 0}

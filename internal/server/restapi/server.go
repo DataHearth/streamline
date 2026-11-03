@@ -43,6 +43,7 @@ type Server struct {
 	indexers        indexer.Manager
 	downloads       download.Downloader
 	mediaServers    mediaserver.Manager
+	refreshStatus   mediaserver.RefreshStatuses
 	scheduler       scheduler.Controller
 	bulkImports     bulkimport.Manager
 	missingSearcher *rss.MissingSearcher
@@ -69,6 +70,8 @@ type Server struct {
 	// transcoder is nil in any composition that wired no worker; the
 	// /transcoding/* handlers read that as the feature being off.
 	transcoder *transcoding.Worker
+	// seeding caches the import review's torrent listing.
+	seeding seedingCache
 }
 
 // authRejecter is a provider that can report its credentials being refused.
@@ -76,12 +79,15 @@ type authRejecter interface{ AuthRejected() bool }
 
 // Deps is the dependency set required by restapi handlers.
 type Deps struct {
-	Auth            auth.Manager
-	Movies          movie.Manager
-	Metadata        metadata.Provider
-	Indexers        indexer.Manager
-	Downloads       download.Downloader
-	MediaServers    mediaserver.Manager
+	Auth         auth.Manager
+	Movies       movie.Manager
+	Metadata     metadata.Provider
+	Indexers     indexer.Manager
+	Downloads    download.Downloader
+	MediaServers mediaserver.Manager
+	// RefreshStatus feeds each media server's last_refresh; nil leaves it
+	// out.
+	RefreshStatus   mediaserver.RefreshStatuses
 	Scheduler       scheduler.Controller
 	BulkImports     bulkimport.Manager
 	MissingSearcher *rss.MissingSearcher
@@ -117,6 +123,7 @@ func New(d Deps) *Server {
 		indexers:        d.Indexers,
 		downloads:       d.Downloads,
 		mediaServers:    d.MediaServers,
+		refreshStatus:   d.RefreshStatus,
 		scheduler:       d.Scheduler,
 		bulkImports:     d.BulkImports,
 		missingSearcher: d.MissingSearcher,

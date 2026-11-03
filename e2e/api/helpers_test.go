@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -187,6 +189,31 @@ func createLibraryMovie() uint32 {
 		))
 	})
 	return movie.Id
+}
+
+// registerFakeQBittorrent points streamline at a fakes.QBittorrent for the
+// duration of one spec. Config-backed resources are global, so it is removed
+// again rather than left for whichever spec runs next.
+func registerFakeQBittorrent(fakeURL string) {
+	GinkgoHelper()
+	u, err := url.Parse(fakeURL)
+	Expect(err).NotTo(HaveOccurred())
+	port, err := strconv.ParseUint(u.Port(), 10, 16)
+	Expect(err).NotTo(HaveOccurred())
+
+	resp := post("/api/v1/download-clients", adminAuth, map[string]any{
+		"name": "e2e-qbit", "client_type": "qbittorrent",
+		"host": u.Hostname(), "port": port,
+		"auth_method": "password",
+		"username":    fakes.QBUsername, "password": fakes.QBPassword,
+		"enabled": true,
+	})
+	defer resp.Body.Close()
+	Expect(resp.StatusCode).To(Equal(http.StatusCreated), bodyText(resp))
+	DeferCleanup(func() {
+		del("/api/v1/download-clients/e2e-qbit", adminAuth, nil).
+			Body.Close()
+	})
 }
 
 // bootstrapIdentities logs the seed admin in, provisions a request_only user,

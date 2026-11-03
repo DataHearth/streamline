@@ -145,6 +145,11 @@ func DetailsFetchedAt(v time.Time) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldDetailsFetchedAt, v))
 }
 
+// ArtSidecarHash applies equality check predicate on the "art_sidecar_hash" field. It's identical to ArtSidecarHashEQ.
+func ArtSidecarHash(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldArtSidecarHash, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldCreateTime, v))
@@ -1355,6 +1360,81 @@ func DetailsFetchedAtNotNil() predicate.Artist {
 	return predicate.Artist(sql.FieldNotNull(FieldDetailsFetchedAt))
 }
 
+// ArtSidecarHashEQ applies the EQ predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashNEQ applies the NEQ predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashNEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashIn applies the In predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldArtSidecarHash, vs...))
+}
+
+// ArtSidecarHashNotIn applies the NotIn predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashNotIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldArtSidecarHash, vs...))
+}
+
+// ArtSidecarHashGT applies the GT predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashGT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGT(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashGTE applies the GTE predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashGTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGTE(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashLT applies the LT predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashLT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLT(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashLTE applies the LTE predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashLTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLTE(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashContains applies the Contains predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashContains(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContains(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashHasPrefix applies the HasPrefix predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashHasPrefix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasPrefix(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashHasSuffix applies the HasSuffix predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashHasSuffix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasSuffix(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashIsNil applies the IsNil predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldArtSidecarHash))
+}
+
+// ArtSidecarHashNotNil applies the NotNil predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldArtSidecarHash))
+}
+
+// ArtSidecarHashEqualFold applies the EqualFold predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashEqualFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEqualFold(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashContainsFold applies the ContainsFold predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashContainsFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContainsFold(FieldArtSidecarHash, v))
+}
+
 // HasAlbums applies the HasEdge predicate on the "albums" edge.
 func HasAlbums() predicate.Artist {
 	return predicate.Artist(func(s *sql.Selector) {
@@ -1416,6 +1496,75 @@ func HasDownloadRecords() predicate.Artist {
 func HasDownloadRecordsWith(preds ...predicate.DownloadRecord) predicate.Artist {
 	return predicate.Artist(func(s *sql.Selector) {
 		step := newDownloadRecordsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAnnotations applies the HasEdge predicate on the "annotations" edge.
+func HasAnnotations() predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AnnotationsTable, AnnotationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAnnotationsWith applies the HasEdge predicate on the "annotations" edge with a given conditions (other predicates).
+func HasAnnotationsWith(preds ...predicate.MusicAnnotation) predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := newAnnotationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasEvents applies the HasEdge predicate on the "events" edge.
+func HasEvents() predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEventsWith applies the HasEdge predicate on the "events" edge with a given conditions (other predicates).
+func HasEventsWith(preds ...predicate.MediaEvent) predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := newEventsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCoAlbums applies the HasEdge predicate on the "co_albums" edge.
+func HasCoAlbums() predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, CoAlbumsTable, CoAlbumsPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCoAlbumsWith applies the HasEdge predicate on the "co_albums" edge with a given conditions (other predicates).
+func HasCoAlbumsWith(preds ...predicate.Album) predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := newCoAlbumsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

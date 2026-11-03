@@ -38,6 +38,20 @@ type Source struct {
 	Name     string
 }
 
+// over fills the fields src leaves empty from old.
+func (src Source) over(old Source) Source {
+	if src.URL == "" {
+		src.URL = old.URL
+	}
+	if src.DeezerID == 0 {
+		src.DeezerID = old.DeezerID
+	}
+	if src.Name == "" {
+		src.Name = old.Name
+	}
+	return src
+}
+
 type sourceKey struct {
 	kind Kind
 	key  string
@@ -66,7 +80,9 @@ func NewSources() *Sources {
 }
 
 // Remember records where the art of (kind, key) lives; an empty Source is
-// ignored.
+// ignored. A field the new Source leaves empty keeps what a live entry already
+// held, so a search listing an artist by name does not forget the Deezer link
+// its detail lookup remembered.
 func (s *Sources) Remember(kind Kind, key string, src Source) {
 	if src == (Source{}) {
 		return
@@ -75,6 +91,9 @@ func (s *Sources) Remember(kind Kind, key string, src Source) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if el, ok := s.items[k]; ok {
+		if old := el.Value.(*sourceEntry); time.Since(old.at) <= sourceTTL {
+			src = src.over(old.src)
+		}
 		el.Value = &sourceEntry{k: k, src: src, at: time.Now()}
 		s.order.MoveToBack(el)
 		return

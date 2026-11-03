@@ -88,6 +88,14 @@ var (
 	ErrClientFull = errors.New(
 		"download client holds its maximum number of torrents",
 	)
+	// ErrNoSpace is returned by grab when the release would not fit on the
+	// download client's disk beside what its active downloads still have to
+	// write, keeping download.space_reserve_gb free.
+	ErrNoSpace = errors.New("not enough space on the download disk")
+	// ErrCueImage is returned by an album grab whose .torrent lists disc
+	// images split by a CUE sheet, which the album importer refuses: grabbing it
+	// would only download a release that cannot be imported.
+	ErrCueImage = errors.New(library.CueImageReason)
 )
 
 // downloadSavePath joins a client-supplied torrent name onto the configured
@@ -229,6 +237,7 @@ type CompletedDownload struct {
 type Checker interface {
 	CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 	ReconcileStrandedMedia(ctx context.Context) error
+	RejectCueImages(ctx context.Context) error
 }
 
 // SelectionResolver is the consumer-facing surface for the file_selection
@@ -281,6 +290,7 @@ type Downloader interface {
 	) (*ent.DownloadRecord, error)
 	CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 	ReconcileStrandedMedia(ctx context.Context) error
+	RejectCueImages(ctx context.Context) error
 	RemoveTorrent(
 		ctx context.Context,
 		downloadClientName string,
@@ -301,9 +311,18 @@ type Downloader interface {
 		torrentHash string,
 	) (TorrentStatus, error)
 	Queue(ctx context.Context) (QueueSnapshot, error)
+	// SeedingTorrents is every torrent the enabled clients still list, which
+	// the music tag writer must not write through.
+	SeedingTorrents(ctx context.Context) SeedingSet
 	CancelQueueItem(ctx context.Context, recordID uint32) error
 	PauseQueueItem(ctx context.Context, recordID uint32) error
 	ResumeQueueItem(ctx context.Context, recordID uint32) error
+	// ReleaseFiles lists the files of a release's .torrent without grabbing
+	// it; ErrFileListUnavailable for a magnet.
+	ReleaseFiles(
+		ctx context.Context,
+		result indexer.SearchResult,
+	) ([]ReleaseFile, error)
 }
 
 const (
@@ -361,6 +380,9 @@ type download struct {
 	gaugesOnce sync.Once
 
 	grabbing hashLocks
+
+	cueMu      sync.Mutex
+	cueChecked map[uint32]struct{}
 }
 
 // hashLocks serialises grabs of one info hash. The in-flight lookup and the
@@ -436,12 +458,15 @@ type QueueEntry struct {
 	Episode        *ent.Episode
 	Indexer        string
 	DownloadClient string
-	Size           int64
-	Progress       float64
-	DownloadSpeed  int64
-	ETA            int64
-	FailureReason  string
-	CreatedAt      time.Time
+	// TorrentHash is the record's info hash in DownloadClient, empty when it
+	// has none; the activity page links it to the torrent's own details.
+	TorrentHash   string
+	Size          int64
+	Progress      float64
+	DownloadSpeed int64
+	ETA           int64
+	FailureReason string
+	CreatedAt     time.Time
 	// SelectionState mirrors download_record.selection_state.
 	SelectionState string
 	// SelectedFiles is the kept indexes when SelectionState is "applied"; nil
@@ -524,10 +549,41 @@ func (d *download) refreshQueue(ctx context.Context) ([]QueueEntry, error) {
 		})
 	}
 	wg.Wait()
-	sort.SliceStable(entries, func(a, b int) bool {
-		return entries[a].CreatedAt.After(entries[b].CreatedAt)
-	})
+	sortQueue(entries)
 	return entries, nil
+}
+
+// sortQueue orders the queue by how close an entry is to the library: an
+// import first, then what waits on a person (held, error), then downloads,
+// then paused ones. Within a rank the furthest along comes first, then the
+// newest. Newest first alone left a download about to finish anywhere in
+// the list.
+func sortQueue(entries []QueueEntry) {
+	sort.SliceStable(entries, func(a, b int) bool {
+		ea, eb := entries[a], entries[b]
+		if ra, rb := queueRank(ea.Status), queueRank(eb.Status); ra != rb {
+			return ra < rb
+		}
+		if ea.Progress != eb.Progress {
+			return ea.Progress > eb.Progress
+		}
+		return ea.CreatedAt.After(eb.CreatedAt)
+	})
+}
+
+func queueRank(status string) int {
+	switch status {
+	case "importing":
+		return 0
+	case "held":
+		return 1
+	case "error":
+		return 2
+	case "downloading", "stalled":
+		return 3
+	default:
+		return 4
+	}
 }
 
 func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
@@ -564,6 +620,7 @@ func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 	}
 	e.Indexer = rec.IndexerName
 	e.DownloadClient = rec.DownloadClientName
+	e.TorrentHash = rec.TorrentHash
 	return e
 }
 
@@ -571,6 +628,8 @@ func liveQueueStatus(s TorrentStatus) string {
 	switch s {
 	case StatusPaused:
 		return "paused"
+	case StatusStalled:
+		return "stalled"
 	case StatusError:
 		return "error"
 	default:
@@ -579,9 +638,14 @@ func liveQueueStatus(s TorrentStatus) string {
 }
 
 // CancelQueueItem removes the torrent (and its partial files) from the
-// client, deletes the record, and reverts the movie to "wanted" when it has
-// no file. A NotFound record propagates so the handler can 404, a held one
-// yields ErrRecordHeld so it can 409.
+// client, deletes the record, and reverts what it was for at once: the movie
+// to "wanted" when it has no file, and every episode, album and book slot the
+// record left "downloading" through ReconcileStrandedMedia — the same pass
+// PurgeRecordForHash runs, since a cancel issued through streamline is as
+// final as a removal from the Torrents page. Without it those waited for the
+// next download-monitor tick, reading as downloading with nothing in the
+// queue and skipped by every search. A NotFound record propagates so the
+// handler can 404, a held one yields ErrRecordHeld so it can 409.
 func (d *download) CancelQueueItem(ctx context.Context, recordID uint32) error {
 	rec, err := d.db.FindActiveDownloadRecordByID(ctx, recordID)
 	if err != nil {
@@ -609,15 +673,52 @@ func (d *download) CancelQueueItem(ctx context.Context, recordID uint32) error {
 		if err := d.db.RevertMovieToWantedIfNoFile(ctx, m.ID); err != nil {
 			return fmt.Errorf("revert movie: %w", err)
 		}
+	}
+	// The record is gone by now, so the cancel happened whatever this says: a
+	// failure is logged, not returned, and the monitor's own pass retries it.
+	if err := d.ReconcileStrandedMedia(ctx); err != nil {
+		slog.WarnContext(
+			ctx,
+			"cancel: reverting the record's media failed, the monitor retries",
+			"download_record.id",
+			rec.ID,
+			"error",
+			err,
+		)
+	}
+	if scope, id, ok := cancelledOwner(rec); ok {
+		p := map[string]any{"release_title": rec.Title}
+		if rec.BookKind != "" {
+			p["book_kind"] = string(rec.BookKind)
+		}
 		if err := events.Record(
-			ctx, nil, events.TypeDownloadCancelled, events.ScopeMovie, m.ID,
-			map[string]any{"release_title": rec.Title},
+			ctx, nil, events.TypeDownloadCancelled, scope, id, p,
 		); err != nil {
 			slog.WarnContext(ctx, "record download cancellation event failed",
-				"movie.id", m.ID, "error", err)
+				"download_record.id", rec.ID, "error", err)
 		}
 	}
 	return nil
+}
+
+// cancelledOwner names what a cancelled record's activity row is filed
+// against, in the order the download-record hooks resolve owners: the movie,
+// the anchor episode, the album, the book, then the artist of a discography
+// pack. An adoption proposal matching nothing has none.
+func cancelledOwner(rec *ent.DownloadRecord) (events.Scope, uint32, bool) {
+	switch e := rec.Edges; {
+	case e.Movie != nil:
+		return events.ScopeMovie, e.Movie.ID, true
+	case e.AnchorEpisode != nil:
+		return events.ScopeEpisode, e.AnchorEpisode.ID, true
+	case e.Album != nil:
+		return events.ScopeAlbum, e.Album.ID, true
+	case e.Book != nil:
+		return events.ScopeBook, e.Book.ID, true
+	case e.Artist != nil:
+		return events.ScopeArtist, e.Artist.ID, true
+	}
+	return 0, 0, false
 }
 
 func (d *download) PauseQueueItem(ctx context.Context, recordID uint32) error {
@@ -881,6 +982,23 @@ func (d *download) grabWith(
 		defer d.grabbing.lock(localHash)()
 	}
 
+	// A magnet's files are unknown until a client fetches them; the monitor's
+	// RejectCueImages pass catches those once they are.
+	if albumID != 0 && len(src.Bytes) > 0 {
+		if files, ferr := decodeTorrentFiles(src.Bytes); ferr == nil {
+			paths := make([]string, len(files))
+			for i, f := range files {
+				paths[i] = f.Path
+			}
+			if d.cueImageFor(ctx, albumID, paths) {
+				outcome = "cue_image"
+				return nil, otelx.RecordSpanError(
+					span, fmt.Errorf("%w: %s", ErrCueImage, result.Title),
+				)
+			}
+		}
+	}
+
 	// spec §4.6: a re-grab landing on a hash already tracked by a live record
 	// means "I also want these episodes", not "add a duplicate torrent" —
 	// checked before any client contact, and before Flow A's own decode runs,
@@ -1028,6 +1146,18 @@ func (d *download) grabWith(
 			src.Selective = true
 			selectivePending = true
 		}
+	}
+
+	size := result.Size
+	if selection != nil {
+		size = selection.bytes
+	}
+	if err := checkFreeSpace(ctx, client, size); err != nil {
+		outcome = "no_space"
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("%w: %s", err, result.Title),
+		)
 	}
 
 	hash, err := client.AddTorrent(ctx, src)
@@ -1675,24 +1805,30 @@ func (d *download) ReconcileStrandedMedia(ctx context.Context) error {
 // failed records past failedRecordRetention. Both deletes run independently;
 // one failing does not block the other. Errors are joined.
 //
-// A completed record whose torrent the builtin engine still holds is kept
-// however old it is: it is RemoveSeedCompleteTorrents' only permission to
-// reap that torrent, and a seed_time at or past the retention window would
-// otherwise lose the record first and strand the files for good.
+// A record whose torrent an enabled client still lists is kept however old it
+// is. Without it the next adoption pass finds a managed torrent no record
+// claims and files it as a proposal: a music or book torrent as
+// "unidentified", for a title the library may already hold. A completed
+// builtin record is also RemoveSeedCompleteTorrents' only permission to reap
+// its torrent. When a client cannot be listed nothing is purged, since any of
+// its torrents could be one of the records.
 func (d *download) PurgeOldRecords(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "download.purge_old_records")
 	defer span.End()
 
-	now := time.Now()
-	var compN int
-	keep, compErr := d.builtinTorrentHashes(ctx)
-	if compErr == nil {
-		compN, compErr = d.db.DeleteCompletedDownloadRecordsBefore(
-			ctx, now.Add(-completedRecordRetention), keep,
-		)
+	live := d.SeedingTorrents(ctx)
+	if !live.Complete {
+		return otelx.RecordSpanError(span, errors.New(
+			"a download client could not be listed; old records kept",
+		))
 	}
+	keep := live.Hashes()
+	now := time.Now()
+	compN, compErr := d.db.DeleteCompletedDownloadRecordsBefore(
+		ctx, now.Add(-completedRecordRetention), keep,
+	)
 	failN, failErr := d.db.DeleteFailedDownloadRecordsBefore(
-		ctx, now.Add(-failedRecordRetention),
+		ctx, now.Add(-failedRecordRetention), keep,
 	)
 
 	span.SetAttributes(attribute.Int("cleanup.deleted_count", compN+failN))
@@ -1700,27 +1836,7 @@ func (d *download) PurgeOldRecords(ctx context.Context) error {
 		slog.InfoContext(ctx, "cleanup deleted download records",
 			"completed", compN, "failed", failN)
 	}
-	return errors.Join(compErr, failErr)
-}
-
-func (d *download) builtinTorrentHashes(ctx context.Context) ([]string, error) {
-	dc, ok := config.BuiltinDownloadClient()
-	if !ok {
-		return nil, nil
-	}
-	client, err := d.buildClient(dc)
-	if err != nil {
-		return nil, fmt.Errorf("build builtin client: %w", err)
-	}
-	torrents, err := client.ListTorrents(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list builtin torrents: %w", err)
-	}
-	hashes := make([]string, len(torrents))
-	for i, t := range torrents {
-		hashes[i] = t.Hash
-	}
-	return hashes, nil
+	return otelx.RecordSpanError(span, errors.Join(compErr, failErr))
 }
 
 // PurgeOrphanedTorrents deletes "downloading" records whose torrent is no

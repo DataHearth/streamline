@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/bookcontribution"
 	"github.com/datahearth/streamline/ent/bookedition"
+	"github.com/datahearth/streamline/ent/bookmark"
 	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -33,13 +34,18 @@ import (
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/oidcidentity"
 	"github.com/datahearth/streamline/ent/person"
+	"github.com/datahearth/streamline/ent/playlist"
+	"github.com/datahearth/streamline/ent/playqueue"
+	"github.com/datahearth/streamline/ent/radiostation"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/scheduledjob"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
+	"github.com/datahearth/streamline/ent/share"
 	"github.com/datahearth/streamline/ent/torrentsession"
 	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/transcodejob"
@@ -114,6 +120,7 @@ func checkColumn(t, c string) error {
 			bookcontribution.Table: bookcontribution.ValidColumn,
 			bookedition.Table:      bookedition.ValidColumn,
 			bookseries.Table:       bookseries.ValidColumn,
+			bookmark.Table:         bookmark.ValidColumn,
 			credit.Table:           credit.ValidColumn,
 			downloadrecord.Table:   downloadrecord.ValidColumn,
 			episode.Table:          episode.ValidColumn,
@@ -126,13 +133,18 @@ func checkColumn(t, c string) error {
 			mediaevent.Table:       mediaevent.ValidColumn,
 			mediafile.Table:        mediafile.ValidColumn,
 			movie.Table:            movie.ValidColumn,
+			musicannotation.Table:  musicannotation.ValidColumn,
 			musiccredit.Table:      musiccredit.ValidColumn,
 			oidcidentity.Table:     oidcidentity.ValidColumn,
 			person.Table:           person.ValidColumn,
+			playqueue.Table:        playqueue.ValidColumn,
+			playlist.Table:         playlist.ValidColumn,
+			radiostation.Table:     radiostation.ValidColumn,
 			request.Table:          request.ValidColumn,
 			scheduledjob.Table:     scheduledjob.ValidColumn,
 			season.Table:           season.ValidColumn,
 			session.Table:          session.ValidColumn,
+			share.Table:            share.ValidColumn,
 			tvshow.Table:           tvshow.ValidColumn,
 			torrentsession.Table:   torrentsession.ValidColumn,
 			track.Table:            track.ValidColumn,

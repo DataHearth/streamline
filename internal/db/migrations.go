@@ -6,6 +6,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"time"
 
@@ -24,7 +25,15 @@ var migrationsFS embed.FS
 // (a WAL checkpoint stalling behind a busy disk) was indistinguishable from a
 // hung boot, since nothing said migrations had started, finished, or moved the
 // schema version at all.
-func runMigrations(ctx context.Context, db *sql.DB) error {
+//
+// snapshot, when non-nil, runs after the version is read and before anything
+// is applied, only when there is something to apply to a database that already
+// holds a schema; an error from it aborts the run with nothing applied.
+func runMigrations(
+	ctx context.Context,
+	db *sql.DB,
+	snapshot func(ctx context.Context, from uint) error,
+) error {
 	src, err := iofs.New(migrationsFS, "migrations")
 	if err != nil {
 		return fmt.Errorf("migration source: %w", err)
@@ -38,9 +47,20 @@ func runMigrations(ctx context.Context, db *sql.DB) error {
 		return fmt.Errorf("migrate init: %w", err)
 	}
 
-	before, _, _ := m.Version()
+	before, dirty, verr := m.Version()
 	slog.InfoContext(ctx, "applying database migrations",
 		"schema.version_before", before)
+
+	// A fresh database (no version yet) holds nothing worth copying, and a
+	// dirty one is refused by Up below anyway — the snapshot taken before the
+	// migration that left it dirty is the one to restore.
+	if snapshot != nil && verr == nil && !dirty {
+		if _, err := src.Next(before); err == nil {
+			if err := snapshot(ctx, before); err != nil {
+				return err
+			}
+		}
+	}
 
 	// Atlas opens every table-rebuild migration with `PRAGMA foreign_keys =
 	// off`, and golang-migrate runs each file inside a transaction, where that
@@ -95,4 +115,28 @@ func runMigrations(ctx context.Context, db *sql.DB) error {
 		"schema.dirty", dirty,
 		"duration_ms", elapsed.Milliseconds())
 	return nil
+}
+
+// LatestSchemaVersion is the newest migration this binary carries: the highest
+// schema version it can boot from. A restore refuses a backup above it.
+func LatestSchemaVersion() (uint, error) {
+	src, err := iofs.New(migrationsFS, "migrations")
+	if err != nil {
+		return 0, fmt.Errorf("migration source: %w", err)
+	}
+	defer src.Close()
+	v, err := src.First()
+	if err != nil {
+		return 0, fmt.Errorf("first migration: %w", err)
+	}
+	for {
+		next, err := src.Next(v)
+		if errors.Is(err, fs.ErrNotExist) {
+			return v, nil
+		}
+		if err != nil {
+			return 0, fmt.Errorf("next migration after %d: %w", v, err)
+		}
+		v = next
+	}
 }

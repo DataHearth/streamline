@@ -5,11 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
-	"regexp"
 	"slices"
-	"strconv"
-	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -20,59 +16,6 @@ import (
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 )
-
-var (
-	dirYearRe  = regexp.MustCompile(`\b((?:19|20)\d{2})\b`)
-	dirGroupRe = regexp.MustCompile(`\[[^\]]*\]|\([^)]*\)`)
-	dirDiscRe  = regexp.MustCompile(`(?i)^(?:cd|dis[ck])\s*\d+$`)
-	dirDelimRe = regexp.MustCompile(`[._]+`)
-)
-
-const dirPartsSep = " - "
-
-// albumDir is the folder a file's album lives in: a disc subfolder (CD1,
-// Disc 2) belongs to the folder holding the discs.
-func albumDir(file string) string {
-	dir := filepath.Dir(file)
-	if dirDiscRe.MatchString(strings.TrimSpace(filepath.Base(dir))) {
-		return filepath.Dir(dir)
-	}
-	return dir
-}
-
-// matchPackDir finds the linked album a pack folder holds, by its folded title
-// and, when the folder names a four-digit year, by that year. No provider is
-// asked. An ambiguous folder (two linked albums of one title and no year to
-// tell them apart) matches nothing.
-func matchPackDir(dir string, albums []*ent.Album) *ent.Album {
-	base := filepath.Base(dir)
-	var year int
-	if m := dirYearRe.FindString(base); m != "" {
-		year, _ = strconv.Atoi(m)
-	}
-	clean := strings.TrimSpace(dirGroupRe.ReplaceAllString(
-		dirDelimRe.ReplaceAllString(base, " "), " "))
-	candidates := append([]string{clean}, strings.Split(clean, dirPartsSep)...)
-
-	var matches []*ent.Album
-	for _, a := range albums {
-		for _, c := range candidates {
-			if library.TitleMatchesStrict(strings.TrimSpace(c), a.Title) {
-				matches = append(matches, a)
-				break
-			}
-		}
-	}
-	if len(matches) > 1 && year != 0 {
-		matches = slices.DeleteFunc(matches, func(a *ent.Album) bool {
-			return a.ReleaseDate == nil || a.ReleaseDate.Year() != year
-		})
-	}
-	if len(matches) != 1 {
-		return nil
-	}
-	return matches[0]
-}
 
 // importPackRecord imports a completed discography pack: its audio files are
 // grouped by folder, each folder is matched to one of the albums the record
@@ -97,9 +40,10 @@ func (w *Worker) importPackRecord(
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("list pack files: %w", err))
 	}
+	files = w.sourceFilter(ctx, rec).Filter(files)
 	byDir := map[string][]string{}
 	for _, f := range files {
-		d := albumDir(f)
+		d := library.PackAlbumDir(f)
 		byDir[d] = append(byDir[d], f)
 	}
 	dirs := make([]string, 0, len(byDir))
@@ -109,9 +53,12 @@ func (w *Worker) importPackRecord(
 	slices.Sort(dirs)
 
 	matched := map[uint32]struct{}{}
-	var errs []error
+	var (
+		errs    []error
+		changed []string
+	)
 	for _, d := range dirs {
-		alb := matchPackDir(d, linked)
+		alb := library.MatchPackDir(d, linked)
 		if alb == nil {
 			slog.InfoContext(ctx, "pack import: folder matched no linked album",
 				"dir", d, "record.id", rec.ID)
@@ -121,7 +68,10 @@ func (w *Worker) importPackRecord(
 			continue
 		}
 		matched[alb.ID] = struct{}{}
-		held, err := w.importAlbumFiles(ctx, span, rec, alb, byDir[d], libCfg, true)
+		placed, held, err := w.importAlbumFiles(
+			ctx, span, rec, alb, byDir[d], libCfg, true,
+		)
+		changed = append(changed, placed...)
 		switch {
 		case held:
 			return nil
@@ -158,6 +108,6 @@ func (w *Worker) importPackRecord(
 
 	libCfg.ImportMode = albumImportMode(libCfg)
 	w.cleanupTorrent(ctx, rec, libCfg)
-	w.refreshMediaServers(ctx, mediaserver.KindMusic, libCfg.MusicPath)
+	w.refreshMediaServers(ctx, mediaserver.KindMusic, libCfg.MusicPath, changed...)
 	return nil
 }

@@ -12,10 +12,15 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/apikey"
+	"github.com/datahearth/streamline/ent/bookmark"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/oidcidentity"
+	"github.com/datahearth/streamline/ent/playlist"
+	"github.com/datahearth/streamline/ent/playqueue"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/session"
+	"github.com/datahearth/streamline/ent/share"
 	"github.com/datahearth/streamline/ent/user"
 )
 
@@ -221,6 +226,111 @@ func (_u *UserUpdate) ClearSubsonicLastClient() *UserUpdate {
 	return _u
 }
 
+// SetSubsonicCanStream sets the "subsonic_can_stream" field.
+func (_u *UserUpdate) SetSubsonicCanStream(v bool) *UserUpdate {
+	_u.mutation.SetSubsonicCanStream(v)
+	return _u
+}
+
+// SetNillableSubsonicCanStream sets the "subsonic_can_stream" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicCanStream(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicCanStream(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanDownload sets the "subsonic_can_download" field.
+func (_u *UserUpdate) SetSubsonicCanDownload(v bool) *UserUpdate {
+	_u.mutation.SetSubsonicCanDownload(v)
+	return _u
+}
+
+// SetNillableSubsonicCanDownload sets the "subsonic_can_download" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicCanDownload(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicCanDownload(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field.
+func (_u *UserUpdate) SetSubsonicCanManagePlaylists(v bool) *UserUpdate {
+	_u.mutation.SetSubsonicCanManagePlaylists(v)
+	return _u
+}
+
+// SetNillableSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicCanManagePlaylists(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicCanManagePlaylists(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanShare sets the "subsonic_can_share" field.
+func (_u *UserUpdate) SetSubsonicCanShare(v bool) *UserUpdate {
+	_u.mutation.SetSubsonicCanShare(v)
+	return _u
+}
+
+// SetNillableSubsonicCanShare sets the "subsonic_can_share" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicCanShare(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicCanShare(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanRate sets the "subsonic_can_rate" field.
+func (_u *UserUpdate) SetSubsonicCanRate(v bool) *UserUpdate {
+	_u.mutation.SetSubsonicCanRate(v)
+	return _u
+}
+
+// SetNillableSubsonicCanRate sets the "subsonic_can_rate" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicCanRate(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicCanRate(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanChangePassword sets the "subsonic_can_change_password" field.
+func (_u *UserUpdate) SetSubsonicCanChangePassword(v bool) *UserUpdate {
+	_u.mutation.SetSubsonicCanChangePassword(v)
+	return _u
+}
+
+// SetNillableSubsonicCanChangePassword sets the "subsonic_can_change_password" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicCanChangePassword(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicCanChangePassword(*v)
+	}
+	return _u
+}
+
+// SetSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field.
+func (_u *UserUpdate) SetSubsonicMaxBitRate(v uint16) *UserUpdate {
+	_u.mutation.ResetSubsonicMaxBitRate()
+	_u.mutation.SetSubsonicMaxBitRate(v)
+	return _u
+}
+
+// SetNillableSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicMaxBitRate(v *uint16) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicMaxBitRate(*v)
+	}
+	return _u
+}
+
+// AddSubsonicMaxBitRate adds value to the "subsonic_max_bit_rate" field.
+func (_u *UserUpdate) AddSubsonicMaxBitRate(v int16) *UserUpdate {
+	_u.mutation.AddSubsonicMaxBitRate(v)
+	return _u
+}
+
 // SetOpdsToken sets the "opds_token" field.
 func (_u *UserUpdate) SetOpdsToken(v string) *UserUpdate {
 	_u.mutation.SetOpdsToken(v)
@@ -422,6 +532,85 @@ func (_u *UserUpdate) AddSessions(v ...*Session) *UserUpdate {
 	return _u.AddSessionIDs(ids...)
 }
 
+// AddMusicAnnotationIDs adds the "music_annotations" edge to the MusicAnnotation entity by IDs.
+func (_u *UserUpdate) AddMusicAnnotationIDs(ids ...uint32) *UserUpdate {
+	_u.mutation.AddMusicAnnotationIDs(ids...)
+	return _u
+}
+
+// AddMusicAnnotations adds the "music_annotations" edges to the MusicAnnotation entity.
+func (_u *UserUpdate) AddMusicAnnotations(v ...*MusicAnnotation) *UserUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddMusicAnnotationIDs(ids...)
+}
+
+// AddPlaylistIDs adds the "playlists" edge to the Playlist entity by IDs.
+func (_u *UserUpdate) AddPlaylistIDs(ids ...uint32) *UserUpdate {
+	_u.mutation.AddPlaylistIDs(ids...)
+	return _u
+}
+
+// AddPlaylists adds the "playlists" edges to the Playlist entity.
+func (_u *UserUpdate) AddPlaylists(v ...*Playlist) *UserUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPlaylistIDs(ids...)
+}
+
+// AddShareIDs adds the "shares" edge to the Share entity by IDs.
+func (_u *UserUpdate) AddShareIDs(ids ...uint32) *UserUpdate {
+	_u.mutation.AddShareIDs(ids...)
+	return _u
+}
+
+// AddShares adds the "shares" edges to the Share entity.
+func (_u *UserUpdate) AddShares(v ...*Share) *UserUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddShareIDs(ids...)
+}
+
+// AddBookmarkIDs adds the "bookmarks" edge to the Bookmark entity by IDs.
+func (_u *UserUpdate) AddBookmarkIDs(ids ...uint32) *UserUpdate {
+	_u.mutation.AddBookmarkIDs(ids...)
+	return _u
+}
+
+// AddBookmarks adds the "bookmarks" edges to the Bookmark entity.
+func (_u *UserUpdate) AddBookmarks(v ...*Bookmark) *UserUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddBookmarkIDs(ids...)
+}
+
+// SetPlayQueueID sets the "play_queue" edge to the PlayQueue entity by ID.
+func (_u *UserUpdate) SetPlayQueueID(id uint32) *UserUpdate {
+	_u.mutation.SetPlayQueueID(id)
+	return _u
+}
+
+// SetNillablePlayQueueID sets the "play_queue" edge to the PlayQueue entity by ID if the given value is not nil.
+func (_u *UserUpdate) SetNillablePlayQueueID(id *uint32) *UserUpdate {
+	if id != nil {
+		_u = _u.SetPlayQueueID(*id)
+	}
+	return _u
+}
+
+// SetPlayQueue sets the "play_queue" edge to the PlayQueue entity.
+func (_u *UserUpdate) SetPlayQueue(v *PlayQueue) *UserUpdate {
+	return _u.SetPlayQueueID(v.ID)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdate) Mutation() *UserMutation {
 	return _u.mutation
@@ -511,6 +700,96 @@ func (_u *UserUpdate) RemoveSessions(v ...*Session) *UserUpdate {
 	return _u.RemoveSessionIDs(ids...)
 }
 
+// ClearMusicAnnotations clears all "music_annotations" edges to the MusicAnnotation entity.
+func (_u *UserUpdate) ClearMusicAnnotations() *UserUpdate {
+	_u.mutation.ClearMusicAnnotations()
+	return _u
+}
+
+// RemoveMusicAnnotationIDs removes the "music_annotations" edge to MusicAnnotation entities by IDs.
+func (_u *UserUpdate) RemoveMusicAnnotationIDs(ids ...uint32) *UserUpdate {
+	_u.mutation.RemoveMusicAnnotationIDs(ids...)
+	return _u
+}
+
+// RemoveMusicAnnotations removes "music_annotations" edges to MusicAnnotation entities.
+func (_u *UserUpdate) RemoveMusicAnnotations(v ...*MusicAnnotation) *UserUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveMusicAnnotationIDs(ids...)
+}
+
+// ClearPlaylists clears all "playlists" edges to the Playlist entity.
+func (_u *UserUpdate) ClearPlaylists() *UserUpdate {
+	_u.mutation.ClearPlaylists()
+	return _u
+}
+
+// RemovePlaylistIDs removes the "playlists" edge to Playlist entities by IDs.
+func (_u *UserUpdate) RemovePlaylistIDs(ids ...uint32) *UserUpdate {
+	_u.mutation.RemovePlaylistIDs(ids...)
+	return _u
+}
+
+// RemovePlaylists removes "playlists" edges to Playlist entities.
+func (_u *UserUpdate) RemovePlaylists(v ...*Playlist) *UserUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePlaylistIDs(ids...)
+}
+
+// ClearShares clears all "shares" edges to the Share entity.
+func (_u *UserUpdate) ClearShares() *UserUpdate {
+	_u.mutation.ClearShares()
+	return _u
+}
+
+// RemoveShareIDs removes the "shares" edge to Share entities by IDs.
+func (_u *UserUpdate) RemoveShareIDs(ids ...uint32) *UserUpdate {
+	_u.mutation.RemoveShareIDs(ids...)
+	return _u
+}
+
+// RemoveShares removes "shares" edges to Share entities.
+func (_u *UserUpdate) RemoveShares(v ...*Share) *UserUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveShareIDs(ids...)
+}
+
+// ClearBookmarks clears all "bookmarks" edges to the Bookmark entity.
+func (_u *UserUpdate) ClearBookmarks() *UserUpdate {
+	_u.mutation.ClearBookmarks()
+	return _u
+}
+
+// RemoveBookmarkIDs removes the "bookmarks" edge to Bookmark entities by IDs.
+func (_u *UserUpdate) RemoveBookmarkIDs(ids ...uint32) *UserUpdate {
+	_u.mutation.RemoveBookmarkIDs(ids...)
+	return _u
+}
+
+// RemoveBookmarks removes "bookmarks" edges to Bookmark entities.
+func (_u *UserUpdate) RemoveBookmarks(v ...*Bookmark) *UserUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveBookmarkIDs(ids...)
+}
+
+// ClearPlayQueue clears the "play_queue" edge to the PlayQueue entity.
+func (_u *UserUpdate) ClearPlayQueue() *UserUpdate {
+	_u.mutation.ClearPlayQueue()
+	return _u
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *UserUpdate) Save(ctx context.Context) (int, error) {
 	_u.defaults()
@@ -567,6 +846,11 @@ func (_u *UserUpdate) check() error {
 	if v, ok := _u.mutation.SubsonicLastClient(); ok {
 		if err := user.SubsonicLastClientValidator(v); err != nil {
 			return &ValidationError{Name: "subsonic_last_client", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_last_client": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.SubsonicMaxBitRate(); ok {
+		if err := user.SubsonicMaxBitRateValidator(v); err != nil {
+			return &ValidationError{Name: "subsonic_max_bit_rate", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_max_bit_rate": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.OpdsLastClient(); ok {
@@ -648,6 +932,30 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.SubsonicLastClientCleared() {
 		_spec.ClearField(user.FieldSubsonicLastClient, field.TypeString)
+	}
+	if value, ok := _u.mutation.SubsonicCanStream(); ok {
+		_spec.SetField(user.FieldSubsonicCanStream, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanDownload(); ok {
+		_spec.SetField(user.FieldSubsonicCanDownload, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanManagePlaylists(); ok {
+		_spec.SetField(user.FieldSubsonicCanManagePlaylists, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanShare(); ok {
+		_spec.SetField(user.FieldSubsonicCanShare, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanRate(); ok {
+		_spec.SetField(user.FieldSubsonicCanRate, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanChangePassword(); ok {
+		_spec.SetField(user.FieldSubsonicCanChangePassword, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicMaxBitRate(); ok {
+		_spec.SetField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedSubsonicMaxBitRate(); ok {
+		_spec.AddField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
 	}
 	if value, ok := _u.mutation.OpdsToken(); ok {
 		_spec.SetField(user.FieldOpdsToken, field.TypeString, value)
@@ -864,6 +1172,215 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.MusicAnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MusicAnnotationsTable,
+			Columns: []string{user.MusicAnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedMusicAnnotationsIDs(); len(nodes) > 0 && !_u.mutation.MusicAnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MusicAnnotationsTable,
+			Columns: []string{user.MusicAnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.MusicAnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MusicAnnotationsTable,
+			Columns: []string{user.MusicAnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PlaylistsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPlaylistsIDs(); len(nodes) > 0 && !_u.mutation.PlaylistsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PlaylistsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.SharesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharesTable,
+			Columns: []string{user.SharesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedSharesIDs(); len(nodes) > 0 && !_u.mutation.SharesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharesTable,
+			Columns: []string{user.SharesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SharesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharesTable,
+			Columns: []string{user.SharesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.BookmarksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.BookmarksTable,
+			Columns: []string{user.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedBookmarksIDs(); len(nodes) > 0 && !_u.mutation.BookmarksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.BookmarksTable,
+			Columns: []string{user.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.BookmarksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.BookmarksTable,
+			Columns: []string{user.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PlayQueueCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.PlayQueueTable,
+			Columns: []string{user.PlayQueueColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playqueue.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PlayQueueIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.PlayQueueTable,
+			Columns: []string{user.PlayQueueColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playqueue.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1081,6 +1598,111 @@ func (_u *UserUpdateOne) ClearSubsonicLastClient() *UserUpdateOne {
 	return _u
 }
 
+// SetSubsonicCanStream sets the "subsonic_can_stream" field.
+func (_u *UserUpdateOne) SetSubsonicCanStream(v bool) *UserUpdateOne {
+	_u.mutation.SetSubsonicCanStream(v)
+	return _u
+}
+
+// SetNillableSubsonicCanStream sets the "subsonic_can_stream" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicCanStream(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicCanStream(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanDownload sets the "subsonic_can_download" field.
+func (_u *UserUpdateOne) SetSubsonicCanDownload(v bool) *UserUpdateOne {
+	_u.mutation.SetSubsonicCanDownload(v)
+	return _u
+}
+
+// SetNillableSubsonicCanDownload sets the "subsonic_can_download" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicCanDownload(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicCanDownload(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field.
+func (_u *UserUpdateOne) SetSubsonicCanManagePlaylists(v bool) *UserUpdateOne {
+	_u.mutation.SetSubsonicCanManagePlaylists(v)
+	return _u
+}
+
+// SetNillableSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicCanManagePlaylists(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicCanManagePlaylists(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanShare sets the "subsonic_can_share" field.
+func (_u *UserUpdateOne) SetSubsonicCanShare(v bool) *UserUpdateOne {
+	_u.mutation.SetSubsonicCanShare(v)
+	return _u
+}
+
+// SetNillableSubsonicCanShare sets the "subsonic_can_share" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicCanShare(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicCanShare(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanRate sets the "subsonic_can_rate" field.
+func (_u *UserUpdateOne) SetSubsonicCanRate(v bool) *UserUpdateOne {
+	_u.mutation.SetSubsonicCanRate(v)
+	return _u
+}
+
+// SetNillableSubsonicCanRate sets the "subsonic_can_rate" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicCanRate(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicCanRate(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanChangePassword sets the "subsonic_can_change_password" field.
+func (_u *UserUpdateOne) SetSubsonicCanChangePassword(v bool) *UserUpdateOne {
+	_u.mutation.SetSubsonicCanChangePassword(v)
+	return _u
+}
+
+// SetNillableSubsonicCanChangePassword sets the "subsonic_can_change_password" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicCanChangePassword(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicCanChangePassword(*v)
+	}
+	return _u
+}
+
+// SetSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field.
+func (_u *UserUpdateOne) SetSubsonicMaxBitRate(v uint16) *UserUpdateOne {
+	_u.mutation.ResetSubsonicMaxBitRate()
+	_u.mutation.SetSubsonicMaxBitRate(v)
+	return _u
+}
+
+// SetNillableSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicMaxBitRate(v *uint16) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicMaxBitRate(*v)
+	}
+	return _u
+}
+
+// AddSubsonicMaxBitRate adds value to the "subsonic_max_bit_rate" field.
+func (_u *UserUpdateOne) AddSubsonicMaxBitRate(v int16) *UserUpdateOne {
+	_u.mutation.AddSubsonicMaxBitRate(v)
+	return _u
+}
+
 // SetOpdsToken sets the "opds_token" field.
 func (_u *UserUpdateOne) SetOpdsToken(v string) *UserUpdateOne {
 	_u.mutation.SetOpdsToken(v)
@@ -1282,6 +1904,85 @@ func (_u *UserUpdateOne) AddSessions(v ...*Session) *UserUpdateOne {
 	return _u.AddSessionIDs(ids...)
 }
 
+// AddMusicAnnotationIDs adds the "music_annotations" edge to the MusicAnnotation entity by IDs.
+func (_u *UserUpdateOne) AddMusicAnnotationIDs(ids ...uint32) *UserUpdateOne {
+	_u.mutation.AddMusicAnnotationIDs(ids...)
+	return _u
+}
+
+// AddMusicAnnotations adds the "music_annotations" edges to the MusicAnnotation entity.
+func (_u *UserUpdateOne) AddMusicAnnotations(v ...*MusicAnnotation) *UserUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddMusicAnnotationIDs(ids...)
+}
+
+// AddPlaylistIDs adds the "playlists" edge to the Playlist entity by IDs.
+func (_u *UserUpdateOne) AddPlaylistIDs(ids ...uint32) *UserUpdateOne {
+	_u.mutation.AddPlaylistIDs(ids...)
+	return _u
+}
+
+// AddPlaylists adds the "playlists" edges to the Playlist entity.
+func (_u *UserUpdateOne) AddPlaylists(v ...*Playlist) *UserUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPlaylistIDs(ids...)
+}
+
+// AddShareIDs adds the "shares" edge to the Share entity by IDs.
+func (_u *UserUpdateOne) AddShareIDs(ids ...uint32) *UserUpdateOne {
+	_u.mutation.AddShareIDs(ids...)
+	return _u
+}
+
+// AddShares adds the "shares" edges to the Share entity.
+func (_u *UserUpdateOne) AddShares(v ...*Share) *UserUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddShareIDs(ids...)
+}
+
+// AddBookmarkIDs adds the "bookmarks" edge to the Bookmark entity by IDs.
+func (_u *UserUpdateOne) AddBookmarkIDs(ids ...uint32) *UserUpdateOne {
+	_u.mutation.AddBookmarkIDs(ids...)
+	return _u
+}
+
+// AddBookmarks adds the "bookmarks" edges to the Bookmark entity.
+func (_u *UserUpdateOne) AddBookmarks(v ...*Bookmark) *UserUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddBookmarkIDs(ids...)
+}
+
+// SetPlayQueueID sets the "play_queue" edge to the PlayQueue entity by ID.
+func (_u *UserUpdateOne) SetPlayQueueID(id uint32) *UserUpdateOne {
+	_u.mutation.SetPlayQueueID(id)
+	return _u
+}
+
+// SetNillablePlayQueueID sets the "play_queue" edge to the PlayQueue entity by ID if the given value is not nil.
+func (_u *UserUpdateOne) SetNillablePlayQueueID(id *uint32) *UserUpdateOne {
+	if id != nil {
+		_u = _u.SetPlayQueueID(*id)
+	}
+	return _u
+}
+
+// SetPlayQueue sets the "play_queue" edge to the PlayQueue entity.
+func (_u *UserUpdateOne) SetPlayQueue(v *PlayQueue) *UserUpdateOne {
+	return _u.SetPlayQueueID(v.ID)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdateOne) Mutation() *UserMutation {
 	return _u.mutation
@@ -1371,6 +2072,96 @@ func (_u *UserUpdateOne) RemoveSessions(v ...*Session) *UserUpdateOne {
 	return _u.RemoveSessionIDs(ids...)
 }
 
+// ClearMusicAnnotations clears all "music_annotations" edges to the MusicAnnotation entity.
+func (_u *UserUpdateOne) ClearMusicAnnotations() *UserUpdateOne {
+	_u.mutation.ClearMusicAnnotations()
+	return _u
+}
+
+// RemoveMusicAnnotationIDs removes the "music_annotations" edge to MusicAnnotation entities by IDs.
+func (_u *UserUpdateOne) RemoveMusicAnnotationIDs(ids ...uint32) *UserUpdateOne {
+	_u.mutation.RemoveMusicAnnotationIDs(ids...)
+	return _u
+}
+
+// RemoveMusicAnnotations removes "music_annotations" edges to MusicAnnotation entities.
+func (_u *UserUpdateOne) RemoveMusicAnnotations(v ...*MusicAnnotation) *UserUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveMusicAnnotationIDs(ids...)
+}
+
+// ClearPlaylists clears all "playlists" edges to the Playlist entity.
+func (_u *UserUpdateOne) ClearPlaylists() *UserUpdateOne {
+	_u.mutation.ClearPlaylists()
+	return _u
+}
+
+// RemovePlaylistIDs removes the "playlists" edge to Playlist entities by IDs.
+func (_u *UserUpdateOne) RemovePlaylistIDs(ids ...uint32) *UserUpdateOne {
+	_u.mutation.RemovePlaylistIDs(ids...)
+	return _u
+}
+
+// RemovePlaylists removes "playlists" edges to Playlist entities.
+func (_u *UserUpdateOne) RemovePlaylists(v ...*Playlist) *UserUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePlaylistIDs(ids...)
+}
+
+// ClearShares clears all "shares" edges to the Share entity.
+func (_u *UserUpdateOne) ClearShares() *UserUpdateOne {
+	_u.mutation.ClearShares()
+	return _u
+}
+
+// RemoveShareIDs removes the "shares" edge to Share entities by IDs.
+func (_u *UserUpdateOne) RemoveShareIDs(ids ...uint32) *UserUpdateOne {
+	_u.mutation.RemoveShareIDs(ids...)
+	return _u
+}
+
+// RemoveShares removes "shares" edges to Share entities.
+func (_u *UserUpdateOne) RemoveShares(v ...*Share) *UserUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveShareIDs(ids...)
+}
+
+// ClearBookmarks clears all "bookmarks" edges to the Bookmark entity.
+func (_u *UserUpdateOne) ClearBookmarks() *UserUpdateOne {
+	_u.mutation.ClearBookmarks()
+	return _u
+}
+
+// RemoveBookmarkIDs removes the "bookmarks" edge to Bookmark entities by IDs.
+func (_u *UserUpdateOne) RemoveBookmarkIDs(ids ...uint32) *UserUpdateOne {
+	_u.mutation.RemoveBookmarkIDs(ids...)
+	return _u
+}
+
+// RemoveBookmarks removes "bookmarks" edges to Bookmark entities.
+func (_u *UserUpdateOne) RemoveBookmarks(v ...*Bookmark) *UserUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveBookmarkIDs(ids...)
+}
+
+// ClearPlayQueue clears the "play_queue" edge to the PlayQueue entity.
+func (_u *UserUpdateOne) ClearPlayQueue() *UserUpdateOne {
+	_u.mutation.ClearPlayQueue()
+	return _u
+}
+
 // Where appends a list predicates to the UserUpdate builder.
 func (_u *UserUpdateOne) Where(ps ...predicate.User) *UserUpdateOne {
 	_u.mutation.Where(ps...)
@@ -1440,6 +2231,11 @@ func (_u *UserUpdateOne) check() error {
 	if v, ok := _u.mutation.SubsonicLastClient(); ok {
 		if err := user.SubsonicLastClientValidator(v); err != nil {
 			return &ValidationError{Name: "subsonic_last_client", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_last_client": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.SubsonicMaxBitRate(); ok {
+		if err := user.SubsonicMaxBitRateValidator(v); err != nil {
+			return &ValidationError{Name: "subsonic_max_bit_rate", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_max_bit_rate": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.OpdsLastClient(); ok {
@@ -1538,6 +2334,30 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if _u.mutation.SubsonicLastClientCleared() {
 		_spec.ClearField(user.FieldSubsonicLastClient, field.TypeString)
+	}
+	if value, ok := _u.mutation.SubsonicCanStream(); ok {
+		_spec.SetField(user.FieldSubsonicCanStream, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanDownload(); ok {
+		_spec.SetField(user.FieldSubsonicCanDownload, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanManagePlaylists(); ok {
+		_spec.SetField(user.FieldSubsonicCanManagePlaylists, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanShare(); ok {
+		_spec.SetField(user.FieldSubsonicCanShare, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanRate(); ok {
+		_spec.SetField(user.FieldSubsonicCanRate, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanChangePassword(); ok {
+		_spec.SetField(user.FieldSubsonicCanChangePassword, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicMaxBitRate(); ok {
+		_spec.SetField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedSubsonicMaxBitRate(); ok {
+		_spec.AddField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
 	}
 	if value, ok := _u.mutation.OpdsToken(); ok {
 		_spec.SetField(user.FieldOpdsToken, field.TypeString, value)
@@ -1754,6 +2574,215 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.MusicAnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MusicAnnotationsTable,
+			Columns: []string{user.MusicAnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedMusicAnnotationsIDs(); len(nodes) > 0 && !_u.mutation.MusicAnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MusicAnnotationsTable,
+			Columns: []string{user.MusicAnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.MusicAnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MusicAnnotationsTable,
+			Columns: []string{user.MusicAnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PlaylistsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPlaylistsIDs(); len(nodes) > 0 && !_u.mutation.PlaylistsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PlaylistsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.SharesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharesTable,
+			Columns: []string{user.SharesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedSharesIDs(); len(nodes) > 0 && !_u.mutation.SharesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharesTable,
+			Columns: []string{user.SharesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SharesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharesTable,
+			Columns: []string{user.SharesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.BookmarksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.BookmarksTable,
+			Columns: []string{user.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedBookmarksIDs(); len(nodes) > 0 && !_u.mutation.BookmarksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.BookmarksTable,
+			Columns: []string{user.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.BookmarksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.BookmarksTable,
+			Columns: []string{user.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PlayQueueCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.PlayQueueTable,
+			Columns: []string{user.PlayQueueColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playqueue.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PlayQueueIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.PlayQueueTable,
+			Columns: []string{user.PlayQueueColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playqueue.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

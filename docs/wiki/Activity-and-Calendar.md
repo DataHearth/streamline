@@ -28,18 +28,18 @@ The health indicator in the top bar reflects real state — disk usage on your d
 
 ## The event feed
 
-The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behind it, is the history of what happened to each title. Events cover movies, episodes and series:
+The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behind it, is the history of what happened to each title. Events cover movies, episodes, series, artists, albums, books and book series, and every detail page — movie, series, artist, book, book series — has a **History** tab showing its own slice of the feed:
 
 | Event | When it fires |
 | --- | --- |
-| `added` | A movie or series entered the library |
+| `added` | A movie, series, artist, book or book series entered the library |
 | `grabbed` | A release was sent to the download client |
 | `download_completed` | The bytes arrived and the import is starting |
 | `download_failed` | That download failed |
-| `download_cancelled` | You cancelled or removed the download, and the title went back to wanted |
+| `download_cancelled` | You cancelled or removed the download — of a movie, episode, album, book or discography pack — and the title went back to wanted at once (or to available, when it already had its files and the grab was an upgrade) |
 | `grab_widened` | More episodes were added to a torrent already in flight |
 | `imported` | A file landed in the library |
-| `import_failed` | A bulk-import entry failed |
+| `import_failed` | A bulk-import entry failed (a movie, series, album or book entry) |
 | `import_held_for_review` | Import verification failed and the download is parked, waiting on your decision |
 | `file_renamed` | A file was moved by a rename pass |
 | `file_removed` | A file left the library — deleted by hand, replaced by an upgrade, or swapped in a bulk-import commit |
@@ -47,12 +47,14 @@ The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behin
 | `drift_confirmed` | It stayed missing past the grace window and the row was reverted |
 | `reidentified` | A title was re-pointed at different metadata |
 | `metadata_refreshed` | A provider refresh actually changed something — a new title, or episodes added or pruned |
-| `monitoring_changed` | Monitoring was turned on or off |
+| `monitoring_changed` | Monitoring was turned on or off, or an artist or book series got a new monitor policy |
 | `request_approved` | Someone's request was approved and the title was added |
 | `transcode_completed` / `transcode_failed` / `transcode_rejected` | A transcode finished, gave up, or produced output that failed verification |
 | `searched` | A search-and-grab pass ran |
 
-Every event names exactly one owner — `movie`, `episode` or `series`. Episode rows render as *Show · S01E03*.
+Every event names exactly one owner — `movie`, `episode`, `series`, `artist`, `album`, `book` or `book_series`. Episode rows render as *Show · S01E03*, album rows as *Artist · Album*, a series volume as *Series · Vol. 3*, and a book row names the slot (ebook or audiobook) it was about.
+
+**Music and books follow the same rules one level up.** An album is the unit a grab and an import cover, so importing a twelve-track album is one `imported` row on the album (with the track count), never twelve, and replacing an album's or an audiobook's files is one `file_removed` row. A discography pack is filed against its artist; everything else lands on the album. Adding an artist is one `added` row — the albums it seeds are not each an arrival — and adding a book series is one row for the series, not one per volume. An artist's History tab shows its own rows and every album's; a book series' shows its own and every volume's. Automatic and *Search now* passes write one `searched` row per album, per book slot, and per series-wide pass. Changing an artist's monitor policy is one row saying how many albums it moved — *Boards of Canada · 13 albums · Monitored* — and a book series' policy one row with its volume count; a single album or book toggle gets its own row, and a patch that changes nothing writes none.
 
 **`searched` is recorded once per search, not once per episode.** Asking Streamline to search a series writes one event for the whole pass, with the seasons it touched, how many episodes it searched and how many it grabbed in the payload. A pass over one season reads as *Show · Season 3*. Without that, a `tv-missing-search` tick over a large library would write thousands of rows an hour.
 
@@ -68,11 +70,13 @@ Rows are purged by the `cleanup` job after `events.retention` (default 90 days).
 
 ## The queue
 
-**Activity → Queue.** A live snapshot of everything currently downloading, refreshed every 30 seconds by the `download-monitor` job. Each row shows progress, speed, ETA, size, which download client is handling it, and what it's for.
+**Activity → Queue.** A live snapshot of everything currently downloading, refreshed every 30 seconds by the `download-monitor` job. Each row shows progress, speed, ETA, size, which download client is handling it, and what it's for. Imports come first, then held and errored entries waiting on you, then downloads furthest along first, then paused ones.
 
 You can **pause**, **resume** and **remove** items directly — these act on your actual download client, so pausing here pauses in qBittorrent. Removing asks whether to delete the downloaded data too.
 
 To act on several at once, tick their checkboxes (or the header box for every row the filters show) and use the bar that appears at the bottom: **Pause**, **Resume** or **Cancel download**. On a phone, press and hold a row to start selecting, then tap the others. Each action only touches the entries it applies to — Pause skips what is already paused, Resume takes only paused entries, and **held** entries are left out of all three, since resolving them is a decision per entry.
+
+On a phone, swipe a row sideways for a shortcut. Swipe right to **pause** or **resume** it (in the history, to **retry the import** of a failed entry), and swipe left to **cancel** the download (in the history, to **remove** the entry). Let go once the colour fills in; short of that, the row springs back. Cancel, retry and remove still ask first, in the same words as the row's sheet, and held entries have no swipe.
 
 A queue entry is in one of five states:
 
@@ -84,7 +88,7 @@ A queue entry is in one of five states:
 | **Paused** | Suspended, by you or by the client |
 | **Error** | Something failed — the entry carries a failure reason |
 
-**Held** entries are the only ones whose next move is yours. Streamline probed the finished file and it disagrees with what the release claimed — a 720p file sold as 1080p, a truncated runtime, a codec your profile doesn't allow, or a file ffprobe cannot read at all. Nothing was moved into your library. Open the entry and choose: **import anyway**, or delete it — with or without searching for a replacement. A season pack is held whole, listing every file that failed.
+**Held** entries are the only ones whose next move is yours. Streamline probed the finished file and it disagrees with what the release claimed — a 720p file sold as 1080p, a truncated runtime, a codec your profile doesn't allow, or a file ffprobe cannot read at all. Nothing was moved into your library. Open the entry and choose: **import anyway**, or delete it — with or without searching for a replacement. Deleting it marks the release as rejected for that title: the automatic searches and the RSS feeds skip it from then on and take the next-best release, while a manual search still lists it if you want it after all. Retrying or removing the entry in **History** lifts the rejection. A season pack is held whole, listing every file that failed.
 
 See [Configuration Reference](Configuration-Reference#import-verification) for the checks and how to turn them up or off (including `always_ask`, which holds every import for review).
 
@@ -103,7 +107,7 @@ Filter by event type or by title, and page back through time. This is where you 
 
 Select entries the same way as on the queue to **remove** several history records at once; the titles and their files are not touched.
 
-**Clear completed** tidies out successful entries and leaves the failures. Events also age out on their own after `events.retention` (default 90 days).
+**Clear completed** tidies out successful entries and leaves the failures. An entry whose torrent is still seeding stays, completed or failed, both here and in the automatic clean-up (completed entries after 30 days, failed ones after 14): without it, Streamline would no longer recognise the torrent as its own and list it under *Needs attention*. Events also age out on their own after `events.retention` (default 90 days).
 
 ---
 
@@ -150,11 +154,17 @@ Adding a series this way monitors it, exactly as adding it by hand would, so Str
 
 ## Torrents (built-in client)
 
-**Activity → Torrents.** Only relevant if you're running Streamline's built-in torrent engine (`client_type: builtin`).
+**Activity → Torrents.** Only relevant if you're running Streamline's built-in torrent engine (`client_type: builtin`). The entry appears in the navigation only while an enabled built-in client is configured.
 
 Live view of the engine's torrents: peers, pieces, ratio, up/down rates. You can pause and resume individual torrents, and toggle individual **files** within a torrent on and off — handy for a season pack where you only want three episodes.
 
+A torrent is listed under the name inside its `.torrent` file, which the uploader chose and which can differ from the release name shown in Queue and History — a RuTracker upload of an album is often just the artist's name. For a torrent Streamline grabbed, the release name appears under the torrent's own, and the search box matches either one (or the infohash).
+
 Tick several torrents (or press and hold one on a phone) to **pause**, **resume** or **remove** them together. Removing asks once whether to delete the downloaded files too, and any download Streamline was tracking for a removed torrent goes back to wanted.
+
+On a phone, swipe a torrent right to **pause** or **resume** it, or left to **remove** it, which asks the same question about its files.
+
+A torrent's details open at their own address (`/torrents?hash=<info hash>`), so a reload keeps the drawer open and the link can be shared or bookmarked. From the **Queue** or **History**, an admin opens a download's details (expand the row, or tap it on a phone) and follows **Open torrent** to land on that torrent's drawer. The button shows only while the built-in engine still lists the torrent.
 
 If you're using qBittorrent or Transmission, this page will be empty; manage those torrents in their own UI or from the Queue.
 
@@ -165,7 +175,7 @@ If you're using qBittorrent or Transmission, this page will be empty; manage tho
 **Activity → Transcoding.** Admin only. The queue of files being re-encoded in the background, driven by the `transcode` block on a [quality profile](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files).
 
 > [!NOTE]
-> Transcoding is **off by default**. Until you turn it on under Settings → Transcoding this page shows an off state rather than an empty queue — there's a difference between "nothing to do" and "not running", and the page says which.
+> Transcoding is **off by default**, and the Activity → Transcoding entry is left out of the navigation and the search until you turn it on under Settings → Transcoding. Opened by its address while off, the page shows an off state rather than an empty queue — there's a difference between "nothing to do" and "not running", and the page says which.
 
 Each row names the movie or episode, the file on disk, and where the job got to:
 

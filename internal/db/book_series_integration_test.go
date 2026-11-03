@@ -245,7 +245,10 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 					SetEbookStatus(book.EbookStatusAvailable).
 					ExecX(ctx)
 
-				Expect(store.SetSeriesMonitor(ctx, s.ID, "none", now)).To(Succeed())
+				Expect(
+					store.SetSeriesMonitor(ctx, s.ID, "none", now),
+				).Error().
+					To(Succeed())
 
 				got := fresh(s.ID)
 				Expect(got.Monitor).To(Equal(bookseries.MonitorNone))
@@ -268,7 +271,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 
 				Expect(
 					store.SetSeriesMonitor(ctx, s.ID, "future", now),
-				).To(Succeed())
+				).Error().To(Succeed())
 
 				got := fresh(s.ID)
 				Expect(volume(got, 1).EbookMonitored).To(BeFalse())
@@ -286,7 +289,10 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 					ClearEbookEdition().
 					ExecX(ctx)
 
-				Expect(store.SetSeriesMonitor(ctx, s.ID, "all", now)).To(Succeed())
+				Expect(
+					store.SetSeriesMonitor(ctx, s.ID, "all", now),
+				).Error().
+					To(Succeed())
 
 				v := volume(fresh(s.ID), 1)
 				Expect(v.EbookMonitored).To(BeTrue())
@@ -315,7 +321,10 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 				}
 				s := create(stub, audioOnly)
 
-				Expect(store.SetSeriesMonitor(ctx, s.ID, "all", now)).To(Succeed())
+				Expect(
+					store.SetSeriesMonitor(ctx, s.ID, "all", now),
+				).Error().
+					To(Succeed())
 
 				got := fresh(s.ID)
 				Expect(volume(got, 4).EbookMonitored).To(BeTrue())
@@ -374,7 +383,10 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 	Describe("ApplySeriesMetadata and RefreshSeriesStats", func() {
 		It("replaces the contributions and keeps the user's choices", func() {
 			s := create(volumeSeed(1, 1, now))
-			Expect(store.SetSeriesMonitor(ctx, s.ID, "none", now)).To(Succeed())
+			Expect(
+				store.SetSeriesMonitor(ctx, s.ID, "none", now),
+			).Error().
+				To(Succeed())
 
 			Expect(store.ApplySeriesMetadata(ctx, s.ID, SeriesMetadata{
 				Title: "One Piece!", Overview: "Pirates", AuthorName: "Eiichiro Oda",

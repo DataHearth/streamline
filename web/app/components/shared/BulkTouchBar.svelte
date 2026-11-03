@@ -17,6 +17,7 @@
 </script>
 
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Ellipsis, X } from "@lucide/svelte";
@@ -47,6 +48,7 @@
 	} = $props();
 
 	let sheet = $state(false);
+	closeOnBack(() => sheet, () => (sheet = false));
 	let cells = $derived(Math.min(actions.length, 3) + 1);
 
 	// While this bar is mounted the bottom nav stands down.

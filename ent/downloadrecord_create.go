@@ -296,6 +296,20 @@ func (_c *DownloadRecordCreate) SetNillableBookKind(v *downloadrecord.BookKind) 
 	return _c
 }
 
+// SetRejected sets the "rejected" field.
+func (_c *DownloadRecordCreate) SetRejected(v bool) *DownloadRecordCreate {
+	_c.mutation.SetRejected(v)
+	return _c
+}
+
+// SetNillableRejected sets the "rejected" field if the given value is not nil.
+func (_c *DownloadRecordCreate) SetNillableRejected(v *bool) *DownloadRecordCreate {
+	if v != nil {
+		_c.SetRejected(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *DownloadRecordCreate) SetID(v uint32) *DownloadRecordCreate {
 	_c.mutation.SetID(v)
@@ -490,6 +504,10 @@ func (_c *DownloadRecordCreate) defaults() {
 		v := downloadrecord.DefaultSelectionState
 		_c.mutation.SetSelectionState(v)
 	}
+	if _, ok := _c.mutation.Rejected(); !ok {
+		v := downloadrecord.DefaultRejected
+		_c.mutation.SetRejected(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -542,6 +560,9 @@ func (_c *DownloadRecordCreate) check() error {
 		if err := downloadrecord.BookKindValidator(v); err != nil {
 			return &ValidationError{Name: "book_kind", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.book_kind": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.Rejected(); !ok {
+		return &ValidationError{Name: "rejected", err: errors.New(`ent: missing required field "DownloadRecord.rejected"`)}
 	}
 	return nil
 }
@@ -658,6 +679,10 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 	if value, ok := _c.mutation.BookKind(); ok {
 		_spec.SetField(downloadrecord.FieldBookKind, field.TypeEnum, value)
 		_node.BookKind = value
+	}
+	if value, ok := _c.mutation.Rejected(); ok {
+		_spec.SetField(downloadrecord.FieldRejected, field.TypeBool, value)
+		_node.Rejected = value
 	}
 	if nodes := _c.mutation.MovieIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

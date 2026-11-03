@@ -403,6 +403,20 @@ func (_u *DownloadRecordUpdate) ClearBookKind() *DownloadRecordUpdate {
 	return _u
 }
 
+// SetRejected sets the "rejected" field.
+func (_u *DownloadRecordUpdate) SetRejected(v bool) *DownloadRecordUpdate {
+	_u.mutation.SetRejected(v)
+	return _u
+}
+
+// SetNillableRejected sets the "rejected" field if the given value is not nil.
+func (_u *DownloadRecordUpdate) SetNillableRejected(v *bool) *DownloadRecordUpdate {
+	if v != nil {
+		_u.SetRejected(*v)
+	}
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *DownloadRecordUpdate) SetMovieID(id uint32) *DownloadRecordUpdate {
 	_u.mutation.SetMovieID(id)
@@ -806,6 +820,9 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if _u.mutation.BookKindCleared() {
 		_spec.ClearField(downloadrecord.FieldBookKind, field.TypeEnum)
+	}
+	if value, ok := _u.mutation.Rejected(); ok {
+		_spec.SetField(downloadrecord.FieldRejected, field.TypeBool, value)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1431,6 +1448,20 @@ func (_u *DownloadRecordUpdateOne) ClearBookKind() *DownloadRecordUpdateOne {
 	return _u
 }
 
+// SetRejected sets the "rejected" field.
+func (_u *DownloadRecordUpdateOne) SetRejected(v bool) *DownloadRecordUpdateOne {
+	_u.mutation.SetRejected(v)
+	return _u
+}
+
+// SetNillableRejected sets the "rejected" field if the given value is not nil.
+func (_u *DownloadRecordUpdateOne) SetNillableRejected(v *bool) *DownloadRecordUpdateOne {
+	if v != nil {
+		_u.SetRejected(*v)
+	}
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *DownloadRecordUpdateOne) SetMovieID(id uint32) *DownloadRecordUpdateOne {
 	_u.mutation.SetMovieID(id)
@@ -1864,6 +1895,9 @@ func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *Download
 	}
 	if _u.mutation.BookKindCleared() {
 		_spec.ClearField(downloadrecord.FieldBookKind, field.TypeEnum)
+	}
+	if value, ok := _u.mutation.Rejected(); ok {
+		_spec.SetField(downloadrecord.FieldRejected, field.TypeBool, value)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{

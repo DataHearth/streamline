@@ -27,10 +27,9 @@ func (s stubServer) TestConnection(
 
 func (s stubServer) RefreshLibrary(
 	context.Context,
-	string,
-	string,
-) error {
-	return nil
+	RefreshRequest,
+) (RefreshScope, error) {
+	return ScopeLibrary, nil
 }
 
 func (s stubServer) MovieDeepLink(

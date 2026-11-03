@@ -5,6 +5,273 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-10-28
+
+### Added
+
+- Music entities
+- Musicbrainz metadata provider
+- config: Music quality profiles family
+- metadata: Musicbrainz client
+- Album cover art via posters proxy
+- Music service
+- Music REST endpoints
+- Music SPA section
+- Book entities
+- Hardcover metadata provider
+- Books config (hardcover key, paths, quality profiles)
+- Hardcover client
+- Book cover art via posters proxy
+- Book service
+- Books REST endpoints
+- Books SPA section
+- web: Section headings move into the page
+- Plain-language manual search with tracker privacy and grab history
+- library: Audio tag reading
+- Ebook metadata reading
+- Musicbrainz release-group search
+- metadata: Hardcover book search and isbn lookup
+- Music release parser and scoring
+- Book release parser and scoring
+- indexer: Album search
+- indexer: Book search
+- music: Import scan entities
+- books: Import scan entities
+- Download record album and book edges
+- Music and book request entities
+- Per-user subsonic password
+- Per-user opds token
+- Album release calendar
+- Book release calendar
+- audiotags: Tag writing
+- Subsonic server package
+- Opds feed types and auth
+- Opds catalog feeds
+- Opds downloads
+- Music request flow
+- Book request flow
+- Album grabs
+- book: Release search and grab per slot
+- Music orphan scanner
+- Adopt albums on music import commit
+- Book orphan scanner
+- Adopt books on import commit
+- subsonic: Mount subsonic server
+- opds: Mount opds server
+- Import scan REST for music and books
+- music: Album manual search and grab
+- books: Book slot manual search and grab
+- Music and book request REST
+- importer: Import completed album downloads with tag writing
+- importer: Import books per slot
+- music: Backlog search and artist refresh schedulers
+- book: Backlog search and author refresh schedulers
+- rss: Auto-grab wanted albums from indexer feeds
+- rss: Auto-grab wanted book slots from indexer feeds
+- metadata: Deezer cover client, poster Put, album barcode and embedded-picture reader
+- music: Resolve album covers from embedded art, folder, Deezer and the archive
+- metadata: Honour Hardcover rate limit and daily budget
+- e2e: Album, ebook and audiobook packs in the fake tracker
+- web: Pull music, books, settings logs and bar titles from the design project
+- Separate default quality profiles for movies and series
+- api: Music and books contract for the design
+- Music and book quality profiles, requests and lookup art for the design
+- web: Wire the music and books design to the real API
+- music: The backend the music design needs
+- books: The book-first backend the books design needs
+- Subsonic and opds access cards, hardcover key and codes, music and book calendar entries
+- Music and book import review fields, release-group search and album requests
+- web: Pull the second music and books design batch
+- config: Seed a default music quality profile
+- ci: Build the nix checks on the homelab builder
+- activity: Name the album, pack artist or book on queue and history rows (#84)
+- web: Lead the login page with SSO, fold the password form (#87)
+- scheduler: Give music and books their own scheduled jobs
+- metadata: Support preferred book language in Hardcover editions (#88)
+- web: Redesign the dashboard around new arrivals across all four media
+- library: List recent imports across movies, series, music and books
+- music: Sort the artist list by name by default
+- activity: Identify unmatched proposals as albums and books
+- config: Add smtp section
+- mailer: Add stdlib SMTP sender
+- account: Add device email to the profile
+- books: Send ebooks to a device by email
+- api: Add book and series send endpoints
+- web: Send books and series to an e-reader
+- metadata: Read series membership and slugs from Hardcover
+- books: Find series through translated titles and keep their slugs
+- api: Expose series covers, slugs and translated matches
+- web: Fan series covers and find series by translated title
+- web: Bulk pause, resume and remove on torrents and activity
+- subsonic: Serve the rest of the Subsonic API and OpenSubsonic (#99)
+- music: Write the full MusicBrainz tag set without destroying the file's own (#105)
+- web: Swipe actions on the activity and torrent touch rows
+- History tab for music and books, swipeable detail tabs
+- Record cancellations, monitoring and failed bulk imports for music and books; run the fake tracker anywhere
+- music: Preview a release's files and grab only the missing tracks
+- series: Grab only the missing episodes from a season or series pack
+- series: Preview a season or series pack's files before grabbing it
+- music: Preview a discography pack's files before grabbing it
+- movies: Show the digital release date on the movie page
+- activity: Open a download's torrent from the queue
+- torrents: Show and search a builtin torrent by its release title
+- search: List albums and episodes as their own search results
+- web: Say "Searching…" while the search waits on its answers
+- mediaserver: Targeted folder rescans, path mappings, coalesced refreshes (#144)
+- config: Write the defaults when the config file is missing
+- deploy: Unraid template and Proxmox LXC install script
+- db: Back up the database before migrations, daily, and from the CLI
+- download: Refuse a grab that would not fit on the download disk
+- auth: API key read-only scope and expiry
+- music: Co-artist edge and per-track artist credits
+- metadata: Read each track's credited artists
+- music: Shared albums on every artist's page, kept when an artist is deleted
+- music: Tag each track with its credited artists
+- music: Show shared albums and per-track artists
+- subsonic: Serve shared albums under every artist
+- music: Refuse single-file CD images before they download
+- subsonic: Draw playlist covers as a mosaic
+- ui: Add the add button to the music and books toolbars
+- metadata: Make the MusicBrainz server URL configurable
+- metadata: Make the MusicBrainz request interval configurable
+- settings: Edit the MusicBrainz server and request interval
+
+### Changed
+
+- web: Move torrents, transcoding and imports to top-level routes
+- db: Link download records to every episode they cover
+- nix: Fetch Go modules without building the frontend
+- migrate: Check every generated down step against the replayed schema
+- migrate: Check the whole migration history and regenerate broken downs
+
+### Fixed
+
+- hygiene: Adopt library orphans in place instead of hardlinking a twin
+- dashboard: Order recently added movies by file import time
+- bittorrent: Report seeding only once every wanted piece is hash-verified (#74)
+- web: Keep the topbar title still and stop doubling page headings
+- web: Translate the remaining UI strings and fix search field chrome (#75)
+- deps: Update go modules (#67)
+- media: Rescan media servers after deletes, renames and bulk imports
+- deps: Update go modules (#76)
+- db: Keep a rejected upgrade's episode available
+- download: Keep a completed record while its builtin torrent still seeds
+- opds: Sanitize download filename and fix gosec directive
+- subsonic: Log non-API errors before the generic envelope
+- audiotags: Falsifiable replace spec, drop debug print
+- media: Book and album grab review fixes
+- bulkimport: Record span failures, dedupe adopted tracks, guard book commit and decisions
+- Hardcover author role, shared book titles and subsonic POST params
+- shared: Review findings for the design backend
+- web: Review findings for the design backend
+- music: Review findings for the design backend
+- books: Review findings for the design backend
+- db: Count held records as in flight for album searches
+- Review findings for the round-2 backendA change
+- Review findings for the round-2 backendB change
+- Review findings for the round-2 spa change
+- metadata: One member per person from musicbrainz relations
+- metadata: Pass over fragment editions when naming a book's original
+- indexer: Keep audiobooks out of music searches
+- Never auto-grab or import a release that names another album or book
+- download: Refuse a grab whose hash an in-flight record already holds
+- bittorrent: Fail a magnet the path guard refuses after metadata
+- mediaserver: Refresh media servers after music and book imports, renames and deletes
+- opds,subsonic: Serve OPDS covers under Basic auth, stamp empty feeds, implement getIndexes
+- posters: Serve the cached image's real type and leave no empty dir on a failed fetch
+- request: Load the requester edge on the create response
+- books: Date a book by its original edition and rank author matches first in lookup
+- bulkimport: Adopt a multi-disc music album as one candidate
+- subsonic: GetIndexes tracks album and track changes and never answers stale
+- bulkimport: Clean the scan root before folding disc folders
+- download: Revert stranded albums and book slots, read base32 magnet hashes as hex
+- web: Read an import row by its own shape across scan-to-scan navigation
+- web: Page title claims name their path so a left page's title never sticks
+- web: Drop the in-page Imports heading the top bar already shows
+- deps: Build with Go 1.27.2 and take toolchain patches from upstream (#82)
+- web: Consistent monitoring, refresh and error feedback across movies, series, music and books (#83)
+- music: Set aside album search results named for another album (#85)
+- Prevent stale search results in releases dialog (#86)
+- web: Artist rows show owned then wanted releases, never unmonitored ones
+- music: An album monitored or dropped by hand survives the monitored-types catch-up
+- db: The replace_mode migration rolls back
+- Make #main positioned to contain sr-only labels (#89)
+- series: A season or episode monitored by hand survives the specials catch-up
+- deps: Update go modules (#93)
+- web: Link Hardcover books through the id route
+- mailer: Drop the connection when a message fails mid-write
+- config: Accept a dotless smtp sender like streamline@localhost
+- books: Leave unowned volumes out of a series send's skipped list
+- importer: Refuse single-file CUE album images
+- music: Park albums at failed after a refused import
+- music: Settle a partial album on a failed or stranded grab
+- books: Keep series status, the add pick and the book hits in translated series search
+- books: Drop an empty series the batch did not return
+- web: Stop retrying lookup covers that do not exist
+- cli: Reject unknown commands instead of booting the server (#98)
+- quality: Classify 4:3 1080p files as 1080p, not 720p (#100)
+- web: Show Ctrl K, not ⌘ K, off Apple platforms (#104)
+- docker: Re-run the vaapi apt upgrade on every CI build (#126)
+- web: Make the activity page readable on phone, tablet and desktop
+- web: The phone selection takes over the top bar
+- download: Revert episodes, albums and books when a download is cancelled
+- e2e: XML-escape the faketracker's .torrent link
+- web: Let the release list scroll with the modal on phones
+- music: Rank a partial MusicBrainz date after the fuller ones in its period
+- music: Read tracker-tagged release names and interleaved editions
+- download: Order the queue by status, then progress
+- subsonic: List only albums and artists holding a playable file
+- music: Skip video discs and take the standard edition on a same-day tie
+- deps: Bump Go to 1.27.3 for GO-2026-6809 (#135)
+- Run manual series and movie searches off the request and map add errors by cause
+- movies: Return the digital release date from the add response
+- importer: Import only the files the record's own torrent lists
+- bittorrent: Delete only a removed torrent's own files
+- web: Make search say what it finds and reach every settings section
+- search: Rank the closest album and episode title first
+- tvshow: Title aired episodes the metadata language has no translation for
+- config: Ask for the secret again when a resource moves to another address
+- config: Ask for the OIDC client secret again on an issuer change
+- web: Hide Torrents and Transcoding from the nav while they are off
+- downloads: Blocklist a release rejected from the held-download dialog
+- db: Walk every episode of a failed record back, not just its anchor
+- ci: Stop trying to set Issue Types — this repo has none (#142)
+- web: Close phone search and bottom sheets on Back (#143)
+- web: Show a distant API key expiry as a localized date
+- web: Localize relative dates past one month
+- artwork: Tell namesake artists apart for search tile photos
+- search: Show covers and identifying text for every lookup hit
+- music: Guard library artist photos against shared Deezer pages
+- metadata: Wait a minute on a zero MusicBrainz Retry-After
+- music: List a shared release group under every artist instead of failing the add
+- music: Backfill track artists at any release size instead of bumping the credits layout
+- music: Write track artists with MusicBrainz's join phrase and know a merged artist id by name
+- music: Report a shared album's owner on every page and space the track credit lines
+- subsonic: Name a split release's songs by their own artist and order co-albums by date
+- music: Poll and show history for an artist's shared albums too
+- music: Hand shared albums over inside the artist delete and re-tag them
+- music: Log a shared album's link only once it is committed
+- web: Tell a metadata provider's rate limit apart from a login lockout
+- music: Hold MusicBrainz prefetch and background calls after a 503
+- web: Count an artist's owed releases, not the whole discography
+- download: Keep the records of torrents that still seed
+- subsonic: Match search on artist and album names
+- metadata: Drop Deezer's stock artist picture
+- music: Run a refresh's artist photo lookup at interactive priority
+- music: Refuse CUE images split one file per disc side
+- db: Sort titles and artist names accent-folded
+- activity: Show stalled downloads in the queue
+- music: Scroll the release list on its own and open on a monitored album
+- hygiene: Probe only movie and episode files
+- importer: Fall back to file names for untagged album tracks
+- music: Sort artists by their displayed name
+- music: Treat remix, DJ-mix, mixtape and demo release groups as other
+- music: Leave bootleg-only release groups out of the discography
+- music: Flag search results that name neither the artist nor the album
+- library: Read a year between the artist and the title of a release name
+- deps: Update go modules (#149)
+- music: Ignore search and bookkeeping events when pruning unlisted albums
+
 ## [3.2.0] - 2026-09-25
 
 ### Added
@@ -653,6 +920,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - sysinfo: Make disk-usage probe cross-platform for releases (#1)
 
+[3.3.0]: https://github.com/datahearth/streamline/compare/v3.2.0..v3.3.0
 [3.2.0]: https://github.com/datahearth/streamline/compare/v3.1.0..v3.2.0
 [3.1.0]: https://github.com/datahearth/streamline/compare/v3.0.0..v3.1.0
 [3.0.0]: https://github.com/datahearth/streamline/compare/v2.0.0..v3.0.0

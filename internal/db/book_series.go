@@ -406,23 +406,24 @@ func setEbookMonitored(
 // SetSeriesMonitor stores the policy and applies it to each volume's ebook
 // slot. all monitors every volume; future monitors those releasing after
 // since and unmonitors the earlier ones that hold no file; none unmonitors
-// every volume without a file. A volume with a file keeps its status.
+// every volume without a file. A volume with a file keeps its status. It
+// returns how many volumes' ebook flag it moved.
 func (db *DB) SetSeriesMonitor(
 	ctx context.Context,
 	id uint32,
 	monitor string,
 	since time.Time,
-) error {
+) (int, error) {
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	c := tx.Client()
 	if err := c.BookSeries.UpdateOneID(id).
 		SetMonitor(bookseries.Monitor(monitor)).
 		Exec(ctx); err != nil {
 		tx.Rollback()
-		return err
+		return 0, err
 	}
 	vols, err := c.Book.Query().
 		Where(book.HasSeriesWith(bookseries.IDEQ(id))).
@@ -432,19 +433,23 @@ func (db *DB) SetSeriesMonitor(
 		All(ctx)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return 0, err
 	}
+	moved := 0
 	for _, v := range vols {
 		want := pick.MonitorsVolume(monitor, v.ReleaseDate, since)
 		if !want && ebookFile(v) {
 			continue
 		}
+		if v.EbookMonitored != want {
+			moved++
+		}
 		if err := setEbookMonitored(ctx, c, v, want); err != nil {
 			tx.Rollback()
-			return err
+			return 0, err
 		}
 	}
-	return tx.Commit()
+	return moved, tx.Commit()
 }
 
 // SetSeriesEdition stores the chosen (language, publisher) and re-picks the

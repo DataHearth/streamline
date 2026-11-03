@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { Search, X } from "@lucide/svelte";
+	import { LoaderCircle, Search, X } from "@lucide/svelte";
 	import {
 		createSearchModel,
 		searchNav,
@@ -71,11 +71,19 @@
 		onsubmit={onSubmit}
 		class="search-box flex h-11 items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 transition"
 	>
-		<Search
-			size={16}
-			class="search-icon shrink-0 text-fg-subtle"
-			aria-hidden="true"
-		/>
+		{#if showPanel && model.pending}
+			<LoaderCircle
+				size={16}
+				class="search-icon shrink-0 animate-spin text-accent"
+				aria-hidden="true"
+			/>
+		{:else}
+			<Search
+				size={16}
+				class="search-icon shrink-0 text-fg-subtle"
+				aria-hidden="true"
+			/>
+		{/if}
 		<input
 			bind:this={inputEl}
 			bind:value={query}
@@ -132,8 +140,10 @@
 			{/each}
 
 			{#if model.flat.length === 0}
-				<div class="px-3 py-7 text-center text-[12.5px] text-fg-subtle">
-					{i18n.search_no_matches_for({ query: query.trim() })}
+				<div role="status" class="px-3 py-7 text-center text-[12.5px] text-fg-subtle">
+					{model.pending
+						? i18n.common_searching()
+						: i18n.search_no_matches_for({ query: query.trim() })}
 				</div>
 			{/if}
 		</div>

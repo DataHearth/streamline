@@ -24,6 +24,9 @@
 	import ReleasePanel from "@components/music/ReleasePanel.svelte";
 	import ReleaseAccordion from "@components/music/ReleaseAccordion.svelte";
 	import ReleaseSearchModal from "@components/music/ReleaseSearchModal.svelte";
+	import ReleaseTagsModal from "@components/music/ReleaseTagsModal.svelte";
+	import DetailHistory from "@components/shared/DetailHistory.svelte";
+	import { swipeTabs } from "@lib/swipe-tabs";
 	import {
 		artistPeople,
 		artistTally,
@@ -51,6 +54,7 @@
 	// Phone accordion: null follows the selection, -1 is "all closed".
 	let openId = $state<number | null>(null);
 	let tab = $state<string>("overview");
+	let tabTrack = $state<HTMLElement | null>(null);
 	// Manual search opens on the whole discography ("artist") or on a release id.
 	let manualOpen = $state(false);
 	let manualScope = $state("artist");
@@ -139,6 +143,7 @@
 	}
 	const searchRelease = (r: Release) => searchNow.mutate({ path: `/music/albums/${r.id}/search-now`, title: r.title });
 	let deletingTrack = $state<Track | null>(null);
+	let tagsRelease = $state<Release | null>(null);
 	const delTrack = createAction<Track>(() => ({
 		run: (t) => api(`/music/tracks/${t.id}/file`, { method: "DELETE" }),
 		refresh: MUSIC,
@@ -152,7 +157,7 @@
 
 	let meta = $derived.by(() => {
 		if (!artist || !tally) return [];
-		const p: string[] = [releasesCount(tally.released)];
+		const p: string[] = [releasesCount(tally.listed)];
 		if (tally.upcoming) p.push(i18n.music_n_upcoming({ count: String(tally.upcoming) }));
 		p.push(tracksCount(artist.tracks_have));
 		if (artist.size) p.push(formatBytes(artist.size, ""));
@@ -163,6 +168,12 @@
 	// The cast and crew of a discography. The overview shows the line-up and
 	// the few names that recur most; Credits shows everyone, by what they did.
 	let people = $derived(artist ? artistPeople(artist) : null);
+	let tabs = $derived([
+		{ key: "overview", label: i18n.common_overview(), n: null },
+		{ key: "discography", label: i18n.music_discography(), n: artist?.albums.length ?? null },
+		{ key: "credits", label: i18n.music_credits(), n: people?.total || null },
+		{ key: "history", label: i18n.common_history(), n: null },
+	]);
 	let collabs = $derived(people ? collaborators(people, 6) : []);
 	let moreCredits = $derived(!!people && people.total > people.current.length + collabs.length);
 	const memberTile = (m: Member): PersonTile => ({
@@ -359,8 +370,8 @@
 		</MediaHero>
 
 		<nav class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
-			<div class="flex w-full gap-0.5">
-				{#each [{ key: "overview", label: i18n.common_overview(), n: null }, { key: "discography", label: i18n.music_discography(), n: artist.albums.length }, { key: "credits", label: i18n.music_credits(), n: people?.total || null }] as t (t.key)}
+			<div bind:this={tabTrack} class="flex w-full gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+				{#each tabs as t (t.key)}
 					{@const active = tab === t.key}
 					<button
 						type="button"
@@ -376,10 +387,12 @@
 			</div>
 		</nav>
 
+		<div use:swipeTabs={{ keys: tabs.map((t) => t.key), current: tab, onChange: (k) => (tab = k), track: tabTrack }} class="min-h-[60dvh]">
 		{#if tab === "discography"}
 			<div class="md:hidden">
 				<ReleaseAccordion
 					releases={artist.albums}
+					artistId={artist.id}
 					openId={open}
 					onToggle={(rid) => (openId = open === rid ? -1 : rid)}
 					{canEdit}
@@ -389,16 +402,22 @@
 					monitorPending={monitorRelease.isPending}
 					onManualSearchTrack={(r) => openManual(String(r.id))}
 					onDeleteTrack={(t) => (deletingTrack = t)}
+					onTags={(r) => (tagsRelease = r)}
 				/>
 			</div>
 			<!-- 1fr, not minmax(0,1fr): the browser Tailwind build hangs the tab on
 			     an arbitrary grid template that ends in `minmax(0,1fr)]`. The panel is
 			     min-w-0, which gives the same floor. -->
 			<div class="hidden gap-6 px-8 py-6 md:grid md:grid-cols-[200px_1fr] lg:grid-cols-[250px_1fr]">
-				<ReleaseList releases={artist.albums} selectedId={selected?.id} onSelect={select} />
+				<!-- The top bar (4rem), the sticky tab strip and the grid's own padding
+				     sit above it, so the list scrolls on its own beside a long panel. -->
+				<div class="sticky top-[8.5rem] max-h-[calc(100dvh-10rem)] self-start overflow-y-auto overscroll-contain">
+					<ReleaseList releases={artist.albums} selectedId={selected?.id} onSelect={select} />
+				</div>
 				{#if selected}
 					<ReleasePanel
 						release={selected}
+						artistId={artist.id}
 						{canEdit}
 						onSearch={() => searchRelease(selected)}
 						onManualSearch={() => openManual(String(selected.id))}
@@ -406,6 +425,7 @@
 						monitorPending={monitorRelease.isPending}
 						onManualSearchTrack={() => openManual(String(selected.id))}
 						onDeleteTrack={(t) => (deletingTrack = t)}
+						onTags={() => (tagsRelease = selected)}
 					/>
 				{/if}
 			</div>
@@ -424,6 +444,10 @@
 						<p class="mt-1 text-xs text-fg-muted">{i18n.music_no_credits_help()}</p>
 					</div>
 				{/each}
+			</div>
+		{:else if tab === "history"}
+			<div class="px-4 py-6 md:px-8">
+				<DetailHistory artistId={artist.id} />
 			</div>
 		{:else}
 			<!-- The movie and series overview: about and people on the left, the
@@ -451,6 +475,7 @@
 				</aside>
 			</div>
 		{/if}
+		</div>
 
 		{#if canEdit}
 			<!-- Phone: the searches, as on the book page — the automatic one, then
@@ -481,6 +506,7 @@
 
 		{#if canEdit}
 			<ReleaseSearchModal open={manualOpen} {artist} initialScope={manualScope} onClose={() => (manualOpen = false)} />
+			<ReleaseTagsModal release={tagsRelease} onClose={() => (tagsRelease = null)} />
 		{/if}
 
 		<Dialog

@@ -24,6 +24,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
+	"github.com/datahearth/streamline/internal/testutil/nettest"
 )
 
 // engineBindIP keeps the engine loopback-only. Binding it also switches off
@@ -108,6 +109,9 @@ func newSeederOfSize(dir string, size int, pieceLen int64) ([]byte, int) {
 	cc.DisablePEX = true
 	cc.NoDefaultPortForwarding = true
 	cc.ListenPort = 0
+	// A host without IPv6 fails every default anacrolix client at the tcp6
+	// listener; the engine under test binds its own dual-stack socket.
+	cc.DisableIPv6 = !nettest.IPv6()
 	cc.Slogger = engineSlogger()
 	seeder, err := antorrent.NewClient(cc)
 	Expect(err).NotTo(HaveOccurred())
@@ -154,6 +158,9 @@ func newTCPOnlySeeder(dir string) ([]byte, int) {
 	cc.DisablePEX = true
 	cc.NoDefaultPortForwarding = true
 	cc.ListenPort = 0
+	// A host without IPv6 fails every default anacrolix client at the tcp6
+	// listener; the engine under test binds its own dual-stack socket.
+	cc.DisableIPv6 = !nettest.IPv6()
 	cc.Slogger = engineSlogger()
 	seeder, err := antorrent.NewClient(cc)
 	Expect(err).NotTo(HaveOccurred())

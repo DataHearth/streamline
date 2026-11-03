@@ -6,12 +6,12 @@
 	import AddButton from "./AddButton.svelte";
 	import TopBar from "./TopBar.svelte";
 	import CommandPalette from "./CommandPalette.svelte";
-	import SearchScreen from "./SearchScreen.svelte";
 	import AddMovieModal from "@components/movies/AddMovieModal.svelte";
 	import AddSeriesModal from "@components/series/AddSeriesModal.svelte";
 	import MediaLookupScreen from "@components/shared/MediaLookupScreen.svelte";
 	import AddMusicBookModal from "@components/shared/AddMusicBookModal.svelte";
 	import MusicBookLookupScreen from "@components/shared/MusicBookLookupScreen.svelte";
+	import { restoreScrollOnBack } from "@lib/scroll-restore";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { children }: { children: Snippet } = $props();
@@ -21,9 +21,12 @@
 	let addArtistOpen = $state(false);
 	let addBookOpen = $state(false);
 	// Below md the add/request flow is a full-screen search rather than the split
-	// modal, and search itself is a screen rather than the centred palette —
-	// different components, not something CSS can pick.
+	// modal, and search itself is a page (/search) rather than the centred
+	// palette — different components, not something CSS can pick.
 	let compact = $state(false);
+	let main = $state<HTMLElement | null>(null);
+
+	onMount(() => (main ? restoreScrollOnBack(main) : undefined));
 
 	onMount(() => {
 		const onOpenMovie = () => (addMovieOpen = true);
@@ -65,6 +68,7 @@
 	     resolve against <body>, escape this scroller's clip and stretch the
 	     document, which then draws a second scrollbar beside this one. -->
 	<main
+		bind:this={main}
 		id="main"
 		class="relative min-w-0 flex-1 overflow-y-auto pb-20 [scrollbar-gutter:stable] md:pb-0"
 	>
@@ -74,9 +78,7 @@
 	<BottomNav />
 	<AddButton />
 </div>
-{#if compact}
-	<SearchScreen />
-{:else}
+{#if !compact}
 	<CommandPalette />
 {/if}
 

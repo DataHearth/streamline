@@ -20,6 +20,8 @@ const (
 	FieldUpdateTime = "update_time"
 	// FieldMbid holds the string denoting the mbid field in the database.
 	FieldMbid = "mbid"
+	// FieldReleaseTrackMbid holds the string denoting the release_track_mbid field in the database.
+	FieldReleaseTrackMbid = "release_track_mbid"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
 	// FieldDisc holds the string denoting the disc field in the database.
@@ -30,12 +32,20 @@ const (
 	FieldDuration = "duration"
 	// FieldBonus holds the string denoting the bonus field in the database.
 	FieldBonus = "bonus"
+	// FieldArtistCredit holds the string denoting the artist_credit field in the database.
+	FieldArtistCredit = "artist_credit"
+	// FieldTagOverrides holds the string denoting the tag_overrides field in the database.
+	FieldTagOverrides = "tag_overrides"
 	// EdgeAlbum holds the string denoting the album edge name in mutations.
 	EdgeAlbum = "album"
 	// EdgeMediaFiles holds the string denoting the media_files edge name in mutations.
 	EdgeMediaFiles = "media_files"
 	// EdgeCredits holds the string denoting the credits edge name in mutations.
 	EdgeCredits = "credits"
+	// EdgeAnnotations holds the string denoting the annotations edge name in mutations.
+	EdgeAnnotations = "annotations"
+	// EdgeBookmarks holds the string denoting the bookmarks edge name in mutations.
+	EdgeBookmarks = "bookmarks"
 	// Table holds the table name of the track in the database.
 	Table = "tracks"
 	// AlbumTable is the table that holds the album relation/edge.
@@ -59,6 +69,20 @@ const (
 	CreditsInverseTable = "music_credits"
 	// CreditsColumn is the table column denoting the credits relation/edge.
 	CreditsColumn = "track_credits"
+	// AnnotationsTable is the table that holds the annotations relation/edge.
+	AnnotationsTable = "music_annotations"
+	// AnnotationsInverseTable is the table name for the MusicAnnotation entity.
+	// It exists in this package in order to avoid circular dependency with the "musicannotation" package.
+	AnnotationsInverseTable = "music_annotations"
+	// AnnotationsColumn is the table column denoting the annotations relation/edge.
+	AnnotationsColumn = "track_id"
+	// BookmarksTable is the table that holds the bookmarks relation/edge.
+	BookmarksTable = "bookmarks"
+	// BookmarksInverseTable is the table name for the Bookmark entity.
+	// It exists in this package in order to avoid circular dependency with the "bookmark" package.
+	BookmarksInverseTable = "bookmarks"
+	// BookmarksColumn is the table column denoting the bookmarks relation/edge.
+	BookmarksColumn = "track_id"
 )
 
 // Columns holds all SQL columns for track fields.
@@ -67,11 +91,14 @@ var Columns = []string{
 	FieldCreateTime,
 	FieldUpdateTime,
 	FieldMbid,
+	FieldReleaseTrackMbid,
 	FieldTitle,
 	FieldDisc,
 	FieldPosition,
 	FieldDuration,
 	FieldBonus,
+	FieldArtistCredit,
+	FieldTagOverrides,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "tracks"
@@ -135,6 +162,11 @@ func ByMbid(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMbid, opts...).ToFunc()
 }
 
+// ByReleaseTrackMbid orders the results by the release_track_mbid field.
+func ByReleaseTrackMbid(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReleaseTrackMbid, opts...).ToFunc()
+}
+
 // ByTitle orders the results by the title field.
 func ByTitle(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTitle, opts...).ToFunc()
@@ -158,6 +190,11 @@ func ByDuration(opts ...sql.OrderTermOption) OrderOption {
 // ByBonus orders the results by the bonus field.
 func ByBonus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBonus, opts...).ToFunc()
+}
+
+// ByArtistCredit orders the results by the artist_credit field.
+func ByArtistCredit(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldArtistCredit, opts...).ToFunc()
 }
 
 // ByAlbumField orders the results by album field.
@@ -194,6 +231,34 @@ func ByCredits(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newCreditsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByAnnotationsCount orders the results by annotations count.
+func ByAnnotationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAnnotationsStep(), opts...)
+	}
+}
+
+// ByAnnotations orders the results by annotations terms.
+func ByAnnotations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAnnotationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByBookmarksCount orders the results by bookmarks count.
+func ByBookmarksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newBookmarksStep(), opts...)
+	}
+}
+
+// ByBookmarks orders the results by bookmarks terms.
+func ByBookmarks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBookmarksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newAlbumStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -213,5 +278,19 @@ func newCreditsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CreditsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CreditsTable, CreditsColumn),
+	)
+}
+func newAnnotationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AnnotationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AnnotationsTable, AnnotationsColumn),
+	)
+}
+func newBookmarksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BookmarksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, BookmarksTable, BookmarksColumn),
 	)
 }

@@ -38,6 +38,8 @@
 		const released = formatDate(movie.release_date);
 		if (released) p.push(released);
 		else if (movie.year) p.push(String(movie.year));
+		const digital = formatDate(movie.digital_release_date);
+		if (digital) p.push(i18n.detail_digital_release_on({ date: digital }));
 		if (movie.runtime) p.push(`${movie.runtime}m`);
 		if (movie.rating) p.push(`★ ${movie.rating.toFixed(1)}`);
 		if (movie.genres?.length) p.push(movie.genres.join(" / "));

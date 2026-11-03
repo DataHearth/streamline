@@ -51,6 +51,7 @@ export function formatRatio(ratio: number | undefined | null): string {
 export function pillStatus(
 	status:
 		| "downloading"
+		| "stalled"
 		| "importing"
 		| "paused"
 		| "error"
@@ -61,6 +62,8 @@ export function pillStatus(
 	switch (status) {
 		case "held":
 			return "held";
+		case "stalled":
+			return "stalled";
 		case "importing":
 			return "importing";
 		case "error":

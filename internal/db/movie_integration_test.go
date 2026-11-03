@@ -109,6 +109,27 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 			Expect(items[1].Title).To(Equal("Alpha"))
 		})
 
+		It("sorts accented titles with their unaccented letter", func() {
+			seed("Zack Snyder's Justice League", 2021, 42, entmovie.StatusWanted)
+			seed("Évasion", 2013, 43, entmovie.StatusWanted)
+			seed("À la poursuite du diamant vert", 1984, 44, entmovie.StatusWanted)
+			seed("Evolution", 2001, 45, entmovie.StatusWanted)
+			items, _, err := store.FilterMovies(ctx, FilterMoviesParams{
+				Sort: "title", Order: "asc", Limit: 10,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			titles := make([]string, len(items))
+			for i, m := range items {
+				titles[i] = m.Title
+			}
+			Expect(titles).To(Equal([]string{
+				"À la poursuite du diamant vert",
+				"Évasion",
+				"Evolution",
+				"Zack Snyder's Justice League",
+			}))
+		})
+
 		It("sorts by year asc", func() {
 			seed("Old", 1999, 50, entmovie.StatusWanted)
 			seed("New", 2024, 51, entmovie.StatusWanted)

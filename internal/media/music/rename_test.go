@@ -95,8 +95,8 @@ var _ = Describe("Renamer", Label("unit", "integration", "music"), func() {
 		ms := msmocks.NewMockRefresher(GinkgoT())
 		r = NewRenamer(e.store, ms)
 		done := make(chan struct{})
-		ms.EXPECT().RefreshAll(mock.Anything, "music", root()).
-			RunAndReturn(func(context.Context, string, string) error {
+		ms.EXPECT().RefreshAll(mock.Anything, "music", root(), mock.Anything).
+			RunAndReturn(func(context.Context, string, string, ...string) error {
 				close(done)
 				return nil
 			}).Once()

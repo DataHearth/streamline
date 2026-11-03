@@ -217,6 +217,9 @@ type ReleaseGroupInfo struct {
 	Title       string
 	Type        AlbumType
 	ReleaseDate *time.Time // nil when MusicBrainz has no first-release-date
+	// OriginalDate is the same first-release-date as MusicBrainz wrote it,
+	// YYYY, YYYY-MM or YYYY-MM-DD; empty when it has none.
+	OriginalDate string
 }
 
 // ReleaseGroupSearchResult is a MusicBrainz release-group search hit with its
@@ -237,24 +240,42 @@ type PersonInfo struct {
 
 // TrackInfo is one track of the canonical release picked for a release-group.
 type TrackInfo struct {
-	MBID     string // recording MBID
-	Title    string
-	Disc     uint8
-	Position uint16
-	Duration uint32 // seconds, 0 when unknown
+	MBID string // recording MBID
+	// ReleaseTrackMBID is the track's own id on the canonical release.
+	ReleaseTrackMBID string
+	Title            string
+	Disc             uint8
+	Position         uint16
+	Duration         uint32 // seconds, 0 when unknown
+	// Artists are the artists the track is credited to, before any "feat."
+	// join phrase; on a split release they differ from the album's.
+	Artists []PersonInfo
+	// ArtistCredit is Artists as MusicBrainz joins them ("A x B", "A & B"),
+	// canonical names, no "feat." part.
+	ArtistCredit string
 	// Featuring are the artists credited after a "feat." join phrase.
 	Featuring []PersonInfo
-	// Writers are the writers, composers and lyricists of the recorded work.
-	Writers []PersonInfo
+	// Writers are the people credited on the recorded work, each under one
+	// role: composer, lyricist, writer or arranger. A person both composer
+	// and lyricist appears twice.
+	Writers []CreditInfo
+	// Credits are the production credits of this recording itself, the
+	// recording-level relations also folded into the album's Credits; and
+	// Performers its performers, with the instruments played on it. Both come
+	// from the heavy release call only.
+	Credits    []CreditInfo
+	Performers []PerformerInfo
 	// Bonus is set only when MusicBrainz says so: a medium titled "bonus" or a
 	// track titled "(bonus track)".
 	Bonus bool
 }
 
-// CreditInfo is one production credit of an album.
+// CreditInfo is one credit of an album or a track.
 type CreditInfo struct {
 	PersonInfo
-	// Role is producer, recording, mix, mastering or artwork.
+	// Role is producer, recording, mix, mastering, artwork, conductor,
+	// remixer or arranger for a production credit, and composer, lyricist,
+	// writer or arranger for a writer of the work.
 	Role string
 }
 
@@ -281,6 +302,11 @@ type ReleaseGroupDetails struct {
 	CatalogNumber string
 	// Country is a two-letter region; XW, XE and the like are dropped.
 	Country string
+	// EditionDate is the canonical release's own date as MusicBrainz wrote
+	// it, which can differ from the release group's first-release-date.
+	EditionDate string
+	// Genres are the release group's top genres by vote, at most five.
+	Genres []string
 	// Media is the union of the release group's physical media: cd, vinyl,
 	// digital, cassette.
 	Media  []string
@@ -357,6 +383,18 @@ type ArtistPhotoProvider interface {
 type Overview struct {
 	Text      string
 	SourceURL string
+}
+
+// ArtistLinkProvider reads what MusicBrainz links as an artist's picture,
+// which is how namesakes are told apart. Implemented by *MusicBrainz.
+type ArtistLinkProvider interface {
+	// ArtistArt returns the Deezer page and Commons image MusicBrainz links
+	// for the artist, each empty when it links none.
+	ArtistArt(ctx context.Context, mbid string) (ArtistArt, error)
+	// DeezerArtistShared reports whether more than one MusicBrainz artist
+	// links the Deezer artist page: Deezer files namesakes under one page,
+	// whose picture is only ever one of them.
+	DeezerArtistShared(ctx context.Context, id uint32) (bool, error)
 }
 
 // OverviewProvider fetches artist overviews. Implemented by *Wikipedia.

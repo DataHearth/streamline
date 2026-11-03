@@ -111,7 +111,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -159,8 +159,12 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			storeMk.EXPECT().
 				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once()
-			msMk.EXPECT().RefreshAll(mock.Anything, mock.Anything, libDir).
-				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
+				Return(nil).
+				Once()
+			dlMk.EXPECT().ListTorrentFiles(mock.Anything, "qbit", "hash").
+				Return(nil, nil).Once()
 			dlMk.EXPECT().RemoveTorrent(mock.Anything, "qbit", "hash", true).
 				Return(nil).Once()
 
@@ -216,7 +220,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, mock.Anything, libDir).
+				RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -259,7 +263,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -295,7 +299,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -343,7 +347,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -373,7 +377,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -405,7 +409,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -502,7 +506,9 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
-		msMk.EXPECT().RefreshAll(mock.Anything, mock.Anything, libDir).Return(nil)
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
+			Return(nil)
 
 		errs := make(chan error, 2)
 		var wg sync.WaitGroup
@@ -608,7 +614,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 			Return(errors.New("boom")).
 			Once()
 
@@ -705,8 +711,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, mock.Anything, libDir).
-			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		ctx, cancel := context.WithCancel(context.Background())
 		stopped := make(chan struct{})
@@ -777,7 +785,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, mock.Anything, libDir).
+				RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -835,7 +843,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, mock.Anything, libDir).
+				RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -874,7 +882,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -934,7 +942,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -973,7 +981,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -1013,7 +1021,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 			Return(nil).Once()
 
 		Expect(w.runImport(ctx, 2)).To(Succeed())
@@ -1085,7 +1093,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, mock.Anything, libDir).
+				RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -1116,7 +1124,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 			Return(nil).
 			Once()
 
@@ -1300,7 +1308,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, mock.Anything, libDir).
+				RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -1506,7 +1514,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, mock.Anything, libDir).
+				RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -1557,7 +1565,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 					Return(nil).Once()
 				msMk.EXPECT().
-					RefreshAll(mock.Anything, mock.Anything, libDir).
+					RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 					Return(nil).
 					Once()
 
@@ -1600,7 +1608,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, mock.Anything, libDir).
+				RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -1732,7 +1740,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 					Return(nil).Once()
 				msMk.EXPECT().
-					RefreshAll(mock.Anything, mock.Anything, libDir).
+					RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
 					Return(nil).
 					Once()
 

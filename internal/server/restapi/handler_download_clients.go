@@ -176,13 +176,15 @@ func (s *Server) UpdateDownloadClient(
 		return UpdateDownloadClient404JSONResponse{
 			NotFoundJSONResponse: errNotFound("download client not found"),
 		}, nil
-	case configLocked(err):
-		return UpdateDownloadClient403JSONResponse{
-			ForbiddenJSONResponse: forbiddenResp(err.Error()),
-		}, nil
 	case err != nil:
+		forbidden, unprocessable := errResourceUpdate(err)
+		if forbidden != nil {
+			return UpdateDownloadClient403JSONResponse{
+				ForbiddenJSONResponse: *forbidden,
+			}, nil
+		}
 		return UpdateDownloadClient422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			UnprocessableEntityJSONResponse: *unprocessable,
 		}, nil
 	}
 	if prev.ClientType == "builtin" || string(request.Body.ClientType) == "builtin" {

@@ -10,8 +10,10 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/quality/qualityctx"
@@ -78,8 +80,9 @@ func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
 	return nil
 }
 
-// SearchShow runs one search-and-grab pass scoped to a single series, so a
-// show with nothing searchable is a no-op. Powers POST /series/{id}/search.
+// SearchShow starts one search-and-grab pass scoped to a single series in the
+// background and returns once the eligibility query has answered, so a show
+// with nothing searchable is a no-op. Powers POST /series/{id}/search.
 // A user asked for this pass, so the operator throttles are waived — matching
 // the movie twin, where SearchMovieNow calls SearchOne directly instead of
 // going through the eligibility query. The hard guards still apply.
@@ -96,12 +99,25 @@ func (s *EpisodeMissingSearcher) SearchShow(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	grabbed := make(map[uint32]struct{})
 	for _, show := range shows {
 		if show.ID != showID {
 			continue
 		}
-		s.searchShow(ctx, show, grabbed)
+		// One indexer query per season, each as slow as the slowest tracker
+		// behind Prowlarr: on the request ctx the pass died with the client
+		// that asked for it, a phone locking or a proxy timing out included.
+		bg := trace.ContextWithSpanContext(
+			context.WithoutCancel(ctx),
+			trace.SpanContext{},
+		)
+		go func() {
+			defer observability.RecoverPanic(bg, "rss.tv_search_show", nil)
+			bg, span := tracer.Start(bg, "rss.tv_search_show_pass",
+				trace.WithAttributes(attribute.Int64("tvshow.id", int64(showID))),
+			)
+			defer span.End()
+			s.searchShow(bg, show, make(map[uint32]struct{}))
+		}()
 	}
 	return nil
 }
@@ -149,11 +165,19 @@ func (s *EpisodeMissingSearcher) searchShow(
 			"tvshow.id", show.ID, "error", err)
 	}
 	perSeason := counts[show.ID]
+	// Without the blocklist the pick could be a release the user rejected, so
+	// the show is skipped this pass rather than searched blind.
+	blocklist, err := s.store.RejectedReleases(ctx)
+	if err != nil {
+		slog.WarnContext(ctx, "tv missing-search: rejected releases unavailable",
+			"tvshow.id", show.ID, "error", err)
+		return
+	}
 	var tally searchTally
 	for _, se := range show.Edges.Seasons {
 		tally.add(
 			se.Number,
-			s.processSeason(ctx, show, se, titles, perSeason, grabbed),
+			s.processSeason(ctx, show, se, titles, perSeason, grabbed, blocklist),
 		)
 	}
 	if tally.episodes == 0 {
@@ -201,6 +225,7 @@ func (s *EpisodeMissingSearcher) processSeason(
 	titles []string,
 	perSeason map[uint16]int,
 	grabbed map[uint32]struct{},
+	blocklist *db.ReleaseBlocklist,
 ) searchTally {
 	wanted := make([]*ent.Episode, 0, len(se.Edges.Episodes))
 	for _, e := range se.Edges.Episodes {
@@ -225,6 +250,7 @@ func (s *EpisodeMissingSearcher) processSeason(
 			profile,
 			perSeason,
 			grabbed,
+			blocklist,
 		) {
 		return searchTally{
 			episodes: len(wanted),
@@ -235,7 +261,7 @@ func (s *EpisodeMissingSearcher) processSeason(
 
 	t := searchTally{episodes: len(wanted)}
 	for _, e := range wanted {
-		if s.grabEpisode(ctx, show, se, e, titles, profile, grabbed) {
+		if s.grabEpisode(ctx, show, se, e, titles, profile, grabbed, blocklist) {
 			t.grabbed++
 		}
 	}
@@ -260,6 +286,7 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 	profile quality.Profile,
 	perSeason map[uint16]int,
 	grabbed map[uint32]struct{},
+	blocklist *db.ReleaseBlocklist,
 ) bool {
 	ctx, span := tracer.Start(ctx, "rss.tv_season_pack",
 		trace.WithAttributes(
@@ -283,7 +310,9 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 	if episodes < 1 {
 		episodes = singleRelease
 	}
-	ranked := rankAccepted(profile, packs, episodes)
+	ranked := rankAccepted(
+		profile, dropRejected(ctx, packs, blocklist.Show, show.ID), episodes,
+	)
 	// Loaded at most once per pack attempt, and only with a pack worth
 	// grabbing: a season whose results are all rejected is the steady-state
 	// case and must not cost a query.
@@ -381,6 +410,7 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 	titles []string,
 	profile quality.Profile,
 	grabbed map[uint32]struct{},
+	blocklist *db.ReleaseBlocklist,
 ) bool {
 	if _, already := grabbed[e.ID]; already {
 		return false
@@ -410,7 +440,10 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 		return false
 	}
 
-	for _, r := range rankAccepted(profile, results, singleRelease) {
+	ranked := rankAccepted(
+		profile, dropRejected(ctx, results, blocklist.Show, show.ID), singleRelease,
+	)
+	for _, r := range ranked {
 		if _, err := s.downloads.GrabEpisode(
 			ctx,
 			r,

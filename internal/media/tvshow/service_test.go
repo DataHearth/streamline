@@ -63,8 +63,8 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 	// See the movie suite: the refresh runs on its own goroutine.
 	expectRefresh := func(root string) chan struct{} {
 		done := make(chan struct{})
-		msMk.RefreshAll(mock.Anything, "series", root).
-			Run(func(context.Context, string, string) { close(done) }).
+		msMk.RefreshAll(mock.Anything, "series", root, mock.Anything).
+			Run(func(context.Context, string, string, ...string) { close(done) }).
 			Return(nil).Once()
 		return done
 	}

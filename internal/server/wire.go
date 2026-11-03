@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/dbbackup"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
@@ -59,6 +60,9 @@ type App struct {
 	Importer   *importer.Worker
 	HTTPLogger *observability.HTTPLogger
 	Torrents   *bittorrent.Engine
+	// MediaServers holds the refreshes collected over its window; shutdown
+	// flushes it, or the last imports would never reach the servers.
+	MediaServers *mediaserver.Dispatcher
 }
 
 // httpAccessSkip filters which requests bypass the HTTP access log.
@@ -203,6 +207,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Posters: postersSvc,
 		Library: artwork.EntLibrary{Client: dbClient},
 		Deezer:  deezer,
+		Links:   mb,
 	})
 	if err != nil {
 		dbClient.Close()
@@ -210,7 +215,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	}
 	musicSvc := music.NewService(
 		store, mb, postersSvc, deezer, indexerSvc, dlManager,
-		metadata.NewWikipedia(), deezer, dispatcher,
+		metadata.NewWikipedia(), deezer, mb, dispatcher,
 	)
 	var mail mailer.Sender
 	if cfg.SMTP.Enabled() {
@@ -288,6 +293,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Prober:      prober,
 		Covers:      musicSvc,
 		Albums:      musicSvc,
+		Tagger:      musicSvc,
 	})
 	go imp.Start(ctx)
 
@@ -477,6 +483,28 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 				return jobs.FileSelection(dlManager.(download.SelectionResolver))
 			},
 		},
+		{
+			"music-tag-sync",
+			cfg.Schedule.MusicTagSync,
+			func(time.Duration) scheduler.JobFunc { return musicSvc.SyncTags },
+		},
+		{
+			"database-backup",
+			cfg.Schedule.DatabaseBackup,
+			func(d time.Duration) scheduler.JobFunc {
+				interval := func() time.Duration {
+					if info, err := sched.Get("database-backup"); err == nil {
+						return info.Interval
+					}
+					return d
+				}
+				return jobs.DatabaseBackup(
+					cfg.DatabasePath(),
+					dbbackup.Dir(cfg.DataDir),
+					interval,
+				)
+			},
+		},
 	}
 	for _, j := range jobsToRegister {
 		d, err := time.ParseDuration(j.interval)
@@ -491,6 +519,12 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		"purge-sessions",
 		time.Hour,
 		jobs.PurgeSessions(authSvc),
+		scheduler.WithSystem(),
+	)
+	sched.Register(
+		"purge-api-keys",
+		time.Hour,
+		jobs.PurgeAPIKeys(authSvc),
 		scheduler.WithSystem(),
 	)
 
@@ -533,6 +567,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Indexers:        indexerSvc,
 		Downloads:       dlManager,
 		MediaServers:    mediaServerSvc,
+		RefreshStatus:   dispatcher,
 		DeepLinker:      deepLinker,
 		Renamer:         renamer,
 		SeriesRenamer:   seriesRenamer,
@@ -554,6 +589,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Importer:        imp,
 		Prober:          prober,
 		Transcoder:      transcoder,
+		AudioTranscoder: prober,
 		Music:           musicSvc,
 		Books:           bookSvc,
 		MetadataBook:    bookMeta,
@@ -573,6 +609,8 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Importer:   imp,
 		HTTPLogger: httpLogger,
 		Torrents:   torrentEngine,
+
+		MediaServers: dispatcher,
 	}, nil
 }
 
@@ -624,6 +662,7 @@ var authExcludePaths = []string{
 	"/auth/invite/",
 	"/auth/oidc/",
 	"/rest/",
+	"/share/",
 	"/opds",
 	"/opds/",
 }

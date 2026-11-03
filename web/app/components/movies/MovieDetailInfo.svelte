@@ -38,6 +38,7 @@
 	// Named as Released when there is a day to name, Year when the server has
 	// only the year — the same fallback the hero makes, so the two never disagree.
 	let releasedText = $derived(formatDate(movie.release_date));
+	let digitalText = $derived(formatDate(movie.digital_release_date));
 	// The panel groups by provenance rather than marking values one by one: what
 	// ffprobe read, what the release name claimed, and what is on disk. An
 	// unprobed file is the same panel without its first group — no empty rows and
@@ -372,6 +373,10 @@
 			{:else if movie.year}
 				<dt class="text-fg-subtle">{i18n.common_year()}</dt>
 				<dd class="text-right font-mono text-fg">{movie.year}</dd>
+			{/if}
+			{#if digitalText}
+				<dt class="text-fg-subtle">{i18n.detail_digital_release()}</dt>
+				<dd class="text-right font-mono text-fg">{digitalText}</dd>
 			{/if}
 			{#if movie.runtime}
 				<dt class="text-fg-subtle">{i18n.detail_runtime()}</dt>

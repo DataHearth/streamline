@@ -28,12 +28,13 @@ var _ = Describe("Shell navigation", Label("e2e"), func() {
 		page := newSessionPage("/")
 		page.MustElement(`aside[aria-label="Primary navigation"]`)
 		// Operations' routes are each their own top-level row, so every link
-		// below is in the DOM from the first render.
+		// below is in the DOM from the first render. Torrents and Transcoding
+		// are not: each is listed only while its feature is on, and this app
+		// has no builtin client and transcoding off — asserted after the walk.
 		for _, section := range []struct{ href, heading string }{
 			{"/movies", "Movies"},
 			{"/series", "Series"},
 			{"/activity", "Queue & History"},
-			{"/torrents", "Torrents"},
 			{"/calendar", "Calendar"},
 			{"/requests", "Requests"},
 			{"/", "Dashboard"},
@@ -60,6 +61,17 @@ var _ = Describe("Shell navigation", Label("e2e"), func() {
 			)
 			Expect(current).To(HaveLen(1))
 			Expect(*current[0].MustAttribute("href")).To(Equal(section.href))
+		}
+
+		By("leaving out the features that are off")
+		// The nav treats both as off until its config queries answer, so an
+		// empty match on the first render would prove nothing. After the walk
+		// those queries (fired at mount, no retry) have long since settled, and
+		// MustElements does not wait, so empty here means hidden.
+		for _, href := range []string{"/torrents", "/transcoding"} {
+			Expect(page.MustElements(fmt.Sprintf(
+				`aside[aria-label="Primary navigation"] a[href=%q]`, href,
+			))).To(BeEmpty(), href)
 		}
 	})
 

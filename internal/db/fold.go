@@ -49,6 +49,18 @@ func init() {
 	)
 }
 
+// orderFold orders by col folded: SQLite compares bytes, which sorts every
+// accented initial ("Évasion", "À la poursuite…") after the whole of Z.
+func orderFold(col string, desc bool) func(*entsql.Selector) {
+	return func(s *entsql.Selector) {
+		expr := "fold(" + s.C(col) + ")"
+		if desc {
+			expr += " DESC"
+		}
+		s.OrderExpr(entsql.Expr(expr))
+	}
+}
+
 // foldContains matches col against q with both sides accent- and case-folded.
 // Like ent's own ContainsFold it does not escape LIKE wildcards.
 func foldContains(s *entsql.Selector, col, q string) *entsql.Predicate {

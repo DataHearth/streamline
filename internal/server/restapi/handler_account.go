@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/datahearth/streamline/ent/apikey"
 	"github.com/datahearth/streamline/internal/auth"
 )
 
@@ -119,15 +120,54 @@ func (s *Server) CreateMyApiKey(
 			),
 		}, nil
 	}
-	raw, rec, err := s.auth.CreateAPIKey(ctx, claims.UserID, req.Body.Name)
-	if err != nil {
+	spec := auth.APIKeySpec{Name: req.Body.Name, Scope: apikey.ScopeFull}
+	if sc := req.Body.Scope; sc != nil {
+		if !sc.Valid() {
+			return CreateMyApiKey422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(
+					"scope must be read or full",
+				),
+			}, nil
+		}
+		spec.Scope = apikey.Scope(*sc)
+	}
+	if days := req.Body.ExpiresInDays; days != nil {
+		// Nothing validates a body against the spec, so the presets are held
+		// here: an arbitrary lifetime would let a key outlive any policy the
+		// account page states.
+		if !days.Valid() {
+			return CreateMyApiKey422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(
+					"expires_in_days must be 30, 90 or 365",
+				),
+			}, nil
+		}
+		spec.TTL = time.Duration(*days) * 24 * time.Hour
+	}
+	raw, rec, err := s.auth.CreateAPIKey(ctx, claims.UserID, spec)
+	switch {
+	case errors.Is(err, auth.ErrAPIKeyQuotaExceeded):
+		code := codeAPIKeyQuota
+		return CreateMyApiKey422JSONResponse{
+			Message: err.Error(),
+			Code:    &code,
+		}, nil
+	case errors.Is(err, auth.ErrAPIKeyInvalid):
+		return CreateMyApiKey422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	case err != nil:
 		return nil, err
 	}
+	out := toAPIApiKey(rec)
 	return CreateMyApiKey201JSONResponse{
-		Id:        rec.ID,
-		Name:      rec.Name,
-		CreatedAt: rec.CreateTime,
-		RawToken:  raw,
+		Id:         out.Id,
+		Name:       out.Name,
+		Scope:      out.Scope,
+		ExpiresAt:  out.ExpiresAt,
+		LastUsedAt: out.LastUsedAt,
+		CreatedAt:  out.CreatedAt,
+		RawToken:   raw,
 	}, nil
 }
 

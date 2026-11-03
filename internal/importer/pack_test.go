@@ -23,73 +23,6 @@ import (
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
-var _ = Describe("Pack folders", Label("unit", "importer"), func() {
-	year := func(y int) *time.Time {
-		t := time.Date(y, 1, 1, 0, 0, 0, 0, time.UTC)
-		return &t
-	}
-	albums := []*ent.Album{
-		{ID: 1, Title: "Nevermind", ReleaseDate: year(1991)},
-		{ID: 2, Title: "In Utero", ReleaseDate: year(1993)},
-		{ID: 3, Title: "Greatest Hits", ReleaseDate: year(1995)},
-		{ID: 4, Title: "Greatest Hits", ReleaseDate: year(2005)},
-	}
-
-	DescribeTable(
-		"matchPackDir",
-		func(dir string, want uint32) {
-			got := matchPackDir(dir, albums)
-			if want == 0 {
-				Expect(got).To(BeNil())
-				return
-			}
-			Expect(got).NotTo(BeNil())
-			Expect(got.ID).To(Equal(want))
-		},
-		Entry("plain title", "/dl/Nirvana/Nevermind", uint32(1)),
-		Entry(
-			"year and format tags",
-			"/dl/Nirvana/Nevermind (1991) [FLAC]",
-			uint32(1),
-		),
-		Entry(
-			"artist and year prefix",
-			"/dl/Nirvana - 1993 - In Utero [FLAC]",
-			uint32(2),
-		),
-		Entry("dots for spaces", "/dl/In.Utero.1993.FLAC", uint32(0)),
-		Entry("dots around a title", "/dl/Nirvana.-.In.Utero", uint32(2)),
-		Entry("case and punctuation folded", "/dl/NEVERMIND!", uint32(1)),
-		Entry(
-			"the year picks between two albums of one title",
-			"/dl/Greatest Hits (2005)",
-			uint32(4),
-		),
-		Entry(
-			"no year, two albums of one title: ambiguous",
-			"/dl/Greatest Hits",
-			uint32(0),
-		),
-		Entry("a folder that names no linked album", "/dl/Bleach", uint32(0)),
-	)
-
-	DescribeTable(
-		"albumDir keeps disc subfolders with their album",
-		func(file, want string) {
-			Expect(albumDir(file)).To(Equal(want))
-		},
-		Entry("flat", "/dl/Nevermind/01.flac", "/dl/Nevermind"),
-		Entry("CD1", "/dl/Greatest Hits/CD1/01.flac", "/dl/Greatest Hits"),
-		Entry("Disc 2", "/dl/Greatest Hits/Disc 2/01.flac", "/dl/Greatest Hits"),
-		Entry("disk3 in lower case", "/dl/Box/disk3/01.flac", "/dl/Box"),
-		Entry(
-			"a folder that merely starts with cd",
-			"/dl/CDs of 1991/01.flac",
-			"/dl/CDs of 1991",
-		),
-	)
-})
-
 var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 	var (
 		storeMk                    *mockdb.MockStore
@@ -176,6 +109,9 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 			DB: storeMk, Library: library.NewImportService(),
 			MediaServer: msMk, Download: dlMk,
 		})
+		// No listing: the pack reads its whole save path.
+		dlMk.EXPECT().ListTorrentFiles(mock.Anything, "qbit", "hash").
+			Return(nil, nil).Maybe()
 		storeMk.EXPECT().
 			MarkRequestsAvailableByMBID(mock.Anything, "artist", "artist-4").
 			Return(nil).Maybe()
@@ -207,7 +143,7 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 				Return(nil).
 				Once()
 			msMk.EXPECT().
-				RefreshAll(mock.Anything, "music", musicDir).
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
 				Return(nil).
 				Once()
 
@@ -246,7 +182,10 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		)).Return(nil).Once()
 		storeMk.EXPECT().CompletePackRecord(mock.Anything, uint32(1), []uint32(nil)).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -302,7 +241,10 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		expectFind(rec)
 		storeMk.EXPECT().CompletePackRecord(mock.Anything, uint32(1), []uint32(nil)).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -323,7 +265,10 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		)).Return(nil).Once()
 		storeMk.EXPECT().CompletePackRecord(mock.Anything, uint32(1), []uint32(nil)).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -346,7 +291,10 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		)).Return(nil).Once()
 		storeMk.EXPECT().CompletePackRecord(mock.Anything, uint32(1), []uint32(nil)).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -369,7 +317,10 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 				return !p.KeepRecord && len(p.Files) == 1
 			},
 		)).Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})

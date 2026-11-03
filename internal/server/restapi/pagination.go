@@ -7,17 +7,18 @@ import "fmt"
 // request-validation middleware is mounted, so the spec's bounds are enforced
 // here: a present value outside them answers with a 400.
 const (
-	usersMaxLimit    = 100
-	activityMaxLimit = 200
-	importMaxLimit   = 100
-	moviesMaxLimit   = 100
-	seriesMaxLimit   = 100
-	requestsMaxLimit = 100
-	peopleMaxLimit   = 100
-	pendingMaxLimit  = 100
-	musicMaxLimit    = 100
-	bookMaxLimit     = 100
-	arrivalsMaxLimit = 100
+	usersMaxLimit       = 100
+	activityMaxLimit    = 200
+	importMaxLimit      = 100
+	moviesMaxLimit      = 100
+	seriesMaxLimit      = 100
+	requestsMaxLimit    = 100
+	peopleMaxLimit      = 100
+	titleSearchMaxLimit = 100
+	pendingMaxLimit     = 100
+	musicMaxLimit       = 100
+	bookMaxLimit        = 100
+	arrivalsMaxLimit    = 100
 )
 
 const msgZeroPage = "page must be >= 1"

@@ -68,7 +68,7 @@ var _ = Describe("ImportService books", Label("unit", "library"), func() {
 			epub := write(src, "elantris.epub")
 			write(src, "elantris.nfo")
 
-			got, err := svc.ImportEbook(ctx, src, book, profile, false)
+			got, err := svc.ImportEbook(ctx, src, nil, book, profile, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got.Path).To(Equal(
 				filepath.Join(ebooks, "Brandon Sanderson", "Elantris (2005).epub"),
@@ -83,20 +83,20 @@ var _ = Describe("ImportService books", Label("unit", "library"), func() {
 
 		It("never imports a format outside the profile", func() {
 			write(src, "elantris.pdf")
-			_, err := svc.ImportEbook(ctx, src, book, profile, false)
+			_, err := svc.ImportEbook(ctx, src, nil, book, profile, false)
 			Expect(err).To(MatchError(ErrNoMedia))
 		})
 
 		It("reports sample-only downloads", func() {
 			write(src, "elantris.sample.epub")
-			_, err := svc.ImportEbook(ctx, src, book, profile, false)
+			_, err := svc.ImportEbook(ctx, src, nil, book, profile, false)
 			Expect(err).To(MatchError(ErrSampleOnly))
 		})
 
 		It("refuses an existing destination unless replacing", func() {
 			write(src, "elantris.epub")
 			write(ebooks, "Brandon Sanderson/Elantris (2005).epub")
-			_, err := svc.ImportEbook(ctx, src, book, profile, false)
+			_, err := svc.ImportEbook(ctx, src, nil, book, profile, false)
 			Expect(err).To(MatchError(ErrDestExists))
 		})
 	})
@@ -107,7 +107,7 @@ var _ = Describe("ImportService books", Label("unit", "library"), func() {
 			write(src, "Disc 2/Part 01.mp3")
 			write(src, "cover.jpg")
 
-			got, err := svc.ImportAudiobook(ctx, src, book, false)
+			got, err := svc.ImportAudiobook(ctx, src, nil, book, false)
 			Expect(err).NotTo(HaveOccurred())
 			dir := filepath.Join(audio, "Brandon Sanderson", "Elantris (2005)")
 			paths := make([]string, 0, len(got))
@@ -123,34 +123,36 @@ var _ = Describe("ImportService books", Label("unit", "library"), func() {
 		It("refuses a non-empty destination folder unless replacing", func() {
 			write(src, "Part 01.mp3")
 			write(audio, "Brandon Sanderson/Elantris (2005)/old.mp3")
-			_, err := svc.ImportAudiobook(ctx, src, book, false)
+			_, err := svc.ImportAudiobook(ctx, src, nil, book, false)
 			Expect(err).To(MatchError(ErrDestExists))
 
-			_, err = svc.ImportAudiobook(ctx, src, book, true)
+			_, err = svc.ImportAudiobook(ctx, src, nil, book, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("removes what it placed when a later file fails", func() {
 			write(src, "Part 01.mp3")
-			unreadable := write(src, "Part 02.mp3")
-			Expect(os.Chmod(unreadable, 0o000)).To(Succeed())
-			DeferCleanup(func() {
-				Expect(os.Chmod(unreadable, 0o644)).To(Succeed())
-			})
+			// A dangling symlink fails the copy for every user. A chmod 000
+			// file did not: root reads it anyway, so the spec failed exactly
+			// where it ran as root (containers, CI runners).
+			target := filepath.Join(GinkgoT().TempDir(), "part 02.mp3")
+			Expect(
+				os.Symlink(target, filepath.Join(src, "Part 02.mp3")),
+			).To(Succeed())
 
-			_, err := svc.ImportAudiobook(ctx, src, book, false)
+			_, err := svc.ImportAudiobook(ctx, src, nil, book, false)
 			Expect(err).To(HaveOccurred())
 			dir := filepath.Join(audio, "Brandon Sanderson", "Elantris (2005)")
 			Expect(dir).NotTo(BeAnExistingFile())
 
-			Expect(os.Chmod(unreadable, 0o644)).To(Succeed())
-			_, err = svc.ImportAudiobook(ctx, src, book, false)
+			Expect(os.WriteFile(target, []byte("part two"), 0o644)).To(Succeed())
+			_, err = svc.ImportAudiobook(ctx, src, nil, book, false)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("fails with ErrNoMedia when there is no audio", func() {
 			write(src, "notes.txt")
-			_, err := svc.ImportAudiobook(ctx, src, book, false)
+			_, err := svc.ImportAudiobook(ctx, src, nil, book, false)
 			Expect(err).To(MatchError(ErrNoMedia))
 		})
 	})

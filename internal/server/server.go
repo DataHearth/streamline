@@ -67,6 +67,7 @@ type Config struct {
 	Indexers        indexer.Manager
 	Downloads       download.Downloader
 	MediaServers    mediaserver.Manager
+	RefreshStatus   mediaserver.RefreshStatuses
 	DeepLinker      *mediaserver.DeepLinker
 	Renamer         library.Renamer
 	SeriesRenamer   library.Renamer
@@ -93,6 +94,9 @@ type Config struct {
 	Importer        importer.Enqueuer
 	Prober          ffmpeg.Prober
 	Transcoder      *transcoding.Worker
+	// AudioTranscoder converts music for Subsonic's stream; nil serves every
+	// file as it is.
+	AudioTranscoder subsonic.Transcoder
 	AuthMiddleware  func(http.Handler) http.Handler
 	HTTPLog         func(http.Handler) http.Handler
 }
@@ -113,6 +117,7 @@ func New(cfg Config) *Server {
 		Indexers:        cfg.Indexers,
 		Downloads:       cfg.Downloads,
 		MediaServers:    cfg.MediaServers,
+		RefreshStatus:   cfg.RefreshStatus,
 		DeepLinker:      cfg.DeepLinker,
 		Renamer:         cfg.Renamer,
 		SeriesRenamer:   cfg.SeriesRenamer,
@@ -197,14 +202,21 @@ func New(cfg Config) *Server {
 	web.Mount(s.router, s.web)
 
 	appAccess := appaccess.NewTracker(cfg.Ent)
+	sonic := subsonic.New(subsonic.Deps{
+		Ent:        cfg.Ent,
+		Posters:    cfg.Posters,
+		Tracker:    appAccess,
+		Transcoder: cfg.AudioTranscoder,
+		Jobs:       cfg.Scheduler,
+		Accounts:   cfg.Auth,
+	})
 	s.router.Mount(
 		"/rest",
-		subsonic.New(subsonic.Deps{
-			Ent:     cfg.Ent,
-			Posters: cfg.Posters,
-			Tracker: appAccess,
-		}).Routes(),
+		sonic.Routes(),
 	)
+	// Public share links handed out by Subsonic's createShare: excluded from
+	// auth, the token in the path is the credential.
+	s.router.Mount("/share", sonic.SharePage())
 	s.router.Mount("/opds", opds.New(cfg.Ent, appAccess, cfg.Posters).Router())
 
 	s.router.Get(

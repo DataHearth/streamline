@@ -289,6 +289,69 @@ func (_c *MockManager_Commit_Call) RunAndReturn(run func(ctx context.Context, id
 	return _c
 }
 
+// CommitWith provides a mock function for the type MockManager
+func (_mock *MockManager) CommitWith(ctx context.Context, id uint32, opts bulkimport.CommitOptions) error {
+	ret := _mock.Called(ctx, id, opts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CommitWith")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bulkimport.CommitOptions) error); ok {
+		r0 = returnFunc(ctx, id, opts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_CommitWith_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CommitWith'
+type MockManager_CommitWith_Call struct {
+	*mock.Call
+}
+
+// CommitWith is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - opts bulkimport.CommitOptions
+func (_e *MockManager_Expecter) CommitWith(ctx any, id any, opts any) *MockManager_CommitWith_Call {
+	return &MockManager_CommitWith_Call{Call: _e.mock.On("CommitWith", ctx, id, opts)}
+}
+
+func (_c *MockManager_CommitWith_Call) Run(run func(ctx context.Context, id uint32, opts bulkimport.CommitOptions)) *MockManager_CommitWith_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 bulkimport.CommitOptions
+		if args[2] != nil {
+			arg2 = args[2].(bulkimport.CommitOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_CommitWith_Call) Return(err error) *MockManager_CommitWith_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_CommitWith_Call) RunAndReturn(run func(ctx context.Context, id uint32, opts bulkimport.CommitOptions) error) *MockManager_CommitWith_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Delete provides a mock function for the type MockManager
 func (_mock *MockManager) Delete(ctx context.Context, id uint32) error {
 	ret := _mock.Called(ctx, id)

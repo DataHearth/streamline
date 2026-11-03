@@ -50,14 +50,22 @@ func (MediaEvent) Fields() []ent.Field {
 // lifecycle (grab, import, drift, transcode, rename); tv_show carries what
 // belongs to the series as a whole rather than to any one episode — a search
 // issued at series or season scope, and the show-level actions (added,
-// reidentified, metadata_refreshed, monitoring_changed). The owner is
-// optional rather than required because the three are alternatives — the
+// reidentified, metadata_refreshed, monitoring_changed). Music and books
+// follow the same split one level up: album and book carry their own
+// lifecycle (an album is the unit a grab and an import cover, never a track),
+// artist what belongs to no single album — a discography pack, the artist
+// being added — and book_series the series-level actions. The owner is
+// optional rather than required because the seven are alternatives — the
 // invariant is enforced by events.Record, which refuses a row without one.
 func (MediaEvent) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("movie", Movie.Type).Ref("events").Unique(),
 		edge.From("episode", Episode.Type).Ref("events").Unique(),
 		edge.From("tv_show", TVShow.Type).Ref("events").Unique(),
+		edge.From("artist", Artist.Type).Ref("events").Unique(),
+		edge.From("album", Album.Type).Ref("events").Unique(),
+		edge.From("book", Book.Type).Ref("events").Unique(),
+		edge.From("book_series", BookSeries.Type).Ref("events").Unique(),
 	}
 }
 
@@ -68,5 +76,9 @@ func (MediaEvent) Indexes() []ent.Index {
 		index.Edges("movie").Fields("create_time"),
 		index.Edges("episode").Fields("create_time"),
 		index.Edges("tv_show").Fields("create_time"),
+		index.Edges("artist").Fields("create_time"),
+		index.Edges("album").Fields("create_time"),
+		index.Edges("book").Fields("create_time"),
+		index.Edges("book_series").Fields("create_time"),
 	}
 }

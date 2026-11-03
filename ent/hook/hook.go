@@ -117,6 +117,18 @@ func (f BookSeriesFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BookSeriesMutation", m)
 }
 
+// The BookmarkFunc type is an adapter to allow the use of ordinary
+// function as Bookmark mutator.
+type BookmarkFunc func(context.Context, *ent.BookmarkMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BookmarkFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BookmarkMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BookmarkMutation", m)
+}
+
 // The CreditFunc type is an adapter to allow the use of ordinary
 // function as Credit mutator.
 type CreditFunc func(context.Context, *ent.CreditMutation) (ent.Value, error)
@@ -261,6 +273,18 @@ func (f MovieFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MovieMutation", m)
 }
 
+// The MusicAnnotationFunc type is an adapter to allow the use of ordinary
+// function as MusicAnnotation mutator.
+type MusicAnnotationFunc func(context.Context, *ent.MusicAnnotationMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f MusicAnnotationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.MusicAnnotationMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MusicAnnotationMutation", m)
+}
+
 // The MusicCreditFunc type is an adapter to allow the use of ordinary
 // function as MusicCredit mutator.
 type MusicCreditFunc func(context.Context, *ent.MusicCreditMutation) (ent.Value, error)
@@ -295,6 +319,42 @@ func (f PersonFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PersonMutation", m)
+}
+
+// The PlayQueueFunc type is an adapter to allow the use of ordinary
+// function as PlayQueue mutator.
+type PlayQueueFunc func(context.Context, *ent.PlayQueueMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PlayQueueFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PlayQueueMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PlayQueueMutation", m)
+}
+
+// The PlaylistFunc type is an adapter to allow the use of ordinary
+// function as Playlist mutator.
+type PlaylistFunc func(context.Context, *ent.PlaylistMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PlaylistFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PlaylistMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PlaylistMutation", m)
+}
+
+// The RadioStationFunc type is an adapter to allow the use of ordinary
+// function as RadioStation mutator.
+type RadioStationFunc func(context.Context, *ent.RadioStationMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RadioStationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RadioStationMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RadioStationMutation", m)
 }
 
 // The RequestFunc type is an adapter to allow the use of ordinary
@@ -343,6 +403,18 @@ func (f SessionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SessionMutation", m)
+}
+
+// The ShareFunc type is an adapter to allow the use of ordinary
+// function as Share mutator.
+type ShareFunc func(context.Context, *ent.ShareMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ShareFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ShareMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ShareMutation", m)
 }
 
 // The TVShowFunc type is an adapter to allow the use of ordinary

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from "svelte";
-	import { Search, Film, Tv, ArrowRight, Music, BookOpen } from "@lucide/svelte";
+	import { Search, Film, Tv, ArrowRight, Music, BookOpen, LoaderCircle } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { initials } from "@lib/people";
 	import { posterUrl, tvPosterUrl } from "@lib/posters";
@@ -9,6 +9,7 @@
 	import Img from "@components/shared/Img.svelte";
 	import {
 		createSearchModel,
+		isTitleItem,
 		itemKindLabel,
 		itemSubline,
 		searchNav,
@@ -180,11 +181,19 @@
 			<div
 				class="search-row flex items-center gap-3 border-b border-border px-4 py-3"
 			>
-				<Search
-					size={16}
-					class="search-icon shrink-0 text-fg-subtle"
-					aria-hidden="true"
-				/>
+				{#if model.pending}
+					<LoaderCircle
+						size={16}
+						class="search-icon shrink-0 animate-spin text-accent"
+						aria-hidden="true"
+					/>
+				{:else}
+					<Search
+						size={16}
+						class="search-icon shrink-0 text-fg-subtle"
+						aria-hidden="true"
+					/>
+				{/if}
 				<input
 					bind:this={inputEl}
 					bind:value={query}
@@ -222,12 +231,12 @@
 									: "text-fg-muted hover:text-fg",
 							)}
 						>
-							{#if item.kind === "movie" || item.kind === "series"}
+							{#if item.kind === "movie" || item.kind === "series" || item.kind === "episode"}
 								{@const MediaIcon = item.kind === "movie" ? Film : Tv}
 								{@const poster =
 									item.kind === "movie"
 										? posterUrl({ id: item.id })
-										: tvPosterUrl(item.id)}
+										: tvPosterUrl(item.kind === "episode" ? item.seriesId : item.id)}
 								<div
 									class="relative h-9 w-6 shrink-0 overflow-hidden rounded-md bg-surface-2"
 								>
@@ -242,15 +251,17 @@
 										class="relative h-full w-full object-cover"
 									/>
 								</div>
-							{:else if item.kind === "artist" || item.kind === "book"}
+							{:else if item.kind === "artist" || item.kind === "album" || item.kind === "book"}
 								<div
 									class={cn(
 										"relative shrink-0 overflow-hidden bg-surface-2",
-										item.kind === "artist" ? "h-7 w-7 rounded-full" : "h-9 w-6 rounded-md",
+										item.kind === "artist" && "h-7 w-7 rounded-full",
+										item.kind === "album" && "h-8 w-8 rounded-md",
+										item.kind === "book" && "h-9 w-6 rounded-md",
 									)}
 								>
 									<div class="absolute inset-0 grid place-items-center text-fg-muted">
-										{#if item.kind === "artist"}
+										{#if item.kind === "artist" || item.kind === "album"}
 											<Music size={13} aria-hidden="true" />
 										{:else}
 											<BookOpen size={13} aria-hidden="true" />
@@ -296,7 +307,7 @@
 								<div class="truncate text-[13px] font-medium">
 									{item.label}
 								</div>
-								{#if (item.kind === "movie" || item.kind === "series" || item.kind === "artist" || item.kind === "book") && itemSubline(item)}
+								{#if isTitleItem(item) && itemSubline(item)}
 									<div
 										class="truncate font-mono text-[10.5px] text-fg-subtle"
 									>
@@ -329,8 +340,10 @@
 				{/each}
 
 				{#if flat.length === 0}
-					<div class="px-3 py-8 text-center text-[12.5px] text-fg-subtle">
-						{i18n.search_no_matches_for({ query: query.trim() })}
+					<div role="status" class="px-3 py-8 text-center text-[12.5px] text-fg-subtle">
+						{model.pending
+							? i18n.common_searching()
+							: i18n.search_no_matches_for({ query: query.trim() })}
 					</div>
 				{/if}
 			</div>

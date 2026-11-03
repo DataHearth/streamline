@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"unicode/utf8"
 
@@ -333,6 +334,32 @@ func (s *Server) ApplyMusicMonitoredTypes(
 	}, nil
 }
 
+// RetagMusicLibrary queues every track file for a full rewrite by the
+// music-tag-sync job. Admin only — a library-wide bulk action driven from the
+// settings page.
+func (s *Server) RetagMusicLibrary(
+	ctx context.Context,
+	_ RetagMusicLibraryRequestObject,
+) (RetagMusicLibraryResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return RetagMusicLibrary403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	n, err := s.music.RetagLibrary(ctx)
+	if errors.Is(err, music.ErrTagsOff) {
+		return RetagMusicLibrary409JSONResponse{
+			ConflictJSONResponse: conflictResp("music_tags_off", err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return RetagMusicLibrary500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return RetagMusicLibrary202JSONResponse{Queued: n}, nil
+}
+
 func musicAlbumTypes(types []string) []MusicAlbumType {
 	out := make([]MusicAlbumType, len(types))
 	for i, t := range types {
@@ -544,6 +571,76 @@ func toMusicSearchItems(releases []music.AlbumRelease) []SearchResult {
 	return items
 }
 
+// toReleaseFiles maps a release's files read against the album.
+func toReleaseFiles(v *music.ReleaseFilesView) ReleaseFiles {
+	out := ReleaseFiles{
+		Files: make([]ReleaseFile, 0, len(v.Files)),
+	}
+	for _, f := range v.Files {
+		rf := ReleaseFile{Path: f.Path, Size: f.Size}
+		if f.TrackID != 0 {
+			rf.TrackId = &f.TrackID
+		}
+		out.Files = append(out.Files, rf)
+	}
+	out.Tracks = toReleaseTracks(v.Tracks)
+	return out
+}
+
+func toReleaseTracks(tracks []music.ReleaseTrackView) []ReleaseTrack {
+	out := make([]ReleaseTrack, 0, len(tracks))
+	for _, t := range tracks {
+		out = append(out, ReleaseTrack{
+			Id:        t.ID,
+			Disc:      t.Disc,
+			Number:    t.Position,
+			Title:     t.Title,
+			HasFile:   t.HasFile,
+			InRelease: t.InRelease,
+		})
+	}
+	return out
+}
+
+// toDiscographyFiles maps a discography pack read against the artist.
+func toDiscographyFiles(v *music.DiscographyFilesView) DiscographyFiles {
+	out := DiscographyFiles{
+		Files:   make([]DiscographyFile, 0, len(v.Files)),
+		Folders: make([]DiscographyFolder, 0, len(v.Folders)),
+		Albums:  make([]DiscographyAlbum, 0, len(v.Albums)),
+	}
+	for _, f := range v.Files {
+		df := DiscographyFile{Path: f.Path, Size: f.Size}
+		if f.AlbumID != 0 {
+			df.AlbumId = &f.AlbumID
+		}
+		if f.TrackID != 0 {
+			df.TrackId = &f.TrackID
+		}
+		out.Files = append(out.Files, df)
+	}
+	for _, f := range v.Folders {
+		df := DiscographyFolder{Path: f.Path, Waiting: f.Waiting}
+		if f.AlbumID != 0 {
+			df.AlbumId = &f.AlbumID
+		}
+		out.Folders = append(out.Folders, df)
+	}
+	for _, a := range v.Albums {
+		da := DiscographyAlbum{
+			Id:        a.ID,
+			Title:     a.Title,
+			InRelease: a.InRelease,
+			Tracks:    toReleaseTracks(a.Tracks),
+		}
+		if a.Year != 0 {
+			da.Year = &a.Year
+		}
+		out.Albums = append(out.Albums, da)
+	}
+	return out
+}
+
 func (s *Server) BrowseMusicArtistReleases(
 	ctx context.Context,
 	request BrowseMusicArtistReleasesRequestObject,
@@ -581,7 +678,9 @@ func grabRefused(err error) bool {
 	return errors.Is(err, download.ErrUntrustedSource) ||
 		errors.Is(err, download.ErrNoWantedFiles) ||
 		errors.Is(err, download.ErrClientFull) ||
-		errors.Is(err, download.ErrUnsafeTorrentName)
+		errors.Is(err, download.ErrNoSpace) ||
+		errors.Is(err, download.ErrUnsafeTorrentName) ||
+		errors.Is(err, download.ErrCueImage)
 }
 
 func (s *Server) GrabMusicArtistRelease(
@@ -663,8 +762,24 @@ func (s *Server) PatchMusicAlbum(
 		}, nil
 	}
 	var err error
-	if request.Body != nil && request.Body.Monitored != nil {
-		err = s.music.SetAlbumMonitored(ctx, request.Id, *request.Body.Monitored)
+	var tags music.AlbumTagSettings
+	if b := request.Body; b != nil {
+		tags.Managed = b.TagsManaged
+		if b.TagOverrides != nil {
+			overrides, verr := tagOverrides(*b.TagOverrides)
+			if verr != nil {
+				return PatchMusicAlbum422JSONResponse{
+					UnprocessableEntityJSONResponse: errUnprocessable(verr.Error()),
+				}, nil
+			}
+			tags.Overrides = &overrides
+		}
+		if b.Monitored != nil {
+			err = s.music.SetAlbumMonitored(ctx, request.Id, *b.Monitored)
+		}
+	}
+	if err == nil && (tags.Managed != nil || tags.Overrides != nil) {
+		err = s.music.SetAlbumTagSettings(ctx, request.Id, tags)
 	}
 	var view *music.AlbumView
 	if err == nil {
@@ -758,6 +873,101 @@ func (s *Server) GrabMusicAlbumRelease(
 		}, nil
 	}
 	return GrabMusicAlbumRelease202Response{}, nil
+}
+
+func (s *Server) GetMusicAlbumReleaseFiles(
+	ctx context.Context,
+	request GetMusicAlbumReleaseFilesRequestObject,
+) (GetMusicAlbumReleaseFilesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GetMusicAlbumReleaseFiles403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
+		return GetMusicAlbumReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GetMusicAlbumReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
+		}, nil
+	}
+	view, err := s.music.AlbumReleaseFiles(ctx, request.Id, sr)
+	switch {
+	case errors.Is(err, music.ErrAlbumNotFound):
+		return GetMusicAlbumReleaseFiles404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	case errors.Is(err, download.ErrUntrustedSource):
+		return GetMusicAlbumReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case errors.Is(err, download.ErrFileListUnavailable):
+		return GetMusicAlbumReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: errFilesUnavailable(err.Error()),
+		}, nil
+	case err != nil:
+		// Anything else is the indexer not handing the .torrent over, or a
+		// payload that does not decode. The error text can name the indexer's
+		// address, so it goes to the log and the caller gets the gist.
+		slog.WarnContext(ctx, "release files: fetch failed",
+			"album.id", request.Id, "release", sr.Title, "error", err)
+		return GetMusicAlbumReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: errTorrentUnreadable(
+				"the indexer did not hand over a readable .torrent for this release",
+			),
+		}, nil
+	}
+	return GetMusicAlbumReleaseFiles200JSONResponse(toReleaseFiles(view)), nil
+}
+
+func (s *Server) GetMusicArtistReleaseFiles(
+	ctx context.Context,
+	request GetMusicArtistReleaseFilesRequestObject,
+) (GetMusicArtistReleaseFilesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GetMusicArtistReleaseFiles403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
+		return GetMusicArtistReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GetMusicArtistReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
+		}, nil
+	}
+	view, err := s.music.ArtistPackFiles(ctx, request.Id, sr)
+	switch {
+	case errors.Is(err, music.ErrArtistNotFound):
+		return GetMusicArtistReleaseFiles404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	case errors.Is(err, download.ErrUntrustedSource):
+		return GetMusicArtistReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case errors.Is(err, download.ErrFileListUnavailable):
+		return GetMusicArtistReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: errFilesUnavailable(err.Error()),
+		}, nil
+	case err != nil:
+		slog.WarnContext(ctx, "release files: fetch failed",
+			"artist.id", request.Id, "release", sr.Title, "error", err)
+		return GetMusicArtistReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: errTorrentUnreadable(
+				"the indexer did not hand over a readable .torrent for this release",
+			),
+		}, nil
+	}
+	return GetMusicArtistReleaseFiles200JSONResponse(toDiscographyFiles(view)), nil
 }
 
 func (s *Server) SearchMusicAlbumNow(

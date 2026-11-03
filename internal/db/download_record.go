@@ -11,6 +11,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -51,7 +52,8 @@ func withBookContext(q *ent.BookQuery) {
 // order, each with the files it already holds. Mirrors FindAlbumByID: the
 // album importer matches downloaded files to tracks and skips covered ones.
 func withAlbumContext(q *ent.AlbumQuery) {
-	q.WithArtist().WithTracks(func(tq *ent.TrackQuery) {
+	withAlbumArtists(q)
+	q.WithTracks(func(tq *ent.TrackQuery) {
 		tq.Order(ent.Asc(track.FieldDisc), ent.Asc(track.FieldPosition)).
 			WithMediaFiles()
 	})
@@ -162,6 +164,32 @@ func (db *DB) AllDownloadRecordHashes(
 		set[h] = struct{}{}
 	}
 	return set, nil
+}
+
+// DownloadRecordTitlesByHash maps every non-empty torrent hash to the release
+// title of the newest record holding it. A torrent's own name is its
+// uploader's choice and can say nothing of the release — a RuTracker Omens LP
+// is named "Lamb Of God" — so the builtin torrent list shows this beside it.
+func (db *DB) DownloadRecordTitlesByHash(
+	ctx context.Context,
+) (map[string]string, error) {
+	var rows []struct {
+		TorrentHash string `json:"torrent_hash"`
+		Title       string `json:"title"`
+	}
+	err := db.client.DownloadRecord.Query().
+		Where(downloadrecord.TorrentHashNEQ("")).
+		Order(ent.Asc(downloadrecord.FieldID)).
+		Select(downloadrecord.FieldTorrentHash, downloadrecord.FieldTitle).
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, fmt.Errorf("list download record titles: %w", err)
+	}
+	titles := make(map[string]string, len(rows))
+	for _, r := range rows {
+		titles[r.TorrentHash] = r.Title
+	}
+	return titles, nil
 }
 
 // ListPendingDownloadRecords returns one page of status=pending records with
@@ -675,10 +703,13 @@ func (db *DB) ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error {
 		Exec(ctx)
 }
 
-// FailHeldDownloadRecord finalizes a held record the user rejected. requeue
+// FailHeldDownloadRecord finalizes a held record the user rejected, and marks
+// it rejected: RejectedReleases reads it back so the automatic grab paths
+// never take the same release for the same item again. requeue
 // reverts the movie to wanted so a search finds a replacement; without it the
 // movie stays failed, the user having judged the release themselves. Episodes
-// revert to wanted either way, mirroring RecordImportFailure — unless the
+// revert to wanted either way, mirroring RecordImportFailure, every episode a
+// pack left in flight included (settleRecordEpisodes) — unless the
 // episode still holds a file: an upgrade grab anchors its record on an
 // episode it was replacing, and rejecting the replacement leaves that file in
 // place, so "wanted" would claim we have nothing. Albums follow the movie rule,
@@ -693,7 +724,56 @@ func (db *DB) FailHeldDownloadRecord(
 	if err != nil {
 		return err
 	}
+	return db.rejectRecord(ctx, rec, reason, requeue)
+}
 
+// RejectDownloadingRecord fails a record still downloading as rejected and
+// sends what it was for back to wanted: a release found unimportable before it
+// finished, which the automatic searches must not pick again.
+func (db *DB) RejectDownloadingRecord(
+	ctx context.Context,
+	id uint32,
+	reason string,
+) error {
+	rec, err := db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.ID(id),
+			downloadrecord.StatusEQ(downloadrecord.StatusDownloading),
+		).
+		WithMovie().
+		WithAnchorEpisode(withEpisodeContext).
+		WithAlbum(withAlbumContext).
+		WithArtist().
+		WithAlbums(withAlbumContext).
+		Only(ctx)
+	if err != nil {
+		return err
+	}
+	return db.rejectRecord(ctx, rec, reason, true)
+}
+
+// ListDownloadingAlbumRecords returns the album records still downloading,
+// each with its album's id.
+func (db *DB) ListDownloadingAlbumRecords(
+	ctx context.Context,
+) ([]*ent.DownloadRecord, error) {
+	return db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.StatusEQ(downloadrecord.StatusDownloading),
+			downloadrecord.HasAlbum(),
+			downloadrecord.TorrentHashNEQ(""),
+		).
+		WithAlbum(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
+		All(ctx)
+}
+
+func (db *DB) rejectRecord(
+	ctx context.Context,
+	rec *ent.DownloadRecord,
+	reason string,
+	requeue bool,
+) error {
+	id := rec.ID
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
 		return err
@@ -701,6 +781,7 @@ func (db *DB) FailHeldDownloadRecord(
 	if err := tx.DownloadRecord.UpdateOneID(id).
 		SetStatus(downloadrecord.StatusFailed).
 		SetFailureReason(reason).
+		SetRejected(true).
 		ClearHoldReasons().
 		Exec(ctx); err != nil {
 		tx.Rollback()
@@ -730,6 +811,10 @@ func (db *DB) FailHeldDownloadRecord(
 			tx.Rollback()
 			return fmt.Errorf("update episode: %w", err)
 		}
+	}
+	if err := settleRecordEpisodes(ctx, tx, id); err != nil {
+		tx.Rollback()
+		return err
 	}
 	var albumIDs []uint32
 	if rec.Edges.Album != nil {
@@ -935,6 +1020,7 @@ func (db *DB) RecordAlbumImportSuccess(
 			SetFormat(f.Format).
 			SetSource(mediafile.SourceAuto).
 			SetTrackID(f.TrackID).
+			SetNillableTagsState(tagsPending(f.TagsPending)).
 			Exec(ctx); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("create media file %s: %w", f.Path, err)
@@ -1093,8 +1179,9 @@ func (db *DB) RecordBookImportSuccess(
 }
 
 // RecordImportFailure writes attempt counter on retryable; on terminal also
-// flips DownloadRecord + Movie to failed with reason, and settles the album
-// (or each album a pack expected) through settleFailedAlbums.
+// flips DownloadRecord + Movie to failed with reason, walks the record's
+// episodes back (settleRecordEpisodes), and settles the album (or each album
+// a pack expected) through settleFailedAlbums.
 func (db *DB) RecordImportFailure(
 	ctx context.Context,
 	p RecordImportFailureParams,
@@ -1141,6 +1228,12 @@ func (db *DB) RecordImportFailure(
 				tx.Rollback()
 				return fmt.Errorf("update episode: %w", err)
 			}
+		}
+	}
+	if p.Terminal {
+		if err := settleRecordEpisodes(ctx, tx, p.RecordID); err != nil {
+			tx.Rollback()
+			return err
 		}
 	}
 	if p.Terminal {
@@ -1241,6 +1334,9 @@ func (db *DB) MarkWantedRecordEpisodesImporting(
 // MarkRecordEpisodesImporting deliberately leaves "wanted" alone because a
 // wanted episode is usually none of a running grab's business — here "wanted"
 // is precisely what this record's own failure wrote.
+//
+// A rejected record loses the mark: retrying it is the user taking the
+// rejection back, and the release is once again one a search may grab.
 func (db *DB) RetryFailedDownloadRecord(ctx context.Context, id uint32) error {
 	rec, err := db.client.DownloadRecord.Query().
 		Where(
@@ -1263,6 +1359,7 @@ func (db *DB) RetryFailedDownloadRecord(ctx context.Context, id uint32) error {
 		SetStatus(downloadrecord.StatusImporting).
 		SetImportAttempts(0).
 		SetFailureReason("").
+		SetRejected(false).
 		Exec(ctx); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("update download record: %w", err)
@@ -1311,33 +1408,44 @@ func (db *DB) DeleteCompletedDownloadRecordsBefore(
 	cutoff time.Time,
 	keepHashes []string,
 ) (int, error) {
-	preds := []predicate.DownloadRecord{
+	return db.client.DownloadRecord.Delete().Where(sparingHashes(keepHashes,
 		downloadrecord.StatusEQ(downloadrecord.StatusCompleted),
 		downloadrecord.ImportedAtLT(cutoff),
-	}
-	if len(keepHashes) > 0 {
-		// torrent_hash is nullable and NULL NOT IN (...) is NULL, so without
-		// the IsNil arm a hashless record would never be purged again.
-		preds = append(preds, downloadrecord.Or(
-			downloadrecord.TorrentHashIsNil(),
-			downloadrecord.TorrentHashNotIn(keepHashes...),
-		))
-	}
-	return db.client.DownloadRecord.Delete().Where(preds...).Exec(ctx)
+	)...).Exec(ctx)
 }
 
 // DeleteFailedDownloadRecordsBefore deletes records whose status is failed and
-// whose update_time is older than cutoff. Returns the number of rows deleted.
+// whose update_time is older than cutoff, sparing any whose torrent_hash is in
+// keepHashes. Returns the number of rows deleted. A rejected record is kept
+// however old it is: it is the blocklist entry, and purging it would hand the
+// release back to the next automatic search. The user forgets one by deleting
+// it from the history.
 func (db *DB) DeleteFailedDownloadRecordsBefore(
 	ctx context.Context,
 	cutoff time.Time,
+	keepHashes []string,
 ) (int, error) {
-	return db.client.DownloadRecord.Delete().
-		Where(
-			downloadrecord.StatusEQ(downloadrecord.StatusFailed),
-			downloadrecord.UpdateTimeLT(cutoff),
-		).
-		Exec(ctx)
+	return db.client.DownloadRecord.Delete().Where(sparingHashes(keepHashes,
+		downloadrecord.StatusEQ(downloadrecord.StatusFailed),
+		downloadrecord.UpdateTimeLT(cutoff),
+		downloadrecord.Rejected(false),
+	)...).Exec(ctx)
+}
+
+// sparingHashes appends to preds the condition that a record's torrent is not
+// one of keepHashes. torrent_hash is nullable and NULL NOT IN (...) is NULL, so
+// without the IsNil arm a hashless record would never be purged again.
+func sparingHashes(
+	keepHashes []string,
+	preds ...predicate.DownloadRecord,
+) []predicate.DownloadRecord {
+	if len(keepHashes) == 0 {
+		return preds
+	}
+	return append(preds, downloadrecord.Or(
+		downloadrecord.TorrentHashIsNil(),
+		downloadrecord.TorrentHashNotIn(keepHashes...),
+	))
 }
 
 // SetDownloadRecordSavePath persists save_path so import_scan can resume
@@ -1616,6 +1724,12 @@ func (db *DB) FindActiveDownloadRecordByID(
 			),
 		).
 		WithMovie().
+		// What a cancellation is filed against when it is not a movie: the
+		// activity row needs the owner, and only its id.
+		WithAnchorEpisode(func(q *ent.EpisodeQuery) { q.Select(episode.FieldID) }).
+		WithAlbum(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
+		WithBook(func(q *ent.BookQuery) { q.Select(book.FieldID) }).
+		WithArtist(func(q *ent.ArtistQuery) { q.Select(artist.FieldID) }).
 		Only(ctx)
 }
 
@@ -1697,13 +1811,15 @@ func (db *DB) DeleteDownloadRecord(ctx context.Context, id uint32) error {
 }
 
 // DeleteAllCompletedDownloadRecords removes every completed record (the
-// "Clear completed" action). Returns the number of rows deleted.
+// "Clear completed" action) but those whose torrent_hash is in keepHashes.
+// Returns the number of rows deleted.
 func (db *DB) DeleteAllCompletedDownloadRecords(
 	ctx context.Context,
+	keepHashes []string,
 ) (int, error) {
-	return db.client.DownloadRecord.Delete().
-		Where(downloadrecord.StatusEQ(downloadrecord.StatusCompleted)).
-		Exec(ctx)
+	return db.client.DownloadRecord.Delete().Where(sparingHashes(keepHashes,
+		downloadrecord.StatusEQ(downloadrecord.StatusCompleted),
+	)...).Exec(ctx)
 }
 
 // RevertMovieToWantedIfNoFile flips a movie back to "wanted" only when it has
@@ -1749,6 +1865,36 @@ var inFlightRecordStatuses = []downloadrecord.Status{
 // recordEpisodes selects every episode a record's download is for.
 func recordEpisodes(recordID uint32) predicate.Episode {
 	return episode.HasDownloadRecordsWith(downloadrecord.ID(recordID))
+}
+
+// settleRecordEpisodes walks a record that just failed back off the episodes
+// it left in flight: RevertOrphanedDownloadingEpisodes' rule, scoped to the
+// record's own set and run in the failing transaction. A pack marks every
+// episode it is for, and only the anchor used to be walked back, so the rest
+// read "importing" until the next monitor tick's sweep found them stranded.
+// An episode another in-flight record still covers is left to it; the caller
+// has already moved this record out of flight.
+func settleRecordEpisodes(ctx context.Context, tx *ent.Tx, recordID uint32) error {
+	stranded := episode.And(
+		recordEpisodes(recordID),
+		episode.StatusIn(inFlightEpisodeStatuses...),
+		episode.Not(episode.HasDownloadRecordsWith(
+			downloadrecord.StatusIn(inFlightRecordStatuses...),
+		)),
+	)
+	if _, err := tx.Episode.Update().
+		Where(stranded, episode.Not(episode.HasMediaFiles())).
+		SetStatus(episode.StatusWanted).
+		Save(ctx); err != nil {
+		return fmt.Errorf("revert record episodes to wanted: %w", err)
+	}
+	if _, err := tx.Episode.Update().
+		Where(stranded, episode.HasMediaFiles()).
+		SetStatus(episode.StatusAvailable).
+		Save(ctx); err != nil {
+		return fmt.Errorf("revert record episodes to available: %w", err)
+	}
+	return nil
 }
 
 // RevertOrphanedDownloadingEpisodes reconciles episodes stuck in flight with

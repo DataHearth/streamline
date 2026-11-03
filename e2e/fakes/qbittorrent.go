@@ -32,21 +32,35 @@ type QBFile struct {
 }
 
 // QBittorrent serves the read side of qBittorrent's WebUI API — login, the
-// category-filtered torrent listing, and per-torrent file lists. That is
-// everything the manual-torrent adoption pass and the pending-proposal preview
-// consume, and nothing that writes: a spec that needs a real daemon's add /
-// selection behavior wants containers.StartQBittorrent instead.
+// category-filtered torrent listing, per-torrent file lists, and the free
+// space a grab is checked against. That is everything the manual-torrent
+// adoption pass, the pending-proposal preview and a refused grab consume, and
+// nothing that writes: a spec that needs a real daemon's add / selection
+// behavior wants containers.StartQBittorrent instead.
 type QBittorrent struct {
 	URL string
+	// FreeSpace is the server_state.free_space_on_disk the fake reports.
+	FreeSpace int64
 
 	torrents []QBTorrent
 }
 
 // NewQBittorrent starts the fake reporting torrents, all of them seeding and
-// in the managed category. Shuts down via DeferCleanup.
+// in the managed category, and 1 TB free. Shuts down via DeferCleanup.
 func NewQBittorrent(torrents ...QBTorrent) *QBittorrent {
-	q := &QBittorrent{torrents: torrents}
+	q := &QBittorrent{torrents: torrents, FreeSpace: 1_000_000_000_000}
 	mux := http.NewServeMux()
+
+	mux.HandleFunc(
+		"/api/v2/sync/maindata",
+		func(w http.ResponseWriter, _ *http.Request) {
+			writeQBJSON(w, map[string]any{
+				"rid":          1,
+				"full_update":  true,
+				"server_state": map[string]any{"free_space_on_disk": q.FreeSpace},
+			})
+		},
+	)
 
 	mux.HandleFunc(
 		"/api/v2/auth/login",

@@ -1,6 +1,7 @@
 package restapi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -334,6 +335,75 @@ var _ = Describe(
 				Expect(e.Code).NotTo(BeNil())
 				Expect(*e.Code).To(Equal("last_admin"))
 			})
+
+			It("passes the Subsonic permissions through and echoes them", func() {
+				app.addMember("sonic@test.com")
+
+				var got auth.UserPatch
+				app.auth.EXPECT().
+					UpdateUser(mock.Anything, app.memberID, mock.AnythingOfType("auth.UserPatch")).
+					Run(func(_ context.Context, _ uint32, p auth.UserPatch) { got = p }).
+					Return(nil).
+					Once()
+				app.auth.EXPECT().
+					GetUserByID(mock.Anything, app.memberID).
+					Return(&ent.User{
+						ID:                 app.memberID,
+						Email:              "sonic@test.com",
+						Role:               "member",
+						SubsonicCanStream:  true,
+						SubsonicCanShare:   false,
+						SubsonicMaxBitRate: 128,
+					}, nil).
+					Once()
+
+				req := app.req(
+					http.MethodPatch,
+					fmt.Sprintf("/api/v1/users/%d", app.memberID),
+					app.adminKey,
+					strings.NewReader(
+						`{"subsonic":{"can_share":false,"max_bit_rate":128}}`,
+					),
+				)
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				Expect(got.Role).To(BeNil())
+				Expect(got.Subsonic.CanShare).To(HaveValue(BeFalse()))
+				Expect(got.Subsonic.MaxBitRate).To(HaveValue(BeEquivalentTo(128)))
+				Expect(
+					got.Subsonic.CanStream,
+				).To(BeNil(), "an unsent flag is left alone")
+
+				var u User
+				Expect(json.NewDecoder(resp.Body).Decode(&u)).To(Succeed())
+				Expect(u.Subsonic).NotTo(BeNil())
+				Expect(u.Subsonic.CanShare).To(BeFalse())
+				Expect(u.Subsonic.MaxBitRate).To(BeEquivalentTo(128))
+			})
+
+			DescribeTable("refuses a bit rate cap no transcode can honour",
+				func(kbps int) {
+					app.addMember("cap@test.com")
+					req := app.req(
+						http.MethodPatch,
+						fmt.Sprintf("/api/v1/users/%d", app.memberID),
+						app.adminKey,
+						strings.NewReader(
+							fmt.Sprintf(`{"subsonic":{"max_bit_rate":%d}}`, kbps),
+						),
+					)
+					req.Header.Set("Content-Type", "application/json")
+					resp := app.do(req)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				},
+				Entry("under the floor", 16),
+				Entry("over the ceiling", 512),
+				Entry("negative", -1),
+			)
 		})
 
 		Describe("DELETE /api/v1/users/{uid}", func() {

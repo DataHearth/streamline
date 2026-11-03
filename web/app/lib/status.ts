@@ -5,6 +5,7 @@ import type {
 	Movie,
 	TVShow,
 } from "./types";
+import { m as i18n } from "./paraglide/messages.js";
 
 // The backend keeps a fileless movie in "wanted" whether or not anyone is
 // looking for it. Unmonitored means nobody is, so the card reads "missing".
@@ -49,4 +50,16 @@ export function episodeStatus(
 export function missingEpisodes(episodes: Episode[], showMonitored = true) {
 	return episodes.filter((e) => episodeStatus(e, showMonitored) === "missing")
 		.length;
+}
+
+// What an episode row is called. A blank title is not "TBA" once the episode
+// has an air date or a file: the provider's translation for the configured
+// language trails the original airing by weeks, and a downloaded season read
+// as a column of "TBA" that looked unaired. Only a dateless placeholder with
+// nothing on disk is still to be announced.
+export function episodeTitle(e: Episode): string {
+	if (e.title) return e.title;
+	return e.air_date || e.has_file
+		? i18n.episode_number({ number: e.number })
+		: i18n.episode_title_tba();
 }

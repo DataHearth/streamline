@@ -581,7 +581,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 				mock.Anything, mock.AnythingOfType("time.Time"), []string(nil),
 			).Return(0, nil).Once()
 			store.EXPECT().DeleteFailedDownloadRecordsBefore(
-				mock.Anything, mock.AnythingOfType("time.Time"),
+				mock.Anything, mock.AnythingOfType("time.Time"), []string(nil),
 			).Return(0, nil).Once()
 			Expect(cleaner.PurgeOldRecords(ctx)).To(Succeed())
 		})
@@ -594,8 +594,8 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			).Run(func(_ context.Context, c time.Time, _ []string) { compCutoff = c }).
 				Return(2, nil).Once()
 			store.EXPECT().DeleteFailedDownloadRecordsBefore(
-				mock.Anything, mock.AnythingOfType("time.Time"),
-			).Run(func(_ context.Context, c time.Time) { failCutoff = c }).
+				mock.Anything, mock.AnythingOfType("time.Time"), []string(nil),
+			).Run(func(_ context.Context, c time.Time, _ []string) { failCutoff = c }).
 				Return(1, nil).Once()
 
 			Expect(cleaner.PurgeOldRecords(ctx)).To(Succeed())
@@ -613,7 +613,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 				mock.Anything, mock.Anything, mock.Anything,
 			).Return(0, errors.New("comp")).Once()
 			store.EXPECT().DeleteFailedDownloadRecordsBefore(
-				mock.Anything, mock.Anything,
+				mock.Anything, mock.Anything, mock.Anything,
 			).Return(0, errors.New("fail")).Once()
 			err := cleaner.PurgeOldRecords(ctx)
 			Expect(err).To(MatchError(ContainSubstring("comp")))
@@ -628,6 +628,40 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 				Return(nil, boom).Once()
 			_, err := mgr.Queue(ctx)
 			Expect(err).To(MatchError(boom))
+		})
+
+		It("orders imports first, then by status and progress", func() {
+			now := time.Now()
+			entries := []QueueEntry{
+				{RecordID: 1, Status: "downloading", Progress: 0.42, CreatedAt: now},
+				{RecordID: 2, Status: "paused", Progress: 0.9, CreatedAt: now},
+				{RecordID: 3, Status: "downloading", Progress: 0.77, CreatedAt: now},
+				{
+					RecordID:  4,
+					Status:    "importing",
+					Progress:  1,
+					CreatedAt: now.Add(-time.Hour),
+				},
+				{RecordID: 5, Status: "held", Progress: 1, CreatedAt: now},
+				{
+					RecordID:  6,
+					Status:    "downloading",
+					Progress:  0.42,
+					CreatedAt: now.Add(time.Minute),
+				},
+				{RecordID: 7, Status: "error", Progress: 0.1, CreatedAt: now},
+				{RecordID: 8, Status: "stalled", Progress: 0.5, CreatedAt: now},
+			}
+			sortQueue(entries)
+			ids := make([]uint32, 0, len(entries))
+			for _, e := range entries {
+				ids = append(ids, e.RecordID)
+			}
+			Expect(ids).To(Equal([]uint32{4, 5, 7, 3, 8, 6, 1, 2}))
+		})
+
+		It("keeps a stalled torrent stalled rather than downloading", func() {
+			Expect(liveQueueStatus(StatusStalled)).To(Equal("stalled"))
 		})
 
 		It("maps importing records to progress 1.0 without polling", func() {
@@ -679,7 +713,84 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			store.EXPECT().
 				RevertMovieToWantedIfNoFile(mock.Anything, uint32(5)).
 				Return(nil).Once()
+			store.EXPECT().
+				RevertOrphanedDownloadingEpisodes(mock.Anything).
+				Return(0, nil).Once()
+			store.EXPECT().
+				RevertOrphanedDownloadingAlbumsAndBooks(mock.Anything).
+				Return(0, nil).Once()
 			Expect(mgr.CancelQueueItem(ctx, 3)).To(Succeed())
+		})
+
+		It("reverts an album's or episode's media in the same call", func() {
+			rec := &ent.DownloadRecord{
+				ID: 6, Status: downloadrecord.StatusDownloading,
+			}
+			rec.Edges.Album = &ent.Album{ID: 21}
+			store.EXPECT().
+				FindActiveDownloadRecordByID(mock.Anything, uint32(6)).
+				Return(rec, nil).Once()
+			store.EXPECT().
+				DeleteDownloadRecord(mock.Anything, uint32(6)).
+				Return(nil).Once()
+			store.EXPECT().
+				RevertOrphanedDownloadingEpisodes(mock.Anything).
+				Return(0, nil).Once()
+			store.EXPECT().
+				RevertOrphanedDownloadingAlbumsAndBooks(mock.Anything).
+				Return(1, nil).Once()
+			Expect(mgr.CancelQueueItem(ctx, 6)).To(Succeed())
+		})
+
+		It("still reports the cancel when the revert fails", func() {
+			rec := &ent.DownloadRecord{
+				ID: 7, Status: downloadrecord.StatusDownloading,
+			}
+			rec.Edges.Book = &ent.Book{ID: 8}
+			store.EXPECT().
+				FindActiveDownloadRecordByID(mock.Anything, uint32(7)).
+				Return(rec, nil).Once()
+			store.EXPECT().
+				DeleteDownloadRecord(mock.Anything, uint32(7)).
+				Return(nil).Once()
+			store.EXPECT().
+				RevertOrphanedDownloadingEpisodes(mock.Anything).
+				Return(0, errors.New("database is locked")).Once()
+			Expect(mgr.CancelQueueItem(ctx, 7)).To(Succeed(),
+				"the record is already gone; the monitor retries the revert")
+		})
+
+		DescribeTable(
+			"files the cancellation against the record's owner",
+			func(edges ent.DownloadRecordEdges, scope events.Scope, id uint32) {
+				got, gotID, ok := cancelledOwner(&ent.DownloadRecord{Edges: edges})
+				Expect(ok).To(BeTrue())
+				Expect(got).To(Equal(scope))
+				Expect(gotID).To(Equal(id))
+			},
+			Entry("a movie", ent.DownloadRecordEdges{Movie: &ent.Movie{ID: 1}},
+				events.ScopeMovie, uint32(1)),
+			Entry(
+				"an episode",
+				ent.DownloadRecordEdges{AnchorEpisode: &ent.Episode{ID: 2}},
+				events.ScopeEpisode,
+				uint32(2),
+			),
+			Entry("an album", ent.DownloadRecordEdges{Album: &ent.Album{ID: 3}},
+				events.ScopeAlbum, uint32(3)),
+			Entry("a book", ent.DownloadRecordEdges{Book: &ent.Book{ID: 4}},
+				events.ScopeBook, uint32(4)),
+			Entry(
+				"a discography pack",
+				ent.DownloadRecordEdges{Artist: &ent.Artist{ID: 5}},
+				events.ScopeArtist,
+				uint32(5),
+			),
+		)
+
+		It("has no owner for a record matching nothing", func() {
+			_, _, ok := cancelledOwner(&ent.DownloadRecord{})
+			Expect(ok).To(BeFalse())
 		})
 
 		It("refuses a held record without touching it", func() {
@@ -2032,21 +2143,18 @@ var _ = Describe(
 			).Return(0, nil).Once()
 			store.EXPECT().DeleteFailedDownloadRecordsBefore(
 				mock.Anything, mock.AnythingOfType("time.Time"),
+				[]string{"h1", "h2"},
 			).Return(0, nil).Once()
 
 			Expect(mgr.PurgeOldRecords(ctx)).To(Succeed())
 		})
 
-		It("skips the completed purge when the engine cannot be listed", func() {
+		It("purges nothing when the engine cannot be listed", func() {
 			client.listErr = errors.New("engine boom")
-			// No completed-delete EXPECT: purging blind would drop the very
-			// records the seed reap needs. The mock fails the spec on a call.
-			store.EXPECT().DeleteFailedDownloadRecordsBefore(
-				mock.Anything, mock.AnythingOfType("time.Time"),
-			).Return(0, nil).Once()
-
+			// No delete EXPECT: any torrent the engine holds could be one of
+			// the records. The mock fails the spec on a call.
 			Expect(mgr.PurgeOldRecords(ctx)).
-				To(MatchError(ContainSubstring("engine boom")))
+				To(MatchError(ContainSubstring("could not be listed")))
 		})
 	},
 )

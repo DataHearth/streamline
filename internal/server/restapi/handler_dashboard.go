@@ -30,6 +30,18 @@ func (s *Server) ListActivity(
 		id := *req.Params.SeriesId
 		f.SeriesID = &id
 	}
+	if req.Params.ArtistId != nil {
+		id := *req.Params.ArtistId
+		f.ArtistID = &id
+	}
+	if req.Params.BookId != nil {
+		id := *req.Params.BookId
+		f.BookID = &id
+	}
+	if req.Params.BookSeriesId != nil {
+		id := *req.Params.BookSeriesId
+		f.BookSeriesID = &id
+	}
 	if req.Params.Since != nil {
 		t := *req.Params.Since
 		f.Since = &t

@@ -106,6 +106,9 @@ paths:
       description: |
         Fetches metadata from TMDB by ID and adds the movie to the library
         with the specified quality profile. The movie starts in "wanted" status.
+
+        Conflicts (409) only when the movie is already in the library; a
+        profile that resolves to nothing is a 422 with `code: no_quality_profile`.
       tags: [movies]
       requestBody:
         $ref: "#/components/requestBodies/AddMovie"
@@ -120,6 +123,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
         "500":
@@ -245,9 +250,10 @@ paths:
       operationId: searchMovieNow
       summary: Dispatch an indexer search and grab for a single movie
       description: |
-        Runs one indexer search-and-grab pass against the movie. On a
-        matching release the download manager is invoked; otherwise the
-        movie's cooldown timer is bumped.
+        Starts one indexer search-and-grab pass against the movie in the
+        background and answers 202 straight away. On a matching release the
+        download manager is invoked; otherwise the movie's cooldown timer is
+        bumped. Either way the outcome lands as the movie's `searched` event.
       tags: [movies]
       responses:
         "202":
@@ -507,6 +513,9 @@ paths:
       description: |
         Fetches metadata from TVDB by ID and adds the series to the library
         with the specified quality profile and an optional monitoring preset.
+
+        Conflicts (409) only when the series is already in the library; a
+        profile that resolves to nothing is a 422 with `code: no_quality_profile`.
       tags: [series]
       requestBody:
         $ref: "#/components/requestBodies/AddSeries"
@@ -517,6 +526,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
         "500":
@@ -743,6 +754,45 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /series/{id}/seasons/{number}/release-files:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/SeasonNumber"
+    post:
+      operationId: getSeasonReleaseFiles
+      summary: List a season pack's files against the season's episodes, before grabbing it
+      description: |
+        Fetches the release's `.torrent` from its indexer (one request, through the same
+         allowlist a grab is held to) and lists its files without adding anything to a download
+         client. Each video file of at least 5 MiB carries the `episode_id` its name points at,
+         read by the matcher the selective download and the importer share, so it is what a grab
+         would keep and import. `episodes` is the season's; 404 for a season the show does not have. Each episode says whether it holds a file, whether a
+         grab without `replace_existing` is for it (`wanted`: still wanted and aired), and whether
+         the release seems to carry it. The body is an item of the search response, unchanged. A
+         magnet answers 422 with `code: files_unavailable`; an indexer that does not hand a
+         readable `.torrent` over answers 422 with `code: torrent_unreadable`; a link outside the
+         configured indexers answers 422 with `code: grab_rejected`.
+      tags: [series]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabSeriesRelease"
+      responses:
+        "200":
+          description: The release's files mapped onto the scope's episodes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackFiles"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /series/{id}/episodes/{episodeId}:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -772,8 +822,9 @@ paths:
       operationId: searchSeries
       summary: Auto-search all wanted episodes for this series
       description: |
-        Dispatches one indexer search-and-grab pass over the series' wanted
-        episodes, preferring season packs when a whole season is wanted.
+        Starts one indexer search-and-grab pass over the series' wanted
+        episodes in the background, preferring season packs when a whole
+        season is wanted, and answers 202 once the wanted set is known.
       tags: [series]
       responses:
         "202":
@@ -845,6 +896,44 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/release-files:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: getSeriesReleaseFiles
+      summary: List a whole-series release's files against the show's episodes, before grabbing it
+      description: |
+        Fetches the release's `.torrent` from its indexer (one request, through the same
+         allowlist a grab is held to) and lists its files without adding anything to a download
+         client. Each video file of at least 5 MiB carries the `episode_id` its name points at,
+         read by the matcher the selective download and the importer share, so it is what a grab
+         would keep and import. `episodes` is every episode of the show, specials included. Each episode says whether it holds a file, whether a
+         grab without `replace_existing` is for it (`wanted`: still wanted and aired), and whether
+         the release seems to carry it. The body is an item of the search response, unchanged. A
+         magnet answers 422 with `code: files_unavailable`; an indexer that does not hand a
+         readable `.torrent` over answers 422 with `code: torrent_unreadable`; a link outside the
+         configured indexers answers 422 with `code: grab_rejected`.
+      tags: [series]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabSeriesRelease"
+      responses:
+        "200":
+          description: The release's files mapped onto the scope's episodes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackFiles"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1011,6 +1100,35 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Episodes (title search) ─────────────────────────────
+  /episodes:
+    get:
+      operationId: listEpisodes
+      summary: Search the library's episodes by title
+      description: |
+        Every episode of every series in the library whose title holds
+        `query`, with accents, case and punctuation folded on both sides.
+        A title equal to the query ranks first, then one starting with it,
+        then the rest; among equal matches the episodes holding a file come
+        first, then the most recently aired, and one with no air date last. Each hit names its show and
+        season, so it can be shown and linked without loading the series.
+      tags: [series]
+      parameters:
+        - $ref: "#/components/parameters/TitleSearchQuery"
+        - $ref: "#/components/parameters/TitleSearchLimit"
+        - $ref: "#/components/parameters/TitleSearchOffset"
+      responses:
+        "200":
+          description: Paginated episode hits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EpisodeSearchList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1408,6 +1526,36 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/albums:
+    get:
+      operationId: listMusicAlbums
+      summary: Search the library's albums by title
+      description: |
+        Every album row in the library whose title holds `query`, with
+        accents, case and punctuation folded on both sides. A title equal to
+        the query ranks first, then one starting with it, then the rest; among
+        equal matches the albums holding at least one track file come first
+        (an artist's whole discography is album rows), then the monitored
+        ones, then the newest. This is
+        the search surfaces' album list: `GET /music/artists` matches album
+        titles too, but answers with the artist.
+      tags: [music]
+      parameters:
+        - $ref: "#/components/parameters/TitleSearchQuery"
+        - $ref: "#/components/parameters/TitleSearchLimit"
+        - $ref: "#/components/parameters/TitleSearchOffset"
+      responses:
+        "200":
+          description: Paginated album hits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlbumSearchList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /music/albums/{id}:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -1431,6 +1579,11 @@ paths:
         Sets the album's monitored flag by hand: `POST /music/monitored-types/apply` leaves it alone
         from then on, until the artist's monitor is next changed. Never changes the artist's monitor
         policy or the album's status.
+
+        `tags_managed` and `tag_overrides` are the album's own tag settings (see
+        `GET /music/albums/{id}/tags`). Saving overrides, or setting `tags_managed: true`, queues the
+        album's files for the `music-tag-sync` job unless tagging is off. A key that is not a tag
+        name answers 422.
       tags: [music]
       requestBody:
         $ref: "#/components/requestBodies/PatchMusicAlbum"
@@ -1443,6 +1596,66 @@ paths:
           $ref: "#/components/responses/NotFound"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/albums/{id}/tags:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getMusicAlbumTags
+      summary: Compare an album's files with the tags Streamline writes
+      description: |
+        Reads every file of the album and compares it, key by key, with what the tag writer would
+        leave in it: the library's tags, the album's `tag_overrides`, the track's over those, under
+        `library.music_tags`' strip and preserve lists. Keys are the format's own (an MP3's
+        performers are `PERFORMER:<INSTRUMENT>`). `same` and `differs` are keys Streamline writes;
+        `kept` is one it leaves alone. Reads files; writes nothing.
+      tags: [music]
+      responses:
+        "200":
+          description: The album's tag panel.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MusicAlbumTags"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/albums/{id}/tags/apply:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: applyMusicAlbumTags
+      summary: Write an album's tags now
+      description: |
+        Queues every file of the album for a full rewrite, whether or not the album is managed, and
+        writes them in the background at once, under the job's rules: a file a torrent still holds
+        stays deferred. Answers 409 `code: music_tags_off` when tagging is off.
+      tags: [music]
+      responses:
+        "202":
+          description: How many files were queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued:
+                    type: integer
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1506,6 +1719,84 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/artists/{id}/release-files:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: getMusicArtistReleaseFiles
+      summary: List a discography pack's files against the artist's albums, before grabbing it
+      description: |
+        Fetches the release's `.torrent` from its indexer (one request, through the same
+         allowlist a grab is held to) and reads it the way the pack import will: audio files
+         grouped by album folder (a `CD1`/`Disc 2` subfolder belongs to its parent), each folder
+         matched by title, and by year when it names one, to an album of the artist. `albums` is
+         what the grab would link and fill (monitored, released, hydrated, still wanted, paused or
+         failed); empty means the grab would be refused. A folder naming an album that is not
+         among them has `waiting: false` and is skipped by the import. Inside a waiting folder each
+         file carries the `track_id` its **name** points at; the import matches by tags, so that
+         half is a preview. The body is an item of the browse response, unchanged. A magnet answers
+         422 with `code: files_unavailable`; an indexer that does not hand a readable `.torrent`
+         over answers 422 with `code: torrent_unreadable`; a link outside the configured indexers
+         answers 422 with `code: grab_rejected`.
+      tags: [music]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabArtistRelease"
+      responses:
+        "200":
+          description: The pack's files mapped onto the artist's albums.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscographyFiles"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/albums/{id}/release-files:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: getMusicAlbumReleaseFiles
+      summary: List a release's files against the album's tracks, before grabbing it
+      description: |
+        Fetches the release's `.torrent` from its indexer (one request, through the same
+         allowlist a grab is held to) and lists its files without adding anything to a download
+         client. Each audio file carries the `track_id` its **name** points at (disc folder or
+         prefix, track number, then a loose title), and every track of the album says whether it
+         already holds a file and whether the release seems to carry it. The import itself
+         matches by tags, so this is a preview: a file named for no track may still fill one.
+         The body is an item of the search response, unchanged. A magnet has no file list until
+         peers supply it and answers 422 with `code: files_unavailable`; an indexer that does
+         not hand a readable `.torrent` over answers 422 with `code: torrent_unreadable`; a link
+         outside the configured indexers answers 422 with `code: grab_rejected`.
+      tags: [music]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabAlbumRelease"
+      responses:
+        "200":
+          description: The release's files mapped onto the album's tracks.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseFiles"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /music/albums/{id}/search-now:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -1548,6 +1839,37 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/tracks/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    patch:
+      operationId: patchMusicTrack
+      summary: Set a track's own tags
+      description: |
+        Replaces the track's `tag_overrides`, written over the album's and the library's tags for
+        the track's files (an empty object clears them), and queues the album's files unless tagging
+        is off. A key that is not a tag name answers 422.
+      tags: [music]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchMusicTrackRequest"
+      responses:
+        "204":
+          description: Saved.
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /music/tracks/{id}/file:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -1566,6 +1888,41 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/tags/retag:
+    post:
+      operationId: retagMusicLibrary
+      summary: Rewrite every music file's tags (admin)
+      description: |
+        Queues every track file for the `music-tag-sync` job and empties its
+        stored tag hash, so the next pass rewrites each one with what
+        Streamline writes now, whatever it carries. This is how files tagged
+        before a change in what Streamline writes are brought up to date under
+        `library.music_tags.mode: import`, which writes each file once;
+        `managed` queues files on its own. A file a torrent still owns stays
+        deferred. Answers 409 when the mode is `off`. Run the job by hand
+        (`POST /schedules/music-tag-sync/run`) to start at once.
+      tags: [music, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "202":
+          description: How many files were queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued:
+                    type: integer
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
         "500":
@@ -2692,6 +3049,12 @@ paths:
       operationId: updateIndexer
       summary: Update an indexer
       tags: [indexers]
+      description: |
+        A blank `api_key` keeps the stored key, unless `host`, `port` or
+        `use_ssl` move the indexer to another destination: then the update is
+        refused with `422` `code: secret_required` until the key is sent again,
+        and with `403` `code: secret_file_managed` when the key comes from
+        `api_key_file`.
       requestBody:
         $ref: "#/components/requestBodies/CreateIndexer"
       responses:
@@ -2819,6 +3182,13 @@ paths:
       operationId: updateDownloadClient
       summary: Update a download client
       tags: [download-clients]
+      description: |
+        A blank `password` or `api_key` keeps the stored secret, unless `host`,
+        `port` or `use_ssl` move the client to another destination: then the
+        update is refused with `422` `code: secret_required` until the secret
+        the client authenticates with is sent again (the other one, unused, is
+        dropped), and with `403` `code: secret_file_managed` when either comes
+        from a `*_file` path.
       requestBody:
         $ref: "#/components/requestBodies/CreateDownloadClient"
       responses:
@@ -3090,6 +3460,12 @@ paths:
       operationId: updateMediaServer
       summary: Update a media server
       tags: [media-servers]
+      description: |
+        A blank `api_key` keeps the stored token, unless `host` moves the server
+        to another destination (scheme, host or port; a path or letter case
+        change is not a move): then the update is refused with `422`
+        `code: secret_required` until the token is sent again, and with `403`
+        `code: secret_file_managed` when it comes from `api_key_file`.
       requestBody:
         $ref: "#/components/requestBodies/UpdateMediaServer"
       responses:
@@ -3308,6 +3684,11 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          # Unknown `scope`, an `expires_in_days` other than 30, 90 or 365, or
+          # (`code: api_key_quota`) the caller already holds the maximum of 20
+          # unexpired keys.
+          $ref: "#/components/responses/UnprocessableEntity"
   /auth/me/api-keys/{id}:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -3872,8 +4253,12 @@ paths:
       summary: Update an OIDC provider (admin)
       description: |
         Updates issuer/client_id/client_secret on an existing provider.
-        Leaving client_secret blank preserves the current secret. Takes effect
-        after the process restarts.
+        Leaving client_secret blank preserves the current secret, except when
+        `issuer` changes (a trailing slash aside): the secret is presented to
+        the issuer's token endpoint, so the update is refused with `422`
+        `code: secret_required` until it is sent again, and with `403`
+        `code: secret_file_managed` when it comes from `client_secret_file`.
+        Takes effect after the process restarts.
       tags: [config, admin]
       security:
         - BearerAuth: []
@@ -3996,8 +4381,10 @@ paths:
       operationId: updateUser
       summary: Patch user (admin)
       description: |
-        Updates a target user's role, display_name, or auth_method. Demoting
-        the last remaining admin is rejected with 409 last_admin.
+        Updates a target user's role, display_name, auth_method, or what
+        they may do through the Subsonic API (`subsonic`). Demoting the last
+        remaining admin is rejected with 409 last_admin; a `max_bit_rate`
+        that is neither 0 nor 32-320 with 422.
       tags: [users, admin]
       security:
         - BearerAuth: []
@@ -4017,6 +4404,8 @@ paths:
           $ref: "#/components/responses/Conflict"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
     delete:
       operationId: deleteUser
       summary: Delete user (admin)
@@ -4367,8 +4756,28 @@ paths:
       operationId: CommitImport
       description: |
         Answers 503 when a `book` scan is committed without a Hardcover API
-        key.
+        key. The body is optional; `write_tags` applies to music scans only.
       tags: [library]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                write_tags:
+                  type: boolean
+                  description: |
+                    Music scans: queue the adopted files for the music tag
+                    writer and tag them as each album is committed, and mark
+                    the albums the commit brings in (those holding no file yet) as managed (re-tagged on
+                    their own under `managed`). Off leaves the files as they
+                    are and the new albums unmanaged; an album that already
+                    held files keeps its own setting. Defaults to off: a
+                    commit that does not ask leaves every adopted file byte for
+                    byte as it is. With `library.music_tags.mode` `off` the
+                    files are queued and written once it is switched on. A file
+                    a torrent still serves is tagged once the torrent is gone.
       responses:
         "202":
           $ref: "#/components/responses/ImportScan"
@@ -4642,13 +5051,17 @@ paths:
       operationId: listActivity
       summary: Library activity events.
       description: |
-        Reverse-chronological feed of media events across movies, episodes and
-        series. Supports cursor pagination and optional filtering by event
-        type, movie id, series id, and a time window.
+        Reverse-chronological feed of media events across movies, episodes,
+        series, artists, albums, books and book series. Supports cursor
+        pagination and optional filtering by event type, owner (movie, series,
+        artist, book, book series) and a time window.
       parameters:
         - $ref: "#/components/parameters/ActivityType"
         - $ref: "#/components/parameters/ActivityMovieID"
         - $ref: "#/components/parameters/ActivitySeriesID"
+        - $ref: "#/components/parameters/ActivityArtistID"
+        - $ref: "#/components/parameters/ActivityBookID"
+        - $ref: "#/components/parameters/ActivityBookSeriesID"
         - $ref: "#/components/parameters/ActivitySince"
         - $ref: "#/components/parameters/ActivityBefore"
         - $ref: "#/components/parameters/ActivityLimit"
@@ -4667,7 +5080,9 @@ paths:
         In-flight DownloadRecords (downloading or importing) enriched with
         live progress / speed / ETA polled from the download client. Served
         from a short-TTL cached snapshot; unreachable clients degrade to the
-        stored record without telemetry.
+        stored record without telemetry. Ordered importing, held, error,
+        downloading, then paused; within each, by progress (furthest first),
+        then newest first.
       tags: [activity]
       responses:
         "200":
@@ -4681,9 +5096,11 @@ paths:
       summary: Cancel an in-flight download.
       description: |
         Removes the torrent (and its partial files) from the client, deletes
-        the record, and reverts the movie to "wanted" when it has no file.
-        409 when the download is held by import verification — resolve it via
-        POST /downloads/{id}/resolve instead.
+        the record, and reverts what it was for in the same request: the
+        movie to "wanted" when it has no file, and every episode, album or
+        book slot left "downloading" to "wanted" (or "available" when it
+        still holds its files). 409 when the download is held by import
+        verification — resolve it via POST /downloads/{id}/resolve instead.
       tags: [activity]
       responses:
         "204":
@@ -4749,8 +5166,12 @@ paths:
       summary: Release a download held by import verification.
       description: |
         Imports the held files as-is, or deletes them from the client and
-        either re-searches (regrab) or stops (delete). 400 when the action is
-        missing or unrecognised, 409 when the record exists but is not held.
+        either re-searches (regrab) or stops (delete). Both deleting actions
+        mark the release rejected: the missing searches and the RSS feeds skip
+        it for that title from then on (matched by info hash, else by title),
+        until the record is retried or removed from the history. Manual search
+        and grab are unaffected. 400 when the action is missing or
+        unrecognised, 409 when the record exists but is not held.
       tags: [activity]
       requestBody:
         required: true
@@ -4835,12 +5256,18 @@ paths:
     post:
       operationId: clearCompletedHistory
       summary: Delete all completed history records.
+      description: |
+        A record whose torrent an enabled download client still lists is
+        kept: without it, the next adoption pass would file that torrent as
+        a proposal. Nothing is deleted when a client cannot be listed (503).
       tags: [activity]
       responses:
         "200":
           $ref: "#/components/responses/ClearCompletedResult"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /activity/pending:
     get:
@@ -5394,9 +5821,16 @@ components:
 
         API keys may read the identity endpoints but never mutate them: any
         non-GET request under `/auth/me`, `/auth/password`, `/auth/invites`,
-        `/auth/jwt`, or `/users` is refused with `403` — those actions require
-        session authentication (JWT or cookie). Media and configuration
-        endpoints are unaffected.
+        `/auth/jwt`, `/account`, `/users`, `/config/auth` or `/config/oidc` is
+        refused with `403` — those actions require session authentication (JWT
+        or cookie). Media and configuration endpoints are unaffected.
+
+        A key carries a `scope` chosen at creation. A `read` key may only send
+        `GET` and `HEAD`; any other method is refused with `403` before the
+        owner's role is consulted, so an admin's read key cannot write. A
+        `full` key acts with its owner's current role. A key may also carry
+        an `expires_at`: once past it, the key is refused with `401` exactly
+        like an unknown key.
 
   parameters:
     ResourceID:
@@ -5592,6 +6026,31 @@ components:
         maximum: 100
         x-go-type: uint16
     PeopleOffset:
+      name: offset
+      in: query
+      description: Zero-based offset for pagination.
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+        x-go-type: uint32
+    TitleSearchQuery:
+      name: query
+      in: query
+      description: Substring filter over the title, accent-, case- and punctuation-folded.
+      schema:
+        type: string
+    TitleSearchLimit:
+      name: limit
+      in: query
+      description: Max items per page (1..100).
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+        x-go-type: uint16
+    TitleSearchOffset:
       name: offset
       in: query
       description: Zero-based offset for pagination.
@@ -5818,6 +6277,32 @@ components:
       required: false
       description: |
         Matches both the series' own events and those of its episodes.
+      schema:
+        type: integer
+        x-go-type: uint32
+    ActivityArtistID:
+      name: artist_id
+      in: query
+      required: false
+      description: |
+        Matches both the artist's own events (a discography pack, the artist
+        being added) and those of its albums.
+      schema:
+        type: integer
+        x-go-type: uint32
+    ActivityBookID:
+      name: book_id
+      in: query
+      required: false
+      schema:
+        type: integer
+        x-go-type: uint32
+    ActivityBookSeriesID:
+      name: book_series_id
+      in: query
+      required: false
+      description: |
+        Matches both the series' own events and those of its volumes.
       schema:
         type: integer
         x-go-type: uint32
@@ -7338,8 +7823,10 @@ components:
             self_delete_forbidden, email_exists, connection_failed,
             invalid_condition, grab_rejected, rate_limited, worker_unavailable,
             hardcover_not_configured, hardcover_key_rejected, not_sendable,
-            no_device_email, smtp_not_configured, send_failed). Present for domain errors
-            where the caller needs to branch on the specific reason; absent
+            no_device_email, smtp_not_configured, send_failed,
+            secret_required, secret_file_managed, api_key_quota). Present
+            for domain errors where the caller needs to branch on the
+            specific reason; absent
             for generic errors where the message is sufficient.
 
     DeleteFileRequest:
@@ -7563,6 +8050,15 @@ components:
             waits on; this is what the library displays. Absent for an
             announced title with no date set, which is why `year` stays
             required.
+        digital_release_date:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            Earliest digital (TMDB type 4) release in `metadata.tmdb_region`,
+            ISO yyyy-mm-dd. Fetched on add and on every metadata refresh;
+            absent when no region is configured or TMDB has published no
+            digital date for it yet.
         overview:
           type: string
         runtime:
@@ -7882,6 +8378,96 @@ components:
         total:
           type: integer
           description: Total number of people matching the filter.
+          x-go-type: uint32
+        limit:
+          type: integer
+          x-go-type: uint16
+        offset:
+          type: integer
+          x-go-type: uint32
+
+    AlbumSearchHit:
+      type: object
+      required: [id, title, type, artist_id, artist_name]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        type:
+          $ref: "#/components/schemas/MusicAlbumType"
+        artist_id:
+          type: integer
+          x-go-type: uint32
+        artist_name:
+          type: string
+        release_date:
+          type: string
+          format: date
+          description: Absent for an undated album.
+
+    AlbumSearchList:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlbumSearchHit"
+        total:
+          type: integer
+          description: Total number of albums matching the query.
+          x-go-type: uint32
+        limit:
+          type: integer
+          x-go-type: uint16
+        offset:
+          type: integer
+          x-go-type: uint32
+
+    EpisodeSearchHit:
+      type: object
+      required: [id, title, series_id, series_title, series_type, season, episode]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        series_id:
+          type: integer
+          x-go-type: uint32
+        series_title:
+          type: string
+        series_type:
+          type: string
+          enum: [standard, anime, daily]
+          description: |
+            The show's type: a `daily` show numbers its episodes by air date
+            rather than as SxxExx.
+        season:
+          type: integer
+          x-go-type: uint16
+        episode:
+          type: integer
+          x-go-type: uint16
+        air_date:
+          type: string
+          format: date-time
+          description: Absent for an episode with no air date.
+
+    EpisodeSearchList:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/EpisodeSearchHit"
+        total:
+          type: integer
+          description: Total number of episodes matching the query.
           x-go-type: uint32
         limit:
           type: integer
@@ -8440,7 +9026,7 @@ components:
 
     MusicCreditRole:
       type: string
-      enum: [producer, recording, mix, mastering, artwork]
+      enum: [producer, recording, mix, mastering, artwork, conductor, remixer, arranger]
 
     MusicArtistCore:
       type: object
@@ -8628,6 +9214,9 @@ components:
         artist_id:
           type: integer
           x-go-type: uint32
+          description: |
+            The album's owner, whose folder holds its files. A shared album
+            names the same owner on every artist it is listed under.
         title:
           type: string
         type:
@@ -8659,6 +9248,14 @@ components:
         tracks_pending:
           type: boolean
           description: True until the album's tracks have been fetched.
+        artists:
+          type: array
+          description: |
+            Every library artist a shared release group is listed under, the
+            owner (whose folder holds the files) first. Omitted for an album
+            only its owner is credited on.
+          items:
+            $ref: "#/components/schemas/MusicPerson"
 
     MusicAlbum:
       allOf:
@@ -8733,6 +9330,14 @@ components:
           type: integer
           x-go-type: uint32
           description: Length in seconds, 0 when unknown.
+        artists:
+          type: array
+          description: |
+            The artists the track is credited to, before any "feat."; on a
+            split release they are not the album's. Omitted until the album
+            is hydrated with them.
+          items:
+            $ref: "#/components/schemas/MusicPerson"
         featuring:
           type: array
           items:
@@ -8963,6 +9568,114 @@ components:
       properties:
         monitored:
           type: boolean
+        tags_managed:
+          type: boolean
+          description: |
+            Whether the tag writer re-queues the album's files on its own (managed triggers,
+            settings changes, Retag library). A file queued explicitly is written either way.
+        tag_overrides:
+          $ref: "#/components/schemas/TagOverrides"
+
+    PatchMusicTrackRequest:
+      type: object
+      required: [tag_overrides]
+      properties:
+        tag_overrides:
+          $ref: "#/components/schemas/TagOverrides"
+
+    TagOverrides:
+      type: object
+      description: |
+        Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+        written over what the library would write; an empty list removes the key from the files.
+        At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+        still wins.
+      additionalProperties:
+        type: array
+        items:
+          type: string
+
+    MusicAlbumTags:
+      type: object
+      required: [album_id, mode, managed, overrides, files]
+      properties:
+        album_id:
+          type: integer
+          x-go-type: uint32
+        mode:
+          type: string
+          enum: ["off", import, managed]
+          description: The instance's `library.music_tags.mode`.
+        managed:
+          type: boolean
+          description: The album's `tags_managed`.
+        overrides:
+          $ref: "#/components/schemas/TagOverrides"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicTagFile"
+
+    MusicTagFile:
+      type: object
+      required: [media_file_id, track_id, disc, position, title, file_name, format, state, overrides, keys]
+      properties:
+        media_file_id:
+          type: integer
+          x-go-type: uint32
+        track_id:
+          type: integer
+          x-go-type: uint32
+        disc:
+          type: integer
+        position:
+          type: integer
+        title:
+          type: string
+        file_name:
+          type: string
+        format:
+          type: string
+        state:
+          type: string
+          enum: [untagged, pending, deferred, written, failed]
+          description: The writer's state; `untagged` is a file it was never asked to write.
+        error:
+          type: string
+          description: The last write's failure.
+        tagged_at:
+          type: string
+          format: date-time
+        read_error:
+          type: string
+          description: Why the file could not be read; `keys` is empty then.
+        overrides:
+          $ref: "#/components/schemas/TagOverrides"
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicTagKey"
+
+    MusicTagKey:
+      type: object
+      required: [key, current, desired, status, overridden]
+      properties:
+        key:
+          type: string
+        current:
+          type: array
+          items:
+            type: string
+        desired:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [same, differs, kept]
+        overridden:
+          type: boolean
+          description: The desired value comes from an album or track override.
 
     MusicRenamePlan:
       type: object
@@ -10070,6 +10783,183 @@ components:
             empty or short list is not the whole story, and that the season or
             whole-series scope is where those releases are grabbable.
 
+    PackFiles:
+      type: object
+      required: [files, episodes]
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/PackFile"
+        episodes:
+          type: array
+          description: Every episode of the scope, in season and episode order.
+          items:
+            $ref: "#/components/schemas/PackEpisode"
+
+    PackFile:
+      type: object
+      required: [path, size]
+      properties:
+        path:
+          type: string
+          description: The file's path inside the torrent.
+        size:
+          type: integer
+          format: int64
+        episode_id:
+          type: integer
+          x-go-type: uint32
+          description: The episode the file's name points at; absent for none.
+
+    PackEpisode:
+      type: object
+      required: [id, season, number, title, has_file, wanted, in_release]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        season:
+          type: integer
+          x-go-type: uint16
+        number:
+          type: integer
+          x-go-type: uint16
+        title:
+          type: string
+        has_file:
+          type: boolean
+          description: The episode already holds a file in the library.
+        wanted:
+          type: boolean
+          description: Still wanted and aired, what a grab without replace_existing fetches.
+        in_release:
+          type: boolean
+          description: A file of the release is named for this episode.
+
+    DiscographyFiles:
+      type: object
+      required: [files, folders, albums]
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscographyFile"
+        folders:
+          type: array
+          description: Every folder holding audio, in the torrent's order.
+          items:
+            $ref: "#/components/schemas/DiscographyFolder"
+        albums:
+          type: array
+          description: The albums the grab would link and fill, with their tracks.
+          items:
+            $ref: "#/components/schemas/DiscographyAlbum"
+
+    DiscographyFile:
+      type: object
+      required: [path, size]
+      properties:
+        path:
+          type: string
+          description: The file's path inside the torrent.
+        size:
+          type: integer
+          format: int64
+        album_id:
+          type: integer
+          x-go-type: uint32
+          description: The waiting album the file's folder fills; absent for none.
+        track_id:
+          type: integer
+          x-go-type: uint32
+          description: The track the file's name points at; absent for none.
+
+    DiscographyFolder:
+      type: object
+      required: [path, waiting]
+      properties:
+        path:
+          type: string
+        album_id:
+          type: integer
+          x-go-type: uint32
+          description: The artist's album the folder names; absent for none.
+        waiting:
+          type: boolean
+          description: The album is one the grab links, so the import fills it.
+
+    DiscographyAlbum:
+      type: object
+      required: [id, title, in_release, tracks]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        year:
+          type: integer
+        in_release:
+          type: boolean
+          description: A folder of the pack names this album.
+        tracks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReleaseTrack"
+
+    ReleaseFiles:
+      type: object
+      required: [files, tracks]
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReleaseFile"
+        tracks:
+          type: array
+          description: Every track of the album, in disc and position order.
+          items:
+            $ref: "#/components/schemas/ReleaseTrack"
+
+    ReleaseFile:
+      type: object
+      required: [path, size]
+      properties:
+        path:
+          type: string
+          description: The file's path inside the torrent.
+        size:
+          type: integer
+          format: int64
+        track_id:
+          type: integer
+          x-go-type: uint32
+          description: The track the file's name points at; absent for none.
+
+    ReleaseTrack:
+      type: object
+      required: [id, disc, number, title, has_file, in_release]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        disc:
+          type: integer
+          x-go-type: uint8
+        number:
+          type: integer
+          x-go-type: uint16
+          description: Position on the disc.
+        title:
+          type: string
+        has_file:
+          type: boolean
+          description: The track already holds a file in the library.
+        in_release:
+          type: boolean
+          description: A file of the release is named for this track.
+
     SearchResult:
       type: object
       required: [title, download_url, size, seeders]
@@ -10823,6 +11713,13 @@ components:
         tracked:
           type: boolean
           description: False for arbitrary adds not tied to a library item.
+        release_title:
+          type: string
+          description: |
+            The release the newest download record holding this torrent was
+            grabbed as. `name` is the torrent's own, which its uploader
+            chose and which can name no release at all ("Lamb Of God" for an
+            Omens LP). Absent when the torrent is untracked.
 
     TorrentFile:
       type: object
@@ -10955,6 +11852,8 @@ components:
           description: Address of the user's e-reader; empty when unset.
         send:
           $ref: "#/components/schemas/UserSend"
+        subsonic:
+          $ref: "#/components/schemas/SubsonicAccess"
         created_at:
           type: string
           format: date-time
@@ -11058,13 +11957,23 @@ components:
 
     ApiKey:
       type: object
-      required: [id, name, created_at]
+      required: [id, name, scope, created_at]
       properties:
         id:
           type: integer
           x-go-type: uint32
         name:
           type: string
+        scope:
+          $ref: "#/components/schemas/ApiKeyScope"
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: >-
+            When the key stops authenticating; null never expires. An expired
+            key is still listed until the hourly `purge-api-keys` job drops
+            it, seven days after it expired.
         last_used_at:
           type: string
           format: date-time
@@ -11072,6 +11981,13 @@ components:
         created_at:
           type: string
           format: date-time
+
+    ApiKeyScope:
+      type: string
+      enum: [read, full]
+      description: >-
+        `read` may only send GET and HEAD, whatever the owner's role; `full`
+        acts with the owner's current role.
 
     ApiKeyCreated:
       allOf:
@@ -11177,6 +12093,17 @@ components:
           type: string
           minLength: 1
           maxLength: 100
+        scope:
+          allOf:
+            - $ref: "#/components/schemas/ApiKeyScope"
+          description: Defaults to `full` when omitted.
+        expires_in_days:
+          type: integer
+          enum: [30, 90, 365]
+          nullable: true
+          description: >-
+            Lifetime of the key from now. Omitted or null, the key never
+            expires.
 
     UserList:
       type: object
@@ -11239,6 +12166,65 @@ components:
         auth_method:
           type: string
           enum: [local, oidc, both]
+        subsonic:
+          $ref: "#/components/schemas/SubsonicAccessPatch"
+
+    SubsonicAccess:
+      type: object
+      description: |
+        What the user may do through the Subsonic API (`/rest`). These gate
+        Subsonic calls only, never the web UI or the REST API. Browsing,
+        searching, starring and scrobbling are always allowed.
+      required:
+        - can_stream
+        - can_download
+        - can_manage_playlists
+        - can_share
+        - can_rate
+        - can_change_password
+        - max_bit_rate
+      properties:
+        can_stream:
+          type: boolean
+        can_download:
+          type: boolean
+        can_manage_playlists:
+          type: boolean
+        can_share:
+          type: boolean
+        can_rate:
+          type: boolean
+        can_change_password:
+          type: boolean
+          description: Whether the user may change their own Subsonic password from an app.
+        max_bit_rate:
+          type: integer
+          x-go-type: uint16
+          minimum: 0
+          maximum: 320
+          description: Kbps ceiling on every stream, 0 for none; a stream above it is transcoded.
+
+    SubsonicAccessPatch:
+      type: object
+      description: Only provided fields are applied.
+      properties:
+        can_stream:
+          type: boolean
+        can_download:
+          type: boolean
+        can_manage_playlists:
+          type: boolean
+        can_share:
+          type: boolean
+        can_rate:
+          type: boolean
+        can_change_password:
+          type: boolean
+        max_bit_rate:
+          type: integer
+          minimum: 0
+          maximum: 320
+          description: 0 for no cap, else 32-320.
 
     ResetPasswordRequest:
       type: object
@@ -11352,6 +12338,7 @@ components:
         - movie_path
         - series_path
         - download_path
+        - music_tags
       properties:
         monitor_specials:
           type: boolean
@@ -11419,6 +12406,8 @@ components:
           readOnly: true
         probe:
           $ref: "#/components/schemas/ProbeConfig"
+        music_tags:
+          $ref: "#/components/schemas/MusicTagsConfig"
 
     LibraryConfigPatch:
       type: object
@@ -11467,10 +12456,13 @@ components:
             type: string
         probe:
           $ref: "#/components/schemas/ProbeConfig"
+        music_tags:
+          $ref: "#/components/schemas/MusicTagsConfig"
 
     DownloadConfigView:
       type: object
-      required: [selective_files, selection_grace, path_mappings]
+      required:
+        [selective_files, selection_grace, space_check, space_reserve_gb, path_mappings]
       properties:
         selective_files:
           type: boolean
@@ -11482,6 +12474,18 @@ components:
           description: >-
             Go duration string. How long a magnet-sourced selection may sit
             pending before giving up and downloading whole.
+        space_check:
+          type: boolean
+          description: >-
+            Refuse a grab (`422 grab_rejected`) that would not fit on the
+            download client's disk once its active downloads finish, keeping
+            `space_reserve_gb` free. A client that cannot report its free space
+            is not checked.
+        space_reserve_gb:
+          type: integer
+          minimum: 0
+          maximum: 255
+          description: Gigabytes the space check keeps free on the download disk.
         path_mappings:
           type: array
           items:
@@ -11500,6 +12504,12 @@ components:
           type: boolean
         selection_grace:
           type: string
+        space_check:
+          type: boolean
+        space_reserve_gb:
+          type: integer
+          minimum: 0
+          maximum: 255
         path_mappings:
           type: array
           items:
@@ -11525,6 +12535,8 @@ components:
         - tmdb_api_key_set
         - tvdb_api_key_set
         - hardcover_api_key_set
+        - musicbrainz_url
+        - musicbrainz_interval
         - restart_required
       properties:
         language:
@@ -11532,6 +12544,16 @@ components:
           description: >-
             BCP-47 tag. The language TMDB and TVDB answer in — so also the
             titles the library stores and matches releases against.
+        musicbrainz_url:
+          type: string
+          description: >-
+            MusicBrainz server root, without /ws/2. https://musicbrainz.org, or
+            a self-hosted mirror.
+        musicbrainz_interval:
+          type: string
+          description: >-
+            Go duration: the least time between two MusicBrainz calls. 1s is
+            what musicbrainz.org allows; 0s removes the limit, for a mirror.
         tmdb_region:
           type: string
           description: Two-letter uppercase region code, for TMDB release dates.
@@ -11576,6 +12598,12 @@ components:
         hardcover_api_key:
           type: string
           format: password
+        musicbrainz_url:
+          type: string
+          description: An http(s) URL; anything else answers 422.
+        musicbrainz_interval:
+          type: string
+          description: A non-negative Go duration; anything else answers 422.
 
     SystemConfigView:
       type: object
@@ -11690,6 +12718,60 @@ components:
           description: |
             A file shorter than this share of the expected runtime fails the
             duration check.
+
+    MusicTagsConfig:
+      type: object
+      description: |
+        The tags Streamline writes into music files (`library.music_tags`).
+        The view always carries every field; when patched, only provided
+        fields are applied, and a patch that changes what a file should carry
+        (mode, strip, preserve, art) queues every managed file for the
+        music-tag-sync job under `managed`.
+      properties:
+        mode:
+          type: string
+          enum: ["off", import, managed]
+          description: |
+            `off` never writes. `import` writes each file once, when it is
+            imported or adopted with tagging on. `managed` also rewrites a
+            file whenever the library's data for it changes, and undoes edits
+            made elsewhere to the keys Streamline owns.
+        seeding:
+          type: string
+          enum: [defer, copy]
+          description: |
+            `defer` keeps a hardlinked import as one copy on disk and tags it
+            once its torrent is gone; `copy` imports a copy and tags it at
+            once. A file a torrent still serves is never written.
+        embed_art:
+          type: boolean
+          description: Write the album cover into each file as its front cover.
+        art_max_px:
+          type: integer
+          minimum: 256
+          maximum: 3000
+          description: Longest edge of an embedded cover, in pixels.
+        sidecar_art:
+          type: boolean
+          description: |
+            Write cover.jpg into each album folder and folder.jpg into each
+            artist folder, never replacing one Streamline did not write.
+        strip:
+          type: array
+          items:
+            type: string
+            maxLength: 64
+          description: |
+            Keys deleted from every file written (Picard's names). An entry
+            ending in `*` matches as a prefix.
+        preserve:
+          type: array
+          items:
+            type: string
+            maxLength: 64
+          description: |
+            Keys never written or deleted; wins over strip and over the keys
+            Streamline manages. An entry ending in `*` matches as a prefix.
 
     FFmpegConfigView:
       type: object
@@ -12166,6 +13248,63 @@ components:
         api_key_set:
           type: boolean
           description: True when an API key/token is stored. The value itself is never returned.
+        path_mappings:
+          type: array
+          description: >-
+            Rewrites a folder as streamline sees it into the path the server
+            knows it by, before a targeted rescan is sent and before Plex
+            sections are matched. First matching prefix wins; empty means
+            both see the same paths.
+          items:
+            $ref: "#/components/schemas/MediaServerPathMapping"
+        last_refresh:
+          $ref: "#/components/schemas/MediaServerRefreshStatus"
+
+    MediaServerPathMapping:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+          description: Absolute prefix as streamline sees it.
+        to:
+          type: string
+          description: >-
+            Absolute prefix as the media server sees it. A Windows path
+            (`D:\Movies`, `\\nas\movies`) is accepted for a server running
+            on Windows.
+
+    MediaServerRefreshStatus:
+      type: object
+      nullable: true
+      description: >-
+        The last rescan streamline sent this server since it started, null
+        before the first. Refreshes are collected for 30 seconds and sent
+        together, so a fresh import shows here up to that long after.
+      required: [at, outcome, folders]
+      properties:
+        at:
+          type: string
+          format: date-time
+        outcome:
+          type: string
+          enum: [ok, error]
+        scope:
+          type: string
+          description: >-
+            folders when only the changed folders were rescanned, library
+            when the whole section (Plex) or every library (Jellyfin, Emby)
+            was — no folder given, or one lay outside everything the server
+            reports, which usually means a missing path mapping. Absent when
+            the request failed before the server was asked.
+          enum: [folders, library]
+        folders:
+          type: integer
+          minimum: 0
+          description: How many folders a folders-scope rescan named.
+        error:
+          type: string
+          description: What the server or the connection answered, on an error.
 
     MediaServerCreate:
       type: object
@@ -12188,6 +13327,11 @@ components:
           nullable: true
         enabled:
           type: boolean
+        path_mappings:
+          type: array
+          description: Replaces the whole list when present; an empty list clears it.
+          items:
+            $ref: "#/components/schemas/MediaServerPathMapping"
 
     MediaServerUpdate:
       type: object
@@ -12209,6 +13353,11 @@ components:
           nullable: true
         enabled:
           type: boolean
+        path_mappings:
+          type: array
+          description: Replaces the whole list when present; an empty list clears it.
+          items:
+            $ref: "#/components/schemas/MediaServerPathMapping"
 
     MediaServerDiscoveryRequest:
       type: object
@@ -12850,6 +13999,16 @@ components:
         file_count:
           type: integer
           x-go-type: uint16
+        seeding_files:
+          type: integer
+          description: |
+            How many of the folder's audio files the tag writer will leave
+            alone while a torrent the download clients still list holds them:
+            files a torrent serves, and under `seeding: defer` files
+            hardlinked to a listed torrent's. Tags are written to those only
+            once the torrent is removed from its client. Read from a listing
+            at most 30 seconds old, and only while the scan awaits review
+            with tagging on; absent otherwise.
         decision:
           type: string
           enum: [pending, accept, skip]
@@ -13045,11 +14204,17 @@ components:
       type: object
       required: [id, type, created_at]
       description: |
-        Exactly one of movie / episode / series is set, naming what the event
-        happened to. `series` carries what belongs to no single episode — a
-        search issued at series or season scope, and the show-level actions
-        (added, reidentified, metadata_refreshed, monitoring_changed);
-        per-episode outcomes use `episode`.
+        Exactly one of movie / episode / series / artist / album / book /
+        book_series is set, naming what the event happened to. `series`
+        carries what belongs to no single episode — a search issued at series
+        or season scope, and the show-level actions (added, reidentified,
+        metadata_refreshed, monitoring_changed); per-episode outcomes use
+        `episode`. Music and books split the same way one level up: `album`
+        and `book` carry their own grabs, imports, removals and searches (an
+        album import is one event, never one per track; a book event's
+        `book_kind` payload key names the slot), `artist` a discography pack
+        and the artist being added, `book_series` the series being added and
+        a series-wide search.
       properties:
         id:
           type: integer
@@ -13068,6 +14233,22 @@ components:
           $ref: "#/components/schemas/EpisodeRef"
         series:
           $ref: "#/components/schemas/SeriesRef"
+        artist:
+          $ref: "#/components/schemas/ArtistRef"
+        album:
+          $ref: "#/components/schemas/ActivityAlbumRef"
+        book:
+          $ref: "#/components/schemas/ActivityBookRef"
+        book_series:
+          $ref: "#/components/schemas/SeriesRef"
+
+    ArtistRef:
+      type: object
+      required: [id, name]
+      description: Minimal artist identity for feed rows.
+      properties:
+        id: { type: integer, x-go-type: uint32 }
+        name: { type: string }
 
     ReidentifyResult:
       type: object
@@ -13091,8 +14272,9 @@ components:
       type: object
       required: [id, title]
       description: |
-        Minimal series identity for feed rows. Deliberately not the full TVShow
-        schema, which carries the whole season/episode tree.
+        Minimal series identity for feed rows — a TV series under `series`, a
+        book series under `book_series`. Deliberately not the full TVShow or
+        BookSeries schema, which carry the whole season or volume tree.
       properties:
         id: { type: integer, x-go-type: uint32 }
         title: { type: string }
@@ -13113,8 +14295,9 @@ components:
       type: object
       required: [id, title, artist_id, artist_name]
       description: |
-        The album an album download is for (queue/history rows render
-        "<artist> · <album>" from it). Absent on every other record.
+        The album an album download or activity event is for (queue,
+        history and feed rows render "<artist> · <album>" from it). Absent on
+        every other record.
       properties:
         id: { type: integer, x-go-type: uint32 }
         title: { type: string }
@@ -13137,7 +14320,8 @@ components:
       type: object
       required: [id, title, author]
       description: |
-        The book a book download is for. Absent on every other record.
+        The book a book download or activity event is for. Absent on every
+        other record.
       properties:
         id: { type: integer, x-go-type: uint32 }
         title: { type: string }
@@ -13176,7 +14360,8 @@ components:
           description: |
             "held" means the download finished but failed import verification
             and is waiting on a decision (POST /downloads/{id}/resolve).
-          enum: [downloading, importing, paused, error, held]
+            "stalled" means the client reports the download is not moving.
+          enum: [downloading, stalled, importing, paused, error, held]
         title: { type: string }
         quality: { type: string }
         release_group: { type: string }
@@ -13192,6 +14377,12 @@ components:
         book: { $ref: "#/components/schemas/ActivityBookRef" }
         indexer: { type: string }
         download_client: { type: string }
+        torrent_hash:
+          type: string
+          description: |
+            Info hash of the torrent behind the record in download_client,
+            lower-case hex. Absent when the record carries none. Under the
+            builtin client it is the key of GET /torrents/{hash}.
         size: { type: integer, format: int64 }
         progress: { type: number, format: double }
         download_speed: { type: integer, format: int64 }
@@ -13282,6 +14473,11 @@ components:
         book: { $ref: "#/components/schemas/ActivityBookRef" }
         indexer: { type: string }
         download_client: { type: string }
+        torrent_hash:
+          type: string
+          description: |
+            Info hash of the torrent behind the record, lower-case hex. The
+            torrent may since have been removed from download_client.
         size: { type: integer, format: int64 }
         failure_reason: { type: string }
         imported_at: { type: string, format: date-time, nullable: true }

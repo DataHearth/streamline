@@ -37,9 +37,11 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 	})
 
 	Describe("New", func() {
-		It("rejects a non-writable dataDir", func() {
-			bad := filepath.Join(GinkgoT().TempDir(), "ro")
-			Expect(os.MkdirAll(bad, 0o500)).To(Succeed())
+		It("rejects a dataDir it cannot create the posters folder in", func() {
+			// A regular file where the folder should be refuses every user; a
+			// 0o500 directory did not refuse root, so the spec failed as root.
+			bad := filepath.Join(GinkgoT().TempDir(), "not-a-dir")
+			Expect(os.WriteFile(bad, nil, 0o644)).To(Succeed())
 			_, err := New(bad)
 			Expect(err).To(HaveOccurred())
 		})

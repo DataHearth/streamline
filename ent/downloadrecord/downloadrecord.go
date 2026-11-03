@@ -57,6 +57,8 @@ const (
 	FieldSelectionState = "selection_state"
 	// FieldBookKind holds the string denoting the book_kind field in the database.
 	FieldBookKind = "book_kind"
+	// FieldRejected holds the string denoting the rejected field in the database.
+	FieldRejected = "rejected"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeAlbum holds the string denoting the album edge name in mutations.
@@ -144,6 +146,7 @@ var Columns = []string{
 	FieldSelectedBytes,
 	FieldSelectionState,
 	FieldBookKind,
+	FieldRejected,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "download_records"
@@ -193,6 +196,8 @@ var (
 	DefaultImportAttempts uint8
 	// DefaultVerificationBypassed holds the default value on creation for the "verification_bypassed" field.
 	DefaultVerificationBypassed bool
+	// DefaultRejected holds the default value on creation for the "rejected" field.
+	DefaultRejected bool
 )
 
 // Status defines the type for the "status" enum field.
@@ -405,6 +410,11 @@ func BySelectionState(opts ...sql.OrderTermOption) OrderOption {
 // ByBookKind orders the results by the book_kind field.
 func ByBookKind(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBookKind, opts...).ToFunc()
+}
+
+// ByRejected orders the results by the rejected field.
+func ByRejected(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRejected, opts...).ToFunc()
 }
 
 // ByMovieField orders the results by movie field.

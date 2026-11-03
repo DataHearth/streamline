@@ -84,6 +84,40 @@ func (_u *ApiKeyUpdate) ClearLastUsedAt() *ApiKeyUpdate {
 	return _u
 }
 
+// SetScope sets the "scope" field.
+func (_u *ApiKeyUpdate) SetScope(v apikey.Scope) *ApiKeyUpdate {
+	_u.mutation.SetScope(v)
+	return _u
+}
+
+// SetNillableScope sets the "scope" field if the given value is not nil.
+func (_u *ApiKeyUpdate) SetNillableScope(v *apikey.Scope) *ApiKeyUpdate {
+	if v != nil {
+		_u.SetScope(*v)
+	}
+	return _u
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (_u *ApiKeyUpdate) SetExpiresAt(v time.Time) *ApiKeyUpdate {
+	_u.mutation.SetExpiresAt(v)
+	return _u
+}
+
+// SetNillableExpiresAt sets the "expires_at" field if the given value is not nil.
+func (_u *ApiKeyUpdate) SetNillableExpiresAt(v *time.Time) *ApiKeyUpdate {
+	if v != nil {
+		_u.SetExpiresAt(*v)
+	}
+	return _u
+}
+
+// ClearExpiresAt clears the value of the "expires_at" field.
+func (_u *ApiKeyUpdate) ClearExpiresAt() *ApiKeyUpdate {
+	_u.mutation.ClearExpiresAt()
+	return _u
+}
+
 // SetOwnerID sets the "owner" edge to the User entity by ID.
 func (_u *ApiKeyUpdate) SetOwnerID(id uint32) *ApiKeyUpdate {
 	_u.mutation.SetOwnerID(id)
@@ -154,6 +188,11 @@ func (_u *ApiKeyUpdate) check() error {
 			return &ValidationError{Name: "key_hash", err: fmt.Errorf(`ent: validator failed for field "ApiKey.key_hash": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Scope(); ok {
+		if err := apikey.ScopeValidator(v); err != nil {
+			return &ValidationError{Name: "scope", err: fmt.Errorf(`ent: validator failed for field "ApiKey.scope": %w`, err)}
+		}
+	}
 	if _u.mutation.OwnerCleared() && len(_u.mutation.OwnerIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ApiKey.owner"`)
 	}
@@ -192,6 +231,15 @@ func (_u *ApiKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.LastUsedAtCleared() {
 		_spec.ClearField(apikey.FieldLastUsedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.Scope(); ok {
+		_spec.SetField(apikey.FieldScope, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.ExpiresAt(); ok {
+		_spec.SetField(apikey.FieldExpiresAt, field.TypeTime, value)
+	}
+	if _u.mutation.ExpiresAtCleared() {
+		_spec.ClearField(apikey.FieldExpiresAt, field.TypeTime)
 	}
 	if _u.mutation.OwnerCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -298,6 +346,40 @@ func (_u *ApiKeyUpdateOne) ClearLastUsedAt() *ApiKeyUpdateOne {
 	return _u
 }
 
+// SetScope sets the "scope" field.
+func (_u *ApiKeyUpdateOne) SetScope(v apikey.Scope) *ApiKeyUpdateOne {
+	_u.mutation.SetScope(v)
+	return _u
+}
+
+// SetNillableScope sets the "scope" field if the given value is not nil.
+func (_u *ApiKeyUpdateOne) SetNillableScope(v *apikey.Scope) *ApiKeyUpdateOne {
+	if v != nil {
+		_u.SetScope(*v)
+	}
+	return _u
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (_u *ApiKeyUpdateOne) SetExpiresAt(v time.Time) *ApiKeyUpdateOne {
+	_u.mutation.SetExpiresAt(v)
+	return _u
+}
+
+// SetNillableExpiresAt sets the "expires_at" field if the given value is not nil.
+func (_u *ApiKeyUpdateOne) SetNillableExpiresAt(v *time.Time) *ApiKeyUpdateOne {
+	if v != nil {
+		_u.SetExpiresAt(*v)
+	}
+	return _u
+}
+
+// ClearExpiresAt clears the value of the "expires_at" field.
+func (_u *ApiKeyUpdateOne) ClearExpiresAt() *ApiKeyUpdateOne {
+	_u.mutation.ClearExpiresAt()
+	return _u
+}
+
 // SetOwnerID sets the "owner" edge to the User entity by ID.
 func (_u *ApiKeyUpdateOne) SetOwnerID(id uint32) *ApiKeyUpdateOne {
 	_u.mutation.SetOwnerID(id)
@@ -381,6 +463,11 @@ func (_u *ApiKeyUpdateOne) check() error {
 			return &ValidationError{Name: "key_hash", err: fmt.Errorf(`ent: validator failed for field "ApiKey.key_hash": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Scope(); ok {
+		if err := apikey.ScopeValidator(v); err != nil {
+			return &ValidationError{Name: "scope", err: fmt.Errorf(`ent: validator failed for field "ApiKey.scope": %w`, err)}
+		}
+	}
 	if _u.mutation.OwnerCleared() && len(_u.mutation.OwnerIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ApiKey.owner"`)
 	}
@@ -436,6 +523,15 @@ func (_u *ApiKeyUpdateOne) sqlSave(ctx context.Context) (_node *ApiKey, err erro
 	}
 	if _u.mutation.LastUsedAtCleared() {
 		_spec.ClearField(apikey.FieldLastUsedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.Scope(); ok {
+		_spec.SetField(apikey.FieldScope, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.ExpiresAt(); ok {
+		_spec.SetField(apikey.FieldExpiresAt, field.TypeTime, value)
+	}
+	if _u.mutation.ExpiresAtCleared() {
+		_spec.ClearField(apikey.FieldExpiresAt, field.TypeTime)
 	}
 	if _u.mutation.OwnerCleared() {
 		edge := &sqlgraph.EdgeSpec{

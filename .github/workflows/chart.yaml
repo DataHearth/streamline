@@ -64,7 +64,7 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
-          version: v4.3.0
+          version: v4.3.1
 
       # The tag names the release; Chart.yaml is what actually gets packaged.
       # If they disagree the push lands on a version nobody asked for.
@@ -79,7 +79,7 @@ jobs:
           echo "version=${chart_version}" >> "$GITHUB_ENV"
 
       - name: Log in to GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

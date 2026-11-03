@@ -31,6 +31,19 @@ export type MonitoringPreset =
 	| "pilot"
 	| "none";
 
+// A search hit for one episode (GET /episodes): enough to name and link it
+// without loading its series.
+export type EpisodeSearchHit = {
+	id: number;
+	title: string;
+	series_id: number;
+	series_title: string;
+	series_type: SeriesType;
+	season: number;
+	episode: number;
+	air_date?: string;
+};
+
 export type Episode = {
 	id: number;
 	number: number;
@@ -279,6 +292,9 @@ export type Movie = {
 	// name a day rather than a year. Absent for an announced title with no date
 	// set yet, which is why `year` stays and stays required.
 	release_date?: string | null;
+	// Earliest digital release in the configured TMDB region, ISO yyyy-mm-dd.
+	// Absent until TMDB publishes one (or with no region configured).
+	digital_release_date?: string | null;
 	status: MovieStatus;
 	tmdb_id: number;
 	overview?: string;
@@ -390,6 +406,22 @@ export type SearchResult = {
 	// When this exact release was last grabbed for the queried item, from its
 	// download history. Absent when it never was.
 	previously_grabbed_at?: string;
+};
+
+// A season or whole-series release's torrent read against the show before
+// grabbing it (POST /series/{id}[/seasons/{n}]/release-files). wanted is what a
+// grab without replace_existing fetches: still wanted, and aired.
+export type PackFiles = {
+	files: { path: string; size: number; episode_id?: number }[];
+	episodes: {
+		id: number;
+		season: number;
+		number: number;
+		title: string;
+		has_file: boolean;
+		wanted: boolean;
+		in_release: boolean;
+	}[];
 };
 
 export type PlayOnStatus = "resolved" | "fallback" | "unavailable";
@@ -637,9 +669,11 @@ export type SeriesRef = {
 	title: string;
 };
 
-// Exactly one of movie / episode / series is set — what the event happened to.
-// series carries only what belongs to no single episode (a search issued at
-// series or season scope); per-episode outcomes use episode.
+// Exactly one owner is set — what the event happened to. series carries only
+// what belongs to no single episode (a search issued at series or season
+// scope); per-episode outcomes use episode. Music and books split the same way
+// one level up: album and book carry their own lifecycle, artist a discography
+// pack and the artist being added, book_series what belongs to the series.
 export type ActivityEvent = {
 	id: number;
 	type: ActivityType;
@@ -648,6 +682,10 @@ export type ActivityEvent = {
 	movie?: Movie;
 	episode?: EpisodeRef;
 	series?: SeriesRef;
+	artist?: { id: number; name: string };
+	album?: ActivityAlbumRef;
+	book?: ActivityBookRef;
+	book_series?: SeriesRef;
 };
 
 export type ActivityList = {
@@ -704,7 +742,7 @@ export type QueueEntry = {
 	// "held": the download finished and failed verification, so it is waiting on
 	// a decision rather than on the network. The only queue state whose next move
 	// belongs to a person.
-	status: "downloading" | "importing" | "paused" | "error" | "held";
+	status: "downloading" | "stalled" | "importing" | "paused" | "error" | "held";
 	title: string;
 	quality?: string;
 	release_group?: string;
@@ -715,6 +753,9 @@ export type QueueEntry = {
 	book?: ActivityBookRef;
 	indexer?: string;
 	download_client?: string;
+	// Lower-case info hash in download_client. Under the builtin engine it is
+	// the torrent page's key (/torrents?hash=…).
+	torrent_hash?: string;
 	size: number;
 	progress: number;
 	download_speed?: number;
@@ -777,6 +818,7 @@ export type HistoryEntry = {
 	book?: ActivityBookRef;
 	indexer?: string;
 	download_client?: string;
+	torrent_hash?: string;
 	size: number;
 	failure_reason?: string;
 	imported_at?: string | null;
@@ -804,14 +846,34 @@ export type User = {
 	device_email?: string;
 	// Only /auth/me fills this; admin user lists leave it out.
 	send?: { configured: boolean; from: string };
+	// What the account may do through the Subsonic API; gates /rest only.
+	subsonic?: SubsonicAccess;
 	created_at: string;
 	failed_login_count?: number;
 	locked_until?: string | null;
 };
 
+export type SubsonicAccess = {
+	can_stream: boolean;
+	can_download: boolean;
+	can_manage_playlists: boolean;
+	can_share: boolean;
+	can_rate: boolean;
+	can_change_password: boolean;
+	// Kbps ceiling on every stream; 0 is none.
+	max_bit_rate: number;
+};
+
+// read: GET and HEAD only, whatever the owner's role. full: the owner's role.
+export type ApiKeyScope = "read" | "full";
+
 export type ApiKey = {
 	id: number;
 	name: string;
+	scope: ApiKeyScope;
+	// null never expires. An expired key stays listed until the purge job
+	// drops it, a week later.
+	expires_at?: string | null;
 	created_at: string;
 	last_used_at: string | null;
 };
@@ -891,11 +953,28 @@ export type LibraryConfig = {
 	series_path?: string;
 	download_path?: string;
 	probe?: ProbeConfig;
+	music_tags: MusicTagsConfig;
+};
+
+// library.music_tags: what Streamline writes into music files. Every field is
+// optional on a patch.
+export type MusicTagsMode = "off" | "import" | "managed";
+export type MusicTagsSeeding = "defer" | "copy";
+export type MusicTagsConfig = {
+	mode: MusicTagsMode;
+	seeding: MusicTagsSeeding;
+	embed_art: boolean;
+	art_max_px: number;
+	sidecar_art: boolean;
+	strip: string[];
+	preserve: string[];
 };
 
 export type DownloadConfig = {
 	selective_files: boolean;
 	selection_grace: string;
+	space_check: boolean;
+	space_reserve_gb: number;
 };
 
 // The api keys are write-only: the response says whether one is configured
@@ -910,6 +989,8 @@ export type MetadataConfig = {
 	tmdb_api_key_file_managed?: boolean;
 	tvdb_api_key_file_managed?: boolean;
 	hardcover_api_key_file_managed?: boolean;
+	musicbrainz_url: string;
+	musicbrainz_interval: string;
 	restart_required: boolean;
 };
 
@@ -959,6 +1040,8 @@ export type MetadataConfigPatch = {
 	tmdb_api_key?: string;
 	tvdb_api_key?: string;
 	hardcover_api_key?: string;
+	musicbrainz_url?: string;
+	musicbrainz_interval?: string;
 };
 
 export type ProbeConfig = {
@@ -1301,6 +1384,10 @@ export type Torrent = {
 	seeding_stopped: boolean;
 	// False for arbitrary adds not tied to a library item.
 	tracked: boolean;
+	// The release the newest download record holding it was grabbed as;
+	// absent when untracked. `name` is the uploader's and can name no
+	// release at all.
+	release_title?: string;
 };
 
 export type TorrentFile = {
@@ -1339,6 +1426,20 @@ export type TorrentAddResult = { hash: string };
 
 export type MediaServerType = "plex" | "jellyfin" | "emby";
 
+// from is the folder as Streamline sees it, to as the media server does.
+export type MediaServerPathMapping = { from: string; to: string };
+
+// The last rescan sent to a server since Streamline started.
+export type MediaServerRefreshStatus = {
+	at: string;
+	outcome: "ok" | "error";
+	// folders: only the changed folders; library: the whole section or
+	// library. Absent when the request failed before the server was asked.
+	scope?: "folders" | "library";
+	folders: number;
+	error?: string;
+};
+
 export type MediaServer = {
 	name: string;
 	server_type: MediaServerType;
@@ -1347,6 +1448,8 @@ export type MediaServer = {
 	library_section_tv?: string | null;
 	enabled: boolean;
 	api_key_set: boolean;
+	path_mappings?: MediaServerPathMapping[];
+	last_refresh?: MediaServerRefreshStatus | null;
 };
 
 export type MediaServerSection = {
@@ -1581,6 +1684,9 @@ export type ImportScanAlbum = {
 	format?: string;
 	// Audio files in the folder, not MusicBrainz's track count.
 	file_count: number;
+	// Of those, the files a torrent the clients still list serves: tags reach
+	// them only once the torrent is removed. Read live.
+	seeding_files?: number;
 	size: number;
 	classification: ImportFileClassification;
 	release_group_mbid?: string;

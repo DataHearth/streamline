@@ -29,6 +29,8 @@ Generate a file containing every key at its default:
 streamline config init --output ~/.config/streamline/config.yaml
 ```
 
+Or let the server do it: when the file `--config` names does not exist, Streamline writes the same defaults there on start (mode 0600, creating the directory if it must) and boots on them. The library folders (`library.*_path`) and `data_dir` are written from their `STREAMLINE_` variables when those are set, so the file agrees with the environment that seeded it; no other variable, and never a secret, is written. An existing file is never touched, even an empty one, and a directory the process cannot write to stops the boot with a message saying so.
+
 Validate one before restarting into it:
 
 ```bash
@@ -136,17 +138,18 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `auth.lockout.{threshold,window,duration}` | ✅ | Settings → Authentication |
 | `library.monitor_specials` | ✅ | Settings → Series |
 | `library.music_monitored_types` | ✅ | Settings → Music |
+| `library.music_tags.*` | ✅ | Settings → Music |
 | `library.probe.*` | ✅ Applies to the next import — see [Import verification](#import-verification) | Settings → Media probe |
 | `library.{movie,series}_naming` | ✅ Applies to the next import or rename | Settings → Library |
 | `library.import_mode`, `keep_torrent_seeding`, `import_max_attempts`, `allowed_download_roots` | ✅ | Settings → Library |
 | `library.no_match_cooldown`, `max_grab_failures`, `drift_grace_ticks` | ✅ | Settings → Library |
-| `download.selective_files`, `download.selection_grace`, `download.path_mappings` | ✅ | Settings → Library |
+| `download.selective_files`, `download.selection_grace`, `download.space_check`, `download.space_reserve_gb`, `download.path_mappings` | ✅ | Settings → Library |
 | `ffmpeg.enabled` | ✅ | Settings → Media probe |
 | `ffmpeg.path` | ⚠️ Accepted immediately, but only picked up by the process's prober on the next restart | Settings → Media probe |
 | `transcoding.{enabled,max_concurrent,max_failures,defer_seeding,hw_accel,hw_device,verify.*}` | ✅ Read on every worker tick — no restart | Settings → Transcoding |
 | `quality_profiles[].transcode` | ⚠️ API and YAML only — the profile form does not edit it | — |
 | `events.retention` | ✅ Applies on the next cleanup run | Settings → General |
-| `metadata.*` | ⚠️ Accepted immediately, but the TMDB, TVDB and Hardcover clients are built at boot — restart required | Settings → Metadata |
+| `metadata.*` | ⚠️ Accepted immediately, but the TMDB, TVDB, Hardcover and MusicBrainz clients are built at boot — restart required | Settings → Metadata |
 | `log.*`, `otel.endpoint` | ⚠️ Accepted immediately, but the log handlers and OTLP exporters are built at boot — restart required | Settings → General |
 | OIDC providers | ⚠️ CRUD works, but only loaded at startup — restart required | Settings → Single Sign-On |
 | Everything else | ❌ File only, restart required | — |
@@ -185,6 +188,9 @@ GLOBAL OPTIONS
 | `config init [--output <path>]` | Write a default config to stdout or a file |
 | `config validate [--config <path>]` | Load a config (or stdin) and report errors |
 | `auth unlock <email>` | Clear lockout state on an account |
+| `backup` | Back up the database into `<data_dir>/backups` and print the file's path. Works with the server running or stopped. See [Backups](GitOps-and-Kubernetes#backups) |
+| `backup list` | List the backups, newest first |
+| `restore <file>` | Replace the database with a backup (a path, or a name from `backup list`), keeping the one it replaces. **Stop the server first** |
 
 Running `streamline` with no command starts the server.
 
@@ -253,13 +259,20 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.book_language` | string | `en` | ISO 639-1 language a new book prefers; picks the edition of each slot. Editable at runtime |
 | `library.audiobook_path` | path | `/data/audiobooks` | Audiobook library root. File-only |
 | `library.audiobook_naming` | template | `{Author}/{Title} ({Year})` | Folder only; chapter files keep their names. File-only |
-| `library.download_path` | path | `/downloads` | Where Streamline reads finished torrents from. Combined with the torrent name: `<download_path>/<torrent.Name>` |
+| `library.download_path` | path | `/downloads` | Where Streamline reads finished torrents from. Combined with the torrent name: `<download_path>/<torrent.Name>`. Two torrents with the same name share that folder; an import only takes the files its own torrent lists |
 | `library.movie_naming` | template | `{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}` | See [Quality Profiles and Naming](Quality-Profiles-and-Naming#file-naming) |
 | `library.series_naming` | template | `{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}` | |
 | `library.import_mode` | enum | `hardlink` | `hardlink` \| `copy` \| `move`. `move` also removes the torrent from its client once the import lands, since it can no longer seed. Music always copies instead of hardlinking, and instead of moving while `keep_torrent_seeding` is on: tags are written into the library copy, which must not be the file the torrent is seeding |
 | `library.monitor_specials` | bool | `false` | Monitor season 0 on add/discovery. **Runtime-editable** |
 | `library.music_monitored_types` | list | `[album, ep]` | Release types an artist monitored for *all* or *future* releases monitors: any of `album`, `ep`, `single`, `live`, `compilation`, `other`. The rest are added unmonitored. Applies when a policy is applied (add, refresh, monitor change); Settings → Music can re-apply it to existing artists. **Runtime-editable** |
 | `library.probe.always_ask` | bool | `false` | Hold every import for manual approval instead of importing straight away. Needs no ffprobe. **Runtime-editable** |
+| `library.music_tags.mode` | string | `import` | `off` never writes into a music file; `import` writes each file once, when it is imported (or adopted with tagging on); `managed` also rewrites files whenever the library's data for them changes, and undoes edits made elsewhere to the tags Streamline owns. **Runtime-editable** |
+| `library.music_tags.seeding` | string | `defer` | What a hardlinked music import does while its torrent seeds. `defer` keeps the hardlink (one copy on disk) and tags the file once the torrent is removed from the client; `copy` imports a copy and tags it at once (two copies while seeding). A file a torrent still serves from its own path is never written either way. **Runtime-editable** |
+| `library.music_tags.embed_art` | bool | `true` | Write the album cover into each file as its front cover. **Runtime-editable** |
+| `library.music_tags.art_max_px` | int | `1000` | Longest edge of an embedded cover, 256 to 3000. **Runtime-editable** |
+| `library.music_tags.sidecar_art` | bool | `true` | Write `cover.jpg` into each album folder and `folder.jpg` into each artist folder, never replacing one Streamline did not write. **Runtime-editable** |
+| `library.music_tags.strip` | list | `[COMMENT, ENCODEDBY, URL, FILEWEBPAGE, AUDIOSOURCEWEBPAGE, PAYMENTWEBPAGE, PUBLISHERWEBPAGE]` | Tags removed from every file Streamline writes, by MusicBrainz Picard's names. An entry ending in `*` matches every tag starting with it. **Runtime-editable** |
+| `library.music_tags.preserve` | list | `[REPLAYGAIN_*, R128_*, LYRICS, UNSYNCEDLYRICS, ACOUSTID_*, BPM, INITIALKEY]` | Tags never written or removed, even when Streamline manages them or `strip` names them. **Runtime-editable** |
 | `library.probe.min_duration_ratio` | float | `0.5` | Hold an import when the probed duration falls below this share of the expected runtime — the check for sample clips and truncated remuxes. A ratio, not a percentage: `0.5` is half. Greater than 0, at most 1. **Runtime-editable** |
 | `library.no_match_cooldown` | duration | `6h` | Quiet period after a search finds nothing acceptable |
 | `library.max_grab_failures` | int | `3` | Consecutive failures before an item is marked failed |
@@ -316,6 +329,8 @@ All values are Go duration strings, runtime-editable, pausable and runnable on d
 | `schedules.music_metadata_refresh` | duration | `24h` | |
 | `schedules.book_metadata_refresh` | duration | `24h` | |
 | `schedules.file_selection` | duration | `30s` | |
+| `schedules.music_tag_sync` | duration | `30m` | The music tag writer: writes every file waiting for its tags, and retries the ones waiting on a torrent |
+| `schedules.database_backup` | duration | `24h` | Backs the database up into `<data_dir>/backups`; see [`backup`](#backup) |
 
 **Deprecated aliases**, still honoured with a warning at boot: `rss_sync` (→ `movie_rss_sync`), `orphan_scan` (→ both the `movie_*` and `tv_*` keys), `missing_search` and `metadata_refresh` (each → the `movie_*`, `tv_*`, `music_*` and `book_*` keys).
 
@@ -328,8 +343,10 @@ All values are Go duration strings, runtime-editable, pausable and runnable on d
 | `metadata.hardcover_api_key` | string | `""` | **Required for books.** Settable in Settings → Metadata (write-only, restart required) |
 | `metadata.language` | BCP-47 | `en` | Empty lets the provider pick its own default |
 | `metadata.tmdb_region` | ISO 3166-1 α-2 | `FR` | Uppercase. Drives which country's digital release dates feed the calendar — set it to yours |
+| `metadata.musicbrainz_url` | URL | `https://musicbrainz.org` | The MusicBrainz server root, without `/ws/2`. Point it at a [self-hosted mirror](https://musicbrainz.org/doc/MusicBrainz_Server/Setup) (e.g. `http://musicbrainz:5000`) to stop sharing musicbrainz.org's load shedding. Settable in Settings → Metadata, restart required |
+| `metadata.musicbrainz_interval` | duration | `1s` | Least time between two MusicBrainz calls; background work (filling in tracks and credits) keeps twice that. `1s` is what musicbrainz.org allows; lower it, or set `0s` for no limit, **only** against your own mirror. Settable in Settings → Metadata, restart required |
 
-Both keys have `_file` twins.
+All three API keys have `_file` twins.
 
 ### ffmpeg
 
@@ -424,6 +441,19 @@ File-only and read at startup: it is not reachable through the settings API, and
 | --- | --- | --- | --- |
 | `events.retention` | duration | `2160h` | 90 days. How long activity events are kept |
 
+### backup
+
+Database backups under `<data_dir>/backups` — see [Backups](GitOps-and-Kubernetes#backups). File-only.
+
+| Key | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `backup.pre_migration` | bool | `true` | Back up the database at boot before applying pending migrations, and refuse to migrate when the backup fails. Turn off only for a database too large to copy on every upgrade |
+| `backup.retention.scheduled` | int | `7` | Backups the `database-backup` job keeps, newest first. `0` keeps every one |
+| `backup.retention.pre_migration` | int | `5` | Pre-migration backups kept. `0` keeps every one |
+| `backup.retention.manual` | int | `10` | Backups `streamline backup` keeps. `0` keeps every one |
+
+A database replaced by `streamline restore` is kept as a `pre-restore` backup and never pruned.
+
 ### media_server
 
 | Key | Type | Default | Notes |
@@ -442,17 +472,22 @@ Per entry:
 | `enabled` | | |
 | `library_section` | | Plex section key holding movies |
 | `library_section_tv` | | Plex section key holding TV |
+| `path_mappings[]` | | `{from, to}`: `from` a folder as Streamline sees it (absolute), `to` the same folder as the server sees it (absolute; a Windows path such as `D:\Movies` is accepted). First matching prefix wins |
 
-Both section keys are Plex-only. Leave them unset and Streamline looks the section up by matching your library path against the paths Plex reports — which only works when Plex sees the library at the same path Streamline does. In Docker or Kubernetes it usually doesn't (Streamline's `/srv/streamline/movies` is Plex's `/data/movies`), so the lookup misses and Streamline falls back to rescanning **every** section. That works, but it is a bigger scan than you need: set the two keys to scope it. Settings → Media Servers lists the available sections (`POST /api/v1/media-servers/discover`).
+Streamline asks a server to rescan only the folders a change touched, collecting changes for 30 seconds into one request. Each folder goes through `path_mappings` first; if one still lies outside every library the server reports, that request rescans the whole library instead (for Plex the configured section, else every section). In Docker or Kubernetes the server usually sees the library elsewhere (Streamline's `/srv/streamline/movies` is Plex's `/data/movies`), so add a mapping per library root — see [Path mappings](First-Run-Setup#path-mappings).
+
+Both section keys are Plex-only. Leave them unset and Streamline looks the section up by matching the folder (or, for a whole-library rescan, the mapped library root) against the paths Plex reports. When even that misses, Streamline falls back to rescanning **every** section: set the two keys to scope it. Settings → Media Servers lists the available sections (`POST /api/v1/media-servers/discover`).
 
 ### download
 
-Governs [selective file download](First-Run-Setup#selective-file-download) — grabbing an episode-scoped pack downloads only the files that episode needs.
+Governs [selective file download](First-Run-Setup#selective-file-download) — grabbing an episode-scoped pack downloads only the files that episode needs — and the [free-space check](First-Run-Setup#free-space-check) on every grab.
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `download.selective_files` | bool | `false` | Off is bit-for-bit today's whole-torrent grab, and the rollback path. **Runtime-editable** |
 | `download.selection_grace` | duration | `10m` | How long a magnet-sourced selection may sit unresolved before giving up and downloading the release whole |
+| `download.space_check` | bool | `true` | Refuse a grab that would not fit on the download client's disk once its active downloads finish. **Runtime-editable** |
+| `download.space_reserve_gb` | int (0–255) | `10` | Gigabytes the space check always leaves free on the download disk. **Runtime-editable** |
 | `download.path_mappings` | list of `{from, to}` | `[]` | Translates a save path your download client reports into one Streamline can open. First matching prefix wins. Both sides must be absolute. **Runtime-editable** |
 
 #### Path mappings

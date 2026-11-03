@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import type { Snippet } from "svelte";
 	import { fade } from "svelte/transition";
 	import { config } from "@lib/config.svelte";
@@ -49,6 +50,8 @@
 		test,
 		note,
 	}: Props = $props();
+
+	closeOnBack(() => open, () => onClose());
 
 	const desktop = createSettingsDesktop();
 

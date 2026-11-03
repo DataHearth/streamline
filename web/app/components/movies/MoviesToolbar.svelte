@@ -222,94 +222,93 @@
 			onClear={() => onSelectModeChange(false)}
 			{onSelectAll}
 		/>
-	{:else}
-		<div class="flex items-center gap-2 px-4 py-2">
-			<nav
-				use:dragScroll
-				aria-label={i18n.movies_status()}
-				class="filter-tabs flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-			>
-				{#if query}
-					<span
-						class={cn(phoneChip, "border-accent-line bg-accent-soft text-accent-text")}
-					>
-						“{query}”
-						<button
-							type="button"
-							onclick={() => onQueryChange("")}
-							aria-label={i18n.common_clear_search()}
-							class="-mr-1 grid h-6 w-6 place-items-center rounded-full text-accent-text"
-						>
-							<X size={12} aria-hidden="true" />
-						</button>
-					</span>
-				{/if}
-				{#if mon !== "all"}
-					<span
-						class={cn(phoneChip, "border-accent-line bg-accent-soft text-accent-text")}
-					>
-						{currentMon.label}
-						<button
-							type="button"
-							onclick={() => onMonChange("all")}
-							aria-label={i18n.common_reset()}
-							class="-mr-1 grid h-6 w-6 place-items-center rounded-full text-accent-text"
-						>
-							<X size={12} aria-hidden="true" />
-						</button>
-					</span>
-				{/if}
-				{#each tabs as t (t.key)}
-					{@const active = tab === t.key}
+	{/if}
+	<div class="flex items-center gap-2 px-4 py-2">
+		<nav
+			use:dragScroll
+			aria-label={i18n.movies_status()}
+			class="filter-tabs flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+		>
+			{#if query}
+				<span
+					class={cn(phoneChip, "border-accent-line bg-accent-soft text-accent-text")}
+				>
+					“{query}”
 					<button
 						type="button"
-						onclick={() => onTabChange(t.key)}
-						aria-current={active ? "page" : undefined}
-						class={cn(
-							phoneChip,
-							active
-								? "border-accent-line bg-accent-soft text-accent-text"
-								: "border-border bg-surface text-fg-muted",
-						)}
+						onclick={() => onQueryChange("")}
+						aria-label={i18n.common_clear_search()}
+						class="-mr-1 grid h-6 w-6 place-items-center rounded-full text-accent-text"
 					>
-						{#if t.dot}
-							<span
-								class={cn("h-1.5 w-1.5 rounded-full", t.dot)}
-								aria-hidden="true"
-							></span>
-						{/if}
-						{t.label}
-						<span class="font-mono text-[10.5px] tabular opacity-70">
-							{tabCount(t.key)}
-						</span>
+						<X size={12} aria-hidden="true" />
 					</button>
-				{/each}
-			</nav>
-
-			<button
-				type="button"
-				onclick={() => (sheetOpen = true)}
-				aria-haspopup="dialog"
-				aria-expanded={sheetOpen}
-				aria-label={i18n.filter_and_sort()}
-				class={cn(
-					"relative grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border transition",
-					activeFilters > 0
-						? "border-accent-line bg-accent-soft text-accent-text"
-						: "border-border-strong bg-bg-elevated text-fg-muted",
-				)}
-			>
-				<SlidersHorizontal size={16} aria-hidden="true" />
-				{#if activeFilters > 0}
-					<span
-						class="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 font-mono text-[9.5px] font-semibold text-fg-on-accent"
+				</span>
+			{/if}
+			{#if mon !== "all"}
+				<span
+					class={cn(phoneChip, "border-accent-line bg-accent-soft text-accent-text")}
+				>
+					{currentMon.label}
+					<button
+						type="button"
+						onclick={() => onMonChange("all")}
+						aria-label={i18n.common_reset()}
+						class="-mr-1 grid h-6 w-6 place-items-center rounded-full text-accent-text"
 					>
-						{activeFilters}
+						<X size={12} aria-hidden="true" />
+					</button>
+				</span>
+			{/if}
+			{#each tabs as t (t.key)}
+				{@const active = tab === t.key}
+				<button
+					type="button"
+					onclick={() => onTabChange(t.key)}
+					aria-current={active ? "page" : undefined}
+					class={cn(
+						phoneChip,
+						active
+							? "border-accent-line bg-accent-soft text-accent-text"
+							: "border-border bg-surface text-fg-muted",
+					)}
+				>
+					{#if t.dot}
+						<span
+							class={cn("h-1.5 w-1.5 rounded-full", t.dot)}
+							aria-hidden="true"
+						></span>
+					{/if}
+					{t.label}
+					<span class="font-mono text-[10.5px] tabular opacity-70">
+						{tabCount(t.key)}
 					</span>
-				{/if}
-			</button>
-		</div>
-	{/if}
+				</button>
+			{/each}
+		</nav>
+
+		<button
+			type="button"
+			onclick={() => (sheetOpen = true)}
+			aria-haspopup="dialog"
+			aria-expanded={sheetOpen}
+			aria-label={i18n.filter_and_sort()}
+			class={cn(
+				"relative grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border transition",
+				activeFilters > 0
+					? "border-accent-line bg-accent-soft text-accent-text"
+					: "border-border-strong bg-bg-elevated text-fg-muted",
+			)}
+		>
+			<SlidersHorizontal size={16} aria-hidden="true" />
+			{#if activeFilters > 0}
+				<span
+					class="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 font-mono text-[9.5px] font-semibold text-fg-on-accent"
+				>
+					{activeFilters}
+				</span>
+			{/if}
+		</button>
+	</div>
 </div>
 
 <MediaFilterSheet

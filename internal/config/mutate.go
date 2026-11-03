@@ -55,6 +55,8 @@ type LibraryPatch struct {
 	ImportMaxAttempts    *uint8
 	DriftGraceTicks      *uint8
 	AllowedDownloadRoots *[]string
+	// MusicTags is optional-partial like Probe.
+	MusicTags *MusicTagsPatch
 	// Probe is itself optional-partial: a nil Probe leaves the whole section
 	// untouched, and a non-nil Probe with only one field set leaves the
 	// other alone.
@@ -66,6 +68,8 @@ type LibraryPatch struct {
 type DownloadPatch struct {
 	SelectiveFiles *bool
 	SelectionGrace *string
+	SpaceCheck     *bool
+	SpaceReserveGB *uint8
 	// PathMappings replaces the whole list when non-nil. A pointer to an empty
 	// slice is how the list is cleared; nil leaves it alone.
 	PathMappings *[]PathMapping
@@ -118,9 +122,11 @@ type MetadataPatch struct {
 	TVDBAPIKey *string
 	// HardcoverAPIKey is restart-required like the other two: wire.go builds
 	// the Hardcover client once.
-	HardcoverAPIKey *string
-	Language        *string
-	TMDBRegion      *string
+	HardcoverAPIKey     *string
+	Language            *string
+	TMDBRegion          *string
+	MusicBrainzURL      *string
+	MusicBrainzInterval *string
 }
 
 // ProbePatch carries optional field updates to the library.probe section.
@@ -276,6 +282,42 @@ func UpdateAuth(ctx context.Context, patch AuthPatch) (AuthConfig, error) {
 	return out, nil
 }
 
+// MusicTagsPatch carries optional field updates to library.music_tags. Nil
+// fields are left untouched.
+type MusicTagsPatch struct {
+	Mode       *string
+	Seeding    *string
+	EmbedArt   *bool
+	ArtMaxPx   *uint16
+	SidecarArt *bool
+	Strip      *[]string
+	Preserve   *[]string
+}
+
+func (p *MusicTagsPatch) apply(c *MusicTagsConfig) {
+	if p.Mode != nil {
+		c.Mode = *p.Mode
+	}
+	if p.Seeding != nil {
+		c.Seeding = *p.Seeding
+	}
+	if p.EmbedArt != nil {
+		c.EmbedArt = *p.EmbedArt
+	}
+	if p.ArtMaxPx != nil {
+		c.ArtMaxPx = *p.ArtMaxPx
+	}
+	if p.SidecarArt != nil {
+		c.SidecarArt = *p.SidecarArt
+	}
+	if p.Strip != nil {
+		c.Strip = *p.Strip
+	}
+	if p.Preserve != nil {
+		c.Preserve = *p.Preserve
+	}
+}
+
 // UpdateLibrary merges the patch into the library section and persists it.
 // Returns the resulting LibraryConfig so callers can echo the new state back.
 func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, error) {
@@ -331,6 +373,9 @@ func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, erro
 		}
 		if patch.AllowedDownloadRoots != nil {
 			c.Library.AllowedDownloadRoots = *patch.AllowedDownloadRoots
+		}
+		if patch.MusicTags != nil {
+			patch.MusicTags.apply(&c.Library.MusicTags)
 		}
 		if patch.Probe != nil {
 			if patch.Probe.AlwaysAsk != nil {
@@ -446,6 +491,12 @@ func UpdateDownload(
 		if patch.SelectionGrace != nil {
 			c.Download.SelectionGrace = *patch.SelectionGrace
 		}
+		if patch.SpaceCheck != nil {
+			c.Download.SpaceCheck = *patch.SpaceCheck
+		}
+		if patch.SpaceReserveGB != nil {
+			c.Download.SpaceReserveGB = *patch.SpaceReserveGB
+		}
 		if patch.PathMappings != nil {
 			c.Download.PathMappings = *patch.PathMappings
 		}
@@ -470,6 +521,16 @@ func UpdateMetadata(
 	ctx context.Context,
 	patch MetadataPatch,
 ) (MetadataConfig, error) {
+	if err := checkDuration(
+		"metadata.musicbrainz_interval", patch.MusicBrainzInterval,
+	); err != nil {
+		return MetadataConfig{}, err
+	}
+	if v := patch.MusicBrainzInterval; v != nil && strings.HasPrefix(*v, "-") {
+		return MetadataConfig{}, errors.New(
+			"metadata.musicbrainz_interval: must not be negative",
+		)
+	}
 	var out MetadataConfig
 	err := Update(ctx, func(c *Config) error {
 		set := func(dst *string, file string, v *string) error {
@@ -504,6 +565,12 @@ func UpdateMetadata(
 		}
 		if patch.TMDBRegion != nil {
 			c.Metadata.TMDBRegion = *patch.TMDBRegion
+		}
+		if patch.MusicBrainzURL != nil {
+			c.Metadata.MusicBrainzURL = *patch.MusicBrainzURL
+		}
+		if patch.MusicBrainzInterval != nil {
+			c.Metadata.MusicBrainzInterval = *patch.MusicBrainzInterval
 		}
 		out = c.Metadata
 		return nil
@@ -643,9 +710,11 @@ func AddOIDCProvider(ctx context.Context, p OIDCConfig) error {
 }
 
 // UpdateOIDCProvider merges the patch into the named provider. An empty/nil
-// ClientSecret is treated as "keep existing" so the UI doesn't have to
-// re-surface the secret just to let the admin change the issuer. When Issuer
-// is patched the new URL is probed before the Update is written.
+// ClientSecret is treated as "keep existing", except across an issuer change:
+// the secret is presented to the issuer's token endpoint at the next login, so
+// keeping it would hand it to an IdP it was never issued by (ErrSecretRequired,
+// or ErrSecretFileDestination for a client_secret_file). When Issuer is patched
+// the new URL is probed before the Update is written.
 func UpdateOIDCProvider(
 	ctx context.Context,
 	name string,
@@ -692,9 +761,22 @@ func UpdateOIDCProvider(
 		if patch.ClientID != nil {
 			p.ClientID = *patch.ClientID
 		}
+		var secret *string
 		if patch.ClientSecret != nil &&
 			strings.TrimSpace(*patch.ClientSecret) != "" {
 			p.ClientSecret = *patch.ClientSecret
+			secret = patch.ClientSecret
+		}
+		if issuerDestination(
+			p.Issuer,
+		) != issuerDestination(
+			c.Auth.OIDC[idx].Issuer,
+		) {
+			if err := guardMovedSecret(
+				&p.ClientSecret, p.ClientSecretFile, secret, true,
+			); err != nil {
+				return err
+			}
 		}
 		c.Auth.OIDC[idx] = p
 		return nil

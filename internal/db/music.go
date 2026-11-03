@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -13,10 +15,12 @@ import (
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
@@ -39,19 +43,26 @@ type PersonSeed struct {
 }
 
 type TrackSeed struct {
-	MBID      string
-	Title     string
-	Disc      uint8
-	Position  uint16
-	Duration  uint32
-	Bonus     bool
-	Featuring []PersonSeed
-	Writers   []PersonSeed
+	MBID             string
+	ReleaseTrackMBID string
+	Title            string
+	Disc             uint8
+	Position         uint16
+	Duration         uint32
+	Bonus            bool
+	Artists          []PersonSeed
+	ArtistCredit     string
+	Featuring        []PersonSeed
+	// Writers, Credits and Performers are stored only when the release
+	// call's credits are complete.
+	Writers    []MusicCreditSeed
+	Credits    []MusicCreditSeed
+	Performers []PerformerSeed
 }
 
-// AlbumCreditSeed is one production credit of an album; Role is one of the
+// MusicCreditSeed is one credit of an album or a track; Role is one of the
 // musiccredit role values.
-type AlbumCreditSeed struct {
+type MusicCreditSeed struct {
 	PersonSeed
 	Role string
 }
@@ -65,11 +76,12 @@ type PerformerSeed struct {
 // AlbumSeed is a release group as the artist's discography lists it. The
 // tracks arrive later, through SetAlbumHydration.
 type AlbumSeed struct {
-	MBID        string
-	Title       string
-	Type        string
-	ReleaseDate *time.Time
-	Monitored   bool
+	MBID         string
+	Title        string
+	Type         string
+	ReleaseDate  *time.Time
+	OriginalDate string
+	Monitored    bool
 }
 
 type MemberSeed struct {
@@ -129,6 +141,9 @@ type ArtistDetailsParams struct {
 // relationships and must not erase what an earlier heavy call stored.
 type HydrationParams struct {
 	ReleaseMBID     string
+	OriginalDate    string
+	EditionDate     string
+	Genres          []string
 	Barcode         string
 	Label           string
 	CatalogNumber   string
@@ -136,12 +151,21 @@ type HydrationParams struct {
 	Media           []string
 	Studio          string
 	Tracks          []TrackSeed
-	Credits         []AlbumCreditSeed
+	Credits         []MusicCreditSeed
 	Performers      []PerformerSeed
 	CreditsComplete bool
 }
 
 func joinCSV(s []string) string { return strings.Join(s, ",") }
+
+// creditRole is a seed's role as the column stores it, nil for none.
+func creditRole(r string) *musiccredit.Role {
+	if r == "" {
+		return nil
+	}
+	role := musiccredit.Role(r)
+	return &role
+}
 
 func createAlbum(
 	ctx context.Context,
@@ -154,7 +178,8 @@ func createAlbum(
 		SetTitle(a.Title).
 		SetMonitored(a.Monitored).
 		SetArtistID(artistID).
-		SetNillableReleaseDate(a.ReleaseDate)
+		SetNillableReleaseDate(a.ReleaseDate).
+		SetOriginalDate(a.OriginalDate)
 	if a.Type != "" {
 		b = b.SetType(album.Type(a.Type))
 	}
@@ -163,6 +188,88 @@ func createAlbum(
 		return 0, err
 	}
 	return row.ID, nil
+}
+
+// sharedLink is one album linkSharedAlbums listed under an artist, logged by
+// the caller once its transaction commits.
+type sharedLink struct{ albumID, ownerID uint32 }
+
+func logSharedLinks(ctx context.Context, artistID uint32, links []sharedLink) {
+	for _, l := range links {
+		slog.InfoContext(ctx, "listed shared album under artist",
+			"album.id", l.albumID, "artist.id", artistID, "owner.id", l.ownerID)
+	}
+}
+
+// linkSharedAlbums lists under the artist every seeded release group another
+// artist already owns, since the mbid is one row however many artists it
+// credits, and returns the mbids it handled so the caller neither inserts nor
+// refreshes them (the owner keeps the row up to date), with the new links.
+func linkSharedAlbums(
+	ctx context.Context,
+	c *ent.Client,
+	artistID uint32,
+	seeds []AlbumSeed,
+) (map[string]bool, []sharedLink, error) {
+	if len(seeds) == 0 {
+		return nil, nil, nil
+	}
+	mbids := make([]string, len(seeds))
+	for i, a := range seeds {
+		mbids[i] = a.MBID
+	}
+	rows, err := c.Album.Query().
+		Where(
+			album.MbidIn(mbids...),
+			album.Not(album.HasArtistWith(artist.IDEQ(artistID))),
+		).
+		WithArtist(func(q *ent.ArtistQuery) { q.Select(artist.FieldID) }).
+		WithCoArtists(func(q *ent.ArtistQuery) { q.Select(artist.FieldID) }).
+		All(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	shared := make(map[string]bool, len(rows))
+	var links []sharedLink
+	for _, a := range rows {
+		shared[a.Mbid] = true
+		if slices.ContainsFunc(a.Edges.CoArtists, func(co *ent.Artist) bool {
+			return co.ID == artistID
+		}) {
+			continue
+		}
+		if err := c.Album.UpdateOne(a).
+			AddCoArtistIDs(artistID).
+			Exec(ctx); err != nil {
+			return nil, nil, err
+		}
+		links = append(links, sharedLink{albumID: a.ID, ownerID: a.Edges.Artist.ID})
+	}
+	return shared, links, nil
+}
+
+// AlbumOfArtist matches the albums listed under the artist: the ones it owns
+// and the ones it is co-credited on.
+func AlbumOfArtist(id uint32) predicate.Album {
+	return albumOfArtists([]uint32{id})
+}
+
+func albumOfArtists(ids []uint32) predicate.Album {
+	return album.Or(
+		album.HasArtistWith(artist.IDIn(ids...)),
+		album.HasCoArtistsWith(artist.IDIn(ids...)),
+	)
+}
+
+// ArtistAlbums is every album listed under the artist, owned then co-credited,
+// from an artist read with both edges loaded.
+func ArtistAlbums(a *ent.Artist) []*ent.Album {
+	return slices.Concat(a.Edges.Albums, a.Edges.CoAlbums)
+}
+
+// artistHasAlbum matches the artists with a listed album the predicates match.
+func artistHasAlbum(p ...predicate.Album) predicate.Artist {
+	return artist.Or(artist.HasAlbumsWith(p...), artist.HasCoAlbumsWith(p...))
 }
 
 func replaceMembers(
@@ -227,7 +334,15 @@ func (db *DB) CreateArtist(
 		tx.Rollback()
 		return nil, err
 	}
+	shared, links, err := linkSharedAlbums(ctx, tx.Client(), row.ID, p.Albums)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
 	for _, a := range p.Albums {
+		if shared[a.MBID] {
+			continue
+		}
 		if _, err := createAlbum(ctx, tx.Client(), row.ID, a); err != nil {
 			tx.Rollback()
 			return nil, err
@@ -236,12 +351,14 @@ func (db *DB) CreateArtist(
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
+	logSharedLinks(ctx, row.ID, links)
 	return db.FindArtistByID(ctx, row.ID)
 }
 
 // withAlbumTree eager-loads an album's tracks in disc order with their files
-// and credits, and the album's own credits.
+// and credits, the album's own credits, and the artists it is listed under.
 func withAlbumTree(q *ent.AlbumQuery) {
+	withAlbumArtists(q)
 	q.WithCredits(func(cq *ent.MusicCreditQuery) {
 		cq.Order(ent.Asc(musiccredit.FieldOrdinal))
 	}).WithTracks(func(tq *ent.TrackQuery) {
@@ -250,6 +367,13 @@ func withAlbumTree(q *ent.AlbumQuery) {
 			WithCredits(func(cq *ent.MusicCreditQuery) {
 				cq.Order(ent.Asc(musiccredit.FieldOrdinal))
 			})
+	})
+}
+
+// withAlbumArtists eager-loads the album's owner and co-artists.
+func withAlbumArtists(q *ent.AlbumQuery) {
+	q.WithArtist().WithCoArtists(func(aq *ent.ArtistQuery) {
+		aq.Order(ent.Asc(artist.FieldID))
 	})
 }
 
@@ -263,11 +387,15 @@ func (db *DB) FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error
 			q.Order(ent.Desc(album.FieldReleaseDate), ent.Asc(album.FieldTitle))
 			withAlbumTree(q)
 		}).
+		WithCoAlbums(func(q *ent.AlbumQuery) {
+			q.Order(ent.Desc(album.FieldReleaseDate), ent.Asc(album.FieldTitle))
+			withAlbumTree(q)
+		}).
 		Only(ctx)
 }
 
 func (db *DB) FindAlbumByID(ctx context.Context, id uint32) (*ent.Album, error) {
-	q := db.client.Album.Query().Where(album.IDEQ(id)).WithArtist()
+	q := db.client.Album.Query().Where(album.IDEQ(id))
 	withAlbumTree(q)
 	return q.Only(ctx)
 }
@@ -390,8 +518,8 @@ func downloadingAlbum() predicate.Album {
 // downloading if any is downloading or paused, else wanted if any is wanted
 // or failed, else available.
 func artistStatus(status string, now time.Time) predicate.Artist {
-	downloading := artist.HasAlbumsWith(downloadingAlbum())
-	wanted := artist.HasAlbumsWith(album.And(
+	downloading := artistHasAlbum(downloadingAlbum())
+	wanted := artistHasAlbum(album.And(
 		album.Monitored(true),
 		album.StatusIn(album.StatusWanted, album.StatusFailed),
 		releasedAlbum(now),
@@ -430,7 +558,7 @@ func artistFilters(p ListArtistsParams, skip facet) []predicate.Artist {
 					foldContains(s, artist.FieldGenre, p.Query),
 				))
 			},
-			artist.HasAlbumsWith(func(s *entsql.Selector) {
+			artistHasAlbum(func(s *entsql.Selector) {
 				s.Where(foldContains(s, album.FieldTitle, p.Query))
 			}),
 		))
@@ -459,13 +587,7 @@ func (db *DB) ListArtists(
 	var order []artist.OrderOption
 	switch p.Sort {
 	case "name":
-		if desc {
-			order = append(order,
-				artist.BySortName(entsql.OrderDesc()),
-				artist.ByName(entsql.OrderDesc()))
-		} else {
-			order = append(order, artist.BySortName(), artist.ByName())
-		}
+		order = append(order, orderFold(artist.FieldName, desc))
 	default:
 		if p.Order == "asc" {
 			order = append(order, artist.ByCreateTime())
@@ -479,7 +601,8 @@ func (db *DB) ListArtists(
 		Order(order...).
 		Offset(int(p.Offset)).
 		Limit(int(p.Limit)).
-		WithAlbums().
+		WithAlbums(withAlbumArtists).
+		WithCoAlbums(withAlbumArtists).
 		All(ctx)
 }
 
@@ -565,7 +688,7 @@ func (db *DB) AlbumRollups(
 		Duration int64  `sql:"duration"`
 	}
 	err := db.client.Track.Query().
-		Where(track.HasAlbumWith(album.HasArtistWith(artist.IDIn(artistIDs...)))).
+		Where(track.HasAlbumWith(albumOfArtists(artistIDs))).
 		Modify(func(s *entsql.Selector) {
 			s.Select(
 				entsql.As(s.C(track.AlbumColumn), "album_id"),
@@ -595,7 +718,7 @@ func (db *DB) AlbumRollups(
 	err = db.client.Track.Query().
 		Where(
 			track.HasMediaFiles(),
-			track.HasAlbumWith(album.HasArtistWith(artist.IDIn(artistIDs...))),
+			track.HasAlbumWith(albumOfArtists(artistIDs)),
 		).
 		Modify(func(s *entsql.Selector) {
 			mf := entsql.Dialect(s.Dialect()).
@@ -654,8 +777,9 @@ func smallRelease() predicate.Album {
 	}
 }
 
-// HydratingArtists reports, for each of the artists, whether any album is
-// still being filled in. It drives the SPA's polling.
+// HydratingArtists reports, for each of the artists, whether any album listed
+// under it, owned or co-credited, is still being filled in. It drives the
+// SPA's polling.
 func (db *DB) HydratingArtists(
 	ctx context.Context,
 	artistIDs []uint32,
@@ -668,7 +792,7 @@ func (db *DB) HydratingArtists(
 	ids, err := db.client.Artist.Query().
 		Where(
 			artist.IDIn(artistIDs...),
-			artist.HasAlbumsWith(albumHydrating(now)),
+			artistHasAlbum(albumHydrating(now)),
 		).
 		IDs(ctx)
 	if err != nil {
@@ -682,15 +806,17 @@ func (db *DB) HydratingArtists(
 
 // RefreshArtist rewrites the artist's provider-sourced fields and members and
 // reconciles its release groups: stored albums update title, type and date
-// only, new ones are created. It returns the ids of the created albums.
+// only, new ones are created, and those no longer listed are pruned
+// (pruneUnlistedAlbums). It returns the ids of the created and of the deleted
+// albums.
 func (db *DB) RefreshArtist(
 	ctx context.Context,
 	id uint32,
 	p RefreshArtistParams,
-) ([]uint32, error) {
+) ([]uint32, []uint32, error) {
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	c := tx.Client()
 	u := c.Artist.UpdateOneID(id).
@@ -711,49 +837,136 @@ func (db *DB) RefreshArtist(
 	}
 	if err := u.Exec(ctx); err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, nil, err
 	}
 	if err := replaceMembers(ctx, c, id, p.Members); err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, nil, err
 	}
 	existing, err := c.Album.Query().
 		Where(album.HasArtistWith(artist.IDEQ(id))).
 		All(ctx)
 	if err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, nil, err
 	}
 	byMBID := make(map[string]*ent.Album, len(existing))
 	for _, a := range existing {
 		byMBID[a.Mbid] = a
 	}
+	shared, links, err := linkSharedAlbums(ctx, c, id, p.Albums)
+	if err != nil {
+		tx.Rollback()
+		return nil, nil, err
+	}
 	var created []uint32
 	for _, a := range p.Albums {
+		if shared[a.MBID] {
+			continue
+		}
 		if cur := byMBID[a.MBID]; cur != nil {
 			u := c.Album.UpdateOne(cur).
 				SetTitle(a.Title).
 				SetNillableReleaseDate(a.ReleaseDate)
+			if a.OriginalDate != "" {
+				u = u.SetOriginalDate(a.OriginalDate)
+			}
 			if a.Type != "" {
 				u = u.SetType(album.Type(a.Type))
 			}
 			if err := u.Exec(ctx); err != nil {
 				tx.Rollback()
-				return nil, err
+				return nil, nil, err
 			}
 			continue
 		}
 		newID, err := createAlbum(ctx, c, id, a)
 		if err != nil {
 			tx.Rollback()
-			return nil, err
+			return nil, nil, err
 		}
 		created = append(created, newID)
 	}
+	removed, err := pruneUnlistedAlbums(ctx, c, id, p.Albums)
+	if err != nil {
+		tx.Rollback()
+		return nil, nil, err
+	}
 	if err := tx.Commit(); err != nil {
+		return nil, nil, err
+	}
+	logSharedLinks(ctx, id, links)
+	return created, removed, nil
+}
+
+// pruneUnlistedAlbums handles the albums the artist owns that its discography
+// no longer lists — a release group MusicBrainz merged away, or one the
+// discography fetch now leaves out, like a bootleg-only one. An album nothing
+// was ever done with is deleted. One holding files, download history, an
+// acquisition event or a co-artist is kept, and unmonitored unless its flag
+// was set by hand. The events written for every album (added, searched by the
+// missing-album job, metadata or monitoring changes) are not use: counting
+// them kept nearly every bootleg album a scheduled search had tried.
+// An empty listing prunes nothing: it says nothing about the stored albums.
+// It returns the deleted albums' ids.
+func pruneUnlistedAlbums(
+	ctx context.Context,
+	c *ent.Client,
+	artistID uint32,
+	listed []AlbumSeed,
+) ([]uint32, error) {
+	if len(listed) == 0 {
+		return nil, nil
+	}
+	mbids := make([]string, 0, len(listed))
+	for _, a := range listed {
+		mbids = append(mbids, a.MBID)
+	}
+	unlisted := album.And(
+		album.HasArtistWith(artist.IDEQ(artistID)),
+		album.MbidNotIn(mbids...),
+	)
+	used := album.Or(
+		album.HasTracksWith(track.HasMediaFiles()),
+		album.HasDownloadRecords(),
+		album.HasPackRecords(),
+		album.HasEventsWith(mediaevent.TypeIn(
+			mediaevent.TypeGrabbed,
+			mediaevent.TypeDownloadCompleted,
+			mediaevent.TypeDownloadFailed,
+			mediaevent.TypeDownloadCancelled,
+			mediaevent.TypeGrabWidened,
+			mediaevent.TypeImported,
+			mediaevent.TypeImportFailed,
+			mediaevent.TypeImportHeldForReview,
+			mediaevent.TypeFileRenamed,
+			mediaevent.TypeFileRemoved,
+			mediaevent.TypeRequestApproved,
+		)),
+		album.HasCoArtists(),
+		album.MonitorPinned(true),
+	)
+	ids, err := c.Album.Query().Where(unlisted, album.Not(used)).IDs(ctx)
+	if err != nil {
 		return nil, err
 	}
-	return created, nil
+	if len(ids) > 0 {
+		if _, err := c.Album.Delete().
+			Where(album.IDIn(ids...)).
+			Exec(ctx); err != nil {
+			return nil, err
+		}
+	}
+	err = c.Album.Update().
+		Where(
+			unlisted,
+			album.Monitored(true),
+			album.MonitorPinned(false),
+			album.Not(album.HasCoArtists()),
+		).
+		SetMonitored(false).
+		Exec(ctx)
+	return ids, err
 }
 
 // SetArtistDetails writes the overview fields that are non-empty and stamps
@@ -780,41 +993,42 @@ func (db *DB) SetArtistDetails(
 // SetArtistMonitor stores the policy and applies it to the artist's existing
 // albums in one transaction (applyMonitorPolicy), clearing every album's
 // monitor_pinned: choosing a policy is starting over. It never touches album
-// status.
+// status, and returns how many albums it monitored and unmonitored.
 func (db *DB) SetArtistMonitor(
 	ctx context.Context,
 	id uint32,
 	monitor artist.Monitor,
 	types []string,
 	now time.Time,
-) error {
+) (int, int, error) {
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
 	if err := tx.Artist.UpdateOneID(id).SetMonitor(monitor).Exec(ctx); err != nil {
 		tx.Rollback()
-		return err
+		return 0, 0, err
 	}
 	owned := album.HasArtistWith(artist.IDEQ(id))
 	if err := tx.Album.Update().
 		Where(owned, album.MonitorPinned(true)).
 		SetMonitorPinned(false).Exec(ctx); err != nil {
 		tx.Rollback()
-		return err
+		return 0, 0, err
 	}
-	if _, _, err := applyMonitorPolicy(
+	on, off, err := applyMonitorPolicy(
 		ctx,
 		tx.Client(),
 		owned,
 		monitor,
 		types,
 		now,
-	); err != nil {
+	)
+	if err != nil {
 		tx.Rollback()
-		return err
+		return 0, 0, err
 	}
-	return tx.Commit()
+	return on, off, tx.Commit()
 }
 
 // ReapplyMonitorPolicies applies every artist's own all or future policy to
@@ -942,13 +1156,48 @@ func (db *DB) SetAlbumStatus(
 	return n > 0, err
 }
 
-func (db *DB) DeleteArtist(ctx context.Context, id uint32) error {
-	return db.client.Artist.DeleteOneID(id).Exec(ctx)
+// DeleteArtist deletes the artist and, in the same transaction, first gives
+// every album it owns that another artist is co-credited on to its lowest-id
+// co-artist: an album that is still another artist's is not deleted with this
+// one, and its files stay where they are. It returns the moved albums' ids.
+func (db *DB) DeleteArtist(ctx context.Context, id uint32) ([]uint32, error) {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Album.Query().
+		Where(album.HasArtistWith(artist.IDEQ(id)), album.HasCoArtists()).
+		WithCoArtists(func(q *ent.ArtistQuery) {
+			q.Select(artist.FieldID).Order(ent.Asc(artist.FieldID))
+		}).
+		All(ctx)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	moved := make([]uint32, 0, len(rows))
+	for _, a := range rows {
+		heir := a.Edges.CoArtists[0].ID
+		if err := tx.Album.UpdateOne(a).
+			SetArtistID(heir).
+			RemoveCoArtistIDs(heir).
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+		moved = append(moved, a.ID)
+	}
+	if err := tx.Artist.DeleteOneID(id).Exec(ctx); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	return moved, tx.Commit()
 }
 
 // SetAlbumHydration stores one album's release call in a transaction: the
 // album-level facts, its tracks (updated in place by disc and position, so a
-// track already holding a file keeps it), the featuring credits of every
+// track already holding a file keeps it, and one the release no longer
+// lists is deleted unless it holds a file), the featuring credits of every
 // track and, when CreditsComplete, the album's credits and performers, the
 // tracks' writers and the studio. It stamps metadata_fetched_at, and
 // credits_fetched_at when the credits landed; it never touches status or
@@ -969,7 +1218,13 @@ func (db *DB) SetAlbumHydration(
 		SetCatalogNumber(p.CatalogNumber).
 		SetCountry(p.Country).
 		SetMedia(joinCSV(p.Media)).
+		SetEditionDate(p.EditionDate).
+		// Never NULL once hydrated: NULL is the marker the backfill reads.
+		SetGenres(append([]string{}, p.Genres...)).
 		SetMetadataFetchedAt(at)
+	if p.OriginalDate != "" {
+		u = u.SetOriginalDate(p.OriginalDate)
+	}
 	if p.ReleaseMBID != "" {
 		u = u.SetReleaseMbid(p.ReleaseMBID)
 	}
@@ -977,7 +1232,8 @@ func (db *DB) SetAlbumHydration(
 		u = u.SetBarcode(p.Barcode)
 	}
 	if p.CreditsComplete {
-		u = u.SetStudio(p.Studio).SetCreditsFetchedAt(at)
+		u = u.SetStudio(p.Studio).SetCreditsFetchedAt(at).
+			SetCreditsVersion(library.MusicCreditsVersion)
 	}
 	if err := u.Exec(ctx); err != nil {
 		tx.Rollback()
@@ -1005,9 +1261,11 @@ func (db *DB) SetAlbumHydration(
 			id = cur.ID
 			if err := c.Track.UpdateOneID(id).
 				SetMbid(t.MBID).
+				SetReleaseTrackMbid(t.ReleaseTrackMBID).
 				SetTitle(t.Title).
 				SetDuration(t.Duration).
 				SetBonus(t.Bonus).
+				SetArtistCredit(t.ArtistCredit).
 				Exec(ctx); err != nil {
 				tx.Rollback()
 				return err
@@ -1015,11 +1273,13 @@ func (db *DB) SetAlbumHydration(
 		} else {
 			row, err := c.Track.Create().
 				SetMbid(t.MBID).
+				SetReleaseTrackMbid(t.ReleaseTrackMBID).
 				SetTitle(t.Title).
 				SetDisc(t.Disc).
 				SetPosition(t.Position).
 				SetDuration(t.Duration).
 				SetBonus(t.Bonus).
+				SetArtistCredit(t.ArtistCredit).
 				SetAlbumID(albumID).
 				Save(ctx)
 			if err != nil {
@@ -1028,9 +1288,17 @@ func (db *DB) SetAlbumHydration(
 			}
 			id = row.ID
 		}
-		kinds := []musiccredit.Kind{musiccredit.KindFeaturing}
+		kinds := []musiccredit.Kind{
+			musiccredit.KindArtist,
+			musiccredit.KindFeaturing,
+		}
 		if p.CreditsComplete {
-			kinds = append(kinds, musiccredit.KindWriter)
+			kinds = append(
+				kinds,
+				musiccredit.KindWriter,
+				musiccredit.KindCredit,
+				musiccredit.KindPerformer,
+			)
 		}
 		if _, err := c.MusicCredit.Delete().Where(
 			musiccredit.HasTrackWith(track.IDEQ(id)),
@@ -1040,6 +1308,12 @@ func (db *DB) SetAlbumHydration(
 			return err
 		}
 		var creates []*ent.MusicCreditCreate
+		for i, a := range t.Artists {
+			creates = append(creates, c.MusicCredit.Create().
+				SetKind(musiccredit.KindArtist).
+				SetName(a.Name).SetMbid(a.MBID).
+				SetOrdinal(numeric.SaturateU16(i)).SetTrackID(id))
+		}
 		for i, f := range t.Featuring {
 			creates = append(creates, c.MusicCredit.Create().
 				SetKind(musiccredit.KindFeaturing).
@@ -1050,12 +1324,54 @@ func (db *DB) SetAlbumHydration(
 			for i, w := range t.Writers {
 				creates = append(creates, c.MusicCredit.Create().
 					SetKind(musiccredit.KindWriter).
+					SetNillableRole(creditRole(w.Role)).
 					SetName(w.Name).SetMbid(w.MBID).
+					SetOrdinal(numeric.SaturateU16(i)).SetTrackID(id))
+			}
+			for i, cr := range t.Credits {
+				creates = append(creates, c.MusicCredit.Create().
+					SetKind(musiccredit.KindCredit).
+					SetRole(musiccredit.Role(cr.Role)).
+					SetName(cr.Name).SetMbid(cr.MBID).
+					SetOrdinal(numeric.SaturateU16(i)).SetTrackID(id))
+			}
+			for i, pf := range t.Performers {
+				creates = append(creates, c.MusicCredit.Create().
+					SetKind(musiccredit.KindPerformer).
+					SetName(pf.Name).SetMbid(pf.MBID).
+					SetInstruments(joinCSV(pf.Instruments)).
 					SetOrdinal(numeric.SaturateU16(i)).SetTrackID(id))
 			}
 		}
 		if len(creates) > 0 {
 			if err := c.MusicCredit.CreateBulk(creates...).Exec(ctx); err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
+	// A stored track the release does not list goes, unless it holds a file:
+	// an album re-picked onto another edition (a bonus-track pressing
+	// replaced by the standard one) would otherwise keep the extra tracks
+	// forever, each one missing. No tracks at all is a release MusicBrainz
+	// no longer knows, which says nothing about the stored ones.
+	if len(p.Tracks) > 0 {
+		listed := make(map[slot]bool, len(p.Tracks))
+		for _, t := range p.Tracks {
+			listed[slot{t.Disc, t.Position}] = true
+		}
+		var gone []uint32
+		for s, t := range byslot {
+			if !listed[s] {
+				gone = append(gone, t.ID)
+			}
+		}
+		if len(gone) > 0 {
+			if _, err := c.Track.Delete().Where(
+				track.IDIn(gone...),
+				track.Not(track.HasMediaFiles()),
+			).Exec(ctx); err != nil {
 				tx.Rollback()
 				return err
 			}
@@ -1125,6 +1441,54 @@ func (db *DB) ListAlbumsAwaitingCredits(
 			album.CreditsFetchedAtIsNil(),
 			album.HasTracks(),
 			smallRelease(),
+		).
+		WithArtist().
+		Order(ent.Asc(album.FieldMetadataFetchedAt), ent.Asc(album.FieldID)).
+		Limit(limit).
+		All(ctx)
+}
+
+// ListAlbumsAwaitingDetails returns up to limit hydrated albums holding at
+// least one file whose release data predates what the tag writer reads:
+// genres never fetched (hydrated before the genres and edition date were
+// part of hydration), credits stored under an older layout than
+// library.MusicCreditsVersion, or tracks carrying no credited artist
+// (hydrated before those were stored; listed at any size, once its retry is
+// due). Albums without files wait for their import.
+//
+// An album waiting on its credits layout is listed only when its release is
+// small enough for the heavy call (the credits sweep's own cap) and its last
+// fetch is older than retryBefore: a refetch that falls back to the light
+// call succeeds without moving the version, and would otherwise head the list
+// on every pass. The longest-unfetched come first, so such an album goes to
+// the back once tried.
+func (db *DB) ListAlbumsAwaitingDetails(
+	ctx context.Context,
+	retryBefore time.Time,
+	limit int,
+) ([]*ent.Album, error) {
+	return db.client.Album.Query().
+		Where(
+			album.MetadataFetchedAtNotNil(),
+			album.Or(
+				album.GenresIsNil(),
+				album.And(
+					album.CreditsFetchedAtNotNil(),
+					album.CreditsVersionLT(library.MusicCreditsVersion),
+					album.MetadataFetchedAtLT(retryBefore),
+					smallRelease(),
+				),
+				// Hydrated before track artists were stored. The light call
+				// carries them too, so a release too large for the heavy one
+				// still gets them.
+				album.And(
+					album.MetadataFetchedAtLT(retryBefore),
+					album.Not(album.HasTracksWith(track.HasCreditsWith(
+						musiccredit.KindEQ(musiccredit.KindArtist),
+					))),
+				),
+			),
+			album.HasTracksWith(track.HasMediaFiles()),
 		).
 		WithArtist().
 		Order(ent.Asc(album.FieldMetadataFetchedAt), ent.Asc(album.FieldID)).
@@ -1213,7 +1577,7 @@ func (db *DB) ListArtistAlbumsForSearch(
 ) ([]*ent.Album, error) {
 	return db.client.Album.Query().
 		Where(
-			album.HasArtistWith(artist.IDEQ(artistID)),
+			AlbumOfArtist(artistID),
 			wantedAlbum(time.Now()),
 			album.MetadataFetchedAtNotNil(),
 		).
@@ -1230,7 +1594,7 @@ func (db *DB) ListPackAlbums(
 ) ([]*ent.Album, error) {
 	return db.client.Album.Query().
 		Where(
-			album.HasArtistWith(artist.IDEQ(artistID)),
+			AlbumOfArtist(artistID),
 			album.Monitored(true),
 			releasedAlbum(time.Now()),
 			album.MetadataFetchedAtNotNil(),

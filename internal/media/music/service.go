@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -94,10 +95,35 @@ type Manager interface {
 		result indexer.SearchResult,
 		replace bool,
 	) error
+	AlbumReleaseFiles(
+		ctx context.Context,
+		albumID uint32,
+		result indexer.SearchResult,
+	) (*ReleaseFilesView, error)
+	ArtistPackFiles(
+		ctx context.Context,
+		artistID uint32,
+		result indexer.SearchResult,
+	) (*DiscographyFilesView, error)
 	SearchAlbumNow(ctx context.Context, albumID uint32) error
 	SearchArtistNow(ctx context.Context, artistID uint32) error
 	SearchTrackNow(ctx context.Context, trackID uint32) error
 	DeleteTrackFile(ctx context.Context, trackID uint32) error
+
+	RetagLibrary(ctx context.Context) (int, error)
+	TagSettingsChanged(ctx context.Context, before, after config.MusicTagsConfig)
+	AlbumTags(ctx context.Context, albumID uint32) (*AlbumTagsView, error)
+	ApplyAlbumTags(ctx context.Context, albumID uint32) (int, error)
+	SetAlbumTagSettings(
+		ctx context.Context,
+		albumID uint32,
+		s AlbumTagSettings,
+	) error
+	SetTrackTagOverrides(
+		ctx context.Context,
+		trackID uint32,
+		overrides map[string][]string,
+	) error
 }
 
 var _ Manager = (*Service)(nil)
@@ -111,16 +137,19 @@ type Service struct {
 	download  download.Downloader
 	overviews metadata.OverviewProvider
 	photos    metadata.ArtistPhotoProvider
+	links     metadata.ArtistLinkProvider
 	ms        mediaserver.Refresher
 
 	details         *memo[*metadata.ArtistDetails]
 	lookups         *memo[*lookupBody]
 	releaseSearches *memo[[]metadata.ReleaseGroupSearchResult]
 	hydrate         hydrator
+	seeding         seedingCache
 }
 
 // NewService wires the music service. overviews and photos may be nil, which
-// turns the Wikipedia and Deezer steps of an add off.
+// turns the Wikipedia and Deezer steps of an add off; links may be nil, which
+// leaves the photo step unable to tell namesakes sharing a Deezer page apart.
 func NewService(
 	store db.Store,
 	meta metadata.MusicProvider,
@@ -130,11 +159,13 @@ func NewService(
 	dl download.Downloader,
 	overviews metadata.OverviewProvider,
 	photos metadata.ArtistPhotoProvider,
+	links metadata.ArtistLinkProvider,
 	ms mediaserver.Refresher,
 ) *Service {
 	return &Service{
 		db: store, metadata: meta, posters: p, covers: covers,
-		indexer: idx, download: dl, overviews: overviews, photos: photos, ms: ms,
+		indexer: idx, download: dl, overviews: overviews, photos: photos,
+		links: links, ms: ms,
 		details: newMemo[*metadata.ArtistDetails](detailsTTL, detailsCacheLimit),
 		lookups: newMemo[*lookupBody](detailsTTL, detailsCacheLimit),
 		releaseSearches: newMemo[[]metadata.ReleaseGroupSearchResult](
@@ -202,11 +233,12 @@ func albumSeeds(
 	seeds := make([]db.AlbumSeed, len(groups))
 	for i, rg := range groups {
 		seeds[i] = db.AlbumSeed{
-			MBID:        rg.MBID,
-			Title:       rg.Title,
-			Type:        string(rg.Type),
-			ReleaseDate: rg.ReleaseDate,
-			Monitored:   monitoredFor(policy, rg.Type, rg.ReleaseDate, now, types),
+			MBID:         rg.MBID,
+			Title:        rg.Title,
+			Type:         string(rg.Type),
+			ReleaseDate:  rg.ReleaseDate,
+			OriginalDate: rg.OriginalDate,
+			Monitored:    monitoredFor(policy, rg.Type, rg.ReleaseDate, now, types),
 		}
 	}
 	return seeds
@@ -319,7 +351,9 @@ func (s *Service) afterAdd(ctx context.Context, a *ent.Artist, force bool) {
 		}
 	}
 	s.enqueueHydration(a.ID, items...)
-	s.fillDetailsInBackground(ctx, a.ID, force)
+	// Nobody waits on the photo of an artist just added, so its MusicBrainz
+	// calls go behind any lookup a person makes meanwhile.
+	s.fillDetailsInBackground(metadata.Prefetch(ctx), a.ID, force)
 }
 
 func (s *Service) Get(ctx context.Context, id uint32) (*ent.Artist, error) {
@@ -373,12 +407,27 @@ func (s *Service) SetArtistMonitor(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	return otelx.RecordSpanError(
-		span,
-		notFound(s.db.SetArtistMonitor(
-			ctx, id, policy, config.Get().Library.MusicMonitoredTypes, time.Now(),
-		)),
+	on, off, err := s.db.SetArtistMonitor(
+		ctx, id, policy, config.Get().Library.MusicMonitoredTypes, time.Now(),
 	)
+	if err != nil {
+		return otelx.RecordSpanError(span, notFound(err))
+	}
+	// One artist-scoped row for the whole re-apply, carrying how many albums
+	// it moved — the series twin records one row with its episode count, not
+	// one per episode.
+	if err := events.Record(
+		ctx, nil, events.TypeMonitoringChanged, events.ScopeArtist, id,
+		map[string]any{
+			"monitor":   string(policy),
+			"monitored": policy != artist.MonitorNone,
+			"albums":    on + off,
+		},
+	); err != nil {
+		slog.WarnContext(ctx, "music: record monitoring event failed",
+			"artist.id", id, "error", err)
+	}
+	return nil
 }
 
 // ApplyMonitoredTypes applies the current library.music_monitored_types to
@@ -415,7 +464,17 @@ func (s *Service) SetAlbumMonitored(ctx context.Context, id uint32, m bool) erro
 	if ent.IsNotFound(err) {
 		err = ErrAlbumNotFound
 	}
-	return otelx.RecordSpanError(span, err)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if err := events.Record(
+		ctx, nil, events.TypeMonitoringChanged, events.ScopeAlbum, id,
+		map[string]any{"monitored": m},
+	); err != nil {
+		slog.WarnContext(ctx, "music: record monitoring event failed",
+			"album.id", id, "error", err)
+	}
+	return nil
 }
 
 // Delete removes the artist; albums, tracks and media-file rows cascade in the
@@ -433,12 +492,34 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 	if err != nil {
 		return otelx.RecordSpanError(span, notFound(err))
 	}
+	// A shared album is still another artist's: DeleteArtist hands it to
+	// them, so neither its files nor its cover go with this artist.
+	owned := slices.DeleteFunc(
+		slices.Clone(row.Edges.Albums),
+		func(a *ent.Album) bool {
+			return len(a.Edges.CoArtists) > 0
+		},
+	)
 	if deleteFiles {
 		root := config.Get().Library.MusicPath
-		defer mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindMusic, root)
-		for _, a := range row.Edges.Albums {
+		var removed []string
+		defer func() {
+			if len(removed) > 0 {
+				mediaserver.RefreshInBackground(
+					ctx, s.ms, mediaserver.KindMusic, root, removed...,
+				)
+			}
+		}()
+		for _, a := range owned {
+			unlock := library.LockAlbumFiles(a.ID)
+			// Read again under the lock: the renamer may have moved a
+			// file since the artist was loaded.
+			if fresh, err := s.db.FindAlbumByID(ctx, a.ID); err == nil {
+				a = fresh
+			}
 			for _, t := range a.Edges.Tracks {
 				for _, f := range t.Edges.MediaFiles {
+					removed = append(removed, f.Path)
 					if err := library.RemoveMediaFile(
 						ctx,
 						f.Path,
@@ -457,16 +538,24 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 					}
 				}
 			}
+			unlock()
 		}
 	}
-	if err := s.db.DeleteArtist(ctx, id); err != nil {
+	moved, err := s.db.DeleteArtist(ctx, id)
+	if err != nil {
 		return otelx.RecordSpanError(span, notFound(err))
+	}
+	if len(moved) > 0 {
+		slog.InfoContext(ctx, "shared albums handed to a co-artist",
+			"artist.id", id, "albums", moved)
+		// Their files name the deleted owner as the album artist.
+		s.tagsChanged(ctx, moved...)
 	}
 	if err := s.posters.Remove(artistKind, id); err != nil {
 		slog.WarnContext(ctx, "artist poster was not removed",
 			"artist.id", id, "error", err)
 	}
-	for _, a := range row.Edges.Albums {
+	for _, a := range owned {
 		if err := s.posters.Remove(coverKind, a.ID); err != nil {
 			slog.WarnContext(ctx, "album poster was not removed",
 				"album.id", a.ID, "error", err)
@@ -507,7 +596,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 	s.details.put(row.Mbid, details)
 
 	now := time.Now()
-	created, err := s.db.RefreshArtist(ctx, id, db.RefreshArtistParams{
+	created, removed, err := s.db.RefreshArtist(ctx, id, db.RefreshArtistParams{
 		Name:        details.Name,
 		SortName:    details.SortName,
 		Type:        details.Type,
@@ -523,11 +612,28 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
+	if len(removed) > 0 {
+		slog.InfoContext(ctx, "albums no longer in the discography removed",
+			"artist.id", id, "albums", removed)
+	}
+	for _, albumID := range removed {
+		if err := s.posters.Remove(coverKind, albumID); err != nil {
+			slog.WarnContext(ctx, "album poster was not removed",
+				"album.id", albumID, "error", err)
+		}
+	}
 
 	updated, err := s.db.FindArtistByID(ctx, id)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
+	var albumIDs []uint32
+	for _, a := range updated.Edges.Albums {
+		albumIDs = append(albumIDs, a.ID)
+	}
+	// A title, date or type the refresh changed reaches the files under
+	// managed; the hash settles the albums where nothing did.
+	s.tagsChanged(ctx, albumIDs...)
 	var items []hydrateItem
 	retried := 0
 	for _, a := range updated.Edges.Albums {

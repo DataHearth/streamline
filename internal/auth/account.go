@@ -39,6 +39,14 @@ var (
 	// key past maxAPIKeysPerUser. Handlers map to a 4xx.
 	ErrAPIKeyQuotaExceeded = errors.New("api key quota exceeded")
 
+	// ErrAPIKeyInvalid is returned when a key is requested with an unknown
+	// scope or a negative lifetime. Handlers map to 422.
+	ErrAPIKeyInvalid = errors.New("invalid api key request")
+
+	// errInvalidAPIKey is ValidateAPIKey's one refusal, for an unknown and an
+	// expired key alike.
+	errInvalidAPIKey = errors.New("invalid API key")
+
 	// ErrInvalidDeviceEmail is returned when a device address is not a bare
 	// email address. Handlers map to 422.
 	ErrInvalidDeviceEmail = errors.New("device email is not a valid address")
@@ -239,6 +247,42 @@ func (s *auth) RotateSubsonicPassword(
 	}
 	slog.InfoContext(ctx, "subsonic password rotated", "user.id", userID)
 	return pw, nil
+}
+
+// SetSubsonicPassword sets the user's Subsonic password to one the caller
+// chose (the Subsonic API's changePassword, for the caller's own account). It is
+// held to the login password policy but never becomes the login password:
+// it is stored recoverable, so it must not double as a web credential.
+// Returns ErrPasswordWeak or ErrUserNotFound.
+func (s *auth) SetSubsonicPassword(
+	ctx context.Context,
+	userID uint32,
+	password string,
+) error {
+	ctx, span := tracer.Start(ctx, "auth.set_subsonic_password",
+		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
+	)
+	defer span.End()
+
+	if err := validatePassword(password); err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	if _, err := s.db.UpdateUser(
+		ctx,
+		userID,
+		db.UpdateUserParams{SubsonicPassword: &password, SubsonicCreatedAt: &now},
+	); err != nil {
+		if ent.IsNotFound(err) {
+			return ErrUserNotFound
+		}
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("set subsonic password: %w", err),
+		)
+	}
+	slog.InfoContext(ctx, "subsonic password set", "target.user.id", userID)
+	return nil
 }
 
 // DisableSubsonicPassword clears the user's Subsonic password, ending Subsonic

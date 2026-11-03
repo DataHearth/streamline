@@ -72,6 +72,7 @@ func forbiddenResp(msg string) ForbiddenJSONResponse {
 func configLocked(err error) bool {
 	return errors.Is(err, config.ErrReadOnly) ||
 		errors.Is(err, config.ErrSecretFileManaged) ||
+		errors.Is(err, config.ErrSecretFileDestination) ||
 		errors.Is(err, config.ErrOIDCTrustFileManaged)
 }
 
@@ -92,6 +93,11 @@ func movieToAPI(m *ent.Movie) Movie {
 	}
 	if m.ReleaseDate != nil {
 		mov.ReleaseDate = &openapi_types.Date{Time: *m.ReleaseDate}
+	}
+	if m.DigitalReleaseDate != nil {
+		mov.DigitalReleaseDate = &openapi_types.Date{
+			Time: m.DigitalReleaseDate.UTC(),
+		}
 	}
 	if m.Overview != "" {
 		mov.Overview = &m.Overview
@@ -239,7 +245,16 @@ func toAPIUser(u *ent.User) User {
 		AuthMethod:  UserAuthMethod(u.AuthMethod),
 		DisplayName: dn,
 		DeviceEmail: &u.DeviceEmail,
-		CreatedAt:   u.CreateTime,
+		Subsonic: &SubsonicAccess{
+			CanStream:          u.SubsonicCanStream,
+			CanDownload:        u.SubsonicCanDownload,
+			CanManagePlaylists: u.SubsonicCanManagePlaylists,
+			CanShare:           u.SubsonicCanShare,
+			CanRate:            u.SubsonicCanRate,
+			CanChangePassword:  u.SubsonicCanChangePassword,
+			MaxBitRate:         u.SubsonicMaxBitRate,
+		},
+		CreatedAt: u.CreateTime,
 	}
 }
 
@@ -333,6 +348,8 @@ func toAPIApiKey(k *ent.ApiKey) ApiKey {
 	return ApiKey{
 		Id:         k.ID,
 		Name:       k.Name,
+		Scope:      ApiKeyScope(k.Scope),
+		ExpiresAt:  k.ExpiresAt,
 		CreatedAt:  k.CreateTime,
 		LastUsedAt: k.LastUsedAt,
 	}
@@ -479,13 +496,23 @@ func mediaInfoToAPI(f *ent.MediaFile) *MediaInfo {
 	return out
 }
 
-func mediaServerToAPI(e config.MediaServerEntry) MediaServer {
+// mediaServerToAPI is the read view of an entry; statuses, when set, fills
+// its last refresh.
+func mediaServerToAPI(
+	e config.MediaServerEntry,
+	statuses mediaserver.RefreshStatuses,
+) MediaServer {
+	mappings := make([]MediaServerPathMapping, 0, len(e.PathMappings))
+	for _, m := range e.PathMappings {
+		mappings = append(mappings, MediaServerPathMapping{From: m.From, To: m.To})
+	}
 	out := MediaServer{
-		Name:       e.Name,
-		ServerType: MediaServerServerType(e.ServerType),
-		Host:       e.Host,
-		Enabled:    e.Enabled,
-		ApiKeySet:  e.APIKey != "" || e.APIKeyFile != "",
+		Name:         e.Name,
+		ServerType:   MediaServerServerType(e.ServerType),
+		Host:         e.Host,
+		Enabled:      e.Enabled,
+		ApiKeySet:    e.APIKey != "" || e.APIKeyFile != "",
+		PathMappings: &mappings,
 	}
 	if e.LibrarySection != nil {
 		out.LibrarySection = e.LibrarySection
@@ -493,7 +520,43 @@ func mediaServerToAPI(e config.MediaServerEntry) MediaServer {
 	if e.LibrarySectionTV != nil {
 		out.LibrarySectionTv = e.LibrarySectionTV
 	}
+	if statuses != nil {
+		if st, ok := statuses.LastRefresh(e.Name); ok {
+			out.LastRefresh = refreshStatusToAPI(st)
+		}
+	}
 	return out
+}
+
+func refreshStatusToAPI(st mediaserver.RefreshStatus) *MediaServerRefreshStatus {
+	out := &MediaServerRefreshStatus{
+		At:      st.At,
+		Outcome: MediaServerRefreshStatusOutcome(st.Outcome),
+		Folders: st.Folders,
+	}
+	if st.Scope != "" {
+		scope := MediaServerRefreshStatusScope(st.Scope)
+		out.Scope = &scope
+	}
+	if st.Error != "" {
+		out.Error = &st.Error
+	}
+	return out
+}
+
+// mediaServerPathMappings converts a request's mapping list; nil stays nil,
+// which a patch reads as "unchanged".
+func mediaServerPathMappings(
+	in *[]MediaServerPathMapping,
+) *[]config.MediaServerPathMapping {
+	if in == nil {
+		return nil
+	}
+	out := make([]config.MediaServerPathMapping, 0, len(*in))
+	for _, m := range *in {
+		out = append(out, config.MediaServerPathMapping{From: m.From, To: m.To})
+	}
+	return &out
 }
 
 func indexerToAPI(e config.IndexerEntry) Indexer {
@@ -573,6 +636,18 @@ func toActivityEvent(e *ent.MediaEvent) ActivityEvent {
 		out.Series = &SeriesRef{
 			Id:    e.Edges.TvShow.ID,
 			Title: e.Edges.TvShow.Title,
+		}
+	case e.Edges.Artist != nil:
+		out.Artist = &ArtistRef{Id: e.Edges.Artist.ID, Name: e.Edges.Artist.Name}
+	case e.Edges.Album != nil:
+		out.Album = activityAlbumRef(e.Edges.Album)
+	case e.Edges.Book != nil:
+		kind, _ := e.Payload["book_kind"].(string)
+		out.Book = activityBookRef(e.Edges.Book, kind)
+	case e.Edges.BookSeries != nil:
+		out.BookSeries = &SeriesRef{
+			Id:    e.Edges.BookSeries.ID,
+			Title: e.Edges.BookSeries.Title,
 		}
 	}
 	return out
@@ -832,6 +907,7 @@ func toQueueEntry(e download.QueueEntry) QueueEntry {
 	if e.DownloadClient != "" {
 		out.DownloadClient = &e.DownloadClient
 	}
+	out.TorrentHash = torrentHashRef(e.TorrentHash)
 	if e.FailureReason != "" {
 		out.FailureReason = &e.FailureReason
 	}
@@ -890,6 +966,7 @@ func toHistoryEntry(r *ent.DownloadRecord) HistoryEntry {
 		name := r.DownloadClientName
 		out.DownloadClient = &name
 	}
+	out.TorrentHash = torrentHashRef(r.TorrentHash)
 	if r.FailureReason != "" {
 		out.FailureReason = &r.FailureReason
 	}
@@ -897,6 +974,17 @@ func toHistoryEntry(r *ent.DownloadRecord) HistoryEntry {
 		out.ImportedAt = r.ImportedAt
 	}
 	return out
+}
+
+// torrentHashRef is a record's info hash for a queue or history row, nil when
+// it has none. Lower-cased: the clients differ in the case they report, and the
+// SPA matches it against the builtin engine's list and puts it in a URL.
+func torrentHashRef(hash string) *string {
+	if hash == "" {
+		return nil
+	}
+	h := strings.ToLower(hash)
+	return &h
 }
 
 // episodeRef builds the show + S/E context for a TV download record's queue or

@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 
+	"github.com/datahearth/streamline/internal/mediaserver"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -131,20 +132,29 @@ func (_c *MockServer_MovieDeepLink_Call) RunAndReturn(run func(ctx context.Conte
 }
 
 // RefreshLibrary provides a mock function for the type MockServer
-func (_mock *MockServer) RefreshLibrary(ctx context.Context, libraryPath string, sectionKey string) error {
-	ret := _mock.Called(ctx, libraryPath, sectionKey)
+func (_mock *MockServer) RefreshLibrary(ctx context.Context, req mediaserver.RefreshRequest) (mediaserver.RefreshScope, error) {
+	ret := _mock.Called(ctx, req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RefreshLibrary")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
-		r0 = returnFunc(ctx, libraryPath, sectionKey)
-	} else {
-		r0 = ret.Error(0)
+	var r0 mediaserver.RefreshScope
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, mediaserver.RefreshRequest) (mediaserver.RefreshScope, error)); ok {
+		return returnFunc(ctx, req)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(0).(func(context.Context, mediaserver.RefreshRequest) mediaserver.RefreshScope); ok {
+		r0 = returnFunc(ctx, req)
+	} else {
+		r0 = ret.Get(0).(mediaserver.RefreshScope)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, mediaserver.RefreshRequest) error); ok {
+		r1 = returnFunc(ctx, req)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockServer_RefreshLibrary_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshLibrary'
@@ -154,41 +164,35 @@ type MockServer_RefreshLibrary_Call struct {
 
 // RefreshLibrary is a helper method to define mock.On call
 //   - ctx context.Context
-//   - libraryPath string
-//   - sectionKey string
-func (_e *MockServer_Expecter) RefreshLibrary(ctx any, libraryPath any, sectionKey any) *MockServer_RefreshLibrary_Call {
-	return &MockServer_RefreshLibrary_Call{Call: _e.mock.On("RefreshLibrary", ctx, libraryPath, sectionKey)}
+//   - req mediaserver.RefreshRequest
+func (_e *MockServer_Expecter) RefreshLibrary(ctx any, req any) *MockServer_RefreshLibrary_Call {
+	return &MockServer_RefreshLibrary_Call{Call: _e.mock.On("RefreshLibrary", ctx, req)}
 }
 
-func (_c *MockServer_RefreshLibrary_Call) Run(run func(ctx context.Context, libraryPath string, sectionKey string)) *MockServer_RefreshLibrary_Call {
+func (_c *MockServer_RefreshLibrary_Call) Run(run func(ctx context.Context, req mediaserver.RefreshRequest)) *MockServer_RefreshLibrary_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 mediaserver.RefreshRequest
 		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg1 = args[1].(mediaserver.RefreshRequest)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockServer_RefreshLibrary_Call) Return(err error) *MockServer_RefreshLibrary_Call {
-	_c.Call.Return(err)
+func (_c *MockServer_RefreshLibrary_Call) Return(refreshScope mediaserver.RefreshScope, err error) *MockServer_RefreshLibrary_Call {
+	_c.Call.Return(refreshScope, err)
 	return _c
 }
 
-func (_c *MockServer_RefreshLibrary_Call) RunAndReturn(run func(ctx context.Context, libraryPath string, sectionKey string) error) *MockServer_RefreshLibrary_Call {
+func (_c *MockServer_RefreshLibrary_Call) RunAndReturn(run func(ctx context.Context, req mediaserver.RefreshRequest) (mediaserver.RefreshScope, error)) *MockServer_RefreshLibrary_Call {
 	_c.Call.Return(run)
 	return _c
 }

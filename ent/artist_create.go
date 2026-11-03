@@ -14,6 +14,8 @@ import (
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
+	"github.com/datahearth/streamline/ent/musicannotation"
 )
 
 // ArtistCreate is the builder for creating a Artist entity.
@@ -287,6 +289,20 @@ func (_c *ArtistCreate) SetNillableDetailsFetchedAt(v *time.Time) *ArtistCreate 
 	return _c
 }
 
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (_c *ArtistCreate) SetArtSidecarHash(v string) *ArtistCreate {
+	_c.mutation.SetArtSidecarHash(v)
+	return _c
+}
+
+// SetNillableArtSidecarHash sets the "art_sidecar_hash" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableArtSidecarHash(v *string) *ArtistCreate {
+	if v != nil {
+		_c.SetArtSidecarHash(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *ArtistCreate) SetID(v uint32) *ArtistCreate {
 	_c.mutation.SetID(v)
@@ -336,6 +352,51 @@ func (_c *ArtistCreate) AddDownloadRecords(v ...*DownloadRecord) *ArtistCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddDownloadRecordIDs(ids...)
+}
+
+// AddAnnotationIDs adds the "annotations" edge to the MusicAnnotation entity by IDs.
+func (_c *ArtistCreate) AddAnnotationIDs(ids ...uint32) *ArtistCreate {
+	_c.mutation.AddAnnotationIDs(ids...)
+	return _c
+}
+
+// AddAnnotations adds the "annotations" edges to the MusicAnnotation entity.
+func (_c *ArtistCreate) AddAnnotations(v ...*MusicAnnotation) *ArtistCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAnnotationIDs(ids...)
+}
+
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
+func (_c *ArtistCreate) AddEventIDs(ids ...uint32) *ArtistCreate {
+	_c.mutation.AddEventIDs(ids...)
+	return _c
+}
+
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_c *ArtistCreate) AddEvents(v ...*MediaEvent) *ArtistCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddEventIDs(ids...)
+}
+
+// AddCoAlbumIDs adds the "co_albums" edge to the Album entity by IDs.
+func (_c *ArtistCreate) AddCoAlbumIDs(ids ...uint32) *ArtistCreate {
+	_c.mutation.AddCoAlbumIDs(ids...)
+	return _c
+}
+
+// AddCoAlbums adds the "co_albums" edges to the Album entity.
+func (_c *ArtistCreate) AddCoAlbums(v ...*Album) *ArtistCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCoAlbumIDs(ids...)
 }
 
 // Mutation returns the ArtistMutation object of the builder.
@@ -536,6 +597,10 @@ func (_c *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 		_spec.SetField(artist.FieldDetailsFetchedAt, field.TypeTime, value)
 		_node.DetailsFetchedAt = &value
 	}
+	if value, ok := _c.mutation.ArtSidecarHash(); ok {
+		_spec.SetField(artist.FieldArtSidecarHash, field.TypeString, value)
+		_node.ArtSidecarHash = value
+	}
 	if nodes := _c.mutation.AlbumsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -577,6 +642,54 @@ func (_c *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.EventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.EventsTable,
+			Columns: []string{artist.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CoAlbumsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

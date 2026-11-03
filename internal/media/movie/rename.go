@@ -74,7 +74,9 @@ func (r *RenameService) Apply(
 	// Deferred so a plan that fails halfway still rescans for the files it
 	// already moved.
 	if len(plan.Operations) > 0 {
-		defer mediaserver.RefreshInBackground(ctx, r.ms, "movie", r.libraryRoot)
+		defer mediaserver.RefreshInBackground(
+			ctx, r.ms, "movie", r.libraryRoot, plan.Paths()...,
+		)
 	}
 	for _, op := range plan.Operations {
 		if err := library.MkdirLibraryDir(filepath.Dir(op.To)); err != nil {

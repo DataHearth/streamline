@@ -512,6 +512,145 @@ var _ = Describe("TVDB season translations", Label("unit", "metadata"), func() {
 	})
 })
 
+var _ = Describe(
+	"TVDB untranslated episode fallback",
+	Label("unit", "metadata"),
+	func() {
+		var (
+			client *TVDB
+			ctx    context.Context
+			asked  []string
+			pages  map[string]string
+		)
+
+		// An untranslated episode carries neither a name nor an overview.
+		ep := func(season, number int, name, aired string) string {
+			overview := ""
+			if name != "" {
+				overview = name + " overview"
+			}
+			return fmt.Sprintf(
+				`{"seasonNumber":%d,"number":%d,"name":%q,"overview":%q,"aired":%q}`,
+				season, number, name, overview, aired,
+			)
+		}
+		page := func(eps ...string) string {
+			return `{"data":{"episodes":[` + strings.Join(
+				eps,
+				",",
+			) + `]},"links":{"next":null}}`
+		}
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			asked = nil
+			pages = map[string]string{}
+			mux := http.NewServeMux()
+			mux.HandleFunc("/login", func(w http.ResponseWriter, _ *http.Request) {
+				_, _ = w.Write([]byte(`{"data":{"token":"t"}}`))
+			})
+			mux.HandleFunc(
+				"/series/7/extended",
+				func(w http.ResponseWriter, _ *http.Request) {
+					_, _ = w.Write([]byte(`{"data":{"id":7,"name":"MobLand"}}`))
+				},
+			)
+			mux.HandleFunc(
+				"/series/7/episodes/default/",
+				func(w http.ResponseWriter, r *http.Request) {
+					asked = append(asked, r.URL.Path)
+					body, ok := pages[r.URL.Path]
+					if !ok {
+						w.WriteHeader(http.StatusNotFound)
+						return
+					}
+					_, _ = w.Write([]byte(body))
+				},
+			)
+			mux.HandleFunc(
+				"/series/7/episodes/default",
+				func(w http.ResponseWriter, r *http.Request) {
+					asked = append(asked, r.URL.Path)
+					_, _ = w.Write([]byte(pages[r.URL.Path]))
+				},
+			)
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			client = NewTVDB()
+			client.BaseURL = srv.URL
+			client.apiKey = "x"
+			client.language = "fra"
+		})
+
+		titles := func(d *TVDetails) []string {
+			out := make([]string, 0, len(d.Episodes))
+			for _, e := range d.Episodes {
+				out = append(out, e.Title)
+			}
+			return out
+		}
+
+		It(
+			"titles an aired episode the language lacks from English, then the original",
+			func() {
+				pages["/series/7/episodes/default/fra"] = page(
+					ep(1, 1, "Pile ou face", "2025-03-30"),
+					ep(2, 1, "", "2026-09-18"),
+					ep(2, 2, "", "2026-09-25"),
+					ep(2, 3, "", "2999-01-01"),
+				)
+				pages["/series/7/episodes/default/eng"] = page(
+					ep(1, 1, "Heads or Tails", "2025-03-30"),
+					ep(2, 1, "The Return", "2026-09-18"),
+					ep(2, 2, "", "2026-09-25"),
+					ep(2, 3, "Finale", "2999-01-01"),
+				)
+				pages["/series/7/episodes/default"] = page(
+					ep(2, 2, "Original Two", "2026-09-25"),
+				)
+
+				d, err := client.GetSeries(ctx, 7)
+				Expect(err).NotTo(HaveOccurred())
+				// The translated title stands; an unaired episode stays untitled.
+				Expect(
+					titles(d),
+				).To(Equal([]string{"Pile ou face", "The Return", "Original Two", ""}))
+				Expect(d.Episodes[1].Overview).To(Equal("The Return overview"))
+				Expect(asked).To(Equal([]string{
+					"/series/7/episodes/default/fra",
+					"/series/7/episodes/default/eng",
+					"/series/7/episodes/default",
+				}))
+			},
+		)
+
+		It("spends no fallback request while every aired episode is titled", func() {
+			pages["/series/7/episodes/default/fra"] = page(
+				ep(1, 1, "Pile ou face", "2025-03-30"),
+				ep(1, 2, "", "2999-01-01"),
+				ep(1, 3, "", ""),
+			)
+
+			_, err := client.GetSeries(ctx, 7)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(asked).To(Equal([]string{"/series/7/episodes/default/fra"}))
+		})
+
+		It("keeps the blank when a fallback fails", func() {
+			pages["/series/7/episodes/default/fra"] = page(
+				ep(2, 1, "", "2026-09-18"),
+			)
+			pages["/series/7/episodes/default"] = page(ep(2, 1, "", "2026-09-18"))
+
+			d, err := client.GetSeries(ctx, 7)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles(d)).To(Equal([]string{""}))
+			Expect(asked).To(ContainElement("/series/7/episodes/default/eng"))
+		})
+	},
+)
+
 var _ = Describe("TVDB hidden base_url override", Label("unit", "metadata"), func() {
 	It("honors metadata.tvdb.base_url from the hidden config key", func() {
 		configtest.Setup(map[string]any{

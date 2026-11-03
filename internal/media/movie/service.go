@@ -717,9 +717,9 @@ func (s *Service) updateMetadata(
 }
 
 // fetchDigitalRelease persists m's configured-region digital (TMDB type-4)
-// release date. Best-effort: an unset region or a failed TMDB lookup is
-// swallowed (the metadata-refresh tick retries later); only the DB write
-// surfaces an error.
+// release date and mirrors it onto m, which Add hands back as the response.
+// Best-effort: an unset region or a failed TMDB lookup is swallowed (the
+// metadata-refresh tick retries later); only the DB write surfaces an error.
 func (s *Service) fetchDigitalRelease(ctx context.Context, m *ent.Movie) error {
 	region := config.Get().Metadata.TMDBRegion
 	if region == "" {
@@ -731,7 +731,11 @@ func (s *Service) fetchDigitalRelease(ctx context.Context, m *ent.Movie) error {
 			"movie.id", m.ID, "movie.tmdb_id", m.TmdbID, "error", err)
 		return nil
 	}
-	return s.db.SetMovieDigitalReleaseDate(ctx, m.ID, date)
+	if err := s.db.SetMovieDigitalReleaseDate(ctx, m.ID, date); err != nil {
+		return err
+	}
+	m.DigitalReleaseDate = date
+	return nil
 }
 
 // AnnotateTMDBResults batches the AlreadyAdded lookup so callers avoid a
@@ -807,7 +811,11 @@ func (s *Service) Delete(
 			attribute.Int("files.kept", kept),
 		)
 		if len(files) > 0 {
-			mediaserver.RefreshInBackground(ctx, s.ms, "movie", root)
+			removed := make([]string, 0, len(files))
+			for _, f := range files {
+				removed = append(removed, f.Path)
+			}
+			mediaserver.RefreshInBackground(ctx, s.ms, "movie", root, removed...)
 		}
 		// Before DeleteMovie: the download_records edge cascades, so after the
 		// row goes there is nothing left to say which torrent produced this
@@ -874,7 +882,7 @@ func (s *Service) DeleteFile(
 		slog.WarnContext(ctx, "delete media file from disk failed",
 			"path", mf.Path, "error", err)
 	}
-	mediaserver.RefreshInBackground(ctx, s.ms, "movie", root)
+	mediaserver.RefreshInBackground(ctx, s.ms, "movie", root, mf.Path)
 	if err := s.db.DeleteMediaFileAndRevertMovie(ctx, fileID, movieID); err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("delete + revert: %w", err))
 	}

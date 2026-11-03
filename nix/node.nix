@@ -43,11 +43,18 @@ if pkg.version == declared then
   pkg
 else
   pkg.override {
-    nodejs-slim = buildPackages."nodejs-slim_${major}".overrideAttrs {
+    nodejs-slim = buildPackages."nodejs-slim_${major}".overrideAttrs (old: {
       version = declared;
       src = fetchurl {
         url = "https://nodejs.org/dist/v${declared}/node-v${declared}.tar.xz";
         inherit hash;
       };
-    };
+      # Node compiles against the brotli it bundles, not nixpkgs' shared one: a
+      # patch release can move its bundled copy ahead of the brotli nixpkgs
+      # ships, and the shared build then fails on a constant only the newer copy
+      # declares — 24.22.1's node_zlib.cc names BROTLI_DECODER_ERROR_FORMAT_BLOCK_SWITCH,
+      # which brotli 1.2.0 leaves as a reserved -17. `v24.nix` takes no `brotli`
+      # argument to swap, so the shared flags are dropped instead.
+      configureFlags = lib.filter (flag: !lib.hasPrefix "--shared-brotli" flag) old.configureFlags;
+    });
   }

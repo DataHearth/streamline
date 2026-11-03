@@ -65,9 +65,11 @@ type BookSeriesEdges struct {
 	Volumes []*Book `json:"volumes,omitempty"`
 	// Contributions holds the value of the contributions edge.
 	Contributions []*BookContribution `json:"contributions,omitempty"`
+	// Events holds the value of the events edge.
+	Events []*MediaEvent `json:"events,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // VolumesOrErr returns the Volumes value or an error if the edge
@@ -86,6 +88,15 @@ func (e BookSeriesEdges) ContributionsOrErr() ([]*BookContribution, error) {
 		return e.Contributions, nil
 	}
 	return nil, &NotLoadedError{edge: "contributions"}
+}
+
+// EventsOrErr returns the Events value or an error if the edge
+// was not loaded in eager-loading.
+func (e BookSeriesEdges) EventsOrErr() ([]*MediaEvent, error) {
+	if e.loadedTypes[2] {
+		return e.Events, nil
+	}
+	return nil, &NotLoadedError{edge: "events"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -254,6 +265,11 @@ func (_m *BookSeries) QueryVolumes() *BookQuery {
 // QueryContributions queries the "contributions" edge of the BookSeries entity.
 func (_m *BookSeries) QueryContributions() *BookContributionQuery {
 	return NewBookSeriesClient(_m.config).QueryContributions(_m)
+}
+
+// QueryEvents queries the "events" edge of the BookSeries entity.
+func (_m *BookSeries) QueryEvents() *MediaEventQuery {
+	return NewBookSeriesClient(_m.config).QueryEvents(_m)
 }
 
 // Update returns a builder for updating this BookSeries.

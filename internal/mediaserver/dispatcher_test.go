@@ -16,7 +16,7 @@ var _ = Describe("Dispatcher", Label("unit", "mediaserver"), func() {
 	var d *Dispatcher
 
 	BeforeEach(func() {
-		d = NewDispatcher()
+		d = newDispatcher(0)
 	})
 
 	It("returns nil when no enabled servers", func() {

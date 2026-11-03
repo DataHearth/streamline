@@ -432,6 +432,9 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 						{Position: 3, BookHardcoverID: 920},
 						{Position: 4, BookHardcoverID: 930, UsersCount: 99},
 					}
+					for i := range r.Volumes {
+						r.Volumes[i].ImageURL = "https://img/v.jpg"
+					}
 					f.meta.EXPECT().GetSeriesLookup(anyCtx, ids(5450)).
 						Return([]metadata.SeriesLookupRecord{r}, nil).Once()
 
@@ -443,6 +446,103 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 					Expect(hits[0].Volumes).To(Equal(uint32(7)))
 				},
 			)
+		})
+
+		Describe("cover fan", func() {
+			lookupFan := func(r metadata.SeriesLookupRecord) []uint32 {
+				GinkgoHelper()
+				f.meta.EXPECT().LookupBooks(anyCtx, "calvin").Return(nil, nil).Once()
+				f.meta.EXPECT().LookupSeries(anyCtx, "calvin").
+					Return([]metadata.BookLookupHit{seriesHit(r.HardcoverID, r.Name)}, nil).
+					Once()
+				f.meta.EXPECT().GetSeriesLookup(anyCtx, ids(r.HardcoverID)).
+					Return([]metadata.SeriesLookupRecord{r}, nil).Once()
+				hits, err := f.svc.Lookup(f.ctx, "calvin", lookupSeries)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hits).To(HaveLen(1))
+				return hits[0].CoverBookIDs
+			}
+
+			It("leaves out a volume Hardcover has no cover for", func() {
+				r := seriesRec(1, "Calvin", 0)
+				r.PrimaryBooks = 3
+				r.Volumes = []metadata.SeriesLookupVolume{
+					{
+						Position:        1,
+						BookHardcoverID: 11,
+						ImageURL:        "https://img/11.jpg",
+					},
+					{Position: 2, BookHardcoverID: 12},
+					{
+						Position:        3,
+						BookHardcoverID: 13,
+						ImageURL:        "https://img/13.jpg",
+					},
+				}
+				r.Loose = []metadata.SeriesLookupVolume{
+					{BookHardcoverID: 99, ImageURL: "https://img/99.jpg"},
+				}
+
+				Expect(lookupFan(r)).To(Equal([]uint32{11, 13}))
+			})
+
+			It(
+				"fans the most read unnumbered books of a series that numbers none",
+				func() {
+					r := seriesRec(1, "Calvin und Hobbes", 0)
+					r.PrimaryBooks = 6
+					r.Loose = []metadata.SeriesLookupVolume{
+						{
+							BookHardcoverID: 21,
+							UsersCount:      117,
+							ImageURL:        "https://img/21.jpg",
+						},
+						{BookHardcoverID: 22, UsersCount: 2},
+						{
+							BookHardcoverID: 23,
+							UsersCount:      1,
+							Compilation:     true,
+							ImageURL:        "https://img/23.jpg",
+						},
+						{
+							BookHardcoverID: 24,
+							UsersCount:      1,
+							ImageURL:        "https://img/24.jpg",
+						},
+						{
+							BookHardcoverID: 25,
+							UsersCount:      1,
+							ImageURL:        "https://img/25.jpg",
+						},
+						{
+							BookHardcoverID: 26,
+							UsersCount:      1,
+							ImageURL:        "https://img/26.jpg",
+						},
+					}
+
+					Expect(lookupFan(r)).To(Equal([]uint32{21, 24, 25}))
+				},
+			)
+		})
+
+		It("drops a book hit with neither a maker nor a cover", func() {
+			stray := bookHit(2, "Calvin and Hobbes")
+			stray.Author, stray.ImageURL = "", ""
+			noCover := bookHit(3, "Calvin and Hobbes Sunday Pages")
+			noCover.ImageURL = ""
+			f.meta.EXPECT().LookupBooks(anyCtx, "calvin and hobbes").
+				Return([]metadata.BookLookupHit{bookHit(1, "Calvin and Hobbes"), stray, noCover}, nil).
+				Once()
+
+			hits, err := f.svc.Lookup(f.ctx, "calvin and hobbes", lookupBook)
+
+			Expect(err).NotTo(HaveOccurred())
+			ids := make([]uint32, 0, len(hits))
+			for _, h := range hits {
+				ids = append(ids, h.HardcoverID)
+			}
+			Expect(ids).To(Equal([]uint32{1, 3}))
 		})
 
 		It("says so when there is no Hardcover key", func() {

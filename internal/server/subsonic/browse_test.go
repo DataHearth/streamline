@@ -17,6 +17,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/internal/appaccess"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
@@ -218,9 +220,94 @@ var _ = g.Describe("browse", g.Label("integration"), func() {
 		Expect(albums).To(HaveLen(1))
 		entry := albums[0].(map[string]any)
 		Expect(entry["id"]).To(Equal(fmt.Sprintf("al-%d", f.album.ID)))
-		Expect(entry["songCount"]).To(BeEquivalentTo(2))
+		// The playable songs only: getAlbum lists the one with a file.
+		Expect(entry["songCount"]).To(BeEquivalentTo(1))
 		Expect(entry["coverArt"]).To(Equal(fmt.Sprintf("al-%d", f.album.ID)))
 		Expect(entry["year"]).To(BeEquivalentTo(1991))
+	})
+
+	g.Context("with a co-credited artist", func() {
+		var guest *ent.Artist
+
+		g.BeforeEach(func() {
+			var err error
+			guest, err = db.New(f.client).
+				CreateArtist(context.Background(), db.CreateArtistParams{
+					MBID: "a-2",
+					Name: "Guest",
+					Albums: []db.AlbumSeed{
+						{MBID: "rg-1", Title: "Nevermind", Type: "album"},
+					},
+				})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		g.It("lists a co-album under getArtist, keeping its owner", func() {
+			got := obj(
+				okResp(f.call("getArtist", url.Values{"id": {ar(guest)}})),
+				"artist",
+			)
+			Expect(got["albumCount"]).To(BeEquivalentTo(1))
+			albums := got["album"].([]any)
+			Expect(albums).To(HaveLen(1))
+			entry := albums[0].(map[string]any)
+			Expect(entry["id"]).To(Equal(al(f.album)))
+			Expect(entry["artistId"]).To(Equal(ar(f.artist)))
+			Expect(entry["artist"]).To(Equal("Nirvana"))
+		})
+
+		g.It("names a song by its own credited artist on a split release", func() {
+			song := func() map[string]any {
+				g.GinkgoHelper()
+				return obj(
+					okResp(f.call("getSong", url.Values{"id": {tr(f.withFile)}})),
+					"song",
+				)
+			}
+			Expect(song()["artist"]).To(Equal("Nirvana"))
+
+			f.client.Track.UpdateOne(f.withFile).
+				SetArtistCredit("Guest").
+				ExecX(context.Background())
+			got := song()
+			Expect(got["artist"]).To(Equal("Guest"))
+			Expect(got["artistId"]).To(Equal(ar(guest)))
+			Expect(got["albumId"]).To(Equal(al(f.album)))
+		})
+
+		g.It("orders owned and co-albums together by date", func() {
+			ctx := context.Background()
+			store := db.New(f.client)
+			later := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+			_, _, err := store.RefreshArtist(ctx, guest.ID, db.RefreshArtistParams{
+				Name: "Guest", RefreshedAt: time.Now(),
+				Albums: []db.AlbumSeed{
+					{MBID: "rg-1", Title: "Nevermind"},
+					{MBID: "rg-g", Title: "Own", Type: "album", ReleaseDate: &later},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			own := f.client.Album.Query().Where(album.MbidEQ("rg-g")).OnlyX(ctx)
+			Expect(store.SetAlbumHydration(ctx, own.ID, db.HydrationParams{
+				Tracks: []db.TrackSeed{
+					{MBID: "g-1", Title: "Mine", Disc: 1, Position: 1},
+				},
+			}, time.Now())).To(Succeed())
+			f.client.MediaFile.Create().SetPath("/music/guest/01.flac").SetSize(1).
+				SetTrackID(own.QueryTracks().OnlyX(ctx).ID).ExecX(ctx)
+
+			albums := obj(okResp(f.call("getArtist", url.Values{"id": {ar(guest)}})), "artist")["album"].([]any)
+			Expect(albums).To(HaveLen(2))
+			Expect(albums[0].(map[string]any)["id"]).To(Equal(al(f.album)))
+			Expect(albums[1].(map[string]any)["id"]).To(Equal(al(own)))
+		})
+
+		g.It("counts a co-album's songs under the artist", func() {
+			got := obj(okResp(f.call("getSimilarSongs2", url.Values{
+				"id": {ar(guest)}, "count": {"10"},
+			})), "similarSongs2")
+			Expect(got["song"]).To(HaveLen(1))
+		})
 	})
 
 	g.It("lists an album's songs, omitting tracks with no file", func() {
@@ -298,10 +385,55 @@ var _ = g.Describe("browse", g.Label("integration"), func() {
 		}
 	})
 
+	g.It("leaves out the albums and artists it holds no file for", func() {
+		ep := f.addAlbum(f.artist, "rg-ep", "Hormoaning", "")
+		empty := f.addArtist("a-9", "Melvins", "Sludge")
+		f.addAlbum(empty, "rg-9", "Houdini", "")
+
+		for _, typ := range []string{"newest", "alphabeticalByName", "random"} {
+			albums := list(obj(okResp(f.call("getAlbumList2",
+				url.Values{"type": {typ}})), "albumList2"), "album")
+			Expect(ids(albums)).To(Equal([]string{al(f.album)}), typ)
+		}
+		artists := obj(okResp(f.call("getArtists", nil)), "artists")
+		var names []string
+		for _, idx := range list(artists, "index") {
+			for _, a := range list(idx, "artist") {
+				names = append(names, a["name"].(string))
+				Expect(a["albumCount"]).To(BeEquivalentTo(1))
+			}
+		}
+		Expect(names).To(Equal([]string{"Nirvana"}))
+		artist := obj(
+			okResp(f.call("getArtist", url.Values{"id": {ar(f.artist)}})),
+			"artist",
+		)
+		Expect(ids(list(artist, "album"))).To(Equal([]string{al(f.album)}))
+		res := obj(
+			okResp(f.call("search3", url.Values{"query": {""}})),
+			"searchResult3",
+		)
+		Expect(ids(list(res, "album"))).To(Equal([]string{al(f.album)}))
+		Expect(ids(list(res, "artist"))).To(Equal([]string{ar(f.artist)}))
+
+		// A file landing lists the album, newest first by that file.
+		f.giveFile(
+			f.client.Track.Query().Where(track.HasAlbumWith(album.IDEQ(ep.ID))).
+				OnlyX(context.Background()),
+			"/music/nirvana/ep/01.flac",
+		)
+		albums := list(obj(okResp(f.call("getAlbumList2",
+			url.Values{"type": {"newest"}})), "albumList2"), "album")
+		Expect(ids(albums)).To(Equal([]string{al(ep), al(f.album)}))
+	})
+
 	g.It("searches artists, albums and songs", func() {
 		resp := f.call("search3", url.Values{"query": {"nirv"}})
 		result := resp["searchResult3"].(map[string]any)
 		Expect(result["artist"]).To(HaveLen(1))
+		g.By("listing the artist's albums and songs under their name")
+		Expect(ids(list(result, "album"))).To(Equal([]string{al(f.album)}))
+		Expect(result["song"]).NotTo(BeEmpty())
 
 		resp = f.call("search3", url.Values{"query": {"smells"}})
 		result = resp["searchResult3"].(map[string]any)
@@ -385,6 +517,6 @@ var _ = g.Describe("browse", g.Label("integration"), func() {
 	})
 
 	g.It("answers error 0 for an unimplemented endpoint", func() {
-		Expect(errCode(f.call("getPlaylists", nil))).To(BeEquivalentTo(0))
+		Expect(errCode(f.call("getPodcasts", nil))).To(BeEquivalentTo(0))
 	})
 })

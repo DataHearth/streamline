@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { roleLabel } from "@lib/roles";
 	import { onMount } from "svelte";
 	import { fly, fade } from "svelte/transition";
@@ -32,6 +33,7 @@
 	import { cn } from "@lib/cn";
 	import {
 		TORRENT_PILLS,
+		activityFeatures,
 		torrentCountsQuery,
 		transcodeCountsQuery,
 		activityCurrent,
@@ -50,6 +52,7 @@
 
 	const counts = navCountsQuery();
 	const torrentCounts = torrentCountsQuery();
+	const features = activityFeatures();
 
 	const requestCountsQuery = createQuery<RequestCounts>(() => ({
 		queryKey: ["requests", "counts"],
@@ -136,7 +139,8 @@
 			line: counts.queueLine,
 			badge: pendingAdoptions,
 		},
-		...(auth.isAdmin
+		// Each only while its feature is on (activityFeatures).
+		...(features.torrents
 			? [
 					{
 						label: i18n.torrent_label(),
@@ -144,6 +148,10 @@
 						icon: Magnet,
 						torrents: true,
 					},
+				]
+			: []),
+		...(features.transcoding
+			? [
 					{
 						label: i18n.transcode_label(),
 						href: "/transcoding",
@@ -227,6 +235,7 @@
 	function toggleSheet(s: Section) {
 		sheet = sheet === s ? "" : s;
 	}
+	closeOnBack(() => sheet !== "", closeSheet);
 
 	// Routify intercepts internal <a> clicks and navigates client-side; close
 	// the sheet on any click inside it so a tapped link doesn't leave the

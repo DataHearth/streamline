@@ -49,6 +49,7 @@ type Config struct {
 	Download    DownloadConfig    `koanf:"download"`
 	Transcoding TranscodingConfig `koanf:"transcoding"`
 	SMTP        SMTPConfig        `koanf:"smtp"`
+	Backup      BackupConfig      `koanf:"backup"`
 	// TorrentListenPort overrides the builtin download client's own
 	// listen_port, and is a top-level scalar so the environment can reach it:
 	// STREAMLINE_TORRENT_LISTEN_PORT lands here, while nothing in
@@ -281,6 +282,46 @@ type LibraryConfig struct {
 	// Probe governs import-time verification against ffprobe results, read by
 	// the importer's verifier before a transfer.
 	Probe ProbeConfig `koanf:"probe"`
+	// MusicTags governs the tags Streamline writes into music files.
+	MusicTags MusicTagsConfig `koanf:"music_tags"`
+}
+
+// Music tag modes and seeding policies.
+const (
+	MusicTagsOff     = "off"
+	MusicTagsImport  = "import"
+	MusicTagsManaged = "managed"
+
+	MusicTagsSeedingDefer = "defer"
+	MusicTagsSeedingCopy  = "copy"
+)
+
+// MusicTagsConfig governs the tags Streamline writes into music files, all of
+// it runtime-editable. The music-tag-sync job is the writer; the importer
+// tags a file it copied itself inline.
+type MusicTagsConfig struct {
+	// Mode is off (never write), import (write each file once, when it is
+	// imported or adopted with tagging on) or managed (also rewrite whenever
+	// the library's data for it changes, and undo edits made elsewhere to
+	// the keys Streamline owns).
+	Mode string `koanf:"mode" validate:"required,oneof=off import managed"`
+	// Seeding decides a hardlinked import: defer keeps the hardlink, one copy
+	// on disk, and tags the file once its torrent is gone; copy imports a
+	// copy and tags it at once, two copies while the torrent seeds. A file a
+	// torrent itself still serves is never written either way.
+	Seeding string `koanf:"seeding" validate:"required,oneof=defer copy"`
+	// EmbedArt writes the album cover into each file as its front cover,
+	// resized to ArtMaxPx on its longest edge.
+	EmbedArt bool   `koanf:"embed_art"`
+	ArtMaxPx uint16 `koanf:"art_max_px" validate:"required,min=256,max=3000"`
+	// SidecarArt writes cover.jpg into each album folder and folder.jpg into
+	// each artist folder, never replacing one Streamline did not write.
+	SidecarArt bool `koanf:"sidecar_art"`
+	// Strip names keys deleted from every file written; Preserve names keys
+	// never written or deleted, which wins over both Strip and the keys
+	// Streamline manages. An entry ending in * matches as a prefix.
+	Strip    []string `koanf:"strip"    validate:"dive,required,max=64"`
+	Preserve []string `koanf:"preserve" validate:"dive,required,max=64"`
 }
 
 // ProbeConfig governs import-time verification against ffprobe results.
@@ -316,6 +357,8 @@ type ScheduleConfig struct {
 	DriftCheck           string `koanf:"drift_check"            validate:"required"`
 	MediaProbe           string `koanf:"media_probe"            validate:"required"`
 	FileSelection        string `koanf:"file_selection"         validate:"required"`
+	MusicTagSync         string `koanf:"music_tag_sync"         validate:"required"`
+	DatabaseBackup       string `koanf:"database_backup"        validate:"required"`
 }
 
 type MetadataConfig struct {
@@ -327,12 +370,47 @@ type MetadataConfig struct {
 	HardcoverAPIKeyFile string `koanf:"hardcover_api_key_file" validate:"omitempty,excluded_with=HardcoverAPIKey,filepath"`
 	Language            string `koanf:"language"               validate:"omitempty,bcp47_language_tag"`
 	TMDBRegion          string `koanf:"tmdb_region"            validate:"omitempty,len=2,uppercase"`
+	// MusicBrainzURL is the server root, without /ws/2: a self-hosted mirror
+	// is reached at its own address instead of musicbrainz.org.
+	MusicBrainzURL string `koanf:"musicbrainz_url" validate:"required,http_url"`
+	// MusicBrainzInterval is the least time between two MusicBrainz calls:
+	// musicbrainz.org allows one a second, a mirror none ("0s").
+	MusicBrainzInterval string `koanf:"musicbrainz_interval" validate:"required"`
+}
+
+// MusicBrainzIntervalDuration parses MusicBrainzInterval, falling back to the
+// one second musicbrainz.org allows on an unparseable or negative value, so a
+// typo never lifts the limit against the public server.
+func (m MetadataConfig) MusicBrainzIntervalDuration() time.Duration {
+	if d, err := time.ParseDuration(m.MusicBrainzInterval); err == nil && d >= 0 {
+		return d
+	}
+	return time.Second
 }
 
 // EventsConfig governs the MediaEvent retention window. Old rows are deleted
 // by the cleanup job after Retention.
 type EventsConfig struct {
 	Retention string `koanf:"retention" validate:"required"`
+}
+
+// BackupConfig governs the database snapshots under <data_dir>/backups. File-only
+// and read where it is used: PreMigration at boot, before the migrations run,
+// and the retention counts by each pass that writes a backup of that kind.
+type BackupConfig struct {
+	// PreMigration snapshots the database before applying pending migrations,
+	// and refuses to migrate when the snapshot fails. Off only for a database
+	// too large to copy on every upgrade, with a backup taken some other way.
+	PreMigration bool            `koanf:"pre_migration"`
+	Retention    BackupRetention `koanf:"retention"`
+}
+
+// BackupRetention is how many backups of each kind are kept, newest first; 0
+// keeps every one. A database replaced by a restore is never pruned.
+type BackupRetention struct {
+	Scheduled    uint16 `koanf:"scheduled"`
+	PreMigration uint16 `koanf:"pre_migration"`
+	Manual       uint16 `koanf:"manual"`
 }
 
 // FFmpegConfig owns the ffmpeg-suite dependency (ffprobe today, the player's
@@ -344,11 +422,15 @@ type FFmpegConfig struct {
 	Path    string `koanf:"path"`
 }
 
-// DownloadConfig gates selective file download (spec §7). Off is bit-for-bit
-// today's behaviour and the rollback path; runtime-toggleable.
+// DownloadConfig gates selective file download (spec §7; off is bit-for-bit
+// the whole-torrent grab) and the free-space check on grab. Runtime-editable.
 type DownloadConfig struct {
 	SelectiveFiles bool   `koanf:"selective_files"`
 	SelectionGrace string `koanf:"selection_grace" validate:"required"`
+	// SpaceCheck refuses a grab that would leave less than SpaceReserveGB free
+	// on the download client's disk once every active download has finished.
+	SpaceCheck     bool  `koanf:"space_check"`
+	SpaceReserveGB uint8 `koanf:"space_reserve_gb"`
 	// PathMappings translate a save path a download client reports into one
 	// streamline can open. Empty means both processes see the same paths,
 	// which is the single-host case.
@@ -937,25 +1019,42 @@ func defaults() map[string]any {
 		"schedules.drift_check":            "15m",
 		"schedules.media_probe":            "15m",
 		"schedules.file_selection":         "30s",
+		"schedules.music_tag_sync":         "30m",
+		"schedules.database_backup":        "24h",
 		"library.drift_grace_ticks":        3,
 		"library.probe.always_ask":         false,
 		"library.probe.min_duration_ratio": 0.5,
-		"metadata.tmdb_api_key":            "",
-		"metadata.tmdb_api_key_file":       "",
-		"metadata.tvdb_api_key":            "",
-		"metadata.tvdb_api_key_file":       "",
-		"metadata.hardcover_api_key":       "",
-		"metadata.hardcover_api_key_file":  "",
-		"metadata.language":                "en",
-		"metadata.tmdb_region":             "FR",
-		"otel.endpoint":                    "",
-		"otel.insecure":                    false,
-		"otel.sample_ratio":                0.05,
-		"otel.environment":                 "",
-		"media_server.plex_client_id":      "",
-		"media_server.servers":             []any{},
-		"download_clients":                 []any{},
-		"indexers":                         []any{},
+		"library.music_tags.mode":          MusicTagsImport,
+		"library.music_tags.seeding":       MusicTagsSeedingDefer,
+		"library.music_tags.embed_art":     true,
+		"library.music_tags.art_max_px":    1000,
+		"library.music_tags.sidecar_art":   true,
+		"library.music_tags.strip": []string{
+			"COMMENT", "ENCODEDBY", "URL", "FILEWEBPAGE",
+			"AUDIOSOURCEWEBPAGE", "PAYMENTWEBPAGE", "PUBLISHERWEBPAGE",
+		},
+		"library.music_tags.preserve": []string{
+			"REPLAYGAIN_*", "R128_*", "LYRICS", "UNSYNCEDLYRICS",
+			"ACOUSTID_*", "BPM", "INITIALKEY",
+		},
+		"metadata.tmdb_api_key":           "",
+		"metadata.tmdb_api_key_file":      "",
+		"metadata.tvdb_api_key":           "",
+		"metadata.tvdb_api_key_file":      "",
+		"metadata.hardcover_api_key":      "",
+		"metadata.hardcover_api_key_file": "",
+		"metadata.language":               "en",
+		"metadata.tmdb_region":            "FR",
+		"metadata.musicbrainz_url":        "https://musicbrainz.org",
+		"metadata.musicbrainz_interval":   "1s",
+		"otel.endpoint":                   "",
+		"otel.insecure":                   false,
+		"otel.sample_ratio":               0.05,
+		"otel.environment":                "",
+		"media_server.plex_client_id":     "",
+		"media_server.servers":            []any{},
+		"download_clients":                []any{},
+		"indexers":                        []any{},
 		"quality_profiles": []map[string]any{
 			{
 				"name":                 "default",
@@ -996,10 +1095,16 @@ func defaults() map[string]any {
 		"book_quality_default_profiles.comic": "default",
 		"book_quality_default_profiles.manga": "default",
 		"events.retention":                    "2160h",
+		"backup.pre_migration":                true,
+		"backup.retention.scheduled":          7,
+		"backup.retention.pre_migration":      5,
+		"backup.retention.manual":             10,
 		"ffmpeg.enabled":                      true,
 		"ffmpeg.path":                         "",
 		"download.selective_files":            false,
 		"download.selection_grace":            "10m",
+		"download.space_check":                true,
+		"download.space_reserve_gb":           10,
 		"download.path_mappings":              []PathMapping{},
 		"transcoding.enabled":                 false,
 		"transcoding.max_concurrent":          1,
@@ -1158,10 +1263,12 @@ func applyRenamedKeys(k *koanf.Koanf) (map[string][]string, error) {
 	return applied, nil
 }
 
-func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
-	// Double-underscore is the path separator; a single underscore is literal
-	// so keys with underscore segments (data_dir, session_secret, tmdb_api_key)
-	// stay reachable: STREAMLINE_AUTH__SESSION_SECRET -> auth.session_secret.
+// loadEnv reads every STREAMLINE_* variable as a config key.
+//
+// Double-underscore is the path separator; a single underscore is literal
+// so keys with underscore segments (data_dir, session_secret, tmdb_api_key)
+// stay reachable: STREAMLINE_AUTH__SESSION_SECRET -> auth.session_secret.
+func loadEnv() (*koanf.Koanf, error) {
 	envProvider := env.Provider(".", env.Opt{
 		Prefix: "STREAMLINE_",
 		TransformFunc: func(k, v string) (string, any) {
@@ -1171,6 +1278,14 @@ func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
 	})
 	envK := koanf.New(".")
 	if err := envK.Load(envProvider, nil); err != nil {
+		return nil, err
+	}
+	return envK, nil
+}
+
+func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
+	envK, err := loadEnv()
+	if err != nil {
 		return nil, nil, err
 	}
 	if err := k.Merge(envK); err != nil {

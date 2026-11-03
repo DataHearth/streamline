@@ -4,7 +4,7 @@
 	import { Info, Search, Trash2 } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { dragScroll } from "@lib/drag-scroll";
-	import { episodeStatus } from "@lib/status";
+	import { episodeStatus, episodeTitle } from "@lib/status";
 	import EpisodeDetailModal, {
 		STATUS_META,
 	} from "./EpisodeDetailModal.svelte";
@@ -124,7 +124,7 @@
 							title={ep.title || i18n.series_episode_details()}
 							class="block max-w-full truncate rounded-sm text-left text-fg transition hover:text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
-							{ep.title || "TBA"}
+							{episodeTitle(ep)}
 						</button>
 					</td>
 					<td

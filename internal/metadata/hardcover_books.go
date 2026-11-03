@@ -867,7 +867,8 @@ func derefU32(p *uint32) uint32 {
 // hcSeriesLookupQuery reads the volumes' cached_image, not image: image is a
 // relation, one level past the depth limit under series > book_series > book.
 // A position can hold dozens of translations; ordering each position by
-// readers keeps the book the add path would pick inside the limit.
+// readers keeps the book the add path would pick inside the limit. loose is
+// the most read unnumbered books, the cover fan of a series that numbers none.
 const hcSeriesLookupQuery = `
 query ($ids: [Int!]!) {
   series(where: {id: {_in: $ids}}) {
@@ -875,6 +876,9 @@ query ($ids: [Int!]!) {
     author { id name }
     book_series(where: {position: {_is_null: false}}, order_by: [{position: asc}, {book: {users_count: desc}}], limit: 50) {
       position
+      book { id users_count compilation cached_image }
+    }
+    loose: book_series(where: {position: {_is_null: true}}, order_by: {book: {users_count: desc}}, limit: 6) {
       book { id users_count compilation cached_image }
     }
   }
@@ -904,6 +908,26 @@ func (h *Hardcover) GetSeriesLookup(
 		return recs, nil
 	}
 
+	type entry struct {
+		Position *float64 `json:"position"`
+		Book     *struct {
+			ID          hcID    `json:"id"`
+			UsersCount  *uint32 `json:"users_count"`
+			Compilation *bool   `json:"compilation"`
+			CachedImage hcImage `json:"cached_image"`
+		} `json:"book"`
+	}
+	volume := func(v entry) (SeriesLookupVolume, bool) {
+		if v.Book == nil || v.Book.ID == 0 {
+			return SeriesLookupVolume{}, false
+		}
+		return SeriesLookupVolume{
+			BookHardcoverID: uint32(v.Book.ID),
+			UsersCount:      derefU32(v.Book.UsersCount),
+			Compilation:     v.Book.Compilation != nil && *v.Book.Compilation,
+			ImageURL:        string(v.Book.CachedImage),
+		}, true
+	}
 	var payload struct {
 		Series []struct {
 			ID                hcID    `json:"id"`
@@ -915,15 +939,8 @@ func (h *Hardcover) GetSeriesLookup(
 			Author            *struct {
 				Name string `json:"name"`
 			} `json:"author"`
-			BookSeries []struct {
-				Position *float64 `json:"position"`
-				Book     *struct {
-					ID          hcID    `json:"id"`
-					UsersCount  *uint32 `json:"users_count"`
-					Compilation *bool   `json:"compilation"`
-					CachedImage hcImage `json:"cached_image"`
-				} `json:"book"`
-			} `json:"book_series"`
+			BookSeries []entry `json:"book_series"`
+			Loose      []entry `json:"loose"`
 		} `json:"series"`
 	}
 	if err := h.query(
@@ -950,16 +967,15 @@ func (h *Hardcover) GetSeriesLookup(
 			rec.Ongoing = new(!*row.IsCompleted)
 		}
 		for _, v := range row.BookSeries {
-			if v.Position == nil || v.Book == nil || v.Book.ID == 0 {
-				continue
+			if vol, ok := volume(v); ok && v.Position != nil {
+				vol.Position = *v.Position
+				rec.Volumes = append(rec.Volumes, vol)
 			}
-			rec.Volumes = append(rec.Volumes, SeriesLookupVolume{
-				Position:        *v.Position,
-				BookHardcoverID: uint32(v.Book.ID),
-				UsersCount:      derefU32(v.Book.UsersCount),
-				Compilation:     v.Book.Compilation != nil && *v.Book.Compilation,
-				ImageURL:        string(v.Book.CachedImage),
-			})
+		}
+		for _, v := range row.Loose {
+			if vol, ok := volume(v); ok {
+				rec.Loose = append(rec.Loose, vol)
+			}
 		}
 		recs = append(recs, rec)
 	}

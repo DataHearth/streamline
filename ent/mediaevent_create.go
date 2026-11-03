@@ -10,6 +10,10 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/movie"
@@ -124,6 +128,82 @@ func (_c *MediaEventCreate) SetNillableTvShowID(id *uint32) *MediaEventCreate {
 // SetTvShow sets the "tv_show" edge to the TVShow entity.
 func (_c *MediaEventCreate) SetTvShow(v *TVShow) *MediaEventCreate {
 	return _c.SetTvShowID(v.ID)
+}
+
+// SetArtistID sets the "artist" edge to the Artist entity by ID.
+func (_c *MediaEventCreate) SetArtistID(id uint32) *MediaEventCreate {
+	_c.mutation.SetArtistID(id)
+	return _c
+}
+
+// SetNillableArtistID sets the "artist" edge to the Artist entity by ID if the given value is not nil.
+func (_c *MediaEventCreate) SetNillableArtistID(id *uint32) *MediaEventCreate {
+	if id != nil {
+		_c = _c.SetArtistID(*id)
+	}
+	return _c
+}
+
+// SetArtist sets the "artist" edge to the Artist entity.
+func (_c *MediaEventCreate) SetArtist(v *Artist) *MediaEventCreate {
+	return _c.SetArtistID(v.ID)
+}
+
+// SetAlbumID sets the "album" edge to the Album entity by ID.
+func (_c *MediaEventCreate) SetAlbumID(id uint32) *MediaEventCreate {
+	_c.mutation.SetAlbumID(id)
+	return _c
+}
+
+// SetNillableAlbumID sets the "album" edge to the Album entity by ID if the given value is not nil.
+func (_c *MediaEventCreate) SetNillableAlbumID(id *uint32) *MediaEventCreate {
+	if id != nil {
+		_c = _c.SetAlbumID(*id)
+	}
+	return _c
+}
+
+// SetAlbum sets the "album" edge to the Album entity.
+func (_c *MediaEventCreate) SetAlbum(v *Album) *MediaEventCreate {
+	return _c.SetAlbumID(v.ID)
+}
+
+// SetBookID sets the "book" edge to the Book entity by ID.
+func (_c *MediaEventCreate) SetBookID(id uint32) *MediaEventCreate {
+	_c.mutation.SetBookID(id)
+	return _c
+}
+
+// SetNillableBookID sets the "book" edge to the Book entity by ID if the given value is not nil.
+func (_c *MediaEventCreate) SetNillableBookID(id *uint32) *MediaEventCreate {
+	if id != nil {
+		_c = _c.SetBookID(*id)
+	}
+	return _c
+}
+
+// SetBook sets the "book" edge to the Book entity.
+func (_c *MediaEventCreate) SetBook(v *Book) *MediaEventCreate {
+	return _c.SetBookID(v.ID)
+}
+
+// SetBookSeriesID sets the "book_series" edge to the BookSeries entity by ID.
+func (_c *MediaEventCreate) SetBookSeriesID(id uint32) *MediaEventCreate {
+	_c.mutation.SetBookSeriesID(id)
+	return _c
+}
+
+// SetNillableBookSeriesID sets the "book_series" edge to the BookSeries entity by ID if the given value is not nil.
+func (_c *MediaEventCreate) SetNillableBookSeriesID(id *uint32) *MediaEventCreate {
+	if id != nil {
+		_c = _c.SetBookSeriesID(*id)
+	}
+	return _c
+}
+
+// SetBookSeries sets the "book_series" edge to the BookSeries entity.
+func (_c *MediaEventCreate) SetBookSeries(v *BookSeries) *MediaEventCreate {
+	return _c.SetBookSeriesID(v.ID)
 }
 
 // Mutation returns the MediaEventMutation object of the builder.
@@ -284,6 +364,74 @@ func (_c *MediaEventCreate) createSpec() (*MediaEvent, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.tv_show_events = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ArtistIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediaevent.ArtistTable,
+			Columns: []string{mediaevent.ArtistColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.artist_events = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AlbumIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediaevent.AlbumTable,
+			Columns: []string{mediaevent.AlbumColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.album_events = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.BookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediaevent.BookTable,
+			Columns: []string{mediaevent.BookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.book_events = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.BookSeriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediaevent.BookSeriesTable,
+			Columns: []string{mediaevent.BookSeriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookseries.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.book_series_events = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

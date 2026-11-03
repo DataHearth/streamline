@@ -144,6 +144,46 @@ var _ = Describe("Music schedulers", Label("unit", "integration", "music"), func
 			Expect(got.Status).To(Equal(album.StatusWanted))
 		})
 
+		It(
+			"tries the next release when the best is a CD image, with no strike",
+			func() {
+				al := seedAlbums("Nevermind")[0]
+				mp3 := indexer.SearchResult{
+					Title:    "Nirvana - Nevermind (1991) [MP3 320]",
+					Download: "magnet:?xt=urn:btih:def",
+					Seeders:  5,
+				}
+				e.idx.EXPECT().
+					SearchAlbum(mock.Anything, "Nirvana", "Nevermind", uint16(0)).
+					Return([]indexer.SearchResult{mp3, flac}, nil).Once()
+				e.dl.EXPECT().GrabAlbum(mock.Anything, flac, al.ID).
+					Return(nil, fmt.Errorf("%w: x", download.ErrCueImage)).Once()
+				e.dl.EXPECT().GrabAlbum(mock.Anything, mp3, al.ID).
+					Return(&ent.DownloadRecord{}, nil).Once()
+
+				Expect(e.svc.SearchMissing(e.ctx)).To(Succeed())
+
+				got := e.client.Album.GetX(e.ctx, al.ID)
+				Expect(got.Status).To(Equal(album.StatusDownloading))
+				Expect(got.GrabFailures).To(BeZero())
+			},
+		)
+
+		It("counts no strike when every accepted release is a CD image", func() {
+			al := seedAlbums("Nevermind")[0]
+			e.idx.EXPECT().
+				SearchAlbum(mock.Anything, "Nirvana", "Nevermind", uint16(0)).
+				Return([]indexer.SearchResult{flac}, nil).Once()
+			e.dl.EXPECT().GrabAlbum(mock.Anything, flac, al.ID).
+				Return(nil, fmt.Errorf("%w: x", download.ErrCueImage)).Once()
+
+			Expect(e.svc.SearchMissing(e.ctx)).To(Succeed())
+
+			got := e.client.Album.GetX(e.ctx, al.ID)
+			Expect(got.Status).To(Equal(album.StatusWanted))
+			Expect(got.GrabFailures).To(BeZero())
+		})
+
 		It("does not count an unreachable download client", func() {
 			al := seedAlbums("Nevermind")[0]
 			e.idx.EXPECT().

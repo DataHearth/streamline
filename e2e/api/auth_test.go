@@ -11,9 +11,11 @@ import (
 )
 
 type apiKeyCreated struct {
-	Id       uint32 `json:"id"`
-	Name     string `json:"name"`
-	RawToken string `json:"raw_token"`
+	Id        uint32  `json:"id"`
+	Name      string  `json:"name"`
+	Scope     string  `json:"scope"`
+	ExpiresAt *string `json:"expires_at"`
+	RawToken  string  `json:"raw_token"`
 }
 
 // createOwnAPIKey mints an API key for the admin and schedules its revocation.
@@ -21,9 +23,13 @@ type apiKeyCreated struct {
 // leak the key; 404 covers specs that revoke it themselves.
 func createOwnAPIKey(name string) apiKeyCreated {
 	GinkgoHelper()
-	resp := post("/api/v1/auth/me/api-keys", adminAuth, map[string]any{
-		"name": name,
-	})
+	return createOwnAPIKeyWith(map[string]any{"name": name})
+}
+
+// createOwnAPIKeyWith is createOwnAPIKey with the whole request body.
+func createOwnAPIKeyWith(body map[string]any) apiKeyCreated {
+	GinkgoHelper()
+	resp := post("/api/v1/auth/me/api-keys", adminAuth, body)
 	defer resp.Body.Close()
 	var key apiKeyCreated
 	// The closure deliberately reads key.Id after decode below populates it —
@@ -211,6 +217,42 @@ var _ = Describe("REST API auth", Label("e2e"), func() {
 			)
 			defer revoked.Body.Close()
 			Expect(revoked.StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		It("creates a full key with no expiry when neither is asked for", func() {
+			key := createOwnAPIKey("e2e-default-key")
+			Expect(key.Scope).To(Equal("full"))
+			Expect(key.ExpiresAt).To(BeNil())
+		})
+
+		It("holds an admin's read key to GET and HEAD", func() {
+			key := createOwnAPIKeyWith(map[string]any{
+				"name":            "e2e-read-key",
+				"scope":           "read",
+				"expires_in_days": 30,
+			})
+			Expect(key.Scope).To(Equal("read"))
+			Expect(key.ExpiresAt).NotTo(BeNil())
+			readKey := identity{apiKey: key.RawToken}
+
+			read := get("/api/v1/config/library", readKey)
+			defer read.Body.Close()
+			Expect(read.StatusCode).To(Equal(http.StatusOK))
+
+			// An admin-only write the owner's role allows: the key's scope,
+			// not the role, decides.
+			write := patch("/api/v1/config/library", readKey, map[string]any{})
+			defer write.Body.Close()
+			Expect(write.StatusCode).To(Equal(http.StatusForbidden))
+		})
+
+		It("422s a lifetime outside the presets", func() {
+			resp := post("/api/v1/auth/me/api-keys", adminAuth, map[string]any{
+				"name":            "e2e-odd-lifetime",
+				"expires_in_days": 7,
+			})
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
 		})
 
 		It("404s revoking an API key the caller does not own", func() {

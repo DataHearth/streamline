@@ -20,6 +20,7 @@ import (
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -140,7 +141,7 @@ func (s *Service) commitBook(
 	}
 
 	kind := entmediafile.BookKind(sc.Slot)
-	attached := 0
+	attached, created := 0, 0
 	for _, p := range sc.FilePaths {
 		info, serr := os.Stat(p)
 		if serr != nil {
@@ -168,6 +169,7 @@ func (s *Service) commitBook(
 			return commitBookFail(span, "record file "+p, cerr, target.ID)
 		}
 		attached++
+		created++
 	}
 	if attached == 0 {
 		return commitBookFail(
@@ -184,6 +186,21 @@ func (s *Service) commitBook(
 		string(sc.Slot),
 	); err != nil {
 		return commitBookFail(span, "mark slot available", err, target.ID)
+	}
+	// One row for the slot, as the book importer writes: the per-file create
+	// hook leaves book files alone, and an audiobook is a folder of them.
+	if created > 0 {
+		if err := events.Record(
+			ctx, nil, events.TypeImported, events.ScopeBook, target.ID,
+			map[string]any{
+				"book_kind": string(kind),
+				"files":     created,
+				"source":    "bulk_import",
+			},
+		); err != nil {
+			slog.WarnContext(ctx, "book commit: record imported event failed",
+				"book.id", target.ID, "error", err)
+		}
 	}
 	outcome := entimportscanbook.OutcomeCreated
 	if sc.Classification == entimportscanbook.ClassificationExisting &&

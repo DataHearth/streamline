@@ -75,6 +75,34 @@ func (_c *ApiKeyCreate) SetNillableLastUsedAt(v *time.Time) *ApiKeyCreate {
 	return _c
 }
 
+// SetScope sets the "scope" field.
+func (_c *ApiKeyCreate) SetScope(v apikey.Scope) *ApiKeyCreate {
+	_c.mutation.SetScope(v)
+	return _c
+}
+
+// SetNillableScope sets the "scope" field if the given value is not nil.
+func (_c *ApiKeyCreate) SetNillableScope(v *apikey.Scope) *ApiKeyCreate {
+	if v != nil {
+		_c.SetScope(*v)
+	}
+	return _c
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (_c *ApiKeyCreate) SetExpiresAt(v time.Time) *ApiKeyCreate {
+	_c.mutation.SetExpiresAt(v)
+	return _c
+}
+
+// SetNillableExpiresAt sets the "expires_at" field if the given value is not nil.
+func (_c *ApiKeyCreate) SetNillableExpiresAt(v *time.Time) *ApiKeyCreate {
+	if v != nil {
+		_c.SetExpiresAt(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *ApiKeyCreate) SetID(v uint32) *ApiKeyCreate {
 	_c.mutation.SetID(v)
@@ -135,6 +163,10 @@ func (_c *ApiKeyCreate) defaults() {
 		v := apikey.DefaultUpdateTime()
 		_c.mutation.SetUpdateTime(v)
 	}
+	if _, ok := _c.mutation.Scope(); !ok {
+		v := apikey.DefaultScope
+		_c.mutation.SetScope(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -159,6 +191,14 @@ func (_c *ApiKeyCreate) check() error {
 	if v, ok := _c.mutation.KeyHash(); ok {
 		if err := apikey.KeyHashValidator(v); err != nil {
 			return &ValidationError{Name: "key_hash", err: fmt.Errorf(`ent: validator failed for field "ApiKey.key_hash": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.Scope(); !ok {
+		return &ValidationError{Name: "scope", err: errors.New(`ent: missing required field "ApiKey.scope"`)}
+	}
+	if v, ok := _c.mutation.Scope(); ok {
+		if err := apikey.ScopeValidator(v); err != nil {
+			return &ValidationError{Name: "scope", err: fmt.Errorf(`ent: validator failed for field "ApiKey.scope": %w`, err)}
 		}
 	}
 	if len(_c.mutation.OwnerIDs()) == 0 {
@@ -215,6 +255,14 @@ func (_c *ApiKeyCreate) createSpec() (*ApiKey, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.LastUsedAt(); ok {
 		_spec.SetField(apikey.FieldLastUsedAt, field.TypeTime, value)
 		_node.LastUsedAt = &value
+	}
+	if value, ok := _c.mutation.Scope(); ok {
+		_spec.SetField(apikey.FieldScope, field.TypeEnum, value)
+		_node.Scope = value
+	}
+	if value, ok := _c.mutation.ExpiresAt(); ok {
+		_spec.SetField(apikey.FieldExpiresAt, field.TypeTime, value)
+		_node.ExpiresAt = &value
 	}
 	if nodes := _c.mutation.OwnerIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

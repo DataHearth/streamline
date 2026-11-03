@@ -19,6 +19,7 @@ without reading why it is shaped that way.**
 | [`downloads-and-imports.md`](downloads-and-imports.md) | `internal/bittorrent/`, `internal/importer/`, `internal/download/adopt.go`, `internal/mediaserver/` |
 | [`frontend.md`](frontend.md) | `web/app/**`, `web/static/**`, `routify.config.js`, `web/embed.go` |
 | [`media-lifecycle.md`](media-lifecycle.md) | episode/movie status transitions, `internal/events/`, `internal/db` list queries, the `media-probe` job, re-identify |
+| [`music-tags.md`](music-tags.md) | `internal/library/audiotags/`, `internal/library/music_tags.go`, `internal/media/music/tags.go`, `internal/download/seeding.go`, the album importer's tagging, `library.music_tags` |
 | [`quality-scoring.md`](quality-scoring.md) | `internal/quality/**`, `qualityctx`, RSS feed/missing-search scanners, profile & custom-format handlers |
 | [`selective-file-download.md`](selective-file-download.md) | `internal/download/manager.go`, `selection_pass.go`, `internal/bittorrent/` piece priorities, any client's `SetWantedFiles`/`ListFiles` |
 | [`transcoding.md`](transcoding.md) | `internal/transcoding/`, `internal/ffmpeg/`, `quality_profiles[].transcode`, `/transcoding/*` handlers |

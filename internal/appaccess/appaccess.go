@@ -78,7 +78,7 @@ func (t *Tracker) Touch(
 	t.entries[k] = entry{credentialSince: credentialSince, lastAttempt: now}
 	t.mu.Unlock()
 
-	client = sanitizeClient(client)
+	client = SanitizeClient(client)
 	ctx = context.WithoutCancel(ctx)
 	go func() {
 		defer observability.RecoverPanic(ctx, "appaccess touch", func() {
@@ -114,7 +114,10 @@ func (t *Tracker) write(
 	return err
 }
 
-func sanitizeClient(s string) string {
+// SanitizeClient trims a client name (the Subsonic c parameter, a reader's
+// User-Agent) to printable characters and at most 64 bytes, never splitting
+// a character: what a 64-byte client column can hold.
+func SanitizeClient(s string) string {
 	s = strings.Map(func(r rune) rune {
 		if !unicode.IsPrint(r) {
 			return -1

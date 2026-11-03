@@ -78,7 +78,7 @@ func (a albumRequestMonitor) MonitorAlbum(
 }
 
 func findAlbum(a *ent.Artist, mbid string) *ent.Album {
-	for _, al := range a.Edges.Albums {
+	for _, al := range db.ArtistAlbums(a) {
 		if al.Mbid == mbid {
 			return al
 		}

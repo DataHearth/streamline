@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import {
 		Play,
 		ChevronDown,
@@ -39,6 +40,7 @@
 	}: Props = $props();
 
 	let open = $state(false);
+	closeOnBack(() => open, () => close());
 	let triggerEl = $state<HTMLButtonElement | null>(null);
 
 	const q = createQuery<PlayOnLinkList>(() => ({

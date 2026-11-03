@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<!--
+  Unraid Community Applications template. Install it by hand today with:
+    wget -O /boot/config/plugins/dockerMan/templates-user/my-streamline.xml \
+      https://raw.githubusercontent.com/DataHearth/streamline/main/deploy/unraid/streamline.xml
+  then Docker → Add Container → Template: streamline. See deploy/unraid/README.md.
+-->
+<Container version="2">
+  <Name>streamline</Name>
+  <Repository>ghcr.io/datahearth/streamline:latest</Repository>
+  <Registry>https://github.com/DataHearth/streamline/pkgs/container/streamline</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/DataHearth/streamline/discussions</Support>
+  <Project>https://github.com/DataHearth/streamline</Project>
+  <ReadMe>https://github.com/DataHearth/streamline/wiki/Installation#unraid</ReadMe>
+  <Overview>Streamline is one self-hosted app for movies, TV, music and books: it replaces Radarr, Sonarr, Lidarr, Readarr and Seerr with a single binary. Web UI, REST API, multi-user with SSO, a built-in request system, Torznab and Prowlarr indexers, qBittorrent, Transmission, Deluge or a built-in torrent engine, and Plex, Jellyfin and Emby notifications. Subsonic and OPDS servers are included.[br][br]
+On first start Streamline writes its config file to the Config folder and creates an admin account, admin@streamline.local, whose generated password is printed ONCE in the container log (the line reading 'default admin credentials'). Log in, then change it.[br][br]
+Keep downloads and media on ONE share mapped to the same path inside the container (the Data share below) so imports can hardlink, and give your torrent client the same mapping.[br][br]
+The container runs as nobody:users (99:100). Intel or AMD hardware transcoding needs the latest-vaapi tag, /dev/dri and the render group: see the Installation wiki.</Overview>
+  <Category>MediaApp:Video MediaApp:Music MediaApp:Books Downloaders:</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/DataHearth/streamline/main/deploy/unraid/streamline.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/DataHearth/streamline/main/web/static/images/favicon-512.png</Icon>
+  <ExtraParams>--user 99:100</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>A share holding both your downloads and your media folders (for example /mnt/user/data with downloads/ and media/ inside), so imports can hardlink instead of copying.</Requires>
+  <Config Name="Web UI port" Target="8080" Default="8080" Mode="tcp" Description="Port of the web UI, the REST API, Subsonic (/rest) and OPDS (/opds)." Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Data share" Target="/mnt/user/data" Default="/mnt/user/data" Mode="rw" Description="One share holding both downloads and media, mapped to the SAME path inside the container. Map it identically in your torrent client so the paths it reports resolve here unchanged." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/data</Config>
+  <Config Name="Config" Target="/etc/streamline" Default="/mnt/user/appdata/streamline/config" Mode="rw" Description="Holds config.yaml. Written with the defaults on first start; settings saved from the web UI are written back here." Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/streamline/config</Config>
+  <Config Name="App data" Target="/data" Default="/mnt/user/appdata/streamline/data" Mode="rw" Description="The database, poster cache and built-in torrent engine state. Back this up." Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/streamline/data</Config>
+  <Config Name="Download folder" Target="STREAMLINE_LIBRARY__DOWNLOAD_PATH" Default="/mnt/user/data/downloads" Mode="" Description="Where your torrent client saves finished downloads (the save path of its 'streamline' category), as seen inside this container. Set here, it is fixed by the container: change it in this template, not in Streamline." Type="Variable" Display="always" Required="true" Mask="false">/mnt/user/data/downloads</Config>
+  <Config Name="Movies folder" Target="STREAMLINE_LIBRARY__MOVIE_PATH" Default="/mnt/user/data/media/movies" Mode="" Description="Library folder for movies. Must be on the Data share." Type="Variable" Display="always" Required="true" Mask="false">/mnt/user/data/media/movies</Config>
+  <Config Name="TV folder" Target="STREAMLINE_LIBRARY__SERIES_PATH" Default="/mnt/user/data/media/series" Mode="" Description="Library folder for TV series. Must be on the Data share." Type="Variable" Display="always" Required="true" Mask="false">/mnt/user/data/media/series</Config>
+  <Config Name="Music folder" Target="STREAMLINE_LIBRARY__MUSIC_PATH" Default="/mnt/user/data/media/music" Mode="" Description="Library folder for music. Must be on the Data share." Type="Variable" Display="advanced" Required="true" Mask="false">/mnt/user/data/media/music</Config>
+  <Config Name="Ebooks folder" Target="STREAMLINE_LIBRARY__EBOOK_PATH" Default="/mnt/user/data/media/books" Mode="" Description="Library folder for ebooks. Must be on the Data share." Type="Variable" Display="advanced" Required="true" Mask="false">/mnt/user/data/media/books</Config>
+  <Config Name="Audiobooks folder" Target="STREAMLINE_LIBRARY__AUDIOBOOK_PATH" Default="/mnt/user/data/media/audiobooks" Mode="" Description="Library folder for audiobooks. Must be on the Data share." Type="Variable" Display="advanced" Required="true" Mask="false">/mnt/user/data/media/audiobooks</Config>
+</Container>

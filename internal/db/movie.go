@@ -404,11 +404,7 @@ func (db *DB) FilterMovies(
 	desc := p.Order == "desc"
 	switch p.Sort {
 	case "title":
-		if desc {
-			q = q.Order(ent.Desc(movie.FieldTitle))
-		} else {
-			q = q.Order(ent.Asc(movie.FieldTitle))
-		}
+		q = q.Order(orderFold(movie.FieldTitle, desc))
 	case "year":
 		if desc {
 			q = q.Order(ent.Desc(movie.FieldYear))

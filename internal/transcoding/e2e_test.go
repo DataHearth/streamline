@@ -140,7 +140,7 @@ var _ = Describe(
 			Expect(err).NotTo(HaveOccurred())
 
 			ms.EXPECT().
-				RefreshAll(mock.Anything, "movie", movieRoot).
+				RefreshAll(mock.Anything, "movie", movieRoot, mock.Anything).
 				Return(nil).
 				Once()
 

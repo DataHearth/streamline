@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -18,20 +17,28 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
-	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
-// albumImportMode is the transfer mode an album import uses. A hardlink shares
-// its inode with the seeding source, and tag writing rewrites the file in
-// place; a moved file is the seeding source itself. Either would corrupt what
-// the torrent is still serving, so those combinations copy.
+// albumImportMode is the transfer mode an album import uses. A move while the
+// torrent seeds would pull the file out from under it, so it copies. A
+// hardlink is safe from the tag writer, which renames a fresh copy over the
+// file and so never reaches the torrent's bytes, but its first write splits
+// the two: under music_tags.seeding copy that is accepted now and the import
+// copies outright, under defer the hardlink is kept and the job tags the file
+// once its torrent is gone. With tags off a hardlink stays a hardlink.
 func albumImportMode(libCfg config.LibraryConfig) string {
-	if libCfg.ImportMode == "hardlink" ||
-		(libCfg.KeepTorrentSeeding && libCfg.ImportMode == "move") {
+	tags := libCfg.MusicTags
+	switch {
+	case libCfg.KeepTorrentSeeding && libCfg.ImportMode == "move":
+		return "copy"
+	case libCfg.ImportMode == "hardlink" &&
+		tags.Mode != config.MusicTagsOff &&
+		tags.Seeding == config.MusicTagsSeedingCopy:
 		return "copy"
 	}
 	return libCfg.ImportMode
@@ -54,7 +61,7 @@ func listAudioFiles(path string) ([]string, error) {
 			if d.IsDir() {
 				return nil
 			}
-			if _, ok := audiotags.AudioExtensions[strings.ToLower(filepath.Ext(p))]; ok {
+			if audiotags.IsAudioFile(p) {
 				out = append(out, p)
 			}
 			return nil
@@ -87,7 +94,8 @@ func (w *Worker) importAlbumRecord(
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("list album files: %w", err))
 	}
-	held, err := w.importAlbumFiles(
+	files = w.sourceFilter(ctx, rec).Filter(files)
+	changed, held, err := w.importAlbumFiles(
 		ctx, span, rec, rec.Edges.Album, files, libCfg, false,
 	)
 	if err != nil || held {
@@ -97,33 +105,44 @@ func (w *Worker) importAlbumRecord(
 	// the source untouched, so a configured "move" must not delete it.
 	libCfg.ImportMode = albumImportMode(libCfg)
 	w.cleanupTorrent(ctx, rec, libCfg)
-	w.refreshMediaServers(ctx, mediaserver.KindMusic, libCfg.MusicPath)
+	w.refreshMediaServers(ctx, mediaserver.KindMusic, libCfg.MusicPath, changed...)
 	return nil
 }
 
-// cueImage reports whether files are one audio file with a CUE sheet in its
-// folder: a disc ripped to a single image, its tracks only marked by the sheet.
-func cueImage(files []string) bool {
-	if len(files) != 1 {
-		return false
+// cueImage reports whether the folders holding files are images of an album
+// of tracks, its tracks only marked by the CUE sheet beside them — the rule
+// the grab applies to a torrent's file list, read here off the disk.
+func cueImage(files []string, tracks int) bool {
+	var listing []string
+	seen := map[string]bool{}
+	for _, f := range files {
+		dir := filepath.Dir(f)
+		if seen[dir] {
+			continue
+		}
+		seen[dir] = true
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			if !e.IsDir() {
+				listing = append(listing, filepath.Join(dir, e.Name()))
+			}
+		}
 	}
-	entries, err := os.ReadDir(filepath.Dir(files[0]))
-	if err != nil {
-		return false
-	}
-	return slices.ContainsFunc(entries, func(e os.DirEntry) bool {
-		return !e.IsDir() && strings.EqualFold(filepath.Ext(e.Name()), ".cue")
-	})
+	return library.CueImage(listing, tracks)
 }
 
 // hydratedAlbum returns the album with its tracks: one added as a stub has
 // none until its release data is fetched, and a download for it cannot be
-// matched before that.
+// matched before that. One hydrated before genres were fetched (NULL) gets
+// them now, best effort, since the tags written below carry them.
 func (w *Worker) hydratedAlbum(
 	ctx context.Context,
 	alb *ent.Album,
 ) (*ent.Album, error) {
-	if alb.MetadataFetchedAt != nil || w.albums == nil {
+	if (alb.MetadataFetchedAt != nil && alb.Genres != nil) || w.albums == nil {
 		return alb, nil
 	}
 	if err := w.albums.HydrateAlbum(ctx, alb.ID); err != nil {
@@ -144,14 +163,14 @@ func (w *Worker) importAlbumFiles(
 	files []string,
 	libCfg config.LibraryConfig,
 	pack bool,
-) (bool, error) {
-	alb, err := w.hydratedAlbum(ctx, alb)
+) (changed []string, held bool, err error) {
+	alb, err = w.hydratedAlbum(ctx, alb)
 	if err != nil {
-		return false, otelx.RecordSpanError(span, err)
+		return nil, false, otelx.RecordSpanError(span, err)
 	}
 	artist := alb.Edges.Artist
 	if artist == nil {
-		return false, otelx.RecordSpanError(
+		return nil, false, otelx.RecordSpanError(
 			span,
 			fmt.Errorf("album %d missing artist context", alb.ID),
 		)
@@ -164,17 +183,17 @@ func (w *Worker) importAlbumFiles(
 
 	// Checked before matching: the image's tags can name the first track, and
 	// the whole disc would then be imported as that one track.
-	if len(alb.Edges.Tracks) > 1 && cueImage(files) {
-		return false, otelx.RecordSpanError(span, ErrCueImage)
+	if cueImage(files, len(alb.Edges.Tracks)) {
+		return nil, false, otelx.RecordSpanError(span, ErrCueImage)
 	}
 
 	profile, haveProfile := config.ResolveMusicQualityProfile(artist.QualityProfile)
 	plan, skippedCovered := w.planAlbumImport(ctx, rec, alb, files, profile)
 	if len(plan) == 0 {
 		if skippedCovered > 0 {
-			return false, otelx.RecordSpanError(span, library.ErrDestExists)
+			return nil, false, otelx.RecordSpanError(span, ErrTracksHeld)
 		}
-		return false, otelx.RecordSpanError(span, ErrNoAlbumTracks)
+		return nil, false, otelx.RecordSpanError(span, ErrNoAlbumTracks)
 	}
 	// Verified before anything is set aside or transferred, so a hold leaves
 	// the library exactly as it was.
@@ -184,7 +203,7 @@ func (w *Worker) importAlbumFiles(
 			reasons = append(reasons, tierHoldReasons(plan, profile)...)
 		}
 		if len(reasons) > 0 {
-			return true, w.hold(ctx, span, rec, reasons)
+			return nil, true, w.hold(ctx, span, rec, reasons)
 		}
 	}
 
@@ -192,10 +211,7 @@ func (w *Worker) importAlbumFiles(
 		return t.Disc > 1
 	})
 	mode := albumImportMode(libCfg)
-	var year uint16
-	if alb.ReleaseDate != nil {
-		year = numeric.SaturateU16(alb.ReleaseDate.Year())
-	}
+	tagging := libCfg.MusicTags.Mode != config.MusicTagsOff
 
 	var (
 		rows     []db.AdoptAlbumFile
@@ -203,6 +219,11 @@ func (w *Worker) importAlbumFiles(
 		replaced []*ent.MediaFile
 		firstErr error
 	)
+	// The album's files change from here until the replaced ones are gone:
+	// a tag write must not rename a copy of an old file over its path in
+	// between. Released before the album is tagged, which takes it per file.
+	unlockFiles := library.LockAlbumFiles(alb.ID)
+	defer unlockFiles()
 	for _, f := range plan {
 		old := f.tr.Edges.MediaFiles
 		moved, err := setAside(ctx, old)
@@ -225,48 +246,22 @@ func (w *Worker) importAlbumFiles(
 		aside = append(aside, moved...)
 		replaced = append(replaced, old...)
 
-		if err := audiotags.Write(imported.Path, audiotags.WriteTags{
-			Artist:           artist.Name,
-			AlbumArtist:      artist.Name,
-			Album:            alb.Title,
-			Title:            f.tr.Title,
-			Track:            f.tr.Position,
-			Disc:             f.tr.Disc,
-			Year:             year,
-			MBArtistID:       artist.Mbid,
-			MBReleaseGroupID: alb.Mbid,
-			MBRecordingID:    f.tr.Mbid,
-		}); err != nil {
-			slog.WarnContext(
-				ctx,
-				"album import: tag write failed, file imported untagged",
-				"file",
-				imported.Path,
-				"track.id",
-				f.tr.ID,
-				"error",
-				err,
-			)
-		}
-		size := imported.Size
-		if st, err := os.Stat(imported.Path); err == nil {
-			size = st.Size()
-		}
 		rows = append(rows, db.AdoptAlbumFile{
-			TrackID: f.tr.ID,
-			Path:    imported.Path,
-			Quality: tierName(f.q),
-			Format:  f.info.Format,
-			Size:    size,
+			TrackID:     f.tr.ID,
+			Path:        imported.Path,
+			Quality:     tierName(f.q),
+			Format:      f.info.Format,
+			Size:        imported.Size,
+			TagsPending: tagging,
 		})
 	}
 	if len(rows) == 0 {
-		return false, otelx.RecordSpanError(span, firstErr)
+		return nil, false, otelx.RecordSpanError(span, firstErr)
 	}
 
 	for _, mf := range replaced {
 		if err := w.db.DeleteMediaFile(ctx, mf.ID); err != nil {
-			return false, otelx.RecordSpanError(
+			return nil, false, otelx.RecordSpanError(
 				span, fmt.Errorf("delete replaced track media file: %w", err),
 			)
 		}
@@ -277,12 +272,32 @@ func (w *Worker) importAlbumFiles(
 		Files:      rows,
 		KeepRecord: pack,
 	}); err != nil {
-		return false, otelx.RecordSpanError(
+		return nil, false, otelx.RecordSpanError(
 			span, fmt.Errorf("record album import success: %w", err),
 		)
 	}
 	dropAside(ctx, aside)
-	if w.covers != nil {
+	unlockFiles()
+	w.recordAlbumImported(ctx, alb.ID, rec.Title, pack, rows)
+	// Tagged before the media servers hear of the files, so they index them
+	// once. A file the torrent still shares is deferred to the job.
+	coverResolved := false
+	if tagging && w.tagger != nil {
+		var err error
+		if coverResolved, err = w.tagger.TagAlbum(ctx, alb.ID); err != nil {
+			slog.WarnContext(
+				ctx,
+				"album import: tagging the files failed, the job retries",
+				"album.id",
+				alb.ID,
+				"error",
+				err,
+			)
+		}
+	}
+	// The tagger resolved the cover before writing the files; a second
+	// pass would read every file again for nothing.
+	if w.covers != nil && !coverResolved {
 		w.covers.ResolveCoversInBackground(ctx, alb.ID)
 	}
 
@@ -294,8 +309,15 @@ func (w *Worker) importAlbumFiles(
 		"album.id", alb.ID, "artist.id", artist.ID, "files", len(rows))
 
 	w.markRequestsAvailableByMBID(ctx, "artist", artist.Mbid)
+	for _, co := range alb.Edges.CoArtists {
+		w.markRequestsAvailableByMBID(ctx, "artist", co.Mbid)
+	}
 	w.markRequestsAvailableByMBID(ctx, "album", alb.Mbid)
-	return false, nil
+	changed = mediaFilePaths(replaced)
+	for _, r := range rows {
+		changed = append(changed, r.Path)
+	}
+	return changed, false, nil
 }
 
 // planAlbumImport binds each source file to the track it fills. A track
@@ -317,14 +339,32 @@ func (w *Worker) planAlbumImport(
 		plan           []albumFile
 		skippedCovered int
 	)
+	// Every file's tags first: whether their numbers name the album's tracks
+	// is decided over the whole release.
+	paths := make([]string, 0, len(files))
+	infos := make([]audiotags.Info, 0, len(files))
 	for _, path := range files {
-		info, err := audiotags.Read(path)
+		info, err := library.ReadTrackInfo(path)
 		if err != nil {
 			slog.WarnContext(ctx, "album import: tag read failed",
 				"file", path, "error", err)
 			continue
 		}
-		tr := library.MatchTrack(alb.Edges.Tracks, info)
+		paths = append(paths, path)
+		infos = append(infos, info)
+	}
+	matcher := library.NewTrackMatcher(alb.Edges.Tracks, infos)
+	if !matcher.ByNumber() {
+		slog.InfoContext(
+			ctx,
+			"album import: track numbers name other titles, matching by title",
+			"album.id",
+			alb.ID,
+		)
+	}
+	for i, path := range paths {
+		info := infos[i]
+		tr := matcher.Match(info)
 		if tr == nil {
 			slog.WarnContext(ctx, "album import: file matched no track",
 				"file", filepath.Base(path), "album.id", alb.ID)
@@ -395,4 +435,38 @@ func tierName(q albumFileQuality) string {
 		return ""
 	}
 	return q.tier.String()
+}
+
+// recordAlbumImported files one imported event for the album, however many
+// tracks it took: the per-file create hook leaves track files alone, since an
+// album is one import from where its owner stands. A pack records one per
+// album it filled, against that album.
+func (w *Worker) recordAlbumImported(
+	ctx context.Context,
+	albumID uint32,
+	release string,
+	pack bool,
+	rows []db.AdoptAlbumFile,
+) {
+	var size int64
+	for _, r := range rows {
+		size += r.Size
+	}
+	p := map[string]any{
+		"release_title": release,
+		"tracks":        len(rows),
+		"size_bytes":    size,
+	}
+	if q := rows[0].Quality; q != "" {
+		p["quality"] = q
+	}
+	if pack {
+		p["source"] = "pack"
+	}
+	if err := events.Record(
+		ctx, nil, events.TypeImported, events.ScopeAlbum, albumID, p,
+	); err != nil {
+		slog.WarnContext(ctx, "album import: record imported event failed",
+			"album.id", albumID, "error", err)
+	}
 }

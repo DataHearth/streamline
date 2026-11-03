@@ -23,6 +23,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import { cn } from "@lib/cn";
 	import {
+		activityFeatures,
 		torrentCountsQuery,
 		transcodeCountsQuery,
 		activityCurrent,
@@ -123,13 +124,16 @@
 
 	// Activity's three routes each sit as their own top-level row — no parent to
 	// fold, so the destination is always one click away. Torrents and
-	// transcoding are admin-only, which is why this list is derived rather than
-	// constant.
+	// transcoding are admin-only and each shown only while its feature is on,
+	// which is why this list is derived rather than constant.
+	const features = activityFeatures();
 	let activityLinks = $derived([
 		{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
-		...(auth.isAdmin
+		...(features.torrents
+			? [{ label: i18n.torrent_label(), href: "/torrents", icon: Magnet }]
+			: []),
+		...(features.transcoding
 			? [
-					{ label: i18n.torrent_label(), href: "/torrents", icon: Magnet },
 					{
 						label: i18n.transcode_label(),
 						href: "/transcoding",

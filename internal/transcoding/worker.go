@@ -555,7 +555,7 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 		bytesSaved.Add(wctx, saved)
 	}
 
-	w.refresh(wctx, mf)
+	w.refresh(wctx, mf, finalPath)
 	slog.InfoContext(wctx, "transcoded file",
 		"media_file.path", finalPath,
 		"transcode.reason", reason,
@@ -886,7 +886,9 @@ func swap(ctx context.Context, outPath, finalPath, srcPath string) (int64, error
 	return st.Size(), nil
 }
 
-func (w *Worker) refresh(ctx context.Context, mf *ent.MediaFile) {
+// refresh rescans the folder of the swapped file: the source and the output
+// share it, whatever the container change did to the name.
+func (w *Worker) refresh(ctx context.Context, mf *ent.MediaFile, finalPath string) {
 	cfg := config.Get()
 	if cfg == nil {
 		return
@@ -895,7 +897,7 @@ func (w *Worker) refresh(ctx context.Context, mf *ent.MediaFile) {
 	if mf.Edges.Movie != nil {
 		kind, root = "movie", cfg.Library.MoviePath
 	}
-	if err := w.ms.RefreshAll(ctx, kind, root); err != nil {
+	if err := w.ms.RefreshAll(ctx, kind, root, finalPath); err != nil {
 		slog.WarnContext(
 			ctx,
 			"could not refresh the media servers after a transcode",

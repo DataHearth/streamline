@@ -14,6 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/apikey"
 	entuser "github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
@@ -202,7 +203,7 @@ var _ = Describe("AuthService unit", Label("unit", "auth"), func() {
 				Return(&ent.ApiKey{ID: 5, Name: "cli"}, nil).
 				Once()
 
-			raw, rec, err := svc.CreateAPIKey(ctx, 7, "cli")
+			raw, rec, err := svc.CreateAPIKey(ctx, 7, APIKeySpec{Name: "cli"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(raw).NotTo(BeEmpty())
 			Expect(rec.ID).To(Equal(uint32(5)))
@@ -213,16 +214,64 @@ var _ = Describe("AuthService unit", Label("unit", "auth"), func() {
 			storeMock.CreateAPIKey(ctx, mock.AnythingOfType("db.CreateAPIKeyParams")).
 				Return(nil, errors.New("insert fail")).
 				Once()
-			_, _, err := svc.CreateAPIKey(ctx, 7, "cli")
+			_, _, err := svc.CreateAPIKey(ctx, 7, APIKeySpec{Name: "cli"})
 			Expect(err).To(MatchError(ContainSubstring("create API key")))
 		})
+
+		It("stores the scope and an expiry the lifetime away", func() {
+			storeMock.CountAPIKeysByUser(ctx, uint32(7)).Return(0, nil).Once()
+			var got db.CreateAPIKeyParams
+			storeMock.CreateAPIKey(ctx, mock.AnythingOfType("db.CreateAPIKeyParams")).
+				Run(func(_ context.Context, p db.CreateAPIKeyParams) { got = p }).
+				Return(&ent.ApiKey{ID: 5, Name: "ha"}, nil).
+				Once()
+
+			before := time.Now()
+			_, _, err := svc.CreateAPIKey(ctx, 7, APIKeySpec{
+				Name:  "ha",
+				Scope: apikey.ScopeRead,
+				TTL:   30 * 24 * time.Hour,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Scope).To(Equal(apikey.ScopeRead))
+			Expect(got.ExpiresAt).NotTo(BeNil())
+			Expect(*got.ExpiresAt).To(BeTemporally("~",
+				before.Add(30*24*time.Hour), 5*time.Second))
+		})
+
+		It("defaults to a full key that never expires", func() {
+			storeMock.CountAPIKeysByUser(ctx, uint32(7)).Return(0, nil).Once()
+			storeMock.CreateAPIKey(ctx, mock.MatchedBy(func(p db.CreateAPIKeyParams) bool {
+				return p.Scope == apikey.ScopeFull && p.ExpiresAt == nil
+			})).
+				Return(&ent.ApiKey{ID: 5, Name: "cli"}, nil).
+				Once()
+
+			_, _, err := svc.CreateAPIKey(ctx, 7, APIKeySpec{Name: "cli"})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It(
+			"refuses an unknown scope or a negative lifetime before counting",
+			func() {
+				_, _, err := svc.CreateAPIKey(ctx, 7, APIKeySpec{
+					Name: "x", Scope: apikey.Scope("admin"),
+				})
+				Expect(err).To(MatchError(ErrAPIKeyInvalid))
+
+				_, _, err = svc.CreateAPIKey(ctx, 7, APIKeySpec{
+					Name: "x", TTL: -time.Hour,
+				})
+				Expect(err).To(MatchError(ErrAPIKeyInvalid))
+			},
+		)
 
 		It("returns ErrAPIKeyQuotaExceeded at the cap without inserting", func() {
 			storeMock.CountAPIKeysByUser(ctx, uint32(7)).
 				Return(maxAPIKeysPerUser, nil).
 				Once()
 
-			_, _, err := svc.CreateAPIKey(ctx, 7, "cli")
+			_, _, err := svc.CreateAPIKey(ctx, 7, APIKeySpec{Name: "cli"})
 			Expect(err).To(MatchError(ErrAPIKeyQuotaExceeded))
 		})
 	})
@@ -244,7 +293,8 @@ var _ = Describe("AuthService unit", Label("unit", "auth"), func() {
 
 				got, err := svc.ValidateAPIKey(ctx, "raw-key")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(got).To(Equal(owner))
+				Expect(got).To(Equal(ak))
+				Expect(got.Edges.Owner).To(Equal(owner))
 			},
 		)
 
@@ -262,7 +312,41 @@ var _ = Describe("AuthService unit", Label("unit", "auth"), func() {
 
 			got, err := svc.ValidateAPIKey(ctx, "raw-key")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(got).To(Equal(owner))
+			Expect(got.Edges.Owner).To(Equal(owner))
+		})
+
+		It("refuses an expired key exactly like an unknown one", func() {
+			past := time.Now().Add(-time.Minute)
+			ak := &ent.ApiKey{
+				ID:        7,
+				ExpiresAt: &past,
+				Edges:     ent.ApiKeyEdges{Owner: &ent.User{ID: 1}},
+			}
+			storeMock.FindAPIKeyByHash(ctx, mock.AnythingOfType("string")).
+				Return(ak, nil).
+				Once()
+
+			_, err := svc.ValidateAPIKey(ctx, "raw-key")
+			Expect(err).To(MatchError("invalid API key"))
+		})
+
+		It("accepts a key whose expiry is still ahead", func() {
+			future := time.Now().Add(time.Hour)
+			ak := &ent.ApiKey{
+				ID:        8,
+				ExpiresAt: &future,
+				Edges:     ent.ApiKeyEdges{Owner: &ent.User{ID: 1}},
+			}
+			storeMock.FindAPIKeyByHash(ctx, mock.AnythingOfType("string")).
+				Return(ak, nil).
+				Once()
+			storeMock.TouchAPIKey(ctx, uint32(8), mock.AnythingOfType("time.Time")).
+				Return(nil).
+				Once()
+
+			got, err := svc.ValidateAPIKey(ctx, "raw-key")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.ID).To(Equal(uint32(8)))
 		})
 
 		It("returns invalid when the lookup errors", func() {
@@ -718,7 +802,7 @@ var _ = Describe("AuthService driver-level failures", Label("unit", "auth"), fun
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 		mock.ExpectQuery(`INSERT INTO .api_keys.`).WillReturnError(dbErr)
 
-		_, _, err := svc.CreateAPIKey(ctx, 1, "test-key")
+		_, _, err := svc.CreateAPIKey(ctx, 1, APIKeySpec{Name: "test-key"})
 		Expect(err).To(MatchError(ContainSubstring("create API key")))
 		Expect(err).To(MatchError(dbErr))
 	})
@@ -727,7 +811,7 @@ var _ = Describe("AuthService driver-level failures", Label("unit", "auth"), fun
 		dbErr := errors.New("count query blew up")
 		mock.ExpectQuery(`SELECT COUNT`).WillReturnError(dbErr)
 
-		_, _, err := svc.CreateAPIKey(ctx, 1, "test-key")
+		_, _, err := svc.CreateAPIKey(ctx, 1, APIKeySpec{Name: "test-key"})
 		Expect(err).To(MatchError(ContainSubstring("count API keys")))
 		Expect(err).To(MatchError(dbErr))
 	})

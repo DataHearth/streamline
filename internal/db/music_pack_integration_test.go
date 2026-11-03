@@ -144,6 +144,37 @@ var _ = Describe("Discography pack records", Label("integration", "db"), func() 
 			To(Equal(album.StatusDownloading))
 	})
 
+	It("rejects a downloading album record and requeues its album", func() {
+		rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+			Title: "Bleach (image+.cue)", Size: 1, TorrentHash: "img-hash",
+			Status: downloadrecord.StatusDownloading, AlbumID: albums[0].ID,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		createPack()
+
+		live, err := store.ListDownloadingAlbumRecords(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(live).To(HaveLen(1))
+		Expect(live[0].Edges.Album.ID).To(Equal(albums[0].ID))
+
+		Expect(store.RejectDownloadingRecord(ctx, rec.ID, "image")).To(Succeed())
+
+		got := client.DownloadRecord.GetX(ctx, rec.ID)
+		Expect(got.Status).To(Equal(downloadrecord.StatusFailed))
+		Expect(got.Rejected).To(BeTrue())
+		Expect(client.Album.GetX(ctx, albums[0].ID).Status).
+			To(Equal(album.StatusWanted))
+		bl, err := store.RejectedReleases(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(bl.Album(albums[0].ID, "img-hash", got.Title)).To(BeTrue())
+	})
+
+	It("rejects no record that has stopped downloading", func() {
+		rec := createPack()
+		Expect(ent.IsNotFound(store.RejectDownloadingRecord(ctx, rec.ID, "x"))).
+			To(BeTrue())
+	})
+
 	It("completes a single album's record unless told to keep it", func() {
 		rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
 			Title: "Bleach", Size: 1, Status: downloadrecord.StatusImporting,

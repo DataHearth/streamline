@@ -31,10 +31,22 @@ const (
 	FieldType = "type"
 	// FieldReleaseDate holds the string denoting the release_date field in the database.
 	FieldReleaseDate = "release_date"
+	// FieldOriginalDate holds the string denoting the original_date field in the database.
+	FieldOriginalDate = "original_date"
+	// FieldEditionDate holds the string denoting the edition_date field in the database.
+	FieldEditionDate = "edition_date"
+	// FieldGenres holds the string denoting the genres field in the database.
+	FieldGenres = "genres"
 	// FieldMonitored holds the string denoting the monitored field in the database.
 	FieldMonitored = "monitored"
 	// FieldMonitorPinned holds the string denoting the monitor_pinned field in the database.
 	FieldMonitorPinned = "monitor_pinned"
+	// FieldTagsManaged holds the string denoting the tags_managed field in the database.
+	FieldTagsManaged = "tags_managed"
+	// FieldArtSidecarHash holds the string denoting the art_sidecar_hash field in the database.
+	FieldArtSidecarHash = "art_sidecar_hash"
+	// FieldTagOverrides holds the string denoting the tag_overrides field in the database.
+	FieldTagOverrides = "tag_overrides"
 	// FieldGrabFailures holds the string denoting the grab_failures field in the database.
 	FieldGrabFailures = "grab_failures"
 	// FieldLastSearchAt holds the string denoting the last_search_at field in the database.
@@ -57,6 +69,8 @@ const (
 	FieldMetadataFetchedAt = "metadata_fetched_at"
 	// FieldCreditsFetchedAt holds the string denoting the credits_fetched_at field in the database.
 	FieldCreditsFetchedAt = "credits_fetched_at"
+	// FieldCreditsVersion holds the string denoting the credits_version field in the database.
+	FieldCreditsVersion = "credits_version"
 	// EdgeArtist holds the string denoting the artist edge name in mutations.
 	EdgeArtist = "artist"
 	// EdgeTracks holds the string denoting the tracks edge name in mutations.
@@ -65,8 +79,14 @@ const (
 	EdgeDownloadRecords = "download_records"
 	// EdgeCredits holds the string denoting the credits edge name in mutations.
 	EdgeCredits = "credits"
+	// EdgeAnnotations holds the string denoting the annotations edge name in mutations.
+	EdgeAnnotations = "annotations"
+	// EdgeEvents holds the string denoting the events edge name in mutations.
+	EdgeEvents = "events"
 	// EdgePackRecords holds the string denoting the pack_records edge name in mutations.
 	EdgePackRecords = "pack_records"
+	// EdgeCoArtists holds the string denoting the co_artists edge name in mutations.
+	EdgeCoArtists = "co_artists"
 	// Table holds the table name of the album in the database.
 	Table = "albums"
 	// ArtistTable is the table that holds the artist relation/edge.
@@ -97,11 +117,30 @@ const (
 	CreditsInverseTable = "music_credits"
 	// CreditsColumn is the table column denoting the credits relation/edge.
 	CreditsColumn = "album_credits"
+	// AnnotationsTable is the table that holds the annotations relation/edge.
+	AnnotationsTable = "music_annotations"
+	// AnnotationsInverseTable is the table name for the MusicAnnotation entity.
+	// It exists in this package in order to avoid circular dependency with the "musicannotation" package.
+	AnnotationsInverseTable = "music_annotations"
+	// AnnotationsColumn is the table column denoting the annotations relation/edge.
+	AnnotationsColumn = "album_id"
+	// EventsTable is the table that holds the events relation/edge.
+	EventsTable = "media_events"
+	// EventsInverseTable is the table name for the MediaEvent entity.
+	// It exists in this package in order to avoid circular dependency with the "mediaevent" package.
+	EventsInverseTable = "media_events"
+	// EventsColumn is the table column denoting the events relation/edge.
+	EventsColumn = "album_events"
 	// PackRecordsTable is the table that holds the pack_records relation/edge. The primary key declared below.
 	PackRecordsTable = "download_record_albums"
 	// PackRecordsInverseTable is the table name for the DownloadRecord entity.
 	// It exists in this package in order to avoid circular dependency with the "downloadrecord" package.
 	PackRecordsInverseTable = "download_records"
+	// CoArtistsTable is the table that holds the co_artists relation/edge. The primary key declared below.
+	CoArtistsTable = "artist_co_albums"
+	// CoArtistsInverseTable is the table name for the Artist entity.
+	// It exists in this package in order to avoid circular dependency with the "artist" package.
+	CoArtistsInverseTable = "artists"
 )
 
 // Columns holds all SQL columns for album fields.
@@ -115,8 +154,14 @@ var Columns = []string{
 	FieldTitle,
 	FieldType,
 	FieldReleaseDate,
+	FieldOriginalDate,
+	FieldEditionDate,
+	FieldGenres,
 	FieldMonitored,
 	FieldMonitorPinned,
+	FieldTagsManaged,
+	FieldArtSidecarHash,
+	FieldTagOverrides,
 	FieldGrabFailures,
 	FieldLastSearchAt,
 	FieldStatus,
@@ -128,6 +173,7 @@ var Columns = []string{
 	FieldStudio,
 	FieldMetadataFetchedAt,
 	FieldCreditsFetchedAt,
+	FieldCreditsVersion,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "albums"
@@ -140,6 +186,9 @@ var (
 	// PackRecordsPrimaryKey and PackRecordsColumn2 are the table columns denoting the
 	// primary key for the pack_records relation (M2M).
 	PackRecordsPrimaryKey = []string{"download_record_id", "album_id"}
+	// CoArtistsPrimaryKey and CoArtistsColumn2 are the table columns denoting the
+	// primary key for the co_artists relation (M2M).
+	CoArtistsPrimaryKey = []string{"artist_id", "album_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -172,8 +221,12 @@ var (
 	DefaultMonitored bool
 	// DefaultMonitorPinned holds the default value on creation for the "monitor_pinned" field.
 	DefaultMonitorPinned bool
+	// DefaultTagsManaged holds the default value on creation for the "tags_managed" field.
+	DefaultTagsManaged bool
 	// DefaultGrabFailures holds the default value on creation for the "grab_failures" field.
 	DefaultGrabFailures uint8
+	// DefaultCreditsVersion holds the default value on creation for the "credits_version" field.
+	DefaultCreditsVersion uint8
 )
 
 // Type defines the type for the "type" enum field.
@@ -284,6 +337,16 @@ func ByReleaseDate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldReleaseDate, opts...).ToFunc()
 }
 
+// ByOriginalDate orders the results by the original_date field.
+func ByOriginalDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOriginalDate, opts...).ToFunc()
+}
+
+// ByEditionDate orders the results by the edition_date field.
+func ByEditionDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEditionDate, opts...).ToFunc()
+}
+
 // ByMonitored orders the results by the monitored field.
 func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMonitored, opts...).ToFunc()
@@ -292,6 +355,16 @@ func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
 // ByMonitorPinned orders the results by the monitor_pinned field.
 func ByMonitorPinned(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMonitorPinned, opts...).ToFunc()
+}
+
+// ByTagsManaged orders the results by the tags_managed field.
+func ByTagsManaged(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTagsManaged, opts...).ToFunc()
+}
+
+// ByArtSidecarHash orders the results by the art_sidecar_hash field.
+func ByArtSidecarHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldArtSidecarHash, opts...).ToFunc()
 }
 
 // ByGrabFailures orders the results by the grab_failures field.
@@ -349,6 +422,11 @@ func ByCreditsFetchedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreditsFetchedAt, opts...).ToFunc()
 }
 
+// ByCreditsVersion orders the results by the credits_version field.
+func ByCreditsVersion(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreditsVersion, opts...).ToFunc()
+}
+
 // ByArtistField orders the results by artist field.
 func ByArtistField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -398,6 +476,34 @@ func ByCredits(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByAnnotationsCount orders the results by annotations count.
+func ByAnnotationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAnnotationsStep(), opts...)
+	}
+}
+
+// ByAnnotations orders the results by annotations terms.
+func ByAnnotations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAnnotationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByEventsCount orders the results by events count.
+func ByEventsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newEventsStep(), opts...)
+	}
+}
+
+// ByEvents orders the results by events terms.
+func ByEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByPackRecordsCount orders the results by pack_records count.
 func ByPackRecordsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -409,6 +515,20 @@ func ByPackRecordsCount(opts ...sql.OrderTermOption) OrderOption {
 func ByPackRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newPackRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByCoArtistsCount orders the results by co_artists count.
+func ByCoArtistsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCoArtistsStep(), opts...)
+	}
+}
+
+// ByCoArtists orders the results by co_artists terms.
+func ByCoArtists(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCoArtistsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newArtistStep() *sqlgraph.Step {
@@ -439,10 +559,31 @@ func newCreditsStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2M, false, CreditsTable, CreditsColumn),
 	)
 }
+func newAnnotationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AnnotationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AnnotationsTable, AnnotationsColumn),
+	)
+}
+func newEventsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EventsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
+	)
+}
 func newPackRecordsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PackRecordsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2M, true, PackRecordsTable, PackRecordsPrimaryKey...),
+	)
+}
+func newCoArtistsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CoArtistsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, CoArtistsTable, CoArtistsPrimaryKey...),
 	)
 }

@@ -11,11 +11,32 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type { ActivityEvent, ActivityList } from "@lib/types";
 
-	let { movieId, seriesId }: { movieId?: number; seriesId?: number } =
-		$props();
+	// Exactly one owner: the page's own title. A series, an artist and a book
+	// series also take in the rows of their episodes, albums and volumes.
+	let {
+		movieId,
+		seriesId,
+		artistId,
+		bookId,
+		bookSeriesId,
+	}: {
+		movieId?: number;
+		seriesId?: number;
+		artistId?: number;
+		bookId?: number;
+		bookSeriesId?: number;
+	} = $props();
 
 	let filter = $derived(
-		movieId !== undefined ? `movie_id=${movieId}` : `series_id=${seriesId}`,
+		movieId !== undefined
+			? `movie_id=${movieId}`
+			: seriesId !== undefined
+				? `series_id=${seriesId}`
+				: artistId !== undefined
+					? `artist_id=${artistId}`
+					: bookId !== undefined
+						? `book_id=${bookId}`
+						: `book_series_id=${bookSeriesId}`,
 	);
 
 	const q = createQuery<ActivityList>(() => ({
@@ -84,8 +105,9 @@
 			{@const sz = size(event)}
 			<!-- The subject's title is the page we are already on, so only its
 			     qualifier carries anything here: which episode, which season, how
-			     many. Without it every scan, import and completion on a show read
-			     as a bare event name repeated down the list. -->
+			     many — or which album, which volume, which slot. Without it every
+			     scan, import and completion on a show read as a bare event name
+			     repeated down the list. -->
 			{@const scope = eventSubject(event).detail}
 			<li
 				class="grid grid-cols-[28px_1fr_auto_auto] items-center gap-4 border-b border-border px-4 py-3 last:border-b-0"

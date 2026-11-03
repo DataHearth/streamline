@@ -141,6 +141,24 @@ func (e AddSeriesRequestPreset) Valid() bool {
 	}
 }
 
+// Defines values for ApiKeyScope.
+const (
+	ApiKeyScopeFull ApiKeyScope = "full"
+	ApiKeyScopeRead ApiKeyScope = "read"
+)
+
+// Valid indicates whether the value is a known member of the ApiKeyScope enum.
+func (e ApiKeyScope) Valid() bool {
+	switch e {
+	case ApiKeyScopeFull:
+		return true
+	case ApiKeyScopeRead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AppLogConfigFormat.
 const (
 	AppLogConfigFormatJson AppLogConfigFormat = "json"
@@ -498,6 +516,27 @@ func (e BookVolumeStatus) Valid() bool {
 	}
 }
 
+// Defines values for CreateApiKeyRequestExpiresInDays.
+const (
+	CreateApiKeyRequestExpiresInDaysN30  CreateApiKeyRequestExpiresInDays = 30
+	CreateApiKeyRequestExpiresInDaysN365 CreateApiKeyRequestExpiresInDays = 365
+	CreateApiKeyRequestExpiresInDaysN90  CreateApiKeyRequestExpiresInDays = 90
+)
+
+// Valid indicates whether the value is a known member of the CreateApiKeyRequestExpiresInDays enum.
+func (e CreateApiKeyRequestExpiresInDays) Valid() bool {
+	switch e {
+	case CreateApiKeyRequestExpiresInDaysN30:
+		return true
+	case CreateApiKeyRequestExpiresInDaysN365:
+		return true
+	case CreateApiKeyRequestExpiresInDaysN90:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateInviteRequestRole.
 const (
 	CreateInviteRequestRoleAdmin       CreateInviteRequestRole = "admin"
@@ -711,6 +750,27 @@ func (e EbookFormat) Valid() bool {
 	case EbookFormatMOBI:
 		return true
 	case EbookFormatPDF:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EpisodeSearchHitSeriesType.
+const (
+	EpisodeSearchHitSeriesTypeAnime    EpisodeSearchHitSeriesType = "anime"
+	EpisodeSearchHitSeriesTypeDaily    EpisodeSearchHitSeriesType = "daily"
+	EpisodeSearchHitSeriesTypeStandard EpisodeSearchHitSeriesType = "standard"
+)
+
+// Valid indicates whether the value is a known member of the EpisodeSearchHitSeriesType enum.
+func (e EpisodeSearchHitSeriesType) Valid() bool {
+	switch e {
+	case EpisodeSearchHitSeriesTypeAnime:
+		return true
+	case EpisodeSearchHitSeriesTypeDaily:
+		return true
+	case EpisodeSearchHitSeriesTypeStandard:
 		return true
 	default:
 		return false
@@ -1713,6 +1773,42 @@ func (e MediaServerDiscoveryRequestServerType) Valid() bool {
 	}
 }
 
+// Defines values for MediaServerRefreshStatusOutcome.
+const (
+	MediaServerRefreshStatusOutcomeError MediaServerRefreshStatusOutcome = "error"
+	MediaServerRefreshStatusOutcomeOk    MediaServerRefreshStatusOutcome = "ok"
+)
+
+// Valid indicates whether the value is a known member of the MediaServerRefreshStatusOutcome enum.
+func (e MediaServerRefreshStatusOutcome) Valid() bool {
+	switch e {
+	case MediaServerRefreshStatusOutcomeError:
+		return true
+	case MediaServerRefreshStatusOutcomeOk:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaServerRefreshStatusScope.
+const (
+	MediaServerRefreshStatusScopeFolders MediaServerRefreshStatusScope = "folders"
+	MediaServerRefreshStatusScopeLibrary MediaServerRefreshStatusScope = "library"
+)
+
+// Valid indicates whether the value is a known member of the MediaServerRefreshStatusScope enum.
+func (e MediaServerRefreshStatusScope) Valid() bool {
+	switch e {
+	case MediaServerRefreshStatusScopeFolders:
+		return true
+	case MediaServerRefreshStatusScopeLibrary:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MediaServerUpdateServerType.
 const (
 	MediaServerUpdateServerTypeEmby     MediaServerUpdateServerType = "emby"
@@ -1794,6 +1890,27 @@ func (e MusicAlbumStatus) Valid() bool {
 	}
 }
 
+// Defines values for MusicAlbumTagsMode.
+const (
+	MusicAlbumTagsModeImport  MusicAlbumTagsMode = "import"
+	MusicAlbumTagsModeManaged MusicAlbumTagsMode = "managed"
+	MusicAlbumTagsModeOff     MusicAlbumTagsMode = "off"
+)
+
+// Valid indicates whether the value is a known member of the MusicAlbumTagsMode enum.
+func (e MusicAlbumTagsMode) Valid() bool {
+	switch e {
+	case MusicAlbumTagsModeImport:
+		return true
+	case MusicAlbumTagsModeManaged:
+		return true
+	case MusicAlbumTagsModeOff:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MusicAlbumType.
 const (
 	MusicAlbumTypeAlbum       MusicAlbumType = "album"
@@ -1865,17 +1982,24 @@ func (e MusicArtistStatus) Valid() bool {
 
 // Defines values for MusicCreditRole.
 const (
+	MusicCreditRoleArranger  MusicCreditRole = "arranger"
 	MusicCreditRoleArtwork   MusicCreditRole = "artwork"
+	MusicCreditRoleConductor MusicCreditRole = "conductor"
 	MusicCreditRoleMastering MusicCreditRole = "mastering"
 	MusicCreditRoleMix       MusicCreditRole = "mix"
 	MusicCreditRoleProducer  MusicCreditRole = "producer"
 	MusicCreditRoleRecording MusicCreditRole = "recording"
+	MusicCreditRoleRemixer   MusicCreditRole = "remixer"
 )
 
 // Valid indicates whether the value is a known member of the MusicCreditRole enum.
 func (e MusicCreditRole) Valid() bool {
 	switch e {
+	case MusicCreditRoleArranger:
+		return true
 	case MusicCreditRoleArtwork:
+		return true
+	case MusicCreditRoleConductor:
 		return true
 	case MusicCreditRoleMastering:
 		return true
@@ -1884,6 +2008,8 @@ func (e MusicCreditRole) Valid() bool {
 	case MusicCreditRoleProducer:
 		return true
 	case MusicCreditRoleRecording:
+		return true
+	case MusicCreditRoleRemixer:
 		return true
 	default:
 		return false
@@ -1932,6 +2058,93 @@ func (e MusicMonitor) Valid() bool {
 	case MusicMonitorManual:
 		return true
 	case MusicMonitorNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicTagFileState.
+const (
+	MusicTagFileStateDeferred MusicTagFileState = "deferred"
+	MusicTagFileStateFailed   MusicTagFileState = "failed"
+	MusicTagFileStatePending  MusicTagFileState = "pending"
+	MusicTagFileStateUntagged MusicTagFileState = "untagged"
+	MusicTagFileStateWritten  MusicTagFileState = "written"
+)
+
+// Valid indicates whether the value is a known member of the MusicTagFileState enum.
+func (e MusicTagFileState) Valid() bool {
+	switch e {
+	case MusicTagFileStateDeferred:
+		return true
+	case MusicTagFileStateFailed:
+		return true
+	case MusicTagFileStatePending:
+		return true
+	case MusicTagFileStateUntagged:
+		return true
+	case MusicTagFileStateWritten:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicTagKeyStatus.
+const (
+	MusicTagKeyStatusDiffers MusicTagKeyStatus = "differs"
+	MusicTagKeyStatusKept    MusicTagKeyStatus = "kept"
+	MusicTagKeyStatusSame    MusicTagKeyStatus = "same"
+)
+
+// Valid indicates whether the value is a known member of the MusicTagKeyStatus enum.
+func (e MusicTagKeyStatus) Valid() bool {
+	switch e {
+	case MusicTagKeyStatusDiffers:
+		return true
+	case MusicTagKeyStatusKept:
+		return true
+	case MusicTagKeyStatusSame:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicTagsConfigMode.
+const (
+	MusicTagsConfigModeImport  MusicTagsConfigMode = "import"
+	MusicTagsConfigModeManaged MusicTagsConfigMode = "managed"
+	MusicTagsConfigModeOff     MusicTagsConfigMode = "off"
+)
+
+// Valid indicates whether the value is a known member of the MusicTagsConfigMode enum.
+func (e MusicTagsConfigMode) Valid() bool {
+	switch e {
+	case MusicTagsConfigModeImport:
+		return true
+	case MusicTagsConfigModeManaged:
+		return true
+	case MusicTagsConfigModeOff:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicTagsConfigSeeding.
+const (
+	MusicTagsConfigSeedingCopy  MusicTagsConfigSeeding = "copy"
+	MusicTagsConfigSeedingDefer MusicTagsConfigSeeding = "defer"
+)
+
+// Valid indicates whether the value is a known member of the MusicTagsConfigSeeding enum.
+func (e MusicTagsConfigSeeding) Valid() bool {
+	switch e {
+	case MusicTagsConfigSeedingCopy:
+		return true
+	case MusicTagsConfigSeedingDefer:
 		return true
 	default:
 		return false
@@ -2278,6 +2491,7 @@ const (
 	QueueEntryStatusHeld        QueueEntryStatus = "held"
 	QueueEntryStatusImporting   QueueEntryStatus = "importing"
 	QueueEntryStatusPaused      QueueEntryStatus = "paused"
+	QueueEntryStatusStalled     QueueEntryStatus = "stalled"
 )
 
 // Valid indicates whether the value is a known member of the QueueEntryStatus enum.
@@ -2292,6 +2506,8 @@ func (e QueueEntryStatus) Valid() bool {
 	case QueueEntryStatusImporting:
 		return true
 	case QueueEntryStatusPaused:
+		return true
+	case QueueEntryStatusStalled:
 		return true
 	default:
 		return false
@@ -3837,8 +4053,9 @@ func (e ListUsersParamsOrder) Valid() bool {
 	}
 }
 
-// ActivityAlbumRef The album an album download is for (queue/history rows render
-// "<artist> · <album>" from it). Absent on every other record.
+// ActivityAlbumRef The album an album download or activity event is for (queue,
+// history and feed rows render "<artist> · <album>" from it). Absent on
+// every other record.
 type ActivityAlbumRef struct {
 	ArtistId   uint32 `json:"artist_id"`
 	ArtistName string `json:"artist_name"`
@@ -3854,7 +4071,8 @@ type ActivityArtistRef struct {
 	Name       string `json:"name"`
 }
 
-// ActivityBookRef The book a book download is for. Absent on every other record.
+// ActivityBookRef The book a book download or activity event is for. Absent on every
+// other record.
 type ActivityBookRef struct {
 	Author string         `json:"author"`
 	Id     uint32         `json:"id"`
@@ -3868,13 +4086,35 @@ type ActivityBookRef struct {
 // ActivityBookRefSlot Which of the book's two slots the download fills.
 type ActivityBookRefSlot string
 
-// ActivityEvent Exactly one of movie / episode / series is set, naming what the event
-// happened to. `series` carries what belongs to no single episode — a
-// search issued at series or season scope, and the show-level actions
-// (added, reidentified, metadata_refreshed, monitoring_changed);
-// per-episode outcomes use `episode`.
+// ActivityEvent Exactly one of movie / episode / series / artist / album / book /
+// book_series is set, naming what the event happened to. `series`
+// carries what belongs to no single episode — a search issued at series
+// or season scope, and the show-level actions (added, reidentified,
+// metadata_refreshed, monitoring_changed); per-episode outcomes use
+// `episode`. Music and books split the same way one level up: `album`
+// and `book` carry their own grabs, imports, removals and searches (an
+// album import is one event, never one per track; a book event's
+// `book_kind` payload key names the slot), `artist` a discography pack
+// and the artist being added, `book_series` the series being added and
+// a series-wide search.
 type ActivityEvent struct {
-	CreatedAt time.Time `json:"created_at"`
+	// Album The album an album download or activity event is for (queue,
+	// history and feed rows render "<artist> · <album>" from it). Absent on
+	// every other record.
+	Album *ActivityAlbumRef `json:"album,omitempty"`
+
+	// Artist Minimal artist identity for feed rows.
+	Artist *ArtistRef `json:"artist,omitempty"`
+
+	// Book The book a book download or activity event is for. Absent on every
+	// other record.
+	Book *ActivityBookRef `json:"book,omitempty"`
+
+	// BookSeries Minimal series identity for feed rows — a TV series under `series`, a
+	// book series under `book_series`. Deliberately not the full TVShow or
+	// BookSeries schema, which carry the whole season or volume tree.
+	BookSeries *SeriesRef `json:"book_series,omitempty"`
+	CreatedAt  time.Time  `json:"created_at"`
 
 	// Episode Show + S/E context for a TV download record (queue/history rows render
 	// "<show> · SxxExx" from it). Absent on movie records.
@@ -3883,8 +4123,9 @@ type ActivityEvent struct {
 	Movie   *Movie                  `json:"movie,omitempty"`
 	Payload *map[string]interface{} `json:"payload,omitempty"`
 
-	// Series Minimal series identity for feed rows. Deliberately not the full TVShow
-	// schema, which carries the whole season/episode tree.
+	// Series Minimal series identity for feed rows — a TV series under `series`, a
+	// book series under `book_series`. Deliberately not the full TVShow or
+	// BookSeries schema, which carry the whole season or volume tree.
 	Series *SeriesRef `json:"series,omitempty"`
 
 	// Type What happened to the item the event hangs off. Mirrors the enum on
@@ -3966,22 +4207,59 @@ type AddTorrentRequest struct {
 	Torrent *[]byte `json:"torrent,omitempty"`
 }
 
+// AlbumSearchHit defines model for AlbumSearchHit.
+type AlbumSearchHit struct {
+	ArtistId   uint32 `json:"artist_id"`
+	ArtistName string `json:"artist_name"`
+	Id         uint32 `json:"id"`
+
+	// ReleaseDate Absent for an undated album.
+	ReleaseDate *openapi_types.Date `json:"release_date,omitempty"`
+	Title       string              `json:"title"`
+	Type        MusicAlbumType      `json:"type"`
+}
+
+// AlbumSearchList defines model for AlbumSearchList.
+type AlbumSearchList struct {
+	Items  []AlbumSearchHit `json:"items"`
+	Limit  uint16           `json:"limit"`
+	Offset uint32           `json:"offset"`
+
+	// Total Total number of albums matching the query.
+	Total uint32 `json:"total"`
+}
+
 // ApiKey defines model for ApiKey.
 type ApiKey struct {
-	CreatedAt  time.Time  `json:"created_at"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// ExpiresAt When the key stops authenticating; null never expires. An expired key is still listed until the hourly `purge-api-keys` job drops it, seven days after it expired.
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
 	Id         uint32     `json:"id"`
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 	Name       string     `json:"name"`
+
+	// Scope `read` may only send GET and HEAD, whatever the owner's role; `full` acts with the owner's current role.
+	Scope ApiKeyScope `json:"scope"`
 }
 
 // ApiKeyCreated defines model for ApiKeyCreated.
 type ApiKeyCreated struct {
-	CreatedAt  time.Time  `json:"created_at"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// ExpiresAt When the key stops authenticating; null never expires. An expired key is still listed until the hourly `purge-api-keys` job drops it, seven days after it expired.
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
 	Id         uint32     `json:"id"`
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 	Name       string     `json:"name"`
 	RawToken   string     `json:"raw_token"`
+
+	// Scope `read` may only send GET and HEAD, whatever the owner's role; `full` acts with the owner's current role.
+	Scope ApiKeyScope `json:"scope"`
 }
+
+// ApiKeyScope `read` may only send GET and HEAD, whatever the owner's role; `full` acts with the owner's current role.
+type ApiKeyScope string
 
 // AppAccess One Subsonic or OPDS credential of the caller. Never carries the secret.
 type AppAccess struct {
@@ -4044,6 +4322,12 @@ type ApproveRequestRequest struct {
 	// request's media (movie or series; the book's kind). A name that
 	// is not in the family answers 422 and the request stays pending.
 	QualityProfile *string `json:"quality_profile,omitempty"`
+}
+
+// ArtistRef Minimal artist identity for feed rows.
+type ArtistRef struct {
+	Id   uint32 `json:"id"`
+	Name string `json:"name"`
 }
 
 // AudiobookFormat Best first. Upper case on the wire, in config and in `MediaFile.quality`.
@@ -4570,8 +4854,16 @@ type ClearCompletedResult struct {
 
 // CreateApiKeyRequest defines model for CreateApiKeyRequest.
 type CreateApiKeyRequest struct {
-	Name string `json:"name"`
+	// ExpiresInDays Lifetime of the key from now. Omitted or null, the key never expires.
+	ExpiresInDays *CreateApiKeyRequestExpiresInDays `json:"expires_in_days,omitempty"`
+	Name          string                            `json:"name"`
+
+	// Scope Defaults to `full` when omitted.
+	Scope *ApiKeyScope `json:"scope,omitempty"`
 }
+
+// CreateApiKeyRequestExpiresInDays Lifetime of the key from now. Omitted or null, the key never expires.
+type CreateApiKeyRequestExpiresInDays int
 
 // CreateInviteRequest defines model for CreateInviteRequest.
 type CreateInviteRequest struct {
@@ -4712,6 +5004,50 @@ type DenyRequestRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// DiscographyAlbum defines model for DiscographyAlbum.
+type DiscographyAlbum struct {
+	Id uint32 `json:"id"`
+
+	// InRelease A folder of the pack names this album.
+	InRelease bool           `json:"in_release"`
+	Title     string         `json:"title"`
+	Tracks    []ReleaseTrack `json:"tracks"`
+	Year      *int           `json:"year,omitempty"`
+}
+
+// DiscographyFile defines model for DiscographyFile.
+type DiscographyFile struct {
+	// AlbumId The waiting album the file's folder fills; absent for none.
+	AlbumId *uint32 `json:"album_id,omitempty"`
+
+	// Path The file's path inside the torrent.
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+
+	// TrackId The track the file's name points at; absent for none.
+	TrackId *uint32 `json:"track_id,omitempty"`
+}
+
+// DiscographyFiles defines model for DiscographyFiles.
+type DiscographyFiles struct {
+	// Albums The albums the grab would link and fill, with their tracks.
+	Albums []DiscographyAlbum `json:"albums"`
+	Files  []DiscographyFile  `json:"files"`
+
+	// Folders Every folder holding audio, in the torrent's order.
+	Folders []DiscographyFolder `json:"folders"`
+}
+
+// DiscographyFolder defines model for DiscographyFolder.
+type DiscographyFolder struct {
+	// AlbumId The artist's album the folder names; absent for none.
+	AlbumId *uint32 `json:"album_id,omitempty"`
+	Path    string  `json:"path"`
+
+	// Waiting The album is one the grab links, so the import fills it.
+	Waiting bool `json:"waiting"`
+}
+
 // DiskUsage defines model for DiskUsage.
 type DiskUsage struct {
 	Free string `json:"free"`
@@ -4812,6 +5148,8 @@ type DownloadConfigPatch struct {
 	PathMappings   *[]PathMapping `json:"path_mappings,omitempty"`
 	SelectionGrace *string        `json:"selection_grace,omitempty"`
 	SelectiveFiles *bool          `json:"selective_files,omitempty"`
+	SpaceCheck     *bool          `json:"space_check,omitempty"`
+	SpaceReserveGb *int           `json:"space_reserve_gb,omitempty"`
 }
 
 // DownloadConfigView defines model for DownloadConfigView.
@@ -4824,6 +5162,12 @@ type DownloadConfigView struct {
 
 	// SelectiveFiles Grab only the files a release is wanted for. Off is a whole-torrent grab, the pre-feature behaviour.
 	SelectiveFiles bool `json:"selective_files"`
+
+	// SpaceCheck Refuse a grab (`422 grab_rejected`) that would not fit on the download client's disk once its active downloads finish, keeping `space_reserve_gb` free. A client that cannot report its free space is not checked.
+	SpaceCheck bool `json:"space_check"`
+
+	// SpaceReserveGb Gigabytes the space check keeps free on the download disk.
+	SpaceReserveGb int `json:"space_reserve_gb"`
 }
 
 // DownloadHistory defines model for DownloadHistory.
@@ -4921,6 +5265,36 @@ type EpisodeRef struct {
 	ShowTitle string  `json:"show_title"`
 }
 
+// EpisodeSearchHit defines model for EpisodeSearchHit.
+type EpisodeSearchHit struct {
+	// AirDate Absent for an episode with no air date.
+	AirDate     *time.Time `json:"air_date,omitempty"`
+	Episode     uint16     `json:"episode"`
+	Id          uint32     `json:"id"`
+	Season      uint16     `json:"season"`
+	SeriesId    uint32     `json:"series_id"`
+	SeriesTitle string     `json:"series_title"`
+
+	// SeriesType The show's type: a `daily` show numbers its episodes by air date
+	// rather than as SxxExx.
+	SeriesType EpisodeSearchHitSeriesType `json:"series_type"`
+	Title      string                     `json:"title"`
+}
+
+// EpisodeSearchHitSeriesType The show's type: a `daily` show numbers its episodes by air date
+// rather than as SxxExx.
+type EpisodeSearchHitSeriesType string
+
+// EpisodeSearchList defines model for EpisodeSearchList.
+type EpisodeSearchList struct {
+	Items  []EpisodeSearchHit `json:"items"`
+	Limit  uint16             `json:"limit"`
+	Offset uint32             `json:"offset"`
+
+	// Total Total number of episodes matching the query.
+	Total uint32 `json:"total"`
+}
+
 // EpisodeStatus Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead or is not yet known (a provider announces a future season as dateless "TBA" placeholders).
 type EpisodeStatus string
 
@@ -4930,8 +5304,10 @@ type Error struct {
 	// self_delete_forbidden, email_exists, connection_failed,
 	// invalid_condition, grab_rejected, rate_limited, worker_unavailable,
 	// hardcover_not_configured, hardcover_key_rejected, not_sendable,
-	// no_device_email, smtp_not_configured, send_failed). Present for domain errors
-	// where the caller needs to branch on the specific reason; absent
+	// no_device_email, smtp_not_configured, send_failed,
+	// secret_required, secret_file_managed, api_key_quota). Present
+	// for domain errors where the caller needs to branch on the
+	// specific reason; absent
 	// for generic errors where the message is sufficient.
 	Code *string `json:"code,omitempty"`
 
@@ -4988,14 +5364,16 @@ type HTTPLogConfigFormat string
 
 // HistoryEntry defines model for HistoryEntry.
 type HistoryEntry struct {
-	// Album The album an album download is for (queue/history rows render
-	// "<artist> · <album>" from it). Absent on every other record.
+	// Album The album an album download or activity event is for (queue,
+	// history and feed rows render "<artist> · <album>" from it). Absent on
+	// every other record.
 	Album *ActivityAlbumRef `json:"album,omitempty"`
 
 	// Artist The artist a discography pack is for. Absent on every other record.
 	Artist *ActivityArtistRef `json:"artist,omitempty"`
 
-	// Book The book a book download is for. Absent on every other record.
+	// Book The book a book download or activity event is for. Absent on every
+	// other record.
 	Book           *ActivityBookRef `json:"book,omitempty"`
 	CreatedAt      time.Time        `json:"created_at"`
 	DownloadClient *string          `json:"download_client,omitempty"`
@@ -5013,7 +5391,11 @@ type HistoryEntry struct {
 	Size          int64              `json:"size"`
 	Status        HistoryEntryStatus `json:"status"`
 	Title         string             `json:"title"`
-	UpdatedAt     time.Time          `json:"updated_at"`
+
+	// TorrentHash Info hash of the torrent behind the record, lower-case hex. The
+	// torrent may since have been removed from download_client.
+	TorrentHash *string   `json:"torrent_hash,omitempty"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // HistoryEntryStatus defines model for HistoryEntry.Status.
@@ -5153,6 +5535,15 @@ type ImportScanAlbum struct {
 	Outcome          ImportScanAlbumOutcome `json:"outcome"`
 	OutcomeMessage   *string                `json:"outcome_message,omitempty"`
 	ReleaseGroupMbid *string                `json:"release_group_mbid,omitempty"`
+
+	// SeedingFiles How many of the folder's audio files the tag writer will leave
+	// alone while a torrent the download clients still list holds them:
+	// files a torrent serves, and under `seeding: defer` files
+	// hardlinked to a listed torrent's. Tags are written to those only
+	// once the torrent is removed from its client. Read from a listing
+	// at most 30 seconds old, and only while the scan awaits review
+	// with tagging on; absent otherwise.
+	SeedingFiles *int `json:"seeding_files,omitempty"`
 
 	// Size Bytes of the folder's audio files.
 	Size         int64   `json:"size"`
@@ -5558,6 +5949,13 @@ type LibraryConfigPatch struct {
 	MovieNaming          *string                       `json:"movie_naming,omitempty"`
 	MusicMonitoredTypes  *[]MusicAlbumType             `json:"music_monitored_types,omitempty"`
 
+	// MusicTags The tags Streamline writes into music files (`library.music_tags`).
+	// The view always carries every field; when patched, only provided
+	// fields are applied, and a patch that changes what a file should carry
+	// (mode, strip, preserve, art) queues every managed file for the
+	// music-tag-sync job under `managed`.
+	MusicTags *MusicTagsConfig `json:"music_tags,omitempty"`
+
 	// NoMatchCooldown Go duration string.
 	NoMatchCooldown *string `json:"no_match_cooldown,omitempty"`
 
@@ -5597,6 +5995,13 @@ type LibraryConfigView struct {
 	// (add, refresh, monitor change); `POST /music/monitored-types/apply`
 	// catches existing artists up.
 	MusicMonitoredTypes []MusicAlbumType `json:"music_monitored_types"`
+
+	// MusicTags The tags Streamline writes into music files (`library.music_tags`).
+	// The view always carries every field; when patched, only provided
+	// fields are applied, and a patch that changes what a file should carry
+	// (mode, strip, preserve, art) queues every managed file for the
+	// music-tag-sync job under `managed`.
+	MusicTags MusicTagsConfig `json:"music_tags"`
 
 	// NoMatchCooldown Go duration string.
 	NoMatchCooldown string `json:"no_match_cooldown"`
@@ -5766,13 +6171,19 @@ type MediaServer struct {
 	Enabled   bool   `json:"enabled"`
 	Host      string `json:"host"`
 
+	// LastRefresh The last rescan streamline sent this server since it started, null before the first. Refreshes are collected for 30 seconds and sent together, so a fresh import shows here up to that long after.
+	LastRefresh *MediaServerRefreshStatus `json:"last_refresh,omitempty"`
+
 	// LibrarySection Plex section key holding movies. Null on Jellyfin / Emby.
 	LibrarySection *string `json:"library_section,omitempty"`
 
 	// LibrarySectionTv Plex section key holding TV. Null on Jellyfin / Emby.
-	LibrarySectionTv *string               `json:"library_section_tv,omitempty"`
-	Name             string                `json:"name"`
-	ServerType       MediaServerServerType `json:"server_type"`
+	LibrarySectionTv *string `json:"library_section_tv,omitempty"`
+	Name             string  `json:"name"`
+
+	// PathMappings Rewrites a folder as streamline sees it into the path the server knows it by, before a targeted rescan is sent and before Plex sections are matched. First matching prefix wins; empty means both see the same paths.
+	PathMappings *[]MediaServerPathMapping `json:"path_mappings,omitempty"`
+	ServerType   MediaServerServerType     `json:"server_type"`
 }
 
 // MediaServerServerType defines model for MediaServer.ServerType.
@@ -5780,13 +6191,16 @@ type MediaServerServerType string
 
 // MediaServerCreate defines model for MediaServerCreate.
 type MediaServerCreate struct {
-	ApiKey           string                      `json:"api_key"`
-	Enabled          *bool                       `json:"enabled,omitempty"`
-	Host             string                      `json:"host"`
-	LibrarySection   *string                     `json:"library_section,omitempty"`
-	LibrarySectionTv *string                     `json:"library_section_tv,omitempty"`
-	Name             string                      `json:"name"`
-	ServerType       MediaServerCreateServerType `json:"server_type"`
+	ApiKey           string  `json:"api_key"`
+	Enabled          *bool   `json:"enabled,omitempty"`
+	Host             string  `json:"host"`
+	LibrarySection   *string `json:"library_section,omitempty"`
+	LibrarySectionTv *string `json:"library_section_tv,omitempty"`
+	Name             string  `json:"name"`
+
+	// PathMappings Replaces the whole list when present; an empty list clears it.
+	PathMappings *[]MediaServerPathMapping   `json:"path_mappings,omitempty"`
+	ServerType   MediaServerCreateServerType `json:"server_type"`
 }
 
 // MediaServerCreateServerType defines model for MediaServerCreate.ServerType.
@@ -5812,6 +6226,36 @@ type MediaServerListView struct {
 	Items []MediaServer `json:"items"`
 }
 
+// MediaServerPathMapping defines model for MediaServerPathMapping.
+type MediaServerPathMapping struct {
+	// From Absolute prefix as streamline sees it.
+	From string `json:"from"`
+
+	// To Absolute prefix as the media server sees it. A Windows path (`D:\Movies`, `\\nas\movies`) is accepted for a server running on Windows.
+	To string `json:"to"`
+}
+
+// MediaServerRefreshStatus The last rescan streamline sent this server since it started, null before the first. Refreshes are collected for 30 seconds and sent together, so a fresh import shows here up to that long after.
+type MediaServerRefreshStatus struct {
+	At time.Time `json:"at"`
+
+	// Error What the server or the connection answered, on an error.
+	Error *string `json:"error,omitempty"`
+
+	// Folders How many folders a folders-scope rescan named.
+	Folders int                             `json:"folders"`
+	Outcome MediaServerRefreshStatusOutcome `json:"outcome"`
+
+	// Scope folders when only the changed folders were rescanned, library when the whole section (Plex) or every library (Jellyfin, Emby) was — no folder given, or one lay outside everything the server reports, which usually means a missing path mapping. Absent when the request failed before the server was asked.
+	Scope *MediaServerRefreshStatusScope `json:"scope,omitempty"`
+}
+
+// MediaServerRefreshStatusOutcome defines model for MediaServerRefreshStatus.Outcome.
+type MediaServerRefreshStatusOutcome string
+
+// MediaServerRefreshStatusScope folders when only the changed folders were rescanned, library when the whole section (Plex) or every library (Jellyfin, Emby) was — no folder given, or one lay outside everything the server reports, which usually means a missing path mapping. Absent when the request failed before the server was asked.
+type MediaServerRefreshStatusScope string
+
 // MediaServerSection defines model for MediaServerSection.
 type MediaServerSection struct {
 	Key       string   `json:"key"`
@@ -5822,13 +6266,16 @@ type MediaServerSection struct {
 
 // MediaServerUpdate defines model for MediaServerUpdate.
 type MediaServerUpdate struct {
-	ApiKey           *string                      `json:"api_key,omitempty"`
-	Enabled          *bool                        `json:"enabled,omitempty"`
-	Host             *string                      `json:"host,omitempty"`
-	LibrarySection   *string                      `json:"library_section,omitempty"`
-	LibrarySectionTv *string                      `json:"library_section_tv,omitempty"`
-	Name             *string                      `json:"name,omitempty"`
-	ServerType       *MediaServerUpdateServerType `json:"server_type,omitempty"`
+	ApiKey           *string `json:"api_key,omitempty"`
+	Enabled          *bool   `json:"enabled,omitempty"`
+	Host             *string `json:"host,omitempty"`
+	LibrarySection   *string `json:"library_section,omitempty"`
+	LibrarySectionTv *string `json:"library_section_tv,omitempty"`
+	Name             *string `json:"name,omitempty"`
+
+	// PathMappings Replaces the whole list when present; an empty list clears it.
+	PathMappings *[]MediaServerPathMapping    `json:"path_mappings,omitempty"`
+	ServerType   *MediaServerUpdateServerType `json:"server_type,omitempty"`
 }
 
 // MediaServerUpdateServerType defines model for MediaServerUpdate.ServerType.
@@ -5838,9 +6285,15 @@ type MediaServerUpdateServerType string
 type MetadataConfigPatch struct {
 	HardcoverApiKey *string `json:"hardcover_api_key,omitempty"`
 	Language        *string `json:"language,omitempty"`
-	TmdbApiKey      *string `json:"tmdb_api_key,omitempty"`
-	TmdbRegion      *string `json:"tmdb_region,omitempty"`
-	TvdbApiKey      *string `json:"tvdb_api_key,omitempty"`
+
+	// MusicbrainzInterval A non-negative Go duration; anything else answers 422.
+	MusicbrainzInterval *string `json:"musicbrainz_interval,omitempty"`
+
+	// MusicbrainzUrl An http(s) URL; anything else answers 422.
+	MusicbrainzUrl *string `json:"musicbrainz_url,omitempty"`
+	TmdbApiKey     *string `json:"tmdb_api_key,omitempty"`
+	TmdbRegion     *string `json:"tmdb_region,omitempty"`
+	TvdbApiKey     *string `json:"tvdb_api_key,omitempty"`
 }
 
 // MetadataConfigView defines model for MetadataConfigView.
@@ -5851,6 +6304,12 @@ type MetadataConfigView struct {
 
 	// Language BCP-47 tag. The language TMDB and TVDB answer in — so also the titles the library stores and matches releases against.
 	Language string `json:"language"`
+
+	// MusicbrainzInterval Go duration: the least time between two MusicBrainz calls. 1s is what musicbrainz.org allows; 0s removes the limit, for a mirror.
+	MusicbrainzInterval string `json:"musicbrainz_interval"`
+
+	// MusicbrainzUrl MusicBrainz server root, without /ws/2. https://musicbrainz.org, or a self-hosted mirror.
+	MusicbrainzUrl string `json:"musicbrainz_url"`
 
 	// RestartRequired True when a metadata change is pending a process restart. The same process-wide flag OIDC provider mutations set.
 	RestartRequired bool `json:"restart_required"`
@@ -5878,6 +6337,12 @@ type Movie struct {
 	// Cast Top-billed cast from TMDB. Only populated by GET /movies/{id};
 	// absent in list responses.
 	Cast *[]CastMember `json:"cast,omitempty"`
+
+	// DigitalReleaseDate Earliest digital (TMDB type 4) release in `metadata.tmdb_region`,
+	// ISO yyyy-mm-dd. Fetched on add and on every metadata refresh;
+	// absent when no region is configured or TMDB has published no
+	// digital date for it yet.
+	DigitalReleaseDate *openapi_types.Date `json:"digital_release_date,omitempty"`
 
 	// FileSummary Per-movie rollup of the files on disk, carried by list responses in
 	// place of the full media_files array. Absent when the movie has no
@@ -5999,8 +6464,15 @@ type MovieSearchAccepted struct {
 
 // MusicAlbum defines model for MusicAlbum.
 type MusicAlbum struct {
-	ArtistId      uint32  `json:"artist_id"`
-	CatalogNumber *string `json:"catalog_number,omitempty"`
+	// ArtistId The album's owner, whose folder holds its files. A shared album
+	// names the same owner on every artist it is listed under.
+	ArtistId uint32 `json:"artist_id"`
+
+	// Artists Every library artist a shared release group is listed under, the
+	// owner (whose folder holds the files) first. Omitted for an album
+	// only its owner is credited on.
+	Artists       *[]MusicPerson `json:"artists,omitempty"`
+	CatalogNumber *string        `json:"catalog_number,omitempty"`
 
 	// Country Two-letter region code of the canonical release.
 	Country *string       `json:"country,omitempty"`
@@ -6067,7 +6539,14 @@ type MusicAlbumStatus string
 
 // MusicAlbumSummary defines model for MusicAlbumSummary.
 type MusicAlbumSummary struct {
+	// ArtistId The album's owner, whose folder holds its files. A shared album
+	// names the same owner on every artist it is listed under.
 	ArtistId uint32 `json:"artist_id"`
+
+	// Artists Every library artist a shared release group is listed under, the
+	// owner (whose folder holds the files) first. Omitted for an album
+	// only its owner is credited on.
+	Artists *[]MusicPerson `json:"artists,omitempty"`
 
 	// FailureReason Present while `status` is `failed`; why the import was refused.
 	FailureReason *string `json:"failure_reason,omitempty"`
@@ -6096,6 +6575,27 @@ type MusicAlbumSummary struct {
 	TracksPending bool           `json:"tracks_pending"`
 	Type          MusicAlbumType `json:"type"`
 }
+
+// MusicAlbumTags defines model for MusicAlbumTags.
+type MusicAlbumTags struct {
+	AlbumId uint32         `json:"album_id"`
+	Files   []MusicTagFile `json:"files"`
+
+	// Managed The album's `tags_managed`.
+	Managed bool `json:"managed"`
+
+	// Mode The instance's `library.music_tags.mode`.
+	Mode MusicAlbumTagsMode `json:"mode"`
+
+	// Overrides Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+	// written over what the library would write; an empty list removes the key from the files.
+	// At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+	// still wins.
+	Overrides TagOverrides `json:"overrides"`
+}
+
+// MusicAlbumTagsMode The instance's `library.music_tags.mode`.
+type MusicAlbumTagsMode string
 
 // MusicAlbumType defines model for MusicAlbumType.
 type MusicAlbumType string
@@ -6517,11 +7017,108 @@ type MusicRenamePlan struct {
 	Operations []RenameOperation `json:"operations"`
 }
 
+// MusicTagFile defines model for MusicTagFile.
+type MusicTagFile struct {
+	Disc int `json:"disc"`
+
+	// Error The last write's failure.
+	Error       *string       `json:"error,omitempty"`
+	FileName    string        `json:"file_name"`
+	Format      string        `json:"format"`
+	Keys        []MusicTagKey `json:"keys"`
+	MediaFileId uint32        `json:"media_file_id"`
+
+	// Overrides Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+	// written over what the library would write; an empty list removes the key from the files.
+	// At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+	// still wins.
+	Overrides TagOverrides `json:"overrides"`
+	Position  int          `json:"position"`
+
+	// ReadError Why the file could not be read; `keys` is empty then.
+	ReadError *string `json:"read_error,omitempty"`
+
+	// State The writer's state; `untagged` is a file it was never asked to write.
+	State    MusicTagFileState `json:"state"`
+	TaggedAt *time.Time        `json:"tagged_at,omitempty"`
+	Title    string            `json:"title"`
+	TrackId  uint32            `json:"track_id"`
+}
+
+// MusicTagFileState The writer's state; `untagged` is a file it was never asked to write.
+type MusicTagFileState string
+
+// MusicTagKey defines model for MusicTagKey.
+type MusicTagKey struct {
+	Current []string `json:"current"`
+	Desired []string `json:"desired"`
+	Key     string   `json:"key"`
+
+	// Overridden The desired value comes from an album or track override.
+	Overridden bool              `json:"overridden"`
+	Status     MusicTagKeyStatus `json:"status"`
+}
+
+// MusicTagKeyStatus defines model for MusicTagKey.Status.
+type MusicTagKeyStatus string
+
+// MusicTagsConfig The tags Streamline writes into music files (`library.music_tags`).
+// The view always carries every field; when patched, only provided
+// fields are applied, and a patch that changes what a file should carry
+// (mode, strip, preserve, art) queues every managed file for the
+// music-tag-sync job under `managed`.
+type MusicTagsConfig struct {
+	// ArtMaxPx Longest edge of an embedded cover, in pixels.
+	ArtMaxPx *int `json:"art_max_px,omitempty"`
+
+	// EmbedArt Write the album cover into each file as its front cover.
+	EmbedArt *bool `json:"embed_art,omitempty"`
+
+	// Mode `off` never writes. `import` writes each file once, when it is
+	// imported or adopted with tagging on. `managed` also rewrites a
+	// file whenever the library's data for it changes, and undoes edits
+	// made elsewhere to the keys Streamline owns.
+	Mode *MusicTagsConfigMode `json:"mode,omitempty"`
+
+	// Preserve Keys never written or deleted; wins over strip and over the keys
+	// Streamline manages. An entry ending in `*` matches as a prefix.
+	Preserve *[]string `json:"preserve,omitempty"`
+
+	// Seeding `defer` keeps a hardlinked import as one copy on disk and tags it
+	// once its torrent is gone; `copy` imports a copy and tags it at
+	// once. A file a torrent still serves is never written.
+	Seeding *MusicTagsConfigSeeding `json:"seeding,omitempty"`
+
+	// SidecarArt Write cover.jpg into each album folder and folder.jpg into each
+	// artist folder, never replacing one Streamline did not write.
+	SidecarArt *bool `json:"sidecar_art,omitempty"`
+
+	// Strip Keys deleted from every file written (Picard's names). An entry
+	// ending in `*` matches as a prefix.
+	Strip *[]string `json:"strip,omitempty"`
+}
+
+// MusicTagsConfigMode `off` never writes. `import` writes each file once, when it is
+// imported or adopted with tagging on. `managed` also rewrites a
+// file whenever the library's data for it changes, and undoes edits
+// made elsewhere to the keys Streamline owns.
+type MusicTagsConfigMode string
+
+// MusicTagsConfigSeeding `defer` keeps a hardlinked import as one copy on disk and tags it
+// once its torrent is gone; `copy` imports a copy and tags it at
+// once. A file a torrent still serves is never written.
+type MusicTagsConfigSeeding string
+
 // MusicTier Audio quality tier, best first. The canonical order everywhere.
 type MusicTier string
 
 // MusicTrack defines model for MusicTrack.
 type MusicTrack struct {
+	// Artists The artists the track is credited to, before any "feat."; on a
+	// split release they are not the album's. Omitted until the album
+	// is hydrated with them.
+	Artists *[]MusicPerson `json:"artists,omitempty"`
+
 	// Bonus Set only when MusicBrainz says so; never guessed.
 	Bonus *bool `json:"bonus,omitempty"`
 	Disc  uint8 `json:"disc"`
@@ -6573,6 +7170,39 @@ type OIDCProviderView struct {
 	ClientSecretSet bool   `json:"client_secret_set"`
 	Issuer          string `json:"issuer"`
 	Name            string `json:"name"`
+}
+
+// PackEpisode defines model for PackEpisode.
+type PackEpisode struct {
+	// HasFile The episode already holds a file in the library.
+	HasFile bool   `json:"has_file"`
+	Id      uint32 `json:"id"`
+
+	// InRelease A file of the release is named for this episode.
+	InRelease bool   `json:"in_release"`
+	Number    uint16 `json:"number"`
+	Season    uint16 `json:"season"`
+	Title     string `json:"title"`
+
+	// Wanted Still wanted and aired, what a grab without replace_existing fetches.
+	Wanted bool `json:"wanted"`
+}
+
+// PackFile defines model for PackFile.
+type PackFile struct {
+	// EpisodeId The episode the file's name points at; absent for none.
+	EpisodeId *uint32 `json:"episode_id,omitempty"`
+
+	// Path The file's path inside the torrent.
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+}
+
+// PackFiles defines model for PackFiles.
+type PackFiles struct {
+	// Episodes Every episode of the scope, in season and episode order.
+	Episodes []PackEpisode `json:"episodes"`
+	Files    []PackFile    `json:"files"`
 }
 
 // PaginatedMovies defines model for PaginatedMovies.
@@ -6652,6 +7282,16 @@ type PatchBookSeriesRequest struct {
 // PatchMusicAlbumRequest defines model for PatchMusicAlbumRequest.
 type PatchMusicAlbumRequest struct {
 	Monitored *bool `json:"monitored,omitempty"`
+
+	// TagOverrides Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+	// written over what the library would write; an empty list removes the key from the files.
+	// At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+	// still wins.
+	TagOverrides *TagOverrides `json:"tag_overrides,omitempty"`
+
+	// TagsManaged Whether the tag writer re-queues the album's files on its own (managed triggers,
+	// settings changes, Retag library). A file queued explicitly is written either way.
+	TagsManaged *bool `json:"tags_managed,omitempty"`
 }
 
 // PatchMusicArtistRequest defines model for PatchMusicArtistRequest.
@@ -6665,6 +7305,15 @@ type PatchMusicArtistRequest struct {
 
 	// QualityProfile Empty clears to the default; an unknown name answers 422.
 	QualityProfile *string `json:"quality_profile,omitempty"`
+}
+
+// PatchMusicTrackRequest defines model for PatchMusicTrackRequest.
+type PatchMusicTrackRequest struct {
+	// TagOverrides Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+	// written over what the library would write; an empty list removes the key from the files.
+	// At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+	// still wins.
+	TagOverrides TagOverrides `json:"tag_overrides"`
 }
 
 // PatchSeriesRequest defines model for PatchSeriesRequest.
@@ -7120,14 +7769,16 @@ type QualityProfileFormatScore struct {
 
 // QueueEntry defines model for QueueEntry.
 type QueueEntry struct {
-	// Album The album an album download is for (queue/history rows render
-	// "<artist> · <album>" from it). Absent on every other record.
+	// Album The album an album download or activity event is for (queue,
+	// history and feed rows render "<artist> · <album>" from it). Absent on
+	// every other record.
 	Album *ActivityAlbumRef `json:"album,omitempty"`
 
 	// Artist The artist a discography pack is for. Absent on every other record.
 	Artist *ActivityArtistRef `json:"artist,omitempty"`
 
-	// Book The book a book download is for. Absent on every other record.
+	// Book The book a book download or activity event is for. Absent on every
+	// other record.
 	Book           *ActivityBookRef `json:"book,omitempty"`
 	CreatedAt      time.Time        `json:"created_at"`
 	DownloadClient *string          `json:"download_client,omitempty"`
@@ -7164,8 +7815,14 @@ type QueueEntry struct {
 
 	// Status "held" means the download finished but failed import verification
 	// and is waiting on a decision (POST /downloads/{id}/resolve).
+	// "stalled" means the client reports the download is not moving.
 	Status QueueEntryStatus `json:"status"`
 	Title  string           `json:"title"`
+
+	// TorrentHash Info hash of the torrent behind the record in download_client,
+	// lower-case hex. Absent when the record carries none. Under the
+	// builtin client it is the key of GET /torrents/{hash}.
+	TorrentHash *string `json:"torrent_hash,omitempty"`
 }
 
 // QueueEntrySelectionState File-selection outcome for this grab. Omitted when "skipped" — no
@@ -7174,6 +7831,7 @@ type QueueEntrySelectionState string
 
 // QueueEntryStatus "held" means the download finished but failed import verification
 // and is waiting on a decision (POST /downloads/{id}/resolve).
+// "stalled" means the client reports the download is not moving.
 type QueueEntryStatus string
 
 // ReidentifyResult defines model for ReidentifyResult.
@@ -7189,6 +7847,40 @@ type ReidentifyResult struct {
 	// Unmatched Series only. Paths still on disk whose season/episode number has no
 	// counterpart in the new show; their database rows were dropped.
 	Unmatched *[]string `json:"unmatched,omitempty"`
+}
+
+// ReleaseFile defines model for ReleaseFile.
+type ReleaseFile struct {
+	// Path The file's path inside the torrent.
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+
+	// TrackId The track the file's name points at; absent for none.
+	TrackId *uint32 `json:"track_id,omitempty"`
+}
+
+// ReleaseFiles defines model for ReleaseFiles.
+type ReleaseFiles struct {
+	Files []ReleaseFile `json:"files"`
+
+	// Tracks Every track of the album, in disc and position order.
+	Tracks []ReleaseTrack `json:"tracks"`
+}
+
+// ReleaseTrack defines model for ReleaseTrack.
+type ReleaseTrack struct {
+	Disc uint8 `json:"disc"`
+
+	// HasFile The track already holds a file in the library.
+	HasFile bool   `json:"has_file"`
+	Id      uint32 `json:"id"`
+
+	// InRelease A file of the release is named for this track.
+	InRelease bool `json:"in_release"`
+
+	// Number Position on the disc.
+	Number uint16 `json:"number"`
+	Title  string `json:"title"`
 }
 
 // RenameOperation defines model for RenameOperation.
@@ -7511,8 +8203,9 @@ type SeriesLookupResultList struct {
 	Items []SeriesLookupResult `json:"items"`
 }
 
-// SeriesRef Minimal series identity for feed rows. Deliberately not the full TVShow
-// schema, which carries the whole season/episode tree.
+// SeriesRef Minimal series identity for feed rows — a TV series under `series`, a
+// book series under `book_series`. Deliberately not the full TVShow or
+// BookSeries schema, which carry the whole season or volume tree.
 type SeriesRef struct {
 	Id    uint32 `json:"id"`
 	Title string `json:"title"`
@@ -7599,6 +8292,35 @@ type SpecialsMonitoredResult struct {
 
 	// SeasonsUpdated Specials seasons the setting was applied to.
 	SeasonsUpdated int `json:"seasons_updated"`
+}
+
+// SubsonicAccess What the user may do through the Subsonic API (`/rest`). These gate
+// Subsonic calls only, never the web UI or the REST API. Browsing,
+// searching, starring and scrobbling are always allowed.
+type SubsonicAccess struct {
+	// CanChangePassword Whether the user may change their own Subsonic password from an app.
+	CanChangePassword  bool `json:"can_change_password"`
+	CanDownload        bool `json:"can_download"`
+	CanManagePlaylists bool `json:"can_manage_playlists"`
+	CanRate            bool `json:"can_rate"`
+	CanShare           bool `json:"can_share"`
+	CanStream          bool `json:"can_stream"`
+
+	// MaxBitRate Kbps ceiling on every stream, 0 for none; a stream above it is transcoded.
+	MaxBitRate uint16 `json:"max_bit_rate"`
+}
+
+// SubsonicAccessPatch Only provided fields are applied.
+type SubsonicAccessPatch struct {
+	CanChangePassword  *bool `json:"can_change_password,omitempty"`
+	CanDownload        *bool `json:"can_download,omitempty"`
+	CanManagePlaylists *bool `json:"can_manage_playlists,omitempty"`
+	CanRate            *bool `json:"can_rate,omitempty"`
+	CanShare           *bool `json:"can_share,omitempty"`
+	CanStream          *bool `json:"can_stream,omitempty"`
+
+	// MaxBitRate 0 for no cap, else 32-320.
+	MaxBitRate *int `json:"max_bit_rate,omitempty"`
 }
 
 // SystemConfigPatch Only provided fields are applied, nested objects included.
@@ -7864,6 +8586,12 @@ type TVShowCounts struct {
 	WantedEpisodes int `json:"wanted_episodes"`
 }
 
+// TagOverrides Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+// written over what the library would write; an empty list removes the key from the files.
+// At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+// still wins.
+type TagOverrides map[string][]string
+
 // TorrentAddResult defines model for TorrentAddResult.
 type TorrentAddResult struct {
 	Hash string `json:"hash"`
@@ -7895,7 +8623,13 @@ type TorrentDetails struct {
 	// Progress Fraction complete, 0..1.
 	Progress float64 `json:"progress"`
 	Ratio    float64 `json:"ratio"`
-	SavePath string  `json:"save_path"`
+
+	// ReleaseTitle The release the newest download record holding this torrent was
+	// grabbed as. `name` is the torrent's own, which its uploader
+	// chose and which can name no release at all ("Lamb Of God" for an
+	// Omens LP). Absent when the torrent is untracked.
+	ReleaseTitle *string `json:"release_title,omitempty"`
+	SavePath     string  `json:"save_path"`
 
 	// SeedingStopped True once the ratio/seed-time limit stopped seeding.
 	SeedingStopped bool `json:"seeding_stopped"`
@@ -7964,7 +8698,13 @@ type TorrentInfo struct {
 	// Progress Fraction complete, 0..1.
 	Progress float64 `json:"progress"`
 	Ratio    float64 `json:"ratio"`
-	SavePath string  `json:"save_path"`
+
+	// ReleaseTitle The release the newest download record holding this torrent was
+	// grabbed as. `name` is the torrent's own, which its uploader
+	// chose and which can name no release at all ("Lamb Of God" for an
+	// Omens LP). Absent when the torrent is untracked.
+	ReleaseTitle *string `json:"release_title,omitempty"`
+	SavePath     string  `json:"save_path"`
 
 	// SeedingStopped True once the ratio/seed-time limit stopped seeding.
 	SeedingStopped bool `json:"seeding_stopped"`
@@ -8352,6 +9092,9 @@ type UpdateUserRequest struct {
 	// Email New email address. Must be unique across users.
 	Email *openapi_types.Email   `json:"email,omitempty"`
 	Role  *UpdateUserRequestRole `json:"role,omitempty"`
+
+	// Subsonic Only provided fields are applied.
+	Subsonic *SubsonicAccessPatch `json:"subsonic,omitempty"`
 }
 
 // UpdateUserRequestAuthMethod defines model for UpdateUserRequest.AuthMethod.
@@ -8374,6 +9117,11 @@ type User struct {
 	LockedUntil      *time.Time          `json:"locked_until,omitempty"`
 	Role             UserRole            `json:"role"`
 	Send             *UserSend           `json:"send,omitempty"`
+
+	// Subsonic What the user may do through the Subsonic API (`/rest`). These gate
+	// Subsonic calls only, never the web UI or the REST API. Browsing,
+	// searching, starring and scrobbling are always allowed.
+	Subsonic *SubsonicAccess `json:"subsonic,omitempty"`
 }
 
 // UserAuthMethod defines model for User.AuthMethod.
@@ -8405,8 +9153,17 @@ type UserSend struct {
 	From string `json:"from"`
 }
 
+// ActivityArtistID defines model for ActivityArtistID.
+type ActivityArtistID = uint32
+
 // ActivityBefore defines model for ActivityBefore.
 type ActivityBefore = time.Time
+
+// ActivityBookID defines model for ActivityBookID.
+type ActivityBookID = uint32
+
+// ActivityBookSeriesID defines model for ActivityBookSeriesID.
+type ActivityBookSeriesID = uint32
 
 // ActivityCursor defines model for ActivityCursor.
 type ActivityCursor = string
@@ -8640,6 +9397,15 @@ type TMDBID = uint32
 
 // TVDBID defines model for TVDBID.
 type TVDBID = uint32
+
+// TitleSearchLimit defines model for TitleSearchLimit.
+type TitleSearchLimit = uint16
+
+// TitleSearchOffset defines model for TitleSearchOffset.
+type TitleSearchOffset = uint32
+
+// TitleSearchQuery defines model for TitleSearchQuery.
+type TitleSearchQuery = string
 
 // TorrentFileIndex defines model for TorrentFileIndex.
 type TorrentFileIndex = int
@@ -9064,10 +9830,18 @@ type ListActivityParams struct {
 
 	// SeriesId Matches both the series' own events and those of its episodes.
 	SeriesId *ActivitySeriesID `form:"series_id,omitempty" json:"series_id,omitempty"`
-	Since    *ActivitySince    `form:"since,omitempty" json:"since,omitempty"`
-	Before   *ActivityBefore   `form:"before,omitempty" json:"before,omitempty"`
-	Limit    *ActivityLimit    `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor   *ActivityCursor   `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// ArtistId Matches both the artist's own events (a discography pack, the artist
+	// being added) and those of its albums.
+	ArtistId *ActivityArtistID `form:"artist_id,omitempty" json:"artist_id,omitempty"`
+	BookId   *ActivityBookID   `form:"book_id,omitempty" json:"book_id,omitempty"`
+
+	// BookSeriesId Matches both the series' own events and those of its volumes.
+	BookSeriesId *ActivityBookSeriesID `form:"book_series_id,omitempty" json:"book_series_id,omitempty"`
+	Since        *ActivitySince        `form:"since,omitempty" json:"since,omitempty"`
+	Before       *ActivityBefore       `form:"before,omitempty" json:"before,omitempty"`
+	Limit        *ActivityLimit        `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor       *ActivityCursor       `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ListDownloadHistoryParams defines parameters for ListDownloadHistory.
@@ -9216,6 +9990,18 @@ type ListUpcomingReleasesParams struct {
 	To   CalendarTo   `form:"to" json:"to"`
 }
 
+// ListEpisodesParams defines parameters for ListEpisodes.
+type ListEpisodesParams struct {
+	// Query Substring filter over the title, accent-, case- and punctuation-folded.
+	Query *TitleSearchQuery `form:"query,omitempty" json:"query,omitempty"`
+
+	// Limit Max items per page (1..100).
+	Limit *TitleSearchLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Zero-based offset for pagination.
+	Offset *TitleSearchOffset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // ListImportsParams defines parameters for ListImports.
 type ListImportsParams struct {
 	Page  *ImportPage  `form:"page,omitempty" json:"page,omitempty"`
@@ -9243,6 +10029,21 @@ type ListImportBooksParams struct {
 
 // ListImportBooksParamsClassification defines parameters for ListImportBooks.
 type ListImportBooksParamsClassification string
+
+// CommitImportJSONBody defines parameters for CommitImport.
+type CommitImportJSONBody struct {
+	// WriteTags Music scans: queue the adopted files for the music tag
+	// writer and tag them as each album is committed, and mark
+	// the albums the commit brings in (those holding no file yet) as managed (re-tagged on
+	// their own under `managed`). Off leaves the files as they
+	// are and the new albums unmanaged; an album that already
+	// held files keeps its own setting. Defaults to off: a
+	// commit that does not ask leaves every adopted file byte for
+	// byte as it is. With `library.music_tags.mode` `off` the
+	// files are queued and written once it is switched on. A file
+	// a torrent still serves is tagged once the torrent is gone.
+	WriteTags *bool `json:"write_tags,omitempty"`
+}
 
 // ListImportFilesParams defines parameters for ListImportFiles.
 type ListImportFilesParams struct {
@@ -9332,6 +10133,18 @@ type ReidentifyMovieJSONBody struct {
 type RenameMovieFilesParams struct {
 	// Preview When true, returns the rename plan without applying it.
 	Preview *RenamePreview `form:"preview,omitempty" json:"preview,omitempty"`
+}
+
+// ListMusicAlbumsParams defines parameters for ListMusicAlbums.
+type ListMusicAlbumsParams struct {
+	// Query Substring filter over the title, accent-, case- and punctuation-folded.
+	Query *TitleSearchQuery `form:"query,omitempty" json:"query,omitempty"`
+
+	// Limit Max items per page (1..100).
+	Limit *TitleSearchLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Zero-based offset for pagination.
+	Offset *TitleSearchOffset `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
 // ListMusicArtistsParams defines parameters for ListMusicArtists.
@@ -9696,6 +10509,9 @@ type UpdateImportAlbumDecisionJSONRequestBody = ImportScanAlbumDecisionRequest
 // UpdateImportBookDecisionJSONRequestBody defines body for UpdateImportBookDecision for application/json ContentType.
 type UpdateImportBookDecisionJSONRequestBody = ImportScanBookDecisionRequest
 
+// CommitImportJSONRequestBody defines body for CommitImport for application/json ContentType.
+type CommitImportJSONRequestBody CommitImportJSONBody
+
 // BulkUpdateImportDecisionsJSONRequestBody defines body for BulkUpdateImportDecisions for application/json ContentType.
 type BulkUpdateImportDecisionsJSONRequestBody = ImportBulkDecisionRequest
 
@@ -9744,6 +10560,9 @@ type PatchMusicAlbumJSONRequestBody = PatchMusicAlbumRequest
 // GrabMusicAlbumReleaseJSONRequestBody defines body for GrabMusicAlbumRelease for application/json ContentType.
 type GrabMusicAlbumReleaseJSONRequestBody = SearchResult
 
+// GetMusicAlbumReleaseFilesJSONRequestBody defines body for GetMusicAlbumReleaseFiles for application/json ContentType.
+type GetMusicAlbumReleaseFilesJSONRequestBody = SearchResult
+
 // AddMusicArtistJSONRequestBody defines body for AddMusicArtist for application/json ContentType.
 type AddMusicArtistJSONRequestBody = AddMusicArtistRequest
 
@@ -9753,11 +10572,17 @@ type PatchMusicArtistJSONRequestBody = PatchMusicArtistRequest
 // GrabMusicArtistReleaseJSONRequestBody defines body for GrabMusicArtistRelease for application/json ContentType.
 type GrabMusicArtistReleaseJSONRequestBody = SearchResult
 
+// GetMusicArtistReleaseFilesJSONRequestBody defines body for GetMusicArtistReleaseFiles for application/json ContentType.
+type GetMusicArtistReleaseFilesJSONRequestBody = SearchResult
+
 // CreateMusicQualityProfileJSONRequestBody defines body for CreateMusicQualityProfile for application/json ContentType.
 type CreateMusicQualityProfileJSONRequestBody = MusicQualityProfileCreate
 
 // UpdateMusicQualityProfileJSONRequestBody defines body for UpdateMusicQualityProfile for application/json ContentType.
 type UpdateMusicQualityProfileJSONRequestBody = MusicQualityProfileCreate
+
+// PatchMusicTrackJSONRequestBody defines body for PatchMusicTrack for application/json ContentType.
+type PatchMusicTrackJSONRequestBody = PatchMusicTrackRequest
 
 // CreateQualityProfileJSONRequestBody defines body for CreateQualityProfile for application/json ContentType.
 type CreateQualityProfileJSONRequestBody = QualityProfileCreate
@@ -9798,11 +10623,17 @@ type GrabSeriesReleaseJSONRequestBody = SearchResult
 // ReidentifySeriesJSONRequestBody defines body for ReidentifySeries for application/json ContentType.
 type ReidentifySeriesJSONRequestBody ReidentifySeriesJSONBody
 
+// GetSeriesReleaseFilesJSONRequestBody defines body for GetSeriesReleaseFiles for application/json ContentType.
+type GetSeriesReleaseFilesJSONRequestBody = SearchResult
+
 // PatchSeasonJSONRequestBody defines body for PatchSeason for application/json ContentType.
 type PatchSeasonJSONRequestBody = MonitorToggleRequest
 
 // GrabSeasonReleaseJSONRequestBody defines body for GrabSeasonRelease for application/json ContentType.
 type GrabSeasonReleaseJSONRequestBody = SearchResult
+
+// GetSeasonReleaseFilesJSONRequestBody defines body for GetSeasonReleaseFiles for application/json ContentType.
+type GetSeasonReleaseFilesJSONRequestBody = SearchResult
 
 // AddTorrentJSONRequestBody defines body for AddTorrent for application/json ContentType.
 type AddTorrentJSONRequestBody = AddTorrentRequest
@@ -10194,6 +11025,9 @@ type ServerInterface interface {
 	// ResolveHeldDownload Release a download held by import verification.
 	// (POST /downloads/{id}/resolve)
 	ResolveHeldDownload(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ListEpisodes Search the library's episodes by title
+	// (GET /episodes)
+	ListEpisodes(w http.ResponseWriter, r *http.Request, params ListEpisodesParams)
 	// ListIndexers List configured indexers
 	// (GET /indexers)
 	ListIndexers(w http.ResponseWriter, r *http.Request)
@@ -10344,6 +11178,9 @@ type ServerInterface interface {
 	// SearchMovieNow Dispatch an indexer search and grab for a single movie
 	// (POST /movies/{id}/search-now)
 	SearchMovieNow(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ListMusicAlbums Search the library's albums by title
+	// (GET /music/albums)
+	ListMusicAlbums(w http.ResponseWriter, r *http.Request, params ListMusicAlbumsParams)
 	// GetMusicAlbum Get album details
 	// (GET /music/albums/{id})
 	GetMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -10353,12 +11190,21 @@ type ServerInterface interface {
 	// GrabMusicAlbumRelease Grab a specific release for this album
 	// (POST /music/albums/{id}/grab)
 	GrabMusicAlbumRelease(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// GetMusicAlbumReleaseFiles List a release's files against the album's tracks, before grabbing it
+	// (POST /music/albums/{id}/release-files)
+	GetMusicAlbumReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// SearchMusicAlbumReleases Search indexers for one album's releases
 	// (POST /music/albums/{id}/search)
 	SearchMusicAlbumReleases(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// SearchMusicAlbumNow Dispatch an indexer search and grab for a single album
 	// (POST /music/albums/{id}/search-now)
 	SearchMusicAlbumNow(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// GetMusicAlbumTags Compare an album's files with the tags Streamline writes
+	// (GET /music/albums/{id}/tags)
+	GetMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ApplyMusicAlbumTags Write an album's tags now
+	// (POST /music/albums/{id}/tags/apply)
+	ApplyMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListMusicArtists List music artists
 	// (GET /music/artists)
 	ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams)
@@ -10386,6 +11232,9 @@ type ServerInterface interface {
 	// RefreshMusicArtist Refresh an artist from MusicBrainz
 	// (POST /music/artists/{id}/refresh-metadata)
 	RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params RefreshMusicArtistParams)
+	// GetMusicArtistReleaseFiles List a discography pack's files against the artist's albums, before grabbing it
+	// (POST /music/artists/{id}/release-files)
+	GetMusicArtistReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// RenameMusicArtistFiles Rename an artist's track files to match the library naming pattern
 	// (POST /music/artists/{id}/rename)
 	RenameMusicArtistFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameMusicArtistFilesParams)
@@ -10419,6 +11268,12 @@ type ServerInterface interface {
 	// GetMusicArtistLookup Look up one MusicBrainz artist
 	// (GET /music/search/{mbid})
 	GetMusicArtistLookup(w http.ResponseWriter, r *http.Request, mbid MBIDParam, params GetMusicArtistLookupParams)
+	// RetagMusicLibrary Rewrite every music file's tags (admin)
+	// (POST /music/tags/retag)
+	RetagMusicLibrary(w http.ResponseWriter, r *http.Request)
+	// PatchMusicTrack Set a track's own tags
+	// (PATCH /music/tracks/{id})
+	PatchMusicTrack(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// DeleteMusicTrackFile Delete a track's media file
 	// (DELETE /music/tracks/{id}/file)
 	DeleteMusicTrackFile(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -10548,6 +11403,9 @@ type ServerInterface interface {
 	// ReidentifySeries Point this series at a different TVDB show
 	// (POST /series/{id}/reidentify)
 	ReidentifySeries(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// GetSeriesReleaseFiles List a whole-series release's files against the show's episodes, before grabbing it
+	// (POST /series/{id}/release-files)
+	GetSeriesReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// RenameSeriesFiles Rename series episode files to match the library naming pattern
 	// (POST /series/{id}/rename)
 	RenameSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameSeriesFilesParams)
@@ -10560,6 +11418,9 @@ type ServerInterface interface {
 	// GrabSeasonRelease Grab a season-pack release
 	// (POST /series/{id}/seasons/{number}/grab)
 	GrabSeasonRelease(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber)
+	// GetSeasonReleaseFiles List a season pack's files against the season's episodes, before grabbing it
+	// (POST /series/{id}/seasons/{number}/release-files)
+	GetSeasonReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber)
 	// BrowseSeasonReleases Search indexers for a season's releases
 	// (POST /series/{id}/seasons/{number}/search)
 	BrowseSeasonReleases(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber)
@@ -11199,6 +12060,12 @@ func (_ Unimplemented) ResolveHeldDownload(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ListEpisodes Search the library's episodes by title
+// (GET /episodes)
+func (_ Unimplemented) ListEpisodes(w http.ResponseWriter, r *http.Request, params ListEpisodesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListIndexers List configured indexers
 // (GET /indexers)
 func (_ Unimplemented) ListIndexers(w http.ResponseWriter, r *http.Request) {
@@ -11485,6 +12352,12 @@ func (_ Unimplemented) SearchMovieNow(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ListMusicAlbums Search the library's albums by title
+// (GET /music/albums)
+func (_ Unimplemented) ListMusicAlbums(w http.ResponseWriter, r *http.Request, params ListMusicAlbumsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetMusicAlbum Get album details
 // (GET /music/albums/{id})
 func (_ Unimplemented) GetMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID) {
@@ -11503,6 +12376,12 @@ func (_ Unimplemented) GrabMusicAlbumRelease(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetMusicAlbumReleaseFiles List a release's files against the album's tracks, before grabbing it
+// (POST /music/albums/{id}/release-files)
+func (_ Unimplemented) GetMusicAlbumReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // SearchMusicAlbumReleases Search indexers for one album's releases
 // (POST /music/albums/{id}/search)
 func (_ Unimplemented) SearchMusicAlbumReleases(w http.ResponseWriter, r *http.Request, id ResourceID) {
@@ -11512,6 +12391,18 @@ func (_ Unimplemented) SearchMusicAlbumReleases(w http.ResponseWriter, r *http.R
 // SearchMusicAlbumNow Dispatch an indexer search and grab for a single album
 // (POST /music/albums/{id}/search-now)
 func (_ Unimplemented) SearchMusicAlbumNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMusicAlbumTags Compare an album's files with the tags Streamline writes
+// (GET /music/albums/{id}/tags)
+func (_ Unimplemented) GetMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ApplyMusicAlbumTags Write an album's tags now
+// (POST /music/albums/{id}/tags/apply)
+func (_ Unimplemented) ApplyMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -11566,6 +12457,12 @@ func (_ Unimplemented) GrabMusicArtistRelease(w http.ResponseWriter, r *http.Req
 // RefreshMusicArtist Refresh an artist from MusicBrainz
 // (POST /music/artists/{id}/refresh-metadata)
 func (_ Unimplemented) RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params RefreshMusicArtistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMusicArtistReleaseFiles List a discography pack's files against the artist's albums, before grabbing it
+// (POST /music/artists/{id}/release-files)
+func (_ Unimplemented) GetMusicArtistReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -11632,6 +12529,18 @@ func (_ Unimplemented) SearchMusicReleases(w http.ResponseWriter, r *http.Reques
 // GetMusicArtistLookup Look up one MusicBrainz artist
 // (GET /music/search/{mbid})
 func (_ Unimplemented) GetMusicArtistLookup(w http.ResponseWriter, r *http.Request, mbid MBIDParam, params GetMusicArtistLookupParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RetagMusicLibrary Rewrite every music file's tags (admin)
+// (POST /music/tags/retag)
+func (_ Unimplemented) RetagMusicLibrary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchMusicTrack Set a track's own tags
+// (PATCH /music/tracks/{id})
+func (_ Unimplemented) PatchMusicTrack(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -11893,6 +12802,12 @@ func (_ Unimplemented) ReidentifySeries(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetSeriesReleaseFiles List a whole-series release's files against the show's episodes, before grabbing it
+// (POST /series/{id}/release-files)
+func (_ Unimplemented) GetSeriesReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // RenameSeriesFiles Rename series episode files to match the library naming pattern
 // (POST /series/{id}/rename)
 func (_ Unimplemented) RenameSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameSeriesFilesParams) {
@@ -11914,6 +12829,12 @@ func (_ Unimplemented) PatchSeason(w http.ResponseWriter, r *http.Request, id Re
 // GrabSeasonRelease Grab a season-pack release
 // (POST /series/{id}/seasons/{number}/grab)
 func (_ Unimplemented) GrabSeasonRelease(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetSeasonReleaseFiles List a season pack's files against the season's episodes, before grabbing it
+// (POST /series/{id}/seasons/{number}/release-files)
+func (_ Unimplemented) GetSeasonReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -12192,6 +13113,45 @@ func (siw *ServerInterfaceWrapper) ListActivity(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "series_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "series_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "artist_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "artist_id", r.URL.Query(), &params.ArtistId, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "artist_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "artist_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "book_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "book_id", r.URL.Query(), &params.BookId, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "book_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "book_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "book_series_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "book_series_id", r.URL.Query(), &params.BookSeriesId, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "book_series_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "book_series_id", Err: err})
 		}
 		return
 	}
@@ -14471,6 +15431,65 @@ func (siw *ServerInterfaceWrapper) ResolveHeldDownload(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// ListEpisodes operation middleware
+func (siw *ServerInterfaceWrapper) ListEpisodes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListEpisodesParams
+
+	// ------------- Optional query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListEpisodes(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListIndexers operation middleware
 func (siw *ServerInterfaceWrapper) ListIndexers(w http.ResponseWriter, r *http.Request) {
 
@@ -16057,6 +17076,65 @@ func (siw *ServerInterfaceWrapper) SearchMovieNow(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListMusicAlbums operation middleware
+func (siw *ServerInterfaceWrapper) ListMusicAlbums(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMusicAlbumsParams
+
+	// ------------- Optional query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMusicAlbums(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMusicAlbum operation middleware
 func (siw *ServerInterfaceWrapper) GetMusicAlbum(w http.ResponseWriter, r *http.Request) {
 
@@ -16135,6 +17213,32 @@ func (siw *ServerInterfaceWrapper) GrabMusicAlbumRelease(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// GetMusicAlbumReleaseFiles operation middleware
+func (siw *ServerInterfaceWrapper) GetMusicAlbumReleaseFiles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMusicAlbumReleaseFiles(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SearchMusicAlbumReleases operation middleware
 func (siw *ServerInterfaceWrapper) SearchMusicAlbumReleases(w http.ResponseWriter, r *http.Request) {
 
@@ -16178,6 +17282,58 @@ func (siw *ServerInterfaceWrapper) SearchMusicAlbumNow(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SearchMusicAlbumNow(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMusicAlbumTags operation middleware
+func (siw *ServerInterfaceWrapper) GetMusicAlbumTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMusicAlbumTags(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApplyMusicAlbumTags operation middleware
+func (siw *ServerInterfaceWrapper) ApplyMusicAlbumTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApplyMusicAlbumTags(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -16604,6 +17760,32 @@ func (siw *ServerInterfaceWrapper) RefreshMusicArtist(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// GetMusicArtistReleaseFiles operation middleware
+func (siw *ServerInterfaceWrapper) GetMusicArtistReleaseFiles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMusicArtistReleaseFiles(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RenameMusicArtistFiles operation middleware
 func (siw *ServerInterfaceWrapper) RenameMusicArtistFiles(w http.ResponseWriter, r *http.Request) {
 
@@ -16904,6 +18086,46 @@ func (siw *ServerInterfaceWrapper) GetMusicArtistLookup(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMusicArtistLookup(w, r, mbid, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RetagMusicLibrary operation middleware
+func (siw *ServerInterfaceWrapper) RetagMusicLibrary(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetagMusicLibrary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchMusicTrack operation middleware
+func (siw *ServerInterfaceWrapper) PatchMusicTrack(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchMusicTrack(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -18253,6 +19475,32 @@ func (siw *ServerInterfaceWrapper) ReidentifySeries(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetSeriesReleaseFiles operation middleware
+func (siw *ServerInterfaceWrapper) GetSeriesReleaseFiles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSeriesReleaseFiles(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RenameSeriesFiles operation middleware
 func (siw *ServerInterfaceWrapper) RenameSeriesFiles(w http.ResponseWriter, r *http.Request) {
 
@@ -18382,6 +19630,41 @@ func (siw *ServerInterfaceWrapper) GrabSeasonRelease(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GrabSeasonRelease(w, r, id, number)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSeasonReleaseFiles operation middleware
+func (siw *ServerInterfaceWrapper) GetSeasonReleaseFiles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "number" -------------
+	var number SeasonNumber
+
+	err = runtime.BindStyledParameterWithOptions("simple", "number", chi.URLParam(r, "number"), &number, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "number", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSeasonReleaseFiles(w, r, id, number)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -19230,6 +20513,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/series/{id}/seasons/{number}/grab", wrapper.GrabSeasonRelease)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/series/{id}/seasons/{number}/release-files", wrapper.GetSeasonReleaseFiles)
+	})
+	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/series/{id}/episodes/{episodeId}", wrapper.PatchEpisode)
 	})
 	r.Group(func(r chi.Router) {
@@ -19240,6 +20526,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/series/{id}/browse", wrapper.BrowseSeriesReleases)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/series/{id}/release-files", wrapper.GetSeriesReleaseFiles)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/series/{id}/grab", wrapper.GrabSeriesRelease)
@@ -19261,6 +20550,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/series/{id}/play-on", wrapper.GetSeriesPlayOnLinks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/episodes", wrapper.ListEpisodes)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/people", wrapper.ListPeople)
@@ -19311,10 +20603,19 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/music/artists/{id}/grab", wrapper.GrabMusicArtistRelease)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/albums", wrapper.ListMusicAlbums)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/music/albums/{id}", wrapper.GetMusicAlbum)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/music/albums/{id}", wrapper.PatchMusicAlbum)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/albums/{id}/tags", wrapper.GetMusicAlbumTags)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/albums/{id}/tags/apply", wrapper.ApplyMusicAlbumTags)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/albums/{id}/search", wrapper.SearchMusicAlbumReleases)
@@ -19323,13 +20624,25 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/music/albums/{id}/grab", wrapper.GrabMusicAlbumRelease)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/artists/{id}/release-files", wrapper.GetMusicArtistReleaseFiles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/albums/{id}/release-files", wrapper.GetMusicAlbumReleaseFiles)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/albums/{id}/search-now", wrapper.SearchMusicAlbumNow)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/tracks/{id}/search-now", wrapper.SearchMusicTrackNow)
 	})
 	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/music/tracks/{id}", wrapper.PatchMusicTrack)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/music/tracks/{id}/file", wrapper.DeleteMusicTrackFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/tags/retag", wrapper.RetagMusicLibrary)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/monitored-types/apply", wrapper.ApplyMusicMonitoredTypes)
@@ -20480,6 +21793,20 @@ func (response ClearCompletedHistory403JSONResponse) VisitClearCompletedHistoryR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClearCompletedHistory503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ClearCompletedHistory503JSONResponse) VisitClearCompletedHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -21798,6 +23125,22 @@ func (response CreateMyApiKey413JSONResponse) VisitCreateMyApiKeyResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMyApiKey422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response CreateMyApiKey422JSONResponse) VisitCreateMyApiKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -26247,6 +27590,56 @@ func (response ResolveHeldDownload500JSONResponse) VisitResolveHeldDownloadRespo
 	return err
 }
 
+type ListEpisodesRequestObject struct {
+	Params ListEpisodesParams
+}
+
+type ListEpisodesResponseObject interface {
+	VisitListEpisodesResponse(w http.ResponseWriter) error
+}
+
+type ListEpisodes200JSONResponse EpisodeSearchList
+
+func (response ListEpisodes200JSONResponse) VisitListEpisodesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListEpisodes400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListEpisodes400JSONResponse) VisitListEpisodesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListEpisodes500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListEpisodes500JSONResponse) VisitListEpisodesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListIndexersRequestObject struct {
 }
 
@@ -27266,7 +28659,8 @@ func (response CancelImport422JSONResponse) VisitCancelImportResponse(w http.Res
 }
 
 type CommitImportRequestObject struct {
-	Id ResourceID `json:"id"`
+	Id   ResourceID `json:"id"`
+	Body *CommitImportJSONRequestBody
 }
 
 type CommitImportResponseObject interface {
@@ -28729,6 +30123,22 @@ func (response AddMovie413JSONResponse) VisitAddMovieResponse(w http.ResponseWri
 	return err
 }
 
+type AddMovie422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response AddMovie422JSONResponse) VisitAddMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddMovie500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response AddMovie500JSONResponse) VisitAddMovieResponse(w http.ResponseWriter) error {
@@ -29621,6 +31031,56 @@ func (response SearchMovieNow500JSONResponse) VisitSearchMovieNowResponse(w http
 	return err
 }
 
+type ListMusicAlbumsRequestObject struct {
+	Params ListMusicAlbumsParams
+}
+
+type ListMusicAlbumsResponseObject interface {
+	VisitListMusicAlbumsResponse(w http.ResponseWriter) error
+}
+
+type ListMusicAlbums200JSONResponse AlbumSearchList
+
+func (response ListMusicAlbums200JSONResponse) VisitListMusicAlbumsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicAlbums400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListMusicAlbums400JSONResponse) VisitListMusicAlbumsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicAlbums500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListMusicAlbums500JSONResponse) VisitListMusicAlbumsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetMusicAlbumRequestObject struct {
 	Id ResourceID `json:"id"`
 }
@@ -29736,6 +31196,22 @@ func (response PatchMusicAlbum413JSONResponse) VisitPatchMusicAlbumResponse(w ht
 	return err
 }
 
+type PatchMusicAlbum422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PatchMusicAlbum422JSONResponse) VisitPatchMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchMusicAlbum500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PatchMusicAlbum500JSONResponse) VisitPatchMusicAlbumResponse(w http.ResponseWriter) error {
@@ -29827,6 +31303,101 @@ func (response GrabMusicAlbumRelease422JSONResponse) VisitGrabMusicAlbumReleaseR
 type GrabMusicAlbumRelease500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response GrabMusicAlbumRelease500JSONResponse) VisitGrabMusicAlbumReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumReleaseFilesRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *GetMusicAlbumReleaseFilesJSONRequestBody
+}
+
+type GetMusicAlbumReleaseFilesResponseObject interface {
+	VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error
+}
+
+type GetMusicAlbumReleaseFiles200JSONResponse ReleaseFiles
+
+func (response GetMusicAlbumReleaseFiles200JSONResponse) VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumReleaseFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetMusicAlbumReleaseFiles403JSONResponse) VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumReleaseFiles404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetMusicAlbumReleaseFiles404JSONResponse) VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumReleaseFiles413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GetMusicAlbumReleaseFiles413JSONResponse) VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumReleaseFiles422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response GetMusicAlbumReleaseFiles422JSONResponse) VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumReleaseFiles500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetMusicAlbumReleaseFiles500JSONResponse) VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -29964,6 +31535,150 @@ func (response SearchMusicAlbumNow404JSONResponse) VisitSearchMusicAlbumNowRespo
 type SearchMusicAlbumNow500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response SearchMusicAlbumNow500JSONResponse) VisitSearchMusicAlbumNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumTagsRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type GetMusicAlbumTagsResponseObject interface {
+	VisitGetMusicAlbumTagsResponse(w http.ResponseWriter) error
+}
+
+type GetMusicAlbumTags200JSONResponse MusicAlbumTags
+
+func (response GetMusicAlbumTags200JSONResponse) VisitGetMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumTags403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetMusicAlbumTags403JSONResponse) VisitGetMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumTags404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetMusicAlbumTags404JSONResponse) VisitGetMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumTags500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetMusicAlbumTags500JSONResponse) VisitGetMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyMusicAlbumTagsRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type ApplyMusicAlbumTagsResponseObject interface {
+	VisitApplyMusicAlbumTagsResponse(w http.ResponseWriter) error
+}
+
+type ApplyMusicAlbumTags202JSONResponse struct {
+	Queued int `json:"queued"`
+}
+
+func (response ApplyMusicAlbumTags202JSONResponse) VisitApplyMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyMusicAlbumTags403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ApplyMusicAlbumTags403JSONResponse) VisitApplyMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyMusicAlbumTags404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ApplyMusicAlbumTags404JSONResponse) VisitApplyMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyMusicAlbumTags409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ApplyMusicAlbumTags409JSONResponse) VisitApplyMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyMusicAlbumTags500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ApplyMusicAlbumTags500JSONResponse) VisitApplyMusicAlbumTagsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -30618,6 +32333,101 @@ func (response RefreshMusicArtist429JSONResponse) VisitRefreshMusicArtistRespons
 type RefreshMusicArtist500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response RefreshMusicArtist500JSONResponse) VisitRefreshMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistReleaseFilesRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *GetMusicArtistReleaseFilesJSONRequestBody
+}
+
+type GetMusicArtistReleaseFilesResponseObject interface {
+	VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error
+}
+
+type GetMusicArtistReleaseFiles200JSONResponse DiscographyFiles
+
+func (response GetMusicArtistReleaseFiles200JSONResponse) VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistReleaseFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetMusicArtistReleaseFiles403JSONResponse) VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistReleaseFiles404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetMusicArtistReleaseFiles404JSONResponse) VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistReleaseFiles413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GetMusicArtistReleaseFiles413JSONResponse) VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistReleaseFiles422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response GetMusicArtistReleaseFiles422JSONResponse) VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistReleaseFiles500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetMusicArtistReleaseFiles500JSONResponse) VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -31339,6 +33149,160 @@ func (response GetMusicArtistLookup429JSONResponse) VisitGetMusicArtistLookupRes
 type GetMusicArtistLookup500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response GetMusicArtistLookup500JSONResponse) VisitGetMusicArtistLookupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetagMusicLibraryRequestObject struct {
+}
+
+type RetagMusicLibraryResponseObject interface {
+	VisitRetagMusicLibraryResponse(w http.ResponseWriter) error
+}
+
+type RetagMusicLibrary202JSONResponse struct {
+	Queued int `json:"queued"`
+}
+
+func (response RetagMusicLibrary202JSONResponse) VisitRetagMusicLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetagMusicLibrary403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RetagMusicLibrary403JSONResponse) VisitRetagMusicLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetagMusicLibrary409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RetagMusicLibrary409JSONResponse) VisitRetagMusicLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetagMusicLibrary500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RetagMusicLibrary500JSONResponse) VisitRetagMusicLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicTrackRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *PatchMusicTrackJSONRequestBody
+}
+
+type PatchMusicTrackResponseObject interface {
+	VisitPatchMusicTrackResponse(w http.ResponseWriter) error
+}
+
+type PatchMusicTrack204Response struct {
+}
+
+func (response PatchMusicTrack204Response) VisitPatchMusicTrackResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PatchMusicTrack403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PatchMusicTrack403JSONResponse) VisitPatchMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicTrack404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PatchMusicTrack404JSONResponse) VisitPatchMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicTrack413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PatchMusicTrack413JSONResponse) VisitPatchMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicTrack422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PatchMusicTrack422JSONResponse) VisitPatchMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicTrack500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response PatchMusicTrack500JSONResponse) VisitPatchMusicTrackResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -33227,6 +35191,22 @@ func (response AddSeries413JSONResponse) VisitAddSeriesResponse(w http.ResponseW
 	return err
 }
 
+type AddSeries422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response AddSeries422JSONResponse) VisitAddSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response AddSeries500JSONResponse) VisitAddSeriesResponse(w http.ResponseWriter) error {
@@ -34294,6 +36274,101 @@ func (response ReidentifySeries500JSONResponse) VisitReidentifySeriesResponse(w 
 	return err
 }
 
+type GetSeriesReleaseFilesRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *GetSeriesReleaseFilesJSONRequestBody
+}
+
+type GetSeriesReleaseFilesResponseObject interface {
+	VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error
+}
+
+type GetSeriesReleaseFiles200JSONResponse PackFiles
+
+func (response GetSeriesReleaseFiles200JSONResponse) VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeriesReleaseFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetSeriesReleaseFiles403JSONResponse) VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeriesReleaseFiles404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetSeriesReleaseFiles404JSONResponse) VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeriesReleaseFiles413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GetSeriesReleaseFiles413JSONResponse) VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeriesReleaseFiles422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response GetSeriesReleaseFiles422JSONResponse) VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeriesReleaseFiles500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetSeriesReleaseFiles500JSONResponse) VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RenameSeriesFilesRequestObject struct {
 	Id     ResourceID `json:"id"`
 	Params RenameSeriesFilesParams
@@ -34567,6 +36642,102 @@ func (response GrabSeasonRelease422JSONResponse) VisitGrabSeasonReleaseResponse(
 type GrabSeasonRelease500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response GrabSeasonRelease500JSONResponse) VisitGrabSeasonReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeasonReleaseFilesRequestObject struct {
+	Id     ResourceID   `json:"id"`
+	Number SeasonNumber `json:"number"`
+	Body   *GetSeasonReleaseFilesJSONRequestBody
+}
+
+type GetSeasonReleaseFilesResponseObject interface {
+	VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error
+}
+
+type GetSeasonReleaseFiles200JSONResponse PackFiles
+
+func (response GetSeasonReleaseFiles200JSONResponse) VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeasonReleaseFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetSeasonReleaseFiles403JSONResponse) VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeasonReleaseFiles404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetSeasonReleaseFiles404JSONResponse) VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeasonReleaseFiles413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GetSeasonReleaseFiles413JSONResponse) VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeasonReleaseFiles422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response GetSeasonReleaseFiles422JSONResponse) VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeasonReleaseFiles500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetSeasonReleaseFiles500JSONResponse) VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -35658,6 +37829,22 @@ func (response UpdateUser413JSONResponse) VisitUpdateUserResponse(w http.Respons
 	return err
 }
 
+type UpdateUser422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateUser422JSONResponse) VisitUpdateUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RevokeUserApiKeyRequestObject struct {
 	Uid UserID   `json:"uid"`
 	Kid ApiKeyID `json:"kid"`
@@ -36147,6 +38334,9 @@ type StrictServerInterface interface {
 	// ResolveHeldDownload Release a download held by import verification.
 	// (POST /downloads/{id}/resolve)
 	ResolveHeldDownload(ctx context.Context, request ResolveHeldDownloadRequestObject) (ResolveHeldDownloadResponseObject, error)
+	// ListEpisodes Search the library's episodes by title
+	// (GET /episodes)
+	ListEpisodes(ctx context.Context, request ListEpisodesRequestObject) (ListEpisodesResponseObject, error)
 	// ListIndexers List configured indexers
 	// (GET /indexers)
 	ListIndexers(ctx context.Context, request ListIndexersRequestObject) (ListIndexersResponseObject, error)
@@ -36297,6 +38487,9 @@ type StrictServerInterface interface {
 	// SearchMovieNow Dispatch an indexer search and grab for a single movie
 	// (POST /movies/{id}/search-now)
 	SearchMovieNow(ctx context.Context, request SearchMovieNowRequestObject) (SearchMovieNowResponseObject, error)
+	// ListMusicAlbums Search the library's albums by title
+	// (GET /music/albums)
+	ListMusicAlbums(ctx context.Context, request ListMusicAlbumsRequestObject) (ListMusicAlbumsResponseObject, error)
 	// GetMusicAlbum Get album details
 	// (GET /music/albums/{id})
 	GetMusicAlbum(ctx context.Context, request GetMusicAlbumRequestObject) (GetMusicAlbumResponseObject, error)
@@ -36306,12 +38499,21 @@ type StrictServerInterface interface {
 	// GrabMusicAlbumRelease Grab a specific release for this album
 	// (POST /music/albums/{id}/grab)
 	GrabMusicAlbumRelease(ctx context.Context, request GrabMusicAlbumReleaseRequestObject) (GrabMusicAlbumReleaseResponseObject, error)
+	// GetMusicAlbumReleaseFiles List a release's files against the album's tracks, before grabbing it
+	// (POST /music/albums/{id}/release-files)
+	GetMusicAlbumReleaseFiles(ctx context.Context, request GetMusicAlbumReleaseFilesRequestObject) (GetMusicAlbumReleaseFilesResponseObject, error)
 	// SearchMusicAlbumReleases Search indexers for one album's releases
 	// (POST /music/albums/{id}/search)
 	SearchMusicAlbumReleases(ctx context.Context, request SearchMusicAlbumReleasesRequestObject) (SearchMusicAlbumReleasesResponseObject, error)
 	// SearchMusicAlbumNow Dispatch an indexer search and grab for a single album
 	// (POST /music/albums/{id}/search-now)
 	SearchMusicAlbumNow(ctx context.Context, request SearchMusicAlbumNowRequestObject) (SearchMusicAlbumNowResponseObject, error)
+	// GetMusicAlbumTags Compare an album's files with the tags Streamline writes
+	// (GET /music/albums/{id}/tags)
+	GetMusicAlbumTags(ctx context.Context, request GetMusicAlbumTagsRequestObject) (GetMusicAlbumTagsResponseObject, error)
+	// ApplyMusicAlbumTags Write an album's tags now
+	// (POST /music/albums/{id}/tags/apply)
+	ApplyMusicAlbumTags(ctx context.Context, request ApplyMusicAlbumTagsRequestObject) (ApplyMusicAlbumTagsResponseObject, error)
 	// ListMusicArtists List music artists
 	// (GET /music/artists)
 	ListMusicArtists(ctx context.Context, request ListMusicArtistsRequestObject) (ListMusicArtistsResponseObject, error)
@@ -36339,6 +38541,9 @@ type StrictServerInterface interface {
 	// RefreshMusicArtist Refresh an artist from MusicBrainz
 	// (POST /music/artists/{id}/refresh-metadata)
 	RefreshMusicArtist(ctx context.Context, request RefreshMusicArtistRequestObject) (RefreshMusicArtistResponseObject, error)
+	// GetMusicArtistReleaseFiles List a discography pack's files against the artist's albums, before grabbing it
+	// (POST /music/artists/{id}/release-files)
+	GetMusicArtistReleaseFiles(ctx context.Context, request GetMusicArtistReleaseFilesRequestObject) (GetMusicArtistReleaseFilesResponseObject, error)
 	// RenameMusicArtistFiles Rename an artist's track files to match the library naming pattern
 	// (POST /music/artists/{id}/rename)
 	RenameMusicArtistFiles(ctx context.Context, request RenameMusicArtistFilesRequestObject) (RenameMusicArtistFilesResponseObject, error)
@@ -36372,6 +38577,12 @@ type StrictServerInterface interface {
 	// GetMusicArtistLookup Look up one MusicBrainz artist
 	// (GET /music/search/{mbid})
 	GetMusicArtistLookup(ctx context.Context, request GetMusicArtistLookupRequestObject) (GetMusicArtistLookupResponseObject, error)
+	// RetagMusicLibrary Rewrite every music file's tags (admin)
+	// (POST /music/tags/retag)
+	RetagMusicLibrary(ctx context.Context, request RetagMusicLibraryRequestObject) (RetagMusicLibraryResponseObject, error)
+	// PatchMusicTrack Set a track's own tags
+	// (PATCH /music/tracks/{id})
+	PatchMusicTrack(ctx context.Context, request PatchMusicTrackRequestObject) (PatchMusicTrackResponseObject, error)
 	// DeleteMusicTrackFile Delete a track's media file
 	// (DELETE /music/tracks/{id}/file)
 	DeleteMusicTrackFile(ctx context.Context, request DeleteMusicTrackFileRequestObject) (DeleteMusicTrackFileResponseObject, error)
@@ -36501,6 +38712,9 @@ type StrictServerInterface interface {
 	// ReidentifySeries Point this series at a different TVDB show
 	// (POST /series/{id}/reidentify)
 	ReidentifySeries(ctx context.Context, request ReidentifySeriesRequestObject) (ReidentifySeriesResponseObject, error)
+	// GetSeriesReleaseFiles List a whole-series release's files against the show's episodes, before grabbing it
+	// (POST /series/{id}/release-files)
+	GetSeriesReleaseFiles(ctx context.Context, request GetSeriesReleaseFilesRequestObject) (GetSeriesReleaseFilesResponseObject, error)
 	// RenameSeriesFiles Rename series episode files to match the library naming pattern
 	// (POST /series/{id}/rename)
 	RenameSeriesFiles(ctx context.Context, request RenameSeriesFilesRequestObject) (RenameSeriesFilesResponseObject, error)
@@ -36513,6 +38727,9 @@ type StrictServerInterface interface {
 	// GrabSeasonRelease Grab a season-pack release
 	// (POST /series/{id}/seasons/{number}/grab)
 	GrabSeasonRelease(ctx context.Context, request GrabSeasonReleaseRequestObject) (GrabSeasonReleaseResponseObject, error)
+	// GetSeasonReleaseFiles List a season pack's files against the season's episodes, before grabbing it
+	// (POST /series/{id}/seasons/{number}/release-files)
+	GetSeasonReleaseFiles(ctx context.Context, request GetSeasonReleaseFilesRequestObject) (GetSeasonReleaseFilesResponseObject, error)
 	// BrowseSeasonReleases Search indexers for a season's releases
 	// (POST /series/{id}/seasons/{number}/search)
 	BrowseSeasonReleases(ctx context.Context, request BrowseSeasonReleasesRequestObject) (BrowseSeasonReleasesResponseObject, error)
@@ -39216,6 +41433,32 @@ func (sh *strictHandler) ResolveHeldDownload(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// ListEpisodes operation middleware
+func (sh *strictHandler) ListEpisodes(w http.ResponseWriter, r *http.Request, params ListEpisodesParams) {
+	var request ListEpisodesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListEpisodes(ctx, request.(ListEpisodesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListEpisodes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListEpisodesResponseObject); ok {
+		if err := validResponse.VisitListEpisodesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListIndexers operation middleware
 func (sh *strictHandler) ListIndexers(w http.ResponseWriter, r *http.Request) {
 	var request ListIndexersRequestObject
@@ -39649,6 +41892,16 @@ func (sh *strictHandler) CommitImport(w http.ResponseWriter, r *http.Request, id
 	var request CommitImportRequestObject
 
 	request.Id = id
+
+	var body CommitImportJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.CommitImport(ctx, request.(CommitImportRequestObject))
@@ -40644,6 +42897,32 @@ func (sh *strictHandler) SearchMovieNow(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+// ListMusicAlbums operation middleware
+func (sh *strictHandler) ListMusicAlbums(w http.ResponseWriter, r *http.Request, params ListMusicAlbumsParams) {
+	var request ListMusicAlbumsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMusicAlbums(ctx, request.(ListMusicAlbumsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMusicAlbums")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMusicAlbumsResponseObject); ok {
+		if err := validResponse.VisitListMusicAlbumsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetMusicAlbum operation middleware
 func (sh *strictHandler) GetMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	var request GetMusicAlbumRequestObject
@@ -40736,6 +43015,39 @@ func (sh *strictHandler) GrabMusicAlbumRelease(w http.ResponseWriter, r *http.Re
 	}
 }
 
+// GetMusicAlbumReleaseFiles operation middleware
+func (sh *strictHandler) GetMusicAlbumReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetMusicAlbumReleaseFilesRequestObject
+
+	request.Id = id
+
+	var body GetMusicAlbumReleaseFilesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMusicAlbumReleaseFiles(ctx, request.(GetMusicAlbumReleaseFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMusicAlbumReleaseFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMusicAlbumReleaseFilesResponseObject); ok {
+		if err := validResponse.VisitGetMusicAlbumReleaseFilesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // SearchMusicAlbumReleases operation middleware
 func (sh *strictHandler) SearchMusicAlbumReleases(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	var request SearchMusicAlbumReleasesRequestObject
@@ -40781,6 +43093,58 @@ func (sh *strictHandler) SearchMusicAlbumNow(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchMusicAlbumNowResponseObject); ok {
 		if err := validResponse.VisitSearchMusicAlbumNowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMusicAlbumTags operation middleware
+func (sh *strictHandler) GetMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetMusicAlbumTagsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMusicAlbumTags(ctx, request.(GetMusicAlbumTagsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMusicAlbumTags")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMusicAlbumTagsResponseObject); ok {
+		if err := validResponse.VisitGetMusicAlbumTagsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApplyMusicAlbumTags operation middleware
+func (sh *strictHandler) ApplyMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request ApplyMusicAlbumTagsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApplyMusicAlbumTags(ctx, request.(ApplyMusicAlbumTagsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApplyMusicAlbumTags")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApplyMusicAlbumTagsResponseObject); ok {
+		if err := validResponse.VisitApplyMusicAlbumTagsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -41038,6 +43402,39 @@ func (sh *strictHandler) RefreshMusicArtist(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RefreshMusicArtistResponseObject); ok {
 		if err := validResponse.VisitRefreshMusicArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMusicArtistReleaseFiles operation middleware
+func (sh *strictHandler) GetMusicArtistReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetMusicArtistReleaseFilesRequestObject
+
+	request.Id = id
+
+	var body GetMusicArtistReleaseFilesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMusicArtistReleaseFiles(ctx, request.(GetMusicArtistReleaseFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMusicArtistReleaseFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMusicArtistReleaseFilesResponseObject); ok {
+		if err := validResponse.VisitGetMusicArtistReleaseFilesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -41334,6 +43731,63 @@ func (sh *strictHandler) GetMusicArtistLookup(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetMusicArtistLookupResponseObject); ok {
 		if err := validResponse.VisitGetMusicArtistLookupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RetagMusicLibrary operation middleware
+func (sh *strictHandler) RetagMusicLibrary(w http.ResponseWriter, r *http.Request) {
+	var request RetagMusicLibraryRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RetagMusicLibrary(ctx, request.(RetagMusicLibraryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RetagMusicLibrary")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RetagMusicLibraryResponseObject); ok {
+		if err := validResponse.VisitRetagMusicLibraryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchMusicTrack operation middleware
+func (sh *strictHandler) PatchMusicTrack(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request PatchMusicTrackRequestObject
+
+	request.Id = id
+
+	var body PatchMusicTrackJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchMusicTrack(ctx, request.(PatchMusicTrackRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchMusicTrack")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchMusicTrackResponseObject); ok {
+		if err := validResponse.VisitPatchMusicTrackResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -42546,6 +45000,39 @@ func (sh *strictHandler) ReidentifySeries(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// GetSeriesReleaseFiles operation middleware
+func (sh *strictHandler) GetSeriesReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetSeriesReleaseFilesRequestObject
+
+	request.Id = id
+
+	var body GetSeriesReleaseFilesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSeriesReleaseFiles(ctx, request.(GetSeriesReleaseFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSeriesReleaseFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSeriesReleaseFilesResponseObject); ok {
+		if err := validResponse.VisitGetSeriesReleaseFilesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RenameSeriesFiles operation middleware
 func (sh *strictHandler) RenameSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameSeriesFilesParams) {
 	var request RenameSeriesFilesRequestObject
@@ -42660,6 +45147,40 @@ func (sh *strictHandler) GrabSeasonRelease(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GrabSeasonReleaseResponseObject); ok {
 		if err := validResponse.VisitGrabSeasonReleaseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSeasonReleaseFiles operation middleware
+func (sh *strictHandler) GetSeasonReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber) {
+	var request GetSeasonReleaseFilesRequestObject
+
+	request.Id = id
+	request.Number = number
+
+	var body GetSeasonReleaseFilesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSeasonReleaseFiles(ctx, request.(GetSeasonReleaseFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSeasonReleaseFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSeasonReleaseFilesResponseObject); ok {
+		if err := validResponse.VisitGetSeasonReleaseFilesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

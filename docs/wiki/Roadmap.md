@@ -10,10 +10,11 @@ Missing something you need? [Open an issue](https://github.com/datahearth/stream
 | --- | --- |
 | Movies | ✅ Shipped |
 | TV shows | ✅ Shipped |
-| Music | ✅ Shipped — library management with background hydration of tracks and credits, Wikipedia overviews and artist photos, monitor policies, adoption of existing files, a Subsonic server, searching and grabbing albums and discography packs with tag writing, RSS and scheduled searches, and requests |
+| Music | ✅ Shipped — library management with background hydration of tracks and credits, Wikipedia overviews and artist photos, monitor policies, adoption of existing files, a Subsonic server (playlists, stars and play counts, queue sync, share links, lyrics, transcoding), searching and grabbing albums and discography packs with tag writing, RSS and scheduled searches, and requests |
 | Books | ✅ Shipped — a book-first library (books and series with volumes, editions per language and publisher, an ebook and an audiobook slot each), adoption of existing files, an OPDS catalog, searching and grabbing per slot, RSS and scheduled searches, and requests |
 | Send to e-reader by email (EPUB and PDF) | ✅ Shipped |
 | CBZ → PDF for send to e-reader | 📋 Planned |
+| Music tag engine (Streamline keeps every file's tags and artwork in step with its library) | 🚧 In progress — full MusicBrainz tag set with composers, performers and production credits, the album cover in each file and `cover.jpg`/`folder.jpg` beside them, a per-release tag panel with hand-set tags, and edits made elsewhere undone under *Managed* — without losing ReplayGain, lyrics or a release's own art |
 
 Music and books work like movies and TV: adopt your existing library, then let automatic searching, grabbing and requests fill the gaps. Music is reachable from Subsonic clients and books from OPDS readers; see [Music and Books](Music-and-Books).
 
@@ -66,10 +67,13 @@ Hardware encoding through VAAPI is shipped on Linux (`transcoding.hw_accel`, wit
 | OpenTelemetry traces, metrics, logs | ✅ Shipped |
 | Docker images, Helm chart, single binary | ✅ Shipped |
 | Nix flake — package, NixOS module, home-manager module | ✅ Shipped |
+| Unraid template | ✅ Shipped — listing in Community Applications 🚧 In progress |
+| Proxmox VE LXC install and update script | ✅ Shipped — submission to Proxmox VE Helper-Scripts 📋 Planned |
 | Import an existing library (scan, match, review, rename) | ✅ Shipped |
 | Library path migration (re-root a moved library) | ✅ Shipped |
 | Installable web app (home-screen manifest) | ✅ Shipped |
 | Re-identify a title matched to the wrong movie or show | ✅ Shipped |
+| Database backups — before every upgrade, daily, and from the CLI, with restore | ✅ Shipped |
 
 ---
 

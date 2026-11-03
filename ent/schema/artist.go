@@ -46,6 +46,10 @@ func (Artist) Fields() []ent.Field {
 		// Stamped once the overview and photo steps have run, so neither is
 		// repeated for an artist that simply has no article or no picture.
 		field.Time("details_fetched_at").Optional().Nillable(),
+		// art_sidecar_hash is the SHA-256 of the folder.jpg the tag writer
+		// left in the artist's folder, which it may replace; any other
+		// folder.jpg is someone else's.
+		field.String("art_sidecar_hash").Optional(),
 	}
 }
 
@@ -57,6 +61,13 @@ func (Artist) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("download_records", DownloadRecord.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("annotations", MusicAnnotation.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("events", MediaEvent.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		// Albums another artist owns that this one is also credited on: a
+		// release group is one row, listed under every library artist it names.
+		edge.To("co_albums", Album.Type),
 	}
 }
 

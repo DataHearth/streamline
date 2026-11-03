@@ -15,6 +15,12 @@
       "type": "string",
       "enum": ["admin", "member", "request_only"]
     },
+    "tagKey": {
+      "type": "string",
+      "description": "A tag property key as MusicBrainz Picard names it (COMMENT, REPLAYGAIN_TRACK_GAIN), optionally ending in * to match a prefix.",
+      "pattern": "^[A-Za-z0-9_ ]+\\*?$",
+      "maxLength": 64
+    },
     "resolution": {
       "type": "string",
       "enum": ["720p", "1080p", "2160p"]
@@ -45,7 +51,26 @@
         "api_key_file": { "type": "string" },
         "enabled": { "type": "boolean" },
         "library_section": { "type": ["string", "null"] },
-        "library_section_tv": { "type": ["string", "null"] }
+        "library_section_tv": { "type": ["string", "null"] },
+        "path_mappings": {
+          "type": "array",
+          "description": "Rewrites a folder as streamline sees it into the path the media server knows it by, before a targeted rescan is sent and before Plex sections are matched. First matching prefix wins; empty means both see the same paths. A folder no section or library of the server contains falls back to rescanning the whole library.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to"],
+            "properties": {
+              "from": {
+                "type": "string",
+                "description": "Absolute prefix as streamline sees it."
+              },
+              "to": {
+                "type": "string",
+                "description": "Absolute prefix as the media server sees it (a Windows path such as D:\\Movies is accepted)."
+              }
+            }
+          }
+        }
       }
     },
     "downloadClientEntry": {
@@ -555,6 +580,47 @@
               "description": "Hold an import whose probed duration is less than this share of the known runtime."
             }
           }
+        },
+        "music_tags": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The tags Streamline writes into music files. Runtime-editable (Settings → Music).",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["off", "import", "managed"],
+              "description": "off never writes; import writes each file once, at import or at an adoption with tagging on; managed also rewrites a file whenever the library's data for it changes and undoes edits made elsewhere to the keys Streamline owns."
+            },
+            "seeding": {
+              "type": "string",
+              "enum": ["defer", "copy"],
+              "description": "defer keeps a hardlinked import as one copy on disk and tags it once its torrent is gone; copy imports a copy and tags it at once. A file a torrent still serves is never written."
+            },
+            "embed_art": {
+              "type": "boolean",
+              "description": "Write the album cover into each file as its front cover."
+            },
+            "art_max_px": {
+              "type": "integer",
+              "minimum": 256,
+              "maximum": 3000,
+              "description": "Longest edge of an embedded cover, in pixels."
+            },
+            "sidecar_art": {
+              "type": "boolean",
+              "description": "Write cover.jpg into each album folder and folder.jpg into each artist folder, never replacing one Streamline did not write."
+            },
+            "strip": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/tagKey" },
+              "description": "Keys deleted from every file written. An entry ending in * matches as a prefix."
+            },
+            "preserve": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/tagKey" },
+              "description": "Keys never written or deleted; wins over strip and over the keys Streamline manages. An entry ending in * matches as a prefix."
+            }
+          }
         }
       }
     },
@@ -581,6 +647,8 @@
         "drift_check": { "$ref": "#/definitions/duration" },
         "media_probe": { "$ref": "#/definitions/duration" },
         "file_selection": { "$ref": "#/definitions/duration" },
+        "music_tag_sync": { "$ref": "#/definitions/duration" },
+        "database_backup": { "$ref": "#/definitions/duration" },
         "rss_sync": {
           "$ref": "#/definitions/duration",
           "description": "Deprecated: renamed to movie_rss_sync. Still honoured, with a warning on boot."
@@ -616,6 +684,15 @@
         "tmdb_region": {
           "type": "string",
           "description": "ISO 3166-1 alpha-2 uppercase region code, e.g. \"FR\"."
+        },
+        "musicbrainz_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "MusicBrainz server root, without /ws/2 (default https://musicbrainz.org). Point it at a self-hosted mirror. Restart required."
+        },
+        "musicbrainz_interval": {
+          "$ref": "#/definitions/duration",
+          "description": "Least time between two MusicBrainz calls (default 1s, what musicbrainz.org allows). Background work keeps twice this between its own calls. \"0s\" removes the limit, for a self-hosted mirror only. Restart required."
         }
       }
     },
@@ -624,6 +701,27 @@
       "additionalProperties": false,
       "properties": {
         "retention": { "$ref": "#/definitions/duration" }
+      }
+    },
+    "backup": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Database snapshots under <data_dir>/backups (file-only). The database-backup job takes the scheduled ones; `streamline backup` the manual ones.",
+      "properties": {
+        "pre_migration": {
+          "type": "boolean",
+          "description": "Snapshot the database before applying pending migrations, and refuse to migrate if the snapshot fails. Turn off only for a database too large to copy on every upgrade."
+        },
+        "retention": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Backups kept per kind, newest first; 0 keeps every one. A database replaced by a restore is never pruned.",
+          "properties": {
+            "scheduled": { "type": "integer", "minimum": 0, "maximum": 65535 },
+            "pre_migration": { "type": "integer", "minimum": 0, "maximum": 65535 },
+            "manual": { "type": "integer", "minimum": 0, "maximum": 65535 }
+          }
+        }
       }
     },
     "ffmpeg": {
@@ -644,7 +742,7 @@
     "download": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Gates selective file download. Off is bit-for-bit today's behaviour.",
+      "description": "Selective file download, the free-space check on grab, and client path mappings.",
       "properties": {
         "selective_files": {
           "type": "boolean",
@@ -653,6 +751,16 @@
         "selection_grace": {
           "$ref": "#/definitions/duration",
           "description": "How long file selection stays open after grab."
+        },
+        "space_check": {
+          "type": "boolean",
+          "description": "Refuses a grab that would not fit on the download client's disk, counting what its active downloads still have to write and keeping space_reserve_gb free."
+        },
+        "space_reserve_gb": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Gigabytes the space check keeps free on the download disk."
         },
         "path_mappings": {
           "type": "array",

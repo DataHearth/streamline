@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -24,6 +25,8 @@ type Track struct {
 	UpdateTime time.Time `json:"update_time,omitempty"`
 	// Mbid holds the value of the "mbid" field.
 	Mbid string `json:"mbid,omitempty"`
+	// ReleaseTrackMbid holds the value of the "release_track_mbid" field.
+	ReleaseTrackMbid string `json:"release_track_mbid,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// Disc holds the value of the "disc" field.
@@ -34,6 +37,10 @@ type Track struct {
 	Duration uint32 `json:"duration,omitempty"`
 	// Bonus holds the value of the "bonus" field.
 	Bonus bool `json:"bonus,omitempty"`
+	// ArtistCredit holds the value of the "artist_credit" field.
+	ArtistCredit string `json:"artist_credit,omitempty"`
+	// TagOverrides holds the value of the "tag_overrides" field.
+	TagOverrides map[string][]string `json:"tag_overrides,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the TrackQuery when eager-loading is set.
 	Edges        TrackEdges `json:"edges"`
@@ -49,9 +56,13 @@ type TrackEdges struct {
 	MediaFiles []*MediaFile `json:"media_files,omitempty"`
 	// Credits holds the value of the credits edge.
 	Credits []*MusicCredit `json:"credits,omitempty"`
+	// Annotations holds the value of the annotations edge.
+	Annotations []*MusicAnnotation `json:"annotations,omitempty"`
+	// Bookmarks holds the value of the bookmarks edge.
+	Bookmarks []*Bookmark `json:"bookmarks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [5]bool
 }
 
 // AlbumOrErr returns the Album value or an error if the edge
@@ -83,16 +94,36 @@ func (e TrackEdges) CreditsOrErr() ([]*MusicCredit, error) {
 	return nil, &NotLoadedError{edge: "credits"}
 }
 
+// AnnotationsOrErr returns the Annotations value or an error if the edge
+// was not loaded in eager-loading.
+func (e TrackEdges) AnnotationsOrErr() ([]*MusicAnnotation, error) {
+	if e.loadedTypes[3] {
+		return e.Annotations, nil
+	}
+	return nil, &NotLoadedError{edge: "annotations"}
+}
+
+// BookmarksOrErr returns the Bookmarks value or an error if the edge
+// was not loaded in eager-loading.
+func (e TrackEdges) BookmarksOrErr() ([]*Bookmark, error) {
+	if e.loadedTypes[4] {
+		return e.Bookmarks, nil
+	}
+	return nil, &NotLoadedError{edge: "bookmarks"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Track) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case track.FieldTagOverrides:
+			values[i] = new([]byte)
 		case track.FieldBonus:
 			values[i] = new(sql.NullBool)
 		case track.FieldID, track.FieldDisc, track.FieldPosition, track.FieldDuration:
 			values[i] = new(sql.NullInt64)
-		case track.FieldMbid, track.FieldTitle:
+		case track.FieldMbid, track.FieldReleaseTrackMbid, track.FieldTitle, track.FieldArtistCredit:
 			values[i] = new(sql.NullString)
 		case track.FieldCreateTime, track.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -137,6 +168,12 @@ func (_m *Track) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Mbid = value.String
 			}
+		case track.FieldReleaseTrackMbid:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field release_track_mbid", values[i])
+			} else if value.Valid {
+				_m.ReleaseTrackMbid = value.String
+			}
 		case track.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field title", values[i])
@@ -166,6 +203,20 @@ func (_m *Track) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field bonus", values[i])
 			} else if value.Valid {
 				_m.Bonus = value.Bool
+			}
+		case track.FieldArtistCredit:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field artist_credit", values[i])
+			} else if value.Valid {
+				_m.ArtistCredit = value.String
+			}
+		case track.FieldTagOverrides:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field tag_overrides", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.TagOverrides); err != nil {
+					return fmt.Errorf("unmarshal field tag_overrides: %w", err)
+				}
 			}
 		case track.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -202,6 +253,16 @@ func (_m *Track) QueryCredits() *MusicCreditQuery {
 	return NewTrackClient(_m.config).QueryCredits(_m)
 }
 
+// QueryAnnotations queries the "annotations" edge of the Track entity.
+func (_m *Track) QueryAnnotations() *MusicAnnotationQuery {
+	return NewTrackClient(_m.config).QueryAnnotations(_m)
+}
+
+// QueryBookmarks queries the "bookmarks" edge of the Track entity.
+func (_m *Track) QueryBookmarks() *BookmarkQuery {
+	return NewTrackClient(_m.config).QueryBookmarks(_m)
+}
+
 // Update returns a builder for updating this Track.
 // Note that you need to call Track.Unwrap() before calling this method if this Track
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -234,6 +295,9 @@ func (_m *Track) String() string {
 	builder.WriteString("mbid=")
 	builder.WriteString(_m.Mbid)
 	builder.WriteString(", ")
+	builder.WriteString("release_track_mbid=")
+	builder.WriteString(_m.ReleaseTrackMbid)
+	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)
 	builder.WriteString(", ")
@@ -248,6 +312,12 @@ func (_m *Track) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("bonus=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Bonus))
+	builder.WriteString(", ")
+	builder.WriteString("artist_credit=")
+	builder.WriteString(_m.ArtistCredit)
+	builder.WriteString(", ")
+	builder.WriteString("tag_overrides=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TagOverrides))
 	builder.WriteByte(')')
 	return builder.String()
 }

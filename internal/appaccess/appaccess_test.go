@@ -94,7 +94,7 @@ var _ = Describe("Tracker", Label("unit"), func() {
 	DescribeTable(
 		"sanitises the client string",
 		func(in, want string) {
-			Expect(sanitizeClient(in)).To(Equal(want))
+			Expect(SanitizeClient(in)).To(Equal(want))
 		},
 		Entry("trims", "  DSub ", "DSub"),
 		Entry("strips control characters", "Sym\x00fo\nnium", "Symfonium"),

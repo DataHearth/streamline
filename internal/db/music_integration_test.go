@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -14,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/track"
+	"github.com/datahearth/streamline/internal/library"
 )
 
 var _ = Describe("Music persistence", Label("integration", "db"), func() {
@@ -119,6 +121,92 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(a.Monitor).To(Equal(entartist.MonitorAll))
+		})
+
+		It("links an existing release group instead of inserting it", func() {
+			a := seed()
+			rg1 := albumByMBID("rg-1")
+			client.Album.UpdateOneID(rg1.ID).
+				SetStatus(album.StatusAvailable).SetMonitored(false).ExecX(ctx)
+
+			b, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-2", Name: "Guest Band",
+				Albums: []AlbumSeed{
+					{
+						MBID:      "rg-1",
+						Title:     "Nevermind",
+						Type:      "album",
+						Monitored: true,
+					},
+					{
+						MBID:      "rg-9",
+						Title:     "Own Record",
+						Type:      "album",
+						Monitored: true,
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			got := client.Album.Query().Where(album.IDEQ(rg1.ID)).
+				WithArtist().WithCoArtists().OnlyX(ctx)
+			Expect(got.Edges.Artist.ID).To(Equal(a.ID))
+			Expect(got.Edges.CoArtists).To(HaveLen(1))
+			Expect(got.Edges.CoArtists[0].ID).To(Equal(b.ID))
+			Expect(got.Status).To(Equal(album.StatusAvailable))
+			Expect(got.Monitored).To(BeFalse())
+			Expect(
+				albumByMBID("rg-9").QueryArtist().OnlyIDX(ctx),
+			).To(Equal(b.ID))
+		})
+
+		It("hands a shared album to a co-artist as the artist is deleted", func() {
+			a := seed()
+			mk := func(mbid string) *ent.Artist {
+				GinkgoHelper()
+				x, err := store.CreateArtist(ctx, CreateArtistParams{
+					MBID: mbid, Name: mbid,
+					Albums: []AlbumSeed{{MBID: "rg-1", Title: "Nevermind"}},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				return x
+			}
+			b, c := mk("a-b"), mk("a-c")
+
+			moved, err := store.DeleteArtist(ctx, a.ID)
+			Expect(err).NotTo(HaveOccurred())
+			rg1 := albumByMBID("rg-1")
+			Expect(moved).To(Equal([]uint32{rg1.ID}))
+			Expect(rg1.QueryArtist().OnlyIDX(ctx)).To(Equal(b.ID))
+			Expect(rg1.QueryCoArtists().IDsX(ctx)).To(Equal([]uint32{c.ID}))
+			Expect(client.Album.Query().Where(album.MbidEQ("rg-2")).ExistX(ctx)).
+				To(BeFalse(), "an unshared album goes with its artist")
+			Expect(client.Artist.Query().Where(entartist.IDEQ(a.ID)).ExistX(ctx)).
+				To(BeFalse())
+		})
+
+		It("logs a shared album's link only once the add commits", func() {
+			seed()
+			var logs strings.Builder
+			GinkgoWriter.TeeTo(&logs)
+			DeferCleanup(GinkgoWriter.ClearTeeWriters)
+
+			_, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-2", Name: "Guest",
+				Albums: []AlbumSeed{
+					{MBID: "rg-1", Title: "Nevermind"},
+					{MBID: "rg-x", Title: "Broken", Type: "not-a-type"},
+				},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(logs.String()).NotTo(ContainSubstring("listed shared album"))
+
+			_, err = store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-2", Name: "Guest",
+				Albums: []AlbumSeed{{MBID: "rg-1", Title: "Nevermind"}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(logs.String()).To(ContainSubstring("listed shared album"))
 		})
 
 		It("orders the albums newest first and the tracks by position", func() {
@@ -256,7 +344,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			func(policy entartist.Monitor, want map[string]bool) {
 				Expect(
 					store.SetArtistMonitor(ctx, a.ID, policy, types, now),
-				).To(Succeed())
+				).Error().To(Succeed())
 				Expect(monitored()).To(Equal(want))
 				Expect(client.Artist.GetX(ctx, a.ID).Monitor).To(Equal(policy))
 			},
@@ -305,8 +393,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 		It("monitors nothing under all when no type is listed", func() {
 			Expect(
 				store.SetArtistMonitor(ctx, a.ID, entartist.MonitorAll, nil, now),
-			).
-				To(Succeed())
+			).Error().To(Succeed())
 			Expect(monitored()).To(HaveEach(BeFalse()))
 		})
 
@@ -333,8 +420,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 						types,
 						now,
 					),
-				).
-					To(Succeed())
+				).Error().To(Succeed())
 
 				on, off, err := store.ReapplyMonitorPolicies(
 					ctx, []string{"album", "single"}, now,
@@ -364,7 +450,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 						types,
 						now,
 					),
-				).To(Succeed())
+				).Error().To(Succeed())
 				Expect(store.SetAlbumMonitored(ctx, albumByMBID("past").ID, false)).
 					To(Succeed())
 				Expect(store.SetAlbumMonitored(ctx, albumByMBID("single").ID, true)).
@@ -385,7 +471,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 						types,
 						now,
 					),
-				).To(Succeed())
+				).Error().To(Succeed())
 				Expect(monitored()).To(Equal(map[string]bool{
 					"past": true, "soon": true, "undated": true, "single": false,
 				}))
@@ -403,8 +489,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				SetStatus(album.StatusAvailable).ExecX(ctx)
 			Expect(
 				store.SetArtistMonitor(ctx, a.ID, entartist.MonitorNone, types, now),
-			).
-				To(Succeed())
+			).Error().To(Succeed())
 			Expect(albumByMBID("past").Status).To(Equal(album.StatusAvailable))
 		})
 	})
@@ -417,7 +502,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			client.Album.UpdateOneID(rg1.ID).
 				SetStatus(album.StatusAvailable).ExecX(ctx)
 
-			created, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
+			created, _, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
 				Name: "Nirvana", Type: "group", Origin: "Aberdeen, United States",
 				Since: 1987, Genre: "Rock", DeezerID: 415, WikidataID: "Q11649",
 				RefreshedAt: now,
@@ -463,9 +548,83 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			Expect(members[0].Name).To(Equal("Dave Grohl"))
 		})
 
+		It("refreshes twice without duplicating the link", func() {
+			seed()
+			b, err := store.CreateArtist(
+				ctx,
+				CreateArtistParams{MBID: "a-2", Name: "Guest Band"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			params := RefreshArtistParams{
+				Name: "Guest Band", RefreshedAt: now,
+				Albums: []AlbumSeed{
+					{
+						MBID:      "rg-1",
+						Title:     "Nevermind",
+						Type:      "album",
+						Monitored: true,
+					},
+				},
+			}
+			for range 2 {
+				created, _, err := store.RefreshArtist(ctx, b.ID, params)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(created).To(BeEmpty())
+			}
+			Expect(albumByMBID("rg-1").QueryCoArtists().IDsX(ctx)).
+				To(Equal([]uint32{b.ID}))
+			Expect(albumByMBID("rg-1").Title).To(Equal("Nevermind"))
+		})
+
+		It(
+			"deletes an unlisted album nothing was done with and unmonitors a used one",
+			func() {
+				a := seed()
+				client.Album.Create().SetMbid("bootleg").SetTitle("Super Punk").
+					SetArtistID(a.ID).SetMonitored(true).ExecX(ctx)
+				tr := client.Track.Create().SetTitle("Time to Relax").SetPosition(1).
+					SetAlbumID(albumByMBID("rg-2").ID).SaveX(ctx)
+				client.MediaFile.Create().SetPath("/m/1.flac").SetSize(10).
+					SetTrackID(tr.ID).ExecX(ctx)
+				gone := albumByMBID("bootleg").ID
+				client.MediaEvent.Create().SetType("searched").SetAlbumID(gone).
+					ExecX(ctx)
+
+				_, removed, err := store.RefreshArtist(
+					ctx,
+					a.ID,
+					RefreshArtistParams{
+						Name:        "Nirvana",
+						RefreshedAt: now,
+						Albums: []AlbumSeed{
+							{MBID: "rg-1", Title: "Nevermind", Type: "album"},
+						},
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(removed).To(Equal([]uint32{gone}))
+				Expect(
+					client.Album.Query().Where(album.MbidEQ("bootleg")).ExistX(ctx),
+				).
+					To(BeFalse())
+				Expect(albumByMBID("rg-2").Monitored).To(BeFalse(), "holds a file")
+				Expect(albumByMBID("rg-1").Monitored).To(BeTrue(), "still listed")
+			},
+		)
+
+		It("prunes nothing on an empty listing", func() {
+			a := seed()
+			_, removed, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
+				Name: "Nirvana", RefreshedAt: now,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(removed).To(BeEmpty())
+			Expect(albumByMBID("rg-2").Monitored).To(BeTrue())
+		})
+
 		It("clears the type when MusicBrainz states none", func() {
 			a := seed()
-			_, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
+			_, _, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
 				Name: "Nirvana", RefreshedAt: now,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -519,16 +678,26 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 						Duration:  217,
 						Bonus:     true,
 						Featuring: []PersonSeed{{Name: "A Guest", MBID: "g-1"}},
-						Writers:   []PersonSeed{{Name: "Kurt Cobain", MBID: "m-1"}},
+						Writers: []MusicCreditSeed{
+							{Name: "Kurt Cobain", MBID: "m-1", Role: "composer"},
+						},
+						Credits: []MusicCreditSeed{
+							{Name: "Andy Wallace", Role: "mix"},
+						},
+						Performers: []PerformerSeed{{
+							Name: "Kurt Cobain", MBID: "m-1",
+							Instruments: []string{"guitar", "lead vocals"},
+						}},
 					},
 					{
 						MBID:     "r-2",
 						Title:    "Scentless Apprentice",
 						Disc:     1,
 						Position: 2,
+						Artists:  []PersonSeed{{Name: "Nirvana", MBID: "a-1"}},
 					},
 				},
-				Credits: []AlbumCreditSeed{
+				Credits: []MusicCreditSeed{
 					{
 						Name: "Steve Albini", MBID: "p-1",
 						Role: "producer",
@@ -555,23 +724,31 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			Expect(got.ReleaseMbid).To(Equal("rel-1"))
 			Expect(got.MetadataFetchedAt).NotTo(BeNil())
 			Expect(got.CreditsFetchedAt).NotTo(BeNil())
+			Expect(got.CreditsVersion).To(Equal(library.MusicCreditsVersion))
 			Expect(got.Edges.Tracks).To(HaveLen(2))
 
 			first := got.Edges.Tracks[0]
 			Expect(first.Bonus).To(BeTrue())
 			Expect(first.Duration).To(Equal(uint32(217)))
-			Expect(first.Edges.Credits).To(HaveLen(2))
-			kinds := []musiccredit.Kind{
-				first.Edges.Credits[0].Kind,
-				first.Edges.Credits[1].Kind,
+			byKind := map[musiccredit.Kind]*ent.MusicCredit{}
+			for _, c := range first.Edges.Credits {
+				byKind[c.Kind] = c
 			}
+			Expect(byKind).To(HaveLen(4))
 			Expect(
-				kinds,
-			).To(ConsistOf(musiccredit.KindFeaturing, musiccredit.KindWriter))
+				byKind[musiccredit.KindWriter].Role,
+			).To(Equal(musiccredit.RoleComposer))
+			Expect(
+				byKind[musiccredit.KindCredit].Role,
+			).To(Equal(musiccredit.RoleMix))
+			Expect(byKind[musiccredit.KindPerformer].Instruments).
+				To(Equal("guitar,lead vocals"))
 
 			Expect(got.Edges.Credits).To(HaveLen(3))
-			perf := client.MusicCredit.Query().
-				Where(musiccredit.KindEQ(musiccredit.KindPerformer)).OnlyX(ctx)
+			perf := client.MusicCredit.Query().Where(
+				musiccredit.KindEQ(musiccredit.KindPerformer),
+				musiccredit.HasAlbum(),
+			).OnlyX(ctx)
 			Expect(perf.Guest).To(BeTrue())
 			Expect(perf.Instruments).To(Equal("guitar"))
 		})
@@ -597,6 +774,48 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 		})
 
 		It(
+			"drops a track the release no longer lists unless it holds a file",
+			func() {
+				p := heavy()
+				p.Tracks = append(
+					p.Tracks,
+					TrackSeed{MBID: "r-3", Title: "Bonus", Disc: 1, Position: 3},
+					TrackSeed{
+						MBID:     "r-4",
+						Title:    "Bonus Held",
+						Disc:     1,
+						Position: 4,
+					},
+				)
+				Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
+				held := client.Track.Query().Where(track.MbidEQ("r-4")).OnlyX(ctx)
+				client.MediaFile.Create().SetPath("/m/4.flac").SetSize(10).
+					SetTrackID(held.ID).ExecX(ctx)
+
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, heavy(), now),
+				).To(Succeed())
+				left := client.Track.Query().
+					Where(track.HasAlbumWith(album.IDEQ(rg2.ID))).
+					Order(ent.Asc(track.FieldPosition)).
+					AllX(ctx)
+				Expect(left).To(HaveLen(3))
+				Expect(left[2].ID).To(Equal(held.ID))
+			},
+		)
+
+		It("keeps every stored track when the release lists none", func() {
+			Expect(store.SetAlbumHydration(ctx, rg2.ID, heavy(), now)).To(Succeed())
+			p := heavy()
+			p.Tracks = nil
+			Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
+			Expect(
+				client.Track.Query().Where(track.HasAlbumWith(album.IDEQ(rg2.ID))).
+					CountX(ctx),
+			).To(Equal(2))
+		})
+
+		It(
 			"replaces credits on a repeat heavy call instead of stacking them",
 			func() {
 				Expect(
@@ -613,6 +832,34 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				).CountX(ctx)).To(Equal(1))
 			},
 		)
+
+		It("stores each track's artists", func() {
+			p := heavy()
+			p.Tracks[0].Artists = []PersonSeed{{Name: "311", MBID: "a-311"}}
+			p.Tracks[0].ArtistCredit = "311"
+			Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
+			Expect(
+				client.Track.Query().
+					Where(track.MbidEQ("r-1")).
+					OnlyX(ctx).
+					ArtistCredit,
+			).To(Equal("311"))
+			rows := client.MusicCredit.Query().Where(
+				musiccredit.KindEQ(musiccredit.KindArtist),
+				musiccredit.HasTrackWith(track.MbidEQ("r-1")),
+			).AllX(ctx)
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Name).To(Equal("311"))
+			Expect(rows[0].Mbid).To(Equal("a-311"))
+
+			p.Tracks[0].Artists = nil
+			p.CreditsComplete = false
+			Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
+			Expect(client.MusicCredit.Query().Where(
+				musiccredit.KindEQ(musiccredit.KindArtist),
+				musiccredit.HasTrackWith(track.MbidEQ("r-1")),
+			).CountX(ctx)).To(BeZero(), "the light call carries artists too")
+		})
 
 		It("keeps stored credits when only the light fallback succeeded", func() {
 			Expect(store.SetAlbumHydration(ctx, rg2.ID, heavy(), now)).To(Succeed())
@@ -634,7 +881,118 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			Expect(client.MusicCredit.Query().Where(
 				musiccredit.KindEQ(musiccredit.KindFeaturing),
 			).CountX(ctx)).To(BeZero(), "featuring comes from the light call too")
+			Expect(client.MusicCredit.Query().Where(
+				musiccredit.HasTrack(),
+				musiccredit.KindIn(musiccredit.KindCredit, musiccredit.KindPerformer),
+			).
+				CountX(ctx)).To(Equal(2))
 		})
+
+		It(
+			"backfills the albums holding files whose details predate the tag writer",
+			func() {
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, heavy(), now),
+				).To(Succeed())
+				tr := client.Track.Query().Where(track.MbidEQ("r-1")).OnlyX(ctx)
+				client.MediaFile.Create().SetPath("/m/1.flac").SetSize(10).
+					SetTrackID(tr.ID).ExecX(ctx)
+				waiting := func() []uint32 {
+					rows, err := store.ListAlbumsAwaitingDetails(
+						ctx, now.Add(time.Minute), 10)
+					Expect(err).NotTo(HaveOccurred())
+					ids := make([]uint32, len(rows))
+					for i, a := range rows {
+						ids[i] = a.ID
+					}
+					return ids
+				}
+				Expect(waiting()).To(BeEmpty())
+
+				client.Album.UpdateOneID(rg2.ID).SetCreditsVersion(0).ExecX(ctx)
+				Expect(waiting()).To(ConsistOf(rg2.ID))
+
+				client.Album.UpdateOneID(rg2.ID).ClearCreditsFetchedAt().ExecX(ctx)
+				Expect(
+					waiting(),
+				).To(BeEmpty(), "a heavy call that never succeeded is the credits sweep's")
+			},
+		)
+
+		It(
+			"lists a held album whose tracks carry no artists, however large, once its retry is due",
+			func() {
+				p := heavy()
+				p.Tracks[1].Artists = nil
+				Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
+				tr := client.Track.Query().Where(track.MbidEQ("r-1")).OnlyX(ctx)
+				client.MediaFile.Create().SetPath("/m/1.flac").SetSize(10).
+					SetTrackID(tr.ID).ExecX(ctx)
+				creates := make([]*ent.TrackCreate, MaxCreditsTracks)
+				for i := range creates {
+					creates[i] = client.Track.Create().SetTitle(fmt.Sprint(i)).
+						SetPosition(uint16(i + 3)).SetAlbumID(rg2.ID)
+				}
+				client.Track.CreateBulk(creates...).ExecX(ctx)
+				list := func(retryBefore time.Time) []*ent.Album {
+					GinkgoHelper()
+					rows, err := store.ListAlbumsAwaitingDetails(
+						ctx,
+						retryBefore,
+						10,
+					)
+					Expect(err).NotTo(HaveOccurred())
+					return rows
+				}
+
+				Expect(list(now.Add(-time.Hour))).To(BeEmpty())
+				Expect(list(now.Add(time.Minute))).To(HaveLen(1))
+
+				p.Tracks[1].Artists = []PersonSeed{{Name: "Nirvana", MBID: "a-1"}}
+				Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
+				Expect(list(now.Add(time.Minute))).To(BeEmpty())
+			},
+		)
+
+		It(
+			"does not list an outdated credits layout again until its retry is due, nor one too large for the heavy call",
+			func() {
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, heavy(), now),
+				).To(Succeed())
+				tr := client.Track.Query().Where(track.MbidEQ("r-1")).OnlyX(ctx)
+				client.MediaFile.Create().SetPath("/m/1.flac").SetSize(10).
+					SetTrackID(tr.ID).ExecX(ctx)
+				client.Album.UpdateOneID(rg2.ID).SetCreditsVersion(0).ExecX(ctx)
+				list := func(retryBefore time.Time) []*ent.Album {
+					rows, err := store.ListAlbumsAwaitingDetails(
+						ctx,
+						retryBefore,
+						10,
+					)
+					Expect(err).NotTo(HaveOccurred())
+					return rows
+				}
+
+				// Fetched at now: a refetch that fell back to the light call
+				// leaves the version, and must not head the list again at once.
+				Expect(list(now.Add(-time.Hour))).To(BeEmpty())
+				Expect(list(now.Add(time.Minute))).To(HaveLen(1))
+
+				creates := make([]*ent.TrackCreate, MaxCreditsTracks)
+				for i := range creates {
+					creates[i] = client.Track.Create().SetTitle(fmt.Sprint(i)).
+						SetPosition(uint16(i + 2)).SetAlbumID(rg2.ID)
+				}
+				client.Track.CreateBulk(creates...).ExecX(ctx)
+				Expect(list(now.Add(time.Minute))).To(BeEmpty(),
+					"a release the heavy call cannot carry never moves its version")
+
+				client.Album.UpdateOneID(rg2.ID).ClearGenres().ExecX(ctx)
+				Expect(list(now.Add(-time.Hour))).To(HaveLen(1),
+					"missing genres come from the release-group call, whatever the size")
+			},
+		)
 
 		It("leaves credits_fetched_at empty after a light call", func() {
 			light := HydrationParams{
@@ -707,12 +1065,50 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			return out
 		}
 
-		It("sorts by name on sort_name then name, and flips with order", func() {
-			Expect(names(ListArtistsParams{Sort: "name"})).
-				To(Equal([]string{"Björk", "Nirvana", "Zebra"}))
-			Expect(names(ListArtistsParams{Sort: "name", Order: "desc"})).
-				To(Equal([]string{"Zebra", "Nirvana", "Björk"}))
+		Context("with an album Zebra is also credited on", func() {
+			var zebra *ent.Artist
+
+			BeforeEach(func() {
+				zebra = client.Artist.Query().
+					Where(entartist.MbidEQ("a-3")).OnlyX(ctx)
+				_, _, err := store.RefreshArtist(ctx, zebra.ID, RefreshArtistParams{
+					Name: "Zebra", SortName: "Zebra", RefreshedAt: now,
+					Albums: []AlbumSeed{
+						{MBID: "rg-2", Title: "In Utero", Type: "album"},
+						{MBID: "z-1", Title: "Coming", Type: "album"},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("lists a co-album under the co-artist", func() {
+				Expect(names(ListArtistsParams{Query: "utero", Sort: "name"})).
+					To(Equal([]string{"Nirvana", "Zebra"}))
+				row, err := store.FindArtistByID(ctx, zebra.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(row.Edges.CoAlbums).To(HaveLen(1))
+				Expect(ArtistAlbums(row)).To(HaveLen(2))
+			})
+
+			It("rolls a co-album into the co-artist's status", func() {
+				Expect(
+					names(ListArtistsParams{Status: "downloading", Sort: "name"}),
+				).
+					To(Equal([]string{"Nirvana", "Zebra"}))
+			})
 		})
+
+		It(
+			"sorts by the displayed name, not sort_name, and flips with order",
+			func() {
+				client.Artist.Update().Where(entartist.NameEQ("Zebra")).
+					SetSortName("Aardvark, Zebra").ExecX(ctx)
+				Expect(names(ListArtistsParams{Sort: "name"})).
+					To(Equal([]string{"Björk", "Nirvana", "Zebra"}))
+				Expect(names(ListArtistsParams{Sort: "name", Order: "desc"})).
+					To(Equal([]string{"Zebra", "Nirvana", "Björk"}))
+			},
+		)
 
 		It("sorts by recently added by default, newest first", func() {
 			Expect(names(ListArtistsParams{})).
@@ -841,6 +1237,20 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 	})
 
 	Describe("AlbumRollups", func() {
+		It("tallies a co-album for a co-artist whose owner is not asked", func() {
+			seed()
+			rg1 := albumByMBID("rg-1")
+			guest, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-2", Name: "Guest",
+				Albums: []AlbumSeed{{MBID: "rg-1", Title: "Nevermind"}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			got, err := store.AlbumRollups(ctx, []uint32{guest.ID})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got[rg1.ID].TrackCount).To(Equal(uint32(2)))
+		})
+
 		It(
 			"tallies tracks, tracks with a file, bytes and runtime per album",
 			func() {
@@ -916,6 +1326,18 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got[a.ID]).To(BeFalse())
+		})
+
+		It("flags a co-artist while a shared album waits for its tracks", func() {
+			seed()
+			guest, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-2", Name: "Guest",
+				Albums: []AlbumSeed{{MBID: "rg-2", Title: "In Utero"}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			got, err := store.HydratingArtists(ctx, []uint32{guest.ID}, now)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got[guest.ID]).To(BeTrue())
 		})
 
 		It("does not flag an artist whose albums are all done", func() {
@@ -1257,7 +1679,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 		a := seed()
 		Expect(store.SetAlbumHydration(ctx, albumByMBID("rg-1").ID, HydrationParams{
 			CreditsComplete: true,
-			Credits: []AlbumCreditSeed{
+			Credits: []MusicCreditSeed{
 				{Name: "P", Role: "mix"},
 			},
 			Tracks: []TrackSeed{{
@@ -1265,7 +1687,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				Featuring: []PersonSeed{{Name: "F"}},
 			}},
 		}, now)).To(Succeed())
-		Expect(store.DeleteArtist(ctx, a.ID)).To(Succeed())
+		Expect(store.DeleteArtist(ctx, a.ID)).Error().To(Succeed())
 		Expect(client.Album.Query().Count(ctx)).To(BeZero())
 		Expect(client.Track.Query().Count(ctx)).To(BeZero())
 		Expect(client.ArtistMember.Query().Count(ctx)).To(BeZero())

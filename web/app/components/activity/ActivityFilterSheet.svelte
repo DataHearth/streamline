@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Search, Trash2, X } from "@lucide/svelte";
@@ -41,6 +42,8 @@
 		onReset: () => void;
 		activeCount?: number;
 	} = $props();
+
+	closeOnBack(() => open, () => onClose());
 
 	$effect(() => {
 		if (!open) return;

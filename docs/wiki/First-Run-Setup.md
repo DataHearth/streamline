@@ -35,16 +35,17 @@ auth:
     # password_file: /run/secrets/streamline-admin-password
 ```
 
-**If you didn't**, Streamline created `admin@streamline.local` with a randomly generated password and **wrote that password back into your config file**. Open `config.yaml` and read it out of `auth.seed_admin.password`:
+**If you didn't**, Streamline created `admin@streamline.local` with a randomly generated password and printed it **once** to standard output, on a line reading `default admin credentials`. It is never written to the config file and never sent to the log pipeline:
 
 ```bash
-grep -A 3 seed_admin config/config.yaml
+docker logs streamline 2>&1 | grep 'default admin'      # Docker
+journalctl -u streamline | grep 'default admin'         # systemd (plain binary, Proxmox LXC)
 ```
 
 Log in, then change the password from the account menu (top right → **Account settings**).
 
 > [!WARNING]
-> The generated password is sitting in a plaintext config file. Treat it as a bootstrap credential, not a permanent one — change it as soon as you've logged in.
+> Anything that captures the container's or the service's output captured the password too. Treat it as a bootstrap credential, not a permanent one — change it as soon as you've logged in.
 
 > [!NOTE]
 > Locked yourself out by fat-fingering the password? Streamline rate-limits logins per IP (5 attempts / 15 minutes) *and* locks the account after 10 failures in a 15-minute window. Clear the account lock from the command line:
@@ -159,6 +160,16 @@ If nothing in a release actually matches what's wanted, the grab is dropped rath
 
 The torrent drawer (**Activity → Torrents**) still shows every file with its priority and lets you flip one back on manually before the download finishes — the same control that existed before this feature, now driven automatically as well.
 
+### Free-space check
+
+On by default (`download.space_check: true`, runtime-editable). Before a release goes to your download client, Streamline asks the client how much space its disk has free and refuses the grab if the release would not fit once the client's active downloads finish, leaving `download.space_reserve_gb` (10 GB by default) untouched. The reserve matters because downloads and the library usually share one disk for hardlinks — and often the database too — so a download disk that fills to the last byte breaks imports along with the downloads.
+
+The client measures the space itself, so the check is right even when the client runs on another machine: qBittorrent's free space on disk, Transmission's `free-space` for its download directory, Deluge's free space, or the built-in client's own download folder. qBittorrent only reports its **default** save path — if the `streamline` category saves to a different disk, that disk is not the one being checked.
+
+A grab you make by hand answers with the reason, sizes included. A search or RSS grab skips the release, logs a warning and tries again on its next pass; a refusal never counts as a failed grab. If the client cannot report its free space, or the release's size is unknown, the grab goes ahead unchecked.
+
+Torrents are never paused or resumed by this check, and it cannot see space taken on that disk by anything other than the download client.
+
 ---
 
 ## 5. Add an indexer
@@ -218,7 +229,7 @@ Full detail — including how 720p/1080p/2160p rank against each other — in [Q
 
 **Settings → Media servers → Add.** Optional, but it's what makes "Play on…" buttons appear and stops you waiting on Plex's own scan timer.
 
-Streamline supports Plex, Jellyfin and Emby. Whenever it imports, renames or deletes something it pokes the server to rescan the affected library, and it can deep-link you straight into playback.
+Streamline supports Plex, Jellyfin and Emby. Whenever it imports, renames or deletes something it asks the server to rescan just the folder that changed — the movie's folder, the season's, the album's — and it can deep-link you straight into playback. Changes that land close together (several downloads finishing in one go) are collected for 30 seconds and sent as one request, so a burst of imports costs the server one scan instead of one each.
 
 For **Plex**, authentication is a PIN pop-up rather than a pasted token — click **Connect**, approve at plex.tv, done. Then click **Discover** and fill in the two section fields:
 
@@ -229,9 +240,22 @@ For **Plex**, authentication is a PIN pop-up rather than a pasted token — clic
 
 Plex rescans one library at a time, so these are what let a film import poke only your film library and an episode import poke only your TV one. Each dropdown lists only sections of the matching type, so you can't pick a TV library as your movie one by accident.
 
-Both are optional. Left blank, Streamline tries to work the section out by matching your library path against the paths Plex reports — which only lines up when Plex sees the library at the same path Streamline does. In Docker or Kubernetes it usually doesn't (Streamline's `/srv/streamline/movies` is Plex's `/data/movies`), and Streamline falls back to rescanning **every** section. That works, but it means each import also kicks a scan of libraries that have nothing to do with Streamline. Fill the two fields in and it stops guessing.
+Both are optional. Left blank, Streamline works the section out by matching the changed folder against the paths Plex reports.
 
-For **Jellyfin/Emby**, generate an API key in that server's dashboard and paste it in. Neither has a section concept — they take a single "rescan everything" call, so there is nothing to pick.
+For **Jellyfin/Emby**, generate an API key in that server's dashboard and paste it in. Neither has a section concept, so there is nothing to pick.
+
+### Path mappings
+
+A folder-only rescan works when the server knows the folder by the path Streamline sends. In Docker or Kubernetes it usually doesn't: Streamline's `/srv/streamline/movies` is Plex's `/data/movies`. Add a **path mapping** for each library root in the server's form:
+
+| Path in Streamline | Path on the server |
+| --- | --- |
+| `/srv/streamline/movies` | `/data/movies` |
+| `/srv/streamline/tv` | `/data/tv` |
+
+A server on Windows takes Windows paths on the right (`D:\Movies`, `\\nas\movies`). In YAML it is `path_mappings: [{from: /srv/streamline/movies, to: /data/movies}]` under the server's entry.
+
+Without a mapping that matches, nothing breaks: a folder the server does not know is rescanned as the whole library (for Plex the configured section, else every section), which is how every refresh worked before. The server's card in **Settings → Media servers** shows the last rescan and whether it covered folders or the whole library — "whole library" after an import is the sign a mapping is missing.
 
 ---
 

@@ -13,6 +13,9 @@ type RenameOperation struct {
 	// Season is the season number the episode belongs to, for series plans.
 	// Zero (and meaningless) for a movie plan.
 	Season uint16
+	// AlbumID names the album the file belongs to, for music plans: the move
+	// takes its file lock (LockAlbumFiles).
+	AlbumID uint32
 }
 
 // RenamePlan is the set of file moves needed to bring a title's media files in
@@ -20,6 +23,16 @@ type RenameOperation struct {
 // already matches its target.
 type RenamePlan struct {
 	Operations []RenameOperation
+}
+
+// Paths lists both ends of every operation: the media servers rescan the
+// folders a rename emptied as well as the ones it filled.
+func (p RenamePlan) Paths() []string {
+	out := make([]string, 0, 2*len(p.Operations))
+	for _, op := range p.Operations {
+		out = append(out, op.From, op.To)
+	}
+	return out
 }
 
 // Renamer computes and applies media-file rename plans for one title (movie or

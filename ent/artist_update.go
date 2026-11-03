@@ -15,6 +15,8 @@ import (
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
@@ -394,6 +396,26 @@ func (_u *ArtistUpdate) ClearDetailsFetchedAt() *ArtistUpdate {
 	return _u
 }
 
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (_u *ArtistUpdate) SetArtSidecarHash(v string) *ArtistUpdate {
+	_u.mutation.SetArtSidecarHash(v)
+	return _u
+}
+
+// SetNillableArtSidecarHash sets the "art_sidecar_hash" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableArtSidecarHash(v *string) *ArtistUpdate {
+	if v != nil {
+		_u.SetArtSidecarHash(*v)
+	}
+	return _u
+}
+
+// ClearArtSidecarHash clears the value of the "art_sidecar_hash" field.
+func (_u *ArtistUpdate) ClearArtSidecarHash() *ArtistUpdate {
+	_u.mutation.ClearArtSidecarHash()
+	return _u
+}
+
 // AddAlbumIDs adds the "albums" edge to the Album entity by IDs.
 func (_u *ArtistUpdate) AddAlbumIDs(ids ...uint32) *ArtistUpdate {
 	_u.mutation.AddAlbumIDs(ids...)
@@ -437,6 +459,51 @@ func (_u *ArtistUpdate) AddDownloadRecords(v ...*DownloadRecord) *ArtistUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddDownloadRecordIDs(ids...)
+}
+
+// AddAnnotationIDs adds the "annotations" edge to the MusicAnnotation entity by IDs.
+func (_u *ArtistUpdate) AddAnnotationIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.AddAnnotationIDs(ids...)
+	return _u
+}
+
+// AddAnnotations adds the "annotations" edges to the MusicAnnotation entity.
+func (_u *ArtistUpdate) AddAnnotations(v ...*MusicAnnotation) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAnnotationIDs(ids...)
+}
+
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
+func (_u *ArtistUpdate) AddEventIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.AddEventIDs(ids...)
+	return _u
+}
+
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_u *ArtistUpdate) AddEvents(v ...*MediaEvent) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEventIDs(ids...)
+}
+
+// AddCoAlbumIDs adds the "co_albums" edge to the Album entity by IDs.
+func (_u *ArtistUpdate) AddCoAlbumIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.AddCoAlbumIDs(ids...)
+	return _u
+}
+
+// AddCoAlbums adds the "co_albums" edges to the Album entity.
+func (_u *ArtistUpdate) AddCoAlbums(v ...*Album) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCoAlbumIDs(ids...)
 }
 
 // Mutation returns the ArtistMutation object of the builder.
@@ -505,6 +572,69 @@ func (_u *ArtistUpdate) RemoveDownloadRecords(v ...*DownloadRecord) *ArtistUpdat
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDownloadRecordIDs(ids...)
+}
+
+// ClearAnnotations clears all "annotations" edges to the MusicAnnotation entity.
+func (_u *ArtistUpdate) ClearAnnotations() *ArtistUpdate {
+	_u.mutation.ClearAnnotations()
+	return _u
+}
+
+// RemoveAnnotationIDs removes the "annotations" edge to MusicAnnotation entities by IDs.
+func (_u *ArtistUpdate) RemoveAnnotationIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.RemoveAnnotationIDs(ids...)
+	return _u
+}
+
+// RemoveAnnotations removes "annotations" edges to MusicAnnotation entities.
+func (_u *ArtistUpdate) RemoveAnnotations(v ...*MusicAnnotation) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAnnotationIDs(ids...)
+}
+
+// ClearEvents clears all "events" edges to the MediaEvent entity.
+func (_u *ArtistUpdate) ClearEvents() *ArtistUpdate {
+	_u.mutation.ClearEvents()
+	return _u
+}
+
+// RemoveEventIDs removes the "events" edge to MediaEvent entities by IDs.
+func (_u *ArtistUpdate) RemoveEventIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.RemoveEventIDs(ids...)
+	return _u
+}
+
+// RemoveEvents removes "events" edges to MediaEvent entities.
+func (_u *ArtistUpdate) RemoveEvents(v ...*MediaEvent) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearCoAlbums clears all "co_albums" edges to the Album entity.
+func (_u *ArtistUpdate) ClearCoAlbums() *ArtistUpdate {
+	_u.mutation.ClearCoAlbums()
+	return _u
+}
+
+// RemoveCoAlbumIDs removes the "co_albums" edge to Album entities by IDs.
+func (_u *ArtistUpdate) RemoveCoAlbumIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.RemoveCoAlbumIDs(ids...)
+	return _u
+}
+
+// RemoveCoAlbums removes "co_albums" edges to Album entities.
+func (_u *ArtistUpdate) RemoveCoAlbums(v ...*Album) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCoAlbumIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -694,6 +824,12 @@ func (_u *ArtistUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.DetailsFetchedAtCleared() {
 		_spec.ClearField(artist.FieldDetailsFetchedAt, field.TypeTime)
 	}
+	if value, ok := _u.mutation.ArtSidecarHash(); ok {
+		_spec.SetField(artist.FieldArtSidecarHash, field.TypeString, value)
+	}
+	if _u.mutation.ArtSidecarHashCleared() {
+		_spec.ClearField(artist.FieldArtSidecarHash, field.TypeString)
+	}
 	if _u.mutation.AlbumsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -822,6 +958,141 @@ func (_u *ArtistUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAnnotationsIDs(); len(nodes) > 0 && !_u.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.EventsTable,
+			Columns: []string{artist.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEventsIDs(); len(nodes) > 0 && !_u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.EventsTable,
+			Columns: []string{artist.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.EventsTable,
+			Columns: []string{artist.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CoAlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCoAlbumsIDs(); len(nodes) > 0 && !_u.mutation.CoAlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CoAlbumsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1213,6 +1484,26 @@ func (_u *ArtistUpdateOne) ClearDetailsFetchedAt() *ArtistUpdateOne {
 	return _u
 }
 
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (_u *ArtistUpdateOne) SetArtSidecarHash(v string) *ArtistUpdateOne {
+	_u.mutation.SetArtSidecarHash(v)
+	return _u
+}
+
+// SetNillableArtSidecarHash sets the "art_sidecar_hash" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableArtSidecarHash(v *string) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetArtSidecarHash(*v)
+	}
+	return _u
+}
+
+// ClearArtSidecarHash clears the value of the "art_sidecar_hash" field.
+func (_u *ArtistUpdateOne) ClearArtSidecarHash() *ArtistUpdateOne {
+	_u.mutation.ClearArtSidecarHash()
+	return _u
+}
+
 // AddAlbumIDs adds the "albums" edge to the Album entity by IDs.
 func (_u *ArtistUpdateOne) AddAlbumIDs(ids ...uint32) *ArtistUpdateOne {
 	_u.mutation.AddAlbumIDs(ids...)
@@ -1256,6 +1547,51 @@ func (_u *ArtistUpdateOne) AddDownloadRecords(v ...*DownloadRecord) *ArtistUpdat
 		ids[i] = v[i].ID
 	}
 	return _u.AddDownloadRecordIDs(ids...)
+}
+
+// AddAnnotationIDs adds the "annotations" edge to the MusicAnnotation entity by IDs.
+func (_u *ArtistUpdateOne) AddAnnotationIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.AddAnnotationIDs(ids...)
+	return _u
+}
+
+// AddAnnotations adds the "annotations" edges to the MusicAnnotation entity.
+func (_u *ArtistUpdateOne) AddAnnotations(v ...*MusicAnnotation) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAnnotationIDs(ids...)
+}
+
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
+func (_u *ArtistUpdateOne) AddEventIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.AddEventIDs(ids...)
+	return _u
+}
+
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_u *ArtistUpdateOne) AddEvents(v ...*MediaEvent) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEventIDs(ids...)
+}
+
+// AddCoAlbumIDs adds the "co_albums" edge to the Album entity by IDs.
+func (_u *ArtistUpdateOne) AddCoAlbumIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.AddCoAlbumIDs(ids...)
+	return _u
+}
+
+// AddCoAlbums adds the "co_albums" edges to the Album entity.
+func (_u *ArtistUpdateOne) AddCoAlbums(v ...*Album) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCoAlbumIDs(ids...)
 }
 
 // Mutation returns the ArtistMutation object of the builder.
@@ -1324,6 +1660,69 @@ func (_u *ArtistUpdateOne) RemoveDownloadRecords(v ...*DownloadRecord) *ArtistUp
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDownloadRecordIDs(ids...)
+}
+
+// ClearAnnotations clears all "annotations" edges to the MusicAnnotation entity.
+func (_u *ArtistUpdateOne) ClearAnnotations() *ArtistUpdateOne {
+	_u.mutation.ClearAnnotations()
+	return _u
+}
+
+// RemoveAnnotationIDs removes the "annotations" edge to MusicAnnotation entities by IDs.
+func (_u *ArtistUpdateOne) RemoveAnnotationIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.RemoveAnnotationIDs(ids...)
+	return _u
+}
+
+// RemoveAnnotations removes "annotations" edges to MusicAnnotation entities.
+func (_u *ArtistUpdateOne) RemoveAnnotations(v ...*MusicAnnotation) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAnnotationIDs(ids...)
+}
+
+// ClearEvents clears all "events" edges to the MediaEvent entity.
+func (_u *ArtistUpdateOne) ClearEvents() *ArtistUpdateOne {
+	_u.mutation.ClearEvents()
+	return _u
+}
+
+// RemoveEventIDs removes the "events" edge to MediaEvent entities by IDs.
+func (_u *ArtistUpdateOne) RemoveEventIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.RemoveEventIDs(ids...)
+	return _u
+}
+
+// RemoveEvents removes "events" edges to MediaEvent entities.
+func (_u *ArtistUpdateOne) RemoveEvents(v ...*MediaEvent) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearCoAlbums clears all "co_albums" edges to the Album entity.
+func (_u *ArtistUpdateOne) ClearCoAlbums() *ArtistUpdateOne {
+	_u.mutation.ClearCoAlbums()
+	return _u
+}
+
+// RemoveCoAlbumIDs removes the "co_albums" edge to Album entities by IDs.
+func (_u *ArtistUpdateOne) RemoveCoAlbumIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.RemoveCoAlbumIDs(ids...)
+	return _u
+}
+
+// RemoveCoAlbums removes "co_albums" edges to Album entities.
+func (_u *ArtistUpdateOne) RemoveCoAlbums(v ...*Album) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCoAlbumIDs(ids...)
 }
 
 // Where appends a list predicates to the ArtistUpdate builder.
@@ -1543,6 +1942,12 @@ func (_u *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err erro
 	if _u.mutation.DetailsFetchedAtCleared() {
 		_spec.ClearField(artist.FieldDetailsFetchedAt, field.TypeTime)
 	}
+	if value, ok := _u.mutation.ArtSidecarHash(); ok {
+		_spec.SetField(artist.FieldArtSidecarHash, field.TypeString, value)
+	}
+	if _u.mutation.ArtSidecarHashCleared() {
+		_spec.ClearField(artist.FieldArtSidecarHash, field.TypeString)
+	}
 	if _u.mutation.AlbumsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1671,6 +2076,141 @@ func (_u *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAnnotationsIDs(); len(nodes) > 0 && !_u.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.EventsTable,
+			Columns: []string{artist.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEventsIDs(); len(nodes) > 0 && !_u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.EventsTable,
+			Columns: []string{artist.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.EventsTable,
+			Columns: []string{artist.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CoAlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCoAlbumsIDs(); len(nodes) > 0 && !_u.mutation.CoAlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CoAlbumsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   artist.CoAlbumsTable,
+			Columns: artist.CoAlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

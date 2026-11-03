@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import type { Snippet } from "svelte";
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -35,6 +36,15 @@
 		full,
 		footer,
 	}: Props = $props();
+
+	// Back retraces Escape: an expanded sheet drops to its peek first.
+	closeOnBack(
+		() => open,
+		() => {
+			if (expanded) expanded = false;
+			else onClose();
+		},
+	);
 
 	// Drag thresholds, in px of travel from where the pointer went down.
 	const PROMOTE = -46;

@@ -85,6 +85,32 @@ var _ = Describe("Deluge Client", Label("unit", "downloads"), func() {
 		})
 	})
 
+	Describe("FreeSpace", func() {
+		It("returns core.get_free_space", func() {
+			srv := delugeServer(
+				func(method string, _ []json.RawMessage) (any, string) {
+					Expect(method).To(Equal("core.get_free_space"))
+					return 555, ""
+				},
+			)
+			DeferCleanup(srv.Close)
+
+			free, err := NewDeluge(srv.URL, "pw").FreeSpace(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(free).To(Equal(int64(555)))
+		})
+
+		It("refuses the -1 Deluge 1.3 answers for a path it cannot stat", func() {
+			srv := delugeServer(func(string, []json.RawMessage) (any, string) {
+				return -1, ""
+			})
+			DeferCleanup(srv.Close)
+
+			_, err := NewDeluge(srv.URL, "pw").FreeSpace(context.Background())
+			Expect(err).To(MatchError(ErrBadResponse))
+		})
+	})
+
 	Describe("AddTorrent", func() {
 		It("sends a base64 dump and returns the lowercased hash", func() {
 			srv := delugeServer(

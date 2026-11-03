@@ -106,6 +106,35 @@ func rootCommand() *cli.Command {
 				},
 			},
 			{
+				Name:  "backup",
+				Usage: "back up the database into <data_dir>/backups (server running or stopped)",
+				Description: "Writes a consistent copy of the database with VACUUM INTO, as a manual backup " +
+					"kept up to backup.retention.manual, and prints its path.",
+				Action: backupCreate,
+				Commands: []*cli.Command{
+					{
+						Name:   "list",
+						Usage:  "list the backups in <data_dir>/backups, newest first",
+						Action: backupList,
+					},
+				},
+			},
+			{
+				Name:      "restore",
+				Usage:     "replace the database with a backup (stop the server first)",
+				ArgsUsage: "<file>",
+				Description: "Takes a path, or the name of a file in <data_dir>/backups. The backup must open, pass " +
+					"SQLite's integrity check and hold a schema version no newer than this binary's. The " +
+					"database it replaces is kept in <data_dir>/backups as a pre-restore backup.",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "force",
+						Usage: "restore even though data_dir holds no database yet",
+					},
+				},
+				Action: restoreCmd,
+			},
+			{
 				Name:  "config",
 				Usage: "manage configuration",
 				Commands: []*cli.Command{
@@ -187,8 +216,14 @@ func run(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("unknown command %q (see --help)", cmd.Args().First())
 	}
 
-	// 1. Load configuration
-	cfg, err := config.Load(cmd.String("config"))
+	// 1. Load configuration, writing the defaults first when the file is
+	//    missing — a container's fresh config volume starts empty.
+	cfgPath := cmd.String("config")
+	seeded, err := config.Seed(cfgPath)
+	if err != nil {
+		return fmt.Errorf("config: %w", err)
+	}
+	cfg, err := config.Load(cfgPath)
 	if err != nil {
 		return fmt.Errorf("config: %w", err)
 	}
@@ -211,6 +246,11 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	}
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
+
+	if seeded {
+		slog.InfoContext(ctx, "no config file found; wrote one with the defaults",
+			"config_path", cfgPath)
+	}
 
 	if limit := applyMemoryLimit(); limit > 0 {
 		slog.InfoContext(ctx, "derived GOMEMLIMIT from the cgroup memory limit",
@@ -277,6 +317,9 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	if err := app.Auth.Shutdown(shutdownCtx); err != nil {
 		logger.ErrorContext(shutdownCtx, "auth shutdown error", "error", err)
 	}
+	// The refreshes still inside the coalescing window: the imports they
+	// describe have landed, and nothing else would tell the servers.
+	app.MediaServers.Flush(shutdownCtx)
 	if app.Torrents != nil {
 		if err := app.Torrents.Close(); err != nil {
 			logger.ErrorContext(

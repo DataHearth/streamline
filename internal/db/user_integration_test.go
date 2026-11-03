@@ -113,6 +113,23 @@ var _ = Describe("User store CRUD", Label("integration", "db"), func() {
 			Expect(updated.Role).To(Equal(user.RoleMember))
 		})
 
+		It("patches only the Subsonic permissions it was sent", func() {
+			u := create("sonic@test.com", "member")
+			Expect(u.SubsonicCanStream).To(BeTrue())
+			Expect(u.SubsonicCanShare).To(BeTrue())
+
+			off := false
+			kbps := uint16(192)
+			got, err := store.UpdateUser(ctx, u.ID, UpdateUserParams{
+				Subsonic: SubsonicAccessParams{CanShare: &off, MaxBitRate: &kbps},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.SubsonicCanShare).To(BeFalse())
+			Expect(got.SubsonicMaxBitRate).To(BeEquivalentTo(192))
+			Expect(got.SubsonicCanStream).To(BeTrue())
+			Expect(got.SubsonicCanDownload).To(BeTrue())
+		})
+
 		It("sets then clears the subsonic password", func() {
 			u := create("a@example.com", "member")
 			pw := "secretsecretsecretsecret"

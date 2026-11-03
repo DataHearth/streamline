@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/testutil"
 )
 
 // Setup seeds the process-wide config singleton with defaults plus any
@@ -37,6 +38,9 @@ import (
 //	}) })
 func Setup(overrides ...map[string]any) *config.Config {
 	GinkgoHelper()
+	// The loader reads STREAMLINE_* over the overrides; a spec's config is
+	// only the spec's when the session's own variables are out of the way.
+	DeferCleanup(testutil.IsolateEnv())
 	raw := marshalOverrides(GinkgoT().TempDir(), overrides)
 	Expect(config.LoadReader(bytes.NewReader(raw))).To(Succeed())
 	DeferCleanup(config.ResetForTest)
@@ -50,6 +54,7 @@ func Setup(overrides ...map[string]any) *config.Config {
 // returns ErrNoPath without a file. Setup suffices for read-only tests.
 func SetupFile(overrides ...map[string]any) *config.Config {
 	GinkgoHelper()
+	DeferCleanup(testutil.IsolateEnv())
 	dir := GinkgoT().TempDir()
 	raw := marshalOverrides(dir, overrides)
 	path := filepath.Join(dir, "config.yaml")

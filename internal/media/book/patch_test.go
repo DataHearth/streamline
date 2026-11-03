@@ -8,7 +8,9 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/metadata"
 )
 
@@ -67,6 +69,34 @@ var _ = Describe("Patching books", Label("unit", "integration", "books"), func()
 			Entry("audiobook", "audiobook", false, true),
 			Entry("none", "none", false, false),
 		)
+
+		It("records a monitoring row only when a slot's flag moved", func() {
+			events.Register(f.client)
+			b := f.addBook(1, "Elantris", "none")
+
+			_, err := f.svc.PatchBook(
+				f.ctx,
+				b.ID,
+				PatchBookParams{Monitor: new("none")},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = f.svc.PatchBook(
+				f.ctx,
+				b.ID,
+				PatchBookParams{Monitor: new("ebook")},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			rows := f.client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.TypeMonitoringChanged)).
+				WithBook().AllX(f.ctx)
+			Expect(rows).To(HaveLen(1), "the no-op patch writes nothing")
+			Expect(rows[0].Edges.Book.ID).To(Equal(b.ID))
+			Expect(rows[0].Payload).To(And(
+				HaveKeyWithValue("monitor", "ebook"),
+				HaveKeyWithValue("monitored", true),
+			))
+		})
 
 		It(
 			"unmonitoring moves wanted to skipped and keeps a slot in flight",
@@ -315,6 +345,28 @@ var _ = Describe("Patching books", Label("unit", "integration", "books"), func()
 				Expect(v.EbookMonitored).To(BeFalse())
 				Expect(v.EbookStatus).To(Equal(book.EbookStatusSkipped))
 			}
+		})
+
+		It("records one series row carrying how many volumes moved", func() {
+			s := add(2, "all")
+			events.Register(f.client)
+
+			_, err := f.svc.PatchSeries(
+				f.ctx,
+				s.ID,
+				PatchSeriesParams{Monitor: new("none")},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			rows := f.client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.TypeMonitoringChanged)).
+				WithBookSeries().WithBook().AllX(f.ctx)
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Edges.BookSeries.ID).To(Equal(s.ID))
+			Expect(rows[0].Payload).To(And(
+				HaveKeyWithValue("monitored", false),
+				HaveKeyWithValue("volumes", BeNumerically("==", 2)),
+			))
 		})
 
 		It("measures the future policy from the moment of the patch", func() {

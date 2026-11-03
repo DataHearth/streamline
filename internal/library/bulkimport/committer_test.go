@@ -153,7 +153,7 @@ var _ = Describe("Service.runCommit", Label("unit", "bulkimport"), func() {
 			Once()
 		refreshed := make(chan struct{})
 		ms.EXPECT().RefreshAll(mock.Anything, "movie", "/lib").
-			Run(func(context.Context, string, string) { close(refreshed) }).
+			Run(func(context.Context, string, string, ...string) { close(refreshed) }).
 			Return(nil).Once()
 
 		svc.runCommit(ctx, scan)
@@ -166,7 +166,7 @@ var _ = Describe("Service.runCommit", Label("unit", "bulkimport"), func() {
 			Once()
 		refreshed := make(chan struct{})
 		ms.EXPECT().RefreshAll(mock.Anything, mock.Anything, mock.Anything).
-			Run(func(context.Context, string, string) { close(refreshed) }).
+			Run(func(context.Context, string, string, ...string) { close(refreshed) }).
 			Return(nil).Maybe()
 
 		svc.runCommit(ctx, scan)
@@ -733,4 +733,14 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 			Expect(movieID).To(Equal(uint32(42)))
 		},
 	)
+})
+
+var _ = Describe("CommitOptions", Label("unit", "bulkimport"), func() {
+	It("leaves adopted files alone unless the commit asks for tags", func() {
+		on, off := true, false
+		Expect(CommitOptions{}.writeTags()).To(BeFalse(),
+			"a commit with no body never rewrites a collection's files")
+		Expect(CommitOptions{WriteTags: &off}.writeTags()).To(BeFalse())
+		Expect(CommitOptions{WriteTags: &on}.writeTags()).To(BeTrue())
+	})
 })

@@ -10,6 +10,7 @@
 		formatEta,
 		formatRatio,
 	} from "@lib/format";
+	import { torrentRelease } from "@lib/activity-touch";
 	import type { Torrent } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -86,9 +87,16 @@
 					</span>
 				{/if}
 			</div>
-			<div class="truncate font-mono text-[11px] text-fg-subtle">
-				{torrent.hash.slice(0, 24)}…
-			</div>
+			{@const release = torrentRelease(torrent)}
+			{#if release}
+				<div class="truncate text-[11px] text-fg-subtle" title={release}>
+					{release}
+				</div>
+			{:else}
+				<div class="truncate font-mono text-[11px] text-fg-subtle">
+					{torrent.hash.slice(0, 24)}…
+				</div>
+			{/if}
 		{/if}
 	</td>
 

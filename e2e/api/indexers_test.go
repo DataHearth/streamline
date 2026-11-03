@@ -107,22 +107,46 @@ var _ = Describe("REST API indexers", Label("e2e"), func() {
 		Expect(indexer.Enabled).To(BeFalse())
 		Expect(indexer.ApiKeySet).To(BeTrue())
 
-		updated := put("/api/v1/indexers/e2e-indexer", adminAuth, map[string]any{
-			"name":     "e2e-indexer",
-			"host":     "127.0.0.2",
-			"port":     2,
-			"api_key":  "",
-			"protocol": "torznab",
-			"priority": 7,
-			"enabled":  false,
-		})
+		body := func(host string, port int, apiKey string) map[string]any {
+			return map[string]any{
+				"name":     "e2e-indexer",
+				"host":     host,
+				"port":     port,
+				"api_key":  apiKey,
+				"protocol": "torznab",
+				"priority": 7,
+				"enabled":  false,
+			}
+		}
+
+		// A blank api_key preserves the stored secret on the same address.
+		updated := put("/api/v1/indexers/e2e-indexer", adminAuth,
+			body("127.0.0.1", 1, ""))
 		defer updated.Body.Close()
 		Expect(updated.StatusCode).To(Equal(http.StatusOK))
 		decode(updated, &indexer)
+		Expect(indexer.Priority).To(BeEquivalentTo(7))
+		Expect(indexer.ApiKeySet).To(BeTrue())
+
+		// Moving it without the key would send the stored one to the new
+		// address, so the move is refused until the key comes with it.
+		refused := put("/api/v1/indexers/e2e-indexer", adminAuth,
+			body("127.0.0.2", 2, ""))
+		defer refused.Body.Close()
+		Expect(refused.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+		var refusal struct {
+			Code string `json:"code"`
+		}
+		decode(refused, &refusal)
+		Expect(refusal.Code).To(Equal("secret_required"))
+
+		moved := put("/api/v1/indexers/e2e-indexer", adminAuth,
+			body("127.0.0.2", 2, "new-key"))
+		defer moved.Body.Close()
+		Expect(moved.StatusCode).To(Equal(http.StatusOK))
+		decode(moved, &indexer)
 		Expect(indexer.Host).To(Equal("127.0.0.2"))
 		Expect(indexer.Port).To(BeEquivalentTo(2))
-		Expect(indexer.Priority).To(BeEquivalentTo(7))
-		// A blank api_key preserves the stored secret.
 		Expect(indexer.ApiKeySet).To(BeTrue())
 
 		deleted := del("/api/v1/indexers/e2e-indexer", adminAuth, nil)

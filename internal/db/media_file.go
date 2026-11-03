@@ -131,14 +131,20 @@ func (db *DB) CreateMediaFile(
 	return mf, nil
 }
 
-// ListUnprobedMediaFiles returns up to limit rows that have never been probed
-// (probed_at IS NULL), oldest-first, for the backfill job to work through.
+// ListUnprobedMediaFiles returns up to limit video rows that have never been
+// probed (probed_at IS NULL), oldest-first, for the backfill job to work
+// through. Track and book files are left out: the probe reads a video stream,
+// fails every one of them with "no video stream", and nothing reads its
+// columns outside movies and episodes.
 func (db *DB) ListUnprobedMediaFiles(
 	ctx context.Context,
 	limit int,
 ) ([]*ent.MediaFile, error) {
 	rows, err := db.client.MediaFile.Query().
-		Where(mediafile.ProbedAtIsNil()).
+		Where(
+			mediafile.ProbedAtIsNil(),
+			mediafile.Or(mediafile.HasMovie(), mediafile.HasEpisode()),
+		).
 		Order(ent.Asc(mediafile.FieldID)).
 		Limit(limit).
 		All(ctx)

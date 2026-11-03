@@ -21,6 +21,15 @@
 //	-selftest downloads the first pack through the tracker with a throwaway
 //	client and exits; it is the smoke test that announce, seeding and the
 //	metainfo are all coherent.
+//
+//	-print-host prints the address the tracker would advertise and exits, so
+//	a script can write the indexer entry before the tracker is up.
+//
+// It runs on any host: the seeding clients skip IPv6 when the host has none,
+// content goes under the OS temp directory unless -data says otherwise, and a
+// -listen with no host (the default) advertises a non-loopback address of
+// this machine — the builtin engine refuses a tracker on loopback or
+// link-local, so 127.0.0.1 would leave every torrent fetching forever.
 package main
 
 import (
@@ -49,7 +58,7 @@ import (
 	"github.com/anacrolix/torrent/metainfo"
 
 	"github.com/datahearth/streamline/internal/library/audiotags"
-	"github.com/datahearth/streamline/internal/utils/numeric"
+	"github.com/datahearth/streamline/internal/testutil/nettest"
 )
 
 //go:embed testdata/track.mp3
@@ -104,8 +113,13 @@ func main() {
 	)
 	dataDir := flag.String(
 		"data",
-		"/tmp/streamline/faketracker",
+		filepath.Join(os.TempDir(), "streamline", "faketracker"),
 		"directory for generated content",
+	)
+	printHost := flag.Bool(
+		"print-host",
+		false,
+		"print the address a host-less -listen advertises, then exit",
 	)
 	apiKey := flag.String("apikey", "fake-key", "torznab api key to require")
 	selftest := flag.Bool(
@@ -140,6 +154,16 @@ func main() {
 	)
 	flag.Parse()
 
+	if *printHost {
+		ip, err := nettest.AdvertiseIP()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println(ip)
+		return
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
@@ -173,7 +197,11 @@ func run(
 	if err != nil {
 		return fmt.Errorf("listen: %w", err)
 	}
-	baseURL := "http://" + hostAddr(ln.Addr())
+	host, err := hostAddr(ln.Addr())
+	if err != nil {
+		return err
+	}
+	baseURL := "http://" + host
 
 	for _, p := range packs {
 		if berr := p.build(dataDir, baseURL+"/announce"); berr != nil {
@@ -225,7 +253,7 @@ faketracker up at %s — indexer entry for the config (or POST /api/v1/indexers)
       enabled: true
 
 Content + .torrent files under %s. Ctrl-C to stop.
-`, baseURL, hostOnly(ln.Addr()), portOnly(ln.Addr()), apiKey, dataDir)
+`, baseURL, hostOnly(host), portOnly(host), apiKey, dataDir)
 
 	<-ctx.Done()
 	return srv.Close()
@@ -447,14 +475,14 @@ func (p *pack) writeTrack(dir, name string, n int) error {
 	if err := os.WriteFile(path, trackMP3, 0o644); err != nil {
 		return fmt.Errorf("write track: %w", err)
 	}
-	return audiotags.Write(path, audiotags.WriteTags{
-		Artist:      p.creator,
-		AlbumArtist: p.creator,
-		Album:       p.title,
-		Title:       fmt.Sprintf("Track %02d", n),
-		Track:       numeric.SaturateU16(n),
-		Disc:        1,
-	})
+	return audiotags.Write(path, audiotags.Tags{
+		audiotags.KeyArtist:      {p.creator},
+		audiotags.KeyAlbumArtist: {p.creator},
+		audiotags.KeyAlbum:       {p.title},
+		audiotags.KeyTitle:       {fmt.Sprintf("Track %02d", n)},
+		audiotags.KeyTrackNumber: {strconv.Itoa(n)},
+		audiotags.KeyDiscNumber:  {"1"},
+	}, audiotags.Policy{})
 }
 
 func (p *pack) writeAlbum(dir string) error {
@@ -588,6 +616,7 @@ func newSeeder(
 	cc.Seed = true
 	cc.NoDHT = true
 	cc.ListenPort = 0
+	cc.DisableIPv6 = !nettest.IPv6()
 	client, err := antorrent.NewClient(cc)
 	if err != nil {
 		return nil, fmt.Errorf("seeder client: %w", err)
@@ -623,7 +652,11 @@ func newSeeder(
 // runSelftest leeches the first pack with a throwaway client, proving the
 // tracker hands out the seeder and the seeder hands out the bytes.
 func runSelftest(ctx context.Context, p *pack) error {
-	tmp, err := os.MkdirTemp("/tmp/streamline", "faketracker-selftest-")
+	root := filepath.Join(os.TempDir(), "streamline")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		return fmt.Errorf("selftest tmp: %w", err)
+	}
+	tmp, err := os.MkdirTemp(root, "faketracker-selftest-")
 	if err != nil {
 		return fmt.Errorf("selftest tmp: %w", err)
 	}
@@ -637,6 +670,7 @@ func runSelftest(ctx context.Context, p *pack) error {
 	cc.DataDir = tmp
 	cc.NoDHT = true
 	cc.ListenPort = 0
+	cc.DisableIPv6 = !nettest.IPv6()
 	client, err := antorrent.NewClient(cc)
 	if err != nil {
 		return fmt.Errorf("selftest client: %w", err)
@@ -785,16 +819,19 @@ func torznabHandler(
 		if err := xml.EscapeText(&title, []byte(p.release)); err != nil {
 			continue
 		}
-		link := baseURL + "/torrents/" + url.PathEscape(p.release+".torrent")
+		raw := baseURL + "/torrents/" + url.PathEscape(p.release+".torrent")
 		if magnets {
 			// resolveTorrentSource keys its magnet arm on the URI scheme, so a
 			// magnet feed is just a different enclosure string.
-			var esc bytes.Buffer
-			if err := xml.EscapeText(&esc, []byte(p.magnet)); err != nil {
-				continue
-			}
-			link = esc.String()
+			raw = p.magnet
 		}
+		// PathEscape leaves "&" alone (it is legal in a path), so a release
+		// named "Feathers & Flesh" needs the XML escape as much as a magnet.
+		var esc bytes.Buffer
+		if err := xml.EscapeText(&esc, []byte(raw)); err != nil {
+			continue
+		}
+		link := esc.String()
 		items[p] = fmt.Sprintf(`  <item>
     <title>%[1]s</title>
     <guid>faketracker-%[1]s</guid>
@@ -860,20 +897,31 @@ func writeXML(w http.ResponseWriter, r *http.Request, body string) {
 
 // ---- address helpers ----
 
-func hostAddr(a net.Addr) string {
+// hostAddr is the host:port the tracker advertises in its announce URLs and
+// feed links. A listener on every interface advertises this machine's own
+// non-loopback address rather than 127.0.0.1, which the builtin engine
+// refuses to announce to.
+func hostAddr(a net.Addr) (string, error) {
 	t := a.(*net.TCPAddr)
-	if t.IP.IsUnspecified() || t.IP == nil {
-		return net.JoinHostPort("127.0.0.1", strconv.Itoa(t.Port))
+	if t.IP == nil || t.IP.IsUnspecified() {
+		ip, err := nettest.AdvertiseIP()
+		if err != nil {
+			return "", fmt.Errorf(
+				"pick an address to advertise (pass -listen host:port): %w",
+				err,
+			)
+		}
+		return net.JoinHostPort(ip.String(), strconv.Itoa(t.Port)), nil
 	}
-	return t.String()
+	return t.String(), nil
 }
 
-func hostOnly(a net.Addr) string {
-	h, _, _ := net.SplitHostPort(hostAddr(a))
+func hostOnly(hostPort string) string {
+	h, _, _ := net.SplitHostPort(hostPort)
 	return h
 }
 
-func portOnly(a net.Addr) string {
-	_, p, _ := net.SplitHostPort(hostAddr(a))
+func portOnly(hostPort string) string {
+	_, p, _ := net.SplitHostPort(hostPort)
 	return p
 }

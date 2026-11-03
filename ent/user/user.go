@@ -39,6 +39,20 @@ const (
 	FieldSubsonicLastUsedAt = "subsonic_last_used_at"
 	// FieldSubsonicLastClient holds the string denoting the subsonic_last_client field in the database.
 	FieldSubsonicLastClient = "subsonic_last_client"
+	// FieldSubsonicCanStream holds the string denoting the subsonic_can_stream field in the database.
+	FieldSubsonicCanStream = "subsonic_can_stream"
+	// FieldSubsonicCanDownload holds the string denoting the subsonic_can_download field in the database.
+	FieldSubsonicCanDownload = "subsonic_can_download"
+	// FieldSubsonicCanManagePlaylists holds the string denoting the subsonic_can_manage_playlists field in the database.
+	FieldSubsonicCanManagePlaylists = "subsonic_can_manage_playlists"
+	// FieldSubsonicCanShare holds the string denoting the subsonic_can_share field in the database.
+	FieldSubsonicCanShare = "subsonic_can_share"
+	// FieldSubsonicCanRate holds the string denoting the subsonic_can_rate field in the database.
+	FieldSubsonicCanRate = "subsonic_can_rate"
+	// FieldSubsonicCanChangePassword holds the string denoting the subsonic_can_change_password field in the database.
+	FieldSubsonicCanChangePassword = "subsonic_can_change_password"
+	// FieldSubsonicMaxBitRate holds the string denoting the subsonic_max_bit_rate field in the database.
+	FieldSubsonicMaxBitRate = "subsonic_max_bit_rate"
 	// FieldOpdsToken holds the string denoting the opds_token field in the database.
 	FieldOpdsToken = "opds_token"
 	// FieldOpdsCreatedAt holds the string denoting the opds_created_at field in the database.
@@ -61,6 +75,16 @@ const (
 	EdgeRequests = "requests"
 	// EdgeSessions holds the string denoting the sessions edge name in mutations.
 	EdgeSessions = "sessions"
+	// EdgeMusicAnnotations holds the string denoting the music_annotations edge name in mutations.
+	EdgeMusicAnnotations = "music_annotations"
+	// EdgePlaylists holds the string denoting the playlists edge name in mutations.
+	EdgePlaylists = "playlists"
+	// EdgeShares holds the string denoting the shares edge name in mutations.
+	EdgeShares = "shares"
+	// EdgeBookmarks holds the string denoting the bookmarks edge name in mutations.
+	EdgeBookmarks = "bookmarks"
+	// EdgePlayQueue holds the string denoting the play_queue edge name in mutations.
+	EdgePlayQueue = "play_queue"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// APIKeysTable is the table that holds the api_keys relation/edge.
@@ -91,6 +115,41 @@ const (
 	SessionsInverseTable = "sessions"
 	// SessionsColumn is the table column denoting the sessions relation/edge.
 	SessionsColumn = "user_sessions"
+	// MusicAnnotationsTable is the table that holds the music_annotations relation/edge.
+	MusicAnnotationsTable = "music_annotations"
+	// MusicAnnotationsInverseTable is the table name for the MusicAnnotation entity.
+	// It exists in this package in order to avoid circular dependency with the "musicannotation" package.
+	MusicAnnotationsInverseTable = "music_annotations"
+	// MusicAnnotationsColumn is the table column denoting the music_annotations relation/edge.
+	MusicAnnotationsColumn = "user_id"
+	// PlaylistsTable is the table that holds the playlists relation/edge.
+	PlaylistsTable = "playlists"
+	// PlaylistsInverseTable is the table name for the Playlist entity.
+	// It exists in this package in order to avoid circular dependency with the "playlist" package.
+	PlaylistsInverseTable = "playlists"
+	// PlaylistsColumn is the table column denoting the playlists relation/edge.
+	PlaylistsColumn = "user_playlists"
+	// SharesTable is the table that holds the shares relation/edge.
+	SharesTable = "shares"
+	// SharesInverseTable is the table name for the Share entity.
+	// It exists in this package in order to avoid circular dependency with the "share" package.
+	SharesInverseTable = "shares"
+	// SharesColumn is the table column denoting the shares relation/edge.
+	SharesColumn = "user_shares"
+	// BookmarksTable is the table that holds the bookmarks relation/edge.
+	BookmarksTable = "bookmarks"
+	// BookmarksInverseTable is the table name for the Bookmark entity.
+	// It exists in this package in order to avoid circular dependency with the "bookmark" package.
+	BookmarksInverseTable = "bookmarks"
+	// BookmarksColumn is the table column denoting the bookmarks relation/edge.
+	BookmarksColumn = "user_id"
+	// PlayQueueTable is the table that holds the play_queue relation/edge.
+	PlayQueueTable = "play_queues"
+	// PlayQueueInverseTable is the table name for the PlayQueue entity.
+	// It exists in this package in order to avoid circular dependency with the "playqueue" package.
+	PlayQueueInverseTable = "play_queues"
+	// PlayQueueColumn is the table column denoting the play_queue relation/edge.
+	PlayQueueColumn = "user_play_queue"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -108,6 +167,13 @@ var Columns = []string{
 	FieldSubsonicCreatedAt,
 	FieldSubsonicLastUsedAt,
 	FieldSubsonicLastClient,
+	FieldSubsonicCanStream,
+	FieldSubsonicCanDownload,
+	FieldSubsonicCanManagePlaylists,
+	FieldSubsonicCanShare,
+	FieldSubsonicCanRate,
+	FieldSubsonicCanChangePassword,
+	FieldSubsonicMaxBitRate,
 	FieldOpdsToken,
 	FieldOpdsCreatedAt,
 	FieldOpdsLastUsedAt,
@@ -138,6 +204,22 @@ var (
 	EmailValidator func(string) error
 	// SubsonicLastClientValidator is a validator for the "subsonic_last_client" field. It is called by the builders before save.
 	SubsonicLastClientValidator func(string) error
+	// DefaultSubsonicCanStream holds the default value on creation for the "subsonic_can_stream" field.
+	DefaultSubsonicCanStream bool
+	// DefaultSubsonicCanDownload holds the default value on creation for the "subsonic_can_download" field.
+	DefaultSubsonicCanDownload bool
+	// DefaultSubsonicCanManagePlaylists holds the default value on creation for the "subsonic_can_manage_playlists" field.
+	DefaultSubsonicCanManagePlaylists bool
+	// DefaultSubsonicCanShare holds the default value on creation for the "subsonic_can_share" field.
+	DefaultSubsonicCanShare bool
+	// DefaultSubsonicCanRate holds the default value on creation for the "subsonic_can_rate" field.
+	DefaultSubsonicCanRate bool
+	// DefaultSubsonicCanChangePassword holds the default value on creation for the "subsonic_can_change_password" field.
+	DefaultSubsonicCanChangePassword bool
+	// DefaultSubsonicMaxBitRate holds the default value on creation for the "subsonic_max_bit_rate" field.
+	DefaultSubsonicMaxBitRate uint16
+	// SubsonicMaxBitRateValidator is a validator for the "subsonic_max_bit_rate" field. It is called by the builders before save.
+	SubsonicMaxBitRateValidator func(uint16) error
 	// OpdsLastClientValidator is a validator for the "opds_last_client" field. It is called by the builders before save.
 	OpdsLastClientValidator func(string) error
 	// DefaultFailedLoginCount holds the default value on creation for the "failed_login_count" field.
@@ -266,6 +348,41 @@ func BySubsonicLastClient(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSubsonicLastClient, opts...).ToFunc()
 }
 
+// BySubsonicCanStream orders the results by the subsonic_can_stream field.
+func BySubsonicCanStream(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCanStream, opts...).ToFunc()
+}
+
+// BySubsonicCanDownload orders the results by the subsonic_can_download field.
+func BySubsonicCanDownload(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCanDownload, opts...).ToFunc()
+}
+
+// BySubsonicCanManagePlaylists orders the results by the subsonic_can_manage_playlists field.
+func BySubsonicCanManagePlaylists(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCanManagePlaylists, opts...).ToFunc()
+}
+
+// BySubsonicCanShare orders the results by the subsonic_can_share field.
+func BySubsonicCanShare(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCanShare, opts...).ToFunc()
+}
+
+// BySubsonicCanRate orders the results by the subsonic_can_rate field.
+func BySubsonicCanRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCanRate, opts...).ToFunc()
+}
+
+// BySubsonicCanChangePassword orders the results by the subsonic_can_change_password field.
+func BySubsonicCanChangePassword(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCanChangePassword, opts...).ToFunc()
+}
+
+// BySubsonicMaxBitRate orders the results by the subsonic_max_bit_rate field.
+func BySubsonicMaxBitRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicMaxBitRate, opts...).ToFunc()
+}
+
 // ByOpdsToken orders the results by the opds_token field.
 func ByOpdsToken(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOpdsToken, opts...).ToFunc()
@@ -356,6 +473,69 @@ func BySessions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newSessionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByMusicAnnotationsCount orders the results by music_annotations count.
+func ByMusicAnnotationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newMusicAnnotationsStep(), opts...)
+	}
+}
+
+// ByMusicAnnotations orders the results by music_annotations terms.
+func ByMusicAnnotations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newMusicAnnotationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByPlaylistsCount orders the results by playlists count.
+func ByPlaylistsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPlaylistsStep(), opts...)
+	}
+}
+
+// ByPlaylists orders the results by playlists terms.
+func ByPlaylists(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPlaylistsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// BySharesCount orders the results by shares count.
+func BySharesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newSharesStep(), opts...)
+	}
+}
+
+// ByShares orders the results by shares terms.
+func ByShares(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSharesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByBookmarksCount orders the results by bookmarks count.
+func ByBookmarksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newBookmarksStep(), opts...)
+	}
+}
+
+// ByBookmarks orders the results by bookmarks terms.
+func ByBookmarks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBookmarksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByPlayQueueField orders the results by play_queue field.
+func ByPlayQueueField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPlayQueueStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newAPIKeysStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -382,5 +562,40 @@ func newSessionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(SessionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, SessionsTable, SessionsColumn),
+	)
+}
+func newMusicAnnotationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(MusicAnnotationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, MusicAnnotationsTable, MusicAnnotationsColumn),
+	)
+}
+func newPlaylistsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PlaylistsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, PlaylistsTable, PlaylistsColumn),
+	)
+}
+func newSharesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SharesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SharesTable, SharesColumn),
+	)
+}
+func newBookmarksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BookmarksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, BookmarksTable, BookmarksColumn),
+	)
+}
+func newPlayQueueStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PlayQueueInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, PlayQueueTable, PlayQueueColumn),
 	)
 }

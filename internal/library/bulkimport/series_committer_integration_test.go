@@ -90,7 +90,7 @@ var _ = Describe(
 			func() {
 				rescanned := make(chan struct{}, 2)
 				ms.EXPECT().RefreshAll(mock.Anything, "series", tmpDir).
-					Run(func(context.Context, string, string) { rescanned <- struct{}{} }).
+					Run(func(context.Context, string, string, ...string) { rescanned <- struct{}{} }).
 					Return(nil).Times(2)
 
 				const tvdbID = uint32(81189)

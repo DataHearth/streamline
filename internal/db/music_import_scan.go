@@ -53,6 +53,8 @@ type AdoptAlbumFile struct {
 	Quality string
 	Format  string
 	Size    int64
+	// TagsPending queues the file for the music tag writer.
+	TagsPending bool
 }
 
 func (db *DB) ListPendingImportScanAlbumFolders(
@@ -250,6 +252,7 @@ func adoptAlbumFiles(
 			SetFormat(f.Format).
 			SetSource(entmediafile.SourceOrphan).
 			SetTrackID(f.TrackID).
+			SetNillableTagsState(tagsPending(f.TagsPending)).
 			Exec(ctx); err != nil {
 			return fmt.Errorf("create media file %s: %w", f.Path, err)
 		}
@@ -350,4 +353,14 @@ func (db *DB) UpdateImportScanAlbumDecision(
 		return ErrImportScanAlbumNotFound
 	}
 	return nil
+}
+
+// tagsPending is the tags_state a new track file starts with: pending when it
+// is queued for the tag writer, NULL when it is not.
+func tagsPending(pending bool) *entmediafile.TagsState {
+	if !pending {
+		return nil
+	}
+	st := entmediafile.TagsStatePending
+	return &st
 }

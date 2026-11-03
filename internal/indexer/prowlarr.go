@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/http"
 	"net/url"
 	"strings"
@@ -202,7 +203,9 @@ func mapProwlarrReleases(releases []prowlarrRelease) []SearchResult {
 			dl = r.MagnetURL
 		}
 		results = append(results, SearchResult{
-			Title:       r.Title,
+			// Some trackers hand Prowlarr an HTML-escaped title ("Feathers
+			// &amp; Flesh"), which no name match then reads as "&".
+			Title:       html.UnescapeString(r.Title),
 			InfoURL:     r.InfoURL,
 			Download:    dl,
 			Size:        r.Size,

@@ -45,6 +45,8 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
+		// Nothing rejected; blocklist_integration_test.go covers the filter.
+		store.EXPECT().RejectedReleases(mock.Anything).Return(nil, nil).Maybe()
 		indexerM = mocks.NewMockTVIndexerSearcher(GinkgoT())
 		dlM = mocks.NewMockEpisodeGrabber(GinkgoT())
 		// Season lengths are looked up once per pass to size packs; the specs
@@ -397,6 +399,49 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 
 			Expect(searcher.SearchShow(ctx, 1)).To(Succeed())
 			Expect(cutoff).To(BeTemporally("~", time.Now(), time.Minute))
+		})
+
+		It("keeps searching after the request that asked for it is gone", func() {
+			store.EXPECT().
+				ListEligibleEpisodesForSync(
+					mock.Anything, uint8(math.MaxUint8),
+					mock.AnythingOfType("time.Time"),
+					mock.AnythingOfType("time.Time"),
+				).
+				Return([]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})}, nil).
+				Once()
+
+			reqCtx, cancel := context.WithCancel(ctx)
+			release := make(chan struct{})
+			DeferCleanup(func() {
+				select {
+				case <-release:
+				default:
+					close(release)
+				}
+			})
+			searchErr := make(chan error, 1)
+			indexerM.EXPECT().
+				SearchEpisode(mock.Anything, mock.Anything, mock.Anything, uint32(9001), uint16(3), uint16(1)).
+				Run(func(c context.Context, _, _ []string, _ uint32, _, _ uint16) {
+					<-release
+					searchErr <- c.Err()
+				}).
+				Return(nil, 0, nil).Once()
+			stamped := make(chan struct{})
+			store.EXPECT().
+				SetEpisodeLastSearchAt(mock.Anything, uint32(11), mock.AnythingOfType("time.Time")).
+				Run(func(context.Context, uint32, time.Time) { close(stamped) }).
+				Return(nil).Once()
+
+			returned := make(chan error, 1)
+			go func() { returned <- searcher.SearchShow(reqCtx, 1) }()
+			Eventually(returned).Should(Receive(BeNil()))
+			cancel()
+			close(release)
+
+			Eventually(searchErr).Should(Receive(BeNil()))
+			Eventually(stamped).Should(BeClosed())
 		})
 	})
 

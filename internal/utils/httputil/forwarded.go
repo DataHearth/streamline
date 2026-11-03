@@ -88,3 +88,20 @@ func firstHop(chain string) string {
 	head, _, _ := strings.Cut(chain, ",")
 	return strings.ToLower(strings.TrimSpace(head))
 }
+
+// RequestOrigin is the scheme://host the client reached this request on:
+// r.Host, or X-Forwarded-Host when the peer is a configured reverse proxy
+// (off one it is attacker-supplied), with the scheme from ServedOverTLS. It
+// is what a link handed back to that client should start with.
+func RequestOrigin(r *http.Request) string {
+	scheme, host := "http", r.Host
+	if ServedOverTLS(r) {
+		scheme = "https"
+	}
+	if TrustedPeer(r) {
+		if fwd := r.Header.Get("X-Forwarded-Host"); fwd != "" {
+			host = fwd
+		}
+	}
+	return scheme + "://" + host
+}

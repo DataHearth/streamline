@@ -156,6 +156,68 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 		Expect(bodyText(resp)).To(ContainSubstring("configured indexer"))
 	})
 
+	It("422s a grab that would not fit on the download client's disk", func() {
+		createLiveIndexer("e2e-space-indexer")
+		qb := fakes.NewQBittorrent()
+		qb.FreeSpace = 1_000_000_000
+		registerFakeQBittorrent(qb.URL)
+		movieID := createLibraryMovie()
+
+		resp := post(
+			fmt.Sprintf("/api/v1/movies/%d/search", movieID),
+			adminAuth,
+			nil,
+		)
+		defer resp.Body.Close()
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		var results []map[string]any
+		decode(resp, &results)
+		Expect(results).To(HaveLen(1))
+
+		grab := func() *http.Response {
+			return post(
+				fmt.Sprintf("/api/v1/movies/%d/grab", movieID),
+				adminAuth,
+				results[0],
+			)
+		}
+
+		By("refusing it with the client's own free space in the reason")
+		refused := grab()
+		defer refused.Body.Close()
+		Expect(refused.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+		var body struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		}
+		decode(refused, &body)
+		Expect(body.Code).To(Equal("grab_rejected"))
+		Expect(body.Message).To(ContainSubstring(
+			"not enough space on the download disk: needs 0.1 GB, 1.0 GB free",
+		))
+
+		By("letting it reach the client once the check is off")
+		off := patch(
+			"/api/v1/config/download",
+			adminAuth,
+			map[string]any{"space_check": false},
+		)
+		off.Body.Close()
+		DeferCleanup(func() {
+			patch(
+				"/api/v1/config/download",
+				adminAuth,
+				map[string]any{"space_check": true},
+			).
+				Body.Close()
+		})
+		// The fake serves no add route, so the grab still fails, but at the
+		// client rather than at the check.
+		passed := grab()
+		defer passed.Body.Close()
+		Expect(bodyText(passed)).NotTo(ContainSubstring("not enough space"))
+	})
+
 	It("403s a grab for a request_only caller", func() {
 		resp := post("/api/v1/movies/1/grab", viewerAuth, map[string]any{
 			"title":        "x",

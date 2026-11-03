@@ -90,6 +90,104 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 			false,
 		),
 		Entry("a bare artist name", "Gojira FLAC", false),
+		Entry(
+			"a covers album naming the artist inside",
+			"Williams.Joshua.Gojira.Relaxing.Acoustic.Covers.2024.FLAC",
+			true,
+		),
+		Entry(
+			"a scene name holding the album after the artist's name elsewhere",
+			"Live.Gojira.From.Mars.to.Sirius.FLAC",
+			false,
+		),
+	)
+
+	DescribeTable(
+		"reads past the tags a tracker opens the name on",
+		func(name, creator, title string, other bool) {
+			Expect(ReleaseNamesOtherWork(name, creator, title)).To(Equal(other))
+			Expect(ReleaseNamesWork(name, creator, title)).To(Equal(!other))
+		},
+		Entry(
+			"a genre and a medium",
+			"(Groove Metal) [CD] Lamb Of God - Into Oblivion - 2026, FLAC (image+.cue), lossless",
+			"Lamb of God",
+			"Into Oblivion",
+			false,
+		),
+		Entry(
+			"tracker flags",
+			"[TR24][OF][LDR] Gojira - Our Time Is Now - 2022 (Progressive-Groove-Death Metal)",
+			"Gojira",
+			"Our Time Is Now",
+			false,
+		),
+		Entry(
+			"a remaster with two years",
+			"(Thrash, Experimental) [LP] [24/96] Meshuggah - Nothing 2019 Remaster - 2002/2019, FLAC (tracks)",
+			"Meshuggah",
+			"Nothing",
+			false,
+		),
+		Entry(
+			"another album behind the tags",
+			"(Melodic Death Metal) [WEB] Avatar - Schlacht - 2007, FLAC (tracks), lossless",
+			"Avatar",
+			"Black Waltz",
+			true,
+		),
+		Entry(
+			"a compilation behind the tags",
+			"VA - The Top 500 Heavy Metal Songs of All Time - 2017 (35 CD) - MP3 320 kb/s",
+			"Meshuggah",
+			"Nothing",
+			true,
+		),
+		Entry(
+			"the year between the artist and the album",
+			"The Glitch Mob - 2021 - Revisions [FLAC]",
+			"The Glitch Mob", "Revisions", false,
+		),
+		Entry(
+			"another album behind a leading year",
+			"The Glitch Mob - 2014 - Love Death Immortality [FLAC]",
+			"The Glitch Mob", "Revisions", true,
+		),
+		Entry(
+			"an album named after a year",
+			"Some Band - 1984 [FLAC]",
+			"Some Band", "1984", false,
+		),
+		Entry(
+			"an artist whose name opens on brackets",
+			"(hed) p.e. - Blackout (2003) [FLAC]",
+			"(hed) p.e.", "Blackout", false,
+		),
+	)
+
+	DescribeTable(
+		"reads \"&\" as \"and\"",
+		func(name string, other bool) {
+			Expect(
+				ReleaseNamesOtherWork(name, "Avatar", "Feathers & Flesh"),
+			).To(Equal(other))
+		},
+		Entry(
+			"spelled out, scene-named",
+			"Avatar.Feathers.And.Flesh.2016.FLAC-GRP",
+			false,
+		),
+		Entry("dropped", "Avatar - Feathers Flesh (2016) [FLAC]", false),
+		Entry(
+			"as the album writes it",
+			"Avatar - Feathers & Flesh [Deluxe Edition] (2016)",
+			false,
+		),
+		Entry(
+			"spelled out, with more title after it",
+			"Avatar.Feathers.And.Flesh.In.His.Own.Words.2017.FLAC.[16bit.44kHz]-NOTAG",
+			true,
+		),
 	)
 
 	It("answers false when the artist normalizes to nothing", func() {

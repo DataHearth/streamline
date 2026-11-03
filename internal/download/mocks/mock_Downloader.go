@@ -850,6 +850,125 @@ func (_c *MockDownloader_ReconcileStrandedMedia_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
+// RejectCueImages provides a mock function for the type MockDownloader
+func (_mock *MockDownloader) RejectCueImages(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RejectCueImages")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockDownloader_RejectCueImages_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RejectCueImages'
+type MockDownloader_RejectCueImages_Call struct {
+	*mock.Call
+}
+
+// RejectCueImages is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockDownloader_Expecter) RejectCueImages(ctx any) *MockDownloader_RejectCueImages_Call {
+	return &MockDownloader_RejectCueImages_Call{Call: _e.mock.On("RejectCueImages", ctx)}
+}
+
+func (_c *MockDownloader_RejectCueImages_Call) Run(run func(ctx context.Context)) *MockDownloader_RejectCueImages_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockDownloader_RejectCueImages_Call) Return(err error) *MockDownloader_RejectCueImages_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockDownloader_RejectCueImages_Call) RunAndReturn(run func(ctx context.Context) error) *MockDownloader_RejectCueImages_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReleaseFiles provides a mock function for the type MockDownloader
+func (_mock *MockDownloader) ReleaseFiles(ctx context.Context, result indexer.SearchResult) ([]download.ReleaseFile, error) {
+	ret := _mock.Called(ctx, result)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReleaseFiles")
+	}
+
+	var r0 []download.ReleaseFile
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, indexer.SearchResult) ([]download.ReleaseFile, error)); ok {
+		return returnFunc(ctx, result)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, indexer.SearchResult) []download.ReleaseFile); ok {
+		r0 = returnFunc(ctx, result)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]download.ReleaseFile)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, indexer.SearchResult) error); ok {
+		r1 = returnFunc(ctx, result)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockDownloader_ReleaseFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReleaseFiles'
+type MockDownloader_ReleaseFiles_Call struct {
+	*mock.Call
+}
+
+// ReleaseFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - result indexer.SearchResult
+func (_e *MockDownloader_Expecter) ReleaseFiles(ctx any, result any) *MockDownloader_ReleaseFiles_Call {
+	return &MockDownloader_ReleaseFiles_Call{Call: _e.mock.On("ReleaseFiles", ctx, result)}
+}
+
+func (_c *MockDownloader_ReleaseFiles_Call) Run(run func(ctx context.Context, result indexer.SearchResult)) *MockDownloader_ReleaseFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 indexer.SearchResult
+		if args[1] != nil {
+			arg1 = args[1].(indexer.SearchResult)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockDownloader_ReleaseFiles_Call) Return(releaseFiles []download.ReleaseFile, err error) *MockDownloader_ReleaseFiles_Call {
+	_c.Call.Return(releaseFiles, err)
+	return _c
+}
+
+func (_c *MockDownloader_ReleaseFiles_Call) RunAndReturn(run func(ctx context.Context, result indexer.SearchResult) ([]download.ReleaseFile, error)) *MockDownloader_ReleaseFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RemoveTorrent provides a mock function for the type MockDownloader
 func (_mock *MockDownloader) RemoveTorrent(ctx context.Context, downloadClientName string, torrentHash string, deleteFiles bool) error {
 	ret := _mock.Called(ctx, downloadClientName, torrentHash, deleteFiles)
@@ -972,6 +1091,57 @@ func (_c *MockDownloader_ResumeQueueItem_Call) Return(err error) *MockDownloader
 }
 
 func (_c *MockDownloader_ResumeQueueItem_Call) RunAndReturn(run func(ctx context.Context, recordID uint32) error) *MockDownloader_ResumeQueueItem_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SeedingTorrents provides a mock function for the type MockDownloader
+func (_mock *MockDownloader) SeedingTorrents(ctx context.Context) download.SeedingSet {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SeedingTorrents")
+	}
+
+	var r0 download.SeedingSet
+	if returnFunc, ok := ret.Get(0).(func(context.Context) download.SeedingSet); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(download.SeedingSet)
+	}
+	return r0
+}
+
+// MockDownloader_SeedingTorrents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SeedingTorrents'
+type MockDownloader_SeedingTorrents_Call struct {
+	*mock.Call
+}
+
+// SeedingTorrents is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockDownloader_Expecter) SeedingTorrents(ctx any) *MockDownloader_SeedingTorrents_Call {
+	return &MockDownloader_SeedingTorrents_Call{Call: _e.mock.On("SeedingTorrents", ctx)}
+}
+
+func (_c *MockDownloader_SeedingTorrents_Call) Run(run func(ctx context.Context)) *MockDownloader_SeedingTorrents_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockDownloader_SeedingTorrents_Call) Return(seedingSet download.SeedingSet) *MockDownloader_SeedingTorrents_Call {
+	_c.Call.Return(seedingSet)
+	return _c
+}
+
+func (_c *MockDownloader_SeedingTorrents_Call) RunAndReturn(run func(ctx context.Context) download.SeedingSet) *MockDownloader_SeedingTorrents_Call {
 	_c.Call.Return(run)
 	return _c
 }

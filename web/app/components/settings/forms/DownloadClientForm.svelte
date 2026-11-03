@@ -7,6 +7,7 @@
 	import TypePicker from "@components/forms/TypePicker.svelte";
 	import BrandLogo from "@components/settings/BrandLogo.svelte";
 	import { readOnlyLock } from "@lib/config.svelte";
+	import { hostDestination } from "@lib/destination";
 	import type { AppForm } from "@lib/form";
 	import type { DownloadClientType, DownloadClientAuth } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -71,6 +72,18 @@
 
 	const clientType = untrack(() => form.useSelector((s) => s.values.client_type));
 	const authMethod = untrack(() => form.useSelector((s) => s.values.auth_method));
+
+	// Captured once, not through a selector: the address the client was saved
+	// under. Moving it makes the server refuse a blank secret, so the secret
+	// field says to enter it again instead of "leave blank to keep".
+	const savedDestination = untrack(() => {
+		const v = form.state.values;
+		return hostDestination(v.host, v.port, v.use_ssl);
+	});
+	const destination = untrack(() =>
+		form.useSelector((s) => hostDestination(s.values.host, s.values.port, s.values.use_ssl)),
+	);
+	const moved = $derived(isEdit && destination.current !== savedDestination);
 </script>
 
 <div class="space-y-5">
@@ -187,9 +200,11 @@
 								label={i18n.common_password()}
 								type="password"
 								autocomplete="new-password"
-								help={isEdit
-									? i18n.dlclient_password_keep()
-									: undefined}
+								help={moved
+									? i18n.settings_secret_reenter()
+									: isEdit
+										? i18n.dlclient_password_keep()
+										: undefined}
 							/>
 						{/snippet}
 					</form.Field>
@@ -202,9 +217,11 @@
 							label={i18n.field_api_key()}
 							type="password"
 							autocomplete="off"
-							help={isEdit
-								? i18n.dlclient_apikey_keep_qbit()
-								: i18n.dlclient_qbit_apikey_help()}
+							help={moved
+								? i18n.settings_secret_reenter()
+								: isEdit
+									? i18n.dlclient_apikey_keep_qbit()
+									: i18n.dlclient_qbit_apikey_help()}
 						/>
 					{/snippet}
 				</form.Field>
@@ -223,9 +240,11 @@
 							label={i18n.common_password()}
 							type="password"
 							autocomplete="new-password"
-							help={isEdit
-								? i18n.dlclient_password_keep()
-								: undefined}
+							help={moved
+								? i18n.settings_secret_reenter()
+								: isEdit
+									? i18n.dlclient_password_keep()
+									: undefined}
 						/>
 					{/snippet}
 				</form.Field>

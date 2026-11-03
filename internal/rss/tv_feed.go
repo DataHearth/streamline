@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
@@ -84,6 +85,12 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
+	// Every grab below is automatic; without the blocklist any of them could
+	// be a release the user rejected.
+	blocklist, err := s.store.RejectedReleases(ctx)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
 
 	// Unfiltered season lengths: the two indexes above are narrowed to the
 	// episodes this pass cares about, and a pack costs us every episode it
@@ -101,6 +108,7 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 		upgrades:     buildEpisodeIndex(upgradable),
 		profiles:     resolveShowProfiles(ctx, shows, upgradable),
 		seasonCounts: seasonCounts,
+		rejected:     blocklist,
 		// grabbed tracks episode IDs already attempted this tick so a second
 		// indexer carrying the same release doesn't double-grab, and so a wanted
 		// grab and an upgrade grab never both fire for one episode.
@@ -138,6 +146,8 @@ type tvPass struct {
 	// unscaled rather than blocking the tick.
 	seasonCounts map[uint32]map[uint16]int
 	grabbed      map[uint32]struct{}
+	// rejected is the releases the user rejected, matched per show.
+	rejected *db.ReleaseBlocklist
 }
 
 func (s *TVFeedScanner) processItems(
@@ -159,6 +169,10 @@ func (s *TVFeedScanner) processItems(
 		// episodes, so the profile is one lookup either way.
 		show := indexedShow(ws, us)
 		if show == nil {
+			continue
+		}
+		// Both branches below grab for this show, wanted and upgrade alike.
+		if rejected(ctx, item, pass.rejected.Show, show.ID) {
 			continue
 		}
 		p := pass.profiles[show.QualityProfile]

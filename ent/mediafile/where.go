@@ -185,6 +185,46 @@ func SizeBefore(v int64) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldSizeBefore, v))
 }
 
+// TagsHash applies equality check predicate on the "tags_hash" field. It's identical to TagsHashEQ.
+func TagsHash(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsHash, v))
+}
+
+// TaggedAt applies equality check predicate on the "tagged_at" field. It's identical to TaggedAtEQ.
+func TaggedAt(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTaggedAt, v))
+}
+
+// TagsMtime applies equality check predicate on the "tags_mtime" field. It's identical to TagsMtimeEQ.
+func TagsMtime(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsMtime, v))
+}
+
+// TagsSize applies equality check predicate on the "tags_size" field. It's identical to TagsSizeEQ.
+func TagsSize(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsSize, v))
+}
+
+// TagsCheckedAt applies equality check predicate on the "tags_checked_at" field. It's identical to TagsCheckedAtEQ.
+func TagsCheckedAt(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsCheckedAt, v))
+}
+
+// TagFailures applies equality check predicate on the "tag_failures" field. It's identical to TagFailuresEQ.
+func TagFailures(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagFailures, v))
+}
+
+// TagsError applies equality check predicate on the "tags_error" field. It's identical to TagsErrorEQ.
+func TagsError(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsError, v))
+}
+
+// TagsArtHash applies equality check predicate on the "tags_art_hash" field. It's identical to TagsArtHashEQ.
+func TagsArtHash(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsArtHash, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldCreateTime, v))
@@ -1793,6 +1833,501 @@ func BookKindIsNil() predicate.MediaFile {
 // BookKindNotNil applies the NotNil predicate on the "book_kind" field.
 func BookKindNotNil() predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldNotNull(FieldBookKind))
+}
+
+// TagsStateEQ applies the EQ predicate on the "tags_state" field.
+func TagsStateEQ(v TagsState) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsState, v))
+}
+
+// TagsStateNEQ applies the NEQ predicate on the "tags_state" field.
+func TagsStateNEQ(v TagsState) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldTagsState, v))
+}
+
+// TagsStateIn applies the In predicate on the "tags_state" field.
+func TagsStateIn(vs ...TagsState) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldTagsState, vs...))
+}
+
+// TagsStateNotIn applies the NotIn predicate on the "tags_state" field.
+func TagsStateNotIn(vs ...TagsState) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldTagsState, vs...))
+}
+
+// TagsStateIsNil applies the IsNil predicate on the "tags_state" field.
+func TagsStateIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldTagsState))
+}
+
+// TagsStateNotNil applies the NotNil predicate on the "tags_state" field.
+func TagsStateNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldTagsState))
+}
+
+// TagsHashEQ applies the EQ predicate on the "tags_hash" field.
+func TagsHashEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsHash, v))
+}
+
+// TagsHashNEQ applies the NEQ predicate on the "tags_hash" field.
+func TagsHashNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldTagsHash, v))
+}
+
+// TagsHashIn applies the In predicate on the "tags_hash" field.
+func TagsHashIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldTagsHash, vs...))
+}
+
+// TagsHashNotIn applies the NotIn predicate on the "tags_hash" field.
+func TagsHashNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldTagsHash, vs...))
+}
+
+// TagsHashGT applies the GT predicate on the "tags_hash" field.
+func TagsHashGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldTagsHash, v))
+}
+
+// TagsHashGTE applies the GTE predicate on the "tags_hash" field.
+func TagsHashGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldTagsHash, v))
+}
+
+// TagsHashLT applies the LT predicate on the "tags_hash" field.
+func TagsHashLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldTagsHash, v))
+}
+
+// TagsHashLTE applies the LTE predicate on the "tags_hash" field.
+func TagsHashLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldTagsHash, v))
+}
+
+// TagsHashContains applies the Contains predicate on the "tags_hash" field.
+func TagsHashContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldTagsHash, v))
+}
+
+// TagsHashHasPrefix applies the HasPrefix predicate on the "tags_hash" field.
+func TagsHashHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldTagsHash, v))
+}
+
+// TagsHashHasSuffix applies the HasSuffix predicate on the "tags_hash" field.
+func TagsHashHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldTagsHash, v))
+}
+
+// TagsHashIsNil applies the IsNil predicate on the "tags_hash" field.
+func TagsHashIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldTagsHash))
+}
+
+// TagsHashNotNil applies the NotNil predicate on the "tags_hash" field.
+func TagsHashNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldTagsHash))
+}
+
+// TagsHashEqualFold applies the EqualFold predicate on the "tags_hash" field.
+func TagsHashEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldTagsHash, v))
+}
+
+// TagsHashContainsFold applies the ContainsFold predicate on the "tags_hash" field.
+func TagsHashContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldTagsHash, v))
+}
+
+// TaggedAtEQ applies the EQ predicate on the "tagged_at" field.
+func TaggedAtEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTaggedAt, v))
+}
+
+// TaggedAtNEQ applies the NEQ predicate on the "tagged_at" field.
+func TaggedAtNEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldTaggedAt, v))
+}
+
+// TaggedAtIn applies the In predicate on the "tagged_at" field.
+func TaggedAtIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldTaggedAt, vs...))
+}
+
+// TaggedAtNotIn applies the NotIn predicate on the "tagged_at" field.
+func TaggedAtNotIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldTaggedAt, vs...))
+}
+
+// TaggedAtGT applies the GT predicate on the "tagged_at" field.
+func TaggedAtGT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldTaggedAt, v))
+}
+
+// TaggedAtGTE applies the GTE predicate on the "tagged_at" field.
+func TaggedAtGTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldTaggedAt, v))
+}
+
+// TaggedAtLT applies the LT predicate on the "tagged_at" field.
+func TaggedAtLT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldTaggedAt, v))
+}
+
+// TaggedAtLTE applies the LTE predicate on the "tagged_at" field.
+func TaggedAtLTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldTaggedAt, v))
+}
+
+// TaggedAtIsNil applies the IsNil predicate on the "tagged_at" field.
+func TaggedAtIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldTaggedAt))
+}
+
+// TaggedAtNotNil applies the NotNil predicate on the "tagged_at" field.
+func TaggedAtNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldTaggedAt))
+}
+
+// TagsMtimeEQ applies the EQ predicate on the "tags_mtime" field.
+func TagsMtimeEQ(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsMtime, v))
+}
+
+// TagsMtimeNEQ applies the NEQ predicate on the "tags_mtime" field.
+func TagsMtimeNEQ(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldTagsMtime, v))
+}
+
+// TagsMtimeIn applies the In predicate on the "tags_mtime" field.
+func TagsMtimeIn(vs ...int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldTagsMtime, vs...))
+}
+
+// TagsMtimeNotIn applies the NotIn predicate on the "tags_mtime" field.
+func TagsMtimeNotIn(vs ...int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldTagsMtime, vs...))
+}
+
+// TagsMtimeGT applies the GT predicate on the "tags_mtime" field.
+func TagsMtimeGT(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldTagsMtime, v))
+}
+
+// TagsMtimeGTE applies the GTE predicate on the "tags_mtime" field.
+func TagsMtimeGTE(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldTagsMtime, v))
+}
+
+// TagsMtimeLT applies the LT predicate on the "tags_mtime" field.
+func TagsMtimeLT(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldTagsMtime, v))
+}
+
+// TagsMtimeLTE applies the LTE predicate on the "tags_mtime" field.
+func TagsMtimeLTE(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldTagsMtime, v))
+}
+
+// TagsMtimeIsNil applies the IsNil predicate on the "tags_mtime" field.
+func TagsMtimeIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldTagsMtime))
+}
+
+// TagsMtimeNotNil applies the NotNil predicate on the "tags_mtime" field.
+func TagsMtimeNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldTagsMtime))
+}
+
+// TagsSizeEQ applies the EQ predicate on the "tags_size" field.
+func TagsSizeEQ(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsSize, v))
+}
+
+// TagsSizeNEQ applies the NEQ predicate on the "tags_size" field.
+func TagsSizeNEQ(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldTagsSize, v))
+}
+
+// TagsSizeIn applies the In predicate on the "tags_size" field.
+func TagsSizeIn(vs ...int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldTagsSize, vs...))
+}
+
+// TagsSizeNotIn applies the NotIn predicate on the "tags_size" field.
+func TagsSizeNotIn(vs ...int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldTagsSize, vs...))
+}
+
+// TagsSizeGT applies the GT predicate on the "tags_size" field.
+func TagsSizeGT(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldTagsSize, v))
+}
+
+// TagsSizeGTE applies the GTE predicate on the "tags_size" field.
+func TagsSizeGTE(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldTagsSize, v))
+}
+
+// TagsSizeLT applies the LT predicate on the "tags_size" field.
+func TagsSizeLT(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldTagsSize, v))
+}
+
+// TagsSizeLTE applies the LTE predicate on the "tags_size" field.
+func TagsSizeLTE(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldTagsSize, v))
+}
+
+// TagsSizeIsNil applies the IsNil predicate on the "tags_size" field.
+func TagsSizeIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldTagsSize))
+}
+
+// TagsSizeNotNil applies the NotNil predicate on the "tags_size" field.
+func TagsSizeNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldTagsSize))
+}
+
+// TagsCheckedAtEQ applies the EQ predicate on the "tags_checked_at" field.
+func TagsCheckedAtEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsCheckedAt, v))
+}
+
+// TagsCheckedAtNEQ applies the NEQ predicate on the "tags_checked_at" field.
+func TagsCheckedAtNEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldTagsCheckedAt, v))
+}
+
+// TagsCheckedAtIn applies the In predicate on the "tags_checked_at" field.
+func TagsCheckedAtIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldTagsCheckedAt, vs...))
+}
+
+// TagsCheckedAtNotIn applies the NotIn predicate on the "tags_checked_at" field.
+func TagsCheckedAtNotIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldTagsCheckedAt, vs...))
+}
+
+// TagsCheckedAtGT applies the GT predicate on the "tags_checked_at" field.
+func TagsCheckedAtGT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldTagsCheckedAt, v))
+}
+
+// TagsCheckedAtGTE applies the GTE predicate on the "tags_checked_at" field.
+func TagsCheckedAtGTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldTagsCheckedAt, v))
+}
+
+// TagsCheckedAtLT applies the LT predicate on the "tags_checked_at" field.
+func TagsCheckedAtLT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldTagsCheckedAt, v))
+}
+
+// TagsCheckedAtLTE applies the LTE predicate on the "tags_checked_at" field.
+func TagsCheckedAtLTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldTagsCheckedAt, v))
+}
+
+// TagsCheckedAtIsNil applies the IsNil predicate on the "tags_checked_at" field.
+func TagsCheckedAtIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldTagsCheckedAt))
+}
+
+// TagsCheckedAtNotNil applies the NotNil predicate on the "tags_checked_at" field.
+func TagsCheckedAtNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldTagsCheckedAt))
+}
+
+// TagFailuresEQ applies the EQ predicate on the "tag_failures" field.
+func TagFailuresEQ(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagFailures, v))
+}
+
+// TagFailuresNEQ applies the NEQ predicate on the "tag_failures" field.
+func TagFailuresNEQ(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldTagFailures, v))
+}
+
+// TagFailuresIn applies the In predicate on the "tag_failures" field.
+func TagFailuresIn(vs ...uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldTagFailures, vs...))
+}
+
+// TagFailuresNotIn applies the NotIn predicate on the "tag_failures" field.
+func TagFailuresNotIn(vs ...uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldTagFailures, vs...))
+}
+
+// TagFailuresGT applies the GT predicate on the "tag_failures" field.
+func TagFailuresGT(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldTagFailures, v))
+}
+
+// TagFailuresGTE applies the GTE predicate on the "tag_failures" field.
+func TagFailuresGTE(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldTagFailures, v))
+}
+
+// TagFailuresLT applies the LT predicate on the "tag_failures" field.
+func TagFailuresLT(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldTagFailures, v))
+}
+
+// TagFailuresLTE applies the LTE predicate on the "tag_failures" field.
+func TagFailuresLTE(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldTagFailures, v))
+}
+
+// TagsErrorEQ applies the EQ predicate on the "tags_error" field.
+func TagsErrorEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsError, v))
+}
+
+// TagsErrorNEQ applies the NEQ predicate on the "tags_error" field.
+func TagsErrorNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldTagsError, v))
+}
+
+// TagsErrorIn applies the In predicate on the "tags_error" field.
+func TagsErrorIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldTagsError, vs...))
+}
+
+// TagsErrorNotIn applies the NotIn predicate on the "tags_error" field.
+func TagsErrorNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldTagsError, vs...))
+}
+
+// TagsErrorGT applies the GT predicate on the "tags_error" field.
+func TagsErrorGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldTagsError, v))
+}
+
+// TagsErrorGTE applies the GTE predicate on the "tags_error" field.
+func TagsErrorGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldTagsError, v))
+}
+
+// TagsErrorLT applies the LT predicate on the "tags_error" field.
+func TagsErrorLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldTagsError, v))
+}
+
+// TagsErrorLTE applies the LTE predicate on the "tags_error" field.
+func TagsErrorLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldTagsError, v))
+}
+
+// TagsErrorContains applies the Contains predicate on the "tags_error" field.
+func TagsErrorContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldTagsError, v))
+}
+
+// TagsErrorHasPrefix applies the HasPrefix predicate on the "tags_error" field.
+func TagsErrorHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldTagsError, v))
+}
+
+// TagsErrorHasSuffix applies the HasSuffix predicate on the "tags_error" field.
+func TagsErrorHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldTagsError, v))
+}
+
+// TagsErrorIsNil applies the IsNil predicate on the "tags_error" field.
+func TagsErrorIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldTagsError))
+}
+
+// TagsErrorNotNil applies the NotNil predicate on the "tags_error" field.
+func TagsErrorNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldTagsError))
+}
+
+// TagsErrorEqualFold applies the EqualFold predicate on the "tags_error" field.
+func TagsErrorEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldTagsError, v))
+}
+
+// TagsErrorContainsFold applies the ContainsFold predicate on the "tags_error" field.
+func TagsErrorContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldTagsError, v))
+}
+
+// TagsArtHashEQ applies the EQ predicate on the "tags_art_hash" field.
+func TagsArtHashEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsArtHash, v))
+}
+
+// TagsArtHashNEQ applies the NEQ predicate on the "tags_art_hash" field.
+func TagsArtHashNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldTagsArtHash, v))
+}
+
+// TagsArtHashIn applies the In predicate on the "tags_art_hash" field.
+func TagsArtHashIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldTagsArtHash, vs...))
+}
+
+// TagsArtHashNotIn applies the NotIn predicate on the "tags_art_hash" field.
+func TagsArtHashNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldTagsArtHash, vs...))
+}
+
+// TagsArtHashGT applies the GT predicate on the "tags_art_hash" field.
+func TagsArtHashGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldTagsArtHash, v))
+}
+
+// TagsArtHashGTE applies the GTE predicate on the "tags_art_hash" field.
+func TagsArtHashGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldTagsArtHash, v))
+}
+
+// TagsArtHashLT applies the LT predicate on the "tags_art_hash" field.
+func TagsArtHashLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldTagsArtHash, v))
+}
+
+// TagsArtHashLTE applies the LTE predicate on the "tags_art_hash" field.
+func TagsArtHashLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldTagsArtHash, v))
+}
+
+// TagsArtHashContains applies the Contains predicate on the "tags_art_hash" field.
+func TagsArtHashContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldTagsArtHash, v))
+}
+
+// TagsArtHashHasPrefix applies the HasPrefix predicate on the "tags_art_hash" field.
+func TagsArtHashHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldTagsArtHash, v))
+}
+
+// TagsArtHashHasSuffix applies the HasSuffix predicate on the "tags_art_hash" field.
+func TagsArtHashHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldTagsArtHash, v))
+}
+
+// TagsArtHashIsNil applies the IsNil predicate on the "tags_art_hash" field.
+func TagsArtHashIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldTagsArtHash))
+}
+
+// TagsArtHashNotNil applies the NotNil predicate on the "tags_art_hash" field.
+func TagsArtHashNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldTagsArtHash))
+}
+
+// TagsArtHashEqualFold applies the EqualFold predicate on the "tags_art_hash" field.
+func TagsArtHashEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldTagsArtHash, v))
+}
+
+// TagsArtHashContainsFold applies the ContainsFold predicate on the "tags_art_hash" field.
+func TagsArtHashContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldTagsArtHash, v))
 }
 
 // HasMovie applies the HasEdge predicate on the "movie" edge.

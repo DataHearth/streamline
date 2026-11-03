@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -62,14 +63,32 @@ type ImportedFile struct {
 	Parsed ParseResult
 }
 
+// SourceFilter reports whether a file found under a download's save path is
+// one of that download's own. A save path is a folder named after the torrent,
+// and two torrents named alike share it, so a walk of it can reach files no
+// one grabbed for this record. A nil filter keeps every file.
+type SourceFilter func(path string) bool
+
+// Keep reports whether path passes the filter; everything passes a nil one.
+func (f SourceFilter) Keep(path string) bool { return f == nil || f(path) }
+
+// Filter returns the paths that pass the filter, reusing the slice.
+func (f SourceFilter) Filter(paths []string) []string {
+	if f == nil {
+		return paths
+	}
+	return slices.DeleteFunc(paths, func(p string) bool { return !f(p) })
+}
+
 // findMediaFile scans dir for video files of at least minSize (MinMediaSize
 // for a feature, MinEpisodeSize for an episode), skipping any whose basename
-// matches \bsample\b. Returns the absolute path to the sole candidate.
+// matches \bsample\b or that keep rejects. Returns the absolute path to the
+// sole candidate.
 // Errors: ErrNoMedia (none found, none filtered), ErrSampleOnly (all
 // candidates were samples), ErrMultipleMedia (>1 candidate after filtering).
 // When dir is a single file, it is returned directly provided it passes the
 // same filters.
-func findMediaFile(dir string, minSize int64) (string, error) {
+func findMediaFile(dir string, minSize int64, keep SourceFilter) (string, error) {
 	info, err := os.Stat(dir)
 	if err != nil {
 		return "", err
@@ -94,7 +113,7 @@ func findMediaFile(dir string, minSize int64) (string, error) {
 			continue
 		}
 		name := e.Name()
-		if !IsVideoPath(name) {
+		if !IsVideoPath(name) || !keep.Keep(filepath.Join(dir, name)) {
 			continue
 		}
 		info, err := e.Info()
@@ -120,15 +139,15 @@ func findMediaFile(dir string, minSize int64) (string, error) {
 }
 
 // ResolveMediaFile resolves the single importable feature under pathOrDir (or
-// pathOrDir itself when it is a file), with findMediaFile's filters. Lets the
-// importer probe the source before the transfer decides anything.
-func ResolveMediaFile(pathOrDir string) (string, error) {
-	return findMediaFile(pathOrDir, MinMediaSize)
+// pathOrDir itself when it is a file), with findMediaFile's filters and keep.
+// Lets the importer probe the source before the transfer decides anything.
+func ResolveMediaFile(pathOrDir string, keep SourceFilter) (string, error) {
+	return findMediaFile(pathOrDir, MinMediaSize, keep)
 }
 
 // ResolveEpisodeFile is ResolveMediaFile against the episode size floor.
-func ResolveEpisodeFile(pathOrDir string) (string, error) {
-	return findMediaFile(pathOrDir, MinEpisodeSize)
+func ResolveEpisodeFile(pathOrDir string, keep SourceFilter) (string, error) {
+	return findMediaFile(pathOrDir, MinEpisodeSize, keep)
 }
 
 // ListVideoFilesRecursive returns every importable video file under dir and its
@@ -382,7 +401,7 @@ func placeFile(
 			".",
 		)
 	} else {
-		srcFile, err = findMediaFile(p.src, p.minSize)
+		srcFile, err = findMediaFile(p.src, p.minSize, nil)
 		if err == nil {
 			parsed = Parse(filepath.Base(srcFile))
 		}

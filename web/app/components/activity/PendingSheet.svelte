@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X } from "@lucide/svelte";
@@ -32,6 +33,8 @@
 		onIgnore: (id: number, removeTorrent: boolean) => void;
 		onForget: (id: number) => void;
 	} = $props();
+
+	closeOnBack(() => open, () => onClose());
 
 	$effect(() => {
 		if (!open) return;

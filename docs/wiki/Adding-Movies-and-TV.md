@@ -127,7 +127,7 @@ By default the results read in plain words: which language you will hear (**FR +
 
 Each release also says whether its indexer is a private or public tracker — the **Private** setting on the indexer, since trackers don't report it themselves — and whether you have grabbed that exact release before for this title (for TV, for any episode of the show), with when. "That exact release" means the same info hash when both the release and the earlier download have one, and otherwise the same release name. Earlier grabs that failed count too, which is the point: it stops you re-grabbing something that already went wrong.
 
-When the title (or, for a season or whole-series search, any episode in that scope) already has a file on disk, **Select** asks first, showing what is there next to what you picked. Confirming grabs with replace on, so the import overwrites the existing file(s); cancelling grabs nothing.
+When the title (or, for a season or whole-series search, any episode in that scope) already has a file on disk, **Select** asks first, showing what is there next to what you picked. Confirming grabs with replace on, so the import overwrites the existing file(s); cancelling grabs nothing. When a season or whole-series search also has aired episodes still missing, the question offers *Download missing episodes only* as well: the import then fills only the episodes without a file and leaves yours in place (a pack holding none of the missing episodes imports nothing). To know before choosing, *Files* on a season or whole-series result reads the release's torrent and lists which missing episodes it holds, with every file it contains; the same panel shows in the question. It reads episode numbers from the file names exactly as the import does, but it costs one request to the indexer, so it only runs when you ask, and a magnet link has no file list until a download starts.
 
 For TV you can search at three levels:
 
@@ -152,6 +152,8 @@ From the **Episodes** tab, the season header has its own **Search season** butto
 Every name in a title's **Cast** tab is a link. Click one and you get that person's page: every movie and series in *your* library they are credited on, each poster labelled with the character they play there.
 
 Cast members also show up in search — the command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>), the phone search screen and the tablet search panel all list matching people under the title hits, with the number of library titles each appears in.
+
+The same search finds episodes by their title, each with its show and SxxExx code: picking one opens the series on that episode's season with its details sheet open. It also finds artists, albums and books (see [Music and Books](Music-and-Books#finding-an-artist-an-album-or-a-book)), and an admin can type the name of a settings section, such as *indexers* or *quality profiles*, to jump straight to it.
 
 There is no people database: a person exists exactly as long as a title crediting them does. Someone who appears in nothing you have is not findable, and delete their only title and their page goes with it.
 

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/apikey"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -33,7 +34,7 @@ var apiRejections = otelx.Must(
 // service. Defined here (consumer side) so unit tests can mock it without
 // depending on the full Manager.
 type Authenticator interface {
-	ValidateAPIKey(ctx context.Context, key string) (*ent.User, error)
+	ValidateAPIKey(ctx context.Context, key string) (*ent.ApiKey, error)
 	ValidateToken(token string) (*auth.Claims, error)
 	ValidateSession(ctx context.Context, jti string) error
 	TouchSessionAsync(jti string)
@@ -121,10 +122,18 @@ func authenticateAPI(
 ) {
 	ctx := r.Context()
 	if apiKey := r.Header.Get("X-API-Key"); apiKey != "" {
-		u, err := svc.ValidateAPIKey(ctx, apiKey)
+		ak, err := svc.ValidateAPIKey(ctx, apiKey)
 		if err != nil {
 			rejectedAuth(ctx, "invalid api key", "api_key")
 			rejectAPI(limiter, w, r, "invalid API key")
+			return
+		}
+		// A read key's limit is the key's, not its owner's: checked here,
+		// before the request reaches the RBAC table, so no role widens it.
+		// Not metered: the credential is valid, this is authorization.
+		if ak.Scope != apikey.ScopeFull && !readMethod(r.Method) {
+			rejectedAuth(ctx, "write via read-only api key", "api_key")
+			http.Error(w, "this API key is read-only", http.StatusForbidden)
 			return
 		}
 		if identityMutationForAPIKey(r) {
@@ -137,6 +146,7 @@ func authenticateAPI(
 			)
 			return
 		}
+		u := ak.Edges.Owner
 		ctx := auth.ContextWithClaims(ctx, &auth.Claims{
 			UserID:      u.ID,
 			Email:       u.Email,
@@ -238,7 +248,7 @@ var identityPrefixes = []string{
 }
 
 func identityMutationForAPIKey(r *http.Request) bool {
-	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+	if readMethod(r.Method) {
 		return false
 	}
 	for _, p := range identityPrefixes {
@@ -247,6 +257,13 @@ func identityMutationForAPIKey(r *http.Request) bool {
 		}
 	}
 	return false
+}
+
+// readMethod reports whether m is one a read-only credential may use. Narrower
+// than safeMethod: OPTIONS is a CORS preflight, never something an API key
+// itself needs, so a read key is held to GET and HEAD.
+func readMethod(m string) bool {
+	return m == http.MethodGet || m == http.MethodHead
 }
 
 // rejectAPI answers an /api/v1 request that failed to authenticate, and meters

@@ -47,16 +47,22 @@ func (_m *MockRefresher) EXPECT() *MockRefresher_Expecter {
 }
 
 // RefreshAll provides a mock function for the type MockRefresher
-func (_mock *MockRefresher) RefreshAll(ctx context.Context, kind string, libraryPath string) error {
-	ret := _mock.Called(ctx, kind, libraryPath)
+func (_mock *MockRefresher) RefreshAll(ctx context.Context, kind string, libraryPath string, paths ...string) error {
+	var tmpRet mock.Arguments
+	if len(paths) > 0 {
+		tmpRet = _mock.Called(ctx, kind, libraryPath, paths)
+	} else {
+		tmpRet = _mock.Called(ctx, kind, libraryPath)
+	}
+	ret := tmpRet
 
 	if len(ret) == 0 {
 		panic("no return value specified for RefreshAll")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
-		r0 = returnFunc(ctx, kind, libraryPath)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...string) error); ok {
+		r0 = returnFunc(ctx, kind, libraryPath, paths...)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -72,11 +78,13 @@ type MockRefresher_RefreshAll_Call struct {
 //   - ctx context.Context
 //   - kind string
 //   - libraryPath string
-func (_e *MockRefresher_Expecter) RefreshAll(ctx any, kind any, libraryPath any) *MockRefresher_RefreshAll_Call {
-	return &MockRefresher_RefreshAll_Call{Call: _e.mock.On("RefreshAll", ctx, kind, libraryPath)}
+//   - paths ...string
+func (_e *MockRefresher_Expecter) RefreshAll(ctx any, kind any, libraryPath any, paths ...any) *MockRefresher_RefreshAll_Call {
+	return &MockRefresher_RefreshAll_Call{Call: _e.mock.On("RefreshAll",
+		append([]any{ctx, kind, libraryPath}, paths...)...)}
 }
 
-func (_c *MockRefresher_RefreshAll_Call) Run(run func(ctx context.Context, kind string, libraryPath string)) *MockRefresher_RefreshAll_Call {
+func (_c *MockRefresher_RefreshAll_Call) Run(run func(ctx context.Context, kind string, libraryPath string, paths ...string)) *MockRefresher_RefreshAll_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -90,10 +98,17 @@ func (_c *MockRefresher_RefreshAll_Call) Run(run func(ctx context.Context, kind 
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
+		var arg3 []string
+		var variadicArgs []string
+		if len(args) > 3 {
+			variadicArgs = args[3].([]string)
+		}
+		arg3 = variadicArgs
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3...,
 		)
 	})
 	return _c
@@ -104,7 +119,7 @@ func (_c *MockRefresher_RefreshAll_Call) Return(err error) *MockRefresher_Refres
 	return _c
 }
 
-func (_c *MockRefresher_RefreshAll_Call) RunAndReturn(run func(ctx context.Context, kind string, libraryPath string) error) *MockRefresher_RefreshAll_Call {
+func (_c *MockRefresher_RefreshAll_Call) RunAndReturn(run func(ctx context.Context, kind string, libraryPath string, paths ...string) error) *MockRefresher_RefreshAll_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Key, Trash2 } from "@lucide/svelte";
-	import { formatDateTime, formatRelative } from "@lib/dates";
+	import { cn } from "@lib/cn";
+	import { formatDate, formatDateTime, formatRelative } from "@lib/dates";
 	import type { ApiKey } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -13,6 +14,21 @@
 		revoking?: boolean;
 		onRevoke: () => void;
 	} = $props();
+
+	// Read once per render: an expired key authenticates nothing, and stays
+	// listed only until the purge job drops it a week later.
+	let expired = $derived(
+		!!apiKey.expires_at && new Date(apiKey.expires_at).getTime() <= Date.now(),
+	);
+
+	// Inside a month a relative "in 12 days" says more than a date; past it a
+	// 90- or 365-day key reads better as the day it stops working.
+	const MONTH_MS = 30 * 86_400_000;
+	function expiryText(iso: string): string {
+		return Math.abs(new Date(iso).getTime() - Date.now()) < MONTH_MS
+			? formatRelative(iso)
+			: formatDate(iso);
+	}
 </script>
 
 <li class="flex items-start gap-3.5 px-5 py-3.5">
@@ -23,13 +39,51 @@
 		<Key size={18} />
 	</div>
 	<div class="min-w-0 flex-1">
-		<p class="truncate text-sm font-semibold text-fg">{apiKey.name}</p>
+		<div class="flex min-w-0 items-center gap-2">
+			<p
+				class={cn(
+					"truncate text-sm font-semibold text-fg",
+					expired && "text-fg-muted line-through",
+				)}
+			>
+				{apiKey.name}
+			</p>
+			<span
+				class={cn(
+					"shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium",
+					apiKey.scope === "read"
+						? "bg-bg-card text-fg-muted"
+						: "bg-status-wanted/10 text-status-wanted",
+				)}
+				title={apiKey.scope === "read"
+					? i18n.apikey_scope_read_hint()
+					: i18n.apikey_scope_full_hint()}
+			>
+				{apiKey.scope === "read"
+					? i18n.apikey_scope_read()
+					: i18n.apikey_scope_full()}
+			</span>
+		</div>
 		<dl class="mt-1 flex flex-wrap gap-x-3.5 gap-y-0.5 text-xs text-fg-muted">
 			<div class="flex items-center gap-1">
 				<dt class="text-fg-subtle">{i18n.apikey_created()}</dt>
 				<dd title={formatDateTime(apiKey.created_at)}
 					>{formatRelative(apiKey.created_at)}</dd
 				>
+			</div>
+			<div class="flex items-center gap-1">
+				<dt class="text-fg-subtle">
+					{expired ? i18n.apikey_expired() : i18n.apikey_expires()}
+				</dt>
+				<dd
+					class:text-fg-subtle={!apiKey.expires_at}
+					class:text-status-failed={expired}
+					title={apiKey.expires_at
+						? formatDateTime(apiKey.expires_at)
+						: undefined}
+				>
+					{apiKey.expires_at ? expiryText(apiKey.expires_at) : i18n.lc_never()}
+				</dd>
 			</div>
 			<div class="flex items-center gap-1">
 				<dt class="text-fg-subtle">{i18n.apikey_last_used()}</dt>

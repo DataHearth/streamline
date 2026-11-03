@@ -7,6 +7,7 @@
 	import BrandLogo from "@components/settings/BrandLogo.svelte";
 	import { cn } from "@lib/cn";
 	import { readOnlyLock } from "@lib/config.svelte";
+	import { hostDestination } from "@lib/destination";
 	import type { AppForm } from "@lib/form";
 	import type { IndexerProtocol } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -86,6 +87,18 @@
 	}
 
 	const protocol = untrack(() => form.useSelector((s) => s.values.protocol));
+
+	// Captured once, not through a selector: the address the indexer was saved
+	// under. Moving it makes the server refuse a blank key, so the key field
+	// says to enter it again instead of "leave blank to keep".
+	const savedDestination = untrack(() => {
+		const v = form.state.values;
+		return hostDestination(v.host, v.port, v.use_ssl);
+	});
+	const destination = untrack(() =>
+		form.useSelector((s) => hostDestination(s.values.host, s.values.port, s.values.use_ssl)),
+	);
+	const moved = $derived(isEdit && destination.current !== savedDestination);
 
 	const PROTOCOL_META: Record<
 		IndexerProtocol,
@@ -260,9 +273,11 @@
 						label={i18n.field_api_key()}
 						type="password"
 						autocomplete="off"
-						help={isEdit
-							? i18n.indexer_apikey_keep()
-							: undefined}
+						help={moved
+							? i18n.settings_secret_reenter()
+							: isEdit
+								? i18n.indexer_apikey_keep()
+								: undefined}
 					/>
 				{/snippet}
 			</form.Field>

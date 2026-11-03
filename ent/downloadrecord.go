@@ -66,6 +66,8 @@ type DownloadRecord struct {
 	SelectionState downloadrecord.SelectionState `json:"selection_state,omitempty"`
 	// BookKind holds the value of the "book_kind" field.
 	BookKind downloadrecord.BookKind `json:"book_kind,omitempty"`
+	// Rejected holds the value of the "rejected" field.
+	Rejected bool `json:"rejected,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the DownloadRecordQuery when eager-loading is set.
 	Edges                    DownloadRecordEdges `json:"edges"`
@@ -178,7 +180,7 @@ func (*DownloadRecord) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case downloadrecord.FieldHoldReasons, downloadrecord.FieldSelectedFiles:
 			values[i] = new([]byte)
-		case downloadrecord.FieldVerificationBypassed:
+		case downloadrecord.FieldVerificationBypassed, downloadrecord.FieldRejected:
 			values[i] = new(sql.NullBool)
 		case downloadrecord.FieldID, downloadrecord.FieldSize, downloadrecord.FieldImportAttempts, downloadrecord.FieldSelectedBytes:
 			values[i] = new(sql.NullInt64)
@@ -347,6 +349,12 @@ func (_m *DownloadRecord) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field book_kind", values[i])
 			} else if value.Valid {
 				_m.BookKind = downloadrecord.BookKind(value.String)
+			}
+		case downloadrecord.FieldRejected:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field rejected", values[i])
+			} else if value.Valid {
+				_m.Rejected = value.Bool
 			}
 		case downloadrecord.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -518,6 +526,9 @@ func (_m *DownloadRecord) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("book_kind=")
 	builder.WriteString(fmt.Sprintf("%v", _m.BookKind))
+	builder.WriteString(", ")
+	builder.WriteString("rejected=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Rejected))
 	builder.WriteByte(')')
 	return builder.String()
 }

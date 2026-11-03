@@ -292,3 +292,31 @@ func (s *auth) PurgeExpiredSessions(
 	span.SetAttributes(attribute.Int("sessions.purged", n))
 	return n, nil
 }
+
+// APIKeyPurger is the consumer-facing surface for the periodic expired-key
+// sweep, the API-key twin of SessionPurger.
+type APIKeyPurger interface {
+	PurgeExpiredAPIKeys(ctx context.Context, before time.Time) (int, error)
+}
+
+// PurgeExpiredAPIKeys deletes keys whose expires_at is before the supplied
+// cutoff. A key past its expiry already authenticates nothing; the row stays
+// until the cutoff passes it so the account page can show it as expired for a
+// while. Keys without an expiry are never touched.
+func (s *auth) PurgeExpiredAPIKeys(
+	ctx context.Context,
+	before time.Time,
+) (int, error) {
+	ctx, span := tracer.Start(ctx, "auth.purge_api_keys")
+	defer span.End()
+
+	n, err := s.db.PurgeExpiredAPIKeys(ctx, before)
+	if err != nil {
+		return 0, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("purge expired API keys: %w", err),
+		)
+	}
+	span.SetAttributes(attribute.Int("api_keys.purged", n))
+	return n, nil
+}

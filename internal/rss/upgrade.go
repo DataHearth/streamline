@@ -69,6 +69,9 @@ func (s *FeedScanner) tryAlbumUpgrade(
 	if _, already := pass.grabbed[a.ID]; already {
 		return false
 	}
+	if rejected(ctx, item, pass.rejected.Album, a.ID) {
+		return false
+	}
 	profile := pass.profiles[a.Edges.Artist.QualityProfile]
 	if !profile.UpgradeAllowed {
 		return false
@@ -185,6 +188,9 @@ func (s *FeedScanner) tryBookUpgrade(
 	}
 	slot := bookSlot{id: b.ID, kind: kind}
 	if _, already := pass.grabbed[slot]; already {
+		return false
+	}
+	if rejected(ctx, item, pass.rejected.Book, b.ID) {
 		return false
 	}
 	profile, ok := bookProfile(ctx, b)

@@ -80,12 +80,13 @@ type Store interface {
 		artistIDs []uint32,
 		now time.Time,
 	) (map[uint32]bool, error)
-	// RefreshArtist reconciles the discography and returns the created albums.
+	// RefreshArtist reconciles the discography and returns the created and
+	// the deleted albums.
 	RefreshArtist(
 		ctx context.Context,
 		id uint32,
 		p RefreshArtistParams,
-	) ([]uint32, error)
+	) ([]uint32, []uint32, error)
 	SetArtistDetails(
 		ctx context.Context,
 		id uint32,
@@ -94,14 +95,15 @@ type Store interface {
 	) error
 	// SetArtistMonitor stores the policy and applies it to the existing
 	// albums, all and future only to the listed release types; it never
-	// touches album status.
+	// touches album status. It returns how many albums it monitored and
+	// unmonitored.
 	SetArtistMonitor(
 		ctx context.Context,
 		id uint32,
 		monitor artist.Monitor,
 		types []string,
 		now time.Time,
-	) error
+	) (int, int, error)
 	// ReapplyMonitorPolicies applies every all and future artist's policy to
 	// its albums again, returning how many it monitored and unmonitored.
 	ReapplyMonitorPolicies(
@@ -127,6 +129,52 @@ type Store interface {
 	) error
 	ListAlbumsAwaitingHydration(ctx context.Context, limit int) ([]*ent.Album, error)
 	ListAlbumsAwaitingCredits(ctx context.Context, limit int) ([]*ent.Album, error)
+	ListAlbumsAwaitingDetails(
+		ctx context.Context,
+		retryBefore time.Time,
+		limit int,
+	) ([]*ent.Album, error)
+	ListMediaFilesForTagSync(
+		ctx context.Context,
+		limit int,
+	) ([]*ent.MediaFile, error)
+	ListAlbumTagFiles(ctx context.Context, albumID uint32) ([]*ent.MediaFile, error)
+	SetMediaFileTagsWritten(ctx context.Context, id uint32, w TagWrite) error
+	SetMediaFileTagsDeferred(ctx context.Context, id uint32, at time.Time) error
+	RecordMediaFileTagFailure(
+		ctx context.Context,
+		id uint32,
+		msg string,
+		maxFailures uint8,
+	) error
+	MarkAlbumTags(ctx context.Context, albumIDs []uint32, mark TagMark) (int, error)
+	MarkAllMusicTags(ctx context.Context, mark TagMark) (int, error)
+	SetAlbumTagsManaged(ctx context.Context, id uint32, managed bool) error
+	QueueAlbumTags(ctx context.Context, albumID uint32, mark TagMark) (int, error)
+	ListMediaFilesForEditCheck(
+		ctx context.Context,
+		limit int,
+	) ([]*ent.MediaFile, error)
+	SetMediaFileTagsChecked(
+		ctx context.Context,
+		id uint32,
+		mtime, size int64,
+		at time.Time,
+	) error
+	SetMediaFileTagsEdited(ctx context.Context, id uint32, at time.Time) error
+	SetAlbumTagOverrides(
+		ctx context.Context,
+		id uint32,
+		overrides map[string][]string,
+	) error
+	SetTrackTagOverrides(
+		ctx context.Context,
+		id uint32,
+		overrides map[string][]string,
+	) (uint32, error)
+	SetAlbumArtSidecar(ctx context.Context, id uint32, hash string) error
+	SetArtistArtSidecar(ctx context.Context, id uint32, hash string) error
+	AlbumTorrentHashes(ctx context.Context, albumID uint32) ([]string, error)
 	ListAlbumsTrackless(
 		ctx context.Context,
 		staleBefore, releasedBefore time.Time,
@@ -152,7 +200,10 @@ type Store interface {
 		ctx context.Context,
 		maxGrabFailures uint8,
 	) ([]*ent.Album, error)
-	DeleteArtist(ctx context.Context, id uint32) error
+	// DeleteArtist hands each shared album the artist owns to its lowest-id
+	// co-artist and deletes the artist, in one transaction, returning the
+	// moved album ids.
+	DeleteArtist(ctx context.Context, id uint32) ([]uint32, error)
 	// ListEligibleAlbumsForSync returns wanted, monitored, released, hydrated
 	// albums under the failure cap and past cooldown with no in-flight record,
 	// least recently searched first. The artist is eager-loaded.
@@ -274,13 +325,14 @@ type Store interface {
 	// SetSeriesQualityProfile writes the series and every one of its volumes.
 	SetSeriesQualityProfile(ctx context.Context, id uint32, profile string) error
 	// SetSeriesMonitor stores the policy and applies it to each volume's ebook
-	// slot; since is the instant "future" is measured against.
+	// slot; since is the instant "future" is measured against. It returns how
+	// many volumes' ebook flag it moved.
 	SetSeriesMonitor(
 		ctx context.Context,
 		id uint32,
 		monitor string,
 		since time.Time,
-	) error
+	) (int, error)
 	// SetSeriesEdition stores the chosen (language, publisher) and re-picks
 	// the ebook slot of every volume without an ebook file.
 	SetSeriesEdition(
@@ -412,6 +464,7 @@ type Store interface {
 	ListAPIKeysByUser(ctx context.Context, userID uint32) ([]*ent.ApiKey, error)
 	DeleteAPIKeyByID(ctx context.Context, userID, keyID uint32) (int, error)
 	DeleteAPIKeysByUser(ctx context.Context, userID uint32) (int, error)
+	PurgeExpiredAPIKeys(ctx context.Context, before time.Time) (int, error)
 
 	// torrent sessions (builtin BitTorrent engine persistence)
 	CreateTorrentSession(
@@ -671,6 +724,8 @@ type Store interface {
 		reason string,
 		requeue bool,
 	) error
+	RejectDownloadingRecord(ctx context.Context, id uint32, reason string) error
+	ListDownloadingAlbumRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
 	RecordImportSuccess(ctx context.Context, p RecordImportSuccessParams) error
 	RecordEpisodeImportSuccess(
 		ctx context.Context,
@@ -693,6 +748,9 @@ type Store interface {
 	) error
 	RecordImportFailure(ctx context.Context, p RecordImportFailureParams) error
 	RetryFailedDownloadRecord(ctx context.Context, id uint32) error
+	// RejectedReleases is the blocklist the automatic grab paths filter on:
+	// the releases a user rejected from the held-download dialog, per item.
+	RejectedReleases(ctx context.Context) (*ReleaseBlocklist, error)
 	SetDownloadRecordSavePath(ctx context.Context, id uint32, path string) error
 	CountLiveDownloadRecords(ctx context.Context) (int, error)
 	// ListDownloadRecordsByPathPrefix returns records whose save_path sits
@@ -709,6 +767,7 @@ type Store interface {
 	DeleteFailedDownloadRecordsBefore(
 		ctx context.Context,
 		cutoff time.Time,
+		keepHashes []string,
 	) (int, error)
 	ListActiveDownloadRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
 	FindActiveDownloadRecordByID(
@@ -751,7 +810,10 @@ type Store interface {
 		cursor string,
 	) (*DownloadHistoryResult, error)
 	DeleteDownloadRecord(ctx context.Context, id uint32) error
-	DeleteAllCompletedDownloadRecords(ctx context.Context) (int, error)
+	DeleteAllCompletedDownloadRecords(
+		ctx context.Context,
+		keepHashes []string,
+	) (int, error)
 	RevertMovieToWantedIfNoFile(ctx context.Context, movieID uint32) error
 	RevertOrphanedDownloadingEpisodes(ctx context.Context) (int, error)
 	RevertOrphanedDownloadingAlbumsAndBooks(ctx context.Context) (int, error)
@@ -764,6 +826,10 @@ type Store interface {
 	// across every record. The adoption pass uses it to skip already-tracked
 	// torrents.
 	AllDownloadRecordHashes(ctx context.Context) (map[string]struct{}, error)
+	// DownloadRecordTitlesByHash maps every non-empty torrent hash to the
+	// release title of the newest record holding it. The builtin torrent list
+	// reads it for its tracked flag and to show the release a torrent is for.
+	DownloadRecordTitlesByHash(ctx context.Context) (map[string]string, error)
 	ListPendingDownloadRecords(
 		ctx context.Context,
 		limit, offset uint32,
@@ -858,9 +924,9 @@ type Store interface {
 		ctx context.Context,
 		prefix string,
 	) ([]*ent.MediaFile, error)
-	// ListUnprobedMediaFiles returns up to limit rows that have never been
-	// probed (probed_at IS NULL), oldest-first, for the media-probe backfill
-	// job to work through.
+	// ListUnprobedMediaFiles returns up to limit movie and episode rows that
+	// have never been probed (probed_at IS NULL), oldest-first, for the
+	// media-probe backfill job to work through.
 	ListUnprobedMediaFiles(ctx context.Context, limit int) ([]*ent.MediaFile, error)
 	// StampMediaFileProbe records a probe attempt's result. A nil info
 	// (failed probe) still sets probed_at, so ListUnprobedMediaFiles never
@@ -1338,6 +1404,20 @@ type Store interface {
 		id uint32,
 		d metadata.PersonDetails,
 	) error
+
+	// title search
+	// SearchAlbums pages the albums whose title holds the query, folded, the
+	// ones holding a file first, each with its artist loaded.
+	SearchAlbums(
+		ctx context.Context,
+		p TitleSearchParams,
+	) ([]*ent.Album, uint32, error)
+	// SearchEpisodes pages the episodes whose title holds the query, folded,
+	// the ones holding a file first, each with its season and show loaded.
+	SearchEpisodes(
+		ctx context.Context,
+		p TitleSearchParams,
+	) ([]*ent.Episode, uint32, error)
 
 	// requests
 	CreateRequest(ctx context.Context, p CreateRequestParams) (*ent.Request, error)

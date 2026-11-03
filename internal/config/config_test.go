@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -1088,4 +1089,22 @@ quality_profiles:
 
 		Expect(logs.String()).ToNot(ContainSubstring("database.elsewhere"))
 	})
+})
+
+var _ = Describe("MusicBrainzIntervalDuration", Label("unit", "config"), func() {
+	DescribeTable("parses the interval, keeping a typo off the public server",
+		func(raw string, want time.Duration) {
+			Expect(
+				MetadataConfig{
+					MusicBrainzInterval: raw,
+				}.MusicBrainzIntervalDuration(),
+			).
+				To(Equal(want))
+		},
+		Entry("the default", "1s", time.Second),
+		Entry("a mirror without a limit", "0s", time.Duration(0)),
+		Entry("a faster mirror", "100ms", 100*time.Millisecond),
+		Entry("a typo falls back to one second", "1 second", time.Second),
+		Entry("a negative value falls back to one second", "-1s", time.Second),
+	)
 })

@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -27,8 +28,8 @@ import (
 )
 
 // ErrNoEligibleRelease is returned by SearchOne when no indexer result passes
-// the quality filter. last_search_at is still bumped so the cooldown counter
-// advances.
+// the quality filter, the user's rejected releases set aside. last_search_at is
+// still bumped so the cooldown counter advances.
 var ErrNoEligibleRelease = errors.New("rss: no eligible release for movie")
 
 // defaultRSSWorkers caps the number of parallel per-movie indexer searches
@@ -122,7 +123,8 @@ func currentSearchWindow(ctx context.Context) (searchWindow, error) {
 }
 
 // transportFailure reports whether err is the indexer or the download client
-// being unreachable, rather than anything about the release.
+// being unreachable, or the download disk being full, rather than anything
+// about the release.
 //
 // grab_failures is a strike count against a *release choice*, and nothing
 // resets it but a successful grab — so counting a timeout retires the item
@@ -133,6 +135,7 @@ func currentSearchWindow(ctx context.Context) (searchWindow, error) {
 // "wanted" forever.
 func transportFailure(err error) bool {
 	return errors.Is(err, download.ErrUnreachable) ||
+		errors.Is(err, download.ErrNoSpace) ||
 		errors.Is(err, indexer.ErrUnreachable)
 }
 
@@ -258,8 +261,27 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 	return nil
 }
 
+// SearchNow runs SearchOne for a user who asked for it, detached from their
+// request: an indexer query can outlast the client, and the outcome reaches
+// them as the movie's `searched` event either way.
+func (s *MissingSearcher) SearchNow(ctx context.Context, m *ent.Movie) {
+	bg := trace.ContextWithSpanContext(
+		context.WithoutCancel(ctx),
+		trace.SpanContext{},
+	)
+	go func() {
+		defer observability.RecoverPanic(bg, "rss.search_movie_now", nil)
+		err := s.SearchOne(bg, m)
+		if err != nil && !errors.Is(err, ErrNoEligibleRelease) {
+			slog.WarnContext(bg, "movie search-now failed",
+				"movie.id", m.ID, "error", err)
+		}
+	}()
+}
+
 // SearchOne runs one indexer query for movie m, scores every result against
-// its quality profile, and dispatches a grab on the highest-scoring one.
+// its quality profile, and dispatches a grab on the highest-scoring one that
+// the user has not rejected for this movie.
 //
 // Returns nil on a successful grab, ErrNoEligibleRelease when nothing matches
 // the quality bar, or a wrapped error on indexer / downloader failure.
@@ -289,6 +311,14 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 		}
 	}()
 
+	// Read before the query, so a failing database does not cost an indexer
+	// request; without it the pick could be the release the user rejected.
+	blocklist, err := s.db.RejectedReleases(ctx)
+	if err != nil {
+		movieOutcome = "blocklist_failed"
+		return otelx.RecordSpanError(span, err)
+	}
+
 	results, err := s.indexers.SearchMovie(
 		ctx,
 		[]string{m.Title, m.OriginalTitle},
@@ -306,7 +336,7 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	resultCount = len(results)
 	match, ok := scoreBest(
 		qualityFor(ctx, config.MediaMovie, m.QualityProfile),
-		results,
+		dropRejected(ctx, results, blocklist.Movie, m.ID),
 	)
 	if e := s.db.SetMovieLastSearchAt(ctx, m.ID, time.Now()); e != nil {
 		slog.WarnContext(ctx,

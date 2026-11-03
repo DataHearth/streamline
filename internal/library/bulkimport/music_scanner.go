@@ -131,7 +131,7 @@ func walkAlbumFolders(
 			if d.IsDir() {
 				return nil
 			}
-			if _, ok := audiotags.AudioExtensions[strings.ToLower(filepath.Ext(path))]; !ok {
+			if !audiotags.IsAudioFile(path) {
 				return nil
 			}
 			dir := filepath.Dir(path)

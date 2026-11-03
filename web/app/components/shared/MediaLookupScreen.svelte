@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { tick } from "svelte";
 	import {
 		createQuery,
@@ -54,6 +55,8 @@
 		onClose: () => void;
 	};
 	let { kind, open, onClose }: Props = $props();
+
+	closeOnBack(() => open, () => onClose());
 
 	type Hit = {
 		id: number;

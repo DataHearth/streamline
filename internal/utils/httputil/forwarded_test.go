@@ -151,3 +151,48 @@ var _ = Describe("ServedOverTLS", Label("unit"), func() {
 		Expect(ServedOverTLS(r)).To(BeFalse())
 	})
 })
+
+var _ = Describe("RequestOrigin", Label("unit"), func() {
+	trustProxies := func() {
+		GinkgoHelper()
+		configtest.Setup(map[string]any{
+			"server": map[string]any{
+				"trusted_proxies": []string{forwardedTrustedCIDR},
+			},
+		})
+	}
+
+	request := func(peer string, headers map[string]string) *http.Request {
+		r := httptest.NewRequest(http.MethodGet, "/x", nil)
+		r.Host = "streamline.lan:8080"
+		if peer != "" {
+			r.RemoteAddr = peer
+		}
+		for k, v := range headers {
+			r.Header.Set(k, v)
+		}
+		return r
+	}
+
+	It("is the request's own host over plain HTTP", func() {
+		trustProxies()
+		Expect(RequestOrigin(request(forwardedUntrustedPeer, nil))).
+			To(Equal("http://streamline.lan:8080"))
+	})
+
+	It("takes the forwarded host and scheme from a trusted proxy", func() {
+		trustProxies()
+		Expect(RequestOrigin(request("", map[string]string{
+			"X-Forwarded-Host":  "music.example.com",
+			"X-Forwarded-Proto": "https",
+		}))).To(Equal("https://music.example.com"))
+	})
+
+	It("ignores a forwarded host from any other peer", func() {
+		trustProxies()
+		Expect(RequestOrigin(request(forwardedUntrustedPeer, map[string]string{
+			"X-Forwarded-Host":  "evil.example",
+			"X-Forwarded-Proto": "https",
+		}))).To(Equal("http://streamline.lan:8080"))
+	})
+})

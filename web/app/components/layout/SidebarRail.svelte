@@ -28,6 +28,7 @@
 	import { cn } from "@lib/cn";
 	import {
 		TORRENT_PILLS,
+		activityFeatures,
 		torrentCountsQuery,
 		activityCurrent,
 		activityGroupActive,
@@ -46,6 +47,7 @@
 
 	const counts = navCountsQuery();
 	const torrentCounts = torrentCountsQuery();
+	const features = activityFeatures();
 
 	const requestCountsQuery = createQuery<RequestCounts>(() => ({
 		queryKey: ["requests", "counts"],
@@ -66,11 +68,12 @@
 		],
 		Activity: [
 			{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
-			...(auth.isAdmin
-				? [
-						{ label: i18n.torrent_label(), href: "/torrents", icon: Magnet },
-						{ label: i18n.transcode_label(), href: "/transcoding", icon: Replace },
-					]
+			// Each only while its feature is on (activityFeatures).
+			...(features.torrents
+				? [{ label: i18n.torrent_label(), href: "/torrents", icon: Magnet }]
+				: []),
+			...(features.transcoding
+				? [{ label: i18n.transcode_label(), href: "/transcoding", icon: Replace }]
 				: []),
 		],
 	});

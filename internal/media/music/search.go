@@ -2,6 +2,7 @@ package music
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -14,6 +15,9 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/searchwindow"
@@ -87,20 +91,26 @@ func namingAlbum(releases []AlbumRelease, a *ent.Album) []AlbumRelease {
 		return nil
 	}
 	return slices.DeleteFunc(slices.Clone(releases), func(r AlbumRelease) bool {
-		creator, title, ok := library.SplitCreatorTitle(r.Result.Title)
-		return !ok || !library.TitleMatchesStrict(creator, artist.Name) ||
-			!library.TitleNamesSameWork(title, a.Title)
+		return !library.ReleaseNamesWork(r.Result.Title, artist.Name, a.Title)
 	})
 }
 
-// firstAccepted is the best release the profile accepts, nil when none is.
-func firstAccepted(releases []AlbumRelease) *AlbumRelease {
-	for i := range releases {
-		if !releases[i].Rejected() {
-			return &releases[i]
+// notRejected drops the releases the user rejected for the album from the
+// held-download dialog, so an automatic pick takes the next-best one instead.
+func notRejected(
+	ctx context.Context,
+	releases []AlbumRelease,
+	blocklist *db.ReleaseBlocklist,
+	albumID uint32,
+) []AlbumRelease {
+	return slices.DeleteFunc(slices.Clone(releases), func(r AlbumRelease) bool {
+		if !blocklist.Album(albumID, r.Result.InfoHash, r.Result.Title) {
+			return false
 		}
-	}
-	return nil
+		slog.InfoContext(ctx, "music search: skipping a release the user rejected",
+			"album.id", albumID, "release", r.Result.Title)
+		return true
+	})
 }
 
 // SearchAlbumReleases queries the indexers for the album and judges every
@@ -176,8 +186,7 @@ func (s *Service) BrowseArtistReleases(
 	}
 	byArtist := make([]indexer.SearchResult, 0, len(results))
 	for _, r := range results {
-		creator, _, ok := library.SplitCreatorTitle(r.Title)
-		if ok && library.TitleMatchesStrict(creator, a.Name) {
+		if library.ReleaseNamedByCreator(r.Title, a.Name) {
 			byArtist = append(byArtist, r)
 		}
 	}
@@ -237,24 +246,71 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		trace.WithAttributes(attribute.Int("album.id", int(a.ID))))
 	defer span.End()
 
+	// One row per pass at the album's scope, as a movie search writes: the
+	// outcome is what an empty history otherwise leaves unexplained.
+	outcome, results := "no_match", 0
+	defer func() {
+		if err := events.Record(
+			ctx, nil, events.TypeSearched, events.ScopeAlbum, a.ID,
+			map[string]any{"outcome": outcome, "results": results},
+		); err != nil {
+			slog.WarnContext(ctx, "music search: record searched event failed",
+				"album.id", a.ID, "error", err)
+		}
+	}()
+
+	// Read before the query, so a failing database does not cost an indexer
+	// request; without it the pick could be the release the user rejected.
+	blocklist, err := s.db.RejectedReleases(ctx)
+	if err != nil {
+		outcome = "blocklist_failed"
+		otelx.RecordSpanError(span, err)
+		slog.WarnContext(ctx, "music search: rejected releases unavailable",
+			"album.id", a.ID, "error", err)
+		return false
+	}
 	releases, err := s.SearchAlbumReleases(ctx, a.ID)
 	if err != nil {
+		outcome = "search_failed"
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "music search: search failed",
 			"album.id", a.ID, "error", err)
 		return false
 	}
+	results = len(releases)
 	if err := s.db.SetAlbumLastSearchAt(ctx, a.ID, time.Now()); err != nil {
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "music search: stamp last_search_at failed",
 			"album.id", a.ID, "error", err)
 	}
-	best := firstAccepted(namingAlbum(releases, a))
-	if best == nil {
+	accepted := slices.DeleteFunc(
+		notRejected(ctx, namingAlbum(releases, a), blocklist, a.ID),
+		AlbumRelease.Rejected,
+	)
+	if len(accepted) == 0 {
 		return false
 	}
 
-	if err := s.GrabAlbumRelease(ctx, a.ID, best.Result); err != nil {
+	// A CUE disc image is only known once the release's own .torrent is
+	// read, so its refusal costs no strike and the next release is tried in
+	// the same pass.
+	// ponytail: the image is fetched again next pass; blocklist it if those
+	// requests ever matter against a rate-limited tracker.
+	for _, r := range accepted {
+		if err = s.GrabAlbumRelease(ctx, a.ID, r.Result); !errors.Is(
+			err, download.ErrCueImage,
+		) {
+			break
+		}
+		slog.InfoContext(ctx, "music search: release is a CD image, trying the next",
+			"album.id", a.ID, "release", r.Result.Title)
+	}
+	if errors.Is(err, download.ErrCueImage) {
+		outcome = "cue_image"
+		return false
+	}
+	if err != nil {
+		outcome = "grab_failed"
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "music search: grab failed",
 			"album.id", a.ID, "error", err)
@@ -266,6 +322,7 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		}
 		return false
 	}
+	outcome = "grabbed"
 	if err := s.db.ResetAlbumGrabFailures(ctx, a.ID); err != nil {
 		slog.WarnContext(ctx, "music search: reset grab_failures failed",
 			"album.id", a.ID, "error", err)

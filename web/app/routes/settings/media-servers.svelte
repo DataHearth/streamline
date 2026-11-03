@@ -6,12 +6,25 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
-	import { Plus, Trash2, Cast, Folder, Pencil, Eye } from "@lucide/svelte";
+	import {
+		Plus,
+		Trash2,
+		Cast,
+		Folder,
+		Pencil,
+		Eye,
+		RefreshCw,
+	} from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { config, READONLY_HINT } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
 	import { mediaServerForm } from "@lib/schemas";
-	import type { MediaServer, MediaServerType } from "@lib/types";
+	import type {
+		MediaServer,
+		MediaServerPathMapping,
+		MediaServerType,
+	} from "@lib/types";
+	import { formatRelative } from "@lib/dates";
 	import ConfigFormShell from "@components/modals/ConfigFormShell.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import MediaServerForm from "@components/settings/forms/MediaServerForm.svelte";
@@ -28,6 +41,7 @@
 		library_section: string;
 		library_section_tv: string;
 		enabled: boolean;
+		path_mappings: MediaServerPathMapping[];
 	};
 
 	const qc = useQueryClient();
@@ -54,6 +68,11 @@
 				if (body[k]) payload[k] = body[k];
 				else if (editing) payload[k] = "";
 			}
+			// Always sent: the list replaces the stored one, so an emptied
+			// form clears it. A row left blank on both sides is dropped.
+			payload.path_mappings = body.path_mappings
+				.map((m) => ({ from: m.from.trim(), to: m.to.trim() }))
+				.filter((m) => m.from || m.to);
 			if (editing) {
 				return api<MediaServer>(
 					`/media-servers/${encodeURIComponent(editing.name)}`,
@@ -98,6 +117,7 @@
 		library_section: "",
 		library_section_tv: "",
 		enabled: true,
+		path_mappings: [],
 	};
 
 	const form = createForm(() => ({
@@ -122,6 +142,7 @@
 			library_section: s.library_section ?? "",
 			library_section_tv: s.library_section_tv ?? "",
 			enabled: s.enabled,
+			path_mappings: (s.path_mappings ?? []).map((m) => ({ ...m })),
 		});
 		modalOpen = true;
 	}
@@ -243,6 +264,31 @@
 								]
 									.filter(Boolean)
 									.join(" · ")}
+							</span>
+						</div>
+					{/if}
+					{#if s.last_refresh}
+						{@const r = s.last_refresh}
+						{@const when = formatRelative(r.at)}
+						<div
+							class="flex items-center gap-2 text-xs {r.outcome === 'error'
+								? 'text-status-failed'
+								: 'text-fg-muted'}"
+						>
+							<RefreshCw size={14} aria-hidden="true" class="shrink-0" />
+							<span class="truncate" title={r.error ?? ""}>
+								{#if r.outcome === "error"}
+									{i18n.mediaserver_refresh_failed({ when, error: r.error ?? "" })}
+								{:else if r.scope === "folders"}
+									{r.folders === 1
+										? i18n.mediaserver_refresh_folders_one({ when })
+										: i18n.mediaserver_refresh_folders_other({
+												when,
+												count: r.folders,
+											})}
+								{:else}
+									{i18n.mediaserver_refresh_library({ when })}
+								{/if}
 							</span>
 						</div>
 					{/if}

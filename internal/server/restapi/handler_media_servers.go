@@ -20,7 +20,7 @@ func (s *Server) ListMediaServers(
 	servers := config.Get().MediaServer.Servers
 	items := make([]MediaServer, 0, len(servers))
 	for _, ms := range servers {
-		items = append(items, mediaServerToAPI(ms))
+		items = append(items, mediaServerToAPI(ms, s.refreshStatus))
 	}
 	return ListMediaServers200JSONResponse{
 		Items: items,
@@ -43,7 +43,9 @@ func (s *Server) GetMediaServer(
 		}, nil
 	}
 	return GetMediaServer200JSONResponse{
-		MediaServerOKJSONResponse: MediaServerOKJSONResponse(mediaServerToAPI(ms)),
+		MediaServerOKJSONResponse: MediaServerOKJSONResponse(
+			mediaServerToAPI(ms, s.refreshStatus),
+		),
 	}, nil
 }
 
@@ -67,6 +69,9 @@ func (s *Server) CreateMediaServer(
 	if request.Body.Enabled != nil {
 		e.Enabled = *request.Body.Enabled
 	}
+	if m := mediaServerPathMappings(request.Body.PathMappings); m != nil {
+		e.PathMappings = *m
+	}
 
 	switch err := config.AddMediaServer(ctx, e); {
 	case errors.Is(err, config.ErrMediaServerExists):
@@ -86,7 +91,7 @@ func (s *Server) CreateMediaServer(
 	stored, _ := config.FindMediaServer(e.Name)
 	return CreateMediaServer201JSONResponse{
 		MediaServerCreatedJSONResponse: MediaServerCreatedJSONResponse(
-			mediaServerToAPI(stored),
+			mediaServerToAPI(stored, s.refreshStatus),
 		),
 	}, nil
 }
@@ -106,6 +111,7 @@ func (s *Server) UpdateMediaServer(
 		Enabled:          request.Body.Enabled,
 		LibrarySection:   request.Body.LibrarySection,
 		LibrarySectionTV: request.Body.LibrarySectionTv,
+		PathMappings:     mediaServerPathMappings(request.Body.PathMappings),
 	}
 	if request.Body.ServerType != nil {
 		st := string(*request.Body.ServerType)
@@ -117,18 +123,22 @@ func (s *Server) UpdateMediaServer(
 		return UpdateMediaServer404JSONResponse{
 			NotFoundJSONResponse: errNotFound("media server not found"),
 		}, nil
-	case configLocked(err):
-		return UpdateMediaServer403JSONResponse{
-			ForbiddenJSONResponse: forbiddenResp(err.Error()),
-		}, nil
 	case err != nil:
+		forbidden, unprocessable := errResourceUpdate(err)
+		if forbidden != nil {
+			return UpdateMediaServer403JSONResponse{
+				ForbiddenJSONResponse: *forbidden,
+			}, nil
+		}
 		return UpdateMediaServer422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			UnprocessableEntityJSONResponse: *unprocessable,
 		}, nil
 	}
 	ms, _ := config.FindMediaServer(request.Name)
 	return UpdateMediaServer200JSONResponse{
-		MediaServerOKJSONResponse: MediaServerOKJSONResponse(mediaServerToAPI(ms)),
+		MediaServerOKJSONResponse: MediaServerOKJSONResponse(
+			mediaServerToAPI(ms, s.refreshStatus),
+		),
 	}, nil
 }
 

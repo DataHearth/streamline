@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"slices"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -80,12 +81,12 @@ func (s *Service) List(
 	for i, r := range rows {
 		v := ArtistView{
 			Artist:     r,
-			Status:     artistStatusAt(r.Edges.Albums, p.Now),
-			AlbumCount: numeric.SaturateU32(len(r.Edges.Albums)),
+			Status:     artistStatusAt(db.ArtistAlbums(r), p.Now),
+			AlbumCount: numeric.SaturateU32(len(db.ArtistAlbums(r))),
 			Hydrating:  hydrating[r.ID],
 		}
 		v.Overview, v.OverviewSource = pickOverview(r, "en")
-		albums := slices.Clone(r.Edges.Albums)
+		albums := db.ArtistAlbums(r)
 		slices.SortStableFunc(albums, byNewest)
 		for _, a := range albums {
 			t := tile(a, rollups[a.ID], progress, p.Now)
@@ -113,6 +114,7 @@ func tile(
 		Size:          r.Size,
 		Duration:      r.Duration,
 		TracksPending: a.MetadataFetchedAt == nil,
+		Artists:       albumArtists(a),
 	}
 	if a.Status == album.StatusDownloading {
 		if pct, ok := progress[a.ID]; ok {
@@ -120,6 +122,37 @@ func tile(
 		}
 	}
 	return v
+}
+
+// trackArtist resolves a track's credited artist to the library, falling back
+// to a same-named artist the album is listed under: MusicBrainz may have
+// merged the id the artist was added with, and the track then reads as
+// someone else's on that artist's own page.
+func trackArtist(a *ent.Album, people peopleIndex, c *ent.MusicCredit) PersonView {
+	v := people.person(c.Name, c.Mbid)
+	if v.ArtistID != 0 {
+		return v
+	}
+	for _, ar := range append([]*ent.Artist{a.Edges.Artist}, a.Edges.CoArtists...) {
+		if ar != nil && strings.EqualFold(ar.Name, c.Name) {
+			v.ArtistID = ar.ID
+			break
+		}
+	}
+	return v
+}
+
+// albumArtists is the library artists a shared album is listed under, owner
+// first, or nil when only its owner is credited on it.
+func albumArtists(a *ent.Album) []PersonView {
+	if len(a.Edges.CoArtists) == 0 || a.Edges.Artist == nil {
+		return nil
+	}
+	out := make([]PersonView, 0, 1+len(a.Edges.CoArtists))
+	for _, ar := range append([]*ent.Artist{a.Edges.Artist}, a.Edges.CoArtists...) {
+		out = append(out, PersonView{Name: ar.Name, MBID: ar.Mbid, ArtistID: ar.ID})
+	}
+	return out
 }
 
 func (s *Service) Counts(
@@ -155,7 +188,7 @@ func (s *Service) Detail(
 	}
 	progress := s.progressByAlbum(ctx)
 
-	albums := slices.Clone(row.Edges.Albums)
+	albums := db.ArtistAlbums(row)
 	slices.SortStableFunc(albums, byNewest)
 	people, err := s.libraryPeople(ctx, row, albums)
 	if err != nil {
@@ -263,6 +296,7 @@ func fullAlbum(
 		Status:        albumStatusAt(a, now),
 		TrackCount:    numeric.SaturateU32(len(a.Edges.Tracks)),
 		TracksPending: a.MetadataFetchedAt == nil,
+		Artists:       albumArtists(a),
 	}
 	if a.Status == album.StatusDownloading {
 		if pct, ok := progress[a.ID]; ok {
@@ -278,12 +312,13 @@ func fullAlbum(
 			v.Size += f.Size
 		}
 		v.Duration += t.Duration
+		for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindArtist) {
+			tv.Artists = append(tv.Artists, trackArtist(a, people, c))
+		}
 		for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindFeaturing) {
 			tv.Featuring = append(tv.Featuring, people.person(c.Name, c.Mbid))
 		}
-		for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindWriter) {
-			tv.Writers = append(tv.Writers, people.person(c.Name, c.Mbid))
-		}
+		tv.Writers = trackWriters(t.Edges.Credits, people)
 		v.Tracks = append(v.Tracks, tv)
 	}
 	files := albumFiles(a)
@@ -305,4 +340,33 @@ func fullAlbum(
 		})
 	}
 	return v
+}
+
+// writtenByRoles are the writer roles "written by" names: a writer row is
+// stored once per role, for the tags, and an arranger is not one who wrote
+// the work. A row stored before writers had roles has none.
+var writtenByRoles = []musiccredit.Role{
+	musiccredit.RoleWriter, musiccredit.RoleComposer, musiccredit.RoleLyricist, "",
+}
+
+// trackWriters is the track's "written by": each person once, whatever roles
+// they hold, in credit order.
+func trackWriters(credits []*ent.MusicCredit, people peopleIndex) []PersonView {
+	var out []PersonView
+	seen := map[string]bool{}
+	for _, c := range creditsOf(credits, musiccredit.KindWriter) {
+		if !slices.Contains(writtenByRoles, c.Role) {
+			continue
+		}
+		key := c.Mbid
+		if key == "" {
+			key = "name:" + strings.ToLower(c.Name)
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, people.person(c.Name, c.Mbid))
+	}
+	return out
 }

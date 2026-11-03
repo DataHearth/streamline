@@ -151,7 +151,9 @@ type SeriesLookupVolume struct {
 }
 
 // SeriesLookupRecord is one series of the batched lookup read. Volumes are in
-// position order and may hold several books at one position.
+// position order and may hold several books at one position. Loose are the
+// books Hardcover lists with no position, most read first: the only books
+// some series have ("Calvin und Hobbes"), and so the only covers to show.
 type SeriesLookupRecord struct {
 	HardcoverID  uint32
 	Name         string
@@ -161,6 +163,7 @@ type SeriesLookupRecord struct {
 	AuthorName   string
 	Ongoing      *bool
 	Volumes      []SeriesLookupVolume
+	Loose        []SeriesLookupVolume
 }
 
 // BookSearchResult is a Hardcover book search hit, used to match scanned

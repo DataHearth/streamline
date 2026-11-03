@@ -13,10 +13,12 @@
 	import { api, apiAllPages, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { entryHeading } from "@lib/activity-touch";
+	import { builtinTorrentsQuery, torrentHref } from "@lib/activity-nav";
 	import { toast } from "@lib/toast";
 	import { pullRefresh } from "@lib/pull-refresh";
 	import { formatEta, formatSpeed } from "@lib/format";
 	import { fold } from "@lib/text";
+	import { cn } from "@lib/cn";
 	import { Selection } from "@lib/selection.svelte";
 	import { NOUN_DOWNLOAD } from "@lib/nouns";
 	import type {
@@ -43,6 +45,9 @@
 	import PendingRow from "@components/pending/PendingRow.svelte";
 	import EventList from "@components/activity/EventList.svelte";
 	import DownloadBulkActions from "@components/activity/DownloadBulkActions.svelte";
+	import DownloadConfirmDialog, {
+		type DownloadConfirm,
+	} from "@components/activity/DownloadConfirmDialog.svelte";
 	import SelectionTopBar from "@components/shared/SelectionTopBar.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -69,6 +74,16 @@
 		queryFn: () => api<DownloadQueue>("/activity/queue"),
 		refetchInterval: 2000,
 	}));
+
+	// "Open torrent" on a row's detail needs the torrent to be on the torrents
+	// page, which lists the builtin engine only. The nav already polls that list
+	// for its counts; this is one more observer of the same cache entry.
+	const engineTorrents = builtinTorrentsQuery();
+	let listedHashes = $derived(
+		new Set((engineTorrents.data?.items ?? []).map((t) => t.hash.toLowerCase())),
+	);
+	const rowTorrentHref = (item: QueueEntry | HistoryEntry) =>
+		auth.isAdmin ? torrentHref(item.torrent_hash, listedHashes) : null;
 
 	const PAGE = 50;
 	const history = createInfiniteQuery<
@@ -377,6 +392,14 @@
 	let detailItem = $derived<QueueEntry | HistoryEntry | null>(
 		detailId === null ? null : (source.find((i) => i.id === detailId) ?? null),
 	);
+	// A swiped row's cancel / retry / remove asks first, in the sheet's words.
+	// By id for the same reason as the sheet: the queue repolls every 2 s.
+	let swipeConfirm = $state<{ id: number; kind: DownloadConfirm } | null>(null);
+	let swipeItem = $derived(
+		swipeConfirm === null
+			? null
+			: (source.find((i) => i.id === swipeConfirm?.id) ?? null),
+	);
 	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0));
 	let clearableCount = $derived(
 		historyItems.filter((h) => h.status === "completed").length,
@@ -449,10 +472,14 @@
      clipping column sliced the first row in half with no way to scroll to it.
      Below md the page scrolls as before — the touch list is paged,
      pull-to-refresh needs the page at scrollTop 0, and the bottom nav already
-     eats the bottom of the viewport. -->
+     eats the bottom of the viewport. While rows are picked the column ends above
+     the floating bulk bar, which otherwise sat over the last rows of the list. -->
 <div
 	use:pullRefresh={{ onRefresh: refreshAll }}
-	class="group relative flex flex-col px-4 py-6 md:max-h-[calc(100dvh-4rem)] md:min-h-0 md:overflow-y-auto md:px-6"
+	class={cn(
+		"group relative flex flex-col px-4 py-6 md:max-h-[calc(100dvh-4rem)] md:min-h-0 md:overflow-y-auto md:px-6",
+		auth.isAdmin && selection.size > 0 && "md:pb-24",
+	)}
 >
 	<!-- Sits in the gap the pull opens above the page. -->
 	<div
@@ -613,20 +640,18 @@
 			{/if}
 		</div>
 	{:else}
-	<!-- Below md an active selection takes the toolbar's line rather than
-	     stacking on it, so selecting costs no height. -->
+	<!-- Below md an active selection takes over the top bar (SelectionTopBar
+	     draws nothing in place), so the toolbar and the list stay where they
+	     are as selecting begins. -->
 	{#if selecting}
-		<div class="sticky top-16 z-20 -mx-4 mb-1 md:hidden">
-			<SelectionTopBar
-				count={selection.size}
-				total={rows.length}
-				noun={NOUN_DOWNLOAD}
-				onClear={() => selection.clear()}
-				onSelectAll={selectAllRows}
-			/>
-		</div>
+		<SelectionTopBar
+			count={selection.size}
+			total={rows.length}
+			noun={NOUN_DOWNLOAD}
+			onClear={() => selection.clear()}
+			onSelectAll={selectAllRows}
+		/>
 	{/if}
-	<div class={selecting ? "hidden md:contents" : "contents"}>
 	<ActivityToolbar
 		view={tableView}
 		{statusFilter}
@@ -646,7 +671,6 @@
 			/>
 		{/snippet}
 	</ActivityToolbar>
-	</div>
 
 	{#if showPending}
 		<!-- Below md the section is one line, and it sits under the toolbar rather than
@@ -686,6 +710,7 @@
 		hasMore={view === "history" && (history.hasNextPage ?? false)}
 		loadingMore={history.isFetchingNextPage}
 		canControl={auth.isAdmin}
+		torrentHref={rowTorrentHref}
 		onLoadMore={() => history.fetchNextPage()}
 		onCancel={(id) => cancel.mutate(id)}
 		onPause={(id) => pause.mutate(id)}
@@ -712,6 +737,11 @@
 		onBeginSelect={auth.isAdmin ? (id) => selection.begin(id) : undefined}
 		onOpen={(item) => (detailId = item.id)}
 		onResolve={auth.isAdmin ? (item) => (resolveId = item.id) : undefined}
+		onPause={auth.isAdmin ? (id) => pause.mutate(id) : undefined}
+		onResume={auth.isAdmin ? (id) => resume.mutate(id) : undefined}
+		onConfirm={auth.isAdmin
+			? (item, kind) => (swipeConfirm = { id: item.id, kind })
+			: undefined}
 	/>
 
 	{#if auth.isAdmin}
@@ -756,11 +786,24 @@
 	onClose={() => (resolveId = null)}
 />
 
+<DownloadConfirmDialog
+	kind={swipeConfirm?.kind ?? null}
+	item={swipeItem}
+	onClose={() => (swipeConfirm = null)}
+	onConfirm={(kind, id) =>
+		kind === "cancel"
+			? cancel.mutate(id)
+			: kind === "retry"
+				? retryImport.mutate(id)
+				: removeHistory.mutate(id)}
+/>
+
 <ActivityDetailSheet
 	item={detailItem}
 	view={tableView}
 	busy={detailId !== null && busyId === detailId}
 	canControl={auth.isAdmin}
+	torrentHref={detailItem ? rowTorrentHref(detailItem) : null}
 	onClose={() => (detailId = null)}
 	onCancel={(id) => cancel.mutate(id)}
 	onPause={(id) => pause.mutate(id)}

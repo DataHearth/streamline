@@ -63,6 +63,11 @@ func (DownloadRecord) Fields() []ent.Field {
 			Values("pending", "applied", "unsupported", "skipped").
 			Default("skipped"),
 		field.Enum("book_kind").Values("ebook", "audiobook").Optional(),
+		// Set when the user rejected the release from the held-download
+		// dialog. The automatic grab paths skip a release matching a rejected
+		// record of the same item (by info hash, else by title), so the next
+		// missing search or feed tick does not take the same release again.
+		field.Bool("rejected").Default(false),
 	}
 }
 
@@ -81,6 +86,9 @@ func (DownloadRecord) Indexes() []ent.Index {
 		index.Fields("status"),
 		index.Fields("torrent_hash"),
 		index.Fields("update_time", "id"),
+		// rejected: every automatic search loads the blocklist, and the
+		// rejected rows are a handful in a table of thousands.
+		index.Fields("rejected"),
 		// SQLite indexes no foreign key on its own, so deleting a movie or an
 		// episode scans this table for children to cascade.
 		index.Edges("movie"),

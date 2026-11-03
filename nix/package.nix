@@ -6,7 +6,7 @@
   fetchPnpmDeps,
   pnpmConfigHook,
   nix-update-script,
-  version ? "3.2.0",
+  version ? "3.3.0",
 }:
 let
   go = callPackage ./go.nix { };
@@ -91,7 +91,7 @@ let
       inherit (finalAttrs) version src;
       inherit pnpm;
       fetcherVersion = 4;
-      hash = "sha256-RZd8Suj4qyVfrVeXwn3cYoAteTyHBmkb5XCEbDAhGMA=";
+      hash = "sha256-k6g47X6e0cGpyjrHe8CuftftUjKwa8qjL0dLX1V1BSM=";
     };
 
     # Mirrors `task build:js` + `task build:css`. Keep the two in step: the Go
@@ -133,12 +133,16 @@ in
   pname = "streamline";
   inherit version src;
 
-  vendorHash = "sha256-AW9TnUnxJPlBNoNcGc1p+yKtZiGX7QjEr+1oW6kpCNE=";
+  vendorHash = "sha256-d76p3IvE9xbHN7q4Fl99ukAIGCv+cbiENEJHe9yLyK4=";
   # Named by what decides the vendored set rather than by the app version, for
   # the reason inputsId gives. Fixed rather than derived from pname, so the lint
   # check's overrideAttrs shares this fetch instead of repeating it.
   overrideModAttrs = {
     name = "streamline-go-modules-${inputsId [ ../go.mod ../go.sum ] [ go.version ]}";
+    # buildGoModule hands the package's preBuild to this fetch too, and ours
+    # needs the frontend: vendoring would wait on a frontend build, and so on
+    # a source-built Node whenever package.json is ahead of the locked nixpkgs.
+    preBuild = "";
   };
 
   subPackages = [ "cmd" ];

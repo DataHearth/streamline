@@ -698,6 +698,7 @@ func (s *Server) GrabBookRelease(
 		errors.Is(err, book.ErrNotHydrated),
 		errors.Is(err, download.ErrUntrustedSource),
 		errors.Is(err, download.ErrClientFull),
+		errors.Is(err, download.ErrNoSpace),
 		errors.Is(err, download.ErrUnsafeTorrentName):
 		return GrabBookRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),

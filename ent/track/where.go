@@ -70,6 +70,11 @@ func Mbid(v string) predicate.Track {
 	return predicate.Track(sql.FieldEQ(FieldMbid, v))
 }
 
+// ReleaseTrackMbid applies equality check predicate on the "release_track_mbid" field. It's identical to ReleaseTrackMbidEQ.
+func ReleaseTrackMbid(v string) predicate.Track {
+	return predicate.Track(sql.FieldEQ(FieldReleaseTrackMbid, v))
+}
+
 // Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
 func Title(v string) predicate.Track {
 	return predicate.Track(sql.FieldEQ(FieldTitle, v))
@@ -93,6 +98,11 @@ func Duration(v uint32) predicate.Track {
 // Bonus applies equality check predicate on the "bonus" field. It's identical to BonusEQ.
 func Bonus(v bool) predicate.Track {
 	return predicate.Track(sql.FieldEQ(FieldBonus, v))
+}
+
+// ArtistCredit applies equality check predicate on the "artist_credit" field. It's identical to ArtistCreditEQ.
+func ArtistCredit(v string) predicate.Track {
+	return predicate.Track(sql.FieldEQ(FieldArtistCredit, v))
 }
 
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
@@ -248,6 +258,81 @@ func MbidEqualFold(v string) predicate.Track {
 // MbidContainsFold applies the ContainsFold predicate on the "mbid" field.
 func MbidContainsFold(v string) predicate.Track {
 	return predicate.Track(sql.FieldContainsFold(FieldMbid, v))
+}
+
+// ReleaseTrackMbidEQ applies the EQ predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidEQ(v string) predicate.Track {
+	return predicate.Track(sql.FieldEQ(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidNEQ applies the NEQ predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidNEQ(v string) predicate.Track {
+	return predicate.Track(sql.FieldNEQ(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidIn applies the In predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidIn(vs ...string) predicate.Track {
+	return predicate.Track(sql.FieldIn(FieldReleaseTrackMbid, vs...))
+}
+
+// ReleaseTrackMbidNotIn applies the NotIn predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidNotIn(vs ...string) predicate.Track {
+	return predicate.Track(sql.FieldNotIn(FieldReleaseTrackMbid, vs...))
+}
+
+// ReleaseTrackMbidGT applies the GT predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidGT(v string) predicate.Track {
+	return predicate.Track(sql.FieldGT(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidGTE applies the GTE predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidGTE(v string) predicate.Track {
+	return predicate.Track(sql.FieldGTE(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidLT applies the LT predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidLT(v string) predicate.Track {
+	return predicate.Track(sql.FieldLT(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidLTE applies the LTE predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidLTE(v string) predicate.Track {
+	return predicate.Track(sql.FieldLTE(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidContains applies the Contains predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidContains(v string) predicate.Track {
+	return predicate.Track(sql.FieldContains(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidHasPrefix applies the HasPrefix predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidHasPrefix(v string) predicate.Track {
+	return predicate.Track(sql.FieldHasPrefix(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidHasSuffix applies the HasSuffix predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidHasSuffix(v string) predicate.Track {
+	return predicate.Track(sql.FieldHasSuffix(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidIsNil applies the IsNil predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidIsNil() predicate.Track {
+	return predicate.Track(sql.FieldIsNull(FieldReleaseTrackMbid))
+}
+
+// ReleaseTrackMbidNotNil applies the NotNil predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidNotNil() predicate.Track {
+	return predicate.Track(sql.FieldNotNull(FieldReleaseTrackMbid))
+}
+
+// ReleaseTrackMbidEqualFold applies the EqualFold predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidEqualFold(v string) predicate.Track {
+	return predicate.Track(sql.FieldEqualFold(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidContainsFold applies the ContainsFold predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidContainsFold(v string) predicate.Track {
+	return predicate.Track(sql.FieldContainsFold(FieldReleaseTrackMbid, v))
 }
 
 // TitleEQ applies the EQ predicate on the "title" field.
@@ -455,6 +540,91 @@ func BonusNEQ(v bool) predicate.Track {
 	return predicate.Track(sql.FieldNEQ(FieldBonus, v))
 }
 
+// ArtistCreditEQ applies the EQ predicate on the "artist_credit" field.
+func ArtistCreditEQ(v string) predicate.Track {
+	return predicate.Track(sql.FieldEQ(FieldArtistCredit, v))
+}
+
+// ArtistCreditNEQ applies the NEQ predicate on the "artist_credit" field.
+func ArtistCreditNEQ(v string) predicate.Track {
+	return predicate.Track(sql.FieldNEQ(FieldArtistCredit, v))
+}
+
+// ArtistCreditIn applies the In predicate on the "artist_credit" field.
+func ArtistCreditIn(vs ...string) predicate.Track {
+	return predicate.Track(sql.FieldIn(FieldArtistCredit, vs...))
+}
+
+// ArtistCreditNotIn applies the NotIn predicate on the "artist_credit" field.
+func ArtistCreditNotIn(vs ...string) predicate.Track {
+	return predicate.Track(sql.FieldNotIn(FieldArtistCredit, vs...))
+}
+
+// ArtistCreditGT applies the GT predicate on the "artist_credit" field.
+func ArtistCreditGT(v string) predicate.Track {
+	return predicate.Track(sql.FieldGT(FieldArtistCredit, v))
+}
+
+// ArtistCreditGTE applies the GTE predicate on the "artist_credit" field.
+func ArtistCreditGTE(v string) predicate.Track {
+	return predicate.Track(sql.FieldGTE(FieldArtistCredit, v))
+}
+
+// ArtistCreditLT applies the LT predicate on the "artist_credit" field.
+func ArtistCreditLT(v string) predicate.Track {
+	return predicate.Track(sql.FieldLT(FieldArtistCredit, v))
+}
+
+// ArtistCreditLTE applies the LTE predicate on the "artist_credit" field.
+func ArtistCreditLTE(v string) predicate.Track {
+	return predicate.Track(sql.FieldLTE(FieldArtistCredit, v))
+}
+
+// ArtistCreditContains applies the Contains predicate on the "artist_credit" field.
+func ArtistCreditContains(v string) predicate.Track {
+	return predicate.Track(sql.FieldContains(FieldArtistCredit, v))
+}
+
+// ArtistCreditHasPrefix applies the HasPrefix predicate on the "artist_credit" field.
+func ArtistCreditHasPrefix(v string) predicate.Track {
+	return predicate.Track(sql.FieldHasPrefix(FieldArtistCredit, v))
+}
+
+// ArtistCreditHasSuffix applies the HasSuffix predicate on the "artist_credit" field.
+func ArtistCreditHasSuffix(v string) predicate.Track {
+	return predicate.Track(sql.FieldHasSuffix(FieldArtistCredit, v))
+}
+
+// ArtistCreditIsNil applies the IsNil predicate on the "artist_credit" field.
+func ArtistCreditIsNil() predicate.Track {
+	return predicate.Track(sql.FieldIsNull(FieldArtistCredit))
+}
+
+// ArtistCreditNotNil applies the NotNil predicate on the "artist_credit" field.
+func ArtistCreditNotNil() predicate.Track {
+	return predicate.Track(sql.FieldNotNull(FieldArtistCredit))
+}
+
+// ArtistCreditEqualFold applies the EqualFold predicate on the "artist_credit" field.
+func ArtistCreditEqualFold(v string) predicate.Track {
+	return predicate.Track(sql.FieldEqualFold(FieldArtistCredit, v))
+}
+
+// ArtistCreditContainsFold applies the ContainsFold predicate on the "artist_credit" field.
+func ArtistCreditContainsFold(v string) predicate.Track {
+	return predicate.Track(sql.FieldContainsFold(FieldArtistCredit, v))
+}
+
+// TagOverridesIsNil applies the IsNil predicate on the "tag_overrides" field.
+func TagOverridesIsNil() predicate.Track {
+	return predicate.Track(sql.FieldIsNull(FieldTagOverrides))
+}
+
+// TagOverridesNotNil applies the NotNil predicate on the "tag_overrides" field.
+func TagOverridesNotNil() predicate.Track {
+	return predicate.Track(sql.FieldNotNull(FieldTagOverrides))
+}
+
 // HasAlbum applies the HasEdge predicate on the "album" edge.
 func HasAlbum() predicate.Track {
 	return predicate.Track(func(s *sql.Selector) {
@@ -516,6 +686,52 @@ func HasCredits() predicate.Track {
 func HasCreditsWith(preds ...predicate.MusicCredit) predicate.Track {
 	return predicate.Track(func(s *sql.Selector) {
 		step := newCreditsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAnnotations applies the HasEdge predicate on the "annotations" edge.
+func HasAnnotations() predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AnnotationsTable, AnnotationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAnnotationsWith applies the HasEdge predicate on the "annotations" edge with a given conditions (other predicates).
+func HasAnnotationsWith(preds ...predicate.MusicAnnotation) predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := newAnnotationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasBookmarks applies the HasEdge predicate on the "bookmarks" edge.
+func HasBookmarks() predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, BookmarksTable, BookmarksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBookmarksWith applies the HasEdge predicate on the "bookmarks" edge with a given conditions (other predicates).
+func HasBookmarksWith(preds ...predicate.Bookmark) predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := newBookmarksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

@@ -40,10 +40,12 @@
 		dense ? "min-h-12 py-1.5" : "min-h-14 py-2",
 	)}
 >
-	{#if isTitle && (item.kind === "movie" || item.kind === "series")}
+	{#if item.kind === "movie" || item.kind === "series" || item.kind === "episode"}
 		{@const MediaIcon = item.kind === "movie" ? Film : Tv}
 		{@const poster =
-			item.kind === "movie" ? posterUrl({ id: item.id }) : tvPosterUrl(item.id)}
+			item.kind === "movie"
+				? posterUrl({ id: item.id })
+				: tvPosterUrl(item.kind === "episode" ? item.seriesId : item.id)}
 		<div
 			class={cn(
 				"relative shrink-0 overflow-hidden rounded-md bg-surface-2 ring-1 ring-border",
@@ -59,17 +61,17 @@
 				class="relative h-full w-full object-cover"
 			/>
 		</div>
-	{:else if item.kind === "artist" || item.kind === "book"}
+	{:else if item.kind === "artist" || item.kind === "album" || item.kind === "book"}
 		<div
 			class={cn(
 				"relative shrink-0 overflow-hidden bg-surface-2 ring-1 ring-border",
-				item.kind === "artist"
-					? cn("rounded-full", dense ? "h-9 w-9" : "h-10 w-10")
-					: cn("rounded-md", dense ? "h-10 w-[27px]" : "h-[45px] w-[30px]"),
+				item.kind === "artist" && cn("rounded-full", dense ? "h-9 w-9" : "h-10 w-10"),
+				item.kind === "album" && cn("rounded-md", dense ? "h-9 w-9" : "h-10 w-10"),
+				item.kind === "book" && cn("rounded-md", dense ? "h-10 w-[27px]" : "h-[45px] w-[30px]"),
 			)}
 		>
 			<div class="absolute inset-0 grid place-items-center text-fg-muted">
-				{#if item.kind === "artist"}
+				{#if item.kind === "artist" || item.kind === "album"}
 					<Music size={14} aria-hidden="true" />
 				{:else}
 					<BookOpen size={14} aria-hidden="true" />
@@ -122,11 +124,7 @@
 		>
 			{item.label}
 		</span>
-		{#if item.kind === "movie" || item.kind === "series"}
-			<span class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle">
-				{item.year ? `${item.year} · ` : ""}{item.kind}
-			</span>
-		{:else if item.kind === "artist" || item.kind === "book"}
+		{#if isTitle}
 			<span class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle">
 				{[itemSubline(item), itemKindLabel(item).toLowerCase()].filter(Boolean).join(" · ")}
 			</span>

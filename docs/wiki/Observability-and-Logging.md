@@ -130,7 +130,7 @@ Beyond those, the series worth building alerts on:
 | `streamline.transcoding.running` vs `.max_concurrent` | Saturated or stalled. Queue depth is `streamline_transcode_jobs_by_status{status="queued"}`. |
 | `streamline.importer.outcomes` | Imports by `held` / `failed` / `terminal` / `succeeded`; `streamline.importer.queued` is the backlog. |
 | `streamline.indexer.queries` / `.feeds` | Per-indexer outcome, split into `unauthorized`, `unreachable`, `bad_response` — an expired API key and a dead tracker are different problems. |
-| `streamline.mediaserver.refreshes` | Per-server refresh outcome; catches Plex failing while Jellyfin works. |
+| `streamline.mediaserver.refreshes` | Per-server refresh outcome; catches Plex failing while Jellyfin works. `scope` says whether the server rescanned the changed folders or its whole library — a steady `library` usually means a missing path mapping. |
 | `streamline.auth.api_rejections` | Rejected `/api/v1` authentication by method and reason. |
 | `streamline.auth.ratelimit.table_full` | **Any non-zero rate means the login rate limiter has stopped limiting.** |
 | `streamline_requests_by_status{status="pending"}` | Request backlog. `streamline_movies_by_status` and `streamline_episodes_by_status` cover wanted/downloading counts. |

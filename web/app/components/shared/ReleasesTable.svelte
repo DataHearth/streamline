@@ -15,6 +15,7 @@
 		BookOpen,
 		Headphones,
 		Music,
+		FileText,
 	} from "@lucide/svelte";
 	import { formatLabel, languageName, releaseFormat, releaseLanguage, releaseTier, tierLabel, type BookFormat } from "@lib/music-books";
 	import { cn } from "@lib/cn";
@@ -41,6 +42,7 @@
 	import Select from "@components/forms/Select.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import SearchNarration from "@components/shared/SearchNarration.svelte";
+	import ReleaseFilesPanel from "@components/shared/ReleaseFilesPanel.svelte";
 	import { getLocale } from "@lib/paraglide/runtime.js";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -65,6 +67,9 @@
 		existingCount,
 		onGrabbed,
 		media = "video",
+		missingCount = 0,
+		filesPath,
+		filesKind: filesKindProp,
 	}: {
 		// POST endpoint returning ranked SearchResult[] (movie or episode browse).
 		searchPath: string;
@@ -85,6 +90,19 @@
 		// the dub/subtitle chip and a resolution, with an Ebook/Audiobook filter.
 		// "music": the tier and the container (Lossless · FLAC) in their place.
 		media?: "video" | "books" | "music";
+		// How many items of the scope a grab without replace_existing would
+		// fill (an album's missing tracks, a season's wanted aired episodes).
+		// With files on disk too, the confirmation offers a grab that
+		// fills only those and leaves the rest in place: one without
+		// replace_existing.
+		missingCount?: number;
+		// POST endpoint listing a release's files against the scope before it
+		// is grabbed (an album's tracks, a season's or show's episodes). Set, each release can show its files
+		// on demand and the confirmation shows them for the pick.
+		filesPath?: string;
+		// What filesPath answers about; by default an album's tracks for music
+		// and a season's or show's episodes otherwise.
+		filesKind?: "tracks" | "episodes" | "discography";
 	} = $props();
 	let books = $derived(media === "books");
 	let music = $derived(media === "music");
@@ -314,6 +332,29 @@
 
 	let replaceCount = $derived(existingCount ?? (existing ? 1 : 0));
 	let confirmFor = $state<SearchResult | null>(null);
+	// Some files on disk and some missing: the grab may fill the gaps only.
+	let canFillGaps = $derived(replaceCount > 0 && missingCount > 0);
+	// What the gaps are: an album's tracks, else a season's or show's episodes.
+	let gapText = $derived(
+		music
+			? {
+					title: i18n.replace_missing_title,
+					one: i18n.replace_missing_body_one,
+					other: i18n.replace_missing_body_other,
+					action: i18n.replace_missing_action,
+				}
+			: {
+					title: i18n.replace_missing_episodes_title,
+					one: i18n.replace_missing_episodes_body_one,
+					other: i18n.replace_missing_episodes_body_other,
+					action: i18n.replace_missing_episodes_action,
+				},
+	);
+
+	// The one release whose files are unfolded. Each unfolding is a request
+	// to the indexer, so it only happens on a tap.
+	let filesFor = $state<string | null>(null);
+	let filesKind = $derived(filesKindProp ?? (music ? "tracks" : "episodes"));
 
 	let pendingId = $state<string | null>(null);
 	function doGrab(r: SearchResult, replace: boolean) {
@@ -453,6 +494,29 @@
 	</span>
 {/snippet}
 
+{#snippet filesToggle(r: SearchResult)}
+	{#if filesPath}
+		{@const open = filesFor === r.download_url}
+		<button
+			type="button"
+			onclick={() => (filesFor = open ? null : r.download_url)}
+			aria-expanded={open}
+			class="touch-hit inline-flex items-center gap-1 text-[12px] font-medium text-accent-text transition hover:text-accent-hover"
+		>
+			<FileText size={12} aria-hidden="true" />
+			{open ? i18n.release_files_hide() : i18n.release_files_show()}
+		</button>
+	{/if}
+{/snippet}
+
+{#snippet filesPanel(r: SearchResult, extra = "")}
+	{#if filesPath && filesFor === r.download_url}
+		<div class={extra}>
+			<ReleaseFilesPanel path={filesPath} release={r} kind={filesKind} />
+		</div>
+	{/if}
+{/snippet}
+
 {#snippet selectButton(r: SearchResult, extra = "")}
 	{@const pending = pendingId === r.download_url}
 	<button
@@ -578,8 +642,10 @@
 			{#if r.release_group}
 				<span class="font-mono text-[11px] text-fg-faint">{r.release_group}</span>
 			{/if}
+			{@render filesToggle(r)}
 		</div>
 		{@render selectButton(r, "[grid-area:act] self-end md:self-center")}
+		{@render filesPanel(r, "col-span-full")}
 	</li>
 {/snippet}
 
@@ -716,7 +782,10 @@
 	</div>
 
 	{#if !technical}
-		<ul class="flex max-h-[60vh] flex-col gap-2 overflow-y-auto overscroll-contain">
+		<!-- Below md the list scrolls with the modal body: a 60vh box of its
+		     own under the toolbar overflows the 85vh dialog, and with
+		     overscroll-contain its last cards could never be reached. -->
+		<ul class="flex flex-col gap-2 md:max-h-[60vh] md:overflow-y-auto md:overscroll-contain">
 			{#each friendly as r (r.download_url)}
 				{@render friendlyCard(r, r === recommended)}
 			{/each}
@@ -765,7 +834,7 @@
 		<!-- Phone: cards. A row has seven columns of which only two fit, and
 		     sideways scrolling to compare seeders is not a comparison. -->
 		<ul
-			class="flex max-h-[60vh] flex-col gap-2 overflow-y-auto overscroll-contain md:hidden"
+			class="flex flex-col gap-2 md:hidden"
 		>
 			{#each rows as r (r.download_url)}
 				<li
@@ -854,6 +923,10 @@
 						</span>
 						{@render selectButton(r, "ml-auto")}
 					</div>
+					{#if filesPath}
+						<div class="mt-2">{@render filesToggle(r)}</div>
+					{/if}
+					{@render filesPanel(r, "mt-2")}
 				</li>
 			{/each}
 		</ul>
@@ -1042,6 +1115,9 @@
 										</span>
 									{/if}
 								</div>
+								{#if filesPath}
+									<div class="mt-1">{@render filesToggle(r)}</div>
+								{/if}
 							</td>
 							<td
 								class="truncate px-3 py-2.5 font-mono text-[11.5px] text-fg"
@@ -1108,6 +1184,13 @@
 								</button>
 							</td>
 						</tr>
+						{#if filesPath && filesFor === r.download_url}
+							<tr class="border-b border-border last:border-b-0">
+								<td colspan={scored ? 9 : 8} class="px-4 pb-3 pt-0">
+									<ReleaseFilesPanel path={filesPath} release={r} kind={filesKind} />
+								</td>
+							</tr>
+						{/if}
 					{/each}
 				</tbody>
 			</table>
@@ -1117,9 +1200,12 @@
 
 <Dialog
 	open={confirmFor !== null}
-	title={replaceCount > 1
-		? i18n.replace_confirm_title_many()
-		: i18n.replace_confirm_title()}
+	size={canFillGaps ? "xl" : "md"}
+	title={canFillGaps
+		? gapText.title()
+		: replaceCount > 1
+			? i18n.replace_confirm_title_many()
+			: i18n.replace_confirm_title()}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost" },
 		{
@@ -1129,13 +1215,30 @@
 				if (confirmFor) doGrab(confirmFor, true);
 			},
 		},
+		// Last, so it is the decisive button: rightmost from sm, on top of the
+		// stack below it. Keeping what is there is the safer answer.
+		...(canFillGaps
+			? [
+					{
+						label: gapText.action(),
+						variant: "primary" as const,
+						onClick: () => {
+							if (confirmFor) doGrab(confirmFor, false);
+						},
+					},
+				]
+			: []),
 	]}
 	onClose={() => (confirmFor = null)}
 >
 	<p class="text-sm leading-relaxed text-fg-muted">
-		{replaceCount > 1
-			? i18n.replace_confirm_body_many({ count: replaceCount })
-			: i18n.replace_confirm_body()}
+		{#if canFillGaps}
+			{(missingCount === 1 ? gapText.one : gapText.other)({ count: missingCount })}
+		{:else if replaceCount > 1}
+			{i18n.replace_confirm_body_many({ count: replaceCount })}
+		{:else}
+			{i18n.replace_confirm_body()}
+		{/if}
 	</p>
 	{#if existing && replaceCount === 1}
 		<div class="mt-3.5 rounded-md border border-border bg-bg-base px-3 py-2.5">
@@ -1165,8 +1268,20 @@
 	{#if confirmFor}
 		{@const pickQuality = qualityWord(confirmFor)}
 		<div class="mt-2.5 flex flex-wrap items-center gap-1.5 text-[12px] text-fg-subtle">
-			<span class="mr-0.5">{i18n.replace_replaced_by()}</span>
-			{@render langStatic(lang(confirmFor))}
+			<span class="mr-0.5">{canFillGaps ? i18n.replace_picked() : i18n.replace_replaced_by()}</span>
+			{#if music}
+				<span class="inline-flex h-6 whitespace-nowrap items-center gap-1.5 rounded-sm bg-bg-card px-2 text-[12px] font-semibold text-fg">
+					<Music size={13} aria-hidden="true" />
+					{tierLabel(confirmFor.audio_tier ?? releaseTier(confirmFor.source))}
+					{#if confirmFor.source}<span class="font-mono text-[10.5px] font-medium text-fg-subtle">{confirmFor.source}</span>{/if}
+				</span>
+			{:else if books}
+				<span class="inline-flex h-6 whitespace-nowrap items-center rounded-sm bg-bg-card px-2 text-[12px] font-semibold text-fg">
+					{formatLabel(confirmFor.slot ?? releaseFormat(confirmFor.source))}
+				</span>
+			{:else}
+				{@render langStatic(lang(confirmFor))}
+			{/if}
 			{#if pickQuality}
 				<span class="inline-flex h-6 whitespace-nowrap items-center rounded-sm bg-bg-card px-2 text-[12px] font-medium text-fg-muted">
 					{pickQuality}
@@ -1175,6 +1290,11 @@
 			<span class="inline-flex h-6 whitespace-nowrap items-center rounded-sm bg-bg-card px-2 text-[12px] font-medium text-fg-muted">
 				{formatBytes(confirmFor.size)}
 			</span>
+		</div>
+	{/if}
+	{#if confirmFor && filesPath}
+		<div class="mt-3.5">
+			<ReleaseFilesPanel path={filesPath} release={confirmFor} kind={filesKind} />
 		</div>
 	{/if}
 </Dialog>

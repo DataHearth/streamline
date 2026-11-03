@@ -8,6 +8,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/metadata"
 )
@@ -76,6 +77,49 @@ const codeConnectionFailed = "connection_failed"
 func errConnectionFailed(msg string) UnprocessableEntityJSONResponse {
 	code := codeConnectionFailed
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
+}
+
+// codeAPIKeyQuota marks a 422 raised because the caller already holds the
+// maximum number of unexpired API keys. The generic 422 would blame the name
+// just typed; the fix is revoking a key.
+const codeAPIKeyQuota = "api_key_quota" //nolint:gosec // an error code, not a credential
+
+// codeSecretRequired marks a 422 raised because an edit moved a media server,
+// download client, indexer or OIDC provider to another address without its
+// secret. The form keeps a blank secret field as "unchanged", so the generic
+// 422 says nothing about the one field the operator has to fill in.
+const codeSecretRequired = "secret_required"
+
+// codeSecretFileManaged marks a 403 raised because the secret the edit would
+// set, or send to a new address, is read from a *_file path. Without it the
+// SPA says "you don't have permission" to an admin who has every permission
+// and needs to edit the config file instead.
+const codeSecretFileManaged = "secret_file_managed"
+
+// errResourceUpdate maps a media server, download client, indexer or OIDC
+// provider update error that is not a 404 onto its 403 or its 422; exactly one
+// is non-nil.
+func errResourceUpdate(
+	err error,
+) (forbidden *ForbiddenJSONResponse, unprocessable *UnprocessableEntityJSONResponse) {
+	switch {
+	case errors.Is(err, config.ErrSecretFileManaged),
+		errors.Is(err, config.ErrSecretFileDestination):
+		code := codeSecretFileManaged
+		return &ForbiddenJSONResponse{Message: err.Error(), Code: &code}, nil
+	case configLocked(err):
+		r := forbiddenResp(err.Error())
+		return &r, nil
+	case errors.Is(err, config.ErrSecretRequired):
+		code := codeSecretRequired
+		return nil, &UnprocessableEntityJSONResponse{
+			Message: err.Error(),
+			Code:    &code,
+		}
+	default:
+		r := errUnprocessable(err.Error())
+		return nil, &r
+	}
 }
 
 // codeInvalidCondition marks a 422 whose message names the custom-format
@@ -195,4 +239,23 @@ func errSMTPNotConfigured(err error) ServiceUnavailableJSONResponse {
 func errSendFailed(err error) BadGatewayJSONResponse {
 	code := codeSendFailed
 	return BadGatewayJSONResponse{Message: err.Error(), Code: &code}
+}
+
+// codeFilesUnavailable marks a 422 raised because a release is a magnet,
+// whose file list only peers hold; codeTorrentUnreadable one raised because
+// the indexer did not hand a readable .torrent over. The request is fine
+// either way, and the SPA words each in the reader's language.
+const (
+	codeFilesUnavailable  = "files_unavailable"
+	codeTorrentUnreadable = "torrent_unreadable"
+)
+
+func errFilesUnavailable(msg string) UnprocessableEntityJSONResponse {
+	code := codeFilesUnavailable
+	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
+}
+
+func errTorrentUnreadable(msg string) UnprocessableEntityJSONResponse {
+	code := codeTorrentUnreadable
+	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }

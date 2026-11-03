@@ -9,12 +9,15 @@
 	import BrandLogo from "@components/settings/BrandLogo.svelte";
 	import PlexPINFlow from "@components/settings/PlexPINFlow.svelte";
 	import PlexSectionsModal from "@components/settings/PlexSectionsModal.svelte";
+	import PathMappingsField from "@components/settings/PathMappingsField.svelte";
 	import { api, errorText } from "@lib/api";
 	import { readOnlyLock } from "@lib/config.svelte";
+	import { urlDestination } from "@lib/destination";
 	import { toast } from "@lib/toast";
 	import type { AppForm } from "@lib/form";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
+		MediaServerPathMapping,
 		MediaServerType,
 		MediaServerSection,
 	} from "@lib/types";
@@ -27,6 +30,7 @@
 		library_section: string;
 		library_section_tv: string;
 		enabled: boolean;
+		path_mappings: MediaServerPathMapping[];
 	};
 
 	type Props = {
@@ -51,6 +55,14 @@
 	// hitting Discover before saving would otherwise 404 against a name the
 	// server was never saved as.
 	const originalName = untrack(() => form.state.values.name);
+	// The address the server was saved under, captured once for the same reason.
+	// Moving it makes the server refuse a blank token, so the token field says
+	// to enter it again instead of "leave blank to keep".
+	const savedDestination = untrack(() => urlDestination(form.state.values.host));
+	const destination = untrack(() =>
+		form.useSelector((s) => urlDestination(s.values.host)),
+	);
+	const moved = $derived(isEdit && destination.current !== savedDestination);
 	const movieSection = untrack(() =>
 		form.useSelector((s) => s.values.library_section),
 	);
@@ -243,6 +255,9 @@
 						token={field.state.value ?? ""}
 						onToken={(t) => field.handleChange(t)}
 					/>
+					{#if moved && !field.state.value}
+						<p class="mt-1 text-xs text-fg-muted">{i18n.settings_secret_reenter()}</p>
+					{/if}
 				{/snippet}
 			</form.Field>
 		{:else}
@@ -253,9 +268,11 @@
 						label={i18n.mediaserver_token()}
 						type="password"
 						autocomplete="off"
-						help={isEdit
-							? i18n.mediaserver_token_keep()
-							: (KEY_HINTS[serverType.current] ?? "")}
+						help={moved
+							? i18n.settings_secret_reenter()
+							: isEdit
+								? i18n.mediaserver_token_keep()
+								: (KEY_HINTS[serverType.current] ?? "")}
 					/>
 				{/snippet}
 			</form.Field>
@@ -304,6 +321,19 @@
 				</div>
 			</div>
 		{/if}
+	</div>
+
+	<!-- Every type: a targeted rescan names folders, and a server mounting the
+	     library elsewhere only knows them under its own paths. -->
+	<div class="rounded-lg border border-border bg-bg-card p-5">
+		<form.Field name="path_mappings">
+			{#snippet children(field)}
+				<PathMappingsField
+					value={field.state.value ?? []}
+					onChange={(v) => field.handleChange(v)}
+				/>
+			{/snippet}
+		</form.Field>
 	</div>
 </div>
 

@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/media/book/pick"
 	"github.com/datahearth/streamline/internal/otelx"
 )
@@ -127,6 +129,12 @@ func (s *Service) PatchBook(
 		}
 		if err := s.setMonitored(ctx, fresh, slotAudiobook, audiobook); err != nil {
 			return nil, otelx.RecordSpanError(span, err)
+		}
+		if fresh.EbookMonitored != ebook || fresh.AudiobookMonitored != audiobook {
+			recordMonitoring(ctx, events.ScopeBook, id, map[string]any{
+				"monitor":   *p.Monitor,
+				"monitored": ebook || audiobook,
+			})
 		}
 	}
 	out, err := s.GetBook(ctx, id)
@@ -326,14 +334,17 @@ func (s *Service) PatchSeries(
 		}
 	}
 	if p.Monitor != nil {
-		if err := s.db.SetSeriesMonitor(
-			ctx,
-			id,
-			*p.Monitor,
-			time.Now(),
-		); err != nil {
+		moved, err := s.db.SetSeriesMonitor(ctx, id, *p.Monitor, time.Now())
+		if err != nil {
 			return nil, otelx.RecordSpanError(span, err)
 		}
+		// One series-scoped row carrying how many volumes moved, rather than
+		// one per volume.
+		recordMonitoring(ctx, events.ScopeBookSeries, id, map[string]any{
+			"monitor":   *p.Monitor,
+			"monitored": *p.Monitor != "none",
+			"volumes":   moved,
+		})
 	}
 	if chosen != nil {
 		if err := s.db.SetSeriesEdition(
@@ -347,4 +358,20 @@ func (s *Service) PatchSeries(
 	}
 	out, err := s.GetSeries(ctx, id)
 	return out, otelx.RecordSpanError(span, err)
+}
+
+// recordMonitoring files a monitoring change; a failed write is logged and
+// never fails the patch it describes.
+func recordMonitoring(
+	ctx context.Context,
+	scope events.Scope,
+	id uint32,
+	payload map[string]any,
+) {
+	if err := events.Record(
+		ctx, nil, events.TypeMonitoringChanged, scope, id, payload,
+	); err != nil {
+		slog.WarnContext(ctx, "book: record monitoring event failed",
+			"owner.id", id, "error", err)
+	}
 }

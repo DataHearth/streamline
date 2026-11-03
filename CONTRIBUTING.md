@@ -7,9 +7,12 @@ useful things you can send.
 
 - **Bug fix** — just open a PR. Link the issue if there is one.
 - **New feature** — open an issue first so we can agree on the shape before you
-  spend an evening on it. Check [the roadmap](docs/wiki/Roadmap.md); music,
-  books and the built-in player are already planned, and a half-built version
-  of a planned feature is harder to merge than nothing.
+  spend an evening on it. Check [the roadmap](docs/wiki/Roadmap.md); the
+  built-in player is already planned, and a half-built version of a planned
+  feature is harder to merge than nothing.
+- **Issues are labelled automatically** — a type and an `area/*` label, plus
+  `needs-info` or `possible-duplicate` when they fit. A maintainer reads every
+  issue and corrects the labels where needed.
 - **New integration** (indexer, download client, media server) — welcome. Copy
   the shape of an existing one in `internal/indexer/`, `internal/download/`
   (e.g. `deluge.go`) or `internal/mediaserver/`.

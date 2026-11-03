@@ -77,6 +77,24 @@ type MediaFile struct {
 	SizeBefore int64 `json:"size_before,omitempty"`
 	// BookKind holds the value of the "book_kind" field.
 	BookKind mediafile.BookKind `json:"book_kind,omitempty"`
+	// TagsState holds the value of the "tags_state" field.
+	TagsState *mediafile.TagsState `json:"tags_state,omitempty"`
+	// TagsHash holds the value of the "tags_hash" field.
+	TagsHash string `json:"tags_hash,omitempty"`
+	// TaggedAt holds the value of the "tagged_at" field.
+	TaggedAt *time.Time `json:"tagged_at,omitempty"`
+	// TagsMtime holds the value of the "tags_mtime" field.
+	TagsMtime int64 `json:"tags_mtime,omitempty"`
+	// TagsSize holds the value of the "tags_size" field.
+	TagsSize int64 `json:"tags_size,omitempty"`
+	// TagsCheckedAt holds the value of the "tags_checked_at" field.
+	TagsCheckedAt *time.Time `json:"tags_checked_at,omitempty"`
+	// TagFailures holds the value of the "tag_failures" field.
+	TagFailures uint8 `json:"tag_failures,omitempty"`
+	// TagsError holds the value of the "tags_error" field.
+	TagsError string `json:"tags_error,omitempty"`
+	// TagsArtHash holds the value of the "tags_art_hash" field.
+	TagsArtHash string `json:"tags_art_hash,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the MediaFileQuery when eager-loading is set.
 	Edges               MediaFileEdges `json:"edges"`
@@ -162,11 +180,11 @@ func (*MediaFile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case mediafile.FieldID, mediafile.FieldSize, mediafile.FieldDurationSeconds, mediafile.FieldWidth, mediafile.FieldHeight, mediafile.FieldAudioChannels, mediafile.FieldBitrate, mediafile.FieldAudioTracks, mediafile.FieldSizeBefore:
+		case mediafile.FieldID, mediafile.FieldSize, mediafile.FieldDurationSeconds, mediafile.FieldWidth, mediafile.FieldHeight, mediafile.FieldAudioChannels, mediafile.FieldBitrate, mediafile.FieldAudioTracks, mediafile.FieldSizeBefore, mediafile.FieldTagsMtime, mediafile.FieldTagsSize, mediafile.FieldTagFailures:
 			values[i] = new(sql.NullInt64)
-		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec, mediafile.FieldAudioLangs, mediafile.FieldSubLangs, mediafile.FieldParsedSource, mediafile.FieldParsedResolution, mediafile.FieldParsedCodec, mediafile.FieldBookKind:
+		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec, mediafile.FieldAudioLangs, mediafile.FieldSubLangs, mediafile.FieldParsedSource, mediafile.FieldParsedResolution, mediafile.FieldParsedCodec, mediafile.FieldBookKind, mediafile.FieldTagsState, mediafile.FieldTagsHash, mediafile.FieldTagsError, mediafile.FieldTagsArtHash:
 			values[i] = new(sql.NullString)
-		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldLastSeenAt, mediafile.FieldMissingSince, mediafile.FieldProbedAt, mediafile.FieldTranscodedAt:
+		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldLastSeenAt, mediafile.FieldMissingSince, mediafile.FieldProbedAt, mediafile.FieldTranscodedAt, mediafile.FieldTaggedAt, mediafile.FieldTagsCheckedAt:
 			values[i] = new(sql.NullTime)
 		case mediafile.ForeignKeys[0]: // book_media_files
 			values[i] = new(sql.NullInt64)
@@ -369,6 +387,63 @@ func (_m *MediaFile) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.BookKind = mediafile.BookKind(value.String)
 			}
+		case mediafile.FieldTagsState:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field tags_state", values[i])
+			} else if value.Valid {
+				_m.TagsState = new(mediafile.TagsState)
+				*_m.TagsState = mediafile.TagsState(value.String)
+			}
+		case mediafile.FieldTagsHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field tags_hash", values[i])
+			} else if value.Valid {
+				_m.TagsHash = value.String
+			}
+		case mediafile.FieldTaggedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field tagged_at", values[i])
+			} else if value.Valid {
+				_m.TaggedAt = new(time.Time)
+				*_m.TaggedAt = value.Time
+			}
+		case mediafile.FieldTagsMtime:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field tags_mtime", values[i])
+			} else if value.Valid {
+				_m.TagsMtime = value.Int64
+			}
+		case mediafile.FieldTagsSize:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field tags_size", values[i])
+			} else if value.Valid {
+				_m.TagsSize = value.Int64
+			}
+		case mediafile.FieldTagsCheckedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field tags_checked_at", values[i])
+			} else if value.Valid {
+				_m.TagsCheckedAt = new(time.Time)
+				*_m.TagsCheckedAt = value.Time
+			}
+		case mediafile.FieldTagFailures:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field tag_failures", values[i])
+			} else if value.Valid {
+				_m.TagFailures = uint8(value.Int64)
+			}
+		case mediafile.FieldTagsError:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field tags_error", values[i])
+			} else if value.Valid {
+				_m.TagsError = value.String
+			}
+		case mediafile.FieldTagsArtHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field tags_art_hash", values[i])
+			} else if value.Valid {
+				_m.TagsArtHash = value.String
+			}
 		case mediafile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field book_media_files", value)
@@ -549,6 +624,39 @@ func (_m *MediaFile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("book_kind=")
 	builder.WriteString(fmt.Sprintf("%v", _m.BookKind))
+	builder.WriteString(", ")
+	if v := _m.TagsState; v != nil {
+		builder.WriteString("tags_state=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("tags_hash=")
+	builder.WriteString(_m.TagsHash)
+	builder.WriteString(", ")
+	if v := _m.TaggedAt; v != nil {
+		builder.WriteString("tagged_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("tags_mtime=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TagsMtime))
+	builder.WriteString(", ")
+	builder.WriteString("tags_size=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TagsSize))
+	builder.WriteString(", ")
+	if v := _m.TagsCheckedAt; v != nil {
+		builder.WriteString("tags_checked_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("tag_failures=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TagFailures))
+	builder.WriteString(", ")
+	builder.WriteString("tags_error=")
+	builder.WriteString(_m.TagsError)
+	builder.WriteString(", ")
+	builder.WriteString("tags_art_hash=")
+	builder.WriteString(_m.TagsArtHash)
 	builder.WriteByte(')')
 	return builder.String()
 }

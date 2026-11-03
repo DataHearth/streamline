@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -68,6 +69,7 @@ func (w *Worker) importBookRecord(
 		placed []library.ImportedFile
 		aside  []string
 		probed *ffmpeg.Info
+		keep   = w.sourceFilter(ctx, rec)
 	)
 	switch rec.BookKind {
 	case downloadrecord.BookKindEbook:
@@ -79,7 +81,7 @@ func (w *Worker) importBookRecord(
 		if err != nil {
 			return otelx.RecordSpanError(span, err)
 		}
-		f, err := w.lib.ImportEbook(ctx, rec.SavePath, b, profile, replace)
+		f, err := w.lib.ImportEbook(ctx, rec.SavePath, keep, b, profile, replace)
 		if err != nil {
 			putBack(ctx, aside)
 			return otelx.RecordSpanError(span, err)
@@ -91,7 +93,9 @@ func (w *Worker) importBookRecord(
 			return otelx.RecordSpanError(span, ErrNoBookProfile)
 		}
 		if !rec.VerificationBypassed {
-			reasons, measured := w.audiobookHoldReasons(ctx, rec.SavePath, profile)
+			reasons, measured := w.audiobookHoldReasons(
+				ctx, rec.SavePath, keep, profile,
+			)
 			if len(reasons) > 0 {
 				return w.hold(ctx, span, rec, reasons)
 			}
@@ -101,7 +105,7 @@ func (w *Worker) importBookRecord(
 		if err != nil {
 			return otelx.RecordSpanError(span, err)
 		}
-		placed, err = w.lib.ImportAudiobook(ctx, rec.SavePath, b, replace)
+		placed, err = w.lib.ImportAudiobook(ctx, rec.SavePath, keep, b, replace)
 		if err != nil {
 			putBack(ctx, aside)
 			return otelx.RecordSpanError(span, err)
@@ -139,6 +143,7 @@ func (w *Worker) importBookRecord(
 		)
 	}
 	dropAside(ctx, aside)
+	recordBookImported(ctx, b.ID, rec.Title, kind, rows)
 	slog.InfoContext(ctx, "imported book",
 		"book.id", b.ID, "book.kind", string(rec.BookKind), "files", len(placed))
 
@@ -147,7 +152,42 @@ func (w *Worker) importBookRecord(
 		w.markRequestsAvailable(ctx, "book_series", series.HardcoverID)
 	}
 	w.cleanupTorrent(ctx, rec, libCfg)
+	changed := mediaFilePaths(existing)
+	for _, f := range placed {
+		changed = append(changed, f.Path)
+	}
 	w.refreshMediaServers(ctx, mediaserver.KindBook,
-		library.BookRoot(libCfg, string(rec.BookKind)))
+		library.BookRoot(libCfg, string(rec.BookKind)), changed...)
 	return nil
+}
+
+// recordBookImported files one imported event for the slot the record filled.
+// An audiobook is a folder of files, which the per-file create hook would
+// have written as one row each.
+func recordBookImported(
+	ctx context.Context,
+	bookID uint32,
+	release string,
+	kind mediafile.BookKind,
+	rows []db.MediaFileRow,
+) {
+	var size int64
+	for _, r := range rows {
+		size += r.Size
+	}
+	p := map[string]any{
+		"release_title": release,
+		"book_kind":     string(kind),
+		"files":         len(rows),
+		"size_bytes":    size,
+	}
+	if len(rows) > 0 && rows[0].Quality != "" {
+		p["quality"] = rows[0].Quality
+	}
+	if err := events.Record(
+		ctx, nil, events.TypeImported, events.ScopeBook, bookID, p,
+	); err != nil {
+		slog.WarnContext(ctx, "book import: record imported event failed",
+			"book.id", bookID, "error", err)
+	}
 }

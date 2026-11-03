@@ -7,6 +7,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/media/book"
 )
@@ -88,6 +89,8 @@ type EligibleEpisodeLister interface {
 	// UpgradeCandidateShow loads the on-disk episodes one pack grab may
 	// replace, for the show it is about to grab for.
 	UpgradeCandidateShow(ctx context.Context, showID uint32) (*ent.TVShow, error)
+	// RejectedReleases is the blocklist every automatic pick filters on.
+	RejectedReleases(ctx context.Context) (*db.ReleaseBlocklist, error)
 	// SetDownloadRecordReplaceMode tells the import which of the episodes a
 	// grab covers it may overwrite.
 	SetDownloadRecordReplaceMode(

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -22,12 +23,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/datahearth/streamline/internal/buildinfo"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
 const (
-	mbBaseURL = "https://musicbrainz.org/ws/2"
-
 	// maxMusicReleaseResponse bounds the heavy release call, whose
 	// relationship expansion of a large release outgrows maxProviderResponse's
 	// intent while staying far below it in practice.
@@ -48,26 +48,36 @@ var (
 
 	deezerArtistRe = regexp.MustCompile(`deezer\.com/(?:[a-z]{2}/)?artist/(\d+)`)
 	wikidataIDRe   = regexp.MustCompile(`/(Q\d+)$`)
-	featJoinRe     = regexp.MustCompile(`(?i)\b(feat\.?|featuring|ft\.?)(\s|$)`)
+	commonsFileRe  = regexp.MustCompile(
+		`^https://commons\.wikimedia\.org/wiki/File:([^/?#]+)$`,
+	)
+	featJoinRe = regexp.MustCompile(`(?i)\b(feat\.?|featuring|ft\.?)(\s|$)`)
 )
 
 // MusicBrainz is the MusicProvider implementation. No API key; MusicBrainz
-// mandates a descriptive User-Agent and at most 1 request/second, shared by
-// every caller through one two-class limiter.
+// mandates a descriptive User-Agent and at most 1 request/second
+// (metadata.musicbrainz_interval, lifted for a mirror), shared by every
+// caller through one limiter.
 type MusicBrainz struct {
 	client  *http.Client
 	limiter *mbLimiter
+	baseURL string
 
 	genreMu      sync.Mutex
 	genres       map[string]struct{}
 	genresLoaded time.Time
+
+	deezerShared memo[bool]
 }
 
 func NewMusicBrainz() *MusicBrainz {
 	c := *otelx.HTTPClient
+	m := config.Get().Metadata
+	interval := m.MusicBrainzIntervalDuration()
 	return &MusicBrainz{
 		client:  &c,
-		limiter: newMBLimiter(mbInterval, musicBackgroundGap),
+		limiter: newMBLimiter(interval, backgroundGapFactor*interval),
+		baseURL: strings.TrimRight(m.MusicBrainzURL, "/") + "/ws/2",
 	}
 }
 
@@ -96,7 +106,7 @@ func (m *MusicBrainz) fetch(
 		return otelx.RecordSpanError(span, err)
 	}
 	req, err := http.NewRequestWithContext(
-		ctx, http.MethodGet, mbBaseURL+path+"?"+params.Encode(), nil,
+		ctx, http.MethodGet, m.baseURL+path+"?"+params.Encode(), nil,
 	)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
@@ -118,12 +128,20 @@ func (m *MusicBrainz) fetch(
 			fmt.Errorf("musicbrainz: %s: %w", path, ErrNotFound))
 	case http.StatusServiceUnavailable, http.StatusTooManyRequests:
 		retry := mbDefaultRetryAfter
+		// MusicBrainz's busy 503 can carry Retry-After: 0, which taken at its
+		// word leaves the hydration worker retrying every 2s.
 		if v := resp.Header.Get("Retry-After"); v != "" {
-			retry = parseRetryAfter(v, time.Now())
+			if d := parseRetryAfter(v, time.Now()); d > 0 {
+				retry = d
+			}
 		}
 		slog.WarnContext(ctx, "musicbrainz rate limited",
 			"musicbrainz.endpoint", path, "http.status_code", resp.StatusCode,
+			// "global" is MusicBrainz shedding load for every client, not a
+			// limit on this instance.
+			"musicbrainz.ratelimit_zone", resp.Header.Get("X-RateLimit-Zone"),
 			"retry_after", retry.Round(time.Second))
+		m.limiter.hold(retry)
 		return otelx.RecordSpanError(span, &RateLimitedError{RetryAfter: retry})
 	}
 	slog.WarnContext(ctx, "musicbrainz request non-200",
@@ -316,18 +334,41 @@ type mbReleaseGroup struct {
 	PrimaryType      string   `json:"primary-type"`
 	SecondaryTypes   []string `json:"secondary-types"`
 	FirstReleaseDate string   `json:"first-release-date"`
+	Genres           []mbTag  `json:"genres"`
 }
 
 func (rg mbReleaseGroup) toInfo() ReleaseGroupInfo {
 	info := ReleaseGroupInfo{MBID: rg.ID, Title: rg.Title, Type: mapAlbumType(rg)}
-	// MusicBrainz dates may be YYYY, YYYY-MM, or YYYY-MM-DD.
-	for _, layout := range []string{"2006-01-02", "2006-01", "2006"} {
-		if t, err := time.Parse(layout, rg.FirstReleaseDate); err == nil {
-			info.ReleaseDate = &t
-			break
-		}
+	if t, ok := parseMBDate(rg.FirstReleaseDate); ok {
+		info.ReleaseDate = &t
+		info.OriginalDate = rg.FirstReleaseDate
 	}
 	return info
+}
+
+// parseMBDate reads a MusicBrainz date, which may be YYYY, YYYY-MM or
+// YYYY-MM-DD.
+func parseMBDate(s string) (time.Time, bool) {
+	for _, layout := range []string{"2006-01-02", "2006-01", "2006"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, true
+		}
+	}
+	return time.Time{}, false
+}
+
+// topGenres returns at most maxLookupGenres genre names, most voted first.
+func topGenres(tags []mbTag) []string {
+	sorted := slices.Clone(tags)
+	slices.SortStableFunc(sorted, func(a, b mbTag) int { return b.Count - a.Count })
+	out := []string{}
+	for _, g := range sorted {
+		if len(out) == maxLookupGenres {
+			break
+		}
+		out = append(out, titleCase(g.Name))
+	}
+	return out
 }
 
 func luceneQuote(s string) string {
@@ -429,6 +470,8 @@ func mapAlbumType(rg mbReleaseGroup) AlbumType {
 			return AlbumTypeCompilation
 		case "Live":
 			return AlbumTypeLive
+		case "Remix", "DJ-mix", "Mixtape/Street", "Demo":
+			return AlbumTypeOther
 		}
 	}
 	switch rg.PrimaryType {
@@ -486,14 +529,8 @@ func (m *MusicBrainz) GetArtist(
 		ArtistResult: artist.toResult(),
 		Origin:       joinAreas(artist.BeginArea, artist.Area),
 	}
-	slices.SortStableFunc(artist.Genres, func(a, b mbTag) int {
-		return b.Count - a.Count
-	})
-	for _, g := range artist.Genres {
-		if len(details.Genres) == maxLookupGenres {
-			break
-		}
-		details.Genres = append(details.Genres, titleCase(g.Name))
+	if g := topGenres(artist.Genres); len(g) > 0 {
+		details.Genres = g
 	}
 	if len(details.Genres) > 0 {
 		details.Genre = details.Genres[0]
@@ -513,10 +550,14 @@ func (m *MusicBrainz) GetArtist(
 			Count         int              `json:"release-group-count"`
 			ReleaseGroups []mbReleaseGroup `json:"release-groups"`
 		}
+		// website-default leaves out the release groups with no official
+		// release (fan remix compilations, bootleg live recordings), as the
+		// MusicBrainz site does: as albums they were wanted and searched for.
 		params := url.Values{
-			"artist": {mbid},
-			"limit":  {"100"},
-			"offset": {fmt.Sprint(offset)},
+			"artist":               {mbid},
+			"limit":                {"100"},
+			"offset":               {fmt.Sprint(offset)},
+			"release-group-status": {"website-default"},
 		}
 		if err := m.get(ctx, "/release-group", params, &page); err != nil {
 			return nil, otelx.RecordSpanError(span, err)
@@ -530,6 +571,99 @@ func (m *MusicBrainz) GetArtist(
 		}
 	}
 	return details, nil
+}
+
+// ArtistArt is what MusicBrainz links as one artist's picture: its Deezer
+// page and its own image (a Wikimedia Commons file), each empty when none.
+type ArtistArt struct {
+	DeezerID uint32
+	ImageURL string
+}
+
+// ArtistArt reads one artist's url-rels for the links a search result never
+// carries: the lookup art proxy's way to tell namesakes apart.
+func (m *MusicBrainz) ArtistArt(
+	ctx context.Context,
+	mbid string,
+) (ArtistArt, error) {
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.artist_art",
+		trace.WithAttributes(attribute.String("musicbrainz.mbid", mbid)))
+	defer span.End()
+
+	var artist mbArtist
+	if err := m.get(
+		ctx,
+		"/artist/"+url.PathEscape(mbid),
+		url.Values{"inc": {"url-rels"}},
+		&artist,
+	); err != nil {
+		return ArtistArt{}, otelx.RecordSpanError(span, err)
+	}
+	var d ArtistDetails
+	var art ArtistArt
+	for _, rel := range artist.Relations {
+		if rel.URL == nil {
+			continue
+		}
+		readURLRel(rel, &d)
+		if rel.Type == "image" && art.ImageURL == "" {
+			art.ImageURL = commonsImageURL(rel.URL.Resource)
+		}
+	}
+	art.DeezerID = d.DeezerID
+	return art, nil
+}
+
+// commonsImageURL turns a Wikimedia Commons file page into a 500 px
+// rendition of the file, "" for any other address.
+func commonsImageURL(resource string) string {
+	m := commonsFileRe.FindStringSubmatch(resource)
+	if m == nil {
+		return ""
+	}
+	return "https://commons.wikimedia.org/wiki/Special:FilePath/" + m[1] + "?width=500"
+}
+
+// deezerSharedTTL is how long DeezerArtistShared remembers an answer: the
+// tiles of one search ask about the same page, and editors rarely move it.
+const deezerSharedTTL = 24 * time.Hour
+
+// DeezerArtistShared reports whether more than one MusicBrainz artist links
+// the Deezer artist page id. Deezer files namesakes under one page, and
+// MusicBrainz then links the grunge Nirvana and the 60s UK band to the same
+// one, whose picture is only ever one of them. A page MusicBrainz does not
+// know is not shared.
+func (m *MusicBrainz) DeezerArtistShared(
+	ctx context.Context,
+	id uint32,
+) (bool, error) {
+	key := strconv.FormatUint(uint64(id), 10)
+	if shared, ok := m.deezerShared.get(key); ok {
+		return shared, nil
+	}
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.deezer_artist_shared",
+		trace.WithAttributes(attribute.Int64("deezer.artist_id", int64(id))))
+	defer span.End()
+
+	var payload struct {
+		Relations []mbRel `json:"relations"`
+	}
+	err := m.get(ctx, "/url", url.Values{
+		"resource": {"https://www.deezer.com/artist/" + key},
+		"inc":      {"artist-rels"},
+	}, &payload)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return false, otelx.RecordSpanError(span, err)
+	}
+	artists := map[string]struct{}{}
+	for _, rel := range payload.Relations {
+		if rel.Artist != nil {
+			artists[rel.Artist.ID] = struct{}{}
+		}
+	}
+	shared := len(artists) > 1
+	m.deezerShared.put(key, shared, deezerSharedTTL)
+	return shared, nil
 }
 
 var ignoredMemberAttributes = []string{"original", "additional"}
@@ -612,13 +746,15 @@ type mbLabelInfo struct {
 }
 
 type mbMedium struct {
-	Position uint8     `json:"position"`
-	Title    string    `json:"title"`
-	Format   string    `json:"format"`
-	Tracks   []mbTrack `json:"tracks"`
+	Position   uint8     `json:"position"`
+	Title      string    `json:"title"`
+	Format     string    `json:"format"`
+	TrackCount int       `json:"track-count"`
+	Tracks     []mbTrack `json:"tracks"`
 }
 
 type mbTrack struct {
+	ID           string     `json:"id"`
 	Position     uint16     `json:"position"`
 	Title        string     `json:"title"`
 	Length       uint32     `json:"length"`
@@ -640,27 +776,65 @@ type mbCredit struct {
 	} `json:"artist"`
 }
 
-// canonicalRelease is the earliest official release; an undated one ranks
-// after every dated one (ISO dates sort lexically, so "" would otherwise win).
-// Falls back to the first listed release when none is official.
+// canonicalRelease is the earliest official release. Among releases out the
+// same day the one with the fewest audio tracks wins, then the fewest audio
+// discs, then the first listed: the standard edition, which is what
+// releases on the indexers carry. MusicBrainz listed Avatar's Feathers &
+// Flesh CD + live DVD first, and the deluxe one next, so the album took a
+// concert's chapters or two bonus songs no ordinary release has. Video
+// discs never count (fillRelease skips them). Falls back to the first listed
+// release when none is official.
 func canonicalRelease(releases []mbRelease) string {
-	best, bestDate := "", ""
+	best, bestDate, bestTracks, bestDiscs := "", "", 0, 0
 	for _, r := range releases {
 		if r.Status != "Official" {
 			continue
 		}
-		date := r.Date
-		if date == "" {
-			date = "9999"
+		date := releaseSortDate(r.Date)
+		tracks, discs := audioSize(r.Media)
+		if tracks == 0 {
+			// Nothing counted is no information, not the smallest edition.
+			tracks = math.MaxInt
 		}
-		if best == "" || date < bestDate {
-			best, bestDate = r.ID, date
+		if best == "" || date < bestDate || date == bestDate &&
+			(tracks < bestTracks || tracks == bestTracks && discs < bestDiscs) {
+			best, bestDate, bestTracks, bestDiscs = r.ID, date, tracks, discs
 		}
 	}
 	if best == "" && len(releases) > 0 {
 		return releases[0].ID
 	}
 	return best
+}
+
+// audioSize counts a release's audio tracks and discs, video discs left out.
+func audioSize(media []mbMedium) (tracks, discs int) {
+	for _, md := range media {
+		if isVideoMedium(md) {
+			continue
+		}
+		discs++
+		tracks += md.TrackCount
+	}
+	return tracks, discs
+}
+
+// releaseSortDate makes a MusicBrainz date (YYYY, YYYY-MM or YYYY-MM-DD)
+// sort lexically by when it can have happened: a partial date ranks after
+// every fuller date inside its period and before the next period, and an
+// undated release after every dated one. Compared raw, "2022" sorts before
+// "2022-10-07", and Omens took a Russian pressing dated only by its year,
+// three bonus tracks included, over the standard edition released that day.
+func releaseSortDate(date string) string {
+	switch len(date) {
+	case 0:
+		return "9999-99-99"
+	case 4:
+		return date + "-99-99"
+	case 7:
+		return date + "-99"
+	}
+	return date
 }
 
 const (
@@ -682,13 +856,20 @@ func (m *MusicBrainz) GetReleaseGroup(
 		Releases     []mbRelease `json:"releases"`
 		ArtistCredit []mbCredit  `json:"artist-credit"`
 	}
-	if err := m.get(ctx, "/release-group/"+url.PathEscape(mbid),
-		url.Values{"inc": {"releases+media+artist-credits"}}, &rg); err != nil {
+	if err := m.get(
+		ctx,
+		"/release-group/"+url.PathEscape(mbid),
+		url.Values{
+			"inc": {"releases+media+artist-credits+genres"},
+		},
+		&rg,
+	); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	details := &ReleaseGroupDetails{
 		ReleaseGroupInfo: rg.toInfo(),
 		ReleaseMBID:      canonicalRelease(rg.Releases),
+		Genres:           topGenres(rg.Genres),
 	}
 	if len(rg.ArtistCredit) > 0 {
 		details.ArtistMBID = rg.ArtistCredit[0].Artist.ID
@@ -749,6 +930,17 @@ func (m *MusicBrainz) getRelease(
 	return rel, false, nil
 }
 
+// videoFormats are the MusicBrainz medium formats that hold video. DVD-Audio
+// and the CD variants are audio and stay out.
+var videoFormats = []string{
+	"DVD", "DVD-Video", "Blu-ray", "HD-DVD", "VHS", "Betamax",
+	"VCD", "SVCD", "LaserDisc", "UMD", "CED", "VHD",
+}
+
+func isVideoMedium(md mbMedium) bool {
+	return slices.Contains(videoFormats, md.Format)
+}
+
 func mapMedia(formats []string) []string {
 	have := map[string]bool{}
 	for _, f := range formats {
@@ -786,22 +978,46 @@ func validCountry(c string) string {
 	return c
 }
 
+// roleByType maps a release or recording relationship to a production role,
+// grouped the way Picard groups them into tags.
 var roleByType = map[string]string{
 	"producer":            "producer",
 	"recording":           "recording",
 	"engineer":            "recording",
 	"recording engineer":  "recording",
+	"audio":               "recording",
+	"sound":               "recording",
 	"mix":                 "mix",
 	"mastering":           "mastering",
 	"design/illustration": "artwork",
 	"graphic design":      "artwork",
 	"art direction":       "artwork",
 	"photography":         "artwork",
+	"conductor":           "conductor",
+	"remixer":             "remixer",
+	"arranger":            "arranger",
+	"instrument arranger": "arranger",
+	"vocal arranger":      "arranger",
+	"orchestrator":        "arranger",
 }
 
-var writerTypes = []string{"writer", "composer", "lyricist"}
+// writerRoleByType maps a work relationship to the role its person is
+// credited under on the recording.
+var writerRoleByType = map[string]string{
+	"composer":            "composer",
+	"lyricist":            "lyricist",
+	"librettist":          "lyricist",
+	"writer":              "writer",
+	"arranger":            "arranger",
+	"instrument arranger": "arranger",
+	"vocal arranger":      "arranger",
+	"orchestrator":        "arranger",
+}
 
 func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
+	if _, ok := parseMBDate(rel.Date); ok {
+		d.EditionDate = rel.Date
+	}
 	d.Barcode = rel.Barcode
 	d.Country = validCountry(rel.Country)
 	if len(rel.LabelInfo) > 0 {
@@ -815,27 +1031,39 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 	performers := map[string]*PerformerInfo{}
 	var performerOrder []string
 	creditSeen := map[string]bool{}
-	addCredit := func(rel mbRel) {
+	// addCredit records a production credit on the album and returns it,
+	// nil when the relation is none.
+	addCredit := func(rel mbRel) *CreditInfo {
 		role, ok := roleByType[rel.Type]
 		if !ok || rel.TargetType != "artist" || rel.Artist == nil {
-			return
+			return nil
 		}
-		key := creditKey(rel.Artist.ID, rel.Artist.Name) + "|" + role
-		if creditSeen[key] {
-			return
-		}
-		creditSeen[key] = true
-		d.Credits = append(d.Credits, CreditInfo{
+		c := CreditInfo{
 			Name: rel.Artist.Name, MBID: rel.Artist.ID,
 			Role: role,
-		})
+		}
+		key := creditKey(rel.Artist.ID, rel.Artist.Name) + "|" + role
+		if !creditSeen[key] {
+			creditSeen[key] = true
+			d.Credits = append(d.Credits, c)
+		}
+		return &c
 	}
 	placeCount := map[string]int{}
 
 	for _, r := range rel.Relations {
 		addCredit(r)
 	}
+	// A video disc's tracks are chapters of a film, not songs: a CD + DVD
+	// edition otherwise lists the DVD as a disc of tracks no audio release
+	// carries. Kept only when the release has nothing else.
+	audioOnly := slices.ContainsFunc(rel.Media, func(md mbMedium) bool {
+		return !isVideoMedium(md)
+	})
 	for _, md := range rel.Media {
+		if audioOnly && isVideoMedium(md) {
+			continue
+		}
 		disc := md.Position
 		if disc == 0 {
 			disc = 1
@@ -843,20 +1071,31 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 		mediumBonus := strings.Contains(strings.ToLower(md.Title), "bonus")
 		for _, t := range md.Tracks {
 			ti := TrackInfo{
-				MBID:      t.Recording.ID,
-				Title:     t.Title,
-				Disc:      disc,
-				Position:  t.Position,
-				Duration:  t.Length / 1000,
-				Featuring: featuring(t.ArtistCredit),
+				MBID:             t.Recording.ID,
+				ReleaseTrackMBID: t.ID,
+				Title:            t.Title,
+				Disc:             disc,
+				Position:         t.Position,
+				Duration:         t.Length / 1000,
+				Artists:          trackArtists(t.ArtistCredit),
+				ArtistCredit:     trackArtistCredit(t.ArtistCredit),
+				Featuring:        featuring(t.ArtistCredit),
 				Bonus: mediumBonus || strings.HasSuffix(
 					strings.ToLower(strings.TrimSpace(t.Title)), "(bonus track)"),
 			}
 			seenOnRecording := map[string]bool{}
 			writerSeen := map[string]bool{}
+			trackCreditSeen := map[string]bool{}
+			trackPerformers := map[string]int{}
 			performerBearing := false
 			for _, rr := range t.Recording.Relations {
-				addCredit(rr)
+				if c := addCredit(rr); c != nil && heavy {
+					key := creditKey(c.MBID, c.Name) + "|" + c.Role
+					if !trackCreditSeen[key] {
+						trackCreditSeen[key] = true
+						ti.Credits = append(ti.Credits, *c)
+					}
+				}
 				switch {
 				case rr.Type == "recording" && rr.TargetType == "place" &&
 					rr.Place != nil:
@@ -886,19 +1125,37 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 							p.Instruments = append(p.Instruments, in)
 						}
 					}
+					if !heavy {
+						break
+					}
+					idx, ok := trackPerformers[key]
+					if !ok {
+						idx = len(ti.Performers)
+						trackPerformers[key] = idx
+						ti.Performers = append(ti.Performers, PerformerInfo{
+							Name: rr.Artist.Name, MBID: rr.Artist.ID,
+						})
+					}
+					tp := &ti.Performers[idx]
+					for _, in := range instruments {
+						if !slices.Contains(tp.Instruments, in) {
+							tp.Instruments = append(tp.Instruments, in)
+						}
+					}
 				case rr.Type == "performance" && rr.Work != nil:
 					for _, wr := range rr.Work.Relations {
-						if !slices.Contains(writerTypes, wr.Type) ||
-							wr.Artist == nil {
+						role, ok := writerRoleByType[wr.Type]
+						if !ok || wr.Artist == nil {
 							continue
 						}
-						key := creditKey(wr.Artist.ID, wr.Artist.Name)
+						key := creditKey(wr.Artist.ID, wr.Artist.Name) + "|" + role
 						if writerSeen[key] {
 							continue
 						}
 						writerSeen[key] = true
-						ti.Writers = append(ti.Writers, PersonInfo{
+						ti.Writers = append(ti.Writers, CreditInfo{
 							Name: wr.Artist.Name, MBID: wr.Artist.ID,
+							Role: role,
 						})
 					}
 				}
@@ -937,21 +1194,51 @@ func creditKey(mbid, name string) string {
 // featuring returns the credited artists after the first "feat." join phrase.
 // Artists before it are co-primary credits of a collaboration, not guests.
 func featuring(credits []mbCredit) []PersonInfo {
-	for i := 1; i < len(credits); i++ {
-		if !featJoinRe.MatchString(credits[i-1].JoinPhrase) {
+	return creditedPeople(credits[featStart(credits):])
+}
+
+// trackArtists returns the credited artists before the first "feat." join
+// phrase, all of them when there is none.
+func trackArtists(credits []mbCredit) []PersonInfo {
+	return creditedPeople(credits[:featStart(credits)])
+}
+
+// trackArtistCredit joins the artists before the first "feat." with
+// MusicBrainz's own join phrases, the last one (the "feat." itself) dropped.
+func trackArtistCredit(credits []mbCredit) string {
+	var b strings.Builder
+	join := ""
+	for _, c := range credits[:featStart(credits)] {
+		people := creditedPeople([]mbCredit{c})
+		if len(people) == 0 {
 			continue
 		}
-		out := make([]PersonInfo, 0, len(credits)-i)
-		for _, c := range credits[i:] {
-			name := c.Artist.Name
-			if name == "" {
-				name = c.Name
-			}
-			if name != "" && utf8.ValidString(name) {
-				out = append(out, PersonInfo{Name: name, MBID: c.Artist.ID})
-			}
-		}
-		return out
+		b.WriteString(join)
+		b.WriteString(people[0].Name)
+		join = c.JoinPhrase
 	}
-	return nil
+	return b.String()
+}
+
+func featStart(credits []mbCredit) int {
+	for i := 1; i < len(credits); i++ {
+		if featJoinRe.MatchString(credits[i-1].JoinPhrase) {
+			return i
+		}
+	}
+	return len(credits)
+}
+
+func creditedPeople(credits []mbCredit) []PersonInfo {
+	var out []PersonInfo
+	for _, c := range credits {
+		name := c.Artist.Name
+		if name == "" {
+			name = c.Name
+		}
+		if name != "" && utf8.ValidString(name) {
+			out = append(out, PersonInfo{Name: name, MBID: c.Artist.ID})
+		}
+	}
+	return out
 }

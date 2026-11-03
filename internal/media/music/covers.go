@@ -97,6 +97,16 @@ func (s *Service) resolveCover(ctx context.Context, a *ent.Album) {
 		trace.WithAttributes(attribute.Int64("album.id", int64(a.ID))))
 	defer span.End()
 
+	before := s.coverHash(a.ID)
+	defer func() {
+		// A new cover changes what the tag writer embeds and leaves beside
+		// the files; under managed the album is queued, and the hash settles
+		// a resolve that stored the same bytes again without a write.
+		if after := s.coverHash(a.ID); after != "" && after != before {
+			s.tagsChanged(ctx, a.ID)
+		}
+	}()
+
 	var errs []error
 	source := s.localCover(ctx, a, &errs)
 	if source == "" && s.hasCover(a.ID) {
@@ -126,23 +136,27 @@ func (s *Service) localCover(
 	a *ent.Album,
 	errs *[]error,
 ) string {
-	var paths []string
+	var files []*ent.MediaFile
 	for _, t := range a.Edges.Tracks {
-		for _, mf := range t.Edges.MediaFiles {
-			paths = append(paths, mf.Path)
-		}
+		files = append(files, t.Edges.MediaFiles...)
 	}
-	if len(paths) == 0 {
+	if len(files) == 0 {
 		return ""
 	}
 
-	for _, p := range paths {
-		data, mime, err := audiotags.Picture(p)
+	for _, mf := range files {
+		data, mime, err := audiotags.Picture(mf.Path)
 		if err != nil {
 			*errs = append(*errs, err)
 			continue
 		}
 		if data == nil || (mime != "" && !strings.HasPrefix(mime, "image/")) {
+			continue
+		}
+		if mf.TagsArtHash != "" && audiotags.ArtHash(data) == mf.TagsArtHash {
+			// The copy the tag writer embedded, not the album's own art: a
+			// downscaled cache would otherwise replace the cache, again on
+			// every resolve.
 			continue
 		}
 		if err := s.posters.Put(
@@ -157,7 +171,7 @@ func (s *Service) localCover(
 		return coverSourceEmbedded
 	}
 
-	cover, err := folderCover(filepath.Dir(paths[0]))
+	cover, err := folderCover(a, filepath.Dir(files[0].Path))
 	if err != nil {
 		*errs = append(*errs, err)
 		return ""
@@ -182,20 +196,37 @@ func (s *Service) putFile(ctx context.Context, albumID uint32, path string) erro
 	return s.posters.Put(ctx, coverKind, albumID, f)
 }
 
+// coverHash identifies the cached cover, empty when there is none.
+func (s *Service) coverHash(albumID uint32) string {
+	data, err := os.ReadFile(s.posters.Path(coverKind, albumID))
+	if err != nil || len(data) == 0 {
+		return ""
+	}
+	return audiotags.ArtHash(data)
+}
+
+// ownSidecar reports the cover file the tag writer left beside the album's
+// files: the cache's own copy, never a source of it.
+func ownSidecar(a *ent.Album, path string) bool {
+	if a.ArtSidecarHash == "" {
+		return false
+	}
+	//nolint:gosec // path is a cover file found beside the album's own media
+	data, err := os.ReadFile(path)
+	return err == nil && audiotags.ArtHash(data) == a.ArtSidecarHash
+}
+
 // folderCover finds cover|folder|front.jpg|jpeg|png in dir, any case, in that
-// order of preference. "" when there is none.
-func folderCover(dir string) (string, error) {
-	entries, err := os.ReadDir(dir)
+// order of preference, "" when there is none. The tag writer's own cover
+// file is passed over: one someone added beside it is the album's art.
+func folderCover(a *ent.Album, dir string) (string, error) {
+	found, err := findImages(dir, folderCoverNames)
 	if err != nil {
 		return "", err
 	}
-	for _, name := range folderCoverNames {
-		for _, ext := range folderCoverExts {
-			for _, e := range entries {
-				if !e.IsDir() && strings.EqualFold(e.Name(), name+ext) {
-					return filepath.Join(dir, e.Name()), nil
-				}
-			}
+	for _, f := range found {
+		if !ownSidecar(a, f) {
+			return f, nil
 		}
 	}
 	return "", nil

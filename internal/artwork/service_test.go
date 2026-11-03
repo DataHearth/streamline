@@ -69,6 +69,25 @@ func (d *fakeDeezer) SearchArtists(
 	return d.search[name], nil
 }
 
+type fakeLinks struct {
+	art    map[string]metadata.ArtistArt
+	shared map[uint32]bool
+	err    error
+	calls  atomic.Int32
+}
+
+func (l *fakeLinks) ArtistArt(
+	_ context.Context,
+	mbid string,
+) (metadata.ArtistArt, error) {
+	l.calls.Add(1)
+	return l.art[mbid], l.err
+}
+
+func (l *fakeLinks) DeezerArtistShared(_ context.Context, id uint32) (bool, error) {
+	return l.shared[id], nil
+}
+
 type fakeLibrary struct {
 	ids map[string]uint32
 }
@@ -87,6 +106,7 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 		svc     *artwork.Service
 		sources *artwork.Sources
 		deezer  *fakeDeezer
+		links   *fakeLinks
 		lib     fakeLibrary
 		pm      posters.Manager
 		dir     string
@@ -114,6 +134,10 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 			byID:   map[uint32]*metadata.DeezerArtist{},
 			search: map[string][]metadata.DeezerArtist{},
 		}
+		links = &fakeLinks{
+			art:    map[string]metadata.ArtistArt{},
+			shared: map[uint32]bool{},
+		}
 		lib = fakeLibrary{ids: map[string]uint32{}}
 		fetched = nil
 		reply = func(r *http.Request) (*http.Response, error) {
@@ -125,6 +149,7 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 				Posters: pm,
 				Library: lib,
 				Deezer:  deezer,
+				Links:   links,
 				Sources: sources,
 				Client: &http.Client{Transport: roundTrip(
 					func(r *http.Request) (*http.Response, error) {
@@ -346,17 +371,12 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 			Expect(fetched).To(Equal([]string{"https://cdn-images.dzcdn.net/a.jpg"}))
 		})
 
-		It("gives up on a namesake rather than guess a face", func() {
+		It("never asks MusicBrainz when the name settles it", func() {
 			deezer.search["Nirvana"] = []metadata.DeezerArtist{
 				{
 					ID:         1,
 					Name:       "Nirvana",
 					PictureURL: "https://cdn-images.dzcdn.net/a.jpg",
-				},
-				{
-					ID:         2,
-					Name:       "Nirvana",
-					PictureURL: "https://cdn-images.dzcdn.net/b.jpg",
 				},
 			}
 			sources.Remember(
@@ -365,8 +385,168 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 				artwork.Source{Name: "Nirvana"},
 			)
 
-			Expect(get("artists", artistMBID).Code).To(Equal(http.StatusNotFound))
-			Expect(fetched).To(BeEmpty())
+			Expect(get("artists", artistMBID).Code).To(Equal(http.StatusOK))
+			Expect(links.calls.Load()).To(BeZero())
+		})
+
+		Context("with a namesake on Deezer", func() {
+			const commons = "https://commons.wikimedia.org/wiki/Special:FilePath/N.jpg?width=500"
+
+			BeforeEach(func() {
+				deezer.search["Nirvana"] = []metadata.DeezerArtist{
+					{
+						ID:         1,
+						Name:       "Nirvana",
+						PictureURL: "https://cdn-images.dzcdn.net/a.jpg",
+					},
+					{
+						ID:         2,
+						Name:       "Nirvana",
+						PictureURL: "https://cdn-images.dzcdn.net/b.jpg",
+					},
+				}
+				deezer.byID[2] = &deezer.search["Nirvana"][1]
+				sources.Remember(
+					artwork.KindArtists,
+					artistMBID,
+					artwork.Source{Name: "Nirvana"},
+				)
+			})
+
+			It("takes the face MusicBrainz's own Deezer link names", func() {
+				links.art[artistMBID] = metadata.ArtistArt{
+					DeezerID: 2,
+					ImageURL: commons,
+				}
+
+				Expect(get("artists", artistMBID).Code).To(Equal(http.StatusOK))
+				Expect(
+					fetched,
+				).To(Equal([]string{"https://cdn-images.dzcdn.net/b.jpg"}))
+			})
+
+			It(
+				"falls back to MusicBrainz's own image when the Deezer page is shared",
+				func() {
+					links.art[artistMBID] = metadata.ArtistArt{
+						DeezerID: 2,
+						ImageURL: commons,
+					}
+					links.shared[2] = true
+
+					Expect(get("artists", artistMBID).Code).To(Equal(http.StatusOK))
+					Expect(fetched).To(Equal([]string{commons}))
+				},
+			)
+
+			It(
+				"gives up rather than guess when the shared page is all there is",
+				func() {
+					links.art[artistMBID] = metadata.ArtistArt{DeezerID: 2}
+					links.shared[2] = true
+
+					Expect(
+						get("artists", artistMBID).Code,
+					).To(Equal(http.StatusNotFound))
+					Expect(fetched).To(BeEmpty())
+				},
+			)
+
+			It("gives up rather than guess when MusicBrainz links nothing", func() {
+				Expect(
+					get("artists", artistMBID).Code,
+				).To(Equal(http.StatusNotFound))
+				Expect(fetched).To(BeEmpty())
+				Expect(links.calls.Load()).To(Equal(int32(1)))
+			})
+
+			It("does not remember a miss MusicBrainz rate limited", func() {
+				links.err = &metadata.RateLimitedError{RetryAfter: time.Second}
+				Expect(
+					get("artists", artistMBID).Code,
+				).To(Equal(http.StatusNotFound))
+
+				links.err = nil
+				links.art[artistMBID] = metadata.ArtistArt{DeezerID: 2}
+
+				Expect(get("artists", artistMBID).Code).To(Equal(http.StatusOK))
+				Expect(links.calls.Load()).To(Equal(int32(2)))
+			})
+
+			It("retries at once when a lookup remembers a Deezer link", func() {
+				Expect(
+					get("artists", artistMBID).Code,
+				).To(Equal(http.StatusNotFound))
+				Expect(
+					get("artists", artistMBID).Code,
+				).To(Equal(http.StatusNotFound))
+				Expect(links.calls.Load()).To(Equal(int32(1)))
+
+				sources.Remember(artwork.KindArtists, artistMBID, artwork.Source{
+					DeezerID: 2, Name: "Nirvana",
+				})
+
+				Expect(get("artists", artistMBID).Code).To(Equal(http.StatusOK))
+				Expect(
+					fetched,
+				).To(Equal([]string{"https://cdn-images.dzcdn.net/b.jpg"}))
+				Expect(links.calls.Load()).To(Equal(int32(1)))
+			})
+
+			It(
+				"checks a remembered Deezer link is not shared before using it",
+				func() {
+					links.art[artistMBID] = metadata.ArtistArt{
+						DeezerID: 2,
+						ImageURL: commons,
+					}
+					links.shared[2] = true
+					sources.Remember(artwork.KindArtists, artistMBID, artwork.Source{
+						DeezerID: 2, Name: "Nirvana",
+					})
+
+					Expect(get("artists", artistMBID).Code).To(Equal(http.StatusOK))
+					Expect(fetched).To(Equal([]string{commons}))
+				},
+			)
+		})
+
+		It("asks MusicBrainz when Deezer has no artist of that name", func() {
+			deezer.byID[9] = &metadata.DeezerArtist{
+				ID:         9,
+				Name:       "Nirvana (UK)",
+				PictureURL: "https://cdn-images.dzcdn.net/uk.jpg",
+			}
+			links.art[artistMBID] = metadata.ArtistArt{DeezerID: 9}
+			sources.Remember(
+				artwork.KindArtists,
+				artistMBID,
+				artwork.Source{Name: "Nirvana"},
+			)
+
+			Expect(get("artists", artistMBID).Code).To(Equal(http.StatusOK))
+			Expect(
+				fetched,
+			).To(Equal([]string{"https://cdn-images.dzcdn.net/uk.jpg"}))
+		})
+
+		It("sends a descriptive User-Agent, which Wikimedia requires", func() {
+			var ua string
+			reply = func(r *http.Request) (*http.Response, error) {
+				ua = r.Header.Get("User-Agent")
+				return respond(200, "image/jpeg", imageBytes), nil
+			}
+			links.art[artistMBID] = metadata.ArtistArt{
+				ImageURL: "https://commons.wikimedia.org/wiki/Special:FilePath/N.jpg?width=500",
+			}
+			sources.Remember(
+				artwork.KindArtists,
+				artistMBID,
+				artwork.Source{Name: "Nirvana"},
+			)
+
+			Expect(get("artists", artistMBID).Code).To(Equal(http.StatusOK))
+			Expect(ua).To(HavePrefix("streamline/"))
 		})
 	})
 
@@ -477,6 +657,20 @@ var _ = Describe("Sources", Label("unit", "artwork"), func() {
 		Expect(src.URL).To(Equal("fresh"))
 		_, ok = s.Lookup(artwork.KindBooks, "1")
 		Expect(ok).To(BeFalse())
+	})
+
+	It("keeps what a live entry knew when a new source leaves it empty", func() {
+		s := artwork.NewSources()
+		s.Remember(
+			artwork.KindArtists,
+			"a",
+			artwork.Source{DeezerID: 415, Name: "Nirvana"},
+		)
+		s.Remember(artwork.KindArtists, "a", artwork.Source{Name: "Nirvana"})
+
+		src, ok := s.Lookup(artwork.KindArtists, "a")
+		Expect(ok).To(BeTrue())
+		Expect(src).To(Equal(artwork.Source{DeezerID: 415, Name: "Nirvana"}))
 	})
 
 	It("ignores an empty source", func() {

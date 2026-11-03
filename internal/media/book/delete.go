@@ -27,12 +27,33 @@ func removeFiles(ctx context.Context, b *ent.Book) {
 	}
 }
 
-// refreshLibraries asks the media servers to rescan both slot roots.
-func (s *Service) refreshLibraries(ctx context.Context) {
+// refreshLibraries asks the media servers to rescan the folders of paths,
+// under whichever slot root holds each; a root none of them lies under is left
+// alone.
+func (s *Service) refreshLibraries(ctx context.Context, paths []string) {
 	lib := config.Get().Library
 	for _, root := range []string{lib.EbookPath, lib.AudiobookPath} {
-		mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindBook, root)
+		var under []string
+		for _, p := range paths {
+			if library.PathUnderRoot(p, root) {
+				under = append(under, p)
+			}
+		}
+		if len(under) > 0 {
+			mediaserver.RefreshInBackground(
+				ctx, s.ms, mediaserver.KindBook, root, under...,
+			)
+		}
 	}
+}
+
+// filePaths lists the paths of a book's files.
+func filePaths(b *ent.Book) []string {
+	out := make([]string, 0, len(b.Edges.MediaFiles))
+	for _, f := range b.Edges.MediaFiles {
+		out = append(out, f.Path)
+	}
+	return out
 }
 
 // removePosters drops the cached covers and the photos of the people the
@@ -76,7 +97,7 @@ func (s *Service) DeleteBook(
 		return otelx.RecordSpanError(span, ErrSeriesVolume)
 	}
 	if deleteFiles {
-		defer s.refreshLibraries(ctx)
+		defer s.refreshLibraries(ctx, filePaths(row))
 		removeFiles(ctx, row)
 	}
 	orphans, err := s.db.DeleteBook(ctx, id)
@@ -105,13 +126,15 @@ func (s *Service) DeleteSeries(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
+	var removed []string
 	if deleteFiles {
-		defer s.refreshLibraries(ctx)
+		defer func() { s.refreshLibraries(ctx, removed) }()
 	}
 	volumeIDs := make([]uint32, 0, len(row.Edges.Volumes))
 	for _, v := range row.Edges.Volumes {
 		volumeIDs = append(volumeIDs, v.ID)
 		if deleteFiles {
+			removed = append(removed, filePaths(v)...)
 			removeFiles(ctx, v)
 		}
 	}

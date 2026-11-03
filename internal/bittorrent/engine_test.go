@@ -15,6 +15,7 @@ import (
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/testutil/nettest"
 )
 
 // newTestClient starts a network-disabled anacrolix client rooted so that
@@ -30,6 +31,9 @@ func newTestClient(dir string) *antorrent.Client {
 	cc.DisablePEX = true
 	cc.NoDefaultPortForwarding = true
 	cc.ListenPort = 0
+	// A host without IPv6 fails every default anacrolix client at the tcp6
+	// listener; the engine under test binds its own dual-stack socket.
+	cc.DisableIPv6 = !nettest.IPv6()
 	cc.Slogger = engineSlogger()
 	client, err := antorrent.NewClient(cc)
 	Expect(err).NotTo(HaveOccurred())

@@ -167,6 +167,31 @@ var _ = Describe("Deezer cover provider", Label("unit", "metadata"), func() {
 			Expect(gotPath).To(Equal("/artist/412"))
 		})
 
+		DescribeTable("drops the stock silhouette Deezer serves for no photo",
+			func(picture string) {
+				dz.client.Transport = mbRoundTripper(
+					func(*http.Request) (*http.Response, error) {
+						return jsonResponse(
+							200,
+							`{"id":244190682,"name":"The Glitch Mob",`+
+								`"picture_xl":"`+picture+`"}`,
+						), nil
+					},
+				)
+				a, err := dz.ArtistByID(ctx, 244190682)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(a.PictureURL).To(BeEmpty())
+			},
+			Entry(
+				"an empty hash",
+				"https://cdn-images.dzcdn.net/images/artist//1000x1000-000000-80-0-0.jpg",
+			),
+			Entry(
+				"the MD5 of an empty string",
+				"https://cdn-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/1000x1000-000000-80-0-0.jpg",
+			),
+		)
+
 		It("treats Deezer's 200 error body as no artist", func() {
 			dz.client.Transport = mbRoundTripper(
 				func(*http.Request) (*http.Response, error) {
@@ -195,6 +220,18 @@ var _ = Describe("Deezer cover provider", Label("unit", "metadata"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(hits).To(HaveLen(2))
 			Expect(gotQuery).To(Equal("Nirvana"))
+		})
+
+		It("drops a hit's stock silhouette", func() {
+			dz.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(200, `{"data":[{"id":1,"name":"X",`+
+						`"picture_xl":"https://cdn-images.dzcdn.net/images/artist//1000x1000.jpg"}]}`), nil
+				},
+			)
+			hits, err := dz.SearchArtists(ctx, "X")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hits[0].PictureURL).To(BeEmpty())
 		})
 
 		It("treats a 404 as no hits", func() {

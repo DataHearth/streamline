@@ -23,6 +23,15 @@ func (ApiKey) Fields() []ent.Field {
 		field.String("name").NotEmpty(),
 		field.String("key_hash").NotEmpty().Sensitive(),
 		field.Time("last_used_at").Optional().Nillable(),
+		// scope bounds what the key may do regardless of its owner's role: a
+		// read key is refused every unsafe method in the auth middleware,
+		// before the RBAC table sees the request. Existing keys migrate to
+		// full, which is what they could already do.
+		field.Enum("scope").Values("read", "full").Default("full"),
+		// expires_at is when the key stops authenticating; nil never expires.
+		// An expired key is refused exactly like an unknown one and its row is
+		// dropped by the purge-api-keys job.
+		field.Time("expires_at").Optional().Nillable(),
 	}
 }
 
@@ -39,5 +48,7 @@ func (ApiKey) Indexes() []ent.Index {
 		// the same is a collision the schema should refuse, not tolerate.
 		index.Fields("key_hash").Unique(),
 		index.Edges("owner"),
+		// The purge job deletes by expiry.
+		index.Fields("expires_at"),
 	}
 }

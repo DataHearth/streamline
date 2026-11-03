@@ -62,77 +62,161 @@ func (p *Plex) TestConnection(ctx context.Context) error {
 
 func (p *Plex) RefreshLibrary(
 	ctx context.Context,
-	libraryPath, sectionKey string,
-) error {
-	if sectionKey != "" {
-		return p.refreshSection(ctx, sectionKey, libraryPath)
+	req RefreshRequest,
+) (RefreshScope, error) {
+	if len(req.Folders) == 0 && req.SectionKey != "" {
+		return ScopeLibrary, p.refreshSection(ctx, req.SectionKey, "")
 	}
-
-	return p.refreshByPathOrType(ctx, libraryPath, "")
+	sections, err := p.ListSections(ctx)
+	if err != nil {
+		if req.SectionKey == "" {
+			return "", err
+		}
+		// The configured section needs no listing: the rescan the folders
+		// would have narrowed still reaches it.
+		slog.WarnContext(ctx,
+			"plex: listing the sections failed, rescanning the configured one",
+			"section", req.SectionKey, "error", err)
+		return ScopeLibrary, p.refreshSection(ctx, req.SectionKey, "")
+	}
+	if len(req.Folders) > 0 {
+		if targets, ok := plexTargets(sections, req); ok {
+			return ScopeFolders, p.refreshFolders(ctx, targets)
+		}
+		slog.InfoContext(ctx,
+			"plex: a folder lies outside every section, rescanning the library",
+			"folders", req.Folders,
+			"path", req.Root,
+		)
+	}
+	return ScopeLibrary, p.refreshLibrary(ctx, sections, req)
 }
 
-// RefreshLibraryOfType is RefreshLibrary for a library whose section type is
-// known ("artist" for music), used when no section key is configured: the
-// fallback rescans only the sections of that type, not every library the
-// server holds.
-func (p *Plex) RefreshLibraryOfType(
-	ctx context.Context,
-	libraryPath, sectionType string,
-) error {
-	return p.refreshByPathOrType(ctx, libraryPath, sectionType)
+// plexTarget is one partial scan: a folder and the section holding it.
+type plexTarget struct {
+	section string
+	folder  string
 }
 
-func (p *Plex) refreshByPathOrType(
+// plexTargets assigns every folder to the section whose location holds it
+// most narrowly, among the configured section when there is one, else among
+// the sections of the request's type. ok is false as soon as one folder has
+// none: Plex ignores a partial scan of a path outside the section, so the
+// change would never be seen.
+func plexTargets(sections []Section, req RefreshRequest) ([]plexTarget, bool) {
+	var locs, keys []string
+	for _, s := range sections {
+		if req.SectionKey != "" && s.Key != req.SectionKey {
+			continue
+		}
+		if req.SectionKey == "" && req.SectionType != "" &&
+			s.Type != req.SectionType {
+			continue
+		}
+		for _, l := range s.Locations {
+			locs = append(locs, l)
+			keys = append(keys, s.Key)
+		}
+	}
+	out := make([]plexTarget, 0, len(req.Folders))
+	for _, f := range req.Folders {
+		i := longestContaining(f, locs)
+		if i < 0 {
+			return nil, false
+		}
+		out = append(out, plexTarget{section: keys[i], folder: f})
+	}
+	return out, true
+}
+
+// refreshFolders sends one partial scan per folder: Plex takes a single path
+// per call.
+func (p *Plex) refreshFolders(ctx context.Context, targets []plexTarget) error {
+	var errs []error
+	for _, t := range targets {
+		if err := p.refreshSection(ctx, t.section, t.folder); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// refreshLibrary rescans whole sections: the configured one, else the one
+// holding the library root, else every section (of the request's type).
+func (p *Plex) refreshLibrary(
 	ctx context.Context,
-	libraryPath, sectionType string,
+	sections []Section,
+	req RefreshRequest,
 ) error {
+	if req.SectionKey != "" {
+		return p.refreshSection(ctx, req.SectionKey, "")
+	}
 	// Plex reports its *own* mount paths, which in any containerised install
-	// differ from ours (/srv/streamline/movies here, /data/movies there), so
-	// the path match usually finds nothing. Refreshing every section is what
-	// Jellyfin already does and beats importing a file nobody ever sees;
-	// configure library_section to scope it back down to one.
-	key, err := p.findSection(ctx, libraryPath)
-	if err == nil {
-		return p.refreshSection(ctx, key, libraryPath)
+	// differ from ours (/srv/streamline/movies here, /data/movies there)
+	// unless path_mappings translates them, so the match can find nothing.
+	// Refreshing every section is what Jellyfin already does and beats
+	// importing a file nobody ever sees; configure library_section or a
+	// mapping to scope it back down to one.
+	if key := sectionForRoot(sections, req); key != "" {
+		return p.refreshSection(ctx, key, "")
 	}
 	slog.WarnContext(
 		ctx,
 		"plex: no section matches the library path, refreshing all sections",
 		"path",
-		libraryPath,
+		req.Root,
 		"section_type",
-		sectionType,
-		"error",
-		err,
+		req.SectionType,
 	)
 
-	sections, err := p.ListSections(ctx)
-	if err != nil {
-		return err
-	}
 	var errs []error
 	matched := 0
 	for _, s := range sections {
-		if sectionType != "" && s.Type != sectionType {
+		if req.SectionType != "" && s.Type != req.SectionType {
 			continue
 		}
 		matched++
-		if err := p.refreshSection(ctx, s.Key, libraryPath); err != nil {
+		if err := p.refreshSection(ctx, s.Key, ""); err != nil {
 			errs = append(errs, err)
 		}
 	}
-	if matched == 0 && sectionType != "" {
-		return fmt.Errorf("plex: no %s library section to refresh", sectionType)
+	if matched == 0 && req.SectionType != "" {
+		return fmt.Errorf("plex: no %s library section to refresh", req.SectionType)
 	}
 	return errors.Join(errs...)
 }
 
-func (p *Plex) refreshSection(ctx context.Context, key, libraryPath string) error {
-	req, err := http.NewRequestWithContext(
-		ctx, http.MethodGet,
-		fmt.Sprintf("%s/library/sections/%s/refresh", p.baseURL, key),
-		nil,
+// sectionForRoot returns the key of the section (of the request's type) whose
+// location is the library root or holds it, or "" when none does.
+func sectionForRoot(sections []Section, req RefreshRequest) string {
+	var locs, keys []string
+	for _, s := range sections {
+		if req.SectionType != "" && s.Type != req.SectionType {
+			continue
+		}
+		for _, l := range s.Locations {
+			locs = append(locs, l)
+			keys = append(keys, s.Key)
+		}
+	}
+	if i := longestContaining(req.Root, locs); i >= 0 {
+		return keys[i]
+	}
+	return ""
+}
+
+// refreshSection rescans one section, or only folder inside it when folder is
+// set (Plex's partial scan).
+func (p *Plex) refreshSection(ctx context.Context, key, folder string) error {
+	endpoint := fmt.Sprintf(
+		"%s/library/sections/%s/refresh",
+		p.baseURL,
+		url.PathEscape(key),
 	)
+	if folder != "" {
+		endpoint += "?" + url.Values{"path": {folder}}.Encode()
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return err
 	}
@@ -151,53 +235,14 @@ func (p *Plex) refreshSection(ctx context.Context, key, libraryPath string) erro
 	slog.InfoContext(ctx,
 		"plex library refreshed",
 		"section", key,
-		"path", libraryPath,
+		"folder", folder,
 	)
 	return nil
 }
 
-func (p *Plex) findSection(ctx context.Context, libraryPath string) (string, error) {
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodGet,
-		p.baseURL+"/library/sections",
-		nil,
-	)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("X-Plex-Token", p.token)
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := p.client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("plex sections: unexpected status %d", resp.StatusCode)
-	}
-
-	var sections plexSectionsResponse
-	if err := otelx.DecodeJSON(resp.Body, maxSmallResponse, &sections); err != nil {
-		return "", fmt.Errorf("plex sections decode: %w", err)
-	}
-
-	for _, dir := range sections.MediaContainer.Directory {
-		for _, loc := range dir.Location {
-			if loc.Path == libraryPath {
-				return dir.Key, nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("plex: no section found for path %s", libraryPath)
-}
-
-// Section is a Plex library section: the unit RefreshLibrary targets when
-// given a non-empty sectionKey. Locations are filesystem paths Plex itself
-// sees (which may differ from Streamline's own mounts).
+// Section is a Plex library section: the unit RefreshLibrary rescans, whole or
+// one folder of it. Locations are filesystem paths Plex itself sees (which
+// differ from Streamline's own mounts unless path_mappings translates them).
 type Section struct {
 	Key       string
 	Name      string

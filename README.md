@@ -171,7 +171,7 @@ sha256sum -c checksums.txt --ignore-missing
 ```bash
 curl -fsSL -o checksums.txt.bundle https://github.com/datahearth/streamline/releases/latest/download/checksums.txt.bundle
 cosign verify-blob checksums.txt --bundle checksums.txt.bundle \
-  --certificate-identity-regexp="https://github.com/datahearth/streamline/.github/workflows/release.yaml@.*" \
+  --certificate-identity-regexp="https://github.com/DataHearth/streamline/.github/workflows/release.yaml@.*" \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com
 ```
 
@@ -412,7 +412,7 @@ All images are signed with [cosign](https://github.com/sigstore/cosign) via GitH
 
 ```bash
 cosign verify ghcr.io/datahearth/streamline:latest \
-  --certificate-identity-regexp="https://github.com/datahearth/streamline/.github/workflows/image.yaml@.*" \
+  --certificate-identity-regexp="https://github.com/DataHearth/streamline/.github/workflows/image.yaml@.*" \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com
 ```
 

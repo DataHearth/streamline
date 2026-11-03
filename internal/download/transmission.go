@@ -262,6 +262,37 @@ func (t *Transmission) TestConnection(ctx context.Context) error {
 	return err
 }
 
+// FreeSpace asks free-space about the daemon's own download-dir, which is
+// where streamline's torrents land since it never sends a path on add.
+func (t *Transmission) FreeSpace(ctx context.Context) (int64, error) {
+	raw, err := t.call(ctx, "session-get",
+		map[string]any{"fields": []string{"download-dir"}})
+	if err != nil {
+		return 0, fmt.Errorf("transmission free space: %w", err)
+	}
+	var session struct {
+		DownloadDir string `json:"download-dir"`
+	}
+	if err := json.Unmarshal(raw, &session); err != nil {
+		return 0, fmt.Errorf("transmission free space: %w: %w", ErrBadResponse, err)
+	}
+	if raw, err = t.call(ctx, "free-space",
+		map[string]any{"path": session.DownloadDir}); err != nil {
+		return 0, fmt.Errorf("transmission free space: %w", err)
+	}
+	var free struct {
+		SizeBytes *int64 `json:"size-bytes"`
+	}
+	if err := json.Unmarshal(raw, &free); err != nil {
+		return 0, fmt.Errorf("transmission free space: %w: %w", ErrBadResponse, err)
+	}
+	if free.SizeBytes == nil {
+		return 0, fmt.Errorf("transmission free space: %w: no size-bytes",
+			ErrBadResponse)
+	}
+	return *free.SizeBytes, nil
+}
+
 // trFile and trFileStat are the torrent-get subfields for "files" and
 // "fileStats" respectively — parallel arrays indexed by array position.
 type trFile struct {

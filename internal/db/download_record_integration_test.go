@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -1415,7 +1416,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			createRec("comp", downloadrecord.StatusCompleted)
 
 			n, err := store.DeleteFailedDownloadRecordsBefore(
-				ctx, time.Now().Add(-14*24*time.Hour),
+				ctx, time.Now().Add(-14*24*time.Hour), nil,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(n).To(Equal(1))
@@ -1424,6 +1425,27 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			Expect(ent.IsNotFound(err)).To(BeTrue())
 			_, err = client.DownloadRecord.Get(ctx, fresh.ID)
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("keeps a failed record whose torrent is still listed", func() {
+			aged := time.Now().Add(-20 * 24 * time.Hour)
+			kept := createRec("seeding", downloadrecord.StatusFailed)
+			gone := createRec("removed", downloadrecord.StatusFailed)
+			for _, id := range []uint32{kept.ID, gone.ID} {
+				_, err := client.DownloadRecord.UpdateOneID(id).
+					SetUpdateTime(aged).Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			n, err := store.DeleteFailedDownloadRecordsBefore(
+				ctx, time.Now().Add(-14*24*time.Hour), []string{"seeding"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+			_, err = client.DownloadRecord.Get(ctx, kept.ID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.DownloadRecord.Get(ctx, gone.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
 	})
 
@@ -1521,7 +1543,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			createRec("c2", downloadrecord.StatusCompleted)
 			createRec("f1", downloadrecord.StatusFailed)
 
-			n, err := store.DeleteAllCompletedDownloadRecords(ctx)
+			n, err := store.DeleteAllCompletedDownloadRecords(ctx, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(n).To(Equal(2))
 
@@ -1530,6 +1552,21 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			for _, r := range rest.Records {
 				Expect(r.Status).To(Equal(downloadrecord.StatusFailed))
 			}
+		})
+
+		It("keeps a completed record whose torrent is still listed", func() {
+			kept := createRec("seeding", downloadrecord.StatusCompleted)
+			gone := createRec("removed", downloadrecord.StatusCompleted)
+
+			n, err := store.DeleteAllCompletedDownloadRecords(
+				ctx, []string{"seeding"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+			_, err = client.DownloadRecord.Get(ctx, kept.ID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.DownloadRecord.Get(ctx, gone.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
 	})
 
@@ -1902,6 +1939,32 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("DownloadRecordTitlesByHash", func() {
+		titled := func(hash, title string) {
+			GinkgoHelper()
+			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: title, Size: 1,
+				TorrentHash: hash, Status: downloadrecord.StatusCompleted,
+				MovieID: movieID, DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		It("maps each hash to its newest record's title", func() {
+			titled("H1", "Lamb Of God - Omens - 2022, FLAC")
+			titled("H2", "Old grab")
+			titled("H2", "New grab")
+			titled("", "No hash")
+
+			titles, err := store.DownloadRecordTitlesByHash(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles).To(Equal(map[string]string{
+				"H1": "Lamb Of God - Omens - 2022, FLAC",
+				"H2": "New grab",
+			}))
+		})
+	})
+
 	Describe("DeletePendingDownloadRecord", func() {
 		// The hash set is what the adoption sweep calls "already tracked", and
 		// it does not look at status. That is why forgetting a proposal has to
@@ -2183,6 +2246,187 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			e, err := client.Episode.Get(ctx, epID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(e.Status).To(Equal(episode.StatusAvailable))
+		})
+
+		// A pack marks every episode it is for; failing it must walk them all
+		// back, not just the anchor, and leave one another live record covers.
+		createPackRec := func(tvdb uint32) (*ent.DownloadRecord, []uint32, uint32) {
+			GinkgoHelper()
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Pack", Year: 2024, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{
+					Number: 1,
+					Episodes: []EpisodeSeed{
+						{Number: 1, Title: "One"},
+						{Number: 2, Title: "Two"},
+						{Number: 3, Title: "Three"},
+						{Number: 4, Title: "Four"},
+					},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			eps := show.Edges.Seasons[0].Edges.Episodes
+			ids := make([]uint32, 0, len(eps))
+			for _, e := range eps {
+				ids = append(ids, e.ID)
+			}
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "Pack.S01", Size: 1, TorrentHash: fmt.Sprintf("pack%d", tvdb),
+				Status:             downloadrecord.StatusImporting,
+				EpisodeID:          ids[0],
+				EpisodeIDs:         ids[:3],
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			// The fourth is another record's, still downloading; the third is
+			// covered by both.
+			_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title:              "Pack.S01E03E04",
+				Size:               1,
+				TorrentHash:        fmt.Sprintf("other%d", tvdb),
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          ids[2],
+				EpisodeIDs:         ids[2:],
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(client.Episode.Update().Where(episode.IDIn(ids...)).
+				SetStatus(episode.StatusImporting).Exec(ctx)).To(Succeed())
+			return rec, ids, show.ID
+		}
+		statuses := func(ids []uint32) []episode.Status {
+			GinkgoHelper()
+			out := make([]episode.Status, len(ids))
+			for i, id := range ids {
+				e, err := client.Episode.Get(ctx, id)
+				Expect(err).NotTo(HaveOccurred())
+				out[i] = e.Status
+			}
+			return out
+		}
+
+		It(
+			"walks every episode of a rejected pack back, not just its anchor",
+			func() {
+				rec, ids, _ := createPackRec(9230)
+				Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+				Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", true)).
+					To(Succeed())
+
+				Expect(statuses(ids)).To(Equal([]episode.Status{
+					episode.StatusWanted, episode.StatusWanted,
+					episode.StatusImporting, episode.StatusImporting,
+				}))
+			},
+		)
+
+		It("walks every episode of a pack that failed for good back", func() {
+			rec, ids, _ := createPackRec(9231)
+			Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+				RecordID: rec.ID, Attempts: 3, Terminal: true,
+				Reason: "broken", EpisodeID: ids[0],
+			})).To(Succeed())
+
+			Expect(statuses(ids)).To(Equal([]episode.Status{
+				episode.StatusWanted, episode.StatusWanted,
+				episode.StatusImporting, episode.StatusImporting,
+			}))
+		})
+
+		It("leaves a pack's episodes in flight on a retryable failure", func() {
+			rec, ids, _ := createPackRec(9232)
+			Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+				RecordID: rec.ID, Attempts: 1, Reason: "not yet",
+				EpisodeID: ids[0],
+			})).To(Succeed())
+
+			Expect(statuses(ids)).To(HaveEach(episode.StatusImporting))
+		})
+
+		It("blocklists a rejected movie release by hash, else by title", func() {
+			for _, requeue := range []bool{true, false} {
+				hash := fmt.Sprintf("Rej%t", requeue)
+				rec := createRec(hash, downloadrecord.StatusImporting)
+				Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+				Expect(
+					store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", requeue),
+				).To(Succeed())
+
+				got, err := client.DownloadRecord.Get(ctx, rec.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Rejected).To(BeTrue())
+
+				bl, err := store.RejectedReleases(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(bl.Movie(movieID, strings.ToLower(hash), "other")).
+					To(BeTrue(), "same hash, any title")
+				Expect(bl.Movie(movieID, "", "T")).
+					To(BeTrue(), "no hash: title match")
+				Expect(bl.Movie(movieID, "another-upload", "t")).
+					To(BeFalse(), "a hashed record does not block another upload")
+				Expect(bl.Movie(movieID+1, hash, "t")).
+					To(BeFalse(), "another movie")
+			}
+		})
+
+		It("leaves every release that was not rejected off the blocklist", func() {
+			createRec("done", downloadrecord.StatusCompleted)
+			createRec("broke", downloadrecord.StatusFailed)
+
+			bl, err := store.RejectedReleases(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bl.Len()).To(BeZero())
+			Expect(bl.Movie(movieID, "done", "t")).To(BeFalse())
+			Expect(bl.Movie(movieID, "broke", "t")).To(BeFalse())
+		})
+
+		It("blocklists a rejected episode release for its show", func() {
+			rec, epID := createEpisodeRec(9220)
+			showID, err := client.Episode.Query().Where(episode.ID(epID)).
+				QuerySeason().QueryTvShow().OnlyID(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+			Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", true)).
+				To(Succeed())
+
+			bl, err := store.RejectedReleases(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bl.Show(showID, "eh", "t")).To(BeTrue())
+			Expect(bl.Show(showID+1, "eh", "t")).To(BeFalse())
+			Expect(bl.Movie(movieID, "eh", "t")).To(BeFalse())
+		})
+
+		It("takes a release off the blocklist when its record is retried", func() {
+			rec := createRec("retry", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+			Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", true)).
+				To(Succeed())
+			Expect(store.RetryFailedDownloadRecord(ctx, rec.ID)).To(Succeed())
+
+			got, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Rejected).To(BeFalse())
+			bl, err := store.RejectedReleases(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bl.Movie(movieID, "retry", "t")).To(BeFalse())
+		})
+
+		It("keeps a rejected record past the failed-record retention", func() {
+			rec := createRec("kept", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+			Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", true)).
+				To(Succeed())
+			plain := createRec("plain", downloadrecord.StatusFailed)
+
+			n, err := store.DeleteFailedDownloadRecordsBefore(
+				ctx, time.Now().Add(time.Hour), nil,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+			_, err = client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.DownloadRecord.Get(ctx, plain.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
 	})
 

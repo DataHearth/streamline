@@ -31,8 +31,11 @@ Everything Streamline does on its own is a named job on a fixed interval. All of
 | `drift-check` | `15m` | `schedules.drift_check` | Detects tracked files that have vanished from disk | UI / API |
 | `media-probe` | `15m` | `schedules.media_probe` | Backfills ffprobe technical info (`media_info`) onto `MediaFile` rows the importer didn't probe inline — adoption, orphan scan, bulk import. 25 rows/tick, oldest first. No-ops when `ffmpeg.enabled` is false or ffprobe isn't found | UI / API |
 | `file-selection` | `30s` | `schedules.file_selection` | Resolves magnet-sourced [selective file downloads](First-Run-Setup#selective-file-download) still waiting to learn what's inside the torrent. While records are actually pending the job re-checks every 5 seconds from inside its own run, so a magnet resolves at that cadence rather than this one; the interval here is only how often it looks for work when there is none. It keeps draining pending records regardless of `download.selective_files` — turning the setting off stops new pending records being created, but records already waiting still have to be resolved | UI / API |
+| `music-tag-sync` | `30m` | `schedules.music_tag_sync` | Writes the tags of every music file waiting for them (500 a run; a manual run takes all), retries files waiting on a torrent still seeding, and asks the media servers to rescan when something was written. Does nothing when `library.music_tags.mode` is `off`. See [Tags and artwork](Music-and-Books#tags-and-artwork) | UI / API |
+| `database-backup` | `24h` | `schedules.database_backup` | Backs the database up into `<data_dir>/backups` and keeps the newest `backup.retention.scheduled` (7). The run at boot, or after a resume or retime, skips when a backup from within the interval already exists, so restarts do not rotate the week out; a manual run always takes one. See [Backups](GitOps-and-Kubernetes#backups) | UI / API |
 | `cleanup` | `24h` | `schedules.cleanup` | Prunes completed download records and aged-out events | UI / API |
 | `purge-sessions` | `1h` | — | Deletes expired sessions | System job — not controllable |
+| `purge-api-keys` | `1h` | — | Deletes API keys that expired more than a week ago | System job — not controllable |
 
 ### RSS sync vs missing search
 
@@ -92,7 +95,7 @@ A manual run does the work the ticker would defer: the missing searches ignore `
 
 Intervals have a **10 second floor**. Pause state is persisted to the database, so a paused job stays paused across restarts.
 
-`purge-sessions` is flagged `system: true` and rejects PATCH, pause, resume and run.
+`purge-sessions` and `purge-api-keys` are flagged `system: true` and reject PATCH, pause, resume and run.
 
 ---
 

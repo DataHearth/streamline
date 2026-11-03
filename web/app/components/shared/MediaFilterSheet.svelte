@@ -3,6 +3,7 @@
 </script>
 
 <script lang="ts">
+	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import type { Snippet } from "svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -55,6 +56,8 @@
 		// Filters only one media type has — the series type pills.
 		extra?: Snippet;
 	} = $props();
+
+	closeOnBack(() => open, () => onClose());
 
 	$effect(() => {
 		if (!open) return;

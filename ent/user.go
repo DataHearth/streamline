@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/datahearth/streamline/ent/playqueue"
 	"github.com/datahearth/streamline/ent/user"
 )
 
@@ -41,6 +42,20 @@ type User struct {
 	SubsonicLastUsedAt *time.Time `json:"subsonic_last_used_at,omitempty"`
 	// SubsonicLastClient holds the value of the "subsonic_last_client" field.
 	SubsonicLastClient string `json:"subsonic_last_client,omitempty"`
+	// SubsonicCanStream holds the value of the "subsonic_can_stream" field.
+	SubsonicCanStream bool `json:"subsonic_can_stream,omitempty"`
+	// SubsonicCanDownload holds the value of the "subsonic_can_download" field.
+	SubsonicCanDownload bool `json:"subsonic_can_download,omitempty"`
+	// SubsonicCanManagePlaylists holds the value of the "subsonic_can_manage_playlists" field.
+	SubsonicCanManagePlaylists bool `json:"subsonic_can_manage_playlists,omitempty"`
+	// SubsonicCanShare holds the value of the "subsonic_can_share" field.
+	SubsonicCanShare bool `json:"subsonic_can_share,omitempty"`
+	// SubsonicCanRate holds the value of the "subsonic_can_rate" field.
+	SubsonicCanRate bool `json:"subsonic_can_rate,omitempty"`
+	// SubsonicCanChangePassword holds the value of the "subsonic_can_change_password" field.
+	SubsonicCanChangePassword bool `json:"subsonic_can_change_password,omitempty"`
+	// SubsonicMaxBitRate holds the value of the "subsonic_max_bit_rate" field.
+	SubsonicMaxBitRate uint16 `json:"subsonic_max_bit_rate,omitempty"`
 	// OpdsToken holds the value of the "opds_token" field.
 	OpdsToken string `json:"-"`
 	// OpdsCreatedAt holds the value of the "opds_created_at" field.
@@ -71,9 +86,19 @@ type UserEdges struct {
 	Requests []*Request `json:"requests,omitempty"`
 	// Sessions holds the value of the sessions edge.
 	Sessions []*Session `json:"sessions,omitempty"`
+	// MusicAnnotations holds the value of the music_annotations edge.
+	MusicAnnotations []*MusicAnnotation `json:"music_annotations,omitempty"`
+	// Playlists holds the value of the playlists edge.
+	Playlists []*Playlist `json:"playlists,omitempty"`
+	// Shares holds the value of the shares edge.
+	Shares []*Share `json:"shares,omitempty"`
+	// Bookmarks holds the value of the bookmarks edge.
+	Bookmarks []*Bookmark `json:"bookmarks,omitempty"`
+	// PlayQueue holds the value of the play_queue edge.
+	PlayQueue *PlayQueue `json:"play_queue,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [9]bool
 }
 
 // APIKeysOrErr returns the APIKeys value or an error if the edge
@@ -112,12 +137,61 @@ func (e UserEdges) SessionsOrErr() ([]*Session, error) {
 	return nil, &NotLoadedError{edge: "sessions"}
 }
 
+// MusicAnnotationsOrErr returns the MusicAnnotations value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) MusicAnnotationsOrErr() ([]*MusicAnnotation, error) {
+	if e.loadedTypes[4] {
+		return e.MusicAnnotations, nil
+	}
+	return nil, &NotLoadedError{edge: "music_annotations"}
+}
+
+// PlaylistsOrErr returns the Playlists value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) PlaylistsOrErr() ([]*Playlist, error) {
+	if e.loadedTypes[5] {
+		return e.Playlists, nil
+	}
+	return nil, &NotLoadedError{edge: "playlists"}
+}
+
+// SharesOrErr returns the Shares value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) SharesOrErr() ([]*Share, error) {
+	if e.loadedTypes[6] {
+		return e.Shares, nil
+	}
+	return nil, &NotLoadedError{edge: "shares"}
+}
+
+// BookmarksOrErr returns the Bookmarks value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) BookmarksOrErr() ([]*Bookmark, error) {
+	if e.loadedTypes[7] {
+		return e.Bookmarks, nil
+	}
+	return nil, &NotLoadedError{edge: "bookmarks"}
+}
+
+// PlayQueueOrErr returns the PlayQueue value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) PlayQueueOrErr() (*PlayQueue, error) {
+	if e.PlayQueue != nil {
+		return e.PlayQueue, nil
+	} else if e.loadedTypes[8] {
+		return nil, &NotFoundError{label: playqueue.Label}
+	}
+	return nil, &NotLoadedError{edge: "play_queue"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldID, user.FieldFailedLoginCount:
+		case user.FieldSubsonicCanStream, user.FieldSubsonicCanDownload, user.FieldSubsonicCanManagePlaylists, user.FieldSubsonicCanShare, user.FieldSubsonicCanRate, user.FieldSubsonicCanChangePassword:
+			values[i] = new(sql.NullBool)
+		case user.FieldID, user.FieldSubsonicMaxBitRate, user.FieldFailedLoginCount:
 			values[i] = new(sql.NullInt64)
 		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldAuthMethod, user.FieldDisplayName, user.FieldDeviceEmail, user.FieldSubsonicPassword, user.FieldSubsonicLastClient, user.FieldOpdsToken, user.FieldOpdsLastClient:
 			values[i] = new(sql.NullString)
@@ -218,6 +292,48 @@ func (_m *User) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.SubsonicLastClient = value.String
 			}
+		case user.FieldSubsonicCanStream:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_can_stream", values[i])
+			} else if value.Valid {
+				_m.SubsonicCanStream = value.Bool
+			}
+		case user.FieldSubsonicCanDownload:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_can_download", values[i])
+			} else if value.Valid {
+				_m.SubsonicCanDownload = value.Bool
+			}
+		case user.FieldSubsonicCanManagePlaylists:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_can_manage_playlists", values[i])
+			} else if value.Valid {
+				_m.SubsonicCanManagePlaylists = value.Bool
+			}
+		case user.FieldSubsonicCanShare:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_can_share", values[i])
+			} else if value.Valid {
+				_m.SubsonicCanShare = value.Bool
+			}
+		case user.FieldSubsonicCanRate:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_can_rate", values[i])
+			} else if value.Valid {
+				_m.SubsonicCanRate = value.Bool
+			}
+		case user.FieldSubsonicCanChangePassword:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_can_change_password", values[i])
+			} else if value.Valid {
+				_m.SubsonicCanChangePassword = value.Bool
+			}
+		case user.FieldSubsonicMaxBitRate:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_max_bit_rate", values[i])
+			} else if value.Valid {
+				_m.SubsonicMaxBitRate = uint16(value.Int64)
+			}
 		case user.FieldOpdsToken:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field opds_token", values[i])
@@ -297,6 +413,31 @@ func (_m *User) QuerySessions() *SessionQuery {
 	return NewUserClient(_m.config).QuerySessions(_m)
 }
 
+// QueryMusicAnnotations queries the "music_annotations" edge of the User entity.
+func (_m *User) QueryMusicAnnotations() *MusicAnnotationQuery {
+	return NewUserClient(_m.config).QueryMusicAnnotations(_m)
+}
+
+// QueryPlaylists queries the "playlists" edge of the User entity.
+func (_m *User) QueryPlaylists() *PlaylistQuery {
+	return NewUserClient(_m.config).QueryPlaylists(_m)
+}
+
+// QueryShares queries the "shares" edge of the User entity.
+func (_m *User) QueryShares() *ShareQuery {
+	return NewUserClient(_m.config).QueryShares(_m)
+}
+
+// QueryBookmarks queries the "bookmarks" edge of the User entity.
+func (_m *User) QueryBookmarks() *BookmarkQuery {
+	return NewUserClient(_m.config).QueryBookmarks(_m)
+}
+
+// QueryPlayQueue queries the "play_queue" edge of the User entity.
+func (_m *User) QueryPlayQueue() *PlayQueueQuery {
+	return NewUserClient(_m.config).QueryPlayQueue(_m)
+}
+
 // Update returns a builder for updating this User.
 // Note that you need to call User.Unwrap() before calling this method if this User
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -357,6 +498,27 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("subsonic_last_client=")
 	builder.WriteString(_m.SubsonicLastClient)
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_can_stream=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanStream))
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_can_download=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanDownload))
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_can_manage_playlists=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanManagePlaylists))
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_can_share=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanShare))
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_can_rate=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanRate))
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_can_change_password=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanChangePassword))
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_max_bit_rate=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicMaxBitRate))
 	builder.WriteString(", ")
 	builder.WriteString("opds_token=<sensitive>")
 	builder.WriteString(", ")

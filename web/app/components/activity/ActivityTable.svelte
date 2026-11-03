@@ -19,6 +19,7 @@
 		hasMore = false,
 		loadingMore = false,
 		canControl = false,
+		torrentHref,
 		onLoadMore,
 		onCancel,
 		onPause,
@@ -38,6 +39,8 @@
 		hasMore?: boolean;
 		loadingMore?: boolean;
 		canControl?: boolean;
+		// Where a row's torrent opens on the torrents page, null when it has none.
+		torrentHref?: (item: QueueEntry | HistoryEntry) => string | null;
 		onLoadMore: () => void;
 		onCancel: (id: number) => void;
 		onPause: (id: number) => void;
@@ -79,7 +82,9 @@
 			{ label: i18n.common_progress(), sort: "progress" },
 			// The cell reads speed · ETA; speed is the half worth ordering on, and the
 			// ETA follows it for anything actually moving.
-			{ label: i18n.activity_speed_eta(), sort: "speed" },
+			// Below @3xl the cell folds under the progress bar instead: on a tablet
+			// the column cost the title ~140px to hold a "—".
+			{ label: i18n.activity_speed_eta(), hide: "hidden @3xl:table-cell", sort: "speed" },
 			{ label: i18n.common_client(), hide: "hidden @3xl:table-cell", sort: "client" },
 			{ label: "" },
 		],
@@ -127,6 +132,7 @@
 		error: 1,
 		failed: 1,
 		downloading: 2,
+		stalled: 2,
 		importing: 3,
 		paused: 4,
 		completed: 5,
@@ -331,6 +337,7 @@
 							{colspan}
 							busy={busyId === row.id}
 							{canControl}
+							torrentHref={torrentHref?.(row) ?? null}
 							{onCancel}
 							{onPause}
 							{onResume}

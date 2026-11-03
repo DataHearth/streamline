@@ -388,6 +388,23 @@ func (d *Deluge) TestConnection(ctx context.Context) error {
 	return d.ensureSession(ctx)
 }
 
+// FreeSpace measures the daemon's default download location.
+func (d *Deluge) FreeSpace(ctx context.Context) (int64, error) {
+	raw, err := d.call(ctx, "core.get_free_space")
+	if err != nil {
+		return 0, fmt.Errorf("deluge free space: %w", err)
+	}
+	var free int64
+	if err := json.Unmarshal(raw, &free); err != nil {
+		return 0, fmt.Errorf("deluge free space: %w: %w", ErrBadResponse, err)
+	}
+	// Deluge 1.3 answers -1 for a path it cannot stat rather than raising.
+	if free < 0 {
+		return 0, fmt.Errorf("deluge free space: %w: %d", ErrBadResponse, free)
+	}
+	return free, nil
+}
+
 // delugeFilePriorities builds the full positional array core.add_torrent_file
 // and core.set_torrent_options expect: libtorrent values, 4 (normal) for a
 // wanted index, 0 (skip) for everything else.

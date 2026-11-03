@@ -33,6 +33,7 @@ type env struct {
 	provider  *mockmeta.MockMusicProvider
 	overviews *mockmeta.MockOverviewProvider
 	photos    *mockmeta.MockArtistPhotoProvider
+	links     *mockmeta.MockArtistLinkProvider
 	posters   *mockposters.MockManager
 	idx       *mockindexer.MockManager
 	dl        *mockdownload.MockDownloader
@@ -58,14 +59,27 @@ func newEnv(withEnrichment bool) *env {
 	var (
 		ov metadata.OverviewProvider
 		ph metadata.ArtistPhotoProvider
+		lk metadata.ArtistLinkProvider
 	)
 	if withEnrichment {
 		e.cacheArt = stubKindPaths(e.posters, "artists")
 		e.overviews = mockmeta.NewMockOverviewProvider(GinkgoT())
 		e.photos = mockmeta.NewMockArtistPhotoProvider(GinkgoT())
-		ov, ph = e.overviews, e.photos
+		e.links = mockmeta.NewMockArtistLinkProvider(GinkgoT())
+		ov, ph, lk = e.overviews, e.photos, e.links
 	}
-	e.svc = NewService(e.store, e.provider, e.posters, nil, e.idx, e.dl, ov, ph, nil)
+	e.svc = NewService(
+		e.store,
+		e.provider,
+		e.posters,
+		nil,
+		e.idx,
+		e.dl,
+		ov,
+		ph,
+		lk,
+		nil,
+	)
 	e.setConfig(map[string]any{})
 	return e
 }

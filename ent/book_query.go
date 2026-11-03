@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/bookedition"
 	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
 )
@@ -35,6 +36,7 @@ type BookQuery struct {
 	withAudiobookEdition *BookEditionQuery
 	withMediaFiles       *MediaFileQuery
 	withDownloadRecords  *DownloadRecordQuery
+	withEvents           *MediaEventQuery
 	withFKs              bool
 	modifiers            []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -220,6 +222,28 @@ func (_q *BookQuery) QueryDownloadRecords() *DownloadRecordQuery {
 			sqlgraph.From(book.Table, book.FieldID, selector),
 			sqlgraph.To(downloadrecord.Table, downloadrecord.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, book.DownloadRecordsTable, book.DownloadRecordsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEvents chains the current query on the "events" edge.
+func (_q *BookQuery) QueryEvents() *MediaEventQuery {
+	query := (&MediaEventClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(book.Table, book.FieldID, selector),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, book.EventsTable, book.EventsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -426,6 +450,7 @@ func (_q *BookQuery) Clone() *BookQuery {
 		withAudiobookEdition: _q.withAudiobookEdition.Clone(),
 		withMediaFiles:       _q.withMediaFiles.Clone(),
 		withDownloadRecords:  _q.withDownloadRecords.Clone(),
+		withEvents:           _q.withEvents.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -510,6 +535,17 @@ func (_q *BookQuery) WithDownloadRecords(opts ...func(*DownloadRecordQuery)) *Bo
 	return _q
 }
 
+// WithEvents tells the query-builder to eager-load the nodes that are connected to
+// the "events" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *BookQuery) WithEvents(opts ...func(*MediaEventQuery)) *BookQuery {
+	query := (&MediaEventClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withEvents = query
+	return _q
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -589,7 +625,7 @@ func (_q *BookQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Book, e
 		nodes       = []*Book{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [7]bool{
+		loadedTypes = [8]bool{
 			_q.withSeries != nil,
 			_q.withEditions != nil,
 			_q.withContributions != nil,
@@ -597,6 +633,7 @@ func (_q *BookQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Book, e
 			_q.withAudiobookEdition != nil,
 			_q.withMediaFiles != nil,
 			_q.withDownloadRecords != nil,
+			_q.withEvents != nil,
 		}
 	)
 	if _q.withSeries != nil || _q.withEbookEdition != nil || _q.withAudiobookEdition != nil {
@@ -669,6 +706,13 @@ func (_q *BookQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Book, e
 		if err := _q.loadDownloadRecords(ctx, query, nodes,
 			func(n *Book) { n.Edges.DownloadRecords = []*DownloadRecord{} },
 			func(n *Book, e *DownloadRecord) { n.Edges.DownloadRecords = append(n.Edges.DownloadRecords, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withEvents; query != nil {
+		if err := _q.loadEvents(ctx, query, nodes,
+			func(n *Book) { n.Edges.Events = []*MediaEvent{} },
+			func(n *Book, e *MediaEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -890,6 +934,37 @@ func (_q *BookQuery) loadDownloadRecords(ctx context.Context, query *DownloadRec
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "book_download_records" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *BookQuery) loadEvents(ctx context.Context, query *MediaEventQuery, nodes []*Book, init func(*Book), assign func(*Book, *MediaEvent)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Book)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.MediaEvent(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(book.EventsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.book_events
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "book_events" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "book_events" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

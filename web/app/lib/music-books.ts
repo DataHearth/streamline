@@ -30,7 +30,15 @@ export type Member = Person & { instruments: string[]; from?: number; to?: numbe
 // Who played on a release. `guest` marks a player from outside a group.
 export type Performer = Person & { instruments: string[]; guest?: boolean };
 // MusicBrainz relationship types, folded to the five liner notes carry.
-export type CreditRole = "producer" | "recording" | "mix" | "mastering" | "artwork";
+export type CreditRole =
+	| "producer"
+	| "recording"
+	| "mix"
+	| "mastering"
+	| "artwork"
+	| "conductor"
+	| "remixer"
+	| "arranger";
 export type Credit = Person & { role: CreditRole };
 export type MediumFormat = "cd" | "vinyl" | "digital" | "cassette";
 
@@ -39,6 +47,8 @@ export type Track = {
 	disc: number;
 	number: number;
 	title: string;
+	// The artist credit before any "feat."; on a split release not the album's.
+	artists?: Person[];
 	// The artist credit's "feat." part, one entry per guest.
 	featuring?: Person[];
 	writers?: Person[];
@@ -67,6 +77,9 @@ export type Release = {
 	progress?: number;
 	// Why the import was refused, while status is failed.
 	failure_reason?: string;
+	// Every library artist a shared release is listed under, owner first;
+	// absent when only its owner is credited.
+	artists?: Person[];
 	// Detail only; the list leaves them out.
 	tracks?: Track[];
 	mbid?: string;
@@ -105,6 +118,16 @@ export type Artist = {
 	hydrating: boolean;
 	// Newest first, upcoming included.
 	albums: Release[];
+};
+
+// A search hit for one album (GET /music/albums), named with its artist.
+export type AlbumSearchHit = {
+	id: number;
+	title: string;
+	type: ReleaseType;
+	artist_id: number;
+	artist_name: string;
+	release_date?: string;
 };
 
 export type ArtistList = { items: Artist[]; total: number; page: number; limit: number };
@@ -366,7 +389,11 @@ export function qualityNote(r: Release): string {
 export function artistTally(a: Artist) {
 	const out = a.albums.filter((r) => r.status !== "upcoming");
 	return {
-		released: out.length,
+		listed: out.length,
+		// Owed releases only, as the status rollup counts them: the singles and
+		// live records a discography lists unmonitored kept a fully held
+		// artist at 10 / 62.
+		released: out.filter((r) => r.monitored || r.status === "available").length,
 		have: out.filter((r) => r.status === "available").length,
 		// What the missing search would look for: an unmonitored release is
 		// never searched, so it is not counted as wanted.
@@ -394,13 +421,17 @@ export function releaseGroups(releases: Release[]) {
 	})).filter((g) => g.releases.length > 0);
 }
 
-// The release an artist page opens on: the newest with something missing,
-// else the newest that is out.
+// The release an artist page opens on, read in the list's own order (albums
+// first): the newest monitored one with something missing, else the newest
+// held, else the newest that is out. The API's order mixes every type, and an
+// unmonitored single was opened over the albums the list starts with.
 export function defaultRelease(releases: Release[]): Release | undefined {
+	const listed = releaseGroups(releases).flatMap((g) => g.releases);
 	return (
-		releases.find((r) => ["wanted", "downloading", "paused", "failed"].includes(r.status)) ??
-		releases.find((r) => r.status !== "upcoming") ??
-		releases[0]
+		listed.find((r) => r.monitored && ["wanted", "downloading", "paused", "failed"].includes(r.status)) ??
+		listed.find((r) => r.status === "available") ??
+		listed.find((r) => r.status !== "upcoming") ??
+		listed[0]
 	);
 }
 
@@ -420,6 +451,19 @@ export function personHref(p: Person): string | undefined {
 	return undefined;
 }
 
+// The other library artists a shared release is listed under, seen from the
+// artist whose page it is on.
+export function sharedWith(r: Release, artistId: number): Person[] {
+	return (r.artists ?? []).filter((p) => p.artist_id !== artistId);
+}
+
+// A track's own artists when they are not the page's artist: the other side
+// of a split single. Empty when the track is the page artist's.
+export function otherTrackArtists(t: Track, artistId?: number): Person[] {
+	const artists = t.artists ?? [];
+	return artists.some((p) => p.artist_id !== undefined && p.artist_id === artistId) ? [] : artists;
+}
+
 export function peopleList(ps: Person[]): string {
 	const names = ps.map((p) => p.name);
 	try {
@@ -432,12 +476,24 @@ export function peopleList(ps: Person[]): string {
 export const memberYears = (m: Member) =>
 	m.to ? (m.from ? `${m.from}–${m.to}` : `–${m.to}`) : m.from ? i18n.music_since({ year: String(m.from) }) : "";
 
-export const CREDIT_ROLES: CreditRole[] = ["producer", "recording", "mix", "mastering", "artwork"];
+export const CREDIT_ROLES: CreditRole[] = [
+	"producer",
+	"recording",
+	"mix",
+	"mastering",
+	"conductor",
+	"arranger",
+	"remixer",
+	"artwork",
+];
 export function creditRoleLabel(r: CreditRole): string {
 	if (r === "producer") return i18n.music_role_producer();
 	if (r === "recording") return i18n.music_role_recording();
 	if (r === "mix") return i18n.music_role_mix();
 	if (r === "mastering") return i18n.music_role_mastering();
+	if (r === "conductor") return i18n.music_role_conductor();
+	if (r === "remixer") return i18n.music_role_remixer();
+	if (r === "arranger") return i18n.music_role_arranger();
 	return i18n.music_role_artwork();
 }
 
@@ -817,3 +873,24 @@ export const bookRequest = (x: BookProfileValues) => ({
 		min_bitrate: x.min_bitrate,
 	},
 });
+
+// A release's torrent read against an album before grabbing it
+// (POST /music/albums/{id}/release-files). Matched by file name, so a preview.
+export type ReleaseFile = { path: string; size: number; track_id?: number };
+export type ReleaseTrack = {
+	id: number;
+	disc: number;
+	number: number;
+	title: string;
+	has_file: boolean;
+	in_release: boolean;
+};
+export type ReleaseFiles = { files: ReleaseFile[]; tracks: ReleaseTrack[] };
+// A discography pack read against the artist (POST /music/artists/{id}/release-files):
+// albums is what the grab links and fills; a folder naming any other album is
+// skipped by the import (waiting false).
+export type DiscographyFiles = {
+	files: { path: string; size: number; album_id?: number; track_id?: number }[];
+	folders: { path: string; album_id?: number; waiting: boolean }[];
+	albums: { id: number; title: string; year?: number; in_release: boolean; tracks: ReleaseTrack[] }[];
+};

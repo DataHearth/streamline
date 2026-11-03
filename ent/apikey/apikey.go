@@ -3,6 +3,7 @@
 package apikey
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -24,6 +25,10 @@ const (
 	FieldKeyHash = "key_hash"
 	// FieldLastUsedAt holds the string denoting the last_used_at field in the database.
 	FieldLastUsedAt = "last_used_at"
+	// FieldScope holds the string denoting the scope field in the database.
+	FieldScope = "scope"
+	// FieldExpiresAt holds the string denoting the expires_at field in the database.
+	FieldExpiresAt = "expires_at"
 	// EdgeOwner holds the string denoting the owner edge name in mutations.
 	EdgeOwner = "owner"
 	// Table holds the table name of the apikey in the database.
@@ -45,6 +50,8 @@ var Columns = []string{
 	FieldName,
 	FieldKeyHash,
 	FieldLastUsedAt,
+	FieldScope,
+	FieldExpiresAt,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "api_keys"
@@ -81,6 +88,32 @@ var (
 	KeyHashValidator func(string) error
 )
 
+// Scope defines the type for the "scope" enum field.
+type Scope string
+
+// ScopeFull is the default value of the Scope enum.
+const DefaultScope = ScopeFull
+
+// Scope values.
+const (
+	ScopeRead Scope = "read"
+	ScopeFull Scope = "full"
+)
+
+func (s Scope) String() string {
+	return string(s)
+}
+
+// ScopeValidator is a validator for the "scope" field enum values. It is called by the builders before save.
+func ScopeValidator(s Scope) error {
+	switch s {
+	case ScopeRead, ScopeFull:
+		return nil
+	default:
+		return fmt.Errorf("apikey: invalid enum value for scope field: %q", s)
+	}
+}
+
 // OrderOption defines the ordering options for the ApiKey queries.
 type OrderOption func(*sql.Selector)
 
@@ -112,6 +145,16 @@ func ByKeyHash(opts ...sql.OrderTermOption) OrderOption {
 // ByLastUsedAt orders the results by the last_used_at field.
 func ByLastUsedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastUsedAt, opts...).ToFunc()
+}
+
+// ByScope orders the results by the scope field.
+func ByScope(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldScope, opts...).ToFunc()
+}
+
+// ByExpiresAt orders the results by the expires_at field.
+func ByExpiresAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldExpiresAt, opts...).ToFunc()
 }
 
 // ByOwnerField orders the results by owner field.

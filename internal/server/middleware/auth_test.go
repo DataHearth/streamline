@@ -13,12 +13,18 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/apikey"
 	entuser "github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/auth"
 	mocks "github.com/datahearth/streamline/internal/server/middleware/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/utils/httputil"
 )
+
+// keyOf is an API key row as ValidateAPIKey returns it: owner loaded.
+func keyOf(u *ent.User, scope apikey.Scope) *ent.ApiKey {
+	return &ent.ApiKey{ID: 9, Scope: scope, Edges: ent.ApiKeyEdges{Owner: u}}
+}
 
 var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 	const (
@@ -234,7 +240,7 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 		g.It("accepts an X-API-Key regardless of Sec-Fetch-Site", func() {
 			svc.EXPECT().
 				ValidateAPIKey(mock.Anything, apiKey).
-				Return(user, nil).
+				Return(keyOf(user, apikey.ScopeFull), nil).
 				Once()
 
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/movies", nil)
@@ -261,7 +267,7 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			g.GinkgoHelper()
 			svc.EXPECT().
 				ValidateAPIKey(mock.Anything, apiKey).
-				Return(user, nil).
+				Return(keyOf(user, apikey.ScopeFull), nil).
 				Once()
 			req := httptest.NewRequest(method, path, nil)
 			req.Header.Set("X-API-Key", apiKey)
@@ -342,6 +348,93 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 	})
 })
 
+var _ = g.Describe("read-scoped API key", g.Label("unit"), func() {
+	const apiKey = "read-key"
+	var (
+		svc     *mocks.MockAuthenticator
+		limiter auth.Limiter
+		reached *auth.Claims
+		next    http.Handler
+		admin   *ent.User
+	)
+
+	g.BeforeEach(func() {
+		svc = mocks.NewMockAuthenticator(g.GinkgoT())
+		limiter = auth.NewLimiter(1, 15*time.Minute)
+		reached = nil
+		next = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			reached = auth.ClaimsFromContext(r.Context())
+			w.WriteHeader(http.StatusOK)
+		})
+		admin = &ent.User{ID: 1, Email: "a@example.com", Role: entuser.RoleAdmin}
+	})
+
+	send := func(method, path string) *httptest.ResponseRecorder {
+		g.GinkgoHelper()
+		svc.EXPECT().
+			ValidateAPIKey(mock.Anything, apiKey).
+			Return(keyOf(admin, apikey.ScopeRead), nil).
+			Once()
+		req := httptest.NewRequest(method, path, nil)
+		req.Header.Set("X-API-Key", apiKey)
+		req.RemoteAddr = "203.0.113.5:4000"
+		rr := httptest.NewRecorder()
+		authenticateAPI(svc, limiter, next, rr, req)
+		return rr
+	}
+
+	g.DescribeTable(
+		"reads pass with the owner's role",
+		func(method, path string) {
+			Expect(send(method, path).Code).To(Equal(http.StatusOK))
+			Expect(reached).NotTo(BeNil())
+			Expect(reached.UserID).To(Equal(uint32(1)))
+			Expect(reached.Role).To(Equal("admin"))
+		},
+		g.Entry("GET", http.MethodGet, "/api/v1/movies"),
+		g.Entry("HEAD", http.MethodHead, "/api/v1/movies"),
+		g.Entry("identity read", http.MethodGet, "/api/v1/users"),
+	)
+
+	g.DescribeTable(
+		"every other method is refused with 403, whatever the owner's role",
+		func(method, path string) {
+			rr := send(method, path)
+			Expect(rr.Code).To(Equal(http.StatusForbidden))
+			Expect(rr.Body.String()).To(ContainSubstring("read-only"))
+			Expect(reached).To(BeNil(), "the handler never runs")
+		},
+		g.Entry("POST", http.MethodPost, "/api/v1/movies"),
+		g.Entry("PUT", http.MethodPut, "/api/v1/movies/3"),
+		g.Entry("PATCH", http.MethodPatch, "/api/v1/config/library"),
+		g.Entry("DELETE", http.MethodDelete, "/api/v1/movies/3"),
+		g.Entry("OPTIONS", http.MethodOptions, "/api/v1/movies"),
+		g.Entry("admin endpoint", http.MethodPost, "/api/v1/schedules/x/run"),
+	)
+
+	g.It(
+		"is not metered: the refusal is authorization, not a bad credential",
+		func() {
+			for range 3 {
+				Expect(send(http.MethodPost, "/api/v1/movies").Code).
+					To(Equal(http.StatusForbidden))
+			}
+		},
+	)
+
+	g.It("fails closed on a scope it does not know", func() {
+		svc.EXPECT().
+			ValidateAPIKey(mock.Anything, apiKey).
+			Return(keyOf(admin, apikey.Scope("write")), nil).
+			Once()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/movies", nil)
+		req.Header.Set("X-API-Key", apiKey)
+		rr := httptest.NewRecorder()
+		authenticateAPI(svc, nil, next, rr, req)
+		Expect(rr.Code).To(Equal(http.StatusForbidden))
+	})
+})
+
 var _ = g.Describe("api credential throttling", g.Label("unit"), func() {
 	const apiKey = "wrong-key"
 
@@ -406,7 +499,7 @@ var _ = g.Describe("api credential throttling", g.Label("unit"), func() {
 		good := &ent.User{ID: 1, Email: "u@example.com", Role: entuser.Role("admin")}
 		svc.EXPECT().
 			ValidateAPIKey(mock.Anything, "good-key").
-			Return(good, nil).
+			Return(keyOf(good, apikey.ScopeFull), nil).
 			Times(10)
 		svc.EXPECT().
 			ValidateAPIKey(mock.Anything, apiKey).

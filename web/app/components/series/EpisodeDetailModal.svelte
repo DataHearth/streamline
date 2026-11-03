@@ -26,7 +26,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import { Search, Trash2 } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
-	import { episodeStatus } from "@lib/status";
+	import { episodeStatus, episodeTitle } from "@lib/status";
 	import Modal from "@components/modals/Modal.svelte";
 	import { formatDateTime, formatRelative } from "@lib/dates";
 	import { formatBytes } from "@lib/format";
@@ -136,7 +136,7 @@
 
 {#if episode}
 	{@const meta = STATUS_META[episodeStatus(episode, showMonitored)]}
-	<Modal open={true} title={episode.title || "TBA"} size="xl" {onClose}>
+	<Modal open={true} title={episodeTitle(episode)} size="xl" {onClose}>
 		<div class="flex flex-wrap items-center gap-2">
 			<span
 				class="ep-pill inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-semibold"

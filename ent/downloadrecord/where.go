@@ -130,6 +130,11 @@ func SelectedBytes(v int64) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldEQ(FieldSelectedBytes, v))
 }
 
+// Rejected applies equality check predicate on the "rejected" field. It's identical to RejectedEQ.
+func Rejected(v bool) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldEQ(FieldRejected, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldEQ(FieldCreateTime, v))
@@ -1108,6 +1113,16 @@ func BookKindIsNil() predicate.DownloadRecord {
 // BookKindNotNil applies the NotNil predicate on the "book_kind" field.
 func BookKindNotNil() predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldNotNull(FieldBookKind))
+}
+
+// RejectedEQ applies the EQ predicate on the "rejected" field.
+func RejectedEQ(v bool) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldEQ(FieldRejected, v))
+}
+
+// RejectedNEQ applies the NEQ predicate on the "rejected" field.
+func RejectedNEQ(v bool) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNEQ(FieldRejected, v))
 }
 
 // HasMovie applies the HasEdge predicate on the "movie" edge.

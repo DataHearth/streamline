@@ -7,6 +7,7 @@ Find what you're seeing in the table below, then jump straight to the fix. Order
 | Title search returns nothing at all, not just no releases | No metadata API key configured | [Searching finds nothing at all](#searching-finds-nothing-at-all) |
 | Titles sit at **Wanted** forever | No working indexer/client, or quality profile rejecting every release | [Nothing ever gets grabbed](#nothing-ever-gets-grabbed) |
 | Torrent completes in the client but Streamline does nothing with it | Held for review, or a path/mount mismatch | [Downloads finish but never import](#downloads-finish-but-never-import) |
+| Container exits on first start: `config file … does not exist and cannot be created` | The config directory is not writable by Streamline's uid/gid | [The config file cannot be created](#the-config-file-cannot-be-created) |
 | Import fails writing to disk | Streamline's uid/gid can't write to your media directories | [Permission denied on import](#permission-denied-on-import) |
 | No password, or too many failed logins | Seed password never seen, or account/IP locked out | [I can't log in](#i-cant-log-in) |
 | Login redirects back to the login form | Proxy not forwarding scheme, untrusted proxy, or clock skew | [Login loops back to the login page](#login-loops-back-to-the-login-page) |
@@ -15,6 +16,7 @@ Find what you're seeing in the table below, then jump straight to the fix. Order
 | Torrents show **Seeding** but upload is `0 B/s`, 0 peers | Nothing can open an inbound connection to you (NAT/port forward) | [Torrents seed forever but upload nothing](#torrents-seed-forever-but-upload-nothing) |
 | Plex/Jellyfin/Emby doesn't pick up new files | Refresh failed, wrong library section, or separate mounts | [My media server doesn't notice new files](#my-media-server-doesnt-notice-new-files) |
 | Library looks empty after a mount/volume change | Stored paths no longer match reality | [My library emptied itself after a remount](#my-library-emptied-itself-after-a-remount) |
+| Won't start after an update: `back up the database before migrating` | The pre-migration backup could not be written | [Won't start: backup before migrating failed](#wont-start-backup-before-migrating-failed) |
 | `unable to open database file` / general DB errors | More than one writer, or the DB is on a network filesystem | [Database is locked](#database-is-locked) |
 | Need to see what's actually happening | — | [Where the logs are](#where-the-logs-are) |
 | Ready to report a bug | — | [Filing a good bug report](#filing-a-good-bug-report) |
@@ -121,6 +123,22 @@ Either way, the proposal re-resolves on the next monitor tick.
 
 ---
 
+## The config file cannot be created
+
+```
+error: config: config file /etc/streamline/config.yaml does not exist and cannot be created (this process runs as uid 1000, gid 1000): … permission denied
+```
+
+With no config file, Streamline writes the defaults to the `--config` path on its first start, and here it could not. The usual cause is a bind-mounted config folder Docker created itself: a missing host directory is created as `root`, and the container runs as someone else. Give the folder to the uid and gid the message names, then start again:
+
+```bash
+sudo chown -R 1000:1000 ./config      # Unraid: chown -R 99:100 /mnt/user/appdata/streamline
+```
+
+Or create the file yourself with `streamline config init --output …`, as [Installation](Installation#1-create-the-config) shows.
+
+---
+
 ## Permission denied on import
 
 Streamline runs as **uid/gid 1000** in the official image. If your media directories are owned by someone else, it can't write.
@@ -149,11 +167,14 @@ On Kubernetes this shows up as a crashloop with `unable to open database file (1
 
 ## I can't log in
 
-**You never saw a password.** Streamline generated one and wrote it into your config file:
+**You never saw a password.** Streamline generated one and printed it once to standard output, on a line reading `default admin credentials`:
 
 ```bash
-grep -A 3 seed_admin config/config.yaml
+docker logs streamline 2>&1 | grep 'default admin'      # Docker
+journalctl -u streamline | grep 'default admin'         # systemd
 ```
+
+Gone from the logs? Set a new one from the command line, with the service stopped: `streamline -c /etc/streamline/config.yaml auth set-password admin@streamline.local --generate` prints a fresh password once.
 
 **Too many failed attempts.** Two separate limits apply. The account locks after 10 failures in 15 minutes; clear it with:
 
@@ -263,13 +284,15 @@ Streamline pokes Plex/Jellyfin/Emby to rescan whenever it changes your library: 
 
 - **Test the connection.** Settings → Media servers → Test.
 - **Check your media server can see the files.** Streamline importing successfully doesn't mean Plex has the path mounted. They're separate containers with separate mounts.
-- **For Plex, set both section keys.** Settings → Media servers → **Discover**, then fill in **Movie library section** and **TV library section**. Left blank, Streamline falls back to rescanning every section — so the scan does happen, but it is broader than it needs to be, and a log line will say so:
+- **Look at the server's card.** Settings → Media servers shows the last rescan Streamline sent — when, whether it failed, and whether it covered just the changed folders or the whole library. Rescans are collected for 30 seconds before they are sent, so a fresh import shows up there a little later. Jellyfin and Emby then wait on their own library-monitor delay (a minute or so) before rescanning the folders they were sent; Plex starts at once.
+- **Add path mappings when the server mounts the library elsewhere.** Streamline sends the changed folder by its own path; a server in another container knows it by another one (Streamline's `/srv/streamline/movies` is Plex's `/data/movies`). Without a mapping Streamline cannot find the folder among the server's libraries and rescans the whole library instead — the card then reads "whole library" after every import, and the log says so:
 
   ```
+  INFO plex: a folder lies outside every section, rescanning the library
   WARN plex: no section matches the library path, refreshing all sections
   ```
 
-  That message is expected on any containerised install: Plex reports its *own* mount paths, which don't match Streamline's. Setting the two keys is the fix.
+  Add a mapping for each library root in the server's form ([Path mappings](First-Run-Setup#path-mappings)). For Plex, setting **Movie library section** and **TV library section** (**Discover**) also keeps that fallback to one section instead of all of them.
 
 Check the log for the import itself too. A refresh that failed outright logs at WARN and never stops the import, so the file lands on disk with nothing to show for it:
 
@@ -334,7 +357,17 @@ Streamline uses SQLite, which allows exactly one writer.
 
 **Your data directory is on a network filesystem.** SQLite locking over NFS or SMB is unreliable and will corrupt your database. Put `data_dir` on local storage. Your *media* can live on the network; your database can't.
 
-The database is `<data_dir>/streamline.db`, accompanied by `-wal` and `-shm` files. If you ever copy it, copy all three.
+The database is `<data_dir>/streamline.db`, accompanied by `-wal` and `-shm` files. If you ever copy it, copy all three — or use `streamline backup`, which writes one consistent file ([Backups](GitOps-and-Kubernetes#backups)).
+
+---
+
+## Won't start: backup before migrating failed
+
+A new version backs the database up into `<data_dir>/backups` before updating it, and refuses to update it when that fails. Nothing was changed: the log line names the cause, which is nearly always a full disk.
+
+- **Free space** on the volume holding `data_dir` — the backup needs about as much as the database itself. Old backups in `<data_dir>/backups` can go; lowering `backup.retention.*` keeps fewer from now on.
+- **Permissions**: Streamline's user must be able to create `<data_dir>/backups`.
+- For a database too large to copy on every upgrade, set `backup.pre_migration: false` and take your own backup before each update.
 
 ---
 

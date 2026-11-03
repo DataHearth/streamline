@@ -45,12 +45,14 @@
 	import SeasonStrip from "@components/series/SeasonStrip.svelte";
 	import SeasonAccordion from "@components/series/SeasonAccordion.svelte";
 	import EpisodeTable from "@components/series/EpisodeTable.svelte";
+	import EpisodeDetailModal from "@components/series/EpisodeDetailModal.svelte";
 	import SeriesManualSearchModal from "@components/series/SeriesManualSearchModal.svelte";
 	import SeriesReleaseSearchModal from "@components/series/SeriesReleaseSearchModal.svelte";
 	import { existingFromEpisode } from "@lib/release-facts";
 	import SeriesKebabMenu from "@components/series/SeriesKebabMenu.svelte";
 	import DetailCast from "@components/shared/DetailCast.svelte";
 	import DetailHistory from "@components/shared/DetailHistory.svelte";
+	import { swipeTabs } from "@lib/swipe-tabs";
 	import DetailAbout from "@components/shared/DetailAbout.svelte";
 	import PlayOnMenu from "@components/shared/PlayOnMenu.svelte";
 	import type { SeriesAction } from "@components/series/SeriesKebabMenu.svelte";
@@ -86,6 +88,7 @@
 			if (currentId !== undefined && p.id !== currentId) resetSeriesState();
 			currentId = p.id;
 			routeParams = p;
+			focusFrom(p);
 		});
 		const u2 = goto.subscribe((fn) => (navigate = fn));
 		return () => {
@@ -101,9 +104,14 @@
 		return t && VALID_TABS.has(t as Tab) ? (t as Tab) : "overview";
 	}
 	let tab = $state<Tab>(readTab());
+	let tabTrack = $state<HTMLElement | null>(null);
 
 	$effect(() => {
 		if (typeof window === "undefined") return;
+		// At mount window.location still names the outgoing page: writing ?tab=
+		// onto it sent a search hit that opens on the episodes tab back to the
+		// page it came from.
+		if (window.location.pathname !== `/series/${routeParams.id}`) return;
 		const p = new URLSearchParams(window.location.search);
 		if (tab === "overview") p.delete("tab");
 		else p.set("tab", tab);
@@ -235,9 +243,45 @@
 	// Clears everything scoped to the show being navigated away from. `tab` is
 	// re-read from the URL rather than reset to a constant so browser
 	// back/forward onto /series/x?tab=cast lands on the tab it was left on.
+	// A search hit for one episode lands here as ?season=N&episode=ID: the
+	// season is selected and the episode's sheet opens. Read off the route
+	// params, since window.location still names the outgoing page at mount.
+	let focusEpisodeId = $state<number | null>(null);
+	function focusFrom(p: Record<string, string>) {
+		const ep = Number(p.episode);
+		if (!ep) return;
+		tab = "episodes";
+		const n = Number(p.season);
+		if (Number.isInteger(n)) selectedSeason = n;
+		focusEpisodeId = ep;
+	}
+	// One sheet at the route rather than one per list: the phone accordion and
+	// the md+ table are both mounted, so each opening its own would show two.
+	let focused = $derived.by(() => {
+		if (focusEpisodeId === null) return null;
+		for (const s of seasons) {
+			const ep = s.episodes?.find((e) => e.id === focusEpisodeId);
+			if (ep) {
+				const code =
+					show?.type === "daily" ? `#${ep.number}` : `S${pad2(s.number)}E${pad2(ep.number)}`;
+				return { ep, code };
+			}
+		}
+		return null;
+	});
+	function closeFocus() {
+		focusEpisodeId = null;
+		// Consumed: a reload or a season change should not reopen the sheet.
+		const u = new URL(window.location.href);
+		u.searchParams.delete("season");
+		u.searchParams.delete("episode");
+		window.history.replaceState(null, "", u.pathname + u.search);
+	}
+
 	function resetSeriesState() {
 		tab = readTab();
 		selectedSeason = null;
+		focusEpisodeId = null;
 		presetValue = "all";
 		deleteOpen = false;
 		qpOpen = false;
@@ -423,6 +467,19 @@
 		const counts: Record<string, number> = { series: seriesFileEpisodes.length };
 		for (const s of seasons)
 			counts[String(s.number)] = (s.episodes ?? []).filter((e) => (e.size ?? 0) > 0).length;
+		return counts;
+	});
+	// Episodes a pack grabbed without replace_existing is for, per scope: the
+	// server's wantedAiredEpisodes (still wanted, not dated in the future).
+	// Above zero beside files on disk, the grab can fill only these.
+	const fillable = (eps: Episode[]) =>
+		eps.filter((e) => e.status === "wanted" && !(e.air_date && Date.parse(e.air_date) > Date.now()))
+			.length;
+	let packMissingCounts = $derived.by(() => {
+		const counts: Record<string, number> = {
+			series: fillable(seasons.flatMap((s) => s.episodes ?? [])),
+		};
+		for (const s of seasons) counts[String(s.number)] = fillable(s.episodes ?? []);
 		return counts;
 	});
 	const qpQuery = createQuery<QualityProfile[]>(() => ({
@@ -699,7 +756,7 @@
 		aria-label={i18n.series_sections()}
 		class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
 	>
-		<div class="tabs-track flex w-full gap-0.5">
+		<div bind:this={tabTrack} class="tabs-track flex w-full gap-0.5">
 			{#each TABS as t (t.key)}
 				{@const active = tab === t.key}
 				<button
@@ -728,7 +785,10 @@
 		</div>
 	</nav>
 
-	<div class="w-full px-4 py-6 md:px-8">
+	<div
+		use:swipeTabs={{ keys: TABS.map((t) => t.key), current: tab, onChange: (k) => (tab = k), track: tabTrack }}
+		class="min-h-[60dvh] w-full px-4 py-6 md:px-8"
+	>
 		{#if tab === "overview"}
 			<div
 				class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px] md:gap-7 lg:grid-cols-[1fr_320px] lg:gap-10"
@@ -994,6 +1054,14 @@
 		onClose={() => (deleteOpen = false)}
 		onConfirm={(withFiles) => del.mutate(withFiles)}
 	/>
+	<EpisodeDetailModal
+		episode={focused?.ep ?? null}
+		code={focused?.code ?? ""}
+		onClose={closeFocus}
+		onManualSearch={openManualSearch}
+		onDeleteFile={(ep) => openDeleteFiles(episodeCode(ep), [ep])}
+		{showMonitored}
+	/>
 	<SeriesManualSearchModal
 		open={manualOpen}
 		seriesId={show.id}
@@ -1008,6 +1076,7 @@
 		seasons={searchSeasons}
 		initialScope={packSearchScope}
 		fileCounts={packFileCounts}
+		missingCounts={packMissingCounts}
 		scopeLabel={show.year ? `${show.title} (${show.year})` : show.title}
 		onClose={() => (packSearchOpen = false)}
 	/>

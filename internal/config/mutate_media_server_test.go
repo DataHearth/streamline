@@ -2,6 +2,8 @@ package config_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,7 +32,7 @@ var _ = Describe("Media server CRUD", Label("unit", "config"), func() {
 			Expect(config.AddMediaServer(ctx, entry("home-plex"))).
 				To(MatchError(config.ErrMediaServerExists))
 
-			host := "http://plex2:32400"
+			host := "http://Plex:32400/"
 			blank := ""
 			section := "Movies"
 			Expect(
@@ -39,7 +41,7 @@ var _ = Describe("Media server CRUD", Label("unit", "config"), func() {
 				}),
 			).To(Succeed())
 			got, _ := config.FindMediaServer("home-plex")
-			Expect(got.Host).To(Equal("http://plex2:32400"))
+			Expect(got.Host).To(Equal("http://Plex:32400/"))
 			Expect(got.APIKey).To(Equal("tok")) // preserved
 			Expect(got.LibrarySection).NotTo(BeNil())
 			Expect(*got.LibrarySection).To(Equal("Movies"))
@@ -50,6 +52,80 @@ var _ = Describe("Media server CRUD", Label("unit", "config"), func() {
 				To(MatchError(config.ErrMediaServerNotFound))
 		},
 	)
+
+	Describe("path_mappings", func() {
+		ctx := context.Background()
+
+		It(
+			"stores a list, keeps it across an unrelated patch, and clears it",
+			func() {
+				e := entry("home-plex")
+				e.PathMappings = []config.MediaServerPathMapping{
+					{From: "/srv/movies", To: "/data/movies"},
+					{From: "/srv/tv", To: `D:\TV`},
+					{From: "/srv/music", To: `\\nas\music`},
+				}
+				Expect(config.AddMediaServer(ctx, e)).To(Succeed())
+				got, _ := config.FindMediaServer("home-plex")
+				Expect(got.PathMappings).To(Equal(e.PathMappings))
+
+				enabled := false
+				Expect(
+					config.UpdateMediaServer(
+						ctx,
+						"home-plex",
+						config.MediaServerPatch{
+							Enabled: &enabled,
+						},
+					),
+				).To(Succeed())
+				got, _ = config.FindMediaServer("home-plex")
+				Expect(got.PathMappings).To(HaveLen(3))
+
+				Expect(
+					config.UpdateMediaServer(
+						ctx,
+						"home-plex",
+						config.MediaServerPatch{
+							PathMappings: &[]config.MediaServerPathMapping{},
+						},
+					),
+				).To(Succeed())
+				got, _ = config.FindMediaServer("home-plex")
+				Expect(got.PathMappings).To(BeEmpty())
+			},
+		)
+
+		DescribeTable("rejects a mapping that is not absolute on its side",
+			func(m config.MediaServerPathMapping, field string) {
+				Expect(config.AddMediaServer(ctx, entry("home-plex"))).To(Succeed())
+				err := config.UpdateMediaServer(
+					ctx,
+					"home-plex",
+					config.MediaServerPatch{
+						PathMappings: &[]config.MediaServerPathMapping{m},
+					},
+				)
+				Expect(
+					err,
+				).To(MatchError(ContainSubstring("path_mappings[0]." + field)))
+				got, _ := config.FindMediaServer("home-plex")
+				Expect(got.PathMappings).To(BeEmpty())
+			},
+			Entry("relative from", config.MediaServerPathMapping{
+				From: "movies", To: "/data/movies",
+			}, "from"),
+			Entry("Windows from", config.MediaServerPathMapping{
+				From: `D:\Movies`, To: "/data/movies",
+			}, "from"),
+			Entry("empty to", config.MediaServerPathMapping{
+				From: "/srv/movies", To: " ",
+			}, "to"),
+			Entry("relative to", config.MediaServerPathMapping{
+				From: "/srv/movies", To: "data/movies",
+			}, "to"),
+		)
+	})
 
 	Describe("library_section is Plex-only", func() {
 		ctx := context.Background()
@@ -119,6 +195,68 @@ var _ = Describe("Media server CRUD", Label("unit", "config"), func() {
 			got, _ := config.FindMediaServer("home-plex")
 			Expect(got.ServerType).To(Equal("jellyfin"))
 			Expect(got.LibrarySection).To(BeNil())
+		})
+	})
+
+	Describe("moving to another destination", func() {
+		ctx := context.Background()
+
+		It("refuses a new scheme, host or port without the token", func() {
+			Expect(config.AddMediaServer(ctx, entry("plex"))).To(Succeed())
+			blank := ""
+			for _, host := range []string{
+				"https://plex:32400", "http://plex2:32400", "http://plex:32401",
+				"http://plex",
+			} {
+				Expect(config.UpdateMediaServer(ctx, "plex", config.MediaServerPatch{
+					Host: &host, APIKey: &blank,
+				})).To(MatchError(config.ErrSecretRequired), host)
+			}
+			got, _ := config.FindMediaServer("plex")
+			Expect(got.Host).To(Equal("http://plex:32400"))
+			Expect(got.APIKey).To(Equal("tok"))
+		})
+
+		It("does not count a default port or a path as a move", func() {
+			e := entry("jf")
+			e.Host = "https://jf.example"
+			Expect(config.AddMediaServer(ctx, e)).To(Succeed())
+			host := "https://jf.example:443/jellyfin"
+			Expect(config.UpdateMediaServer(ctx, "jf",
+				config.MediaServerPatch{Host: &host})).To(Succeed())
+			got, _ := config.FindMediaServer("jf")
+			Expect(got.APIKey).To(Equal("tok"))
+		})
+
+		It("moves with the token entered again", func() {
+			Expect(config.AddMediaServer(ctx, entry("plex"))).To(Succeed())
+			host, tok := "http://plex2:32400", "tok2"
+			Expect(config.UpdateMediaServer(ctx, "plex",
+				config.MediaServerPatch{Host: &host, APIKey: &tok})).To(Succeed())
+			got, _ := config.FindMediaServer("plex")
+			Expect(got.Host).To(Equal("http://plex2:32400"))
+			Expect(got.APIKey).To(Equal("tok2"))
+		})
+
+		It("refuses any move of a file-backed token", func() {
+			keyPath := filepath.Join(GinkgoT().TempDir(), "plex.key")
+			Expect(os.WriteFile(keyPath, []byte("tok\n"), 0o600)).To(Succeed())
+			configtest.SetupFile(map[string]any{
+				"media_server": map[string]any{
+					"servers": []map[string]any{
+						{
+							"name": "fb", "server_type": "plex",
+							"host": "http://plex:32400", "api_key_file": keyPath,
+							"enabled": true,
+						},
+					},
+				},
+			})
+
+			host := "http://plex2:32400"
+			Expect(config.UpdateMediaServer(ctx, "fb",
+				config.MediaServerPatch{Host: &host})).
+				To(MatchError(config.ErrSecretFileDestination))
 		})
 	})
 })

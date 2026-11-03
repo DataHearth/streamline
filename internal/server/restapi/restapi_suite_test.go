@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/internal/auth"
 	authmocks "github.com/datahearth/streamline/internal/auth/mocks"
@@ -137,6 +138,12 @@ func newAPIKeyApp() *apiKeyApp {
 		requestOnlyKey: "test-requestonly-token",
 		requestOnlyID:  3,
 	}
+
+	// Every library PATCH tells the music service what changed in
+	// music_tags; the specs that care assert it themselves.
+	a.music.EXPECT().
+		TagSettingsChanged(mock.Anything, mock.Anything, mock.Anything).
+		Maybe()
 
 	rsrv := New(Deps{
 		Auth:           a.auth,

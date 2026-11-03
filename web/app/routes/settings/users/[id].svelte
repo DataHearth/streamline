@@ -12,6 +12,7 @@
 	import UserDangerActions from "@components/users/UserDangerActions.svelte";
 	import UserSessionsCard from "@components/users/UserSessionsCard.svelte";
 	import UserAPIKeysCard from "@components/users/UserAPIKeysCard.svelte";
+	import UserSubsonicCard from "@components/users/UserSubsonicCard.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let routeParams = $state<Record<string, string>>({});
@@ -77,6 +78,9 @@
 		<div class="grid items-start gap-5">
 			<UserDetailHeader user={target} />
 		</div>
+
+		{@render section(i18n.users_subsonic_title(), i18n.users_subsonic_desc())}
+		<UserSubsonicCard user={target} />
 
 		{@render section(
 			i18n.account_section_devices(),

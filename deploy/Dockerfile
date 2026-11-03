@@ -10,8 +10,8 @@
 # Pinned, not floating `1.26-alpine`: a moving tag made grype's stdlib findings
 # drift between builds independently of our code. The cost is that stdlib CVE
 # fixes now require bumping this by hand — grype failing on `stdlib` is the signal.
-ARG GO_VERSION=1.27.2
-ARG GO_DIGEST=sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+ARG GO_VERSION=1.27.3
+ARG GO_DIGEST=sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb
 
 # static-ffmpeg publishes hardened static PIE builds with no external deps,
 # which is what lets a bare COPY of the binaries into distroless (no package
@@ -20,7 +20,7 @@ ARG FFMPEG_VERSION=9.0
 ARG FFMPEG_DIGEST=sha256:b90574a4e2ae62b763c39c384526689e7eb435da6398f4fb3f6c3f1c6a14ce33
 
 # --- Frontend assets (esbuild + TailwindCSS) ---
-FROM node:24.21.0-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS frontend
+FROM node:24.22.1-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS frontend
 WORKDIR /app
 
 RUN corepack enable
@@ -96,9 +96,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
       -ldflags="-s -w -X github.com/datahearth/streamline/internal/buildinfo.Version=${VERSION} -X github.com/datahearth/streamline/internal/buildinfo.Commit=${COMMIT} -X github.com/datahearth/streamline/internal/buildinfo.Date=${BUILD_DATE}" \
       -o /out/streamline ./cmd
 
-# The runtime image has no shell to mkdir with, so stage the data dir here and
-# copy it over with the right ownership.
-RUN mkdir -p /out/data
+# The runtime image has no shell to mkdir with, so stage the data and config
+# dirs here and copy them over with the right ownership. The config dir is not
+# a VOLUME, but a fresh named volume mounted there copies this ownership: owned
+# by root, it would refuse the config file Streamline writes on first start.
+RUN mkdir -p /out/data /out/config
 
 # --- Runtime, VAAPI variant (`--target vaapi`, published as `<tag>-vaapi`) ---
 # The default image below cannot hardware-encode: static-ffmpeg is built without
@@ -133,14 +135,25 @@ FROM lscr.io/linuxserver/ffmpeg:9.0-cli-ls81@sha256:ec8ac72754e6c115d330ec37aa18
 #
 # The digest pin holds the base layer steady; it does not hold back security
 # updates. Grype scanning still runs against this image in CI, same as every
-# other stage — the upgrade step below covers only what apt itself tracks
-# (ca-certificates, tzdata), the rest of the base is linuxserver's to patch.
+# other stage — the upgrade step below takes every dpkg package (curl, libx11,
+# libxml2…) to what the Ubuntu archive has patched; only what sits outside dpkg
+# (ffmpeg itself, the bundled VA drivers) is linuxserver's to patch.
 #
 # /usr/bin/pebble is a Go binary the Ubuntu base drops in outside dpkg. Nothing
 # here runs it, but grype reports the stdlib it was built with as if it were
 # ours — a lagging Go toolchain there failed the scan as `stdlib go1.26.5` while
 # streamline itself was built by the pinned 1.26.6 image. Deleting the file is
 # the only way to take it off the report; no package owns it to purge.
+#
+# BUILD_DATE is declared here only to keep this layer out of the build cache.
+# image.yaml restores every layer from the GHA cache, and a cached upgrade is
+# the upgrade from whenever the layer was first built: on 2026-10-20 it still
+# held curl 8.18.0-1ubuntu2.7 six days after resolute-security shipped .8 for
+# CVE-2026-92392, and grype failed both vaapi builds on a fix the archive had.
+# A changed ARG misses the cache at the first RUN after it, so CI (which passes
+# a timestamp) upgrades on every build; a plain `docker build` leaves it at
+# `unknown` and keeps its cache.
+ARG BUILD_DATE=unknown
 RUN apt-get update && \
     apt-get upgrade -y --no-install-recommends && \
     apt-get install -y --no-install-recommends \
@@ -151,6 +164,7 @@ RUN apt-get update && \
 WORKDIR /
 
 COPY --from=builder --chown=1000:1000 /out/data /data
+COPY --from=builder --chown=1000:1000 /out/config /etc/streamline
 COPY --from=builder /out/streamline /usr/local/bin/streamline
 
 EXPOSE 8080
@@ -179,6 +193,7 @@ FROM gcr.io/distroless/static-debian12:nonroot@sha256:1b7b9f0f0e0a1d2155f531db58
 WORKDIR /
 
 COPY --from=builder --chown=1000:1000 /out/data /data
+COPY --from=builder --chown=1000:1000 /out/config /etc/streamline
 COPY --from=builder /out/streamline /usr/local/bin/streamline
 
 # /usr/local/bin is on distroless' default PATH, so this satisfies

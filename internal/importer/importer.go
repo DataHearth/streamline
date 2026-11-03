@@ -59,6 +59,9 @@ type Deps struct {
 	// Albums is optional: without it an album added as a stub is not hydrated
 	// before its download is matched to tracks.
 	Albums music.AlbumHydrator
+	// Tagger is optional: without it an imported album's files keep the tags
+	// they came with until the music-tag-sync job reaches them.
+	Tagger music.AlbumTagger
 }
 
 const (
@@ -74,6 +77,7 @@ type Worker struct {
 	probe  ffmpeg.Prober
 	covers music.CoverResolver
 	albums music.AlbumHydrator
+	tagger music.AlbumTagger
 
 	ch   chan uint32
 	stop chan struct{}
@@ -107,6 +111,7 @@ func NewWorker(d Deps) *Worker {
 		probe:    d.Prober,
 		covers:   d.Covers,
 		albums:   d.Albums,
+		tagger:   d.Tagger,
 		ch:       make(chan uint32, channelCap),
 		stop:     make(chan struct{}),
 		inFlight: make(map[uint32]struct{}),
@@ -383,7 +388,7 @@ func (w *Worker) importMovieRecord(
 
 	var probeInfo *ffmpeg.Info
 	var probeErr error
-	src, srcErr := library.ResolveMediaFile(rec.SavePath)
+	src, srcErr := library.ResolveMediaFile(rec.SavePath, w.sourceFilter(ctx, rec))
 	if srcErr == nil {
 		probeInfo, probeErr = w.probeSource(ctx, src)
 	}
@@ -415,7 +420,7 @@ func (w *Worker) importMovieRecord(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	imported, err := w.lib.ImportMovie(ctx, rec.SavePath, m)
+	imported, err := w.lib.ImportMovie(ctx, src, m)
 	if err != nil {
 		putBack(ctx, aside)
 		return otelx.RecordSpanError(span, err)
@@ -458,7 +463,8 @@ func (w *Worker) importMovieRecord(
 	)
 
 	w.markRequestsAvailable(ctx, "movie", m.TmdbID)
-	w.refreshMediaServers(ctx, "movie", libCfg.MoviePath)
+	w.refreshMediaServers(ctx, "movie", libCfg.MoviePath,
+		append(mediaFilePaths(existing), imported.Path)...)
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
 }
@@ -612,8 +618,11 @@ func (w *Worker) importEpisodeRecord(
 	// Single file (or a dir resolving to exactly one file) → import directly to
 	// the record's own episode. Otherwise treat it as a season pack.
 	if !info.IsDir() {
-		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep, libCfg)
+		return w.importSingleEpisode(
+			ctx, span, rec, show, season.Number, ep, nil, libCfg,
+		)
 	}
+	keep := w.sourceFilter(ctx, rec)
 	files, err := library.ListVideoFilesRecursive(rec.SavePath)
 	if err != nil {
 		return otelx.RecordSpanError(
@@ -621,8 +630,11 @@ func (w *Worker) importEpisodeRecord(
 			fmt.Errorf("list pack files: %w", err),
 		)
 	}
+	files = keep.Filter(files)
 	if len(files) <= 1 {
-		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep, libCfg)
+		return w.importSingleEpisode(
+			ctx, span, rec, show, season.Number, ep, keep, libCfg,
+		)
 	}
 
 	profile, hasProfile := config.ResolveScoredProfile(
@@ -686,6 +698,7 @@ func (w *Worker) importEpisodeRecord(
 
 	matched, skippedExisting := 0, 0
 	touched := map[uint16]struct{}{}
+	var changed []string
 	// One imported event stands for the whole pack, recorded below. Without
 	// this the per-file create hook wrote an activity row per episode, so a
 	// full-season grab read as twenty-odd unrelated imports.
@@ -756,6 +769,8 @@ func (w *Worker) importEpisodeRecord(
 		}
 		dropAside(ctx, aside)
 		touched[pf.season] = struct{}{}
+		changed = append(changed, imported.Path)
+		changed = append(changed, mediaFilePaths(replaced)...)
 		matched++
 	}
 	if matched == 0 {
@@ -789,7 +804,7 @@ func (w *Worker) importEpisodeRecord(
 	}
 
 	w.markRequestsAvailable(ctx, "tvshow", show.TvdbID)
-	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath)
+	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath, changed...)
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
 }
@@ -801,6 +816,7 @@ func (w *Worker) importSingleEpisode(
 	show *ent.TVShow,
 	seasonNumber uint16,
 	ep *ent.Episode,
+	keep library.SourceFilter,
 	libCfg config.LibraryConfig,
 ) error {
 	// An episode holds at most one media file: a grab arriving while one
@@ -816,7 +832,7 @@ func (w *Worker) importSingleEpisode(
 
 	var probeInfo *ffmpeg.Info
 	var probeErr error
-	src, srcErr := library.ResolveEpisodeFile(rec.SavePath)
+	src, srcErr := library.ResolveEpisodeFile(rec.SavePath, keep)
 	if srcErr == nil {
 		probeInfo, probeErr = w.probeSource(ctx, src)
 	}
@@ -852,7 +868,7 @@ func (w *Worker) importSingleEpisode(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	imported, err := w.lib.ImportEpisode(ctx, rec.SavePath, show, seasonNumber, ep)
+	imported, err := w.lib.ImportEpisode(ctx, src, show, seasonNumber, ep)
 	if err != nil {
 		putBack(ctx, aside)
 		return otelx.RecordSpanError(span, err)
@@ -899,18 +915,35 @@ func (w *Worker) importSingleEpisode(
 		"tvshow.id", show.ID, "episode.id", ep.ID)
 
 	w.markRequestsAvailable(ctx, "tvshow", show.TvdbID)
-	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath)
+	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath,
+		append(mediaFilePaths(replaced), imported.Path)...)
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
 }
 
-func (w *Worker) refreshMediaServers(ctx context.Context, kind, libraryPath string) {
+// refreshMediaServers asks the media servers to rescan the folders of paths,
+// the files an import placed and the ones it replaced: a replaced file can
+// sit in another folder when the naming template moved since.
+func (w *Worker) refreshMediaServers(
+	ctx context.Context,
+	kind, libraryPath string,
+	paths ...string,
+) {
 	if w.ms == nil {
 		return
 	}
-	if err := w.ms.RefreshAll(ctx, kind, libraryPath); err != nil {
+	if err := w.ms.RefreshAll(ctx, kind, libraryPath, paths...); err != nil {
 		slog.WarnContext(ctx, "media server refresh reported errors", "error", err)
 	}
+}
+
+// mediaFilePaths lists the paths of files.
+func mediaFilePaths(files []*ent.MediaFile) []string {
+	out := make([]string, 0, len(files))
+	for _, mf := range files {
+		out = append(out, mf.Path)
+	}
+	return out
 }
 
 // markRequestsAvailable best-effort flips any approved requests for this media

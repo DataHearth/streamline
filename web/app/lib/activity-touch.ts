@@ -11,6 +11,7 @@
 import type { StatusKind } from "@components/shared/StatusPill.svelte";
 import { formatBytes, formatEta, formatRatio, formatSpeed } from "./format";
 import { formatRelative } from "./dates";
+import { fold } from "./text";
 import { volumeLabel } from "./music-books";
 import { NOUN_ALBUM } from "./nouns";
 import type { HistoryEntry, HoldReason, QueueEntry, Torrent } from "./types";
@@ -149,11 +150,20 @@ export function queueMeta(item: QueueEntry): MetaLine {
 			]),
 		};
 	}
+	// The bytes go in even with a speed beside them: a queue of grabs sitting at
+	// 0% with nothing moving otherwise read as the client's name and nothing else.
 	const eta = formatEta(item.eta);
 	return {
+		color: item.status === "stalled" ? "var(--status-stalled)" : undefined,
 		text: joinDot([
-			formatSpeed(item.download_speed),
+			item.status === "stalled" ? i18n.lc_stalled() : formatSpeed(item.download_speed),
 			eta ? i18n.queue_time_left({ eta }) : "",
+			total > 0
+				? i18n.queue_of_total({
+						done: formatBytes(total * (item.progress ?? 0), "0 B"),
+						total: formatBytes(total),
+					})
+				: "",
 			item.selection_state === "unsupported"
 				? i18n.queue_selection_unsupported()
 				: item.download_client,
@@ -269,6 +279,25 @@ export function compareTorrents(
 	}
 	const d = ((a[sort] as number) ?? 0) - ((b[sort] as number) ?? 0);
 	return d !== 0 ? d : a.hash.localeCompare(b.hash);
+}
+
+// The release a tracked torrent was grabbed as, when it says something the
+// torrent's own name does not. The name is the uploader's — a RuTracker Omens
+// LP is "Lamb Of God" — while Activity shows the release title for the same
+// download, so without it the two pages had no word in common.
+export function torrentRelease(t: Torrent): string | undefined {
+	const r = t.release_title;
+	return r && fold(r) !== fold(t.name) ? r : undefined;
+}
+
+// Whether a torrent answers a search: its name, the release it was grabbed
+// as, or its infohash. q is already folded.
+export function torrentMatches(t: Torrent, q: string): boolean {
+	return (
+		fold(t.name).includes(q) ||
+		fold(t.release_title ?? "").includes(q) ||
+		fold(t.hash).includes(q)
+	);
 }
 
 export function sortTorrents(

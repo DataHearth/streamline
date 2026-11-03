@@ -55,12 +55,20 @@ const (
 	FieldLastRefreshedAt = "last_refreshed_at"
 	// FieldDetailsFetchedAt holds the string denoting the details_fetched_at field in the database.
 	FieldDetailsFetchedAt = "details_fetched_at"
+	// FieldArtSidecarHash holds the string denoting the art_sidecar_hash field in the database.
+	FieldArtSidecarHash = "art_sidecar_hash"
 	// EdgeAlbums holds the string denoting the albums edge name in mutations.
 	EdgeAlbums = "albums"
 	// EdgeMembers holds the string denoting the members edge name in mutations.
 	EdgeMembers = "members"
 	// EdgeDownloadRecords holds the string denoting the download_records edge name in mutations.
 	EdgeDownloadRecords = "download_records"
+	// EdgeAnnotations holds the string denoting the annotations edge name in mutations.
+	EdgeAnnotations = "annotations"
+	// EdgeEvents holds the string denoting the events edge name in mutations.
+	EdgeEvents = "events"
+	// EdgeCoAlbums holds the string denoting the co_albums edge name in mutations.
+	EdgeCoAlbums = "co_albums"
 	// Table holds the table name of the artist in the database.
 	Table = "artists"
 	// AlbumsTable is the table that holds the albums relation/edge.
@@ -84,6 +92,25 @@ const (
 	DownloadRecordsInverseTable = "download_records"
 	// DownloadRecordsColumn is the table column denoting the download_records relation/edge.
 	DownloadRecordsColumn = "artist_download_records"
+	// AnnotationsTable is the table that holds the annotations relation/edge.
+	AnnotationsTable = "music_annotations"
+	// AnnotationsInverseTable is the table name for the MusicAnnotation entity.
+	// It exists in this package in order to avoid circular dependency with the "musicannotation" package.
+	AnnotationsInverseTable = "music_annotations"
+	// AnnotationsColumn is the table column denoting the annotations relation/edge.
+	AnnotationsColumn = "artist_id"
+	// EventsTable is the table that holds the events relation/edge.
+	EventsTable = "media_events"
+	// EventsInverseTable is the table name for the MediaEvent entity.
+	// It exists in this package in order to avoid circular dependency with the "mediaevent" package.
+	EventsInverseTable = "media_events"
+	// EventsColumn is the table column denoting the events relation/edge.
+	EventsColumn = "artist_events"
+	// CoAlbumsTable is the table that holds the co_albums relation/edge. The primary key declared below.
+	CoAlbumsTable = "artist_co_albums"
+	// CoAlbumsInverseTable is the table name for the Album entity.
+	// It exists in this package in order to avoid circular dependency with the "album" package.
+	CoAlbumsInverseTable = "albums"
 )
 
 // Columns holds all SQL columns for artist fields.
@@ -109,7 +136,14 @@ var Columns = []string{
 	FieldQualityProfile,
 	FieldLastRefreshedAt,
 	FieldDetailsFetchedAt,
+	FieldArtSidecarHash,
 }
+
+var (
+	// CoAlbumsPrimaryKey and CoAlbumsColumn2 are the table columns denoting the
+	// primary key for the co_albums relation (M2M).
+	CoAlbumsPrimaryKey = []string{"artist_id", "album_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -293,6 +327,11 @@ func ByDetailsFetchedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDetailsFetchedAt, opts...).ToFunc()
 }
 
+// ByArtSidecarHash orders the results by the art_sidecar_hash field.
+func ByArtSidecarHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldArtSidecarHash, opts...).ToFunc()
+}
+
 // ByAlbumsCount orders the results by albums count.
 func ByAlbumsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -334,6 +373,48 @@ func ByDownloadRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newDownloadRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByAnnotationsCount orders the results by annotations count.
+func ByAnnotationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAnnotationsStep(), opts...)
+	}
+}
+
+// ByAnnotations orders the results by annotations terms.
+func ByAnnotations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAnnotationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByEventsCount orders the results by events count.
+func ByEventsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newEventsStep(), opts...)
+	}
+}
+
+// ByEvents orders the results by events terms.
+func ByEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByCoAlbumsCount orders the results by co_albums count.
+func ByCoAlbumsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCoAlbumsStep(), opts...)
+	}
+}
+
+// ByCoAlbums orders the results by co_albums terms.
+func ByCoAlbums(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCoAlbumsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newAlbumsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -353,5 +434,26 @@ func newDownloadRecordsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(DownloadRecordsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, DownloadRecordsTable, DownloadRecordsColumn),
+	)
+}
+func newAnnotationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AnnotationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AnnotationsTable, AnnotationsColumn),
+	)
+}
+func newEventsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EventsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
+	)
+}
+func newCoAlbumsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CoAlbumsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, CoAlbumsTable, CoAlbumsPrimaryKey...),
 	)
 }

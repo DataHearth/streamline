@@ -1,0 +1,164 @@
+# Every label the repository carries, and the one list both workflows read:
+# labels.yaml syncs it to GitHub, issue-triage.yaml derives what Claude may
+# touch from `group`.
+#
+#   type, area  — Claude adds and removes these, on new issues and on a backfill
+#   status      — Claude adds these on new issues only, never on a backfill
+#   maintainer  — a person's call; Claude never adds or removes one
+#   renovate    — set by renovate.json on its own PRs
+#
+# A description is also Claude's guidance for when the label fits, so it says
+# what the label covers rather than restating its name. GitHub caps it at 100
+# characters. `aliases` are old names the sync renames in place, keeping the
+# label on every issue that already has it. The sync never deletes a label.
+
+# Type
+- name: bug
+  group: type
+  color: d73a4a
+  description: Something isn't working
+- name: enhancement
+  group: type
+  color: a2eeef
+  description: New feature or request
+- name: documentation
+  group: type
+  color: 0075ca
+  description: The wiki, README or other docs are wrong, missing or unclear
+
+# Status
+- name: needs-triage
+  group: status
+  color: fbca04
+  description: Not triaged yet; still here after the triage run means the run failed
+- name: needs-info
+  group: status
+  color: d876e3
+  description: The report is missing what it takes to act on it
+  aliases: [question]
+- name: possible-duplicate
+  group: status
+  color: cfd3d7
+  description: Looks like an existing issue; a maintainer confirms with `duplicate`
+- name: security
+  group: status
+  color: b60205
+  description: A vulnerability or hardening concern
+
+# Area
+- name: area/movies
+  group: area
+  color: c5def5
+  description: Movies — library, detail pages, movie searches and grabs
+- name: area/tv
+  group: area
+  color: c5def5
+  description: Series, seasons and episodes — numbering, packs, episode status
+- name: area/music
+  group: area
+  color: c5def5
+  description: Artists, albums and tracks — MusicBrainz hydration, music tags, covers
+- name: area/books
+  group: area
+  color: c5def5
+  description: Books and book series — ebook and audiobook slots, editions, send to device
+- name: area/requests
+  group: area
+  color: c5def5
+  description: The request flow — requesting, approval, auto-approve, request_only users
+- name: area/downloads
+  group: area
+  color: c5def5
+  description: Download manager and external clients — activity queue, held downloads, blocklist
+- name: area/bittorrent
+  group: area
+  color: c5def5
+  description: The builtin torrent engine — peers, seeding, limits, cross-seed
+- name: area/indexers
+  group: area
+  color: c5def5
+  description: Torznab/Prowlarr indexers, release search, RSS, quality profiles and scoring
+- name: area/import
+  group: area
+  color: c5def5
+  description: Importer, bulk import and adoption, renames, release-name parsing
+- name: area/metadata
+  group: area
+  color: c5def5
+  description: TMDB, TVDB, MusicBrainz, Hardcover — lookups, matching, artwork
+- name: area/media-servers
+  group: area
+  color: c5def5
+  description: Plex, Jellyfin and Emby — refreshes, section discovery, path mapping
+- name: area/notifications
+  group: area
+  color: c5def5
+  description: Webhooks, Apprise and in-app notifications
+- name: area/auth
+  group: area
+  color: c5def5
+  description: Login, registration, OIDC/SSO, users and roles, sessions, API keys
+- name: area/web
+  group: area
+  color: c5def5
+  description: The web UI — layout, mobile, PWA, navigation, search screens
+- name: area/i18n
+  group: area
+  color: c5def5
+  description: Translations and wording across locales
+- name: area/api
+  group: area
+  color: c5def5
+  description: The REST API contract — OpenAPI spec, endpoints, status codes
+- name: area/subsonic
+  group: area
+  color: c5def5
+  description: The Subsonic/OpenSubsonic API and music clients, shares
+- name: area/opds
+  group: area
+  color: c5def5
+  description: The OPDS catalog and ebook reader apps
+- name: area/transcoding
+  group: area
+  color: c5def5
+  description: Video transcoding — ffmpeg, hardware acceleration, verification
+- name: area/core
+  group: area
+  color: c5def5
+  description: Config, database and migrations, scheduler, logging and observability
+- name: area/deploy
+  group: area
+  color: c5def5
+  description: Docker, Helm, Nix and other install methods, releases and images
+
+# Maintainer
+- name: duplicate
+  group: maintainer
+  color: cfd3d7
+  description: This issue or pull request already exists
+- name: help wanted
+  group: maintainer
+  color: "008672"
+  description: Extra attention is needed
+- name: good first issue
+  group: maintainer
+  color: 7057ff
+  description: Good for newcomers
+- name: invalid
+  group: maintainer
+  color: e4e669
+  description: This doesn't seem right
+- name: wontfix
+  group: maintainer
+  color: ffffff
+  description: This will not be worked on
+
+# Renovate
+- name: dependencies
+  group: renovate
+  color: 0366d6
+  description: Pull requests that update a dependency file
+- name: github_actions
+  group: renovate
+  color: "000000"
+  description: Pull requests that update GitHub Actions code
