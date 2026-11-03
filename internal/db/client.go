@@ -75,20 +75,7 @@ func Open(ctx context.Context, dsn string) (*ent.Client, error) {
 	// at boot, so a config change to otel.endpoint needs a restart either way.
 	instrumented := config.Get() != nil && config.Get().OTel.Endpoint != ""
 
-	var db *sql.DB
-	var err error
-	if instrumented {
-		db, err = otelsql.Open("sqlite", connStr,
-			otelsql.WithAttributes(semconv.DBSystemNameSQLite),
-			otelsql.WithSpanOptions(otelsql.SpanOptions{
-				OmitConnResetSession: true,
-				OmitConnPrepare:      true,
-				OmitRows:             true,
-			}),
-		)
-	} else {
-		db, err = sql.Open("sqlite", connStr)
-	}
+	db, err := openPool(connStr, "write", instrumented)
 	if err != nil {
 		return nil, err
 	}
@@ -99,21 +86,12 @@ func Open(ctx context.Context, dsn string) (*ent.Client, error) {
 		db.SetMaxIdleConns(1)
 		db.SetConnMaxIdleTime(0)
 	} else {
-		// SQLite has a single writer. Cap the pool to one connection so all
-		// access serializes in Go's pool instead of racing for the write lock
+		// SQLite has a single writer. Cap the write pool to one connection so
+		// writes serialize in Go's pool instead of racing for the write lock
 		// and returning SQLITE_BUSY ("database is locked") under concurrent
 		// writes (scheduled-job burst + session touches), which busy_timeout
 		// alone can't cover on slow (network) storage.
 		db.SetMaxOpenConns(1)
-	}
-
-	if instrumented {
-		if _, err := otelsql.RegisterDBStatsMetrics(db,
-			otelsql.WithAttributes(semconv.DBSystemNameSQLite),
-		); err != nil {
-			db.Close()
-			return nil, fmt.Errorf("register db stats metrics: %w", err)
-		}
 	}
 
 	if !memory {
@@ -132,8 +110,23 @@ func Open(ctx context.Context, dsn string) (*ent.Client, error) {
 		}
 	}
 
-	drv := entsql.OpenDB(dialect.SQLite, db)
-	client := ent.NewClient(ent.Driver(drv))
+	// query_only goes last so the DSN's journal_mode pragma runs before it,
+	// a no-op on a database the writer has already switched to WAL.
+	readDB, err := openPool(connStr+"&_pragma=query_only(1)", "read", instrumented)
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	readDB.SetMaxOpenConns(readConns)
+	// database/sql keeps two idle connections by default and closes the rest,
+	// so the pool would reopen readers all day: each one a fresh page cache, a
+	// schema re-read and the DSN's pragmas again. Keep them all.
+	readDB.SetMaxIdleConns(readConns)
+
+	client := ent.NewClient(ent.Driver(router{
+		write: entsql.OpenDB(dialect.SQLite, db),
+		read:  entsql.OpenDB(dialect.SQLite, readDB),
+	}))
 
 	if memory {
 		// In-memory DBs are throwaway per-test fixtures; bypass versioned
@@ -146,6 +139,39 @@ func Open(ctx context.Context, dsn string) (*ent.Client, error) {
 	}
 
 	return client, nil
+}
+
+// readConns bounds the read pool. Each connection carries its own page cache
+// (cache_size), so this multiplies the cache's memory.
+const readConns = 4
+
+// openPool opens one pool on connStr. pool names it on the spans and the
+// connection-stats metrics, so the read pool's queue and the writer's read
+// apart.
+func openPool(connStr, pool string, instrumented bool) (*sql.DB, error) {
+	if !instrumented {
+		return sql.Open("sqlite", connStr)
+	}
+	attrs := otelsql.WithAttributes(
+		semconv.DBSystemNameSQLite,
+		semconv.DBClientConnectionPoolName(pool),
+	)
+	db, err := otelsql.Open("sqlite", connStr,
+		attrs,
+		otelsql.WithSpanOptions(otelsql.SpanOptions{
+			OmitConnResetSession: true,
+			OmitConnPrepare:      true,
+			OmitRows:             true,
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := otelsql.RegisterDBStatsMetrics(db, attrs); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("register db stats metrics: %w", err)
+	}
+	return db, nil
 }
 
 // preMigrationSnapshot returns the hook runMigrations calls before applying
