@@ -157,3 +157,75 @@ var _ = Describe("RemoveMediaFile", Label("unit", "library"), func() {
 		Expect(onDisk).To(BeAnExistingFile())
 	})
 })
+
+var _ = Describe("MoveSidecars", Label("unit", "library"), func() {
+	touch := func(path string) {
+		GinkgoHelper()
+		Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
+		Expect(os.WriteFile(path, []byte("x"), 0o644)).To(Succeed())
+	}
+
+	It(
+		"carries the trickplay folder and sidecars, so the old season folder prunes",
+		func() {
+			root := GinkgoT().TempDir()
+			oldDir := filepath.Join(root, "Bodies (2023) (2023)", "Season 01")
+			newDir := filepath.Join(root, "Bodies (2023)", "Season 01")
+			from := filepath.Join(oldDir, "Bodies (2023) (2023) - S01E01.mkv")
+			to := filepath.Join(newDir, "Bodies (2023) - S01E01.mkv")
+			touch(from)
+			touch(
+				filepath.Join(
+					oldDir,
+					"Bodies (2023) (2023) - S01E01.trickplay",
+					"320 - 10x10",
+					"0.jpg",
+				),
+			)
+			touch(filepath.Join(oldDir, "Bodies (2023) (2023) - S01E01.en.srt"))
+			touch(filepath.Join(oldDir, "Bodies (2023) (2023) - S01E01-thumb.jpg"))
+			Expect(os.MkdirAll(newDir, 0o755)).To(Succeed())
+			Expect(os.Rename(from, to)).To(Succeed())
+
+			MoveSidecars(context.Background(), from, to)
+			PruneEmptyDirs(context.Background(), oldDir, root)
+
+			Expect(
+				filepath.Join(
+					newDir,
+					"Bodies (2023) - S01E01.trickplay",
+					"320 - 10x10",
+					"0.jpg",
+				),
+			).To(BeAnExistingFile())
+			Expect(
+				filepath.Join(newDir, "Bodies (2023) - S01E01.en.srt"),
+			).To(BeAnExistingFile())
+			Expect(
+				filepath.Join(newDir, "Bodies (2023) - S01E01-thumb.jpg"),
+			).To(BeAnExistingFile())
+			Expect(filepath.Join(root, "Bodies (2023) (2023)")).NotTo(BeADirectory())
+			Expect(root).To(BeADirectory())
+		},
+	)
+
+	It(
+		"leaves a sidecar whose target is taken and another episode's files alone",
+		func() {
+			dir := GinkgoT().TempDir()
+			from := filepath.Join(dir, "Show - S01E01.mkv")
+			to := filepath.Join(dir, "Show - S01E01 - Pilot.mkv")
+			touch(to)
+			touch(filepath.Join(dir, "Show - S01E01.nfo"))
+			touch(filepath.Join(dir, "Show - S01E01 - Pilot.nfo"))
+			touch(filepath.Join(dir, "Show - S01E01-E02.mkv"))
+
+			MoveSidecars(context.Background(), from, to)
+
+			Expect(filepath.Join(dir, "Show - S01E01.nfo")).To(BeAnExistingFile())
+			Expect(
+				filepath.Join(dir, "Show - S01E01-E02.mkv"),
+			).To(BeAnExistingFile())
+		},
+	)
+})
