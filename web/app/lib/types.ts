@@ -1825,3 +1825,32 @@ export type ReidentifyResult = {
 	// counterpart in the new show.
 	unmatched?: string[];
 };
+
+// What a bulk action reads of one selected title: GET /movies/selection and
+// /series/selection answer these for "select all", and a loaded card maps to
+// one for a hand-picked selection.
+export type MovieSelectionRow = {
+	id: number;
+	monitored: boolean;
+	file_count: number;
+	size_bytes: number;
+};
+export type SeriesSelectionRow = {
+	id: number;
+	monitored: boolean;
+	have_episodes: number;
+	wanted_episodes: number;
+};
+
+export const movieSelectionRow = (m: Movie): MovieSelectionRow => ({
+	id: m.id,
+	monitored: m.monitored ?? false,
+	file_count: m.file_summary?.file_count ?? 0,
+	size_bytes: m.file_summary?.size_bytes ?? 0,
+});
+export const seriesSelectionRow = (s: TVShow): SeriesSelectionRow => ({
+	id: s.id,
+	monitored: s.monitored,
+	have_episodes: s.have_episodes ?? 0,
+	wanted_episodes: s.wanted_episodes ?? 0,
+});

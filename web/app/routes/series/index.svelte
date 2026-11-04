@@ -29,7 +29,14 @@
 	import SeriesList from "@components/series/SeriesList.svelte";
 	import SeriesEmpty from "@components/series/SeriesEmpty.svelte";
 	import SeriesBulkActions from "@components/series/SeriesBulkActions.svelte";
-	import type { ScheduleList, TVShow, TVShowCounts } from "@lib/types";
+	import {
+		seriesSelectionRow,
+		type ScheduleList,
+		type SeriesSelectionRow,
+		type TVShow,
+		type TVShowCounts,
+	} from "@lib/types";
+	import { toast } from "@lib/toast";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type View = "grid" | "list";
@@ -176,6 +183,15 @@
 	// never used the params. It pulled the whole library and redid the work in
 	// the browser on every stale refetch.
 	const PAGE = 50;
+	// The filters alone, which the list, the counts and the selection share.
+	function filterParams(): URLSearchParams {
+		const p = new URLSearchParams();
+		if (tab !== "all") p.set("status", tab);
+		if (typeFilter !== "all") p.set("type", typeFilter);
+		if (mon !== "all") p.set("monitored", mon);
+		if (debouncedQuery.trim()) p.set("query", debouncedQuery.trim());
+		return p;
+	}
 	const seriesQuery = createInfiniteQuery<
 		Paginated<TVShow>,
 		Error,
@@ -201,16 +217,11 @@
 			order,
 		] as const,
 		queryFn: ({ pageParam }) => {
-			const p = new URLSearchParams({
-				page: String(pageParam),
-				limit: String(PAGE),
-				sort,
-				order,
-			});
-			if (tab !== "all") p.set("status", tab);
-			if (typeFilter !== "all") p.set("type", typeFilter);
-			if (mon !== "all") p.set("monitored", mon);
-			if (debouncedQuery.trim()) p.set("query", debouncedQuery.trim());
+			const p = filterParams();
+			p.set("page", String(pageParam));
+			p.set("limit", String(PAGE));
+			p.set("sort", sort);
+			p.set("order", order);
 			return api<Paginated<TVShow>>(`/series?${p.toString()}`);
 		},
 		initialPageParam: 1,
@@ -230,12 +241,7 @@
 	const countsQuery = createQuery<TVShowCounts>(() => ({
 		queryKey: ["series", "counts", tab, typeFilter, mon, debouncedQuery] as const,
 		queryFn: () => {
-			const p = new URLSearchParams();
-			if (tab !== "all") p.set("status", tab);
-			if (typeFilter !== "all") p.set("type", typeFilter);
-			if (mon !== "all") p.set("monitored", mon);
-			if (debouncedQuery.trim()) p.set("query", debouncedQuery.trim());
-			const qs = p.toString();
+			const qs = filterParams().toString();
 			return api<TVShowCounts>(`/series/counts${qs ? `?${qs}` : ""}`);
 		},
 		placeholderData: keepPreviousData,
@@ -276,8 +282,7 @@
 	// which is a facet row.
 	let libraryTotal = $derived(countsQuery.data?.total ?? 0);
 
-	// Everything loaded so far. Bulk selection and the "N of M" line read this,
-	// so both mean "of what you have pulled in", not "of the whole library".
+	// Everything loaded so far, which the "N of M" line reads.
 	let visibleSeries = $derived(
 		(seriesQuery.data?.pages ?? []).flatMap((p) => p.items),
 	);
@@ -366,9 +371,28 @@
 		selectMode = v;
 		if (!v) clearSelection();
 	}
-	function selectAll() {
+	// Bumped whenever a selection is cleared, so a select all still in flight
+	// when the filters change does not select the next filter's rows.
+	let selectionEpoch = 0;
+	// "Select all" asks the server for every match in one slim list rather
+	// than loading every page of full cards; a hand-picked selection reads the
+	// loaded cards. Dropped with the selection.
+	let fetchedRows = $state<SeriesSelectionRow[] | null>(null);
+	let selectionRows = $derived(fetchedRows ?? visibleSeries.map(seriesSelectionRow));
+	async function selectAll() {
 		selectMode = true;
-		toggleAll(true);
+		const epoch = selectionEpoch;
+		const qs = filterParams().toString();
+		let rows: SeriesSelectionRow[];
+		try {
+			rows = (await api<{ items: SeriesSelectionRow[] }>(`/series/selection${qs ? `?${qs}` : ""}`)).items;
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_unknown_error()));
+			return;
+		}
+		if (epoch !== selectionEpoch) return;
+		fetchedRows = rows;
+		selected = new Set(rows.map((r) => r.id));
 	}
 	// Press and hold a poster: selection on, that card selected.
 	function beginLongPress(id: number) {
@@ -384,9 +408,11 @@
 	}
 	function toggleAll(v: boolean) {
 		if (!v) return clearSelection();
-		selected = new Set(visibleSeries.map((s) => s.id));
+		void selectAll();
 	}
 	function clearSelection() {
+		selectionEpoch++;
+		fetchedRows = null;
 		if (selected.size > 0) selected = new Set();
 	}
 
@@ -461,7 +487,7 @@
 			{monCounts}
 			{selectMode}
 			selectedCount={selected.size}
-			visibleCount={visibleSeries.length}
+			matchedCount={matchedTotal}
 			onTabChange={(t) => (tab = t)}
 			onTypeChange={(t) => (typeFilter = t)}
 			onMonChange={(m) => (mon = m)}
@@ -546,10 +572,10 @@
 
 		{#if auth.canAddDirectly}
 			<SeriesBulkActions
-				series={visibleSeries}
+				items={selectionRows}
 				{selected}
-				total={visibleSeries.length}
-				onSelectAll={() => toggleAll(true)}
+				total={matchedTotal}
+				onSelectAll={selectAll}
 				onClear={clearSelection}
 			/>
 		{/if}

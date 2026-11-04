@@ -24,17 +24,19 @@
 	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
 	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
-	import type { TVShow, QualityProfile } from "@lib/types";
+	import type { SeriesSelectionRow, QualityProfile } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
-		series,
+		items,
 		selected,
 		total,
 		onSelectAll,
 		onClear,
 	}: {
-		series: TVShow[];
+		// Every selectable show under the active filters: the whole match after
+		// "select all", the loaded cards otherwise.
+		items: SeriesSelectionRow[];
 		selected: Set<number>;
 		total: number;
 		onSelectAll: () => void;
@@ -43,18 +45,14 @@
 
 	let count = $derived(selected.size);
 	let active = $derived(count > 0);
-	let picked = $derived(series.filter((s) => selected.has(s.id)));
-	let episodeCount = $derived(
-		picked.reduce((n, s) => n + (s.have_episodes ?? 0), 0),
-	);
-	let wantedCount = $derived(
-		picked.reduce((n, s) => n + (s.wanted_episodes ?? 0), 0),
-	);
+	let picked = $derived(items.filter((s) => selected.has(s.id)));
+	let episodeCount = $derived(picked.reduce((n, s) => n + s.have_episodes, 0));
+	let wantedCount = $derived(picked.reduce((n, s) => n + s.wanted_episodes, 0));
 	let monitoredPicked = $derived(picked.filter((s) => s.monitored).length);
 	// A show with no episode on disk can only come back with an empty rename
 	// plan, so it is dropped from the request set rather than counted in the
 	// toast. have_episodes is the list rollup; the episode tree is detail-only.
-	let renamable = $derived(picked.filter((s) => (s.have_episodes ?? 0) > 0));
+	let renamable = $derived(picked.filter((s) => s.have_episodes > 0));
 	let qpOpen = $state(false);
 	let deleteOpen = $state(false);
 	let renameOpen = $state(false);
@@ -85,14 +83,14 @@
 	// episodes on disk, so the count the toast reports is what was acted on.
 	async function run(
 		done: Done,
-		fn: (s: TVShow) => Promise<unknown>,
+		fn: (s: SeriesSelectionRow) => Promise<unknown>,
 		after?: () => void,
-		items: TVShow[] = picked,
+		targets: SeriesSelectionRow[] = picked,
 	) {
 		if (busy) return;
 		busy = true;
 		try {
-			const res = await runBulk(items, fn);
+			const res = await runBulk(targets, fn);
 			qc.invalidateQueries({ queryKey: ["series"] });
 			report(done, res);
 			after?.();
@@ -102,7 +100,7 @@
 		}
 	}
 
-	const patch = (s: TVShow, body: Record<string, unknown>) =>
+	const patch = (s: SeriesSelectionRow, body: Record<string, unknown>) =>
 		api(`/series/${s.id}`, { method: "PATCH", body });
 
 	function setMonitored(v: boolean) {

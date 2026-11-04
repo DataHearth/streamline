@@ -20,11 +20,14 @@
 	import MoviesEmpty from "@components/movies/MoviesEmpty.svelte";
 	import MovieBulkActions from "@components/movies/MovieBulkActions.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
-	import type {
-		Movie,
-		MovieCounts,
-		ScheduleList,
+	import {
+		movieSelectionRow,
+		type Movie,
+		type MovieCounts,
+		type MovieSelectionRow,
+		type ScheduleList,
 	} from "@lib/types";
+	import { toast } from "@lib/toast";
 
 	type View = "grid" | "list";
 	type SortKey = "title" | "year";
@@ -152,6 +155,14 @@
 	// refetch — window focus, any mutation — re-walked 600+ rows over seven
 	// requests to render twenty cards.
 	const PAGE = 50;
+	// The filters alone, which the list, the counts and the selection share.
+	function filterParams(): URLSearchParams {
+		const p = new URLSearchParams();
+		if (tab !== "all") p.set("status", tab);
+		if (mon !== "all") p.set("monitored", mon);
+		if (debouncedQuery.trim()) p.set("query", debouncedQuery.trim());
+		return p;
+	}
 	const moviesQuery = createInfiniteQuery<
 		Paginated<Movie>,
 		Error,
@@ -161,15 +172,11 @@
 	>(() => ({
 		queryKey: ["movies", tab, mon, debouncedQuery, sort, order] as const,
 		queryFn: ({ pageParam }) => {
-			const p = new URLSearchParams({
-				page: String(pageParam),
-				limit: String(PAGE),
-				sort,
-				order,
-			});
-			if (tab !== "all") p.set("status", tab);
-			if (mon !== "all") p.set("monitored", mon);
-			if (debouncedQuery.trim()) p.set("query", debouncedQuery.trim());
+			const p = filterParams();
+			p.set("page", String(pageParam));
+			p.set("limit", String(PAGE));
+			p.set("sort", sort);
+			p.set("order", order);
 			return api<Paginated<Movie>>(`/movies?${p.toString()}`);
 		},
 		initialPageParam: 1,
@@ -189,11 +196,7 @@
 	const countsQuery = createQuery<MovieCounts>(() => ({
 		queryKey: ["movies", "counts", tab, mon, debouncedQuery] as const,
 		queryFn: () => {
-			const p = new URLSearchParams();
-			if (tab !== "all") p.set("status", tab);
-			if (mon !== "all") p.set("monitored", mon);
-			if (debouncedQuery.trim()) p.set("query", debouncedQuery.trim());
-			const qs = p.toString();
+			const qs = filterParams().toString();
 			return api<MovieCounts>(`/movies/counts${qs ? `?${qs}` : ""}`);
 		},
 		placeholderData: keepPreviousData,
@@ -220,8 +223,7 @@
 		},
 	);
 
-	// Everything loaded so far. Bulk selection and the "N of M" line read this,
-	// so both mean "of what you have pulled in", not "of the whole library".
+	// Everything loaded so far, which the "N of M" line reads.
 	let visibleMovies = $derived(
 		(moviesQuery.data?.pages ?? []).flatMap((p) => p.items),
 	);
@@ -295,9 +297,28 @@
 		selectMode = v;
 		if (!v) clearSelection();
 	}
-	function selectAll() {
+	// Bumped whenever a selection is cleared, so a select all still in flight
+	// when the filters change does not select the next filter's rows.
+	let selectionEpoch = 0;
+	// "Select all" asks the server for every match in one slim list rather
+	// than loading every page of full cards; a hand-picked selection reads the
+	// loaded cards. Dropped with the selection.
+	let fetchedRows = $state<MovieSelectionRow[] | null>(null);
+	let selectionRows = $derived(fetchedRows ?? visibleMovies.map(movieSelectionRow));
+	async function selectAll() {
 		selectMode = true;
-		toggleAll(true);
+		const epoch = selectionEpoch;
+		const qs = filterParams().toString();
+		let rows: MovieSelectionRow[];
+		try {
+			rows = (await api<{ items: MovieSelectionRow[] }>(`/movies/selection${qs ? `?${qs}` : ""}`)).items;
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_unknown_error()));
+			return;
+		}
+		if (epoch !== selectionEpoch) return;
+		fetchedRows = rows;
+		selected = new Set(rows.map((r) => r.id));
 	}
 	// A press and hold on a poster is the touch way in: it turns selection on and
 	// takes the held card with it.
@@ -314,9 +335,11 @@
 	}
 	function toggleAll(v: boolean) {
 		if (!v) return clearSelection();
-		selected = new Set(visibleMovies.map((m) => m.id));
+		void selectAll();
 	}
 	function clearSelection() {
+		selectionEpoch++;
+		fetchedRows = null;
 		if (selected.size > 0) selected = new Set();
 	}
 
@@ -391,7 +414,7 @@
 			{counts}
 			{selectMode}
 			selectedCount={selected.size}
-			visibleCount={visibleMovies.length}
+			matchedCount={matchedTotal}
 			onTabChange={(t) => (tab = t)}
 			onMonChange={(m) => (mon = m)}
 			onQueryChange={(q) => (query = q)}
@@ -469,10 +492,10 @@
 
 		{#if auth.canAddDirectly}
 			<MovieBulkActions
-				movies={visibleMovies}
+				items={selectionRows}
 				{selected}
-				total={visibleMovies.length}
-				onSelectAll={() => toggleAll(true)}
+				total={matchedTotal}
+				onSelectAll={selectAll}
 				onClear={clearSelection}
 			/>
 		{/if}
