@@ -134,7 +134,7 @@ export function queueMeta(item: QueueEntry): MetaLine {
 	}
 	if (item.status === "importing") {
 		return {
-			text: joinDot([i18n.lc_importing(), item.download_client]),
+			text: joinDot([i18n.lc_importing(), item.uploaded ? i18n.activity_upload() : item.download_client]),
 			color: "var(--status-grabbing)",
 		};
 	}
@@ -166,7 +166,9 @@ export function queueMeta(item: QueueEntry): MetaLine {
 				: "",
 			item.selection_state === "unsupported"
 				? i18n.queue_selection_unsupported()
-				: item.download_client,
+				: item.uploaded
+					? i18n.activity_upload()
+					: item.download_client,
 		]),
 	};
 }
@@ -175,12 +177,12 @@ export function historyMeta(item: HistoryEntry): MetaLine {
 	const when = formatRelative(item.updated_at);
 	if (item.status === "failed") {
 		return {
-			text: joinDot([when, item.failure_reason || i18n.lc_failed(), item.indexer]),
+			text: joinDot([when, item.failure_reason || i18n.lc_failed(), item.uploaded ? i18n.activity_upload() : item.indexer]),
 			color: "var(--status-failed)",
 		};
 	}
 	return {
-		text: joinDot([when, formatBytes(item.size, ""), item.indexer]),
+		text: joinDot([when, formatBytes(item.size, ""), item.uploaded ? i18n.activity_upload() : item.indexer]),
 	};
 }
 

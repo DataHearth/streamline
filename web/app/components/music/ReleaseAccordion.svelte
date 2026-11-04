@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronRight, Radar, Search, Tags } from "@lucide/svelte";
+	import { ChevronRight, Radar, Search, Tags, Upload } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -31,6 +31,8 @@
 		onManualSearchTrack,
 		onDeleteTrack,
 		onTags,
+		onUpload,
+		onUploadTrack,
 	}: {
 		releases: Release[];
 		// The artist whose page the releases are on.
@@ -48,6 +50,8 @@
 		onManualSearchTrack?: (r: Release) => void;
 		onDeleteTrack?: (t: Track) => void;
 		onTags?: (r: Release) => void;
+		onUpload?: (r: Release) => void;
+		onUploadTrack?: (t: Track, file?: File) => void;
 	} = $props();
 
 	let groups = $derived(releaseGroups(releases));
@@ -137,6 +141,17 @@
 								<Tags size={16} aria-hidden="true" />
 							</button>
 						{/if}
+						{#if onUpload && !up}
+							<button
+								type="button"
+								onclick={() => onUpload(r)}
+								aria-label={i18n.upload_button()}
+								title={i18n.upload_button()}
+								class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg-muted transition active:bg-surface"
+							>
+								<Upload size={16} aria-hidden="true" />
+							</button>
+						{/if}
 						{#if up}
 							<p class="self-center text-[12.5px] leading-snug text-fg-muted">
 								{r.monitored ? i18n.music_upcoming_monitored() : i18n.music_upcoming_unmonitored()}
@@ -156,6 +171,7 @@
 							{canEdit}
 							onManualSearch={onManualSearchTrack ? () => onManualSearchTrack(r) : undefined}
 							onDeleteFile={onDeleteTrack}
+							onUpload={onUploadTrack}
 						/>
 					{:else if r.tracks_pending}
 						<p class="rounded-lg border border-dashed border-border-strong px-4 py-6 text-center text-[13px] text-fg-muted">

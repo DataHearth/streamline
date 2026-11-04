@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Radar, Search, Tags } from "@lucide/svelte";
+	import { Radar, Search, Tags, Upload } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import ReleaseCover from "./ReleaseCover.svelte";
@@ -24,6 +24,8 @@
 		onManualSearchTrack,
 		onDeleteTrack,
 		onTags,
+		onUpload,
+		onUploadTrack,
 	}: {
 		release: Release;
 		// The artist whose page the release is on.
@@ -40,6 +42,9 @@
 		onDeleteTrack?: (t: Track) => void;
 		// The release's tag panel, for a release holding files.
 		onTags?: () => void;
+		// Files onto the release, or onto one of its tracks (a file may come with a drop).
+		onUpload?: () => void;
+		onUploadTrack?: (t: Track, file?: File) => void;
 	} = $props();
 
 	let up = $derived(r.status === "upcoming");
@@ -130,6 +135,18 @@
 							<span class="hidden @md:inline">{i18n.music_tags_panel_button()}</span>
 						</button>
 					{/if}
+					{#if onUpload && !up}
+						<button
+							type="button"
+							onclick={onUpload}
+							aria-label={i18n.upload_button()}
+							title={i18n.upload_button()}
+							class="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.06] px-2 text-[13px] font-medium text-fg transition hover:bg-white/[0.12] lg:h-9 lg:min-w-9 @md:px-3"
+						>
+							<Upload size={15} aria-hidden="true" />
+							<span class="hidden @md:inline">{i18n.upload_button()}</span>
+						</button>
+					{/if}
 					{#if up}
 						<span class="text-[13px] text-fg-muted">
 							{r.monitored ? i18n.music_upcoming_monitored() : i18n.music_upcoming_unmonitored()}
@@ -151,6 +168,7 @@
 				{canEdit}
 				onManualSearch={onManualSearchTrack ? () => onManualSearchTrack() : undefined}
 				onDeleteFile={onDeleteTrack}
+				onUpload={onUploadTrack}
 			/>
 		{:else if r.tracks_pending}
 			<div class="rounded-lg border border-dashed border-border-strong px-6 py-10 text-center">

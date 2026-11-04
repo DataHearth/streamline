@@ -2,7 +2,7 @@
 	import { onMount } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { activeRoute } from "@roxi/routify";
-	import { Radar, Search, UserRound } from "@lucide/svelte";
+	import { Radar, Search, Upload, UserRound } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { createAction, deleteFailed, monitorToast, MUSIC, searchFailed, updateFailed } from "@lib/actions";
 	import { auth } from "@lib/auth.svelte";
@@ -25,6 +25,8 @@
 	import ReleaseAccordion from "@components/music/ReleaseAccordion.svelte";
 	import ReleaseSearchModal from "@components/music/ReleaseSearchModal.svelte";
 	import ReleaseTagsModal from "@components/music/ReleaseTagsModal.svelte";
+	import UploadSheet from "@components/shared/UploadSheet.svelte";
+	import type { UploadEntry } from "@lib/upload";
 	import DetailHistory from "@components/shared/DetailHistory.svelte";
 	import { swipeTabs } from "@lib/swipe-tabs";
 	import {
@@ -144,6 +146,11 @@
 	const searchRelease = (r: Release) => searchNow.mutate({ path: `/music/albums/${r.id}/search-now`, title: r.title });
 	let deletingTrack = $state<Track | null>(null);
 	let tagsRelease = $state<Release | null>(null);
+	type UploadTarget = { target: "album" | "track" | "artist"; id: number; hasFiles: boolean; initial?: UploadEntry[] };
+	let uploading = $state<UploadTarget | null>(null);
+	const uploadRelease = (r: Release) => (uploading = { target: "album", id: r.id, hasFiles: r.tracks_have > 0 });
+	const uploadTrack = (t: Track, file?: File) =>
+		(uploading = { target: "track", id: t.id, hasFiles: t.has_file, initial: file ? [{ file, path: file.name }] : [] });
 	const delTrack = createAction<Track>(() => ({
 		run: (t) => api(`/music/tracks/${t.id}/file`, { method: "DELETE" }),
 		refresh: MUSIC,
@@ -352,6 +359,19 @@
 							<Search size={16} aria-hidden="true" />
 							<span class="hidden @lg:inline">{i18n.action_manual_search()}</span>
 						</button>
+						<button
+							type="button"
+							onclick={() => (uploading = { target: "artist", id: artist.id, hasFiles: artist.size > 0 })}
+							aria-label={i18n.upload_button()}
+							title={i18n.upload_button()}
+							class={cn(
+								"inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14]",
+								"px-3 @lg:px-4",
+							)}
+						>
+							<Upload size={16} aria-hidden="true" />
+							<span class="hidden @lg:inline">{i18n.upload_button()}</span>
+						</button>
 						<LibraryActions
 							base={`/music/artists/${artist.id}`}
 							title={artist.name}
@@ -403,6 +423,8 @@
 					onManualSearchTrack={(r) => openManual(String(r.id))}
 					onDeleteTrack={(t) => (deletingTrack = t)}
 					onTags={(r) => (tagsRelease = r)}
+					onUpload={uploadRelease}
+					onUploadTrack={uploadTrack}
 				/>
 			</div>
 			<!-- 1fr, not minmax(0,1fr): the browser Tailwind build hangs the tab on
@@ -426,6 +448,8 @@
 						onManualSearchTrack={() => openManual(String(selected.id))}
 						onDeleteTrack={(t) => (deletingTrack = t)}
 						onTags={() => (tagsRelease = selected)}
+						onUpload={() => uploadRelease(selected)}
+						onUploadTrack={uploadTrack}
 					/>
 				{/if}
 			</div>
@@ -507,6 +531,9 @@
 		{#if canEdit}
 			<ReleaseSearchModal open={manualOpen} {artist} initialScope={manualScope} onClose={() => (manualOpen = false)} />
 			<ReleaseTagsModal release={tagsRelease} onClose={() => (tagsRelease = null)} />
+			{#if uploading}
+				<UploadSheet {...uploading} onDone={() => (uploading = null)} />
+			{/if}
 		{/if}
 
 		<Dialog

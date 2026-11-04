@@ -2,7 +2,7 @@
 	import { onMount, tick } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { params } from "@roxi/routify";
-	import { LoaderCircle, Radar, Search, Send } from "@lucide/svelte";
+	import { LoaderCircle, Radar, Search, Send, Upload } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { BOOKS, createAction, monitorToast, searchFailed, updateFailed } from "@lib/actions";
 	import { auth } from "@lib/auth.svelte";
@@ -12,6 +12,7 @@
 	import { bookPosterUrl } from "@lib/posters";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import Modal from "@components/modals/Modal.svelte";
+	import UploadSheet from "@components/shared/UploadSheet.svelte";
 	import ReleasesTable from "@components/shared/ReleasesTable.svelte";
 	import MediaHero from "@components/shared/MediaHero.svelte";
 	import MonitorSelect from "@components/shared/MonitorSelect.svelte";
@@ -69,6 +70,7 @@
 	let editionsEl = $state<HTMLElement | null>(null);
 	let pending = $state<Edition | null>(null);
 	let manualOpen = $state(false);
+	let uploadOpen = $state(false);
 	let downloading = $derived(!!book?.formats.some((f) => f.state === "downloading"));
 
 	const editionOf = (eid: number | null | undefined) => book?.editions.find((e) => e.id === eid);
@@ -284,6 +286,16 @@
 						<Search size={16} aria-hidden="true" />
 						{i18n.action_manual_search()}
 					</button>
+					<button
+						type="button"
+						onclick={() => (uploadOpen = true)}
+						aria-label={i18n.upload_button()}
+						title={i18n.upload_button()}
+						class="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] px-3 text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14] md:px-4"
+					>
+						<Upload size={16} aria-hidden="true" />
+						<span class="hidden md:inline">{i18n.upload_button()}</span>
+					</button>
 					<LibraryActions
 						base={`/books/${book.id}`}
 						title={book.title}
@@ -407,6 +419,16 @@
 				{/if}
 			</button>
 		</div>
+	{/if}
+
+	{#if canEdit && uploadOpen}
+		<UploadSheet
+			target="book"
+			id={book.id}
+			hasFiles={book.formats.some((f) => !!f.file)}
+			slotsHolding={book.formats.filter((f) => !!f.file).map((f) => f.format)}
+			onDone={() => (uploadOpen = false)}
+		/>
 	{/if}
 
 	<Modal open={manualOpen} title={i18n.manual_search_scope({ scope: book.title })} size="4xl" onClose={() => (manualOpen = false)}>

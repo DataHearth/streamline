@@ -753,6 +753,8 @@ export type QueueEntry = {
 	book?: ActivityBookRef;
 	indexer?: string;
 	download_client?: string;
+	// Files were uploaded to Streamline; there is no indexer or client.
+	uploaded?: boolean;
 	// Lower-case info hash in download_client. Under the builtin engine it is
 	// the torrent page's key (/torrents?hash=…).
 	torrent_hash?: string;
@@ -818,6 +820,8 @@ export type HistoryEntry = {
 	book?: ActivityBookRef;
 	indexer?: string;
 	download_client?: string;
+	// Files were uploaded to Streamline; there is no indexer or client.
+	uploaded?: boolean;
 	torrent_hash?: string;
 	size: number;
 	failure_reason?: string;
