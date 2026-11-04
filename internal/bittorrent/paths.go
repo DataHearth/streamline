@@ -59,6 +59,11 @@ func newContentStorage(
 		PieceCompletion: pc,
 		TorrentDirMaker: paths.torrentDir,
 		FilePathMaker:   paths.filePath,
+		// Pieces are read by uncachedPiece; what is left of the mapped IO is
+		// the writes, and a mapped file replaced or truncated underneath it
+		// (an import moving it, a user deleting it) faults the process with
+		// SIGBUS instead of failing the write.
+		DisableMmap: true,
 	}), dir), paths
 }
 
