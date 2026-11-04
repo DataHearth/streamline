@@ -9,6 +9,7 @@ package book
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
@@ -114,11 +115,27 @@ type Manager interface {
 		userID, seriesID uint32,
 	) (SeriesSendPlan, error)
 	SendState(ctx context.Context, userID uint32, b *ent.Book) SendState
+	BookUploadPreview(
+		ctx context.Context,
+		bookID uint32,
+		kind string,
+		files []download.ReleaseFile,
+	) ([]UploadFileView, error)
+	UploadBook(
+		ctx context.Context,
+		bookID uint32,
+		kind string,
+		o UploadOptions,
+		recv ReceiveFunc,
+	) (*ent.DownloadRecord, error)
 }
 
 var _ Manager = (*Service)(nil)
 
 type Service struct {
+	// uploadMu makes an upload's busy check and its record one step.
+	uploadMu sync.Mutex
+
 	db       db.Store
 	metadata metadata.BookProvider
 	posters  posters.Manager
