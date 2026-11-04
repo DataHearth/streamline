@@ -38,6 +38,9 @@ type ShelfParams struct {
 	Desc   bool
 	Limit  uint32
 	Offset uint32
+	// NoTotal skips counting the matches, for a caller that shows only the
+	// page: the count is a second pass over every match.
+	NoTotal bool
 }
 
 // ShelfRow is one shelf item: a book or a series. A series carries empty slot
@@ -285,25 +288,27 @@ func (db *DB) ListShelf(
 ) ([]ShelfRow, uint32, error) {
 	now := time.Now()
 
-	count := &sqlBuilder{}
-	count.w("SELECT COUNT(*) AS n FROM (")
-	shelfUnion(count, p, now, "")
-	count.w(") AS shelf")
-	if p.Status != "" {
-		count.w(" WHERE status = ?", p.Status)
-	}
-	var totals []struct {
-		N uint32 `sql:"n"`
-	}
-	if err := db.scanRaw(ctx, count, []string{"n"}, &totals); err != nil {
-		return nil, 0, fmt.Errorf("count shelf: %w", err)
-	}
 	var total uint32
-	if len(totals) > 0 {
-		total = totals[0].N
-	}
-	if total == 0 {
-		return []ShelfRow{}, 0, nil
+	if !p.NoTotal {
+		count := &sqlBuilder{}
+		count.w("SELECT COUNT(*) AS n FROM (")
+		shelfUnion(count, p, now, "")
+		count.w(") AS shelf")
+		if p.Status != "" {
+			count.w(" WHERE status = ?", p.Status)
+		}
+		var totals []struct {
+			N uint32 `sql:"n"`
+		}
+		if err := db.scanRaw(ctx, count, []string{"n"}, &totals); err != nil {
+			return nil, 0, fmt.Errorf("count shelf: %w", err)
+		}
+		if len(totals) > 0 {
+			total = totals[0].N
+		}
+		if total == 0 {
+			return []ShelfRow{}, 0, nil
+		}
 	}
 
 	list := &sqlBuilder{}

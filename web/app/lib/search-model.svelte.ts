@@ -27,7 +27,7 @@ import {
 	User,
 	LogOut,
 } from "@lucide/svelte";
-import { api, type Paginated } from "./api";
+import { api } from "./api";
 import { albumPosterUrl, artistPosterUrl, bookPosterUrl, tvPosterUrl } from "./posters";
 import { activityFeatures } from "./activity-nav";
 import { auth } from "./auth.svelte";
@@ -42,6 +42,7 @@ import {
 	type BookKind,
 	type ReleaseType,
 	type ShelfItem,
+	type TrackSearchHit,
 } from "./music-books";
 import { volumesCount } from "./music-books-lookup";
 import { m as i18n } from "./paraglide/messages.js";
@@ -102,8 +103,9 @@ export type BookItem = {
 	series: boolean;
 	volumes?: number;
 };
-// An album and an episode have no page of their own: an album opens its
-// artist on that release, an episode its series on that episode's sheet.
+// An album, a track and an episode have no page of their own: an album or a
+// track opens its artist on that release, an episode its series on that
+// episode's sheet.
 export type AlbumItem = {
 	kind: "album";
 	id: number;
@@ -113,6 +115,16 @@ export type AlbumItem = {
 	artist: string;
 	year?: string;
 	releaseType: ReleaseType;
+};
+export type TrackItem = {
+	kind: "track";
+	id: number;
+	label: string;
+	image: string;
+	artistId: number;
+	artist: string;
+	albumId: number;
+	album: string;
 };
 export type EpisodeItem = {
 	kind: "episode";
@@ -131,9 +143,17 @@ export type SearchItem =
 	| EpisodeItem
 	| ArtistItem
 	| AlbumItem
+	| TrackItem
 	| BookItem
 	| PersonItem;
-export type TitleItem = MovieItem | SeriesItem | EpisodeItem | ArtistItem | AlbumItem | BookItem;
+export type TitleItem =
+	| MovieItem
+	| SeriesItem
+	| EpisodeItem
+	| ArtistItem
+	| AlbumItem
+	| TrackItem
+	| BookItem;
 // The kinds that lead to something in the library.
 export const isTitleItem = (i: SearchItem): i is TitleItem =>
 	i.kind === "movie" ||
@@ -141,6 +161,7 @@ export const isTitleItem = (i: SearchItem): i is TitleItem =>
 	i.kind === "episode" ||
 	i.kind === "artist" ||
 	i.kind === "album" ||
+	i.kind === "track" ||
 	i.kind === "book";
 export type SectionId =
 	| "titles"
@@ -149,6 +170,9 @@ export type SectionId =
 	| "episodes"
 	| "music"
 	| "albums"
+	| "singles"
+	| "eps"
+	| "tracks"
 	| "books"
 	| "people"
 	| "pages"
@@ -193,6 +217,7 @@ export function itemKindLabel(item: SearchItem): string {
 	if (item.kind === "person") return i18n.common_person();
 	if (item.kind === "artist") return i18n.common_artist();
 	if (item.kind === "album") return releaseTypeLabel(item.releaseType);
+	if (item.kind === "track") return i18n.common_track();
 	if (item.kind === "episode") return i18n.common_episode();
 	if (item.kind === "book") return kindLabel(item.bookKind);
 	// The singular: the plural "Séries" is the section, not one show.
@@ -204,6 +229,7 @@ export function itemKindLabel(item: SearchItem): string {
 export function itemSubline(item: SearchItem): string {
 	if (item.kind === "movie" || item.kind === "series") return item.year ? String(item.year) : "";
 	if (item.kind === "album") return [item.artist, item.year].filter(Boolean).join(" · ");
+	if (item.kind === "track") return `${item.artist} · ${item.album}`;
 	if (item.kind === "episode") return `${item.series} · ${item.code}`;
 	if (item.kind === "artist")
 		return item.album ? i18n.search_via({ title: item.album }) : (item.genre ?? "");
@@ -280,12 +306,16 @@ export function createSearchModel(
 	});
 	const enabled = $derived(typed.length >= TITLE_MIN);
 
-	function titleSearch<T>(path: string) {
+	// `extra` is more query string, `&`-led, which also keys the cache. The
+	// lists the library pages share answer a total unless told not to, and
+	// nothing here shows one.
+	const NO_TOTAL = "&with_total=false";
+	function titleSearch<T>(path: string, extra = "") {
 		return createQuery(() => ({
-			queryKey: [path.slice(1), "search", typed],
+			queryKey: [path.slice(1), "search", typed, extra],
 			queryFn: () =>
-				api<Paginated<T>>(
-					`${path}?query=${encodeURIComponent(typed)}&limit=${TITLE_LIMIT}`,
+				api<{ items: T[] }>(
+					`${path}?query=${encodeURIComponent(typed)}&limit=${TITLE_LIMIT}${extra}`,
 				),
 			staleTime: 30_000,
 			// Keeps the last hits on screen while the next ones load, so the
@@ -295,12 +325,20 @@ export function createSearchModel(
 		}));
 	}
 
-	const moviesQuery = titleSearch<Movie>("/movies");
-	const seriesQuery = titleSearch<TVShow>("/series");
+	const moviesQuery = titleSearch<Movie>("/movies", NO_TOTAL);
+	const seriesQuery = titleSearch<TVShow>("/series", NO_TOTAL);
 	const episodesQuery = titleSearch<EpisodeSearchHit>("/episodes");
-	const artistsQuery = titleSearch<Artist>("/music/artists");
-	const albumsQuery = titleSearch<AlbumSearchHit>("/music/albums");
-	const booksQuery = titleSearch<ShelfItem>("/books");
+	const artistsQuery = titleSearch<Artist>("/music/artists", NO_TOTAL);
+	// Each release type gets its own section and its own TITLE_LIMIT, or an
+	// artist's dozen singles would push every album out of one shared list.
+	const albumsQuery = titleSearch<AlbumSearchHit>(
+		"/music/albums",
+		"&type=album&type=live&type=compilation&type=other",
+	);
+	const singlesQuery = titleSearch<AlbumSearchHit>("/music/albums", "&type=single");
+	const epsQuery = titleSearch<AlbumSearchHit>("/music/albums", "&type=ep");
+	const tracksQuery = titleSearch<TrackSearchHit>("/music/tracks");
+	const booksQuery = titleSearch<ShelfItem>("/books", NO_TOTAL);
 	const peopleQuery = titleSearch<Person>("/people");
 	// Torrents and transcoding are pages only while their feature is on, as in
 	// the nav.
@@ -365,7 +403,7 @@ export function createSearchModel(
 		enabled
 			? foldedArtists(
 					artistsQuery.data?.items ?? [],
-					albumsQuery.data?.items ?? [],
+					[albumsQuery, singlesQuery, epsQuery].flatMap((x) => x.data?.items ?? []),
 					fold(getQuery().trim()),
 				)
 			: new Set<number>(),
@@ -408,16 +446,32 @@ export function createSearchModel(
 					album: matchedAlbum(a, q),
 				}))
 			: [];
-		const albumHits: AlbumItem[] = enabled
-			? (albumsQuery.data?.items ?? []).map((a) => ({
-					kind: "album",
-					id: a.id,
-					label: a.title,
-					image: albumPosterUrl(a.id),
-					artistId: a.artist_id,
-					artist: a.artist_name,
-					year: a.release_date?.slice(0, 4),
-					releaseType: a.type,
+		const releaseHits = (hits: AlbumSearchHit[] | undefined): AlbumItem[] =>
+			enabled
+				? (hits ?? []).map((a) => ({
+						kind: "album",
+						id: a.id,
+						label: a.title,
+						image: albumPosterUrl(a.id),
+						artistId: a.artist_id,
+						artist: a.artist_name,
+						year: a.release_date?.slice(0, 4),
+						releaseType: a.type,
+					}))
+				: [];
+		const albumHits = releaseHits(albumsQuery.data?.items);
+		const singleHits = releaseHits(singlesQuery.data?.items);
+		const epHits = releaseHits(epsQuery.data?.items);
+		const trackHits: TrackItem[] = enabled
+			? (tracksQuery.data?.items ?? []).map((t) => ({
+					kind: "track",
+					id: t.id,
+					label: t.title,
+					image: albumPosterUrl(t.album_id),
+					artistId: t.artist_id,
+					artist: t.artist_name,
+					albumId: t.album_id,
+					album: t.album_title,
 				}))
 			: [];
 		const shownArtists = artistHits.filter((a) => !hiddenArtists.has(a.id));
@@ -459,6 +513,9 @@ export function createSearchModel(
 				...shownArtists,
 				...bookHits,
 				...albumHits,
+				...singleHits,
+				...epHits,
+				...trackHits,
 				...episodeHits,
 			];
 			if (items.length) titles.push({ id: "titles", label: i18n.dash_titles(), items });
@@ -473,6 +530,11 @@ export function createSearchModel(
 				titles.push({ id: "music", label: i18n.music_label(), items: shownArtists });
 			if (albumHits.length)
 				titles.push({ id: "albums", label: i18n.common_albums(), items: albumHits });
+			if (singleHits.length)
+				titles.push({ id: "singles", label: i18n.common_singles(), items: singleHits });
+			if (epHits.length) titles.push({ id: "eps", label: i18n.common_eps(), items: epHits });
+			if (trackHits.length)
+				titles.push({ id: "tracks", label: i18n.common_tracks(), items: trackHits });
 			if (bookHits.length)
 				titles.push({ id: "books", label: i18n.books_label(), items: bookHits });
 		}
@@ -493,23 +555,6 @@ export function createSearchModel(
 	});
 
 	let flat = $derived(sections.flatMap((s) => s.items));
-	let titleHits = $derived(flat.filter(isTitleItem).length);
-	// How many titles matched, against the at-most-TITLE_LIMIT-each shown. Null
-	// until the query passes TITLE_MIN and the fetch lands, so the hint stays
-	// absent rather than claiming zero while the panel is still closed.
-	let searchable = $derived.by<number | null>(() => {
-		const totals = [
-			moviesQuery,
-			seriesQuery,
-			episodesQuery,
-			artistsQuery,
-			albumsQuery,
-			booksQuery,
-		].map((q) => q.data?.total ?? null);
-		if (totals.every((t) => t === null)) return null;
-		return totals.reduce<number>((n, t) => n + (t ?? 0), 0) - hiddenArtists.size;
-	});
-
 	// True from the keystroke until every search has answered for what is
 	// typed: the debounce is still running, or a fetch is. Until then an empty
 	// list is no verdict, and "No matches" read as one for a query the server
@@ -524,6 +569,9 @@ export function createSearchModel(
 			episodesQuery,
 			artistsQuery,
 			albumsQuery,
+			singlesQuery,
+			epsQuery,
+			tracksQuery,
 			booksQuery,
 			peopleQuery,
 		].some((x) => x.isFetching);
@@ -538,12 +586,6 @@ export function createSearchModel(
 		},
 		get flat(): SearchItem[] {
 			return flat;
-		},
-		get titleHits(): number {
-			return titleHits;
-		},
-		get searchable(): number | null {
-			return searchable;
 		},
 	};
 }
@@ -569,6 +611,8 @@ export function searchNav() {
 			navigate("/music/[id]", { id: String(item.id) });
 		else if (item.kind === "album")
 			navigate("/music/[id]", { id: String(item.artistId), release: String(item.id) });
+		else if (item.kind === "track")
+			navigate("/music/[id]", { id: String(item.artistId), release: String(item.albumId) });
 		else if (item.kind === "episode")
 			navigate("/series/[id]", {
 				id: String(item.seriesId),

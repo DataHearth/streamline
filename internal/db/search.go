@@ -22,11 +22,6 @@ type TitleSearchParams struct {
 	Limit  uint16
 }
 
-// countRow scans a COUNT(*) straight into the API's width.
-type countRow struct {
-	Total uint32 `sql:"total"`
-}
-
 // byMatch ranks a title equal to the query first, then one starting with it,
 // then the rest. Without it a bare "discovery" listed five remixes and a
 // bootleg of Daft Punk's, newest first, and not the album itself. An empty
@@ -52,28 +47,22 @@ func byMatch(col, query string) func(*entsql.Selector) {
 // SearchAlbums pages the albums whose title holds the query, each with its
 // artist loaded, the closest title first. An artist's whole discography is
 // album rows, so among equal matches the albums holding a file come first:
-// those are the ones a search is usually for.
+// those are the ones a search is usually for. A non-empty types keeps only
+// albums of those release types.
 func (db *DB) SearchAlbums(
 	ctx context.Context,
 	p TitleSearchParams,
-) ([]*ent.Album, uint32, error) {
+	types []album.Type,
+) ([]*ent.Album, error) {
 	q := db.client.Album.Query()
+	if len(types) > 0 {
+		q = q.Where(album.TypeIn(types...))
+	}
 	if p.Query != "" {
 		q = q.Where(func(s *entsql.Selector) {
 			s.Where(foldContains(s, album.FieldTitle, p.Query))
 		})
 	}
-	var counted []countRow
-	err := q.Clone().
-		Modify(func(s *entsql.Selector) { s.Select(entsql.As("COUNT(*)", "total")) }).
-		Scan(ctx, &counted)
-	if err != nil {
-		return nil, 0, fmt.Errorf("count albums: %w", err)
-	}
-	if len(counted) == 0 || counted[0].Total == 0 {
-		return []*ent.Album{}, 0, nil
-	}
-	total := counted[0].Total
 	rows, err := q.
 		Order(
 			byMatch(album.FieldTitle, p.Query),
@@ -96,9 +85,9 @@ func (db *DB) SearchAlbums(
 		WithArtist().
 		All(ctx)
 	if err != nil {
-		return nil, 0, fmt.Errorf("search albums: %w", err)
+		return nil, fmt.Errorf("search albums: %w", err)
 	}
-	return rows, total, nil
+	return rows, nil
 }
 
 // SearchEpisodes pages the episodes whose title holds the query, each with
@@ -108,24 +97,13 @@ func (db *DB) SearchAlbums(
 func (db *DB) SearchEpisodes(
 	ctx context.Context,
 	p TitleSearchParams,
-) ([]*ent.Episode, uint32, error) {
+) ([]*ent.Episode, error) {
 	q := db.client.Episode.Query()
 	if p.Query != "" {
 		q = q.Where(func(s *entsql.Selector) {
 			s.Where(foldContains(s, episode.FieldTitle, p.Query))
 		})
 	}
-	var counted []countRow
-	err := q.Clone().
-		Modify(func(s *entsql.Selector) { s.Select(entsql.As("COUNT(*)", "total")) }).
-		Scan(ctx, &counted)
-	if err != nil {
-		return nil, 0, fmt.Errorf("count episodes: %w", err)
-	}
-	if len(counted) == 0 || counted[0].Total == 0 {
-		return []*ent.Episode{}, 0, nil
-	}
-	total := counted[0].Total
 	rows, err := q.
 		Order(
 			byMatch(episode.FieldTitle, p.Query),
@@ -143,7 +121,44 @@ func (db *DB) SearchEpisodes(
 		WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() }).
 		All(ctx)
 	if err != nil {
-		return nil, 0, fmt.Errorf("search episodes: %w", err)
+		return nil, fmt.Errorf("search episodes: %w", err)
 	}
-	return rows, total, nil
+	return rows, nil
+}
+
+// SearchTracks pages the tracks whose title holds the query, each with its
+// album and the album's artist loaded, the closest title first. Among equal
+// matches the tracks holding a file come first, then those of a monitored
+// album, then the newest album.
+func (db *DB) SearchTracks(
+	ctx context.Context,
+	p TitleSearchParams,
+) ([]*ent.Track, error) {
+	q := db.client.Track.Query()
+	if p.Query != "" {
+		q = q.Where(func(s *entsql.Selector) {
+			s.Where(foldContains(s, track.FieldTitle, p.Query))
+		})
+	}
+	rows, err := q.
+		Order(
+			byMatch(track.FieldTitle, p.Query),
+			func(s *entsql.Selector) {
+				s.OrderExpr(entsql.Expr(fmt.Sprintf(
+					"EXISTS (SELECT 1 FROM %s f WHERE f.%s = %s) DESC",
+					mediafile.Table, mediafile.TrackColumn, s.C(track.FieldID),
+				)))
+			},
+			track.ByAlbumField(album.FieldMonitored, entsql.OrderDesc()),
+			track.ByAlbumField(album.FieldReleaseDate, entsql.OrderDesc()),
+			track.ByID(),
+		).
+		Offset(int(p.Offset)).
+		Limit(int(p.Limit)).
+		WithAlbum(func(aq *ent.AlbumQuery) { aq.WithArtist() }).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("search tracks: %w", err)
+	}
+	return rows, nil
 }

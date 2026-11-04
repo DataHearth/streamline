@@ -156,6 +156,8 @@ type FilterParams struct {
 	Limit  uint16
 	// Monitored filters on the movie's own flag; nil means "either".
 	Monitored *bool
+	// NoTotal skips counting the matches; see db.FilterMoviesParams.
+	NoTotal bool
 }
 
 // metadataMinRefreshInterval bounds the TMDB call rate of the metadata-refresh
@@ -306,6 +308,7 @@ func (s *Service) FilterList(
 		Order:     p.Order,
 		Offset:    uint32(page-1) * uint32(limit),
 		Limit:     uint32(limit),
+		NoTotal:   p.NoTotal,
 	})
 	if err != nil {
 		return nil, nil, 0, otelx.RecordSpanError(

@@ -55,11 +55,7 @@ func (s *Service) List(
 		p.Limit = defaultPageLimit
 	}
 	p.Now = time.Now()
-	rows, err := s.db.ListArtists(ctx, p)
-	if err != nil {
-		return ArtistPage{}, otelx.RecordSpanError(span, err)
-	}
-	total, err := s.db.CountArtistsFiltered(ctx, p)
+	rows, total, err := s.db.ListArtists(ctx, p)
 	if err != nil {
 		return ArtistPage{}, otelx.RecordSpanError(span, err)
 	}
@@ -97,7 +93,7 @@ func (s *Service) List(
 		items[i] = v
 	}
 	span.SetAttributes(attribute.Int("artists.count", len(items)))
-	return ArtistPage{Items: items, Total: numeric.SaturateU32(total)}, nil
+	return ArtistPage{Items: items, Total: total}, nil
 }
 
 func tile(

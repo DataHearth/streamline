@@ -299,6 +299,9 @@ type FilterMoviesParams struct {
 	Order     string // "asc" | "desc"
 	Offset    uint32
 	Limit     uint32
+	// NoTotal skips counting the matches, for a caller that shows only the
+	// page: the count is a second pass over every match.
+	NoTotal bool
 }
 
 // movieFilters builds the list's predicates, leaving out the facet a caller
@@ -395,9 +398,12 @@ func (db *DB) FilterMovies(
 ) ([]*ent.Movie, int, error) {
 	base := db.client.Movie.Query().Where(movieFilters(p, facetAll)...)
 
-	total, err := base.Clone().Count(ctx)
-	if err != nil {
-		return nil, 0, err
+	var total int
+	if !p.NoTotal {
+		var err error
+		if total, err = base.Clone().Count(ctx); err != nil {
+			return nil, 0, err
+		}
 	}
 
 	q := base.Offset(int(p.Offset)).Limit(int(p.Limit))

@@ -138,9 +138,10 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` | `/movies` | List movies | Authenticated |
+| `GET` | `/movies` | List movies (`?with_total=false` skips counting the matches and leaves `total` out) | Authenticated |
 | `POST` | `/movies` | Add a movie | Member |
 | `GET` | `/movies/counts` | Faceted counts (same filter params as the list) | Authenticated |
+| `GET` | `/movies/selection` | Every movie `/movies` would list under the same filters (`?status=`, `?monitored=`, `?query=`), unpaged: `{ "items": [{ "id", "monitored", "file_count", "size_bytes" }] }`. What "select all" picks | Authenticated |
 | `GET` | `/movies/{id}` | Fetch a movie | Authenticated |
 | `PATCH` `DELETE` | `/movies/{id}` | Update / delete a movie | Member |
 | `POST` | `/movies/{id}/search` · `/search-now` · `/grab` · `/refresh-metadata` · `/rename` | Search, force a search (`/search-now` runs in the background and answers `202`; the outcome lands in the movie's history), grab, refresh metadata, or rename to the naming template | Member |
@@ -154,10 +155,11 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` | `/series` | List (`?status=`, `?type=`, `?query=`, `?sort=`, `?order=`) | Authenticated |
+| `GET` | `/series` | List (`?status=`, `?type=`, `?query=`, `?sort=`, `?order=`; `?with_total=false` skips counting the matches and leaves `total` out) | Authenticated |
 | `POST` | `/series` | Add a series | Member |
 | `GET` | `/series/counts` · `/series/lookup` · `/series/lookup/{tvdb_id}` | Faceted counts (same filter params as the list), TVDB lookup | Authenticated |
-| `GET` | `/episodes` | Episodes whose title holds `?query=` (accent-, case- and punctuation-folded), each naming its show, season and number; the exact title first, then titles starting with the query, then the rest, and within each the ones holding a file first, then most recently aired (`?limit=` 1-100, `?offset=`) | Authenticated |
+| `GET` | `/series/selection` | Every show `/series` would list under the same filters (`?status=`, `?type=`, `?monitored=`, `?query=`), unpaged: `{ "items": [{ "id", "monitored", "have_episodes", "wanted_episodes" }] }`, specials left out of the counts. What "select all" picks | Authenticated |
+| `GET` | `/episodes` | Episodes whose title holds `?query=` (accent-, case- and punctuation-folded), each naming its show, season and number; the exact title first, then titles starting with the query, then the rest, and within each the ones holding a file first, then most recently aired (`?limit=` 1-100, `?offset=`; no total, since only the search surfaces list them) | Authenticated |
 | `POST` | `/series/specials/apply` | Apply `library.monitor_specials` to season 0 of every series, skipping seasons and episodes toggled by hand | 🔒 Admin |
 | `GET` | `/series/{id}` | Fetch a series | Authenticated |
 | `PATCH` `DELETE` | `/series/{id}` | Update (`monitored`, `quality_profile`, `preset`, `type`) / delete a series | Member |
@@ -181,7 +183,7 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `GET` | `/music/search?query=` | Search MusicBrainz for artists; each hit carries `already_added`, `library_id`, `genre`, `area`, `since`. `429` (`code: rate_limited`, `Retry-After`) when MusicBrainz is limiting | Authenticated |
 | `GET` | `/music/search/releases?query=&limit=` | Search MusicBrainz release groups by title or artist (2 to 200 characters, `limit` 1 to 20, `400` outside); each hit carries `mbid`, `title`, `artist`, `artist_mbid`, `year`, `type` and `already_added`. Memoised for 10 minutes. `429` (`code: rate_limited`) when MusicBrainz limits | Authenticated |
 | `GET` | `/music/search/{mbid}` | The hit fields and the detail of one MusicBrainz artist: `overview` (`?lang=en\|fr`, English when that language has no article), `genres`, current `members`, `releases` | Authenticated |
-| `GET` | `/music/artists` | Paginated list (`?page=`, `?limit=` 1-100, `?status=wanted\|downloading\|available`, `?monitored=monitored\|unmonitored`, `?query=` accent-folded over name, sort name, genre and album titles, `?sort=recent\|name`, `?order=`); items carry their albums as tiles with no tracks | Authenticated |
+| `GET` | `/music/artists` | Paginated list (`?page=`, `?limit=` 1-100, `?status=wanted\|downloading\|available`, `?monitored=monitored\|unmonitored`, `?query=` accent-folded over name, sort name, genre and album titles, `?sort=recent\|name`, `?order=`); items carry their albums as tiles with no tracks; `?with_total=false` skips counting the matches and leaves `total` out | Authenticated |
 | `GET` | `/music/artists/counts` | Faceted counts for the list's toolbar: each facet is counted with the other facet's filter applied, each with its own `*_total` row; with no parameters, the whole library | Authenticated |
 | `POST` | `/music/artists` | Add an artist by `mbid` (`monitor` defaults to `all`, optional `quality_profile`); `409` if already added, `422` for an unknown profile or policy, `429` when MusicBrainz is limiting | Member |
 | `GET` | `/music/artists/{id}` | Fetch an artist with its full tree: members, and every album with tracks, credits and personnel (`?lang=en\|fr` picks the overview) | Authenticated |
@@ -195,7 +197,8 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `POST` | `/music/artists/{id}/browse` | Search the indexers for the artist's discography packs; items are plain search results | Member |
 | `POST` | `/music/artists/{id}/release-files` | List a discography pack's files before grabbing it: the body is a browse item, unchanged. Fetches the `.torrent` (one indexer request) and reads it as the pack import will: audio grouped by album folder (disc subfolders fold in), each folder matched by title, and year when it names one, to an album of the artist. `albums` is what the grab links and fills (monitored, released, hydrated, still wanted, paused or failed — empty means the grab would be refused), each with its tracks' `has_file` and `in_release`; `folders` marks each audio folder `waiting` or skipped. Folder to album is the import's own rule; file to track reads names, the import reads tags. Same `422` codes as the album route | Member |
 | `POST` | `/music/artists/{id}/grab` | Grab a discography pack: the item of a browse, unchanged. `202`; `422 grab_rejected` when no album of the artist can take it | Member |
-| `GET` | `/music/albums` | Albums whose title holds `?query=` (accent-, case- and punctuation-folded), each with its artist's id and name; the exact title first, then titles starting with the query, then the rest, and within each the ones holding a file first, then monitored, then newest (`?limit=` 1-100, `?offset=`) | Authenticated |
+| `GET` | `/music/albums` | Albums whose title holds `?query=` (accent-, case- and punctuation-folded), each with its artist's id and name; the exact title first, then titles starting with the query, then the rest, and within each the ones holding a file first, then monitored, then newest (`?limit=` 1-100, `?offset=`; no total, since only the search surfaces list them; `?type=` keeps only those release types, repeated for several, `400` for an unknown one) | Authenticated |
+| `GET` | `/music/tracks` | Tracks whose title holds `?query=` (accent-, case- and punctuation-folded), each with its album's id, title and type and its artist's id and name; the exact title first, then titles starting with the query, then the rest, and within each the ones holding a file first, then those of a monitored album, then the newest album (`?limit=` 1-100, `?offset=`; no total, since only the search surfaces list them) | Authenticated |
 | `GET` | `/music/albums/{id}` | Fetch an album with its tracks, credits and personnel (the object an artist detail embeds) | Authenticated |
 | `PATCH` | `/music/albums/{id}` | Update `monitored`; never changes the artist's policy, and `/music/monitored-types/apply` leaves the album alone afterwards until the artist's `monitor` is next changed. Also the album's tag settings: `tags_managed`, and `tag_overrides` (tag name to values, written over the library's tags in every file; an empty list removes the tag; `422` for a key that is not a tag name), either of which queues the album's files | Member |
 | `GET` | `/music/albums/{id}/tags` | Read every file of the album and compare it, key by key, with what Streamline would write (`same`, `differs`, or `kept` for a key it leaves alone), in the format's own keys; with the file's writer state, the album's and track's overrides, and the instance's mode | Member |
@@ -224,7 +227,7 @@ A music release in a search result carries `source` as a display label (`FLAC 24
 |--------|------|-------------|------|
 | `GET` | `/books/search?query=&type=` | Search Hardcover for books and series to add (`type` is `book`, `series` or `all`, the default; at least 2 characters). Three Hardcover requests (book search, series search, one batch over every candidate series), one with `type=book`, memoised for 5 minutes. A series is also found through any book whose title, in any language, is the query (searching "Fondation" lists Asimov's Foundation series); series with no volumes are left out. Series named like the query and series reached through a book of that exact title come first and are never cut, then books, then the other series, capped at 20. Each hit carries `already_added` and its `library_id`; a series hit also carries `slug` (for `https://hardcover.app/series/{slug}`), `cover_book_ids` (up to three Hardcover book ids for a fanned cover, via `/posters/lookup/books/{id}/poster.jpg`) and, when found through a translated title, `matched_title` | Authenticated |
 | `GET` | `/books/search/{hardcover_id}?type=book\|series` | One hit plus its detail (overview, genres, pages, editions, `volume_book_ids`), memoised for 10 minutes; also the book arm of `GET /requests/{id}/metadata` | Authenticated |
-| `GET` | `/books` | The shelf: standalone books and series merged into one paged list (`?page=`, `?limit=` 1-100, `?status=`, `?author=`, `?format=`, `?kind=` comma list, `?query=`, `?sort=added\|title\|year`, `?order=`). `type` says which an item is; ids are only unique per `type`. A series volume is never an item of its own | Authenticated |
+| `GET` | `/books` | The shelf: standalone books and series merged into one paged list (`?page=`, `?limit=` 1-100, `?status=`, `?author=`, `?format=`, `?kind=` comma list, `?query=`, `?sort=added\|title\|year`, `?order=`). `type` says which an item is; ids are only unique per `type`. A series volume is never an item of its own; `?with_total=false` skips counting the matches and leaves `total` out | Authenticated |
 | `GET` | `/books/counts` | Faceted counts (status, author, format), each with its own `*_total`; with no parameters the whole library | Authenticated |
 | `POST` | `/books` | Add a book by `hardcover_id` (one Hardcover request; optional `monitor` `both\|ebook\|audiobook\|none` and `quality_profile`). `404` for an unknown Hardcover id, `409` if already in the library, `422` for an unknown monitor or profile, `429` with `Retry-After` and `code: rate_limited`, `503` without a Hardcover key | Member |
 | `GET` | `/books/{id}` | A book with its contributors, editions and the two format slots (state, edition, file, live progress, a replacement under way) | Authenticated |
@@ -263,7 +266,7 @@ People are rows of their own, related to titles through a `credits` table — on
 
 A person is listed only while something credits them. `credits` counts library items — movies plus series — not credit rows, so a person listed twice on one title counts once. The list is ordered by `credits` descending, then by name; `query` folds accents, case and punctuation on both sides, so `?query=beatrice` finds "Béatrice Dalle".
 
-`/people` pages with `limit` (1..100, default 20) and a zero-based `offset` rather than `page`, and answers `{ "items": [...], "total": N, "limit": N, "offset": N }`. Each item:
+`/people` pages with `limit` (1..100, default 20) and a zero-based `offset` rather than `page`, and answers `{ "items": [...], "limit": N, "offset": N }` (no total: only the search surfaces list people). Each item:
 
 ```jsonc
 {

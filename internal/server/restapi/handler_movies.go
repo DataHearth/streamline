@@ -51,6 +51,7 @@ func (s *Server) ListMovies(
 		on := *request.Params.Monitored == ListMoviesParamsMonitoredMonitored
 		p.Monitored = &on
 	}
+	p.NoTotal = skipTotal(request.Params.WithTotal)
 
 	movies, summaries, total, err := s.movies.FilterList(ctx, p)
 	if err != nil {
@@ -66,10 +67,43 @@ func (s *Server) ListMovies(
 
 	return ListMovies200JSONResponse{
 		Items: items,
-		Total: total,
+		Total: optTotal(total, p.NoTotal),
 		Page:  uint32(p.Page),
 		Limit: p.Limit,
 	}, nil
+}
+
+func (s *Server) GetMovieSelection(
+	ctx context.Context,
+	request GetMovieSelectionRequestObject,
+) (GetMovieSelectionResponseObject, error) {
+	p := db.FilterMoviesParams{}
+	if v := request.Params.Status; v != nil {
+		p.Status = entmovie.Status(*v)
+	}
+	if v := request.Params.Query; v != nil {
+		p.Query = *v
+	}
+	if v := request.Params.Monitored; v != nil {
+		on := *v == GetMovieSelectionParamsMonitoredMonitored
+		p.Monitored = &on
+	}
+	rows, err := s.store.MovieSelection(ctx, p)
+	if err != nil {
+		return GetMovieSelection500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	items := make([]MovieSelectionRow, len(rows))
+	for i, r := range rows {
+		items[i] = MovieSelectionRow{
+			Id:        r.ID,
+			Monitored: r.Monitored,
+			FileCount: r.FileCount,
+			SizeBytes: r.SizeBytes,
+		}
+	}
+	return GetMovieSelection200JSONResponse{Items: items}, nil
 }
 
 func (s *Server) GetMovieCounts(

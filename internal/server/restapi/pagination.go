@@ -55,3 +55,16 @@ func limitOr[T ~int | ~uint16 | ~uint32](v *T, def, maxLimit T) (T, bool) {
 	}
 	return *v, true
 }
+
+// skipTotal reads with_total: only an explicit false skips the count.
+func skipTotal(withTotal *bool) bool {
+	return withTotal != nil && !*withTotal
+}
+
+// optTotal is total on the wire, or nothing when the count was skipped.
+func optTotal(total uint32, skipped bool) *uint32 {
+	if skipped {
+		return nil
+	}
+	return &total
+}

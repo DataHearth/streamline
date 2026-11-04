@@ -41,6 +41,9 @@ type FilterTVShowsParams struct {
 	// Now anchors the aired/unaired split. Passed in so a caller can render a
 	// consistent view across the filter and the counts.
 	Now time.Time
+	// NoTotal skips counting the matches, for a caller that shows only the
+	// page: the count is a second pass over every match.
+	NoTotal bool
 }
 
 // EpisodeCounts is the season/episode rollup the series list renders. It is
@@ -379,9 +382,12 @@ func (db *DB) FilterTVShows(
 ) ([]*ent.TVShow, map[uint32]EpisodeCounts, uint32, error) {
 	base := db.client.TVShow.Query().Where(tvShowFilters(p, facetAll)...)
 
-	total, err := base.Clone().Count(ctx)
-	if err != nil {
-		return nil, nil, 0, fmt.Errorf("count tv shows: %w", err)
+	var total int
+	if !p.NoTotal {
+		var err error
+		if total, err = base.Clone().Count(ctx); err != nil {
+			return nil, nil, 0, fmt.Errorf("count tv shows: %w", err)
+		}
 	}
 
 	q := base.Offset(int(p.Offset)).Limit(int(p.Limit))
@@ -699,4 +705,47 @@ func (db *DB) CountDownloadingEpisodes(ctx context.Context) (int, error) {
 		return 0, fmt.Errorf("count downloading episodes: %w", err)
 	}
 	return n, nil
+}
+
+// SeriesSelectionRow is what a bulk action needs of one selected show; Have
+// and Wanted are the list rollup's, specials left out.
+type SeriesSelectionRow struct {
+	ID        uint32
+	Monitored bool
+	Have      uint32
+	Wanted    uint32
+}
+
+// TVShowSelection lists every show the list's filters match, unpaged, with
+// only what the bulk bar reads: "select all" picks the whole match without
+// loading every page of full shows.
+func (db *DB) TVShowSelection(
+	ctx context.Context,
+	p FilterTVShowsParams,
+) ([]SeriesSelectionRow, error) {
+	shows, err := db.client.TVShow.Query().
+		Where(tvShowFilters(p, facetAll)...).
+		Select(tvshow.FieldID, tvshow.FieldMonitored).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("select tv shows: %w", err)
+	}
+	ids := make([]uint32, len(shows))
+	for i, s := range shows {
+		ids[i] = s.ID
+	}
+	counts, err := db.episodeCounts(ctx, ids, p.Now)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]SeriesSelectionRow, len(shows))
+	for i, s := range shows {
+		out[i] = SeriesSelectionRow{
+			ID:        s.ID,
+			Monitored: s.Monitored,
+			Have:      counts[s.ID].Have,
+			Wanted:    counts[s.ID].Wanted,
+		}
+	}
+	return out, nil
 }

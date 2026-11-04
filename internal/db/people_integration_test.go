@@ -88,9 +88,8 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 			creditShow(zach, first, "Léo")
 			creditShow(nina, second, "Claire")
 
-			people, total, err := store.ListPeople(ctx, ListPeopleParams{Limit: 10})
+			people, err := store.ListPeople(ctx, ListPeopleParams{Limit: 10})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(2)))
 			Expect(people).To(HaveLen(2))
 			Expect(people[0].TMDBID).To(BeZero())
 			Expect(people[1].TMDBID).To(BeZero())
@@ -119,9 +118,8 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 			creditMovie(bob, alpha, "Bob")
 			creditShow(bob, delta, "Bob")
 
-			people, total, err := store.ListPeople(ctx, ListPeopleParams{Limit: 10})
+			people, err := store.ListPeople(ctx, ListPeopleParams{Limit: 10})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(2)))
 			Expect(people).To(HaveLen(2))
 			Expect(people[0].ID).To(Equal(ada.ID))
 			Expect(people[0].TMDBID).To(Equal(uint32(10)))
@@ -137,9 +135,8 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 			creditMovie(ada, alpha, "Herself")
 			creditMovie(ada, alpha, "Narrator")
 
-			people, total, err := store.ListPeople(ctx, ListPeopleParams{Limit: 10})
+			people, err := store.ListPeople(ctx, ListPeopleParams{Limit: 10})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(1)))
 			Expect(people[0].Credits).To(Equal(uint32(1)))
 		})
 
@@ -149,17 +146,16 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 			creditMovie(seedPerson("Béatrice Dalle"), alpha, "Betty")
 			creditMovie(seedPerson("Bob Stone"), beta, "Bob")
 
-			people, total, err := store.ListPeople(ctx, ListPeopleParams{
+			people, err := store.ListPeople(ctx, ListPeopleParams{
 				Query: "beatrice",
 				Limit: 10,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(1)))
 			Expect(people).To(HaveLen(1))
 			Expect(people[0].Name).To(Equal("Béatrice Dalle"))
 		})
 
-		It("pages with limit and offset against the unpaged total", func() {
+		It("pages with limit and offset", func() {
 			alpha := seedMovie("Alpha", 1)
 			beta := seedMovie("Beta", 2)
 			ada := seedPerson("Ada Lovelace")
@@ -168,12 +164,11 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 			creditMovie(seedPerson("Bob Stone"), alpha, "Bob")
 			creditMovie(seedPerson("Cleo Rain"), beta, "Cleo")
 
-			page, total, err := store.ListPeople(ctx, ListPeopleParams{
+			page, err := store.ListPeople(ctx, ListPeopleParams{
 				Limit:  1,
 				Offset: 1,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(3)))
 			Expect(page).To(HaveLen(1))
 			// Ada leads on two credits; the tail is ordered by name.
 			Expect(page[0].Name).To(Equal("Bob Stone"))
@@ -184,9 +179,8 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 			seedShow("Gamma", 3)
 			seedPerson("Ada Lovelace")
 
-			people, total, err := store.ListPeople(ctx, ListPeopleParams{Limit: 10})
+			people, err := store.ListPeople(ctx, ListPeopleParams{Limit: 10})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(BeZero())
 			Expect(people).To(BeEmpty())
 		})
 	})

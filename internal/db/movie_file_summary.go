@@ -76,3 +76,45 @@ func (db *DB) MovieFileSummaries(
 	}
 	return out, nil
 }
+
+// MovieSelectionRow is what a bulk action needs of one selected movie.
+type MovieSelectionRow struct {
+	ID        uint32
+	Monitored bool
+	FileCount uint32
+	SizeBytes int64
+}
+
+// MovieSelection lists every movie the list's filters match, unpaged, with
+// only what the bulk bar reads: "select all" picks the whole match without
+// loading every page of full movies.
+func (db *DB) MovieSelection(
+	ctx context.Context,
+	p FilterMoviesParams,
+) ([]MovieSelectionRow, error) {
+	movies, err := db.client.Movie.Query().
+		Where(movieFilters(p, facetAll)...).
+		Select(movie.FieldID, movie.FieldMonitored).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("select movies: %w", err)
+	}
+	ids := make([]uint32, len(movies))
+	for i, m := range movies {
+		ids[i] = m.ID
+	}
+	sums, err := db.MovieFileSummaries(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]MovieSelectionRow, len(movies))
+	for i, m := range movies {
+		out[i] = MovieSelectionRow{
+			ID:        m.ID,
+			Monitored: m.Monitored,
+			FileCount: sums[m.ID].FileCount,
+			SizeBytes: sums[m.ID].SizeBytes,
+		}
+	}
+	return out, nil
+}

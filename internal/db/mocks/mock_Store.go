@@ -2571,72 +2571,6 @@ func (_c *MockStore_CountActiveImportScans_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
-// CountArtistsFiltered provides a mock function for the type MockStore
-func (_mock *MockStore) CountArtistsFiltered(ctx context.Context, p db.ListArtistsParams) (int, error) {
-	ret := _mock.Called(ctx, p)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CountArtistsFiltered")
-	}
-
-	var r0 int
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListArtistsParams) (int, error)); ok {
-		return returnFunc(ctx, p)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListArtistsParams) int); ok {
-		r0 = returnFunc(ctx, p)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListArtistsParams) error); ok {
-		r1 = returnFunc(ctx, p)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockStore_CountArtistsFiltered_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountArtistsFiltered'
-type MockStore_CountArtistsFiltered_Call struct {
-	*mock.Call
-}
-
-// CountArtistsFiltered is a helper method to define mock.On call
-//   - ctx context.Context
-//   - p db.ListArtistsParams
-func (_e *MockStore_Expecter) CountArtistsFiltered(ctx any, p any) *MockStore_CountArtistsFiltered_Call {
-	return &MockStore_CountArtistsFiltered_Call{Call: _e.mock.On("CountArtistsFiltered", ctx, p)}
-}
-
-func (_c *MockStore_CountArtistsFiltered_Call) Run(run func(ctx context.Context, p db.ListArtistsParams)) *MockStore_CountArtistsFiltered_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 db.ListArtistsParams
-		if args[1] != nil {
-			arg1 = args[1].(db.ListArtistsParams)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_CountArtistsFiltered_Call) Return(n int, err error) *MockStore_CountArtistsFiltered_Call {
-	_c.Call.Return(n, err)
-	return _c
-}
-
-func (_c *MockStore_CountArtistsFiltered_Call) RunAndReturn(run func(ctx context.Context, p db.ListArtistsParams) (int, error)) *MockStore_CountArtistsFiltered_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // CountDownloadingEpisodes provides a mock function for the type MockStore
 func (_mock *MockStore) CountDownloadingEpisodes(ctx context.Context) (int, error) {
 	ret := _mock.Called(ctx)
@@ -11362,7 +11296,7 @@ func (_c *MockStore_ListArtistAlbumsForSearch_Call) RunAndReturn(run func(ctx co
 }
 
 // ListArtists provides a mock function for the type MockStore
-func (_mock *MockStore) ListArtists(ctx context.Context, p db.ListArtistsParams) ([]*ent.Artist, error) {
+func (_mock *MockStore) ListArtists(ctx context.Context, p db.ListArtistsParams) ([]*ent.Artist, uint32, error) {
 	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
@@ -11370,8 +11304,9 @@ func (_mock *MockStore) ListArtists(ctx context.Context, p db.ListArtistsParams)
 	}
 
 	var r0 []*ent.Artist
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListArtistsParams) ([]*ent.Artist, error)); ok {
+	var r1 uint32
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListArtistsParams) ([]*ent.Artist, uint32, error)); ok {
 		return returnFunc(ctx, p)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListArtistsParams) []*ent.Artist); ok {
@@ -11381,12 +11316,17 @@ func (_mock *MockStore) ListArtists(ctx context.Context, p db.ListArtistsParams)
 			r0 = ret.Get(0).([]*ent.Artist)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListArtistsParams) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListArtistsParams) uint32); ok {
 		r1 = returnFunc(ctx, p)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(uint32)
 	}
-	return r0, r1
+	if returnFunc, ok := ret.Get(2).(func(context.Context, db.ListArtistsParams) error); ok {
+		r2 = returnFunc(ctx, p)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
 }
 
 // MockStore_ListArtists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListArtists'
@@ -11419,12 +11359,12 @@ func (_c *MockStore_ListArtists_Call) Run(run func(ctx context.Context, p db.Lis
 	return _c
 }
 
-func (_c *MockStore_ListArtists_Call) Return(artists []*ent.Artist, err error) *MockStore_ListArtists_Call {
-	_c.Call.Return(artists, err)
+func (_c *MockStore_ListArtists_Call) Return(artists []*ent.Artist, v uint32, err error) *MockStore_ListArtists_Call {
+	_c.Call.Return(artists, v, err)
 	return _c
 }
 
-func (_c *MockStore_ListArtists_Call) RunAndReturn(run func(ctx context.Context, p db.ListArtistsParams) ([]*ent.Artist, error)) *MockStore_ListArtists_Call {
+func (_c *MockStore_ListArtists_Call) RunAndReturn(run func(ctx context.Context, p db.ListArtistsParams) ([]*ent.Artist, uint32, error)) *MockStore_ListArtists_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -13926,7 +13866,7 @@ func (_c *MockStore_ListPendingSelectionRecords_Call) RunAndReturn(run func(ctx 
 }
 
 // ListPeople provides a mock function for the type MockStore
-func (_mock *MockStore) ListPeople(ctx context.Context, p db.ListPeopleParams) ([]db.Person, uint32, error) {
+func (_mock *MockStore) ListPeople(ctx context.Context, p db.ListPeopleParams) ([]db.Person, error) {
 	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
@@ -13934,9 +13874,8 @@ func (_mock *MockStore) ListPeople(ctx context.Context, p db.ListPeopleParams) (
 	}
 
 	var r0 []db.Person
-	var r1 uint32
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListPeopleParams) ([]db.Person, uint32, error)); ok {
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListPeopleParams) ([]db.Person, error)); ok {
 		return returnFunc(ctx, p)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListPeopleParams) []db.Person); ok {
@@ -13946,17 +13885,12 @@ func (_mock *MockStore) ListPeople(ctx context.Context, p db.ListPeopleParams) (
 			r0 = ret.Get(0).([]db.Person)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListPeopleParams) uint32); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListPeopleParams) error); ok {
 		r1 = returnFunc(ctx, p)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, db.ListPeopleParams) error); ok {
-		r2 = returnFunc(ctx, p)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // MockStore_ListPeople_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPeople'
@@ -13989,12 +13923,12 @@ func (_c *MockStore_ListPeople_Call) Run(run func(ctx context.Context, p db.List
 	return _c
 }
 
-func (_c *MockStore_ListPeople_Call) Return(persons []db.Person, v uint32, err error) *MockStore_ListPeople_Call {
-	_c.Call.Return(persons, v, err)
+func (_c *MockStore_ListPeople_Call) Return(persons []db.Person, err error) *MockStore_ListPeople_Call {
+	_c.Call.Return(persons, err)
 	return _c
 }
 
-func (_c *MockStore_ListPeople_Call) RunAndReturn(run func(ctx context.Context, p db.ListPeopleParams) ([]db.Person, uint32, error)) *MockStore_ListPeople_Call {
+func (_c *MockStore_ListPeople_Call) RunAndReturn(run func(ctx context.Context, p db.ListPeopleParams) ([]db.Person, error)) *MockStore_ListPeople_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -16810,6 +16744,74 @@ func (_c *MockStore_MovieHasMediaFile_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// MovieSelection provides a mock function for the type MockStore
+func (_mock *MockStore) MovieSelection(ctx context.Context, p db.FilterMoviesParams) ([]db.MovieSelectionRow, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MovieSelection")
+	}
+
+	var r0 []db.MovieSelectionRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.FilterMoviesParams) ([]db.MovieSelectionRow, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.FilterMoviesParams) []db.MovieSelectionRow); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.MovieSelectionRow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.FilterMoviesParams) error); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_MovieSelection_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MovieSelection'
+type MockStore_MovieSelection_Call struct {
+	*mock.Call
+}
+
+// MovieSelection is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.FilterMoviesParams
+func (_e *MockStore_Expecter) MovieSelection(ctx any, p any) *MockStore_MovieSelection_Call {
+	return &MockStore_MovieSelection_Call{Call: _e.mock.On("MovieSelection", ctx, p)}
+}
+
+func (_c *MockStore_MovieSelection_Call) Run(run func(ctx context.Context, p db.FilterMoviesParams)) *MockStore_MovieSelection_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.FilterMoviesParams
+		if args[1] != nil {
+			arg1 = args[1].(db.FilterMoviesParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_MovieSelection_Call) Return(movieSelectionRows []db.MovieSelectionRow, err error) *MockStore_MovieSelection_Call {
+	_c.Call.Return(movieSelectionRows, err)
+	return _c
+}
+
+func (_c *MockStore_MovieSelection_Call) RunAndReturn(run func(ctx context.Context, p db.FilterMoviesParams) ([]db.MovieSelectionRow, error)) *MockStore_MovieSelection_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // MovieTMDBIndex provides a mock function for the type MockStore
 func (_mock *MockStore) MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error) {
 	ret := _mock.Called(ctx)
@@ -19367,37 +19369,31 @@ func (_c *MockStore_SavePersonDetails_Call) RunAndReturn(run func(ctx context.Co
 }
 
 // SearchAlbums provides a mock function for the type MockStore
-func (_mock *MockStore) SearchAlbums(ctx context.Context, p db.TitleSearchParams) ([]*ent.Album, uint32, error) {
-	ret := _mock.Called(ctx, p)
+func (_mock *MockStore) SearchAlbums(ctx context.Context, p db.TitleSearchParams, types []album.Type) ([]*ent.Album, error) {
+	ret := _mock.Called(ctx, p, types)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SearchAlbums")
 	}
 
 	var r0 []*ent.Album
-	var r1 uint32
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.TitleSearchParams) ([]*ent.Album, uint32, error)); ok {
-		return returnFunc(ctx, p)
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.TitleSearchParams, []album.Type) ([]*ent.Album, error)); ok {
+		return returnFunc(ctx, p, types)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.TitleSearchParams) []*ent.Album); ok {
-		r0 = returnFunc(ctx, p)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.TitleSearchParams, []album.Type) []*ent.Album); ok {
+		r0 = returnFunc(ctx, p, types)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*ent.Album)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, db.TitleSearchParams) uint32); ok {
-		r1 = returnFunc(ctx, p)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.TitleSearchParams, []album.Type) error); ok {
+		r1 = returnFunc(ctx, p, types)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, db.TitleSearchParams) error); ok {
-		r2 = returnFunc(ctx, p)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // MockStore_SearchAlbums_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchAlbums'
@@ -19408,11 +19404,12 @@ type MockStore_SearchAlbums_Call struct {
 // SearchAlbums is a helper method to define mock.On call
 //   - ctx context.Context
 //   - p db.TitleSearchParams
-func (_e *MockStore_Expecter) SearchAlbums(ctx any, p any) *MockStore_SearchAlbums_Call {
-	return &MockStore_SearchAlbums_Call{Call: _e.mock.On("SearchAlbums", ctx, p)}
+//   - types []album.Type
+func (_e *MockStore_Expecter) SearchAlbums(ctx any, p any, types any) *MockStore_SearchAlbums_Call {
+	return &MockStore_SearchAlbums_Call{Call: _e.mock.On("SearchAlbums", ctx, p, types)}
 }
 
-func (_c *MockStore_SearchAlbums_Call) Run(run func(ctx context.Context, p db.TitleSearchParams)) *MockStore_SearchAlbums_Call {
+func (_c *MockStore_SearchAlbums_Call) Run(run func(ctx context.Context, p db.TitleSearchParams, types []album.Type)) *MockStore_SearchAlbums_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -19422,26 +19419,31 @@ func (_c *MockStore_SearchAlbums_Call) Run(run func(ctx context.Context, p db.Ti
 		if args[1] != nil {
 			arg1 = args[1].(db.TitleSearchParams)
 		}
+		var arg2 []album.Type
+		if args[2] != nil {
+			arg2 = args[2].([]album.Type)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockStore_SearchAlbums_Call) Return(albums []*ent.Album, v uint32, err error) *MockStore_SearchAlbums_Call {
-	_c.Call.Return(albums, v, err)
+func (_c *MockStore_SearchAlbums_Call) Return(albums []*ent.Album, err error) *MockStore_SearchAlbums_Call {
+	_c.Call.Return(albums, err)
 	return _c
 }
 
-func (_c *MockStore_SearchAlbums_Call) RunAndReturn(run func(ctx context.Context, p db.TitleSearchParams) ([]*ent.Album, uint32, error)) *MockStore_SearchAlbums_Call {
+func (_c *MockStore_SearchAlbums_Call) RunAndReturn(run func(ctx context.Context, p db.TitleSearchParams, types []album.Type) ([]*ent.Album, error)) *MockStore_SearchAlbums_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SearchEpisodes provides a mock function for the type MockStore
-func (_mock *MockStore) SearchEpisodes(ctx context.Context, p db.TitleSearchParams) ([]*ent.Episode, uint32, error) {
+func (_mock *MockStore) SearchEpisodes(ctx context.Context, p db.TitleSearchParams) ([]*ent.Episode, error) {
 	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
@@ -19449,9 +19451,8 @@ func (_mock *MockStore) SearchEpisodes(ctx context.Context, p db.TitleSearchPara
 	}
 
 	var r0 []*ent.Episode
-	var r1 uint32
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.TitleSearchParams) ([]*ent.Episode, uint32, error)); ok {
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.TitleSearchParams) ([]*ent.Episode, error)); ok {
 		return returnFunc(ctx, p)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, db.TitleSearchParams) []*ent.Episode); ok {
@@ -19461,17 +19462,12 @@ func (_mock *MockStore) SearchEpisodes(ctx context.Context, p db.TitleSearchPara
 			r0 = ret.Get(0).([]*ent.Episode)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, db.TitleSearchParams) uint32); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.TitleSearchParams) error); ok {
 		r1 = returnFunc(ctx, p)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, db.TitleSearchParams) error); ok {
-		r2 = returnFunc(ctx, p)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // MockStore_SearchEpisodes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchEpisodes'
@@ -19504,12 +19500,80 @@ func (_c *MockStore_SearchEpisodes_Call) Run(run func(ctx context.Context, p db.
 	return _c
 }
 
-func (_c *MockStore_SearchEpisodes_Call) Return(episodes []*ent.Episode, v uint32, err error) *MockStore_SearchEpisodes_Call {
-	_c.Call.Return(episodes, v, err)
+func (_c *MockStore_SearchEpisodes_Call) Return(episodes []*ent.Episode, err error) *MockStore_SearchEpisodes_Call {
+	_c.Call.Return(episodes, err)
 	return _c
 }
 
-func (_c *MockStore_SearchEpisodes_Call) RunAndReturn(run func(ctx context.Context, p db.TitleSearchParams) ([]*ent.Episode, uint32, error)) *MockStore_SearchEpisodes_Call {
+func (_c *MockStore_SearchEpisodes_Call) RunAndReturn(run func(ctx context.Context, p db.TitleSearchParams) ([]*ent.Episode, error)) *MockStore_SearchEpisodes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SearchTracks provides a mock function for the type MockStore
+func (_mock *MockStore) SearchTracks(ctx context.Context, p db.TitleSearchParams) ([]*ent.Track, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchTracks")
+	}
+
+	var r0 []*ent.Track
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.TitleSearchParams) ([]*ent.Track, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.TitleSearchParams) []*ent.Track); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Track)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.TitleSearchParams) error); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_SearchTracks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchTracks'
+type MockStore_SearchTracks_Call struct {
+	*mock.Call
+}
+
+// SearchTracks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.TitleSearchParams
+func (_e *MockStore_Expecter) SearchTracks(ctx any, p any) *MockStore_SearchTracks_Call {
+	return &MockStore_SearchTracks_Call{Call: _e.mock.On("SearchTracks", ctx, p)}
+}
+
+func (_c *MockStore_SearchTracks_Call) Run(run func(ctx context.Context, p db.TitleSearchParams)) *MockStore_SearchTracks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.TitleSearchParams
+		if args[1] != nil {
+			arg1 = args[1].(db.TitleSearchParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SearchTracks_Call) Return(tracks []*ent.Track, err error) *MockStore_SearchTracks_Call {
+	_c.Call.Return(tracks, err)
+	return _c
+}
+
+func (_c *MockStore_SearchTracks_Call) RunAndReturn(run func(ctx context.Context, p db.TitleSearchParams) ([]*ent.Track, error)) *MockStore_SearchTracks_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -23405,6 +23469,74 @@ func (_c *MockStore_TVShowForEpisode_Call) Return(tVShow *ent.TVShow, err error)
 }
 
 func (_c *MockStore_TVShowForEpisode_Call) RunAndReturn(run func(ctx context.Context, episodeID uint32) (*ent.TVShow, error)) *MockStore_TVShowForEpisode_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TVShowSelection provides a mock function for the type MockStore
+func (_mock *MockStore) TVShowSelection(ctx context.Context, p db.FilterTVShowsParams) ([]db.SeriesSelectionRow, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TVShowSelection")
+	}
+
+	var r0 []db.SeriesSelectionRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.FilterTVShowsParams) ([]db.SeriesSelectionRow, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.FilterTVShowsParams) []db.SeriesSelectionRow); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.SeriesSelectionRow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.FilterTVShowsParams) error); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_TVShowSelection_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TVShowSelection'
+type MockStore_TVShowSelection_Call struct {
+	*mock.Call
+}
+
+// TVShowSelection is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.FilterTVShowsParams
+func (_e *MockStore_Expecter) TVShowSelection(ctx any, p any) *MockStore_TVShowSelection_Call {
+	return &MockStore_TVShowSelection_Call{Call: _e.mock.On("TVShowSelection", ctx, p)}
+}
+
+func (_c *MockStore_TVShowSelection_Call) Run(run func(ctx context.Context, p db.FilterTVShowsParams)) *MockStore_TVShowSelection_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.FilterTVShowsParams
+		if args[1] != nil {
+			arg1 = args[1].(db.FilterTVShowsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TVShowSelection_Call) Return(seriesSelectionRows []db.SeriesSelectionRow, err error) *MockStore_TVShowSelection_Call {
+	_c.Call.Return(seriesSelectionRows, err)
+	return _c
+}
+
+func (_c *MockStore_TVShowSelection_Call) RunAndReturn(run func(ctx context.Context, p db.FilterTVShowsParams) ([]db.SeriesSelectionRow, error)) *MockStore_TVShowSelection_Call {
 	_c.Call.Return(run)
 	return _c
 }

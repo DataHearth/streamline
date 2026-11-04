@@ -67,7 +67,7 @@ var _ = Describe(
 						Name:       "Béatrice Dalle",
 						ProfileURL: "https://img/bd.jpg",
 						Credits:    3,
-					}}, 1, nil).
+					}}, nil).
 					Once()
 
 				resp := app.do(app.req(
@@ -80,7 +80,6 @@ var _ = Describe(
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				var body PersonList
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
-				Expect(body.Total).To(Equal(uint32(1)))
 				Expect(body.Limit).To(Equal(uint16(5)))
 				Expect(body.Offset).To(Equal(uint32(10)))
 				Expect(body.Items).To(HaveLen(1))
@@ -106,7 +105,7 @@ var _ = Describe(
 							Name:    "Zachary Chasseriaud",
 							Credits: 1,
 						},
-					}, 2, nil).
+					}, nil).
 					Once()
 
 				resp := app.do(app.req(
@@ -133,7 +132,7 @@ var _ = Describe(
 						TMDBID:  10,
 						Name:    "Ada Lovelace",
 						Credits: 1,
-					}}, 1, nil).
+					}}, nil).
 					Once()
 
 				resp := app.do(app.req(
@@ -167,7 +166,7 @@ var _ = Describe(
 						IMDbID:       "nm0000001",
 						InstagramID:  "ada",
 						TwitterID:    "adalovelace",
-					}}, 1, nil).
+					}}, nil).
 					Once()
 
 				resp := app.do(app.req(
@@ -205,7 +204,7 @@ var _ = Describe(
 						Credits:   1,
 						Biography: "A performer.",
 						Birthday:  "1988-01-01",
-					}}, 1, nil).
+					}}, nil).
 					Once()
 
 				resp := app.do(app.req(

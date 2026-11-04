@@ -1056,7 +1056,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			if p.Limit == 0 {
 				p.Limit = 50
 			}
-			rows, err := store.ListArtists(ctx, p)
+			rows, _, err := store.ListArtists(ctx, p)
 			Expect(err).NotTo(HaveOccurred())
 			out := make([]string, len(rows))
 			for i, r := range rows {
@@ -1178,15 +1178,23 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			},
 		)
 
-		It("counts what the filters match", func() {
-			n, err := store.CountArtistsFiltered(ctx,
-				ListArtistsParams{Monitored: "monitored", Now: now})
+		It("counts what the filters match, unless asked not to", func() {
+			rows, total, err := store.ListArtists(ctx,
+				ListArtistsParams{Monitored: "monitored", Limit: 1, Now: now})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(n).To(Equal(2))
+			Expect(rows).To(HaveLen(1))
+			Expect(total).To(Equal(uint32(2)))
+
+			rows, total, err = store.ListArtists(ctx, ListArtistsParams{
+				Monitored: "monitored", Limit: 1, Now: now, NoTotal: true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+			Expect(total).To(BeZero())
 		})
 
 		It("loads each artist's albums as tiles", func() {
-			rows, err := store.ListArtists(ctx,
+			rows, _, err := store.ListArtists(ctx,
 				ListArtistsParams{Query: "nirvana", Limit: 10, Now: now})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rows[0].Edges.Albums).To(HaveLen(2))

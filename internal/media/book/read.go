@@ -26,20 +26,23 @@ type ListParams struct {
 	Desc   bool
 	Page   uint32
 	Limit  uint32
+	// NoTotal skips counting the matches; see db.ShelfParams.
+	NoTotal bool
 }
 
 func (p ListParams) shelf() db.ShelfParams {
 	page := max(p.Page, 1)
 	return db.ShelfParams{
-		Status: p.Status,
-		Author: p.Author,
-		Format: p.Format,
-		Kinds:  p.Kinds,
-		Query:  p.Query,
-		Sort:   p.Sort,
-		Desc:   p.Desc,
-		Limit:  p.Limit,
-		Offset: (page - 1) * p.Limit,
+		Status:  p.Status,
+		Author:  p.Author,
+		Format:  p.Format,
+		Kinds:   p.Kinds,
+		Query:   p.Query,
+		Sort:    p.Sort,
+		Desc:    p.Desc,
+		Limit:   p.Limit,
+		Offset:  (page - 1) * p.Limit,
+		NoTotal: p.NoTotal,
 	}
 }
 

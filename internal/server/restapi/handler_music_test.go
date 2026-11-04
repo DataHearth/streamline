@@ -427,7 +427,7 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			var out PaginatedMusicArtists
 			decodeInto(resp, &out)
-			Expect(out.Total).To(Equal(uint32(7)))
+			Expect(out.Total).To(HaveValue(Equal(uint32(7))))
 			Expect(out.Items).To(HaveLen(1))
 			a := out.Items[0]
 			Expect(a.Id).To(Equal(uint32(3)))

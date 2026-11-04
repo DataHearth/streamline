@@ -25,7 +25,7 @@ func (s *Server) ListPeople(
 		p.Offset = *request.Params.Offset
 	}
 
-	people, total, err := s.store.ListPeople(ctx, p)
+	people, err := s.store.ListPeople(ctx, p)
 	if err != nil {
 		return ListPeople500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -55,7 +55,6 @@ func (s *Server) ListPeople(
 
 	return ListPeople200JSONResponse{
 		Items:  items,
-		Total:  total,
 		Limit:  p.Limit,
 		Offset: p.Offset,
 	}, nil

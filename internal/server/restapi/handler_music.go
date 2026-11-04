@@ -184,6 +184,7 @@ func (s *Server) ListMusicArtists(
 		Order:     paramString(p.Order),
 		Offset:    uint32(page-1) * uint32(limit),
 		Limit:     limit,
+		NoTotal:   skipTotal(p.WithTotal),
 	}
 	res, err := s.music.List(ctx, params)
 	if err != nil {
@@ -199,7 +200,7 @@ func (s *Server) ListMusicArtists(
 		Items: items,
 		Limit: limit,
 		Page:  uint32(page),
-		Total: res.Total,
+		Total: optTotal(res.Total, params.NoTotal),
 	}, nil
 }
 
