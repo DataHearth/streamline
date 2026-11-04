@@ -694,7 +694,7 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
 			Expect(got.Monitored).To(Equal(2))
 			Expect(got.Unmonitored).To(Equal(5))
-			Expect(got.Types).To(Equal([]MusicAlbumType{"album", "ep"}))
+			Expect(got.Types).To(Equal([]MusicAlbumType{"album", "ep", "single"}))
 		})
 
 		It("refuses a member", func() {

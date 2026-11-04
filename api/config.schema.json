@@ -548,7 +548,7 @@
           "type": "array",
           "items": { "enum": ["album", "ep", "single", "compilation", "live", "other"] },
           "uniqueItems": true,
-          "description": "Release types an artist's all and future monitor policies monitor; the others are added unmonitored. Defaults to album and ep."
+          "description": "Release types an artist's all and future monitor policies monitor; the others are added unmonitored. Defaults to album, ep and single."
         },
         "no_match_cooldown": { "$ref": "#/definitions/duration" },
         "max_grab_failures": { "type": "integer", "minimum": 1 },

@@ -995,7 +995,7 @@ func defaults() map[string]any {
 		"library.movie_naming":             "{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}",
 		"library.import_mode":              "hardlink",
 		"library.monitor_specials":         false,
-		"library.music_monitored_types":    []string{"album", "ep"},
+		"library.music_monitored_types":    []string{"album", "ep", "single"},
 		"library.keep_torrent_seeding":     true,
 		"library.import_max_attempts":      3,
 		"library.allowed_download_roots":   []string{},

@@ -126,7 +126,7 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 
 		It("round-trips music_monitored_types, dropping repeats", func() {
 			Expect(config.Get().Library.MusicMonitoredTypes).
-				To(Equal([]string{"album", "ep"}))
+				To(Equal([]string{"album", "ep", "single"}))
 			body := strings.NewReader(
 				`{"music_monitored_types":["album","live","album"]}`,
 			)
@@ -212,7 +212,7 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
 			Expect(config.Get().Library.MusicMonitoredTypes).
-				To(Equal([]string{"album", "ep"}))
+				To(Equal([]string{"album", "ep", "single"}))
 		})
 
 		It("rejects a non-admin with 403", func() {
