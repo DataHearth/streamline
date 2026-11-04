@@ -8,6 +8,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
@@ -98,6 +99,37 @@ func (s *Service) ArtistPackFiles(
 		}
 	}
 
+	view := packFilesView(linked, all, files)
+	span.SetAttributes(
+		attribute.Int("files", len(view.Files)),
+		attribute.Int("folders", len(view.Folders)),
+		attribute.Int("albums.linked", len(linked)),
+		attribute.Int("albums.named", countNamed(view.Albums)),
+	)
+	return view, nil
+}
+
+func countNamed(albums []PackAlbumView) int {
+	n := 0
+	for _, a := range albums {
+		if a.InRelease {
+			n++
+		}
+	}
+	return n
+}
+
+// packFilesView reads a plain file list against the albums a folder may name:
+// linked are the ones an import would fill, all every album of the artist.
+func packFilesView(
+	linked, all []*ent.Album,
+	files []download.ReleaseFile,
+) *DiscographyFilesView {
+	byID := make(map[uint32]*ent.Album, len(all))
+	for _, a := range all {
+		byID[a.ID] = a
+	}
+
 	// Each folder is one album import, which decides over its own files
 	// whether their numbers name the album's tracks.
 	byDir := map[string][]string{}
@@ -167,11 +199,5 @@ func (s *Service) ArtistPackFiles(
 		}
 		view.Albums = append(view.Albums, av)
 	}
-	span.SetAttributes(
-		attribute.Int("files", len(view.Files)),
-		attribute.Int("folders", len(view.Folders)),
-		attribute.Int("albums.linked", len(linked)),
-		attribute.Int("albums.named", len(named)),
-	)
-	return view, nil
+	return view
 }

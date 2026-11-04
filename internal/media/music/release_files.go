@@ -8,6 +8,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
@@ -22,6 +24,9 @@ import (
 type ReleaseFilesView struct {
 	Files  []ReleaseFileView
 	Tracks []ReleaseTrackView
+	// TracksPending says the album's tracks are not known yet, so nothing could
+	// be matched. Only an upload preview sets it.
+	TracksPending bool
 }
 
 type ReleaseFileView struct {
@@ -65,6 +70,29 @@ func (s *Service) AlbumReleaseFiles(
 		return nil, otelx.RecordSpanError(span, err)
 	}
 
+	view := albumFilesView(a, files)
+	span.SetAttributes(
+		attribute.Int("files", len(view.Files)),
+		attribute.Int("tracks_matched", countInRelease(view.Tracks)),
+	)
+	return view, nil
+}
+
+func countInRelease(tracks []ReleaseTrackView) int {
+	n := 0
+	for _, t := range tracks {
+		if t.InRelease {
+			n++
+		}
+	}
+	return n
+}
+
+// albumFilesView reads a plain file list against the album's tracks.
+func albumFilesView(
+	a *ent.Album,
+	files []download.ReleaseFile,
+) *ReleaseFilesView {
 	tracks := a.Edges.Tracks
 	var audio []string
 	for _, f := range files {
@@ -103,9 +131,5 @@ func (s *Service) AlbumReleaseFiles(
 			cmp.Compare(x.Position, y.Position),
 		)
 	})
-	span.SetAttributes(
-		attribute.Int("files", len(view.Files)),
-		attribute.Int("tracks_matched", len(in)),
-	)
-	return view, nil
+	return view
 }
