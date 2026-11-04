@@ -36,17 +36,18 @@ func (s *ImportService) ImportEbook(
 	b *ent.Book,
 	profile config.BookQualityProfileEntry,
 	replace bool,
+	mode string,
 ) (ImportedFile, error) {
 	lib := config.Get().Library
 	ctx, span := tracer.Start(ctx, "library.import_ebook",
 		trace.WithAttributes(
 			attribute.Int64("book.id", int64(b.ID)),
-			attribute.String("import.mode", lib.ImportMode),
+			attribute.String("import.mode", mode),
 		),
 	)
 	defer span.End()
 	outcome := "success"
-	defer recordBookImport(ctx, "ebook", lib.ImportMode, time.Now(), &outcome)
+	defer recordBookImport(ctx, "ebook", mode, time.Now(), &outcome)
 
 	cands, sawSample, err := collectBookFiles(
 		srcPath,
@@ -118,7 +119,7 @@ func (s *ImportService) ImportEbook(
 			return ImportedFile{}, otelx.RecordSpanError(span, ErrDestExists)
 		}
 	}
-	if err := transferFile(best.path, destPath, lib.ImportMode); err != nil {
+	if err := transferFile(best.path, destPath, mode); err != nil {
 		outcome = "transfer_failed"
 		return ImportedFile{}, otelx.RecordSpanError(
 			span, fmt.Errorf("transfer file: %w", err),
@@ -134,7 +135,7 @@ func (s *ImportService) ImportEbook(
 	span.SetAttributes(attribute.Int64("file.size", info.Size()))
 	slog.InfoContext(ctx, "ebook transferred",
 		"media_file.src", best.path, "media_file.dst", destPath,
-		"import.mode", lib.ImportMode, "book.id", b.ID)
+		"import.mode", mode, "book.id", b.ID)
 	return ImportedFile{
 		Path: destPath, Size: info.Size(), Parsed: bookParsed(destPath),
 	}, nil
@@ -149,17 +150,18 @@ func (s *ImportService) ImportAudiobook(
 	keep SourceFilter,
 	b *ent.Book,
 	replace bool,
+	mode string,
 ) ([]ImportedFile, error) {
 	lib := config.Get().Library
 	ctx, span := tracer.Start(ctx, "library.import_audiobook",
 		trace.WithAttributes(
 			attribute.Int64("book.id", int64(b.ID)),
-			attribute.String("import.mode", lib.ImportMode),
+			attribute.String("import.mode", mode),
 		),
 	)
 	defer span.End()
 	outcome := "success"
-	defer recordBookImport(ctx, "audiobook", lib.ImportMode, time.Now(), &outcome)
+	defer recordBookImport(ctx, "audiobook", mode, time.Now(), &outcome)
 
 	cands, sawSample, err := collectBookFiles(
 		srcPath,
@@ -232,7 +234,7 @@ func (s *ImportService) ImportAudiobook(
 				return nil, otelx.RecordSpanError(span, ErrDestExists)
 			}
 		}
-		if err := transferFile(c.path, dst, lib.ImportMode); err != nil {
+		if err := transferFile(c.path, dst, mode); err != nil {
 			outcome = "transfer_failed"
 			undo()
 			return nil, otelx.RecordSpanError(
@@ -254,7 +256,7 @@ func (s *ImportService) ImportAudiobook(
 	}
 	slog.InfoContext(ctx, "audiobook transferred",
 		"media_file.dst", destDir, "files", len(placed),
-		"import.mode", lib.ImportMode, "book.id", b.ID)
+		"import.mode", mode, "book.id", b.ID)
 	return placed, nil
 }
 

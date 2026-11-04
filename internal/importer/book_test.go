@@ -67,16 +67,12 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 		return client.Book.GetX(ctx, b.ID)
 	}
 
-	BeforeEach(func() {
-		ctx = context.Background()
-		tmp = GinkgoT().TempDir()
-		ebooks = filepath.Join(tmp, "ebooks")
-		audio = filepath.Join(tmp, "audio")
+	configure := func(importMode string) {
 		configtest.Setup(map[string]any{
 			"library": map[string]any{
 				"ebook_path":          ebooks,
 				"audiobook_path":      audio,
-				"import_mode":         "copy",
+				"import_mode":         importMode,
 				"import_max_attempts": 3,
 			},
 			"book_quality_profiles": []map[string]any{{
@@ -92,6 +88,14 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 				"novel": "e", "bd": "e", "comic": "e", "manga": "e",
 			},
 		})
+	}
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		tmp = GinkgoT().TempDir()
+		ebooks = filepath.Join(tmp, "ebooks")
+		audio = filepath.Join(tmp, "audio")
+		configure("copy")
 		client = dbtest.SetupTestDB(ctx)
 		DeferCleanup(client.Close)
 		w = NewWorker(Deps{DB: db.New(client), Library: library.NewImportService()})
@@ -403,6 +407,80 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 
 		Expect(reload().EbookReplacingLanguage).To(BeEmpty())
 		Expect(reload().EbookStatus).To(Equal(book.EbookStatusAvailable))
+	})
+	Describe("uploaded records", func() {
+		uploaded := func(kind downloadrecord.BookKind, src string, mode downloadrecord.ReplaceMode) uint32 {
+			GinkgoHelper()
+			return client.DownloadRecord.Create().
+				SetTitle("Elantris").
+				SetBookID(b.ID).
+				SetBookKind(kind).
+				SetSavePath(src).
+				SetReplaceMode(mode).
+				SetUploaded(true).
+				SetStatus(downloadrecord.StatusImporting).
+				SaveX(ctx).ID
+		}
+
+		BeforeEach(func() { configure("move") })
+
+		It("copies an ebook, then removes the staging folder", func() {
+			src := filepath.Join(tmp, "dl")
+			write(src, "elantris.epub", "epub bytes")
+			id := uploaded(
+				downloadrecord.BookKindEbook, src, downloadrecord.ReplaceModeNone,
+			)
+
+			Expect(run(id)).To(Succeed())
+
+			Expect(
+				filepath.Join(ebooks, "Brandon Sanderson", "Elantris (2005).epub"),
+			).
+				To(BeAnExistingFile())
+			Expect(src).NotTo(BeAnExistingFile())
+			Expect(client.DownloadRecord.GetX(ctx, id).Status).
+				To(Equal(downloadrecord.StatusCompleted))
+		})
+
+		It("leaves the staging file when the placement fails", func() {
+			src := filepath.Join(tmp, "dl")
+			staged := write(src, "x.epub", "new")
+			old := write(ebooks, "Brandon Sanderson/Elantris (2005).epub", "old")
+			client.MediaFile.Create().
+				SetPath(old).SetSize(3).SetQuality("epub").SetFormat("epub").
+				SetBookID(b.ID).SetBookKind(mediafile.BookKindEbook).SaveX(ctx)
+			id := uploaded(
+				downloadrecord.BookKindEbook, src, downloadrecord.ReplaceModeNone,
+			)
+
+			Expect(run(id)).To(MatchError(library.ErrDestExists))
+
+			Expect(staged).To(BeAnExistingFile())
+		})
+
+		It(
+			"keeps every staged audiobook file when the second fails to place",
+			func() {
+				src := filepath.Join(tmp, "dl")
+				first := write(src, "Part 01.mp3", "one")
+				second := write(src, "Part 02.mp3", "two")
+				dir := filepath.Join(audio, "Brandon Sanderson", "Elantris (2005)")
+				Expect(
+					os.MkdirAll(filepath.Join(dir, "Part 02.mp3"), 0o755),
+				).To(Succeed())
+				id := uploaded(
+					downloadrecord.BookKindAudiobook,
+					src,
+					downloadrecord.ReplaceModeAll,
+				)
+
+				Expect(run(id)).NotTo(Succeed())
+
+				Expect(first).To(BeAnExistingFile())
+				Expect(second).To(BeAnExistingFile())
+				Expect(filepath.Join(dir, "Part 01.mp3")).NotTo(BeAnExistingFile())
+			},
+		)
 	})
 })
 

@@ -15,6 +15,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
@@ -198,7 +199,12 @@ func (w *Worker) importAlbumFiles(
 	// Verified before anything is set aside or transferred, so a hold leaves
 	// the library exactly as it was.
 	if !rec.VerificationBypassed {
-		reasons := albumHoldReasons(plan, alb)
+		var reasons []schema.HoldReason
+		// Someone chose this track for this file: its album tag is no evidence of a
+		// wrong download, only of where the recording was first released.
+		if rec.Edges.Track == nil {
+			reasons = albumHoldReasons(plan, alb)
+		}
 		if haveProfile {
 			reasons = append(reasons, tierHoldReasons(plan, profile)...)
 		}
@@ -353,8 +359,17 @@ func (w *Worker) planAlbumImport(
 		paths = append(paths, path)
 		infos = append(infos, info)
 	}
+	var uploadedTrack *ent.Track
+	if rec.Edges.Track != nil {
+		for _, t := range alb.Edges.Tracks {
+			if t.ID == rec.Edges.Track.ID {
+				uploadedTrack = t
+				break
+			}
+		}
+	}
 	matcher := library.NewTrackMatcher(alb.Edges.Tracks, infos)
-	if !matcher.ByNumber() {
+	if uploadedTrack == nil && !matcher.ByNumber() {
 		slog.InfoContext(
 			ctx,
 			"album import: track numbers name other titles, matching by title",
@@ -364,7 +379,10 @@ func (w *Worker) planAlbumImport(
 	}
 	for i, path := range paths {
 		info := infos[i]
-		tr := matcher.Match(info)
+		tr := uploadedTrack
+		if rec.Edges.Track == nil {
+			tr = matcher.Match(info)
+		}
 		if tr == nil {
 			slog.WarnContext(ctx, "album import: file matched no track",
 				"file", filepath.Base(path), "album.id", alb.ID)

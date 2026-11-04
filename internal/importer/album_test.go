@@ -172,6 +172,91 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 			Return(nil).Maybe()
 	})
 
+	Describe("uploaded records", func() {
+		uploadedRecord := func(track *ent.Track) *ent.DownloadRecord {
+			rec := fixtureAlbumRecord(dlDir, alb)
+			rec.DownloadClientName = ""
+			rec.Uploaded = true
+			rec.Edges.Track = track
+			return rec
+		}
+
+		BeforeEach(func() {
+			setup("move", true)
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+				Return(nil).Once()
+		})
+
+		It("copies an album's tracks, then removes the staging folder", func() {
+			staging := filepath.Join(dlDir, "staged")
+			Expect(os.MkdirAll(staging, 0o755)).To(Succeed())
+			a := seedTrackFile(
+				staging,
+				"a.mp3",
+				"tagged.mp3",
+				1,
+				albumTracks[0].title,
+			)
+			rec := uploadedRecord(nil)
+			rec.SavePath = staging
+			expectFind(rec)
+			storeMk.EXPECT().
+				RecordAlbumImportSuccess(mock.Anything, mock.Anything).
+				Return(nil).Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+
+			Expect(destOf(1, albumTracks[0].title, "mp3")).To(BeAnExistingFile())
+			Expect(a).NotTo(BeAnExistingFile())
+			Expect(staging).NotTo(BeAnExistingFile())
+		})
+
+		It("does not hold a track upload tagged with another album", func() {
+			staging := filepath.Join(dlDir, "staged")
+			Expect(os.MkdirAll(staging, 0o755)).To(Succeed())
+			path := seedTrackFile(
+				staging,
+				"x.flac",
+				"tagged.flac",
+				9,
+				"Nothing Like It",
+			)
+			Expect(audiotags.Write(path, audiotags.Tags{
+				audiotags.KeyAlbum: {"Greatest Hits"},
+			}, audiotags.Policy{})).To(Succeed())
+			rec := uploadedRecord(alb.Edges.Tracks[2])
+			rec.SavePath = staging
+			expectFind(rec)
+			storeMk.EXPECT().
+				RecordAlbumImportSuccess(mock.Anything, mock.Anything).
+				Return(nil).Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+
+			Expect(destOf(3, albumTracks[2].title, "flac")).To(BeAnExistingFile())
+		})
+
+		It("files an untagged track upload under its track", func() {
+			staging := filepath.Join(dlDir, "staged")
+			Expect(os.MkdirAll(staging, 0o755)).To(Succeed())
+			seedTrackFile(staging, "x.flac", "tagged.flac", 9, "Nothing Like It")
+			rec := uploadedRecord(alb.Edges.Tracks[2])
+			rec.SavePath = staging
+			expectFind(rec)
+			var got db.RecordAlbumImportSuccessParams
+			storeMk.EXPECT().
+				RecordAlbumImportSuccess(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
+				Return(nil).Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+
+			Expect(got.Files).To(ConsistOf(HaveField("TrackID", uint32(13))))
+			Expect(destOf(3, albumTracks[2].title, "flac")).To(BeAnExistingFile())
+		})
+	})
+
 	It(
 		"imports matched tracks, queues them for their tags and leaves the gap",
 		func() {
