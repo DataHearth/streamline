@@ -6,6 +6,7 @@
 	import ReleaseTile from "./ReleaseTile.svelte";
 	import LibraryActions from "@components/shared/LibraryActions.svelte";
 	import { artistTally, releasesCount, type Artist } from "@lib/music-books";
+	import { countMissing } from "@lib/nouns";
 	import { artistPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -95,8 +96,16 @@
 {/snippet}
 
 {#snippet tally()}
-	<span class="text-fg">{t.have}</span> / {releasesCount(t.released)}{#if t.wanted}
-		<span class="text-fg-faint"> · </span><span class="text-status-wanted">{i18n.music_n_wanted({ count: String(t.wanted) })}</span>
+	<!-- With nothing followed or held, the discography's size is all there is
+	     to say, as on a series card. -->
+	{#if t.released}
+		<span class="text-fg">{t.have}</span> / {releasesCount(t.released)}{#if t.wanted}
+			<span class="text-fg-faint"> · </span><span class="text-status-wanted">{i18n.music_n_wanted({ count: String(t.wanted) })}</span>
+		{/if}{#if t.missing}
+			<span class="text-fg-faint"> · </span><span class="text-status-missing">{countMissing(t.missing)}</span>
+		{/if}
+	{:else}
+		{releasesCount(t.out)}
 	{/if}
 {/snippet}
 

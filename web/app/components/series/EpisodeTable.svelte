@@ -1,5 +1,6 @@
 <script lang="ts">
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
+	import LabelPill from "@components/shared/LabelPill.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { Info, Search, Trash2 } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
@@ -138,18 +139,7 @@
 						{/if}
 					</td>
 					<td class="px-3 py-2.5">
-						<span
-							class="ep-pill inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
-							style:--c={`var(--status-${meta.token})`}
-						>
-							<span
-								class={cn(
-									"dot h-1.5 w-1.5 shrink-0 rounded-full",
-									meta.live && "motion-safe:animate-pulse",
-								)}
-							></span>
-							{meta.label}
-						</span>
+						<LabelPill token={meta.token} label={meta.label} variant="translucent" live={meta.live} />
 					</td>
 					<td
 						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted @lg:table-cell"

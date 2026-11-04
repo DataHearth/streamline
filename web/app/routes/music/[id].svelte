@@ -29,6 +29,7 @@
 	import type { UploadEntry } from "@lib/upload";
 	import DetailHistory from "@components/shared/DetailHistory.svelte";
 	import { swipeTabs } from "@lib/swipe-tabs";
+	import { countMissing } from "@lib/nouns";
 	import {
 		artistPeople,
 		artistTally,
@@ -164,7 +165,7 @@
 
 	let meta = $derived.by(() => {
 		if (!artist || !tally) return [];
-		const p: string[] = [releasesCount(tally.listed)];
+		const p: string[] = [releasesCount(tally.out)];
 		if (tally.upcoming) p.push(i18n.music_n_upcoming({ count: String(tally.upcoming) }));
 		p.push(tracksCount(artist.tracks_have));
 		if (artist.size) p.push(formatBytes(artist.size, ""));
@@ -303,6 +304,9 @@
 							{/if}
 							{#if tally.wanted}
 								<span class="text-fg-faint"> · </span><span class="text-status-wanted">{i18n.music_n_wanted({ count: String(tally.wanted) })}</span>
+							{/if}
+							{#if tally.missing}
+								<span class="text-fg-faint"> · </span><span class="text-status-missing">{countMissing(tally.missing)}</span>
 							{/if}
 						</div>
 						<div class="flex h-[3px] w-full overflow-hidden rounded-full bg-white/[0.08]" aria-hidden="true">

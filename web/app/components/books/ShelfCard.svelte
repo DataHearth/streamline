@@ -34,7 +34,7 @@
 >
 	<div
 		class={cn(
-			"relative overflow-hidden rounded-lg transition group-hover:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)] group-has-[:focus-visible]:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)]",
+			"relative overflow-hidden rounded-lg transition group-hover:shadow-[var(--shadow-card-hover)] group-has-[:focus-visible]:shadow-[var(--shadow-card-hover)]",
 			isSeries && "bg-bg-deep",
 		)}
 	>

@@ -397,19 +397,24 @@ export function qualityNote(r: Release): string {
 	});
 }
 
+// The progress figures count what the library follows or holds, the scope
+// the series rollups use (monitored, or on disk): a release nobody monitors
+// is owed nothing, so it only counts once it is on disk.
 export function artistTally(a: Artist) {
 	const out = a.albums.filter((r) => r.status !== "upcoming");
+	const owed = out.filter((r) => r.monitored || r.status === "available");
 	return {
-		listed: out.length,
-		// Owed releases only, as the status rollup counts them: the singles and
-		// live records a discography lists unmonitored kept a fully held
-		// artist at 10 / 62.
-		released: out.filter((r) => r.monitored || r.status === "available").length,
-		have: out.filter((r) => r.status === "available").length,
+		// The discography as released, monitored or not: the hero's meta line.
+		out: out.length,
+		released: owed.length,
+		have: owed.filter((r) => r.status === "available").length,
 		// What the missing search would look for: an unmonitored release is
 		// never searched, so it is not counted as wanted.
-		wanted: out.filter((r) => r.status === "wanted" && r.monitored).length,
-		downloading: out.filter((r) => r.status === "downloading" || r.status === "paused").length,
+		wanted: owed.filter((r) => r.status === "wanted" && r.monitored).length,
+		// Outside that scope, so never in a bar: released, unmonitored and not
+		// (all) on disk. The labels name them.
+		missing: out.filter((r) => r.status === "wanted" && !r.monitored).length,
+		downloading: owed.filter((r) => r.status === "downloading" || r.status === "paused").length,
 		upcoming: a.albums.length - out.length,
 	};
 }

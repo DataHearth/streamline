@@ -153,12 +153,12 @@
 	id="poster-card-{movie.id}"
 	class={cn(
 		"group relative rounded-lg transition duration-200",
-		"hover:scale-[1.02] hover:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)]",
-		"has-[:focus-visible]:scale-[1.02] has-[:focus-visible]:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)]",
+		"hover:scale-[1.02] hover:shadow-[var(--shadow-card-hover)]",
+		"has-[:focus-visible]:scale-[1.02] has-[:focus-visible]:shadow-[var(--shadow-card-hover)]",
 		size === "sm" && "w-[120px]",
 		size === "md" && "w-full",
 		size === "lg" && "w-[200px]",
-		selected && "shadow-[0_0_0_2px_var(--accent),0_24px_64px_rgb(0_0_0_/0.55)]",
+		selected && "shadow-[0_0_0_2px_var(--accent),0_24px_48px_rgb(0_0_0_/0.5)]",
 		holding && "scale-[0.97]",
 	)}
 >
