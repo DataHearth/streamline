@@ -59,7 +59,21 @@ func newContentStorage(
 		PieceCompletion: pc,
 		TorrentDirMaker: paths.torrentDir,
 		FilePathMaker:   paths.filePath,
-	})), paths
+	}), dir), paths
+}
+
+// pieceFiles is where the file storage put each of info's files: torrentDir
+// always answers the base dir, and a torrent filePath refused never reaches
+// OpenTorrent's success path, so the layout needs no admission check again.
+func pieceFiles(base string, info *metainfo.Info) []string {
+	files := info.UpvertedFiles()
+	paths := make([]string, len(files))
+	for i, fi := range files {
+		paths[i] = filepath.Join(
+			append([]string{base, info.BestName()}, fi.BestPath()...)...,
+		)
+	}
+	return paths
 }
 
 func newContentPaths() *contentPaths {
