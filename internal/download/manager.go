@@ -460,7 +460,9 @@ type QueueEntry struct {
 	DownloadClient string
 	// TorrentHash is the record's info hash in DownloadClient, empty when it
 	// has none; the activity page links it to the torrent's own details.
-	TorrentHash   string
+	TorrentHash string
+	// Uploaded marks a record whose files were uploaded, not downloaded.
+	Uploaded      bool
 	Size          int64
 	Progress      float64
 	DownloadSpeed int64
@@ -598,6 +600,7 @@ func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 		Artist:         rec.Edges.Artist,
 		Book:           rec.Edges.Book,
 		BookKind:       string(rec.BookKind),
+		Uploaded:       rec.Uploaded,
 		Episode:        rec.Edges.AnchorEpisode,
 		Size:           rec.Size,
 		FailureReason:  rec.FailureReason,

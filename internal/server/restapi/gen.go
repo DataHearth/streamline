@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"time"
 
@@ -3204,6 +3205,27 @@ func (e UpdateUserRequestRole) Valid() bool {
 	}
 }
 
+// Defines values for UploadPreviewOutcomeOutcome.
+const (
+	UploadPreviewOutcomeOutcomeIgnored UploadPreviewOutcomeOutcome = "ignored"
+	UploadPreviewOutcomeOutcomeKept    UploadPreviewOutcomeOutcome = "kept"
+	UploadPreviewOutcomeOutcomeRefused UploadPreviewOutcomeOutcome = "refused"
+)
+
+// Valid indicates whether the value is a known member of the UploadPreviewOutcomeOutcome enum.
+func (e UploadPreviewOutcomeOutcome) Valid() bool {
+	switch e {
+	case UploadPreviewOutcomeOutcomeIgnored:
+		return true
+	case UploadPreviewOutcomeOutcomeKept:
+		return true
+	case UploadPreviewOutcomeOutcomeRefused:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UserAuthMethod.
 const (
 	UserAuthMethodBoth  UserAuthMethod = "both"
@@ -3522,6 +3544,24 @@ func (e SeriesOrder) Valid() bool {
 	}
 }
 
+// Defines values for UploadSlot.
+const (
+	UploadSlotAudiobook UploadSlot = "audiobook"
+	UploadSlotEbook     UploadSlot = "ebook"
+)
+
+// Valid indicates whether the value is a known member of the UploadSlot enum.
+func (e UploadSlot) Valid() bool {
+	switch e {
+	case UploadSlotAudiobook:
+		return true
+	case UploadSlotEbook:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UsersOrder.
 const (
 	UsersOrderAsc  UsersOrder = "asc"
@@ -3666,6 +3706,42 @@ func (e SearchBooksParamsType) Valid() bool {
 	case SearchBooksParamsTypeBook:
 		return true
 	case SearchBooksParamsTypeSeries:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UploadBookParamsSlot.
+const (
+	UploadBookParamsSlotAudiobook UploadBookParamsSlot = "audiobook"
+	UploadBookParamsSlotEbook     UploadBookParamsSlot = "ebook"
+)
+
+// Valid indicates whether the value is a known member of the UploadBookParamsSlot enum.
+func (e UploadBookParamsSlot) Valid() bool {
+	switch e {
+	case UploadBookParamsSlotAudiobook:
+		return true
+	case UploadBookParamsSlotEbook:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PreviewBookUploadParamsSlot.
+const (
+	PreviewBookUploadParamsSlotAudiobook PreviewBookUploadParamsSlot = "audiobook"
+	PreviewBookUploadParamsSlotEbook     PreviewBookUploadParamsSlot = "ebook"
+)
+
+// Valid indicates whether the value is a known member of the PreviewBookUploadParamsSlot enum.
+func (e PreviewBookUploadParamsSlot) Valid() bool {
+	switch e {
+	case PreviewBookUploadParamsSlotAudiobook:
+		return true
+	case PreviewBookUploadParamsSlotEbook:
 		return true
 	default:
 		return false
@@ -5426,6 +5502,9 @@ type HistoryEntry struct {
 	// torrent may since have been removed from download_client.
 	TorrentHash *string   `json:"torrent_hash,omitempty"`
 	UpdatedAt   time.Time `json:"updated_at"`
+
+	// Uploaded The files were uploaded to Streamline, not downloaded; indexer and download_client are absent.
+	Uploaded *bool `json:"uploaded,omitempty"`
 }
 
 // HistoryEntryStatus defines model for HistoryEntry.Status.
@@ -7871,6 +7950,9 @@ type QueueEntry struct {
 	// lower-case hex. Absent when the record carries none. Under the
 	// builtin client it is the key of GET /torrents/{hash}.
 	TorrentHash *string `json:"torrent_hash,omitempty"`
+
+	// Uploaded The files were uploaded to Streamline, not downloaded; indexer and download_client are absent.
+	Uploaded *bool `json:"uploaded,omitempty"`
 }
 
 // QueueEntrySelectionState File-selection outcome for this grab. Omitted when "skipped" — no
@@ -7913,6 +7995,9 @@ type ReleaseFiles struct {
 
 	// Tracks Every track of the album, in disc and position order.
 	Tracks []ReleaseTrack `json:"tracks"`
+
+	// TracksPending Upload preview only. The album's tracks are not known yet, so nothing could be matched.
+	TracksPending *bool `json:"tracks_pending,omitempty"`
 }
 
 // ReleaseTrack defines model for ReleaseTrack.
@@ -9182,6 +9267,42 @@ type UpdateUserRequestAuthMethod string
 // UpdateUserRequestRole defines model for UpdateUserRequest.Role.
 type UpdateUserRequestRole string
 
+// UploadAccepted defines model for UploadAccepted.
+type UploadAccepted struct {
+	// RecordId The download record the import runs under.
+	RecordId uint32 `json:"record_id"`
+
+	// SkippedFolders Folders of an artist upload that matched no album and were dropped.
+	SkippedFolders *[]string `json:"skipped_folders,omitempty"`
+}
+
+// UploadPreview defines model for UploadPreview.
+type UploadPreview struct {
+	Files []UploadPreviewOutcome `json:"files"`
+}
+
+// UploadPreviewFile defines model for UploadPreviewFile.
+type UploadPreviewFile struct {
+	// Path Path relative to the picked folder.
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+}
+
+// UploadPreviewOutcome defines model for UploadPreviewOutcome.
+type UploadPreviewOutcome struct {
+	Outcome UploadPreviewOutcomeOutcome `json:"outcome"`
+	Path    string                      `json:"path"`
+	Size    int64                       `json:"size"`
+}
+
+// UploadPreviewOutcomeOutcome defines model for UploadPreviewOutcome.Outcome.
+type UploadPreviewOutcomeOutcome string
+
+// UploadPreviewRequest defines model for UploadPreviewRequest.
+type UploadPreviewRequest struct {
+	Files []UploadPreviewFile `json:"files"`
+}
+
 // User defines model for User.
 type User struct {
 	AuthMethod UserAuthMethod `json:"auth_method"`
@@ -9494,6 +9615,15 @@ type TorrentFileIndex = int
 
 // TorrentHash defines model for TorrentHash.
 type TorrentHash = string
+
+// UploadReplaceExisting defines model for UploadReplaceExisting.
+type UploadReplaceExisting = bool
+
+// UploadSlot defines model for UploadSlot.
+type UploadSlot string
+
+// UploadTitle defines model for UploadTitle.
+type UploadTitle = string
 
 // UserID defines model for UserID.
 type UserID = uint32
@@ -9844,6 +9974,9 @@ type PatchMusicArtist = PatchMusicArtistRequest
 // PatchSeries defines model for PatchSeries.
 type PatchSeries = PatchSeriesRequest
 
+// PreviewUploadNames defines model for PreviewUploadNames.
+type PreviewUploadNames = UploadPreviewRequest
+
 // ReplacePending defines model for ReplacePending.
 type ReplacePending = ReplacePendingRequest
 
@@ -10074,6 +10207,34 @@ type SearchBookNowParams struct {
 	Kind *BookSlotKind `form:"kind,omitempty" json:"kind,omitempty"`
 }
 
+// UploadBookMultipartBody defines parameters for UploadBook.
+type UploadBookMultipartBody struct {
+	// File One part per file; its filename is the path relative to the picked folder.
+	File *[]openapi_types.File `json:"file,omitempty"`
+}
+
+// UploadBookParams defines parameters for UploadBook.
+type UploadBookParams struct {
+	Slot UploadBookParamsSlot `form:"slot" json:"slot"`
+
+	// ReplaceExisting Replace the files the target already holds, once the new ones are placed.
+	ReplaceExisting *UploadReplaceExisting `form:"replace_existing,omitempty" json:"replace_existing,omitempty"`
+
+	// Title The dropped folder's name, the record's title. Defaults to `Upload`.
+	Title *UploadTitle `form:"title,omitempty" json:"title,omitempty"`
+}
+
+// UploadBookParamsSlot defines parameters for UploadBook.
+type UploadBookParamsSlot string
+
+// PreviewBookUploadParams defines parameters for PreviewBookUpload.
+type PreviewBookUploadParams struct {
+	Slot PreviewBookUploadParamsSlot `form:"slot" json:"slot"`
+}
+
+// PreviewBookUploadParamsSlot defines parameters for PreviewBookUpload.
+type PreviewBookUploadParamsSlot string
+
 // ListUpcomingReleasesParams defines parameters for ListUpcomingReleases.
 type ListUpcomingReleasesParams struct {
 	From CalendarFrom `form:"from" json:"from"`
@@ -10262,6 +10423,21 @@ type ListMusicAlbumsParams struct {
 	Type *AlbumSearchTypes `form:"type,omitempty" json:"type,omitempty"`
 }
 
+// UploadMusicAlbumMultipartBody defines parameters for UploadMusicAlbum.
+type UploadMusicAlbumMultipartBody struct {
+	// File One part per file; its filename is the path relative to the picked folder.
+	File *[]openapi_types.File `json:"file,omitempty"`
+}
+
+// UploadMusicAlbumParams defines parameters for UploadMusicAlbum.
+type UploadMusicAlbumParams struct {
+	// ReplaceExisting Replace the files the target already holds, once the new ones are placed.
+	ReplaceExisting *UploadReplaceExisting `form:"replace_existing,omitempty" json:"replace_existing,omitempty"`
+
+	// Title The dropped folder's name, the record's title. Defaults to `Upload`.
+	Title *UploadTitle `form:"title,omitempty" json:"title,omitempty"`
+}
+
 // ListMusicArtistsParams defines parameters for ListMusicArtists.
 type ListMusicArtistsParams struct {
 	Page  *SeriesPage  `form:"page,omitempty" json:"page,omitempty"`
@@ -10343,6 +10519,21 @@ type RenameMusicArtistFilesParams struct {
 	Preview *RenamePreview `form:"preview,omitempty" json:"preview,omitempty"`
 }
 
+// UploadMusicArtistMultipartBody defines parameters for UploadMusicArtist.
+type UploadMusicArtistMultipartBody struct {
+	// File One part per file; its filename is the path relative to the picked folder.
+	File *[]openapi_types.File `json:"file,omitempty"`
+}
+
+// UploadMusicArtistParams defines parameters for UploadMusicArtist.
+type UploadMusicArtistParams struct {
+	// ReplaceExisting Replace the files the target already holds, once the new ones are placed.
+	ReplaceExisting *UploadReplaceExisting `form:"replace_existing,omitempty" json:"replace_existing,omitempty"`
+
+	// Title The dropped folder's name, the record's title. Defaults to `Upload`.
+	Title *UploadTitle `form:"title,omitempty" json:"title,omitempty"`
+}
+
 // SearchMusicArtistsParams defines parameters for SearchMusicArtists.
 type SearchMusicArtistsParams struct {
 	// Query MusicBrainz artist search query.
@@ -10377,6 +10568,21 @@ type ListMusicTracksParams struct {
 
 	// Offset Zero-based offset for pagination.
 	Offset *TitleSearchOffset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// UploadMusicTrackMultipartBody defines parameters for UploadMusicTrack.
+type UploadMusicTrackMultipartBody struct {
+	// File One part per file; its filename is the path relative to the picked folder.
+	File *[]openapi_types.File `json:"file,omitempty"`
+}
+
+// UploadMusicTrackParams defines parameters for UploadMusicTrack.
+type UploadMusicTrackParams struct {
+	// ReplaceExisting Replace the files the target already holds, once the new ones are placed.
+	ReplaceExisting *UploadReplaceExisting `form:"replace_existing,omitempty" json:"replace_existing,omitempty"`
+
+	// Title The dropped folder's name, the record's title. Defaults to `Upload`.
+	Title *UploadTitle `form:"title,omitempty" json:"title,omitempty"`
 }
 
 // ListPeopleParams defines parameters for ListPeople.
@@ -10601,6 +10807,12 @@ type PatchBookJSONRequestBody = PatchBookRequest
 // GrabBookReleaseJSONRequestBody defines body for GrabBookRelease for application/json ContentType.
 type GrabBookReleaseJSONRequestBody = SearchResult
 
+// UploadBookMultipartRequestBody defines body for UploadBook for multipart/form-data ContentType.
+type UploadBookMultipartRequestBody UploadBookMultipartBody
+
+// PreviewBookUploadJSONRequestBody defines body for PreviewBookUpload for application/json ContentType.
+type PreviewBookUploadJSONRequestBody = UploadPreviewRequest
+
 // UpdateConfigAuthJSONRequestBody defines body for UpdateConfigAuth for application/json ContentType.
 type UpdateConfigAuthJSONRequestBody = AuthConfigPatch
 
@@ -10721,6 +10933,12 @@ type GrabMusicAlbumReleaseJSONRequestBody = SearchResult
 // GetMusicAlbumReleaseFilesJSONRequestBody defines body for GetMusicAlbumReleaseFiles for application/json ContentType.
 type GetMusicAlbumReleaseFilesJSONRequestBody = SearchResult
 
+// UploadMusicAlbumMultipartRequestBody defines body for UploadMusicAlbum for multipart/form-data ContentType.
+type UploadMusicAlbumMultipartRequestBody UploadMusicAlbumMultipartBody
+
+// PreviewMusicAlbumUploadJSONRequestBody defines body for PreviewMusicAlbumUpload for application/json ContentType.
+type PreviewMusicAlbumUploadJSONRequestBody = UploadPreviewRequest
+
 // AddMusicArtistJSONRequestBody defines body for AddMusicArtist for application/json ContentType.
 type AddMusicArtistJSONRequestBody = AddMusicArtistRequest
 
@@ -10733,6 +10951,12 @@ type GrabMusicArtistReleaseJSONRequestBody = SearchResult
 // GetMusicArtistReleaseFilesJSONRequestBody defines body for GetMusicArtistReleaseFiles for application/json ContentType.
 type GetMusicArtistReleaseFilesJSONRequestBody = SearchResult
 
+// UploadMusicArtistMultipartRequestBody defines body for UploadMusicArtist for multipart/form-data ContentType.
+type UploadMusicArtistMultipartRequestBody UploadMusicArtistMultipartBody
+
+// PreviewMusicArtistUploadJSONRequestBody defines body for PreviewMusicArtistUpload for application/json ContentType.
+type PreviewMusicArtistUploadJSONRequestBody = UploadPreviewRequest
+
 // CreateMusicQualityProfileJSONRequestBody defines body for CreateMusicQualityProfile for application/json ContentType.
 type CreateMusicQualityProfileJSONRequestBody = MusicQualityProfileCreate
 
@@ -10741,6 +10965,9 @@ type UpdateMusicQualityProfileJSONRequestBody = MusicQualityProfileCreate
 
 // PatchMusicTrackJSONRequestBody defines body for PatchMusicTrack for application/json ContentType.
 type PatchMusicTrackJSONRequestBody = PatchMusicTrackRequest
+
+// UploadMusicTrackMultipartRequestBody defines body for UploadMusicTrack for multipart/form-data ContentType.
+type UploadMusicTrackMultipartRequestBody UploadMusicTrackMultipartBody
 
 // CreateQualityProfileJSONRequestBody defines body for CreateQualityProfile for application/json ContentType.
 type CreateQualityProfileJSONRequestBody = QualityProfileCreate
@@ -11084,6 +11311,12 @@ type ServerInterface interface {
 	// SendBook Email a book's ebook to the caller's device
 	// (POST /books/{id}/send)
 	SendBook(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// UploadBook Upload the files of one slot of a book
+	// (POST /books/{id}/upload)
+	UploadBook(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadBookParams)
+	// PreviewBookUpload Read what an upload of files to one slot of a book would keep
+	// (POST /books/{id}/upload/preview)
+	PreviewBookUpload(w http.ResponseWriter, r *http.Request, id ResourceID, params PreviewBookUploadParams)
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(w http.ResponseWriter, r *http.Request, params ListUpcomingReleasesParams)
@@ -11366,6 +11599,12 @@ type ServerInterface interface {
 	// ApplyMusicAlbumTags Write an album's tags now
 	// (POST /music/albums/{id}/tags/apply)
 	ApplyMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// UploadMusicAlbum Upload the files of an album, EP or single
+	// (POST /music/albums/{id}/upload)
+	UploadMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadMusicAlbumParams)
+	// PreviewMusicAlbumUpload Read the names of files about to be uploaded against the album's tracks
+	// (POST /music/albums/{id}/upload/preview)
+	PreviewMusicAlbumUpload(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListMusicArtists List music artists
 	// (GET /music/artists)
 	ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams)
@@ -11402,6 +11641,12 @@ type ServerInterface interface {
 	// SearchMusicArtistNow Dispatch an indexer search for an artist's wanted albums
 	// (POST /music/artists/{id}/search-now)
 	SearchMusicArtistNow(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// UploadMusicArtist Upload a discography, one folder per album
+	// (POST /music/artists/{id}/upload)
+	UploadMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadMusicArtistParams)
+	// PreviewMusicArtistUpload Read the names of files about to be uploaded against every album of the artist
+	// (POST /music/artists/{id}/upload/preview)
+	PreviewMusicArtistUpload(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ApplyMusicMonitoredTypes Apply the monitored release types to existing artists (admin)
 	// (POST /music/monitored-types/apply)
 	ApplyMusicMonitoredTypes(w http.ResponseWriter, r *http.Request)
@@ -11444,6 +11689,9 @@ type ServerInterface interface {
 	// SearchMusicTrackNow Dispatch an indexer search for the album holding a track
 	// (POST /music/tracks/{id}/search-now)
 	SearchMusicTrackNow(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// UploadMusicTrack Upload the one file of a track
+	// (POST /music/tracks/{id}/upload)
+	UploadMusicTrack(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadMusicTrackParams)
 	// ListPeople List cast members in the library
 	// (GET /people)
 	ListPeople(w http.ResponseWriter, r *http.Request, params ListPeopleParams)
@@ -12029,6 +12277,18 @@ func (_ Unimplemented) SendBook(w http.ResponseWriter, r *http.Request, id Resou
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// UploadBook Upload the files of one slot of a book
+// (POST /books/{id}/upload)
+func (_ Unimplemented) UploadBook(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadBookParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PreviewBookUpload Read what an upload of files to one slot of a book would keep
+// (POST /books/{id}/upload/preview)
+func (_ Unimplemented) PreviewBookUpload(w http.ResponseWriter, r *http.Request, id ResourceID, params PreviewBookUploadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 // (GET /calendar/upcoming)
 func (_ Unimplemented) ListUpcomingReleases(w http.ResponseWriter, r *http.Request, params ListUpcomingReleasesParams) {
@@ -12579,6 +12839,18 @@ func (_ Unimplemented) ApplyMusicAlbumTags(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// UploadMusicAlbum Upload the files of an album, EP or single
+// (POST /music/albums/{id}/upload)
+func (_ Unimplemented) UploadMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadMusicAlbumParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PreviewMusicAlbumUpload Read the names of files about to be uploaded against the album's tracks
+// (POST /music/albums/{id}/upload/preview)
+func (_ Unimplemented) PreviewMusicAlbumUpload(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListMusicArtists List music artists
 // (GET /music/artists)
 func (_ Unimplemented) ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams) {
@@ -12648,6 +12920,18 @@ func (_ Unimplemented) RenameMusicArtistFiles(w http.ResponseWriter, r *http.Req
 // SearchMusicArtistNow Dispatch an indexer search for an artist's wanted albums
 // (POST /music/artists/{id}/search-now)
 func (_ Unimplemented) SearchMusicArtistNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UploadMusicArtist Upload a discography, one folder per album
+// (POST /music/artists/{id}/upload)
+func (_ Unimplemented) UploadMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadMusicArtistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PreviewMusicArtistUpload Read the names of files about to be uploaded against every album of the artist
+// (POST /music/artists/{id}/upload/preview)
+func (_ Unimplemented) PreviewMusicArtistUpload(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -12732,6 +13016,12 @@ func (_ Unimplemented) DeleteMusicTrackFile(w http.ResponseWriter, r *http.Reque
 // SearchMusicTrackNow Dispatch an indexer search for the album holding a track
 // (POST /music/tracks/{id}/search-now)
 func (_ Unimplemented) SearchMusicTrackNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UploadMusicTrack Upload the one file of a track
+// (POST /music/tracks/{id}/upload)
+func (_ Unimplemented) UploadMusicTrack(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadMusicTrackParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -15006,6 +15296,116 @@ func (siw *ServerInterfaceWrapper) SendBook(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SendBook(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadBook operation middleware
+func (siw *ServerInterfaceWrapper) UploadBook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UploadBookParams
+
+	// ------------- Required query parameter "slot" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "slot", r.URL.Query(), &params.Slot, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "slot"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slot", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "replace_existing" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "replace_existing", r.URL.Query(), &params.ReplaceExisting, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "replace_existing"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "replace_existing", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "title" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "title", r.URL.Query(), &params.Title, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "title"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "title", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadBook(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewBookUpload operation middleware
+func (siw *ServerInterfaceWrapper) PreviewBookUpload(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PreviewBookUploadParams
+
+	// ------------- Required query parameter "slot" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "slot", r.URL.Query(), &params.Slot, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "slot"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slot", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewBookUpload(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -17626,6 +18026,87 @@ func (siw *ServerInterfaceWrapper) ApplyMusicAlbumTags(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// UploadMusicAlbum operation middleware
+func (siw *ServerInterfaceWrapper) UploadMusicAlbum(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UploadMusicAlbumParams
+
+	// ------------- Optional query parameter "replace_existing" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "replace_existing", r.URL.Query(), &params.ReplaceExisting, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "replace_existing"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "replace_existing", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "title" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "title", r.URL.Query(), &params.Title, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "title"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "title", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadMusicAlbum(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewMusicAlbumUpload operation middleware
+func (siw *ServerInterfaceWrapper) PreviewMusicAlbumUpload(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewMusicAlbumUpload(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMusicArtists operation middleware
 func (siw *ServerInterfaceWrapper) ListMusicArtists(w http.ResponseWriter, r *http.Request) {
 
@@ -18150,6 +18631,87 @@ func (siw *ServerInterfaceWrapper) SearchMusicArtistNow(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// UploadMusicArtist operation middleware
+func (siw *ServerInterfaceWrapper) UploadMusicArtist(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UploadMusicArtistParams
+
+	// ------------- Optional query parameter "replace_existing" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "replace_existing", r.URL.Query(), &params.ReplaceExisting, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "replace_existing"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "replace_existing", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "title" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "title", r.URL.Query(), &params.Title, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "title"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "title", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadMusicArtist(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewMusicArtistUpload operation middleware
+func (siw *ServerInterfaceWrapper) PreviewMusicArtistUpload(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewMusicArtistUpload(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ApplyMusicMonitoredTypes operation middleware
 func (siw *ServerInterfaceWrapper) ApplyMusicMonitoredTypes(w http.ResponseWriter, r *http.Request) {
 
@@ -18533,6 +19095,61 @@ func (siw *ServerInterfaceWrapper) SearchMusicTrackNow(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SearchMusicTrackNow(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadMusicTrack operation middleware
+func (siw *ServerInterfaceWrapper) UploadMusicTrack(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UploadMusicTrackParams
+
+	// ------------- Optional query parameter "replace_existing" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "replace_existing", r.URL.Query(), &params.ReplaceExisting, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "replace_existing"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "replace_existing", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "title" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "title", r.URL.Query(), &params.Title, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "title"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "title", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadMusicTrack(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -21076,6 +21693,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/music/albums/{id}/release-files", wrapper.GetMusicAlbumReleaseFiles)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/albums/{id}/upload/preview", wrapper.PreviewMusicAlbumUpload)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/albums/{id}/upload", wrapper.UploadMusicAlbum)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/tracks/{id}/upload", wrapper.UploadMusicTrack)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/artists/{id}/upload/preview", wrapper.PreviewMusicArtistUpload)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/artists/{id}/upload", wrapper.UploadMusicArtist)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/albums/{id}/search-now", wrapper.SearchMusicAlbumNow)
 	})
 	r.Group(func(r chi.Router) {
@@ -21188,6 +21820,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/books/{id}/rename", wrapper.RenameBookFiles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/books/{id}/upload/preview", wrapper.PreviewBookUpload)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/books/{id}/upload", wrapper.UploadBook)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/books/{id}/send", wrapper.SendBook)
@@ -21918,6 +22556,8 @@ type UnauthorizedJSONResponse Error
 type UnprocessableEntityJSONResponse Error
 
 type UpcomingListJSONResponse UpcomingList
+
+type UploadAcceptedJSONResponse UploadAccepted
 
 type UserApiKeyRevokedResponse struct {
 }
@@ -26032,6 +26672,226 @@ func (response SendBook503JSONResponse) VisitSendBookResponse(w http.ResponseWri
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadBookRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params UploadBookParams
+	Body   *multipart.Reader
+}
+
+type UploadBookResponseObject interface {
+	VisitUploadBookResponse(w http.ResponseWriter) error
+}
+
+type UploadBook202JSONResponse struct{ UploadAcceptedJSONResponse }
+
+func (response UploadBook202JSONResponse) VisitUploadBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadBook403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UploadBook403JSONResponse) VisitUploadBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadBook404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UploadBook404JSONResponse) VisitUploadBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadBook409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UploadBook409JSONResponse) VisitUploadBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadBook413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UploadBook413JSONResponse) VisitUploadBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadBook422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UploadBook422JSONResponse) VisitUploadBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadBook500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UploadBook500JSONResponse) VisitUploadBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewBookUploadRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params PreviewBookUploadParams
+	Body   *PreviewBookUploadJSONRequestBody
+}
+
+type PreviewBookUploadResponseObject interface {
+	VisitPreviewBookUploadResponse(w http.ResponseWriter) error
+}
+
+type PreviewBookUpload200JSONResponse UploadPreview
+
+func (response PreviewBookUpload200JSONResponse) VisitPreviewBookUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewBookUpload403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PreviewBookUpload403JSONResponse) VisitPreviewBookUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewBookUpload404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PreviewBookUpload404JSONResponse) VisitPreviewBookUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewBookUpload409JSONResponse struct{ ConflictJSONResponse }
+
+func (response PreviewBookUpload409JSONResponse) VisitPreviewBookUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewBookUpload413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PreviewBookUpload413JSONResponse) VisitPreviewBookUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewBookUpload422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PreviewBookUpload422JSONResponse) VisitPreviewBookUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewBookUpload500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response PreviewBookUpload500JSONResponse) VisitPreviewBookUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -32175,6 +33035,225 @@ func (response ApplyMusicAlbumTags500JSONResponse) VisitApplyMusicAlbumTagsRespo
 	return err
 }
 
+type UploadMusicAlbumRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params UploadMusicAlbumParams
+	Body   *multipart.Reader
+}
+
+type UploadMusicAlbumResponseObject interface {
+	VisitUploadMusicAlbumResponse(w http.ResponseWriter) error
+}
+
+type UploadMusicAlbum202JSONResponse struct{ UploadAcceptedJSONResponse }
+
+func (response UploadMusicAlbum202JSONResponse) VisitUploadMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicAlbum403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UploadMusicAlbum403JSONResponse) VisitUploadMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicAlbum404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UploadMusicAlbum404JSONResponse) VisitUploadMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicAlbum409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UploadMusicAlbum409JSONResponse) VisitUploadMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicAlbum413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UploadMusicAlbum413JSONResponse) VisitUploadMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicAlbum422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UploadMusicAlbum422JSONResponse) VisitUploadMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicAlbum500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UploadMusicAlbum500JSONResponse) VisitUploadMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicAlbumUploadRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *PreviewMusicAlbumUploadJSONRequestBody
+}
+
+type PreviewMusicAlbumUploadResponseObject interface {
+	VisitPreviewMusicAlbumUploadResponse(w http.ResponseWriter) error
+}
+
+type PreviewMusicAlbumUpload200JSONResponse ReleaseFiles
+
+func (response PreviewMusicAlbumUpload200JSONResponse) VisitPreviewMusicAlbumUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicAlbumUpload403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PreviewMusicAlbumUpload403JSONResponse) VisitPreviewMusicAlbumUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicAlbumUpload404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PreviewMusicAlbumUpload404JSONResponse) VisitPreviewMusicAlbumUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicAlbumUpload409JSONResponse struct{ ConflictJSONResponse }
+
+func (response PreviewMusicAlbumUpload409JSONResponse) VisitPreviewMusicAlbumUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicAlbumUpload413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PreviewMusicAlbumUpload413JSONResponse) VisitPreviewMusicAlbumUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicAlbumUpload422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PreviewMusicAlbumUpload422JSONResponse) VisitPreviewMusicAlbumUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicAlbumUpload500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response PreviewMusicAlbumUpload500JSONResponse) VisitPreviewMusicAlbumUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListMusicArtistsRequestObject struct {
 	Params ListMusicArtistsParams
 }
@@ -33037,6 +34116,225 @@ func (response SearchMusicArtistNow404JSONResponse) VisitSearchMusicArtistNowRes
 type SearchMusicArtistNow500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response SearchMusicArtistNow500JSONResponse) VisitSearchMusicArtistNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicArtistRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params UploadMusicArtistParams
+	Body   *multipart.Reader
+}
+
+type UploadMusicArtistResponseObject interface {
+	VisitUploadMusicArtistResponse(w http.ResponseWriter) error
+}
+
+type UploadMusicArtist202JSONResponse struct{ UploadAcceptedJSONResponse }
+
+func (response UploadMusicArtist202JSONResponse) VisitUploadMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicArtist403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UploadMusicArtist403JSONResponse) VisitUploadMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicArtist404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UploadMusicArtist404JSONResponse) VisitUploadMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicArtist409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UploadMusicArtist409JSONResponse) VisitUploadMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicArtist413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UploadMusicArtist413JSONResponse) VisitUploadMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicArtist422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UploadMusicArtist422JSONResponse) VisitUploadMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicArtist500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UploadMusicArtist500JSONResponse) VisitUploadMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicArtistUploadRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *PreviewMusicArtistUploadJSONRequestBody
+}
+
+type PreviewMusicArtistUploadResponseObject interface {
+	VisitPreviewMusicArtistUploadResponse(w http.ResponseWriter) error
+}
+
+type PreviewMusicArtistUpload200JSONResponse DiscographyFiles
+
+func (response PreviewMusicArtistUpload200JSONResponse) VisitPreviewMusicArtistUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicArtistUpload403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PreviewMusicArtistUpload403JSONResponse) VisitPreviewMusicArtistUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicArtistUpload404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PreviewMusicArtistUpload404JSONResponse) VisitPreviewMusicArtistUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicArtistUpload409JSONResponse struct{ ConflictJSONResponse }
+
+func (response PreviewMusicArtistUpload409JSONResponse) VisitPreviewMusicArtistUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicArtistUpload413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PreviewMusicArtistUpload413JSONResponse) VisitPreviewMusicArtistUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicArtistUpload422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PreviewMusicArtistUpload422JSONResponse) VisitPreviewMusicArtistUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewMusicArtistUpload500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response PreviewMusicArtistUpload500JSONResponse) VisitPreviewMusicArtistUploadResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -33966,6 +35264,116 @@ func (response SearchMusicTrackNow404JSONResponse) VisitSearchMusicTrackNowRespo
 type SearchMusicTrackNow500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response SearchMusicTrackNow500JSONResponse) VisitSearchMusicTrackNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicTrackRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params UploadMusicTrackParams
+	Body   *multipart.Reader
+}
+
+type UploadMusicTrackResponseObject interface {
+	VisitUploadMusicTrackResponse(w http.ResponseWriter) error
+}
+
+type UploadMusicTrack202JSONResponse struct{ UploadAcceptedJSONResponse }
+
+func (response UploadMusicTrack202JSONResponse) VisitUploadMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicTrack403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UploadMusicTrack403JSONResponse) VisitUploadMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicTrack404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UploadMusicTrack404JSONResponse) VisitUploadMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicTrack409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UploadMusicTrack409JSONResponse) VisitUploadMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicTrack413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UploadMusicTrack413JSONResponse) VisitUploadMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicTrack422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UploadMusicTrack422JSONResponse) VisitUploadMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadMusicTrack500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UploadMusicTrack500JSONResponse) VisitUploadMusicTrackResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -38806,6 +40214,12 @@ type StrictServerInterface interface {
 	// SendBook Email a book's ebook to the caller's device
 	// (POST /books/{id}/send)
 	SendBook(ctx context.Context, request SendBookRequestObject) (SendBookResponseObject, error)
+	// UploadBook Upload the files of one slot of a book
+	// (POST /books/{id}/upload)
+	UploadBook(ctx context.Context, request UploadBookRequestObject) (UploadBookResponseObject, error)
+	// PreviewBookUpload Read what an upload of files to one slot of a book would keep
+	// (POST /books/{id}/upload/preview)
+	PreviewBookUpload(ctx context.Context, request PreviewBookUploadRequestObject) (PreviewBookUploadResponseObject, error)
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(ctx context.Context, request ListUpcomingReleasesRequestObject) (ListUpcomingReleasesResponseObject, error)
@@ -39088,6 +40502,12 @@ type StrictServerInterface interface {
 	// ApplyMusicAlbumTags Write an album's tags now
 	// (POST /music/albums/{id}/tags/apply)
 	ApplyMusicAlbumTags(ctx context.Context, request ApplyMusicAlbumTagsRequestObject) (ApplyMusicAlbumTagsResponseObject, error)
+	// UploadMusicAlbum Upload the files of an album, EP or single
+	// (POST /music/albums/{id}/upload)
+	UploadMusicAlbum(ctx context.Context, request UploadMusicAlbumRequestObject) (UploadMusicAlbumResponseObject, error)
+	// PreviewMusicAlbumUpload Read the names of files about to be uploaded against the album's tracks
+	// (POST /music/albums/{id}/upload/preview)
+	PreviewMusicAlbumUpload(ctx context.Context, request PreviewMusicAlbumUploadRequestObject) (PreviewMusicAlbumUploadResponseObject, error)
 	// ListMusicArtists List music artists
 	// (GET /music/artists)
 	ListMusicArtists(ctx context.Context, request ListMusicArtistsRequestObject) (ListMusicArtistsResponseObject, error)
@@ -39124,6 +40544,12 @@ type StrictServerInterface interface {
 	// SearchMusicArtistNow Dispatch an indexer search for an artist's wanted albums
 	// (POST /music/artists/{id}/search-now)
 	SearchMusicArtistNow(ctx context.Context, request SearchMusicArtistNowRequestObject) (SearchMusicArtistNowResponseObject, error)
+	// UploadMusicArtist Upload a discography, one folder per album
+	// (POST /music/artists/{id}/upload)
+	UploadMusicArtist(ctx context.Context, request UploadMusicArtistRequestObject) (UploadMusicArtistResponseObject, error)
+	// PreviewMusicArtistUpload Read the names of files about to be uploaded against every album of the artist
+	// (POST /music/artists/{id}/upload/preview)
+	PreviewMusicArtistUpload(ctx context.Context, request PreviewMusicArtistUploadRequestObject) (PreviewMusicArtistUploadResponseObject, error)
 	// ApplyMusicMonitoredTypes Apply the monitored release types to existing artists (admin)
 	// (POST /music/monitored-types/apply)
 	ApplyMusicMonitoredTypes(ctx context.Context, request ApplyMusicMonitoredTypesRequestObject) (ApplyMusicMonitoredTypesResponseObject, error)
@@ -39166,6 +40592,9 @@ type StrictServerInterface interface {
 	// SearchMusicTrackNow Dispatch an indexer search for the album holding a track
 	// (POST /music/tracks/{id}/search-now)
 	SearchMusicTrackNow(ctx context.Context, request SearchMusicTrackNowRequestObject) (SearchMusicTrackNowResponseObject, error)
+	// UploadMusicTrack Upload the one file of a track
+	// (POST /music/tracks/{id}/upload)
+	UploadMusicTrack(ctx context.Context, request UploadMusicTrackRequestObject) (UploadMusicTrackResponseObject, error)
 	// ListPeople List cast members in the library
 	// (GET /people)
 	ListPeople(ctx context.Context, request ListPeopleRequestObject) (ListPeopleResponseObject, error)
@@ -41080,6 +42509,74 @@ func (sh *strictHandler) SendBook(w http.ResponseWriter, r *http.Request, id Res
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SendBookResponseObject); ok {
 		if err := validResponse.VisitSendBookResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UploadBook operation middleware
+func (sh *strictHandler) UploadBook(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadBookParams) {
+	var request UploadBookRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UploadBook(ctx, request.(UploadBookRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadBook")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UploadBookResponseObject); ok {
+		if err := validResponse.VisitUploadBookResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PreviewBookUpload operation middleware
+func (sh *strictHandler) PreviewBookUpload(w http.ResponseWriter, r *http.Request, id ResourceID, params PreviewBookUploadParams) {
+	var request PreviewBookUploadRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	var body PreviewBookUploadJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PreviewBookUpload(ctx, request.(PreviewBookUploadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PreviewBookUpload")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PreviewBookUploadResponseObject); ok {
+		if err := validResponse.VisitPreviewBookUploadResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -43758,6 +45255,73 @@ func (sh *strictHandler) ApplyMusicAlbumTags(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// UploadMusicAlbum operation middleware
+func (sh *strictHandler) UploadMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadMusicAlbumParams) {
+	var request UploadMusicAlbumRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UploadMusicAlbum(ctx, request.(UploadMusicAlbumRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadMusicAlbum")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UploadMusicAlbumResponseObject); ok {
+		if err := validResponse.VisitUploadMusicAlbumResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PreviewMusicAlbumUpload operation middleware
+func (sh *strictHandler) PreviewMusicAlbumUpload(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request PreviewMusicAlbumUploadRequestObject
+
+	request.Id = id
+
+	var body PreviewMusicAlbumUploadJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PreviewMusicAlbumUpload(ctx, request.(PreviewMusicAlbumUploadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PreviewMusicAlbumUpload")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PreviewMusicAlbumUploadResponseObject); ok {
+		if err := validResponse.VisitPreviewMusicAlbumUploadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListMusicArtists operation middleware
 func (sh *strictHandler) ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams) {
 	var request ListMusicArtistsRequestObject
@@ -44094,6 +45658,73 @@ func (sh *strictHandler) SearchMusicArtistNow(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchMusicArtistNowResponseObject); ok {
 		if err := validResponse.VisitSearchMusicArtistNowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UploadMusicArtist operation middleware
+func (sh *strictHandler) UploadMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadMusicArtistParams) {
+	var request UploadMusicArtistRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UploadMusicArtist(ctx, request.(UploadMusicArtistRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadMusicArtist")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UploadMusicArtistResponseObject); ok {
+		if err := validResponse.VisitUploadMusicArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PreviewMusicArtistUpload operation middleware
+func (sh *strictHandler) PreviewMusicArtistUpload(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request PreviewMusicArtistUploadRequestObject
+
+	request.Id = id
+
+	var body PreviewMusicArtistUploadJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PreviewMusicArtistUpload(ctx, request.(PreviewMusicArtistUploadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PreviewMusicArtistUpload")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PreviewMusicArtistUploadResponseObject); ok {
+		if err := validResponse.VisitPreviewMusicArtistUploadResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -44472,6 +46103,40 @@ func (sh *strictHandler) SearchMusicTrackNow(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchMusicTrackNowResponseObject); ok {
 		if err := validResponse.VisitSearchMusicTrackNowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UploadMusicTrack operation middleware
+func (sh *strictHandler) UploadMusicTrack(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadMusicTrackParams) {
+	var request UploadMusicTrackRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UploadMusicTrack(ctx, request.(UploadMusicTrackRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadMusicTrack")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UploadMusicTrackResponseObject); ok {
+		if err := validResponse.VisitUploadMusicTrackResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
