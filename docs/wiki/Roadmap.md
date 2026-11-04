@@ -13,6 +13,7 @@ Missing something you need? [Open an issue](https://github.com/datahearth/stream
 | Music | ✅ Shipped — library management with background hydration of tracks and credits, Wikipedia overviews and artist photos, monitor policies, adoption of existing files, a Subsonic server (playlists, stars and play counts, queue sync, share links, lyrics, transcoding), searching and grabbing albums and discography packs with tag writing, RSS and scheduled searches, and requests |
 | Books | ✅ Shipped — a book-first library (books and series with volumes, editions per language and publisher, an ebook and an audiobook slot each), adoption of existing files, an OPDS catalog, searching and grabbing per slot, RSS and scheduled searches, and requests |
 | Send to e-reader by email (EPUB and PDF) | ✅ Shipped |
+| Upload albums, tracks, discographies and books from the UI or API, imported like a finished download | ✅ Shipped |
 | CBZ → PDF for send to e-reader | 📋 Planned |
 | Music tag engine (Streamline keeps every file's tags and artwork in step with its library) | 🚧 In progress — full MusicBrainz tag set with composers, performers and production credits, the album cover in each file and `cover.jpg`/`folder.jpg` beside them, a per-release tag panel with hand-set tags, and edits made elsewhere undone under *Managed* — without losing ReplayGain, lyrics or a release's own art |
 
