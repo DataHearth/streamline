@@ -1327,6 +1327,78 @@ func (_c *MockTx_BookHardcoverIndex_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
+// BookSlotHasLiveRecord provides a mock function for the type MockTx
+func (_mock *MockTx) BookSlotHasLiveRecord(ctx context.Context, bookID uint32, kind downloadrecord.BookKind) (bool, error) {
+	ret := _mock.Called(ctx, bookID, kind)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BookSlotHasLiveRecord")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, downloadrecord.BookKind) (bool, error)); ok {
+		return returnFunc(ctx, bookID, kind)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, downloadrecord.BookKind) bool); ok {
+		r0 = returnFunc(ctx, bookID, kind)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, downloadrecord.BookKind) error); ok {
+		r1 = returnFunc(ctx, bookID, kind)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_BookSlotHasLiveRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookSlotHasLiveRecord'
+type MockTx_BookSlotHasLiveRecord_Call struct {
+	*mock.Call
+}
+
+// BookSlotHasLiveRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - bookID uint32
+//   - kind downloadrecord.BookKind
+func (_e *MockTx_Expecter) BookSlotHasLiveRecord(ctx any, bookID any, kind any) *MockTx_BookSlotHasLiveRecord_Call {
+	return &MockTx_BookSlotHasLiveRecord_Call{Call: _e.mock.On("BookSlotHasLiveRecord", ctx, bookID, kind)}
+}
+
+func (_c *MockTx_BookSlotHasLiveRecord_Call) Run(run func(ctx context.Context, bookID uint32, kind downloadrecord.BookKind)) *MockTx_BookSlotHasLiveRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 downloadrecord.BookKind
+		if args[2] != nil {
+			arg2 = args[2].(downloadrecord.BookKind)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_BookSlotHasLiveRecord_Call) Return(b bool, err error) *MockTx_BookSlotHasLiveRecord_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockTx_BookSlotHasLiveRecord_Call) RunAndReturn(run func(ctx context.Context, bookID uint32, kind downloadrecord.BookKind) (bool, error)) *MockTx_BookSlotHasLiveRecord_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BulkCreateImportScanAlbums provides a mock function for the type MockTx
 func (_mock *MockTx) BulkCreateImportScanAlbums(ctx context.Context, scanID uint32, albums []db.CreateImportScanAlbumParams) error {
 	ret := _mock.Called(ctx, scanID, albums)
@@ -12897,6 +12969,68 @@ func (_c *MockTx_ListInvites_Call) Return(invites []*ent.Invite, err error) *Moc
 }
 
 func (_c *MockTx_ListInvites_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.Invite, error)) *MockTx_ListInvites_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListKeptUploadPaths provides a mock function for the type MockTx
+func (_mock *MockTx) ListKeptUploadPaths(ctx context.Context) ([]string, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListKeptUploadPaths")
+	}
+
+	var r0 []string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]string, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []string); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListKeptUploadPaths_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListKeptUploadPaths'
+type MockTx_ListKeptUploadPaths_Call struct {
+	*mock.Call
+}
+
+// ListKeptUploadPaths is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTx_Expecter) ListKeptUploadPaths(ctx any) *MockTx_ListKeptUploadPaths_Call {
+	return &MockTx_ListKeptUploadPaths_Call{Call: _e.mock.On("ListKeptUploadPaths", ctx)}
+}
+
+func (_c *MockTx_ListKeptUploadPaths_Call) Run(run func(ctx context.Context)) *MockTx_ListKeptUploadPaths_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListKeptUploadPaths_Call) Return(strings []string, err error) *MockTx_ListKeptUploadPaths_Call {
+	_c.Call.Return(strings, err)
+	return _c
+}
+
+func (_c *MockTx_ListKeptUploadPaths_Call) RunAndReturn(run func(ctx context.Context) ([]string, error)) *MockTx_ListKeptUploadPaths_Call {
 	_c.Call.Return(run)
 	return _c
 }

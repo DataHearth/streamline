@@ -50,6 +50,8 @@ func (Track) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("bookmarks", Bookmark.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("download_records", DownloadRecord.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

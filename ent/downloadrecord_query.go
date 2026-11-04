@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/track"
 )
 
 // DownloadRecordQuery is the builder for querying DownloadRecord entities.
@@ -30,6 +31,7 @@ type DownloadRecordQuery struct {
 	predicates        []predicate.DownloadRecord
 	withMovie         *MovieQuery
 	withAlbum         *AlbumQuery
+	withTrack         *TrackQuery
 	withBook          *BookQuery
 	withArtist        *ArtistQuery
 	withAlbums        *AlbumQuery
@@ -110,6 +112,28 @@ func (_q *DownloadRecordQuery) QueryAlbum() *AlbumQuery {
 			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, selector),
 			sqlgraph.To(album.Table, album.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.AlbumTable, downloadrecord.AlbumColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTrack chains the current query on the "track" edge.
+func (_q *DownloadRecordQuery) QueryTrack() *TrackQuery {
+	query := (&TrackClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, selector),
+			sqlgraph.To(track.Table, track.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.TrackTable, downloadrecord.TrackColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -421,6 +445,7 @@ func (_q *DownloadRecordQuery) Clone() *DownloadRecordQuery {
 		predicates:        append([]predicate.DownloadRecord{}, _q.predicates...),
 		withMovie:         _q.withMovie.Clone(),
 		withAlbum:         _q.withAlbum.Clone(),
+		withTrack:         _q.withTrack.Clone(),
 		withBook:          _q.withBook.Clone(),
 		withArtist:        _q.withArtist.Clone(),
 		withAlbums:        _q.withAlbums.Clone(),
@@ -452,6 +477,17 @@ func (_q *DownloadRecordQuery) WithAlbum(opts ...func(*AlbumQuery)) *DownloadRec
 		opt(query)
 	}
 	_q.withAlbum = query
+	return _q
+}
+
+// WithTrack tells the query-builder to eager-load the nodes that are connected to
+// the "track" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *DownloadRecordQuery) WithTrack(opts ...func(*TrackQuery)) *DownloadRecordQuery {
+	query := (&TrackClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withTrack = query
 	return _q
 }
 
@@ -589,9 +625,10 @@ func (_q *DownloadRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 		nodes       = []*DownloadRecord{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [7]bool{
+		loadedTypes = [8]bool{
 			_q.withMovie != nil,
 			_q.withAlbum != nil,
+			_q.withTrack != nil,
 			_q.withBook != nil,
 			_q.withArtist != nil,
 			_q.withAlbums != nil,
@@ -599,7 +636,7 @@ func (_q *DownloadRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 			_q.withEpisodes != nil,
 		}
 	)
-	if _q.withMovie != nil || _q.withAlbum != nil || _q.withBook != nil || _q.withArtist != nil || _q.withAnchorEpisode != nil {
+	if _q.withMovie != nil || _q.withAlbum != nil || _q.withTrack != nil || _q.withBook != nil || _q.withArtist != nil || _q.withAnchorEpisode != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -635,6 +672,12 @@ func (_q *DownloadRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	if query := _q.withAlbum; query != nil {
 		if err := _q.loadAlbum(ctx, query, nodes, nil,
 			func(n *DownloadRecord, e *Album) { n.Edges.Album = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withTrack; query != nil {
+		if err := _q.loadTrack(ctx, query, nodes, nil,
+			func(n *DownloadRecord, e *Track) { n.Edges.Track = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -730,6 +773,38 @@ func (_q *DownloadRecordQuery) loadAlbum(ctx context.Context, query *AlbumQuery,
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "album_download_records" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *DownloadRecordQuery) loadTrack(ctx context.Context, query *TrackQuery, nodes []*DownloadRecord, init func(*DownloadRecord), assign func(*DownloadRecord, *Track)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*DownloadRecord)
+	for i := range nodes {
+		if nodes[i].track_download_records == nil {
+			continue
+		}
+		fk := *nodes[i].track_download_records
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(track.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "track_download_records" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/bookmark"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
@@ -230,6 +231,21 @@ func (_c *TrackCreate) AddBookmarks(v ...*Bookmark) *TrackCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddBookmarkIDs(ids...)
+}
+
+// AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by IDs.
+func (_c *TrackCreate) AddDownloadRecordIDs(ids ...uint32) *TrackCreate {
+	_c.mutation.AddDownloadRecordIDs(ids...)
+	return _c
+}
+
+// AddDownloadRecords adds the "download_records" edges to the DownloadRecord entity.
+func (_c *TrackCreate) AddDownloadRecords(v ...*DownloadRecord) *TrackCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddDownloadRecordIDs(ids...)
 }
 
 // Mutation returns the TrackMutation object of the builder.
@@ -467,6 +483,22 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.DownloadRecordsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.DownloadRecordsTable,
+			Columns: []string{track.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

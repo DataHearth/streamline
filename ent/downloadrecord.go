@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/ent/track"
 )
 
 // DownloadRecord is the model entity for the DownloadRecord schema.
@@ -68,6 +69,8 @@ type DownloadRecord struct {
 	BookKind downloadrecord.BookKind `json:"book_kind,omitempty"`
 	// Rejected holds the value of the "rejected" field.
 	Rejected bool `json:"rejected,omitempty"`
+	// Uploaded holds the value of the "uploaded" field.
+	Uploaded bool `json:"uploaded,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the DownloadRecordQuery when eager-loading is set.
 	Edges                    DownloadRecordEdges `json:"edges"`
@@ -76,6 +79,7 @@ type DownloadRecord struct {
 	book_download_records    *uint32
 	episode_download_records *uint32
 	movie_download_records   *uint32
+	track_download_records   *uint32
 	selectValues             sql.SelectValues
 }
 
@@ -85,6 +89,8 @@ type DownloadRecordEdges struct {
 	Movie *Movie `json:"movie,omitempty"`
 	// Album holds the value of the album edge.
 	Album *Album `json:"album,omitempty"`
+	// Track holds the value of the track edge.
+	Track *Track `json:"track,omitempty"`
 	// Book holds the value of the book edge.
 	Book *Book `json:"book,omitempty"`
 	// Artist holds the value of the artist edge.
@@ -97,7 +103,7 @@ type DownloadRecordEdges struct {
 	Episodes []*Episode `json:"episodes,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [8]bool
 }
 
 // MovieOrErr returns the Movie value or an error if the edge
@@ -122,12 +128,23 @@ func (e DownloadRecordEdges) AlbumOrErr() (*Album, error) {
 	return nil, &NotLoadedError{edge: "album"}
 }
 
+// TrackOrErr returns the Track value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e DownloadRecordEdges) TrackOrErr() (*Track, error) {
+	if e.Track != nil {
+		return e.Track, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: track.Label}
+	}
+	return nil, &NotLoadedError{edge: "track"}
+}
+
 // BookOrErr returns the Book value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e DownloadRecordEdges) BookOrErr() (*Book, error) {
 	if e.Book != nil {
 		return e.Book, nil
-	} else if e.loadedTypes[2] {
+	} else if e.loadedTypes[3] {
 		return nil, &NotFoundError{label: book.Label}
 	}
 	return nil, &NotLoadedError{edge: "book"}
@@ -138,7 +155,7 @@ func (e DownloadRecordEdges) BookOrErr() (*Book, error) {
 func (e DownloadRecordEdges) ArtistOrErr() (*Artist, error) {
 	if e.Artist != nil {
 		return e.Artist, nil
-	} else if e.loadedTypes[3] {
+	} else if e.loadedTypes[4] {
 		return nil, &NotFoundError{label: artist.Label}
 	}
 	return nil, &NotLoadedError{edge: "artist"}
@@ -147,7 +164,7 @@ func (e DownloadRecordEdges) ArtistOrErr() (*Artist, error) {
 // AlbumsOrErr returns the Albums value or an error if the edge
 // was not loaded in eager-loading.
 func (e DownloadRecordEdges) AlbumsOrErr() ([]*Album, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[5] {
 		return e.Albums, nil
 	}
 	return nil, &NotLoadedError{edge: "albums"}
@@ -158,7 +175,7 @@ func (e DownloadRecordEdges) AlbumsOrErr() ([]*Album, error) {
 func (e DownloadRecordEdges) AnchorEpisodeOrErr() (*Episode, error) {
 	if e.AnchorEpisode != nil {
 		return e.AnchorEpisode, nil
-	} else if e.loadedTypes[5] {
+	} else if e.loadedTypes[6] {
 		return nil, &NotFoundError{label: episode.Label}
 	}
 	return nil, &NotLoadedError{edge: "anchor_episode"}
@@ -167,7 +184,7 @@ func (e DownloadRecordEdges) AnchorEpisodeOrErr() (*Episode, error) {
 // EpisodesOrErr returns the Episodes value or an error if the edge
 // was not loaded in eager-loading.
 func (e DownloadRecordEdges) EpisodesOrErr() ([]*Episode, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[7] {
 		return e.Episodes, nil
 	}
 	return nil, &NotLoadedError{edge: "episodes"}
@@ -180,7 +197,7 @@ func (*DownloadRecord) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case downloadrecord.FieldHoldReasons, downloadrecord.FieldSelectedFiles:
 			values[i] = new([]byte)
-		case downloadrecord.FieldVerificationBypassed, downloadrecord.FieldRejected:
+		case downloadrecord.FieldVerificationBypassed, downloadrecord.FieldRejected, downloadrecord.FieldUploaded:
 			values[i] = new(sql.NullBool)
 		case downloadrecord.FieldID, downloadrecord.FieldSize, downloadrecord.FieldImportAttempts, downloadrecord.FieldSelectedBytes:
 			values[i] = new(sql.NullInt64)
@@ -197,6 +214,8 @@ func (*DownloadRecord) scanValues(columns []string) ([]any, error) {
 		case downloadrecord.ForeignKeys[3]: // episode_download_records
 			values[i] = new(sql.NullInt64)
 		case downloadrecord.ForeignKeys[4]: // movie_download_records
+			values[i] = new(sql.NullInt64)
+		case downloadrecord.ForeignKeys[5]: // track_download_records
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -356,6 +375,12 @@ func (_m *DownloadRecord) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Rejected = value.Bool
 			}
+		case downloadrecord.FieldUploaded:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field uploaded", values[i])
+			} else if value.Valid {
+				_m.Uploaded = value.Bool
+			}
 		case downloadrecord.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field album_download_records", value)
@@ -391,6 +416,13 @@ func (_m *DownloadRecord) assignValues(columns []string, values []any) error {
 				_m.movie_download_records = new(uint32)
 				*_m.movie_download_records = uint32(value.Int64)
 			}
+		case downloadrecord.ForeignKeys[5]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field track_download_records", value)
+			} else if value.Valid {
+				_m.track_download_records = new(uint32)
+				*_m.track_download_records = uint32(value.Int64)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -412,6 +444,11 @@ func (_m *DownloadRecord) QueryMovie() *MovieQuery {
 // QueryAlbum queries the "album" edge of the DownloadRecord entity.
 func (_m *DownloadRecord) QueryAlbum() *AlbumQuery {
 	return NewDownloadRecordClient(_m.config).QueryAlbum(_m)
+}
+
+// QueryTrack queries the "track" edge of the DownloadRecord entity.
+func (_m *DownloadRecord) QueryTrack() *TrackQuery {
+	return NewDownloadRecordClient(_m.config).QueryTrack(_m)
 }
 
 // QueryBook queries the "book" edge of the DownloadRecord entity.
@@ -529,6 +566,9 @@ func (_m *DownloadRecord) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("rejected=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Rejected))
+	builder.WriteString(", ")
+	builder.WriteString("uploaded=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Uploaded))
 	builder.WriteByte(')')
 	return builder.String()
 }

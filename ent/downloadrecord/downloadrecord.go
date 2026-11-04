@@ -59,10 +59,14 @@ const (
 	FieldBookKind = "book_kind"
 	// FieldRejected holds the string denoting the rejected field in the database.
 	FieldRejected = "rejected"
+	// FieldUploaded holds the string denoting the uploaded field in the database.
+	FieldUploaded = "uploaded"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeAlbum holds the string denoting the album edge name in mutations.
 	EdgeAlbum = "album"
+	// EdgeTrack holds the string denoting the track edge name in mutations.
+	EdgeTrack = "track"
 	// EdgeBook holds the string denoting the book edge name in mutations.
 	EdgeBook = "book"
 	// EdgeArtist holds the string denoting the artist edge name in mutations.
@@ -89,6 +93,13 @@ const (
 	AlbumInverseTable = "albums"
 	// AlbumColumn is the table column denoting the album relation/edge.
 	AlbumColumn = "album_download_records"
+	// TrackTable is the table that holds the track relation/edge.
+	TrackTable = "download_records"
+	// TrackInverseTable is the table name for the Track entity.
+	// It exists in this package in order to avoid circular dependency with the "track" package.
+	TrackInverseTable = "tracks"
+	// TrackColumn is the table column denoting the track relation/edge.
+	TrackColumn = "track_download_records"
 	// BookTable is the table that holds the book relation/edge.
 	BookTable = "download_records"
 	// BookInverseTable is the table name for the Book entity.
@@ -147,6 +158,7 @@ var Columns = []string{
 	FieldSelectionState,
 	FieldBookKind,
 	FieldRejected,
+	FieldUploaded,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "download_records"
@@ -157,6 +169,7 @@ var ForeignKeys = []string{
 	"book_download_records",
 	"episode_download_records",
 	"movie_download_records",
+	"track_download_records",
 }
 
 var (
@@ -198,6 +211,8 @@ var (
 	DefaultVerificationBypassed bool
 	// DefaultRejected holds the default value on creation for the "rejected" field.
 	DefaultRejected bool
+	// DefaultUploaded holds the default value on creation for the "uploaded" field.
+	DefaultUploaded bool
 )
 
 // Status defines the type for the "status" enum field.
@@ -417,6 +432,11 @@ func ByRejected(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRejected, opts...).ToFunc()
 }
 
+// ByUploaded orders the results by the uploaded field.
+func ByUploaded(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUploaded, opts...).ToFunc()
+}
+
 // ByMovieField orders the results by movie field.
 func ByMovieField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -428,6 +448,13 @@ func ByMovieField(field string, opts ...sql.OrderTermOption) OrderOption {
 func ByAlbumField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newAlbumStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByTrackField orders the results by track field.
+func ByTrackField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTrackStep(), sql.OrderByField(field, opts...))
 	}
 }
 
@@ -491,6 +518,13 @@ func newAlbumStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AlbumInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, AlbumTable, AlbumColumn),
+	)
+}
+func newTrackStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TrackInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, TrackTable, TrackColumn),
 	)
 }
 func newBookStep() *sqlgraph.Step {

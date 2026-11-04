@@ -141,6 +141,190 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("uploaded records", Label("integration"), func() {
+		It("keeps a rejected upload off the blocklist", func() {
+			a, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-bl",
+				Name: "Nirvana",
+				Albums: []AlbumSeed{
+					{MBID: "rg-bl", Title: "Nevermind", Type: "album"},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			albumID := a.Edges.Albums[0].ID
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "Nevermind", Status: downloadrecord.StatusHeld,
+				AlbumID: albumID, Uploaded: true, SavePath: "/up/x",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(
+				store.FailHeldDownloadRecord(ctx, rec.ID, "no", false),
+			).To(Succeed())
+
+			bl, err := store.RejectedReleases(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bl.Album(albumID, "", "Nevermind")).To(BeFalse())
+			kept, err := store.ListKeptUploadPaths(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(kept).NotTo(ContainElement("/up/x"))
+		})
+
+		Context("when an upload fails", func() {
+			var albumID uint32
+			seed := func(status downloadrecord.Status) *ent.DownloadRecord {
+				GinkgoHelper()
+				a, err := store.CreateArtist(ctx, CreateArtistParams{
+					MBID: "a-rq",
+					Name: "Nirvana",
+					Albums: []AlbumSeed{
+						{MBID: "rg-rq", Title: "Nevermind", Type: "album"},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				albumID = a.Edges.Albums[0].ID
+				client.Album.UpdateOneID(albumID).
+					SetStatus(entalbum.StatusDownloading).
+					ExecX(ctx)
+				rec, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "Nevermind", Status: status, AlbumID: albumID,
+						Uploaded: true, SavePath: "/up/rq",
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				return rec
+			}
+
+			It("returns the album to wanted on a terminal import failure", func() {
+				rec := seed(downloadrecord.StatusImporting)
+				Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+					RecordID: rec.ID, Terminal: true, Attempts: 1, AlbumID: albumID,
+					Reason: "bad file", Requeue: true,
+				})).To(Succeed())
+				got := client.Album.GetX(ctx, albumID)
+				Expect(got.Status).To(Equal(entalbum.StatusWanted))
+				Expect(got.FailureReason).To(BeEmpty())
+			})
+
+			It("returns the album to wanted when a held upload is rejected", func() {
+				rec := seed(downloadrecord.StatusHeld)
+				Expect(
+					store.FailHeldDownloadRecord(ctx, rec.ID, "no", false),
+				).To(Succeed())
+				Expect(
+					client.Album.GetX(ctx, albumID).Status,
+				).To(Equal(entalbum.StatusWanted))
+			})
+
+			It("takes the wanted album back to downloading on a retry", func() {
+				rec := seed(downloadrecord.StatusImporting)
+				Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+					RecordID: rec.ID, Terminal: true, Attempts: 1, AlbumID: albumID,
+					Reason: "bad file", Requeue: true,
+				})).To(Succeed())
+				Expect(store.RetryFailedDownloadRecord(ctx, rec.ID)).To(Succeed())
+				Expect(
+					client.Album.GetX(ctx, albumID).Status,
+				).To(Equal(entalbum.StatusDownloading))
+			})
+		})
+
+		It("stores the replace mode with the insert", func() {
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Status: downloadrecord.StatusImporting,
+				ReplaceMode: downloadrecord.ReplaceModeAll,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec.ReplaceMode).To(Equal(downloadrecord.ReplaceModeAll))
+		})
+
+		It("stores uploaded and the track edge", func() {
+			a, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-up",
+				Name: "Nirvana",
+				Albums: []AlbumSeed{
+					{MBID: "rg-up", Title: "Nevermind", Type: "album"},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			albumID := a.Edges.Albums[0].ID
+			trackID := client.Track.Create().
+				SetTitle("Intro").SetDisc(1).SetPosition(1).SetAlbumID(albumID).
+				SaveX(ctx).ID
+
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "Upload", Status: downloadrecord.StatusImporting,
+				AlbumID: albumID, TrackID: trackID, Uploaded: true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			got, err := store.FindImportingDownloadRecordByID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Uploaded).To(BeTrue())
+			Expect(got.Edges.Track).NotTo(BeNil())
+			Expect(got.Edges.Track.ID).To(Equal(trackID))
+		})
+
+		It("lists kept upload paths", func() {
+			mk := func(path string, st downloadrecord.Status, uploaded, rejected bool) {
+				GinkgoHelper()
+				rec, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "t", Status: st, SavePath: path, Uploaded: uploaded,
+						MovieID: movieID,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				if rejected {
+					client.DownloadRecord.UpdateOneID(rec.ID).
+						SetRejected(true).
+						ExecX(ctx)
+				}
+			}
+			mk("/a", downloadrecord.StatusImporting, true, false)
+			mk("/b", downloadrecord.StatusHeld, true, false)
+			mk("/c", downloadrecord.StatusFailed, true, false)
+			mk("/d", downloadrecord.StatusFailed, true, true)
+			mk("/e", downloadrecord.StatusCompleted, true, false)
+			mk("/f", downloadrecord.StatusImporting, false, false)
+
+			paths, err := store.ListKeptUploadPaths(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(paths).To(ConsistOf("/a", "/b", "/c"))
+		})
+
+		It("reports a live record on one book slot", func() {
+			b, err := store.CreateBook(ctx, BookSeed{
+				HardcoverID: 77, Title: "Elantris", Kind: "novel",
+				PreferredLanguage: "en",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Status: downloadrecord.StatusDownloading,
+				BookID: b.ID, BookKind: downloadrecord.BookKindEbook,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			live, err := store.BookSlotHasLiveRecord(
+				ctx,
+				b.ID,
+				downloadrecord.BookKindEbook,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(live).To(BeTrue())
+			live, err = store.BookSlotHasLiveRecord(
+				ctx,
+				b.ID,
+				downloadrecord.BookKindAudiobook,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(live).To(BeFalse())
+		})
+	})
+
 	Describe("CountLiveDownloadRecords", func() {
 		It("counts in-flight and pending rows, not terminal ones", func() {
 			createRec("live-dl", downloadrecord.StatusDownloading)
