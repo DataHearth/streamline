@@ -94,6 +94,17 @@ let
       hash = "sha256-l4zwXQ76MA36i52ax/a5XX8uZNbjSb/WTevGtVS4x1o=";
     };
 
+    # nixpkgs' pnpmConfigHook rebuilds the store's index.db from a `.dump`,
+    # which drops WAL mode, so pnpm's writer switches it back to WAL while the
+    # install's readers are open. Under rollback journaling that write locks
+    # them out, and pnpm 12 treats a read past its 5 s busy_timeout as a missing
+    # snapshot: on a loaded builder the offline install failed with
+    # ERR_PNPM_NO_OFFLINE_TARBALL on a different package each run. Drop this
+    # once the hook restores the index in WAL mode itself.
+    prePnpmInstall = ''
+      sqlite3 "$STORE_PATH/v11/index.db" 'PRAGMA journal_mode=WAL;' >/dev/null
+    '';
+
     # Mirrors `task build:js` + `task build:css`. Keep the two in step: the Go
     # build embeds exactly these outputs and a missing one fails //go:embed
     # with "no matching files found", which reads like broken code.
