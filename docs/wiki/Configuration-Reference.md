@@ -143,7 +143,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `library.music_tags.*` | ✅ | Settings → Music |
 | `library.probe.*` | ✅ Applies to the next import — see [Import verification](#import-verification) | Settings → Media probe |
 | `library.{movie,series}_naming` | ✅ Applies to the next import or rename | Settings → Library |
-| `library.book_language` | ✅ Applies to books added from then on | API only (`PATCH /config/library`) |
+| `library.book_language` | ✅ Applies to books added from then on | Settings → Library (Books) |
 | `library.import_mode`, `keep_torrent_seeding`, `import_max_attempts`, `allowed_download_roots` | ✅ | Settings → Library |
 | `library.no_match_cooldown`, `max_grab_failures`, `drift_grace_ticks` | ✅ | Settings → Library |
 | `download.selective_files`, `download.selection_grace`, `download.space_check`, `download.space_reserve_gb`, `download.path_mappings` | ✅ | Settings → Library |
@@ -262,7 +262,7 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.ebook_path` | path | `/data/books` | Ebook library root. File-only |
 | `library.ebook_naming` | template | `{Author}/{Title} ({Year})` | Also `{Language}`, `{Series}`, `{Volume}`; the extension is appended. File-only. Tokens: [Music and book naming](Quality-Profiles-and-Naming#music-and-book-naming) |
 | `library.book_series_naming` | template | `{Author}/{Series}/{Series} - Vol. {Volume:02}` | Ebook volumes of a book series; audiobooks keep `audiobook_naming`. Not `library.series_naming`, which is the TV template. File-only |
-| `library.book_language` | string | `en` | ISO 639-1 language a new book prefers; picks the edition of each slot. Editable at runtime |
+| `library.book_language` | string | `en` | ISO 639-1 language a new book prefers; picks the edition of each slot. Editable at runtime, on Settings → Library |
 | `library.audiobook_path` | path | `/data/audiobooks` | Audiobook library root. File-only |
 | `library.audiobook_naming` | template | `{Author}/{Title} ({Year})` | Folder only; chapter files keep their names. File-only |
 | `library.download_path` | path | `/downloads` | Where Streamline reads finished torrents from. Combined with the torrent name: `<download_path>/<torrent.Name>`. Two torrents with the same name share that folder; an import only takes the files its own torrent lists |

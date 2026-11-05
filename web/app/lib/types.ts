@@ -944,6 +944,8 @@ export type LibraryConfig = {
 	monitor_specials: boolean;
 	// Release types an artist's all and future policies monitor.
 	music_monitored_types: ("album" | "ep" | "single" | "compilation" | "live" | "other")[];
+	// ISO 639-1 language a newly added book prefers (seeds preferred_language).
+	book_language: string;
 	movie_naming: string;
 	series_naming: string;
 	import_mode: ImportTransferMode;

@@ -19,6 +19,7 @@
 	import FieldLock from "@components/forms/FieldLock.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { INPUT_CLASS } from "@lib/form";
+	import { languageName } from "@lib/music-books";
 
 	// Saves per control rather than through one form, so nothing else
 	// establishes the config-form context the field primitives read. Without
@@ -122,6 +123,21 @@
 		saveLibrary.mutate({ allowed_download_roots: next });
 	}
 
+
+	// The languages Hardcover catalogues most editions in. The API takes any
+	// ISO 639-1 code, so a code set in the config file is offered too.
+	const BOOK_LANGUAGES = [
+		"ar", "cs", "da", "de", "el", "en", "es", "fi", "fr", "he", "hu", "it",
+		"ja", "ko", "nl", "pl", "pt", "ro", "ru", "sv", "tr", "uk", "zh",
+	];
+	function bookLanguageOptions(current: string) {
+		const codes = BOOK_LANGUAGES.includes(current)
+			? BOOK_LANGUAGES
+			: [...BOOK_LANGUAGES, current];
+		return codes
+			.map((code) => ({ value: code, label: languageName(code, true), hint: code }))
+			.sort((x, y) => x.label.localeCompare(y.label));
+	}
 
 	let pending = $derived(library.isPending || download.isPending);
 	let failed = $derived(library.isError || download.isError);
@@ -238,6 +254,30 @@
 					),
 				{ mono: true },
 			)}
+		</section>
+
+		<section class="mt-4 space-y-4 rounded-lg border border-border bg-bg-card p-4">
+			<div>
+				<h2 class="text-sm font-semibold text-fg">{i18n.library_books()}</h2>
+				<p class="mt-0.5 text-xs leading-relaxed text-fg-subtle">
+					{i18n.library_books_help()}
+				</p>
+			</div>
+			<div>
+				<div class="max-w-xs">
+					<Select
+						label={i18n.library_book_language()}
+						value={lib.book_language}
+						options={bookLanguageOptions(lib.book_language)}
+						onChange={(v) => {
+							if (v !== lib.book_language) saveLibrary.mutate({ book_language: v });
+						}}
+					/>
+				</div>
+				<p class="mt-1 max-w-xl text-xs leading-relaxed text-fg-muted">
+					{i18n.library_book_language_help()}
+				</p>
+			</div>
 		</section>
 
 		<section class="mt-4 space-y-4 rounded-lg border border-border bg-bg-card p-4">
