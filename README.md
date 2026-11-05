@@ -23,6 +23,7 @@ https://github.com/user-attachments/assets/318e94d2-7571-4dda-96f6-f62bb4af8a46
 - **Music**: MusicBrainz metadata, album and discography-pack grabs, tags and artwork written into your files, and a built-in Subsonic/OpenSubsonic server, so any Subsonic app streams the library
 - **Books**: Hardcover metadata, books and series with an ebook and an audiobook slot each, an OPDS catalog for e-reader apps, and send-to-Kindle by email
 - Adopt an existing library: scan untracked files and import them under review — and torrents you added by hand
+- Upload albums, discographies and books from the browser, imported like a finished download — no access to the server's disk needed
 - Monitoring, RSS auto-grab, manual search, and a calendar of upcoming releases
 - Quality profiles with custom-format scoring and upgrades, import verification, activity queue and history
 - Multi-user with SSO (OIDC), invites, API keys
@@ -210,7 +211,7 @@ Each archive also ships an SPDX SBOM (`<archive>.sbom.spdx.json`).
 
 ### From source
 
-Requires Go >= 1.27.3, Node >= 24.22.1, pnpm 12, [Task](https://taskfile.dev) — or `nix develop`, whose devshell pins all of them.
+Requires Go >= 1.27.3, Node >= 24.22.2, pnpm 12, [Task](https://taskfile.dev) — or `nix develop`, whose devshell pins all of them.
 
 ```bash
 git clone https://github.com/datahearth/streamline.git

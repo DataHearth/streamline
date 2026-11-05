@@ -19,7 +19,7 @@ useful things you can send.
 
 ## Setup
 
-Requires Go >= 1.27.3 (the `go` directive in `go.mod`), Node >= 24.22.1,
+Requires Go >= 1.27.3 (the `go` directive in `go.mod`), Node >= 24.22.2,
 [pnpm](https://pnpm.io) 12 (the `packageManager` in `package.json`) and
 [Task](https://taskfile.dev). Nix users get all of it, at exactly those
 versions, from the flake devshell (`nix develop`, or direnv).
