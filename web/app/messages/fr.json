@@ -842,6 +842,7 @@
 	"hold_check_always_ask": "validation manuelle",
 	"hold_check_tier": "niveau de qualité",
 	"hold_check_album": "album",
+	"hold_check_track": "piste",
 	"hold_check_format": "format",
 	"hold_check_bitrate": "débit",
 	"hold_check_metadata": "métadonnées",

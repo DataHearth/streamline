@@ -72,6 +72,39 @@ func albumHoldReasons(plan []albumFile, alb *ent.Album) []schema.HoldReason {
 	return out
 }
 
+// trackHoldReasons lists the files whose title contradicts the track they were
+// matched to: another edition's bonus tracks land on the album's by number, and
+// the tags would then call one recording another's name. It speaks only when
+// at least half the comparable titles agree, since a mostly different list is
+// a translated release whose numbers are all there is to go on.
+func trackHoldReasons(plan []albumFile) []schema.HoldReason {
+	var (
+		out             []schema.HoldReason
+		agree, compared int
+	)
+	for _, f := range plan {
+		if !library.TitleComparable(f.info.Title) ||
+			!library.TitleComparable(f.tr.Title) {
+			continue
+		}
+		compared++
+		if library.TitlePrefixMatches(f.tr.Title, f.info.Title) {
+			agree++
+			continue
+		}
+		out = append(out, schema.HoldReason{
+			File:     f.path,
+			Check:    "track",
+			Expected: f.tr.Title,
+			Actual:   f.info.Title,
+		})
+	}
+	if 2*agree < compared {
+		return nil
+	}
+	return out
+}
+
 // tierHoldReasons lists the measured files whose tier the artist's profile
 // does not tick: a "FLAC" that is a 128k transcode, or a 24-bit pack under a
 // profile that left hi-res unticked.

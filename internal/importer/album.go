@@ -200,10 +200,10 @@ func (w *Worker) importAlbumFiles(
 	// the library exactly as it was.
 	if !rec.VerificationBypassed {
 		var reasons []schema.HoldReason
-		// Someone chose this track for this file: its album tag is no evidence of a
+		// Someone chose this track for this file: its tags are no evidence of a
 		// wrong download, only of where the recording was first released.
 		if rec.Edges.Track == nil {
-			reasons = albumHoldReasons(plan, alb)
+			reasons = append(albumHoldReasons(plan, alb), trackHoldReasons(plan)...)
 		}
 		if haveProfile {
 			reasons = append(reasons, tierHoldReasons(plan, profile)...)

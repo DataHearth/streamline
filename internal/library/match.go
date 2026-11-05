@@ -36,6 +36,10 @@ func normalizeTitle(s string) string {
 	return s
 }
 
+// TitleComparable reports whether a title survives normalization: one in a
+// non-Latin script normalizes to nothing and can be compared to no other.
+func TitleComparable(s string) bool { return normalizeTitle(s) != "" }
+
 // TitleMatches reports whether two titles are equal after normalization.
 func TitleMatches(a, b string) bool { return normalizeTitle(a) == normalizeTitle(b) }
 

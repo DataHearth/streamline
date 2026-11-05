@@ -709,6 +709,7 @@ export type HoldCheck =
 	| "codec"
 	| "tier"
 	| "album"
+	| "track"
 	| "format"
 	| "bitrate"
 	| "metadata"

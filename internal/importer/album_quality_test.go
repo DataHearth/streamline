@@ -191,6 +191,47 @@ var _ = Describe(
 		)
 
 		It(
+			"parks the record held when a file's title contradicts its track",
+			func() {
+				for i, title := range []string{
+					albumTracks[0].title,
+					albumTracks[1].title,
+					"Burning Angel (Live)",
+				} {
+					seedTrackFile(
+						dlDir,
+						albumTracks[i].title+".flac",
+						"tagged.flac",
+						albumTracks[i].position,
+						title,
+					)
+				}
+				rec := fixtureAlbumRecord(dlDir, alb)
+				storeMk.EXPECT().
+					FindImportingDownloadRecordByID(mock.Anything, rec.ID).
+					Return(rec, nil).
+					Once()
+				prober.EXPECT().ProbeAudio(mock.Anything, mock.Anything).
+					Return(&ffmpeg.AudioInfo{Codec: "flac", BitDepth: 16, SampleRateHz: 44100, DurationSec: 200}, nil).
+					Times(3)
+				var reasons []schema.HoldReason
+				storeMk.EXPECT().
+					HoldDownloadRecord(mock.Anything, rec.ID, mock.Anything).
+					Run(func(_ context.Context, _ uint32, r []schema.HoldReason) { reasons = r }).
+					Return(nil).
+					Once()
+
+				Expect(w.runImport(context.Background(), rec.ID)).To(Succeed())
+
+				Expect(reasons).To(HaveLen(1))
+				Expect(reasons[0].Check).To(Equal("track"))
+				Expect(reasons[0].Expected).To(Equal(albumTracks[2].title))
+				Expect(reasons[0].Actual).To(Equal("Burning Angel (Live)"))
+				Expect(musicDir).NotTo(BeADirectory())
+			},
+		)
+
+		It(
 			"imports a measured tier the profile ticks and stores the tier as quality",
 			func() {
 				seedTrackFile(
@@ -345,4 +386,66 @@ var _ = Describe("albumHoldReasons", Label("unit", "importer"), func() {
 			}))
 		},
 	)
+})
+
+var _ = Describe("trackHoldReasons", Label("unit", "importer"), func() {
+	file := func(track, title string) albumFile {
+		return albumFile{
+			path: "/dl/" + title + ".flac",
+			info: audiotags.Info{Title: title},
+			tr:   &ent.Track{Title: track},
+		}
+	}
+
+	It("holds only the bonus tracks another edition swapped in", func() {
+		reasons := trackHoldReasons([]albumFile{
+			file("Enter the Machine", "Enter The Machine"),
+			file("I Am Legend / Out for Blood", "I Am Legend-Out For Blood"),
+			file("Heart of Darkness (live in Paris 2004)", "Burning Angel (Live)"),
+		})
+		Expect(reasons).To(ConsistOf(schema.HoldReason{
+			File:     "/dl/Burning Angel (Live).flac",
+			Check:    "track",
+			Expected: "Heart of Darkness (live in Paris 2004)",
+			Actual:   "Burning Angel (Live)",
+		}))
+	})
+
+	It("accepts a title a release shortens", func() {
+		Expect(trackHoldReasons([]albumFile{
+			file("The Czar: Usurper / Escape / Martyr / Spiral", "The Czar"),
+		})).To(BeEmpty())
+	})
+
+	It("keeps the numbers of a release whose titles are mostly translated", func() {
+		Expect(trackHoldReasons([]albumFile{
+			file("Oblivion", "Oubli"),
+			file("Divinations", "Divinations"),
+			file("Quintessence", "Quintessence (FR)"),
+			file("The Last Baron", "Le Dernier Baron"),
+			file("Ghost of Karelia", "Fantôme de Carélie"),
+		})).To(BeEmpty())
+	})
+
+	It("holds at exactly half the titles agreeing", func() {
+		Expect(trackHoldReasons([]albumFile{
+			file("Oblivion", "Oblivion"),
+			file("Divinations", "Something Else"),
+		})).To(HaveLen(1))
+	})
+
+	It("takes an untagged title as no evidence", func() {
+		Expect(trackHoldReasons([]albumFile{
+			file("Oblivion", "Oblivion"),
+			file("Divinations", ""),
+		})).To(BeEmpty())
+	})
+
+	It("takes a title in a script it cannot compare as no evidence", func() {
+		Expect(trackHoldReasons([]albumFile{
+			file("Oblivion", "Oblivion"),
+			file("Divinations", "東京"),
+			file("東京", "Divinations"),
+		})).To(BeEmpty())
+	})
 })

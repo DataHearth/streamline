@@ -43,6 +43,7 @@
 		always_ask: () => i18n.hold_check_always_ask(),
 		tier: () => i18n.hold_check_tier(),
 		album: () => i18n.hold_check_album(),
+		track: () => i18n.hold_check_track(),
 		format: () => i18n.hold_check_format(),
 		bitrate: () => i18n.hold_check_bitrate(),
 		metadata: () => i18n.hold_check_metadata(),

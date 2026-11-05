@@ -859,6 +859,7 @@ const (
 	HoldReasonCheckMetadata   HoldReasonCheck = "metadata"
 	HoldReasonCheckResolution HoldReasonCheck = "resolution"
 	HoldReasonCheckTier       HoldReasonCheck = "tier"
+	HoldReasonCheckTrack      HoldReasonCheck = "track"
 )
 
 // Valid indicates whether the value is a known member of the HoldReasonCheck enum.
@@ -883,6 +884,8 @@ func (e HoldReasonCheck) Valid() bool {
 	case HoldReasonCheckResolution:
 		return true
 	case HoldReasonCheckTier:
+		return true
+	case HoldReasonCheckTrack:
 		return true
 	default:
 		return false
@@ -5560,18 +5563,22 @@ type HoldReason struct {
 	Actual *string `json:"actual,omitempty"`
 
 	// Check corrupt, resolution, duration, codec and always_ask are the video
-	// checks; tier and album hold a music download (a measured tier the
-	// profile does not tick, files tagged as another album); format,
-	// bitrate and metadata hold a book.
+	// checks; tier, album and track hold a music download (a measured
+	// tier the profile does not tick, files tagged as another album, a
+	// file titled differently from the track its number lands on, when
+	// at least half the release's titles agree); format, bitrate and
+	// metadata hold a book.
 	Check    HoldReasonCheck `json:"check"`
 	Expected *string         `json:"expected,omitempty"`
 	File     string          `json:"file"`
 }
 
 // HoldReasonCheck corrupt, resolution, duration, codec and always_ask are the video
-// checks; tier and album hold a music download (a measured tier the
-// profile does not tick, files tagged as another album); format,
-// bitrate and metadata hold a book.
+// checks; tier, album and track hold a music download (a measured
+// tier the profile does not tick, files tagged as another album, a
+// file titled differently from the track its number lands on, when
+// at least half the release's titles agree); format, bitrate and
+// metadata hold a book.
 type HoldReasonCheck string
 
 // IdentifyPendingRequest defines model for IdentifyPendingRequest.

@@ -770,8 +770,9 @@ A download that fails import verification sits in the queue with
 `"status": "held"` and a `hold_reasons` array — one entry per failed check,
 each naming the file, what was expected and what was found. `corrupt`,
 `resolution`, `duration`, `codec` and `always_ask` are the video checks; `tier`
-(a measured audio tier the profile does not tick) and `album` (files tagged as
-another album) hold a music download; `format`, `bitrate` and `metadata` (a
+(a measured audio tier the profile does not tick), `album` (files tagged as
+another album) and `track` (a file titled differently from the track its number
+lands on) hold a music download; `format`, `bitrate` and `metadata` (a
 series placeholder, or a book with no author yet) hold a book. See
 [Configuration Reference](Configuration-Reference#import-verification) for the
 rules and the knobs.
