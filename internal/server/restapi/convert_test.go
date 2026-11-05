@@ -299,6 +299,20 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 			Expect(out.Episode.SeriesId).To(Equal(&show.ID))
 		})
 
+		It("names a discography pack's albums in id order", func() {
+			rec := &ent.DownloadRecord{ID: 6, Title: "Upload", Uploaded: true}
+			rec.Edges.Artist = &ent.Artist{ID: 1, Name: "Dr. Peacock"}
+			rec.Edges.Albums = []*ent.Album{
+				{ID: 12, Title: "Trip to Lapland"},
+				{ID: 3, Title: "Proof 1"},
+			}
+			out := toHistoryEntry(rec)
+			Expect(out.Artist).NotTo(BeNil())
+			Expect(out.Artist.AlbumCount).To(Equal(2))
+			Expect(out.Artist.AlbumTitles).
+				To(Equal(&[]string{"Proof 1", "Trip to Lapland"}))
+		})
+
 		It("leaves track absent on any other record", func() {
 			rec := &ent.DownloadRecord{ID: 4, Title: "Artist - Album"}
 			rec.Edges.Album = &ent.Album{ID: 7, Title: "Proof 2"}

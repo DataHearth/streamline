@@ -728,7 +728,7 @@ export type HoldReason = {
 export type ActivityAlbumRef = { id: number; title: string; artist_id: number; artist_name: string };
 // album_count is how many albums a discography pack is expected to cover. A
 // book names the slot it fills and, for a volume, its series.
-export type ActivityArtistRef = { id: number; name: string; album_count: number };
+export type ActivityArtistRef = { id: number; name: string; album_count: number; album_titles?: string[] };
 // The track a single-track upload is for, beside its album.
 export type ActivityTrackRef = { id: number; title: string; disc: number; position: number };
 export type ActivityBookRef = {

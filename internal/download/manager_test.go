@@ -665,6 +665,24 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			Expect(liveQueueStatus(StatusStalled)).To(Equal("stalled"))
 		})
 
+		It("lists a pack's albums in id order", func() {
+			rec := &ent.DownloadRecord{
+				ID: 8, Title: "Upload", Status: downloadrecord.StatusImporting,
+			}
+			rec.Edges.Artist = &ent.Artist{ID: 1, Name: "Dr. Peacock"}
+			rec.Edges.Albums = []*ent.Album{
+				{ID: 12, Title: "Trip to Lapland"},
+				{ID: 3, Title: "Proof 1"},
+			}
+			store.EXPECT().ListActiveDownloadRecords(mock.Anything).
+				Return([]*ent.DownloadRecord{rec}, nil).Once()
+			snap, err := mgr.Queue(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(snap.Items[0].PackAlbumIDs).To(Equal([]uint32{3, 12}))
+			Expect(snap.Items[0].PackAlbumTitles).
+				To(Equal([]string{"Proof 1", "Trip to Lapland"}))
+		})
+
 		It("maps importing records to progress 1.0 without polling", func() {
 			rec := &ent.DownloadRecord{
 				ID: 7, Title: "Dune", Status: downloadrecord.StatusImporting,

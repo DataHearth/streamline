@@ -4205,9 +4205,13 @@ type ActivityAlbumRef struct {
 // ActivityArtistRef The artist a discography pack is for. Absent on every other record.
 type ActivityArtistRef struct {
 	// AlbumCount Albums the pack is expected to cover.
-	AlbumCount int    `json:"album_count"`
-	Id         uint32 `json:"id"`
-	Name       string `json:"name"`
+	AlbumCount int `json:"album_count"`
+
+	// AlbumTitles Those albums' titles, in library order. An uploaded discography
+	// has no release name, so its row names what it filled with these.
+	AlbumTitles *[]string `json:"album_titles,omitempty"`
+	Id          uint32    `json:"id"`
+	Name        string    `json:"name"`
 }
 
 // ActivityBookRef The book a book download or activity event is for. Absent on every

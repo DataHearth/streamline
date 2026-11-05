@@ -2,6 +2,7 @@ package download
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/base32"
 	"encoding/hex"
@@ -453,8 +454,10 @@ type QueueEntry struct {
 	Book   *ent.Book
 	// BookKind is the slot a book record fills: ebook or audiobook.
 	BookKind string
-	// PackAlbumIDs are the albums a discography pack is expected to cover.
-	PackAlbumIDs []uint32
+	// PackAlbumIDs are the albums a discography pack is expected to cover,
+	// PackAlbumTitles their titles in the same order.
+	PackAlbumIDs    []uint32
+	PackAlbumTitles []string
 	// Episode is set for TV download records (with season + show eager-loaded);
 	// nil for movie records. Drives the "<show> · SxxExx" row title.
 	Episode        *ent.Episode
@@ -624,8 +627,14 @@ func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 		e.Progress = 1.0
 		e.HoldReasons = rec.HoldReasons
 	}
-	for _, a := range rec.Edges.Albums {
+	albums := slices.Clone(rec.Edges.Albums)
+	slices.SortFunc(
+		albums,
+		func(a, b *ent.Album) int { return cmp.Compare(a.ID, b.ID) },
+	)
+	for _, a := range albums {
 		e.PackAlbumIDs = append(e.PackAlbumIDs, a.ID)
+		e.PackAlbumTitles = append(e.PackAlbumTitles, a.Title)
 	}
 	e.Indexer = rec.IndexerName
 	e.DownloadClient = rec.DownloadClientName

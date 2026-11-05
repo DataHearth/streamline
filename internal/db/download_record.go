@@ -1589,7 +1589,9 @@ func (db *DB) ListActiveDownloadRecords(
 		WithTrack().
 		WithArtist().
 		WithBook(func(q *ent.BookQuery) { q.WithSeries() }).
-		WithAlbums(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
+		WithAlbums(func(q *ent.AlbumQuery) {
+			q.Select(album.FieldID, album.FieldTitle)
+		}).
 		All(ctx)
 }
 
@@ -1848,7 +1850,9 @@ func (db *DB) ListDownloadHistory(
 		WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
 		WithTrack().
 		WithArtist().
-		WithAlbums(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
+		WithAlbums(func(q *ent.AlbumQuery) {
+			q.Select(album.FieldID, album.FieldTitle)
+		}).
 		WithBook(func(q *ent.BookQuery) { q.WithSeries() })
 
 	if cursor != "" {

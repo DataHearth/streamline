@@ -886,7 +886,7 @@ func toQueueEntry(e download.QueueEntry) QueueEntry {
 	out.Episode = episodeRef(e.Episode)
 	out.Album = activityAlbumRef(e.Album)
 	out.Track = activityTrackRef(e.Track)
-	out.Artist = activityArtistRef(e.Artist, len(e.PackAlbumIDs))
+	out.Artist = activityArtistRef(e.Artist, len(e.PackAlbumIDs), e.PackAlbumTitles)
 	out.Book = activityBookRef(e.Book, e.BookKind)
 	out.Uploaded = uploadedRef(e.Uploaded)
 	if e.DownloadSpeed != 0 {
@@ -953,7 +953,9 @@ func toHistoryEntry(r *ent.DownloadRecord) HistoryEntry {
 	out.Episode = episodeRef(r.Edges.AnchorEpisode)
 	out.Album = activityAlbumRef(r.Edges.Album)
 	out.Track = activityTrackRef(r.Edges.Track)
-	out.Artist = activityArtistRef(r.Edges.Artist, len(r.Edges.Albums))
+	out.Artist = activityArtistRef(
+		r.Edges.Artist, len(r.Edges.Albums), packAlbumTitles(r.Edges.Albums),
+	)
 	out.Book = activityBookRef(r.Edges.Book, string(r.BookKind))
 	out.Uploaded = uploadedRef(r.Uploaded)
 	if r.Quality != "" {
@@ -1045,12 +1047,42 @@ func activityTrackRef(t *ent.Track) *ActivityTrackRef {
 }
 
 // activityArtistRef titles a discography pack's row, with the number of
-// albums the pack is expected to cover, or nil for any other record.
-func activityArtistRef(a *ent.Artist, albums int) *ActivityArtistRef {
+// albums the pack is expected to cover and their titles (empty ones
+// dropped), or nil for any other record.
+func activityArtistRef(
+	a *ent.Artist,
+	albums int,
+	titles []string,
+) *ActivityArtistRef {
 	if a == nil {
 		return nil
 	}
-	return &ActivityArtistRef{Id: a.ID, Name: a.Name, AlbumCount: albums}
+	ref := &ActivityArtistRef{Id: a.ID, Name: a.Name, AlbumCount: albums}
+	named := make([]string, 0, len(titles))
+	for _, t := range titles {
+		if t != "" {
+			named = append(named, t)
+		}
+	}
+	if len(named) > 0 {
+		ref.AlbumTitles = &named
+	}
+	return ref
+}
+
+// packAlbumTitles lists a pack's linked albums' titles in id order: the
+// eager load returns them in no particular order.
+func packAlbumTitles(albums []*ent.Album) []string {
+	sorted := slices.Clone(albums)
+	slices.SortFunc(
+		sorted,
+		func(a, b *ent.Album) int { return cmp.Compare(a.ID, b.ID) },
+	)
+	titles := make([]string, 0, len(sorted))
+	for _, a := range sorted {
+		titles = append(titles, a.Title)
+	}
+	return titles
 }
 
 // activityBookRef titles a book download's row with the slot it fills, or nil

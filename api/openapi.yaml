@@ -14879,6 +14879,12 @@ components:
         album_count:
           type: integer
           description: Albums the pack is expected to cover.
+        album_titles:
+          type: array
+          items: { type: string }
+          description: |
+            Those albums' titles, in library order. An uploaded discography
+            has no release name, so its row names what it filled with these.
 
     ActivityBookRef:
       type: object

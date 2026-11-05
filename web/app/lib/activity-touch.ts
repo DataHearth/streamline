@@ -54,9 +54,11 @@ export function entryHeading(item: QueueEntry | HistoryEntry): string {
 
 // The line under the heading: the release name. An upload has none — its title
 // is the folder it came from, or a placeholder — so a track upload names its
-// album there instead, the heading carrying the track.
+// album there instead, the heading carrying the track, and a discography upload
+// the albums it filled.
 export function entryRelease(item: QueueEntry | HistoryEntry): string {
 	if (item.track && item.album) return item.album.title;
+	if (item.uploaded && item.artist?.album_titles?.length) return item.artist.album_titles.join(", ");
 	return item.title;
 }
 
