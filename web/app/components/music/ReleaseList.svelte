@@ -1,9 +1,17 @@
 <script lang="ts">
+	import { ChevronRight } from "@lucide/svelte";
+	import { createQuery } from "@tanstack/svelte-query";
+	import { slide } from "svelte/transition";
+	import { cubicInOut, cubicOut } from "svelte/easing";
+	import { api } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
 	import { cn } from "@lib/cn";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import ReleaseCover from "./ReleaseCover.svelte";
 	import ReleaseMark from "./ReleaseMark.svelte";
-	import { releaseGroups, releaseLine, releaseTypeLabel, type Release } from "@lib/music-books";
+	import { releaseGroups, releaseLine, releaseTypeLabel, type Release, type ReleaseGroup } from "@lib/music-books";
 	import { albumPosterUrl } from "@lib/posters";
+	import type { LibraryConfig } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The artist page's left column from md: releases grouped the way seasons
@@ -12,9 +20,29 @@
 		releases,
 		selectedId,
 		onSelect,
-	}: { releases: Release[]; selectedId: number | undefined; onSelect: (r: Release) => void } = $props();
+		onMonitorGroup,
+		monitorPending = false,
+	}: {
+		releases: Release[];
+		selectedId: number | undefined;
+		onSelect: (r: Release) => void;
+		onMonitorGroup?: (releases: Release[], monitored: boolean) => void;
+		monitorPending?: boolean;
+	} = $props();
 
 	let groups = $derived(releaseGroups(releases));
+
+	// /config/library is admin-only. Anyone else opens a section on what is
+	// monitored or held in it, which the release rows already say.
+	const cfg = createQuery<LibraryConfig>(() => ({
+		queryKey: ["config", "library"],
+		queryFn: () => api<LibraryConfig>("/config/library"),
+		enabled: auth.isAdmin,
+	}));
+	let toggled = $state<Record<string, boolean>>({});
+	const opensByDefault = (g: ReleaseGroup) =>
+		g.types.some((t) => cfg.data?.music_monitored_types?.includes(t)) ||
+		g.releases.some((r) => r.monitored || r.tracks_have > 0 || r.id === selectedId);
 </script>
 
 {#snippet item(r: Release)}
@@ -51,13 +79,43 @@
 
 <nav aria-label={i18n.music_discography()} class="flex flex-col">
 	{#each groups as g, i (g.key)}
-		<p class={cn("px-2.5 pb-1 font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint", i > 0 && "pt-4")}>
-			{g.label} · {g.releases.length}
-		</p>
-		<ul class="flex flex-col gap-0.5">
-			{#each g.releases as r (r.id)}
-				{@render item(r)}
-			{/each}
-		</ul>
+		{@const open = toggled[g.key] ?? opensByDefault(g)}
+		{@const allMonitored = g.releases.every((r) => r.monitored)}
+		<div class={cn("flex items-center gap-1 pr-1", i > 0 && "mt-3")}>
+			<button
+				type="button"
+				aria-expanded={open}
+				onclick={() => (toggled[g.key] = !open)}
+				class="flex min-h-11 min-w-0 flex-1 items-center gap-1.5 rounded-md px-2.5 text-left font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint transition hover:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring lg:min-h-7"
+			>
+				<ChevronRight size={12} class={cn("shrink-0 transition-transform duration-150", open && "rotate-90")} aria-hidden="true" />
+				<span class="truncate">{g.label} · {g.releases.length}</span>
+			</button>
+			{#if onMonitorGroup}
+				<MonitorToggle
+					variant="ghost"
+					size="xs"
+					monitored={allMonitored}
+					pending={monitorPending}
+					startLabel={i18n.music_group_monitor({ group: g.label })}
+					stopLabel={i18n.music_group_unmonitor({ group: g.label })}
+					onToggle={() => onMonitorGroup(g.releases, !allMonitored)}
+				/>
+			{/if}
+		</div>
+		{#if open}
+			<!-- Opening eases in: a 2000px section under ease-out passes the list's
+			     visible height in one frame, leaving its slow tail off screen. Only a
+			     click animates, not the config answering during page load. -->
+			<ul
+				class="flex flex-col gap-0.5"
+				in:slide={{ duration: toggled[g.key] === undefined ? 0 : 280, easing: cubicInOut }}
+				out:slide={{ duration: 180, easing: cubicOut }}
+			>
+				{#each g.releases as r (r.id)}
+					{@render item(r)}
+				{/each}
+			</ul>
+		{/if}
 	{/each}
 </nav>

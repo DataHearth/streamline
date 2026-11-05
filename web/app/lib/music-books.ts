@@ -429,10 +429,13 @@ const RELEASE_SECTIONS: { key: string; label: () => string; types: ReleaseType[]
 	{ key: "compilations", label: () => i18n.music_group_compilations(), types: ["compilation", "other"] },
 ];
 
-export function releaseGroups(releases: Release[]) {
+export type ReleaseGroup = { key: string; label: string; types: ReleaseType[]; releases: Release[] };
+
+export function releaseGroups(releases: Release[]): ReleaseGroup[] {
 	return RELEASE_SECTIONS.map((s) => ({
 		key: s.key,
 		label: s.label(),
+		types: s.types,
 		releases: releases.filter((r) => s.types.includes(r.type)),
 	})).filter((g) => g.releases.length > 0);
 }
@@ -682,8 +685,9 @@ export function languageName(code: string, standalone = false): string {
 }
 
 export function listenTime(s: number): string {
-	const h = Math.floor(s / 3600);
-	const m = Math.round((s % 3600) / 60);
+	const minutes = Math.round(s / 60);
+	const h = Math.floor(minutes / 60);
+	const m = minutes % 60;
 	return i18n.books_duration({ h: String(h), m: String(m).padStart(2, "0") });
 }
 

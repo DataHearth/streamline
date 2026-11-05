@@ -124,9 +124,6 @@
 					{trackTime(t.duration)}
 				</span>
 				<div class="hidden w-[116px] shrink-0 items-center justify-end gap-0.5 lg:flex">
-					<button type="button" onclick={() => (detail = t)} aria-label={i18n.common_details()} title={i18n.common_details()} class={iconBtn}>
-						<Info size={14} aria-hidden="true" />
-					</button>
 					{#if canUpload}
 						<button type="button" onclick={() => onUpload?.(t)} aria-label={i18n.upload_button()} title={i18n.upload_button()} class={iconBtn}>
 							<Upload size={14} aria-hidden="true" />
@@ -154,6 +151,9 @@
 							<Trash2 size={14} aria-hidden="true" />
 						</button>
 					{/if}
+					<button type="button" onclick={() => (detail = t)} aria-label={i18n.common_details()} title={i18n.common_details()} class={iconBtn}>
+						<Info size={14} aria-hidden="true" />
+					</button>
 				</div>
 				<div class="shrink-0 lg:hidden">
 					<KebabMenu items={items(t)} variant="row" />

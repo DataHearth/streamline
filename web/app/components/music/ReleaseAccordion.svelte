@@ -28,6 +28,7 @@
 		onManualSearch,
 		onMonitor,
 		monitorPending = false,
+		onMonitorGroup,
 		onManualSearchTrack,
 		onDeleteTrack,
 		onTags,
@@ -45,6 +46,7 @@
 		onMonitor: (r: Release) => void;
 		// The monitor write is in flight.
 		monitorPending?: boolean;
+		onMonitorGroup?: (releases: Release[], monitored: boolean) => void;
 		// A track is never grabbed on its own: its manual search lists the
 		// releases of its album.
 		onManualSearchTrack?: (r: Release) => void;
@@ -129,7 +131,6 @@
 								<Search size={16} aria-hidden="true" />
 							</button>
 						{/if}
-						<MonitorToggle monitored={r.monitored} onToggle={() => onMonitor(r)} pending={monitorPending} />
 						{#if onTags && r.tracks_have > 0}
 							<button
 								type="button"
@@ -152,6 +153,7 @@
 								<Upload size={16} aria-hidden="true" />
 							</button>
 						{/if}
+						<MonitorToggle monitored={r.monitored} onToggle={() => onMonitor(r)} pending={monitorPending} />
 						{#if up}
 							<p class="self-center text-[12.5px] leading-snug text-fg-muted">
 								{r.monitored ? i18n.music_upcoming_monitored() : i18n.music_upcoming_unmonitored()}
@@ -192,9 +194,23 @@
 {/snippet}
 
 {#each groups as g (g.key)}
-	<p class="px-4 pb-2 pt-5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-faint">
-		{g.label} · {g.releases.length}
-	</p>
+	{@const allMonitored = g.releases.every((r) => r.monitored)}
+	<div class="flex items-center justify-between gap-2 pl-4 pr-1 pt-3">
+		<p class="min-w-0 truncate font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-faint">
+			{g.label} · {g.releases.length}
+		</p>
+		{#if canEdit && onMonitorGroup}
+			<MonitorToggle
+				variant="ghost"
+				size="xs"
+				monitored={allMonitored}
+				pending={monitorPending}
+				startLabel={i18n.music_group_monitor({ group: g.label })}
+				stopLabel={i18n.music_group_unmonitor({ group: g.label })}
+				onToggle={() => onMonitorGroup(g.releases, !allMonitored)}
+			/>
+		{/if}
+	</div>
 	{#each g.releases as r (r.id)}
 		{@render row(r)}
 	{/each}

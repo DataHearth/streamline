@@ -122,7 +122,6 @@
 							<span class="hidden @md:inline">{i18n.action_manual_search()}</span>
 						</button>
 					{/if}
-					<MonitorToggle monitored={r.monitored} onToggle={onMonitor} pending={monitorPending} size="sm" />
 					{#if onTags && r.tracks_have > 0}
 						<button
 							type="button"
@@ -147,6 +146,7 @@
 							<span class="hidden @md:inline">{i18n.upload_button()}</span>
 						</button>
 					{/if}
+					<MonitorToggle monitored={r.monitored} onToggle={onMonitor} pending={monitorPending} size="sm" />
 					{#if up}
 						<span class="text-[13px] text-fg-muted">
 							{r.monitored ? i18n.music_upcoming_monitored() : i18n.music_upcoming_unmonitored()}
