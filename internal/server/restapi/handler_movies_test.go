@@ -187,6 +187,27 @@ var _ = Describe(
 				Expect(body.Items[0].QualityProfile).To(HaveValue(Equal("uhd")))
 			})
 
+			It("skips the count and leaves total out for with_total=false", func() {
+				app.movies.EXPECT().
+					FilterList(mock.Anything, mock.MatchedBy(func(p moviesvc.FilterParams) bool {
+						return p.NoTotal
+					})).
+					Return([]*ent.Movie{{ID: 1, Title: "Movie A", TmdbID: 100}}, nil, uint32(0), nil).
+					Once()
+
+				resp, err := http.Get(
+					app.srv.URL + "/api/v1/movies?query=movie&limit=5&with_total=false",
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body map[string]any
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body).To(HaveKey("items"))
+				Expect(body).NotTo(HaveKey("total"))
+			})
+
 			It("returns empty page when no movies exist", func() {
 				app.movies.EXPECT().
 					FilterList(mock.Anything, mock.AnythingOfType("movie.FilterParams")).
@@ -206,6 +227,39 @@ var _ = Describe(
 				Expect(body.Items).To(BeEmpty())
 				Expect(body.Total).To(Equal(0))
 			})
+		})
+
+		Describe("GetMovieSelection", func() {
+			It(
+				"passes the list's filters and answers every match as a slim row",
+				func() {
+					app.store.EXPECT().
+						MovieSelection(mock.Anything, mock.MatchedBy(func(p db.FilterMoviesParams) bool {
+							return p.Status == movie.StatusWanted &&
+								p.Query == "hell" &&
+								p.Monitored != nil &&
+								*p.Monitored
+						})).
+						Return([]db.MovieSelectionRow{
+							{ID: 1, Monitored: true, FileCount: 2, SizeBytes: 700},
+							{ID: 2, Monitored: true},
+						}, nil).
+						Once()
+
+					resp, err := http.Get(app.srv.URL +
+						"/api/v1/movies/selection?status=wanted&monitored=monitored&query=hell")
+					Expect(err).NotTo(HaveOccurred())
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+					var body MovieSelection
+					Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+					Expect(body.Items).To(Equal([]MovieSelectionRow{
+						{Id: 1, Monitored: true, FileCount: 2, SizeBytes: 700},
+						{Id: 2, Monitored: true},
+					}))
+				},
+			)
 		})
 
 		Describe("GetMovieCounts", func() {

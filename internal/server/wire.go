@@ -527,6 +527,16 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		jobs.PurgeAPIKeys(authSvc),
 		scheduler.WithSystem(),
 	)
+	purgeUploads := jobs.PurgeUploads(store)
+	sched.Register(
+		"purge-uploads",
+		time.Hour,
+		purgeUploads,
+		scheduler.WithSystem(),
+	)
+	if err := purgeUploads(ctx); err != nil {
+		slog.WarnContext(ctx, "boot upload sweep failed", "error", err)
+	}
 
 	if err := jobsstate.Seed(ctx, dbClient, sched.List()); err != nil {
 		dbClient.Close()

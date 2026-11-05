@@ -89,8 +89,8 @@
 		}
 		const out: KV[] = [
 			{ label: i18n.common_release(), value: item.title },
-			{ label: i18n.common_indexer(), value: item.indexer || "—" },
-			{ label: i18n.common_client(), value: item.download_client || "—" },
+			{ label: i18n.common_indexer(), value: item.uploaded ? i18n.activity_upload() : item.indexer || "—" },
+			{ label: i18n.common_client(), value: item.uploaded ? i18n.activity_upload() : item.download_client || "—" },
 			{ label: i18n.common_size(), value: sizeValue },
 			{ label: i18n.common_created(), value: formatDateTime(item.created_at) },
 		];

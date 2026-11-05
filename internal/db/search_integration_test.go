@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
 )
 
 var _ = Describe("Title search", Label("integration", "db"), func() {
@@ -63,11 +64,10 @@ var _ = Describe("Title search", Label("integration", "db"), func() {
 			seedAlbum("Électrique Nuit", day(1971, 1, 1), true)
 			seedAlbum("Imagine", day(1971, 9, 9), true)
 
-			rows, total, err := store.SearchAlbums(ctx, TitleSearchParams{
+			rows, err := store.SearchAlbums(ctx, TitleSearchParams{
 				Query: "electrique-nuit", Limit: 5,
-			})
+			}, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(1)))
 			Expect(rows).To(HaveLen(1))
 			Expect(rows[0].Title).To(Equal("Électrique Nuit"))
 			Expect(rows[0].Edges.Artist).NotTo(BeNil())
@@ -82,11 +82,10 @@ var _ = Describe("Title search", Label("integration", "db"), func() {
 			undated := seedAlbum("Power to the People (Demo)", nil, true)
 			hold(held)
 
-			rows, total, err := store.SearchAlbums(ctx, TitleSearchParams{
+			rows, err := store.SearchAlbums(ctx, TitleSearchParams{
 				Query: "power", Limit: 5,
-			})
+			}, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(3)))
 			ids := make([]uint32, 0, len(rows))
 			for _, r := range rows {
 				ids = append(ids, r.ID)
@@ -104,9 +103,9 @@ var _ = Describe("Title search", Label("integration", "db"), func() {
 				exact := seedAlbum("Discovery", day(2001, 3, 12), false)
 				hold(bootleg)
 
-				rows, _, err := store.SearchAlbums(ctx, TitleSearchParams{
+				rows, err := store.SearchAlbums(ctx, TitleSearchParams{
 					Query: "DISCOVERY", Limit: 5,
-				})
+				}, nil)
 				Expect(err).NotTo(HaveOccurred())
 				ids := make([]uint32, 0, len(rows))
 				for _, r := range rows {
@@ -118,27 +117,45 @@ var _ = Describe("Title search", Label("integration", "db"), func() {
 			},
 		)
 
-		It("pages with limit and offset while total counts every match", func() {
+		It("pages with limit and offset", func() {
 			for _, t := range []string{"Love A", "Love B", "Love C"} {
 				seedAlbum(t, nil, true)
 			}
 
-			rows, total, err := store.SearchAlbums(ctx, TitleSearchParams{
+			rows, err := store.SearchAlbums(ctx, TitleSearchParams{
 				Query: "love", Limit: 2, Offset: 2,
-			})
+			}, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(3)))
 			Expect(rows).To(HaveLen(1))
+		})
+
+		It("keeps only the release types asked for", func() {
+			seedAlbum("Imagine", day(1971, 9, 9), true)
+			single := client.Album.Create().
+				SetMbid("rg-imagine-single").SetTitle("Imagine (Single)").
+				SetType(album.TypeSingle).SetArtist(lennon).SaveX(ctx)
+			ep := client.Album.Create().
+				SetMbid("rg-imagine-ep").SetTitle("Imagine EP").
+				SetType(album.TypeEp).SetArtist(lennon).SaveX(ctx)
+
+			rows, err := store.SearchAlbums(ctx, TitleSearchParams{
+				Query: "imagine", Limit: 5,
+			}, []album.Type{album.TypeSingle, album.TypeEp})
+			Expect(err).NotTo(HaveOccurred())
+			ids := make([]uint32, 0, len(rows))
+			for _, r := range rows {
+				ids = append(ids, r.ID)
+			}
+			Expect(ids).To(ConsistOf(single.ID, ep.ID))
 		})
 
 		It("answers an empty page when nothing matches", func() {
 			seedAlbum("Imagine", nil, true)
 
-			rows, total, err := store.SearchAlbums(ctx, TitleSearchParams{
+			rows, err := store.SearchAlbums(ctx, TitleSearchParams{
 				Query: "metallica", Limit: 5,
-			})
+			}, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(BeZero())
 			Expect(rows).To(BeEmpty())
 		})
 	})
@@ -167,11 +184,10 @@ var _ = Describe("Title search", Label("integration", "db"), func() {
 			seedEpisode(1, "The Hidden Hand", day(2024, 11, 17))
 			seedEpisode(2, "Two Wolves", day(2024, 11, 24))
 
-			rows, total, err := store.SearchEpisodes(ctx, TitleSearchParams{
+			rows, err := store.SearchEpisodes(ctx, TitleSearchParams{
 				Query: "HIDDEN hand", Limit: 5,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(1)))
 			Expect(rows).To(HaveLen(1))
 			Expect(rows[0].Number).To(Equal(uint16(1)))
 			Expect(rows[0].Edges.Season).NotTo(BeNil())
@@ -185,7 +201,7 @@ var _ = Describe("Title search", Label("integration", "db"), func() {
 			older := seedEpisode(1, "Half Loop", day(2022, 2, 18))
 			newer := seedEpisode(2, "The Half Loop Returns", day(2025, 1, 1))
 
-			rows, _, err := store.SearchEpisodes(ctx, TitleSearchParams{
+			rows, err := store.SearchEpisodes(ctx, TitleSearchParams{
 				Query: "half loop", Limit: 5,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -205,7 +221,7 @@ var _ = Describe("Title search", Label("integration", "db"), func() {
 					SetPath("/tv/s01e03.mkv").SetSize(10).
 					SetEpisodeID(held.ID).ExecX(ctx)
 
-				rows, _, err := store.SearchEpisodes(ctx, TitleSearchParams{
+				rows, err := store.SearchEpisodes(ctx, TitleSearchParams{
 					Query: "sisterhood", Limit: 10,
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -218,5 +234,94 @@ var _ = Describe("Title search", Label("integration", "db"), func() {
 				).To(Equal([]uint32{held.ID, newer.ID, older.ID, undated.ID}))
 			},
 		)
+	})
+	Describe("SearchTracks", func() {
+		var gurdy *ent.Artist
+
+		BeforeEach(func() {
+			gurdy = client.Artist.Create().
+				SetMbid("a-gurdy").SetName("Patty Gurdy").SaveX(ctx)
+		})
+
+		seedTrack := func(albumTitle, title string, released *time.Time, monitored bool) *ent.Track {
+			GinkgoHelper()
+			al := client.Album.Create().
+				SetMbid("rg-" + albumTitle + title).
+				SetTitle(albumTitle).
+				SetArtist(gurdy).
+				SetNillableReleaseDate(released).
+				SetMonitored(monitored).
+				SaveX(ctx)
+			return client.Track.Create().
+				SetTitle(title).SetPosition(1).SetAlbum(al).SaveX(ctx)
+		}
+
+		ids := func(rows []*ent.Track) []uint32 {
+			out := make([]uint32, 0, len(rows))
+			for _, r := range rows {
+				out = append(out, r.ID)
+			}
+			return out
+		}
+
+		It("matches the title folded, with its album and artist loaded", func() {
+			seedTrack("Pest & Power", "Last Farewell", day(2019, 9, 27), true)
+			seedTrack("Pest & Power", "Pest & Power", day(2019, 9, 27), true)
+
+			rows, err := store.SearchTracks(ctx, TitleSearchParams{
+				Query: "LAST farewell", Limit: 5,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Title).To(Equal("Last Farewell"))
+			Expect(rows[0].Edges.Album).NotTo(BeNil())
+			Expect(rows[0].Edges.Album.Title).To(Equal("Pest & Power"))
+			Expect(rows[0].Edges.Album.Edges.Artist).NotTo(BeNil())
+			Expect(rows[0].Edges.Album.Edges.Artist.Name).To(Equal("Patty Gurdy"))
+		})
+
+		It(
+			"ranks the exact title first, then held, monitored and newest among equals",
+			func() {
+				contains := seedTrack(
+					"Live",
+					"The Farewell Song",
+					day(2025, 1, 1),
+					true,
+				)
+				unmonitored := seedTrack(
+					"Single",
+					"Farewell",
+					day(2024, 1, 1),
+					false,
+				)
+				older := seedTrack("Old", "Farewell", day(2016, 1, 1), true)
+				newer := seedTrack("New", "Farewell", day(2021, 1, 8), true)
+				held := seedTrack("Held", "Farewell", day(2010, 1, 1), false)
+				client.MediaFile.Create().
+					SetPath("/m/farewell.flac").SetSize(10).
+					SetTrackID(held.ID).ExecX(ctx)
+
+				rows, err := store.SearchTracks(ctx, TitleSearchParams{
+					Query: "farewell", Limit: 10,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids(rows)).To(Equal([]uint32{
+					held.ID, newer.ID, older.ID, unmonitored.ID, contains.ID,
+				}))
+			},
+		)
+
+		It("pages with limit and offset", func() {
+			for _, t := range []string{"Love A", "Love B", "Love C"} {
+				seedTrack(t, t, nil, true)
+			}
+
+			rows, err := store.SearchTracks(ctx, TitleSearchParams{
+				Query: "love", Limit: 2, Offset: 2,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+		})
 	})
 })

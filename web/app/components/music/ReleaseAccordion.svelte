@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronRight, Radar, Search, Tags } from "@lucide/svelte";
+	import { ChevronRight, Radar, Search, Tags, Upload } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -28,9 +28,12 @@
 		onManualSearch,
 		onMonitor,
 		monitorPending = false,
+		onMonitorGroup,
 		onManualSearchTrack,
 		onDeleteTrack,
 		onTags,
+		onUpload,
+		onUploadTrack,
 	}: {
 		releases: Release[];
 		// The artist whose page the releases are on.
@@ -43,11 +46,14 @@
 		onMonitor: (r: Release) => void;
 		// The monitor write is in flight.
 		monitorPending?: boolean;
+		onMonitorGroup?: (releases: Release[], monitored: boolean) => void;
 		// A track is never grabbed on its own: its manual search lists the
 		// releases of its album.
 		onManualSearchTrack?: (r: Release) => void;
 		onDeleteTrack?: (t: Track) => void;
 		onTags?: (r: Release) => void;
+		onUpload?: (r: Release) => void;
+		onUploadTrack?: (t: Track, file?: File) => void;
 	} = $props();
 
 	let groups = $derived(releaseGroups(releases));
@@ -125,7 +131,6 @@
 								<Search size={16} aria-hidden="true" />
 							</button>
 						{/if}
-						<MonitorToggle monitored={r.monitored} onToggle={() => onMonitor(r)} pending={monitorPending} />
 						{#if onTags && r.tracks_have > 0}
 							<button
 								type="button"
@@ -137,6 +142,18 @@
 								<Tags size={16} aria-hidden="true" />
 							</button>
 						{/if}
+						{#if onUpload && !up}
+							<button
+								type="button"
+								onclick={() => onUpload(r)}
+								aria-label={i18n.upload_button()}
+								title={i18n.upload_button()}
+								class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg-muted transition active:bg-surface"
+							>
+								<Upload size={16} aria-hidden="true" />
+							</button>
+						{/if}
+						<MonitorToggle monitored={r.monitored} onToggle={() => onMonitor(r)} pending={monitorPending} />
 						{#if up}
 							<p class="self-center text-[12.5px] leading-snug text-fg-muted">
 								{r.monitored ? i18n.music_upcoming_monitored() : i18n.music_upcoming_unmonitored()}
@@ -156,6 +173,7 @@
 							{canEdit}
 							onManualSearch={onManualSearchTrack ? () => onManualSearchTrack(r) : undefined}
 							onDeleteFile={onDeleteTrack}
+							onUpload={onUploadTrack}
 						/>
 					{:else if r.tracks_pending}
 						<p class="rounded-lg border border-dashed border-border-strong px-4 py-6 text-center text-[13px] text-fg-muted">
@@ -176,9 +194,23 @@
 {/snippet}
 
 {#each groups as g (g.key)}
-	<p class="px-4 pb-2 pt-5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-faint">
-		{g.label} · {g.releases.length}
-	</p>
+	{@const allMonitored = g.releases.every((r) => r.monitored)}
+	<div class="flex items-center justify-between gap-2 pl-4 pr-1 pt-3">
+		<p class="min-w-0 truncate font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-faint">
+			{g.label} · {g.releases.length}
+		</p>
+		{#if canEdit && onMonitorGroup}
+			<MonitorToggle
+				variant="ghost"
+				size="xs"
+				monitored={allMonitored}
+				pending={monitorPending}
+				startLabel={i18n.music_group_monitor({ group: g.label })}
+				stopLabel={i18n.music_group_unmonitor({ group: g.label })}
+				onToggle={() => onMonitorGroup(g.releases, !allMonitored)}
+			/>
+		{/if}
+	</div>
 	{#each g.releases as r (r.id)}
 		{@render row(r)}
 	{/each}

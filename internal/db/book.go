@@ -1135,3 +1135,19 @@ func (db *DB) ListActiveBookRecords(
 	}
 	return out, nil
 }
+
+// BookSlotHasLiveRecord reports whether a download for one slot of the book is
+// in flight.
+func (db *DB) BookSlotHasLiveRecord(
+	ctx context.Context,
+	bookID uint32,
+	kind downloadrecord.BookKind,
+) (bool, error) {
+	return db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.HasBookWith(book.ID(bookID)),
+			downloadrecord.BookKindEQ(kind),
+			liveRecord(),
+		).
+		Exist(ctx)
+}

@@ -63,7 +63,7 @@
 		monCounts,
 		selectMode,
 		selectedCount,
-		visibleCount,
+		matchedCount,
 		onTabChange,
 		onTypeChange,
 		onMonChange,
@@ -87,7 +87,7 @@
 		monCounts: SeriesMonCounts;
 		selectMode: boolean;
 		selectedCount: number;
-		visibleCount: number;
+		matchedCount: number;
 		onTabChange: (t: SeriesTab) => void;
 		onTypeChange: (t: SeriesTypeFilter) => void;
 		onMonChange: (m: SeriesMonFilter) => void;
@@ -244,7 +244,7 @@
 	{#if selecting}
 		<SelectionTopBar
 			count={selectedCount}
-			total={visibleCount}
+			total={matchedCount}
 			noun={NOUN_SERIES}
 			onClear={() => onSelectModeChange(false)}
 			{onSelectAll}
@@ -681,13 +681,13 @@
 				<button
 					type="button"
 					onclick={onSelectAll}
-					disabled={visibleCount === 0}
+					disabled={matchedCount === 0}
 					class="inline-flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:pointer-events-none disabled:opacity-40 lg:h-9"
 				>
 					<CheckCheck size={14} aria-hidden="true" />
 					{i18n.common_select_all()}
 					<span class="font-mono text-[10px] tabular text-fg-faint">
-						{visibleCount}
+						{matchedCount}
 					</span>
 				</button>
 			{/if}

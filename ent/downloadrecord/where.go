@@ -135,6 +135,11 @@ func Rejected(v bool) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldEQ(FieldRejected, v))
 }
 
+// Uploaded applies equality check predicate on the "uploaded" field. It's identical to UploadedEQ.
+func Uploaded(v bool) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldEQ(FieldUploaded, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldEQ(FieldCreateTime, v))
@@ -1125,6 +1130,16 @@ func RejectedNEQ(v bool) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldNEQ(FieldRejected, v))
 }
 
+// UploadedEQ applies the EQ predicate on the "uploaded" field.
+func UploadedEQ(v bool) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldEQ(FieldUploaded, v))
+}
+
+// UploadedNEQ applies the NEQ predicate on the "uploaded" field.
+func UploadedNEQ(v bool) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNEQ(FieldUploaded, v))
+}
+
 // HasMovie applies the HasEdge predicate on the "movie" edge.
 func HasMovie() predicate.DownloadRecord {
 	return predicate.DownloadRecord(func(s *sql.Selector) {
@@ -1163,6 +1178,29 @@ func HasAlbum() predicate.DownloadRecord {
 func HasAlbumWith(preds ...predicate.Album) predicate.DownloadRecord {
 	return predicate.DownloadRecord(func(s *sql.Selector) {
 		step := newAlbumStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTrack applies the HasEdge predicate on the "track" edge.
+func HasTrack() predicate.DownloadRecord {
+	return predicate.DownloadRecord(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, TrackTable, TrackColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTrackWith applies the HasEdge predicate on the "track" edge with a given conditions (other predicates).
+func HasTrackWith(preds ...predicate.Track) predicate.DownloadRecord {
+	return predicate.DownloadRecord(func(s *sql.Selector) {
+		step := newTrackStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

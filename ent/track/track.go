@@ -46,6 +46,8 @@ const (
 	EdgeAnnotations = "annotations"
 	// EdgeBookmarks holds the string denoting the bookmarks edge name in mutations.
 	EdgeBookmarks = "bookmarks"
+	// EdgeDownloadRecords holds the string denoting the download_records edge name in mutations.
+	EdgeDownloadRecords = "download_records"
 	// Table holds the table name of the track in the database.
 	Table = "tracks"
 	// AlbumTable is the table that holds the album relation/edge.
@@ -83,6 +85,13 @@ const (
 	BookmarksInverseTable = "bookmarks"
 	// BookmarksColumn is the table column denoting the bookmarks relation/edge.
 	BookmarksColumn = "track_id"
+	// DownloadRecordsTable is the table that holds the download_records relation/edge.
+	DownloadRecordsTable = "download_records"
+	// DownloadRecordsInverseTable is the table name for the DownloadRecord entity.
+	// It exists in this package in order to avoid circular dependency with the "downloadrecord" package.
+	DownloadRecordsInverseTable = "download_records"
+	// DownloadRecordsColumn is the table column denoting the download_records relation/edge.
+	DownloadRecordsColumn = "track_download_records"
 )
 
 // Columns holds all SQL columns for track fields.
@@ -259,6 +268,20 @@ func ByBookmarks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newBookmarksStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByDownloadRecordsCount orders the results by download_records count.
+func ByDownloadRecordsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newDownloadRecordsStep(), opts...)
+	}
+}
+
+// ByDownloadRecords orders the results by download_records terms.
+func ByDownloadRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDownloadRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newAlbumStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -292,5 +315,12 @@ func newBookmarksStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(BookmarksInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, BookmarksTable, BookmarksColumn),
+	)
+}
+func newDownloadRecordsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DownloadRecordsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, DownloadRecordsTable, DownloadRecordsColumn),
 	)
 }

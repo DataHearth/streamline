@@ -230,6 +230,7 @@ func (s *Server) ListBooks(
 	if order := req.Params.Order; order != nil {
 		p.Desc = *order == ListBooksParamsOrderDesc
 	}
+	p.NoTotal = skipTotal(req.Params.WithTotal)
 
 	res, err := s.books.List(ctx, p)
 	if err != nil {
@@ -242,7 +243,10 @@ func (s *Server) ListBooks(
 		items = append(items, toShelfItem(r, res.Progress))
 	}
 	return ListBooks200JSONResponse{
-		Items: items, Total: res.Total, Page: uint32(page), Limit: limit,
+		Items: items,
+		Total: optTotal(res.Total, p.NoTotal),
+		Page:  uint32(page),
+		Limit: limit,
 	}, nil
 }
 

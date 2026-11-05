@@ -2718,6 +2718,22 @@ func (c *DownloadRecordClient) QueryAlbum(_m *DownloadRecord) *AlbumQuery {
 	return query
 }
 
+// QueryTrack queries the track edge of a DownloadRecord.
+func (c *DownloadRecordClient) QueryTrack(_m *DownloadRecord) *TrackQuery {
+	query := (&TrackClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, id),
+			sqlgraph.To(track.Table, track.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.TrackTable, downloadrecord.TrackColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryBook queries the book edge of a DownloadRecord.
 func (c *DownloadRecordClient) QueryBook(_m *DownloadRecord) *BookQuery {
 	query := (&BookClient{config: c.config}).Query()
@@ -6996,6 +7012,22 @@ func (c *TrackClient) QueryBookmarks(_m *Track) *BookmarkQuery {
 			sqlgraph.From(track.Table, track.FieldID, id),
 			sqlgraph.To(bookmark.Table, bookmark.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, track.BookmarksTable, track.BookmarksColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDownloadRecords queries the download_records edge of a Track.
+func (c *TrackClient) QueryDownloadRecords(_m *Track) *DownloadRecordQuery {
+	query := (&DownloadRecordClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(track.Table, track.FieldID, id),
+			sqlgraph.To(downloadrecord.Table, downloadrecord.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, track.DownloadRecordsTable, track.DownloadRecordsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

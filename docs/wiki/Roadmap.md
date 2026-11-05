@@ -15,6 +15,7 @@ Missing something you need? [Open an issue](https://github.com/datahearth/stream
 | Subsonic server for music apps (OpenSubsonic, playlists, shares, transcoding) | ✅ Shipped |
 | OPDS catalogue for e-reader apps | ✅ Shipped |
 | Send to e-reader by email (EPUB and PDF) | ✅ Shipped |
+| Upload albums, tracks, discographies and books from the UI or API, imported like a finished download | ✅ Shipped |
 | CBZ → PDF for send to e-reader | 📋 Planned |
 | Music tag engine (Streamline keeps every file's tags and artwork in step with its library) | ✅ Shipped — full MusicBrainz tag set with composers, performers and production credits, the album cover in each file and `cover.jpg`/`folder.jpg` beside them, a per-release tag panel with hand-set tags, and edits made elsewhere undone under *Managed* — without losing ReplayGain, lyrics or a release's own art |
 

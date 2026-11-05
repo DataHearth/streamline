@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/bookmark"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
@@ -280,6 +281,21 @@ func (_u *TrackUpdate) AddBookmarks(v ...*Bookmark) *TrackUpdate {
 	return _u.AddBookmarkIDs(ids...)
 }
 
+// AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by IDs.
+func (_u *TrackUpdate) AddDownloadRecordIDs(ids ...uint32) *TrackUpdate {
+	_u.mutation.AddDownloadRecordIDs(ids...)
+	return _u
+}
+
+// AddDownloadRecords adds the "download_records" edges to the DownloadRecord entity.
+func (_u *TrackUpdate) AddDownloadRecords(v ...*DownloadRecord) *TrackUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddDownloadRecordIDs(ids...)
+}
+
 // Mutation returns the TrackMutation object of the builder.
 func (_u *TrackUpdate) Mutation() *TrackMutation {
 	return _u.mutation
@@ -373,6 +389,27 @@ func (_u *TrackUpdate) RemoveBookmarks(v ...*Bookmark) *TrackUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveBookmarkIDs(ids...)
+}
+
+// ClearDownloadRecords clears all "download_records" edges to the DownloadRecord entity.
+func (_u *TrackUpdate) ClearDownloadRecords() *TrackUpdate {
+	_u.mutation.ClearDownloadRecords()
+	return _u
+}
+
+// RemoveDownloadRecordIDs removes the "download_records" edge to DownloadRecord entities by IDs.
+func (_u *TrackUpdate) RemoveDownloadRecordIDs(ids ...uint32) *TrackUpdate {
+	_u.mutation.RemoveDownloadRecordIDs(ids...)
+	return _u
+}
+
+// RemoveDownloadRecords removes "download_records" edges to DownloadRecord entities.
+func (_u *TrackUpdate) RemoveDownloadRecords(v ...*DownloadRecord) *TrackUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveDownloadRecordIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -705,6 +742,51 @@ func (_u *TrackUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.DownloadRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.DownloadRecordsTable,
+			Columns: []string{track.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedDownloadRecordsIDs(); len(nodes) > 0 && !_u.mutation.DownloadRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.DownloadRecordsTable,
+			Columns: []string{track.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DownloadRecordsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.DownloadRecordsTable,
+			Columns: []string{track.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -973,6 +1055,21 @@ func (_u *TrackUpdateOne) AddBookmarks(v ...*Bookmark) *TrackUpdateOne {
 	return _u.AddBookmarkIDs(ids...)
 }
 
+// AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by IDs.
+func (_u *TrackUpdateOne) AddDownloadRecordIDs(ids ...uint32) *TrackUpdateOne {
+	_u.mutation.AddDownloadRecordIDs(ids...)
+	return _u
+}
+
+// AddDownloadRecords adds the "download_records" edges to the DownloadRecord entity.
+func (_u *TrackUpdateOne) AddDownloadRecords(v ...*DownloadRecord) *TrackUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddDownloadRecordIDs(ids...)
+}
+
 // Mutation returns the TrackMutation object of the builder.
 func (_u *TrackUpdateOne) Mutation() *TrackMutation {
 	return _u.mutation
@@ -1066,6 +1163,27 @@ func (_u *TrackUpdateOne) RemoveBookmarks(v ...*Bookmark) *TrackUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveBookmarkIDs(ids...)
+}
+
+// ClearDownloadRecords clears all "download_records" edges to the DownloadRecord entity.
+func (_u *TrackUpdateOne) ClearDownloadRecords() *TrackUpdateOne {
+	_u.mutation.ClearDownloadRecords()
+	return _u
+}
+
+// RemoveDownloadRecordIDs removes the "download_records" edge to DownloadRecord entities by IDs.
+func (_u *TrackUpdateOne) RemoveDownloadRecordIDs(ids ...uint32) *TrackUpdateOne {
+	_u.mutation.RemoveDownloadRecordIDs(ids...)
+	return _u
+}
+
+// RemoveDownloadRecords removes "download_records" edges to DownloadRecord entities.
+func (_u *TrackUpdateOne) RemoveDownloadRecords(v ...*DownloadRecord) *TrackUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveDownloadRecordIDs(ids...)
 }
 
 // Where appends a list predicates to the TrackUpdate builder.
@@ -1421,6 +1539,51 @@ func (_u *TrackUpdateOne) sqlSave(ctx context.Context) (_node *Track, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DownloadRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.DownloadRecordsTable,
+			Columns: []string{track.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedDownloadRecordsIDs(); len(nodes) > 0 && !_u.mutation.DownloadRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.DownloadRecordsTable,
+			Columns: []string{track.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DownloadRecordsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.DownloadRecordsTable,
+			Columns: []string{track.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

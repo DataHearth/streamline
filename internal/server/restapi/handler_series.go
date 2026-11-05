@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
+	"time"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -54,6 +56,7 @@ func (s *Server) ListSeries(
 		on := *request.Params.Monitored == ListSeriesParamsMonitoredMonitored
 		p.Monitored = &on
 	}
+	p.NoTotal = skipTotal(request.Params.WithTotal)
 
 	rows, counts, total, err := s.tvshows.FilterList(ctx, p)
 	if err != nil {
@@ -68,7 +71,7 @@ func (s *Server) ListSeries(
 	}
 	return ListSeries200JSONResponse{
 		Items: items,
-		Total: total,
+		Total: optTotal(total, p.NoTotal),
 		Page:  uint32(p.Page),
 		Limit: p.Limit,
 	}, nil
@@ -170,6 +173,42 @@ func (s *Server) AddSeries(
 	return AddSeries201JSONResponse{
 		SeriesCreatedJSONResponse: SeriesCreatedJSONResponse(tvShowToAPI(show)),
 	}, nil
+}
+
+func (s *Server) GetSeriesSelection(
+	ctx context.Context,
+	request GetSeriesSelectionRequestObject,
+) (GetSeriesSelectionResponseObject, error) {
+	p := db.FilterTVShowsParams{Now: time.Now()}
+	if v := request.Params.Status; v != nil {
+		p.Status = *v
+	}
+	if v := request.Params.Type; v != nil {
+		p.Type = *v
+	}
+	if v := request.Params.Query; v != nil {
+		p.Query = strings.TrimSpace(*v)
+	}
+	if v := request.Params.Monitored; v != nil {
+		on := *v == GetSeriesSelectionParamsMonitoredMonitored
+		p.Monitored = &on
+	}
+	rows, err := s.store.TVShowSelection(ctx, p)
+	if err != nil {
+		return GetSeriesSelection500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	items := make([]SeriesSelectionRow, len(rows))
+	for i, r := range rows {
+		items[i] = SeriesSelectionRow{
+			Id:             r.ID,
+			Monitored:      r.Monitored,
+			HaveEpisodes:   r.Have,
+			WantedEpisodes: r.Wanted,
+		}
+	}
+	return GetSeriesSelection200JSONResponse{Items: items}, nil
 }
 
 func (s *Server) GetSeriesCounts(

@@ -91,8 +91,19 @@ let
       inherit (finalAttrs) version src;
       inherit pnpm;
       fetcherVersion = 4;
-      hash = "sha256-k6g47X6e0cGpyjrHe8CuftftUjKwa8qjL0dLX1V1BSM=";
+      hash = "sha256-U62nz9lBmfka2vxfs0HXdpoBs+/+1zdajq+Km6Iquck=";
     };
+
+    # nixpkgs' pnpmConfigHook rebuilds the store's index.db from a `.dump`,
+    # which drops WAL mode, so pnpm's writer switches it back to WAL while the
+    # install's readers are open. Under rollback journaling that write locks
+    # them out, and pnpm 12 treats a read past its 5 s busy_timeout as a missing
+    # snapshot: on a loaded builder the offline install failed with
+    # ERR_PNPM_NO_OFFLINE_TARBALL on a different package each run. Drop this
+    # once the hook restores the index in WAL mode itself.
+    prePnpmInstall = ''
+      sqlite3 "$STORE_PATH/v11/index.db" 'PRAGMA journal_mode=WAL;' >/dev/null
+    '';
 
     # Mirrors `task build:js` + `task build:css`. Keep the two in step: the Go
     # build embeds exactly these outputs and a missing one fails //go:embed
@@ -133,7 +144,7 @@ in
   pname = "streamline";
   inherit version src;
 
-  vendorHash = "sha256-2cj4oHPhG9KSrHMes6cmlDi9dhsmbvKb37dKoRr0RfU=";
+  vendorHash = "sha256-nBq2bXrvA7qzxR8t0S5pwOtTwAFJ6thpM9p6ureUlcE=";
   # Named by what decides the vendored set rather than by the app version, for
   # the reason inputsId gives. Fixed rather than derived from pname, so the lint
   # check's overrideAttrs shares this fetch instead of repeating it.

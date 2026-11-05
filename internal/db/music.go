@@ -475,6 +475,9 @@ type ListArtistsParams struct {
 	Limit     uint16
 	// Now anchors the upcoming split, so the filter and the counts agree.
 	Now time.Time
+	// NoTotal skips counting the matches, for a caller that shows only the
+	// page: the count is a second pass over every match.
+	NoTotal bool
 }
 
 // ArtistCounts is the faceted tally behind the artist list's toolbar: each
@@ -566,23 +569,13 @@ func artistFilters(p ListArtistsParams, skip facet) []predicate.Artist {
 	return out
 }
 
-// CountArtistsFiltered counts the artists the list's filters match, which is
-// the list's total.
-func (db *DB) CountArtistsFiltered(
-	ctx context.Context,
-	p ListArtistsParams,
-) (int, error) {
-	return db.client.Artist.Query().
-		Where(artistFilters(p, facetAll)...).
-		Count(ctx)
-}
-
 // ListArtists returns one page of the filtered, sorted list with each artist's
-// albums loaded as tiles: no tracks, no credits.
+// albums loaded as tiles (no tracks, no credits), and how many artists the
+// filters match unless p.NoTotal.
 func (db *DB) ListArtists(
 	ctx context.Context,
 	p ListArtistsParams,
-) ([]*ent.Artist, error) {
+) ([]*ent.Artist, uint32, error) {
 	desc := p.Order == "desc"
 	var order []artist.OrderOption
 	switch p.Sort {
@@ -596,14 +589,25 @@ func (db *DB) ListArtists(
 		}
 	}
 	order = append(order, artist.ByID())
-	return db.client.Artist.Query().
-		Where(artistFilters(p, facetAll)...).
+	base := db.client.Artist.Query().Where(artistFilters(p, facetAll)...)
+	var total int
+	if !p.NoTotal {
+		var err error
+		if total, err = base.Clone().Count(ctx); err != nil {
+			return nil, 0, fmt.Errorf("count artists: %w", err)
+		}
+	}
+	rows, err := base.
 		Order(order...).
 		Offset(int(p.Offset)).
 		Limit(int(p.Limit)).
 		WithAlbums(withAlbumArtists).
 		WithCoAlbums(withAlbumArtists).
 		All(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list artists: %w", err)
+	}
+	return rows, numeric.SaturateU32(total), nil
 }
 
 func (db *DB) ArtistCounts(

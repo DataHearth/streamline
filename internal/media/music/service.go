@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"slices"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -105,6 +106,34 @@ type Manager interface {
 		artistID uint32,
 		result indexer.SearchResult,
 	) (*DiscographyFilesView, error)
+	AlbumUploadPreview(
+		ctx context.Context,
+		albumID uint32,
+		files []download.ReleaseFile,
+	) (*ReleaseFilesView, error)
+	ArtistUploadPreview(
+		ctx context.Context,
+		artistID uint32,
+		files []download.ReleaseFile,
+	) (*DiscographyFilesView, error)
+	UploadAlbum(
+		ctx context.Context,
+		albumID uint32,
+		o UploadOptions,
+		recv ReceiveFunc,
+	) (*ent.DownloadRecord, error)
+	UploadTrack(
+		ctx context.Context,
+		trackID uint32,
+		o UploadOptions,
+		recv ReceiveFunc,
+	) (*ent.DownloadRecord, error)
+	UploadArtist(
+		ctx context.Context,
+		artistID uint32,
+		o UploadOptions,
+		recv ReceiveFunc,
+	) (*ent.DownloadRecord, []string, error)
 	SearchAlbumNow(ctx context.Context, albumID uint32) error
 	SearchArtistNow(ctx context.Context, artistID uint32) error
 	SearchTrackNow(ctx context.Context, trackID uint32) error
@@ -129,6 +158,9 @@ type Manager interface {
 var _ Manager = (*Service)(nil)
 
 type Service struct {
+	// uploadMu makes an upload's busy check and its record one step.
+	uploadMu sync.Mutex
+
 	db        db.Store
 	metadata  metadata.MusicProvider
 	posters   posters.Manager

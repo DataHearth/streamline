@@ -121,11 +121,11 @@
 			{held ? "—" : speedEta || "—"}
 		</td>
 		<td class={cn("hidden px-2 text-xs text-fg-subtle @3xl:table-cell", tight, pad)}>
-			{queue.download_client || "—"}
+			{queue.uploaded ? i18n.activity_upload() : queue.download_client || "—"}
 		</td>
 	{:else}
 		<td class={cn("hidden px-2 text-xs text-fg-subtle @3xl:table-cell", tight, pad)}>
-			{history.indexer || "—"}
+			{history.uploaded ? i18n.activity_upload() : history.indexer || "—"}
 		</td>
 		<td class={cn("px-2 tabular-nums text-xs text-fg-muted", tight, pad)}>
 			{formatBytes(history.size)}

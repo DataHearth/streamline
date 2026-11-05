@@ -60,11 +60,13 @@ type Store interface {
 	FindArtistByMBID(ctx context.Context, mbid string) (*ent.Artist, error)
 	// ArtistIDsByMBID maps each mbid that is a library artist to its id.
 	ArtistIDsByMBID(ctx context.Context, mbids []string) (map[string]uint32, error)
-	// CountArtistsFiltered counts what ListArtists's filters match.
-	CountArtistsFiltered(ctx context.Context, p ListArtistsParams) (int, error)
 	// ListArtists returns one filtered, sorted page with each artist's albums
-	// loaded as tiles (no tracks).
-	ListArtists(ctx context.Context, p ListArtistsParams) ([]*ent.Artist, error)
+	// loaded as tiles (no tracks), and how many artists the filters match
+	// unless p.NoTotal.
+	ListArtists(
+		ctx context.Context,
+		p ListArtistsParams,
+	) ([]*ent.Artist, uint32, error)
 	// ArtistCounts is the faceted tally behind the artist list's toolbar.
 	ArtistCounts(ctx context.Context, p ListArtistsParams) (ArtistCounts, error)
 	// AlbumRollups tallies tracks, files, bytes and runtime per album for the
@@ -185,6 +187,16 @@ type Store interface {
 	// AlbumHasLiveRecord reports whether a download for the album, single or
 	// as part of a pack, is in flight.
 	AlbumHasLiveRecord(ctx context.Context, albumID uint32) (bool, error)
+	// BookSlotHasLiveRecord reports whether a download for one slot of the
+	// book is in flight.
+	BookSlotHasLiveRecord(
+		ctx context.Context,
+		bookID uint32,
+		kind downloadrecord.BookKind,
+	) (bool, error)
+	// ListKeptUploadPaths returns the staging folders of uploaded records
+	// that are importing, held, or failed without being rejected.
+	ListKeptUploadPaths(ctx context.Context) ([]string, error)
 	// ListArtistAlbumsForSearch returns the artist's monitored, released,
 	// hydrated, wanted albums.
 	ListArtistAlbumsForSearch(
@@ -552,6 +564,18 @@ type Store interface {
 		ctx context.Context,
 		movieIDs []uint32,
 	) (map[uint32]MovieFileSummary, error)
+	// MovieSelection lists every movie the list's filters match, unpaged,
+	// with what a bulk action reads.
+	MovieSelection(
+		ctx context.Context,
+		p FilterMoviesParams,
+	) ([]MovieSelectionRow, error)
+	// TVShowSelection lists every show the list's filters match, unpaged,
+	// with what a bulk action reads.
+	TVShowSelection(
+		ctx context.Context,
+		p FilterTVShowsParams,
+	) ([]SeriesSelectionRow, error)
 	MovieCreateTimesSince(ctx context.Context, since time.Time) ([]time.Time, error)
 	// TVShowFacetCounts tallies every facet of the series list — status, type
 	// and monitoring — each against the filters applied to the others.
@@ -1367,7 +1391,7 @@ type Store interface {
 	// people (cast)
 	// ListPeople pages the cast members credited anywhere in the library,
 	// most-credited first, with the credit count rolled up in SQL.
-	ListPeople(ctx context.Context, p ListPeopleParams) ([]Person, uint32, error)
+	ListPeople(ctx context.Context, p ListPeopleParams) ([]Person, error)
 	// PersonCredits returns every movie and series crediting the person, each
 	// with the character they play there. ErrPersonNotFound when no such
 	// persons row exists.
@@ -1411,13 +1435,20 @@ type Store interface {
 	SearchAlbums(
 		ctx context.Context,
 		p TitleSearchParams,
-	) ([]*ent.Album, uint32, error)
+		types []album.Type,
+	) ([]*ent.Album, error)
 	// SearchEpisodes pages the episodes whose title holds the query, folded,
 	// the ones holding a file first, each with its season and show loaded.
 	SearchEpisodes(
 		ctx context.Context,
 		p TitleSearchParams,
-	) ([]*ent.Episode, uint32, error)
+	) ([]*ent.Episode, error)
+	// SearchTracks pages the tracks whose title holds the query, folded, the
+	// ones holding a file first, each with its album and artist loaded.
+	SearchTracks(
+		ctx context.Context,
+		p TitleSearchParams,
+	) ([]*ent.Track, error)
 
 	// requests
 	CreateRequest(ctx context.Context, p CreateRequestParams) (*ent.Request, error)

@@ -68,6 +68,9 @@ func (DownloadRecord) Fields() []ent.Field {
 		// record of the same item (by info hash, else by title), so the next
 		// missing search or feed tick does not take the same release again.
 		field.Bool("rejected").Default(false),
+		// A client-less record whose files were uploaded into a staging
+		// folder; the importer always copies from it.
+		field.Bool("uploaded").Default(false),
 	}
 }
 
@@ -101,6 +104,7 @@ func (DownloadRecord) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("movie", Movie.Type).Ref("download_records").Unique(),
 		edge.From("album", Album.Type).Ref("download_records").Unique(),
+		edge.From("track", Track.Type).Ref("download_records").Unique(),
 		edge.From("book", Book.Type).Ref("download_records").Unique(),
 		// A discography pack is filed under the artist and links, through
 		// albums, every album it is expected to cover. A record has album xor

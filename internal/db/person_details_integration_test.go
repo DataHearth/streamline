@@ -153,9 +153,8 @@ var _ = Describe("Person details", Label("integration", "db"), func() {
 			credit(p, m)
 			Expect(store.SavePersonDetails(ctx, p.ID, details)).To(Succeed())
 
-			listed, total, err := store.ListPeople(ctx, ListPeopleParams{Limit: 10})
+			listed, err := store.ListPeople(ctx, ListPeopleParams{Limit: 10})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(1)))
 			Expect(listed[0].PersonBio).To(Equal(PersonBio{
 				Biography:    details.Biography,
 				KnownFor:     details.KnownFor,

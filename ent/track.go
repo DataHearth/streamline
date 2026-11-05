@@ -60,9 +60,11 @@ type TrackEdges struct {
 	Annotations []*MusicAnnotation `json:"annotations,omitempty"`
 	// Bookmarks holds the value of the bookmarks edge.
 	Bookmarks []*Bookmark `json:"bookmarks,omitempty"`
+	// DownloadRecords holds the value of the download_records edge.
+	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [6]bool
 }
 
 // AlbumOrErr returns the Album value or an error if the edge
@@ -110,6 +112,15 @@ func (e TrackEdges) BookmarksOrErr() ([]*Bookmark, error) {
 		return e.Bookmarks, nil
 	}
 	return nil, &NotLoadedError{edge: "bookmarks"}
+}
+
+// DownloadRecordsOrErr returns the DownloadRecords value or an error if the edge
+// was not loaded in eager-loading.
+func (e TrackEdges) DownloadRecordsOrErr() ([]*DownloadRecord, error) {
+	if e.loadedTypes[5] {
+		return e.DownloadRecords, nil
+	}
+	return nil, &NotLoadedError{edge: "download_records"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -261,6 +272,11 @@ func (_m *Track) QueryAnnotations() *MusicAnnotationQuery {
 // QueryBookmarks queries the "bookmarks" edge of the Track entity.
 func (_m *Track) QueryBookmarks() *BookmarkQuery {
 	return NewTrackClient(_m.config).QueryBookmarks(_m)
+}
+
+// QueryDownloadRecords queries the "download_records" edge of the Track entity.
+func (_m *Track) QueryDownloadRecords() *DownloadRecordQuery {
+	return NewTrackClient(_m.config).QueryDownloadRecords(_m)
 }
 
 // Update returns a builder for updating this Track.

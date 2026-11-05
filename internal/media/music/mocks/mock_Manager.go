@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/media/music"
 	mock "github.com/stretchr/testify/mock"
@@ -329,6 +330,80 @@ func (_c *MockManager_AlbumTags_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// AlbumUploadPreview provides a mock function for the type MockManager
+func (_mock *MockManager) AlbumUploadPreview(ctx context.Context, albumID uint32, files []download.ReleaseFile) (*music.ReleaseFilesView, error) {
+	ret := _mock.Called(ctx, albumID, files)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AlbumUploadPreview")
+	}
+
+	var r0 *music.ReleaseFilesView
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []download.ReleaseFile) (*music.ReleaseFilesView, error)); ok {
+		return returnFunc(ctx, albumID, files)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []download.ReleaseFile) *music.ReleaseFilesView); ok {
+		r0 = returnFunc(ctx, albumID, files)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*music.ReleaseFilesView)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, []download.ReleaseFile) error); ok {
+		r1 = returnFunc(ctx, albumID, files)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_AlbumUploadPreview_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AlbumUploadPreview'
+type MockManager_AlbumUploadPreview_Call struct {
+	*mock.Call
+}
+
+// AlbumUploadPreview is a helper method to define mock.On call
+//   - ctx context.Context
+//   - albumID uint32
+//   - files []download.ReleaseFile
+func (_e *MockManager_Expecter) AlbumUploadPreview(ctx any, albumID any, files any) *MockManager_AlbumUploadPreview_Call {
+	return &MockManager_AlbumUploadPreview_Call{Call: _e.mock.On("AlbumUploadPreview", ctx, albumID, files)}
+}
+
+func (_c *MockManager_AlbumUploadPreview_Call) Run(run func(ctx context.Context, albumID uint32, files []download.ReleaseFile)) *MockManager_AlbumUploadPreview_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 []download.ReleaseFile
+		if args[2] != nil {
+			arg2 = args[2].([]download.ReleaseFile)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_AlbumUploadPreview_Call) Return(releaseFilesView *music.ReleaseFilesView, err error) *MockManager_AlbumUploadPreview_Call {
+	_c.Call.Return(releaseFilesView, err)
+	return _c
+}
+
+func (_c *MockManager_AlbumUploadPreview_Call) RunAndReturn(run func(ctx context.Context, albumID uint32, files []download.ReleaseFile) (*music.ReleaseFilesView, error)) *MockManager_AlbumUploadPreview_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ApplyAlbumTags provides a mock function for the type MockManager
 func (_mock *MockManager) ApplyAlbumTags(ctx context.Context, albumID uint32) (int, error) {
 	ret := _mock.Called(ctx, albumID)
@@ -531,6 +606,80 @@ func (_c *MockManager_ArtistPackFiles_Call) Return(discographyFilesView *music.D
 }
 
 func (_c *MockManager_ArtistPackFiles_Call) RunAndReturn(run func(ctx context.Context, artistID uint32, result indexer.SearchResult) (*music.DiscographyFilesView, error)) *MockManager_ArtistPackFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ArtistUploadPreview provides a mock function for the type MockManager
+func (_mock *MockManager) ArtistUploadPreview(ctx context.Context, artistID uint32, files []download.ReleaseFile) (*music.DiscographyFilesView, error) {
+	ret := _mock.Called(ctx, artistID, files)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ArtistUploadPreview")
+	}
+
+	var r0 *music.DiscographyFilesView
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []download.ReleaseFile) (*music.DiscographyFilesView, error)); ok {
+		return returnFunc(ctx, artistID, files)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []download.ReleaseFile) *music.DiscographyFilesView); ok {
+		r0 = returnFunc(ctx, artistID, files)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*music.DiscographyFilesView)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, []download.ReleaseFile) error); ok {
+		r1 = returnFunc(ctx, artistID, files)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_ArtistUploadPreview_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ArtistUploadPreview'
+type MockManager_ArtistUploadPreview_Call struct {
+	*mock.Call
+}
+
+// ArtistUploadPreview is a helper method to define mock.On call
+//   - ctx context.Context
+//   - artistID uint32
+//   - files []download.ReleaseFile
+func (_e *MockManager_Expecter) ArtistUploadPreview(ctx any, artistID any, files any) *MockManager_ArtistUploadPreview_Call {
+	return &MockManager_ArtistUploadPreview_Call{Call: _e.mock.On("ArtistUploadPreview", ctx, artistID, files)}
+}
+
+func (_c *MockManager_ArtistUploadPreview_Call) Run(run func(ctx context.Context, artistID uint32, files []download.ReleaseFile)) *MockManager_ArtistUploadPreview_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 []download.ReleaseFile
+		if args[2] != nil {
+			arg2 = args[2].([]download.ReleaseFile)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_ArtistUploadPreview_Call) Return(discographyFilesView *music.DiscographyFilesView, err error) *MockManager_ArtistUploadPreview_Call {
+	_c.Call.Return(discographyFilesView, err)
+	return _c
+}
+
+func (_c *MockManager_ArtistUploadPreview_Call) RunAndReturn(run func(ctx context.Context, artistID uint32, files []download.ReleaseFile) (*music.DiscographyFilesView, error)) *MockManager_ArtistUploadPreview_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2071,5 +2220,253 @@ func (_c *MockManager_TagSettingsChanged_Call) Return() *MockManager_TagSettings
 
 func (_c *MockManager_TagSettingsChanged_Call) RunAndReturn(run func(ctx context.Context, before config.MusicTagsConfig, after config.MusicTagsConfig)) *MockManager_TagSettingsChanged_Call {
 	_c.Run(run)
+	return _c
+}
+
+// UploadAlbum provides a mock function for the type MockManager
+func (_mock *MockManager) UploadAlbum(ctx context.Context, albumID uint32, o music.UploadOptions, recv music.ReceiveFunc) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, albumID, o, recv)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UploadAlbum")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, music.UploadOptions, music.ReceiveFunc) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, albumID, o, recv)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, music.UploadOptions, music.ReceiveFunc) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, albumID, o, recv)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, music.UploadOptions, music.ReceiveFunc) error); ok {
+		r1 = returnFunc(ctx, albumID, o, recv)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_UploadAlbum_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UploadAlbum'
+type MockManager_UploadAlbum_Call struct {
+	*mock.Call
+}
+
+// UploadAlbum is a helper method to define mock.On call
+//   - ctx context.Context
+//   - albumID uint32
+//   - o music.UploadOptions
+//   - recv music.ReceiveFunc
+func (_e *MockManager_Expecter) UploadAlbum(ctx any, albumID any, o any, recv any) *MockManager_UploadAlbum_Call {
+	return &MockManager_UploadAlbum_Call{Call: _e.mock.On("UploadAlbum", ctx, albumID, o, recv)}
+}
+
+func (_c *MockManager_UploadAlbum_Call) Run(run func(ctx context.Context, albumID uint32, o music.UploadOptions, recv music.ReceiveFunc)) *MockManager_UploadAlbum_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 music.UploadOptions
+		if args[2] != nil {
+			arg2 = args[2].(music.UploadOptions)
+		}
+		var arg3 music.ReceiveFunc
+		if args[3] != nil {
+			arg3 = args[3].(music.ReceiveFunc)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_UploadAlbum_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockManager_UploadAlbum_Call {
+	_c.Call.Return(downloadRecord, err)
+	return _c
+}
+
+func (_c *MockManager_UploadAlbum_Call) RunAndReturn(run func(ctx context.Context, albumID uint32, o music.UploadOptions, recv music.ReceiveFunc) (*ent.DownloadRecord, error)) *MockManager_UploadAlbum_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UploadArtist provides a mock function for the type MockManager
+func (_mock *MockManager) UploadArtist(ctx context.Context, artistID uint32, o music.UploadOptions, recv music.ReceiveFunc) (*ent.DownloadRecord, []string, error) {
+	ret := _mock.Called(ctx, artistID, o, recv)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UploadArtist")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 []string
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, music.UploadOptions, music.ReceiveFunc) (*ent.DownloadRecord, []string, error)); ok {
+		return returnFunc(ctx, artistID, o, recv)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, music.UploadOptions, music.ReceiveFunc) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, artistID, o, recv)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, music.UploadOptions, music.ReceiveFunc) []string); ok {
+		r1 = returnFunc(ctx, artistID, o, recv)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, music.UploadOptions, music.ReceiveFunc) error); ok {
+		r2 = returnFunc(ctx, artistID, o, recv)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockManager_UploadArtist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UploadArtist'
+type MockManager_UploadArtist_Call struct {
+	*mock.Call
+}
+
+// UploadArtist is a helper method to define mock.On call
+//   - ctx context.Context
+//   - artistID uint32
+//   - o music.UploadOptions
+//   - recv music.ReceiveFunc
+func (_e *MockManager_Expecter) UploadArtist(ctx any, artistID any, o any, recv any) *MockManager_UploadArtist_Call {
+	return &MockManager_UploadArtist_Call{Call: _e.mock.On("UploadArtist", ctx, artistID, o, recv)}
+}
+
+func (_c *MockManager_UploadArtist_Call) Run(run func(ctx context.Context, artistID uint32, o music.UploadOptions, recv music.ReceiveFunc)) *MockManager_UploadArtist_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 music.UploadOptions
+		if args[2] != nil {
+			arg2 = args[2].(music.UploadOptions)
+		}
+		var arg3 music.ReceiveFunc
+		if args[3] != nil {
+			arg3 = args[3].(music.ReceiveFunc)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_UploadArtist_Call) Return(downloadRecord *ent.DownloadRecord, strings []string, err error) *MockManager_UploadArtist_Call {
+	_c.Call.Return(downloadRecord, strings, err)
+	return _c
+}
+
+func (_c *MockManager_UploadArtist_Call) RunAndReturn(run func(ctx context.Context, artistID uint32, o music.UploadOptions, recv music.ReceiveFunc) (*ent.DownloadRecord, []string, error)) *MockManager_UploadArtist_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UploadTrack provides a mock function for the type MockManager
+func (_mock *MockManager) UploadTrack(ctx context.Context, trackID uint32, o music.UploadOptions, recv music.ReceiveFunc) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, trackID, o, recv)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UploadTrack")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, music.UploadOptions, music.ReceiveFunc) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, trackID, o, recv)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, music.UploadOptions, music.ReceiveFunc) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, trackID, o, recv)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, music.UploadOptions, music.ReceiveFunc) error); ok {
+		r1 = returnFunc(ctx, trackID, o, recv)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_UploadTrack_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UploadTrack'
+type MockManager_UploadTrack_Call struct {
+	*mock.Call
+}
+
+// UploadTrack is a helper method to define mock.On call
+//   - ctx context.Context
+//   - trackID uint32
+//   - o music.UploadOptions
+//   - recv music.ReceiveFunc
+func (_e *MockManager_Expecter) UploadTrack(ctx any, trackID any, o any, recv any) *MockManager_UploadTrack_Call {
+	return &MockManager_UploadTrack_Call{Call: _e.mock.On("UploadTrack", ctx, trackID, o, recv)}
+}
+
+func (_c *MockManager_UploadTrack_Call) Run(run func(ctx context.Context, trackID uint32, o music.UploadOptions, recv music.ReceiveFunc)) *MockManager_UploadTrack_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 music.UploadOptions
+		if args[2] != nil {
+			arg2 = args[2].(music.UploadOptions)
+		}
+		var arg3 music.ReceiveFunc
+		if args[3] != nil {
+			arg3 = args[3].(music.ReceiveFunc)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_UploadTrack_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockManager_UploadTrack_Call {
+	_c.Call.Return(downloadRecord, err)
+	return _c
+}
+
+func (_c *MockManager_UploadTrack_Call) RunAndReturn(run func(ctx context.Context, trackID uint32, o music.UploadOptions, recv music.ReceiveFunc) (*ent.DownloadRecord, error)) *MockManager_UploadTrack_Call {
+	_c.Call.Return(run)
 	return _c
 }

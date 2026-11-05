@@ -618,9 +618,12 @@
 					</p>
 				{/if}
 
+				<!-- The bar keeps the rollups' scope, what the library follows or
+				     holds. The line also names the missing episodes, aired ones that
+				     nobody monitors and nobody has, which the bar leaves out. -->
 				<div class="mt-5 max-w-[680px]">
 					<div
-						class="mb-1.5 flex items-center gap-1.5 font-mono text-xs text-fg-muted"
+						class="mb-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 font-mono text-xs text-fg-muted"
 					>
 						<span class="text-fg">{show.have_episodes ?? 0}</span>
 						<span class="text-fg-faint">/</span>

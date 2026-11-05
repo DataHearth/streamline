@@ -2,10 +2,13 @@ package middleware
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"testing/iotest"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -209,4 +212,160 @@ var _ = Describe("BodyLimit middleware", Label("unit", "server"), func() {
 			Expect(sink.read).To(Equal(int64(defaultMaxBody)))
 		})
 	})
+
+	Context("the upload carve-out", func() {
+		const (
+			uploadPath = "/api/v1/music/albums/7/upload"
+			bigUpload  = 50 << 20
+		)
+
+		It("passes a member's upload over the default cap", func() {
+			rec := serveBodyAs(
+				sink, http.MethodPost, uploadPath, bigUpload,
+				&auth.Claims{Role: "member"},
+			)
+
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(sink.read).To(Equal(int64(bigUpload)))
+		})
+
+		DescribeTable("keeps the default cap for everyone else",
+			func(claims *auth.Claims) {
+				rec := serveBodyAs(
+					sink, http.MethodPost, uploadPath, bigUpload, claims,
+				)
+
+				Expect(rec.Code).To(Equal(http.StatusRequestEntityTooLarge))
+				Expect(sink.called).To(BeFalse())
+			},
+			Entry("request_only", &auth.Claims{Role: "request_only"}),
+			Entry("anonymous", nil),
+		)
+
+		It("keeps the cap on the preview", func() {
+			rec := serveBodyAs(
+				sink, http.MethodPost, uploadPath+"/preview", bigUpload,
+				&auth.Claims{Role: "member"},
+			)
+
+			Expect(rec.Code).To(Equal(http.StatusRequestEntityTooLarge))
+		})
+
+		It("hands the declared length to the handler", func() {
+			var got int64
+			req := httptest.NewRequest(
+				http.MethodPost, uploadPath, bytes.NewReader([]byte("abc")),
+			)
+			req = req.WithContext(
+				auth.ContextWithClaims(req.Context(), &auth.Claims{Role: "member"}),
+			)
+			BodyLimit(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				got = UploadLength(r.Context())
+			})).ServeHTTP(httptest.NewRecorder(), req)
+
+			Expect(got).To(Equal(int64(3)))
+			Expect(UploadLength(context.Background())).To(Equal(int64(-1)))
+		})
+
+		It("keeps reading when the connection takes no deadlines", func() {
+			rw := &deadlineRecorder{
+				ResponseRecorder: httptest.NewRecorder(),
+				err:              http.ErrNotSupported,
+			}
+			req := httptest.NewRequest(
+				http.MethodPost, uploadPath, bytes.NewReader([]byte("abc")),
+			)
+			req = req.WithContext(
+				auth.ContextWithClaims(req.Context(), &auth.Claims{Role: "member"}),
+			)
+			var read []byte
+			BodyLimit(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				var err error
+				read, err = io.ReadAll(r.Body)
+				Expect(err).ToNot(HaveOccurred())
+			})).ServeHTTP(rw, req)
+
+			Expect(string(read)).To(Equal("abc"))
+		})
+
+		It("pushes both deadlines ahead on every Read", func() {
+			rw := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+			req := httptest.NewRequest(
+				http.MethodPost, uploadPath, bytes.NewReader([]byte("abcdef")),
+			)
+			req = req.WithContext(
+				auth.ContextWithClaims(req.Context(), &auth.Claims{Role: "member"}),
+			)
+			var reads, writes int
+			BodyLimit(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				buf := make([]byte, 2)
+				for range 3 {
+					_, err := r.Body.Read(buf)
+					Expect(err).ToNot(HaveOccurred())
+				}
+				reads, writes = rw.reads, rw.writes
+			})).ServeHTTP(rw, req)
+
+			Expect(reads).To(Equal(3))
+			Expect(writes).To(Equal(3))
+			Expect(
+				rw.lastRead,
+			).To(BeTemporally("~", time.Now().Add(2*time.Minute), 5*time.Second))
+		})
+
+		It("does not read again after a failed read", func() {
+			rw := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+			req := httptest.NewRequest(
+				http.MethodPost,
+				uploadPath,
+				iotest.TimeoutReader(
+					iotest.OneByteReader(bytes.NewReader([]byte("abcdef"))),
+				),
+			)
+			req = req.WithContext(
+				auth.ContextWithClaims(req.Context(), &auth.Claims{Role: "member"}),
+			)
+			var during int
+			BodyLimit(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				_, err := io.ReadAll(r.Body)
+				Expect(err).To(MatchError(iotest.ErrTimeout))
+				during = rw.reads
+			})).ServeHTTP(rw, req)
+
+			Expect(rw.reads).To(Equal(during))
+		})
+
+		It("reads what a refusing handler left unread", func() {
+			rw := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+			body := bytes.NewReader([]byte("abcdef"))
+			req := httptest.NewRequest(http.MethodPost, uploadPath, body)
+			req = req.WithContext(
+				auth.ContextWithClaims(req.Context(), &auth.Claims{Role: "member"}),
+			)
+			BodyLimit(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusConflict)
+			})).ServeHTTP(rw, req)
+
+			Expect(rw.Code).To(Equal(http.StatusConflict))
+			Expect(body.Len()).To(BeZero())
+		})
+	})
 })
+
+type deadlineRecorder struct {
+	*httptest.ResponseRecorder
+	reads, writes int
+	lastRead      time.Time
+	err           error
+}
+
+func (d *deadlineRecorder) SetReadDeadline(t time.Time) error {
+	d.reads++
+	d.lastRead = t
+	return d.err
+}
+
+func (d *deadlineRecorder) SetWriteDeadline(time.Time) error {
+	d.writes++
+	return d.err
+}

@@ -1,8 +1,13 @@
 package middleware
 
 import (
+	"context"
+	"errors"
+	"io"
 	"log/slog"
 	"net/http"
+	"regexp"
+	"time"
 
 	"github.com/datahearth/streamline/internal/auth"
 )
@@ -30,6 +35,79 @@ const torrentMaxBody = 24 << 20
 
 const addTorrentPath = "/api/v1/torrents"
 
+// uploadIdleTimeout is how far every Read of an upload body pushes the
+// connection's deadlines: an upload may take as long as it keeps moving.
+const uploadIdleTimeout = 2 * time.Minute
+
+// uploadDrainMax is how much of a refused upload is read and thrown away. A
+// handler that answers with the body unread makes the server close the
+// connection under a client still sending, and a browser then reports a network
+// error instead of the refusal. A track fits; a bigger upload learns the same
+// refusal from its preview, before sending anything.
+const uploadDrainMax = 256 << 20
+
+// uploadRoute matches the four multipart upload routes, not their previews.
+var uploadRoute = regexp.MustCompile(
+	`^/api/v1/(music/(albums|tracks|artists)|books)/[0-9]+/upload$`,
+)
+
+type uploadLengthKey struct{}
+
+// UploadLength is the declared Content-Length of an upload request, -1 when
+// undeclared or when the request is not an upload.
+func UploadLength(ctx context.Context) int64 {
+	if n, ok := ctx.Value(uploadLengthKey{}).(int64); ok {
+		return n
+	}
+	return -1
+}
+
+// idleBody pushes the read and write deadlines ahead on every Read, the
+// read-side twin of the Subsonic stream's idleWriter. The write half matters
+// as much: writeTimeout is armed when the headers are read, so without it a
+// long upload could not be answered.
+type idleBody struct {
+	io.ReadCloser
+	rc *http.ResponseController
+	// The first error stays: a read after a timeout would push the deadline again,
+	// and the drain would hold a stalled client for a second idle period.
+	err error
+}
+
+func (b *idleBody) Read(p []byte) (int, error) {
+	if b.err != nil {
+		return 0, b.err
+	}
+	deadline := time.Now().Add(uploadIdleTimeout)
+	if err := b.rc.SetReadDeadline(deadline); err != nil {
+		slog.DebugContext(
+			context.Background(),
+			"upload read deadline not set",
+			"error",
+			err,
+		)
+	}
+	if err := b.rc.SetWriteDeadline(deadline); err != nil {
+		slog.DebugContext(
+			context.Background(),
+			"upload write deadline not set",
+			"error",
+			err,
+		)
+	}
+	n, err := b.ReadCloser.Read(p)
+	b.err = err
+	return n, err
+}
+
+func isMemberUpload(r *http.Request) bool {
+	if r.Method != http.MethodPost || !uploadRoute.MatchString(routePath(r)) {
+		return false
+	}
+	claims := auth.ClaimsFromContext(r.Context())
+	return claims != nil && auth.RoleAtLeast(claims.Role, "member")
+}
+
 // BodyTooLargeJSON is the 413 body, shared with restapi so a caller sees the
 // same answer whichever half of the limit tripped. The code matters because
 // which half trips is a matter of framing, not of what the caller did wrong: a
@@ -53,6 +131,34 @@ const BodyTooLargeJSON = `{"message":"request body too large","code":"body_too_l
 // today rather than telling it the ceiling.
 func BodyLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isMemberUpload(r) {
+			ctx := context.WithValue(r.Context(), uploadLengthKey{}, r.ContentLength)
+			r = r.WithContext(ctx)
+			if r.Body != nil {
+				r.Body = &idleBody{
+					ReadCloser: r.Body,
+					rc:         http.NewResponseController(w),
+				}
+			}
+			next.ServeHTTP(w, r)
+			if r.Body != nil {
+				if _, err := io.CopyN(
+					io.Discard,
+					r.Body,
+					uploadDrainMax,
+				); err != nil &&
+					!errors.Is(err, io.EOF) {
+					slog.DebugContext(
+						r.Context(),
+						"drain refused upload",
+						"error",
+						err,
+					)
+				}
+			}
+			return
+		}
+
 		limit := int64(defaultMaxBody)
 		if r.Method == http.MethodPost && routePath(r) == addTorrentPath &&
 			auth.IsAdmin(r.Context()) {

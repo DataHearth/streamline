@@ -9,6 +9,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/book"
 	mock "github.com/stretchr/testify/mock"
@@ -182,6 +183,86 @@ func (_c *MockManager_AddSeries_Call) Return(bookSeries *ent.BookSeries, err err
 }
 
 func (_c *MockManager_AddSeries_Call) RunAndReturn(run func(ctx context.Context, p book.AddSeriesParams) (*ent.BookSeries, error)) *MockManager_AddSeries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// BookUploadPreview provides a mock function for the type MockManager
+func (_mock *MockManager) BookUploadPreview(ctx context.Context, bookID uint32, kind string, files []download.ReleaseFile) ([]book.UploadFileView, error) {
+	ret := _mock.Called(ctx, bookID, kind, files)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BookUploadPreview")
+	}
+
+	var r0 []book.UploadFileView
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, []download.ReleaseFile) ([]book.UploadFileView, error)); ok {
+		return returnFunc(ctx, bookID, kind, files)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, []download.ReleaseFile) []book.UploadFileView); ok {
+		r0 = returnFunc(ctx, bookID, kind, files)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]book.UploadFileView)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string, []download.ReleaseFile) error); ok {
+		r1 = returnFunc(ctx, bookID, kind, files)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_BookUploadPreview_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookUploadPreview'
+type MockManager_BookUploadPreview_Call struct {
+	*mock.Call
+}
+
+// BookUploadPreview is a helper method to define mock.On call
+//   - ctx context.Context
+//   - bookID uint32
+//   - kind string
+//   - files []download.ReleaseFile
+func (_e *MockManager_Expecter) BookUploadPreview(ctx any, bookID any, kind any, files any) *MockManager_BookUploadPreview_Call {
+	return &MockManager_BookUploadPreview_Call{Call: _e.mock.On("BookUploadPreview", ctx, bookID, kind, files)}
+}
+
+func (_c *MockManager_BookUploadPreview_Call) Run(run func(ctx context.Context, bookID uint32, kind string, files []download.ReleaseFile)) *MockManager_BookUploadPreview_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []download.ReleaseFile
+		if args[3] != nil {
+			arg3 = args[3].([]download.ReleaseFile)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_BookUploadPreview_Call) Return(uploadFileViews []book.UploadFileView, err error) *MockManager_BookUploadPreview_Call {
+	_c.Call.Return(uploadFileViews, err)
+	return _c
+}
+
+func (_c *MockManager_BookUploadPreview_Call) RunAndReturn(run func(ctx context.Context, bookID uint32, kind string, files []download.ReleaseFile) ([]book.UploadFileView, error)) *MockManager_BookUploadPreview_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1684,6 +1765,92 @@ func (_c *MockManager_SendState_Call) Return(sendState book.SendState) *MockMana
 }
 
 func (_c *MockManager_SendState_Call) RunAndReturn(run func(ctx context.Context, userID uint32, b *ent.Book) book.SendState) *MockManager_SendState_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UploadBook provides a mock function for the type MockManager
+func (_mock *MockManager) UploadBook(ctx context.Context, bookID uint32, kind string, o book.UploadOptions, recv book.ReceiveFunc) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, bookID, kind, o, recv)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UploadBook")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, book.UploadOptions, book.ReceiveFunc) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, bookID, kind, o, recv)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, book.UploadOptions, book.ReceiveFunc) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, bookID, kind, o, recv)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string, book.UploadOptions, book.ReceiveFunc) error); ok {
+		r1 = returnFunc(ctx, bookID, kind, o, recv)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_UploadBook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UploadBook'
+type MockManager_UploadBook_Call struct {
+	*mock.Call
+}
+
+// UploadBook is a helper method to define mock.On call
+//   - ctx context.Context
+//   - bookID uint32
+//   - kind string
+//   - o book.UploadOptions
+//   - recv book.ReceiveFunc
+func (_e *MockManager_Expecter) UploadBook(ctx any, bookID any, kind any, o any, recv any) *MockManager_UploadBook_Call {
+	return &MockManager_UploadBook_Call{Call: _e.mock.On("UploadBook", ctx, bookID, kind, o, recv)}
+}
+
+func (_c *MockManager_UploadBook_Call) Run(run func(ctx context.Context, bookID uint32, kind string, o book.UploadOptions, recv book.ReceiveFunc)) *MockManager_UploadBook_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 book.UploadOptions
+		if args[3] != nil {
+			arg3 = args[3].(book.UploadOptions)
+		}
+		var arg4 book.ReceiveFunc
+		if args[4] != nil {
+			arg4 = args[4].(book.ReceiveFunc)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_UploadBook_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockManager_UploadBook_Call {
+	_c.Call.Return(downloadRecord, err)
+	return _c
+}
+
+func (_c *MockManager_UploadBook_Call) RunAndReturn(run func(ctx context.Context, bookID uint32, kind string, o book.UploadOptions, recv book.ReceiveFunc) (*ent.DownloadRecord, error)) *MockManager_UploadBook_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -423,6 +423,57 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		Expect(sessions[0].InfoHash).To(Equal(hash))
 	})
 
+	// Upload is the one path no other spec takes the engine down: every other
+	// spec downloads from a plain anacrolix seeder. Pieces a peer asks for are
+	// read by uncachedPiece, not anacrolix's own storage.
+	It("seeds a completed torrent to a fresh peer", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		connectToSeeder(engine, hash, seederPort)
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(download.StatusSeeding))
+
+		leechDir := GinkgoT().TempDir()
+		cc := antorrent.NewDefaultClientConfig()
+		cc.DataDir = leechDir
+		cc.NoDHT = true
+		cc.DisableTrackers = true
+		cc.DisablePEX = true
+		cc.NoDefaultPortForwarding = true
+		cc.ListenPort = 0
+		cc.DisableIPv6 = !nettest.IPv6()
+		cc.Slogger = engineSlogger()
+		leecher, err := antorrent.NewClient(cc)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(leecher.Close()).To(BeEmpty()) })
+		mi, err := metainfo.Load(bytes.NewReader(torrentBytes))
+		Expect(err).NotTo(HaveOccurred())
+		lt, err := leecher.AddTorrent(mi)
+		Expect(err).NotTo(HaveOccurred())
+		<-lt.GotInfo()
+		lt.DownloadAll()
+		lt.AddPeers([]antorrent.PeerInfo{{
+			Addr: &net.TCPAddr{
+				IP: net.IPv4(127, 0, 0, 1), Port: engine.client.LocalPort(),
+			},
+		}})
+		Eventually(lt.Complete().Bool).
+			WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(BeTrue())
+
+		got, err := os.ReadFile(filepath.Join(leechDir, "payload.bin"))
+		Expect(err).NotTo(HaveOccurred())
+		want, err := os.ReadFile(filepath.Join(dlDir, "payload.bin"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(Equal(want))
+	})
+
 	It("returns ErrTorrentNotFound for unknown hashes", func() {
 		_, err := engine.GetTorrent(ctx,
 			"0000000000000000000000000000000000000000")

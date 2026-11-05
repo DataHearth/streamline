@@ -16242,11 +16242,14 @@ type DownloadRecordMutation struct {
 	selection_state       *downloadrecord.SelectionState
 	book_kind             *downloadrecord.BookKind
 	rejected              *bool
+	uploaded              *bool
 	clearedFields         map[string]struct{}
 	movie                 *uint32
 	clearedmovie          bool
 	album                 *uint32
 	clearedalbum          bool
+	track                 *uint32
+	clearedtrack          bool
 	book                  *uint32
 	clearedbook           bool
 	artist                *uint32
@@ -17423,6 +17426,42 @@ func (m *DownloadRecordMutation) ResetRejected() {
 	m.rejected = nil
 }
 
+// SetUploaded sets the "uploaded" field.
+func (m *DownloadRecordMutation) SetUploaded(b bool) {
+	m.uploaded = &b
+}
+
+// Uploaded returns the value of the "uploaded" field in the mutation.
+func (m *DownloadRecordMutation) Uploaded() (r bool, exists bool) {
+	v := m.uploaded
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUploaded returns the old "uploaded" field's value of the DownloadRecord entity.
+// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DownloadRecordMutation) OldUploaded(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUploaded is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUploaded requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUploaded: %w", err)
+	}
+	return oldValue.Uploaded, nil
+}
+
+// ResetUploaded resets all changes to the "uploaded" field.
+func (m *DownloadRecordMutation) ResetUploaded() {
+	m.uploaded = nil
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by id.
 func (m *DownloadRecordMutation) SetMovieID(id uint32) {
 	m.movie = &id
@@ -17499,6 +17538,45 @@ func (m *DownloadRecordMutation) AlbumIDs() (ids []uint32) {
 func (m *DownloadRecordMutation) ResetAlbum() {
 	m.album = nil
 	m.clearedalbum = false
+}
+
+// SetTrackID sets the "track" edge to the Track entity by id.
+func (m *DownloadRecordMutation) SetTrackID(id uint32) {
+	m.track = &id
+}
+
+// ClearTrack clears the "track" edge to the Track entity.
+func (m *DownloadRecordMutation) ClearTrack() {
+	m.clearedtrack = true
+}
+
+// TrackCleared reports if the "track" edge to the Track entity was cleared.
+func (m *DownloadRecordMutation) TrackCleared() bool {
+	return m.clearedtrack
+}
+
+// TrackID returns the "track" edge ID in the mutation.
+func (m *DownloadRecordMutation) TrackID() (id uint32, exists bool) {
+	if m.track != nil {
+		return *m.track, true
+	}
+	return
+}
+
+// TrackIDs returns the "track" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TrackID instead. It exists only for internal usage by the builders.
+func (m *DownloadRecordMutation) TrackIDs() (ids []uint32) {
+	if id := m.track; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetTrack resets all changes to the "track" edge.
+func (m *DownloadRecordMutation) ResetTrack() {
+	m.track = nil
+	m.clearedtrack = false
 }
 
 // SetBookID sets the "book" edge to the Book entity by id.
@@ -17760,7 +17838,7 @@ func (m *DownloadRecordMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DownloadRecordMutation) Fields() []string {
-	fields := make([]string, 0, 22)
+	fields := make([]string, 0, 23)
 	if m.create_time != nil {
 		fields = append(fields, downloadrecord.FieldCreateTime)
 	}
@@ -17827,6 +17905,9 @@ func (m *DownloadRecordMutation) Fields() []string {
 	if m.rejected != nil {
 		fields = append(fields, downloadrecord.FieldRejected)
 	}
+	if m.uploaded != nil {
+		fields = append(fields, downloadrecord.FieldUploaded)
+	}
 	return fields
 }
 
@@ -17879,6 +17960,8 @@ func (m *DownloadRecordMutation) Field(name string) (ent.Value, bool) {
 		return m.BookKind()
 	case downloadrecord.FieldRejected:
 		return m.Rejected()
+	case downloadrecord.FieldUploaded:
+		return m.Uploaded()
 	}
 	return nil, false
 }
@@ -17932,6 +18015,8 @@ func (m *DownloadRecordMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldBookKind(ctx)
 	case downloadrecord.FieldRejected:
 		return m.OldRejected(ctx)
+	case downloadrecord.FieldUploaded:
+		return m.OldUploaded(ctx)
 	}
 	return nil, fmt.Errorf("unknown DownloadRecord field %s", name)
 }
@@ -18094,6 +18179,13 @@ func (m *DownloadRecordMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRejected(v)
+		return nil
+	case downloadrecord.FieldUploaded:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUploaded(v)
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord field %s", name)
@@ -18330,18 +18422,24 @@ func (m *DownloadRecordMutation) ResetField(name string) error {
 	case downloadrecord.FieldRejected:
 		m.ResetRejected()
 		return nil
+	case downloadrecord.FieldUploaded:
+		m.ResetUploaded()
+		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *DownloadRecordMutation) AddedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.movie != nil {
 		edges = append(edges, downloadrecord.EdgeMovie)
 	}
 	if m.album != nil {
 		edges = append(edges, downloadrecord.EdgeAlbum)
+	}
+	if m.track != nil {
+		edges = append(edges, downloadrecord.EdgeTrack)
 	}
 	if m.book != nil {
 		edges = append(edges, downloadrecord.EdgeBook)
@@ -18371,6 +18469,10 @@ func (m *DownloadRecordMutation) AddedIDs(name string) []ent.Value {
 		}
 	case downloadrecord.EdgeAlbum:
 		if id := m.album; id != nil {
+			return []ent.Value{*id}
+		}
+	case downloadrecord.EdgeTrack:
+		if id := m.track; id != nil {
 			return []ent.Value{*id}
 		}
 	case downloadrecord.EdgeBook:
@@ -18403,7 +18505,7 @@ func (m *DownloadRecordMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *DownloadRecordMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.removedalbums != nil {
 		edges = append(edges, downloadrecord.EdgeAlbums)
 	}
@@ -18435,12 +18537,15 @@ func (m *DownloadRecordMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *DownloadRecordMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.clearedmovie {
 		edges = append(edges, downloadrecord.EdgeMovie)
 	}
 	if m.clearedalbum {
 		edges = append(edges, downloadrecord.EdgeAlbum)
+	}
+	if m.clearedtrack {
+		edges = append(edges, downloadrecord.EdgeTrack)
 	}
 	if m.clearedbook {
 		edges = append(edges, downloadrecord.EdgeBook)
@@ -18468,6 +18573,8 @@ func (m *DownloadRecordMutation) EdgeCleared(name string) bool {
 		return m.clearedmovie
 	case downloadrecord.EdgeAlbum:
 		return m.clearedalbum
+	case downloadrecord.EdgeTrack:
+		return m.clearedtrack
 	case downloadrecord.EdgeBook:
 		return m.clearedbook
 	case downloadrecord.EdgeArtist:
@@ -18492,6 +18599,9 @@ func (m *DownloadRecordMutation) ClearEdge(name string) error {
 	case downloadrecord.EdgeAlbum:
 		m.ClearAlbum()
 		return nil
+	case downloadrecord.EdgeTrack:
+		m.ClearTrack()
+		return nil
 	case downloadrecord.EdgeBook:
 		m.ClearBook()
 		return nil
@@ -18514,6 +18624,9 @@ func (m *DownloadRecordMutation) ResetEdge(name string) error {
 		return nil
 	case downloadrecord.EdgeAlbum:
 		m.ResetAlbum()
+		return nil
+	case downloadrecord.EdgeTrack:
+		m.ResetTrack()
 		return nil
 	case downloadrecord.EdgeBook:
 		m.ResetBook()
@@ -49895,41 +50008,44 @@ func (m *TorrentSessionMutation) ResetEdge(name string) error {
 // TrackMutation represents an operation that mutates the Track nodes in the graph.
 type TrackMutation struct {
 	config
-	op                 Op
-	typ                string
-	id                 *uint32
-	create_time        *time.Time
-	update_time        *time.Time
-	mbid               *string
-	release_track_mbid *string
-	title              *string
-	disc               *uint8
-	adddisc            *int8
-	position           *uint16
-	addposition        *int16
-	duration           *uint32
-	addduration        *int32
-	bonus              *bool
-	artist_credit      *string
-	tag_overrides      *map[string][]string
-	clearedFields      map[string]struct{}
-	album              *uint32
-	clearedalbum       bool
-	media_files        map[uint32]struct{}
-	removedmedia_files map[uint32]struct{}
-	clearedmedia_files bool
-	credits            map[uint32]struct{}
-	removedcredits     map[uint32]struct{}
-	clearedcredits     bool
-	annotations        map[uint32]struct{}
-	removedannotations map[uint32]struct{}
-	clearedannotations bool
-	bookmarks          map[uint32]struct{}
-	removedbookmarks   map[uint32]struct{}
-	clearedbookmarks   bool
-	done               bool
-	oldValue           func(context.Context) (*Track, error)
-	predicates         []predicate.Track
+	op                      Op
+	typ                     string
+	id                      *uint32
+	create_time             *time.Time
+	update_time             *time.Time
+	mbid                    *string
+	release_track_mbid      *string
+	title                   *string
+	disc                    *uint8
+	adddisc                 *int8
+	position                *uint16
+	addposition             *int16
+	duration                *uint32
+	addduration             *int32
+	bonus                   *bool
+	artist_credit           *string
+	tag_overrides           *map[string][]string
+	clearedFields           map[string]struct{}
+	album                   *uint32
+	clearedalbum            bool
+	media_files             map[uint32]struct{}
+	removedmedia_files      map[uint32]struct{}
+	clearedmedia_files      bool
+	credits                 map[uint32]struct{}
+	removedcredits          map[uint32]struct{}
+	clearedcredits          bool
+	annotations             map[uint32]struct{}
+	removedannotations      map[uint32]struct{}
+	clearedannotations      bool
+	bookmarks               map[uint32]struct{}
+	removedbookmarks        map[uint32]struct{}
+	clearedbookmarks        bool
+	download_records        map[uint32]struct{}
+	removeddownload_records map[uint32]struct{}
+	cleareddownload_records bool
+	done                    bool
+	oldValue                func(context.Context) (*Track, error)
+	predicates              []predicate.Track
 }
 
 var _ ent.Mutation = (*TrackMutation)(nil)
@@ -50813,6 +50929,60 @@ func (m *TrackMutation) ResetBookmarks() {
 	m.removedbookmarks = nil
 }
 
+// AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by ids.
+func (m *TrackMutation) AddDownloadRecordIDs(ids ...uint32) {
+	if m.download_records == nil {
+		m.download_records = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.download_records[ids[i]] = struct{}{}
+	}
+}
+
+// ClearDownloadRecords clears the "download_records" edge to the DownloadRecord entity.
+func (m *TrackMutation) ClearDownloadRecords() {
+	m.cleareddownload_records = true
+}
+
+// DownloadRecordsCleared reports if the "download_records" edge to the DownloadRecord entity was cleared.
+func (m *TrackMutation) DownloadRecordsCleared() bool {
+	return m.cleareddownload_records
+}
+
+// RemoveDownloadRecordIDs removes the "download_records" edge to the DownloadRecord entity by IDs.
+func (m *TrackMutation) RemoveDownloadRecordIDs(ids ...uint32) {
+	if m.removeddownload_records == nil {
+		m.removeddownload_records = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.download_records, ids[i])
+		m.removeddownload_records[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedDownloadRecords returns the removed IDs of the "download_records" edge to the DownloadRecord entity.
+func (m *TrackMutation) RemovedDownloadRecordsIDs() (ids []uint32) {
+	for id := range m.removeddownload_records {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// DownloadRecordsIDs returns the "download_records" edge IDs in the mutation.
+func (m *TrackMutation) DownloadRecordsIDs() (ids []uint32) {
+	for id := range m.download_records {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetDownloadRecords resets all changes to the "download_records" edge.
+func (m *TrackMutation) ResetDownloadRecords() {
+	m.download_records = nil
+	m.cleareddownload_records = false
+	m.removeddownload_records = nil
+}
+
 // Where appends a list predicates to the TrackMutation builder.
 func (m *TrackMutation) Where(ps ...predicate.Track) {
 	m.predicates = append(m.predicates, ps...)
@@ -51188,7 +51358,7 @@ func (m *TrackMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TrackMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.album != nil {
 		edges = append(edges, track.EdgeAlbum)
 	}
@@ -51203,6 +51373,9 @@ func (m *TrackMutation) AddedEdges() []string {
 	}
 	if m.bookmarks != nil {
 		edges = append(edges, track.EdgeBookmarks)
+	}
+	if m.download_records != nil {
+		edges = append(edges, track.EdgeDownloadRecords)
 	}
 	return edges
 }
@@ -51239,13 +51412,19 @@ func (m *TrackMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case track.EdgeDownloadRecords:
+		ids := make([]ent.Value, 0, len(m.download_records))
+		for id := range m.download_records {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TrackMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.removedmedia_files != nil {
 		edges = append(edges, track.EdgeMediaFiles)
 	}
@@ -51257,6 +51436,9 @@ func (m *TrackMutation) RemovedEdges() []string {
 	}
 	if m.removedbookmarks != nil {
 		edges = append(edges, track.EdgeBookmarks)
+	}
+	if m.removeddownload_records != nil {
+		edges = append(edges, track.EdgeDownloadRecords)
 	}
 	return edges
 }
@@ -51289,13 +51471,19 @@ func (m *TrackMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case track.EdgeDownloadRecords:
+		ids := make([]ent.Value, 0, len(m.removeddownload_records))
+		for id := range m.removeddownload_records {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TrackMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.clearedalbum {
 		edges = append(edges, track.EdgeAlbum)
 	}
@@ -51310,6 +51498,9 @@ func (m *TrackMutation) ClearedEdges() []string {
 	}
 	if m.clearedbookmarks {
 		edges = append(edges, track.EdgeBookmarks)
+	}
+	if m.cleareddownload_records {
+		edges = append(edges, track.EdgeDownloadRecords)
 	}
 	return edges
 }
@@ -51328,6 +51519,8 @@ func (m *TrackMutation) EdgeCleared(name string) bool {
 		return m.clearedannotations
 	case track.EdgeBookmarks:
 		return m.clearedbookmarks
+	case track.EdgeDownloadRecords:
+		return m.cleareddownload_records
 	}
 	return false
 }
@@ -51361,6 +51554,9 @@ func (m *TrackMutation) ResetEdge(name string) error {
 		return nil
 	case track.EdgeBookmarks:
 		m.ResetBookmarks()
+		return nil
+	case track.EdgeDownloadRecords:
+		m.ResetDownloadRecords()
 		return nil
 	}
 	return fmt.Errorf("unknown Track edge %s", name)

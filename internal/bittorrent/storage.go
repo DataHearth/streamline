@@ -13,9 +13,9 @@ import (
 
 var (
 	_ storage.ClientImplCloser = (*drainingStorage)(nil)
-	// A refactor that breaks the WriterTo promotion would silently demote
-	// every piece hash to the generic copy fallback (see guard).
-	_ io.WriterTo = writerToPiece{}
+	// Without WriteTo every piece hash falls back to anacrolix's generic copy
+	// through its mmap reader, the page-cache path uncachedPiece exists to avoid.
+	_ io.WriterTo = guardedPiece{}
 )
 
 var errStorageClosed = errors.New("piece storage is closed")
@@ -53,13 +53,17 @@ var errStorageClosed = errors.New("piece storage is closed")
 // still let the store close in the gap between them.
 type drainingStorage struct {
 	inner storage.ClientImplCloser
+	base  string
 
 	mu     sync.RWMutex
 	closed bool
 }
 
-func newDrainingStorage(inner storage.ClientImplCloser) *drainingStorage {
-	return &drainingStorage{inner: inner}
+func newDrainingStorage(
+	inner storage.ClientImplCloser,
+	base string,
+) *drainingStorage {
+	return &drainingStorage{inner: inner, base: base}
 }
 
 func (d *drainingStorage) OpenTorrent(
@@ -74,9 +78,19 @@ func (d *drainingStorage) OpenTorrent(
 	// File storage leaves PieceWithHash nil (storage/file-client.go:121-124)
 	// and anacrolix then routes every piece through Piece
 	// (storage/wrappers.go:43-48), so guarding Piece covers all of them.
+	files := pieceFiles(d.base, info)
+	segs := info.FileSegmentsIndex()
 	piece := impl.Piece
 	impl.Piece = func(p metainfo.Piece) storage.PieceImpl {
-		return d.guard(piece(p), infoHash, p.Index())
+		return guardedPiece{
+			PieceImpl: piece(p),
+			read: uncachedPiece{
+				files: files, segs: segs, offset: p.Offset(), length: p.Length(),
+			},
+			store:    d,
+			infoHash: infoHash,
+			index:    p.Index(),
+		}
 	}
 	return impl, nil
 }
@@ -86,22 +100,6 @@ func (d *drainingStorage) Close() error {
 	defer d.mu.Unlock()
 	d.closed = true
 	return d.inner.Close()
-}
-
-func (d *drainingStorage) guard(
-	inner storage.PieceImpl,
-	infoHash metainfo.Hash,
-	index int,
-) storage.PieceImpl {
-	p := guardedPiece{PieceImpl: inner, store: d, infoHash: infoHash, index: index}
-	// Hashing a piece goes through the io.WriterTo fast path when the piece
-	// offers one (torrent.go:1358 into storage/wrappers.go:60-77), and file
-	// storage does (storage/file-piece.go:28-32). A wrapper that dropped it
-	// would push every hash onto the generic copy fallback.
-	if wt, ok := inner.(io.WriterTo); ok {
-		return writerToPiece{guardedPiece: p, WriterTo: wt}
-	}
-	return p
 }
 
 // mark runs one completion mark under the drain lock, refusing it once the
@@ -126,6 +124,7 @@ func (d *drainingStorage) mark(
 
 type guardedPiece struct {
 	storage.PieceImpl
+	read     uncachedPiece
 	store    *drainingStorage
 	infoHash metainfo.Hash
 	index    int
@@ -139,7 +138,10 @@ func (p guardedPiece) MarkNotComplete() error {
 	return p.store.mark(p.infoHash, p.index, false, p.PieceImpl.MarkNotComplete)
 }
 
-type writerToPiece struct {
-	guardedPiece
-	io.WriterTo
+func (p guardedPiece) ReadAt(b []byte, off int64) (int, error) {
+	return p.read.ReadAt(b, off)
+}
+
+func (p guardedPiece) WriteTo(w io.Writer) (int64, error) {
+	return p.read.WriteTo(w)
 }

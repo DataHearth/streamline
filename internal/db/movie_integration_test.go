@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -45,6 +46,38 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 		return m
 	}
 
+	Describe("MovieSelection", func() {
+		It("lists every match unpaged with its file count and size", func() {
+			held := seed("Alpha", 2020, 1, entmovie.StatusAvailable)
+			_, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
+				Path: "/m/alpha.mkv", Size: 700, MovieID: held.ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			for i := range 3 {
+				seed(
+					fmt.Sprintf("Beta %d", i),
+					2021,
+					uint32(2+i),
+					entmovie.StatusWanted,
+				)
+			}
+			seed("Gamma", 2022, 9, entmovie.StatusWanted)
+
+			rows, err := store.MovieSelection(ctx, FilterMoviesParams{Query: "a"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(5))
+			Expect(rows).To(ContainElement(MovieSelectionRow{
+				ID: held.ID, Monitored: held.Monitored, FileCount: 1, SizeBytes: 700,
+			}))
+
+			rows, err = store.MovieSelection(ctx, FilterMoviesParams{
+				Status: entmovie.StatusWanted, Query: "beta",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(3))
+		})
+	})
+
 	Describe("FilterMovies", func() {
 		It("filters by status and query, sorts by title asc, paginates", func() {
 			seed("Alpha", 2020, 1, entmovie.StatusWanted)
@@ -62,6 +95,16 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 			Expect(items).To(HaveLen(2))
 			Expect(items[0].Title).To(Equal("Alpha"))
 			Expect(items[1].Title).To(Equal("Beta"))
+
+			items, total, err = store.FilterMovies(ctx, FilterMoviesParams{
+				Status: entmovie.StatusWanted,
+				Sort:   "title", Order: "asc",
+				Limit:   2,
+				NoTotal: true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(items).To(HaveLen(2))
+			Expect(total).To(BeZero())
 		})
 
 		It("substring-matches title case-insensitively", func() {

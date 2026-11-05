@@ -262,6 +262,7 @@ func (s *Service) FilterList(
 		Limit:     limit,
 		Monitored: p.Monitored,
 		Now:       time.Now(),
+		NoTotal:   p.NoTotal,
 	})
 	if err != nil {
 		return nil, nil, 0, otelx.RecordSpanError(span, err)
@@ -1344,6 +1345,8 @@ type FilterParams struct {
 	Limit  uint16
 	// Monitored filters on the show's own flag; nil means "either".
 	Monitored *bool
+	// NoTotal skips counting the matches; see db.FilterTVShowsParams.
+	NoTotal bool
 }
 
 // Counts is the series toolbar's whole model. Every facet is tallied with the

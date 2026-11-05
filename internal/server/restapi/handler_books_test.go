@@ -160,7 +160,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				var page PaginatedShelf
 				decode(resp, &page)
-				Expect(page.Total).To(Equal(uint32(12)))
+				Expect(page.Total).To(HaveValue(Equal(uint32(12))))
 				Expect(page.Page).To(Equal(uint32(2)))
 				Expect(page.Limit).To(Equal(uint16(5)))
 				Expect(page.Items).To(HaveLen(2))

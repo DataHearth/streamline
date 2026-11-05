@@ -25,19 +25,19 @@
 	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
 	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
-	import type { Movie, QualityProfile } from "@lib/types";
+	import type { MovieSelectionRow, QualityProfile } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
-		movies,
+		items,
 		selected,
 		total,
 		onSelectAll,
 		onClear,
 	}: {
-		// The currently visible movies, so "select all" and the file tallies
-		// follow the active filters rather than the whole library.
-		movies: Movie[];
+		// Every selectable movie under the active filters: the whole match after
+		// "select all", the loaded cards otherwise.
+		items: MovieSelectionRow[];
 		selected: Set<number>;
 		total: number;
 		onSelectAll: () => void;
@@ -46,21 +46,14 @@
 
 	let count = $derived(selected.size);
 	let active = $derived(count > 0);
-	let picked = $derived(movies.filter((m) => selected.has(m.id)));
-	// Off the list response's file rollup; media_files is detail-only.
-	let fileCount = $derived(
-		picked.reduce((n, m) => n + (m.file_summary?.file_count ?? 0), 0),
-	);
-	let pickedBytes = $derived(
-		picked.reduce((n, m) => n + (m.file_summary?.size_bytes ?? 0), 0),
-	);
+	let picked = $derived(items.filter((m) => selected.has(m.id)));
+	let fileCount = $derived(picked.reduce((n, m) => n + m.file_count, 0));
+	let pickedBytes = $derived(picked.reduce((n, m) => n + m.size_bytes, 0));
 	let monitoredPicked = $derived(picked.filter((m) => m.monitored).length);
 	// Renaming a title with nothing on disk is a request that can only come
 	// back with an empty plan, so the selection is narrowed to what has files
 	// and the count in the confirm says how many that is.
-	let renamable = $derived(
-		picked.filter((m) => (m.file_summary?.file_count ?? 0) > 0),
-	);
+	let renamable = $derived(picked.filter((m) => m.file_count > 0));
 	let qpOpen = $state(false);
 	let deleteOpen = $state(false);
 	let renameOpen = $state(false);
@@ -91,14 +84,14 @@
 	// files, so the "N titles" the toast reports is the number actually acted on.
 	async function run(
 		done: Done,
-		fn: (m: Movie) => Promise<unknown>,
+		fn: (m: MovieSelectionRow) => Promise<unknown>,
 		after?: () => void,
-		items: Movie[] = picked,
+		targets: MovieSelectionRow[] = picked,
 	) {
 		if (busy) return;
 		busy = true;
 		try {
-			const res = await runBulk(items, fn);
+			const res = await runBulk(targets, fn);
 			qc.invalidateQueries({ queryKey: ["movies"] });
 			report(done, res);
 			after?.();
@@ -108,7 +101,7 @@
 		}
 	}
 
-	const patch = (m: Movie, body: Record<string, unknown>) =>
+	const patch = (m: MovieSelectionRow, body: Record<string, unknown>) =>
 		api(`/movies/${m.id}`, { method: "PATCH", body });
 
 	function setMonitored(v: boolean) {

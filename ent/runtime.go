@@ -367,6 +367,10 @@ func init() {
 	downloadrecordDescRejected := downloadrecordFields[19].Descriptor()
 	// downloadrecord.DefaultRejected holds the default value on creation for the rejected field.
 	downloadrecord.DefaultRejected = downloadrecordDescRejected.Default.(bool)
+	// downloadrecordDescUploaded is the schema descriptor for uploaded field.
+	downloadrecordDescUploaded := downloadrecordFields[20].Descriptor()
+	// downloadrecord.DefaultUploaded holds the default value on creation for the uploaded field.
+	downloadrecord.DefaultUploaded = downloadrecordDescUploaded.Default.(bool)
 	episodeMixin := schema.Episode{}.Mixin()
 	episodeMixinFields1 := episodeMixin[1].Fields()
 	_ = episodeMixinFields1

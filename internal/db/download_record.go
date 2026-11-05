@@ -67,6 +67,9 @@ type CreateDownloadRecordParams struct {
 	MovieID     uint32
 	EpisodeID   uint32
 	AlbumID     uint32
+	// TrackID files a single-track upload under its track; AlbumID is set too.
+	TrackID  uint32
+	Uploaded bool
 	// ArtistID files a discography pack under its artist; AlbumIDs are the
 	// albums it is expected to cover. A record has an album or an artist.
 	ArtistID           uint32
@@ -91,6 +94,9 @@ type CreateDownloadRecordParams struct {
 	// empty pair there reads as "0 B of 24 GB selected".
 	SelectedFiles []int
 	SelectedBytes int64
+	// Zero value resolves to the schema default. An upload is born importing, so
+	// its mode has to land with the insert or a scan could import it without.
+	ReplaceMode downloadrecord.ReplaceMode
 	// Set when the record is born completed — an adoption of a torrent whose
 	// file is already the library's. Nil otherwise; the importer stamps it.
 	ImportedAt *time.Time
@@ -123,6 +129,12 @@ func (db *DB) CreateDownloadRecord(
 	if p.AlbumID != 0 {
 		b = b.SetAlbumID(p.AlbumID)
 	}
+	if p.TrackID != 0 {
+		b = b.SetTrackID(p.TrackID)
+	}
+	if p.Uploaded {
+		b = b.SetUploaded(true)
+	}
 	if p.ArtistID != 0 {
 		b = b.SetArtistID(p.ArtistID)
 	}
@@ -136,6 +148,9 @@ func (db *DB) CreateDownloadRecord(
 	b = b.AddEpisodeIDs(p.EpisodeIDs...)
 	if p.SelectionState != "" {
 		b = b.SetSelectionState(p.SelectionState)
+	}
+	if p.ReplaceMode != "" {
+		b = b.SetReplaceMode(p.ReplaceMode)
 	}
 	if len(p.SelectedFiles) > 0 {
 		b = b.SetSelectedFiles(p.SelectedFiles)
@@ -596,6 +611,10 @@ type RecordImportFailureParams struct {
 	// the episode is left as-is.
 	// An album record sets AlbumID instead: a terminal failure walks a
 	// downloading album back to wanted, unless it already holds a file.
+	// Requeue sends an incomplete album to wanted rather than failed. An upload's
+	// failure sets it: failed exists to keep the searches off a bad release, and
+	// a bad upload is no reason for them to stop looking.
+	Requeue   bool
 	MovieID   uint32
 	EpisodeID uint32
 	// BookID / BookKind identify the book slot a book record imports. On
@@ -648,6 +667,7 @@ func (db *DB) FindImportingDownloadRecordByID(
 		WithAlbum(withAlbumContext).
 		WithArtist().
 		WithAlbums(withAlbumContext).
+		WithTrack().
 		Only(ctx)
 }
 
@@ -823,7 +843,13 @@ func (db *DB) rejectRecord(
 	for _, a := range rec.Edges.Albums {
 		albumIDs = append(albumIDs, a.ID)
 	}
-	if err := settleFailedAlbums(ctx, tx, albumIDs, reason, requeue); err != nil {
+	if err := settleFailedAlbums(
+		ctx,
+		tx,
+		albumIDs,
+		reason,
+		requeue || rec.Uploaded,
+	); err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -1241,7 +1267,7 @@ func (db *DB) RecordImportFailure(
 		if p.AlbumID != 0 {
 			ids = append(ids, p.AlbumID)
 		}
-		if err := settleFailedAlbums(ctx, tx, ids, p.Reason, false); err != nil {
+		if err := settleFailedAlbums(ctx, tx, ids, p.Reason, p.Requeue); err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -1388,8 +1414,13 @@ func (db *DB) RetryFailedDownloadRecord(ctx context.Context, id uint32) error {
 		albumIDs = append(albumIDs, a.ID)
 	}
 	if len(albumIDs) > 0 {
+		from := []album.Status{album.StatusFailed}
+		// A failed upload left its album wanted, not failed.
+		if rec.Uploaded {
+			from = append(from, album.StatusWanted)
+		}
 		if err := tx.Album.Update().
-			Where(album.IDIn(albumIDs...), album.StatusEQ(album.StatusFailed)).
+			Where(album.IDIn(albumIDs...), album.StatusIn(from...)).
 			SetStatus(album.StatusDownloading).
 			ClearFailureReason().
 			Exec(ctx); err != nil {
@@ -2098,4 +2129,27 @@ func (db *DB) SyncDownloadStateForRecord(
 		return fmt.Errorf("sync download state: %w", err)
 	}
 	return nil
+}
+
+// ListKeptUploadPaths returns the staging folders of uploaded records the
+// importer or a person may still need: importing, held, or failed and not
+// rejected (a retry reads them).
+func (db *DB) ListKeptUploadPaths(ctx context.Context) ([]string, error) {
+	return db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.Uploaded(true),
+			downloadrecord.SavePathNEQ(""),
+			downloadrecord.Or(
+				downloadrecord.StatusIn(
+					downloadrecord.StatusImporting,
+					downloadrecord.StatusHeld,
+				),
+				downloadrecord.And(
+					downloadrecord.StatusEQ(downloadrecord.StatusFailed),
+					downloadrecord.Rejected(false),
+				),
+			),
+		).
+		Select(downloadrecord.FieldSavePath).
+		Strings(ctx)
 }

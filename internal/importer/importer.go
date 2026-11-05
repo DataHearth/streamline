@@ -264,6 +264,11 @@ func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 		}
 	}
 
+	if rec.Uploaded {
+		libCfg.ImportMode = "copy"
+		libCfg.KeepTorrentSeeding = false
+	}
+
 	switch {
 	case rec.Edges.Movie != nil:
 		return w.importMovieRecord(ctx, span, rec, libCfg)
@@ -977,6 +982,13 @@ func (w *Worker) cleanupTorrent(
 	rec *ent.DownloadRecord,
 	libCfg config.LibraryConfig,
 ) {
+	if rec.Uploaded {
+		if err := os.RemoveAll(rec.SavePath); err != nil {
+			slog.WarnContext(ctx, "remove upload staging failed",
+				"path", rec.SavePath, "error", err)
+		}
+		return
+	}
 	if rec.DownloadClientName == "" {
 		return
 	}
@@ -1025,6 +1037,7 @@ func (w *Worker) handleOutcome(ctx context.Context, recordID uint32, runErr erro
 		RecordID: rec.ID,
 		Terminal: isTerminal,
 		Attempts: attempts,
+		Requeue:  rec.Uploaded,
 	}
 	if rec.Edges.Movie != nil {
 		params.MovieID = rec.Edges.Movie.ID

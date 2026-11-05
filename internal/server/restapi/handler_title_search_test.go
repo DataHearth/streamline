@@ -47,7 +47,7 @@ var _ = Describe(
 				app.store.EXPECT().
 					SearchAlbums(mock.Anything, db.TitleSearchParams{
 						Query: "imagine", Limit: 5, Offset: 10,
-					}).
+					}, []entalbum.Type(nil)).
 					Return([]*ent.Album{
 						{
 							ID:          41,
@@ -59,7 +59,7 @@ var _ = Describe(
 							},
 						},
 						{ID: 42, Title: "Imagine (Demo)", Type: entalbum.TypeSingle},
-					}, 2, nil).
+					}, nil).
 					Once()
 
 				var body AlbumSearchList
@@ -70,7 +70,6 @@ var _ = Describe(
 					),
 				).
 					To(Equal(http.StatusOK))
-				Expect(body.Total).To(Equal(uint32(2)))
 				Expect(body.Limit).To(Equal(uint16(5)))
 				Expect(body.Offset).To(Equal(uint32(10)))
 				Expect(body.Items).To(HaveLen(2))
@@ -83,6 +82,27 @@ var _ = Describe(
 				// claiming the zero date.
 				Expect(body.Items[1].ReleaseDate).To(BeNil())
 				Expect(body.Items[1].Type).To(Equal(MusicAlbumTypeSingle))
+			})
+
+			It("narrows to the repeated release types", func() {
+				app.store.EXPECT().
+					SearchAlbums(mock.Anything, db.TitleSearchParams{
+						Query: "imagine", Limit: 20,
+					}, []entalbum.Type{entalbum.TypeSingle, entalbum.TypeEp}).
+					Return([]*ent.Album{}, nil).
+					Once()
+
+				var body AlbumSearchList
+				Expect(get(
+					"/api/v1/music/albums?query=imagine&type=single&type=ep",
+					&body,
+				)).To(Equal(http.StatusOK))
+			})
+
+			It("rejects an unknown release type with a JSON 400", func() {
+				var body Error
+				Expect(get("/api/v1/music/albums?type=bootleg", &body)).
+					To(Equal(http.StatusBadRequest))
 			})
 		})
 
@@ -117,13 +137,12 @@ var _ = Describe(
 							}},
 						},
 						{ID: 302, Number: 2, Title: "Hidden Away"},
-					}, 2, nil).
+					}, nil).
 					Once()
 
 				var body EpisodeSearchList
 				Expect(get("/api/v1/episodes?query=hidden", &body)).
 					To(Equal(http.StatusOK))
-				Expect(body.Total).To(Equal(uint32(2)))
 				Expect(body.Items).To(HaveLen(1))
 				hit := body.Items[0]
 				Expect(hit.Id).To(Equal(uint32(301)))
@@ -133,6 +152,50 @@ var _ = Describe(
 				Expect(hit.Season).To(Equal(uint16(1)))
 				Expect(hit.Episode).To(Equal(uint16(1)))
 				Expect(hit.AirDate).To(HaveValue(BeTemporally("==", aired)))
+			})
+		})
+		Describe("ListMusicTracks", func() {
+			It("rejects a limit outside [1, 100] with a JSON 400", func() {
+				var body Error
+				Expect(get("/api/v1/music/tracks?limit=101", &body)).
+					To(Equal(http.StatusBadRequest))
+				Expect(body.Message).To(Equal("limit must be between 1 and 100"))
+			})
+
+			It("names each track's album and artist, and drops an orphan", func() {
+				app.store.EXPECT().
+					SearchTracks(mock.Anything, db.TitleSearchParams{
+						Query: "farewell", Limit: 20,
+					}).
+					Return([]*ent.Track{
+						{
+							ID:    88,
+							Title: "Last Farewell",
+							Edges: ent.TrackEdges{Album: &ent.Album{
+								ID:    12,
+								Title: "Pest & Power",
+								Type:  entalbum.TypeAlbum,
+								Edges: ent.AlbumEdges{
+									Artist: &ent.Artist{ID: 3, Name: "Patty Gurdy"},
+								},
+							}},
+						},
+						{ID: 89, Title: "Farewell"},
+					}, nil).
+					Once()
+
+				var body TrackSearchList
+				Expect(get("/api/v1/music/tracks?query=farewell", &body)).
+					To(Equal(http.StatusOK))
+				Expect(body.Items).To(Equal([]TrackSearchHit{{
+					Id:         88,
+					Title:      "Last Farewell",
+					AlbumId:    12,
+					AlbumTitle: "Pest & Power",
+					AlbumType:  MusicAlbumTypeAlbum,
+					ArtistId:   3,
+					ArtistName: "Patty Gurdy",
+				}}))
 			})
 		})
 	},

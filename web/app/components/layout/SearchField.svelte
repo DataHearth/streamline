@@ -125,14 +125,6 @@
 					class="flex items-baseline justify-between px-2.5 pb-1 pt-2 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
 				>
 					<span>{section.label}</span>
-					{#if section.id === "titles" && model.searchable !== null}
-						<span class="text-[10px] normal-case tracking-[0.04em]">
-							{i18n.search_hits_of({
-								hits: model.titleHits,
-								total: model.searchable.toLocaleString(),
-							})}
-						</span>
-					{/if}
 				</div>
 				{#each section.items as item, i (item.kind + "-" + i)}
 					<SearchResultRow {item} dense onpick={pick} />

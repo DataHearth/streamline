@@ -15,7 +15,9 @@ import (
 
 // RemoveMediaFile deletes a media file together with its sidecars — the
 // non-media files beside it that share its basename, such as `<stem>.nfo`,
-// `<stem>.en.srt` or `<stem>-thumb.jpg` — then prunes the directories the
+// `<stem>.en.srt` or `<stem>-thumb.jpg`, and Jellyfin's `<stem>.trickplay`
+// folder, the only directory it removes, since that removal is recursive and
+// a left-behind one keeps the folder alive past the prune — then prunes the directories the
 // deletion left empty, stopping below root so a library root survives even
 // when it holds nothing else.
 //
@@ -61,10 +63,14 @@ func RemoveMediaFile(ctx context.Context, path, root string) error {
 		return fmt.Errorf("read %s: %w", dir, err)
 	case err == nil:
 		for _, e := range entries {
-			if e.IsDir() || !isSidecar(e.Name(), stem) {
+			remove := os.Remove
+			switch {
+			case e.IsDir() && strings.EqualFold(e.Name(), stem+".trickplay"):
+				remove = os.RemoveAll
+			case e.IsDir() || !isSidecar(e.Name(), stem):
 				continue
 			}
-			if err := os.Remove(filepath.Join(dir, e.Name())); err != nil &&
+			if err := remove(filepath.Join(dir, e.Name())); err != nil &&
 				!errors.Is(err, fs.ErrNotExist) {
 				return fmt.Errorf("remove %s: %w", e.Name(), err)
 			}
@@ -97,6 +103,50 @@ func isSidecar(name, stem string) bool {
 		return false
 	}
 	return rest[0] == '.' || rest[0] == '-'
+}
+
+// MoveSidecars carries the sidecars of a media file renamed from → to over to
+// its new name, directories included — Jellyfin keeps trickplay in a
+// `<stem>.trickplay` folder. Left behind, a sidecar keeps the old folder alive
+// past PruneEmptyDirs and the media server shows a ghost item for it (51 old
+// series folders after one bulk rename); moved, the server keeps trickplay it
+// would spend hours regenerating. One that cannot move — its target taken, a
+// folder another user owns — is logged and left where it is: the media file
+// already moved, and its metadata must not fail the rename.
+func MoveSidecars(ctx context.Context, from, to string) {
+	srcDir, dstDir := filepath.Dir(from), filepath.Dir(to)
+	oldStem := strings.TrimSuffix(filepath.Base(from), filepath.Ext(from))
+	newStem := strings.TrimSuffix(filepath.Base(to), filepath.Ext(to))
+	entries, err := os.ReadDir(srcDir)
+	if err != nil {
+		slog.WarnContext(
+			ctx,
+			"list sidecars failed",
+			"dir.path",
+			srcDir,
+			"error",
+			err,
+		)
+		return
+	}
+	for _, e := range entries {
+		if !isSidecar(e.Name(), oldStem) {
+			continue
+		}
+		src := filepath.Join(srcDir, e.Name())
+		dst := filepath.Join(dstDir, newStem+strings.TrimPrefix(e.Name(), oldStem))
+		if _, err := os.Lstat(dst); !errors.Is(err, fs.ErrNotExist) {
+			slog.WarnContext(ctx, "sidecar left behind, target exists",
+				"file.path", src, "file.target", dst, "error", err)
+			continue
+		}
+		if err := os.Rename(src, dst); err != nil {
+			slog.WarnContext(ctx, "move sidecar failed",
+				"file.path", src, "file.target", dst, "error", err)
+			continue
+		}
+		slog.InfoContext(ctx, "moved sidecar", "file.path", src, "file.target", dst)
+	}
 }
 
 // externalMetadata names the media-server metadata files that sit beside a

@@ -36,6 +36,7 @@ Everything Streamline does on its own is a named job on a fixed interval. All of
 | `cleanup` | `24h` | `schedules.cleanup` | Prunes completed download records and aged-out events | UI / API |
 | `purge-sessions` | `1h` | — | Deletes expired sessions | System job — not controllable |
 | `purge-api-keys` | `1h` | — | Deletes API keys that expired more than a week ago | System job — not controllable |
+| `purge-uploads` | `1h` | — | Removes upload staging folders nothing is receiving or waiting on (also once at boot); a held or failed upload keeps its folder | System job — not controllable |
 
 ### RSS sync vs missing search
 
@@ -95,7 +96,7 @@ A manual run does the work the ticker would defer: the missing searches ignore `
 
 Intervals have a **10 second floor**. Pause state is persisted to the database, so a paused job stays paused across restarts.
 
-`purge-sessions` and `purge-api-keys` are flagged `system: true` and reject PATCH, pause, resume and run.
+`purge-sessions`, `purge-api-keys` and `purge-uploads` are flagged `system: true` and reject PATCH, pause, resume and run.
 
 ---
 

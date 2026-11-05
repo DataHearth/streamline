@@ -38,7 +38,7 @@
 		counts,
 		selectMode,
 		selectedCount,
-		visibleCount,
+		matchedCount,
 		onTabChange,
 		onMonChange,
 		onQueryChange,
@@ -57,7 +57,7 @@
 		view: View;
 		selectMode: boolean;
 		selectedCount: number;
-		visibleCount: number;
+		matchedCount: number;
 		// Only the per-status tallies are shown here; `trend` (from /movies/counts)
 		// isn't needed, so accept the client-computed counts without it.
 		counts: Omit<MovieCounts, "trend">;
@@ -218,7 +218,7 @@
 	{#if selecting}
 		<SelectionTopBar
 			count={selectedCount}
-			total={visibleCount}
+			total={matchedCount}
 			onClear={() => onSelectModeChange(false)}
 			{onSelectAll}
 		/>
@@ -585,13 +585,13 @@
 				<button
 					type="button"
 					onclick={onSelectAll}
-					disabled={visibleCount === 0}
+					disabled={matchedCount === 0}
 					class="inline-flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:pointer-events-none disabled:opacity-40 lg:h-9"
 				>
 					<CheckCheck size={14} aria-hidden="true" />
 					{i18n.common_select_all()}
 					<span class="font-mono text-[10px] tabular text-fg-faint">
-						{visibleCount}
+						{matchedCount}
 					</span>
 				</button>
 			{/if}

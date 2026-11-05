@@ -13,10 +13,14 @@
 
 	// Prefer the per-episode breakdown (detail view, where episodes are loaded)
 	// so the bar differentiates downloading/paused; fall back to the rollup
-	// counts in list views that ship only the season summary.
+	// counts in list views that ship only the season summary. Either way the
+	// bar keeps the rollups' scope, what the library follows or holds: an
+	// episode nobody monitors and nobody has is named missing by the line
+	// above the bar, not drawn in it.
 	let segments = $derived.by<Seg[]>(() => {
-		const eps = season.episodes ?? [];
-		if (eps.length > 0) {
+		const all = season.episodes ?? [];
+		if (all.length > 0) {
+			const eps = all.filter((e) => (e.size ?? 0) > 0 || (e.monitored && showMonitored));
 			const n = (s: EpisodeDisplayStatus) =>
 				eps.filter((e) => episodeStatus(e, showMonitored) === s).length;
 			return [
@@ -25,7 +29,6 @@
 				{ key: "importing", count: n("importing"), token: "grabbing", label: i18n.lc_importing() },
 				{ key: "paused", count: n("paused"), token: "paused", label: i18n.lc_paused() },
 				{ key: "wanted", count: n("wanted"), token: "wanted", label: i18n.lc_wanted() },
-				{ key: "missing", count: n("missing"), token: "missing", label: i18n.lc_missing() },
 				{ key: "unaired", count: n("unaired"), token: "missing", label: i18n.lc_unaired() },
 			];
 		}

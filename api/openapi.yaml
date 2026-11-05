@@ -89,6 +89,7 @@ paths:
         - $ref: "#/components/parameters/MoviesQuery"
         - $ref: "#/components/parameters/MoviesSort"
         - $ref: "#/components/parameters/MoviesOrder"
+        - $ref: "#/components/parameters/WithTotal"
       responses:
         "200":
           description: Paginated movie list
@@ -127,6 +128,31 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /movies/selection:
+    get:
+      operationId: getMovieSelection
+      summary: Every movie the list's filters match, for a bulk selection
+      description: |
+        Every movie `GET /movies` would list under the same filters, unpaged
+        and unsorted, with only what a bulk action reads of each: whether it
+        is monitored and its file count and size. It is what "select all"
+        picks, so the selection is the whole match without loading every page
+        of full movies.
+      tags: [movies]
+      parameters:
+        - $ref: "#/components/parameters/MoviesStatus"
+        - $ref: "#/components/parameters/MoviesMonitored"
+        - $ref: "#/components/parameters/MoviesQuery"
+      responses:
+        "200":
+          description: The selection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MovieSelection"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -500,6 +526,7 @@ paths:
         - $ref: "#/components/parameters/SeriesQuery"
         - $ref: "#/components/parameters/SeriesSort"
         - $ref: "#/components/parameters/SeriesOrder"
+        - $ref: "#/components/parameters/WithTotal"
       responses:
         "200":
           $ref: "#/components/responses/SeriesList"
@@ -530,6 +557,32 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/selection:
+    get:
+      operationId: getSeriesSelection
+      summary: Every show the list's filters match, for a bulk selection
+      description: |
+        Every show `GET /series` would list under the same filters, unpaged
+        and unsorted, with only what a bulk action reads of each: whether it
+        is monitored and its held and wanted episode counts (specials left
+        out, as in the list). It is what "select all" picks, so the selection
+        is the whole match without loading every page of full shows.
+      tags: [series]
+      parameters:
+        - $ref: "#/components/parameters/SeriesStatus"
+        - $ref: "#/components/parameters/SeriesMonitored"
+        - $ref: "#/components/parameters/SeriesType"
+        - $ref: "#/components/parameters/SeriesQuery"
+      responses:
+        "200":
+          description: The selection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeriesSelection"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1282,6 +1335,7 @@ paths:
         - $ref: "#/components/parameters/MusicArtistQueryParam"
         - $ref: "#/components/parameters/MusicArtistSortParam"
         - $ref: "#/components/parameters/MusicArtistOrderParam"
+        - $ref: "#/components/parameters/WithTotal"
       responses:
         "200":
           $ref: "#/components/responses/MusicArtistList"
@@ -1538,12 +1592,15 @@ paths:
         (an artist's whole discography is album rows), then the monitored
         ones, then the newest. This is
         the search surfaces' album list: `GET /music/artists` matches album
-        titles too, but answers with the artist.
+        titles too, but answers with the artist. `type` narrows it to some
+        release types, which is how the search surfaces list albums, singles
+        and EPs apart.
       tags: [music]
       parameters:
         - $ref: "#/components/parameters/TitleSearchQuery"
         - $ref: "#/components/parameters/TitleSearchLimit"
         - $ref: "#/components/parameters/TitleSearchOffset"
+        - $ref: "#/components/parameters/AlbumSearchTypes"
       responses:
         "200":
           description: Paginated album hits
@@ -1797,6 +1854,178 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/albums/{id}/upload/preview:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: previewMusicAlbumUpload
+      summary: Read the names of files about to be uploaded against the album's tracks
+      description: |
+        Takes only names and sizes, no bytes. Each audio file carries the `track_id` its
+         **name** points at, and every track says whether it already holds a file and whether
+         the files seem to carry it. The import itself matches by tags, so this is a preview.
+         `tracks_pending` says the album's tracks are not known yet, so nothing could be matched.
+         Answers what the upload itself would refuse, before anything is sent: 409
+         `upload_conflict` for a download in flight on the album, 422 `no_space`, and 422
+         `upload_rejected` for an unsafe name, media of the wrong kind or more than 5000 entries.
+      tags: [music]
+      requestBody:
+        $ref: "#/components/requestBodies/PreviewUploadNames"
+      responses:
+        "200":
+          description: The files mapped onto the album's tracks.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseFiles"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/albums/{id}/upload:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: uploadMusicAlbum
+      summary: Upload the files of an album, EP or single
+      description: |
+        One `file` part per file, its filename the path relative to the picked folder. Audio and
+         `.cue` files are kept, other non-media parts discarded unread, and a media file of
+         another kind refuses the whole upload. The files are staged and filed as an importing
+         record that the importer places like a finished download (always by copy).
+         `replace_existing` has the grab's meaning. An album with a download in flight answers
+         409 `upload_conflict`; a path that climbs out of the upload, wrong-kind media or no
+         media answers 422 `upload_rejected`; too little free space answers 422 `no_space`.
+      tags: [music]
+      parameters:
+        - $ref: "#/components/parameters/UploadReplaceExisting"
+        - $ref: "#/components/parameters/UploadTitle"
+      requestBody:
+        $ref: "#/components/requestBodies/UploadFiles"
+      responses:
+        "202":
+          $ref: "#/components/responses/UploadAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/tracks/{id}/upload:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: uploadMusicTrack
+      summary: Upload the one file of a track
+      description: |
+        Exactly one audio file, pinned to the track with no matching. A track that already holds
+         a file needs `replace_existing`, else 422 `upload_rejected`. Busy album: 409
+         `upload_conflict`.
+      tags: [music]
+      parameters:
+        - $ref: "#/components/parameters/UploadReplaceExisting"
+        - $ref: "#/components/parameters/UploadTitle"
+      requestBody:
+        $ref: "#/components/requestBodies/UploadFiles"
+      responses:
+        "202":
+          $ref: "#/components/responses/UploadAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/artists/{id}/upload/preview:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: previewMusicArtistUpload
+      summary: Read the names of files about to be uploaded against every album of the artist
+      description: |
+        Files are grouped by album folder and each folder matched by title (and year when it
+         names one) against every album of the artist, monitored or not, of any type. A folder
+         matching none has `waiting: false` and is skipped by the upload. More than 5000
+         entries answers 422.
+      tags: [music]
+      requestBody:
+        $ref: "#/components/requestBodies/PreviewUploadNames"
+      responses:
+        "200":
+          description: The files mapped onto the artist's albums.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscographyFiles"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/artists/{id}/upload:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: uploadMusicArtist
+      summary: Upload a discography, one folder per album
+      description: |
+        Each album folder is matched against every album of the artist; the folders that match
+         none are dropped and listed in `skipped_folders`. No folder matching answers 422
+         `upload_rejected`. Otherwise as the album upload; any album of the artist with a
+         download in flight answers 409 `upload_conflict`.
+      tags: [music]
+      parameters:
+        - $ref: "#/components/parameters/UploadReplaceExisting"
+        - $ref: "#/components/parameters/UploadTitle"
+      requestBody:
+        $ref: "#/components/requestBodies/UploadFiles"
+      responses:
+        "202":
+          $ref: "#/components/responses/UploadAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /music/albums/{id}/search-now:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -1816,6 +2045,34 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/tracks:
+    get:
+      operationId: listMusicTracks
+      summary: Search the library's tracks by title
+      description: |
+        Every track of every album in the library whose title holds `query`,
+        with accents, case and punctuation folded on both sides. A title equal
+        to the query ranks first, then one starting with it, then the rest;
+        among equal matches the tracks holding a file come first, then those
+        of a monitored album, then the newest album. Each hit names its album
+        and artist, so it can be shown and linked without loading the album.
+      tags: [music]
+      parameters:
+        - $ref: "#/components/parameters/TitleSearchQuery"
+        - $ref: "#/components/parameters/TitleSearchLimit"
+        - $ref: "#/components/parameters/TitleSearchOffset"
+      responses:
+        "200":
+          description: Paginated track hits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackSearchList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2142,6 +2399,7 @@ paths:
         - $ref: "#/components/parameters/BookShelfQueryParam"
         - $ref: "#/components/parameters/BookShelfSortParam"
         - $ref: "#/components/parameters/BookShelfOrderParam"
+        - $ref: "#/components/parameters/WithTotal"
       responses:
         "200":
           $ref: "#/components/responses/BookShelfPage"
@@ -2708,6 +2966,76 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/{id}/upload/preview:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: previewBookUpload
+      summary: Read what an upload of files to one slot of a book would keep
+      description: |
+        Takes only names and sizes. Per file the `outcome` is `kept`, `ignored` or `refused`
+         (media of the wrong kind). An ebook import keeps the single best file under the book's
+         profile; an audiobook import keeps every audio file. More than 5000 entries answers 422.
+      tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/UploadSlot"
+      requestBody:
+        $ref: "#/components/requestBodies/PreviewUploadNames"
+      responses:
+        "200":
+          description: What the upload would keep.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadPreview"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/{id}/upload:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: uploadBook
+      summary: Upload the files of one slot of a book
+      description: |
+        `slot` is required. An ebook upload keeps ebook formats, an audiobook upload audio files
+         (the whole folder is imported). A slot that already holds a file needs
+         `replace_existing`. A slot with a download in flight answers 409 `upload_conflict`;
+         an unhydrated stub, bad paths or wrong-kind media answer 422 `upload_rejected`; no
+         usable quality profile answers 422 `no_quality_profile`.
+      tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/UploadSlot"
+        - $ref: "#/components/parameters/UploadReplaceExisting"
+        - $ref: "#/components/parameters/UploadTitle"
+      requestBody:
+        $ref: "#/components/requestBodies/UploadFiles"
+      responses:
+        "202":
+          $ref: "#/components/responses/UploadAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -5840,6 +6168,27 @@ components:
       schema:
         type: integer
         x-go-type: uint32
+    UploadReplaceExisting:
+      name: replace_existing
+      in: query
+      required: false
+      description: Replace the files the target already holds, once the new ones are placed.
+      schema:
+        type: boolean
+    UploadTitle:
+      name: title
+      in: query
+      required: false
+      description: The dropped folder's name, the record's title. Defaults to `Upload`.
+      schema:
+        type: string
+    UploadSlot:
+      name: slot
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [ebook, audiobook]
     PersonID:
       name: id
       in: path
@@ -6050,6 +6399,28 @@ components:
         minimum: 1
         maximum: 100
         x-go-type: uint16
+    AlbumSearchTypes:
+      name: type
+      in: query
+      description: |
+        Only albums of these release types; repeat the parameter for several.
+        Absent means every type. An unknown type answers 400.
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          $ref: "#/components/schemas/MusicAlbumType"
+    WithTotal:
+      name: with_total
+      in: query
+      description: |
+        `false` skips counting the matches and leaves `total` out, for a
+        caller that shows only the page (the search surfaces): the count is a
+        second pass over every match.
+      schema:
+        type: boolean
+        default: true
     TitleSearchOffset:
       name: offset
       in: query
@@ -6649,6 +7020,27 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/MusicQualityProfileCreate"
+
+    PreviewUploadNames:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UploadPreviewRequest"
+
+    UploadFiles:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              file:
+                type: array
+                description: One part per file; its filename is the path relative to the picked folder.
+                items:
+                  type: string
+                  format: binary
 
     GrabAlbumRelease:
       required: true
@@ -7263,6 +7655,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/MusicRenamePlan"
+
+    UploadAccepted:
+      description: The files are staged and queued for import.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UploadAccepted"
 
     SearchNowAccepted:
       description: Indexer search queued; the pass runs in the background.
@@ -8369,16 +8768,12 @@ components:
 
     PersonList:
       type: object
-      required: [items, total, limit, offset]
+      required: [items, limit, offset]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/Person"
-        total:
-          type: integer
-          description: Total number of people matching the filter.
-          x-go-type: uint32
         limit:
           type: integer
           x-go-type: uint16
@@ -8409,16 +8804,12 @@ components:
 
     AlbumSearchList:
       type: object
-      required: [items, total, limit, offset]
+      required: [items, limit, offset]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/AlbumSearchHit"
-        total:
-          type: integer
-          description: Total number of albums matching the query.
-          x-go-type: uint32
         limit:
           type: integer
           x-go-type: uint16
@@ -8459,20 +8850,103 @@ components:
 
     EpisodeSearchList:
       type: object
-      required: [items, total, limit, offset]
+      required: [items, limit, offset]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/EpisodeSearchHit"
-        total:
-          type: integer
-          description: Total number of episodes matching the query.
-          x-go-type: uint32
         limit:
           type: integer
           x-go-type: uint16
         offset:
+          type: integer
+          x-go-type: uint32
+
+    TrackSearchHit:
+      type: object
+      required: [id, title, album_id, album_title, album_type, artist_id, artist_name]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        album_id:
+          type: integer
+          x-go-type: uint32
+        album_title:
+          type: string
+        album_type:
+          $ref: "#/components/schemas/MusicAlbumType"
+        artist_id:
+          type: integer
+          x-go-type: uint32
+        artist_name:
+          type: string
+
+    TrackSearchList:
+      type: object
+      required: [items, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrackSearchHit"
+        limit:
+          type: integer
+          x-go-type: uint16
+        offset:
+          type: integer
+          x-go-type: uint32
+
+    MovieSelection:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MovieSelectionRow"
+
+    MovieSelectionRow:
+      type: object
+      required: [id, monitored, file_count, size_bytes]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        monitored:
+          type: boolean
+        file_count:
+          type: integer
+          x-go-type: uint32
+        size_bytes:
+          type: integer
+          format: int64
+
+    SeriesSelection:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeriesSelectionRow"
+
+    SeriesSelectionRow:
+      type: object
+      required: [id, monitored, have_episodes, wanted_episodes]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        monitored:
+          type: boolean
+        have_episodes:
+          type: integer
+          x-go-type: uint32
+        wanted_episodes:
           type: integer
           x-go-type: uint32
 
@@ -8531,13 +9005,14 @@ components:
 
     PaginatedMovies:
       type: object
-      required: [items, total, page, limit]
+      required: [items, page, limit]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/Movie"
         total:
+          description: Absent when `with_total=false`.
           type: integer
           x-go-type: uint32
         page:
@@ -9403,13 +9878,14 @@ components:
 
     PaginatedMusicArtists:
       type: object
-      required: [items, total, page, limit]
+      required: [items, page, limit]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/MusicArtist"
         total:
+          description: Absent when `with_total=false`.
           type: integer
           x-go-type: uint32
         page:
@@ -10232,13 +10708,14 @@ components:
 
     PaginatedShelf:
       type: object
-      required: [items, total, page, limit]
+      required: [items, page, limit]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/ShelfItem"
         total:
+          description: Absent when `with_total=false`.
           type: integer
           x-go-type: uint32
         page:
@@ -10562,13 +11039,14 @@ components:
 
     PaginatedTVShows:
       type: object
-      required: [items, total, page, limit]
+      required: [items, page, limit]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/TVShow"
         total:
+          description: Absent when `with_total=false`.
           type: integer
           x-go-type: uint32
         page:
@@ -10837,6 +11315,59 @@ components:
           type: boolean
           description: A file of the release is named for this episode.
 
+    UploadAccepted:
+      type: object
+      required: [record_id]
+      properties:
+        record_id:
+          type: integer
+          x-go-type: uint32
+          description: The download record the import runs under.
+        skipped_folders:
+          type: array
+          description: Folders of an artist upload that matched no album and were dropped.
+          items: { type: string }
+
+    UploadPreviewFile:
+      type: object
+      required: [path, size]
+      properties:
+        path:
+          type: string
+          description: Path relative to the picked folder.
+        size:
+          type: integer
+          format: int64
+
+    UploadPreviewRequest:
+      type: object
+      required: [files]
+      properties:
+        files:
+          type: array
+          maxItems: 5000
+          items:
+            $ref: "#/components/schemas/UploadPreviewFile"
+
+    UploadPreviewOutcome:
+      type: object
+      required: [path, size, outcome]
+      properties:
+        path: { type: string }
+        size: { type: integer, format: int64 }
+        outcome:
+          type: string
+          enum: [kept, ignored, refused]
+
+    UploadPreview:
+      type: object
+      required: [files]
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/UploadPreviewOutcome"
+
     DiscographyFiles:
       type: object
       required: [files, folders, albums]
@@ -10921,6 +11452,9 @@ components:
           description: Every track of the album, in disc and position order.
           items:
             $ref: "#/components/schemas/ReleaseTrack"
+        tracks_pending:
+          type: boolean
+          description: Upload preview only. The album's tracks are not known yet, so nothing could be matched.
 
     ReleaseFile:
       type: object
@@ -14379,6 +14913,9 @@ components:
         book: { $ref: "#/components/schemas/ActivityBookRef" }
         indexer: { type: string }
         download_client: { type: string }
+        uploaded:
+          type: boolean
+          description: The files were uploaded to Streamline, not downloaded; indexer and download_client are absent.
         torrent_hash:
           type: string
           description: |
@@ -14475,6 +15012,9 @@ components:
         book: { $ref: "#/components/schemas/ActivityBookRef" }
         indexer: { type: string }
         download_client: { type: string }
+        uploaded:
+          type: boolean
+          description: The files were uploaded to Streamline, not downloaded; indexer and download_client are absent.
         torrent_hash:
           type: string
           description: |

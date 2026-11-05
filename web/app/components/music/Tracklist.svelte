@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Info, Search, Trash2 } from "@lucide/svelte";
+	import { Info, Search, Trash2, Upload } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import KebabMenu, { type KebabItem } from "@components/shared/KebabMenu.svelte";
@@ -21,6 +21,7 @@
 		compact = false,
 		canEdit = false,
 		onManualSearch,
+		onUpload,
 		onDeleteFile,
 	}: {
 		tracks: Track[];
@@ -33,15 +34,27 @@
 		canEdit?: boolean;
 		onManualSearch?: (t: Track) => void;
 		onDeleteFile?: (t: Track) => void;
+		// A file picked for the track, or dropped on its row.
+		onUpload?: (t: Track, file?: File) => void;
 	} = $props();
 
 	let detail = $state<Track | null>(null);
 	let multiDisc = $derived(new Set(tracks.map((t) => t.disc)).size > 1);
 	let canSearch = $derived(canEdit && !!onManualSearch);
+	let canUpload = $derived(canEdit && !!onUpload);
+	let dropOver = $state(-1);
+	function dropFile(e: DragEvent, t: Track) {
+		dropOver = -1;
+		const file = e.dataTransfer?.files[0];
+		if (!canUpload || !file) return;
+		e.preventDefault();
+		onUpload?.(t, file);
+	}
 	const canDelete = (t: Track) => canEdit && !!onDeleteFile && t.has_file;
 	const items = (t: Track): KebabItem[] => [
 		{ key: "info", label: i18n.common_details(), icon: Info, onSelect: () => (detail = t) },
 		...(canSearch ? [{ key: "search", label: i18n.action_manual_search_ellipsis(), icon: Search, onSelect: () => onManualSearch?.(t) } satisfies KebabItem] : []),
+		...(canUpload ? [{ key: "upload", label: i18n.upload_button(), icon: Upload, onSelect: () => onUpload?.(t) } satisfies KebabItem] : []),
 		...(canDelete(t)
 			? [{ key: "delete", label: i18n.action_delete_file(), icon: Trash2, danger: true, dividerBefore: true, onSelect: () => onDeleteFile?.(t) } satisfies KebabItem]
 			: []),
@@ -64,9 +77,18 @@
 	<ol>
 		{#each tracks as t (t.id)}
 			<li
+				ondragover={canUpload
+					? (e) => {
+							e.preventDefault();
+							dropOver = t.id;
+						}
+					: undefined}
+				ondragleave={() => (dropOver = -1)}
+				ondrop={(e) => dropFile(e, t)}
 				class={cn(
 					"flex min-h-11 items-center border-b border-border/60 last:border-b-0",
 					compact ? "gap-3 pl-3 pr-0.5" : "gap-4 pl-4 pr-1 lg:min-h-10 lg:pr-3",
+					dropOver === t.id && "bg-accent/10",
 				)}
 			>
 				<span
@@ -101,10 +123,12 @@
 				<span class={cn("shrink-0 text-right font-mono text-fg-muted", compact ? "text-[11px]" : "w-10 text-xs")}>
 					{trackTime(t.duration)}
 				</span>
-				<div class="hidden w-[88px] shrink-0 items-center justify-end gap-0.5 lg:flex">
-					<button type="button" onclick={() => (detail = t)} aria-label={i18n.common_details()} title={i18n.common_details()} class={iconBtn}>
-						<Info size={14} aria-hidden="true" />
-					</button>
+				<div class="hidden w-[116px] shrink-0 items-center justify-end gap-0.5 lg:flex">
+					{#if canUpload}
+						<button type="button" onclick={() => onUpload?.(t)} aria-label={i18n.upload_button()} title={i18n.upload_button()} class={iconBtn}>
+							<Upload size={14} aria-hidden="true" />
+						</button>
+					{/if}
 					{#if canSearch}
 						<button
 							type="button"
@@ -127,6 +151,9 @@
 							<Trash2 size={14} aria-hidden="true" />
 						</button>
 					{/if}
+					<button type="button" onclick={() => (detail = t)} aria-label={i18n.common_details()} title={i18n.common_details()} class={iconBtn}>
+						<Info size={14} aria-hidden="true" />
+					</button>
 				</div>
 				<div class="shrink-0 lg:hidden">
 					<KebabMenu items={items(t)} variant="row" />

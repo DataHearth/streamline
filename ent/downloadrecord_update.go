@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/ent/track"
 )
 
 // DownloadRecordUpdate is the builder for updating DownloadRecord entities.
@@ -417,6 +418,20 @@ func (_u *DownloadRecordUpdate) SetNillableRejected(v *bool) *DownloadRecordUpda
 	return _u
 }
 
+// SetUploaded sets the "uploaded" field.
+func (_u *DownloadRecordUpdate) SetUploaded(v bool) *DownloadRecordUpdate {
+	_u.mutation.SetUploaded(v)
+	return _u
+}
+
+// SetNillableUploaded sets the "uploaded" field if the given value is not nil.
+func (_u *DownloadRecordUpdate) SetNillableUploaded(v *bool) *DownloadRecordUpdate {
+	if v != nil {
+		_u.SetUploaded(*v)
+	}
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *DownloadRecordUpdate) SetMovieID(id uint32) *DownloadRecordUpdate {
 	_u.mutation.SetMovieID(id)
@@ -453,6 +468,25 @@ func (_u *DownloadRecordUpdate) SetNillableAlbumID(id *uint32) *DownloadRecordUp
 // SetAlbum sets the "album" edge to the Album entity.
 func (_u *DownloadRecordUpdate) SetAlbum(v *Album) *DownloadRecordUpdate {
 	return _u.SetAlbumID(v.ID)
+}
+
+// SetTrackID sets the "track" edge to the Track entity by ID.
+func (_u *DownloadRecordUpdate) SetTrackID(id uint32) *DownloadRecordUpdate {
+	_u.mutation.SetTrackID(id)
+	return _u
+}
+
+// SetNillableTrackID sets the "track" edge to the Track entity by ID if the given value is not nil.
+func (_u *DownloadRecordUpdate) SetNillableTrackID(id *uint32) *DownloadRecordUpdate {
+	if id != nil {
+		_u = _u.SetTrackID(*id)
+	}
+	return _u
+}
+
+// SetTrack sets the "track" edge to the Track entity.
+func (_u *DownloadRecordUpdate) SetTrack(v *Track) *DownloadRecordUpdate {
+	return _u.SetTrackID(v.ID)
 }
 
 // SetBookID sets the "book" edge to the Book entity by ID.
@@ -556,6 +590,12 @@ func (_u *DownloadRecordUpdate) ClearMovie() *DownloadRecordUpdate {
 // ClearAlbum clears the "album" edge to the Album entity.
 func (_u *DownloadRecordUpdate) ClearAlbum() *DownloadRecordUpdate {
 	_u.mutation.ClearAlbum()
+	return _u
+}
+
+// ClearTrack clears the "track" edge to the Track entity.
+func (_u *DownloadRecordUpdate) ClearTrack() *DownloadRecordUpdate {
+	_u.mutation.ClearTrack()
 	return _u
 }
 
@@ -824,6 +864,9 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 	if value, ok := _u.mutation.Rejected(); ok {
 		_spec.SetField(downloadrecord.FieldRejected, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.Uploaded(); ok {
+		_spec.SetField(downloadrecord.FieldUploaded, field.TypeBool, value)
+	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -875,6 +918,35 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TrackCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   downloadrecord.TrackTable,
+			Columns: []string{downloadrecord.TrackColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TrackIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   downloadrecord.TrackTable,
+			Columns: []string{downloadrecord.TrackColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1462,6 +1534,20 @@ func (_u *DownloadRecordUpdateOne) SetNillableRejected(v *bool) *DownloadRecordU
 	return _u
 }
 
+// SetUploaded sets the "uploaded" field.
+func (_u *DownloadRecordUpdateOne) SetUploaded(v bool) *DownloadRecordUpdateOne {
+	_u.mutation.SetUploaded(v)
+	return _u
+}
+
+// SetNillableUploaded sets the "uploaded" field if the given value is not nil.
+func (_u *DownloadRecordUpdateOne) SetNillableUploaded(v *bool) *DownloadRecordUpdateOne {
+	if v != nil {
+		_u.SetUploaded(*v)
+	}
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *DownloadRecordUpdateOne) SetMovieID(id uint32) *DownloadRecordUpdateOne {
 	_u.mutation.SetMovieID(id)
@@ -1498,6 +1584,25 @@ func (_u *DownloadRecordUpdateOne) SetNillableAlbumID(id *uint32) *DownloadRecor
 // SetAlbum sets the "album" edge to the Album entity.
 func (_u *DownloadRecordUpdateOne) SetAlbum(v *Album) *DownloadRecordUpdateOne {
 	return _u.SetAlbumID(v.ID)
+}
+
+// SetTrackID sets the "track" edge to the Track entity by ID.
+func (_u *DownloadRecordUpdateOne) SetTrackID(id uint32) *DownloadRecordUpdateOne {
+	_u.mutation.SetTrackID(id)
+	return _u
+}
+
+// SetNillableTrackID sets the "track" edge to the Track entity by ID if the given value is not nil.
+func (_u *DownloadRecordUpdateOne) SetNillableTrackID(id *uint32) *DownloadRecordUpdateOne {
+	if id != nil {
+		_u = _u.SetTrackID(*id)
+	}
+	return _u
+}
+
+// SetTrack sets the "track" edge to the Track entity.
+func (_u *DownloadRecordUpdateOne) SetTrack(v *Track) *DownloadRecordUpdateOne {
+	return _u.SetTrackID(v.ID)
 }
 
 // SetBookID sets the "book" edge to the Book entity by ID.
@@ -1601,6 +1706,12 @@ func (_u *DownloadRecordUpdateOne) ClearMovie() *DownloadRecordUpdateOne {
 // ClearAlbum clears the "album" edge to the Album entity.
 func (_u *DownloadRecordUpdateOne) ClearAlbum() *DownloadRecordUpdateOne {
 	_u.mutation.ClearAlbum()
+	return _u
+}
+
+// ClearTrack clears the "track" edge to the Track entity.
+func (_u *DownloadRecordUpdateOne) ClearTrack() *DownloadRecordUpdateOne {
+	_u.mutation.ClearTrack()
 	return _u
 }
 
@@ -1899,6 +2010,9 @@ func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *Download
 	if value, ok := _u.mutation.Rejected(); ok {
 		_spec.SetField(downloadrecord.FieldRejected, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.Uploaded(); ok {
+		_spec.SetField(downloadrecord.FieldUploaded, field.TypeBool, value)
+	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -1950,6 +2064,35 @@ func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *Download
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TrackCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   downloadrecord.TrackTable,
+			Columns: []string{downloadrecord.TrackColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TrackIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   downloadrecord.TrackTable,
+			Columns: []string{downloadrecord.TrackColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

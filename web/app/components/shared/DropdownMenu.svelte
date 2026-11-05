@@ -222,6 +222,7 @@
 		left: var(--dd-left);
 		width: var(--dd-width);
 		min-width: var(--dd-min-width);
+		max-width: calc(100vw - 16px);
 	}
 	/* Both directions are CSS animations rather than Svelte transitions, and the
 	   unmount is on a timer — see the effect above for why. */

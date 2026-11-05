@@ -104,7 +104,8 @@ func (b *ReleaseBlocklist) Len() int {
 // a handful, so the whole set is read once per pass rather than per item.
 func (db *DB) RejectedReleases(ctx context.Context) (*ReleaseBlocklist, error) {
 	recs, err := db.client.DownloadRecord.Query().
-		Where(downloadrecord.Rejected(true)).
+		// An upload has no release name for an indexer's result to match.
+		Where(downloadrecord.Rejected(true), downloadrecord.Uploaded(false)).
 		WithMovie().
 		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })

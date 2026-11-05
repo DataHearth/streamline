@@ -130,6 +130,17 @@ export type AlbumSearchHit = {
 	release_date?: string;
 };
 
+// A search hit for one track (GET /music/tracks), named with its album and artist.
+export type TrackSearchHit = {
+	id: number;
+	title: string;
+	album_id: number;
+	album_title: string;
+	album_type: ReleaseType;
+	artist_id: number;
+	artist_name: string;
+};
+
 export type ArtistList = { items: Artist[]; total: number; page: number; limit: number };
 export type ArtistCounts = {
 	total: number;
@@ -386,19 +397,24 @@ export function qualityNote(r: Release): string {
 	});
 }
 
+// The progress figures count what the library follows or holds, the scope
+// the series rollups use (monitored, or on disk): a release nobody monitors
+// is owed nothing, so it only counts once it is on disk.
 export function artistTally(a: Artist) {
 	const out = a.albums.filter((r) => r.status !== "upcoming");
+	const owed = out.filter((r) => r.monitored || r.status === "available");
 	return {
-		listed: out.length,
-		// Owed releases only, as the status rollup counts them: the singles and
-		// live records a discography lists unmonitored kept a fully held
-		// artist at 10 / 62.
-		released: out.filter((r) => r.monitored || r.status === "available").length,
-		have: out.filter((r) => r.status === "available").length,
+		// The discography as released, monitored or not: the hero's meta line.
+		out: out.length,
+		released: owed.length,
+		have: owed.filter((r) => r.status === "available").length,
 		// What the missing search would look for: an unmonitored release is
 		// never searched, so it is not counted as wanted.
-		wanted: out.filter((r) => r.status === "wanted" && r.monitored).length,
-		downloading: out.filter((r) => r.status === "downloading" || r.status === "paused").length,
+		wanted: owed.filter((r) => r.status === "wanted" && r.monitored).length,
+		// Outside that scope, so never in a bar: released, unmonitored and not
+		// (all) on disk. The labels name them.
+		missing: out.filter((r) => r.status === "wanted" && !r.monitored).length,
+		downloading: owed.filter((r) => r.status === "downloading" || r.status === "paused").length,
 		upcoming: a.albums.length - out.length,
 	};
 }
@@ -413,10 +429,13 @@ const RELEASE_SECTIONS: { key: string; label: () => string; types: ReleaseType[]
 	{ key: "compilations", label: () => i18n.music_group_compilations(), types: ["compilation", "other"] },
 ];
 
-export function releaseGroups(releases: Release[]) {
+export type ReleaseGroup = { key: string; label: string; types: ReleaseType[]; releases: Release[] };
+
+export function releaseGroups(releases: Release[]): ReleaseGroup[] {
 	return RELEASE_SECTIONS.map((s) => ({
 		key: s.key,
 		label: s.label(),
+		types: s.types,
 		releases: releases.filter((r) => s.types.includes(r.type)),
 	})).filter((g) => g.releases.length > 0);
 }
@@ -666,8 +685,9 @@ export function languageName(code: string, standalone = false): string {
 }
 
 export function listenTime(s: number): string {
-	const h = Math.floor(s / 3600);
-	const m = Math.round((s % 3600) / 60);
+	const minutes = Math.round(s / 60);
+	const h = Math.floor(minutes / 60);
+	const m = minutes % 60;
 	return i18n.books_duration({ h: String(h), m: String(m).padStart(2, "0") });
 }
 

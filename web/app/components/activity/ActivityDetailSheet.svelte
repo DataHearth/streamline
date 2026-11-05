@@ -119,7 +119,7 @@
 		if (!item) return [];
 		const out: KV[] = [
 			{ label: i18n.common_release(), value: item.title },
-			{ label: i18n.common_indexer(), value: item.indexer || "—" },
+			{ label: i18n.common_indexer(), value: item.uploaded ? i18n.activity_upload() : item.indexer || "—" },
 			{ label: i18n.common_created(), value: formatDateTime(item.created_at) },
 		];
 		if (view === "history") {
@@ -219,7 +219,7 @@
 					</div>
 					<div class="bg-bg-elevated px-3 py-2.5">
 						<div class="truncate font-mono text-[12.5px] font-semibold text-fg">
-							{item.download_client || "—"}
+							{item.uploaded ? i18n.activity_upload() : item.download_client || "—"}
 						</div>
 						<div
 							class="mt-px text-[9px] font-medium uppercase tracking-[0.12em] text-fg-faint"

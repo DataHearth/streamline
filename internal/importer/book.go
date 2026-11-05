@@ -81,7 +81,15 @@ func (w *Worker) importBookRecord(
 		if err != nil {
 			return otelx.RecordSpanError(span, err)
 		}
-		f, err := w.lib.ImportEbook(ctx, rec.SavePath, keep, b, profile, replace)
+		f, err := w.lib.ImportEbook(
+			ctx,
+			rec.SavePath,
+			keep,
+			b,
+			profile,
+			replace,
+			libCfg.ImportMode,
+		)
 		if err != nil {
 			putBack(ctx, aside)
 			return otelx.RecordSpanError(span, err)
@@ -105,7 +113,14 @@ func (w *Worker) importBookRecord(
 		if err != nil {
 			return otelx.RecordSpanError(span, err)
 		}
-		placed, err = w.lib.ImportAudiobook(ctx, rec.SavePath, keep, b, replace)
+		placed, err = w.lib.ImportAudiobook(
+			ctx,
+			rec.SavePath,
+			keep,
+			b,
+			replace,
+			libCfg.ImportMode,
+		)
 		if err != nil {
 			putBack(ctx, aside)
 			return otelx.RecordSpanError(span, err)

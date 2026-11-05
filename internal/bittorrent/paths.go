@@ -59,7 +59,26 @@ func newContentStorage(
 		PieceCompletion: pc,
 		TorrentDirMaker: paths.torrentDir,
 		FilePathMaker:   paths.filePath,
-	})), paths
+		// Pieces are read by uncachedPiece; what is left of the mapped IO is
+		// the writes, and a mapped file replaced or truncated underneath it
+		// (an import moving it, a user deleting it) faults the process with
+		// SIGBUS instead of failing the write.
+		DisableMmap: true,
+	}), dir), paths
+}
+
+// pieceFiles is where the file storage put each of info's files: torrentDir
+// always answers the base dir, and a torrent filePath refused never reaches
+// OpenTorrent's success path, so the layout needs no admission check again.
+func pieceFiles(base string, info *metainfo.Info) []string {
+	files := info.UpvertedFiles()
+	paths := make([]string, len(files))
+	for i, fi := range files {
+		paths[i] = filepath.Join(
+			append([]string{base, info.BestName()}, fi.BestPath()...)...,
+		)
+	}
+	return paths
 }
 
 func newContentPaths() *contentPaths {

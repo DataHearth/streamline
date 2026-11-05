@@ -740,6 +740,29 @@ func HasBookmarksWith(preds ...predicate.Bookmark) predicate.Track {
 	})
 }
 
+// HasDownloadRecords applies the HasEdge predicate on the "download_records" edge.
+func HasDownloadRecords() predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, DownloadRecordsTable, DownloadRecordsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDownloadRecordsWith applies the HasEdge predicate on the "download_records" edge with a given conditions (other predicates).
+func HasDownloadRecordsWith(preds ...predicate.DownloadRecord) predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := newDownloadRecordsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Track) predicate.Track {
 	return predicate.Track(sql.AndPredicates(predicates...))

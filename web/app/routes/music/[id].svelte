@@ -2,10 +2,11 @@
 	import { onMount } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { activeRoute } from "@roxi/routify";
-	import { Radar, Search, UserRound } from "@lucide/svelte";
+	import { Radar, Search, Tags, Upload, UserRound } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { createAction, deleteFailed, monitorToast, MUSIC, searchFailed, updateFailed } from "@lib/actions";
 	import { auth } from "@lib/auth.svelte";
+	import { runBulk } from "@lib/bulk";
 	import { cn } from "@lib/cn";
 	import { formatBytes } from "@lib/format";
 	import { formatRelative } from "@lib/dates";
@@ -25,14 +26,18 @@
 	import ReleaseAccordion from "@components/music/ReleaseAccordion.svelte";
 	import ReleaseSearchModal from "@components/music/ReleaseSearchModal.svelte";
 	import ReleaseTagsModal from "@components/music/ReleaseTagsModal.svelte";
+	import UploadSheet from "@components/shared/UploadSheet.svelte";
+	import type { UploadEntry } from "@lib/upload";
 	import DetailHistory from "@components/shared/DetailHistory.svelte";
 	import { swipeTabs } from "@lib/swipe-tabs";
+	import { countMissing } from "@lib/nouns";
 	import {
 		artistPeople,
 		artistTally,
 		collaborators,
 		creditRoleLabel,
 		defaultRelease,
+		listenTime,
 		memberYears,
 		overviewLang,
 		personHref,
@@ -132,6 +137,38 @@
 		succeeded: (r) => monitorToast(!r.monitored),
 	}));
 	const toggleRelease = (r: Release) => monitorRelease.mutate(r);
+	const monitorGroup = createAction<{ releases: Release[]; monitored: boolean }>(() => ({
+		run: async ({ releases, monitored }) => {
+			const res = await runBulk(
+				releases.filter((r) => r.monitored !== monitored),
+				(r) => api(`/music/albums/${r.id}`, { method: "PATCH", body: { monitored } }),
+			);
+			if (res.failed > 0) throw new Error(res.firstError);
+		},
+		refresh: MUSIC,
+		failed: updateFailed,
+		succeeded: ({ monitored }) => monitorToast(monitored),
+	}));
+	const toggleGroup = (releases: Release[], monitored: boolean) => monitorGroup.mutate({ releases, monitored });
+	let confirmingTags = $state(false);
+	const writeArtistTags = createAction<void, number>(() => ({
+		run: async () => {
+			let queued = 0;
+			const res = await runBulk(artist?.albums.filter((r) => r.tracks_have > 0) ?? [], async (r) => {
+				const written = await api<{ queued: number }>(`/music/albums/${r.id}/tags/apply`, { method: "POST" });
+				queued += written.queued;
+			});
+			if (res.failed > 0) throw new Error(res.firstError);
+			return queued;
+		},
+		refresh: [["music", "album-tags"]],
+		failed: updateFailed,
+		detail: (e) => e.message,
+		succeeded: (_, queued) =>
+			queued === 1
+				? i18n.music_tags_panel_written_one({ count: String(queued) })
+				: i18n.music_tags_panel_written_other({ count: String(queued) }),
+	}));
 	const searchNow = createAction<{ path: string; title: string }>(() => ({
 		run: ({ path }) => api(path, { method: "POST" }),
 		refresh: [],
@@ -144,6 +181,11 @@
 	const searchRelease = (r: Release) => searchNow.mutate({ path: `/music/albums/${r.id}/search-now`, title: r.title });
 	let deletingTrack = $state<Track | null>(null);
 	let tagsRelease = $state<Release | null>(null);
+	type UploadTarget = { target: "album" | "track" | "artist"; id: number; hasFiles: boolean; initial?: UploadEntry[] };
+	let uploading = $state<UploadTarget | null>(null);
+	const uploadRelease = (r: Release) => (uploading = { target: "album", id: r.id, hasFiles: r.tracks_have > 0 });
+	const uploadTrack = (t: Track, file?: File) =>
+		(uploading = { target: "track", id: t.id, hasFiles: t.has_file, initial: file ? [{ file, path: file.name }] : [] });
 	const delTrack = createAction<Track>(() => ({
 		run: (t) => api(`/music/tracks/${t.id}/file`, { method: "DELETE" }),
 		refresh: MUSIC,
@@ -157,9 +199,13 @@
 
 	let meta = $derived.by(() => {
 		if (!artist || !tally) return [];
-		const p: string[] = [releasesCount(tally.listed)];
+		const p: string[] = [releasesCount(tally.out)];
 		if (tally.upcoming) p.push(i18n.music_n_upcoming({ count: String(tally.upcoming) }));
 		p.push(tracksCount(artist.tracks_have));
+		const heldSeconds = artist.albums
+			.flatMap((r) => r.tracks ?? [])
+			.reduce((sum, t) => sum + (t.has_file ? t.duration : 0), 0);
+		if (heldSeconds) p.push(listenTime(heldSeconds));
 		if (artist.size) p.push(formatBytes(artist.size, ""));
 		return p;
 	});
@@ -297,6 +343,9 @@
 							{#if tally.wanted}
 								<span class="text-fg-faint"> · </span><span class="text-status-wanted">{i18n.music_n_wanted({ count: String(tally.wanted) })}</span>
 							{/if}
+							{#if tally.missing}
+								<span class="text-fg-faint"> · </span><span class="text-status-missing">{countMissing(tally.missing)}</span>
+							{/if}
 						</div>
 						<div class="flex h-[3px] w-full overflow-hidden rounded-full bg-white/[0.08]" aria-hidden="true">
 							<div class="bg-status-available" style:width="{(tally.have / tally.released) * 100}%"></div>
@@ -313,9 +362,9 @@
 					     wanted) and Manual search, which lists results to pick from for
 					     the discography or one release. One flow in DOM order: a phone
 					     keeps label over select + bookmark + menu, with the searches in
-					     the pinned bar. Manual search is an icon below 512px of row: in
-					     French the pair and the menu are 476 and the tablet row is 470,
-					     so the menu would wrap onto a third line. -->
+					     the pinned bar. The other buttons are icons below 700px of row: in
+					     French the labelled row is 695, and the menu would wrap onto a
+					     third line. -->
 					<div class="@container">
 					<div class="flex flex-wrap items-center gap-2 md:gap-x-2.5 md:gap-y-3">
 						<span class="basis-full font-mono text-[10.5px] uppercase tracking-[0.1em] text-fg-subtle md:basis-auto">{i18n.action_monitor()}</span>
@@ -346,11 +395,39 @@
 							title={i18n.action_manual_search()}
 							class={cn(
 								"hidden h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14] md:inline-flex",
-								"px-3 @lg:px-4",
+								"px-3 @min-[700px]:px-4",
 							)}
 						>
 							<Search size={16} aria-hidden="true" />
-							<span class="hidden @lg:inline">{i18n.action_manual_search()}</span>
+							<span class="hidden @min-[700px]:inline">{i18n.action_manual_search()}</span>
+						</button>
+						{#if artist.tracks_have > 0}
+							<button
+								type="button"
+								onclick={() => (confirmingTags = true)}
+								aria-label={i18n.music_tags_panel_button()}
+								title={i18n.music_tags_panel_button()}
+								class={cn(
+									"inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14]",
+									"px-3 @min-[700px]:px-4",
+								)}
+							>
+								<Tags size={16} aria-hidden="true" />
+								<span class="hidden @min-[700px]:inline">{i18n.music_tags_panel_button()}</span>
+							</button>
+						{/if}
+						<button
+							type="button"
+							onclick={() => (uploading = { target: "artist", id: artist.id, hasFiles: artist.size > 0 })}
+							aria-label={i18n.upload_button()}
+							title={i18n.upload_button()}
+							class={cn(
+								"inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14]",
+								"px-3 @min-[700px]:px-4",
+							)}
+						>
+							<Upload size={16} aria-hidden="true" />
+							<span class="hidden @min-[700px]:inline">{i18n.upload_button()}</span>
 						</button>
 						<LibraryActions
 							base={`/music/artists/${artist.id}`}
@@ -399,10 +476,13 @@
 					onSearch={searchRelease}
 					onManualSearch={(r) => openManual(String(r.id))}
 					onMonitor={toggleRelease}
-					monitorPending={monitorRelease.isPending}
+					monitorPending={monitorRelease.isPending || monitorGroup.isPending}
+					onMonitorGroup={toggleGroup}
 					onManualSearchTrack={(r) => openManual(String(r.id))}
 					onDeleteTrack={(t) => (deletingTrack = t)}
 					onTags={(r) => (tagsRelease = r)}
+					onUpload={uploadRelease}
+					onUploadTrack={uploadTrack}
 				/>
 			</div>
 			<!-- 1fr, not minmax(0,1fr): the browser Tailwind build hangs the tab on
@@ -412,7 +492,15 @@
 				<!-- The top bar (4rem), the sticky tab strip and the grid's own padding
 				     sit above it, so the list scrolls on its own beside a long panel. -->
 				<div class="sticky top-[8.5rem] max-h-[calc(100dvh-10rem)] self-start overflow-y-auto overscroll-contain">
-					<ReleaseList releases={artist.albums} selectedId={selected?.id} onSelect={select} />
+					{#key artist.id}
+						<ReleaseList
+							releases={artist.albums}
+							selectedId={selected?.id}
+							onSelect={select}
+							onMonitorGroup={canEdit ? toggleGroup : undefined}
+							monitorPending={monitorRelease.isPending || monitorGroup.isPending}
+						/>
+					{/key}
 				</div>
 				{#if selected}
 					<ReleasePanel
@@ -426,6 +514,8 @@
 						onManualSearchTrack={() => openManual(String(selected.id))}
 						onDeleteTrack={(t) => (deletingTrack = t)}
 						onTags={() => (tagsRelease = selected)}
+						onUpload={() => uploadRelease(selected)}
+						onUploadTrack={uploadTrack}
 					/>
 				{/if}
 			</div>
@@ -507,7 +597,26 @@
 		{#if canEdit}
 			<ReleaseSearchModal open={manualOpen} {artist} initialScope={manualScope} onClose={() => (manualOpen = false)} />
 			<ReleaseTagsModal release={tagsRelease} onClose={() => (tagsRelease = null)} />
+			{#if uploading}
+				<UploadSheet {...uploading} onDone={() => (uploading = null)} />
+			{/if}
 		{/if}
+
+		<Dialog
+			open={confirmingTags}
+			title={i18n.music_tags_artist_title({ name: artist.name })}
+			onClose={() => (confirmingTags = false)}
+			actions={[
+				{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+				{ label: i18n.music_tags_panel_write(), variant: "primary", onClick: () => writeArtistTags.mutate() },
+			]}
+		>
+			<p class="text-sm leading-relaxed text-fg-muted [text-wrap:pretty]">
+				{artist.tracks_have === 1
+					? i18n.music_tags_artist_body_one({ count: String(artist.tracks_have) })
+					: i18n.music_tags_artist_body_other({ count: String(artist.tracks_have) })}
+			</p>
+		</Dialog>
 
 		<Dialog
 			open={!!deletingTrack}

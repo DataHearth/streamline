@@ -2,10 +2,12 @@ package restapi
 
 import (
 	"context"
+	"fmt"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/datahearth/streamline/ent"
+	entalbum "github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/internal/db"
 )
 
@@ -43,7 +45,21 @@ func (s *Server) ListMusicAlbums(
 			),
 		}, nil
 	}
-	albums, total, err := s.store.SearchAlbums(ctx, p)
+	var types []entalbum.Type
+	if prm.Type != nil {
+		for _, t := range *prm.Type {
+			at := entalbum.Type(t)
+			if entalbum.TypeValidator(at) != nil {
+				return ListMusicAlbums400JSONResponse{
+					BadRequestJSONResponse: errBadRequest(
+						fmt.Sprintf("unknown release type %q", t),
+					),
+				}, nil
+			}
+			types = append(types, at)
+		}
+	}
+	albums, err := s.store.SearchAlbums(ctx, p, types)
 	if err != nil {
 		return ListMusicAlbums500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -55,7 +71,6 @@ func (s *Server) ListMusicAlbums(
 	}
 	return ListMusicAlbums200JSONResponse{
 		Items:  items,
-		Total:  total,
 		Limit:  p.Limit,
 		Offset: p.Offset,
 	}, nil
@@ -74,7 +89,7 @@ func (s *Server) ListEpisodes(
 			),
 		}, nil
 	}
-	episodes, total, err := s.store.SearchEpisodes(ctx, p)
+	episodes, err := s.store.SearchEpisodes(ctx, p)
 	if err != nil {
 		return ListEpisodes500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -90,7 +105,6 @@ func (s *Server) ListEpisodes(
 	}
 	return ListEpisodes200JSONResponse{
 		Items:  items,
-		Total:  total,
 		Limit:  p.Limit,
 		Offset: p.Offset,
 	}, nil
@@ -131,4 +145,54 @@ func toEpisodeSearchHit(e *ent.Episode) (EpisodeSearchHit, bool) {
 		out.AirDate = &e.AirDate
 	}
 	return out, true
+}
+
+func (s *Server) ListMusicTracks(
+	ctx context.Context,
+	request ListMusicTracksRequestObject,
+) (ListMusicTracksResponseObject, error) {
+	prm := request.Params
+	p, ok := titleSearchParams(prm.Query, prm.Limit, prm.Offset)
+	if !ok {
+		return ListMusicTracks400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(
+				limitRangeMsg(titleSearchMaxLimit),
+			),
+		}, nil
+	}
+	tracks, err := s.store.SearchTracks(ctx, p)
+	if err != nil {
+		return ListMusicTracks500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	items := make([]TrackSearchHit, 0, len(tracks))
+	for _, t := range tracks {
+		// A track is always loaded with its album and artist; one missing
+		// either edge could not be named or linked, so it is left out.
+		if hit, ok := toTrackSearchHit(t); ok {
+			items = append(items, hit)
+		}
+	}
+	return ListMusicTracks200JSONResponse{
+		Items:  items,
+		Limit:  p.Limit,
+		Offset: p.Offset,
+	}, nil
+}
+
+func toTrackSearchHit(t *ent.Track) (TrackSearchHit, bool) {
+	al := t.Edges.Album
+	if al == nil || al.Edges.Artist == nil {
+		return TrackSearchHit{}, false
+	}
+	return TrackSearchHit{
+		Id:         t.ID,
+		Title:      t.Title,
+		AlbumId:    al.ID,
+		AlbumTitle: al.Title,
+		AlbumType:  MusicAlbumType(al.Type),
+		ArtistId:   al.Edges.Artist.ID,
+		ArtistName: al.Edges.Artist.Name,
+	}, true
 }

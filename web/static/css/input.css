@@ -61,6 +61,7 @@
 	/* Accent (cooler indigo per design bundle) */
 	--accent: #7c8cff;
 	--accent-hover: #8b9aff;
+	--accent-pressed: #6573e6;
 	--accent-glow: rgb(124 140 255 / 0.25);
 	--accent-ring: rgb(124 140 255 / 0.4);
 	--accent-soft: rgb(124 140 255 / 0.14);
@@ -137,6 +138,7 @@
 	--shadow-3: 0 16px 32px rgb(0 0 0 / 0.45);
 	--shadow-4: 0 24px 64px rgb(0 0 0 / 0.55);
 	--shadow-glow: 0 0 24px var(--accent-glow);
+	--shadow-card-hover: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent), 0 24px 48px rgb(0 0 0 / 0.5);
 
 	/* Radii */
 	--radius-sm: 6px;
@@ -186,6 +188,7 @@
 
 	--color-accent: var(--accent);
 	--color-accent-hover: var(--accent-hover);
+	--color-accent-pressed: var(--accent-pressed);
 	--color-accent-ring: var(--accent-ring);
 	--color-accent-soft: var(--accent-soft);
 	--color-accent-line: var(--accent-line);
@@ -222,6 +225,14 @@
 	--radius-md: var(--radius-md);
 	--radius-lg: var(--radius-lg);
 	--radius-xl: var(--radius-xl);
+
+	--shadow-1: var(--shadow-1);
+	--shadow-2: var(--shadow-2);
+	--shadow-3: var(--shadow-3);
+	--shadow-4: var(--shadow-4);
+	--shadow-glow: var(--shadow-glow);
+
+	--default-transition-timing-function: var(--ease);
 }
 
 /* ------------------------------------------------------------------ */

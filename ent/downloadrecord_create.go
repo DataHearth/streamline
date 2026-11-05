@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/ent/track"
 )
 
 // DownloadRecordCreate is the builder for creating a DownloadRecord entity.
@@ -310,6 +311,20 @@ func (_c *DownloadRecordCreate) SetNillableRejected(v *bool) *DownloadRecordCrea
 	return _c
 }
 
+// SetUploaded sets the "uploaded" field.
+func (_c *DownloadRecordCreate) SetUploaded(v bool) *DownloadRecordCreate {
+	_c.mutation.SetUploaded(v)
+	return _c
+}
+
+// SetNillableUploaded sets the "uploaded" field if the given value is not nil.
+func (_c *DownloadRecordCreate) SetNillableUploaded(v *bool) *DownloadRecordCreate {
+	if v != nil {
+		_c.SetUploaded(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *DownloadRecordCreate) SetID(v uint32) *DownloadRecordCreate {
 	_c.mutation.SetID(v)
@@ -352,6 +367,25 @@ func (_c *DownloadRecordCreate) SetNillableAlbumID(id *uint32) *DownloadRecordCr
 // SetAlbum sets the "album" edge to the Album entity.
 func (_c *DownloadRecordCreate) SetAlbum(v *Album) *DownloadRecordCreate {
 	return _c.SetAlbumID(v.ID)
+}
+
+// SetTrackID sets the "track" edge to the Track entity by ID.
+func (_c *DownloadRecordCreate) SetTrackID(id uint32) *DownloadRecordCreate {
+	_c.mutation.SetTrackID(id)
+	return _c
+}
+
+// SetNillableTrackID sets the "track" edge to the Track entity by ID if the given value is not nil.
+func (_c *DownloadRecordCreate) SetNillableTrackID(id *uint32) *DownloadRecordCreate {
+	if id != nil {
+		_c = _c.SetTrackID(*id)
+	}
+	return _c
+}
+
+// SetTrack sets the "track" edge to the Track entity.
+func (_c *DownloadRecordCreate) SetTrack(v *Track) *DownloadRecordCreate {
+	return _c.SetTrackID(v.ID)
 }
 
 // SetBookID sets the "book" edge to the Book entity by ID.
@@ -508,6 +542,10 @@ func (_c *DownloadRecordCreate) defaults() {
 		v := downloadrecord.DefaultRejected
 		_c.mutation.SetRejected(v)
 	}
+	if _, ok := _c.mutation.Uploaded(); !ok {
+		v := downloadrecord.DefaultUploaded
+		_c.mutation.SetUploaded(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -563,6 +601,9 @@ func (_c *DownloadRecordCreate) check() error {
 	}
 	if _, ok := _c.mutation.Rejected(); !ok {
 		return &ValidationError{Name: "rejected", err: errors.New(`ent: missing required field "DownloadRecord.rejected"`)}
+	}
+	if _, ok := _c.mutation.Uploaded(); !ok {
+		return &ValidationError{Name: "uploaded", err: errors.New(`ent: missing required field "DownloadRecord.uploaded"`)}
 	}
 	return nil
 }
@@ -684,6 +725,10 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 		_spec.SetField(downloadrecord.FieldRejected, field.TypeBool, value)
 		_node.Rejected = value
 	}
+	if value, ok := _c.mutation.Uploaded(); ok {
+		_spec.SetField(downloadrecord.FieldUploaded, field.TypeBool, value)
+		_node.Uploaded = value
+	}
 	if nodes := _c.mutation.MovieIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -716,6 +761,23 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.album_download_records = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TrackIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   downloadrecord.TrackTable,
+			Columns: []string{downloadrecord.TrackColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.track_download_records = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.BookIDs(); len(nodes) > 0 {

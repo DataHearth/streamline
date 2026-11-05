@@ -132,30 +132,7 @@ func creditItemKey(cr *entsql.SelectTable) string {
 func (db *DB) ListPeople(
 	ctx context.Context,
 	p ListPeopleParams,
-) ([]Person, uint32, error) {
-	var totalRows []struct {
-		Total uint32 `sql:"total"`
-	}
-	err := db.client.Person.Query().
-		Modify(func(s *entsql.Selector) {
-			joinCredits(s)
-			s.Select(entsql.As(
-				"COUNT(DISTINCT "+s.C(person.FieldID)+")", "total",
-			))
-			peopleWhere(s, p.Query)
-		}).
-		Scan(ctx, &totalRows)
-	if err != nil {
-		return nil, 0, fmt.Errorf("count people: %w", err)
-	}
-	var total uint32
-	if len(totalRows) > 0 {
-		total = totalRows[0].Total
-	}
-	if total == 0 {
-		return []Person{}, 0, nil
-	}
-
+) ([]Person, error) {
 	var rows []struct {
 		ID           uint32 `sql:"id"`
 		TMDBID       uint32 `sql:"tmdb_id"`
@@ -172,7 +149,7 @@ func (db *DB) ListPeople(
 		TwitterID    string `sql:"twitter_id"`
 		Credits      uint32 `sql:"credits"`
 	}
-	err = db.client.Person.Query().
+	err := db.client.Person.Query().
 		Modify(func(s *entsql.Selector) {
 			cr := joinCredits(s)
 			credits := creditItemKey(cr)
@@ -205,7 +182,7 @@ func (db *DB) ListPeople(
 		}).
 		Scan(ctx, &rows)
 	if err != nil {
-		return nil, 0, fmt.Errorf("list people: %w", err)
+		return nil, fmt.Errorf("list people: %w", err)
 	}
 
 	out := make([]Person, 0, len(rows))
@@ -227,7 +204,7 @@ func (db *DB) ListPeople(
 			Credits:      r.Credits,
 		})
 	}
-	return out, total, nil
+	return out, nil
 }
 
 // joinCredits inner-joins the credits table, which both drops a person

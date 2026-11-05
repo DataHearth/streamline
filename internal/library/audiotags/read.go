@@ -29,6 +29,14 @@ var AudioExtensions = map[string]struct{}{
 	".flac": {}, ".mp3": {}, ".m4a": {}, ".ogg": {}, ".opus": {},
 }
 
+// HoldsAudio reports whether TagLib finds an audio stream in the file. Read
+// cannot say: it answers a file of random bytes with empty tags and no error.
+// It reads the headers only, so a file cut short after them still passes.
+func HoldsAudio(path string) bool {
+	p, err := taglib.ReadProperties(path)
+	return err == nil && p.Channels > 0 && p.SampleRate > 0
+}
+
 // Read returns an Info with only Format set and a nil error when the file has
 // no tags or they cannot be parsed: absence of tags is data, and the caller
 // falls back to filename parsing. Only a failure to open is an error.

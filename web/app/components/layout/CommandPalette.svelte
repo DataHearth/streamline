@@ -251,17 +251,17 @@
 										class="relative h-full w-full object-cover"
 									/>
 								</div>
-							{:else if item.kind === "artist" || item.kind === "album" || item.kind === "book"}
+							{:else if item.kind === "artist" || item.kind === "album" || item.kind === "track" || item.kind === "book"}
 								<div
 									class={cn(
 										"relative shrink-0 overflow-hidden bg-surface-2",
 										item.kind === "artist" && "h-7 w-7 rounded-full",
-										item.kind === "album" && "h-8 w-8 rounded-md",
+										(item.kind === "album" || item.kind === "track") && "h-8 w-8 rounded-md",
 										item.kind === "book" && "h-9 w-6 rounded-md",
 									)}
 								>
 									<div class="absolute inset-0 grid place-items-center text-fg-muted">
-										{#if item.kind === "artist" || item.kind === "album"}
+										{#if item.kind === "artist" || item.kind === "album" || item.kind === "track"}
 											<Music size={13} aria-hidden="true" />
 										{:else}
 											<BookOpen size={13} aria-hidden="true" />

@@ -166,6 +166,35 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 		})
 	})
 
+	Describe("TVShowSelection", func() {
+		It("lists every match unpaged with its held and wanted episodes", func() {
+			aired := now.Add(-24 * time.Hour)
+			held := seedShow("Held", 30, []EpisodeSeed{
+				{Number: 1, Title: "A", AirDate: &aired},
+				{Number: 2, Title: "B", AirDate: &aired},
+			}, true)
+			attachFile(
+				held.Edges.Seasons[0].Edges.Episodes[0].ID,
+				"/tv/h/S01E01.mkv",
+			)
+			for i := range 3 {
+				seedShow("Other", uint32(31+i), []EpisodeSeed{
+					{Number: 1, Title: "A", AirDate: &aired},
+				}, true)
+			}
+			seedShow("Zzz", 40, nil, true)
+
+			rows, err := store.TVShowSelection(ctx, FilterTVShowsParams{
+				Query: "e", Now: now,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(4))
+			Expect(rows).To(ContainElement(SeriesSelectionRow{
+				ID: held.ID, Monitored: true, Have: 1, Wanted: 1,
+			}))
+		})
+	})
+
 	Describe("episode counts", func() {
 		It(
 			"buckets have/wanted/unaired and excludes unmonitored file-less rows",
@@ -513,6 +542,13 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(total).To(Equal(uint32(5)))
 			Expect(rows).To(HaveLen(2))
+
+			rows, _, total, err = store.FilterTVShows(ctx, FilterTVShowsParams{
+				Offset: 2, Limit: 2, Now: now, NoTotal: true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(2))
+			Expect(total).To(BeZero())
 		})
 	})
 })

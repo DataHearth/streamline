@@ -87,6 +87,7 @@ func (r *RenameService) Apply(
 			return library.RenamePlan{}, otelx.RecordSpanError(span,
 				fmt.Errorf("rename %s → %s: %w", op.From, op.To, err))
 		}
+		library.MoveSidecars(ctx, op.From, op.To)
 		// The move can empty the directory the file came from — every colon in a
 		// title used to render one, so a re-rename pass leaves one behind per
 		// title. Prune before the DB write: the file is already at op.To, so a

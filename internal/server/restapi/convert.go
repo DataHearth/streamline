@@ -887,6 +887,7 @@ func toQueueEntry(e download.QueueEntry) QueueEntry {
 	out.Album = activityAlbumRef(e.Album)
 	out.Artist = activityArtistRef(e.Artist, len(e.PackAlbumIDs))
 	out.Book = activityBookRef(e.Book, e.BookKind)
+	out.Uploaded = uploadedRef(e.Uploaded)
 	if e.DownloadSpeed != 0 {
 		ds := e.DownloadSpeed
 		out.DownloadSpeed = &ds
@@ -952,6 +953,7 @@ func toHistoryEntry(r *ent.DownloadRecord) HistoryEntry {
 	out.Album = activityAlbumRef(r.Edges.Album)
 	out.Artist = activityArtistRef(r.Edges.Artist, len(r.Edges.Albums))
 	out.Book = activityBookRef(r.Edges.Book, string(r.BookKind))
+	out.Uploaded = uploadedRef(r.Uploaded)
 	if r.Quality != "" {
 		out.Quality = &r.Quality
 	}
@@ -974,6 +976,13 @@ func toHistoryEntry(r *ent.DownloadRecord) HistoryEntry {
 		out.ImportedAt = r.ImportedAt
 	}
 	return out
+}
+
+func uploadedRef(uploaded bool) *bool {
+	if !uploaded {
+		return nil
+	}
+	return &uploaded
 }
 
 // torrentHashRef is a record's info hash for a queue or history row, nil when

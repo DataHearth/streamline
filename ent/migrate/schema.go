@@ -544,11 +544,13 @@ var (
 		{Name: "selection_state", Type: field.TypeEnum, Enums: []string{"pending", "applied", "unsupported", "skipped"}, Default: "skipped"},
 		{Name: "book_kind", Type: field.TypeEnum, Nullable: true, Enums: []string{"ebook", "audiobook"}},
 		{Name: "rejected", Type: field.TypeBool, Default: false},
+		{Name: "uploaded", Type: field.TypeBool, Default: false},
 		{Name: "album_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "artist_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "book_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "episode_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_download_records", Type: field.TypeUint32, Nullable: true},
+		{Name: "track_download_records", Type: field.TypeUint32, Nullable: true},
 	}
 	// DownloadRecordsTable holds the schema information for the "download_records" table.
 	DownloadRecordsTable = &schema.Table{
@@ -558,32 +560,38 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "download_records_albums_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[23]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[24]},
 				RefColumns: []*schema.Column{AlbumsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_artists_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[24]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[25]},
 				RefColumns: []*schema.Column{ArtistsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_books_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[25]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[26]},
 				RefColumns: []*schema.Column{BooksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_episodes_anchored_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[26]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[27]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_movies_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[27]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[28]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "download_records_tracks_download_records",
+				Columns:    []*schema.Column{DownloadRecordsColumns[29]},
+				RefColumns: []*schema.Column{TracksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 		},
@@ -616,17 +624,17 @@ var (
 			{
 				Name:    "downloadrecord_movie_download_records",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[27]},
+				Columns: []*schema.Column{DownloadRecordsColumns[28]},
 			},
 			{
 				Name:    "downloadrecord_episode_download_records",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[26]},
+				Columns: []*schema.Column{DownloadRecordsColumns[27]},
 			},
 			{
 				Name:    "downloadrecord_artist_download_records",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[24]},
+				Columns: []*schema.Column{DownloadRecordsColumns[25]},
 			},
 		},
 	}
@@ -2033,6 +2041,7 @@ func init() {
 	DownloadRecordsTable.ForeignKeys[2].RefTable = BooksTable
 	DownloadRecordsTable.ForeignKeys[3].RefTable = EpisodesTable
 	DownloadRecordsTable.ForeignKeys[4].RefTable = MoviesTable
+	DownloadRecordsTable.ForeignKeys[5].RefTable = TracksTable
 	EpisodesTable.ForeignKeys[0].RefTable = SeasonsTable
 	ImportScanAlbumsTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanBooksTable.ForeignKeys[0].RefTable = ImportScansTable
