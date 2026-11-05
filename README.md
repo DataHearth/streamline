@@ -8,7 +8,9 @@
 
 Self-hosted media manager for movies, TV, music and books. Replaces the \*arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr with a single binary.
 
-https://github.com/user-attachments/assets/318e94d2-7571-4dda-96f6-f62bb4af8a46
+
+https://github.com/user-attachments/assets/f08f3d32-3172-4de7-afeb-163a484403ce
+
 
 |  |  |
 | --- | --- |
