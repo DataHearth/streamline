@@ -630,7 +630,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			Expect(err).To(MatchError(boom))
 		})
 
-		It("orders imports first, then by status and progress, stalled after downloading", func() {
+		It("orders by status, stalled after downloading, then progress", func() {
 			now := time.Now()
 			entries := []QueueEntry{
 				{RecordID: 1, Status: "downloading", Progress: 0.42, CreatedAt: now},

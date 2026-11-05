@@ -2134,7 +2134,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		It("maps each asked hash to its newest record and the title it is for", func() {
+		It("maps each asked hash to its newest record", func() {
 			titled("H1", "Lamb Of God - Omens - 2022, FLAC")
 			titled("H2", "Old grab")
 			titled("H2", "New grab")

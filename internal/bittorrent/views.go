@@ -198,9 +198,9 @@ func (e *Engine) Details(
 		TorrentView: e.torrentView(
 			t, e.trackedRecords(ctx, []string{t.InfoHash().HexString()}),
 		),
-		Files:       []FileView{},
-		Trackers:    []string{},
-		Peers:       []PeerView{},
+		Files:    []FileView{},
+		Trackers: []string{},
+		Peers:    []PeerView{},
 	}
 	if t.Info() != nil {
 		for i, f := range t.Files() {

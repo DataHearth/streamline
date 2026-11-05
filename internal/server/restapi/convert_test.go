@@ -273,7 +273,12 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 		It("names the track a single-track upload is for", func() {
 			rec := &ent.DownloadRecord{ID: 3, Title: "Upload", Uploaded: true}
 			rec.Edges.Album = &ent.Album{ID: 7, Title: "Proof 2"}
-			rec.Edges.Track = &ent.Track{ID: 11, Title: "Intro", Disc: 1, Position: 4}
+			rec.Edges.Track = &ent.Track{
+				ID:       11,
+				Title:    "Intro",
+				Disc:     1,
+				Position: 4,
+			}
 			out := toHistoryEntry(rec)
 			Expect(out.Album).NotTo(BeNil())
 			Expect(out.Track).To(Equal(&ActivityTrackRef{
