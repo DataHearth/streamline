@@ -614,6 +614,42 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 		})
 
+		It(
+			"maps a pack the client already holds to a grab_rejected 422 naming it",
+			func() {
+				app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+					Return(&ent.TVShow{ID: 3}, nil).Once()
+				app.tvshows.EXPECT().
+					GrabSeasonRelease(mock.Anything, uint32(3), uint16(1),
+						mock.AnythingOfType("indexer.SearchResult"), false).
+					Return(fmt.Errorf("grab pack: %w", download.ErrTorrentAlreadyExists)).
+					Once()
+
+				req := app.req(
+					http.MethodPost,
+					"/api/v1/series/3/seasons/1/grab",
+					app.adminKey,
+					strings.NewReader(
+						`{"title":"BB S01","download_url":"magnet:x","size":1,"seeders":1}`,
+					),
+				)
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+				var body struct {
+					Message string `json:"message"`
+					Code    string `json:"code"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Code).To(Equal("grab_rejected"))
+				Expect(
+					body.Message,
+				).To(Equal("BB S01 is already in the download client"))
+			},
+		)
+
 		It("maps a pack matching no wanted file to a grab_rejected 422", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
 				Return(&ent.TVShow{ID: 3}, nil).Once()

@@ -151,6 +151,18 @@ func errGrabRejected(msg string) UnprocessableEntityJSONResponse {
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
 
+// errAlreadyInClient is the grab_rejected answer to
+// download.ErrTorrentAlreadyExists: the client already holds that torrent, or
+// a live record of streamline's already tracks its hash. Nothing failed and
+// nothing was added, so it is a refusal like the others, never the 500 it
+// used to fall through to, which left the SPA showing "internal error" for a
+// release the person could see downloading in the queue.
+func errAlreadyInClient(title string) UnprocessableEntityJSONResponse {
+	return errGrabRejected(
+		fmt.Sprintf("%s is already in the download client", title),
+	)
+}
+
 // codeNoQualityProfile marks a 422 raised because the album or book slot has
 // no quality profile to judge releases against. Nothing in the request is
 // wrong, and a diagnostic 422 without a code falls to the SPA's generic

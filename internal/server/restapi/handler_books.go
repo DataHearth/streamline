@@ -698,6 +698,10 @@ func (s *Server) GrabBookRelease(
 		return GrabBookRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: errNoQualityProfile(err.Error()),
 		}, nil
+	case errors.Is(err, download.ErrTorrentAlreadyExists):
+		return GrabBookRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errAlreadyInClient(sr.Title),
+		}, nil
 	case errors.Is(err, book.ErrSlotMismatch),
 		errors.Is(err, book.ErrNotHydrated),
 		errors.Is(err, download.ErrUntrustedSource),

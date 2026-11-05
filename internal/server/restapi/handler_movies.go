@@ -427,6 +427,10 @@ func (s *Server) GrabMovieRelease(
 	}
 	rec, err := s.downloads.Grab(ctx, sr, m.ID)
 	switch {
+	case errors.Is(err, download.ErrTorrentAlreadyExists):
+		return GrabMovieRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errAlreadyInClient(sr.Title),
+		}, nil
 	case errors.Is(err, download.ErrUntrustedSource),
 		errors.Is(err, download.ErrClientFull),
 		errors.Is(err, download.ErrNoSpace),

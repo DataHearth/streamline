@@ -379,6 +379,8 @@ paths:
       description: |
         Dispatches the chosen release to the highest-priority download
         client. Body is the SearchResult chosen from a browse-releases call.
+        A refused grab, a release the download client already holds included,
+        answers 422 with `code: grab_rejected`.
       tags: [movies]
       requestBody:
         $ref: "#/components/requestBodies/GrabMovieRelease"
@@ -789,7 +791,9 @@ paths:
       description: |
         Dispatches the chosen season-pack release to the highest-priority
         download client and marks every episode in the season downloading.
-        Body is the SearchResult chosen from a browse call.
+        Body is the SearchResult chosen from a browse call. A refused grab, a
+        release the download client already holds included, answers 422 with
+        `code: grab_rejected`.
       tags: [series]
       requestBody:
         $ref: "#/components/requestBodies/GrabSeriesRelease"
@@ -999,7 +1003,9 @@ paths:
       description: |
         Dispatches the chosen (integral / multi-season) release to the
         highest-priority download client and marks every episode in the series
-        downloading. Body is the SearchResult chosen from a browse call.
+        downloading. Body is the SearchResult chosen from a browse call. A
+        refused grab, a release the download client already holds included,
+        answers 422 with `code: grab_rejected`.
       tags: [series]
       requestBody:
         $ref: "#/components/requestBodies/GrabSeriesRelease"
@@ -1027,6 +1033,8 @@ paths:
       description: |
         Dispatches the chosen release to the highest-priority download
         client. Body is the SearchResult chosen from a browse-releases call.
+        A refused grab, a release the download client already holds included,
+        answers 422 with `code: grab_rejected`.
       tags: [series]
       requestBody:
         $ref: "#/components/requestBodies/GrabSeriesRelease"
@@ -1561,7 +1569,8 @@ paths:
          (its `download_url` is a sealed handle). With `replace_existing: true` the importer
          replaces, per linked album that already had files, the tracks the pack matches, and
          deletes the old files only after the new ones are placed and verified. A refused grab,
-         including a pack with no linkable album, answers 422 with `code: grab_rejected`; an
+         including a pack with no linkable album or one the download client already holds,
+         answers 422 with `code: grab_rejected`; an
          artist with no usable quality profile answers 422 with `code: no_quality_profile`.
       tags: [music]
       requestBody:
@@ -1756,8 +1765,8 @@ paths:
          album downloading. The body is an item of the search response, unchanged (its
          `download_url` is a sealed handle). With `replace_existing: true` the importer, once
          the new files are placed and verified, removes the old file of every track the release
-         matched; tracks it did not cover keep theirs. A refused grab answers 422 with
-         `code: grab_rejected`; an album with no usable quality profile answers 422 with
+         matched; tracks it did not cover keep theirs. A refused grab, a release the download
+         client already holds included, answers 422 with `code: grab_rejected`; an album with no usable quality profile answers 422 with
          `code: no_quality_profile`.
       tags: [music]
       requestBody:
@@ -2872,8 +2881,8 @@ paths:
          the slot from the parsed container and refuses a body whose `slot` disagrees with it with
          `code: grab_rejected`, so a tampered `slot` cannot place an audiobook container in an
          ebook slot. With `replace_existing: true` every file of that slot is removed once the new
-         one is placed and verified; the other slot is never touched. A refused grab answers 422
-         with `code: grab_rejected`; a book with no usable quality profile answers 422 with
+         one is placed and verified; the other slot is never touched. A refused grab, a release
+         the download client already holds included, answers 422 with `code: grab_rejected`; a book with no usable quality profile answers 422 with
          `code: no_quality_profile`.
       tags: [books]
       parameters:

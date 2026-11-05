@@ -632,6 +632,10 @@ func (s *Server) GrabEpisodeRelease(
 		ctx, sr, request.EpisodeId, []uint32{request.EpisodeId},
 	)
 	switch {
+	case errors.Is(err, download.ErrTorrentAlreadyExists):
+		return GrabEpisodeRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errAlreadyInClient(sr.Title),
+		}, nil
 	case errors.Is(err, download.ErrUntrustedSource),
 		errors.Is(err, download.ErrNoWantedFiles),
 		errors.Is(err, download.ErrClientFull),
@@ -734,6 +738,10 @@ func (s *Server) GrabSeasonRelease(
 		ctx, request.Id, request.Number, sr, replaceExisting(request.Body),
 	)
 	switch {
+	case errors.Is(err, download.ErrTorrentAlreadyExists):
+		return GrabSeasonRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errAlreadyInClient(sr.Title),
+		}, nil
 	case errors.Is(err, download.ErrUntrustedSource),
 		errors.Is(err, download.ErrNoWantedFiles),
 		errors.Is(err, download.ErrClientFull),
@@ -868,6 +876,10 @@ func (s *Server) GrabSeriesRelease(
 		ctx, request.Id, sr, replaceExisting(request.Body),
 	)
 	switch {
+	case errors.Is(err, download.ErrTorrentAlreadyExists):
+		return GrabSeriesRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errAlreadyInClient(sr.Title),
+		}, nil
 	case errors.Is(err, download.ErrUntrustedSource),
 		errors.Is(err, download.ErrNoWantedFiles),
 		errors.Is(err, download.ErrClientFull),

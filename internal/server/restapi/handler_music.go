@@ -719,6 +719,10 @@ func (s *Server) GrabMusicArtistRelease(
 		return GrabMusicArtistRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: errNoQualityProfile(err.Error()),
 		}, nil
+	case errors.Is(err, download.ErrTorrentAlreadyExists):
+		return GrabMusicArtistRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errAlreadyInClient(sr.Title),
+		}, nil
 	case grabRefused(err):
 		return GrabMusicArtistRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
@@ -863,6 +867,10 @@ func (s *Server) GrabMusicAlbumRelease(
 	case errors.Is(err, music.ErrNoQualityProfile):
 		return GrabMusicAlbumRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: errNoQualityProfile(err.Error()),
+		}, nil
+	case errors.Is(err, download.ErrTorrentAlreadyExists):
+		return GrabMusicAlbumRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errAlreadyInClient(sr.Title),
 		}, nil
 	case grabRefused(err):
 		return GrabMusicAlbumRelease422JSONResponse{

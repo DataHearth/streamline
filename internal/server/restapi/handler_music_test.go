@@ -1404,6 +1404,7 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 				Entry("untrusted source", download.ErrUntrustedSource),
 				Entry("client full", download.ErrClientFull),
 				Entry("unsafe torrent name", download.ErrUnsafeTorrentName),
+				Entry("already in the client", download.ErrTorrentAlreadyExists),
 			)
 
 			It("404s for an unknown album", func() {

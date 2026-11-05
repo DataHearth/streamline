@@ -1327,7 +1327,8 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 				To(Equal(http.StatusBadRequest))
 		})
 
-		DescribeTable("maps a refused grab to grab_rejected",
+		DescribeTable(
+			"maps a refused grab to grab_rejected",
 			func(err error) {
 				app.books.EXPECT().
 					GrabBookRelease(mock.Anything, uint32(7), mock.Anything).
@@ -1347,6 +1348,10 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 			Entry("an untrusted source", download.ErrUntrustedSource),
 			Entry("a full client", download.ErrClientFull),
 			Entry("an unsafe name", download.ErrUnsafeTorrentName),
+			Entry(
+				"a torrent the client already holds",
+				download.ErrTorrentAlreadyExists,
+			),
 		)
 
 		It("maps the other failures", func() {
