@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/http/httptest"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -19,6 +20,8 @@ import (
 const (
 	AdminEmail    = "e2e-admin@streamline.local"
 	AdminPassword = "e2e-Admin-Passw0rd!"
+
+	memoryDir = "/dev/shm"
 )
 
 // Start boots the real wired app (temp SQLite, seeded admin) on an ephemeral
@@ -36,6 +39,14 @@ func Start(extra ...map[string]any) (*server.App, string) {
 	prev := observability.StderrSink
 	observability.StderrSink = GinkgoWriter
 	DeferCleanup(func() { observability.StderrSink = prev })
+
+	// Every file of the app (database, config, data_dir) lands under TMPDIR.
+	// On a disk, one suite's SQLite fsyncs wait for whatever else is being
+	// written there, and the whole tree's test binaries being linked stalled a
+	// request past the client's timeout. Nothing here asserts on durability.
+	if info, err := os.Stat(memoryDir); err == nil && info.IsDir() {
+		GinkgoT().Setenv("TMPDIR", memoryDir)
+	}
 
 	// SetupFile, not Setup: config-backed resource CRUD (quality profiles,
 	// indexers, download clients, media servers, schedules) goes through

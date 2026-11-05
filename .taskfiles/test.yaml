@@ -1,5 +1,14 @@
 version: "3"
 
+vars:
+  # ginkgo builds every suite it is pointed at while it runs them, skipped or
+  # not, inside --timeout. Over the whole tree that was 51 test binaries with no
+  # e2e spec, and building them starved the e2e suites of disk and CPU until
+  # requests and browser clicks hit their own timeouts.
+  E2E_PACKAGES:
+    sh: grep -rl --include='*_test.go' 'Label(.*"e2e"' cmd e2e internal |
+      xargs -n1 dirname | sort -u | sed 's|^|./|' | tr '\n' ' '
+
 tasks:
   unit:
     desc: Run unit tests only
@@ -15,7 +24,7 @@ tasks:
     desc: Run hermetic e2e tests (API + web; container-backed specs excluded)
     deps: [":build:js", ":build:css"]
     cmd: go tool ginkgo run -r --keep-going --label-filter="e2e && !containers{{with
-      .LABEL_FILTER}} && {{.}}{{end}}" --timeout=1m15s {{.CLI_ARGS}}
+      .LABEL_FILTER}} && {{.}}{{end}}" --timeout=1m15s {{.CLI_ARGS | default .E2E_PACKAGES}}
 
   e2e:containers:
     desc: Run container-backed e2e tests (needs Docker)
@@ -41,5 +50,13 @@ tasks:
 
   default:
     desc: Run entire test suite
-    cmd: go tool ginkgo run -r --keep-going {{.CLI_ARGS}}
+    # The e2e specs go first and alone: ginkgo starts with cmd/ and e2e/, so in
+    # one run they would sit in the middle of the whole tree's builds. The second
+    # run still happens when the first fails, so one report covers everything.
+    cmd: |
+      go tool ginkgo run -r --keep-going --label-filter=e2e {{with .JUNIT_DIR}}--junit-report={{.}}/junit-e2e.xml{{end}} {{.CLI_ARGS}} {{.E2E_PACKAGES}}
+      e2e=$?
+      go tool ginkgo run -r --keep-going --label-filter='!e2e' {{with .JUNIT_DIR}}--junit-report={{.}}/junit-rest.xml{{end}} {{.CLI_ARGS}}
+      rest=$?
+      exit $((e2e | rest))
 

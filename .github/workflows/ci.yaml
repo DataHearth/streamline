@@ -171,13 +171,12 @@ jobs:
       - name: Build frontend assets
         run: task build:js build:css
       - name: Run tests
-        run: task test -- --keep-going
-          --junit-report=/tmp/streamline/junit-report.xml
+        run: task test JUNIT_DIR=/tmp/streamline -- --keep-going
       - name: Publish test report
         if: success() || failure()
         uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
         with:
-          report_paths: /tmp/streamline/junit-report.xml
+          report_paths: /tmp/streamline/junit-*.xml
           check_name: Test Results
           detailed_summary: true
           fail_on_failure: false
