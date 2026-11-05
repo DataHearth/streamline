@@ -1,6 +1,9 @@
 <script lang="ts" generics="T extends string">
-	import { ChevronDown } from "@lucide/svelte";
+	import { tick } from "svelte";
+	import { ChevronDown, Search } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
+	import { fold } from "@lib/text";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { readOnlyLock } from "@lib/config.svelte";
 	import DropdownMenu from "@components/shared/DropdownMenu.svelte";
 	import DropdownOption from "@components/shared/DropdownOption.svelte";
@@ -28,6 +31,11 @@
 		// someone identify which library is theirs and copy its key into config.
 		// See readOnlyLock(), which already names discovery as exempt.
 		readOnlyExempt?: boolean;
+		// A filter field above the options, matching a label, hint or value,
+		// accents and case aside. For lists long enough to hunt through.
+		searchable?: boolean;
+		// Caps the open list's height in px; it scrolls past that.
+		maxHeight?: number;
 	};
 
 	let {
@@ -39,6 +47,8 @@
 		disabled = false,
 		ariaLabel,
 		readOnlyExempt = false,
+		searchable = false,
+		maxHeight,
 	}: Props = $props();
 
 	const lock = readOnlyLock();
@@ -47,6 +57,16 @@
 
 	let open = $state(false);
 	let triggerEl = $state<HTMLButtonElement | null>(null);
+	let searchEl = $state<HTMLInputElement | null>(null);
+	let query = $state("");
+
+	let shown = $derived.by(() => {
+		const q = fold(query.trim());
+		if (!searchable || q === "") return options;
+		return options.filter((o) =>
+			[o.label, o.hint ?? "", o.value].some((t) => fold(t).includes(q)),
+		);
+	});
 
 	let selectedLabel = $derived(
 		options.find((o) => o.value === value)?.label ?? "",
@@ -58,7 +78,26 @@
 
 	function toggle() {
 		if (open) close();
-		else if (!off) open = true;
+		else if (!off) {
+			query = "";
+			open = true;
+			if (searchable) void tick().then(() => searchEl?.focus());
+		}
+	}
+
+	// Enter takes the first match; the down arrow moves into the list, whose
+	// options are ordinary buttons from there on.
+	function onSearchKey(e: KeyboardEvent) {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			if (shown[0]) pick(shown[0].value);
+		} else if (e.key === "ArrowDown") {
+			e.preventDefault();
+			const first = (e.currentTarget as HTMLElement)
+				.closest(".dd")
+				?.querySelector<HTMLElement>('[role="option"]');
+			first?.focus();
+		}
 	}
 
 	function pick(v: T) {
@@ -108,9 +147,11 @@
 	anchor={triggerEl}
 	onClose={close}
 	matchAnchor
+	{maxHeight}
+	header={searchable ? searchField : undefined}
 	ariaLabel={label ?? ariaLabel}
 >
-	{#each options as o (o.value)}
+	{#each shown as o (o.value)}
 		<DropdownOption
 			label={o.label}
 			hint={o.hint}
@@ -118,5 +159,24 @@
 			selected={value === o.value}
 			onSelect={() => pick(o.value)}
 		/>
+	{:else}
+		<li class="px-3 py-2 text-sm text-fg-muted">{i18n.common_no_matches()}</li>
 	{/each}
 </DropdownMenu>
+
+{#snippet searchField()}
+	<label class="flex items-center gap-2 rounded-md bg-bg px-2.5">
+		<Search size={14} class="shrink-0 text-fg-muted" aria-hidden="true" />
+		<input
+			bind:this={searchEl}
+			bind:value={query}
+			type="search"
+			spellcheck="false"
+			autocomplete="off"
+			placeholder={i18n.common_search()}
+			aria-label={i18n.common_search()}
+			onkeydown={onSearchKey}
+			class="h-9 w-full min-w-0 bg-transparent text-sm text-fg placeholder:text-fg-faint focus:outline-none"
+		/>
+	</label>
+{/snippet}

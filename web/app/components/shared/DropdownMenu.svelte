@@ -22,6 +22,12 @@
 		minWidth?: string;
 		role?: "listbox" | "menu";
 		ariaLabel?: string;
+		// A ceiling on the list's height in px, under the space budget below: a
+		// long list that should scroll in a compact box rather than fill the
+		// window (the language picker's twenty-odd rows).
+		maxHeight?: number;
+		// Rendered above the list and outside its scroll, e.g. a search field.
+		header?: Snippet;
 		children: Snippet;
 	};
 
@@ -34,11 +40,14 @@
 		minWidth,
 		role = "listbox",
 		ariaLabel,
+		maxHeight,
+		header,
 		children,
 	}: Props = $props();
 
 	let menuEl = $state<HTMLDivElement | null>(null);
 	let listEl = $state<HTMLUListElement | null>(null);
+	let headerEl = $state<HTMLDivElement | null>(null);
 	let menuTop = $state(0);
 	let menuLeft = $state(0);
 	let menuWidth = $state(0);
@@ -115,14 +124,20 @@
 		// Measured on the list's scroll height, not the rendered box: the box is
 		// already clamped by the budget this decides, so reading it back would let
 		// the flip chase its own result.
-		const h = listEl ? listEl.scrollHeight + LIST_PAD : (menuEl?.offsetHeight ?? 0);
+		// The header does not scroll, so it comes off the list's budget.
+		const headH = headerEl?.offsetHeight ?? 0;
+		const cap = maxHeight ?? Number.POSITIVE_INFINITY;
+		const listH = listEl ? listEl.scrollHeight + LIST_PAD : (menuEl?.offsetHeight ?? 0);
+		const h = Math.min(listH, cap) + headH;
 		const below = window.innerHeight - r.bottom - GAP - PAD;
 		const above = r.top - GAP - PAD;
 		flipped = h > below && above > below;
 		// Never below a floor: a cramped window gets a short scrolling list rather
 		// than a sliver.
-		maxH = Math.max(MIN_H, flipped ? above : below);
-		menuTop = flipped ? Math.max(PAD, r.top - GAP - Math.min(h, maxH)) : r.bottom + GAP;
+		maxH = Math.min(cap, Math.max(MIN_H, (flipped ? above : below) - headH));
+		menuTop = flipped
+			? Math.max(PAD, r.top - GAP - Math.min(h, maxH + headH))
+			: r.bottom + GAP;
 		placed = true;
 	}
 
@@ -204,6 +219,11 @@
 		style:--dd-min-width={minWidth ?? "0px"}
 		style:--dd-out-ms="{OUT_MS}ms"
 	>
+		{#if header}
+			<div bind:this={headerEl} class="border-b border-border p-1.5">
+				{@render header()}
+			</div>
+		{/if}
 		<ul
 			bind:this={listEl}
 			{role}

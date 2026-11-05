@@ -125,7 +125,8 @@
 
 
 	// The languages Hardcover catalogues most editions in. The API takes any
-	// ISO 639-1 code, so a code set in the config file is offered too.
+	// ISO 639-1 code, so a code set in the config file is offered too. One line
+	// per option: the search matches the code, so it need not be shown.
 	const BOOK_LANGUAGES = [
 		"ar", "cs", "da", "de", "el", "en", "es", "fi", "fr", "he", "hu", "it",
 		"ja", "ko", "nl", "pl", "pt", "ro", "ru", "sv", "tr", "uk", "zh",
@@ -135,7 +136,7 @@
 			? BOOK_LANGUAGES
 			: [...BOOK_LANGUAGES, current];
 		return codes
-			.map((code) => ({ value: code, label: languageName(code, true), hint: code }))
+			.map((code) => ({ value: code, label: languageName(code, true) }))
 			.sort((x, y) => x.label.localeCompare(y.label));
 	}
 
@@ -269,6 +270,8 @@
 						label={i18n.library_book_language()}
 						value={lib.book_language}
 						options={bookLanguageOptions(lib.book_language)}
+						searchable
+						maxHeight={264}
 						onChange={(v) => {
 							if (v !== lib.book_language) saveLibrary.mutate({ book_language: v });
 						}}
