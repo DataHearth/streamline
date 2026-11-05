@@ -630,7 +630,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			Expect(err).To(MatchError(boom))
 		})
 
-		It("orders imports first, then by status and progress", func() {
+		It("orders imports first, then by status and progress, stalled after downloading", func() {
 			now := time.Now()
 			entries := []QueueEntry{
 				{RecordID: 1, Status: "downloading", Progress: 0.42, CreatedAt: now},
@@ -651,13 +651,14 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 				},
 				{RecordID: 7, Status: "error", Progress: 0.1, CreatedAt: now},
 				{RecordID: 8, Status: "stalled", Progress: 0.5, CreatedAt: now},
+				{RecordID: 9, Status: "stalled", Progress: 0.9, CreatedAt: now},
 			}
 			sortQueue(entries)
 			ids := make([]uint32, 0, len(entries))
 			for _, e := range entries {
 				ids = append(ids, e.RecordID)
 			}
-			Expect(ids).To(Equal([]uint32{4, 5, 7, 3, 8, 6, 1, 2}))
+			Expect(ids).To(Equal([]uint32{4, 5, 7, 3, 6, 1, 9, 8, 2}))
 		})
 
 		It("keeps a stalled torrent stalled rather than downloading", func() {

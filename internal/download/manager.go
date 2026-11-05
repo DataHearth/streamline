@@ -556,10 +556,11 @@ func (d *download) refreshQueue(ctx context.Context) ([]QueueEntry, error) {
 }
 
 // sortQueue orders the queue by how close an entry is to the library: an
-// import first, then what waits on a person (held, error), then downloads,
-// then paused ones. Within a rank the furthest along comes first, then the
-// newest. Newest first alone left a download about to finish anywhere in
-// the list.
+// import first, then what waits on a person (held, error), then downloads
+// that are moving, then stalled ones, then paused ones. Within a rank the
+// furthest along comes first, then the newest. Newest first alone left a
+// download about to finish anywhere in the list; sharing a rank with the
+// active downloads scattered stalled rows between them by progress.
 func sortQueue(entries []QueueEntry) {
 	sort.SliceStable(entries, func(a, b int) bool {
 		ea, eb := entries[a], entries[b]
@@ -581,10 +582,12 @@ func queueRank(status string) int {
 		return 1
 	case "error":
 		return 2
-	case "downloading", "stalled":
+	case "downloading":
 		return 3
-	default:
+	case "stalled":
 		return 4
+	default:
+		return 5
 	}
 }
 

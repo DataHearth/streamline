@@ -132,10 +132,10 @@
 		error: 1,
 		failed: 1,
 		downloading: 2,
-		stalled: 2,
-		importing: 3,
-		paused: 4,
-		completed: 5,
+		stalled: 3,
+		importing: 4,
+		paused: 5,
+		completed: 6,
 	};
 
 	function sortValue(
