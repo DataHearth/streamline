@@ -54,7 +54,7 @@ Two halves of keeping the database honest against the filesystem.
 
 **Orphan scan** finds files on disk that Streamline doesn't know about. A confident match for a movie already in the library with no file is adopted where it lies — no copy, no link, no rename — and everything else is queued for review rather than imported blind, with the same accept/match/exclude flow as an import scan.
 
-**Drift check** finds records whose files have gone. It doesn't act immediately: a file must be missing for `library.drift_grace_ticks` consecutive checks (default 3) before its row is deleted. At the default 15-minute interval that's 45 minutes of tolerance, which is what stops a brief NFS outage from erasing your library metadata.
+**Drift check** finds records whose files have gone. It doesn't act immediately: a file must be missing for `library.drift_grace_ticks` consecutive checks (default 3) before its row is deleted and what it belonged to goes back to Wanted: the movie or episode, the album, or the book's ebook or audiobook slot once that slot holds no file. At the default 15-minute interval that's 45 minutes of tolerance, which is what stops a brief NFS outage from erasing your library metadata. A longer outage does revert everything on that volume, and the monitored titles among it are then searched for again.
 
 If your storage is flaky, raise `drift_grace_ticks` (max 20) rather than lengthening the interval — you keep prompt detection while widening the tolerance.
 

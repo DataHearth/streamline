@@ -12,8 +12,11 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	entalbum "github.com/datahearth/streamline/ent/album"
+	entbook "github.com/datahearth/streamline/ent/book"
 	entepisode "github.com/datahearth/streamline/ent/episode"
 	entmediaevent "github.com/datahearth/streamline/ent/mediaevent"
+	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
@@ -305,6 +308,213 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(since.UTC()).To(BeTemporally("==", oldest))
+	})
+
+	Describe("track and book files", func() {
+		var missingSince time.Time
+
+		// file writes a row whose file is already gone past the grace window.
+		file := func(name string, set func(*ent.MediaFileCreate)) *ent.MediaFile {
+			GinkgoHelper()
+			c := entClient.MediaFile.Create().
+				SetPath(filepath.Join(tmpDir, name)).
+				SetSize(4).
+				SetMissingSince(missingSince)
+			set(c)
+			return c.SaveX(ctx)
+		}
+		driftEvents := func(t entmediaevent.Type) []*ent.MediaEvent {
+			GinkgoHelper()
+			return entClient.MediaEvent.Query().
+				Where(entmediaevent.TypeEQ(t)).
+				WithAlbum().
+				WithBook().
+				AllX(ctx)
+		}
+
+		BeforeEach(func() {
+			missingSince = time.Now().Add(-2 * time.Hour).UTC()
+		})
+
+		Describe("of an album", func() {
+			var (
+				alb      *ent.Album
+				newTrack func(position uint16) *ent.Track
+			)
+
+			BeforeEach(func() {
+				owner := entClient.Artist.Create().
+					SetMbid("artist-mbid").SetName("Artist").
+					SaveX(ctx)
+				alb = entClient.Album.Create().
+					SetMbid("album-mbid").SetTitle("Album").
+					SetArtist(owner).SetStatus(entalbum.StatusAvailable).
+					SaveX(ctx)
+				newTrack = func(position uint16) *ent.Track {
+					return entClient.Track.Create().
+						SetTitle(fmt.Sprintf("Track %d", position)).
+						SetDisc(1).SetPosition(position).SetAlbum(alb).
+						SaveX(ctx)
+				}
+			})
+
+			It(
+				"sends an available album back to wanted, keeping its other tracks",
+				func() {
+					gone := file(
+						"01.flac",
+						func(c *ent.MediaFileCreate) { c.SetTrack(newTrack(1)) },
+					)
+					kept := filepath.Join(tmpDir, "02.flac")
+					Expect(os.WriteFile(kept, []byte("data"), 0o644)).To(Succeed())
+					other := entClient.MediaFile.Create().
+						SetPath(kept).SetSize(4).SetTrack(newTrack(2)).SaveX(ctx)
+
+					Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+					_, err := store.FindMediaFileByID(ctx, gone.ID)
+					Expect(ent.IsNotFound(err)).To(BeTrue())
+					_, err = store.FindMediaFileByID(ctx, other.ID)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(entClient.Album.GetX(ctx, alb.ID).Status).
+						To(Equal(entalbum.StatusWanted))
+				},
+			)
+
+			It("reports one event per album for the whole sweep", func() {
+				file(
+					"01.flac",
+					func(c *ent.MediaFileCreate) { c.SetTrack(newTrack(1)) },
+				)
+				file(
+					"02.flac",
+					func(c *ent.MediaFileCreate) { c.SetTrack(newTrack(2)) },
+				)
+
+				Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+				confirmed := driftEvents(entmediaevent.TypeDriftConfirmed)
+				Expect(confirmed).To(HaveLen(1))
+				Expect(confirmed[0].Edges.Album).NotTo(BeNil())
+				Expect(confirmed[0].Edges.Album.ID).To(Equal(alb.ID))
+				Expect(confirmed[0].Payload["tracks"]).To(BeEquivalentTo(2))
+				Expect(confirmed[0].Payload).To(HaveKey("missing_since"))
+				Expect(driftEvents(entmediaevent.TypeFileRemoved)).To(BeEmpty(),
+					"a diagnosed disappearance is not also a bare removal")
+			})
+
+			It("leaves an album it does not hold as available alone", func() {
+				entClient.Album.UpdateOneID(alb.ID).
+					SetStatus(entalbum.StatusDownloading).ExecX(ctx)
+				gone := file(
+					"01.flac",
+					func(c *ent.MediaFileCreate) { c.SetTrack(newTrack(1)) },
+				)
+
+				Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+				_, err := store.FindMediaFileByID(ctx, gone.ID)
+				Expect(ent.IsNotFound(err)).To(BeTrue())
+				Expect(entClient.Album.GetX(ctx, alb.ID).Status).
+					To(Equal(entalbum.StatusDownloading))
+			})
+
+			It(
+				"reports a file inside the grace window without touching the album",
+				func() {
+					row := entClient.MediaFile.Create().
+						SetPath(filepath.Join(tmpDir, "01.flac")).
+						SetSize(4).SetTrack(newTrack(1)).SaveX(ctx)
+
+					Expect(svc.RunDriftCheck(ctx, time.Hour)).To(Succeed())
+
+					_, err := store.FindMediaFileByID(ctx, row.ID)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(entClient.Album.GetX(ctx, alb.ID).Status).
+						To(Equal(entalbum.StatusAvailable))
+					detected := driftEvents(entmediaevent.TypeDriftDetected)
+					Expect(detected).To(HaveLen(1))
+					Expect(detected[0].Edges.Album.ID).To(Equal(alb.ID))
+					Expect(detected[0].Payload["tracks"]).To(BeEquivalentTo(1))
+				},
+			)
+		})
+
+		Describe("of a book", func() {
+			var b *ent.Book
+
+			BeforeEach(func() {
+				b = entClient.Book.Create().
+					SetHardcoverID(1).SetTitle("Book").
+					SetEbookStatus(entbook.EbookStatusAvailable).
+					SetAudiobookStatus(entbook.AudiobookStatusAvailable).
+					SaveX(ctx)
+			})
+
+			inSlot := func(kind entmediafile.BookKind) func(*ent.MediaFileCreate) {
+				return func(c *ent.MediaFileCreate) { c.SetBook(b).SetBookKind(kind) }
+			}
+
+			It("sends only the emptied slot back to wanted", func() {
+				gone := file("book.epub", inSlot(entmediafile.BookKindEbook))
+				kept := filepath.Join(tmpDir, "part1.m4b")
+				Expect(os.WriteFile(kept, []byte("data"), 0o644)).To(Succeed())
+				entClient.MediaFile.Create().SetPath(kept).SetSize(4).
+					SetBook(b).SetBookKind(entmediafile.BookKindAudiobook).SaveX(ctx)
+
+				Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+				_, err := store.FindMediaFileByID(ctx, gone.ID)
+				Expect(ent.IsNotFound(err)).To(BeTrue())
+				got := entClient.Book.GetX(ctx, b.ID)
+				Expect(got.EbookStatus).To(Equal(entbook.EbookStatusWanted))
+				Expect(
+					got.AudiobookStatus,
+				).To(Equal(entbook.AudiobookStatusAvailable))
+				confirmed := driftEvents(entmediaevent.TypeDriftConfirmed)
+				Expect(confirmed).To(HaveLen(1))
+				Expect(confirmed[0].Edges.Book.ID).To(Equal(b.ID))
+				Expect(confirmed[0].Payload["book_kind"]).To(Equal("ebook"))
+			})
+
+			It("keeps a slot available while it still holds a file", func() {
+				// A grab into a slot holding files fails on the file already
+				// there, so wanted would only burn a download.
+				gone := file("part1.m4b", inSlot(entmediafile.BookKindAudiobook))
+				kept := filepath.Join(tmpDir, "part2.m4b")
+				Expect(os.WriteFile(kept, []byte("data"), 0o644)).To(Succeed())
+				entClient.MediaFile.Create().SetPath(kept).SetSize(4).
+					SetBook(b).SetBookKind(entmediafile.BookKindAudiobook).SaveX(ctx)
+
+				Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+				_, err := store.FindMediaFileByID(ctx, gone.ID)
+				Expect(ent.IsNotFound(err)).To(BeTrue())
+				Expect(entClient.Book.GetX(ctx, b.ID).AudiobookStatus).
+					To(Equal(entbook.AudiobookStatusAvailable))
+				confirmed := driftEvents(entmediaevent.TypeDriftConfirmed)
+				Expect(
+					confirmed,
+				).To(HaveLen(1), "the row left, so the owner is told")
+			})
+
+			It(
+				"folds a whole audiobook into one event and empties the slot",
+				func() {
+					file("part1.m4b", inSlot(entmediafile.BookKindAudiobook))
+					file("part2.m4b", inSlot(entmediafile.BookKindAudiobook))
+
+					Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+					Expect(entClient.Book.GetX(ctx, b.ID).AudiobookStatus).
+						To(Equal(entbook.AudiobookStatusWanted))
+					confirmed := driftEvents(entmediaevent.TypeDriftConfirmed)
+					Expect(confirmed).To(HaveLen(1))
+					Expect(confirmed[0].Payload["files"]).To(BeEquivalentTo(2))
+					Expect(confirmed[0].Payload["book_kind"]).To(Equal("audiobook"))
+				},
+			)
+		})
 	})
 
 	It("deletes a media_file row whose owner is gone", func() {

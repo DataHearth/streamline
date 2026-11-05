@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 )
@@ -258,11 +260,11 @@ func (db *DB) ListMediaFilesForDrift(
 	return rows, nil
 }
 
-// FindMediaFileWithOwners loads one row with both owner edges — the shape the
+// FindMediaFileWithOwners loads one row with its owner edges — the shape the
 // drift check needs once a file turns out to be missing, which is the rare
 // case worth paying an extra query for. The episode edge carries its season
-// and show: drift is reported per show, so the sweep needs the season number
-// and the show id, not just the episode.
+// and show, and the track edge its album: drift is reported per show and per
+// album, so the sweep needs those ids, not just the episode or the track.
 func (db *DB) FindMediaFileWithOwners(
 	ctx context.Context,
 	id uint32,
@@ -273,6 +275,11 @@ func (db *DB) FindMediaFileWithOwners(
 		WithEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
+		WithTrack(func(q *ent.TrackQuery) {
+			q.Select(track.FieldID).
+				WithAlbum(func(aq *ent.AlbumQuery) { aq.Select(album.FieldID) })
+		}).
+		WithBook(func(q *ent.BookQuery) { q.Select(book.FieldID) }).
 		Only(ctx)
 }
 
@@ -484,4 +491,75 @@ func (db *DB) DeleteMediaFileAndRevertEpisode(
 	slog.InfoContext(ctx, "media file removed, episode reverted to wanted",
 		"media_file.id", mediaFileID, "episode.id", episodeID)
 	return nil
+}
+
+// DeleteMediaFileAndRevertAlbum removes a track's MediaFile row and moves its
+// album from available to wanted inside a single transaction. An album in any
+// other status keeps it: what it is waiting on still stands.
+func (db *DB) DeleteMediaFileAndRevertAlbum(
+	ctx context.Context,
+	mediaFileID, albumID uint32,
+) error {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	if err := tx.MediaFile.DeleteOneID(mediaFileID).Exec(ctx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("delete media_file %d: %w", mediaFileID, err)
+	}
+	if err := tx.Album.Update().
+		Where(album.IDEQ(albumID), album.StatusEQ(album.StatusAvailable)).
+		SetStatus(album.StatusWanted).
+		Exec(ctx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("revert album %d to wanted: %w", albumID, err)
+	}
+	return tx.Commit()
+}
+
+// DeleteMediaFileAndRevertBookSlot removes a book's MediaFile row and, once the
+// slot holds no file, moves it from available to wanted inside a single
+// transaction. A slot that still holds one stays available: the importer
+// refuses a grab into it with ErrDestExists, so wanted would only burn a
+// download.
+func (db *DB) DeleteMediaFileAndRevertBookSlot(
+	ctx context.Context,
+	mediaFileID, bookID uint32,
+	kind mediafile.BookKind,
+) error {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	if err := tx.MediaFile.DeleteOneID(mediaFileID).Exec(ctx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("delete media_file %d: %w", mediaFileID, err)
+	}
+	held, err := tx.MediaFile.Query().
+		Where(mediafile.HasBookWith(book.ID(bookID)), mediafile.BookKindEQ(kind)).
+		Exist(ctx)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("check book %d slot files: %w", bookID, err)
+	}
+	if !held {
+		u := tx.Book.Update().Where(book.ID(bookID))
+		switch kind {
+		case mediafile.BookKindEbook:
+			u = u.Where(book.EbookStatusEQ(book.EbookStatusAvailable)).
+				SetEbookStatus(book.EbookStatusWanted)
+		case mediafile.BookKindAudiobook:
+			u = u.Where(book.AudiobookStatusEQ(book.AudiobookStatusAvailable)).
+				SetAudiobookStatus(book.AudiobookStatusWanted)
+		default:
+			tx.Rollback()
+			return fmt.Errorf("revert book %d: unknown kind %q", bookID, kind)
+		}
+		if err := u.Exec(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("revert book %d %s slot: %w", bookID, kind, err)
+		}
+	}
+	return tx.Commit()
 }

@@ -5300,6 +5300,138 @@ func (_c *MockTx_DeleteMediaFile_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
+// DeleteMediaFileAndRevertAlbum provides a mock function for the type MockTx
+func (_mock *MockTx) DeleteMediaFileAndRevertAlbum(ctx context.Context, mediaFileID uint32, albumID uint32) error {
+	ret := _mock.Called(ctx, mediaFileID, albumID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteMediaFileAndRevertAlbum")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) error); ok {
+		r0 = returnFunc(ctx, mediaFileID, albumID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_DeleteMediaFileAndRevertAlbum_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteMediaFileAndRevertAlbum'
+type MockTx_DeleteMediaFileAndRevertAlbum_Call struct {
+	*mock.Call
+}
+
+// DeleteMediaFileAndRevertAlbum is a helper method to define mock.On call
+//   - ctx context.Context
+//   - mediaFileID uint32
+//   - albumID uint32
+func (_e *MockTx_Expecter) DeleteMediaFileAndRevertAlbum(ctx any, mediaFileID any, albumID any) *MockTx_DeleteMediaFileAndRevertAlbum_Call {
+	return &MockTx_DeleteMediaFileAndRevertAlbum_Call{Call: _e.mock.On("DeleteMediaFileAndRevertAlbum", ctx, mediaFileID, albumID)}
+}
+
+func (_c *MockTx_DeleteMediaFileAndRevertAlbum_Call) Run(run func(ctx context.Context, mediaFileID uint32, albumID uint32)) *MockTx_DeleteMediaFileAndRevertAlbum_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_DeleteMediaFileAndRevertAlbum_Call) Return(err error) *MockTx_DeleteMediaFileAndRevertAlbum_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_DeleteMediaFileAndRevertAlbum_Call) RunAndReturn(run func(ctx context.Context, mediaFileID uint32, albumID uint32) error) *MockTx_DeleteMediaFileAndRevertAlbum_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteMediaFileAndRevertBookSlot provides a mock function for the type MockTx
+func (_mock *MockTx) DeleteMediaFileAndRevertBookSlot(ctx context.Context, mediaFileID uint32, bookID uint32, kind mediafile.BookKind) error {
+	ret := _mock.Called(ctx, mediaFileID, bookID, kind)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteMediaFileAndRevertBookSlot")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, mediafile.BookKind) error); ok {
+		r0 = returnFunc(ctx, mediaFileID, bookID, kind)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_DeleteMediaFileAndRevertBookSlot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteMediaFileAndRevertBookSlot'
+type MockTx_DeleteMediaFileAndRevertBookSlot_Call struct {
+	*mock.Call
+}
+
+// DeleteMediaFileAndRevertBookSlot is a helper method to define mock.On call
+//   - ctx context.Context
+//   - mediaFileID uint32
+//   - bookID uint32
+//   - kind mediafile.BookKind
+func (_e *MockTx_Expecter) DeleteMediaFileAndRevertBookSlot(ctx any, mediaFileID any, bookID any, kind any) *MockTx_DeleteMediaFileAndRevertBookSlot_Call {
+	return &MockTx_DeleteMediaFileAndRevertBookSlot_Call{Call: _e.mock.On("DeleteMediaFileAndRevertBookSlot", ctx, mediaFileID, bookID, kind)}
+}
+
+func (_c *MockTx_DeleteMediaFileAndRevertBookSlot_Call) Run(run func(ctx context.Context, mediaFileID uint32, bookID uint32, kind mediafile.BookKind)) *MockTx_DeleteMediaFileAndRevertBookSlot_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 mediafile.BookKind
+		if args[3] != nil {
+			arg3 = args[3].(mediafile.BookKind)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_DeleteMediaFileAndRevertBookSlot_Call) Return(err error) *MockTx_DeleteMediaFileAndRevertBookSlot_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_DeleteMediaFileAndRevertBookSlot_Call) RunAndReturn(run func(ctx context.Context, mediaFileID uint32, bookID uint32, kind mediafile.BookKind) error) *MockTx_DeleteMediaFileAndRevertBookSlot_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteMediaFileAndRevertEpisode provides a mock function for the type MockTx
 func (_mock *MockTx) DeleteMediaFileAndRevertEpisode(ctx context.Context, mediaFileID uint32, episodeID uint32) error {
 	ret := _mock.Called(ctx, mediaFileID, episodeID)

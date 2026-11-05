@@ -11,8 +11,10 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/scheduler"
 	"go.opentelemetry.io/otel/attribute"
@@ -22,7 +24,7 @@ import (
 // RunDriftCheck verifies every tracked MediaFile is still present on disk.
 // A missing file starts a grace clock at missing_since; once the file has been
 // gone for at least cfg.DriftGraceTicks intervals the row is deleted and its
-// owning movie or episode reverts to "wanted". The clock starts when a tick
+// owner reverts to "wanted". The clock starts when a tick
 // first sees the file gone, not when one last saw it: after downtime longer
 // than the window, a volume not yet mounted would otherwise revert the whole
 // library on the first tick.
@@ -133,14 +135,14 @@ func (s *Service) handleMissing(
 		slog.WarnContext(ctx, "mark missing failed",
 			"media_file.id", row.ID, "error", err)
 	}
-	showID, season, aggregated := episodeOwner(row)
+	group, season, aggregated := driftGroupOf(row)
 	if first {
 		// The aggregated payload carries no path, so this line is the only
 		// place the individual file is named.
 		slog.InfoContext(ctx, "drift detected a missing file",
 			"media_file.id", row.ID, "media_file.path", row.Path)
 		if aggregated {
-			acc.detect(showID, season)
+			acc.detect(group, season)
 		} else {
 			s.recordDrift(ctx, row, events.TypeDriftDetected, map[string]any{
 				"path": row.Path,
@@ -159,7 +161,7 @@ func (s *Service) handleMissing(
 		"media_file.id", row.ID, "media_file.path", row.Path,
 		"missing_since", row.MissingSince.UTC())
 	if aggregated {
-		acc.confirm(showID, season, *row.MissingSince)
+		acc.confirm(group, season, *row.MissingSince)
 	} else {
 		s.recordDrift(ctx, row, events.TypeDriftConfirmed, map[string]any{
 			"path":          row.Path,
@@ -172,6 +174,10 @@ func (s *Service) handleMissing(
 		s.revertMovie(ctx, row.ID, row.Edges.Movie.ID)
 	case row.Edges.Episode != nil:
 		s.revertEpisode(ctx, row.ID, row.Edges.Episode.ID)
+	case row.Edges.Track != nil && row.Edges.Track.Edges.Album != nil:
+		s.revertAlbum(ctx, row.ID, row.Edges.Track.Edges.Album.ID)
+	case row.Edges.Book != nil:
+		s.revertBookSlot(ctx, row.ID, row.Edges.Book.ID, row.BookKind)
 	default:
 		s.deleteOrphan(ctx, row)
 	}
@@ -201,21 +207,49 @@ func (s *Service) recordDrift(
 	}
 }
 
-// episodeOwner resolves the show and season an episode-owned file hangs off,
-// and reports whether the file's drift belongs in the per-show aggregate. A
-// movie or ownerless row is not aggregated, and neither is an episode whose
-// season or show edge failed to load — that keeps the per-episode event rather
-// than dropping the drift record on the floor.
-func episodeOwner(row *ent.MediaFile) (uint32, uint16, bool) {
-	ep := row.Edges.Episode
-	if ep == nil || ep.Edges.Season == nil || ep.Edges.Season.Edges.TvShow == nil {
-		return 0, 0, false
-	}
-	return ep.Edges.Season.Edges.TvShow.ID, ep.Edges.Season.Number, true
+// driftGroup is the owner a file's drift is folded into: a show, an album or
+// one slot of a book. Files of these go missing together, and a row per file
+// per tick buried the rest of the history under a single incident.
+type driftGroup struct {
+	scope    events.Scope
+	id       uint32
+	bookKind string
 }
 
-// driftTally is one show's worth of episode files that drifted the same way in
-// one sweep.
+// driftGroupOf resolves the group a file's drift belongs to, with the season
+// when that is a show, and reports whether it has one. A movie or ownerless
+// row does not, and neither does an episode whose season or show edge failed
+// to load — that keeps the per-episode event rather than dropping the drift
+// record on the floor.
+func driftGroupOf(row *ent.MediaFile) (driftGroup, uint16, bool) {
+	switch {
+	case row.Edges.Episode != nil:
+		ep := row.Edges.Episode
+		if ep.Edges.Season == nil || ep.Edges.Season.Edges.TvShow == nil {
+			return driftGroup{}, 0, false
+		}
+		return driftGroup{
+			scope: events.ScopeSeries,
+			id:    ep.Edges.Season.Edges.TvShow.ID,
+		}, ep.Edges.Season.Number, true
+	case row.Edges.Track != nil && row.Edges.Track.Edges.Album != nil:
+		return driftGroup{
+			scope: events.ScopeAlbum,
+			id:    row.Edges.Track.Edges.Album.ID,
+		}, 0, true
+	case row.Edges.Book != nil:
+		return driftGroup{
+			scope:    events.ScopeBook,
+			id:       row.Edges.Book.ID,
+			bookKind: string(row.BookKind),
+		}, 0, true
+	default:
+		return driftGroup{}, 0, false
+	}
+}
+
+// driftTally is one group's worth of files that drifted the same way in one
+// sweep.
 type driftTally struct {
 	seasons      map[uint16]struct{}
 	files        int
@@ -231,10 +265,18 @@ func (t *driftTally) add(season uint16, missingSince time.Time) {
 	}
 }
 
-func (t *driftTally) payload() map[string]any {
-	payload := map[string]any{
-		"seasons":  slices.Sorted(maps.Keys(t.seasons)),
-		"episodes": t.files,
+func (t *driftTally) payload(g driftGroup) map[string]any {
+	var payload map[string]any
+	switch g.scope {
+	case events.ScopeAlbum:
+		payload = map[string]any{"tracks": t.files}
+	case events.ScopeBook:
+		payload = map[string]any{"files": t.files, "book_kind": g.bookKind}
+	default:
+		payload = map[string]any{
+			"seasons":  slices.Sorted(maps.Keys(t.seasons)),
+			"episodes": t.files,
+		}
 	}
 	if !t.missingSince.IsZero() {
 		payload["missing_since"] = t.missingSince.UTC()
@@ -242,59 +284,57 @@ func (t *driftTally) payload() map[string]any {
 	return payload
 }
 
-// driftAccumulator folds a sweep's episode-owned drift into one event per show
-// per type. A show whose folder disappears drifts every episode it has at
-// once, and a row per file per tick buried the rest of the history under a
-// single incident.
+// driftAccumulator folds a sweep's drift into one event per group per type.
 type driftAccumulator struct {
-	detected  map[uint32]*driftTally
-	confirmed map[uint32]*driftTally
+	detected  map[driftGroup]*driftTally
+	confirmed map[driftGroup]*driftTally
 }
 
 func newDriftAccumulator() driftAccumulator {
 	return driftAccumulator{
-		detected:  make(map[uint32]*driftTally),
-		confirmed: make(map[uint32]*driftTally),
+		detected:  make(map[driftGroup]*driftTally),
+		confirmed: make(map[driftGroup]*driftTally),
 	}
 }
 
-func (a driftAccumulator) detect(showID uint32, season uint16) {
-	tallyFor(a.detected, showID).add(season, time.Time{})
+func (a driftAccumulator) detect(g driftGroup, season uint16) {
+	tallyFor(a.detected, g).add(season, time.Time{})
 }
 
 func (a driftAccumulator) confirm(
-	showID uint32,
+	g driftGroup,
 	season uint16,
 	missingSince time.Time,
 ) {
-	tallyFor(a.confirmed, showID).add(season, missingSince)
+	tallyFor(a.confirmed, g).add(season, missingSince)
 }
 
-func tallyFor(tallies map[uint32]*driftTally, showID uint32) *driftTally {
-	t, ok := tallies[showID]
+func tallyFor(tallies map[driftGroup]*driftTally, g driftGroup) *driftTally {
+	t, ok := tallies[g]
 	if !ok {
 		t = &driftTally{seasons: make(map[uint16]struct{})}
-		tallies[showID] = t
+		tallies[g] = t
 	}
 	return t
 }
 
 func (a driftAccumulator) flush(ctx context.Context) {
-	recordShowDrift(ctx, events.TypeDriftDetected, a.detected)
-	recordShowDrift(ctx, events.TypeDriftConfirmed, a.confirmed)
+	recordGroupDrift(ctx, events.TypeDriftDetected, a.detected)
+	recordGroupDrift(ctx, events.TypeDriftConfirmed, a.confirmed)
 }
 
-func recordShowDrift(
+func recordGroupDrift(
 	ctx context.Context,
 	t events.Type,
-	tallies map[uint32]*driftTally,
+	tallies map[driftGroup]*driftTally,
 ) {
-	for showID, tally := range tallies {
+	for g, tally := range tallies {
 		if err := events.Record(
-			ctx, nil, t, events.ScopeSeries, showID, tally.payload(),
+			ctx, nil, t, g.scope, g.id, tally.payload(g),
 		); err != nil {
 			slog.WarnContext(ctx, "record drift event failed",
-				"tvshow.id", showID, "event.type", string(t), "error", err)
+				"owner.scope", g.scope.String(), "owner.id", g.id,
+				"event.type", string(t), "error", err)
 		}
 	}
 }
@@ -338,6 +378,49 @@ func (s *Service) revertEpisode(ctx context.Context, mediaFileID, episodeID uint
 	))
 	slog.InfoContext(ctx, "drift reverted media file",
 		"media_file.id", mediaFileID, "episode.id", episodeID)
+}
+
+func (s *Service) revertAlbum(ctx context.Context, mediaFileID, albumID uint32) {
+	defer library.LockAlbumFiles(albumID)()
+	ctx = events.SuppressFileRemoved(ctx)
+	if err := s.store.DeleteMediaFileAndRevertAlbum(
+		ctx,
+		mediaFileID,
+		albumID,
+	); err != nil {
+		slog.ErrorContext(ctx, "drift revert failed",
+			"media_file.id", mediaFileID, "album.id", albumID, "error", err)
+		return
+	}
+	driftReverted.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("media.kind", "album"),
+	))
+	slog.InfoContext(ctx, "drift reverted media file",
+		"media_file.id", mediaFileID, "album.id", albumID)
+}
+
+func (s *Service) revertBookSlot(
+	ctx context.Context,
+	mediaFileID, bookID uint32,
+	kind mediafile.BookKind,
+) {
+	ctx = events.SuppressFileRemoved(ctx)
+	if err := s.store.DeleteMediaFileAndRevertBookSlot(
+		ctx,
+		mediaFileID,
+		bookID,
+		kind,
+	); err != nil {
+		slog.ErrorContext(ctx, "drift revert failed",
+			"media_file.id", mediaFileID, "book.id", bookID, "error", err)
+		return
+	}
+	driftReverted.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("media.kind", "book"),
+	))
+	slog.InfoContext(ctx, "drift reverted media file",
+		"media_file.id", mediaFileID, "book.id", bookID,
+		"book.kind", string(kind))
 }
 
 // deleteOrphan reaps a row whose owner is gone. Movie deletes predating the

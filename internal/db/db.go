@@ -976,6 +976,19 @@ type Store interface {
 		ctx context.Context,
 		mediaFileID, movieID uint32,
 	) error
+	// DeleteMediaFileAndRevertAlbum removes a track's MediaFile row and moves
+	// its album from available to wanted, atomically.
+	DeleteMediaFileAndRevertAlbum(
+		ctx context.Context,
+		mediaFileID, albumID uint32,
+	) error
+	// DeleteMediaFileAndRevertBookSlot removes a book's MediaFile row and, once
+	// the slot holds no file, moves it from available to wanted, atomically.
+	DeleteMediaFileAndRevertBookSlot(
+		ctx context.Context,
+		mediaFileID, bookID uint32,
+		kind mediafile.BookKind,
+	) error
 	// DeleteMediaFileAndRevertEpisode is the episode twin of
 	// DeleteMediaFileAndRevertMovie.
 	DeleteMediaFileAndRevertEpisode(
