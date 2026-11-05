@@ -34,6 +34,7 @@
 	// max-w-0) then absorbs everything left over instead of overflowing.
 	const pad = "w-px whitespace-nowrap py-3";
 	let fetching = $derived(torrent.status === "fetching");
+	let href = $derived(torrentHref(torrent));
 	let active = $derived(
 		torrent.status === "downloading" ||
 			torrent.status === "seeding" ||
@@ -77,7 +78,18 @@
 			</div>
 		{:else}
 			<div class="flex items-center gap-1.5">
-				<span class="truncate font-medium text-fg">{torrent.name}</span>
+				{#if href}
+					<!-- The row opens the drawer; the name alone leaves for the title's page. -->
+					<a
+						{href}
+						onclick={(e) => e.stopPropagation()}
+						class="truncate font-medium text-fg hover:text-accent hover:underline focus-visible:underline"
+					>
+						{torrent.name}
+					</a>
+				{:else}
+					<span class="truncate font-medium text-fg">{torrent.name}</span>
+				{/if}
 				{#if !torrent.tracked}
 					<span
 						class="shrink-0 rounded-full border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-fg-subtle"
@@ -88,21 +100,9 @@
 				{/if}
 			</div>
 			{@const release = torrentRelease(torrent)}
-			{@const href = torrentHref(torrent)}
 			{#if release}
 				<div class="truncate text-[11px] text-fg-subtle" title={release}>
-					{#if href}
-						<!-- The row opens the drawer; the release alone leaves for the page. -->
-						<a
-							{href}
-							onclick={(e) => e.stopPropagation()}
-							class="hover:text-accent hover:underline focus-visible:underline"
-						>
-							{release}
-						</a>
-					{:else}
-						{release}
-					{/if}
+					{release}
 				</div>
 			{:else}
 				<div class="truncate font-mono text-[11px] text-fg-subtle">
