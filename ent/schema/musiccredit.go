@@ -60,5 +60,8 @@ func (MusicCredit) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Edges("album"),
 		index.Edges("track"),
+		// An artist page reads one kind over a whole discography's tracks, and
+		// the index on the track alone would visit every row of each to filter.
+		index.Fields("kind").Edges("track"),
 	}
 }

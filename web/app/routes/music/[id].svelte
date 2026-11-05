@@ -51,6 +51,8 @@
 		type Reach,
 		type Release,
 		type Track,
+		type TrackCredits,
+		withTrackCredits,
 	} from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -100,6 +102,27 @@
 		artist ? (artist.albums.find((r) => r.id === selectedId) ?? defaultRelease(artist.albums)) : undefined,
 	);
 	let open = $derived(openId === null ? selected?.id : openId);
+	// Only the Discography tab shows these. Every track's credits load behind the
+	// page, and the release being looked at does not wait for them.
+	const allTrackCredits = createQuery<{ tracks: TrackCredits[] }>(() => ({
+		queryKey: ["music", "artist", id, "track-credits"],
+		queryFn: () => api<{ tracks: TrackCredits[] }>(`/music/artists/${id}/track-credits`),
+		enabled: !!id && tab === "discography",
+		refetchInterval: artist?.hydrating ? 60_000 : false,
+	}));
+	const releaseQuery = (rid: () => number | undefined) =>
+		createQuery<Release>(() => ({
+			queryKey: ["music", "album", rid()],
+			queryFn: () => api<Release>(`/music/albums/${rid()}`),
+			enabled: tab === "discography" && (rid() ?? 0) > 0 && !allTrackCredits.data,
+		}));
+	const selectedRelease = releaseQuery(() => selected?.id);
+	const openRelease = releaseQuery(() => open);
+	let trackCredits = $derived(
+		new Map<number, TrackCredits>(
+			[...(selectedRelease.data?.tracks ?? []), ...(openRelease.data?.tracks ?? []), ...(allTrackCredits.data?.tracks ?? [])].map((t) => [t.id, t]),
+		),
+	);
 	let canEdit = $derived(auth.canAddDirectly);
 
 	function select(r: Release) {
@@ -468,7 +491,7 @@
 		{#if tab === "discography"}
 			<div class="md:hidden">
 				<ReleaseAccordion
-					releases={artist.albums}
+					releases={artist.albums.map((r) => withTrackCredits(r, trackCredits))}
 					artistId={artist.id}
 					openId={open}
 					onToggle={(rid) => (openId = open === rid ? -1 : rid)}
@@ -504,7 +527,7 @@
 				</div>
 				{#if selected}
 					<ReleasePanel
-						release={selected}
+						release={withTrackCredits(selected, trackCredits)}
 						artistId={artist.id}
 						{canEdit}
 						onSearch={() => searchRelease(selected)}

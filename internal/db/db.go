@@ -45,9 +45,14 @@ type Store interface {
 
 	// music
 	CreateArtist(ctx context.Context, p CreateArtistParams) (*ent.Artist, error)
-	// FindArtistByID eager-loads the members and the albums with their
-	// tracks (disc, position), the tracks' media files and every credit.
+	// FindArtistByID eager-loads the members and the albums with their own
+	// credits and tracks (disc, position), the tracks' media files and only
+	// their featuring credits. FindAlbumByID loads every credit of one album.
 	FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error)
+	// FindArtistTrackCredits eager-loads the artist's albums, the artists they
+	// are listed under, and their tracks with only the credits a track displays
+	// on its own (artists and writers).
+	FindArtistTrackCredits(ctx context.Context, id uint32) (*ent.Artist, error)
 	// FindArtistRow returns the artist alone, with no edges loaded.
 	FindArtistRow(ctx context.Context, id uint32) (*ent.Artist, error)
 	// FindAlbumByID eager-loads the album's tracks (disc, then position) with

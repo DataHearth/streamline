@@ -72,6 +72,18 @@ func toMusicTrack(t music.TrackView) MusicTrack {
 	return out
 }
 
+func toMusicTrackCredits(in []music.TrackView) []MusicTrackCredits {
+	out := make([]MusicTrackCredits, 0, len(in))
+	for _, t := range in {
+		out = append(out, MusicTrackCredits{
+			Id:      t.Track.ID,
+			Artists: toMusicPeople(t.Artists),
+			Writers: toMusicPeople(t.Writers),
+		})
+	}
+	return out
+}
+
 func toMusicAlbumDate(a music.AlbumView) *openapi_types.Date {
 	if a.Album.ReleaseDate == nil {
 		return nil

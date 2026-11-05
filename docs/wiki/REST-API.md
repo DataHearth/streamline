@@ -132,7 +132,7 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 
 ## Endpoint map
 
-191 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential, `request_only` included), `Member` (`admin` or `member` — a `request_only` caller gets 403) or `🔒 Admin`; the Requests group spells out the exact roles.
+192 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential, `request_only` included), `Member` (`admin` or `member` — a `request_only` caller gets 403) or `🔒 Admin`; the Requests group spells out the exact roles.
 
 ### Movies
 
@@ -186,7 +186,8 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `GET` | `/music/artists` | Paginated list (`?page=`, `?limit=` 1-100, `?status=wanted\|downloading\|available`, `?monitored=monitored\|unmonitored`, `?query=` accent-folded over name, sort name, genre and album titles, `?sort=recent\|name`, `?order=`); items carry their albums as tiles with no tracks; `?with_total=false` skips counting the matches and leaves `total` out | Authenticated |
 | `GET` | `/music/artists/counts` | Faceted counts for the list's toolbar: each facet is counted with the other facet's filter applied, each with its own `*_total` row; with no parameters, the whole library | Authenticated |
 | `POST` | `/music/artists` | Add an artist by `mbid` (`monitor` defaults to `all`, optional `quality_profile`); `409` if already added, `422` for an unknown profile or policy, `429` when MusicBrainz is limiting | Member |
-| `GET` | `/music/artists/{id}` | Fetch an artist with its full tree: members, and every album with tracks, credits and personnel (`?lang=en\|fr` picks the overview) | Authenticated |
+| `GET` | `/music/artists/{id}` | Fetch an artist with its discography: members, and every album with tracks, credits and personnel (a track's `artists` and `writers` come from `GET /music/artists/{id}/track-credits` or `GET /music/albums/{id}`) (`?lang=en\|fr` picks the overview) | Authenticated |
+| `GET` | `/music/artists/{id}/track-credits` | The artists and writers of every track of the artist's discography, the per-track credits its detail leaves out; a track with neither is left out | Authenticated |
 | `PATCH` | `/music/artists/{id}` | Update `monitor` (`all`, `future`, `manual`, `none`; re-applied to the existing albums, never touching their status; `all` and `future` monitor only the types in `library.music_monitored_types`) and `quality_profile` (`422` for an unknown name; empty clears to the default) | Member |
 | `POST` | `/music/tags/retag` | Queue every music file for a full rewrite of its tags by the `music-tag-sync` job (`202 {queued}`); `409 code: music_tags_off` when `library.music_tags.mode` is `off` | 🔒 Admin |
 | `POST` | `/music/monitored-types/apply` | Re-apply every `all`/`future` artist's monitor policy under the current `library.music_monitored_types`, skipping albums whose flag was set by hand; answers `monitored`, `unmonitored` (albums changed) and `types` | 🔒 Admin |

@@ -6912,7 +6912,9 @@ type MusicArtistCounts struct {
 }
 
 // MusicArtistDetail Artist with its full tree: members, and every album with tracks,
-// credits and personnel. Also the response of add, patch and refresh.
+// credits and personnel. Each track carries its `featuring` only: its
+// `artists` and `writers` come from `GET /music/artists/{id}/track-credits`
+// or `GET /music/albums/{id}`. Also the response of add, patch and refresh.
 type MusicArtistDetail struct {
 	AddedAt time.Time `json:"added_at"`
 
@@ -7061,6 +7063,11 @@ type MusicArtistSearchResultList struct {
 // is downloading or paused, else `wanted` if any is wanted or failed,
 // else `available` (including an artist with nothing monitored).
 type MusicArtistStatus string
+
+// MusicArtistTrackCredits defines model for MusicArtistTrackCredits.
+type MusicArtistTrackCredits struct {
+	Tracks []MusicTrackCredits `json:"tracks"`
+}
 
 // MusicCredit defines model for MusicCredit.
 type MusicCredit struct {
@@ -7290,7 +7297,8 @@ type MusicTier string
 type MusicTrack struct {
 	// Artists The artists the track is credited to, before any "feat."; on a
 	// split release they are not the album's. Omitted until the album
-	// is hydrated with them.
+	// is hydrated with them, and from an artist detail: read
+	// `GET /music/artists/{id}/track-credits` or `GET /music/albums/{id}`.
 	Artists *[]MusicPerson `json:"artists,omitempty"`
 
 	// Bonus Set only when MusicBrainz says so; never guessed.
@@ -7307,8 +7315,17 @@ type MusicTrack struct {
 	Mbid *string `json:"mbid,omitempty"`
 
 	// Number Position on the disc.
-	Number  uint16         `json:"number"`
-	Title   string         `json:"title"`
+	Number uint16 `json:"number"`
+	Title  string `json:"title"`
+
+	// Writers Omitted from an artist detail; read `GET /music/artists/{id}/track-credits` or `GET /music/albums/{id}`.
+	Writers *[]MusicPerson `json:"writers,omitempty"`
+}
+
+// MusicTrackCredits defines model for MusicTrackCredits.
+type MusicTrackCredits struct {
+	Artists *[]MusicPerson `json:"artists,omitempty"`
+	Id      uint32         `json:"id"`
 	Writers *[]MusicPerson `json:"writers,omitempty"`
 }
 
@@ -9829,7 +9846,9 @@ type MusicAlbumDetail = MusicAlbum
 type MusicArtistCountsResponse = MusicArtistCounts
 
 // MusicArtistCreated Artist with its full tree: members, and every album with tracks,
-// credits and personnel. Also the response of add, patch and refresh.
+// credits and personnel. Each track carries its `featuring` only: its
+// `artists` and `writers` come from `GET /music/artists/{id}/track-credits`
+// or `GET /music/albums/{id}`. Also the response of add, patch and refresh.
 type MusicArtistCreated = MusicArtistDetail
 
 // MusicArtistList defines model for MusicArtistList.
@@ -11720,6 +11739,9 @@ type ServerInterface interface {
 	// SearchMusicArtistNow Dispatch an indexer search for an artist's wanted albums
 	// (POST /music/artists/{id}/search-now)
 	SearchMusicArtistNow(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// GetMusicArtistTrackCredits Get the artists and writers of every track of an artist
+	// (GET /music/artists/{id}/track-credits)
+	GetMusicArtistTrackCredits(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// UploadMusicArtist Upload a discography, one folder per album
 	// (POST /music/artists/{id}/upload)
 	UploadMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params UploadMusicArtistParams)
@@ -12999,6 +13021,12 @@ func (_ Unimplemented) RenameMusicArtistFiles(w http.ResponseWriter, r *http.Req
 // SearchMusicArtistNow Dispatch an indexer search for an artist's wanted albums
 // (POST /music/artists/{id}/search-now)
 func (_ Unimplemented) SearchMusicArtistNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMusicArtistTrackCredits Get the artists and writers of every track of an artist
+// (GET /music/artists/{id}/track-credits)
+func (_ Unimplemented) GetMusicArtistTrackCredits(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -18710,6 +18738,32 @@ func (siw *ServerInterfaceWrapper) SearchMusicArtistNow(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetMusicArtistTrackCredits operation middleware
+func (siw *ServerInterfaceWrapper) GetMusicArtistTrackCredits(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMusicArtistTrackCredits(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UploadMusicArtist operation middleware
 func (siw *ServerInterfaceWrapper) UploadMusicArtist(w http.ResponseWriter, r *http.Request) {
 
@@ -21730,6 +21784,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/music/artists/{id}", wrapper.PatchMusicArtist)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/artists/{id}/track-credits", wrapper.GetMusicArtistTrackCredits)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/artists/{id}/refresh-metadata", wrapper.RefreshMusicArtist)
 	})
 	r.Group(func(r chi.Router) {
@@ -22486,6 +22543,8 @@ type MusicArtistDetailJSONResponse MusicArtistDetail
 type MusicArtistListJSONResponse PaginatedMusicArtists
 
 type MusicArtistLookupDetailResponseJSONResponse MusicArtistLookupDetail
+
+type MusicArtistTrackCreditsJSONResponse MusicArtistTrackCredits
 
 type MusicQualityProfileDeletedResponse struct {
 }
@@ -34206,6 +34265,58 @@ func (response SearchMusicArtistNow500JSONResponse) VisitSearchMusicArtistNowRes
 	return err
 }
 
+type GetMusicArtistTrackCreditsRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type GetMusicArtistTrackCreditsResponseObject interface {
+	VisitGetMusicArtistTrackCreditsResponse(w http.ResponseWriter) error
+}
+
+type GetMusicArtistTrackCredits200JSONResponse struct {
+	MusicArtistTrackCreditsJSONResponse
+}
+
+func (response GetMusicArtistTrackCredits200JSONResponse) VisitGetMusicArtistTrackCreditsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistTrackCredits404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetMusicArtistTrackCredits404JSONResponse) VisitGetMusicArtistTrackCreditsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistTrackCredits500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetMusicArtistTrackCredits500JSONResponse) VisitGetMusicArtistTrackCreditsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UploadMusicArtistRequestObject struct {
 	Id     ResourceID `json:"id"`
 	Params UploadMusicArtistParams
@@ -40623,6 +40734,9 @@ type StrictServerInterface interface {
 	// SearchMusicArtistNow Dispatch an indexer search for an artist's wanted albums
 	// (POST /music/artists/{id}/search-now)
 	SearchMusicArtistNow(ctx context.Context, request SearchMusicArtistNowRequestObject) (SearchMusicArtistNowResponseObject, error)
+	// GetMusicArtistTrackCredits Get the artists and writers of every track of an artist
+	// (GET /music/artists/{id}/track-credits)
+	GetMusicArtistTrackCredits(ctx context.Context, request GetMusicArtistTrackCreditsRequestObject) (GetMusicArtistTrackCreditsResponseObject, error)
 	// UploadMusicArtist Upload a discography, one folder per album
 	// (POST /music/artists/{id}/upload)
 	UploadMusicArtist(ctx context.Context, request UploadMusicArtistRequestObject) (UploadMusicArtistResponseObject, error)
@@ -45737,6 +45851,32 @@ func (sh *strictHandler) SearchMusicArtistNow(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchMusicArtistNowResponseObject); ok {
 		if err := validResponse.VisitSearchMusicArtistNowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMusicArtistTrackCredits operation middleware
+func (sh *strictHandler) GetMusicArtistTrackCredits(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetMusicArtistTrackCreditsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMusicArtistTrackCredits(ctx, request.(GetMusicArtistTrackCreditsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMusicArtistTrackCredits")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMusicArtistTrackCreditsResponseObject); ok {
+		if err := validResponse.VisitGetMusicArtistTrackCreditsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

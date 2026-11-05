@@ -1462,6 +1462,26 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/artists/{id}/track-credits:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getMusicArtistTrackCredits
+      summary: Get the artists and writers of every track of an artist
+      description: |
+        The per-track credits an artist detail leaves out, for the whole
+        discography in one request. It reads far more than the detail does, so
+        a client asks for it alongside the detail rather than holding its page
+        for it. A track with neither is left out.
+      tags: [music]
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicArtistTrackCredits"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /music/artists/{id}/refresh-metadata:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -7641,6 +7661,13 @@ components:
           schema:
             $ref: "#/components/schemas/MusicArtistDetail"
 
+    MusicArtistTrackCredits:
+      description: The artists and writers of every track of an artist.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MusicArtistTrackCredits"
+
     MusicArtistCreated:
       description: Artist added; album stubs are present and their tracks arrive in the background (`hydrating`).
       content:
@@ -9604,10 +9631,38 @@ components:
               items:
                 $ref: "#/components/schemas/MusicAlbumSummary"
 
+    MusicTrackCredits:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+          format: uint32
+          x-go-type: uint32
+        artists:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicPerson"
+        writers:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicPerson"
+
+    MusicArtistTrackCredits:
+      type: object
+      required: [tracks]
+      properties:
+        tracks:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicTrackCredits"
+
     MusicArtistDetail:
       description: |
         Artist with its full tree: members, and every album with tracks,
-        credits and personnel. Also the response of add, patch and refresh.
+        credits and personnel. Each track carries its `featuring` only: its
+        `artists` and `writers` come from `GET /music/artists/{id}/track-credits`
+        or `GET /music/albums/{id}`. Also the response of add, patch and refresh.
       allOf:
         - $ref: "#/components/schemas/MusicArtistCore"
         - type: object
@@ -9819,7 +9874,8 @@ components:
           description: |
             The artists the track is credited to, before any "feat."; on a
             split release they are not the album's. Omitted until the album
-            is hydrated with them.
+            is hydrated with them, and from an artist detail: read
+            `GET /music/artists/{id}/track-credits` or `GET /music/albums/{id}`.
           items:
             $ref: "#/components/schemas/MusicPerson"
         featuring:
@@ -9828,6 +9884,7 @@ components:
             $ref: "#/components/schemas/MusicPerson"
         writers:
           type: array
+          description: Omitted from an artist detail; read `GET /music/artists/{id}/track-credits` or `GET /music/albums/{id}`.
           items:
             $ref: "#/components/schemas/MusicPerson"
         bonus:

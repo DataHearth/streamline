@@ -483,6 +483,17 @@ export function otherTrackArtists(t: Track, artistId?: number): Person[] {
 	return artists.some((p) => p.artist_id !== undefined && p.artist_id === artistId) ? [] : artists;
 }
 
+export type TrackCredits = Pick<Track, "id" | "artists" | "writers">;
+
+// An artist's payload leaves out each track's artists and writers, which arrive
+// on their own: the open release's GET, and every track's in the background.
+export function withTrackCredits(r: Release, credits: Map<number, TrackCredits>): Release {
+	return {
+		...r,
+		tracks: r.tracks?.map((t) => ({ ...t, artists: credits.get(t.id)?.artists, writers: credits.get(t.id)?.writers })),
+	};
+}
+
 export function peopleList(ps: Person[]): string {
 	const names = ps.map((p) => p.name);
 	try {

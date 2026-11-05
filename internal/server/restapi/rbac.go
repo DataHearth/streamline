@@ -195,6 +195,7 @@ var minRole = map[string]string{
 	"SearchMusicArtists":         roleRequestOnly,
 	"ListMusicArtists":           roleRequestOnly,
 	"GetMusicArtist":             roleRequestOnly,
+	"GetMusicArtistTrackCredits": roleRequestOnly,
 	"ListMusicAlbums":            roleRequestOnly,
 	"ListMusicTracks":            roleRequestOnly,
 	"GetMusicAlbum":              roleRequestOnly,

@@ -219,6 +219,41 @@ func (s *Service) Detail(
 	return v, nil
 }
 
+// TrackCredits reads the artists and writers of every track Detail leaves them
+// out of, skipping a track with neither.
+func (s *Service) TrackCredits(ctx context.Context, id uint32) ([]TrackView, error) {
+	ctx, span := tracer.Start(ctx, "music.track_credits",
+		trace.WithAttributes(attribute.Int("artist.id", int(id))))
+	defer span.End()
+
+	row, err := s.db.FindArtistTrackCredits(ctx, id)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, notFound(err))
+	}
+	albums := db.ArtistAlbums(row)
+	people, err := s.libraryPeople(ctx, nil, albums)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	var out []TrackView
+	for _, a := range albums {
+		for _, t := range a.Edges.Tracks {
+			if tv := creditedTrack(
+				a,
+				t,
+				people,
+			); len(
+				tv.Artists,
+			)+len(
+				tv.Writers,
+			) > 0 {
+				out = append(out, tv)
+			}
+		}
+	}
+	return out, nil
+}
+
 // AlbumDetail reads one album with its tracks, credits and personnel.
 func (s *Service) AlbumDetail(ctx context.Context, id uint32) (*AlbumView, error) {
 	ctx, span := tracer.Start(ctx, "music.album_detail",
@@ -300,7 +335,7 @@ func fullAlbum(
 		}
 	}
 	for _, t := range a.Edges.Tracks {
-		tv := TrackView{Track: t, HasFile: len(t.Edges.MediaFiles) > 0}
+		tv := creditedTrack(a, t, people)
 		if tv.HasFile {
 			v.TracksHave++
 		}
@@ -308,13 +343,6 @@ func fullAlbum(
 			v.Size += f.Size
 		}
 		v.Duration += t.Duration
-		for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindArtist) {
-			tv.Artists = append(tv.Artists, trackArtist(a, people, c))
-		}
-		for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindFeaturing) {
-			tv.Featuring = append(tv.Featuring, people.person(c.Name, c.Mbid))
-		}
-		tv.Writers = trackWriters(t.Edges.Credits, people)
 		v.Tracks = append(v.Tracks, tv)
 	}
 	files := albumFiles(a)
@@ -336,6 +364,18 @@ func fullAlbum(
 		})
 	}
 	return v
+}
+
+func creditedTrack(a *ent.Album, t *ent.Track, people peopleIndex) TrackView {
+	tv := TrackView{Track: t, HasFile: len(t.Edges.MediaFiles) > 0}
+	for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindArtist) {
+		tv.Artists = append(tv.Artists, trackArtist(a, people, c))
+	}
+	for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindFeaturing) {
+		tv.Featuring = append(tv.Featuring, people.person(c.Name, c.Mbid))
+	}
+	tv.Writers = trackWriters(t.Edges.Credits, people)
+	return tv
 }
 
 // writtenByRoles are the writer roles "written by" names: a writer row is

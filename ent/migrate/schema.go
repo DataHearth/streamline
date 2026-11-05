@@ -1402,6 +1402,11 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{MusicCreditsColumns[11]},
 			},
+			{
+				Name:    "musiccredit_kind_track_credits",
+				Unique:  false,
+				Columns: []*schema.Column{MusicCreditsColumns[3], MusicCreditsColumns[11]},
+			},
 		},
 	}
 	// OidcIdentitiesColumns holds the columns for the "oidc_identities" table.

@@ -356,8 +356,9 @@ func (db *DB) CreateArtist(
 }
 
 // withAlbumTree eager-loads an album's tracks in disc order with their files
-// and credits, the album's own credits, and the artists it is listed under.
-func withAlbumTree(q *ent.AlbumQuery) {
+// and credits (those matching trackCredits, all of them without any), the
+// album's own credits, and the artists it is listed under.
+func withAlbumTree(q *ent.AlbumQuery, trackCredits ...predicate.MusicCredit) {
 	withAlbumArtists(q)
 	q.WithCredits(func(cq *ent.MusicCreditQuery) {
 		cq.Order(ent.Asc(musiccredit.FieldOrdinal))
@@ -365,7 +366,7 @@ func withAlbumTree(q *ent.AlbumQuery) {
 		tq.Order(ent.Asc(track.FieldDisc), ent.Asc(track.FieldPosition)).
 			WithMediaFiles().
 			WithCredits(func(cq *ent.MusicCreditQuery) {
-				cq.Order(ent.Asc(musiccredit.FieldOrdinal))
+				cq.Where(trackCredits...).Order(ent.Asc(musiccredit.FieldOrdinal))
 			})
 	})
 }
@@ -378,6 +379,12 @@ func withAlbumArtists(q *ent.AlbumQuery) {
 }
 
 func (db *DB) FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error) {
+	// Every credit of every track is hundreds of pages for a large discography,
+	// each an uncached read on a networked volume the first time an artist
+	// loads. The page shows only the guests across the discography, and
+	// FindAlbumByID has the rest for one release. Filtering to the kinds a track
+	// row displays would save nothing: those rows share their pages with the rest.
+	featuring := musiccredit.KindEQ(musiccredit.KindFeaturing)
 	return db.client.Artist.Query().
 		Where(artist.IDEQ(id)).
 		WithMembers(func(mq *ent.ArtistMemberQuery) {
@@ -385,12 +392,32 @@ func (db *DB) FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error
 		}).
 		WithAlbums(func(q *ent.AlbumQuery) {
 			q.Order(ent.Desc(album.FieldReleaseDate), ent.Asc(album.FieldTitle))
-			withAlbumTree(q)
+			withAlbumTree(q, featuring)
 		}).
 		WithCoAlbums(func(q *ent.AlbumQuery) {
 			q.Order(ent.Desc(album.FieldReleaseDate), ent.Asc(album.FieldTitle))
-			withAlbumTree(q)
+			withAlbumTree(q, featuring)
 		}).
+		Only(ctx)
+}
+
+func (db *DB) FindArtistTrackCredits(
+	ctx context.Context,
+	id uint32,
+) (*ent.Artist, error) {
+	withTrackCredits := func(q *ent.AlbumQuery) {
+		withAlbumArtists(q)
+		q.WithTracks(func(tq *ent.TrackQuery) {
+			tq.WithCredits(func(cq *ent.MusicCreditQuery) {
+				cq.Where(musiccredit.KindIn(musiccredit.KindArtist, musiccredit.KindWriter)).
+					Order(ent.Asc(musiccredit.FieldOrdinal))
+			})
+		})
+	}
+	return db.client.Artist.Query().
+		Where(artist.IDEQ(id)).
+		WithAlbums(withTrackCredits).
+		WithCoAlbums(withTrackCredits).
 		Only(ctx)
 }
 

@@ -310,6 +310,28 @@ func (s *Server) GetMusicArtist(
 	}, nil
 }
 
+func (s *Server) GetMusicArtistTrackCredits(
+	ctx context.Context,
+	request GetMusicArtistTrackCreditsRequestObject,
+) (GetMusicArtistTrackCreditsResponseObject, error) {
+	tracks, err := s.music.TrackCredits(ctx, request.Id)
+	switch {
+	case errors.Is(err, music.ErrArtistNotFound):
+		return GetMusicArtistTrackCredits404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	case err != nil:
+		return GetMusicArtistTrackCredits500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return GetMusicArtistTrackCredits200JSONResponse{
+		MusicArtistTrackCreditsJSONResponse: MusicArtistTrackCreditsJSONResponse(
+			MusicArtistTrackCredits{Tracks: toMusicTrackCredits(tracks)},
+		),
+	}, nil
+}
+
 // ApplyMusicMonitoredTypes re-applies the all and future artists' policies
 // under the current library.music_monitored_types. Admin only — it is a
 // library-wide bulk mutation driven from the settings page.

@@ -198,6 +198,77 @@ var _ = Describe(
 			})
 		})
 
+		Describe("TrackCredits", func() {
+			It(
+				"reads a discography's artists and writers, shared albums included",
+				func() {
+					queue()
+					a, albums := e.seedArtist("Nirvana",
+						albumSeed{mbid: "rg-1", title: "Split"})
+					b, _ := e.seedArtist("Guest")
+					Expect(
+						e.store.SetAlbumHydration(
+							e.ctx,
+							albums[0].ID,
+							db.HydrationParams{
+								CreditsComplete: true,
+								Tracks: []db.TrackSeed{
+									{
+										MBID:     "r-1",
+										Title:    "Theirs",
+										Disc:     1,
+										Position: 1,
+										Artists: []db.PersonSeed{
+											{Name: "Guest", MBID: "mbid-Guest"},
+										},
+										Writers: []db.MusicCreditSeed{
+											{Name: "Kurt Cobain", Role: "composer"},
+										},
+									},
+									{
+										MBID:     "r-2",
+										Title:    "Bare",
+										Disc:     1,
+										Position: 2,
+									},
+								},
+							},
+							time.Now(),
+						),
+					).To(Succeed())
+					_, _, err := e.store.RefreshArtist(
+						e.ctx,
+						b.ID,
+						db.RefreshArtistParams{
+							Name: "Guest", RefreshedAt: time.Now(),
+							Albums: []db.AlbumSeed{{MBID: "rg-1", Title: "Split"}},
+						},
+					)
+					Expect(err).NotTo(HaveOccurred())
+
+					for _, id := range []uint32{a.ID, b.ID} {
+						got, err := e.svc.TrackCredits(e.ctx, id)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(
+							got,
+						).To(HaveLen(1), "a track with neither is left out")
+						Expect(got[0].Track.Title).To(Equal("Theirs"))
+						Expect(got[0].Artists).To(Equal([]PersonView{
+							{Name: "Guest", MBID: "mbid-Guest", ArtistID: b.ID},
+						}))
+						Expect(
+							got[0].Writers,
+						).To(Equal([]PersonView{{Name: "Kurt Cobain"}}))
+					}
+				},
+			)
+
+			It("maps a missing artist to ErrArtistNotFound", func() {
+				_, err := e.svc.TrackCredits(e.ctx, 9999)
+				Expect(err).To(MatchError(ErrArtistNotFound))
+			})
+		})
+
 		Describe("Detail", func() {
 			It("resolves a track artist held in the library", func() {
 				queue()
@@ -236,8 +307,11 @@ var _ = Describe(
 
 				v, err := e.svc.Detail(e.ctx, a.ID, "en")
 				Expect(err).NotTo(HaveOccurred())
-				tr := v.Albums[0].Tracks[0]
-				Expect(tr.Artists).To(Equal([]PersonView{
+				Expect(v.Albums[0].Tracks[0].Artists).To(BeEmpty(),
+					"an artist's discography leaves track artists to the album")
+				full, err := e.svc.AlbumDetail(e.ctx, albums[0].ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(full.Tracks[0].Artists).To(Equal([]PersonView{
 					{Name: "Guest", MBID: "mbid-Guest", ArtistID: b.ID},
 				}))
 				Expect(v.Albums[0].Artists).To(Equal([]PersonView{
@@ -273,9 +347,9 @@ var _ = Describe(
 						),
 					).To(Succeed())
 
-					v, err := e.svc.Detail(e.ctx, a.ID, "en")
+					full, err := e.svc.AlbumDetail(e.ctx, albums[0].ID)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(v.Albums[0].Tracks[0].Artists[0].ArtistID).To(Equal(a.ID))
+					Expect(full.Tracks[0].Artists[0].ArtistID).To(Equal(a.ID))
 				},
 			)
 
@@ -435,9 +509,14 @@ var _ = Describe(
 					Expect(
 						nevermind.Tracks[0].Featuring[0].ArtistID,
 					).To(Equal(otherID))
-					Expect(nevermind.Tracks[0].Writers[0].ArtistID).To(BeZero())
-					written := make([]string, 0, len(nevermind.Tracks[0].Writers))
-					for _, w := range nevermind.Tracks[0].Writers {
+					Expect(nevermind.Tracks[0].Writers).To(BeEmpty(),
+						"an artist's discography leaves writers to the album")
+
+					full, err := e.svc.AlbumDetail(e.ctx, albums[0].ID)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(full.Tracks[0].Writers[0].ArtistID).To(BeZero())
+					written := make([]string, 0, len(full.Tracks[0].Writers))
+					for _, w := range full.Tracks[0].Writers {
 						written = append(written, w.Name)
 					}
 					Expect(written).To(Equal([]string{"Nobody", "Kurt Cobain"}),

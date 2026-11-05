@@ -7208,6 +7208,74 @@ func (_c *MockStore_FindArtistRow_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// FindArtistTrackCredits provides a mock function for the type MockStore
+func (_mock *MockStore) FindArtistTrackCredits(ctx context.Context, id uint32) (*ent.Artist, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindArtistTrackCredits")
+	}
+
+	var r0 *ent.Artist
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Artist, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Artist); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Artist)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_FindArtistTrackCredits_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindArtistTrackCredits'
+type MockStore_FindArtistTrackCredits_Call struct {
+	*mock.Call
+}
+
+// FindArtistTrackCredits is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) FindArtistTrackCredits(ctx any, id any) *MockStore_FindArtistTrackCredits_Call {
+	return &MockStore_FindArtistTrackCredits_Call{Call: _e.mock.On("FindArtistTrackCredits", ctx, id)}
+}
+
+func (_c *MockStore_FindArtistTrackCredits_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_FindArtistTrackCredits_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_FindArtistTrackCredits_Call) Return(artist *ent.Artist, err error) *MockStore_FindArtistTrackCredits_Call {
+	_c.Call.Return(artist, err)
+	return _c
+}
+
+func (_c *MockStore_FindArtistTrackCredits_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Artist, error)) *MockStore_FindArtistTrackCredits_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindBookByHardcoverID provides a mock function for the type MockStore
 func (_mock *MockStore) FindBookByHardcoverID(ctx context.Context, hardcoverID uint32) (*ent.Book, error) {
 	ret := _mock.Called(ctx, hardcoverID)

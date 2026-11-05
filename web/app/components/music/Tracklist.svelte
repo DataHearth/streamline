@@ -38,7 +38,8 @@
 		onUpload?: (t: Track, file?: File) => void;
 	} = $props();
 
-	let detail = $state<Track | null>(null);
+	let detailId = $state<number | null>(null);
+	let detail = $derived(tracks.find((t) => t.id === detailId) ?? null);
 	let multiDisc = $derived(new Set(tracks.map((t) => t.disc)).size > 1);
 	let canSearch = $derived(canEdit && !!onManualSearch);
 	let canUpload = $derived(canEdit && !!onUpload);
@@ -52,7 +53,7 @@
 	}
 	const canDelete = (t: Track) => canEdit && !!onDeleteFile && t.has_file;
 	const items = (t: Track): KebabItem[] => [
-		{ key: "info", label: i18n.common_details(), icon: Info, onSelect: () => (detail = t) },
+		{ key: "info", label: i18n.common_details(), icon: Info, onSelect: () => (detailId = t.id) },
 		...(canSearch ? [{ key: "search", label: i18n.action_manual_search_ellipsis(), icon: Search, onSelect: () => onManualSearch?.(t) } satisfies KebabItem] : []),
 		...(canUpload ? [{ key: "upload", label: i18n.upload_button(), icon: Upload, onSelect: () => onUpload?.(t) } satisfies KebabItem] : []),
 		...(canDelete(t)
@@ -102,7 +103,7 @@
 				</span>
 				<button
 					type="button"
-					onclick={() => (detail = t)}
+					onclick={() => (detailId = t.id)}
 					class={cn(
 						"min-w-0 flex-1 truncate py-2.5 text-left transition hover:text-accent-text",
 						compact ? "text-[13.5px]" : "text-[14px]",
@@ -151,7 +152,7 @@
 							<Trash2 size={14} aria-hidden="true" />
 						</button>
 					{/if}
-					<button type="button" onclick={() => (detail = t)} aria-label={i18n.common_details()} title={i18n.common_details()} class={iconBtn}>
+					<button type="button" onclick={() => (detailId = t.id)} aria-label={i18n.common_details()} title={i18n.common_details()} class={iconBtn}>
 						<Info size={14} aria-hidden="true" />
 					</button>
 				</div>
@@ -170,5 +171,5 @@
 	{canEdit}
 	onManualSearch={canSearch ? onManualSearch : undefined}
 	{onDeleteFile}
-	onClose={() => (detail = null)}
+	onClose={() => (detailId = null)}
 />

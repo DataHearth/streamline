@@ -678,6 +678,46 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 		})
 	})
 
+	Describe("GetMusicArtistTrackCredits", func() {
+		It("sends each track's artists and writers", func() {
+			app.music.EXPECT().TrackCredits(mock.Anything, uint32(3)).
+				Return([]music.TrackView{{
+					Track:   &ent.Track{ID: 7},
+					Artists: []music.PersonView{{Name: "Guest", ArtistID: 4}},
+					Writers: []music.PersonView{{Name: "Kurt Cobain"}},
+				}}, nil).Once()
+			resp := get("/api/v1/music/artists/3/track-credits")
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var out MusicArtistTrackCredits
+			decodeInto(resp, &out)
+
+			Expect(out.Tracks).To(HaveLen(1))
+			Expect(out.Tracks[0].Id).To(Equal(uint32(7)))
+			Expect(
+				(*out.Tracks[0].Artists)[0].ArtistId,
+			).To(HaveValue(Equal(uint32(4))))
+			Expect((*out.Tracks[0].Writers)[0].Name).To(Equal("Kurt Cobain"))
+		})
+
+		It("answers an empty list rather than null", func() {
+			app.music.EXPECT().TrackCredits(mock.Anything, uint32(3)).
+				Return(nil, nil).Once()
+			resp := get("/api/v1/music/artists/3/track-credits")
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var out map[string]json.RawMessage
+			decodeInto(resp, &out)
+			Expect(string(out["tracks"])).To(Equal("[]"))
+		})
+
+		It("404s for an unknown artist", func() {
+			app.music.EXPECT().TrackCredits(mock.Anything, uint32(99)).
+				Return(nil, music.ErrArtistNotFound).Once()
+			resp := get("/api/v1/music/artists/99/track-credits")
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			resp.Body.Close()
+		})
+	})
+
 	Describe("ApplyMusicMonitoredTypes", func() {
 		It("re-applies the policies and answers the counts and the types", func() {
 			app.music.EXPECT().ApplyMonitoredTypes(mock.Anything).

@@ -62,6 +62,7 @@ type Manager interface {
 	List(ctx context.Context, p db.ListArtistsParams) (ArtistPage, error)
 	Counts(ctx context.Context, p db.ListArtistsParams) (db.ArtistCounts, error)
 	Detail(ctx context.Context, id uint32, lang string) (*ArtistView, error)
+	TrackCredits(ctx context.Context, id uint32) ([]TrackView, error)
 	AlbumDetail(ctx context.Context, id uint32) (*AlbumView, error)
 	SetArtistMonitor(ctx context.Context, id uint32, monitor string) error
 	ApplyMonitoredTypes(ctx context.Context) (int, int, error)

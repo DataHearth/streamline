@@ -711,6 +711,60 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			}
 		}
 
+		It("loads only featuring credits per track for a discography", func() {
+			Expect(store.SetAlbumHydration(ctx, rg2.ID, heavy(), now)).To(Succeed())
+
+			owner := rg2.QueryArtist().OnlyX(ctx)
+			row, err := store.FindArtistByID(ctx, owner.ID)
+			Expect(err).NotTo(HaveOccurred())
+			var inDiscography *ent.Album
+			for _, a := range row.Edges.Albums {
+				if a.ID == rg2.ID {
+					inDiscography = a
+				}
+			}
+			Expect(inDiscography).NotTo(BeNil())
+			Expect(inDiscography.Edges.Credits).NotTo(BeEmpty())
+			Expect(inDiscography.Edges.Tracks).To(HaveLen(2))
+			first := inDiscography.Edges.Tracks[0].Edges.Credits
+			Expect(first).To(HaveLen(1))
+			Expect(first[0].Kind).To(Equal(musiccredit.KindFeaturing))
+			Expect(inDiscography.Edges.Tracks[1].Edges.Credits).To(BeEmpty())
+
+			full, err := store.FindAlbumByID(ctx, rg2.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(full.Edges.Tracks[0].Edges.Credits)).To(BeNumerically(">", 1))
+			Expect(full.Edges.Tracks[1].Edges.Credits).NotTo(BeEmpty())
+		})
+
+		It(
+			"loads each track's artists and writers for a discography's credits",
+			func() {
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, heavy(), now),
+				).To(Succeed())
+
+				owner := rg2.QueryArtist().OnlyX(ctx)
+				row, err := store.FindArtistTrackCredits(ctx, owner.ID)
+				Expect(err).NotTo(HaveOccurred())
+				var kinds []musiccredit.Kind
+				for _, a := range row.Edges.Albums {
+					Expect(
+						a.Edges.Credits,
+					).To(BeEmpty(), "an album's own credits are the detail's")
+					for _, t := range a.Edges.Tracks {
+						Expect(t.Edges.MediaFiles).To(BeEmpty())
+						for _, c := range t.Edges.Credits {
+							kinds = append(kinds, c.Kind)
+						}
+					}
+				}
+				Expect(
+					kinds,
+				).To(ConsistOf(musiccredit.KindWriter, musiccredit.KindArtist))
+			},
+		)
+
 		It("stores the album facts, tracks and every credit in one go", func() {
 			Expect(store.SetAlbumHydration(ctx, rg2.ID, heavy(), now)).To(Succeed())
 			got, err := store.FindAlbumByID(ctx, rg2.ID)
