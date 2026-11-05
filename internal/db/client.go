@@ -100,12 +100,12 @@ func Open(ctx context.Context, dsn string) (*ent.Client, error) {
 			return nil, fmt.Errorf("apply migrations: %w", err)
 		}
 		// sqlite_stat1 is otherwise never populated, leaving the planner to
-		// guess on every multi-index and subquery decision. optimize ANALYZEs
-		// only the tables whose stats are missing or stale, which is why it is
-		// safe here: on a settled database it does nothing, and right after a
-		// migration that added indexes it does exactly the work needed.
+		// guess on every multi-index and subquery decision. The 0x10000 bit
+		// checks every table's size: a bare optimize looks only at tables this
+		// connection has already queried, so at boot it fills in missing stats
+		// but leaves stale ones stale however far a table has grown.
 		// Failure is not fatal — bad statistics are slow, not wrong.
-		if _, err := db.ExecContext(ctx, "PRAGMA optimize"); err != nil {
+		if _, err := db.ExecContext(ctx, "PRAGMA optimize=0x10002"); err != nil {
 			slog.WarnContext(ctx, "PRAGMA optimize failed", "error", err)
 		}
 	}
