@@ -23,6 +23,7 @@
 
 	const lock = readOnlyLock();
 	let locked = $derived(lock());
+	// svelte-ignore state_referenced_locally -- useStore subscribes once, and MediaProfilesPanel passes one constant form.
 	const values = form.useStore((s) => s.values);
 	let preferred = $derived(values.current.preferred);
 
