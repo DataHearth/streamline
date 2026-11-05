@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -123,6 +124,26 @@ var _ = Describe("runMigrations", Label("integration", "db"), func() {
 
 		Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
 		Expect(ids()).To(Equal([]int{1, 2, 3}))
+	})
+
+	It("checks foreign keys only when a migration applied", func() {
+		var logs bytes.Buffer
+		GinkgoWriter.TeeTo(&logs)
+		DeferCleanup(GinkgoWriter.ClearTeeWriters)
+		const canary = "dangling references"
+
+		migrateToPrevious()
+		// Its requester does not exist, which is what the check reports.
+		seed(1, "movie", 42, "pending")
+
+		Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
+		Expect(logs.String()).To(ContainSubstring(canary))
+
+		By("skipping it on a boot with nothing to apply")
+		logs.Reset()
+		Expect(runMigrations(context.Background(), sqlDB, nil)).To(Succeed())
+		Expect(logs.String()).To(ContainSubstring("database migrations applied"))
+		Expect(logs.String()).NotTo(ContainSubstring(canary))
 	})
 })
 

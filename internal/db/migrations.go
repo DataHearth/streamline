@@ -97,15 +97,23 @@ func runMigrations(
 	}
 	// Enforcement was off for the whole run, so a data migration writing a
 	// dangling reference now succeeds silently. This is the canary for that.
-	var dangling int
-	if err := db.QueryRowContext(
-		ctx,
-		"SELECT count(*) FROM pragma_foreign_key_check",
-	).Scan(&dangling); err != nil {
-		slog.WarnContext(ctx, "foreign key check failed", "error", err)
-	} else if dangling > 0 {
-		slog.ErrorContext(ctx, "database holds dangling references after migrating",
-			"violations", dangling)
+	// It reads every row of every table, so it runs only after a migration
+	// applied: on the homelab's Ceph volume it held every boot for 160 s.
+	if !errors.Is(err, migrate.ErrNoChange) {
+		var dangling int
+		if err := db.QueryRowContext(
+			ctx,
+			"SELECT count(*) FROM pragma_foreign_key_check",
+		).Scan(&dangling); err != nil {
+			slog.WarnContext(ctx, "foreign key check failed", "error", err)
+		} else if dangling > 0 {
+			slog.ErrorContext(
+				ctx,
+				"database holds dangling references after migrating",
+				"violations",
+				dangling,
+			)
+		}
 	}
 
 	after, dirty, _ := m.Version()
