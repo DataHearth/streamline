@@ -109,12 +109,21 @@ func (MediaFile) Edges() []ent.Edge {
 // SQLite does not index a foreign key on its own, so every episode->file
 // lookup was a full media_files scan. The series list runs one per episode row
 // of the page: 3.9s for 20 shows on a real library.
+//
+// Partial because a file has one owner, so most rows are NULL in each column,
+// and ANALYZE counts all those NULLs as one group. That inflated the estimate
+// per owner enough for a large IN list to pick a scan of the table. An IN or =
+// on the column still uses these.
 func (MediaFile) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Edges("episode"),
-		index.Edges("movie"),
-		index.Edges("track"),
-		index.Edges("book"),
+		index.Edges("episode").
+			Annotations(entsql.IndexWhere("episode_media_files IS NOT NULL")),
+		index.Edges("movie").
+			Annotations(entsql.IndexWhere("movie_media_files IS NOT NULL")),
+		index.Edges("track").
+			Annotations(entsql.IndexWhere("track_media_files IS NOT NULL")),
+		index.Edges("book").
+			Annotations(entsql.IndexWhere("book_media_files IS NOT NULL")),
 		index.Fields("tags_state"),
 		// Partial: the media-probe backfill asks for the oldest rows that were
 		// never probed, so once the backfill drains, the index is empty and

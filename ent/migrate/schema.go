@@ -1196,21 +1196,33 @@ var (
 				Name:    "mediafile_episode_media_files",
 				Unique:  false,
 				Columns: []*schema.Column{MediaFilesColumns[38]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "episode_media_files IS NOT NULL",
+				},
 			},
 			{
 				Name:    "mediafile_movie_media_files",
 				Unique:  false,
 				Columns: []*schema.Column{MediaFilesColumns[39]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "movie_media_files IS NOT NULL",
+				},
 			},
 			{
 				Name:    "mediafile_track_media_files",
 				Unique:  false,
 				Columns: []*schema.Column{MediaFilesColumns[40]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "track_media_files IS NOT NULL",
+				},
 			},
 			{
 				Name:    "mediafile_book_media_files",
 				Unique:  false,
 				Columns: []*schema.Column{MediaFilesColumns[37]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "book_media_files IS NOT NULL",
+				},
 			},
 			{
 				Name:    "mediafile_tags_state",
