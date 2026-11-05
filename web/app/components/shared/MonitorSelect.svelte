@@ -24,11 +24,13 @@
 
 	let open = $state(false);
 	let anchor = $state<HTMLButtonElement | null>(null);
-	let current = $derived(options.find((o) => o.key === value)?.label ?? "");
+	let triggerWidth = $state(0);
+	let current =$derived(options.find((o) => o.key === value)?.label ?? "");
 </script>
 
 <button
 	bind:this={anchor}
+	bind:offsetWidth={triggerWidth}
 	type="button"
 	{disabled}
 	aria-haspopup="listbox"
@@ -43,7 +45,9 @@
 	<span class="truncate">{current}</span>
 	<ChevronDown size={16} class="shrink-0 text-fg-subtle" aria-hidden="true" />
 </button>
-<DropdownMenu {open} {anchor} onClose={() => (open = false)} matchAnchor ariaLabel={label}>
+<!-- Not matchAnchor: the trigger shrinks to the current value, which cut every
+     longer option off under "Nothing". -->
+<DropdownMenu {open} {anchor} onClose={() => (open = false)} minWidth="{triggerWidth}px" ariaLabel={label}>
 	{#each options as o (o.key)}
 		<DropdownOption
 			label={o.label}
