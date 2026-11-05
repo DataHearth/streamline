@@ -1301,7 +1301,7 @@ func (db *DB) SetAlbumHydration(
 			)
 		}
 		if _, err := c.MusicCredit.Delete().Where(
-			musiccredit.HasTrackWith(track.IDEQ(id)),
+			entsql.FieldEQ(musiccredit.TrackColumn, id),
 			musiccredit.KindIn(kinds...),
 		).Exec(ctx); err != nil {
 			tx.Rollback()
@@ -1374,7 +1374,7 @@ func (db *DB) SetAlbumHydration(
 
 	if p.CreditsComplete {
 		if _, err := c.MusicCredit.Delete().Where(
-			musiccredit.HasAlbumWith(album.IDEQ(albumID)),
+			entsql.FieldEQ(musiccredit.AlbumColumn, albumID),
 		).Exec(ctx); err != nil {
 			tx.Rollback()
 			return err
