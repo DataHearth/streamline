@@ -181,30 +181,72 @@ func (db *DB) AllDownloadRecordHashes(
 	return set, nil
 }
 
-// DownloadRecordTitlesByHash maps every non-empty torrent hash to the release
-// title of the newest record holding it. A torrent's own name is its
-// uploader's choice and can say nothing of the release — a RuTracker Omens LP
-// is named "Lamb Of God" — so the builtin torrent list shows this beside it.
-func (db *DB) DownloadRecordTitlesByHash(
+// TorrentRecord is what the builtin torrent list shows of the newest download
+// record holding a torrent: the release it was grabbed as, and the library
+// title it is for, so the list can link to that title's page. At most one of
+// the ids is set (AlbumArtistID beside AlbumID); none on an orphan record.
+type TorrentRecord struct {
+	Title         string
+	MovieID       uint32
+	SeriesID      uint32
+	AlbumID       uint32
+	AlbumArtistID uint32
+	ArtistID      uint32
+	BookID        uint32
+}
+
+// DownloadRecordsByHash maps each of hashes that some download record holds to
+// the newest such record. A torrent's own name is its uploader's choice and
+// can say nothing of the release — a RuTracker Omens LP is named "Lamb Of
+// God" — so the builtin torrent list shows the record's title beside it.
+func (db *DB) DownloadRecordsByHash(
 	ctx context.Context,
-) (map[string]string, error) {
-	var rows []struct {
-		TorrentHash string `json:"torrent_hash"`
-		Title       string `json:"title"`
+	hashes []string,
+) (map[string]TorrentRecord, error) {
+	out := make(map[string]TorrentRecord, len(hashes))
+	if len(hashes) == 0 {
+		return out, nil
 	}
-	err := db.client.DownloadRecord.Query().
-		Where(downloadrecord.TorrentHashNEQ("")).
+	recs, err := db.client.DownloadRecord.Query().
+		Where(downloadrecord.TorrentHashIn(hashes...)).
 		Order(ent.Asc(downloadrecord.FieldID)).
-		Select(downloadrecord.FieldTorrentHash, downloadrecord.FieldTitle).
-		Scan(ctx, &rows)
+		WithMovie().
+		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
+			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
+		}).
+		WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
+		WithArtist().
+		WithBook().
+		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("list download record titles: %w", err)
+		return nil, fmt.Errorf("list download records by hash: %w", err)
 	}
-	titles := make(map[string]string, len(rows))
-	for _, r := range rows {
-		titles[r.TorrentHash] = r.Title
+	for _, r := range recs {
+		out[r.TorrentHash] = torrentRecord(r)
 	}
-	return titles, nil
+	return out, nil
+}
+
+func torrentRecord(r *ent.DownloadRecord) TorrentRecord {
+	t := TorrentRecord{Title: r.Title}
+	switch e := r.Edges; {
+	case e.Album != nil:
+		t.AlbumID = e.Album.ID
+		if e.Album.Edges.Artist != nil {
+			t.AlbumArtistID = e.Album.Edges.Artist.ID
+		}
+	case e.Artist != nil:
+		t.ArtistID = e.Artist.ID
+	case e.Book != nil:
+		t.BookID = e.Book.ID
+	case e.AnchorEpisode != nil:
+		if se := e.AnchorEpisode.Edges.Season; se != nil && se.Edges.TvShow != nil {
+			t.SeriesID = se.Edges.TvShow.ID
+		}
+	case e.Movie != nil:
+		t.MovieID = e.Movie.ID
+	}
+	return t
 }
 
 // ListPendingDownloadRecords returns one page of status=pending records with

@@ -9,11 +9,13 @@
 		RotateCw,
 		LoaderCircle,
 		ArrowUpRight,
+		ExternalLink,
 	} from "@lucide/svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import { cn } from "@lib/cn";
 	import { formatBytes } from "@lib/format";
 	import { formatDateTime } from "@lib/dates";
+	import { entryHref } from "@lib/activity-touch";
 	import type { QueueEntry, HistoryEntry } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -65,6 +67,7 @@
 	// The record's own verbs. The torrent link is not one of them: it shows on
 	// a held record too, whose torrent is still there to inspect.
 	let controls = $derived(canControl && !isHeld);
+	let itemHref = $derived(entryHref(item));
 	let queue = $derived(item as QueueEntry);
 
 	// Applied: the file selection kept a subset of the torrent, so the
@@ -146,8 +149,17 @@
 				{/if}
 			</dl>
 
-			{#if torrentHref || controls}
+			{#if itemHref || torrentHref || controls}
 			<div class="flex flex-wrap items-start gap-2">
+				{#if itemHref}
+					<a
+						href={itemHref}
+						class={cn(btn, "bg-bg-subtle text-fg hover:bg-surface")}
+					>
+						<ExternalLink size={13} aria-hidden="true" />
+						{i18n.activity_open_item()}
+					</a>
+				{/if}
 				{#if torrentHref}
 					<a
 						href={torrentHref}

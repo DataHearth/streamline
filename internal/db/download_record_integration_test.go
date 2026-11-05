@@ -2123,7 +2123,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
-	Describe("DownloadRecordTitlesByHash", func() {
+	Describe("DownloadRecordsByHash", func() {
 		titled := func(hash, title string) {
 			GinkgoHelper()
 			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
@@ -2134,18 +2134,25 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		It("maps each hash to its newest record's title", func() {
+		It("maps each asked hash to its newest record and the title it is for", func() {
 			titled("H1", "Lamb Of God - Omens - 2022, FLAC")
 			titled("H2", "Old grab")
 			titled("H2", "New grab")
+			titled("H3", "Not asked for")
 			titled("", "No hash")
 
-			titles, err := store.DownloadRecordTitlesByHash(ctx)
+			recs, err := store.DownloadRecordsByHash(ctx, []string{"H1", "H2", "H4"})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(titles).To(Equal(map[string]string{
-				"H1": "Lamb Of God - Omens - 2022, FLAC",
-				"H2": "New grab",
+			Expect(recs).To(Equal(map[string]TorrentRecord{
+				"H1": {Title: "Lamb Of God - Omens - 2022, FLAC", MovieID: movieID},
+				"H2": {Title: "New grab", MovieID: movieID},
 			}))
+		})
+
+		It("asks nothing of the database for no hashes", func() {
+			recs, err := store.DownloadRecordsByHash(ctx, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recs).To(BeEmpty())
 		})
 	})
 

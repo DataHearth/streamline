@@ -281,6 +281,19 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 			}))
 		})
 
+		It("links an episode record to its series", func() {
+			rec := &ent.DownloadRecord{ID: 5, Title: "Show.S01E02"}
+			show := &ent.TVShow{ID: 9, Title: "Show"}
+			season := &ent.Season{Number: 1}
+			season.Edges.TvShow = show
+			ep := &ent.Episode{Number: 2}
+			ep.Edges.Season = season
+			rec.Edges.AnchorEpisode = ep
+			out := toHistoryEntry(rec)
+			Expect(out.Episode).NotTo(BeNil())
+			Expect(out.Episode.SeriesId).To(Equal(&show.ID))
+		})
+
 		It("leaves track absent on any other record", func() {
 			rec := &ent.DownloadRecord{ID: 4, Title: "Artist - Album"}
 			rec.Edges.Album = &ent.Album{ID: 7, Title: "Proof 2"}

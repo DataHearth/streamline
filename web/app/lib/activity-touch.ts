@@ -60,6 +60,47 @@ export function entryRelease(item: QueueEntry | HistoryEntry): string {
 	return item.title;
 }
 
+// The page of the title a download is for, with the events feed's targets
+// (eventSubject): an album opens on its artist with the release selected, an
+// episode or season on its show. Undefined when the record names nothing.
+export function entryHref(item: QueueEntry | HistoryEntry): string | undefined {
+	return mediaHref(item);
+}
+
+export function mediaHref(m: {
+	movie?: { id: number };
+	episode?: { series_id?: number };
+	album?: { id: number; artist_id: number };
+	artist?: { id: number };
+	book?: { id: number };
+}): string | undefined {
+	if (m.album) return m.album.artist_id ? `/music/${m.album.artist_id}?release=${m.album.id}` : undefined;
+	if (m.artist) return `/music/${m.artist.id}`;
+	if (m.book) return `/books/${m.book.id}`;
+	if (m.episode) return m.episode.series_id ? `/series/${m.episode.series_id}` : undefined;
+	// Every other record carries an empty placeholder movie (id 0).
+	if (m.movie?.id) return `/movies/${m.movie.id}`;
+	return undefined;
+}
+
+// The page of the title a tracked torrent is for.
+export function torrentHref(t: Torrent): string | undefined {
+	const m = t.media;
+	if (!m) return undefined;
+	switch (m.kind) {
+		case "movie":
+			return mediaHref({ movie: m });
+		case "series":
+			return mediaHref({ episode: { series_id: m.id } });
+		case "album":
+			return mediaHref({ album: { id: m.id, artist_id: m.artist_id ?? 0 } });
+		case "artist":
+			return mediaHref({ artist: m });
+		case "book":
+			return mediaHref({ book: m });
+	}
+}
+
 export type RingGlyph =
 	| "check"
 	| "cross"

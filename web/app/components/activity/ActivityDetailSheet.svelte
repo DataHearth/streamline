@@ -5,6 +5,7 @@
 	import {
 		ArrowUpRight,
 		Ban,
+		ExternalLink,
 		LoaderCircle,
 		Pause,
 		Play,
@@ -20,7 +21,7 @@
 	import { cn } from "@lib/cn";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
-	import { entryHeading, entryRelease, historyMeta, queueMeta } from "@lib/activity-touch";
+	import { entryHeading, entryHref, entryRelease, historyMeta, queueMeta } from "@lib/activity-touch";
 	import { formatBytes, pillStatus } from "@lib/format";
 	import { formatDateTime } from "@lib/dates";
 	import type { HistoryEntry, QueueEntry } from "@lib/types";
@@ -254,6 +255,15 @@
 					{/each}
 				</dl>
 
+				{#if item && entryHref(item)}
+					<a
+						href={entryHref(item)}
+						class="mt-3.5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface text-[14px] font-semibold text-fg transition active:bg-surface-2"
+					>
+						<ExternalLink size={16} aria-hidden="true" />
+						{i18n.activity_open_item()}
+					</a>
+				{/if}
 				{#if torrentHref}
 					<a
 						href={torrentHref}

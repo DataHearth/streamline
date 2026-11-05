@@ -2797,6 +2797,33 @@ func (e TorrentInfoStatus) Valid() bool {
 	}
 }
 
+// Defines values for TorrentMediaKind.
+const (
+	TorrentMediaKindAlbum  TorrentMediaKind = "album"
+	TorrentMediaKindArtist TorrentMediaKind = "artist"
+	TorrentMediaKindBook   TorrentMediaKind = "book"
+	TorrentMediaKindMovie  TorrentMediaKind = "movie"
+	TorrentMediaKindSeries TorrentMediaKind = "series"
+)
+
+// Valid indicates whether the value is a known member of the TorrentMediaKind enum.
+func (e TorrentMediaKind) Valid() bool {
+	switch e {
+	case TorrentMediaKindAlbum:
+		return true
+	case TorrentMediaKindArtist:
+		return true
+	case TorrentMediaKindBook:
+		return true
+	case TorrentMediaKindMovie:
+		return true
+	case TorrentMediaKindSeries:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TranscodeIfContainers.
 const (
 	TranscodeIfContainersAvi  TranscodeIfContainers = "avi"
@@ -8777,8 +8804,13 @@ type TorrentDetails struct {
 	// peer_count are connections, so a complete torrent nobody is
 	// currently pulling from reads 0/0 — the same as one nothing can
 	// reach. This separates an idle swarm from an unreachable engine.
-	KnownPeers *int   `json:"known_peers,omitempty"`
-	Name       string `json:"name"`
+	KnownPeers *int `json:"known_peers,omitempty"`
+
+	// Media The library title the newest download record holding a torrent is
+	// for, so the list can link to its page. Absent when the torrent is
+	// untracked or its record names no title.
+	Media *TorrentMedia `json:"media,omitempty"`
+	Name  string        `json:"name"`
 
 	// PeerCount Currently connected peers.
 	PeerCount int           `json:"peer_count"`
@@ -8853,8 +8885,13 @@ type TorrentInfo struct {
 	// peer_count are connections, so a complete torrent nobody is
 	// currently pulling from reads 0/0 — the same as one nothing can
 	// reach. This separates an idle swarm from an unreachable engine.
-	KnownPeers *int   `json:"known_peers,omitempty"`
-	Name       string `json:"name"`
+	KnownPeers *int `json:"known_peers,omitempty"`
+
+	// Media The library title the newest download record holding a torrent is
+	// for, so the list can link to its page. Absent when the torrent is
+	// untracked or its record names no title.
+	Media *TorrentMedia `json:"media,omitempty"`
+	Name  string        `json:"name"`
 
 	// PeerCount Currently connected peers.
 	PeerCount int `json:"peer_count"`
@@ -8894,6 +8931,19 @@ type TorrentList struct {
 	Items       []TorrentInfo `json:"items"`
 	RefreshedAt time.Time     `json:"refreshed_at"`
 }
+
+// TorrentMedia The library title the newest download record holding a torrent is
+// for, so the list can link to its page. Absent when the torrent is
+// untracked or its record names no title.
+type TorrentMedia struct {
+	// ArtistId The album's artist, whose page lists the album. Set only for an album.
+	ArtistId *uint32          `json:"artist_id,omitempty"`
+	Id       uint32           `json:"id"`
+	Kind     TorrentMediaKind `json:"kind"`
+}
+
+// TorrentMediaKind defines model for TorrentMedia.Kind.
+type TorrentMediaKind string
 
 // TorrentPeer defines model for TorrentPeer.
 type TorrentPeer struct {

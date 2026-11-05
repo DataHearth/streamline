@@ -10,7 +10,7 @@
 		formatEta,
 		formatRatio,
 	} from "@lib/format";
-	import { torrentRelease } from "@lib/activity-touch";
+	import { torrentHref, torrentRelease } from "@lib/activity-touch";
 	import type { Torrent } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -88,9 +88,21 @@
 				{/if}
 			</div>
 			{@const release = torrentRelease(torrent)}
+			{@const href = torrentHref(torrent)}
 			{#if release}
 				<div class="truncate text-[11px] text-fg-subtle" title={release}>
-					{release}
+					{#if href}
+						<!-- The row opens the drawer; the release alone leaves for the page. -->
+						<a
+							{href}
+							onclick={(e) => e.stopPropagation()}
+							class="hover:text-accent hover:underline focus-visible:underline"
+						>
+							{release}
+						</a>
+					{:else}
+						{release}
+					{/if}
 				</div>
 			{:else}
 				<div class="truncate font-mono text-[11px] text-fg-subtle">

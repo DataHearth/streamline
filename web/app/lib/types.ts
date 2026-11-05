@@ -1398,6 +1398,15 @@ export type Torrent = {
 	// absent when untracked. `name` is the uploader's and can name no
 	// release at all.
 	release_title?: string;
+	// The library title that record is for; absent when untracked.
+	media?: TorrentMedia;
+};
+
+export type TorrentMedia = {
+	kind: "movie" | "series" | "album" | "artist" | "book";
+	id: number;
+	// Set for an album: its artist's page lists it.
+	artist_id?: number;
 };
 
 export type TorrentFile = {

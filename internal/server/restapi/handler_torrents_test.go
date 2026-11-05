@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/bittorrent/mocks"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 )
 
@@ -42,7 +43,30 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 		Expect(json.NewDecoder(resp.Body).Decode(&list)).To(Succeed())
 		Expect(list.Items).To(HaveLen(1))
 		Expect(list.Items[0].Ratio).To(Equal(2.5))
+		Expect(list.Items[0].Media).To(BeNil())
 		Expect(list.RefreshedAt).NotTo(BeZero())
+	})
+
+	It("names the library title a tracked torrent is for", func() {
+		app.torrents.EXPECT().ListViews(mock.Anything).Return(
+			[]bittorrent.TorrentView{{
+				Hash: testHash, Name: "Lamb Of God", Status: download.StatusSeeding,
+				Tracked: true, ReleaseTitle: "Lamb Of God - Omens",
+				Record: db.TorrentRecord{
+					Title: "Lamb Of God - Omens", AlbumID: 7, AlbumArtistID: 3,
+				},
+			}},
+		).Once()
+
+		resp, err := http.Get(app.srv.URL + "/api/v1/torrents")
+		Expect(err).NotTo(HaveOccurred())
+		defer resp.Body.Close()
+		var list TorrentList
+		Expect(json.NewDecoder(resp.Body).Decode(&list)).To(Succeed())
+		artist := uint32(3)
+		Expect(list.Items[0].Media).To(Equal(&TorrentMedia{
+			Kind: TorrentMediaKindAlbum, Id: 7, ArtistId: &artist,
+		}))
 	})
 
 	It("adds a torrent from a magnet link", func() {

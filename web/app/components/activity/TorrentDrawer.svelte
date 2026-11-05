@@ -7,6 +7,7 @@
 	import {
 		X,
 		Copy,
+		ExternalLink,
 		Check,
 		Pause,
 		Play,
@@ -32,7 +33,7 @@
 		formatRatio,
 	} from "@lib/format";
 	import { formatRelative, formatDateTime } from "@lib/dates";
-	import { torrentRelease } from "@lib/activity-touch";
+	import { torrentHref, torrentRelease } from "@lib/activity-touch";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		Torrent,
@@ -246,6 +247,15 @@
 						>
 							{i18n.torrent_untracked()}
 						</span>
+					{/if}
+					{#if torrentHref(torrent)}
+						<a
+							href={torrentHref(torrent)}
+							class="touch-hit inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
+						>
+							<ExternalLink size={12} aria-hidden="true" />
+							{i18n.activity_open_item()}
+						</a>
 					{/if}
 					<span class="ml-auto font-mono text-xs tabular-nums text-fg-faint">
 						{#if torrent.status === "downloading" && torrent.eta > 0}

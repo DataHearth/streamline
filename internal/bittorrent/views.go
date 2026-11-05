@@ -12,6 +12,7 @@ import (
 	antorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/types"
 
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 )
 
@@ -76,6 +77,9 @@ type TorrentView struct {
 	// ReleaseTitle is the title of the release the newest download_record
 	// holding the torrent was grabbed as; empty when untracked.
 	ReleaseTitle string
+	// Record is that newest record, with the library title it is for; zero
+	// when untracked.
+	Record db.TorrentRecord
 }
 
 type FileView struct {
@@ -107,8 +111,12 @@ type FilePriority struct {
 }
 
 func (e *Engine) ListViews(ctx context.Context) []TorrentView {
-	tracked := e.recordTitles(ctx)
 	live := e.client.Torrents()
+	hashes := make([]string, 0, len(live))
+	for _, t := range live {
+		hashes = append(hashes, t.InfoHash().HexString())
+	}
+	tracked := e.trackedRecords(ctx, hashes)
 	out := make([]TorrentView, 0, len(live))
 	for _, t := range live {
 		out = append(out, e.torrentView(t, tracked))
@@ -136,10 +144,10 @@ func sortViews(views []TorrentView) {
 // torrentView maps one live snapshot onto the management view.
 func (e *Engine) torrentView(
 	t *antorrent.Torrent,
-	tracked map[string]string,
+	tracked map[string]db.TorrentRecord,
 ) TorrentView {
 	l := e.live(t)
-	title, isTracked := tracked[l.hash]
+	rec, isTracked := tracked[l.hash]
 	return TorrentView{
 		Hash:           l.hash,
 		Name:           l.name,
@@ -158,20 +166,24 @@ func (e *Engine) torrentView(
 		AddedAt:        l.addedAt,
 		SeedingStopped: l.seedingStopped,
 		Tracked:        isTracked,
-		ReleaseTitle:   title,
+		ReleaseTitle:   rec.Title,
+		Record:         rec,
 	}
 }
 
-// recordTitles maps the torrent hashes some download_record owns to its
-// release title. A lookup failure degrades to "nothing tracked" (display-only
-// data, and the list refreshes every poll) rather than failing the view.
-func (e *Engine) recordTitles(ctx context.Context) map[string]string {
-	titles, err := e.store.DownloadRecordTitlesByHash(ctx)
+// trackedRecords maps the hashes some download_record owns to its newest
+// record. A lookup failure degrades to "nothing tracked" (display-only data,
+// and the list refreshes every poll) rather than failing the view.
+func (e *Engine) trackedRecords(
+	ctx context.Context,
+	hashes []string,
+) map[string]db.TorrentRecord {
+	recs, err := e.store.DownloadRecordsByHash(ctx, hashes)
 	if err != nil {
 		slog.WarnContext(ctx, "listing tracked torrent hashes failed", "error", err)
-		return map[string]string{}
+		return map[string]db.TorrentRecord{}
 	}
-	return titles
+	return recs
 }
 
 func (e *Engine) Details(
@@ -183,7 +195,9 @@ func (e *Engine) Details(
 		return TorrentDetails{}, err
 	}
 	d := TorrentDetails{
-		TorrentView: e.torrentView(t, e.recordTitles(ctx)),
+		TorrentView: e.torrentView(
+			t, e.trackedRecords(ctx, []string{t.InfoHash().HexString()}),
+		),
 		Files:       []FileView{},
 		Trackers:    []string{},
 		Peers:       []PeerView{},

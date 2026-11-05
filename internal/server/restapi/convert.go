@@ -1009,6 +1009,8 @@ func episodeRef(ep *ent.Episode) *EpisodeRef {
 		ref.Season = se.Number
 		if sh := se.Edges.TvShow; sh != nil {
 			ref.ShowTitle = sh.Title
+			id := sh.ID
+			ref.SeriesId = &id
 		}
 	}
 	return ref

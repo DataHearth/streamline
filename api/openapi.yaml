@@ -12263,6 +12263,8 @@ components:
             grabbed as. `name` is the torrent's own, which its uploader
             chose and which can name no release at all ("Lamb Of God" for an
             Omens LP). Absent when the torrent is untracked.
+        media:
+          $ref: "#/components/schemas/TorrentMedia"
 
     TorrentFile:
       type: object
@@ -12299,6 +12301,23 @@ components:
         upload_rate:
           type: number
           format: double
+
+    TorrentMedia:
+      type: object
+      required: [kind, id]
+      description: |
+        The library title the newest download record holding a torrent is
+        for, so the list can link to its page. Absent when the torrent is
+        untracked or its record names no title.
+      properties:
+        kind:
+          type: string
+          enum: [movie, series, album, artist, book]
+        id: { type: integer, x-go-type: uint32 }
+        artist_id:
+          type: integer
+          x-go-type: uint32
+          description: The album's artist, whose page lists the album. Set only for an album.
 
     TorrentDetails:
       allOf:

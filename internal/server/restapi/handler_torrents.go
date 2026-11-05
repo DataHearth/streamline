@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/internal/bittorrent"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 )
 
@@ -258,7 +259,30 @@ func torrentInfoToAPI(v bittorrent.TorrentView) TorrentInfo {
 		SeedingStopped: v.SeedingStopped,
 		Tracked:        v.Tracked,
 		ReleaseTitle:   releaseTitle,
+		Media:          torrentMedia(v.Record),
 	}
+}
+
+// torrentMedia names the library title a tracked torrent is for, or nil.
+func torrentMedia(r db.TorrentRecord) *TorrentMedia {
+	switch {
+	case r.AlbumID != 0:
+		m := &TorrentMedia{Kind: TorrentMediaKindAlbum, Id: r.AlbumID}
+		if r.AlbumArtistID != 0 {
+			id := r.AlbumArtistID
+			m.ArtistId = &id
+		}
+		return m
+	case r.ArtistID != 0:
+		return &TorrentMedia{Kind: TorrentMediaKindArtist, Id: r.ArtistID}
+	case r.BookID != 0:
+		return &TorrentMedia{Kind: TorrentMediaKindBook, Id: r.BookID}
+	case r.SeriesID != 0:
+		return &TorrentMedia{Kind: TorrentMediaKindSeries, Id: r.SeriesID}
+	case r.MovieID != 0:
+		return &TorrentMedia{Kind: TorrentMediaKindMovie, Id: r.MovieID}
+	}
+	return nil
 }
 
 func torrentDetailsToAPI(d bittorrent.TorrentDetails) TorrentDetails {
@@ -312,6 +336,7 @@ func torrentDetailsToAPI(d bittorrent.TorrentDetails) TorrentDetails {
 		SeedingStopped: d.SeedingStopped,
 		Tracked:        d.Tracked,
 		ReleaseTitle:   releaseTitle,
+		Media:          torrentMedia(d.Record),
 		Files:          files,
 		Trackers:       d.Trackers,
 		Peers:          peers,
