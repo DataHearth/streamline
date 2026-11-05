@@ -5,7 +5,6 @@ import (
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
-	"entgo.io/ent/schema/index"
 	"entgo.io/ent/schema/mixin"
 
 	"github.com/datahearth/streamline/ent/schema/mixins"
@@ -37,8 +36,4 @@ func (Author) Edges() []ent.Edge {
 		edge.To("contributions", BookContribution.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
-}
-
-func (Author) Indexes() []ent.Index {
-	return []ent.Index{index.Fields("name")}
 }

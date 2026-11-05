@@ -89,14 +89,14 @@ func (DownloadRecord) Indexes() []ent.Index {
 		index.Fields("status"),
 		index.Fields("torrent_hash"),
 		index.Fields("update_time", "id"),
-		// rejected: every automatic search loads the blocklist, and the
-		// rejected rows are a handful in a table of thousands.
-		index.Fields("rejected"),
 		// SQLite indexes no foreign key on its own, so deleting a movie or an
 		// episode scans this table for children to cascade.
 		index.Edges("movie"),
 		index.Edges("anchor_episode"),
 		index.Edges("artist"),
+		index.Edges("album"),
+		index.Edges("track"),
+		index.Edges("book"),
 	}
 }
 

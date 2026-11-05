@@ -60,6 +60,5 @@ func (MusicCredit) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Edges("album"),
 		index.Edges("track"),
-		index.Fields("mbid"),
 	}
 }

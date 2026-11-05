@@ -88,7 +88,8 @@ func (Book) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Edges("series"),
 		index.Edges("series").Fields("series_position"),
+		index.Edges("ebook_edition"),
+		index.Edges("audiobook_edition"),
 		index.Fields("kind"),
-		index.Fields("author_name"),
 	}
 }

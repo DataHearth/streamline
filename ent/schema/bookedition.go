@@ -50,8 +50,10 @@ func (BookEdition) Edges() []ent.Edge {
 
 func (BookEdition) Indexes() []ent.Index {
 	return []ent.Index{
+		// Neither composite below leads on the book, since ent orders fields
+		// before edges, so each book's editions need their own.
+		index.Edges("book"),
 		index.Fields("hardcover_edition_id").Edges("book").Unique(),
 		index.Fields("language", "format", "publisher").Edges("book"),
-		index.Fields("isbn_13"),
 	}
 }

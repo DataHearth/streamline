@@ -62,5 +62,10 @@ func (MusicAnnotation) Indexes() []ent.Index {
 		index.Edges("user", "artist").Unique(),
 		index.Edges("user", "album").Unique(),
 		index.Edges("user", "track").Unique(),
+		// The pairs above lead on the user, so a delete cascading from the
+		// target would scan the table.
+		index.Edges("artist"),
+		index.Edges("album"),
+		index.Edges("track"),
 	}
 }

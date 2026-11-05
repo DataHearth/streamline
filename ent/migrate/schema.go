@@ -203,13 +203,6 @@ var (
 		Name:       "authors",
 		Columns:    AuthorsColumns,
 		PrimaryKey: []*schema.Column{AuthorsColumns[0]},
-		Indexes: []*schema.Index{
-			{
-				Name:    "author_name",
-				Unique:  false,
-				Columns: []*schema.Column{AuthorsColumns[4]},
-			},
-		},
 	}
 	// BooksColumns holds the columns for the "books" table.
 	BooksColumns = []*schema.Column{
@@ -282,14 +275,19 @@ var (
 				Columns: []*schema.Column{BooksColumns[16], BooksColumns[30]},
 			},
 			{
+				Name:    "book_book_ebook_edition",
+				Unique:  false,
+				Columns: []*schema.Column{BooksColumns[28]},
+			},
+			{
+				Name:    "book_book_audiobook_edition",
+				Unique:  false,
+				Columns: []*schema.Column{BooksColumns[29]},
+			},
+			{
 				Name:    "book_kind",
 				Unique:  false,
 				Columns: []*schema.Column{BooksColumns[8]},
-			},
-			{
-				Name:    "book_author_name",
-				Unique:  false,
-				Columns: []*schema.Column{BooksColumns[7]},
 			},
 		},
 	}
@@ -384,6 +382,11 @@ var (
 		},
 		Indexes: []*schema.Index{
 			{
+				Name:    "bookedition_book_editions",
+				Unique:  false,
+				Columns: []*schema.Column{BookEditionsColumns[17]},
+			},
+			{
 				Name:    "bookedition_hardcover_edition_id_book_editions",
 				Unique:  true,
 				Columns: []*schema.Column{BookEditionsColumns[3], BookEditionsColumns[17]},
@@ -392,11 +395,6 @@ var (
 				Name:    "bookedition_language_format_publisher_book_editions",
 				Unique:  false,
 				Columns: []*schema.Column{BookEditionsColumns[4], BookEditionsColumns[8], BookEditionsColumns[6], BookEditionsColumns[17]},
-			},
-			{
-				Name:    "bookedition_isbn_13",
-				Unique:  false,
-				Columns: []*schema.Column{BookEditionsColumns[14]},
 			},
 		},
 	}
@@ -462,6 +460,11 @@ var (
 				Name:    "bookmark_user_id_track_id",
 				Unique:  true,
 				Columns: []*schema.Column{BookmarksColumns[6], BookmarksColumns[5]},
+			},
+			{
+				Name:    "bookmark_track_id",
+				Unique:  false,
+				Columns: []*schema.Column{BookmarksColumns[5]},
 			},
 		},
 	}
@@ -617,11 +620,6 @@ var (
 				Columns: []*schema.Column{DownloadRecordsColumns[2], DownloadRecordsColumns[0]},
 			},
 			{
-				Name:    "downloadrecord_rejected",
-				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[22]},
-			},
-			{
 				Name:    "downloadrecord_movie_download_records",
 				Unique:  false,
 				Columns: []*schema.Column{DownloadRecordsColumns[28]},
@@ -635,6 +633,21 @@ var (
 				Name:    "downloadrecord_artist_download_records",
 				Unique:  false,
 				Columns: []*schema.Column{DownloadRecordsColumns[25]},
+			},
+			{
+				Name:    "downloadrecord_album_download_records",
+				Unique:  false,
+				Columns: []*schema.Column{DownloadRecordsColumns[24]},
+			},
+			{
+				Name:    "downloadrecord_track_download_records",
+				Unique:  false,
+				Columns: []*schema.Column{DownloadRecordsColumns[29]},
+			},
+			{
+				Name:    "downloadrecord_book_download_records",
+				Unique:  false,
+				Columns: []*schema.Column{DownloadRecordsColumns[26]},
 			},
 		},
 	}
@@ -1328,6 +1341,21 @@ var (
 				Unique:  true,
 				Columns: []*schema.Column{MusicAnnotationsColumns[10], MusicAnnotationsColumns[9]},
 			},
+			{
+				Name:    "musicannotation_artist_id",
+				Unique:  false,
+				Columns: []*schema.Column{MusicAnnotationsColumns[8]},
+			},
+			{
+				Name:    "musicannotation_album_id",
+				Unique:  false,
+				Columns: []*schema.Column{MusicAnnotationsColumns[7]},
+			},
+			{
+				Name:    "musicannotation_track_id",
+				Unique:  false,
+				Columns: []*schema.Column{MusicAnnotationsColumns[9]},
+			},
 		},
 	}
 	// MusicCreditsColumns holds the columns for the "music_credits" table.
@@ -1374,11 +1402,6 @@ var (
 				Name:    "musiccredit_track_credits",
 				Unique:  false,
 				Columns: []*schema.Column{MusicCreditsColumns[11]},
-			},
-			{
-				Name:    "musiccredit_mbid",
-				Unique:  false,
-				Columns: []*schema.Column{MusicCreditsColumns[6]},
 			},
 		},
 	}
@@ -1452,11 +1475,6 @@ var (
 				Name:    "person_tvdb_id",
 				Unique:  false,
 				Columns: []*schema.Column{PersonsColumns[4]},
-			},
-			{
-				Name:    "person_name",
-				Unique:  false,
-				Columns: []*schema.Column{PersonsColumns[5]},
 			},
 		},
 	}

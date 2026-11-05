@@ -66,6 +66,5 @@ func (Person) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tmdb_id"),
 		index.Fields("tvdb_id"),
-		index.Fields("name"),
 	}
 }

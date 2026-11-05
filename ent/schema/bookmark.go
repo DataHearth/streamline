@@ -45,5 +45,8 @@ func (Bookmark) Edges() []ent.Edge {
 }
 
 func (Bookmark) Indexes() []ent.Index {
-	return []ent.Index{index.Edges("user", "track").Unique()}
+	return []ent.Index{
+		index.Edges("user", "track").Unique(),
+		index.Edges("track"),
+	}
 }
