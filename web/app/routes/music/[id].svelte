@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { createQuery } from "@tanstack/svelte-query";
+	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import { activeRoute } from "@roxi/routify";
 	import { Radar, Search, Tags, Upload, UserRound } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
@@ -103,13 +103,25 @@
 	);
 	let open = $derived(openId === null ? selected?.id : openId);
 	// Only the Discography tab shows these. Every track's credits load behind the
-	// page, and the release being looked at does not wait for them.
+	// page, and the release being looked at does not wait for them. Megabytes for
+	// a large discography and only hydration changes them, so the key stays out of
+	// the ["music"] prefix every monitor toggle refreshes.
+	const trackCreditsKey = () => ["artist-track-credits", id];
 	const allTrackCredits = createQuery<{ tracks: TrackCredits[] }>(() => ({
-		queryKey: ["music", "artist", id, "track-credits"],
+		queryKey: trackCreditsKey(),
 		queryFn: () => api<{ tracks: TrackCredits[] }>(`/music/artists/${id}/track-credits`),
 		enabled: !!id && tab === "discography",
+		staleTime: Infinity,
 		refetchInterval: artist?.hydrating ? 60_000 : false,
 	}));
+	// The minute poll can stop just before hydration writes its last credits.
+	const qc = useQueryClient();
+	let wasHydrating = false;
+	$effect(() => {
+		if (!artist) return;
+		if (wasHydrating && !artist.hydrating) qc.invalidateQueries({ queryKey: trackCreditsKey() });
+		wasHydrating = !!artist.hydrating;
+	});
 	const releaseQuery = (rid: () => number | undefined) =>
 		createQuery<Release>(() => ({
 			queryKey: ["music", "album", rid()],
