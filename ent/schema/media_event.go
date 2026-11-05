@@ -73,12 +73,14 @@ func (MediaEvent) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("create_time"),
 		index.Fields("type", "create_time"),
-		index.Edges("movie").Fields("create_time"),
-		index.Edges("episode").Fields("create_time"),
-		index.Edges("tv_show").Fields("create_time"),
-		index.Edges("artist").Fields("create_time"),
-		index.Edges("album").Fields("create_time"),
-		index.Edges("book").Fields("create_time"),
-		index.Edges("book_series").Fields("create_time"),
+		// The owner alone: ent puts fields before edges, so adding create_time
+		// here would lead on it, and such an index cannot seek to one owner.
+		index.Edges("movie"),
+		index.Edges("episode"),
+		index.Edges("tv_show"),
+		index.Edges("artist"),
+		index.Edges("album"),
+		index.Edges("book"),
+		index.Edges("book_series"),
 	}
 }
