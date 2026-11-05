@@ -87,13 +87,19 @@
 		} else if (selectionUnsupported) {
 			sizeValue = `${sizeValue} — ${i18n.queue_selection_unsupported()}`;
 		}
-		const out: KV[] = [
-			{ label: i18n.common_release(), value: item.title },
-			{ label: i18n.common_indexer(), value: item.uploaded ? i18n.activity_upload() : item.indexer || "—" },
-			{ label: i18n.common_client(), value: item.uploaded ? i18n.activity_upload() : item.download_client || "—" },
+		// An upload has no release name, indexer or client — its row already says
+		// it is one — so it lists only what it carries.
+		const out: KV[] = item.uploaded
+			? []
+			: [
+					{ label: i18n.common_release(), value: item.title },
+					{ label: i18n.common_indexer(), value: item.indexer || "—" },
+					{ label: i18n.common_client(), value: item.download_client || "—" },
+				];
+		out.push(
 			{ label: i18n.common_size(), value: sizeValue },
 			{ label: i18n.common_created(), value: formatDateTime(item.created_at) },
-		];
+		);
 		if (view === "history") {
 			const h = item as HistoryEntry;
 			out.push({

@@ -12,7 +12,7 @@
 	} from "@tanstack/svelte-query";
 	import { api, apiAllPages, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
-	import { entryHeading } from "@lib/activity-touch";
+	import { entryHeading, entryRelease } from "@lib/activity-touch";
 	import { builtinTorrentsQuery, torrentHref } from "@lib/activity-nav";
 	import { toast } from "@lib/toast";
 	import { pullRefresh } from "@lib/pull-refresh";
@@ -369,7 +369,9 @@
 			const q = fold(search);
 			out = out.filter(
 				(i) =>
-					fold(i.title).includes(q) || fold(entryHeading(i)).includes(q),
+					fold(i.title).includes(q) ||
+					fold(entryHeading(i)).includes(q) ||
+					fold(entryRelease(i)).includes(q),
 			);
 		}
 		return out;

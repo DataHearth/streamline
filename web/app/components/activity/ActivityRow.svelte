@@ -4,7 +4,7 @@
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
 	import SelectBox from "@components/shared/SelectBox.svelte";
 	import { cn } from "@lib/cn";
-	import { entryHeading, holdSummary } from "@lib/activity-touch";
+	import { entryHeading, entryRelease, holdSummary } from "@lib/activity-touch";
 	import { pillStatus, formatBytes, formatSpeed, formatEta } from "@lib/format";
 	import { formatRelative, formatDateTime } from "@lib/dates";
 	import type { QueueEntry, HistoryEntry } from "@lib/types";
@@ -81,7 +81,7 @@
 	<td class={cn("w-full max-w-0 px-2", pad)}>
 		<div class="truncate font-medium text-fg">{heading}</div>
 		<div class="truncate font-mono text-[11px] text-fg-subtle">
-			{item.title}
+			{entryRelease(item)}
 		</div>
 	</td>
 

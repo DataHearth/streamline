@@ -4255,6 +4255,15 @@ type ActivityList struct {
 	NextCursor *string         `json:"next_cursor,omitempty"`
 }
 
+// ActivityTrackRef The track a single-track upload is for; album is set beside it. Absent
+// on every other record.
+type ActivityTrackRef struct {
+	Disc     uint8  `json:"disc"`
+	Id       uint32 `json:"id"`
+	Position uint16 `json:"position"`
+	Title    string `json:"title"`
+}
+
 // AddBookRequest defines model for AddBookRequest.
 type AddBookRequest struct {
 	HardcoverId uint32 `json:"hardcover_id"`
@@ -5501,8 +5510,12 @@ type HistoryEntry struct {
 
 	// TorrentHash Info hash of the torrent behind the record, lower-case hex. The
 	// torrent may since have been removed from download_client.
-	TorrentHash *string   `json:"torrent_hash,omitempty"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	TorrentHash *string `json:"torrent_hash,omitempty"`
+
+	// Track The track a single-track upload is for; album is set beside it. Absent
+	// on every other record.
+	Track     *ActivityTrackRef `json:"track,omitempty"`
+	UpdatedAt time.Time         `json:"updated_at"`
 
 	// Uploaded The files were uploaded to Streamline, not downloaded; indexer and download_client are absent.
 	Uploaded *bool `json:"uploaded,omitempty"`
@@ -7951,6 +7964,10 @@ type QueueEntry struct {
 	// lower-case hex. Absent when the record carries none. Under the
 	// builtin client it is the key of GET /torrents/{hash}.
 	TorrentHash *string `json:"torrent_hash,omitempty"`
+
+	// Track The track a single-track upload is for; album is set beside it. Absent
+	// on every other record.
+	Track *ActivityTrackRef `json:"track,omitempty"`
 
 	// Uploaded The files were uploaded to Streamline, not downloaded; indexer and download_client are absent.
 	Uploaded *bool `json:"uploaded,omitempty"`

@@ -446,7 +446,9 @@ type QueueEntry struct {
 	// Album is set for an album record (its artist eager-loaded), Artist for a
 	// discography pack, Book for a book slot; each lets the activity page
 	// title the row.
-	Album  *ent.Album
+	Album *ent.Album
+	// Track is set on a single-track upload, beside Album.
+	Track  *ent.Track
 	Artist *ent.Artist
 	Book   *ent.Book
 	// BookKind is the slot a book record fills: ebook or audiobook.
@@ -600,6 +602,7 @@ func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 		ReleaseGroup:   rec.ReleaseGroup,
 		Movie:          rec.Edges.Movie,
 		Album:          rec.Edges.Album,
+		Track:          rec.Edges.Track,
 		Artist:         rec.Edges.Artist,
 		Book:           rec.Edges.Book,
 		BookKind:       string(rec.BookKind),

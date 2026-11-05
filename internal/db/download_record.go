@@ -1525,7 +1525,8 @@ func (db *DB) ListDownloadRecordsByPathPrefix(
 
 // ListActiveDownloadRecords returns records still in flight (downloading,
 // importing or held) with the title they are for eager-loaded — movie, anchor
-// episode, album (with its artist), discography-pack artist or book.
+// episode, album (with its artist), an uploaded track, discography-pack artist
+// or book.
 // Powers the live queue snapshot.
 func (db *DB) ListActiveDownloadRecords(
 	ctx context.Context,
@@ -1543,6 +1544,7 @@ func (db *DB) ListActiveDownloadRecords(
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
 		WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
+		WithTrack().
 		WithArtist().
 		WithBook(func(q *ent.BookQuery) { q.WithSeries() }).
 		WithAlbums(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
@@ -1802,6 +1804,7 @@ func (db *DB) ListDownloadHistory(
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
 		WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
+		WithTrack().
 		WithArtist().
 		WithAlbums(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
 		WithBook(func(q *ent.BookQuery) { q.WithSeries() })

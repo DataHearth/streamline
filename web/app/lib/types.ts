@@ -729,6 +729,8 @@ export type ActivityAlbumRef = { id: number; title: string; artist_id: number; a
 // album_count is how many albums a discography pack is expected to cover. A
 // book names the slot it fills and, for a volume, its series.
 export type ActivityArtistRef = { id: number; name: string; album_count: number };
+// The track a single-track upload is for, beside its album.
+export type ActivityTrackRef = { id: number; title: string; disc: number; position: number };
 export type ActivityBookRef = {
 	id: number;
 	title: string;
@@ -749,6 +751,7 @@ export type QueueEntry = {
 	movie: Movie;
 	episode?: EpisodeRef;
 	album?: ActivityAlbumRef;
+	track?: ActivityTrackRef;
 	artist?: ActivityArtistRef;
 	book?: ActivityBookRef;
 	indexer?: string;
@@ -816,6 +819,7 @@ export type HistoryEntry = {
 	movie: Movie;
 	episode?: EpisodeRef;
 	album?: ActivityAlbumRef;
+	track?: ActivityTrackRef;
 	artist?: ActivityArtistRef;
 	book?: ActivityBookRef;
 	indexer?: string;

@@ -11,7 +11,7 @@
 	} from "@lucide/svelte";
 	import TouchRow, { type RowSwipe } from "./TouchRow.svelte";
 	import type { DownloadConfirm } from "./DownloadConfirmDialog.svelte";
-	import { entryHeading, historyMeta, queueMeta } from "@lib/activity-touch";
+	import { entryHeading, entryRelease, historyMeta, queueMeta } from "@lib/activity-touch";
 	import { pillStatus } from "@lib/format";
 	import type { HistoryEntry, QueueEntry } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -170,7 +170,7 @@
 					status={pillStatus(row.status)}
 					progress={progressOf(row)}
 					title={entryHeading(row)}
-					release={row.title}
+					release={entryRelease(row)}
 					meta={view === "queue"
 						? queueMeta(row as QueueEntry)
 						: historyMeta(row as HistoryEntry)}

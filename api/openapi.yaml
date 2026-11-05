@@ -14880,6 +14880,18 @@ components:
           # "<series> · Vol. n".
           $ref: "#/components/schemas/BookSeriesRef"
 
+    ActivityTrackRef:
+      type: object
+      required: [id, title, disc, position]
+      description: |
+        The track a single-track upload is for; album is set beside it. Absent
+        on every other record.
+      properties:
+        id: { type: integer, x-go-type: uint32 }
+        title: { type: string }
+        disc: { type: integer, x-go-type: uint8 }
+        position: { type: integer, x-go-type: uint16 }
+
     EpisodeRef:
       type: object
       required: [show_title, season, episode]
@@ -14918,6 +14930,7 @@ components:
             is titled from episode, album, artist or book instead.
         episode: { $ref: "#/components/schemas/EpisodeRef" }
         album: { $ref: "#/components/schemas/ActivityAlbumRef" }
+        track: { $ref: "#/components/schemas/ActivityTrackRef" }
         artist: { $ref: "#/components/schemas/ActivityArtistRef" }
         book: { $ref: "#/components/schemas/ActivityBookRef" }
         indexer: { type: string }
@@ -15017,6 +15030,7 @@ components:
             is titled from episode, album, artist or book instead.
         episode: { $ref: "#/components/schemas/EpisodeRef" }
         album: { $ref: "#/components/schemas/ActivityAlbumRef" }
+        track: { $ref: "#/components/schemas/ActivityTrackRef" }
         artist: { $ref: "#/components/schemas/ActivityArtistRef" }
         book: { $ref: "#/components/schemas/ActivityBookRef" }
         indexer: { type: string }

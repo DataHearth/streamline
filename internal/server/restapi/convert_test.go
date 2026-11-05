@@ -268,4 +268,23 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 			Expect(*out.GrabFailures).To(Equal(uint8(2)))
 		})
 	})
+
+	Describe("toHistoryEntry", func() {
+		It("names the track a single-track upload is for", func() {
+			rec := &ent.DownloadRecord{ID: 3, Title: "Upload", Uploaded: true}
+			rec.Edges.Album = &ent.Album{ID: 7, Title: "Proof 2"}
+			rec.Edges.Track = &ent.Track{ID: 11, Title: "Intro", Disc: 1, Position: 4}
+			out := toHistoryEntry(rec)
+			Expect(out.Album).NotTo(BeNil())
+			Expect(out.Track).To(Equal(&ActivityTrackRef{
+				Id: 11, Title: "Intro", Disc: 1, Position: 4,
+			}))
+		})
+
+		It("leaves track absent on any other record", func() {
+			rec := &ent.DownloadRecord{ID: 4, Title: "Artist - Album"}
+			rec.Edges.Album = &ent.Album{ID: 7, Title: "Proof 2"}
+			Expect(toHistoryEntry(rec).Track).To(BeNil())
+		})
+	})
 })

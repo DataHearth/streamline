@@ -28,7 +28,8 @@ const pct = (v: number | undefined | null) =>
 // its linked episode is just the season's first — label it as the season rather
 // than a misleading SxxE01.
 export function entryHeading(item: QueueEntry | HistoryEntry): string {
-	if (item.album) return joinDot([item.album.artist_name, item.album.title]);
+	// A single-track upload names its track; entryRelease puts the album under it.
+	if (item.album) return joinDot([item.album.artist_name, item.track?.title ?? item.album.title]);
 	if (item.artist) {
 		const { name, album_count } = item.artist;
 		return joinDot([name, i18n.music_discography(), album_count ? NOUN_ALBUM.count(album_count) : ""]);
@@ -49,6 +50,14 @@ export function entryHeading(item: QueueEntry | HistoryEntry): string {
 	}
 	const season = ep.season === 0 ? i18n.series_specials() : i18n.season_number({ number: pad2(ep.season) });
 	return `${ep.show_title} · ${season}`;
+}
+
+// The line under the heading: the release name. An upload has none — its title
+// is the folder it came from, or a placeholder — so a track upload names its
+// album there instead, the heading carrying the track.
+export function entryRelease(item: QueueEntry | HistoryEntry): string {
+	if (item.track && item.album) return item.album.title;
+	return item.title;
 }
 
 export type RingGlyph =

@@ -20,7 +20,7 @@
 	import { cn } from "@lib/cn";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
-	import { entryHeading, historyMeta, queueMeta } from "@lib/activity-touch";
+	import { entryHeading, entryRelease, historyMeta, queueMeta } from "@lib/activity-touch";
 	import { formatBytes, pillStatus } from "@lib/format";
 	import { formatDateTime } from "@lib/dates";
 	import type { HistoryEntry, QueueEntry } from "@lib/types";
@@ -117,11 +117,14 @@
 	type KV = { label: string; value: string; tone?: string };
 	let rows = $derived.by<KV[]>(() => {
 		if (!item) return [];
-		const out: KV[] = [
-			{ label: i18n.common_release(), value: item.title },
-			{ label: i18n.common_indexer(), value: item.uploaded ? i18n.activity_upload() : item.indexer || "—" },
-			{ label: i18n.common_created(), value: formatDateTime(item.created_at) },
-		];
+		// An upload has no release name or indexer; the client tile goes too.
+		const out: KV[] = item.uploaded
+			? []
+			: [
+					{ label: i18n.common_release(), value: item.title },
+					{ label: i18n.common_indexer(), value: item.indexer || "—" },
+				];
+		out.push({ label: i18n.common_created(), value: formatDateTime(item.created_at) });
 		if (view === "history") {
 			out.push({
 				label: i18n.activity_imported(),
@@ -172,7 +175,7 @@
 						<h2 class="truncate text-[16.5px] font-semibold tracking-tight text-fg">
 							{entryHeading(item)}
 						</h2>
-						<p class="truncate font-mono text-[11px] text-fg-subtle">{item.title}</p>
+						<p class="truncate font-mono text-[11px] text-fg-subtle">{entryRelease(item)}</p>
 					</div>
 				</div>
 				<button
@@ -200,7 +203,10 @@
 				</div>
 
 				<div
-					class="mt-3.5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border"
+					class={cn(
+						"mt-3.5 grid gap-px overflow-hidden rounded-lg border border-border bg-border",
+						item.uploaded ? "grid-cols-1" : "grid-cols-2",
+					)}
 				>
 					<div class="bg-bg-elevated px-3 py-2.5">
 						<div class="font-mono text-[13.5px] font-semibold tabular-nums text-fg">
@@ -217,16 +223,18 @@
 							</div>
 						{/if}
 					</div>
-					<div class="bg-bg-elevated px-3 py-2.5">
-						<div class="truncate font-mono text-[12.5px] font-semibold text-fg">
-							{item.uploaded ? i18n.activity_upload() : item.download_client || "—"}
+					{#if !item.uploaded}
+						<div class="bg-bg-elevated px-3 py-2.5">
+							<div class="truncate font-mono text-[12.5px] font-semibold text-fg">
+								{item.download_client || "—"}
+							</div>
+							<div
+								class="mt-px text-[9px] font-medium uppercase tracking-[0.12em] text-fg-faint"
+							>
+								{i18n.common_client()}
+							</div>
 						</div>
-						<div
-							class="mt-px text-[9px] font-medium uppercase tracking-[0.12em] text-fg-faint"
-						>
-							{i18n.common_client()}
-						</div>
-					</div>
+					{/if}
 				</div>
 
 				<dl class="mt-3.5 grid grid-cols-[max-content_1fr] gap-x-3.5 gap-y-1.5">

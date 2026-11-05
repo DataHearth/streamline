@@ -885,6 +885,7 @@ func toQueueEntry(e download.QueueEntry) QueueEntry {
 	}
 	out.Episode = episodeRef(e.Episode)
 	out.Album = activityAlbumRef(e.Album)
+	out.Track = activityTrackRef(e.Track)
 	out.Artist = activityArtistRef(e.Artist, len(e.PackAlbumIDs))
 	out.Book = activityBookRef(e.Book, e.BookKind)
 	out.Uploaded = uploadedRef(e.Uploaded)
@@ -951,6 +952,7 @@ func toHistoryEntry(r *ent.DownloadRecord) HistoryEntry {
 	}
 	out.Episode = episodeRef(r.Edges.AnchorEpisode)
 	out.Album = activityAlbumRef(r.Edges.Album)
+	out.Track = activityTrackRef(r.Edges.Track)
 	out.Artist = activityArtistRef(r.Edges.Artist, len(r.Edges.Albums))
 	out.Book = activityBookRef(r.Edges.Book, string(r.BookKind))
 	out.Uploaded = uploadedRef(r.Uploaded)
@@ -1024,6 +1026,20 @@ func activityAlbumRef(a *ent.Album) *ActivityAlbumRef {
 		ref.ArtistName = ar.Name
 	}
 	return ref
+}
+
+// activityTrackRef names the track a single-track upload is for, or nil for
+// any other record.
+func activityTrackRef(t *ent.Track) *ActivityTrackRef {
+	if t == nil {
+		return nil
+	}
+	return &ActivityTrackRef{
+		Id:       t.ID,
+		Title:    t.Title,
+		Disc:     t.Disc,
+		Position: t.Position,
+	}
 }
 
 // activityArtistRef titles a discography pack's row, with the number of
