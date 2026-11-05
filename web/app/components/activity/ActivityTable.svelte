@@ -179,7 +179,12 @@
 			const vb = sortValue(b, key);
 			if (typeof va === "string" || typeof vb === "string")
 				return String(va).localeCompare(String(vb)) * dir;
-			return (va - vb) * dir;
+			if (va !== vb) return (va - vb) * dir;
+			// Within one queue status the furthest along leads, whichever way
+			// the statuses run — the API's own order, without depending on it.
+			if (key === "status" && view === "queue")
+				return (sortValue(b, "progress") as number) - (sortValue(a, "progress") as number);
+			return 0;
 		});
 	});
 
