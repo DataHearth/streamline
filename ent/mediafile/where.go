@@ -90,11 +90,6 @@ func ReleaseGroup(v string) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldReleaseGroup, v))
 }
 
-// LastSeenAt applies equality check predicate on the "last_seen_at" field. It's identical to LastSeenAtEQ.
-func LastSeenAt(v time.Time) predicate.MediaFile {
-	return predicate.MediaFile(sql.FieldEQ(FieldLastSeenAt, v))
-}
-
 // MissingSince applies equality check predicate on the "missing_since" field. It's identical to MissingSinceEQ.
 func MissingSince(v time.Time) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldMissingSince, v))
@@ -653,56 +648,6 @@ func SourceIn(vs ...Source) predicate.MediaFile {
 // SourceNotIn applies the NotIn predicate on the "source" field.
 func SourceNotIn(vs ...Source) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldNotIn(FieldSource, vs...))
-}
-
-// LastSeenAtEQ applies the EQ predicate on the "last_seen_at" field.
-func LastSeenAtEQ(v time.Time) predicate.MediaFile {
-	return predicate.MediaFile(sql.FieldEQ(FieldLastSeenAt, v))
-}
-
-// LastSeenAtNEQ applies the NEQ predicate on the "last_seen_at" field.
-func LastSeenAtNEQ(v time.Time) predicate.MediaFile {
-	return predicate.MediaFile(sql.FieldNEQ(FieldLastSeenAt, v))
-}
-
-// LastSeenAtIn applies the In predicate on the "last_seen_at" field.
-func LastSeenAtIn(vs ...time.Time) predicate.MediaFile {
-	return predicate.MediaFile(sql.FieldIn(FieldLastSeenAt, vs...))
-}
-
-// LastSeenAtNotIn applies the NotIn predicate on the "last_seen_at" field.
-func LastSeenAtNotIn(vs ...time.Time) predicate.MediaFile {
-	return predicate.MediaFile(sql.FieldNotIn(FieldLastSeenAt, vs...))
-}
-
-// LastSeenAtGT applies the GT predicate on the "last_seen_at" field.
-func LastSeenAtGT(v time.Time) predicate.MediaFile {
-	return predicate.MediaFile(sql.FieldGT(FieldLastSeenAt, v))
-}
-
-// LastSeenAtGTE applies the GTE predicate on the "last_seen_at" field.
-func LastSeenAtGTE(v time.Time) predicate.MediaFile {
-	return predicate.MediaFile(sql.FieldGTE(FieldLastSeenAt, v))
-}
-
-// LastSeenAtLT applies the LT predicate on the "last_seen_at" field.
-func LastSeenAtLT(v time.Time) predicate.MediaFile {
-	return predicate.MediaFile(sql.FieldLT(FieldLastSeenAt, v))
-}
-
-// LastSeenAtLTE applies the LTE predicate on the "last_seen_at" field.
-func LastSeenAtLTE(v time.Time) predicate.MediaFile {
-	return predicate.MediaFile(sql.FieldLTE(FieldLastSeenAt, v))
-}
-
-// LastSeenAtIsNil applies the IsNil predicate on the "last_seen_at" field.
-func LastSeenAtIsNil() predicate.MediaFile {
-	return predicate.MediaFile(sql.FieldIsNull(FieldLastSeenAt))
-}
-
-// LastSeenAtNotNil applies the NotNil predicate on the "last_seen_at" field.
-func LastSeenAtNotNil() predicate.MediaFile {
-	return predicate.MediaFile(sql.FieldNotNull(FieldLastSeenAt))
 }
 
 // MissingSinceEQ applies the EQ predicate on the "missing_since" field.

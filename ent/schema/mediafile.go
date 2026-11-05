@@ -1,8 +1,6 @@
 package schema
 
 import (
-	"time"
-
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
@@ -31,14 +29,9 @@ func (MediaFile) Fields() []ent.Field {
 		field.Enum("source").
 			Values("wizard", "orphan", "auto").
 			Default("auto"),
-		field.Time("last_seen_at").
-			Optional().
-			Nillable().
-			Default(time.Now),
 		// Set on the first drift tick that cannot stat the file, cleared the
-		// moment it is seen again. last_seen_at alone cannot tell the first
-		// missing tick from the fifth — it just stops advancing — and that
-		// edge is what the drift_detected event fires on.
+		// moment it is seen again. The grace window counts from here, and
+		// setting it is the edge the drift_detected event fires on.
 		field.Time("missing_since").Optional().Nillable(),
 		field.String("container").Optional(),
 		field.Uint32("duration_seconds").Optional(),

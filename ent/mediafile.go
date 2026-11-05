@@ -37,8 +37,6 @@ type MediaFile struct {
 	ReleaseGroup string `json:"release_group,omitempty"`
 	// Source holds the value of the "source" field.
 	Source mediafile.Source `json:"source,omitempty"`
-	// LastSeenAt holds the value of the "last_seen_at" field.
-	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
 	// MissingSince holds the value of the "missing_since" field.
 	MissingSince *time.Time `json:"missing_since,omitempty"`
 	// Container holds the value of the "container" field.
@@ -184,7 +182,7 @@ func (*MediaFile) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec, mediafile.FieldAudioLangs, mediafile.FieldSubLangs, mediafile.FieldParsedSource, mediafile.FieldParsedResolution, mediafile.FieldParsedCodec, mediafile.FieldBookKind, mediafile.FieldTagsState, mediafile.FieldTagsHash, mediafile.FieldTagsError, mediafile.FieldTagsArtHash:
 			values[i] = new(sql.NullString)
-		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldLastSeenAt, mediafile.FieldMissingSince, mediafile.FieldProbedAt, mediafile.FieldTranscodedAt, mediafile.FieldTaggedAt, mediafile.FieldTagsCheckedAt:
+		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldMissingSince, mediafile.FieldProbedAt, mediafile.FieldTranscodedAt, mediafile.FieldTaggedAt, mediafile.FieldTagsCheckedAt:
 			values[i] = new(sql.NullTime)
 		case mediafile.ForeignKeys[0]: // book_media_files
 			values[i] = new(sql.NullInt64)
@@ -262,13 +260,6 @@ func (_m *MediaFile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field source", values[i])
 			} else if value.Valid {
 				_m.Source = mediafile.Source(value.String)
-			}
-		case mediafile.FieldLastSeenAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field last_seen_at", values[i])
-			} else if value.Valid {
-				_m.LastSeenAt = new(time.Time)
-				*_m.LastSeenAt = value.Time
 			}
 		case mediafile.FieldMissingSince:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -556,11 +547,6 @@ func (_m *MediaFile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("source=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Source))
-	builder.WriteString(", ")
-	if v := _m.LastSeenAt; v != nil {
-		builder.WriteString("last_seen_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
 	builder.WriteString(", ")
 	if v := _m.MissingSince; v != nil {
 		builder.WriteString("missing_since=")

@@ -31,8 +31,6 @@ const (
 	FieldReleaseGroup = "release_group"
 	// FieldSource holds the string denoting the source field in the database.
 	FieldSource = "source"
-	// FieldLastSeenAt holds the string denoting the last_seen_at field in the database.
-	FieldLastSeenAt = "last_seen_at"
 	// FieldMissingSince holds the string denoting the missing_since field in the database.
 	FieldMissingSince = "missing_since"
 	// FieldContainer holds the string denoting the container field in the database.
@@ -149,7 +147,6 @@ var Columns = []string{
 	FieldFormat,
 	FieldReleaseGroup,
 	FieldSource,
-	FieldLastSeenAt,
 	FieldMissingSince,
 	FieldContainer,
 	FieldDurationSeconds,
@@ -213,8 +210,6 @@ var (
 	UpdateDefaultUpdateTime func() time.Time
 	// PathValidator is a validator for the "path" field. It is called by the builders before save.
 	PathValidator func(string) error
-	// DefaultLastSeenAt holds the default value on creation for the "last_seen_at" field.
-	DefaultLastSeenAt func() time.Time
 	// DefaultTagFailures holds the default value on creation for the "tag_failures" field.
 	DefaultTagFailures uint8
 )
@@ -340,11 +335,6 @@ func ByReleaseGroup(opts ...sql.OrderTermOption) OrderOption {
 // BySource orders the results by the source field.
 func BySource(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSource, opts...).ToFunc()
-}
-
-// ByLastSeenAt orders the results by the last_seen_at field.
-func ByLastSeenAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldLastSeenAt, opts...).ToFunc()
 }
 
 // ByMissingSince orders the results by the missing_since field.

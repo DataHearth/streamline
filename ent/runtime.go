@@ -578,12 +578,8 @@ func init() {
 	mediafileDescPath := mediafileFields[0].Descriptor()
 	// mediafile.PathValidator is a validator for the "path" field. It is called by the builders before save.
 	mediafile.PathValidator = mediafileDescPath.Validators[0].(func(string) error)
-	// mediafileDescLastSeenAt is the schema descriptor for last_seen_at field.
-	mediafileDescLastSeenAt := mediafileFields[6].Descriptor()
-	// mediafile.DefaultLastSeenAt holds the default value on creation for the last_seen_at field.
-	mediafile.DefaultLastSeenAt = mediafileDescLastSeenAt.Default.(func() time.Time)
 	// mediafileDescTagFailures is the schema descriptor for tag_failures field.
-	mediafileDescTagFailures := mediafileFields[32].Descriptor()
+	mediafileDescTagFailures := mediafileFields[31].Descriptor()
 	// mediafile.DefaultTagFailures holds the default value on creation for the tag_failures field.
 	mediafile.DefaultTagFailures = mediafileDescTagFailures.Default.(uint8)
 	movieMixin := schema.Movie{}.Mixin()

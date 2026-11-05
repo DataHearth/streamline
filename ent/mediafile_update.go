@@ -149,26 +149,6 @@ func (_u *MediaFileUpdate) SetNillableSource(v *mediafile.Source) *MediaFileUpda
 	return _u
 }
 
-// SetLastSeenAt sets the "last_seen_at" field.
-func (_u *MediaFileUpdate) SetLastSeenAt(v time.Time) *MediaFileUpdate {
-	_u.mutation.SetLastSeenAt(v)
-	return _u
-}
-
-// SetNillableLastSeenAt sets the "last_seen_at" field if the given value is not nil.
-func (_u *MediaFileUpdate) SetNillableLastSeenAt(v *time.Time) *MediaFileUpdate {
-	if v != nil {
-		_u.SetLastSeenAt(*v)
-	}
-	return _u
-}
-
-// ClearLastSeenAt clears the value of the "last_seen_at" field.
-func (_u *MediaFileUpdate) ClearLastSeenAt() *MediaFileUpdate {
-	_u.mutation.ClearLastSeenAt()
-	return _u
-}
-
 // SetMissingSince sets the "missing_since" field.
 func (_u *MediaFileUpdate) SetMissingSince(v time.Time) *MediaFileUpdate {
 	_u.mutation.SetMissingSince(v)
@@ -1046,12 +1026,6 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Source(); ok {
 		_spec.SetField(mediafile.FieldSource, field.TypeEnum, value)
 	}
-	if value, ok := _u.mutation.LastSeenAt(); ok {
-		_spec.SetField(mediafile.FieldLastSeenAt, field.TypeTime, value)
-	}
-	if _u.mutation.LastSeenAtCleared() {
-		_spec.ClearField(mediafile.FieldLastSeenAt, field.TypeTime)
-	}
 	if value, ok := _u.mutation.MissingSince(); ok {
 		_spec.SetField(mediafile.FieldMissingSince, field.TypeTime, value)
 	}
@@ -1542,26 +1516,6 @@ func (_u *MediaFileUpdateOne) SetNillableSource(v *mediafile.Source) *MediaFileU
 	if v != nil {
 		_u.SetSource(*v)
 	}
-	return _u
-}
-
-// SetLastSeenAt sets the "last_seen_at" field.
-func (_u *MediaFileUpdateOne) SetLastSeenAt(v time.Time) *MediaFileUpdateOne {
-	_u.mutation.SetLastSeenAt(v)
-	return _u
-}
-
-// SetNillableLastSeenAt sets the "last_seen_at" field if the given value is not nil.
-func (_u *MediaFileUpdateOne) SetNillableLastSeenAt(v *time.Time) *MediaFileUpdateOne {
-	if v != nil {
-		_u.SetLastSeenAt(*v)
-	}
-	return _u
-}
-
-// ClearLastSeenAt clears the value of the "last_seen_at" field.
-func (_u *MediaFileUpdateOne) ClearLastSeenAt() *MediaFileUpdateOne {
-	_u.mutation.ClearLastSeenAt()
 	return _u
 }
 
@@ -2471,12 +2425,6 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 	}
 	if value, ok := _u.mutation.Source(); ok {
 		_spec.SetField(mediafile.FieldSource, field.TypeEnum, value)
-	}
-	if value, ok := _u.mutation.LastSeenAt(); ok {
-		_spec.SetField(mediafile.FieldLastSeenAt, field.TypeTime, value)
-	}
-	if _u.mutation.LastSeenAtCleared() {
-		_spec.ClearField(mediafile.FieldLastSeenAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.MissingSince(); ok {
 		_spec.SetField(mediafile.FieldMissingSince, field.TypeTime, value)

@@ -121,20 +121,6 @@ func (_c *MediaFileCreate) SetNillableSource(v *mediafile.Source) *MediaFileCrea
 	return _c
 }
 
-// SetLastSeenAt sets the "last_seen_at" field.
-func (_c *MediaFileCreate) SetLastSeenAt(v time.Time) *MediaFileCreate {
-	_c.mutation.SetLastSeenAt(v)
-	return _c
-}
-
-// SetNillableLastSeenAt sets the "last_seen_at" field if the given value is not nil.
-func (_c *MediaFileCreate) SetNillableLastSeenAt(v *time.Time) *MediaFileCreate {
-	if v != nil {
-		_c.SetLastSeenAt(*v)
-	}
-	return _c
-}
-
 // SetMissingSince sets the "missing_since" field.
 func (_c *MediaFileCreate) SetMissingSince(v time.Time) *MediaFileCreate {
 	_c.mutation.SetMissingSince(v)
@@ -671,10 +657,6 @@ func (_c *MediaFileCreate) defaults() {
 		v := mediafile.DefaultSource
 		_c.mutation.SetSource(v)
 	}
-	if _, ok := _c.mutation.LastSeenAt(); !ok {
-		v := mediafile.DefaultLastSeenAt()
-		_c.mutation.SetLastSeenAt(v)
-	}
 	if _, ok := _c.mutation.TagFailures(); !ok {
 		v := mediafile.DefaultTagFailures
 		_c.mutation.SetTagFailures(v)
@@ -784,10 +766,6 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Source(); ok {
 		_spec.SetField(mediafile.FieldSource, field.TypeEnum, value)
 		_node.Source = value
-	}
-	if value, ok := _c.mutation.LastSeenAt(); ok {
-		_spec.SetField(mediafile.FieldLastSeenAt, field.TypeTime, value)
-		_node.LastSeenAt = &value
 	}
 	if value, ok := _c.mutation.MissingSince(); ok {
 		_spec.SetField(mediafile.FieldMissingSince, field.TypeTime, value)

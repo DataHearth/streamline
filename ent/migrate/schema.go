@@ -1127,7 +1127,6 @@ var (
 		{Name: "format", Type: field.TypeString, Nullable: true},
 		{Name: "release_group", Type: field.TypeString, Nullable: true},
 		{Name: "source", Type: field.TypeEnum, Enums: []string{"wizard", "orphan", "auto"}, Default: "auto"},
-		{Name: "last_seen_at", Type: field.TypeTime, Nullable: true},
 		{Name: "missing_since", Type: field.TypeTime, Nullable: true},
 		{Name: "container", Type: field.TypeString, Nullable: true},
 		{Name: "duration_seconds", Type: field.TypeUint32, Nullable: true},
@@ -1169,25 +1168,25 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "media_files_books_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[38]},
+				Columns:    []*schema.Column{MediaFilesColumns[37]},
 				RefColumns: []*schema.Column{BooksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_episodes_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[39]},
+				Columns:    []*schema.Column{MediaFilesColumns[38]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_movies_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[40]},
+				Columns:    []*schema.Column{MediaFilesColumns[39]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_tracks_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[41]},
+				Columns:    []*schema.Column{MediaFilesColumns[40]},
 				RefColumns: []*schema.Column{TracksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1196,32 +1195,32 @@ var (
 			{
 				Name:    "mediafile_episode_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[39]},
+				Columns: []*schema.Column{MediaFilesColumns[38]},
 			},
 			{
 				Name:    "mediafile_movie_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[40]},
+				Columns: []*schema.Column{MediaFilesColumns[39]},
 			},
 			{
 				Name:    "mediafile_track_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[41]},
+				Columns: []*schema.Column{MediaFilesColumns[40]},
 			},
 			{
 				Name:    "mediafile_book_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[38]},
+				Columns: []*schema.Column{MediaFilesColumns[37]},
 			},
 			{
 				Name:    "mediafile_tags_state",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[29]},
+				Columns: []*schema.Column{MediaFilesColumns[28]},
 			},
 			{
 				Name:    "mediafile_probed_at",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[22]},
+				Columns: []*schema.Column{MediaFilesColumns[21]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "probed_at IS NULL",
 				},

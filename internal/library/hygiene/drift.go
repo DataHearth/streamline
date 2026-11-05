@@ -20,9 +20,12 @@ import (
 )
 
 // RunDriftCheck verifies every tracked MediaFile is still present on disk.
-// Missing files start (or advance) a grace clock keyed off last_seen_at; once
-// the file has been gone for at least cfg.DriftGraceTicks intervals the row is
-// deleted and its owning movie or episode reverts to "wanted".
+// A missing file starts a grace clock at missing_since; once the file has been
+// gone for at least cfg.DriftGraceTicks intervals the row is deleted and its
+// owning movie or episode reverts to "wanted". The clock starts when a tick
+// first sees the file gone, not when one last saw it: after downtime longer
+// than the window, a volume not yet mounted would otherwise revert the whole
+// library on the first tick.
 func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) error {
 	graceWindow := interval * time.Duration(s.cfg.DriftGraceTicks)
 
@@ -42,7 +45,7 @@ func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) err
 	// since the next tick sees them as no longer newly missing.
 	acc := newDriftAccumulator()
 	defer acc.flush(ctx)
-	present := make([]uint32, 0, driftPageSize)
+	var returned []uint32
 	for {
 		rows, err := s.store.ListMediaFilesForDrift(ctx, afterID, driftPageSize)
 		if err != nil {
@@ -52,34 +55,34 @@ func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) err
 			break
 		}
 		total += len(rows)
+		var verified int64
 		for _, row := range rows {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
 			if s.checkDrift(ctx, row, graceWindow, acc) {
-				present = append(present, row.ID)
+				verified++
+				if row.MissingSince != nil {
+					returned = append(returned, row.ID)
+				}
 			}
 			afterID = row.ID
 		}
 		scheduler.Progress(ctx, total, 0)
-		// Flushed per page so the bump list cannot itself grow with the
-		// library — the batching that keeps these off the single SQLite
-		// connection one-by-one is inside BumpMediaFilesLastSeen.
-		if len(present) > 0 {
-			if err := s.store.BumpMediaFilesLastSeen(ctx, present); err != nil {
+		driftVerified.Add(ctx, verified)
+		if len(returned) > 0 {
+			if err := s.store.ClearMediaFilesMissing(ctx, returned); err != nil {
 				return otelx.RecordSpanError(span, err)
 			}
-			driftVerified.Add(ctx, int64(len(present)))
-			present = present[:0]
+			returned = returned[:0]
 		}
 	}
 	span.SetAttributes(attribute.Int("rows", total))
 	return nil
 }
 
-// checkDrift reports whether the row's file is present on disk; the caller
-// batches the last_seen bookkeeping for present rows. Missing and erroring
-// rows are handled here and report false.
+// checkDrift reports whether the row's file is present on disk. Missing and
+// erroring rows are handled here and report false.
 // driftPageSize is how many rows one keyset page carries. Big enough that a
 // modest library is one or two queries, small enough that the slice never
 // scales with the table.
@@ -145,29 +148,22 @@ func (s *Service) handleMissing(
 		}
 	}
 
-	// First-tick free pass: NULL last_seen_at → start grace clock. The write
-	// must leave missing_since in place or the next tick re-detects the same
-	// disappearance.
-	if row.LastSeenAt == nil {
-		if err := s.store.StartMediaFileGraceClock(ctx, row.ID); err != nil {
-			slog.WarnContext(ctx, "start grace clock failed",
-				"media_file_id", row.ID, "error", err)
-		}
-		return
-	}
-	if time.Since(*row.LastSeenAt) < graceWindow {
+	// row was read before MarkMediaFileMissing, so nil means this tick is the
+	// one that started the clock.
+	if row.MissingSince == nil ||
+		time.Since(*row.MissingSince) < graceWindow {
 		return
 	}
 
 	slog.InfoContext(ctx, "drift confirmed a missing file",
 		"media_file.id", row.ID, "media_file.path", row.Path,
-		"missing_since", row.LastSeenAt.UTC())
+		"missing_since", row.MissingSince.UTC())
 	if aggregated {
-		acc.confirm(showID, season, *row.LastSeenAt)
+		acc.confirm(showID, season, *row.MissingSince)
 	} else {
 		s.recordDrift(ctx, row, events.TypeDriftConfirmed, map[string]any{
 			"path":          row.Path,
-			"missing_since": row.LastSeenAt.UTC(),
+			"missing_since": row.MissingSince.UTC(),
 		})
 	}
 

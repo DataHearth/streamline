@@ -225,9 +225,9 @@ func (db *DB) ListAllMediaFilesWithOwners(
 // its grace arithmetic. The owner edges are not here: they are read only on
 // the rare branch where a file has actually gone missing.
 type DriftRow struct {
-	ID         uint32     `json:"id"`
-	Path       string     `json:"path"`
-	LastSeenAt *time.Time `json:"last_seen_at"`
+	ID           uint32     `json:"id"`
+	Path         string     `json:"path"`
+	MissingSince *time.Time `json:"missing_since"`
 }
 
 // ListMediaFilesForDrift returns one keyset page of drift rows, ordered by id,
@@ -250,7 +250,7 @@ func (db *DB) ListMediaFilesForDrift(
 	err := q.Select(
 		mediafile.FieldID,
 		mediafile.FieldPath,
-		mediafile.FieldLastSeenAt,
+		mediafile.FieldMissingSince,
 	).Scan(ctx, &rows)
 	if err != nil {
 		return nil, fmt.Errorf("list media_files for drift: %w", err)
@@ -383,39 +383,17 @@ func (db *DB) UpdateMediaFileAfterTranscode(
 	return nil
 }
 
-// StartMediaFileGraceClock stamps last_seen_at for a row that never had one,
-// so a missing file gets a full grace window instead of instant deletion. It
-// deliberately leaves missing_since alone: clearing it here made the next
-// tick's MarkMediaFileMissing report "first" again and drift_detected fired
-// twice for one disappearance.
-func (db *DB) StartMediaFileGraceClock(ctx context.Context, id uint32) error {
-	if err := db.client.MediaFile.UpdateOneID(id).
-		SetLastSeenAt(time.Now()).
+// ClearMediaFilesMissing clears missing_since on files seen on disk again. A
+// file that never went missing is not written at all: stamping every row each
+// tick rewrote the whole table into the WAL every 15 minutes.
+func (db *DB) ClearMediaFilesMissing(ctx context.Context, ids []uint32) error {
+	if err := db.client.MediaFile.Update().
+		Where(mediafile.IDIn(ids...)).
+		ClearMissingSince().
 		Exec(ctx); err != nil {
-		return fmt.Errorf("start grace clock for media_file %d: %w", id, err)
-	}
-	return nil
-}
-
-// BumpMediaFilesLastSeen is BumpMediaFileLastSeen over a batch. drift-check
-// verifies the whole library every tick; issuing the bumps row by row held
-// SQLite's single connection through thousands of UPDATEs and every API
-// request queued behind them. Chunked so the IN list stays well under
-// SQLite's bound-variable cap.
-func (db *DB) BumpMediaFilesLastSeen(ctx context.Context, ids []uint32) error {
-	const chunkSize = 500
-	now := time.Now()
-	for start := 0; start < len(ids); start += chunkSize {
-		chunk := ids[start:min(start+chunkSize, len(ids))]
-		if err := db.client.MediaFile.Update().
-			Where(mediafile.IDIn(chunk...)).
-			SetLastSeenAt(now).
-			ClearMissingSince().
-			Exec(ctx); err != nil {
-			return fmt.Errorf(
-				"bump last_seen_at for %d media_files: %w", len(chunk), err,
-			)
-		}
+		return fmt.Errorf(
+			"clear missing_since on %d media_files: %w", len(ids), err,
+		)
 	}
 	return nil
 }

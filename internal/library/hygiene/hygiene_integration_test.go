@@ -149,17 +149,21 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		// Back-date last_seen_at via the ent client so the grace window expires immediately.
-		Expect(entClient.MediaFile.UpdateOneID(mf.ID).
-			SetLastSeenAt(time.Now().Add(-2 * time.Hour)).
-			Exec(ctx)).To(Succeed())
-
 		Expect(os.Remove(path)).To(Succeed())
 
-		// grace_ticks=3 × 1ms interval = 3ms; one tick is enough at 2h staleness.
-		Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
-
+		By("only starting the clock on the tick that first finds it gone")
+		Expect(svc.RunDriftCheck(ctx, time.Hour)).To(Succeed())
 		refreshed, err := store.FindMovieByID(ctx, m.ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(refreshed.Status)).To(Equal("available"))
+
+		By("reverting on a later tick past the grace window")
+		Expect(entClient.MediaFile.UpdateOneID(mf.ID).
+			SetMissingSince(time.Now().Add(-4 * time.Hour)).
+			Exec(ctx)).To(Succeed())
+		Expect(svc.RunDriftCheck(ctx, time.Hour)).To(Succeed())
+
+		refreshed, err = store.FindMovieByID(ctx, m.ID)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(refreshed.Status)).To(Equal("wanted"))
 
@@ -205,7 +209,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entClient.MediaFile.UpdateOneID(mf.ID).
-			SetLastSeenAt(time.Now().Add(-2 * time.Hour)).
+			SetMissingSince(time.Now().Add(-2 * time.Hour)).
 			Exec(ctx)).To(Succeed())
 
 		Expect(os.Remove(path)).To(Succeed())
@@ -244,7 +248,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		// Staggered so the aggregate's missing_since is provably the earliest
 		// of the three and not just whichever row happened to be walked first.
 		oldest := time.Now().Add(-5 * time.Hour).UTC().Truncate(time.Second)
-		offset := 0
+		var fileIDs []uint32
 		for _, season := range show.Edges.Seasons {
 			for _, ep := range season.Edges.Episodes {
 				Expect(store.SetEpisodeStatus(
@@ -258,14 +262,17 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 					EpisodeID: ep.ID, Path: path, Size: 4,
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(entClient.MediaFile.UpdateOneID(mf.ID).
-					SetLastSeenAt(oldest.Add(time.Duration(offset) * time.Hour)).
-					Exec(ctx)).To(Succeed())
 				Expect(os.Remove(path)).To(Succeed())
-				offset++
+				fileIDs = append(fileIDs, mf.ID)
 			}
 		}
 
+		Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+		for offset, id := range fileIDs {
+			Expect(entClient.MediaFile.UpdateOneID(id).
+				SetMissingSince(oldest.Add(time.Duration(offset) * time.Hour)).
+				Exec(ctx)).To(Succeed())
+		}
 		Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
 
 		for _, t := range []entmediaevent.Type{
@@ -307,7 +314,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		mf, err := entClient.MediaFile.Create().
 			SetPath(path).
 			SetSize(4).
-			SetLastSeenAt(time.Now().Add(-2 * time.Hour)).
+			SetMissingSince(time.Now().Add(-2 * time.Hour)).
 			Save(ctx)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Remove(path)).To(Succeed())

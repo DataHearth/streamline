@@ -930,13 +930,9 @@ type Store interface {
 		bookID uint32,
 		kind mediafile.BookKind,
 	) ([]*ent.MediaFile, error)
-	// BumpMediaFilesLastSeen sets last_seen_at = now and clears any
-	// missing_since stamp for the given rows, in a bounded number of UPDATE
-	// statements rather than one per row.
-	BumpMediaFilesLastSeen(ctx context.Context, ids []uint32) error
-	// StartMediaFileGraceClock stamps last_seen_at for a row that never had
-	// one, without touching missing_since.
-	StartMediaFileGraceClock(ctx context.Context, id uint32) error
+	// ClearMediaFilesMissing clears missing_since for the given rows in one
+	// UPDATE.
+	ClearMediaFilesMissing(ctx context.Context, ids []uint32) error
 	// MarkMediaFileMissing stamps missing_since, reporting true only when this
 	// call set it — the first drift tick that could not stat the file.
 	MarkMediaFileMissing(ctx context.Context, id uint32) (bool, error)

@@ -1987,63 +1987,6 @@ func (_c *MockStore_BulkUpdateImportScanShowDecisions_Call) RunAndReturn(run fun
 	return _c
 }
 
-// BumpMediaFilesLastSeen provides a mock function for the type MockStore
-func (_mock *MockStore) BumpMediaFilesLastSeen(ctx context.Context, ids []uint32) error {
-	ret := _mock.Called(ctx, ids)
-
-	if len(ret) == 0 {
-		panic("no return value specified for BumpMediaFilesLastSeen")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) error); ok {
-		r0 = returnFunc(ctx, ids)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockStore_BumpMediaFilesLastSeen_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BumpMediaFilesLastSeen'
-type MockStore_BumpMediaFilesLastSeen_Call struct {
-	*mock.Call
-}
-
-// BumpMediaFilesLastSeen is a helper method to define mock.On call
-//   - ctx context.Context
-//   - ids []uint32
-func (_e *MockStore_Expecter) BumpMediaFilesLastSeen(ctx any, ids any) *MockStore_BumpMediaFilesLastSeen_Call {
-	return &MockStore_BumpMediaFilesLastSeen_Call{Call: _e.mock.On("BumpMediaFilesLastSeen", ctx, ids)}
-}
-
-func (_c *MockStore_BumpMediaFilesLastSeen_Call) Run(run func(ctx context.Context, ids []uint32)) *MockStore_BumpMediaFilesLastSeen_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 []uint32
-		if args[1] != nil {
-			arg1 = args[1].([]uint32)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_BumpMediaFilesLastSeen_Call) Return(err error) *MockStore_BumpMediaFilesLastSeen_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockStore_BumpMediaFilesLastSeen_Call) RunAndReturn(run func(ctx context.Context, ids []uint32) error) *MockStore_BumpMediaFilesLastSeen_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // CascadeSeasonMonitored provides a mock function for the type MockStore
 func (_mock *MockStore) CascadeSeasonMonitored(ctx context.Context, seasonID uint32, monitored bool) (db.SeasonCascade, error) {
 	ret := _mock.Called(ctx, seasonID, monitored)
@@ -2312,6 +2255,63 @@ func (_c *MockStore_ClaimNextTranscodeJob_Call) Return(transcodeJob *ent.Transco
 }
 
 func (_c *MockStore_ClaimNextTranscodeJob_Call) RunAndReturn(run func(ctx context.Context) (*ent.TranscodeJob, error)) *MockStore_ClaimNextTranscodeJob_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ClearMediaFilesMissing provides a mock function for the type MockStore
+func (_mock *MockStore) ClearMediaFilesMissing(ctx context.Context, ids []uint32) error {
+	ret := _mock.Called(ctx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ClearMediaFilesMissing")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) error); ok {
+		r0 = returnFunc(ctx, ids)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_ClearMediaFilesMissing_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClearMediaFilesMissing'
+type MockStore_ClearMediaFilesMissing_Call struct {
+	*mock.Call
+}
+
+// ClearMediaFilesMissing is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ids []uint32
+func (_e *MockStore_Expecter) ClearMediaFilesMissing(ctx any, ids any) *MockStore_ClearMediaFilesMissing_Call {
+	return &MockStore_ClearMediaFilesMissing_Call{Call: _e.mock.On("ClearMediaFilesMissing", ctx, ids)}
+}
+
+func (_c *MockStore_ClearMediaFilesMissing_Call) Run(run func(ctx context.Context, ids []uint32)) *MockStore_ClearMediaFilesMissing_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []uint32
+		if args[1] != nil {
+			arg1 = args[1].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ClearMediaFilesMissing_Call) Return(err error) *MockStore_ClearMediaFilesMissing_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_ClearMediaFilesMissing_Call) RunAndReturn(run func(ctx context.Context, ids []uint32) error) *MockStore_ClearMediaFilesMissing_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -23355,63 +23355,6 @@ func (_c *MockStore_StampMediaFileProbe_Call) Return(err error) *MockStore_Stamp
 }
 
 func (_c *MockStore_StampMediaFileProbe_Call) RunAndReturn(run func(ctx context.Context, id uint32, path string, info *ffmpeg.Info) error) *MockStore_StampMediaFileProbe_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// StartMediaFileGraceClock provides a mock function for the type MockStore
-func (_mock *MockStore) StartMediaFileGraceClock(ctx context.Context, id uint32) error {
-	ret := _mock.Called(ctx, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for StartMediaFileGraceClock")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
-		r0 = returnFunc(ctx, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockStore_StartMediaFileGraceClock_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'StartMediaFileGraceClock'
-type MockStore_StartMediaFileGraceClock_Call struct {
-	*mock.Call
-}
-
-// StartMediaFileGraceClock is a helper method to define mock.On call
-//   - ctx context.Context
-//   - id uint32
-func (_e *MockStore_Expecter) StartMediaFileGraceClock(ctx any, id any) *MockStore_StartMediaFileGraceClock_Call {
-	return &MockStore_StartMediaFileGraceClock_Call{Call: _e.mock.On("StartMediaFileGraceClock", ctx, id)}
-}
-
-func (_c *MockStore_StartMediaFileGraceClock_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_StartMediaFileGraceClock_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uint32
-		if args[1] != nil {
-			arg1 = args[1].(uint32)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_StartMediaFileGraceClock_Call) Return(err error) *MockStore_StartMediaFileGraceClock_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockStore_StartMediaFileGraceClock_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockStore_StartMediaFileGraceClock_Call {
 	_c.Call.Return(run)
 	return _c
 }

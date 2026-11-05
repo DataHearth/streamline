@@ -58,70 +58,68 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		}
 	}
 
-	It("bumps last_seen_at for present files in one batch", func() {
-		seen := time.Now().Add(-2 * time.Hour)
+	It("writes nothing for files that are present and were never missing", func() {
+		// No write and no FindMediaFileWithOwners expectation: the mock fails
+		// on any call.
 		rows := make([]db.DriftRow, 0, 2)
 		for _, id := range []uint32{42, 43} {
 			path := filepath.Join(tmpDir, fmt.Sprintf("Inception-%d.mkv", id))
 			Expect(os.WriteFile(path, []byte("data"), 0o644)).To(Succeed())
-			rows = append(rows, db.DriftRow{ID: id, Path: path, LastSeenAt: &seen})
+			rows = append(rows, db.DriftRow{ID: id, Path: path})
 		}
 		pages(rows...)
+
+		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
+	})
+
+	It("clears missing_since only on files that came back", func() {
+		since := time.Now().Add(-30 * time.Minute)
+		back := filepath.Join(tmpDir, "Back.mkv")
+		steady := filepath.Join(tmpDir, "Steady.mkv")
+		Expect(os.WriteFile(back, []byte("data"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(steady, []byte("data"), 0o644)).To(Succeed())
+		pages(
+			db.DriftRow{ID: 5, Path: back, MissingSince: &since},
+			db.DriftRow{ID: 6, Path: steady},
+		)
 		store.EXPECT().
-			BumpMediaFilesLastSeen(mock.Anything, []uint32{42, 43}).
+			ClearMediaFilesMissing(mock.Anything, []uint32{5}).
 			Return(nil).Once()
 
 		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
 	})
 
-	It("never loads owner edges for a file that is present", func() {
-		// The walk is a three-column projection; the owners cost an extra
-		// query and are only worth it once a file has actually gone. No
-		// FindMediaFileWithOwners expectation — the mock fails on any call.
-		path := filepath.Join(tmpDir, "Present.mkv")
-		Expect(os.WriteFile(path, []byte("data"), 0o644)).To(Succeed())
-		seen := time.Now().Add(-2 * time.Hour)
-		pages(db.DriftRow{ID: 5, Path: path, LastSeenAt: &seen})
+	It("starts the grace clock on the first tick that finds a file gone", func() {
+		// No delete expectation: however long the file has really been gone,
+		// a first sighting never reverts anything.
+		path := filepath.Join(tmpDir, "Gone.mkv")
+		pages(db.DriftRow{ID: 7, Path: path})
 		store.EXPECT().
-			BumpMediaFilesLastSeen(mock.Anything, []uint32{5}).
-			Return(nil).Once()
+			FindMediaFileWithOwners(mock.Anything, uint32(7)).
+			Return(&ent.MediaFile{
+				ID: 7, Path: path,
+				Edges: ent.MediaFileEdges{Movie: &ent.Movie{ID: 88}},
+			}, nil).
+			Once()
+		store.EXPECT().
+			MarkMediaFileMissing(mock.Anything, uint32(7)).
+			Return(true, nil).
+			Once()
 
 		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
 	})
-
-	It(
-		"starts the grace clock when last_seen_at is NULL and the file is missing",
-		func() {
-			path := filepath.Join(tmpDir, "Gone.mkv")
-			pages(db.DriftRow{ID: 7, Path: path})
-			store.EXPECT().
-				FindMediaFileWithOwners(mock.Anything, uint32(7)).
-				Return(&ent.MediaFile{ID: 7, Path: path}, nil).
-				Once()
-			store.EXPECT().
-				MarkMediaFileMissing(mock.Anything, uint32(7)).
-				Return(true, nil).
-				Once()
-			store.EXPECT().
-				StartMediaFileGraceClock(mock.Anything, uint32(7)).
-				Return(nil).
-				Once()
-
-			Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
-		},
-	)
 
 	It("no-ops while still within the grace window", func() {
 		seen := time.Now().Add(-30 * time.Minute) // grace = 15m × 3 = 45m
 		path := filepath.Join(tmpDir, "Gone.mkv")
-		pages(db.DriftRow{ID: 11, Path: path, LastSeenAt: &seen})
+		pages(db.DriftRow{ID: 11, Path: path, MissingSince: &seen})
 		store.EXPECT().
 			FindMediaFileWithOwners(mock.Anything, uint32(11)).
-			Return(&ent.MediaFile{ID: 11, Path: path, LastSeenAt: &seen}, nil).
+			Return(&ent.MediaFile{ID: 11, Path: path, MissingSince: &seen}, nil).
 			Once()
 		store.EXPECT().
 			MarkMediaFileMissing(mock.Anything, uint32(11)).
-			Return(true, nil).
+			Return(false, nil).
 			Once()
 
 		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
@@ -130,11 +128,11 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 	It("reverts the movie when grace expires and the file is missing", func() {
 		seen := time.Now().Add(-2 * time.Hour)
 		path := filepath.Join(tmpDir, "Gone.mkv")
-		pages(db.DriftRow{ID: 99, Path: path, LastSeenAt: &seen})
+		pages(db.DriftRow{ID: 99, Path: path, MissingSince: &seen})
 		store.EXPECT().
 			FindMediaFileWithOwners(mock.Anything, uint32(99)).
 			Return(&ent.MediaFile{
-				ID: 99, Path: path, LastSeenAt: &seen,
+				ID: 99, Path: path, MissingSince: &seen,
 				Edges: ent.MediaFileEdges{
 					Movie: &ent.Movie{ID: 88, Title: "Gone", TmdbID: 1234},
 				},
@@ -142,7 +140,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 			Once()
 		store.EXPECT().
 			MarkMediaFileMissing(mock.Anything, uint32(99)).
-			Return(true, nil).
+			Return(false, nil).
 			Once()
 		store.EXPECT().
 			DeleteMediaFileAndRevertMovie(mock.Anything, uint32(99), uint32(88)).
@@ -161,7 +159,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		seen *time.Time,
 	) *ent.MediaFile {
 		return &ent.MediaFile{
-			ID: id, Path: path, LastSeenAt: seen,
+			ID: id, Path: path, MissingSince: seen,
 			Edges: ent.MediaFileEdges{
 				Episode: &ent.Episode{
 					ID: episodeID, Number: 1,
@@ -181,14 +179,14 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 	It("reverts the episode when grace expires and the file is missing", func() {
 		seen := time.Now().Add(-2 * time.Hour)
 		path := filepath.Join(tmpDir, "S01E01.mkv")
-		pages(db.DriftRow{ID: 21, Path: path, LastSeenAt: &seen})
+		pages(db.DriftRow{ID: 21, Path: path, MissingSince: &seen})
 		store.EXPECT().
 			FindMediaFileWithOwners(mock.Anything, uint32(21)).
 			Return(episodeFile(21, 33, 55, 1, path, &seen), nil).
 			Once()
 		store.EXPECT().
 			MarkMediaFileMissing(mock.Anything, uint32(21)).
-			Return(true, nil).
+			Return(false, nil).
 			Once()
 		store.EXPECT().
 			DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(21), uint32(33)).
@@ -203,14 +201,14 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		rows := make([]db.DriftRow, 0, 3)
 		for i, id := range []uint32{21, 22, 23} {
 			path := filepath.Join(tmpDir, fmt.Sprintf("S01E0%d.mkv", i+1))
-			rows = append(rows, db.DriftRow{ID: id, Path: path, LastSeenAt: &seen})
+			rows = append(rows, db.DriftRow{ID: id, Path: path, MissingSince: &seen})
 			store.EXPECT().
 				FindMediaFileWithOwners(mock.Anything, id).
 				Return(episodeFile(id, id+100, 55, 1, path, &seen), nil).
 				Once()
 			store.EXPECT().
 				MarkMediaFileMissing(mock.Anything, id).
-				Return(true, nil).
+				Return(false, nil).
 				Once()
 			store.EXPECT().
 				DeleteMediaFileAndRevertEpisode(mock.Anything, id, id+100).
@@ -225,14 +223,14 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 	It("deletes an ownerless row instead of warning about it forever", func() {
 		seen := time.Now().Add(-2 * time.Hour)
 		path := filepath.Join(tmpDir, "Orphan.mkv")
-		pages(db.DriftRow{ID: 64, Path: path, LastSeenAt: &seen})
+		pages(db.DriftRow{ID: 64, Path: path, MissingSince: &seen})
 		store.EXPECT().
 			FindMediaFileWithOwners(mock.Anything, uint32(64)).
-			Return(&ent.MediaFile{ID: 64, Path: path, LastSeenAt: &seen}, nil).
+			Return(&ent.MediaFile{ID: 64, Path: path, MissingSince: &seen}, nil).
 			Once()
 		store.EXPECT().
 			MarkMediaFileMissing(mock.Anything, uint32(64)).
-			Return(true, nil).
+			Return(false, nil).
 			Once()
 		store.EXPECT().
 			DeleteMediaFile(mock.Anything, uint32(64)).
@@ -254,7 +252,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		DeferCleanup(func() { _ = os.Chmod(locked, 0o755) })
 
 		seen := time.Now().Add(-2 * time.Hour)
-		pages(db.DriftRow{ID: 5, Path: file, LastSeenAt: &seen})
+		pages(db.DriftRow{ID: 5, Path: file, MissingSince: &seen})
 
 		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
 	})

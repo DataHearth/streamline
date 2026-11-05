@@ -142,50 +142,23 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		})
 	})
 
-	Describe("BumpMediaFilesLastSeen", func() {
-		It(
-			"stamps last_seen_at and clears missing_since for the whole batch",
-			func() {
-				a, b := createMovieFile(), createMovieFile()
-				first, err := store.MarkMediaFileMissing(ctx, a.ID)
+	Describe("ClearMediaFilesMissing", func() {
+		It("re-arms MarkMediaFileMissing for the files it clears", func() {
+			a, b := createMovieFile(), createMovieFile()
+			for _, id := range []uint32{a.ID, b.ID} {
+				first, err := store.MarkMediaFileMissing(ctx, id)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(first).To(BeTrue())
+			}
 
-				Expect(store.BumpMediaFilesLastSeen(
-					ctx, []uint32{a.ID, b.ID},
-				)).To(Succeed())
+			Expect(store.ClearMediaFilesMissing(ctx, []uint32{a.ID})).To(Succeed())
 
-				for _, id := range []uint32{a.ID, b.ID} {
-					row, err := client.MediaFile.Get(ctx, id)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(row.LastSeenAt).NotTo(BeNil())
-					Expect(row.MissingSince).To(BeNil())
-				}
-			},
-		)
-	})
-
-	Describe("StartMediaFileGraceClock", func() {
-		// The grace-start write leaving missing_since alone is what keeps
-		// MarkMediaFileMissing from reporting "first" twice — and each
-		// "first" is a drift_detected event.
-		It("does not re-arm MarkMediaFileMissing", func() {
-			mf := createMovieFile()
-
-			first, err := store.MarkMediaFileMissing(ctx, mf.ID)
+			again, err := store.MarkMediaFileMissing(ctx, a.ID)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(first).To(BeTrue())
-
-			Expect(store.StartMediaFileGraceClock(ctx, mf.ID)).To(Succeed())
-
-			again, err := store.MarkMediaFileMissing(ctx, mf.ID)
+			Expect(again).To(BeTrue())
+			again, err = store.MarkMediaFileMissing(ctx, b.ID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(again).To(BeFalse())
-
-			row, err := client.MediaFile.Get(ctx, mf.ID)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(row.LastSeenAt).NotTo(BeNil())
-			Expect(row.MissingSince).NotTo(BeNil())
 		})
 	})
 

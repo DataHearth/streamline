@@ -30345,7 +30345,6 @@ type MediaFileMutation struct {
 	format                *string
 	release_group         *string
 	source                *mediafile.Source
-	last_seen_at          *time.Time
 	missing_since         *time.Time
 	container             *string
 	duration_seconds      *uint32
@@ -30850,55 +30849,6 @@ func (m *MediaFileMutation) OldSource(ctx context.Context) (v mediafile.Source, 
 // ResetSource resets all changes to the "source" field.
 func (m *MediaFileMutation) ResetSource() {
 	m.source = nil
-}
-
-// SetLastSeenAt sets the "last_seen_at" field.
-func (m *MediaFileMutation) SetLastSeenAt(t time.Time) {
-	m.last_seen_at = &t
-}
-
-// LastSeenAt returns the value of the "last_seen_at" field in the mutation.
-func (m *MediaFileMutation) LastSeenAt() (r time.Time, exists bool) {
-	v := m.last_seen_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldLastSeenAt returns the old "last_seen_at" field's value of the MediaFile entity.
-// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaFileMutation) OldLastSeenAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldLastSeenAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldLastSeenAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldLastSeenAt: %w", err)
-	}
-	return oldValue.LastSeenAt, nil
-}
-
-// ClearLastSeenAt clears the value of the "last_seen_at" field.
-func (m *MediaFileMutation) ClearLastSeenAt() {
-	m.last_seen_at = nil
-	m.clearedFields[mediafile.FieldLastSeenAt] = struct{}{}
-}
-
-// LastSeenAtCleared returns if the "last_seen_at" field was cleared in this mutation.
-func (m *MediaFileMutation) LastSeenAtCleared() bool {
-	_, ok := m.clearedFields[mediafile.FieldLastSeenAt]
-	return ok
-}
-
-// ResetLastSeenAt resets all changes to the "last_seen_at" field.
-func (m *MediaFileMutation) ResetLastSeenAt() {
-	m.last_seen_at = nil
-	delete(m.clearedFields, mediafile.FieldLastSeenAt)
 }
 
 // SetMissingSince sets the "missing_since" field.
@@ -32713,7 +32663,7 @@ func (m *MediaFileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaFileMutation) Fields() []string {
-	fields := make([]string, 0, 37)
+	fields := make([]string, 0, 36)
 	if m.create_time != nil {
 		fields = append(fields, mediafile.FieldCreateTime)
 	}
@@ -32737,9 +32687,6 @@ func (m *MediaFileMutation) Fields() []string {
 	}
 	if m.source != nil {
 		fields = append(fields, mediafile.FieldSource)
-	}
-	if m.last_seen_at != nil {
-		fields = append(fields, mediafile.FieldLastSeenAt)
 	}
 	if m.missing_since != nil {
 		fields = append(fields, mediafile.FieldMissingSince)
@@ -32849,8 +32796,6 @@ func (m *MediaFileMutation) Field(name string) (ent.Value, bool) {
 		return m.ReleaseGroup()
 	case mediafile.FieldSource:
 		return m.Source()
-	case mediafile.FieldLastSeenAt:
-		return m.LastSeenAt()
 	case mediafile.FieldMissingSince:
 		return m.MissingSince()
 	case mediafile.FieldContainer:
@@ -32932,8 +32877,6 @@ func (m *MediaFileMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldReleaseGroup(ctx)
 	case mediafile.FieldSource:
 		return m.OldSource(ctx)
-	case mediafile.FieldLastSeenAt:
-		return m.OldLastSeenAt(ctx)
 	case mediafile.FieldMissingSince:
 		return m.OldMissingSince(ctx)
 	case mediafile.FieldContainer:
@@ -33054,13 +32997,6 @@ func (m *MediaFileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSource(v)
-		return nil
-	case mediafile.FieldLastSeenAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetLastSeenAt(v)
 		return nil
 	case mediafile.FieldMissingSince:
 		v, ok := value.(time.Time)
@@ -33432,9 +33368,6 @@ func (m *MediaFileMutation) ClearedFields() []string {
 	if m.FieldCleared(mediafile.FieldReleaseGroup) {
 		fields = append(fields, mediafile.FieldReleaseGroup)
 	}
-	if m.FieldCleared(mediafile.FieldLastSeenAt) {
-		fields = append(fields, mediafile.FieldLastSeenAt)
-	}
 	if m.FieldCleared(mediafile.FieldMissingSince) {
 		fields = append(fields, mediafile.FieldMissingSince)
 	}
@@ -33538,9 +33471,6 @@ func (m *MediaFileMutation) ClearField(name string) error {
 		return nil
 	case mediafile.FieldReleaseGroup:
 		m.ClearReleaseGroup()
-		return nil
-	case mediafile.FieldLastSeenAt:
-		m.ClearLastSeenAt()
 		return nil
 	case mediafile.FieldMissingSince:
 		m.ClearMissingSince()
@@ -33654,9 +33584,6 @@ func (m *MediaFileMutation) ResetField(name string) error {
 		return nil
 	case mediafile.FieldSource:
 		m.ResetSource()
-		return nil
-	case mediafile.FieldLastSeenAt:
-		m.ResetLastSeenAt()
 		return nil
 	case mediafile.FieldMissingSince:
 		m.ResetMissingSince()
