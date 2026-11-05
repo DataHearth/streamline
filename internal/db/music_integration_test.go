@@ -804,6 +804,166 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			},
 		)
 
+		Context("when a re-pick lays the album out differently", func() {
+			albumTracks := func() []*ent.Track {
+				GinkgoHelper()
+				return client.Track.Query().
+					Where(track.HasAlbumWith(album.IDEQ(rg2.ID))).
+					Order(ent.Asc(track.FieldDisc), ent.Asc(track.FieldPosition)).
+					AllX(ctx)
+			}
+			holdFile := func(mbid, path string) *ent.Track {
+				GinkgoHelper()
+				row := client.Track.Query().Where(
+					track.MbidEQ(mbid),
+					track.HasAlbumWith(album.IDEQ(rg2.ID)),
+				).FirstX(ctx)
+				client.MediaFile.Create().SetPath(path).SetSize(10).
+					SetTrackID(row.ID).ExecX(ctx)
+				return row
+			}
+			hydrate := func(tracks ...TrackSeed) {
+				GinkgoHelper()
+				p := heavy()
+				p.Tracks = tracks
+				Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
+			}
+			serve := TrackSeed{
+				MBID:     "r-1",
+				Title:    "Serve the Servants",
+				Disc:     1,
+				Position: 1,
+			}
+
+			It("moves a held file's track to the recording's new position", func() {
+				hydrate(
+					serve,
+					TrackSeed{MBID: "r-2", Title: "Scentless", Disc: 2, Position: 1},
+				)
+				held := holdFile("r-2", "/m/2.flac")
+
+				hydrate(
+					serve,
+					TrackSeed{MBID: "r-2", Title: "Scentless", Disc: 1, Position: 2},
+				)
+
+				rows := albumTracks()
+				Expect(rows).To(HaveLen(2))
+				Expect(rows[1].ID).To(Equal(held.ID))
+				Expect(rows[1].Disc).To(Equal(uint8(1)))
+				Expect(rows[1].Position).To(Equal(uint16(2)))
+			})
+
+			It("folds the empty twin an earlier re-pick left behind", func() {
+				hydrate(
+					TrackSeed{MBID: "r-2", Title: "Scentless", Disc: 1, Position: 2},
+					TrackSeed{MBID: "r-2", Title: "Scentless", Disc: 2, Position: 1},
+				)
+				held := client.Track.Query().
+					Where(track.MbidEQ("r-2"), track.DiscEQ(2)).OnlyX(ctx)
+				client.MediaFile.Create().SetPath("/m/2.flac").SetSize(10).
+					SetTrackID(held.ID).ExecX(ctx)
+
+				hydrate(
+					serve,
+					TrackSeed{MBID: "r-2", Title: "Scentless", Disc: 1, Position: 2},
+				)
+
+				rows := albumTracks()
+				Expect(rows).To(HaveLen(2))
+				Expect(rows[1].ID).To(Equal(held.ID))
+				Expect(rows[1].Disc).To(Equal(uint8(1)))
+			})
+
+			It("gives a recording listed twice one row per listing", func() {
+				first := TrackSeed{
+					MBID:     "r-2",
+					Title:    "Reprise",
+					Disc:     1,
+					Position: 1,
+				}
+				second := TrackSeed{
+					MBID:     "r-2",
+					Title:    "Reprise",
+					Disc:     1,
+					Position: 2,
+				}
+				hydrate(first, second)
+				before := albumTracks()
+				client.MediaFile.Create().SetPath("/m/1.flac").SetSize(10).
+					SetTrackID(before[0].ID).ExecX(ctx)
+				client.MediaFile.Create().SetPath("/m/2.flac").SetSize(10).
+					SetTrackID(before[1].ID).ExecX(ctx)
+
+				hydrate(first, second)
+
+				rows := albumTracks()
+				Expect(rows).To(HaveLen(2))
+				Expect(rows[0].ID).To(Equal(before[0].ID))
+				Expect(rows[1].ID).To(Equal(before[1].ID))
+			})
+
+			It("never hands a held file to another song at its position", func() {
+				hydrate(serve)
+				held := holdFile("r-1", "/m/1.flac")
+
+				hydrate(
+					TrackSeed{
+						MBID:     "r-9",
+						Title:    "Another Song",
+						Disc:     1,
+						Position: 1,
+					},
+				)
+
+				got := client.Track.GetX(ctx, held.ID)
+				Expect(got.Mbid).To(Equal("r-1"))
+				Expect(got.Title).To(Equal("Serve the Servants"))
+				Expect(client.Track.Query().Where(
+					track.MbidEQ("r-9"),
+					track.Not(track.HasMediaFiles()),
+				).CountX(ctx)).To(Equal(1))
+			})
+
+			It("keeps a held file through a recording merge", func() {
+				hydrate(serve)
+				held := holdFile("r-1", "/m/1.flac")
+
+				hydrate(
+					TrackSeed{
+						MBID:     "r-merged",
+						Title:    "Serve The Servants",
+						Disc:     1,
+						Position: 1,
+					},
+				)
+
+				rows := albumTracks()
+				Expect(rows).To(HaveLen(1))
+				Expect(rows[0].ID).To(Equal(held.ID))
+				Expect(rows[0].Mbid).To(Equal("r-merged"))
+			})
+
+			It("reuses an empty row at a position another song takes", func() {
+				hydrate(serve)
+				empty := albumTracks()[0]
+
+				hydrate(
+					TrackSeed{
+						MBID:     "r-9",
+						Title:    "Another Song",
+						Disc:     1,
+						Position: 1,
+					},
+				)
+
+				rows := albumTracks()
+				Expect(rows).To(HaveLen(1))
+				Expect(rows[0].ID).To(Equal(empty.ID))
+				Expect(rows[0].Mbid).To(Equal("r-9"))
+			})
+		})
+
 		It("keeps every stored track when the release lists none", func() {
 			Expect(store.SetAlbumHydration(ctx, rg2.ID, heavy(), now)).To(Succeed())
 			p := heavy()

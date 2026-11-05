@@ -1246,27 +1246,23 @@ func (db *DB) SetAlbumHydration(
 
 	existing, err := c.Track.Query().
 		Where(track.HasAlbumWith(album.IDEQ(albumID))).
+		WithMediaFiles().
 		All(ctx)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
-	type slot struct {
-		disc uint8
-		pos  uint16
-	}
-	byslot := make(map[slot]*ent.Track, len(existing))
-	for _, t := range existing {
-		byslot[slot{t.Disc, t.Position}] = t
-	}
-	for _, t := range p.Tracks {
+	rows, unmatched := matchStoredTracks(existing, p.Tracks)
+	for i, t := range p.Tracks {
 		var id uint32
-		if cur := byslot[slot{t.Disc, t.Position}]; cur != nil {
+		if cur := rows[i]; cur != nil {
 			id = cur.ID
 			if err := c.Track.UpdateOneID(id).
 				SetMbid(t.MBID).
 				SetReleaseTrackMbid(t.ReleaseTrackMBID).
 				SetTitle(t.Title).
+				SetDisc(t.Disc).
+				SetPosition(t.Position).
 				SetDuration(t.Duration).
 				SetBonus(t.Bonus).
 				SetArtistCredit(t.ArtistCredit).
@@ -1361,15 +1357,9 @@ func (db *DB) SetAlbumHydration(
 	// forever, each one missing. No tracks at all is a release MusicBrainz
 	// no longer knows, which says nothing about the stored ones.
 	if len(p.Tracks) > 0 {
-		listed := make(map[slot]bool, len(p.Tracks))
-		for _, t := range p.Tracks {
-			listed[slot{t.Disc, t.Position}] = true
-		}
-		var gone []uint32
-		for s, t := range byslot {
-			if !listed[s] {
-				gone = append(gone, t.ID)
-			}
+		gone := make([]uint32, 0, len(unmatched))
+		for _, t := range unmatched {
+			gone = append(gone, t.ID)
 		}
 		if len(gone) > 0 {
 			if _, err := c.Track.Delete().Where(
@@ -1450,6 +1440,58 @@ func (db *DB) ListAlbumsAwaitingCredits(
 		Order(ent.Asc(album.FieldMetadataFetchedAt), ent.Asc(album.FieldID)).
 		Limit(limit).
 		All(ctx)
+}
+
+// matchStoredTracks pairs each listed track with the stored row it updates, nil
+// for one that needs a new row, and returns the rows left over. A recording
+// keeps its row wherever the edition places it, since the row carries its file,
+// marks and overrides. A position alone only names whatever song an edition puts
+// there, so a row holding a file changes recording there only under the same
+// title, as when MusicBrainz merges two recordings: anything looser would leave
+// the file under another song's title.
+func matchStoredTracks(
+	stored []*ent.Track,
+	listed []TrackSeed,
+) ([]*ent.Track, []*ent.Track) {
+	held := func(r *ent.Track) bool { return len(r.Edges.MediaFiles) > 0 }
+	sameRecording := func(s TrackSeed, r *ent.Track) bool {
+		return s.MBID != "" && s.MBID == r.Mbid
+	}
+	sameSlot := func(s TrackSeed, r *ent.Track) bool {
+		return s.Disc == r.Disc && s.Position == r.Position
+	}
+	matched := make([]*ent.Track, len(listed))
+	free := slices.Clone(stored)
+	take := func(accept func(TrackSeed, *ent.Track) bool) {
+		for i, s := range listed {
+			if matched[i] != nil {
+				continue
+			}
+			if j := slices.IndexFunc(free, func(r *ent.Track) bool {
+				return accept(s, r)
+			}); j >= 0 {
+				matched[i] = free[j]
+				free = slices.Delete(free, j, j+1)
+			}
+		}
+	}
+	// Held rows choose first, or a file's recording could lose its row to an
+	// empty twin at the listed position and stay behind as a duplicate.
+	take(func(s TrackSeed, r *ent.Track) bool {
+		return held(r) && sameRecording(s, r) && sameSlot(s, r)
+	})
+	take(func(s TrackSeed, r *ent.Track) bool {
+		return held(r) && sameRecording(s, r)
+	})
+	take(func(s TrackSeed, r *ent.Track) bool {
+		return sameRecording(s, r) && sameSlot(s, r)
+	})
+	take(sameRecording)
+	take(func(s TrackSeed, r *ent.Track) bool {
+		return sameSlot(s, r) && (!held(r) || s.Title == r.Title ||
+			library.TitleMatchesStrict(s.Title, r.Title))
+	})
+	return matched, free
 }
 
 // ListAlbumsAwaitingDetails returns up to limit hydrated albums holding at
