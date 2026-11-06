@@ -16235,6 +16235,7 @@ type DownloadRecordMutation struct {
 	hold_reasons          *[]schema.HoldReason
 	appendhold_reasons    []schema.HoldReason
 	verification_bypassed *bool
+	track_assignments     *map[string]uint32
 	selected_files        *[]int
 	appendselected_files  []int
 	selected_bytes        *int64
@@ -17170,6 +17171,55 @@ func (m *DownloadRecordMutation) ResetVerificationBypassed() {
 	m.verification_bypassed = nil
 }
 
+// SetTrackAssignments sets the "track_assignments" field.
+func (m *DownloadRecordMutation) SetTrackAssignments(value map[string]uint32) {
+	m.track_assignments = &value
+}
+
+// TrackAssignments returns the value of the "track_assignments" field in the mutation.
+func (m *DownloadRecordMutation) TrackAssignments() (r map[string]uint32, exists bool) {
+	v := m.track_assignments
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTrackAssignments returns the old "track_assignments" field's value of the DownloadRecord entity.
+// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DownloadRecordMutation) OldTrackAssignments(ctx context.Context) (v map[string]uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTrackAssignments is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTrackAssignments requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTrackAssignments: %w", err)
+	}
+	return oldValue.TrackAssignments, nil
+}
+
+// ClearTrackAssignments clears the value of the "track_assignments" field.
+func (m *DownloadRecordMutation) ClearTrackAssignments() {
+	m.track_assignments = nil
+	m.clearedFields[downloadrecord.FieldTrackAssignments] = struct{}{}
+}
+
+// TrackAssignmentsCleared returns if the "track_assignments" field was cleared in this mutation.
+func (m *DownloadRecordMutation) TrackAssignmentsCleared() bool {
+	_, ok := m.clearedFields[downloadrecord.FieldTrackAssignments]
+	return ok
+}
+
+// ResetTrackAssignments resets all changes to the "track_assignments" field.
+func (m *DownloadRecordMutation) ResetTrackAssignments() {
+	m.track_assignments = nil
+	delete(m.clearedFields, downloadrecord.FieldTrackAssignments)
+}
+
 // SetSelectedFiles sets the "selected_files" field.
 func (m *DownloadRecordMutation) SetSelectedFiles(i []int) {
 	m.selected_files = &i
@@ -17838,7 +17888,7 @@ func (m *DownloadRecordMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DownloadRecordMutation) Fields() []string {
-	fields := make([]string, 0, 23)
+	fields := make([]string, 0, 24)
 	if m.create_time != nil {
 		fields = append(fields, downloadrecord.FieldCreateTime)
 	}
@@ -17889,6 +17939,9 @@ func (m *DownloadRecordMutation) Fields() []string {
 	}
 	if m.verification_bypassed != nil {
 		fields = append(fields, downloadrecord.FieldVerificationBypassed)
+	}
+	if m.track_assignments != nil {
+		fields = append(fields, downloadrecord.FieldTrackAssignments)
 	}
 	if m.selected_files != nil {
 		fields = append(fields, downloadrecord.FieldSelectedFiles)
@@ -17950,6 +18003,8 @@ func (m *DownloadRecordMutation) Field(name string) (ent.Value, bool) {
 		return m.HoldReasons()
 	case downloadrecord.FieldVerificationBypassed:
 		return m.VerificationBypassed()
+	case downloadrecord.FieldTrackAssignments:
+		return m.TrackAssignments()
 	case downloadrecord.FieldSelectedFiles:
 		return m.SelectedFiles()
 	case downloadrecord.FieldSelectedBytes:
@@ -18005,6 +18060,8 @@ func (m *DownloadRecordMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldHoldReasons(ctx)
 	case downloadrecord.FieldVerificationBypassed:
 		return m.OldVerificationBypassed(ctx)
+	case downloadrecord.FieldTrackAssignments:
+		return m.OldTrackAssignments(ctx)
 	case downloadrecord.FieldSelectedFiles:
 		return m.OldSelectedFiles(ctx)
 	case downloadrecord.FieldSelectedBytes:
@@ -18144,6 +18201,13 @@ func (m *DownloadRecordMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetVerificationBypassed(v)
+		return nil
+	case downloadrecord.FieldTrackAssignments:
+		v, ok := value.(map[string]uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTrackAssignments(v)
 		return nil
 	case downloadrecord.FieldSelectedFiles:
 		v, ok := value.([]int)
@@ -18286,6 +18350,9 @@ func (m *DownloadRecordMutation) ClearedFields() []string {
 	if m.FieldCleared(downloadrecord.FieldHoldReasons) {
 		fields = append(fields, downloadrecord.FieldHoldReasons)
 	}
+	if m.FieldCleared(downloadrecord.FieldTrackAssignments) {
+		fields = append(fields, downloadrecord.FieldTrackAssignments)
+	}
 	if m.FieldCleared(downloadrecord.FieldSelectedFiles) {
 		fields = append(fields, downloadrecord.FieldSelectedFiles)
 	}
@@ -18338,6 +18405,9 @@ func (m *DownloadRecordMutation) ClearField(name string) error {
 		return nil
 	case downloadrecord.FieldHoldReasons:
 		m.ClearHoldReasons()
+		return nil
+	case downloadrecord.FieldTrackAssignments:
+		m.ClearTrackAssignments()
 		return nil
 	case downloadrecord.FieldSelectedFiles:
 		m.ClearSelectedFiles()
@@ -18406,6 +18476,9 @@ func (m *DownloadRecordMutation) ResetField(name string) error {
 		return nil
 	case downloadrecord.FieldVerificationBypassed:
 		m.ResetVerificationBypassed()
+		return nil
+	case downloadrecord.FieldTrackAssignments:
+		m.ResetTrackAssignments()
 		return nil
 	case downloadrecord.FieldSelectedFiles:
 		m.ResetSelectedFiles()

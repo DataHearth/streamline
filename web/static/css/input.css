@@ -138,7 +138,8 @@
 	--shadow-3: 0 16px 32px rgb(0 0 0 / 0.45);
 	--shadow-4: 0 24px 64px rgb(0 0 0 / 0.55);
 	--shadow-glow: 0 0 24px var(--accent-glow);
-	--shadow-card-hover: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent), 0 24px 48px rgb(0 0 0 / 0.5);
+	--shadow-card-hover:
+		0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent), 0 24px 48px rgb(0 0 0 / 0.5);
 
 	/* Radii */
 	--radius-sm: 6px;

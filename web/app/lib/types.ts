@@ -724,6 +724,13 @@ export type HoldReason = {
 	actual?: string;
 };
 
+export type TrackAssignment = { file: string; track_id: number };
+export type TrackPlanTrack = { id: number; disc: number; position: number; title: string };
+export type TrackPlan = {
+	files: { file: string; track_id?: number }[];
+	tracks: TrackPlanTrack[];
+};
+
 // The title a music or book download is for — the activity rows' heading, as
 // EpisodeRef is a TV record's. At most one is set, and none on a movie record.
 export type ActivityAlbumRef = { id: number; title: string; artist_id: number; artist_name: string };

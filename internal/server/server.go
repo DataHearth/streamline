@@ -96,6 +96,7 @@ type Config struct {
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service
 	Importer        importer.Enqueuer
+	TrackPlans      importer.TrackPlanner
 	Prober          ffmpeg.Prober
 	Transcoder      *transcoding.Worker
 	// AudioTranscoder converts music for Subsonic's stream; nil serves every
@@ -141,6 +142,7 @@ func New(cfg Config) *Server {
 		Torrents:        cfg.Torrents,
 		PathMigrations:  cfg.PathMigrations,
 		Importer:        cfg.Importer,
+		TrackPlans:      cfg.TrackPlans,
 		Store:           cfg.DB,
 		Ent:             cfg.Ent,
 		PublicURL:       config.PublicURL(),

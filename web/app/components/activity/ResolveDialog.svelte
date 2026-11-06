@@ -1,8 +1,18 @@
 <script lang="ts">
 	import Dialog from "@components/modals/Dialog.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import { createQuery } from "@tanstack/svelte-query";
+	import { api } from "@lib/api";
 	import { entryHeading, holdFileCount } from "@lib/activity-touch";
-	import type { HoldCheck, HoldReason, QueueEntry } from "@lib/types";
+	import type {
+		HoldCheck,
+		HoldReason,
+		QueueEntry,
+		TrackAssignment,
+		TrackPlan,
+		TrackPlanTrack,
+	} from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The decision a held download is waiting for. Three outcomes, two buttons:
@@ -17,7 +27,10 @@
 	}: {
 		item: QueueEntry | null;
 		pending?: boolean;
-		onResolve: (action: "import" | "regrab" | "delete") => void;
+		onResolve: (
+			action: "import" | "regrab" | "delete",
+			trackAssignments?: TrackAssignment[],
+		) => void;
 		onClose: () => void;
 	} = $props();
 
@@ -34,6 +47,74 @@
 		}
 		if (!item) openedFor = null;
 	});
+
+	// A discography pack has no plan and answers 409: the dialog then keeps its
+	// plain "Import anyway".
+	const heldFiles = $derived(
+		new Set(
+			(item?.hold_reasons ?? [])
+				.filter((r) => r.check === "track")
+				.map((r) => r.file),
+		),
+	);
+	const planQuery = createQuery<TrackPlan>(() => ({
+		queryKey: ["track-plan", item?.id],
+		queryFn: () => api<TrackPlan>(`/downloads/${item?.id}/track-plan`),
+		enabled: heldFiles.size > 0,
+		retry: false,
+		gcTime: 0,
+		refetchOnWindowFocus: false,
+	}));
+	const plan = $derived(heldFiles.size > 0 ? planQuery.data : undefined);
+
+	// The chosen track per file, "" for a file left out.
+	let choices = $state<Record<string, string>>({});
+	let seededFor = $state<number | null>(null);
+	$effect(() => {
+		if (!item) seededFor = null;
+		if (item && plan && seededFor !== item.id) {
+			seededFor = item.id;
+			choices = Object.fromEntries(
+				plan.files.map((f) => [f.file, f.track_id ? String(f.track_id) : ""]),
+			);
+		}
+	});
+
+	const planFiles = $derived(
+		(plan?.files ?? []).toSorted(
+			(a, b) => Number(heldFiles.has(b.file)) - Number(heldFiles.has(a.file)),
+		),
+	);
+	const chosen = $derived(Object.values(choices).filter(Boolean));
+	const taken = (track: string) =>
+		track !== "" && chosen.filter((c) => c === track).length > 1;
+	const canImport = $derived(
+		!plan || (chosen.length > 0 && new Set(chosen).size === chosen.length),
+	);
+
+	const trackLabel = (t: TrackPlanTrack, tracks: TrackPlanTrack[]) => {
+		const number = String(t.position).padStart(2, "0");
+		return tracks.some((o) => o.disc > 1)
+			? `${t.disc}-${number} · ${t.title}`
+			: `${number} · ${t.title}`;
+	};
+	const trackOptions = $derived([
+		{ value: "", label: i18n.hold_track_skip() },
+		...(plan?.tracks ?? []).map((t) => ({
+			value: String(t.id),
+			label: trackLabel(t, plan?.tracks ?? []),
+		})),
+	]);
+
+	function importHeld() {
+		onResolve(
+			"import",
+			plan &&
+				Object.entries(choices)
+					.filter(([, track]) => track)
+					.map(([file, track]) => ({ file, track_id: Number(track) })),
+		);
+	}
 
 	const CHECK_LABELS: Record<HoldCheck, () => string> = {
 		resolution: () => i18n.hold_check_resolution(),
@@ -59,6 +140,7 @@
 	let groups = $derived.by<FileGroup[]>(() => {
 		const out = new Map<string, FileGroup>();
 		for (const r of item?.hold_reasons ?? []) {
+			if (plan && r.check === "track") continue;
 			let g = out.get(r.file);
 			if (!g) {
 				g = {
@@ -86,11 +168,11 @@
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: i18n.hold_import_anyway(),
+			label: plan ? i18n.hold_import() : i18n.hold_import_anyway(),
 			variant: "ghost",
 			dismiss: false,
-			disabled: pending,
-			onClick: () => onResolve("import"),
+			disabled: pending || !canImport || (heldFiles.size > 0 && planQuery.isPending),
+			onClick: importHeld,
 		},
 		{
 			label: regrab ? i18n.hold_delete_and_search() : i18n.common_delete(),
@@ -143,6 +225,37 @@
 			</div>
 		{/each}
 	</div>
+
+	{#if plan}
+		<p class="mt-4 text-sm text-fg-muted">{i18n.hold_track_help()}</p>
+		<ul class="mt-2 flex max-h-80 flex-col gap-2 overflow-y-auto">
+			{#each planFiles as f (f.file)}
+				<li class="grid gap-1 sm:grid-cols-2 sm:items-center sm:gap-3">
+					<span
+						class="truncate font-mono text-xs"
+						class:text-fg={!heldFiles.has(f.file)}
+						style:color={heldFiles.has(f.file) ? "var(--status-held)" : undefined}
+						title={f.file}
+					>
+						{f.file.split("/").pop()}
+					</span>
+					<div>
+						<Select
+							ariaLabel={f.file.split("/").pop()}
+							value={choices[f.file] ?? ""}
+							options={trackOptions}
+							onChange={(v) => (choices[f.file] = v)}
+							searchable={trackOptions.length > 10}
+							maxHeight={240}
+						/>
+						{#if taken(choices[f.file] ?? "")}
+							<p class="mt-1 text-xs text-status-held">{i18n.hold_track_taken()}</p>
+						{/if}
+					</div>
+				</li>
+			{/each}
+		</ul>
+	{/if}
 
 	<div class="mt-4 border-t border-border pt-3.5">
 		<Checkbox

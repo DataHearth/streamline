@@ -169,6 +169,19 @@ func (m TrackMatcher) Match(info audiotags.Info) *ent.Track {
 	return matchTitle(m.tracks, info.Disc, info.Title)
 }
 
+// Suggest is Match unless the file states the title of another track: the guess
+// offered to someone choosing a held file's track.
+func (m TrackMatcher) Suggest(info audiotags.Info) *ent.Track {
+	t := m.Match(info)
+	if t != nil && TitlePrefixMatches(t.Title, info.Title) {
+		return t
+	}
+	if named := matchTitle(m.tracks, info.Disc, info.Title); named != nil {
+		return named
+	}
+	return t
+}
+
 // MatchByName is MatchTrackByName when the numbers are trusted, else the
 // track whose title the file name states, on its disc first.
 func (m TrackMatcher) MatchByName(p string) *ent.Track {

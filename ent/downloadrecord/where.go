@@ -1010,6 +1010,16 @@ func VerificationBypassedNEQ(v bool) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldNEQ(FieldVerificationBypassed, v))
 }
 
+// TrackAssignmentsIsNil applies the IsNil predicate on the "track_assignments" field.
+func TrackAssignmentsIsNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldIsNull(FieldTrackAssignments))
+}
+
+// TrackAssignmentsNotNil applies the NotNil predicate on the "track_assignments" field.
+func TrackAssignmentsNotNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNotNull(FieldTrackAssignments))
+}
+
 // SelectedFilesIsNil applies the IsNil predicate on the "selected_files" field.
 func SelectedFilesIsNil() predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldIsNull(FieldSelectedFiles))

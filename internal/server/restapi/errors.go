@@ -151,6 +151,13 @@ func errGrabRejected(msg string) UnprocessableEntityJSONResponse {
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
 
+// errTrackAssignmentRejected names what is wrong with a held album's chosen
+// tracks. The SPA renders it verbatim.
+func errTrackAssignmentRejected(msg string) UnprocessableEntityJSONResponse {
+	code := "track_assignment_rejected"
+	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
+}
+
 // errAlreadyInClient is the grab_rejected answer to
 // download.ErrTorrentAlreadyExists: the client already holds that torrent, or
 // a live record of streamline's already tracks its hash. Nothing failed and

@@ -62,6 +62,7 @@ type Server struct {
 	torrents        bittorrent.Manager
 	pathMigrations  *pathmigrate.Service
 	importer        importer.Enqueuer
+	trackPlans      importer.TrackPlanner
 	store           db.Store
 	ent             *ent.Client
 	publicURL       string
@@ -106,6 +107,7 @@ type Deps struct {
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service
 	Importer        importer.Enqueuer
+	TrackPlans      importer.TrackPlanner
 	Store           db.Store
 	Ent             *ent.Client
 	PublicURL       string
@@ -142,6 +144,7 @@ func New(d Deps) *Server {
 		torrents:        d.Torrents,
 		pathMigrations:  d.PathMigrations,
 		importer:        d.Importer,
+		trackPlans:      d.TrackPlans,
 		store:           d.Store,
 		ent:             d.Ent,
 		publicURL:       d.PublicURL,

@@ -18,6 +18,9 @@ var (
 	// ErrNoAlbumTracks is returned when no audio file under an album record's
 	// save path matched a track the import was allowed to fill.
 	ErrNoAlbumTracks = errors.New("no audio file matched an album track")
+	// ErrNotSingleAlbum is returned for a track plan of a record that is not
+	// one whole album: a discography pack, a track upload, or not music.
+	ErrNotSingleAlbum = errors.New("record is not a single album")
 	// ErrCueImage is returned when an album release is disc images, one file
 	// per disc or vinyl side, cut by a CUE sheet beside them.
 	ErrCueImage = errors.New("release is a " + library.CueImageReason)

@@ -231,6 +231,93 @@ var _ = Describe(
 			},
 		)
 
+		Context("with a person's track choices on the record", func() {
+			var paths []string
+
+			BeforeEach(func() {
+				paths = []string{
+					seedTrackFile(
+						dlDir,
+						"01.flac",
+						"tagged.flac",
+						1,
+						albumTracks[0].title,
+					),
+					seedTrackFile(
+						dlDir,
+						"02.flac",
+						"tagged.flac",
+						2,
+						albumTracks[2].title,
+					),
+					seedTrackFile(
+						dlDir,
+						"03.flac",
+						"tagged.flac",
+						3,
+						albumTracks[1].title,
+					),
+				}
+			})
+
+			It("files each file where it was put and leaves out the rest", func() {
+				rec := fixtureAlbumRecord(dlDir, alb)
+				rec.TrackAssignments = map[string]uint32{
+					paths[1]: albumTracks[2].id,
+					paths[2]: albumTracks[1].id,
+				}
+				prober.EXPECT().ProbeAudio(mock.Anything, mock.Anything).
+					Return(&ffmpeg.AudioInfo{Codec: "flac", BitDepth: 16, SampleRateHz: 44100, DurationSec: 200}, nil).
+					Times(2)
+
+				plan, _ := w.planAlbumImport(
+					context.Background(),
+					rec,
+					alb,
+					paths,
+					config.MusicQualityProfileEntry{},
+				)
+
+				placed := map[string]uint32{}
+				for _, f := range plan {
+					placed[f.path] = f.tr.ID
+				}
+				Expect(placed).To(Equal(rec.TrackAssignments))
+			})
+
+			It("suggests the track each file names", func() {
+				held := fixtureAlbumRecord(dlDir, alb)
+				held.Status = downloadrecord.StatusHeld
+				storeMk.EXPECT().FindHeldAlbumRecord(mock.Anything, held.ID).
+					Return(held, nil).Once()
+
+				plan, err := w.AlbumTrackPlan(context.Background(), held.ID)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(plan.Tracks).To(Equal(alb.Edges.Tracks))
+				suggested := map[string]uint32{}
+				for _, f := range plan.Files {
+					suggested[f.Path] = f.Track.ID
+				}
+				Expect(suggested).To(Equal(map[string]uint32{
+					paths[0]: albumTracks[0].id,
+					paths[1]: albumTracks[2].id,
+					paths[2]: albumTracks[1].id,
+				}))
+			})
+
+			It("has no plan for a discography pack", func() {
+				pack := fixtureAlbumRecord(dlDir, alb)
+				pack.Edges.Artist = alb.Edges.Artist
+				storeMk.EXPECT().FindHeldAlbumRecord(mock.Anything, pack.ID).
+					Return(pack, nil).Once()
+
+				_, err := w.AlbumTrackPlan(context.Background(), pack.ID)
+
+				Expect(err).To(MatchError(ErrNotSingleAlbum))
+			})
+		})
+
 		It(
 			"imports a measured tier the profile ticks and stores the tier as quality",
 			func() {

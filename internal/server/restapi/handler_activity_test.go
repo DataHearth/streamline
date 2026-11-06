@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/importer"
 )
 
 var _ = Describe("Handler: Activity queue/history",
@@ -372,7 +373,7 @@ var _ = Describe("Handler: resolve held downloads",
 			app.store.EXPECT().FindDownloadRecordByID(mock.Anything, uint32(1)).
 				Return(held(1), nil).Once()
 			app.store.EXPECT().
-				ReleaseHeldDownloadRecord(mock.Anything, uint32(1)).
+				ReleaseHeldDownloadRecord(mock.Anything, uint32(1), map[string]uint32(nil)).
 				Return(nil).Once()
 			app.importer.EXPECT().Enqueue(uint32(1)).Once()
 
@@ -421,6 +422,76 @@ var _ = Describe("Handler: resolve held downloads",
 
 		It("400s an unrecognised action instead of deleting", func() {
 			Expect(post(5, "cancel").StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		Context("with chosen tracks", func() {
+			plan := importer.TrackPlan{
+				Files: []importer.PlannedFile{
+					{Path: "/dl/a.flac"},
+					{Path: "/dl/b.flac"},
+				},
+				Tracks: []*ent.Track{
+					{ID: 7, Title: "Wither"},
+					{ID: 8, Title: "The Shattered Fortress"},
+				},
+			}
+			postChoices := func(choices string) *http.Response {
+				GinkgoHelper()
+				resp, err := http.Post(
+					app.srv.URL+"/api/v1/downloads/9/resolve",
+					"application/json",
+					strings.NewReader(
+						`{"action":"import","track_assignments":`+choices+`}`,
+					),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				DeferCleanup(resp.Body.Close)
+				return resp
+			}
+
+			BeforeEach(func() {
+				app.store.EXPECT().FindDownloadRecordByID(mock.Anything, uint32(9)).
+					Return(held(9), nil).Once()
+				app.trackPlans.EXPECT().AlbumTrackPlan(mock.Anything, uint32(9)).
+					Return(plan, nil).Once()
+			})
+
+			It("releases the record with them", func() {
+				app.store.EXPECT().ReleaseHeldDownloadRecord(
+					mock.Anything, uint32(9), map[string]uint32{"/dl/a.flac": 8, "/dl/b.flac": 7},
+				).
+					Return(nil).Once()
+				app.importer.EXPECT().Enqueue(uint32(9)).Once()
+
+				resp := postChoices(
+					`[{"file":"/dl/a.flac","track_id":8},{"file":"/dl/b.flac","track_id":7}]`,
+				)
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			})
+
+			DescribeTable("refuses",
+				func(choices, message string) {
+					resp := postChoices(choices)
+					Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+					var body struct{ Code, Message string }
+					Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+					Expect(body.Code).To(Equal("track_assignment_rejected"))
+					Expect(body.Message).To(ContainSubstring(message))
+				},
+				Entry(
+					"a file outside the download",
+					`[{"file":"/etc/passwd","track_id":7}]`,
+					"not a file of this download",
+				),
+				Entry("a track outside the album",
+					`[{"file":"/dl/a.flac","track_id":99}]`, "not on this album"),
+				Entry(
+					"one track twice",
+					`[{"file":"/dl/a.flac","track_id":7},{"file":"/dl/b.flac","track_id":7}]`,
+					"two files are assigned to Wither",
+				),
+				Entry("nothing chosen", `[]`, "at least one file"),
+			)
 		})
 
 		It("400s a body with no action at all", func() {

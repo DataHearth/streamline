@@ -80,6 +80,57 @@ type albumFile struct {
 	q    albumFileQuality
 }
 
+// PlannedFile is one file of a held album and the track it most likely fills;
+// Track is nil when nothing points at one.
+type PlannedFile struct {
+	Path  string
+	Track *ent.Track
+}
+
+// TrackPlan is what someone choosing a held album's tracks picks from.
+type TrackPlan struct {
+	Files  []PlannedFile
+	Tracks []*ent.Track
+}
+
+// AlbumTrackPlan lists the files importing the held record would read, each
+// with its suggested track. ErrNotSingleAlbum means no plan applies to it.
+func (w *Worker) AlbumTrackPlan(
+	ctx context.Context,
+	recordID uint32,
+) (TrackPlan, error) {
+	rec, err := w.db.FindHeldAlbumRecord(ctx, recordID)
+	if err != nil {
+		return TrackPlan{}, fmt.Errorf("load held record: %w", err)
+	}
+	alb := rec.Edges.Album
+	if alb == nil || rec.Edges.Artist != nil || rec.Edges.Track != nil {
+		return TrackPlan{}, ErrNotSingleAlbum
+	}
+	files, err := listAudioFiles(rec.SavePath)
+	if err != nil {
+		return TrackPlan{}, fmt.Errorf("list album files: %w", err)
+	}
+	files = w.sourceFilter(ctx, rec).Filter(files)
+	infos := make([]audiotags.Info, 0, len(files))
+	plan := make([]PlannedFile, 0, len(files))
+	for _, path := range files {
+		info, err := library.ReadTrackInfo(path)
+		if err != nil {
+			slog.WarnContext(ctx, "album track plan: tag read failed",
+				"file", path, "error", err)
+			info = library.TrackInfoFromName(path)
+		}
+		infos = append(infos, info)
+		plan = append(plan, PlannedFile{Path: path})
+	}
+	matcher := library.NewTrackMatcher(alb.Edges.Tracks, infos)
+	for i, info := range infos {
+		plan[i].Track = matcher.Suggest(info)
+	}
+	return TrackPlan{Files: plan, Tracks: alb.Edges.Tracks}, nil
+}
+
 // importAlbumRecord imports a completed album download: every audio file is
 // matched to a track by its tags, placed under the music library, and retagged
 // on the library copy. Tracks the release did not cover stay without a file and
@@ -379,8 +430,13 @@ func (w *Worker) planAlbumImport(
 	}
 	for i, path := range paths {
 		info := infos[i]
-		tr := uploadedTrack
-		if rec.Edges.Track == nil {
+		var tr *ent.Track
+		switch {
+		case rec.Edges.Track != nil:
+			tr = uploadedTrack
+		case rec.TrackAssignments != nil:
+			tr = assignedTrack(alb.Edges.Tracks, rec.TrackAssignments[path])
+		default:
 			tr = matcher.Match(info)
 		}
 		if tr == nil {
@@ -410,6 +466,15 @@ func (w *Worker) planAlbumImport(
 		plan = append(plan, albumFile{path: path, info: info, tr: tr, q: q})
 	}
 	return plan, skippedCovered
+}
+
+func assignedTrack(tracks []*ent.Track, id uint32) *ent.Track {
+	if i := slices.IndexFunc(tracks, func(t *ent.Track) bool {
+		return t.ID == id
+	}); i >= 0 {
+		return tracks[i]
+	}
+	return nil
 }
 
 // missingTracks counts the album's tracks that hold no file once rows landed.

@@ -733,6 +733,10 @@ type Store interface {
 	// ArtistCoverAlbums lists an artist's released albums, newest first.
 	ArtistCoverAlbums(ctx context.Context, artistID uint32) ([]uint32, error)
 	ListImportingDownloadRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
+	FindHeldAlbumRecord(
+		ctx context.Context,
+		id uint32,
+	) (*ent.DownloadRecord, error)
 	FindImportingDownloadRecordByID(
 		ctx context.Context,
 		id uint32,
@@ -750,7 +754,11 @@ type Store interface {
 		ctx context.Context,
 		id uint32,
 	) (*ent.DownloadRecord, error)
-	ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error
+	ReleaseHeldDownloadRecord(
+		ctx context.Context,
+		id uint32,
+		assignments map[string]uint32,
+	) error
 	FailHeldDownloadRecord(
 		ctx context.Context,
 		id uint32,

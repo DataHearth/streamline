@@ -9,6 +9,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/importer"
 )
 
 func (s *Server) GetDownloadQueue(
@@ -283,7 +284,35 @@ func (s *Server) ResolveHeldDownload(
 	}
 
 	if request.Body.Action == ResolveHeldRequestActionImport {
-		if err := s.store.ReleaseHeldDownloadRecord(ctx, rec.ID); err != nil {
+		var assignments map[string]uint32
+		if request.Body.TrackAssignments != nil {
+			plan, err := s.trackPlans.AlbumTrackPlan(ctx, rec.ID)
+			if errors.Is(err, importer.ErrNotSingleAlbum) {
+				return ResolveHeldDownload409JSONResponse{
+					ConflictJSONResponse: errConflict(err.Error()),
+				}, nil
+			}
+			if err != nil {
+				return nil, err
+			}
+			var problem string
+			assignments, problem = checkTrackAssignments(
+				plan,
+				*request.Body.TrackAssignments,
+			)
+			if problem != "" {
+				return ResolveHeldDownload422JSONResponse{
+					UnprocessableEntityJSONResponse: errTrackAssignmentRejected(
+						problem,
+					),
+				}, nil
+			}
+		}
+		if err := s.store.ReleaseHeldDownloadRecord(
+			ctx,
+			rec.ID,
+			assignments,
+		); err != nil {
 			return nil, err
 		}
 		s.importer.Enqueue(rec.ID)
@@ -309,4 +338,93 @@ func (s *Server) ResolveHeldDownload(
 		return nil, err
 	}
 	return ResolveHeldDownload204Response{}, nil
+}
+
+// checkTrackAssignments turns a held album's chosen tracks into what the import
+// reads, or says why it cannot: the paths come from the client, and only the
+// record's own files may reach the importer.
+func checkTrackAssignments(
+	plan importer.TrackPlan,
+	chosen []TrackAssignment,
+) (map[string]uint32, string) {
+	if len(chosen) == 0 {
+		return nil, "choose a track for at least one file"
+	}
+	files := make(map[string]struct{}, len(plan.Files))
+	for _, f := range plan.Files {
+		files[f.Path] = struct{}{}
+	}
+	tracks := make(map[uint32]string, len(plan.Tracks))
+	for _, t := range plan.Tracks {
+		tracks[t.ID] = t.Title
+	}
+	out := make(map[string]uint32, len(chosen))
+	taken := make(map[uint32]struct{}, len(chosen))
+	for _, c := range chosen {
+		if _, ok := files[c.File]; !ok {
+			return nil, c.File + " is not a file of this download"
+		}
+		title, ok := tracks[c.TrackId]
+		if !ok {
+			return nil, c.File + " is assigned a track that is not on this album"
+		}
+		if _, dup := taken[c.TrackId]; dup {
+			return nil, "two files are assigned to " + title
+		}
+		taken[c.TrackId] = struct{}{}
+		out[c.File] = c.TrackId
+	}
+	return out, ""
+}
+
+// GetHeldDownloadTrackPlan lists a held album's files and tracks.
+func (s *Server) GetHeldDownloadTrackPlan(
+	ctx context.Context,
+	request GetHeldDownloadTrackPlanRequestObject,
+) (GetHeldDownloadTrackPlanResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return GetHeldDownloadTrackPlan403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	rec, err := s.store.FindDownloadRecordByID(ctx, request.Id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return GetHeldDownloadTrackPlan404JSONResponse{
+				NotFoundJSONResponse: errNotFound("download record not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	if rec.Status != downloadrecord.StatusHeld {
+		return GetHeldDownloadTrackPlan409JSONResponse{
+			ConflictJSONResponse: errConflict("download record is not held"),
+		}, nil
+	}
+	plan, err := s.trackPlans.AlbumTrackPlan(ctx, rec.ID)
+	if errors.Is(err, importer.ErrNotSingleAlbum) {
+		return GetHeldDownloadTrackPlan409JSONResponse{
+			ConflictJSONResponse: errConflict(err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	out := GetHeldDownloadTrackPlan200JSONResponse{
+		Files:  make([]TrackPlanFile, 0, len(plan.Files)),
+		Tracks: make([]TrackPlanTrack, 0, len(plan.Tracks)),
+	}
+	for _, f := range plan.Files {
+		row := TrackPlanFile{File: f.Path}
+		if f.Track != nil {
+			row.TrackId = &f.Track.ID
+		}
+		out.Files = append(out.Files, row)
+	}
+	for _, t := range plan.Tracks {
+		out.Tracks = append(out.Tracks, TrackPlanTrack{
+			Id: t.ID, Disc: t.Disc, Position: t.Position, Title: t.Title,
+		})
+	}
+	return out, nil
 }

@@ -713,6 +713,23 @@ func (db *DB) FindImportingDownloadRecordByID(
 		Only(ctx)
 }
 
+// FindHeldAlbumRecord returns a held record with what a track plan reads. A
+// record in any other status is not found.
+func (db *DB) FindHeldAlbumRecord(
+	ctx context.Context,
+	id uint32,
+) (*ent.DownloadRecord, error) {
+	return db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.ID(id),
+			downloadrecord.StatusEQ(downloadrecord.StatusHeld),
+		).
+		WithAlbum(withAlbumContext).
+		WithArtist().
+		WithTrack().
+		Only(ctx)
+}
+
 // FindDownloadRecordByID returns one record by ID whatever its status, so a
 // caller can tell "no such record" from "wrong state for this action".
 func (db *DB) FindDownloadRecordByID(
@@ -756,13 +773,21 @@ func (db *DB) FindHeldDownloadRecordByID(
 }
 
 // ReleaseHeldDownloadRecord flips a held record back to importing with
-// verification bypassed, so the importer's re-run imports it as-is.
-func (db *DB) ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error {
-	return db.client.DownloadRecord.UpdateOneID(id).
+// verification bypassed, so the importer's re-run imports it as-is. Non-nil
+// assignments replace the album's track matching on that run.
+func (db *DB) ReleaseHeldDownloadRecord(
+	ctx context.Context,
+	id uint32,
+	assignments map[string]uint32,
+) error {
+	update := db.client.DownloadRecord.UpdateOneID(id).
 		SetStatus(downloadrecord.StatusImporting).
 		SetVerificationBypassed(true).
-		ClearHoldReasons().
-		Exec(ctx)
+		ClearHoldReasons()
+	if assignments != nil {
+		update.SetTrackAssignments(assignments)
+	}
+	return update.Exec(ctx)
 }
 
 // FailHeldDownloadRecord finalizes a held record the user rejected, and marks

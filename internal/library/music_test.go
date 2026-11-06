@@ -133,6 +133,24 @@ var _ = Describe("TrackMatcher", Label("unit", "library"), func() {
 			To(Equal(uint32(1)))
 	})
 
+	It("suggests the track a file names over the one its number reaches", func() {
+		m := NewTrackMatcher(album, nil)
+		Expect(m.Suggest(audiotags.Info{Disc: 1, Track: 3, Title: "New Land"}).ID).
+			To(Equal(uint32(4)))
+		Expect(m.Suggest(audiotags.Info{Disc: 1, Track: 3, Title: "Bonus Song"}).ID).
+			To(Equal(uint32(3)))
+		Expect(
+			m.Suggest(
+				audiotags.Info{
+					Disc:  1,
+					Track: 3,
+					Title: "The Eagle Has Landed (Remastered)",
+				},
+			).ID,
+		).To(Equal(uint32(3)))
+		Expect(m.Suggest(audiotags.Info{Title: "Bonus Song"})).To(BeNil())
+	})
+
 	It("trusts numbers whose titles name no track of the album", func() {
 		m := NewTrackMatcher(album, []audiotags.Info{
 			{Disc: 1, Track: 1, Title: "Regret (version française)"},

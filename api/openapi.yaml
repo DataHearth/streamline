@@ -5527,7 +5527,11 @@ paths:
       summary: Release a download held by import verification.
       description: |
         Imports the held files as-is, or deletes them from the client and
-        either re-searches (regrab) or stops (delete). Both deleting actions
+        either re-searches (regrab) or stops (delete). `import` may carry
+        `track_assignments`, read from `GET /downloads/{id}/track-plan`; the
+        import then files exactly those files on those tracks, and a list naming
+        a file or track outside the record, or one track twice, is a 422 with
+        `code: track_assignment_rejected`. Both deleting actions
         mark the release rejected: the missing searches and the RSS feeds skip
         it for that title from then on (matched by info hash, else by title),
         until the record is retried or removed from the history. Manual search
@@ -5545,6 +5549,35 @@ paths:
           $ref: "#/components/responses/NoContent"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /downloads/{id}/track-plan:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getHeldDownloadTrackPlan
+      summary: A held album's files, each with the track it would most likely fill.
+      description: |
+        Reads every file's tags, so it is only for someone opening a held album.
+        409 when the record is not held, or is not a single album (a discography
+        pack, a track upload, or not music).
+      tags: [activity]
+      responses:
+        "200":
+          description: The files and the album's tracks.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackPlan"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -15503,6 +15536,61 @@ components:
         action:
           type: string
           enum: [import, regrab, delete]
+        track_assignments:
+          type: array
+          description: With `import` on a held album, the whole plan. A file left out is not imported.
+          items:
+            $ref: "#/components/schemas/TrackAssignment"
+
+    TrackAssignment:
+      type: object
+      required: [file, track_id]
+      properties:
+        file:
+          type: string
+        track_id:
+          type: integer
+          format: uint32
+
+    TrackPlan:
+      type: object
+      required: [files, tracks]
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrackPlanFile"
+        tracks:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrackPlanTrack"
+
+    TrackPlanFile:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+        track_id:
+          type: integer
+          format: uint32
+          description: The suggested track. Absent when nothing points at one.
+
+    TrackPlanTrack:
+      type: object
+      required: [id, disc, position, title]
+      properties:
+        id:
+          type: integer
+          format: uint32
+        disc:
+          type: integer
+          format: uint8
+        position:
+          type: integer
+          format: uint16
+        title:
+          type: string
 
     DownloadQueue:
       type: object

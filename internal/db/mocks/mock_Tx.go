@@ -7792,6 +7792,74 @@ func (_c *MockTx_FindDownloadRecordByID_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// FindHeldAlbumRecord provides a mock function for the type MockTx
+func (_mock *MockTx) FindHeldAlbumRecord(ctx context.Context, id uint32) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindHeldAlbumRecord")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_FindHeldAlbumRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindHeldAlbumRecord'
+type MockTx_FindHeldAlbumRecord_Call struct {
+	*mock.Call
+}
+
+// FindHeldAlbumRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockTx_Expecter) FindHeldAlbumRecord(ctx any, id any) *MockTx_FindHeldAlbumRecord_Call {
+	return &MockTx_FindHeldAlbumRecord_Call{Call: _e.mock.On("FindHeldAlbumRecord", ctx, id)}
+}
+
+func (_c *MockTx_FindHeldAlbumRecord_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_FindHeldAlbumRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_FindHeldAlbumRecord_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockTx_FindHeldAlbumRecord_Call {
+	_c.Call.Return(downloadRecord, err)
+	return _c
+}
+
+func (_c *MockTx_FindHeldAlbumRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.DownloadRecord, error)) *MockTx_FindHeldAlbumRecord_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindHeldDownloadRecordByID provides a mock function for the type MockTx
 func (_mock *MockTx) FindHeldDownloadRecordByID(ctx context.Context, id uint32) (*ent.DownloadRecord, error) {
 	ret := _mock.Called(ctx, id)
@@ -18726,16 +18794,16 @@ func (_c *MockTx_RejectedReleases_Call) RunAndReturn(run func(ctx context.Contex
 }
 
 // ReleaseHeldDownloadRecord provides a mock function for the type MockTx
-func (_mock *MockTx) ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error {
-	ret := _mock.Called(ctx, id)
+func (_mock *MockTx) ReleaseHeldDownloadRecord(ctx context.Context, id uint32, assignments map[string]uint32) error {
+	ret := _mock.Called(ctx, id, assignments)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReleaseHeldDownloadRecord")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
-		r0 = returnFunc(ctx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, map[string]uint32) error); ok {
+		r0 = returnFunc(ctx, id, assignments)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -18750,11 +18818,12 @@ type MockTx_ReleaseHeldDownloadRecord_Call struct {
 // ReleaseHeldDownloadRecord is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-func (_e *MockTx_Expecter) ReleaseHeldDownloadRecord(ctx any, id any) *MockTx_ReleaseHeldDownloadRecord_Call {
-	return &MockTx_ReleaseHeldDownloadRecord_Call{Call: _e.mock.On("ReleaseHeldDownloadRecord", ctx, id)}
+//   - assignments map[string]uint32
+func (_e *MockTx_Expecter) ReleaseHeldDownloadRecord(ctx any, id any, assignments any) *MockTx_ReleaseHeldDownloadRecord_Call {
+	return &MockTx_ReleaseHeldDownloadRecord_Call{Call: _e.mock.On("ReleaseHeldDownloadRecord", ctx, id, assignments)}
 }
 
-func (_c *MockTx_ReleaseHeldDownloadRecord_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_ReleaseHeldDownloadRecord_Call {
+func (_c *MockTx_ReleaseHeldDownloadRecord_Call) Run(run func(ctx context.Context, id uint32, assignments map[string]uint32)) *MockTx_ReleaseHeldDownloadRecord_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -18764,9 +18833,14 @@ func (_c *MockTx_ReleaseHeldDownloadRecord_Call) Run(run func(ctx context.Contex
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
+		var arg2 map[string]uint32
+		if args[2] != nil {
+			arg2 = args[2].(map[string]uint32)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -18777,7 +18851,7 @@ func (_c *MockTx_ReleaseHeldDownloadRecord_Call) Return(err error) *MockTx_Relea
 	return _c
 }
 
-func (_c *MockTx_ReleaseHeldDownloadRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_ReleaseHeldDownloadRecord_Call {
+func (_c *MockTx_ReleaseHeldDownloadRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32, assignments map[string]uint32) error) *MockTx_ReleaseHeldDownloadRecord_Call {
 	_c.Call.Return(run)
 	return _c
 }

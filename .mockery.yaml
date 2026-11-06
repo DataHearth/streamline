@@ -33,6 +33,7 @@ packages:
   github.com/datahearth/streamline/internal/importer:
     interfaces:
       Enqueuer: {}
+      TrackPlanner: {}
   github.com/datahearth/streamline/internal/indexer:
     interfaces:
       Client: {}

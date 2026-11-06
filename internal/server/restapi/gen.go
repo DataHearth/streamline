@@ -8295,6 +8295,9 @@ type ResetPasswordRequest struct {
 // "delete" deletes it and leaves the media alone.
 type ResolveHeldRequest struct {
 	Action ResolveHeldRequestAction `json:"action"`
+
+	// TrackAssignments With `import` on a held album, the whole plan. A file left out is not imported.
+	TrackAssignments *[]TrackAssignment `json:"track_assignments,omitempty"`
 }
 
 // ResolveHeldRequestAction defines model for ResolveHeldRequest.Action.
@@ -9246,6 +9249,34 @@ type TorrentPeer struct {
 	Client       *string  `json:"client,omitempty"`
 	DownloadRate *float64 `json:"download_rate,omitempty"`
 	UploadRate   *float64 `json:"upload_rate,omitempty"`
+}
+
+// TrackAssignment defines model for TrackAssignment.
+type TrackAssignment struct {
+	File    string `json:"file"`
+	TrackId uint32 `json:"track_id"`
+}
+
+// TrackPlan defines model for TrackPlan.
+type TrackPlan struct {
+	Files  []TrackPlanFile  `json:"files"`
+	Tracks []TrackPlanTrack `json:"tracks"`
+}
+
+// TrackPlanFile defines model for TrackPlanFile.
+type TrackPlanFile struct {
+	File string `json:"file"`
+
+	// TrackId The suggested track. Absent when nothing points at one.
+	TrackId *uint32 `json:"track_id,omitempty"`
+}
+
+// TrackPlanTrack defines model for TrackPlanTrack.
+type TrackPlanTrack struct {
+	Disc     uint8  `json:"disc"`
+	Id       uint32 `json:"id"`
+	Position uint16 `json:"position"`
+	Title    string `json:"title"`
 }
 
 // TrackSearchHit defines model for TrackSearchHit.
@@ -11808,6 +11839,9 @@ type ServerInterface interface {
 	// ResolveHeldDownload Release a download held by import verification.
 	// (POST /downloads/{id}/resolve)
 	ResolveHeldDownload(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// GetHeldDownloadTrackPlan A held album's files, each with the track it would most likely fill.
+	// (GET /downloads/{id}/track-plan)
+	GetHeldDownloadTrackPlan(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListEpisodes Search the library's episodes by title
 	// (GET /episodes)
 	ListEpisodes(w http.ResponseWriter, r *http.Request, params ListEpisodesParams)
@@ -12882,6 +12916,12 @@ func (_ Unimplemented) TestDownloadClient(w http.ResponseWriter, r *http.Request
 // ResolveHeldDownload Release a download held by import verification.
 // (POST /downloads/{id}/resolve)
 func (_ Unimplemented) ResolveHeldDownload(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetHeldDownloadTrackPlan A held album's files, each with the track it would most likely fill.
+// (GET /downloads/{id}/track-plan)
+func (_ Unimplemented) GetHeldDownloadTrackPlan(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -16430,6 +16470,32 @@ func (siw *ServerInterfaceWrapper) ResolveHeldDownload(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResolveHeldDownload(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetHeldDownloadTrackPlan operation middleware
+func (siw *ServerInterfaceWrapper) GetHeldDownloadTrackPlan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHeldDownloadTrackPlan(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -22684,6 +22750,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/downloads/{id}/resolve", wrapper.ResolveHeldDownload)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/downloads/{id}/track-plan", wrapper.GetHeldDownloadTrackPlan)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activity/history", wrapper.ListDownloadHistory)
@@ -29390,9 +29459,103 @@ func (response ResolveHeldDownload409JSONResponse) VisitResolveHeldDownloadRespo
 	return err
 }
 
+type ResolveHeldDownload422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response ResolveHeldDownload422JSONResponse) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ResolveHeldDownload500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ResolveHeldDownload500JSONResponse) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHeldDownloadTrackPlanRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type GetHeldDownloadTrackPlanResponseObject interface {
+	VisitGetHeldDownloadTrackPlanResponse(w http.ResponseWriter) error
+}
+
+type GetHeldDownloadTrackPlan200JSONResponse TrackPlan
+
+func (response GetHeldDownloadTrackPlan200JSONResponse) VisitGetHeldDownloadTrackPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHeldDownloadTrackPlan403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetHeldDownloadTrackPlan403JSONResponse) VisitGetHeldDownloadTrackPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHeldDownloadTrackPlan404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetHeldDownloadTrackPlan404JSONResponse) VisitGetHeldDownloadTrackPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHeldDownloadTrackPlan409JSONResponse struct{ ConflictJSONResponse }
+
+func (response GetHeldDownloadTrackPlan409JSONResponse) VisitGetHeldDownloadTrackPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHeldDownloadTrackPlan500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetHeldDownloadTrackPlan500JSONResponse) VisitGetHeldDownloadTrackPlanResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -40940,6 +41103,9 @@ type StrictServerInterface interface {
 	// ResolveHeldDownload Release a download held by import verification.
 	// (POST /downloads/{id}/resolve)
 	ResolveHeldDownload(ctx context.Context, request ResolveHeldDownloadRequestObject) (ResolveHeldDownloadResponseObject, error)
+	// GetHeldDownloadTrackPlan A held album's files, each with the track it would most likely fill.
+	// (GET /downloads/{id}/track-plan)
+	GetHeldDownloadTrackPlan(ctx context.Context, request GetHeldDownloadTrackPlanRequestObject) (GetHeldDownloadTrackPlanResponseObject, error)
 	// ListEpisodes Search the library's episodes by title
 	// (GET /episodes)
 	ListEpisodes(ctx context.Context, request ListEpisodesRequestObject) (ListEpisodesResponseObject, error)
@@ -44130,6 +44296,32 @@ func (sh *strictHandler) ResolveHeldDownload(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ResolveHeldDownloadResponseObject); ok {
 		if err := validResponse.VisitResolveHeldDownloadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetHeldDownloadTrackPlan operation middleware
+func (sh *strictHandler) GetHeldDownloadTrackPlan(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetHeldDownloadTrackPlanRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetHeldDownloadTrackPlan(ctx, request.(GetHeldDownloadTrackPlanRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetHeldDownloadTrackPlan")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetHeldDownloadTrackPlanResponseObject); ok {
+		if err := validResponse.VisitGetHeldDownloadTrackPlanResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

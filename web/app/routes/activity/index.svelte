@@ -29,6 +29,7 @@
 		HistoryEntry,
 		PendingList,
 		PendingItem,
+		TrackAssignment,
 	} from "@lib/types";
 	import ActivityToolbar, {
 		ACTIVITY_CHIPS,
@@ -184,10 +185,17 @@
 	const resolve = createMutation<
 		unknown,
 		Error,
-		{ id: number; action: "import" | "regrab" | "delete" }
+		{
+			id: number;
+			action: "import" | "regrab" | "delete";
+			trackAssignments?: TrackAssignment[];
+		}
 	>(() => ({
-		mutationFn: ({ id, action }) =>
-			api(`/downloads/${id}/resolve`, { method: "POST", body: { action } }),
+		mutationFn: ({ id, action, trackAssignments }) =>
+			api(`/downloads/${id}/resolve`, {
+				method: "POST",
+				body: { action, track_assignments: trackAssignments },
+			}),
 		onSuccess: (_r, { action }) => {
 			invalidate();
 			resolveId = null;
@@ -783,8 +791,8 @@
 <ResolveDialog
 	item={heldItem}
 	pending={resolve.isPending}
-	onResolve={(action) =>
-		resolveId !== null && resolve.mutate({ id: resolveId, action })}
+	onResolve={(action, trackAssignments) =>
+		resolveId !== null && resolve.mutate({ id: resolveId, action, trackAssignments })}
 	onClose={() => (resolveId = null)}
 />
 

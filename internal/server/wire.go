@@ -597,6 +597,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Torrents:        torrentsAPI,
 		PathMigrations:  pathMigrations,
 		Importer:        imp,
+		TrackPlans:      imp,
 		Prober:          prober,
 		Transcoder:      transcoder,
 		AudioTranscoder: prober,
