@@ -1666,7 +1666,8 @@ paths:
       summary: The releases this album can follow
       description: |
         Every release of the album's release group that has audio, oldest first. One MusicBrainz
-         call, so only on a person's tap. `current` is the release the tracks came from and
+         call, a few more for a group of 25 releases or more, so only on a person's tap.
+         `current` is the release the tracks came from and
          `chosen` the one a person picked, empty when Streamline picks.
       tags: [music]
       responses:

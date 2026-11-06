@@ -3,6 +3,7 @@ package metadata
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -579,6 +580,113 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 					Discs:          2,
 				},
 			}))
+		})
+
+		Context("with more releases than a lookup embeds", func() {
+			releases := func(prefix string, n int, date string) string {
+				rows := make([]string, n)
+				for i := range rows {
+					rows[i] = fmt.Sprintf(
+						`{"id":"%s-%d","status":"Official","date":"%s","media":[{"format":"CD","track-count":10}]}`,
+						prefix,
+						i,
+						date,
+					)
+				}
+				return strings.Join(rows, ",")
+			}
+			serveBrowse := func(lookup int) *[]url.Values {
+				var browses []url.Values
+				mb.client.Transport = mbRoundTripper(
+					func(r *http.Request) (*http.Response, error) {
+						switch r.URL.Path {
+						case "/ws/2/release-group/rg-1":
+							return jsonResponse(
+								200,
+								`{"id":"rg-1","title":"X","releases":[`+
+									releases("lookup", lookup, "2000-01-01")+`]}`,
+							), nil
+						case "/ws/2/release":
+							browses = append(browses, r.URL.Query())
+							if r.URL.Query().Get("offset") == "0" {
+								return jsonResponse(
+									200,
+									`{"release-count":27,"releases":[`+
+										releases("first", 20, "2000-01-01")+`]}`,
+								), nil
+							}
+							return jsonResponse(
+								200,
+								`{"release-count":27,"releases":[`+
+									releases("second", 7, "1999-01-01")+`]}`,
+							), nil
+						}
+						return jsonResponse(200, `{"id":"second-0","media":[]}`), nil
+					},
+				)
+				return &browses
+			}
+
+			It("lists every release, walking the browse pages", func() {
+				browses := serveBrowse(25)
+
+				editions, err := mb.ReleaseGroupEditions(ctx, "rg-1")
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(editions).To(HaveLen(27))
+				Expect(editions[0].MBID).To(Equal("second-0"))
+				Expect(*browses).To(HaveLen(2))
+				Expect((*browses)[0].Get("release-group")).To(Equal("rg-1"))
+				Expect((*browses)[0].Get("inc")).To(Equal("media"))
+				Expect((*browses)[1].Get("offset")).To(Equal("20"))
+			})
+
+			It("picks the canonical release among all of them", func() {
+				serveBrowse(25)
+
+				rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rg.ReleaseMBID).To(Equal("second-0"))
+			})
+
+			It("follows a chosen edition only the browse lists", func() {
+				serveBrowse(25)
+
+				rg, err := mb.GetReleaseGroupEdition(ctx, "rg-1", "second-6")
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rg.ReleaseMBID).To(Equal("second-6"))
+			})
+
+			It("spends no browse on a group the lookup holds whole", func() {
+				browses := serveBrowse(24)
+
+				editions, err := mb.ReleaseGroupEditions(ctx, "rg-1")
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(editions).To(HaveLen(24))
+				Expect(*browses).To(BeEmpty())
+			})
+
+			It("fails rather than list part of the group", func() {
+				mb.client.Transport = mbRoundTripper(
+					func(r *http.Request) (*http.Response, error) {
+						if r.URL.Path == "/ws/2/release" {
+							return jsonResponse(503, `{}`), nil
+						}
+						return jsonResponse(
+							200,
+							`{"id":"rg-1","title":"X","releases":[`+
+								releases("lookup", 25, "2000-01-01")+`]}`,
+						), nil
+					},
+				)
+
+				_, err := mb.ReleaseGroupEditions(ctx, "rg-1")
+
+				Expect(err).To(MatchError(ErrRateLimited))
+			})
 		})
 
 		Context("with an edition a person chose", func() {

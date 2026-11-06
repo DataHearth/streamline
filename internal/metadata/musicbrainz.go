@@ -845,6 +845,13 @@ const (
 	lightReleaseInc = "recordings+artist-credits+labels"
 )
 
+// mbLookupReleaseCap is the most releases a release-group lookup embeds, with
+// nothing saying more exist: Slipknot's self-titled answers 25 of its 39, so
+// its 2025 anniversary edition could be neither picked nor chosen. A lookup
+// that reaches it is read again from the browse, and most groups, far below
+// it, keep their one call.
+const mbLookupReleaseCap = 25
+
 type mbReleaseGroupDetail struct {
 	mbReleaseGroup
 	Releases     []mbRelease `json:"releases"`
@@ -864,11 +871,42 @@ func (m *MusicBrainz) fetchReleaseGroup(
 		},
 		&rg,
 	)
+	if err != nil || len(rg.Releases) < mbLookupReleaseCap {
+		return rg, err
+	}
+	rg.Releases, err = m.browseReleases(ctx, mbid)
 	return rg, err
 }
 
+// browseReleases reads every release of a group from the paged browse.
+func (m *MusicBrainz) browseReleases(
+	ctx context.Context,
+	mbid string,
+) ([]mbRelease, error) {
+	var releases []mbRelease
+	for {
+		var page struct {
+			Count    int         `json:"release-count"`
+			Releases []mbRelease `json:"releases"`
+		}
+		params := url.Values{
+			"release-group": {mbid},
+			"inc":           {"media"},
+			"limit":         {"100"},
+			"offset":        {fmt.Sprint(len(releases))},
+		}
+		if err := m.get(ctx, "/release", params, &page); err != nil {
+			return nil, err
+		}
+		releases = append(releases, page.Releases...)
+		if len(releases) >= page.Count || len(page.Releases) == 0 {
+			return releases, nil
+		}
+	}
+}
+
 // ReleaseGroupEditions lists every release of the group with audio, oldest
-// first, in one call.
+// first, in one call, more for a group past mbLookupReleaseCap.
 func (m *MusicBrainz) ReleaseGroupEditions(
 	ctx context.Context,
 	mbid string,
