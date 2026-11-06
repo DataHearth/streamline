@@ -29,6 +29,7 @@ func (h *Handler) download(w http.ResponseWriter, r *http.Request) {
 		Where(
 			mediafile.HasBookWith(book.IDEQ(uint32(id))),
 			mediafile.BookKindEQ(mediafile.BookKindEbook),
+			mediafile.MissingSinceIsNil(),
 			mediafile.QualityEqualFold(format),
 		).
 		WithBook().

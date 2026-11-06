@@ -494,6 +494,9 @@ func loadableConfig(fileKeys *koanf.Koanf) (*Config, []loadIssue) {
 	if _, err := applyRenamedKeys(k); err != nil {
 		return nil, []loadIssue{{id: err.Error(), err: err}}
 	}
+	if err := normalizeMissingFileWait(k); err != nil {
+		return nil, []loadIssue{{id: err.Error(), err: err}}
+	}
 	var c Config
 	return &c, splitIssues(k.Unmarshal("", &c))
 }

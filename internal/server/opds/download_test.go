@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"time"
 
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -64,6 +65,28 @@ var _ = g.Describe("download", g.Label("integration"), func() {
 			Expect(
 				f.get(downloadPath(f.audioOnly.ID, "m4b"), true).Code,
 			).To(Equal(http.StatusNotFound))
+		},
+	)
+
+	g.It(
+		"serves the present copy over a stale row of the same format",
+		func(ctx g.SpecContext) {
+			// The older row wins an unordered First on the rowid, which is the order
+			// a re-adopted book's rows land in.
+			f.client.MediaFile.Update().
+				Where(mediafile.PathEQ(f.file)).
+				SetPath(f.file + ".gone").
+				SetMissingSince(time.Now()).ExecX(ctx)
+			f.client.MediaFile.Create().
+				SetPath(f.file).
+				SetSize(8).
+				SetQuality("EPUB").
+				SetBookKind(mediafile.BookKindEbook).
+				SetBook(f.ebook).
+				ExecX(ctx)
+
+			Expect(f.get(downloadPath(f.ebook.ID, "epub"), true).Code).
+				To(Equal(http.StatusOK))
 		},
 	)
 

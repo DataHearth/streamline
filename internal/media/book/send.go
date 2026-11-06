@@ -37,8 +37,13 @@ var (
 // The reason is empty exactly when a file is returned.
 func Sendable(files []*ent.MediaFile, maxBytes int64) (*ent.MediaFile, string) {
 	var epub, pdf, other *ent.MediaFile
+	sawMissing := false
 	for _, f := range files {
 		if f.BookKind != mediafile.BookKindEbook {
+			continue
+		}
+		if f.MissingSince != nil {
+			sawMissing = true
 			continue
 		}
 		switch f.Quality {
@@ -62,6 +67,9 @@ func Sendable(files []*ent.MediaFile, maxBytes int64) (*ent.MediaFile, string) {
 	}
 	if pick == nil {
 		if other == nil {
+			if sawMissing {
+				return nil, reasonMissingFile
+			}
 			return nil, reasonNoEbookFile
 		}
 		format := other.Quality

@@ -385,7 +385,11 @@ func (s *Service) planAlbumFiles(
 	for _, t := range alb.Edges.Tracks {
 		for _, mf := range t.Edges.MediaFiles {
 			held[mf.Path] = struct{}{}
-			covered[t.ID] = struct{}{}
+			// A missing file covers nothing: this may be the same album at its
+			// new path, and the old row goes when its wait ends.
+			if mf.MissingSince == nil {
+				covered[t.ID] = struct{}{}
+			}
 		}
 	}
 

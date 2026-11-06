@@ -286,7 +286,7 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.import_max_attempts` | int | `3` | Import retries before giving up |
 | `library.allowed_download_roots` | []path | `[]` | If non-empty, a torrent's save path must sit under one of these or import is refused. Security fence — empty disables the check |
 | `library.drift_grace_ticks` | int | `3` | Consecutive `drift_check` ticks a file may be gone before it counts as missing from disk (1–20). At the default 15m interval, 3 ticks ≈ 45 minutes of tolerance for a flaky mount |
-| `library.missing_file_redownload_after` | duration or `off` | `168h` | How long a file missing from disk keeps its record and its title's status before the title goes back to wanted. `0` is immediately and `off` is never. A value that cannot be read counts as never |
+| `library.missing_file_redownload_after` | duration or `off` | `168h` | How long a file missing from disk keeps its record and its title's status before the title goes back to wanted. `0` is immediately and `off` is never. A value that cannot be read counts as never, and so does a boolean, which is what Helm turns an unquoted `off` into |
 
 #### Import verification
 

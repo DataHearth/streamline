@@ -92,6 +92,34 @@ var _ = Describe("Config mutate", Label("unit", "config"), func() {
 		})
 	})
 
+	Describe("reading missing_file_redownload_after from a file", func() {
+		// Helm's YAML parser reads an unquoted off as false, and the decoder then
+		// turns false into "0": no wait at all, the opposite of what was asked.
+		DescribeTable("reads a boolean as never, however it got there",
+			func(value bool) {
+				configtest.Setup(map[string]any{"library": map[string]any{
+					"missing_file_redownload_after": value,
+				}})
+
+				wait, never := config.Get().Library.MissingFileWait()
+				Expect(never).To(BeTrue())
+				Expect(wait).To(BeZero())
+			},
+			Entry("false", false),
+			Entry("true", true),
+		)
+
+		It("still reads a bare 0 as no wait", func() {
+			configtest.Setup(map[string]any{"library": map[string]any{
+				"missing_file_redownload_after": 0,
+			}})
+
+			wait, never := config.Get().Library.MissingFileWait()
+			Expect(never).To(BeFalse())
+			Expect(wait).To(BeZero())
+		})
+	})
+
 	Describe("UpdateLibrary missing_file_redownload_after", func() {
 		DescribeTable("stores a value it can read",
 			func(raw string) {

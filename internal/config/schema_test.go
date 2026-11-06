@@ -138,6 +138,17 @@ var _ = Describe("config.SchemaJSON", Label("unit", "config"), func() {
 		Expect(compiledSchema().Validate(any(doc))).To(HaveOccurred())
 	})
 
+	DescribeTable("accepts every documented missing_file_redownload_after",
+		func(value string) {
+			doc := dumpedDefaultsDoc()
+			doc["library"].(map[string]any)["missing_file_redownload_after"] = value
+			Expect(compiledSchema().Validate(any(doc))).To(Succeed())
+		},
+		Entry("a duration", "168h"),
+		Entry("no wait", "0"),
+		Entry("never", "off"),
+	)
+
 	It("rejects an invalid enum value", func() {
 		doc := dumpedDefaultsDoc()
 		doc["auth"].(map[string]any)["mode"] = "not-a-mode"

@@ -293,6 +293,18 @@ type LibraryConfig struct {
 // missingFileWaitOff is the missing_file_redownload_after value for never.
 const missingFileWaitOff = "off"
 
+// normalizeMissingFileWait reads a boolean missing_file_redownload_after as off.
+// A YAML 1.1 parser, Helm's among them, reads an unquoted off as false, and the
+// decoder would turn that into "0": no wait at all, deleting the rows the
+// operator asked to keep. It must run before every Unmarshal of file values.
+func normalizeMissingFileWait(k *koanf.Koanf) error {
+	const key = "library.missing_file_redownload_after"
+	if _, isBool := k.Get(key).(bool); isBool {
+		return k.Set(key, missingFileWaitOff)
+	}
+	return nil
+}
+
 // MissingFileWait reads missing_file_redownload_after. A value it cannot read
 // counts as never, since this setting decides whether rows get deleted and a
 // hand-edited typo must not delete any.
@@ -1341,6 +1353,9 @@ func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
 		}
 	}
 
+	if err := normalizeMissingFileWait(k); err != nil {
+		return nil, nil, err
+	}
 	var cfg Config
 	if err := k.Unmarshal("", &cfg); err != nil {
 		return nil, nil, err

@@ -565,7 +565,7 @@
           "description": "Consecutive drift_check ticks a MediaFile may be missing before it is confirmed missing."
         },
         "missing_file_redownload_after": {
-          "oneOf": [
+          "anyOf": [
             { "$ref": "#/definitions/duration" },
             { "const": "off" }
           ],

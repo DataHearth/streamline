@@ -45,6 +45,29 @@ var _ = Describe("Sendable", Label("unit", "book"), func() {
 		Expect(got).To(BeIdenticalTo(epub))
 	})
 
+	Context("with a file missing from disk", func() {
+		missing := func(row *ent.MediaFile) *ent.MediaFile {
+			now := time.Now()
+			row.MissingSince = &now
+			return row
+		}
+
+		It("picks the present copy over a stale row of the same format", func() {
+			stale := missing(ebookRow(filepath.Join(dir, "old.epub"), "EPUB"))
+			epub := ebookRow(writeFile(dir, "new.epub", 10), "EPUB")
+			got, reason := Sendable([]*ent.MediaFile{stale, epub}, mb)
+			Expect(reason).To(BeEmpty())
+			Expect(got).To(BeIdenticalTo(epub))
+		})
+
+		It("says the file is missing when no copy is left", func() {
+			stale := missing(ebookRow(filepath.Join(dir, "old.epub"), "EPUB"))
+			got, reason := Sendable([]*ent.MediaFile{stale}, mb)
+			Expect(got).To(BeNil())
+			Expect(reason).To(Equal(reasonMissingFile))
+		})
+	})
+
 	It("falls back to the PDF", func() {
 		pdf := ebookRow(writeFile(dir, "a.pdf", 10), "PDF")
 		got, reason := Sendable([]*ent.MediaFile{pdf}, mb)
