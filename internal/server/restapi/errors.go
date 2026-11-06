@@ -143,6 +143,10 @@ func errInvalidCondition(msg string) UnprocessableEntityJSONResponse {
 // they picked instead of at the reason, which the message already names.
 const codeGrabRejected = "grab_rejected"
 
+// codeLibraryOffline marks a change refused because the library root it touches
+// looks gone. The SPA renders the message verbatim.
+const codeLibraryOffline = "library_offline"
+
 // errGrabRejected is errUnprocessable for a refused grab. The message is a
 // download-package sentinel plus the release title the caller submitted, so it
 // is safe to show verbatim and is the only place the refusal's reason appears.

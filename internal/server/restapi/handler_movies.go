@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/utils/numeric"
@@ -268,6 +269,11 @@ func (s *Server) DeleteMovie(
 	if request.Params.DeleteFiles != nil {
 		opts.DeleteFiles = *request.Params.DeleteFiles
 	}
+	if opts.DeleteFiles {
+		if err := roothealth.Require(ctx, db.RootMovies); err != nil {
+			return nil, err
+		}
+	}
 	if err := s.movies.Delete(ctx, request.Id, opts); err != nil {
 		return DeleteMovie404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
@@ -284,6 +290,9 @@ func (s *Server) DeleteMovieFile(
 		return DeleteMovieFile403JSONResponse{
 			ForbiddenJSONResponse: requestOnlyResp,
 		}, nil
+	}
+	if err := roothealth.Require(ctx, db.RootMovies); err != nil {
+		return nil, err
 	}
 	remove := request.Body != nil &&
 		request.Body.RemoveTorrent != nil &&
@@ -492,6 +501,9 @@ func (s *Server) RenameMovieFiles(
 		return RenameMovieFiles403JSONResponse{
 			ForbiddenJSONResponse: requestOnlyResp,
 		}, nil
+	}
+	if err := roothealth.Require(ctx, db.RootMovies); err != nil {
+		return nil, err
 	}
 	if s.renamer == nil {
 		return RenameMovieFiles500JSONResponse{

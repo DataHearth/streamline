@@ -10,7 +10,9 @@ import (
 	"github.com/datahearth/streamline/internal/auth"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/book"
 )
 
@@ -494,6 +496,15 @@ func (s *Server) DeleteBook(
 		return DeleteBook403JSONResponse{ForbiddenJSONResponse: requestOnlyResp}, nil
 	}
 	deleteFiles := req.Params.DeleteFiles != nil && *req.Params.DeleteFiles
+	if deleteFiles {
+		if err := roothealth.Require(
+			ctx,
+			db.RootEbooks,
+			db.RootAudiobooks,
+		); err != nil {
+			return nil, err
+		}
+	}
 	err := s.books.DeleteBook(ctx, req.Id, deleteFiles)
 	switch {
 	case err == nil:
@@ -522,6 +533,15 @@ func (s *Server) DeleteBookSeries(
 		}, nil
 	}
 	deleteFiles := req.Params.DeleteFiles != nil && *req.Params.DeleteFiles
+	if deleteFiles {
+		if err := roothealth.Require(
+			ctx,
+			db.RootEbooks,
+			db.RootAudiobooks,
+		); err != nil {
+			return nil, err
+		}
+	}
 	err := s.books.DeleteSeries(ctx, req.Id, deleteFiles)
 	switch {
 	case err == nil:
@@ -782,6 +802,9 @@ func (s *Server) RenameBookFiles(
 			ForbiddenJSONResponse: requestOnlyResp,
 		}, nil
 	}
+	if err := roothealth.Require(ctx, db.RootEbooks, db.RootAudiobooks); err != nil {
+		return nil, err
+	}
 	preview := req.Params.Preview != nil && *req.Params.Preview
 	plan, err := s.books.RenameBook(ctx, req.Id, preview)
 	switch {
@@ -809,6 +832,9 @@ func (s *Server) RenameBookSeriesFiles(
 		return RenameBookSeriesFiles403JSONResponse{
 			ForbiddenJSONResponse: requestOnlyResp,
 		}, nil
+	}
+	if err := roothealth.Require(ctx, db.RootEbooks, db.RootAudiobooks); err != nil {
+		return nil, err
 	}
 	preview := req.Params.Preview != nil && *req.Params.Preview
 	plan, err := s.books.RenameSeries(ctx, req.Id, preview)

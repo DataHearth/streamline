@@ -21,6 +21,7 @@ import (
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -32,6 +33,18 @@ const commitConcurrency = 4
 // Commit commits a reviewed scan with the default options.
 func (s *Service) Commit(ctx context.Context, id uint32) error {
 	return s.CommitWith(ctx, id, CommitOptions{})
+}
+
+func scanRoots(kind entimportscan.Kind) []db.LibraryRoot {
+	switch kind {
+	case entimportscan.KindSeries:
+		return []db.LibraryRoot{db.RootSeries}
+	case entimportscan.KindMusic:
+		return []db.LibraryRoot{db.RootMusic}
+	case entimportscan.KindBook:
+		return []db.LibraryRoot{db.RootEbooks, db.RootAudiobooks}
+	}
+	return []db.LibraryRoot{db.RootMovies}
 }
 
 // CommitWith commits a reviewed scan in the background.
@@ -67,6 +80,9 @@ func (s *Service) CommitWith(
 	}
 	if scan.Kind == entimportscan.KindBook && s.bookmeta == nil {
 		return otelx.RecordSpanError(span, book.ErrNotConfigured)
+	}
+	if err := roothealth.Require(ctx, scanRoots(scan.Kind)...); err != nil {
+		return otelx.RecordSpanError(span, err)
 	}
 	if err := s.store.UpdateImportScanStatus(
 		ctx,

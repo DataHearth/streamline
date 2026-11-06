@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/metadata"
 )
@@ -410,12 +411,17 @@ func (s *Server) DeleteSeries(
 			ForbiddenJSONResponse: requestOnlyResp,
 		}, nil
 	}
+	deleteFiles := request.Params.DeleteFiles != nil && *request.Params.DeleteFiles
+	if deleteFiles {
+		if err := roothealth.Require(ctx, db.RootSeries); err != nil {
+			return nil, err
+		}
+	}
 	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
 		return DeleteSeries404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil
 	}
-	deleteFiles := request.Params.DeleteFiles != nil && *request.Params.DeleteFiles
 	if err := s.tvshows.Delete(
 		ctx,
 		request.Id,
@@ -436,6 +442,9 @@ func (s *Server) DeleteEpisodeFile(
 		return DeleteEpisodeFile403JSONResponse{
 			ForbiddenJSONResponse: requestOnlyResp,
 		}, nil
+	}
+	if err := roothealth.Require(ctx, db.RootSeries); err != nil {
+		return nil, err
 	}
 	remove := request.Body != nil &&
 		request.Body.RemoveTorrent != nil &&
@@ -983,6 +992,9 @@ func (s *Server) RenameSeriesFiles(
 		return RenameSeriesFiles403JSONResponse{
 			ForbiddenJSONResponse: requestOnlyResp,
 		}, nil
+	}
+	if err := roothealth.Require(ctx, db.RootSeries); err != nil {
+		return nil, err
 	}
 	if s.seriesRenamer == nil {
 		return RenameSeriesFiles500JSONResponse{

@@ -4,6 +4,7 @@
 package restapi
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -20,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/media/music"
@@ -223,6 +225,18 @@ func paramErrMessage(err error) string {
 // raw internal error; log it and return an opaque JSON 500 instead.
 func responseError(w http.ResponseWriter, r *http.Request, err error) {
 	ctx := r.Context()
+	// Not a server fault, and its message is what the SPA shows.
+	if offline, ok := errors.AsType[*roothealth.OfflineError](err); ok {
+		code := codeLibraryOffline
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		if encErr := json.NewEncoder(w).Encode(
+			Error{Message: offline.Error(), Code: &code},
+		); encErr != nil {
+			slog.ErrorContext(ctx, "json encode failed", "error", encErr)
+		}
+		return
+	}
 	slog.ErrorContext(ctx, "api handler returned an error", "error", err)
 	denyJSON(
 		ctx,

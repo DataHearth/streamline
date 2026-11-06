@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/utils/numeric"
@@ -459,6 +460,11 @@ func (s *Server) DeleteMusicArtist(
 		}, nil
 	}
 	deleteFiles := request.Params.DeleteFiles != nil && *request.Params.DeleteFiles
+	if deleteFiles {
+		if err := roothealth.Require(ctx, db.RootMusic); err != nil {
+			return nil, err
+		}
+	}
 	err := s.music.Delete(ctx, request.Id, deleteFiles)
 	switch {
 	case errors.Is(err, music.ErrArtistNotFound):
@@ -518,6 +524,9 @@ func (s *Server) RenameMusicArtistFiles(
 		return RenameMusicArtistFiles403JSONResponse{
 			ForbiddenJSONResponse: requestOnlyResp,
 		}, nil
+	}
+	if err := roothealth.Require(ctx, db.RootMusic); err != nil {
+		return nil, err
 	}
 	if s.musicRenamer == nil {
 		return RenameMusicArtistFiles500JSONResponse{
@@ -1059,6 +1068,9 @@ func (s *Server) DeleteMusicTrackFile(
 		return DeleteMusicTrackFile403JSONResponse{
 			ForbiddenJSONResponse: requestOnlyResp,
 		}, nil
+	}
+	if err := roothealth.Require(ctx, db.RootMusic); err != nil {
+		return nil, err
 	}
 	err := s.music.DeleteTrackFile(ctx, request.Id)
 	switch {

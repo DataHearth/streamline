@@ -26187,6 +26187,20 @@ func (response DeleteBookSeries404JSONResponse) VisitDeleteBookSeriesResponse(w 
 	return err
 }
 
+type DeleteBookSeries409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteBookSeries409JSONResponse) VisitDeleteBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteBookSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response DeleteBookSeries500JSONResponse) VisitDeleteBookSeriesResponse(w http.ResponseWriter) error {
@@ -26490,6 +26504,20 @@ func (response RenameBookSeriesFiles404JSONResponse) VisitRenameBookSeriesFilesR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameBookSeriesFiles409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RenameBookSeriesFiles409JSONResponse) VisitRenameBookSeriesFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -27134,6 +27162,20 @@ func (response RenameBookFiles404JSONResponse) VisitRenameBookFilesResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameBookFiles409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RenameBookFiles409JSONResponse) VisitRenameBookFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -30944,6 +30986,20 @@ func (response CommitImport404JSONResponse) VisitCommitImportResponse(w http.Res
 	return err
 }
 
+type CommitImport409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CommitImport409JSONResponse) VisitCommitImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CommitImport422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -32507,6 +32563,20 @@ func (response DeleteMovie404JSONResponse) VisitDeleteMovieResponse(w http.Respo
 	return err
 }
 
+type DeleteMovie409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteMovie409JSONResponse) VisitDeleteMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteMovie500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response DeleteMovie500JSONResponse) VisitDeleteMovieResponse(w http.ResponseWriter) error {
@@ -33154,6 +33224,20 @@ func (response RenameMovieFiles404JSONResponse) VisitRenameMovieFilesResponse(w 
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameMovieFiles409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RenameMovieFiles409JSONResponse) VisitRenameMovieFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -34595,6 +34679,20 @@ func (response DeleteMusicArtist404JSONResponse) VisitDeleteMusicArtistResponse(
 	return err
 }
 
+type DeleteMusicArtist409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteMusicArtist409JSONResponse) VisitDeleteMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteMusicArtist500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response DeleteMusicArtist500JSONResponse) VisitDeleteMusicArtistResponse(w http.ResponseWriter) error {
@@ -35150,6 +35248,20 @@ func (response RenameMusicArtistFiles404JSONResponse) VisitRenameMusicArtistFile
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameMusicArtistFiles409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RenameMusicArtistFiles409JSONResponse) VisitRenameMusicArtistFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -38557,6 +38669,20 @@ func (response DeleteSeries404JSONResponse) VisitDeleteSeriesResponse(w http.Res
 	return err
 }
 
+type DeleteSeries409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteSeries409JSONResponse) VisitDeleteSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response DeleteSeries500JSONResponse) VisitDeleteSeriesResponse(w http.ResponseWriter) error {
@@ -39545,6 +39671,20 @@ func (response RenameSeriesFiles404JSONResponse) VisitRenameSeriesFilesResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameSeriesFiles409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RenameSeriesFiles409JSONResponse) VisitRenameSeriesFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }

@@ -43,13 +43,12 @@ type OfflineError struct {
 	Status
 }
 
+// Error names the root and not its path: this is the message a member sees, and
+// library paths are admin-only.
 func (e *OfflineError) Error() string {
 	return fmt.Sprintf(
-		"the %s library at %s is offline (%s): none of its %d tracked files can be reached",
+		"the %s library is offline: none of its files can be reached",
 		e.Root,
-		e.Path,
-		e.Reason,
-		e.Tracked,
 	)
 }
 

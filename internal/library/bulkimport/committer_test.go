@@ -2,6 +2,7 @@ package bulkimport
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -17,12 +18,14 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/roottest"
 )
 
 var _ = Describe("Service.Commit validation", Label("unit", "bulkimport"), func() {
@@ -70,6 +73,24 @@ var _ = Describe("Service.Commit validation", Label("unit", "bulkimport"), func(
 
 		Expect(svc.Commit(ctx, 4)).To(MatchError(book.ErrNotConfigured))
 	})
+
+	It(
+		"refuses a commit into an offline root and leaves the scan reviewable",
+		func() {
+			configtest.Setup()
+			roottest.Offline(db.RootMusic)
+			store.EXPECT().FindImportScan(mock.Anything, uint32(5)).
+				Return(&ent.ImportScan{
+					ID:     5,
+					Kind:   entimportscan.KindMusic,
+					Status: entimportscan.StatusAwaitingReview,
+				}, nil).Once()
+
+			_, refused := errors.AsType[*roothealth.OfflineError](svc.Commit(ctx, 5))
+
+			Expect(refused).To(BeTrue())
+		},
+	)
 
 	It("returns ErrScanNotFound when scan does not exist", func() {
 		store.EXPECT().FindImportScan(mock.Anything, uint32(2)).

@@ -132,6 +132,7 @@ export function errorText(err: unknown, fallback?: string): string {
 		// the request body, which sent an operator hunting through releases for
 		// a reason this message had already named.
 		if (code === "grab_rejected" && err.message) return err.message;
+		if (code === "library_offline" && err.message) return err.message;
 		if ((code === "assignment_rejected" || code === "edition_not_found") && err.message) return err.message;
 		// An upload refused names the file or the target that was the problem:
 		// the generic 422 or 409 would hide which.

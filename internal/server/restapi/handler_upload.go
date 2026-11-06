@@ -5,7 +5,9 @@ import (
 	"errors"
 	"mime/multipart"
 
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/server/middleware"
@@ -147,6 +149,9 @@ func (s *Server) UploadMusicAlbum(
 	ctx context.Context,
 	request UploadMusicAlbumRequestObject,
 ) (UploadMusicAlbumResponseObject, error) {
+	if err := roothealth.Require(ctx, db.RootMusic); err != nil {
+		return nil, err
+	}
 	err := upload.CheckSpace(middleware.UploadLength(ctx))
 	var rec uint32
 	if err == nil {
@@ -191,6 +196,9 @@ func (s *Server) UploadMusicTrack(
 	ctx context.Context,
 	request UploadMusicTrackRequestObject,
 ) (UploadMusicTrackResponseObject, error) {
+	if err := roothealth.Require(ctx, db.RootMusic); err != nil {
+		return nil, err
+	}
 	err := upload.CheckSpace(middleware.UploadLength(ctx))
 	var rec uint32
 	if err == nil {
@@ -235,6 +243,9 @@ func (s *Server) UploadMusicArtist(
 	ctx context.Context,
 	request UploadMusicArtistRequestObject,
 ) (UploadMusicArtistResponseObject, error) {
+	if err := roothealth.Require(ctx, db.RootMusic); err != nil {
+		return nil, err
+	}
 	err := upload.CheckSpace(middleware.UploadLength(ctx))
 	var rec uint32
 	var skipped []string
@@ -285,6 +296,12 @@ func (s *Server) UploadBook(
 	ctx context.Context,
 	request UploadBookRequestObject,
 ) (UploadBookResponseObject, error) {
+	if err := roothealth.Require(
+		ctx,
+		db.BookRoot(string(request.Params.Slot)),
+	); err != nil {
+		return nil, err
+	}
 	err := upload.CheckSpace(middleware.UploadLength(ctx))
 	var rec uint32
 	if err == nil {
