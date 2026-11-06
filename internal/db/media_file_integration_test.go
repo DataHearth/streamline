@@ -164,6 +164,31 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("ListMediaFilesForDrift skipping a root", func() {
+		It(
+			"leaves the other roots' files in the walk when a book root is skipped",
+			func() {
+				movieFile := createMovieFile()
+				bk := client.Book.Create().SetHardcoverID(2).SetTitle("Elantris").
+					SetAuthorName("Sanderson").SaveX(ctx)
+				client.MediaFile.Create().SetPath("/b/a.epub").SetSize(1).
+					SetBookID(bk.ID).SetBookKind(mediafile.BookKindEbook).ExecX(ctx)
+				audio := client.MediaFile.Create().SetPath("/b/a.m4b").SetSize(1).
+					SetBookID(bk.ID).
+					SetBookKind(mediafile.BookKindAudiobook).SaveX(ctx)
+
+				rows, err := store.ListMediaFilesForDrift(ctx, 0, 10, RootEbooks)
+
+				Expect(err).NotTo(HaveOccurred())
+				ids := make([]uint32, len(rows))
+				for i, row := range rows {
+					ids[i] = row.ID
+				}
+				Expect(ids).To(ConsistOf(movieFile.ID, audio.ID))
+			},
+		)
+	})
+
 	Describe("the missing file columns", func() {
 		It("ClearMediaFilesMissing clears missing_confirmed_at too", func() {
 			mf := createMovieFile()
