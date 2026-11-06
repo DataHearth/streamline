@@ -11,6 +11,7 @@ var _ = Describe("Type.Valid", Label("unit", "events"), func() {
 			TypeGrabbed, TypeDownloadCompleted, TypeDownloadFailed,
 			TypeImported, TypeImportFailed,
 			TypeDriftDetected, TypeDriftConfirmed,
+			TypeDriftReverted, TypeDriftRecovered,
 		} {
 			Expect(t.Valid()).To(BeTrue(), "type %q should be valid", t)
 		}

@@ -150,6 +150,8 @@ const (
 	TypeImportHeldForReview Type = "import_held_for_review"
 	TypeDriftDetected       Type = "drift_detected"
 	TypeDriftConfirmed      Type = "drift_confirmed"
+	TypeDriftReverted       Type = "drift_reverted"
+	TypeDriftRecovered      Type = "drift_recovered"
 	TypeSearched            Type = "searched"
 	TypeAdded               Type = "added"
 	TypeFileRenamed         Type = "file_renamed"
@@ -170,7 +172,7 @@ func (_type Type) String() string {
 // TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
 func TypeValidator(_type Type) error {
 	switch _type {
-	case TypeGrabbed, TypeDownloadCompleted, TypeDownloadFailed, TypeDownloadCancelled, TypeGrabWidened, TypeImported, TypeImportFailed, TypeImportHeldForReview, TypeDriftDetected, TypeDriftConfirmed, TypeSearched, TypeAdded, TypeFileRenamed, TypeFileRemoved, TypeReidentified, TypeMetadataRefreshed, TypeMonitoringChanged, TypeRequestApproved, TypeTranscodeCompleted, TypeTranscodeFailed, TypeTranscodeRejected:
+	case TypeGrabbed, TypeDownloadCompleted, TypeDownloadFailed, TypeDownloadCancelled, TypeGrabWidened, TypeImported, TypeImportFailed, TypeImportHeldForReview, TypeDriftDetected, TypeDriftConfirmed, TypeDriftReverted, TypeDriftRecovered, TypeSearched, TypeAdded, TypeFileRenamed, TypeFileRemoved, TypeReidentified, TypeMetadataRefreshed, TypeMonitoringChanged, TypeRequestApproved, TypeTranscodeCompleted, TypeTranscodeFailed, TypeTranscodeRejected:
 		return nil
 	default:
 		return fmt.Errorf("mediaevent: invalid enum value for type field: %q", _type)

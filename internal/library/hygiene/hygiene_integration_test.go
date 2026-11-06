@@ -82,11 +82,12 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		tmpDir = GinkgoT().TempDir()
 		cfg := configtest.Setup(map[string]any{
 			"library": map[string]any{
-				"movie_path":          tmpDir,
-				"movie_naming":        "{title} ({year})/{title}.{ext}",
-				"import_mode":         "copy",
-				"import_max_attempts": 3,
-				"drift_grace_ticks":   3,
+				"movie_path":                    tmpDir,
+				"movie_naming":                  "{title} ({year})/{title}.{ext}",
+				"import_mode":                   "copy",
+				"import_max_attempts":           3,
+				"drift_grace_ticks":             3,
+				"missing_file_redownload_after": "0",
 			},
 		})
 		entClient = dbtest.SetupTestDB(ctx)
@@ -383,6 +384,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			musicDir = GinkgoT().TempDir()
 			configtest.Setup(map[string]any{"library": map[string]any{
 				"movie_path": tmpDir, "music_path": musicDir,
+				"missing_file_redownload_after": "0",
 			}})
 			roothealth.Register(store)
 			DeferCleanup(func() { roothealth.Register(nil) })
@@ -457,6 +459,22 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 					entClient.Album.GetX(ctx, alb.ID).Status,
 				).To(Equal(entalbum.StatusWanted))
 				Expect(confirmed()).To(HaveLen(1))
+			})
+
+			It("records drift_confirmed only for a row not yet confirmed", func() {
+				_, gone := seedWithUnsampledFile()
+				at := time.Now().Add(-time.Hour)
+				entClient.MediaFile.Update().
+					Where(entmediafile.IDIn(rowIDs(gone)...)).
+					SetMissingSince(at).SetMissingConfirmedAt(at).ExecX(ctx)
+
+				Expect(svc.AcceptMissing(ctx, db.RootMusic)).To(Equal(len(gone)))
+
+				Expect(confirmed()).To(BeEmpty())
+				Expect(entClient.MediaEvent.Query().Where(
+					entmediaevent.TypeEQ(entmediaevent.TypeDriftReverted),
+					entmediaevent.HasAlbum(),
+				).CountX(ctx)).To(Equal(1))
 			})
 
 			It("leaves the root online afterwards", func() {
@@ -613,6 +631,20 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			Expect(driftEventCount()).To(BeZero())
 		})
 
+		It("does not revert past the wait while the root is offline", func() {
+			old := time.Now().Add(-48 * time.Hour)
+			gone := trackFile("01.flac", 1, &old)
+			entClient.MediaFile.UpdateOneID(gone.ID).
+				SetMissingConfirmedAt(old).ExecX(ctx)
+
+			Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+			Expect(store.FindMediaFileByID(ctx, gone.ID)).NotTo(BeNil())
+			Expect(
+				entClient.Album.GetX(ctx, alb.ID).Status,
+			).To(Equal(entalbum.StatusAvailable))
+		})
+
 		It("starts no revert for a root that goes offline mid-sweep", func() {
 			paths := []string{
 				filepath.Join(musicDir, "01.flac"),
@@ -755,6 +787,325 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			_, total, err := store.ListImportScans(ctx, 0, 100)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(total).To(BeZero())
+		})
+	})
+
+	Describe("a file missing past grace", func() {
+		// waited is older than the default wait, inWait inside it.
+		var (
+			waited, inWait, old time.Time
+			seq                 uint32
+		)
+
+		// seededFile is a file row of one owner, with what a spec asks of it.
+		type seededFile struct {
+			row     *ent.MediaFile
+			status  func() string
+			another func(path string)
+		}
+
+		next := func() uint32 {
+			seq++
+			return seq
+		}
+		createFile := func(path string, set ...func(*ent.MediaFileCreate)) *ent.MediaFile {
+			GinkgoHelper()
+			c := entClient.MediaFile.Create().SetPath(path).SetSize(4)
+			for _, apply := range set {
+				apply(c)
+			}
+			return c.SaveX(ctx)
+		}
+		onDisk := func(path string) {
+			GinkgoHelper()
+			Expect(os.WriteFile(path, []byte("data"), 0o644)).To(Succeed())
+		}
+		seedMovie := func(path string, set func(*ent.MediaFileCreate)) seededFile {
+			GinkgoHelper()
+			id := next()
+			m, err := store.CreateMovie(ctx, db.CreateMovieParams{
+				Title:         "Movie",
+				OriginalTitle: "Movie",
+				Year:          2020,
+				TmdbID:        1000 + id,
+				Status:        entmovie.StatusAvailable,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			own := func(c *ent.MediaFileCreate) { c.SetMovie(m) }
+			return seededFile{
+				row: createFile(path, own, set),
+				status: func() string {
+					return string(entClient.Movie.GetX(ctx, m.ID).Status)
+				},
+				another: func(p string) { onDisk(p); createFile(p, own) },
+			}
+		}
+		seedEpisode := func(path string, set func(*ent.MediaFileCreate)) seededFile {
+			GinkgoHelper()
+			id := next()
+			show := entClient.TVShow.Create().
+				SetTitle("Show").SetYear(2020).SetTvdbID(2000 + id).SaveX(ctx)
+			season := entClient.Season.Create().
+				SetNumber(1).SetTvShow(show).SaveX(ctx)
+			ep := entClient.Episode.Create().
+				SetNumber(1).SetTitle("One").SetSeason(season).
+				SetStatus(entepisode.StatusAvailable).SaveX(ctx)
+			own := func(c *ent.MediaFileCreate) { c.SetEpisode(ep) }
+			return seededFile{
+				row: createFile(path, own, set),
+				status: func() string {
+					return string(entClient.Episode.GetX(ctx, ep.ID).Status)
+				},
+				another: func(p string) { onDisk(p); createFile(p, own) },
+			}
+		}
+		seedTrack := func(path string, set func(*ent.MediaFileCreate)) seededFile {
+			GinkgoHelper()
+			id := next()
+			artist := entClient.Artist.Create().
+				SetMbid(fmt.Sprintf("artist-%d", id)).SetName("Artist").SaveX(ctx)
+			alb := entClient.Album.Create().
+				SetMbid(fmt.Sprintf("album-%d", id)).SetTitle("Album").
+				SetArtist(artist).SetStatus(entalbum.StatusAvailable).SaveX(ctx)
+			tr := entClient.Track.Create().
+				SetTitle("One").SetDisc(1).SetPosition(1).SetAlbum(alb).SaveX(ctx)
+			own := func(c *ent.MediaFileCreate) { c.SetTrack(tr) }
+			return seededFile{
+				row: createFile(path, own, set),
+				status: func() string {
+					return string(entClient.Album.GetX(ctx, alb.ID).Status)
+				},
+				another: func(p string) { onDisk(p); createFile(p, own) },
+			}
+		}
+		seedBook := func(path string, set func(*ent.MediaFileCreate)) seededFile {
+			GinkgoHelper()
+			id := next()
+			bk := entClient.Book.Create().
+				SetHardcoverID(3000 + id).SetTitle("Book").SetAuthorName("Author").
+				SetEbookStatus(entbook.EbookStatusAvailable).SaveX(ctx)
+			own := func(c *ent.MediaFileCreate) {
+				c.SetBook(bk).SetBookKind(entmediafile.BookKindEbook)
+			}
+			return seededFile{
+				row: createFile(path, own, set),
+				status: func() string {
+					return string(entClient.Book.GetX(ctx, bk.ID).EbookStatus)
+				},
+				another: func(p string) { onDisk(p); createFile(p, own) },
+			}
+		}
+
+		missing := func(c *ent.MediaFileCreate) { c.SetMissingSince(old) }
+		confirmedAt := func(at *time.Time) func(*ent.MediaFileCreate) {
+			return func(c *ent.MediaFileCreate) {
+				c.SetMissingSince(old).SetMissingConfirmedAt(*at)
+			}
+		}
+		setWait := func(value string) {
+			GinkgoHelper()
+			configtest.Setup(map[string]any{"library": map[string]any{
+				"movie_path":                    tmpDir,
+				"missing_file_redownload_after": value,
+			}})
+		}
+		tick := func() {
+			GinkgoHelper()
+			Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+		}
+		eventCount := func(t entmediaevent.Type) int {
+			GinkgoHelper()
+			return entClient.MediaEvent.Query().
+				Where(entmediaevent.TypeEQ(t)).CountX(ctx)
+		}
+		gone := func(mf *ent.MediaFile) bool {
+			GinkgoHelper()
+			_, err := store.FindMediaFileByID(ctx, mf.ID)
+			return ent.IsNotFound(err)
+		}
+		path := func(name string) string { return filepath.Join(tmpDir, name) }
+
+		BeforeEach(func() {
+			seq = 0
+			old = time.Now().Add(-30 * 24 * time.Hour)
+			waited = time.Now().Add(-8 * 24 * time.Hour)
+			inWait = time.Now().Add(-24 * time.Hour)
+			setWait("168h")
+		})
+
+		DescribeTable("the first tick past grace keeps the row and the status",
+			func(seed func(string, func(*ent.MediaFileCreate)) seededFile) {
+				f := seed(path("gone"), missing)
+
+				tick()
+
+				row := entClient.MediaFile.GetX(ctx, f.row.ID)
+				Expect(row.MissingConfirmedAt).NotTo(BeNil())
+				Expect(
+					time.Since(*row.MissingConfirmedAt),
+				).To(BeNumerically("<", time.Minute),
+					"the wait starts now, however old missing_since is")
+				Expect(f.status()).To(Equal("available"))
+				Expect(eventCount(entmediaevent.TypeDriftConfirmed)).To(Equal(1))
+				Expect(eventCount(entmediaevent.TypeDriftReverted)).To(BeZero())
+			},
+			Entry("a movie", seedMovie),
+			Entry("an episode", seedEpisode),
+			Entry("an album track", seedTrack),
+			Entry("a book", seedBook),
+		)
+
+		It("fires drift_confirmed once over several ticks", func() {
+			seedMovie(path("gone"), missing)
+
+			tick()
+			tick()
+			tick()
+
+			Expect(eventCount(entmediaevent.TypeDriftConfirmed)).To(Equal(1))
+		})
+
+		DescribeTable("reverts when the wait has ended",
+			func(seed func(string, func(*ent.MediaFileCreate)) seededFile) {
+				f := seed(path("gone"), confirmedAt(&waited))
+				control := seed(path("control"), confirmedAt(&inWait))
+
+				tick()
+
+				Expect(gone(f.row)).To(BeTrue())
+				Expect(f.status()).To(Equal("wanted"))
+				Expect(eventCount(entmediaevent.TypeDriftReverted)).To(Equal(1))
+				Expect(gone(control.row)).To(BeFalse())
+				Expect(control.status()).To(Equal("available"))
+			},
+			Entry("a movie", seedMovie),
+			Entry("an episode", seedEpisode),
+			Entry("an album track", seedTrack),
+			Entry("a book", seedBook),
+		)
+
+		It("heals a confirmed file that returns, even with the wait over", func() {
+			f := seedMovie(path("back"), confirmedAt(&waited))
+			onDisk(path("back"))
+
+			tick()
+
+			row := entClient.MediaFile.GetX(ctx, f.row.ID)
+			Expect(row.MissingSince).To(BeNil())
+			Expect(row.MissingConfirmedAt).To(BeNil())
+			Expect(f.status()).To(Equal("available"))
+			Expect(eventCount(entmediaevent.TypeDriftRecovered)).To(Equal(1))
+			Expect(eventCount(entmediaevent.TypeDriftReverted)).To(BeZero())
+		})
+
+		It("sends no drift_recovered for a file back inside grace", func() {
+			f := seedMovie(path("back"), missing)
+			onDisk(path("back"))
+
+			tick()
+
+			Expect(entClient.MediaFile.GetX(ctx, f.row.ID).MissingSince).To(BeNil())
+			Expect(eventCount(entmediaevent.TypeDriftRecovered)).To(BeZero())
+		})
+
+		It("0 confirms and reverts in one tick", func() {
+			setWait("0")
+			f := seedMovie(path("gone"), missing)
+
+			tick()
+
+			Expect(gone(f.row)).To(BeTrue())
+			Expect(f.status()).To(Equal("wanted"))
+			Expect(eventCount(entmediaevent.TypeDriftConfirmed)).To(Equal(1))
+			Expect(eventCount(entmediaevent.TypeDriftReverted)).To(Equal(1))
+		})
+
+		DescribeTable("never reverts",
+			func(value string) {
+				setWait(value)
+				f := seedMovie(path("gone"), confirmedAt(&old))
+				fresh := seedMovie(path("fresh"), missing)
+
+				tick()
+
+				Expect(gone(f.row)).To(BeFalse())
+				Expect(f.status()).To(Equal("available"))
+				Expect(
+					entClient.MediaFile.GetX(ctx, fresh.row.ID).MissingConfirmedAt,
+				).
+					NotTo(BeNil())
+				Expect(eventCount(entmediaevent.TypeDriftReverted)).To(BeZero())
+			},
+			Entry("under off", "off"),
+			Entry("on a value that cannot be parsed", "nonsense"),
+		)
+
+		DescribeTable("keeps the status when the owner holds another file on disk",
+			func(seed func(string, func(*ent.MediaFileCreate)) seededFile) {
+				f := seed(path("gone"), confirmedAt(&waited))
+				f.another(path("renamed"))
+
+				tick()
+
+				Expect(gone(f.row)).To(BeTrue())
+				Expect(f.status()).To(Equal("available"))
+				Expect(eventCount(entmediaevent.TypeDriftReverted)).To(BeZero())
+				Expect(eventCount(entmediaevent.TypeFileRemoved)).To(BeZero())
+			},
+			Entry("a movie", seedMovie),
+			Entry("an episode", seedEpisode),
+			Entry("an album track", seedTrack),
+			Entry("a book", seedBook),
+		)
+
+		Describe("of one show", func() {
+			var season *ent.Season
+
+			BeforeEach(func() {
+				show := entClient.TVShow.Create().
+					SetTitle("Show").SetYear(2020).SetTvdbID(9).SaveX(ctx)
+				season = entClient.Season.Create().
+					SetNumber(1).SetTvShow(show).SaveX(ctx)
+			})
+
+			episode := func(n uint16, p string, set func(*ent.MediaFileCreate)) {
+				GinkgoHelper()
+				ep := entClient.Episode.Create().
+					SetNumber(n).SetTitle("Episode").SetSeason(season).
+					SetStatus(entepisode.StatusAvailable).SaveX(ctx)
+				createFile(p, func(c *ent.MediaFileCreate) { c.SetEpisode(ep) }, set)
+			}
+
+			payloadOf := func(t entmediaevent.Type) map[string]any {
+				GinkgoHelper()
+				events := entClient.MediaEvent.Query().
+					Where(entmediaevent.TypeEQ(t)).AllX(ctx)
+				Expect(events).To(HaveLen(1))
+				return events[0].Payload
+			}
+
+			It("folds the reverts into one event", func() {
+				episode(1, path("e1"), confirmedAt(&waited))
+				episode(2, path("e2"), confirmedAt(&waited))
+
+				tick()
+
+				Expect(payloadOf(entmediaevent.TypeDriftReverted)["episodes"]).
+					To(BeEquivalentTo(2))
+			})
+
+			It("folds the recoveries into one event", func() {
+				episode(1, path("e1"), confirmedAt(&inWait))
+				episode(2, path("e2"), confirmedAt(&inWait))
+				onDisk(path("e1"))
+				onDisk(path("e2"))
+
+				tick()
+
+				payload := payloadOf(entmediaevent.TypeDriftRecovered)
+				Expect(payload["episodes"]).To(BeEquivalentTo(2))
+				Expect(payload).To(HaveKey("missing_since"))
+			})
 		})
 	})
 
@@ -1056,3 +1407,11 @@ var _ = Describe(
 		})
 	},
 )
+
+func rowIDs(rows []*ent.MediaFile) []uint32 {
+	ids := make([]uint32, len(rows))
+	for i, row := range rows {
+		ids[i] = row.ID
+	}
+	return ids
+}

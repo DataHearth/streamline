@@ -12,6 +12,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
@@ -24,12 +25,15 @@ import (
 )
 
 // RunDriftCheck verifies every tracked MediaFile is still present on disk.
-// A missing file starts a grace clock at missing_since; once the file has been
-// gone for at least cfg.DriftGraceTicks intervals the row is deleted and its
-// owner reverts to "wanted". The clock starts when a tick
-// first sees the file gone, not when one last saw it: after downtime longer
-// than the window, a volume not yet mounted would otherwise revert the whole
-// library on the first tick.
+// A missing file starts a grace clock at missing_since. Once it has been gone
+// for at least cfg.DriftGraceTicks intervals it is confirmed missing, keeping
+// its row and its owner's status, and the re-download wait
+// (library.missing_file_redownload_after) starts. When that ends the row is
+// deleted and its owner reverts to "wanted". A file seen again at any point
+// clears both clocks. The grace clock starts when a tick first sees the file
+// gone, not when one last saw it: after downtime longer than the window, a
+// volume not yet mounted would otherwise revert the whole library on the first
+// tick.
 func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) error {
 	graceWindow := interval * time.Duration(s.cfg.DriftGraceTicks)
 
@@ -58,7 +62,10 @@ func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) err
 	// since the next tick sees them as no longer newly missing.
 	acc := newDriftAccumulator()
 	defer acc.flush(ctx)
-	var returned []uint32
+	var (
+		returned  []uint32
+		recovered []db.DriftRow
+	)
 	for {
 		rows, err := s.store.ListMediaFilesForDrift(
 			ctx,
@@ -82,6 +89,9 @@ func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) err
 				if row.MissingSince != nil {
 					returned = append(returned, row.ID)
 				}
+				if row.MissingConfirmedAt != nil {
+					recovered = append(recovered, row)
+				}
 			}
 			afterID = row.ID
 		}
@@ -92,6 +102,8 @@ func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) err
 				return otelx.RecordSpanError(span, err)
 			}
 			returned = returned[:0]
+			s.recordRecovered(ctx, recovered, acc)
+			recovered = recovered[:0]
 		}
 	}
 	span.SetAttributes(attribute.Int("rows", total))
@@ -135,6 +147,15 @@ func (s *Service) handleMissing(
 ) {
 	driftDrifted.Add(ctx, 1)
 
+	// Checked before the owners load: a dead disk leaves its rows here tick after
+	// tick for the whole wait, and each would otherwise cost a dozen reads to do
+	// nothing.
+	wait, never := config.Get().Library.MissingFileWait()
+	if lean.MissingConfirmedAt != nil &&
+		(never || time.Since(*lean.MissingConfirmedAt) < wait) {
+		return
+	}
+
 	// The owners are needed from here on — to attribute the event and, past
 	// the grace window, to revert the right media. This is the one branch
 	// that pays for them, which is why the walk itself does not.
@@ -174,18 +195,34 @@ func (s *Service) handleMissing(
 	// The skip list is from the start of the sweep, and a clock can be old
 	// because an earlier outage started it and offline ticks never cleared it,
 	// so a mount dying now must not make this past grace at once.
-	if root, owned := db.RootOfFile(row); owned {
-		status, err := roothealth.Offline(ctx, root)
-		if err != nil {
-			slog.WarnContext(ctx, "could not check the library root before a revert",
+	root, owned := db.RootOfFile(row)
+	if !owned {
+		// Nobody is waiting on a row with no owner, and nothing could list it.
+		s.deleteOrphan(ctx, row)
+		return
+	}
+	status, err := roothealth.Offline(ctx, root)
+	if err != nil {
+		slog.WarnContext(ctx, "could not check the library root before a revert",
+			"media_file.id", row.ID, "error", err)
+		return
+	}
+	if status != nil {
+		return
+	}
+
+	if row.MissingConfirmedAt == nil {
+		if err := s.store.ConfirmMediaFileMissing(ctx, row.ID); err != nil {
+			slog.WarnContext(ctx, "confirm missing failed",
 				"media_file.id", row.ID, "error", err)
 			return
 		}
-		if status != nil {
+		s.recordConfirmed(ctx, row, *row.MissingSince, acc)
+		if never || wait > 0 {
 			return
 		}
 	}
-	s.confirmMissing(ctx, row, *row.MissingSince, acc)
+	s.removeMissing(ctx, row, *row.MissingSince, acc)
 }
 
 // ErrRootOnline refuses AcceptMissing on a root that is not offline: the volume
@@ -195,38 +232,117 @@ var ErrRootOnline = errors.New("this library root is online; nothing was removed
 // ErrAcceptRunning refuses a second walk while one is removing rows.
 var ErrAcceptRunning = errors.New("missing files are already being removed")
 
-// confirmMissing records a file as gone for good and removes its row, reverting
-// its owner. It reports whether the row was removed.
-func (s *Service) confirmMissing(
+func (s *Service) recordConfirmed(
+	ctx context.Context,
+	row *ent.MediaFile,
+	missingSince time.Time,
+	acc driftAccumulator,
+) {
+	slog.InfoContext(ctx, "drift confirmed a missing file",
+		"media_file.id", row.ID, "media_file.path", row.Path,
+		"missing_since", missingSince.UTC())
+	s.recordFolded(ctx, row, events.TypeDriftConfirmed, acc.confirmed, missingSince)
+}
+
+// recordFolded adds a file to its group's tally, or records its own event when
+// it has no group.
+func (s *Service) recordFolded(
+	ctx context.Context,
+	row *ent.MediaFile,
+	t events.Type,
+	tallies map[driftGroup]*driftTally,
+	missingSince time.Time,
+) {
+	if group, season, aggregated := driftGroupOf(row); aggregated {
+		tallyFor(tallies, group).add(season, missingSince)
+		return
+	}
+	s.recordDrift(ctx, row, t, map[string]any{
+		"path":          row.Path,
+		"missing_since": missingSince.UTC(),
+	})
+}
+
+// recordRecovered tells the owners of files that came back after being
+// confirmed missing.
+func (s *Service) recordRecovered(
+	ctx context.Context,
+	rows []db.DriftRow,
+	acc driftAccumulator,
+) {
+	for _, lean := range rows {
+		row, err := s.store.FindMediaFileWithOwners(ctx, lean.ID)
+		if err != nil {
+			slog.WarnContext(ctx, "load media file owners failed",
+				"media_file.id", lean.ID, "error", err)
+			continue
+		}
+		slog.InfoContext(ctx, "drift saw a missing file return",
+			"media_file.id", row.ID, "media_file.path", row.Path)
+		s.recordFolded(
+			ctx, row, events.TypeDriftRecovered, acc.recovered, *lean.MissingSince,
+		)
+	}
+}
+
+// removeMissing removes a missing file's row and reverts its owner, reporting
+// whether the row went. An owner holding another file on disk (the orphan scan
+// adopted the file at a new path during the wait) keeps its status, or it would
+// go to wanted and download what it already has.
+func (s *Service) removeMissing(
 	ctx context.Context,
 	row *ent.MediaFile,
 	missingSince time.Time,
 	acc driftAccumulator,
 ) bool {
-	slog.InfoContext(ctx, "drift confirmed a missing file",
-		"media_file.id", row.ID, "media_file.path", row.Path,
-		"missing_since", missingSince.UTC())
-	if group, season, aggregated := driftGroupOf(row); aggregated {
-		acc.confirm(group, season, missingSince)
-	} else {
-		s.recordDrift(ctx, row, events.TypeDriftConfirmed, map[string]any{
-			"path":          row.Path,
-			"missing_since": missingSince.UTC(),
-		})
+	held, err := s.store.HoldsOtherFile(ctx, row)
+	if err != nil {
+		slog.WarnContext(ctx, "could not check an owner's other files",
+			"media_file.id", row.ID, "error", err)
+		return false
+	}
+	if held {
+		return s.dropReplaced(ctx, row)
 	}
 
+	var removed bool
 	switch {
 	case row.Edges.Movie != nil:
-		return s.revertMovie(ctx, row.ID, row.Edges.Movie.ID)
+		removed = s.revertMovie(ctx, row.ID, row.Edges.Movie.ID)
 	case row.Edges.Episode != nil:
-		return s.revertEpisode(ctx, row.ID, row.Edges.Episode.ID)
+		removed = s.revertEpisode(ctx, row.ID, row.Edges.Episode.ID)
 	case row.Edges.Track != nil && row.Edges.Track.Edges.Album != nil:
-		return s.revertAlbum(ctx, row.ID, row.Edges.Track.Edges.Album.ID)
+		removed = s.revertAlbum(ctx, row.ID, row.Edges.Track.Edges.Album.ID)
 	case row.Edges.Book != nil:
-		return s.revertBookSlot(ctx, row.ID, row.Edges.Book.ID, row.BookKind)
+		removed = s.revertBookSlot(ctx, row.ID, row.Edges.Book.ID, row.BookKind)
 	default:
 		return s.deleteOrphan(ctx, row)
 	}
+	if removed {
+		s.recordFolded(
+			ctx,
+			row,
+			events.TypeDriftReverted,
+			acc.reverted,
+			missingSince,
+		)
+	}
+	return removed
+}
+
+func (s *Service) dropReplaced(ctx context.Context, row *ent.MediaFile) bool {
+	if row.Edges.Track != nil && row.Edges.Track.Edges.Album != nil {
+		defer library.LockAlbumFiles(row.Edges.Track.Edges.Album.ID)()
+	}
+	ctx = events.SuppressFileRemoved(ctx)
+	if err := s.store.DeleteMediaFile(ctx, row.ID); err != nil {
+		slog.ErrorContext(ctx, "drift delete failed",
+			"media_file.id", row.ID, "error", err)
+		return false
+	}
+	slog.InfoContext(ctx, "drift removed a missing file its owner has replaced",
+		"media_file.id", row.ID, "media_file.path", row.Path)
+	return true
 }
 
 // AcceptMissing removes the rows of an offline root whose file is not found,
@@ -288,7 +404,10 @@ func (s *Service) AcceptMissing(
 			if row.MissingSince != nil {
 				since = *row.MissingSince
 			}
-			if s.confirmMissing(ctx, row, since, acc) {
+			if row.MissingConfirmedAt == nil {
+				s.recordConfirmed(ctx, row, since, acc)
+			}
+			if s.removeMissing(ctx, row, since, acc) {
 				removed++
 			}
 		}
@@ -402,25 +521,21 @@ func (t *driftTally) payload(g driftGroup) map[string]any {
 type driftAccumulator struct {
 	detected  map[driftGroup]*driftTally
 	confirmed map[driftGroup]*driftTally
+	reverted  map[driftGroup]*driftTally
+	recovered map[driftGroup]*driftTally
 }
 
 func newDriftAccumulator() driftAccumulator {
 	return driftAccumulator{
 		detected:  make(map[driftGroup]*driftTally),
 		confirmed: make(map[driftGroup]*driftTally),
+		reverted:  make(map[driftGroup]*driftTally),
+		recovered: make(map[driftGroup]*driftTally),
 	}
 }
 
 func (a driftAccumulator) detect(g driftGroup, season uint16) {
 	tallyFor(a.detected, g).add(season, time.Time{})
-}
-
-func (a driftAccumulator) confirm(
-	g driftGroup,
-	season uint16,
-	missingSince time.Time,
-) {
-	tallyFor(a.confirmed, g).add(season, missingSince)
 }
 
 func tallyFor(tallies map[driftGroup]*driftTally, g driftGroup) *driftTally {
@@ -435,6 +550,8 @@ func tallyFor(tallies map[driftGroup]*driftTally, g driftGroup) *driftTally {
 func (a driftAccumulator) flush(ctx context.Context) {
 	recordGroupDrift(ctx, events.TypeDriftDetected, a.detected)
 	recordGroupDrift(ctx, events.TypeDriftConfirmed, a.confirmed)
+	recordGroupDrift(ctx, events.TypeDriftReverted, a.reverted)
+	recordGroupDrift(ctx, events.TypeDriftRecovered, a.recovered)
 }
 
 func recordGroupDrift(

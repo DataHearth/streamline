@@ -45,6 +45,8 @@ const (
 	ActivityEventTypeDownloadFailed      ActivityEventType = "download_failed"
 	ActivityEventTypeDriftConfirmed      ActivityEventType = "drift_confirmed"
 	ActivityEventTypeDriftDetected       ActivityEventType = "drift_detected"
+	ActivityEventTypeDriftRecovered      ActivityEventType = "drift_recovered"
+	ActivityEventTypeDriftReverted       ActivityEventType = "drift_reverted"
 	ActivityEventTypeFileRemoved         ActivityEventType = "file_removed"
 	ActivityEventTypeFileRenamed         ActivityEventType = "file_renamed"
 	ActivityEventTypeGrabWidened         ActivityEventType = "grab_widened"
@@ -76,6 +78,10 @@ func (e ActivityEventType) Valid() bool {
 	case ActivityEventTypeDriftConfirmed:
 		return true
 	case ActivityEventTypeDriftDetected:
+		return true
+	case ActivityEventTypeDriftRecovered:
+		return true
+	case ActivityEventTypeDriftReverted:
 		return true
 	case ActivityEventTypeFileRemoved:
 		return true

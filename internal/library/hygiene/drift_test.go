@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
@@ -30,6 +31,9 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		tmpDir = GinkgoT().TempDir()
+		configtest.Setup(map[string]any{"library": map[string]any{
+			"missing_file_redownload_after": "0",
+		}})
 		store = dbmocks.NewMockStore(GinkgoT())
 		meta = metamocks.NewMockProvider(GinkgoT())
 		svc = New(
@@ -42,6 +46,19 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 			},
 		)
 	})
+
+	// removed scripts what a revert asks of the store before it reverts.
+	removed := func(id uint32) {
+		GinkgoHelper()
+		store.EXPECT().
+			ConfirmMediaFileMissing(mock.Anything, id).
+			Return(nil).
+			Once()
+		store.EXPECT().
+			HoldsOtherFile(mock.Anything, mock.Anything).
+			Return(false, nil).
+			Once()
+	}
 
 	// pages scripts the keyset walk: one page of rows, then an empty page to
 	// end the loop. Every spec here fits in a single page.
@@ -125,6 +142,21 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
 	})
 
+	It("loads no owner for a confirmed file inside its wait", func() {
+		configtest.Setup(map[string]any{"library": map[string]any{
+			"missing_file_redownload_after": "168h",
+		}})
+		seen := time.Now().Add(-2 * time.Hour)
+		confirmed := time.Now().Add(-time.Hour)
+		// No expectations past the walk: the mock fails on any other call.
+		pages(db.DriftRow{
+			ID: 12, Path: filepath.Join(tmpDir, "Gone.mkv"),
+			MissingSince: &seen, MissingConfirmedAt: &confirmed,
+		})
+
+		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
+	})
+
 	It("reverts the movie when grace expires and the file is missing", func() {
 		seen := time.Now().Add(-2 * time.Hour)
 		path := filepath.Join(tmpDir, "Gone.mkv")
@@ -142,6 +174,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 			MarkMediaFileMissing(mock.Anything, uint32(99)).
 			Return(false, nil).
 			Once()
+		removed(99)
 		store.EXPECT().
 			DeleteMediaFileAndRevertMovie(mock.Anything, uint32(99), uint32(88)).
 			Return(nil).
@@ -188,6 +221,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 			MarkMediaFileMissing(mock.Anything, uint32(21)).
 			Return(false, nil).
 			Once()
+		removed(21)
 		store.EXPECT().
 			DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(21), uint32(33)).
 			Return(nil).
@@ -210,6 +244,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 				MarkMediaFileMissing(mock.Anything, id).
 				Return(false, nil).
 				Once()
+			removed(id)
 			store.EXPECT().
 				DeleteMediaFileAndRevertEpisode(mock.Anything, id, id+100).
 				Return(nil).

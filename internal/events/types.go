@@ -13,6 +13,8 @@ const (
 	TypeImportHeld        Type = "import_held_for_review"
 	TypeDriftDetected     Type = "drift_detected"
 	TypeDriftConfirmed    Type = "drift_confirmed"
+	TypeDriftReverted     Type = "drift_reverted"
+	TypeDriftRecovered    Type = "drift_recovered"
 	TypeSearched          Type = "searched"
 	TypeAdded             Type = "added"
 	TypeFileRenamed       Type = "file_renamed"
@@ -33,6 +35,7 @@ func (t Type) Valid() bool {
 		TypeDownloadCancelled, TypeGrabWidened,
 		TypeImported, TypeImportFailed, TypeImportHeld,
 		TypeDriftDetected, TypeDriftConfirmed,
+		TypeDriftReverted, TypeDriftRecovered,
 		TypeSearched,
 		TypeAdded, TypeFileRenamed, TypeFileRemoved,
 		TypeReidentified, TypeMetadataRefreshed, TypeMonitoringChanged,

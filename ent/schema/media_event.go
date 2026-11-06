@@ -30,6 +30,8 @@ func (MediaEvent) Fields() []ent.Field {
 				"import_held_for_review",
 				"drift_detected",
 				"drift_confirmed",
+				"drift_reverted",
+				"drift_recovered",
 				"searched",
 				"added",
 				"file_renamed",
