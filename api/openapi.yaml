@@ -5511,7 +5511,14 @@ paths:
             minimum: 1
             maximum: 100
             x-go-type: uint16
-        - $ref: "#/components/parameters/PeopleOffset"
+        - name: page
+          in: query
+          description: One-based page number.
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+            x-go-type: uint32
       responses:
         "200":
           $ref: "#/components/responses/MissingFileList"
@@ -8878,6 +8885,9 @@ components:
       type: object
       required: [id, path, size]
       properties:
+        missing_from_disk:
+          type: boolean
+          description: The file is confirmed missing from disk. Absent otherwise.
         id:
           type: integer
           x-go-type: uint32
@@ -9705,6 +9715,9 @@ components:
       type: object
       required: [id, number, status, monitored]
       properties:
+        missing_from_disk:
+          type: boolean
+          description: The file is confirmed missing from disk. Absent otherwise.
         id:
           type: integer
           x-go-type: uint32
@@ -10141,6 +10154,9 @@ components:
       type: object
       required: [id, disc, number, title, duration, has_file]
       properties:
+        missing_from_disk:
+          type: boolean
+          description: The file is confirmed missing from disk. Absent otherwise.
         id:
           type: integer
           x-go-type: uint32
@@ -11101,6 +11117,9 @@ components:
       type: object
       required: [container, size]
       properties:
+        missing_from_disk:
+          type: boolean
+          description: The file is confirmed missing from disk. Absent otherwise.
         container:
           type: string
           description: Upper-cased extension of the first file (EPUB, CBZ, M4B, MP3).

@@ -1,10 +1,13 @@
 package restapi
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/media/music"
 )
 
@@ -14,6 +17,43 @@ var _ = Describe(
 	func() {
 		u32 := func(v uint32) *uint32 { return &v }
 		str := func(v string) *string { return &v }
+
+		It("marks a track only when the view says its file is missing", func() {
+			track := music.TrackView{Track: &ent.Track{ID: 1}, HasFile: true}
+			Expect(toMusicTrack(track).MissingFromDisk).To(BeNil())
+
+			track.MissingFromDisk = true
+			Expect(toMusicTrack(track).MissingFromDisk).To(HaveValue(BeTrue()))
+		})
+
+		It(
+			"marks a book slot only when all its files are confirmed missing",
+			func() {
+				at := time.Now()
+				kind := entmediafile.BookKindEbook
+				confirmed := &ent.MediaFile{
+					Path: "/b/a.epub", BookKind: kind,
+					MissingSince: &at, MissingConfirmedAt: &at,
+				}
+				b := &ent.Book{
+					Edges: ent.BookEdges{MediaFiles: []*ent.MediaFile{confirmed}},
+				}
+				Expect(
+					slotFile(b, string(kind)).MissingFromDisk,
+				).To(HaveValue(BeTrue()))
+
+				b.Edges.MediaFiles = []*ent.MediaFile{
+					confirmed,
+					{Path: "/b/a.pdf", BookKind: kind},
+				}
+				Expect(slotFile(b, string(kind)).MissingFromDisk).To(BeNil())
+
+				b.Edges.MediaFiles = []*ent.MediaFile{
+					{Path: "/b/a.epub", BookKind: kind, MissingSince: &at},
+				}
+				Expect(slotFile(b, string(kind)).MissingFromDisk).To(BeNil())
+			},
+		)
 
 		It("carries an album's artists, owner first", func() {
 			v := music.AlbumView{

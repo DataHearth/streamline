@@ -367,7 +367,11 @@ func fullAlbum(
 }
 
 func creditedTrack(a *ent.Album, t *ent.Track, people peopleIndex) TrackView {
-	tv := TrackView{Track: t, HasFile: len(t.Edges.MediaFiles) > 0}
+	tv := TrackView{
+		Track:           t,
+		HasFile:         len(t.Edges.MediaFiles) > 0,
+		MissingFromDisk: db.AllConfirmedMissing(t.Edges.MediaFiles),
+	}
 	for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindArtist) {
 		tv.Artists = append(tv.Artists, trackArtist(a, people, c))
 	}

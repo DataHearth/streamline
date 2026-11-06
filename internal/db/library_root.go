@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/book"
@@ -54,6 +55,17 @@ func RootOfFile(row *ent.MediaFile) (LibraryRoot, bool) {
 		return BookRoot(string(row.BookKind)), true
 	}
 	return "", false
+}
+
+// AllConfirmedMissing reports whether a title's files in one place are all
+// confirmed missing, the condition for marking it. A present file beside a
+// missing one (the orphan scan adopted it during the wait) means the title has
+// what it needs.
+func AllConfirmedMissing(files []*ent.MediaFile) bool {
+	return len(files) > 0 &&
+		!slices.ContainsFunc(files, func(f *ent.MediaFile) bool {
+			return f.MissingConfirmedAt == nil
+		})
 }
 
 func rootPredicate(root LibraryRoot) predicate.MediaFile {

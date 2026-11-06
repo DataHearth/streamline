@@ -121,6 +121,9 @@
 				{#if markMissing && !t.has_file}
 					<LabelPill token="wanted" label={i18n.music_track_missing()} variant="translucent" />
 				{/if}
+				{#if t.missing_from_disk}
+					<LabelPill token="wanted" label={i18n.file_missing_from_disk()} variant="translucent" />
+				{/if}
 				<span class={cn("shrink-0 text-right font-mono text-fg-muted", compact ? "text-[11px]" : "w-10 text-xs")}>
 					{trackTime(t.duration)}
 				</span>

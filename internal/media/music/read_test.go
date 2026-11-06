@@ -544,7 +544,30 @@ var _ = Describe(
 				Expect(nevermind.Size).To(Equal(int64(2000)))
 				Expect(nevermind.TracksHave).To(Equal(uint32(2)))
 				Expect(nevermind.Tracks[0].HasFile).To(BeTrue())
+				Expect(nevermind.Tracks[0].MissingFromDisk).To(BeFalse())
 				Expect(d.TracksHave).To(Equal(uint32(2)))
+			})
+
+			It("marks a track whose only file is confirmed missing", func() {
+				queue()
+				a, albums := e.seedArtist("Nirvana", albumSeed{
+					mbid: "rg-gone", title: "Bleach", monitored: true,
+					tracks: []string{"Blew", "Floyd"},
+				})
+				tracks := albums[0].QueryTracks().AllX(e.ctx)
+				now := time.Now()
+				gone := e.addFile(tracks[0], "/m/blew.flac", "lossless")
+				e.client.MediaFile.UpdateOne(gone).
+					SetMissingSince(now).SetMissingConfirmedAt(now).ExecX(e.ctx)
+				e.addFile(tracks[1], "/m/floyd.flac", "lossless")
+
+				d, err := e.svc.Detail(e.ctx, a.ID, "en")
+
+				Expect(err).NotTo(HaveOccurred())
+				got := d.Albums[0].Tracks
+				Expect(got[0].HasFile).To(BeTrue())
+				Expect(got[0].MissingFromDisk).To(BeTrue())
+				Expect(got[1].MissingFromDisk).To(BeFalse())
 			})
 
 			It("leaves quality empty when no file states a tier", func() {

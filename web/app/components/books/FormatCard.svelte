@@ -61,7 +61,10 @@
 			{/if}
 		</span>
 		<h3 class="text-[14px] font-semibold text-fg">{formatLabel(slot.format)}</h3>
-		<span class="ml-auto">
+		<span class="ml-auto flex flex-wrap justify-end gap-1">
+			{#if slot.file?.missing_from_disk}
+				<LabelPill token="wanted" label={i18n.file_missing_from_disk()} size="md" variant="translucent" />
+			{/if}
 			<LabelPill token={pill.token} label={pill.label} size="md" variant="translucent" live={pill.live} />
 		</span>
 	</div>

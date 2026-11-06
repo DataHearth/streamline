@@ -100,7 +100,7 @@ var _ = Describe(
 			app.store.EXPECT().ListMissingFiles(mock.Anything, 10, 20).
 				Return([]*ent.MediaFile{row}, 21, nil).Once()
 
-			body := list(listURL + "?limit=10&offset=20")
+			body := list(listURL + "?limit=10&page=3")
 
 			Expect(body.Total).To(Equal(21))
 			Expect(body.Items).To(HaveLen(1))

@@ -56,6 +56,7 @@ export type Episode = {
 	quality?: string;
 	size?: number | null;
 	has_file?: boolean;
+	missing_from_disk?: boolean;
 	path?: string;
 	release_group?: string;
 	parsed_source?: string;
@@ -350,10 +351,23 @@ export type MediaInfo = {
 	subtitle_languages?: string[];
 };
 
+export type MissingFile = {
+	id: number;
+	root: LibraryOfflineRoot["root"];
+	title: string;
+	path: string;
+	size: number;
+	missing_since: string;
+	redownload_at?: string;
+	owner_kind: "movie" | "series" | "artist" | "book";
+	owner_id: number;
+};
+
 export type MediaFile = {
 	id: number;
 	path: string;
 	size: number;
+	missing_from_disk?: boolean;
 	quality?: string;
 	format?: string;
 	release_group?: string;
@@ -652,6 +666,8 @@ export type ActivityType =
 	| "import_held_for_review"
 	| "drift_detected"
 	| "drift_confirmed"
+	| "drift_reverted"
+	| "drift_recovered"
 	| "searched"
 	| "added"
 	| "file_renamed"
@@ -1001,6 +1017,7 @@ export type LibraryConfig = {
 	max_grab_failures: number;
 	import_max_attempts: number;
 	drift_grace_ticks: number;
+	missing_file_redownload_after: string;
 	allowed_download_roots?: string[];
 	movie_path?: string;
 	series_path?: string;

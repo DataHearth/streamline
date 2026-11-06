@@ -218,6 +218,16 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 			Expect(out.MediaInfo.Width).To(Equal(3840))
 		})
 
+		It("marks a confirmed row only, not one in grace or on disk", func() {
+			at := time.Now()
+			confirmed := &ent.MediaFile{MissingSince: &at, MissingConfirmedAt: &at}
+			inGrace := &ent.MediaFile{MissingSince: &at}
+
+			Expect(mediaFileToAPI(confirmed).MissingFromDisk).To(HaveValue(BeTrue()))
+			Expect(mediaFileToAPI(inGrace).MissingFromDisk).To(BeNil())
+			Expect(mediaFileToAPI(&ent.MediaFile{}).MissingFromDisk).To(BeNil())
+		})
+
 		It("omits media_info when never probed", func() {
 			f := &ent.MediaFile{ID: 1, Path: "/m/x.mkv", Size: 1}
 			Expect(mediaFileToAPI(f).MediaInfo).To(BeNil())
@@ -236,6 +246,24 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 			out := episodeToAPI(e, now, "")
 			Expect(out.MediaInfo).NotTo(BeNil())
 			Expect(out.MediaInfo.VideoCodec).To(Equal("hevc"))
+		})
+
+		It("marks an episode whose only file is confirmed missing", func() {
+			at := time.Now()
+			e := &ent.Episode{ID: 1, Number: 1}
+			e.Edges.MediaFiles = []*ent.MediaFile{
+				{ID: 1, MissingSince: &at, MissingConfirmedAt: &at},
+			}
+			Expect(episodeToAPI(e, at, "").MissingFromDisk).To(HaveValue(BeTrue()))
+
+			e.Edges.MediaFiles = []*ent.MediaFile{{ID: 1, MissingSince: &at}}
+			Expect(episodeToAPI(e, at, "").MissingFromDisk).To(BeNil())
+
+			e.Edges.MediaFiles = []*ent.MediaFile{
+				{ID: 1, MissingSince: &at, MissingConfirmedAt: &at},
+				{ID: 2},
+			}
+			Expect(episodeToAPI(e, at, "").MissingFromDisk).To(BeNil())
 		})
 
 		It("omits media_info when the episode's file was never probed", func() {

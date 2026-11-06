@@ -138,6 +138,9 @@ func slotFile(b *ent.Book, kind string) *BookSlotFile {
 		n := numeric.SaturateU32(len(files))
 		out.FileCount = &n
 	}
+	if db.AllConfirmedMissing(files) {
+		out.MissingFromDisk = new(true)
+	}
 	return out
 }
 

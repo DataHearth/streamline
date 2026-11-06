@@ -178,6 +178,18 @@ export const EVENT_MARKS: Record<ActivityType, Mark> = {
 		fg: "text-status-wanted",
 		label: i18n.dash_evt_drift_confirmed(),
 	},
+	drift_reverted: {
+		icon: FileX,
+		bg: "bg-status-wanted/15",
+		fg: "text-status-wanted",
+		label: i18n.dash_evt_drift_reverted(),
+	},
+	drift_recovered: {
+		icon: CircleCheck,
+		bg: "bg-status-available/15",
+		fg: "text-status-available",
+		label: i18n.dash_evt_drift_recovered(),
+	},
 	searched: {
 		icon: Radar,
 		bg: "bg-surface-2",

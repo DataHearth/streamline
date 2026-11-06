@@ -17,6 +17,7 @@
 		SystemInfo,
 	} from "@lib/types";
 	import Dialog from "@components/modals/Dialog.svelte";
+	import MissingFilesCard from "@components/settings/MissingFilesCard.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
 	import Select from "@components/forms/Select.svelte";
@@ -528,7 +529,22 @@
 					),
 				{ numeric: true, width: "w-28" },
 			)}
+			<div class="mt-4">
+				{@render field(
+					"missing_file_redownload_after",
+					i18n.library_missing_wait(),
+					i18n.library_missing_wait_help(),
+					draftOf("missing_file_redownload_after", lib.missing_file_redownload_after),
+					() =>
+						commitText("missing_file_redownload_after", lib.missing_file_redownload_after, (v) =>
+							saveLibrary.mutate({ missing_file_redownload_after: v }),
+						),
+					{ mono: true, width: "w-28" },
+				)}
+			</div>
 		</section>
+
+		<MissingFilesCard rootLabels={ROOT_LABELS} />
 	{/if}
 </div>
 

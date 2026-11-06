@@ -55,6 +55,9 @@ type TrackView struct {
 	Featuring []PersonView
 	Writers   []PersonView
 	HasFile   bool
+	// MissingFromDisk says the track's files are all confirmed missing; HasFile
+	// stays true while their rows wait.
+	MissingFromDisk bool
 }
 
 // AlbumView is an album with the rollups the API reports. Tracks, Credits and

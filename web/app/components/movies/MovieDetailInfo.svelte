@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LabelPill from "@components/shared/LabelPill.svelte";
 	import { around } from "@lib/message-parts";
 	import { ChevronDown, ExternalLink, Trash2, ArrowUpRight } from "@lucide/svelte";
 	import { auth } from "@lib/auth.svelte";
@@ -34,7 +35,9 @@
 		qualityProfileName: string | null;
 	} = $props();
 
-	let primary = $derived(movie.media_files?.[0]);
+	let primary = $derived(
+		movie.media_files?.find((f) => !f.missing_from_disk) ?? movie.media_files?.[0],
+	);
 	// Named as Released when there is a day to name, Year when the server has
 	// only the year — the same fallback the hero makes, so the two never disagree.
 	let releasedText = $derived(formatDate(movie.release_date));
@@ -199,6 +202,11 @@
 				</button>
 			{/if}
 		</div>
+		{#if primary?.missing_from_disk}
+			<div class="mt-2">
+				<LabelPill token="wanted" label={i18n.file_missing_from_disk()} variant="translucent" />
+			</div>
+		{/if}
 		{#if primary}
 			<dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[12px]">
 				{#if probe}

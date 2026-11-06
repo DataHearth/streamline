@@ -5183,6 +5183,9 @@ type BookSlotFile struct {
 	Container string  `json:"container"`
 	FileCount *uint32 `json:"file_count,omitempty"`
 
+	// MissingFromDisk The file is confirmed missing from disk. Absent otherwise.
+	MissingFromDisk *bool `json:"missing_from_disk,omitempty"`
+
 	// Size Sum of the slot's file sizes; an audiobook folder is many files.
 	Size int64 `json:"size"`
 }
@@ -5613,9 +5616,12 @@ type Episode struct {
 	// will populate on its own. Fall back to the record's parsed_* fields
 	// when this is null.
 	MediaInfo *MediaInfo `json:"media_info,omitempty"`
-	Monitored bool       `json:"monitored"`
-	Number    uint16     `json:"number"`
-	Overview  *string    `json:"overview,omitempty"`
+
+	// MissingFromDisk The file is confirmed missing from disk. Absent otherwise.
+	MissingFromDisk *bool   `json:"missing_from_disk,omitempty"`
+	Monitored       bool    `json:"monitored"`
+	Number          uint16  `json:"number"`
+	Overview        *string `json:"overview,omitempty"`
 
 	// ParsedSource Source tag (BluRay/Remux/WEB-DL/…) parsed from the release name at import. Empty on rows written before the column existed.
 	ParsedSource *string `json:"parsed_source,omitempty"`
@@ -6546,6 +6552,9 @@ type MediaFile struct {
 	// will populate on its own. Fall back to the record's parsed_* fields
 	// when this is null.
 	MediaInfo *MediaInfo `json:"media_info,omitempty"`
+
+	// MissingFromDisk The file is confirmed missing from disk. Absent otherwise.
+	MissingFromDisk *bool `json:"missing_from_disk,omitempty"`
 
 	// ParsedCodec Video codec (x264/HEVC/AV1/…) parsed from the release name at import. Empty on rows written before the column existed.
 	ParsedCodec *string `json:"parsed_codec,omitempty"`
@@ -7667,6 +7676,9 @@ type MusicTrack struct {
 
 	// Mbid MusicBrainz recording id.
 	Mbid *string `json:"mbid,omitempty"`
+
+	// MissingFromDisk The file is confirmed missing from disk. Absent otherwise.
+	MissingFromDisk *bool `json:"missing_from_disk,omitempty"`
 
 	// Number Position on the disc.
 	Number uint16 `json:"number"`
@@ -11018,8 +11030,8 @@ type ListMissingFilesParams struct {
 	// Limit Max items per page (1..100).
 	Limit *uint16 `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// Offset Zero-based offset for pagination.
-	Offset *PeopleOffset `form:"offset,omitempty" json:"offset,omitempty"`
+	// Page One-based page number.
+	Page *uint32 `form:"page,omitempty" json:"page,omitempty"`
 }
 
 // ListLibraryArrivalsParams defines parameters for ListLibraryArrivals.
@@ -17748,15 +17760,15 @@ func (siw *ServerInterfaceWrapper) ListMissingFiles(w http.ResponseWriter, r *ht
 		return
 	}
 
-	// ------------- Optional query parameter "offset" -------------
+	// ------------- Optional query parameter "page" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page", r.URL.Query(), &params.Page, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "page"})
 		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
 		}
 		return
 	}

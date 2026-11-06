@@ -44,6 +44,7 @@ export type MediumFormat = "cd" | "vinyl" | "digital" | "cassette";
 
 export type Track = {
 	id: number;
+	missing_from_disk?: boolean;
 	disc: number;
 	number: number;
 	title: string;
@@ -186,7 +187,7 @@ export type FormatSlot = {
 	format: BookFormat;
 	state: FormatState;
 	edition_id: number | null;
-	file?: { container: string; size: number; file_count?: number };
+	file?: { container: string; size: number; file_count?: number; missing_from_disk?: boolean };
 	progress?: number;
 	// Set while the file on disk is another edition's, kept until the new one
 	// has downloaded.

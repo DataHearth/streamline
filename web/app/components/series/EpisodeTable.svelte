@@ -140,6 +140,11 @@
 					</td>
 					<td class="px-3 py-2.5">
 						<LabelPill token={meta.token} label={meta.label} variant="translucent" live={meta.live} />
+						{#if ep.missing_from_disk}
+							<span class="mt-1 block">
+								<LabelPill token="wanted" label={i18n.file_missing_from_disk()} variant="translucent" />
+							</span>
+						{/if}
 					</td>
 					<td
 						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted @lg:table-cell"

@@ -65,6 +65,9 @@ func toMusicTrack(t music.TrackView) MusicTrack {
 		Title:     t.Track.Title,
 		Writers:   toMusicPeople(t.Writers),
 	}
+	if t.MissingFromDisk {
+		out.MissingFromDisk = new(true)
+	}
 	if t.Track.Bonus {
 		bonus := true
 		out.Bonus = &bonus

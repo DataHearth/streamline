@@ -144,7 +144,11 @@
 	function epLine(ep: Episode): string {
 		const st = episodeStatus(ep, showMonitored);
 		if (st === "available") {
-			const parts = [episodeMedia(ep), formatBytes(ep.size, "")].filter(Boolean);
+			const parts = [
+				ep.missing_from_disk && i18n.file_missing_from_disk(),
+				episodeMedia(ep),
+				formatBytes(ep.size, ""),
+			].filter(Boolean);
 			return parts.join(" · ") || i18n.ep_state_available();
 		}
 		if (st === "downloading") return i18n.ep_state_downloading();

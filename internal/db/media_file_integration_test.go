@@ -289,6 +289,22 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("AllConfirmedMissing", func() {
+		at := time.Now()
+		confirmed := &ent.MediaFile{MissingSince: &at, MissingConfirmedAt: &at}
+
+		It("is true only when every file is confirmed missing", func() {
+			Expect(AllConfirmedMissing(nil)).To(BeFalse())
+			Expect(AllConfirmedMissing([]*ent.MediaFile{confirmed})).To(BeTrue())
+			Expect(
+				AllConfirmedMissing([]*ent.MediaFile{confirmed, {}}),
+			).To(BeFalse())
+			Expect(AllConfirmedMissing([]*ent.MediaFile{
+				confirmed, {MissingSince: &at},
+			})).To(BeFalse())
+		})
+	})
+
 	Describe("ForgetMediaFile", func() {
 		withOwners := func(id uint32) *ent.MediaFile {
 			GinkgoHelper()

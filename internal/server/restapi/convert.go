@@ -438,6 +438,9 @@ func mediaFileToAPI(f *ent.MediaFile) MediaFile {
 	}
 	out.MediaInfo = mediaInfoToAPI(f)
 	out.TranscodedAt, out.SizeBefore = transcodeSavingOf(f)
+	if f.MissingConfirmedAt != nil {
+		out.MissingFromDisk = new(true)
+	}
 	return out
 }
 
@@ -1379,6 +1382,9 @@ func episodeToAPI(e *ent.Episode, now time.Time, profile string) Episode {
 	}
 	hasFile := len(e.Edges.MediaFiles) > 0
 	out.HasFile = &hasFile
+	if db.AllConfirmedMissing(e.Edges.MediaFiles) {
+		out.MissingFromDisk = new(true)
+	}
 	if len(e.Edges.MediaFiles) > 0 {
 		f := e.Edges.MediaFiles[0]
 		out.Quality = &f.Quality

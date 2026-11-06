@@ -33,11 +33,15 @@ func (s *Server) ListMissingFiles(
 			),
 		}, nil
 	}
-	var offset int
-	if req.Params.Offset != nil {
-		offset = int(*req.Params.Offset)
+	page, ok := positiveOr[uint32](req.Params.Page, 1)
+	if !ok {
+		return ListMissingFiles400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
 	}
-	rows, total, err := s.store.ListMissingFiles(ctx, int(limit), offset)
+	rows, total, err := s.store.ListMissingFiles(
+		ctx, int(limit), (int(page)-1)*int(limit),
+	)
 	if err != nil {
 		return nil, err
 	}
