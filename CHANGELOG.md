@@ -5,6 +5,98 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-11-06
+
+### Added
+
+- music: Monitor singles by default
+- search: Find tracks, singles and EPs, and let lists skip their total
+- web: Select every match on the movie and series lists
+- db: Mark uploaded download records
+- upload: Stream multipart uploads into staging
+- importer: Import uploaded records by copy
+- music: Upload albums, tracks and discographies
+- book: Upload ebooks and audiobooks
+- api: Upload endpoints for music and books
+- web: Upload files onto albums, tracks, artists and books
+- web: Follow the design's hover token and progress scope
+- web: Collapsible discography sections with bulk monitor, artist tags and total length
+- web: Set the preferred book language on Settings → Library
+- web: A compact, searchable book language picker
+- activity: Name an uploaded track and drop torrent fields from uploads
+- activity: Link queue, history and torrents to the title's page
+- web: Follow the design on search rows, page-change scroll, Added columns and the series hero
+- An admin stats page and the music library as an artist grid
+- import: Choose a held album's tracks in the resolve prompt
+- import: Hold an album on any title or file its tracks do not account for
+- import: Hold an album an import would leave with empty tracks
+- music: Choose which edition an album follows
+- music: Choose a held discography pack's albums per folder
+- library: Detect a library root that looks gone
+- library: Migrate music and book root paths
+- library: Accept files really gone from an offline root
+- web: Show an offline library root and how to fix it
+- library: Record when a missing file is confirmed and how long to wait
+- library: Keep a missing file's row until the re-download wait ends
+- library: List files missing from disk and forget them
+- web: Mark files missing from disk and list them in settings
+
+### Changed
+
+- db: Serve reads from a query_only pool beside the single writer
+- bittorrent: Read pieces past the page cache
+- Merge remote-tracking branch 'origin/main' into ccr-4072b327-j2fbzi
+
+### Fixed
+
+- nix: Grant the music and book roots to the sandboxed unit
+- lxc: Back up through streamline backup instead of copying the database
+- deps: Update go modules (#153)
+- metadata: Drop TVDB's disambiguation year from series titles
+- library: Move sidecars and trickplay folders with renamed media
+- library: Delete an episode's trickplay folder with it
+- deps: Bump anacrolix/torrent past GHSA-2wrx-84qj-4pcg and GHSA-4mxg-hpvf-2386
+- nix: Restore the pnpm store index in WAL mode
+- web: Size the monitor dropdown to its options
+- api: Answer a duplicate grab with grab_rejected, not a 500
+- music: Keep a recording's row and file through a re-pick
+- activity: Sort stalled downloads after active ones in the queue
+- activity: Order a queue status group by progress in the Status sort
+- torrents: Link the torrent's name, not the release line
+- activity: Name the albums an uploaded discography filled
+- music: Hold a file whose title contradicts its track
+- db: Check foreign keys only after a migration applied
+- music: Delete credits through the indexed foreign key
+- db: Refresh stale planner stats at boot
+- db: Index foreign keys and drop unused indexes
+- hygiene: Count drift grace from missing_since and stop stamping present files
+- db: Index media events by owner
+- music: Load per-track credits behind the artist page
+- hygiene: Revert albums and book slots when drift confirms a missing file
+- db: Make media file owner indexes partial so large IN lists keep them
+- music: Keep track credits out of the refresh every monitor toggle triggers
+- hygiene: Leave an offline library root alone
+- importer: Wait for an offline library root
+- search: Grab nothing for an offline library root
+- api: Refuse file changes on an offline library root
+- library: Close the gaps the offline root review found
+- api: Refuse album tag apply on an offline library root
+- web: Refresh the health pill after a path migration and name each root's example path
+- db: Index book_kind so a one-kind book library checks its roots cheaply
+- web: Show a detail hero's status on the cover, only while something is pending
+- db: Settle an album a re-hydration completes
+- library: Leave files missing from disk out of tagging, transcoding and renames
+- importer: Let an import fill a file missing from disk
+- db: Keep other roots in the drift walk while a book root is offline
+- library: Read a boolean wait as off and prefer a present file over a missing row
+- library: Close the remaining gaps around files missing from disk
+- metadata: Read every release of a group past the lookup's 25
+- web: Describe the purge-uploads and music-tag-sync jobs
+- web: Scroll the settings sidebar on its own
+- stats: Read dynamic range and resolution from the probe
+- stats: Leave bulk imports out of the pipeline
+- web: Put the stats period above the sections it changes
+
 ## [3.3.0] - 2026-10-28
 
 ### Added
@@ -920,6 +1012,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - sysinfo: Make disk-usage probe cross-platform for releases (#1)
 
+[3.4.0]: https://github.com/datahearth/streamline/compare/v3.3.0..v3.4.0
 [3.3.0]: https://github.com/datahearth/streamline/compare/v3.2.0..v3.3.0
 [3.2.0]: https://github.com/datahearth/streamline/compare/v3.1.0..v3.2.0
 [3.1.0]: https://github.com/datahearth/streamline/compare/v3.0.0..v3.1.0
