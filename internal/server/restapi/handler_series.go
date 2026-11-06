@@ -776,6 +776,10 @@ func (s *Server) ReidentifySeries(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
+	// A re-identify renames the files, and a rename creates folders first.
+	if err := roothealth.Require(ctx, db.RootSeries); err != nil {
+		return nil, err
+	}
 	show, unmatched, err := s.tvshows.Reidentify(
 		ctx, request.Id, request.Body.TvdbId,
 	)

@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
 )
@@ -70,6 +72,44 @@ func rootOwnerColumn(root LibraryRoot) string {
 		return mediafile.TrackColumn
 	}
 	return mediafile.BookColumn
+}
+
+// BookFileRoots names the roots holding a book's files.
+func (db *DB) BookFileRoots(
+	ctx context.Context,
+	bookID uint32,
+) ([]LibraryRoot, error) {
+	return db.bookRootsHolding(ctx, mediafile.HasBookWith(book.ID(bookID)))
+}
+
+// BookSeriesFileRoots names the roots holding the files of a series' volumes.
+func (db *DB) BookSeriesFileRoots(
+	ctx context.Context,
+	seriesID uint32,
+) ([]LibraryRoot, error) {
+	return db.bookRootsHolding(
+		ctx,
+		mediafile.HasBookWith(book.HasSeriesWith(bookseries.ID(seriesID))),
+	)
+}
+
+func (db *DB) bookRootsHolding(
+	ctx context.Context,
+	holding predicate.MediaFile,
+) ([]LibraryRoot, error) {
+	kinds, err := db.client.MediaFile.Query().
+		Where(holding, mediafile.BookKindNotNil()).
+		Unique(true).
+		Select(mediafile.FieldBookKind).
+		Strings(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list book file roots: %w", err)
+	}
+	roots := make([]LibraryRoot, len(kinds))
+	for i, kind := range kinds {
+		roots[i] = BookRoot(kind)
+	}
+	return roots, nil
 }
 
 // CountRootFiles counts the file rows tracked under a root.

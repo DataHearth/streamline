@@ -3,7 +3,10 @@ package restapi
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
 	"slices"
+	"time"
 
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library/hygiene"
@@ -41,18 +44,47 @@ func (s *Server) AcceptLibraryRootMissing(
 			BadRequestJSONResponse: errBadRequest("unknown library root"),
 		}, nil
 	}
-	removed, err := s.hygiene.AcceptMissing(ctx, root)
-	if errors.Is(err, hygiene.ErrRootOnline) {
-		code := "library_online"
+	return acceptMissingRun{ctx: ctx, hygiene: s.hygiene, root: root}, nil
+}
+
+// acceptMissingRun walks the root from its Visit, the one place a strict handler
+// holds the connection. A row costs a read and a write, minutes on a large root
+// over a networked volume, and the listener's WriteTimeout would cut the answer
+// off at two. The walk also outlives a client that gave up: stopping halfway
+// would leave a root half accepted with its events unwritten.
+type acceptMissingRun struct {
+	ctx     context.Context
+	hygiene *hygiene.Service
+	root    db.LibraryRoot
+}
+
+func (a acceptMissingRun) VisitAcceptLibraryRootMissingResponse(
+	w http.ResponseWriter,
+) error {
+	if err := http.NewResponseController(w).
+		SetWriteDeadline(time.Time{}); err != nil &&
+		!errors.Is(err, http.ErrNotSupported) {
+		return fmt.Errorf("clear write deadline: %w", err)
+	}
+	removed, err := a.hygiene.AcceptMissing(context.WithoutCancel(a.ctx), a.root)
+	switch {
+	case errors.Is(err, hygiene.ErrRootOnline):
 		return AcceptLibraryRootMissing409JSONResponse{
-			Message: err.Error(),
-			Code:    &code,
-		}, nil
+			ConflictJSONResponse: conflictResp("library_online", err.Error()),
+		}.VisitAcceptLibraryRootMissingResponse(w)
+	case errors.Is(err, hygiene.ErrAcceptRunning):
+		return AcceptLibraryRootMissing409JSONResponse{
+			ConflictJSONResponse: conflictResp(
+				"library_accept_running",
+				err.Error(),
+			),
+		}.VisitAcceptLibraryRootMissingResponse(w)
+	case err != nil:
+		return err
 	}
-	if err != nil {
-		return nil, err
-	}
-	return AcceptLibraryRootMissing200JSONResponse{Removed: removed}, nil
+	return AcceptLibraryRootMissing200JSONResponse{
+		Removed: removed,
+	}.VisitAcceptLibraryRootMissingResponse(w)
 }
 
 func (s *Server) GetPathMigrationRoots(

@@ -191,6 +191,37 @@ var _ = Describe("library root health", Label("integration", "roothealth"), func
 		Expect(status.Tracked).To(Equal(1))
 	})
 
+	It("names the roots holding a book's and a series' files", func() {
+		book := client.Book.Create().SetHardcoverID(1).SetTitle("Book").SaveX(ctx)
+		both := client.Book.Create().SetHardcoverID(2).SetTitle("Both").SaveX(ctx)
+		none := client.Book.Create().SetHardcoverID(3).SetTitle("None").SaveX(ctx)
+		series := client.BookSeries.Create().SetHardcoverID(9).SetTitle("Series").
+			AddVolumes(book).SaveX(ctx)
+		file := func(b *ent.Book, name string, kind entmediafile.BookKind) {
+			GinkgoHelper()
+			client.MediaFile.Create().
+				SetPath(filepath.Join(elsewhere, name)).
+				SetSize(4).
+				SetBook(b).
+				SetBookKind(kind).
+				SaveX(ctx)
+		}
+		file(book, "a.m4b", entmediafile.BookKindAudiobook)
+		file(book, "b.m4b", entmediafile.BookKindAudiobook)
+		file(both, "c.epub", entmediafile.BookKindEbook)
+		file(both, "d.m4b", entmediafile.BookKindAudiobook)
+		rows := db.New(client)
+
+		Expect(rows.BookFileRoots(ctx, book.ID)).To(ConsistOf(db.RootAudiobooks))
+		Expect(
+			rows.BookFileRoots(ctx, both.ID),
+		).To(ConsistOf(db.RootEbooks, db.RootAudiobooks))
+		Expect(rows.BookFileRoots(ctx, none.ID)).To(BeEmpty())
+		Expect(
+			rows.BookSeriesFileRoots(ctx, series.ID),
+		).To(ConsistOf(db.RootAudiobooks))
+	})
+
 	It("files each owner type under its own root", func() {
 		show := client.TVShow.Create().
 			SetTitle("Show").

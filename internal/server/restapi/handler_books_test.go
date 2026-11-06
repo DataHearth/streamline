@@ -1031,6 +1031,17 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 	})
 
 	Describe("DELETE", func() {
+		BeforeEach(func() {
+			app.store.EXPECT().
+				BookFileRoots(mock.Anything, mock.Anything).
+				Return(nil, nil).
+				Maybe()
+			app.store.EXPECT().
+				BookSeriesFileRoots(mock.Anything, mock.Anything).
+				Return(nil, nil).
+				Maybe()
+		})
+
 		It("deletes a book, with its files when asked", func() {
 			app.books.EXPECT().
 				DeleteBook(mock.Anything, uint32(7), true).
@@ -1482,6 +1493,17 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 	})
 
 	Describe("rename", func() {
+		BeforeEach(func() {
+			app.store.EXPECT().
+				BookFileRoots(mock.Anything, mock.Anything).
+				Return(nil, nil).
+				Maybe()
+			app.store.EXPECT().
+				BookSeriesFileRoots(mock.Anything, mock.Anything).
+				Return(nil, nil).
+				Maybe()
+		})
+
 		It("renders the plan of a book and of a series", func() {
 			plan := library.RenamePlan{Operations: []library.RenameOperation{
 				{MediaFileID: 1, From: "/a", To: "/b"},

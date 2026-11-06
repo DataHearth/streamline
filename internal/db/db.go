@@ -1376,6 +1376,8 @@ type Store interface {
 	) ([]DriftRow, error)
 	FindMediaFileWithOwners(ctx context.Context, id uint32) (*ent.MediaFile, error)
 	CountRootFiles(ctx context.Context, root LibraryRoot) (int, error)
+	BookFileRoots(ctx context.Context, bookID uint32) ([]LibraryRoot, error)
+	BookSeriesFileRoots(ctx context.Context, seriesID uint32) ([]LibraryRoot, error)
 	RootFilePathAt(ctx context.Context, root LibraryRoot, offset int) (string, error)
 	ListRootFilesForDrift(
 		ctx context.Context,

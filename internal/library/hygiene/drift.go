@@ -171,12 +171,43 @@ func (s *Service) handleMissing(
 		time.Since(*row.MissingSince) < graceWindow {
 		return
 	}
+	// The skip list is from the start of the sweep, and a clock can be old
+	// because an earlier outage started it and offline ticks never cleared it,
+	// so a mount dying now must not make this past grace at once.
+	if root, owned := fileRoot(row); owned {
+		status, err := roothealth.Offline(ctx, root)
+		if err != nil {
+			slog.WarnContext(ctx, "could not check the library root before a revert",
+				"media_file.id", row.ID, "error", err)
+			return
+		}
+		if status != nil {
+			return
+		}
+	}
 	s.confirmMissing(ctx, row, *row.MissingSince, acc)
+}
+
+func fileRoot(row *ent.MediaFile) (db.LibraryRoot, bool) {
+	switch {
+	case row.Edges.Movie != nil:
+		return db.RootMovies, true
+	case row.Edges.Episode != nil:
+		return db.RootSeries, true
+	case row.Edges.Track != nil:
+		return db.RootMusic, true
+	case row.Edges.Book != nil:
+		return db.BookRoot(string(row.BookKind)), true
+	}
+	return "", false
 }
 
 // ErrRootOnline refuses AcceptMissing on a root that is not offline: the volume
 // may have returned while the dialog was open.
 var ErrRootOnline = errors.New("this library root is online; nothing was removed")
+
+// ErrAcceptRunning refuses a second walk while one is removing rows.
+var ErrAcceptRunning = errors.New("missing files are already being removed")
 
 // confirmMissing records a file as gone for good and removes its row, reverting
 // its owner. It reports whether the row was removed.
@@ -225,6 +256,11 @@ func (s *Service) AcceptMissing(
 	ctx, span := tracer.Start(ctx, "hygiene.accept_missing",
 		trace.WithAttributes(attribute.String("library.root", string(root))))
 	defer span.End()
+
+	if !s.acceptMu.TryLock() {
+		return 0, otelx.RecordSpanError(span, ErrAcceptRunning)
+	}
+	defer s.acceptMu.Unlock()
 
 	status, err := roothealth.Offline(ctx, root)
 	if err != nil {

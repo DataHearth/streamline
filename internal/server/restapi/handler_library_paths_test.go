@@ -1,10 +1,12 @@
 package restapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -60,6 +62,78 @@ var _ = Describe("Handler: Library path migration",
 				var body AcceptMissingResult
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 				Expect(body.Removed).To(Equal(1))
+			})
+
+			gone := func() []db.DriftRow {
+				return []db.DriftRow{{ID: 7, Path: "/gone/file.flac"}}
+			}
+			expectRemoval := func() {
+				app.store.EXPECT().FindMediaFileWithOwners(mock.Anything, uint32(7)).
+					Return(&ent.MediaFile{ID: 7, Edges: ent.MediaFileEdges{
+						Track: &ent.Track{
+							Edges: ent.TrackEdges{Album: &ent.Album{ID: 3}},
+						},
+					}}, nil).Once()
+				app.store.EXPECT().
+					DeleteMediaFileAndRevertAlbum(mock.Anything, uint32(7), uint32(3)).
+					Return(nil).Once()
+			}
+
+			It("outlives the listener's write timeout", func() {
+				app.srv.Config.WriteTimeout = 50 * time.Millisecond
+				roottest.Offline(db.RootMusic)
+				app.store.EXPECT().
+					ListRootFilesForDrift(mock.Anything, db.RootMusic, uint32(0), mock.Anything).
+					RunAndReturn(func(context.Context, db.LibraryRoot, uint32, int) ([]db.DriftRow, error) {
+						time.Sleep(200 * time.Millisecond)
+						return gone(), nil
+					}).
+					Once()
+				app.store.EXPECT().
+					ListRootFilesForDrift(mock.Anything, db.RootMusic, uint32(7), mock.Anything).
+					Return(nil, nil).Once()
+				expectRemoval()
+
+				resp := app.do(app.req(http.MethodPost, url, app.adminKey, nil))
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			})
+
+			It("finishes the walk when the client goes away", func() {
+				roottest.Offline(db.RootMusic)
+				reqCtx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				finished := make(chan struct{})
+				app.store.EXPECT().
+					ListRootFilesForDrift(mock.Anything, db.RootMusic, uint32(0), mock.Anything).
+					RunAndReturn(func(context.Context, db.LibraryRoot, uint32, int) ([]db.DriftRow, error) {
+						cancel()
+						time.Sleep(200 * time.Millisecond)
+						return gone(), nil
+					}).
+					Once()
+				app.store.EXPECT().
+					ListRootFilesForDrift(mock.Anything, db.RootMusic, uint32(7), mock.Anything).
+					RunAndReturn(func(context.Context, db.LibraryRoot, uint32, int) ([]db.DriftRow, error) {
+						close(finished)
+						return nil, nil
+					}).
+					Once()
+				expectRemoval()
+
+				go func() {
+					defer GinkgoRecover()
+					resp, err := http.DefaultClient.Do(
+						app.req(http.MethodPost, url, app.adminKey, nil).
+							WithContext(reqCtx),
+					)
+					if err == nil {
+						Expect(resp.Body.Close()).To(Succeed())
+					}
+				}()
+
+				Eventually(finished, "5s").Should(BeClosed())
 			})
 
 			It("refuses a member", func() {

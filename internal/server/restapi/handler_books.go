@@ -10,7 +10,6 @@ import (
 	"github.com/datahearth/streamline/internal/auth"
 
 	"github.com/datahearth/streamline/internal/config"
-	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/book"
@@ -497,11 +496,7 @@ func (s *Server) DeleteBook(
 	}
 	deleteFiles := req.Params.DeleteFiles != nil && *req.Params.DeleteFiles
 	if deleteFiles {
-		if err := roothealth.Require(
-			ctx,
-			db.RootEbooks,
-			db.RootAudiobooks,
-		); err != nil {
+		if err := s.requireBookRoots(ctx, req.Id); err != nil {
 			return nil, err
 		}
 	}
@@ -534,11 +529,7 @@ func (s *Server) DeleteBookSeries(
 	}
 	deleteFiles := req.Params.DeleteFiles != nil && *req.Params.DeleteFiles
 	if deleteFiles {
-		if err := roothealth.Require(
-			ctx,
-			db.RootEbooks,
-			db.RootAudiobooks,
-		); err != nil {
+		if err := s.requireBookSeriesRoots(ctx, req.Id); err != nil {
 			return nil, err
 		}
 	}
@@ -802,7 +793,7 @@ func (s *Server) RenameBookFiles(
 			ForbiddenJSONResponse: requestOnlyResp,
 		}, nil
 	}
-	if err := roothealth.Require(ctx, db.RootEbooks, db.RootAudiobooks); err != nil {
+	if err := s.requireBookRoots(ctx, req.Id); err != nil {
 		return nil, err
 	}
 	preview := req.Params.Preview != nil && *req.Params.Preview
@@ -833,7 +824,7 @@ func (s *Server) RenameBookSeriesFiles(
 			ForbiddenJSONResponse: requestOnlyResp,
 		}, nil
 	}
-	if err := roothealth.Require(ctx, db.RootEbooks, db.RootAudiobooks); err != nil {
+	if err := s.requireBookSeriesRoots(ctx, req.Id); err != nil {
 		return nil, err
 	}
 	preview := req.Params.Preview != nil && *req.Params.Preview
@@ -853,4 +844,22 @@ func (s *Server) RenameBookSeriesFiles(
 		SeriesId:   req.Id,
 		Operations: toRenameOperations(plan.Operations),
 	}, nil
+}
+
+// requireBookRoots refuses only when a root holding this book's files is offline:
+// an audiobook on a healthy root is not held back by an ebook outage.
+func (s *Server) requireBookRoots(ctx context.Context, bookID uint32) error {
+	roots, err := s.store.BookFileRoots(ctx, bookID)
+	if err != nil {
+		return err
+	}
+	return roothealth.Require(ctx, roots...)
+}
+
+func (s *Server) requireBookSeriesRoots(ctx context.Context, seriesID uint32) error {
+	roots, err := s.store.BookSeriesFileRoots(ctx, seriesID)
+	if err != nil {
+		return err
+	}
+	return roothealth.Require(ctx, roots...)
 }

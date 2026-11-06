@@ -581,10 +581,9 @@ func rewrite(path, from, to string) string {
 // WarnOnDrift logs a CRITICAL line for every root whose stored paths all sit
 // somewhere other than where the config now points. Nothing else notices that
 // situation, and the fix — POST /library/path-migration — is only reachable
-// by an operator who knows to look. The consequence differs by root:
-// drift-check walks media files only, so movie/series records are deleted
-// once drift_grace_ticks elapses, while download rows are never pruned on
-// drift — there the dangling paths break importing instead.
+// by an operator who knows to look. The consequence differs by root: a media
+// root whose files cannot be reached is held offline by roothealth, while
+// dangling download paths break importing instead.
 func (s *Service) WarnOnDrift(ctx context.Context) {
 	roots, err := s.Roots(ctx)
 	if err != nil {

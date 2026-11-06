@@ -553,6 +553,10 @@ func (s *Server) ReidentifyMovie(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
+	// A re-identify renames the files, and a rename creates folders first.
+	if err := roothealth.Require(ctx, db.RootMovies); err != nil {
+		return nil, err
+	}
 	m, err := s.movies.Reidentify(ctx, request.Id, request.Body.TmdbId)
 	switch {
 	case errors.Is(err, moviesvc.ErrMovieNotFound):

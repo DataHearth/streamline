@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -46,6 +47,24 @@ func (s *unmountingStore) ListMediaFilesForDrift(
 	}
 	s.paths = nil
 	return s.Store.ListMediaFilesForDrift(ctx, afterID, limit, skip...)
+}
+
+// blockingRootStore holds an accept-missing walk at its first page.
+type blockingRootStore struct {
+	db.Store
+	started, release chan struct{}
+	once             sync.Once
+}
+
+func (s *blockingRootStore) ListRootFilesForDrift(
+	ctx context.Context,
+	root db.LibraryRoot,
+	afterID uint32,
+	limit int,
+) ([]db.DriftRow, error) {
+	s.once.Do(func() { close(s.started) })
+	<-s.release
+	return s.Store.ListRootFilesForDrift(ctx, root, afterID, limit)
 }
 
 var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
@@ -449,6 +468,35 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 				Expect(roothealth.Offline(ctx, db.RootMusic)).To(BeNil())
 			})
 
+			It("refuses a second walk while one is running", func() {
+				trackFile("01.flac", 1, nil)
+				started, release := make(chan struct{}), make(chan struct{})
+				walking := New(
+					&blockingRootStore{
+						Store:   store,
+						started: started,
+						release: release,
+					},
+					meta,
+					metamocks.NewMockTVProvider(GinkgoT()),
+					&config.Get().Library,
+				)
+				done := make(chan struct{})
+				go func() {
+					defer GinkgoRecover()
+					defer close(done)
+					_, err := walking.AcceptMissing(ctx, db.RootMusic)
+					Expect(err).NotTo(HaveOccurred())
+				}()
+				Eventually(started).Should(BeClosed())
+
+				_, err := walking.AcceptMissing(ctx, db.RootMusic)
+
+				Expect(err).To(MatchError(ErrAcceptRunning))
+				close(release)
+				Eventually(done).Should(BeClosed())
+			})
+
 			It("refuses a root that is online and removes nothing", func() {
 				_, err := svc.AcceptMissing(ctx, db.RootMovies)
 
@@ -601,6 +649,31 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 
 			Expect(store.FindMediaFileByID(ctx, first.ID)).NotTo(BeNil())
 			Expect(missingSince(first)).To(HaveValue(BeTemporally("==", *started)))
+			Expect(
+				entClient.Album.GetX(ctx, alb.ID).Status,
+			).To(Equal(entalbum.StatusAvailable))
+		})
+
+		It("reverts nothing on a stale clock when the root drops mid-sweep", func() {
+			paths := []string{
+				filepath.Join(musicDir, "01.flac"),
+				filepath.Join(musicDir, "02.flac"),
+			}
+			for _, p := range paths {
+				Expect(os.WriteFile(p, []byte("data"), 0o644)).To(Succeed())
+			}
+			old := time.Now().Add(-48 * time.Hour)
+			stale := trackFile("01.flac", 1, &old)
+			trackFile("02.flac", 2, nil)
+			sweep := New(
+				&unmountingStore{Store: store, paths: paths},
+				meta, metamocks.NewMockTVProvider(GinkgoT()),
+				&config.Get().Library,
+			)
+
+			Expect(sweep.RunDriftCheck(ctx, time.Nanosecond)).To(Succeed())
+
+			Expect(store.FindMediaFileByID(ctx, stale.ID)).NotTo(BeNil())
 			Expect(
 				entClient.Album.GetX(ctx, alb.ID).Status,
 			).To(Equal(entalbum.StatusAvailable))

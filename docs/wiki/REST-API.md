@@ -128,6 +128,8 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 
 **Errors** are `{"message": "..."}` with a conventional status: `400` bad request, `401` unauthenticated, `403` forbidden (usually not an admin), `404`, `409` conflict (already exists), `422` unprocessable, `500`. Some carry a stable `code` alongside the message when the caller needs to branch on the specific reason — `last_admin`, `email_exists`, `connection_failed` (a connection test's upstream diagnostic), `invalid_condition` (a custom-format condition that would not compile), `grab_rejected` (a grab the server refused — an untrusted download host, a release whose files match no wanted episode, a built-in client already holding its maximum of 500 torrents, a release that would not fit on the download client's disk (the [free-space check](First-Run-Setup#free-space-check)), a `.torrent` whose name the built-in engine refuses, an album `.torrent` that is one CUE disc image, a release the download client already holds, or a search result whose handle expired when the session secret rotated), `upload_rejected`, `upload_conflict` and `no_space` (an [upload](Uploading-files) the server refused, found busy or had no room for), `no_quality_profile`, `rate_limited` (a metadata provider's limit, with `Retry-After`), `hardcover_not_configured` / `hardcover_key_rejected`. `connection_failed`, `grab_rejected` and the three upload codes carry a message composed for display, which the web UI shows verbatim; a coded error's `message` is otherwise still advisory.
 
+A change to the files of an offline library root (rename, delete with files, upload, re-identify, import commit) answers `409` with `code: library_offline`. A book or series is refused only when a root holding its files is offline.
+
 ---
 
 ## Endpoint map
@@ -410,7 +412,7 @@ All four answer `409` while `transcoding.enabled` is false.
 | `GET` `POST` | `/library/path-migration` | List / start a path migration | 🔒 Admin |
 | `GET` | `/library/path-migration/roots` | List roots | 🔒 Admin |
 | `POST` | `/library/path-migration/preview` | Preview a migration | 🔒 Admin |
-| `POST` | `/library/roots/{root}/accept-missing` | Remove the records of an offline root whose files are not found (`200 {removed}`; `409` `library_online` when the root is online) | 🔒 Admin |
+| `POST` | `/library/roots/{root}/accept-missing` | Remove the records of an offline root whose files are not found (`200 {removed}`; `409` `library_online` when the root is online, `409` `library_accept_running` during another walk). The request stays open for the whole walk, and the walk finishes even if the client leaves | 🔒 Admin |
 
 An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` and `book` adopt in place only and reject `mode=rename` with `422`. `music` scans album folders against MusicBrainz; each row carries `tagged_year`, `format` (`FLAC 24/96`, `MP3 320`; the extension when ffprobe is off), `size`, `file_count` and a live `artist_id` (absent when the library lacks the artist, which a commit then adds), and each candidate its `type`. `book` scans ebook and audiobook items against Hardcover; each row carries `parsed_year`, `format`, `size`, `file_count` and `source_path`; starting or committing one without a Hardcover API key answers `503`. A row whose files joined an album or book the library already held ends `attached` rather than `created`. A scan that fails because Hardcover refused the key mid-run carries `failure_code: hardcover_key_rejected` (`hardcover_not_configured` if the key vanished before it ran); every other failure has the free-text `failure_reason` alone.
 
@@ -503,6 +505,8 @@ Stream data is **aggregate, not per-track**: a count and two language sets. Ther
 It describes the file's **main** video track and its first audio track. Embedded cover art and poster thumbnails are video streams as far as ffprobe is concerned, so the largest one wins — a 4K film carrying a 300×300 poster reports `3840`, not `300`.
 
 **`ffmpeg_warn`** on `GET /system/info` is `true` when `ffmpeg.enabled` is true but ffprobe wasn't found on this process — a misconfigured `ffmpeg.path` or a custom build missing the binaries. The key is absent when `ffmpeg.enabled` is false; the operator opted out, so it's not a warning.
+
+**`library_offline`** on `GET /system/info` lists the library roots that look gone, each with `root`, `path`, `tracked` and `reason` (`path_missing`, `path_empty` or `files_missing`), and is absent while every root is online. The header pill turns degraded. See [A library root is offline](Troubleshooting#a-library-root-is-offline).
 
 **`hardcover_auth_warn`** on `GET /system/info` is `true` when Hardcover's most recent answer was HTTP 401, which means the configured token was rejected or has expired. The header pill turns amber and Settings → General shows a notice; the flag clears on the next successful Hardcover call. Absent when no 401 is outstanding.
 

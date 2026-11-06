@@ -1327,6 +1327,74 @@ func (_c *MockStore_AttachMediaFileToEpisode_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
+// BookFileRoots provides a mock function for the type MockStore
+func (_mock *MockStore) BookFileRoots(ctx context.Context, bookID uint32) ([]db.LibraryRoot, error) {
+	ret := _mock.Called(ctx, bookID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BookFileRoots")
+	}
+
+	var r0 []db.LibraryRoot
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]db.LibraryRoot, error)); ok {
+		return returnFunc(ctx, bookID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []db.LibraryRoot); ok {
+		r0 = returnFunc(ctx, bookID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.LibraryRoot)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, bookID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_BookFileRoots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookFileRoots'
+type MockStore_BookFileRoots_Call struct {
+	*mock.Call
+}
+
+// BookFileRoots is a helper method to define mock.On call
+//   - ctx context.Context
+//   - bookID uint32
+func (_e *MockStore_Expecter) BookFileRoots(ctx any, bookID any) *MockStore_BookFileRoots_Call {
+	return &MockStore_BookFileRoots_Call{Call: _e.mock.On("BookFileRoots", ctx, bookID)}
+}
+
+func (_c *MockStore_BookFileRoots_Call) Run(run func(ctx context.Context, bookID uint32)) *MockStore_BookFileRoots_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_BookFileRoots_Call) Return(libraryRoots []db.LibraryRoot, err error) *MockStore_BookFileRoots_Call {
+	_c.Call.Return(libraryRoots, err)
+	return _c
+}
+
+func (_c *MockStore_BookFileRoots_Call) RunAndReturn(run func(ctx context.Context, bookID uint32) ([]db.LibraryRoot, error)) *MockStore_BookFileRoots_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BookHardcoverIndex provides a mock function for the type MockStore
 func (_mock *MockStore) BookHardcoverIndex(ctx context.Context, kind string) (map[uint32]uint32, error) {
 	ret := _mock.Called(ctx, kind)
@@ -1391,6 +1459,74 @@ func (_c *MockStore_BookHardcoverIndex_Call) Return(uint32ToUint32 map[uint32]ui
 }
 
 func (_c *MockStore_BookHardcoverIndex_Call) RunAndReturn(run func(ctx context.Context, kind string) (map[uint32]uint32, error)) *MockStore_BookHardcoverIndex_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// BookSeriesFileRoots provides a mock function for the type MockStore
+func (_mock *MockStore) BookSeriesFileRoots(ctx context.Context, seriesID uint32) ([]db.LibraryRoot, error) {
+	ret := _mock.Called(ctx, seriesID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BookSeriesFileRoots")
+	}
+
+	var r0 []db.LibraryRoot
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]db.LibraryRoot, error)); ok {
+		return returnFunc(ctx, seriesID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []db.LibraryRoot); ok {
+		r0 = returnFunc(ctx, seriesID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.LibraryRoot)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, seriesID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_BookSeriesFileRoots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookSeriesFileRoots'
+type MockStore_BookSeriesFileRoots_Call struct {
+	*mock.Call
+}
+
+// BookSeriesFileRoots is a helper method to define mock.On call
+//   - ctx context.Context
+//   - seriesID uint32
+func (_e *MockStore_Expecter) BookSeriesFileRoots(ctx any, seriesID any) *MockStore_BookSeriesFileRoots_Call {
+	return &MockStore_BookSeriesFileRoots_Call{Call: _e.mock.On("BookSeriesFileRoots", ctx, seriesID)}
+}
+
+func (_c *MockStore_BookSeriesFileRoots_Call) Run(run func(ctx context.Context, seriesID uint32)) *MockStore_BookSeriesFileRoots_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_BookSeriesFileRoots_Call) Return(libraryRoots []db.LibraryRoot, err error) *MockStore_BookSeriesFileRoots_Call {
+	_c.Call.Return(libraryRoots, err)
+	return _c
+}
+
+func (_c *MockStore_BookSeriesFileRoots_Call) RunAndReturn(run func(ctx context.Context, seriesID uint32) ([]db.LibraryRoot, error)) *MockStore_BookSeriesFileRoots_Call {
 	_c.Call.Return(run)
 	return _c
 }

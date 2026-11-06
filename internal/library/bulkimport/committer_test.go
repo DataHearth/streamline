@@ -12,6 +12,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
@@ -91,6 +92,41 @@ var _ = Describe("Service.Commit validation", Label("unit", "bulkimport"), func(
 			Expect(refused).To(BeTrue())
 		},
 	)
+
+	Describe("the roots a book commit needs", func() {
+		roots := func(slots ...entimportscanbook.Slot) []db.LibraryRoot {
+			GinkgoHelper()
+			rows := make([]*ent.ImportScanBook, len(slots))
+			for i, slot := range slots {
+				rows[i] = &ent.ImportScanBook{Slot: slot}
+			}
+			store.EXPECT().ListImportScanBooksForCommit(mock.Anything, uint32(6)).
+				Return(rows, nil).Once()
+			got, err := svc.scanRoots(
+				ctx,
+				&ent.ImportScan{ID: 6, Kind: entimportscan.KindBook},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			return got
+		}
+
+		It("needs only the audiobook root for audiobook rows", func() {
+			Expect(
+				roots(
+					entimportscanbook.SlotAudiobook,
+					entimportscanbook.SlotAudiobook,
+				),
+			).
+				To(ConsistOf(db.RootAudiobooks))
+		})
+
+		It("needs both roots for a mixed scan", func() {
+			Expect(
+				roots(entimportscanbook.SlotEbook, entimportscanbook.SlotAudiobook),
+			).
+				To(ConsistOf(db.RootEbooks, db.RootAudiobooks))
+		})
+	})
 
 	It("returns ErrScanNotFound when scan does not exist", func() {
 		store.EXPECT().FindImportScan(mock.Anything, uint32(2)).

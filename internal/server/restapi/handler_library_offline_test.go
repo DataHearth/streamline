@@ -6,6 +6,7 @@ import (
 	"errors"
 	"mime/multipart"
 	"net/http"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -110,54 +111,6 @@ var _ = Describe(
 				http.MethodDelete,
 				"/api/v1/music/artists/1?delete_files=true",
 			),
-			Entry(
-				"rename book, ebooks gone",
-				db.RootEbooks,
-				http.MethodPost,
-				"/api/v1/books/1/rename",
-			),
-			Entry(
-				"rename book, audiobooks gone",
-				db.RootAudiobooks,
-				http.MethodPost,
-				"/api/v1/books/1/rename",
-			),
-			Entry(
-				"rename book series, ebooks gone",
-				db.RootEbooks,
-				http.MethodPost,
-				"/api/v1/books/series/1/rename",
-			),
-			Entry(
-				"rename book series, audiobooks gone",
-				db.RootAudiobooks,
-				http.MethodPost,
-				"/api/v1/books/series/1/rename",
-			),
-			Entry(
-				"delete book with files, ebooks gone",
-				db.RootEbooks,
-				http.MethodDelete,
-				"/api/v1/books/1?delete_files=true",
-			),
-			Entry(
-				"delete book with files, audiobooks gone",
-				db.RootAudiobooks,
-				http.MethodDelete,
-				"/api/v1/books/1?delete_files=true",
-			),
-			Entry(
-				"delete book series with files, ebooks gone",
-				db.RootEbooks,
-				http.MethodDelete,
-				"/api/v1/books/series/1?delete_files=true",
-			),
-			Entry(
-				"delete book series with files, audiobooks gone",
-				db.RootAudiobooks,
-				http.MethodDelete,
-				"/api/v1/books/series/1?delete_files=true",
-			),
 		)
 
 		DescribeTable(
@@ -199,6 +152,90 @@ var _ = Describe(
 
 			Expect(resp.StatusCode).NotTo(Equal(http.StatusConflict))
 		})
+
+		DescribeTable(
+			"refuses a change to the files of a book held in an offline root",
+			func(method, path string) {
+				roottest.Offline(db.RootAudiobooks)
+				held := []db.LibraryRoot{db.RootEbooks, db.RootAudiobooks}
+				app.store.EXPECT().
+					BookFileRoots(mock.Anything, uint32(1)).
+					Return(held, nil).
+					Maybe()
+				app.store.EXPECT().
+					BookSeriesFileRoots(mock.Anything, uint32(1)).
+					Return(held, nil).
+					Maybe()
+
+				expectRefused(app.do(app.req(method, path, app.adminKey, nil)))
+			},
+			Entry("rename book", http.MethodPost, "/api/v1/books/1/rename"),
+			Entry(
+				"rename book series",
+				http.MethodPost,
+				"/api/v1/books/series/1/rename",
+			),
+			Entry(
+				"delete book with files",
+				http.MethodDelete,
+				"/api/v1/books/1?delete_files=true",
+			),
+			Entry(
+				"delete book series with files",
+				http.MethodDelete,
+				"/api/v1/books/series/1?delete_files=true",
+			),
+		)
+
+		It("deletes an audiobook-only book while only ebooks are offline", func() {
+			roottest.Offline(db.RootEbooks)
+			app.store.EXPECT().BookFileRoots(mock.Anything, uint32(1)).
+				Return([]db.LibraryRoot{db.RootAudiobooks}, nil).Once()
+			app.books.EXPECT().
+				DeleteBook(mock.Anything, uint32(1), true).
+				Return(nil).
+				Once()
+
+			resp := app.do(
+				app.req(
+					http.MethodDelete,
+					"/api/v1/books/1?delete_files=true",
+					app.adminKey,
+					nil,
+				),
+			)
+			defer resp.Body.Close()
+
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		DescribeTable(
+			"refuses a re-identify, which renames files",
+			func(root db.LibraryRoot, path, body string) {
+				roottest.Offline(root)
+				req := app.req(
+					http.MethodPost,
+					path,
+					app.adminKey,
+					strings.NewReader(body),
+				)
+				req.Header.Set("Content-Type", "application/json")
+
+				expectRefused(app.do(req))
+			},
+			Entry(
+				"movie",
+				db.RootMovies,
+				"/api/v1/movies/1/reidentify",
+				`{"tmdb_id":1}`,
+			),
+			Entry(
+				"series",
+				db.RootSeries,
+				"/api/v1/series/1/reidentify",
+				`{"tvdb_id":1}`,
+			),
+		)
 
 		It("still deletes a movie that keeps its files", func() {
 			roottest.Offline(db.RootMovies)

@@ -12,6 +12,7 @@ package hygiene
 
 import (
 	"context"
+	"sync"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
@@ -124,6 +125,7 @@ func init() {
 // the on-disk library and the database. It is stateless aside from its
 // dependencies; one instance is shared between the scheduler jobs.
 type Service struct {
+	acceptMu sync.Mutex
 	store    db.Store
 	metadata metadata.Provider
 	tvmeta   metadata.TVProvider

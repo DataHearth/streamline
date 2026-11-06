@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -35,16 +37,30 @@ func (s *Service) Commit(ctx context.Context, id uint32) error {
 	return s.CommitWith(ctx, id, CommitOptions{})
 }
 
-func scanRoots(kind entimportscan.Kind) []db.LibraryRoot {
-	switch kind {
+// scanRoots names the roots a commit adds files to. A book scan covers both book
+// roots, so it goes by the rows being committed: a healthy root is never held
+// back by the other one.
+func (s *Service) scanRoots(
+	ctx context.Context,
+	scan *ent.ImportScan,
+) ([]db.LibraryRoot, error) {
+	switch scan.Kind {
 	case entimportscan.KindSeries:
-		return []db.LibraryRoot{db.RootSeries}
+		return []db.LibraryRoot{db.RootSeries}, nil
 	case entimportscan.KindMusic:
-		return []db.LibraryRoot{db.RootMusic}
+		return []db.LibraryRoot{db.RootMusic}, nil
 	case entimportscan.KindBook:
-		return []db.LibraryRoot{db.RootEbooks, db.RootAudiobooks}
+		rows, err := s.store.ListImportScanBooksForCommit(ctx, scan.ID)
+		if err != nil {
+			return nil, err
+		}
+		held := map[db.LibraryRoot]bool{}
+		for _, row := range rows {
+			held[db.BookRoot(string(row.Slot))] = true
+		}
+		return slices.Collect(maps.Keys(held)), nil
 	}
-	return []db.LibraryRoot{db.RootMovies}
+	return []db.LibraryRoot{db.RootMovies}, nil
 }
 
 // CommitWith commits a reviewed scan in the background.
@@ -81,7 +97,11 @@ func (s *Service) CommitWith(
 	if scan.Kind == entimportscan.KindBook && s.bookmeta == nil {
 		return otelx.RecordSpanError(span, book.ErrNotConfigured)
 	}
-	if err := roothealth.Require(ctx, scanRoots(scan.Kind)...); err != nil {
+	roots, err := s.scanRoots(ctx, scan)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if err := roothealth.Require(ctx, roots...); err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
 	if err := s.store.UpdateImportScanStatus(
