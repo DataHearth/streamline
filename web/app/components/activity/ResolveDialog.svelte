@@ -7,10 +7,11 @@
 	import { api } from "@lib/api";
 	import { entryHeading, holdFileCount } from "@lib/activity-touch";
 	import type {
+		FolderPlan,
+		HoldAssignments,
 		HoldCheck,
 		HoldReason,
 		QueueEntry,
-		TrackAssignment,
 		TrackPlan,
 		TrackPlanTrack,
 	} from "@lib/types";
@@ -30,7 +31,7 @@
 		pending?: boolean;
 		onResolve: (
 			action: "import" | "regrab" | "delete",
-			trackAssignments?: TrackAssignment[],
+			assignments?: HoldAssignments,
 		) => void;
 		onClose: () => void;
 	} = $props();
@@ -71,6 +72,58 @@
 		refetchOnWindowFocus: false,
 	}));
 	const plan = $derived(needsPlan ? planQuery.data : undefined);
+
+	const heldFolders = $derived(
+		new Set(
+			(item?.hold_reasons ?? [])
+				.filter((r) => r.check === "folder")
+				.map((r) => r.file),
+		),
+	);
+	const folderQuery = createQuery<FolderPlan>(() => ({
+		queryKey: ["folder-plan", item?.id],
+		queryFn: () => api<FolderPlan>(`/downloads/${item?.id}/folder-plan`),
+		enabled: heldFolders.size > 0,
+		retry: false,
+		gcTime: 0,
+		refetchOnWindowFocus: false,
+	}));
+	const folderPlan = $derived(heldFolders.size > 0 ? folderQuery.data : undefined);
+
+	// The chosen album per folder, "" for a folder left out.
+	let folderChoices = $state<Record<string, string>>({});
+	let foldersSeededFor = $state<number | null>(null);
+	$effect(() => {
+		if (!item) foldersSeededFor = null;
+		if (item && folderPlan && foldersSeededFor !== item.id) {
+			foldersSeededFor = item.id;
+			folderChoices = Object.fromEntries(
+				folderPlan.folders.map((f) => [
+					f.folder,
+					f.album_id ? String(f.album_id) : "",
+				]),
+			);
+		}
+	});
+	const planFolders = $derived(
+		(folderPlan?.folders ?? []).toSorted(
+			(a, b) => Number(heldFolders.has(b.folder)) - Number(heldFolders.has(a.folder)),
+		),
+	);
+	const chosenAlbums = $derived(Object.values(folderChoices).filter(Boolean));
+	const albumTaken = (album: string) =>
+		album !== "" && chosenAlbums.filter((c) => c === album).length > 1;
+	const albumOptions = $derived([
+		{ value: "", label: i18n.hold_track_skip() },
+		...(folderPlan?.albums ?? []).map((a) => ({
+			value: String(a.id),
+			label: a.year ? `${a.year} · ${a.title}` : a.title,
+		})),
+	]);
+	const foldersReady = $derived(
+		!folderPlan ||
+			(chosenAlbums.length > 0 && new Set(chosenAlbums).size === chosenAlbums.length),
+	);
 
 	// The chosen track per file, "" for a file left out.
 	let choices = $state<Record<string, string>>({});
@@ -118,13 +171,18 @@
 	]);
 
 	function importHeld() {
-		onResolve(
-			"import",
-			plan &&
+		onResolve("import", {
+			track_assignments:
+				plan &&
 				Object.entries(choices)
 					.filter(([, track]) => track)
 					.map(([file, track]) => ({ file, track_id: Number(track) })),
-		);
+			folder_assignments:
+				folderPlan &&
+				Object.entries(folderChoices)
+					.filter(([, album]) => album)
+					.map(([folder, album]) => ({ folder, album_id: Number(album) })),
+		});
 	}
 
 	const CHECK_LABELS: Record<HoldCheck, () => string> = {
@@ -137,6 +195,7 @@
 		album: () => i18n.hold_check_album(),
 		track: () => i18n.hold_check_track(),
 		missing: () => i18n.hold_check_missing(),
+		folder: () => i18n.hold_check_folder(),
 		format: () => i18n.hold_check_format(),
 		bitrate: () => i18n.hold_check_bitrate(),
 		metadata: () => i18n.hold_check_metadata(),
@@ -152,7 +211,12 @@
 	let groups = $derived.by<FileGroup[]>(() => {
 		const out = new Map<string, FileGroup>();
 		for (const r of item?.hold_reasons ?? []) {
-			if (r.check === "missing" || (plan && r.check === "track")) continue;
+			if (
+				r.check === "missing" ||
+				(plan && r.check === "track") ||
+				(folderPlan && r.check === "folder")
+			)
+				continue;
 			let g = out.get(r.file);
 			if (!g) {
 				g = {
@@ -180,10 +244,15 @@
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: plan ? i18n.hold_import() : i18n.hold_import_anyway(),
+			label: plan || folderPlan ? i18n.hold_import() : i18n.hold_import_anyway(),
 			variant: "ghost",
 			dismiss: false,
-			disabled: pending || !canImport || (needsPlan && planQuery.isPending),
+			disabled:
+				pending ||
+				!canImport ||
+				!foldersReady ||
+				(needsPlan && planQuery.isPending) ||
+				(heldFolders.size > 0 && folderQuery.isPending),
 			onClick: importHeld,
 		},
 		{
@@ -196,7 +265,9 @@
 	]}
 >
 	<p class="text-sm leading-relaxed text-fg-muted">
-		{fileCount === 0
+		{heldFolders.size > 0
+			? i18n.hold_body_folders()
+			: fileCount === 0
 			? i18n.hold_body_incomplete()
 			: fileCount === 1
 				? i18n.hold_body_one()
@@ -239,6 +310,37 @@
 			</div>
 		{/each}
 	</div>
+
+	{#if folderPlan}
+		<p class="mt-4 text-sm text-fg-muted">{i18n.hold_folder_help()}</p>
+		<ul class="mt-2 flex max-h-80 flex-col gap-2 overflow-y-auto">
+			{#each planFolders as f (f.folder)}
+				<li class="grid gap-1 sm:grid-cols-2 sm:items-center sm:gap-3">
+					<span
+						class="truncate font-mono text-xs"
+						class:text-fg={!heldFolders.has(f.folder)}
+						style:color={heldFolders.has(f.folder) ? "var(--status-held)" : undefined}
+						title={f.folder}
+					>
+						{f.folder.split("/").pop()}
+					</span>
+					<div>
+						<Select
+							ariaLabel={f.folder.split("/").pop()}
+							value={folderChoices[f.folder] ?? ""}
+							options={albumOptions}
+							onChange={(v) => (folderChoices[f.folder] = v)}
+							searchable={albumOptions.length > 10}
+							maxHeight={240}
+						/>
+						{#if albumTaken(folderChoices[f.folder] ?? "")}
+							<p class="mt-1 text-xs text-status-held">{i18n.hold_folder_taken()}</p>
+						{/if}
+					</div>
+				</li>
+			{/each}
+		</ul>
+	{/if}
 
 	{#if plan}
 		{#if item?.album}

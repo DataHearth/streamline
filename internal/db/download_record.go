@@ -726,6 +726,7 @@ func (db *DB) FindHeldAlbumRecord(
 		).
 		WithAlbum(withAlbumContext).
 		WithArtist().
+		WithAlbums(withAlbumContext).
 		WithTrack().
 		Only(ctx)
 }
@@ -774,18 +775,21 @@ func (db *DB) FindHeldDownloadRecordByID(
 
 // ReleaseHeldDownloadRecord flips a held record back to importing with
 // verification bypassed, so the importer's re-run imports it as-is. Non-nil
-// assignments replace the album's track matching on that run.
+// tracks or folders replace the album's or the pack's matching on that run.
 func (db *DB) ReleaseHeldDownloadRecord(
 	ctx context.Context,
 	id uint32,
-	assignments map[string]uint32,
+	tracks, folders map[string]uint32,
 ) error {
 	update := db.client.DownloadRecord.UpdateOneID(id).
 		SetStatus(downloadrecord.StatusImporting).
 		SetVerificationBypassed(true).
 		ClearHoldReasons()
-	if assignments != nil {
-		update.SetTrackAssignments(assignments)
+	if tracks != nil {
+		update.SetTrackAssignments(tracks)
+	}
+	if folders != nil {
+		update.SetFolderAssignments(folders)
 	}
 	return update.Exec(ctx)
 }

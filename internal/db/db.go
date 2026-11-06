@@ -128,6 +128,8 @@ type Store interface {
 		to album.Status,
 	) (bool, error)
 	SetAlbumEdition(ctx context.Context, id uint32, releaseMBID string) error
+	// ListArtistAlbumTitles is every album listed under the artist, with no edges.
+	ListArtistAlbumTitles(ctx context.Context, artistID uint32) ([]*ent.Album, error)
 	// SetAlbumHydration stores an album's release call: facts, tracks, credits.
 	SetAlbumHydration(
 		ctx context.Context,
@@ -758,7 +760,7 @@ type Store interface {
 	ReleaseHeldDownloadRecord(
 		ctx context.Context,
 		id uint32,
-		assignments map[string]uint32,
+		tracks, folders map[string]uint32,
 	) error
 	FailHeldDownloadRecord(
 		ctx context.Context,

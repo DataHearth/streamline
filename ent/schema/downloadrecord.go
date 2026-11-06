@@ -56,6 +56,9 @@ func (DownloadRecord) Fields() []ent.Field {
 		// The file (source path) to track id a person chose on a held album. Once
 		// set it is the whole plan: a file it leaves out is not imported.
 		field.JSON("track_assignments", map[string]uint32{}).Optional(),
+		// The folder to album id a person chose on a held discography pack. Once
+		// set it is the whole plan: a folder it leaves out is not imported.
+		field.JSON("folder_assignments", map[string]uint32{}).Optional(),
 		// Resolution of the episodes edge against the torrent's actual file list —
 		// the indices SetWantedFiles was called with.
 		field.JSON("selected_files", []int{}).Optional(),

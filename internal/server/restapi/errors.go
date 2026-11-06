@@ -151,10 +151,10 @@ func errGrabRejected(msg string) UnprocessableEntityJSONResponse {
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
 
-// errTrackAssignmentRejected names what is wrong with a held album's chosen
-// tracks. The SPA renders it verbatim.
-func errTrackAssignmentRejected(msg string) UnprocessableEntityJSONResponse {
-	code := "track_assignment_rejected"
+// errAssignmentRejected names what is wrong with a held download's chosen
+// tracks or albums. The SPA renders it verbatim.
+func errAssignmentRejected(msg string) UnprocessableEntityJSONResponse {
+	code := "assignment_rejected"
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
 

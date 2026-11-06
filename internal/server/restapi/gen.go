@@ -855,6 +855,7 @@ const (
 	HoldReasonCheckCodec      HoldReasonCheck = "codec"
 	HoldReasonCheckCorrupt    HoldReasonCheck = "corrupt"
 	HoldReasonCheckDuration   HoldReasonCheck = "duration"
+	HoldReasonCheckFolder     HoldReasonCheck = "folder"
 	HoldReasonCheckFormat     HoldReasonCheck = "format"
 	HoldReasonCheckMetadata   HoldReasonCheck = "metadata"
 	HoldReasonCheckMissing    HoldReasonCheck = "missing"
@@ -877,6 +878,8 @@ func (e HoldReasonCheck) Valid() bool {
 	case HoldReasonCheckCorrupt:
 		return true
 	case HoldReasonCheckDuration:
+		return true
+	case HoldReasonCheckFolder:
 		return true
 	case HoldReasonCheckFormat:
 		return true
@@ -5568,6 +5571,32 @@ type FFmpegConfigView struct {
 	Version *string `json:"version,omitempty"`
 }
 
+// FolderAssignment defines model for FolderAssignment.
+type FolderAssignment struct {
+	AlbumId uint32 `json:"album_id"`
+	Folder  string `json:"folder"`
+}
+
+// FolderPlan defines model for FolderPlan.
+type FolderPlan struct {
+	Albums  []FolderPlanAlbum  `json:"albums"`
+	Folders []FolderPlanFolder `json:"folders"`
+}
+
+// FolderPlanAlbum defines model for FolderPlanAlbum.
+type FolderPlanAlbum struct {
+	Id    uint32 `json:"id"`
+	Title string `json:"title"`
+	Year  *int   `json:"year,omitempty"`
+}
+
+// FolderPlanFolder defines model for FolderPlanFolder.
+type FolderPlanFolder struct {
+	// AlbumId The linked album the folder names. Absent when it names none.
+	AlbumId *uint32 `json:"album_id,omitempty"`
+	Folder  string  `json:"folder"`
+}
+
 // HTTPLogConfig defines model for HTTPLogConfig.
 type HTTPLogConfig struct {
 	Enabled *bool                `json:"enabled,omitempty"`
@@ -8318,6 +8347,9 @@ type ResetPasswordRequest struct {
 // "delete" deletes it and leaves the media alone.
 type ResolveHeldRequest struct {
 	Action ResolveHeldRequestAction `json:"action"`
+
+	// FolderAssignments With `import` on a held discography pack, the whole plan. A folder left out is not imported.
+	FolderAssignments *[]FolderAssignment `json:"folder_assignments,omitempty"`
 
 	// TrackAssignments With `import` on a held album, the whole plan. A file left out is not imported.
 	TrackAssignments *[]TrackAssignment `json:"track_assignments,omitempty"`
@@ -11870,6 +11902,9 @@ type ServerInterface interface {
 	// TestDownloadClient Test download client connection
 	// (POST /download-clients/{name}/test)
 	TestDownloadClient(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// GetHeldDownloadFolderPlan A held discography pack's folders, each with the album it names.
+	// (GET /downloads/{id}/folder-plan)
+	GetHeldDownloadFolderPlan(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ResolveHeldDownload Release a download held by import verification.
 	// (POST /downloads/{id}/resolve)
 	ResolveHeldDownload(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -12950,6 +12985,12 @@ func (_ Unimplemented) UpdateDownloadClient(w http.ResponseWriter, r *http.Reque
 // TestDownloadClient Test download client connection
 // (POST /download-clients/{name}/test)
 func (_ Unimplemented) TestDownloadClient(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetHeldDownloadFolderPlan A held discography pack's folders, each with the album it names.
+// (GET /downloads/{id}/folder-plan)
+func (_ Unimplemented) GetHeldDownloadFolderPlan(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -16496,6 +16537,32 @@ func (siw *ServerInterfaceWrapper) TestDownloadClient(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.TestDownloadClient(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetHeldDownloadFolderPlan operation middleware
+func (siw *ServerInterfaceWrapper) GetHeldDownloadFolderPlan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHeldDownloadFolderPlan(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -22863,6 +22930,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/downloads/{id}/track-plan", wrapper.GetHeldDownloadTrackPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/downloads/{id}/folder-plan", wrapper.GetHeldDownloadFolderPlan)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activity/history", wrapper.ListDownloadHistory)
@@ -29486,6 +29556,84 @@ func (response TestDownloadClient422JSONResponse) VisitTestDownloadClientRespons
 type TestDownloadClient500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response TestDownloadClient500JSONResponse) VisitTestDownloadClientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHeldDownloadFolderPlanRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type GetHeldDownloadFolderPlanResponseObject interface {
+	VisitGetHeldDownloadFolderPlanResponse(w http.ResponseWriter) error
+}
+
+type GetHeldDownloadFolderPlan200JSONResponse FolderPlan
+
+func (response GetHeldDownloadFolderPlan200JSONResponse) VisitGetHeldDownloadFolderPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHeldDownloadFolderPlan403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetHeldDownloadFolderPlan403JSONResponse) VisitGetHeldDownloadFolderPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHeldDownloadFolderPlan404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetHeldDownloadFolderPlan404JSONResponse) VisitGetHeldDownloadFolderPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHeldDownloadFolderPlan409JSONResponse struct{ ConflictJSONResponse }
+
+func (response GetHeldDownloadFolderPlan409JSONResponse) VisitGetHeldDownloadFolderPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHeldDownloadFolderPlan500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetHeldDownloadFolderPlan500JSONResponse) VisitGetHeldDownloadFolderPlanResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -41382,6 +41530,9 @@ type StrictServerInterface interface {
 	// TestDownloadClient Test download client connection
 	// (POST /download-clients/{name}/test)
 	TestDownloadClient(ctx context.Context, request TestDownloadClientRequestObject) (TestDownloadClientResponseObject, error)
+	// GetHeldDownloadFolderPlan A held discography pack's folders, each with the album it names.
+	// (GET /downloads/{id}/folder-plan)
+	GetHeldDownloadFolderPlan(ctx context.Context, request GetHeldDownloadFolderPlanRequestObject) (GetHeldDownloadFolderPlanResponseObject, error)
 	// ResolveHeldDownload Release a download held by import verification.
 	// (POST /downloads/{id}/resolve)
 	ResolveHeldDownload(ctx context.Context, request ResolveHeldDownloadRequestObject) (ResolveHeldDownloadResponseObject, error)
@@ -44551,6 +44702,32 @@ func (sh *strictHandler) TestDownloadClient(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(TestDownloadClientResponseObject); ok {
 		if err := validResponse.VisitTestDownloadClientResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetHeldDownloadFolderPlan operation middleware
+func (sh *strictHandler) GetHeldDownloadFolderPlan(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetHeldDownloadFolderPlanRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetHeldDownloadFolderPlan(ctx, request.(GetHeldDownloadFolderPlanRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetHeldDownloadFolderPlan")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetHeldDownloadFolderPlanResponseObject); ok {
+		if err := validResponse.VisitGetHeldDownloadFolderPlanResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

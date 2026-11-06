@@ -11713,6 +11713,74 @@ func (_c *MockStore_ListAllMediaFilesWithOwners_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
+// ListArtistAlbumTitles provides a mock function for the type MockStore
+func (_mock *MockStore) ListArtistAlbumTitles(ctx context.Context, artistID uint32) ([]*ent.Album, error) {
+	ret := _mock.Called(ctx, artistID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListArtistAlbumTitles")
+	}
+
+	var r0 []*ent.Album
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]*ent.Album, error)); ok {
+		return returnFunc(ctx, artistID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []*ent.Album); ok {
+		r0 = returnFunc(ctx, artistID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Album)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, artistID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListArtistAlbumTitles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListArtistAlbumTitles'
+type MockStore_ListArtistAlbumTitles_Call struct {
+	*mock.Call
+}
+
+// ListArtistAlbumTitles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - artistID uint32
+func (_e *MockStore_Expecter) ListArtistAlbumTitles(ctx any, artistID any) *MockStore_ListArtistAlbumTitles_Call {
+	return &MockStore_ListArtistAlbumTitles_Call{Call: _e.mock.On("ListArtistAlbumTitles", ctx, artistID)}
+}
+
+func (_c *MockStore_ListArtistAlbumTitles_Call) Run(run func(ctx context.Context, artistID uint32)) *MockStore_ListArtistAlbumTitles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListArtistAlbumTitles_Call) Return(albums []*ent.Album, err error) *MockStore_ListArtistAlbumTitles_Call {
+	_c.Call.Return(albums, err)
+	return _c
+}
+
+func (_c *MockStore_ListArtistAlbumTitles_Call) RunAndReturn(run func(ctx context.Context, artistID uint32) ([]*ent.Album, error)) *MockStore_ListArtistAlbumTitles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListArtistAlbumsForSearch provides a mock function for the type MockStore
 func (_mock *MockStore) ListArtistAlbumsForSearch(ctx context.Context, artistID uint32) ([]*ent.Album, error) {
 	ret := _mock.Called(ctx, artistID)
@@ -18750,16 +18818,16 @@ func (_c *MockStore_RejectedReleases_Call) RunAndReturn(run func(ctx context.Con
 }
 
 // ReleaseHeldDownloadRecord provides a mock function for the type MockStore
-func (_mock *MockStore) ReleaseHeldDownloadRecord(ctx context.Context, id uint32, assignments map[string]uint32) error {
-	ret := _mock.Called(ctx, id, assignments)
+func (_mock *MockStore) ReleaseHeldDownloadRecord(ctx context.Context, id uint32, tracks map[string]uint32, folders map[string]uint32) error {
+	ret := _mock.Called(ctx, id, tracks, folders)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReleaseHeldDownloadRecord")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, map[string]uint32) error); ok {
-		r0 = returnFunc(ctx, id, assignments)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, map[string]uint32, map[string]uint32) error); ok {
+		r0 = returnFunc(ctx, id, tracks, folders)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -18774,12 +18842,13 @@ type MockStore_ReleaseHeldDownloadRecord_Call struct {
 // ReleaseHeldDownloadRecord is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-//   - assignments map[string]uint32
-func (_e *MockStore_Expecter) ReleaseHeldDownloadRecord(ctx any, id any, assignments any) *MockStore_ReleaseHeldDownloadRecord_Call {
-	return &MockStore_ReleaseHeldDownloadRecord_Call{Call: _e.mock.On("ReleaseHeldDownloadRecord", ctx, id, assignments)}
+//   - tracks map[string]uint32
+//   - folders map[string]uint32
+func (_e *MockStore_Expecter) ReleaseHeldDownloadRecord(ctx any, id any, tracks any, folders any) *MockStore_ReleaseHeldDownloadRecord_Call {
+	return &MockStore_ReleaseHeldDownloadRecord_Call{Call: _e.mock.On("ReleaseHeldDownloadRecord", ctx, id, tracks, folders)}
 }
 
-func (_c *MockStore_ReleaseHeldDownloadRecord_Call) Run(run func(ctx context.Context, id uint32, assignments map[string]uint32)) *MockStore_ReleaseHeldDownloadRecord_Call {
+func (_c *MockStore_ReleaseHeldDownloadRecord_Call) Run(run func(ctx context.Context, id uint32, tracks map[string]uint32, folders map[string]uint32)) *MockStore_ReleaseHeldDownloadRecord_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -18793,10 +18862,15 @@ func (_c *MockStore_ReleaseHeldDownloadRecord_Call) Run(run func(ctx context.Con
 		if args[2] != nil {
 			arg2 = args[2].(map[string]uint32)
 		}
+		var arg3 map[string]uint32
+		if args[3] != nil {
+			arg3 = args[3].(map[string]uint32)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -18807,7 +18881,7 @@ func (_c *MockStore_ReleaseHeldDownloadRecord_Call) Return(err error) *MockStore
 	return _c
 }
 
-func (_c *MockStore_ReleaseHeldDownloadRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32, assignments map[string]uint32) error) *MockStore_ReleaseHeldDownloadRecord_Call {
+func (_c *MockStore_ReleaseHeldDownloadRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32, tracks map[string]uint32, folders map[string]uint32) error) *MockStore_ReleaseHeldDownloadRecord_Call {
 	_c.Call.Return(run)
 	return _c
 }

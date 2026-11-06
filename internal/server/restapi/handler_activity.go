@@ -284,34 +284,15 @@ func (s *Server) ResolveHeldDownload(
 	}
 
 	if request.Body.Action == ResolveHeldRequestActionImport {
-		var assignments map[string]uint32
-		if request.Body.TrackAssignments != nil {
-			plan, err := s.trackPlans.AlbumTrackPlan(ctx, rec.ID)
-			if errors.Is(err, importer.ErrNotSingleAlbum) {
-				return ResolveHeldDownload409JSONResponse{
-					ConflictJSONResponse: errConflict(err.Error()),
-				}, nil
-			}
-			if err != nil {
-				return nil, err
-			}
-			var problem string
-			assignments, problem = checkTrackAssignments(
-				plan,
-				*request.Body.TrackAssignments,
-			)
-			if problem != "" {
-				return ResolveHeldDownload422JSONResponse{
-					UnprocessableEntityJSONResponse: errTrackAssignmentRejected(
-						problem,
-					),
-				}, nil
-			}
+		tracks, folders, resp, err := s.heldAssignments(ctx, rec.ID, request.Body)
+		if resp != nil || err != nil {
+			return resp, err
 		}
 		if err := s.store.ReleaseHeldDownloadRecord(
 			ctx,
 			rec.ID,
-			assignments,
+			tracks,
+			folders,
 		); err != nil {
 			return nil, err
 		}
@@ -338,6 +319,82 @@ func (s *Server) ResolveHeldDownload(
 		return nil, err
 	}
 	return ResolveHeldDownload204Response{}, nil
+}
+
+// heldAssignments validates a resolve's chosen tracks and folders against the
+// record. resp is set when the request cannot proceed.
+func (s *Server) heldAssignments(
+	ctx context.Context,
+	id uint32,
+	body *ResolveHeldDownloadJSONRequestBody,
+) (tracks, folders map[string]uint32, resp ResolveHeldDownloadResponseObject, _ error) {
+	reject := func(err error) (map[string]uint32, map[string]uint32, ResolveHeldDownloadResponseObject, error) {
+		return nil, nil, ResolveHeldDownload409JSONResponse{
+			ConflictJSONResponse: errConflict(err.Error()),
+		}, nil
+	}
+	var problem string
+	if body.TrackAssignments != nil {
+		plan, err := s.trackPlans.AlbumTrackPlan(ctx, id)
+		if errors.Is(err, importer.ErrNotSingleAlbum) {
+			return reject(err)
+		}
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		tracks, problem = checkTrackAssignments(plan, *body.TrackAssignments)
+	}
+	if body.FolderAssignments != nil && problem == "" {
+		plan, err := s.trackPlans.PackFolderPlan(ctx, id)
+		if errors.Is(err, importer.ErrNotPack) {
+			return reject(err)
+		}
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		folders, problem = checkFolderAssignments(plan, *body.FolderAssignments)
+	}
+	if problem != "" {
+		return nil, nil, ResolveHeldDownload422JSONResponse{
+			UnprocessableEntityJSONResponse: errAssignmentRejected(problem),
+		}, nil
+	}
+	return tracks, folders, nil, nil
+}
+
+// checkFolderAssignments is checkTrackAssignments for a pack's folders.
+func checkFolderAssignments(
+	plan importer.FolderPlan,
+	chosen []FolderAssignment,
+) (map[string]uint32, string) {
+	if len(chosen) == 0 {
+		return nil, "choose an album for at least one folder"
+	}
+	folders := make(map[string]struct{}, len(plan.Folders))
+	for _, f := range plan.Folders {
+		folders[f.Path] = struct{}{}
+	}
+	albums := make(map[uint32]string, len(plan.Albums))
+	for _, a := range plan.Albums {
+		albums[a.ID] = a.Title
+	}
+	out := make(map[string]uint32, len(chosen))
+	taken := make(map[uint32]struct{}, len(chosen))
+	for _, c := range chosen {
+		if _, ok := folders[c.Folder]; !ok {
+			return nil, c.Folder + " is not a folder of this download"
+		}
+		title, ok := albums[c.AlbumId]
+		if !ok {
+			return nil, c.Folder + " is assigned an album that is not this artist's"
+		}
+		if _, dup := taken[c.AlbumId]; dup {
+			return nil, "two folders are assigned to " + title
+		}
+		taken[c.AlbumId] = struct{}{}
+		out[c.Folder] = c.AlbumId
+	}
+	return out, ""
 }
 
 // checkTrackAssignments turns a held album's chosen tracks into what the import
@@ -426,6 +483,61 @@ func (s *Server) GetHeldDownloadTrackPlan(
 			Id: t.ID, Disc: t.Disc, Position: t.Position, Title: t.Title,
 			HasFile: len(t.Edges.MediaFiles) > 0,
 		})
+	}
+	return out, nil
+}
+
+// GetHeldDownloadFolderPlan lists a held discography pack's folders and albums.
+func (s *Server) GetHeldDownloadFolderPlan(
+	ctx context.Context,
+	request GetHeldDownloadFolderPlanRequestObject,
+) (GetHeldDownloadFolderPlanResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return GetHeldDownloadFolderPlan403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	rec, err := s.store.FindDownloadRecordByID(ctx, request.Id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return GetHeldDownloadFolderPlan404JSONResponse{
+				NotFoundJSONResponse: errNotFound("download record not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	if rec.Status != downloadrecord.StatusHeld {
+		return GetHeldDownloadFolderPlan409JSONResponse{
+			ConflictJSONResponse: errConflict("download record is not held"),
+		}, nil
+	}
+	plan, err := s.trackPlans.PackFolderPlan(ctx, rec.ID)
+	if errors.Is(err, importer.ErrNotPack) {
+		return GetHeldDownloadFolderPlan409JSONResponse{
+			ConflictJSONResponse: errConflict(err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	out := GetHeldDownloadFolderPlan200JSONResponse{
+		Folders: make([]FolderPlanFolder, 0, len(plan.Folders)),
+		Albums:  make([]FolderPlanAlbum, 0, len(plan.Albums)),
+	}
+	for _, f := range plan.Folders {
+		row := FolderPlanFolder{Folder: f.Path}
+		if f.Album != nil {
+			row.AlbumId = &f.Album.ID
+		}
+		out.Folders = append(out.Folders, row)
+	}
+	for _, a := range plan.Albums {
+		row := FolderPlanAlbum{Id: a.ID, Title: a.Title}
+		if a.ReleaseDate != nil {
+			year := a.ReleaseDate.Year()
+			row.Year = &year
+		}
+		out.Albums = append(out.Albums, row)
 	}
 	return out, nil
 }

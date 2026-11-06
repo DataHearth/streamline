@@ -431,6 +431,16 @@ func (db *DB) SetAlbumEdition(
 	return db.client.Album.UpdateOneID(id).SetEditionMbid(releaseMBID).Exec(ctx)
 }
 
+func (db *DB) ListArtistAlbumTitles(
+	ctx context.Context,
+	artistID uint32,
+) ([]*ent.Album, error) {
+	return db.client.Album.Query().
+		Where(AlbumOfArtist(artistID)).
+		Order(ent.Asc(album.FieldReleaseDate), ent.Asc(album.FieldID)).
+		All(ctx)
+}
+
 func (db *DB) FindAlbumByID(ctx context.Context, id uint32) (*ent.Album, error) {
 	q := db.client.Album.Query().Where(album.IDEQ(id))
 	withAlbumTree(q)

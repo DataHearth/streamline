@@ -1020,6 +1020,16 @@ func TrackAssignmentsNotNil() predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldNotNull(FieldTrackAssignments))
 }
 
+// FolderAssignmentsIsNil applies the IsNil predicate on the "folder_assignments" field.
+func FolderAssignmentsIsNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldIsNull(FieldFolderAssignments))
+}
+
+// FolderAssignmentsNotNil applies the NotNil predicate on the "folder_assignments" field.
+func FolderAssignmentsNotNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNotNull(FieldFolderAssignments))
+}
+
 // SelectedFilesIsNil applies the IsNil predicate on the "selected_files" field.
 func SelectedFilesIsNil() predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldIsNull(FieldSelectedFiles))

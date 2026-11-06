@@ -255,6 +255,12 @@ func (_c *DownloadRecordCreate) SetTrackAssignments(v map[string]uint32) *Downlo
 	return _c
 }
 
+// SetFolderAssignments sets the "folder_assignments" field.
+func (_c *DownloadRecordCreate) SetFolderAssignments(v map[string]uint32) *DownloadRecordCreate {
+	_c.mutation.SetFolderAssignments(v)
+	return _c
+}
+
 // SetSelectedFiles sets the "selected_files" field.
 func (_c *DownloadRecordCreate) SetSelectedFiles(v []int) *DownloadRecordCreate {
 	_c.mutation.SetSelectedFiles(v)
@@ -714,6 +720,10 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 	if value, ok := _c.mutation.TrackAssignments(); ok {
 		_spec.SetField(downloadrecord.FieldTrackAssignments, field.TypeJSON, value)
 		_node.TrackAssignments = value
+	}
+	if value, ok := _c.mutation.FolderAssignments(); ok {
+		_spec.SetField(downloadrecord.FieldFolderAssignments, field.TypeJSON, value)
+		_node.FolderAssignments = value
 	}
 	if value, ok := _c.mutation.SelectedFiles(); ok {
 		_spec.SetField(downloadrecord.FieldSelectedFiles, field.TypeJSON, value)

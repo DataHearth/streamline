@@ -21,6 +21,8 @@ var (
 	// ErrNotSingleAlbum is returned for a track plan of a record that is not
 	// one whole album: a discography pack, a track upload, or not music.
 	ErrNotSingleAlbum = errors.New("record is not a single album")
+	// ErrNotPack is returned for a folder plan of anything but a discography pack.
+	ErrNotPack = errors.New("record is not a discography pack")
 	// ErrCueImage is returned when an album release is disc images, one file
 	// per disc or vinyl side, cut by a CUE sheet beside them.
 	ErrCueImage = errors.New("release is a " + library.CueImageReason)

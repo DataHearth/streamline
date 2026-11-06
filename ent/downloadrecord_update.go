@@ -337,6 +337,18 @@ func (_u *DownloadRecordUpdate) ClearTrackAssignments() *DownloadRecordUpdate {
 	return _u
 }
 
+// SetFolderAssignments sets the "folder_assignments" field.
+func (_u *DownloadRecordUpdate) SetFolderAssignments(v map[string]uint32) *DownloadRecordUpdate {
+	_u.mutation.SetFolderAssignments(v)
+	return _u
+}
+
+// ClearFolderAssignments clears the value of the "folder_assignments" field.
+func (_u *DownloadRecordUpdate) ClearFolderAssignments() *DownloadRecordUpdate {
+	_u.mutation.ClearFolderAssignments()
+	return _u
+}
+
 // SetSelectedFiles sets the "selected_files" field.
 func (_u *DownloadRecordUpdate) SetSelectedFiles(v []int) *DownloadRecordUpdate {
 	_u.mutation.SetSelectedFiles(v)
@@ -849,6 +861,12 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if _u.mutation.TrackAssignmentsCleared() {
 		_spec.ClearField(downloadrecord.FieldTrackAssignments, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.FolderAssignments(); ok {
+		_spec.SetField(downloadrecord.FieldFolderAssignments, field.TypeJSON, value)
+	}
+	if _u.mutation.FolderAssignmentsCleared() {
+		_spec.ClearField(downloadrecord.FieldFolderAssignments, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.SelectedFiles(); ok {
 		_spec.SetField(downloadrecord.FieldSelectedFiles, field.TypeJSON, value)
@@ -1471,6 +1489,18 @@ func (_u *DownloadRecordUpdateOne) ClearTrackAssignments() *DownloadRecordUpdate
 	return _u
 }
 
+// SetFolderAssignments sets the "folder_assignments" field.
+func (_u *DownloadRecordUpdateOne) SetFolderAssignments(v map[string]uint32) *DownloadRecordUpdateOne {
+	_u.mutation.SetFolderAssignments(v)
+	return _u
+}
+
+// ClearFolderAssignments clears the value of the "folder_assignments" field.
+func (_u *DownloadRecordUpdateOne) ClearFolderAssignments() *DownloadRecordUpdateOne {
+	_u.mutation.ClearFolderAssignments()
+	return _u
+}
+
 // SetSelectedFiles sets the "selected_files" field.
 func (_u *DownloadRecordUpdateOne) SetSelectedFiles(v []int) *DownloadRecordUpdateOne {
 	_u.mutation.SetSelectedFiles(v)
@@ -2013,6 +2043,12 @@ func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *Download
 	}
 	if _u.mutation.TrackAssignmentsCleared() {
 		_spec.ClearField(downloadrecord.FieldTrackAssignments, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.FolderAssignments(); ok {
+		_spec.SetField(downloadrecord.FieldFolderAssignments, field.TypeJSON, value)
+	}
+	if _u.mutation.FolderAssignmentsCleared() {
+		_spec.ClearField(downloadrecord.FieldFolderAssignments, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.SelectedFiles(); ok {
 		_spec.SetField(downloadrecord.FieldSelectedFiles, field.TypeJSON, value)

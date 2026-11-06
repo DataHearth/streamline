@@ -373,7 +373,7 @@ var _ = Describe("Handler: resolve held downloads",
 			app.store.EXPECT().FindDownloadRecordByID(mock.Anything, uint32(1)).
 				Return(held(1), nil).Once()
 			app.store.EXPECT().
-				ReleaseHeldDownloadRecord(mock.Anything, uint32(1), map[string]uint32(nil)).
+				ReleaseHeldDownloadRecord(mock.Anything, uint32(1), map[string]uint32(nil), map[string]uint32(nil)).
 				Return(nil).Once()
 			app.importer.EXPECT().Enqueue(uint32(1)).Once()
 
@@ -458,7 +458,7 @@ var _ = Describe("Handler: resolve held downloads",
 
 			It("releases the record with them", func() {
 				app.store.EXPECT().ReleaseHeldDownloadRecord(
-					mock.Anything, uint32(9), map[string]uint32{"/dl/a.flac": 8, "/dl/b.flac": 7},
+					mock.Anything, uint32(9), map[string]uint32{"/dl/a.flac": 8, "/dl/b.flac": 7}, map[string]uint32(nil),
 				).
 					Return(nil).Once()
 				app.importer.EXPECT().Enqueue(uint32(9)).Once()
@@ -475,7 +475,7 @@ var _ = Describe("Handler: resolve held downloads",
 					Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
 					var body struct{ Code, Message string }
 					Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
-					Expect(body.Code).To(Equal("track_assignment_rejected"))
+					Expect(body.Code).To(Equal("assignment_rejected"))
 					Expect(body.Message).To(ContainSubstring(message))
 				},
 				Entry(
@@ -491,6 +491,68 @@ var _ = Describe("Handler: resolve held downloads",
 					"two files are assigned to Wither",
 				),
 				Entry("nothing chosen", `[]`, "at least one file"),
+			)
+		})
+
+		Context("with chosen folders", func() {
+			plan := importer.FolderPlan{
+				Folders: []importer.PlannedFolder{{Path: "/dl/a"}, {Path: "/dl/b"}},
+				Albums: []*ent.Album{
+					{ID: 7, Title: "Awake"},
+					{ID: 8, Title: "Octavarium"},
+				},
+			}
+			postChoices := func(choices string) *http.Response {
+				GinkgoHelper()
+				resp, err := http.Post(
+					app.srv.URL+"/api/v1/downloads/9/resolve",
+					"application/json",
+					strings.NewReader(
+						`{"action":"import","folder_assignments":`+choices+`}`,
+					),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				DeferCleanup(resp.Body.Close)
+				return resp
+			}
+
+			BeforeEach(func() {
+				app.store.EXPECT().FindDownloadRecordByID(mock.Anything, uint32(9)).
+					Return(held(9), nil).Once()
+				app.trackPlans.EXPECT().PackFolderPlan(mock.Anything, uint32(9)).
+					Return(plan, nil).Once()
+			})
+
+			It("releases the record with them", func() {
+				app.store.EXPECT().ReleaseHeldDownloadRecord(
+					mock.Anything, uint32(9), map[string]uint32(nil), map[string]uint32{"/dl/b": 8},
+				).
+					Return(nil).Once()
+				app.importer.EXPECT().Enqueue(uint32(9)).Once()
+
+				resp := postChoices(`[{"folder":"/dl/b","album_id":8}]`)
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			})
+
+			DescribeTable(
+				"refuses",
+				func(choices string) {
+					Expect(postChoices(choices).StatusCode).
+						To(Equal(http.StatusUnprocessableEntity))
+				},
+				Entry(
+					"a folder outside the download",
+					`[{"folder":"/etc","album_id":7}]`,
+				),
+				Entry(
+					"another artist's album",
+					`[{"folder":"/dl/a","album_id":99}]`,
+				),
+				Entry(
+					"one album twice",
+					`[{"folder":"/dl/a","album_id":7},{"folder":"/dl/b","album_id":7}]`,
+				),
+				Entry("nothing chosen", `[]`),
 			)
 		})
 

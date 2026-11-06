@@ -61,6 +61,8 @@ type DownloadRecord struct {
 	VerificationBypassed bool `json:"verification_bypassed,omitempty"`
 	// TrackAssignments holds the value of the "track_assignments" field.
 	TrackAssignments map[string]uint32 `json:"track_assignments,omitempty"`
+	// FolderAssignments holds the value of the "folder_assignments" field.
+	FolderAssignments map[string]uint32 `json:"folder_assignments,omitempty"`
 	// SelectedFiles holds the value of the "selected_files" field.
 	SelectedFiles []int `json:"selected_files,omitempty"`
 	// SelectedBytes holds the value of the "selected_bytes" field.
@@ -197,7 +199,7 @@ func (*DownloadRecord) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case downloadrecord.FieldHoldReasons, downloadrecord.FieldTrackAssignments, downloadrecord.FieldSelectedFiles:
+		case downloadrecord.FieldHoldReasons, downloadrecord.FieldTrackAssignments, downloadrecord.FieldFolderAssignments, downloadrecord.FieldSelectedFiles:
 			values[i] = new([]byte)
 		case downloadrecord.FieldVerificationBypassed, downloadrecord.FieldRejected, downloadrecord.FieldUploaded:
 			values[i] = new(sql.NullBool)
@@ -351,6 +353,14 @@ func (_m *DownloadRecord) assignValues(columns []string, values []any) error {
 			} else if value != nil && len(*value) > 0 {
 				if err := json.Unmarshal(*value, &_m.TrackAssignments); err != nil {
 					return fmt.Errorf("unmarshal field track_assignments: %w", err)
+				}
+			}
+		case downloadrecord.FieldFolderAssignments:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field folder_assignments", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.FolderAssignments); err != nil {
+					return fmt.Errorf("unmarshal field folder_assignments: %w", err)
 				}
 			}
 		case downloadrecord.FieldSelectedFiles:
@@ -564,6 +574,9 @@ func (_m *DownloadRecord) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("track_assignments=")
 	builder.WriteString(fmt.Sprintf("%v", _m.TrackAssignments))
+	builder.WriteString(", ")
+	builder.WriteString("folder_assignments=")
+	builder.WriteString(fmt.Sprintf("%v", _m.FolderAssignments))
 	builder.WriteString(", ")
 	builder.WriteString("selected_files=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SelectedFiles))

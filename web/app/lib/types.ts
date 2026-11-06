@@ -711,6 +711,7 @@ export type HoldCheck =
 	| "album"
 	| "track"
 	| "missing"
+	| "folder"
 	| "format"
 	| "bitrate"
 	| "metadata"
@@ -740,6 +741,16 @@ export type MusicAlbumEditions = {
 	current: string;
 	chosen: string;
 	editions: MusicAlbumEdition[];
+};
+
+export type FolderAssignment = { folder: string; album_id: number };
+export type FolderPlan = {
+	folders: { folder: string; album_id?: number }[];
+	albums: { id: number; title: string; year?: number }[];
+};
+export type HoldAssignments = {
+	track_assignments?: TrackAssignment[];
+	folder_assignments?: FolderAssignment[];
 };
 
 export type TrackAssignment = { file: string; track_id: number };

@@ -48,6 +48,7 @@ type Enqueuer interface {
 // TrackPlanner reads a held album's files for someone choosing their tracks.
 type TrackPlanner interface {
 	AlbumTrackPlan(ctx context.Context, recordID uint32) (TrackPlan, error)
+	PackFolderPlan(ctx context.Context, recordID uint32) (FolderPlan, error)
 }
 
 // Deps is worker wiring. User-facing knobs (max attempts, keep seeding,

@@ -14,6 +14,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/db"
 	mockdb "github.com/datahearth/streamline/internal/db/mocks"
 	mockdl "github.com/datahearth/streamline/internal/download/mocks"
@@ -125,12 +126,13 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 	})
 
 	It(
-		"imports each folder into the linked album it names and completes the record",
+		"imports each folder into the linked album it names, once waved, and completes the record",
 		func() {
 			seed("Nirvana - Nevermind (1991) [FLAC]", "Drain You", "Lithium")
 			seed("Nirvana - In Utero (1993) [FLAC]", "Serve the Servants")
 			seed("Extras", "Not On Any Album")
 			rec := pack(nevermind, inUtero, bleach)
+			rec.VerificationBypassed = true
 			expectFind(rec)
 
 			var imported []db.RecordAlbumImportSuccessParams
@@ -190,11 +192,124 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
 
+	Context("with a folder no album of the artist accounts for", func() {
+		It("holds the record before anything moves", func() {
+			seed("Nevermind", "Drain You")
+			seed("Mystery", "Drain You")
+			rec := pack(nevermind)
+			expectFind(rec)
+			storeMk.EXPECT().ListArtistAlbumTitles(mock.Anything, uint32(4)).
+				Return([]*ent.Album{nevermind, bleach}, nil).Once()
+			var reasons []schema.HoldReason
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, rec.ID, mock.Anything).
+				Run(func(_ context.Context, _ uint32, r []schema.HoldReason) { reasons = r }).
+				Return(nil).
+				Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+
+			Expect(reasons).To(ConsistOf(schema.HoldReason{
+				File: filepath.Join(
+					rec.SavePath,
+					"Mystery",
+				),
+				Check:  "folder",
+				Actual: "Mystery",
+			}))
+		})
+
+		It("files it where a person put it and leaves out the rest", func() {
+			seed("Nevermind", "Drain You")
+			seed("Mystery", "Serve the Servants")
+			rec := pack(nevermind)
+			rec.VerificationBypassed = true
+			rec.FolderAssignments = map[string]uint32{
+				filepath.Join(rec.SavePath, "Mystery"): inUtero.ID,
+			}
+			expectFind(rec)
+			storeMk.EXPECT().FindAlbumByID(mock.Anything, inUtero.ID).
+				Return(inUtero, nil).Once()
+			storeMk.EXPECT().RecordAlbumImportSuccess(mock.Anything, mock.MatchedBy(
+				func(p db.RecordAlbumImportSuccessParams) bool { return p.AlbumID == inUtero.ID },
+			)).Return(nil).Once()
+			storeMk.EXPECT().
+				CompletePackRecord(mock.Anything, rec.ID, []uint32{nevermind.ID}).
+				Return(nil).
+				Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+				Return(nil).
+				Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		})
+	})
+
+	It("holds a second folder naming an album another folder named", func() {
+		seed("Nevermind", "Drain You")
+		seed("Nevermind (1991)", "Drain You")
+		rec := pack(nevermind)
+		expectFind(rec)
+		var reasons []schema.HoldReason
+		storeMk.EXPECT().HoldDownloadRecord(mock.Anything, rec.ID, mock.Anything).
+			Run(func(_ context.Context, _ uint32, r []schema.HoldReason) { reasons = r }).
+			Return(nil).Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+
+		Expect(reasons).To(HaveLen(1))
+		Expect(reasons[0].Expected).To(Equal("Nevermind"))
+	})
+
+	It("skips a folder naming an album of the artist nobody wanted", func() {
+		seed("Nevermind", "Drain You")
+		seed("Bleach", "Blew")
+		rec := pack(nevermind)
+		expectFind(rec)
+		storeMk.EXPECT().ListArtistAlbumTitles(mock.Anything, uint32(4)).
+			Return([]*ent.Album{nevermind, bleach}, nil).Once()
+		storeMk.EXPECT().RecordAlbumImportSuccess(mock.Anything, mock.MatchedBy(
+			func(p db.RecordAlbumImportSuccessParams) bool { return p.AlbumID == nevermind.ID },
+		)).Return(nil).Once()
+		storeMk.EXPECT().CompletePackRecord(mock.Anything, rec.ID, []uint32(nil)).
+			Return(nil).Once()
+		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+			Return(nil).Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+	})
+
+	It("plans each folder with the album it names", func() {
+		seed("Nevermind", "Drain You")
+		seed("Mystery", "Drain You")
+		rec := pack(nevermind)
+		storeMk.EXPECT().
+			FindHeldAlbumRecord(mock.Anything, uint32(1)).
+			Return(rec, nil).
+			Once()
+		storeMk.EXPECT().ListArtistAlbumTitles(mock.Anything, uint32(4)).
+			Return([]*ent.Album{nevermind, bleach}, nil).Once()
+
+		plan, err := w.PackFolderPlan(context.Background(), 1)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(plan.Albums).To(Equal([]*ent.Album{nevermind, bleach}))
+		Expect(plan.Folders).To(ConsistOf(
+			PlannedFolder{Path: filepath.Join(rec.SavePath, "Mystery")},
+			PlannedFolder{
+				Path:  filepath.Join(rec.SavePath, "Nevermind"),
+				Album: nevermind,
+			},
+		))
+	})
+
 	It(
-		"fails like an album with no matching track when no folder names a linked album",
+		"fails like an album with no matching track when a waved pack names no linked album",
 		func() {
 			seed("Mystery", "Drain You")
 			rec := pack(nevermind)
+			rec.VerificationBypassed = true
 			expectFind(rec)
 			storeMk.EXPECT().
 				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).

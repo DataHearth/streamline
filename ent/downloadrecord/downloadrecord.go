@@ -51,6 +51,8 @@ const (
 	FieldVerificationBypassed = "verification_bypassed"
 	// FieldTrackAssignments holds the string denoting the track_assignments field in the database.
 	FieldTrackAssignments = "track_assignments"
+	// FieldFolderAssignments holds the string denoting the folder_assignments field in the database.
+	FieldFolderAssignments = "folder_assignments"
 	// FieldSelectedFiles holds the string denoting the selected_files field in the database.
 	FieldSelectedFiles = "selected_files"
 	// FieldSelectedBytes holds the string denoting the selected_bytes field in the database.
@@ -156,6 +158,7 @@ var Columns = []string{
 	FieldHoldReasons,
 	FieldVerificationBypassed,
 	FieldTrackAssignments,
+	FieldFolderAssignments,
 	FieldSelectedFiles,
 	FieldSelectedBytes,
 	FieldSelectionState,

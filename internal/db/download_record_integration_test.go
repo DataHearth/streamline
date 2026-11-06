@@ -2369,7 +2369,9 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		It("releases a held record for a bypassed re-import", func() {
 			rec := createRec("h4", downloadrecord.StatusImporting)
 			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
-			Expect(store.ReleaseHeldDownloadRecord(ctx, rec.ID, nil)).To(Succeed())
+			Expect(
+				store.ReleaseHeldDownloadRecord(ctx, rec.ID, nil, nil),
+			).To(Succeed())
 
 			got, err := client.DownloadRecord.Get(ctx, rec.ID)
 			Expect(err).NotTo(HaveOccurred())
