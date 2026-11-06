@@ -60,6 +60,12 @@ type Store interface {
 		root db.LibraryRoot,
 		offset int,
 	) (string, error)
+	CountLiveRootFiles(ctx context.Context, root db.LibraryRoot) (int, error)
+	LiveRootFilePathAt(
+		ctx context.Context,
+		root db.LibraryRoot,
+		offset int,
+	) (string, error)
 }
 
 type checker struct {
@@ -124,36 +130,67 @@ func Require(ctx context.Context, roots ...db.LibraryRoot) error {
 }
 
 func (c *checker) check(ctx context.Context, root db.LibraryRoot) (*Status, error) {
-	first, err := c.store.RootFilePathAt(ctx, root, 0)
+	// Rows confirmed missing are left out of the sample, or a root with enough of
+	// them would read as an outage. When they are all that is left they still
+	// decide: an unmounted volume must not let their wait run out.
+	reachable, tracked, err := sample(
+		ctx, root, c.store.LiveRootFilePathAt, c.store.CountLiveRootFiles,
+	)
+	if err == nil && !reachable && tracked == 0 {
+		reachable, tracked, err = sample(
+			ctx, root, c.store.RootFilePathAt, c.store.CountRootFiles,
+		)
+	}
 	if err != nil {
 		return nil, err
 	}
-	if first == "" || exists(first) {
+	if reachable || tracked == 0 {
 		return nil, nil
-	}
-	count, err := c.store.CountRootFiles(ctx, root)
-	if err != nil {
-		return nil, err
-	}
-	samples := min(count, maxSample)
-	for i := 1; i < samples; i++ {
-		// Spread over the whole id range, newest row included: a batch of old
-		// files deleted by hand is one cluster, and must not read as an outage.
-		path, err := c.store.RootFilePathAt(ctx, root, i*(count-1)/(samples-1))
-		if err != nil {
-			return nil, err
-		}
-		if path != "" && exists(path) {
-			return nil, nil
-		}
 	}
 	path := rootPath(root)
 	return &Status{
 		Root:    root,
 		Path:    path,
-		Tracked: count,
+		Tracked: tracked,
 		Reason:  reasonFor(path),
 	}, nil
+}
+
+// sample reports whether any sampled file of a root exists and, when none does,
+// how many rows were sampled from.
+func sample(
+	ctx context.Context,
+	root db.LibraryRoot,
+	pathAt func(context.Context, db.LibraryRoot, int) (string, error),
+	countRows func(context.Context, db.LibraryRoot) (int, error),
+) (bool, int, error) {
+	first, err := pathAt(ctx, root, 0)
+	if err != nil {
+		return false, 0, err
+	}
+	if first == "" {
+		return false, 0, nil
+	}
+	if exists(first) {
+		return true, 0, nil
+	}
+	count, err := countRows(ctx, root)
+	if err != nil {
+		return false, 0, err
+	}
+	samples := min(count, maxSample)
+	for i := 1; i < samples; i++ {
+		// Spread over the whole id range, newest row included: a batch of old
+		// files deleted by hand is one cluster, and must not read as an outage.
+		path, err := pathAt(ctx, root, i*(count-1)/(samples-1))
+		if err != nil {
+			return false, 0, err
+		}
+		if path != "" && exists(path) {
+			return true, 0, nil
+		}
+	}
+	return false, count, nil
 }
 
 func (c *checker) logTransition(

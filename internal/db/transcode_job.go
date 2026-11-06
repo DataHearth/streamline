@@ -344,13 +344,17 @@ func (db *DB) ListTranscodeJobs(
 // rejected job is left out: the encode was judged worse than the source, and
 // a retry from the queue is the only way to ask again (it flips that same row
 // back to queued, so "has a rejected job" is exactly "rejected, not retried").
+// A file missing from disk has nothing to probe.
 func (db *DB) ListMediaFilesWithTranscodeOwners(
 	ctx context.Context,
 ) ([]*ent.MediaFile, error) {
 	q := db.client.MediaFile.Query().
-		Where(mediafile.Not(mediafile.HasTranscodeJobsWith(
-			transcodejob.StatusEQ(transcodejob.StatusRejected),
-		)))
+		Where(
+			mediafile.MissingSinceIsNil(),
+			mediafile.Not(mediafile.HasTranscodeJobsWith(
+				transcodejob.StatusEQ(transcodejob.StatusRejected),
+			)),
+		)
 	withTranscodeOwners(q)
 	rows, err := q.All(ctx)
 	if err != nil {

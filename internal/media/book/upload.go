@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path"
+	"slices"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -170,7 +171,11 @@ func (s *Service) UploadBook(
 	if busy {
 		return nil, otelx.RecordSpanError(span, upload.ErrConflict)
 	}
-	if hasSlotFile(b, kind) && !o.Replace {
+	held := slices.ContainsFunc(
+		db.PresentFiles(b.Edges.MediaFiles),
+		func(f *ent.MediaFile) bool { return string(f.BookKind) == kind },
+	)
+	if held && !o.Replace {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf(
 			"%w: the %s slot already has a file; replace it to upload",
 			upload.ErrRejected, kind,

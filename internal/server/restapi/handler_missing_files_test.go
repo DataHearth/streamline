@@ -158,6 +158,24 @@ var _ = Describe(
 			}}, "Elantris", "book", uint32(5)),
 		)
 
+		It("does not count a row the wait's end took first", func() {
+			app.store.EXPECT().FindMediaFileWithOwners(mock.Anything, uint32(7)).
+				Return(row, nil).Once()
+			app.store.EXPECT().ForgetMediaFile(mock.Anything, row).
+				Return(&ent.NotFoundError{}).Once()
+
+			resp := app.do(app.req(
+				http.MethodPost, forgetURL, app.adminKey,
+				strings.NewReader(`{"ids":[7]}`),
+			))
+			defer resp.Body.Close()
+
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var body ForgetMissingFilesResult
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Forgotten).To(BeZero())
+		})
+
 		It("forgets through the store and answers the count", func() {
 			app.store.EXPECT().FindMediaFileWithOwners(mock.Anything, uint32(7)).
 				Return(row, nil).Once()

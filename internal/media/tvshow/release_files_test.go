@@ -93,6 +93,20 @@ var _ = Describe("PackReleaseFiles", Label("unit", "series"), func() {
 		return out
 	}
 
+	It("wants an episode whose file is missing from disk", func() {
+		s := show()
+		s.Edges.Seasons[0].Edges.Episodes[0].Edges.MediaFiles[0].MissingSince = new(
+			time.Now(),
+		)
+		storeMk.FindTVShowByID(mock.Anything, uint32(3)).Return(s, nil).Once()
+		dlMk.ReleaseFiles(mock.Anything, release).Return(files, nil).Once()
+
+		season := uint16(1)
+		v, err := svc.PackReleaseFiles(ctx, 3, &season, release)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(flags(v)[10]).To(Equal(row{wanted: true, in: true}))
+	})
+
 	It("maps a season pack onto the season's episodes", func() {
 		storeMk.FindTVShowByID(mock.Anything, uint32(3)).Return(show(), nil).Once()
 		dlMk.ReleaseFiles(mock.Anything, release).Return(files, nil).Once()

@@ -234,7 +234,7 @@
 	let uploading = $state<UploadTarget | null>(null);
 	const uploadRelease = (r: Release) => (uploading = { target: "album", id: r.id, hasFiles: r.tracks_have > 0 });
 	const uploadTrack = (t: Track, file?: File) =>
-		(uploading = { target: "track", id: t.id, hasFiles: t.has_file, initial: file ? [{ file, path: file.name }] : [] });
+		(uploading = { target: "track", id: t.id, hasFiles: t.has_file && !t.missing_from_disk, initial: file ? [{ file, path: file.name }] : [] });
 	const delTrack = createAction<Track>(() => ({
 		run: (t) => api(`/music/tracks/${t.id}/file`, { method: "DELETE" }),
 		refresh: MUSIC,

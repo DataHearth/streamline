@@ -332,7 +332,7 @@ func (w *Worker) importAlbumFiles(
 	}
 
 	for _, mf := range replaced {
-		if err := w.db.DeleteMediaFile(ctx, mf.ID); err != nil {
+		if err := unlessGone(w.db.DeleteMediaFile(ctx, mf.ID)); err != nil {
 			return nil, false, otelx.RecordSpanError(
 				span, fmt.Errorf("delete replaced track media file: %w", err),
 			)
@@ -479,7 +479,7 @@ func (w *Worker) planAlbumImport(
 			continue
 		}
 		q := w.assessAlbumFile(ctx, path, claim)
-		if len(heldFiles(tr.Edges.MediaFiles)) > 0 &&
+		if len(db.PresentFiles(tr.Edges.MediaFiles)) > 0 &&
 			!replacesTrack(rec, tr, q, profile) {
 			skippedCovered++
 			slog.InfoContext(ctx, "album import: leaving track's file in place",

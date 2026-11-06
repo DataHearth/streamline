@@ -7,6 +7,8 @@ import (
 	"path"
 	"time"
 
+	"github.com/datahearth/streamline/internal/db"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
@@ -113,7 +115,7 @@ func (s *Service) PackReleaseFiles(
 	}
 
 	wanted := map[uint32]bool{}
-	for _, e := range wantedAiredEpisodes(eps, time.Now()) {
+	for _, e := range packEpisodes(eps, time.Now()) {
 		wanted[e.ID] = true
 	}
 	view.Episodes = make([]PackEpisode, 0, len(eps))
@@ -123,7 +125,7 @@ func (s *Service) PackReleaseFiles(
 			Season:    seasonOf[e.ID],
 			Number:    e.Number,
 			Title:     e.Title,
-			HasFile:   len(e.Edges.MediaFiles) > 0,
+			HasFile:   len(db.PresentFiles(e.Edges.MediaFiles)) > 0,
 			Wanted:    wanted[e.ID],
 			InRelease: in[e.ID],
 		})

@@ -20,7 +20,7 @@ func removeFiles(ctx context.Context, b *ent.Book) {
 	lib := config.Get().Library
 	for _, f := range b.Edges.MediaFiles {
 		root := library.BookRoot(lib, string(f.BookKind))
-		if err := library.RemoveMediaFile(ctx, f.Path, root); err != nil {
+		if err := library.RemoveTrackedFile(ctx, f, root); err != nil {
 			slog.ErrorContext(ctx, "book file was not deleted from disk",
 				"book.id", b.ID, "path", f.Path, "error", err)
 		}

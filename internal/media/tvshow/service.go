@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -647,9 +648,9 @@ func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) err
 				for _, f := range e.Edges.MediaFiles {
 					requested++
 					removed = append(removed, f.Path)
-					if err := library.RemoveMediaFile(
+					if err := library.RemoveTrackedFile(
 						ctx,
-						f.Path,
+						f,
 						root,
 					); err != nil {
 						kept++
@@ -735,7 +736,7 @@ func (s *Service) DeleteEpisodeFile(
 		return otelx.RecordSpanError(span, fmt.Errorf("find media_file: %w", err))
 	}
 	root := config.Get().Library.SeriesPath
-	if err := library.RemoveMediaFile(ctx, mf.Path, root); err != nil {
+	if err := library.RemoveTrackedFile(ctx, mf, root); err != nil {
 		// See movie.DeleteFile: a file outside the root is refused, row kept.
 		if errors.Is(err, library.ErrOutsideRoot) {
 			return otelx.RecordSpanError(span, err)
@@ -866,6 +867,22 @@ func wantedAiredEpisodes(eps []*ent.Episode, now time.Time) []*ent.Episode {
 	return wanted
 }
 
+// packEpisodes is what a pack grab keeps: the wanted, aired episodes and the
+// ones whose file is missing from disk, which an import fills. Those stay
+// available meanwhile, so wantedAiredEpisodes alone decides what is marked.
+func packEpisodes(eps []*ent.Episode, now time.Time) []*ent.Episode {
+	var keep []*ent.Episode
+	wanted := wantedAiredEpisodes(eps, now)
+	for _, e := range eps {
+		files := e.Edges.MediaFiles
+		if slices.Contains(wanted, e) ||
+			(len(files) > 0 && len(db.PresentFiles(files)) == 0) {
+			keep = append(keep, e)
+		}
+	}
+	return keep
+}
+
 // grabPackAndMark grabs one multi-episode release anchored on the first
 // episode it is wanted for and flips every wanted, aired episode in the set to
 // "downloading". Anchoring the download record to a single episode matches the
@@ -887,7 +904,7 @@ func (s *Service) grabPackAndMark(
 	// the whole set (manual replace grab) — since that mode is about the
 	// selective-download keep-set, not about which episodes get marked.
 	airedWanted := wantedAiredEpisodes(eps, now)
-	wanted := airedWanted
+	wanted := packEpisodes(eps, now)
 	if replaceExisting {
 		wanted = eps
 	}

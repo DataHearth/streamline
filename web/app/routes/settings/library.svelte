@@ -93,6 +93,8 @@
 			api<LibraryConfig>("/config/library", { method: "PATCH", body }),
 		onSuccess: (resp) => {
 			qc.setQueryData(["config", "library"], resp);
+			// Each missing file's download date is worked out from the wait.
+			qc.invalidateQueries({ queryKey: ["library", "missing-files"] });
 			toast.ok(i18n.library_settings_saved());
 		},
 		onError: (err) => toast.err(errorText(err)),

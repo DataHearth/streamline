@@ -271,11 +271,11 @@ func beatEpisodes(
 		if _, already := grabbed[e.ID]; already {
 			continue
 		}
-		if len(e.Edges.MediaFiles) == 0 {
+		files := db.PresentFiles(e.Edges.MediaFiles)
+		if len(files) == 0 {
 			continue
 		}
-		mf := e.Edges.MediaFiles[0]
-		file := qualityctx.ContextFromRow(mf)
+		file := qualityctx.ContextFromRow(files[0])
 		if quality.ReplacesFile(p, file, release) {
 			beat = append(beat, e)
 		}
@@ -382,10 +382,9 @@ func (s *TVFeedScanner) grabUpgrade(
 	if parsed.SeasonPack {
 		selected = beatEpisodes(us, parsed.Season, p, release, pass.grabbed)
 	} else if e := us.lookup(parsed); e != nil {
-		if _, already := pass.grabbed[e.ID]; !already &&
-			len(e.Edges.MediaFiles) > 0 {
-			mf := e.Edges.MediaFiles[0]
-			file := qualityctx.ContextFromRow(mf)
+		files := db.PresentFiles(e.Edges.MediaFiles)
+		if _, already := pass.grabbed[e.ID]; !already && len(files) > 0 {
+			file := qualityctx.ContextFromRow(files[0])
 			if quality.ReplacesFile(p, file, release) {
 				selected = []*ent.Episode{e}
 			}

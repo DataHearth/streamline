@@ -830,7 +830,7 @@ paths:
          client. Each video file of at least 5 MiB carries the `episode_id` its name points at,
          read by the matcher the selective download and the importer share, so it is what a grab
          would keep and import. `episodes` is the season's; 404 for a season the show does not have. Each episode says whether it holds a file, whether a
-         grab without `replace_existing` is for it (`wanted`: still wanted and aired), and whether
+         grab without `replace_existing` is for it (`wanted`: still wanted and aired, or its file is missing from disk), and whether
          the release seems to carry it. The body is an item of the search response, unchanged. A
          magnet answers 422 with `code: files_unavailable`; an indexer that does not hand a
          readable `.torrent` over answers 422 with `code: torrent_unreadable`; a link outside the
@@ -974,7 +974,7 @@ paths:
          client. Each video file of at least 5 MiB carries the `episode_id` its name points at,
          read by the matcher the selective download and the importer share, so it is what a grab
          would keep and import. `episodes` is every episode of the show, specials included. Each episode says whether it holds a file, whether a
-         grab without `replace_existing` is for it (`wanted`: still wanted and aired), and whether
+         grab without `replace_existing` is for it (`wanted`: still wanted and aired, or its file is missing from disk), and whether
          the release seems to carry it. The body is an item of the search response, unchanged. A
          magnet answers 422 with `code: files_unavailable`; an indexer that does not hand a
          readable `.torrent` over answers 422 with `code: torrent_unreadable`; a link outside the

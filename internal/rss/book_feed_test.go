@@ -386,6 +386,12 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 			upgrade(heldBook(mediafile.BookKindEbook, "EPUB", 0), ebookItem)
 		})
 
+		It("grabs no upgrade for a slot whose file is missing from disk", func() {
+			b := heldBook(mediafile.BookKindEbook, "AZW3", 0)
+			b.Edges.MediaFiles[0].MissingSince = new(time.Now())
+			upgrade(b, ebookItem)
+		})
+
 		It("does not take a worse format", func() {
 			upgrade(heldBook(mediafile.BookKindEbook, "EPUB", 0), azw3Item)
 		})

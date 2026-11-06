@@ -1119,7 +1119,7 @@ func toPendingItem(r *ent.DownloadRecord) PendingItem {
 	switch {
 	case r.Edges.Movie != nil:
 		m := r.Edges.Movie
-		item.HasFile = len(m.Edges.MediaFiles) > 0
+		item.HasFile = len(db.PresentFiles(m.Edges.MediaFiles)) > 0
 		y := m.Year
 		item.Media = &PendingMedia{
 			Type:  PendingMediaTypeMovie,
@@ -1129,7 +1129,7 @@ func toPendingItem(r *ent.DownloadRecord) PendingItem {
 		}
 	case r.Edges.AnchorEpisode != nil:
 		ep := r.Edges.AnchorEpisode
-		item.HasFile = len(ep.Edges.MediaFiles) > 0
+		item.HasFile = len(db.PresentFiles(ep.Edges.MediaFiles)) > 0
 		epNum := ep.Number
 		media := &PendingMedia{
 			Type:    PendingMediaTypeEpisode,

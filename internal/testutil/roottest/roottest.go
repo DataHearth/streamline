@@ -36,6 +36,18 @@ func (r *Roots) CountRootFiles(context.Context, db.LibraryRoot) (int, error) {
 	return 1, nil
 }
 
+func (r *Roots) CountLiveRootFiles(context.Context, db.LibraryRoot) (int, error) {
+	return 1, nil
+}
+
+func (r *Roots) LiveRootFilePathAt(
+	ctx context.Context,
+	root db.LibraryRoot,
+	offset int,
+) (string, error) {
+	return r.RootFilePathAt(ctx, root, offset)
+}
+
 func (r *Roots) RootFilePathAt(
 	_ context.Context,
 	root db.LibraryRoot,

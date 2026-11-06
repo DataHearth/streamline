@@ -423,7 +423,7 @@
 			target="book"
 			id={book.id}
 			hasFiles={book.formats.some((f) => !!f.file)}
-			slotsHolding={book.formats.filter((f) => !!f.file).map((f) => f.format)}
+			slotsHolding={book.formats.filter((f) => f.file && !f.file.missing_from_disk).map((f) => f.format)}
 			onDone={() => (uploadOpen = false)}
 		/>
 	{/if}

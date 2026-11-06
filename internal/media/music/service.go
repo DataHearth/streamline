@@ -559,9 +559,9 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 			for _, t := range a.Edges.Tracks {
 				for _, f := range t.Edges.MediaFiles {
 					removed = append(removed, f.Path)
-					if err := library.RemoveMediaFile(
+					if err := library.RemoveTrackedFile(
 						ctx,
-						f.Path,
+						f,
 						root,
 					); err != nil {
 						slog.ErrorContext(

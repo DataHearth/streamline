@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -244,6 +245,20 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 			Expect(p.Skipped).To(Equal(1))
 		})
 
+		It("does not count a row already missing from disk as skipped", func() {
+			store.EXPECT().ListMediaFilesByPathPrefix(mock.Anything, root).
+				Return([]*ent.MediaFile{{
+					ID:           1,
+					Path:         filepath.Join(root, "Gone (2001)/g.mkv"),
+					MissingSince: new(time.Now()),
+				}}, nil).Once()
+
+			p, err := svc.Preview(ctx, Params{Root: RootMovies, To: dest})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Total).To(Equal(1))
+			Expect(p.Skipped).To(BeZero())
+		})
+
 		It("ignores sibling roots that merely share a prefix", func() {
 			files := []*ent.MediaFile{
 				{ID: 1, Path: touch(filepath.Join(dest, "Dune (2021)/d.mkv"))},
@@ -396,6 +411,37 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 			Expect(status.Done).To(BeZero())
 			Expect(status.Skipped).To(Equal(1))
 		})
+
+		DescribeTable("re-points a row already missing from disk",
+			func(move bool) {
+				files := []*ent.MediaFile{{
+					ID:           1,
+					Path:         filepath.Join(root, "Gone (2001)/g.mkv"),
+					MissingSince: new(time.Now()),
+				}}
+				store.EXPECT().ListMediaFilesByPathPrefix(mock.Anything, root).
+					Return(files, nil).Once()
+				store.EXPECT().UpdateMediaFilePath(
+					mock.Anything, uint32(1), filepath.Join(dest, "Gone (2001)/g.mkv"),
+				).
+					Return(nil).Once()
+
+				_, err := svc.Start(
+					ctx,
+					Params{Root: RootMovies, To: dest, MoveFiles: move},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(func() bool { return svc.Status().Running }).
+					Should(BeFalse())
+				status := svc.Status()
+				Expect(status.Error).To(BeEmpty())
+				Expect(status.Done).To(Equal(1))
+				Expect(status.Skipped).To(BeZero())
+			},
+			Entry("when the files were moved by hand", false),
+			Entry("when the migration moves them", true),
+		)
 
 		It("moves the file when asked to", func() {
 			src := touch(filepath.Join(root, "Dune (2021)/d.mkv"))

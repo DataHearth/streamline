@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -24,21 +25,21 @@ type countingStore struct {
 	paths, counts int
 }
 
-func (s *countingStore) RootFilePathAt(
+func (s *countingStore) LiveRootFilePathAt(
 	ctx context.Context,
 	root db.LibraryRoot,
 	offset int,
 ) (string, error) {
 	s.paths++
-	return s.Store.RootFilePathAt(ctx, root, offset)
+	return s.Store.LiveRootFilePathAt(ctx, root, offset)
 }
 
-func (s *countingStore) CountRootFiles(
+func (s *countingStore) CountLiveRootFiles(
 	ctx context.Context,
 	root db.LibraryRoot,
 ) (int, error) {
 	s.counts++
-	return s.Store.CountRootFiles(ctx, root)
+	return s.Store.CountLiveRootFiles(ctx, root)
 }
 
 var _ = Describe("library root health", Label("integration", "roothealth"), func() {
@@ -158,6 +159,54 @@ var _ = Describe("library root health", Label("integration", "roothealth"), func
 		Entry("39 rows, the lowest 20 gone", 39, 20),
 		Entry("21 rows, the lowest 20 gone", 21, 20),
 	)
+
+	Context("with files confirmed missing", func() {
+		// 101 rows sample at 0, 5, 10…, so the one present file at index 1 is
+		// never read unless the confirmed rows are out of the count.
+		confirmAllBut := func(keep string) {
+			GinkgoHelper()
+			now := time.Now()
+			client.MediaFile.Update().
+				Where(entmediafile.Not(entmediafile.PathHasSuffix(keep))).
+				SetMissingSince(now).
+				SetMissingConfirmedAt(now).
+				ExecX(ctx)
+		}
+
+		It("is online when the files it can still reach are few", func() {
+			movieRows(101, func(i int) bool { return i == 1 })
+			confirmAllBut("0001.mkv")
+
+			Expect(Offline(ctx, db.RootMovies)).To(BeNil())
+		})
+
+		It(
+			"is offline when confirmed rows are all that is left and they are gone",
+			func() {
+				movieRows(30, allGone)
+				confirmAllBut("no such file")
+
+				Expect(Offline(ctx, db.RootMovies)).NotTo(BeNil())
+			},
+		)
+
+		It(
+			"is online when confirmed rows are all that is left and one is back",
+			func() {
+				movieRows(30, func(i int) bool { return i == 29 })
+				confirmAllBut("no such file")
+
+				Expect(Offline(ctx, db.RootMovies)).To(BeNil())
+			},
+		)
+
+		It("is offline when the rest of the root is gone too", func() {
+			movieRows(101, allGone)
+			confirmAllBut("0001.mkv")
+
+			Expect(Offline(ctx, db.RootMovies)).NotTo(BeNil())
+		})
+	})
 
 	It("samples at most 20 files", func() {
 		movieRows(1000, allGone)

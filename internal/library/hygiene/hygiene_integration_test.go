@@ -464,11 +464,15 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			})
 
 			It("records drift_confirmed only for a row not yet confirmed", func() {
-				_, gone := seedWithUnsampledFile()
+				gone := []*ent.MediaFile{
+					trackFile("01.flac", 1, nil),
+					trackFile("02.flac", 2, nil),
+				}
 				at := time.Now().Add(-time.Hour)
 				entClient.MediaFile.Update().
 					Where(entmediafile.IDIn(rowIDs(gone)...)).
 					SetMissingSince(at).SetMissingConfirmedAt(at).ExecX(ctx)
+				Expect(roothealth.Offline(ctx, db.RootMusic)).NotTo(BeNil())
 
 				Expect(svc.AcceptMissing(ctx, db.RootMusic)).To(Equal(len(gone)))
 

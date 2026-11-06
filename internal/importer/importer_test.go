@@ -3,6 +3,7 @@ package importer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -495,6 +496,37 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 		Expect(old).NotTo(BeAnExistingFile())
+	})
+
+	It("imports when the wait's end already took the replaced row", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return([]*ent.MediaFile{{
+				ID:           5,
+				Path:         filepath.Join(libDir, "gone.mkv"),
+				MissingSince: new(time.Now()),
+			}}, nil).Once()
+		storeMk.EXPECT().
+			DeleteMediaFileAndRevertMovie(mock.Anything, uint32(5), uint32(10)).
+			Return(fmt.Errorf("gone: %w", &ent.NotFoundError{})).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.Anything).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
 
 	It("a missing file does not stop an import without the replace flag", func() {

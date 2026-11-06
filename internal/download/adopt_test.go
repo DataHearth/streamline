@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -104,6 +105,20 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(dec.autoImport).To(BeFalse())
 			Expect(dec.completed).To(BeFalse())
 			Expect(dec.reason).To(Equal("already have a file"))
+		})
+
+		It("auto-imports over a row whose file is missing from disk", func() {
+			gone := []*ent.Movie{{
+				ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+				Edges: ent.MovieEdges{MediaFiles: []*ent.MediaFile{
+					{ID: 9, Size: 4096, MissingSince: new(time.Now())},
+				}},
+			}}
+			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
+			dec, ok := classifyMovieAdoption(parsed, 4096, gone)
+			Expect(ok).To(BeTrue())
+			Expect(dec.completed).To(BeFalse())
+			Expect(dec.autoImport).To(BeTrue())
 		})
 
 		It("adopts as completed when the torrent is the movie's own file", func() {
@@ -236,6 +251,22 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(dec.episodeID).To(Equal(uint32(102)))
 		})
 
+		It(
+			"auto-imports an episode over a row whose file is missing from disk",
+			func() {
+				show := buildShow(false, false)
+				eps := show.Edges.Seasons[0].Edges.Episodes
+				eps[1].Edges.MediaFiles = []*ent.MediaFile{
+					{ID: 9, Size: 4096, MissingSince: new(time.Now())},
+				}
+				parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
+				dec, ok := classifyEpisodeAdoption(parsed, 4096, []*ent.TVShow{show})
+				Expect(ok).To(BeTrue())
+				Expect(dec.completed).To(BeFalse())
+				Expect(dec.autoImport).To(BeTrue())
+			},
+		)
+
 		It("claims only the matched episode for a single-episode release", func() {
 			shows := []*ent.TVShow{buildShow(false, false)}
 			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
@@ -343,6 +374,16 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		// A pack is fetched for what the library is missing, so anchoring it on
 		// the season's first episode names one the operator already has.
+		It("anchors a pack on an episode whose file is missing from disk", func() {
+			show := buildShow(false, false)
+			eps := show.Edges.Seasons[0].Edges.Episodes
+			eps[0].Edges.MediaFiles = []*ent.MediaFile{
+				{ID: 9, MissingSince: new(time.Now())},
+			}
+			parsed := library.Parse("The.Bear.S01.MULTi.1080p.WEB.H264-FW")
+			Expect(AdoptionEpisode(parsed, show).ID).To(Equal(uint32(101)))
+		})
+
 		It("anchors a pack on the first episode with no file", func() {
 			show := buildShow(false, false)
 			eps := show.Edges.Seasons[0].Edges.Episodes

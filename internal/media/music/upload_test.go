@@ -200,6 +200,15 @@ var _ = Describe("uploads", Label("unit", "integration", "music"), func() {
 			Expect(exists(dir, "01.flac")).To(BeFalse())
 		})
 
+		It("fills a file missing from disk without replace", func() {
+			mf := e.addFile(tr, "/music/x/01.flac", "lossless")
+			e.client.MediaFile.UpdateOneID(mf.ID).
+				SetMissingSince(time.Now()).ExecX(e.ctx)
+			recv, _, _ := stage("01.flac")
+			_, err := e.svc.UploadTrack(e.ctx, tr.ID, UploadOptions{}, recv)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("takes a replacement when asked", func() {
 			e.addFile(tr, "/music/x/01.flac", "lossless")
 			recv, _, _ := stage("01.flac")

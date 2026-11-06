@@ -614,6 +614,15 @@ var _ = Describe("TranscodeJob store", Label("integration", "db"), func() {
 	})
 
 	Describe("ListMediaFilesWithTranscodeOwners", func() {
+		It("leaves out a file missing from disk", func() {
+			mf := createMovieFile()
+			client.MediaFile.UpdateOneID(mf.ID).
+				SetMissingSince(time.Now()).
+				ExecX(ctx)
+
+			Expect(store.ListMediaFilesWithTranscodeOwners(ctx)).To(BeEmpty())
+		})
+
 		It("returns every media file with owner chains loaded", func() {
 			createMovieFile()
 			createEpisodeFile()

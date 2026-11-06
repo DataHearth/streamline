@@ -223,7 +223,8 @@ func (s *FeedScanner) tryUpgrade(
 		return false
 	}
 	p := pass.profiles[m.QualityProfile]
-	if !p.UpgradeAllowed || len(m.Edges.MediaFiles) == 0 {
+	files := db.PresentFiles(m.Edges.MediaFiles)
+	if !p.UpgradeAllowed || len(files) == 0 {
 		return false
 	}
 	if rejected(ctx, item, pass.rejected.Movie, m.ID) {
@@ -236,7 +237,7 @@ func (s *FeedScanner) tryUpgrade(
 			"reason", rel.RejectReason)
 		return false
 	}
-	mf := m.Edges.MediaFiles[0]
+	mf := files[0]
 	file := qualityctx.ContextFromRow(mf)
 	release := qualityctx.ContextFromRelease(
 		item.Title, item.Size, item.Seeders, singleRelease,

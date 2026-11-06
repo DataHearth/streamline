@@ -428,7 +428,7 @@ func (w *Worker) importMovieRecord(
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("list movie files: %w", err))
 	}
-	if len(heldFiles(existing)) > 0 &&
+	if len(db.PresentFiles(existing)) > 0 &&
 		rec.ReplaceMode == downloadrecord.ReplaceModeNone {
 		return otelx.RecordSpanError(span, ErrMovieHasFile)
 	}
@@ -473,7 +473,9 @@ func (w *Worker) importMovieRecord(
 		return otelx.RecordSpanError(span, err)
 	}
 	for _, mf := range existing {
-		if err := w.db.DeleteMediaFileAndRevertMovie(ctx, mf.ID, m.ID); err != nil {
+		if err := unlessGone(
+			w.db.DeleteMediaFileAndRevertMovie(ctx, mf.ID, m.ID),
+		); err != nil {
 			return otelx.RecordSpanError(
 				span, fmt.Errorf("delete replaced movie media file: %w", err),
 			)
@@ -516,13 +518,15 @@ func (w *Worker) importMovieRecord(
 	return nil
 }
 
-// heldFiles leaves out rows whose file is missing from disk. Only the refusal
-// gates read it: an import fills such a file, and its row is replaced like any
-// other.
-func heldFiles(files []*ent.MediaFile) []*ent.MediaFile {
-	return slices.DeleteFunc(slices.Clone(files), func(mf *ent.MediaFile) bool {
-		return mf.MissingSince != nil
-	})
+// unlessGone drops the not-found from deleting a replaced row: the drift check
+// removes a missing file's row when its wait ends, and that can land between
+// this import listing the row and replacing it. The file is in place by then,
+// so failing would burn an attempt on an import that worked.
+func unlessGone(err error) error {
+	if ent.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
 
 // replacedSuffix names an existing library file set aside while the release
@@ -790,9 +794,9 @@ func (w *Worker) importEpisodeRecord(
 			continue
 		}
 		if pf.existing != nil {
-			if err := w.db.DeleteMediaFileAndRevertEpisode(
+			if err := unlessGone(w.db.DeleteMediaFileAndRevertEpisode(
 				ctx, pf.existing.ID, pf.episode.ID,
-			); err != nil {
+			)); err != nil {
 				return otelx.RecordSpanError(span, fmt.Errorf(
 					"delete replaced episode media file: %w", err,
 				))
@@ -931,11 +935,11 @@ func (w *Worker) importSingleEpisode(
 		return otelx.RecordSpanError(span, err)
 	}
 	if mf != nil {
-		if err := w.db.DeleteMediaFileAndRevertEpisode(
+		if err := unlessGone(w.db.DeleteMediaFileAndRevertEpisode(
 			ctx,
 			mf.ID,
 			ep.ID,
-		); err != nil {
+		)); err != nil {
 			return otelx.RecordSpanError(
 				span, fmt.Errorf("delete replaced episode media file: %w", err),
 			)

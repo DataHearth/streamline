@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/db"
+
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
@@ -166,7 +168,7 @@ func (a *albumTagging) sidecars(
 func albumDir(alb *ent.Album) string {
 	dir := ""
 	for _, t := range alb.Edges.Tracks {
-		for _, mf := range t.Edges.MediaFiles {
+		for _, mf := range db.PresentFiles(t.Edges.MediaFiles) {
 			d := filepath.Dir(mf.Path)
 			if dir == "" {
 				dir = d

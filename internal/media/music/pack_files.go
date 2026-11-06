@@ -193,7 +193,7 @@ func packFilesView(
 				Disc:      t.Disc,
 				Position:  t.Position,
 				Title:     t.Title,
-				HasFile:   len(t.Edges.MediaFiles) > 0,
+				HasFile:   len(db.PresentFiles(t.Edges.MediaFiles)) > 0,
 				InRelease: in[t.ID],
 			})
 		}

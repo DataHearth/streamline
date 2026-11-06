@@ -798,7 +798,7 @@ func (s *Service) Delete(
 		root := config.Get().Library.MoviePath
 		var kept int
 		for _, f := range files {
-			if err := library.RemoveMediaFile(ctx, f.Path, root); err != nil {
+			if err := library.RemoveTrackedFile(ctx, f, root); err != nil {
 				kept++
 				// Error, not warn: the operator asked for the files and is
 				// about to be told the title was removed. A file that outlived
@@ -875,7 +875,7 @@ func (s *Service) DeleteFile(
 		return otelx.RecordSpanError(span, fmt.Errorf("find media_file: %w", err))
 	}
 	root := config.Get().Library.MoviePath
-	if err := library.RemoveMediaFile(ctx, mf.Path, root); err != nil {
+	if err := library.RemoveTrackedFile(ctx, mf, root); err != nil {
 		// Refused outright rather than logged and carried on: dropping the
 		// row would leave the file where it is with nothing tracking it, and
 		// the caller told the deletion happened.

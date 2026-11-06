@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/db"
+
 	"github.com/datahearth/streamline/ent"
 	entbook "github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -31,7 +33,7 @@ func albumHeldTier(a *ent.Album) (quality.AudioTier, bool) {
 		any   bool
 	)
 	for _, tr := range a.Edges.Tracks {
-		for _, mf := range tr.Edges.MediaFiles {
+		for _, mf := range db.PresentFiles(tr.Edges.MediaFiles) {
 			t, ok := quality.ParseAudioTier(mf.Quality)
 			if !ok {
 				return 0, false
@@ -116,14 +118,14 @@ func (s *FeedScanner) tryAlbumUpgrade(
 	return true
 }
 
-// slotFiles lists the files a book holds for one slot.
+// slotFiles lists the files a book holds on disk for one slot.
 func slotFiles(b *ent.Book, kind string) []*ent.MediaFile {
 	want := mediafile.BookKindEbook
 	if kind == slotAudiobook {
 		want = mediafile.BookKindAudiobook
 	}
 	return slices.DeleteFunc(
-		slices.Clone(b.Edges.MediaFiles),
+		db.PresentFiles(b.Edges.MediaFiles),
 		func(f *ent.MediaFile) bool {
 			return f.BookKind != want
 		},
@@ -198,6 +200,9 @@ func (s *FeedScanner) tryBookUpgrade(
 		return false
 	}
 	files := slotFiles(b, kind)
+	if len(files) == 0 {
+		return false
+	}
 	var replaces bool
 	if kind == slotAudiobook {
 		if library.ScoreAudiobookRelease(parsed, profile) < 0 {

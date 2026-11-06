@@ -491,7 +491,89 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("ListReplacedMissingFiles", func() {
+		confirm := func(id uint32) {
+			GinkgoHelper()
+			client.MediaFile.UpdateOneID(id).
+				SetMissingSince(time.Now()).
+				SetMissingConfirmedAt(time.Now()).ExecX(ctx)
+		}
+		secondFile := func(mf *ent.MediaFile) *ent.MediaFile {
+			GinkgoHelper()
+			movieID := client.MediaFile.GetX(ctx, mf.ID).QueryMovie().OnlyIDX(ctx)
+			return client.MediaFile.Create().SetPath("/lib/new.mkv").SetSize(1).
+				SetMovieID(movieID).SaveX(ctx)
+		}
+
+		It("lists a confirmed row whose movie holds another file", func() {
+			mf := createMovieFile()
+			confirm(mf.ID)
+			secondFile(mf)
+			confirm(createMovieFile().ID)
+
+			Expect(store.ListReplacedMissingFiles(ctx)).To(ConsistOf(mf.ID))
+		})
+
+		It("leaves a row still inside grace alone", func() {
+			mf := createMovieFile()
+			client.MediaFile.UpdateOneID(mf.ID).
+				SetMissingSince(time.Now()).
+				ExecX(ctx)
+			secondFile(mf)
+
+			Expect(store.ListReplacedMissingFiles(ctx)).To(BeEmpty())
+		})
+
+		It("does not take a file missing as well for a replacement", func() {
+			mf := createMovieFile()
+			confirm(mf.ID)
+			client.MediaFile.UpdateOneID(secondFile(mf).ID).
+				SetMissingSince(time.Now()).ExecX(ctx)
+
+			Expect(store.ListReplacedMissingFiles(ctx)).To(BeEmpty())
+		})
+
+		It("leaves out a root being skipped", func() {
+			mf := createMovieFile()
+			confirm(mf.ID)
+			secondFile(mf)
+
+			Expect(store.ListReplacedMissingFiles(ctx, RootMovies)).To(BeEmpty())
+		})
+
+		It(
+			"lists an ebook replaced within its slot, not a chapter of an audiobook",
+			func() {
+				b := client.Book.Create().
+					SetHardcoverID(1).SetTitle("Elantris").SaveX(ctx)
+				file := func(path string, kind mediafile.BookKind) *ent.MediaFile {
+					return client.MediaFile.Create().SetPath(path).SetSize(1).
+						SetBookID(b.ID).SetBookKind(kind).SaveX(ctx)
+				}
+				ebook := file("/b/old.epub", mediafile.BookKindEbook)
+				confirm(ebook.ID)
+				file("/b/new.epub", mediafile.BookKindEbook)
+				chapter := file("/a/1.m4b", mediafile.BookKindAudiobook)
+				confirm(chapter.ID)
+				file("/a/2.m4b", mediafile.BookKindAudiobook)
+
+				Expect(store.ListReplacedMissingFiles(ctx)).To(ConsistOf(ebook.ID))
+			},
+		)
+	})
+
 	Describe("ListMissingFiles", func() {
+		It("leaves out a row with no owner", func() {
+			client.MediaFile.Create().SetPath("/lib/none.mkv").SetSize(1).
+				SetMissingSince(time.Now()).
+				SetMissingConfirmedAt(time.Now()).ExecX(ctx)
+
+			rows, total, err := store.ListMissingFiles(ctx, 10, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(total).To(BeZero())
+			Expect(rows).To(BeEmpty())
+		})
+
 		It("pages the confirmed rows only, with the names a title needs", func() {
 			confirmed := createMovieFile()
 			createMovieFile()
@@ -710,6 +792,47 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 			}))
 		})
 	})
+
+	DescribeTable("a removed file leaves a title on its way in alone",
+		func(st entmovie.Status) {
+			mf := createMovieFile()
+			m := client.MediaFile.GetX(ctx, mf.ID).QueryMovie().OnlyX(ctx)
+			client.Movie.UpdateOneID(m.ID).SetStatus(st).ExecX(ctx)
+
+			Expect(
+				store.DeleteMediaFileAndRevertMovie(ctx, mf.ID, m.ID),
+			).To(Succeed())
+
+			Expect(client.Movie.GetX(ctx, m.ID).Status).To(Equal(st))
+		},
+		Entry("downloading", entmovie.StatusDownloading),
+		Entry("importing", entmovie.StatusImporting),
+	)
+
+	DescribeTable("a removed file leaves an episode on its way in alone",
+		func(st episode.Status) {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Bear", Year: 2022, TvdbID: 7777,
+				Seasons: []SeasonSeed{{Number: 1, Episodes: []EpisodeSeed{
+					{Number: 1, Title: "System"},
+				}}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			ep := show.Edges.Seasons[0].Edges.Episodes[0]
+			client.Episode.UpdateOneID(ep.ID).SetStatus(st).ExecX(ctx)
+			mf := client.MediaFile.Create().
+				SetPath("/lib/ep.mkv").SetSize(1).SetEpisodeID(ep.ID).SaveX(ctx)
+
+			Expect(
+				store.DeleteMediaFileAndRevertEpisode(ctx, mf.ID, ep.ID),
+			).To(Succeed())
+
+			Expect(client.Episode.GetX(ctx, ep.ID).Status).To(Equal(st))
+		},
+		Entry("downloading", episode.StatusDownloading),
+		Entry("importing", episode.StatusImporting),
+		Entry("paused", episode.StatusPaused),
+	)
 
 	Describe("DeleteMediaFileAndRevertEpisode", func() {
 		It("deletes the media_file row and reverts the episode to wanted", func() {

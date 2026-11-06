@@ -26,15 +26,22 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		store  *dbmocks.MockStore
 		meta   *metamocks.MockProvider
 		svc    *Service
+		// replaced is what the sweep's last query answers.
+		replaced []uint32
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		tmpDir = GinkgoT().TempDir()
+		replaced = nil
 		configtest.Setup(map[string]any{"library": map[string]any{
 			"missing_file_redownload_after": "0",
 		}})
 		store = dbmocks.NewMockStore(GinkgoT())
+		store.EXPECT().ListReplacedMissingFiles(mock.Anything).
+			RunAndReturn(func(context.Context, ...db.LibraryRoot) ([]uint32, error) {
+				return replaced, nil
+			}).Maybe()
 		meta = metamocks.NewMockProvider(GinkgoT())
 		svc = New(
 			store,
@@ -156,6 +163,30 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 
 		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
 	})
+
+	DescribeTable("drops a row its owner has replaced, whatever the wait",
+		func(wait string) {
+			configtest.Setup(map[string]any{"library": map[string]any{
+				"missing_file_redownload_after": wait,
+			}})
+			replaced = []uint32{9}
+			pages()
+			store.EXPECT().FindMediaFileWithOwners(mock.Anything, uint32(9)).
+				Return(&ent.MediaFile{
+					ID: 9, Path: filepath.Join(tmpDir, "Old.mkv"),
+					Edges: ent.MediaFileEdges{Movie: &ent.Movie{ID: 88}},
+				}, nil).Once()
+			// Only the row: DeleteMediaFile is the one write that moves no status.
+			store.EXPECT().
+				DeleteMediaFile(mock.Anything, uint32(9)).
+				Return(nil).
+				Once()
+
+			Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
+		},
+		Entry("under off", "off"),
+		Entry("inside the wait", "168h"),
+	)
 
 	It("reverts the movie when grace expires and the file is missing", func() {
 		seen := time.Now().Add(-2 * time.Hour)

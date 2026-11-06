@@ -68,6 +68,14 @@ func AllConfirmedMissing(files []*ent.MediaFile) bool {
 		})
 }
 
+// PresentFiles leaves out rows whose file is missing from disk, for the checks
+// that ask whether a title holds a file an import or a download must not touch.
+func PresentFiles(files []*ent.MediaFile) []*ent.MediaFile {
+	return slices.DeleteFunc(slices.Clone(files), func(f *ent.MediaFile) bool {
+		return f.MissingSince != nil
+	})
+}
+
 // bookKindIs reads book_kind alone: it is only set on book files, and a HasBook
 // term beside it sends SQLite back to a table scan when one kind holds every
 // row. The NOT NULL term is what lets the drift walk negate this: NOT (book_kind
@@ -149,7 +157,29 @@ func (db *DB) bookRootsHolding(
 
 // CountRootFiles counts the file rows tracked under a root.
 func (db *DB) CountRootFiles(ctx context.Context, root LibraryRoot) (int, error) {
-	n, err := db.client.MediaFile.Query().Where(rootPredicate(root)).Count(ctx)
+	return db.countRootFiles(ctx, rootPredicate(root), root)
+}
+
+// CountLiveRootFiles counts a root's rows not confirmed missing.
+func (db *DB) CountLiveRootFiles(
+	ctx context.Context,
+	root LibraryRoot,
+) (int, error) {
+	return db.countRootFiles(ctx, liveRootPredicate(root), root)
+}
+
+// liveRootPredicate leaves out the rows confirmed missing: they are already known
+// to be gone, so they say nothing about whether the volume is there.
+func liveRootPredicate(root LibraryRoot) predicate.MediaFile {
+	return mediafile.And(rootPredicate(root), mediafile.MissingConfirmedAtIsNil())
+}
+
+func (db *DB) countRootFiles(
+	ctx context.Context,
+	rows predicate.MediaFile,
+	root LibraryRoot,
+) (int, error) {
+	n, err := db.client.MediaFile.Query().Where(rows).Count(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("count %s files: %w", root, err)
 	}
@@ -163,8 +193,26 @@ func (db *DB) RootFilePathAt(
 	root LibraryRoot,
 	offset int,
 ) (string, error) {
+	return db.rootFilePathAt(ctx, rootPredicate(root), root, offset)
+}
+
+// LiveRootFilePathAt is RootFilePathAt over CountLiveRootFiles' rows.
+func (db *DB) LiveRootFilePathAt(
+	ctx context.Context,
+	root LibraryRoot,
+	offset int,
+) (string, error) {
+	return db.rootFilePathAt(ctx, liveRootPredicate(root), root, offset)
+}
+
+func (db *DB) rootFilePathAt(
+	ctx context.Context,
+	rows predicate.MediaFile,
+	root LibraryRoot,
+	offset int,
+) (string, error) {
 	path, err := db.client.MediaFile.Query().
-		Where(rootPredicate(root)).
+		Where(rows).
 		Order(ent.Asc(rootOrder(root)...)).
 		Offset(offset).
 		Limit(1).

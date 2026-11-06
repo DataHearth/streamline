@@ -5,10 +5,35 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
+
+	"github.com/datahearth/streamline/ent"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+var _ = Describe("RemoveTrackedFile", Label("unit", "library"), func() {
+	It("is no error for a file already known to be missing", func() {
+		root := GinkgoT().TempDir()
+		row := &ent.MediaFile{
+			Path: filepath.Join(
+				root,
+				"Gone",
+				"g.mkv",
+			),
+			MissingSince: new(time.Now()),
+		}
+		Expect(RemoveTrackedFile(context.Background(), row, root)).To(Succeed())
+	})
+
+	It("still reports a file nobody knew was gone", func() {
+		root := GinkgoT().TempDir()
+		row := &ent.MediaFile{Path: filepath.Join(root, "Gone", "g.mkv")}
+		Expect(RemoveTrackedFile(context.Background(), row, root)).
+			To(MatchError(fs.ErrNotExist))
+	})
+})
 
 var _ = Describe("RemoveMediaFile", Label("unit", "library"), func() {
 	var root string

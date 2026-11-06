@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/db"
+
 	"github.com/datahearth/streamline/ent"
 	entartist "github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -445,11 +447,12 @@ func previewPack(
 		if ep.Title != "" {
 			item.Title = &ep.Title
 		}
+		held := db.PresentFiles(ep.Edges.MediaFiles)
 		switch {
-		case len(ep.Edges.MediaFiles) == 0:
+		case len(held) == 0:
 			out.Imports = append(out.Imports, item)
 		case hasProfile && replacesEpisodeFile(
-			profile, ep.Edges.MediaFiles[0], name, f.Size, releaseTitle,
+			profile, held[0], name, f.Size, releaseTitle,
 		):
 			out.Upgrades = append(out.Upgrades, item)
 		default:

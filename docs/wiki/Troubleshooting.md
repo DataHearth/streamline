@@ -364,8 +364,8 @@ The drift check cannot find its file. A folder may have been renamed or a disk m
 **Settings → Library** lists every such file, with the root it belongs to and when it will be downloaded again.
 
 - **The file was moved by accident:** put it back at the same path. The next drift check heals the record.
-- **The file moved for good:** a movie's new path is adopted by the next orphan scan and the old record goes when the wait ends, with no download. A show folder, an album or a book goes through the import review.
-- **You deleted it on purpose:** press **Forget**. The record goes and the movie, episode, album or book slot stops being monitored, so it is not downloaded again. Turn monitoring back on from its page if you change your mind. A file found back on disk keeps its record.
+- **The file moved for good:** a movie's new path is adopted by the next orphan scan and the old record goes once it is confirmed missing, with no download. A show folder, an album or a book goes through the import review.
+- **You deleted it on purpose:** press **Forget**. The record goes and the movie, episode, album or book slot stops being monitored, so it is not downloaded again. Turn monitoring back on from its page if you change your mind. A file found back on disk keeps its record. **Forget all** leaves the files of an offline library root alone and says so, and forgets the rest.
 - **You want it back now:** an import without replace fills a missing file, so a manual search and grab works straight away.
 
 While a file is missing, nothing tries to tag, transcode, probe or rename it, and Subsonic and OPDS stop offering it. Stats file counts leave it out, but title counts still count the title as available.

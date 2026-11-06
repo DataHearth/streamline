@@ -148,12 +148,13 @@ func classifyMovieAdoption(
 	}
 	m := matches[0]
 	d := adoptDecision{movieID: m.ID, quality: parsed.Resolution}
+	files := db.PresentFiles(m.Edges.MediaFiles)
 	switch {
 	case len(matches) > 1:
 		d.reason = "ambiguous match"
-	case sameFile(parsed, size, m.Edges.MediaFiles):
+	case sameFile(parsed, size, files):
 		d.completed = true
-	case len(m.Edges.MediaFiles) > 0:
+	case len(files) > 0:
 		d.reason = "already have a file"
 	case resolutionOK(parsed.Resolution, profileMin(config.MediaMovie, m.QualityProfile)):
 		d.autoImport = true
@@ -207,7 +208,7 @@ func classifyEpisodeAdoption(
 		episodeID: ep.ID, episodeIDs: claim, quality: parsed.Resolution,
 	}
 	switch {
-	case sameFile(parsed, size, ep.Edges.MediaFiles):
+	case sameFile(parsed, size, db.PresentFiles(ep.Edges.MediaFiles)):
 		d.completed = true
 	case episodeHasFile(ep):
 		d.reason = "already have a file"
@@ -348,7 +349,7 @@ func singleEpisodeRelease(parsed library.ParseResult) bool {
 // episodeHasFile reports whether an episode (with MediaFiles eager-loaded)
 // already has a file on disk.
 func episodeHasFile(ep *ent.Episode) bool {
-	return len(ep.Edges.MediaFiles) > 0
+	return len(db.PresentFiles(ep.Edges.MediaFiles)) > 0
 }
 
 func profileMin(media config.Media, name string) string {

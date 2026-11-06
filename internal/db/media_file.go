@@ -492,14 +492,67 @@ func holdsOtherFile(
 	return held, nil
 }
 
+// ListReplacedMissingFiles returns the rows confirmed missing whose owner holds
+// another file in that place: the orphan scan or a bulk import took it at a new
+// path. One read however many rows are waiting, which owner lookups per row
+// would not be. An audiobook is left out: its slot is a folder, so another file
+// beside a missing one is the rest of the book and replaces nothing.
+func (db *DB) ListReplacedMissingFiles(
+	ctx context.Context,
+	skip ...LibraryRoot,
+) ([]uint32, error) {
+	q := db.client.MediaFile.Query().Where(
+		mediafile.MissingConfirmedAtNotNil(),
+		mediafile.Or(
+			mediafile.HasMovieWith(
+				movie.HasMediaFilesWith(mediafile.MissingSinceIsNil()),
+			),
+			mediafile.HasEpisodeWith(
+				episode.HasMediaFilesWith(mediafile.MissingSinceIsNil()),
+			),
+			mediafile.HasTrackWith(
+				track.HasMediaFilesWith(mediafile.MissingSinceIsNil()),
+			),
+			mediafile.And(
+				mediafile.BookKindEQ(mediafile.BookKindEbook),
+				mediafile.HasBookWith(book.HasMediaFilesWith(
+					mediafile.BookKindEQ(mediafile.BookKindEbook),
+					mediafile.MissingSinceIsNil(),
+				)),
+			),
+		),
+	)
+	if len(skip) > 0 {
+		skipped := make([]predicate.MediaFile, len(skip))
+		for i, root := range skip {
+			skipped[i] = rootPredicate(root)
+		}
+		q = q.Where(mediafile.Not(mediafile.Or(skipped...)))
+	}
+	ids, err := q.IDs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list replaced missing files: %w", err)
+	}
+	return ids, nil
+}
+
 // ListMissingFiles returns one page of the rows confirmed missing, oldest
 // confirmation first, and how many there are.
 func (db *DB) ListMissingFiles(
 	ctx context.Context,
 	limit, offset int,
 ) ([]*ent.MediaFile, int, error) {
-	confirmed := db.client.MediaFile.Query().
-		Where(mediafile.MissingConfirmedAtNotNil())
+	// Owned rows only: re-identify detaches a title's files for a moment, and a
+	// row with no owner names no root and no title to show.
+	confirmed := db.client.MediaFile.Query().Where(
+		mediafile.MissingConfirmedAtNotNil(),
+		mediafile.Or(
+			mediafile.HasMovie(),
+			mediafile.HasEpisode(),
+			mediafile.HasTrack(),
+			mediafile.HasBook(),
+		),
+	)
 	total, err := confirmed.Clone().Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count missing files: %w", err)
@@ -591,8 +644,14 @@ func forgetInTx(ctx context.Context, tx *ent.Tx, row *ent.MediaFile) error {
 	return nil
 }
 
+// revertMovieStatus leaves a movie on its way in alone: its record's outcome
+// moves it, and wanted beside a live record would have it grabbed again.
 func revertMovieStatus(ctx context.Context, tx *ent.Tx, id uint32) error {
-	if err := tx.Movie.UpdateOneID(id).
+	if err := tx.Movie.Update().
+		Where(
+			movie.ID(id),
+			movie.StatusNotIn(movie.StatusDownloading, movie.StatusImporting),
+		).
 		SetStatus(movie.StatusWanted).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("revert movie %d to wanted: %w", id, err)
@@ -600,8 +659,17 @@ func revertMovieStatus(ctx context.Context, tx *ent.Tx, id uint32) error {
 	return nil
 }
 
+// revertEpisodeStatus is revertMovieStatus for an episode.
 func revertEpisodeStatus(ctx context.Context, tx *ent.Tx, id uint32) error {
-	if err := tx.Episode.UpdateOneID(id).
+	if err := tx.Episode.Update().
+		Where(
+			episode.ID(id),
+			episode.StatusNotIn(
+				episode.StatusDownloading,
+				episode.StatusImporting,
+				episode.StatusPaused,
+			),
+		).
 		SetStatus(episode.StatusWanted).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("revert episode %d to wanted: %w", id, err)

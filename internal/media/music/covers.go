@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/db"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -136,9 +138,9 @@ func (s *Service) localCover(
 	a *ent.Album,
 	errs *[]error,
 ) string {
-	var files []*ent.MediaFile
+	files := make([]*ent.MediaFile, 0, len(a.Edges.Tracks))
 	for _, t := range a.Edges.Tracks {
-		files = append(files, t.Edges.MediaFiles...)
+		files = append(files, db.PresentFiles(t.Edges.MediaFiles)...)
 	}
 	if len(files) == 0 {
 		return ""

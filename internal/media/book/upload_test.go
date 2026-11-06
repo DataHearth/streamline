@@ -6,6 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
+
+	"github.com/datahearth/streamline/ent/mediafile"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -64,6 +67,18 @@ var _ = Describe("uploads", Label("unit", "books"), func() {
 
 		Expect(err).To(MatchError(upload.ErrConflict))
 		Expect(called).To(BeZero())
+	})
+
+	It("fills a slot whose file is missing from disk without replace", func() {
+		b := f.addBook(1, "Elantris", "both")
+		f.client.MediaFile.Create().
+			SetPath("/books/gone.epub").SetSize(1).SetBookID(b.ID).
+			SetBookKind(mediafile.BookKindEbook).SetMissingSince(time.Now()).
+			ExecX(f.ctx)
+
+		_, err := f.svc.UploadBook(f.ctx, b.ID, "ebook", UploadOptions{}, recv)
+
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("files an uploaded record and marks the slot downloading", func() {

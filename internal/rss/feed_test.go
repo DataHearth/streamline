@@ -395,6 +395,18 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		Expect(scanner.Run(ctx)).To(Succeed())
 	})
 
+	It("grabs no upgrade for a movie whose file is missing from disk", func() {
+		configtest.Setup(upgradeConfig("a"))
+		newScanner()
+		m := movieWithFile(upgradableProfile, plainFile)
+		m.Edges.MediaFiles[0].MissingSince = new(time.Now())
+		upgradeCandidates(m)
+		feeder.EXPECT().Feed(mock.Anything, "a").
+			Return([]indexer.SearchResult{{Title: uhdMultiRelease}}, nil).Once()
+		// No grab expectation: the strict mock fails the spec if one fires.
+		Expect(scanner.Run(ctx)).To(Succeed())
+	})
+
 	It("leaves the file alone when the release scores no higher", func() {
 		configtest.Setup(upgradeConfig("a"))
 		newScanner()

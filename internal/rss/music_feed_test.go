@@ -250,6 +250,28 @@ var _ = Describe("FeedScanner music pass", Label("unit", "rss"), func() {
 			run(nil, flacItem)
 		})
 
+		It(
+			"grabs no upgrade for an album whose files are all missing from disk",
+			func() {
+				a := heldAlbum("high", "high")
+				for _, tr := range a.Edges.Tracks {
+					tr.Edges.MediaFiles[0].MissingSince = new(time.Now())
+				}
+				upgradeAlbums = []*ent.Album{a}
+				run(nil, flacItem)
+			},
+		)
+
+		It(
+			"reads the tier from the files on disk, not one missing from disk",
+			func() {
+				a := heldAlbum("lossless", "high")
+				a.Edges.Tracks[1].Edges.MediaFiles[0].MissingSince = new(time.Now())
+				upgradeAlbums = []*ent.Album{a}
+				run(nil, flacItem)
+			},
+		)
+
 		It("does not grab an equal or worse tier", func() {
 			upgradeAlbums = []*ent.Album{heldAlbum("lossless")}
 			run(nil, mp3Item)

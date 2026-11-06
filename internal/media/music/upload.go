@@ -198,7 +198,7 @@ func (s *Service) UploadTrack(
 		return nil, otelx.RecordSpanError(span, fmt.Errorf(
 			"%w: a track takes exactly one audio file", upload.ErrRejected))
 	}
-	if len(t.Edges.MediaFiles) > 0 && !o.Replace {
+	if len(db.PresentFiles(t.Edges.MediaFiles)) > 0 && !o.Replace {
 		staged.Discard()
 		return nil, otelx.RecordSpanError(span, fmt.Errorf(
 			"%w: track already has a file; replace it to upload",

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -113,6 +114,25 @@ var _ = Describe("Cover resolver", Label("unit", "music"), func() {
 		).
 			To(Succeed())
 		album = albumWithFiles(track)
+		var stored []byte
+		posters.EXPECT().Put(mock.Anything, "albums", uint32(7), mock.Anything).
+			Run(putCapture(&stored)).Return(nil).Once()
+
+		svc.resolveCover(ctx, album)
+
+		Expect(string(stored)).To(Equal("cover"))
+	})
+
+	It("takes the cover beside a file on disk, not one missing from disk", func() {
+		dir := GinkgoT().TempDir()
+		track := filepath.Join(dir, "02.mp3")
+		copyFile(untagged, track)
+		Expect(
+			os.WriteFile(filepath.Join(dir, "cover.jpg"), []byte("cover"), 0o600),
+		).
+			To(Succeed())
+		album = albumWithFiles(filepath.Join(GinkgoT().TempDir(), "01.mp3"), track)
+		album.Edges.Tracks[0].Edges.MediaFiles[0].MissingSince = new(time.Now())
 		var stored []byte
 		posters.EXPECT().Put(mock.Anything, "albums", uint32(7), mock.Anything).
 			Run(putCapture(&stored)).Return(nil).Once()

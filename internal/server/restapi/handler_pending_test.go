@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -387,6 +388,38 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 				Edges: ent.DownloadRecordEdges{AnchorEpisode: ep},
 			}
 		}
+
+		It("lists an episode whose file is missing from disk as an import", func() {
+			s := show()
+			s.Edges.Seasons[0].Edges.Episodes[0].Edges.MediaFiles[0].MissingSince = new(
+				time.Now(),
+			)
+			app.store.EXPECT().
+				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(pendingPack(), nil).Once()
+			app.store.EXPECT().
+				FindTVShowByID(mock.Anything, uint32(5)).
+				Return(s, nil).Once()
+			app.downloads.EXPECT().
+				ListTorrentFiles(mock.Anything, "qbit", "abc").
+				Return([]download.TorrentFile{
+					{Path: "Bear/The.Bear.S01E01.1080p.mkv", Size: 900 << 20},
+				}, nil).Once()
+
+			resp := app.do(app.req(
+				http.MethodGet, "/api/v1/activity/pending/1/preview",
+				app.adminKey, nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var body PendingPreview
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Imports).To(HaveLen(1))
+			Expect(body.Imports[0].Episode).To(Equal(uint16(1)))
+			Expect(body.Upgrades).To(BeEmpty())
+			Expect(body.Keeps).To(BeEmpty())
+		})
 
 		It("buckets the torrent's files by what an import would do", func() {
 			app.store.EXPECT().

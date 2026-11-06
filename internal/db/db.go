@@ -1391,11 +1391,25 @@ type Store interface {
 		limit int,
 		skip ...LibraryRoot,
 	) ([]DriftRow, error)
+	// ListReplacedMissingFiles returns the rows confirmed missing whose owner
+	// holds another file in that place, leaving out the skipped roots.
+	ListReplacedMissingFiles(
+		ctx context.Context,
+		skip ...LibraryRoot,
+	) ([]uint32, error)
 	FindMediaFileWithOwners(ctx context.Context, id uint32) (*ent.MediaFile, error)
 	CountRootFiles(ctx context.Context, root LibraryRoot) (int, error)
 	BookFileRoots(ctx context.Context, bookID uint32) ([]LibraryRoot, error)
 	BookSeriesFileRoots(ctx context.Context, seriesID uint32) ([]LibraryRoot, error)
 	RootFilePathAt(ctx context.Context, root LibraryRoot, offset int) (string, error)
+	// CountLiveRootFiles counts a root's rows not confirmed missing.
+	CountLiveRootFiles(ctx context.Context, root LibraryRoot) (int, error)
+	// LiveRootFilePathAt is RootFilePathAt over CountLiveRootFiles' rows.
+	LiveRootFilePathAt(
+		ctx context.Context,
+		root LibraryRoot,
+		offset int,
+	) (string, error)
 	ListRootFilesForDrift(
 		ctx context.Context,
 		root LibraryRoot,

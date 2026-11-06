@@ -238,7 +238,7 @@ func (s *Service) Preview(ctx context.Context, p Params) (Preview, error) {
 		CanMove: canMove(p.Root),
 	}
 	for _, t := range targets {
-		if !onDisk(t, p.MoveFiles) {
+		if !t.missing && !onDisk(t, p.MoveFiles) {
 			out.Skipped++
 		}
 		if len(out.Samples) < sampleLimit {
@@ -302,11 +302,12 @@ func (s *Service) run(ctx context.Context, p Params, targets []target) {
 	var runErr error
 	for _, t := range targets {
 		s.progress(t.from)
-		if !onDisk(t, p.MoveFiles) {
+		present := onDisk(t, p.MoveFiles)
+		if !present && !t.missing {
 			s.skip()
 			continue
 		}
-		if p.MoveFiles {
+		if p.MoveFiles && present {
 			if err := library.MoveFile(ctx, t.from, t.to); err != nil {
 				runErr = fmt.Errorf("move %s → %s: %w", t.from, t.to, err)
 				break
@@ -430,7 +431,11 @@ func (s *Service) resolve(p Params) (Params, error) {
 type target struct {
 	from string
 	to   string
-	save func(ctx context.Context, path string) error
+	// missing marks a file already known to be gone: its row follows the root
+	// anyway, so the drift check looks for it where it would come back. Left on
+	// the old path it could never heal.
+	missing bool
+	save    func(ctx context.Context, path string) error
 }
 
 func (s *Service) collect(ctx context.Context, p Params) ([]target, error) {
@@ -448,8 +453,9 @@ func (s *Service) collect(ctx context.Context, p Params) ([]target, error) {
 		}
 		id := f.ID
 		out = append(out, target{
-			from: f.Path,
-			to:   rewrite(f.Path, p.From, p.To),
+			from:    f.Path,
+			to:      rewrite(f.Path, p.From, p.To),
+			missing: f.MissingSince != nil,
 			save: func(ctx context.Context, path string) error {
 				return s.store.UpdateMediaFilePath(ctx, id, path)
 			},

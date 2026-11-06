@@ -3128,6 +3128,72 @@ func (_c *MockTx_CountLiveDownloadRecords_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// CountLiveRootFiles provides a mock function for the type MockTx
+func (_mock *MockTx) CountLiveRootFiles(ctx context.Context, root db.LibraryRoot) (int, error) {
+	ret := _mock.Called(ctx, root)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountLiveRootFiles")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.LibraryRoot) (int, error)); ok {
+		return returnFunc(ctx, root)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.LibraryRoot) int); ok {
+		r0 = returnFunc(ctx, root)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.LibraryRoot) error); ok {
+		r1 = returnFunc(ctx, root)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_CountLiveRootFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountLiveRootFiles'
+type MockTx_CountLiveRootFiles_Call struct {
+	*mock.Call
+}
+
+// CountLiveRootFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - root db.LibraryRoot
+func (_e *MockTx_Expecter) CountLiveRootFiles(ctx any, root any) *MockTx_CountLiveRootFiles_Call {
+	return &MockTx_CountLiveRootFiles_Call{Call: _e.mock.On("CountLiveRootFiles", ctx, root)}
+}
+
+func (_c *MockTx_CountLiveRootFiles_Call) Run(run func(ctx context.Context, root db.LibraryRoot)) *MockTx_CountLiveRootFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.LibraryRoot
+		if args[1] != nil {
+			arg1 = args[1].(db.LibraryRoot)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_CountLiveRootFiles_Call) Return(n int, err error) *MockTx_CountLiveRootFiles_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockTx_CountLiveRootFiles_Call) RunAndReturn(run func(ctx context.Context, root db.LibraryRoot) (int, error)) *MockTx_CountLiveRootFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CountMovieMediaFiles provides a mock function for the type MockTx
 func (_mock *MockTx) CountMovieMediaFiles(ctx context.Context) (int, error) {
 	ret := _mock.Called(ctx)
@@ -15228,6 +15294,87 @@ func (_c *MockTx_ListReleaseGrabs_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// ListReplacedMissingFiles provides a mock function for the type MockTx
+func (_mock *MockTx) ListReplacedMissingFiles(ctx context.Context, skip ...db.LibraryRoot) ([]uint32, error) {
+	// db.LibraryRoot
+	_va := make([]any, len(skip))
+	for _i := range skip {
+		_va[_i] = skip[_i]
+	}
+	var _ca []any
+	_ca = append(_ca, ctx)
+	_ca = append(_ca, _va...)
+	ret := _mock.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListReplacedMissingFiles")
+	}
+
+	var r0 []uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, ...db.LibraryRoot) ([]uint32, error)); ok {
+		return returnFunc(ctx, skip...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, ...db.LibraryRoot) []uint32); ok {
+		r0 = returnFunc(ctx, skip...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]uint32)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, ...db.LibraryRoot) error); ok {
+		r1 = returnFunc(ctx, skip...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListReplacedMissingFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListReplacedMissingFiles'
+type MockTx_ListReplacedMissingFiles_Call struct {
+	*mock.Call
+}
+
+// ListReplacedMissingFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - skip ...db.LibraryRoot
+func (_e *MockTx_Expecter) ListReplacedMissingFiles(ctx any, skip ...any) *MockTx_ListReplacedMissingFiles_Call {
+	return &MockTx_ListReplacedMissingFiles_Call{Call: _e.mock.On("ListReplacedMissingFiles",
+		append([]any{ctx}, skip...)...)}
+}
+
+func (_c *MockTx_ListReplacedMissingFiles_Call) Run(run func(ctx context.Context, skip ...db.LibraryRoot)) *MockTx_ListReplacedMissingFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []db.LibraryRoot
+		variadicArgs := make([]db.LibraryRoot, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(db.LibraryRoot)
+			}
+		}
+		arg1 = variadicArgs
+		run(
+			arg0,
+			arg1...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListReplacedMissingFiles_Call) Return(uint32s []uint32, err error) *MockTx_ListReplacedMissingFiles_Call {
+	_c.Call.Return(uint32s, err)
+	return _c
+}
+
+func (_c *MockTx_ListReplacedMissingFiles_Call) RunAndReturn(run func(ctx context.Context, skip ...db.LibraryRoot) ([]uint32, error)) *MockTx_ListReplacedMissingFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListRequests provides a mock function for the type MockTx
 func (_mock *MockTx) ListRequests(ctx context.Context, p db.ListRequestsParams) ([]*ent.Request, int, error) {
 	ret := _mock.Called(ctx, p)
@@ -16880,6 +17027,78 @@ func (_c *MockTx_ListWantedMovies_Call) Return(movies []*ent.Movie, err error) *
 }
 
 func (_c *MockTx_ListWantedMovies_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.Movie, error)) *MockTx_ListWantedMovies_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LiveRootFilePathAt provides a mock function for the type MockTx
+func (_mock *MockTx) LiveRootFilePathAt(ctx context.Context, root db.LibraryRoot, offset int) (string, error) {
+	ret := _mock.Called(ctx, root, offset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LiveRootFilePathAt")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.LibraryRoot, int) (string, error)); ok {
+		return returnFunc(ctx, root, offset)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.LibraryRoot, int) string); ok {
+		r0 = returnFunc(ctx, root, offset)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.LibraryRoot, int) error); ok {
+		r1 = returnFunc(ctx, root, offset)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_LiveRootFilePathAt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LiveRootFilePathAt'
+type MockTx_LiveRootFilePathAt_Call struct {
+	*mock.Call
+}
+
+// LiveRootFilePathAt is a helper method to define mock.On call
+//   - ctx context.Context
+//   - root db.LibraryRoot
+//   - offset int
+func (_e *MockTx_Expecter) LiveRootFilePathAt(ctx any, root any, offset any) *MockTx_LiveRootFilePathAt_Call {
+	return &MockTx_LiveRootFilePathAt_Call{Call: _e.mock.On("LiveRootFilePathAt", ctx, root, offset)}
+}
+
+func (_c *MockTx_LiveRootFilePathAt_Call) Run(run func(ctx context.Context, root db.LibraryRoot, offset int)) *MockTx_LiveRootFilePathAt_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.LibraryRoot
+		if args[1] != nil {
+			arg1 = args[1].(db.LibraryRoot)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_LiveRootFilePathAt_Call) Return(s string, err error) *MockTx_LiveRootFilePathAt_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *MockTx_LiveRootFilePathAt_Call) RunAndReturn(run func(ctx context.Context, root db.LibraryRoot, offset int) (string, error)) *MockTx_LiveRootFilePathAt_Call {
 	_c.Call.Return(run)
 	return _c
 }

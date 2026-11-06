@@ -106,7 +106,35 @@ func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) err
 			recovered = recovered[:0]
 		}
 	}
+	if err := s.dropAllReplaced(ctx, skip); err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
 	span.SetAttributes(attribute.Int("rows", total))
+	return nil
+}
+
+// dropAllReplaced removes the rows of files their owner has replaced as soon as
+// they are confirmed, whatever the wait says: there is nothing to wait for, no
+// status to revert, and under off they would otherwise never go. It runs after
+// the walk, which has marked every file that went this tick, so a replacement
+// that is gone as well does not count.
+func (s *Service) dropAllReplaced(
+	ctx context.Context,
+	skip []db.LibraryRoot,
+) error {
+	ids, err := s.store.ListReplacedMissingFiles(ctx, skip...)
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		row, err := s.store.FindMediaFileWithOwners(ctx, id)
+		if err != nil {
+			slog.WarnContext(ctx, "load media file owners failed",
+				"media_file.id", id, "error", err)
+			continue
+		}
+		s.dropReplaced(ctx, row)
+	}
 	return nil
 }
 
@@ -145,8 +173,6 @@ func (s *Service) handleMissing(
 	graceWindow time.Duration,
 	acc driftAccumulator,
 ) {
-	driftDrifted.Add(ctx, 1)
-
 	// Checked before the owners load: a dead disk leaves its rows here tick after
 	// tick for the whole wait, and each would otherwise cost a dozen reads to do
 	// nothing.
@@ -173,6 +199,7 @@ func (s *Service) handleMissing(
 	}
 	group, season, aggregated := driftGroupOf(row)
 	if first {
+		driftDrifted.Add(ctx, 1)
 		// The aggregated payload carries no path, so this line is the only
 		// place the individual file is named.
 		slog.InfoContext(ctx, "drift detected a missing file",
@@ -462,7 +489,11 @@ func (s *Service) forgetOne(ctx context.Context, row *ent.MediaFile) (bool, erro
 	if _, err := os.Stat(row.Path); !errors.Is(err, fs.ErrNotExist) {
 		return false, nil
 	}
-	if err := s.store.ForgetMediaFile(ctx, row); err != nil {
+	// The wait can end between the read and the write, which takes the row and
+	// reverts the title: nothing is left to forget, and nothing went wrong.
+	if err := s.store.ForgetMediaFile(ctx, row); ent.IsNotFound(err) {
+		return false, nil
+	} else if err != nil {
 		return false, err
 	}
 	slog.InfoContext(ctx, "forgot a missing file",

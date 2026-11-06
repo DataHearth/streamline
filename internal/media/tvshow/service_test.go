@@ -687,6 +687,45 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("keeps an episode missing from disk in the selection, unmarked", func() {
+			past := time.Now().Add(-24 * time.Hour)
+			show := &ent.TVShow{ID: 3, Edges: ent.TVShowEdges{
+				Seasons: []*ent.Season{{
+					Number: 1,
+					Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+						{
+							ID:      10,
+							Number:  1,
+							Status:  episode.StatusAvailable,
+							AirDate: past,
+							Edges: ent.EpisodeEdges{MediaFiles: []*ent.MediaFile{
+								{ID: 1, MissingSince: new(time.Now())},
+							}},
+						},
+						{
+							ID:      11,
+							Number:  2,
+							Status:  episode.StatusWanted,
+							AirDate: past,
+						},
+					}},
+				}},
+			}}
+			storeMk.FindTVShowByID(mock.Anything, uint32(3)).Return(show, nil).Once()
+			dlMk.GrabEpisode(mock.Anything,
+				mock.AnythingOfType("indexer.SearchResult"), uint32(10),
+				[]uint32{10, 11}).
+				Return(&ent.DownloadRecord{ID: 1}, nil).Once()
+			// Available keeps its status: the title has not gone back to wanted.
+			storeMk.SetEpisodeStatus(mock.Anything, uint32(11), episode.StatusDownloading).
+				Return(nil).
+				Once()
+
+			err := svc.GrabSeasonRelease(ctx, 3, 1,
+				indexer.SearchResult{Title: "BB S01", Download: "magnet:x"}, false)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		// The anchor is always one of the record's episodes, and the file
 		// selection keeps every episode the record links: anchored on an
 		// episode already on disk, the pack re-downloads it.

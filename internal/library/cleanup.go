@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/datahearth/streamline/ent"
+
 	"github.com/datahearth/streamline/internal/library/audiotags"
 )
 
@@ -34,6 +36,16 @@ import (
 // Returns ErrOutsideRoot, deleting nothing, when path does not resolve strictly
 // below root. The path comes from a media_file row, and a row can hold a path
 // a provider title or a naming template walked out of the library with.
+// RemoveTrackedFile is RemoveMediaFile for a file's row: a file the drift check
+// already found gone is what the delete wanted, so only a surprise is an error.
+func RemoveTrackedFile(ctx context.Context, mf *ent.MediaFile, root string) error {
+	err := RemoveMediaFile(ctx, mf.Path, root)
+	if mf.MissingSince != nil && errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	return err
+}
+
 func RemoveMediaFile(ctx context.Context, path, root string) error {
 	if !PathUnderRoot(path, root) || filepath.Clean(path) == filepath.Clean(root) {
 		return fmt.Errorf("remove %s: %w", path, ErrOutsideRoot)

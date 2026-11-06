@@ -397,6 +397,23 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			Expect(scanner.Run(ctx)).To(Succeed())
 		})
 
+		DescribeTable(
+			"grabs no upgrade for an episode whose file is missing from disk",
+			func(release string) {
+				configtest.Setup(upgradeConfig("a"))
+				newScanner()
+				e := epWithFile(11, 1, plainEpFile)
+				e.Edges.MediaFiles[0].MissingSince = new(time.Now())
+				expectQueries(nil, []*ent.TVShow{showWith(e)})
+				feeder.EXPECT().Feed(mock.Anything, "a").
+					Return([]indexer.SearchResult{{Title: release}}, nil).Once()
+				// No grab expectation: the strict mock fails the spec if one fires.
+				Expect(scanner.Run(ctx)).To(Succeed())
+			},
+			Entry("a single episode", betterEp),
+			Entry("a season pack", betterPack),
+		)
+
 		It("upgrades a whole season against its best file", func() {
 			configtest.Setup(upgradeConfig("a"))
 			newScanner()

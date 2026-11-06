@@ -30,21 +30,34 @@
 		return `/books/${f.owner_id}`;
 	};
 
-	const forget = createMutation<number, Error, MissingFile[]>(() => ({
-		mutationFn: async (rows) => {
-			let forgotten = 0;
-			for (let i = 0; i < rows.length; i += FORGET_BATCH) {
-				const ids = rows.slice(i, i + FORGET_BATCH).map((f) => f.id);
-				const resp = await api<{ forgotten: number }>("/library/missing-files/forget", {
-					method: "POST",
-					body: { ids },
-				});
-				forgotten += resp.forgotten;
-			}
-			return forgotten;
+	// A root at a time: the server refuses a batch holding a row of an offline
+	// root, and one root being down must not stop the others or lose their count.
+	const forgetRoot = async (rows: MissingFile[]) => {
+		let forgotten = 0;
+		for (let i = 0; i < rows.length; i += FORGET_BATCH) {
+			const ids = rows.slice(i, i + FORGET_BATCH).map((f) => f.id);
+			const resp = await api<{ forgotten: number }>("/library/missing-files/forget", {
+				method: "POST",
+				body: { ids },
+			});
+			forgotten += resp.forgotten;
+		}
+		return forgotten;
+	};
+
+	const forget = createMutation<PromiseSettledResult<number>[], Error, MissingFile[]>(() => ({
+		mutationFn: (rows) => {
+			const roots = [...new Set(rows.map((f) => f.root))];
+			return Promise.allSettled(roots.map((root) => forgetRoot(rows.filter((f) => f.root === root))));
 		},
-		onSuccess: (forgotten) => toast.ok(i18n.library_missing_forgotten({ count: forgotten })),
-		onError: (err) => toast.err(errorText(err)),
+		onSuccess: (results) => {
+			const forgotten = results.reduce((sum, r) => sum + (r.status === "fulfilled" ? r.value : 0), 0);
+			if (forgotten > 0) toast.ok(i18n.library_missing_forgotten({ count: forgotten }));
+			// After the count: the newest toast is the one on top of the stack.
+			for (const r of results) {
+				if (r.status === "rejected") toast.err(errorText(r.reason));
+			}
+		},
 		onSettled: () => {
 			forgetting = null;
 			qc.invalidateQueries();

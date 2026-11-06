@@ -9,6 +9,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -22,6 +23,20 @@ import (
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/posters"
 )
+
+var _ = Describe("albumDir", Label("unit", "music"), func() {
+	It("leaves out a file missing from disk at its old path", func() {
+		alb := &ent.Album{Edges: ent.AlbumEdges{Tracks: []*ent.Track{
+			{Edges: ent.TrackEdges{MediaFiles: []*ent.MediaFile{
+				{Path: "/m/Artist/Old Name/01.flac", MissingSince: new(time.Now())},
+			}}},
+			{Edges: ent.TrackEdges{MediaFiles: []*ent.MediaFile{
+				{Path: "/m/Artist/New Name/02.flac"},
+			}}},
+		}}}
+		Expect(albumDir(alb)).To(Equal("/m/Artist/New Name"))
+	})
+})
 
 func solidImage(w, h int, c color.Color) *image.RGBA {
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
