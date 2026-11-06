@@ -710,6 +710,7 @@ export type HoldCheck =
 	| "tier"
 	| "album"
 	| "track"
+	| "missing"
 	| "format"
 	| "bitrate"
 	| "metadata"
@@ -725,7 +726,13 @@ export type HoldReason = {
 };
 
 export type TrackAssignment = { file: string; track_id: number };
-export type TrackPlanTrack = { id: number; disc: number; position: number; title: string };
+export type TrackPlanTrack = {
+	id: number;
+	disc: number;
+	position: number;
+	title: string;
+	has_file: boolean;
+};
 export type TrackPlan = {
 	files: { file: string; track_id?: number }[];
 	tracks: TrackPlanTrack[];

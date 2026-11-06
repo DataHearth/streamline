@@ -15521,7 +15521,7 @@ components:
             file titled differently from the track its number lands on, when
             at least half the release's titles agree); format, bitrate and
             metadata hold a book.
-          enum: [corrupt, resolution, duration, codec, always_ask, tier, album, track, format, bitrate, metadata]
+          enum: [corrupt, resolution, duration, codec, always_ask, tier, album, track, missing, format, bitrate, metadata]
         expected: { type: string }
         actual: { type: string }
 
@@ -15578,8 +15578,11 @@ components:
 
     TrackPlanTrack:
       type: object
-      required: [id, disc, position, title]
+      required: [id, disc, position, title, has_file]
       properties:
+        has_file:
+          type: boolean
+          description: The track already holds a file in the library.
         id:
           type: integer
           format: uint32

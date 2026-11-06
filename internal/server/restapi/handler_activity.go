@@ -424,6 +424,7 @@ func (s *Server) GetHeldDownloadTrackPlan(
 	for _, t := range plan.Tracks {
 		out.Tracks = append(out.Tracks, TrackPlanTrack{
 			Id: t.ID, Disc: t.Disc, Position: t.Position, Title: t.Title,
+			HasFile: len(t.Edges.MediaFiles) > 0,
 		})
 	}
 	return out, nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
@@ -115,6 +116,31 @@ func trackHoldReasons(plan []albumFile, everyFile bool) []schema.HoldReason {
 		return nil
 	}
 	return out
+}
+
+// missingHoldReasons says when the import would leave some of the album's tracks
+// with no file. The reason belongs to the album, so it names no file: the
+// release may be another edition, and only a person can tell if that is fine.
+func missingHoldReasons(plan []albumFile, alb *ent.Album) []schema.HoldReason {
+	filled := make(map[uint32]struct{}, len(plan))
+	for _, f := range plan {
+		filled[f.tr.ID] = struct{}{}
+	}
+	empty := 0
+	for _, t := range alb.Edges.Tracks {
+		if _, ok := filled[t.ID]; !ok && len(t.Edges.MediaFiles) == 0 {
+			empty++
+		}
+	}
+	if empty == 0 {
+		return nil
+	}
+	total := len(alb.Edges.Tracks)
+	return []schema.HoldReason{{
+		Check:    "missing",
+		Expected: strconv.Itoa(total),
+		Actual:   strconv.Itoa(total - empty),
+	}}
 }
 
 // tierHoldReasons lists the measured files whose tier the artist's profile

@@ -857,6 +857,7 @@ const (
 	HoldReasonCheckDuration   HoldReasonCheck = "duration"
 	HoldReasonCheckFormat     HoldReasonCheck = "format"
 	HoldReasonCheckMetadata   HoldReasonCheck = "metadata"
+	HoldReasonCheckMissing    HoldReasonCheck = "missing"
 	HoldReasonCheckResolution HoldReasonCheck = "resolution"
 	HoldReasonCheckTier       HoldReasonCheck = "tier"
 	HoldReasonCheckTrack      HoldReasonCheck = "track"
@@ -880,6 +881,8 @@ func (e HoldReasonCheck) Valid() bool {
 	case HoldReasonCheckFormat:
 		return true
 	case HoldReasonCheckMetadata:
+		return true
+	case HoldReasonCheckMissing:
 		return true
 	case HoldReasonCheckResolution:
 		return true
@@ -9273,7 +9276,10 @@ type TrackPlanFile struct {
 
 // TrackPlanTrack defines model for TrackPlanTrack.
 type TrackPlanTrack struct {
-	Disc     uint8  `json:"disc"`
+	Disc uint8 `json:"disc"`
+
+	// HasFile The track already holds a file in the library.
+	HasFile  bool   `json:"has_file"`
 	Id       uint32 `json:"id"`
 	Position uint16 `json:"position"`
 	Title    string `json:"title"`

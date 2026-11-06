@@ -200,6 +200,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 				albumTracks[0].title,
 			)
 			rec := uploadedRecord(nil)
+			rec.VerificationBypassed = true
 			rec.SavePath = staging
 			expectFind(rec)
 			storeMk.EXPECT().
@@ -264,6 +265,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 			seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 1, albumTracks[0].title)
 			seedTrackFile(dlDir, "b.flac", "tagged.flac", 2, albumTracks[1].title)
 			rec := fixtureAlbumRecord(dlDir, alb)
+			rec.VerificationBypassed = true
 
 			expectFind(rec)
 			var got db.RecordAlbumImportSuccessParams
@@ -424,6 +426,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 				Expected: albumTracks[0].title, Actual: albumTracks[0].title,
 			},
 			schema.HoldReason{File: c, Check: "track", Actual: "Not On The Album"},
+			schema.HoldReason{Check: "missing", Expected: "3", Actual: "1"},
 		))
 	})
 
@@ -466,6 +469,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 					albumTracks[0].title,
 				)
 				rec := fixtureAlbumRecord(dlDir, alb)
+				rec.VerificationBypassed = true
 				expectFind(rec)
 				var got db.RecordAlbumImportSuccessParams
 				storeMk.EXPECT().
@@ -505,6 +509,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 				)
 				before := sum(src)
 				rec := fixtureAlbumRecord(dlDir, alb)
+				rec.VerificationBypassed = true
 				expectFind(rec)
 				var got db.RecordAlbumImportSuccessParams
 				storeMk.EXPECT().
@@ -538,6 +543,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 			)
 			before := sum(src)
 			rec := fixtureAlbumRecord(dlDir, alb)
+			rec.VerificationBypassed = true
 			expectFind(rec)
 			storeMk.EXPECT().
 				RecordAlbumImportSuccess(mock.Anything, mock.Anything).
@@ -562,6 +568,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 				albumTracks[0].title,
 			)
 			rec := fixtureAlbumRecord(dlDir, alb)
+			rec.VerificationBypassed = true
 			expectFind(rec)
 			storeMk.EXPECT().
 				RecordAlbumImportSuccess(mock.Anything, mock.Anything).
@@ -584,6 +591,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		func() {
 			seedTrackFile(dlDir, "a.opus", "tagged.opus", 1, albumTracks[0].title)
 			rec := fixtureAlbumRecord(dlDir, alb)
+			rec.VerificationBypassed = true
 			expectFind(rec)
 			var got db.RecordAlbumImportSuccessParams
 			storeMk.EXPECT().
@@ -613,6 +621,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		setup("copy", true, map[string]any{"mode": "off"})
 		seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 1, albumTracks[0].title)
 		rec := fixtureAlbumRecord(dlDir, alb)
+		rec.VerificationBypassed = true
 		expectFind(rec)
 		var got db.RecordAlbumImportSuccessParams
 		storeMk.EXPECT().
@@ -642,6 +651,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 
 		It("is refused when the destination holds an untracked file", func() {
 			rec := fixtureAlbumRecord(dlDir, alb)
+			rec.VerificationBypassed = true
 			expectFind(rec)
 
 			err := w.runImport(context.Background(), 1)
@@ -671,6 +681,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 					{ID: 77, Path: existing},
 				}
 				rec := fixtureAlbumRecord(dlDir, alb)
+				rec.VerificationBypassed = true
 				rec.ReplaceMode = downloadrecord.ReplaceModeAll
 				expectFind(rec)
 				storeMk.EXPECT().
@@ -699,6 +710,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 				{ID: 77, Path: existing},
 			}
 			rec := fixtureAlbumRecord(dlDir, alb)
+			rec.VerificationBypassed = true
 			rec.ReplaceMode = downloadrecord.ReplaceModeAll
 			// A directory in the way of the aside target makes the rename fail.
 			Expect(os.MkdirAll(existing+replacedSuffix, 0o755)).To(Succeed())
@@ -785,6 +797,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 				)
 				torrentFiles = []download.TorrentFile{{Path: prefix + "own/01.mp3"}}
 				rec := fixtureAlbumRecord(dlDir, alb)
+				rec.VerificationBypassed = true
 				expectFind(rec)
 				var got db.RecordAlbumImportSuccessParams
 				storeMk.EXPECT().

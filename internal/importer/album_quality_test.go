@@ -158,6 +158,7 @@ var _ = Describe(
 		It(
 			"parks the record held, moving nothing, when a measured tier is not ticked",
 			func() {
+				alb.Edges.Tracks = alb.Edges.Tracks[:1]
 				seedTrackFile(
 					dlDir,
 					"a.flac",
@@ -321,6 +322,7 @@ var _ = Describe(
 		It(
 			"imports a measured tier the profile ticks and stores the tier as quality",
 			func() {
+				alb.Edges.Tracks = alb.Edges.Tracks[:1]
 				seedTrackFile(
 					dlDir,
 					"a.flac",
@@ -366,6 +368,7 @@ var _ = Describe(
 		)
 
 		It("skips the check, with the file imported, when the probe fails", func() {
+			alb.Edges.Tracks = alb.Edges.Tracks[:1]
 			seedTrackFile(dlDir, "a.flac", "tagged.flac", 1, albumTracks[0].title)
 			rec := fixtureAlbumRecord(dlDir, alb)
 			storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, rec.ID).
@@ -394,6 +397,7 @@ var _ = Describe(
 		})
 
 		It("flips a co-artist's artist request on import", func() {
+			alb.Edges.Tracks = alb.Edges.Tracks[:1]
 			alb.Edges.CoArtists = []*ent.Artist{
 				{ID: 8, Name: "Guest", Mbid: "artist-8"},
 			}

@@ -306,6 +306,7 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		stub.Edges.Artist = &ent.Artist{ID: 4, Name: "Nirvana", Mbid: "artist-4"}
 		seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 1, "Drain You")
 		rec := fixtureAlbumRecord(dlDir, stub)
+		rec.VerificationBypassed = true
 		expectFind(rec)
 		hydrator.EXPECT().HydrateAlbum(mock.Anything, uint32(1)).Return(nil).Once()
 		storeMk.EXPECT().

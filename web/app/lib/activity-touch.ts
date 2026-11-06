@@ -167,7 +167,7 @@ export function holdSummary(item: QueueEntry): string {
 // How many files are implicated, for the dialog's title.
 export function holdFileCount(reasons: HoldReason[] | undefined): number {
 	const files = new Set<string>();
-	for (const r of reasons ?? []) files.add(r.file);
+	for (const r of reasons ?? []) if (r.file) files.add(r.file);
 	return files.size;
 }
 

@@ -269,6 +269,7 @@ func (w *Worker) importAlbumFiles(
 		}
 		if ask {
 			reasons = append(reasons, unplaced...)
+			reasons = append(reasons, missingHoldReasons(plan, alb)...)
 		}
 		if haveProfile {
 			reasons = append(reasons, tierHoldReasons(plan, profile)...)

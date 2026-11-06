@@ -57,15 +57,19 @@
 				.map((r) => r.file),
 		),
 	);
+	const needsPlan = $derived(
+		heldFiles.size > 0 ||
+			(item?.hold_reasons ?? []).some((r) => r.check === "missing"),
+	);
 	const planQuery = createQuery<TrackPlan>(() => ({
 		queryKey: ["track-plan", item?.id],
 		queryFn: () => api<TrackPlan>(`/downloads/${item?.id}/track-plan`),
-		enabled: heldFiles.size > 0,
+		enabled: needsPlan,
 		retry: false,
 		gcTime: 0,
 		refetchOnWindowFocus: false,
 	}));
-	const plan = $derived(heldFiles.size > 0 ? planQuery.data : undefined);
+	const plan = $derived(needsPlan ? planQuery.data : undefined);
 
 	// The chosen track per file, "" for a file left out.
 	let choices = $state<Record<string, string>>({});
@@ -90,6 +94,12 @@
 		track !== "" && chosen.filter((c) => c === track).length > 1;
 	const canImport = $derived(
 		!plan || (chosen.length > 0 && new Set(chosen).size === chosen.length),
+	);
+
+	const emptyTracks = $derived(
+		(plan?.tracks ?? []).filter(
+			(t) => !t.has_file && !chosen.includes(String(t.id)),
+		),
 	);
 
 	const trackLabel = (t: TrackPlanTrack, tracks: TrackPlanTrack[]) => {
@@ -125,6 +135,7 @@
 		tier: () => i18n.hold_check_tier(),
 		album: () => i18n.hold_check_album(),
 		track: () => i18n.hold_check_track(),
+		missing: () => i18n.hold_check_missing(),
 		format: () => i18n.hold_check_format(),
 		bitrate: () => i18n.hold_check_bitrate(),
 		metadata: () => i18n.hold_check_metadata(),
@@ -140,7 +151,7 @@
 	let groups = $derived.by<FileGroup[]>(() => {
 		const out = new Map<string, FileGroup>();
 		for (const r of item?.hold_reasons ?? []) {
-			if (plan && r.check === "track") continue;
+			if (r.check === "missing" || (plan && r.check === "track")) continue;
 			let g = out.get(r.file);
 			if (!g) {
 				g = {
@@ -171,7 +182,7 @@
 			label: plan ? i18n.hold_import() : i18n.hold_import_anyway(),
 			variant: "ghost",
 			dismiss: false,
-			disabled: pending || !canImport || (heldFiles.size > 0 && planQuery.isPending),
+			disabled: pending || !canImport || (needsPlan && planQuery.isPending),
 			onClick: importHeld,
 		},
 		{
@@ -184,9 +195,11 @@
 	]}
 >
 	<p class="text-sm leading-relaxed text-fg-muted">
-		{fileCount === 1
-			? i18n.hold_body_one()
-			: i18n.hold_body_other({ count: fileCount })}
+		{fileCount === 0
+			? i18n.hold_body_incomplete()
+			: fileCount === 1
+				? i18n.hold_body_one()
+				: i18n.hold_body_other({ count: fileCount })}
 	</p>
 
 	<div class="mt-4 flex flex-col gap-3">
@@ -255,6 +268,13 @@
 				</li>
 			{/each}
 		</ul>
+		{#if emptyTracks.length > 0}
+			<p class="mt-3 text-xs text-fg-muted">
+				{i18n.hold_tracks_empty({
+					titles: emptyTracks.map((t) => t.title).join(" · "),
+				})}
+			</p>
+		{/if}
 	{/if}
 
 	<div class="mt-4 border-t border-border pt-3.5">
