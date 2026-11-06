@@ -541,6 +541,81 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			return &incs
 		}
 
+		It("lists the editions oldest first, leaving out what has no audio", func() {
+			mb.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(
+						200,
+						`{"id":"rg-1","title":"Nevermind","releases":[
+						{"id":"rel-2","title":"Nevermind","disambiguation":"deluxe","status":"Official","date":"1992",
+						 "country":"US","media":[{"format":"CD","track-count":12},{"format":"CD","track-count":3}]},
+						{"id":"rel-3","status":"Official","date":"1990","media":[{"format":"DVD","track-count":4}]},
+						{"id":"rel-1","status":"Bootleg","date":"1991-09-24",
+						 "media":[{"format":"Cassette","track-count":6}]}]}`,
+					), nil
+				},
+			)
+
+			editions, err := mb.ReleaseGroupEditions(ctx, "rg-1")
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(editions).To(Equal([]ReleaseEdition{
+				{
+					MBID:    "rel-1",
+					Date:    "1991-09-24",
+					Formats: []string{"Cassette"},
+					Tracks:  6,
+					Discs:   1,
+				},
+				{
+					MBID:           "rel-2",
+					Title:          "Nevermind",
+					Disambiguation: "deluxe",
+					Date:           "1992",
+					Country:        "US",
+					Official:       true,
+					Formats:        []string{"CD"},
+					Tracks:         15,
+					Discs:          2,
+				},
+			}))
+		})
+
+		Context("with an edition a person chose", func() {
+			serveEdition := func(release *string) {
+				mb.client.Transport = mbRoundTripper(
+					func(r *http.Request) (*http.Response, error) {
+						if r.URL.Path == "/ws/2/release-group/rg-1" {
+							return jsonResponse(200, releaseGroupJSON), nil
+						}
+						*release = r.URL.Path
+						return jsonResponse(200, heavyRelease), nil
+					},
+				)
+			}
+
+			It("follows it", func() {
+				var release string
+				serveEdition(&release)
+				rg, err := mb.GetReleaseGroupEdition(ctx, "rg-1", "rel-2")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(release).To(Equal("/ws/2/release/rel-2"))
+				Expect(rg.ReleaseMBID).To(Equal("rel-2"))
+			})
+
+			It(
+				"falls back to the canonical one when the group no longer lists it",
+				func() {
+					var release string
+					serveEdition(&release)
+					rg, err := mb.GetReleaseGroupEdition(ctx, "rg-1", "gone")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(release).To(Equal("/ws/2/release/rel-1"))
+					Expect(rg.ReleaseMBID).To(Equal("rel-1"))
+				},
+			)
+		})
+
 		It("picks the earliest official release and flattens its media", func() {
 			serve(
 				func(string) *http.Response { return jsonResponse(200, heavyRelease) },

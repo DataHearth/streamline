@@ -349,7 +349,7 @@ func (s *Service) hydrateAlbum(
 		trace.WithAttributes(attribute.Int64("album.id", int64(albumID))))
 	defer span.End()
 
-	d, err := s.metadata.GetReleaseGroup(ctx, a.Mbid)
+	d, err := s.releaseGroup(ctx, a)
 	switch {
 	case errors.Is(err, metadata.ErrNotFound) && detailsOnly:
 		// MusicBrainz no longer has the release group: keep what is stored
@@ -397,6 +397,67 @@ func (s *Service) hydrateAlbum(
 		}
 	}
 	return detailsOnly, nil
+}
+
+func (s *Service) releaseGroup(
+	ctx context.Context,
+	a *ent.Album,
+) (*metadata.ReleaseGroupDetails, error) {
+	if a.EditionMbid != "" {
+		return s.metadata.GetReleaseGroupEdition(ctx, a.Mbid, a.EditionMbid)
+	}
+	return s.metadata.GetReleaseGroup(ctx, a.Mbid)
+}
+
+// AlbumEditions lists the releases a person can make the album follow.
+func (s *Service) AlbumEditions(
+	ctx context.Context,
+	albumID uint32,
+) (*ent.Album, []metadata.ReleaseEdition, error) {
+	a, err := s.db.FindAlbumByID(ctx, albumID)
+	if err != nil {
+		return nil, nil, err
+	}
+	editions, err := s.metadata.ReleaseGroupEditions(ctx, a.Mbid)
+	if err != nil {
+		return nil, nil, err
+	}
+	return a, editions, nil
+}
+
+// SetAlbumEdition makes the album follow a release, empty for the canonical
+// one, and fetches its tracks now. A failed fetch leaves the album as it was.
+func (s *Service) SetAlbumEdition(
+	ctx context.Context,
+	albumID uint32,
+	releaseMBID string,
+) error {
+	a, editions, err := s.AlbumEditions(ctx, albumID)
+	if err != nil {
+		return err
+	}
+	if releaseMBID != "" &&
+		!slices.ContainsFunc(editions, func(e metadata.ReleaseEdition) bool {
+			return e.MBID == releaseMBID
+		}) {
+		return ErrEditionNotFound
+	}
+	if err := s.db.SetAlbumEdition(ctx, albumID, releaseMBID); err != nil {
+		return err
+	}
+	s.hydrate.remove(albumID)
+	if _, err := s.hydrateAlbum(ctx, albumID, true); err != nil {
+		if restore := s.db.SetAlbumEdition(
+			ctx,
+			albumID,
+			a.EditionMbid,
+		); restore != nil {
+			slog.WarnContext(ctx, "restoring an album's edition failed",
+				"album.id", albumID, "error", restore)
+		}
+		return err
+	}
+	return nil
 }
 
 // detailsStale reports a hydrated album whose release data predates what the

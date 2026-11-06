@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
@@ -1077,4 +1078,85 @@ func (s *Server) DeleteMusicTrackFile(
 		}, nil
 	}
 	return DeleteMusicTrackFile204Response{}, nil
+}
+
+// ListMusicAlbumEditions lists the releases an album can follow.
+func (s *Server) ListMusicAlbumEditions(
+	ctx context.Context,
+	request ListMusicAlbumEditionsRequestObject,
+) (ListMusicAlbumEditionsResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return ListMusicAlbumEditions403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	alb, editions, err := s.music.AlbumEditions(ctx, request.Id)
+	switch {
+	case ent.IsNotFound(err):
+		return ListMusicAlbumEditions404JSONResponse{
+			NotFoundJSONResponse: errNotFound("album not found"),
+		}, nil
+	case errors.Is(err, metadata.ErrRateLimited):
+		return ListMusicAlbumEditions429JSONResponse{
+			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
+		}, nil
+	case err != nil:
+		return nil, err
+	}
+	out := ListMusicAlbumEditions200JSONResponse{
+		Current:  alb.ReleaseMbid,
+		Chosen:   alb.EditionMbid,
+		Editions: make([]MusicAlbumEdition, 0, len(editions)),
+	}
+	for _, e := range editions {
+		row := MusicAlbumEdition{
+			Mbid:     e.MBID,
+			Title:    e.Title,
+			Date:     e.Date,
+			Country:  e.Country,
+			Official: e.Official,
+			Formats:  e.Formats,
+			Tracks:   e.Tracks,
+			Discs:    e.Discs,
+		}
+		if row.Formats == nil {
+			row.Formats = []string{}
+		}
+		if e.Disambiguation != "" {
+			row.Disambiguation = &e.Disambiguation
+		}
+		out.Editions = append(out.Editions, row)
+	}
+	return out, nil
+}
+
+// SetMusicAlbumEdition makes an album follow one release.
+func (s *Server) SetMusicAlbumEdition(
+	ctx context.Context,
+	request SetMusicAlbumEditionRequestObject,
+) (SetMusicAlbumEditionResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return SetMusicAlbumEdition403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	err := s.music.SetAlbumEdition(ctx, request.Id, request.Body.ReleaseMbid)
+	switch {
+	case ent.IsNotFound(err):
+		return SetMusicAlbumEdition404JSONResponse{
+			NotFoundJSONResponse: errNotFound("album not found"),
+		}, nil
+	case errors.Is(err, music.ErrEditionNotFound):
+		code := "edition_not_found"
+		return SetMusicAlbumEdition422JSONResponse{
+			Message: err.Error(), Code: &code,
+		}, nil
+	case errors.Is(err, metadata.ErrRateLimited):
+		return SetMusicAlbumEdition429JSONResponse{
+			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
+		}, nil
+	case err != nil:
+		return nil, err
+	}
+	return SetMusicAlbumEdition204Response{}, nil
 }

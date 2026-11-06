@@ -20351,6 +20351,69 @@ func (_c *MockTx_SetAlbumArtSidecar_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
+// SetAlbumEdition provides a mock function for the type MockTx
+func (_mock *MockTx) SetAlbumEdition(ctx context.Context, id uint32, releaseMBID string) error {
+	ret := _mock.Called(ctx, id, releaseMBID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAlbumEdition")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
+		r0 = returnFunc(ctx, id, releaseMBID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SetAlbumEdition_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAlbumEdition'
+type MockTx_SetAlbumEdition_Call struct {
+	*mock.Call
+}
+
+// SetAlbumEdition is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - releaseMBID string
+func (_e *MockTx_Expecter) SetAlbumEdition(ctx any, id any, releaseMBID any) *MockTx_SetAlbumEdition_Call {
+	return &MockTx_SetAlbumEdition_Call{Call: _e.mock.On("SetAlbumEdition", ctx, id, releaseMBID)}
+}
+
+func (_c *MockTx_SetAlbumEdition_Call) Run(run func(ctx context.Context, id uint32, releaseMBID string)) *MockTx_SetAlbumEdition_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SetAlbumEdition_Call) Return(err error) *MockTx_SetAlbumEdition_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SetAlbumEdition_Call) RunAndReturn(run func(ctx context.Context, id uint32, releaseMBID string) error) *MockTx_SetAlbumEdition_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetAlbumHydration provides a mock function for the type MockTx
 func (_mock *MockTx) SetAlbumHydration(ctx context.Context, albumID uint32, p db.HydrationParams, at time.Time) error {
 	ret := _mock.Called(ctx, albumID, p, at)

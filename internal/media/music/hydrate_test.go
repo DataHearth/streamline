@@ -122,6 +122,58 @@ var _ = Describe("Album hydration", Label("unit", "integration", "music"), func(
 			Maybe()
 	})
 
+	Describe("SetAlbumEdition", func() {
+		var albumID uint32
+
+		BeforeEach(func() {
+			_, albums := e.seedArtist("Nirvana",
+				albumSeed{mbid: "rg-1", title: "Nevermind", monitored: true})
+			albumID = albums[0].ID
+			e.provider.EXPECT().ReleaseGroupEditions(mock.Anything, "rg-1").
+				Return([]metadata.ReleaseEdition{{MBID: "rel-2"}}, nil).Once()
+		})
+
+		It("stores the choice and fetches that edition's tracks", func() {
+			e.provider.EXPECT().
+				GetReleaseGroupEdition(mock.Anything, "rg-1", "rel-2").
+				Return(hydrated("rg-1", "Drain You"), nil).
+				Once()
+
+			Expect(e.svc.SetAlbumEdition(e.ctx, albumID, "rel-2")).To(Succeed())
+
+			a := e.client.Album.GetX(e.ctx, albumID)
+			Expect(a.EditionMbid).To(Equal("rel-2"))
+			Expect(a.MetadataFetchedAt).NotTo(BeNil())
+		})
+
+		It("refuses a release of another album", func() {
+			Expect(e.svc.SetAlbumEdition(e.ctx, albumID, "rel-9")).
+				To(MatchError(ErrEditionNotFound))
+			Expect(e.client.Album.GetX(e.ctx, albumID).EditionMbid).To(BeEmpty())
+		})
+
+		It("leaves the album as it was when the fetch fails", func() {
+			boom := errors.New("musicbrainz down")
+			e.provider.EXPECT().
+				GetReleaseGroupEdition(mock.Anything, "rg-1", "rel-2").
+				Return(nil, boom).
+				Once()
+
+			Expect(
+				e.svc.SetAlbumEdition(e.ctx, albumID, "rel-2"),
+			).To(MatchError(boom))
+
+			Expect(e.client.Album.GetX(e.ctx, albumID).EditionMbid).To(BeEmpty())
+		})
+
+		It("goes back to the automatic pick with an empty choice", func() {
+			e.provider.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
+				Return(hydrated("rg-1", "Drain You"), nil).Once()
+
+			Expect(e.svc.SetAlbumEdition(e.ctx, albumID, "")).To(Succeed())
+		})
+	})
+
 	Describe("HydrateAlbum", func() {
 		It("fetches the album's release once and stores it", func() {
 			_, albums := e.seedArtist("Nirvana",

@@ -127,6 +127,7 @@ type Store interface {
 		from []album.Status,
 		to album.Status,
 	) (bool, error)
+	SetAlbumEdition(ctx context.Context, id uint32, releaseMBID string) error
 	// SetAlbumHydration stores an album's release call: facts, tracks, credits.
 	SetAlbumHydration(
 		ctx context.Context,

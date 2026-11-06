@@ -75,6 +75,11 @@ func ReleaseMbid(v string) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldReleaseMbid, v))
 }
 
+// EditionMbid applies equality check predicate on the "edition_mbid" field. It's identical to EditionMbidEQ.
+func EditionMbid(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldEditionMbid, v))
+}
+
 // Barcode applies equality check predicate on the "barcode" field. It's identical to BarcodeEQ.
 func Barcode(v string) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldBarcode, v))
@@ -388,6 +393,81 @@ func ReleaseMbidEqualFold(v string) predicate.Album {
 // ReleaseMbidContainsFold applies the ContainsFold predicate on the "release_mbid" field.
 func ReleaseMbidContainsFold(v string) predicate.Album {
 	return predicate.Album(sql.FieldContainsFold(FieldReleaseMbid, v))
+}
+
+// EditionMbidEQ applies the EQ predicate on the "edition_mbid" field.
+func EditionMbidEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldEditionMbid, v))
+}
+
+// EditionMbidNEQ applies the NEQ predicate on the "edition_mbid" field.
+func EditionMbidNEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldEditionMbid, v))
+}
+
+// EditionMbidIn applies the In predicate on the "edition_mbid" field.
+func EditionMbidIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldIn(FieldEditionMbid, vs...))
+}
+
+// EditionMbidNotIn applies the NotIn predicate on the "edition_mbid" field.
+func EditionMbidNotIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldNotIn(FieldEditionMbid, vs...))
+}
+
+// EditionMbidGT applies the GT predicate on the "edition_mbid" field.
+func EditionMbidGT(v string) predicate.Album {
+	return predicate.Album(sql.FieldGT(FieldEditionMbid, v))
+}
+
+// EditionMbidGTE applies the GTE predicate on the "edition_mbid" field.
+func EditionMbidGTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldGTE(FieldEditionMbid, v))
+}
+
+// EditionMbidLT applies the LT predicate on the "edition_mbid" field.
+func EditionMbidLT(v string) predicate.Album {
+	return predicate.Album(sql.FieldLT(FieldEditionMbid, v))
+}
+
+// EditionMbidLTE applies the LTE predicate on the "edition_mbid" field.
+func EditionMbidLTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldLTE(FieldEditionMbid, v))
+}
+
+// EditionMbidContains applies the Contains predicate on the "edition_mbid" field.
+func EditionMbidContains(v string) predicate.Album {
+	return predicate.Album(sql.FieldContains(FieldEditionMbid, v))
+}
+
+// EditionMbidHasPrefix applies the HasPrefix predicate on the "edition_mbid" field.
+func EditionMbidHasPrefix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasPrefix(FieldEditionMbid, v))
+}
+
+// EditionMbidHasSuffix applies the HasSuffix predicate on the "edition_mbid" field.
+func EditionMbidHasSuffix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasSuffix(FieldEditionMbid, v))
+}
+
+// EditionMbidIsNil applies the IsNil predicate on the "edition_mbid" field.
+func EditionMbidIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldEditionMbid))
+}
+
+// EditionMbidNotNil applies the NotNil predicate on the "edition_mbid" field.
+func EditionMbidNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldEditionMbid))
+}
+
+// EditionMbidEqualFold applies the EqualFold predicate on the "edition_mbid" field.
+func EditionMbidEqualFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldEqualFold(FieldEditionMbid, v))
+}
+
+// EditionMbidContainsFold applies the ContainsFold predicate on the "edition_mbid" field.
+func EditionMbidContainsFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldContainsFold(FieldEditionMbid, v))
 }
 
 // BarcodeEQ applies the EQ predicate on the "barcode" field.

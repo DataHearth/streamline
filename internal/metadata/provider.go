@@ -289,6 +289,20 @@ type PerformerInfo struct {
 }
 
 // ReleaseGroupDetails carries the canonical release pick and its track list.
+// ReleaseEdition is one release of a release group, for a person choosing
+// which one an album follows.
+type ReleaseEdition struct {
+	MBID           string
+	Title          string
+	Disambiguation string
+	Date           string
+	Country        string
+	Official       bool
+	Formats        []string
+	Tracks         int
+	Discs          int
+}
+
 type ReleaseGroupDetails struct {
 	ReleaseGroupInfo
 	// ArtistMBID and ArtistName are the first credited artist, the one an
@@ -417,6 +431,13 @@ type MusicProvider interface {
 	// GetReleaseGroup picks the canonical release (earliest official) and
 	// returns its track list.
 	GetReleaseGroup(ctx context.Context, mbid string) (*ReleaseGroupDetails, error)
+	// GetReleaseGroupEdition is GetReleaseGroup following the release a person
+	// chose instead of the canonical one.
+	GetReleaseGroupEdition(
+		ctx context.Context,
+		mbid, edition string,
+	) (*ReleaseGroupDetails, error)
+	ReleaseGroupEditions(ctx context.Context, mbid string) ([]ReleaseEdition, error)
 	SearchReleaseGroups(
 		ctx context.Context,
 		artist, album string,

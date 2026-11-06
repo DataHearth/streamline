@@ -208,6 +208,8 @@ var minRole = map[string]string{
 	"DeleteMusicArtist":          roleMember,
 	"RefreshMusicArtist":         roleMember,
 	"PatchMusicAlbum":            roleMember,
+	"ListMusicAlbumEditions":     roleMember,
+	"SetMusicAlbumEdition":       roleMember,
 	"GetMusicAlbumTags":          roleMember,
 	"ApplyMusicAlbumTags":        roleMember,
 	"PatchMusicTrack":            roleMember,

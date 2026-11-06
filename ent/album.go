@@ -27,6 +27,8 @@ type Album struct {
 	Mbid string `json:"mbid,omitempty"`
 	// ReleaseMbid holds the value of the "release_mbid" field.
 	ReleaseMbid string `json:"release_mbid,omitempty"`
+	// EditionMbid holds the value of the "edition_mbid" field.
+	EditionMbid string `json:"edition_mbid,omitempty"`
 	// Barcode holds the value of the "barcode" field.
 	Barcode string `json:"barcode,omitempty"`
 	// Title holds the value of the "title" field.
@@ -190,7 +192,7 @@ func (*Album) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case album.FieldID, album.FieldGrabFailures, album.FieldCreditsVersion:
 			values[i] = new(sql.NullInt64)
-		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldOriginalDate, album.FieldEditionDate, album.FieldArtSidecarHash, album.FieldStatus, album.FieldFailureReason, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
+		case album.FieldMbid, album.FieldReleaseMbid, album.FieldEditionMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldOriginalDate, album.FieldEditionDate, album.FieldArtSidecarHash, album.FieldStatus, album.FieldFailureReason, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
 			values[i] = new(sql.NullString)
 		case album.FieldCreateTime, album.FieldUpdateTime, album.FieldReleaseDate, album.FieldLastSearchAt, album.FieldMetadataFetchedAt, album.FieldCreditsFetchedAt:
 			values[i] = new(sql.NullTime)
@@ -240,6 +242,12 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field release_mbid", values[i])
 			} else if value.Valid {
 				_m.ReleaseMbid = value.String
+			}
+		case album.FieldEditionMbid:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field edition_mbid", values[i])
+			} else if value.Valid {
+				_m.EditionMbid = value.String
 			}
 		case album.FieldBarcode:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -487,6 +495,9 @@ func (_m *Album) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("release_mbid=")
 	builder.WriteString(_m.ReleaseMbid)
+	builder.WriteString(", ")
+	builder.WriteString("edition_mbid=")
+	builder.WriteString(_m.EditionMbid)
 	builder.WriteString(", ")
 	builder.WriteString("barcode=")
 	builder.WriteString(_m.Barcode)

@@ -6773,6 +6773,26 @@ type MusicAlbum struct {
 	Type          MusicAlbumType `json:"type"`
 }
 
+// MusicAlbumEdition defines model for MusicAlbumEdition.
+type MusicAlbumEdition struct {
+	Country        string   `json:"country"`
+	Date           string   `json:"date"`
+	Disambiguation *string  `json:"disambiguation,omitempty"`
+	Discs          int      `json:"discs"`
+	Formats        []string `json:"formats"`
+	Mbid           string   `json:"mbid"`
+	Official       bool     `json:"official"`
+	Title          string   `json:"title"`
+	Tracks         int      `json:"tracks"`
+}
+
+// MusicAlbumEditions defines model for MusicAlbumEditions.
+type MusicAlbumEditions struct {
+	Chosen   string              `json:"chosen"`
+	Current  string              `json:"current"`
+	Editions []MusicAlbumEdition `json:"editions"`
+}
+
 // MusicAlbumStatus `upcoming` is derived, never stored: a `wanted` album whose release
 // date is after today (UTC). An undated album is never `upcoming`.
 // `failed` is an album whose download could not be imported
@@ -8543,6 +8563,11 @@ type Session struct {
 	IsCurrent  bool       `json:"is_current"`
 	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
 	UserAgent  *string    `json:"user_agent,omitempty"`
+}
+
+// SetMusicAlbumEditionRequest defines model for SetMusicAlbumEditionRequest.
+type SetMusicAlbumEditionRequest struct {
+	ReleaseMbid string `json:"release_mbid"`
 }
 
 // ShelfItem One entry of the books shelf. `id` is only unique together with `type`.
@@ -11356,6 +11381,9 @@ type ReidentifyMovieJSONRequestBody ReidentifyMovieJSONBody
 // PatchMusicAlbumJSONRequestBody defines body for PatchMusicAlbum for application/json ContentType.
 type PatchMusicAlbumJSONRequestBody = PatchMusicAlbumRequest
 
+// SetMusicAlbumEditionJSONRequestBody defines body for SetMusicAlbumEdition for application/json ContentType.
+type SetMusicAlbumEditionJSONRequestBody = SetMusicAlbumEditionRequest
+
 // GrabMusicAlbumReleaseJSONRequestBody defines body for GrabMusicAlbumRelease for application/json ContentType.
 type GrabMusicAlbumReleaseJSONRequestBody = SearchResult
 
@@ -12013,6 +12041,12 @@ type ServerInterface interface {
 	// PatchMusicAlbum Patch an album
 	// (PATCH /music/albums/{id})
 	PatchMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ListMusicAlbumEditions The releases this album can follow
+	// (GET /music/albums/{id}/editions)
+	ListMusicAlbumEditions(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// SetMusicAlbumEdition Make the album follow one release
+	// (PUT /music/albums/{id}/editions)
+	SetMusicAlbumEdition(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// GrabMusicAlbumRelease Grab a specific release for this album
 	// (POST /music/albums/{id}/grab)
 	GrabMusicAlbumRelease(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -13244,6 +13278,18 @@ func (_ Unimplemented) GetMusicAlbum(w http.ResponseWriter, r *http.Request, id 
 // PatchMusicAlbum Patch an album
 // (PATCH /music/albums/{id})
 func (_ Unimplemented) PatchMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListMusicAlbumEditions The releases this album can follow
+// (GET /music/albums/{id}/editions)
+func (_ Unimplemented) ListMusicAlbumEditions(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SetMusicAlbumEdition Make the album follow one release
+// (PUT /music/albums/{id}/editions)
+func (_ Unimplemented) SetMusicAlbumEdition(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -18352,6 +18398,58 @@ func (siw *ServerInterfaceWrapper) PatchMusicAlbum(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListMusicAlbumEditions operation middleware
+func (siw *ServerInterfaceWrapper) ListMusicAlbumEditions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMusicAlbumEditions(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetMusicAlbumEdition operation middleware
+func (siw *ServerInterfaceWrapper) SetMusicAlbumEdition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetMusicAlbumEdition(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GrabMusicAlbumRelease operation middleware
 func (siw *ServerInterfaceWrapper) GrabMusicAlbumRelease(w http.ResponseWriter, r *http.Request) {
 
@@ -22237,6 +22335,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/music/albums", wrapper.ListMusicAlbums)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/albums/{id}/editions", wrapper.ListMusicAlbumEditions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/music/albums/{id}/editions", wrapper.SetMusicAlbumEdition)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/music/albums/{id}", wrapper.GetMusicAlbum)
@@ -33245,6 +33349,178 @@ func (response PatchMusicAlbum500JSONResponse) VisitPatchMusicAlbumResponse(w ht
 	return err
 }
 
+type ListMusicAlbumEditionsRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type ListMusicAlbumEditionsResponseObject interface {
+	VisitListMusicAlbumEditionsResponse(w http.ResponseWriter) error
+}
+
+type ListMusicAlbumEditions200JSONResponse MusicAlbumEditions
+
+func (response ListMusicAlbumEditions200JSONResponse) VisitListMusicAlbumEditionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicAlbumEditions403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListMusicAlbumEditions403JSONResponse) VisitListMusicAlbumEditionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicAlbumEditions404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListMusicAlbumEditions404JSONResponse) VisitListMusicAlbumEditionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicAlbumEditions429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response ListMusicAlbumEditions429JSONResponse) VisitListMusicAlbumEditionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicAlbumEditions500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListMusicAlbumEditions500JSONResponse) VisitListMusicAlbumEditionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetMusicAlbumEditionRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *SetMusicAlbumEditionJSONRequestBody
+}
+
+type SetMusicAlbumEditionResponseObject interface {
+	VisitSetMusicAlbumEditionResponse(w http.ResponseWriter) error
+}
+
+type SetMusicAlbumEdition204Response = NoContentResponse
+
+func (response SetMusicAlbumEdition204Response) VisitSetMusicAlbumEditionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetMusicAlbumEdition403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SetMusicAlbumEdition403JSONResponse) VisitSetMusicAlbumEditionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetMusicAlbumEdition404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SetMusicAlbumEdition404JSONResponse) VisitSetMusicAlbumEditionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetMusicAlbumEdition422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response SetMusicAlbumEdition422JSONResponse) VisitSetMusicAlbumEditionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetMusicAlbumEdition429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response SetMusicAlbumEdition429JSONResponse) VisitSetMusicAlbumEditionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetMusicAlbumEdition500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SetMusicAlbumEdition500JSONResponse) VisitSetMusicAlbumEditionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GrabMusicAlbumReleaseRequestObject struct {
 	Id   ResourceID `json:"id"`
 	Body *GrabMusicAlbumReleaseJSONRequestBody
@@ -41277,6 +41553,12 @@ type StrictServerInterface interface {
 	// PatchMusicAlbum Patch an album
 	// (PATCH /music/albums/{id})
 	PatchMusicAlbum(ctx context.Context, request PatchMusicAlbumRequestObject) (PatchMusicAlbumResponseObject, error)
+	// ListMusicAlbumEditions The releases this album can follow
+	// (GET /music/albums/{id}/editions)
+	ListMusicAlbumEditions(ctx context.Context, request ListMusicAlbumEditionsRequestObject) (ListMusicAlbumEditionsResponseObject, error)
+	// SetMusicAlbumEdition Make the album follow one release
+	// (PUT /music/albums/{id}/editions)
+	SetMusicAlbumEdition(ctx context.Context, request SetMusicAlbumEditionRequestObject) (SetMusicAlbumEditionResponseObject, error)
 	// GrabMusicAlbumRelease Grab a specific release for this album
 	// (POST /music/albums/{id}/grab)
 	GrabMusicAlbumRelease(ctx context.Context, request GrabMusicAlbumReleaseRequestObject) (GrabMusicAlbumReleaseResponseObject, error)
@@ -45903,6 +46185,65 @@ func (sh *strictHandler) PatchMusicAlbum(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PatchMusicAlbumResponseObject); ok {
 		if err := validResponse.VisitPatchMusicAlbumResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMusicAlbumEditions operation middleware
+func (sh *strictHandler) ListMusicAlbumEditions(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request ListMusicAlbumEditionsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMusicAlbumEditions(ctx, request.(ListMusicAlbumEditionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMusicAlbumEditions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMusicAlbumEditionsResponseObject); ok {
+		if err := validResponse.VisitListMusicAlbumEditionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetMusicAlbumEdition operation middleware
+func (sh *strictHandler) SetMusicAlbumEdition(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request SetMusicAlbumEditionRequestObject
+
+	request.Id = id
+
+	var body SetMusicAlbumEditionJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetMusicAlbumEdition(ctx, request.(SetMusicAlbumEditionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetMusicAlbumEdition")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetMusicAlbumEditionResponseObject); ok {
+		if err := validResponse.VisitSetMusicAlbumEditionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

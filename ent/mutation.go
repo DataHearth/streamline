@@ -114,6 +114,7 @@ type AlbumMutation struct {
 	update_time             *time.Time
 	mbid                    *string
 	release_mbid            *string
+	edition_mbid            *string
 	barcode                 *string
 	title                   *string
 	_type                   *album.Type
@@ -429,6 +430,55 @@ func (m *AlbumMutation) ReleaseMbidCleared() bool {
 func (m *AlbumMutation) ResetReleaseMbid() {
 	m.release_mbid = nil
 	delete(m.clearedFields, album.FieldReleaseMbid)
+}
+
+// SetEditionMbid sets the "edition_mbid" field.
+func (m *AlbumMutation) SetEditionMbid(s string) {
+	m.edition_mbid = &s
+}
+
+// EditionMbid returns the value of the "edition_mbid" field in the mutation.
+func (m *AlbumMutation) EditionMbid() (r string, exists bool) {
+	v := m.edition_mbid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEditionMbid returns the old "edition_mbid" field's value of the Album entity.
+// If the Album object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AlbumMutation) OldEditionMbid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEditionMbid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEditionMbid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEditionMbid: %w", err)
+	}
+	return oldValue.EditionMbid, nil
+}
+
+// ClearEditionMbid clears the value of the "edition_mbid" field.
+func (m *AlbumMutation) ClearEditionMbid() {
+	m.edition_mbid = nil
+	m.clearedFields[album.FieldEditionMbid] = struct{}{}
+}
+
+// EditionMbidCleared returns if the "edition_mbid" field was cleared in this mutation.
+func (m *AlbumMutation) EditionMbidCleared() bool {
+	_, ok := m.clearedFields[album.FieldEditionMbid]
+	return ok
+}
+
+// ResetEditionMbid resets all changes to the "edition_mbid" field.
+func (m *AlbumMutation) ResetEditionMbid() {
+	m.edition_mbid = nil
+	delete(m.clearedFields, album.FieldEditionMbid)
 }
 
 // SetBarcode sets the "barcode" field.
@@ -2010,7 +2060,7 @@ func (m *AlbumMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AlbumMutation) Fields() []string {
-	fields := make([]string, 0, 28)
+	fields := make([]string, 0, 29)
 	if m.create_time != nil {
 		fields = append(fields, album.FieldCreateTime)
 	}
@@ -2022,6 +2072,9 @@ func (m *AlbumMutation) Fields() []string {
 	}
 	if m.release_mbid != nil {
 		fields = append(fields, album.FieldReleaseMbid)
+	}
+	if m.edition_mbid != nil {
+		fields = append(fields, album.FieldEditionMbid)
 	}
 	if m.barcode != nil {
 		fields = append(fields, album.FieldBarcode)
@@ -2111,6 +2164,8 @@ func (m *AlbumMutation) Field(name string) (ent.Value, bool) {
 		return m.Mbid()
 	case album.FieldReleaseMbid:
 		return m.ReleaseMbid()
+	case album.FieldEditionMbid:
+		return m.EditionMbid()
 	case album.FieldBarcode:
 		return m.Barcode()
 	case album.FieldTitle:
@@ -2176,6 +2231,8 @@ func (m *AlbumMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldMbid(ctx)
 	case album.FieldReleaseMbid:
 		return m.OldReleaseMbid(ctx)
+	case album.FieldEditionMbid:
+		return m.OldEditionMbid(ctx)
 	case album.FieldBarcode:
 		return m.OldBarcode(ctx)
 	case album.FieldTitle:
@@ -2260,6 +2317,13 @@ func (m *AlbumMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetReleaseMbid(v)
+		return nil
+	case album.FieldEditionMbid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEditionMbid(v)
 		return nil
 	case album.FieldBarcode:
 		v, ok := value.(string)
@@ -2489,6 +2553,9 @@ func (m *AlbumMutation) ClearedFields() []string {
 	if m.FieldCleared(album.FieldReleaseMbid) {
 		fields = append(fields, album.FieldReleaseMbid)
 	}
+	if m.FieldCleared(album.FieldEditionMbid) {
+		fields = append(fields, album.FieldEditionMbid)
+	}
 	if m.FieldCleared(album.FieldBarcode) {
 		fields = append(fields, album.FieldBarcode)
 	}
@@ -2553,6 +2620,9 @@ func (m *AlbumMutation) ClearField(name string) error {
 	switch name {
 	case album.FieldReleaseMbid:
 		m.ClearReleaseMbid()
+		return nil
+	case album.FieldEditionMbid:
+		m.ClearEditionMbid()
 		return nil
 	case album.FieldBarcode:
 		m.ClearBarcode()
@@ -2621,6 +2691,9 @@ func (m *AlbumMutation) ResetField(name string) error {
 		return nil
 	case album.FieldReleaseMbid:
 		m.ResetReleaseMbid()
+		return nil
+	case album.FieldEditionMbid:
+		m.ResetEditionMbid()
 		return nil
 	case album.FieldBarcode:
 		m.ResetBarcode()

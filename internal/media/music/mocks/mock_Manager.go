@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/media/music"
+	"github.com/datahearth/streamline/internal/metadata"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -184,6 +185,82 @@ func (_c *MockManager_AlbumDetail_Call) Return(albumView *music.AlbumView, err e
 }
 
 func (_c *MockManager_AlbumDetail_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*music.AlbumView, error)) *MockManager_AlbumDetail_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// AlbumEditions provides a mock function for the type MockManager
+func (_mock *MockManager) AlbumEditions(ctx context.Context, id uint32) (*ent.Album, []metadata.ReleaseEdition, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AlbumEditions")
+	}
+
+	var r0 *ent.Album
+	var r1 []metadata.ReleaseEdition
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Album, []metadata.ReleaseEdition, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Album); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Album)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) []metadata.ReleaseEdition); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]metadata.ReleaseEdition)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32) error); ok {
+		r2 = returnFunc(ctx, id)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockManager_AlbumEditions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AlbumEditions'
+type MockManager_AlbumEditions_Call struct {
+	*mock.Call
+}
+
+// AlbumEditions is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockManager_Expecter) AlbumEditions(ctx any, id any) *MockManager_AlbumEditions_Call {
+	return &MockManager_AlbumEditions_Call{Call: _e.mock.On("AlbumEditions", ctx, id)}
+}
+
+func (_c *MockManager_AlbumEditions_Call) Run(run func(ctx context.Context, id uint32)) *MockManager_AlbumEditions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_AlbumEditions_Call) Return(album *ent.Album, releaseEditions []metadata.ReleaseEdition, err error) *MockManager_AlbumEditions_Call {
+	_c.Call.Return(album, releaseEditions, err)
+	return _c
+}
+
+func (_c *MockManager_AlbumEditions_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Album, []metadata.ReleaseEdition, error)) *MockManager_AlbumEditions_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1852,6 +1929,69 @@ func (_c *MockManager_SearchTrackNow_Call) Return(err error) *MockManager_Search
 }
 
 func (_c *MockManager_SearchTrackNow_Call) RunAndReturn(run func(ctx context.Context, trackID uint32) error) *MockManager_SearchTrackNow_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetAlbumEdition provides a mock function for the type MockManager
+func (_mock *MockManager) SetAlbumEdition(ctx context.Context, id uint32, releaseMBID string) error {
+	ret := _mock.Called(ctx, id, releaseMBID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAlbumEdition")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
+		r0 = returnFunc(ctx, id, releaseMBID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_SetAlbumEdition_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAlbumEdition'
+type MockManager_SetAlbumEdition_Call struct {
+	*mock.Call
+}
+
+// SetAlbumEdition is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - releaseMBID string
+func (_e *MockManager_Expecter) SetAlbumEdition(ctx any, id any, releaseMBID any) *MockManager_SetAlbumEdition_Call {
+	return &MockManager_SetAlbumEdition_Call{Call: _e.mock.On("SetAlbumEdition", ctx, id, releaseMBID)}
+}
+
+func (_c *MockManager_SetAlbumEdition_Call) Run(run func(ctx context.Context, id uint32, releaseMBID string)) *MockManager_SetAlbumEdition_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SetAlbumEdition_Call) Return(err error) *MockManager_SetAlbumEdition_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_SetAlbumEdition_Call) RunAndReturn(run func(ctx context.Context, id uint32, releaseMBID string) error) *MockManager_SetAlbumEdition_Call {
 	_c.Call.Return(run)
 	return _c
 }

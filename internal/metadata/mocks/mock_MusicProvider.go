@@ -183,6 +183,148 @@ func (_c *MockMusicProvider_GetReleaseGroup_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// GetReleaseGroupEdition provides a mock function for the type MockMusicProvider
+func (_mock *MockMusicProvider) GetReleaseGroupEdition(ctx context.Context, mbid string, edition string) (*metadata.ReleaseGroupDetails, error) {
+	ret := _mock.Called(ctx, mbid, edition)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetReleaseGroupEdition")
+	}
+
+	var r0 *metadata.ReleaseGroupDetails
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*metadata.ReleaseGroupDetails, error)); ok {
+		return returnFunc(ctx, mbid, edition)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *metadata.ReleaseGroupDetails); ok {
+		r0 = returnFunc(ctx, mbid, edition)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*metadata.ReleaseGroupDetails)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, mbid, edition)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockMusicProvider_GetReleaseGroupEdition_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetReleaseGroupEdition'
+type MockMusicProvider_GetReleaseGroupEdition_Call struct {
+	*mock.Call
+}
+
+// GetReleaseGroupEdition is a helper method to define mock.On call
+//   - ctx context.Context
+//   - mbid string
+//   - edition string
+func (_e *MockMusicProvider_Expecter) GetReleaseGroupEdition(ctx any, mbid any, edition any) *MockMusicProvider_GetReleaseGroupEdition_Call {
+	return &MockMusicProvider_GetReleaseGroupEdition_Call{Call: _e.mock.On("GetReleaseGroupEdition", ctx, mbid, edition)}
+}
+
+func (_c *MockMusicProvider_GetReleaseGroupEdition_Call) Run(run func(ctx context.Context, mbid string, edition string)) *MockMusicProvider_GetReleaseGroupEdition_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockMusicProvider_GetReleaseGroupEdition_Call) Return(releaseGroupDetails *metadata.ReleaseGroupDetails, err error) *MockMusicProvider_GetReleaseGroupEdition_Call {
+	_c.Call.Return(releaseGroupDetails, err)
+	return _c
+}
+
+func (_c *MockMusicProvider_GetReleaseGroupEdition_Call) RunAndReturn(run func(ctx context.Context, mbid string, edition string) (*metadata.ReleaseGroupDetails, error)) *MockMusicProvider_GetReleaseGroupEdition_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReleaseGroupEditions provides a mock function for the type MockMusicProvider
+func (_mock *MockMusicProvider) ReleaseGroupEditions(ctx context.Context, mbid string) ([]metadata.ReleaseEdition, error) {
+	ret := _mock.Called(ctx, mbid)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReleaseGroupEditions")
+	}
+
+	var r0 []metadata.ReleaseEdition
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]metadata.ReleaseEdition, error)); ok {
+		return returnFunc(ctx, mbid)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []metadata.ReleaseEdition); ok {
+		r0 = returnFunc(ctx, mbid)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]metadata.ReleaseEdition)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, mbid)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockMusicProvider_ReleaseGroupEditions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReleaseGroupEditions'
+type MockMusicProvider_ReleaseGroupEditions_Call struct {
+	*mock.Call
+}
+
+// ReleaseGroupEditions is a helper method to define mock.On call
+//   - ctx context.Context
+//   - mbid string
+func (_e *MockMusicProvider_Expecter) ReleaseGroupEditions(ctx any, mbid any) *MockMusicProvider_ReleaseGroupEditions_Call {
+	return &MockMusicProvider_ReleaseGroupEditions_Call{Call: _e.mock.On("ReleaseGroupEditions", ctx, mbid)}
+}
+
+func (_c *MockMusicProvider_ReleaseGroupEditions_Call) Run(run func(ctx context.Context, mbid string)) *MockMusicProvider_ReleaseGroupEditions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockMusicProvider_ReleaseGroupEditions_Call) Return(releaseEditions []metadata.ReleaseEdition, err error) *MockMusicProvider_ReleaseGroupEditions_Call {
+	_c.Call.Return(releaseEditions, err)
+	return _c
+}
+
+func (_c *MockMusicProvider_ReleaseGroupEditions_Call) RunAndReturn(run func(ctx context.Context, mbid string) ([]metadata.ReleaseEdition, error)) *MockMusicProvider_ReleaseGroupEditions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SearchArtists provides a mock function for the type MockMusicProvider
 func (_mock *MockMusicProvider) SearchArtists(ctx context.Context, query string) ([]metadata.ArtistResult, error) {
 	ret := _mock.Called(ctx, query)

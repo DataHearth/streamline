@@ -2,6 +2,7 @@
 	import Dialog from "@components/modals/Dialog.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
 	import Select from "@components/forms/Select.svelte";
+	import AlbumEditionPicker from "@components/music/AlbumEditionPicker.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "@lib/api";
 	import { entryHeading, holdFileCount } from "@lib/activity-touch";
@@ -240,6 +241,19 @@
 	</div>
 
 	{#if plan}
+		{#if item?.album}
+			<div class="mt-4">
+				{#key item.album.id}
+					<AlbumEditionPicker
+						albumId={item.album.id}
+						onChanged={() => {
+							seededFor = null;
+							planQuery.refetch();
+						}}
+					/>
+				{/key}
+			</div>
+		{/if}
 		<p class="mt-4 text-sm text-fg-muted">{i18n.hold_track_help()}</p>
 		<ul class="mt-2 flex max-h-80 flex-col gap-2 overflow-y-auto">
 			{#each planFiles as f (f.file)}

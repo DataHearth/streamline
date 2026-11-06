@@ -1,4 +1,4 @@
-h1:AuQyGXS10yeOXhoAJoBDzaAfThYUTt+cmKsP3vOmDEg=
+h1:yjcRxLnnFXJAF2WuNTDMWxdmH9EyimYKSvGrln84j7c=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -77,3 +77,4 @@ h1:AuQyGXS10yeOXhoAJoBDzaAfThYUTt+cmKsP3vOmDEg=
 20261105202806_music_credit_kind_track.up.sql h1:YdldEMnRMQN9hGdEP0wSIRe4GePeR+AFf5V8Z6lI/f8=
 20261105231809_media_file_owner_partial_indexes.up.sql h1:LpaiGApOWGiUX7C3OyJXDFd1r+4Y/lmmABwMvP8Uju0=
 20261106002625_download_record_track_assignments.up.sql h1:9ROfNvSVkmweU0XSMRO5FE5DznpZBuuUD4RG9KGtuhE=
+20261106005615_album_edition_mbid.up.sql h1:1dN+Ddl/EXB+sIV3qCrei2ZtAK55ySZqjUcYysLrM8w=

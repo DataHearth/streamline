@@ -74,6 +74,20 @@ func (_c *AlbumCreate) SetNillableReleaseMbid(v *string) *AlbumCreate {
 	return _c
 }
 
+// SetEditionMbid sets the "edition_mbid" field.
+func (_c *AlbumCreate) SetEditionMbid(v string) *AlbumCreate {
+	_c.mutation.SetEditionMbid(v)
+	return _c
+}
+
+// SetNillableEditionMbid sets the "edition_mbid" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableEditionMbid(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetEditionMbid(*v)
+	}
+	return _c
+}
+
 // SetBarcode sets the "barcode" field.
 func (_c *AlbumCreate) SetBarcode(v string) *AlbumCreate {
 	_c.mutation.SetBarcode(v)
@@ -686,6 +700,10 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ReleaseMbid(); ok {
 		_spec.SetField(album.FieldReleaseMbid, field.TypeString, value)
 		_node.ReleaseMbid = value
+	}
+	if value, ok := _c.mutation.EditionMbid(); ok {
+		_spec.SetField(album.FieldEditionMbid, field.TypeString, value)
+		_node.EditionMbid = value
 	}
 	if value, ok := _c.mutation.Barcode(); ok {
 		_spec.SetField(album.FieldBarcode, field.TypeString, value)

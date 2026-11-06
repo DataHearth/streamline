@@ -42,10 +42,11 @@ const (
 )
 
 var (
-	ErrArtistExists   = errors.New("artist already exists")
-	ErrArtistNotFound = errors.New("artist not found")
-	ErrAlbumNotFound  = errors.New("album not found")
-	ErrTrackNotFound  = errors.New("track not found")
+	ErrArtistExists    = errors.New("artist already exists")
+	ErrArtistNotFound  = errors.New("artist not found")
+	ErrAlbumNotFound   = errors.New("album not found")
+	ErrTrackNotFound   = errors.New("track not found")
+	ErrEditionNotFound = errors.New("that edition is not a release of this album")
 
 	ErrNoQualityProfile = errors.New("no music quality profile configured")
 	ErrUnknownProfile   = errors.New("unknown music quality profile")
@@ -68,6 +69,11 @@ type Manager interface {
 	ApplyMonitoredTypes(ctx context.Context) (int, int, error)
 	SetArtistQualityProfile(ctx context.Context, id uint32, profile string) error
 	SetAlbumMonitored(ctx context.Context, id uint32, m bool) error
+	AlbumEditions(
+		ctx context.Context,
+		id uint32,
+	) (*ent.Album, []metadata.ReleaseEdition, error)
+	SetAlbumEdition(ctx context.Context, id uint32, releaseMBID string) error
 	Delete(ctx context.Context, id uint32, deleteFiles bool) error
 	RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error)
 

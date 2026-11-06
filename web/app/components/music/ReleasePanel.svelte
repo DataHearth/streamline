@@ -2,6 +2,7 @@
 	import { Radar, Search, Tags, Upload } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
+	import AlbumEditionPicker from "./AlbumEditionPicker.svelte";
 	import ReleaseCover from "./ReleaseCover.svelte";
 	import Tracklist from "./Tracklist.svelte";
 	import ReleaseCredits from "./ReleaseCredits.svelte";
@@ -94,6 +95,13 @@
 						<p class="font-mono text-xs text-status-failed">{r.failure_reason}</p>
 					{/if}
 					<p class="mt-1 text-fg-muted">{i18n.music_import_failed()}</p>
+				</div>
+			{/if}
+			{#if canEdit && !r.tracks_pending}
+				<div class="mt-2 max-w-md">
+					{#key r.id}
+						<AlbumEditionPicker albumId={r.id} />
+					{/key}
 				</div>
 			{/if}
 			{#if canEdit}

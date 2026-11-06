@@ -76,6 +76,26 @@ func (_u *AlbumUpdate) ClearReleaseMbid() *AlbumUpdate {
 	return _u
 }
 
+// SetEditionMbid sets the "edition_mbid" field.
+func (_u *AlbumUpdate) SetEditionMbid(v string) *AlbumUpdate {
+	_u.mutation.SetEditionMbid(v)
+	return _u
+}
+
+// SetNillableEditionMbid sets the "edition_mbid" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableEditionMbid(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetEditionMbid(*v)
+	}
+	return _u
+}
+
+// ClearEditionMbid clears the value of the "edition_mbid" field.
+func (_u *AlbumUpdate) ClearEditionMbid() *AlbumUpdate {
+	_u.mutation.ClearEditionMbid()
+	return _u
+}
+
 // SetBarcode sets the "barcode" field.
 func (_u *AlbumUpdate) SetBarcode(v string) *AlbumUpdate {
 	_u.mutation.SetBarcode(v)
@@ -880,6 +900,12 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.ReleaseMbidCleared() {
 		_spec.ClearField(album.FieldReleaseMbid, field.TypeString)
 	}
+	if value, ok := _u.mutation.EditionMbid(); ok {
+		_spec.SetField(album.FieldEditionMbid, field.TypeString, value)
+	}
+	if _u.mutation.EditionMbidCleared() {
+		_spec.ClearField(album.FieldEditionMbid, field.TypeString)
+	}
 	if value, ok := _u.mutation.Barcode(); ok {
 		_spec.SetField(album.FieldBarcode, field.TypeString, value)
 	}
@@ -1414,6 +1440,26 @@ func (_u *AlbumUpdateOne) SetNillableReleaseMbid(v *string) *AlbumUpdateOne {
 // ClearReleaseMbid clears the value of the "release_mbid" field.
 func (_u *AlbumUpdateOne) ClearReleaseMbid() *AlbumUpdateOne {
 	_u.mutation.ClearReleaseMbid()
+	return _u
+}
+
+// SetEditionMbid sets the "edition_mbid" field.
+func (_u *AlbumUpdateOne) SetEditionMbid(v string) *AlbumUpdateOne {
+	_u.mutation.SetEditionMbid(v)
+	return _u
+}
+
+// SetNillableEditionMbid sets the "edition_mbid" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableEditionMbid(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetEditionMbid(*v)
+	}
+	return _u
+}
+
+// ClearEditionMbid clears the value of the "edition_mbid" field.
+func (_u *AlbumUpdateOne) ClearEditionMbid() *AlbumUpdateOne {
+	_u.mutation.ClearEditionMbid()
 	return _u
 }
 
@@ -2250,6 +2296,12 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	}
 	if _u.mutation.ReleaseMbidCleared() {
 		_spec.ClearField(album.FieldReleaseMbid, field.TypeString)
+	}
+	if value, ok := _u.mutation.EditionMbid(); ok {
+		_spec.SetField(album.FieldEditionMbid, field.TypeString, value)
+	}
+	if _u.mutation.EditionMbidCleared() {
+		_spec.ClearField(album.FieldEditionMbid, field.TypeString)
 	}
 	if value, ok := _u.mutation.Barcode(); ok {
 		_spec.SetField(album.FieldBarcode, field.TypeString, value)

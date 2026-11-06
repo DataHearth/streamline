@@ -421,6 +421,16 @@ func (db *DB) FindArtistTrackCredits(
 		Only(ctx)
 }
 
+// SetAlbumEdition stores the release a person chose; empty goes back to the
+// canonical one.
+func (db *DB) SetAlbumEdition(
+	ctx context.Context,
+	id uint32,
+	releaseMBID string,
+) error {
+	return db.client.Album.UpdateOneID(id).SetEditionMbid(releaseMBID).Exec(ctx)
+}
+
 func (db *DB) FindAlbumByID(ctx context.Context, id uint32) (*ent.Album, error) {
 	q := db.client.Album.Query().Where(album.IDEQ(id))
 	withAlbumTree(q)

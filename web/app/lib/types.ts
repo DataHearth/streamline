@@ -725,6 +725,23 @@ export type HoldReason = {
 	actual?: string;
 };
 
+export type MusicAlbumEdition = {
+	mbid: string;
+	title: string;
+	disambiguation?: string;
+	date: string;
+	country: string;
+	official: boolean;
+	formats: string[];
+	tracks: number;
+	discs: number;
+};
+export type MusicAlbumEditions = {
+	current: string;
+	chosen: string;
+	editions: MusicAlbumEdition[];
+};
+
 export type TrackAssignment = { file: string; track_id: number };
 export type TrackPlanTrack = {
 	id: number;

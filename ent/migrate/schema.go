@@ -16,6 +16,7 @@ var (
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "mbid", Type: field.TypeString, Unique: true},
 		{Name: "release_mbid", Type: field.TypeString, Nullable: true},
+		{Name: "edition_mbid", Type: field.TypeString, Nullable: true},
 		{Name: "barcode", Type: field.TypeString, Nullable: true},
 		{Name: "title", Type: field.TypeString},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"album", "ep", "single", "compilation", "live", "other"}, Default: "album"},
@@ -50,7 +51,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "albums_artists_albums",
-				Columns:    []*schema.Column{AlbumsColumns[29]},
+				Columns:    []*schema.Column{AlbumsColumns[30]},
 				RefColumns: []*schema.Column{ArtistsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -59,17 +60,17 @@ var (
 			{
 				Name:    "album_artist_albums",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[29]},
+				Columns: []*schema.Column{AlbumsColumns[30]},
 			},
 			{
 				Name:    "album_status",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[19]},
+				Columns: []*schema.Column{AlbumsColumns[20]},
 			},
 			{
 				Name:    "album_metadata_fetched_at",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[26]},
+				Columns: []*schema.Column{AlbumsColumns[27]},
 			},
 		},
 	}

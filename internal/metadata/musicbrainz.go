@@ -728,6 +728,8 @@ func readURLRel(rel mbRel, d *ArtistDetails) {
 
 type mbRelease struct {
 	ID        string          `json:"id"`
+	Title     string          `json:"title"`
+	Disambig  string          `json:"disambiguation"`
 	Status    string          `json:"status"`
 	Date      string          `json:"date"`
 	Barcode   string          `json:"barcode"`
@@ -843,32 +845,105 @@ const (
 	lightReleaseInc = "recordings+artist-credits+labels"
 )
 
-func (m *MusicBrainz) GetReleaseGroup(
+type mbReleaseGroupDetail struct {
+	mbReleaseGroup
+	Releases     []mbRelease `json:"releases"`
+	ArtistCredit []mbCredit  `json:"artist-credit"`
+}
+
+func (m *MusicBrainz) fetchReleaseGroup(
 	ctx context.Context,
 	mbid string,
-) (*ReleaseGroupDetails, error) {
-	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.get_release_group",
-		trace.WithAttributes(attribute.String("musicbrainz.mbid", mbid)))
-	defer span.End()
-
-	var rg struct {
-		mbReleaseGroup
-		Releases     []mbRelease `json:"releases"`
-		ArtistCredit []mbCredit  `json:"artist-credit"`
-	}
-	if err := m.get(
+) (mbReleaseGroupDetail, error) {
+	var rg mbReleaseGroupDetail
+	err := m.get(
 		ctx,
 		"/release-group/"+url.PathEscape(mbid),
 		url.Values{
 			"inc": {"releases+media+artist-credits+genres"},
 		},
 		&rg,
-	); err != nil {
+	)
+	return rg, err
+}
+
+// ReleaseGroupEditions lists every release of the group with audio, oldest
+// first, in one call.
+func (m *MusicBrainz) ReleaseGroupEditions(
+	ctx context.Context,
+	mbid string,
+) ([]ReleaseEdition, error) {
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.release_group_editions",
+		trace.WithAttributes(attribute.String("musicbrainz.mbid", mbid)))
+	defer span.End()
+
+	rg, err := m.fetchReleaseGroup(ctx, mbid)
+	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
+	}
+	slices.SortStableFunc(rg.Releases, func(a, b mbRelease) int {
+		return strings.Compare(releaseSortDate(a.Date), releaseSortDate(b.Date))
+	})
+	out := make([]ReleaseEdition, 0, len(rg.Releases))
+	for _, r := range rg.Releases {
+		tracks, discs := audioSize(r.Media)
+		if tracks == 0 {
+			continue
+		}
+		var formats []string
+		for _, md := range r.Media {
+			if !isVideoMedium(md) && md.Format != "" &&
+				!slices.Contains(formats, md.Format) {
+				formats = append(formats, md.Format)
+			}
+		}
+		out = append(out, ReleaseEdition{
+			MBID:           r.ID,
+			Title:          r.Title,
+			Disambiguation: r.Disambig,
+			Date:           r.Date,
+			Country:        r.Country,
+			Official:       r.Status == "Official",
+			Formats:        formats,
+			Tracks:         tracks,
+			Discs:          discs,
+		})
+	}
+	return out, nil
+}
+
+func (m *MusicBrainz) GetReleaseGroup(
+	ctx context.Context,
+	mbid string,
+) (*ReleaseGroupDetails, error) {
+	return m.GetReleaseGroupEdition(ctx, mbid, "")
+}
+
+// GetReleaseGroupEdition is GetReleaseGroup with edition, a release a person
+// chose, in place of the canonical one. An edition MusicBrainz no longer lists
+// under the group falls back to the canonical one.
+func (m *MusicBrainz) GetReleaseGroupEdition(
+	ctx context.Context,
+	mbid, edition string,
+) (*ReleaseGroupDetails, error) {
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.get_release_group",
+		trace.WithAttributes(attribute.String("musicbrainz.mbid", mbid)))
+	defer span.End()
+
+	rg, err := m.fetchReleaseGroup(ctx, mbid)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	release := canonicalRelease(rg.Releases)
+	if slices.ContainsFunc(
+		rg.Releases,
+		func(r mbRelease) bool { return r.ID == edition },
+	) {
+		release = edition
 	}
 	details := &ReleaseGroupDetails{
 		ReleaseGroupInfo: rg.toInfo(),
-		ReleaseMBID:      canonicalRelease(rg.Releases),
+		ReleaseMBID:      release,
 		Genres:           topGenres(rg.Genres),
 	}
 	if len(rg.ArtistCredit) > 0 {
