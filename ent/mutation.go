@@ -30584,6 +30584,7 @@ type MediaFileMutation struct {
 	audio_langs           *string
 	sub_langs             *string
 	probed_at             *time.Time
+	dynamic_range         *string
 	parsed_source         *string
 	parsed_resolution     *string
 	parsed_codec          *string
@@ -31883,6 +31884,55 @@ func (m *MediaFileMutation) ResetProbedAt() {
 	delete(m.clearedFields, mediafile.FieldProbedAt)
 }
 
+// SetDynamicRange sets the "dynamic_range" field.
+func (m *MediaFileMutation) SetDynamicRange(s string) {
+	m.dynamic_range = &s
+}
+
+// DynamicRange returns the value of the "dynamic_range" field in the mutation.
+func (m *MediaFileMutation) DynamicRange() (r string, exists bool) {
+	v := m.dynamic_range
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDynamicRange returns the old "dynamic_range" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldDynamicRange(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDynamicRange is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDynamicRange requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDynamicRange: %w", err)
+	}
+	return oldValue.DynamicRange, nil
+}
+
+// ClearDynamicRange clears the value of the "dynamic_range" field.
+func (m *MediaFileMutation) ClearDynamicRange() {
+	m.dynamic_range = nil
+	m.clearedFields[mediafile.FieldDynamicRange] = struct{}{}
+}
+
+// DynamicRangeCleared returns if the "dynamic_range" field was cleared in this mutation.
+func (m *MediaFileMutation) DynamicRangeCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldDynamicRange]
+	return ok
+}
+
+// ResetDynamicRange resets all changes to the "dynamic_range" field.
+func (m *MediaFileMutation) ResetDynamicRange() {
+	m.dynamic_range = nil
+	delete(m.clearedFields, mediafile.FieldDynamicRange)
+}
+
 // SetParsedSource sets the "parsed_source" field.
 func (m *MediaFileMutation) SetParsedSource(s string) {
 	m.parsed_source = &s
@@ -32932,7 +32982,7 @@ func (m *MediaFileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaFileMutation) Fields() []string {
-	fields := make([]string, 0, 37)
+	fields := make([]string, 0, 38)
 	if m.create_time != nil {
 		fields = append(fields, mediafile.FieldCreateTime)
 	}
@@ -32998,6 +33048,9 @@ func (m *MediaFileMutation) Fields() []string {
 	}
 	if m.probed_at != nil {
 		fields = append(fields, mediafile.FieldProbedAt)
+	}
+	if m.dynamic_range != nil {
+		fields = append(fields, mediafile.FieldDynamicRange)
 	}
 	if m.parsed_source != nil {
 		fields = append(fields, mediafile.FieldParsedSource)
@@ -33096,6 +33149,8 @@ func (m *MediaFileMutation) Field(name string) (ent.Value, bool) {
 		return m.SubLangs()
 	case mediafile.FieldProbedAt:
 		return m.ProbedAt()
+	case mediafile.FieldDynamicRange:
+		return m.DynamicRange()
 	case mediafile.FieldParsedSource:
 		return m.ParsedSource()
 	case mediafile.FieldParsedResolution:
@@ -33179,6 +33234,8 @@ func (m *MediaFileMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldSubLangs(ctx)
 	case mediafile.FieldProbedAt:
 		return m.OldProbedAt(ctx)
+	case mediafile.FieldDynamicRange:
+		return m.OldDynamicRange(ctx)
 	case mediafile.FieldParsedSource:
 		return m.OldParsedSource(ctx)
 	case mediafile.FieldParsedResolution:
@@ -33371,6 +33428,13 @@ func (m *MediaFileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetProbedAt(v)
+		return nil
+	case mediafile.FieldDynamicRange:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDynamicRange(v)
 		return nil
 	case mediafile.FieldParsedSource:
 		v, ok := value.(string)
@@ -33693,6 +33757,9 @@ func (m *MediaFileMutation) ClearedFields() []string {
 	if m.FieldCleared(mediafile.FieldProbedAt) {
 		fields = append(fields, mediafile.FieldProbedAt)
 	}
+	if m.FieldCleared(mediafile.FieldDynamicRange) {
+		fields = append(fields, mediafile.FieldDynamicRange)
+	}
 	if m.FieldCleared(mediafile.FieldParsedSource) {
 		fields = append(fields, mediafile.FieldParsedSource)
 	}
@@ -33799,6 +33866,9 @@ func (m *MediaFileMutation) ClearField(name string) error {
 		return nil
 	case mediafile.FieldProbedAt:
 		m.ClearProbedAt()
+		return nil
+	case mediafile.FieldDynamicRange:
+		m.ClearDynamicRange()
 		return nil
 	case mediafile.FieldParsedSource:
 		m.ClearParsedSource()
@@ -33915,6 +33985,9 @@ func (m *MediaFileMutation) ResetField(name string) error {
 		return nil
 	case mediafile.FieldProbedAt:
 		m.ResetProbedAt()
+		return nil
+	case mediafile.FieldDynamicRange:
+		m.ResetDynamicRange()
 		return nil
 	case mediafile.FieldParsedSource:
 		m.ResetParsedSource()

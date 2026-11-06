@@ -65,6 +65,8 @@ type MediaFile struct {
 	SubLangs string `json:"sub_langs,omitempty"`
 	// ProbedAt holds the value of the "probed_at" field.
 	ProbedAt *time.Time `json:"probed_at,omitempty"`
+	// DynamicRange holds the value of the "dynamic_range" field.
+	DynamicRange *string `json:"dynamic_range,omitempty"`
 	// ParsedSource holds the value of the "parsed_source" field.
 	ParsedSource string `json:"parsed_source,omitempty"`
 	// ParsedResolution holds the value of the "parsed_resolution" field.
@@ -182,7 +184,7 @@ func (*MediaFile) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case mediafile.FieldID, mediafile.FieldSize, mediafile.FieldDurationSeconds, mediafile.FieldWidth, mediafile.FieldHeight, mediafile.FieldAudioChannels, mediafile.FieldBitrate, mediafile.FieldAudioTracks, mediafile.FieldSizeBefore, mediafile.FieldTagsMtime, mediafile.FieldTagsSize, mediafile.FieldTagFailures:
 			values[i] = new(sql.NullInt64)
-		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec, mediafile.FieldAudioLangs, mediafile.FieldSubLangs, mediafile.FieldParsedSource, mediafile.FieldParsedResolution, mediafile.FieldParsedCodec, mediafile.FieldBookKind, mediafile.FieldTagsState, mediafile.FieldTagsHash, mediafile.FieldTagsError, mediafile.FieldTagsArtHash:
+		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec, mediafile.FieldAudioLangs, mediafile.FieldSubLangs, mediafile.FieldDynamicRange, mediafile.FieldParsedSource, mediafile.FieldParsedResolution, mediafile.FieldParsedCodec, mediafile.FieldBookKind, mediafile.FieldTagsState, mediafile.FieldTagsHash, mediafile.FieldTagsError, mediafile.FieldTagsArtHash:
 			values[i] = new(sql.NullString)
 		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldMissingSince, mediafile.FieldMissingConfirmedAt, mediafile.FieldProbedAt, mediafile.FieldTranscodedAt, mediafile.FieldTaggedAt, mediafile.FieldTagsCheckedAt:
 			values[i] = new(sql.NullTime)
@@ -349,6 +351,13 @@ func (_m *MediaFile) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ProbedAt = new(time.Time)
 				*_m.ProbedAt = value.Time
+			}
+		case mediafile.FieldDynamicRange:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field dynamic_range", values[i])
+			} else if value.Valid {
+				_m.DynamicRange = new(string)
+				*_m.DynamicRange = value.String
 			}
 		case mediafile.FieldParsedSource:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -603,6 +612,11 @@ func (_m *MediaFile) String() string {
 	if v := _m.ProbedAt; v != nil {
 		builder.WriteString("probed_at=")
 		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.DynamicRange; v != nil {
+		builder.WriteString("dynamic_range=")
+		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
 	builder.WriteString("parsed_source=")

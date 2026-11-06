@@ -317,6 +317,20 @@ func (_c *MediaFileCreate) SetNillableProbedAt(v *time.Time) *MediaFileCreate {
 	return _c
 }
 
+// SetDynamicRange sets the "dynamic_range" field.
+func (_c *MediaFileCreate) SetDynamicRange(v string) *MediaFileCreate {
+	_c.mutation.SetDynamicRange(v)
+	return _c
+}
+
+// SetNillableDynamicRange sets the "dynamic_range" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableDynamicRange(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetDynamicRange(*v)
+	}
+	return _c
+}
+
 // SetParsedSource sets the "parsed_source" field.
 func (_c *MediaFileCreate) SetParsedSource(v string) *MediaFileCreate {
 	_c.mutation.SetParsedSource(v)
@@ -836,6 +850,10 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ProbedAt(); ok {
 		_spec.SetField(mediafile.FieldProbedAt, field.TypeTime, value)
 		_node.ProbedAt = &value
+	}
+	if value, ok := _c.mutation.DynamicRange(); ok {
+		_spec.SetField(mediafile.FieldDynamicRange, field.TypeString, value)
+		_node.DynamicRange = &value
 	}
 	if value, ok := _c.mutation.ParsedSource(); ok {
 		_spec.SetField(mediafile.FieldParsedSource, field.TypeString, value)

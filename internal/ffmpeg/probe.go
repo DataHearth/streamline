@@ -201,19 +201,19 @@ type probeOutput struct {
 	Format  probeFormat   `json:"format"`
 }
 
-// isHDR reports a PQ/HLG transfer function or a Dolby Vision configuration
-// record in the stream's side data.
-func isHDR(s probeStream) bool {
-	switch s.ColorTransfer {
-	case "smpte2084", "arib-std-b67":
-		return true
-	}
+func dynamicRange(s probeStream) string {
 	for _, sd := range s.SideDataList {
 		if strings.Contains(sd.SideDataType, "DOVI") {
-			return true
+			return "dv"
 		}
 	}
-	return false
+	switch s.ColorTransfer {
+	case "smpte2084":
+		return "hdr10"
+	case "arib-std-b67":
+		return "hlg"
+	}
+	return "sdr"
 }
 
 func parseProbeOutput(raw []byte) (*Info, error) {
@@ -263,7 +263,8 @@ func parseProbeOutput(raw []byte) (*Info, error) {
 			}
 			info.VideoCodec = s.CodecName
 			info.Width, info.Height = s.Width, s.Height
-			info.HDR = isHDR(s)
+			info.DynamicRange = dynamicRange(s)
+			info.HDR = info.DynamicRange != "sdr"
 			info.TenBit = strings.Contains(s.PixFmt, "10")
 			videoStreamDuration = s.Duration
 			videoStreamBitRate = s.BitRate

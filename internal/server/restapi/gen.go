@@ -8949,10 +8949,12 @@ type StatsLargest struct {
 	Bytes int64 `json:"bytes"`
 
 	// Href The title's page in the SPA.
-	Href    string    `json:"href"`
-	Kind    StatsKind `json:"kind"`
-	Quality string    `json:"quality"`
-	Title   string    `json:"title"`
+	Href string    `json:"href"`
+	Kind StatsKind `json:"kind"`
+
+	// Quality The resolution the probe measured, else what the import recorded (a music file's tier).
+	Quality string `json:"quality"`
+	Title   string `json:"title"`
 }
 
 // StatsLibrary defines model for StatsLibrary.

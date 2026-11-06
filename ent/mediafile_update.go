@@ -471,6 +471,26 @@ func (_u *MediaFileUpdate) ClearProbedAt() *MediaFileUpdate {
 	return _u
 }
 
+// SetDynamicRange sets the "dynamic_range" field.
+func (_u *MediaFileUpdate) SetDynamicRange(v string) *MediaFileUpdate {
+	_u.mutation.SetDynamicRange(v)
+	return _u
+}
+
+// SetNillableDynamicRange sets the "dynamic_range" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableDynamicRange(v *string) *MediaFileUpdate {
+	if v != nil {
+		_u.SetDynamicRange(*v)
+	}
+	return _u
+}
+
+// ClearDynamicRange clears the value of the "dynamic_range" field.
+func (_u *MediaFileUpdate) ClearDynamicRange() *MediaFileUpdate {
+	_u.mutation.ClearDynamicRange()
+	return _u
+}
+
 // SetParsedSource sets the "parsed_source" field.
 func (_u *MediaFileUpdate) SetParsedSource(v string) *MediaFileUpdate {
 	_u.mutation.SetParsedSource(v)
@@ -1147,6 +1167,12 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.ProbedAtCleared() {
 		_spec.ClearField(mediafile.FieldProbedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DynamicRange(); ok {
+		_spec.SetField(mediafile.FieldDynamicRange, field.TypeString, value)
+	}
+	if _u.mutation.DynamicRangeCleared() {
+		_spec.ClearField(mediafile.FieldDynamicRange, field.TypeString)
 	}
 	if value, ok := _u.mutation.ParsedSource(); ok {
 		_spec.SetField(mediafile.FieldParsedSource, field.TypeString, value)
@@ -1867,6 +1893,26 @@ func (_u *MediaFileUpdateOne) ClearProbedAt() *MediaFileUpdateOne {
 	return _u
 }
 
+// SetDynamicRange sets the "dynamic_range" field.
+func (_u *MediaFileUpdateOne) SetDynamicRange(v string) *MediaFileUpdateOne {
+	_u.mutation.SetDynamicRange(v)
+	return _u
+}
+
+// SetNillableDynamicRange sets the "dynamic_range" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableDynamicRange(v *string) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetDynamicRange(*v)
+	}
+	return _u
+}
+
+// ClearDynamicRange clears the value of the "dynamic_range" field.
+func (_u *MediaFileUpdateOne) ClearDynamicRange() *MediaFileUpdateOne {
+	_u.mutation.ClearDynamicRange()
+	return _u
+}
+
 // SetParsedSource sets the "parsed_source" field.
 func (_u *MediaFileUpdateOne) SetParsedSource(v string) *MediaFileUpdateOne {
 	_u.mutation.SetParsedSource(v)
@@ -2573,6 +2619,12 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 	}
 	if _u.mutation.ProbedAtCleared() {
 		_spec.ClearField(mediafile.FieldProbedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DynamicRange(); ok {
+		_spec.SetField(mediafile.FieldDynamicRange, field.TypeString, value)
+	}
+	if _u.mutation.DynamicRangeCleared() {
+		_spec.ClearField(mediafile.FieldDynamicRange, field.TypeString)
 	}
 	if value, ok := _u.mutation.ParsedSource(); ok {
 		_spec.SetField(mediafile.FieldParsedSource, field.TypeString, value)

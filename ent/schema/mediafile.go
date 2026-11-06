@@ -55,6 +55,11 @@ func (MediaFile) Fields() []ent.Field {
 		field.String("audio_langs").Optional(),
 		field.String("sub_langs").Optional(),
 		field.Time("probed_at").Optional().Nillable(),
+		// dv, hdr10, hlg or sdr; empty when a probe failed. NULL alone means no
+		// probe has read it, so adding this column queued the backfill without
+		// unstamping probed_at: that would have made every other stream column
+		// unknown, and quality scoring with them, while the backfill ran.
+		field.String("dynamic_range").Optional().Nillable(),
 		// Derived from the filename, stored because deriving it is ~12 regex
 		// passes and every response that mentions a file used to redo them —
 		// once per file, per episode, per poll. The filename never changes
@@ -143,6 +148,8 @@ func (MediaFile) Indexes() []ent.Index {
 		// the 15-minute job stops scanning the whole table forever.
 		index.Fields("probed_at").
 			Annotations(entsql.IndexWhere("probed_at IS NULL")),
+		index.Fields("dynamic_range").
+			Annotations(entsql.IndexWhere("dynamic_range IS NULL")),
 		// The dashboard's arrivals walk files newest first. SQLite appends the
 		// rowid to every index, so this one also serves the id tie-break.
 		index.Fields("create_time"),

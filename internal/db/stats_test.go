@@ -77,17 +77,18 @@ var _ = Describe("GetStats", Label("integration", "db"), func() {
 			SaveX(ctx)
 		client.MediaFile.Create().
 			SetMovie(m).
-			SetPath("/m/Heat.1995.2160p.DoVi.mkv").
+			SetPath("/m/Heat (1995) [2160p].mkv").
 			SetSize(100).
 			SetWidth(3840).
 			SetHeight(1608).
 			SetVideoCodec("hevc").
 			SetAudioCodec("truehd").
+			SetDynamicRange("dv").
 			SetProbedAt(now).
 			ExecX(ctx)
 		client.MediaFile.Create().
 			SetMovie(m).
-			SetPath("/m/Heat.1995.1080p.mkv").
+			SetPath("/m/Heat (1995) [1080p].mkv").
 			SetSize(10).
 			SetWidth(1920).
 			SetHeight(800).
@@ -111,7 +112,7 @@ var _ = Describe("GetStats", Label("integration", "db"), func() {
 			StatsSlice{"hevc", 1, 100}, StatsSlice{"other", 1, 10},
 		))
 		Expect(st.Library.HDR).To(ConsistOf(
-			StatsSlice{"dv", 1, 100}, StatsSlice{"sdr", 1, 10},
+			StatsSlice{"dv", 1, 100}, StatsSlice{"unknown", 1, 10},
 		))
 		Expect(st.Library.Audio).To(ConsistOf(
 			StatsSlice{"truehd", 1, 100}, StatsSlice{"other", 1, 10},
@@ -121,6 +122,7 @@ var _ = Describe("GetStats", Label("integration", "db"), func() {
 		Expect(st.Library.Media[0].Bytes).To(BeEquivalentTo(111))
 		Expect(st.Library.Largest[0].Title).To(Equal("Heat"))
 		Expect(st.Library.Largest[0].Href).To(HavePrefix("/movies/"))
+		Expect(st.Library.Largest[0].Quality).To(Equal("2160p"))
 	})
 
 	It("files failures under codes and tallies indexers and wait times", func() {

@@ -160,6 +160,11 @@ func ProbedAt(v time.Time) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldProbedAt, v))
 }
 
+// DynamicRange applies equality check predicate on the "dynamic_range" field. It's identical to DynamicRangeEQ.
+func DynamicRange(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldDynamicRange, v))
+}
+
 // ParsedSource applies equality check predicate on the "parsed_source" field. It's identical to ParsedSourceEQ.
 func ParsedSource(v string) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldParsedSource, v))
@@ -1478,6 +1483,81 @@ func ProbedAtIsNil() predicate.MediaFile {
 // ProbedAtNotNil applies the NotNil predicate on the "probed_at" field.
 func ProbedAtNotNil() predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldNotNull(FieldProbedAt))
+}
+
+// DynamicRangeEQ applies the EQ predicate on the "dynamic_range" field.
+func DynamicRangeEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldDynamicRange, v))
+}
+
+// DynamicRangeNEQ applies the NEQ predicate on the "dynamic_range" field.
+func DynamicRangeNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldDynamicRange, v))
+}
+
+// DynamicRangeIn applies the In predicate on the "dynamic_range" field.
+func DynamicRangeIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldDynamicRange, vs...))
+}
+
+// DynamicRangeNotIn applies the NotIn predicate on the "dynamic_range" field.
+func DynamicRangeNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldDynamicRange, vs...))
+}
+
+// DynamicRangeGT applies the GT predicate on the "dynamic_range" field.
+func DynamicRangeGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldDynamicRange, v))
+}
+
+// DynamicRangeGTE applies the GTE predicate on the "dynamic_range" field.
+func DynamicRangeGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldDynamicRange, v))
+}
+
+// DynamicRangeLT applies the LT predicate on the "dynamic_range" field.
+func DynamicRangeLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldDynamicRange, v))
+}
+
+// DynamicRangeLTE applies the LTE predicate on the "dynamic_range" field.
+func DynamicRangeLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldDynamicRange, v))
+}
+
+// DynamicRangeContains applies the Contains predicate on the "dynamic_range" field.
+func DynamicRangeContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldDynamicRange, v))
+}
+
+// DynamicRangeHasPrefix applies the HasPrefix predicate on the "dynamic_range" field.
+func DynamicRangeHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldDynamicRange, v))
+}
+
+// DynamicRangeHasSuffix applies the HasSuffix predicate on the "dynamic_range" field.
+func DynamicRangeHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldDynamicRange, v))
+}
+
+// DynamicRangeIsNil applies the IsNil predicate on the "dynamic_range" field.
+func DynamicRangeIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldDynamicRange))
+}
+
+// DynamicRangeNotNil applies the NotNil predicate on the "dynamic_range" field.
+func DynamicRangeNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldDynamicRange))
+}
+
+// DynamicRangeEqualFold applies the EqualFold predicate on the "dynamic_range" field.
+func DynamicRangeEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldDynamicRange, v))
+}
+
+// DynamicRangeContainsFold applies the ContainsFold predicate on the "dynamic_range" field.
+func DynamicRangeContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldDynamicRange, v))
 }
 
 // ParsedSourceEQ applies the EQ predicate on the "parsed_source" field.

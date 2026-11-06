@@ -54,13 +54,15 @@ func applyProbe[T interface {
 	SetAudioTracks(uint8) T
 	SetAudioLangs(string) T
 	SetSubLangs(string) T
+	SetDynamicRange(string) T
 	SetProbedAt(time.Time) T
 }](q T, info *ffmpeg.Info) T {
 	q = q.SetProbedAt(time.Now())
 	if info == nil {
-		return q
+		return q.SetDynamicRange("")
 	}
 	return q.SetContainer(info.Container).
+		SetDynamicRange(info.DynamicRange).
 		SetDurationSeconds(info.DurationSec).
 		SetVideoCodec(info.VideoCodec).
 		SetWidth(info.Width).
@@ -134,8 +136,8 @@ func (db *DB) CreateMediaFile(
 	return mf, nil
 }
 
-// ListUnprobedMediaFiles returns up to limit video rows that have never been
-// probed (probed_at IS NULL), oldest-first, for the backfill job to work
+// ListUnprobedMediaFiles returns up to limit video rows no probe has fully read
+// (probed_at or dynamic_range NULL), oldest-first, for the backfill job to work
 // through. Track and book files are left out: the probe reads a video stream,
 // fails every one of them with "no video stream", and nothing reads its
 // columns outside movies and episodes.
@@ -145,7 +147,7 @@ func (db *DB) ListUnprobedMediaFiles(
 ) ([]*ent.MediaFile, error) {
 	rows, err := db.client.MediaFile.Query().
 		Where(
-			mediafile.ProbedAtIsNil(),
+			mediafile.Or(mediafile.ProbedAtIsNil(), mediafile.DynamicRangeIsNil()),
 			mediafile.MissingSinceIsNil(),
 			mediafile.Or(mediafile.HasMovie(), mediafile.HasEpisode()),
 		).

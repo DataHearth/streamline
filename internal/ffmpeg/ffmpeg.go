@@ -58,6 +58,9 @@ type Info struct {
 	// HDR is true for a PQ/HLG transfer (smpte2084 / arib-std-b67) or a Dolby
 	// Vision configuration record in the video stream's side data.
 	HDR bool
+	// DynamicRange names what HDR only flags: dv, hdr10, hlg or sdr, the first
+	// when a stream carries a Dolby Vision record over its PQ transfer.
+	DynamicRange string
 	// TenBit reports a 10-bit video pixel format (yuv420p10le and kin). The
 	// software encoders keep the source depth on their own; the VAAPI upload
 	// format is what has to read this.

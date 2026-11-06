@@ -10332,6 +10332,7 @@ components:
           format: int64
         quality:
           type: string
+          description: The resolution the probe measured, else what the import recorded (a music file's tier).
     StatsLibrary:
       type: object
       required: [media, volumes, resolution, video_codec, hdr, audio, unprobed, largest]

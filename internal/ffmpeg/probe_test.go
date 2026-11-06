@@ -241,6 +241,7 @@ var _ = Describe("parseProbeOutput HDR", Label("unit", "ffmpeg"), func() {
 		}`))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(info.HDR).To(BeFalse())
+			Expect(info.DynamicRange).To(Equal("sdr"))
 			Expect(info.VideoBitrateBPS).To(Equal(uint32(9000000)))
 			Expect(info.AudioCodecs).To(Equal([]string{"dts", "aac"}))
 		},
@@ -259,7 +260,23 @@ var _ = Describe("parseProbeOutput HDR", Label("unit", "ffmpeg"), func() {
 		}`))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(info.HDR).To(BeTrue())
+		Expect(info.DynamicRange).To(Equal("dv"))
 		Expect(info.VideoBitrateBPS).To(Equal(uint32(45000000)))
 		Expect(info.AudioCodecs).To(Equal([]string{"truehd", "eac3"}))
 	})
+
+	DescribeTable("names the transfer function",
+		func(transfer, want string) {
+			info, err := parseProbeOutput(
+				[]byte(`{"streams":[{"codec_type":"video","codec_name":"hevc",
+				"width":3840,"height":2160,"color_transfer":"` + transfer + `"}],"format":{"duration":"60.0"}}`),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.DynamicRange).To(Equal(want))
+			Expect(info.HDR).To(Equal(want != "sdr"))
+		},
+		Entry("PQ", "smpte2084", "hdr10"),
+		Entry("HLG", "arib-std-b67", "hlg"),
+		Entry("BT.709", "bt709", "sdr"),
+	)
 })

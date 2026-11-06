@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/session"
 	"github.com/datahearth/streamline/ent/transcodejob"
+	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
@@ -165,14 +166,8 @@ const (
 		WHEN 'aac' THEN 'aac'
 		WHEN 'flac' THEN 'flac'
 		ELSE 'other' END`
-	// ponytail: read off the release name, since the probe's HDR flag is not
-	// stored. A column would be exact, at the price of re-probing the library
-	// (a new probe column nulls probed_at).
-	statsHDRKey = `CASE
-		WHEN lower(path) LIKE '%dovi%' OR lower(path) LIKE '%dolby%vision%'
-			OR lower(path) LIKE '%.dv.%' OR lower(path) LIKE '% dv %' THEN 'dv'
-		WHEN lower(path) LIKE '%hdr%' THEN 'hdr10'
-		ELSE 'sdr' END`
+	statsHDRKey = `CASE WHEN dynamic_range IN ('dv', 'hdr10', 'hlg', 'sdr')
+		THEN dynamic_range ELSE 'unknown' END`
 )
 
 func videoFile() predicate.MediaFile {
@@ -300,6 +295,18 @@ func (db *DB) statsMedia(ctx context.Context, now time.Time) ([]StatsMedia, erro
 	return out, nil
 }
 
+// largestQuality prefers what the probe measured: a file adopted by a bulk
+// import has no quality of its own, and a music or book file has no dimensions.
+func largestQuality(f *ent.MediaFile) string {
+	if r := quality.ResolutionFromDims(int(f.Width), int(f.Height)); r != "" {
+		return r
+	}
+	if f.Quality != "" {
+		return f.Quality
+	}
+	return f.ParsedResolution
+}
+
 func (db *DB) statsLargest(ctx context.Context) ([]StatsLargest, error) {
 	rows, err := db.client.MediaFile.Query().
 		Where(mediafile.MissingSinceIsNil()).
@@ -319,7 +326,7 @@ func (db *DB) statsLargest(ctx context.Context) ([]StatsLargest, error) {
 	}
 	out := make([]StatsLargest, 0, len(rows))
 	for _, f := range rows {
-		l := StatsLargest{Bytes: f.Size, Quality: f.Quality}
+		l := StatsLargest{Bytes: f.Size, Quality: largestQuality(f)}
 		switch {
 		case f.Edges.Movie != nil:
 			l.Kind, l.Title = "movie", f.Edges.Movie.Title

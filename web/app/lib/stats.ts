@@ -211,6 +211,7 @@ const SLICE_LABEL: Record<string, () => string> = {
 	av1: () => "AV1",
 	dv: () => "Dolby Vision",
 	hdr10: () => "HDR10",
+	hlg: () => "HLG",
 	sdr: () => "SDR",
 	truehd: () => "TrueHD",
 	dts: () => "DTS-HD",

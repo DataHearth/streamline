@@ -673,6 +673,37 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 			Expect(rows[0].ID).To(Equal(b.ID))
 		})
 
+		It(
+			"selects a row probed before dynamic_range existed, until a probe answers",
+			func() {
+				a := createMovieFile()
+				client.MediaFile.UpdateOneID(a.ID).
+					SetProbedAt(time.Now()).
+					SetWidth(1920).
+					ExecX(ctx)
+
+				rows, err := store.ListUnprobedMediaFiles(ctx, 10)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rows).To(HaveLen(1))
+				Expect(rows[0].ID).To(Equal(a.ID))
+
+				Expect(
+					store.StampMediaFileProbe(
+						ctx,
+						a.ID,
+						"",
+						&ffmpeg.Info{DynamicRange: "hdr10"},
+					),
+				).To(Succeed())
+				Expect(
+					client.MediaFile.GetX(ctx, a.ID).DynamicRange,
+				).To(HaveValue(Equal("hdr10")))
+				rows, err = store.ListUnprobedMediaFiles(ctx, 10)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rows).To(BeEmpty())
+			},
+		)
+
 		It("leaves out a file that is neither a movie's nor an episode's", func() {
 			client.MediaFile.Create().SetPath("/lib/01 - Track.flac").SetSize(1).
 				SetFormat("flac").SaveX(ctx)

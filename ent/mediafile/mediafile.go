@@ -59,6 +59,8 @@ const (
 	FieldSubLangs = "sub_langs"
 	// FieldProbedAt holds the string denoting the probed_at field in the database.
 	FieldProbedAt = "probed_at"
+	// FieldDynamicRange holds the string denoting the dynamic_range field in the database.
+	FieldDynamicRange = "dynamic_range"
 	// FieldParsedSource holds the string denoting the parsed_source field in the database.
 	FieldParsedSource = "parsed_source"
 	// FieldParsedResolution holds the string denoting the parsed_resolution field in the database.
@@ -163,6 +165,7 @@ var Columns = []string{
 	FieldAudioLangs,
 	FieldSubLangs,
 	FieldProbedAt,
+	FieldDynamicRange,
 	FieldParsedSource,
 	FieldParsedResolution,
 	FieldParsedCodec,
@@ -408,6 +411,11 @@ func BySubLangs(opts ...sql.OrderTermOption) OrderOption {
 // ByProbedAt orders the results by the probed_at field.
 func ByProbedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldProbedAt, opts...).ToFunc()
+}
+
+// ByDynamicRange orders the results by the dynamic_range field.
+func ByDynamicRange(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDynamicRange, opts...).ToFunc()
 }
 
 // ByParsedSource orders the results by the parsed_source field.
