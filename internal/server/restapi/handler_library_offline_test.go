@@ -58,6 +58,12 @@ var _ = Describe(
 				expectRefused(app.do(app.req(method, path, app.adminKey, nil)))
 			},
 			Entry(
+				"apply album tags",
+				db.RootMusic,
+				http.MethodPost,
+				"/api/v1/music/albums/1/tags/apply",
+			),
+			Entry(
 				"rename movie",
 				db.RootMovies,
 				http.MethodPost,

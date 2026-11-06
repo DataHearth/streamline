@@ -8,6 +8,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library/roothealth"
+
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/media/music"
 )
@@ -151,6 +154,9 @@ func (s *Server) ApplyMusicAlbumTags(
 		return ApplyMusicAlbumTags403JSONResponse{
 			ForbiddenJSONResponse: requestOnlyResp,
 		}, nil
+	}
+	if err := roothealth.Require(ctx, db.RootMusic); err != nil {
+		return nil, err
 	}
 	n, err := s.music.ApplyAlbumTags(ctx, request.Id)
 	switch {
