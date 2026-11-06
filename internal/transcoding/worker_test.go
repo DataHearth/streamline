@@ -24,6 +24,7 @@ import (
 	dlmocks "github.com/datahearth/streamline/internal/download/mocks"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
@@ -474,6 +475,24 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		// The claim bumped attempts to 1; a deferral is not an attempt.
 		Expect(held.Attempts).To(Equal(uint8(0)))
 		Expect(held.StartedAt).To(BeNil())
+	})
+
+	It("defers a job on an offline root, counting no failure", func() {
+		roothealth.Register(store)
+		DeferCleanup(func() { roothealth.Register(nil) })
+		mf := seedMovieFile("hevc")
+		job := queueJob(mf)
+		data, err := os.ReadFile(mf.Path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Remove(mf.Path)).To(Succeed())
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		held := reload(job)
+		Expect(held.Status).To(Equal(transcodejob.StatusQueued))
+		Expect(held.DeferredUntil).NotTo(BeNil())
+		Expect(held.Attempts).To(Equal(uint8(0)))
+		Expect(os.WriteFile(mf.Path, data, 0o644)).To(Succeed())
 	})
 
 	It("never asks the client while defer_seeding is off", func() {

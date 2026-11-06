@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -87,6 +88,13 @@ func (s *Service) SyncTags(ctx context.Context) error {
 	cfg := config.Get().Library.MusicTags
 	if cfg.Mode == config.MusicTagsOff {
 		span.SetAttributes(attribute.Bool("tags.off", true))
+		return nil
+	}
+	status, err := roothealth.Offline(ctx, db.RootMusic)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if status != nil {
 		return nil
 	}
 	limit, checks := tagSyncBatch, tagCheckBatch

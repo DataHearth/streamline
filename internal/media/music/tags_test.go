@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/scheduler"
 )
 
@@ -90,6 +91,26 @@ var _ = Describe("Music tag sync", Label("unit", "integration", "music"), func()
 			albumSeed{mbid: "rg-1", title: "Nevermind", tracks: []string{"Lithium"}})
 		alb = albums[0]
 		tr = alb.QueryTracks().OnlyX(e.ctx)
+	})
+
+	It("writes nothing and counts no failure for an offline music root", func() {
+		noTorrents()
+		roothealth.Register(e.store)
+		DeferCleanup(func() { roothealth.Register(nil) })
+		mf := placeFile("Nirvana/Nevermind/01.flac", pending())
+		data, err := os.ReadFile(mf.Path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Remove(mf.Path)).To(Succeed())
+
+		Expect(e.svc.SyncTags(e.ctx)).To(Succeed())
+
+		held := reload(mf)
+		Expect(*held.TagsState).To(Equal(entmediafile.TagsStatePending))
+		Expect(held.TagFailures).To(BeZero())
+
+		Expect(os.WriteFile(mf.Path, data, 0o644)).To(Succeed())
+		Expect(e.svc.SyncTags(e.ctx)).To(Succeed())
+		Expect(*reload(mf).TagsState).To(Equal(entmediafile.TagsStateWritten))
 	})
 
 	It("writes a pending file, records what it wrote and settles it", func() {

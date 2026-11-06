@@ -18,13 +18,35 @@ import (
 	entmediaevent "github.com/datahearth/streamline/ent/mediaevent"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
+
+// unmountingStore removes files from disk once the sweep has decided which roots
+// to skip, the moment a mount dies partway through a tick.
+type unmountingStore struct {
+	db.Store
+	paths []string
+}
+
+func (s *unmountingStore) ListMediaFilesForDrift(
+	ctx context.Context,
+	afterID uint32,
+	limit int,
+	skip ...db.LibraryRoot,
+) ([]db.DriftRow, error) {
+	for _, p := range s.paths {
+		Expect(os.Remove(p)).To(Succeed())
+	}
+	s.paths = nil
+	return s.Store.ListMediaFilesForDrift(ctx, afterID, limit, skip...)
+}
 
 var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 	var (
@@ -308,6 +330,214 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(since.UTC()).To(BeTemporally("==", oldest))
+	})
+
+	Describe("an offline library root", func() {
+		var (
+			musicDir string
+			alb      *ent.Album
+			movie    *ent.Movie
+			lost     *ent.MediaFile
+		)
+
+		trackFile := func(name string, position uint16, since *time.Time) *ent.MediaFile {
+			GinkgoHelper()
+			tr := entClient.Track.Create().
+				SetTitle(name).
+				SetDisc(1).SetPosition(position).SetAlbum(alb).SaveX(ctx)
+			return entClient.MediaFile.Create().
+				SetPath(filepath.Join(musicDir, name)).SetSize(4).
+				SetTrack(tr).SetNillableMissingSince(since).SaveX(ctx)
+		}
+		driftEventCount := func() int {
+			GinkgoHelper()
+			return entClient.MediaEvent.Query().
+				Where(entmediaevent.HasAlbum()).
+				CountX(ctx)
+		}
+		missingSince := func(mf *ent.MediaFile) *time.Time {
+			GinkgoHelper()
+			return entClient.MediaFile.GetX(ctx, mf.ID).MissingSince
+		}
+
+		BeforeEach(func() {
+			musicDir = GinkgoT().TempDir()
+			configtest.Setup(map[string]any{"library": map[string]any{
+				"movie_path": tmpDir, "music_path": musicDir,
+			}})
+			roothealth.Register(store)
+			DeferCleanup(func() { roothealth.Register(nil) })
+
+			artist := entClient.Artist.Create().
+				SetMbid("artist").
+				SetName("Artist").
+				SaveX(ctx)
+			alb = entClient.Album.Create().
+				SetMbid("album").SetTitle("Album").SetArtist(artist).
+				SetStatus(entalbum.StatusAvailable).SaveX(ctx)
+
+			var err error
+			movie, err = store.CreateMovie(ctx, db.CreateMovieParams{
+				Title: "Control", OriginalTitle: "Control", Year: 2020, TmdbID: 1,
+				Status: entmovie.StatusAvailable,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			kept := filepath.Join(tmpDir, "kept.mkv")
+			Expect(os.WriteFile(kept, []byte("data"), 0o644)).To(Succeed())
+			entClient.MediaFile.Create().
+				SetPath(kept).
+				SetSize(4).
+				SetMovie(movie).
+				SaveX(ctx)
+			lost = entClient.MediaFile.Create().
+				SetPath(filepath.Join(tmpDir, "lost.mkv")).
+				SetSize(4).SetMovie(movie).SaveX(ctx)
+		})
+
+		It("leaves an offline root's rows untouched", func() {
+			gone := trackFile("01.flac", 1, nil)
+
+			Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+			Expect(missingSince(gone)).To(BeNil())
+			Expect(driftEventCount()).To(BeZero())
+			Expect(
+				entClient.Album.GetX(ctx, alb.ID).Status,
+			).To(Equal(entalbum.StatusAvailable))
+			Expect(missingSince(lost)).NotTo(BeNil())
+		})
+
+		It("does not revert a past-grace row while its root is offline", func() {
+			old := time.Now().Add(-48 * time.Hour)
+			gone := trackFile("01.flac", 1, &old)
+
+			Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+			Expect(store.FindMediaFileByID(ctx, gone.ID)).NotTo(BeNil())
+			Expect(
+				entClient.Album.GetX(ctx, alb.ID).Status,
+			).To(Equal(entalbum.StatusAvailable))
+			Expect(driftEventCount()).To(BeZero())
+		})
+
+		It("starts no revert for a root that goes offline mid-sweep", func() {
+			paths := []string{
+				filepath.Join(musicDir, "01.flac"),
+				filepath.Join(musicDir, "02.flac"),
+			}
+			for _, p := range paths {
+				Expect(os.WriteFile(p, []byte("data"), 0o644)).To(Succeed())
+			}
+			first, second := trackFile(
+				"01.flac",
+				1,
+				nil,
+			), trackFile(
+				"02.flac",
+				2,
+				nil,
+			)
+			sweep := New(
+				&unmountingStore{Store: store, paths: paths},
+				meta, metamocks.NewMockTVProvider(GinkgoT()),
+				&config.Get().Library,
+			)
+
+			Expect(sweep.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+			started := missingSince(first)
+			Expect(started).NotTo(BeNil())
+			Expect(missingSince(second)).NotTo(BeNil())
+			Expect(
+				entClient.Album.GetX(ctx, alb.ID).Status,
+			).To(Equal(entalbum.StatusAvailable))
+
+			Expect(svc.RunDriftCheck(ctx, time.Nanosecond)).To(Succeed())
+
+			Expect(store.FindMediaFileByID(ctx, first.ID)).NotTo(BeNil())
+			Expect(missingSince(first)).To(HaveValue(BeTemporally("==", *started)))
+			Expect(
+				entClient.Album.GetX(ctx, alb.ID).Status,
+			).To(Equal(entalbum.StatusAvailable))
+		})
+
+		It("clears the clocks when the root returns", func() {
+			old := time.Now().Add(-48 * time.Hour)
+			gone := trackFile("01.flac", 1, &old)
+			Expect(svc.RunDriftCheck(ctx, time.Hour)).To(Succeed())
+			Expect(missingSince(gone)).NotTo(BeNil())
+
+			Expect(os.WriteFile(gone.Path, []byte("data"), 0o644)).To(Succeed())
+			Expect(svc.RunDriftCheck(ctx, time.Hour)).To(Succeed())
+
+			Expect(missingSince(gone)).To(BeNil())
+		})
+
+		It("skips the movie orphan scan while movies are offline", func() {
+			entClient.MediaFile.Delete().ExecX(ctx)
+			row := entClient.MediaFile.Create().
+				SetPath(filepath.Join(musicDir, "elsewhere.mkv")).
+				SetSize(4).SetMovie(movie).SaveX(ctx)
+			orphan := filepath.Join(tmpDir, "Orphan.2010.1080p.BluRay.mkv")
+			Expect(
+				os.WriteFile(orphan, make([]byte, 60*1024*1024), 0o644),
+			).To(Succeed())
+
+			Expect(svc.RunOrphanScan(ctx)).To(Succeed())
+			_, total, err := store.ListImportScans(ctx, 0, 100)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(total).To(BeZero())
+
+			Expect(os.WriteFile(row.Path, []byte("data"), 0o644)).To(Succeed())
+			meta.EXPECT().SearchMovie(mock.Anything, "Orphan", uint16(2010)).
+				Return(nil, nil).Once()
+			Expect(svc.RunOrphanScan(ctx)).To(Succeed())
+		})
+
+		It("skips the series orphan scan while series are offline", func() {
+			seriesDir := GinkgoT().TempDir()
+			cfg := configtest.Setup(map[string]any{"library": map[string]any{
+				"series_path": seriesDir,
+			}})
+			show := entClient.TVShow.Create().
+				SetTitle("Tracked").
+				SetYear(2020).
+				SetTvdbID(1).
+				SaveX(ctx)
+			season := entClient.Season.Create().
+				SetNumber(1).
+				SetTvShow(show).
+				SaveX(ctx)
+			episode := entClient.Episode.Create().
+				SetNumber(1).
+				SetSeason(season).
+				SaveX(ctx)
+			entClient.MediaFile.Create().
+				SetPath(filepath.Join(musicDir, "elsewhere.mkv")).
+				SetSize(4).SetEpisode(episode).SaveX(ctx)
+			folder := filepath.Join(seriesDir, "Breaking Bad")
+			Expect(os.MkdirAll(folder, 0o755)).To(Succeed())
+			Expect(os.WriteFile(
+				filepath.Join(
+					folder,
+					"Breaking Bad S01E01.mkv",
+				),
+				make([]byte, 60*1024*1024),
+				0o644,
+			)).To(Succeed())
+			scan := New(
+				store,
+				meta,
+				metamocks.NewMockTVProvider(GinkgoT()),
+				&cfg.Library,
+			)
+
+			Expect(scan.RunSeriesOrphanScan(ctx)).To(Succeed())
+
+			_, total, err := store.ListImportScans(ctx, 0, 100)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(total).To(BeZero())
+		})
 	})
 
 	Describe("track and book files", func() {

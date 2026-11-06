@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -359,7 +360,7 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 	}
 	span.SetAttributes(attribute.Int64("media_file.id", int64(mf.ID)))
 
-	if w.deferred(wctx, job, mf) {
+	if w.heldForRoot(wctx, job, mf) || w.deferred(wctx, job, mf) {
 		return
 	}
 
@@ -562,6 +563,41 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 		"transcode.size_before", mf.Size,
 		"transcode.size_after", sizeAfter,
 	)
+}
+
+// heldForRoot defers a job whose library root looks gone, so an outage costs it
+// no attempt.
+func (w *Worker) heldForRoot(
+	ctx context.Context,
+	job *ent.TranscodeJob,
+	mf *ent.MediaFile,
+) bool {
+	root := db.RootSeries
+	if mf.Edges.Movie != nil {
+		root = db.RootMovies
+	}
+	status, err := roothealth.Offline(ctx, root)
+	if err != nil {
+		slog.ErrorContext(ctx, "could not check the library root of a transcode job",
+			"transcode.job_id", job.ID, "error", err)
+		return false
+	}
+	if status == nil {
+		return false
+	}
+	if err := w.db.DeferTranscodeJob(
+		ctx,
+		job.ID,
+		time.Now().Add(deferRecheck),
+	); err != nil {
+		slog.ErrorContext(ctx, "could not defer a transcode job",
+			"transcode.job_id", job.ID, "error", err)
+		return false
+	}
+	trace.SpanFromContext(ctx).SetAttributes(
+		attribute.String("transcode.outcome", "deferred"),
+	)
+	return true
 }
 
 // deferred reports whether the job was put back on the queue instead of run,

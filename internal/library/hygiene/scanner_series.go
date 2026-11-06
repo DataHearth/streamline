@@ -12,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/scheduler"
 )
@@ -32,6 +33,13 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 			return nil
 		}
 		return otelx.RecordSpanError(span, err)
+	}
+	status, err := roothealth.Offline(ctx, db.RootSeries)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if status != nil {
+		return nil
 	}
 
 	tracked, err := s.trackedEpisodePathSet(ctx)

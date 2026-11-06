@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/scheduler"
 	"go.opentelemetry.io/otel/attribute"
@@ -38,6 +39,13 @@ func (s *Service) RunOrphanScan(ctx context.Context) error {
 			return nil
 		}
 		return otelx.RecordSpanError(span, fmt.Errorf("stat library root: %w", err))
+	}
+	status, err := roothealth.Offline(ctx, db.RootMovies)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if status != nil {
+		return nil
 	}
 
 	tracked, err := s.trackedPathSet(ctx)

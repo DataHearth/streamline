@@ -1372,6 +1372,7 @@ type Store interface {
 		ctx context.Context,
 		afterID uint32,
 		limit int,
+		skip ...LibraryRoot,
 	) ([]DriftRow, error)
 	FindMediaFileWithOwners(ctx context.Context, id uint32) (*ent.MediaFile, error)
 	CountRootFiles(ctx context.Context, root LibraryRoot) (int, error)

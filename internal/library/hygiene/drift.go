@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/scheduler"
 	"go.opentelemetry.io/otel/attribute"
@@ -34,6 +35,15 @@ func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) err
 	ctx, span := tracer.Start(ctx, "hygiene.drift_check")
 	defer span.End()
 
+	offline, err := roothealth.AllOffline(ctx)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	skip := make([]db.LibraryRoot, len(offline))
+	for i, status := range offline {
+		skip[i] = status.Root
+	}
+
 	// Walked a page at a time over a three-column projection rather than
 	// materialising the whole table with both owner edges attached. The check
 	// stats a path and compares a timestamp; the owners are only consulted on
@@ -49,7 +59,11 @@ func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) err
 	defer acc.flush(ctx)
 	var returned []uint32
 	for {
-		rows, err := s.store.ListMediaFilesForDrift(ctx, afterID, driftPageSize)
+		rows, err := s.store.ListMediaFilesForDrift(
+			ctx,
+			afterID,
+			driftPageSize,
+			skip...)
 		if err != nil {
 			return otelx.RecordSpanError(span, err)
 		}

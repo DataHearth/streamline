@@ -13794,8 +13794,16 @@ func (_c *MockTx_ListMediaFilesByPathPrefix_Call) RunAndReturn(run func(ctx cont
 }
 
 // ListMediaFilesForDrift provides a mock function for the type MockTx
-func (_mock *MockTx) ListMediaFilesForDrift(ctx context.Context, afterID uint32, limit int) ([]db.DriftRow, error) {
-	ret := _mock.Called(ctx, afterID, limit)
+func (_mock *MockTx) ListMediaFilesForDrift(ctx context.Context, afterID uint32, limit int, skip ...db.LibraryRoot) ([]db.DriftRow, error) {
+	// db.LibraryRoot
+	_va := make([]any, len(skip))
+	for _i := range skip {
+		_va[_i] = skip[_i]
+	}
+	var _ca []any
+	_ca = append(_ca, ctx, afterID, limit)
+	_ca = append(_ca, _va...)
+	ret := _mock.Called(_ca...)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListMediaFilesForDrift")
@@ -13803,18 +13811,18 @@ func (_mock *MockTx) ListMediaFilesForDrift(ctx context.Context, afterID uint32,
 
 	var r0 []db.DriftRow
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) ([]db.DriftRow, error)); ok {
-		return returnFunc(ctx, afterID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int, ...db.LibraryRoot) ([]db.DriftRow, error)); ok {
+		return returnFunc(ctx, afterID, limit, skip...)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) []db.DriftRow); ok {
-		r0 = returnFunc(ctx, afterID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int, ...db.LibraryRoot) []db.DriftRow); ok {
+		r0 = returnFunc(ctx, afterID, limit, skip...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]db.DriftRow)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, int) error); ok {
-		r1 = returnFunc(ctx, afterID, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, int, ...db.LibraryRoot) error); ok {
+		r1 = returnFunc(ctx, afterID, limit, skip...)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -13830,11 +13838,13 @@ type MockTx_ListMediaFilesForDrift_Call struct {
 //   - ctx context.Context
 //   - afterID uint32
 //   - limit int
-func (_e *MockTx_Expecter) ListMediaFilesForDrift(ctx any, afterID any, limit any) *MockTx_ListMediaFilesForDrift_Call {
-	return &MockTx_ListMediaFilesForDrift_Call{Call: _e.mock.On("ListMediaFilesForDrift", ctx, afterID, limit)}
+//   - skip ...db.LibraryRoot
+func (_e *MockTx_Expecter) ListMediaFilesForDrift(ctx any, afterID any, limit any, skip ...any) *MockTx_ListMediaFilesForDrift_Call {
+	return &MockTx_ListMediaFilesForDrift_Call{Call: _e.mock.On("ListMediaFilesForDrift",
+		append([]any{ctx, afterID, limit}, skip...)...)}
 }
 
-func (_c *MockTx_ListMediaFilesForDrift_Call) Run(run func(ctx context.Context, afterID uint32, limit int)) *MockTx_ListMediaFilesForDrift_Call {
+func (_c *MockTx_ListMediaFilesForDrift_Call) Run(run func(ctx context.Context, afterID uint32, limit int, skip ...db.LibraryRoot)) *MockTx_ListMediaFilesForDrift_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -13848,10 +13858,19 @@ func (_c *MockTx_ListMediaFilesForDrift_Call) Run(run func(ctx context.Context, 
 		if args[2] != nil {
 			arg2 = args[2].(int)
 		}
+		var arg3 []db.LibraryRoot
+		variadicArgs := make([]db.LibraryRoot, len(args)-3)
+		for i, a := range args[3:] {
+			if a != nil {
+				variadicArgs[i] = a.(db.LibraryRoot)
+			}
+		}
+		arg3 = variadicArgs
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3...,
 		)
 	})
 	return _c
@@ -13862,7 +13881,7 @@ func (_c *MockTx_ListMediaFilesForDrift_Call) Return(driftRows []db.DriftRow, er
 	return _c
 }
 
-func (_c *MockTx_ListMediaFilesForDrift_Call) RunAndReturn(run func(ctx context.Context, afterID uint32, limit int) ([]db.DriftRow, error)) *MockTx_ListMediaFilesForDrift_Call {
+func (_c *MockTx_ListMediaFilesForDrift_Call) RunAndReturn(run func(ctx context.Context, afterID uint32, limit int, skip ...db.LibraryRoot) ([]db.DriftRow, error)) *MockTx_ListMediaFilesForDrift_Call {
 	_c.Call.Return(run)
 	return _c
 }

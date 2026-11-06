@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
@@ -241,12 +242,20 @@ func (db *DB) ListMediaFilesForDrift(
 	ctx context.Context,
 	afterID uint32,
 	limit int,
+	skip ...LibraryRoot,
 ) ([]DriftRow, error) {
 	q := db.client.MediaFile.Query().
 		Order(ent.Asc(mediafile.FieldID)).
 		Limit(limit)
 	if afterID > 0 {
 		q = q.Where(mediafile.IDGT(afterID))
+	}
+	if len(skip) > 0 {
+		skipped := make([]predicate.MediaFile, len(skip))
+		for i, root := range skip {
+			skipped[i] = rootPredicate(root)
+		}
+		q = q.Where(mediafile.Not(mediafile.Or(skipped...)))
 	}
 	var rows []DriftRow
 	err := q.Select(
