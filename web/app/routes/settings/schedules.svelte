@@ -45,9 +45,11 @@
 		cleanup: i18n.schedule_purge_downloads(),
 		"purge-sessions": i18n.schedule_purge_sessions(),
 		"purge-api-keys": i18n.schedule_purge_api_keys(),
+		"purge-uploads": i18n.schedule_purge_uploads(),
 		"drift-check":
 			i18n.schedule_verify_files(),
 		"file-selection": i18n.schedule_file_selection(),
+		"music-tag-sync": i18n.schedule_music_tag_sync(),
 		"database-backup": i18n.schedule_database_backup(),
 	};
 

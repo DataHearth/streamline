@@ -1699,6 +1699,8 @@
 	"schedule_purge_downloads": "Purger les anciens enregistrements de téléchargement au-delà de leur rétention",
 	"schedule_purge_sessions": "Supprimer de la base les sessions d'authentification expirées",
 	"schedule_purge_api_keys": "Supprimer de la base les clés API expirées",
+	"schedule_purge_uploads": "Supprimer les dossiers de téléversement temporaires que plus rien ne reçoit ni n'attend",
+	"schedule_music_tag_sync": "Écrire les tags de la bibliothèque dans les fichiers de musique en attente",
 	"schedule_refresh_movies": "Actualiser les métadonnées TMDB des films suivis",
 	"schedule_refresh_series": "Actualiser les métadonnées TVDB des séries suivies",
 	"schedule_refresh_books": "Actualiser les métadonnées Hardcover des livres et séries dans la limite du quota quotidien",

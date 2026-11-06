@@ -1699,6 +1699,8 @@
 	"schedule_purge_downloads": "Purge old download records past their retention window",
 	"schedule_purge_sessions": "Drop expired auth sessions from the DB",
 	"schedule_purge_api_keys": "Drop expired API keys from the DB",
+	"schedule_purge_uploads": "Remove upload staging folders nothing is receiving or waiting on",
+	"schedule_music_tag_sync": "Write the library's tags into the music files waiting for them",
 	"schedule_refresh_movies": "Re-fetch TMDB metadata for tracked movies",
 	"schedule_refresh_series": "Re-fetch TVDB metadata for tracked series",
 	"schedule_refresh_books": "Re-fetch Hardcover metadata for stale books and series within the day's request budget",
