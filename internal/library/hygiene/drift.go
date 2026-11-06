@@ -174,7 +174,7 @@ func (s *Service) handleMissing(
 	// The skip list is from the start of the sweep, and a clock can be old
 	// because an earlier outage started it and offline ticks never cleared it,
 	// so a mount dying now must not make this past grace at once.
-	if root, owned := fileRoot(row); owned {
+	if root, owned := db.RootOfFile(row); owned {
 		status, err := roothealth.Offline(ctx, root)
 		if err != nil {
 			slog.WarnContext(ctx, "could not check the library root before a revert",
@@ -186,20 +186,6 @@ func (s *Service) handleMissing(
 		}
 	}
 	s.confirmMissing(ctx, row, *row.MissingSince, acc)
-}
-
-func fileRoot(row *ent.MediaFile) (db.LibraryRoot, bool) {
-	switch {
-	case row.Edges.Movie != nil:
-		return db.RootMovies, true
-	case row.Edges.Episode != nil:
-		return db.RootSeries, true
-	case row.Edges.Track != nil:
-		return db.RootMusic, true
-	case row.Edges.Book != nil:
-		return db.BookRoot(string(row.BookKind)), true
-	}
-	return "", false
 }
 
 // ErrRootOnline refuses AcceptMissing on a root that is not offline: the volume

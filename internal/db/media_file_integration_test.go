@@ -162,6 +162,131 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("the missing file columns", func() {
+		It("ClearMediaFilesMissing clears missing_confirmed_at too", func() {
+			mf := createMovieFile()
+			_, err := store.MarkMediaFileMissing(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.ConfirmMediaFileMissing(ctx, mf.ID)).To(Succeed())
+
+			Expect(store.ClearMediaFilesMissing(ctx, []uint32{mf.ID})).To(Succeed())
+
+			got := client.MediaFile.GetX(ctx, mf.ID)
+			Expect(got.MissingSince).To(BeNil())
+			Expect(got.MissingConfirmedAt).To(BeNil())
+		})
+
+		It("ListMediaFilesForDrift returns missing_confirmed_at", func() {
+			mf := createMovieFile()
+			_, err := store.MarkMediaFileMissing(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.ConfirmMediaFileMissing(ctx, mf.ID)).To(Succeed())
+
+			rows, err := store.ListMediaFilesForDrift(ctx, 0, 10)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].MissingConfirmedAt).NotTo(BeNil())
+		})
+
+		It("ConfirmMediaFileMissing keeps the first confirmation", func() {
+			mf := createMovieFile()
+			Expect(store.ConfirmMediaFileMissing(ctx, mf.ID)).To(Succeed())
+			first := client.MediaFile.GetX(ctx, mf.ID).MissingConfirmedAt
+			Expect(first).NotTo(BeNil())
+
+			Expect(store.ConfirmMediaFileMissing(ctx, mf.ID)).To(Succeed())
+
+			Expect(client.MediaFile.GetX(ctx, mf.ID).MissingConfirmedAt).
+				To(Equal(first))
+		})
+	})
+
+	Describe("HoldsOtherFile", func() {
+		withOwners := func(id uint32) *ent.MediaFile {
+			GinkgoHelper()
+			row, err := store.FindMediaFileWithOwners(ctx, id)
+			Expect(err).NotTo(HaveOccurred())
+			return row
+		}
+
+		It("is true for another present file of the movie", func() {
+			mf := createMovieFile()
+			movieID := client.MediaFile.GetX(ctx, mf.ID).QueryMovie().OnlyIDX(ctx)
+			client.MediaFile.Create().SetPath("/lib/other.mkv").SetSize(1).
+				SetMovieID(movieID).ExecX(ctx)
+
+			Expect(store.HoldsOtherFile(ctx, withOwners(mf.ID))).To(BeTrue())
+		})
+
+		It("is false when the other file is missing as well", func() {
+			mf := createMovieFile()
+			movieID := client.MediaFile.GetX(ctx, mf.ID).QueryMovie().OnlyIDX(ctx)
+			client.MediaFile.Create().SetPath("/lib/other.mkv").SetSize(1).
+				SetMovieID(movieID).SetMissingSince(time.Now()).ExecX(ctx)
+
+			Expect(store.HoldsOtherFile(ctx, withOwners(mf.ID))).To(BeFalse())
+		})
+
+		It("is false for a file of another owner", func() {
+			mf := createMovieFile()
+			createMovieFile()
+
+			Expect(store.HoldsOtherFile(ctx, withOwners(mf.ID))).To(BeFalse())
+		})
+
+		It("is true for another file of the episode", func() {
+			show := client.TVShow.Create().
+				SetTitle("The Bear").SetYear(2022).SetTvdbID(1).SaveX(ctx)
+			season := client.Season.Create().SetNumber(1).SetTvShow(show).SaveX(ctx)
+			ep := client.Episode.Create().
+				SetNumber(1).SetTitle("System").SetSeason(season).SaveX(ctx)
+			mf := client.MediaFile.Create().SetPath("/s/a.mkv").SetSize(1).
+				SetEpisodeID(ep.ID).SaveX(ctx)
+			client.MediaFile.Create().SetPath("/s/b.mkv").SetSize(1).
+				SetEpisodeID(ep.ID).ExecX(ctx)
+
+			Expect(store.HoldsOtherFile(ctx, withOwners(mf.ID))).To(BeTrue())
+		})
+
+		It("counts the same track only, not the album's other tracks", func() {
+			artist := client.Artist.Create().
+				SetMbid("a").SetName("Artist").SaveX(ctx)
+			al := client.Album.Create().
+				SetMbid("rg").SetTitle("Album").SetArtist(artist).SaveX(ctx)
+			one := client.Track.Create().
+				SetTitle("One").SetPosition(1).SetAlbum(al).SaveX(ctx)
+			two := client.Track.Create().
+				SetTitle("Two").SetPosition(2).SetAlbum(al).SaveX(ctx)
+			mf := client.MediaFile.Create().SetPath("/m/1.flac").SetSize(1).
+				SetTrackID(one.ID).SaveX(ctx)
+			client.MediaFile.Create().SetPath("/m/2.flac").SetSize(1).
+				SetTrackID(two.ID).ExecX(ctx)
+
+			Expect(store.HoldsOtherFile(ctx, withOwners(mf.ID))).To(BeFalse())
+
+			client.MediaFile.Create().SetPath("/m/1b.flac").SetSize(1).
+				SetTrackID(one.ID).ExecX(ctx)
+
+			Expect(store.HoldsOtherFile(ctx, withOwners(mf.ID))).To(BeTrue())
+		})
+
+		It("counts the same book slot only", func() {
+			bk := client.Book.Create().SetHardcoverID(2).SetTitle("Elantris").
+				SetAuthorName("Sanderson").SaveX(ctx)
+			mf := client.MediaFile.Create().SetPath("/b/a.epub").SetSize(1).
+				SetBookID(bk.ID).SetBookKind(mediafile.BookKindEbook).SaveX(ctx)
+			client.MediaFile.Create().SetPath("/b/a.m4b").SetSize(1).
+				SetBookID(bk.ID).SetBookKind(mediafile.BookKindAudiobook).ExecX(ctx)
+
+			Expect(store.HoldsOtherFile(ctx, withOwners(mf.ID))).To(BeFalse())
+
+			client.MediaFile.Create().SetPath("/b/a.pdf").SetSize(1).
+				SetBookID(bk.ID).SetBookKind(mediafile.BookKindEbook).ExecX(ctx)
+
+			Expect(store.HoldsOtherFile(ctx, withOwners(mf.ID))).To(BeTrue())
+		})
+	})
+
 	Describe("StampMediaFileProbe", func() {
 		It("stores probe info and stamps probed_at", func() {
 			mf := createMovieFile()

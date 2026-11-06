@@ -30565,6 +30565,7 @@ type MediaFileMutation struct {
 	release_group         *string
 	source                *mediafile.Source
 	missing_since         *time.Time
+	missing_confirmed_at  *time.Time
 	container             *string
 	duration_seconds      *uint32
 	addduration_seconds   *int32
@@ -31117,6 +31118,55 @@ func (m *MediaFileMutation) MissingSinceCleared() bool {
 func (m *MediaFileMutation) ResetMissingSince() {
 	m.missing_since = nil
 	delete(m.clearedFields, mediafile.FieldMissingSince)
+}
+
+// SetMissingConfirmedAt sets the "missing_confirmed_at" field.
+func (m *MediaFileMutation) SetMissingConfirmedAt(t time.Time) {
+	m.missing_confirmed_at = &t
+}
+
+// MissingConfirmedAt returns the value of the "missing_confirmed_at" field in the mutation.
+func (m *MediaFileMutation) MissingConfirmedAt() (r time.Time, exists bool) {
+	v := m.missing_confirmed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMissingConfirmedAt returns the old "missing_confirmed_at" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldMissingConfirmedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMissingConfirmedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMissingConfirmedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMissingConfirmedAt: %w", err)
+	}
+	return oldValue.MissingConfirmedAt, nil
+}
+
+// ClearMissingConfirmedAt clears the value of the "missing_confirmed_at" field.
+func (m *MediaFileMutation) ClearMissingConfirmedAt() {
+	m.missing_confirmed_at = nil
+	m.clearedFields[mediafile.FieldMissingConfirmedAt] = struct{}{}
+}
+
+// MissingConfirmedAtCleared returns if the "missing_confirmed_at" field was cleared in this mutation.
+func (m *MediaFileMutation) MissingConfirmedAtCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldMissingConfirmedAt]
+	return ok
+}
+
+// ResetMissingConfirmedAt resets all changes to the "missing_confirmed_at" field.
+func (m *MediaFileMutation) ResetMissingConfirmedAt() {
+	m.missing_confirmed_at = nil
+	delete(m.clearedFields, mediafile.FieldMissingConfirmedAt)
 }
 
 // SetContainer sets the "container" field.
@@ -32882,7 +32932,7 @@ func (m *MediaFileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaFileMutation) Fields() []string {
-	fields := make([]string, 0, 36)
+	fields := make([]string, 0, 37)
 	if m.create_time != nil {
 		fields = append(fields, mediafile.FieldCreateTime)
 	}
@@ -32909,6 +32959,9 @@ func (m *MediaFileMutation) Fields() []string {
 	}
 	if m.missing_since != nil {
 		fields = append(fields, mediafile.FieldMissingSince)
+	}
+	if m.missing_confirmed_at != nil {
+		fields = append(fields, mediafile.FieldMissingConfirmedAt)
 	}
 	if m.container != nil {
 		fields = append(fields, mediafile.FieldContainer)
@@ -33017,6 +33070,8 @@ func (m *MediaFileMutation) Field(name string) (ent.Value, bool) {
 		return m.Source()
 	case mediafile.FieldMissingSince:
 		return m.MissingSince()
+	case mediafile.FieldMissingConfirmedAt:
+		return m.MissingConfirmedAt()
 	case mediafile.FieldContainer:
 		return m.Container()
 	case mediafile.FieldDurationSeconds:
@@ -33098,6 +33153,8 @@ func (m *MediaFileMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldSource(ctx)
 	case mediafile.FieldMissingSince:
 		return m.OldMissingSince(ctx)
+	case mediafile.FieldMissingConfirmedAt:
+		return m.OldMissingConfirmedAt(ctx)
 	case mediafile.FieldContainer:
 		return m.OldContainer(ctx)
 	case mediafile.FieldDurationSeconds:
@@ -33223,6 +33280,13 @@ func (m *MediaFileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMissingSince(v)
+		return nil
+	case mediafile.FieldMissingConfirmedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMissingConfirmedAt(v)
 		return nil
 	case mediafile.FieldContainer:
 		v, ok := value.(string)
@@ -33590,6 +33654,9 @@ func (m *MediaFileMutation) ClearedFields() []string {
 	if m.FieldCleared(mediafile.FieldMissingSince) {
 		fields = append(fields, mediafile.FieldMissingSince)
 	}
+	if m.FieldCleared(mediafile.FieldMissingConfirmedAt) {
+		fields = append(fields, mediafile.FieldMissingConfirmedAt)
+	}
 	if m.FieldCleared(mediafile.FieldContainer) {
 		fields = append(fields, mediafile.FieldContainer)
 	}
@@ -33693,6 +33760,9 @@ func (m *MediaFileMutation) ClearField(name string) error {
 		return nil
 	case mediafile.FieldMissingSince:
 		m.ClearMissingSince()
+		return nil
+	case mediafile.FieldMissingConfirmedAt:
+		m.ClearMissingConfirmedAt()
 		return nil
 	case mediafile.FieldContainer:
 		m.ClearContainer()
@@ -33806,6 +33876,9 @@ func (m *MediaFileMutation) ResetField(name string) error {
 		return nil
 	case mediafile.FieldMissingSince:
 		m.ResetMissingSince()
+		return nil
+	case mediafile.FieldMissingConfirmedAt:
+		m.ResetMissingConfirmedAt()
 		return nil
 	case mediafile.FieldContainer:
 		m.ResetContainer()

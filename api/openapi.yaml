@@ -13543,6 +13543,7 @@ components:
         - max_grab_failures
         - import_max_attempts
         - drift_grace_ticks
+        - missing_file_redownload_after
         - movie_path
         - series_path
         - download_path
@@ -13595,6 +13596,9 @@ components:
           type: integer
           minimum: 1
           maximum: 20
+        missing_file_redownload_after:
+          type: string
+          description: How long a confirmed missing file keeps its row and its title's status. A Go duration, 0 for no wait, or off for never.
         allowed_download_roots:
           type: array
           items:
@@ -13658,6 +13662,9 @@ components:
           type: integer
           minimum: 1
           maximum: 20
+        missing_file_redownload_after:
+          type: string
+          description: How long a confirmed missing file keeps its row and its title's status. A Go duration, 0 for no wait, or off for never.
         allowed_download_roots:
           type: array
           items:

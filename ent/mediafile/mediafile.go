@@ -33,6 +33,8 @@ const (
 	FieldSource = "source"
 	// FieldMissingSince holds the string denoting the missing_since field in the database.
 	FieldMissingSince = "missing_since"
+	// FieldMissingConfirmedAt holds the string denoting the missing_confirmed_at field in the database.
+	FieldMissingConfirmedAt = "missing_confirmed_at"
 	// FieldContainer holds the string denoting the container field in the database.
 	FieldContainer = "container"
 	// FieldDurationSeconds holds the string denoting the duration_seconds field in the database.
@@ -148,6 +150,7 @@ var Columns = []string{
 	FieldReleaseGroup,
 	FieldSource,
 	FieldMissingSince,
+	FieldMissingConfirmedAt,
 	FieldContainer,
 	FieldDurationSeconds,
 	FieldVideoCodec,
@@ -340,6 +343,11 @@ func BySource(opts ...sql.OrderTermOption) OrderOption {
 // ByMissingSince orders the results by the missing_since field.
 func ByMissingSince(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMissingSince, opts...).ToFunc()
+}
+
+// ByMissingConfirmedAt orders the results by the missing_confirmed_at field.
+func ByMissingConfirmedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMissingConfirmedAt, opts...).ToFunc()
 }
 
 // ByContainer orders the results by the container field.

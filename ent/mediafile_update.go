@@ -169,6 +169,26 @@ func (_u *MediaFileUpdate) ClearMissingSince() *MediaFileUpdate {
 	return _u
 }
 
+// SetMissingConfirmedAt sets the "missing_confirmed_at" field.
+func (_u *MediaFileUpdate) SetMissingConfirmedAt(v time.Time) *MediaFileUpdate {
+	_u.mutation.SetMissingConfirmedAt(v)
+	return _u
+}
+
+// SetNillableMissingConfirmedAt sets the "missing_confirmed_at" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableMissingConfirmedAt(v *time.Time) *MediaFileUpdate {
+	if v != nil {
+		_u.SetMissingConfirmedAt(*v)
+	}
+	return _u
+}
+
+// ClearMissingConfirmedAt clears the value of the "missing_confirmed_at" field.
+func (_u *MediaFileUpdate) ClearMissingConfirmedAt() *MediaFileUpdate {
+	_u.mutation.ClearMissingConfirmedAt()
+	return _u
+}
+
 // SetContainer sets the "container" field.
 func (_u *MediaFileUpdate) SetContainer(v string) *MediaFileUpdate {
 	_u.mutation.SetContainer(v)
@@ -1032,6 +1052,12 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.MissingSinceCleared() {
 		_spec.ClearField(mediafile.FieldMissingSince, field.TypeTime)
 	}
+	if value, ok := _u.mutation.MissingConfirmedAt(); ok {
+		_spec.SetField(mediafile.FieldMissingConfirmedAt, field.TypeTime, value)
+	}
+	if _u.mutation.MissingConfirmedAtCleared() {
+		_spec.ClearField(mediafile.FieldMissingConfirmedAt, field.TypeTime)
+	}
 	if value, ok := _u.mutation.Container(); ok {
 		_spec.SetField(mediafile.FieldContainer, field.TypeString, value)
 	}
@@ -1536,6 +1562,26 @@ func (_u *MediaFileUpdateOne) SetNillableMissingSince(v *time.Time) *MediaFileUp
 // ClearMissingSince clears the value of the "missing_since" field.
 func (_u *MediaFileUpdateOne) ClearMissingSince() *MediaFileUpdateOne {
 	_u.mutation.ClearMissingSince()
+	return _u
+}
+
+// SetMissingConfirmedAt sets the "missing_confirmed_at" field.
+func (_u *MediaFileUpdateOne) SetMissingConfirmedAt(v time.Time) *MediaFileUpdateOne {
+	_u.mutation.SetMissingConfirmedAt(v)
+	return _u
+}
+
+// SetNillableMissingConfirmedAt sets the "missing_confirmed_at" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableMissingConfirmedAt(v *time.Time) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetMissingConfirmedAt(*v)
+	}
+	return _u
+}
+
+// ClearMissingConfirmedAt clears the value of the "missing_confirmed_at" field.
+func (_u *MediaFileUpdateOne) ClearMissingConfirmedAt() *MediaFileUpdateOne {
+	_u.mutation.ClearMissingConfirmedAt()
 	return _u
 }
 
@@ -2431,6 +2477,12 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 	}
 	if _u.mutation.MissingSinceCleared() {
 		_spec.ClearField(mediafile.FieldMissingSince, field.TypeTime)
+	}
+	if value, ok := _u.mutation.MissingConfirmedAt(); ok {
+		_spec.SetField(mediafile.FieldMissingConfirmedAt, field.TypeTime, value)
+	}
+	if _u.mutation.MissingConfirmedAtCleared() {
+		_spec.ClearField(mediafile.FieldMissingConfirmedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Container(); ok {
 		_spec.SetField(mediafile.FieldContainer, field.TypeString, value)

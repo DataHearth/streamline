@@ -224,13 +224,14 @@ func (db *DB) ListAllMediaFilesWithOwners(
 	return rows, nil
 }
 
-// DriftRow is the three columns the drift check needs to stat a file and do
+// DriftRow is the columns the drift check needs to stat a file and do
 // its grace arithmetic. The owner edges are not here: they are read only on
 // the rare branch where a file has actually gone missing.
 type DriftRow struct {
-	ID           uint32     `json:"id"`
-	Path         string     `json:"path"`
-	MissingSince *time.Time `json:"missing_since"`
+	ID                 uint32     `json:"id"`
+	Path               string     `json:"path"`
+	MissingSince       *time.Time `json:"missing_since"`
+	MissingConfirmedAt *time.Time `json:"missing_confirmed_at"`
 }
 
 // ListMediaFilesForDrift returns one keyset page of drift rows, ordered by id,
@@ -262,6 +263,7 @@ func (db *DB) ListMediaFilesForDrift(
 		mediafile.FieldID,
 		mediafile.FieldPath,
 		mediafile.FieldMissingSince,
+		mediafile.FieldMissingConfirmedAt,
 	).Scan(ctx, &rows)
 	if err != nil {
 		return nil, fmt.Errorf("list media_files for drift: %w", err)
@@ -399,13 +401,15 @@ func (db *DB) UpdateMediaFileAfterTranscode(
 	return nil
 }
 
-// ClearMediaFilesMissing clears missing_since on files seen on disk again. A
+// ClearMediaFilesMissing clears both missing columns on files seen on disk
+// again. A
 // file that never went missing is not written at all: stamping every row each
 // tick rewrote the whole table into the WAL every 15 minutes.
 func (db *DB) ClearMediaFilesMissing(ctx context.Context, ids []uint32) error {
 	if err := db.client.MediaFile.Update().
 		Where(mediafile.IDIn(ids...)).
 		ClearMissingSince().
+		ClearMissingConfirmedAt().
 		Exec(ctx); err != nil {
 		return fmt.Errorf(
 			"clear missing_since on %d media_files: %w", len(ids), err,
@@ -429,6 +433,51 @@ func (db *DB) MarkMediaFileMissing(
 		return false, fmt.Errorf("mark media_file %d missing: %w", id, err)
 	}
 	return n > 0, nil
+}
+
+// ConfirmMediaFileMissing stamps missing_confirmed_at once, so the wait keeps
+// counting from the first tick past grace.
+func (db *DB) ConfirmMediaFileMissing(ctx context.Context, id uint32) error {
+	if err := db.client.MediaFile.Update().
+		Where(mediafile.ID(id), mediafile.MissingConfirmedAtIsNil()).
+		SetMissingConfirmedAt(time.Now()).
+		Exec(ctx); err != nil {
+		return fmt.Errorf("confirm media_file %d missing: %w", id, err)
+	}
+	return nil
+}
+
+// HoldsOtherFile reports whether the owner of row still has another file on
+// disk filling the same place: the movie, the episode, the track or the book
+// slot. It reads the row's loaded owner edges (FindMediaFileWithOwners).
+func (db *DB) HoldsOtherFile(
+	ctx context.Context,
+	row *ent.MediaFile,
+) (bool, error) {
+	q := db.client.MediaFile.Query().
+		Where(mediafile.IDNEQ(row.ID), mediafile.MissingSinceIsNil())
+	switch {
+	case row.Edges.Movie != nil:
+		q = q.Where(mediafile.HasMovieWith(movie.ID(row.Edges.Movie.ID)))
+	case row.Edges.Episode != nil:
+		q = q.Where(mediafile.HasEpisodeWith(episode.ID(row.Edges.Episode.ID)))
+	case row.Edges.Track != nil:
+		q = q.Where(mediafile.HasTrackWith(track.ID(row.Edges.Track.ID)))
+	case row.Edges.Book != nil:
+		q = q.Where(
+			mediafile.HasBookWith(book.ID(row.Edges.Book.ID)),
+			mediafile.BookKindEQ(row.BookKind),
+		)
+	default:
+		return false, nil
+	}
+	held, err := q.Exist(ctx)
+	if err != nil {
+		return false, fmt.Errorf(
+			"check other files of media_file %d: %w", row.ID, err,
+		)
+	}
+	return held, nil
 }
 
 // DeleteMediaFile removes a MediaFile row without touching any owner. Used by

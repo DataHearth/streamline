@@ -562,7 +562,14 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 20,
-          "description": "Consecutive drift_check ticks a MediaFile may be missing before its row is deleted."
+          "description": "Consecutive drift_check ticks a MediaFile may be missing before it is confirmed missing."
+        },
+        "missing_file_redownload_after": {
+          "oneOf": [
+            { "$ref": "#/definitions/duration" },
+            { "const": "off" }
+          ],
+          "description": "How long a confirmed missing file keeps its row and its title's status: a Go duration, 0 for no wait, or off for never."
         },
         "probe": {
           "type": "object",

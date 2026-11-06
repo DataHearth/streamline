@@ -135,6 +135,20 @@ func (_c *MediaFileCreate) SetNillableMissingSince(v *time.Time) *MediaFileCreat
 	return _c
 }
 
+// SetMissingConfirmedAt sets the "missing_confirmed_at" field.
+func (_c *MediaFileCreate) SetMissingConfirmedAt(v time.Time) *MediaFileCreate {
+	_c.mutation.SetMissingConfirmedAt(v)
+	return _c
+}
+
+// SetNillableMissingConfirmedAt sets the "missing_confirmed_at" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableMissingConfirmedAt(v *time.Time) *MediaFileCreate {
+	if v != nil {
+		_c.SetMissingConfirmedAt(*v)
+	}
+	return _c
+}
+
 // SetContainer sets the "container" field.
 func (_c *MediaFileCreate) SetContainer(v string) *MediaFileCreate {
 	_c.mutation.SetContainer(v)
@@ -770,6 +784,10 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.MissingSince(); ok {
 		_spec.SetField(mediafile.FieldMissingSince, field.TypeTime, value)
 		_node.MissingSince = &value
+	}
+	if value, ok := _c.mutation.MissingConfirmedAt(); ok {
+		_spec.SetField(mediafile.FieldMissingConfirmedAt, field.TypeTime, value)
+		_node.MissingConfirmedAt = &value
 	}
 	if value, ok := _c.mutation.Container(); ok {
 		_spec.SetField(mediafile.FieldContainer, field.TypeString, value)

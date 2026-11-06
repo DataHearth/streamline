@@ -33,6 +33,10 @@ func (MediaFile) Fields() []ent.Field {
 		// moment it is seen again. The grace window counts from here, and
 		// setting it is the edge the drift_detected event fires on.
 		field.Time("missing_since").Optional().Nillable(),
+		// Set on the first drift tick past the grace window, cleared with
+		// missing_since. Setting it is the edge the drift_confirmed event fires
+		// on, and the re-download wait counts from here.
+		field.Time("missing_confirmed_at").Optional().Nillable(),
 		field.String("container").Optional(),
 		field.Uint32("duration_seconds").Optional(),
 		field.String("video_codec").Optional(),
@@ -130,6 +134,10 @@ func (MediaFile) Indexes() []ent.Index {
 		index.Fields("book_kind").
 			Annotations(entsql.IndexWhere("book_kind IS NOT NULL")),
 		index.Fields("tags_state"),
+		// Partial: Settings asks only for confirmed rows, and walking the table
+		// for them costs a read per page on the homelab's Ceph volume.
+		index.Fields("missing_confirmed_at").
+			Annotations(entsql.IndexWhere("missing_confirmed_at IS NOT NULL")),
 		// Partial: the media-probe backfill asks for the oldest rows that were
 		// never probed, so once the backfill drains, the index is empty and
 		// the 15-minute job stops scanning the whole table forever.

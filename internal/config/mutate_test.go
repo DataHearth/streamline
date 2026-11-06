@@ -92,6 +92,39 @@ var _ = Describe("Config mutate", Label("unit", "config"), func() {
 		})
 	})
 
+	Describe("UpdateLibrary missing_file_redownload_after", func() {
+		DescribeTable("stores a value it can read",
+			func(raw string) {
+				got, err := config.UpdateLibrary(
+					context.Background(),
+					config.LibraryPatch{MissingFileRedownloadAfter: &raw},
+				)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(got.MissingFileRedownloadAfter).To(Equal(raw))
+			},
+			Entry("off", "off"),
+			Entry("immediately", "0"),
+			Entry("three days", "72h"),
+		)
+
+		DescribeTable("refuses a value it cannot read, keeping the old one",
+			func(raw string) {
+				_, err := config.UpdateLibrary(
+					context.Background(),
+					config.LibraryPatch{MissingFileRedownloadAfter: &raw},
+				)
+				Expect(err).To(MatchError(
+					ContainSubstring("missing_file_redownload_after"),
+				))
+				Expect(config.Get().Library.MissingFileRedownloadAfter).
+					To(Equal("168h"))
+			},
+			Entry("a typo", "nonsense"),
+			Entry("a negative value", "-1h"),
+			Entry("a unit Go does not have", "7d"),
+		)
+	})
+
 	Describe("UpdateLibrary probe patch", func() {
 		It("defaults always_ask=false and min_duration_ratio=0.5", func() {
 			Expect(config.Get().Library.Probe.AlwaysAsk).To(BeFalse())

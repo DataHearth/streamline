@@ -950,12 +950,19 @@ type Store interface {
 		bookID uint32,
 		kind mediafile.BookKind,
 	) ([]*ent.MediaFile, error)
-	// ClearMediaFilesMissing clears missing_since for the given rows in one
-	// UPDATE.
+	// ClearMediaFilesMissing clears missing_since and missing_confirmed_at for
+	// the given rows in one UPDATE.
 	ClearMediaFilesMissing(ctx context.Context, ids []uint32) error
 	// MarkMediaFileMissing stamps missing_since, reporting true only when this
 	// call set it — the first drift tick that could not stat the file.
 	MarkMediaFileMissing(ctx context.Context, id uint32) (bool, error)
+	// ConfirmMediaFileMissing stamps missing_confirmed_at, keeping an earlier
+	// stamp.
+	ConfirmMediaFileMissing(ctx context.Context, id uint32) error
+	// HoldsOtherFile reports whether the owner of a row loaded with its owner
+	// edges has another file on disk in the same place: the movie, the episode,
+	// the track or the book slot.
+	HoldsOtherFile(ctx context.Context, row *ent.MediaFile) (bool, error)
 	// CountMovieMediaFiles / CountEpisodeMediaFiles split the shared
 	// media_files table by owner, so the path migration can tell "this root
 	// holds nothing because the library is empty" apart from "…because the

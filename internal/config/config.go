@@ -279,11 +279,32 @@ type LibraryConfig struct {
 	// owning movie reverts to "wanted". Bounded to give operators a knob
 	// for noisy mounts without unbounded patience.
 	DriftGraceTicks uint8 `koanf:"drift_grace_ticks" validate:"required,min=1,max=20"`
+	// MissingFileRedownloadAfter is how long a file confirmed missing keeps its
+	// row and its title's status: a Go duration, "0" for no wait, or "off" for
+	// never. Read through MissingFileWait.
+	MissingFileRedownloadAfter string `koanf:"missing_file_redownload_after" validate:"required"`
 	// Probe governs import-time verification against ffprobe results, read by
 	// the importer's verifier before a transfer.
 	Probe ProbeConfig `koanf:"probe"`
 	// MusicTags governs the tags Streamline writes into music files.
 	MusicTags MusicTagsConfig `koanf:"music_tags"`
+}
+
+// missingFileWaitOff is the missing_file_redownload_after value for never.
+const missingFileWaitOff = "off"
+
+// MissingFileWait reads missing_file_redownload_after. A value it cannot read
+// counts as never, since this setting decides whether rows get deleted and a
+// hand-edited typo must not delete any.
+func (c LibraryConfig) MissingFileWait() (time.Duration, bool) {
+	if c.MissingFileRedownloadAfter == missingFileWaitOff {
+		return 0, true
+	}
+	wait, err := time.ParseDuration(c.MissingFileRedownloadAfter)
+	if err != nil || wait < 0 {
+		return 0, true
+	}
+	return wait, false
 }
 
 // Music tag modes and seeding policies.
@@ -959,76 +980,77 @@ func findCustomFormatEntry(
 // Keys use koanf's dotted notation.
 func defaults() map[string]any {
 	return map[string]any{
-		"server.host":                      "0.0.0.0",
-		"server.port":                      8080,
-		"server.trusted_proxies":           []string{},
-		"data_dir":                         "./data",
-		"read_only":                        false,
-		"torrent_listen_port":              0,
-		"auth.mode":                        "full",
-		"auth.trusted_networks":            []string{},
-		"auth.trusted_role":                "member",
-		"auth.session_secret":              "",
-		"auth.session_secret_file":         "",
-		"auth.session_ttl":                 "168h",
-		"auth.registration_mode":           "disabled",
-		"auth.default_role":                "member",
-		"auth.seed_admin.email":            "",
-		"auth.seed_admin.password":         "",
-		"auth.seed_admin.password_file":    "",
-		"auth.oidc":                        []any{},
-		"auth.lockout.threshold":           10,
-		"auth.lockout.window":              "15m",
-		"auth.lockout.duration":            "15m",
-		"library.movie_path":               "/media/movies",
-		"library.series_path":              "/media/series",
-		"library.series_naming":            "{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}",
-		"library.music_path":               "/data/music",
-		"library.music_naming":             "{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title}.{ext}",
-		"library.ebook_path":               "/data/books",
-		"library.ebook_naming":             "{Author}/{Title} ({Year})",
-		"library.audiobook_path":           "/data/audiobooks",
-		"library.audiobook_naming":         "{Author}/{Title} ({Year})",
-		"library.book_series_naming":       "{Author}/{Series}/{Series} - Vol. {Volume:02}",
-		"library.book_language":            "en",
-		"library.download_path":            "/downloads",
-		"library.movie_naming":             "{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}",
-		"library.import_mode":              "hardlink",
-		"library.monitor_specials":         false,
-		"library.music_monitored_types":    []string{"album", "ep", "single"},
-		"library.keep_torrent_seeding":     true,
-		"library.import_max_attempts":      3,
-		"library.allowed_download_roots":   []string{},
-		"library.no_match_cooldown":        "6h",
-		"library.max_grab_failures":        3,
-		"schedules.movie_rss_sync":         "15m",
-		"schedules.tv_rss_sync":            "15m",
-		"schedules.movie_missing_search":   "12h",
-		"schedules.tv_missing_search":      "12h",
-		"schedules.movie_metadata_refresh": "24h",
-		"schedules.tv_metadata_refresh":    "24h",
-		"schedules.music_missing_search":   "12h",
-		"schedules.music_metadata_refresh": "24h",
-		"schedules.book_missing_search":    "12h",
-		"schedules.book_metadata_refresh":  "24h",
-		"schedules.movie_orphan_scan":      "6h",
-		"schedules.tv_orphan_scan":         "6h",
-		"schedules.download_monitor":       "30s",
-		"schedules.cleanup":                "24h",
-		"schedules.import_scan":            "60s",
-		"schedules.drift_check":            "15m",
-		"schedules.media_probe":            "15m",
-		"schedules.file_selection":         "30s",
-		"schedules.music_tag_sync":         "30m",
-		"schedules.database_backup":        "24h",
-		"library.drift_grace_ticks":        3,
-		"library.probe.always_ask":         false,
-		"library.probe.min_duration_ratio": 0.5,
-		"library.music_tags.mode":          MusicTagsImport,
-		"library.music_tags.seeding":       MusicTagsSeedingDefer,
-		"library.music_tags.embed_art":     true,
-		"library.music_tags.art_max_px":    1000,
-		"library.music_tags.sidecar_art":   true,
+		"server.host":                           "0.0.0.0",
+		"server.port":                           8080,
+		"server.trusted_proxies":                []string{},
+		"data_dir":                              "./data",
+		"read_only":                             false,
+		"torrent_listen_port":                   0,
+		"auth.mode":                             "full",
+		"auth.trusted_networks":                 []string{},
+		"auth.trusted_role":                     "member",
+		"auth.session_secret":                   "",
+		"auth.session_secret_file":              "",
+		"auth.session_ttl":                      "168h",
+		"auth.registration_mode":                "disabled",
+		"auth.default_role":                     "member",
+		"auth.seed_admin.email":                 "",
+		"auth.seed_admin.password":              "",
+		"auth.seed_admin.password_file":         "",
+		"auth.oidc":                             []any{},
+		"auth.lockout.threshold":                10,
+		"auth.lockout.window":                   "15m",
+		"auth.lockout.duration":                 "15m",
+		"library.movie_path":                    "/media/movies",
+		"library.series_path":                   "/media/series",
+		"library.series_naming":                 "{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}",
+		"library.music_path":                    "/data/music",
+		"library.music_naming":                  "{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title}.{ext}",
+		"library.ebook_path":                    "/data/books",
+		"library.ebook_naming":                  "{Author}/{Title} ({Year})",
+		"library.audiobook_path":                "/data/audiobooks",
+		"library.audiobook_naming":              "{Author}/{Title} ({Year})",
+		"library.book_series_naming":            "{Author}/{Series}/{Series} - Vol. {Volume:02}",
+		"library.book_language":                 "en",
+		"library.download_path":                 "/downloads",
+		"library.movie_naming":                  "{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}",
+		"library.import_mode":                   "hardlink",
+		"library.monitor_specials":              false,
+		"library.music_monitored_types":         []string{"album", "ep", "single"},
+		"library.keep_torrent_seeding":          true,
+		"library.import_max_attempts":           3,
+		"library.allowed_download_roots":        []string{},
+		"library.no_match_cooldown":             "6h",
+		"library.max_grab_failures":             3,
+		"schedules.movie_rss_sync":              "15m",
+		"schedules.tv_rss_sync":                 "15m",
+		"schedules.movie_missing_search":        "12h",
+		"schedules.tv_missing_search":           "12h",
+		"schedules.movie_metadata_refresh":      "24h",
+		"schedules.tv_metadata_refresh":         "24h",
+		"schedules.music_missing_search":        "12h",
+		"schedules.music_metadata_refresh":      "24h",
+		"schedules.book_missing_search":         "12h",
+		"schedules.book_metadata_refresh":       "24h",
+		"schedules.movie_orphan_scan":           "6h",
+		"schedules.tv_orphan_scan":              "6h",
+		"schedules.download_monitor":            "30s",
+		"schedules.cleanup":                     "24h",
+		"schedules.import_scan":                 "60s",
+		"schedules.drift_check":                 "15m",
+		"schedules.media_probe":                 "15m",
+		"schedules.file_selection":              "30s",
+		"schedules.music_tag_sync":              "30m",
+		"schedules.database_backup":             "24h",
+		"library.drift_grace_ticks":             3,
+		"library.missing_file_redownload_after": "168h",
+		"library.probe.always_ask":              false,
+		"library.probe.min_duration_ratio":      0.5,
+		"library.music_tags.mode":               MusicTagsImport,
+		"library.music_tags.seeding":            MusicTagsSeedingDefer,
+		"library.music_tags.embed_art":          true,
+		"library.music_tags.art_max_px":         1000,
+		"library.music_tags.sidecar_art":        true,
 		"library.music_tags.strip": []string{
 			"COMMENT", "ENCODEDBY", "URL", "FILEWEBPAGE",
 			"AUDIOSOURCEWEBPAGE", "PAYMENTWEBPAGE", "PUBLISHERWEBPAGE",

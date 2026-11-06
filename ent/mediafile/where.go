@@ -95,6 +95,11 @@ func MissingSince(v time.Time) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldMissingSince, v))
 }
 
+// MissingConfirmedAt applies equality check predicate on the "missing_confirmed_at" field. It's identical to MissingConfirmedAtEQ.
+func MissingConfirmedAt(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldMissingConfirmedAt, v))
+}
+
 // Container applies equality check predicate on the "container" field. It's identical to ContainerEQ.
 func Container(v string) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldContainer, v))
@@ -698,6 +703,56 @@ func MissingSinceIsNil() predicate.MediaFile {
 // MissingSinceNotNil applies the NotNil predicate on the "missing_since" field.
 func MissingSinceNotNil() predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldNotNull(FieldMissingSince))
+}
+
+// MissingConfirmedAtEQ applies the EQ predicate on the "missing_confirmed_at" field.
+func MissingConfirmedAtEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldMissingConfirmedAt, v))
+}
+
+// MissingConfirmedAtNEQ applies the NEQ predicate on the "missing_confirmed_at" field.
+func MissingConfirmedAtNEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldMissingConfirmedAt, v))
+}
+
+// MissingConfirmedAtIn applies the In predicate on the "missing_confirmed_at" field.
+func MissingConfirmedAtIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldMissingConfirmedAt, vs...))
+}
+
+// MissingConfirmedAtNotIn applies the NotIn predicate on the "missing_confirmed_at" field.
+func MissingConfirmedAtNotIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldMissingConfirmedAt, vs...))
+}
+
+// MissingConfirmedAtGT applies the GT predicate on the "missing_confirmed_at" field.
+func MissingConfirmedAtGT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldMissingConfirmedAt, v))
+}
+
+// MissingConfirmedAtGTE applies the GTE predicate on the "missing_confirmed_at" field.
+func MissingConfirmedAtGTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldMissingConfirmedAt, v))
+}
+
+// MissingConfirmedAtLT applies the LT predicate on the "missing_confirmed_at" field.
+func MissingConfirmedAtLT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldMissingConfirmedAt, v))
+}
+
+// MissingConfirmedAtLTE applies the LTE predicate on the "missing_confirmed_at" field.
+func MissingConfirmedAtLTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldMissingConfirmedAt, v))
+}
+
+// MissingConfirmedAtIsNil applies the IsNil predicate on the "missing_confirmed_at" field.
+func MissingConfirmedAtIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldMissingConfirmedAt))
+}
+
+// MissingConfirmedAtNotNil applies the NotNil predicate on the "missing_confirmed_at" field.
+func MissingConfirmedAtNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldMissingConfirmedAt))
 }
 
 // ContainerEQ applies the EQ predicate on the "container" field.

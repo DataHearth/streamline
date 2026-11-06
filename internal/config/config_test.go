@@ -1108,3 +1108,25 @@ var _ = Describe("MusicBrainzIntervalDuration", Label("unit", "config"), func() 
 		Entry("a negative value falls back to one second", "-1s", time.Second),
 	)
 })
+
+var _ = Describe("MissingFileWait", Label("unit", "config"), func() {
+	DescribeTable("reads the wait, and never reverts on a value it cannot read",
+		func(raw string, wait time.Duration, never bool) {
+			gotWait, gotNever := LibraryConfig{
+				MissingFileRedownloadAfter: raw,
+			}.MissingFileWait()
+			Expect(gotWait).To(Equal(wait))
+			Expect(gotNever).To(Equal(never))
+		},
+		Entry("the default", "168h", 168*time.Hour, false),
+		Entry("immediately", "0", time.Duration(0), false),
+		Entry("off", "off", time.Duration(0), true),
+		Entry("a typo", "nonsense", time.Duration(0), true),
+		Entry("a negative value", "-1h", time.Duration(0), true),
+		Entry("an empty value", "", time.Duration(0), true),
+	)
+
+	It("defaults to seven days", func() {
+		Expect(defaults()["library.missing_file_redownload_after"]).To(Equal("168h"))
+	})
+})

@@ -6311,9 +6311,12 @@ type LibraryConfigPatch struct {
 	ImportMode           *LibraryConfigPatchImportMode `json:"import_mode,omitempty"`
 	KeepTorrentSeeding   *bool                         `json:"keep_torrent_seeding,omitempty"`
 	MaxGrabFailures      *int                          `json:"max_grab_failures,omitempty"`
-	MonitorSpecials      *bool                         `json:"monitor_specials,omitempty"`
-	MovieNaming          *string                       `json:"movie_naming,omitempty"`
-	MusicMonitoredTypes  *[]MusicAlbumType             `json:"music_monitored_types,omitempty"`
+
+	// MissingFileRedownloadAfter How long a confirmed missing file keeps its row and its title's status. A Go duration, 0 for no wait, or off for never.
+	MissingFileRedownloadAfter *string           `json:"missing_file_redownload_after,omitempty"`
+	MonitorSpecials            *bool             `json:"monitor_specials,omitempty"`
+	MovieNaming                *string           `json:"movie_naming,omitempty"`
+	MusicMonitoredTypes        *[]MusicAlbumType `json:"music_monitored_types,omitempty"`
 
 	// MusicTags The tags Streamline writes into music files (`library.music_tags`).
 	// The view always carries every field; when patched, only provided
@@ -6346,6 +6349,9 @@ type LibraryConfigView struct {
 	ImportMode         LibraryConfigViewImportMode `json:"import_mode"`
 	KeepTorrentSeeding bool                        `json:"keep_torrent_seeding"`
 	MaxGrabFailures    int                         `json:"max_grab_failures"`
+
+	// MissingFileRedownloadAfter How long a confirmed missing file keeps its row and its title's status. A Go duration, 0 for no wait, or off for never.
+	MissingFileRedownloadAfter string `json:"missing_file_redownload_after"`
 
 	// MonitorSpecials Monitor season 0 (specials) when a series is added or a refresh
 	// discovers the season. Applies to newly seeded seasons only.

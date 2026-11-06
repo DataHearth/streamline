@@ -40,6 +40,22 @@ func BookRoot(slot string) LibraryRoot {
 	return RootEbooks
 }
 
+// RootOfFile names the root a file belongs to, from its loaded owner edges. It
+// reports false for a row with no owner.
+func RootOfFile(row *ent.MediaFile) (LibraryRoot, bool) {
+	switch {
+	case row.Edges.Movie != nil:
+		return RootMovies, true
+	case row.Edges.Episode != nil:
+		return RootSeries, true
+	case row.Edges.Track != nil:
+		return RootMusic, true
+	case row.Edges.Book != nil:
+		return BookRoot(string(row.BookKind)), true
+	}
+	return "", false
+}
+
 func rootPredicate(root LibraryRoot) predicate.MediaFile {
 	switch root {
 	case RootMovies:
@@ -157,7 +173,12 @@ func (db *DB) ListRootFilesForDrift(
 		Where(rootPredicate(root), mediafile.IDGT(afterID)).
 		Order(ent.Asc(mediafile.FieldID)).
 		Limit(limit).
-		Select(mediafile.FieldID, mediafile.FieldPath, mediafile.FieldMissingSince).
+		Select(
+			mediafile.FieldID,
+			mediafile.FieldPath,
+			mediafile.FieldMissingSince,
+			mediafile.FieldMissingConfirmedAt,
+		).
 		Scan(ctx, &rows)
 	if err != nil {
 		return nil, fmt.Errorf("list %s files: %w", root, err)

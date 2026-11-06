@@ -43,21 +43,22 @@ type LibraryPatch struct {
 	// The roots are pathmigrate's to write. It rewrites every stored
 	// path first and repoints the root afterwards; a caller that sets one of
 	// these on its own leaves the library pointing at the old prefix.
-	MoviePath            *string
-	SeriesPath           *string
-	DownloadPath         *string
-	MusicPath            *string
-	EbookPath            *string
-	AudiobookPath        *string
-	MovieNaming          *string
-	SeriesNaming         *string
-	ImportMode           *string
-	KeepTorrentSeeding   *bool
-	NoMatchCooldown      *string
-	MaxGrabFailures      *uint8
-	ImportMaxAttempts    *uint8
-	DriftGraceTicks      *uint8
-	AllowedDownloadRoots *[]string
+	MoviePath                  *string
+	SeriesPath                 *string
+	DownloadPath               *string
+	MusicPath                  *string
+	EbookPath                  *string
+	AudiobookPath              *string
+	MovieNaming                *string
+	SeriesNaming               *string
+	ImportMode                 *string
+	KeepTorrentSeeding         *bool
+	NoMatchCooldown            *string
+	MaxGrabFailures            *uint8
+	ImportMaxAttempts          *uint8
+	DriftGraceTicks            *uint8
+	MissingFileRedownloadAfter *string
+	AllowedDownloadRoots       *[]string
 	// MusicTags is optional-partial like Probe.
 	MusicTags *MusicTagsPatch
 	// Probe is itself optional-partial: a nil Probe leaves the whole section
@@ -214,6 +215,21 @@ func checkDuration(key string, v *string) error {
 	return nil
 }
 
+// checkMissingFileWait rejects what MissingFileWait would read as never without
+// the operator having said so.
+func checkMissingFileWait(v *string) error {
+	if v == nil || *v == missingFileWaitOff {
+		return nil
+	}
+	if err := checkDuration("missing_file_redownload_after", v); err != nil {
+		return err
+	}
+	if wait, _ := time.ParseDuration(*v); wait < 0 {
+		return fmt.Errorf("missing_file_redownload_after: %q is negative", *v)
+	}
+	return nil
+}
+
 // checkPathMappings rejects a mapping list before it is stored. Both sides
 // must be absolute: the translation is a prefix containment test resolved
 // against this process's working directory, so a relative prefix would match
@@ -329,6 +345,9 @@ func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, erro
 	); err != nil {
 		return LibraryConfig{}, err
 	}
+	if err := checkMissingFileWait(patch.MissingFileRedownloadAfter); err != nil {
+		return LibraryConfig{}, err
+	}
 
 	var out LibraryConfig
 	err := Update(ctx, func(c *Config) error {
@@ -382,6 +401,9 @@ func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, erro
 		}
 		if patch.DriftGraceTicks != nil {
 			c.Library.DriftGraceTicks = *patch.DriftGraceTicks
+		}
+		if patch.MissingFileRedownloadAfter != nil {
+			c.Library.MissingFileRedownloadAfter = *patch.MissingFileRedownloadAfter
 		}
 		if patch.AllowedDownloadRoots != nil {
 			c.Library.AllowedDownloadRoots = *patch.AllowedDownloadRoots
