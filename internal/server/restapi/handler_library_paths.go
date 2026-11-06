@@ -3,7 +3,10 @@ package restapi
 import (
 	"context"
 	"errors"
+	"slices"
 
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library/hygiene"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
 )
 
@@ -21,6 +24,33 @@ func (s *Server) GetPathMigration(
 			toAPIPathMigration(s.pathMigrations.Status()),
 		),
 	}, nil
+}
+
+func (s *Server) AcceptLibraryRootMissing(
+	ctx context.Context,
+	req AcceptLibraryRootMissingRequestObject,
+) (AcceptLibraryRootMissingResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return AcceptLibraryRootMissing403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	root := db.LibraryRoot(req.Root)
+	if !slices.Contains(db.LibraryRoots, root) {
+		return AcceptLibraryRootMissing400JSONResponse{
+			BadRequestJSONResponse: errBadRequest("unknown library root"),
+		}, nil
+	}
+	removed, err := s.hygiene.AcceptMissing(ctx, root)
+	if errors.Is(err, hygiene.ErrRootOnline) {
+		return AcceptLibraryRootMissing409JSONResponse{
+			ConflictJSONResponse: errConflict(err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return AcceptLibraryRootMissing200JSONResponse{Removed: removed}, nil
 }
 
 func (s *Server) GetPathMigrationRoots(

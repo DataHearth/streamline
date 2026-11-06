@@ -126,10 +126,11 @@ var minRole = map[string]string{
 	"UpdateImportBookDecision":  roleAdmin,
 	"UpdateImportAlbumDecision": roleAdmin,
 
-	"GetPathMigration":      roleAdmin,
-	"GetPathMigrationRoots": roleAdmin,
-	"StartPathMigration":    roleAdmin,
-	"PreviewPathMigration":  roleAdmin,
+	"GetPathMigration":         roleAdmin,
+	"GetPathMigrationRoots":    roleAdmin,
+	"StartPathMigration":       roleAdmin,
+	"PreviewPathMigration":     roleAdmin,
+	"AcceptLibraryRootMissing": roleAdmin,
 
 	"ListMediaServers":                 roleAdmin,
 	"GetMediaServer":                   roleAdmin,

@@ -5465,6 +5465,34 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /library/roots/{root}/accept-missing:
+    post:
+      operationId: AcceptLibraryRootMissing
+      summary: Accept that the files of an offline library root are really gone.
+      description: |
+        Admin only. Stats every file row of the root and removes the rows whose
+        file is not found, reverting their titles as the drift check does but
+        with no grace window. A file that is present, or that cannot be checked
+        for any other reason, keeps its row. Answers 409 when the root is online,
+        so a volume that returned while the dialog was open loses nothing.
+      tags: [library]
+      parameters:
+        - name: root
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [movies, series, music, ebooks, audiobooks]
+      responses:
+        "200":
+          $ref: "#/components/responses/AcceptMissingResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /library/path-migration/preview:
     post:
       operationId: PreviewPathMigration
@@ -8331,6 +8359,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/PathMigrationPreview"
+
+    AcceptMissingResult:
+      description: How many file rows were removed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AcceptMissingResult"
 
     PathMigrationRootList:
       description: Configured library roots with their tracked path counts.
@@ -14874,6 +14909,13 @@ components:
             Stored paths of that media type anywhere. `tracked == 0` while
             `total > 0` is the signal that the configured root no longer
             matches the database; both zero just means nothing is stored yet.
+
+    AcceptMissingResult:
+      type: object
+      required: [removed]
+      properties:
+        removed:
+          type: integer
 
     PathMigrationRootList:
       type: object

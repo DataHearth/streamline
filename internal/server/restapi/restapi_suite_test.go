@@ -15,12 +15,14 @@ import (
 	"github.com/datahearth/streamline/internal/auth"
 	authmocks "github.com/datahearth/streamline/internal/auth/mocks"
 	bittorrentmocks "github.com/datahearth/streamline/internal/bittorrent/mocks"
+	"github.com/datahearth/streamline/internal/config"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	downloadmocks "github.com/datahearth/streamline/internal/download/mocks"
 	ffmpegmocks "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	importermocks "github.com/datahearth/streamline/internal/importer/mocks"
 	indexermocks "github.com/datahearth/streamline/internal/indexer/mocks"
 	bulkimportmocks "github.com/datahearth/streamline/internal/library/bulkimport/mocks"
+	"github.com/datahearth/streamline/internal/library/hygiene"
 	librarymocks "github.com/datahearth/streamline/internal/library/mocks"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
 	bookmocks "github.com/datahearth/streamline/internal/media/book/mocks"
@@ -168,9 +170,15 @@ func newAPIKeyApp() *apiKeyApp {
 		SeriesRenamer:  a.seriesRenamer,
 		MusicRenamer:   a.musicRenamer,
 		PathMigrations: pathmigrate.NewService(a.store),
-		Prober:         a.prober,
-		Importer:       a.importer,
-		TrackPlans:     a.trackPlans,
+		Hygiene: hygiene.New(
+			a.store,
+			a.metadata,
+			a.metadataTV,
+			&config.LibraryConfig{},
+		),
+		Prober:     a.prober,
+		Importer:   a.importer,
+		TrackPlans: a.trackPlans,
 		// A real worker, never started: the handlers only ever ask it for
 		// progress of a job this process is encoding (none) and for a scan,
 		// which drives the store mock.

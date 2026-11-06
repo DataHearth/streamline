@@ -598,6 +598,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		LookupArt:       lookupArt,
 		Torrents:        torrentsAPI,
 		PathMigrations:  pathMigrations,
+		Hygiene:         hygieneSvc,
 		Importer:        imp,
 		TrackPlans:      imp,
 		Prober:          prober,

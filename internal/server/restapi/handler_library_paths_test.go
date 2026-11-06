@@ -11,7 +11,9 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/roottest"
 )
 
 var _ = Describe("Handler: Library path migration",
@@ -26,6 +28,69 @@ var _ = Describe("Handler: Library path migration",
 			root = filepath.Join(GinkgoT().TempDir(), "movies")
 			configtest.SetupFile(map[string]any{
 				"library": map[string]any{"movie_path": root},
+			})
+		})
+
+		Describe("accept-missing", func() {
+			const url = "/api/v1/library/roots/music/accept-missing"
+
+			It("removes what is gone and answers the count", func() {
+				roottest.Offline(db.RootMusic)
+				app.store.EXPECT().
+					ListRootFilesForDrift(mock.Anything, db.RootMusic, uint32(0), mock.Anything).
+					Return([]db.DriftRow{{ID: 7, Path: "/gone/file.flac"}}, nil).
+					Once()
+				app.store.EXPECT().
+					ListRootFilesForDrift(mock.Anything, db.RootMusic, uint32(7), mock.Anything).
+					Return(nil, nil).Once()
+				app.store.EXPECT().FindMediaFileWithOwners(mock.Anything, uint32(7)).
+					Return(&ent.MediaFile{ID: 7, Edges: ent.MediaFileEdges{
+						Track: &ent.Track{
+							Edges: ent.TrackEdges{Album: &ent.Album{ID: 3}},
+						},
+					}}, nil).Once()
+				app.store.EXPECT().
+					DeleteMediaFileAndRevertAlbum(mock.Anything, uint32(7), uint32(3)).
+					Return(nil).Once()
+
+				resp := app.do(app.req(http.MethodPost, url, app.adminKey, nil))
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				var body AcceptMissingResult
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Removed).To(Equal(1))
+			})
+
+			It("refuses a member", func() {
+				app.addMember("")
+				roottest.Offline(db.RootMusic)
+
+				resp := app.do(app.req(http.MethodPost, url, app.memberKey, nil))
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+			})
+
+			It("answers 409 once the root is back", func() {
+				roottest.Offline()
+
+				resp := app.do(app.req(http.MethodPost, url, app.adminKey, nil))
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+			})
+
+			It("rejects a root that does not exist", func() {
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/library/roots/downloads/accept-missing",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 		})
 

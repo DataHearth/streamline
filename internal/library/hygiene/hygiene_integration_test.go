@@ -394,6 +394,151 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 				SetSize(4).SetMovie(movie).SaveX(ctx)
 		})
 
+		Describe("accepting that files are gone", func() {
+			// 25 rows sample at every offset but 4, 9, 14, 19 and 23, so a file
+			// at offset 4 leaves the root offline while its row has a real file.
+			seedWithUnsampledFile := func() (present *ent.MediaFile, gone []*ent.MediaFile) {
+				GinkgoHelper()
+				for i := range 25 {
+					row := trackFile(fmt.Sprintf("%02d.flac", i), uint16(i+1), nil)
+					if i == 4 {
+						Expect(
+							os.WriteFile(row.Path, []byte("data"), 0o644),
+						).To(Succeed())
+						present = row
+						continue
+					}
+					gone = append(gone, row)
+				}
+				Expect(roothealth.Offline(ctx, db.RootMusic)).NotTo(BeNil())
+				return present, gone
+			}
+			confirmed := func() []*ent.MediaEvent {
+				GinkgoHelper()
+				return entClient.MediaEvent.Query().Where(
+					entmediaevent.TypeEQ(entmediaevent.TypeDriftConfirmed),
+					entmediaevent.HasAlbum(),
+				).AllX(ctx)
+			}
+
+			It("removes only rows whose file is gone, ignoring grace", func() {
+				present, gone := seedWithUnsampledFile()
+
+				removed, err := svc.AcceptMissing(ctx, db.RootMusic)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(removed).To(Equal(len(gone)))
+				Expect(
+					entClient.MediaFile.Query().
+						Where(entmediafile.HasTrack()).
+						IDsX(ctx),
+				).
+					To(ConsistOf(present.ID))
+				Expect(
+					entClient.Album.GetX(ctx, alb.ID).Status,
+				).To(Equal(entalbum.StatusWanted))
+				Expect(confirmed()).To(HaveLen(1))
+			})
+
+			It("leaves the root online afterwards", func() {
+				seedWithUnsampledFile()
+
+				_, err := svc.AcceptMissing(ctx, db.RootMusic)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(roothealth.Offline(ctx, db.RootMusic)).To(BeNil())
+			})
+
+			It("refuses a root that is online and removes nothing", func() {
+				_, err := svc.AcceptMissing(ctx, db.RootMovies)
+
+				Expect(err).To(MatchError(ErrRootOnline))
+				Expect(store.FindMediaFileByID(ctx, lost.ID)).NotTo(BeNil())
+			})
+
+			It("refuses a second call straight after a successful one", func() {
+				trackFile("01.flac", 1, nil)
+				removed, err := svc.AcceptMissing(ctx, db.RootMusic)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(removed).To(Equal(1))
+
+				_, err = svc.AcceptMissing(ctx, db.RootMusic)
+
+				Expect(err).To(MatchError(ErrRootOnline))
+			})
+
+			It("keeps a row whose stat fails with a permission error", func() {
+				locked := filepath.Join(musicDir, "locked")
+				Expect(os.Mkdir(locked, 0o755)).To(Succeed())
+				unreadable := filepath.Join(locked, "01.flac")
+				Expect(os.WriteFile(unreadable, []byte("data"), 0o644)).To(Succeed())
+				Expect(os.Chmod(locked, 0)).To(Succeed())
+				DeferCleanup(
+					func() { Expect(os.Chmod(locked, 0o755)).To(Succeed()) },
+				)
+				tr := entClient.Track.Create().
+					SetTitle("x").SetDisc(1).SetPosition(1).SetAlbum(alb).SaveX(ctx)
+				row := entClient.MediaFile.Create().
+					SetPath(unreadable).SetSize(4).SetTrack(tr).SaveX(ctx)
+				Expect(roothealth.Offline(ctx, db.RootMusic)).NotTo(BeNil())
+
+				removed, err := svc.AcceptMissing(ctx, db.RootMusic)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(removed).To(BeZero())
+				Expect(store.FindMediaFileByID(ctx, row.ID)).NotTo(BeNil())
+			})
+
+			It("reverts a movie, an episode and a book slot", func() {
+				entClient.MediaFile.Delete().
+					Where(entmediafile.HasMovie()).
+					ExecX(ctx)
+				entClient.MediaFile.Create().
+					SetPath("/gone/m.mkv").
+					SetSize(4).
+					SetMovie(movie).
+					SaveX(ctx)
+				show := entClient.TVShow.Create().
+					SetTitle("S").
+					SetYear(2020).
+					SetTvdbID(1).
+					SaveX(ctx)
+				season := entClient.Season.Create().
+					SetNumber(1).
+					SetTvShow(show).
+					SaveX(ctx)
+				episode := entClient.Episode.Create().SetNumber(1).SetSeason(season).
+					SetStatus(entepisode.StatusAvailable).SaveX(ctx)
+				entClient.MediaFile.Create().
+					SetPath("/gone/e.mkv").
+					SetSize(4).
+					SetEpisode(episode).
+					SaveX(ctx)
+				book := entClient.Book.Create().SetHardcoverID(1).SetTitle("B").
+					SetEbookStatus(entbook.EbookStatusAvailable).SaveX(ctx)
+				entClient.MediaFile.Create().
+					SetPath("/gone/b.epub").
+					SetSize(4).
+					SetBook(book).
+					SetBookKind(entmediafile.BookKindEbook).
+					SaveX(ctx)
+
+				for _, root := range []db.LibraryRoot{db.RootMovies, db.RootSeries, db.RootEbooks} {
+					Expect(svc.AcceptMissing(ctx, root)).To(Equal(1))
+				}
+
+				Expect(
+					entClient.Movie.GetX(ctx, movie.ID).Status,
+				).To(Equal(entmovie.StatusWanted))
+				Expect(
+					entClient.Episode.GetX(ctx, episode.ID).Status,
+				).To(Equal(entepisode.StatusWanted))
+				Expect(
+					entClient.Book.GetX(ctx, book.ID).EbookStatus,
+				).To(Equal(entbook.EbookStatusWanted))
+			})
+		})
+
 		It("leaves an offline root's rows untouched", func() {
 			gone := trackFile("01.flac", 1, nil)
 

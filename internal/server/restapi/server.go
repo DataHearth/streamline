@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
+	"github.com/datahearth/streamline/internal/library/hygiene"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
 	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/book"
@@ -63,6 +64,7 @@ type Server struct {
 	requests        request.Manager
 	torrents        bittorrent.Manager
 	pathMigrations  *pathmigrate.Service
+	hygiene         *hygiene.Service
 	importer        importer.Enqueuer
 	trackPlans      importer.TrackPlanner
 	store           db.Store
@@ -108,6 +110,7 @@ type Deps struct {
 	Requests        request.Manager
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service
+	Hygiene         *hygiene.Service
 	Importer        importer.Enqueuer
 	TrackPlans      importer.TrackPlanner
 	Store           db.Store
@@ -145,6 +148,7 @@ func New(d Deps) *Server {
 		requests:        d.Requests,
 		torrents:        d.Torrents,
 		pathMigrations:  d.PathMigrations,
+		hygiene:         d.Hygiene,
 		importer:        d.Importer,
 		trackPlans:      d.TrackPlans,
 		store:           d.Store,

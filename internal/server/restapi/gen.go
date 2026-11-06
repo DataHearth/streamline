@@ -3973,6 +3973,33 @@ func (e ListImportShowsParamsClassification) Valid() bool {
 	}
 }
 
+// Defines values for AcceptLibraryRootMissingParamsRoot.
+const (
+	AcceptLibraryRootMissingParamsRootAudiobooks AcceptLibraryRootMissingParamsRoot = "audiobooks"
+	AcceptLibraryRootMissingParamsRootEbooks     AcceptLibraryRootMissingParamsRoot = "ebooks"
+	AcceptLibraryRootMissingParamsRootMovies     AcceptLibraryRootMissingParamsRoot = "movies"
+	AcceptLibraryRootMissingParamsRootMusic      AcceptLibraryRootMissingParamsRoot = "music"
+	AcceptLibraryRootMissingParamsRootSeries     AcceptLibraryRootMissingParamsRoot = "series"
+)
+
+// Valid indicates whether the value is a known member of the AcceptLibraryRootMissingParamsRoot enum.
+func (e AcceptLibraryRootMissingParamsRoot) Valid() bool {
+	switch e {
+	case AcceptLibraryRootMissingParamsRootAudiobooks:
+		return true
+	case AcceptLibraryRootMissingParamsRootEbooks:
+		return true
+	case AcceptLibraryRootMissingParamsRootMovies:
+		return true
+	case AcceptLibraryRootMissingParamsRootMusic:
+		return true
+	case AcceptLibraryRootMissingParamsRootSeries:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListMoviesParamsMonitored.
 const (
 	ListMoviesParamsMonitoredMonitored   ListMoviesParamsMonitored = "monitored"
@@ -4292,6 +4319,11 @@ func (e ListUsersParamsOrder) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// AcceptMissingResult defines model for AcceptMissingResult.
+type AcceptMissingResult struct {
+	Removed int `json:"removed"`
 }
 
 // ActivityAlbumRef The album an album download or activity event is for (queue,
@@ -10819,6 +10851,9 @@ type ListLibraryArrivalsParams struct {
 	Limit *uint16 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// AcceptLibraryRootMissingParamsRoot defines parameters for AcceptLibraryRootMissing.
+type AcceptLibraryRootMissingParamsRoot string
+
 // ListMoviesParams defines parameters for ListMovies.
 type ListMoviesParams struct {
 	Page  *uint16 `form:"page,omitempty" json:"page,omitempty"`
@@ -12019,6 +12054,9 @@ type ServerInterface interface {
 	// ListLibraryArrivals What landed in the library, newest first, across movies, series, music and books.
 	// (GET /library/recent)
 	ListLibraryArrivals(w http.ResponseWriter, r *http.Request, params ListLibraryArrivalsParams)
+	// AcceptLibraryRootMissing Accept that the files of an offline library root are really gone.
+	// (POST /library/roots/{root}/accept-missing)
+	AcceptLibraryRootMissing(w http.ResponseWriter, r *http.Request, root AcceptLibraryRootMissingParamsRoot)
 	// ListMediaServers List configured media servers
 	// (GET /media-servers)
 	ListMediaServers(w http.ResponseWriter, r *http.Request)
@@ -13178,6 +13216,12 @@ func (_ Unimplemented) GetPathMigrationRoots(w http.ResponseWriter, r *http.Requ
 // ListLibraryArrivals What landed in the library, newest first, across movies, series, music and books.
 // (GET /library/recent)
 func (_ Unimplemented) ListLibraryArrivals(w http.ResponseWriter, r *http.Request, params ListLibraryArrivalsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// AcceptLibraryRootMissing Accept that the files of an offline library root are really gone.
+// (POST /library/roots/{root}/accept-missing)
+func (_ Unimplemented) AcceptLibraryRootMissing(w http.ResponseWriter, r *http.Request, root AcceptLibraryRootMissingParamsRoot) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -17564,6 +17608,32 @@ func (siw *ServerInterfaceWrapper) ListLibraryArrivals(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListLibraryArrivals(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptLibraryRootMissing operation middleware
+func (siw *ServerInterfaceWrapper) AcceptLibraryRootMissing(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "root" -------------
+	var root AcceptLibraryRootMissingParamsRoot
+
+	err = runtime.BindStyledParameterWithOptions("simple", "root", chi.URLParam(r, "root"), &root, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "root", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptLibraryRootMissing(w, r, root)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -22935,6 +23005,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/library/path-migration/roots", wrapper.GetPathMigrationRoots)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/library/roots/{root}/accept-missing", wrapper.AcceptLibraryRootMissing)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/library/path-migration/preview", wrapper.PreviewPathMigration)
 	})
 	r.Group(func(r chi.Router) {
@@ -23039,6 +23112,8 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 
 	return r
 }
+
+type AcceptMissingResultJSONResponse AcceptMissingResult
 
 type ActivityListJSONResponse ActivityList
 
@@ -31654,6 +31729,72 @@ func (response ListLibraryArrivals400JSONResponse) VisitListLibraryArrivalsRespo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptLibraryRootMissingRequestObject struct {
+	Root AcceptLibraryRootMissingParamsRoot `json:"root"`
+}
+
+type AcceptLibraryRootMissingResponseObject interface {
+	VisitAcceptLibraryRootMissingResponse(w http.ResponseWriter) error
+}
+
+type AcceptLibraryRootMissing200JSONResponse struct {
+	AcceptMissingResultJSONResponse
+}
+
+func (response AcceptLibraryRootMissing200JSONResponse) VisitAcceptLibraryRootMissingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptLibraryRootMissing400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AcceptLibraryRootMissing400JSONResponse) VisitAcceptLibraryRootMissingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptLibraryRootMissing403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AcceptLibraryRootMissing403JSONResponse) VisitAcceptLibraryRootMissingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptLibraryRootMissing409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AcceptLibraryRootMissing409JSONResponse) VisitAcceptLibraryRootMissingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -41787,6 +41928,9 @@ type StrictServerInterface interface {
 	// ListLibraryArrivals What landed in the library, newest first, across movies, series, music and books.
 	// (GET /library/recent)
 	ListLibraryArrivals(ctx context.Context, request ListLibraryArrivalsRequestObject) (ListLibraryArrivalsResponseObject, error)
+	// AcceptLibraryRootMissing Accept that the files of an offline library root are really gone.
+	// (POST /library/roots/{root}/accept-missing)
+	AcceptLibraryRootMissing(ctx context.Context, request AcceptLibraryRootMissingRequestObject) (AcceptLibraryRootMissingResponseObject, error)
 	// ListMediaServers List configured media servers
 	// (GET /media-servers)
 	ListMediaServers(ctx context.Context, request ListMediaServersRequestObject) (ListMediaServersResponseObject, error)
@@ -45735,6 +45879,32 @@ func (sh *strictHandler) ListLibraryArrivals(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListLibraryArrivalsResponseObject); ok {
 		if err := validResponse.VisitListLibraryArrivalsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AcceptLibraryRootMissing operation middleware
+func (sh *strictHandler) AcceptLibraryRootMissing(w http.ResponseWriter, r *http.Request, root AcceptLibraryRootMissingParamsRoot) {
+	var request AcceptLibraryRootMissingRequestObject
+
+	request.Root = root
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptLibraryRootMissing(ctx, request.(AcceptLibraryRootMissingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptLibraryRootMissing")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AcceptLibraryRootMissingResponseObject); ok {
+		if err := validResponse.VisitAcceptLibraryRootMissingResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

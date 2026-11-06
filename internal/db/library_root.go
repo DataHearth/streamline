@@ -107,3 +107,24 @@ func (db *DB) RootFilePathAt(
 	}
 	return path, nil
 }
+
+// ListRootFilesForDrift returns one keyset page of a root's file rows, the same
+// projection the drift check walks.
+func (db *DB) ListRootFilesForDrift(
+	ctx context.Context,
+	root LibraryRoot,
+	afterID uint32,
+	limit int,
+) ([]DriftRow, error) {
+	var rows []DriftRow
+	err := db.client.MediaFile.Query().
+		Where(rootPredicate(root), mediafile.IDGT(afterID)).
+		Order(ent.Asc(mediafile.FieldID)).
+		Limit(limit).
+		Select(mediafile.FieldID, mediafile.FieldPath, mediafile.FieldMissingSince).
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, fmt.Errorf("list %s files: %w", root, err)
+	}
+	return rows, nil
+}

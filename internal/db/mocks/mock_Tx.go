@@ -14906,6 +14906,86 @@ func (_c *MockTx_ListRequests_Call) RunAndReturn(run func(ctx context.Context, p
 	return _c
 }
 
+// ListRootFilesForDrift provides a mock function for the type MockTx
+func (_mock *MockTx) ListRootFilesForDrift(ctx context.Context, root db.LibraryRoot, afterID uint32, limit int) ([]db.DriftRow, error) {
+	ret := _mock.Called(ctx, root, afterID, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListRootFilesForDrift")
+	}
+
+	var r0 []db.DriftRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.LibraryRoot, uint32, int) ([]db.DriftRow, error)); ok {
+		return returnFunc(ctx, root, afterID, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.LibraryRoot, uint32, int) []db.DriftRow); ok {
+		r0 = returnFunc(ctx, root, afterID, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.DriftRow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.LibraryRoot, uint32, int) error); ok {
+		r1 = returnFunc(ctx, root, afterID, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListRootFilesForDrift_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListRootFilesForDrift'
+type MockTx_ListRootFilesForDrift_Call struct {
+	*mock.Call
+}
+
+// ListRootFilesForDrift is a helper method to define mock.On call
+//   - ctx context.Context
+//   - root db.LibraryRoot
+//   - afterID uint32
+//   - limit int
+func (_e *MockTx_Expecter) ListRootFilesForDrift(ctx any, root any, afterID any, limit any) *MockTx_ListRootFilesForDrift_Call {
+	return &MockTx_ListRootFilesForDrift_Call{Call: _e.mock.On("ListRootFilesForDrift", ctx, root, afterID, limit)}
+}
+
+func (_c *MockTx_ListRootFilesForDrift_Call) Run(run func(ctx context.Context, root db.LibraryRoot, afterID uint32, limit int)) *MockTx_ListRootFilesForDrift_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.LibraryRoot
+		if args[1] != nil {
+			arg1 = args[1].(db.LibraryRoot)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListRootFilesForDrift_Call) Return(driftRows []db.DriftRow, err error) *MockTx_ListRootFilesForDrift_Call {
+	_c.Call.Return(driftRows, err)
+	return _c
+}
+
+func (_c *MockTx_ListRootFilesForDrift_Call) RunAndReturn(run func(ctx context.Context, root db.LibraryRoot, afterID uint32, limit int) ([]db.DriftRow, error)) *MockTx_ListRootFilesForDrift_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListShelf provides a mock function for the type MockTx
 func (_mock *MockTx) ListShelf(ctx context.Context, p db.ShelfParams) ([]db.ShelfRow, uint32, error) {
 	ret := _mock.Called(ctx, p)

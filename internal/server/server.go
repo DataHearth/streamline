@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
+	"github.com/datahearth/streamline/internal/library/hygiene"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
@@ -95,6 +96,7 @@ type Config struct {
 	LookupArt       LookupArt
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service
+	Hygiene         *hygiene.Service
 	Importer        importer.Enqueuer
 	TrackPlans      importer.TrackPlanner
 	Prober          ffmpeg.Prober
@@ -141,6 +143,7 @@ func New(cfg Config) *Server {
 		Hardcover:       cfg.Hardcover,
 		Torrents:        cfg.Torrents,
 		PathMigrations:  cfg.PathMigrations,
+		Hygiene:         cfg.Hygiene,
 		Importer:        cfg.Importer,
 		TrackPlans:      cfg.TrackPlans,
 		Store:           cfg.DB,
