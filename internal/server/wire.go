@@ -30,6 +30,7 @@ import (
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/library/hygiene"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/mailer"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
@@ -161,6 +162,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	events.Register(dbClient)
 
 	store := db.New(dbClient)
+	roothealth.Register(store)
 
 	// 3. Create metadata / media / indexer / download services
 	tmdb := metadata.NewTMDB()

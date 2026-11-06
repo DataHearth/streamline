@@ -3149,6 +3149,72 @@ func (_c *MockStore_CountRequestsByStatus_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// CountRootFiles provides a mock function for the type MockStore
+func (_mock *MockStore) CountRootFiles(ctx context.Context, root db.LibraryRoot) (int, error) {
+	ret := _mock.Called(ctx, root)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountRootFiles")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.LibraryRoot) (int, error)); ok {
+		return returnFunc(ctx, root)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.LibraryRoot) int); ok {
+		r0 = returnFunc(ctx, root)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.LibraryRoot) error); ok {
+		r1 = returnFunc(ctx, root)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_CountRootFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountRootFiles'
+type MockStore_CountRootFiles_Call struct {
+	*mock.Call
+}
+
+// CountRootFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - root db.LibraryRoot
+func (_e *MockStore_Expecter) CountRootFiles(ctx any, root any) *MockStore_CountRootFiles_Call {
+	return &MockStore_CountRootFiles_Call{Call: _e.mock.On("CountRootFiles", ctx, root)}
+}
+
+func (_c *MockStore_CountRootFiles_Call) Run(run func(ctx context.Context, root db.LibraryRoot)) *MockStore_CountRootFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.LibraryRoot
+		if args[1] != nil {
+			arg1 = args[1].(db.LibraryRoot)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_CountRootFiles_Call) Return(n int, err error) *MockStore_CountRootFiles_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockStore_CountRootFiles_Call) RunAndReturn(run func(ctx context.Context, root db.LibraryRoot) (int, error)) *MockStore_CountRootFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CountTVShows provides a mock function for the type MockStore
 func (_mock *MockStore) CountTVShows(ctx context.Context) (int, error) {
 	ret := _mock.Called(ctx)
@@ -19929,6 +19995,78 @@ func (_c *MockStore_RevokeUserSessionByID_Call) Return(n int, err error) *MockSt
 }
 
 func (_c *MockStore_RevokeUserSessionByID_Call) RunAndReturn(run func(ctx context.Context, userID uint32, sessionID uint32, when time.Time) (int, error)) *MockStore_RevokeUserSessionByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RootFilePathAt provides a mock function for the type MockStore
+func (_mock *MockStore) RootFilePathAt(ctx context.Context, root db.LibraryRoot, offset int) (string, error) {
+	ret := _mock.Called(ctx, root, offset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RootFilePathAt")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.LibraryRoot, int) (string, error)); ok {
+		return returnFunc(ctx, root, offset)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.LibraryRoot, int) string); ok {
+		r0 = returnFunc(ctx, root, offset)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.LibraryRoot, int) error); ok {
+		r1 = returnFunc(ctx, root, offset)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_RootFilePathAt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RootFilePathAt'
+type MockStore_RootFilePathAt_Call struct {
+	*mock.Call
+}
+
+// RootFilePathAt is a helper method to define mock.On call
+//   - ctx context.Context
+//   - root db.LibraryRoot
+//   - offset int
+func (_e *MockStore_Expecter) RootFilePathAt(ctx any, root any, offset any) *MockStore_RootFilePathAt_Call {
+	return &MockStore_RootFilePathAt_Call{Call: _e.mock.On("RootFilePathAt", ctx, root, offset)}
+}
+
+func (_c *MockStore_RootFilePathAt_Call) Run(run func(ctx context.Context, root db.LibraryRoot, offset int)) *MockStore_RootFilePathAt_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.LibraryRoot
+		if args[1] != nil {
+			arg1 = args[1].(db.LibraryRoot)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_RootFilePathAt_Call) Return(s string, err error) *MockStore_RootFilePathAt_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *MockStore_RootFilePathAt_Call) RunAndReturn(run func(ctx context.Context, root db.LibraryRoot, offset int) (string, error)) *MockStore_RootFilePathAt_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -1374,6 +1374,8 @@ type Store interface {
 		limit int,
 	) ([]DriftRow, error)
 	FindMediaFileWithOwners(ctx context.Context, id uint32) (*ent.MediaFile, error)
+	CountRootFiles(ctx context.Context, root LibraryRoot) (int, error)
+	RootFilePathAt(ctx context.Context, root LibraryRoot, offset int) (string, error)
 	SetEpisodesMonitored(ctx context.Context, ids []uint32, monitored bool) error
 	SetSeasonsMonitored(ctx context.Context, ids []uint32, monitored bool) error
 	// SetEpisodeMonitored sets the flag by hand, pinning it against
