@@ -55,6 +55,15 @@
 		{ value: "downloads", label: i18n.migration_download_folder() },
 	];
 
+	const PATH_EXAMPLES: Record<MigrationRoot, string> = {
+		movies: "movies",
+		series: "series",
+		music: "music",
+		ebooks: "books",
+		audiobooks: "audiobooks",
+		downloads: "downloads",
+	};
+
 	const qc = useQueryClient();
 
 	let root = $state<MigrationRoot>("movies");
@@ -136,6 +145,9 @@
 	$effect(() => {
 		if (wasLive && !live) {
 			qc.invalidateQueries({ queryKey: ["path-migration", "roots"] });
+			// A re-pointed root may no longer be offline, which is what the health
+			// pill and the Settings → Library banner read.
+			qc.invalidateQueries({ queryKey: ["system", "info"] });
 		}
 		wasLive = live;
 	});
@@ -178,6 +190,9 @@
 		onSuccess: (data) => {
 			confirmOpen = false;
 			preview = null;
+			// Seen as running at once: a small run is over before the first poll,
+			// and the refresh above only fires on running turning false.
+			qc.setQueryData(["path-migration"], data);
 			status.refetch();
 			toast.ok(
 				(data.total === 1 ? i18n.migration_started_one : i18n.migration_started_other)({
@@ -252,7 +267,7 @@
 						reset();
 					}}
 					disabled={live || !fromNeeded}
-					placeholder={fromNeeded ? "/media/movies" : ""}
+					placeholder={fromNeeded ? `/media/${PATH_EXAMPLES[root]}` : ""}
 					spellcheck="false"
 					autocapitalize="off"
 					autocorrect="off"
@@ -271,7 +286,7 @@
 					bind:value={to}
 					oninput={reset}
 					disabled={live}
-					placeholder="/data/movies"
+					placeholder={`/data/${PATH_EXAMPLES[root]}`}
 					spellcheck="false"
 					autocapitalize="off"
 					autocorrect="off"
