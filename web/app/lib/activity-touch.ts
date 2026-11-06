@@ -298,7 +298,8 @@ export type TorrentSortKey =
 	| "download_speed"
 	| "upload_speed"
 	| "ratio"
-	| "seeds";
+	| "seeds"
+	| "added_at";
 export type SortOrder = "asc" | "desc";
 
 // Default order: what needs attention first. Live transfers on top, then the
@@ -329,6 +330,10 @@ export function compareTorrents(
 	}
 	if (sort === "name") {
 		const d = a.name.localeCompare(b.name);
+		return d !== 0 ? d : a.hash.localeCompare(b.hash);
+	}
+	if (sort === "added_at") {
+		const d = (Date.parse(a.added_at) || 0) - (Date.parse(b.added_at) || 0);
 		return d !== 0 ? d : a.hash.localeCompare(b.hash);
 	}
 	const d = ((a[sort] as number) ?? 0) - ((b[sort] as number) ?? 0);
@@ -377,6 +382,7 @@ export const TORRENT_SORT_CHIPS: {
 	{ key: "size", label: i18n.sort_largest(), sort: "size", order: "desc" },
 	{ key: "speed", label: i18n.sort_fastest(), sort: "download_speed", order: "desc" },
 	{ key: "ratio", label: i18n.sort_best_ratio(), sort: "ratio", order: "desc" },
+	{ key: "added", label: i18n.library_sort_recent(), sort: "added_at", order: "desc" },
 ];
 
 export function torrentSortChipKey(

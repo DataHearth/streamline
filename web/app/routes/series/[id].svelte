@@ -30,8 +30,7 @@
 	import { listHref, SERIES_SEARCH } from "@lib/prefs";
 	import { formatDate } from "@lib/dates";
 	import Poster from "@components/shared/Poster.svelte";
-	import StatusPill from "@components/shared/StatusPill.svelte";
-	import type { StatusKind } from "@components/shared/StatusPill.svelte";
+	import LabelPill from "@components/shared/LabelPill.svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
@@ -164,14 +163,13 @@
 		),
 	);
 
-	let seriesAvail = $derived<StatusKind>(
-		(show?.wanted_episodes ?? 0) > 0
-			? "wanted"
-			: // Unmonitored shows report zero wanted episodes, so "nothing wanted"
-				// alone would call an empty series available.
-				(show?.have_episodes ?? 0) > 0
-				? "available"
-				: "missing",
+	// The pill sits on the poster, as on an artist's photo, and only while
+	// episodes are wanted: an available show needs no badge, the bar says it.
+	let wantedEpisodes = $derived(show?.wanted_episodes ?? 0);
+	// What the line above the title says about the show, in order. The type
+	// chip follows it on its own.
+	let heroFacts = $derived(
+		show ? [show.series_status, show.network, show.creator].filter((f): f is string => !!f) : [],
 	);
 
 	let airedTotal = $derived.by(() => {
@@ -546,34 +544,48 @@
 		<div
 			class="relative grid w-full items-end gap-5 px-4 pb-6 pt-4 md:grid-cols-[200px_1fr] md:gap-8 md:px-8 md:pb-14 md:pt-10 lg:grid-cols-[260px_1fr] lg:gap-10 lg:pb-16"
 		>
-			<div
-				class="relative mx-auto aspect-[2/3] w-60 overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:mx-0 md:w-auto"
-			>
-				<div class="absolute inset-0 bg-bg-card"></div>
-				<div class="absolute inset-0 grid place-items-center text-fg-faint">
-					<Tv class="h-10 w-10" aria-hidden="true" />
+			<div class="relative mx-auto w-60 md:mx-0 md:w-auto">
+				<div
+					class="relative aspect-[2/3] w-full overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)]"
+				>
+					<div class="absolute inset-0 bg-bg-card"></div>
+					<div class="absolute inset-0 grid place-items-center text-fg-faint">
+						<Tv class="h-10 w-10" aria-hidden="true" />
+					</div>
+					<Poster
+						src={tvPosterUrl(show.id)}
+						alt={i18n.common_poster_alt({ title: show.title })}
+						loading="eager"
+						class="relative h-full w-full object-cover"
+					/>
 				</div>
-				<Poster
-					src={tvPosterUrl(show.id)}
-					alt={i18n.common_poster_alt({ title: show.title })}
-					loading="eager"
-					class="relative h-full w-full object-cover"
-				/>
+				{#if wantedEpisodes > 0}
+					<span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
+						<LabelPill token="wanted" label={countWanted(wantedEpisodes)} size="md" />
+					</span>
+				{/if}
 			</div>
 
 			<div class="min-w-0 text-left">
 				<div
-					class="mb-3 flex flex-wrap items-center gap-2 font-mono text-xs text-fg-muted"
+					class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-xs text-fg-muted"
 				>
-					<StatusPill status={seriesAvail} size="md" variant="translucent" />
-					<span class="uppercase tracking-wide">{show.series_status}</span>
-					{#if show.network}
-						<span class="text-fg-faint" aria-hidden="true">·</span>
-						<span>{show.network}</span>
-					{/if}
-					{#if show.creator}
-						<span class="text-fg-faint" aria-hidden="true">·</span>
-						<span>{show.creator}</span>
+					{#if heroFacts.length > 0}
+						<!-- Each fact carries its dot in front, and the row is pulled left
+						     by one dot inside a clip: the fact that starts a line has its
+						     dot clipped, so a wrap never leaves one hanging. -->
+						<div class="min-w-0 overflow-hidden">
+							<div class="-ml-5 flex flex-wrap gap-y-1">
+								{#each heroFacts as fact, i (i)}
+									<span
+										class={cn(
+											"relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']",
+											i === 0 && show.series_status && "uppercase tracking-wide",
+										)}>{fact}</span
+									>
+								{/each}
+							</div>
+						</div>
 					{/if}
 					<span
 						class={cn(
@@ -598,15 +610,17 @@
 				</h1>
 
 				{#if metaParts.length > 0}
-					<div
-						class="mt-3 flex flex-wrap items-center gap-2 font-mono text-xs text-fg-muted"
-					>
-						{#each metaParts as part, i (i)}
-							{#if i > 0}
-								<span class="text-fg-faint" aria-hidden="true">·</span>
-							{/if}
-							<span>{part}</span>
-						{/each}
+					<!-- The facts line's clip, for the same reason: no dot left at the
+					     end of a line on a phone. -->
+					<div class="mt-3 overflow-hidden font-mono text-xs text-fg-muted">
+						<div class="-ml-5 flex flex-wrap gap-y-2">
+							{#each metaParts as part, i (i)}
+								<span
+									class="relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']"
+									>{part}</span
+								>
+							{/each}
+						</div>
 					</div>
 				{/if}
 

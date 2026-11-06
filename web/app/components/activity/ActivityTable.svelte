@@ -59,7 +59,6 @@
 		selected ? rows.filter((r) => selected.has(r.id)).length : 0,
 	);
 	let allPicked = $derived(rows.length > 0 && pickedHere === rows.length);
-	let colspan = $derived(selectable ? 7 : 6);
 	// Columns hide on the table's own container width, not the viewport's: at
 	// tablet the rail leaves it ~630px, where a viewport media query still counted
 	// the 88px it no longer has and kept a column that fell outside the box.
@@ -71,7 +70,8 @@
 		| "client"
 		| "indexer"
 		| "size"
-		| "when";
+		| "when"
+		| "added";
 	type Col = { label: string; hide?: string; grow?: boolean; sort?: SortKey };
 	const HEADERS: Record<"queue" | "history", Col[]> = {
 		queue: [
@@ -86,6 +86,9 @@
 			// the column cost the title ~140px to hold a "—".
 			{ label: i18n.activity_speed_eta(), hide: "hidden @3xl:table-cell", sort: "speed" },
 			{ label: i18n.common_client(), hide: "hidden @3xl:table-cell", sort: "client" },
+			// When the download was grabbed. The widest table only: below @4xl it is
+			// in the row's detail.
+			{ label: i18n.common_added(), hide: "hidden @4xl:table-cell", sort: "added" },
 			{ label: "" },
 		],
 		history: [
@@ -99,6 +102,8 @@
 		],
 	};
 	let headers = $derived(HEADERS[view]);
+	// Every column the row draws, plus the checkbox: the expanded detail spans them.
+	let colspan = $derived(headers.length + (selectable ? 1 : 0));
 
 	type Sort = { key: SortKey; dir: "asc" | "desc" };
 	// What each view sorts by before anyone touches a header. The queue has none:
@@ -165,6 +170,8 @@
 				return row.size ?? 0;
 			case "when":
 				return Date.parse(h.updated_at) || 0;
+			case "added":
+				return Date.parse(q.created_at) || 0;
 		}
 	}
 
@@ -197,7 +204,7 @@
 		// Text reads A→Z, and Status reads attention-first, which is what its rank
 		// ascends through; a number or a date is asked for biggest-or-newest first.
 		const down =
-			key === "progress" || key === "speed" || key === "size" || key === "when";
+			key === "progress" || key === "speed" || key === "size" || key === "when" || key === "added";
 		picked = { key, dir: down ? "desc" : "asc" };
 	}
 

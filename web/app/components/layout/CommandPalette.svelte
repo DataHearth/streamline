@@ -231,6 +231,9 @@
 									: "text-fg-muted hover:text-fg",
 							)}
 						>
+							<!-- One slot for every kind, as wide as the widest art: posters
+							     centre in it and the titles line up. -->
+							<span class="grid w-8 shrink-0 place-items-center">
 							{#if item.kind === "movie" || item.kind === "series" || item.kind === "episode"}
 								{@const MediaIcon = item.kind === "movie" ? Film : Tv}
 								{@const poster =
@@ -303,6 +306,7 @@
 									<Icon size={14} aria-hidden="true" />
 								</div>
 							{/if}
+							</span>
 							<div class="min-w-0 flex-1">
 								<div class="truncate text-[13px] font-medium">
 									{item.label}

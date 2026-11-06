@@ -137,6 +137,12 @@
 		<td class={cn("hidden px-2 text-xs text-fg-subtle @3xl:table-cell", tight, pad)}>
 			{queue.uploaded ? i18n.activity_upload() : queue.download_client || "—"}
 		</td>
+		<td
+			class={cn("hidden whitespace-nowrap px-2 text-xs text-fg-subtle @4xl:table-cell", tight, pad)}
+			title={formatDateTime(queue.created_at)}
+		>
+			{formatRelative(queue.created_at)}
+		</td>
 	{:else}
 		<td class={cn("hidden px-2 text-xs text-fg-subtle @3xl:table-cell", tight, pad)}>
 			{history.uploaded ? i18n.activity_upload() : history.indexer || "—"}

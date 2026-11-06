@@ -40,6 +40,10 @@
 		dense ? "min-h-12 py-1.5" : "min-h-14 py-2",
 	)}
 >
+	<!-- One slot for every kind, as wide as the widest art (a square): a 2:3
+	     poster centres in it, so the titles line up down the list whatever art
+	     each row has. -->
+	<span class={cn("grid shrink-0 place-items-center", dense ? "w-9" : "w-10")}>
 	{#if item.kind === "movie" || item.kind === "series" || item.kind === "episode"}
 		{@const MediaIcon = item.kind === "movie" ? Film : Tv}
 		{@const poster =
@@ -114,6 +118,7 @@
 			<Icon size={16} aria-hidden="true" />
 		</div>
 	{/if}
+	</span>
 
 	<span class="min-w-0 flex-1">
 		<span

@@ -9,15 +9,18 @@ import { activeRoute } from "@roxi/routify";
 // first emission is the traversal that brought it back.
 //
 // Positions are keyed by the route's URL, query included: a list's filters are
-// in its query string, and a different filter is a different list. A link or
-// a replace (a list rewriting its own query) starts where Routify puts it;
-// only a history traversal restores.
+// in its query string, and a different filter is a different list. Only a
+// history traversal restores. A link or a redirect to another page starts at
+// the top, set here too: Routify's own scroll-to-top did not always reach
+// `#main` (on a phone, Movies to Series kept the list's offset). A replace
+// that only rewrites the query (a list's filters) keeps its place.
 const KEEP = 50;
 // Long enough to outlast Routify's own scroll-to-top, which runs a tick after
 // the route renders, and the first paint of a cached list.
 const SETTLE_MS = 1000;
 
 const stores = new Map<string, Map<string, number>>();
+const pathOf = (url: string) => url.split("?")[0];
 
 export function restoreScrollOnBack(scroller: HTMLElement, name = "main"): () => void {
 	const saved = stores.get(name) ?? new Map<string, number>();
@@ -36,10 +39,15 @@ export function restoreScrollOnBack(scroller: HTMLElement, name = "main"): () =>
 			saved.set(current, scroller.scrollTop);
 			if (saved.size > KEEP) saved.delete(saved.keys().next().value as string);
 		}
+		const was = current;
 		current = r.url ?? "";
-		if (r.mode !== "popState") return;
+		if (r.mode !== "popState") {
+			if (was !== null && pathOf(was) !== pathOf(current)) scroller.scrollTop = 0;
+			return;
+		}
 		const top = saved.get(current);
 		if (top) cancel = settle(scroller, top);
+		else if (was !== null && pathOf(was) !== pathOf(current)) scroller.scrollTop = 0;
 	});
 
 	return () => {

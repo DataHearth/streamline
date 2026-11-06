@@ -87,6 +87,8 @@
 			numeric: true,
 			hide: "hidden @4xl:table-cell",
 		},
+		// When the engine took it. Sorts newest first, like the numbers.
+		{ label: i18n.common_added(), key: "added_at", numeric: true, hide: "hidden @4xl:table-cell" },
 		{ label: "" },
 	];
 

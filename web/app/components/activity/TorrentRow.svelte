@@ -11,6 +11,7 @@
 		formatRatio,
 	} from "@lib/format";
 	import { torrentHref, torrentRelease } from "@lib/activity-touch";
+	import { formatDateTime, formatRelative } from "@lib/dates";
 	import type { Torrent } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -178,6 +179,12 @@
 			<span class="text-fg-muted">{torrent.seeds}</span>
 			<span class="text-fg-faint"> / {torrent.peer_count}</span>
 		{/if}
+	</td>
+	<td
+		class={cn("hidden whitespace-nowrap px-2 text-xs text-fg-subtle @4xl:table-cell", pad)}
+		title={formatDateTime(torrent.added_at)}
+	>
+		{formatRelative(torrent.added_at)}
 	</td>
 
 	<td class={cn("pr-4 pl-2 text-right", pad)}>
