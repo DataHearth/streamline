@@ -74,10 +74,12 @@ func albumHoldReasons(plan []albumFile, alb *ent.Album) []schema.HoldReason {
 
 // trackHoldReasons lists the files whose title contradicts the track they were
 // matched to: another edition's bonus tracks land on the album's by number, and
-// the tags would then call one recording another's name. It speaks only when
-// at least half the comparable titles agree, since a mostly different list is
-// a translated release whose numbers are all there is to go on.
-func trackHoldReasons(plan []albumFile) []schema.HoldReason {
+// the tags would then call one recording another's name. everyFile lists every
+// title that differs, a script the comparison cannot read included, for a
+// person to answer. Without it, it speaks only when at least half the comparable
+// titles agree, since a mostly different list is a translated release whose
+// numbers are all there is to go on.
+func trackHoldReasons(plan []albumFile, everyFile bool) []schema.HoldReason {
 	var (
 		out             []schema.HoldReason
 		agree, compared int
@@ -85,6 +87,16 @@ func trackHoldReasons(plan []albumFile) []schema.HoldReason {
 	for _, f := range plan {
 		if !library.TitleComparable(f.info.Title) ||
 			!library.TitleComparable(f.tr.Title) {
+			title := strings.TrimSpace(f.info.Title)
+			if everyFile && title != "" &&
+				!strings.EqualFold(title, strings.TrimSpace(f.tr.Title)) {
+				out = append(out, schema.HoldReason{
+					File:     f.path,
+					Check:    "track",
+					Expected: f.tr.Title,
+					Actual:   f.info.Title,
+				})
+			}
 			continue
 		}
 		compared++
@@ -99,7 +111,7 @@ func trackHoldReasons(plan []albumFile) []schema.HoldReason {
 			Actual:   f.info.Title,
 		})
 	}
-	if 2*agree < compared {
+	if !everyFile && 2*agree < compared {
 		return nil
 	}
 	return out

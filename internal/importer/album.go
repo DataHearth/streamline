@@ -240,8 +240,17 @@ func (w *Worker) importAlbumFiles(
 	}
 
 	profile, haveProfile := config.ResolveMusicQualityProfile(artist.QualityProfile)
-	plan, skippedCovered := w.planAlbumImport(ctx, rec, alb, files, profile)
-	if len(plan) == 0 {
+	plan, skippedCovered, unplaced := w.planAlbumImport(
+		ctx,
+		rec,
+		alb,
+		files,
+		profile,
+	)
+	// A person can answer for a single album, in the resolve prompt. A pack has
+	// no per-file prompt, so it keeps asking only when most titles agree.
+	ask := !pack && !rec.VerificationBypassed && rec.Edges.Track == nil
+	if len(plan) == 0 && (!ask || len(unplaced) == 0) {
 		if skippedCovered > 0 {
 			return nil, false, otelx.RecordSpanError(span, ErrTracksHeld)
 		}
@@ -254,7 +263,12 @@ func (w *Worker) importAlbumFiles(
 		// Someone chose this track for this file: its tags are no evidence of a
 		// wrong download, only of where the recording was first released.
 		if rec.Edges.Track == nil {
-			reasons = append(albumHoldReasons(plan, alb), trackHoldReasons(plan)...)
+			reasons = append(
+				albumHoldReasons(plan, alb),
+				trackHoldReasons(plan, ask)...)
+		}
+		if ask {
+			reasons = append(reasons, unplaced...)
 		}
 		if haveProfile {
 			reasons = append(reasons, tierHoldReasons(plan, profile)...)
@@ -382,19 +396,21 @@ func (w *Worker) importAlbumFiles(
 // in replace mode all takes every track it covers, one in upgrades mode only
 // the tracks whose held tier the profile lets this file beat. Two files never
 // fill one track: the first wins. skippedCovered counts the files dropped
-// because their track was already filled in the library.
+// because their track was already filled in the library, and unplaced names
+// the ones dropped for matching no track or losing one to another file.
 func (w *Worker) planAlbumImport(
 	ctx context.Context,
 	rec *ent.DownloadRecord,
 	alb *ent.Album,
 	files []string,
 	profile config.MusicQualityProfileEntry,
-) ([]albumFile, int) {
+) ([]albumFile, int, []schema.HoldReason) {
 	claim := library.ParseMusicRelease(rec.Title)
 	claimed := map[uint32]struct{}{}
 	var (
 		plan           []albumFile
 		skippedCovered int
+		unplaced       []schema.HoldReason
 	)
 	// Every file's tags first: whether their numbers name the album's tracks
 	// is decided over the whole release.
@@ -442,6 +458,9 @@ func (w *Worker) planAlbumImport(
 		if tr == nil {
 			slog.WarnContext(ctx, "album import: file matched no track",
 				"file", filepath.Base(path), "album.id", alb.ID)
+			unplaced = append(unplaced, schema.HoldReason{
+				File: path, Check: "track", Actual: info.Title,
+			})
 			continue
 		}
 		if _, dup := claimed[tr.ID]; dup {
@@ -453,6 +472,9 @@ func (w *Worker) planAlbumImport(
 				"track.id",
 				tr.ID,
 			)
+			unplaced = append(unplaced, schema.HoldReason{
+				File: path, Check: "track", Expected: tr.Title, Actual: info.Title,
+			})
 			continue
 		}
 		q := w.assessAlbumFile(ctx, path, claim)
@@ -465,7 +487,7 @@ func (w *Worker) planAlbumImport(
 		claimed[tr.ID] = struct{}{}
 		plan = append(plan, albumFile{path: path, info: info, tr: tr, q: q})
 	}
-	return plan, skippedCovered
+	return plan, skippedCovered, unplaced
 }
 
 func assignedTrack(tracks []*ent.Track, id uint32) *ent.Track {

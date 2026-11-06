@@ -270,7 +270,7 @@ var _ = Describe(
 					Return(&ffmpeg.AudioInfo{Codec: "flac", BitDepth: 16, SampleRateHz: 44100, DurationSec: 200}, nil).
 					Times(2)
 
-				plan, _ := w.planAlbumImport(
+				plan, _, _ := w.planAlbumImport(
 					context.Background(),
 					rec,
 					alb,
@@ -489,7 +489,7 @@ var _ = Describe("trackHoldReasons", Label("unit", "importer"), func() {
 			file("Enter the Machine", "Enter The Machine"),
 			file("I Am Legend / Out for Blood", "I Am Legend-Out For Blood"),
 			file("Heart of Darkness (live in Paris 2004)", "Burning Angel (Live)"),
-		})
+		}, false)
 		Expect(reasons).To(ConsistOf(schema.HoldReason{
 			File:     "/dl/Burning Angel (Live).flac",
 			Check:    "track",
@@ -501,7 +501,20 @@ var _ = Describe("trackHoldReasons", Label("unit", "importer"), func() {
 	It("accepts a title a release shortens", func() {
 		Expect(trackHoldReasons([]albumFile{
 			file("The Czar: Usurper / Escape / Martyr / Spiral", "The Czar"),
-		})).To(BeEmpty())
+		}, false)).To(BeEmpty())
+	})
+
+	It("lists every title that differs when a person can answer", func() {
+		reasons := trackHoldReasons([]albumFile{
+			file("Regret", "Regret"),
+			file("New Land", "Nouvelle terre"),
+			file("Hail the Apocalypse", "後悔"),
+			file("後悔", "後悔"),
+			file("Intro", ""),
+		}, true)
+		Expect(reasons).To(HaveLen(2))
+		Expect(reasons[0].Actual).To(Equal("Nouvelle terre"))
+		Expect(reasons[1].Actual).To(Equal("後悔"))
 	})
 
 	It("keeps the numbers of a release whose titles are mostly translated", func() {
@@ -511,21 +524,21 @@ var _ = Describe("trackHoldReasons", Label("unit", "importer"), func() {
 			file("Quintessence", "Quintessence (FR)"),
 			file("The Last Baron", "Le Dernier Baron"),
 			file("Ghost of Karelia", "Fantôme de Carélie"),
-		})).To(BeEmpty())
+		}, false)).To(BeEmpty())
 	})
 
 	It("holds at exactly half the titles agreeing", func() {
 		Expect(trackHoldReasons([]albumFile{
 			file("Oblivion", "Oblivion"),
 			file("Divinations", "Something Else"),
-		})).To(HaveLen(1))
+		}, false)).To(HaveLen(1))
 	})
 
 	It("takes an untagged title as no evidence", func() {
 		Expect(trackHoldReasons([]albumFile{
 			file("Oblivion", "Oblivion"),
 			file("Divinations", ""),
-		})).To(BeEmpty())
+		}, false)).To(BeEmpty())
 	})
 
 	It("takes a title in a script it cannot compare as no evidence", func() {
@@ -533,6 +546,6 @@ var _ = Describe("trackHoldReasons", Label("unit", "importer"), func() {
 			file("Oblivion", "Oblivion"),
 			file("Divinations", "東京"),
 			file("東京", "Divinations"),
-		})).To(BeEmpty())
+		}, false)).To(BeEmpty())
 	})
 })

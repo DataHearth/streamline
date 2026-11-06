@@ -15,6 +15,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/db"
 	mockdb "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/download"
@@ -402,11 +403,36 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		))
 	})
 
-	It("lets the first file claim a track and ignores unmatched ones", func() {
+	It("holds the files that lost a track or matched none", func() {
+		seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 1, albumTracks[0].title)
+		b := seedTrackFile(dlDir, "b.mp3", "tagged.mp3", 1, albumTracks[0].title)
+		c := seedTrackFile(dlDir, "c.mp3", "tagged.mp3", 9, "Not On The Album")
+		rec := fixtureAlbumRecord(dlDir, alb)
+		expectFind(rec)
+		var reasons []schema.HoldReason
+		storeMk.EXPECT().
+			HoldDownloadRecord(mock.Anything, rec.ID, mock.Anything).
+			Run(func(_ context.Context, _ uint32, r []schema.HoldReason) { reasons = r }).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+
+		Expect(reasons).To(ConsistOf(
+			schema.HoldReason{
+				File: b, Check: "track",
+				Expected: albumTracks[0].title, Actual: albumTracks[0].title,
+			},
+			schema.HoldReason{File: c, Check: "track", Actual: "Not On The Album"},
+		))
+	})
+
+	It("lets the first file claim a track once someone waved the hold", func() {
 		seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 1, albumTracks[0].title)
 		seedTrackFile(dlDir, "b.mp3", "tagged.mp3", 1, albumTracks[0].title)
 		seedTrackFile(dlDir, "c.mp3", "tagged.mp3", 9, "Not On The Album")
 		rec := fixtureAlbumRecord(dlDir, alb)
+		rec.VerificationBypassed = true
 		expectFind(rec)
 		storeMk.EXPECT().
 			RecordAlbumImportSuccess(mock.Anything, mock.MatchedBy(
@@ -686,11 +712,24 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		})
 	})
 
-	It("fails terminally when no audio file matches a track", func() {
+	It("holds a release no file of which matches a track", func() {
+		seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 9, "Nope")
+		rec := fixtureAlbumRecord(dlDir, alb)
+		expectFind(rec)
+		storeMk.EXPECT().
+			HoldDownloadRecord(mock.Anything, rec.ID, mock.Anything).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+	})
+
+	It("fails terminally when a waved release matches no track", func() {
 		seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 9, "Nope")
 		Expect(os.WriteFile(filepath.Join(dlDir, "cover.jpg"), []byte("x"), 0o600)).
 			To(Succeed())
 		rec := fixtureAlbumRecord(dlDir, alb)
+		rec.VerificationBypassed = true
 		expectFind(rec)
 
 		err := w.runImport(context.Background(), 1)
