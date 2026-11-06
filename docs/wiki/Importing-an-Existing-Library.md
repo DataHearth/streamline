@@ -141,7 +141,7 @@ Two background jobs — `movie-orphan-scan` and `tv-orphan-scan`, every 6 hours 
 
 This is what catches files you dropped in by hand, or a title that arrived through some route Streamline didn't manage.
 
-A third job, `drift-check` (every 15 minutes), does the reverse: it notices files Streamline *thinks* exist but which have vanished from disk. To survive a briefly-unavailable network mount, a file has to be missing for `library.drift_grace_ticks` consecutive checks (default 3, so 45 minutes) before its record is removed. If an NFS blip has ever wiped your library metadata in another tool, this is the setting that exists to prevent that.
+A third job, `drift-check` (every 15 minutes), does the reverse: it notices files Streamline *thinks* exist but which have vanished from disk. To survive a briefly-unavailable network mount, a file has to be missing for `library.drift_grace_ticks` consecutive checks (default 3, so 45 minutes) before it counts as missing from disk. Its record then stays until `library.missing_file_redownload_after` has passed (default 7 days), and a file that comes back before that heals by itself. If an NFS blip has ever wiped your library metadata in another tool, these are the settings that exist to prevent that.
 
 All three are retimeable and pausable at **Settings → Schedules**.
 

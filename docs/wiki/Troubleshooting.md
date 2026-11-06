@@ -357,6 +357,19 @@ finished history can't hold the warning on after the root legitimately moved.
 
 ---
 
+## A title says "Missing from disk"
+
+The drift check cannot find its file. A folder may have been renamed or a disk may have died. Nothing has been removed or downloaded: the record stays and the title stays available until `library.missing_file_redownload_after` has passed (default 7 days).
+
+**Settings → Library** lists every such file, with the root it belongs to and when it will be downloaded again.
+
+- **The file was moved by accident:** put it back at the same path. The next drift check heals the record.
+- **The file moved for good:** a movie's new path is adopted by the next orphan scan and the old record goes when the wait ends, with no download. A show folder goes through the import review.
+- **You deleted it on purpose:** press **Forget**. The record goes and the movie, episode, album or book slot stops being monitored, so it is not downloaded again. Turn monitoring back on from its page if you change your mind. A file found back on disk keeps its record.
+- **You want it back now:** an import without replace fills a missing file, so a manual search and grab works straight away.
+
+While a file is missing, nothing tries to tag, transcode, probe or rename it, and Subsonic and OPDS stop offering it. Stats file counts leave it out, but title counts still count the title as available.
+
 ## Music and books
 
 **"Rate limited" on a music search or add.** MusicBrainz allows one request a second, and when it is shedding load it refuses even that. Streamline answers `429` with a retry time and does not retry on its own; wait and search again. Background work (filling in tracks and credits, covers for search tiles) pauses for as long as MusicBrainz asked, so your own searches go first. The warning in the log names MusicBrainz's rate-limit zone: `global` means MusicBrainz is limiting everyone, not you. If this is constant, a [self-hosted MusicBrainz mirror](Configuration-Reference#metadata) (`metadata.musicbrainz_url`, with `metadata.musicbrainz_interval` lowered or `0s`) removes the limit.

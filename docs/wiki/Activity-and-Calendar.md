@@ -44,7 +44,9 @@ The **Events** view of the Queue & History page, and `GET /api/v1/activity` behi
 | `file_renamed` | A file was moved by a rename pass |
 | `file_removed` | A file left the library — deleted by hand, replaced by an upgrade, or swapped in a bulk-import commit |
 | `drift_detected` | A tracked file went missing from disk |
-| `drift_confirmed` | It stayed missing past the grace window and the row was reverted |
+| `drift_confirmed` | It stayed missing past the grace window. The title keeps its status, with a mark, until the re-download wait ends |
+| `drift_reverted` | The wait ended with the file still missing: its record went and the title went back to wanted |
+| `drift_recovered` | A file confirmed missing came back and healed |
 | `reidentified` | A title was re-pointed at different metadata |
 | `metadata_refreshed` | A provider refresh actually changed something — a new title, or episodes added or pruned |
 | `monitoring_changed` | Monitoring was turned on or off, or an artist or book series got a new monitor policy |

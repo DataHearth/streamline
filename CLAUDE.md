@@ -112,6 +112,8 @@ Cast is written inside the title's transaction; the **person biography fetch is 
 
 **A library root that looks gone costs nothing** (`internal/library/roothealth`): it is offline when it has tracked files and none of a sample of at most 20 can be stat'ed. `drift-check`, the orphan scans, tag sync, transcoding, imports and automatic grabs leave it alone, by-hand changes to its files answer `409 code: library_offline`, and `GET /system/info` carries `library_offline` for the pill and the Settings → Library banner. The ways out are path migration (music and book roots re-point only) and `POST /library/roots/{root}/accept-missing`.
 
+**A file gone from disk keeps its row** (`MediaFile.missing_confirmed_at`): past the grace window the title stays `available` with a "missing from disk" mark until `library.missing_file_redownload_after` (default `168h`, `0` at once, `off` never) and a file that returns heals. While `missing_since` is set nothing touches the file on its own schedule, an import treats it as not held, and `POST /library/missing-files/forget` removes the row and stops monitoring the title. One word everywhere: missing.
+
 **Probe semantics, the event hooks, cast ingest and person enrichment, re-identify ordering, the in-flight marking paths and the list push-down: [`docs/agents/media-lifecycle.md`](docs/agents/media-lifecycle.md) — read it before touching status transitions, `internal/events/`, or `internal/db` list queries.**
 ## Music
 

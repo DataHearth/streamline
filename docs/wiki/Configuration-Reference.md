@@ -145,7 +145,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `library.{movie,series}_naming` | ✅ Applies to the next import or rename | Settings → Library |
 | `library.book_language` | ✅ Applies to books added from then on | Settings → Library (Books) |
 | `library.import_mode`, `keep_torrent_seeding`, `import_max_attempts`, `allowed_download_roots` | ✅ | Settings → Library |
-| `library.no_match_cooldown`, `max_grab_failures`, `drift_grace_ticks` | ✅ | Settings → Library |
+| `library.no_match_cooldown`, `max_grab_failures`, `drift_grace_ticks`, `missing_file_redownload_after` | ✅ | Settings → Library |
 | `download.selective_files`, `download.selection_grace`, `download.space_check`, `download.space_reserve_gb`, `download.path_mappings` | ✅ | Settings → Library |
 | `ffmpeg.enabled` | ✅ | Settings → Media probe |
 | `ffmpeg.path` | ⚠️ Accepted immediately, but only picked up by the process's prober on the next restart | Settings → Media probe |
@@ -285,7 +285,8 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.keep_torrent_seeding` | bool | `true` | Leave torrents seeding after import. Ignored under `import_mode: move`: a moved torrent has nothing left to seed, so it is removed from the client, with any files the import left behind, as soon as its record imports |
 | `library.import_max_attempts` | int | `3` | Import retries before giving up |
 | `library.allowed_download_roots` | []path | `[]` | If non-empty, a torrent's save path must sit under one of these or import is refused. Security fence — empty disables the check |
-| `library.drift_grace_ticks` | int | `3` | Consecutive `drift_check` ticks a file may be missing before its record is deleted (1–20). At the default 15m interval, 3 ticks ≈ 45 minutes of tolerance for a flaky mount |
+| `library.drift_grace_ticks` | int | `3` | Consecutive `drift_check` ticks a file may be gone before it counts as missing from disk (1–20). At the default 15m interval, 3 ticks ≈ 45 minutes of tolerance for a flaky mount |
+| `library.missing_file_redownload_after` | duration or `off` | `168h` | How long a file missing from disk keeps its record and its title's status before the title goes back to wanted. `0` is immediately and `off` is never. A value that cannot be read counts as never |
 
 #### Import verification
 
