@@ -14,9 +14,11 @@ import (
 	entbook "github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/searchwindow"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -56,7 +58,16 @@ func (s *Service) SearchMissing(ctx context.Context) error {
 		return otelx.RecordSpanError(span, err)
 	}
 	var work []slotWork
+	offline := make(map[string]bool, len(slotKinds))
 	for _, kind := range slotKinds {
+		status, err := roothealth.Offline(ctx, db.BookRoot(kind))
+		if err != nil {
+			return otelx.RecordSpanError(span, err)
+		}
+		if status != nil {
+			offline[kind] = true
+			continue
+		}
 		books, err := s.db.ListEligibleBookSlotsForSync(
 			ctx, kind, window.MaxGrabFailures, window.NotSearchedSince,
 		)
@@ -67,11 +78,14 @@ func (s *Service) SearchMissing(ctx context.Context) error {
 			work = append(work, slotWork{kind: kind, book: b})
 		}
 	}
-	volumes, err := s.db.ListEligibleSeriesVolumes(
-		ctx, window.MaxGrabFailures, window.NotSearchedSince,
-	)
-	if err != nil {
-		return otelx.RecordSpanError(span, err)
+	var volumes []*ent.Book
+	if !offline[slotEbook] {
+		volumes, err = s.db.ListEligibleSeriesVolumes(
+			ctx, window.MaxGrabFailures, window.NotSearchedSince,
+		)
+		if err != nil {
+			return otelx.RecordSpanError(span, err)
+		}
 	}
 	groups := groupBySeries(volumes)
 

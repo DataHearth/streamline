@@ -12,10 +12,12 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/roottest"
 )
 
 var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
@@ -38,6 +40,26 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 		dlM = mocks.NewMockDownloader(GinkgoT())
 
 		syncer = NewMissingSearcher(store, indexerM, dlM)
+	})
+
+	When("a library root is offline", func() {
+		It("grabs nothing for offline movies", func() {
+			roottest.Offline(db.RootMovies)
+
+			Expect(syncer.Run(ctx)).To(Succeed())
+		})
+
+		It("still runs while another root is offline", func() {
+			roottest.Offline(db.RootMusic)
+			store.EXPECT().
+				ListEligibleMoviesForSync(mock.Anything, uint8(3), mock.Anything).
+				Return(nil, nil).Once()
+			store.EXPECT().
+				CountMoviesByStatus(mock.Anything, entmovie.StatusWanted).
+				Return(0, nil).Once()
+
+			Expect(syncer.Run(ctx)).To(Succeed())
+		})
 	})
 
 	When("no movies are eligible", func() {

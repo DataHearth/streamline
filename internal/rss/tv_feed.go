@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/quality/qualityctx"
@@ -54,6 +55,13 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 
 	indexers := config.EnabledIndexers()
 	if len(indexers) == 0 {
+		return nil
+	}
+	status, err := roothealth.Offline(ctx, db.RootSeries)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if status != nil {
 		return nil
 	}
 

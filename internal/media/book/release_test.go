@@ -11,10 +11,12 @@ import (
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/roottest"
 )
 
 var _ = Describe("Book releases", Label("unit", "integration", "books"), func() {
@@ -382,6 +384,42 @@ var _ = Describe("Book releases", Label("unit", "integration", "books"), func() 
 	})
 
 	Describe("SearchMissing", func() {
+		It("searches only the audiobook slot while ebooks are offline", func() {
+			roottest.Offline(db.RootEbooks)
+			b := f.addBook(1, "Elantris", "both")
+			f.idx.EXPECT().
+				SearchBook(anyCtx, "Brandon Sanderson", "Elantris", uint16(2006), mediafile.BookKindAudiobook).
+				Return([]indexer.SearchResult{m4b}, nil).
+				Once()
+			f.dl.EXPECT().GrabBook(anyCtx, m4b, b.ID, mediafile.BookKindAudiobook).
+				Return(&ent.DownloadRecord{}, nil).Once()
+
+			Expect(f.svc.SearchMissing(f.ctx)).To(Succeed())
+
+			got := f.reloadBook(b.ID)
+			Expect(got.EbookStatus).To(Equal(book.EbookStatusWanted))
+			Expect(got.EbookLastSearchAt).To(BeNil())
+			Expect(got.AudiobookStatus).To(Equal(book.AudiobookStatusDownloading))
+		})
+
+		It("searches only the ebook slot while audiobooks are offline", func() {
+			roottest.Offline(db.RootAudiobooks)
+			b := f.addBook(1, "Elantris", "both")
+			f.idx.EXPECT().
+				SearchBook(anyCtx, "Brandon Sanderson", "Elantris", uint16(2005), mediafile.BookKindEbook).
+				Return([]indexer.SearchResult{epub}, nil).
+				Once()
+			f.dl.EXPECT().GrabBook(anyCtx, epub, b.ID, mediafile.BookKindEbook).
+				Return(&ent.DownloadRecord{}, nil).Once()
+
+			Expect(f.svc.SearchMissing(f.ctx)).To(Succeed())
+
+			got := f.reloadBook(b.ID)
+			Expect(got.EbookStatus).To(Equal(book.EbookStatusDownloading))
+			Expect(got.AudiobookStatus).To(Equal(book.AudiobookStatusWanted))
+			Expect(got.AudiobookLastSearchAt).To(BeNil())
+		})
+
 		It("never grabs a release that names another book", func() {
 			b := f.addBook(1, "Warbreaker", "ebook")
 			f.idx.EXPECT().
@@ -532,6 +570,17 @@ var _ = Describe("Book releases", Label("unit", "integration", "books"), func() 
 				Seeders: 5,
 			}
 		}
+
+		It("searches no volume while ebooks are offline", func() {
+			s := add(3)
+			roottest.Offline(db.RootEbooks)
+
+			Expect(f.svc.SearchMissing(f.ctx)).To(Succeed())
+
+			for _, v := range f.reloadSeries(s.ID).Edges.Volumes {
+				Expect(v.EbookStatus).To(Equal(book.EbookStatusWanted))
+			}
+		})
 
 		It(
 			"searches a whole series with one query and gives each volume its release",

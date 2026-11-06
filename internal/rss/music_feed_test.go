@@ -12,11 +12,13 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/roottest"
 )
 
 func musicConfig(names ...string) map[string]any {
@@ -92,6 +94,27 @@ var _ = Describe("FeedScanner music pass", Label("unit", "rss"), func() {
 		Title:    "Artist Name - Album Title (2020) [FLAC]",
 		Category: "3040",
 	}
+
+	It("grabs nothing and reads no album while music is offline", func() {
+		roottest.Offline(db.RootMusic)
+		store.EXPECT().ListWantedMovies(mock.Anything).Return(nil, nil).Once()
+		store.EXPECT().
+			ListUpgradeCandidateMovies(mock.Anything).
+			Return(nil, nil).
+			Once()
+		store.EXPECT().
+			ListWantedBooks(mock.Anything, uint8(3)).
+			Return(nil, nil).
+			Once()
+		store.EXPECT().
+			ListUpgradeCandidateBooks(mock.Anything).
+			Return(nil, nil).
+			Once()
+		feeder.EXPECT().Feed(mock.Anything, "idx").
+			Return([]indexer.SearchResult{flacItem}, nil).Once()
+
+		Expect(scanner.Run(ctx)).To(Succeed())
+	})
 
 	It("grabs a matching release once and records the success", func() {
 		item := flacItem

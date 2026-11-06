@@ -30,6 +30,14 @@ var LibraryRoots = []LibraryRoot{
 	RootAudiobooks,
 }
 
+// BookRoot names the root a book slot's files live under.
+func BookRoot(slot string) LibraryRoot {
+	if slot == string(mediafile.BookKindAudiobook) {
+		return RootAudiobooks
+	}
+	return RootEbooks
+}
+
 func rootPredicate(root LibraryRoot) predicate.MediaFile {
 	switch root {
 	case RootMovies:

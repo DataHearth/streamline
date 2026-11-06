@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/quality/qualityctx"
@@ -96,6 +97,14 @@ func (s *FeedScanner) Run(ctx context.Context) error {
 	upgradable, err := s.store.ListUpgradeCandidateMovies(ctx)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
+	}
+	// Only the movie part stops: this tick also carries the music and book passes.
+	moviesOffline, err := roothealth.Offline(ctx, db.RootMovies)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if moviesOffline != nil {
+		wanted, upgradable = nil, nil
 	}
 
 	// One read for the tick, shared by the three passes: every grab below is

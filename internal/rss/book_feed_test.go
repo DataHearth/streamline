@@ -14,12 +14,14 @@ import (
 	entbook "github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/roottest"
 )
 
 func bookConfig(names ...string) map[string]any {
@@ -120,6 +122,30 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 		books = mocks.NewMockBookGrabber(GinkgoT())
 		configtest.Setup(bookConfig("idx"))
 		scanner = NewFeedScanner(store, feeder, grabber, nil, books)
+	})
+
+	Describe("an offline library root", func() {
+		It("skips the ebook slot while ebooks are offline", func() {
+			roottest.Offline(db.RootEbooks)
+			books.EXPECT().GrabBookRelease(
+				mock.Anything, uint32(1),
+				book.GrabParams{Kind: "audiobook", Result: audioItem},
+			).Return(nil).Once()
+			expectBookkeeping("audiobook")
+
+			run([]*ent.Book{wantedBook(true, true)}, ebookItem, audioItem)
+		})
+
+		It("skips the audiobook slot while audiobooks are offline", func() {
+			roottest.Offline(db.RootAudiobooks)
+			books.EXPECT().GrabBookRelease(
+				mock.Anything, uint32(1),
+				book.GrabParams{Kind: "ebook", Result: ebookItem},
+			).Return(nil).Once()
+			expectBookkeeping("ebook")
+
+			run([]*ent.Book{wantedBook(true, true)}, ebookItem, audioItem)
+		})
 	})
 
 	It("grabs a wanted ebook slot and records the success", func() {

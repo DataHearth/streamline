@@ -14,11 +14,13 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/mediafiletest"
+	"github.com/datahearth/streamline/internal/testutil/roottest"
 )
 
 func indexerConfig(names ...string) map[string]any {
@@ -178,6 +180,56 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 			Return(nil, nil).Maybe()
 		store.EXPECT().ListUpgradeCandidateBooks(mock.Anything).
 			Return(nil, nil).Maybe()
+	})
+
+	Describe("an offline library root", func() {
+		feed := func(title string) {
+			feeder.EXPECT().Feed(mock.Anything, "a").
+				Return([]indexer.SearchResult{{Title: title}}, nil).Once()
+		}
+
+		It("grabs no wanted movie while movies are offline", func() {
+			configtest.Setup(indexerConfig("a"))
+			newScanner()
+			roottest.Offline(db.RootMovies)
+			store.EXPECT().ListWantedMovies(mock.Anything).Return(
+				[]*ent.Movie{{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}}, nil,
+			).Once()
+			noUpgrades()
+			feed("Dune.2021.1080p.BluRay.x264-GROUP")
+
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
+		It("grabs no upgrade while movies are offline", func() {
+			configtest.Setup(upgradeConfig("a"))
+			newScanner()
+			roottest.Offline(db.RootMovies)
+			upgradeCandidates(movieWithFile(upgradableProfile, plainFile))
+			feed(uhdMultiRelease)
+
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
+		It("still grabs a movie while music is offline", func() {
+			configtest.Setup(indexerConfig("a"))
+			newScanner()
+			roottest.Offline(db.RootMusic)
+			store.EXPECT().ListWantedMovies(mock.Anything).Return(
+				[]*ent.Movie{{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}}, nil,
+			).Once()
+			noUpgrades()
+			feed("Dune.2021.1080p.BluRay.x264-GROUP")
+			grabber.EXPECT().Grab(mock.Anything, mock.Anything, uint32(7)).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			store.EXPECT().ResetMovieGrabFailures(mock.Anything, uint32(7)).
+				Return(nil).Once()
+			store.EXPECT().SetMovieLastSearchAt(
+				mock.Anything, uint32(7), mock.AnythingOfType("time.Time"),
+			).Return(nil).Once()
+
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
 	})
 
 	It("noops when no indexers are configured", func() {

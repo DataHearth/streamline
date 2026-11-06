@@ -16,11 +16,13 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/roottest"
 )
 
 // matchIDs matches a grab's wanted-episode argument against an exact ID set,
@@ -103,6 +105,24 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				mock.Anything, recordID, downloadrecord.ReplaceModeUpgrades,
 			).Return(nil).Once()
 	}
+
+	When("a library root is offline", func() {
+		It("grabs nothing for offline series", func() {
+			roottest.Offline(db.RootSeries)
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+
+		It("still runs while another root is offline", func() {
+			roottest.Offline(db.RootMovies)
+			overlay := defaultRSSConfig()
+			overlay["download_clients"] = []map[string]any{}
+			configtest.Setup(overlay)
+			expectEligible(nil, nil)
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+	})
 
 	When("no download client is enabled", func() {
 		It("skips the pass after the eligibility query", func() {

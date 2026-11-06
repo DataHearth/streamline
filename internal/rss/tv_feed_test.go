@@ -15,11 +15,13 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/roottest"
 )
 
 var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
@@ -96,6 +98,14 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 
 	const acceptableEp = "The.Black.Sea.S03E01.1080p.WEB-DL.x265-GRP"
 	const acceptablePack = "The.Black.Sea.S03.1080p.WEB-DL.x265-GRP"
+
+	It("grabs nothing for offline series", func() {
+		configtest.Setup(indexerConfig("a"))
+		newScanner()
+		roottest.Offline(db.RootSeries)
+
+		Expect(scanner.Run(ctx)).To(Succeed())
+	})
 
 	It("noops when no indexers are configured", func() {
 		configtest.Setup()

@@ -7,6 +7,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/searchwindow"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -28,6 +30,14 @@ var _ MissingSearcher = (*Service)(nil)
 func (s *Service) SearchMissing(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "music.search_missing")
 	defer span.End()
+
+	status, err := roothealth.Offline(ctx, db.RootMusic)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if status != nil {
+		return nil
+	}
 
 	window, err := searchwindow.Current(ctx)
 	if err != nil {

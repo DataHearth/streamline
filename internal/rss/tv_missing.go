@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
@@ -49,6 +50,14 @@ func NewEpisodeMissingSearcher(
 func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "rss.tv_missing_search")
 	defer span.End()
+
+	status, err := roothealth.Offline(ctx, db.RootSeries)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if status != nil {
+		return nil
+	}
 
 	window, err := currentSearchWindow(ctx)
 	if err != nil {

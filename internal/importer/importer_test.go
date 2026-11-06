@@ -25,10 +25,10 @@ import (
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	"github.com/datahearth/streamline/internal/library"
-	"github.com/datahearth/streamline/internal/library/roothealth"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
+	"github.com/datahearth/streamline/internal/testutil/roottest"
 )
 
 func seedMediaFile(dir, name string) {
@@ -57,26 +57,6 @@ func fixtureRecord(
 	}
 	r.Edges.Movie = m
 	return r
-}
-
-// offlineRoots answers roothealth with one unreachable file for each offline root.
-type offlineRoots struct {
-	offline map[db.LibraryRoot]bool
-}
-
-func (r *offlineRoots) CountRootFiles(context.Context, db.LibraryRoot) (int, error) {
-	return 1, nil
-}
-
-func (r *offlineRoots) RootFilePathAt(
-	_ context.Context,
-	root db.LibraryRoot,
-	_ int,
-) (string, error) {
-	if r.offline[root] {
-		return "/nonexistent/streamline/file", nil
-	}
-	return "", nil
 }
 
 var _ = Describe("Worker", Label("unit", "importer"), func() {
@@ -115,7 +95,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 	Describe("an offline library root", func() {
 		var (
 			rec   *ent.DownloadRecord
-			roots *offlineRoots
+			roots *roottest.Roots
 		)
 
 		expectImport := func() {
@@ -145,11 +125,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
 			seedMediaFile(src, "Flick.2024.1080p.mkv")
 			rec = fixtureRecord(1, 10, src, 0)
-			roots = &offlineRoots{
-				offline: map[db.LibraryRoot]bool{db.RootMovies: true},
-			}
-			roothealth.Register(roots)
-			DeferCleanup(func() { roothealth.Register(nil) })
+			roots = roottest.Offline(db.RootMovies)
 		})
 
 		It(
@@ -167,7 +143,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			}
 			Expect(os.ReadDir(libDir)).To(BeEmpty())
 
-			roots.offline[db.RootMovies] = false
+			roots.Back(db.RootMovies)
 			expectImport()
 			run()
 
@@ -175,7 +151,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		})
 
 		It("imports a record for another root meanwhile", func() {
-			roots.offline = map[db.LibraryRoot]bool{db.RootMusic: true}
+			roottest.Offline(db.RootMusic)
 			expectImport()
 
 			run()

@@ -11,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 )
 
 const (
@@ -39,6 +40,13 @@ func musicCategory(cat string) bool {
 }
 
 func (s *FeedScanner) newMusicPass(ctx context.Context) (*musicPass, error) {
+	status, err := roothealth.Offline(ctx, db.RootMusic)
+	if err != nil {
+		return nil, err
+	}
+	if status != nil {
+		return &musicPass{}, nil
+	}
 	albums, err := s.store.ListWantedAlbums(
 		ctx, config.Get().Library.MaxGrabFailures,
 	)

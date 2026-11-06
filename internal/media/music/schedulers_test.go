@@ -13,10 +13,12 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/scheduler"
+	"github.com/datahearth/streamline/internal/testutil/roottest"
 )
 
 func manualContext() context.Context {
@@ -69,6 +71,17 @@ var _ = Describe("Music schedulers", Label("unit", "integration", "music"), func
 	}
 
 	Describe("SearchMissing", func() {
+		It("searches nothing while music is offline", func() {
+			roottest.Offline(db.RootMusic)
+			al := seedAlbums("Nevermind")[0]
+
+			Expect(e.svc.SearchMissing(e.ctx)).To(Succeed())
+
+			got := e.client.Album.GetX(e.ctx, al.ID)
+			Expect(got.Status).To(Equal(album.StatusWanted))
+			Expect(got.LastSearchAt).To(BeNil())
+		})
+
 		It("grabs the best release and resets the failure counter", func() {
 			al := seedAlbums("Nevermind")[0]
 			e.client.Album.UpdateOneID(al.ID).SetGrabFailures(2).ExecX(e.ctx)

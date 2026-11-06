@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/book"
 )
 
@@ -47,6 +48,8 @@ type bookPass struct {
 	upgrades bookIndex
 	grabbed  map[bookSlot]struct{}
 	rejected *db.ReleaseBlocklist
+	// offline holds the slot kinds whose library root looks gone.
+	offline map[string]bool
 }
 
 // bookKindForCategory maps a Torznab category to the slot it fills: exactly
@@ -176,6 +179,14 @@ func (i bookIndex) find(
 }
 
 func (s *FeedScanner) newBookPass(ctx context.Context) (*bookPass, error) {
+	offline := make(map[string]bool, 2)
+	for _, kind := range []string{slotEbook, slotAudiobook} {
+		status, err := roothealth.Offline(ctx, db.BookRoot(kind))
+		if err != nil {
+			return nil, err
+		}
+		offline[kind] = status != nil
+	}
 	books, err := s.store.ListWantedBooks(
 		ctx, config.Get().Library.MaxGrabFailures,
 	)
@@ -190,6 +201,7 @@ func (s *FeedScanner) newBookPass(ctx context.Context) (*bookPass, error) {
 		wanted:   indexBooks(books),
 		upgrades: indexBooks(upgradable),
 		grabbed:  make(map[bookSlot]struct{}),
+		offline:  offline,
 	}, nil
 }
 
@@ -205,7 +217,7 @@ func (s *FeedScanner) processBookItems(
 	matched := 0
 	for _, item := range items {
 		kind := bookKindForCategory(item.Category)
-		if kind == "" {
+		if kind == "" || pass.offline[kind] {
 			continue
 		}
 		parsed := library.ParseBookRelease(item.Title)

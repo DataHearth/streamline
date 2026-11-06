@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
@@ -163,6 +164,16 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 		syncDuration.Record(ctx, time.Since(start).Seconds(), attrs)
 		syncRuns.Add(ctx, 1, attrs)
 	}()
+
+	status, err := roothealth.Offline(ctx, db.RootMovies)
+	if err != nil {
+		outcome = "query_failed"
+		return otelx.RecordSpanError(span, err)
+	}
+	if status != nil {
+		outcome = "root_offline"
+		return nil
+	}
 
 	window, err := currentSearchWindow(ctx)
 	if err != nil {
