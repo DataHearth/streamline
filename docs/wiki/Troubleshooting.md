@@ -317,7 +317,7 @@ While a root is offline, nothing changes for it:
 - `drift-check` and the orphan scans skip it, so no record is removed and no title goes back to wanted.
 - Imports for it wait, with no attempt counted. They run as soon as it returns.
 - The missing searches and RSS make no automatic grab for it. A grab you make by hand still goes through, and its import waits.
-- Tag writes and transcodes for it wait, and renames, deletes with files, uploads and import commits answer `409` with `code: library_offline`.
+- Scheduled tag writes and transcodes for it wait. Renames, re-identify, applying album tags, deletes with files, uploads and import commits answer `409` with `code: library_offline`.
 
 If the volume comes back, everything resumes by itself. The health pill turns **Degraded**, and **Settings → Library** names the root, its path and the reason, with a way out for each case.
 

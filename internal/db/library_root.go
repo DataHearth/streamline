@@ -49,29 +49,29 @@ func rootPredicate(root LibraryRoot) predicate.MediaFile {
 	case RootMusic:
 		return mediafile.HasTrack()
 	case RootEbooks:
-		return mediafile.And(
-			mediafile.HasBook(),
-			mediafile.BookKindEQ(mediafile.BookKindEbook),
-		)
+		// book_kind alone: it is only set on book files, and a HasBook term beside
+		// it sends SQLite back to a table scan when one kind holds every row.
+		return mediafile.BookKindEQ(mediafile.BookKindEbook)
 	case RootAudiobooks:
-		return mediafile.And(
-			mediafile.HasBook(),
-			mediafile.BookKindEQ(mediafile.BookKindAudiobook),
-		)
+		return mediafile.BookKindEQ(mediafile.BookKindAudiobook)
 	}
 	panic(fmt.Sprintf("unknown library root %q", root))
 }
 
-func rootOwnerColumn(root LibraryRoot) string {
+// rootOrder keeps the walk on an index: ordered by id alone SQLite scans the
+// table for the first match, all of it for a root with no files, and this runs on
+// every system info read and every gated job. A book root's index is book_kind,
+// which already ends in the rowid.
+func rootOrder(root LibraryRoot) []string {
 	switch root {
 	case RootMovies:
-		return mediafile.MovieColumn
+		return []string{mediafile.MovieColumn, mediafile.FieldID}
 	case RootSeries:
-		return mediafile.EpisodeColumn
+		return []string{mediafile.EpisodeColumn, mediafile.FieldID}
 	case RootMusic:
-		return mediafile.TrackColumn
+		return []string{mediafile.TrackColumn, mediafile.FieldID}
 	}
-	return mediafile.BookColumn
+	return []string{mediafile.FieldID}
 }
 
 // BookFileRoots names the roots holding a book's files.
@@ -121,12 +121,8 @@ func (db *DB) CountRootFiles(ctx context.Context, root LibraryRoot) (int, error)
 	return n, nil
 }
 
-// RootFilePathAt returns the path of a root's offset-th file row, or "" past the
-// end. Ordered by owner so the walk stays on the partial owner index: ordered by
-// id alone SQLite scans the table for the first match, all of it for a root with
-// no files, and this runs on every system info read and every gated job.
-// ponytail: a book root still walks the other kind's rows to find its own, an
-// index on book_kind if a large one-kind book library ever shows it.
+// RootFilePathAt returns the path of a root's offset-th file row in rootOrder, or
+// "" past the end.
 func (db *DB) RootFilePathAt(
 	ctx context.Context,
 	root LibraryRoot,
@@ -134,7 +130,7 @@ func (db *DB) RootFilePathAt(
 ) (string, error) {
 	path, err := db.client.MediaFile.Query().
 		Where(rootPredicate(root)).
-		Order(ent.Asc(rootOwnerColumn(root), mediafile.FieldID)).
+		Order(ent.Asc(rootOrder(root)...)).
 		Offset(offset).
 		Limit(1).
 		Select(mediafile.FieldPath).

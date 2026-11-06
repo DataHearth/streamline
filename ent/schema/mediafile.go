@@ -124,6 +124,11 @@ func (MediaFile) Indexes() []ent.Index {
 			Annotations(entsql.IndexWhere("track_media_files IS NOT NULL")),
 		index.Edges("book").
 			Annotations(entsql.IndexWhere("book_media_files IS NOT NULL")),
+		// The offline check asks each book root for its first file, and without
+		// this a library holding one kind walks every row to learn the other
+		// root is empty. SQLite appends the rowid, so this also serves the order.
+		index.Fields("book_kind").
+			Annotations(entsql.IndexWhere("book_kind IS NOT NULL")),
 		index.Fields("tags_state"),
 		// Partial: the media-probe backfill asks for the oldest rows that were
 		// never probed, so once the backfill drains, the index is empty and

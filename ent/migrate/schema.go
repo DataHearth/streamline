@@ -1228,6 +1228,14 @@ var (
 				},
 			},
 			{
+				Name:    "mediafile_book_kind",
+				Unique:  false,
+				Columns: []*schema.Column{MediaFilesColumns[27]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "book_kind IS NOT NULL",
+				},
+			},
+			{
 				Name:    "mediafile_tags_state",
 				Unique:  false,
 				Columns: []*schema.Column{MediaFilesColumns[28]},
