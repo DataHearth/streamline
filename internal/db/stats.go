@@ -166,6 +166,10 @@ const (
 		WHEN 'aac' THEN 'aac'
 		WHEN 'flac' THEN 'flac'
 		ELSE 'other' END`
+	// An imported event from an adoption has no grab behind it: a bulk import
+	// made the pipeline read "5,731 of 689 grabs made it into the library".
+	statsGrabbedImport = `NOT (type = 'imported' AND COALESCE(json_extract(payload, '$.source'), '')
+		IN ('wizard', 'orphan', 'bulk_import'))`
 	statsHDRKey = `CASE WHEN dynamic_range IN ('dv', 'hdr10', 'hlg', 'sdr')
 		THEN dynamic_range ELSE 'unknown' END`
 )
@@ -451,6 +455,7 @@ func (db *DB) statsEvents(
 				mediaevent.TypeDriftDetected,
 				mediaevent.TypeDriftConfirmed,
 			),
+			func(s *entsql.Selector) { s.Where(entsql.ExprP(statsGrabbedImport)) },
 		).
 		Select(mediaevent.FieldType, mediaevent.FieldCreateTime).
 		Scan(ctx, &rows)

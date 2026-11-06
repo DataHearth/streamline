@@ -53,6 +53,14 @@ var _ = Describe("GetStats", Label("integration", "db"), func() {
 		event(m, mediaevent.TypeImportFailed, 2*24*time.Hour)
 		event(m, mediaevent.TypeGrabbed, 10*24*time.Hour)
 		event(m, mediaevent.TypeGrabbed, 40*24*time.Hour)
+		for _, source := range []string{"wizard", "orphan", "bulk_import"} {
+			client.MediaEvent.Create().
+				SetMovie(m).
+				SetType(mediaevent.TypeImported).
+				SetCreateTime(now.Add(-time.Hour)).
+				SetPayload(map[string]any{"source": source}).
+				ExecX(ctx)
+		}
 
 		st, err := store.GetStats(ctx, 7, now)
 		Expect(err).NotTo(HaveOccurred())

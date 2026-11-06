@@ -234,4 +234,4 @@ Admins get a **Stats** page, under Operations in the sidebar, with 7, 30 and 90 
 - **Pipeline**: grabs, imports and failures per day against the period before, the search → grab → download → import funnel, the time from grab to import, why grabs failed, how each indexer does, transcoding and drift.
 - **Users and requests**: how many requests came in, what still waits, how long a decision and an arrival take, and every account with its requests and when it was last seen.
 
-Dynamic range is what ffprobe read in the file: Dolby Vision, HDR10, HLG or SDR. A file it has not read for this yet counts as Unknown, and video files it has never read are counted apart.
+The pipeline counts what grabs brought in, so a bulk import or an adopted file is not in its imports. Dynamic range is what ffprobe read in the file: Dolby Vision, HDR10, HLG or SDR. A file it has not read for this yet counts as Unknown, and video files it has never read are counted apart.
