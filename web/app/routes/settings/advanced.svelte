@@ -47,6 +47,9 @@
 	const ROOTS: { value: MigrationRoot; label: string }[] = [
 		{ value: "movies", label: i18n.migration_movie_library() },
 		{ value: "series", label: i18n.migration_series_library() },
+		{ value: "music", label: i18n.migration_music_library() },
+		{ value: "ebooks", label: i18n.migration_ebook_library() },
+		{ value: "audiobooks", label: i18n.migration_audiobook_library() },
 		{ value: "downloads", label: i18n.migration_download_folder() },
 	];
 
@@ -59,7 +62,7 @@
 	let preview = $state<PathMigrationPreview | null>(null);
 	let confirmOpen = $state(false);
 
-	let canMove = $derived(root !== "downloads");
+	let canMove = $derived(root === "movies" || root === "series");
 
 	const roots = createQuery<PathMigrationRootList>(() => ({
 		queryKey: ["path-migration", "roots"],
@@ -219,7 +222,7 @@
 					disabled={live}
 					onChange={(v) => {
 						root = v;
-						if (v === "downloads") moveFiles = false;
+						if (v !== "movies" && v !== "series") moveFiles = false;
 						reset();
 					}}
 				/>
@@ -340,7 +343,7 @@
 				role="note"
 			>
 				<TriangleAlert size={12} class="mt-0.5 shrink-0" aria-hidden="true" />
-				{i18n.migration_download_note()}
+				{root === "downloads" ? i18n.migration_download_note() : i18n.migration_reroot_note()}
 			</p>
 		{/if}
 

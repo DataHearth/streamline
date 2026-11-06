@@ -2241,17 +2241,26 @@ func (e PatchSeriesRequestType) Valid() bool {
 
 // Defines values for PathMigrationPreviewRoot.
 const (
-	PathMigrationPreviewRootDownloads PathMigrationPreviewRoot = "downloads"
-	PathMigrationPreviewRootMovies    PathMigrationPreviewRoot = "movies"
-	PathMigrationPreviewRootSeries    PathMigrationPreviewRoot = "series"
+	PathMigrationPreviewRootAudiobooks PathMigrationPreviewRoot = "audiobooks"
+	PathMigrationPreviewRootDownloads  PathMigrationPreviewRoot = "downloads"
+	PathMigrationPreviewRootEbooks     PathMigrationPreviewRoot = "ebooks"
+	PathMigrationPreviewRootMovies     PathMigrationPreviewRoot = "movies"
+	PathMigrationPreviewRootMusic      PathMigrationPreviewRoot = "music"
+	PathMigrationPreviewRootSeries     PathMigrationPreviewRoot = "series"
 )
 
 // Valid indicates whether the value is a known member of the PathMigrationPreviewRoot enum.
 func (e PathMigrationPreviewRoot) Valid() bool {
 	switch e {
+	case PathMigrationPreviewRootAudiobooks:
+		return true
 	case PathMigrationPreviewRootDownloads:
 		return true
+	case PathMigrationPreviewRootEbooks:
+		return true
 	case PathMigrationPreviewRootMovies:
+		return true
+	case PathMigrationPreviewRootMusic:
 		return true
 	case PathMigrationPreviewRootSeries:
 		return true
@@ -2262,17 +2271,26 @@ func (e PathMigrationPreviewRoot) Valid() bool {
 
 // Defines values for PathMigrationRequestRoot.
 const (
-	PathMigrationRequestRootDownloads PathMigrationRequestRoot = "downloads"
-	PathMigrationRequestRootMovies    PathMigrationRequestRoot = "movies"
-	PathMigrationRequestRootSeries    PathMigrationRequestRoot = "series"
+	PathMigrationRequestRootAudiobooks PathMigrationRequestRoot = "audiobooks"
+	PathMigrationRequestRootDownloads  PathMigrationRequestRoot = "downloads"
+	PathMigrationRequestRootEbooks     PathMigrationRequestRoot = "ebooks"
+	PathMigrationRequestRootMovies     PathMigrationRequestRoot = "movies"
+	PathMigrationRequestRootMusic      PathMigrationRequestRoot = "music"
+	PathMigrationRequestRootSeries     PathMigrationRequestRoot = "series"
 )
 
 // Valid indicates whether the value is a known member of the PathMigrationRequestRoot enum.
 func (e PathMigrationRequestRoot) Valid() bool {
 	switch e {
+	case PathMigrationRequestRootAudiobooks:
+		return true
 	case PathMigrationRequestRootDownloads:
 		return true
+	case PathMigrationRequestRootEbooks:
+		return true
 	case PathMigrationRequestRootMovies:
+		return true
+	case PathMigrationRequestRootMusic:
 		return true
 	case PathMigrationRequestRootSeries:
 		return true
@@ -2283,17 +2301,26 @@ func (e PathMigrationRequestRoot) Valid() bool {
 
 // Defines values for PathMigrationRootRoot.
 const (
-	PathMigrationRootRootDownloads PathMigrationRootRoot = "downloads"
-	PathMigrationRootRootMovies    PathMigrationRootRoot = "movies"
-	PathMigrationRootRootSeries    PathMigrationRootRoot = "series"
+	PathMigrationRootRootAudiobooks PathMigrationRootRoot = "audiobooks"
+	PathMigrationRootRootDownloads  PathMigrationRootRoot = "downloads"
+	PathMigrationRootRootEbooks     PathMigrationRootRoot = "ebooks"
+	PathMigrationRootRootMovies     PathMigrationRootRoot = "movies"
+	PathMigrationRootRootMusic      PathMigrationRootRoot = "music"
+	PathMigrationRootRootSeries     PathMigrationRootRoot = "series"
 )
 
 // Valid indicates whether the value is a known member of the PathMigrationRootRoot enum.
 func (e PathMigrationRootRoot) Valid() bool {
 	switch e {
+	case PathMigrationRootRootAudiobooks:
+		return true
 	case PathMigrationRootRootDownloads:
 		return true
+	case PathMigrationRootRootEbooks:
+		return true
 	case PathMigrationRootRootMovies:
+		return true
+	case PathMigrationRootRootMusic:
 		return true
 	case PathMigrationRootRootSeries:
 		return true

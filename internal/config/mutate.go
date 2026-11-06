@@ -40,12 +40,15 @@ type LibraryPatch struct {
 	MonitorSpecials     *bool
 	MusicMonitoredTypes *[]string
 	BookLanguage        *string
-	// The three roots are pathmigrate's to write. It rewrites every stored
+	// The roots are pathmigrate's to write. It rewrites every stored
 	// path first and repoints the root afterwards; a caller that sets one of
 	// these on its own leaves the library pointing at the old prefix.
 	MoviePath            *string
 	SeriesPath           *string
 	DownloadPath         *string
+	MusicPath            *string
+	EbookPath            *string
+	AudiobookPath        *string
 	MovieNaming          *string
 	SeriesNaming         *string
 	ImportMode           *string
@@ -346,6 +349,15 @@ func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, erro
 		}
 		if patch.DownloadPath != nil {
 			c.Library.DownloadPath = *patch.DownloadPath
+		}
+		if patch.MusicPath != nil {
+			c.Library.MusicPath = *patch.MusicPath
+		}
+		if patch.EbookPath != nil {
+			c.Library.EbookPath = *patch.EbookPath
+		}
+		if patch.AudiobookPath != nil {
+			c.Library.AudiobookPath = *patch.AudiobookPath
 		}
 		if patch.MovieNaming != nil {
 			c.Library.MovieNaming = *patch.MovieNaming

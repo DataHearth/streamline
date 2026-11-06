@@ -50,9 +50,11 @@ var _ = Describe("Handler: Library path migration",
 				Return(1, nil).Once()
 			app.store.EXPECT().
 				ListMediaFilesByPathPrefix(mock.Anything, mock.Anything).
-				Return(nil, nil).Once()
+				Return(nil, nil).Times(4)
 			app.store.EXPECT().CountEpisodeMediaFiles(mock.Anything).
 				Return(0, nil).Once()
+			app.store.EXPECT().CountRootFiles(mock.Anything, mock.Anything).
+				Return(0, nil).Times(3)
 			app.store.EXPECT().
 				ListDownloadRecordsByPathPrefix(mock.Anything, mock.Anything).
 				Return(nil, nil).Once()
@@ -70,7 +72,7 @@ var _ = Describe("Handler: Library path migration",
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			var body PathMigrationRootList
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
-			Expect(body.Items).To(HaveLen(3))
+			Expect(body.Items).To(HaveLen(6))
 			Expect(body.Items[0].Path).To(Equal(root))
 			Expect(body.Items[0].Tracked).To(Equal(1))
 			Expect(body.Items[0].Total).To(Equal(1))

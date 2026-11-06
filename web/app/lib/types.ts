@@ -1828,7 +1828,7 @@ export type ImportStartRequest = {
 	import_mode?: ImportTransferMode | "";
 };
 
-export type MigrationRoot = "movies" | "series" | "downloads";
+export type MigrationRoot = "movies" | "series" | "downloads" | "music" | "ebooks" | "audiobooks";
 
 export type PathMigrationRequest = {
 	root: MigrationRoot;

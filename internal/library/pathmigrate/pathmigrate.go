@@ -48,9 +48,12 @@ var (
 type Root string
 
 const (
-	RootMovies    Root = "movies"
-	RootSeries    Root = "series"
-	RootDownloads Root = "downloads"
+	RootMovies     Root = "movies"
+	RootSeries     Root = "series"
+	RootDownloads  Root = "downloads"
+	RootMusic      Root = "music"
+	RootEbooks     Root = "ebooks"
+	RootAudiobooks Root = "audiobooks"
 )
 
 // sampleLimit caps how many rewrites Preview returns so a 50k-file library
@@ -62,12 +65,13 @@ var (
 	ErrInvalidPath      = errors.New(
 		"both paths must be absolute and different",
 	)
-	// ErrMoveUnsupported guards the download root: its rows point at torrent
-	// data the download client still owns, and moving it out from under the
-	// client breaks seeding. Re-pointing after the operator remaps the
-	// client's own volume is the supported flow.
+	// ErrMoveUnsupported guards the roots that can only be re-pointed. Download
+	// rows point at torrent data the download client still owns, and moving it
+	// breaks seeding. The run loop moves only files with rows, so on the music
+	// and book roots it would leave .lrc lyrics and cover art behind, and it
+	// does not take library.LockAlbumFiles.
 	ErrMoveUnsupported = errors.New(
-		"moving files is not supported for the download root",
+		"moving files is not supported for this root; move them yourself and re-point it",
 	)
 	ErrUnknownRoot = errors.New("unknown library root")
 )
@@ -154,8 +158,11 @@ func (s *Service) Roots(ctx context.Context) ([]RootState, error) {
 	ctx, span := tracer.Start(ctx, "pathmigrate.roots")
 	defer span.End()
 
-	out := make([]RootState, 0, 3)
-	for _, r := range []Root{RootMovies, RootSeries, RootDownloads} {
+	roots := []Root{
+		RootMovies, RootSeries, RootDownloads, RootMusic, RootEbooks, RootAudiobooks,
+	}
+	out := make([]RootState, 0, len(roots))
+	for _, r := range roots {
 		path, err := currentRoot(r)
 		if err != nil {
 			return nil, otelx.RecordSpanError(span, err)
@@ -204,6 +211,8 @@ func (s *Service) countAll(ctx context.Context, r Root) (int, error) {
 			return 0, err
 		}
 		return records + sessions, nil
+	case RootMusic, RootEbooks, RootAudiobooks:
+		return s.store.CountRootFiles(ctx, db.LibraryRoot(r))
 	}
 	return 0, ErrUnknownRoot
 }
@@ -226,7 +235,7 @@ func (s *Service) Preview(ctx context.Context, p Params) (Preview, error) {
 		From:    p.From,
 		To:      p.To,
 		Total:   len(targets),
-		CanMove: p.Root != RootDownloads,
+		CanMove: canMove(p.Root),
 	}
 	for _, t := range targets {
 		if !onDisk(t, p.MoveFiles) {
@@ -354,6 +363,12 @@ func (s *Service) persistRoot(ctx context.Context, p Params) error {
 		patch.SeriesPath = &moved
 	case RootDownloads:
 		patch.DownloadPath = &moved
+	case RootMusic:
+		patch.MusicPath = &moved
+	case RootEbooks:
+		patch.EbookPath = &moved
+	case RootAudiobooks:
+		patch.AudiobookPath = &moved
 	}
 	if _, err := config.UpdateLibrary(ctx, patch); err != nil {
 		if errors.Is(err, config.ErrReadOnly) {
@@ -376,8 +391,18 @@ func currentRoot(r Root) (string, error) {
 		return cfg.Library.SeriesPath, nil
 	case RootDownloads:
 		return cfg.Library.DownloadPath, nil
+	case RootMusic:
+		return cfg.Library.MusicPath, nil
+	case RootEbooks:
+		return cfg.Library.EbookPath, nil
+	case RootAudiobooks:
+		return cfg.Library.AudiobookPath, nil
 	}
 	return "", ErrUnknownRoot
+}
+
+func canMove(r Root) bool {
+	return r == RootMovies || r == RootSeries
 }
 
 func (s *Service) resolve(p Params) (Params, error) {
@@ -393,7 +418,7 @@ func (s *Service) resolve(p Params) (Params, error) {
 	if !filepath.IsAbs(p.From) || !filepath.IsAbs(p.To) || p.From == p.To {
 		return Params{}, ErrInvalidPath
 	}
-	if p.MoveFiles && p.Root == RootDownloads {
+	if p.MoveFiles && !canMove(p.Root) {
 		return Params{}, ErrMoveUnsupported
 	}
 	return p, nil
@@ -571,7 +596,7 @@ func (s *Service) WarnOnDrift(ctx context.Context) {
 		if r.Total == 0 || r.Tracked > 0 {
 			continue
 		}
-		msg := "library root does not match any stored path — records will be pruned"
+		msg := "library root does not match any stored path — held offline if those files cannot be reached"
 		if r.Root == RootDownloads {
 			msg = "download root does not match any stored path — downloads cannot import"
 		}

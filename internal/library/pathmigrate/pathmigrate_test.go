@@ -11,9 +11,13 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
 
 var _ = Describe("Service", Label("unit", "library"), func() {
@@ -56,7 +60,7 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 				Return(movieTotal, nil).Once()
 			store.EXPECT().
 				ListMediaFilesByPathPrefix(mock.Anything, mock.Anything).
-				Return(nil, nil).Once()
+				Return(nil, nil).Times(4)
 			store.EXPECT().CountEpisodeMediaFiles(mock.Anything).
 				Return(0, nil).Once()
 			store.EXPECT().
@@ -69,7 +73,29 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 				Return(0, nil).Once()
 			store.EXPECT().CountTorrentSessions(mock.Anything).
 				Return(0, nil).Once()
+			store.EXPECT().CountRootFiles(mock.Anything, mock.Anything).
+				Return(0, nil).Times(3)
 		}
+
+		It("lists all six roots", func() {
+			expectCounts(nil, 0)
+
+			states, err := svc.Roots(ctx)
+
+			Expect(err).NotTo(HaveOccurred())
+			roots := make([]Root, len(states))
+			for i, st := range states {
+				roots[i] = st.Root
+			}
+			Expect(roots).To(ConsistOf(
+				RootMovies,
+				RootSeries,
+				RootDownloads,
+				RootMusic,
+				RootEbooks,
+				RootAudiobooks,
+			))
+		})
 
 		It("counts the paths stored under each configured root", func() {
 			expectCounts([]*ent.MediaFile{
@@ -78,7 +104,7 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 
 			states, err := svc.Roots(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(states).To(HaveLen(3))
+			Expect(states).To(HaveLen(6))
 			Expect(states[0].Root).To(Equal(RootMovies))
 			Expect(states[0].Path).To(Equal(root))
 			Expect(states[0].Tracked).To(Equal(1))
@@ -108,15 +134,24 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 		// for it, none of them under the configured path.
 		expectDrift := func(drifted Root) {
 			GinkgoHelper()
-			movieTotal, downloadTotal := 0, 0
-			if drifted == RootMovies {
+			movieTotal, downloadTotal, musicTotal := 0, 0, 0
+			switch drifted {
+			case RootMovies:
 				movieTotal = 2
-			} else {
+			case RootMusic:
+				musicTotal = 2
+			default:
 				downloadTotal = 2
 			}
+			store.EXPECT().CountRootFiles(mock.Anything, db.RootMusic).
+				Return(musicTotal, nil).Once()
+			store.EXPECT().CountRootFiles(mock.Anything, db.RootEbooks).
+				Return(0, nil).Once()
+			store.EXPECT().CountRootFiles(mock.Anything, db.RootAudiobooks).
+				Return(0, nil).Once()
 			store.EXPECT().
 				ListMediaFilesByPathPrefix(mock.Anything, mock.Anything).
-				Return(nil, nil).Twice()
+				Return(nil, nil).Times(5)
 			store.EXPECT().CountMovieMediaFiles(mock.Anything).
 				Return(movieTotal, nil).Once()
 			store.EXPECT().CountEpisodeMediaFiles(mock.Anything).
@@ -133,16 +168,24 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 				Return(0, nil).Once()
 		}
 
-		It("warns that a drifted media root will be pruned", func() {
-			expectDrift(RootMovies)
+		DescribeTable("warns about a drifted media root without promising a prune",
+			func(drifted Root) {
+				expectDrift(drifted)
 
-			var buf bytes.Buffer
-			GinkgoWriter.TeeTo(&buf)
-			DeferCleanup(GinkgoWriter.ClearTeeWriters)
+				var buf bytes.Buffer
+				GinkgoWriter.TeeTo(&buf)
+				DeferCleanup(GinkgoWriter.ClearTeeWriters)
 
-			svc.WarnOnDrift(ctx)
-			Expect(buf.String()).To(ContainSubstring("records will be pruned"))
-		})
+				svc.WarnOnDrift(ctx)
+				Expect(
+					buf.String(),
+				).To(ContainSubstring("library.root=" + string(drifted)))
+				Expect(buf.String()).To(ContainSubstring("held offline"))
+				Expect(buf.String()).NotTo(ContainSubstring("pruned"))
+			},
+			Entry("movies", RootMovies),
+			Entry("music", RootMusic),
+		)
 
 		// Download rows are never pruned on drift — hygiene walks media files
 		// only — so the media-root message would be a false alarm here.
@@ -155,7 +198,7 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 
 			svc.WarnOnDrift(ctx)
 			Expect(buf.String()).To(ContainSubstring("downloads cannot import"))
-			Expect(buf.String()).NotTo(ContainSubstring("records will be pruned"))
+			Expect(buf.String()).NotTo(ContainSubstring("held offline"))
 		})
 	})
 
@@ -229,6 +272,27 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 			_, err := svc.Preview(ctx, Params{Root: "photos", To: dest})
 			Expect(err).To(MatchError(ErrUnknownRoot))
 		})
+
+		DescribeTable("only re-points the music and book roots",
+			func(r Root) {
+				_, err := svc.Preview(
+					ctx,
+					Params{Root: r, To: dest, MoveFiles: true},
+				)
+				Expect(err).To(MatchError(ErrMoveUnsupported))
+
+				store.EXPECT().
+					ListMediaFilesByPathPrefix(mock.Anything, mock.Anything).
+					Return(nil, nil).
+					Once()
+				p, err := svc.Preview(ctx, Params{Root: r, To: dest})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(p.CanMove).To(BeFalse())
+			},
+			Entry("music", RootMusic),
+			Entry("ebooks", RootEbooks),
+			Entry("audiobooks", RootAudiobooks),
+		)
 
 		It("refuses to move files for the download root", func() {
 			_, err := svc.Preview(ctx, Params{
@@ -439,4 +503,81 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 			Expect(config.Get().Library.MoviePath).To(Equal(root))
 		})
 	})
+})
+
+var _ = Describe("Service on real rows", Label("integration", "library"), func() {
+	DescribeTable("re-points a music or book root and brings it back online",
+		func(
+			r Root,
+			dbRoot db.LibraryRoot,
+			key string,
+			configured func(config.LibraryConfig) string,
+			own func(client *ent.Client, c *ent.MediaFileCreate) *ent.MediaFileCreate,
+		) {
+			ctx := context.Background()
+			tmp := GinkgoT().TempDir()
+			from := filepath.Join(tmp, "old")
+			to := filepath.Join(tmp, "new")
+			Expect(os.MkdirAll(from, 0o755)).To(Succeed())
+			Expect(os.MkdirAll(to, 0o755)).To(Succeed())
+			Expect(
+				os.WriteFile(filepath.Join(to, "file"), []byte("x"), 0o644),
+			).To(Succeed())
+			configtest.SetupFile(
+				map[string]any{"library": map[string]any{key: from}},
+			)
+			client := dbtest.SetupTestDB(ctx)
+			DeferCleanup(client.Close)
+			store := db.New(client)
+			roothealth.Register(store)
+			DeferCleanup(func() { roothealth.Register(nil) })
+			row := own(client, client.MediaFile.Create().
+				SetPath(filepath.Join(from, "file")).SetSize(1)).SaveX(ctx)
+			Expect(roothealth.Offline(ctx, dbRoot)).NotTo(BeNil())
+
+			svc := NewService(store)
+			_, err := svc.Start(ctx, Params{Root: r, To: to})
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool { return svc.Status().Running }).Should(BeFalse())
+
+			Expect(svc.Status().Error).To(BeEmpty())
+			Expect(
+				client.MediaFile.GetX(ctx, row.ID).Path,
+			).To(Equal(filepath.Join(to, "file")))
+			Expect(configured(config.Get().Library)).To(Equal(to))
+			Expect(roothealth.Offline(ctx, dbRoot)).To(BeNil())
+		},
+		Entry("music", RootMusic, db.RootMusic, "music_path",
+			func(l config.LibraryConfig) string { return l.MusicPath },
+			func(client *ent.Client, c *ent.MediaFileCreate) *ent.MediaFileCreate {
+				ctx := context.Background()
+				artist := client.Artist.Create().SetMbid("a").SetName("A").SaveX(ctx)
+				album := client.Album.Create().
+					SetMbid("b").
+					SetTitle("B").
+					SetArtist(artist).
+					SaveX(ctx)
+				return c.SetTrack(client.Track.Create().
+					SetTitle("T").
+					SetDisc(1).SetPosition(1).SetAlbum(album).SaveX(ctx))
+			}),
+		Entry("ebooks", RootEbooks, db.RootEbooks, "ebook_path",
+			func(l config.LibraryConfig) string { return l.EbookPath },
+			func(client *ent.Client, c *ent.MediaFileCreate) *ent.MediaFileCreate {
+				book := client.Book.Create().
+					SetHardcoverID(1).
+					SetTitle("B").
+					SaveX(context.Background())
+				return c.SetBook(book).SetBookKind(entmediafile.BookKindEbook)
+			}),
+		Entry("audiobooks", RootAudiobooks, db.RootAudiobooks, "audiobook_path",
+			func(l config.LibraryConfig) string { return l.AudiobookPath },
+			func(client *ent.Client, c *ent.MediaFileCreate) *ent.MediaFileCreate {
+				book := client.Book.Create().
+					SetHardcoverID(1).
+					SetTitle("B").
+					SaveX(context.Background())
+				return c.SetBook(book).SetBookKind(entmediafile.BookKindAudiobook)
+			}),
+	)
 })

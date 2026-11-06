@@ -14839,7 +14839,7 @@ components:
       properties:
         root:
           type: string
-          enum: [movies, series, downloads]
+          enum: [movies, series, downloads, music, ebooks, audiobooks]
         from:
           type: string
           description: |
@@ -14861,7 +14861,7 @@ components:
       properties:
         root:
           type: string
-          enum: [movies, series, downloads]
+          enum: [movies, series, downloads, music, ebooks, audiobooks]
         path:
           type: string
           description: The currently configured root.
@@ -14899,7 +14899,7 @@ components:
       properties:
         root:
           type: string
-          enum: [movies, series, downloads]
+          enum: [movies, series, downloads, music, ebooks, audiobooks]
         from:
           type: string
         to:
