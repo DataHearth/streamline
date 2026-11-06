@@ -537,6 +537,34 @@ var _ = Describe("Music tag sync", Label("unit", "integration", "music"), func()
 		Expect(*reload(other).TagsState).To(Equal(entmediafile.TagsStatePending))
 	})
 
+	It(
+		"writes the album's other files and records no failure for a missing one",
+		func() {
+			noTorrents()
+			mf := placeFile("Nirvana/Nevermind/01.flac", pending())
+			tracks := alb.QueryTracks().AllX(e.ctx)
+			missing := e.client.MediaFile.Create().
+				SetPath(filepath.Join(musicDir, "gone.flac")).SetSize(1).
+				SetTrackID(tracks[len(tracks)-1].ID).
+				SetTagsState(entmediafile.TagsStatePending).
+				SetMissingSince(time.Now()).
+				SaveX(e.ctx)
+			e.posters.EXPECT().
+				Fetch(mock.Anything, coverKind, alb.ID, mock.Anything).
+				Return(errors.New("no cover")).
+				Maybe()
+
+			_, err := e.svc.TagAlbum(e.ctx, alb.ID)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(*reload(mf).TagsState).To(Equal(entmediafile.TagsStateWritten))
+			Expect(
+				*reload(missing).TagsState,
+			).To(Equal(entmediafile.TagsStatePending))
+			Expect(reload(missing).TagFailures).To(BeZero())
+		},
+	)
+
 	It("lists the download clients once for albums tagged back to back", func() {
 		// A bulk-import commit tags album after album.
 		e.dl.EXPECT().SeedingTorrents(mock.Anything).

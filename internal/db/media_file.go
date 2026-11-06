@@ -146,6 +146,7 @@ func (db *DB) ListUnprobedMediaFiles(
 	rows, err := db.client.MediaFile.Query().
 		Where(
 			mediafile.ProbedAtIsNil(),
+			mediafile.MissingSinceIsNil(),
 			mediafile.Or(mediafile.HasMovie(), mediafile.HasEpisode()),
 		).
 		Order(ent.Asc(mediafile.FieldID)).

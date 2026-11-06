@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/mediaevent"
@@ -73,6 +74,30 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 		plan, err := svc.Preview(ctx, 1)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(plan.Operations).To(BeEmpty())
+	})
+
+	It("skips a missing file and still renames the others", func() {
+		since := time.Now()
+		show := &ent.TVShow{ID: 1, Title: "The Wire", Year: 2002, TvdbID: 1}
+		show.Edges.Seasons = []*ent.Season{
+			{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+				{ID: 100, Number: 1, Edges: ent.EpisodeEdges{
+					MediaFiles: []*ent.MediaFile{
+						{ID: 10, Path: "/old/gone.mkv", MissingSince: &since},
+					},
+				}},
+				{ID: 101, Number: 2, Edges: ent.EpisodeEdges{
+					MediaFiles: []*ent.MediaFile{{ID: 11, Path: "/old/here.mkv"}},
+				}},
+			}}},
+		}
+		storeMk.FindTVShowByID(mock.Anything, uint32(1)).Return(show, nil).Once()
+
+		plan, err := svc.Preview(ctx, 1)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(plan.Operations).To(HaveLen(1))
+		Expect(plan.Operations[0].MediaFileID).To(Equal(uint32(11)))
 	})
 
 	Describe("Apply's event recording", func() {

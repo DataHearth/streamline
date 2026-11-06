@@ -138,6 +138,9 @@ func (r *Renamer) buildPlan(
 		}
 		for _, t := range alb.Edges.Tracks {
 			for _, f := range t.Edges.MediaFiles {
+				if f.MissingSince != nil {
+					continue
+				}
 				target := trackTarget(lib, a, alb, t, f, year, multiDisc)
 				if target == f.Path {
 					continue

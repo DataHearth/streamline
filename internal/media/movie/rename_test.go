@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -68,6 +69,27 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 		Expect(plan.Operations[0].To).To(
 			Equal("/library/movies/Dune (2021)/Dune (2021).mkv"),
 		)
+	})
+
+	It("skips a missing file and still renames the others", func() {
+		store := dbmocks.NewMockStore(GinkgoT())
+		svc := NewRenameService(store, nil, "/library/movies", naming)
+		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: 438631}
+		since := time.Now()
+		files := []*ent.MediaFile{
+			{ID: 10, Path: filepath.Join(tmp, "Gone.mkv"), MissingSince: &since},
+			{ID: 11, Path: filepath.Join(tmp, "Here.mkv")},
+		}
+		store.EXPECT().FindMovieByID(mock.Anything, uint32(1)).
+			Return(movie, nil).Once()
+		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(1)).
+			Return(files, nil).Once()
+
+		plan, err := svc.Preview(ctx, 1)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(plan.Operations).To(HaveLen(1))
+		Expect(plan.Operations[0].MediaFileID).To(Equal(uint32(11)))
 	})
 
 	It("leaves out a file the template would put outside the library", func() {

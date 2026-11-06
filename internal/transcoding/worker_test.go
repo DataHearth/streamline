@@ -495,6 +495,19 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		Expect(os.WriteFile(mf.Path, data, 0o644)).To(Succeed())
 	})
 
+	It("defers a job whose file is missing, spending no attempt", func() {
+		mf := seedMovieFile("hevc")
+		job := queueJob(mf)
+		client.MediaFile.UpdateOneID(mf.ID).SetMissingSince(time.Now()).ExecX(ctx)
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		held := reload(job)
+		Expect(held.Status).To(Equal(transcodejob.StatusQueued))
+		Expect(held.DeferredUntil).NotTo(BeNil())
+		Expect(held.Attempts).To(Equal(uint8(0)))
+	})
+
 	It("never asks the client while defer_seeding is off", func() {
 		mf := seedMovieFile("hevc")
 		seedTorrent(mf, "abc")

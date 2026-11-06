@@ -146,6 +146,9 @@ func (r *RenameService) buildPlan(
 	for _, se := range show.Edges.Seasons {
 		for _, ep := range se.Edges.Episodes {
 			for _, f := range ep.Edges.MediaFiles {
+				if f.MissingSince != nil {
+					continue
+				}
 				target := r.target(show, se.Number, ep, f)
 				if target == f.Path {
 					continue

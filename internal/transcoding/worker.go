@@ -360,7 +360,7 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 	}
 	span.SetAttributes(attribute.Int64("media_file.id", int64(mf.ID)))
 
-	if w.heldForRoot(wctx, job, mf) || w.deferred(wctx, job, mf) {
+	if w.heldForAbsence(wctx, job, mf) || w.deferred(wctx, job, mf) {
 		return
 	}
 
@@ -565,25 +565,33 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 	)
 }
 
-// heldForRoot defers a job whose library root looks gone, so an outage costs it
-// no attempt.
-func (w *Worker) heldForRoot(
+// heldForAbsence defers a job whose file is missing or whose library root looks
+// gone, so the absence costs it no attempt.
+func (w *Worker) heldForAbsence(
 	ctx context.Context,
 	job *ent.TranscodeJob,
 	mf *ent.MediaFile,
 ) bool {
-	root := db.RootSeries
-	if mf.Edges.Movie != nil {
-		root = db.RootMovies
-	}
-	status, err := roothealth.Offline(ctx, root)
-	if err != nil {
-		slog.ErrorContext(ctx, "could not check the library root of a transcode job",
-			"transcode.job_id", job.ID, "error", err)
-		return false
-	}
-	if status == nil {
-		return false
+	if mf.MissingSince == nil {
+		root := db.RootSeries
+		if mf.Edges.Movie != nil {
+			root = db.RootMovies
+		}
+		status, err := roothealth.Offline(ctx, root)
+		if err != nil {
+			slog.ErrorContext(
+				ctx,
+				"could not check the library root of a transcode job",
+				"transcode.job_id",
+				job.ID,
+				"error",
+				err,
+			)
+			return false
+		}
+		if status == nil {
+			return false
+		}
 	}
 	if err := w.db.DeferTranscodeJob(
 		ctx,

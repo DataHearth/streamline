@@ -97,6 +97,21 @@ var _ = Describe("Music tag bookkeeping", Label("integration", "db"), func() {
 		Expect(got[0].Edges.Track.Edges.Album.ID).To(Equal(alb.ID))
 	})
 
+	It("leaves a missing file out of the tag sync and the edit check", func() {
+		pending := file(st(entmediafile.TagsStatePending), "p")
+		written := file(st(entmediafile.TagsStateWritten), "w")
+		client.MediaFile.Update().
+			Where(entmediafile.IDIn(pending.ID, written.ID)).
+			SetMissingSince(time.Now()).ExecX(ctx)
+
+		got, err := store.ListMediaFilesForTagSync(ctx, 0)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(BeEmpty())
+		got, err = store.ListMediaFilesForEditCheck(ctx, 0)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(BeEmpty())
+	})
+
 	It("sends a file deferred again to the back of the deferred files", func() {
 		first := file(st(entmediafile.TagsStateDeferred), "d1")
 		second := file(st(entmediafile.TagsStateDeferred), "d2")

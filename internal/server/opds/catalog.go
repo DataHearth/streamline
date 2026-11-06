@@ -174,7 +174,11 @@ func (h *Handler) recent(w http.ResponseWriter, r *http.Request) {
 	seen := map[uint32]bool{}
 	for offset := 0; len(books) < recentLimit; offset += page {
 		files, err := h.client.MediaFile.Query().
-			Where(mediafile.BookKindEQ(mediafile.BookKindEbook), mediafile.HasBook()).
+			Where(
+				mediafile.BookKindEQ(mediafile.BookKindEbook),
+				mediafile.MissingSinceIsNil(),
+				mediafile.HasBook(),
+			).
 			Order(ent.Desc(mediafile.FieldCreateTime), ent.Desc(mediafile.FieldID)).
 			Limit(page).Offset(offset).
 			WithBook(func(q *ent.BookQuery) {
@@ -275,11 +279,17 @@ var atomMakers = []bookcontribution.Role{
 }
 
 func hasEbookFile() predicate.Book {
-	return book.HasMediaFilesWith(mediafile.BookKindEQ(mediafile.BookKindEbook))
+	return book.HasMediaFilesWith(
+		mediafile.BookKindEQ(mediafile.BookKindEbook),
+		mediafile.MissingSinceIsNil(),
+	)
 }
 
 func ebookFiles(q *ent.MediaFileQuery) {
-	q.Where(mediafile.BookKindEQ(mediafile.BookKindEbook))
+	q.Where(
+		mediafile.BookKindEQ(mediafile.BookKindEbook),
+		mediafile.MissingSinceIsNil(),
+	)
 }
 
 func (h *Handler) ebookBooks() *ent.BookQuery {

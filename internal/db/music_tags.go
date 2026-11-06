@@ -36,6 +36,7 @@ func (db *DB) ListMediaFilesForTagSync(
 	q := db.client.MediaFile.Query().
 		Where(
 			entmediafile.HasTrack(),
+			entmediafile.MissingSinceIsNil(),
 			entmediafile.TagsStateIn(
 				entmediafile.TagsStatePending,
 				entmediafile.TagsStateDeferred,
@@ -181,6 +182,7 @@ func (db *DB) ListMediaFilesForEditCheck(
 	q := db.client.MediaFile.Query().
 		Where(
 			entmediafile.TagsStateEQ(entmediafile.TagsStateWritten),
+			entmediafile.MissingSinceIsNil(),
 			entmediafile.HasTrackWith(track.HasAlbumWith(album.TagsManaged(true))),
 		).
 		WithTrack(func(tq *ent.TrackQuery) { tq.WithAlbum() }).

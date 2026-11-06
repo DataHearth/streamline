@@ -60,6 +60,23 @@ var _ = Describe("Renamer", Label("unit", "integration", "music"), func() {
 		Expect(plan.Operations[0].To).To(Equal(target("01 - Drain You.flac")))
 	})
 
+	It("skips a missing file and still renames the others", func() {
+		tracks := albums[0].QueryTracks().AllX(e.ctx)
+		stray := filepath.Join(root(), "dump", "a.flac")
+		write(stray)
+		e.addFile(tracks[0], stray, "lossless")
+		gonePath := filepath.Join(root(), "dump", "b.flac")
+		gone := e.addFile(tracks[1], gonePath, "lossless")
+		e.client.MediaFile.UpdateOne(gone).SetMissingSince(time.Now()).ExecX(e.ctx)
+
+		plan, err := r.Apply(e.ctx, artist.ID)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(plan.Operations).To(HaveLen(1))
+		Expect(plan.Operations[0].From).To(Equal(stray))
+		Expect(e.client.MediaFile.GetX(e.ctx, gone.ID).Path).To(Equal(gonePath))
+	})
+
 	It("plans nothing when every file is where the template puts it", func() {
 		tracks := albums[0].QueryTracks().AllX(e.ctx)
 		e.addFile(tracks[0], target("01 - Drain You.flac"), "lossless")

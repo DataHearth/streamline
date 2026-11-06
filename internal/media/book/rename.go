@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -57,9 +58,19 @@ func planBook(
 	var ops []library.RenameOperation
 	for _, kind := range slotKinds {
 		files := slotFiles(b, kind)
-		if len(files) == 0 {
+		present := slices.DeleteFunc(
+			slices.Clone(files),
+			func(f *ent.MediaFile) bool {
+				return f.MissingSince != nil
+			},
+		)
+		// An audiobook folder moves whole, and moving what is left of it would
+		// leave a returning file's stored path behind.
+		if len(present) == 0 ||
+			(kind == slotAudiobook && len(present) < len(files)) {
 			continue
 		}
+		files = present
 		root := library.BookRoot(lib, kind)
 		dest, err := library.BookDestination(
 			root, library.BookTemplate(lib, b, kind), library.NamingForBook(b, kind),

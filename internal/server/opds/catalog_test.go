@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	g "github.com/onsi/ginkgo/v2"
@@ -220,6 +221,25 @@ var _ = g.Describe("catalog", g.Label("integration"), func() {
 		Expect(body).To(ContainSubstring("A fallen city."))
 		Expect(body).NotTo(ContainSubstring("Warbreaker"))
 	})
+
+	g.It(
+		"does not offer a book whose only ebook is missing",
+		func(ctx g.SpecContext) {
+			f.client.MediaFile.Update().
+				Where(mediafile.PathEQ(f.file)).
+				SetMissingSince(time.Now()).ExecX(ctx)
+
+			for _, path := range []string{
+				fmt.Sprintf("/opds/authors/%d", f.author.ID),
+				"/opds/recent",
+				"/opds/search?q=Elantris",
+			} {
+				rec := f.get(path, true)
+				Expect(rec.Code).To(Equal(http.StatusOK), path)
+				Expect(rec.Body.String()).NotTo(ContainSubstring("<entry>"), path)
+			}
+		},
+	)
 
 	g.It("serves a cover under Basic auth and refuses it without", func() {
 		path := fmt.Sprintf("/opds/cover/%d", f.ebook.ID)

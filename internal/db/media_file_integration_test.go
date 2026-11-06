@@ -389,6 +389,20 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("ListUnprobedMediaFiles with a missing file", func() {
+		It("leaves it out, so a backlog of them cannot starve the batch", func() {
+			missing := createMovieFile()
+			present := createMovieFile()
+			client.MediaFile.UpdateOneID(missing.ID).
+				SetMissingSince(time.Now()).ExecX(ctx)
+
+			got, err := store.ListUnprobedMediaFiles(ctx, 1)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(HaveLen(1))
+			Expect(got[0].ID).To(Equal(present.ID))
+		})
+	})
+
 	Describe("ListAllMediaFilesWithOwners", func() {
 		It("eager-loads both the movie and the episode edge", func() {
 			m, err := store.CreateMovie(ctx, CreateMovieParams{

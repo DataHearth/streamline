@@ -265,6 +265,43 @@ var _ = Describe("Book lifecycle", Label("unit", "integration", "books"), func()
 			},
 		)
 
+		It("skips a missing ebook file and still renames the others", func() {
+			b := f.addBook(1, "Elantris", "")
+			here := write(filepath.Join(f.dir, "ebooks", "x.epub"))
+			attach(b, mediafile.BookKindEbook, here)
+			gonePath := filepath.Join(f.dir, "ebooks", "x.pdf")
+			attach(b, mediafile.BookKindEbook, gonePath)
+			f.client.MediaFile.Update().
+				Where(mediafile.PathEQ(gonePath)).
+				SetMissingSince(time.Now()).ExecX(f.ctx)
+
+			plan, err := f.svc.RenameBook(f.ctx, b.ID, false)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(plan.Operations).To(HaveLen(1))
+			Expect(plan.Operations[0].From).To(Equal(here))
+			Expect(f.client.MediaFile.Query().
+				Where(mediafile.PathEQ(gonePath)).ExistX(f.ctx)).To(BeTrue())
+		})
+
+		It("leaves an audiobook folder holding a missing file alone", func() {
+			b := f.addBook(1, "Elantris", "")
+			old := filepath.Join(f.dir, "audio", "dump")
+			here := write(filepath.Join(old, "Part 01.mp3"))
+			attach(b, mediafile.BookKindAudiobook, here)
+			gonePath := filepath.Join(old, "Part 02.mp3")
+			attach(b, mediafile.BookKindAudiobook, gonePath)
+			f.client.MediaFile.Update().
+				Where(mediafile.PathEQ(gonePath)).
+				SetMissingSince(time.Now()).ExecX(f.ctx)
+
+			plan, err := f.svc.RenameBook(f.ctx, b.ID, false)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(plan.Operations).To(BeEmpty())
+			Expect(here).To(BeAnExistingFile())
+		})
+
 		It("leaves a file whose target is taken where it is", func() {
 			b := f.addBook(1, "Elantris", "")
 			old := write(filepath.Join(f.dir, "ebooks", "x.epub"))

@@ -132,6 +132,9 @@ func (r *RenameService) buildPlan(
 	}
 	var plan library.RenamePlan
 	for _, f := range files {
+		if f.MissingSince != nil {
+			continue
+		}
 		target := r.target(m, f)
 		if target == f.Path {
 			continue

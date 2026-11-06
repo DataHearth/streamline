@@ -170,7 +170,7 @@ func (s *Service) TagAlbum(ctx context.Context, albumID uint32) (bool, error) {
 		}
 	}
 	files := slices.DeleteFunc(all, func(mf *ent.MediaFile) bool {
-		return mf.TagsState == nil ||
+		return mf.MissingSince != nil || mf.TagsState == nil ||
 			(*mf.TagsState != entmediafile.TagsStatePending &&
 				*mf.TagsState != entmediafile.TagsStateDeferred)
 	})
