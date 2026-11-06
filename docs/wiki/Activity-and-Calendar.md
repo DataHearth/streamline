@@ -228,7 +228,7 @@ Weeks start on Monday regardless of locale.
 
 ## Stats
 
-Admins get a **Stats** page, under Operations in the sidebar, with 7, 30 and 90 day views:
+Admins get a **Stats** page, under Operations in the sidebar. The 7, 30 and 90 day selector sits above Pipeline and stays in view through it and Users and requests, the two sections it changes:
 
 - **Library**: titles, files, disk use and what is wanted per medium, each library folder's volume, the resolution, codec, dynamic range and audio of your video files, and the five largest files. These are always the current state, whichever view you pick.
 - **Pipeline**: grabs, imports and failures per day against the period before, the search → grab → download → import funnel, the time from grab to import, why grabs failed, how each indexer does, transcoding and drift.

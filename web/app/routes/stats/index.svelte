@@ -47,34 +47,37 @@
 	let stale = $derived(!!stats && stats.range !== range);
 </script>
 
-<div class="mx-auto w-full max-w-7xl px-4 pb-10 pt-5 md:px-8 md:pb-12 md:pt-7">
-	<div class="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 md:mb-6">
-		<div
-			role="group"
-			aria-label={i18n.stats_range()}
-			class="inline-flex gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px]"
-		>
-			{#each STATS_RANGES as r (r)}
-				<button
-					type="button"
-					aria-pressed={range === r}
-					onclick={() => (range = r)}
-					class={cn(
-						"h-[30px] rounded-sm px-3 text-[12.5px] font-medium transition-colors",
-						range === r ? "bg-accent-soft text-accent-text" : "text-fg-subtle hover:text-fg",
-					)}
-				>
-					{RANGE_LABEL[r]()}
-				</button>
-			{/each}
-		</div>
-		{#if stats}
-			<p class="min-w-0 font-mono text-[11px] text-fg-subtle">
-				{i18n.stats_updated({ when: formatRelative(stats.generated_at) })}
-				<span class="hidden md:inline"> · {i18n.stats_compare({ range: RANGE_LABEL[range]() })}</span>
-			</p>
-		{/if}
+{#snippet rangeControl()}
+	<div
+		role="group"
+		aria-label={i18n.stats_range()}
+		class="inline-flex gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px]"
+	>
+		{#each STATS_RANGES as r (r)}
+			<button
+				type="button"
+				aria-pressed={range === r}
+				onclick={() => (range = r)}
+				class={cn(
+					"h-[30px] rounded-sm px-3 text-[12.5px] font-medium transition-colors",
+					range === r ? "bg-accent-soft text-accent-text" : "text-fg-subtle hover:text-fg",
+				)}
+			>
+				{RANGE_LABEL[r]()}
+			</button>
+		{/each}
 	</div>
+	<p class="hidden min-w-0 font-mono text-[11px] text-fg-subtle md:block">
+		{i18n.stats_compare({ range: RANGE_LABEL[range]() })}
+	</p>
+{/snippet}
+
+<div class="mx-auto w-full max-w-7xl px-4 pb-10 pt-5 md:px-8 md:pb-12 md:pt-7">
+	{#if stats}
+		<p class="mb-5 font-mono text-[11px] text-fg-subtle md:mb-6">
+			{i18n.stats_updated({ when: formatRelative(stats.generated_at) })}
+		</p>
+	{/if}
 
 	{#if statsQuery.isError && !stats}
 		<div class="flex flex-col items-start gap-3 rounded-lg border border-border bg-bg-elevated p-5">
@@ -92,7 +95,7 @@
 		<StatsSkeleton />
 	{:else}
 		<div class={cn("transition-opacity duration-200", stale && "opacity-60")} aria-busy={stale}>
-			<StatsReport {stats} />
+			<StatsReport {stats} {rangeControl} />
 		</div>
 	{/if}
 </div>

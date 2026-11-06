@@ -2936,6 +2936,7 @@
 	"stats_load_failed": "Stats could not be loaded.",
 	"stats_section_pipeline": "Pipeline",
 	"stats_section_users": "Users & requests",
+	"stats_library_now": "right now",
 	"stats_library_summary": "{titles} titles across {count} libraries, {size} on disk.",
 	"stats_pipeline_summary": "{imported} of {grabbed} grabs made it into the library over the last {range}.",
 	"stats_users_summary": "{requests} requests from {people} people; {pending} waiting on a decision.",

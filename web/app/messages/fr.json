@@ -2936,6 +2936,7 @@
 	"stats_load_failed": "Impossible de charger les statistiques.",
 	"stats_section_pipeline": "Acquisition",
 	"stats_section_users": "Utilisateurs et demandes",
+	"stats_library_now": "en ce moment",
 	"stats_library_summary": "{titles} titres dans {count} bibliothèques, {size} sur disque.",
 	"stats_pipeline_summary": "{imported} des {grabbed} téléchargements lancés sont arrivés en bibliothèque (période : {range}).",
 	"stats_users_summary": "{requests} demandes de {people} personnes ; {pending} attendent une décision.",
