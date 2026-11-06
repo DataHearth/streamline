@@ -8,6 +8,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
@@ -284,6 +286,207 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 				SetBookID(bk.ID).SetBookKind(mediafile.BookKindEbook).ExecX(ctx)
 
 			Expect(store.HoldsOtherFile(ctx, withOwners(mf.ID))).To(BeTrue())
+		})
+	})
+
+	Describe("ForgetMediaFile", func() {
+		withOwners := func(id uint32) *ent.MediaFile {
+			GinkgoHelper()
+			row, err := store.FindMediaFileWithOwners(ctx, id)
+			Expect(err).NotTo(HaveOccurred())
+			return row
+		}
+		expectGone := func(id uint32) {
+			GinkgoHelper()
+			Expect(client.MediaFile.Query().
+				Where(mediafile.ID(id)).ExistX(ctx)).To(BeFalse())
+		}
+
+		It(
+			"unmonitors a movie and sends it to wanted, out of the missing search",
+			func() {
+				mf := createMovieFile()
+				m := client.MediaFile.GetX(ctx, mf.ID).QueryMovie().OnlyX(ctx)
+				client.Movie.UpdateOne(m).
+					SetStatus(entmovie.StatusAvailable).
+					ExecX(ctx)
+
+				Expect(store.ForgetMediaFile(ctx, withOwners(mf.ID))).To(Succeed())
+
+				expectGone(mf.ID)
+				got := client.Movie.GetX(ctx, m.ID)
+				Expect(got.Status).To(Equal(entmovie.StatusWanted))
+				Expect(got.Monitored).To(BeFalse())
+				Expect(store.ListWantedMovies(ctx)).To(BeEmpty())
+			},
+		)
+
+		It("keeps the status of a movie with another file on disk", func() {
+			mf := createMovieFile()
+			m := client.MediaFile.GetX(ctx, mf.ID).QueryMovie().OnlyX(ctx)
+			client.Movie.UpdateOne(m).SetStatus(entmovie.StatusAvailable).ExecX(ctx)
+			client.MediaFile.Create().SetPath("/lib/other.mkv").SetSize(1).
+				SetMovie(m).ExecX(ctx)
+
+			Expect(store.ForgetMediaFile(ctx, withOwners(mf.ID))).To(Succeed())
+
+			got := client.Movie.GetX(ctx, m.ID)
+			Expect(got.Status).To(Equal(entmovie.StatusAvailable))
+			Expect(got.Monitored).To(BeFalse())
+		})
+
+		It("unmonitors and pins an episode, out of the missing search", func() {
+			aired := time.Now().Add(-time.Hour)
+			show := client.TVShow.Create().
+				SetTitle("The Bear").SetYear(2022).SetTvdbID(1).SaveX(ctx)
+			season := client.Season.Create().SetNumber(1).SetTvShow(show).SaveX(ctx)
+			ep := client.Episode.Create().
+				SetNumber(1).SetTitle("System").SetSeason(season).SetAirDate(aired).
+				SetStatus(episode.StatusAvailable).SaveX(ctx)
+			mf := client.MediaFile.Create().SetPath("/s/a.mkv").SetSize(1).
+				SetEpisodeID(ep.ID).SaveX(ctx)
+
+			Expect(store.ForgetMediaFile(ctx, withOwners(mf.ID))).To(Succeed())
+
+			expectGone(mf.ID)
+			got := client.Episode.GetX(ctx, ep.ID)
+			Expect(got.Status).To(Equal(episode.StatusWanted))
+			Expect(got.Monitored).To(BeFalse())
+			Expect(got.MonitorPinned).To(BeTrue())
+			Expect(store.ListEligibleEpisodesForSync(
+				ctx, 10, time.Now(), time.Now(),
+			)).To(BeEmpty())
+		})
+
+		Describe("of an album", func() {
+			var (
+				al *ent.Album
+				mf *ent.MediaFile
+			)
+
+			BeforeEach(func() {
+				artist := client.Artist.Create().
+					SetMbid("a").SetName("Artist").SaveX(ctx)
+				al = client.Album.Create().
+					SetMbid("rg").SetTitle("Album").SetArtist(artist).
+					SetStatus(album.StatusAvailable).
+					SetMetadataFetchedAt(time.Now()).SaveX(ctx)
+				tr := client.Track.Create().
+					SetTitle("One").SetPosition(1).SetAlbum(al).SaveX(ctx)
+				mf = client.MediaFile.Create().SetPath("/m/1.flac").SetSize(1).
+					SetTrackID(tr.ID).SaveX(ctx)
+			})
+
+			It("unmonitors and pins it, out of the missing search", func() {
+				Expect(store.ForgetMediaFile(ctx, withOwners(mf.ID))).To(Succeed())
+
+				expectGone(mf.ID)
+				got := client.Album.GetX(ctx, al.ID)
+				Expect(got.Status).To(Equal(album.StatusWanted))
+				Expect(got.Monitored).To(BeFalse())
+				Expect(got.MonitorPinned).To(BeTrue())
+				Expect(store.ListWantedAlbums(ctx, 10)).To(BeEmpty())
+			})
+
+			It("keeps the status of a downloading album", func() {
+				client.Album.UpdateOne(al).
+					SetStatus(album.StatusDownloading).
+					ExecX(ctx)
+
+				Expect(store.ForgetMediaFile(ctx, withOwners(mf.ID))).To(Succeed())
+
+				got := client.Album.GetX(ctx, al.ID)
+				Expect(got.Status).To(Equal(album.StatusDownloading))
+				Expect(got.Monitored).To(BeFalse())
+			})
+		})
+
+		Describe("of a book", func() {
+			var (
+				bk *ent.Book
+				mf *ent.MediaFile
+			)
+
+			BeforeEach(func() {
+				bk = client.Book.Create().SetHardcoverID(2).SetTitle("Elantris").
+					SetAuthorName("Sanderson").SetLastRefreshedAt(time.Now()).
+					SetEbookMonitored(true).
+					SetEbookStatus(book.EbookStatusAvailable).
+					SetAudiobookMonitored(true).
+					SetAudiobookStatus(book.AudiobookStatusAvailable).SaveX(ctx)
+				mf = client.MediaFile.Create().SetPath("/b/a.epub").SetSize(1).
+					SetBookID(bk.ID).SetBookKind(mediafile.BookKindEbook).SaveX(ctx)
+			})
+
+			It(
+				"unmonitors the slot, out of the missing search, leaving the other",
+				func() {
+					Expect(
+						store.ForgetMediaFile(ctx, withOwners(mf.ID)),
+					).To(Succeed())
+
+					expectGone(mf.ID)
+					got := client.Book.GetX(ctx, bk.ID)
+					Expect(got.EbookMonitored).To(BeFalse())
+					Expect(got.EbookStatus).To(Equal(book.EbookStatusWanted))
+					Expect(got.AudiobookMonitored).To(BeTrue())
+					Expect(
+						got.AudiobookStatus,
+					).To(Equal(book.AudiobookStatusAvailable))
+					Expect(store.ListWantedBooks(ctx, 10)).To(BeEmpty())
+				},
+			)
+
+			It("keeps a slot holding another file available, unmonitored", func() {
+				client.MediaFile.Create().SetPath("/b/a.pdf").SetSize(1).
+					SetBookID(bk.ID).SetBookKind(mediafile.BookKindEbook).ExecX(ctx)
+
+				Expect(store.ForgetMediaFile(ctx, withOwners(mf.ID))).To(Succeed())
+
+				got := client.Book.GetX(ctx, bk.ID)
+				Expect(got.EbookMonitored).To(BeFalse())
+				Expect(got.EbookStatus).To(Equal(book.EbookStatusAvailable))
+			})
+		})
+	})
+
+	Describe("ListMissingFiles", func() {
+		It("pages the confirmed rows only, with the names a title needs", func() {
+			confirmed := createMovieFile()
+			createMovieFile()
+			inGrace := createMovieFile()
+			client.MediaFile.UpdateOneID(inGrace.ID).
+				SetMissingSince(time.Now()).ExecX(ctx)
+			client.MediaFile.UpdateOneID(confirmed.ID).
+				SetMissingSince(time.Now()).
+				SetMissingConfirmedAt(time.Now()).ExecX(ctx)
+
+			artist := client.Artist.Create().
+				SetMbid("a").SetName("Artist").SaveX(ctx)
+			al := client.Album.Create().
+				SetMbid("rg").SetTitle("Album").SetArtist(artist).SaveX(ctx)
+			tr := client.Track.Create().
+				SetTitle("One").SetPosition(3).SetAlbum(al).SaveX(ctx)
+			track := client.MediaFile.Create().SetPath("/m/3.flac").SetSize(1).
+				SetTrackID(tr.ID).SetMissingSince(time.Now()).
+				SetMissingConfirmedAt(time.Now().Add(time.Minute)).SaveX(ctx)
+
+			rows, total, err := store.ListMissingFiles(ctx, 1, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(total).To(Equal(2))
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].ID).To(Equal(confirmed.ID))
+			Expect(rows[0].Edges.Movie.Title).To(Equal("Dune"))
+
+			rows, _, err = store.ListMissingFiles(ctx, 10, 1)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].ID).To(Equal(track.ID))
+			got := rows[0].Edges.Track
+			Expect(got.Title).To(Equal("One"))
+			Expect(got.Position).To(BeEquivalentTo(3))
+			Expect(got.Edges.Album.Title).To(Equal("Album"))
+			Expect(got.Edges.Album.Edges.Artist.Name).To(Equal("Artist"))
 		})
 	})
 

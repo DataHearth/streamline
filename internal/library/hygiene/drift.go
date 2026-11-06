@@ -416,6 +416,60 @@ func (s *Service) AcceptMissing(
 	return removed, nil
 }
 
+// ForgetMissing removes the rows of files an admin deleted on purpose and stops
+// monitoring their titles, reporting how many went. A row not confirmed missing,
+// or whose file is back or cannot be checked, is left alone and not counted. An
+// offline root refuses with an *roothealth.OfflineError: every file under it
+// reads as gone, so the check would say nothing.
+func (s *Service) ForgetMissing(ctx context.Context, ids []uint32) (int, error) {
+	ctx, span := tracer.Start(ctx, "hygiene.forget_missing",
+		trace.WithAttributes(attribute.Int("media_file.count", len(ids))))
+	defer span.End()
+
+	forgotten := 0
+	for _, id := range ids {
+		row, err := s.store.FindMediaFileWithOwners(ctx, id)
+		if ent.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return forgotten, otelx.RecordSpanError(span, err)
+		}
+		if row.MissingConfirmedAt == nil {
+			continue
+		}
+		if root, owned := db.RootOfFile(row); owned {
+			if err := roothealth.Require(ctx, root); err != nil {
+				return forgotten, otelx.RecordSpanError(span, err)
+			}
+		}
+		went, err := s.forgetOne(ctx, row)
+		if err != nil {
+			return forgotten, otelx.RecordSpanError(span, err)
+		}
+		if went {
+			forgotten++
+		}
+	}
+	span.SetAttributes(attribute.Int("forgotten", forgotten))
+	return forgotten, nil
+}
+
+func (s *Service) forgetOne(ctx context.Context, row *ent.MediaFile) (bool, error) {
+	if row.Edges.Track != nil && row.Edges.Track.Edges.Album != nil {
+		defer library.LockAlbumFiles(row.Edges.Track.Edges.Album.ID)()
+	}
+	if _, err := os.Stat(row.Path); !errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err := s.store.ForgetMediaFile(ctx, row); err != nil {
+		return false, err
+	}
+	slog.InfoContext(ctx, "forgot a missing file",
+		"media_file.id", row.ID, "media_file.path", row.Path)
+	return true, nil
+}
+
 // recordDrift attributes a drift event to the row's owner. An ownerless row
 // (a legacy orphan, reaped below) has nobody to tell, so it is skipped.
 func (s *Service) recordDrift(

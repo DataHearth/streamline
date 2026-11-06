@@ -5493,6 +5493,59 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /library/missing-files:
+    get:
+      operationId: ListMissingFiles
+      summary: List the files confirmed missing from disk.
+      description: |
+        Admin only. A file is listed from the first drift tick past the grace
+        window until it returns, is forgotten, or the re-download wait ends.
+      tags: [library]
+      parameters:
+        - name: limit
+          in: query
+          description: Max items per page (1..100).
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+            x-go-type: uint16
+        - $ref: "#/components/parameters/PeopleOffset"
+      responses:
+        "200":
+          $ref: "#/components/responses/MissingFileList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /library/missing-files/forget:
+    post:
+      operationId: ForgetMissingFiles
+      summary: Forget files deleted on purpose, so they are not downloaded again.
+      description: |
+        Admin only. Removes each row and stops monitoring its movie, episode,
+        album or book slot. A title with no other file on disk also goes back to
+        wanted. A file found back on disk, or not confirmed missing, keeps its
+        row and is not counted.
+      tags: [library]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgetMissingFilesRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ForgetMissingFilesResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /library/path-migration/preview:
     post:
       operationId: PreviewPathMigration
@@ -8359,6 +8412,20 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/PathMigrationPreview"
+
+    MissingFileList:
+      description: One page of the files confirmed missing from disk.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MissingFileList"
+
+    ForgetMissingFilesResult:
+      description: How many file rows were forgotten.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ForgetMissingFilesResult"
 
     AcceptMissingResult:
       description: How many file rows were removed.
@@ -14933,6 +15000,67 @@ components:
         reason:
           type: string
           enum: [path_missing, path_empty, files_missing]
+
+    MissingFile:
+      type: object
+      required: [id, root, title, path, size, missing_since, owner_kind, owner_id]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        root:
+          type: string
+          enum: [movies, series, music, ebooks, audiobooks]
+        title:
+          type: string
+        path:
+          type: string
+        size:
+          type: integer
+          format: int64
+        missing_since:
+          type: string
+          format: date-time
+        redownload_at:
+          type: string
+          format: date-time
+          description: When the title goes back to wanted. Absent when library.missing_file_redownload_after is off.
+        owner_kind:
+          type: string
+          enum: [movie, series, artist, book]
+        owner_id:
+          type: integer
+          x-go-type: uint32
+
+    MissingFileList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MissingFile"
+        total:
+          type: integer
+
+    ForgetMissingFilesRequest:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: integer
+            x-go-type: uint32
+
+    ForgetMissingFilesResult:
+      type: object
+      required: [forgotten]
+      properties:
+        forgotten:
+          type: integer
 
     AcceptMissingResult:
       type: object

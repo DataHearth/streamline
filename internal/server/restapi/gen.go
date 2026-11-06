@@ -1894,6 +1894,57 @@ func (e MediaServerUpdateServerType) Valid() bool {
 	}
 }
 
+// Defines values for MissingFileOwnerKind.
+const (
+	MissingFileOwnerKindArtist MissingFileOwnerKind = "artist"
+	MissingFileOwnerKindBook   MissingFileOwnerKind = "book"
+	MissingFileOwnerKindMovie  MissingFileOwnerKind = "movie"
+	MissingFileOwnerKindSeries MissingFileOwnerKind = "series"
+)
+
+// Valid indicates whether the value is a known member of the MissingFileOwnerKind enum.
+func (e MissingFileOwnerKind) Valid() bool {
+	switch e {
+	case MissingFileOwnerKindArtist:
+		return true
+	case MissingFileOwnerKindBook:
+		return true
+	case MissingFileOwnerKindMovie:
+		return true
+	case MissingFileOwnerKindSeries:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MissingFileRoot.
+const (
+	MissingFileRootAudiobooks MissingFileRoot = "audiobooks"
+	MissingFileRootEbooks     MissingFileRoot = "ebooks"
+	MissingFileRootMovies     MissingFileRoot = "movies"
+	MissingFileRootMusic      MissingFileRoot = "music"
+	MissingFileRootSeries     MissingFileRoot = "series"
+)
+
+// Valid indicates whether the value is a known member of the MissingFileRoot enum.
+func (e MissingFileRoot) Valid() bool {
+	switch e {
+	case MissingFileRootAudiobooks:
+		return true
+	case MissingFileRootEbooks:
+		return true
+	case MissingFileRootMovies:
+		return true
+	case MissingFileRootMusic:
+		return true
+	case MissingFileRootSeries:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MovieStatus.
 const (
 	MovieStatusAvailable   MovieStatus = "available"
@@ -5710,6 +5761,16 @@ type FolderPlanFolder struct {
 	Folder  string  `json:"folder"`
 }
 
+// ForgetMissingFilesRequest defines model for ForgetMissingFilesRequest.
+type ForgetMissingFilesRequest struct {
+	Ids []uint32 `json:"ids"`
+}
+
+// ForgetMissingFilesResult defines model for ForgetMissingFilesResult.
+type ForgetMissingFilesResult struct {
+	Forgotten int `json:"forgotten"`
+}
+
 // HTTPLogConfig defines model for HTTPLogConfig.
 type HTTPLogConfig struct {
 	Enabled *bool                `json:"enabled,omitempty"`
@@ -6717,6 +6778,33 @@ type MetadataConfigView struct {
 	TmdbRegion            string `json:"tmdb_region"`
 	TvdbApiKeyFileManaged *bool  `json:"tvdb_api_key_file_managed,omitempty"`
 	TvdbApiKeySet         bool   `json:"tvdb_api_key_set"`
+}
+
+// MissingFile defines model for MissingFile.
+type MissingFile struct {
+	Id           uint32               `json:"id"`
+	MissingSince time.Time            `json:"missing_since"`
+	OwnerId      uint32               `json:"owner_id"`
+	OwnerKind    MissingFileOwnerKind `json:"owner_kind"`
+	Path         string               `json:"path"`
+
+	// RedownloadAt When the title goes back to wanted. Absent when library.missing_file_redownload_after is off.
+	RedownloadAt *time.Time      `json:"redownload_at,omitempty"`
+	Root         MissingFileRoot `json:"root"`
+	Size         int64           `json:"size"`
+	Title        string          `json:"title"`
+}
+
+// MissingFileOwnerKind defines model for MissingFile.OwnerKind.
+type MissingFileOwnerKind string
+
+// MissingFileRoot defines model for MissingFile.Root.
+type MissingFileRoot string
+
+// MissingFileList defines model for MissingFileList.
+type MissingFileList struct {
+	Items []MissingFile `json:"items"`
+	Total int           `json:"total"`
 }
 
 // MonitorToggleRequest defines model for MonitorToggleRequest.
@@ -10925,6 +11013,15 @@ type ListImportShowsParams struct {
 // ListImportShowsParamsClassification defines parameters for ListImportShows.
 type ListImportShowsParamsClassification string
 
+// ListMissingFilesParams defines parameters for ListMissingFiles.
+type ListMissingFilesParams struct {
+	// Limit Max items per page (1..100).
+	Limit *uint16 `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Zero-based offset for pagination.
+	Offset *PeopleOffset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // ListLibraryArrivalsParams defines parameters for ListLibraryArrivals.
 type ListLibraryArrivalsParams struct {
 	// Limit Imports to return (1..100).
@@ -11518,6 +11615,9 @@ type UpdateImportFileDecisionJSONRequestBody = ImportScanFileDecisionRequest
 
 // UpdateImportShowDecisionJSONRequestBody defines body for UpdateImportShowDecision for application/json ContentType.
 type UpdateImportShowDecisionJSONRequestBody = ImportScanShowDecisionRequest
+
+// ForgetMissingFilesJSONRequestBody defines body for ForgetMissingFiles for application/json ContentType.
+type ForgetMissingFilesJSONRequestBody = ForgetMissingFilesRequest
 
 // StartPathMigrationJSONRequestBody defines body for StartPathMigration for application/json ContentType.
 type StartPathMigrationJSONRequestBody = PathMigrationRequest
@@ -12119,6 +12219,12 @@ type ServerInterface interface {
 
 	// (PATCH /library/imports/{id}/shows/{showId})
 	UpdateImportShowDecision(w http.ResponseWriter, r *http.Request, id ResourceID, showId ImportScanShowID)
+	// ListMissingFiles List the files confirmed missing from disk.
+	// (GET /library/missing-files)
+	ListMissingFiles(w http.ResponseWriter, r *http.Request, params ListMissingFilesParams)
+	// ForgetMissingFiles Forget files deleted on purpose, so they are not downloaded again.
+	// (POST /library/missing-files/forget)
+	ForgetMissingFiles(w http.ResponseWriter, r *http.Request)
 	// GetPathMigration State of the running (or last) library path migration.
 	// (GET /library/path-migration)
 	GetPathMigration(w http.ResponseWriter, r *http.Request)
@@ -13266,6 +13372,18 @@ func (_ Unimplemented) ListImportShows(w http.ResponseWriter, r *http.Request, i
 
 // (PATCH /library/imports/{id}/shows/{showId})
 func (_ Unimplemented) UpdateImportShowDecision(w http.ResponseWriter, r *http.Request, id ResourceID, showId ImportScanShowID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListMissingFiles List the files confirmed missing from disk.
+// (GET /library/missing-files)
+func (_ Unimplemented) ListMissingFiles(w http.ResponseWriter, r *http.Request, params ListMissingFilesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ForgetMissingFiles Forget files deleted on purpose, so they are not downloaded again.
+// (POST /library/missing-files/forget)
+func (_ Unimplemented) ForgetMissingFiles(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -17599,6 +17717,66 @@ func (siw *ServerInterfaceWrapper) UpdateImportShowDecision(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateImportShowDecision(w, r, id, showId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMissingFiles operation middleware
+func (siw *ServerInterfaceWrapper) ListMissingFiles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMissingFilesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMissingFiles(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ForgetMissingFiles operation middleware
+func (siw *ServerInterfaceWrapper) ForgetMissingFiles(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ForgetMissingFiles(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -23088,6 +23266,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/library/roots/{root}/accept-missing", wrapper.AcceptLibraryRootMissing)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/library/missing-files", wrapper.ListMissingFiles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/library/missing-files/forget", wrapper.ForgetMissingFiles)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/library/path-migration/preview", wrapper.PreviewPathMigration)
 	})
 	r.Group(func(r chi.Router) {
@@ -23259,6 +23443,8 @@ type FileDeletedResponse struct {
 
 type ForbiddenJSONResponse Error
 
+type ForgetMissingFilesResultJSONResponse ForgetMissingFilesResult
+
 type ImportBulkDecisionResultJSONResponse ImportBulkDecisionResult
 
 type ImportCancelledResponse struct {
@@ -23312,6 +23498,8 @@ type MediaServerTestOKResponse struct {
 }
 
 type MetadataConfigJSONResponse MetadataConfigView
+
+type MissingFileListJSONResponse MissingFileList
 
 type MovieCountsResponseJSONResponse MovieCounts
 
@@ -31553,6 +31741,122 @@ func (response UpdateImportShowDecision413JSONResponse) VisitUpdateImportShowDec
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMissingFilesRequestObject struct {
+	Params ListMissingFilesParams
+}
+
+type ListMissingFilesResponseObject interface {
+	VisitListMissingFilesResponse(w http.ResponseWriter) error
+}
+
+type ListMissingFiles200JSONResponse struct{ MissingFileListJSONResponse }
+
+func (response ListMissingFiles200JSONResponse) VisitListMissingFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMissingFiles400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListMissingFiles400JSONResponse) VisitListMissingFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMissingFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListMissingFiles403JSONResponse) VisitListMissingFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ForgetMissingFilesRequestObject struct {
+	Body *ForgetMissingFilesJSONRequestBody
+}
+
+type ForgetMissingFilesResponseObject interface {
+	VisitForgetMissingFilesResponse(w http.ResponseWriter) error
+}
+
+type ForgetMissingFiles200JSONResponse struct {
+	ForgetMissingFilesResultJSONResponse
+}
+
+func (response ForgetMissingFiles200JSONResponse) VisitForgetMissingFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ForgetMissingFiles400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ForgetMissingFiles400JSONResponse) VisitForgetMissingFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ForgetMissingFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ForgetMissingFiles403JSONResponse) VisitForgetMissingFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ForgetMissingFiles409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ForgetMissingFiles409JSONResponse) VisitForgetMissingFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -41993,6 +42297,12 @@ type StrictServerInterface interface {
 
 	// (PATCH /library/imports/{id}/shows/{showId})
 	UpdateImportShowDecision(ctx context.Context, request UpdateImportShowDecisionRequestObject) (UpdateImportShowDecisionResponseObject, error)
+	// ListMissingFiles List the files confirmed missing from disk.
+	// (GET /library/missing-files)
+	ListMissingFiles(ctx context.Context, request ListMissingFilesRequestObject) (ListMissingFilesResponseObject, error)
+	// ForgetMissingFiles Forget files deleted on purpose, so they are not downloaded again.
+	// (POST /library/missing-files/forget)
+	ForgetMissingFiles(ctx context.Context, request ForgetMissingFilesRequestObject) (ForgetMissingFilesResponseObject, error)
 	// GetPathMigration State of the running (or last) library path migration.
 	// (GET /library/path-migration)
 	GetPathMigration(ctx context.Context, request GetPathMigrationRequestObject) (GetPathMigrationResponseObject, error)
@@ -45823,6 +46133,63 @@ func (sh *strictHandler) UpdateImportShowDecision(w http.ResponseWriter, r *http
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateImportShowDecisionResponseObject); ok {
 		if err := validResponse.VisitUpdateImportShowDecisionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMissingFiles operation middleware
+func (sh *strictHandler) ListMissingFiles(w http.ResponseWriter, r *http.Request, params ListMissingFilesParams) {
+	var request ListMissingFilesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMissingFiles(ctx, request.(ListMissingFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMissingFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMissingFilesResponseObject); ok {
+		if err := validResponse.VisitListMissingFilesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ForgetMissingFiles operation middleware
+func (sh *strictHandler) ForgetMissingFiles(w http.ResponseWriter, r *http.Request) {
+	var request ForgetMissingFilesRequestObject
+
+	var body ForgetMissingFilesJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ForgetMissingFiles(ctx, request.(ForgetMissingFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ForgetMissingFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ForgetMissingFilesResponseObject); ok {
+		if err := validResponse.VisitForgetMissingFilesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

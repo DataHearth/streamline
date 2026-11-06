@@ -131,6 +131,8 @@ var minRole = map[string]string{
 	"StartPathMigration":       roleAdmin,
 	"PreviewPathMigration":     roleAdmin,
 	"AcceptLibraryRootMissing": roleAdmin,
+	"ListMissingFiles":         roleAdmin,
+	"ForgetMissingFiles":       roleAdmin,
 
 	"ListMediaServers":                 roleAdmin,
 	"GetMediaServer":                   roleAdmin,

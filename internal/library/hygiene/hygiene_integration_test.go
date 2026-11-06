@@ -2,6 +2,7 @@ package hygiene
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,6 +23,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
@@ -1057,6 +1059,77 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			Entry("an album track", seedTrack),
 			Entry("a book", seedBook),
 		)
+
+		Describe("forgetting", func() {
+			var at time.Time
+
+			BeforeEach(func() { at = time.Now().Add(-time.Hour) })
+
+			It("removes a confirmed row and counts it", func() {
+				f := seedMovie(path("gone"), confirmedAt(&at))
+
+				Expect(svc.ForgetMissing(ctx, []uint32{f.row.ID})).To(Equal(1))
+
+				Expect(gone(f.row)).To(BeTrue())
+				Expect(f.status()).To(Equal("wanted"))
+				Expect(eventCount(entmediaevent.TypeFileRemoved)).To(Equal(1))
+			})
+
+			It("keeps the row of a file back on disk and does not count it", func() {
+				f := seedMovie(path("back"), confirmedAt(&at))
+				onDisk(path("back"))
+
+				Expect(svc.ForgetMissing(ctx, []uint32{f.row.ID})).To(BeZero())
+
+				Expect(gone(f.row)).To(BeFalse())
+				Expect(f.status()).To(Equal("available"))
+			})
+
+			It("keeps a row that is not confirmed", func() {
+				f := seedMovie(path("grace"), missing)
+
+				Expect(svc.ForgetMissing(ctx, []uint32{f.row.ID})).To(BeZero())
+
+				Expect(gone(f.row)).To(BeFalse())
+			})
+
+			It("skips an id that no longer exists", func() {
+				f := seedMovie(path("gone"), confirmedAt(&at))
+
+				Expect(svc.ForgetMissing(ctx, []uint32{9999, f.row.ID})).To(Equal(1))
+			})
+
+			It("takes the album file lock", func() {
+				f := seedTrack(path("gone"), confirmedAt(&at))
+				albumID := entClient.MediaFile.GetX(ctx, f.row.ID).
+					QueryTrack().QueryAlbum().OnlyIDX(ctx)
+				unlock := library.LockAlbumFiles(albumID)
+
+				done := make(chan struct{})
+				go func() {
+					defer GinkgoRecover()
+					defer close(done)
+					Expect(svc.ForgetMissing(ctx, []uint32{f.row.ID})).To(Equal(1))
+				}()
+
+				Consistently(done, "100ms").ShouldNot(BeClosed())
+				unlock()
+				Eventually(done).Should(BeClosed())
+			})
+
+			It("refuses a row of an offline root and keeps it", func() {
+				f := seedMovie(path("gone"), confirmedAt(&at))
+				roothealth.Register(store)
+				DeferCleanup(func() { roothealth.Register(nil) })
+
+				n, err := svc.ForgetMissing(ctx, []uint32{f.row.ID})
+
+				var offline *roothealth.OfflineError
+				Expect(errors.As(err, &offline)).To(BeTrue())
+				Expect(n).To(BeZero())
+				Expect(gone(f.row)).To(BeFalse())
+			})
+		})
 
 		Describe("of one show", func() {
 			var season *ent.Season

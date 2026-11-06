@@ -52,6 +52,9 @@ var _ = Describe("Handler: Library path migration",
 						},
 					}}, nil).Once()
 				app.store.EXPECT().
+					HoldsOtherFile(mock.Anything, mock.Anything).
+					Return(false, nil).Once()
+				app.store.EXPECT().
 					DeleteMediaFileAndRevertAlbum(mock.Anything, uint32(7), uint32(3)).
 					Return(nil).Once()
 
@@ -74,6 +77,9 @@ var _ = Describe("Handler: Library path migration",
 							Edges: ent.TrackEdges{Album: &ent.Album{ID: 3}},
 						},
 					}}, nil).Once()
+				app.store.EXPECT().
+					HoldsOtherFile(mock.Anything, mock.Anything).
+					Return(false, nil).Once()
 				app.store.EXPECT().
 					DeleteMediaFileAndRevertAlbum(mock.Anything, uint32(7), uint32(3)).
 					Return(nil).Once()

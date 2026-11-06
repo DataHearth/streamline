@@ -10291,6 +10291,63 @@ func (_c *MockStore_FirstVolumeID_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// ForgetMediaFile provides a mock function for the type MockStore
+func (_mock *MockStore) ForgetMediaFile(ctx context.Context, row *ent.MediaFile) error {
+	ret := _mock.Called(ctx, row)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ForgetMediaFile")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *ent.MediaFile) error); ok {
+		r0 = returnFunc(ctx, row)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_ForgetMediaFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ForgetMediaFile'
+type MockStore_ForgetMediaFile_Call struct {
+	*mock.Call
+}
+
+// ForgetMediaFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - row *ent.MediaFile
+func (_e *MockStore_Expecter) ForgetMediaFile(ctx any, row any) *MockStore_ForgetMediaFile_Call {
+	return &MockStore_ForgetMediaFile_Call{Call: _e.mock.On("ForgetMediaFile", ctx, row)}
+}
+
+func (_c *MockStore_ForgetMediaFile_Call) Run(run func(ctx context.Context, row *ent.MediaFile)) *MockStore_ForgetMediaFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *ent.MediaFile
+		if args[1] != nil {
+			arg1 = args[1].(*ent.MediaFile)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ForgetMediaFile_Call) Return(err error) *MockStore_ForgetMediaFile_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_ForgetMediaFile_Call) RunAndReturn(run func(ctx context.Context, row *ent.MediaFile) error) *MockStore_ForgetMediaFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetRequest provides a mock function for the type MockStore
 func (_mock *MockStore) GetRequest(ctx context.Context, id uint32) (*ent.Request, error) {
 	ret := _mock.Called(ctx, id)
@@ -14295,6 +14352,86 @@ func (_c *MockStore_ListMediaFilesWithTranscodeOwners_Call) Return(mediaFiles []
 }
 
 func (_c *MockStore_ListMediaFilesWithTranscodeOwners_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.MediaFile, error)) *MockStore_ListMediaFilesWithTranscodeOwners_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListMissingFiles provides a mock function for the type MockStore
+func (_mock *MockStore) ListMissingFiles(ctx context.Context, limit int, offset int) ([]*ent.MediaFile, int, error) {
+	ret := _mock.Called(ctx, limit, offset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListMissingFiles")
+	}
+
+	var r0 []*ent.MediaFile
+	var r1 int
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) ([]*ent.MediaFile, int, error)); ok {
+		return returnFunc(ctx, limit, offset)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) []*ent.MediaFile); ok {
+		r0 = returnFunc(ctx, limit, offset)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.MediaFile)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int) int); ok {
+		r1 = returnFunc(ctx, limit, offset)
+	} else {
+		r1 = ret.Get(1).(int)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int, int) error); ok {
+		r2 = returnFunc(ctx, limit, offset)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockStore_ListMissingFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListMissingFiles'
+type MockStore_ListMissingFiles_Call struct {
+	*mock.Call
+}
+
+// ListMissingFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - limit int
+//   - offset int
+func (_e *MockStore_Expecter) ListMissingFiles(ctx any, limit any, offset any) *MockStore_ListMissingFiles_Call {
+	return &MockStore_ListMissingFiles_Call{Call: _e.mock.On("ListMissingFiles", ctx, limit, offset)}
+}
+
+func (_c *MockStore_ListMissingFiles_Call) Run(run func(ctx context.Context, limit int, offset int)) *MockStore_ListMissingFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListMissingFiles_Call) Return(mediaFiles []*ent.MediaFile, n int, err error) *MockStore_ListMissingFiles_Call {
+	_c.Call.Return(mediaFiles, n, err)
+	return _c
+}
+
+func (_c *MockStore_ListMissingFiles_Call) RunAndReturn(run func(ctx context.Context, limit int, offset int) ([]*ent.MediaFile, int, error)) *MockStore_ListMissingFiles_Call {
 	_c.Call.Return(run)
 	return _c
 }

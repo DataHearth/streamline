@@ -963,6 +963,16 @@ type Store interface {
 	// edges has another file on disk in the same place: the movie, the episode,
 	// the track or the book slot.
 	HoldsOtherFile(ctx context.Context, row *ent.MediaFile) (bool, error)
+	// ListMissingFiles returns one page of the rows confirmed missing, oldest
+	// confirmation first, and how many there are. Owners carry the names a
+	// title needs.
+	ListMissingFiles(
+		ctx context.Context,
+		limit, offset int,
+	) ([]*ent.MediaFile, int, error)
+	// ForgetMediaFile removes a row loaded with its owner edges and stops
+	// monitoring what it belongs to, in one transaction.
+	ForgetMediaFile(ctx context.Context, row *ent.MediaFile) error
 	// CountMovieMediaFiles / CountEpisodeMediaFiles split the shared
 	// media_files table by owner, so the path migration can tell "this root
 	// holds nothing because the library is empty" apart from "…because the

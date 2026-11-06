@@ -458,7 +458,15 @@ func (db *DB) HoldsOtherFile(
 	ctx context.Context,
 	row *ent.MediaFile,
 ) (bool, error) {
-	q := db.client.MediaFile.Query().
+	return holdsOtherFile(ctx, db.client.MediaFile, row)
+}
+
+func holdsOtherFile(
+	ctx context.Context,
+	files *ent.MediaFileClient,
+	row *ent.MediaFile,
+) (bool, error) {
+	q := files.Query().
 		Where(mediafile.IDNEQ(row.ID), mediafile.MissingSinceIsNil())
 	switch {
 	case row.Edges.Movie != nil:
@@ -482,6 +490,123 @@ func (db *DB) HoldsOtherFile(
 		)
 	}
 	return held, nil
+}
+
+// ListMissingFiles returns one page of the rows confirmed missing, oldest
+// confirmation first, and how many there are.
+func (db *DB) ListMissingFiles(
+	ctx context.Context,
+	limit, offset int,
+) ([]*ent.MediaFile, int, error) {
+	confirmed := db.client.MediaFile.Query().
+		Where(mediafile.MissingConfirmedAtNotNil())
+	total, err := confirmed.Clone().Count(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count missing files: %w", err)
+	}
+	rows, err := confirmed.
+		Order(
+			ent.Asc(mediafile.FieldMissingConfirmedAt),
+			ent.Asc(mediafile.FieldID),
+		).
+		Limit(limit).
+		Offset(offset).
+		WithMovie().
+		WithEpisode(func(q *ent.EpisodeQuery) {
+			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
+		}).
+		WithTrack(func(q *ent.TrackQuery) {
+			q.WithAlbum(func(aq *ent.AlbumQuery) { aq.WithArtist() })
+		}).
+		WithBook().
+		All(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list missing files: %w", err)
+	}
+	return rows, total, nil
+}
+
+// ForgetMediaFile removes a row and stops monitoring what it belongs to, so the
+// missing searches do not download a file deleted on purpose. An owner still
+// holding a file in that place keeps its status. The file_removed event is not
+// suppressed: it is the title's history of this.
+func (db *DB) ForgetMediaFile(ctx context.Context, row *ent.MediaFile) error {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	if err := forgetInTx(ctx, tx, row); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("forget media_file %d: %w", row.ID, err)
+	}
+	return tx.Commit()
+}
+
+func forgetInTx(ctx context.Context, tx *ent.Tx, row *ent.MediaFile) error {
+	if err := tx.MediaFile.DeleteOneID(row.ID).Exec(ctx); err != nil {
+		return err
+	}
+	held, err := holdsOtherFile(ctx, tx.MediaFile, row)
+	if err != nil {
+		return err
+	}
+	switch {
+	case row.Edges.Movie != nil:
+		id := row.Edges.Movie.ID
+		if !held {
+			if err := revertMovieStatus(ctx, tx, id); err != nil {
+				return err
+			}
+		}
+		return tx.Movie.UpdateOneID(id).SetMonitored(false).Exec(ctx)
+	case row.Edges.Episode != nil:
+		id := row.Edges.Episode.ID
+		if !held {
+			if err := revertEpisodeStatus(ctx, tx, id); err != nil {
+				return err
+			}
+		}
+		return tx.Episode.UpdateOneID(id).
+			SetMonitored(false).SetMonitorPinned(true).Exec(ctx)
+	case row.Edges.Track != nil && row.Edges.Track.Edges.Album != nil:
+		id := row.Edges.Track.Edges.Album.ID
+		if !held {
+			if err := revertAlbumStatus(ctx, tx, id); err != nil {
+				return err
+			}
+		}
+		return tx.Album.UpdateOneID(id).
+			SetMonitored(false).SetMonitorPinned(true).Exec(ctx)
+	case row.Edges.Book != nil:
+		id := row.Edges.Book.ID
+		if err := revertBookSlotStatus(ctx, tx, id, row.BookKind); err != nil {
+			return err
+		}
+		u := tx.Book.UpdateOneID(id)
+		if row.BookKind == mediafile.BookKindAudiobook {
+			return u.SetAudiobookMonitored(false).Exec(ctx)
+		}
+		return u.SetEbookMonitored(false).Exec(ctx)
+	}
+	return nil
+}
+
+func revertMovieStatus(ctx context.Context, tx *ent.Tx, id uint32) error {
+	if err := tx.Movie.UpdateOneID(id).
+		SetStatus(movie.StatusWanted).
+		Exec(ctx); err != nil {
+		return fmt.Errorf("revert movie %d to wanted: %w", id, err)
+	}
+	return nil
+}
+
+func revertEpisodeStatus(ctx context.Context, tx *ent.Tx, id uint32) error {
+	if err := tx.Episode.UpdateOneID(id).
+		SetStatus(episode.StatusWanted).
+		Exec(ctx); err != nil {
+		return fmt.Errorf("revert episode %d to wanted: %w", id, err)
+	}
+	return nil
 }
 
 // DeleteMediaFile removes a MediaFile row without touching any owner. Used by
@@ -509,11 +634,9 @@ func (db *DB) DeleteMediaFileAndRevertMovie(
 		tx.Rollback()
 		return fmt.Errorf("delete media_file %d: %w", mediaFileID, err)
 	}
-	if err := tx.Movie.UpdateOneID(movieID).
-		SetStatus(movie.StatusWanted).
-		Exec(ctx); err != nil {
+	if err := revertMovieStatus(ctx, tx, movieID); err != nil {
 		tx.Rollback()
-		return fmt.Errorf("revert movie %d to wanted: %w", movieID, err)
+		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return err
@@ -541,11 +664,9 @@ func (db *DB) DeleteMediaFileAndRevertEpisode(
 		tx.Rollback()
 		return fmt.Errorf("delete media_file %d: %w", mediaFileID, err)
 	}
-	if err := tx.Episode.UpdateOneID(episodeID).
-		SetStatus(episode.StatusWanted).
-		Exec(ctx); err != nil {
+	if err := revertEpisodeStatus(ctx, tx, episodeID); err != nil {
 		tx.Rollback()
-		return fmt.Errorf("revert episode %d to wanted: %w", episodeID, err)
+		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return err
@@ -570,14 +691,21 @@ func (db *DB) DeleteMediaFileAndRevertAlbum(
 		tx.Rollback()
 		return fmt.Errorf("delete media_file %d: %w", mediaFileID, err)
 	}
-	if err := tx.Album.Update().
-		Where(album.IDEQ(albumID), album.StatusEQ(album.StatusAvailable)).
-		SetStatus(album.StatusWanted).
-		Exec(ctx); err != nil {
+	if err := revertAlbumStatus(ctx, tx, albumID); err != nil {
 		tx.Rollback()
-		return fmt.Errorf("revert album %d to wanted: %w", albumID, err)
+		return err
 	}
 	return tx.Commit()
+}
+
+func revertAlbumStatus(ctx context.Context, tx *ent.Tx, id uint32) error {
+	if err := tx.Album.Update().
+		Where(album.IDEQ(id), album.StatusEQ(album.StatusAvailable)).
+		SetStatus(album.StatusWanted).
+		Exec(ctx); err != nil {
+		return fmt.Errorf("revert album %d to wanted: %w", id, err)
+	}
+	return nil
 }
 
 // DeleteMediaFileAndRevertBookSlot removes a book's MediaFile row and, once the
@@ -598,30 +726,43 @@ func (db *DB) DeleteMediaFileAndRevertBookSlot(
 		tx.Rollback()
 		return fmt.Errorf("delete media_file %d: %w", mediaFileID, err)
 	}
+	if err := revertBookSlotStatus(ctx, tx, bookID, kind); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+// revertBookSlotStatus moves a slot left holding no file from available to
+// wanted.
+func revertBookSlotStatus(
+	ctx context.Context,
+	tx *ent.Tx,
+	bookID uint32,
+	kind mediafile.BookKind,
+) error {
 	held, err := tx.MediaFile.Query().
 		Where(mediafile.HasBookWith(book.ID(bookID)), mediafile.BookKindEQ(kind)).
 		Exist(ctx)
 	if err != nil {
-		tx.Rollback()
 		return fmt.Errorf("check book %d slot files: %w", bookID, err)
 	}
-	if !held {
-		u := tx.Book.Update().Where(book.ID(bookID))
-		switch kind {
-		case mediafile.BookKindEbook:
-			u = u.Where(book.EbookStatusEQ(book.EbookStatusAvailable)).
-				SetEbookStatus(book.EbookStatusWanted)
-		case mediafile.BookKindAudiobook:
-			u = u.Where(book.AudiobookStatusEQ(book.AudiobookStatusAvailable)).
-				SetAudiobookStatus(book.AudiobookStatusWanted)
-		default:
-			tx.Rollback()
-			return fmt.Errorf("revert book %d: unknown kind %q", bookID, kind)
-		}
-		if err := u.Exec(ctx); err != nil {
-			tx.Rollback()
-			return fmt.Errorf("revert book %d %s slot: %w", bookID, kind, err)
-		}
+	if held {
+		return nil
 	}
-	return tx.Commit()
+	u := tx.Book.Update().Where(book.ID(bookID))
+	switch kind {
+	case mediafile.BookKindEbook:
+		u = u.Where(book.EbookStatusEQ(book.EbookStatusAvailable)).
+			SetEbookStatus(book.EbookStatusWanted)
+	case mediafile.BookKindAudiobook:
+		u = u.Where(book.AudiobookStatusEQ(book.AudiobookStatusAvailable)).
+			SetAudiobookStatus(book.AudiobookStatusWanted)
+	default:
+		return fmt.Errorf("revert book %d: unknown kind %q", bookID, kind)
+	}
+	if err := u.Exec(ctx); err != nil {
+		return fmt.Errorf("revert book %d %s slot: %w", bookID, kind, err)
+	}
+	return nil
 }
