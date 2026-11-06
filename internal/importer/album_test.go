@@ -705,6 +705,32 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 			},
 		)
 
+		It("does not stop a missing track being filled without replace", func() {
+			since := time.Now()
+			gone := existing + ".gone"
+			alb.Edges.Tracks[0].Edges.MediaFiles = []*ent.MediaFile{
+				{ID: 77, Path: gone, MissingSince: &since},
+			}
+			Expect(os.Remove(existing)).To(Succeed())
+			rec := fixtureAlbumRecord(dlDir, alb)
+			rec.VerificationBypassed = true
+			expectFind(rec)
+			storeMk.EXPECT().
+				DeleteMediaFile(mock.Anything, uint32(77)).
+				Return(nil).
+				Once()
+			storeMk.EXPECT().
+				RecordAlbumImportSuccess(mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+				Return(nil).
+				Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+			Expect(existing).To(BeAnExistingFile())
+		})
+
 		It("stays in place when it cannot be set aside", func() {
 			alb.Edges.Tracks[0].Edges.MediaFiles = []*ent.MediaFile{
 				{ID: 77, Path: existing},

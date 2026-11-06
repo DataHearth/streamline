@@ -428,7 +428,8 @@ func (w *Worker) importMovieRecord(
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("list movie files: %w", err))
 	}
-	if len(existing) > 0 && rec.ReplaceMode == downloadrecord.ReplaceModeNone {
+	if len(heldFiles(existing)) > 0 &&
+		rec.ReplaceMode == downloadrecord.ReplaceModeNone {
 		return otelx.RecordSpanError(span, ErrMovieHasFile)
 	}
 
@@ -513,6 +514,15 @@ func (w *Worker) importMovieRecord(
 		append(mediaFilePaths(existing), imported.Path)...)
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
+}
+
+// heldFiles leaves out rows whose file is missing from disk. Only the refusal
+// gates read it: an import fills such a file, and its row is replaced like any
+// other.
+func heldFiles(files []*ent.MediaFile) []*ent.MediaFile {
+	return slices.DeleteFunc(slices.Clone(files), func(mf *ent.MediaFile) bool {
+		return mf.MissingSince != nil
+	})
 }
 
 // replacedSuffix names an existing library file set aside while the release
@@ -600,7 +610,7 @@ func takesPackFile(
 	hasProfile bool,
 	recordTitle string,
 ) bool {
-	if pf.existing == nil {
+	if pf.existing == nil || pf.existing.MissingSince != nil {
 		return true
 	}
 	switch mode {
@@ -872,7 +882,8 @@ func (w *Worker) importSingleEpisode(
 	if err != nil && !ent.IsNotFound(err) {
 		return otelx.RecordSpanError(span, fmt.Errorf("find episode file: %w", err))
 	}
-	if mf != nil && rec.ReplaceMode == downloadrecord.ReplaceModeNone {
+	if mf != nil && mf.MissingSince == nil &&
+		rec.ReplaceMode == downloadrecord.ReplaceModeNone {
 		return otelx.RecordSpanError(span, ErrEpisodeHasFile)
 	}
 

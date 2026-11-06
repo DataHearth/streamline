@@ -204,7 +204,10 @@ func (db *DB) FindMediaFileByEpisodeID(
 
 func (db *DB) MovieHasMediaFile(ctx context.Context, tmdbID uint32) (bool, error) {
 	n, err := db.client.MediaFile.Query().
-		Where(mediafile.HasMovieWith(movie.TmdbID(tmdbID))).
+		Where(
+			mediafile.HasMovieWith(movie.TmdbID(tmdbID)),
+			mediafile.MissingSinceIsNil(),
+		).
 		Count(ctx)
 	if err != nil {
 		return false, fmt.Errorf("count media_files for tmdb_id %d: %w", tmdbID, err)

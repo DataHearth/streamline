@@ -61,7 +61,7 @@ func (w *Worker) importBookRecord(
 		return otelx.RecordSpanError(span, fmt.Errorf("list book files: %w", err))
 	}
 	replace := rec.ReplaceMode != downloadrecord.ReplaceModeNone
-	if len(existing) > 0 && !replace {
+	if len(heldFiles(existing)) > 0 && !replace {
 		return otelx.RecordSpanError(span, library.ErrDestExists)
 	}
 

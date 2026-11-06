@@ -930,8 +930,8 @@ type Store interface {
 		episodeID uint32,
 	) (*ent.MediaFile, error)
 	// MovieHasMediaFile reports whether the movie identified by tmdbID has at
-	// least one MediaFile row. Returns (false, nil) when the movie row itself
-	// is absent.
+	// least one MediaFile row whose file is not missing. Returns (false, nil)
+	// when the movie row itself is absent.
 	MovieHasMediaFile(ctx context.Context, tmdbID uint32) (bool, error)
 	// ListAllMediaFilesWithOwners returns every MediaFile row with its owning
 	// movie and episode eagerly loaded. Used by drift_check, which needs to

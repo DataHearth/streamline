@@ -251,6 +251,30 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 			To(Equal(downloadrecord.StatusFailed))
 	})
 
+	It("fills a slot whose file is missing, without replace", func() {
+		src := filepath.Join(tmp, "dl")
+		write(src, "x.epub", "new")
+		missing := client.MediaFile.Create().
+			SetPath(filepath.Join(ebooks, "gone.epub")).
+			SetSize(3).SetQuality("epub").SetFormat("epub").
+			SetBookID(b.ID).SetBookKind(mediafile.BookKindEbook).
+			SetMissingSince(time.Now()).SaveX(ctx)
+		id := record(
+			downloadrecord.BookKindEbook,
+			src,
+			downloadrecord.ReplaceModeNone,
+		)
+
+		Expect(run(id)).To(Succeed())
+
+		Expect(client.MediaFile.Query().
+			Where(mediafile.IDEQ(missing.ID)).ExistX(ctx)).To(BeFalse())
+		Expect(client.MediaFile.Query().
+			Where(mediafile.HasBookWith(book.ID(b.ID))).CountX(ctx)).To(Equal(1))
+		Expect(client.DownloadRecord.GetX(ctx, id).Status).
+			To(Equal(downloadrecord.StatusCompleted))
+	})
+
 	It("replaces the slot's file when the record asks for it", func() {
 		src := filepath.Join(tmp, "dl")
 		write(src, "x.epub", "new")

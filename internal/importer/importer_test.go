@@ -497,6 +497,58 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		Expect(old).NotTo(BeAnExistingFile())
 	})
 
+	It("a missing file does not stop an import without the replace flag", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+		since := time.Now()
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return([]*ent.MediaFile{
+				{
+					ID:           5,
+					Path:         filepath.Join(libDir, "gone.mkv"),
+					MissingSince: &since,
+				},
+			}, nil).Once()
+		storeMk.EXPECT().
+			DeleteMediaFileAndRevertMovie(mock.Anything, uint32(5), uint32(10)).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.Anything).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+	})
+
+	It("refuses when a present file sits beside a missing one", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+		since := time.Now()
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return([]*ent.MediaFile{
+				{ID: 5, Path: "/lib/gone.mkv", MissingSince: &since},
+				{ID: 6, Path: "/lib/here.mkv"},
+			}, nil).Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(MatchError(ErrMovieHasFile))
+	})
+
 	It("replaces a file that sits at the replacement's own path", func() {
 		src := filepath.Join(tmp, "dl")
 		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
@@ -1031,6 +1083,44 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		w.handleOutcome(context.Background(), 1, err)
 	})
 
+	It("a missing episode file does not stop an import without replace", func() {
+		season, eps := buildShow()
+		src := filepath.Join(tmp, "ep-n")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.S01E01.1080p.mkv")
+		rec := episodeRecord(
+			1,
+			filepath.Join(src, "Show.S01E01.1080p.mkv"),
+			season,
+			eps[0],
+		)
+		since := time.Now()
+
+		storeMk.EXPECT().
+			FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().
+			FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+			Return(&ent.MediaFile{
+				ID: 8, Path: filepath.Join(libDir, "gone.mkv"), MissingSince: &since,
+			}, nil).Once()
+		storeMk.EXPECT().
+			DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(8), eps[0].ID).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			RecordEpisodeImportSuccess(mock.Anything, mock.Anything).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+	})
+
 	It("season pack matches each file to its episode + records both", func() {
 		season, eps := buildShow()
 		src := filepath.Join(tmp, "pack")
@@ -1227,6 +1317,42 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			Return(&ent.MediaFile{ID: 8, Path: "/lib/kept.mkv"}, nil).Once()
 		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
 			Return(nil, &ent.NotFoundError{}).Once()
+		storeMk.EXPECT().
+			RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordEpisodeImportSuccessParams) bool {
+				return p.EpisodeID == eps[1].ID
+			})).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 2)).To(Succeed())
+	})
+
+	It("season pack fills a missing episode file and skips a present one", func() {
+		season, eps := buildShow()
+		src := filepath.Join(tmp, "pack-missing")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.S01E01.1080p.mkv")
+		seedMediaFile(src, "Show.S01E02.1080p.mkv")
+		rec := episodeRecord(2, src, season, eps[0])
+		since := time.Now()
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+			Return(&ent.MediaFile{ID: 8, Path: "/lib/kept.mkv"}, nil).Once()
+		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
+			Return(&ent.MediaFile{
+				ID: 9, Path: filepath.Join(libDir, "gone.mkv"), MissingSince: &since,
+			}, nil).Once()
+		storeMk.EXPECT().
+			DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(9), eps[1].ID).
+			Return(nil).Once()
 		storeMk.EXPECT().
 			RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordEpisodeImportSuccessParams) bool {
 				return p.EpisodeID == eps[1].ID

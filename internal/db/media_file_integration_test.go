@@ -403,6 +403,20 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("MovieHasMediaFile", func() {
+		It("does not count a missing file, so the orphan scan can adopt", func() {
+			mf := createMovieFile()
+			tmdb := client.MediaFile.GetX(ctx, mf.ID).QueryMovie().OnlyX(ctx).TmdbID
+			Expect(store.MovieHasMediaFile(ctx, tmdb)).To(BeTrue())
+
+			client.MediaFile.UpdateOneID(mf.ID).
+				SetMissingSince(time.Now()).
+				ExecX(ctx)
+
+			Expect(store.MovieHasMediaFile(ctx, tmdb)).To(BeFalse())
+		})
+	})
+
 	Describe("ListAllMediaFilesWithOwners", func() {
 		It("eager-loads both the movie and the episode edge", func() {
 			m, err := store.CreateMovie(ctx, CreateMovieParams{

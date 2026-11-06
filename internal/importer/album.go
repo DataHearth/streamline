@@ -479,7 +479,8 @@ func (w *Worker) planAlbumImport(
 			continue
 		}
 		q := w.assessAlbumFile(ctx, path, claim)
-		if len(tr.Edges.MediaFiles) > 0 && !replacesTrack(rec, tr, q, profile) {
+		if len(heldFiles(tr.Edges.MediaFiles)) > 0 &&
+			!replacesTrack(rec, tr, q, profile) {
 			skippedCovered++
 			slog.InfoContext(ctx, "album import: leaving track's file in place",
 				"track.id", tr.ID, "file", filepath.Base(path))
