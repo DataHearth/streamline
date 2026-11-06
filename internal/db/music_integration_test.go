@@ -858,6 +858,99 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			},
 		)
 
+		Context("when the new track list completes the album", func() {
+			// Two tracks of the heavy listing plus a bonus one: the files are
+			// of the standard edition, so only the first two hold one.
+			pressing := func() HydrationParams {
+				p := heavy()
+				p.Tracks = append(p.Tracks, TrackSeed{
+					MBID: "r-3", Title: "Bonus", Disc: 1, Position: 3,
+				})
+				return p
+			}
+			holdListed := func() {
+				GinkgoHelper()
+				for i, mbid := range []string{"r-1", "r-2"} {
+					tr := client.Track.Query().Where(
+						track.MbidEQ(mbid),
+						track.HasAlbumWith(album.IDEQ(rg2.ID)),
+					).OnlyX(ctx)
+					client.MediaFile.Create().
+						SetPath(fmt.Sprintf("/m/%d.flac", i)).SetSize(10).
+						SetTrackID(tr.ID).ExecX(ctx)
+				}
+			}
+
+			It("moves a failed album to available and clears the reason", func() {
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, pressing(), now),
+				).To(Succeed())
+				holdListed()
+				client.Album.UpdateOneID(rg2.ID).
+					SetStatus(album.StatusFailed).
+					SetFailureReason("every track this release matched already holds a file").
+					ExecX(ctx)
+
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, heavy(), now),
+				).To(Succeed())
+
+				got := client.Album.GetX(ctx, rg2.ID)
+				Expect(got.Status).To(Equal(album.StatusAvailable))
+				Expect(got.FailureReason).To(BeEmpty())
+			})
+
+			It("moves a wanted album to available", func() {
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, pressing(), now),
+				).To(Succeed())
+				holdListed()
+				client.Album.UpdateOneID(rg2.ID).
+					SetStatus(album.StatusWanted).ExecX(ctx)
+
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, heavy(), now),
+				).To(Succeed())
+
+				Expect(client.Album.GetX(ctx, rg2.ID).Status).
+					To(Equal(album.StatusAvailable))
+			})
+
+			It("leaves an album in flight to its record", func() {
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, pressing(), now),
+				).To(Succeed())
+				holdListed()
+				client.Album.UpdateOneID(rg2.ID).
+					SetStatus(album.StatusDownloading).ExecX(ctx)
+
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, heavy(), now),
+				).To(Succeed())
+
+				Expect(client.Album.GetX(ctx, rg2.ID).Status).
+					To(Equal(album.StatusDownloading))
+			})
+
+			It("keeps a failed album that is still missing a track", func() {
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, heavy(), now),
+				).To(Succeed())
+				holdListed()
+				client.Album.UpdateOneID(rg2.ID).
+					SetStatus(album.StatusFailed).SetFailureReason("boom").
+					ExecX(ctx)
+
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, pressing(), now),
+				).To(Succeed())
+
+				got := client.Album.GetX(ctx, rg2.ID)
+				Expect(got.Status).To(Equal(album.StatusFailed))
+				Expect(got.FailureReason).To(Equal("boom"))
+			})
+		})
+
 		Context("when a re-pick lays the album out differently", func() {
 			albumTracks := func() []*ent.Track {
 				GinkgoHelper()

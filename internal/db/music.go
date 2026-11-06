@@ -1354,8 +1354,9 @@ func (db *DB) DeleteArtist(ctx context.Context, id uint32) ([]uint32, error) {
 // lists is deleted unless it holds a file), the featuring credits of every
 // track and, when CreditsComplete, the album's credits and performers, the
 // tracks' writers and the studio. It stamps metadata_fetched_at, and
-// credits_fetched_at when the credits landed; it never touches status or
-// monitored.
+// credits_fetched_at when the credits landed. It never touches monitored, and
+// touches status only to settle an album the new track list completes (see
+// settleCompletedAlbum).
 func (db *DB) SetAlbumHydration(
 	ctx context.Context,
 	albumID uint32,
@@ -1552,7 +1553,38 @@ func (db *DB) SetAlbumHydration(
 			}
 		}
 	}
+	if err := settleCompletedAlbum(ctx, c, albumID); err != nil {
+		tx.Rollback()
+		return err
+	}
 	return tx.Commit()
+}
+
+// settleCompletedAlbum moves a wanted or failed album whose every track now
+// holds a file to available, clearing its failure reason. A re-hydration is
+// what completes it: a person re-picking the edition the files are of, or a
+// refresh dropping a track nobody holds. Without it the album kept its old
+// status — a failed one stayed failed with an error about tracks it no longer
+// lacks, and nothing searches a failed album, so it never moved again. An
+// album in flight is left to its record, and one this hydration leaves
+// incomplete keeps its status.
+func settleCompletedAlbum(
+	ctx context.Context,
+	c *ent.Client,
+	albumID uint32,
+) error {
+	if err := c.Album.Update().
+		Where(
+			album.ID(albumID),
+			album.StatusIn(album.StatusWanted, album.StatusFailed),
+			completeAlbum(),
+		).
+		SetStatus(album.StatusAvailable).
+		ClearFailureReason().
+		Exec(ctx); err != nil {
+		return fmt.Errorf("settle completed album %d: %w", albumID, err)
+	}
+	return nil
 }
 
 // ListAlbumsAwaitingHydration returns up to limit albums whose tracks have not
