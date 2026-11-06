@@ -4,7 +4,7 @@
 import * as v from "valibot";
 import { m as i18n } from "./paraglide/messages.js";
 import { getLocale } from "./paraglide/runtime.js";
-import { formatDate } from "./dates";
+import { formatDate, formatDateShort } from "./dates";
 import { formatBytes } from "./format";
 import { authorPosterUrl, artistPosterUrl } from "./posters";
 
@@ -152,6 +152,11 @@ export type ArtistCounts = {
 	monitored: number;
 	unmonitored: number;
 	albums: number;
+	// Artists per sort letter ("A"…"Z", "#") under every filter the list has,
+	// so the jump bar knows which letters exist and the offset each starts at.
+	letters?: Record<string, number>;
+	// Every genre with its artists under the other filters: the Genre facet.
+	genres?: { name: string; count: number }[];
 };
 
 // ── Books ────────────────────────────────────────────────────────────────
@@ -417,6 +422,72 @@ export function artistTally(a: Artist) {
 		downloading: owed.filter((r) => r.status === "downloading" || r.status === "paused").length,
 		upcoming: a.albums.length - out.length,
 	};
+}
+
+// The same scope by state, as segments in the season bars' order and colours
+// (SeasonProgress): on disk, on its way, refused, still wanted. A paused
+// download is on its way, drawn blue as releasePill draws it. A release nobody
+// monitors and nobody has is outside the scope and never drawn, so the grey
+// track only shows where an artist has nothing in scope at all.
+export function artistSegments(a: Artist): { token: "available" | "downloading" | "failed" | "wanted"; count: number }[] {
+	const owed = a.albums.filter((r) => r.status !== "upcoming" && (r.monitored || r.status === "available"));
+	const n = (...states: ReleaseStatus[]) => owed.filter((r) => states.includes(r.status)).length;
+	const segs = [
+		{ token: "available" as const, count: n("available") },
+		{ token: "downloading" as const, count: n("downloading", "paused") },
+		{ token: "failed" as const, count: n("failed") },
+		{ token: "wanted" as const, count: n("wanted") },
+	];
+	return segs.filter((s) => s.count > 0);
+}
+
+// The pill an artist wears on its photo, in the library and on its page: only
+// while something is pending. What is on its way comes first, as the artist's
+// status does, then a refused import, then what is missing, then the next
+// release's date. What is missing is still in the ring and the Wanted filter.
+// Nothing at all when the artist is complete: the ring or bar says so.
+export function artistPill(a: Artist): { token: string; label: string; live: boolean } | null {
+	const now = artistNow(a);
+	const wanted = artistTally(a).wanted;
+	if (now.downloading)
+		return now.downloading.status === "paused"
+			? { token: "downloading", label: i18n.status_paused(), live: false }
+			: { token: "downloading", label: i18n.status_downloading(), live: true };
+	if (now.failed) return { token: "failed", label: i18n.status_failed(), live: false };
+	if (wanted) return { token: "wanted", label: i18n.music_n_wanted({ count: String(wanted) }), live: false };
+	if (now.upcoming) return { token: "unaired", label: formatDateShort(now.upcoming.release_date), live: false };
+	return null;
+}
+
+// The releases a library card names, in the tally's scope: the one in flight,
+// a refused import, the monitored ones still missing (newest first) and the
+// next one out. Albums come newest first, upcoming included, so the soonest
+// upcoming release is the last of those.
+export function artistNow(a: Artist) {
+	const followed = a.albums.filter((r) => r.monitored);
+	return {
+		downloading: followed.find((r) => r.status === "downloading" || r.status === "paused"),
+		failed: followed.find((r) => r.status === "failed"),
+		wanted: followed.filter((r) => r.status === "wanted"),
+		upcoming: followed.filter((r) => r.status === "upcoming").at(-1),
+	};
+}
+
+// The library files an artist under the first letter of its name, accents
+// folded; a digit or a symbol files under "#", which sorts first, as the A→Z
+// order puts it: the jump bar's offsets add the letters up in this order.
+export const LETTERS = ["#", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
+export function sortLetter(a: Pick<Artist, "name">): string {
+	const c = a.name.normalize("NFD").charAt(0).toUpperCase();
+	return c >= "A" && c <= "Z" ? c : "#";
+}
+
+// The monitor policy in a list column, where the select's sentences do not fit.
+export function monitorShort(m: ArtistMonitor): string {
+	if (m === "future") return i18n.music_mon_short_future();
+	if (m === "manual") return i18n.music_mon_short_manual();
+	if (m === "none") return i18n.music_mon_short_none();
+	return i18n.music_mon_short_all();
 }
 
 // The discography's sections, the way seasons are, in this order: albums, then

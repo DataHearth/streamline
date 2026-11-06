@@ -59,6 +59,7 @@
 		{ prefix: "/calendar", label: i18n.common_calendar() },
 		{ prefix: "/requests", label: i18n.requests_label() },
 		{ prefix: "/imports", label: i18n.imports_label() },
+		{ prefix: "/stats", label: i18n.stats_label() },
 		{ prefix: "/account", label: i18n.common_account() },
 		{ prefix: "/settings", label: i18n.nav_settings() },
 		{ prefix: "/search", label: i18n.common_search() },

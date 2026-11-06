@@ -109,6 +109,12 @@ The writing itself happens in the `music-tag-sync` job ([Scheduled Jobs](Schedul
 
 Albums added before this version get their genres, edition dates and per-track credits fetched again in the background, at MusicBrainz's slow background pace, starting with the albums you hold files for. Until they are in, the genre, dates, release track id and credit tags already in the album's files are left as they are. A release too large for MusicBrainz's full credits answer (a box set) keeps the credit tags its files carry.
 
+## The music library
+
+Music is a grid of artists, or a table, each with a ring showing its releases by state: on disk, on the way, refused, wanted. Sorted by name the list is filed under letters: a rail down the right edge jumps to one, or a fast scroller on a phone. Names file as they are displayed, accents folded, so *Die Ärzte* is under D and *Élan* under E, and anything that does not start with a letter is under `#`.
+
+An artist with something on its way shows as downloading, even with other releases still missing. It stays under the Wanted filter too, and the amber part of its ring still counts what is missing. There is also a genre filter. An artist with no photo shows the cover of its newest release.
+
 ## Adding an artist
 
 Adding an artist returns at once with one album per MusicBrainz release group. Streamline then fills in the tracks, labels, credits, covers, a Wikipedia overview and a Deezer photo in the background, queued so that no single artist holds the rest up and always behind anything you are waiting on (MusicBrainz allows one request a second for everyone). The artist page shows what has arrived and keeps checking until it is done.

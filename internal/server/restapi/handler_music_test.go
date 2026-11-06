@@ -479,6 +479,8 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 			}).Return(db.ArtistCounts{
 				Total: 10, StatusTotal: 9, Wanted: 3, Downloading: 2, Available: 4,
 				MonitoredTotal: 8, Monitored: 7, Unmonitored: 1, Albums: 55,
+				Letters: map[string]uint32{"#": 1, "N": 9},
+				Genres:  []db.GenreCount{{Name: "Grunge", Count: 2}},
 			}, nil).Once()
 			resp := get("/api/v1/music/artists/counts?status=wanted&query=x")
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -487,6 +489,8 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 			Expect(out).To(Equal(MusicArtistCounts{
 				Total: 10, StatusTotal: 9, Wanted: 3, Downloading: 2, Available: 4,
 				MonitoredTotal: 8, Monitored: 7, Unmonitored: 1, Albums: 55,
+				Letters: map[string]uint32{"#": 1, "N": 9},
+				Genres:  []MusicGenreCount{{Name: "Grunge", Count: 2}},
 			}))
 		})
 	})

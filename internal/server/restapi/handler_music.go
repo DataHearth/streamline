@@ -179,6 +179,7 @@ func (s *Server) ListMusicArtists(
 	params := db.ListArtistsParams{
 		Status:    paramString(p.Status),
 		Monitored: paramString(p.Monitored),
+		Genre:     paramString(p.Genre),
 		Query:     paramString(p.Query),
 		Sort:      paramString(p.Sort),
 		Order:     paramString(p.Order),
@@ -219,6 +220,7 @@ func (s *Server) GetMusicArtistCounts(
 	counts, err := s.music.Counts(ctx, db.ListArtistsParams{
 		Status:    paramString(p.Status),
 		Monitored: paramString(p.Monitored),
+		Genre:     paramString(p.Genre),
 		Query:     paramString(p.Query),
 	})
 	if err != nil {

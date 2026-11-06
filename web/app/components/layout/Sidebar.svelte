@@ -15,6 +15,7 @@
 		ListVideo,
 		Magnet,
 		Replace,
+		ChartColumn,
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
@@ -120,6 +121,9 @@
 			: []),
 		{ label: i18n.common_calendar(), href: "/calendar", icon: CalendarDays },
 		{ label: i18n.requests_label(), href: "/requests", icon: Inbox },
+		...(auth.isAdmin
+			? [{ label: i18n.stats_label(), href: "/stats", icon: ChartColumn }]
+			: []),
 	]);
 
 	// Activity's three routes each sit as their own top-level row — no parent to

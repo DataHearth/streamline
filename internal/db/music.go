@@ -491,10 +491,12 @@ func (db *DB) AlbumIDsByMBID(
 
 // ListArtistsParams filters, sorts and pages the artist list. Status is
 // "wanted", "downloading", "available" or ""; Monitored is "monitored",
-// "unmonitored" or ""; Sort is "recent" or "name".
+// "unmonitored" or ""; Genre is an artist's genre or ""; Sort is "recent" or
+// "name".
 type ListArtistsParams struct {
 	Status    string
 	Monitored string
+	Genre     string
 	Query     string
 	Sort      string
 	Order     string
@@ -520,6 +522,17 @@ type ArtistCounts struct {
 	Monitored      uint32
 	Unmonitored    uint32
 	Albums         uint32
+	// Letters tallies the artists under every filter by the letter the name
+	// sort files them under.
+	Letters map[string]uint32
+	// Genres tallies them by genre with the other filters applied, most first.
+	Genres []GenreCount
+}
+
+// GenreCount is one row of the artist list's genre facet.
+type GenreCount struct {
+	Name  string `sql:"name"`
+	Count uint32 `sql:"n"`
 }
 
 // releasedAlbum is an album that is not upcoming: undated, or dated today or
@@ -544,10 +557,11 @@ func downloadingAlbum() predicate.Album {
 	)
 }
 
-// artistStatus is the rollup over the monitored, non-upcoming albums:
-// downloading if any is downloading or paused, else wanted if any is wanted
-// or failed, else available.
-func artistStatus(status string, now time.Time) predicate.Artist {
+// artistHas is the status facet: what an artist has, not its one headline
+// status. An artist with one album wanted and another downloading is under both
+// wanted and downloading, and available only with neither. The artist's own
+// status field stays the rollup (music.artistStatusAt).
+func artistHas(status string, now time.Time) predicate.Artist {
 	downloading := artistHasAlbum(downloadingAlbum())
 	wanted := artistHasAlbum(album.And(
 		album.Monitored(true),
@@ -558,7 +572,7 @@ func artistStatus(status string, now time.Time) predicate.Artist {
 	case "downloading":
 		return downloading
 	case "wanted":
-		return artist.And(artist.Not(downloading), wanted)
+		return wanted
 	case "available":
 		return artist.And(artist.Not(downloading), artist.Not(wanted))
 	}
@@ -568,9 +582,12 @@ func artistStatus(status string, now time.Time) predicate.Artist {
 func artistFilters(p ListArtistsParams, skip facet) []predicate.Artist {
 	var out []predicate.Artist
 	if p.Status != "" && skip != facetStatus {
-		if pr := artistStatus(p.Status, p.Now); pr != nil {
+		if pr := artistHas(p.Status, p.Now); pr != nil {
 			out = append(out, pr)
 		}
+	}
+	if p.Genre != "" && skip != facetGenre {
+		out = append(out, artist.GenreEQ(p.Genre))
 	}
 	switch {
 	case skip == facetMonitored:
@@ -607,7 +624,7 @@ func (db *DB) ListArtists(
 	var order []artist.OrderOption
 	switch p.Sort {
 	case "name":
-		order = append(order, orderFold(artist.FieldName, desc))
+		order = append(order, orderArtistName(desc))
 	default:
 		if p.Order == "asc" {
 			order = append(order, artist.ByCreateTime())
@@ -637,6 +654,86 @@ func (db *DB) ListArtists(
 	return rows, numeric.SaturateU32(total), nil
 }
 
+// orderArtistName sorts by letter first, so "#" comes before A and each letter
+// is one unbroken run: the SPA's letter sections and the page offsets it adds up
+// from ArtistCounts.Letters both depend on it.
+func orderArtistName(desc bool) func(*entsql.Selector) {
+	return func(s *entsql.Selector) {
+		dir := ""
+		if desc {
+			dir = " DESC"
+		}
+		name := s.C(artist.FieldName)
+		s.OrderExpr(
+			entsql.Expr(
+				"sort_letter(" + name + ")" + dir + ", fold(" + name + ")" + dir,
+			),
+		)
+	}
+}
+
+func (db *DB) artistLetters(
+	ctx context.Context,
+	p ListArtistsParams,
+) (map[string]uint32, error) {
+	var rows []struct {
+		Letter string `sql:"letter"`
+		N      uint32 `sql:"n"`
+	}
+	err := db.client.Artist.Query().
+		Where(artistFilters(p, facetAll)...).
+		Modify(func(s *entsql.Selector) {
+			letter := "sort_letter(" + s.C(artist.FieldName) + ")"
+			s.Select(entsql.As(letter, "letter"), entsql.As("COUNT(*)", "n")).
+				GroupBy(letter)
+		}).
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, fmt.Errorf("count artist letters: %w", err)
+	}
+	out := make(map[string]uint32, len(rows))
+	for _, r := range rows {
+		out[r.Letter] = r.N
+	}
+	return out, nil
+}
+
+func (db *DB) artistGenres(
+	ctx context.Context,
+	p ListArtistsParams,
+) ([]GenreCount, error) {
+	out := []GenreCount{}
+	err := db.client.Artist.Query().
+		Where(append(artistFilters(p, facetGenre), artist.GenreNEQ(""))...).
+		Modify(func(s *entsql.Selector) {
+			genre := s.C(artist.FieldGenre)
+			s.Select(entsql.As(genre, "name"), entsql.As("COUNT(*)", "n")).
+				GroupBy(genre).
+				OrderExpr(entsql.Expr("n DESC, fold(" + genre + ")"))
+		}).
+		Scan(ctx, &out)
+	if err != nil {
+		return nil, fmt.Errorf("count artist genres: %w", err)
+	}
+	return out, nil
+}
+
+// ArtistCoverAlbums lists the artist's released albums, newest first, for the
+// photo fallback: an artist without one shows the cover of its newest release.
+func (db *DB) ArtistCoverAlbums(
+	ctx context.Context,
+	artistID uint32,
+) ([]uint32, error) {
+	ids, err := db.client.Album.Query().
+		Where(AlbumOfArtist(artistID), releasedAlbum(time.Now())).
+		Order(album.ByReleaseDate(entsql.OrderDesc(), entsql.OrderNullsLast()), album.ByID(entsql.OrderDesc())).
+		IDs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list artist cover albums: %w", err)
+	}
+	return ids, nil
+}
+
 func (db *DB) ArtistCounts(
 	ctx context.Context,
 	p ListArtistsParams,
@@ -657,14 +754,14 @@ func (db *DB) ArtistCounts(
 		extra []predicate.Artist
 	}{
 		{&c.StatusTotal, facetStatus, nil},
-		{&c.Wanted, facetStatus, []predicate.Artist{artistStatus("wanted", p.Now)}},
+		{&c.Wanted, facetStatus, []predicate.Artist{artistHas("wanted", p.Now)}},
 		{
 			&c.Downloading, facetStatus,
-			[]predicate.Artist{artistStatus("downloading", p.Now)},
+			[]predicate.Artist{artistHas("downloading", p.Now)},
 		},
 		{
 			&c.Available, facetStatus,
-			[]predicate.Artist{artistStatus("available", p.Now)},
+			[]predicate.Artist{artistHas("available", p.Now)},
 		},
 		{&c.MonitoredTotal, facetMonitored, nil},
 		{
@@ -690,6 +787,12 @@ func (db *DB) ArtistCounts(
 		return ArtistCounts{}, fmt.Errorf("count albums: %w", err)
 	}
 	c.Total, c.Albums = numeric.SaturateU32(total), numeric.SaturateU32(albums)
+	if c.Letters, err = db.artistLetters(ctx, p); err != nil {
+		return ArtistCounts{}, err
+	}
+	if c.Genres, err = db.artistGenres(ctx, p); err != nil {
+		return ArtistCounts{}, err
+	}
 	return c, nil
 }
 

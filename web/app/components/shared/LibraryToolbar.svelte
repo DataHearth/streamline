@@ -12,7 +12,7 @@
 </script>
 
 <script lang="ts">
-	import { ChevronDown, Plus, Search, SlidersHorizontal, X } from "@lucide/svelte";
+	import { ChevronDown, LayoutGrid, List, Plus, Search, SlidersHorizontal, X } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { dragScroll } from "@lib/drag-scroll";
 	import DropdownMenu from "@components/shared/DropdownMenu.svelte";
@@ -21,9 +21,10 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The music and books toolbar: the library toolbars' vocabulary — a status
-	// menu, facet menus, the filter field and a sort — without the parts these
-	// pages have no use for yet (grid/list switch, selection). Below md it is
-	// the movies phone row: status chips plus the filter sheet.
+	// menu, facet menus, the filter field, a sort and, where a page has two
+	// layouts, the series grid/list switch — without selection, which these
+	// pages have no use for yet. Below md it is the movies phone row: status
+	// chips plus the filter sheet.
 	let {
 		statusLabel,
 		tabs,
@@ -38,6 +39,9 @@
 		onSortChange,
 		onReset,
 		add,
+		view,
+		onViewChange,
+		foldFacets = false,
 	}: {
 		statusLabel: string;
 		tabs: ToolbarTab[];
@@ -52,6 +56,13 @@
 		onSortChange: (key: string) => void;
 		onReset: () => void;
 		add?: { label: string; onClick: () => void };
+		// Both or neither: the page's layout and its switch.
+		view?: "grid" | "list";
+		onViewChange?: (v: "grid" | "list") => void;
+		// Below lg the facet menus fold into the filter sheet, as on a phone. A
+		// bar with two facets and the view switch wraps past the 698px a tablet
+		// leaves it.
+		foldFacets?: boolean;
 	} = $props();
 
 	let menu = $state<string | null>(null);
@@ -60,11 +71,8 @@
 
 	let current = $derived(tabs.find((t) => t.key === tab) ?? tabs[0]);
 	let currentSort = $derived(sorts.find((s) => s.key === sort) ?? sorts[0]);
-	let activeCount = $derived(
-		(query ? 1 : 0) +
-			(tab !== tabs[0]?.key ? 1 : 0) +
-			facets.filter((f) => f.value !== f.options[0]?.key).length,
-	);
+	let facetCount = $derived(facets.filter((f) => f.value !== f.options[0]?.key).length);
+	let activeCount = $derived((query ? 1 : 0) + (tab !== tabs[0]?.key ? 1 : 0) + facetCount);
 	const toggle = (key: string) => (menu = menu === key ? null : key);
 	const close = () => (menu = null);
 
@@ -138,7 +146,11 @@
 		<button
 			bind:this={anchors[f.key]}
 			type="button"
-			class={cn(trigger, f.value !== f.options[0]?.key && "border-accent-line text-accent-text")}
+			class={cn(
+				trigger,
+				f.value !== f.options[0]?.key && "border-accent-line text-accent-text",
+				foldFacets && "hidden lg:inline-flex",
+			)}
 			aria-haspopup="listbox"
 			aria-expanded={menu === f.key}
 			aria-label="{f.label}: {value?.label}"
@@ -165,8 +177,34 @@
 		</DropdownMenu>
 	{/each}
 
+	{#if foldFacets && facets.length > 0}
+		<button
+			type="button"
+			onclick={() => (sheetOpen = true)}
+			aria-haspopup="dialog"
+			aria-expanded={sheetOpen}
+			aria-label={i18n.filter_and_sort()}
+			class={cn(
+				"relative grid h-9 w-9 shrink-0 place-items-center rounded-lg border transition lg:hidden",
+				facetCount > 0 ? chipOn : "border-border-strong bg-bg-elevated text-fg-muted hover:text-fg",
+			)}
+		>
+			<SlidersHorizontal size={16} aria-hidden="true" />
+			{#if facetCount > 0}
+				<span
+					class="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 font-mono text-[9.5px] font-semibold text-fg-on-accent"
+				>
+					{facetCount}
+				</span>
+			{/if}
+		</button>
+	{/if}
+
 	<label
-		class="flex h-9 min-w-[180px] flex-1 basis-[220px] items-center gap-2 rounded-lg border border-border bg-bg-elevated px-3 transition focus-within:border-accent-line"
+		class={cn(
+			"flex h-9 flex-1 items-center gap-2 rounded-lg border border-border bg-bg-elevated px-3 transition focus-within:border-accent-line",
+			foldFacets ? "min-w-[140px] basis-[140px] lg:min-w-[160px] lg:basis-[180px]" : "min-w-[180px] basis-[220px]",
+		)}
 	>
 		<Search size={16} class="shrink-0 text-fg-faint" aria-hidden="true" />
 		<input
@@ -213,6 +251,41 @@
 			/>
 		{/each}
 	</DropdownMenu>
+
+	{#if view && onViewChange}
+		<div
+			class="inline-flex shrink-0 items-center rounded-md border border-border bg-bg-elevated p-0.5"
+			role="group"
+			aria-label={i18n.common_view_mode()}
+		>
+			<button
+				type="button"
+				onclick={() => onViewChange("grid")}
+				title={i18n.common_grid_view()}
+				aria-pressed={view === "grid"}
+				class={cn(
+					"grid h-10 w-10 place-items-center rounded-sm transition lg:h-7 lg:w-7",
+					view === "grid" ? "bg-bg-card text-fg" : "text-fg-subtle hover:text-fg",
+				)}
+			>
+				<LayoutGrid size={15} aria-hidden="true" />
+				<span class="sr-only">{i18n.common_grid_view()}</span>
+			</button>
+			<button
+				type="button"
+				onclick={() => onViewChange("list")}
+				title={i18n.common_list_view()}
+				aria-pressed={view === "list"}
+				class={cn(
+					"grid h-10 w-10 place-items-center rounded-sm transition lg:h-7 lg:w-7",
+					view === "list" ? "bg-bg-card text-fg" : "text-fg-subtle hover:text-fg",
+				)}
+			>
+				<List size={14} aria-hidden="true" />
+				<span class="sr-only">{i18n.common_list_view()}</span>
+			</button>
+		</div>
+	{/if}
 
 	{#if add}
 		<button
@@ -286,8 +359,8 @@
 	</div>
 </div>
 
-<!-- view="list" keeps the sheet's layout switch and selection entry out: the
-     switch is md-only anyway, and these pages have one layout. -->
+<!-- A page with one layout passes no view, and "list" keeps the sheet's layout
+     switch and selection entry out; the switch is md-only either way. -->
 <MediaFilterSheet
 	open={sheetOpen}
 	onClose={() => (sheetOpen = false)}
@@ -296,8 +369,8 @@
 	sortOptions={sorts}
 	{sort}
 	{onSortChange}
-	view="list"
-	onViewChange={() => {}}
+	view={view ?? "list"}
+	onViewChange={onViewChange ?? (() => {})}
 	{onReset}
 	{activeCount}
 	extra={facets.length > 0 ? facetChips : undefined}

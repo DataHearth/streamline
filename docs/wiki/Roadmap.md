@@ -78,6 +78,7 @@ Hardware encoding through VAAPI is shipped on Linux (`transcoding.hw_accel`, wit
 | Unraid template | ✅ Shipped — listing in Community Applications 🚧 In progress |
 | Proxmox VE LXC install and update script | ✅ Shipped — submission to Proxmox VE Helper-Scripts 📋 Planned |
 | Import an existing library (scan, match, review, rename) | ✅ Shipped |
+| Admin stats (library, pipeline, users and requests) | ✅ Shipped |
 | Library path migration (re-root a moved library) | ✅ Shipped |
 | Installable web app (home-screen manifest) | ✅ Shipped |
 | Re-identify a title matched to the wrong movie or show | ✅ Shipped |

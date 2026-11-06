@@ -1340,6 +1340,7 @@ paths:
         - $ref: "#/components/parameters/SeriesLimit"
         - $ref: "#/components/parameters/MusicArtistStatusParam"
         - $ref: "#/components/parameters/MusicArtistMonitoredParam"
+        - $ref: "#/components/parameters/MusicArtistGenreParam"
         - $ref: "#/components/parameters/MusicArtistQueryParam"
         - $ref: "#/components/parameters/MusicArtistSortParam"
         - $ref: "#/components/parameters/MusicArtistOrderParam"
@@ -1385,15 +1386,18 @@ paths:
       operationId: getMusicArtistCounts
       summary: Artist facet counts
       description: |
-        Tallies the status and monitoring facets of the artist list. Each facet is counted
-         with the other facet's filter applied and its own left out, each with its own
-         `*_total` "all" row; `query` narrows every tally. Called with no parameters this is
-         the whole library, which is what the nav badge asks for. Open to every authenticated
+        Tallies the status, monitoring and genre facets of the artist list. Each facet is
+         counted with the other facets' filters applied and its own left out, the first two
+         with their own `*_total` "all" row; `query` narrows every tally. `letters` counts
+         the artists under every filter by the letter the name sort files them under, so the
+         SPA can open the list at a letter's page. Called with no parameters this is the
+         whole library, which is what the nav badge asks for. Open to every authenticated
          user.
       tags: [music]
       parameters:
         - $ref: "#/components/parameters/MusicArtistStatusParam"
         - $ref: "#/components/parameters/MusicArtistMonitoredParam"
+        - $ref: "#/components/parameters/MusicArtistGenreParam"
         - $ref: "#/components/parameters/MusicArtistQueryParam"
       responses:
         "200":
@@ -5926,6 +5930,31 @@ paths:
           $ref: "#/components/responses/Conflict"
 
   # ── System ──────────────────────────────────────────────
+  /stats:
+    get:
+      operationId: getStats
+      summary: Library, pipeline and user statistics (admin)
+      description: |
+        The admin stats page. `library` is always now, whatever the range; `range` bounds
+        the pipeline and the requests, today included, and `previous` is the same totals
+        over the stretch before it. Computed on demand from the tables, so poll it slowly.
+        A `range` other than the three answers 400.
+      tags: [system, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StatsRangeParam"
+      responses:
+        "200":
+          $ref: "#/components/responses/StatsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /system/info:
     get:
       operationId: getSystemInfo
@@ -6300,7 +6329,11 @@ components:
       name: status
       in: query
       required: false
-      description: Filter by the artist status rollup.
+      description: |
+        Asks what an artist has, not its rollup: `wanted` is any monitored, released album
+        wanted or failed, `downloading` any monitored album downloading or paused,
+        `available` neither. An artist can be under both of the first two, and the counts
+        overlap the same way.
       schema:
         $ref: "#/components/schemas/MusicArtistStatus"
     MusicArtistMonitoredParam:
@@ -6311,6 +6344,20 @@ components:
       schema:
         type: string
         enum: [monitored, unmonitored]
+    StatsRangeParam:
+      name: range
+      in: query
+      required: false
+      description: The stretch the pipeline and requests cover. Defaults to `30d`.
+      schema:
+        $ref: "#/components/schemas/StatsRange"
+    MusicArtistGenreParam:
+      name: genre
+      in: query
+      required: false
+      description: An artist's genre, exactly as `/music/artists/counts` lists it.
+      schema:
+        type: string
     MusicArtistQueryParam:
       name: query
       in: query
@@ -6322,7 +6369,7 @@ components:
       name: sort
       in: query
       required: false
-      description: "`recent` is by added time, newest first; `name` is by sort name then name, ascending. `order` overrides either; ties break on id."
+      description: "`recent` is by added time, newest first; `name` is by the displayed name, ascending, accents folded, with anything that does not start with A–Z first, under `#`. `order` overrides either; ties break on id."
       schema:
         type: string
         enum: [recent, name]
@@ -7647,6 +7694,12 @@ components:
           schema:
             $ref: "#/components/schemas/PaginatedMusicArtists"
 
+    StatsResponse:
+      description: The stats report.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Stats"
     MusicArtistCountsResponse:
       description: Faceted artist counts.
       content:
@@ -9910,6 +9963,8 @@ components:
           monitored,
           unmonitored,
           albums,
+          letters,
+          genres,
         ]
       properties:
         total:
@@ -9941,6 +9996,369 @@ components:
           type: integer
           x-go-type: uint32
           description: Every album row in the library, upcoming included; filters do not narrow it.
+        letters:
+          type: object
+          description: Artists per letter (`#`, `A`…`Z`) with every filter applied. A letter with none is absent.
+          additionalProperties:
+            type: integer
+            x-go-type: uint32
+        genres:
+          type: array
+          description: Each genre with its artists under the other filters, most first.
+          items:
+            $ref: "#/components/schemas/MusicGenreCount"
+
+    StatsRange:
+      type: string
+      enum: [7d, 30d, 90d]
+    StatsKind:
+      type: string
+      enum: [movie, series, music, books]
+    StatsSlice:
+      type: object
+      required: [key, count, bytes]
+      properties:
+        key:
+          type: string
+          description: "A format (`2160p`, `hevc`, `hdr10`, `eac3`…), or `other` or `unknown`."
+        count:
+          type: integer
+          x-go-type: uint32
+        bytes:
+          type: integer
+          format: int64
+    StatsMedia:
+      type: object
+      required: [kind, titles, files, bytes, wanted]
+      properties:
+        kind:
+          $ref: "#/components/schemas/StatsKind"
+        titles:
+          type: integer
+          x-go-type: uint32
+          description: Movies, shows, artists, books.
+        files:
+          type: integer
+          x-go-type: uint32
+        bytes:
+          type: integer
+          format: int64
+        wanted:
+          type: integer
+          x-go-type: uint32
+          description: "In the medium's own unit: movies, episodes, albums, books."
+    StatsVolume:
+      type: object
+      required: [key, path, used_bytes, total_bytes]
+      properties:
+        key:
+          type: string
+        path:
+          type: string
+        used_bytes:
+          type: integer
+          format: int64
+        total_bytes:
+          type: integer
+          format: int64
+    StatsLargest:
+      type: object
+      required: [title, href, kind, bytes, quality]
+      properties:
+        title:
+          type: string
+        href:
+          type: string
+          description: The title's page in the SPA.
+        kind:
+          $ref: "#/components/schemas/StatsKind"
+        bytes:
+          type: integer
+          format: int64
+        quality:
+          type: string
+    StatsLibrary:
+      type: object
+      required: [media, volumes, resolution, video_codec, hdr, audio, unprobed, largest]
+      properties:
+        media:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatsMedia"
+        volumes:
+          type: array
+          description: The library roots and the data directory. A root that cannot be read is left out.
+          items:
+            $ref: "#/components/schemas/StatsVolume"
+        resolution:
+          type: array
+          description: Probed video files by resolution, most first; the next three likewise.
+          items:
+            $ref: "#/components/schemas/StatsSlice"
+        video_codec:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatsSlice"
+        hdr:
+          type: array
+          description: Read off the release name, not the probe.
+          items:
+            $ref: "#/components/schemas/StatsSlice"
+        audio:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatsSlice"
+        unprobed:
+          type: integer
+          x-go-type: uint32
+          description: Video files ffprobe has not read yet; the breakdowns skip them.
+        largest:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatsLargest"
+    StatsDay:
+      type: object
+      required: [day, grabbed, imported, failed, requests]
+      properties:
+        day:
+          type: string
+          description: "`YYYY-MM-DD`, UTC."
+        grabbed:
+          type: integer
+          x-go-type: uint32
+        imported:
+          type: integer
+          x-go-type: uint32
+        failed:
+          type: integer
+          x-go-type: uint32
+        requests:
+          type: integer
+          x-go-type: uint32
+    StatsTotals:
+      type: object
+      required: [grabbed, imported, failed, requests]
+      properties:
+        grabbed:
+          type: integer
+          x-go-type: uint32
+        imported:
+          type: integer
+          x-go-type: uint32
+        failed:
+          type: integer
+          x-go-type: uint32
+        requests:
+          type: integer
+          x-go-type: uint32
+    StatsFunnel:
+      type: object
+      required: [searched, grabbed, downloaded, imported]
+      properties:
+        searched:
+          type: integer
+          x-go-type: uint32
+        grabbed:
+          type: integer
+          x-go-type: uint32
+        downloaded:
+          type: integer
+          x-go-type: uint32
+        imported:
+          type: integer
+          x-go-type: uint32
+    StatsFailure:
+      type: object
+      required: [reason, count, last_at]
+      properties:
+        reason:
+          type: string
+          description: "`stalled`, `verification`, `no_match`, `tracker`, `no_space`, `unpack` or `other`, classified from the record's free-text reason."
+        count:
+          type: integer
+          x-go-type: uint32
+        last_at:
+          type: string
+          format: date-time
+    StatsIndexer:
+      type: object
+      required: [name, grabs, imported, failed]
+      properties:
+        name:
+          type: string
+        grabs:
+          type: integer
+          x-go-type: uint32
+        imported:
+          type: integer
+          x-go-type: uint32
+        failed:
+          type: integer
+          x-go-type: uint32
+    StatsTranscode:
+      type: object
+      required: [succeeded, failed, rejected, saved_bytes, busy_s]
+      properties:
+        succeeded:
+          type: integer
+          x-go-type: uint32
+        failed:
+          type: integer
+          x-go-type: uint32
+        rejected:
+          type: integer
+          x-go-type: uint32
+        saved_bytes:
+          type: integer
+          format: int64
+        busy_s:
+          type: integer
+          format: int64
+    StatsDrift:
+      type: object
+      required: [detected, confirmed]
+      properties:
+        detected:
+          type: integer
+          x-go-type: uint32
+        confirmed:
+          type: integer
+          x-go-type: uint32
+    StatsPipeline:
+      type: object
+      required: [daily, funnel, held, grab_to_import_p50_s, grab_to_import_p90_s, failures, indexers, transcode, drift]
+      properties:
+        daily:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatsDay"
+        funnel:
+          $ref: "#/components/schemas/StatsFunnel"
+        held:
+          type: integer
+          x-go-type: uint32
+          description: Downloads held for review now, whatever the range.
+        grab_to_import_p50_s:
+          type: integer
+          format: int64
+        grab_to_import_p90_s:
+          type: integer
+          format: int64
+        failures:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatsFailure"
+        indexers:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatsIndexer"
+        transcode:
+          $ref: "#/components/schemas/StatsTranscode"
+        drift:
+          $ref: "#/components/schemas/StatsDrift"
+    StatsPerson:
+      type: object
+      required: [id, name, email, role, requests, approved, denied, available, last_seen_at]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          $ref: "#/components/schemas/StatsRole"
+        requests:
+          type: integer
+          x-go-type: uint32
+        approved:
+          type: integer
+          x-go-type: uint32
+          description: Available requests count as approved too.
+        denied:
+          type: integer
+          x-go-type: uint32
+        available:
+          type: integer
+          x-go-type: uint32
+        last_seen_at:
+          type: string
+          format: date-time
+          nullable: true
+    StatsRole:
+      type: string
+      enum: [admin, member, request_only]
+    StatsRequests:
+      type: object
+      required: [total, pending, approved, denied, available]
+      properties:
+        total:
+          type: integer
+          x-go-type: uint32
+        pending:
+          type: integer
+          x-go-type: uint32
+          description: What waits now, whenever it was asked.
+        approved:
+          type: integer
+          x-go-type: uint32
+        denied:
+          type: integer
+          x-go-type: uint32
+        available:
+          type: integer
+          x-go-type: uint32
+    StatsUsers:
+      type: object
+      required: [total, active, requests, decide_p50_s, available_p50_s, people]
+      properties:
+        total:
+          type: integer
+          x-go-type: uint32
+        active:
+          type: integer
+          x-go-type: uint32
+          description: Seen inside the range.
+        requests:
+          $ref: "#/components/schemas/StatsRequests"
+        decide_p50_s:
+          type: integer
+          format: int64
+        available_p50_s:
+          type: integer
+          format: int64
+        people:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatsPerson"
+    Stats:
+      type: object
+      required: [range, generated_at, library, pipeline, users, previous]
+      properties:
+        range:
+          $ref: "#/components/schemas/StatsRange"
+        generated_at:
+          type: string
+          format: date-time
+        library:
+          $ref: "#/components/schemas/StatsLibrary"
+        pipeline:
+          $ref: "#/components/schemas/StatsPipeline"
+        users:
+          $ref: "#/components/schemas/StatsUsers"
+        previous:
+          $ref: "#/components/schemas/StatsTotals"
+
+    MusicGenreCount:
+      type: object
+      required: [name, count]
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+          x-go-type: uint32
 
     PaginatedMusicArtists:
       type: object

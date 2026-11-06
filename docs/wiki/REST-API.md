@@ -132,7 +132,7 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 
 ## Endpoint map
 
-192 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential, `request_only` included), `Member` (`admin` or `member` — a `request_only` caller gets 403) or `🔒 Admin`; the Requests group spells out the exact roles.
+203 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential, `request_only` included), `Member` (`admin` or `member` — a `request_only` caller gets 403) or `🔒 Admin`; the Requests group spells out the exact roles.
 
 ### Movies
 
@@ -184,7 +184,7 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `GET` | `/music/search/releases?query=&limit=` | Search MusicBrainz release groups by title or artist (2 to 200 characters, `limit` 1 to 20, `400` outside); each hit carries `mbid`, `title`, `artist`, `artist_mbid`, `year`, `type` and `already_added`. Memoised for 10 minutes. `429` (`code: rate_limited`) when MusicBrainz limits | Authenticated |
 | `GET` | `/music/search/{mbid}` | The hit fields and the detail of one MusicBrainz artist: `overview` (`?lang=en\|fr`, English when that language has no article), `genres`, current `members`, `releases` | Authenticated |
 | `GET` | `/music/artists` | Paginated list (`?page=`, `?limit=` 1-100, `?status=wanted\|downloading\|available`, `?monitored=monitored\|unmonitored`, `?query=` accent-folded over name, sort name, genre and album titles, `?sort=recent\|name`, `?order=`); items carry their albums as tiles with no tracks; `?with_total=false` skips counting the matches and leaves `total` out | Authenticated |
-| `GET` | `/music/artists/counts` | Faceted counts for the list's toolbar: each facet is counted with the other facet's filter applied, each with its own `*_total` row; with no parameters, the whole library | Authenticated |
+| `GET` | `/music/artists/counts` | Faceted counts for the list's toolbar: each facet is counted with the other facets' filters applied, status and monitoring with their own `*_total` row; `genres` and `letters` (artists per letter under every filter) alongside; with no parameters, the whole library | Authenticated |
 | `POST` | `/music/artists` | Add an artist by `mbid` (`monitor` defaults to `all`, optional `quality_profile`); `409` if already added, `422` for an unknown profile or policy, `429` when MusicBrainz is limiting | Member |
 | `GET` | `/music/artists/{id}` | Fetch an artist with its discography: members, and every album with tracks, credits and personnel (a track's `artists` and `writers` come from `GET /music/artists/{id}/track-credits` or `GET /music/albums/{id}`) (`?lang=en\|fr` picks the overview) | Authenticated |
 | `GET` | `/music/artists/{id}/track-credits` | The artists and writers of every track of the artist's discography, the per-track credits its detail leaves out; a track with neither is left out | Authenticated |
@@ -444,6 +444,7 @@ An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` and 
 | `PATCH` | `/schedules/{name}` | Update a schedule | 🔒 Admin |
 | `POST` | `/schedules/{name}/pause` · `/resume` · `/run` | Pause, resume, or run a schedule now | 🔒 Admin |
 | `GET` | `/system/info` | Server info | 🔒 Admin |
+| `GET` | `/stats` | The stats page: what the library holds, how the pipeline filled it, who asked for what, over `range=7d`, `30d` or `90d` | 🔒 Admin |
 
 ### Calendar
 

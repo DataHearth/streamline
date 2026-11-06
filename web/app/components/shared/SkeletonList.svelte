@@ -6,7 +6,7 @@
 		variant = "row",
 		count = 3,
 	}: {
-		variant?: "card" | "row" | "divided" | "field" | "panel" | "poster" | "media-row";
+		variant?: "card" | "row" | "divided" | "field" | "panel" | "poster" | "media-row" | "artist";
 		count?: number;
 	} = $props();
 
@@ -82,6 +82,14 @@
 				<Skeleton w={w(i)} h={10} />
 				<Skeleton w="38%" h={8} />
 			</div>
+		</div>
+	{:else if variant === "artist"}
+		<!-- ArtistCard: the round photo inside its ring, the name and the line
+		     under it, centred in the cell. -->
+		<div class="flex flex-col items-center">
+			<div class="aspect-square w-[88%] max-w-[120px] animate-pulse rounded-full bg-white/[0.06] motion-reduce:animate-none"></div>
+			<Skeleton w={w(i)} h={11} class="mt-4" />
+			<Skeleton w={w(i, 2)} h={9} class="mt-1.5" />
 		</div>
 	{:else if variant === "media-row"}
 		<!-- Mirrors MovieList's tr: checkbox, w-10 poster, title (+ original

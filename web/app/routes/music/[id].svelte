@@ -14,7 +14,7 @@
 	import MediaHero from "@components/shared/MediaHero.svelte";
 	import MonitorSelect from "@components/shared/MonitorSelect.svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
-	import StatusPill from "@components/shared/StatusPill.svelte";
+	import LabelPill from "@components/shared/LabelPill.svelte";
 	import Poster from "@components/shared/Poster.svelte";
 	import Skeleton from "@components/shared/Skeleton.svelte";
 	import LibraryActions from "@components/shared/LibraryActions.svelte";
@@ -33,6 +33,8 @@
 	import { countMissing } from "@lib/nouns";
 	import {
 		artistPeople,
+		artistPill,
+		artistSegments,
 		artistTally,
 		collaborators,
 		creditRoleLabel,
@@ -98,6 +100,18 @@
 	}));
 	let artist = $derived(artistQuery.data);
 	let tally = $derived(artist ? artistTally(artist) : null);
+	// The bar under the hero: the tally's scope by state, as the library ring.
+	let segments = $derived(artist ? artistSegments(artist) : []);
+	let segTotal = $derived(segments.reduce((n, sg) => n + sg.count, 0));
+	// On the photo, as on the library card: only while something is pending.
+	let heroPill = $derived(artist ? artistPill(artist) : null);
+	let facts = $derived(
+		artist
+			? [artist.genre, artist.origin, artist.since ? i18n.music_since({ year: String(artist.since) }) : ""].filter(
+					(f): f is string => !!f,
+				)
+			: [],
+	);
 	let selected = $derived(
 		artist ? (artist.albums.find((r) => r.id === selectedId) ?? defaultRelease(artist.albums)) : undefined,
 	);
@@ -347,23 +361,32 @@
 			overview={artist.overview}
 		>
 			{#snippet art()}
-				<div class="relative aspect-square w-full overflow-hidden rounded-full bg-bg-card shadow-[0_24px_48px_rgb(0_0_0_/0.5)]">
-					<div class="absolute inset-0 grid place-items-center text-fg-faint">
-						<UserRound class="h-1/3 w-1/3" aria-hidden="true" />
+				<div class="relative">
+					<div class="relative aspect-square w-full overflow-hidden rounded-full bg-bg-card shadow-[0_24px_48px_rgb(0_0_0_/0.5)]">
+						<div class="absolute inset-0 grid place-items-center text-fg-faint">
+							<UserRound class="h-1/3 w-1/3" aria-hidden="true" />
+						</div>
+						<Poster src={artistPosterUrl(artist.id)} alt="" loading="eager" class="relative h-full w-full object-cover" />
 					</div>
-					<Poster src={artistPosterUrl(artist.id)} alt="" loading="eager" class="relative h-full w-full object-cover" />
+					{#if heroPill}
+						<span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
+							<LabelPill token={heroPill.token} label={heroPill.label} live={heroPill.live} size="md" />
+						</span>
+					{/if}
 				</div>
 			{/snippet}
 			{#snippet pills()}
-				<StatusPill status={artist.status} size="md" variant="translucent" live={artist.status === "downloading"} />
-				{#if artist.genre}<span class={caps}>{artist.genre}</span>{/if}
-				{#if artist.origin}
-					<span class="text-fg-faint" aria-hidden="true">·</span>
-					<span class={caps}>{artist.origin}</span>
-				{/if}
-				{#if artist.since}
-					<span class="text-fg-faint" aria-hidden="true">·</span>
-					<span class={caps}>{i18n.music_since({ year: String(artist.since) })}</span>
+				{#if facts.length > 0}
+					<!-- Each fact carries its dot in front, and the row is pulled left by
+					     one dot inside a clip: the fact that starts a line has its dot
+					     clipped, so a wrap never leaves one hanging. -->
+					<div class="min-w-0 flex-1 overflow-hidden">
+						<div class="-ml-5 flex flex-wrap gap-y-1">
+							{#each facts as fact (fact)}
+								<span class={cn(caps, "relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']")}>{fact}</span>
+							{/each}
+						</div>
+					</div>
 				{/if}
 			{/snippet}
 			{#snippet extra()}
@@ -373,18 +396,19 @@
 							<span class="text-fg">{tally.have}</span> / {tally.released}
 							<span class="text-fg-subtle">{i18n.music_releases_complete()}</span>
 							{#if tally.downloading}
-								<span class="text-fg-faint"> · </span><span class="text-status-downloading">{i18n.music_n_downloading({ count: String(tally.downloading) })}</span>
+								<span class="mr-[1ch] text-fg-faint">·</span><span class="text-status-downloading">{i18n.music_n_downloading({ count: String(tally.downloading) })}</span>
 							{/if}
 							{#if tally.wanted}
-								<span class="text-fg-faint"> · </span><span class="text-status-wanted">{i18n.music_n_wanted({ count: String(tally.wanted) })}</span>
+								<span class="mr-[1ch] text-fg-faint">·</span><span class="text-status-wanted">{i18n.music_n_wanted({ count: String(tally.wanted) })}</span>
 							{/if}
 							{#if tally.missing}
-								<span class="text-fg-faint"> · </span><span class="text-status-missing">{countMissing(tally.missing)}</span>
+								<span class="mr-[1ch] text-fg-faint">·</span><span class="text-status-missing">{countMissing(tally.missing)}</span>
 							{/if}
 						</div>
 						<div class="flex h-[3px] w-full overflow-hidden rounded-full bg-white/[0.08]" aria-hidden="true">
-							<div class="bg-status-available" style:width="{(tally.have / tally.released) * 100}%"></div>
-							<div class="bg-status-downloading" style:width="{(tally.downloading / tally.released) * 100}%"></div>
+							{#each segments as sg (sg.token)}
+								<div style:width="{(sg.count / segTotal) * 100}%" style:background-color="var(--status-{sg.token})"></div>
+							{/each}
 						</div>
 					</div>
 				{/if}

@@ -2638,6 +2638,72 @@ func (e SeriesDownloadScope) Valid() bool {
 	}
 }
 
+// Defines values for StatsKind.
+const (
+	StatsKindBooks  StatsKind = "books"
+	StatsKindMovie  StatsKind = "movie"
+	StatsKindMusic  StatsKind = "music"
+	StatsKindSeries StatsKind = "series"
+)
+
+// Valid indicates whether the value is a known member of the StatsKind enum.
+func (e StatsKind) Valid() bool {
+	switch e {
+	case StatsKindBooks:
+		return true
+	case StatsKindMovie:
+		return true
+	case StatsKindMusic:
+		return true
+	case StatsKindSeries:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatsRange.
+const (
+	StatsRangeN30d StatsRange = "30d"
+	StatsRangeN7d  StatsRange = "7d"
+	StatsRangeN90d StatsRange = "90d"
+)
+
+// Valid indicates whether the value is a known member of the StatsRange enum.
+func (e StatsRange) Valid() bool {
+	switch e {
+	case StatsRangeN30d:
+		return true
+	case StatsRangeN7d:
+		return true
+	case StatsRangeN90d:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatsRole.
+const (
+	StatsRoleAdmin       StatsRole = "admin"
+	StatsRoleMember      StatsRole = "member"
+	StatsRoleRequestOnly StatsRole = "request_only"
+)
+
+// Valid indicates whether the value is a known member of the StatsRole enum.
+func (e StatsRole) Valid() bool {
+	switch e {
+	case StatsRoleAdmin:
+		return true
+	case StatsRoleMember:
+		return true
+	case StatsRoleRequestOnly:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SystemInfoSeedAdminSecret.
 const (
 	SystemInfoSeedAdminSecretConfig SystemInfoSeedAdminSecret = "config"
@@ -6898,12 +6964,18 @@ type MusicArtistCore struct {
 // own left out, and each facet carries its own `*_total` "all" row.
 type MusicArtistCounts struct {
 	// Albums Every album row in the library, upcoming included; filters do not narrow it.
-	Albums         uint32 `json:"albums"`
-	Available      uint32 `json:"available"`
-	Downloading    uint32 `json:"downloading"`
-	Monitored      uint32 `json:"monitored"`
-	MonitoredTotal uint32 `json:"monitored_total"`
-	StatusTotal    uint32 `json:"status_total"`
+	Albums      uint32 `json:"albums"`
+	Available   uint32 `json:"available"`
+	Downloading uint32 `json:"downloading"`
+
+	// Genres Each genre with its artists under the other filters, most first.
+	Genres []MusicGenreCount `json:"genres"`
+
+	// Letters Artists per letter (`#`, `A`…`Z`) with every filter applied. A letter with none is absent.
+	Letters        map[string]uint32 `json:"letters"`
+	Monitored      uint32            `json:"monitored"`
+	MonitoredTotal uint32            `json:"monitored_total"`
+	StatusTotal    uint32            `json:"status_total"`
 
 	// Total The library, filtered by nothing (header, empty state, nav badge).
 	Total       uint32 `json:"total"`
@@ -7080,6 +7152,12 @@ type MusicCredit struct {
 
 // MusicCreditRole defines model for MusicCreditRole.
 type MusicCreditRole string
+
+// MusicGenreCount defines model for MusicGenreCount.
+type MusicGenreCount struct {
+	Count uint32 `json:"count"`
+	Name  string `json:"name"`
+}
 
 // MusicLookupRelease defines model for MusicLookupRelease.
 type MusicLookupRelease struct {
@@ -8513,6 +8591,195 @@ type SpecialsMonitoredResult struct {
 	SeasonsUpdated int `json:"seasons_updated"`
 }
 
+// Stats defines model for Stats.
+type Stats struct {
+	GeneratedAt time.Time     `json:"generated_at"`
+	Library     StatsLibrary  `json:"library"`
+	Pipeline    StatsPipeline `json:"pipeline"`
+	Previous    StatsTotals   `json:"previous"`
+	Range       StatsRange    `json:"range"`
+	Users       StatsUsers    `json:"users"`
+}
+
+// StatsDay defines model for StatsDay.
+type StatsDay struct {
+	// Day `YYYY-MM-DD`, UTC.
+	Day      string `json:"day"`
+	Failed   uint32 `json:"failed"`
+	Grabbed  uint32 `json:"grabbed"`
+	Imported uint32 `json:"imported"`
+	Requests uint32 `json:"requests"`
+}
+
+// StatsDrift defines model for StatsDrift.
+type StatsDrift struct {
+	Confirmed uint32 `json:"confirmed"`
+	Detected  uint32 `json:"detected"`
+}
+
+// StatsFailure defines model for StatsFailure.
+type StatsFailure struct {
+	Count  uint32    `json:"count"`
+	LastAt time.Time `json:"last_at"`
+
+	// Reason `stalled`, `verification`, `no_match`, `tracker`, `no_space`, `unpack` or `other`, classified from the record's free-text reason.
+	Reason string `json:"reason"`
+}
+
+// StatsFunnel defines model for StatsFunnel.
+type StatsFunnel struct {
+	Downloaded uint32 `json:"downloaded"`
+	Grabbed    uint32 `json:"grabbed"`
+	Imported   uint32 `json:"imported"`
+	Searched   uint32 `json:"searched"`
+}
+
+// StatsIndexer defines model for StatsIndexer.
+type StatsIndexer struct {
+	Failed   uint32 `json:"failed"`
+	Grabs    uint32 `json:"grabs"`
+	Imported uint32 `json:"imported"`
+	Name     string `json:"name"`
+}
+
+// StatsKind defines model for StatsKind.
+type StatsKind string
+
+// StatsLargest defines model for StatsLargest.
+type StatsLargest struct {
+	Bytes int64 `json:"bytes"`
+
+	// Href The title's page in the SPA.
+	Href    string    `json:"href"`
+	Kind    StatsKind `json:"kind"`
+	Quality string    `json:"quality"`
+	Title   string    `json:"title"`
+}
+
+// StatsLibrary defines model for StatsLibrary.
+type StatsLibrary struct {
+	Audio []StatsSlice `json:"audio"`
+
+	// Hdr Read off the release name, not the probe.
+	Hdr     []StatsSlice   `json:"hdr"`
+	Largest []StatsLargest `json:"largest"`
+	Media   []StatsMedia   `json:"media"`
+
+	// Resolution Probed video files by resolution, most first; the next three likewise.
+	Resolution []StatsSlice `json:"resolution"`
+
+	// Unprobed Video files ffprobe has not read yet; the breakdowns skip them.
+	Unprobed   uint32       `json:"unprobed"`
+	VideoCodec []StatsSlice `json:"video_codec"`
+
+	// Volumes The library roots and the data directory. A root that cannot be read is left out.
+	Volumes []StatsVolume `json:"volumes"`
+}
+
+// StatsMedia defines model for StatsMedia.
+type StatsMedia struct {
+	Bytes int64     `json:"bytes"`
+	Files uint32    `json:"files"`
+	Kind  StatsKind `json:"kind"`
+
+	// Titles Movies, shows, artists, books.
+	Titles uint32 `json:"titles"`
+
+	// Wanted In the medium's own unit: movies, episodes, albums, books.
+	Wanted uint32 `json:"wanted"`
+}
+
+// StatsPerson defines model for StatsPerson.
+type StatsPerson struct {
+	// Approved Available requests count as approved too.
+	Approved   uint32     `json:"approved"`
+	Available  uint32     `json:"available"`
+	Denied     uint32     `json:"denied"`
+	Email      string     `json:"email"`
+	Id         uint32     `json:"id"`
+	LastSeenAt *time.Time `json:"last_seen_at"`
+	Name       string     `json:"name"`
+	Requests   uint32     `json:"requests"`
+	Role       StatsRole  `json:"role"`
+}
+
+// StatsPipeline defines model for StatsPipeline.
+type StatsPipeline struct {
+	Daily            []StatsDay     `json:"daily"`
+	Drift            StatsDrift     `json:"drift"`
+	Failures         []StatsFailure `json:"failures"`
+	Funnel           StatsFunnel    `json:"funnel"`
+	GrabToImportP50S int64          `json:"grab_to_import_p50_s"`
+	GrabToImportP90S int64          `json:"grab_to_import_p90_s"`
+
+	// Held Downloads held for review now, whatever the range.
+	Held      uint32         `json:"held"`
+	Indexers  []StatsIndexer `json:"indexers"`
+	Transcode StatsTranscode `json:"transcode"`
+}
+
+// StatsRange defines model for StatsRange.
+type StatsRange string
+
+// StatsRequests defines model for StatsRequests.
+type StatsRequests struct {
+	Approved  uint32 `json:"approved"`
+	Available uint32 `json:"available"`
+	Denied    uint32 `json:"denied"`
+
+	// Pending What waits now, whenever it was asked.
+	Pending uint32 `json:"pending"`
+	Total   uint32 `json:"total"`
+}
+
+// StatsRole defines model for StatsRole.
+type StatsRole string
+
+// StatsSlice defines model for StatsSlice.
+type StatsSlice struct {
+	Bytes int64  `json:"bytes"`
+	Count uint32 `json:"count"`
+
+	// Key A format (`2160p`, `hevc`, `hdr10`, `eac3`…), or `other` or `unknown`.
+	Key string `json:"key"`
+}
+
+// StatsTotals defines model for StatsTotals.
+type StatsTotals struct {
+	Failed   uint32 `json:"failed"`
+	Grabbed  uint32 `json:"grabbed"`
+	Imported uint32 `json:"imported"`
+	Requests uint32 `json:"requests"`
+}
+
+// StatsTranscode defines model for StatsTranscode.
+type StatsTranscode struct {
+	BusyS      int64  `json:"busy_s"`
+	Failed     uint32 `json:"failed"`
+	Rejected   uint32 `json:"rejected"`
+	SavedBytes int64  `json:"saved_bytes"`
+	Succeeded  uint32 `json:"succeeded"`
+}
+
+// StatsUsers defines model for StatsUsers.
+type StatsUsers struct {
+	// Active Seen inside the range.
+	Active        uint32        `json:"active"`
+	AvailableP50S int64         `json:"available_p50_s"`
+	DecideP50S    int64         `json:"decide_p50_s"`
+	People        []StatsPerson `json:"people"`
+	Requests      StatsRequests `json:"requests"`
+	Total         uint32        `json:"total"`
+}
+
+// StatsVolume defines model for StatsVolume.
+type StatsVolume struct {
+	Key        string `json:"key"`
+	Path       string `json:"path"`
+	TotalBytes int64  `json:"total_bytes"`
+	UsedBytes  int64  `json:"used_bytes"`
+}
+
 // SubsonicAccess What the user may do through the Subsonic API (`/rest`). These gate
 // Subsonic calls only, never the web UI or the REST API. Browsing,
 // searching, starring and scrobbling are always allowed.
@@ -9590,6 +9857,9 @@ type MoviesSort = string
 // MoviesStatus defines model for MoviesStatus.
 type MoviesStatus = string
 
+// MusicArtistGenreParam defines model for MusicArtistGenreParam.
+type MusicArtistGenreParam = string
+
 // MusicArtistMonitoredParam defines model for MusicArtistMonitoredParam.
 type MusicArtistMonitoredParam string
 
@@ -9690,6 +9960,9 @@ type SeriesType = string
 
 // SessionID defines model for SessionID.
 type SessionID = uint32
+
+// StatsRangeParam defines model for StatsRangeParam.
+type StatsRangeParam = StatsRange
 
 // TMDBID defines model for TMDBID.
 type TMDBID = uint32
@@ -9942,6 +10215,9 @@ type ServiceUnavailable = Error
 
 // SpecialsMonitored defines model for SpecialsMonitored.
 type SpecialsMonitored = SpecialsMonitoredResult
+
+// StatsResponse defines model for StatsResponse.
+type StatsResponse = Stats
 
 // SystemConfig defines model for SystemConfig.
 type SystemConfig = SystemConfigView
@@ -10541,16 +10817,22 @@ type ListMusicArtistsParams struct {
 	Page  *SeriesPage  `form:"page,omitempty" json:"page,omitempty"`
 	Limit *SeriesLimit `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// Status Filter by the artist status rollup.
+	// Status Asks what an artist has, not its rollup: `wanted` is any monitored, released album
+	// wanted or failed, `downloading` any monitored album downloading or paused,
+	// `available` neither. An artist can be under both of the first two, and the counts
+	// overlap the same way.
 	Status *MusicArtistStatusParam `form:"status,omitempty" json:"status,omitempty"`
 
 	// Monitored Filter by monitoring; an artist is monitored when its `monitor` is not `none`.
 	Monitored *ListMusicArtistsParamsMonitored `form:"monitored,omitempty" json:"monitored,omitempty"`
 
+	// Genre An artist's genre, exactly as `/music/artists/counts` lists it.
+	Genre *MusicArtistGenreParam `form:"genre,omitempty" json:"genre,omitempty"`
+
 	// Query Accent-folded match over artist name, sort name, genre and album titles.
 	Query *MusicArtistQueryParam `form:"query,omitempty" json:"query,omitempty"`
 
-	// Sort `recent` is by added time, newest first; `name` is by sort name then name, ascending. `order` overrides either; ties break on id.
+	// Sort `recent` is by added time, newest first; `name` is by the displayed name, ascending, accents folded, with anything that does not start with A–Z first, under `#`. `order` overrides either; ties break on id.
 	Sort  *ListMusicArtistsParamsSort  `form:"sort,omitempty" json:"sort,omitempty"`
 	Order *ListMusicArtistsParamsOrder `form:"order,omitempty" json:"order,omitempty"`
 
@@ -10571,11 +10853,17 @@ type ListMusicArtistsParamsOrder string
 
 // GetMusicArtistCountsParams defines parameters for GetMusicArtistCounts.
 type GetMusicArtistCountsParams struct {
-	// Status Filter by the artist status rollup.
+	// Status Asks what an artist has, not its rollup: `wanted` is any monitored, released album
+	// wanted or failed, `downloading` any monitored album downloading or paused,
+	// `available` neither. An artist can be under both of the first two, and the counts
+	// overlap the same way.
 	Status *MusicArtistStatusParam `form:"status,omitempty" json:"status,omitempty"`
 
 	// Monitored Filter by monitoring; an artist is monitored when its `monitor` is not `none`.
 	Monitored *GetMusicArtistCountsParamsMonitored `form:"monitored,omitempty" json:"monitored,omitempty"`
+
+	// Genre An artist's genre, exactly as `/music/artists/counts` lists it.
+	Genre *MusicArtistGenreParam `form:"genre,omitempty" json:"genre,omitempty"`
 
 	// Query Accent-folded match over artist name, sort name, genre and album titles.
 	Query *MusicArtistQueryParam `form:"query,omitempty" json:"query,omitempty"`
@@ -10823,6 +11111,12 @@ type ReidentifySeriesJSONBody struct {
 type RenameSeriesFilesParams struct {
 	// Preview When true, returns the rename plan without applying it.
 	Preview *RenamePreview `form:"preview,omitempty" json:"preview,omitempty"`
+}
+
+// GetStatsParams defines parameters for GetStats.
+type GetStatsParams struct {
+	// Range The stretch the pipeline and requests cover. Defaults to `30d`.
+	Range *StatsRangeParam `form:"range,omitempty" json:"range,omitempty"`
 }
 
 // DeleteTorrentParams defines parameters for DeleteTorrent.
@@ -11940,6 +12234,9 @@ type ServerInterface interface {
 	// BrowseSeasonReleases Search indexers for a season's releases
 	// (POST /series/{id}/seasons/{number}/search)
 	BrowseSeasonReleases(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber)
+	// GetStats Library, pipeline and user statistics (admin)
+	// (GET /stats)
+	GetStats(w http.ResponseWriter, r *http.Request, params GetStatsParams)
 	// GetSystemInfo Read-only environment summary (admin)
 	// (GET /system/info)
 	GetSystemInfo(w http.ResponseWriter, r *http.Request)
@@ -13423,6 +13720,12 @@ func (_ Unimplemented) GetSeasonReleaseFiles(w http.ResponseWriter, r *http.Requ
 // BrowseSeasonReleases Search indexers for a season's releases
 // (POST /series/{id}/seasons/{number}/search)
 func (_ Unimplemented) BrowseSeasonReleases(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetStats Library, pipeline and user statistics (admin)
+// (GET /stats)
+func (_ Unimplemented) GetStats(w http.ResponseWriter, r *http.Request, params GetStatsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -18275,6 +18578,19 @@ func (siw *ServerInterfaceWrapper) ListMusicArtists(w http.ResponseWriter, r *ht
 		return
 	}
 
+	// ------------- Optional query parameter "genre" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "genre", r.URL.Query(), &params.Genre, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "genre"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "genre", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "query" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -18383,6 +18699,19 @@ func (siw *ServerInterfaceWrapper) GetMusicArtistCounts(w http.ResponseWriter, r
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "monitored"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "monitored", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "genre" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "genre", r.URL.Query(), &params.Genre, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "genre"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "genre", Err: err})
 		}
 		return
 	}
@@ -20899,6 +21228,39 @@ func (siw *ServerInterfaceWrapper) BrowseSeasonReleases(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetStats operation middleware
+func (siw *ServerInterfaceWrapper) GetStats(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetStatsParams
+
+	// ------------- Optional query parameter "range" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "range", r.URL.Query(), &params.Range, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "range"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "range", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStats(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetSystemInfo operation middleware
 func (siw *ServerInterfaceWrapper) GetSystemInfo(w http.ResponseWriter, r *http.Request) {
 
@@ -22372,6 +22734,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/transcoding/scan", wrapper.StartTranscodeScan)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/stats", wrapper.GetStats)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/system/info", wrapper.GetSystemInfo)
 	})
 	r.Group(func(r chi.Router) {
@@ -22667,6 +23032,8 @@ type SeriesSendPlanResponseJSONResponse SeriesSendPlan
 type ServiceUnavailableJSONResponse Error
 
 type SpecialsMonitoredJSONResponse SpecialsMonitoredResult
+
+type StatsResponseJSONResponse Stats
 
 type SystemConfigJSONResponse SystemConfigView
 
@@ -38983,6 +39350,70 @@ func (response BrowseSeasonReleases500JSONResponse) VisitBrowseSeasonReleasesRes
 	return err
 }
 
+type GetStatsRequestObject struct {
+	Params GetStatsParams
+}
+
+type GetStatsResponseObject interface {
+	VisitGetStatsResponse(w http.ResponseWriter) error
+}
+
+type GetStats200JSONResponse struct{ StatsResponseJSONResponse }
+
+func (response GetStats200JSONResponse) VisitGetStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStats400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetStats400JSONResponse) VisitGetStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStats403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetStats403JSONResponse) VisitGetStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStats500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetStats500JSONResponse) VisitGetStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetSystemInfoRequestObject struct {
 }
 
@@ -40935,6 +41366,9 @@ type StrictServerInterface interface {
 	// BrowseSeasonReleases Search indexers for a season's releases
 	// (POST /series/{id}/seasons/{number}/search)
 	BrowseSeasonReleases(ctx context.Context, request BrowseSeasonReleasesRequestObject) (BrowseSeasonReleasesResponseObject, error)
+	// GetStats Library, pipeline and user statistics (admin)
+	// (GET /stats)
+	GetStats(ctx context.Context, request GetStatsRequestObject) (GetStatsResponseObject, error)
 	// GetSystemInfo Read-only environment summary (admin)
 	// (GET /system/info)
 	GetSystemInfo(ctx context.Context, request GetSystemInfoRequestObject) (GetSystemInfoResponseObject, error)
@@ -47750,6 +48184,32 @@ func (sh *strictHandler) BrowseSeasonReleases(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(BrowseSeasonReleasesResponseObject); ok {
 		if err := validResponse.VisitBrowseSeasonReleasesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetStats operation middleware
+func (sh *strictHandler) GetStats(w http.ResponseWriter, r *http.Request, params GetStatsParams) {
+	var request GetStatsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStats(ctx, request.(GetStatsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStats")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetStatsResponseObject); ok {
+		if err := validResponse.VisitGetStatsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

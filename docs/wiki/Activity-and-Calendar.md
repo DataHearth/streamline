@@ -223,3 +223,13 @@ Weeks start on Monday regardless of locale.
 ---
 
 **Next:** [Requests and Users](Requests-and-Users), or [Troubleshooting](Troubleshooting) if something's stuck.
+
+## Stats
+
+Admins get a **Stats** page, under Operations in the sidebar, with 7, 30 and 90 day views:
+
+- **Library**: titles, files, disk use and what is wanted per medium, each library folder's volume, the resolution, codec, dynamic range and audio of your video files, and the five largest files. These are always the current state, whichever view you pick.
+- **Pipeline**: grabs, imports and failures per day against the period before, the search → grab → download → import funnel, the time from grab to import, why grabs failed, how each indexer does, transcoding and drift.
+- **Users and requests**: how many requests came in, what still waits, how long a decision and an arrival take, and every account with its requests and when it was last seen.
+
+Dynamic range is read from the release name, so a file renamed without its `HDR` or `DV` tag counts as SDR, and video files ffprobe has not read yet are counted apart.

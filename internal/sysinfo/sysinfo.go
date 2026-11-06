@@ -86,12 +86,13 @@ func secretSource(inline, file string) string {
 // are pre-formatted byte strings; Pct is 0–100 (rounded down). Kind is a
 // coarse threshold marker for badge / progress-bar styling.
 type DiskUsage struct {
-	Used      string
-	Total     string
-	Free      string
-	FreeBytes int64
-	Pct       uint8
-	Kind      string // "ok" (<70%), "warn" (70–90%), "err" (>=90%)
+	Used       string
+	Total      string
+	Free       string
+	FreeBytes  int64
+	TotalBytes int64
+	Pct        uint8
+	Kind       string // "ok" (<70%), "warn" (70–90%), "err" (>=90%)
 }
 
 // displayVersion renders the ldflag value the way every surface shows it, so
@@ -234,11 +235,12 @@ func diskUsage(total, free int64) *DiskUsage {
 		kind = "warn"
 	}
 	return &DiskUsage{
-		Used:      humanBytes(used),
-		Total:     humanBytes(total),
-		Free:      humanBytes(free),
-		FreeBytes: free,
-		Pct:       pct,
-		Kind:      kind,
+		Used:       humanBytes(used),
+		Total:      humanBytes(total),
+		Free:       humanBytes(free),
+		FreeBytes:  free,
+		TotalBytes: total,
+		Pct:        pct,
+		Kind:       kind,
 	}
 }

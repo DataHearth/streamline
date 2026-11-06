@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	entsql "entgo.io/ent/dialect/sql"
 	"golang.org/x/text/unicode/norm"
@@ -47,6 +48,25 @@ func init() {
 			return foldText(s), nil
 		},
 	)
+	sqlite.MustRegisterDeterministicScalarFunction(
+		"sort_letter", 1,
+		func(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+			s, _ := args[0].(string)
+			return sortLetter(s), nil
+		},
+	)
+}
+
+// sortLetter files a name under its first letter with accents folded, and
+// anything that does not start with A–Z under "#". It looks at the raw first
+// rune rather than foldText's output because web/app/lib/music-books.ts
+// (sortLetter) does: "'Til Tuesday" must land in the same section on both.
+func sortLetter(s string) string {
+	first, _ := utf8.DecodeRuneInString(norm.NFD.String(s))
+	if u := unicode.ToUpper(first); u >= 'A' && u <= 'Z' {
+		return string(u)
+	}
+	return "#"
 }
 
 // orderFold orders by col folded: SQLite compares bytes, which sorts every

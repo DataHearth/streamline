@@ -1324,6 +1324,45 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			},
 		)
 
+		It("files anything that does not start with A–Z first, under #", func() {
+			client.Artist.Update().Where(entartist.NameEQ("Zebra")).
+				SetName("'Til Zebra").ExecX(ctx)
+			client.Artist.Update().Where(entartist.NameEQ("Nirvana")).
+				SetName("Élan").ExecX(ctx)
+			Expect(names(ListArtistsParams{Sort: "name"})).
+				To(Equal([]string{"'Til Zebra", "Björk", "Élan"}))
+			c, err := store.ArtistCounts(ctx, ListArtistsParams{Now: time.Now()})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(c.Letters).To(Equal(map[string]uint32{"#": 1, "B": 1, "E": 1}))
+		})
+
+		It(
+			"counts each genre with the other filters applied, and filters on one",
+			func() {
+				client.Artist.Update().
+					Where(entartist.NameEQ("Zebra")).
+					SetGenre("Rock").
+					ExecX(ctx)
+				client.Artist.Update().
+					Where(entartist.NameEQ("Nirvana")).
+					SetGenre("Rock").
+					ExecX(ctx)
+				client.Artist.Update().
+					Where(entartist.NameEQ("Björk")).
+					SetGenre("Art pop").
+					ExecX(ctx)
+				c, err := store.ArtistCounts(
+					ctx,
+					ListArtistsParams{Genre: "Rock", Now: time.Now()},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(c.Genres).To(Equal([]GenreCount{{"Rock", 2}, {"Art pop", 1}}))
+				Expect(c.Letters).To(Equal(map[string]uint32{"N": 1, "Z": 1}))
+				Expect(names(ListArtistsParams{Genre: "Rock", Sort: "name"})).
+					To(Equal([]string{"Nirvana", "Zebra"}))
+			},
+		)
+
 		It("sorts by recently added by default, newest first", func() {
 			Expect(names(ListArtistsParams{})).
 				To(Equal([]string{"Zebra", "Björk", "Nirvana"}))
@@ -1345,6 +1384,31 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 					To(Equal([]string{"Nirvana"}))
 				Expect(names(ListArtistsParams{Status: "wanted", Sort: "name"})).
 					To(BeEmpty())
+				Expect(names(ListArtistsParams{Status: "available", Sort: "name"})).
+					To(Equal([]string{"Björk", "Zebra"}))
+			},
+		)
+
+		It(
+			"lists an artist with both a wanted and a downloading album under each",
+			func() {
+				nirvana := client.Artist.Query().
+					Where(entartist.NameEQ("Nirvana")).
+					OnlyX(ctx)
+				client.Album.Create().
+					SetArtist(nirvana).
+					SetMbid("rg-wanted").
+					SetTitle("In Utero").
+					SetType(album.TypeAlbum).
+					SetMonitored(true).
+					SetStatus(album.StatusWanted).
+					ExecX(ctx)
+				Expect(
+					names(ListArtistsParams{Status: "downloading", Sort: "name"}),
+				).
+					To(Equal([]string{"Nirvana"}))
+				Expect(names(ListArtistsParams{Status: "wanted", Sort: "name"})).
+					To(Equal([]string{"Nirvana"}))
 				Expect(names(ListArtistsParams{Status: "available", Sort: "name"})).
 					To(Equal([]string{"Björk", "Zebra"}))
 			},
@@ -1423,7 +1487,9 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 					Total: 3, StatusTotal: 3,
 					Wanted: 0, Downloading: 1, Available: 2,
 					MonitoredTotal: 3, Monitored: 2, Unmonitored: 1,
-					Albums: 4,
+					Albums:  4,
+					Letters: map[string]uint32{"B": 1, "N": 1, "Z": 1},
+					Genres:  []GenreCount{{"Electronic", 1}, {"Grunge", 1}},
 				}))
 			})
 

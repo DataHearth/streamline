@@ -181,6 +181,7 @@ const (
 	facetStatus
 	facetType
 	facetMonitored
+	facetGenre
 )
 
 func tvShowFilters(p FilterTVShowsParams, skip facet) []predicate.TVShow {

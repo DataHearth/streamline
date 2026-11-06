@@ -1,8 +1,11 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 
 	oasspec "github.com/datahearth/streamline/api"
@@ -50,6 +53,7 @@ type Server struct {
 	api     *restapi.Server
 	posters posters.Manager
 	art     LookupArt
+	db      db.Store
 }
 
 // LookupArt serves the art of titles that are not in the library yet.
@@ -150,6 +154,7 @@ func New(cfg Config) *Server {
 		api:     api,
 		posters: cfg.Posters,
 		art:     cfg.LookupArt,
+		db:      cfg.DB,
 	}
 
 	// RequestID first so every line the rest of the chain logs — including the
@@ -228,7 +233,11 @@ func New(cfg Config) *Server {
 				http.NotFound(w, r)
 				return
 			}
-			s.posters.Serve(w, r, kind, uint32(idU))
+			id := uint32(idU)
+			if kind == "artists" {
+				kind, id = s.artistPosterSource(r.Context(), id)
+			}
+			s.posters.Serve(w, r, kind, id)
 		},
 	)
 
@@ -246,6 +255,41 @@ func New(cfg Config) *Server {
 	s.router.NotFound(s.web.SPAShell)
 
 	return s
+}
+
+// artistPosterSource falls an artist with no photo back on the cover of its
+// newest released album that has one; with neither, the artist's own 404 is what
+// tells the SPA to draw its monogram.
+func (s *Server) artistPosterSource(
+	ctx context.Context,
+	id uint32,
+) (string, uint32) {
+	if _, err := os.Stat(
+		s.posters.Path("artists", id),
+	); !errors.Is(
+		err,
+		os.ErrNotExist,
+	) {
+		return "artists", id
+	}
+	albums, err := s.db.ArtistCoverAlbums(ctx, id)
+	if err != nil {
+		slog.WarnContext(
+			ctx,
+			"could not list an artist's albums for its photo fallback",
+			"artist.id",
+			id,
+			"error",
+			err,
+		)
+		return "artists", id
+	}
+	for _, album := range albums {
+		if _, err := os.Stat(s.posters.Path("albums", album)); err == nil {
+			return "albums", album
+		}
+	}
+	return "artists", id
 }
 
 // Router returns the fully-wrapped HTTP handler. otelhttp is applied

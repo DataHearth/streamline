@@ -728,6 +728,10 @@ type Store interface {
 	// FailDownloadRecord finalizes a record whose torrent already exists in
 	// the client (unlike FailHeldDownloadRecord, no held-state precondition).
 	FailDownloadRecord(ctx context.Context, id uint32, reason string) error
+	// GetStats builds the admin stats report over the last days days.
+	GetStats(ctx context.Context, days int, now time.Time) (Stats, error)
+	// ArtistCoverAlbums lists an artist's released albums, newest first.
+	ArtistCoverAlbums(ctx context.Context, artistID uint32) ([]uint32, error)
 	ListImportingDownloadRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
 	FindImportingDownloadRecordByID(
 		ctx context.Context,

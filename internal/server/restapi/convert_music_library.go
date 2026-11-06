@@ -351,10 +351,16 @@ func toMusicLookupDetail(d *music.LookupDetail) MusicArtistLookupDetail {
 }
 
 func toMusicCounts(c db.ArtistCounts) MusicArtistCounts {
+	genres := make([]MusicGenreCount, len(c.Genres))
+	for i, g := range c.Genres {
+		genres[i] = MusicGenreCount{Name: g.Name, Count: g.Count}
+	}
 	return MusicArtistCounts{
 		Albums:         c.Albums,
 		Available:      c.Available,
 		Downloading:    c.Downloading,
+		Genres:         genres,
+		Letters:        c.Letters,
 		Monitored:      c.Monitored,
 		MonitoredTotal: c.MonitoredTotal,
 		StatusTotal:    c.StatusTotal,

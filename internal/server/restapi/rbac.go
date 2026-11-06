@@ -259,6 +259,7 @@ var minRole = map[string]string{
 	"ApplySpecialsToExisting": roleAdmin,
 
 	"GetSystemInfo": roleAdmin,
+	"GetStats":      roleAdmin,
 
 	"ListTorrents":           roleAdmin,
 	"GetTorrent":             roleAdmin,
