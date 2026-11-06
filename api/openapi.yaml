@@ -14910,6 +14910,23 @@ components:
             `total > 0` is the signal that the configured root no longer
             matches the database; both zero just means nothing is stored yet.
 
+    LibraryOfflineRoot:
+      type: object
+      required: [root, path, tracked, reason]
+      properties:
+        root:
+          type: string
+          enum: [movies, series, music, ebooks, audiobooks]
+        path:
+          type: string
+          description: The configured path of the root.
+        tracked:
+          type: integer
+          description: File rows tracked under the root.
+        reason:
+          type: string
+          enum: [path_missing, path_empty, files_missing]
+
     AcceptMissingResult:
       type: object
       required: [removed]
@@ -16053,6 +16070,12 @@ components:
           description: |
             True when ffmpeg.enabled is true and ffprobe was not found.
             Absent when ffmpeg is disabled — the operator opted out.
+        library_offline:
+          type: array
+          description: |
+            The library roots that look gone. Absent while every root is online.
+          items:
+            $ref: "#/components/schemas/LibraryOfflineRoot"
         hardcover_auth_warn:
           type: boolean
           description: |

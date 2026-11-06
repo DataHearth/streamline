@@ -1551,10 +1551,18 @@ export type DiskUsage = {
 	kind: "ok" | "warn" | "err";
 };
 
+export type LibraryOfflineRoot = {
+	root: "movies" | "series" | "music" | "ebooks" | "audiobooks";
+	path: string;
+	tracked: number;
+	reason: "path_missing" | "path_empty" | "files_missing";
+};
+
 export type SystemInfo = {
 	public_url: string;
 	https_warn: boolean;
 	ffmpeg_warn?: boolean;
+	library_offline?: LibraryOfflineRoot[];
 	hardcover_auth_warn?: boolean;
 	auth_mode: string;
 	data_dir: string;

@@ -43,8 +43,10 @@ func (s *Server) AcceptLibraryRootMissing(
 	}
 	removed, err := s.hygiene.AcceptMissing(ctx, root)
 	if errors.Is(err, hygiene.ErrRootOnline) {
+		code := "library_online"
 		return AcceptLibraryRootMissing409JSONResponse{
-			ConflictJSONResponse: errConflict(err.Error()),
+			Message: err.Error(),
+			Code:    &code,
 		}, nil
 	}
 	if err != nil {

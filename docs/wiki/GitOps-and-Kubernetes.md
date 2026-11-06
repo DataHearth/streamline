@@ -302,10 +302,10 @@ curl -sS -X POST -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
 
 | Field | Notes |
 | --- | --- |
-| `root` | `movies` \| `series` \| `downloads`. The music, ebook and audiobook roots are not covered |
+| `root` | `movies` \| `series` \| `music` \| `ebooks` \| `audiobooks` \| `downloads` |
 | `from` | Old prefix. Defaults to the root's current configured value |
 | `to` | New prefix |
-| `move_files` | If true, relocate each file first — a rename when both sides share a filesystem, a copy when they don't. **Rejected for the `downloads` root**, since that data belongs to your download client |
+| `move_files` | If true, relocate each file first — a rename when both sides share a filesystem, a copy when they don't. **Only for `movies` and `series`.** `downloads` data belongs to your download client, and music and book folders hold lyrics and cover art with no record of their own, so move those yourself and re-point |
 
 Returns `202`; it runs in the background. Poll `GET /library/path-migration` for progress. Only one migration runs at a time (`409` otherwise).
 

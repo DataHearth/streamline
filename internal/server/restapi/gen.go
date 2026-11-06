@@ -1720,6 +1720,54 @@ func (e LibraryConfigViewImportMode) Valid() bool {
 	}
 }
 
+// Defines values for LibraryOfflineRootReason.
+const (
+	LibraryOfflineRootReasonFilesMissing LibraryOfflineRootReason = "files_missing"
+	LibraryOfflineRootReasonPathEmpty    LibraryOfflineRootReason = "path_empty"
+	LibraryOfflineRootReasonPathMissing  LibraryOfflineRootReason = "path_missing"
+)
+
+// Valid indicates whether the value is a known member of the LibraryOfflineRootReason enum.
+func (e LibraryOfflineRootReason) Valid() bool {
+	switch e {
+	case LibraryOfflineRootReasonFilesMissing:
+		return true
+	case LibraryOfflineRootReasonPathEmpty:
+		return true
+	case LibraryOfflineRootReasonPathMissing:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LibraryOfflineRootRoot.
+const (
+	LibraryOfflineRootRootAudiobooks LibraryOfflineRootRoot = "audiobooks"
+	LibraryOfflineRootRootEbooks     LibraryOfflineRootRoot = "ebooks"
+	LibraryOfflineRootRootMovies     LibraryOfflineRootRoot = "movies"
+	LibraryOfflineRootRootMusic      LibraryOfflineRootRoot = "music"
+	LibraryOfflineRootRootSeries     LibraryOfflineRootRoot = "series"
+)
+
+// Valid indicates whether the value is a known member of the LibraryOfflineRootRoot enum.
+func (e LibraryOfflineRootRoot) Valid() bool {
+	switch e {
+	case LibraryOfflineRootRootAudiobooks:
+		return true
+	case LibraryOfflineRootRootEbooks:
+		return true
+	case LibraryOfflineRootRootMovies:
+		return true
+	case LibraryOfflineRootRootMusic:
+		return true
+	case LibraryOfflineRootRootSeries:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MediaServerServerType.
 const (
 	MediaServerServerTypeEmby     MediaServerServerType = "emby"
@@ -6334,6 +6382,23 @@ type LibraryConfigView struct {
 // LibraryConfigViewImportMode defines model for LibraryConfigView.ImportMode.
 type LibraryConfigViewImportMode string
 
+// LibraryOfflineRoot defines model for LibraryOfflineRoot.
+type LibraryOfflineRoot struct {
+	// Path The configured path of the root.
+	Path   string                   `json:"path"`
+	Reason LibraryOfflineRootReason `json:"reason"`
+	Root   LibraryOfflineRootRoot   `json:"root"`
+
+	// Tracked File rows tracked under the root.
+	Tracked int `json:"tracked"`
+}
+
+// LibraryOfflineRootReason defines model for LibraryOfflineRoot.Reason.
+type LibraryOfflineRootReason string
+
+// LibraryOfflineRootRoot defines model for LibraryOfflineRoot.Root.
+type LibraryOfflineRootRoot string
+
 // ListenPortUpdate defines model for ListenPortUpdate.
 type ListenPortUpdate struct {
 	// Port Peer listening port the builtin engine should move to. Applied to
@@ -8982,8 +9047,11 @@ type SystemInfo struct {
 	HttpsWarn bool `json:"https_warn"`
 
 	// LibraryDir Configured library.movie_path.
-	LibraryDir   *string    `json:"library_dir,omitempty"`
-	LibraryUsage *DiskUsage `json:"library_usage,omitempty"`
+	LibraryDir *string `json:"library_dir,omitempty"`
+
+	// LibraryOffline The library roots that look gone. Absent while every root is online.
+	LibraryOffline *[]LibraryOfflineRoot `json:"library_offline,omitempty"`
+	LibraryUsage   *DiskUsage            `json:"library_usage,omitempty"`
 
 	// LogFormat Effective format of the stderr log sink (text or json).
 	LogFormat *string `json:"log_format,omitempty"`

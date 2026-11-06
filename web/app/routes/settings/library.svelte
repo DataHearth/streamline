@@ -5,7 +5,7 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { FolderInput } from "@lucide/svelte";
+	import { FolderInput, TriangleAlert } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { config, markConfigForm } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
@@ -13,7 +13,11 @@
 		DownloadConfig,
 		ImportTransferMode,
 		LibraryConfig,
+		LibraryOfflineRoot,
+		SystemInfo,
 	} from "@lib/types";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import { auth } from "@lib/auth.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import FieldLock from "@components/forms/FieldLock.svelte";
@@ -28,6 +32,43 @@
 	markConfigForm();
 
 	const qc = useQueryClient();
+
+	const system = createQuery<SystemInfo>(() => ({
+		queryKey: ["system", "info"],
+		queryFn: () => api<SystemInfo>("/system/info"),
+		enabled: auth.isAdmin,
+		retry: false,
+	}));
+	let offlineRoots = $derived(system.data?.library_offline ?? []);
+	let accepting = $state<LibraryOfflineRoot | null>(null);
+
+	const ROOT_LABELS: Record<LibraryOfflineRoot["root"], () => string> = {
+		movies: i18n.migration_movie_library,
+		series: i18n.migration_series_library,
+		music: i18n.migration_music_library,
+		ebooks: i18n.migration_ebook_library,
+		audiobooks: i18n.migration_audiobook_library,
+	};
+	const offlineReason = (r: LibraryOfflineRoot) => {
+		if (r.reason === "path_missing") return i18n.library_offline_path_missing({ path: r.path });
+		if (r.reason === "path_empty") return i18n.library_offline_path_empty({ path: r.path });
+		return i18n.library_offline_files_missing({ path: r.path, tracked: r.tracked });
+	};
+
+	const acceptMissing = createMutation<{ removed: number }, Error, LibraryOfflineRoot>(() => ({
+		mutationFn: (r) =>
+			api<{ removed: number }>(`/library/roots/${r.root}/accept-missing`, { method: "POST" }),
+		onSuccess: (resp) => {
+			toast.ok(i18n.library_offline_removed({ count: resp.removed }));
+			accepting = null;
+			qc.invalidateQueries();
+		},
+		onError: (err) => {
+			toast.err(errorText(err));
+			accepting = null;
+			qc.invalidateQueries({ queryKey: ["system", "info"] });
+		},
+	}));
 
 	const library = createQuery<LibraryConfig>(() => ({
 		queryKey: ["config", "library"],
@@ -191,6 +232,35 @@
 	<header>
 		<p class="text-sm text-fg-muted">{i18n.settings_library_intro()}</p>
 	</header>
+
+	{#each offlineRoots as r (r.root)}
+		<div
+			role="alert"
+			class="mt-6 flex items-start gap-2.5 rounded-md border border-status-wanted/40 bg-status-wanted/10 p-3 text-xs text-status-wanted"
+		>
+			<TriangleAlert size={14} class="mt-0.5 shrink-0" aria-hidden="true" />
+			<div class="min-w-0 flex-1">
+				<p class="font-medium">{i18n.library_offline_title({ root: ROOT_LABELS[r.root]() })}</p>
+				<p class="mt-0.5 break-words text-status-wanted/80">{offlineReason(r)}</p>
+				<p class="mt-0.5 text-status-wanted/80">{i18n.library_offline_help()}</p>
+				<div class="mt-2 flex flex-wrap gap-2">
+					<a
+						href="/settings/advanced?root={r.root}"
+						class="inline-flex items-center rounded-md border border-status-wanted/40 px-2.5 py-1.5 font-medium hover:bg-status-wanted/10"
+					>
+						{i18n.library_offline_moved()}
+					</a>
+					<button
+						type="button"
+						class="rounded-md border border-status-wanted/40 px-2.5 py-1.5 font-medium hover:bg-status-wanted/10"
+						onclick={() => (accepting = r)}
+					>
+						{i18n.library_offline_gone()}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/each}
 
 	{#if pending}
 		<div class="mt-6 space-y-4"><SkeletonList variant="panel" count={3} /></div>
@@ -461,6 +531,23 @@
 		</section>
 	{/if}
 </div>
+
+<Dialog
+	open={accepting !== null}
+	title={accepting ? i18n.library_offline_confirm_title({ root: ROOT_LABELS[accepting.root]() }) : ""}
+	body={accepting ? i18n.library_offline_confirm_body({ tracked: accepting.tracked }) : ""}
+	onClose={() => (accepting = null)}
+	actions={[
+		{ label: i18n.common_cancel(), variant: "ghost" },
+		{
+			label: i18n.library_offline_remove(),
+			variant: "danger",
+			dismiss: false,
+			pending: acceptMissing.isPending,
+			onClick: () => accepting && acceptMissing.mutate(accepting),
+		},
+	]}
+/>
 
 <style>
 	/* Match TextField: drop the native spin buttons. */

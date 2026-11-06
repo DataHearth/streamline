@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { activeRoute } from "@roxi/routify";
+	import { onMount } from "svelte";
 	import { parts } from "@lib/message-parts";
 	import {
 		createQuery,
@@ -56,6 +58,14 @@
 	const qc = useQueryClient();
 
 	let root = $state<MigrationRoot>("movies");
+	// The offline banner on Settings → Library links here with its root, and
+	// the location has not caught up yet when an in-app link mounts this page.
+	onMount(() =>
+		activeRoute.subscribe((r) => {
+			const linked = new URLSearchParams((r?.url ?? "").split("?")[1]).get("root");
+			root = ROOTS.find((o) => o.value === linked)?.value ?? root;
+		}),
+	);
 	let from = $state("");
 	let to = $state("");
 	let moveFiles = $state(false);

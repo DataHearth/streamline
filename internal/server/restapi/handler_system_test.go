@@ -9,7 +9,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/roottest"
 )
 
 type stubAuthRejecter bool
@@ -22,6 +24,45 @@ var _ = Describe("GetSystemInfo", Label("unit", "restapi"), func() {
 	BeforeEach(func() {
 		app = newAPIKeyApp()
 		app.addMember("member@test.com")
+	})
+
+	Describe("library_offline", func() {
+		get := func() SystemInfo {
+			GinkgoHelper()
+			app.prober.EXPECT().Available().Return(true).Maybe()
+			resp := app.do(
+				app.req(http.MethodGet, "/api/v1/system/info", app.adminKey, nil),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var got SystemInfo
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			return got
+		}
+
+		It("names an offline root, its path, count and reason", func() {
+			dir := GinkgoT().TempDir()
+			configtest.Setup(
+				map[string]any{"library": map[string]any{"music_path": dir}},
+			)
+			roottest.Offline(db.RootMusic)
+
+			got := get().LibraryOffline
+
+			Expect(got).NotTo(BeNil())
+			Expect(*got).To(ConsistOf(LibraryOfflineRoot{
+				Root:    LibraryOfflineRootRootMusic,
+				Path:    dir,
+				Tracked: 1,
+				Reason:  LibraryOfflineRootReasonPathEmpty,
+			}))
+		})
+
+		It("is absent while every root is online", func() {
+			roottest.Offline()
+
+			Expect(get().LibraryOffline).To(BeNil())
+		})
 	})
 
 	It("rejects a non-admin with 403", func() {

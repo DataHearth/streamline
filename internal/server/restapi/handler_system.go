@@ -2,8 +2,10 @@ package restapi
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/sysinfo"
 )
 
@@ -28,6 +30,22 @@ func (s *Server) GetSystemInfo(
 	if s.hardcover != nil && s.hardcover.AuthRejected() {
 		warn := true
 		out.HardcoverAuthWarn = &warn
+	}
+	offline, err := roothealth.AllOffline(ctx)
+	if err != nil {
+		slog.WarnContext(ctx, "could not check the library roots", "error", err)
+	}
+	if len(offline) > 0 {
+		roots := make([]LibraryOfflineRoot, len(offline))
+		for i, st := range offline {
+			roots[i] = LibraryOfflineRoot{
+				Root:    LibraryOfflineRootRoot(st.Root),
+				Path:    st.Path,
+				Tracked: st.Tracked,
+				Reason:  LibraryOfflineRootReason(st.Reason),
+			}
+		}
+		out.LibraryOffline = &roots
 	}
 	return GetSystemInfo200JSONResponse{
 		SystemInfoJSONResponse: SystemInfoJSONResponse(out),

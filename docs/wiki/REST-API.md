@@ -132,7 +132,7 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 
 ## Endpoint map
 
-203 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential, `request_only` included), `Member` (`admin` or `member` — a `request_only` caller gets 403) or `🔒 Admin`; the Requests group spells out the exact roles.
+207 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential, `request_only` included), `Member` (`admin` or `member` — a `request_only` caller gets 403) or `🔒 Admin`; the Requests group spells out the exact roles.
 
 ### Movies
 
@@ -410,6 +410,7 @@ All four answer `409` while `transcoding.enabled` is false.
 | `GET` `POST` | `/library/path-migration` | List / start a path migration | 🔒 Admin |
 | `GET` | `/library/path-migration/roots` | List roots | 🔒 Admin |
 | `POST` | `/library/path-migration/preview` | Preview a migration | 🔒 Admin |
+| `POST` | `/library/roots/{root}/accept-missing` | Remove the records of an offline root whose files are not found (`200 {removed}`; `409` `library_online` when the root is online) | 🔒 Admin |
 
 An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` and `book` adopt in place only and reject `mode=rename` with `422`. `music` scans album folders against MusicBrainz; each row carries `tagged_year`, `format` (`FLAC 24/96`, `MP3 320`; the extension when ffprobe is off), `size`, `file_count` and a live `artist_id` (absent when the library lacks the artist, which a commit then adds), and each candidate its `type`. `book` scans ebook and audiobook items against Hardcover; each row carries `parsed_year`, `format`, `size`, `file_count` and `source_path`; starting or committing one without a Hardcover API key answers `503`. A row whose files joined an album or book the library already held ends `attached` rather than `created`. A scan that fails because Hardcover refused the key mid-run carries `failure_code: hardcover_key_rejected` (`hardcover_not_configured` if the key vanished before it ran); every other failure has the free-text `failure_reason` alone.
 

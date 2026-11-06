@@ -15,7 +15,7 @@ Find what you're seeing in the table below, then jump straight to the fix. Order
 | Edited an SSO provider and nothing changed | Providers load once at boot | [OIDC changes do nothing](#oidc-changes-do-nothing) |
 | Torrents show **Seeding** but upload is `0 B/s`, 0 peers | Nothing can open an inbound connection to you (NAT/port forward) | [Torrents seed forever but upload nothing](#torrents-seed-forever-but-upload-nothing) |
 | Plex/Jellyfin/Emby doesn't pick up new files | Refresh failed, wrong library section, or separate mounts | [My media server doesn't notice new files](#my-media-server-doesnt-notice-new-files) |
-| Library looks empty after a mount/volume change | Stored paths no longer match reality | [My library emptied itself after a remount](#my-library-emptied-itself-after-a-remount) |
+| A library shows as offline, or looks empty after a mount/volume change | The volume is not there, or stored paths no longer match reality | [A library root is offline](#a-library-root-is-offline) |
 | Music or book search says a provider is limiting requests, or Books says Hardcover is not configured | MusicBrainz or Hardcover rate limits, or no Hardcover key | [Music and books](#music-and-books) |
 | An album is **Failed**, or its files never get Streamline's tags | A CUE disc image, a seeding torrent, or file ownership | [Music and books](#music-and-books) |
 | Won't start after an update: `back up the database before migrating` | The pre-migration backup could not be written | [Won't start: backup before migrating failed](#wont-start-backup-before-migrating-failed) |
@@ -308,23 +308,31 @@ Failing that, media servers have their own scan schedules and will find the file
 
 ---
 
-## My library emptied itself after a remount
+## A library root is offline
 
-Streamline stores absolute paths. If the mount moves — the claim was at
-`/mnt/media-shared` and is now at `/srv`, a bind mount changed, a chart value
-was edited — every stored path dangles. The files are fine; the records point
-at nothing. The `drift-check` job then removes those records once
-`drift_grace_ticks` elapses, so left alone this becomes real data loss.
+Streamline stores absolute paths, and to it a volume that is not mounted looks exactly like files that were deleted. So every job that touches files first asks whether the root is there at all. A root (`movies`, `series`, `music`, `ebooks`, `audiobooks`) is **offline** when it has tracked files and none of a sample of up to 20 of them, spread across the library, can be reached.
 
-Streamline logs a `CRITICAL` line at boot when a configured root matches none
-of the paths stored for it:
+While a root is offline, nothing changes for it:
+
+- `drift-check` and the orphan scans skip it, so no record is removed and no title goes back to wanted.
+- Imports for it wait, with no attempt counted. They run as soon as it returns.
+- The missing searches and RSS make no automatic grab for it. A grab you make by hand still goes through, and its import waits.
+- Tag writes and transcodes for it wait, and renames, deletes with files, uploads and import commits answer `409` with `code: library_offline`.
+
+If the volume comes back, everything resumes by itself. The health pill turns **Degraded**, and **Settings → Library** names the root, its path and the reason, with a way out for each case.
+
+The log carries one `CRITICAL` line when a root goes offline and one `INFO` line when it returns. At boot, a root whose stored paths all sit under another prefix also logs:
 
 ```
-CRITICAL library root does not match any stored path — records will be pruned
+CRITICAL library root does not match any stored path — held offline if those files cannot be reached
          library.root=movies library.path=/srv/streamline/movies records.total=621
 ```
 
-Fix it by re-rooting rather than re-importing. Check what the server sees:
+**The files really are gone.** Choose **The files are gone** on Settings → Library, or `POST /api/v1/library/roots/{root}/accept-missing`. Streamline checks every tracked file of that root and removes only the records of those it cannot find; their titles go back to wanted. It answers `409` if the root is online by then, so a volume that returned while you were deciding loses nothing.
+
+**A root with every file deleted by hand counts as offline too**, however few files it had, and blocks imports for that root until you accept it. The check only sees whole roots: a renamed subfolder or one dead disk of a pool is still handled file by file by `drift-check`.
+
+**The path moved.** Fix it by re-rooting rather than re-importing. Check what the server sees:
 
 ```bash
 curl -sS -H "X-API-Key: $KEY" "$SL/api/v1/library/path-migration/roots"
