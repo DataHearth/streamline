@@ -25,6 +25,7 @@ import (
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
@@ -58,6 +59,26 @@ func fixtureRecord(
 	return r
 }
 
+// offlineRoots answers roothealth with one unreachable file for each offline root.
+type offlineRoots struct {
+	offline map[db.LibraryRoot]bool
+}
+
+func (r *offlineRoots) CountRootFiles(context.Context, db.LibraryRoot) (int, error) {
+	return 1, nil
+}
+
+func (r *offlineRoots) RootFilePathAt(
+	_ context.Context,
+	root db.LibraryRoot,
+	_ int,
+) (string, error) {
+	if r.offline[root] {
+		return "/nonexistent/streamline/file", nil
+	}
+	return "", nil
+}
+
 var _ = Describe("Worker", Label("unit", "importer"), func() {
 	var (
 		storeMk *mockdb.MockStore
@@ -89,6 +110,121 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		msMk = msmocks.NewMockRefresher(GinkgoT())
 		libSvc = library.NewImportService()
 		w = NewWorker(Deps{DB: storeMk, Library: libSvc, MediaServer: msMk})
+	})
+
+	Describe("an offline library root", func() {
+		var (
+			rec   *ent.DownloadRecord
+			roots *offlineRoots
+		)
+
+		expectImport := func() {
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().RecordImportSuccess(mock.Anything, mock.Anything).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
+				Return(nil).Once()
+		}
+		run := func() {
+			GinkgoHelper()
+			ctx := context.Background()
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).
+				Once()
+			w.handleOutcome(ctx, 1, w.runImport(ctx, 1))
+		}
+
+		BeforeEach(func() {
+			src := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec = fixtureRecord(1, 10, src, 0)
+			roots = &offlineRoots{
+				offline: map[db.LibraryRoot]bool{db.RootMovies: true},
+			}
+			roothealth.Register(roots)
+			DeferCleanup(func() { roothealth.Register(nil) })
+		})
+
+		It(
+			"waits: no failure is recorded and nothing lands under the library",
+			func() {
+				run()
+
+				Expect(os.ReadDir(libDir)).To(BeEmpty())
+			},
+		)
+
+		It("does not burn attempts, and imports once the root returns", func() {
+			for range 5 {
+				run()
+			}
+			Expect(os.ReadDir(libDir)).To(BeEmpty())
+
+			roots.offline[db.RootMovies] = false
+			expectImport()
+			run()
+
+			Expect(os.ReadDir(libDir)).NotTo(BeEmpty())
+		})
+
+		It("imports a record for another root meanwhile", func() {
+			roots.offline = map[db.LibraryRoot]bool{db.RootMusic: true}
+			expectImport()
+
+			run()
+
+			Expect(os.ReadDir(libDir)).NotTo(BeEmpty())
+		})
+
+		DescribeTable(
+			"files a record under its root",
+			func(rec *ent.DownloadRecord, want []db.LibraryRoot) {
+				Expect(recordRoots(rec)).To(Equal(want))
+			},
+			Entry(
+				"movie",
+				&ent.DownloadRecord{
+					Edges: ent.DownloadRecordEdges{Movie: &ent.Movie{}},
+				},
+				[]db.LibraryRoot{db.RootMovies},
+			),
+			Entry(
+				"episode",
+				&ent.DownloadRecord{
+					Edges: ent.DownloadRecordEdges{AnchorEpisode: &ent.Episode{}},
+				},
+				[]db.LibraryRoot{db.RootSeries},
+			),
+			Entry(
+				"album",
+				&ent.DownloadRecord{
+					Edges: ent.DownloadRecordEdges{Album: &ent.Album{}},
+				},
+				[]db.LibraryRoot{db.RootMusic},
+			),
+			Entry(
+				"artist pack",
+				&ent.DownloadRecord{
+					Edges: ent.DownloadRecordEdges{Artist: &ent.Artist{}},
+				},
+				[]db.LibraryRoot{db.RootMusic},
+			),
+			Entry("ebook", &ent.DownloadRecord{
+				BookKind: downloadrecord.BookKindEbook,
+				Edges:    ent.DownloadRecordEdges{Book: &ent.Book{}},
+			}, []db.LibraryRoot{db.RootEbooks}),
+			Entry("audiobook", &ent.DownloadRecord{
+				BookKind: downloadrecord.BookKindAudiobook,
+				Edges:    ent.DownloadRecordEdges{Book: &ent.Book{}},
+			}, []db.LibraryRoot{db.RootAudiobooks}),
+		)
 	})
 
 	It("happy path: success writes success + refreshes media server", func() {

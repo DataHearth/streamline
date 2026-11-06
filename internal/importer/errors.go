@@ -7,6 +7,9 @@ import (
 )
 
 var (
+	// errRootOffline leaves a record importing, with no attempt counted, for
+	// the next scan to retry.
+	errRootOffline = errors.New("library root is offline")
 	// ErrPathNotAllowed is returned when a DownloadRecord.save_path is not
 	// within any configured Library.AllowedDownloadRoots prefix.
 	ErrPathNotAllowed = errors.New("save_path not in allowed download roots")

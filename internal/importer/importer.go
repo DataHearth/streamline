@@ -27,6 +27,7 @@ import (
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -235,6 +236,28 @@ func (w *Worker) lockEntity(key string) func() {
 	return mu.Unlock
 }
 
+// recordRoots names the library roots a record imports into.
+func recordRoots(rec *ent.DownloadRecord) []db.LibraryRoot {
+	switch {
+	case rec.Edges.Movie != nil:
+		return []db.LibraryRoot{db.RootMovies}
+	case rec.Edges.AnchorEpisode != nil:
+		return []db.LibraryRoot{db.RootSeries}
+	case rec.Edges.Book != nil:
+		switch rec.BookKind {
+		case downloadrecord.BookKindEbook:
+			return []db.LibraryRoot{db.RootEbooks}
+		case downloadrecord.BookKindAudiobook:
+			return []db.LibraryRoot{db.RootAudiobooks}
+		}
+		return []db.LibraryRoot{db.RootEbooks, db.RootAudiobooks}
+	case rec.Edges.Album != nil, rec.Edges.Artist != nil,
+		len(rec.Edges.Albums) > 0, rec.Edges.Track != nil:
+		return []db.LibraryRoot{db.RootMusic}
+	}
+	return nil
+}
+
 func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 	ctx, span := tracer.Start(ctx, "importer.run",
 		trace.WithAttributes(attribute.Int64("download_record.id", int64(recordID))),
@@ -250,6 +273,18 @@ func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 			span,
 			fmt.Errorf("find importing record: %w", err),
 		)
+	}
+	// Here rather than in Scan: the monitor and the upload handlers enqueue
+	// records directly. library/import.go creates missing folders, so an import
+	// now could land on the disk under an empty mountpoint.
+	if err := roothealth.Require(ctx, recordRoots(rec)...); err != nil {
+		if offline, ok := errors.AsType[*roothealth.OfflineError](err); ok {
+			span.SetAttributes(
+				attribute.String("import.waiting_on", string(offline.Root)),
+			)
+			return errRootOffline
+		}
+		return otelx.RecordSpanError(span, err)
 	}
 	libCfg := config.Get().Library
 	span.SetAttributes(
@@ -1023,7 +1058,8 @@ func (w *Worker) handleOutcome(ctx context.Context, recordID uint32, runErr erro
 		return
 	}
 	if errors.Is(runErr, context.Canceled) ||
-		errors.Is(runErr, context.DeadlineExceeded) {
+		errors.Is(runErr, context.DeadlineExceeded) ||
+		errors.Is(runErr, errRootOffline) {
 		return
 	}
 
