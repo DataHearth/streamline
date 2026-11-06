@@ -15,10 +15,10 @@
 		labelId,
 		title,
 		originalTitle,
+		facts = [],
 		meta = [],
 		overview,
 		art,
-		pills,
 		extra,
 		actions,
 	}: {
@@ -32,14 +32,27 @@
 		labelId: string;
 		title: string;
 		originalTitle?: string;
+		facts?: string[];
 		meta?: string[];
 		overview?: string;
 		art: Snippet;
-		pills?: Snippet;
 		extra?: Snippet;
 		actions?: Snippet;
 	} = $props();
 </script>
+
+<!-- Each part carries its dot in front, and the row is pulled left by one dot
+     inside a clip: the part that starts a line has its dot clipped, so a wrap
+     never leaves one hanging. -->
+{#snippet dotted(parts: string[], klass: string)}
+	<div class={cn("overflow-hidden", klass)}>
+		<div class="-ml-5 flex flex-wrap gap-y-1">
+			{#each parts as part, i (i)}
+				<span class="relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']">{part}</span>
+			{/each}
+		</div>
+	</div>
+{/snippet}
 
 <section class="relative" aria-labelledby={labelId}>
 	<div class="absolute inset-0 z-0 overflow-hidden bg-bg-deep">
@@ -75,10 +88,8 @@
 		</div>
 
 		<div class="min-w-0 text-left">
-			{#if pills}
-				<div class="mb-3 flex flex-wrap items-center gap-2">
-					{@render pills()}
-				</div>
+			{#if facts.length > 0}
+				{@render dotted(facts, "mb-3 font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted")}
 			{/if}
 			<h1
 				id={labelId}
@@ -90,14 +101,7 @@
 				<p class="mt-1 text-sm italic text-fg-faint">{originalTitle}</p>
 			{/if}
 			{#if meta.length > 0}
-				<div class="mt-3 flex flex-wrap items-center gap-2 font-mono text-xs text-fg-muted">
-					{#each meta as part, i (i)}
-						{#if i > 0}
-							<span class="text-fg-faint" aria-hidden="true">·</span>
-						{/if}
-						<span>{part}</span>
-					{/each}
-				</div>
+				{@render dotted(meta, "mt-3 font-mono text-xs text-fg-muted")}
 			{/if}
 			{#if overview}
 				<p

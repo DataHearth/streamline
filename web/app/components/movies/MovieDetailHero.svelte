@@ -77,31 +77,29 @@
 	<div
 		class="relative grid w-full items-end gap-5 px-4 pb-7 pt-6 md:grid-cols-[200px_1fr] md:gap-8 md:px-8 md:pb-16 md:pt-10 lg:grid-cols-[260px_1fr] lg:gap-10 lg:pb-20"
 	>
-		<div
-			class="relative mx-auto aspect-[2/3] w-60 overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:mx-0 md:w-auto"
-		>
-			<div class="absolute inset-0 bg-bg-card"></div>
-			<div class="absolute inset-0 grid place-items-center text-fg-faint">
-				<Film class="h-10 w-10" aria-hidden="true" />
+		<div class="relative mx-auto w-60 md:mx-0 md:w-auto">
+			<div
+				class="relative aspect-[2/3] w-full overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)]"
+			>
+				<div class="absolute inset-0 bg-bg-card"></div>
+				<div class="absolute inset-0 grid place-items-center text-fg-faint">
+					<Film class="h-10 w-10" aria-hidden="true" />
+				</div>
+				<Poster
+					src={backdropSrc}
+					alt={i18n.common_poster_alt({ title: movie.title })}
+					loading="eager"
+					class="relative h-full w-full object-cover"
+				/>
 			</div>
-			<Poster
-				src={backdropSrc}
-				alt={i18n.common_poster_alt({ title: movie.title })}
-				loading="eager"
-				class="relative h-full w-full object-cover"
-			/>
+			{#if movieStatus(movie) !== "available"}
+				<span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
+					<StatusPill status={movieStatus(movie)} live={movie.status === "downloading"} />
+				</span>
+			{/if}
 		</div>
 
 		<div class="min-w-0 text-left">
-			<div class="mb-3 flex flex-wrap items-center gap-2">
-				<StatusPill
-					status={movieStatus(movie)}
-					size="md"
-					live={movie.status === "downloading"}
-					variant="translucent"
-				/>
-			</div>
-
 			<h1
 				id="movie-title"
 				class="text-[26px] font-bold leading-[1.05] tracking-tight text-fg md:text-4xl lg:text-5xl"
@@ -117,15 +115,15 @@
 			{/if}
 
 			{#if metaParts.length > 0}
-				<div
-					class="mt-3 flex flex-wrap items-center gap-2 font-mono text-xs text-fg-muted"
-				>
-					{#each metaParts as part, i (i)}
-						{#if i > 0}
-							<span class="text-fg-faint" aria-hidden="true">·</span>
-						{/if}
-						<span>{part}</span>
-					{/each}
+				<!-- Each part carries its dot in front, and the row is pulled left by
+				     one dot inside a clip: the part that starts a line has its dot
+				     clipped, so a wrap never leaves one hanging. -->
+				<div class="mt-3 overflow-hidden font-mono text-xs text-fg-muted">
+					<div class="-ml-5 flex flex-wrap gap-y-1">
+						{#each metaParts as part, i (i)}
+							<span class="relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']">{part}</span>
+						{/each}
+					</div>
 				</div>
 			{/if}
 

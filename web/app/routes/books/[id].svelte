@@ -158,7 +158,6 @@
 			? [book.author, i18n.books_first_published({ year: String(book.first_published) }), (book.editions.length === 1 ? i18n.books_editions_n_one : i18n.books_editions_n_other)({ count: String(book.editions.length) })]
 			: [],
 	);
-	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
 	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
 
 	// The movie overview's two columns, under the format cards: what the book
@@ -240,6 +239,7 @@
 		labelId="book-title"
 		title={book.title}
 		originalTitle={book.original_title}
+		facts={[kindLabel(book.kind), book.genre].filter((f): f is string => !!f)}
 		{meta}
 		overview={book.overview}
 	>
@@ -247,13 +247,10 @@
 			<div class="shadow-[0_24px_48px_rgb(0_0_0_/0.5)]">
 				<BookCover src={bookPosterUrl(book.id)} alt={i18n.common_poster_alt({ title: book.title })} />
 			</div>
-		{/snippet}
-		{#snippet pills()}
-			<StatusPill status={book.status} size="md" variant="translucent" live={book.status === "downloading"} />
-			<span class={caps}>{kindLabel(book.kind)}</span>
-			{#if book.genre}
-				<span class="text-fg-faint" aria-hidden="true">·</span>
-				<span class={caps}>{book.genre}</span>
+			{#if book.status !== "available"}
+				<span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
+					<StatusPill status={book.status} live={book.status === "downloading"} />
+				</span>
 			{/if}
 		{/snippet}
 		{#snippet actions()}
@@ -263,7 +260,7 @@
 				     wrapping flow in DOM order, broken by a full-width spacer from md,
 				     so a phone keeps its old shape: label over select + bookmark +
 				     menu, with the searches in the pinned bar. No "Downloading…"
-				     chip: the status pill above the title already says it. -->
+				     chip: the status pill on the cover already says it. -->
 				<div class="flex flex-wrap items-center gap-2 md:gap-x-2.5 md:gap-y-3">
 					<span class="basis-full font-mono text-[10.5px] uppercase tracking-[0.1em] text-fg-subtle md:basis-auto">{i18n.action_monitor()}</span>
 					<MonitorSelect value={book.monitor} options={MONITOR} onChange={(v) => setMonitor.mutate(v)} label={i18n.action_monitor()} class="flex-1 md:flex-none" />

@@ -258,7 +258,6 @@
 		if (artist.size) p.push(formatBytes(artist.size, ""));
 		return p;
 	});
-	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
 
 	// The cast and crew of a discography. The overview shows the line-up and
 	// the few names that recur most; Credits shows everyone, by what they did.
@@ -357,6 +356,7 @@
 			artWrap="w-44"
 			labelId="artist-title"
 			title={artist.name}
+			{facts}
 			meta={meta}
 			overview={artist.overview}
 		>
@@ -374,20 +374,6 @@
 						</span>
 					{/if}
 				</div>
-			{/snippet}
-			{#snippet pills()}
-				{#if facts.length > 0}
-					<!-- Each fact carries its dot in front, and the row is pulled left by
-					     one dot inside a clip: the fact that starts a line has its dot
-					     clipped, so a wrap never leaves one hanging. -->
-					<div class="min-w-0 flex-1 overflow-hidden">
-						<div class="-ml-5 flex flex-wrap gap-y-1">
-							{#each facts as fact (fact)}
-								<span class={cn(caps, "relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']")}>{fact}</span>
-							{/each}
-						</div>
-					</div>
-				{/if}
 			{/snippet}
 			{#snippet extra()}
 				{#if tally.released > 0}

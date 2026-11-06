@@ -124,7 +124,6 @@
 		if (next?.release_date) p.push(i18n.books_next_volume({ n: String(next.number), date: formatDate(next.release_date) }));
 		return p;
 	});
-	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
 	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
 
 	let people = $derived(
@@ -200,19 +199,17 @@
 			labelId="series-title"
 			title={s.title}
 			originalTitle={s.original_title}
+			facts={[kindLabel(s.kind), s.ongoing ? i18n.books_ongoing() : i18n.books_completed(), i18n.music_since({ year: String(s.since) })]}
 			{meta}
 			overview={s.overview}
 		>
 			{#snippet art()}
 				<SeriesCover srcs={covers} alt={i18n.common_poster_alt({ title: s.title })} />
-			{/snippet}
-			{#snippet pills()}
-				<StatusPill status={s.status} size="md" variant="translucent" />
-				<span class={caps}>{kindLabel(s.kind)}</span>
-				<span class="text-fg-faint" aria-hidden="true">·</span>
-				<span class={caps}>{s.ongoing ? i18n.books_ongoing() : i18n.books_completed()}</span>
-				<span class="text-fg-faint" aria-hidden="true">·</span>
-				<span class={caps}>{i18n.music_since({ year: String(s.since) })}</span>
+				{#if s.status !== "available"}
+					<span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
+						<StatusPill status={s.status} />
+					</span>
+				{/if}
 			{/snippet}
 			{#snippet extra()}
 				<div class="mt-5 max-w-[560px]">
@@ -220,7 +217,7 @@
 						<span class="text-fg">{have}</span> / {out.length}
 						<span class="text-fg-subtle">{i18n.books_volumes_word()}</span>
 						{#if wanted}
-							<span class="text-fg-faint"> · </span><span class="text-status-wanted">{i18n.nav_count_wanted_other({ count: String(wanted) })}</span>
+							<span class="mr-[1ch] text-fg-faint">·</span><span class="text-status-wanted">{i18n.nav_count_wanted_other({ count: String(wanted) })}</span>
 						{/if}
 					</div>
 					<div class="flex h-[3px] w-full overflow-hidden rounded-full bg-white/[0.08]" aria-hidden="true">
