@@ -113,7 +113,9 @@ func run(ctx context.Context, o options) error {
 		}
 	}
 
-	scratch, err := os.MkdirTemp("", "streamline-demo-")
+	// A fixed path, not a random one: the library roots show on the dashboard
+	// and the import page, and a shot should not change with every run.
+	scratch, err := scratchDir(filepath.Join(os.TempDir(), "streamline-demo"))
 	if err != nil {
 		return err
 	}
@@ -179,6 +181,27 @@ func run(ctx context.Context, o options) error {
 		<-ctx.Done()
 	}
 	return nil
+}
+
+// scratchMarker names the file that makes a directory the demo's own: only a
+// directory holding it is ever emptied.
+const scratchMarker = ".streamline-demo"
+
+// scratchDir empties dir, after checking it is one a previous run made, and
+// recreates it with the marker.
+func scratchDir(dir string) (string, error) {
+	if _, err := os.Stat(dir); err == nil {
+		if _, err := os.Stat(filepath.Join(dir, scratchMarker)); err != nil {
+			return "", fmt.Errorf("%s exists and was not made by the demo; move it away", dir)
+		}
+		if err := os.RemoveAll(dir); err != nil {
+			return "", err
+		}
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	return dir, os.WriteFile(filepath.Join(dir, scratchMarker), nil, 0o644)
 }
 
 // instance is the throwaway streamline the demo runs against.

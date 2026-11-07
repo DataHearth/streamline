@@ -52,15 +52,52 @@ tasks:
     desc: Retake the README screenshots in docs/assets from the demo library (-- -record to refresh its cassette with real provider keys)
     # e2e/demo boots a throwaway instance on the binary built here, seeds the
     # demo library through its API and shoots every page. The providers answer
-    # from e2e/demo/cassette; -record fills what it lacks from the real ones
+    # from e2e/demo/cassette, fetched from the demo-cassette branch when it is
+    # not on disk; -record fills what it lacks from the real ones
     # (STREAMLINE_METADATA__{TMDB,TVDB,HARDCOVER}_API_KEY). Needs ffmpeg and a
     # Chromium (CHROME_PATH, on PATH, or Playwright's).
     vars:
       DEMO_BIN: '{{.ROOT_DIR}}/tmp/streamline-demo'
     cmds:
+      - task: docs:cassette:fetch
       - task: build:app
         vars: {BINARY: '{{.DEMO_BIN}}'}
       - go run ./e2e/demo -binary {{.DEMO_BIN}} {{.CLI_ARGS}}
+
+  # The cassette lives on an orphan branch, not in main's history: its images
+  # are megabytes no build needs, and every re-recording would add to them.
+  docs:cassette:fetch:
+    desc: Fetch the demo cassette from its orphan branch into e2e/demo/cassette (skipped when one is there)
+    vars: &cassette
+      CASSETTE_REMOTE: '{{.CASSETTE_REMOTE | default "origin"}}'
+      CASSETTE_BRANCH: '{{.CASSETTE_BRANCH | default "demo-cassette"}}'
+    status:
+      - test -f e2e/demo/cassette/cassette.json
+    cmds:
+      - |
+        if git fetch --depth=1 {{.CASSETTE_REMOTE}} {{.CASSETTE_BRANCH}}; then
+          mkdir -p e2e/demo/cassette
+          git archive FETCH_HEAD | tar -x -C e2e/demo/cassette
+        else
+          echo "no {{.CASSETTE_BRANCH}} branch on {{.CASSETTE_REMOTE}}: record one with 'task docs:screenshots -- -record' and the provider keys"
+        fi
+
+  docs:cassette:publish:
+    desc: Replace the demo-cassette branch with e2e/demo/cassette, as one commit with no history
+    vars: *cassette
+    preconditions:
+      - sh: test -f e2e/demo/cassette/cassette.json
+        msg: e2e/demo/cassette holds no recording
+    # Plumbing, so neither the working copy nor its index is touched. One
+    # parentless commit replaces the last: the branch never grows a history
+    # of superseded images.
+    cmd: |
+      set -eu
+      idx=$(mktemp); rm -f "$idx"; trap 'rm -f "$idx"' EXIT
+      GIT_INDEX_FILE=$idx git --work-tree=e2e/demo/cassette add -A -f .
+      tree=$(GIT_INDEX_FILE=$idx git write-tree)
+      commit=$(git commit-tree "$tree" -m "chore(demo): the demo library's provider cassette")
+      git push --force {{.CASSETTE_REMOTE}} "$commit:refs/heads/{{.CASSETTE_BRANCH}}"
 
   migrate:diff:
     desc: Generate a new versioned migration from the ent schema (usage - task migrate:diff -- NAME)

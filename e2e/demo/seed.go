@@ -72,6 +72,7 @@ func (s *seeder) seed(ctx context.Context) error {
 		{"downloads", s.downloads},
 		{"requests", s.requests},
 		{"pending import", s.pendingImport},
+		{"discographies", s.discographies},
 		{"artwork", s.artwork},
 	}
 	for _, st := range steps {
@@ -619,6 +620,30 @@ func (s *seeder) pendingImport(ctx context.Context) error {
 	id, err := s.importScan(ctx, root, "movie", false)
 	s.pendingImp = id
 	return err
+}
+
+// discographies waits for every followed artist's albums to be hydrated.
+// Recording, MusicBrainz's pace keeps the background worker going for
+// minutes after the seeding; shooting before it ends would leave albums
+// nobody recorded, which a replay, unthrottled, then asks for and misses.
+func (s *seeder) discographies(ctx context.Context) error {
+	timeout := 2 * time.Minute
+	if s.record {
+		timeout = 30 * time.Minute
+	}
+	return waitFor(ctx, "discography hydration", timeout, 5*time.Second, func() (bool, error) {
+		for name, id := range s.artistIDs {
+			var a musicArtist
+			if err := s.api.get(ctx, "/music/artists/"+strconv.Itoa(id), nil, &a); err != nil {
+				return false, err
+			}
+			if a.Hydrating {
+				slog.Debug("still hydrating", "artist", name)
+				return false, nil
+			}
+		}
+		return true, nil
+	})
 }
 
 // artwork waits for the posters the background fetches bring in: a page shot

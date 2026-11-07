@@ -45,6 +45,12 @@ Hardcover, Deezer, the Cover Art Archive, Wikimedia — goes through a recording
 
 - **A plain run replays** `e2e/demo/cassette/`: no key, no network, the same library every time. A
   request the cassette lacks answers `502` and is listed in the summary.
+- **The cassette lives on the `demo-cassette` branch**, an orphan holding nothing else, not in
+  `main`'s history: its images are megabytes no build needs. `task docs:screenshots` fetches it into
+  the (gitignored) directory when it is not there (`task docs:cassette:fetch`; `CASSETTE_REMOTE` and
+  `CASSETTE_BRANCH` override `origin` and `demo-cassette`). After recording, `task
+  docs:cassette:publish` replaces the branch with the directory as one parentless commit, so the
+  branch never accumulates superseded images either.
 - **`-- -record`** sends what the cassette lacks to the real providers and keeps it. It needs
   `STREAMLINE_METADATA__TMDB_API_KEY`, `__TVDB_API_KEY` and `__HARDCOVER_API_KEY` in the environment.
   To refresh from scratch, delete the directory first.
@@ -52,7 +58,14 @@ Hardcover, Deezer, the Cover Art Archive, Wikimedia — goes through a recording
 An exchange is one JSON file under its host, named by a hash of the method, the URL (query sorted)
 and the body. The provider keys are replaced by `REDACTED` before hashing and in everything written,
 and a `token` field in a response (TVDB's login) is replaced too, so a cassette holds no credential
-and replays with none. Error answers (`401`, `403`, `429`, `5xx`) are passed through and never kept.
+and replays with none (recording, that login is fetched again rather than replayed: the instance
+needs the real token). Error answers (`401`, `403`, `429`, `5xx`) are passed through and never kept.
+An image wider than 800 px is scaled down by a whole factor and re-encoded before it is kept (and
+handed to the instance the same way, so a recording run draws what its replay will).
+
+Recording waits, before the shots, for every followed artist's discography to finish hydrating: at
+MusicBrainz's one request a second that takes minutes, and an album the worker had not reached
+would be one the unthrottled replay then asks for and misses.
 
 Replaying moves every date within two years of the recording (`cassette.json`'s `recorded_at`)
 forward by the whole weeks since, so an episode that aired the week of the recording airs this week,

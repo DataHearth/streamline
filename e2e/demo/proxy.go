@@ -303,6 +303,15 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 	}
 	// A refusal or an outage is the provider's state at that moment, not the
 	// demo's: answer it, keep nothing, and let the next run ask again.
+	// Images are kept no wider than the screenshots need, and the instance
+	// gets the same copy, so a recording run draws what its replay will.
+	if resp.StatusCode == http.StatusOK {
+		ct, small := shrinkImage(resp.Header.Get("Content-Type"), data)
+		if len(small) < len(data) {
+			data = small
+			ex.Header["Content-Type"] = ct
+		}
+	}
 	if keep := resp.StatusCode < 500 && resp.StatusCode != http.StatusTooManyRequests &&
 		resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != http.StatusForbidden; keep {
 		// Only the kept copy is scrubbed: the instance needs the real token

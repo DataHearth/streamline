@@ -41,3 +41,6 @@
 __pycache__/
 *.pyc
 /result
+
+# The demo cassette lives on the demo-cassette branch (task docs:cassette:fetch).
+/e2e/demo/cassette/
