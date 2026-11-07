@@ -59,11 +59,11 @@ Principles:
 --fg:            #F5F5F7    /* primary */
 --fg-muted:      #C8C8D2    /* secondary (passes 4.5:1 on bg-elevated) */
 --fg-subtle:     #8A8A99    /* tertiary, axis labels, helper */
---fg-faint:      #5A5A68    /* faint, uppercase eyebrow / sub-section */
+--fg-faint:      #74748A    /* faint, uppercase eyebrow / sub-section (passes 3:1 on every surface) */
 --fg-on-accent:  #0B0B10
 ```
 
-Never use `--fg-subtle` for body copy. Labels/axis/helper only. `--fg-faint` is reserved for uppercase eyebrows and sub-section dividers.
+Never use `--fg-subtle` for body copy. Labels/axis/helper only. `--fg-faint` is reserved for icons, uppercase eyebrows and sub-section dividers: it passes 3:1, the floor for icons (§9), not the 4.5:1 of small text, so any other text that must be read uses `--fg-subtle`.
 
 ### Status (ops semantics — used on pills, progress, row highlights)
 ```
@@ -72,7 +72,7 @@ Never use `--fg-subtle` for body copy. Labels/axis/helper only. `--fg-faint` is 
 --status-available:   #22C55E   /* green */
 --status-wanted:      #F59E0B   /* amber */
 --status-missing:     #64748B   /* slate */
---status-failed:      #EF4444   /* red */
+--status-failed:      #F87171   /* red (passes 4.5:1 on every surface) */
 --status-paused:      #71717A   /* gray */
 --status-warning:     #F59E0B   /* amber reuse */
 ```
@@ -384,12 +384,13 @@ Square rounded (`--radius-md`) 32/40/48 variants. Initials in sans `font-medium`
 - **No emoji ever.**
 - Every icon-only interactive element gets `aria-label`.
 - Decorative icons get `aria-hidden="true"`.
+- **App icons** (`web/static/images/`): the logo is `--accent` on `--bg-deep`, 10 px right of the canvas centre on 512 (3.5 px on 180): its heavy bar is on the left, and the offset centres it optically. `favicon-512.png` keeps its rounded tile; `icon-maskable-512.png` and `apple-touch-icon.png` are full-bleed and opaque, since the launcher applies its own mask; `icon-monochrome-512.png` is the white logo on transparent, for themed icons.
 
 ---
 
 ## 9. Accessibility (non-negotiable)
 
-1. All text ≥ 4.5:1 contrast on its background. Large text (≥24px or 18.66px bold) ≥ 3:1.
+1. All text ≥ 4.5:1 contrast on its background. Large text (≥24px or 18.66px bold) ≥ 3:1. Icons and the boundaries of controls ≥ 3:1.
 2. Focus-visible outline always (global rule, see §10 implementation).
 3. Touch targets ≥44×44pt on mobile.
 4. Keyboard reachable: every interactive element, logical tab order, skip-to-main link.
@@ -492,6 +493,7 @@ Copy-paste this block into every PR description that touches UI.
 - [ ] Primary text `--fg` (≥7:1)
 - [ ] Secondary `--fg-muted` (≥4.5:1)
 - [ ] `--fg-subtle` only for labels/helpers (≤4.5:1 allowed, not body)
+- [ ] Icons ≥3:1 on their surface (`--fg-faint` is the lowest token that passes)
 
 **Layout**
 - [ ] Works at 375/768/1024/1440

@@ -101,13 +101,13 @@ var _ = g.Describe("Web-app manifest", g.Label("unit"), func() {
 		Expect(manifest.Display).To(Equal("standalone"))
 	})
 
-	g.It("names only icons the binary embeds, one of them maskable", func() {
+	g.It("names only embedded icons, one maskable, one monochrome", func() {
 		purposes := make([]string, 0, len(manifest.Icons))
 		for _, icon := range manifest.Icons {
 			_, err := webassets.Assets.Open(strings.TrimPrefix(icon.Src, "/"))
 			Expect(err).ToNot(HaveOccurred(), icon.Src)
 			purposes = append(purposes, icon.Purpose)
 		}
-		Expect(purposes).To(ContainElement("maskable"))
+		Expect(purposes).To(ContainElements("maskable", "monochrome"))
 	})
 })
