@@ -262,10 +262,10 @@ func freePort(host string) (int, error) {
 }
 
 func (in *instance) config() string {
+	// Unthrottled in both modes: replaying, nothing goes upstream; recording,
+	// the proxy paces what does (upstreamGap), so what the cassette already
+	// holds is not made to wait.
 	interval := "0s"
-	if in.record {
-		interval = "1s"
-	}
 	return fmt.Sprintf(`data_dir: %[1]s
 server: {host: 127.0.0.1, port: %[2]d}
 auth:

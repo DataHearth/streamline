@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -85,6 +86,11 @@ type proxy struct {
 	upstream *http.Client
 	writeMu  sync.Mutex
 
+	// paced holds the next moment a request may go upstream to a host
+	// that publishes a rate limit; the instance runs unthrottled.
+	paceMu sync.Mutex
+	paced  map[string]time.Time
+
 	hits, misses, recorded atomic.Int64
 	missMu                 sync.Mutex
 	missed                 []string
@@ -98,6 +104,7 @@ func newProxy(dir string, record bool, secrets []string) (*proxy, error) {
 		dir:    dir,
 		record: record,
 		certs:  map[string]*tls.Certificate{},
+		paced:  map[string]time.Time{},
 		upstream: &http.Client{
 			Timeout: 2 * time.Minute,
 			// Redirects go back to the instance, which follows them through
@@ -269,6 +276,10 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 		return
 	}
 
+	if err := p.pace(r.Context(), u.Hostname()); err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
 	out, err := http.NewRequestWithContext(r.Context(), r.Method, u.String(), bytes.NewReader(body))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
@@ -325,6 +336,35 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 		}
 	}
 	p.write(w, &ex, data)
+}
+
+// upstreamGap is the least time between two requests sent upstream to a
+// host that publishes a rate limit. The instance runs with no limiter of its
+// own (musicbrainz_interval 0s) so that whatever the cassette already holds
+// is answered at once, and only what goes upstream waits its turn.
+var upstreamGap = map[string]time.Duration{
+	"musicbrainz.org": 1100 * time.Millisecond, // one a second, with margin
+}
+
+// pace blocks until host may be sent another request.
+func (p *proxy) pace(ctx context.Context, host string) error {
+	gap, ok := upstreamGap[host]
+	if !ok {
+		return nil
+	}
+	p.paceMu.Lock()
+	at := time.Now()
+	if next := p.paced[host]; next.After(at) {
+		at = next
+	}
+	p.paced[host] = at.Add(gap)
+	p.paceMu.Unlock()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(time.Until(at)):
+		return nil
+	}
 }
 
 // key is the exchange's file name: a hash of the method, the URL with its
