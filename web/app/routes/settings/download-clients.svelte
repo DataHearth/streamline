@@ -47,6 +47,9 @@
 		listen_port: number;
 		max_download_kbps: number;
 		max_upload_kbps: number;
+		max_peers_per_torrent: number;
+		max_unverified_mb: number;
+		max_torrents: number;
 		seed_ratio: number;
 		seed_time: string;
 		disable_dht: boolean;
@@ -169,6 +172,9 @@
 		listen_port: 6881,
 		max_download_kbps: 0,
 		max_upload_kbps: 0,
+		max_peers_per_torrent: 0,
+		max_unverified_mb: 0,
+		max_torrents: 0,
 		seed_ratio: 2.0,
 		seed_time: "72h",
 		disable_dht: false,
@@ -237,6 +243,9 @@
 			listen_port: builtinCfg.listen_port ?? 0,
 			max_download_kbps: builtinCfg.max_download_kbps ?? 0,
 			max_upload_kbps: builtinCfg.max_upload_kbps ?? 0,
+			max_peers_per_torrent: builtinCfg.max_peers_per_torrent ?? 0,
+			max_unverified_mb: builtinCfg.max_unverified_mb ?? 0,
+			max_torrents: builtinCfg.max_torrents ?? 0,
 			seed_ratio: builtinCfg.seed_ratio ?? 0,
 			seed_time: builtinCfg.seed_time ?? "",
 			disable_dht: builtinCfg.disable_dht ?? false,

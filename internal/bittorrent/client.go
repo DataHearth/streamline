@@ -124,7 +124,7 @@ func (e *Engine) AddTorrent(
 	delete(e.refusals, hash)
 	e.mu.Unlock()
 	if _, held := e.client.Torrent(spec.InfoHash); !held &&
-		len(e.client.Torrents()) >= maxTorrents {
+		len(e.client.Torrents()) >= e.torrentCap() {
 		return "", otelx.RecordSpanError(span, download.ErrClientFull)
 	}
 	// A .torrent carries its info, so the storage guard's verdict can be had
@@ -878,4 +878,14 @@ func (e *Engine) status(
 		return download.StatusStalled
 	}
 	return download.StatusDownloading
+}
+
+// torrentCap is how many torrents AddTorrent lets the engine hold. A bare
+// Engine{} — the shape several specs build — has no resolved value, and a
+// zero there must not read as "refuse every add".
+func (e *Engine) torrentCap() int {
+	if e.maxTorrents > 0 {
+		return e.maxTorrents
+	}
+	return defaultMaxTorrents
 }

@@ -278,6 +278,18 @@ var _ = Describe("builtin download client", Label("unit", "config"), func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("rejects engine limits past their maxima", func() {
+		for _, e := range []config.DownloadClientEntry{
+			{MaxPeersPerTorrent: 201},
+			{MaxUnverifiedMB: 1025},
+			{MaxTorrents: 10001},
+			{MaxTorrents: -1},
+		} {
+			e.Name, e.ClientType, e.DownloadDir = "embedded", "builtin", "/downloads"
+			Expect(config.AddDownloadClient(ctx, e)).To(HaveOccurred(), "%+v", e)
+		}
+	})
+
 	It("rejects a builtin entry without download_dir", func() {
 		err := config.AddDownloadClient(ctx, config.DownloadClientEntry{
 			Name: "embedded", ClientType: "builtin", Enabled: true,
