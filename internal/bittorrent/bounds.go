@@ -31,18 +31,20 @@ const (
 	// dialled, which trackers and DHT will happily keep supplying.
 	maxKnownPeersPerTorrent = 100
 	// maxUnverifiedBytes bounds piece data received but not yet hashed
-	// (default 64 MiB). It is not heap: anacrolix writes each block to
-	// storage as it arrives (Torrent.writeChunk), so what it bounds is dirty
-	// page cache, which the memory cgroup charges until writeback frees it.
-	// It is counted in whole pieces across every torrent, and the first
-	// piece always counts in full — so it also bounds throughput: a release
-	// with 16 MiB pieces fills it alone, and the engine then works on one
-	// piece at a time.
+	// (default 64 MiB), per torrent: anacrolix pools the count across
+	// torrents only for storage that reports a capacity, and file storage
+	// reports none, so every downloading torrent has its own. It is not
+	// heap: anacrolix writes each block to storage as it arrives
+	// (Torrent.writeChunk), so what it bounds is page cache, which the memory
+	// cgroup charges — dirty until writeback, reclaimable after. It is
+	// counted in whole pieces, the first always in full, so it also bounds
+	// throughput: a release with 16 MiB pieces fills it alone, and that
+	// torrent then downloads one piece at a time.
 	maxUnverifiedBytes = 16 << 20
 	// maxPeerRequestDataPerConn bounds the piece data one connection buffers
 	// for its peer's requests before sending it (default 1 MiB). A peer
-	// pipelines many requests at once, and an upload rate limit holds them
-	// back, so on a seeding connection this fills: at the default it was the
+	// pipelines many requests at once, and an upload rate limit or a slow
+	// peer holds them back, so on a seeding connection this fills: at the default it was the
 	// largest per-connection cost, unbounded by anything above — 150 seeding
 	// connections could hold 150 MB. anacrolix refuses a request longer than
 	// this outright, so it must stay well above the 16 KiB block size peers
