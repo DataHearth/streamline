@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from "svelte";
+	import { goto } from "@roxi/routify";
 	import { Search, Film, Tv, ArrowRight, Music, BookOpen, LoaderCircle } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { initials } from "@lib/people";
@@ -24,9 +25,9 @@
 	let dialogEl = $state<HTMLDialogElement | null>(null);
 	let prevFocus: HTMLElement | null = null;
 
-	// The list itself lives in lib/search-model: the phone screen and the tablet
-	// panel show the same items, ordered for touch. Here it keeps the palette's
-	// order — pages and actions first, titles under them.
+	// The list itself lives in lib/search-model: the search page shows the same
+	// items, ordered for touch. Here it keeps the palette's order — pages and
+	// actions first, titles under them.
 	const model = createSearchModel(() => query, {});
 	const navigateTo = searchNav();
 	let sections = $derived(model.sections);
@@ -39,8 +40,18 @@
 		return before + itemIdx;
 	}
 
+	let navigate: ((path: string) => void) | null = null;
+	onMount(() => goto.subscribe((fn) => (navigate = fn)));
+
 	async function show() {
 		if (open) return;
+		// A touch screen searches on /search instead: its field sits at the top,
+		// above an on-screen keyboard, where the keyboard covers most of this
+		// box on a landscape tablet. The search bar and Ctrl/⌘+K both land here.
+		if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
+			navigate?.("/search");
+			return;
+		}
 		prevFocus = document.activeElement as HTMLElement | null;
 		open = true;
 		query = "";

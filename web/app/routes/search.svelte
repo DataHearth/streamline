@@ -15,11 +15,13 @@
 	import SearchResultRow from "@components/layout/SearchResultRow.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// The phone's search, a page of its own: the top bar's search button links
-	// here below md, where the command palette has no room. It used to be a
-	// screen AppShell drew over the current page, which put nothing in history
-	// — Back left the page underneath and the search stayed on top of the next
-	// one (#140). As a route, Back and Cancel return to the page it was opened
+	// The phone's and the tablet's search, a page of its own: the top bar's
+	// search button links here below md, where the command palette has no room,
+	// and the palette sends a touch screen here at any width. On a touch screen
+	// it covers the whole screen; opened with a mouse from md, it renders inline
+	// under the top bar. It used to be a screen AppShell drew over the current
+	// page, which put nothing in history — Back left the page underneath and
+	// the search stayed on top of the next one (#140). As a route, Back and Cancel return to the page it was opened
 	// from (AppShell restores its scroll position), and the typed query is in
 	// the URL, so Back from a picked result lands on the same results.
 	//
@@ -121,7 +123,7 @@
 	role="search"
 	aria-label={i18n.common_search()}
 	in:fly={{ y: 16, duration: 200, easing: cubicOut }}
-	class="fixed inset-0 z-50 flex flex-col bg-bg-deep md:static md:z-auto md:min-h-[60dvh]"
+	class="fixed inset-0 z-50 flex flex-col bg-bg-deep md:*:mx-auto md:*:w-full md:*:max-w-2xl md:pointer-fine:static md:pointer-fine:z-auto md:pointer-fine:min-h-[60dvh]"
 >
 	<form
 		onsubmit={onSubmit}
