@@ -225,6 +225,29 @@ var _ = Describe("Engine restore", Label("unit", "bittorrent"), func() {
 			Expect(err).To(MatchError(download.ErrClientNotReady))
 		})
 
+		It("finishes a removal whose caller went away during the restore", func() {
+			store.EXPECT().ListTorrentSessions(mock.Anything).RunAndReturn(
+				func(context.Context) ([]*ent.TorrentSession, error) {
+					<-release
+					return []*ent.TorrentSession{
+						{InfoHash: hash, SourceTorrent: raw},
+					}, nil
+				},
+			).Once()
+			store.EXPECT().DeleteTorrentSessionByHash(mock.Anything, hash).
+				RunAndReturn(func(ctx context.Context, _ string) error {
+					return ctx.Err()
+				}).Once()
+			e.wg.Go(func() { e.loadAndRestore(ctx) })
+			caller, cancel := context.WithCancel(ctx)
+			got := make(chan error, 1)
+			go func() { got <- e.RemoveTorrent(caller, hash, false) }()
+			cancel()
+			close(release)
+
+			Eventually(got).Should(Receive(BeNil()))
+		})
+
 		It("holds a torrent re-added before its flags are applied", func() {
 			store.EXPECT().ListTorrentSessions(mock.Anything).Return(
 				[]*ent.TorrentSession{
