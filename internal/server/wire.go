@@ -52,15 +52,17 @@ import (
 // The caller is responsible for starting the scheduler and HTTP server,
 // and for closing the database when done.
 type App struct {
-	Server     *Server
-	Scheduler  *scheduler.Scheduler
-	DB         *ent.Client
-	Store      db.Store
-	Auth       auth.Manager
-	Downloads  download.Downloader
-	Importer   *importer.Worker
-	HTTPLogger *observability.HTTPLogger
-	Torrents   *bittorrent.Engine
+	Server    *Server
+	Scheduler *scheduler.Scheduler
+	// EngineReady closes when the torrent engine can answer for its sessions.
+	EngineReady <-chan struct{}
+	DB          *ent.Client
+	Store       db.Store
+	Auth        auth.Manager
+	Downloads   download.Downloader
+	Importer    *importer.Worker
+	HTTPLogger  *observability.HTTPLogger
+	Torrents    *bittorrent.Engine
 	// MediaServers holds the refreshes collected over its window; shutdown
 	// flushes it, or the last imports would never reach the servers.
 	MediaServers *mediaserver.Dispatcher
@@ -195,6 +197,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	indexerSvc := indexer.New()
 	var torrentEngine *bittorrent.Engine
 	var builtinClient download.Client
+	engineReady := closedChan()
 	if _, ok := config.BuiltinDownloadClient(); ok {
 		var err error
 		torrentEngine, err = bittorrent.New(ctx, store)
@@ -203,6 +206,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			return nil, fmt.Errorf("builtin torrent engine: %w", err)
 		}
 		builtinClient = torrentEngine
+		engineReady = torrentEngine.Ready()
 		boot.mark(ctx, "builtin torrent engine")
 	}
 	dlManager := download.New(store, builtinClient)
@@ -306,7 +310,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Albums:      musicSvc,
 		Tagger:      musicSvc,
 	})
-	go imp.Start(ctx)
+	afterEngineReady(ctx, engineReady, imp.Start)
 
 	transcoder := transcoding.NewWorker(transcoding.Deps{
 		DB:          store,
@@ -323,7 +327,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			"ffmpeg.path", cfg.FFmpeg.Path,
 		)
 	} else {
-		go transcoder.Start(ctx)
+		afterEngineReady(ctx, engineReady, transcoder.Start)
 		if cfg.Transcoding.Enabled {
 			version, err := prober.Version(ctx)
 			if err != nil {
@@ -634,15 +638,16 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	boot.done(ctx)
 
 	return &App{
-		Server:     srv,
-		Scheduler:  sched,
-		DB:         dbClient,
-		Store:      store,
-		Auth:       authSvc,
-		Downloads:  dlManager,
-		Importer:   imp,
-		HTTPLogger: httpLogger,
-		Torrents:   torrentEngine,
+		Server:      srv,
+		Scheduler:   sched,
+		EngineReady: engineReady,
+		DB:          dbClient,
+		Store:       store,
+		Auth:        authSvc,
+		Downloads:   dlManager,
+		Importer:    imp,
+		HTTPLogger:  httpLogger,
+		Torrents:    torrentEngine,
 
 		MediaServers: dispatcher,
 	}, nil

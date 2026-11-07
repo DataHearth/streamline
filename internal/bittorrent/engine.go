@@ -111,6 +111,8 @@ type Engine struct {
 	// loading is true until the session rows are read. The hashes are unknown
 	// until then, so every lookup answers ErrClientNotReady.
 	loading bool
+	// ready closes when the boot restore has finished or given up.
+	ready chan struct{}
 
 	stop chan struct{}
 	wg   sync.WaitGroup
@@ -206,6 +208,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		refusals:    map[string]string{},
 		restoring:   map[string]struct{}{},
 		loading:     true,
+		ready:       make(chan struct{}),
 		stop:        make(chan struct{}),
 	}
 	paths.onRefuse = e.refuseTorrent
@@ -213,6 +216,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	e.wg.Go(e.enforceSeedLimits)
 	restoreCtx := context.WithoutCancel(ctx)
 	e.wg.Go(func() {
+		defer close(e.ready)
 		// On panic, unreached sessions stay not-ready on purpose.
 		defer observability.RecoverPanic(restoreCtx, "torrent restore", nil)
 		e.loadAndRestore(restoreCtx)
@@ -762,6 +766,9 @@ func (e *Engine) restoreOne(ctx context.Context, s pendingSession) bool {
 	e.startWhenReady(t, s.seedStopped)
 	return true
 }
+
+// Ready closes when the boot restore has finished or given up.
+func (e *Engine) Ready() <-chan struct{} { return e.ready }
 
 // restoreProgress reports how many persisted sessions are still waiting to be
 // re-added, out of how many boot found. Before the rows are read it reports one

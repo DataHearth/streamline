@@ -2108,22 +2108,6 @@ var _ = Describe(
 			Expect(client.removed).To(BeEmpty())
 		})
 
-		It("skips the old record purge while the engine is still starting", func() {
-			mgr := reaper("builtin", seedStopped)
-			client.listErr = fmt.Errorf("%w: 3 of 9", ErrClientNotReady)
-
-			// No EXPECT: nothing may be deleted, and this is not a failure.
-			Expect(mgr.(Cleaner).PurgeOldRecords(ctx)).To(Succeed())
-		})
-
-		It("still fails the old record purge when a client is unreachable", func() {
-			mgr := reaper("builtin", seedStopped)
-			client.listErr = errors.New("connection refused")
-
-			Expect(mgr.(Cleaner).PurgeOldRecords(ctx)).
-				To(MatchError(ContainSubstring("could not be listed")))
-		})
-
 		It("ignores a non-builtin client reporting the same shape", func() {
 			mgr := reaper("qbittorrent", seedStopped)
 

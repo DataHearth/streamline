@@ -1838,13 +1838,6 @@ func (d *download) PurgeOldRecords(ctx context.Context) error {
 	defer span.End()
 
 	live := d.SeedingTorrents(ctx)
-	if live.notReadyOnly {
-		slog.DebugContext(
-			ctx,
-			"purge old records: a client is still starting, skipped",
-		)
-		return nil
-	}
 	if !live.Complete {
 		return otelx.RecordSpanError(span, errors.New(
 			"a download client could not be listed; old records kept",

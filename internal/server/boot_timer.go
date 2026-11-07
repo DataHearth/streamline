@@ -43,13 +43,28 @@ func (b *bootTimer) mark(ctx context.Context, step string) {
 // runAfterListen runs a database-heavy boot step in the background, so a cold
 // page cache does not hold back the HTTP listener.
 func runAfterListen(ctx context.Context, step string, run func(context.Context)) {
-	ctx = context.WithoutCancel(ctx)
 	go func() {
 		defer observability.RecoverPanic(ctx, step, nil)
 		start := time.Now()
 		run(ctx)
 		slog.InfoContext(ctx, "background boot step finished",
 			"step", step, "duration_ms", time.Since(start).Milliseconds())
+	}()
+}
+
+// afterEngineReady starts a background worker once the torrent engine can
+// answer for its sessions, since workers read an unanswered lookup as a failure.
+func afterEngineReady(
+	ctx context.Context,
+	ready <-chan struct{},
+	start func(context.Context),
+) {
+	go func() {
+		select {
+		case <-ready:
+			start(ctx)
+		case <-ctx.Done():
+		}
 	}()
 }
 
@@ -60,4 +75,11 @@ func (b *bootTimer) done(ctx context.Context) {
 		"slowest_step", b.slowest,
 		"slowest_ms", b.slowestTook.Milliseconds(),
 	)
+}
+
+// closedChan is the readiness of an install with no torrent engine to wait for.
+func closedChan() <-chan struct{} {
+	ch := make(chan struct{})
+	close(ch)
+	return ch
 }

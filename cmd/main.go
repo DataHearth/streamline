@@ -276,7 +276,11 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	// 5. Start scheduler in background
 	go func() {
 		defer observability.RecoverPanic(ctx, "scheduler", stop)
-		app.Scheduler.Start(ctx)
+		select {
+		case <-app.EngineReady:
+			app.Scheduler.Start(ctx)
+		case <-ctx.Done():
+		}
 	}()
 
 	// 6. Start HTTP server
