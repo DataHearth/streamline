@@ -138,6 +138,12 @@ func (d *download) SeedingTorrents(ctx context.Context) SeedingSet {
 				"client", dc.Name, "error", err)
 			continue
 		}
+		if startingUp(client) {
+			set.Complete = false
+			slog.DebugContext(ctx, "seeding listing: client still starting",
+				"client", dc.Name)
+			continue
+		}
 		torrents, err := client.ListTorrents(ctx)
 		if err != nil {
 			set.Complete = false

@@ -228,6 +228,17 @@ var _ = Describe("Engine restore", Label("unit", "bittorrent"), func() {
 			Eventually(got).Should(Receive(MatchError(download.ErrClientNotReady)))
 		})
 
+		It("does not report ready when a shutdown interrupts the re-add", func() {
+			store.EXPECT().ListTorrentSessions(mock.Anything).Return(
+				[]*ent.TorrentSession{{InfoHash: hash, SourceTorrent: raw}}, nil,
+			).Once()
+			e.quit = readyNow()
+
+			e.loadAndRestore(ctx)
+
+			Expect(e.Ready()).NotTo(BeClosed())
+		})
+
 		It("reports nothing when Close stops the read", func() {
 			store.EXPECT().ListTorrentSessions(mock.Anything).
 				Return(nil, context.Canceled).Once()
@@ -238,6 +249,20 @@ var _ = Describe("Engine restore", Label("unit", "bittorrent"), func() {
 
 			Expect(e.Fatal()).NotTo(Receive())
 		})
+	})
+
+	It("keeps a session's trust when it gives its names up", func() {
+		var ih metainfo.Hash
+		Expect(ih.FromHexString(hash)).To(Succeed())
+		e.paths.trust(ih)
+		e.paths.claim(name, ih)
+
+		e.paths.unclaim(ih)
+
+		e.paths.mu.Lock()
+		defer e.paths.mu.Unlock()
+		Expect(e.paths.owners).NotTo(HaveKey(name))
+		Expect(e.paths.trusted[ih]).To(BeTrue())
 	})
 
 	It("stops at Close, leaving what it did not reach pending", func() {

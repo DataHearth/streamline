@@ -48,9 +48,10 @@ type bootStep struct {
 	run  func(context.Context)
 }
 
-// runAfterListen runs the steps one after another in the background, so a cold
-// page cache neither holds back the listener nor takes every read connection.
-func runAfterListen(ctx context.Context, fatal func(error), steps ...bootStep) {
+// runInBackground runs the steps one after another off the boot path, so a
+// cold page cache neither holds back the listener nor takes every read
+// connection.
+func runInBackground(ctx context.Context, fatal func(error), steps ...bootStep) {
 	go func() {
 		defer observability.RecoverPanic(ctx, "background boot steps", func() {
 			fatal(errors.New("a background boot step panicked"))

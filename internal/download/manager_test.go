@@ -1992,11 +1992,20 @@ type seedReapClient struct {
 	failHash string
 	removed  []string
 	deleted  []bool
+	listed   int
 }
 
 func (c *seedReapClient) ListTorrents(context.Context) ([]Torrent, error) {
+	c.listed++
 	return c.torrents, c.listErr
 }
+
+// startingEngine is a builtin client still restoring its sessions.
+type startingEngine struct {
+	*seedReapClient
+}
+
+func (startingEngine) Ready() <-chan struct{} { return make(chan struct{}) }
 
 func (c *seedReapClient) RemoveTorrent(
 	_ context.Context,
@@ -2052,6 +2061,18 @@ var _ = Describe(
 			Hash: "h1", Name: "The.Batman.2022.1080p.BluRay-X",
 			Status: StatusCompleted, SeedingStopped: true,
 		}
+
+		It("lists nothing from a builtin engine still starting", func() {
+			reaper("builtin", seedStopped)
+			mgr := New(store, startingEngine{client}).(interface {
+				SeedingTorrents(context.Context) SeedingSet
+			})
+
+			set := mgr.SeedingTorrents(ctx)
+
+			Expect(set.Complete).To(BeFalse())
+			Expect(client.listed).To(BeZero())
+		})
 
 		It("removes an imported torrent with its files", func() {
 			mgr := reaper("builtin", seedStopped)

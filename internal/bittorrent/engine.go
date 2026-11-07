@@ -29,6 +29,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/observability"
+	"github.com/datahearth/streamline/internal/otelx"
 )
 
 var tracer = otel.Tracer("github.com/datahearth/streamline/internal/bittorrent")
@@ -121,8 +122,8 @@ type Engine struct {
 }
 
 // New starts the engine from the enabled builtin download-client config
-// entry. Persisted sessions are re-added in the background: a re-add stats
-// every file of every complete piece, minutes on a network filesystem.
+// entry. Persisted sessions are read and re-added in the background (see
+// loadAndRestore).
 func New(ctx context.Context, store db.Store) (*Engine, error) {
 	entry, ok := config.BuiltinDownloadClient()
 	if !ok {
@@ -217,7 +218,6 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	}
 	paths.onRefuse = e.refuseTorrent
 	e.registerEngineGauges(ctx)
-	e.wg.Go(e.enforceSeedLimits)
 	restoreCtx := context.WithoutCancel(ctx)
 	e.wg.Go(func() {
 		defer observability.RecoverPanic(restoreCtx, "torrent restore progress", nil)
@@ -651,8 +651,11 @@ func (e *Engine) loadAndRestore(ctx context.Context) {
 	e.mu.Unlock()
 	slog.InfoContext(ctx, "torrent sessions loaded",
 		"sessions", len(sessions), "duration_ms", time.Since(start).Milliseconds())
-	e.restoreSessions(ctx, sessions)
+	if e.restoreSessions(ctx, sessions) {
+		return
+	}
 	close(e.ready)
+	e.wg.Go(e.enforceSeedLimits)
 }
 
 // restoreProgressEvery paces the warning a long boot restore logs.
@@ -670,6 +673,13 @@ func (e *Engine) logRestoreProgress(ctx context.Context) {
 		case <-e.stop:
 			return
 		case <-tick.C:
+			e.mu.Lock()
+			loading := e.loading
+			e.mu.Unlock()
+			if loading {
+				slog.WarnContext(ctx, "torrent sessions still loading")
+				continue
+			}
 			pending, total := e.restoreProgress()
 			slog.WarnContext(ctx, "torrent restore still running",
 				"pending", pending, "total", total)
@@ -708,7 +718,11 @@ func (e *Engine) awaitRestore(ctx context.Context) error {
 // restoreSessions re-adds the sessions one at a time (anacrolix serializes
 // them on its client lock anyway) and stops at Close. A failed re-add keeps
 // its row for the next boot.
-func (e *Engine) restoreSessions(ctx context.Context, sessions []pendingSession) {
+// It reports whether a shutdown interrupted it.
+func (e *Engine) restoreSessions(
+	ctx context.Context,
+	sessions []pendingSession,
+) (interrupted bool) {
 	ctx, span := tracer.Start(ctx, "bittorrent.restore")
 	defer span.End()
 
@@ -717,7 +731,6 @@ func (e *Engine) restoreSessions(ctx context.Context, sessions []pendingSession)
 		restored, failed int
 		slowest          time.Duration
 		slowestHash      string
-		interrupted      bool
 	)
 	defer func() {
 		took := time.Since(began)
@@ -727,6 +740,12 @@ func (e *Engine) restoreSessions(ctx context.Context, sessions []pendingSession)
 			attribute.Int("torrents.failed", failed),
 			attribute.Bool("restore.interrupted", interrupted),
 		)
+		if failed > 0 || interrupted {
+			_ = otelx.RecordSpanError(span, fmt.Errorf(
+				"%d of %d re-adds failed, interrupted: %t",
+				failed, len(sessions), interrupted,
+			))
+		}
 		if len(sessions) == 0 {
 			return
 		}
@@ -760,7 +779,12 @@ func (e *Engine) restoreSessions(ctx context.Context, sessions []pendingSession)
 		delete(e.restoring, s.hash)
 		e.mu.Unlock()
 		if !ok {
-			e.forget(s.hash)
+			// Its row stays for the next boot, and its trust with it.
+			e.mu.Lock()
+			delete(e.state, s.hash)
+			delete(e.sample, s.hash)
+			e.mu.Unlock()
+			e.paths.unclaim(s.spec.InfoHash)
 			failed++
 			continue
 		}
@@ -769,6 +793,7 @@ func (e *Engine) restoreSessions(ctx context.Context, sessions []pendingSession)
 			slowest, slowestHash = took, s.hash
 		}
 	}
+	return false
 }
 
 // restoreOne re-adds one session and applies its persisted flags, reporting

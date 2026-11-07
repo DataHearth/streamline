@@ -315,7 +315,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		store, dispatcher, cfg.Library.SeriesPath, cfg.Library.SeriesNaming,
 	)
 	pathMigrations := pathmigrate.NewService(store)
-	runAfterListen(ctx, reportFatal,
+	runInBackground(ctx, reportFatal,
 		bootStep{"music hydration resume", musicSvc.ResumeHydration},
 		bootStep{"path drift check", pathMigrations.WarnOnDrift},
 	)

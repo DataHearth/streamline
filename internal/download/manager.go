@@ -539,6 +539,9 @@ func (d *download) refreshQueue(ctx context.Context) ([]QueueEntry, error) {
 					"client", dc.Name, "error", err)
 				return
 			}
+			if startingUp(client) {
+				return
+			}
 			t, err := client.GetTorrent(ctx, rec.TorrentHash)
 			if err != nil {
 				if errors.Is(err, ErrTorrentNotFound) {
@@ -561,6 +564,21 @@ func (d *download) refreshQueue(ctx context.Context) ([]QueueEntry, error) {
 	wg.Wait()
 	sortQueue(entries)
 	return entries, nil
+}
+
+// startingUp reports whether a client is still restoring its sessions after
+// a restart, in which case its calls wait until it is done.
+func startingUp(client Client) bool {
+	r, ok := client.(interface{ Ready() <-chan struct{} })
+	if !ok {
+		return false
+	}
+	select {
+	case <-r.Ready():
+		return false
+	default:
+		return true
+	}
 }
 
 // sortQueue orders the queue by how close an entry is to the library: an

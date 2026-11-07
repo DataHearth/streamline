@@ -241,6 +241,18 @@ func (p *contentPaths) filePath(opts storage.FilePathMakerOpts) string {
 }
 
 // release frees every name ih holds, once the torrent is gone.
+// unclaim drops the names ih holds and keeps its trust, so it can still be
+// placed on its own data.
+func (p *contentPaths) unclaim(ih metainfo.Hash) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for name, owner := range p.owners {
+		if owner == ih {
+			delete(p.owners, name)
+		}
+	}
+}
+
 func (p *contentPaths) release(ih metainfo.Hash) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

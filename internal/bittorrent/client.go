@@ -238,8 +238,9 @@ func (e *Engine) GetTorrent(
 	return &v, nil
 }
 
-// ListTorrents refuses with download.ErrClientNotReady until restore is
-// done: callers read the listing as everything the engine holds.
+// ListTorrents waits for the boot restore, then refuses while a session it
+// interrupted is still pending: callers read the listing as everything the
+// engine holds.
 func (e *Engine) ListTorrents(ctx context.Context) ([]download.Torrent, error) {
 	if err := e.awaitRestore(ctx); err != nil {
 		return nil, err

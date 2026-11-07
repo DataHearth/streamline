@@ -399,13 +399,13 @@ The database is `<data_dir>/streamline.db`, accompanied by `-wal` and `-shm` fil
 
 ## Slow start or restarts during boot
 
-`/health` answers once the database is open and migrated. If boot is slow, the log names the step: `boot step finished` (any step over a second) and `application wired` (total and `slowest_step`).
+`/health` answers once the boot wiring is done: the database is open and migrated, and auth and OIDC discovery are set up. If boot is slow, the log names the step: `boot step finished` (any step over a second) and `application wired` (total and `slowest_step`).
 
 On Kubernetes, give boot a startup allowance or liveness kills the pod mid-boot. The Helm chart has a `startupProbe` from 3.1.0 (5 minutes by default).
 
 Boot reads the database page by page. On a cold page cache over slow storage, such as a network volume with a round trip per read, the large reads take minutes. So the built-in engine's sessions, the music hydration sweep and the path drift check run **after** the server is up; `background boot step finished` and `torrent sessions loaded` report how long they took. Scheduled jobs, imports and transcodes start once the engine's torrents are back.
 
-Meanwhile the Torrents page says *Reading torrents after the restart*, then *Re-adding N of M torrents after the restart*, and downloads keep their state. The log ends with `torrent sessions restored`. The first pages can stay slower until the database is cached.
+Meanwhile the Torrents page says *Reading torrents after the restart*, then *Re-adding torrents after the restart: N of M*, and downloads keep their state. Calls that touch the engine, such as a grab or the queue's progress, wait or show no live state until then. The log ends with `torrent sessions restored`. The first pages can stay slower until the database is cached.
 
 ---
 
