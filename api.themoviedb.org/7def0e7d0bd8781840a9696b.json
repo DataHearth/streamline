@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/78854?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Alan Marshall\",\n    \"Alan M. Willey\",\n    \"Alan Willey\"\n  ],\n  \"biography\": \"Alan Marshal (born Alan Marshal Willey; 29 January 1909 – 9 July 1961) was an actor who performed on stage in the United States and in Hollywood films.\",\n  \"birthday\": \"1909-01-30\",\n  \"deathday\": \"1961-07-10\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 78854,\n  \"imdb_id\": \"nm0550701\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Alan Marshal\",\n  \"place_of_birth\": \"Woollahra, Sydney, New South Wales, Australia\",\n  \"popularity\": 0.5599,\n  \"profile_path\": \"/3s50CuZjKmKwaXqATJxkEKR0nDy.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0550701\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q2830551\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

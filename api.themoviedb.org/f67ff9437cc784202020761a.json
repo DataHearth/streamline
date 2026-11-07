@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=family+reunion\u0026year=2019",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/2XmXiRq1GRC0thJN0YUzzYiGLBY.jpg\",\n      \"genre_ids\": [\n        35,\n        10751\n      ],\n      \"id\": 654580,\n      \"title\": \"A Family Reunion Christmas\",\n      \"original_language\": \"en\",\n      \"original_title\": \"A Family Reunion Christmas\",\n      \"overview\": \"M'Dear and her sisters struggle to keep their singing act together before a church Christmas pageant while Grandpa teaches the kids a valuable lesson.\",\n      \"popularity\": 1.0167,\n      \"poster_path\": \"/dQBdhl5ogydQVjoWIqagC6jJPzi.jpg\",\n      \"release_date\": \"2019-12-09\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 5.9,\n      \"vote_count\": 29\n    },\n    {\n      \"adult\": false,\n      \"backdrop_path\": null,\n      \"genre_ids\": [],\n      \"id\": 1085579,\n      \"title\": \"The Family Man Reunion\",\n      \"original_language\": \"hi\",\n      \"original_title\": \"The Family Man Reunion\",\n      \"overview\": \"Cast and crew of The Family Man sharing their own experiences, thoughts, and ideas behind the show.\",\n      \"popularity\": 0.5878,\n      \"poster_path\": \"/A0R8ALsYjWF3dTrJNPPHtkYnetY.jpg\",\n      \"release_date\": \"2019-10-04\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 0.0,\n      \"vote_count\": 0\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 2\n}"
+}

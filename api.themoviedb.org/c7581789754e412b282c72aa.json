@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/9841?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Greta Schroeder Mátray\",\n    \"Margarethe \\\"Greta\\\" Schröder\",\n    \"Margarethe Schröder\"\n  ],\n  \"biography\": \"From Wikipedia, the free encyclopedia\\n\\nGreta Schröder (7 September 1891 – 13 April 1967) was a German actress. She is best known for the role of Thomas Hutter's wife and victim to Count Orlok in the 1922 silent film Nosferatu. In the fictionalized 2000 film, Shadow of the Vampire, she is portrayed as having been a famous actress during the making of Nosferatu, but in fact she was little known. The bulk of her career was during the 1920s, and she continued to act well into the 1950s, but by the 1930s her roles had diminished to only occasional appearances. Following a failed marriage with struggling actor Ernst Matray, she was married to film director Paul Wegener until his death in 1948.\\n\\nDescription above from the Wikipedia article Greta Schröder, licensed under CC-BY-SA, full list of contributors on Wikipedia.\",\n  \"birthday\": \"1892-06-27\",\n  \"deathday\": \"1980-06-08\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 9841,\n  \"imdb_id\": \"nm0775659\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Greta Schröder\",\n  \"place_of_birth\": \"Düsseldorf, Germany\",\n  \"popularity\": 0.4375,\n  \"profile_path\": \"/vkwD2LVM2QRD2a6auvq1K6Zpwd0.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0775659\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q76656\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

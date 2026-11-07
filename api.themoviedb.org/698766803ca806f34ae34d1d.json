@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=The+Lost+World\u0026year=1925",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/mdNae6nOlJ7iKxFgsWSAgxU9shS.jpg\",\n      \"genre_ids\": [\n        12,\n        14,\n        18,\n        10749,\n        27,\n        878,\n        53\n      ],\n      \"id\": 2981,\n      \"title\": \"The Lost World\",\n      \"original_language\": \"en\",\n      \"original_title\": \"The Lost World\",\n      \"overview\": \"The first film adaptation of Sir Arthur Conan Doyle's classic novel about a land where prehistoric creatures still roam.\",\n      \"popularity\": 1.3479,\n      \"poster_path\": \"/411VnWtYJdEFKiaGqJOeTmBv8th.jpg\",\n      \"release_date\": \"1925-02-02\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 6.7,\n      \"vote_count\": 173\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

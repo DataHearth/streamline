@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/97920?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"William Hinzman\",\n    \"Bill Heinzman\",\n    \"Bill Hinzman\",\n    \"Billy Hinzman\",\n    \"S. William Hinzman Jr.\",\n    \"Bill Hinzeman\"\n  ],\n  \"biography\": \"Motion picture actor and director. Born Samuel William Hinzman, he was working in 1968 as an assistant cameraman on the low budget, black and white film, \\\"Night of the Living Dead\\\", when director George Romero cast him as the zombie in the opening sequence. The iconic role earned Hinzman the admiration of horror fans who have affectionately referred to him as \\\"No. 1 zombie\\\". Hinzman also went on to direct and star in the 1980s horror movies \\\"The Majorettes\\\" (1987) and \\\"FleshEater\\\" (1988). He died of cancer. He requested that his body be cremated because he jokingly said if he was buried he would come back.\",\n  \"birthday\": \"1936-10-24\",\n  \"deathday\": \"2012-02-05\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 97920,\n  \"imdb_id\": \"nm0386100\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"S. William Hinzman\",\n  \"place_of_birth\": \"Coraopolis, Pennsylvania, USA\",\n  \"popularity\": 0.3517,\n  \"profile_path\": \"/jD1fEONB10zMGHbqamOSCt32AYK.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0386100\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q1966500\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

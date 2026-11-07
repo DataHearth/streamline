@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/30236?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Clifton Avon Edwards\",\n    \"Cliff 'Ukulele Ike' Edwards\",\n    \"Cliff 'Ukelele Ike' Edwards\",\n    \"Ukulele Ike\",\n    \"Ukelele Ike\",\n    \"Clifton Avon \\\"Cliff\\\" Edwards\",\n    \"Cliff Edwards\",\n    \"克里夫·爱德华兹\"\n  ],\n  \"biography\": \"Clifton Avon \\\"Cliff\\\" Edwards (June 14, 1895 – July 17, 1971), nicknamed \\\"Ukulele Ike\\\", was an American musician, singer, actor and voice actor, who enjoyed considerable popularity in the 1920s and early 1930s, specializing in jazzy renditions of pop standards and novelty tunes. He had a number-one hit with \\\"Singin' in the Rain\\\" in 1929. He also did voices for animated cartoons later in his career, and is best known as the voice of Jiminy Cricket in Walt Disney's Pinocchio (1940) and Fun and Fancy Free (1947). His rendition of \\\"When You Wish Upon a Star\\\" in Pinocchio is probably his most familiar recorded legacy.\",\n  \"birthday\": \"1895-06-13\",\n  \"deathday\": \"1971-07-17\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 30236,\n  \"imdb_id\": \"nm0249893\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Cliff Edwards\",\n  \"place_of_birth\": \"Hannibal, Missouri, USA\",\n  \"popularity\": 0.4691,\n  \"profile_path\": \"/cplAl2NjSDuoHvSJ87kf8Yh2cdK.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/01mgdm3\",\n    \"freebase_id\": \"/en/cliff_edwards\",\n    \"imdb_id\": \"nm0249893\",\n    \"tvrage_id\": 174350,\n    \"wikidata_id\": \"Q950376\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

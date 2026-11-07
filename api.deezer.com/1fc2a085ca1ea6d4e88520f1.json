@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.deezer.com/search/album?q=artist%3A%22Broke+For+Free%22+album%3A%22Synonymy%22",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\n  \"data\": [],\n  \"total\": 0\n}"
+}

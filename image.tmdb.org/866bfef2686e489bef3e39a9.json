@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://image.tmdb.org/t/p/w780/i9jJzvoXET4D9pOkoEwncSdNNER.jpg",
+  "status": 200,
+  "header": {
+    "Content-Type": "image/jpeg"
+  },
+  "body_file": "866bfef2686e489bef3e39a9.bin"
+}

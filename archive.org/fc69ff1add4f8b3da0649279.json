@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-5580eab4-df0f-430a-abe6-d71ccac8d774/mbid-5580eab4-df0f-430a-abe6-d71ccac8d774-26813189807_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://ia601909.us.archive.org/20/items/mbid-5580eab4-df0f-430a-abe6-d71ccac8d774/mbid-5580eab4-df0f-430a-abe6-d71ccac8d774-26813189807_thumb500.jpg"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/102441?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Richard Miller\",\n    \"ディック・ミラー\",\n    \"Richard Dick Miller\"\n  ],\n  \"biography\": \"Richard Miller (December 25, 1928 – January 30, 2019) was an American character actor who appeared in more than 180 films, including many produced by Roger Corman. He later appeared in the films of directors who began their careers with Corman, including Joe Dante, James Cameron, and Martin Scorsese, with the distinction of appearing in every film directed by Dante. He was known for playing the beleaguered everyman, often in one-scene appearances.\\n\\nMiller's main roles in films included Gremlins, Gremlins 2: The New Batch, Explorers, Piranha, The Howling, A Bucket of Blood, The Little Shop of Horrors, Not of This Earth, Chopping Mall, Night of the Creeps, The Terminator, The 'Burbs, Small Soldiers and Quake.\",\n  \"birthday\": \"1928-12-25\",\n  \"deathday\": \"2019-01-30\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 102441,\n  \"imdb_id\": \"nm0588241\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Dick Miller\",\n  \"place_of_birth\": \"The Bronx, New York City, New York, USA\",\n  \"popularity\": 1.3824,\n  \"profile_path\": \"/zyQXh8BkLg0DDo23pxJN2dy6Bqj.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/05nty2\",\n    \"freebase_id\": \"/en/dick_miller\",\n    \"imdb_id\": \"nm0588241\",\n    \"tvrage_id\": 10780,\n    \"wikidata_id\": \"Q1209753\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

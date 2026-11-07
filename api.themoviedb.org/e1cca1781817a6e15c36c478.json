@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=House+on+Haunted+Hill\u0026year=1959",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/nxE4O2EFIOfanWkdaCWiBRfwjrn.jpg\",\n      \"genre_ids\": [\n        27,\n        9648\n      ],\n      \"id\": 15856,\n      \"title\": \"House on Haunted Hill\",\n      \"original_language\": \"en\",\n      \"original_title\": \"House on Haunted Hill\",\n      \"overview\": \"Frederick Loren invites five strangers to the party of a lifetime and offers each of them $10,000 if they can stay the night in the reportedly haunted house. Armed with a gun for protection, each guest arrives in a hearse and will either leave in it much richer…Or dead.\",\n      \"popularity\": 4.3707,\n      \"poster_path\": \"/g5kdFt3piV3w1pG65W9sSToJ7HB.jpg\",\n      \"release_date\": \"1959-01-01\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 6.733,\n      \"vote_count\": 655\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

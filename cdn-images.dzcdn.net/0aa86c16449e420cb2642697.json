@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://cdn-images.dzcdn.net/images/cover/8ed7486480251f6a0c0eaae9c331ff62/1000x1000-000000-80-0-0.jpg",
+  "status": 200,
+  "header": {
+    "Content-Type": "image/jpeg"
+  },
+  "body_file": "0aa86c16449e420cb2642697.bin"
+}

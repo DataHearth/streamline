@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/118204?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"George Troy Brown\"\n  ],\n  \"biography\": \"\",\n  \"birthday\": \"1901-03-17\",\n  \"deathday\": \"1944-11-18\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 118204,\n  \"imdb_id\": \"nm0112937\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Troy Brown Sr.\",\n  \"place_of_birth\": \"Memphis, Tennessee, USA\",\n  \"popularity\": 0.1128,\n  \"profile_path\": null,\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0112937\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": null,\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

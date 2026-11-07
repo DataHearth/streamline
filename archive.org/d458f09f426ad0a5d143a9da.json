@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-c173e6ac-f33b-40c8-8337-f6c979d721fd/mbid-c173e6ac-f33b-40c8-8337-f6c979d721fd-6373573951_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn710902.ca.archive.org/0/items/mbid-c173e6ac-f33b-40c8-8337-f6c979d721fd/mbid-c173e6ac-f33b-40c8-8337-f6c979d721fd-6373573951_thumb500.jpg"
+  }
+}

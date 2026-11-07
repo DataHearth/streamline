@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-d37548aa-da95-4d7e-afc0-e5896189b9c1/mbid-d37548aa-da95-4d7e-afc0-e5896189b9c1-9589546661_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn710609.ca.archive.org/0/items/mbid-d37548aa-da95-4d7e-afc0-e5896189b9c1/mbid-d37548aa-da95-4d7e-afc0-e5896189b9c1-9589546661_thumb500.jpg"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/7572?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Thomas Antonius Cornelis Ancion\"\n  ],\n  \"biography\": \"Thom Hoffman is a Dutch film and television actor. He also starred in several musicals.\",\n  \"birthday\": \"1957-03-03\",\n  \"deathday\": null,\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 7572,\n  \"imdb_id\": \"nm0389109\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Thom Hoffman\",\n  \"place_of_birth\": \"Wassenaar, Zuid-Holland, Netherlands\",\n  \"popularity\": 0.421,\n  \"profile_path\": \"/9idfzAANRjFDPnPHsRVVBb2LbNR.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0b50l3\",\n    \"freebase_id\": \"/en/thom_hoffman\",\n    \"imdb_id\": \"nm0389109\",\n    \"tvrage_id\": 230923,\n    \"wikidata_id\": \"Q762701\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

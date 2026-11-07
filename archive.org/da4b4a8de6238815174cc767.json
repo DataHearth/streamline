@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-9d194363-5287-433b-af49-2d07d5edfa66/mbid-9d194363-5287-433b-af49-2d07d5edfa66-29398516466_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://ia800505.us.archive.org/30/items/mbid-9d194363-5287-433b-af49-2d07d5edfa66/mbid-9d194363-5287-433b-af49-2d07d5edfa66-29398516466_thumb500.jpg"
+  }
+}

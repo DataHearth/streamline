@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api4.thetvdb.com/v4/seasons/532067/translations/eng",
+  "status": 404,
+  "header": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": "{\n  \"status\": \"failure\",\n  \"message\": \"NotFoundException: error fetching translation\",\n  \"data\": null\n}\n"
+}

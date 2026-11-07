@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/14419?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Glen W. Cavender\",\n    \"Glenn Cavender\"\n  ],\n  \"biography\": \"From Wikipedia, the free encyclopedia\\n\\nGlen Cavender (September 19, 1883 – February 9, 1962) was an American film actor. He appeared in 259 films between 1914 and 1949.\\n\\nThe Spanish–American War soldier was born in Tucson, Arizona, and died in Hollywood, California. He started his acting career in vaudeville shows. Cavender belonged to the original Keystone Cops and was a regular in numerous Mack Sennett comedies. He also worked as a director for three Mack Sennett films between 1914 and 1916. During the 1920s, Cavender worked for the film studios Educational and Christie and appeared in Buster Keaton's film classic The General (1926) as the antagonistic Union Captain Anderson. The advance of sound film in the late 1920s damaged his career and, formerly a well-known actor, Cavender only played minor roles until his retirement in 1949.\",\n  \"birthday\": \"1883-09-18\",\n  \"deathday\": \"1962-02-09\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 14419,\n  \"imdb_id\": \"nm0147070\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Glen Cavender\",\n  \"place_of_birth\": \"Tucson, Arizona, USA\",\n  \"popularity\": 0.3828,\n  \"profile_path\": \"/mkCWTmyWtInbtNiSkBaUU20DgXz.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0147070\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q3108668\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

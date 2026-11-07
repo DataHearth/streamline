@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/97824?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Conrad Biedrzycki\"\n  ],\n  \"biography\": \"Conrad Brooks was born as Conrad Biedrzycki on January 3, 1931 in Baltimore, Maryland. He was the son of Polish immigrants, with a baker father, and had seven brothers and sisters. At seventeen, along with his brothers Henry and Ted, he went to Hollywood, California. Brooks first encountered legendary Grade-Z filmmaker Ed Wood in a donut shop. Conrad first collaborated with Wood on the fifteen minute short movie \\\"Range Revenge.\\\" Brooks had three roles in Wood's \\\"Glen or Glenda.\\\" He achieved his greatest enduring cult popularity as Patrolman Jamie in \\\"Plan 9 from Outer Space.\\\" Conrad briefly popped up in the uproariously awful cheapie clunker \\\"The Beast of Yucca Flats.\\\"\",\n  \"birthday\": \"1931-01-03\",\n  \"deathday\": \"2017-12-06\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 97824,\n  \"imdb_id\": \"nm0111926\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Conrad Brooks\",\n  \"place_of_birth\": \"Baltimore, Maryland, USA\",\n  \"popularity\": 0.2741,\n  \"profile_path\": \"/ccuggOAsOHthPN1kdhDbhH69Xwn.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0111926\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q5162490\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

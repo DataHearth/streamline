@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://assets.hardcover.app/author/250988/9edafc9b-0c45-419b-b60f-dde78f70bcef.jpg",
+  "status": 200,
+  "header": {
+    "Content-Type": "image/jpeg"
+  },
+  "body_file": "928bf2ead74f39cf15710fef.bin"
+}

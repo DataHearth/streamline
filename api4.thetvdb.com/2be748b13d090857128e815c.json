@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api4.thetvdb.com/v4/seasons/864/translations/eng",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"overview\": \"After Lucy breaks her leg, Mr. Mooney enlists the help of Lucy's best pal Vivian Bagley from Danfield to take care of Lucy. Then, the two start reminiscing about old times and the crazy things they did together.\",\n    \"language\": \"eng\",\n    \"isPrimary\": true\n  }\n}\n"
+}

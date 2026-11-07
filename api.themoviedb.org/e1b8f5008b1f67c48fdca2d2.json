@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/33178?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Geo. Chandler\"\n  ],\n  \"biography\": \"From Wikipedia, the free encyclopedia\\n\\nGeorge Chandler (June 30, 1898 – June 10, 1985), born in Waukegan, Illinois, was an American actor. He made his screen debut in 1928, ultimately appearing, throughout his career, in over 140 films, usually in smaller supporting roles. Chandler is perhaps best known for playing the character of Uncle Petrie Martin on the television series Lassie.\\n\\nEarly in his performing career he had a vaudeville act, billed as \\\"George Chandler, the Musical Nut\\\", which featured comedy and his violin. He served in the United States Army during World War I.\\n\\nIn addition to many film roles throughout the years 1928-1979, Chandler appeared, from 1951 onward, in numerous television series.\\n\\nHe was elected president of the Screen Actors Guild in 1960.\\n\\nGeorge Chandler died in Panorama City, California, the result of cancer, on June 10, 1985. He was 86.\",\n  \"birthday\": \"1898-06-30\",\n  \"deathday\": \"1985-06-10\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 33178,\n  \"imdb_id\": \"nm0151370\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"George Chandler\",\n  \"place_of_birth\": \"Waukegan, Illinois, USA\",\n  \"popularity\": 0.5031,\n  \"profile_path\": \"/fXj6FdgWPp8om9O2HD2Uv4yhcBi.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0f8d2l\",\n    \"freebase_id\": \"/en/george_chandler\",\n    \"imdb_id\": \"nm0151370\",\n    \"tvrage_id\": 5460,\n    \"wikidata_id\": \"Q3101481\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/9839?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Maximilian Schreck\",\n    \"Friedrich Gustav Maximilian Schreck\"\n  ],\n  \"biography\": \"From Wikipedia, the free encyclopedia\\n\\nFriedrich Gustav Max Schreck (September 6, 1879 – February 20, 1936) was a German actor. He is most often remembered today for his lead role in the film Nosferatu (1922).\\n\\nDescription above from the Wikipedia article Max Schreck, licensed under CC-BY-SA, full list of contributors on Wikipedia.\",\n  \"birthday\": \"1879-09-06\",\n  \"deathday\": \"1936-02-20\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 9839,\n  \"imdb_id\": \"nm0775180\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Max Schreck\",\n  \"place_of_birth\": \"Berlin, Germany\",\n  \"popularity\": 0.419,\n  \"profile_path\": \"/uKVNFFt6VA8R7pp7HIPJF4e5PfX.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/02rls1\",\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0775180\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q58822\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

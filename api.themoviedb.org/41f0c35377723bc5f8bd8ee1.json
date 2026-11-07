@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Nosferatu\u0026year=1922",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/cA9iGtvjRGJHzDBfrq48l0eyCvA.jpg\",\n      \"genre_ids\": [\n        27,\n        14\n      ],\n      \"id\": 653,\n      \"title\": \"Nosferatu\",\n      \"original_language\": \"de\",\n      \"original_title\": \"Nosferatu, eine Symphonie des Grauens\",\n      \"overview\": \"The mysterious Count Orlok summons a happily married real estate agent to his castle, located up in the Transylvanian mountains, to finalise a terrifying deal.\",\n      \"popularity\": 7.3754,\n      \"poster_path\": \"/zv7J85D8CC9qYagAEhPM63CIG6j.jpg\",\n      \"release_date\": \"1922-02-16\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.6,\n      \"vote_count\": 2580\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

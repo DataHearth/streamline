@@ -1,0 +1,10 @@
+{
+  "method": "GET",
+  "url": "https://coverartarchive.org/release-group/ce0eb31a-142a-4ac8-9cb9-6a3adb3ad19e/front-500",
+  "status": 307,
+  "header": {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Location": "https://archive.org/download/mbid-e81e934b-1c7e-44b0-849c-de3c5311fb19/mbid-e81e934b-1c7e-44b0-849c-de3c5311fb19-12947230750_thumb500.jpg"
+  },
+  "body": "See: https://archive.org/download/mbid-e81e934b-1c7e-44b0-849c-de3c5311fb19/mbid-e81e934b-1c7e-44b0-849c-de3c5311fb19-12947230750_thumb500.jpg\n"
+}

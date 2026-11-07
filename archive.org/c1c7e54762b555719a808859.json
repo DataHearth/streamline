@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-1237722c-1a4a-4484-978a-67af33fd2cf6/mbid-1237722c-1a4a-4484-978a-67af33fd2cf6-18350874623_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn711104.ca.archive.org/0/items/mbid-1237722c-1a4a-4484-978a-67af33fd2cf6/mbid-1237722c-1a4a-4484-978a-67af33fd2cf6-18350874623_thumb500.jpg"
+  }
+}

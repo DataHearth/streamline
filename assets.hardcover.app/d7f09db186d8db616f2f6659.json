@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://assets.hardcover.app/external_data/1677438/d8df1e8803b69c9a987cf2593ef7759136eb3e5a.jpeg",
+  "status": 200,
+  "header": {
+    "Content-Type": "image/jpeg"
+  },
+  "body_file": "d7f09db186d8db616f2f6659.bin"
+}

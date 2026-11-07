@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-88db8655-dc48-4278-be50-afbb281d4218/mbid-88db8655-dc48-4278-be50-afbb281d4218-12437617299_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn711208.ca.archive.org/0/items/mbid-88db8655-dc48-4278-be50-afbb281d4218/mbid-88db8655-dc48-4278-be50-afbb281d4218-12437617299_thumb500.jpg"
+  }
+}

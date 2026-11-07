@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://ia801900.us.archive.org/6/items/mbid-d4d44bf1-a715-414b-af49-80bbbe399f83/mbid-d4d44bf1-a715-414b-af49-80bbbe399f83-3189425246_thumb500.jpg",
+  "status": 200,
+  "header": {
+    "Content-Type": "image/jpeg"
+  },
+  "body_file": "8d640a777fdb481173fbaf3d.bin"
+}

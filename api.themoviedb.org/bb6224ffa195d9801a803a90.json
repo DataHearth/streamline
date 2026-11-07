@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=The+Little+Shop+of+Horrors\u0026year=1960",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/sGz7JApiDtClRFxffIw3WgRK8y2.jpg\",\n      \"genre_ids\": [\n        27,\n        35,\n        14\n      ],\n      \"id\": 24452,\n      \"title\": \"The Little Shop of Horrors\",\n      \"original_language\": \"en\",\n      \"original_title\": \"The Little Shop of Horrors\",\n      \"overview\": \"Seymour works in a skid row florist shop and is in love with his beautiful co-worker, Audrey. He creates a new plant that not only talks but cannot survive without human flesh and blood.\",\n      \"popularity\": 2.6887,\n      \"poster_path\": \"/s9MrumN9oCfv1rFoEvMLwucWD7V.jpg\",\n      \"release_date\": \"1960-05-04\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 6.255,\n      \"vote_count\": 491\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

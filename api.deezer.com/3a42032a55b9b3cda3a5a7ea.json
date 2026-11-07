@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.deezer.com/artist/1449213",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\n  \"id\": 1449213,\n  \"name\": \"Chris Zabriskie\",\n  \"link\": \"https:\\/\\/www.deezer.com\\/artist\\/1449213\",\n  \"share\": \"https:\\/\\/www.deezer.com\\/artist\\/1449213?utm_source=deezer\u0026utm_content=artist-1449213\u0026utm_term=0_1794075887\u0026utm_medium=web\",\n  \"picture\": \"https:\\/\\/api.deezer.com\\/artist\\/1449213\\/image\",\n  \"picture_small\": \"https:\\/\\/cdn-images.dzcdn.net\\/images\\/artist\\/\\/56x56-000000-80-0-0.jpg\",\n  \"picture_medium\": \"https:\\/\\/cdn-images.dzcdn.net\\/images\\/artist\\/\\/250x250-000000-80-0-0.jpg\",\n  \"picture_big\": \"https:\\/\\/cdn-images.dzcdn.net\\/images\\/artist\\/\\/500x500-000000-80-0-0.jpg\",\n  \"picture_xl\": \"https:\\/\\/cdn-images.dzcdn.net\\/images\\/artist\\/\\/1000x1000-000000-80-0-0.jpg\",\n  \"nb_album\": 23,\n  \"nb_fan\": 1017,\n  \"radio\": true,\n  \"tracklist\": \"https:\\/\\/api.deezer.com\\/artist\\/1449213\\/top?limit=50\",\n  \"type\": \"artist\"\n}"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/118203?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Francis Anthony Donner\"\n  ],\n  \"biography\": \"Frank Fay (November 17, 1891 – September 25, 1961) was an American film and stage actor, emcee, comedian, best-known as an actor for having played \\\"Elwood P. Dowd\\\" in the play Harvey by the American playwright Mary Coyle Chase on Broadway.\",\n  \"birthday\": \"1891-11-15\",\n  \"deathday\": \"1961-09-26\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 118203,\n  \"imdb_id\": \"nm0269567\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Frank Fay\",\n  \"place_of_birth\": \"San Francisco, California, USA\",\n  \"popularity\": 0.7083,\n  \"profile_path\": \"/bgVNoAISdUgcIWyv7CWRZyNAJKc.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/076y7l\",\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0269567\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q3082612\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

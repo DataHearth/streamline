@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-7a74a463-4bed-431d-8f41-c5faf9ca0fa7/mbid-7a74a463-4bed-431d-8f41-c5faf9ca0fa7-36086504666_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn721909.ca.archive.org/0/items/mbid-7a74a463-4bed-431d-8f41-c5faf9ca0fa7/mbid-7a74a463-4bed-431d-8f41-c5faf9ca0fa7-36086504666_thumb500.jpg"
+  }
+}

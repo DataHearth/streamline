@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.deezer.com/artist/407",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\n  \"id\": 407,\n  \"name\": \"Nine Inch Nails\",\n  \"link\": \"https:\\/\\/www.deezer.com\\/artist\\/407\",\n  \"share\": \"https:\\/\\/www.deezer.com\\/artist\\/407?utm_source=deezer\u0026utm_content=artist-407\u0026utm_term=0_1794075897\u0026utm_medium=web\",\n  \"picture\": \"https:\\/\\/api.deezer.com\\/artist\\/407\\/image\",\n  \"picture_small\": \"https:\\/\\/cdn-images.dzcdn.net\\/images\\/artist\\/cb15e0065ad89b90f688a250f46001f4\\/56x56-000000-80-0-0.jpg\",\n  \"picture_medium\": \"https:\\/\\/cdn-images.dzcdn.net\\/images\\/artist\\/cb15e0065ad89b90f688a250f46001f4\\/250x250-000000-80-0-0.jpg\",\n  \"picture_big\": \"https:\\/\\/cdn-images.dzcdn.net\\/images\\/artist\\/cb15e0065ad89b90f688a250f46001f4\\/500x500-000000-80-0-0.jpg\",\n  \"picture_xl\": \"https:\\/\\/cdn-images.dzcdn.net\\/images\\/artist\\/cb15e0065ad89b90f688a250f46001f4\\/1000x1000-000000-80-0-0.jpg\",\n  \"nb_album\": 39,\n  \"nb_fan\": 552507,\n  \"radio\": true,\n  \"tracklist\": \"https:\\/\\/api.deezer.com\\/artist\\/407\\/top?limit=50\",\n  \"type\": \"artist\"\n}"
+}

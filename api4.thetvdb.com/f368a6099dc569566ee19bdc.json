@@ -1,0 +1,11 @@
+{
+  "method": "POST",
+  "url": "https://api4.thetvdb.com/v4/login",
+  "request_body": "{\"apikey\":\"REDACTED\"}",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"token\": \"demo-token\"\n  }\n}\n",
+  "scrubbed": true
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Carnival+of+Souls\u0026year=1962",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/esIoQw7VaykfHsw6fx2VltZ1R7U.jpg\",\n      \"genre_ids\": [\n        27,\n        9648,\n        14\n      ],\n      \"id\": 16093,\n      \"title\": \"Carnival of Souls\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Carnival of Souls\",\n      \"overview\": \"Mary Henry ends up the sole survivor of a fatal car accident through mysterious circumstances. Trying to put the incident behind her, she moves to Utah and takes a job as a church organist. But her fresh start is interrupted by visions of a fiendish man. As the visions begin to occur more frequently, Mary finds herself drawn to the deserted carnival on the outskirts of town. The strangely alluring carnival may hold the secret to her tragic past.\",\n      \"popularity\": 2.2016,\n      \"poster_path\": \"/AdbQsFB8pS090l0NO3uBtLZy2zw.jpg\",\n      \"release_date\": \"1962-11-02\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 6.952,\n      \"vote_count\": 568\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/106183?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"John Cabell \\\"Bunny\\\" Breckinridge\",\n    \"John Breckinridge\"\n  ],\n  \"biography\": \"John Cabell \\\"Bunny\\\" Breckinridge (August 6, 1903 – November 5, 1996) was an American actor and drag queen, best known for his role as \\\"The Ruler\\\" in Ed Wood's film Plan 9 from Outer Space, his only film appearance.\",\n  \"birthday\": \"1903-08-06\",\n  \"deathday\": \"1996-11-05\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 106183,\n  \"imdb_id\": \"nm0106559\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Bunny Breckinridge\",\n  \"place_of_birth\": \"Paris, Ile-de-France, France\",\n  \"popularity\": 0.1566,\n  \"profile_path\": \"/ncCFEYdEzM4I5DgLaf1ulrqUdqh.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0106559\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q1402270\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

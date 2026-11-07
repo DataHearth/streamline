@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Coffee+Run\u0026year=2020",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/pUHJzzq6fUowt8NrfDL5JAfjbqR.jpg\",\n      \"genre_ids\": [\n        16\n      ],\n      \"id\": 717986,\n      \"title\": \"Coffee Run\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Coffee Run\",\n      \"overview\": \"Fueled by caffeine, a young woman runs through the bittersweet memories of her past relationship.  All graphic content is CC-By Blender Studio.\",\n      \"popularity\": 1.4012,\n      \"poster_path\": \"/tFaE5KZOzTTTaNAEDD8CY1ZBjei.jpg\",\n      \"release_date\": \"2020-05-29\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.6,\n      \"vote_count\": 12\n    },\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/xeGBxvJUZJgHymIxG2C1CxRXU5t.jpg\",\n      \"genre_ids\": [\n        35\n      ],\n      \"id\": 908389,\n      \"title\": \"Coffee Run\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Coffee Run\",\n      \"overview\": \"Delayed by a long line for his morning coffee, Stu Dent has to make a hurried dash to get to class on time.\",\n      \"popularity\": 0.4607,\n      \"poster_path\": \"/cHrmmiLvc9jrJEdNpE91NS7pWn2.jpg\",\n      \"release_date\": \"2020-02-27\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.0,\n      \"vote_count\": 1\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 2\n}"
+}

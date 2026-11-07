@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/release-group?fmt=json\u0026limit=10\u0026query=releasegroup%3A%22Breadcrumbs%22+AND+artist%3A%22Josh+Woodward%22",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json"
+  },
+  "body": "{\n  \"created\": \"2026-11-07T18:26:54.468Z\",\n  \"count\": 1,\n  \"offset\": 0,\n  \"release-groups\": [\n    {\n      \"id\": \"653509c8-4b8f-4394-8624-ee2bd06b21cb\",\n      \"type-id\": \"f529b476-6e62-324f-b0aa-1f3e33d313fc\",\n      \"score\": 100,\n      \"primary-type-id\": \"f529b476-6e62-324f-b0aa-1f3e33d313fc\",\n      \"artist-credit-id\": \"cf54fbc8-e64a-3e97-9698-63a017391925\",\n      \"count\": 2,\n      \"title\": \"Breadcrumbs\",\n      \"first-release-date\": \"2009-10-05\",\n      \"primary-type\": \"Album\",\n      \"artist-credit\": [\n        {\n          \"name\": \"Josh Woodward\",\n          \"artist\": {\n            \"id\": \"b09c8a50-7bfa-434f-a2cf-f9bf9f6f91a5\",\n            \"name\": \"Josh Woodward\",\n            \"sort-name\": \"Woodward, Josh\",\n            \"disambiguation\": \"American acoustic indie singer‐songwriter\"\n          }\n        }\n      ],\n      \"releases\": [\n        {\n          \"id\": \"694bee0d-ad65-4e31-a40e-6ecd60d9e2b9\",\n          \"status-id\": \"4e304316-386d-3409-af2e-78857eec5cfe\",\n          \"title\": \"Breadcrumbs\",\n          \"status\": \"Official\"\n        },\n        {\n          \"id\": \"2bb8d1de-ec43-4307-8cfa-d466d0717f97\",\n          \"status-id\": \"4e304316-386d-3409-af2e-78857eec5cfe\",\n          \"title\": \"Breadcrumbs\",\n          \"status\": \"Official\"\n        }\n      ]\n    }\n  ]\n}"
+}

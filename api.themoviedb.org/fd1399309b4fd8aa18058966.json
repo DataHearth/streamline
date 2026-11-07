@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/1395666?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"\",\n  \"birthday\": \"1886-08-08\",\n  \"deathday\": \"1952-10-03\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 1395666,\n  \"imdb_id\": \"nm0080930\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Edward Biby\",\n  \"place_of_birth\": \"Pinckneyville, Illinois, USA\",\n  \"popularity\": 0.519,\n  \"profile_path\": null,\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0080930\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q21418765\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

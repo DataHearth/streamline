@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-da0ac25e-6e75-3e63-b8b4-e2ff206b60db/mbid-da0ac25e-6e75-3e63-b8b4-e2ff206b60db-10150650258_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://ia600705.us.archive.org/5/items/mbid-da0ac25e-6e75-3e63-b8b4-e2ff206b60db/mbid-da0ac25e-6e75-3e63-b8b4-e2ff206b60db-10150650258_thumb500.jpg"
+  }
+}

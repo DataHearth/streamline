@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Sintel\u0026year=2010",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/msqeiEyIRpPAtrCeRGFNZQ9tkJL.jpg\",\n      \"genre_ids\": [\n        16,\n        14,\n        12\n      ],\n      \"id\": 45745,\n      \"title\": \"Sintel\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Sintel\",\n      \"overview\": \"A wandering warrior finds an unlikely friend in the form of a young dragon. The two develop a close bond, until one day the dragon is snatched away. She then sets out on a relentless quest to reclaim her friend, finding in the end that her quest exacts a far greater price than she had ever imagined.\",\n      \"popularity\": 2.1665,\n      \"poster_path\": \"/l98Zns4oQe1BSvbF4hJ8oL6VSf0.jpg\",\n      \"release_date\": \"2010-09-30\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.3,\n      \"vote_count\": 180\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

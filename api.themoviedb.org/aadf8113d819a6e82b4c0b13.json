@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/14424?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Frank Richard Allen\"\n  ],\n  \"biography\": \"\",\n  \"birthday\": \"1898-07-31\",\n  \"deathday\": \"1973-07-20\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 14424,\n  \"imdb_id\": \"nm1070961\",\n  \"known_for_department\": \"Camera\",\n  \"name\": \"Frank Barnes\",\n  \"place_of_birth\": \"Los Angeles, California, USA\",\n  \"popularity\": 0.0734,\n  \"profile_path\": null,\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm1070961\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q18205391\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

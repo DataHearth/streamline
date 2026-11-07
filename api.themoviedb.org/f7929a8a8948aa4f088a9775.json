@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/225978?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"Valerie LaPointe is an American director and storyboard artist for Pixar Animation Studios.\",\n  \"birthday\": \"1981-08-04\",\n  \"deathday\": null,\n  \"gender\": 1,\n  \"homepage\": \"http://www.valerielapointe.com/\",\n  \"id\": 225978,\n  \"imdb_id\": \"nm1445746\",\n  \"known_for_department\": \"Writing\",\n  \"name\": \"Valerie LaPointe\",\n  \"place_of_birth\": \"Norfolk, Virginia, USA\",\n  \"popularity\": 0.3731,\n  \"profile_path\": \"/6bvaPm3vqVnMVwKaDtuK2qoAvTd.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm1445746\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q50376926\",\n    \"facebook_id\": null,\n    \"instagram_id\": \"valerielapointe\",\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

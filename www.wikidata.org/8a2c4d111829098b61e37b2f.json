@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026ids=Q1388694\u0026props=sitelinks\u0026sitefilter=enwiki%7Cfrwiki",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\n  \"entities\": {\n    \"Q1388694\": {\n      \"type\": \"item\",\n      \"id\": \"Q1388694\",\n      \"sitelinks\": {\n        \"frwiki\": {\n          \"site\": \"frwiki\",\n          \"title\": \"Josh Woodward\",\n          \"badges\": []\n        }\n      }\n    }\n  },\n  \"success\": 1\n}"
+}

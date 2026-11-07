@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/85996?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Timothy Thomas Ryan\"\n  ],\n  \"biography\": \"Tim Ryan was an American performer who is probably best known today as a film actor. Ryan and his wife, Irene who later played Granny on The Beverly Hillbillies, were a show business team that performed on Broadway, film and radio. They made some short films for Educational Pictures in the mid-1930s based on their vaudeville act.\\n\\nThey were married from 1922 to 1942. Even after their divorce in 1942, the couple occasionally worked together. In the 1940s, Ryan found opportunities at Monogram Pictures where he acted in films as well as wrote screenplays. In films of the 1940s and the early 1950s, Ryan appeared on screen playing numerous roles as cops, newspaper editors and detectives.\",\n  \"birthday\": \"1899-07-04\",\n  \"deathday\": \"1956-10-22\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 85996,\n  \"imdb_id\": \"nm0752878\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Tim Ryan\",\n  \"place_of_birth\": \"Bayonne, New Jersey, USA\",\n  \"popularity\": 0.4847,\n  \"profile_path\": \"/mBC1LqhKh7cLXQUrRgSa2BFPtlb.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/08zb6y\",\n    \"freebase_id\": \"/en/tim_ryan_1889\",\n    \"imdb_id\": \"nm0752878\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q7804213\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

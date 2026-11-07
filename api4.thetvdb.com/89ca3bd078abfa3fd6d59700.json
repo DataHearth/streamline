@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api4.thetvdb.com/v4/seasons/861/translations/eng",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"overview\": \"The ladies are both hot for the handsome clerk at the sporting goods store where Lucy came to buy roller skates. Lucy lies to the bachelor about her shoe size and gets a pair that's far too tight. Her feet swell, making it impossible to take them off if she's going to the big dance that night. Lucy goes alright, wearing the skates under a long gown.\",\n    \"language\": \"eng\",\n    \"isPrimary\": true\n  }\n}\n"
+}

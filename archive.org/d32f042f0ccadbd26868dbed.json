@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-f36eb891-6276-452a-8fdf-cde443a6f543/mbid-f36eb891-6276-452a-8fdf-cde443a6f543-10264802906_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn710806.ca.archive.org/0/items/mbid-f36eb891-6276-452a-8fdf-cde443a6f543/mbid-f36eb891-6276-452a-8fdf-cde443a6f543-10264802906_thumb500.jpg"
+  }
+}

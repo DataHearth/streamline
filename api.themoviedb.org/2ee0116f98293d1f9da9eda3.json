@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/26890?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"Jacques Marin (9 September 1919 – 10 January 2001) was a French actor on film and television. Marin's fluency in English and his instantly recognisable features made him a familiar face in some major American and British productions (Charade, The Train, Marathon Man), and Disney movies (The Island at the Top of the World and Herbie Goes to Monte Carlo).\\n\\nSource: Article \\\"Jacques Marin\\\" from Wikipedia in English, licensed under CC-BY-SA.\",\n  \"birthday\": \"1919-09-09\",\n  \"deathday\": \"2001-01-10\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 26890,\n  \"imdb_id\": \"nm0547462\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Jacques Marin\",\n  \"place_of_birth\": \"Paris, France\",\n  \"popularity\": 0.4844,\n  \"profile_path\": \"/jEu3VtkwfYV0JLAb80kTusABhIF.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/07f7lf\",\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0547462\",\n    \"tvrage_id\": 225884,\n    \"wikidata_id\": \"Q1663127\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

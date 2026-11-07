@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api4.thetvdb.com/v4/seasons/860/translations/eng",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"overview\": \"Lucy and Viv both want to play the lead of Cleopatra for an amateur production being directed by Professor Gitterman. Once a compromise is reached were Lucy would play the lead and Viv portraying Marc Antony, the girls both take turns in upstaging each other.\",\n    \"language\": \"eng\",\n    \"isPrimary\": true\n  }\n}\n"
+}

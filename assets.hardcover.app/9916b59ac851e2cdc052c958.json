@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://assets.hardcover.app/author/147113/213fcea9-c9c6-4733-9b97-b310d0215dbc.png",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/octet-stream"
+  },
+  "body_file": "9916b59ac851e2cdc052c958.bin"
+}

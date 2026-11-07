@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/78856?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"\",\n  \"birthday\": \"1885-04-02\",\n  \"deathday\": \"1973-12-25\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 78856,\n  \"imdb_id\": \"nm0027074\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Leona Anderson\",\n  \"place_of_birth\": \"Saint Louis, Missouri, USA\",\n  \"popularity\": 0.3898,\n  \"profile_path\": \"/32tccMCqd8Z9QRPt7nJ6e7mddqT.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0027074\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q19559954\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

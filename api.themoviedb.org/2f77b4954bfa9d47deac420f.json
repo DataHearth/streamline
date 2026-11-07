@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/18870?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Nusyn Glass\",\n    \"Nusyn \\\"Ned\\\" Glass\"\n  ],\n  \"biography\": \"From Wikipedia, the free encyclopedia\\n\\nNed Glass (April 1, 1906 – June 15, 1984) was a Polish-born American character actor who appeared in more than eighty films and on television more than one hundred times, frequently playing nervous, cowardly, or deceitful characters. Short and bald, with a slight hunch to his shoulders, he was immediately recognizable by his distinct appearance, his nasal voice, and his pronounced New York City accent.\",\n  \"birthday\": \"1906-04-01\",\n  \"deathday\": \"1984-06-15\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 18870,\n  \"imdb_id\": \"nm0321982\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Ned Glass\",\n  \"place_of_birth\": \"Radom, Polska\",\n  \"popularity\": 0.8252,\n  \"profile_path\": \"/8Nq6Ma9r2L4kys0NrJirnEcrbvW.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/043pqwg\",\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0321982\",\n    \"tvrage_id\": 14624,\n    \"wikidata_id\": \"Q453549\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

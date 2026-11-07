@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/movie/457784/release_dates",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"id\": 457784,\n  \"results\": [\n    {\n      \"iso_3166_1\": \"NL\",\n      \"release_dates\": [\n        {\n          \"certification\": \"\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"en\",\n          \"note\": \"\",\n          \"release_date\": \"2017-05-12T00:00:00.000Z\",\n          \"type\": 1\n        },\n        {\n          \"certification\": \"\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"en\",\n          \"note\": \"\",\n          \"release_date\": \"2017-05-15T00:00:00.000Z\",\n          \"type\": 4\n        }\n      ]\n    }\n  ]\n}"
+}

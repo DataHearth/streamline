@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://cdn-images.dzcdn.net/images/artist/8a2ae99bfeade6a2ff8b8d53689b13dc/1000x1000-000000-80-0-0.jpg",
+  "status": 200,
+  "header": {
+    "Content-Type": "image/jpeg"
+  },
+  "body_file": "d3428e19dd272cab2b4a0c54.bin"
+}

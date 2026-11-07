@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/2772?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Ann Lee Doran\"\n  ],\n  \"biography\": \"Ann Lee Doran (July 28, 1911 – September 19, 2000) was an American character actress, possibly best known as the mother of Jim Stark (James Dean) in Rebel Without a Cause (1955). She was an early member of the Screen Actors Guild and served on the board of the Motion Picture \u0026 Television Fund for 30 years.\",\n  \"birthday\": \"1911-07-28\",\n  \"deathday\": \"2000-09-19\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 2772,\n  \"imdb_id\": \"nm0233352\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Ann Doran\",\n  \"place_of_birth\": \"Amarillo, Texas, USA\",\n  \"popularity\": 0.9066,\n  \"profile_path\": \"/t6q0svIGjotyJQgxr74pKz6462g.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/04nqzg\",\n    \"freebase_id\": \"/en/ann_doran\",\n    \"imdb_id\": \"nm0233352\",\n    \"tvrage_id\": 5116,\n    \"wikidata_id\": \"Q450047\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

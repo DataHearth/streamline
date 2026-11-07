@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/movie/133701/release_dates",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"id\": 133701,\n  \"results\": [\n    {\n      \"iso_3166_1\": \"DE\",\n      \"release_dates\": [\n        {\n          \"certification\": \"\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"\",\n          \"release_date\": \"2012-09-26T00:00:00.000Z\",\n          \"type\": 3\n        }\n      ]\n    },\n    {\n      \"iso_3166_1\": \"FR\",\n      \"release_dates\": [\n        {\n          \"certification\": \"\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"\",\n          \"release_date\": \"2012-09-28T00:00:00.000Z\",\n          \"type\": 3\n        }\n      ]\n    },\n    {\n      \"iso_3166_1\": \"NL\",\n      \"release_dates\": [\n        {\n          \"certification\": \"NR\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"\",\n          \"release_date\": \"2012-09-25T00:00:00.000Z\",\n          \"type\": 3\n        }\n      ]\n    },\n    {\n      \"iso_3166_1\": \"US\",\n      \"release_dates\": [\n        {\n          \"certification\": \"\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"\",\n          \"release_date\": \"2012-09-28T00:00:00.000Z\",\n          \"type\": 3\n        }\n      ]\n    }\n  ]\n}"
+}

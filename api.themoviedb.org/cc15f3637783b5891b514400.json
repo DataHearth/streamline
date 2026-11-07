@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/9846?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"Gustav Botz (4 August 1883 – 29 September 1932) was a German actor.\\n\\nBotz was born on 4 August 1883 in Bremen, German Empire.\\n\\nHe began his career in film business The Foreign Prince (1918), The Devil (1918), His Majesty the Hypochondriac (1918), Ikarus, the Flying Man (1918), The Rose of Stamboul (1919), The Secret of the American Docks (1919), The Head of Janus (1920), Monika Vogelsang (1920), Battle of the Sexes (1920), Mary Magdalene (1920), Catherine the Great (1920), The Courier from Lisbon (1921), Peter Voss, Their of Millions (1921), The Eternal Struggle (1921), Lola Montez, the King's Dancer (1922), Dr. Mabuse the Gambler (1922), Nosferatu (1922). His last film role was in 1924's My Leopold and Botz retired from the film business.\",\n  \"birthday\": \"1883-08-04\",\n  \"deathday\": \"1932-09-29\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 9846,\n  \"imdb_id\": \"nm0098774\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Gustav Botz\",\n  \"place_of_birth\": \"Bremen, Germany\",\n  \"popularity\": 0.6532,\n  \"profile_path\": \"/jxML1wkjdTqZo2rKPLFcItlVn8B.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0bvy8qt\",\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0098774\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q114696\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

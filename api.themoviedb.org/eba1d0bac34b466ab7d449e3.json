@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/1090550?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"\",\n  \"birthday\": \"1897-06-12\",\n  \"deathday\": \"1988-07-27\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 1090550,\n  \"imdb_id\": \"nm0676742\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Henri Peters-Arnolds\",\n  \"place_of_birth\": \"Nijmegen, Gelderland, Netherlands\",\n  \"popularity\": 0.3498,\n  \"profile_path\": \"/cSAwbfXurAQ7RNQiTQ2zS4dHbV2.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0hj4dxr\",\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0676742\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q15815136\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

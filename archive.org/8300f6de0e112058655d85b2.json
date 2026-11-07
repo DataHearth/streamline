@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-d5689f27-0ca0-4326-9d9f-792fc6024398/mbid-d5689f27-0ca0-4326-9d9f-792fc6024398-24902854710_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn710302.ca.archive.org/0/items/mbid-d5689f27-0ca0-4326-9d9f-792fc6024398/mbid-d5689f27-0ca0-4326-9d9f-792fc6024398-24902854710_thumb500.jpg"
+  }
+}

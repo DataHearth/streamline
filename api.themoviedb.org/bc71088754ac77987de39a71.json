@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Safety+Last\u0026year=1923",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/3zo6ZONR4Mth2nWFbQK9dhCWbVz.jpg\",\n      \"genre_ids\": [\n        35,\n        10749,\n        53\n      ],\n      \"id\": 22596,\n      \"title\": \"Safety Last!\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Safety Last!\",\n      \"overview\": \"When a store clerk organizes a contest to climb the outside of a tall building, circumstances force him to make the perilous climb himself.\",\n      \"popularity\": 2.3961,\n      \"poster_path\": \"/fEt5HWJ32ek8ibef7zSZnA00Jp0.jpg\",\n      \"release_date\": \"1923-03-12\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.739,\n      \"vote_count\": 613\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

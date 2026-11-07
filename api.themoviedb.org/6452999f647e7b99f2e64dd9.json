@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/9603?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Sergei M. Eisenstein\",\n    \"S. M. Eisenstein\",\n    \" S. Eisenstein\",\n    \"Sergei Mikhailovich Eisenstein\",\n    \" Sergei Eisenstein\",\n    \"Sergei Eizenshtein\",\n    \"Sergueï Mikhaïlovitch Eisenstein\",\n    \"Сергей Михайлович Эйзенштейн\",\n    \"세르게이 에이젠슈타인\",\n    \"세르게이 미하일로비치 예이젠시테인\",\n    \"세르게이 예이젠시테인\",\n    \"세르게이 미하일로비치 에이젠슈타인\",\n    \"Sergej Michajlovič Ėjzenštejn\",\n    \"Sergej Ėjzenštejn\",\n    \"С. Эйзенштейн\"\n  ],\n  \"biography\": \"Sergei Mikhailovich Eisenstein (23 January 1898 — 11 February 1948) was a pioneering Soviet film director and film theorist, often considered to be the 'Father of Montage'. Noted in particular for his silent films Strike (1924), Battleship Potemkin (1925) and October (1927), as well as the historical epics Alexander Nevsky (1938) and Ivan the Terrible (1944, 1958), his work profoundly influenced early filmmakers owing to his innovative use of and writings about montage.\",\n  \"birthday\": \"1898-01-23\",\n  \"deathday\": \"1948-02-11\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 9603,\n  \"imdb_id\": \"nm0001178\",\n  \"known_for_department\": \"Directing\",\n  \"name\": \"Sergei Eisenstein\",\n  \"place_of_birth\": \"Riga, Russian Empire\",\n  \"popularity\": 0.7842,\n  \"profile_path\": \"/ks9uuDtKu9m9w50t18PamLZ91to.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0001178\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q8003\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

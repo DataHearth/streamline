@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/63381?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"Nellie Bly Baker (September 7, 1893 – October 12, 1984) was an American actress active in the silent film era and early sound films, mostly playing minor roles. She is often confused with the journalist Nellie Bly (1864–1922). Baker's career as an actress took place from 1921 to 1934, and she performed in 13 films. She was never the star or had the main role in any films, playing minor or supporting characters. Many of these films were made by Associated First National Pictures, First National Pictures and Metro-Goldwyn-Mayer Pictures. Most of the films she performed in were silent.\",\n  \"birthday\": \"1893-09-07\",\n  \"deathday\": \"1984-10-12\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 63381,\n  \"imdb_id\": \"nm0048798\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Nellie Bly Baker\",\n  \"place_of_birth\": \"Oklahoma City, Oklahoma, USA\",\n  \"popularity\": 0.2946,\n  \"profile_path\": \"/eKj1sCj2Fd8wLRemIlWQqiQQMjg.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0048798\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q22017256\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

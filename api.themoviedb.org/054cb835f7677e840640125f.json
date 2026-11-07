@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/97915?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"From Wikipedia, the free encyclopedia.\\n\\nMarilyn Eastman (December 17, 1933 - August 22, 2021) was an American actress known for her role as Helen Cooper in the film Night of the Living Dead (1968). She also appeared in the films Houseguest (1995) and Santa Claws (1996).\\n\\nContrary to popular belief, Eastman was not married to her co-star from Night of the Living Dead, Karl Hardman, who played her husband in the film. She was married to writer and broadcaster John F. Eastman. However, despite not being married to Karl, she was his business partner and starred alongside him in several motion pictures.\\n\\nDescription above from the Wikipedia article Marilyn Eastman, licensed under CC-BY-SA, full list of contributors on Wikipedia.​\",\n  \"birthday\": \"1933-12-17\",\n  \"deathday\": \"2021-08-22\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 97915,\n  \"imdb_id\": \"nm0247659\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Marilyn Eastman\",\n  \"place_of_birth\": \"Iowa, USA\",\n  \"popularity\": 0.305,\n  \"profile_path\": \"/qQqJ6tUNHHJWTrUJNR3D5xYFf28.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0dk77v\",\n    \"freebase_id\": \"/en/marilyn_eastman\",\n    \"imdb_id\": \"nm0247659\",\n    \"tvrage_id\": 201924,\n    \"wikidata_id\": \"Q463814\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-c254116b-8826-428b-83b9-bf1c3ae3718f/mbid-c254116b-8826-428b-83b9-bf1c3ae3718f-20957438183_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn710700.ca.archive.org/0/items/mbid-c254116b-8826-428b-83b9-bf1c3ae3718f/mbid-c254116b-8826-428b-83b9-bf1c3ae3718f-20957438183_thumb500.jpg"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/3000?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Вернер Краусс\",\n    \"Werner Krauss\",\n    \"Werner Johannes Krauss\",\n    \"Werner Krauß\"\n  ],\n  \"biography\": \"Werner Johannes Krauss (Krauß in German; 23 June 1884 – 20 October 1959) was a German stage and film actor. Krauss dominated the German stage of the early 20th century. However, his participation in the 1940 antisemitic propaganda film Jud Süß (Süss, the Jew) and his collaboration with the Nazis made him a controversial figure.\",\n  \"birthday\": \"1884-06-23\",\n  \"deathday\": \"1959-10-20\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 3000,\n  \"imdb_id\": \"nm0470328\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Werner Krauss\",\n  \"place_of_birth\": \"Gestungshausen, Sonnefeld, Bavaria, Germany\",\n  \"popularity\": 0.4441,\n  \"profile_path\": \"/xlyS30qzcndmczxG5JdJWwJ1heI.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0470328\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q63051\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

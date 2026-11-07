@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/14417?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Elinor Lynn\",\n    \"Joey Marion McCreery Lewyn\"\n  ],\n  \"biography\": \"Joey Marion McCreery Lewyn (April 8, 1902–May 1, 1989), known professionally as Marion Mack, was an American film actress and screenwriter. Mack is best known for co-starring with Buster Keaton in the 1926 silent comedy film, The General. After retiring from acting in 1928, she wrote several short screenplays and took up a career in real estate.\\n\\nDescription above from the Wikipedia article Marion Mack, licensed under CC-BY-SA, full list of contributors on Wikipedia.\",\n  \"birthday\": \"1902-04-08\",\n  \"deathday\": \"1989-05-01\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 14417,\n  \"imdb_id\": \"nm0533045\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Marion Mack\",\n  \"place_of_birth\": \"Mammoth, Utah, USA\",\n  \"popularity\": 0.1737,\n  \"profile_path\": \"/6J8gna8pbBwzseEEYAwvsmwOCLb.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0533045\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

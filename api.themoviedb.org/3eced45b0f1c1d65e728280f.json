@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/1097818?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"\",\n  \"birthday\": null,\n  \"deathday\": null,\n  \"gender\": 0,\n  \"homepage\": null,\n  \"id\": 1097818,\n  \"imdb_id\": \"nm5175245\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Jody Bhe\",\n  \"place_of_birth\": null,\n  \"popularity\": 0.0792,\n  \"profile_path\": null,\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm5175245\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": null,\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

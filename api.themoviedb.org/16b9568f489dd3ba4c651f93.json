@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Steamboat+Willie\u0026year=1928",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/pqZMQezl0K2mh3QzENagYamxXON.jpg\",\n      \"genre_ids\": [\n        16,\n        35\n      ],\n      \"id\": 53565,\n      \"title\": \"Steamboat Willie\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Steamboat Willie\",\n      \"overview\": \"Mickey Mouse, piloting a steamboat, delights his passenger, Minnie Mouse, by making musical instruments out of the menagerie on deck.\",\n      \"popularity\": 2.1031,\n      \"poster_path\": \"/rjgjDtdz41ZgzhYsZQY6HPqz6Js.jpg\",\n      \"release_date\": \"1928-05-15\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.288,\n      \"vote_count\": 633\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

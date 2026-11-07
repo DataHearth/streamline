@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/75?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"Brigitte Helm (17 March 1906 – 11 June 1996) was a German actress, best-remembered for her dual role as Maria and her double, the Maschinenmensch, in Fritz Lang's 1927 silent film Metropolis.\\n\\nDescription above from the Wikipedia article Brigitte Helm, licensed under CC-BY-SA, full list of contributors on Wikipedia.\",\n  \"birthday\": \"1906-03-17\",\n  \"deathday\": \"1996-06-11\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 75,\n  \"imdb_id\": \"nm0375609\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Brigitte Helm\",\n  \"place_of_birth\": \"Berlin, Germany\",\n  \"popularity\": 0.5472,\n  \"profile_path\": \"/a7mwxoeF34BCxmteoHQSB1ENth0.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/01t2cb\",\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0375609\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q76813\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

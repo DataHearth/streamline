@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/11645?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Léontine Ernestine Gauché\",\n    \"Блюетт Бернон\"\n  ],\n  \"biography\": \"Born Léontine Ernestine Gauché, Bleuette Bernon was a French film actress who appeared in five films made by Georges Méliès around the turn of the 20th century. The earliest films, made before 1900, were usually without plot and had a runtime of just a few minutes. However, Méliès evolved the genre of the fictional motion picture, and Bernon became one of the earliest character actors in movies. In 1899, she played the title character in Méliès's Jeanne d'Arc, and Cinderella in Cendrillon. In 1901, she appeared in Barbe-bleue. In 1902 she appeared in a minor role in A Trip to the Moon, which is the best known film of Méliès, as one \\\"lady in the Moon\\\". In 1903 she appeared as Aurora in Le Royaume des fées.\",\n  \"birthday\": \"1878-06-06\",\n  \"deathday\": \"1937-06-15\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 11645,\n  \"imdb_id\": \"nm0076933\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Bleuette Bernon\",\n  \"place_of_birth\": \"Париж, Франція\",\n  \"popularity\": 0.5416,\n  \"profile_path\": \"/u14pGZRIO0Ylsnm9tyimI6I5gbO.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0076933\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q2059665\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

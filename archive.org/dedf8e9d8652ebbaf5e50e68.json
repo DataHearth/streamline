@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-0934c776-6dde-4e22-baab-37e32719c7b0/mbid-0934c776-6dde-4e22-baab-37e32719c7b0-35807253035_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn721602.ca.archive.org/0/items/mbid-0934c776-6dde-4e22-baab-37e32719c7b0/mbid-0934c776-6dde-4e22-baab-37e32719c7b0-35807253035_thumb500.jpg"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-d4e80ac3-2af4-3fa9-8eae-9a5b1aa8dc59/mbid-d4e80ac3-2af4-3fa9-8eae-9a5b1aa8dc59-2546712240_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn721800.ca.archive.org/0/items/mbid-d4e80ac3-2af4-3fa9-8eae-9a5b1aa8dc59/mbid-d4e80ac3-2af4-3fa9-8eae-9a5b1aa8dc59-2546712240_thumb500.jpg"
+  }
+}

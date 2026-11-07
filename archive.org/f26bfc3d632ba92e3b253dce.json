@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-694f4132-7ad9-4730-82ea-22a48fb2766c/mbid-694f4132-7ad9-4730-82ea-22a48fb2766c-16047358433_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn710707.ca.archive.org/0/items/mbid-694f4132-7ad9-4730-82ea-22a48fb2766c/mbid-694f4132-7ad9-4730-82ea-22a48fb2766c-16047358433_thumb500.jpg"
+  }
+}

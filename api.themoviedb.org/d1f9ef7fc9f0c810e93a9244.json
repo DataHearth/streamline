@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/590591?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Friedrich Feher\",\n    \"Friedrich Weiß\"\n  ],\n  \"biography\": \"Austrian actor and film director. Was married to actress Magda Sonja.\",\n  \"birthday\": \"1889-03-16\",\n  \"deathday\": \"1950-09-30\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 590591,\n  \"imdb_id\": \"nm0270415\",\n  \"known_for_department\": \"Directing\",\n  \"name\": \"Friedrich Fehér\",\n  \"place_of_birth\": \"Vienna, Austria-Hungary [now Austria]\",\n  \"popularity\": 0.7782,\n  \"profile_path\": \"/rGStxJtUovcSItqU8TOZtpb9IL8.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0270415\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q87651\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

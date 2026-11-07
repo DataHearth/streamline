@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/158015?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Wister Somers Clark\"\n  ],\n  \"biography\": \"\",\n  \"birthday\": \"1908-03-16\",\n  \"deathday\": \"1978-10-13\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 158015,\n  \"imdb_id\": \"nm0164441\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Roger Clark\",\n  \"place_of_birth\": \"Hartford, Connecticut, USA\",\n  \"popularity\": 0.768,\n  \"profile_path\": \"/f7xzpZMvMJ3p9pAVzpQ5alAzTwX.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0164441\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q27957177\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

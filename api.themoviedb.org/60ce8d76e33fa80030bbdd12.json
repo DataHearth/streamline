@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/120199?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Edward Hall\",\n    \"Ed Hall\",\n    \"Edward Louis Hall\",\n    \"Edward Louis \\\"Eddie\\\" Hall\"\n  ],\n  \"biography\": \"Eddie Hall was born on February 3, 1912 in Chicago, Illinois, USA. He is known for his work on Military Training (1941), Shadows of Death (1945) and Mechanized Patrolling (1943). He was married to Flower Parry and Pat. He died on February 19, 1963 in Granada Hills, California, USA.\",\n  \"birthday\": \"1912-02-03\",\n  \"deathday\": \"1963-02-19\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 120199,\n  \"imdb_id\": \"nm0355538\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Eddie Hall\",\n  \"place_of_birth\": \"Chicago, Illinois, USA\",\n  \"popularity\": 0.4952,\n  \"profile_path\": \"/dxXZcb4K1WV8YufoaChtG9bZAvX.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0355538\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q113818503\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

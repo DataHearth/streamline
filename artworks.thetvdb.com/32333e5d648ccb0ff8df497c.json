@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://artworks.thetvdb.com/banners/posters/76479-3.jpg",
+  "status": 200,
+  "header": {
+    "Content-Type": "image/jpeg"
+  },
+  "body_file": "32333e5d648ccb0ff8df497c.bin"
+}

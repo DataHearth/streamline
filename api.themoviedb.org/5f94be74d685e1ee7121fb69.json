@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/9128?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Dick Hein de Lint\"\n  ],\n  \"biography\": \"Dick Hein de Lint, known as Derek de Lint, (born 17 July 1950) is a Dutch film and television actor.\\n\\nDe Lint was born in The Hague. In 1977, he played the character Alex in the film Soldier of Orange, directed by Paul Verhoeven. In 1986 he played the role of Anton Steenwijk in The Assault, which won the Academy Award for Best Foreign Language Film in 1986. In 2006, De Lint starred in Verhoeven's Black Book as Gerben Kuipers. He was a regular on the sci-fi drama Poltergeist: The Legacy, which ran from 1996-99.\\n\\nFrom Wikipedia, the free encyclopedia\",\n  \"birthday\": \"1950-07-17\",\n  \"deathday\": null,\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 9128,\n  \"imdb_id\": \"nm0513190\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Derek de Lint\",\n  \"place_of_birth\": \"The Hague, Zuid-Holland, Netherlands\",\n  \"popularity\": 0.6729,\n  \"profile_path\": \"/8fRRmh8EYZBlUtu1Wlop0j22QcP.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0h553z\",\n    \"freebase_id\": \"/en/derek_de_lint\",\n    \"imdb_id\": \"nm0513190\",\n    \"tvrage_id\": 8173,\n    \"wikidata_id\": \"Q1200141\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

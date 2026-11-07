@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/106184?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Jeron Criswell King\",\n    \"Charles Criswell King\",\n    \"Jeron King Criswell\",\n    \"The Amazing Criswell\"\n  ],\n  \"biography\": \"Jeron Criswell King (1907 – 1982), known by his stage-name The Amazing Criswell, was an American psychic known for wildly inaccurate predictions.\",\n  \"birthday\": \"1907-08-18\",\n  \"deathday\": \"1982-10-04\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 106184,\n  \"imdb_id\": \"nm0188186\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Criswell\",\n  \"place_of_birth\": \"Princeton, Indiana, USA\",\n  \"popularity\": 0.3344,\n  \"profile_path\": \"/pVel6Hkjw0EHQjfBHPpnxDwFmWL.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0188186\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q201082\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

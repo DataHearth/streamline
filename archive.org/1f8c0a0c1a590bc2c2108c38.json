@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-a6e40bd6-d8f5-4edd-89cf-20656e0aba2e/mbid-a6e40bd6-d8f5-4edd-89cf-20656e0aba2e-46280755435_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://ia800506.us.archive.org/3/items/mbid-a6e40bd6-d8f5-4edd-89cf-20656e0aba2e/mbid-a6e40bd6-d8f5-4edd-89cf-20656e0aba2e-46280755435_thumb500.jpg"
+  }
+}

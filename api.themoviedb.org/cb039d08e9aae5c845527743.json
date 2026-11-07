@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Night+of+the+Living+Dead\u0026year=1968",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/5KtmBSqFtHY3I9t8lgH27Mc0bqY.jpg\",\n      \"genre_ids\": [\n        27,\n        878\n      ],\n      \"id\": 10331,\n      \"title\": \"Night of the Living Dead\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Night of the Living Dead\",\n      \"overview\": \"A ragtag group barricade themselves in an old Pennsylvania farmhouse to remain safe from a horde of flesh-eating ghouls ravaging the Northeast.\",\n      \"popularity\": 10.2484,\n      \"poster_path\": \"/rb2NWyb008u1EcKCOyXs2Nmj0ra.jpg\",\n      \"release_date\": \"1968-10-04\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.602,\n      \"vote_count\": 2887\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

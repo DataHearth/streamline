@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/85994?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Olga Gloria Fishbine\"\n  ],\n  \"biography\": \"\",\n  \"birthday\": \"1918-01-30\",\n  \"deathday\": \"1997-10-19\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 85994,\n  \"imdb_id\": \"nm0236873\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Claudia Drake\",\n  \"place_of_birth\": \" Los Angeles, California, USA\",\n  \"popularity\": 0.4746,\n  \"profile_path\": \"/5kJwLxMktqPfDYQ5X3E2ti9kOMI.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0236873\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q19864996\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

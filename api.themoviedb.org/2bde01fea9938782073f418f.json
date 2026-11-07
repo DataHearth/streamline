@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Cosmos+Laundromat\u0026year=2015",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/f2wABsgj2lIR2dkDEfBZX8p4Iyk.jpg\",\n      \"genre_ids\": [\n        16,\n        14\n      ],\n      \"id\": 358332,\n      \"title\": \"Cosmos Laundromat\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Cosmos Laundromat\",\n      \"overview\": \"On a desolate island, a suicidal sheep named Franck meets his fate…in the form of a quirky salesman named Victor, who offers him the gift of a lifetime. The gift is many lifetimes, actually, in many different worlds – each lasting just a few minutes. In the sequel to the pilot, Franck will find a new reason to live…in the form of a bewitching female adventurer named Tara, who awakens his long-lost lust for life. But can Franck keep up with her?\",\n      \"popularity\": 1.6115,\n      \"poster_path\": \"/5ZXi0oitpEgAdoJglFTc5SZF9nt.jpg\",\n      \"release_date\": \"2015-08-10\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 6.3,\n      \"vote_count\": 62\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

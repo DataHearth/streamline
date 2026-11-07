@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api4.thetvdb.com/v4/seasons/863/translations/eng",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"overview\": \"When visiting the bank as a customer, George Burns finds out that Lucy is instinctively funny and asks her to become a partner in his show. Mr. Mooney, who thinks this is an opportunity to get rid of her, accepts being her agent. The show opens in Santa Monica, where the new pair appear in a Burns and Allen-style act. George Burns is the straight man and Lucy the comedienne, who delivers the punchlines.\",\n    \"language\": \"eng\",\n    \"isPrimary\": true\n  }\n}\n"
+}

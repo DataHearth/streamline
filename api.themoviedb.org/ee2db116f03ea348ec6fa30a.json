@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Tears+of+Steel\u0026year=2012",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/fOy6SL5Zs2PFcNXwqEPIDPrLB1q.jpg\",\n      \"genre_ids\": [\n        878,\n        16\n      ],\n      \"id\": 133701,\n      \"title\": \"Tears of Steel\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Tears of Steel\",\n      \"overview\": \"The film’s premise is about a group of warriors and scientists, who gathered at the “Oude Kerk” in Amsterdam to stage a crucial event from the past, in a desperate attempt to rescue the world from destructive robots.\",\n      \"popularity\": 1.0431,\n      \"poster_path\": \"/8qy3jRmaHR7f8VZh3iXCqCWfFsH.jpg\",\n      \"release_date\": \"2012-09-25\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 5.715,\n      \"vote_count\": 65\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

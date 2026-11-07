@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-5512a6a7-6a27-4fb8-95a6-4cf040e65019/mbid-5512a6a7-6a27-4fb8-95a6-4cf040e65019-18034162492_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn710700.ca.archive.org/0/items/mbid-5512a6a7-6a27-4fb8-95a6-4cf040e65019/mbid-5512a6a7-6a27-4fb8-95a6-4cf040e65019-18034162492_thumb500.jpg"
+  }
+}

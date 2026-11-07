@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=The+Gold+Rush\u0026year=1925",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/66h0ReXG6DVOKtdVCRwMduAia9P.jpg\",\n      \"genre_ids\": [\n        12,\n        35,\n        18\n      ],\n      \"id\": 962,\n      \"title\": \"The Gold Rush\",\n      \"original_language\": \"en\",\n      \"original_title\": \"The Gold Rush\",\n      \"overview\": \"A gold prospector in Alaska struggles to survive the elements and win the heart of a dance hall girl.\",\n      \"popularity\": 4.8849,\n      \"poster_path\": \"/eQRFo1qwRREYwj47Yoe1PisgOle.jpg\",\n      \"release_date\": \"1925-07-13\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 8.0,\n      \"vote_count\": 1928\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/12659?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"William John Bertanzetti\"\n  ],\n  \"biography\": \"Billy Barty (born William John Bertanzetti; October 25, 1924 – December 23, 2000) was an American actor and activist. In adult life, he stood 3 feet, 9 inches (1.14 m) tall, due to cartilage–hair hypoplasia dwarfism, and because of his short stature he was often cast in movies opposite taller performers for comic effect. He specialized in outspoken or wisecracking characters. During the 1950s, he became a television star, appearing regularly in the Spike Jones ensemble.\",\n  \"birthday\": \"1924-10-25\",\n  \"deathday\": \"2000-12-23\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 12659,\n  \"imdb_id\": \"nm0000863\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Billy Barty\",\n  \"place_of_birth\": \"Millsboro, Pennsylvania, USA\",\n  \"popularity\": 1.3965,\n  \"profile_path\": \"/b8Q8bD1AaXFDBpAg4pDBkb7Z1Nh.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/02y3dh\",\n    \"freebase_id\": \"/en/billy_barty\",\n    \"imdb_id\": \"nm0000863\",\n    \"tvrage_id\": 6957,\n    \"wikidata_id\": \"Q716319\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

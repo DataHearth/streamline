@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Charade\u0026year=1963",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/1Q1yTxHjadsLMf7yy9xABUH6zaT.jpg\",\n      \"genre_ids\": [\n        35,\n        9648,\n        10749\n      ],\n      \"id\": 4808,\n      \"title\": \"Charade\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Charade\",\n      \"overview\": \"After Regina Lampert falls for the dashing Peter Joshua on a skiing holiday in the French Alps, she discovers upon her return to Paris that her husband has been murdered. Soon, she and Peter are giving chase to three of her late husband's World War II cronies, Tex, Scobie and Gideon, who are after a quarter of a million dollars the quartet stole while behind enemy lines.\",\n      \"popularity\": 3.5659,\n      \"poster_path\": \"/qqaPjC5FQidtKY65jbAKZPiOTaS.jpg\",\n      \"release_date\": \"1963-12-01\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.661,\n      \"vote_count\": 1628\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

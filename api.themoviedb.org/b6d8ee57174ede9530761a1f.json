@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/14420?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"James Farley\",\n    \"J.H. Farley\",\n    \"James G. Farley\",\n    \"James Lee Farley\",\n    \"James Farley\",\n    \"Jasmes Farley\"\n  ],\n  \"biography\": \"James \\\"Jim\\\" Farley was an early film actor, whose career spanned 30 years across the silent and sound film eras. Farley's final film, The Man from Texas (1948), was released after his death in 1947.\",\n  \"birthday\": \"1882-01-08\",\n  \"deathday\": \"1947-10-12\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 14420,\n  \"imdb_id\": \"nm0267650\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Jim Farley\",\n  \"place_of_birth\": \"Waldron, Arkansas, USA\",\n  \"popularity\": 0.3995,\n  \"profile_path\": \"/155ugk9VWe00T7wWSo3pqb9b80d.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0267650\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q18715957\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

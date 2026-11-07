@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/url?fmt=json\u0026inc=artist-rels\u0026resource=https%3A%2F%2Fwww.deezer.com%2Fartist%2F9610",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\n  \"relations\": [\n    {\n      \"source-credit\": \"\",\n      \"target-type\": \"artist\",\n      \"begin\": null,\n      \"attribute-ids\": {},\n      \"type\": \"free streaming\",\n      \"artist\": {\n        \"disambiguation\": \"\",\n        \"type\": \"Person\",\n        \"id\": \"9c070e4f-28c1-4b98-b371-d8514c31ba55\",\n        \"country\": \"CA\",\n        \"type-id\": \"b6e035f4-3ce9-331c-97df-83397230b0df\",\n        \"name\": \"Brad Sucks\",\n        \"sort-name\": \"Brad Sucks\"\n      },\n      \"type-id\": \"769085a1-c2f7-4c24-a532-2375a77693bd\",\n      \"attributes\": [],\n      \"direction\": \"backward\",\n      \"target-credit\": \"\",\n      \"attribute-values\": {},\n      \"end\": null,\n      \"ended\": false\n    }\n  ],\n  \"resource\": \"https://www.deezer.com/artist/9610\",\n  \"id\": \"1428b9db-36a5-4f74-8532-955358dc7874\"\n}"
+}

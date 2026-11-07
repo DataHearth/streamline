@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/8635?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"The Great Stone Face\",\n    \"Joseph Frank Keaton\",\n    \"巴斯特·基顿\",\n    \"باستر کیتون\"\n  ],\n  \"biography\": \"Joseph Frank \\\"Buster\\\" Keaton (October 4, 1895 – February 1, 1966) was an American comic actor, filmmaker, producer and writer. He was best known for his silent films, in which his trademark was physical comedy with a consistently stoic, deadpan expression, earning him the nickname The Great Stone Face. He was recognized as the seventh-greatest director of all time by Entertainment Weekly. In 1999, the American Film Institute ranked Keaton the 21st-greatest male star of all time.\",\n  \"birthday\": \"1895-10-03\",\n  \"deathday\": \"1966-02-01\",\n  \"gender\": 2,\n  \"homepage\": \"https://www.busterkeaton.org\",\n  \"id\": 8635,\n  \"imdb_id\": \"nm0000036\",\n  \"known_for_department\": \"Directing\",\n  \"name\": \"Buster Keaton\",\n  \"place_of_birth\": \"Piqua, Kansas, USA\",\n  \"popularity\": 1.4083,\n  \"profile_path\": \"/ejJz8YWn1Dr1PFn6E70NZ0oZ6o6.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0btj0\",\n    \"freebase_id\": \"/en/buster_keaton\",\n    \"imdb_id\": \"nm0000036\",\n    \"tvrage_id\": 68371,\n    \"wikidata_id\": \"Q103949\",\n    \"facebook_id\": null,\n    \"instagram_id\": \"busterkeatonsoc\",\n    \"tiktok_id\": null,\n    \"twitter_id\": \"BusterKeatonSoc\",\n    \"youtube_id\": null\n  }\n}"
+}

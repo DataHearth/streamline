@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/67369?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Donald Lee Brodie\",\n    \"Donald L. Brodie\",\n    \"Donald Brodie\",\n    \"Don L. Brodie\",\n    \"Don Brody\",\n    \"Donald Ellis Brodie\"\n  ],\n  \"biography\": \"Don Brodie was an American stage, screen, and television actor.\",\n  \"birthday\": \"1904-05-29\",\n  \"deathday\": \"2001-01-08\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 67369,\n  \"imdb_id\": \"nm0110893\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Don Brodie\",\n  \"place_of_birth\": \"Cincinnati, Ohio, USA\",\n  \"popularity\": 0.4423,\n  \"profile_path\": \"/iETVHhDaS4rFvWSnQbQoR5oSSr8.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/02r0vhl\",\n    \"freebase_id\": \"/en/don_brodie\",\n    \"imdb_id\": \"nm0110893\",\n    \"tvrage_id\": 144211,\n    \"wikidata_id\": \"Q3035739\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/41279?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Bernard Wasdon Mattox\"\n  ],\n  \"biography\": \"From Wikipedia, the free encyclopedia\\n\\nGregory Walcott (born January 13, 1928) is an American television and film actor. He is perhaps best known for having appeared in the 1959 Ed Wood film, the cult classic Plan 9 from Outer Space.\\n\\nDescription above from the Wikipedia article Gregory Walcott, licensed under CC-BY-SA, full list of contributors on Wikipedia.\",\n  \"birthday\": \"1928-01-13\",\n  \"deathday\": \"2015-03-20\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 41279,\n  \"imdb_id\": \"nm0906966\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Gregory Walcott\",\n  \"place_of_birth\": \"Wendell, North Carolina, USA\",\n  \"popularity\": 0.5833,\n  \"profile_path\": \"/tOKACaAYyPjNcVbHGIKhZwJ4wB8.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0cj_hh\",\n    \"freebase_id\": \"/en/gregory_walcott\",\n    \"imdb_id\": \"nm0906966\",\n    \"tvrage_id\": 6237,\n    \"wikidata_id\": \"Q3116392\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

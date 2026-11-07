@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/movie/16093/release_dates",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"id\": 16093,\n  \"results\": [\n    {\n      \"iso_3166_1\": \"CA\",\n      \"release_dates\": [\n        {\n          \"certification\": \"PG\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"\",\n          \"release_date\": \"1962-11-02T00:00:00.000Z\",\n          \"type\": 2\n        }\n      ]\n    },\n    {\n      \"iso_3166_1\": \"FI\",\n      \"release_dates\": [\n        {\n          \"certification\": \"\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"\",\n          \"release_date\": \"1962-11-02T00:00:00.000Z\",\n          \"type\": 3\n        }\n      ]\n    },\n    {\n      \"iso_3166_1\": \"GB\",\n      \"release_dates\": [\n        {\n          \"certification\": \"12\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"\",\n          \"release_date\": \"2009-04-01T00:00:00.000Z\",\n          \"type\": 5\n        }\n      ]\n    },\n    {\n      \"iso_3166_1\": \"NL\",\n      \"release_dates\": [\n        {\n          \"certification\": \"12\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"DVD\",\n          \"release_date\": \"2009-08-27T00:00:00.000Z\",\n          \"type\": 5\n        }\n      ]\n    },\n    {\n      \"iso_3166_1\": \"US\",\n      \"release_dates\": [\n        {\n          \"certification\": \"NR\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"Lawrence, Kansas\",\n          \"release_date\": \"1962-09-26T00:00:00.000Z\",\n          \"type\": 1\n        }\n      ]\n    }\n  ]\n}"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/movie/891761/release_dates",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"id\": 891761,\n  \"results\": [\n    {\n      \"iso_3166_1\": \"NL\",\n      \"release_dates\": [\n        {\n          \"certification\": \"14\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"es\",\n          \"note\": \"At Eye Film\",\n          \"release_date\": \"2024-04-06T00:00:00.000Z\",\n          \"type\": 3\n        }\n      ]\n    },\n    {\n      \"iso_3166_1\": \"US\",\n      \"release_dates\": [\n        {\n          \"certification\": \"\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"en\",\n          \"note\": \"Youtube\",\n          \"release_date\": \"2021-10-29T00:00:00.000Z\",\n          \"type\": 4\n        }\n      ]\n    }\n  ]\n}"
+}

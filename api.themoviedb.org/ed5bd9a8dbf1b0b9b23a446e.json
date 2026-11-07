@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/movie/45745/release_dates",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"id\": 45745,\n  \"results\": [\n    {\n      \"iso_3166_1\": \"AU\",\n      \"release_dates\": [\n        {\n          \"certification\": \"PG\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"\",\n          \"release_date\": \"2010-09-30T00:00:00.000Z\",\n          \"type\": 3\n        }\n      ]\n    },\n    {\n      \"iso_3166_1\": \"FI\",\n      \"release_dates\": [\n        {\n          \"certification\": \"K-12\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"\",\n          \"release_date\": \"2010-09-30T00:00:00.000Z\",\n          \"type\": 3\n        }\n      ]\n    },\n    {\n      \"iso_3166_1\": \"NL\",\n      \"release_dates\": [\n        {\n          \"certification\": \"12\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"\",\n          \"release_date\": \"2010-09-30T00:00:00.000Z\",\n          \"type\": 3\n        }\n      ]\n    },\n    {\n      \"iso_3166_1\": \"US\",\n      \"release_dates\": [\n        {\n          \"certification\": \"PG\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"\",\n          \"release_date\": \"2010-09-30T00:00:00.000Z\",\n          \"type\": 3\n        }\n      ]\n    }\n  ]\n}"
+}

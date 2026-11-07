@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/39847?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"Halina Reijn (born 10 November 1975) is a Dutch actress, writer and film director.\",\n  \"birthday\": \"1975-11-10\",\n  \"deathday\": null,\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 39847,\n  \"imdb_id\": \"nm0717603\",\n  \"known_for_department\": \"Directing\",\n  \"name\": \"Halina Reijn\",\n  \"place_of_birth\": \"Amsterdam, Noord-Holland, Netherlands\",\n  \"popularity\": 0.8071,\n  \"profile_path\": \"/su9FMcM5wKfZiSNs35OLlot4hLd.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0b5139\",\n    \"freebase_id\": \"/en/halina_reijn\",\n    \"imdb_id\": \"nm0717603\",\n    \"tvrage_id\": 193301,\n    \"wikidata_id\": \"Q540456\",\n    \"facebook_id\": null,\n    \"instagram_id\": \"halinareijn\",\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

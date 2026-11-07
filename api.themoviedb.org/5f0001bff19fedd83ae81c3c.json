@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/13848?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Charles Spencer Chaplin\",\n    \"Charles Chaplin\"\n  ],\n  \"biography\": \"Charles “Charlie” Chaplin (April 16, 1889 – December 25, 1977) was an English comic actor, film director and composer best-known for his work during the silent film era. He used mime, slapstick and other visual comedy routines, and continued well into the era of the talkies, though his films decreased in frequency by the end of the 1920s. His most famous role was that of The Tramp, which he first played in Kid Auto Races (1914). From 1914 onwards he was writing and directing most of his films, by 1916 he was producing them, and by 1918 he was also composing the music for them. In 1919 he co-founded United Artists. In 1999, the American Film Institute ranked Chaplin the 10th greatest male screen legend of all time.\",\n  \"birthday\": \"1889-04-16\",\n  \"deathday\": \"1977-12-25\",\n  \"gender\": 2,\n  \"homepage\": \"https://www.charliechaplin.com/\",\n  \"id\": 13848,\n  \"imdb_id\": \"nm0000122\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Charlie Chaplin\",\n  \"place_of_birth\": \"Walworth, London, England, UK\",\n  \"popularity\": 2.2443,\n  \"profile_path\": \"/lRI9Ky1SMOehn04OqhYJ5hQfgIK.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/01lc5\",\n    \"freebase_id\": \"/en/charlie_chaplin\",\n    \"imdb_id\": \"nm0000122\",\n    \"tvrage_id\": 81386,\n    \"wikidata_id\": \"Q882\",\n    \"facebook_id\": \"CharlieChaplinOfficial\",\n    \"instagram_id\": \"CharlieChaplinOfficial\",\n    \"tiktok_id\": null,\n    \"twitter_id\": \"Chaplinofficial\",\n    \"youtube_id\": \"Thechaplinfilms\"\n  }\n}"
+}

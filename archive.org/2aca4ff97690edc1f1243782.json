@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-ceef7b5c-ae41-4065-b2da-cdcd997f4c5a/mbid-ceef7b5c-ae41-4065-b2da-cdcd997f4c5a-15573774421_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn710705.ca.archive.org/0/items/mbid-ceef7b5c-ae41-4065-b2da-cdcd997f4c5a/mbid-ceef7b5c-ae41-4065-b2da-cdcd997f4c5a-15573774421_thumb500.jpg"
+  }
+}

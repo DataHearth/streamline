@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/85997?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"Esther Howard (April 4, 1892 – March 8, 1965) was an American stage and film character actress who played a wide range of supporting roles, from man-hungry spinsters to amoral criminals, appearing in 108 films in her 23-year screen career.\\n\\nFrom 1940 to 1949, Howard was part of Preston Sturges' unofficial \\\"stock company\\\" of character actors, appearing in seven films written and directed by Sturges. From 1937, Howard was a regular player in short-subjects produced at Columbia Pictures, where she was frequently cast opposite comedian Andy Clyde. Her last film was a Columbia comedy short, Caught on the Bounce (1952), in which she played Joe Besser's aunt.\\n\\nFrom Wikipedia.\",\n  \"birthday\": \"1892-04-02\",\n  \"deathday\": \"1965-03-08\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 85997,\n  \"imdb_id\": \"nm0397284\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Esther Howard\",\n  \"place_of_birth\": \"Butte, Montana, USA\",\n  \"popularity\": 0.5376,\n  \"profile_path\": \"/uzDNnWslkr0B5oIMlqW6alS4NNm.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0397284\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q5401196\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

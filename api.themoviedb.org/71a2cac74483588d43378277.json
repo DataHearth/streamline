@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Big+Buck+Bunny\u0026year=2008",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/xtdybjRRZ15mCrPOvEld305myys.jpg\",\n      \"genre_ids\": [\n        16,\n        35,\n        10751\n      ],\n      \"id\": 10378,\n      \"title\": \"Big Buck Bunny\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Big Buck Bunny\",\n      \"overview\": \"Follow a day of the life of Big Buck Bunny when he meets three bullying rodents: Frank, Rinky, and Gamera. The rodents amuse themselves by harassing helpless creatures by throwing fruits, nuts and rocks at them. After the deaths of two of Bunny's favorite butterflies, and an offensive attack on Bunny himself, Bunny sets aside his gentle nature and orchestrates a complex plan for revenge.\",\n      \"popularity\": 2.2041,\n      \"poster_path\": \"/i9jJzvoXET4D9pOkoEwncSdNNER.jpg\",\n      \"release_date\": \"2008-04-10\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 6.5,\n      \"vote_count\": 201\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

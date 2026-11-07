@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://coverartarchive.org/release-group/5d0cf890-3ed8-40e5-85ae-95487c6470d4/front-500",
+  "status": 404,
+  "header": {
+    "Content-Type": "text/html; charset=utf-8"
+  },
+  "body": "\u003c!doctype html\u003e\n\u003chtml lang=en\u003e\n\u003ctitle\u003e404 Not Found\u003c/title\u003e\n\u003ch1\u003eNot Found\u003c/h1\u003e\n\u003cp\u003eNo cover art found for release group 5d0cf890-3ed8-40e5-85ae-95487c6470d4\u003c/p\u003e\n"
+}

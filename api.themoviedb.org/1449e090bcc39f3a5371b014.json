@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/47173?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Greta Berger\"\n  ],\n  \"biography\": \"\",\n  \"birthday\": \"1883-02-11\",\n  \"deathday\": \"1944-05-23\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 47173,\n  \"imdb_id\": \"nm0074186\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Grete Berger\",\n  \"place_of_birth\": \"Jägerndorf, Moravia, Austria-Hungary [now Krnov, Czech Republic]\",\n  \"popularity\": 0.3692,\n  \"profile_path\": null,\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0074186\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q90008\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

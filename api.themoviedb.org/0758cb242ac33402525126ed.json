@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Plan+9+from+Outer+Space\u0026year=1957",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/9pHCAT1ScILdkhY8ErfOma8W4kB.jpg\",\n      \"genre_ids\": [\n        878,\n        27\n      ],\n      \"id\": 10513,\n      \"title\": \"Plan 9 from Outer Space\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Plan 9 from Outer Space\",\n      \"overview\": \"In California, an old man grieves the loss of his wife, and dies the day after she is buried. However, the space soldier Eros and his mate Tanna use an electric device to resurrect them both, alongside the strong Inspector Clay, who was murdered by the alien-controlled dead couple. When the populations of Hollywood and Washington D.C. see flying saucers on the sky, a colonel, a police lieutenant, a commercial pilot, his wife, and a policeman try to stop the aliens.\",\n      \"popularity\": 2.561,\n      \"poster_path\": \"/bmicZi7PvlnZ9rZqp6QXN2Db0pT.jpg\",\n      \"release_date\": \"1957-03-15\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 4.208,\n      \"vote_count\": 640\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

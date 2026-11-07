@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/53376?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"Eric Peterson was born on October 2, 1946 in Indian Head, Saskatchewan, Canada. He is an actor and writer, known for Corner Gas (2004), Street Legal (1987) and Corner Gas: The Movie (2014). He is married to Annie Kidder.\",\n  \"birthday\": \"1946-10-02\",\n  \"deathday\": null,\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 53376,\n  \"imdb_id\": \"nm0677139\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Eric Peterson\",\n  \"place_of_birth\": \"Indian Head, Saskatchewan, Canada\",\n  \"popularity\": 0.6496,\n  \"profile_path\": \"/yDSXor1RJzjkfJ6sd7z3bqXMyZP.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/035cj0\",\n    \"freebase_id\": \"/en/eric_peterson\",\n    \"imdb_id\": \"nm0677139\",\n    \"tvrage_id\": 7818,\n    \"wikidata_id\": \"Q2179433\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

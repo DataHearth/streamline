@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/63382?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Benjamin Franklin Blinn\",\n    \"Benjamin F. Blinn\",\n    \"F. Blinn\"\n  ],\n  \"biography\": \"\",\n  \"birthday\": \"1872-04-03\",\n  \"deathday\": \"1941-04-28\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 63382,\n  \"imdb_id\": \"nm0088474\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"B.F. Blinn\",\n  \"place_of_birth\": \"Allentown, Pennsylvania, USA\",\n  \"popularity\": 0.1991,\n  \"profile_path\": \"/k0zbhIWJw7wGCKFgYKgLWbsxWfF.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0088474\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": null,\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

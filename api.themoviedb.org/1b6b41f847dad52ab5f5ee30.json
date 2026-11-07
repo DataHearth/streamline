@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/43646?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Тиго Гернандт \"\n  ],\n  \"biography\": \"Tygo Gernandt is a Dutch actor and voice actor.\",\n  \"birthday\": \"1974-04-07\",\n  \"deathday\": null,\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 43646,\n  \"imdb_id\": \"nm0314611\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Tygo Gernandt\",\n  \"place_of_birth\": \"Amsterdam, Noord-Holland, Netherlands\",\n  \"popularity\": 0.4089,\n  \"profile_path\": \"/8hz3XHqKo97jqZndXzQC0GbnWuY.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0d9y7d\",\n    \"freebase_id\": \"/en/tygo_gernandt\",\n    \"imdb_id\": \"nm0314611\",\n    \"tvrage_id\": 175459,\n    \"wikidata_id\": \"Q461643\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

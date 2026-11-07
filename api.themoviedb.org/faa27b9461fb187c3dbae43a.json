@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/9072?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Margaret Brainard Hamilton\"\n  ],\n  \"biography\": \"From Wikipedia, the free encyclopedia\\n\\nMargaret Hamilton (December 9, 1902 – May 16, 1985) was an American film actress known for her portrayal of the Wicked Witch of the West in the 1939 film The Wizard of Oz. A former schoolteacher, she worked as a character actor in films for seven years before she was offered the role that defined her public image.\\n\\nIn later years, Hamilton made frequent cameo appearances on television sitcoms and commercials. She also gained recognition for her work as an advocate of causes designed to benefit children and animals, and retained a lifelong commitment to public education.\",\n  \"birthday\": \"1902-12-09\",\n  \"deathday\": \"1985-05-16\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 9072,\n  \"imdb_id\": \"nm0002121\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Margaret Hamilton\",\n  \"place_of_birth\": \"Cleveland, Ohio, USA\",\n  \"popularity\": 1.0035,\n  \"profile_path\": \"/e2tJi7ziy5HCNO6pnpAXoxhnlfg.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/02t0gh\",\n    \"freebase_id\": \"/en/margaret_hamilton\",\n    \"imdb_id\": \"nm0002121\",\n    \"tvrage_id\": 70420,\n    \"wikidata_id\": \"Q257756\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

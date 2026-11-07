@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=His+Girl+Friday\u0026year=1940",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/ihoQaiMFAz4YCTAaSIsQjRknsNH.jpg\",\n      \"genre_ids\": [\n        35,\n        10749,\n        80\n      ],\n      \"id\": 3085,\n      \"title\": \"His Girl Friday\",\n      \"original_language\": \"en\",\n      \"original_title\": \"His Girl Friday\",\n      \"overview\": \"Walter Burns is an irresistibly conniving newspaper publisher desperate to woo back his paper’s star reporter, who also happens to be his estranged wife. She’s threatening to quit and settle down with a new beau, but, as Walter knows, she has a weakness: she can’t resist a juicy scoop.\",\n      \"popularity\": 3.1556,\n      \"poster_path\": \"/lu86Y9zTPH3neCiUzLzHCEFHf7f.jpg\",\n      \"release_date\": \"1940-01-18\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.393,\n      \"vote_count\": 993\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

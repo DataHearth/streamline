@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://artworks.thetvdb.com/banners/v4/series/70695/posters/68e5281d37f8a.jpg",
+  "status": 200,
+  "header": {
+    "Content-Type": "image/jpeg"
+  },
+  "body_file": "0a8b2d34ae8883707bdd53a5.bin"
+}

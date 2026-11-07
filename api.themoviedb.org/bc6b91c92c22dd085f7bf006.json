@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/movie/9761/release_dates",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"id\": 9761,\n  \"results\": [\n    {\n      \"iso_3166_1\": \"FR\",\n      \"release_dates\": [\n        {\n          \"certification\": \"TP\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"fr\",\n          \"note\": \"\",\n          \"release_date\": \"2006-03-24T00:00:00.000Z\",\n          \"type\": 4\n        }\n      ]\n    },\n    {\n      \"iso_3166_1\": \"US\",\n      \"release_dates\": [\n        {\n          \"certification\": \"NR\",\n          \"descriptors\": [],\n          \"iso_639_1\": \"\",\n          \"note\": \"\",\n          \"release_date\": \"2006-03-24T00:00:00.000Z\",\n          \"type\": 4\n        }\n      ]\n    }\n  ]\n}"
+}

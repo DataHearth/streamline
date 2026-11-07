@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api4.thetvdb.com/v4/people/8090676/extended",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"id\": 8090676,\n    \"name\": \"Fred Foy\",\n    \"image\": null,\n    \"nameTranslations\": [\n      \"eng\"\n    ],\n    \"overviewTranslations\": [],\n    \"aliases\": [],\n    \"lastUpdated\": \"2019-11-13 12:54:14\",\n    \"birth\": null,\n    \"death\": null,\n    \"score\": 0,\n    \"birthPlace\": null,\n    \"remoteIds\": null,\n    \"gender\": null,\n    \"characters\": [\n      {\n        \"id\": 64889964,\n        \"name\": \"Announcer\",\n        \"peopleId\": 8090676,\n        \"seriesId\": 72059,\n        \"series\": {\n          \"name\": \"The Lone Ranger (1949)\",\n          \"image\": \"https://artworks.thetvdb.com/banners/posters/72059-1.jpg\",\n          \"year\": \"1949\"\n        },\n        \"movie\": null,\n        \"movieId\": null,\n        \"episodeId\": null,\n        \"type\": 3,\n        \"image\": \"https://artworks.thetvdb.com/banners/actors/14447.jpg\",\n        \"sort\": 4,\n        \"isFeatured\": false,\n        \"url\": \"8090676-fred-foy\",\n        \"nameTranslations\": [],\n        \"overviewTranslations\": [],\n        \"aliases\": [],\n        \"peopleType\": \"Actor\",\n        \"personName\": \"Fred Foy\",\n        \"tagOptions\": null,\n        \"personImgURL\": null\n      }\n    ],\n    \"biographies\": [\n      {\n        \"biography\": \"\",\n        \"language\": \"eng\"\n      }\n    ],\n    \"awards\": null,\n    \"tagOptions\": [],\n    \"translations\": {\n      \"nameTranslations\": [\n        {\n          \"name\": \"Fred Foy\",\n          \"language\": \"eng\"\n        }\n      ],\n      \"overviewTranslations\": null,\n      \"aliases\": null\n    },\n    \"slug\": \"8090676-fred-foy\"\n  }\n}\n"
+}

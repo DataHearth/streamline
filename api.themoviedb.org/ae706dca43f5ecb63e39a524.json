@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=The+Cabinet+of+Dr++Caligari\u0026year=1920",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/sLq72hBx8Xs2IISVsZJqgjOd31b.jpg\",\n      \"genre_ids\": [\n        18,\n        27,\n        53,\n        80\n      ],\n      \"id\": 234,\n      \"title\": \"The Cabinet of Dr. Caligari\",\n      \"original_language\": \"de\",\n      \"original_title\": \"Das Cabinet des Dr. Caligari\",\n      \"overview\": \"Francis, a young man, recalls in his memory the horrible experiences he and his fiancée Jane recently went through. Francis and his friend Alan visit The Cabinet of Dr. Caligari, an exhibit where the mysterious doctor shows the somnambulist Cesare, and awakens him for some moments from his death-like sleep.\",\n      \"popularity\": 4.4511,\n      \"poster_path\": \"/myK9DeIsXWGKgUTZyGXg2IfFk0W.jpg\",\n      \"release_date\": \"1920-02-27\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.9,\n      \"vote_count\": 1851\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

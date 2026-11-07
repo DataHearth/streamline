@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Nothing+Sacred\u0026year=1937",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/5PoDnA7RdNxPM0R3uG3toML2QuE.jpg\",\n      \"genre_ids\": [\n        35,\n        10749\n      ],\n      \"id\": 37650,\n      \"title\": \"Nothing Sacred\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Nothing Sacred\",\n      \"overview\": \"When a small-town girl is incorrectly diagnosed with a rare, deadly disease, an unknowing newspaper columnist turns her into a national heroine.\",\n      \"popularity\": 1.1445,\n      \"poster_path\": \"/uqu30x75SjsPNyDN0A5VedoEqyg.jpg\",\n      \"release_date\": \"1937-11-25\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 6.3,\n      \"vote_count\": 117\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

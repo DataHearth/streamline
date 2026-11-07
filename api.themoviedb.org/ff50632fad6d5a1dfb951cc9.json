@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/21301?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Olga Edna Purviance\",\n    \"Една Перваєнс\",\n    \"Эдна Пурвиенс\",\n    \"Эдна Первиэнс\",\n    \"Эдна Пёрвиэнс\",\n    \"Эдна Пурвиэнс\"\n  ],\n  \"biography\": \"​From Wikipedia, the free encyclopedia\\n\\nEdna Purviance (October 21, 1895 – January 11, 1958) was an American actress during the silent movie era. She was the leading lady in many Charlie Chaplin movies. In a span of eight years, she appeared in over thirty films with Chaplin.\",\n  \"birthday\": \"1895-10-19\",\n  \"deathday\": \"1958-01-11\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 21301,\n  \"imdb_id\": \"nm0701012\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Edna Purviance\",\n  \"place_of_birth\": \"Paradise Valley, Nevada, USA\",\n  \"popularity\": 0.7904,\n  \"profile_path\": \"/qGAhDLNl9YjTdds73hhgOo2NLf7.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0701012\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q235313\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Caminandes+Llama+Drama\u0026year=2013",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/mjkoC8Vo7fSHuqrbVQdI6cNwKA2.jpg\",\n      \"genre_ids\": [\n        16,\n        10751,\n        35\n      ],\n      \"id\": 253777,\n      \"title\": \"Caminandes: Llama Drama\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Caminandes: Llama Drama\",\n      \"overview\": \"Koro wants to get to the other side of the road.\",\n      \"popularity\": 0.3592,\n      \"poster_path\": \"/66VPke0YSiyfe97aobbcZ55ts56.jpg\",\n      \"release_date\": \"2013-02-10\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 6.7,\n      \"vote_count\": 9\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

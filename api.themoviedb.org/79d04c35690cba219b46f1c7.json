@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/97914?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"From Wikipedia, the free encyclopedia.\\n\\nKarl Hardman (March 22, 1927 – September 22, 2007) was an American horror film producer and actor. He produced George A. Romero's Night of the Living Dead (1968) and also co-starred as Harry Cooper. He also appeared in Santa Claws (1996) as Bruce Brunswick. He was born Karl Hardman Schon in Pittsburgh, Pennsylvania.\\n\\nDescription above from the Wikipedia article Karl Hardman, licensed under CC-BY-SA, full list of contributors on Wikipedia.​\",\n  \"birthday\": \"1927-03-22\",\n  \"deathday\": \"2007-09-22\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 97914,\n  \"imdb_id\": \"nm0362457\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Karl Hardman\",\n  \"place_of_birth\": \"Pittsburgh, Pennsylvania, USA\",\n  \"popularity\": 0.5132,\n  \"profile_path\": \"/vs5xLO71stUS3Cn1UD1EWeGAa7b.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0362457\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q1372866\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/3007?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"From Wikipedia, the free encyclopedia\\n\\nHans Heinrich von Twardowski (5 May 1898 – 19 November 1958) was a German film actor.\",\n  \"birthday\": \"1898-05-04\",\n  \"deathday\": \"1958-11-19\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 3007,\n  \"imdb_id\": \"nm0903145\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Hans Heinrich von Twardowski\",\n  \"place_of_birth\": \"Stettin, Pomerania, Germany [now Szczecin, Zachodniopomorskie, Poland]\",\n  \"popularity\": 0.794,\n  \"profile_path\": \"/kip8D2tvcdEJiPtZaGioQD6vSjV.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0903145\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q88143\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

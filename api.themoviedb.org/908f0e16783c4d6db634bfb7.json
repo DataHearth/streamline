@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/78?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Fritz Heinrich Rasp\"\n  ],\n  \"biography\": \"From Wikipedia, the free encyclopedia.\\n\\nFritz Heinrich Rasp (13 May 1891; Bayreuth – 30 November 1976; Gräfelfing) was a German film actor who appeared in 104 films between 1916 and 1976.\\n\\nHis most notable film roles were J.J. Peachum in The Threepenny Opera (1931), as Meinert in Diary of a Lost Girl (1929), and as \\\"Der Schmale\\\" (\\\"The Thin Man\\\") in Fritz Lang's Metropolis (1927). Many of the scenes in which he appears in the latter film are part of the Metropolis footage long believed lost until their recovery in 2008.\\n\\nRasp's obituary in Der Spiegel described him as \\\"the German film villain in service, for over 60 years.\\\" He played numerous scoundrels or shady characters during the Golden Age of German cinema in the 1920s. He is considered to be one of the most successful film villains in German film history.\",\n  \"birthday\": \"1891-05-13\",\n  \"deathday\": \"1976-11-30\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 78,\n  \"imdb_id\": \"nm0003248\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Fritz Rasp\",\n  \"place_of_birth\": \"Bayreuth, Germany\",\n  \"popularity\": 0.3334,\n  \"profile_path\": \"/6NnV7WF489FZqMYSVhm3tFHEQXe.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/03d1q4f\",\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0003248\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q91058\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

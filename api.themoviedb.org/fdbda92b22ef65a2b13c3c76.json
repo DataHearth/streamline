@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Sherlock+Jr\u0026year=1924",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/tSipsYTp565LkopntX1lZNLPYHP.jpg\",\n      \"genre_ids\": [\n        28,\n        35,\n        9648\n      ],\n      \"id\": 992,\n      \"title\": \"Sherlock Jr.\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Sherlock Jr.\",\n      \"overview\": \"A film projectionist longs to be a detective, and puts his meager skills to work when he is framed by a rival for stealing his girlfriend's father's pocketwatch.\",\n      \"popularity\": 3.1481,\n      \"poster_path\": \"/1G9r3rqtbFAQuyWKOZm4Y5J5s7Q.jpg\",\n      \"release_date\": \"1924-04-17\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 8.042,\n      \"vote_count\": 1237\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

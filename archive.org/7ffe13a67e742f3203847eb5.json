@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-1fb24a07-491a-4ac8-bdb6-ab798c01af1a/mbid-1fb24a07-491a-4ac8-bdb6-ab798c01af1a-39074154560_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn721601.ca.archive.org/0/items/mbid-1fb24a07-491a-4ac8-bdb6-ab798c01af1a/mbid-1fb24a07-491a-4ac8-bdb6-ab798c01af1a-39074154560_thumb500.jpg"
+  }
+}

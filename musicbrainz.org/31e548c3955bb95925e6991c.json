@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/url?fmt=json\u0026inc=artist-rels\u0026resource=https%3A%2F%2Fwww.deezer.com%2Fartist%2F16426",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\n  \"relations\": [\n    {\n      \"ended\": false,\n      \"end\": null,\n      \"target-credit\": \"\",\n      \"attribute-values\": {},\n      \"direction\": \"backward\",\n      \"type-id\": \"769085a1-c2f7-4c24-a532-2375a77693bd\",\n      \"attributes\": [],\n      \"artist\": {\n        \"id\": \"d8df7087-06d5-4545-9024-831bb8558ad1\",\n        \"country\": \"US\",\n        \"disambiguation\": \"\",\n        \"type\": \"Person\",\n        \"type-id\": \"b6e035f4-3ce9-331c-97df-83397230b0df\",\n        \"name\": \"Jonathan Coulton\",\n        \"sort-name\": \"Coulton, Jonathan\"\n      },\n      \"type\": \"free streaming\",\n      \"attribute-ids\": {},\n      \"begin\": null,\n      \"target-type\": \"artist\",\n      \"source-credit\": \"\"\n    }\n  ],\n  \"resource\": \"https://www.deezer.com/artist/16426\",\n  \"id\": \"371426a2-0d93-47ba-aeb3-4f0fce63bfca\"\n}"
+}

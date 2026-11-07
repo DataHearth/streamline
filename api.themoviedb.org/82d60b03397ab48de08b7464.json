@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/83474?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Charlie Winninger\",\n    \"Charles J. Winninger\"\n  ],\n  \"biography\": \"From Wikipedia, the free encyclopedia\\n\\nCharles Winninger (May 26, 1884 – January 27, 1969) was an American stage and film actor, most often cast in comedies or musicals, but equally at home in dramas.\",\n  \"birthday\": \"1884-05-25\",\n  \"deathday\": \"1969-01-27\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 83474,\n  \"imdb_id\": \"nm0935415\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Charles Winninger\",\n  \"place_of_birth\": \"Athens, Wisconsin, USA\",\n  \"popularity\": 0.4347,\n  \"profile_path\": \"/ga4o02ASamp2g2vDZfdl2Uxddqk.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0dxpzh\",\n    \"freebase_id\": \"/en/charles_winninger\",\n    \"imdb_id\": \"nm0935415\",\n    \"tvrage_id\": 181584,\n    \"wikidata_id\": \"Q2080114\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

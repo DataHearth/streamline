@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/85993?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Thomas Carroll Neal Jr.\",\n    \"Thomas Neal\"\n  ],\n  \"biography\": \"​From Wikipedia\\n\\nThomas Carroll Neal Jr. (January 28, 1914 – August 7, 1972) was an American actor and boxer best known for appearing in the critically lauded film Detour (1945), for having a tryst with actress Barbara Payton, and for later committing manslaughter.\",\n  \"birthday\": \"1914-01-28\",\n  \"deathday\": \"1972-08-07\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 85993,\n  \"imdb_id\": \"nm0623684\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Tom Neal\",\n  \"place_of_birth\": \"Evanston, Illinois, USA\",\n  \"popularity\": 0.5016,\n  \"profile_path\": \"/m0h1k9LV7I86f4D2FRMujDcI76h.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0623684\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q3530819\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

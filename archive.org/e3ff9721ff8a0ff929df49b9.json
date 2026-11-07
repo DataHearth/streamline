@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-52cce2e6-2127-4320-9e19-192b9edc6d7f/mbid-52cce2e6-2127-4320-9e19-192b9edc6d7f-42236725910_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://ia600407.us.archive.org/32/items/mbid-52cce2e6-2127-4320-9e19-192b9edc6d7f/mbid-52cce2e6-2127-4320-9e19-192b9edc6d7f-42236725910_thumb500.jpg"
+  }
+}

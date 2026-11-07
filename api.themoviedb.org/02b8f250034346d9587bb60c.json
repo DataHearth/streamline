@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/30241?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Helen Mack\",\n    \"海伦·马克\"\n  ],\n  \"biography\": \"From Wikipedia, the free encyclopedia.\\n\\nHelen Mack (November 12, 1913 – August 13, 1986) was an American actress. Mack started her career as a child actress in silent films, moving on to Broadway plays, and touring the vaudeville circuit. Her greater success as an actress was as a leading lady in the 1930s. Eventually Mack transitioned into performing on radio, and then into writing, directing, and producing some of the best known radio shows during the Golden Age of Radio. Later in life, Mack billed herself as a professional writer, writing for Broadway, stage, and television. Her career spanned the infancy of the motion picture industry, the beginnings of Broadway, the final days of Vaudeville, the transition to \\\"talking pictures\\\", the Golden Age of Radio, and the rise of television.\\n\\nDescription above from the Wikipedia article Helen Mack, licensed under CC-BY-SA, full list of contributors on Wikipedia.   \",\n  \"birthday\": \"1913-11-13\",\n  \"deathday\": \"1986-08-13\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 30241,\n  \"imdb_id\": \"nm0532997\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Helen Mack\",\n  \"place_of_birth\": \"Rock Island, Illinois, United States\",\n  \"popularity\": 0.9893,\n  \"profile_path\": \"/zHefRbs0wALGyzCoIhjf6WKfy8S.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0532997\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q531224\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

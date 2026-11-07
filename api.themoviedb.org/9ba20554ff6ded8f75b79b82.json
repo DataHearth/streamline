@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/79298?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"Candace Hilligoss (born August 14, 1935, Huron, South Dakota) is an American actress.\\n\\nAfter three years at the University of Iowa, she came to New York City to study acting at the American Theatre Wing and made her professional debut in summer stock in Pennsylvania. She acted at the Cape Cod Playhouse, appeared in a touring production of Idiot's Delight with Nina Foch, performed in television programs produced in New York, and danced at the Copacabana nightclub.\\n\\nShe is best-known for her portrayal of Mary Henry, a church organist haunted by specters, in Carnival of Souls (1962), a low-budget horror film that has developed a cult following. She also appeared in The Curse of the Living Corpse (1964).\\n\\nDescription above from the Wikipedia article Candace Hilligoss, licensed under CC-BY-SA, full list of contributors on Wikipedia.\",\n  \"birthday\": \"1935-08-14\",\n  \"deathday\": null,\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 79298,\n  \"imdb_id\": \"nm0385010\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Candace Hilligoss\",\n  \"place_of_birth\": \"Huron, South Dakota, USA\",\n  \"popularity\": 0.5386,\n  \"profile_path\": \"/2snLWDrBcNfkOIf0f8TlBG404eV.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/026jnkz\",\n    \"freebase_id\": \"/en/candace_hilligoss\",\n    \"imdb_id\": \"nm0385010\",\n    \"tvrage_id\": 305414,\n    \"wikidata_id\": \"Q2328155\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

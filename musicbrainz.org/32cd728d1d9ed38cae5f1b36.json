@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/url?fmt=json\u0026inc=artist-rels\u0026resource=https%3A%2F%2Fwww.deezer.com%2Fartist%2F1449213",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\n  \"relations\": [\n    {\n      \"direction\": \"backward\",\n      \"source-credit\": \"\",\n      \"ended\": false,\n      \"artist\": {\n        \"country\": \"US\",\n        \"name\": \"Chris Zabriskie\",\n        \"type-id\": \"b6e035f4-3ce9-331c-97df-83397230b0df\",\n        \"disambiguation\": \"\",\n        \"type\": \"Person\",\n        \"sort-name\": \"Zabriskie, Chris\",\n        \"id\": \"cd661c5c-c9ce-42ff-83f8-7b1dd1515d64\"\n      },\n      \"begin\": null,\n      \"type\": \"free streaming\",\n      \"target-credit\": \"\",\n      \"attributes\": [],\n      \"end\": null,\n      \"target-type\": \"artist\",\n      \"attribute-ids\": {},\n      \"type-id\": \"769085a1-c2f7-4c24-a532-2375a77693bd\",\n      \"attribute-values\": {}\n    }\n  ],\n  \"resource\": \"https://www.deezer.com/artist/1449213\",\n  \"id\": \"e252e215-6d51-45aa-9206-1c11b4d5663d\"\n}"
+}

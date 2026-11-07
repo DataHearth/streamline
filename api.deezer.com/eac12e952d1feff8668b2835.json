@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.deezer.com/artist/9610",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\n  \"id\": 9610,\n  \"name\": \"Brad Sucks\",\n  \"link\": \"https:\\/\\/www.deezer.com\\/artist\\/9610\",\n  \"share\": \"https:\\/\\/www.deezer.com\\/artist\\/9610?utm_source=deezer\u0026utm_content=artist-9610\u0026utm_term=0_1794075872\u0026utm_medium=web\",\n  \"picture\": \"https:\\/\\/api.deezer.com\\/artist\\/9610\\/image\",\n  \"picture_small\": \"https:\\/\\/cdn-images.dzcdn.net\\/images\\/artist\\/3359371a8a0f16272b6a560dab8c5eff\\/56x56-000000-80-0-0.jpg\",\n  \"picture_medium\": \"https:\\/\\/cdn-images.dzcdn.net\\/images\\/artist\\/3359371a8a0f16272b6a560dab8c5eff\\/250x250-000000-80-0-0.jpg\",\n  \"picture_big\": \"https:\\/\\/cdn-images.dzcdn.net\\/images\\/artist\\/3359371a8a0f16272b6a560dab8c5eff\\/500x500-000000-80-0-0.jpg\",\n  \"picture_xl\": \"https:\\/\\/cdn-images.dzcdn.net\\/images\\/artist\\/3359371a8a0f16272b6a560dab8c5eff\\/1000x1000-000000-80-0-0.jpg\",\n  \"nb_album\": 25,\n  \"nb_fan\": 3604,\n  \"radio\": true,\n  \"tracklist\": \"https:\\/\\/api.deezer.com\\/artist\\/9610\\/top?limit=50\",\n  \"type\": \"artist\"\n}"
+}

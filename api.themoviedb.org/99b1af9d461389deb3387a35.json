@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/1308319?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Данило Антонович\",\n    \"Д. Антонович\",\n    \"D. Antonovich\"\n  ],\n  \"biography\": \"\",\n  \"birthday\": \"1889-12-22\",\n  \"deathday\": \"1975-02-08\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 1308319,\n  \"imdb_id\": \"nm1131834\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Danylo Antonovych\",\n  \"place_of_birth\": null,\n  \"popularity\": 0.2874,\n  \"profile_path\": \"/6X3iC9YY3EuNXW71IryT1NjKLrO.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm1131834\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q4067431\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

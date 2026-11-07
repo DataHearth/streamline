@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Battleship+Potemkin\u0026year=1925",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/3RH61Z7BP3f215936PJBEG2qQrT.jpg\",\n      \"genre_ids\": [\n        18,\n        36,\n        10752\n      ],\n      \"id\": 643,\n      \"title\": \"Battleship Potemkin\",\n      \"original_language\": \"ru\",\n      \"original_title\": \"Броненосец Потёмкин\",\n      \"overview\": \"In the midst of the Russian Revolution of 1905, the crew of the battleship Potemkin revolt against the brutal, tyrannical regime of the vessel's officers. The resulting street demonstration in Odessa brings on a police massacre.\",\n      \"popularity\": 3.9993,\n      \"poster_path\": \"/hZmsRLsCnE9Zshf1YJONUpCOhds.jpg\",\n      \"release_date\": \"1925-12-24\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.567,\n      \"vote_count\": 1355\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

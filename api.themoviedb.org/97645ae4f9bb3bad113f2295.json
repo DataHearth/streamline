@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/43648?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Casper Jansen\"\n  ],\n  \"biography\": \"\",\n  \"birthday\": \"1977-06-24\",\n  \"deathday\": null,\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 43648,\n  \"imdb_id\": \"nm0417970\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Cas Jansen\",\n  \"place_of_birth\": \"Badhoevedorp, Noord-Holland, Netherlands\",\n  \"popularity\": 0.3165,\n  \"profile_path\": \"/xW0uz8Z5LdIXGArsqSSIZ4T78PP.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/02r6__l\",\n    \"freebase_id\": \"/en/cas_jansen\",\n    \"imdb_id\": \"nm0417970\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q5047770\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/78852?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Richard McCord Long\"\n  ],\n  \"biography\": \"Richard Long  (December 17, 1927 – December 21, 1974) was an American actor better known for his leading roles in several ABC television series, including The Big Valley and Nanny and the Professor.\",\n  \"birthday\": \"1927-12-17\",\n  \"deathday\": \"1974-12-21\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 78852,\n  \"imdb_id\": \"nm0519160\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Richard Long\",\n  \"place_of_birth\": \"Chicago, Illinois, USA\",\n  \"popularity\": 1.0915,\n  \"profile_path\": \"/nzbsijHVwXBetlPe2J5FYYOYhFf.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/038kd6\",\n    \"freebase_id\": \"/en/richard_long_1927\",\n    \"imdb_id\": \"nm0519160\",\n    \"tvrage_id\": 40269,\n    \"wikidata_id\": \"Q339593\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

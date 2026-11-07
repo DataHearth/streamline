@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/63378?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Carlton Miller\",\n    \"Карл Миллер\"\n  ],\n  \"biography\": \"Carl Miller (August 9, 1894 – January 20, 1979) was an American film actor. He appeared in 48 films from 1917 to 1942, and he remains perhaps best known for his roles in two Charlie Chaplin films: The Kid (1921) and A Woman of Paris (1923). He was born in Wichita County, Texas and died in Honolulu, Hawaii.\",\n  \"birthday\": \"1894-08-09\",\n  \"deathday\": \"1979-01-20\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 63378,\n  \"imdb_id\": \"nm0588033\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Carl Miller\",\n  \"place_of_birth\": \"Wichita County, Texas, USA\",\n  \"popularity\": 0.7006,\n  \"profile_path\": \"/bt3pDOt4rcUJQvt61MlHqYQzBgh.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0588033\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q4293499\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

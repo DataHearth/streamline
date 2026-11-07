@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=A+Trip+to+the+Moon\u0026year=1902",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/g67r1eiQD3ERSEQFCFkSn7TeGw5.jpg\",\n      \"genre_ids\": [\n        12,\n        878,\n        35\n      ],\n      \"id\": 775,\n      \"title\": \"A Trip to the Moon\",\n      \"original_language\": \"fr\",\n      \"original_title\": \"Le Voyage dans la Lune\",\n      \"overview\": \"Professor Barbenfouillis and five of his colleagues from the Academy of Astronomy travel to the Moon aboard a rocket propelled by a giant cannon. Once on the lunar surface, the bold explorers face the many perils hidden in the caves of the mysterious planet.\",\n      \"popularity\": 3.7706,\n      \"poster_path\": \"/9o0v5LLFk51nyTBHZSre6OB37n2.jpg\",\n      \"release_date\": \"1902-06-15\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.869,\n      \"vote_count\": 2106\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

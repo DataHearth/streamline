@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-e0397ed3-3cd9-40f9-9057-c261c695fd16/mbid-e0397ed3-3cd9-40f9-9057-c261c695fd16-44257312318_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn721906.ca.archive.org/0/items/mbid-e0397ed3-3cd9-40f9-9057-c261c695fd16/mbid-e0397ed3-3cd9-40f9-9057-c261c695fd16-44257312318_thumb500.jpg"
+  }
+}

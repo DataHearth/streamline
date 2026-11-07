@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/78851?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Adele Ruth Crago\"\n  ],\n  \"biography\": \"Carolyn Craig (born Adele Ruth Crago) was an American actress who was best known for her performance as Nora Manning in William Castle's 1959 shocker House on Haunted Hill.\",\n  \"birthday\": \"1934-10-27\",\n  \"deathday\": \"1970-12-12\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 78851,\n  \"imdb_id\": \"nm0185795\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Carolyn Craig\",\n  \"place_of_birth\": \"Valley Stream, Long Island, New York, USA\",\n  \"popularity\": 0.6948,\n  \"profile_path\": \"/qRX9gZQrcdkTLZiVhuWSjy9nfAz.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0h1dvsh\",\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0185795\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q4251151\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

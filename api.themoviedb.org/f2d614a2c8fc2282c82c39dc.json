@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Detour\u0026year=1945",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/uGOKN4VeCsf249zypWfaAzfTxAB.jpg\",\n      \"genre_ids\": [\n        18,\n        53\n      ],\n      \"id\": 20367,\n      \"title\": \"Detour\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Detour\",\n      \"overview\": \"The life of Al Roberts, a pianist in a New York nightclub, turns into a nightmare when he decides to hitchhike to Los Angeles to visit his girlfriend.\",\n      \"popularity\": 1.9453,\n      \"poster_path\": \"/gJb9HRAs1V4bA0VKsWpT6mhv2RT.jpg\",\n      \"release_date\": \"1945-11-30\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.2,\n      \"vote_count\": 434\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-31fe276c-6d8d-4ddd-8171-24980dabb7ec/mbid-31fe276c-6d8d-4ddd-8171-24980dabb7ec-945721932_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn721807.ca.archive.org/0/items/mbid-31fe276c-6d8d-4ddd-8171-24980dabb7ec/mbid-31fe276c-6d8d-4ddd-8171-24980dabb7ec-945721932_thumb500.jpg"
+  }
+}

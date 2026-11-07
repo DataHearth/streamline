@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/9728?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"А. Левшин\",\n    \"Левшин Александр Иванович\",\n    \"A. Levshin\"\n  ],\n  \"biography\": \"\",\n  \"birthday\": \"1899-03-01\",\n  \"deathday\": \"1982-11-01\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 9728,\n  \"imdb_id\": \"nm0506298\",\n  \"known_for_department\": \"Directing\",\n  \"name\": \"Aleksandr Levshin\",\n  \"place_of_birth\": \"Tambov district, Tambov Governorate, Russian Empire\",\n  \"popularity\": 0.2223,\n  \"profile_path\": null,\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0506298\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q5960668\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

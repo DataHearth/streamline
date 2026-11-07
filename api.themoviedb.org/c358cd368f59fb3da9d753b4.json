@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/28964?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Jeanne d'Alcy\",\n    \"Fanny Manieux\",\n    \"Stéphanie Méliès\",\n    \"Жанна д'Альсі\"\n  ],\n  \"biography\": \"A performer at the Théâtre Robert-Houdin from 1888, when it was re-opened by Georges Méliès, Jehanne d'Alcy (also known as Fanny Manieux) later became Méliès's mistress and appeared in a number of his films, including the first of his risqué productions Après le bal - le tub (1897). Méliès's first wife Eugenie died in May 1913, and in 1925 he married d'Alcy. Her concession of a toy stall at the Gare Montparnasse, Paris, manned by Georges, provided their only income for several years. In 1932 they moved into an apartment at a home for cinema veterans. After Méliès's death, d'Alcy appeared in the poignant framing sequences of Georges Franju's short dramatisation of his life, Le Grand Méliès (1952), with Méliès's son André playing his father. Jehanne d'Alcy died on 14 October 1956 at Versailles, aged ninety-two.\",\n  \"birthday\": \"1865-03-20\",\n  \"deathday\": \"1956-10-14\",\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 28964,\n  \"imdb_id\": \"nm0194945\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Jehanne d'Alcy\",\n  \"place_of_birth\": \"Вожур, Франція\",\n  \"popularity\": 0.3529,\n  \"profile_path\": \"/j2LBrYmGeNBQQYTE5SWpTSzVCBW.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0194945\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q151126\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

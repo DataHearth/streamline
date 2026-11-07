@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Sprite+Fright\u0026year=2021",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/aCMT1okuiKFnyKHdCOez66rJKyT.jpg\",\n      \"genre_ids\": [\n        16,\n        27,\n        35,\n        14\n      ],\n      \"id\": 891761,\n      \"title\": \"Sprite Fright\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Sprite Fright\",\n      \"overview\": \"Set in 80’s-Britain, when a group of rowdy teenagers trek into an isolated forest, they discover peaceful mushroom creatures that turn out to be an unexpected force of nature.\",\n      \"popularity\": 0.6429,\n      \"poster_path\": \"/AjWJQOogG4Irpff6K49tzrUTb1s.jpg\",\n      \"release_date\": \"2024-04-06\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 7.7,\n      \"vote_count\": 7\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

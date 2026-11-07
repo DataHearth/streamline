@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/url?fmt=json\u0026inc=artist-rels\u0026resource=https%3A%2F%2Fwww.deezer.com%2Fartist%2F407",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\n  \"relations\": [\n    {\n      \"end\": null,\n      \"type-id\": \"769085a1-c2f7-4c24-a532-2375a77693bd\",\n      \"direction\": \"backward\",\n      \"ended\": false,\n      \"artist\": {\n        \"id\": \"b7ffd2af-418f-4be2-bdd1-22f8b48613da\",\n        \"type-id\": \"e431f5f6-b5d2-343d-8b36-72607fffb74b\",\n        \"sort-name\": \"Nine Inch Nails\",\n        \"type\": \"Group\",\n        \"disambiguation\": \"\",\n        \"country\": \"US\",\n        \"name\": \"Nine Inch Nails\"\n      },\n      \"attribute-values\": {},\n      \"source-credit\": \"\",\n      \"type\": \"free streaming\",\n      \"target-credit\": \"\",\n      \"attribute-ids\": {},\n      \"target-type\": \"artist\",\n      \"begin\": null,\n      \"attributes\": []\n    }\n  ],\n  \"id\": \"a4050b4d-4372-4fb2-b853-60945712deb6\",\n  \"resource\": \"https://www.deezer.com/artist/407\"\n}"
+}

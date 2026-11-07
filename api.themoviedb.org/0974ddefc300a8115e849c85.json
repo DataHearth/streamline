@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/search/movie?language=en\u0026query=Elephants+Dream\u0026year=2006",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"page\": 1,\n  \"results\": [\n    {\n      \"adult\": false,\n      \"backdrop_path\": \"/9bJDwuhza19HQcYA99FeslLYmUm.jpg\",\n      \"genre_ids\": [\n        16,\n        878\n      ],\n      \"id\": 9761,\n      \"title\": \"Elephants Dream\",\n      \"original_language\": \"en\",\n      \"original_title\": \"Elephants Dream\",\n      \"overview\": \"Elephants Dream is the story of two strange characters exploring a capricious and seemingly infinite machine. The elder, Proog, acts as a tour-guide and protector, happily showing off the sights and dangers of the machine to his initially curious but increasingly skeptical protege Emo. As their journey unfolds we discover signs that the machine is not all Proog thinks it is, and his guiding takes on a more desperate aspect.  Elephants Dream is a story about communication and fiction, made purposefully open-ended as the world’s first 3D animated “Open movie”. The film itself is released under the Creative Commons license, along with the entirety of the production files used to make it (roughly 7 Gigabytes of data). The software used to make the movie is the free/open source animation suite Blender along with other open source software, thus allowing the movie to be remade, remixed and re-purposed with only a computer and the data on the DVD or download.\",\n      \"popularity\": 1.1695,\n      \"poster_path\": \"/9zROtU9TkpZQrOuEaMAp68FOWLK.jpg\",\n      \"release_date\": \"2006-03-24\",\n      \"softcore\": false,\n      \"video\": false,\n      \"vote_average\": 5.792,\n      \"vote_count\": 72\n    }\n  ],\n  \"total_pages\": 1,\n  \"total_results\": 1\n}"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/13576?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Фредрик Марч\",\n    \"Frederick March\",\n    \"Фредрік Марч\"\n  ],\n  \"biography\": \"Fredric March (born Ernest Frederick McIntyre Bickel; August 31, 1897 – April 14, 1975) was an American actor, regarded as one of Hollywood's most celebrated, versatile stars of the 1930s and 1940s. He won the Academy Award for Best Actor for Dr. Jekyll and Mr. Hyde (1931) and The Best Years of Our Lives (1946), as well as the Tony Award for Best Actor in a Play for Years Ago (1947) and Long Day's Journey into Night (1956).\\n\\nMarch is one of only two actors, the other being Helen Hayes, to have won both the Academy Award and the Tony Award twice.\",\n  \"birthday\": \"1897-08-31\",\n  \"deathday\": \"1975-04-14\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 13576,\n  \"imdb_id\": \"nm0545298\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Fredric March\",\n  \"place_of_birth\": \"Racine, Wisconsin, USA\",\n  \"popularity\": 0.6167,\n  \"profile_path\": \"/285cjPToJMXn0ALimtQoqofgM2G.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": \"/m/0h1_w\",\n    \"freebase_id\": \"/en/fredric_march\",\n    \"imdb_id\": \"nm0545298\",\n    \"tvrage_id\": 114946,\n    \"wikidata_id\": \"Q181819\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

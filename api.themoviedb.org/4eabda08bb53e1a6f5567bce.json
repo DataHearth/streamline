@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/74?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [\n    \"Gustav Froelich\"\n  ],\n  \"biography\": \"From Wikipedia, the free encyclopedia\\n\\nGustav Fröhlich (21 March 1902 – 22 December 1987) was a German actor and film director. He landed secondary roles in a number of films and plays before landing his breakthrough role of Freder Fredersen in Fritz Lang's 1927 film Metropolis. He remained a popular film star in Germany until the 1950s.\",\n  \"birthday\": \"1902-03-21\",\n  \"deathday\": \"1987-12-22\",\n  \"gender\": 2,\n  \"homepage\": null,\n  \"id\": 74,\n  \"imdb_id\": \"nm0297054\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Gustav Fröhlich\",\n  \"place_of_birth\": \"Hannover, Germany\",\n  \"popularity\": 1.4468,\n  \"profile_path\": \"/bkjDaorTT3LcOeTcQF1TDpBlHwt.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0297054\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q65496\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

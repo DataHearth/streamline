@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.themoviedb.org/3/person/97918?append_to_response=external_ids\u0026language=en",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json;charset=utf-8"
+  },
+  "body": "{\n  \"adult\": false,\n  \"also_known_as\": [],\n  \"biography\": \"\",\n  \"birthday\": \"1957-10-04\",\n  \"deathday\": null,\n  \"gender\": 1,\n  \"homepage\": null,\n  \"id\": 97918,\n  \"imdb_id\": \"nm0774736\",\n  \"known_for_department\": \"Acting\",\n  \"name\": \"Kyra Schon\",\n  \"place_of_birth\": null,\n  \"popularity\": 0.317,\n  \"profile_path\": \"/k0mRAFI9Ptzp40N9xh5pD2oaJPT.jpg\",\n  \"external_ids\": {\n    \"freebase_mid\": null,\n    \"freebase_id\": null,\n    \"imdb_id\": \"nm0774736\",\n    \"tvrage_id\": null,\n    \"wikidata_id\": \"Q463610\",\n    \"facebook_id\": null,\n    \"instagram_id\": null,\n    \"tiktok_id\": null,\n    \"twitter_id\": null,\n    \"youtube_id\": null\n  }\n}"
+}

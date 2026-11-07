@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026ids=Q92122\u0026props=sitelinks\u0026sitefilter=enwiki%7Cfrwiki",
+  "status": 200,
+  "header": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\n  \"entities\": {\n    \"Q92122\": {\n      \"type\": \"item\",\n      \"id\": \"Q92122\",\n      \"sitelinks\": {\n        \"enwiki\": {\n          \"site\": \"enwiki\",\n          \"title\": \"Kimiko Ishizaka\",\n          \"badges\": []\n        },\n        \"frwiki\": {\n          \"site\": \"frwiki\",\n          \"title\": \"Kimiko Douglass-Ishizaka\",\n          \"badges\": []\n        }\n      }\n    }\n  },\n  \"success\": 1\n}"
+}

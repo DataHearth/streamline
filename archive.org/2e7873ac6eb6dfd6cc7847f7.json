@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://archive.org/download/mbid-36df813a-9cd6-4faa-b503-02bdeb49fa02/mbid-36df813a-9cd6-4faa-b503-02bdeb49fa02-20255141648_thumb500.jpg",
+  "status": 302,
+  "header": {
+    "Content-Type": "image/jpeg",
+    "Location": "https://dn710702.ca.archive.org/0/items/mbid-36df813a-9cd6-4faa-b503-02bdeb49fa02/mbid-36df813a-9cd6-4faa-b503-02bdeb49fa02-20255141648_thumb500.jpg"
+  }
+}
