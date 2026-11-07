@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { roleLabel } from "@lib/roles";
+	import { sheetSwipe } from "@lib/sheet-swipe";
 	import { onMount } from "svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -265,131 +266,14 @@
 		}
 	}
 
-	// Drag the sheet down to dismiss. Pointer events so a mouse works too; the
-	// drag only starts from the header or from a list already scrolled to the
-	// top, otherwise the gesture belongs to the list. Past a quarter of the
-	// sheet's height — or on a flick — it closes; anything less springs back.
-	// The touch move is claimed in JS as well: left to itself the browser turns
-	// the touch into a scroll and cancels the pointer, which limited the drag to
-	// the header — the only strip with `touch-action: none`.
-	const DISMISS_RATIO = 0.25;
-	const FLICK = 0.5; // px per ms
-	function swipeSheet(node: HTMLElement) {
-		let id: number | null = null;
-		let startY = 0;
-		let startX = 0;
-		let startedAt = 0;
-		let dy = 0;
-		let dragging = false;
-		let touchDriven = false;
-		const backdrop = () =>
-			node.parentElement?.querySelector<HTMLElement>('[data-sheet-backdrop=""]');
-
-		const paint = () => {
-			node.style.transform = dy > 0 ? `translate3d(0, ${dy}px, 0)` : "";
-			const b = backdrop();
-			if (b) b.style.opacity = String(Math.max(0.25, 1 - dy / (node.offsetHeight || 1)));
-		};
-		const drive = (delta: number) => {
-			if (!dragging) {
-				dragging = true;
-				node.style.transition = "none";
-			}
-			// Resistance above the resting position rather than a gap under it.
-			dy = delta > 0 ? delta : delta / 4;
-			paint();
-		};
-		const reset = (animate: boolean) => {
-			node.style.transition = animate
-				? "transform var(--dur-base, 200ms) var(--ease, ease-out)"
-				: "";
-			node.style.transform = "";
-			const b = backdrop();
-			if (b) b.style.opacity = "";
-		};
-
-		const onDown = (e: PointerEvent) => {
-			if (id !== null || e.button !== 0) return;
-			const target = e.target as HTMLElement;
-			const scroller = node.querySelector<HTMLElement>("[data-sheet-scroll]");
-			if (scroller?.contains(target) && scroller.scrollTop > 0) return;
-			id = e.pointerId;
-			startY = e.clientY;
-			startX = e.clientX;
-			startedAt = e.timeStamp;
-			dy = 0;
-			touchDriven = false;
-		};
-		const onMove = (e: PointerEvent) => {
-			if (e.pointerId !== id || touchDriven) return;
-			const delta = e.clientY - startY;
-			// 6px of slop so a tap on a row is still a tap.
-			if (!dragging) {
-				if (delta < 6) return;
-				// Capture keeps the gesture alive if the finger leaves the sheet;
-				// it can legitimately fail (pointer already released), and the
-				// drag still works without it.
-				try {
-					node.setPointerCapture(e.pointerId);
-				} catch {}
-			}
-			drive(delta);
-		};
-		const onTouchMove = (e: TouchEvent) => {
-			// `id === null` means onDown already refused this gesture — a list
-			// scrolled off its top keeps it.
-			if (id === null) return;
-			const t = e.touches[0];
-			if (!t) return;
-			const delta = t.clientY - startY;
-			// Downward only, and not while the finger is mostly travelling
-			// sideways.
-			if (!dragging && (delta < 6 || delta <= Math.abs(t.clientX - startX)))
-				return;
-			if (e.cancelable) e.preventDefault();
-			touchDriven = true;
-			drive(delta);
-		};
-		const onUp = (e: PointerEvent) => {
-			if (e.pointerId !== id) return;
-			const velocity = dy / Math.max(1, e.timeStamp - startedAt);
-			const far = dy > (node.offsetHeight || 0) * DISMISS_RATIO;
-			id = null;
-			if (!dragging) return;
-			dragging = false;
-			if (far || velocity > FLICK) {
-				node.style.transition = ""; // fly and fade leave from the dropped position
-				closeSheet();
-			} else {
-				reset(true);
-			}
-		};
-		const onCancel = (e: PointerEvent) => {
-			if (e.pointerId !== id) return;
-			id = null;
-			dragging = false;
-			touchDriven = false;
-			reset(true);
-		};
-
-		node.addEventListener("pointerdown", onDown);
-		node.addEventListener("pointermove", onMove);
-		node.addEventListener("pointerup", onUp);
-		node.addEventListener("pointercancel", onCancel);
-		node.addEventListener("touchmove", onTouchMove, { passive: false });
-		// Bound here rather than as onclick= on the sheet: a click handler on a
-		// plain div is an a11y warning, and the links it delegates for are
-		// already keyboard-operable (Enter fires click).
+	// Bound here rather than as onclick= on the sheet: a click handler on a
+	// plain div is an a11y warning, and the links it delegates for are already
+	// keyboard-operable (Enter fires click). The drag itself is `sheetSwipe`'s,
+	// shared with every other bottom sheet.
+	function sheetLinks(node: HTMLElement) {
 		node.addEventListener("click", onSheetClick);
 		return {
-			destroy() {
-				node.removeEventListener("pointerdown", onDown);
-				node.removeEventListener("pointermove", onMove);
-				node.removeEventListener("pointerup", onUp);
-				node.removeEventListener("pointercancel", onCancel);
-				node.removeEventListener("touchmove", onTouchMove);
-				node.removeEventListener("click", onSheetClick);
-			},
+			destroy: () => node.removeEventListener("click", onSheetClick),
 		};
 	}
 
@@ -476,14 +360,15 @@
 		<button
 			type="button"
 			aria-label={i18n.nav_close_menu()}
-			data-sheet-backdrop=""
+			data-sheet-scrim
 			transition:fade={{ duration: 180 }}
 			onclick={closeSheet}
 			class="absolute inset-0 h-full w-full cursor-default bg-black/55 backdrop-blur-[2px]"
 		></button>
 
 		<div
-			use:swipeSheet
+			use:sheetSwipe={{ onDismiss: closeSheet }}
+			use:sheetLinks
 			transition:fly={{ y: 420, duration: 300, easing: cubicOut }}
 			class="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl border-t border-border-strong bg-bg-elevated shadow-4"
 		>

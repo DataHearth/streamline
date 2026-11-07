@@ -1,5 +1,6 @@
 // Drag a bottom sheet down to dismiss it. Shared by every scrimmed bottom
-// sheet (filters, bulk actions, detail and decision sheets).
+// sheet (filters, bulk actions, detail and decision sheets, the bottom nav's
+// section sheets).
 //
 // Transform writes go straight to the node: animating anything that relayouts
 // costs a frame per pointermove on mobile Gecko, which is the whole reason the
