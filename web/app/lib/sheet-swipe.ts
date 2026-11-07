@@ -100,8 +100,12 @@ export function sheetSwipe(
 		if (!dragging) return;
 		dragging = false;
 		if (far || velocity > FLICK) {
-			reset(false); // hand the exit to the fly transition
+			node.style.transition = ""; // fly leaves from the dropped position
 			onDismiss();
+			// Still on the page with no exit animation: the parent kept it open.
+			setTimeout(() => {
+				if (node.isConnected && node.getAnimations().length === 0) reset(true);
+			});
 		} else {
 			reset(true);
 		}

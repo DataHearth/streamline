@@ -358,7 +358,7 @@
 			if (!dragging) return;
 			dragging = false;
 			if (far || velocity > FLICK) {
-				reset(false); // hand the exit to the fly transition
+				node.style.transition = ""; // fly and fade leave from the dropped position
 				closeSheet();
 			} else {
 				reset(true);
