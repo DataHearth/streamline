@@ -52,8 +52,13 @@ import (
 // The caller is responsible for starting the scheduler and HTTP server,
 // and for closing the database when done.
 type App struct {
-	Server     *Server
-	Scheduler  *scheduler.Scheduler
+	Server    *Server
+	Scheduler *scheduler.Scheduler
+	// EngineReady closes when the torrent engine can answer for its sessions.
+	EngineReady <-chan struct{}
+	// Fatal yields an error that a background part of the boot cannot recover
+	// from; the process shuts down on it.
+	Fatal      <-chan error
 	DB         *ent.Client
 	Store      db.Store
 	Auth       auth.Manager
@@ -89,6 +94,7 @@ func httpAccessSkip(r *http.Request) bool {
 // observability.Setup, so no logger is plumbed through component constructors.
 func NewFromConfig(ctx context.Context) (*App, error) {
 	cfg := config.Get()
+	boot := newBootTimer()
 
 	// 1. Ensure a session secret exists. Try to persist it to the backing
 	//    config file so sessions survive restarts. If persistence fails
@@ -145,6 +151,8 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		cfg = config.Get()
 	}
 
+	boot.mark(ctx, "config secrets")
+
 	// 2. Open database
 	dbClient, err := db.Open(ctx, cfg.DatabasePath())
 	if err != nil {
@@ -163,6 +171,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 
 	store := db.New(dbClient)
 	roothealth.Register(store)
+	boot.mark(ctx, "open database")
 
 	// 3. Create metadata / media / indexer / download services
 	tmdb := metadata.NewTMDB()
@@ -187,9 +196,18 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		dbClient.Close()
 		return nil, fmt.Errorf("create posters service: %w", err)
 	}
+	boot.mark(ctx, "metadata providers and posters")
 	indexerSvc := indexer.New()
 	var torrentEngine *bittorrent.Engine
 	var builtinClient download.Client
+	engineReady := closedChan()
+	fatal := make(chan error, 1)
+	reportFatal := func(err error) {
+		select {
+		case fatal <- err:
+		default:
+		}
+	}
 	if _, ok := config.BuiltinDownloadClient(); ok {
 		var err error
 		torrentEngine, err = bittorrent.New(ctx, store)
@@ -198,6 +216,16 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			return nil, fmt.Errorf("builtin torrent engine: %w", err)
 		}
 		builtinClient = torrentEngine
+		engineReady = torrentEngine.Ready()
+		go func() {
+			defer observability.RecoverPanic(ctx, "torrent engine fatal", nil)
+			select {
+			case err := <-torrentEngine.Fatal():
+				reportFatal(fmt.Errorf("torrent engine: %w", err))
+			case <-ctx.Done():
+			}
+		}()
+		boot.mark(ctx, "builtin torrent engine")
 	}
 	dlManager := download.New(store, builtinClient)
 	dispatcher := mediaserver.NewDispatcher()
@@ -215,6 +243,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		dbClient.Close()
 		return nil, fmt.Errorf("create lookup art service: %w", err)
 	}
+	boot.mark(ctx, "lookup art")
 	musicSvc := music.NewService(
 		store, mb, postersSvc, deezer, indexerSvc, dlManager,
 		metadata.NewWikipedia(), deezer, mb, dispatcher,
@@ -239,6 +268,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			return nil, fmt.Errorf("create library path %s: %w", p, err)
 		}
 	}
+	boot.mark(ctx, "media services and library paths")
 	// Constructed once and kept: bulk import, the media-probe backfill job and
 	// the restapi Server (system-info + config/ffmpeg endpoints) reuse this
 	// same prober.
@@ -276,7 +306,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			n,
 		)
 	}
-	musicSvc.ResumeHydration(ctx)
+	boot.mark(ctx, "bulk import recovery")
 	deepLinker := mediaserver.NewDeepLinker(nil)
 	renamer := movie.NewRenameService(
 		store, dispatcher, cfg.Library.MoviePath, cfg.Library.MovieNaming,
@@ -285,7 +315,10 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		store, dispatcher, cfg.Library.SeriesPath, cfg.Library.SeriesNaming,
 	)
 	pathMigrations := pathmigrate.NewService(store)
-	pathMigrations.WarnOnDrift(ctx)
+	runInBackground(ctx, reportFatal,
+		bootStep{"music hydration resume", musicSvc.ResumeHydration},
+		bootStep{"path drift check", pathMigrations.WarnOnDrift},
+	)
 	hygieneSvc.Probe = prober
 	imp := importer.NewWorker(importer.Deps{
 		DB:          store,
@@ -297,7 +330,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Albums:      musicSvc,
 		Tagger:      musicSvc,
 	})
-	go imp.Start(ctx)
+	afterEngineReady(ctx, "importer", engineReady, reportFatal, imp.Start)
 
 	transcoder := transcoding.NewWorker(transcoding.Deps{
 		DB:          store,
@@ -314,7 +347,13 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			"ffmpeg.path", cfg.FFmpeg.Path,
 		)
 	} else {
-		go transcoder.Start(ctx)
+		afterEngineReady(
+			ctx,
+			"transcoder",
+			engineReady,
+			reportFatal,
+			transcoder.Start,
+		)
 		if cfg.Transcoding.Enabled {
 			version, err := prober.Version(ctx)
 			if err != nil {
@@ -329,6 +368,8 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			}
 		}
 	}
+
+	boot.mark(ctx, "workers")
 
 	// 4. Create auth service
 	authSvc, err := auth.New(store)
@@ -345,7 +386,9 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 
 	// 6. Initialize OIDC providers (silent skip on discovery failures).
 	oidcMgr := auth.NewOIDCManager()
+	boot.mark(ctx, "auth")
 	oidcMgr.Init(ctx, config.PublicURL())
+	boot.mark(ctx, "oidc discovery")
 
 	// 7. Login/register rate limiter: 5 attempts per 15 minutes per IP.
 	limiter := auth.NewLimiter(5, 15*time.Minute)
@@ -536,9 +579,11 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		purgeUploads,
 		scheduler.WithSystem(),
 	)
+	boot.mark(ctx, "scheduler")
 	if err := purgeUploads(ctx); err != nil {
 		slog.WarnContext(ctx, "boot upload sweep failed", "error", err)
 	}
+	boot.mark(ctx, "upload sweep")
 
 	if err := jobsstate.Seed(ctx, dbClient, sched.List()); err != nil {
 		dbClient.Close()
@@ -555,6 +600,8 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 				"job", name, "error", err)
 		}
 	}
+
+	boot.mark(ctx, "job state")
 
 	// 10. HTTP access logger (nil when disabled). Mounted as outermost
 	//     middleware so every request — including 404s and panics — is
@@ -613,16 +660,21 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		HTTPLog:         httpLogger.Middleware(httpAccessSkip),
 	})
 
+	boot.mark(ctx, "http server")
+	boot.done(ctx)
+
 	return &App{
-		Server:     srv,
-		Scheduler:  sched,
-		DB:         dbClient,
-		Store:      store,
-		Auth:       authSvc,
-		Downloads:  dlManager,
-		Importer:   imp,
-		HTTPLogger: httpLogger,
-		Torrents:   torrentEngine,
+		Server:      srv,
+		Scheduler:   sched,
+		EngineReady: engineReady,
+		Fatal:       fatal,
+		DB:          dbClient,
+		Store:       store,
+		Auth:        authSvc,
+		Downloads:   dlManager,
+		Importer:    imp,
+		HTTPLogger:  httpLogger,
+		Torrents:    torrentEngine,
 
 		MediaServers: dispatcher,
 	}, nil

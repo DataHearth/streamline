@@ -91,6 +91,8 @@ podSecurityContext:
 
 **`server.port` must equal `service.port`.** Probes and the container port both target it.
 
+**Give boot a startup allowance.** `/health` answers once the boot wiring is done (database open and migrated, auth and OIDC discovery set up), which on a large database and slow storage can take minutes. The chart's `startupProbe` (from chart 3.1.0) holds liveness off for `startupProbe.periodSeconds` × `startupProbe.failureThreshold`, 5 minutes by default; raise `failureThreshold` if a boot needs longer. The built-in engine's torrents, the music hydration sweep and the path drift check run in the background without holding the listener back, so they do not count against it. See [Slow start or restarts during boot](Troubleshooting#slow-start-or-restarts-during-boot).
+
 ### The config block
 
 `values.yaml`'s `config:` is rendered into `/etc/streamline/config.yaml`. The chart deliberately carries **only keys that deviate from the binary's built-in defaults**, so it can't silently drift from them:

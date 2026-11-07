@@ -112,6 +112,9 @@ func (e *Engine) AddTorrent(
 	ctx context.Context,
 	src download.TorrentSource,
 ) (string, error) {
+	if err := e.awaitRestore(ctx); err != nil {
+		return "", err
+	}
 	ctx, span := tracer.Start(ctx, "bittorrent.add_torrent")
 	defer span.End()
 
@@ -216,6 +219,9 @@ func (e *Engine) GetTorrent(
 	ctx context.Context,
 	hash string,
 ) (*download.Torrent, error) {
+	if err := e.awaitTorrent(ctx, hash); err != nil {
+		return nil, err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		e.mu.Lock()
@@ -230,7 +236,12 @@ func (e *Engine) GetTorrent(
 	return &v, nil
 }
 
+// ListTorrents waits for the boot restore: callers read the listing as
+// everything the engine holds.
 func (e *Engine) ListTorrents(ctx context.Context) ([]download.Torrent, error) {
+	if err := e.awaitRestore(ctx); err != nil {
+		return nil, err
+	}
 	live := e.client.Torrents()
 	out := make([]download.Torrent, 0, len(live))
 	for _, t := range live {
@@ -262,6 +273,9 @@ func (e *Engine) RemoveTorrent(
 	hash string,
 	deleteFiles bool,
 ) error {
+	if err := e.awaitTorrent(ctx, hash); err != nil {
+		return err
+	}
 	ctx, span := tracer.Start(ctx, "bittorrent.remove_torrent")
 	defer span.End()
 
@@ -345,6 +359,9 @@ func (e *Engine) forget(hash string) {
 }
 
 func (e *Engine) PauseTorrent(ctx context.Context, hash string) error {
+	if err := e.awaitTorrent(ctx, hash); err != nil {
+		return err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		return err
@@ -356,6 +373,9 @@ func (e *Engine) PauseTorrent(ctx context.Context, hash string) error {
 }
 
 func (e *Engine) ResumeTorrent(ctx context.Context, hash string) error {
+	if err := e.awaitTorrent(ctx, hash); err != nil {
+		return err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		return err
@@ -411,6 +431,9 @@ func (e *Engine) ListFiles(
 	ctx context.Context,
 	hash string,
 ) ([]download.TorrentFile, error) {
+	if err := e.awaitTorrent(ctx, hash); err != nil {
+		return nil, err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		return nil, err
@@ -439,6 +462,9 @@ func (e *Engine) SetWantedFiles(
 	hash string,
 	wanted []int,
 ) error {
+	if err := e.awaitTorrent(ctx, hash); err != nil {
+		return err
+	}
 	ctx, span := tracer.Start(ctx, "bittorrent.set_wanted_files",
 		trace.WithAttributes(
 			attribute.String("torrent.hash", hash),

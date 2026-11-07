@@ -136,6 +136,7 @@ func currentSearchWindow(ctx context.Context) (searchWindow, error) {
 // "wanted" forever.
 func transportFailure(err error) bool {
 	return errors.Is(err, download.ErrUnreachable) ||
+		errors.Is(err, download.ErrClientNotReady) ||
 		errors.Is(err, download.ErrNoSpace) ||
 		errors.Is(err, indexer.ErrUnreachable)
 }

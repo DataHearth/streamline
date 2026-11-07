@@ -38,14 +38,23 @@ type RuntimeStatus struct {
 	Running        bool
 	PortBound      uint16
 	InterfaceBound string
+	// RestoreLoading is true until the session rows are read.
+	RestoreLoading bool
+	// RestorePending of RestoreTotal sessions are not re-added yet.
+	RestorePending int
+	RestoreTotal   int
 }
 
 func (e *Engine) Runtime() RuntimeStatus {
+	pending, total := e.restoreProgress()
 	return RuntimeStatus{
 		Running: true,
 		//nolint:gosec // LocalPort is a bound TCP/UDP port, 0..65535
 		PortBound:      uint16(e.client.LocalPort()),
 		InterfaceBound: e.bindAddr,
+		RestoreLoading: pending > 0 && total == 0,
+		RestorePending: pending,
+		RestoreTotal:   total,
 	}
 }
 
@@ -190,6 +199,9 @@ func (e *Engine) Details(
 	ctx context.Context,
 	hash string,
 ) (TorrentDetails, error) {
+	if err := e.awaitTorrent(ctx, hash); err != nil {
+		return TorrentDetails{}, err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		return TorrentDetails{}, err
@@ -240,6 +252,9 @@ func (e *Engine) SetFilePriorities(
 	hash string,
 	prios []FilePriority,
 ) error {
+	if err := e.awaitTorrent(ctx, hash); err != nil {
+		return err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		return err

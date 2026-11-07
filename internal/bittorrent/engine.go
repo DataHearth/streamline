@@ -22,11 +22,14 @@ import (
 	"github.com/anacrolix/torrent/storage"
 	"github.com/anacrolix/torrent/types"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/time/rate"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/observability"
+	"github.com/datahearth/streamline/internal/otelx"
 )
 
 var tracer = otel.Tracer("github.com/datahearth/streamline/internal/bittorrent")
@@ -101,13 +104,26 @@ type Engine struct {
 	// kept after the torrent is dropped so GetTorrent can still tell the
 	// download manager why it is gone.
 	refusals map[string]string
+	// restoring holds the sessions not re-added yet since boot. Their hashes
+	// answer ErrClientNotReady, never ErrTorrentNotFound (which purges).
+	restoring    map[string]struct{}
+	restoreTotal int
+	// loading is true until the session rows are read. The hashes are unknown
+	// until then, so every lookup answers ErrClientNotReady.
+	loading bool
+	// ready closes when the boot restore has finished.
+	ready chan struct{}
+	fatal chan error
+	// quit closes when the process starts shutting down, before Close.
+	quit <-chan struct{}
 
 	stop chan struct{}
 	wg   sync.WaitGroup
 }
 
 // New starts the engine from the enabled builtin download-client config
-// entry and re-adds every persisted torrent session.
+// entry. Persisted sessions are read and re-added in the background (see
+// loadAndRestore).
 func New(ctx context.Context, store db.Store) (*Engine, error) {
 	entry, ok := config.BuiltinDownloadClient()
 	if !ok {
@@ -193,17 +209,26 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		state:       map[string]*torrentState{},
 		sample:      map[string]speedSample{},
 		refusals:    map[string]string{},
+		restoring:   map[string]struct{}{},
+		loading:     true,
+		ready:       make(chan struct{}),
+		fatal:       make(chan error, 1),
+		quit:        ctx.Done(),
 		stop:        make(chan struct{}),
 	}
 	paths.onRefuse = e.refuseTorrent
-	if err := e.restore(ctx); err != nil {
-		if cerr := e.Close(); cerr != nil {
-			slog.WarnContext(ctx, "engine close after failed restore", "error", cerr)
-		}
-		return nil, fmt.Errorf("restore torrent sessions: %w", err)
-	}
 	e.registerEngineGauges(ctx)
-	e.wg.Go(e.enforceSeedLimits)
+	restoreCtx := context.WithoutCancel(ctx)
+	e.wg.Go(func() {
+		defer observability.RecoverPanic(restoreCtx, "torrent restore progress", nil)
+		e.logRestoreProgress(restoreCtx)
+	})
+	e.wg.Go(func() {
+		defer observability.RecoverPanic(restoreCtx, "torrent restore", func() {
+			e.reportFatal(errors.New("torrent restore panicked"))
+		})
+		e.loadAndRestore(restoreCtx)
+	})
 	return e, nil
 }
 
@@ -512,18 +537,23 @@ func pieceMarkInFlight(t *antorrent.Torrent) bool {
 	return false
 }
 
-// restore re-adds every persisted torrent session. Unrestorable rows are
-// skipped with a warning rather than failing boot.
-//
-// A row whose stored source no longer parses is deleted: it fails the same way
-// on every boot, and no API can reach a torrent that never goes live. A failed
-// re-add keeps its row — that can be transient, a download mount not ready
-// yet, and deleting on it would lose the torrent for good.
-func (e *Engine) restore(ctx context.Context) error {
+// pendingSession is a persisted session waiting to be re-added.
+type pendingSession struct {
+	hash        string
+	spec        *antorrent.TorrentSpec
+	paused      bool
+	seedStopped bool
+}
+
+// loadSessions reads the persisted sessions and, before any re-add, loads
+// their state and claims their names, so a grab landing mid-restore cannot
+// take one. A row whose source no longer parses is deleted.
+func (e *Engine) loadSessions(ctx context.Context) ([]pendingSession, error) {
 	sessions, err := e.store.ListTorrentSessions(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	out := make([]pendingSession, 0, len(sessions))
 	for _, s := range sessions {
 		spec, _, _, err := specFromSource(download.TorrentSource{
 			Magnet: s.SourceMagnet,
@@ -553,10 +583,7 @@ func (e *Engine) restore(ctx context.Context) error {
 			}
 			continue
 		}
-		// Same guard as the add path, and it matters more here: the panic an
-		// unusable announce URL triggers would land on the boot goroutine,
-		// and a magnet stored before that guard existed is replayed on every
-		// start.
+		// Same guard as the add path: an unusable announce URL panics.
 		if trackers, dropped := dropUnusableTrackers(spec.Trackers); dropped > 0 {
 			spec.Trackers = trackers
 			slog.WarnContext(ctx, "ignoring unusable announce URLs",
@@ -564,12 +591,10 @@ func (e *Engine) restore(ctx context.Context) error {
 				"remaining", len(trackers))
 		}
 		e.paths.trust(spec.InfoHash)
-		t, _, err := e.client.AddTorrentSpec(spec)
-		if err != nil {
-			slog.WarnContext(ctx, "failed to re-add torrent",
-				"info_hash", s.InfoHash, "error", err)
-			continue
+		if len(spec.InfoBytes) > 0 {
+			e.paths.claim(spec.DisplayName, spec.InfoHash)
 		}
+		hash := spec.InfoHash.HexString()
 		st := &torrentState{
 			paused:            s.Paused,
 			seedStopped:       s.SeedStopped,
@@ -583,19 +608,253 @@ func (e *Engine) restore(ctx context.Context) error {
 			st.completedAt = *s.CompletedAt
 		}
 		e.mu.Lock()
-		e.state[s.InfoHash] = st
+		e.state[hash] = st
+		e.restoring[hash] = struct{}{}
+		e.restoreTotal++
 		e.mu.Unlock()
-		if s.Paused {
-			t.DisallowDataDownload()
-			t.DisallowDataUpload()
-		}
-		// Arm the metadata watcher even for paused sessions: a magnet re-adds
-		// with Info()==nil, and the default file prioritization must fire once
-		// metadata resolves so a subsequent resume isn't stuck with no wanted
-		// pieces. Data stays gated by the Disallow calls above until resumed.
-		e.startWhenReady(t, s.SeedStopped)
+		out = append(out, pendingSession{
+			hash:        hash,
+			spec:        spec,
+			paused:      s.Paused,
+			seedStopped: s.SeedStopped,
+		})
 	}
-	return nil
+	return out, nil
+}
+
+// loadAndRestore reads the session rows and re-adds them. The rows hold every
+// .torrent, so reading them takes minutes on a cold page cache over slow
+// storage. A failed read is fatal: the process exits and restarts.
+func (e *Engine) loadAndRestore(ctx context.Context) {
+	loadCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		defer observability.RecoverPanic(ctx, "torrent load cancel", nil)
+		select {
+		case <-e.stop:
+			cancel()
+		case <-loadCtx.Done():
+		}
+	}()
+	start := time.Now()
+	sessions, err := e.loadSessions(loadCtx)
+	if err != nil {
+		select {
+		case <-e.stop:
+		default:
+			e.reportFatal(fmt.Errorf("load torrent sessions: %w", err))
+		}
+		return
+	}
+	e.mu.Lock()
+	e.loading = false
+	e.mu.Unlock()
+	slog.InfoContext(ctx, "torrent sessions loaded",
+		"sessions", len(sessions), "duration_ms", time.Since(start).Milliseconds())
+	if e.restoreSessions(ctx, sessions) {
+		return
+	}
+	close(e.ready)
+	e.wg.Go(e.enforceSeedLimits)
+}
+
+// restoreProgressEvery paces the warning a long boot restore logs.
+const restoreProgressEvery = 2 * time.Minute
+
+// logRestoreProgress warns while the boot restore runs long, so a stalled one
+// shows in the log.
+func (e *Engine) logRestoreProgress(ctx context.Context) {
+	tick := time.NewTicker(restoreProgressEvery)
+	defer tick.Stop()
+	for {
+		select {
+		case <-e.ready:
+			return
+		case <-e.stop:
+			return
+		case <-tick.C:
+			e.mu.Lock()
+			loading := e.loading
+			e.mu.Unlock()
+			if loading {
+				slog.WarnContext(ctx, "torrent sessions still loading")
+				continue
+			}
+			pending, total := e.restoreProgress()
+			slog.WarnContext(ctx, "torrent restore still running",
+				"pending", pending, "total", total)
+		}
+	}
+}
+
+// reportFatal hands a restore failure to the process, which shuts down.
+func (e *Engine) reportFatal(err error) {
+	select {
+	case e.fatal <- err:
+	default:
+	}
+}
+
+// awaitTorrent skips the wait for a torrent the engine already holds.
+func (e *Engine) awaitTorrent(ctx context.Context, hash string) error {
+	if h, err := parseHash(hash); err == nil {
+		if _, ok := e.client.Torrent(h); ok {
+			return nil
+		}
+	}
+	return e.awaitRestore(ctx)
+}
+
+// awaitRestore holds a caller until the boot restore is done, so it sees the
+// engine as it was before the restart.
+func (e *Engine) awaitRestore(ctx context.Context) error {
+	select {
+	case <-e.ready:
+		return nil
+	default:
+	}
+	select {
+	case <-e.ready:
+		return nil
+	case <-e.stop:
+		return fmt.Errorf("%w: engine stopped", download.ErrClientNotReady)
+	case <-e.quit:
+		return fmt.Errorf("%w: shutting down", download.ErrClientNotReady)
+	case <-ctx.Done():
+		return fmt.Errorf("%w: %w", download.ErrClientNotReady, ctx.Err())
+	}
+}
+
+// restoreSessions re-adds the sessions one at a time (anacrolix serializes
+// them on its client lock anyway) and stops at Close. A failed re-add keeps
+// its row for the next boot.
+// It reports whether a shutdown interrupted it.
+func (e *Engine) restoreSessions(
+	ctx context.Context,
+	sessions []pendingSession,
+) (interrupted bool) {
+	ctx, span := tracer.Start(ctx, "bittorrent.restore")
+	defer span.End()
+
+	began := time.Now()
+	var (
+		restored, failed int
+		slowest          time.Duration
+		slowestHash      string
+	)
+	defer func() {
+		took := time.Since(began)
+		span.SetAttributes(
+			attribute.Int("torrents.sessions", len(sessions)),
+			attribute.Int("torrents.restored", restored),
+			attribute.Int("torrents.failed", failed),
+			attribute.Bool("restore.interrupted", interrupted),
+		)
+		if failed > 0 || interrupted {
+			_ = otelx.RecordSpanError(span, fmt.Errorf(
+				"%d of %d re-adds failed, interrupted: %t",
+				failed, len(sessions), interrupted,
+			))
+		}
+		if len(sessions) == 0 {
+			return
+		}
+		if !interrupted {
+			restoreDuration.Record(ctx, took.Seconds())
+		}
+		slog.InfoContext(ctx, "torrent sessions restored",
+			"sessions", len(sessions),
+			"restored", restored,
+			"failed", failed,
+			"interrupted", interrupted,
+			"duration_ms", took.Milliseconds(),
+			"slowest_info_hash", slowestHash,
+			"slowest_ms", slowest.Milliseconds(),
+		)
+	}()
+	for _, s := range sessions {
+		select {
+		case <-e.stop:
+			interrupted = true
+			return
+		case <-e.quit:
+			interrupted = true
+			return
+		default:
+		}
+		start := time.Now()
+		ok := e.restoreOne(ctx, s)
+		took := time.Since(start)
+		e.mu.Lock()
+		delete(e.restoring, s.hash)
+		e.mu.Unlock()
+		if !ok {
+			// Its row stays for the next boot, and its trust with it.
+			e.mu.Lock()
+			delete(e.state, s.hash)
+			delete(e.sample, s.hash)
+			e.mu.Unlock()
+			e.paths.unclaim(s.spec.InfoHash)
+			failed++
+			continue
+		}
+		restored++
+		if took > slowest {
+			slowest, slowestHash = took, s.hash
+		}
+	}
+	return false
+}
+
+// restoreOne re-adds one session and applies its persisted flags, reporting
+// whether the client took it.
+func (e *Engine) restoreOne(ctx context.Context, s pendingSession) bool {
+	start := time.Now()
+	t, _, err := e.client.AddTorrentSpec(s.spec)
+	if err != nil {
+		slog.WarnContext(ctx, "failed to re-add torrent",
+			"info_hash", s.hash, "error", err)
+		return false
+	}
+	pieces := 0
+	if t.Info() != nil {
+		pieces = t.NumPieces()
+	}
+	slog.DebugContext(ctx, "torrent session re-added",
+		"info_hash", s.hash,
+		"pieces", pieces,
+		"duration_ms", time.Since(start).Milliseconds(),
+	)
+	if s.paused {
+		t.DisallowDataDownload()
+		t.DisallowDataUpload()
+	}
+	// Arm the metadata watcher even for paused sessions: a magnet re-adds
+	// with Info()==nil, and the default file prioritization must fire once
+	// metadata resolves so a subsequent resume isn't stuck with no wanted
+	// pieces. Data stays gated by the Disallow calls above until resumed.
+	e.startWhenReady(t, s.seedStopped)
+	return true
+}
+
+var _ download.RestoringClient = (*Engine)(nil)
+
+// Ready closes when the boot restore has finished.
+func (e *Engine) Ready() <-chan struct{} { return e.ready }
+
+// Fatal yields the error that stopped the boot restore.
+func (e *Engine) Fatal() <-chan error { return e.fatal }
+
+// restoreProgress reports how many persisted sessions are still waiting to be
+// re-added, out of how many boot found. Before the rows are read it reports one
+// pending of none, so that callers gating on pending keep refusing.
+func (e *Engine) restoreProgress() (pending, total int) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.loading {
+		return 1, 0
+	}
+	return len(e.restoring), e.restoreTotal
 }
 
 // startWhenReady begins downloading once torrent metadata is known. Magnet

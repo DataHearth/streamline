@@ -96,6 +96,18 @@ func (p *contentPaths) trust(ih metainfo.Hash) {
 	p.trusted[ih] = true
 }
 
+// claim reserves name for ih before it is placed, unless already owned.
+func (p *contentPaths) claim(name string, ih metainfo.Hash) {
+	if !safeContentName(name) {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, taken := p.owners[name]; !taken {
+		p.owners[name] = ih
+	}
+}
+
 // admits reports whether a torrent may be placed, without claiming its name.
 func (p *contentPaths) admits(
 	base string,
@@ -230,6 +242,15 @@ func (p *contentPaths) filePath(opts storage.FilePathMakerOpts) string {
 
 // release frees every name ih holds, once the torrent is gone.
 func (p *contentPaths) release(ih metainfo.Hash) {
+	p.unclaim(ih)
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	delete(p.trusted, ih)
+}
+
+// unclaim drops the names ih holds and keeps its trust, so it can still be
+// placed on its own data.
+func (p *contentPaths) unclaim(ih metainfo.Hash) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for name, owner := range p.owners {
@@ -237,7 +258,6 @@ func (p *contentPaths) release(ih metainfo.Hash) {
 			delete(p.owners, name)
 		}
 	}
-	delete(p.trusted, ih)
 }
 
 func safeContentName(name string) bool {

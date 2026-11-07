@@ -25,6 +25,10 @@ const otelFlushTimeout = 5 * time.Second
 // versionString assembles the --version line. buildinfo holds the goreleaser
 // ldflag values; we fall back to placeholders so the CLI stays readable when
 // built via plain go run / go build.
+
+// shutdownWatchdog bounds a shutdown caused by a background failure.
+const shutdownWatchdog = 30 * time.Second
+
 func versionString() string {
 	v := buildinfo.Version
 	if v == "" {
@@ -276,7 +280,11 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	// 5. Start scheduler in background
 	go func() {
 		defer observability.RecoverPanic(ctx, "scheduler", stop)
-		app.Scheduler.Start(ctx)
+		select {
+		case <-app.EngineReady:
+			app.Scheduler.Start(ctx)
+		case <-ctx.Done():
+		}
 	}()
 
 	// 6. Start HTTP server
@@ -303,7 +311,18 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	}()
 
 	// 7. Wait for shutdown signal
-	<-ctx.Done()
+	var fatal error
+	select {
+	case <-ctx.Done():
+	case fatal = <-app.Fatal:
+		//nolint:sloglint // LogAttrs takes slog.Attr by API design
+		logger.LogAttrs(ctx, observability.LevelCritical,
+			"a background component failed, shutting down",
+			slog.Any("error", fatal))
+		stop()
+		// A panic that left a lock held could block the shutdown below.
+		time.AfterFunc(shutdownWatchdog, func() { os.Exit(1) })
+	}
 	logger.InfoContext(ctx, "shutting down")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -348,5 +367,5 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	logger.InfoContext(shutdownCtx, "shutdown complete")
-	return nil
+	return fatal
 }

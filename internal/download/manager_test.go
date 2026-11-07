@@ -1992,11 +1992,29 @@ type seedReapClient struct {
 	failHash string
 	removed  []string
 	deleted  []bool
+	listed   int
 }
 
 func (c *seedReapClient) ListTorrents(context.Context) ([]Torrent, error) {
+	c.listed++
 	return c.torrents, c.listErr
 }
+
+// notReadyRemover is a builtin client that cannot remove a torrent yet.
+type notReadyRemover struct {
+	*seedReapClient
+}
+
+func (notReadyRemover) RemoveTorrent(context.Context, string, bool) error {
+	return fmt.Errorf("%w: shutting down", ErrClientNotReady)
+}
+
+// startingEngine is a builtin client still restoring its sessions.
+type startingEngine struct {
+	*seedReapClient
+}
+
+func (startingEngine) Ready() <-chan struct{} { return make(chan struct{}) }
 
 func (c *seedReapClient) RemoveTorrent(
 	_ context.Context,
@@ -2053,6 +2071,33 @@ var _ = Describe(
 			Status: StatusCompleted, SeedingStopped: true,
 		}
 
+		It("keeps the record when the engine cannot remove its torrent yet", func() {
+			reaper("builtin")
+			mgr := New(store, notReadyRemover{client})
+			store.EXPECT().
+				FindActiveDownloadRecordByID(mock.Anything, uint32(3)).
+				Return(&ent.DownloadRecord{
+					ID: 3, Status: downloadrecord.StatusDownloading,
+					DownloadClientName: "embedded", TorrentHash: "h1",
+				}, nil).Once()
+
+			// No DeleteDownloadRecord expected: the mock fails the spec on it.
+			Expect(mgr.CancelQueueItem(ctx, 3)).
+				To(MatchError(ErrClientNotReady))
+		})
+
+		It("lists nothing from a builtin engine still starting", func() {
+			reaper("builtin", seedStopped)
+			mgr := New(store, startingEngine{client}).(interface {
+				SeedingTorrents(context.Context) SeedingSet
+			})
+
+			set := mgr.SeedingTorrents(ctx)
+
+			Expect(set.Complete).To(BeFalse())
+			Expect(client.listed).To(BeZero())
+		})
+
 		It("removes an imported torrent with its files", func() {
 			mgr := reaper("builtin", seedStopped)
 			store.EXPECT().
@@ -2095,6 +2140,14 @@ var _ = Describe(
 			})
 			// No EXPECT: a torrent still inside its limits must not even be
 			// looked up. The mock fails the spec on any call.
+
+			Expect(mgr.RemoveSeedCompleteTorrents(ctx)).To(Succeed())
+			Expect(client.removed).To(BeEmpty())
+		})
+
+		It("skips the tick while the engine is still restoring", func() {
+			mgr := reaper("builtin", seedStopped)
+			client.listErr = fmt.Errorf("%w: 3 of 9", ErrClientNotReady)
 
 			Expect(mgr.RemoveSeedCompleteTorrents(ctx)).To(Succeed())
 			Expect(client.removed).To(BeEmpty())

@@ -223,6 +223,8 @@
 	}));
 
 	let torrentItems = $derived<Torrent[]>(torrents.data?.items ?? []);
+	// Nothing is back yet: the empty state would claim the engine holds nothing.
+	let restoringEmpty = $derived(!!torrents.data?.restoring && torrentItems.length === 0);
 	let torrentsNotConfigured = $derived(engineDisabled(torrents.error));
 	let filteredRows = $derived.by<Torrent[]>(() => {
 		let out = torrentItems;
@@ -368,6 +370,17 @@
 						: i18n.torrent_engine_count_other)({ count: torrentItems.length })}
 				{/if}
 			</p>
+			{#if torrents.data?.restoring}
+				<p class="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-fg-subtle" role="status">
+					<LoaderCircle size={13} class="motion-safe:animate-spin" aria-hidden="true" />
+					{torrents.data.restoring.total === 0
+						? i18n.torrent_engine_loading()
+						: i18n.torrent_engine_restoring({
+								done: torrents.data.restoring.total - torrents.data.restoring.pending,
+								total: torrents.data.restoring.total,
+							})}
+				</p>
+			{/if}
 		</div>
 		{#if !torrentsNotConfigured}
 			<div class="flex items-center gap-2">
@@ -532,7 +545,7 @@
 
 		<TorrentTable
 			rows={torrentRows}
-			loading={torrents.isPending}
+			loading={torrents.isPending || restoringEmpty}
 			error={torrents.error ?? null}
 			canControl={auth.isAdmin}
 			{selectedHash}
@@ -553,7 +566,7 @@
 
 		<TorrentTouchList
 			rows={torrentRows}
-			loading={torrents.isPending}
+			loading={torrents.isPending || restoringEmpty}
 			error={torrents.error ?? null}
 			canControl={auth.isAdmin}
 			selected={auth.isAdmin ? selection.keys : undefined}

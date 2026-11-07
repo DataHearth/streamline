@@ -13,6 +13,65 @@ import (
 
 var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 	Describe("Register and Start", func() {
+		It("starts its jobs again on a second Start", func() {
+			s := New()
+			var count atomic.Int32
+			s.Register("again", time.Hour, func(context.Context) error {
+				count.Add(1)
+				return nil
+			})
+			first, cancel := context.WithCancel(context.Background())
+			go func() {
+				time.Sleep(50 * time.Millisecond)
+				cancel()
+			}()
+			s.Start(first)
+			Eventually(func() bool {
+				job, _ := s.job("again")
+				job.mu.Lock()
+				defer job.mu.Unlock()
+				return job.stopCh == nil
+			}).Should(BeTrue())
+			ran := count.Load()
+
+			second, cancel2 := context.WithTimeout(
+				context.Background(),
+				100*time.Millisecond,
+			)
+			defer cancel2()
+			s.Start(second)
+
+			Expect(count.Load()).To(BeNumerically(">", ran))
+		})
+
+		It("does not start a job a Resume already started during Start", func() {
+			s := New()
+			s.Register(
+				"resumed",
+				time.Hour,
+				func(context.Context) error { return nil },
+			)
+			Expect(s.Pause("resumed")).To(Succeed())
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			// Start has set the root context and not reached the job yet.
+			s.mu.Lock()
+			s.rootCtx = ctx
+			s.mu.Unlock()
+			Expect(s.Resume("resumed")).To(Succeed())
+			job, err := s.job("resumed")
+			Expect(err).NotTo(HaveOccurred())
+			job.mu.Lock()
+			running := job.stopCh
+			job.mu.Unlock()
+
+			s.startJob(ctx, job, 0)
+
+			job.mu.Lock()
+			defer job.mu.Unlock()
+			Expect(job.stopCh).To(Equal(running))
+		})
+
 		It("should run registered jobs at their interval", func() {
 			s := New()
 

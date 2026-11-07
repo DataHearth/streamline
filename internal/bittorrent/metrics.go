@@ -18,6 +18,14 @@ var (
 			"Torrents whose upload was stopped by a seed ratio or time limit",
 		),
 	))
+
+	restoreDuration = otelx.Must(meter.Float64Histogram(
+		"streamline.bittorrent.restore.duration",
+		metric.WithDescription(
+			"How long the boot re-add of every persisted torrent session took",
+		),
+		metric.WithUnit("s"),
+	))
 )
 
 // registerEngineGauges publishes the live view of the swarm the engine already

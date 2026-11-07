@@ -58,7 +58,10 @@ var (
 	ErrBadResponse       = errors.New("download client returned malformed response")
 	ErrTorrentNotFound   = errors.New("torrent not found in download client")
 	ErrTorrentRefused    = errors.New("download client refused the torrent")
-	ErrUntrustedSource   = errors.New(
+	// ErrClientNotReady: the torrent is not re-added yet since a restart.
+	// Never treat it as not found; retry next tick.
+	ErrClientNotReady  = errors.New("download client is not ready yet")
+	ErrUntrustedSource = errors.New(
 		"download URL does not belong to a configured indexer",
 	)
 	// ErrTorrentAlreadyExists is returned by AddTorrent when the download
@@ -536,6 +539,9 @@ func (d *download) refreshQueue(ctx context.Context) ([]QueueEntry, error) {
 					"client", dc.Name, "error", err)
 				return
 			}
+			if startingUp(client) {
+				return
+			}
 			t, err := client.GetTorrent(ctx, rec.TorrentHash)
 			if err != nil {
 				if errors.Is(err, ErrTorrentNotFound) {
@@ -558,6 +564,26 @@ func (d *download) refreshQueue(ctx context.Context) ([]QueueEntry, error) {
 	wg.Wait()
 	sortQueue(entries)
 	return entries, nil
+}
+
+// RestoringClient is a client that restores its sessions after a restart and
+// holds calls until it is done: the builtin engine.
+type RestoringClient interface {
+	Ready() <-chan struct{}
+}
+
+// startingUp reports whether a client is still restoring its sessions.
+func startingUp(client Client) bool {
+	r, ok := client.(RestoringClient)
+	if !ok {
+		return false
+	}
+	select {
+	case <-r.Ready():
+		return false
+	default:
+		return true
+	}
 }
 
 // sortQueue orders the queue by how close an entry is to the library: an
@@ -677,8 +703,12 @@ func (d *download) CancelQueueItem(ctx context.Context, recordID uint32) error {
 	); ok &&
 		rec.TorrentHash != "" {
 		if client, berr := d.buildClient(dc); berr == nil {
-			if rerr := client.RemoveTorrent(
-				ctx, rec.TorrentHash, true); rerr != nil {
+			rerr := client.RemoveTorrent(ctx, rec.TorrentHash, true)
+			if errors.Is(rerr, ErrClientNotReady) {
+				// The torrent would outlive its record.
+				return rerr
+			}
+			if rerr != nil {
 				slog.WarnContext(ctx, "cancel: remove torrent failed",
 					"hash", rec.TorrentHash, "error", rerr)
 			}
@@ -1954,6 +1984,11 @@ func (d *download) RemoveSeedCompleteTorrents(ctx context.Context) error {
 		)
 	}
 	torrents, err := client.ListTorrents(ctx)
+	if errors.Is(err, ErrClientNotReady) {
+		slog.DebugContext(ctx, "seed reaper: builtin engine not ready",
+			"error", err)
+		return nil
+	}
 	if err != nil {
 		return otelx.RecordSpanError(
 			span, fmt.Errorf("list builtin torrents: %w", err),

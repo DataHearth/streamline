@@ -50,6 +50,7 @@ func Current(ctx context.Context) (Window, error) {
 // it, so counting a timeout would retire an item after a few flaky ticks.
 func TransportFailure(err error) bool {
 	return errors.Is(err, download.ErrUnreachable) ||
+		errors.Is(err, download.ErrClientNotReady) ||
 		errors.Is(err, download.ErrNoSpace) ||
 		errors.Is(err, indexer.ErrUnreachable)
 }

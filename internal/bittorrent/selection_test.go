@@ -62,6 +62,7 @@ var _ = Describe("Engine file selection", Label("unit", "bittorrent"), func() {
 		hash = t.InfoHash().HexString()
 		store = dbmocks.NewMockStore(GinkgoT())
 		eng = &Engine{
+			ready:  readyNow(),
 			client: client,
 			store:  store,
 			state:  map[string]*torrentState{},
@@ -198,6 +199,7 @@ var _ = Describe("Engine file selection", Label("unit", "bittorrent"), func() {
 			pHash := pt.InfoHash().HexString()
 			pStore := dbmocks.NewMockStore(GinkgoT())
 			pEng := &Engine{
+				ready:  readyNow(),
 				client: pClient,
 				store:  pStore,
 				state:  map[string]*torrentState{},
@@ -248,6 +250,7 @@ var _ = Describe("Engine.AddTorrent selection", Label("unit", "bittorrent"), fun
 				"aabbccddeeff00112233445566778899aabbccdd&dn=test"
 			client := newTestClient(GinkgoT().TempDir())
 			eng := &Engine{
+				ready:  readyNow(),
 				client: client,
 				store:  store,
 				state:  map[string]*torrentState{},
@@ -309,6 +312,7 @@ var _ = Describe("Engine.AddTorrent selection", Label("unit", "bittorrent"), fun
 
 			client := newTestClient(dir)
 			eng := &Engine{
+				ready:  readyNow(),
 				client: client,
 				store:  store,
 				state:  map[string]*torrentState{},
@@ -349,6 +353,7 @@ var _ = Describe("Engine.AddTorrent selection", Label("unit", "bittorrent"), fun
 				"aabbccddeeff00112233445566778899aabbccdd&dn=test"
 			client := newTestClient(GinkgoT().TempDir())
 			eng := &Engine{
+				ready:  readyNow(),
 				client: client,
 				store:  store,
 				state:  map[string]*torrentState{},

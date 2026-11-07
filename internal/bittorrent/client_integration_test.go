@@ -214,6 +214,8 @@ func newEngineBoundTo(
 	})
 	e, err := New(ctx, store)
 	Expect(err).NotTo(HaveOccurred())
+	// New re-adds sessions in the background; wait for it.
+	Eventually(e.Ready()).WithTimeout(30 * time.Second).Should(BeClosed())
 	closed := false
 	stop := func() {
 		GinkgoHelper()
@@ -809,10 +811,14 @@ func newUnboundEngineNoPortForwarding(
 		packetConn:  packetConn,
 		state:       map[string]*torrentState{},
 		sample:      map[string]speedSample{},
+		restoring:   map[string]struct{}{},
+		loading:     true,
+		ready:       make(chan struct{}),
+		fatal:       make(chan error, 1),
 		stop:        make(chan struct{}),
 	}
-	Expect(e.restore(ctx)).To(Succeed())
-	e.wg.Go(e.enforceSeedLimits)
+	e.loadAndRestore(ctx)
+	Expect(e.Ready()).To(BeClosed())
 
 	closed := false
 	stop := func() {

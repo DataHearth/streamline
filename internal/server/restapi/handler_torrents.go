@@ -29,11 +29,17 @@ func (s *Server) ListTorrents(
 	for _, v := range views {
 		items = append(items, torrentInfoToAPI(v))
 	}
+	list := TorrentList{Items: items, RefreshedAt: time.Now()}
+	if rt := s.torrents.Runtime(); rt.RestoreLoading {
+		list.Restoring = &TorrentRestoreProgress{}
+	} else if rt.RestorePending > 0 {
+		list.Restoring = &TorrentRestoreProgress{
+			Pending: rt.RestorePending,
+			Total:   rt.RestoreTotal,
+		}
+	}
 	return ListTorrents200JSONResponse{
-		TorrentListJSONResponse: TorrentListJSONResponse(TorrentList{
-			Items:       items,
-			RefreshedAt: time.Now(),
-		}),
+		TorrentListJSONResponse: TorrentListJSONResponse(list),
 	}, nil
 }
 

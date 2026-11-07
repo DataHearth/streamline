@@ -34,6 +34,10 @@ func (s *Server) GetDownloadQueue(
 	}, nil
 }
 
+// errEngineStarting answers a removal the builtin engine cannot do until its
+// restore is done.
+const errEngineStarting = "the torrent engine is still starting; try again shortly"
+
 func (s *Server) CancelQueueItem(
 	ctx context.Context,
 	request CancelQueueItemRequestObject,
@@ -54,6 +58,11 @@ func (s *Server) CancelQueueItem(
 				ConflictJSONResponse: errConflict(
 					"download is held; resolve it via POST /downloads/{id}/resolve",
 				),
+			}, nil
+		}
+		if errors.Is(err, download.ErrClientNotReady) {
+			return CancelQueueItem409JSONResponse{
+				ConflictJSONResponse: errConflict(errEngineStarting),
 			}, nil
 		}
 		return nil, err
@@ -303,9 +312,15 @@ func (s *Server) ResolveHeldDownload(
 	}
 
 	if rec.TorrentHash != "" {
-		if err := s.downloads.RemoveTorrent(
+		err := s.downloads.RemoveTorrent(
 			ctx, rec.DownloadClientName, rec.TorrentHash, true,
-		); err != nil {
+		)
+		if errors.Is(err, download.ErrClientNotReady) {
+			return ResolveHeldDownload409JSONResponse{
+				ConflictJSONResponse: errConflict(errEngineStarting),
+			}, nil
+		}
+		if err != nil {
 			slog.WarnContext(ctx, "resolve held: remove torrent failed",
 				"hash", rec.TorrentHash, "error", err)
 		}

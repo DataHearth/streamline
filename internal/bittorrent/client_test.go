@@ -97,7 +97,11 @@ var _ = Describe("Engine.status", Label("unit", "bittorrent"), func() {
 		"reports seeding, not downloading, when a skipped file is the only gap",
 		func() {
 			t := newPartialTorrent()
-			e := &Engine{state: map[string]*torrentState{}, paths: newContentPaths()}
+			e := &Engine{
+				ready: readyNow(),
+				state: map[string]*torrentState{},
+				paths: newContentPaths(),
+			}
 			e.prioritize(t, "all", nil)
 			t.Files()[0].SetPriority(types.PiecePriorityNone)
 			Expect(t.BytesMissing()).NotTo(BeZero(),
@@ -116,7 +120,11 @@ var _ = Describe("Engine.status", Label("unit", "bittorrent"), func() {
 	// ratio and progress both come back 0 for the same reason.
 	It("reports fetching until file priorities have been applied", func() {
 		t := newTestTorrent()
-		e := &Engine{state: map[string]*torrentState{}, paths: newContentPaths()}
+		e := &Engine{
+			ready: readyNow(),
+			state: map[string]*torrentState{},
+			paths: newContentPaths(),
+		}
 		hash := t.InfoHash().HexString()
 
 		Expect(wantedBytes(t)).To(BeZero(),
@@ -143,7 +151,7 @@ var _ = Describe("Engine.SetListenPort", Label("unit", "bittorrent"), func() {
 			Expect(pc.Close()).To(Succeed())
 			Expect(ln.Close()).To(Succeed())
 		})
-		return &Engine{packetConn: pc, listener: ln}
+		return &Engine{ready: readyNow(), packetConn: pc, listener: ln}
 	}
 
 	It("moves both sockets to the new port", func() {
