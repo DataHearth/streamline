@@ -4,10 +4,10 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { Gauge, LoaderCircle, Plus } from "@lucide/svelte";
+	import { Gauge, Plus } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
-	import { toast } from "@lib/toast";
+	import { createOutcome } from "@lib/outcome.svelte";
 	import type {
 		AddMovieRequest,
 		LookupDetail,
@@ -18,6 +18,7 @@
 	import Modal from "@components/modals/Modal.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
+	import OutcomeButton from "@components/shared/OutcomeButton.svelte";
 	import { serverDefaultLabel } from "@lib/quality-profiles";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -30,8 +31,16 @@
 
 	let qualityProfileName = $state<string>("");
 
+	// The add's result, shown on the add button itself; on success the modal
+	// closes once it has shown.
+	const outcome = createOutcome<number>(1000);
+	let closeTimer: ReturnType<typeof setTimeout> | undefined;
 	$effect(() => {
-		if (!open) qualityProfileName = "";
+		if (!open) {
+			qualityProfileName = "";
+			outcome.clear();
+			clearTimeout(closeTimer);
+		}
 	});
 
 	const qpQuery = createQuery<QualityProfile[]>(() => ({
@@ -80,6 +89,7 @@
 
 	const qc = useQueryClient();
 	const addMutation = createMutation<Movie | null, Error, TMDBMovieResult>(() => ({
+		onMutate: () => outcome.clear(),
 		mutationFn: async (m) => {
 			if (!auth.canAddDirectly) {
 				await api("/requests", {
@@ -100,17 +110,20 @@
 			return api<Movie>("/movies", { method: "POST", body });
 		},
 		onSuccess: (movie, m) => {
+			outcome.done(m.tmdb_id);
 			if (movie) {
 				qc.invalidateQueries({ queryKey: ["movies"] });
 				qc.invalidateQueries({ queryKey: ["movies", "counts"] });
-				toast.ok(i18n.toast_added({ title: m.title }));
 			} else {
 				qc.invalidateQueries({ queryKey: ["requests"] });
-				toast.ok(i18n.toast_requested({ title: m.title }));
 			}
-			onClose();
+			closeTimer = setTimeout(onClose, 1000);
 		},
-		onError: (e) => toast.err(errorText(e, i18n.common_add_failed())),
+		onError: (e, m) =>
+			outcome.failed(
+				m.tmdb_id,
+				errorText(e, auth.canAddDirectly ? i18n.common_add_failed() : i18n.common_request_failed()),
+			),
 	}));
 </script>
 
@@ -153,19 +166,17 @@
 		>
 			{i18n.common_cancel()}
 		</button>
-		<button
-			type="button"
-			disabled={!rec || addMutation.isPending}
-			onclick={() => rec && addMutation.mutate(rec)}
-			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-		>
-			{#if addMutation.isPending}
-				<LoaderCircle size={14} class="animate-spin" aria-hidden="true" />
-				{auth.canAddDirectly ? i18n.action_adding() : i18n.action_requesting()}
-			{:else}
-				<Plus size={14} aria-hidden="true" />
-				{auth.canAddDirectly ? i18n.action_add_to_library() : i18n.action_request()}
-			{/if}
-		</button>
+		{#if rec}
+			<OutcomeButton
+				phase={outcome.phase(rec.tmdb_id, addMutation.isPending)}
+				error={outcome.error(rec.tmdb_id)}
+				icon={Plus}
+				label={auth.canAddDirectly ? i18n.action_add_to_library() : i18n.action_request()}
+				pendingLabel={auth.canAddDirectly ? i18n.action_adding() : i18n.action_requesting()}
+				doneLabel={auth.canAddDirectly ? i18n.common_added() : i18n.status_requested()}
+				failedLabel={auth.canAddDirectly ? i18n.common_add_failed() : i18n.common_request_failed()}
+				onclick={() => rec && addMutation.mutate(rec)}
+			/>
+		{/if}
 	{/snippet}
 </Modal>
