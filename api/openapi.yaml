@@ -5628,8 +5628,9 @@ paths:
         book slot left "downloading" to "wanted" (or "available" when it
         still holds its files). 409 when the download is held by import
         verification — resolve it via POST /downloads/{id}/resolve instead.
-        409 also answers when the torrent engine cannot remove the torrent yet
-        (restoring after a restart, or shutting down); the record is kept.
+        409 also answers when the torrent engine is shutting down and cannot
+        remove the torrent; the record is kept. While the engine restores its
+        sessions after a restart, the request waits for it.
       tags: [activity]
       responses:
         "204":
@@ -5707,8 +5708,9 @@ paths:
         until the record is retried or removed from the history. Manual search
         and grab are unaffected. 400 when the action is missing or
         unrecognised, 409 when the record exists but is not held.
-        409 also answers when a reject cannot remove the torrent yet because
-        the torrent engine is restoring or shutting down; the record is kept.
+        409 also answers when a reject cannot remove the torrent because the
+        torrent engine is shutting down; the record is kept. While the engine
+        restores its sessions after a restart, the request waits for it.
       tags: [activity]
       requestBody:
         required: true

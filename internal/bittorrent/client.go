@@ -273,9 +273,6 @@ func (e *Engine) RemoveTorrent(
 	hash string,
 	deleteFiles bool,
 ) error {
-	// A removal outlives its caller, so the torrent does not outlive a record
-	// the caller has already let go of.
-	ctx = context.WithoutCancel(ctx)
 	if err := e.awaitTorrent(ctx, hash); err != nil {
 		return err
 	}

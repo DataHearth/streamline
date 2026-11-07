@@ -23,7 +23,7 @@ import (
 const otelFlushTimeout = 5 * time.Second
 
 // shutdownWatchdog bounds a shutdown caused by a background failure.
-const shutdownWatchdog = 30 * time.Second
+const shutdownWatchdog = 3 * time.Minute
 
 // versionString assembles the --version line. buildinfo holds the goreleaser
 // ldflag values; we fall back to placeholders so the CLI stays readable when

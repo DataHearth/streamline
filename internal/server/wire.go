@@ -347,26 +347,24 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			"ffmpeg.path", cfg.FFmpeg.Path,
 		)
 	} else {
-		afterEngineReady(
-			ctx,
-			"transcoder",
-			engineReady,
-			reportFatal,
-			transcoder.Start,
+		afterEngineReady(ctx, "transcoder", engineReady, reportFatal,
+			func(ctx context.Context) {
+				if cfg.Transcoding.Enabled {
+					version, err := prober.Version(ctx)
+					if err != nil {
+						slog.WarnContext(ctx, "could not read the ffmpeg version",
+							"error", err,
+						)
+					} else {
+						slog.InfoContext(ctx, "transcoding worker started",
+							"ffmpeg.version", version,
+							"max_concurrent", cfg.Transcoding.MaxConcurrent,
+						)
+					}
+				}
+				transcoder.Start(ctx)
+			},
 		)
-		if cfg.Transcoding.Enabled {
-			version, err := prober.Version(ctx)
-			if err != nil {
-				slog.WarnContext(ctx, "could not read the ffmpeg version",
-					"error", err,
-				)
-			} else {
-				slog.InfoContext(ctx, "transcoding worker started",
-					"ffmpeg.version", version,
-					"max_concurrent", cfg.Transcoding.MaxConcurrent,
-				)
-			}
-		}
 	}
 
 	boot.mark(ctx, "workers")
@@ -619,6 +617,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 
 	// 11. HTTP server
 	srv := New(Config{
+		EngineReady:     engineReady,
 		DB:              store,
 		Ent:             dbClient,
 		Movies:          movieSvc,

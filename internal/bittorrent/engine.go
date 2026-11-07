@@ -632,6 +632,8 @@ func (e *Engine) loadAndRestore(ctx context.Context) {
 		select {
 		case <-e.stop:
 			cancel()
+		case <-e.quit:
+			cancel()
 		case <-loadCtx.Done():
 		}
 	}()
@@ -640,6 +642,7 @@ func (e *Engine) loadAndRestore(ctx context.Context) {
 	if err != nil {
 		select {
 		case <-e.stop:
+		case <-e.quit:
 		default:
 			e.reportFatal(fmt.Errorf("load torrent sessions: %w", err))
 		}
@@ -685,6 +688,8 @@ func (e *Engine) watchRestore(ctx context.Context) {
 		case <-e.ready:
 			return
 		case <-e.stop:
+			return
+		case <-e.quit:
 			return
 		case <-tick.C:
 		}

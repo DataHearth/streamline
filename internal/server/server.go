@@ -106,6 +106,31 @@ type Config struct {
 	AudioTranscoder subsonic.Transcoder
 	AuthMiddleware  func(http.Handler) http.Handler
 	HTTPLog         func(http.Handler) http.Handler
+	// EngineReady closes when the torrent engine has restored its sessions.
+	EngineReady <-chan struct{}
+}
+
+// finishChangesDuringRestore lets a request that changes state run to the end
+// while the torrent engine restores, even if its client leaves. Such a request
+// can wait minutes for the engine, and stopping it halfway would leave the
+// change half made.
+func finishChangesDuringRestore(
+	ready <-chan struct{},
+) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet, http.MethodHead, http.MethodOptions:
+			default:
+				select {
+				case <-ready:
+				default:
+					r = r.WithContext(context.WithoutCancel(r.Context()))
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 // New assembles the composition root.
@@ -174,6 +199,9 @@ func New(cfg Config) *Server {
 		s.router.Use(cfg.HTTPLog)
 	}
 	s.router.Use(middleware.Recoverer)
+	if cfg.EngineReady != nil {
+		s.router.Use(finishChangesDuringRestore(cfg.EngineReady))
+	}
 	s.router.Use(middleware.RouteTagger)
 	if cfg.AuthMiddleware != nil {
 		s.router.Use(cfg.AuthMiddleware)
