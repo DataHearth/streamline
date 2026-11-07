@@ -48,25 +48,37 @@ export function episodeStatus(
 	return e.status;
 }
 
-// The season line's tallies. season.missing is every aired, followed episode
-// without a file, so a season whose grab is in flight read "22 wanted" in the
-// wanted colour while each of its rows said downloading. With the episodes
-// loaded the in-flight ones (downloading, importing) are split out; the
-// rollup-only fallback cannot tell them apart and keeps the old count.
-export function seasonTallies(
-	s: Season,
-	showMonitored = true,
-): { wanted: number; downloading: number } {
+export type SeasonTally = { wanted: number; downloading: number; importing: number };
+
+// The tallies a season line names, in the library list's terms: in flight is
+// named for what it is, downloading or importing, beside what is still wanted.
+// season.missing is every aired, followed episode without a file, in-flight
+// grabs included, so a season whose pack was downloading read "22 wanted" in
+// the wanted colour above 22 rows saying downloading. With the episodes loaded
+// the in-flight ones are split out of wanted; the rollup-only fallback cannot
+// tell them apart and keeps the API's count.
+export function seasonTallies(s: Season, showMonitored = true): SeasonTally {
 	const eps = s.episodes ?? [];
-	if (eps.length === 0) return { wanted: s.missing ?? 0, downloading: 0 };
-	let wanted = 0;
-	let downloading = 0;
+	if (eps.length === 0) return { wanted: s.missing ?? 0, downloading: 0, importing: 0 };
+	const t: SeasonTally = { wanted: 0, downloading: 0, importing: 0 };
 	for (const e of eps) {
 		const st = episodeStatus(e, showMonitored);
-		if (st === "wanted") wanted++;
-		else if (st === "downloading" || st === "importing") downloading++;
+		if (st === "wanted") t.wanted++;
+		else if (st === "downloading") t.downloading++;
+		else if (st === "importing") t.importing++;
 	}
-	return { wanted, downloading };
+	return t;
+}
+
+export function sumTallies(ts: SeasonTally[]): SeasonTally {
+	return ts.reduce(
+		(a, t) => ({
+			wanted: a.wanted + t.wanted,
+			downloading: a.downloading + t.downloading,
+			importing: a.importing + t.importing,
+		}),
+		{ wanted: 0, downloading: 0, importing: 0 },
+	);
 }
 
 export function missingEpisodes(episodes: Episode[], showMonitored = true) {

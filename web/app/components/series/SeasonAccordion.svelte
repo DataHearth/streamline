@@ -1,6 +1,6 @@
 <script lang="ts">
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
-	import { countDownloading, countMissing, countWanted } from "@lib/nouns";
+	import { countMissing, countWanted } from "@lib/nouns";
 	import SeasonProgress from "./SeasonProgress.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { ChevronRight, Info, Search, Trash2 } from "@lucide/svelte";
@@ -205,11 +205,14 @@
 							{#if seasonBytes(s) > 0}
 								· {formatBytes(seasonBytes(s), "")}
 							{/if}
-							{#if tally.downloading > 0}
-								· <span class="text-status-downloading">{countDownloading(tally.downloading)}</span>
-							{/if}
 							{#if tally.wanted > 0}
 								· <span class="text-status-wanted">{countWanted(tally.wanted)}</span>
+							{/if}
+							{#if tally.downloading > 0}
+								· <span class="lowercase text-status-downloading">{tally.downloading} {i18n.status_downloading()}</span>
+							{/if}
+							{#if tally.importing > 0}
+								· <span class="lowercase text-status-importing">{tally.importing} {i18n.status_importing()}</span>
 							{/if}
 							{#if missing > 0}
 								· <span class="text-status-missing">{countMissing(missing)}</span>

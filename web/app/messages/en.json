@@ -644,8 +644,6 @@
 	"conn_badge_ok": "connection ok",
 	"count_available_one": "{count} available",
 	"count_available_other": "{count} available",
-	"count_downloading_one": "{count} downloading",
-	"count_downloading_other": "{count} downloading",
 	"count_future_one": "{count} future",
 	"count_future_other": "{count} future",
 	"count_missing_one": "{count} missing",

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { countDownloading, countFuture, countMissing, countWanted } from "@lib/nouns";
+	import { countFuture, countMissing, countWanted } from "@lib/nouns";
 	import { cn } from "@lib/cn";
 	import { missingEpisodes, seasonTallies } from "@lib/status";
 	import SeasonProgress from "./SeasonProgress.svelte";
@@ -56,11 +56,14 @@
 			{/if}
 			<div class="font-mono text-[11px] text-fg-muted">
 				<span class="text-fg">{s.available ?? 0}</span>/{s.total ?? 0}
-				{#if tally.downloading > 0}
-					<span class="text-status-downloading">· {countDownloading(tally.downloading)}</span>
-				{/if}
 				{#if tally.wanted > 0}
 					<span class="text-status-wanted">· {countWanted(tally.wanted)}</span>
+				{/if}
+				{#if tally.downloading > 0}
+					<span class="lowercase text-status-downloading">· {tally.downloading} {i18n.status_downloading()}</span>
+				{/if}
+				{#if tally.importing > 0}
+					<span class="lowercase text-status-importing">· {tally.importing} {i18n.status_importing()}</span>
 				{/if}
 				{#if missing > 0}
 					<span class="text-status-missing">· {countMissing(missing)}</span>
