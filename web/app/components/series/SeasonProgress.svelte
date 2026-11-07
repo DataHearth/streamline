@@ -7,7 +7,14 @@
 	let {
 		season,
 		showMonitored = true,
-	}: { season: Season; showMonitored?: boolean } = $props();
+		// The bar's accessible name around its summary; the series hero draws
+		// the whole run through this component and names it as the series.
+		label = (summary: string) => i18n.series_season_progress({ summary }),
+	}: {
+		season: Season;
+		showMonitored?: boolean;
+		label?: (summary: string) => string;
+	} = $props();
 
 	type Seg = { key: string; count: number; token: string; label: string };
 
@@ -57,7 +64,7 @@
 <div
 	class="flex h-1 w-full overflow-hidden rounded-full bg-white/[0.06]"
 	role="img"
-	aria-label={i18n.series_season_progress({ summary })}
+	aria-label={label(summary)}
 >
 	{#each visible as s (s.key)}
 		<span
