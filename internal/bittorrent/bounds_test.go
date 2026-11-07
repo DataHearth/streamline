@@ -23,6 +23,19 @@ var _ = Describe("applyMemoryBounds", Label("unit", "bittorrent"), func() {
 			To(BeNumerically("<", before.TorrentPeersHighWater))
 		Expect(cc.MaxUnverifiedBytes).
 			To(BeNumerically("<", before.MaxUnverifiedBytes))
+		Expect(cc.MaxAllocPeerRequestDataPerConn).
+			To(BeNumerically("<", before.MaxAllocPeerRequestDataPerConn))
+	})
+
+	It("still buffers several standard-size peer requests per connection", func() {
+		// anacrolix refuses a peer request longer than this bound outright,
+		// and peers request 16 KiB blocks; a bound near the block size would
+		// refuse clients asking for larger ones and serialise every upload.
+		cc := antorrent.NewDefaultClientConfig()
+		applyMemoryBounds(cc)
+
+		Expect(cc.MaxAllocPeerRequestDataPerConn).
+			To(BeNumerically(">=", 8*(16<<10)))
 	})
 
 	It("keeps the known-peer high water above the low water", func() {
