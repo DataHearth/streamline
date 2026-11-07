@@ -23,6 +23,7 @@
 	import type { SystemInfo } from "@lib/types";
 	import { toast } from "@lib/toast";
 	import { isApple, modKey } from "@lib/platform";
+	import { openAdd } from "@lib/add-flow";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Routify's `activeRoute` only emits once a navigation has resolved, so
@@ -156,18 +157,6 @@
 	function openPalette() {
 		window.dispatchEvent(new CustomEvent("streamline:open-palette"));
 	}
-	function openAddMovie() {
-		window.dispatchEvent(new CustomEvent("streamline:open-add-movie"));
-	}
-	function openAddSeries() {
-		window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
-	}
-	function openAddArtist() {
-		window.dispatchEvent(new CustomEvent("streamline:open-add-artist"));
-	}
-	function openAddBook() {
-		window.dispatchEvent(new CustomEvent("streamline:open-add-book"));
-	}
 
 	// Add-to-library dropdown ------------------------------------------------
 	// md and up, beside the search field. Below that the plus is not in the bar
@@ -287,13 +276,8 @@
 			toast.info(i18n.common_not_implemented({ label: item.label }));
 			return;
 		}
-		if (item.id === "movie") openAddMovie();
-		else if (item.id === "series") openAddSeries();
-		else if (item.id === "artist") openAddArtist();
-		else if (item.id === "book") openAddBook();
-		else if (item.id === "import") {
-			window.location.href = "/imports";
-		}
+		if (item.id === "import") window.location.href = "/imports";
+		else openAdd(item.id);
 	}
 
 	function onAddKey(e: KeyboardEvent) {

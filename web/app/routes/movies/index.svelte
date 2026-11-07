@@ -19,6 +19,7 @@
 	import MovieList from "@components/movies/MovieList.svelte";
 	import MoviesEmpty from "@components/movies/MoviesEmpty.svelte";
 	import MovieBulkActions from "@components/movies/MovieBulkActions.svelte";
+	import { openAdd } from "@lib/add-flow";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import {
 		movieSelectionRow,
@@ -115,10 +116,6 @@
 		sort = s;
 		order = o;
 		savePref(SORT_PREF, `${s}-${o}`);
-	}
-
-	function openAddMovie() {
-		window.dispatchEvent(new CustomEvent("streamline:open-add-movie"));
 	}
 
 	$effect(() => {
@@ -423,7 +420,7 @@
 			onClearFilters={clearFilters}
 			onSelectModeChange={setSelectMode}
 			onSelectAll={selectAll}
-			onAddMovie={openAddMovie}
+			onAddMovie={() => openAdd("movie")}
 		/>
 
 		<div

@@ -37,6 +37,7 @@
 		type TVShowCounts,
 	} from "@lib/types";
 	import { toast } from "@lib/toast";
+	import { openAdd } from "@lib/add-flow";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type View = "grid" | "list";
@@ -142,10 +143,6 @@
 		sort = s;
 		order = o;
 		savePref(SORT_PREF, `${s}-${o}`);
-	}
-
-	function openAddSeries() {
-		window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
 	}
 
 	$effect(() => {
@@ -497,7 +494,7 @@
 			onClearFilters={clearFilters}
 			onSelectModeChange={setSelectMode}
 			onSelectAll={selectAll}
-			onAddSeries={openAddSeries}
+			onAddSeries={() => openAdd("series")}
 		/>
 
 		<div
