@@ -214,6 +214,11 @@ func newEngineBoundTo(
 	})
 	e, err := New(ctx, store)
 	Expect(err).NotTo(HaveOccurred())
+	// New re-adds sessions in the background; wait for it.
+	Eventually(func() int {
+		pending, _ := e.restoreProgress()
+		return pending
+	}).WithTimeout(30 * time.Second).Should(BeZero())
 	closed := false
 	stop := func() {
 		GinkgoHelper()

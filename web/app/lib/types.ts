@@ -1493,7 +1493,13 @@ export type TorrentDetails = Torrent & {
 	peers: TorrentPeer[];
 };
 
-export type TorrentList = { items: Torrent[]; refreshed_at: string };
+// restoring: set while the engine re-adds its torrents after a restart. total
+// is 0 until it has read its persisted sessions.
+export type TorrentList = {
+	items: Torrent[];
+	refreshed_at: string;
+	restoring?: { pending: number; total: number };
+};
 
 // POST /torrents — exactly one of magnet / torrent (base64 .torrent) is set.
 export type AddTorrentRequest = {

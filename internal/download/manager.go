@@ -58,7 +58,10 @@ var (
 	ErrBadResponse       = errors.New("download client returned malformed response")
 	ErrTorrentNotFound   = errors.New("torrent not found in download client")
 	ErrTorrentRefused    = errors.New("download client refused the torrent")
-	ErrUntrustedSource   = errors.New(
+	// ErrClientNotReady: the torrent is not re-added yet since a restart.
+	// Never treat it as not found; retry next tick.
+	ErrClientNotReady  = errors.New("download client is not ready yet")
+	ErrUntrustedSource = errors.New(
 		"download URL does not belong to a configured indexer",
 	)
 	// ErrTorrentAlreadyExists is returned by AddTorrent when the download
@@ -1835,6 +1838,13 @@ func (d *download) PurgeOldRecords(ctx context.Context) error {
 	defer span.End()
 
 	live := d.SeedingTorrents(ctx)
+	if live.notReadyOnly {
+		slog.DebugContext(
+			ctx,
+			"purge old records: a client is still starting, skipped",
+		)
+		return nil
+	}
 	if !live.Complete {
 		return otelx.RecordSpanError(span, errors.New(
 			"a download client could not be listed; old records kept",
@@ -1954,6 +1964,11 @@ func (d *download) RemoveSeedCompleteTorrents(ctx context.Context) error {
 		)
 	}
 	torrents, err := client.ListTorrents(ctx)
+	if errors.Is(err, ErrClientNotReady) {
+		slog.DebugContext(ctx, "seed reaper: builtin engine not ready",
+			"error", err)
+		return nil
+	}
 	if err != nil {
 		return otelx.RecordSpanError(
 			span, fmt.Errorf("list builtin torrents: %w", err),

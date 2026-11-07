@@ -69,11 +69,16 @@ spec:
             - secretRef:
                 name: {{ include "streamline.fullname" . }}-secrets
           {{- end }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
           livenessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 10
             periodSeconds: 20
           readinessProbe:
             httpGet:

@@ -2,6 +2,7 @@ package download
 
 import (
 	"context"
+	"errors"
 	"io/fs"
 	"log/slog"
 	"maps"
@@ -28,9 +29,12 @@ type SeedingSet struct {
 	// unknown, and a caller must assume the worst of anything a torrent could
 	// own.
 	Complete bool
-	roots    []string
-	hashes   map[string]struct{}
-	links    *linkIndex
+	// notReadyOnly is true when every client that could not be listed answered
+	// ErrClientNotReady: it has not lost anything, it is still starting.
+	notReadyOnly bool
+	roots        []string
+	hashes       map[string]struct{}
+	links        *linkIndex
 }
 
 // linkIndex is every file inside the listed torrents' content that has more
@@ -134,13 +138,24 @@ func (d *download) SeedingTorrents(ctx context.Context) SeedingSet {
 		client, err := d.buildClient(dc)
 		if err != nil {
 			set.Complete = false
+			set.notReadyOnly = false
 			slog.WarnContext(ctx, "seeding listing: build client failed",
 				"client", dc.Name, "error", err)
 			continue
 		}
 		torrents, err := client.ListTorrents(ctx)
+		if errors.Is(err, ErrClientNotReady) {
+			if set.Complete {
+				set.notReadyOnly = true
+			}
+			set.Complete = false
+			slog.DebugContext(ctx, "seeding listing: client not ready",
+				"client", dc.Name, "error", err)
+			continue
+		}
 		if err != nil {
 			set.Complete = false
+			set.notReadyOnly = false
 			slog.WarnContext(ctx, "seeding listing: list torrents failed",
 				"client", dc.Name, "error", err)
 			continue

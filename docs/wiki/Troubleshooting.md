@@ -18,6 +18,7 @@ Find what you're seeing in the table below, then jump straight to the fix. Order
 | A library shows as offline, or looks empty after a mount/volume change | The volume is not there, or stored paths no longer match reality | [A library root is offline](#a-library-root-is-offline) |
 | Music or book search says a provider is limiting requests, or Books says Hardcover is not configured | MusicBrainz or Hardcover rate limits, or no Hardcover key | [Music and books](#music-and-books) |
 | An album is **Failed**, or its files never get Streamline's tags | A CUE disc image, a seeding torrent, or file ownership | [Music and books](#music-and-books) |
+| Pod restarts before `streamline starting`, or the Torrents page is short just after a restart | A probe with no startup allowance, or the built-in engine still re-adding its torrents | [Slow start or restarts during boot](#slow-start-or-restarts-during-boot) |
 | Won't start after an update: `back up the database before migrating` | The pre-migration backup could not be written | [Won't start: backup before migrating failed](#wont-start-backup-before-migrating-failed) |
 | `unable to open database file` / general DB errors | More than one writer, or the DB is on a network filesystem | [Database is locked](#database-is-locked) |
 | Need to see what's actually happening | — | [Where the logs are](#where-the-logs-are) |
@@ -393,6 +394,18 @@ Streamline uses SQLite, which allows exactly one writer.
 **Your data directory is on a network filesystem.** SQLite locking over NFS or SMB is unreliable and will corrupt your database. Put `data_dir` on local storage. Your *media* can live on the network; your database can't.
 
 The database is `<data_dir>/streamline.db`, accompanied by `-wal` and `-shm` files. If you ever copy it, copy all three — or use `streamline backup`, which writes one consistent file ([Backups](GitOps-and-Kubernetes#backups)).
+
+---
+
+## Slow start or restarts during boot
+
+`/health` answers once the database is open and migrated. If boot is slow, the log names the step: `boot step finished` (any step over a second) and `application wired` (total and `slowest_step`).
+
+On Kubernetes, give boot a startup allowance or liveness kills the pod mid-boot. The Helm chart has a `startupProbe` from 3.1.0 (5 minutes by default).
+
+Boot reads the database page by page. On a cold page cache over slow storage, such as a network volume with a round trip per read, the large reads take minutes. So the built-in engine's sessions, the music hydration sweep and the path drift check run **after** the server is up; `background boot step finished` and `torrent sessions loaded` report how long they took.
+
+Meanwhile the Torrents page says *Reading torrents after the restart*, then *Re-adding N of M torrents after the restart*, and downloads keep their state. The log ends with `torrent sessions restored`. The first pages can stay slower until the database is cached.
 
 ---
 

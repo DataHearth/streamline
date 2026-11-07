@@ -9529,6 +9529,11 @@ type TorrentInfoStatus string
 type TorrentList struct {
 	Items       []TorrentInfo `json:"items"`
 	RefreshedAt time.Time     `json:"refreshed_at"`
+
+	// Restoring Present while the engine re-adds its torrents after a restart;
+	// `items` then lists only those already back. `pending` and `total` are
+	// both 0 until the engine has read its persisted sessions.
+	Restoring *TorrentRestoreProgress `json:"restoring,omitempty"`
 }
 
 // TorrentMedia The library title the newest download record holding a torrent is
@@ -9550,6 +9555,17 @@ type TorrentPeer struct {
 	Client       *string  `json:"client,omitempty"`
 	DownloadRate *float64 `json:"download_rate,omitempty"`
 	UploadRate   *float64 `json:"upload_rate,omitempty"`
+}
+
+// TorrentRestoreProgress Present while the engine re-adds its torrents after a restart;
+// `items` then lists only those already back. `pending` and `total` are
+// both 0 until the engine has read its persisted sessions.
+type TorrentRestoreProgress struct {
+	// Pending Torrents not re-added yet.
+	Pending int `json:"pending"`
+
+	// Total Torrents the engine held before the restart.
+	Total int `json:"total"`
 }
 
 // TrackAssignment defines model for TrackAssignment.

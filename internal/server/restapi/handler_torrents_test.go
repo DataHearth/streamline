@@ -34,6 +34,7 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 				Progress: 1, Size: 100, Uploaded: 250, Ratio: 2.5, PeerCount: 3,
 			}},
 		).Once()
+		app.torrents.EXPECT().Runtime().Return(bittorrent.RuntimeStatus{}).Once()
 
 		resp, err := http.Get(app.srv.URL + "/api/v1/torrents")
 		Expect(err).NotTo(HaveOccurred())
@@ -45,6 +46,38 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 		Expect(list.Items[0].Ratio).To(Equal(2.5))
 		Expect(list.Items[0].Media).To(BeNil())
 		Expect(list.RefreshedAt).NotTo(BeZero())
+		Expect(list.Restoring).To(BeNil())
+	})
+
+	It("says how many torrents are still being re-added", func() {
+		app.torrents.EXPECT().ListViews(mock.Anything).Return(nil).Once()
+		app.torrents.EXPECT().Runtime().Return(bittorrent.RuntimeStatus{
+			Running: true, RestorePending: 3, RestoreTotal: 9,
+		}).Once()
+
+		resp, err := http.Get(app.srv.URL + "/api/v1/torrents")
+		Expect(err).NotTo(HaveOccurred())
+		defer resp.Body.Close()
+		var list TorrentList
+		Expect(json.NewDecoder(resp.Body).Decode(&list)).To(Succeed())
+		Expect(list.Items).To(BeEmpty())
+		Expect(
+			list.Restoring,
+		).To(Equal(&TorrentRestoreProgress{Pending: 3, Total: 9}))
+	})
+
+	It("reports empty progress until the engine has read its sessions", func() {
+		app.torrents.EXPECT().ListViews(mock.Anything).Return(nil).Once()
+		app.torrents.EXPECT().Runtime().Return(bittorrent.RuntimeStatus{
+			Running: true, RestoreLoading: true, RestorePending: 1,
+		}).Once()
+
+		resp, err := http.Get(app.srv.URL + "/api/v1/torrents")
+		Expect(err).NotTo(HaveOccurred())
+		defer resp.Body.Close()
+		var list TorrentList
+		Expect(json.NewDecoder(resp.Body).Decode(&list)).To(Succeed())
+		Expect(list.Restoring).To(Equal(&TorrentRestoreProgress{}))
 	})
 
 	It("names the library title a tracked torrent is for", func() {
@@ -57,6 +90,7 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 				},
 			}},
 		).Once()
+		app.torrents.EXPECT().Runtime().Return(bittorrent.RuntimeStatus{}).Once()
 
 		resp, err := http.Get(app.srv.URL + "/api/v1/torrents")
 		Expect(err).NotTo(HaveOccurred())

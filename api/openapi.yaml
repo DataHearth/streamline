@@ -13090,6 +13090,23 @@ components:
         refreshed_at:
           type: string
           format: date-time
+        restoring:
+          $ref: "#/components/schemas/TorrentRestoreProgress"
+
+    TorrentRestoreProgress:
+      type: object
+      description: |
+        Present while the engine re-adds its torrents after a restart;
+        `items` then lists only those already back. `pending` and `total` are
+        both 0 until the engine has read its persisted sessions.
+      required: [pending, total]
+      properties:
+        pending:
+          type: integer
+          description: Torrents not re-added yet.
+        total:
+          type: integer
+          description: Torrents the engine held before the restart.
 
     AddTorrentRequest:
       type: object

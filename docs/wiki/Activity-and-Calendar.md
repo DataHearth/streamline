@@ -169,6 +169,8 @@ On a phone, swipe a torrent right to **pause** or **resume** it, or left to **re
 
 A torrent's details open at their own address (`/torrents?hash=<info hash>`), so a reload keeps the drawer open and the link can be shared or bookmarked. From the **Queue** or **History**, an admin opens a download's details (expand the row, or tap it on a phone) and follows **Open torrent** to land on that torrent's drawer. The button shows only while the built-in engine still lists the torrent.
 
+Just after a restart the list can be short: the engine re-adds its torrents in the background, and the page says *Reading torrents after the restart*, then *Re-adding N of M torrents after the restart*, until it is done. Downloads keep their state meanwhile — see [Slow start or restarts during boot](Troubleshooting#slow-start-or-restarts-during-boot).
+
 With only qBittorrent, Transmission or Deluge configured the page is not offered at all; manage those torrents in their own UI or from the Queue.
 
 ---

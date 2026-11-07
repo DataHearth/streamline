@@ -2095,6 +2095,8 @@
 	"torrent_engine_count_one": "{count} torrent · built-in engine",
 	"torrent_engine_count_other": "{count} torrents · built-in engine",
 	"torrent_engine_disabled": "Built-in engine · disabled",
+	"torrent_engine_loading": "Reading torrents after the restart",
+	"torrent_engine_restoring": "Re-adding {pending} of {total} torrents after the restart",
 	"torrent_fetching_metadata": "Fetching metadata…",
 	"torrent_file_list_after_magnet": "The file list appears once the magnet resolves.",
 	"torrent_files_summary": "{count} files · {size} wanted",

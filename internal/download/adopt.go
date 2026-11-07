@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -410,6 +411,13 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 			continue
 		}
 		torrents, err := client.ListTorrents(ctx)
+		if errors.Is(err, ErrClientNotReady) {
+			// Reachable, but skipped so no proposal is pruned.
+			slog.DebugContext(ctx, "adopt: client not ready",
+				"client", dc.Name, "error", err)
+			d.setReachable(dc.Name, true)
+			continue
+		}
 		if err != nil {
 			slog.DebugContext(ctx, "adopt: list torrents failed",
 				"client", dc.Name, "error", err)

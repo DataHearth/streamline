@@ -96,6 +96,18 @@ func (p *contentPaths) trust(ih metainfo.Hash) {
 	p.trusted[ih] = true
 }
 
+// claim reserves name for ih before it is placed, unless already owned.
+func (p *contentPaths) claim(name string, ih metainfo.Hash) {
+	if !safeContentName(name) {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, taken := p.owners[name]; !taken {
+		p.owners[name] = ih
+	}
+}
+
 // admits reports whether a torrent may be placed, without claiming its name.
 func (p *contentPaths) admits(
 	base string,
