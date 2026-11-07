@@ -42,7 +42,7 @@ const (
 	replayKey      = "demo-replay-key"
 	trackerAPIKey  = "demo-tracker-key"
 	sessionSecret  = "demo-session-secret-0123456789abcdef0123"
-	trackerRateKiB = 4096
+	trackerRateKiB = 10240
 )
 
 type options struct {
@@ -113,19 +113,25 @@ func run(ctx context.Context, o options) error {
 		}
 	}
 
-	// Memory where there is some, as the e2e suites do: the dashboard's
-	// health pill reads the data directory's disk, and a nearly full build
-	// disk would shoot it red.
-	base := ""
-	if st, err := os.Stat("/dev/shm"); err == nil && st.IsDir() {
-		base = "/dev/shm"
-	}
-	scratch, err := os.MkdirTemp(base, "streamline-demo-")
+	scratch, err := os.MkdirTemp("", "streamline-demo-")
 	if err != nil {
 		return err
 	}
 	if !o.keep {
 		defer os.RemoveAll(scratch)
+	}
+	// The data directory (the database, posters, a few MB) goes in memory
+	// where there is some, as the e2e suites do: the dashboard's health pill
+	// reads its disk, and a nearly full build disk would shoot it red. The
+	// downloads stay on disk: the engine writes gigabytes there.
+	dataDir := filepath.Join(scratch, "data")
+	if st, err := os.Stat("/dev/shm"); err == nil && st.IsDir() {
+		if d, err := os.MkdirTemp("/dev/shm", "streamline-demo-data-"); err == nil {
+			dataDir = d
+			if !o.keep {
+				defer os.RemoveAll(d)
+			}
+		}
 	}
 	slog.Info("scratch directory", "path", scratch)
 
@@ -142,7 +148,7 @@ func run(ctx context.Context, o options) error {
 	defer pxSrv.Close()
 	defer func() { slog.Info(px.report()) }()
 
-	in, err := newInstance(scratch, keys, o.record)
+	in, err := newInstance(scratch, dataDir, keys, o.record)
 	if err != nil {
 		return err
 	}
@@ -191,9 +197,12 @@ type instance struct {
 	trackerArgs         []string
 }
 
-func newInstance(dir string, keys map[string]string, record bool) (*instance, error) {
-	in := &instance{dir: dir, keys: keys, record: record, paths: map[string]string{}}
-	for _, k := range []string{"data", "downloads", "movies", "series", "music", "books", "audiobooks", "tracker"} {
+func newInstance(dir, dataDir string, keys map[string]string, record bool) (*instance, error) {
+	in := &instance{dir: dir, keys: keys, record: record, paths: map[string]string{"data": dataDir}}
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		return nil, err
+	}
+	for _, k := range []string{"downloads", "movies", "series", "music", "books", "audiobooks", "tracker"} {
 		p := filepath.Join(dir, k)
 		switch k {
 		case "movies", "series", "music", "books", "audiobooks":

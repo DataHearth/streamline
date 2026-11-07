@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -28,32 +29,48 @@ type shot struct {
 	anonymous bool
 }
 
-func clickText(selector, text string) func(p *rod.Page) error {
-	return func(p *rod.Page) error {
-		el, err := p.Timeout(20*time.Second).ElementR(selector, text)
+// clickVisible clicks the first match that is on screen: a page often holds a
+// phone and a desktop copy of one control, and clicking the hidden one waits
+// for it to show until the page times out.
+func clickVisible(p *rod.Page, what string, find func() (rod.Elements, error), settleFor time.Duration) error {
+	deadline := time.Now().Add(20 * time.Second)
+	for {
+		els, err := find()
 		if err != nil {
-			return fmt.Errorf("no %s %q: %w", selector, text, err)
-		}
-		if err := el.Click(proto.InputMouseButtonLeft, 1); err != nil {
 			return err
 		}
-		time.Sleep(1200 * time.Millisecond)
-		return nil
+		for _, el := range els {
+			if ok, verr := el.Visible(); verr == nil && ok {
+				if err := el.Click(proto.InputMouseButtonLeft, 1); err != nil {
+					return err
+				}
+				time.Sleep(settleFor)
+				return nil
+			}
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("no visible %s", what)
+		}
+		time.Sleep(500 * time.Millisecond)
 	}
 }
 
-func clickSelector(selector string) func(p *rod.Page) error {
+func clickText(selector, text string) func(p *rod.Page) error {
 	return func(p *rod.Page) error {
-		el, err := p.Timeout(20 * time.Second).Element(selector)
-		if err != nil {
-			return fmt.Errorf("no %s: %w", selector, err)
-		}
-		if err := el.Click(proto.InputMouseButtonLeft, 1); err != nil {
-			return err
-		}
-		// A manual search waits on the indexer.
-		time.Sleep(4 * time.Second)
-		return nil
+		re := regexp.MustCompile(text)
+		return clickVisible(p, fmt.Sprintf("%s %q", selector, text), func() (rod.Elements, error) {
+			all, err := p.Elements(selector)
+			if err != nil {
+				return nil, err
+			}
+			var out rod.Elements
+			for _, el := range all {
+				if t, err := el.Text(); err == nil && re.MatchString(strings.TrimSpace(t)) {
+					out = append(out, el)
+				}
+			}
+			return out, nil
+		}, 4*time.Second)
 	}
 }
 
@@ -88,7 +105,7 @@ func (s *seeder) shots() []shot {
 		{name: "import-verification", path: "/activity", width: w, height: h, before: clickText("button", "^Resolve$")},
 		{name: "movies", path: "/movies", width: w, height: h},
 		{name: "movie-detail", path: idPath("/movies/", movie, ""), width: w, height: h},
-		{name: "manual-search", path: idPath("/movies/", search, ""), width: w, height: h, before: clickSelector(`[aria-label="Manual search"]`)},
+		{name: "manual-search", path: idPath("/movies/", search, ""), width: w, height: h, before: clickText("button", "^Manual search$")},
 		{name: "series", path: "/series", width: w, height: h},
 		{name: "series-episodes", path: idPath("/series/", show, "?tab=episodes"), width: w, height: h},
 		{name: "library-import", path: idPath("/imports/", s.pendingImp, ""), width: w, height: h},

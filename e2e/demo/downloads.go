@@ -81,7 +81,7 @@ func (s *seeder) downloads(ctx context.Context) error {
 	// Every resolution of the manual-search film.
 	if len(wantedFilms) > 0 {
 		d := wantedFilms[0]
-		for _, spec := range []string{"2160p:18200", "1080p:9800", "720p:4400", "480p:1400"} {
+		for _, spec := range []string{"2160p:3800", "1080p:2200", "720p:1100", "480p:700"} {
 			args = append(args, "-movie", fmt.Sprintf("%s:%d:%s", d.Title, d.Year, spec))
 		}
 	}

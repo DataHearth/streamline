@@ -64,11 +64,14 @@ var quickFilms = []grabbedFilm{
 	{"Spring", 2019, 2160, 1080, 140},
 }
 
-// Grabbed last, so they are still downloading when the queue is shot.
+// Grabbed last, so they are still downloading when the queue is shot. The
+// tracker hashes every byte of what it seeds twice before it comes up (once
+// to author the torrent, once to verify it), so these stay a few GB: large
+// enough to look like films, small enough to start in seconds.
 var slowFilms = []grabbedFilm{
-	{"Tears of Steel", 2012, 2160, 2160, 12900},
-	{"Cosmos Laundromat", 2015, 2160, 2160, 9200},
-	{"Nothing Sacred", 1937, 2160, 2160, 9900},
+	{"Tears of Steel", 2012, 2160, 2160, 3100},
+	{"Cosmos Laundromat", 2015, 2160, 2160, 2400},
+	{"Nothing Sacred", 1937, 2160, 2160, 2900},
 }
 
 // wantedFilms are monitored with nothing on disk. The first is the manual
@@ -108,8 +111,8 @@ type seasonPack struct {
 }
 
 var slowPacks = []seasonPack{
-	{"The Cisco Kid", 3, 13, 640},
-	{"Petticoat Junction", 2, 12, 700},
+	{"The Cisco Kid", 3, 10, 350},
+	{"Petticoat Junction", 2, 10, 350},
 }
 
 // artist is followed with every release; Albums are the ones adopted from
@@ -182,7 +185,7 @@ var requests = []request{
 	{Kind: "movie", Title: "The Kid", Year: 1921, Decide: "approve"},
 	{Kind: "movie", Title: "The Lost World", Year: 1925},
 	{Kind: "series", Title: "Dragnet", Year: 1951},
-	{Kind: "album", Title: "Royalty Free", Artist: "Kevin MacLeod"},
+	{Kind: "album", Title: "Bitter Suite", Artist: "Kevin MacLeod"},
 	{Kind: "book", Title: "Twenty Thousand Leagues Under the Seas", Year: 1870},
 	{Kind: "book", Title: "Around the World in Eighty Days", Year: 1872, Decide: "deny"},
 }
