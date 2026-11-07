@@ -8,7 +8,13 @@
 //
 //	go run ./e2e/faketracker -pack "Breaking Bad:1:10" -pack "Kaamelott:2:8" \
 //	    -album "Boards of Canada:Hi Scores:6" -ebook "Ted Chiang:Exhalation" \
-//	    -audiobook "Ted Chiang:Exhalation:3"
+//	    -audiobook "Ted Chiang:Exhalation:3" -movie "Sintel:2010:1080p"
+//
+// A movie is one MKV whose header states the resolution, codecs and a
+// feature-length duration (ffmpeg on PATH required), padded to its size with
+// a sparse hole: it passes the importer's probe, or fails it on purpose when
+// the spec names a different actual resolution. -rate caps what the seeder
+// uploads, so large releases stay in the queue for a while.
 //
 // Name packs after titles already in the dev library — the keep-set matcher
 // resolves episode files against library rows, and the feed matchers resolve
@@ -33,10 +39,8 @@
 package main
 
 import (
-	"archive/zip"
 	"bytes"
 	"context"
-	_ "embed"
 	"encoding/binary"
 	"encoding/xml"
 	"flag"
@@ -56,17 +60,17 @@ import (
 	antorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
+	"golang.org/x/time/rate"
 
+	"github.com/datahearth/streamline/e2e/demomedia"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/testutil/nettest"
 )
 
-//go:embed testdata/track.mp3
-var trackMP3 []byte
-
 const (
 	pieceLength     = 1 << 20
 	episodeSize     = 8 << 20 // above library.MinEpisodeSize so files are skip candidates
+	patternLimit    = 8 << 20
 	announceSeconds = 60
 )
 
@@ -77,6 +81,7 @@ const (
 	kindAlbum
 	kindEbook
 	kindAudiobook
+	kindMovie
 )
 
 type pack struct {
@@ -84,8 +89,13 @@ type pack struct {
 	title    string // show, album or book title
 	creator  string // artist or author; empty for a show
 	seasonLo int
-	seasonHi int // == seasonLo for a single-season pack
-	episodes int // per season; tracks for an album, parts for an audiobook
+	seasonHi int      // == seasonLo for a single-season pack
+	episodes int      // per season; tracks for an album, parts for an audiobook
+	tracks   []string // album track titles, when the spec names them
+	year     int      // movie
+	claimed  int      // movie: the resolution the release name states
+	actual   int      // movie: the resolution the file holds
+	fileSize int64    // movie file; per episode for a pack (0: the default)
 
 	release  string // release name, e.g. Breaking.Bad.S01.1080p.WEB-DL.x264-FAKE
 	category string // torznab category attr
@@ -105,7 +115,7 @@ func (p *packFlags) Set(v string) error {
 }
 
 func main() {
-	var packSpecs, albumSpecs, ebookSpecs, audiobookSpecs packFlags
+	var packSpecs, albumSpecs, ebookSpecs, audiobookSpecs, movieSpecs packFlags
 	listen := flag.String(
 		"listen",
 		":9117",
@@ -135,12 +145,12 @@ func main() {
 	flag.Var(
 		&packSpecs,
 		"pack",
-		`repeatable "Title:season:episodes", e.g. "Breaking Bad:1:10"`,
+		`repeatable "Title:season:episodes[:MB per episode]", e.g. "Breaking Bad:1:10"`,
 	)
 	flag.Var(
 		&albumSpecs,
 		"album",
-		`repeatable "Artist:Album:tracks", e.g. "Boards of Canada:Hi Scores:6"`,
+		`repeatable "Artist:Album:tracks", e.g. "Boards of Canada:Hi Scores:6"; tracks is a count or "Title|Title|..." to name them`,
 	)
 	flag.Var(
 		&ebookSpecs,
@@ -151,6 +161,16 @@ func main() {
 		&audiobookSpecs,
 		"audiobook",
 		`repeatable "Author:Title:parts", e.g. "Ted Chiang:Exhalation:3"`,
+	)
+	flag.Var(
+		&movieSpecs,
+		"movie",
+		`repeatable "Title:Year:resolution[:MB[:actual resolution]]", e.g. "Sintel:2010:2160p:1500:1080p"`,
+	)
+	rateKiB := flag.Int(
+		"rate",
+		0,
+		"cap on what the seeder uploads, in KiB/s across every torrent (0: no cap)",
 	)
 	flag.Parse()
 
@@ -167,7 +187,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	packs, err := parsePacks(packSpecs, albumSpecs, ebookSpecs, audiobookSpecs)
+	packs, err := parsePacks(packSpecs, albumSpecs, ebookSpecs, audiobookSpecs, movieSpecs)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		flag.Usage()
@@ -181,6 +201,7 @@ func main() {
 		*apiKey,
 		*selftest,
 		*magnets,
+		*rateKiB,
 	); err != nil {
 		slog.ErrorContext(ctx, "faketracker failed", "err", err)
 		os.Exit(1)
@@ -192,6 +213,7 @@ func run(
 	packs []*pack,
 	listen, dataDir, apiKey string,
 	selftest, magnets bool,
+	rateKiB int,
 ) error {
 	ln, err := net.Listen("tcp", listen)
 	if err != nil {
@@ -231,7 +253,7 @@ func run(
 		}
 	}()
 
-	seeder, err := newSeeder(ctx, dataDir, packs)
+	seeder, err := newSeeder(ctx, dataDir, packs, rateKiB)
 	if err != nil {
 		return err
 	}
@@ -259,7 +281,7 @@ Content + .torrent files under %s. Ctrl-C to stop.
 	return srv.Close()
 }
 
-func parsePacks(tv, albums, ebooks, audiobooks []string) ([]*pack, error) {
+func parsePacks(tv, albums, ebooks, audiobooks, movies []string) ([]*pack, error) {
 	var packs []*pack
 	for _, spec := range tv {
 		p, err := parsePack(spec)
@@ -289,9 +311,16 @@ func parsePacks(tv, albums, ebooks, audiobooks []string) ([]*pack, error) {
 		}
 		packs = append(packs, p)
 	}
+	for _, spec := range movies {
+		p, err := parseMovie(spec)
+		if err != nil {
+			return nil, err
+		}
+		packs = append(packs, p)
+	}
 	if len(packs) == 0 {
 		return nil, fmt.Errorf(
-			"at least one -pack, -album, -ebook or -audiobook is required",
+			"at least one -pack, -album, -ebook, -audiobook or -movie is required",
 		)
 	}
 	return packs, nil
@@ -328,6 +357,13 @@ func parseCreatorPack(
 			spec,
 		)
 	}
+	if counted && kind == kindAlbum && strings.Contains(parts[2], "|") {
+		// Named tracks: the album importer holds a file whose title names
+		// another track than its number, so a demo album carries the real ones.
+		p.tracks = strings.Split(parts[2], "|")
+		p.episodes = len(p.tracks)
+		return p, nil
+	}
 	if counted {
 		n, err := strconv.Atoi(parts[2])
 		if err != nil || n < 1 {
@@ -342,10 +378,49 @@ func parseCreatorPack(
 	return p, nil
 }
 
+// parseMovie reads "Title:Year:resolution[:MB[:actual resolution]]".
+func parseMovie(spec string) (*pack, error) {
+	parts := strings.Split(spec, ":")
+	if len(parts) < 3 || len(parts) > 5 {
+		return nil, fmt.Errorf("bad -movie %q: want Title:Year:resolution[:MB[:actual]]", spec)
+	}
+	p := &pack{kind: kindMovie, title: strings.TrimSpace(parts[0])}
+	year, err := strconv.Atoi(parts[1])
+	if err != nil || year < 1800 || p.title == "" {
+		return nil, fmt.Errorf("bad -movie %q: want a title and a year", spec)
+	}
+	p.year = year
+	if p.claimed, err = parseHeight(parts[2]); err != nil {
+		return nil, fmt.Errorf("bad -movie %q: %w", spec, err)
+	}
+	p.actual = p.claimed
+	if len(parts) > 3 && parts[3] != "" {
+		mb, err := strconv.Atoi(parts[3])
+		if err != nil || mb < 1 {
+			return nil, fmt.Errorf("bad -movie %q: size must be a positive number of MB", spec)
+		}
+		p.fileSize = int64(mb) << 20
+	}
+	if len(parts) > 4 {
+		if p.actual, err = parseHeight(parts[4]); err != nil {
+			return nil, fmt.Errorf("bad -movie %q: %w", spec, err)
+		}
+	}
+	return p, nil
+}
+
+func parseHeight(s string) (int, error) {
+	h, err := strconv.Atoi(strings.TrimSuffix(strings.ToLower(strings.TrimSpace(s)), "p"))
+	if err != nil || (h != 2160 && h != 1080 && h != 720 && h != 480) {
+		return 0, fmt.Errorf("resolution %q is not one of 2160p, 1080p, 720p, 480p", s)
+	}
+	return h, nil
+}
+
 func parsePack(spec string) (*pack, error) {
 	parts := strings.Split(spec, ":")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("bad -pack %q: want Title:season:episodes", spec)
+	if len(parts) != 3 && len(parts) != 4 {
+		return nil, fmt.Errorf("bad -pack %q: want Title:season:episodes[:MB]", spec)
 	}
 	lo, hi, ok := strings.Cut(parts[1], "-")
 	seasonLo, err := strconv.Atoi(lo)
@@ -372,11 +447,20 @@ func parsePack(spec string) (*pack, error) {
 			spec,
 		)
 	}
+	var size int64
+	if len(parts) == 4 {
+		mb, err := strconv.Atoi(parts[3])
+		if err != nil || mb < 1 {
+			return nil, fmt.Errorf("bad -pack %q: size must be a positive number of MB", spec)
+		}
+		size = int64(mb) << 20
+	}
 	return &pack{
 		title:    strings.TrimSpace(parts[0]),
 		seasonLo: seasonLo,
 		seasonHi: seasonHi,
 		episodes: episodes,
+		fileSize: size,
 	}, nil
 }
 
@@ -403,6 +487,17 @@ func (p *pack) build(dataDir, announce string) error {
 		)
 		p.category = "3030"
 		write = p.writeAudiobook
+	case kindMovie:
+		codec := "x265"
+		if p.claimed < 1080 {
+			codec = "x264"
+		}
+		p.release = fmt.Sprintf(
+			"%s.%d.%dp.WEB-DL.DDP5.1.%s-DEMO",
+			strings.ReplaceAll(p.title, " ", "."), p.year, p.claimed, codec,
+		)
+		p.category = "2000"
+		write = p.writeMovie
 	default:
 		dotted := strings.ReplaceAll(p.title, " ", ".")
 		span := fmt.Sprintf("S%02d", p.seasonLo)
@@ -438,9 +533,13 @@ func (p *pack) writeSeasons(dir string) error {
 				season,
 				ep,
 			)
+			size := int64(episodeSize)
+			if p.fileSize > 0 {
+				size = p.fileSize
+			}
 			if err := writePattern(
 				filepath.Join(dir, name),
-				episodeSize,
+				size,
 				byte(uint(season*16+ep)&0xFF),
 			); err != nil {
 				return err
@@ -463,31 +562,29 @@ func (p *pack) writeSeasons(dir string) error {
 	return nil
 }
 
-// writeTrack copies the embedded MP3 template and retags it so the album
-// importer can bind the file to a track by number. An existing file is kept
-// as is: the tag writer's frame order is not stable, so rewriting would move
-// the infohash on every restart while live records still point at the old one.
+// writeTrack tags a copy of the MP3 template so the album importer can bind
+// the file to a track by number (and by title, when the spec names them).
 func (p *pack) writeTrack(dir, name string, n int) error {
-	path := filepath.Join(dir, name)
-	if _, err := os.Stat(path); err == nil {
-		return nil
+	title := fmt.Sprintf("Track %02d", n)
+	if len(p.tracks) >= n {
+		title = p.tracks[n-1]
 	}
-	if err := os.WriteFile(path, trackMP3, 0o644); err != nil {
-		return fmt.Errorf("write track: %w", err)
-	}
-	return audiotags.Write(path, audiotags.Tags{
+	return demomedia.Track(filepath.Join(dir, name), audiotags.Tags{
 		audiotags.KeyArtist:      {p.creator},
 		audiotags.KeyAlbumArtist: {p.creator},
 		audiotags.KeyAlbum:       {p.title},
-		audiotags.KeyTitle:       {fmt.Sprintf("Track %02d", n)},
+		audiotags.KeyTitle:       {title},
 		audiotags.KeyTrackNumber: {strconv.Itoa(n)},
 		audiotags.KeyDiscNumber:  {"1"},
-	}, audiotags.Policy{})
+	})
 }
 
 func (p *pack) writeAlbum(dir string) error {
 	for n := 1; n <= p.episodes; n++ {
 		name := fmt.Sprintf("%02d - Track %02d.mp3", n, n)
+		if len(p.tracks) >= n {
+			name = fmt.Sprintf("%02d - %s.mp3", n, safeName(p.tracks[n-1]))
+		}
 		if err := p.writeTrack(dir, name, n); err != nil {
 			return err
 		}
@@ -505,54 +602,40 @@ func (p *pack) writeAudiobook(dir string) error {
 	return nil
 }
 
-// writeEbook authors a minimal EPUB: a stored mimetype entry first, the
-// container pointing at an OPF that carries the title and author.
+// writeEbook authors a minimal EPUB carrying the title and author.
 func (p *pack) writeEbook(dir string) error {
-	var buf bytes.Buffer
-	zw := zip.NewWriter(&buf)
-	mt, err := zw.CreateHeader(&zip.FileHeader{Name: "mimetype", Method: zip.Store})
-	if err != nil {
-		return err
+	return demomedia.Ebook(
+		filepath.Join(dir, fmt.Sprintf("%s - %s.epub", p.creator, p.title)),
+		demomedia.EbookMeta{
+			Title:  p.title,
+			Author: p.creator,
+			ID:     "urn:faketracker:" + p.title,
+		},
+	)
+}
+
+// writeMovie writes one MKV that probes at the actual resolution with a
+// feature-length duration, padded to the release's size.
+func (p *pack) writeMovie(dir string) error {
+	size := p.fileSize
+	if size == 0 {
+		size = 64 << 20
 	}
-	if _, err := mt.Write([]byte("application/epub+zip")); err != nil {
-		return err
-	}
-	var title, creator bytes.Buffer
-	if err := xml.EscapeText(&title, []byte(p.title)); err != nil {
-		return err
-	}
-	if err := xml.EscapeText(&creator, []byte(p.creator)); err != nil {
-		return err
-	}
-	entries := map[string]string{
-		"META-INF/container.xml": `<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`,
-		"content.opf":            `<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" xmlns:opf="http://www.idpf.org/2007/opf" unique-identifier="id" version="2.0"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>` + title.String() + `</dc:title><dc:creator opf:role="aut">` + creator.String() + `</dc:creator><dc:identifier id="id">urn:faketracker:` + title.String() + `</dc:identifier><dc:language>en</dc:language></metadata><manifest><item id="c" href="c.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="c"/></spine></package>`,
-		"c.xhtml":                `<html xmlns="http://www.w3.org/1999/xhtml"><body><p>faketracker</p></body></html>`,
-	}
-	for _, name := range []string{"META-INF/container.xml", "content.opf", "c.xhtml"} {
-		w, err := zw.Create(name)
-		if err != nil {
-			return err
+	return demomedia.Video(filepath.Join(dir, p.release+".mkv"), demomedia.VideoSpec{
+		Height: p.actual,
+		HDR:    p.actual == 2160,
+		Size:   size,
+	})
+}
+
+// safeName drops the characters a file name cannot carry on any platform.
+func safeName(s string) string {
+	return strings.Map(func(r rune) rune {
+		if strings.ContainsRune(`<>:"/\|?*`, r) {
+			return -1
 		}
-		if _, err := w.Write([]byte(entries[name])); err != nil {
-			return err
-		}
-	}
-	if err := zw.Close(); err != nil {
-		return err
-	}
-	name := fmt.Sprintf("%s - %s.epub", p.creator, p.title)
-	if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
-		return nil
-	}
-	if err := os.WriteFile(
-		filepath.Join(dir, name),
-		buf.Bytes(),
-		0o644,
-	); err != nil {
-		return fmt.Errorf("write epub: %w", err)
-	}
-	return nil
+		return r
+	}, s)
 }
 
 // author builds the metainfo over dir, seeds the magnet and saves the
@@ -592,16 +675,21 @@ func (p *pack) author(dataDir, dir, announce string) error {
 
 // writePattern skips rewriting an existing full-size file so restarts reuse
 // content — the infohash must stay stable across runs for live records.
-func writePattern(path string, size int, seed byte) error {
-	if st, err := os.Stat(path); err == nil && st.Size() == int64(size) {
+// Content past the first patternLimit bytes is a sparse hole, so a pack of
+// large episodes costs no disk on the seeding side.
+func writePattern(path string, size int64, seed byte) error {
+	if st, err := os.Stat(path); err == nil && st.Size() == size {
 		return nil
 	}
-	buf := make([]byte, size)
+	buf := make([]byte, min(size, patternLimit))
 	for i := range buf {
 		buf[i] = byte(i)*31 + seed
 	}
 	if err := os.WriteFile(path, buf, 0o644); err != nil {
 		return fmt.Errorf("write episode file: %w", err)
+	}
+	if err := os.Truncate(path, size); err != nil {
+		return fmt.Errorf("pad episode file: %w", err)
 	}
 	return nil
 }
@@ -610,6 +698,7 @@ func newSeeder(
 	ctx context.Context,
 	dataDir string,
 	packs []*pack,
+	rateKiB int,
 ) (*antorrent.Client, error) {
 	cc := antorrent.NewDefaultClientConfig()
 	cc.DataDir = dataDir
@@ -617,6 +706,11 @@ func newSeeder(
 	cc.NoDHT = true
 	cc.ListenPort = 0
 	cc.DisableIPv6 = !nettest.IPv6()
+	if rateKiB > 0 {
+		// The burst must hold a whole chunk (16 KiB), or no request is ever
+		// served.
+		cc.UploadRateLimiter = rate.NewLimiter(rate.Limit(rateKiB<<10), max(rateKiB<<10, 1<<16))
+	}
 	client, err := antorrent.NewClient(cc)
 	if err != nil {
 		return nil, fmt.Errorf("seeder client: %w", err)
@@ -799,6 +893,7 @@ const capsXML = `<?xml version="1.0" encoding="UTF-8"?>
     <movie-search available="yes" supportedParams="q"/>
   </searching>
   <categories>
+    <category id="2000" name="Movies"/>
     <category id="3000" name="Audio"><subcat id="3030" name="Audio/Audiobook"/></category>
     <category id="5000" name="TV"/>
     <category id="7000" name="Books"><subcat id="7020" name="Books/EBook"/></category>
