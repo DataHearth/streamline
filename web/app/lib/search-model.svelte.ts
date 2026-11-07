@@ -1,6 +1,7 @@
-// One result model behind three search surfaces: the desktop command palette,
-// the phone search page (routes/search.svelte) and the tablet SearchField panel. Each renders its
-// rows differently; none of them decides what a match is.
+// One result model behind both search surfaces: the command palette for a
+// mouse or trackpad, and the search page (routes/search.svelte) for touch
+// screens and narrow windows. Each renders its rows differently; neither
+// decides what a match is.
 //
 // `compact: true` is the touch shape. Movie and series hits merge into one
 // "Titles" group and lead the list, because on a phone what you came for is
@@ -290,9 +291,9 @@ export function createSearchModel(
 	getQuery: () => string,
 	opts: { compact?: boolean } = {},
 ) {
-	// SearchField sits in the global layout, so this model is constructed on
+	// The palette sits in the global layout, so this model is constructed on
 	// every route. Ungated, each mount pulled the whole movie and series
-	// libraries for a panel that stays closed until the user types — on a
+	// libraries for a box that stays closed until the user types — on a
 	// 23-show library that was 2.8 MB and ~2.6s of the /movies page load.
 	//
 	// Matching is the server's, same as the library lists: it searches the
