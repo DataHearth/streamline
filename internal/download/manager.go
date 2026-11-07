@@ -566,10 +566,15 @@ func (d *download) refreshQueue(ctx context.Context) ([]QueueEntry, error) {
 	return entries, nil
 }
 
-// startingUp reports whether a client is still restoring its sessions after
-// a restart, in which case its calls wait until it is done.
+// RestoringClient is a client that restores its sessions after a restart and
+// holds calls until it is done: the builtin engine.
+type RestoringClient interface {
+	Ready() <-chan struct{}
+}
+
+// startingUp reports whether a client is still restoring its sessions.
 func startingUp(client Client) bool {
-	r, ok := client.(interface{ Ready() <-chan struct{} })
+	r, ok := client.(RestoringClient)
 	if !ok {
 		return false
 	}
@@ -698,8 +703,12 @@ func (d *download) CancelQueueItem(ctx context.Context, recordID uint32) error {
 	); ok &&
 		rec.TorrentHash != "" {
 		if client, berr := d.buildClient(dc); berr == nil {
-			if rerr := client.RemoveTorrent(
-				ctx, rec.TorrentHash, true); rerr != nil {
+			rerr := client.RemoveTorrent(ctx, rec.TorrentHash, true)
+			if errors.Is(rerr, ErrClientNotReady) {
+				// The torrent would outlive its record.
+				return rerr
+			}
+			if rerr != nil {
 				slog.WarnContext(ctx, "cancel: remove torrent failed",
 					"hash", rec.TorrentHash, "error", rerr)
 			}

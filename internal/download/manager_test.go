@@ -2000,6 +2000,15 @@ func (c *seedReapClient) ListTorrents(context.Context) ([]Torrent, error) {
 	return c.torrents, c.listErr
 }
 
+// notReadyRemover is a builtin client that cannot remove a torrent yet.
+type notReadyRemover struct {
+	*seedReapClient
+}
+
+func (notReadyRemover) RemoveTorrent(context.Context, string, bool) error {
+	return fmt.Errorf("%w: shutting down", ErrClientNotReady)
+}
+
 // startingEngine is a builtin client still restoring its sessions.
 type startingEngine struct {
 	*seedReapClient
@@ -2061,6 +2070,21 @@ var _ = Describe(
 			Hash: "h1", Name: "The.Batman.2022.1080p.BluRay-X",
 			Status: StatusCompleted, SeedingStopped: true,
 		}
+
+		It("keeps the record when the engine cannot remove its torrent yet", func() {
+			reaper("builtin")
+			mgr := New(store, notReadyRemover{client})
+			store.EXPECT().
+				FindActiveDownloadRecordByID(mock.Anything, uint32(3)).
+				Return(&ent.DownloadRecord{
+					ID: 3, Status: downloadrecord.StatusDownloading,
+					DownloadClientName: "embedded", TorrentHash: "h1",
+				}, nil).Once()
+
+			// No DeleteDownloadRecord expected: the mock fails the spec on it.
+			Expect(mgr.CancelQueueItem(ctx, 3)).
+				To(MatchError(ErrClientNotReady))
+		})
 
 		It("lists nothing from a builtin engine still starting", func() {
 			reaper("builtin", seedStopped)

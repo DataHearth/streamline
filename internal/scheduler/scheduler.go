@@ -433,6 +433,12 @@ func (s *Scheduler) runJob(
 	for {
 		select {
 		case <-ctx.Done():
+			// A later Start relaunches the job only once it reads as stopped.
+			job.mu.Lock()
+			if (<-chan struct{})(job.stopCh) == stopCh {
+				job.stopCh = nil
+			}
+			job.mu.Unlock()
 			return
 		case <-stopCh:
 			return

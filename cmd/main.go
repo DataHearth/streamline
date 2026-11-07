@@ -25,6 +25,10 @@ const otelFlushTimeout = 5 * time.Second
 // versionString assembles the --version line. buildinfo holds the goreleaser
 // ldflag values; we fall back to placeholders so the CLI stays readable when
 // built via plain go run / go build.
+
+// shutdownWatchdog bounds a shutdown caused by a background failure.
+const shutdownWatchdog = 30 * time.Second
+
 func versionString() string {
 	v := buildinfo.Version
 	if v == "" {
@@ -311,8 +315,13 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	select {
 	case <-ctx.Done():
 	case fatal = <-app.Fatal:
-		logger.ErrorContext(ctx, "boot failed in the background", "error", fatal)
+		//nolint:sloglint // LogAttrs takes slog.Attr by API design
+		logger.LogAttrs(ctx, observability.LevelCritical,
+			"a background component failed, shutting down",
+			slog.Any("error", fatal))
 		stop()
+		// A panic that left a lock held could block the shutdown below.
+		time.AfterFunc(shutdownWatchdog, func() { os.Exit(1) })
 	}
 	logger.InfoContext(ctx, "shutting down")
 

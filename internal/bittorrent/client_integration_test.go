@@ -819,7 +819,6 @@ func newUnboundEngineNoPortForwarding(
 	}
 	e.loadAndRestore(ctx)
 	Expect(e.Ready()).To(BeClosed())
-	e.wg.Go(e.enforceSeedLimits)
 
 	closed := false
 	stop := func() {

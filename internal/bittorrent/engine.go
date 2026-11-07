@@ -695,6 +695,16 @@ func (e *Engine) reportFatal(err error) {
 	}
 }
 
+// awaitTorrent skips the wait for a torrent the engine already holds.
+func (e *Engine) awaitTorrent(ctx context.Context, hash string) error {
+	if h, err := parseHash(hash); err == nil {
+		if _, ok := e.client.Torrent(h); ok {
+			return nil
+		}
+	}
+	return e.awaitRestore(ctx)
+}
+
 // awaitRestore holds a caller until the boot restore is done, so it sees the
 // engine as it was before the restart.
 func (e *Engine) awaitRestore(ctx context.Context) error {
@@ -827,6 +837,8 @@ func (e *Engine) restoreOne(ctx context.Context, s pendingSession) bool {
 	return true
 }
 
+var _ download.RestoringClient = (*Engine)(nil)
+
 // Ready closes when the boot restore has finished.
 func (e *Engine) Ready() <-chan struct{} { return e.ready }
 
@@ -843,16 +855,6 @@ func (e *Engine) restoreProgress() (pending, total int) {
 		return 1, 0
 	}
 	return len(e.restoring), e.restoreTotal
-}
-
-func (e *Engine) isRestoring(hash string) bool {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if e.loading {
-		return true
-	}
-	_, ok := e.restoring[hash]
-	return ok
 }
 
 // startWhenReady begins downloading once torrent metadata is known. Magnet
@@ -977,12 +979,6 @@ func (e *Engine) torrent(hash string) (*antorrent.Torrent, error) {
 	}
 	t, ok := e.client.Torrent(h)
 	if !ok {
-		if e.isRestoring(h.HexString()) {
-			return nil, fmt.Errorf(
-				"%w: torrent %s has not been re-added since the restart yet",
-				download.ErrClientNotReady, hash,
-			)
-		}
 		return nil, fmt.Errorf("%w: %s", download.ErrTorrentNotFound, hash)
 	}
 	return t, nil

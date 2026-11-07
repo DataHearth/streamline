@@ -199,7 +199,7 @@ func (e *Engine) Details(
 	ctx context.Context,
 	hash string,
 ) (TorrentDetails, error) {
-	if err := e.awaitRestore(ctx); err != nil {
+	if err := e.awaitTorrent(ctx, hash); err != nil {
 		return TorrentDetails{}, err
 	}
 	t, err := e.torrent(hash)
@@ -252,7 +252,7 @@ func (e *Engine) SetFilePriorities(
 	hash string,
 	prios []FilePriority,
 ) error {
-	if err := e.awaitRestore(ctx); err != nil {
+	if err := e.awaitTorrent(ctx, hash); err != nil {
 		return err
 	}
 	t, err := e.torrent(hash)

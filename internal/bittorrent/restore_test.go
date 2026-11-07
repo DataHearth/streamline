@@ -98,16 +98,17 @@ var _ = Describe("Engine restore", Label("unit", "bittorrent"), func() {
 		).
 			Once()
 
+		e.ready = make(chan struct{})
 		pending, err := e.loadSessions(ctx)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(pending).To(HaveLen(1))
 
-		_, err = e.GetTorrent(ctx, hash)
+		short, cancel := context.WithTimeout(ctx, 20*time.Millisecond)
+		defer cancel()
+		_, err = e.GetTorrent(short, hash)
 		Expect(err).To(MatchError(download.ErrClientNotReady))
 		Expect(err).NotTo(MatchError(download.ErrTorrentNotFound))
-		_, err = e.GetTorrent(ctx, unknown)
-		Expect(err).To(MatchError(download.ErrTorrentNotFound))
-		_, err = e.ListTorrents(ctx)
+		_, err = e.ListTorrents(short)
 		Expect(err).To(MatchError(download.ErrClientNotReady))
 		Expect(e.Runtime().RestorePending).To(Equal(1))
 		Expect(e.Runtime().RestoreTotal).To(Equal(1))
@@ -115,7 +116,10 @@ var _ = Describe("Engine restore", Label("unit", "bittorrent"), func() {
 			"the row's flags are loaded before the re-add")
 
 		e.restoreSessions(ctx, pending)
+		close(e.ready)
 
+		_, err = e.GetTorrent(ctx, unknown)
+		Expect(err).To(MatchError(download.ErrTorrentNotFound))
 		listed, err := e.ListTorrents(ctx)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(listed).To(HaveLen(1))
@@ -204,6 +208,22 @@ var _ = Describe("Engine restore", Label("unit", "bittorrent"), func() {
 			Expect(e.Runtime().RestoreTotal).To(Equal(1))
 		})
 
+		It("answers at once for a torrent already back", func() {
+			store.EXPECT().ListTorrentSessions(mock.Anything).Return(
+				[]*ent.TorrentSession{{InfoHash: hash, SourceTorrent: raw}}, nil,
+			).Once()
+			pending, err := e.loadSessions(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			e.restoreSessions(ctx, pending)
+
+			short, cancel := context.WithTimeout(ctx, 20*time.Millisecond)
+			defer cancel()
+			_, err = e.GetTorrent(short, hash)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = e.GetTorrent(short, unknown)
+			Expect(err).To(MatchError(download.ErrClientNotReady))
+		})
+
 		It("reports a failed read as fatal and never reports ready", func() {
 			store.EXPECT().ListTorrentSessions(mock.Anything).
 				Return(nil, errors.New("disk")).Once()
@@ -269,6 +289,7 @@ var _ = Describe("Engine restore", Label("unit", "bittorrent"), func() {
 		store.EXPECT().ListTorrentSessions(mock.Anything).Return(
 			[]*ent.TorrentSession{{InfoHash: hash, SourceTorrent: raw}}, nil,
 		).Once()
+		e.ready = make(chan struct{})
 		pending, err := e.loadSessions(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
