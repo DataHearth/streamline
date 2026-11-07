@@ -102,6 +102,15 @@ func (s *Server) CreateDownloadClient(
 	if request.Body.MaxDownloadKbps != nil {
 		e.MaxDownloadKbps = *request.Body.MaxDownloadKbps
 	}
+	if request.Body.MaxPeersPerTorrent != nil {
+		e.MaxPeersPerTorrent = *request.Body.MaxPeersPerTorrent
+	}
+	if request.Body.MaxUnverifiedMb != nil {
+		e.MaxUnverifiedMB = *request.Body.MaxUnverifiedMb
+	}
+	if request.Body.MaxTorrents != nil {
+		e.MaxTorrents = *request.Body.MaxTorrents
+	}
 	if request.Body.SeedRatio != nil {
 		e.SeedRatio = *request.Body.SeedRatio
 	}
@@ -146,23 +155,26 @@ func (s *Server) UpdateDownloadClient(
 	}
 	ct := string(request.Body.ClientType)
 	patch := config.DownloadClientPatch{
-		ClientType:      &ct,
-		Host:            request.Body.Host,
-		Port:            request.Body.Port,
-		Username:        request.Body.Username,
-		Password:        request.Body.Password,
-		APIKey:          request.Body.ApiKey,
-		UseSSL:          request.Body.UseSsl,
-		Priority:        request.Body.Priority,
-		Enabled:         request.Body.Enabled,
-		DownloadDir:     request.Body.DownloadDir,
-		ListenPort:      request.Body.ListenPort,
-		MaxUploadKbps:   request.Body.MaxUploadKbps,
-		MaxDownloadKbps: request.Body.MaxDownloadKbps,
-		SeedRatio:       request.Body.SeedRatio,
-		SeedTime:        request.Body.SeedTime,
-		DisableDHT:      request.Body.DisableDht,
-		BindInterface:   request.Body.BindInterface,
+		ClientType:         &ct,
+		Host:               request.Body.Host,
+		Port:               request.Body.Port,
+		Username:           request.Body.Username,
+		Password:           request.Body.Password,
+		APIKey:             request.Body.ApiKey,
+		UseSSL:             request.Body.UseSsl,
+		Priority:           request.Body.Priority,
+		Enabled:            request.Body.Enabled,
+		DownloadDir:        request.Body.DownloadDir,
+		ListenPort:         request.Body.ListenPort,
+		MaxUploadKbps:      request.Body.MaxUploadKbps,
+		MaxDownloadKbps:    request.Body.MaxDownloadKbps,
+		MaxPeersPerTorrent: request.Body.MaxPeersPerTorrent,
+		MaxUnverifiedMB:    request.Body.MaxUnverifiedMb,
+		MaxTorrents:        request.Body.MaxTorrents,
+		SeedRatio:          request.Body.SeedRatio,
+		SeedTime:           request.Body.SeedTime,
+		DisableDHT:         request.Body.DisableDht,
+		BindInterface:      request.Body.BindInterface,
 	}
 	if request.Body.AuthMethod != nil {
 		am := string(*request.Body.AuthMethod)

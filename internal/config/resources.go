@@ -63,6 +63,13 @@ type DownloadClientEntry struct {
 	ListenPort      uint16 `koanf:"listen_port"       validate:"omitempty,port"`
 	MaxUploadKbps   int    `koanf:"max_upload_kbps"   validate:"min=0"`
 	MaxDownloadKbps int    `koanf:"max_download_kbps" validate:"min=0"`
+	// Peer-pool and torrent limits; 0 keeps the engine's default (15 peers
+	// per torrent, 16 MiB unverified, 500 torrents — internal/bittorrent's
+	// bounds.go). The maxima keep a typo from asking for thousands of
+	// connections; each peer costs ~160 KB, more while seeding.
+	MaxPeersPerTorrent int `koanf:"max_peers_per_torrent" validate:"min=0,max=200"`
+	MaxUnverifiedMB    int `koanf:"max_unverified_mb"     validate:"min=0,max=1024"`
+	MaxTorrents        int `koanf:"max_torrents"          validate:"min=0,max=10000"`
 	// SeedRatio/SeedTime stop seeding when either is reached; zero = unlimited.
 	SeedRatio  float64 `koanf:"seed_ratio"  validate:"min=0"`
 	SeedTime   string  `koanf:"seed_time"`

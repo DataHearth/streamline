@@ -5594,8 +5594,17 @@ type DownloadClient struct {
 	// ListenPortOverride Present on the builtin entry only, and only when the top-level `torrent_listen_port` is set — normally by STREAMLINE_TORRENT_LISTEN_PORT, since the value is authored by a VPN tunnel. It wins over `listen_port`, so a client showing this must present `listen_port` as having no effect rather than as the port in force.
 	ListenPortOverride *uint16 `json:"listen_port_override,omitempty"`
 	MaxDownloadKbps    *int    `json:"max_download_kbps,omitempty"`
-	MaxUploadKbps      *int    `json:"max_upload_kbps,omitempty"`
-	Name               string  `json:"name"`
+
+	// MaxPeersPerTorrent Established peer connections per torrent. 0 or absent = the engine's default (15). Each connection costs about 160 KB of memory, up to about 420 KB while seeding. Restart required.
+	MaxPeersPerTorrent *int `json:"max_peers_per_torrent,omitempty"`
+
+	// MaxTorrents Torrents the engine holds at once; a grab past it is refused with `422` `code: grab_rejected`. 0 or absent = the engine's default (500). Lowering it below what the engine holds removes nothing. Restart required.
+	MaxTorrents *int `json:"max_torrents,omitempty"`
+
+	// MaxUnverifiedMb MiB of downloaded piece data not yet hash-checked, per torrent, counted in whole pieces. 0 or absent = the engine's default (16). Raise it for releases with large pieces: one 16 MiB piece fills the default alone, and that torrent then downloads one piece at a time. Costs page cache, not process memory. Restart required.
+	MaxUnverifiedMb *int   `json:"max_unverified_mb,omitempty"`
+	MaxUploadKbps   *int   `json:"max_upload_kbps,omitempty"`
+	Name            string `json:"name"`
 
 	// PasswordSet True when a password is stored. The password itself is never returned.
 	PasswordSet bool     `json:"password_set"`
@@ -5631,12 +5640,21 @@ type DownloadClientCreate struct {
 	Host            *string                        `json:"host,omitempty"`
 	ListenPort      *uint16                        `json:"listen_port,omitempty"`
 	MaxDownloadKbps *int                           `json:"max_download_kbps,omitempty"`
-	MaxUploadKbps   *int                           `json:"max_upload_kbps,omitempty"`
-	Name            string                         `json:"name"`
-	Password        *string                        `json:"password,omitempty"`
-	Port            *uint16                        `json:"port,omitempty"`
-	Priority        *uint8                         `json:"priority,omitempty"`
-	SeedRatio       *float64                       `json:"seed_ratio,omitempty"`
+
+	// MaxPeersPerTorrent Established peer connections per torrent. 0 or absent = the engine's default (15). Each connection costs about 160 KB of memory, up to about 420 KB while seeding. Restart required.
+	MaxPeersPerTorrent *int `json:"max_peers_per_torrent,omitempty"`
+
+	// MaxTorrents Torrents the engine holds at once; a grab past it is refused with `422` `code: grab_rejected`. 0 or absent = the engine's default (500). Lowering it below what the engine holds removes nothing. Restart required.
+	MaxTorrents *int `json:"max_torrents,omitempty"`
+
+	// MaxUnverifiedMb MiB of downloaded piece data not yet hash-checked, per torrent, counted in whole pieces. 0 or absent = the engine's default (16). Raise it for releases with large pieces: one 16 MiB piece fills the default alone, and that torrent then downloads one piece at a time. Costs page cache, not process memory. Restart required.
+	MaxUnverifiedMb *int     `json:"max_unverified_mb,omitempty"`
+	MaxUploadKbps   *int     `json:"max_upload_kbps,omitempty"`
+	Name            string   `json:"name"`
+	Password        *string  `json:"password,omitempty"`
+	Port            *uint16  `json:"port,omitempty"`
+	Priority        *uint8   `json:"priority,omitempty"`
+	SeedRatio       *float64 `json:"seed_ratio,omitempty"`
 
 	// SeedTime Go duration string, e.g. "72h". Empty = unlimited.
 	SeedTime *string `json:"seed_time,omitempty"`

@@ -143,6 +143,9 @@ download_clients:
     listen_port: 6881
     max_upload_kbps: 0        # 0 = unlimited
     max_download_kbps: 0
+    max_peers_per_torrent: 0  # 0 = default (15); ~160 KB of memory per peer
+    max_unverified_mb: 0      # 0 = default (16); raise for large-piece releases
+    max_torrents: 0           # 0 = default (500)
     seed_ratio: 2.0
     seed_time: 48h
 ```
