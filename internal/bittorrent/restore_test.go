@@ -214,6 +214,7 @@ var _ = Describe("Engine restore", Label("unit", "bittorrent"), func() {
 			).Once()
 			pending, err := e.loadSessions(ctx)
 			Expect(err).NotTo(HaveOccurred())
+			e.loading = false
 			e.restoreSessions(ctx, pending)
 
 			short, cancel := context.WithTimeout(ctx, 20*time.Millisecond)
@@ -222,6 +223,42 @@ var _ = Describe("Engine restore", Label("unit", "bittorrent"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			_, err = e.GetTorrent(short, unknown)
 			Expect(err).To(MatchError(download.ErrClientNotReady))
+		})
+
+		It("holds a torrent re-added before its flags are applied", func() {
+			store.EXPECT().ListTorrentSessions(mock.Anything).Return(
+				[]*ent.TorrentSession{
+					{InfoHash: hash, SourceTorrent: raw, Paused: true},
+				}, nil,
+			).
+				Once()
+			pending, err := e.loadSessions(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			e.loading = false
+			_, _, err = e.client.AddTorrentSpec(pending[0].spec)
+			Expect(err).NotTo(HaveOccurred())
+
+			short, cancel := context.WithTimeout(ctx, 20*time.Millisecond)
+			defer cancel()
+			Expect(
+				e.ResumeTorrent(short, hash),
+			).To(MatchError(download.ErrClientNotReady))
+		})
+
+		It("reports rows that never finish loading as fatal", func() {
+			restore := []*time.Duration{&restoreProgressEvery, &restoreLoadLimit}
+			saved := []time.Duration{restoreProgressEvery, restoreLoadLimit}
+			restoreProgressEvery, restoreLoadLimit = 5*time.Millisecond, 20*time.Millisecond
+			DeferCleanup(func() {
+				for i, p := range restore {
+					*p = saved[i]
+				}
+			})
+			e.wg.Go(func() { e.watchRestore(ctx) })
+
+			Eventually(
+				e.Fatal(),
+			).Should(Receive(MatchError(ContainSubstring("still loading"))))
 		})
 
 		It("reports a failed read as fatal and never reports ready", func() {

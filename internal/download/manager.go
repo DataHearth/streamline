@@ -1984,11 +1984,6 @@ func (d *download) RemoveSeedCompleteTorrents(ctx context.Context) error {
 		)
 	}
 	torrents, err := client.ListTorrents(ctx)
-	if errors.Is(err, ErrClientNotReady) {
-		slog.DebugContext(ctx, "seed reaper: builtin engine not ready",
-			"error", err)
-		return nil
-	}
 	if err != nil {
 		return otelx.RecordSpanError(
 			span, fmt.Errorf("list builtin torrents: %w", err),

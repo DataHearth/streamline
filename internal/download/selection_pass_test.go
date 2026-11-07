@@ -3,7 +3,6 @@ package download
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -227,25 +226,6 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 			// RunSelectionPass swallows the per-record error and continues;
 			// this only proves no terminal state was written — the mock
 			// would panic on an unexpected SetDownloadRecordSelection call.
-			Expect(err).NotTo(HaveOccurred())
-			Expect(client.resumeCalls).To(Equal(0))
-			Expect(client.removeCalls).To(Equal(0))
-		},
-	)
-
-	It(
-		"ListFiles answering not ready past grace: record untouched, "+
-			"retried next tick",
-		func() {
-			anchor := passShow()
-			rec := pendingRecord(anchor, time.Now().Add(-11*time.Minute))
-			store.EXPECT().
-				ListPendingSelectionRecords(mock.Anything).
-				Return([]*ent.DownloadRecord{rec}, nil).Once()
-			client.listFilesErr = fmt.Errorf("%w: restoring", ErrClientNotReady)
-
-			_, err := mgr.RunSelectionPass(ctx)
-
 			Expect(err).NotTo(HaveOccurred())
 			Expect(client.resumeCalls).To(Equal(0))
 			Expect(client.removeCalls).To(Equal(0))

@@ -22,13 +22,12 @@ import (
 // shutdown budget the application teardown spends.
 const otelFlushTimeout = 5 * time.Second
 
-// versionString assembles the --version line. buildinfo holds the goreleaser
-// ldflag values; we fall back to placeholders so the CLI stays readable when
-// built via plain go run / go build.
-
 // shutdownWatchdog bounds a shutdown caused by a background failure.
 const shutdownWatchdog = 30 * time.Second
 
+// versionString assembles the --version line. buildinfo holds the goreleaser
+// ldflag values; we fall back to placeholders so the CLI stays readable when
+// built via plain go run / go build.
 func versionString() string {
 	v := buildinfo.Version
 	if v == "" {

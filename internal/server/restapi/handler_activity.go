@@ -34,9 +34,9 @@ func (s *Server) GetDownloadQueue(
 	}, nil
 }
 
-// errEngineStarting answers a removal the builtin engine cannot do until its
-// restore is done.
-const errEngineStarting = "the torrent engine is still starting; try again shortly"
+// errEngineStarting answers a removal the builtin engine could not run because
+// it was restoring its sessions or shutting down.
+const errEngineStarting = "the torrent engine is not ready; try again shortly"
 
 func (s *Server) CancelQueueItem(
 	ctx context.Context,

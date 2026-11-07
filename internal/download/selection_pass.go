@@ -84,9 +84,6 @@ func (d *download) resolvePendingSelection(
 		return d.finalizePending(
 			ctx, span, client, rec, downloadrecord.SelectionStateUnsupported,
 		)
-	case errors.Is(err, ErrClientNotReady):
-		// Never give up on a torrent still being re-added.
-		return otelx.RecordSpanError(span, fmt.Errorf("list files: %w", err))
 	case err != nil:
 		if time.Since(rec.CreateTime) <=
 			config.Get().Download.SelectionGraceDuration() {

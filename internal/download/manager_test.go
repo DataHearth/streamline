@@ -2145,14 +2145,6 @@ var _ = Describe(
 			Expect(client.removed).To(BeEmpty())
 		})
 
-		It("skips the tick while the engine is still restoring", func() {
-			mgr := reaper("builtin", seedStopped)
-			client.listErr = fmt.Errorf("%w: 3 of 9", ErrClientNotReady)
-
-			Expect(mgr.RemoveSeedCompleteTorrents(ctx)).To(Succeed())
-			Expect(client.removed).To(BeEmpty())
-		})
-
 		It("ignores a non-builtin client reporting the same shape", func() {
 			mgr := reaper("qbittorrent", seedStopped)
 

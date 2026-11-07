@@ -46,13 +46,13 @@ type RuntimeStatus struct {
 }
 
 func (e *Engine) Runtime() RuntimeStatus {
-	pending, total := e.restoreProgress()
+	loading, pending, total := e.restoreProgress()
 	return RuntimeStatus{
 		Running: true,
 		//nolint:gosec // LocalPort is a bound TCP/UDP port, 0..65535
 		PortBound:      uint16(e.client.LocalPort()),
 		InterfaceBound: e.bindAddr,
-		RestoreLoading: pending > 0 && total == 0,
+		RestoreLoading: loading,
 		RestorePending: pending,
 		RestoreTotal:   total,
 	}

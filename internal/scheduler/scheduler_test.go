@@ -20,18 +20,26 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 				count.Add(1)
 				return nil
 			})
+			// Second in order, so it is still in its boot delay when cancelled.
+			s.Register(
+				"delayed",
+				time.Hour,
+				func(context.Context) error { return nil },
+			)
 			first, cancel := context.WithCancel(context.Background())
 			go func() {
 				time.Sleep(50 * time.Millisecond)
 				cancel()
 			}()
 			s.Start(first)
-			Eventually(func() bool {
-				job, _ := s.job("again")
-				job.mu.Lock()
-				defer job.mu.Unlock()
-				return job.stopCh == nil
-			}).Should(BeTrue())
+			for _, name := range []string{"again", "delayed"} {
+				Eventually(func() bool {
+					job, _ := s.job(name)
+					job.mu.Lock()
+					defer job.mu.Unlock()
+					return job.stopCh == nil
+				}).Should(BeTrue(), name)
+			}
 			ran := count.Load()
 
 			second, cancel2 := context.WithTimeout(

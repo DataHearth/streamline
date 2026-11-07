@@ -421,6 +421,7 @@ func (s *Scheduler) runJob(
 	if firstDelay > 0 {
 		select {
 		case <-ctx.Done():
+			s.markStopped(job, stopCh)
 			return
 		case <-stopCh:
 			return
@@ -433,18 +434,23 @@ func (s *Scheduler) runJob(
 	for {
 		select {
 		case <-ctx.Done():
-			// A later Start relaunches the job only once it reads as stopped.
-			job.mu.Lock()
-			if (<-chan struct{})(job.stopCh) == stopCh {
-				job.stopCh = nil
-			}
-			job.mu.Unlock()
+			s.markStopped(job, stopCh)
 			return
 		case <-stopCh:
 			return
 		case <-ticker.C:
 			go s.executeJob(ctx, job)
 		}
+	}
+}
+
+// markStopped clears the job's stopCh when it is still the one this run got,
+// so a later Start relaunches the job.
+func (s *Scheduler) markStopped(job *registeredJob, stopCh <-chan struct{}) {
+	job.mu.Lock()
+	defer job.mu.Unlock()
+	if (<-chan struct{})(job.stopCh) == stopCh {
+		job.stopCh = nil
 	}
 }
 

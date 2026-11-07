@@ -104,12 +104,11 @@ type Engine struct {
 	// kept after the torrent is dropped so GetTorrent can still tell the
 	// download manager why it is gone.
 	refusals map[string]string
-	// restoring holds the sessions not re-added yet since boot. Their hashes
-	// answer ErrClientNotReady, never ErrTorrentNotFound (which purges).
+	// restoring holds the sessions not re-added yet since boot, with their
+	// flags not applied yet.
 	restoring    map[string]struct{}
 	restoreTotal int
-	// loading is true until the session rows are read. The hashes are unknown
-	// until then, so every lookup answers ErrClientNotReady.
+	// loading is true until the session rows are read.
 	loading bool
 	// ready closes when the boot restore has finished.
 	ready chan struct{}
@@ -220,8 +219,8 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	e.registerEngineGauges(ctx)
 	restoreCtx := context.WithoutCancel(ctx)
 	e.wg.Go(func() {
-		defer observability.RecoverPanic(restoreCtx, "torrent restore progress", nil)
-		e.logRestoreProgress(restoreCtx)
+		defer observability.RecoverPanic(restoreCtx, "torrent restore watch", nil)
+		e.watchRestore(restoreCtx)
 	})
 	e.wg.Go(func() {
 		defer observability.RecoverPanic(restoreCtx, "torrent restore", func() {
@@ -654,18 +653,33 @@ func (e *Engine) loadAndRestore(ctx context.Context) {
 	if e.restoreSessions(ctx, sessions) {
 		return
 	}
+	select {
+	case <-e.quit:
+		return
+	case <-e.stop:
+		return
+	default:
+	}
 	close(e.ready)
 	e.wg.Go(e.enforceSeedLimits)
 }
 
-// restoreProgressEvery paces the warning a long boot restore logs.
-const restoreProgressEvery = 2 * time.Minute
+// restoreProgressEvery paces the warning a long boot restore logs. A restore
+// that reads its rows for longer than restoreLoadLimit, or re-adds nothing for
+// restoreStallLimit, is fatal, as a probe would have killed a boot that hung.
+var (
+	restoreProgressEvery = 2 * time.Minute
+	restoreLoadLimit     = 30 * time.Minute
+	restoreStallLimit    = 15 * time.Minute
+)
 
-// logRestoreProgress warns while the boot restore runs long, so a stalled one
-// shows in the log.
-func (e *Engine) logRestoreProgress(ctx context.Context) {
+// watchRestore warns while the boot restore runs long and reports a stalled
+// one as fatal.
+func (e *Engine) watchRestore(ctx context.Context) {
 	tick := time.NewTicker(restoreProgressEvery)
 	defer tick.Stop()
+	began := time.Now()
+	lastPending, lastMove := -1, began
 	for {
 		select {
 		case <-e.ready:
@@ -673,16 +687,27 @@ func (e *Engine) logRestoreProgress(ctx context.Context) {
 		case <-e.stop:
 			return
 		case <-tick.C:
-			e.mu.Lock()
-			loading := e.loading
-			e.mu.Unlock()
-			if loading {
-				slog.WarnContext(ctx, "torrent sessions still loading")
-				continue
+		}
+		loading, pending, total := e.restoreProgress()
+		if loading {
+			slog.WarnContext(ctx, "torrent sessions still loading",
+				"elapsed", time.Since(began).Round(time.Second))
+			if time.Since(began) >= restoreLoadLimit {
+				e.reportFatal(fmt.Errorf(
+					"torrent sessions still loading after %s", restoreLoadLimit))
+				return
 			}
-			pending, total := e.restoreProgress()
-			slog.WarnContext(ctx, "torrent restore still running",
-				"pending", pending, "total", total)
+			continue
+		}
+		if pending != lastPending {
+			lastPending, lastMove = pending, time.Now()
+		}
+		slog.WarnContext(ctx, "torrent restore still running",
+			"pending", pending, "total", total)
+		if time.Since(lastMove) >= restoreStallLimit {
+			e.reportFatal(fmt.Errorf(
+				"torrent restore made no progress in %s", restoreStallLimit))
+			return
 		}
 	}
 }
@@ -695,9 +720,23 @@ func (e *Engine) reportFatal(err error) {
 	}
 }
 
-// awaitTorrent skips the wait for a torrent the engine already holds.
+// awaitTorrent skips the wait for a torrent already re-added with its flags,
+// and for a hash torrent() rejects anyway.
 func (e *Engine) awaitTorrent(ctx context.Context, hash string) error {
-	if h, err := parseHash(hash); err == nil {
+	select {
+	case <-e.ready:
+		return nil
+	default:
+	}
+	h, err := parseHash(hash)
+	if err != nil {
+		return nil
+	}
+	e.mu.Lock()
+	_, pending := e.restoring[h.HexString()]
+	loading := e.loading
+	e.mu.Unlock()
+	if !loading && !pending {
 		if _, ok := e.client.Torrent(h); ok {
 			return nil
 		}
@@ -845,16 +884,12 @@ func (e *Engine) Ready() <-chan struct{} { return e.ready }
 // Fatal yields the error that stopped the boot restore.
 func (e *Engine) Fatal() <-chan error { return e.fatal }
 
-// restoreProgress reports how many persisted sessions are still waiting to be
-// re-added, out of how many boot found. Before the rows are read it reports one
-// pending of none, so that callers gating on pending keep refusing.
-func (e *Engine) restoreProgress() (pending, total int) {
+// restoreProgress reports whether the session rows are still being read, and
+// how many sessions are still waiting to be re-added out of how many boot found.
+func (e *Engine) restoreProgress() (loading bool, pending, total int) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if e.loading {
-		return 1, 0
-	}
-	return len(e.restoring), e.restoreTotal
+	return e.loading, len(e.restoring), e.restoreTotal
 }
 
 // startWhenReady begins downloading once torrent metadata is known. Magnet

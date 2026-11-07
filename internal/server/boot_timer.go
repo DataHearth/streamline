@@ -42,7 +42,7 @@ func (b *bootTimer) mark(ctx context.Context, step string) {
 		"step", step, "duration_ms", took.Milliseconds())
 }
 
-// bootStep is a database-heavy boot step that runs after the listener opens.
+// bootStep is a database-heavy boot step that runs in the background.
 type bootStep struct {
 	name string
 	run  func(context.Context)
