@@ -12,7 +12,6 @@
 		X,
 		Plus,
 		Check,
-		LoaderCircle,
 		Film,
 		Tv,
 		ArrowUpRight,
@@ -21,7 +20,8 @@
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { api, apiAllPages, errorText, type Paginated } from "@lib/api";
-	import { toast } from "@lib/toast";
+	import { createOutcome } from "@lib/outcome.svelte";
+	import OutcomeButton from "@components/shared/OutcomeButton.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { formatBytes } from "@lib/format";
 	import { movieStatus } from "@lib/status";
@@ -84,6 +84,8 @@
 	// between mutation success and the library refetch.
 	let sessionAdds = $state(new Map<number, number>());
 	let requested = $state(new Set<number>());
+	// The last add or request's result, shown on the add button itself.
+	const outcome = createOutcome<number>();
 	let failedPosters = $state(new Set<number>());
 	let input = $state<HTMLInputElement | null>(null);
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -104,6 +106,7 @@
 			sheetExpanded = false;
 			sessionAdds = new Map();
 			requested = new Set();
+			outcome.clear();
 			failedPosters = new Set();
 			return;
 		}
@@ -179,6 +182,7 @@
 	const addMutation = createMutation<Movie | TVShow | null, Error, Hit>(() => ({
 		onMutate: (h) => {
 			pendingId = h.id;
+			outcome.clear();
 		},
 		mutationFn: async (h) => {
 			if (!canAdd) {
@@ -206,22 +210,22 @@
 			return api<TVShow>("/series", { method: "POST", body });
 		},
 		onSuccess: (item, h) => {
+			outcome.done(h.id);
 			if (!canAdd || !item) {
 				requested = new Set(requested).add(h.id);
-				toast.ok(i18n.toast_requested({ title: h.title }));
 			} else {
 				sessionAdds = new Map(sessionAdds).set(h.id, item.id);
 				qc.invalidateQueries({ queryKey: isMovie ? ["movies"] : ["series"] });
 				qc.invalidateQueries({
 					queryKey: isMovie ? ["movies", "counts"] : ["series", "counts"],
 				});
-				toast.ok(i18n.toast_added({ title: h.title }));
 			}
-			// Back to the grid — the badge carries the new state, and the next
-			// title is one tap away.
-			selectedId = null;
 		},
-		onError: (e) => toast.err(errorText(e, i18n.common_add_failed())),
+		onError: (e, h) =>
+			outcome.failed(
+				h.id,
+				errorText(e, canAdd ? i18n.common_add_failed() : i18n.common_request_failed()),
+			),
 		onSettled: () => {
 			pendingId = null;
 		},
@@ -587,7 +591,8 @@
 		{/snippet}
 
 		{#snippet footer()}
-			{#if selectedHeld}
+			{@const settling = !!selected && outcome.showing(selected.id)}
+			{#if selectedHeld && !settling}
 				<div
 					class="flex h-[46px] items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3.5"
 				>
@@ -610,7 +615,7 @@
 						<ArrowUpRight size={17} aria-hidden="true" />
 					</a>
 				{/if}
-			{:else if selectedRequested}
+			{:else if selectedRequested && !settling}
 				<div
 					class="flex h-[50px] items-center justify-center gap-2 rounded-xl border border-accent-line bg-accent-soft text-[16px] font-semibold text-accent-text"
 				>
@@ -633,25 +638,24 @@
 						/>
 					</div>
 				</div>
-				<button
-					type="button"
-					disabled={selectedPending}
-					aria-busy={selectedPending}
-					onclick={() => selected && addMutation.mutate(selected)}
-					class="mt-2.5 flex h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-accent text-[16px] font-semibold text-fg-on-accent transition active:opacity-80 disabled:opacity-60"
-				>
-					{#if selectedPending}
-						<LoaderCircle size={17} class="animate-spin" aria-hidden="true" />
-						{canAdd ? i18n.action_adding() : i18n.action_requesting()}
-					{:else}
-						<Plus size={18} aria-hidden="true" />
-						{canAdd
+				{#if selected}
+					<OutcomeButton
+						size="lg"
+						class="mt-2.5"
+						phase={outcome.phase(selected.id, selectedPending)}
+						error={outcome.error(selected.id)}
+						icon={Plus}
+						label={canAdd
 							? isMovie
 								? i18n.action_add_movie()
 								: i18n.action_add_series()
 							: i18n.action_request()}
-					{/if}
-				</button>
+						pendingLabel={canAdd ? i18n.action_adding() : i18n.action_requesting()}
+						doneLabel={canAdd ? i18n.common_added() : i18n.status_requested()}
+						failedLabel={canAdd ? i18n.common_add_failed() : i18n.common_request_failed()}
+						onclick={() => selected && addMutation.mutate(selected)}
+					/>
+				{/if}
 			{/if}
 		{/snippet}
 	</LookupSheet>
