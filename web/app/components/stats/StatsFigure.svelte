@@ -2,8 +2,8 @@
 	import type { Delta } from "@lib/stats";
 	import { cn } from "@lib/cn";
 
-	// One headline number. The label carries meaning, so it is fg-subtle, not
-	// the eyebrow's faint grey. `tone` colours the value with a status token
+	// One headline number. The label is text, so it is fg-subtle like every
+	// eyebrow (faint is for icons and separators only). `tone` colours the value with a status token
 	// when the number is itself a state (failed, pending); most stay fg.
 	let {
 		label,

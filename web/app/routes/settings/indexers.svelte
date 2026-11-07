@@ -341,7 +341,7 @@
 							</div>
 							<div class="mt-0.5 text-[11px] text-fg-subtle">
 								{provider(i).label}
-								<span class="text-fg-subtle">· {provider(i).hint}</span>
+								<span>· {provider(i).hint}</span>
 							</div>
 						</div>
 					</button>

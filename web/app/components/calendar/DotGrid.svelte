@@ -71,7 +71,7 @@
 						class={cn(
 							"font-mono text-[13px] font-semibold leading-none tabular",
 							!cell.inMonth
-								? "text-fg-subtle opacity-60"
+								? "font-normal text-fg-subtle"
 								: isSelected || isCurrent
 									? "text-accent-text"
 									: "text-fg-muted",

@@ -380,7 +380,7 @@
 								"rounded-sm px-1.5 py-px font-mono text-[10px] tabular",
 								t.key === "pending" && t.count > 0
 									? "bg-status-wanted/20 text-status-wanted"
-									: "bg-white/[0.04] text-fg-subtle",
+									: "bg-white/[0.04] text-fg-muted",
 							)}
 						>
 							{t.count}
@@ -473,7 +473,7 @@
 									</span>
 								</div>
 								<div class="mt-0.5 truncate text-[12px] text-fg-subtle">
-									{#if albumBy(r)}{albumBy(r)}{#if requestedAs(r)}<span class="text-fg-subtle">{" ("}{requestedAs(r)}{")"}</span>{/if}{" · "}{/if}{requesterName(r)} · {formatRelative(r.created_at)}
+									{#if albumBy(r)}{albumBy(r)}{#if requestedAs(r)}<span class="italic">{" ("}{requestedAs(r)}{")"}</span>{/if}{" · "}{/if}{requesterName(r)} · {formatRelative(r.created_at)}
 								</div>
 							</div>
 							<span

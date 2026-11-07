@@ -176,7 +176,7 @@
 							<span class="{chip} border-status-downloading/30 text-status-downloading">{i18n.books_ongoing()}</span>
 						{/if}
 						{#if loading}
-							<span class="{chip} text-fg-subtle">{i18n.lc_loading()}</span>
+							<span class={cn(chip, "text-fg-subtle")}>{i18n.lc_loading()}</span>
 						{/if}
 					</div>
 				</div>

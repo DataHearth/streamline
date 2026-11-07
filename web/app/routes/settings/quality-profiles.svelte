@@ -205,7 +205,7 @@
 				>
 					{t.label}
 					{#if t.count !== undefined}
-						<span class="rounded-sm bg-white/[0.04] px-1.5 py-px font-mono text-[10px] tabular text-fg-subtle">{t.count}</span>
+						<span class="rounded-sm bg-white/[0.04] px-1.5 py-px font-mono text-[10px] tabular text-fg-muted">{t.count}</span>
 					{/if}
 				</button>
 			{/each}

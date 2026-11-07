@@ -126,7 +126,7 @@
 		{:else if entry.classification === "existing"}
 			<span class="text-xs text-fg-subtle">{i18n.imports_attach()}</span>
 		{:else}
-			<span class="text-xs text-fg-subtle">{i18n.imports_awaits_decision()}</span>
+			<span class="text-xs italic text-fg-subtle">{i18n.imports_awaits_decision()}</span>
 		{/if}
 	</td>
 
