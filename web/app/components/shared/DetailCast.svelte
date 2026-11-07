@@ -58,7 +58,7 @@
 						/>
 					{:else}
 						<span
-							class="grid h-full w-full place-items-center font-mono text-2xl font-bold text-fg-faint"
+							class="grid h-full w-full place-items-center font-mono text-2xl font-bold text-fg-subtle"
 						>
 							{initials(member.name)}
 						</span>

@@ -494,7 +494,7 @@
 							>
 								<h2 class="text-[20px] font-bold leading-none tracking-tight text-fg">{s.letter}</h2>
 								{#if s.count != null}
-									<span class="font-mono text-[11px] text-fg-faint">{artistsCount(s.count)}</span>
+									<span class="font-mono text-[11px] text-fg-subtle">{artistsCount(s.count)}</span>
 								{/if}
 								<span class="h-px flex-1 bg-border" aria-hidden="true"></span>
 							</div>

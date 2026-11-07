@@ -158,7 +158,7 @@
 			? [book.author, i18n.books_first_published({ year: String(book.first_published) }), (book.editions.length === 1 ? i18n.books_editions_n_one : i18n.books_editions_n_other)({ count: String(book.editions.length) })]
 			: [],
 	);
-	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
+	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle";
 
 	// The movie overview's two columns, under the format cards: what the book
 	// is and who made it, beside its facts and our copy of it. Translators and
@@ -457,11 +457,11 @@
 			<div class="mt-5 grid gap-3 sm:grid-cols-2">
 				{#each [{ label: i18n.replace_current_file(), e: pendingCurrent, detail: [pendingCurrent.publisher, String(pendingCurrent.year), pendingSlot.file?.container, pendingSlot.file ? formatBytes(pendingSlot.file.size, "") : ""] }, { label: i18n.replace_replaced_by(), e: pending, detail: [pending.publisher, String(pending.year), editionDetail(pending)] }] as box (box.label)}
 					<div class="rounded-lg border border-border bg-bg-deep/60 p-3.5">
-						<p class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint">{box.label}</p>
+						<p class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle">{box.label}</p>
 						<div class="mt-2 flex items-center gap-1.5">
 							<LangChip code={box.e.language} active />
 							{#if box.e.original}
-								<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-faint">{i18n.books_original()}</span>
+								<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">{i18n.books_original()}</span>
 							{/if}
 						</div>
 						<p class="mt-1.5 text-[13.5px] text-fg">{box.e.title}</p>

@@ -42,7 +42,7 @@
 	<div class="grid grid-cols-7" aria-hidden="true">
 		{#each labels as label, i (i)}
 			<span
-				class="pb-1.5 text-center font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint"
+				class="pb-1.5 text-center font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle"
 			>
 				{label}
 			</span>
@@ -71,7 +71,7 @@
 						class={cn(
 							"font-mono text-[13px] font-semibold leading-none tabular",
 							!cell.inMonth
-								? "text-fg-faint opacity-60"
+								? "text-fg-subtle opacity-60"
 								: isSelected || isCurrent
 									? "text-accent-text"
 									: "text-fg-muted",
@@ -84,7 +84,7 @@
 							<EventDot kind={dotToken(e)} />
 						{/each}
 						{#if evs.length > MAX_DOTS}
-							<span class="font-mono text-[8px] leading-none text-fg-faint">
+							<span class="font-mono text-[8px] leading-none text-fg-subtle">
 								+{evs.length - MAX_DOTS}
 							</span>
 						{/if}

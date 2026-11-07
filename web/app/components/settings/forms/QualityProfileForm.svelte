@@ -513,7 +513,7 @@
 					<div class="mt-4 space-y-4 border-t border-border pt-4">
 						<div>
 							<h4
-								class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+								class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
 							>
 								{i18n.quality_transcode_if()}
 							</h4>
@@ -575,7 +575,7 @@
 						</form.Field>
 
 						<h4
-							class="border-t border-border pt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+							class="border-t border-border pt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
 						>
 							{i18n.quality_transcode_to()}
 						</h4>

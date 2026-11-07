@@ -103,7 +103,7 @@
 				bind:value={typed}
 				autocomplete="off"
 				spellcheck="false"
-				class="h-9 w-full rounded-md border border-border bg-bg px-3 font-mono text-sm text-fg placeholder:text-fg-faint focus-visible:outline-2 focus-visible:outline-accent"
+				class="h-9 w-full rounded-md border border-border bg-bg px-3 font-mono text-sm text-fg placeholder:text-fg-subtle focus-visible:outline-2 focus-visible:outline-accent"
 			/>
 		</label>
 	</Dialog>

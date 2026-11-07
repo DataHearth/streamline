@@ -36,7 +36,7 @@
 			<span class="sr-only">{label}</span>
 		</span>
 	{:else}
-		<span class="text-fg-faint" aria-hidden="true">—</span><span class="sr-only">0 {label}</span>
+		<span class="text-fg-subtle" aria-hidden="true">—</span><span class="sr-only">0 {label}</span>
 	{/if}
 {/snippet}
 
@@ -51,9 +51,9 @@
 	<div class="overflow-hidden rounded-lg border border-border bg-bg-elevated">
 		<div class="ledger-grid hidden border-b border-border px-5 py-2.5 md:grid" aria-hidden="true">
 			<span></span>
-			<span class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint">{i18n.dash_col_library()}</span>
-			<span class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint">{i18n.status_wanted()}</span>
-			<span class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint">{i18n.dash_col_queue()}</span>
+			<span class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle">{i18n.dash_col_library()}</span>
+			<span class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle">{i18n.status_wanted()}</span>
+			<span class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle">{i18n.dash_col_queue()}</span>
 			<span></span>
 		</div>
 

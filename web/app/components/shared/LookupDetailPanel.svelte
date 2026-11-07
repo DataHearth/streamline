@@ -131,7 +131,7 @@
 			<Tv class="mb-3 h-8 w-8 text-fg-faint" aria-hidden="true" />
 		{/if}
 		<p class="text-sm font-medium text-fg-muted">{i18n.lookup_nothing_selected()}</p>
-		<p class="mt-1 text-xs text-fg-faint">
+		<p class="mt-1 text-xs text-fg-subtle">
 			{i18n.lookup_pick_result()}
 		</p>
 	</div>
@@ -181,7 +181,7 @@
 					</h3>
 				{/if}
 				{#if item.subtitle}
-					<p class="mt-1 truncate text-[12.5px] italic text-fg-faint">
+					<p class="mt-1 truncate text-[12.5px] italic text-fg-subtle">
 						{item.subtitle}
 					</p>
 				{/if}
@@ -229,7 +229,7 @@
 					{/each}
 					{#if loading}
 						<span
-							class="inline-flex h-6 items-center rounded-full border border-border bg-surface px-2.5 font-mono text-[11px] text-fg-faint"
+							class="inline-flex h-6 items-center rounded-full border border-border bg-surface px-2.5 font-mono text-[11px] text-fg-subtle"
 						>
 							{i18n.lc_loading()}
 						</span>
@@ -242,7 +242,7 @@
 		{#if synopsis && !headless}
 			<section>
 				<h4
-					class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint"
+					class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle"
 				>
 					{i18n.detail_synopsis()}
 				</h4>
@@ -262,7 +262,7 @@
 		{:else if loading && !detail}
 			<section>
 				<h4
-					class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint"
+					class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle"
 				>
 					{i18n.detail_top_billed()}
 				</h4>
@@ -282,7 +282,7 @@
 		{:else if cast.length > 0}
 			<section>
 				<h4
-					class="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint"
+					class="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle"
 				>
 					{i18n.detail_top_billed()}
 				</h4>
@@ -293,7 +293,7 @@
 		{#if facts.length > 0}
 			<section>
 				<h4
-					class="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint"
+					class="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle"
 				>
 					{i18n.common_details()}
 				</h4>

@@ -228,7 +228,7 @@
 						class="{INPUT_CLASS} pr-8 font-mono tabular"
 					/>
 					<span
-						class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-fg-faint"
+						class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-fg-subtle"
 						aria-hidden="true"
 					>
 						%

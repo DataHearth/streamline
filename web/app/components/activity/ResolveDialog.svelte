@@ -289,7 +289,7 @@
 							class="grid grid-cols-[auto_1fr] items-baseline gap-x-3 px-2.5 py-2"
 						>
 							<dt
-								class="font-mono text-[10px] uppercase tracking-[0.1em] text-fg-faint"
+								class="font-mono text-[10px] uppercase tracking-[0.1em] text-fg-subtle"
 							>
 								{CHECK_LABELS[f.check]?.() ?? f.check}
 							</dt>

@@ -27,7 +27,7 @@
 			<span
 				class="font-mono text-[14px] font-semibold tabular-nums {c.n > 0
 					? c.cls
-					: 'text-fg-faint'}"
+					: 'text-fg-subtle'}"
 			>
 				{c.n}
 			</span>

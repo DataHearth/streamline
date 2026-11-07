@@ -248,7 +248,7 @@ export function torrentMeta(t: Torrent): MetaLine {
 	if (t.status === "fetching") {
 		return {
 			text: joinDot([i18n.torrent_meta_waiting_metadata(), swarm || peers(0)]),
-			color: "var(--fg-faint)",
+			color: "var(--fg-subtle)",
 		};
 	}
 	if (t.status === "stalled") {

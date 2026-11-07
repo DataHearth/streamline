@@ -32,7 +32,7 @@
 		accent:
 			"text-fg-muted has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent-text",
 		status:
-			"text-fg-faint has-[:checked]:border-status-available/40 has-[:checked]:bg-status-available/10 has-[:checked]:text-status-available",
+			"text-fg-subtle has-[:checked]:border-status-available/40 has-[:checked]:bg-status-available/10 has-[:checked]:text-status-available",
 	} as const;
 </script>
 

@@ -515,7 +515,7 @@
 								<div class="truncate text-[14px] font-medium leading-tight text-fg">
 									{auth.user.display_name || auth.user.email}
 								</div>
-								<div class="mt-0.5 truncate font-mono text-[11px] text-fg-faint">
+								<div class="mt-0.5 truncate font-mono text-[11px] text-fg-subtle">
 									{role}{version ? ` · ${version}` : ""}
 								</div>
 							</div>

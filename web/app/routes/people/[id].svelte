@@ -227,7 +227,7 @@
 	const gridClass =
 		"grid gap-x-4 gap-y-6 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]";
 	const headingClass =
-		"mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
+		"mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle";
 </script>
 
 {#if personQuery.isLoading}
@@ -283,7 +283,7 @@
 					/>
 				{:else}
 					<span
-						class="grid h-full w-full place-items-center font-mono text-4xl font-bold text-fg-faint md:text-5xl"
+						class="grid h-full w-full place-items-center font-mono text-4xl font-bold text-fg-subtle md:text-5xl"
 					>
 						{initials(person.name)}
 					</span>
@@ -345,10 +345,7 @@
 
 				{#if bioParagraphs.length > 0}
 					<div class="mt-4 max-w-[680px]">
-						<!-- fg-faint reads on the page's flat background, which is where
-						     the other two headings sit. This one is over the blurred
-						     portrait and needs the lighter step to stay legible. -->
-						<h2 class={cn(headingClass, "text-fg-subtle")}>
+						<h2 class={headingClass}>
 							{i18n.person_biography()}
 						</h2>
 						<div

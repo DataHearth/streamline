@@ -26,7 +26,7 @@
 				{s.value}
 			</div>
 			<div
-				class="mt-px truncate text-[9px] font-medium uppercase tracking-[0.13em] text-fg-faint"
+				class="mt-px truncate text-[9px] font-medium uppercase tracking-[0.13em] text-fg-subtle"
 			>
 				{s.label}
 			</div>

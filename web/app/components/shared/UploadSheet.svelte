@@ -282,11 +282,11 @@
 								<li class="flex items-baseline gap-3">
 									<span class="min-w-0 flex-1 break-all font-mono text-[11px] text-fg">{f.path}</span>
 									<span class={cn("shrink-0 text-[11px]", OUTCOME[f.outcome]?.tone)}>{OUTCOME[f.outcome]?.label()}</span>
-									<span class="shrink-0 font-mono text-[10.5px] tabular text-fg-faint">{formatBytes(f.size)}</span>
+									<span class="shrink-0 font-mono text-[10.5px] tabular text-fg-subtle">{formatBytes(f.size)}</span>
 								</li>
 							{/each}
 						</ul>
-						<p class="mt-2 text-[11px] text-fg-faint">{i18n.upload_book_hint()}</p>
+						<p class="mt-2 text-[11px] text-fg-subtle">{i18n.upload_book_hint()}</p>
 					{/if}
 				</div>
 			{/if}
@@ -305,7 +305,7 @@
 					<div class="h-full bg-accent transition-[width]" style:width={sent.total > 0 ? `${(100 * sent.done) / sent.total}%` : "0%"}></div>
 				</div>
 				{#if sent.total > 0}
-					<p class="mt-1 font-mono text-[11px] text-fg-faint">
+					<p class="mt-1 font-mono text-[11px] text-fg-subtle">
 						{i18n.upload_progress({ sent: formatBytes(sent.done), total: formatBytes(sent.total) })}
 					</p>
 				{/if}

@@ -137,7 +137,7 @@
 			: ''}"
 	>
 		<dt
-			class="flex items-center gap-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-fg-faint"
+			class="flex items-center gap-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-fg-subtle"
 		>
 			<Icon size={11} aria-hidden="true" />
 			{label}

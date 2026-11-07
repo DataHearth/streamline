@@ -72,7 +72,7 @@
 										</span>
 										<span class="mt-0.5 block font-mono text-[11px] text-fg-subtle">{tierFormats(t)}</span>
 									</span>
-									<span class="shrink-0 font-mono text-[11px] text-fg-faint">{tierAlbumSize(t)}</span>
+									<span class="shrink-0 font-mono text-[11px] text-fg-subtle">{tierAlbumSize(t)}</span>
 								</span>
 							</Checkbox>
 						</li>

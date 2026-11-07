@@ -314,7 +314,7 @@
 						</button>
 					{/if}
 					{#if !apiKey.current && !isEdit}
-						<span class="font-mono text-[10.5px] text-fg-faint">
+						<span class="font-mono text-[10.5px] text-fg-subtle">
 							{i18n.mediaserver_plex_signin_first()}
 						</span>
 					{/if}

@@ -87,7 +87,7 @@
 		<div class="mt-3 flex min-w-0 items-center gap-2">
 			<LangChip code={edition.language} active />
 			{#if edition.original}
-				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-faint">{i18n.books_original()}</span>
+				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">{i18n.books_original()}</span>
 			{/if}
 			<p class="min-w-0 truncate text-[13.5px] text-fg">{edition.title}</p>
 		</div>

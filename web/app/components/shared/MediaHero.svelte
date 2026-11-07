@@ -92,7 +92,7 @@
 				{title}
 			</h1>
 			{#if originalTitle}
-				<p class="mt-1 text-sm italic text-fg-faint">{originalTitle}</p>
+				<p class="mt-1 text-sm italic text-fg-subtle">{originalTitle}</p>
 			{/if}
 			{#if meta.length > 0}
 				{@render dotted(meta, "mt-3 font-mono text-xs text-fg-muted")}

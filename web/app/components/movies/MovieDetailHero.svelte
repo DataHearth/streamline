@@ -104,7 +104,7 @@
 			</h1>
 
 			{#if movie.original_title.trim() && movie.original_title.trim() !== movie.title.trim()}
-				<p class="mt-1 text-sm italic text-fg-faint">
+				<p class="mt-1 text-sm italic text-fg-subtle">
 					{movie.original_title}
 				</p>
 			{/if}

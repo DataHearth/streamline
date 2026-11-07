@@ -19,7 +19,7 @@
 	let { media }: { media: StatsMedia[] } = $props();
 
 	let bytes = $derived(media.reduce((a, m) => a + m.bytes, 0));
-	const head = "font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint";
+	const head = "font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle";
 </script>
 
 <div class="min-w-0">
@@ -75,7 +75,7 @@
 							{#if m.wanted > 0}
 								<span class="text-status-wanted">{fmtCount(m.wanted)}</span>
 							{:else}
-								<span class="text-fg-faint" aria-hidden="true">—</span><span class="sr-only">0</span>
+								<span class="text-fg-subtle" aria-hidden="true">—</span><span class="sr-only">0</span>
 							{/if}
 						</span>
 						<ChevronRight size={14} class="text-fg-faint" aria-hidden="true" />

@@ -712,7 +712,7 @@
 									>
 								{/if}
 								{#if unairedTotal > 0}
-									<span class="whitespace-nowrap text-fg-faint"
+									<span class="whitespace-nowrap text-fg-subtle"
 										><span class="sep">·&nbsp;</span>{countUnaired(unairedTotal)}</span
 									>
 								{/if}
@@ -820,7 +820,7 @@
 				>
 					<span>{t.label}</span>
 					{#if t.key === "episodes"}
-						<span class="ml-1.5 font-mono text-[11px] text-fg-faint">
+						<span class="ml-1.5 font-mono text-[11px] text-fg-subtle">
 							{show.have_episodes ?? 0}/{show.total_episodes ?? 0}
 						</span>
 					{/if}
@@ -856,7 +856,7 @@
 					>
 						<h4
 							id="series-info-library"
-							class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+							class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
 						>
 							{i18n.nav_library()}
 						</h4>
@@ -1046,8 +1046,8 @@
 													>
 												{/if}
 												{#if (currentSeason.unaired ?? 0) > 0}
-													<span class="whitespace-nowrap text-fg-faint"
-														><span class="sep">·&nbsp;</span>{countUnaired(currentSeason.unaired ?? 0)}</span
+													<span class="whitespace-nowrap text-fg-subtle"
+														><span class="sep text-fg-faint">·&nbsp;</span>{countUnaired(currentSeason.unaired ?? 0)}</span
 													>
 												{/if}
 											</span></span>

@@ -215,12 +215,12 @@
 							{sizeValue}
 						</div>
 						<div
-							class="mt-px text-[9px] font-medium uppercase tracking-[0.12em] text-fg-faint"
+							class="mt-px text-[9px] font-medium uppercase tracking-[0.12em] text-fg-subtle"
 						>
 							{i18n.common_size()}
 						</div>
 						{#if selectionUnsupported}
-							<div class="mt-1 text-[9.5px] text-fg-faint">
+							<div class="mt-1 text-[9.5px] text-fg-subtle">
 								{i18n.queue_selection_unsupported()}
 							</div>
 						{/if}
@@ -231,7 +231,7 @@
 								{item.download_client || "—"}
 							</div>
 							<div
-								class="mt-px text-[9px] font-medium uppercase tracking-[0.12em] text-fg-faint"
+								class="mt-px text-[9px] font-medium uppercase tracking-[0.12em] text-fg-subtle"
 							>
 								{i18n.common_client()}
 							</div>
@@ -243,7 +243,7 @@
 					{#each rows as kv (kv.label)}
 						<dt
 							class="pt-px text-[9.5px] font-medium uppercase tracking-[0.1em]"
-							style:color={kv.tone ?? "var(--fg-faint)"}
+							style:color={kv.tone ?? "var(--fg-subtle)"}
 						>
 							{kv.label}
 						</dt>

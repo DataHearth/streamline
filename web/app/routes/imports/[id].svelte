@@ -683,7 +683,7 @@
 		<header class="mt-3 flex flex-wrap items-start justify-between gap-3">
 			<div class="min-w-0 flex-1">
 				<p
-					class="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-faint"
+					class="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle"
 				>
 					{i18n.imports_scan_hash({ id: scan.id })}
 				</p>
@@ -876,7 +876,7 @@
 							type="search"
 							bind:value={q}
 							placeholder={text.search}
-							class="w-full rounded-md border border-border bg-bg-card py-1.5 pl-3 pr-9 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class="w-full rounded-md border border-border bg-bg-card py-1.5 pl-3 pr-9 text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
 						/>
 						{#if q}
 							<button
@@ -919,7 +919,7 @@
 					{:else}
 						<table class="w-full text-sm">
 							<thead
-								class="bg-surface text-left text-[10px] uppercase tracking-[0.14em] text-fg-faint"
+								class="bg-surface text-left text-[10px] uppercase tracking-[0.14em] text-fg-subtle"
 							>
 								<tr>
 									<th class="px-4 py-2.5 font-semibold">{text.column}</th>
@@ -972,7 +972,7 @@
 							type="search"
 							bind:value={q}
 							placeholder={i18n.imports_search_folder_title()}
-							class="w-full rounded-md border border-border bg-bg-card py-1.5 pl-3 pr-9 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class="w-full rounded-md border border-border bg-bg-card py-1.5 pl-3 pr-9 text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
 						/>
 						{#if q}
 							<button
@@ -1015,7 +1015,7 @@
 					{:else}
 						<table class="w-full text-sm">
 							<thead
-								class="bg-surface text-left text-[10px] uppercase tracking-[0.14em] text-fg-faint"
+								class="bg-surface text-left text-[10px] uppercase tracking-[0.14em] text-fg-subtle"
 							>
 								<tr>
 									<th class="px-4 py-2.5 font-semibold">{i18n.imports_show_folder()}</th>
@@ -1069,7 +1069,7 @@
 							type="search"
 							bind:value={q}
 							placeholder={i18n.imports_search_filename()}
-							class="w-full rounded-md border border-border bg-bg-card py-1.5 pl-3 pr-9 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class="w-full rounded-md border border-border bg-bg-card py-1.5 pl-3 pr-9 text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
 						/>
 						{#if q}
 							<button
@@ -1114,7 +1114,7 @@
 					{:else}
 						<table class="w-full text-sm">
 							<thead
-								class="bg-surface text-left text-[10px] uppercase tracking-[0.14em] text-fg-faint"
+								class="bg-surface text-left text-[10px] uppercase tracking-[0.14em] text-fg-subtle"
 							>
 								<tr>
 									{@render sortHeader("file", i18n.common_file())}

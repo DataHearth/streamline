@@ -223,7 +223,7 @@
 						</span>
 					{/if}
 				</h2>
-				<span class="shrink-0 font-mono text-[10.5px] text-fg-faint">
+				<span class="shrink-0 font-mono text-[10.5px] text-fg-subtle">
 					{dayEvents.length === 1
 						? i18n.calendar_release_count_one({ count: dayEvents.length })
 						: i18n.calendar_release_count_other({ count: dayEvents.length })}
@@ -259,7 +259,7 @@
 		<section class="mt-2 lg:hidden">
 			<div class="mb-1 flex items-baseline justify-between gap-3 px-1">
 				<h2 class="text-base font-semibold tracking-tight text-fg">{i18n.calendar_coming_up()}</h2>
-				<span class="font-mono text-[11px] text-fg-faint">{i18n.lc_next_30_days()}</span>
+				<span class="font-mono text-[11px] text-fg-subtle">{i18n.lc_next_30_days()}</span>
 			</div>
 			<AgendaList events={agendaEvents} size="md" />
 		</section>

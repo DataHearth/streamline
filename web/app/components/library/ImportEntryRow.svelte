@@ -126,7 +126,7 @@
 		{:else if entry.classification === "existing"}
 			<span class="text-xs text-fg-subtle">{i18n.imports_attach()}</span>
 		{:else}
-			<span class="text-xs text-fg-faint">{i18n.imports_awaits_decision()}</span>
+			<span class="text-xs text-fg-subtle">{i18n.imports_awaits_decision()}</span>
 		{/if}
 	</td>
 
@@ -161,7 +161,7 @@
 		{:else if reviewing && entry.classification === "existing"}
 			{@render skipToggle()}
 		{:else}
-			<span class="font-mono text-xs text-fg-faint">—</span>
+			<span class="font-mono text-xs text-fg-subtle">—</span>
 		{/if}
 	</td>
 </tr>

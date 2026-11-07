@@ -100,7 +100,7 @@
 				oninput={(e) => (magnet = e.currentTarget.value)}
 				rows="3"
 				placeholder="magnet:?xt=urn:btih:…"
-				class="w-full resize-none rounded-md border border-border bg-bg px-3 py-2 font-mono text-xs text-fg placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+				class="w-full resize-none rounded-md border border-border bg-bg px-3 py-2 font-mono text-xs text-fg placeholder:text-fg-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
 			></textarea>
 		</label>
 		{#if magnet.trim() && !magnetValid}

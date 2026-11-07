@@ -67,7 +67,7 @@
 				>
 					<div class="flex gap-2.5 px-3 py-2">
 						<span
-							class="w-8 shrink-0 pt-px font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint"
+							class="w-8 shrink-0 pt-px font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle"
 						>
 							{i18n.common_from()}
 						</span>

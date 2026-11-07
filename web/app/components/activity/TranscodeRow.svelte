@@ -113,7 +113,7 @@
 						{/if}
 					</div>
 				{/if}
-				<div class="truncate font-mono text-[10.5px] tabular-nums text-fg-faint">
+				<div class="truncate font-mono text-[10.5px] tabular-nums text-fg-subtle">
 					{fig.sub}
 				</div>
 			</div>
@@ -171,11 +171,11 @@
 	{#if expanded}
 		<div transition:slide={{ duration: 180 }} class="bg-bg-card px-3 py-3.5 md:px-4">
 			<dl class="grid grid-cols-[max-content_1fr] gap-x-5 gap-y-1.5 text-[11.5px]">
-				<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">
+				<dt class="font-medium uppercase tracking-[0.1em] text-fg-subtle">
 					{i18n.transcode_file()}
 				</dt>
 				<dd class="m-0 min-w-0 break-all font-mono text-fg-muted">{job.file_path}</dd>
-				<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">
+				<dt class="font-medium uppercase tracking-[0.1em] text-fg-subtle">
 					{i18n.common_size()}
 				</dt>
 				<dd class="m-0 min-w-0 font-mono text-fg-muted">
@@ -185,18 +185,18 @@
 						{formatBytes(job.size_before)}
 					{/if}
 				</dd>
-				<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">
+				<dt class="font-medium uppercase tracking-[0.1em] text-fg-subtle">
 					{i18n.transcode_attempts_label()}
 				</dt>
 				<dd class="m-0 min-w-0 font-mono text-fg-muted">{job.attempts}</dd>
-				<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">
+				<dt class="font-medium uppercase tracking-[0.1em] text-fg-subtle">
 					{i18n.common_created()}
 				</dt>
 				<dd class="m-0 min-w-0 font-mono text-fg-muted">
 					{formatDateTime(job.created_at)}
 				</dd>
 				{#if job.finished_at}
-					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">
+					<dt class="font-medium uppercase tracking-[0.1em] text-fg-subtle">
 						{i18n.transcode_finished_label()}
 					</dt>
 					<dd class="m-0 min-w-0 font-mono text-fg-muted">

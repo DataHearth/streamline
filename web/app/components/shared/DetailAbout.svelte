@@ -19,7 +19,7 @@
 <section class="min-w-0" aria-labelledby="detail-synopsis">
 	<h2
 		id="detail-synopsis"
-		class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+		class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
 	>
 		{i18n.detail_synopsis()}
 	</h2>
@@ -37,7 +37,7 @@
 		<div class="my-5 h-px bg-border"></div>
 		<div class="mb-3 flex items-baseline justify-between">
 			<h3
-				class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+				class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
 			>
 				{i18n.detail_cast()}
 			</h3>

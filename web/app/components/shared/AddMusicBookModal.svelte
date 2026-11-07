@@ -298,7 +298,7 @@
 					placeholder={isArtist ? i18n.lookup_search_mb_placeholder() : i18n.lookup_search_hc_placeholder()}
 					autocomplete="off"
 					aria-label={isArtist ? i18n.lookup_search_mb() : i18n.lookup_search_hc()}
-					class="w-full rounded-md border border-border bg-bg-card py-2 pl-10 pr-10 text-sm text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent-ring placeholder:text-fg-faint"
+					class="w-full rounded-md border border-border bg-bg-card py-2 pl-10 pr-10 text-sm text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent-ring placeholder:text-fg-subtle"
 				/>
 				{#if query.length > 0}
 					<button
@@ -316,7 +316,7 @@
 			</div>
 
 			{#if debounced.length >= 2 && !searchQuery.isLoading && !searchQuery.isError && results.length > 0}
-				<p class="px-1 text-[11px] text-fg-faint">
+				<p class="px-1 text-[11px] text-fg-subtle">
 					{(results.length === 1 ? i18n.lookup_matches_for_one : i18n.lookup_matches_for_other)({
 						count: results.length,
 						query: debounced,
@@ -331,7 +331,7 @@
 						<p class="text-sm font-medium text-fg-muted">
 							{isArtist ? i18n.lookup_mb_prompt() : i18n.lookup_hc_prompt()}
 						</p>
-						<p class="mt-1 text-xs text-fg-faint">
+						<p class="mt-1 text-xs text-fg-subtle">
 							{isArtist ? i18n.lookup_type_2_artist() : i18n.lookup_type_2_book()}
 						</p>
 					</div>
@@ -364,7 +364,7 @@
 							<BookOpen class="mb-3 h-8 w-8 text-fg-faint" aria-hidden="true" />
 						{/if}
 						<p class="text-sm font-medium text-fg-muted">{i18n.common_no_matches()}</p>
-						<p class="mt-1 text-xs text-fg-faint">
+						<p class="mt-1 text-xs text-fg-subtle">
 							{(isArtist ? i18n.lookup_nothing_on_mb : i18n.lookup_nothing_on_hc)({ query: debounced })}
 						</p>
 					</div>
@@ -437,7 +437,7 @@
 											</span>
 										{/if}
 										{#if r.book?.matched_title}
-											<span class="mt-0.5 truncate text-[11px] italic text-fg-faint">
+											<span class="mt-0.5 truncate text-[11px] italic text-fg-subtle">
 												{i18n.lookup_series_via({ title: r.book.matched_title })}
 											</span>
 										{/if}

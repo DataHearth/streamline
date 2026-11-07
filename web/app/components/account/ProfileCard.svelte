@@ -60,7 +60,7 @@
 				{#if auth.user?.display_name?.trim()}
 					{auth.user.display_name}
 				{:else}
-					<span class="text-fg-faint">—</span>
+					<span class="text-fg-subtle">—</span>
 				{/if}
 			</dd>
 		</div>
