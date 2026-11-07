@@ -39,6 +39,7 @@ const FLICK = 0.45; // px per ms
 const FLICK_WINDOW_MS = 100; // the release speed is measured over this trailing span
 const FLICK_HOLD_MS = 150; // held still longer than this before release → no speed
 const SLOP = 6; // a tap on a row must stay a tap
+const TURN_PX = 2; // a step back smaller than this is jitter, not a turn
 const CATCH_PX = 4; // further than this off its rest, the sheet is mid-flight
 const SETTLE = "transform var(--dur-base, 200ms) var(--ease, ease-out)";
 const SCRIM_SETTLE = "opacity var(--dur-base, 200ms) var(--ease, ease-out)";
@@ -52,16 +53,29 @@ type Sample = { y: number; t: number };
  *  on event timestamps. The span is the fixed window widened backwards across
  *  gaps that carry fast motion (moves a busy main thread delivered late and
  *  coalesced) and stops at a still gap — what precedes a pause must not lend
- *  the release any speed. A finger parked before letting go has none. */
+ *  the release any speed. A finger parked before letting go has none.
+ *
+ *  A turn ends the span the way a pause does. A finger that reverses without
+ *  slowing down leaves no still gap behind it, so the fast pull before the turn
+ *  used to widen the span back over itself and outweigh the flick that ended
+ *  the gesture: a sheet flicked back up closed. The direction is the net one
+ *  over the fixed window, so a pixel of jitter at the end of a fling is not a
+ *  turn. */
 function releaseVelocity(samples: Sample[], t: number): number {
 	const last = samples[samples.length - 1];
 	if (!last || t - last.t > FLICK_HOLD_MS) return 0;
+	let w = samples.length - 1;
+	while (w > 0 && last.t - samples[w - 1]!.t <= FLICK_WINDOW_MS) w--;
+	const dir = Math.sign(last.y - samples[w]!.y);
 	let i = samples.length - 1;
 	while (i > 0) {
 		const cur = samples[i]!;
 		const prev = samples[i - 1]!;
+		const step = cur.y - prev.y;
+		if (dir !== 0 && Math.sign(step) === -dir && Math.abs(step) > TURN_PX)
+			break;
 		const gap = cur.t - prev.t;
-		const fast = gap > 0 && Math.abs(cur.y - prev.y) / gap > FLICK / 2;
+		const fast = gap > 0 && Math.abs(step) / gap > FLICK / 2;
 		if (last.t - prev.t > FLICK_WINDOW_MS && !fast) break;
 		i--;
 	}
