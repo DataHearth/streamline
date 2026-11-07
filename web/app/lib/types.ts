@@ -1400,6 +1400,10 @@ export type DownloadClient = {
 	listen_port_override?: number;
 	max_upload_kbps?: number;
 	max_download_kbps?: number;
+	// Engine limits; absent = 0 = the engine's default (15, 16 MiB, 500).
+	max_peers_per_torrent?: number;
+	max_unverified_mb?: number;
+	max_torrents?: number;
 	seed_ratio?: number;
 	seed_time?: string;
 	disable_dht?: boolean;

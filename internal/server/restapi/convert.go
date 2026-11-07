@@ -325,6 +325,18 @@ func downloadClientToAPI(e config.DownloadClientEntry) DownloadClient {
 		v := e.MaxDownloadKbps
 		d.MaxDownloadKbps = &v
 	}
+	if e.MaxPeersPerTorrent != 0 {
+		v := e.MaxPeersPerTorrent
+		d.MaxPeersPerTorrent = &v
+	}
+	if e.MaxUnverifiedMB != 0 {
+		v := e.MaxUnverifiedMB
+		d.MaxUnverifiedMb = &v
+	}
+	if e.MaxTorrents != 0 {
+		v := e.MaxTorrents
+		d.MaxTorrents = &v
+	}
 	if e.SeedRatio != 0 {
 		v := e.SeedRatio
 		d.SeedRatio = &v
