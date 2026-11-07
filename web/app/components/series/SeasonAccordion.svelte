@@ -206,7 +206,9 @@
 								· {formatBytes(seasonBytes(s), "")}
 							{/if}
 							{#if headline}
-								· <span class={cn("whitespace-nowrap", headline.cls)}>{headline.text}</span>
+								<span class="whitespace-nowrap"
+									>· <span class={headline.cls}>{headline.text}</span></span
+								>
 							{/if}
 						</span>
 						<span class="mt-2 block">
