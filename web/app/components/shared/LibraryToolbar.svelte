@@ -300,7 +300,7 @@
 	{/if}
 </div>
 
-<div class="sticky top-16 z-20 bg-bg-deep/85 backdrop-blur-md md:hidden">
+<div class="sticky top-(--topbar-h) z-20 bg-bg-deep/85 backdrop-blur-md md:hidden">
 	<div class="flex items-center gap-2 px-4 py-2">
 		<nav
 			use:dragScroll

@@ -490,7 +490,7 @@
 					<section data-letter={s.letter ?? undefined} class={cn(s.letter && ANCHOR, "pt-2 md:pt-1")}>
 						{#if s.letter}
 							<div
-								class="sticky top-[124px] z-10 -mx-4 mb-3 flex items-center gap-3 bg-bg-deep/85 px-4 py-2.5 backdrop-blur-md md:top-16 md:-mx-6 md:px-6"
+								class="sticky top-[calc(var(--topbar-h)+60px)] z-10 -mx-4 mb-3 flex items-center gap-3 bg-bg-deep/85 px-4 py-2.5 backdrop-blur-md md:top-(--topbar-h) md:-mx-6 md:px-6"
 							>
 								<h2 class="text-[20px] font-bold leading-none tracking-tight text-fg">{s.letter}</h2>
 								{#if s.count != null}

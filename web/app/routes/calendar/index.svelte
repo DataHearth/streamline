@@ -125,7 +125,7 @@
 </script>
 
 <div
-	class="flex flex-col px-4 py-5 md:px-6 md:py-6 lg:h-[calc(100dvh-4rem)] lg:min-h-0 lg:overflow-hidden"
+	class="flex flex-col px-4 py-5 md:px-6 md:py-6 lg:h-[calc(100dvh-var(--topbar-h))] lg:min-h-0 lg:overflow-hidden"
 	use:monthSwipe={{
 		onPrev: () => shift(-1),
 		onNext: () => shift(1),

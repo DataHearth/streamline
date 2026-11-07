@@ -155,6 +155,13 @@
 	--ease: cubic-bezier(0.16, 1, 0.3, 1);
 	--ease-in: cubic-bezier(0.4, 0, 1, 1);
 
+	/* The top bar's height. In a home-screen app on iOS the page runs under the
+	   translucent status bar (apple-mobile-web-app-status-bar-style in
+	   index.html), so the bar grows by the inset, and everything pinned under
+	   it — sticky toolbars and tab bars, layouts sized to the rest of the
+	   screen — offsets by this, never by a bare 4rem. */
+	--topbar-h: calc(4rem + env(safe-area-inset-top));
+
 	/* Card aspects */
 	--card-aspect-poster: 2 / 3;
 	--card-aspect-album: 1 / 1;

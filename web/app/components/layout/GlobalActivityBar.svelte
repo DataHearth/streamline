@@ -39,7 +39,7 @@
 	     beats a z-300 confined to an ancestor's, and the bar would paint behind
 	     the backdrop, blurred. It portals to <body> too, where the two are
 	     comparable. -->
-	<div use:portal class="fixed inset-x-0 top-0 z-[300]">
+	<div use:portal class="fixed inset-x-0 top-[env(safe-area-inset-top)] z-[300]">
 		<ProgressBar height={2} label={i18n.common_loading()} />
 	</div>
 {/if}

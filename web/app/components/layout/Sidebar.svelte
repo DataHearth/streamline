@@ -263,7 +263,7 @@
 
 
 <aside
-	class="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-3.5 border-r border-border bg-bg-elevated px-3.5 pb-5 pt-5 lg:flex"
+	class="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-3.5 border-r border-border bg-bg-elevated px-3.5 pb-5 pt-[calc(1.25rem+env(safe-area-inset-top))] lg:flex"
 	aria-label={i18n.nav_primary_navigation()}
 >
 	<div class="px-2 pb-2 pt-1">

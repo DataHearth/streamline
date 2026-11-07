@@ -22,7 +22,7 @@
 </script>
 
 <aside
-	class="hidden shrink-0 self-start overscroll-contain lg:sticky lg:top-[5.75rem] lg:-ml-2 lg:block lg:max-h-[calc(100dvh-6.75rem)] lg:w-58 lg:overflow-y-auto lg:pb-4 lg:pl-2 lg:[scrollbar-width:thin]"
+	class="hidden shrink-0 self-start overscroll-contain lg:sticky lg:top-[calc(var(--topbar-h)+1.75rem)] lg:-ml-2 lg:block lg:max-h-[calc(100dvh-var(--topbar-h)-2.75rem)] lg:w-58 lg:overflow-y-auto lg:pb-4 lg:pl-2 lg:[scrollbar-width:thin]"
 	aria-label={i18n.settings_sections()}
 >
 	<div class="mb-3.5 px-2">

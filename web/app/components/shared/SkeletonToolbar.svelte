@@ -20,7 +20,7 @@
   difference between the two pages: movies has status and monitoring, series
   adds type.
 -->
-<div class="sticky top-16 z-20 bg-bg-deep/85 backdrop-blur-md md:hidden">
+<div class="sticky top-(--topbar-h) z-20 bg-bg-deep/85 backdrop-blur-md md:hidden">
 	<div class="flex items-center gap-2 px-4 py-2">
 		<div class="flex flex-1 items-center gap-2 overflow-hidden">
 			{#each [86, 74, 96] as w}
@@ -32,7 +32,7 @@
 </div>
 
 <div
-	class="sticky top-16 z-20 hidden flex-wrap items-center gap-2 bg-bg-deep/85 px-4 py-3 backdrop-blur-md md:flex md:gap-2.5 md:px-6"
+	class="sticky top-(--topbar-h) z-20 hidden flex-wrap items-center gap-2 bg-bg-deep/85 px-4 py-3 backdrop-blur-md md:flex md:gap-2.5 md:px-6"
 	aria-hidden="true"
 >
 	{#each Array(triggers) as _, i}

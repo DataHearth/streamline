@@ -66,7 +66,7 @@
 			class="flex h-full w-full flex-col bg-bg-deep"
 		>
 			<header
-				class="flex min-h-14 shrink-0 items-center gap-1 border-b border-border bg-bg-elevated px-2 pt-[env(safe-area-inset-top)]"
+				class="flex min-h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center gap-1 border-b border-border bg-bg-elevated px-2 pt-[env(safe-area-inset-top)]"
 			>
 				<button
 					type="button"
