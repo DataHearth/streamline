@@ -27,6 +27,14 @@
       }
     },
     "replicaCount": { "type": "integer", "minimum": 1, "maximum": 1 },
+    "startupProbe": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "periodSeconds": { "type": "integer", "minimum": 1 },
+        "failureThreshold": { "type": "integer", "minimum": 1 }
+      }
+    },
     "persistence": {
       "type": "object",
       "properties": {

@@ -18,6 +18,7 @@ Find what you're seeing in the table below, then jump straight to the fix. Order
 | A library shows as offline, or looks empty after a mount/volume change | The volume is not there, or stored paths no longer match reality | [A library root is offline](#a-library-root-is-offline) |
 | Music or book search says a provider is limiting requests, or Books says Hardcover is not configured | MusicBrainz or Hardcover rate limits, or no Hardcover key | [Music and books](#music-and-books) |
 | An album is **Failed**, or its files never get Streamline's tags | A CUE disc image, a seeding torrent, or file ownership | [Music and books](#music-and-books) |
+| Pod restarts before `streamline starting`, or boot takes minutes | A probe with no startup allowance, or the database or the download directory on slow storage | [Slow start or restarts during boot](#slow-start-or-restarts-during-boot) |
 | Won't start after an update: `back up the database before migrating` | The pre-migration backup could not be written | [Won't start: backup before migrating failed](#wont-start-backup-before-migrating-failed) |
 | `unable to open database file` / general DB errors | More than one writer, or the DB is on a network filesystem | [Database is locked](#database-is-locked) |
 | Need to see what's actually happening | — | [Where the logs are](#where-the-logs-are) |
@@ -393,6 +394,14 @@ Streamline uses SQLite, which allows exactly one writer.
 **Your data directory is on a network filesystem.** SQLite locking over NFS or SMB is unreliable and will corrupt your database. Put `data_dir` on local storage. Your *media* can live on the network; your database can't.
 
 The database is `<data_dir>/streamline.db`, accompanied by `-wal` and `-shm` files. If you ever copy it, copy all three — or use `streamline backup`, which writes one consistent file ([Backups](GitOps-and-Kubernetes#backups)).
+
+---
+
+## Slow start or restarts during boot
+
+Boot first reads the files it would otherwise read a page at a time into the page cache: the database and its WAL, and the built-in engine's piece completion (`.streamline-session/.torrent.bolt.db` in its download directory). Then it opens and migrates the database and re-adds the torrents. The log shows `reading boot files into the page cache` with their size, then `boot files read into the page cache` with how long it took. On local disks it takes a moment. On network storage it runs at the storage's throughput, about 24 s for a 130 MB database on a Ceph RBD volume reached over a WAN, and it saves much more than that: on such storage each cold page read is a round trip, and on CephFS each one also pulls a whole readahead window. The read stops after 2 minutes (`timed_out=true`); what it read by then stays cached. Keep the database itself on a block volume (Ceph RBD, EBS, iSCSI), not a network filesystem: see [Database is locked](#database-is-locked).
+
+On Kubernetes, give boot a startup allowance or liveness kills the pod mid-boot. The Helm chart has a `startupProbe` from 3.1.0 (5 minutes by default); raise `startupProbe.failureThreshold` if the read or a migration needs longer.
 
 ---
 

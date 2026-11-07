@@ -20,7 +20,7 @@ spec:
       args:
         - |
           set -eu
-          for i in $(seq 1 30); do
+          for i in $(seq 1 120); do
             if curl -fsS "http://{{ include "streamline.fullname" . }}:{{ .Values.service.port }}/health"; then
               exit 0
             fi
