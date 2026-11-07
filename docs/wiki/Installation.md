@@ -380,7 +380,7 @@ The update only goes forward. An older version will not start on a database a ne
 Streamline ships a web-app manifest, so the browser can pin it to a home screen and open it full-screen without browser chrome. Nothing runs offline: it is the same web UI, just without the address bar.
 
 - **Android / desktop Chrome and Edge** — open Streamline, then use the browser's install prompt (the icon in the address bar, or the browser menu → *Install app*).
-- **iOS Safari** — Safari never prompts. Tap *Share* → *Add to Home Screen*.
+- **iOS Safari** — Safari never prompts. Tap *Share* → *Add to Home Screen*. The app draws under a transparent status bar; iOS reads that when the icon is added, so an icon added with Streamline 3.4 or earlier keeps a light band above the app until it is removed and added again.
 
 The installed app uses the same session cookie as the tab, so a login in one is a login in both. If you sign in through OIDC, see the [standalone note](Authentication-and-SSO#oidc-from-an-installed-app) on the Authentication page.
 

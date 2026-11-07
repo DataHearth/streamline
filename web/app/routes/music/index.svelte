@@ -171,7 +171,7 @@
 	// ── Letters: where the list is, and going to one ───────────────────────
 	// Each anchor lands under the sticky bars: the top bar, plus the phone's chip
 	// row. From md the letters are a rail down the right edge, not a bar.
-	const ANCHOR = "scroll-mt-[124px] md:scroll-mt-16";
+	const ANCHOR = "scroll-mt-[calc(var(--topbar-h)+60px)] md:scroll-mt-(--topbar-h)";
 	let listEl = $state<HTMLElement | null>(null);
 	let mainEl: HTMLElement | null = null;
 	let current = $state<string | null>(null);

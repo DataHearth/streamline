@@ -98,8 +98,11 @@
      away with the page on a phone; a selection's bar is what stays pinned. -->
 <div
 	class={cn(
-		"top-16 z-20 -mx-4 mb-1 flex flex-wrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:sticky md:-mx-6 md:gap-3 md:px-6",
-		!leading && "sticky flex-nowrap",
+		"z-20 -mx-4 mb-1 flex flex-wrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:sticky md:-mx-6 md:gap-3 md:px-6",
+		// /activity (the one page with a `leading` switch) scrolls in a box of
+		// its own from md, where this offset is inside that box; elsewhere the
+		// toolbar pins under the top bar in #main.
+		leading ? "top-16" : "sticky top-(--topbar-h) flex-nowrap",
 	)}
 >
 	{#if leading}

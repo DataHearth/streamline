@@ -88,7 +88,7 @@
 	onpointerup={up}
 	onpointercancel={up}
 	style:right="{gutter}px"
-	class="fixed top-[calc(50%+2rem)] z-20 hidden max-h-[calc(100%-6rem)] w-6 -translate-y-1/2 touch-none select-none flex-col items-center md:flex"
+	class="fixed top-[calc(50%+var(--topbar-h)/2)] z-20 hidden max-h-[calc(100%-var(--topbar-h)-2rem)] w-6 -translate-y-1/2 touch-none select-none flex-col items-center md:flex"
 >
 	{#each LETTERS as l (l)}
 		{@const has = (letters[l] ?? 0) > 0}

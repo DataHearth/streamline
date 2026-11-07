@@ -137,7 +137,10 @@
 		const main = document.getElementById("main");
 		const el = editionsEl;
 		if (!main || !el) return;
-		const top = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - 88;
+		// Land below the top bar, whose height grows by the status bar's inset in
+		// an iOS home-screen app, with the tab strip's room to spare.
+		const bar = main.querySelector(":scope > header")?.getBoundingClientRect().height ?? 64;
+		const top = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - (bar + 24);
 		main.scrollTo({ top, behavior: "smooth" });
 	}
 	function use(e: Edition) {

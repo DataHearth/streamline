@@ -95,7 +95,7 @@
 	<!-- biome-ignore lint/a11y/noStaticElementInteractions: the scrim is the pointer's way out; Escape is the keyboard's -->
 	<div
 		use:portal
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-2 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] backdrop-blur-sm sm:px-4"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-2 pt-[env(safe-area-inset-top)] backdrop-blur-sm sm:px-4"
 		transition:fade={{ duration: 180 }}
 		onmousedown={onBackdropMousedown}
 		role="presentation"

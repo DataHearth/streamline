@@ -175,7 +175,7 @@
 						<!-- The book lookups' "not configured" and "key rejected" notices link
 						     here. A new key is read at startup, as TMDB's and TVDB's are; said
 						     under this field because it is the one people are sent to fix. -->
-						<div id="hardcover" class="scroll-mt-24">
+						<div id="hardcover" class="scroll-mt-[calc(var(--topbar-h)+2rem)]">
 							<form.Field name="hardcover_api_key">
 								{#snippet children(field)}
 									<TextField

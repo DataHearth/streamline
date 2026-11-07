@@ -534,7 +534,7 @@
 			     an arbitrary grid template that ends in `minmax(0,1fr)]`. The panel is
 			     min-w-0, which gives the same floor. -->
 			<div class="hidden gap-6 px-8 py-6 md:grid md:grid-cols-[200px_1fr] lg:grid-cols-[250px_1fr]">
-				<!-- The top bar (4rem), the sticky tab strip and the grid's own padding
+				<!-- The top bar (--topbar-h), the sticky tab strip and the grid's own padding
 				     sit above it, so the list scrolls on its own beside a long panel. -->
 				<div class="sticky top-[calc(var(--topbar-h)+4.5rem)] max-h-[calc(100dvh-var(--topbar-h)-6rem)] self-start overflow-y-auto overscroll-contain">
 					{#key artist.id}

@@ -13,7 +13,7 @@
 </script>
 
 <div
-	class="relative isolate grid grid-cols-1 min-h-dvh place-items-center overflow-hidden bg-bg-deep px-4 py-10"
+	class="relative isolate grid grid-cols-1 min-h-dvh place-items-center overflow-hidden bg-bg-deep px-4 pb-10 pt-[calc(2.5rem+env(safe-area-inset-top))]"
 >
 	<div
 		aria-hidden="true"

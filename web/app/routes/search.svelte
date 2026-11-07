@@ -178,7 +178,7 @@
 >
 	<form
 		onsubmit={onSubmit}
-		class="flex w-full flex-none items-center gap-3 px-4 pb-2.5 pt-[max(env(safe-area-inset-top),10px)] md:mx-auto md:max-w-2xl"
+		class="flex w-full flex-none items-center gap-3 px-4 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] md:mx-auto md:max-w-2xl md:pointer-fine:pt-2.5"
 	>
 		<div
 			class="search-box flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-border-strong bg-surface px-3"
