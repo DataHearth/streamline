@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	oasspec "github.com/datahearth/streamline/api"
 	"github.com/datahearth/streamline/ent"
@@ -110,17 +111,19 @@ type Config struct {
 	EngineReady <-chan struct{}
 }
 
-// finishChangesDuringRestore lets a request that changes state run to the end
-// while the torrent engine restores, even if its client leaves. Such a request
-// can wait minutes for the engine, and stopping it halfway would leave the
-// change half made.
+// finishChangesDuringRestore lets an API request that changes state run to the
+// end while the torrent engine restores, even if its client leaves. Such a
+// request can wait minutes for the engine, and stopping it halfway would leave
+// the change half made. Subsonic, which sends reads as POST, is left alone.
 func finishChangesDuringRestore(
 	ready <-chan struct{},
 ) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			switch r.Method {
-			case http.MethodGet, http.MethodHead, http.MethodOptions:
+			switch {
+			case r.Method == http.MethodGet, r.Method == http.MethodHead,
+				r.Method == http.MethodOptions,
+				!strings.HasPrefix(r.URL.Path, "/api/"):
 			default:
 				select {
 				case <-ready:

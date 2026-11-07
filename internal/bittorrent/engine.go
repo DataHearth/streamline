@@ -219,7 +219,13 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	e.registerEngineGauges(ctx)
 	restoreCtx := context.WithoutCancel(ctx)
 	e.wg.Go(func() {
-		defer observability.RecoverPanic(restoreCtx, "torrent restore watch", nil)
+		defer observability.RecoverPanic(
+			restoreCtx,
+			"torrent restore watch",
+			func() {
+				e.reportFatal(errors.New("torrent restore watch panicked"))
+			},
+		)
 		e.watchRestore(restoreCtx)
 	})
 	e.wg.Go(func() {
@@ -664,7 +670,12 @@ func (e *Engine) loadAndRestore(ctx context.Context) {
 	default:
 	}
 	close(e.ready)
-	e.wg.Go(e.enforceSeedLimits)
+	e.wg.Go(func() {
+		defer observability.RecoverPanic(ctx, "seed limits", func() {
+			e.reportFatal(errors.New("seed limit enforcer panicked"))
+		})
+		e.enforceSeedLimits()
+	})
 }
 
 // restoreProgressEvery paces the warning a long boot restore logs. A restore

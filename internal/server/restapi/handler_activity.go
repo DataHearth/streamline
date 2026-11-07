@@ -34,9 +34,9 @@ func (s *Server) GetDownloadQueue(
 	}, nil
 }
 
-// errEngineStarting answers a removal the builtin engine could not run because
+// errEngineShuttingDown answers a removal the builtin engine could not run because
 // the process is shutting down.
-const errEngineStarting = "the torrent engine is shutting down; try again once it is back"
+const errEngineShuttingDown = "the torrent engine is shutting down; try again once it is back"
 
 func (s *Server) CancelQueueItem(
 	ctx context.Context,
@@ -62,7 +62,7 @@ func (s *Server) CancelQueueItem(
 		}
 		if errors.Is(err, download.ErrClientNotReady) {
 			return CancelQueueItem409JSONResponse{
-				ConflictJSONResponse: errConflict(errEngineStarting),
+				ConflictJSONResponse: errConflict(errEngineShuttingDown),
 			}, nil
 		}
 		return nil, err
@@ -317,7 +317,7 @@ func (s *Server) ResolveHeldDownload(
 		)
 		if errors.Is(err, download.ErrClientNotReady) {
 			return ResolveHeldDownload409JSONResponse{
-				ConflictJSONResponse: errConflict(errEngineStarting),
+				ConflictJSONResponse: errConflict(errEngineShuttingDown),
 			}, nil
 		}
 		if err != nil {

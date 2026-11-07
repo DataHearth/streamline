@@ -516,7 +516,7 @@ func (e *Engine) SetWantedFiles(
 			slog.WarnContext(ctx, "resetting torrent completion failed",
 				"info_hash", hash, "error", err)
 		}
-		// Persisted, not just in-memory: restore() re-applies whatever
+		// Persisted, not just in-memory: the boot restore re-applies whatever
 		// seed_stopped last saved, and a restart landing between this call and
 		// the newly-wanted files completing would otherwise re-stamp the stale
 		// "true" and strand the torrent seed-stopped with no enforcer pass left

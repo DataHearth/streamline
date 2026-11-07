@@ -240,11 +240,11 @@ func (p *contentPaths) filePath(opts storage.FilePathMakerOpts) string {
 	return rel
 }
 
-// release frees every name ih holds, once the torrent is gone.
+// release frees every name ih holds and its trust, once the torrent is gone.
 func (p *contentPaths) release(ih metainfo.Hash) {
-	p.unclaim(ih)
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.dropOwnerLocked(ih)
 	delete(p.trusted, ih)
 }
 
@@ -253,6 +253,10 @@ func (p *contentPaths) release(ih metainfo.Hash) {
 func (p *contentPaths) unclaim(ih metainfo.Hash) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.dropOwnerLocked(ih)
+}
+
+func (p *contentPaths) dropOwnerLocked(ih metainfo.Hash) {
 	for name, owner := range p.owners {
 		if owner == ih {
 			delete(p.owners, name)
