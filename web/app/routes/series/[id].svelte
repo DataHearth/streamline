@@ -31,7 +31,7 @@
 	import { formatDate } from "@lib/dates";
 	import Poster from "@components/shared/Poster.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
-	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import SeasonProgress from "@components/series/SeasonProgress.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
@@ -204,24 +204,27 @@
 		show ? [show.series_status, show.network, show.creator].filter((f): f is string => !!f) : [],
 	);
 
-	let airedTotal = $derived.by(() => {
-		if (regularSeasons.length > 0) {
-			return regularSeasons.reduce(
-				(n, s) => n + Math.max(0, (s.total ?? 0) - (s.unaired ?? 0)),
-				0,
-			);
-		}
-		return show?.total_episodes ?? 0;
-	});
 	// Named as First aired where it is labelled, and printed bare in the hero's
 	// dotted meta line — the same date either way.
 	let airedText = $derived(formatDate(show?.first_aired));
 	let unairedTotal = $derived(
 		regularSeasons.reduce((n, s) => n + (s.unaired ?? 0), 0),
 	);
-	let seriesProgress = $derived(
-		(show?.have_episodes ?? 0) / Math.max(1, airedTotal),
-	);
+	// The hero bar is the season bar over the whole run: the numbered seasons'
+	// episodes in one season-shaped bag, so it draws the same segments in the
+	// same colours (available, downloading, importing, paused, wanted,
+	// unaired) as every season below it, where it used to draw available
+	// alone against the aired total.
+	let runSeason = $derived<Season>({
+		id: 0,
+		number: 0,
+		monitored: show?.monitored ?? true,
+		available: regularSeasons.reduce((n, s) => n + (s.available ?? 0), 0),
+		missing: regularSeasons.reduce((n, s) => n + (s.missing ?? 0), 0),
+		unaired: unairedTotal,
+		total: regularSeasons.reduce((n, s) => n + (s.total ?? 0), 0),
+		episodes: regularSeasons.flatMap((s) => s.episodes ?? []),
+	});
 
 	let metaParts = $derived.by(() => {
 		if (!show) return [] as string[];
@@ -700,11 +703,10 @@
 							<span class="text-fg-faint">· {countUnaired(unairedTotal)}</span>
 						{/if}
 					</div>
-					<ProgressBar
-						value={seriesProgress}
-						status="available"
-						height={4}
-						label={i18n.series_progress()}
+					<SeasonProgress
+						season={runSeason}
+						{showMonitored}
+						label={(summary) => i18n.series_run_progress({ summary })}
 					/>
 				</div>
 
