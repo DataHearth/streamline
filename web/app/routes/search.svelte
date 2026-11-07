@@ -13,6 +13,7 @@
 	import { onRouteQuery } from "@lib/route-query";
 	import { restoreScrollOnBack } from "@lib/scroll-restore";
 	import SearchResultRow from "@components/layout/SearchResultRow.svelte";
+	import LookupStrip from "@components/layout/LookupStrip.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The phone's and the tablet's search, a page of its own: the top bar's
@@ -55,7 +56,7 @@
 		else navigate?.("/", {}, { mode: "replace" });
 	}
 
-	// An action opens a surface of its own over the page search was opened
+	// An action or a lookup opens a surface of its own over the page search was opened
 	// from (the add flow) or leaves the app (sign out), so it runs once that
 	// page is back rather than over the search page on its way out.
 	function leaveThen(run: () => void) {
@@ -72,6 +73,7 @@
 
 	function pick(item: SearchItem) {
 		if (item.kind === "action") leaveThen(item.run);
+		else if (item.kind === "lookup") leaveThen(() => navigateTo(item));
 		else navigateTo(item);
 	}
 
@@ -180,6 +182,14 @@
 		</button>
 	</form>
 
+	<!-- Under the field, not at the bottom: the keyboard covers the bottom of
+	     the screen for as long as you type. -->
+	<LookupStrip
+		items={model.lookups}
+		onpick={pick}
+		class="flex-none border-b border-border px-4 pb-2.5 pt-0.5"
+	/>
+
 	<div
 		bind:this={listEl}
 		class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 pb-[max(env(safe-area-inset-bottom),16px)]"
@@ -195,7 +205,7 @@
 			{/each}
 		{/each}
 
-		{#if model.flat.length === 0}
+		{#if !model.matched}
 			<div role="status" class="flex flex-col items-center gap-2.5 px-6 py-14 text-center">
 				{#if model.pending}
 					<LoaderCircle size={26} class="animate-spin text-fg-faint" aria-hidden="true" />
@@ -203,7 +213,9 @@
 				{:else}
 					<SearchX size={26} class="text-fg-faint" aria-hidden="true" />
 					<p class="text-[13.5px] text-fg-subtle">
-						{i18n.search_no_matches_for({ query: query.trim() })}
+						{model.lookups.length
+							? i18n.search_no_library_matches_for({ query: query.trim() })
+							: i18n.search_no_matches_for({ query: query.trim() })}
 					</p>
 				{/if}
 			</div>

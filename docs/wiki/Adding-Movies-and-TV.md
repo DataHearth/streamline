@@ -23,6 +23,8 @@ How a title gets from "I'd like to watch that" to a file on disk. Artists, album
 
 Click the **+** button (or press it in the bottom bar on mobile) → **Movie**. Type a title. Results come from TMDB.
 
+You can also start from search: the search bar at the top of the page (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>), or the search icon on a phone. Whatever in your library matches is listed first. Once you have typed two characters, a **Not in your library? Add "…" as** strip stays pinned below the results (above them on a phone or tablet) with a button per kind: **Movie** and **Series** (and Artist and Book) open the add screen already searching what you typed. The strip is there whether or not your library matched, however long the list. Nothing is looked up outside your library until you pick one.
+
 Pick the right one — check the year, posters help — and you'll be asked for two things:
 
 - **Quality profile** — leave it on the default unless this particular film deserves different treatment
