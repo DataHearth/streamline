@@ -7,6 +7,7 @@ import type {
 	TVShow,
 } from "./types";
 import { m as i18n } from "./paraglide/messages.js";
+import { countMissing, countWanted } from "./nouns";
 
 // The backend keeps a fileless movie in "wanted" whether or not anyone is
 // looking for it. Unmonitored means nobody is, so the card reads "missing".
@@ -68,6 +69,29 @@ export function seasonTallies(s: Season, showMonitored = true): SeasonTally {
 		else if (st === "importing") t.importing++;
 	}
 	return t;
+}
+
+// The one state a season row names beside its count, with the library cards'
+// precedence: in flight beats the gap it fills, a wanted gap beats one nobody
+// follows. The bar under it carries the rest of the breakdown, so a row whose
+// pack is landing reads "20 downloading", not four tallies in four colours.
+export function seasonHeadline(
+	t: SeasonTally,
+	missing: number,
+): { text: string; cls: string } | null {
+	if (t.downloading > 0)
+		return {
+			text: `${t.downloading} ${i18n.status_downloading().toLowerCase()}`,
+			cls: "text-status-downloading",
+		};
+	if (t.importing > 0)
+		return {
+			text: `${t.importing} ${i18n.status_importing().toLowerCase()}`,
+			cls: "text-status-importing",
+		};
+	if (t.wanted > 0) return { text: countWanted(t.wanted), cls: "text-status-wanted" };
+	if (missing > 0) return { text: countMissing(missing), cls: "text-status-missing" };
+	return null;
 }
 
 export function sumTallies(ts: SeasonTally[]): SeasonTally {
