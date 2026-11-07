@@ -12,6 +12,7 @@
 	import AddMusicBookModal from "@components/shared/AddMusicBookModal.svelte";
 	import MusicBookLookupScreen from "@components/shared/MusicBookLookupScreen.svelte";
 	import { restoreScrollOnBack } from "@lib/scroll-restore";
+	import { addSeed } from "@lib/add-flow";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { children }: { children: Snippet } = $props();
@@ -20,6 +21,8 @@
 	let addSeriesOpen = $state(false);
 	let addArtistOpen = $state(false);
 	let addBookOpen = $state(false);
+	// Set on every open, so an opener sending no query clears the last one.
+	let addQuery = $state("");
 	// Below md the add/request flow is a full-screen search rather than the split
 	// modal, and search itself is a page (/search) rather than the centred
 	// palette — different components, not something CSS can pick.
@@ -29,10 +32,22 @@
 	onMount(() => (main ? restoreScrollOnBack(main) : undefined));
 
 	onMount(() => {
-		const onOpenMovie = () => (addMovieOpen = true);
-		const onOpenSeries = () => (addSeriesOpen = true);
-		const onOpenArtist = () => (addArtistOpen = true);
-		const onOpenBook = () => (addBookOpen = true);
+		const onOpenMovie = (e: Event) => {
+			addQuery = addSeed(e);
+			addMovieOpen = true;
+		};
+		const onOpenSeries = (e: Event) => {
+			addQuery = addSeed(e);
+			addSeriesOpen = true;
+		};
+		const onOpenArtist = (e: Event) => {
+			addQuery = addSeed(e);
+			addArtistOpen = true;
+		};
+		const onOpenBook = (e: Event) => {
+			addQuery = addSeed(e);
+			addBookOpen = true;
+		};
 		window.addEventListener("streamline:open-add-movie", onOpenMovie);
 		window.addEventListener("streamline:open-add-series", onOpenSeries);
 		window.addEventListener("streamline:open-add-artist", onOpenArtist);
@@ -86,20 +101,42 @@
 	<MediaLookupScreen
 		kind="movie"
 		open={addMovieOpen}
+		seedQuery={addQuery}
 		onClose={() => (addMovieOpen = false)}
 	/>
 	<MediaLookupScreen
 		kind="series"
 		open={addSeriesOpen}
+		seedQuery={addQuery}
 		onClose={() => (addSeriesOpen = false)}
 	/>
-	<MusicBookLookupScreen kind="artist" open={addArtistOpen} onClose={() => (addArtistOpen = false)} />
-	<MusicBookLookupScreen kind="book" open={addBookOpen} onClose={() => (addBookOpen = false)} />
+	<MusicBookLookupScreen
+		kind="artist"
+		open={addArtistOpen}
+		seedQuery={addQuery}
+		onClose={() => (addArtistOpen = false)}
+	/>
+	<MusicBookLookupScreen
+		kind="book"
+		open={addBookOpen}
+		seedQuery={addQuery}
+		onClose={() => (addBookOpen = false)}
+	/>
 {:else}
-	<AddMovieModal open={addMovieOpen} onClose={() => (addMovieOpen = false)} />
-	<AddSeriesModal open={addSeriesOpen} onClose={() => (addSeriesOpen = false)} />
-	<AddMusicBookModal kind="artist" open={addArtistOpen} onClose={() => (addArtistOpen = false)} />
-	<AddMusicBookModal kind="book" open={addBookOpen} onClose={() => (addBookOpen = false)} />
+	<AddMovieModal open={addMovieOpen} seedQuery={addQuery} onClose={() => (addMovieOpen = false)} />
+	<AddSeriesModal open={addSeriesOpen} seedQuery={addQuery} onClose={() => (addSeriesOpen = false)} />
+	<AddMusicBookModal
+		kind="artist"
+		open={addArtistOpen}
+		seedQuery={addQuery}
+		onClose={() => (addArtistOpen = false)}
+	/>
+	<AddMusicBookModal
+		kind="book"
+		open={addBookOpen}
+		seedQuery={addQuery}
+		onClose={() => (addBookOpen = false)}
+	/>
 {/if}
 
 <style>
