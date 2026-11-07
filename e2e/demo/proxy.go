@@ -60,6 +60,10 @@ type exchange struct {
 	Body        string            `json:"body,omitempty"`
 	// BodyFile names a sibling file holding a binary body (an image).
 	BodyFile string `json:"body_file,omitempty"`
+	// Scrubbed marks a body whose credential was replaced. Replaying, the
+	// placeholder is all anyone needs; recording, the instance needs the
+	// real one for the calls that follow, so the exchange is fetched again.
+	Scrubbed bool `json:"scrubbed,omitempty"`
 }
 
 // keptHeaders are the response headers worth replaying.
@@ -249,7 +253,7 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 	key, shown := p.key(r.Method, &u, body)
 	file := filepath.Join(p.dir, safeHost(u.Host), key+".json")
 
-	if ex, data, err := p.load(file); err == nil {
+	if ex, data, err := p.load(file); err == nil && !(p.record && ex.Scrubbed) {
 		p.hits.Add(1)
 		p.write(w, ex, p.shiftDates(ex, data))
 		return
@@ -303,7 +307,9 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 		resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != http.StatusForbidden; keep {
 		// Only the kept copy is scrubbed: the instance needs the real token
 		// for the rest of this recording run.
-		if err := p.save(file, &ex, p.scrub(data)); err != nil {
+		kept := p.scrub(data)
+		ex.Scrubbed = !bytes.Equal(kept, data)
+		if err := p.save(file, &ex, kept); err != nil {
 			slog.Warn("cassette write failed", "file", file, "error", err)
 		} else {
 			p.recorded.Add(1)
