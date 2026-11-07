@@ -15,14 +15,16 @@ import (
 // release is a search result, sent back intact to grab it.
 type release map[string]any
 
-func (r release) title() string  { s, _ := r["title"].(string); return s }
-func (r release) rejected() bool { b, _ := r["rejected"].(bool); return b }
-func (r release) reason() string { s, _ := r["reject_reason"].(string); return s }
+func (r release) title() string { s, _ := r["title"].(string); return s }
 
 // grab searches path+"/search" and grabs the release whose name starts with
 // want (the fake tracker's own naming), rejected or not: the demo decides
 // what downloads, the profile only labels it.
-func (s *seeder) grab(ctx context.Context, path, want string, query url.Values) error {
+func (s *seeder) grab(
+	ctx context.Context,
+	path, want string,
+	query url.Values,
+) error {
 	search := path + "/search"
 	if len(query) > 0 {
 		search += "?" + query.Encode()
@@ -55,7 +57,12 @@ func (s *seeder) grab(ctx context.Context, path, want string, query url.Values) 
 	for _, h := range hits {
 		names = append(names, h.title())
 	}
-	return fmt.Errorf("no release named %q among %d (%s)", want, len(hits), strings.Join(names, "; "))
+	return fmt.Errorf(
+		"no release named %q among %d (%s)",
+		want,
+		len(hits),
+		strings.Join(names, "; "),
+	)
 }
 
 func dotted(title string) string {
@@ -67,7 +74,13 @@ func filmRelease(f grabbedFilm) string {
 	if f.Height < 1080 {
 		codec = "x264"
 	}
-	return fmt.Sprintf("%s.%d.%dp.WEB-DL.DDP5.1.%s-DEMO", dotted(f.Title), f.Year, f.Height, codec)
+	return fmt.Sprintf(
+		"%s.%d.%dp.WEB-DL.DDP5.1.%s-DEMO",
+		dotted(f.Title),
+		f.Year,
+		f.Height,
+		codec,
+	)
 }
 
 // downloads starts the tracker with every release the demo grabs or lists,
@@ -76,17 +89,36 @@ func filmRelease(f grabbedFilm) string {
 func (s *seeder) downloads(ctx context.Context) error {
 	var args []string
 	for _, f := range append(append([]grabbedFilm{}, quickFilms...), slowFilms...) {
-		args = append(args, "-movie", fmt.Sprintf("%s:%d:%dp:%d:%dp", f.Title, f.Year, f.Height, f.SizeMB, f.Actual))
+		args = append(
+			args,
+			"-movie",
+			fmt.Sprintf(
+				"%s:%d:%dp:%d:%dp",
+				f.Title,
+				f.Year,
+				f.Height,
+				f.SizeMB,
+				f.Actual,
+			),
+		)
 	}
 	// Every resolution of the manual-search film.
 	if len(wantedFilms) > 0 {
 		d := wantedFilms[0]
 		for _, spec := range []string{"2160p:3800", "1080p:2200", "720p:1100", "480p:700"} {
-			args = append(args, "-movie", fmt.Sprintf("%s:%d:%s", d.Title, d.Year, spec))
+			args = append(
+				args,
+				"-movie",
+				fmt.Sprintf("%s:%d:%s", d.Title, d.Year, spec),
+			)
 		}
 	}
 	for _, p := range slowPacks {
-		args = append(args, "-pack", fmt.Sprintf("%s:%d:%d:%d", p.Show, p.Season, p.Episodes, p.EpMB))
+		args = append(
+			args,
+			"-pack",
+			fmt.Sprintf("%s:%d:%d:%d", p.Show, p.Season, p.Episodes, p.EpMB),
+		)
 	}
 	type albumGrab struct{ artist, album string }
 	var albums []albumGrab
@@ -96,21 +128,41 @@ func (s *seeder) downloads(ctx context.Context) error {
 			continue
 		}
 		var a musicArtist
-		if err := s.api.get(ctx, "/music/artists/"+strconv.Itoa(id), nil, &a); err != nil {
+		if err := s.api.get(
+			ctx,
+			"/music/artists/"+strconv.Itoa(id),
+			nil,
+			&a,
+		); err != nil {
 			s.warn("album grab "+ar.Name, err)
 			continue
 		}
 		for _, title := range ar.Grab {
 			al := findAlbum(&a, title)
 			if al == nil || len(al.Tracks) == 0 {
-				s.warn("album grab "+title, fmt.Errorf("%s has no hydrated album %q", ar.Name, title))
+				s.warn(
+					"album grab "+title,
+					fmt.Errorf("%s has no hydrated album %q", ar.Name, title),
+				)
 				continue
 			}
 			names := make([]string, 0, len(al.Tracks))
 			for _, t := range al.Tracks {
-				names = append(names, strings.NewReplacer(":", "", "|", "").Replace(t.Title))
+				names = append(
+					names,
+					strings.NewReplacer(":", "", "|", "").Replace(t.Title),
+				)
 			}
-			args = append(args, "-album", fmt.Sprintf("%s:%s:%s", ar.Name, strings.ReplaceAll(al.Title, ":", ""), strings.Join(names, "|")))
+			args = append(
+				args,
+				"-album",
+				fmt.Sprintf(
+					"%s:%s:%s",
+					ar.Name,
+					strings.ReplaceAll(al.Title, ":", ""),
+					strings.Join(names, "|"),
+				),
+			)
 			albums = append(albums, albumGrab{ar.Name, al.Title})
 		}
 	}
@@ -134,12 +186,22 @@ func (s *seeder) downloads(ctx context.Context) error {
 	}
 	for _, g := range albums {
 		var a musicArtist
-		if err := s.api.get(ctx, "/music/artists/"+strconv.Itoa(s.artistIDs[g.artist]), nil, &a); err != nil {
+		if err := s.api.get(
+			ctx,
+			"/music/artists/"+strconv.Itoa(s.artistIDs[g.artist]),
+			nil,
+			&a,
+		); err != nil {
 			s.warn("grab "+g.album, err)
 			continue
 		}
 		al := findAlbum(&a, g.album)
-		if err := s.grab(ctx, "/music/albums/"+strconv.Itoa(al.ID), g.artist+" - "+strings.ReplaceAll(al.Title, ":", ""), nil); err != nil {
+		if err := s.grab(
+			ctx,
+			"/music/albums/"+strconv.Itoa(al.ID),
+			g.artist+" - "+strings.ReplaceAll(al.Title, ":", ""),
+			nil,
+		); err != nil {
 			s.warn("grab "+g.album, err)
 		}
 	}
@@ -149,28 +211,39 @@ func (s *seeder) downloads(ctx context.Context) error {
 	}{{grabEbook, "ebook"}, {grabAudiobook, "audiobook"}} {
 		id, err := s.addBook(ctx, b.book)
 		if err == nil {
-			err = s.grab(ctx, "/books/"+strconv.Itoa(id), b.Author+" - "+b.Title, url.Values{"kind": {b.kind}})
+			err = s.grab(
+				ctx,
+				"/books/"+strconv.Itoa(id),
+				b.Author+" - "+b.Title,
+				url.Values{"kind": {b.kind}},
+			)
 		}
 		if err != nil {
 			s.warn("grab "+b.Title, err)
 		}
 	}
-	if err := waitFor(ctx, "quick downloads", 8*time.Minute, 3*time.Second, func() (bool, error) {
-		var q struct {
-			Items []struct {
-				Status string `json:"status"`
-			} `json:"items"`
-		}
-		if err := s.api.get(ctx, "/activity/queue", nil, &q); err != nil {
-			return false, err
-		}
-		for _, it := range q.Items {
-			if it.Status != "held" && it.Status != "failed" {
-				return false, nil
+	if err := waitFor(
+		ctx,
+		"quick downloads",
+		8*time.Minute,
+		3*time.Second,
+		func() (bool, error) {
+			var q struct {
+				Items []struct {
+					Status string `json:"status"`
+				} `json:"items"`
 			}
-		}
-		return true, nil
-	}); err != nil {
+			if err := s.api.get(ctx, "/activity/queue", nil, &q); err != nil {
+				return false, err
+			}
+			for _, it := range q.Items {
+				if it.Status != "held" && it.Status != "failed" {
+					return false, nil
+				}
+			}
+			return true, nil
+		},
+	); err != nil {
 		s.warn("quick downloads", err)
 	}
 
@@ -191,12 +264,17 @@ func (s *seeder) downloads(ctx context.Context) error {
 			continue
 		}
 		want := fmt.Sprintf("%s.S%02d", dotted(p.Show), p.Season)
-		if err := s.grab(ctx, fmt.Sprintf("/series/%d/seasons/%d", id, p.Season), want, nil); err != nil {
+		if err := s.grab(
+			ctx,
+			fmt.Sprintf("/series/%d/seasons/%d", id, p.Season),
+			want,
+			nil,
+		); err != nil {
 			s.warn("grab "+p.Show, err)
 		}
 	}
 	// Give them a minute to show progress and a speed.
-	slog.Info("letting the queue fill")
+	slog.InfoContext(ctx, "letting the queue fill")
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -209,7 +287,10 @@ func (s *seeder) downloads(ctx context.Context) error {
 // decides some of them.
 func (s *seeder) requests(ctx context.Context) error {
 	if err := s.api.post(ctx, "/users", map[string]any{
-		"email": memberEmail, "password": demoPassword, "role": "member", "display_name": "Mina Okafor",
+		"email":        memberEmail,
+		"password":     demoPassword,
+		"role":         "member",
+		"display_name": "Mina Okafor",
 	}, nil); err != nil {
 		return err
 	}
@@ -232,9 +313,19 @@ func (s *seeder) requests(ctx context.Context) error {
 		}
 		switch r.Decide {
 		case "approve":
-			err = s.api.post(ctx, fmt.Sprintf("/requests/%d/approve", out.ID), map[string]any{}, nil)
+			err = s.api.post(
+				ctx,
+				fmt.Sprintf("/requests/%d/approve", out.ID),
+				map[string]any{},
+				nil,
+			)
 		case "deny":
-			err = s.api.post(ctx, fmt.Sprintf("/requests/%d/deny", out.ID), map[string]any{"reason": "Already on the shelf in another edition."}, nil)
+			err = s.api.post(
+				ctx,
+				fmt.Sprintf("/requests/%d/deny", out.ID),
+				map[string]any{"reason": "Already on the shelf in another edition."},
+				nil,
+			)
 		}
 		if err != nil {
 			s.warn("decide "+r.Title, err)
@@ -243,7 +334,10 @@ func (s *seeder) requests(ctx context.Context) error {
 	return nil
 }
 
-func (s *seeder) requestBody(ctx context.Context, r request) (map[string]any, error) {
+func (s *seeder) requestBody(
+	ctx context.Context,
+	r request,
+) (map[string]any, error) {
 	switch r.Kind {
 	case "movie":
 		var hits []struct {
@@ -251,12 +345,21 @@ func (s *seeder) requestBody(ctx context.Context, r request) (map[string]any, er
 			Title  string `json:"title"`
 			Year   int    `json:"year"`
 		}
-		if err := s.member.get(ctx, "/search/movie", url.Values{"q": {r.Title}, "year": {strconv.Itoa(r.Year)}}, &hits); err != nil {
+		if err := s.member.get(
+			ctx,
+			"/search/movie",
+			url.Values{"q": {r.Title}, "year": {strconv.Itoa(r.Year)}},
+			&hits,
+		); err != nil {
 			return nil, err
 		}
 		for _, h := range hits {
 			if h.Year == r.Year {
-				return map[string]any{"media_type": "movie", "media_id": h.TMDBID, "title": h.Title}, nil
+				return map[string]any{
+					"media_type": "movie",
+					"media_id":   h.TMDBID,
+					"title":      h.Title,
+				}, nil
 			}
 		}
 	case "series":
@@ -267,12 +370,21 @@ func (s *seeder) requestBody(ctx context.Context, r request) (map[string]any, er
 				Year   int    `json:"year"`
 			} `json:"items"`
 		}
-		if err := s.member.get(ctx, "/series/lookup", url.Values{"query": {r.Title}}, &res); err != nil {
+		if err := s.member.get(
+			ctx,
+			"/series/lookup",
+			url.Values{"query": {r.Title}},
+			&res,
+		); err != nil {
 			return nil, err
 		}
 		for _, h := range res.Items {
 			if h.Year == r.Year {
-				return map[string]any{"media_type": "tvshow", "media_id": h.TVDBID, "title": h.Title}, nil
+				return map[string]any{
+					"media_type": "tvshow",
+					"media_id":   h.TVDBID,
+					"title":      h.Title,
+				}, nil
 			}
 		}
 	case "album":
@@ -284,14 +396,23 @@ func (s *seeder) requestBody(ctx context.Context, r request) (map[string]any, er
 				ArtistMBID string `json:"artist_mbid"`
 			} `json:"items"`
 		}
-		if err := s.member.get(ctx, "/music/search/releases", url.Values{"query": {r.Artist + " " + r.Title}}, &res); err != nil {
+		if err := s.member.get(
+			ctx,
+			"/music/search/releases",
+			url.Values{"query": {r.Artist + " " + r.Title}},
+			&res,
+		); err != nil {
 			return nil, err
 		}
 		for _, h := range res.Items {
-			if strings.EqualFold(h.Title, r.Title) && strings.EqualFold(h.Artist, r.Artist) {
+			if strings.EqualFold(h.Title, r.Title) &&
+				strings.EqualFold(h.Artist, r.Artist) {
 				return map[string]any{
-					"media_type": "album", "media_mbid": h.MBID, "artist_mbid": h.ArtistMBID,
-					"artist_name": h.Artist, "title": h.Title,
+					"media_type":  "album",
+					"media_mbid":  h.MBID,
+					"artist_mbid": h.ArtistMBID,
+					"artist_name": h.Artist,
+					"title":       h.Title,
 				}, nil
 			}
 		}
@@ -299,17 +420,30 @@ func (s *seeder) requestBody(ctx context.Context, r request) (map[string]any, er
 		var res struct {
 			Items []bookHit `json:"items"`
 		}
-		if err := s.member.get(ctx, "/books/search", url.Values{"query": {r.Title}, "type": {"book"}}, &res); err != nil {
+		if err := s.member.get(
+			ctx,
+			"/books/search",
+			url.Values{"query": {r.Title}, "type": {"book"}},
+			&res,
+		); err != nil {
 			return nil, err
 		}
 		for _, h := range res.Items {
 			if strings.EqualFold(h.Title, r.Title) {
-				return map[string]any{"media_type": "book", "media_id": h.HardcoverID, "title": h.Title}, nil
+				return map[string]any{
+					"media_type": "book",
+					"media_id":   h.HardcoverID,
+					"title":      h.Title,
+				}, nil
 			}
 		}
 		if len(res.Items) > 0 {
 			h := res.Items[0]
-			return map[string]any{"media_type": "book", "media_id": h.HardcoverID, "title": h.Title}, nil
+			return map[string]any{
+				"media_type": "book",
+				"media_id":   h.HardcoverID,
+				"title":      h.Title,
+			}, nil
 		}
 	}
 	return nil, fmt.Errorf("no match for %s %q", r.Kind, r.Title)

@@ -68,7 +68,12 @@ type exchange struct {
 }
 
 // keptHeaders are the response headers worth replaying.
-var keptHeaders = []string{"Content-Type", "Retry-After", "Location", "X-RateLimit-Zone"}
+var keptHeaders = []string{
+	"Content-Type",
+	"Retry-After",
+	"Location",
+	"X-RateLimit-Zone",
+}
 
 type proxy struct {
 	dir     string
@@ -110,7 +115,10 @@ func newProxy(dir string, record bool, secrets []string) (*proxy, error) {
 			// Redirects go back to the instance, which follows them through
 			// the proxy, so each hop is its own exchange.
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
-			Transport:     &http.Transport{Proxy: http.ProxyFromEnvironment, ForceAttemptHTTP2: true},
+			Transport: &http.Transport{
+				Proxy:             http.ProxyFromEnvironment,
+				ForceAttemptHTTP2: true,
+			},
 		},
 	}
 	for _, s := range secrets {
@@ -125,11 +133,18 @@ func newProxy(dir string, record bool, secrets []string) (*proxy, error) {
 	}
 	if p.meta.RecordedAt.IsZero() {
 		if !record {
-			return nil, fmt.Errorf("%s holds no recording; run with -record and provider keys first", dir)
+			return nil, fmt.Errorf(
+				"%s holds no recording; run with -record and provider keys first",
+				dir,
+			)
 		}
 		p.meta.RecordedAt = time.Now().UTC().Truncate(24 * time.Hour)
 		raw, _ := json.MarshalIndent(p.meta, "", "  ")
-		if err := os.WriteFile(filepath.Join(dir, "cassette.json"), append(raw, '\n'), 0o644); err != nil {
+		if err := os.WriteFile(
+			filepath.Join(dir, "cassette.json"),
+			append(raw, '\n'),
+			0o644,
+		); err != nil {
 			return nil, err
 		}
 	}
@@ -189,7 +204,13 @@ func (p *proxy) leaf(host string) (*tls.Certificate, error) {
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}
-	der, err := x509.CreateCertificate(rand.Reader, tmpl, p.ca, &key.PublicKey, p.caKey)
+	der, err := x509.CreateCertificate(
+		rand.Reader,
+		tmpl,
+		p.ca,
+		&key.PublicKey,
+		p.caKey,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -215,11 +236,13 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	if _, err := conn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n")); err != nil {
+	if _, err := conn.Write(
+		[]byte("HTTP/1.1 200 Connection Established\r\n\r\n"),
+	); err != nil {
 		conn.Close()
 		return
 	}
-	var raw net.Conn = conn
+	raw := conn
 	if buf.Reader.Buffered() > 0 {
 		raw = &prefixConn{Conn: conn, r: io.MultiReader(buf.Reader, conn)}
 	}
@@ -260,7 +283,7 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 	key, shown := p.key(r.Method, &u, body)
 	file := filepath.Join(p.dir, safeHost(u.Host), key+".json")
 
-	if ex, data, err := p.load(file); err == nil && !(p.record && ex.Scrubbed) {
+	if ex, data, err := p.load(file); err == nil && (!p.record || !ex.Scrubbed) {
 		p.hits.Add(1)
 		p.write(w, ex, p.shiftDates(ex, data))
 		return
@@ -270,7 +293,7 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 		p.missMu.Lock()
 		p.missed = append(p.missed, r.Method+" "+shown)
 		p.missMu.Unlock()
-		slog.Warn("cassette miss", "request", r.Method+" "+shown)
+		slog.WarnContext(r.Context(), "cassette miss", "request", r.Method+" "+shown)
 		w.Header().Set("X-Demo-Cassette", "miss")
 		http.Error(w, "not in the demo cassette", http.StatusBadGateway)
 		return
@@ -280,7 +303,15 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	out, err := http.NewRequestWithContext(r.Context(), r.Method, u.String(), bytes.NewReader(body))
+	// A forwarding proxy fetches what it is asked for; only the instance this
+	// command started talks to it, on loopback.
+	//nolint:gosec // G704: the instance's own provider calls, by design
+	out, err := http.NewRequestWithContext(
+		r.Context(),
+		r.Method,
+		u.String(),
+		bytes.NewReader(body),
+	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
@@ -291,9 +322,16 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 		}
 		out.Header[k] = vs
 	}
-	resp, err := p.upstream.Do(out)
+	resp, err := p.upstream.Do(out) //nolint:gosec // G704: see above
 	if err != nil {
-		slog.Warn("upstream failed", "request", r.Method+" "+shown, "error", err)
+		slog.WarnContext(
+			r.Context(),
+			"upstream failed",
+			"request",
+			r.Method+" "+shown,
+			"error",
+			err,
+		)
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
@@ -303,7 +341,12 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	ex := exchange{Method: r.Method, URL: shown, Status: resp.StatusCode, Header: map[string]string{}}
+	ex := exchange{
+		Method: r.Method,
+		URL:    shown,
+		Status: resp.StatusCode,
+		Header: map[string]string{},
+	}
 	for _, h := range keptHeaders {
 		if v := resp.Header.Get(h); v != "" {
 			ex.Header[h] = p.redact(v)
@@ -323,14 +366,23 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 			ex.Header["Content-Type"] = ct
 		}
 	}
-	if keep := resp.StatusCode < 500 && resp.StatusCode != http.StatusTooManyRequests &&
-		resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != http.StatusForbidden; keep {
+	if keep := resp.StatusCode < 500 &&
+		resp.StatusCode != http.StatusTooManyRequests &&
+		resp.StatusCode != http.StatusUnauthorized &&
+		resp.StatusCode != http.StatusForbidden; keep {
 		// Only the kept copy is scrubbed: the instance needs the real token
 		// for the rest of this recording run.
 		kept := p.scrub(data)
 		ex.Scrubbed = !bytes.Equal(kept, data)
 		if err := p.save(file, &ex, kept); err != nil {
-			slog.Warn("cassette write failed", "file", file, "error", err)
+			slog.WarnContext(
+				r.Context(),
+				"cassette write failed",
+				"file",
+				file,
+				"error",
+				err,
+			)
 		} else {
 			p.recorded.Add(1)
 		}
@@ -409,7 +461,9 @@ func (p *proxy) redact(s string) string {
 
 // tokenField matches a JSON string field that carries a credential, such as
 // the token TVDB's login answers with.
-var tokenField = regexp.MustCompile(`("(?:token|access_token|refresh_token)"\s*:\s*")[^"]*(")`)
+var tokenField = regexp.MustCompile(
+	`("(?:token|access_token|refresh_token)"\s*:\s*")[^"]*(")`,
+)
 
 func (p *proxy) scrub(data []byte) []byte {
 	if !utf8.Valid(data) {
@@ -423,6 +477,9 @@ func (p *proxy) scrub(data []byte) []byte {
 func (p *proxy) save(file string, ex *exchange, data []byte) error {
 	p.writeMu.Lock()
 	defer p.writeMu.Unlock()
+	// file is the cassette directory, safeHost's one-element name and a hex
+	// hash: no path element comes from the request as it was sent.
+	//nolint:gosec // G703: see above
 	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
 		return err
 	}
@@ -436,7 +493,12 @@ func (p *proxy) save(file string, ex *exchange, data []byte) error {
 		}
 	} else {
 		ex.BodyFile = strings.TrimSuffix(filepath.Base(file), ".json") + ".bin"
-		if err := os.WriteFile(filepath.Join(filepath.Dir(file), ex.BodyFile), data, 0o644); err != nil {
+		//nolint:gosec // G703: BodyFile is the hash-named sibling of file
+		if err := os.WriteFile(
+			filepath.Join(filepath.Dir(file), ex.BodyFile),
+			data,
+			0o644,
+		); err != nil {
 			return err
 		}
 	}
@@ -444,10 +506,12 @@ func (p *proxy) save(file string, ex *exchange, data []byte) error {
 	if err != nil {
 		return err
 	}
+	//nolint:gosec // G703: file is built as above
 	return os.WriteFile(file, append(raw, '\n'), 0o644)
 }
 
 func (p *proxy) load(file string) (*exchange, []byte, error) {
+	//nolint:gosec // G703: file is the cassette path handle built, never the request's
 	raw, err := os.ReadFile(file)
 	if err != nil {
 		return nil, nil, err
@@ -457,6 +521,7 @@ func (p *proxy) load(file string) (*exchange, []byte, error) {
 		return nil, nil, fmt.Errorf("%s: %w", file, err)
 	}
 	if ex.BodyFile != "" {
+		//nolint:gosec // G703: BodyFile is read back from our own cassette entry
 		data, err := os.ReadFile(filepath.Join(filepath.Dir(file), ex.BodyFile))
 		if err != nil {
 			return nil, nil, err
@@ -472,6 +537,7 @@ func (p *proxy) write(w http.ResponseWriter, ex *exchange, data []byte) {
 	}
 	w.Header().Set("Content-Length", fmt.Sprint(len(data)))
 	w.WriteHeader(ex.Status)
+	//nolint:gosec // G705: a proxy relays the provider's body to the instance, never to a browser
 	_, _ = w.Write(data)
 }
 
@@ -483,7 +549,8 @@ var isoDate = regexp.MustCompile(`\b(\d{4})-(\d{2})-(\d{2})\b`)
 // one and the calendar is never empty. Older dates are a film's or a book's
 // own and stay put.
 func (p *proxy) shiftDates(ex *exchange, data []byte) []byte {
-	if p.shift <= 0 || ex.BodyFile != "" || !strings.Contains(ex.Header["Content-Type"], "json") {
+	if p.shift <= 0 || ex.BodyFile != "" ||
+		!strings.Contains(ex.Header["Content-Type"], "json") {
 		return data
 	}
 	window := 2 * 365 * 24 * time.Hour
@@ -500,21 +567,46 @@ func (p *proxy) shiftDates(ex *exchange, data []byte) []byte {
 }
 
 func (p *proxy) report() string {
-	s := fmt.Sprintf("cassette: %d answered, %d recorded, %d missing", p.hits.Load(), p.recorded.Load(), p.misses.Load())
+	var b strings.Builder
+	fmt.Fprintf(
+		&b,
+		"cassette: %d answered, %d recorded, %d missing",
+		p.hits.Load(),
+		p.recorded.Load(),
+		p.misses.Load(),
+	)
 	p.missMu.Lock()
 	defer p.missMu.Unlock()
 	seen := map[string]bool{}
 	for _, m := range p.missed {
 		if !seen[m] && len(seen) < 20 {
 			seen[m] = true
-			s += "\n  missing: " + m
+			b.WriteString("\n  missing: " + m)
 		}
 	}
-	return s
+	return b.String()
 }
 
+// safeHost turns a request's host into one directory name: anything but
+// letters, digits, dots and hyphens becomes an underscore, and a name made of
+// dots only (".", "..") gets a prefix, so no host can reach outside the
+// cassette.
 func safeHost(h string) string {
-	return strings.NewReplacer(":", "_", "/", "_").Replace(h)
+	h = strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z',
+			r >= 'A' && r <= 'Z',
+			r >= '0' && r <= '9',
+			r == '.',
+			r == '-':
+			return r
+		}
+		return '_'
+	}, h)
+	if strings.Trim(h, ".") == "" {
+		h = "_" + h
+	}
+	return h
 }
 
 func hopHeader(k string) bool {

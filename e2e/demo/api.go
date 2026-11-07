@@ -35,12 +35,23 @@ type statusError struct {
 }
 
 func (e *statusError) Error() string {
-	return fmt.Sprintf("%s %s: %d %s", e.Method, e.Path, e.Status, strings.TrimSpace(e.Body))
+	return fmt.Sprintf(
+		"%s %s: %d %s",
+		e.Method,
+		e.Path,
+		e.Status,
+		strings.TrimSpace(e.Body),
+	)
 }
 
 func (a *api) login(ctx context.Context, email, password string) error {
 	body, _ := json.Marshal(map[string]string{"email": email, "password": password})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.base+"/auth/login", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		a.base+"/auth/login",
+		bytes.NewReader(body),
+	)
 	if err != nil {
 		return err
 	}
@@ -52,7 +63,12 @@ func (a *api) login(ctx context.Context, email, password string) error {
 	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {
 		b, _ := io.ReadAll(resp.Body)
-		return &statusError{Method: "POST", Path: "/auth/login", Status: resp.StatusCode, Body: string(b)}
+		return &statusError{
+			Method: "POST",
+			Path:   "/auth/login",
+			Status: resp.StatusCode,
+			Body:   string(b),
+		}
 	}
 	for _, c := range resp.Cookies() {
 		if c.Name == "streamline_session" {
@@ -70,14 +86,22 @@ func (a *api) do(ctx context.Context, method, path string, in, out any) error {
 	for attempt := 0; ; attempt++ {
 		err := a.once(ctx, method, path, in, out)
 		var se *statusError
-		if attempt >= 5 || !errors.As(err, &se) || se.Status != http.StatusTooManyRequests {
+		if attempt >= 5 || !errors.As(err, &se) ||
+			se.Status != http.StatusTooManyRequests {
 			return err
 		}
 		wait := 30 * time.Second
 		if se.RetryAfter > 0 {
 			wait = se.RetryAfter
 		}
-		slog.Info("rate limited, waiting", "request", method+" "+path, "wait", wait)
+		slog.InfoContext(
+			ctx,
+			"rate limited, waiting",
+			"request",
+			method+" "+path,
+			"wait",
+			wait,
+		)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -113,8 +137,16 @@ func (a *api) once(ctx context.Context, method, path string, in, out any) error 
 		return err
 	}
 	if resp.StatusCode/100 != 2 {
-		se := &statusError{Method: method, Path: path, Status: resp.StatusCode, Body: string(raw)}
-		if secs, err := strconv.Atoi(resp.Header.Get("Retry-After")); err == nil && secs > 0 {
+		se := &statusError{
+			Method: method,
+			Path:   path,
+			Status: resp.StatusCode,
+			Body:   string(raw),
+		}
+		if secs, err := strconv.Atoi(
+			resp.Header.Get("Retry-After"),
+		); err == nil &&
+			secs > 0 {
 			se.RetryAfter = time.Duration(secs) * time.Second
 		}
 		return se
@@ -144,7 +176,12 @@ func (a *api) patch(ctx context.Context, path string, in, out any) error {
 
 // waitFor polls cond every interval until it reports done, fails, or the
 // timeout passes.
-func waitFor(ctx context.Context, what string, timeout, interval time.Duration, cond func() (bool, error)) error {
+func waitFor(
+	ctx context.Context,
+	what string,
+	timeout, interval time.Duration,
+	cond func() (bool, error),
+) error {
 	deadline := time.Now().Add(timeout)
 	for {
 		done, err := cond()

@@ -32,7 +32,11 @@ type shot struct {
 // clickVisible clicks the first match that is on screen: a page often holds a
 // phone and a desktop copy of one control, and clicking the hidden one waits
 // for it to show until the page times out.
-func clickVisible(p *rod.Page, what string, find func() (rod.Elements, error), settleFor time.Duration) error {
+func clickVisible(
+	what string,
+	find func() (rod.Elements, error),
+	settleFor time.Duration,
+) error {
 	deadline := time.Now().Add(20 * time.Second)
 	for {
 		els, err := find()
@@ -58,19 +62,24 @@ func clickVisible(p *rod.Page, what string, find func() (rod.Elements, error), s
 func clickText(selector, text string) func(p *rod.Page) error {
 	return func(p *rod.Page) error {
 		re := regexp.MustCompile(text)
-		return clickVisible(p, fmt.Sprintf("%s %q", selector, text), func() (rod.Elements, error) {
-			all, err := p.Elements(selector)
-			if err != nil {
-				return nil, err
-			}
-			var out rod.Elements
-			for _, el := range all {
-				if t, err := el.Text(); err == nil && re.MatchString(strings.TrimSpace(t)) {
-					out = append(out, el)
+		return clickVisible(
+			fmt.Sprintf("%s %q", selector, text),
+			func() (rod.Elements, error) {
+				all, err := p.Elements(selector)
+				if err != nil {
+					return nil, err
 				}
-			}
-			return out, nil
-		}, 4*time.Second)
+				var out rod.Elements
+				for _, el := range all {
+					if t, err := el.Text(); err == nil &&
+						re.MatchString(strings.TrimSpace(t)) {
+						out = append(out, el)
+					}
+				}
+				return out, nil
+			},
+			4*time.Second,
+		)
 	}
 }
 
@@ -102,18 +111,60 @@ func (s *seeder) shots() []shot {
 		{name: "dashboard", path: "/", width: w, height: h},
 		{name: "activity-queue", path: "/activity", width: w, height: h},
 		{name: "history", path: "/activity?view=history", width: w, height: h},
-		{name: "import-verification", path: "/activity", width: w, height: h, before: clickText("button", "^Resolve$")},
+		{
+			name:   "import-verification",
+			path:   "/activity",
+			width:  w,
+			height: h,
+			before: clickText("button", "^Resolve$"),
+		},
 		{name: "movies", path: "/movies", width: w, height: h},
-		{name: "movie-detail", path: idPath("/movies/", movie, ""), width: w, height: h},
-		{name: "manual-search", path: idPath("/movies/", search, ""), width: w, height: h, before: clickText("button", "^Manual search$")},
+		{
+			name:   "movie-detail",
+			path:   idPath("/movies/", movie, ""),
+			width:  w,
+			height: h,
+		},
+		{
+			name:   "manual-search",
+			path:   idPath("/movies/", search, ""),
+			width:  w,
+			height: h,
+			before: clickText("button", "^Manual search$"),
+		},
 		{name: "series", path: "/series", width: w, height: h},
-		{name: "series-episodes", path: idPath("/series/", show, "?tab=episodes"), width: w, height: h},
-		{name: "library-import", path: idPath("/imports/", s.pendingImp, ""), width: w, height: h},
+		{
+			name:   "series-episodes",
+			path:   idPath("/series/", show, "?tab=episodes"),
+			width:  w,
+			height: h,
+		},
+		{
+			name:   "library-import",
+			path:   idPath("/imports/", s.pendingImp, ""),
+			width:  w,
+			height: h,
+		},
 		{name: "music", path: "/music", width: w, height: h},
-		{name: "music-artist", path: idPath("/music/", artist, "?tab=discography"), width: w, height: h},
+		{
+			name:   "music-artist",
+			path:   idPath("/music/", artist, "?tab=discography"),
+			width:  w,
+			height: h,
+		},
 		{name: "books", path: "/books", width: w, height: h},
-		{name: "book-detail", path: idPath("/books/", book, ""), width: w, height: h},
-		{name: "book-series", path: idPath("/books/series/", series, ""), width: w, height: h},
+		{
+			name:   "book-detail",
+			path:   idPath("/books/", book, ""),
+			width:  w,
+			height: h,
+		},
+		{
+			name:   "book-series",
+			path:   idPath("/books/series/", series, ""),
+			width:  w,
+			height: h,
+		},
 		{name: "requests", path: "/requests", width: w, height: h},
 		{name: "calendar", path: "/calendar", width: w, height: h},
 		{name: "settings", path: "/settings", width: w, height: h},
@@ -126,7 +177,12 @@ func (s *seeder) phoneShots() []shot {
 	book := first(s.bookIDs, grabEbook.Title, "Pride and Prejudice")
 	return []shot{
 		{name: "phone-dashboard", path: "/", width: 390, height: 780},
-		{name: "phone-book", path: idPath("/books/", book, ""), width: 390, height: 780},
+		{
+			name:   "phone-book",
+			path:   idPath("/books/", book, ""),
+			width:  390,
+			height: 780,
+		},
 		{name: "phone-activity", path: "/activity", width: 390, height: 780},
 	}
 }
@@ -156,19 +212,24 @@ func shoot(ctx context.Context, in *instance, s *seeder, o options) error {
 			continue
 		}
 		if sh.path == "" {
-			slog.Warn("shot skipped: its title is not in the library", "shot", sh.name)
+			slog.WarnContext(
+				ctx,
+				"shot skipped: its title is not in the library",
+				"shot",
+				sh.name,
+			)
 			continue
 		}
 		data, err := capture(browser, in, sh, o.scale)
 		if err != nil {
-			slog.Warn("shot failed", "shot", sh.name, "error", err)
+			slog.WarnContext(ctx, "shot failed", "shot", sh.name, "error", err)
 			continue
 		}
 		file := filepath.Join(o.out, sh.name+".png")
 		if err := os.WriteFile(file, data, 0o644); err != nil {
 			return err
 		}
-		slog.Info("shot", "file", file)
+		slog.InfoContext(ctx, "shot", "file", file)
 	}
 	if want("mobile") {
 		var phones [][]byte
@@ -178,7 +239,7 @@ func shoot(ctx context.Context, in *instance, s *seeder, o options) error {
 			}
 			data, err := capture(browser, in, sh, 2)
 			if err != nil {
-				slog.Warn("shot failed", "shot", sh.name, "error", err)
+				slog.WarnContext(ctx, "shot failed", "shot", sh.name, "error", err)
 				continue
 			}
 			phones = append(phones, data)
@@ -192,7 +253,7 @@ func shoot(ctx context.Context, in *instance, s *seeder, o options) error {
 			if err := os.WriteFile(file, data, 0o644); err != nil {
 				return err
 			}
-			slog.Info("shot", "file", file)
+			slog.InfoContext(ctx, "shot", "file", file)
 		}
 	}
 	return nil
@@ -200,7 +261,12 @@ func shoot(ctx context.Context, in *instance, s *seeder, o options) error {
 
 // capture opens one page in a fresh incognito context, signed in unless the
 // shot says otherwise, and returns the viewport as PNG.
-func capture(browser *rod.Browser, in *instance, sh shot, scale float64) ([]byte, error) {
+func capture(
+	browser *rod.Browser,
+	in *instance,
+	sh shot,
+	scale float64,
+) ([]byte, error) {
 	inc, err := browser.Incognito()
 	if err != nil {
 		return nil, err
@@ -219,7 +285,12 @@ func capture(browser *rod.Browser, in *instance, sh shot, scale float64) ([]byte
 	}
 	if mobile {
 		touch := 5
-		_ = proto.EmulationSetTouchEmulationEnabled{Enabled: true, MaxTouchPoints: &touch}.Call(p)
+		_ = proto.EmulationSetTouchEmulationEnabled{
+			Enabled:        true,
+			MaxTouchPoints: &touch,
+		}.Call(
+			p,
+		)
 	}
 	if !sh.anonymous {
 		if err := p.Navigate(in.base + "/login"); err != nil {
@@ -228,7 +299,11 @@ func capture(browser *rod.Browser, in *instance, sh shot, scale float64) ([]byte
 		if err := p.WaitLoad(); err != nil {
 			return nil, err
 		}
-		res, err := p.Eval(`(e, pw) => fetch("/auth/login", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({email: e, password: pw})}).then(r => r.status)`, adminEmail, demoPassword)
+		res, err := p.Eval(
+			`(e, pw) => fetch("/auth/login", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({email: e, password: pw})}).then(r => r.status)`,
+			adminEmail,
+			demoPassword,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -250,7 +325,10 @@ func capture(browser *rod.Browser, in *instance, sh shot, scale float64) ([]byte
 			return nil, err
 		}
 	}
-	return p.Screenshot(false, &proto.PageCaptureScreenshot{Format: proto.PageCaptureScreenshotFormatPng})
+	return p.Screenshot(
+		false,
+		&proto.PageCaptureScreenshot{Format: proto.PageCaptureScreenshotFormatPng},
+	)
 }
 
 // settle waits for the network to go quiet, every image to finish loading
@@ -259,7 +337,12 @@ func settle(p *rod.Page) error {
 	if err := p.WaitLoad(); err != nil {
 		return err
 	}
-	wait := p.WaitRequestIdle(800*time.Millisecond, nil, []string{"/schedules/events"}, nil)
+	wait := p.WaitRequestIdle(
+		800*time.Millisecond,
+		nil,
+		[]string{"/schedules/events"},
+		nil,
+	)
 	wait()
 	_, err := p.Eval(`() => Promise.all([
 		document.fonts.ready,
@@ -273,10 +356,18 @@ func settle(p *rod.Page) error {
 }
 
 // composite lays the phone shots side by side on the app's background.
-func composite(browser *rod.Browser, phones [][]byte, scale float64) ([]byte, error) {
+func composite(
+	browser *rod.Browser,
+	phones [][]byte,
+	scale float64,
+) ([]byte, error) {
 	var imgs strings.Builder
 	for _, b := range phones {
-		imgs.WriteString(`<img src="data:image/png;base64,` + base64.StdEncoding.EncodeToString(b) + `">`)
+		imgs.WriteString(
+			`<img src="data:image/png;base64,` + base64.StdEncoding.EncodeToString(
+				b,
+			) + `">`,
+		)
 	}
 	html := `<!doctype html><html><body style="margin:0;background:#0b0b10;display:flex;gap:30px;align-items:center;justify-content:center;width:1845px;height:1280px">
 <style>img{width:555px;border-radius:28px;box-shadow:0 24px 64px rgb(0 0 0/.55);outline:1px solid rgb(255 255 255/.08)}</style>` + imgs.String() + `</body></html>`
@@ -285,16 +376,27 @@ func composite(browser *rod.Browser, phones [][]byte, scale float64) ([]byte, er
 		return nil, err
 	}
 	defer p.Close()
-	if err := p.SetViewport(&proto.EmulationSetDeviceMetricsOverride{Width: 1845, Height: 1280, DeviceScaleFactor: scale}); err != nil {
+	if err := p.SetViewport(
+		&proto.EmulationSetDeviceMetricsOverride{
+			Width:             1845,
+			Height:            1280,
+			DeviceScaleFactor: scale,
+		},
+	); err != nil {
 		return nil, err
 	}
 	if err := p.SetDocumentContent(html); err != nil {
 		return nil, err
 	}
-	if _, err := p.Eval(`() => Promise.all(Array.from(document.images).map(i => i.decode()))`); err != nil {
+	if _, err := p.Eval(
+		`() => Promise.all(Array.from(document.images).map(i => i.decode()))`,
+	); err != nil {
 		return nil, err
 	}
-	return p.Screenshot(false, &proto.PageCaptureScreenshot{Format: proto.PageCaptureScreenshotFormatPng})
+	return p.Screenshot(
+		false,
+		&proto.PageCaptureScreenshot{Format: proto.PageCaptureScreenshotFormatPng},
+	)
 }
 
 // chromeBin is CHROME_PATH, else a browser on PATH, else a Chromium under

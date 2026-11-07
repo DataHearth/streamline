@@ -67,7 +67,10 @@ func Video(path string, spec VideoSpec) error {
 	if spec.Duration == 0 {
 		spec.Duration = 3 * time.Hour
 	}
-	if st, err := os.Stat(path); err == nil && spec.Size > 0 && st.Size() == spec.Size {
+	if st, err := os.Stat(
+		path,
+	); err == nil && spec.Size > 0 &&
+		st.Size() == spec.Size {
 		return nil
 	}
 	ffmpeg, err := exec.LookPath("ffmpeg")
@@ -87,23 +90,52 @@ func Video(path string, spec VideoSpec) error {
 	}
 	secs := strconv.Itoa(int(spec.Duration.Seconds()))
 	args := []string{
-		"-hide_banner", "-loglevel", "error", "-y",
-		"-f", "lavfi", "-i", fmt.Sprintf("color=c=black:s=%dx%d:r=1/3600:d=%s", width, spec.Height, secs),
-		"-f", "lavfi", "-t", "1", "-i", "anullsrc=r=48000:cl=" + layout,
-		"-map", "0", "-map", "1",
+		"-hide_banner",
+		"-loglevel",
+		"error",
+		"-y",
+		"-f",
+		"lavfi",
+		"-i",
+		fmt.Sprintf("color=c=black:s=%dx%d:r=1/3600:d=%s", width, spec.Height, secs),
+		"-f",
+		"lavfi",
+		"-t",
+		"1",
+		"-i",
+		"anullsrc=r=48000:cl=" + layout,
+		"-map",
+		"0",
+		"-map",
+		"1",
 	}
 	switch spec.Codec {
 	case "hevc":
-		args = append(args, "-c:v", "libx265", "-preset", "ultrafast", "-x265-params", "log-level=error")
+		args = append(
+			args,
+			"-c:v",
+			"libx265",
+			"-preset",
+			"ultrafast",
+			"-x265-params",
+			"log-level=error",
+		)
 	case "h264":
 		args = append(args, "-c:v", "libx264", "-preset", "ultrafast")
 	default:
 		return fmt.Errorf("demomedia: unsupported codec %q", spec.Codec)
 	}
 	if spec.HDR {
-		args = append(args,
-			"-pix_fmt", "yuv420p10le",
-			"-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc",
+		args = append(
+			args,
+			"-pix_fmt",
+			"yuv420p10le",
+			"-color_primaries",
+			"bt2020",
+			"-color_trc",
+			"smpte2084",
+			"-colorspace",
+			"bt2020nc",
 		)
 	} else {
 		args = append(args, "-pix_fmt", "yuv420p")
@@ -113,6 +145,7 @@ func Video(path string, spec VideoSpec) error {
 		"-fflags", "+bitexact", "-flags", "+bitexact", "-map_metadata", "-1",
 		"-f", "matroska", path,
 	)
+	//nolint:gosec // G204: ffmpeg from PATH, with arguments built here from a VideoSpec
 	if out, err := exec.Command(ffmpeg, args...).CombinedOutput(); err != nil {
 		return fmt.Errorf("demomedia: ffmpeg: %w: %s", err, bytes.TrimSpace(out))
 	}
@@ -172,9 +205,28 @@ func Ebook(path string, m EbookMeta) error {
 		isbn = `<dc:identifier opf:scheme="ISBN">` + esc(m.ISBN) + `</dc:identifier>`
 	}
 	entries := []struct{ name, body string }{
-		{"META-INF/container.xml", `<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`},
-		{"content.opf", `<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" xmlns:opf="http://www.idpf.org/2007/opf" unique-identifier="id" version="2.0"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>` + esc(m.Title) + `</dc:title><dc:creator opf:role="aut">` + esc(m.Author) + `</dc:creator><dc:identifier id="id">` + esc(m.ID) + `</dc:identifier>` + isbn + `<dc:language>` + esc(m.Language) + `</dc:language></metadata><manifest><item id="c" href="c.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="c"/></spine></package>`},
-		{"c.xhtml", `<html xmlns="http://www.w3.org/1999/xhtml"><body><p>` + esc(m.Title) + `</p></body></html>`},
+		{
+			"META-INF/container.xml",
+			`<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`,
+		},
+		{
+			"content.opf",
+			`<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" xmlns:opf="http://www.idpf.org/2007/opf" unique-identifier="id" version="2.0"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>` + esc(
+				m.Title,
+			) + `</dc:title><dc:creator opf:role="aut">` + esc(
+				m.Author,
+			) + `</dc:creator><dc:identifier id="id">` + esc(
+				m.ID,
+			) + `</dc:identifier>` + isbn + `<dc:language>` + esc(
+				m.Language,
+			) + `</dc:language></metadata><manifest><item id="c" href="c.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="c"/></spine></package>`,
+		},
+		{
+			"c.xhtml",
+			`<html xmlns="http://www.w3.org/1999/xhtml"><body><p>` + esc(
+				m.Title,
+			) + `</p></body></html>`,
+		},
 	}
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)

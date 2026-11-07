@@ -59,13 +59,48 @@ type options struct {
 func main() {
 	var o options
 	var only string
-	flag.StringVar(&o.binary, "binary", "", "streamline binary to run (task docs:screenshots builds one)")
-	flag.StringVar(&o.tracker, "tracker", "", "faketracker binary (default: built from ./e2e/faketracker)")
-	flag.StringVar(&o.out, "out", "docs/assets", "directory the screenshots are written to")
-	flag.StringVar(&o.cassette, "cassette", "e2e/demo/cassette", "directory of recorded provider responses")
-	flag.BoolVar(&o.record, "record", false, "send what the cassette lacks to the real providers and keep it (needs the provider keys)")
-	flag.BoolVar(&o.keep, "keep", false, "leave the instance running after the shots, until Ctrl-C")
-	flag.StringVar(&only, "only", "", "comma-separated screenshot names to take (default: all)")
+	flag.StringVar(
+		&o.binary,
+		"binary",
+		"",
+		"streamline binary to run (task docs:screenshots builds one)",
+	)
+	flag.StringVar(
+		&o.tracker,
+		"tracker",
+		"",
+		"faketracker binary (default: built from ./e2e/faketracker)",
+	)
+	flag.StringVar(
+		&o.out,
+		"out",
+		"docs/assets",
+		"directory the screenshots are written to",
+	)
+	flag.StringVar(
+		&o.cassette,
+		"cassette",
+		"e2e/demo/cassette",
+		"directory of recorded provider responses",
+	)
+	flag.BoolVar(
+		&o.record,
+		"record",
+		false,
+		"send what the cassette lacks to the real providers and keep it (needs the provider keys)",
+	)
+	flag.BoolVar(
+		&o.keep,
+		"keep",
+		false,
+		"leave the instance running after the shots, until Ctrl-C",
+	)
+	flag.StringVar(
+		&only,
+		"only",
+		"",
+		"comma-separated screenshot names to take (default: all)",
+	)
 	flag.Float64Var(&o.scale, "scale", 1, "device scale factor of the screenshots")
 	flag.Parse()
 	if o.binary == "" {
@@ -78,12 +113,23 @@ func main() {
 			o.only[strings.TrimSpace(n)] = true
 		}
 	}
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	slog.SetDefault(
+		slog.New(
+			slog.NewTextHandler(
+				os.Stderr,
+				&slog.HandlerOptions{Level: slog.LevelInfo},
+			),
+		),
+	)
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
 	defer stop()
 	if err := run(ctx, o); err != nil {
-		slog.Error("demo failed", "error", err)
+		slog.ErrorContext(ctx, "demo failed", "error", err)
 		os.Exit(1)
 	}
 }
@@ -98,8 +144,14 @@ func run(ctx context.Context, o options) error {
 	for name, v := range keys {
 		if v == "" {
 			if o.record {
-				slog.Warn("no key in the environment: that provider's calls fail and are not recorded",
-					"provider", name, "env", "STREAMLINE_METADATA__"+strings.ToUpper(name)+"_API_KEY")
+				slog.WarnContext(
+					ctx,
+					"no key in the environment: that provider's calls fail and are not recorded",
+					"provider",
+					name,
+					"env",
+					"STREAMLINE_METADATA__"+strings.ToUpper(name)+"_API_KEY",
+				)
 			}
 			keys[name] = replayKey
 			continue
@@ -120,7 +172,7 @@ func run(ctx context.Context, o options) error {
 		return err
 	}
 	if !o.keep {
-		defer os.RemoveAll(scratch)
+		defer func() { _ = os.RemoveAll(scratch) }()
 	}
 	// The data directory (the database, posters, a few MB) goes in memory
 	// where there is some, as the e2e suites do: the dashboard's health pill
@@ -131,11 +183,11 @@ func run(ctx context.Context, o options) error {
 		if d, err := os.MkdirTemp("/dev/shm", "streamline-demo-data-"); err == nil {
 			dataDir = d
 			if !o.keep {
-				defer os.RemoveAll(d)
+				defer func() { _ = os.RemoveAll(d) }()
 			}
 		}
 	}
-	slog.Info("scratch directory", "path", scratch)
+	slog.InfoContext(ctx, "scratch directory", "path", scratch)
 
 	px, err := newProxy(o.cassette, o.record, secrets)
 	if err != nil {
@@ -148,13 +200,18 @@ func run(ctx context.Context, o options) error {
 	pxSrv := &http.Server{Handler: px, ReadHeaderTimeout: 30 * time.Second}
 	go func() { _ = pxSrv.Serve(pxLn) }()
 	defer pxSrv.Close()
-	defer func() { slog.Info(px.report()) }()
+	defer func() { slog.InfoContext(ctx, px.report()) }()
 
 	in, err := newInstance(scratch, dataDir, keys, o.record)
 	if err != nil {
 		return err
 	}
-	if err := in.start(ctx, o.binary, "http://"+pxLn.Addr().String(), px.caPEM); err != nil {
+	if err := in.start(
+		ctx,
+		o.binary,
+		"http://"+pxLn.Addr().String(),
+		px.caPEM,
+	); err != nil {
 		return err
 	}
 	defer in.stop()
@@ -162,8 +219,10 @@ func run(ctx context.Context, o options) error {
 	tracker := o.tracker
 	if tracker == "" {
 		tracker = filepath.Join(scratch, "faketracker")
-		slog.Info("building the fake tracker")
-		if out, err := exec.CommandContext(ctx, "go", "build", "-o", tracker, "./e2e/faketracker").CombinedOutput(); err != nil {
+		slog.InfoContext(ctx, "building the fake tracker")
+		//nolint:gosec // G204: the output path is this run's own scratch directory
+		if out, err := exec.CommandContext(ctx, "go", "build", "-o", tracker, "./e2e/faketracker").
+			CombinedOutput(); err != nil {
 			return fmt.Errorf("build faketracker: %w: %s", err, out)
 		}
 	}
@@ -177,7 +236,16 @@ func run(ctx context.Context, o options) error {
 		return fmt.Errorf("shoot: %w", err)
 	}
 	if o.keep {
-		slog.Info("instance left running; Ctrl-C to stop", "url", in.base, "email", adminEmail, "password", demoPassword)
+		slog.InfoContext(
+			ctx,
+			"instance left running; Ctrl-C to stop",
+			"url",
+			in.base,
+			"email",
+			adminEmail,
+			"password",
+			demoPassword,
+		)
 		<-ctx.Done()
 	}
 	return nil
@@ -192,7 +260,10 @@ const scratchMarker = ".streamline-demo"
 func scratchDir(dir string) (string, error) {
 	if _, err := os.Stat(dir); err == nil {
 		if _, err := os.Stat(filepath.Join(dir, scratchMarker)); err != nil {
-			return "", fmt.Errorf("%s exists and was not made by the demo; move it away", dir)
+			return "", fmt.Errorf(
+				"%s exists and was not made by the demo; move it away",
+				dir,
+			)
 		}
 		if err := os.RemoveAll(dir); err != nil {
 			return "", err
@@ -220,8 +291,17 @@ type instance struct {
 	trackerArgs         []string
 }
 
-func newInstance(dir, dataDir string, keys map[string]string, record bool) (*instance, error) {
-	in := &instance{dir: dir, keys: keys, record: record, paths: map[string]string{"data": dataDir}}
+func newInstance(
+	dir, dataDir string,
+	keys map[string]string,
+	record bool,
+) (*instance, error) {
+	in := &instance{
+		dir:    dir,
+		keys:   keys,
+		record: record,
+		paths:  map[string]string{"data": dataDir},
+	}
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
 		return nil, err
 	}
@@ -242,7 +322,10 @@ func newInstance(dir, dataDir string, keys map[string]string, record bool) (*ins
 	}
 	ip, err := nettest.AdvertiseIP()
 	if err != nil {
-		return nil, fmt.Errorf("the fake tracker needs a non-loopback address: %w", err)
+		return nil, fmt.Errorf(
+			"the fake tracker needs a non-loopback address: %w",
+			err,
+		)
 	}
 	in.trackerHost = ip.String()
 	if in.trackerPort, err = freePort(in.trackerHost); err != nil {
@@ -266,7 +349,8 @@ func (in *instance) config() string {
 	// the proxy paces what does (upstreamGap), so what the cassette already
 	// holds is not made to wait.
 	interval := "0s"
-	return fmt.Sprintf(`data_dir: %[1]s
+	return fmt.Sprintf(
+		`data_dir: %[1]s
 server: {host: 127.0.0.1, port: %[2]d}
 auth:
   session_secret: %[3]s
@@ -296,11 +380,24 @@ indexers:
 log:
   app: {level: warn}
 `,
-		in.paths["data"], in.port, sessionSecret, adminEmail, demoPassword,
-		in.paths["downloads"], in.paths["movies"], in.paths["series"], in.paths["music"],
-		in.paths["books"], in.paths["audiobooks"],
-		in.keys["tmdb"], in.keys["tvdb"], in.keys["hardcover"], interval,
-		in.trackerHost, in.trackerPort, trackerAPIKey,
+		in.paths["data"],
+		in.port,
+		sessionSecret,
+		adminEmail,
+		demoPassword,
+		in.paths["downloads"],
+		in.paths["movies"],
+		in.paths["series"],
+		in.paths["music"],
+		in.paths["books"],
+		in.paths["audiobooks"],
+		in.keys["tmdb"],
+		in.keys["tvdb"],
+		in.keys["hardcover"],
+		interval,
+		in.trackerHost,
+		in.trackerPort,
+		trackerAPIKey,
 	)
 }
 
@@ -324,7 +421,11 @@ func childEnv(extra ...string) []string {
 	return append(env, extra...)
 }
 
-func (in *instance) start(ctx context.Context, binary, proxyURL string, caPEM []byte) error {
+func (in *instance) start(
+	ctx context.Context,
+	binary, proxyURL string,
+	caPEM []byte,
+) error {
 	cfg := filepath.Join(in.dir, "config.yaml")
 	if err := os.WriteFile(cfg, []byte(in.config()), 0o600); err != nil {
 		return err
@@ -337,6 +438,7 @@ func (in *instance) start(ctx context.Context, binary, proxyURL string, caPEM []
 	if in.logFile, err = os.Create(filepath.Join(in.dir, "server.log")); err != nil {
 		return err
 	}
+	//nolint:gosec // G204: the binary is the operator's own -binary flag
 	in.cmd = exec.Command(binary, "--config", cfg)
 	in.cmd.Env = childEnv(
 		"HTTPS_PROXY="+proxyURL, "HTTP_PROXY="+proxyURL,
@@ -349,7 +451,14 @@ func (in *instance) start(ctx context.Context, binary, proxyURL string, caPEM []
 	if err := in.cmd.Start(); err != nil {
 		return fmt.Errorf("start streamline: %w", err)
 	}
-	slog.Info("instance starting", "url", in.base, "log", in.logFile.Name())
+	slog.InfoContext(
+		ctx,
+		"instance starting",
+		"url",
+		in.base,
+		"log",
+		in.logFile.Name(),
+	)
 	deadline := time.Now().Add(2 * time.Minute)
 	for time.Now().Before(deadline) {
 		if ctx.Err() != nil {
@@ -372,7 +481,9 @@ func (in *instance) start(ctx context.Context, binary, proxyURL string, caPEM []
 // startTracker runs the fake tracker with the releases the seeder settled on.
 func (in *instance) startTracker(ctx context.Context, args []string) error {
 	var err error
-	if in.trackerLog, err = os.Create(filepath.Join(in.dir, "tracker.log")); err != nil {
+	if in.trackerLog, err = os.Create(
+		filepath.Join(in.dir, "tracker.log"),
+	); err != nil {
 		return err
 	}
 	all := append([]string{
@@ -382,6 +493,7 @@ func (in *instance) startTracker(ctx context.Context, args []string) error {
 		"-rate", strconv.Itoa(trackerRateKiB),
 	}, args...)
 	in.trackerArgs = all
+	//nolint:gosec // G204: the operator's -tracker flag or our own build, with our own arguments
 	in.trackerCmd = exec.Command(in.trackerBin, all...)
 	in.trackerCmd.Env = childEnv()
 	in.trackerCmd.Stdout, in.trackerCmd.Stderr = in.trackerLog, in.trackerLog
@@ -394,7 +506,9 @@ func (in *instance) startTracker(ctx context.Context, args []string) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if resp, err := http.Get("http://" + addr + "/?t=caps&apikey=" + trackerAPIKey); err == nil {
+		if resp, err := http.Get(
+			"http://" + addr + "/?t=caps&apikey=" + trackerAPIKey,
+		); err == nil {
 			resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
 				return nil

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -36,7 +37,14 @@ type seeder struct {
 }
 
 func (s *seeder) warn(what string, err error) {
-	slog.Warn("seed step skipped", "step", what, "error", err)
+	slog.WarnContext(
+		context.Background(),
+		"seed step skipped",
+		"step",
+		what,
+		"error",
+		err,
+	)
 	s.failures = append(s.failures, what+": "+err.Error())
 }
 
@@ -52,7 +60,12 @@ func (s *seeder) seed(ctx context.Context) error {
 	if err := s.api.get(ctx, "/auth/me", nil, &me); err != nil {
 		return err
 	}
-	if err := s.api.patch(ctx, "/auth/me", map[string]any{"display_name": "Demo Admin"}, nil); err != nil {
+	if err := s.api.patch(
+		ctx,
+		"/auth/me",
+		map[string]any{"display_name": "Demo Admin"},
+		nil,
+	); err != nil {
 		s.warn("admin display name", err)
 	}
 	if err := s.profiles(ctx); err != nil {
@@ -79,17 +92,29 @@ func (s *seeder) seed(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		slog.Info("seeding", "step", st.name)
+		slog.InfoContext(ctx, "seeding", "step", st.name)
 		start := time.Now()
 		if err := st.fn(ctx); err != nil {
 			s.warn(st.name, err)
 		}
-		slog.Info("seeded", "step", st.name, "took", time.Since(start).Round(time.Second))
+		slog.InfoContext(
+			ctx,
+			"seeded",
+			"step",
+			st.name,
+			"took",
+			time.Since(start).Round(time.Second),
+		)
 	}
 	if len(s.failures) > 0 {
-		slog.Warn("the demo library is incomplete", "skipped", len(s.failures))
+		slog.WarnContext(
+			ctx,
+			"the demo library is incomplete",
+			"skipped",
+			len(s.failures),
+		)
 		for _, f := range s.failures {
-			slog.Warn("  " + f)
+			slog.WarnContext(ctx, "  "+f)
 		}
 	}
 	return nil
@@ -106,13 +131,19 @@ func (s *seeder) profiles(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return s.api.post(ctx, "/quality-profiles/"+url.PathEscape("Ultra HD")+"/default?media=movie", nil, nil)
+	return s.api.post(
+		ctx,
+		"/quality-profiles/"+url.PathEscape("Ultra HD")+"/default?media=movie",
+		nil,
+		nil,
+	)
 }
 
 // ---- movies ----
 
 func filmFile(root string, f film) string {
-	dotted := strings.NewReplacer(" ", ".", ":", "", "'", "", "!", "").Replace(f.Title)
+	dotted := strings.NewReplacer(" ", ".", ":", "", "'", "", "!", "").
+		Replace(f.Title)
 	folder := strings.NewReplacer(":", "", "!", "").Replace(f.Title)
 	audio := "AAC5.1"
 	extra := "x265.10bit"
@@ -122,7 +153,16 @@ func filmFile(root string, f film) string {
 			extra = "DV.HDR.x265"
 		}
 	}
-	name := fmt.Sprintf("%s.%d.%dp.%s.%s.%s-%s.mkv", dotted, f.Year, f.Height, f.Source, extra, audio, f.Group)
+	name := fmt.Sprintf(
+		"%s.%d.%dp.%s.%s.%s-%s.mkv",
+		dotted,
+		f.Year,
+		f.Height,
+		f.Source,
+		extra,
+		audio,
+		f.Group,
+	)
 	return filepath.Join(root, fmt.Sprintf("%s (%d)", folder, f.Year), name)
 }
 
@@ -133,7 +173,11 @@ func writeFilm(root string, f film) error {
 		channels = 8
 	}
 	return demomedia.Video(filmFile(root, f), demomedia.VideoSpec{
-		Height: f.Height, HDR: f.HDR, Audio: audio, Channels: channels, Size: f.SizeMB << 20,
+		Height:   f.Height,
+		HDR:      f.HDR,
+		Audio:    audio,
+		Channels: channels,
+		Size:     f.SizeMB << 20,
 	})
 }
 
@@ -156,7 +200,12 @@ func (s *seeder) indexMovies(ctx context.Context) error {
 			Title string `json:"title"`
 		} `json:"items"`
 	}
-	if err := s.api.get(ctx, "/movies", url.Values{"limit": {"100"}}, &page); err != nil {
+	if err := s.api.get(
+		ctx,
+		"/movies",
+		url.Values{"limit": {"100"}},
+		&page,
+	); err != nil {
 		return err
 	}
 	for _, m := range page.Items {
@@ -175,7 +224,12 @@ func (s *seeder) addFilm(ctx context.Context, title string, year int) (int, erro
 		Title  string `json:"title"`
 		Year   int    `json:"year"`
 	}
-	if err := s.api.get(ctx, "/search/movie", url.Values{"q": {title}, "year": {strconv.Itoa(year)}}, &hits); err != nil {
+	if err := s.api.get(
+		ctx,
+		"/search/movie",
+		url.Values{"q": {title}, "year": {strconv.Itoa(year)}},
+		&hits,
+	); err != nil {
 		return 0, err
 	}
 	for _, h := range hits {
@@ -183,7 +237,12 @@ func (s *seeder) addFilm(ctx context.Context, title string, year int) (int, erro
 			var m struct {
 				ID int `json:"id"`
 			}
-			if err := s.api.post(ctx, "/movies", map[string]any{"tmdb_id": h.TMDBID}, &m); err != nil {
+			if err := s.api.post(
+				ctx,
+				"/movies",
+				map[string]any{"tmdb_id": h.TMDBID},
+				&m,
+			); err != nil {
 				return 0, err
 			}
 			s.movieIDs[title] = m.ID
@@ -200,18 +259,36 @@ func (s *seeder) seriesLibrary(ctx context.Context) error {
 		dotted := strings.ReplaceAll(sh.Title, " ", ".")
 		for season, eps := range sh.Seasons {
 			for ep := 1; ep <= eps; ep++ {
-				name := fmt.Sprintf("%s.S%02dE%02d.1080p.BluRay.x265.AAC2.0-DEMO.mkv", dotted, season, ep)
-				path := filepath.Join(s.in.paths["series"], fmt.Sprintf("%s (%d)", sh.Title, sh.Year),
-					fmt.Sprintf("Season %02d", season), name)
+				name := fmt.Sprintf(
+					"%s.S%02dE%02d.1080p.BluRay.x265.AAC2.0-DEMO.mkv",
+					dotted,
+					season,
+					ep,
+				)
+				path := filepath.Join(
+					s.in.paths["series"],
+					fmt.Sprintf("%s (%d)", sh.Title, sh.Year),
+					fmt.Sprintf("Season %02d", season),
+					name,
+				)
 				if err := demomedia.Video(path, demomedia.VideoSpec{
-					Height: 1080, Audio: "aac", Channels: 2, Duration: time.Hour, Size: sh.EpMB << 20,
+					Height:   1080,
+					Audio:    "aac",
+					Channels: 2,
+					Duration: time.Hour,
+					Size:     sh.EpMB << 20,
 				}); err != nil {
 					return err
 				}
 			}
 		}
 	}
-	if _, err := s.importScan(ctx, s.in.paths["series"], "series", true); err != nil {
+	if _, err := s.importScan(
+		ctx,
+		s.in.paths["series"],
+		"series",
+		true,
+	); err != nil {
 		return err
 	}
 	return s.indexShows(ctx)
@@ -224,7 +301,12 @@ func (s *seeder) indexShows(ctx context.Context) error {
 			Title string `json:"title"`
 		} `json:"items"`
 	}
-	if err := s.api.get(ctx, "/series", url.Values{"limit": {"100"}}, &page); err != nil {
+	if err := s.api.get(
+		ctx,
+		"/series",
+		url.Values{"limit": {"100"}},
+		&page,
+	); err != nil {
 		return err
 	}
 	for _, m := range page.Items {
@@ -265,7 +347,12 @@ func (s *seeder) findArtist(ctx context.Context, name string) (string, error) {
 			Name string `json:"name"`
 		} `json:"items"`
 	}
-	if err := s.api.get(ctx, "/music/search", url.Values{"query": {name}}, &res); err != nil {
+	if err := s.api.get(
+		ctx,
+		"/music/search",
+		url.Values{"query": {name}},
+		&res,
+	); err != nil {
 		return "", err
 	}
 	for _, it := range res.Items {
@@ -289,36 +376,56 @@ func findAlbum(a *musicArtist, title string) *musicAlbum {
 // the background worker could take minutes per artist; choosing the automatic
 // edition again re-fetches an album's tracks in the request, at interactive
 // priority. A MusicBrainz refusal (429) is waited out.
-func (s *seeder) waitTracks(ctx context.Context, id int, titles []string) (*musicArtist, error) {
+func (s *seeder) waitTracks(
+	ctx context.Context,
+	id int,
+	titles []string,
+) (*musicArtist, error) {
 	var a musicArtist
-	err := waitFor(ctx, "album tracks", 15*time.Minute, 2*time.Second, func() (bool, error) {
-		a = musicArtist{}
-		if err := s.api.get(ctx, "/music/artists/"+strconv.Itoa(id), nil, &a); err != nil {
-			return false, err
-		}
-		for _, t := range titles {
-			al := findAlbum(&a, t)
-			if al == nil {
-				return false, fmt.Errorf("%s has no album %q", a.Name, t)
-			}
-			if len(al.Tracks) > 0 && !al.Pending {
-				continue
-			}
-			err := s.api.do(ctx, http.MethodPut, "/music/albums/"+strconv.Itoa(al.ID)+"/editions",
-				map[string]any{"release_mbid": ""}, nil)
-			var se *statusError
-			if errors.As(err, &se) && se.Status == http.StatusTooManyRequests {
-				slog.Info("MusicBrainz asks to wait", "album", t)
-				time.Sleep(20 * time.Second)
-				return false, nil
-			}
-			if err != nil {
+	err := waitFor(
+		ctx,
+		"album tracks",
+		15*time.Minute,
+		2*time.Second,
+		func() (bool, error) {
+			a = musicArtist{}
+			if err := s.api.get(
+				ctx,
+				"/music/artists/"+strconv.Itoa(id),
+				nil,
+				&a,
+			); err != nil {
 				return false, err
 			}
-			return false, nil
-		}
-		return true, nil
-	})
+			for _, t := range titles {
+				al := findAlbum(&a, t)
+				if al == nil {
+					return false, fmt.Errorf("%s has no album %q", a.Name, t)
+				}
+				if len(al.Tracks) > 0 && !al.Pending {
+					continue
+				}
+				err := s.api.do(
+					ctx,
+					http.MethodPut,
+					"/music/albums/"+strconv.Itoa(al.ID)+"/editions",
+					map[string]any{"release_mbid": ""},
+					nil,
+				)
+				var se *statusError
+				if errors.As(err, &se) && se.Status == http.StatusTooManyRequests {
+					slog.InfoContext(ctx, "MusicBrainz asks to wait", "album", t)
+					time.Sleep(20 * time.Second)
+					return false, nil
+				}
+				if err != nil {
+					return false, err
+				}
+				return false, nil
+			}
+			return true, nil
+		},
+	)
 	return &a, err
 }
 
@@ -332,7 +439,12 @@ func (s *seeder) musicLibrary(ctx context.Context) error {
 			continue
 		}
 		var a musicArtist
-		if err := s.api.post(ctx, "/music/artists", map[string]any{"mbid": mbid, "monitor": "all"}, &a); err != nil {
+		if err := s.api.post(
+			ctx,
+			"/music/artists",
+			map[string]any{"mbid": mbid, "monitor": "all"},
+			&a,
+		); err != nil {
 			s.warn("artist "+ar.Name, err)
 			continue
 		}
@@ -344,19 +456,32 @@ func (s *seeder) musicLibrary(ctx context.Context) error {
 		if !ok {
 			continue
 		}
-		full, err := s.waitTracks(ctx, id, append(append([]string{}, ar.Albums...), ar.Grab...))
+		full, err := s.waitTracks(
+			ctx,
+			id,
+			append(append([]string{}, ar.Albums...), ar.Grab...),
+		)
 		if err != nil {
 			s.warn("artist "+ar.Name, err)
 			continue
 		}
 		for _, title := range ar.Albums {
 			al := findAlbum(full, title)
-			year := strings.SplitN(al.ReleaseDate, "-", 2)[0]
-			dir := filepath.Join(s.in.paths["music"], safeFile(ar.Name), safeFile(fmt.Sprintf("%s (%s)", al.Title, year)))
+			year, _, _ := strings.Cut(al.ReleaseDate, "-")
+			dir := filepath.Join(
+				s.in.paths["music"],
+				safeFile(ar.Name),
+				safeFile(fmt.Sprintf("%s (%s)", al.Title, year)),
+			)
 			for _, t := range al.Tracks {
 				name := fmt.Sprintf("%02d - %s.mp3", t.Number, safeFile(t.Title))
 				if t.Disc > 1 {
-					name = fmt.Sprintf("%d-%02d - %s.mp3", t.Disc, t.Number, safeFile(t.Title))
+					name = fmt.Sprintf(
+						"%d-%02d - %s.mp3",
+						t.Disc,
+						t.Number,
+						safeFile(t.Title),
+					)
 				}
 				if err := demomedia.Track(filepath.Join(dir, name), audiotags.Tags{
 					audiotags.KeyArtist:      {ar.Name},
@@ -387,8 +512,16 @@ func (s *seeder) musicLibrary(ctx context.Context) error {
 
 func (s *seeder) bookLibrary(ctx context.Context) error {
 	for _, b := range libraryBooks {
-		path := filepath.Join(s.in.paths["books"], safeFile(b.Author), safeFile(b.Title), safeFile(b.Title)+".epub")
-		if err := demomedia.Ebook(path, demomedia.EbookMeta{Title: b.Title, Author: b.Author}); err != nil {
+		path := filepath.Join(
+			s.in.paths["books"],
+			safeFile(b.Author),
+			safeFile(b.Title),
+			safeFile(b.Title)+".epub",
+		)
+		if err := demomedia.Ebook(
+			path,
+			demomedia.EbookMeta{Title: b.Title, Author: b.Author},
+		); err != nil {
 			return err
 		}
 	}
@@ -414,7 +547,12 @@ func (s *seeder) indexBooks(ctx context.Context) error {
 			} `json:"series"`
 		} `json:"items"`
 	}
-	if err := s.api.get(ctx, "/books", url.Values{"limit": {"100"}}, &page); err != nil {
+	if err := s.api.get(
+		ctx,
+		"/books",
+		url.Values{"limit": {"100"}},
+		&page,
+	); err != nil {
 		return err
 	}
 	for _, it := range page.Items {
@@ -440,15 +578,29 @@ type bookHit struct {
 	Year        int    `json:"year"`
 }
 
-func (s *seeder) findBook(ctx context.Context, kind string, b book) (*bookHit, error) {
+func (s *seeder) findBook(
+	ctx context.Context,
+	kind string,
+	b book,
+) (*bookHit, error) {
 	var res struct {
 		Items []bookHit `json:"items"`
 	}
-	if err := s.api.get(ctx, "/books/search", url.Values{"query": {b.Title + " " + b.Author}, "type": {kind}}, &res); err != nil {
+	if err := s.api.get(
+		ctx,
+		"/books/search",
+		url.Values{"query": {b.Title + " " + b.Author}, "type": {kind}},
+		&res,
+	); err != nil {
 		return nil, err
 	}
 	if len(res.Items) == 0 {
-		if err := s.api.get(ctx, "/books/search", url.Values{"query": {b.Title}, "type": {kind}}, &res); err != nil {
+		if err := s.api.get(
+			ctx,
+			"/books/search",
+			url.Values{"query": {b.Title}, "type": {kind}},
+			&res,
+		); err != nil {
 			return nil, err
 		}
 	}
@@ -457,7 +609,10 @@ func (s *seeder) findBook(ctx context.Context, kind string, b book) (*bookHit, e
 		if h.Type != "" && h.Type != kind {
 			continue
 		}
-		if strings.Contains(strings.ToLower(h.Author), strings.ToLower(lastWord(b.Author))) {
+		if strings.Contains(
+			strings.ToLower(h.Author),
+			strings.ToLower(lastWord(b.Author)),
+		) {
 			if strings.EqualFold(h.Title, b.Title) {
 				return &res.Items[i], nil
 			}
@@ -483,7 +638,12 @@ func (s *seeder) followBookSeries(ctx context.Context) error {
 			ID    int    `json:"id"`
 			Title string `json:"title"`
 		}
-		if err := s.api.post(ctx, "/books/series", map[string]any{"hardcover_id": hit.HardcoverID, "monitor": "all"}, &out); err != nil {
+		if err := s.api.post(
+			ctx,
+			"/books/series",
+			map[string]any{"hardcover_id": hit.HardcoverID, "monitor": "all"},
+			&out,
+		); err != nil {
 			s.warn("book series "+b.Title, err)
 			continue
 		}
@@ -491,20 +651,31 @@ func (s *seeder) followBookSeries(ctx context.Context) error {
 	}
 	// Phase two fills the volumes in the background; the shelf and the series
 	// page read better once it has.
-	_ = waitFor(ctx, "series hydration", 10*time.Minute, 3*time.Second, func() (bool, error) {
-		for _, id := range s.seriesIDs {
-			var sr struct {
-				Hydrating bool `json:"hydrating"`
+	_ = waitFor(
+		ctx,
+		"series hydration",
+		10*time.Minute,
+		3*time.Second,
+		func() (bool, error) {
+			for _, id := range s.seriesIDs {
+				var sr struct {
+					Hydrating bool `json:"hydrating"`
+				}
+				if err := s.api.get(
+					ctx,
+					"/books/series/"+strconv.Itoa(id),
+					nil,
+					&sr,
+				); err != nil {
+					return false, err
+				}
+				if sr.Hydrating {
+					return false, nil
+				}
 			}
-			if err := s.api.get(ctx, "/books/series/"+strconv.Itoa(id), nil, &sr); err != nil {
-				return false, err
-			}
-			if sr.Hydrating {
-				return false, nil
-			}
-		}
-		return true, nil
-	})
+			return true, nil
+		},
+	)
 	return s.indexBooks(ctx)
 }
 
@@ -519,7 +690,12 @@ func (s *seeder) addBook(ctx context.Context, b book) (int, error) {
 	var out struct {
 		ID int `json:"id"`
 	}
-	if err := s.api.post(ctx, "/books", map[string]any{"hardcover_id": hit.HardcoverID, "monitor": "both"}, &out); err != nil {
+	if err := s.api.post(
+		ctx,
+		"/books",
+		map[string]any{"hardcover_id": hit.HardcoverID, "monitor": "both"},
+		&out,
+	); err != nil {
 		return 0, err
 	}
 	s.bookIDs[b.Title] = out.ID
@@ -555,7 +731,11 @@ type importScan struct {
 
 // importScan scans root, accepts every confirmed row and, with commit,
 // adopts them in place.
-func (s *seeder) importScan(ctx context.Context, root, kind string, commit bool) (int, error) {
+func (s *seeder) importScan(
+	ctx context.Context,
+	root, kind string,
+	commit bool,
+) (int, error) {
 	var sc importScan
 	if err := s.api.post(ctx, "/library/imports", map[string]any{
 		"source_path": root, "kind": kind, "mode": "in_place",
@@ -564,21 +744,22 @@ func (s *seeder) importScan(ctx context.Context, root, kind string, commit bool)
 	}
 	path := "/library/imports/" + strconv.Itoa(sc.ID)
 	wait := func(want ...string) error {
-		return waitFor(ctx, kind+" import scan", 20*time.Minute, time.Second, func() (bool, error) {
-			if err := s.api.get(ctx, path, nil, &sc); err != nil {
-				return false, err
-			}
-			switch sc.Status {
-			case "failed", "cancelled":
-				return false, fmt.Errorf("scan %s: %s", sc.Status, sc.Reason)
-			}
-			for _, w := range want {
-				if sc.Status == w {
-					return true, nil
+		return waitFor(
+			ctx,
+			kind+" import scan",
+			20*time.Minute,
+			time.Second,
+			func() (bool, error) {
+				if err := s.api.get(ctx, path, nil, &sc); err != nil {
+					return false, err
 				}
-			}
-			return false, nil
-		})
+				switch sc.Status {
+				case "failed", "cancelled":
+					return false, fmt.Errorf("scan %s: %s", sc.Status, sc.Reason)
+				}
+				return slices.Contains(want, sc.Status), nil
+			},
+		)
 	}
 	if err := wait("awaiting_review"); err != nil {
 		return sc.ID, err
@@ -586,7 +767,12 @@ func (s *seeder) importScan(ctx context.Context, root, kind string, commit bool)
 	if !commit {
 		return sc.ID, nil
 	}
-	if err := s.api.post(ctx, path+"/decisions", map[string]any{"decision": "accept", "classification": "confirmed"}, nil); err != nil {
+	if err := s.api.post(
+		ctx,
+		path+"/decisions",
+		map[string]any{"decision": "accept", "classification": "confirmed"},
+		nil,
+	); err != nil {
 		return sc.ID, err
 	}
 	if err := s.api.post(ctx, path+"/commit", map[string]any{}, nil); err != nil {
@@ -595,9 +781,24 @@ func (s *seeder) importScan(ctx context.Context, root, kind string, commit bool)
 	if err := wait("completed"); err != nil {
 		return sc.ID, err
 	}
-	slog.Info("import committed", "kind", kind, "rows", sc.Total, "adopted", sc.Committed, "failed", sc.Failed)
+	slog.InfoContext(
+		ctx,
+		"import committed",
+		"kind",
+		kind,
+		"rows",
+		sc.Total,
+		"adopted",
+		sc.Committed,
+		"failed",
+		sc.Failed,
+	)
 	if sc.Committed == 0 {
-		return sc.ID, fmt.Errorf("the %s scan adopted nothing (%d rows): its provider answered no match", kind, sc.Total)
+		return sc.ID, fmt.Errorf(
+			"the %s scan adopted nothing (%d rows): its provider answered no match",
+			kind,
+			sc.Total,
+		)
 	}
 	return sc.ID, nil
 }
@@ -613,8 +814,16 @@ func (s *seeder) pendingImport(ctx context.Context) error {
 		}
 	}
 	// A file no provider knows, so the review has a decision to ask for.
-	if err := demomedia.Video(filepath.Join(root, "Home Movies", "family.reunion.2019.mkv"),
-		demomedia.VideoSpec{Height: 1080, Codec: "h264", Audio: "aac", Channels: 2, Size: 2400 << 20}); err != nil {
+	if err := demomedia.Video(
+		filepath.Join(root, "Home Movies", "family.reunion.2019.mkv"),
+		demomedia.VideoSpec{
+			Height:   1080,
+			Codec:    "h264",
+			Audio:    "aac",
+			Channels: 2,
+			Size:     2400 << 20,
+		},
+	); err != nil {
 		return err
 	}
 	id, err := s.importScan(ctx, root, "movie", false)
@@ -631,25 +840,40 @@ func (s *seeder) discographies(ctx context.Context) error {
 	if s.record {
 		timeout = 30 * time.Minute
 	}
-	return waitFor(ctx, "discography hydration", timeout, 5*time.Second, func() (bool, error) {
-		for name, id := range s.artistIDs {
-			var a musicArtist
-			if err := s.api.get(ctx, "/music/artists/"+strconv.Itoa(id), nil, &a); err != nil {
-				return false, err
+	return waitFor(
+		ctx,
+		"discography hydration",
+		timeout,
+		5*time.Second,
+		func() (bool, error) {
+			for name, id := range s.artistIDs {
+				var a musicArtist
+				if err := s.api.get(
+					ctx,
+					"/music/artists/"+strconv.Itoa(id),
+					nil,
+					&a,
+				); err != nil {
+					return false, err
+				}
+				if a.Hydrating {
+					slog.DebugContext(ctx, "still hydrating", "artist", name)
+					return false, nil
+				}
 			}
-			if a.Hydrating {
-				slog.Debug("still hydrating", "artist", name)
-				return false, nil
-			}
-		}
-		return true, nil
-	})
+			return true, nil
+		},
+	)
 }
 
 // artwork waits for the posters the background fetches bring in: a page shot
 // before its poster lands shows the placeholder.
 func (s *seeder) artwork(ctx context.Context) error {
-	var urls []string
+	urls := make(
+		[]string,
+		0,
+		len(s.movieIDs)+len(s.showIDs)+len(s.bookIDs)+len(s.artistIDs),
+	)
 	for _, id := range s.movieIDs {
 		urls = append(urls, fmt.Sprintf("/posters/movies/%d/poster.jpg", id))
 	}
@@ -677,7 +901,14 @@ func (s *seeder) artwork(ctx context.Context) error {
 		}
 	}
 	if len(missing) > 0 {
-		slog.Info("artwork never arrived", "count", len(missing), "first", missing[0])
+		slog.InfoContext(
+			ctx,
+			"artwork never arrived",
+			"count",
+			len(missing),
+			"first",
+			missing[0],
+		)
 	}
 	return nil
 }

@@ -124,11 +124,22 @@ type artist struct {
 }
 
 var artists = []artist{
-	{Name: "Brad Sucks", Albums: []string{"I Don't Know What I'm Doing"}, Grab: []string{"Out of It"}},
-	{Name: "Jonathan Coulton", Albums: []string{"Thing a Week One", "Artificial Heart"}},
+	{
+		Name:   "Brad Sucks",
+		Albums: []string{"I Don't Know What I'm Doing"},
+		Grab:   []string{"Out of It"},
+	},
+	{
+		Name:   "Jonathan Coulton",
+		Albums: []string{"Thing a Week One", "Artificial Heart"},
+	},
 	{Name: "Broke For Free", Albums: []string{"Layers"}},
 	{Name: "Chris Zabriskie", Albums: []string{"Divider"}},
-	{Name: "Josh Woodward", Albums: []string{"Breadcrumbs"}, Grab: []string{"The Simple Life"}},
+	{
+		Name:   "Josh Woodward",
+		Albums: []string{"Breadcrumbs"},
+		Grab:   []string{"The Simple Life"},
+	},
 	{Name: "Kimiko Douglass-Ishizaka", Albums: []string{"Open Goldberg Variations"}},
 	// Released under CC BY-NC-SA.
 	{Name: "Nine Inch Nails", Albums: []string{"Ghosts I–IV", "The Slip"}},
@@ -187,5 +198,10 @@ var requests = []request{
 	{Kind: "series", Title: "Dragnet", Year: 1951},
 	{Kind: "album", Title: "Bitter Suite", Artist: "Kevin MacLeod"},
 	{Kind: "book", Title: "Twenty Thousand Leagues Under the Seas", Year: 1870},
-	{Kind: "book", Title: "Around the World in Eighty Days", Year: 1872, Decide: "deny"},
+	{
+		Kind:   "book",
+		Title:  "Around the World in Eighty Days",
+		Year:   1872,
+		Decide: "deny",
+	},
 }

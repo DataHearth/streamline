@@ -42,8 +42,15 @@ func shrinkImage(contentType string, data []byte) (string, []byte) {
 					r, g, bl, a = r+cr, g+cg, bl+cb, a+ca
 				}
 			}
-			n := uint32(f * f)
-			dst.SetRGBA(x, y, color.RGBA{uint8(r / n >> 8), uint8(g / n >> 8), uint8(bl / n >> 8), uint8(a / n >> 8)})
+			// f is width/800 rounded up, a handful at most; each channel is
+			// a 16-bit average, so >>8 fits a byte.
+			n := uint32(f * f) //nolint:gosec // G115: see above
+			dst.SetRGBA(x, y, color.RGBA{
+				uint8(r / n >> 8),  //nolint:gosec // G115: see above
+				uint8(g / n >> 8),  //nolint:gosec // G115: see above
+				uint8(bl / n >> 8), //nolint:gosec // G115: see above
+				uint8(a / n >> 8),  //nolint:gosec // G115: see above
+			})
 		}
 	}
 	var out bytes.Buffer

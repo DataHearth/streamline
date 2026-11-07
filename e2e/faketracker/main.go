@@ -187,7 +187,13 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	packs, err := parsePacks(packSpecs, albumSpecs, ebookSpecs, audiobookSpecs, movieSpecs)
+	packs, err := parsePacks(
+		packSpecs,
+		albumSpecs,
+		ebookSpecs,
+		audiobookSpecs,
+		movieSpecs,
+	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		flag.Usage()
@@ -382,7 +388,10 @@ func parseCreatorPack(
 func parseMovie(spec string) (*pack, error) {
 	parts := strings.Split(spec, ":")
 	if len(parts) < 3 || len(parts) > 5 {
-		return nil, fmt.Errorf("bad -movie %q: want Title:Year:resolution[:MB[:actual]]", spec)
+		return nil, fmt.Errorf(
+			"bad -movie %q: want Title:Year:resolution[:MB[:actual]]",
+			spec,
+		)
 	}
 	p := &pack{kind: kindMovie, title: strings.TrimSpace(parts[0])}
 	year, err := strconv.Atoi(parts[1])
@@ -397,7 +406,10 @@ func parseMovie(spec string) (*pack, error) {
 	if len(parts) > 3 && parts[3] != "" {
 		mb, err := strconv.Atoi(parts[3])
 		if err != nil || mb < 1 {
-			return nil, fmt.Errorf("bad -movie %q: size must be a positive number of MB", spec)
+			return nil, fmt.Errorf(
+				"bad -movie %q: size must be a positive number of MB",
+				spec,
+			)
 		}
 		p.fileSize = int64(mb) << 20
 	}
@@ -410,9 +422,14 @@ func parseMovie(spec string) (*pack, error) {
 }
 
 func parseHeight(s string) (int, error) {
-	h, err := strconv.Atoi(strings.TrimSuffix(strings.ToLower(strings.TrimSpace(s)), "p"))
+	h, err := strconv.Atoi(
+		strings.TrimSuffix(strings.ToLower(strings.TrimSpace(s)), "p"),
+	)
 	if err != nil || (h != 2160 && h != 1080 && h != 720 && h != 480) {
-		return 0, fmt.Errorf("resolution %q is not one of 2160p, 1080p, 720p, 480p", s)
+		return 0, fmt.Errorf(
+			"resolution %q is not one of 2160p, 1080p, 720p, 480p",
+			s,
+		)
 	}
 	return h, nil
 }
@@ -451,7 +468,10 @@ func parsePack(spec string) (*pack, error) {
 	if len(parts) == 4 {
 		mb, err := strconv.Atoi(parts[3])
 		if err != nil || mb < 1 {
-			return nil, fmt.Errorf("bad -pack %q: size must be a positive number of MB", spec)
+			return nil, fmt.Errorf(
+				"bad -pack %q: size must be a positive number of MB",
+				spec,
+			)
 		}
 		size = int64(mb) << 20
 	}
@@ -709,7 +729,10 @@ func newSeeder(
 	if rateKiB > 0 {
 		// The burst must hold a whole chunk (16 KiB), or no request is ever
 		// served.
-		cc.UploadRateLimiter = rate.NewLimiter(rate.Limit(rateKiB<<10), max(rateKiB<<10, 1<<16))
+		cc.UploadRateLimiter = rate.NewLimiter(
+			rate.Limit(rateKiB<<10),
+			max(rateKiB<<10, 1<<16),
+		)
 	}
 	client, err := antorrent.NewClient(cc)
 	if err != nil {
