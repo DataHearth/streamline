@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -40,15 +42,28 @@ func (b *bootTimer) mark(ctx context.Context, step string) {
 		"step", step, "duration_ms", took.Milliseconds())
 }
 
-// runAfterListen runs a database-heavy boot step in the background, so a cold
-// page cache does not hold back the HTTP listener.
-func runAfterListen(ctx context.Context, step string, run func(context.Context)) {
+// bootStep is a database-heavy boot step that runs after the listener opens.
+type bootStep struct {
+	name string
+	run  func(context.Context)
+}
+
+// runAfterListen runs the steps one after another in the background, so a cold
+// page cache neither holds back the listener nor takes every read connection.
+func runAfterListen(ctx context.Context, fatal func(error), steps ...bootStep) {
 	go func() {
-		defer observability.RecoverPanic(ctx, step, nil)
-		start := time.Now()
-		run(ctx)
-		slog.InfoContext(ctx, "background boot step finished",
-			"step", step, "duration_ms", time.Since(start).Milliseconds())
+		defer observability.RecoverPanic(ctx, "background boot steps", func() {
+			fatal(errors.New("a background boot step panicked"))
+		})
+		for _, step := range steps {
+			if ctx.Err() != nil {
+				return
+			}
+			start := time.Now()
+			step.run(ctx)
+			slog.InfoContext(ctx, "background boot step finished",
+				"step", step.name, "duration_ms", time.Since(start).Milliseconds())
+		}
 	}()
 }
 
@@ -58,10 +73,13 @@ func afterEngineReady(
 	ctx context.Context,
 	what string,
 	ready <-chan struct{},
+	fatal func(error),
 	start func(context.Context),
 ) {
 	go func() {
-		defer observability.RecoverPanic(ctx, what, nil)
+		defer observability.RecoverPanic(ctx, what, func() {
+			fatal(fmt.Errorf("%s panicked", what))
+		})
 		select {
 		case <-ready:
 			start(ctx)

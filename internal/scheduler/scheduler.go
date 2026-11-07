@@ -328,13 +328,7 @@ func (s *Scheduler) Start(ctx context.Context) {
 	sort.Slice(jobs, func(i, k int) bool { return jobs[i].name < jobs[k].name })
 
 	for i, j := range jobs {
-		j.mu.Lock()
-		paused := j.paused
-		interval := j.interval
-		j.mu.Unlock()
-		if !paused {
-			s.startJob(ctx, j, bootDelay(i, interval))
-		}
+		s.startJob(ctx, j, i)
 	}
 	<-ctx.Done()
 }
@@ -403,19 +397,18 @@ func (s *Scheduler) root() (context.Context, bool) {
 	return s.rootCtx, true
 }
 
-// startJob assigns a fresh stopCh to job and launches the goroutine. delay
-// defers only the first run; the ticker period is unaffected.
-func (s *Scheduler) startJob(
-	ctx context.Context,
-	job *registeredJob,
-	delay time.Duration,
-) {
-	stop := make(chan struct{})
+// startJob launches the job's goroutine unless it is paused or a Resume or
+// Reschedule landing while Start iterates already launched one. The boot
+// delay for position i defers only the first run.
+func (s *Scheduler) startJob(ctx context.Context, job *registeredJob, i int) {
 	job.mu.Lock()
+	defer job.mu.Unlock()
+	if job.paused || job.stopCh != nil {
+		return
+	}
+	stop := make(chan struct{})
 	job.stopCh = stop
-	interval := job.interval
-	job.mu.Unlock()
-	go s.runJob(ctx, stop, interval, job, delay)
+	go s.runJob(ctx, stop, job.interval, job, bootDelay(i, job.interval))
 }
 
 func (s *Scheduler) runJob(

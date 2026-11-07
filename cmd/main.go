@@ -310,9 +310,8 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	var fatal error
 	select {
 	case <-ctx.Done():
-	case err := <-app.EngineFatal:
-		fatal = fmt.Errorf("torrent engine: %w", err)
-		logger.ErrorContext(ctx, "torrent engine failed to restore", "error", err)
+	case fatal = <-app.Fatal:
+		logger.ErrorContext(ctx, "boot failed in the background", "error", fatal)
 		stop()
 	}
 	logger.InfoContext(ctx, "shutting down")

@@ -13,6 +13,34 @@ import (
 
 var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 	Describe("Register and Start", func() {
+		It("does not start a job a Resume already started during Start", func() {
+			s := New()
+			s.Register(
+				"resumed",
+				time.Hour,
+				func(context.Context) error { return nil },
+			)
+			Expect(s.Pause("resumed")).To(Succeed())
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			// Start has set the root context and not reached the job yet.
+			s.mu.Lock()
+			s.rootCtx = ctx
+			s.mu.Unlock()
+			Expect(s.Resume("resumed")).To(Succeed())
+			job, err := s.job("resumed")
+			Expect(err).NotTo(HaveOccurred())
+			job.mu.Lock()
+			running := job.stopCh
+			job.mu.Unlock()
+
+			s.startJob(ctx, job, 0)
+
+			job.mu.Lock()
+			defer job.mu.Unlock()
+			Expect(job.stopCh).To(Equal(running))
+		})
+
 		It("should run registered jobs at their interval", func() {
 			s := New()
 

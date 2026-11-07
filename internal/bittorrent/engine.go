@@ -220,6 +220,10 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	e.wg.Go(e.enforceSeedLimits)
 	restoreCtx := context.WithoutCancel(ctx)
 	e.wg.Go(func() {
+		defer observability.RecoverPanic(restoreCtx, "torrent restore progress", nil)
+		e.logRestoreProgress(restoreCtx)
+	})
+	e.wg.Go(func() {
 		defer observability.RecoverPanic(restoreCtx, "torrent restore", func() {
 			e.reportFatal(errors.New("torrent restore panicked"))
 		})
@@ -620,7 +624,7 @@ func (e *Engine) loadSessions(ctx context.Context) ([]pendingSession, error) {
 
 // loadAndRestore reads the session rows and re-adds them. The rows hold every
 // .torrent, so reading them takes minutes on a cold page cache over slow
-// storage. A failed read is fatal, as it was when it ran before the listener.
+// storage. A failed read is fatal: the process exits and restarts.
 func (e *Engine) loadAndRestore(ctx context.Context) {
 	loadCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -651,6 +655,28 @@ func (e *Engine) loadAndRestore(ctx context.Context) {
 	close(e.ready)
 }
 
+// restoreProgressEvery paces the warning a long boot restore logs.
+const restoreProgressEvery = 2 * time.Minute
+
+// logRestoreProgress warns while the boot restore runs long, so a stalled one
+// shows in the log.
+func (e *Engine) logRestoreProgress(ctx context.Context) {
+	tick := time.NewTicker(restoreProgressEvery)
+	defer tick.Stop()
+	for {
+		select {
+		case <-e.ready:
+			return
+		case <-e.stop:
+			return
+		case <-tick.C:
+			pending, total := e.restoreProgress()
+			slog.WarnContext(ctx, "torrent restore still running",
+				"pending", pending, "total", total)
+		}
+	}
+}
+
 // reportFatal hands a restore failure to the process, which shuts down.
 func (e *Engine) reportFatal(err error) {
 	select {
@@ -662,6 +688,11 @@ func (e *Engine) reportFatal(err error) {
 // awaitRestore holds a caller until the boot restore is done, so it sees the
 // engine as it was before the restart.
 func (e *Engine) awaitRestore(ctx context.Context) error {
+	select {
+	case <-e.ready:
+		return nil
+	default:
+	}
 	select {
 	case <-e.ready:
 		return nil
@@ -686,6 +717,7 @@ func (e *Engine) restoreSessions(ctx context.Context, sessions []pendingSession)
 		restored, failed int
 		slowest          time.Duration
 		slowestHash      string
+		interrupted      bool
 	)
 	defer func() {
 		took := time.Since(began)
@@ -693,15 +725,19 @@ func (e *Engine) restoreSessions(ctx context.Context, sessions []pendingSession)
 			attribute.Int("torrents.sessions", len(sessions)),
 			attribute.Int("torrents.restored", restored),
 			attribute.Int("torrents.failed", failed),
+			attribute.Bool("restore.interrupted", interrupted),
 		)
 		if len(sessions) == 0 {
 			return
 		}
-		restoreDuration.Record(ctx, took.Seconds())
+		if !interrupted {
+			restoreDuration.Record(ctx, took.Seconds())
+		}
 		slog.InfoContext(ctx, "torrent sessions restored",
 			"sessions", len(sessions),
 			"restored", restored,
 			"failed", failed,
+			"interrupted", interrupted,
 			"duration_ms", took.Milliseconds(),
 			"slowest_info_hash", slowestHash,
 			"slowest_ms", slowest.Milliseconds(),
@@ -710,7 +746,10 @@ func (e *Engine) restoreSessions(ctx context.Context, sessions []pendingSession)
 	for _, s := range sessions {
 		select {
 		case <-e.stop:
-			span.SetAttributes(attribute.Bool("restore.interrupted", true))
+			interrupted = true
+			return
+		case <-e.quit:
+			interrupted = true
 			return
 		default:
 		}
@@ -918,10 +957,6 @@ func (e *Engine) torrent(hash string) (*antorrent.Torrent, error) {
 				"%w: torrent %s has not been re-added since the restart yet",
 				download.ErrClientNotReady, hash,
 			)
-		}
-		// A re-add can land between the two checks above.
-		if t, ok := e.client.Torrent(h); ok {
-			return t, nil
 		}
 		return nil, fmt.Errorf("%w: %s", download.ErrTorrentNotFound, hash)
 	}

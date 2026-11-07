@@ -73,8 +73,9 @@ spec:
             httpGet:
               path: /health
               port: http
-            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
-            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+            {{- $startup := .Values.startupProbe | default dict }}
+            periodSeconds: {{ $startup.periodSeconds | default 5 }}
+            failureThreshold: {{ $startup.failureThreshold | default 60 }}
           livenessProbe:
             httpGet:
               path: /health

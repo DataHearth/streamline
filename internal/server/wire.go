@@ -56,15 +56,16 @@ type App struct {
 	Scheduler *scheduler.Scheduler
 	// EngineReady closes when the torrent engine can answer for its sessions.
 	EngineReady <-chan struct{}
-	// EngineFatal yields the error that stopped the torrent engine's restore.
-	EngineFatal <-chan error
-	DB          *ent.Client
-	Store       db.Store
-	Auth        auth.Manager
-	Downloads   download.Downloader
-	Importer    *importer.Worker
-	HTTPLogger  *observability.HTTPLogger
-	Torrents    *bittorrent.Engine
+	// Fatal yields an error that a background part of the boot cannot recover
+	// from; the process shuts down on it.
+	Fatal      <-chan error
+	DB         *ent.Client
+	Store      db.Store
+	Auth       auth.Manager
+	Downloads  download.Downloader
+	Importer   *importer.Worker
+	HTTPLogger *observability.HTTPLogger
+	Torrents   *bittorrent.Engine
 	// MediaServers holds the refreshes collected over its window; shutdown
 	// flushes it, or the last imports would never reach the servers.
 	MediaServers *mediaserver.Dispatcher
@@ -200,7 +201,13 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	var torrentEngine *bittorrent.Engine
 	var builtinClient download.Client
 	engineReady := closedChan()
-	var engineFatal <-chan error
+	fatal := make(chan error, 1)
+	reportFatal := func(err error) {
+		select {
+		case fatal <- err:
+		default:
+		}
+	}
 	if _, ok := config.BuiltinDownloadClient(); ok {
 		var err error
 		torrentEngine, err = bittorrent.New(ctx, store)
@@ -210,7 +217,14 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		}
 		builtinClient = torrentEngine
 		engineReady = torrentEngine.Ready()
-		engineFatal = torrentEngine.Fatal()
+		go func() {
+			defer observability.RecoverPanic(ctx, "torrent engine fatal", nil)
+			select {
+			case err := <-torrentEngine.Fatal():
+				reportFatal(fmt.Errorf("torrent engine: %w", err))
+			case <-ctx.Done():
+			}
+		}()
 		boot.mark(ctx, "builtin torrent engine")
 	}
 	dlManager := download.New(store, builtinClient)
@@ -293,7 +307,6 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		)
 	}
 	boot.mark(ctx, "bulk import recovery")
-	runAfterListen(ctx, "music hydration resume", musicSvc.ResumeHydration)
 	deepLinker := mediaserver.NewDeepLinker(nil)
 	renamer := movie.NewRenameService(
 		store, dispatcher, cfg.Library.MoviePath, cfg.Library.MovieNaming,
@@ -302,7 +315,10 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		store, dispatcher, cfg.Library.SeriesPath, cfg.Library.SeriesNaming,
 	)
 	pathMigrations := pathmigrate.NewService(store)
-	runAfterListen(ctx, "path drift check", pathMigrations.WarnOnDrift)
+	runAfterListen(ctx, reportFatal,
+		bootStep{"music hydration resume", musicSvc.ResumeHydration},
+		bootStep{"path drift check", pathMigrations.WarnOnDrift},
+	)
 	hygieneSvc.Probe = prober
 	imp := importer.NewWorker(importer.Deps{
 		DB:          store,
@@ -314,7 +330,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Albums:      musicSvc,
 		Tagger:      musicSvc,
 	})
-	afterEngineReady(ctx, "importer", engineReady, imp.Start)
+	afterEngineReady(ctx, "importer", engineReady, reportFatal, imp.Start)
 
 	transcoder := transcoding.NewWorker(transcoding.Deps{
 		DB:          store,
@@ -331,7 +347,13 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			"ffmpeg.path", cfg.FFmpeg.Path,
 		)
 	} else {
-		afterEngineReady(ctx, "transcoder", engineReady, transcoder.Start)
+		afterEngineReady(
+			ctx,
+			"transcoder",
+			engineReady,
+			reportFatal,
+			transcoder.Start,
+		)
 		if cfg.Transcoding.Enabled {
 			version, err := prober.Version(ctx)
 			if err != nil {
@@ -645,7 +667,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Server:      srv,
 		Scheduler:   sched,
 		EngineReady: engineReady,
-		EngineFatal: engineFatal,
+		Fatal:       fatal,
 		DB:          dbClient,
 		Store:       store,
 		Auth:        authSvc,
