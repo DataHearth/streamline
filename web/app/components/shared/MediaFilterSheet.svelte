@@ -91,6 +91,7 @@
 		<button
 			type="button"
 			aria-label={i18n.common_close()}
+			data-sheet-scrim
 			transition:fade={{ duration: 160 }}
 			onclick={onClose}
 			class="absolute inset-0 h-full w-full cursor-default bg-black/55"

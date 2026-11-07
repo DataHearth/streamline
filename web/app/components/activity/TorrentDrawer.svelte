@@ -145,6 +145,7 @@
 	<div use:portal class="fixed inset-0 z-40" role="presentation">
 		<div
 			class="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+			data-sheet-scrim
 			transition:fade={{ duration: 160 }}
 			onmousedown={onClose}
 			role="presentation"
