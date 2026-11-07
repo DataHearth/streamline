@@ -48,6 +48,20 @@ tasks:
       - biome format web/static/js web/static/css
       - nixfmt --check flake.nix nix/*.nix
 
+  docs:screenshots:
+    desc: Retake the README screenshots in docs/assets from the demo library (-- -record to refresh its cassette with real provider keys)
+    # e2e/demo boots a throwaway instance on the binary built here, seeds the
+    # demo library through its API and shoots every page. The providers answer
+    # from e2e/demo/cassette; -record fills what it lacks from the real ones
+    # (STREAMLINE_METADATA__{TMDB,TVDB,HARDCOVER}_API_KEY). Needs ffmpeg and a
+    # Chromium (CHROME_PATH, on PATH, or Playwright's).
+    vars:
+      DEMO_BIN: '{{.ROOT_DIR}}/tmp/streamline-demo'
+    cmds:
+      - task: build:app
+        vars: {BINARY: '{{.DEMO_BIN}}'}
+      - go run ./e2e/demo -binary {{.DEMO_BIN}} {{.CLI_ARGS}}
+
   migrate:diff:
     desc: Generate a new versioned migration from the ent schema (usage - task migrate:diff -- NAME)
     cmd: go run -mod=mod ./ent/migrate/main.go {{.CLI_ARGS}}
