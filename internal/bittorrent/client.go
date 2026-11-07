@@ -112,6 +112,9 @@ func (e *Engine) AddTorrent(
 	ctx context.Context,
 	src download.TorrentSource,
 ) (string, error) {
+	if err := e.awaitRestore(ctx); err != nil {
+		return "", err
+	}
 	ctx, span := tracer.Start(ctx, "bittorrent.add_torrent")
 	defer span.End()
 
@@ -121,16 +124,8 @@ func (e *Engine) AddTorrent(
 	}
 	hash := spec.InfoHash.HexString()
 	e.mu.Lock()
-	loading := e.loading
 	delete(e.refusals, hash)
 	e.mu.Unlock()
-	// The name claims of persisted sessions are unknown until the rows are read.
-	if loading {
-		return "", otelx.RecordSpanError(span, fmt.Errorf(
-			"%w: torrent sessions not loaded since the restart yet",
-			download.ErrClientNotReady,
-		))
-	}
 	// Sessions not re-added yet count against the cap.
 	pending, _ := e.restoreProgress()
 	if _, held := e.client.Torrent(spec.InfoHash); !held &&
@@ -226,6 +221,9 @@ func (e *Engine) GetTorrent(
 	ctx context.Context,
 	hash string,
 ) (*download.Torrent, error) {
+	if err := e.awaitRestore(ctx); err != nil {
+		return nil, err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		e.mu.Lock()
@@ -243,13 +241,10 @@ func (e *Engine) GetTorrent(
 // ListTorrents refuses with download.ErrClientNotReady until restore is
 // done: callers read the listing as everything the engine holds.
 func (e *Engine) ListTorrents(ctx context.Context) ([]download.Torrent, error) {
+	if err := e.awaitRestore(ctx); err != nil {
+		return nil, err
+	}
 	if pending, total := e.restoreProgress(); pending > 0 {
-		if total == 0 {
-			return nil, fmt.Errorf(
-				"%w: torrent sessions not loaded since the restart yet",
-				download.ErrClientNotReady,
-			)
-		}
 		return nil, fmt.Errorf(
 			"%w: %d of %d torrents not re-added since the restart yet",
 			download.ErrClientNotReady, pending, total,
@@ -286,6 +281,9 @@ func (e *Engine) RemoveTorrent(
 	hash string,
 	deleteFiles bool,
 ) error {
+	if err := e.awaitRestore(ctx); err != nil {
+		return err
+	}
 	ctx, span := tracer.Start(ctx, "bittorrent.remove_torrent")
 	defer span.End()
 
@@ -369,6 +367,9 @@ func (e *Engine) forget(hash string) {
 }
 
 func (e *Engine) PauseTorrent(ctx context.Context, hash string) error {
+	if err := e.awaitRestore(ctx); err != nil {
+		return err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		return err
@@ -380,6 +381,9 @@ func (e *Engine) PauseTorrent(ctx context.Context, hash string) error {
 }
 
 func (e *Engine) ResumeTorrent(ctx context.Context, hash string) error {
+	if err := e.awaitRestore(ctx); err != nil {
+		return err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		return err
@@ -435,6 +439,9 @@ func (e *Engine) ListFiles(
 	ctx context.Context,
 	hash string,
 ) ([]download.TorrentFile, error) {
+	if err := e.awaitRestore(ctx); err != nil {
+		return nil, err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		return nil, err
@@ -463,6 +470,9 @@ func (e *Engine) SetWantedFiles(
 	hash string,
 	wanted []int,
 ) error {
+	if err := e.awaitRestore(ctx); err != nil {
+		return err
+	}
 	ctx, span := tracer.Start(ctx, "bittorrent.set_wanted_files",
 		trace.WithAttributes(
 			attribute.String("torrent.hash", hash),

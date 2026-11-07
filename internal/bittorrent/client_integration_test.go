@@ -811,9 +811,14 @@ func newUnboundEngineNoPortForwarding(
 		packetConn:  packetConn,
 		state:       map[string]*torrentState{},
 		sample:      map[string]speedSample{},
+		restoring:   map[string]struct{}{},
+		loading:     true,
+		ready:       make(chan struct{}),
+		fatal:       make(chan error, 1),
 		stop:        make(chan struct{}),
 	}
-	Expect(e.restore(ctx)).To(Succeed())
+	e.loadAndRestore(ctx)
+	Expect(e.Ready()).To(BeClosed())
 	e.wg.Go(e.enforceSeedLimits)
 
 	closed := false

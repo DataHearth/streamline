@@ -232,6 +232,12 @@ func (s *Server) RunSchedule(
 		return RunSchedule409JSONResponse{
 			ConflictJSONResponse: errConflict("job is currently running"),
 		}, nil
+	case errors.Is(err, scheduler.ErrNotStarted):
+		return RunSchedule409JSONResponse{
+			ConflictJSONResponse: errConflict(
+				"jobs start once the torrent engine is ready",
+			),
+		}, nil
 	default:
 		return nil, err
 	}

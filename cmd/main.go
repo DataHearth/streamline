@@ -307,7 +307,14 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	}()
 
 	// 7. Wait for shutdown signal
-	<-ctx.Done()
+	var fatal error
+	select {
+	case <-ctx.Done():
+	case err := <-app.EngineFatal:
+		fatal = fmt.Errorf("torrent engine: %w", err)
+		logger.ErrorContext(ctx, "torrent engine failed to restore", "error", err)
+		stop()
+	}
 	logger.InfoContext(ctx, "shutting down")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -352,5 +359,5 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	logger.InfoContext(shutdownCtx, "shutdown complete")
-	return nil
+	return fatal
 }

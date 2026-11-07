@@ -373,9 +373,11 @@
 			{#if torrents.data?.restoring}
 				<p class="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-fg-subtle" role="status">
 					<LoaderCircle size={13} class="motion-safe:animate-spin" aria-hidden="true" />
-					{torrents.data.restoring.total > 0
-						? i18n.torrent_engine_restoring(torrents.data.restoring)
-						: i18n.torrent_engine_loading()}
+					{torrents.data.restoring.total === 0
+						? i18n.torrent_engine_loading()
+						: (torrents.data.restoring.total === 1
+								? i18n.torrent_engine_restoring_one
+								: i18n.torrent_engine_restoring)(torrents.data.restoring)}
 				</p>
 			{/if}
 		</div>

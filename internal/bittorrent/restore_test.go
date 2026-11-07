@@ -19,6 +19,13 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 )
 
+// readyNow is the readiness of an engine whose boot restore is already done.
+func readyNow() chan struct{} {
+	ch := make(chan struct{})
+	close(ch)
+	return ch
+}
+
 // localTorrentFile returns a .torrent for data already in the returned dir.
 func localTorrentFile() ([]byte, string) {
 	GinkgoHelper()
@@ -63,12 +70,15 @@ var _ = Describe("Engine restore", Label("unit", "bittorrent"), func() {
 			SetTorrentSessionName(mock.Anything, hash, mock.Anything).
 			Return(nil).Maybe()
 		e = &Engine{
-			client: newTestClient(dir),
-			store:  store,
-			paths:  newContentPaths(),
-			state:  map[string]*torrentState{},
-			sample: map[string]speedSample{},
-			stop:   make(chan struct{}),
+			ready:     readyNow(),
+			fatal:     make(chan error, 1),
+			restoring: map[string]struct{}{},
+			client:    newTestClient(dir),
+			store:     store,
+			paths:     newContentPaths(),
+			state:     map[string]*torrentState{},
+			sample:    map[string]speedSample{},
+			stop:      make(chan struct{}),
 		}
 		stopped = false
 		DeferCleanup(func() {
@@ -159,9 +169,10 @@ var _ = Describe("Engine restore", Label("unit", "bittorrent"), func() {
 		BeforeEach(func() {
 			release = make(chan struct{})
 			e.loading = true
+			e.ready = make(chan struct{})
 		})
 
-		It("answers not ready for every hash until the rows are read", func() {
+		It("holds engine calls until the rows are read and re-added", func() {
 			store.EXPECT().ListTorrentSessions(mock.Anything).RunAndReturn(
 				func(context.Context) ([]*ent.TorrentSession, error) {
 					<-release
@@ -172,52 +183,60 @@ var _ = Describe("Engine restore", Label("unit", "bittorrent"), func() {
 			).Once()
 			e.wg.Go(func() { e.loadAndRestore(ctx) })
 
-			_, err := e.GetTorrent(ctx, unknown)
-			Expect(err).To(MatchError(download.ErrClientNotReady))
-			_, err = e.ListTorrents(ctx)
-			Expect(err).To(MatchError(download.ErrClientNotReady))
-			_, err = e.AddTorrent(ctx, download.TorrentSource{Bytes: raw})
+			short, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+			defer cancel()
+			_, err := e.GetTorrent(short, hash)
 			Expect(err).To(MatchError(download.ErrClientNotReady))
 			Expect(e.Runtime().RestoreLoading).To(BeTrue())
 
+			got := make(chan error, 1)
+			go func() {
+				_, err := e.GetTorrent(ctx, hash)
+				got <- err
+			}()
+			Consistently(got).ShouldNot(Receive())
 			close(release)
 
-			Eventually(func() error {
-				_, err := e.GetTorrent(ctx, hash)
-				return err
-			}).Should(Succeed())
+			Eventually(got).Should(Receive(BeNil()))
+			Expect(e.Ready()).To(BeClosed())
 			_, err = e.GetTorrent(ctx, unknown)
 			Expect(err).To(MatchError(download.ErrTorrentNotFound))
-			Expect(e.Runtime().RestoreLoading).To(BeFalse())
 			Expect(e.Runtime().RestoreTotal).To(Equal(1))
 		})
 
-		It("retries a failed read and stays not ready meanwhile", func() {
-			previous := sessionLoadRetry
-			sessionLoadRetry = time.Millisecond
-			DeferCleanup(func() { sessionLoadRetry = previous })
+		It("reports a failed read as fatal and never reports ready", func() {
 			store.EXPECT().ListTorrentSessions(mock.Anything).
 				Return(nil, errors.New("disk")).Once()
-			store.EXPECT().ListTorrentSessions(mock.Anything).Return(
-				[]*ent.TorrentSession{{InfoHash: hash, SourceTorrent: raw}}, nil,
-			).Once()
 
 			e.loadAndRestore(ctx)
 
-			_, err := e.GetTorrent(ctx, hash)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(e.Fatal()).To(Receive(MatchError(ContainSubstring("disk"))))
+			Expect(e.Ready()).NotTo(BeClosed())
 		})
 
-		It("gives up at Close and stays not ready", func() {
+		It("releases waiting calls when the process shuts down", func() {
+			quit := make(chan struct{})
+			e.quit = quit
+			got := make(chan error, 1)
+			go func() {
+				_, err := e.GetTorrent(ctx, hash)
+				got <- err
+			}()
+			Consistently(got).ShouldNot(Receive())
+			close(quit)
+
+			Eventually(got).Should(Receive(MatchError(download.ErrClientNotReady)))
+		})
+
+		It("reports nothing when Close stops the read", func() {
 			store.EXPECT().ListTorrentSessions(mock.Anything).
-				Return(nil, errors.New("disk")).Once()
+				Return(nil, context.Canceled).Once()
 			close(e.stop)
 			stopped = true
 
 			e.loadAndRestore(ctx)
 
-			_, err := e.GetTorrent(ctx, hash)
-			Expect(err).To(MatchError(download.ErrClientNotReady))
+			Expect(e.Fatal()).NotTo(Receive())
 		})
 	})
 

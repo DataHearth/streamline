@@ -18,7 +18,6 @@ import (
 	"time"
 
 	antorrent "github.com/anacrolix/torrent"
-	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
 	"github.com/anacrolix/torrent/types"
@@ -111,8 +110,11 @@ type Engine struct {
 	// loading is true until the session rows are read. The hashes are unknown
 	// until then, so every lookup answers ErrClientNotReady.
 	loading bool
-	// ready closes when the boot restore has finished or given up.
+	// ready closes when the boot restore has finished.
 	ready chan struct{}
+	fatal chan error
+	// quit closes when the process starts shutting down, before Close.
+	quit <-chan struct{}
 
 	stop chan struct{}
 	wg   sync.WaitGroup
@@ -209,6 +211,8 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		restoring:   map[string]struct{}{},
 		loading:     true,
 		ready:       make(chan struct{}),
+		fatal:       make(chan error, 1),
+		quit:        ctx.Done(),
 		stop:        make(chan struct{}),
 	}
 	paths.onRefuse = e.refuseTorrent
@@ -216,9 +220,9 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	e.wg.Go(e.enforceSeedLimits)
 	restoreCtx := context.WithoutCancel(ctx)
 	e.wg.Go(func() {
-		defer close(e.ready)
-		// On panic, unreached sessions stay not-ready on purpose.
-		defer observability.RecoverPanic(restoreCtx, "torrent restore", nil)
+		defer observability.RecoverPanic(restoreCtx, "torrent restore", func() {
+			e.reportFatal(errors.New("torrent restore panicked"))
+		})
 		e.loadAndRestore(restoreCtx)
 	})
 	return e, nil
@@ -235,9 +239,6 @@ func closeAndWarn(ctx context.Context, what string, c io.Closer) {
 		slog.WarnContext(ctx, "closing "+what+" failed", "error", err)
 	}
 }
-
-// sessionLoadRetry is the wait between attempts to read the session rows.
-var sessionLoadRetry = 30 * time.Second
 
 // maxPeerSocketBindAttempts bounds the retry newPeerSockets runs when the
 // requested port is 0: the UDP port the OS hands out can already be taken on
@@ -540,16 +541,6 @@ type pendingSession struct {
 	seedStopped bool
 }
 
-// restore re-adds every persisted torrent session, synchronously.
-func (e *Engine) restore(ctx context.Context) error {
-	sessions, err := e.loadSessions(ctx)
-	if err != nil {
-		return err
-	}
-	e.restoreSessions(ctx, sessions)
-	return nil
-}
-
 // loadSessions reads the persisted sessions and, before any re-add, loads
 // their state and claims their names, so a grab landing mid-restore cannot
 // take one. A row whose source no longer parses is deleted.
@@ -597,10 +588,7 @@ func (e *Engine) loadSessions(ctx context.Context) ([]pendingSession, error) {
 		}
 		e.paths.trust(spec.InfoHash)
 		if len(spec.InfoBytes) > 0 {
-			var info metainfo.Info
-			if err := bencode.Unmarshal(spec.InfoBytes, &info); err == nil {
-				e.paths.claim(info.BestName(), spec.InfoHash)
-			}
+			e.paths.claim(spec.DisplayName, spec.InfoHash)
 		}
 		hash := spec.InfoHash.HexString()
 		st := &torrentState{
@@ -617,9 +605,6 @@ func (e *Engine) loadSessions(ctx context.Context) ([]pendingSession, error) {
 		}
 		e.mu.Lock()
 		e.state[hash] = st
-		if e.restoring == nil {
-			e.restoring = map[string]struct{}{}
-		}
 		e.restoring[hash] = struct{}{}
 		e.restoreTotal++
 		e.mu.Unlock()
@@ -633,13 +618,14 @@ func (e *Engine) loadSessions(ctx context.Context) ([]pendingSession, error) {
 	return out, nil
 }
 
-// loadAndRestore reads the session rows, retrying until they load or Close, and
-// re-adds them. The rows hold every .torrent, so reading them takes minutes on a
-// cold page cache over slow storage. The engine answers not-ready until then.
+// loadAndRestore reads the session rows and re-adds them. The rows hold every
+// .torrent, so reading them takes minutes on a cold page cache over slow
+// storage. A failed read is fatal, as it was when it ran before the listener.
 func (e *Engine) loadAndRestore(ctx context.Context) {
 	loadCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go func() {
+		defer observability.RecoverPanic(ctx, "torrent load cancel", nil)
 		select {
 		case <-e.stop:
 			cancel()
@@ -647,29 +633,14 @@ func (e *Engine) loadAndRestore(ctx context.Context) {
 		}
 	}()
 	start := time.Now()
-	var sessions []pendingSession
-	for {
-		var err error
-		sessions, err = e.loadSessions(loadCtx)
-		if err == nil {
-			break
-		}
+	sessions, err := e.loadSessions(loadCtx)
+	if err != nil {
 		select {
 		case <-e.stop:
-			return
 		default:
+			e.reportFatal(fmt.Errorf("load torrent sessions: %w", err))
 		}
-		slog.ErrorContext(
-			ctx,
-			"could not load torrent sessions, retrying",
-			"error",
-			err,
-		)
-		select {
-		case <-e.stop:
-			return
-		case <-time.After(sessionLoadRetry):
-		}
+		return
 	}
 	e.mu.Lock()
 	e.loading = false
@@ -677,6 +648,30 @@ func (e *Engine) loadAndRestore(ctx context.Context) {
 	slog.InfoContext(ctx, "torrent sessions loaded",
 		"sessions", len(sessions), "duration_ms", time.Since(start).Milliseconds())
 	e.restoreSessions(ctx, sessions)
+	close(e.ready)
+}
+
+// reportFatal hands a restore failure to the process, which shuts down.
+func (e *Engine) reportFatal(err error) {
+	select {
+	case e.fatal <- err:
+	default:
+	}
+}
+
+// awaitRestore holds a caller until the boot restore is done, so it sees the
+// engine as it was before the restart.
+func (e *Engine) awaitRestore(ctx context.Context) error {
+	select {
+	case <-e.ready:
+		return nil
+	case <-e.stop:
+		return fmt.Errorf("%w: engine stopped", download.ErrClientNotReady)
+	case <-e.quit:
+		return fmt.Errorf("%w: shutting down", download.ErrClientNotReady)
+	case <-ctx.Done():
+		return fmt.Errorf("%w: %w", download.ErrClientNotReady, ctx.Err())
+	}
 }
 
 // restoreSessions re-adds the sessions one at a time (anacrolix serializes
@@ -726,6 +721,7 @@ func (e *Engine) restoreSessions(ctx context.Context, sessions []pendingSession)
 		delete(e.restoring, s.hash)
 		e.mu.Unlock()
 		if !ok {
+			e.forget(s.hash)
 			failed++
 			continue
 		}
@@ -767,8 +763,11 @@ func (e *Engine) restoreOne(ctx context.Context, s pendingSession) bool {
 	return true
 }
 
-// Ready closes when the boot restore has finished or given up.
+// Ready closes when the boot restore has finished.
 func (e *Engine) Ready() <-chan struct{} { return e.ready }
+
+// Fatal yields the error that stopped the boot restore.
+func (e *Engine) Fatal() <-chan error { return e.fatal }
 
 // restoreProgress reports how many persisted sessions are still waiting to be
 // re-added, out of how many boot found. Before the rows are read it reports one
@@ -919,6 +918,10 @@ func (e *Engine) torrent(hash string) (*antorrent.Torrent, error) {
 				"%w: torrent %s has not been re-added since the restart yet",
 				download.ErrClientNotReady, hash,
 			)
+		}
+		// A re-add can land between the two checks above.
+		if t, ok := e.client.Torrent(h); ok {
+			return t, nil
 		}
 		return nil, fmt.Errorf("%w: %s", download.ErrTorrentNotFound, hash)
 	}

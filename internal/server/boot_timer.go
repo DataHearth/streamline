@@ -56,10 +56,12 @@ func runAfterListen(ctx context.Context, step string, run func(context.Context))
 // answer for its sessions, since workers read an unanswered lookup as a failure.
 func afterEngineReady(
 	ctx context.Context,
+	what string,
 	ready <-chan struct{},
 	start func(context.Context),
 ) {
 	go func() {
+		defer observability.RecoverPanic(ctx, what, nil)
 		select {
 		case <-ready:
 			start(ctx)

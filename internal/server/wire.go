@@ -56,6 +56,8 @@ type App struct {
 	Scheduler *scheduler.Scheduler
 	// EngineReady closes when the torrent engine can answer for its sessions.
 	EngineReady <-chan struct{}
+	// EngineFatal yields the error that stopped the torrent engine's restore.
+	EngineFatal <-chan error
 	DB          *ent.Client
 	Store       db.Store
 	Auth        auth.Manager
@@ -198,6 +200,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	var torrentEngine *bittorrent.Engine
 	var builtinClient download.Client
 	engineReady := closedChan()
+	var engineFatal <-chan error
 	if _, ok := config.BuiltinDownloadClient(); ok {
 		var err error
 		torrentEngine, err = bittorrent.New(ctx, store)
@@ -207,6 +210,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		}
 		builtinClient = torrentEngine
 		engineReady = torrentEngine.Ready()
+		engineFatal = torrentEngine.Fatal()
 		boot.mark(ctx, "builtin torrent engine")
 	}
 	dlManager := download.New(store, builtinClient)
@@ -310,7 +314,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Albums:      musicSvc,
 		Tagger:      musicSvc,
 	})
-	afterEngineReady(ctx, engineReady, imp.Start)
+	afterEngineReady(ctx, "importer", engineReady, imp.Start)
 
 	transcoder := transcoding.NewWorker(transcoding.Deps{
 		DB:          store,
@@ -327,7 +331,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			"ffmpeg.path", cfg.FFmpeg.Path,
 		)
 	} else {
-		afterEngineReady(ctx, engineReady, transcoder.Start)
+		afterEngineReady(ctx, "transcoder", engineReady, transcoder.Start)
 		if cfg.Transcoding.Enabled {
 			version, err := prober.Version(ctx)
 			if err != nil {
@@ -641,6 +645,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Server:      srv,
 		Scheduler:   sched,
 		EngineReady: engineReady,
+		EngineFatal: engineFatal,
 		DB:          dbClient,
 		Store:       store,
 		Auth:        authSvc,
