@@ -28,14 +28,17 @@ type DownloadClientPatch struct {
 	Enabled    *bool
 
 	// builtin-only knobs (client_type "builtin").
-	DownloadDir     *string
-	ListenPort      *uint16
-	MaxUploadKbps   *int
-	MaxDownloadKbps *int
-	SeedRatio       *float64
-	SeedTime        *string
-	DisableDHT      *bool
-	BindInterface   *string
+	DownloadDir        *string
+	ListenPort         *uint16
+	MaxUploadKbps      *int
+	MaxDownloadKbps    *int
+	MaxPeersPerTorrent *int
+	MaxUnverifiedMB    *int
+	MaxTorrents        *int
+	SeedRatio          *float64
+	SeedTime           *string
+	DisableDHT         *bool
+	BindInterface      *string
 }
 
 func AddDownloadClient(ctx context.Context, e DownloadClientEntry) error {
@@ -115,6 +118,15 @@ func UpdateDownloadClient(
 		}
 		if p.MaxDownloadKbps != nil {
 			e.MaxDownloadKbps = *p.MaxDownloadKbps
+		}
+		if p.MaxPeersPerTorrent != nil {
+			e.MaxPeersPerTorrent = *p.MaxPeersPerTorrent
+		}
+		if p.MaxUnverifiedMB != nil {
+			e.MaxUnverifiedMB = *p.MaxUnverifiedMB
+		}
+		if p.MaxTorrents != nil {
+			e.MaxTorrents = *p.MaxTorrents
 		}
 		if p.SeedRatio != nil {
 			e.SeedRatio = *p.SeedRatio

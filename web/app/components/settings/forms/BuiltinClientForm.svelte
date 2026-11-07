@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Zap, Folder, Gauge, Globe, TriangleAlert } from "@lucide/svelte";
+	import { Zap, Folder, Gauge, Globe, TriangleAlert, Cpu } from "@lucide/svelte";
 	import TextField from "@components/forms/TextField.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import TogglePill from "@components/forms/TogglePill.svelte";
@@ -12,6 +12,9 @@
 		listen_port: number;
 		max_download_kbps: number;
 		max_upload_kbps: number;
+		max_peers_per_torrent: number;
+		max_unverified_mb: number;
+		max_torrents: number;
 		seed_ratio: number;
 		seed_time: string;
 		disable_dht: boolean;
@@ -211,6 +214,58 @@
 		</div>
 		<p class="text-[11px] text-fg-subtle">
 			{i18n.builtin_speed_limits_help()}
+		</p>
+	</div>
+
+	<!-- Resource limits: 0 keeps each default; the engine reads them at start -->
+	<div class="rounded-lg border border-border bg-bg-card p-5 space-y-4">
+		<div class="flex items-center gap-2">
+			<Cpu size={13} class="text-fg-faint" aria-hidden="true" />
+			<span
+				class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
+				>{i18n.builtin_resource_limits()}</span
+			>
+		</div>
+		<div class="grid gap-3 sm:grid-cols-3">
+			<form.Field name="max_peers_per_torrent">
+				{#snippet children(field)}
+					<TextField
+						{field}
+						label={i18n.builtin_max_peers()}
+						type="number"
+						min={0}
+						max={200}
+						help={i18n.builtin_max_peers_help()}
+					/>
+				{/snippet}
+			</form.Field>
+			<form.Field name="max_unverified_mb">
+				{#snippet children(field)}
+					<TextField
+						{field}
+						label={i18n.builtin_max_unverified()}
+						type="number"
+						min={0}
+						max={1024}
+						help={i18n.builtin_max_unverified_help()}
+					/>
+				{/snippet}
+			</form.Field>
+			<form.Field name="max_torrents">
+				{#snippet children(field)}
+					<TextField
+						{field}
+						label={i18n.builtin_max_torrents()}
+						type="number"
+						min={0}
+						max={10000}
+						help={i18n.builtin_max_torrents_help()}
+					/>
+				{/snippet}
+			</form.Field>
+		</div>
+		<p class="text-[11px] text-fg-subtle">
+			{i18n.builtin_resource_limits_help()}
 		</p>
 	</div>
 

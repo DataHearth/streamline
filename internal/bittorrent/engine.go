@@ -85,6 +85,9 @@ type Engine struct {
 	downloadDir string
 	seedRatio   float64
 	seedTime    time.Duration
+	// maxTorrents is the resolved max_torrents; AddTorrent reads it through
+	// torrentCap, which treats 0 (an Engine not built by New) as the default.
+	maxTorrents int
 	// bindAddr is the resolved interface/IP the engine actually bound to
 	// (empty = all interfaces); surfaced in the download-client read view.
 	bindAddr string
@@ -187,6 +190,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		downloadDir: entry.DownloadDir,
 		seedRatio:   entry.SeedRatio,
 		seedTime:    seedTime,
+		maxTorrents: resolveBounds(entry).torrents,
 		bindAddr:    bindAddr,
 		listener:    listener,
 		packetConn:  packetConn,
@@ -307,7 +311,7 @@ func newClientConfig(
 	// in an announce list are skipped.
 	cc.DisableWebtorrent = true
 	cc.Slogger = engineSlogger()
-	applyMemoryBounds(cc)
+	applyMemoryBounds(cc, resolveBounds(entry))
 	// cc.ListenPort is deliberately left alone. It only reaches
 	// listenAllWithListenFunc, whose one remaining network is served by the
 	// ListenPacket closure below — which hands back a conn newPeerSockets
