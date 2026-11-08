@@ -279,7 +279,7 @@ func (db *DB) ReconcileEpisodes(
 	// The guard above refuses to prune on an empty provider response, but a
 	// *short* one is accepted as authoritative — so a partial TVDB payload
 	// deletes real rows through this path. It is the layer that does the
-	// deleting, and it left no record of how much it took.
+	// deleting, so it records how much it took.
 	if removedSeasons > 0 || removedEpisodes > 0 {
 		slog.InfoContext(ctx, "pruned episode tree",
 			"tvshow.id", showID,
@@ -561,8 +561,8 @@ func (db *DB) SetEpisodeMonitored(
 
 // TVShowTVDBIndex maps every tracked tvdb id to its show row id — the series
 // twin of MovieTMDBIndex. The scanners that only need to tell a tracked show
-// from a new one were calling ListTvShowsForAdoption, which eager-loads the
-// whole season → episode → media_file tree (~121 KB per show) to read two
+// from a new one use it rather than ListTvShowsForAdoption, which eager-loads
+// the whole season → episode → media_file tree (~121 KB per show) to read two
 // columns.
 func (db *DB) TVShowTVDBIndex(ctx context.Context) (map[uint32]uint32, error) {
 	var rows []struct {
@@ -584,11 +584,11 @@ func (db *DB) TVShowTVDBIndex(ctx context.Context) (map[uint32]uint32, error) {
 	return out, nil
 }
 
-// SetEpisodesMonitored sets the flag on many episodes in one statement. The
-// monitoring presets used to walk the tree one UpdateOneID at a time, each its
-// own autocommit — ~270 of them for a 250-episode show, all serialized through
-// the single SQLite connection while the request held it. A preset is starting
-// over, so it clears monitor_pinned on every episode it sets.
+// SetEpisodesMonitored sets the flag on many episodes in one statement. A
+// monitoring preset walking the tree one UpdateOneID at a time would make each
+// its own autocommit — ~270 of them for a 250-episode show, all serialized
+// through the single SQLite connection while the request held it. A preset is
+// starting over, so it clears monitor_pinned on every episode it sets.
 func (db *DB) SetEpisodesMonitored(
 	ctx context.Context,
 	ids []uint32,

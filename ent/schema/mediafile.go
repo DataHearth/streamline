@@ -56,15 +56,15 @@ func (MediaFile) Fields() []ent.Field {
 		field.String("sub_langs").Optional(),
 		field.Time("probed_at").Optional().Nillable(),
 		// dv, hdr10, hlg or sdr; empty when a probe failed. NULL alone means no
-		// probe has read it, so adding this column queued the backfill without
-		// unstamping probed_at: that would have made every other stream column
-		// unknown, and quality scoring with them, while the backfill ran.
+		// probe has read it, so the column queues the backfill without
+		// unstamping probed_at, which would make every other stream column
+		// unknown, and quality scoring with them, while the backfill runs.
 		field.String("dynamic_range").Optional().Nillable(),
 		// Derived from the filename, stored because deriving it is ~12 regex
-		// passes and every response that mentions a file used to redo them —
-		// once per file, per episode, per poll. The filename never changes
-		// under a row, so the parse is a pure function of a column and there
-		// is nothing to keep in sync. Empty means "not parsed yet"; readers
+		// passes and every response that mentions a file would otherwise redo
+		// them — once per file, per episode, per poll. The filename never
+		// changes under a row, so the parse is a pure function of a column and
+		// there is nothing to keep in sync. Empty means "not parsed yet"; readers
 		// fall back to parsing live, which is what carries rows written
 		// before these columns existed.
 		field.String("parsed_source").Optional(),
@@ -115,12 +115,12 @@ func (MediaFile) Edges() []ent.Edge {
 	}
 }
 
-// SQLite does not index a foreign key on its own, so every episode->file
-// lookup was a full media_files scan. The series list runs one per episode row
-// of the page: 3.9s for 20 shows on a real library.
+// SQLite does not index a foreign key on its own, so without these every
+// episode->file lookup is a full media_files scan. The series list runs one per
+// episode row of the page: 3.9s for 20 shows on a real library.
 //
 // Partial because a file has one owner, so most rows are NULL in each column,
-// and ANALYZE counts all those NULLs as one group. That inflated the estimate
+// and ANALYZE counts all those NULLs as one group. That inflates the estimate
 // per owner enough for a large IN list to pick a scan of the table. An IN or =
 // on the column still uses these.
 func (MediaFile) Indexes() []ent.Index {

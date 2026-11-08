@@ -133,8 +133,8 @@ var _ = Describe("ImportService books", Label("unit", "library"), func() {
 		It("removes what it placed when a later file fails", func() {
 			write(src, "Part 01.mp3")
 			// A dangling symlink fails the copy for every user. A chmod 000
-			// file did not: root reads it anyway, so the spec failed exactly
-			// where it ran as root (containers, CI runners).
+			// file does not: root reads it anyway, so the spec would fail
+			// exactly where it runs as root (containers, CI runners).
 			target := filepath.Join(GinkgoT().TempDir(), "part 02.mp3")
 			Expect(
 				os.Symlink(target, filepath.Join(src, "Part 02.mp3")),

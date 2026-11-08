@@ -327,8 +327,9 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 			},
 		),
 		// Kaamelott's first four Livres each run to 100 shorts. Pinned at two
-		// digits this parsed as episode 10, so the file matched the wrong
-		// episode — silently, with nothing about the name looking malformed.
+		// digits this would parse as episode 10, so the file would match the
+		// wrong episode — silently, with nothing about the name looking
+		// malformed.
 		Entry(
 			"three-digit episode number",
 			"Kaamelott.S01E100.1080p.BDRIP.x265-GRP",

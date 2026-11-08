@@ -130,9 +130,9 @@ var _ = Describe(
 
 				placeEpisode("Breaking Bad", "Breaking Bad S01E01.mkv")
 				placeEpisode("Breaking Bad", "Breaking Bad S01E02.mkv")
-				// The layout unsanitized slashes in the episode title used to
-				// produce: one folder per slash, the number on the top one, the
-				// file says nothing.
+				// The layout unsanitized slashes in the episode title produce:
+				// one folder per slash, the number on the top one, the file
+				// says nothing.
 				placeEpisode(
 					"Breaking Bad",
 					filepath.Join(

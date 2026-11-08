@@ -319,7 +319,7 @@ var _ = Describe("ParsedFromMediaFile", Label("unit", "library"), func() {
 		Expect(p.Extension).To(Equal("mkv"))
 	})
 
-	// The reported case: nothing was stored from the release name, but the
+	// The case this pins: nothing was stored from the release name, but the
 	// probe measured the file. Without this the name re-renders "[]" forever.
 	It("falls back to the probe when the stored parse is empty", func() {
 		p := ParsedFromMediaFile(&ent.MediaFile{

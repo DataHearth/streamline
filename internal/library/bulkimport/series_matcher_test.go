@@ -104,8 +104,8 @@ var _ = Describe(
 	Label("unit", "bulkimport"),
 	func() {
 		// Two library rows normalise to "Spiral": TVDB writes the 2017 entry's
-		// year inside its title. Picking the first tracked candidate reported the
-		// 2005 folder as `existing` against the 2017 row and adopted 76 files
+		// year inside its title. Picking the first tracked candidate would report
+		// the 2005 folder as `existing` against the 2017 row and adopt 76 files
 		// into it.
 		hits := []metadata.TVResult{
 			{TVDBID: 82152, Title: "Spiral", Year: 2005},

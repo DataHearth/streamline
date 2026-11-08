@@ -5,9 +5,9 @@ import "sync"
 // albumLocks serializes the changes to one music album's files across the
 // process: the tag writer's copy-and-rename, the album importer's transfers
 // and replacements, the renamer's moves and the deletes. Without it a tag
-// write that copied a file before an upgrade, a rename or a delete renamed
-// its copy over the path afterwards, putting the old bytes back where the
-// upgrade had landed, or a deleted file back on disk with no row.
+// write that copied a file before an upgrade, a rename or a delete would
+// rename its copy over the path afterwards, putting the old bytes back where
+// the upgrade had landed, or a deleted file back on disk with no row.
 var albumLocks = struct {
 	mu    sync.Mutex
 	locks map[uint32]*albumLock

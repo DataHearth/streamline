@@ -130,9 +130,8 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 	}
 	// Same split as the movie scanner, for the same reason: "shows.queued: 60"
 	// reads identically whether TVDB is down or the library already holds
-	// every one of them. The error tallies are what the movie side already
-	// counts and the series side did not, so an alert built on the hygiene
-	// counters silently had no series coverage.
+	// every one of them. The error tallies match what the movie side counts,
+	// so an alert built on the hygiene counters covers series too.
 	slog.InfoContext(ctx, "series scan finished",
 		"scan.id", scan.ID,
 		"shows.queued", len(queue),

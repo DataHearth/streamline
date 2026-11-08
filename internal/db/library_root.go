@@ -79,8 +79,8 @@ func PresentFiles(files []*ent.MediaFile) []*ent.MediaFile {
 // bookKindIs reads book_kind alone: it is only set on book files, and a HasBook
 // term beside it sends SQLite back to a table scan when one kind holds every
 // row. The NOT NULL term is what lets the drift walk negate this: NOT (book_kind
-// = 'ebook') alone is NULL for every file that is not a book, which dropped all
-// of them from the walk while a book root was offline.
+// = 'ebook') alone is NULL for every file that is not a book, which would drop
+// all of them from the walk while a book root is offline.
 func bookKindIs(kind mediafile.BookKind) predicate.MediaFile {
 	return mediafile.And(mediafile.BookKindNotNil(), mediafile.BookKindEQ(kind))
 }

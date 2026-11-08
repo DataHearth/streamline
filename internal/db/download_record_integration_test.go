@@ -1920,9 +1920,9 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		It(
 			"reverts an episode left paused by a record that has since gone",
 			func() {
-				// The homelab shape: a duplicate grab in season 2 was paused by
-				// hand, the season-scoped pause sync flipped the season's
-				// episodes with it, then the record was purged. Nothing resumes
+				// The homelab shape: a duplicate grab in season 2 paused by
+				// hand, a season-scoped pause sync flipping the season's
+				// episodes with it, then the record purged. Nothing resumes
 				// them, so the sweep is the only way out.
 				ids := seedDownloadingSeason(7007, 3)
 				for _, id := range ids {
@@ -2055,9 +2055,9 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		It("leaves another record's episodes in the same season alone", func() {
 			// The homelab shape: a whole-series pack anchored in season 1
 			// covers season 2 as well, and a duplicate grab of one season-2
-			// episode is paused by hand. Season scope flipped the pack's eight
-			// other season-2 episodes with it and the resume — scoped to the
-			// pack's own anchor season — never reached them again.
+			// episode is paused by hand. Season scope would flip the pack's
+			// eight other season-2 episodes with it and the resume — scoped to
+			// the pack's own anchor season — would never reach them again.
 			eps := []EpisodeSeed{{Number: 1, Title: "E1"}, {Number: 2, Title: "E2"}}
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 				Title: "Integrale", Year: 2015, TvdbID: 8002,

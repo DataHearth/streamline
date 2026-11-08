@@ -115,8 +115,8 @@ func trackAt(tracks []*ent.Track, info audiotags.Info) *ent.Track {
 // number is right for an ordinary rip and wrong for an edition numbered
 // otherwise. Avatar's "Feathers & Flesh (In His Own Words)" puts a spoken
 // interlude before every song, so its 01 is "An Ancient Old Tale" where the
-// album's 01 is "Regret", and by number every song landed in another song's
-// slot with the interludes between them.
+// album's 01 is "Regret", and by number every song would land in another
+// song's slot with the interludes between them.
 type TrackMatcher struct {
 	tracks   []*ent.Track
 	byNumber bool

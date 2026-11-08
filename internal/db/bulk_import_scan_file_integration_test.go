@@ -138,9 +138,9 @@ var _ = Describe("ImportScanFile store", Label("integration", "db"), func() {
 			Expect(row.DecisionTmdbID).To(Equal(tmdbID))
 		})
 
-		// A decision addressed to scan A carrying a file id owned by scan B used
-		// to mutate B's row and only then 404 on the scoped read-back: the client
-		// saw a rejection while the foreign write had already landed.
+		// Guards against a decision addressed to scan A carrying a file id owned
+		// by scan B mutating B's row and only then 404ing on the scoped read-back:
+		// the client would see a rejection while the foreign write had landed.
 		It("leaves another scan's file untouched", func() {
 			other, err := store.CreateImportScan(ctx, CreateImportScanParams{
 				SourcePath: "/y",

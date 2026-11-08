@@ -35,9 +35,9 @@ func statusAttr(v string) []attribute.KeyValue {
 // The flat totals answer "how big is the library"; the status-scoped ones
 // answer the questions an operator actually alerts on — a request backlog that
 // keeps growing, a wanted count that never drains, a transcode queue nothing
-// is claiming. Those splits were already computable (CountMoviesByStatus and
-// friends exist) but were wired only to the on-demand UI endpoint, so nothing
-// could be graphed over time.
+// is claiming. CountMoviesByStatus and friends compute those splits for the
+// on-demand UI endpoint; reporting them here is what lets them be graphed over
+// time.
 var entityGauges = []entityGauge{
 	{
 		name: "streamline_movies_total",

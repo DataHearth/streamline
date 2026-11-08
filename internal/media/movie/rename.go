@@ -88,10 +88,10 @@ func (r *RenameService) Apply(
 				fmt.Errorf("rename %s → %s: %w", op.From, op.To, err))
 		}
 		library.MoveSidecars(ctx, op.From, op.To)
-		// The move can empty the directory the file came from — every colon in a
-		// title used to render one, so a re-rename pass leaves one behind per
-		// title. Prune before the DB write: the file is already at op.To, so a
-		// failure here must not abort the rename.
+		// The move can empty the directory the file came from — a path that split
+		// a title into a directory at each colon leaves one behind per title on a
+		// re-rename pass. Prune before the DB write: the file is already at
+		// op.To, so a failure here must not abort the rename.
 		library.PruneEmptyDirs(ctx, filepath.Dir(op.From), r.libraryRoot)
 		if err := r.db.UpdateMediaFilePath(ctx, op.MediaFileID, op.To); err != nil {
 			return library.RenamePlan{}, otelx.RecordSpanError(span,

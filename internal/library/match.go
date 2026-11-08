@@ -25,9 +25,9 @@ var (
 // NFD is what makes an accented library title comparable to a scene release,
 // which never carries one: decomposing splits "é" into "e" plus a combining
 // mark, and titleNonAlnum drops that mark like any other non-ASCII byte.
-// Without it "Détective Conan" normalized to "dtectiveconan" and matched none
-// of its own releases, so preferTitleMatches found nothing to prefer and fell
-// back to handing the whole result set to the season-pack grabber.
+// Without it "Détective Conan" would normalize to "dtectiveconan" and match
+// none of its own releases, so preferTitleMatches would find nothing to prefer
+// and fall back to handing the whole result set to the season-pack grabber.
 func normalizeTitle(s string) string {
 	s = titleYearSuffix.ReplaceAllString(s, "")
 	s = strings.ToLower(norm.NFD.String(s))
@@ -85,7 +85,7 @@ func TitlePrefixMatches(a, b string) bool {
 //
 // The list is deliberately short. A word that is not on it is treated as part
 // of the title, so a release naming a longer work is refused; adding a word
-// that can distinguish two works is what reopens the bug this guards.
+// that can distinguish two works would let that release match again.
 var titleTagSuffix = regexp.MustCompile(
 	`^(?:complet|complete|integral|integrale|multi|french|truefrench|` +
 		`vostfr|vff|vf|vo|uncut|extended|remastered|repack|proper)+$`,
@@ -103,10 +103,10 @@ var titleTagSuffix = regexp.MustCompile(
 // ("Narcos Mexico"), and only the first is allowed. What a *library entry*
 // carries beyond the release is the provider's disambiguating subtitle, which
 // releases routinely drop — TMDB's "… Infinity Castle Chapter 1: The Return of
-// Akaza" against a tracker's "… Infinity Castle" — so that direction stays as
-// tolerant as it was. It leaves a release named for the shorter work matching
-// the longer one, which is the pre-existing reading and the only one that
-// reaches a title held under a fuller name.
+// Akaza" against a tracker's "… Infinity Castle" — so that direction stays
+// tolerant. It leaves a release named for the shorter work matching the longer
+// one, which is the only reading that reaches a title held under a fuller
+// name.
 func TitleNamesSameWork(release, title string) bool {
 	nr, nt := normalizeTitle(release), normalizeTitle(title)
 	if nr == "" || nt == "" {

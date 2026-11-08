@@ -363,8 +363,8 @@ type SeasonView struct {
 //
 // An undated episode counts as unaired, not missing: providers announce a
 // future season as dateless placeholders (often literally titled "TBA"), and
-// treating "no date" as "aired" made every one of them a permanent gap the
-// missing search re-ran against forever.
+// treating "no date" as "aired" would make every one of them a permanent gap
+// the missing search re-runs against forever.
 func DeriveSeasonViews(show *ent.TVShow, now time.Time) []SeasonView {
 	views := make([]SeasonView, 0, len(show.Edges.Seasons))
 	for _, se := range show.Edges.Seasons {
@@ -477,8 +477,8 @@ func (s *Service) applyPreset(ctx context.Context, id uint32, preset string) err
 	now := time.Now()
 	pilot := pilotEpisode(show)
 	// Collected into four buckets and written as four statements. Per-row
-	// updates meant one autocommit per episode — a 250-episode show held the
-	// one SQLite connection for ~270 of them, mid-request.
+	// updates would mean one autocommit per episode — a 250-episode show would
+	// hold the one SQLite connection for ~270 of them, mid-request.
 	var (
 		epOn, epOff         []uint32
 		seasonOn, seasonOff []uint32
@@ -1029,8 +1029,8 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	if err := s.db.SetTVShowRefreshedAt(ctx, id, time.Now()); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	// Add and Reidentify fetched the poster, refresh did not — so a cleared
-	// cache stayed cleared for every show already in the library. Fetch
+	// Add and Reidentify fetch the poster too; without this a cleared cache
+	// would stay cleared for every show already in the library. Fetch
 	// no-ops when the file is present, so this is free on a warm cache.
 	s.fetchPoster(ctx, id, d.PosterPath)
 	// Only when the provider actually moved something. RefreshStale runs this

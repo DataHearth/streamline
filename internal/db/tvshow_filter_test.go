@@ -554,9 +554,9 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 })
 
 // Unmonitoring a show writes tv_shows.monitored and nothing else — it never
-// reached the episodes underneath, and a metadata refresh creates new ones from
-// the season's flag. Every query that read the episode alone therefore kept
-// working through shows their owner had switched off.
+// reaches the episodes underneath, and a metadata refresh creates new ones from
+// the season's flag. Every query that read the episode alone would therefore
+// keep working through shows their owner had switched off.
 var _ = Describe("an unmonitored show", Label("unit", "db"), func() {
 	var (
 		store Store
@@ -586,8 +586,8 @@ var _ = Describe("an unmonitored show", Label("unit", "db"), func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		// The episode stays monitored throughout: that is the state the bug
-		// lived in, and the show's flag alone has to be enough.
+		// The episode stays monitored throughout: that is the state this pins,
+		// and the show's flag alone has to be enough.
 		off := false
 		_, err = store.UpdateTVShow(
 			ctx,

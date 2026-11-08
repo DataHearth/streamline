@@ -104,8 +104,8 @@ func (db *DB) CountMoviesByStatus(
 
 // MovieTMDBIndex maps every tracked tmdb id to its movie row id. The bulk
 // importer needs exactly this to tell an already-tracked title from a new
-// one; it used to page the entire movie table *with media files attached* to
-// build the same two columns.
+// one, rather than paging the entire movie table *with media files attached*
+// to build the same two columns.
 func (db *DB) MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error) {
 	var rows []struct {
 		ID     uint32 `json:"id"`

@@ -375,8 +375,8 @@ func (db *DB) tvShowTypeCounts(
 
 // FilterTVShows applies every filter, the sort and the page in SQL, and
 // returns the page's shows *without* their season/episode tree. The list view
-// wants three numbers per show, not the tree: eager-loading it cost ~121 KB
-// per show and made a 23-show library a 2.8 MB response.
+// wants three numbers per show, not the tree: eager-loading it costs ~121 KB
+// per show and makes a 23-show library a 2.8 MB response.
 func (db *DB) FilterTVShows(
 	ctx context.Context,
 	p FilterTVShowsParams,
@@ -447,12 +447,12 @@ func descending(order string, naturally bool) bool {
 // own flag and its show's.
 //
 // The show's flag is a gate, not a label. Unmonitoring a show writes only
-// tv_shows.monitored — it never reached the episodes underneath — and a
+// tv_shows.monitored — it never reaches the episodes underneath — and a
 // metadata refresh creates new seasons and episodes from the *season's* flag,
-// so a show switched off still accumulated monitored episodes. Every query
-// that tested the episode alone therefore kept working through shows their
-// owner had explicitly stopped following: searching for them, badging them
-// wanted, and listing them on the calendar.
+// so a show switched off still accumulates monitored episodes. Every query
+// that tested the episode alone would therefore keep working through shows
+// their owner had explicitly stopped following: searching for them, badging
+// them wanted, and listing them on the calendar.
 func monitoredEpisode() predicate.Episode {
 	return episode.And(
 		episode.MonitoredEQ(true),

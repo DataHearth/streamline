@@ -583,9 +583,9 @@ func (s *Service) Reidentify(
 	// The cached poster is keyed by row id, so it still shows the old title
 	// until it is replaced.
 	s.fetchPoster(ctx, id, details.PosterPath)
-	// The series twin logs its outcome; this one logged nothing, leaving the
-	// rarer and more consequential of the two corrections — a movie repointed
-	// at different metadata — without an audit trail.
+	// Logged like the series twin: otherwise the rarer and more consequential
+	// of the two corrections — a movie repointed at different metadata — has
+	// no audit trail.
 	slog.InfoContext(ctx, "movie re-identified",
 		"movie.id", id, "movie.tmdb_id", tmdbID, "title", details.Title)
 	if err := events.Record(
@@ -662,8 +662,8 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 	}
 	// Fetch is a no-op when the file is already cached, so this costs nothing
 	// on a populated cache and is the only thing that refills a cleared one —
-	// the series path already does it, and without it dropping the poster
-	// directory left movies with placeholders permanently.
+	// the series path does it too, and without it dropping the poster
+	// directory would leave movies with placeholders permanently.
 	s.fetchPoster(ctx, m.ID, details.PosterPath)
 	// Only when the provider actually moved something. RefreshStale runs this
 	// over every stale row on a tick, and an unconditional event would bury a
