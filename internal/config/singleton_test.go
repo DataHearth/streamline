@@ -646,9 +646,9 @@ var _ = Describe(
 			Expect(Get().Auth.SessionSecretFile).To(Equal(secret))
 		})
 
-		// store's callers all hand it a layer, but nothing made them: the one
-		// that did not left a nil envOverlay for the write-back to walk into,
-		// reachable the moment a path was captured too.
+		// store's callers all hand it a layer, but nothing makes them: one
+		// that does not leaves a nil envOverlay for the write-back to walk
+		// into, reachable the moment a path is captured too.
 		It("writes back for a config stored without an environment layer", func() {
 			path := writeConfigFile()
 			cfg, err := Load(path)
@@ -764,9 +764,9 @@ var _ = Describe(
 			Expect(err).To(MatchError(ContainSubstring("'Config.DataDir'")))
 		})
 
-		// Load runs Validate and loadSecretFiles; the gate ran only the first
-		// half, so a *_file path the environment replaces went back to disk with
-		// nothing said about the next boot failing to read it.
+		// Load runs Validate and loadSecretFiles; a gate running only the first
+		// half would send a *_file path the environment replaces back to disk
+		// with nothing said about the next boot failing to read it.
 		It("reports a secret file only the environment replaces", func() {
 			dir := GinkgoT().TempDir()
 			live := filepath.Join(dir, "session.secret")
@@ -796,7 +796,7 @@ var _ = Describe(
 
 		// Every settings save goes through here. Refusing them all over a file
 		// the operator can still boot is a bricked settings page, not a
-		// protection — round 2 saved happily.
+		// protection.
 		It("keeps saving while the environment props the file up", func() {
 			GinkgoT().Setenv("STREAMLINE_QUALITY_DEFAULT_PROFILE", "uhd-remux")
 			path := writeConfigFile(map[string]any{
@@ -826,7 +826,7 @@ var _ = Describe(
 			Expect(d.String("auth.registration_mode")).To(Equal("invite"))
 		})
 
-		// Validation used to create data_dir, so a refused update left the
+		// Validation must not create data_dir, or a refused update leaves the
 		// directory tree of a change that never happened.
 		It("creates nothing on disk when it refuses the update", func() {
 			GinkgoT().Setenv("STREAMLINE_SCHEDULES__MOVIE_RSS_SYNC", "5m")
@@ -929,9 +929,9 @@ var _ = Describe(
 			),
 		)
 
-		// Same masking, one phase in: the secret-file read used to stop at the
-		// first unreadable path, so an install already missing one had its
-		// answer fixed no matter what else the update broke.
+		// Same masking, one phase in: a secret-file read that stops at the
+		// first unreadable path fixes the answer for an install already missing
+		// one, no matter what else the update breaks.
 		It("refuses a second secret file while the first is already gone", func() {
 			dir := GinkgoT().TempDir()
 			live := filepath.Join(dir, "session.secret")
@@ -959,11 +959,11 @@ var _ = Describe(
 		})
 
 		// One mutation, three installs: one healthy, two carrying an unrelated
-		// flaw the environment corrects. Reasons were collected across the
-		// phases but not inside one, so whichever flaw a phase reported first
-		// stood for that phase on both sides of the comparison — the delete
-		// came out with nothing caused, and the file lost the profile the
-		// default still names.
+		// flaw the environment corrects. Reasons collected across the phases
+		// but not inside one would let whichever flaw a phase reports first
+		// stand for that phase on both sides of the comparison — the delete
+		// would come out with nothing caused, and the file would lose the
+		// profile the default still names.
 		DescribeTable(
 			"refuses the delete that leaves the default profile naming nothing",
 			func(prepare func(dir string) map[string]any) {
@@ -1006,7 +1006,7 @@ var _ = Describe(
 				func(string) map[string]any { return map[string]any{} },
 			),
 			// An invariant ahead of the one the delete breaks: both are
-			// checkInvariants', which used to answer with its first.
+			// checkInvariants', which must not answer with its first alone.
 			Entry(
 				"on a file whose proxy list only the environment corrects",
 				func(string) map[string]any {
@@ -1018,8 +1018,8 @@ var _ = Describe(
 					}}
 				},
 			),
-			// A struct tag ahead of it: Validate used to return on the tags, so
-			// no invariant ran at all on either side of the comparison.
+			// A struct tag ahead of it: a Validate returning on the tags would
+			// run no invariant at all on either side of the comparison.
 			Entry(
 				"on a file whose secret path only the environment corrects",
 				func(dir string) map[string]any {
@@ -1035,7 +1035,7 @@ var _ = Describe(
 				},
 			),
 			// A value that will not decode, which is a phase ahead of both:
-			// the config was thrown away whole, so nothing else was asked.
+			// throwing the config away whole would leave nothing else asked.
 			Entry(
 				"on a file whose port only the environment corrects",
 				func(string) map[string]any {

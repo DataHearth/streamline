@@ -63,7 +63,7 @@ const metadataImageCDNs = "https://image.tmdb.org https://artworks.thetvdb.com"
 //
 // img-src carries metadataImageCDNs and font-src carries nothing, and the two
 // decisions only look inconsistent. What separates them is whether the browser
-// was already talking to the third party before the policy existed.
+// talks to the third party anyway, with or without the policy.
 //
 // The SPA binds TMDB and TVDB artwork URLs straight into <img src> — the
 // add-movie and add-series pickers, the lookup detail panel, similar titles,
@@ -75,7 +75,7 @@ const metadataImageCDNs = "https://image.tmdb.org https://artworks.thetvdb.com"
 // empty film-strip tiles with no error surfaced anywhere but the console.
 //
 // font-src deliberately omits https://fonts.scalar.com, and that is the
-// opposite trade: nothing was talking to it before, and a self-hosted install
+// opposite trade: nothing else talks to it, and a self-hosted install
 // should not announce every visit to its API docs to a third party. There is
 // no cost to pay here either, because the request is not merely blocked — it
 // is not made. Scalar's default theme declares Inter and JetBrains Mono over

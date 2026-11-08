@@ -46,9 +46,9 @@ func openLogWriter(
 			output = filepath.Join(cfg.DataDir, output)
 		}
 	}
-	// timberjack deprecated the Compress bool in favour of a Compression
-	// algorithm string; "gzip" is what the old bool resolved to, so the
-	// config key stays a bool and is mapped here.
+	// timberjack takes a Compression algorithm string over its deprecated
+	// Compress bool; "gzip" is what that bool means, so the config key stays
+	// a bool and is mapped here.
 	compression := compressionNone
 	if rot.Compress {
 		compression = compressionGzip

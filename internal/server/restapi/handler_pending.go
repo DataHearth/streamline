@@ -345,8 +345,8 @@ func (s *Server) identifyMovie(
 
 // PreviewPending answers what importing the proposal's torrent would do. The
 // episodes a proposal is filed under say nothing about which file lands where
-// or what each would replace, so the operator was deciding blind on anything
-// wider than a single file.
+// or what each would replace, so without this the operator decides blind on
+// anything wider than a single file.
 func (s *Server) PreviewPending(
 	ctx context.Context,
 	request PreviewPendingRequestObject,
@@ -540,14 +540,14 @@ func (s *Server) ReplacePending(
 		}, nil
 	}
 
-	// The importer owns the replacement, and this used to pre-delete instead:
-	// one file, the record's *anchor*, which on a pack is a handle rather than
-	// anything the torrent holds — so Replace could delete a file the release
-	// had no copy of, and skip the other N because the record was still
-	// replace_mode "none". Worse on every shape, the delete ran here, before
-	// anything was probed: a held import had already destroyed the only copy on
-	// disk, which is exactly the ordering importSingleEpisode/importMovieRecord
-	// go out of their way to avoid.
+	// The importer owns the replacement; nothing is pre-deleted here. A
+	// pre-delete would take one file, the record's *anchor*, which on a pack is
+	// a handle rather than anything the torrent holds — so Replace could delete
+	// a file the release has no copy of, and skip the other N because the
+	// record is still replace_mode "none". Worse on every shape, it would run
+	// here, before anything is probed: a held import would already have
+	// destroyed the only copy on disk, which is exactly the ordering
+	// importSingleEpisode/importMovieRecord go out of their way to avoid.
 	//
 	// "upgrades" rather than "all" because a pack proposal is not a release the
 	// operator inspected: it is hundreds of files, and quality.ReplacesFile is

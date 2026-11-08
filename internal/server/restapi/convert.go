@@ -308,9 +308,9 @@ func downloadClientToAPI(e config.DownloadClientEntry) DownloadClient {
 	}
 	// BuiltinDownloadClient resolves torrent_listen_port over this entry's own
 	// listen_port, so on the deployment the override exists for — a VPN whose
-	// forwarded port rotates — the settings form was showing, and happily
-	// saving, a value the engine never binds. Reporting the override is what
-	// lets the form say so instead of lying by omission.
+	// forwarded port rotates — the entry's own value is one the engine never
+	// binds. Reporting the override is what lets the form say so instead of
+	// showing, and saving, that value as if it applied.
 	if e.ClientType == "builtin" {
 		if c := config.Get(); c != nil && c.TorrentListenPort != 0 {
 			v := c.TorrentListenPort
@@ -390,7 +390,7 @@ func playOnToAPI(r mediaserver.PlayOnResult) PlayOnLink {
 
 // parsedFieldsOf returns a file's parsed source/resolution/codec, preferring
 // the stored columns and falling back to parsing the basename for rows written
-// before those columns existed. Parsing is ~12 regex passes, and this used to
+// before those columns existed. Parsing is ~12 regex passes, too costly to
 // run per file per response — per episode of a series detail, on every poll.
 // The fallback is what makes the migration need no data backfill: an old row
 // keeps working and gets its values the next time it is written.
@@ -1262,7 +1262,7 @@ func tvShowToAPI(s *ent.TVShow) TVShow {
 
 // tvShowListToAPI renders a list row. The rollup arrives pre-aggregated from
 // SQL because the list query deliberately leaves the season/episode tree
-// unloaded — serializing it was 121 KB per show. `seasons` stays absent here;
+// unloaded — serializing it is 121 KB per show. `seasons` stays absent here;
 // the detail view (tvShowToAPI) is what carries it.
 // progress is the mean over the show's live queue entries, or nil when the
 // show has nothing downloading or the queue could not be read — the card
@@ -1498,8 +1498,8 @@ func singleReleaseEpisodes(SearchResult) int { return 1 }
 //
 // A season the library tracks no episodes for contributes nothing, and a
 // result that resolves to nothing at all falls back to 1 — an unscaled bound,
-// which is how these behaved before they scaled, rather than a tighter one
-// invented from a partial count.
+// as for a single-episode result, rather than a tighter one invented from a
+// partial count.
 func spanEpisodes(perSeason map[uint16]int) func(SearchResult) int {
 	return func(r SearchResult) int {
 		if n := library.ParseSeasonSpan(r.Title).EpisodeCount(perSeason); n > 0 {

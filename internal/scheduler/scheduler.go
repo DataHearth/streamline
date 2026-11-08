@@ -302,11 +302,11 @@ func (s *Scheduler) List() []JobInfo {
 	return out
 }
 
-// bootStagger spreads the first run of each job at startup. Every job used to
-// fire the instant Start ran, which made the boot minute the heaviest period
-// the profiler saw — a full metadata sweep, both orphan scans and both missing
+// bootStagger spreads the first run of each job at startup. Every job firing
+// the instant Start runs makes the boot minute the heaviest period the
+// profiler sees — a full metadata sweep, both orphan scans and both missing
 // searches at once, all contending for the single SQLite connection while the
-// server was also trying to answer its first requests.
+// server is also trying to answer its first requests.
 const bootStagger = 2 * time.Second
 
 // Start launches every registered job that is not paused. Each job runs once

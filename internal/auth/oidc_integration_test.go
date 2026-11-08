@@ -227,7 +227,7 @@ var _ = Describe("LoginOIDC end-to-end", Label("integration", "auth"), func() {
 		Expect(u.Role).To(Equal(entuser.RoleMember))
 	})
 
-	// Round 4 POC (B). default_role is what a provisioning login lands on
+	// Escalation POC (B). default_role is what a provisioning login lands on
 	// when no claim maps, and it is operator-set — but it is still a role this
 	// provider confers, so the ceiling has to reach it too. Without that, an
 	// install whose default is admin inverts: presenting the mapped admin group
@@ -253,7 +253,7 @@ var _ = Describe("LoginOIDC end-to-end", Label("integration", "auth"), func() {
 			Expect(reloaded.Role).ToNot(Equal(entuser.RoleAdmin))
 		})
 
-	// Round 4 POC (A), single-provider shape. The account is of federated
+	// Escalation POC (A), single-provider shape. The account is of federated
 	// origin, so nothing about it ever carries a local password — the auth_method
 	// an adoption leaves behind is not a usable proxy for "this provider was
 	// only ever trusted at the lower tier".
@@ -287,7 +287,7 @@ var _ = Describe("LoginOIDC end-to-end", Label("integration", "auth"), func() {
 		},
 	)
 
-	// Round 4 POC (A), two-provider shape: the escalation completes by making
+	// Escalation POC (A), two-provider shape: the escalation completes by making
 	// the setting *stricter*. A weak provider adopts an account the strong one
 	// created, which leaves auth_method at oidc; tightening the weak provider to
 	// disabled then reads that as "an account of my own population" and hands it

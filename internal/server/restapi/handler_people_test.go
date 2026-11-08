@@ -93,8 +93,8 @@ var _ = Describe(
 			})
 
 			It("keys a TVDB-only person by their row id", func() {
-				// The bug this keying replaced: TVDB cast carries tmdb_id 0, so
-				// every series actor in the library collapsed into one person.
+				// TVDB cast carries tmdb_id 0, so keyed by tmdb_id every series
+				// actor in the library would collapse into one person.
 				app.store.EXPECT().
 					ListPeople(mock.Anything, mock.Anything).
 					Return([]db.Person{

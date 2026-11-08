@@ -72,8 +72,8 @@ func playable() predicate.Track {
 }
 
 // listed keeps albums holding at least one playable track. The library holds
-// every release group of a followed artist, wanted or not, and a client showed
-// each one it had no file for as an empty album.
+// every release group of a followed artist, wanted or not, and a client shows
+// each one it has no file for as an empty album.
 func listed() predicate.Album {
 	return album.HasTracksWith(playable())
 }

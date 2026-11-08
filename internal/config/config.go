@@ -117,9 +117,8 @@ type AuthConfig struct {
 	// role.SelfRegistered clamps admin to member locally, and role.Federated
 	// clamps it for a provider without allow_admin.
 	//
-	// Renamed from auth.oidc_default_role, which the local path read too
-	// despite the name. A clean break: the old key is not aliased, so a config
-	// still naming it loses the value and falls back to member.
+	// auth.oidc_default_role is deliberately not an alias for it: a config
+	// still naming that key loses the value and falls back to member.
 	DefaultRole string        `koanf:"default_role" validate:"required,oneof=admin member request_only"`
 	SeedAdmin   SeedAdminCfg  `koanf:"seed_admin"`
 	OIDC        []OIDCConfig  `koanf:"oidc"         validate:"dive"`
@@ -176,10 +175,11 @@ type OIDCConfig struct {
 	// weakest one speaks for accounts belonging to the strongest.
 	//
 	// It governs adoption and nothing else. Roles are AllowAdmin's business:
-	// while one key meant both, tightening the adoption tier could raise the
-	// role ceiling (an account of federated origin adopted at non_admin became
-	// promotable the moment the operator set the provider back to disabled),
-	// and loosening it could lower it. Two keys make each axis monotone —
+	// with one key meaning both, tightening the adoption tier could raise the
+	// role ceiling (an account of federated origin adopted at non_admin would
+	// become promotable the moment the operator set the provider back to
+	// disabled), and loosening it could lower it. Two keys make each axis
+	// monotone —
 	// no move on one can add capability on the other.
 	//
 	// Empty is OIDCEmailLinkingDisabled, spelled out at load by
@@ -598,7 +598,7 @@ var bindInterfacePattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
 
 // normalizeOIDCEmailLinking spells out the zero value as the tier it already
 // means. The write-back marshals the whole struct, zero fields included, so a
-// provider that never named the key used to be rewritten as
+// provider that never named the key would otherwise be rewritten as
 // `email_linking: ""` — which the Go loader accepts (omitempty) but
 // api/config.schema.json rejects, leaving streamline emitting a config its own
 // published schema fails. Writing the word also makes the file say which tier
@@ -640,11 +640,11 @@ func (c *Config) normalizeTranscodePolicies() {
 // still load — leaves nothing behind on the filesystem when the answer is no.
 //
 // The answer carries every rule broken, joined: the struct tags and the
-// invariants both, however many of each. Returning at the tags read as a
-// config with one flaw in it, and config.Update compares two of these answers
-// to tell a flaw it is introducing from one it inherited — an install whose
-// tags already fail would have had every invariant it broke hidden behind
-// them, and the write saved.
+// invariants both, however many of each. Returning at the tags would read as
+// a config with one flaw in it, and config.Update compares two of these
+// answers to tell a flaw it is introducing from one it inherited — an install
+// whose tags already fail would have every invariant it breaks hidden behind
+// them, and the write would save.
 //
 // "However many" is across fields, not within one: validator stops at a
 // field's first failing tag, so anything behind it — a dive into the
@@ -690,9 +690,9 @@ func ParseBitrate(s string) (int64, error) {
 
 // ensureDataDir creates data_dir. Nothing else makes it: the poster cache
 // mkdirs <data_dir>/posters, long after this. So any data_dir below its
-// volume's mount point — `/data/streamline` on a fresh, empty PVC — used to
-// fail validation with a message naming a tag rather than the missing
-// directory.
+// volume's mount point — `/data/streamline` on a fresh, empty PVC — would
+// otherwise fail validation with a message naming a tag rather than the
+// missing directory.
 //
 // A boot step, not a validation step: the database this process serves from is
 // opened out of this directory once, at startup. A config.Update that changes
@@ -1226,17 +1226,17 @@ func newDefaultsKoanf() *koanf.Koanf {
 //
 // The entries are the pre-media-split schedules names: missing_search,
 // metadata_refresh and orphan_scan each drove both the movie and the TV job,
-// and the first two music and books as well (they rode the movie job until
-// they had their own), so a value set under the old name has to land on every
+// and the first two music and books as well (the movie job carried them under
+// the old names), so a value set under the old name has to land on every
 // replacement or the operator's cadence silently changes for one library.
 //
 // quality_default_profile was one default for both media; a v1 file carrying
 // it seeds both new keys.
 //
-// auth.oidc_default_role was briefly here when it became auth.default_role and
-// is deliberately not: that rename is a clean break, so an old config's value
-// is ignored rather than carried over. The map stays general because the next
-// rename should not have to rebuild the mechanism.
+// auth.oidc_default_role is deliberately not here: its rename to
+// auth.default_role is a clean break, so an old config's value is ignored
+// rather than carried over. The map stays general because the next rename
+// should not have to rebuild the mechanism.
 var renamedKeys = map[string][]string{
 	"quality_default_profile": {
 		"movie_quality_default_profile",
@@ -1265,7 +1265,7 @@ var renamedKeys = map[string][]string{
 // replacements, skipping any replacement the operator already set themselves,
 // and returns the replacements it actually wrote keyed by the deprecated key
 // they came from. Without it an old config keeps parsing — koanf drops keys the
-// struct no longer has — while every renamed job silently reverts to its
+// struct does not have — while every renamed job silently reverts to its
 // default interval.
 //
 // "Already set themselves" is read as "carries a value that differs from the

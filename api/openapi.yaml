@@ -3269,8 +3269,8 @@ paths:
         Points `movie_quality_default_profile` and/or
         `series_quality_default_profile` at this profile — the one a movie or
         series with an empty `quality_profile` resolves to. `media` picks which
-        one; absent sets both, which is what a v1 client calling this before the
-        two defaults were split got. Also the only way to free a current default
+        one; absent sets both, so a client that never sends it keeps one
+        default for both media. Also the only way to free a current default
         for deletion, which is refused with 409 while the profile is the default
         for either media.
       tags: [quality-profiles]

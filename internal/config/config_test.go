@@ -238,7 +238,7 @@ schedules:
 			// The rename to auth.default_role is a clean break: the old key is
 			// not in renamedKeys, so koanf drops it like any key the struct does
 			// not have and the role falls back to the default. This spec pins
-			// that decision rather than the alias it replaced — an operator
+			// that decision, deliberately aliasless — an operator
 			// upgrading past the rename has to move the key themselves, and the
 			// silent part of that is exactly what it documents.
 			It("ignores the old key, leaving default_role at its default", func() {
@@ -444,9 +444,9 @@ auth:
 
 		// Two entries sharing a name split the settings that authenticate a
 		// token from the settings that bound what it may become: findOIDCProvider
-		// reads the first match, oidcManager.Init keyed the map so the last write
-		// won. A token from the second entry's issuer was then capped by the
-		// first entry's allow_admin.
+		// reads the first match, oidcManager.Init keys a map so the last write
+		// wins. A token from the second entry's issuer would then be capped by
+		// the first entry's allow_admin.
 		Describe("duplicate names in name-keyed lists", func() {
 			loadWith := func(body string) error {
 				GinkgoHelper()
@@ -998,8 +998,8 @@ var _ = Describe("Load provenance signals", Label("unit", "config"), func() {
 	})
 
 	// The environment is always a string and the file holds a list as []any, so
-	// rendering both and comparing the text reported a key as shadowed by the
-	// value it already had — on every boot, for a setting nothing was overriding.
+	// rendering both and comparing the text would report a key as shadowed by
+	// the value it already had — on every boot, for a setting nothing overrides.
 	It("stays quiet when a list the file sets matches the environment", func() {
 		GinkgoT().
 			Setenv("STREAMLINE_LIBRARY__ALLOWED_DOWNLOAD_ROOTS", "/downloads")

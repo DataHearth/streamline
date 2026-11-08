@@ -176,9 +176,9 @@ func (s *Server) DeleteHistoryItem(
 
 // RetryFailedImport hands a terminally-failed record back to the importer.
 // Nothing else can: resolve only accepts a held record and the importer's scan
-// only picks up records already importing, so before this a record that
-// exhausted library.import_max_attempts was unreachable — including after the
-// operator fixed whatever caused it.
+// only picks up records already importing, so without this a record that
+// exhausted library.import_max_attempts is unreachable — including after the
+// operator fixes whatever caused it.
 func (s *Server) RetryFailedImport(
 	ctx context.Context,
 	request RetryFailedImportRequestObject,

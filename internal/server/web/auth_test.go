@@ -51,7 +51,7 @@ var _ = Describe("authLogin rate limiting", Label("unit", "server"), func() {
 		return rr
 	}
 
-	// The bug this pins: allowAttempt runs before the credentials are known, so
+	// What this pins: allowAttempt runs before the credentials are known, so
 	// without the refund the ceiling meters use rather than guessing. Behind a
 	// proxy whose address is not in server.trusted_proxies every user shares one
 	// budget, so five logins would lock out the whole deployment.

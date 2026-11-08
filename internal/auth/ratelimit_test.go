@@ -402,9 +402,8 @@ var _ = Describe("Limiter", Label("unit", "auth"), func() {
 		})
 
 		It("admits a new key when every tracked key is mid-throttle", func() {
-			// Restored from the evicting map this replaced. Its subject was the
-			// eviction policy, but its content is the property that outlived it:
-			// a caller that has made no attempts is never turned away, whatever
+			// The property an eviction policy would also have to keep: a
+			// caller that has made no attempts is never turned away, whatever
 			// the table is holding. Here it holds nothing but keys that have
 			// spent their budget, so there is no dead weight to reclaim and no
 			// slot to give away — and the answer is to admit the newcomer
@@ -468,9 +467,9 @@ var _ = Describe("Limiter", Label("unit", "auth"), func() {
 		})
 
 		It("keeps a throttled key throttled through one-hit keys", func() {
-			// The shape that reset a throttle when the table evicted: fill it
+			// The shape that resets a throttle in a table that evicts: fill it
 			// with cheap one-hit keys, then keep inserting so every new key
-			// arrives at a full table. Nothing is ever dropped to make room now,
+			// arrives at a full table. Nothing is ever dropped to make room,
 			// so the sequence is only traffic.
 			const victim = "203.0.113.7"
 			l := NewLimiter(5, 15*time.Minute)

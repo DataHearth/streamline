@@ -187,8 +187,8 @@ var _ = Describe("Handler: Import scan lookup",
 		var app *apiKeyApp
 		BeforeEach(func() { app = newAPIKeyApp() })
 
-		// The body used to echo the raw ent error ("ent: import_scan not
-		// found"), leaking ORM vocabulary to API clients.
+		// The body must not echo the raw ent error ("ent: import_scan not
+		// found"), which would leak ORM vocabulary to API clients.
 		It("404s GET /library/imports/{id} with a client-safe message", func() {
 			app.bulkImports.EXPECT().Get(mock.Anything, uint32(999999)).
 				Return(nil, &ent.NotFoundError{}).Once()

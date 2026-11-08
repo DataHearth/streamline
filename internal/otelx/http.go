@@ -62,8 +62,8 @@ type spanURLRedactor struct {
 }
 
 // The guard mirrors everything RedactURL strips, not just the query: gating on
-// RawQuery alone let a fragment-bearing URL export otelhttp's own url.full
-// verbatim, so the helper's stated invariant was defeated by its only caller.
+// RawQuery alone would let a fragment-bearing URL export otelhttp's own url.full
+// verbatim, defeating the helper's stated invariant through its only caller.
 func (t spanURLRedactor) RoundTrip(req *http.Request) (*http.Response, error) {
 	if u := req.URL; u != nil &&
 		(u.RawQuery != "" || u.ForceQuery ||
