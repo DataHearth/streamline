@@ -10,7 +10,8 @@
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import type { Movie, MediaFile } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
-	import Img from "@components/shared/Img.svelte";
+	import HeroBackdrop from "@components/shared/HeroBackdrop.svelte";
+	import { provideHeroHold } from "@lib/hero-hold.svelte";
 
 	let {
 		movie,
@@ -29,6 +30,7 @@
 
 	let primary = $derived(pickPrimary(movie.media_files));
 	let backdropSrc = $derived(posterUrl(movie));
+	provideHeroHold();
 
 	// Single dotted meta line: release · runtime · rating · genres, then any
 	// file-derived facts. Mirrors the prototype's left-aligned header.
@@ -55,15 +57,7 @@
 	class="hero relative"
 	aria-labelledby="movie-title"
 >
-	<div class="absolute inset-0 z-0 overflow-hidden bg-bg-deep">
-		<Img
-			src={backdropSrc}
-			alt=""
-			aria-hidden="true"
-			class="h-full w-full scale-110 object-cover opacity-70 blur-md"
-		/>
-		<div class="absolute inset-0 hero-overlay"></div>
-	</div>
+	<HeroBackdrop src={backdropSrc} />
 
 	<div class="relative w-full px-4 pt-6 md:px-8">
 		<a
@@ -146,14 +140,3 @@
 		</div>
 	</div>
 </section>
-
-<style>
-	.hero-overlay {
-		background-image: linear-gradient(
-			180deg,
-			rgb(11 11 16 / 0.3) 0%,
-			rgb(11 11 16 / 0.7) 60%,
-			var(--bg-deep) 100%
-		);
-	}
-</style>

@@ -58,7 +58,8 @@
 	import PlayOnMenu from "@components/shared/PlayOnMenu.svelte";
 	import type { SeriesAction } from "@components/series/SeriesKebabMenu.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
-	import Img from "@components/shared/Img.svelte";
+	import HeroBackdrop from "@components/shared/HeroBackdrop.svelte";
+	import { provideHeroHold } from "@lib/hero-hold.svelte";
 	import type {
 		Episode,
 		MonitoringPreset,
@@ -130,6 +131,7 @@
 	}));
 
 	let show = $derived(seriesQuery.data);
+	provideHeroHold();
 	let seasons = $derived<Season[]>(show?.seasons ?? []);
 	// Specials are a season of the show but not of its run: every headline
 	// number here counts the numbered seasons only, as the API's rollups do.
@@ -563,15 +565,7 @@
 	</div>
 {:else if show}
 	<section class="hero relative" aria-labelledby="series-title">
-		<div class="absolute inset-0 z-0 overflow-hidden bg-bg-deep">
-			<Img
-				src={tvPosterUrl(show.id)}
-				alt=""
-				aria-hidden="true"
-				class="h-full w-full scale-110 object-cover opacity-70 blur-md"
-			/>
-			<div class="absolute inset-0 hero-overlay"></div>
-		</div>
+		<HeroBackdrop src={tvPosterUrl(show.id)} />
 
 		<div class="relative w-full px-4 pt-6 md:px-8">
 			<a
@@ -1232,14 +1226,6 @@
 {/if}
 
 <style>
-	.hero-overlay {
-		background-image: linear-gradient(
-			180deg,
-			rgb(11 11 16 / 0.3) 0%,
-			rgb(11 11 16 / 0.7) 60%,
-			var(--bg-deep) 100%
-		);
-	}
 	.tabs-track {
 		overflow-x: auto;
 		overflow-y: hidden;

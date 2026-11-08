@@ -26,7 +26,6 @@ type TMDB struct {
 const (
 	MovieTMDBID      = 550
 	MovieTitle       = "Fight Club"
-	MovieOverview    = "A ticking-time-bomb insomniac."
 	MovieReleaseDate = "1999-10-15"
 	MovieYear        = 1999
 	MovieRuntime     = 139
@@ -35,6 +34,12 @@ const (
 	MovieCastName    = "Brad Pitt"
 	MoviePosterPath  = "/fake-poster.jpg"
 )
+
+// MovieOverview is long enough for the detail hero's Read more.
+const MovieOverview = "An office worker who cannot sleep starts spending his nights in a basement with a stranger he met on a plane. " +
+	"What begins as a way to feel something grows, week after week, into a network of rooms in every part of the city, each with rules of its own. " +
+	"The more the network asks of him, the less he can tell which of its plans are his, and the closer it comes to the one place he never meant it to reach. " +
+	"By the time he tries to stop it, it has stopped needing him."
 
 var (
 	// movieDetail deliberately carries no poster_path: metadata.PosterURL pins

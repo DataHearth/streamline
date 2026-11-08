@@ -14,6 +14,7 @@
 	import type { Movie, PersonDetail, TVShow } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import Img from "@components/shared/Img.svelte";
+	import HeroBackdrop from "@components/shared/HeroBackdrop.svelte";
 
 	let routeParams = $state<Record<string, string>>({});
 	onMount(() => params.subscribe((p) => (routeParams = p)));
@@ -265,24 +266,8 @@
 	</div>
 {:else if person}
 	<section class="relative" aria-labelledby="person-name">
-		<div class="absolute inset-0 z-0 overflow-hidden bg-bg-deep">
-			<!-- Fixed height, not inset-0: the biography expands in place, and a
-			     backdrop that tracked the section's height re-ran object-cover on
-			     every toggle — the blurred portrait visibly jumped. The gradient
-			     ends at bg-deep, which is what the container paints below it, so
-			     stopping short of the section's full height is seamless. -->
-			<div class="absolute inset-x-0 top-0 h-[520px] overflow-hidden">
-				{#if person.profile_url}
-					<Img
-						src={person.profile_url}
-						alt=""
-						aria-hidden="true"
-						class="h-full w-full scale-110 object-cover opacity-70 blur-md"
-					/>
-				{/if}
-				<div class="absolute inset-0 hero-overlay"></div>
-			</div>
-		</div>
+		<!-- Fixed height: the biography expands in place. -->
+		<HeroBackdrop src={person.profile_url} class="h-[520px]" />
 
 		<div
 			class="relative grid w-full items-start gap-5 px-4 pb-7 pt-8 md:grid-cols-[200px_1fr] md:gap-8 md:px-8 md:pb-12 md:pt-10 lg:grid-cols-[260px_1fr] lg:gap-10"
@@ -464,14 +449,5 @@
 		max-height: calc(1.65em * var(--bio-lines));
 		overflow: hidden;
 		mask-image: linear-gradient(180deg, #000 65%, transparent 100%);
-	}
-
-	.hero-overlay {
-		background-image: linear-gradient(
-			180deg,
-			rgb(11 11 16 / 0.3) 0%,
-			rgb(11 11 16 / 0.7) 60%,
-			var(--bg-deep) 100%
-		);
 	}
 </style>

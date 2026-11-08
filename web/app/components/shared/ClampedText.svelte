@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { tick } from "svelte";
+	import { heroHold } from "@lib/hero-hold.svelte";
 	import { cn } from "@lib/cn";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -20,9 +21,12 @@
 		onReadMore?: () => void;
 	} = $props();
 
-	// Collapsed again for each new text (client-side navigation).
+	// Collapsed again for each new text (client-side navigation). Through a
+	// derived: the prop's getter also tracks the parent's object, which a
+	// refetch replaces with the same text.
+	let currentText = $derived(text);
 	let ownExpanded = $derived.by(() => {
-		void text;
+		void currentText;
 		return false;
 	});
 	let expanded = $derived(onReadMore ? open : ownExpanded);
@@ -76,19 +80,34 @@
 					c.style.alignSelf = align;
 					c.style.marginTop = margin;
 				}
-				window.removeEventListener("resize", release);
+				window.removeEventListener("resize", onResize);
 				unpin = null;
 			};
-			// The pinned offsets belong to this layout only.
-			window.addEventListener("resize", release);
+			// The offsets belong to this layout width, which a pinch-zoom or a
+			// phone toolbar's `resize` leaves alone.
+			const width = document.documentElement.clientWidth;
+			const onResize = () => {
+				if (document.documentElement.clientWidth !== width) release();
+			};
+			window.addEventListener("resize", onResize);
 			unpin = release;
 			return;
 		}
 	}
+
 	$effect(() => {
 		if (!expanded) unpin?.();
 	});
 	$effect(() => () => unpin?.());
+
+	// Inside a hero, the backdrop keeps its height while this text is open.
+	// A pre-effect runs before the text grows, so the hold measures it collapsed.
+	const hold = heroHold();
+	$effect.pre(() => {
+		if (!expanded || !hold) return;
+		hold.open();
+		return () => hold.close();
+	});
 
 	async function toggle() {
 		if (!onReadMore) {
