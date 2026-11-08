@@ -5,6 +5,9 @@
 package cardiganntest
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"crypto/sha1"
 	"embed"
 	"fmt"
@@ -91,4 +94,28 @@ func Keep(dataDir, file string, spec []byte) string {
 		definitions.Keep(dataDir, file, commit, spec),
 	).To(Succeed())
 	return commit
+}
+
+// Tarball is the fixtures as upstream's archive of commit, the body
+// codeload.github.com answers a fetch of that commit with.
+func Tarball(commit string) []byte {
+	GinkgoHelper()
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	add := func(name string, body []byte) {
+		Expect(tw.WriteHeader(&tar.Header{
+			Name: "Indexers-" + commit + "/" + name, Mode: 0o644,
+			Size: int64(len(body)), Typeflag: tar.TypeReg,
+		})).To(Succeed())
+		_, err := tw.Write(body)
+		Expect(err).NotTo(HaveOccurred())
+	}
+	add("VERSIONS", []byte("MIN_VERSION=11\nMAX_VERSION=12\nCURRENT_VERSION=11\n"))
+	for _, f := range Files() {
+		add("definitions/v11/"+f.Name, f.Data)
+	}
+	Expect(tw.Close()).To(Succeed())
+	Expect(gz.Close()).To(Succeed())
+	return buf.Bytes()
 }

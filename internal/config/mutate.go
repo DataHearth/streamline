@@ -191,6 +191,13 @@ var (
 		"secret is file-managed; edit the file, not the UI",
 	)
 
+	// ErrSettingFileOnly refuses a built-in indexer setting ending
+	// SettingFileSuffix from the API: a path it could write is a file the
+	// server would read and send to a tracker.
+	ErrSettingFileOnly = errors.New(
+		"settings ending _file are written in the config file, not through the API",
+	)
+
 	// ErrOIDCTrustFileManaged refuses an issuer change on a provider the
 	// config file trusts. allow_admin and email_linking are file-only, but
 	// they belong to the provider entry, not to the issuer: re-pointing the

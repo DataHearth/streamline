@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 
@@ -57,6 +58,84 @@ var _ = Describe("Handler: Cardigann", Label("unit", "server", "indexers"), func
 					resp.StatusCode,
 				).To(Equal(http.StatusServiceUnavailable), path)
 			}
+		})
+	})
+
+	When("an indexer's version is neither kept nor the catalog's", func() {
+		var fetches int
+
+		BeforeEach(func() {
+			prev := definitions.Install(nil)
+			DeferCleanup(func() { definitions.Install(prev) })
+			fetches = 0
+			commit := cardiganntest.Upstream.Commit
+			orig := otelx.HTTPClient.Transport
+			otelx.HTTPClient.Transport = cardigannRoundTrip(
+				func(r *http.Request) (*http.Response, error) {
+					if r.URL.Host != "codeload.github.com" ||
+						!strings.HasSuffix(r.URL.Path, commit) {
+						return nil, errors.New("offline")
+					}
+					fetches++
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body: io.NopCloser(
+							bytes.NewReader(cardiganntest.Tarball(commit)),
+						),
+					}, nil
+				},
+			)
+			DeferCleanup(func() { otelx.HTTPClient.Transport = orig })
+			configtest.SetupFile(indexerOverride(map[string]any{
+				"name": "3D", "protocol": "cardigann", "enabled": true,
+				"cardigann": map[string]any{
+					"definition": "3dtorrents", "commit": commit,
+					"settings": map[string]any{"username": "u", "password": "p"},
+				},
+			}))
+		})
+
+		It("fetches it to list the indexer", func() {
+			app.indexers.EXPECT().Session(mock.Anything, "3D").
+				Return(indexer.SessionState{}, nil)
+			resp := app.do(app.req(http.MethodGet, "/api/v1/indexers", "", nil))
+			defer resp.Body.Close()
+			var items []Indexer
+			Expect(json.NewDecoder(resp.Body).Decode(&items)).To(Succeed())
+			Expect(items).To(HaveLen(1))
+			Expect(items[0].Host).To(Equal("www.3dtorrents.org"))
+			Expect(items[0].Settings).
+				To(HaveValue(HaveKeyWithValue("username", "u")))
+			Expect(items[0].SecretsSet).To(HaveValue(ConsistOf("password")))
+			// None when an earlier spec's fetch of the commit is remembered.
+			Expect(fetches).To(BeNumerically("<=", 1))
+		})
+
+		It("tries upstream once a listing when it cannot be reached", func() {
+			attempts := 0
+			otelx.HTTPClient.Transport = cardigannRoundTrip(
+				func(*http.Request) (*http.Response, error) {
+					attempts++
+					return nil, errors.New("offline")
+				},
+			)
+			entry := func(name string) map[string]any {
+				return map[string]any{
+					"name": name, "protocol": "cardigann", "enabled": true,
+					"cardigann": map[string]any{
+						"definition": "3dtorrents",
+						// One no spec fetched: the last fetch is remembered.
+						"commit": strings.Repeat("1", 40),
+					},
+				}
+			}
+			configtest.SetupFile(indexerOverride(entry("A"), entry("B")))
+			app.indexers.EXPECT().Session(mock.Anything, mock.Anything).
+				Return(indexer.SessionState{}, nil).Times(2)
+			resp := app.do(app.req(http.MethodGet, "/api/v1/indexers", "", nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(attempts).To(Equal(1))
 		})
 	})
 

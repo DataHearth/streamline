@@ -6385,13 +6385,13 @@ type Indexer struct {
 	// Proxy A `cardigann` indexer's proxy, credentials stripped.
 	Proxy *string `json:"proxy,omitempty"`
 
-	// SecretsSet The secret settings of a `cardigann` indexer that hold a value.
+	// SecretsSet The secret settings of a `cardigann` indexer that hold a value, inline or read from a file.
 	SecretsSet *[]string `json:"secrets_set,omitempty"`
 
 	// Session A `cardigann` indexer's tracker login. Absent for the other protocols.
 	Session *IndexerSession `json:"session,omitempty"`
 
-	// Settings A `cardigann` indexer's settings, secret ones left out (see `secrets_set`).
+	// Settings A `cardigann` indexer's settings, secret ones left out (see `secrets_set`). A setting the config file reads from a file is shown as `<name>_file` with its path.
 	Settings *map[string]string `json:"settings,omitempty"`
 
 	// Site A `cardigann` indexer's chosen link, when not the definition's first.
@@ -6427,7 +6427,7 @@ type IndexerCreate struct {
 	// Proxy On an update, absent keeps the stored proxy and an empty string clears it.
 	Proxy *string `json:"proxy,omitempty"`
 
-	// Settings By setting name. On an update, a secret setting left empty or out keeps its stored value, unless the definition changes.
+	// Settings By setting name. On an update, a secret setting left empty or out keeps its stored value, unless the definition changes. A key ending `_file` is refused (422): a setting is read from a file only through the config file, and a value sent for such a setting, or a move of its `site` or `proxy` while it holds a secret, answers 403 `secret_file_managed`.
 	Settings *map[string]string `json:"settings,omitempty"`
 	Site     *string            `json:"site,omitempty"`
 	UseSsl   *bool              `json:"use_ssl,omitempty"`

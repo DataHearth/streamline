@@ -1646,6 +1646,13 @@ func cardigannSettingsToAPI(
 		return shown, set
 	}
 	for _, s := range def.Settings {
+		if file, ok := c.SettingFile(s.Name); ok {
+			shown[s.Name+config.SettingFileSuffix] = file
+			if s.Secret {
+				set = append(set, s.Name)
+			}
+			continue
+		}
 		v, ok := c.Settings[s.Name]
 		switch {
 		case !ok:

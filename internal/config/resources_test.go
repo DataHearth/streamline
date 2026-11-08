@@ -1107,14 +1107,16 @@ var _ = Describe("cardigann indexer", Label("unit", "config"), func() {
 
 		setup := func(settings map[string]any) *config.Config {
 			GinkgoHelper()
-			return configtest.Setup(map[string]any{"indexers": []any{map[string]any{
-				"name": "3dtorrents", "protocol": "cardigann", "enabled": true,
-				"cardigann": map[string]any{
-					"definition": "3dtorrents",
-					"commit":     cardiganntest.Upstream.Commit,
-					"settings":   settings,
-				},
-			}}})
+			return configtest.SetupFile(
+				map[string]any{"indexers": []any{map[string]any{
+					"name": "3dtorrents", "protocol": "cardigann", "enabled": true,
+					"cardigann": map[string]any{
+						"definition": "3dtorrents",
+						"commit":     cardiganntest.Upstream.Commit,
+						"settings":   settings,
+					},
+				}}},
+			)
 		}
 
 		It("hands the engine the file's contents under the setting's name", func() {
@@ -1138,6 +1140,66 @@ var _ = Describe("cardigann indexer", Label("unit", "config"), func() {
 			Expect(c.CheckCardigann(c.Indexers[0])).
 				To(MatchError(ContainSubstring(`unknown setting "nosuch"`)))
 		})
+
+		patch := func(c config.CardigannPatch) error {
+			return config.UpdateIndexer(
+				ctx, "3dtorrents", config.IndexerPatch{Cardigann: &c},
+			)
+		}
+
+		It("never takes a file reference through the API", func() {
+			e := cardigann("3dtorrents", map[string]string{"password_file": path})
+			e.Name = "other"
+			Expect(config.AddIndexer(ctx, e)).
+				To(MatchError(config.ErrSettingFileOnly))
+			setup(map[string]any{"username": "u", "password_file": path})
+			Expect(patch(config.CardigannPatch{
+				Settings: map[string]string{"username_file": path},
+			})).To(MatchError(config.ErrSettingFileOnly))
+		})
+
+		It("keeps the file reference through an edit of the other settings", func() {
+			setup(map[string]any{"username": "u", "password_file": path})
+			Expect(patch(config.CardigannPatch{
+				Settings: map[string]string{"username": "v", "password": ""},
+			})).To(Succeed())
+			got, _ := config.FindIndexer("3dtorrents")
+			Expect(got.Cardigann.Settings).To(Equal(
+				map[string]string{"username": "v", "password_file": path},
+			))
+		})
+
+		It("refuses a value for a setting its file holds", func() {
+			setup(map[string]any{"username": "u", "password_file": path})
+			Expect(patch(config.CardigannPatch{
+				Settings: map[string]string{"username": "u", "password": "new"},
+			})).To(MatchError(config.ErrSecretFileManaged))
+		})
+
+		It("refuses to move a file-held secret to another destination", func() {
+			setup(map[string]any{"username": "u", "password_file": path})
+			proxy := "http://vpn:3128"
+			Expect(patch(config.CardigannPatch{Proxy: &proxy})).
+				To(MatchError(config.ErrSecretFileDestination))
+		})
+
+		It("refuses a definition change that would drop a file reference", func() {
+			setup(map[string]any{"username": "u", "password_file": path})
+			def, commit := "yts", cardiganntest.Upstream.Commit
+			Expect(patch(config.CardigannPatch{Definition: &def, Commit: &commit})).
+				To(MatchError(config.ErrSecretFileDestination))
+		})
+
+		It("reads an empty file reference as no setting", func() {
+			c := setup(map[string]any{"password": "p", "password_file": ""})
+			Expect(c.Validate()).To(Succeed())
+			Expect(c.Indexers[0].Cardigann.Resolved()).
+				To(Equal(map[string]string{"password": "p"}))
+		})
+	})
+
+	It("resolves an entry with no settings to none", func() {
+		Expect((&config.CardigannIndexer{Definition: "yts"}).Resolved()).To(BeNil())
 	})
 
 	It("rejects an entry whose definition is missing or does not run", func() {

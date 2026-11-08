@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -469,6 +471,119 @@ var _ = Describe(
 				Expect(got.Cardigann.Settings).To(Equal(map[string]string{
 					"username": "u2", "password": "p",
 				}))
+			})
+
+			Context("with a setting read from a file", func() {
+				var path string
+
+				BeforeEach(func() {
+					path = filepath.Join(GinkgoT().TempDir(), "pass")
+					Expect(os.WriteFile(path, []byte("p"), 0o600)).To(Succeed())
+					configtest.SetupFile(indexerOverride(map[string]any{
+						"name": "3D", "protocol": "cardigann", "enabled": true,
+						"cardigann": map[string]any{
+							"definition": "3dtorrents",
+							"commit":     cardiganntest.Upstream.Commit,
+							"settings": map[string]any{
+								"username": "u", "password_file": path,
+							},
+						},
+					}))
+				})
+
+				send := func(method, url, body string) *http.Response {
+					GinkgoHelper()
+					req := app.req(method, url, "", strings.NewReader(body))
+					req.Header.Set("Content-Type", "application/json")
+					return app.do(req)
+				}
+
+				It("shows the file's path and counts the secret as set", func() {
+					app.indexers.EXPECT().Session(mock.Anything, "3D").
+						Return(indexer.SessionState{}, nil)
+					resp, err := http.Get(app.srv.URL + "/api/v1/indexers")
+					Expect(err).NotTo(HaveOccurred())
+					defer resp.Body.Close()
+					var items []Indexer
+					Expect(json.NewDecoder(resp.Body).Decode(&items)).To(Succeed())
+					Expect(items).To(HaveLen(1))
+					Expect(items[0].Settings).To(HaveValue(Equal(map[string]string{
+						"username": "u", "password_file": path,
+					})))
+					Expect(items[0].SecretsSet).To(HaveValue(ConsistOf("password")))
+				})
+
+				It("lists an empty file reference as no setting", func() {
+					configtest.SetupFile(indexerOverride(map[string]any{
+						"name": "3D", "protocol": "cardigann", "enabled": true,
+						"cardigann": map[string]any{
+							"definition": "3dtorrents",
+							"commit":     cardiganntest.Upstream.Commit,
+							"settings": map[string]any{
+								"username":      "u",
+								"password_file": "",
+							},
+						},
+					}))
+					app.indexers.EXPECT().Session(mock.Anything, "3D").
+						Return(indexer.SessionState{}, nil)
+					resp, err := http.Get(app.srv.URL + "/api/v1/indexers")
+					Expect(err).NotTo(HaveOccurred())
+					defer resp.Body.Close()
+					var items []Indexer
+					Expect(json.NewDecoder(resp.Body).Decode(&items)).To(Succeed())
+					Expect(items[0].Settings).
+						To(HaveValue(Equal(map[string]string{"username": "u"})))
+					Expect(items[0].SecretsSet).To(HaveValue(BeEmpty()))
+				})
+
+				// The mock carries no Test expectation: a probe fails the spec.
+				It("refuses a file reference in a draft before probing it", func() {
+					resp := send(
+						http.MethodPost,
+						"/api/v1/indexers/test",
+						`{"name":"d","protocol":"cardigann","definition":"3dtorrents",
+						  "proxy":"http://mine:3128",
+						  "settings":{"username":"u","password_file":"`+path+`"}}`,
+					)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				})
+
+				It("refuses a file reference sent through the API", func() {
+					resp := send(
+						http.MethodPost,
+						"/api/v1/indexers",
+						`{"name":"3E","protocol":"cardigann","definition":"3dtorrents",
+						  "enabled":true,"settings":{"password_file":"/etc/passwd"}}`,
+					)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+					resp2 := send(http.MethodPut, "/api/v1/indexers/3D",
+						`{"name":"3D","settings":{"username_file":"/etc/passwd"}}`)
+					defer resp2.Body.Close()
+					Expect(
+						resp2.StatusCode,
+					).To(Equal(http.StatusUnprocessableEntity))
+				})
+
+				It(
+					"answers 403 secret_file_managed to a value for the file's setting",
+					func() {
+						resp := send(
+							http.MethodPut,
+							"/api/v1/indexers/3D",
+							`{"name":"3D","settings":{"username":"u","password":"new"}}`,
+						)
+						defer resp.Body.Close()
+						Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+						var body Error
+						Expect(
+							json.NewDecoder(resp.Body).Decode(&body),
+						).To(Succeed())
+						Expect(body.Code).To(HaveValue(Equal("secret_file_managed")))
+					},
+				)
 			})
 
 			It(

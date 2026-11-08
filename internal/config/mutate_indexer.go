@@ -56,6 +56,9 @@ func (p CardigannPatch) apply(
 	c *Config,
 	ix IndexerEntry,
 ) (*CardigannIndexer, error) {
+	if NamesSettingFile(p.Settings) {
+		return nil, ErrSettingFileOnly
+	}
 	old := ix.Cardigann
 	next := &CardigannIndexer{}
 	if old != nil {
@@ -63,6 +66,11 @@ func (p CardigannPatch) apply(
 		next.Settings = maps.Clone(old.Settings)
 	}
 	if p.Definition != nil && *p.Definition != next.Definition {
+		for k, v := range next.Settings {
+			if strings.HasSuffix(k, SettingFileSuffix) && v != "" {
+				return nil, ErrSecretFileDestination
+			}
+		}
 		next.Definition, next.Settings, next.Site = *p.Definition, nil, ""
 	}
 	if p.Commit != nil {
@@ -99,12 +107,24 @@ func (p CardigannPatch) apply(
 		}
 	}
 	// Non-secret settings come from the patch when it carries any, else
-	// stay; a secret only ever comes from the patch or the store.
+	// stay; a secret only ever comes from the patch or the store, and a
+	// setting read from a file only from the file.
 	merged := maps.Clone(next.Settings)
 	if p.Settings != nil {
 		merged = maps.Clone(p.Settings)
 	}
 	for _, s := range def.Settings {
+		if file, ok := next.SettingFile(s.Name); ok {
+			switch {
+			case p.Settings[s.Name] != "":
+				return nil, ErrSecretFileManaged
+			case moved && s.Secret:
+				return nil, ErrSecretFileDestination
+			}
+			delete(merged, s.Name)
+			merged[s.Name+SettingFileSuffix] = file
+			continue
+		}
 		if !s.Secret {
 			continue
 		}
@@ -126,6 +146,17 @@ func (p CardigannPatch) apply(
 	return next, nil
 }
 
+// NamesSettingFile reports whether settings hold a key ending SettingFileSuffix,
+// which only the config file may write (ErrSettingFileOnly).
+func NamesSettingFile(settings map[string]string) bool {
+	for k := range settings {
+		if strings.HasSuffix(k, SettingFileSuffix) {
+			return true
+		}
+	}
+	return false
+}
+
 func AddIndexer(ctx context.Context, e IndexerEntry) error {
 	return Update(ctx, func(c *Config) error {
 		for _, x := range c.Indexers {
@@ -134,6 +165,9 @@ func AddIndexer(ctx context.Context, e IndexerEntry) error {
 			}
 		}
 		if e.Protocol == "cardigann" {
+			if e.Cardigann != nil && NamesSettingFile(e.Cardigann.Settings) {
+				return ErrSettingFileOnly
+			}
 			if err := c.CheckCardigann(e); err != nil {
 				return err
 			}

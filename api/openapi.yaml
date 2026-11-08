@@ -12981,12 +12981,15 @@ components:
             type: string
           description: >-
             A `cardigann` indexer's settings, secret ones left out (see
-            `secrets_set`).
+            `secrets_set`). A setting the config file reads from a file is
+            shown as `<name>_file` with its path.
         secrets_set:
           type: array
           items:
             type: string
-          description: The secret settings of a `cardigann` indexer that hold a value.
+          description: >-
+            The secret settings of a `cardigann` indexer that hold a value,
+            inline or read from a file.
         proxy:
           type: string
           description: A `cardigann` indexer's proxy, credentials stripped.
@@ -13224,7 +13227,11 @@ components:
             type: string
           description: >-
             By setting name. On an update, a secret setting left empty or out
-            keeps its stored value, unless the definition changes.
+            keeps its stored value, unless the definition changes. A key
+            ending `_file` is refused (422): a setting is read from a file
+            only through the config file, and a value sent for such a
+            setting, or a move of its `site` or `proxy` while it holds a
+            secret, answers 403 `secret_file_managed`.
         proxy:
           type: string
           description: >-

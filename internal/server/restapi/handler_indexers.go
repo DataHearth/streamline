@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/cardigann/definitions"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/indexer"
 )
@@ -20,11 +21,38 @@ func (s *Server) ListIndexers(
 		return ListIndexers403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
 	c := config.Get()
+	fetchUnkept(ctx, c)
 	items := make([]Indexer, 0, len(c.Indexers))
 	for _, e := range c.Indexers {
 		items = append(items, s.indexerWithSession(ctx, e))
 	}
 	return ListIndexers200JSONResponse(items), nil
+}
+
+// fetchUnkept fetches the pinned version of every built-in indexer that has
+// none kept: one written in the file has none until the update job or a
+// search fetches it, and its card would list no site and no settings. The
+// first failure ends it, so an unreachable upstream costs one attempt.
+func fetchUnkept(ctx context.Context, c *config.Config) {
+	for _, e := range c.Indexers {
+		if e.Protocol != "cardigann" || e.Cardigann == nil ||
+			e.Cardigann.Commit == "" {
+			continue
+		}
+		if _, err := c.CardigannDefinition(
+			e,
+		); !errors.Is(
+			err,
+			definitions.ErrNotKept,
+		) {
+			continue
+		}
+		if _, err := pinnedVersion(ctx, e); err != nil {
+			slog.WarnContext(ctx, "could not fetch a built-in indexer's definition",
+				"indexer.name", e.Name, "error", err)
+			return
+		}
+	}
 }
 
 // indexerFromBody reads a create or draft-test body into a config entry.
@@ -256,6 +284,13 @@ func (s *Server) TestDraftIndexer(
 		Cardigann: e.Cardigann,
 	}
 	if e.Protocol == "cardigann" {
+		if e.Cardigann != nil && config.NamesSettingFile(e.Cardigann.Settings) {
+			return TestDraftIndexer422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(
+					config.ErrSettingFileOnly.Error(),
+				),
+			}, nil
+		}
 		// The target is one of the definition's own links, never one the
 		// caller names; what can be wrong is the definition or a setting —
 		// and the proxy, the one address the caller does name, which the
