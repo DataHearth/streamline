@@ -589,7 +589,16 @@ indexers:
       definition: nyaasi
       settings:
         filter-id: "2"     # trusted uploads only
+  - name: C411
+    protocol: cardigann
+    enabled: true
+    cardigann:
+      definition: c411
+      settings:
+        apikey_file: /etc/streamline/secrets/c411-apikey
 ```
+
+**Settings from a file.** Any setting can be read from a file instead, like every other `*_file` secret: name it with `_file` after it (`apikey_file`, `password_file`) and give the file's path. The file's contents, trimmed, become the setting's value; Streamline reads it at start and refuses to start when it cannot. A setting is given one way or the other, never both; an empty path counts as not set. A `_file` setting can only be written in this file — the API refuses one, refuses a new value for a setting a file holds, and refuses to change the indexer's definition, or to move its `site` or `proxy` while a file holds one of its secrets (change those here too). The edit form shows a setting read from a file as its path.
 
 Private trackers work too: give the definition's settings — usually `username` and `password`, sometimes a `cookie`, an API key or a passkey — and Streamline logs in when it needs to, keeps the session for 30 days and logs in again when the tracker says it expired. A login the tracker refuses is retried with a growing delay (one minute, then five, up to a day), so a wrong password cannot get your account banned; fix the settings and use **Log in** on the indexer's card to try at once. A tracker whose login form shows an image captcha is logged in from that card too: Streamline shows the captcha and you type it. A site behind a browser challenge (Cloudflare, DDoS-Guard) needs a challenge solver: run [trawl](https://github.com/germondai/trawl), [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) or Byparr and point `cardigann.solver_url` at it. When a tracker answers with a challenge page, Streamline has the solver open it in a real browser and reuses the cookies and browser identity it got through with until they expire. A clearance is only good for the address that earned it, so the solver must reach the internet from the same address as Streamline; if Streamline's tracker traffic leaves through a VPN, give the indexer that VPN's proxy as `proxy` — the solver is told to use it too.
 
@@ -600,7 +609,7 @@ Private trackers work too: give the definition's settings — usually `username`
 
 **Definition updates.** The `cardigann-update` [scheduled job](Scheduled-Jobs) reads Prowlarr's latest definitions every day and moves each of your built-in indexers to the new version of its own, so a tracker that moved to a new domain keeps working. An update that would send one of your configured trackers to other domains, or change how it logs in, is not applied by itself: Settings → Indexers shows it with the exact change, and you approve it or keep the version you have. A version you turn down is not offered again until Streamline restarts. A definition Prowlarr removes leaves your indexer on the version it has.
 
-**Read-only configuration.** With `read_only: true` Streamline cannot write the file, so every update waits under Settings → Indexers: **Copy commit** puts the new version's commit on your clipboard, to set as the indexer's `commit` in your config and redeploy.
+**Read-only configuration.** With `read_only: true` Streamline cannot write the file, so every update waits under Settings → Indexers: **Copy commit** puts the new version's commit on your clipboard, to set as the indexer's `commit` in your config and redeploy. Adding one still works from the UI: **Add built-in** opens the usual form, and **Show YAML** turns what you filled in into the entry to paste under `indexers:`, pinned to the catalog's commit, with only the settings you changed. Secrets are written in it as you typed them; move each to a file with `<setting>_file` before the entry goes into git.
 
 Streamline checks an indexer's definition when it loads (regexes compile, templates parse, settings and site match it); one that does not hold up logs a warning and stays unused, and the rest of Streamline starts as usual.
 

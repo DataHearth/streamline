@@ -51,7 +51,11 @@ the commit is the one in force. Only regular `definitions/v12/*.yml`,
   tarball (the last one fetched apart from the catalog is remembered, so entries pinned to
   it share one download). `definitions.Pinned` never reaches the network: it is what
   `config` reads (`Config.CardigannDefinition`, inside `config.Update`), so every caller
-  that pins or edits an entry resolves first. `update.Run` prunes every commit no entry is
+  that pins or edits an entry resolves first. `GET /indexers` resolves too
+  (`fetchUnkept`): an entry written in the file has no kept version until the boot run of
+  the update job, and its card listed no site and no settings until then; the first
+  failed fetch ends that pass, so an unreachable GitHub costs one attempt per listing.
+  `update.Run` prunes every commit no entry is
   pinned to after its writes, and every directory an older converter wrote. The data
   directory is state, so a read-only configuration still keeps versions.
 - **`convert.Version` is bumped whenever the converter's output changes for the same
@@ -477,6 +481,14 @@ newznab root of the kind, or page past the first response.
   picking the first link back on an edit reaches the server (absent means "keep"). A
   definition with a captcha says to save first and log in from the card; one with a
   challenge names `cardigann.solver_url`.
+- **On a read-only instance, *Add built-in* still opens the form** (outside
+  `ReadOnlyFieldset`, so nothing locks) and its submit is *Show YAML*: the browser renders
+  the entry (`lib/cardigann-yaml.ts`, every string JSON-quoted, which is valid YAML and
+  keeps `"true"` a string) pinned to `GET /cardigann/updates`' `upstream.commit`, with only
+  the settings that differ from the form's seed — the Plex credentials pattern. Nothing is
+  validated until the instance loads it. Editing an existing entry stays the locked view.
+  `ConfigFormShell`/`ConfigModalFooter` take `showSubmit` for this; it defaults to
+  `!config.readOnly`.
 
 ## Logins
 
@@ -579,6 +591,28 @@ type-only rule would leave every one in clear in the config audit. A `text` sett
 secret when its name contains `pass`, `key`, `cookie`, `token`, `2fa` or `secret`, or is
 `pin` (`secretHints`). Over-flagging costs a masked input; under-flagging leaks a
 credential. When the config entry lands, its redaction reads this flag — not key names.
+
+**Any setting can come from a file**: `settings.<name>_file: <path>`, read with every other
+`*_file` secret (`loadSecretFiles`, trimmed, unreadable fails the boot) and resolved by
+`CardigannIndexer.Resolved()` — which the engine, `CheckCardigann` and the session's
+`config_hash` all read, so a rotated file retires the session like an edited value
+(`Resolved` stays nil for nil `Settings`, so an entry without settings keeps the hash it
+had before). An empty path is no file, as for every other `*_file` (`SettingFile`). Both
+forms of one setting is a load error (`checkIndexers`). The suffix is read on every key,
+so `convert.Check` refuses a definition declaring a setting that ends `_file` (none
+upstream does at `8c74dfa`) rather than leave the config guessing. A `_file` key is
+**file-only**: `AddIndexer` and `CardigannPatch.apply` answer `ErrSettingFileOnly` (422)
+to one, since a path the API could write is a file the server would read and send to a
+tracker; a patch sending a value for a file-held setting is `ErrSecretFileManaged`, and a
+`site`/`proxy` move while a file holds a secret, or a definition change while any setting
+is file-held (it would drop the reference), is `ErrSecretFileDestination` (both 403
+`secret_file_managed`); every other edit carries the `_file` keys through, and the draft
+test (`POST /indexers/test`) refuses `_file` keys before probing. The SPA's edit form
+shows a file-held setting as its path and never sends it, since a seeded default sent
+back would be refused as a new value. YAML escapes U+0085, U+2028 and U+2029, which JSON
+leaves bare and YAML folds to a space. The API shows
+a file-held setting as `<name>_file` with its path and counts a secret one in
+`secrets_set`.
 
 ## Licensing
 
