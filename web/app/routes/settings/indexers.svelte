@@ -203,8 +203,6 @@
 		<button
 			type="button"
 			onclick={() => (catalogOpen = true)}
-			disabled={config.readOnly}
-			title={config.readOnly ? READONLY_HINT : null}
 			class="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3.5 py-2 text-sm font-semibold text-fg transition hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			<Library size={16} aria-hidden="true" />

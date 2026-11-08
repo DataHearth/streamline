@@ -26,6 +26,7 @@
 		formId: string;
 		submitLabel: string;
 		submitDisabled?: boolean;
+		showSubmit?: boolean;
 		size?: "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
 		onClose: () => void;
 		children: Snippet;
@@ -44,12 +45,14 @@
 		formId,
 		submitLabel,
 		submitDisabled = false,
+		showSubmit: showSubmitProp,
 		size = "xl",
 		onClose,
 		children,
 		test,
 		note,
 	}: Props = $props();
+	let submitShown = $derived(showSubmitProp ?? !config.readOnly);
 
 	closeOnBack(() => open, () => onClose());
 
@@ -129,7 +132,7 @@
 					onclick={onClose}
 					class="min-h-11 shrink-0 rounded-md px-2 py-2 text-sm text-fg-muted transition active:bg-bg-hover"
 				>
-					{config.readOnly ? i18n.common_close() : i18n.common_cancel()}
+					{submitShown ? i18n.common_cancel() : i18n.common_close()}
 				</button>
 				<h2
 					id={titleId}
@@ -137,7 +140,7 @@
 				>
 					{title}
 				</h2>
-				{#if config.readOnly}
+				{#if !submitShown}
 					<span class="w-14 shrink-0" aria-hidden="true"></span>
 				{:else}
 					<button
@@ -171,6 +174,7 @@
 				{formId}
 				{submitLabel}
 				{submitDisabled}
+				showSubmit={submitShown}
 				onCancel={onClose}
 			>
 				{#snippet left()}

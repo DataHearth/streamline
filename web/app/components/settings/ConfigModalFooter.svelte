@@ -7,17 +7,22 @@
 		formId,
 		submitLabel,
 		submitDisabled = false,
+		showSubmit: showSubmitProp,
 		onCancel,
 		left,
 	}: {
 		formId: string;
 		submitLabel: string;
 		submitDisabled?: boolean;
+		// A form that writes nothing back (one that only shows its result)
+		// keeps its submit on a read-only instance.
+		showSubmit?: boolean;
 		onCancel: () => void;
 		// Rendered first so an `mr-auto` wrapper inside it pushes the
 		// cancel/submit pair to the right edge of the footer.
 		left?: Snippet;
 	} = $props();
+	let submitShown = $derived(showSubmitProp ?? !config.readOnly);
 </script>
 
 {@render left?.()}
@@ -26,9 +31,9 @@
 	onclick={onCancel}
 	class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
 >
-	{config.readOnly ? i18n.common_close() : i18n.common_cancel()}
+	{submitShown ? i18n.common_cancel() : i18n.common_close()}
 </button>
-{#if !config.readOnly}
+{#if submitShown}
 	<button
 		type="submit"
 		form={formId}

@@ -7,6 +7,7 @@
 	import { createForm } from "@tanstack/svelte-form";
 	import { Info, TriangleAlert } from "@lucide/svelte";
 	import ConfigFormShell from "@components/modals/ConfigFormShell.svelte";
+	import CardigannYamlModal from "@components/settings/CardigannYamlModal.svelte";
 	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
 	import TestConnectionButton from "@components/settings/TestConnectionButton.svelte";
 	import TextField from "@components/forms/TextField.svelte";
@@ -16,7 +17,13 @@
 	import { config } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
 	import { cardigannIndexerForm } from "@lib/schemas";
-	import type { CardigannDefinition, CardigannSetting, Indexer } from "@lib/types";
+	import { indexerYaml } from "@lib/cardigann-yaml";
+	import type {
+		CardigannDefinition,
+		CardigannSetting,
+		CardigannUpdates,
+		Indexer,
+	} from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// A built-in indexer's form, generated from its definition's settings.
@@ -40,6 +47,19 @@
 
 	let definition = $derived(editing?.definition ?? file);
 	let open = $derived(definition !== null);
+	// A read-only instance can still fill in a new indexer: the form shows
+	// the entry to paste into the config file instead of saving it.
+	let drafting = $derived(config.readOnly && editing === null);
+	let yaml = $state<string | null>(null);
+
+	const updates = createQuery<CardigannUpdates>(() => ({
+		queryKey: ["cardigann", "updates"],
+		queryFn: () => api<CardigannUpdates>("/cardigann/updates"),
+		enabled: drafting && open,
+		// Opening the catalog may have just read upstream; an answer cached
+		// before it carries no commit to pin.
+		staleTime: 0,
+	}));
 
 	// An existing indexer is edited against the version it carries, which an
 	// update may not have reached; a new one against the catalog's.
@@ -67,10 +87,14 @@
 		return folded?.key ?? options[0]?.key ?? "";
 	}
 
+	// A setting the config file reads from a file is shown, never sent: the
+	// server refuses a value for it.
+	const fileOf = (name: string) => editing?.settings?.[`${name}_file`];
+
 	function seed(d: CardigannDefinition): Values {
 		const settings: Record<string, string> = {};
 		for (const s of d.settings) {
-			if (!valued(s.type)) continue;
+			if (!valued(s.type) || fileOf(s.name)) continue;
 			const stored = editing?.settings?.[s.name];
 			if (s.type === "select") {
 				settings[s.name] = selectKey(s, stored ?? s.default);
@@ -137,7 +161,26 @@
 			settings: {},
 		} as Values,
 		validators: { onChange: cardigannIndexerForm },
-		onSubmit: ({ value }) => save.mutate(value),
+		onSubmit: ({ value }) => {
+			if (!drafting) {
+				save.mutate(value);
+				return;
+			}
+			const defaults = def.data ? seed(def.data).settings : {};
+			yaml = indexerYaml({
+				name: value.name,
+				enabled: value.enabled,
+				priority: value.priority,
+				private: value.private,
+				definition: definition ?? "",
+				commit: updates.data?.upstream.commit ?? "",
+				site: value.site === def.data?.links[0] ? "" : value.site,
+				proxy: value.proxy,
+				settings: Object.fromEntries(
+					Object.entries(value.settings).filter(([k, v]) => v !== defaults[k]),
+				),
+			});
+		},
 	}));
 
 	$effect(() => {
@@ -149,19 +192,25 @@
 
 <ConfigFormShell
 	{open}
-	title={config.readOnly
-		? i18n.indexer_view()
-		: editing
-			? i18n.indexer_edit()
-			: i18n.cardigann_add_title({ name: def.data?.name ?? "" })}
+	title={editing
+		? config.readOnly
+			? i18n.indexer_view()
+			: i18n.indexer_edit()
+		: i18n.cardigann_add_title({ name: def.data?.name ?? "" })}
 	size="xl"
 	formId="cardigann-form"
-	submitLabel={form.state.isSubmitting
-		? i18n.common_saving()
-		: editing
-			? i18n.common_save_changes()
-			: i18n.indexer_add()}
-	submitDisabled={!def.data || !form.state.canSubmit || form.state.isSubmitting}
+	showSubmit={drafting || undefined}
+	submitLabel={drafting
+		? i18n.cardigann_show_yaml()
+		: form.state.isSubmitting
+			? i18n.common_saving()
+			: editing
+				? i18n.common_save_changes()
+				: i18n.indexer_add()}
+	submitDisabled={!def.data ||
+		!form.state.canSubmit ||
+		form.state.isSubmitting ||
+		(drafting && !updates.data?.upstream.commit)}
 	{onClose}
 >
 	<form
@@ -177,7 +226,7 @@
 			<p class="text-sm text-status-failed">{errorText(def.error)}</p>
 		{:else if def.data}
 			{@const d = def.data}
-			<ReadOnlyFieldset>
+			{#snippet fields()}
 				<div class="space-y-5">
 					<div class="rounded-md border border-border bg-bg-card px-3 py-2">
 						<div class="text-xs font-semibold text-fg">{d.name}</div>
@@ -242,7 +291,14 @@
 
 					<div class="space-y-4 rounded-lg border border-border bg-bg-card p-5">
 						{#each d.settings as s (s.name)}
-							{#if s.type === "text" || s.type === "password"}
+							{#if valued(s.type) && fileOf(s.name)}
+								<div class="text-sm">
+									<div class="font-medium text-fg">{s.label}</div>
+									<div class="text-xs text-fg-muted">
+										{i18n.cardigann_setting_file({ path: fileOf(s.name) ?? "" })}
+									</div>
+								</div>
+							{:else if s.type === "text" || s.type === "password"}
 								<form.Field name={`settings.${s.name}`}>
 									{#snippet children(field)}
 										<TextField
@@ -304,7 +360,12 @@
 						{/snippet}
 					</form.Field>
 				</div>
-			</ReadOnlyFieldset>
+			{/snippet}
+			{#if drafting}
+				<fieldset class="min-w-0">{@render fields()}</fieldset>
+			{:else}
+				<ReadOnlyFieldset>{@render fields()}</ReadOnlyFieldset>
+			{/if}
 		{/if}
 	</form>
 
@@ -325,3 +386,9 @@
 		{/if}
 	{/snippet}
 </ConfigFormShell>
+
+<CardigannYamlModal
+	title={i18n.cardigann_add_title({ name: def.data?.name ?? "" })}
+	{yaml}
+	onClose={() => (yaml = null)}
+/>
