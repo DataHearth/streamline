@@ -7,6 +7,7 @@ import (
 	"maps"
 
 	"github.com/datahearth/streamline/internal/cardigann/definitions"
+	"github.com/datahearth/streamline/internal/cardigann/engine"
 )
 
 var (
@@ -34,7 +35,11 @@ type IndexerPatch struct {
 // CardigannPatch edits a built-in indexer's definition block. Settings
 // replaces the settings — but a secret one sent empty or left out keeps its
 // stored value, since the API never returns one to send back — unless the
-// definition changes, which starts the settings over. Proxy "" clears it.
+// definition changes, which starts the settings over, or the edit moves
+// where the secrets are sent: another of the definition's links, or a
+// proxy they will now pass through. Then every stored secret must be sent
+// again (ErrSecretRequired), as a moved host asks for a Torznab key. Proxy
+// "" clears it.
 type CardigannPatch struct {
 	Definition *string
 	Site       *string
@@ -62,22 +67,47 @@ func (p CardigannPatch) apply(
 	if p.Proxy != nil {
 		next.Proxy = *p.Proxy
 	}
-	if p.Settings == nil {
+	if p.Settings == nil && len(next.Settings) == 0 {
 		return next, nil
 	}
 	def, err := definitions.Load(dir, next.Definition)
 	if err != nil {
 		return nil, err
 	}
-	merged := maps.Clone(p.Settings)
+	moved := false
+	if old != nil && next.Definition == old.Definition {
+		from, err := engine.Site(def, old.Site)
+		if err != nil {
+			return nil, err
+		}
+		to, err := engine.Site(def, next.Site)
+		if err != nil {
+			return nil, err
+		}
+		moved = from.String() != to.String() || next.Proxy != old.Proxy
+	}
+	// Non-secret settings come from the patch when it carries any, else
+	// stay; a secret only ever comes from the patch or the store.
+	merged := maps.Clone(next.Settings)
+	if p.Settings != nil {
+		merged = maps.Clone(p.Settings)
+	}
 	for _, s := range def.Settings {
-		if !s.Secret || merged[s.Name] != "" {
+		if !s.Secret {
 			continue
 		}
-		if v, ok := next.Settings[s.Name]; ok {
-			merged[s.Name] = v
-		} else {
+		if p.Settings[s.Name] != "" {
+			merged[s.Name] = p.Settings[s.Name]
+			continue
+		}
+		stored := next.Settings[s.Name]
+		switch {
+		case stored == "":
 			delete(merged, s.Name)
+		case moved:
+			return nil, ErrSecretRequired
+		default:
+			merged[s.Name] = stored
 		}
 	}
 	next.Settings = merged

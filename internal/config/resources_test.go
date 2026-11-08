@@ -1040,6 +1040,38 @@ var _ = Describe("cardigann indexer", Label("unit", "config"), func() {
 		Expect(got.Cardigann.Proxy).To(BeEmpty())
 	})
 
+	It("asks for the secrets again when an edit moves where they go", func() {
+		e := cardigann(
+			"bwtorrents",
+			map[string]string{"username": "u", "password": "p"},
+		)
+		Expect(config.AddIndexer(ctx, e)).To(Succeed())
+		proxy := "http://vpn:3128"
+		patch := func(c config.CardigannPatch) error {
+			return config.UpdateIndexer(
+				ctx,
+				e.Name,
+				config.IndexerPatch{Cardigann: &c},
+			)
+		}
+		Expect(patch(config.CardigannPatch{Proxy: &proxy})).
+			To(MatchError(config.ErrSecretRequired))
+		Expect(patch(config.CardigannPatch{
+			Proxy:    &proxy,
+			Settings: map[string]string{"username": "u", "password": "p"},
+		})).To(Succeed())
+		mirror := "https://bwtorrents.cc/"
+		Expect(patch(config.CardigannPatch{
+			Site:     &mirror,
+			Settings: map[string]string{"username": "u", "password": ""},
+		})).To(MatchError(config.ErrSecretRequired))
+		// Naming the link already in force moves nothing.
+		first := "https://bwtorrents.tv/"
+		Expect(patch(config.CardigannPatch{Site: &first})).To(Succeed())
+		got, _ := config.FindIndexer(e.Name)
+		Expect(got.Cardigann.Settings).To(HaveKeyWithValue("password", "p"))
+	})
+
 	It("rejects a definition the snapshot does not hold", func() {
 		Expect(config.AddIndexer(ctx, cardigann("no-such-tracker", nil))).
 			To(MatchError(ContainSubstring("not found")))
