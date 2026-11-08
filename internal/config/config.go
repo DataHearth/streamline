@@ -1744,12 +1744,18 @@ func Load(cfgFile string) (*Config, error) {
 		return nil, err
 	}
 	store(cfg, cfgFile, k, layer)
+	cfg.warnUnusableCardigann()
 	return cfg, nil
 }
 
 // checkIndexers holds each indexer to what its protocol needs: an API key for
-// a Torznab or Prowlarr endpoint, and for a cardigann entry a definition the
-// engine can run with the settings it was given.
+// a Torznab or Prowlarr endpoint, and for a cardigann entry a definition name
+// and a well-formed proxy. Whether the definition still runs with the entry's
+// settings is not a validation matter (CheckCardigann): the definitions move
+// under a running instance — the update job, an approved hold, a new binary's
+// snapshot, a custom file — and a drifted one must leave that indexer unusable,
+// not keep the whole process from starting. The API checks it on every write;
+// Load warns.
 func (c *Config) checkIndexers() []error {
 	var errs []error
 	for _, ix := range c.Indexers {
@@ -1767,24 +1773,51 @@ func (c *Config) checkIndexers() []error {
 			}
 			continue
 		}
-		if err := CheckCardigann(c.CardigannDir(), ix); err != nil {
-			errs = append(errs, fmt.Errorf("indexers %q: %w", ix.Name, err))
+		if ix.Cardigann == nil || ix.Cardigann.Definition == "" {
+			errs = append(errs, fmt.Errorf(
+				"indexers %q: cardigann.definition is required", ix.Name,
+			))
+			continue
 		}
-		if p := ix.Cardigann; p != nil && p.Proxy != "" {
-			u, err := url.Parse(p.Proxy)
-			if err != nil || u.Host == "" ||
-				!slices.Contains(
-					[]string{"http", "https", "socks5", "socks5h"},
-					u.Scheme,
-				) {
-				errs = append(errs, fmt.Errorf(
-					"indexers %q: cardigann.proxy wants an http, https or socks5 URL",
-					ix.Name,
-				))
-			}
+		if err := CheckCardigannProxy(ix.Cardigann.Proxy); err != nil {
+			errs = append(errs, fmt.Errorf("indexers %q: %w", ix.Name, err))
 		}
 	}
 	return errs
+}
+
+// warnUnusableCardigann names every cardigann entry the definitions in force
+// can no longer run, so a drift the update job or a new snapshot brought is
+// in the boot log rather than only in each failed search.
+func (c *Config) warnUnusableCardigann() {
+	for _, ix := range c.Indexers {
+		if ix.Protocol != "cardigann" {
+			continue
+		}
+		if err := CheckCardigann(c.CardigannDir(), ix); err != nil {
+			slog.WarnContext(
+				context.Background(),
+				"built-in indexer cannot run until its definition or settings are fixed",
+				"indexer.name",
+				ix.Name,
+				"error",
+				err,
+			)
+		}
+	}
+}
+
+// CheckCardigannProxy accepts an empty proxy or an http, https or socks5 URL.
+func CheckCardigannProxy(proxy string) error {
+	if proxy == "" {
+		return nil
+	}
+	u, err := url.Parse(proxy)
+	if err != nil || u.Host == "" ||
+		!slices.Contains([]string{"http", "https", "socks5", "socks5h"}, u.Scheme) {
+		return errors.New("cardigann.proxy wants an http, https or socks5 URL")
+	}
+	return nil
 }
 
 // CheckCardigann reports whether a cardigann entry names a definition the

@@ -1050,6 +1050,28 @@ var _ = Describe("cardigann indexer", Label("unit", "config"), func() {
 			config.AddIndexer(ctx, cardigann("yts", map[string]string{"nope": "1"})),
 		).
 			To(MatchError(ContainSubstring(`unknown setting "nope"`)))
+		Expect(config.AddIndexer(ctx, cardigann("yts", nil))).To(Succeed())
+		Expect(config.UpdateIndexer(ctx, "yts", config.IndexerPatch{
+			Cardigann: &config.CardigannPatch{
+				Settings: map[string]string{"nope": "1"},
+			},
+		})).To(MatchError(ContainSubstring(`unknown setting "nope"`)))
+	})
+
+	It("loads a file whose entry the definitions can no longer run", func() {
+		// The definitions move under a running instance; one that drifted
+		// leaves its indexer unusable, never the process unable to start.
+		c := configtest.SetupFile(map[string]any{
+			"indexers": []map[string]any{{
+				"name": "gone", "protocol": "cardigann", "enabled": true,
+				"cardigann": map[string]any{
+					"definition": "yts",
+					"settings":   map[string]any{"nope": "1"},
+				},
+			}},
+		})
+		Expect(c.Indexers).To(HaveLen(1))
+		Expect(c.Validate()).To(Succeed())
 	})
 
 	It("rejects a site that is not one of the definition's links", func() {

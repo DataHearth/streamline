@@ -91,6 +91,11 @@ func AddIndexer(ctx context.Context, e IndexerEntry) error {
 				return ErrIndexerExists
 			}
 		}
+		if e.Protocol == "cardigann" {
+			if err := CheckCardigann(c.CardigannDir(), e); err != nil {
+				return err
+			}
+		}
 		c.Indexers = append(c.Indexers, e)
 		slog.InfoContext(ctx, "indexer added", "name", e.Name)
 		return nil
@@ -161,6 +166,11 @@ func UpdateIndexer(ctx context.Context, name string, p IndexerPatch) error {
 				return err
 			}
 			e.Cardigann = next
+		}
+		if e.Protocol == "cardigann" {
+			if err := CheckCardigann(c.CardigannDir(), e); err != nil {
+				return err
+			}
 		}
 		c.Indexers[idx] = e
 		slog.InfoContext(ctx, "indexer updated", "name", name)
