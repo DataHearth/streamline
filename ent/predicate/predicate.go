@@ -45,6 +45,9 @@ type DownloadRecord func(*sql.Selector)
 // Episode is the predicate function for episode builders.
 type Episode func(*sql.Selector)
 
+// ExternalID is the predicate function for externalid builders.
+type ExternalID func(*sql.Selector)
+
 // ImportScan is the predicate function for importscan builders.
 type ImportScan func(*sql.Selector)
 

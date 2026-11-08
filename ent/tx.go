@@ -38,6 +38,8 @@ type Tx struct {
 	DownloadRecord *DownloadRecordClient
 	// Episode is the client for interacting with the Episode builders.
 	Episode *EpisodeClient
+	// ExternalID is the client for interacting with the ExternalID builders.
+	ExternalID *ExternalIDClient
 	// ImportScan is the client for interacting with the ImportScan builders.
 	ImportScan *ImportScanClient
 	// ImportScanAlbum is the client for interacting with the ImportScanAlbum builders.
@@ -234,6 +236,7 @@ func (tx *Tx) init() {
 	tx.Credit = NewCreditClient(tx.config)
 	tx.DownloadRecord = NewDownloadRecordClient(tx.config)
 	tx.Episode = NewEpisodeClient(tx.config)
+	tx.ExternalID = NewExternalIDClient(tx.config)
 	tx.ImportScan = NewImportScanClient(tx.config)
 	tx.ImportScanAlbum = NewImportScanAlbumClient(tx.config)
 	tx.ImportScanBook = NewImportScanBookClient(tx.config)

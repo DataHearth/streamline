@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/credit"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
@@ -150,48 +151,6 @@ func (_c *TVShowCreate) SetNillableMonitored(v *bool) *TVShowCreate {
 // SetTvdbID sets the "tvdb_id" field.
 func (_c *TVShowCreate) SetTvdbID(v uint32) *TVShowCreate {
 	_c.mutation.SetTvdbID(v)
-	return _c
-}
-
-// SetTmdbID sets the "tmdb_id" field.
-func (_c *TVShowCreate) SetTmdbID(v uint32) *TVShowCreate {
-	_c.mutation.SetTmdbID(v)
-	return _c
-}
-
-// SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
-func (_c *TVShowCreate) SetNillableTmdbID(v *uint32) *TVShowCreate {
-	if v != nil {
-		_c.SetTmdbID(*v)
-	}
-	return _c
-}
-
-// SetImdbID sets the "imdb_id" field.
-func (_c *TVShowCreate) SetImdbID(v string) *TVShowCreate {
-	_c.mutation.SetImdbID(v)
-	return _c
-}
-
-// SetNillableImdbID sets the "imdb_id" field if the given value is not nil.
-func (_c *TVShowCreate) SetNillableImdbID(v *string) *TVShowCreate {
-	if v != nil {
-		_c.SetImdbID(*v)
-	}
-	return _c
-}
-
-// SetWikidataID sets the "wikidata_id" field.
-func (_c *TVShowCreate) SetWikidataID(v string) *TVShowCreate {
-	_c.mutation.SetWikidataID(v)
-	return _c
-}
-
-// SetNillableWikidataID sets the "wikidata_id" field if the given value is not nil.
-func (_c *TVShowCreate) SetNillableWikidataID(v *string) *TVShowCreate {
-	if v != nil {
-		_c.SetWikidataID(*v)
-	}
 	return _c
 }
 
@@ -354,6 +313,21 @@ func (_c *TVShowCreate) AddCredits(v ...*Credit) *TVShowCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddCreditIDs(ids...)
+}
+
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_c *TVShowCreate) AddExternalIDIDs(ids ...uint32) *TVShowCreate {
+	_c.mutation.AddExternalIDIDs(ids...)
+	return _c
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_c *TVShowCreate) AddExternalIds(v ...*ExternalID) *TVShowCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddExternalIDIDs(ids...)
 }
 
 // Mutation returns the TVShowMutation object of the builder.
@@ -538,18 +512,6 @@ func (_c *TVShowCreate) createSpec() (*TVShow, *sqlgraph.CreateSpec) {
 		_spec.SetField(tvshow.FieldTvdbID, field.TypeUint32, value)
 		_node.TvdbID = value
 	}
-	if value, ok := _c.mutation.TmdbID(); ok {
-		_spec.SetField(tvshow.FieldTmdbID, field.TypeUint32, value)
-		_node.TmdbID = value
-	}
-	if value, ok := _c.mutation.ImdbID(); ok {
-		_spec.SetField(tvshow.FieldImdbID, field.TypeString, value)
-		_node.ImdbID = value
-	}
-	if value, ok := _c.mutation.WikidataID(); ok {
-		_spec.SetField(tvshow.FieldWikidataID, field.TypeString, value)
-		_node.WikidataID = value
-	}
 	if value, ok := _c.mutation.PosterPath(); ok {
 		_spec.SetField(tvshow.FieldPosterPath, field.TypeString, value)
 		_node.PosterPath = value
@@ -627,6 +589,22 @@ func (_c *TVShowCreate) createSpec() (*TVShow, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.ExternalIdsTable,
+			Columns: []string{tvshow.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

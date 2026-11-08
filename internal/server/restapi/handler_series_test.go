@@ -179,6 +179,10 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				}, nil).
 				Once()
 			app.store.EXPECT().
+				TitleExternalIDs(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				Return(db.ExternalIDs{}, nil).
+				Maybe()
+			app.store.EXPECT().
 				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
 				Return([]db.CastEntry{{
 					PersonID:  14,
@@ -215,10 +219,50 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				To(Equal("https://www.thetvdb.com/dereferrer/people/203697"))
 		})
 
+		It("serves the cross-references stored for the show", func() {
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
+				Return(&ent.TVShow{
+					ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189,
+				}, nil).
+				Once()
+			app.store.EXPECT().
+				TitleExternalIDs(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				Return(db.ExternalIDs{
+					TMDBID: 1396, IMDbID: "tt0903747", WikidataID: "Q1079",
+				}, nil).
+				Once()
+			app.store.EXPECT().
+				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				Return(nil, nil).
+				Once()
+
+			resp := app.do(
+				app.req(http.MethodGet, "/api/v1/series/1", app.adminKey, nil),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var body struct {
+				TvdbID     uint32 `json:"tvdb_id"`
+				TmdbID     uint32 `json:"tmdb_id"`
+				ImdbID     string `json:"imdb_id"`
+				WikidataID string `json:"wikidata_id"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.TvdbID).To(Equal(uint32(81189)))
+			Expect(body.TmdbID).To(Equal(uint32(1396)))
+			Expect(body.ImdbID).To(Equal("tt0903747"))
+			Expect(body.WikidataID).To(Equal("Q1079"))
+		})
+
 		It("omits cast when nothing credits the show", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
 				Return(&ent.TVShow{ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189}, nil).
 				Once()
+			app.store.EXPECT().
+				TitleExternalIDs(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				Return(db.ExternalIDs{}, nil).
+				Maybe()
 			app.store.EXPECT().
 				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
 				Return(nil, nil).
@@ -271,6 +315,10 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			show.Edges.Seasons = []*ent.Season{season}
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
 				Return(show, nil).Once()
+			app.store.EXPECT().
+				TitleExternalIDs(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				Return(db.ExternalIDs{}, nil).
+				Maybe()
 			app.store.EXPECT().
 				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
 				Return(nil, nil).

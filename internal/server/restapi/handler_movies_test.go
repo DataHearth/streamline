@@ -643,6 +643,10 @@ var _ = Describe(
 					}, nil).
 					Once()
 				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
+				app.store.EXPECT().
 					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
 					Return(nil, nil).
 					Once()
@@ -691,6 +695,10 @@ var _ = Describe(
 						Status: movie.StatusWanted,
 					}, nil).
 					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
 				app.store.EXPECT().
 					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
 					Return(nil, nil).
@@ -747,6 +755,10 @@ var _ = Describe(
 						QualityProfile: "default",
 					}, nil).
 					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
 				app.store.EXPECT().
 					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
 					Return(nil, nil).
@@ -844,6 +856,10 @@ var _ = Describe(
 					ListMediaFilesByMovieID(mock.Anything, movieID).
 					Return(nil, nil).
 					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
 				app.store.EXPECT().
 					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
 					Return([]db.CastEntry{{

@@ -40,12 +40,6 @@ type TVShow struct {
 	Monitored bool `json:"monitored,omitempty"`
 	// TvdbID holds the value of the "tvdb_id" field.
 	TvdbID uint32 `json:"tvdb_id,omitempty"`
-	// TmdbID holds the value of the "tmdb_id" field.
-	TmdbID uint32 `json:"tmdb_id,omitempty"`
-	// ImdbID holds the value of the "imdb_id" field.
-	ImdbID string `json:"imdb_id,omitempty"`
-	// WikidataID holds the value of the "wikidata_id" field.
-	WikidataID string `json:"wikidata_id,omitempty"`
 	// PosterPath holds the value of the "poster_path" field.
 	PosterPath string `json:"poster_path,omitempty"`
 	// Network holds the value of the "network" field.
@@ -78,9 +72,11 @@ type TVShowEdges struct {
 	Events []*MediaEvent `json:"events,omitempty"`
 	// Credits holds the value of the credits edge.
 	Credits []*Credit `json:"credits,omitempty"`
+	// ExternalIds holds the value of the external_ids edge.
+	ExternalIds []*ExternalID `json:"external_ids,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // SeasonsOrErr returns the Seasons value or an error if the edge
@@ -110,6 +106,15 @@ func (e TVShowEdges) CreditsOrErr() ([]*Credit, error) {
 	return nil, &NotLoadedError{edge: "credits"}
 }
 
+// ExternalIdsOrErr returns the ExternalIds value or an error if the edge
+// was not loaded in eager-loading.
+func (e TVShowEdges) ExternalIdsOrErr() ([]*ExternalID, error) {
+	if e.loadedTypes[3] {
+		return e.ExternalIds, nil
+	}
+	return nil, &NotLoadedError{edge: "external_ids"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*TVShow) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -121,9 +126,9 @@ func (*TVShow) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case tvshow.FieldRating:
 			values[i] = new(sql.NullFloat64)
-		case tvshow.FieldID, tvshow.FieldYear, tvshow.FieldTvdbID, tvshow.FieldTmdbID, tvshow.FieldRuntime:
+		case tvshow.FieldID, tvshow.FieldYear, tvshow.FieldTvdbID, tvshow.FieldRuntime:
 			values[i] = new(sql.NullInt64)
-		case tvshow.FieldTitle, tvshow.FieldOriginalTitle, tvshow.FieldOverview, tvshow.FieldSeriesStatus, tvshow.FieldType, tvshow.FieldImdbID, tvshow.FieldWikidataID, tvshow.FieldPosterPath, tvshow.FieldNetwork, tvshow.FieldCreator, tvshow.FieldQualityProfile:
+		case tvshow.FieldTitle, tvshow.FieldOriginalTitle, tvshow.FieldOverview, tvshow.FieldSeriesStatus, tvshow.FieldType, tvshow.FieldPosterPath, tvshow.FieldNetwork, tvshow.FieldCreator, tvshow.FieldQualityProfile:
 			values[i] = new(sql.NullString)
 		case tvshow.FieldCreateTime, tvshow.FieldUpdateTime, tvshow.FieldFirstAired, tvshow.FieldLastRefreshedAt:
 			values[i] = new(sql.NullTime)
@@ -215,24 +220,6 @@ func (_m *TVShow) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.TvdbID = uint32(value.Int64)
 			}
-		case tvshow.FieldTmdbID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field tmdb_id", values[i])
-			} else if value.Valid {
-				_m.TmdbID = uint32(value.Int64)
-			}
-		case tvshow.FieldImdbID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field imdb_id", values[i])
-			} else if value.Valid {
-				_m.ImdbID = value.String
-			}
-		case tvshow.FieldWikidataID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field wikidata_id", values[i])
-			} else if value.Valid {
-				_m.WikidataID = value.String
-			}
 		case tvshow.FieldPosterPath:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field poster_path", values[i])
@@ -320,6 +307,11 @@ func (_m *TVShow) QueryCredits() *CreditQuery {
 	return NewTVShowClient(_m.config).QueryCredits(_m)
 }
 
+// QueryExternalIds queries the "external_ids" edge of the TVShow entity.
+func (_m *TVShow) QueryExternalIds() *ExternalIDQuery {
+	return NewTVShowClient(_m.config).QueryExternalIds(_m)
+}
+
 // Update returns a builder for updating this TVShow.
 // Note that you need to call TVShow.Unwrap() before calling this method if this TVShow
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -377,15 +369,6 @@ func (_m *TVShow) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("tvdb_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.TvdbID))
-	builder.WriteString(", ")
-	builder.WriteString("tmdb_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.TmdbID))
-	builder.WriteString(", ")
-	builder.WriteString("imdb_id=")
-	builder.WriteString(_m.ImdbID)
-	builder.WriteString(", ")
-	builder.WriteString("wikidata_id=")
-	builder.WriteString(_m.WikidataID)
 	builder.WriteString(", ")
 	builder.WriteString("poster_path=")
 	builder.WriteString(_m.PosterPath)

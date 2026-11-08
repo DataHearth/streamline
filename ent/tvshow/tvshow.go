@@ -37,12 +37,6 @@ const (
 	FieldMonitored = "monitored"
 	// FieldTvdbID holds the string denoting the tvdb_id field in the database.
 	FieldTvdbID = "tvdb_id"
-	// FieldTmdbID holds the string denoting the tmdb_id field in the database.
-	FieldTmdbID = "tmdb_id"
-	// FieldImdbID holds the string denoting the imdb_id field in the database.
-	FieldImdbID = "imdb_id"
-	// FieldWikidataID holds the string denoting the wikidata_id field in the database.
-	FieldWikidataID = "wikidata_id"
 	// FieldPosterPath holds the string denoting the poster_path field in the database.
 	FieldPosterPath = "poster_path"
 	// FieldNetwork holds the string denoting the network field in the database.
@@ -67,6 +61,8 @@ const (
 	EdgeEvents = "events"
 	// EdgeCredits holds the string denoting the credits edge name in mutations.
 	EdgeCredits = "credits"
+	// EdgeExternalIds holds the string denoting the external_ids edge name in mutations.
+	EdgeExternalIds = "external_ids"
 	// Table holds the table name of the tvshow in the database.
 	Table = "tv_shows"
 	// SeasonsTable is the table that holds the seasons relation/edge.
@@ -90,6 +86,13 @@ const (
 	CreditsInverseTable = "credits"
 	// CreditsColumn is the table column denoting the credits relation/edge.
 	CreditsColumn = "tv_show_credits"
+	// ExternalIdsTable is the table that holds the external_ids relation/edge.
+	ExternalIdsTable = "external_ids"
+	// ExternalIdsInverseTable is the table name for the ExternalID entity.
+	// It exists in this package in order to avoid circular dependency with the "externalid" package.
+	ExternalIdsInverseTable = "external_ids"
+	// ExternalIdsColumn is the table column denoting the external_ids relation/edge.
+	ExternalIdsColumn = "tv_show_external_ids"
 )
 
 // Columns holds all SQL columns for tvshow fields.
@@ -106,9 +109,6 @@ var Columns = []string{
 	FieldType,
 	FieldMonitored,
 	FieldTvdbID,
-	FieldTmdbID,
-	FieldImdbID,
-	FieldWikidataID,
 	FieldPosterPath,
 	FieldNetwork,
 	FieldCreator,
@@ -263,21 +263,6 @@ func ByTvdbID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTvdbID, opts...).ToFunc()
 }
 
-// ByTmdbID orders the results by the tmdb_id field.
-func ByTmdbID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldTmdbID, opts...).ToFunc()
-}
-
-// ByImdbID orders the results by the imdb_id field.
-func ByImdbID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldImdbID, opts...).ToFunc()
-}
-
-// ByWikidataID orders the results by the wikidata_id field.
-func ByWikidataID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldWikidataID, opts...).ToFunc()
-}
-
 // ByPosterPath orders the results by the poster_path field.
 func ByPosterPath(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPosterPath, opts...).ToFunc()
@@ -354,6 +339,20 @@ func ByCredits(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newCreditsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByExternalIdsCount orders the results by external_ids count.
+func ByExternalIdsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newExternalIdsStep(), opts...)
+	}
+}
+
+// ByExternalIds orders the results by external_ids terms.
+func ByExternalIds(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newExternalIdsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newSeasonsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -373,5 +372,12 @@ func newCreditsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CreditsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CreditsTable, CreditsColumn),
+	)
+}
+func newExternalIdsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ExternalIdsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ExternalIdsTable, ExternalIdsColumn),
 	)
 }
