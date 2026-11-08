@@ -3,7 +3,8 @@
 	import type { Snippet } from "svelte";
 	import { ArrowLeft } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
-	import Img from "@components/shared/Img.svelte";
+	import HeroBackdrop from "@components/shared/HeroBackdrop.svelte";
+	import { provideHeroHold } from "@lib/hero-hold.svelte";
 
 	// MovieDetailHero's frame for the music and books detail pages: blurred
 	// backdrop, back link, art beside the text from md, stacked on a phone.
@@ -40,6 +41,8 @@
 		extra?: Snippet;
 		actions?: Snippet;
 	} = $props();
+
+	provideHeroHold();
 </script>
 
 <!-- Each part carries its dot in front, and the row is pulled left by one dot
@@ -56,17 +59,7 @@
 {/snippet}
 
 <section class="relative" aria-labelledby={labelId}>
-	<div class="absolute inset-0 z-0 overflow-hidden bg-bg-deep">
-		{#if backdrop}
-			<Img
-				src={backdrop}
-				alt=""
-				aria-hidden="true"
-				class="h-full w-full scale-110 object-cover opacity-70 blur-md"
-			/>
-		{/if}
-		<div class="hero-overlay absolute inset-0"></div>
-	</div>
+	<HeroBackdrop src={backdrop} />
 
 	<div class="relative w-full px-4 pt-6 md:px-8">
 		<a
@@ -118,14 +111,3 @@
 		</div>
 	</div>
 </section>
-
-<style>
-	.hero-overlay {
-		background-image: linear-gradient(
-			180deg,
-			rgb(11 11 16 / 0.3) 0%,
-			rgb(11 11 16 / 0.7) 60%,
-			var(--bg-deep) 100%
-		);
-	}
-</style>

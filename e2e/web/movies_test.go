@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-rod/rod"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -123,5 +124,55 @@ var _ = Describe("Movies page with a populated library", Label("e2e"), func() {
 			ContainSubstring(fakes.MovieOverview),
 			ContainSubstring(fakes.MovieCastName),
 		))
+	})
+
+	// Read more grows the hero; the backdrop layer keeps its height while the
+	// overview is open, and follows the hero again otherwise.
+	It("holds the hero backdrop while the overview is open", func() {
+		id := seedMovie()
+		page := newSessionPage(fmt.Sprintf("/movies/%d", id))
+
+		hero := page.MustElement(`section[aria-labelledby="movie-title"]`)
+		layer := hero.MustElement("[data-hero-backdrop]")
+		height := func(el *rod.Element) float64 {
+			return el.MustEval(`() => this.getBoundingClientRect().height`).Num()
+		}
+		follows := func() float64 { return height(layer) - height(hero) }
+		holds := func(h float64) {
+			GinkgoHelper()
+			Consistently(func() float64 { return height(layer) }).
+				WithTimeout(400 * time.Millisecond).
+				Should(BeNumerically("~", h, 0.5))
+		}
+
+		readMore := hero.MustElementR("button", "^Read more$")
+		page.MustEval(`() => document.fonts.ready.then(() => true)`)
+		collapsed := height(layer)
+		Expect(follows()).To(BeNumerically("~", 0, 0.5))
+		readMore.MustClick()
+		Eventually(func() float64 { return height(hero) }).
+			WithTimeout(2 * time.Second).
+			Should(BeNumerically(">", collapsed+10))
+		holds(collapsed)
+
+		// A new layout width drops the hold.
+		page.MustSetViewport(1100, 900, 1, false)
+		inlineHeight := func() string {
+			return layer.MustEval(`() => this.style.height`).Str()
+		}
+		Eventually(inlineHeight).WithTimeout(2 * time.Second).Should(BeEmpty())
+		Expect(follows()).To(BeNumerically("~", 0, 0.5))
+
+		hero.MustElementR("button", "^Show less$").MustClick()
+		readMore = hero.MustElementR("button", "^Read more$")
+		Eventually(follows).
+			WithTimeout(2 * time.Second).
+			Should(BeNumerically("~", 0, 0.5))
+
+		collapsed = height(layer)
+		readMore.MustClick()
+		hero.MustElementR("button", "^Show less$")
+		holds(collapsed)
+		Expect(height(hero)).To(BeNumerically(">", collapsed+10))
 	})
 })
