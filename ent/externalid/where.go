@@ -90,6 +90,11 @@ func AlbumID(v uint32) predicate.ExternalID {
 	return predicate.ExternalID(sql.FieldEQ(FieldAlbumID, v))
 }
 
+// BookEditionID applies equality check predicate on the "book_edition_id" field. It's identical to BookEditionIDEQ.
+func BookEditionID(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldEQ(FieldBookEditionID, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.ExternalID {
 	return predicate.ExternalID(sql.FieldEQ(FieldCreateTime, v))
@@ -375,6 +380,36 @@ func AlbumIDNotNil() predicate.ExternalID {
 	return predicate.ExternalID(sql.FieldNotNull(FieldAlbumID))
 }
 
+// BookEditionIDEQ applies the EQ predicate on the "book_edition_id" field.
+func BookEditionIDEQ(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldEQ(FieldBookEditionID, v))
+}
+
+// BookEditionIDNEQ applies the NEQ predicate on the "book_edition_id" field.
+func BookEditionIDNEQ(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNEQ(FieldBookEditionID, v))
+}
+
+// BookEditionIDIn applies the In predicate on the "book_edition_id" field.
+func BookEditionIDIn(vs ...uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldIn(FieldBookEditionID, vs...))
+}
+
+// BookEditionIDNotIn applies the NotIn predicate on the "book_edition_id" field.
+func BookEditionIDNotIn(vs ...uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNotIn(FieldBookEditionID, vs...))
+}
+
+// BookEditionIDIsNil applies the IsNil predicate on the "book_edition_id" field.
+func BookEditionIDIsNil() predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldIsNull(FieldBookEditionID))
+}
+
+// BookEditionIDNotNil applies the NotNil predicate on the "book_edition_id" field.
+func BookEditionIDNotNil() predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNotNull(FieldBookEditionID))
+}
+
 // HasMovie applies the HasEdge predicate on the "movie" edge.
 func HasMovie() predicate.ExternalID {
 	return predicate.ExternalID(func(s *sql.Selector) {
@@ -459,6 +494,29 @@ func HasAlbum() predicate.ExternalID {
 func HasAlbumWith(preds ...predicate.Album) predicate.ExternalID {
 	return predicate.ExternalID(func(s *sql.Selector) {
 		step := newAlbumStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasBookEdition applies the HasEdge predicate on the "book_edition" edge.
+func HasBookEdition() predicate.ExternalID {
+	return predicate.ExternalID(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, BookEditionTable, BookEditionColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBookEditionWith applies the HasEdge predicate on the "book_edition" edge with a given conditions (other predicates).
+func HasBookEditionWith(preds ...predicate.BookEdition) predicate.ExternalID {
+	return predicate.ExternalID(func(s *sql.Selector) {
+		step := newBookEditionStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

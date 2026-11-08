@@ -2066,6 +2066,54 @@ func (c *BookEditionClient) QueryBook(_m *BookEdition) *BookQuery {
 	return query
 }
 
+// QueryEbookOf queries the ebook_of edge of a BookEdition.
+func (c *BookEditionClient) QueryEbookOf(_m *BookEdition) *BookQuery {
+	query := (&BookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookedition.Table, bookedition.FieldID, id),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, bookedition.EbookOfTable, bookedition.EbookOfColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAudiobookOf queries the audiobook_of edge of a BookEdition.
+func (c *BookEditionClient) QueryAudiobookOf(_m *BookEdition) *BookQuery {
+	query := (&BookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookedition.Table, bookedition.FieldID, id),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, bookedition.AudiobookOfTable, bookedition.AudiobookOfColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryExternalIds queries the external_ids edge of a BookEdition.
+func (c *BookEditionClient) QueryExternalIds(_m *BookEdition) *ExternalIDQuery {
+	query := (&ExternalIDClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookedition.Table, bookedition.FieldID, id),
+			sqlgraph.To(externalid.Table, externalid.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, bookedition.ExternalIdsTable, bookedition.ExternalIdsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *BookEditionClient) Hooks() []Hook {
 	return c.hooks.BookEdition
@@ -3257,6 +3305,22 @@ func (c *ExternalIDClient) QueryAlbum(_m *ExternalID) *AlbumQuery {
 			sqlgraph.From(externalid.Table, externalid.FieldID, id),
 			sqlgraph.To(album.Table, album.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, externalid.AlbumTable, externalid.AlbumColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryBookEdition queries the book_edition edge of a ExternalID.
+func (c *ExternalIDClient) QueryBookEdition(_m *ExternalID) *BookEditionQuery {
+	query := (&BookEditionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(externalid.Table, externalid.FieldID, id),
+			sqlgraph.To(bookedition.Table, bookedition.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, externalid.BookEditionTable, externalid.BookEditionColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

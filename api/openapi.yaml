@@ -10068,8 +10068,24 @@ components:
         hardcover:
           type: string
           description: |
-            A book's or a book series' Hardcover id (`hardcover_id`), as a
-            decimal string; the two are separate id spaces.
+            Hardcover id, as a decimal string: a book's or a book series'
+            (`hardcover_id`), or an edition's own. The three are separate id
+            spaces.
+        goodreads:
+          type: string
+          description: Goodreads book id of an edition (Goodreads' books are editions).
+        openlibrary:
+          type: string
+          description: Open Library edition key of an edition, `OL…M`.
+        google_books:
+          type: string
+          description: Google Books volume id of an edition.
+        audible:
+          type: string
+          description: |
+            An audiobook edition's Audible product, `ASIN:region` (`B0FXY6DVJS:fr`):
+            the store of `library.book_language` when Hardcover lists one,
+            else the US store, else the first it lists.
         wikidata:
           type: string
           description: Wikidata item, `Q…`.
@@ -11242,6 +11258,8 @@ components:
         asin:
           type: string
           description: Amazon ASIN (an Audible one for an audiobook). Absent when Hardcover has none.
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
 
     BookSlotFile:
       type: object

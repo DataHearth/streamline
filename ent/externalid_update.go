@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/bookedition"
 	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -147,6 +148,26 @@ func (_u *ExternalIDUpdate) ClearAlbumID() *ExternalIDUpdate {
 	return _u
 }
 
+// SetBookEditionID sets the "book_edition_id" field.
+func (_u *ExternalIDUpdate) SetBookEditionID(v uint32) *ExternalIDUpdate {
+	_u.mutation.SetBookEditionID(v)
+	return _u
+}
+
+// SetNillableBookEditionID sets the "book_edition_id" field if the given value is not nil.
+func (_u *ExternalIDUpdate) SetNillableBookEditionID(v *uint32) *ExternalIDUpdate {
+	if v != nil {
+		_u.SetBookEditionID(*v)
+	}
+	return _u
+}
+
+// ClearBookEditionID clears the value of the "book_edition_id" field.
+func (_u *ExternalIDUpdate) ClearBookEditionID() *ExternalIDUpdate {
+	_u.mutation.ClearBookEditionID()
+	return _u
+}
+
 // SetMovie sets the "movie" edge to the Movie entity.
 func (_u *ExternalIDUpdate) SetMovie(v *Movie) *ExternalIDUpdate {
 	return _u.SetMovieID(v.ID)
@@ -165,6 +186,11 @@ func (_u *ExternalIDUpdate) SetArtist(v *Artist) *ExternalIDUpdate {
 // SetAlbum sets the "album" edge to the Album entity.
 func (_u *ExternalIDUpdate) SetAlbum(v *Album) *ExternalIDUpdate {
 	return _u.SetAlbumID(v.ID)
+}
+
+// SetBookEdition sets the "book_edition" edge to the BookEdition entity.
+func (_u *ExternalIDUpdate) SetBookEdition(v *BookEdition) *ExternalIDUpdate {
+	return _u.SetBookEditionID(v.ID)
 }
 
 // Mutation returns the ExternalIDMutation object of the builder.
@@ -193,6 +219,12 @@ func (_u *ExternalIDUpdate) ClearArtist() *ExternalIDUpdate {
 // ClearAlbum clears the "album" edge to the Album entity.
 func (_u *ExternalIDUpdate) ClearAlbum() *ExternalIDUpdate {
 	_u.mutation.ClearAlbum()
+	return _u
+}
+
+// ClearBookEdition clears the "book_edition" edge to the BookEdition entity.
+func (_u *ExternalIDUpdate) ClearBookEdition() *ExternalIDUpdate {
+	_u.mutation.ClearBookEdition()
 	return _u
 }
 
@@ -390,6 +422,35 @@ func (_u *ExternalIDUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.BookEditionCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   externalid.BookEditionTable,
+			Columns: []string{externalid.BookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.BookEditionIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   externalid.BookEditionTable,
+			Columns: []string{externalid.BookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -526,6 +587,26 @@ func (_u *ExternalIDUpdateOne) ClearAlbumID() *ExternalIDUpdateOne {
 	return _u
 }
 
+// SetBookEditionID sets the "book_edition_id" field.
+func (_u *ExternalIDUpdateOne) SetBookEditionID(v uint32) *ExternalIDUpdateOne {
+	_u.mutation.SetBookEditionID(v)
+	return _u
+}
+
+// SetNillableBookEditionID sets the "book_edition_id" field if the given value is not nil.
+func (_u *ExternalIDUpdateOne) SetNillableBookEditionID(v *uint32) *ExternalIDUpdateOne {
+	if v != nil {
+		_u.SetBookEditionID(*v)
+	}
+	return _u
+}
+
+// ClearBookEditionID clears the value of the "book_edition_id" field.
+func (_u *ExternalIDUpdateOne) ClearBookEditionID() *ExternalIDUpdateOne {
+	_u.mutation.ClearBookEditionID()
+	return _u
+}
+
 // SetMovie sets the "movie" edge to the Movie entity.
 func (_u *ExternalIDUpdateOne) SetMovie(v *Movie) *ExternalIDUpdateOne {
 	return _u.SetMovieID(v.ID)
@@ -544,6 +625,11 @@ func (_u *ExternalIDUpdateOne) SetArtist(v *Artist) *ExternalIDUpdateOne {
 // SetAlbum sets the "album" edge to the Album entity.
 func (_u *ExternalIDUpdateOne) SetAlbum(v *Album) *ExternalIDUpdateOne {
 	return _u.SetAlbumID(v.ID)
+}
+
+// SetBookEdition sets the "book_edition" edge to the BookEdition entity.
+func (_u *ExternalIDUpdateOne) SetBookEdition(v *BookEdition) *ExternalIDUpdateOne {
+	return _u.SetBookEditionID(v.ID)
 }
 
 // Mutation returns the ExternalIDMutation object of the builder.
@@ -572,6 +658,12 @@ func (_u *ExternalIDUpdateOne) ClearArtist() *ExternalIDUpdateOne {
 // ClearAlbum clears the "album" edge to the Album entity.
 func (_u *ExternalIDUpdateOne) ClearAlbum() *ExternalIDUpdateOne {
 	_u.mutation.ClearAlbum()
+	return _u
+}
+
+// ClearBookEdition clears the "book_edition" edge to the BookEdition entity.
+func (_u *ExternalIDUpdateOne) ClearBookEdition() *ExternalIDUpdateOne {
+	_u.mutation.ClearBookEdition()
 	return _u
 }
 
@@ -792,6 +884,35 @@ func (_u *ExternalIDUpdateOne) sqlSave(ctx context.Context) (_node *ExternalID, 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.BookEditionCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   externalid.BookEditionTable,
+			Columns: []string{externalid.BookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.BookEditionIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   externalid.BookEditionTable,
+			Columns: []string{externalid.BookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

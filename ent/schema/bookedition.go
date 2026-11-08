@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -37,6 +38,10 @@ func (BookEdition) Fields() []ent.Field {
 		field.String("translator").Optional(),
 		field.String("isbn_13").Optional(),
 		field.String("asin").Optional(),
+		// links_fetched_at stamps the last read of the edition's other sites'
+		// ids (external_ids). Only an edition a slot follows is ever read, so
+		// NULL on one of those is the links backfill's work list.
+		field.Time("links_fetched_at").Optional().Nillable(),
 		field.Uint32("popularity").Default(0).
 			Comment("Hardcover users_count; ranks winners."),
 	}
@@ -45,6 +50,11 @@ func (BookEdition) Fields() []ent.Field {
 func (BookEdition) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("book", Book.Type).Ref("editions").Unique().Required(),
+		// The slots that follow the edition; the column is on books.
+		edge.From("ebook_of", Book.Type).Ref("ebook_edition"),
+		edge.From("audiobook_of", Book.Type).Ref("audiobook_edition"),
+		edge.To("external_ids", ExternalID.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

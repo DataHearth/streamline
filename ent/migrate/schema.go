@@ -367,6 +367,7 @@ var (
 		{Name: "translator", Type: field.TypeString, Nullable: true},
 		{Name: "isbn_13", Type: field.TypeString, Nullable: true},
 		{Name: "asin", Type: field.TypeString, Nullable: true},
+		{Name: "links_fetched_at", Type: field.TypeTime, Nullable: true},
 		{Name: "popularity", Type: field.TypeUint32, Default: 0},
 		{Name: "book_editions", Type: field.TypeUint32},
 	}
@@ -378,7 +379,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "book_editions_books_editions",
-				Columns:    []*schema.Column{BookEditionsColumns[17]},
+				Columns:    []*schema.Column{BookEditionsColumns[18]},
 				RefColumns: []*schema.Column{BooksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -387,17 +388,17 @@ var (
 			{
 				Name:    "bookedition_book_editions",
 				Unique:  false,
-				Columns: []*schema.Column{BookEditionsColumns[17]},
+				Columns: []*schema.Column{BookEditionsColumns[18]},
 			},
 			{
 				Name:    "bookedition_hardcover_edition_id_book_editions",
 				Unique:  true,
-				Columns: []*schema.Column{BookEditionsColumns[3], BookEditionsColumns[17]},
+				Columns: []*schema.Column{BookEditionsColumns[3], BookEditionsColumns[18]},
 			},
 			{
 				Name:    "bookedition_language_format_publisher_book_editions",
 				Unique:  false,
-				Columns: []*schema.Column{BookEditionsColumns[4], BookEditionsColumns[8], BookEditionsColumns[6], BookEditionsColumns[17]},
+				Columns: []*schema.Column{BookEditionsColumns[4], BookEditionsColumns[8], BookEditionsColumns[6], BookEditionsColumns[18]},
 			},
 		},
 	}
@@ -704,10 +705,11 @@ var (
 		{Name: "id", Type: field.TypeUint32, Increment: true},
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
-		{Name: "source", Type: field.TypeEnum, Enums: []string{"imdb", "tmdb", "wikidata", "discogs", "allmusic", "spotify", "deezer", "bandcamp", "lastfm", "rateyourmusic"}},
+		{Name: "source", Type: field.TypeEnum, Enums: []string{"imdb", "tmdb", "wikidata", "discogs", "allmusic", "spotify", "deezer", "bandcamp", "lastfm", "rateyourmusic", "goodreads", "openlibrary", "google_books", "audible"}},
 		{Name: "value", Type: field.TypeString},
 		{Name: "album_id", Type: field.TypeUint32, Nullable: true},
 		{Name: "artist_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "book_edition_id", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_id", Type: field.TypeUint32, Nullable: true},
 		{Name: "tv_show_id", Type: field.TypeUint32, Nullable: true},
 	}
@@ -730,14 +732,20 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "external_ids_movies_external_ids",
+				Symbol:     "external_ids_book_editions_external_ids",
 				Columns:    []*schema.Column{ExternalIdsColumns[7]},
+				RefColumns: []*schema.Column{BookEditionsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "external_ids_movies_external_ids",
+				Columns:    []*schema.Column{ExternalIdsColumns[8]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "external_ids_tv_shows_external_ids",
-				Columns:    []*schema.Column{ExternalIdsColumns[8]},
+				Columns:    []*schema.Column{ExternalIdsColumns[9]},
 				RefColumns: []*schema.Column{TvShowsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -746,12 +754,12 @@ var (
 			{
 				Name:    "externalid_movie_id_source",
 				Unique:  true,
-				Columns: []*schema.Column{ExternalIdsColumns[7], ExternalIdsColumns[3]},
+				Columns: []*schema.Column{ExternalIdsColumns[8], ExternalIdsColumns[3]},
 			},
 			{
 				Name:    "externalid_tv_show_id_source",
 				Unique:  true,
-				Columns: []*schema.Column{ExternalIdsColumns[8], ExternalIdsColumns[3]},
+				Columns: []*schema.Column{ExternalIdsColumns[9], ExternalIdsColumns[3]},
 			},
 			{
 				Name:    "externalid_artist_id_source",
@@ -762,6 +770,11 @@ var (
 				Name:    "externalid_album_id_source",
 				Unique:  true,
 				Columns: []*schema.Column{ExternalIdsColumns[5], ExternalIdsColumns[3]},
+			},
+			{
+				Name:    "externalid_book_edition_id_source",
+				Unique:  true,
+				Columns: []*schema.Column{ExternalIdsColumns[7], ExternalIdsColumns[3]},
 			},
 			{
 				Name:    "externalid_source_value",
@@ -2184,8 +2197,9 @@ func init() {
 	EpisodesTable.ForeignKeys[0].RefTable = SeasonsTable
 	ExternalIdsTable.ForeignKeys[0].RefTable = AlbumsTable
 	ExternalIdsTable.ForeignKeys[1].RefTable = ArtistsTable
-	ExternalIdsTable.ForeignKeys[2].RefTable = MoviesTable
-	ExternalIdsTable.ForeignKeys[3].RefTable = TvShowsTable
+	ExternalIdsTable.ForeignKeys[2].RefTable = BookEditionsTable
+	ExternalIdsTable.ForeignKeys[3].RefTable = MoviesTable
+	ExternalIdsTable.ForeignKeys[4].RefTable = TvShowsTable
 	ImportScanAlbumsTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanBooksTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanFilesTable.ForeignKeys[0].RefTable = ImportScansTable

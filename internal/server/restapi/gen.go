@@ -4898,9 +4898,31 @@ type BookEdition struct {
 	Asin *string `json:"asin,omitempty"`
 
 	// Duration Audiobook length in seconds.
-	Duration *uint32    `json:"duration,omitempty"`
-	Format   BookFormat `json:"format"`
-	Id       uint32     `json:"id"`
+	Duration *uint32 `json:"duration,omitempty"`
+
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
+	Format      BookFormat   `json:"format"`
+	Id          uint32       `json:"id"`
 
 	// Isbn13 ISBN-13 Hardcover lists for the edition. The detail page links
 	// Goodreads and Open Library through it. Absent when there is none,
@@ -5782,6 +5804,11 @@ type ExternalIds struct {
 	// Allmusic AllMusic id, `mn…` for an artist, `mw…` for an album.
 	Allmusic *string `json:"allmusic,omitempty"`
 
+	// Audible An audiobook edition's Audible product, `ASIN:region` (`B0FXY6DVJS:fr`):
+	// the store of `library.book_language` when Hardcover lists one,
+	// else the US store, else the first it lists.
+	Audible *string `json:"audible,omitempty"`
+
 	// Bandcamp Bandcamp host for an artist (`band.bandcamp.com`), host and path
 	// for an album (`band.bandcamp.com/album/name`).
 	Bandcamp *string `json:"bandcamp,omitempty"`
@@ -5792,8 +5819,15 @@ type ExternalIds struct {
 	// Discogs Discogs artist id, or master id for an album.
 	Discogs *string `json:"discogs,omitempty"`
 
-	// Hardcover A book's or a book series' Hardcover id (`hardcover_id`), as a
-	// decimal string; the two are separate id spaces.
+	// Goodreads Goodreads book id of an edition (Goodreads' books are editions).
+	Goodreads *string `json:"goodreads,omitempty"`
+
+	// GoogleBooks Google Books volume id of an edition.
+	GoogleBooks *string `json:"google_books,omitempty"`
+
+	// Hardcover Hardcover id, as a decimal string: a book's or a book series'
+	// (`hardcover_id`), or an edition's own. The three are separate id
+	// spaces.
 	Hardcover *string `json:"hardcover,omitempty"`
 
 	// Imdb IMDb title id, `tt…`.
@@ -5804,6 +5838,9 @@ type ExternalIds struct {
 
 	// Musicbrainz An artist's MusicBrainz id, or an album's release group (`mbid`).
 	Musicbrainz *string `json:"musicbrainz,omitempty"`
+
+	// Openlibrary Open Library edition key of an edition, `OL…M`.
+	Openlibrary *string `json:"openlibrary,omitempty"`
 
 	// Rateyourmusic RateYourMusic path below `/artist/` for an artist, below
 	// `/release/` for an album (`album/radiohead/ok_computer`).

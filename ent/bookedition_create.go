@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/bookedition"
+	"github.com/datahearth/streamline/ent/externalid"
 )
 
 // BookEditionCreate is the builder for creating a BookEdition entity.
@@ -199,6 +200,20 @@ func (_c *BookEditionCreate) SetNillableAsin(v *string) *BookEditionCreate {
 	return _c
 }
 
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (_c *BookEditionCreate) SetLinksFetchedAt(v time.Time) *BookEditionCreate {
+	_c.mutation.SetLinksFetchedAt(v)
+	return _c
+}
+
+// SetNillableLinksFetchedAt sets the "links_fetched_at" field if the given value is not nil.
+func (_c *BookEditionCreate) SetNillableLinksFetchedAt(v *time.Time) *BookEditionCreate {
+	if v != nil {
+		_c.SetLinksFetchedAt(*v)
+	}
+	return _c
+}
+
 // SetPopularity sets the "popularity" field.
 func (_c *BookEditionCreate) SetPopularity(v uint32) *BookEditionCreate {
 	_c.mutation.SetPopularity(v)
@@ -228,6 +243,51 @@ func (_c *BookEditionCreate) SetBookID(id uint32) *BookEditionCreate {
 // SetBook sets the "book" edge to the Book entity.
 func (_c *BookEditionCreate) SetBook(v *Book) *BookEditionCreate {
 	return _c.SetBookID(v.ID)
+}
+
+// AddEbookOfIDs adds the "ebook_of" edge to the Book entity by IDs.
+func (_c *BookEditionCreate) AddEbookOfIDs(ids ...uint32) *BookEditionCreate {
+	_c.mutation.AddEbookOfIDs(ids...)
+	return _c
+}
+
+// AddEbookOf adds the "ebook_of" edges to the Book entity.
+func (_c *BookEditionCreate) AddEbookOf(v ...*Book) *BookEditionCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddEbookOfIDs(ids...)
+}
+
+// AddAudiobookOfIDs adds the "audiobook_of" edge to the Book entity by IDs.
+func (_c *BookEditionCreate) AddAudiobookOfIDs(ids ...uint32) *BookEditionCreate {
+	_c.mutation.AddAudiobookOfIDs(ids...)
+	return _c
+}
+
+// AddAudiobookOf adds the "audiobook_of" edges to the Book entity.
+func (_c *BookEditionCreate) AddAudiobookOf(v ...*Book) *BookEditionCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAudiobookOfIDs(ids...)
+}
+
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_c *BookEditionCreate) AddExternalIDIDs(ids ...uint32) *BookEditionCreate {
+	_c.mutation.AddExternalIDIDs(ids...)
+	return _c
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_c *BookEditionCreate) AddExternalIds(v ...*ExternalID) *BookEditionCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddExternalIDIDs(ids...)
 }
 
 // Mutation returns the BookEditionMutation object of the builder.
@@ -433,6 +493,10 @@ func (_c *BookEditionCreate) createSpec() (*BookEdition, *sqlgraph.CreateSpec) {
 		_spec.SetField(bookedition.FieldAsin, field.TypeString, value)
 		_node.Asin = value
 	}
+	if value, ok := _c.mutation.LinksFetchedAt(); ok {
+		_spec.SetField(bookedition.FieldLinksFetchedAt, field.TypeTime, value)
+		_node.LinksFetchedAt = &value
+	}
 	if value, ok := _c.mutation.Popularity(); ok {
 		_spec.SetField(bookedition.FieldPopularity, field.TypeUint32, value)
 		_node.Popularity = value
@@ -452,6 +516,54 @@ func (_c *BookEditionCreate) createSpec() (*BookEdition, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.book_editions = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.EbookOfIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.EbookOfTable,
+			Columns: []string{bookedition.EbookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AudiobookOfIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.AudiobookOfTable,
+			Columns: []string{bookedition.AudiobookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   bookedition.ExternalIdsTable,
+			Columns: []string{bookedition.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -15,6 +15,10 @@ const (
 	SourceBandcamp      = "bandcamp"
 	SourceLastFM        = "lastfm"
 	SourceRateYourMusic = "rateyourmusic"
+	SourceGoodreads     = "goodreads"
+	SourceOpenLibrary   = "openlibrary"
+	SourceGoogleBooks   = "google_books"
+	SourceAudible       = "audible"
 )
 
 // The providers' own ids under the names the API's external_ids map gives
