@@ -9,7 +9,9 @@
 
 	type State = "done" | "current" | "pending";
 
-	const STEPS = $derived([
+	type Step = { label: string; sub: string };
+
+	const STEPS: [Step, ...Step[]] = $derived([
 		{ label: i18n.imports_discovery(), sub: i18n.imports_step_indexing() },
 		{ label: i18n.imports_parsing(), sub: i18n.imports_matching_against({ provider: IMPORT_KIND[kind].source }) },
 		{ label: i18n.common_review(), sub: i18n.imports_step_resolve() },
@@ -46,16 +48,14 @@
 			? states.indexOf("current")
 			: Math.max(0, states.lastIndexOf("done")),
 	);
-	// currentIndex is always within [0, STEPS.length): indexOf/lastIndexOf over
-	// `states`, which is derived 1:1 from STEPS, clamped to 0 by Math.max.
-	let current = $derived(STEPS[currentIndex]!);
+	let current = $derived(STEPS[currentIndex] ?? STEPS[0]);
 </script>
 
 <!-- Below md the four labels are single unbreakable words that overflow a 358px
      card, so the phone gets dots plus the current step's label and sub-label —
      the latter being exactly what a four-label strip hides at this width. -->
-<div
-	class="flex items-center gap-3 rounded-lg border border-border bg-bg-elevated px-4 py-3 md:hidden"
+<fieldset
+	class="min-w-0 flex items-center gap-3 rounded-lg border border-border bg-bg-elevated px-4 py-3 md:hidden"
 	aria-label={i18n.imports_progress()}
 >
 	<div class="flex shrink-0 items-center gap-1.5" aria-hidden="true">
@@ -79,7 +79,7 @@
 	<span class="shrink-0 font-mono text-[10.5px] tabular-nums text-fg-faint">
 		{currentIndex + 1}/{STEPS.length}
 	</span>
-</div>
+</fieldset>
 
 <ol
 	class="hidden items-stretch gap-0 rounded-lg border border-border bg-bg-elevated px-3 py-4 md:flex md:px-6"

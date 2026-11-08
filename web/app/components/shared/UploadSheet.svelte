@@ -192,25 +192,20 @@
 			<div role="radiogroup" aria-label={i18n.upload_slot()} class="flex items-center gap-2">
 				<span class="font-mono text-[10.5px] uppercase tracking-[0.1em] text-fg-subtle">{i18n.upload_slot()}</span>
 				{#each ["ebook", "audiobook"] as const as s (s)}
-					<button
-						type="button"
-						role="radio"
-						aria-checked={chosenSlot === s}
-						disabled={sending}
-						onclick={() => (chosenSlot = s)}
+					<label
 						class={cn(
-							"h-9 rounded-lg border px-3 text-[13px] font-medium transition",
+							"relative inline-flex h-9 cursor-pointer items-center rounded-lg border px-3 text-[13px] font-medium transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent-ring",
 							chosenSlot === s ? "border-accent bg-accent/15 text-fg" : "border-border text-fg-muted hover:text-fg",
 						)}
 					>
+						<input type="radio" class="sr-only" name="upload-slot" value={s} bind:group={chosenSlot} disabled={sending} />
 						{s === "ebook" ? i18n.upload_slot_ebook() : i18n.upload_slot_audiobook()}
-					</button>
+					</label>
 				{/each}
 			</div>
 		{/if}
 
-		<div
-			role="group"
+		<fieldset
 			ondragover={(e) => {
 				e.preventDefault();
 				over = true;
@@ -218,7 +213,7 @@
 			ondragleave={() => (over = false)}
 			ondrop={onDrop}
 			class={cn(
-				"flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-6 text-center transition",
+				"min-w-0 flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-6 text-center transition",
 				over ? "border-accent bg-accent/10" : "border-border-strong",
 			)}
 		>
@@ -238,7 +233,7 @@
 			</div>
 			<input bind:this={folderInput} type="file" multiple hidden onchange={onPick} {...{ webkitdirectory: true }} />
 			<input bind:this={filesInput} type="file" multiple={target !== "track"} hidden onchange={onPick} />
-		</div>
+		</fieldset>
 
 		{#if entries.length > 0}
 			<div class="flex items-center justify-between gap-3 text-[12.5px] text-fg-muted">

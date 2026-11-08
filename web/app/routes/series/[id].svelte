@@ -384,7 +384,7 @@
 		refresh: SERIES,
 		failed: updateFailed,
 		succeeded: () => i18n.quality_updated(),
-		then: () => (qpOpen = false),
+		after: () => (qpOpen = false),
 	}));
 
 	const saveType = createAction<SeriesType>(() => ({
@@ -392,7 +392,7 @@
 		refresh: SERIES,
 		failed: updateFailed,
 		succeeded: () => i18n.series_type_updated(),
-		then: () => (typeOpen = false),
+		after: () => (typeOpen = false),
 	}));
 
 	const refresh = createAction(() => ({
@@ -414,7 +414,7 @@
 		refresh: SERIES,
 		failed: deleteFailed,
 		succeeded: () => i18n.series_deleted(),
-		then: () => navigate("/series"),
+		after: () => navigate("/series"),
 	}));
 
 	const monitorSeason = createAction<Season>(() => ({
@@ -446,7 +446,7 @@
 		refresh: SERIES,
 		failed: deleteFailed,
 		succeeded: ({ episodes }) => (episodes.length > 1 ? i18n.files_deleted() : i18n.file_deleted()),
-		then: () => (deleteFiles = null),
+		after: () => (deleteFiles = null),
 	}));
 
 	// A switch with a `never` default, not an if-chain: the menu owns the item
@@ -767,8 +767,8 @@
 						/>
 					</div>
 
-					<div
-						class="mt-5 hidden flex-wrap items-center gap-x-2.5 gap-y-3 md:flex"
+					<fieldset
+						class="min-w-0 mt-5 hidden flex-wrap items-center gap-x-2.5 gap-y-3 md:flex"
 						aria-label={i18n.series_actions()}
 					>
 						<MonitorSplitButton
@@ -802,7 +802,7 @@
 							onPick={onKebabPick}
 							disabledActions={hasFiles ? [] : ["rename"]}
 						/>
-					</div>
+					</fieldset>
 				{/if}
 			</div>
 		</div>

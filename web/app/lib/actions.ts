@@ -26,7 +26,7 @@ type ActionOptions<V, D> = {
 	// A confirmation toast, when the change is not visible on its own.
 	succeeded?: (vars: V, data: D) => string | undefined;
 	// Anything else on success: closing a dialog, navigating away.
-	then?: (vars: V, data: D) => void;
+	after?: (vars: V, data: D) => void;
 };
 
 // createAction is the one write path for a library title, whatever its media
@@ -46,7 +46,7 @@ export function createAction<V = void, D = unknown>(options: () => ActionOptions
 			onSuccess: (data, vars) => {
 				const msg = o.succeeded?.(vars, data);
 				if (msg) toast.ok(msg);
-				o.then?.(vars, data);
+				o.after?.(vars, data);
 			},
 			onError: (e) => {
 				const description = o.detail?.(e);

@@ -389,8 +389,8 @@
 	</div>
 
 	{#if canEdit}
-		<div
-			class="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] z-30 flex items-center gap-2 border-t border-border bg-bg-elevated/95 px-3 pb-4 pt-2.5 backdrop-blur-md md:hidden"
+		<fieldset
+			class="min-w-0 fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] z-30 flex items-center gap-2 border-t border-border bg-bg-elevated/95 px-3 pb-4 pt-2.5 backdrop-blur-md md:hidden"
 			aria-label={i18n.books_actions()}
 		>
 			<button
@@ -415,7 +415,7 @@
 					<Search size={18} aria-hidden="true" />
 				{/if}
 			</button>
-		</div>
+		</fieldset>
 	{/if}
 
 	{#if canEdit && uploadOpen}

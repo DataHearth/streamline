@@ -20,7 +20,6 @@
 
 	type Props = {
 		form: AppForm<Values>;
-		isEdit?: boolean;
 		// The effective port when the top-level torrent_listen_port overrides
 		// this entry's own. Editing listen_port then has no effect, so the field
 		// goes read-only and says why instead of accepting a value the engine
@@ -28,7 +27,7 @@
 		listenPortOverride?: number | undefined;
 	};
 
-	let { form, isEdit = false, listenPortOverride }: Props = $props();
+	let { form, listenPortOverride }: Props = $props();
 
 	let overridden = $derived(listenPortOverride !== undefined);
 

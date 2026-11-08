@@ -90,10 +90,8 @@
 		</p>
 	</div>
 {:else}
-	<ul
-		class="overflow-hidden rounded-lg border border-border bg-bg-elevated"
-		role="list"
-	>
+	<!-- biome-ignore lint/a11y/noRedundantRoles: Safari's VoiceOver drops the list role from a list-style: none list -->
+	<ul role="list" class="overflow-hidden rounded-lg border border-border bg-bg-elevated">
 		{#each events as event (event.id)}
 			{@const mark = EVENT_MARKS[event.type] ?? {
 				icon: Activity,

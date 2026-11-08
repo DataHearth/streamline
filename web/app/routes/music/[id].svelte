@@ -240,7 +240,7 @@
 		refresh: MUSIC,
 		failed: deleteFailed,
 		succeeded: () => i18n.file_deleted(),
-		then: () => (deletingTrack = null),
+		after: () => (deletingTrack = null),
 	}));
 	function deleteTrack() {
 		if (deletingTrack) delTrack.mutate(deletingTrack);

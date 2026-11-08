@@ -57,7 +57,7 @@
 		<h2 class="text-[15px] font-semibold text-fg">{i18n.books_editions()}</h2>
 		<span class="font-mono text-[11px] text-fg-faint">{editions.length}</span>
 	</div>
-	<div class="inline-flex rounded-lg border border-border bg-bg-elevated p-0.5" role="group" aria-label={i18n.books_format()}>
+	<fieldset class="min-w-0 inline-flex rounded-lg border border-border bg-bg-elevated p-0.5" aria-label={i18n.books_format()}>
 		{#each segs as s (s.key)}
 			<button
 				type="button"
@@ -72,7 +72,7 @@
 				<span class="font-mono text-[10.5px] text-fg-faint">{s.n}</span>
 			</button>
 		{/each}
-	</div>
+	</fieldset>
 </div>
 
 <div class="hidden overflow-hidden rounded-lg border border-border bg-bg-elevated/70 md:block">

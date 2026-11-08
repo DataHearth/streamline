@@ -3,8 +3,7 @@
 
 	// `dot` maps each filter to a real --status-* token (some chip keys like
 	// "importing"/"error" have no token of their own — mirror lib/format.pillStatus).
-	// Exported because the filter sheet renders the same set below lg.
-	export const ACTIVITY_CHIPS: Record<
+	const ACTIVITY_CHIPS: Record<
 		ActivityView,
 		{ key: string; label: string; dot: string }[]
 	> = {
@@ -114,10 +113,9 @@
 	<div
 		class="inline-flex min-w-0 flex-1 items-center rounded-md border border-border bg-bg-elevated p-[3px] md:flex-none"
 	>
-		<div
+		<fieldset
 			use:dragScroll
 			class="filter-chips flex min-w-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
-			role="group"
 			aria-label={i18n.activity_status_filter()}
 		>
 			{#each chips as c (c.key)}
@@ -138,7 +136,7 @@
 					{c.label}
 				</button>
 			{/each}
-		</div>
+		</fieldset>
 		{#if anyActive}
 			<button
 				type="button"

@@ -92,6 +92,7 @@
 </script>
 
 {#if open}
+	<!-- biome-ignore lint/a11y/noStaticElementInteractions: the scrim is the pointer's way out; Escape is the keyboard's -->
 	<div
 		use:portal
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-2 backdrop-blur-sm sm:px-4"

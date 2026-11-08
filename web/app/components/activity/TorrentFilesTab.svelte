@@ -79,7 +79,7 @@
 			let node = root;
 			let acc = "";
 			for (const p of parts) {
-				acc = acc ? acc + "/" + p : p;
+				acc = acc ? `${acc}/${p}` : p;
 				if (!node.dirs.has(p))
 					node.dirs.set(p, { name: p, path: acc, dirs: new Map(), files: [] });
 				node = node.dirs.get(p) as Node;
@@ -223,19 +223,19 @@
 
 <div
 	class="relative overflow-y-auto rounded-md border border-border"
-	style:height={virtual ? VIEW_H + "px" : "auto"}
+	style:height={virtual ? `${VIEW_H}px` : "auto"}
 	onscroll={(e) => (scrollTop = e.currentTarget.scrollTop)}
 >
-	<div class="relative" style:height={virtual ? rows.length * ROW_H + "px" : "auto"}>
-		{#each visible as row, i (row.type === "folder" ? "d:" + row.path : "f:" + row.file.index)}
+	<div class="relative" style:height={virtual ? `${rows.length * ROW_H}px` : "auto"}>
+		{#each visible as row, i (row.type === "folder" ? `d:${row.path}` : `f:${row.file.index}`)}
 			<div
 				class={cn(
 					"flex items-center gap-2 border-b border-border/50 px-3",
 					virtual && "absolute inset-x-0",
 				)}
 				style:height="{ROW_H}px"
-				style:top={virtual ? (start + i) * ROW_H + "px" : undefined}
-				style:padding-left={12 + row.depth * 16 + "px"}
+				style:top={virtual ? `${(start + i) * ROW_H}px` : undefined}
+				style:padding-left={`${12 + row.depth * 16}px`}
 			>
 				{#if row.type === "folder"}
 					<button

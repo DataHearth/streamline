@@ -44,7 +44,7 @@ export function oidcStartURL(provider: string, next: string): string {
 	const params = new URLSearchParams();
 	if (next) params.set("next", next);
 	const qs = params.toString();
-	return `/auth/oidc/${encodeURIComponent(provider)}/start${qs ? "?" + qs : ""}`;
+	return `/auth/oidc/${encodeURIComponent(provider)}/start${qs ? `?${qs}` : ""}`;
 }
 
 // oidcErrorMessage maps the error code carried in /login?error=... back to a

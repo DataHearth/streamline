@@ -66,16 +66,16 @@ function arm(onBack: () => void, rearm: () => void): () => void {
 
 	// Set while an Escape keydown is dispatched; the watcher's close follows
 	// that dispatch in the same task.
-	let escape = false;
+	let escaping = false;
 	const onKey = (e: KeyboardEvent) => {
 		if (e.key !== "Escape") return;
-		escape = true;
-		setTimeout(() => (escape = false));
+		escaping = true;
+		setTimeout(() => (escaping = false));
 	};
 	if (watcher) {
 		window.addEventListener("keydown", onKey, true);
 		watcher.onclose = () => {
-			if (!escape) return fire();
+			if (!escaping) return fire();
 			// The layer's own handler has the Escape. The watcher is spent, so
 			// arm another for a later Back if the layer is still open.
 			done = true;

@@ -35,7 +35,7 @@
 	let query = $state("");
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let listEl = $state<HTMLDivElement | null>(null);
-	let rootEl = $state<HTMLDivElement | null>(null);
+	let rootEl = $state<HTMLElement | null>(null);
 
 	const model = createSearchModel(() => query, { compact: true });
 	const navigateTo = searchNav();
@@ -131,8 +131,8 @@
 			const shortcut = isPaletteShortcut(e);
 			// An Escape that cancels an IME conversion is the field's; Safari
 			// can report one with isComposing false but keyCode 229.
-			const escape = e.key === "Escape" && !e.isComposing && e.keyCode !== 229;
-			if (!shortcut && !escape) return;
+			const isEscape = e.key === "Escape" && !e.isComposing && e.keyCode !== 229;
+			if (!shortcut && !isEscape) return;
 			// A modal layer over this page (the palette's <dialog>, an
 			// aria-modal Modal such as the add flow, a sheet) owns the keyboard:
 			// its Escape closes it and the page stays. The Modal's
@@ -170,9 +170,8 @@
 	});
 </script>
 
-<div
+<search
 	bind:this={rootEl}
-	role="search"
 	aria-label={i18n.common_search()}
 	in:fly={{ y: 16, duration: 200, easing: cubicOut }}
 	class="fixed inset-0 z-50 flex flex-col bg-bg-deep md:pointer-fine:static md:pointer-fine:z-auto md:pointer-fine:min-h-[60dvh]"
@@ -254,7 +253,7 @@
 				>
 					<span>{section.label}</span>
 				</div>
-				{#each section.items as item, i (item.kind + "-" + i)}
+				{#each section.items as item, i (`${item.kind}-${i}`)}
 					<SearchResultRow {item} onpick={pick} />
 				{/each}
 			{/each}
@@ -276,7 +275,7 @@
 			{/if}
 		</div>
 	</div>
-</div>
+</search>
 
 <style>
 	.search-box:focus-within {

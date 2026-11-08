@@ -29,7 +29,7 @@ import {
 	LogOut,
 } from "@lucide/svelte";
 import { api } from "./api";
-import { albumPosterUrl, artistPosterUrl, bookPosterUrl, tvPosterUrl } from "./posters";
+import { albumPosterUrl, artistPosterUrl, bookPosterUrl } from "./posters";
 import { activityFeatures } from "./activity-nav";
 import { openAdd, type AddKind } from "./add-flow";
 import { auth } from "./auth.svelte";

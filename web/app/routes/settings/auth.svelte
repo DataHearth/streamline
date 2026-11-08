@@ -295,10 +295,10 @@
 				<button
 					type="button"
 					disabled={rotate.isPending}
-					onclick={() =>
-						config.readOnly
-							? rotate.mutate(false)
-							: (confirmRotate = true)}
+					onclick={() => {
+						if (config.readOnly) rotate.mutate(false);
+						else confirmRotate = true;
+					}}
 					class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 text-sm font-medium text-status-failed transition hover:bg-status-failed/15 disabled:cursor-not-allowed disabled:opacity-60"
 				>
 					<RefreshCw size={14} aria-hidden="true" />

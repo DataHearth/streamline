@@ -75,7 +75,7 @@
 							{#if m.wanted > 0}
 								<span class="text-status-wanted">{fmtCount(m.wanted)}</span>
 							{:else}
-								<span class="text-fg-faint" aria-label="0">—</span>
+								<span class="text-fg-faint" aria-hidden="true">—</span><span class="sr-only">0</span>
 							{/if}
 						</span>
 						<ChevronRight size={14} class="text-fg-faint" aria-hidden="true" />

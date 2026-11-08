@@ -82,9 +82,8 @@
 		{/each}
 	</DropdownMenu>
 {:else}
-	<div
-		class="flex shrink-0 items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px]"
-		role="group"
+	<fieldset
+		class="min-w-0 flex shrink-0 items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px]"
 		aria-label={i18n.calendar_filter_releases()}
 	>
 		{#each CELLS as c (c.value)}
@@ -109,5 +108,5 @@
 				{c.label}
 			</button>
 		{/each}
-	</div>
+	</fieldset>
 {/if}

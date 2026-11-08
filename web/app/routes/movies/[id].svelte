@@ -118,7 +118,7 @@
 		refresh: MOVIES,
 		failed: updateFailed,
 		succeeded: () => i18n.movie_quality_updated(),
-		then: () => (qpOpen = false),
+		after: () => (qpOpen = false),
 	}));
 
 	// Only the list is re-read: the detail is gone, and re-reading it would
@@ -128,7 +128,7 @@
 		refresh: [["movies"]],
 		failed: deleteFailed,
 		succeeded: () => i18n.movie_deleted(),
-		then: () => navigate("/movies"),
+		after: () => navigate("/movies"),
 	}));
 
 	function onKebabPick(a: string) {
@@ -265,8 +265,8 @@
 	{#if auth.canAddDirectly}
 		<!-- Phone: the action row the hero gives up, pinned above the bottom nav so
 		     playing and searching are in reach from anywhere in the page. -->
-		<div
-			class="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] z-30 flex items-center gap-2 border-t border-border bg-bg-elevated/95 px-3 pb-4 pt-2.5 backdrop-blur-md md:hidden"
+		<fieldset
+			class="min-w-0 fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] z-30 flex items-center gap-2 border-t border-border bg-bg-elevated/95 px-3 pb-4 pt-2.5 backdrop-blur-md md:hidden"
 			aria-label={i18n.movies_actions()}
 		>
 			<PlayOnMenu
@@ -294,7 +294,7 @@
 			<MonitorToggle monitored={movie.monitored ?? false} onToggle={() => monitor.mutate(!(movie.monitored ?? false))} pending={monitor.isPending} />
 
 			<MovieKebabMenu onPick={onKebabPick} disabledActions={hasFiles ? [] : ["rename"]} />
-		</div>
+		</fieldset>
 	{/if}
 
 	<ManualSearchModal

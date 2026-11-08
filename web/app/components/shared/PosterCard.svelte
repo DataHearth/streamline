@@ -31,7 +31,6 @@
 	let {
 		movie,
 		size = "md",
-		showMeta = true,
 		detail,
 		href,
 		posterSrc,
@@ -46,7 +45,6 @@
 	}: {
 		movie: PosterMovie;
 		size?: "sm" | "md" | "lg";
-		showMeta?: boolean;
 		// A qualifier under the title: what this card is here for when that is not
 		// the title itself — the episodes an import landed ("S03E04 · Quartz").
 		// Same vocabulary as eventSubject().detail.
@@ -191,7 +189,7 @@
 			>
 				{movie.title}
 			</p>
-			{#if movie.original_title && movie.original_title.trim() && movie.original_title.trim() !== movie.title.trim()}
+			{#if movie.original_title?.trim() && movie.original_title.trim() !== movie.title.trim()}
 				<p
 					class="truncate text-[11px] italic text-white/70 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]"
 					title={movie.original_title}

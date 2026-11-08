@@ -640,9 +640,8 @@
 			</DropdownMenu>
 		</div>
 
-		<div
-			class="inline-flex items-center rounded-md border border-border bg-bg-elevated p-0.5"
-			role="group"
+		<fieldset
+			class="min-w-0 inline-flex items-center rounded-md border border-border bg-bg-elevated p-0.5"
 			aria-label={i18n.common_view_mode()}
 		>
 			<button
@@ -669,7 +668,7 @@
 				<List size={14} aria-hidden="true" />
 				<span class="sr-only">{i18n.common_list_view()}</span>
 			</button>
-		</div>
+		</fieldset>
 
 		<!-- Selection is a mode, not a filter: one icon, and only in grid view where
 		     the cards' checkboxes stay hidden until hover. Select all joins it whenever the mode is on,

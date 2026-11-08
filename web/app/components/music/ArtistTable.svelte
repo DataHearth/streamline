@@ -73,6 +73,7 @@
 						<td class="px-3 py-2">
 							<!-- The size sits on the inner disc: on the link, tokens.css's
 							     touch floor would stretch it into an oval below lg. -->
+							<!-- biome-ignore lint/a11y/useAnchorContent: a pointer-only twin of the named link beside it, out of the tab order -->
 							<a href="/music/{a.id}" tabindex="-1" aria-hidden="true" class="block w-fit">
 								<span class="relative block h-9 w-9 overflow-hidden rounded-full bg-bg-card">
 									<span class="absolute inset-0 grid place-items-center text-fg-faint">

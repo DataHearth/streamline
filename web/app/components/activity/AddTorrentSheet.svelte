@@ -172,6 +172,7 @@
 					</p>
 				{/if}
 
+				<!-- biome-ignore lint/a11y/noLabelWithoutControl: its text is inside an {#if}, which Biome does not read -->
 				<label
 					class="mt-3 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border-strong px-4 py-6 text-center transition active:bg-surface"
 				>

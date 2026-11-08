@@ -17,9 +17,8 @@
 	const off = "text-fg-subtle hover:text-fg";
 </script>
 
-<div
-	class="flex shrink-0 items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px]"
-	role="group"
+<fieldset
+	class="min-w-0 flex shrink-0 items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px]"
 	aria-label={i18n.calendar_view()}
 >
 	<button
@@ -38,4 +37,4 @@
 	>
 		{i18n.series_upcoming()}
 	</button>
-</div>
+</fieldset>

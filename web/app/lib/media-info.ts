@@ -249,9 +249,7 @@ export function formatDuration(seconds?: number): string | undefined {
 // ── composed lines ────────────────────────────────────────────────────────
 
 const joinDot = (parts: (string | undefined | null)[]) =>
-	parts.filter((p): p is string => Boolean(p && p.trim())).join(" · ");
-const joinSpace = (parts: (string | undefined | null)[]) =>
-	parts.filter((p): p is string => Boolean(p && p.trim())).join(" ");
+	parts.filter((p): p is string => Boolean(p?.trim())).join(" · ");
 
 // The resolution a file should be described by: the probe's bucket, else the
 // word the filename claimed.

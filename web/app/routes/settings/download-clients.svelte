@@ -614,7 +614,6 @@
 		<ReadOnlyFieldset>
 			<BuiltinClientForm
 				form={builtinForm}
-				isEdit={builtinIsEdit}
 				listenPortOverride={builtinCfg?.listen_port_override}
 			/>
 		</ReadOnlyFieldset>

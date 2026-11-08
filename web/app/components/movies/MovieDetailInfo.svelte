@@ -141,7 +141,7 @@
 		refresh: MOVIES,
 		failed: deleteFailed,
 		succeeded: () => i18n.file_deleted(),
-		then: () => (deleteOpen = false),
+		after: () => (deleteOpen = false),
 	}));
 </script>
 

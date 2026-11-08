@@ -15,34 +15,11 @@ import type { FormApi, SvelteFormApi } from "@tanstack/svelte-form";
 // concrete schema outright. `any` is the only slot value that is (variance-
 // wise) compatible with whatever the parent passed, so it stands in for all
 // eleven here rather than in each of the six form components individually.
-export type AppForm<TFormData> = FormApi<
-	TFormData,
-	any,
-	any,
-	any,
-	any,
-	any,
-	any,
-	any,
-	any,
-	any,
-	any,
-	any
-> &
-	SvelteFormApi<
-		TFormData,
-		any,
-		any,
-		any,
-		any,
-		any,
-		any,
-		any,
-		any,
-		any,
-		any,
-		any
-	>;
+// biome-ignore lint/suspicious/noExplicitAny: invariant validator slots, see above
+type Slot = any;
+
+export type AppForm<TFormData> = FormApi<TFormData, Slot, Slot, Slot, Slot, Slot, Slot, Slot, Slot, Slot, Slot, Slot> &
+	SvelteFormApi<TFormData, Slot, Slot, Slot, Slot, Slot, Slot, Slot, Slot, Slot, Slot, Slot>;
 
 // The one text-input class for every settings control, whether the page uses
 // TanStack forms or saves per control. Read-only styling is part of it rather

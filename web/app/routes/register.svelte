@@ -10,7 +10,7 @@
 		type AuthConfig,
 		type RegisterInput,
 	} from "@lib/auth_api";
-	import { ApiError, errorText } from "@lib/api";
+	import { errorText } from "@lib/api";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { email as emailSchema, password as passwordSchema } from "@lib/schemas";
 	import TextField from "@components/forms/TextField.svelte";

@@ -88,7 +88,7 @@
 
 	let root = $derived(
 		SECTIONS.find(
-			(s) => pathname === s.prefix || pathname.startsWith(s.prefix + "/"),
+			(s) => pathname === s.prefix || pathname.startsWith(`${s.prefix}/`),
 		),
 	);
 	let barTitle = $derived(
@@ -398,9 +398,9 @@
 		     Back closes it (routes/search.svelte). -->
 		<a
 			href="/search"
-			aria-label={i18n.common_search()}
 			class="grid h-11 w-11 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg md:hidden"
 		>
+			<span class="sr-only">{i18n.common_search()}</span>
 			<Search size={19} aria-hidden="true" />
 		</a>
 		<button
@@ -485,7 +485,7 @@
 		</div>
 		{#each addItems as item, i (item.id)}
 			{#if item.divider && i > 0}
-				<div class="-mx-1 my-1 h-px bg-border" role="separator"></div>
+				<hr class="-mx-1 my-1 h-px border-0 bg-border" />
 			{/if}
 			<button
 				role="menuitem"

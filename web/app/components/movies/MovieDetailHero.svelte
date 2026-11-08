@@ -136,12 +136,12 @@
 				<!-- md and up only: on a phone these live in the pinned bar at the
 				     bottom of the page, where Manual search is reachable from anywhere
 				     in the document rather than only from the top of it. -->
-				<div
-					class="mt-5 hidden flex-wrap items-center gap-2.5 md:flex"
+				<fieldset
+					class="min-w-0 mt-5 hidden flex-wrap items-center gap-2.5 md:flex"
 					aria-label={i18n.movies_actions()}
 				>
 					{@render actions()}
-				</div>
+				</fieldset>
 			{/if}
 		</div>
 	</div>

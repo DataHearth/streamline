@@ -141,6 +141,7 @@
 		{/if}
 	</div>
 
+	<!-- biome-ignore lint/a11y/useAnchorContent: a pointer-only twin of the named link beside it, out of the tab order -->
 	<a
 		{href}
 		tabindex="-1"

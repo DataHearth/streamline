@@ -48,10 +48,9 @@
 </script>
 
 {#snippet rangeControl()}
-	<div
-		role="group"
+	<fieldset
 		aria-label={i18n.stats_range()}
-		class="inline-flex gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px]"
+		class="min-w-0 inline-flex gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px]"
 	>
 		{#each STATS_RANGES as r (r)}
 			<button
@@ -66,7 +65,7 @@
 				{RANGE_LABEL[r]()}
 			</button>
 		{/each}
-	</div>
+	</fieldset>
 	<p class="hidden min-w-0 font-mono text-[11px] text-fg-subtle md:block">
 		{i18n.stats_compare({ range: RANGE_LABEL[range]() })}
 	</p>

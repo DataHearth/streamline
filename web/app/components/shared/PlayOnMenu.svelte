@@ -75,15 +75,16 @@
 		};
 	}
 
-	// Escape and the scroll lock belong to the document once the sheet is
-	// portalled out of the wrapper below.
+	// Escape belongs to the document while the menu is open, since the phone
+	// sheet is portalled out of this component.
 	$effect(() => {
-		if (!open || !primary) return;
-		lockScroll();
+		if (!open) return;
+		const sheet = primary;
+		if (sheet) lockScroll();
 		document.addEventListener("keydown", onKey);
 		return () => {
 			document.removeEventListener("keydown", onKey);
-			unlockScroll();
+			if (sheet) unlockScroll();
 		};
 	});
 </script>
@@ -177,6 +178,7 @@
 						<div
 							role="menuitem"
 							aria-disabled="true"
+							tabindex="-1"
 							class="flex w-full items-center justify-between gap-2 text-left opacity-50 {big
 								? 'px-5 py-4 text-[15px]'
 								: 'px-3 py-2 text-sm'}"
@@ -190,11 +192,7 @@
 	{/if}
 {/snippet}
 
-<div
-	class={primary ? "relative flex min-w-0 flex-1" : "relative"}
-	onkeydown={onKey}
-	role="presentation"
->
+<div class={primary ? "relative flex min-w-0 flex-1" : "relative"}>
 	{#if primary}
 		<button
 			bind:this={triggerEl}

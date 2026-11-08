@@ -91,6 +91,7 @@
 		<p class="text-sm leading-relaxed text-fg-muted">
 			{i18n.jwt_rotate_confirm_help()}
 		</p>
+		<!-- biome-ignore lint/a11y/noLabelWithoutControl: its text is inside an {#each}, which Biome does not read -->
 		<label class="mt-4 block">
 			<span class="mb-1 block text-xs font-medium text-fg-muted">
 				{#each typeToConfirm as p}{#if p.slot === "word"}<code

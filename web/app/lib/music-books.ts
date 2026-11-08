@@ -631,7 +631,10 @@ export function artistPeople(a: Artist): ArtistPeople {
 	const production = new Map<string, Acc>();
 	const at = (map: Map<string, Acc>, p: Person) => {
 		let x = map.get(p.name);
-		if (!x) map.set(p.name, (x = { person: p, releases: new Set(), tracks: 0, roles: new Set(), instruments: new Set() }));
+		if (!x) {
+			x = { person: p, releases: new Set(), tracks: 0, roles: new Set(), instruments: new Set() };
+			map.set(p.name, x);
+		}
 		return x;
 	};
 	for (const r of a.albums) {
@@ -644,7 +647,7 @@ export function artistPeople(a: Artist): ArtistPeople {
 		for (const p of r.personnel ?? [])
 			if (!band.has(p.name)) {
 				const x = at(musicians, p);
-				p.instruments.forEach((i) => x.instruments.add(i));
+				for (const i of p.instruments) x.instruments.add(i);
 				x.releases.add(r.id);
 			}
 		for (const c of r.credits ?? [])

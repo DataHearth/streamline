@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { tick } from "svelte";
-	import { createQuery, createMutation, useQueryClient } from "@tanstack/svelte-query";
+	import { createQuery, createMutation, skipToken, useQueryClient } from "@tanstack/svelte-query";
 	import { ArrowUpRight, BookOpen, Check, ChevronLeft, Music, Plus, Search, X } from "@lucide/svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -26,7 +26,7 @@
 		LOOKUP_SOURCE,
 		hardcoverIssue,
 		type HardcoverIssue,
-		type LookupHit,
+		type SearchHit,
 		type LookupKind,
 		type LookupRelease,
 	} from "@lib/music-books-lookup";
@@ -69,7 +69,7 @@
 	// See AddMusicBookModal: one album off the artist's discography.
 	let album = $state<LookupRelease | null>(null);
 	let pendingAlbum: LookupRelease | null = null;
-	const requestKey = (h: LookupHit, a: LookupRelease | null) => (a?.mbid ? `${h.key}:${a.mbid}` : h.key);
+	const requestKey = (h: SearchHit, a: LookupRelease | null) => (a?.mbid ? `${h.key}:${a.mbid}` : h.key);
 	// The last add or request's result, shown on the add button itself.
 	const outcome = createOutcome<string>();
 	$effect(() => {
@@ -120,7 +120,7 @@
 		queryFn: () => api<QualityProfile[]>(profilesPath(media)),
 		enabled: open,
 	}));
-	const searchQuery = createQuery<LookupHit[]>(() => ({
+	const searchQuery = createQuery<SearchHit[]>(() => ({
 		queryKey: ["mb-lookup", kind, debounced],
 		queryFn: () => lookupSearch(kind, debounced),
 		enabled: open && debounced.length >= 2,
@@ -138,23 +138,28 @@
 	let keyIssue = $derived(hardcoverIssue(searchQuery.error) ?? refused);
 	let results = $derived(keyIssue ? [] : (searchQuery.data ?? []));
 	let selected = $derived(results.find((r) => r.key === selectedKey));
-	const detailQuery = createQuery(() => ({
-		queryKey: ["mb-lookup-detail", selected?.key ?? null],
-		queryFn: async () => {
-			try {
-				return await lookupDetail(selected!);
-			} catch (e) {
-				const issue = hardcoverIssue(e);
-				if (issue) refuse(issue);
-				throw e;
-			}
-		},
-		enabled: open && !!selected,
-		staleTime: 5 * 60_000,
-	}));
+	const detailQuery = createQuery(() => {
+		const hit = selected;
+		return {
+			queryKey: ["mb-lookup-detail", hit?.key ?? null],
+			queryFn:
+				open && hit
+					? async () => {
+							try {
+								return await lookupDetail(hit);
+							} catch (e) {
+								const issue = hardcoverIssue(e);
+								if (issue) refuse(issue);
+								throw e;
+							}
+						}
+					: skipToken,
+			staleTime: 5 * 60_000,
+		};
+	});
 
 	const qc = useQueryClient();
-	const addMutation = createMutation<{ id: number } | null, Error, LookupHit>(() => ({
+	const addMutation = createMutation<{ id: number } | null, Error, SearchHit>(() => ({
 		onMutate: (h) => {
 			pendingKey = h.key;
 			pendingAlbum = canAdd ? null : album;
@@ -193,7 +198,7 @@
 		...(qpQuery.data ?? []).map((p) => ({ value: p.name, label: p.name })),
 	]);
 
-	const isHeld = (h: LookupHit) => h.held || sessionAdds.has(h.key);
+	const isHeld = (h: SearchHit) => h.held || sessionAdds.has(h.key);
 	let heldCount = $derived(results.filter(isHeld).length);
 	let selectedHeld = $derived(selected ? isHeld(selected) : false);
 	let selectedLocalId = $derived(selected ? (selected.library_id ?? sessionAdds.get(selected.key)) : undefined);
@@ -212,7 +217,7 @@
 					: i18n.action_add_book(),
 	);
 
-	function pick(h: LookupHit) {
+	function pick(h: SearchHit) {
 		selectedKey = h.key;
 		sheetExpanded = false;
 	}

@@ -76,7 +76,7 @@
 		failed: updateFailed,
 		detail: hardcover,
 		succeeded: () => i18n.quality_updated(),
-		then: () => (qpOpen = false),
+		after: () => (qpOpen = false),
 	}));
 	const refreshAction = createAction(() => ({
 		run: () => api(`${base}/refresh-metadata`, { method: "POST" }),
@@ -93,7 +93,7 @@
 		failed: deleteFailed,
 		detail: hardcover,
 		succeeded: () => i18n.library_removed({ title }),
-		then: () => {
+		after: () => {
 			deleteOpen = false;
 			navigate(backHref);
 		},

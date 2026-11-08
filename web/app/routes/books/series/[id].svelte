@@ -102,7 +102,7 @@
 		run: () => api<SeriesSendPlan>(`/books/series/${id}/send`, { method: "POST" }),
 		refresh: [],
 		failed: () => i18n.common_update_failed(),
-		then: (_, plan) => {
+		after: (_, plan) => {
 			const list = plan.skipped ?? [];
 			const head = i18n.books_send_series_started({ emails: String(plan.emails), volumes: String(plan.sent_volumes) });
 			if (list.length === 0) {

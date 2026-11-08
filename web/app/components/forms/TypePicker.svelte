@@ -60,6 +60,7 @@
 				checked={active}
 				{disabled}
 				onchange={() => onChange(o.value)}
+				aria-label={o.label}
 				class="sr-only"
 			/>
 			{@render logo(o.value)}

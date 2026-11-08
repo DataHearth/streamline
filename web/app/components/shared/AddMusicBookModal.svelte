@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createQuery, createMutation, useQueryClient } from "@tanstack/svelte-query";
+	import { createQuery, createMutation, skipToken, useQueryClient } from "@tanstack/svelte-query";
 	import {
 		ArrowUpRight,
 		BookOpen,
@@ -27,10 +27,9 @@
 		monitorOptions,
 		profileMedia,
 		requestBody,
-		LOOKUP_SOURCE,
 		hardcoverIssue,
 		type HardcoverIssue,
-		type LookupHit,
+		type SearchHit,
 		type LookupKind,
 		type LookupRelease,
 	} from "@lib/music-books-lookup";
@@ -73,7 +72,7 @@
 	// of that album alone. It belongs to that artist, so it clears with it.
 	let album = $state<LookupRelease | null>(null);
 	let pendingAlbum: LookupRelease | null = null;
-	const requestKey = (h: LookupHit, a: LookupRelease | null) => (a?.mbid ? `${h.key}:${a.mbid}` : h.key);
+	const requestKey = (h: SearchHit, a: LookupRelease | null) => (a?.mbid ? `${h.key}:${a.mbid}` : h.key);
 	// The last add or request's result, shown on the add button itself; keyed
 	// like `requested`, so an album request answers on that album.
 	const outcome = createOutcome<string>();
@@ -124,7 +123,7 @@
 		enabled: open,
 	}));
 
-	const searchQuery = createQuery<LookupHit[]>(() => ({
+	const searchQuery = createQuery<SearchHit[]>(() => ({
 		queryKey: ["mb-lookup", kind, debounced],
 		queryFn: () => lookupSearch(kind, debounced),
 		enabled: open && debounced.length >= 2,
@@ -141,19 +140,24 @@
 	let results = $derived(keyIssue ? [] : (searchQuery.data ?? []));
 	let selected = $derived(results.find((r) => r.key === selectedKey));
 
-	const detailQuery = createQuery(() => ({
-		queryKey: ["mb-lookup-detail", selected?.key ?? null],
-		queryFn: async () => {
-			try {
-				return await lookupDetail(selected!);
-			} catch (e) {
-				refused = hardcoverIssue(e) ?? refused;
-				throw e;
-			}
-		},
-		enabled: open && !!selected,
-		staleTime: 5 * 60_000,
-	}));
+	const detailQuery = createQuery(() => {
+		const hit = selected;
+		return {
+			queryKey: ["mb-lookup-detail", hit?.key ?? null],
+			queryFn:
+				open && hit
+					? async () => {
+							try {
+								return await lookupDetail(hit);
+							} catch (e) {
+								refused = hardcoverIssue(e) ?? refused;
+								throw e;
+							}
+						}
+					: skipToken,
+			staleTime: 5 * 60_000,
+		};
+	});
 
 	// Keep the highlight on a row that still exists as results change.
 	$effect(() => {
@@ -166,7 +170,7 @@
 	});
 
 	const qc = useQueryClient();
-	const addMutation = createMutation<{ id: number } | null, Error, LookupHit>(() => ({
+	const addMutation = createMutation<{ id: number } | null, Error, SearchHit>(() => ({
 		onMutate: (h) => {
 			pendingKey = h.key;
 			pendingAlbum = canAdd ? null : album;
@@ -211,8 +215,8 @@
 		monitorOpts.some((o) => o.value === monitor) ? monitor : (monitorOpts[0]?.value ?? ""),
 	);
 
-	const localId = (h: LookupHit) => h.library_id ?? sessionAdds.get(h.key);
-	const isHeld = (h: LookupHit) => h.held || sessionAdds.has(h.key);
+	const localId = (h: SearchHit) => h.library_id ?? sessionAdds.get(h.key);
+	const isHeld = (h: SearchHit) => h.held || sessionAdds.has(h.key);
 	let selectedLocalId = $derived(selected ? localId(selected) : undefined);
 	let selectedHeld = $derived(selected ? isHeld(selected) : false);
 	let selectedPending = $derived(selected ? pendingKey === selected.key : false);
@@ -230,7 +234,7 @@
 					: i18n.action_add_book(),
 	);
 
-	function selectResult(h: LookupHit, revealPanel = false) {
+	function selectResult(h: SearchHit, revealPanel = false) {
 		selectedKey = h.key;
 		if (revealPanel) showPanelOnNarrow = true;
 	}
@@ -511,7 +515,7 @@
 	{/if}
 {/snippet}
 
-{#snippet addButton(h: LookupHit)}
+{#snippet addButton(h: SearchHit)}
 	{@const key = requestKey(h, album)}
 	<OutcomeButton
 		phase={outcome.phase(key, selectedPending)}

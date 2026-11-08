@@ -1,6 +1,6 @@
 import {
 	Ban,
-	Check,
+	type Check,
 	CircleAlert,
 	CircleCheck,
 	CircleX,

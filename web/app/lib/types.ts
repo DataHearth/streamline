@@ -1,4 +1,4 @@
-import type { BookFormat, BookKind, MusicTier, ReleaseType } from "./music-books";
+import type { BookFormat, BookKind, ReleaseType } from "./music-books";
 
 export type MovieStatus =
 	| "wanted"

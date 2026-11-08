@@ -93,9 +93,8 @@
 			>
 				{i18n.movies_more_like_this()}
 			</h3>
-			<div
-				class="hidden items-center gap-1 md:flex"
-				role="group"
+			<fieldset
+				class="min-w-0 hidden items-center gap-1 md:flex"
 				aria-label={i18n.movies_more_like_this()}
 			>
 				<button
@@ -116,7 +115,7 @@
 				>
 					<ChevronRight size={14} aria-hidden="true" />
 				</button>
-			</div>
+			</fieldset>
 		</header>
 		<div
 			bind:this={scrollEl}

@@ -31,9 +31,7 @@
 		PendingItem,
 		HoldAssignments,
 	} from "@lib/types";
-	import ActivityToolbar, {
-		ACTIVITY_CHIPS,
-	} from "@components/activity/ActivityToolbar.svelte";
+	import ActivityToolbar from "@components/activity/ActivityToolbar.svelte";
 	import ActivityViewSwitch from "@components/activity/ActivityViewSwitch.svelte";
 	import ActivityTable from "@components/activity/ActivityTable.svelte";
 	import ActivityTouchList from "@components/activity/ActivityTouchList.svelte";

@@ -341,7 +341,6 @@
 								href={link.href}
 								target="_blank"
 								rel="noopener noreferrer"
-								aria-label={link.label}
 								title={link.label}
 								class={cn(
 									"inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/40 text-fg-muted backdrop-blur-sm transition hover:border-accent/40 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ring",
@@ -353,6 +352,7 @@
 									style:--mark="url('/static/images/brand-logos/{link.slug}.svg')"
 									aria-hidden="true"
 								></span>
+								<span class="sr-only">{link.label}</span>
 							</a>
 						{/each}
 					</div>

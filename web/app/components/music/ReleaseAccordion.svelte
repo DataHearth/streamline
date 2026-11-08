@@ -186,7 +186,7 @@
 					{/if}
 				</div>
 				<div class="mt-5">
-					<ReleaseCredits release={r} scope="accordion" />
+					<ReleaseCredits release={r} idScope="accordion" />
 				</div>
 			</div>
 		{/if}

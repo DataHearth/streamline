@@ -181,6 +181,7 @@
 			</div>
 		{:else}
 			{#each items as i (i.name)}
+				{@const logo = PROVIDERS[i.protocol].logo}
 				<div
 					class="group relative flex flex-col gap-3 overflow-hidden rounded-lg border border-border bg-bg-elevated p-5 transition hover:border-border-strong"
 				>
@@ -195,9 +196,9 @@
 						<div
 							class="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-bg-card text-fg-muted"
 						>
-							{#if PROVIDERS[i.protocol].logo}
+							{#if logo}
 								<BrandLogo
-									name={PROVIDERS[i.protocol].logo!}
+									name={logo}
 									size={26}
 									ariaLabel={PROVIDERS[i.protocol].label}
 								/>

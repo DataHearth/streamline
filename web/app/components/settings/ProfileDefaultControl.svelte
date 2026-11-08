@@ -39,7 +39,10 @@
 		bind:this={trigger}
 		type="button"
 		disabled={busy}
-		onclick={() => (single ? onMake(null) : (open = !open))}
+		onclick={() => {
+			if (single) onMake(null);
+			else open = !open;
+		}}
 		aria-haspopup={single ? undefined : "listbox"}
 		aria-expanded={single ? undefined : open}
 		aria-label={label}

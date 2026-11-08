@@ -164,9 +164,9 @@
 >
 	<a
 		href="/"
-		aria-label={i18n.nav_home_dashboard()}
 		class="mb-3 grid min-h-11 min-w-11 place-items-center rounded-md transition hover:opacity-90"
 	>
+		<span class="sr-only">{i18n.nav_home_dashboard()}</span>
 		<img
 			src="/static/images/favicon-512.png"
 			alt=""

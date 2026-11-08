@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronRight, SlidersHorizontal } from "@lucide/svelte";
+	import { ChevronRight, type SlidersHorizontal } from "@lucide/svelte";
 	import { createSettingsNav } from "@lib/settings-nav.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 

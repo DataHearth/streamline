@@ -85,8 +85,8 @@
 			<a
 				href="/settings/users/{user.id}"
 				class="inline-flex items-center justify-center rounded-md p-1.5 text-fg-muted hover:bg-surface hover:text-fg"
-				aria-label={i18n.users_edit_name({ name: user.display_name || user.email })}
 			>
+				<span class="sr-only">{i18n.users_edit_name({ name: user.display_name || user.email })}</span>
 				<Pencil size={16} aria-hidden="true" />
 			</a>
 			{#if !isSelf}

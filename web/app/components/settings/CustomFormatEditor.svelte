@@ -109,8 +109,7 @@
 		const names: string[] = [];
 		let cur = "";
 		for (let i = 0; i < body.length; i++) {
-			// i < body.length, so the index is always in range.
-			const ch = body[i]!;
+			const ch = body.charAt(i);
 			if (ch === "\\") {
 				const next = body[i + 1];
 				// \d, \b, \w and friends are classes, not escaped literals.

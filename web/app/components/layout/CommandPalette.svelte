@@ -193,6 +193,7 @@
 	});
 </script>
 
+<!-- biome-ignore lint/a11y/useKeyWithClickEvents: a click on the ::backdrop lands on the dialog; Escape is its oncancel -->
 <dialog
 	bind:this={dialogEl}
 	aria-label={i18n.palette_label()}
@@ -241,7 +242,7 @@
 					>
 						{section.label}
 					</div>
-					{#each section.items as item, iIdx (item.kind + "-" + iIdx)}
+					{#each section.items as item, iIdx (`${item.kind}-${iIdx}`)}
 						{@const flatIdx = indexOf(sIdx, iIdx)}
 						{@const active = flatIdx === cursor}
 						<button

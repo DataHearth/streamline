@@ -35,9 +35,8 @@
 	const num = "font-mono text-[10.5px] tabular-nums";
 </script>
 
-<div
-	class="flex w-full shrink-0 items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px] md:w-auto"
-	role="group"
+<fieldset
+	class="min-w-0 flex w-full shrink-0 items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px] md:w-auto"
 	aria-label={i18n.activity_view()}
 >
 	{#each cells as c (c.key)}
@@ -55,4 +54,4 @@
 			{/if}
 		</button>
 	{/each}
-</div>
+</fieldset>

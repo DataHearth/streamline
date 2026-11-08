@@ -144,6 +144,7 @@
 
 {#if open && torrent}
 	<div use:portal class="fixed inset-0 z-40" role="presentation">
+		<!-- biome-ignore lint/a11y/noStaticElementInteractions: the scrim is the pointer's way out; Escape and the close button are the keyboard's -->
 		<div
 			class="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
 			data-sheet-scrim

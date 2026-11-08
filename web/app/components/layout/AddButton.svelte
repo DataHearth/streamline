@@ -107,9 +107,8 @@
 		class:on={open}
 	></button>
 
-	<div
-		class="add-pill fixed right-4 z-[45] flex flex-col items-end gap-2.5 md:hidden"
-		role="group"
+	<fieldset
+		class="min-w-0 add-pill fixed right-4 z-[45] flex flex-col items-end gap-2.5 md:hidden"
 		aria-label={heading}
 	>
 		{#each fan as item, i (item.id)}
@@ -174,7 +173,7 @@
 			     being swapped for an X. -->
 			<Plus class="pill-icon" size={20} strokeWidth={2.4} aria-hidden="true" />
 		</button>
-	</div>
+	</fieldset>
 {/if}
 
 <style>
@@ -188,10 +187,6 @@
 		   fan row take pointer events back. */
 		pointer-events: none;
 	}
-	.add-pill > .pill {
-		pointer-events: auto;
-	}
-
 	.scrim {
 		opacity: 0;
 		visibility: hidden;
@@ -232,6 +227,9 @@
 		transition:
 			background-color 160ms var(--ease),
 			color 160ms var(--ease);
+	}
+	.add-pill > .pill {
+		pointer-events: auto;
 	}
 	.pill :global(.pill-icon) {
 		flex: none;

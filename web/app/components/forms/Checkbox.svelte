@@ -37,6 +37,7 @@
 	let off = $derived(disabled || configLocked);
 </script>
 
+<!-- biome-ignore lint/a11y/noLabelWithoutControl: its text is inside an {#if}, which Biome does not read -->
 <label
 	class={cn(
 		"flex cursor-pointer items-start gap-2.5",

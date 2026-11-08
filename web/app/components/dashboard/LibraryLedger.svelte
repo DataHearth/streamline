@@ -36,7 +36,7 @@
 			<span class="sr-only">{label}</span>
 		</span>
 	{:else}
-		<span class="text-fg-faint" aria-label="0 {label}">—</span>
+		<span class="text-fg-faint" aria-hidden="true">—</span><span class="sr-only">0 {label}</span>
 	{/if}
 {/snippet}
 

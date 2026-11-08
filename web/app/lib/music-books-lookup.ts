@@ -88,7 +88,7 @@ export type BookMeta = BookHit & BookDetail;
 // What /requests/{id}/metadata answers, by the request's media_type.
 export type RequestMetadata = RequestMediaDetails | ArtistMeta | BookMeta;
 
-export type LookupHit = {
+type HitFields = {
 	// mbid for an artist; "b<id>" / "s<id>" for a book or a series, whose ids
 	// Hardcover keeps in separate spaces.
 	key: string;
@@ -105,11 +105,15 @@ export type LookupHit = {
 	year?: number;
 	held: boolean;
 	library_id?: number;
-	artist?: ArtistHit;
-	book?: BookHit;
 };
 
-export function artistHit(a: ArtistHit): LookupHit {
+export type LookupHit = HitFields & { artist?: ArtistHit; book?: BookHit };
+
+// A search answers exactly one of the two. A request's hit can carry neither,
+// when its metadata has not been read.
+export type SearchHit = HitFields & ({ artist: ArtistHit; book?: undefined } | { artist?: undefined; book: BookHit });
+
+export function artistHit(a: ArtistHit): SearchHit {
 	return {
 		key: a.mbid,
 		kind: "artist",
@@ -131,7 +135,7 @@ function bookImage(b: BookHit): string | undefined {
 	return b.type === "book" ? lookupPosterUrl("books", b.hardcover_id) : undefined;
 }
 
-export function bookHit(b: BookHit): LookupHit {
+export function bookHit(b: BookHit): SearchHit {
 	return {
 		key: (b.type === "series" ? "s" : "b") + b.hardcover_id,
 		kind: "book",
@@ -148,7 +152,7 @@ export function bookHit(b: BookHit): LookupHit {
 	};
 }
 
-export async function lookupSearch(kind: LookupKind, q: string): Promise<LookupHit[]> {
+export async function lookupSearch(kind: LookupKind, q: string): Promise<SearchHit[]> {
 	const query = encodeURIComponent(q);
 	if (kind === "artist") {
 		const res = await api<{ items: ArtistHit[] }>(`/music/search?query=${query}`);
@@ -158,10 +162,9 @@ export async function lookupSearch(kind: LookupKind, q: string): Promise<LookupH
 	return (res.items ?? []).map(bookHit);
 }
 
-export function lookupDetail(h: LookupHit): Promise<ArtistDetail | BookDetail> {
+export function lookupDetail(h: SearchHit): Promise<ArtistDetail | BookDetail> {
 	if (h.artist) return api<ArtistDetail>(`/music/search/${h.artist.mbid}?lang=${overviewLang()}`);
-	const b = h.book!;
-	return api<BookDetail>(`/books/search/${b.hardcover_id}?type=${b.type}`);
+	return api<BookDetail>(`/books/search/${h.book.hardcover_id}?type=${h.book.type}`);
 }
 
 // A 409 from an add means another tab or user got there first.
@@ -228,21 +231,20 @@ export function monitorOptions(h: LookupHit | undefined): { value: string; label
 	];
 }
 
-export function addRequest(h: LookupHit, profile: string, monitor: string) {
+export function addRequest(h: SearchHit, profile: string, monitor: string) {
 	const quality_profile = profile || undefined;
 	if (h.artist)
 		return { path: "/music/artists", body: { mbid: h.artist.mbid, quality_profile, monitor } };
-	const b = h.book!;
 	return {
-		path: b.type === "series" ? "/books/series" : "/books",
-		body: { hardcover_id: b.hardcover_id, quality_profile, monitor },
+		path: h.book.type === "series" ? "/books/series" : "/books",
+		body: { hardcover_id: h.book.hardcover_id, quality_profile, monitor },
 	};
 }
 
 // The request a request_only member sends instead. The profile is a
 // preference; the reviewer can override it. With an album picked from an
 // artist's discography the request is for that album alone.
-export function requestBody(h: LookupHit, profile: string, album?: LookupRelease | null) {
+export function requestBody(h: SearchHit, profile: string, album?: LookupRelease | null) {
 	const title = h.title;
 	const quality_profile = profile || undefined;
 	if (h.artist && album?.mbid)
@@ -257,7 +259,7 @@ export function requestBody(h: LookupHit, profile: string, album?: LookupRelease
 	if (h.artist) return { media_type: "artist", media_mbid: h.artist.mbid, title, quality_profile };
 	return {
 		media_type: h.series ? "book_series" : "book",
-		media_id: h.book!.hardcover_id,
+		media_id: h.book.hardcover_id,
 		title,
 		quality_profile,
 	};

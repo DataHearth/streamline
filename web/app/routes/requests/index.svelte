@@ -390,9 +390,8 @@
 			{/each}
 		</nav>
 
-		<div
-			class="flex items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-1"
-			role="group"
+		<fieldset
+			class="min-w-0 flex items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-1"
 			aria-label={i18n.imports_media_type()}
 		>
 			{#each KIND_CHIPS as opt (opt.key)}
@@ -410,7 +409,7 @@
 					{opt.label}
 				</button>
 			{/each}
-		</div>
+		</fieldset>
 	</div>
 
 	{#if requestsQuery.isLoading}

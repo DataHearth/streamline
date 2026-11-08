@@ -33,9 +33,8 @@
 		<h3 class="text-base font-semibold text-fg">{i18n.account_language()}</h3>
 	</header>
 
-	<div
-		class="inline-flex items-center rounded-md border border-border bg-bg p-0.5"
-		role="group"
+	<fieldset
+		class="min-w-0 inline-flex items-center rounded-md border border-border bg-bg p-0.5"
 		aria-label={i18n.account_language()}
 	>
 		{#each options as o (o.code)}
@@ -54,7 +53,7 @@
 				{o.label}
 			</button>
 		{/each}
-	</div>
+	</fieldset>
 
 	<p class="mt-2.5 text-xs text-fg-subtle">{i18n.account_language_help()}</p>
 </section>

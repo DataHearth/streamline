@@ -110,6 +110,7 @@
 			</p>
 		{/if}
 	{:else}
+		<!-- biome-ignore lint/a11y/noLabelWithoutControl: its text is inside an {#if}, which Biome does not read -->
 		<label
 			class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-bg-card px-4 py-8 text-center transition hover:border-border-strong"
 		>

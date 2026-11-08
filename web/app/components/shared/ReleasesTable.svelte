@@ -717,7 +717,7 @@
 		</span>
 		<div class="flex flex-wrap items-center gap-2">
 			{#if books && !technical}
-				<div class="inline-flex rounded-lg border border-border bg-bg-elevated p-0.5" role="group" aria-label={i18n.books_format()}>
+				<fieldset class="min-w-0 inline-flex rounded-lg border border-border bg-bg-elevated p-0.5" aria-label={i18n.books_format()}>
 					{#each [{ key: "all" as const, label: i18n.common_all() }, { key: "ebook" as const, label: formatLabel("ebook") }, { key: "audiobook" as const, label: formatLabel("audiobook") }] as seg (seg.key)}
 						<button
 							type="button"
@@ -731,7 +731,7 @@
 							{seg.label}
 						</button>
 					{/each}
-				</div>
+				</fieldset>
 			{/if}
 			{#if technical && groups.length > 0}
 				<div class="w-40">

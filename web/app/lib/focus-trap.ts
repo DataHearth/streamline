@@ -30,10 +30,9 @@ export function trapFocus(node: HTMLElement) {
 	function onKeydown(e: KeyboardEvent) {
 		if (e.key !== "Tab") return;
 		const els = focusableIn(node);
-		if (els.length === 0) return;
-		// Non-null: els is non-empty per the guard above, so both ends exist.
-		const first = els[0]!;
-		const last = els[els.length - 1]!;
+		const first = els[0];
+		const last = els.at(-1);
+		if (!first || !last) return;
 		const active = document.activeElement as HTMLElement | null;
 		if (e.shiftKey && (active === first || !node.contains(active))) {
 			e.preventDefault();

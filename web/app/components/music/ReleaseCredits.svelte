@@ -17,10 +17,10 @@
 	// What the liner notes say, under the tracklist: who guests on which
 	// track, who made the record, and the release's own facts. Anyone who is
 	// an artist in the library links to their page.
-	// `scope` keeps the ids apart: the phone accordion and the md panel both
+	// `idScope` keeps the ids apart: the phone accordion and the md panel both
 	// render the open release, one of them hidden.
-	let { release: r, scope = "panel" }: { release: Release; scope?: string } = $props();
-	let uid = $derived(`${scope}-${r.id}`);
+	let { release: r, idScope = "panel" }: { release: Release; idScope?: string } = $props();
+	let uid = $derived(`${idScope}-${r.id}`);
 
 	const ln = (p: Person): InfoLink => ({ text: p.name, href: personHref(p) });
 

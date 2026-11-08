@@ -187,12 +187,13 @@
 	</form>
 
 	{#if lastCreated}
+		{@const invite = lastCreated}
 		<div
 			class="mt-4 rounded-md border border-status-wanted/40 bg-status-wanted/5 p-3 text-xs"
 		>
 			<p class="mb-2 flex items-center gap-1.5 font-medium text-fg">
 				<Send size={12} aria-hidden="true" />
-				{i18n.invites_for_copy({ who: lastCreated.email ?? i18n.invites_anyone() })}
+				{i18n.invites_for_copy({ who: invite.email ?? i18n.invites_anyone() })}
 			</p>
 			<div class="grid gap-2">
 				<div>
@@ -200,11 +201,11 @@
 					<code
 						class="mt-1 block break-all rounded bg-bg-deep p-2 font-mono text-fg"
 					>
-						{lastCreated.url}
+						{invite.url}
 					</code>
 					<button
 						type="button"
-						onclick={() => copy(lastCreated!.url)}
+						onclick={() => copy(invite.url)}
 						class="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-fg-muted hover:bg-surface hover:text-fg"
 					>
 						<LinkIcon size={12} aria-hidden="true" />
@@ -216,11 +217,11 @@
 					<code
 						class="mt-1 block break-all rounded bg-bg-deep p-2 font-mono text-fg"
 					>
-						{lastCreated.raw_token}
+						{invite.raw_token}
 					</code>
 					<button
 						type="button"
-						onclick={() => copy(lastCreated!.raw_token)}
+						onclick={() => copy(invite.raw_token)}
 						class="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-fg-muted hover:bg-surface hover:text-fg"
 					>
 						<Clipboard size={12} aria-hidden="true" />

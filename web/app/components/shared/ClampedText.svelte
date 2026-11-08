@@ -123,6 +123,7 @@
      min-w-0: a long URL must not widen the paragraph past its column. -->
 <div class={cn("flex max-w-[680px]", klass)}>
 	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
+	<!-- biome-ignore lint/a11y/useKeyWithClickEvents: a tap on the text opens it for a thumb; the toggle is the keyboard's way -->
 	<p
 		bind:this={el}
 		tabindex={onReadMore ? -1 : undefined}

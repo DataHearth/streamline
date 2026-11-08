@@ -158,14 +158,8 @@
 						help={i18n.account_password_help()}
 					/>
 					<div class="flex items-center gap-2">
-						<div
-							class="flex flex-1 gap-1"
-							role="meter"
-							aria-label={i18n.account_password_strength()}
-							aria-valuemin={0}
-							aria-valuemax={4}
-							aria-valuenow={score}
-						>
+						<meter class="sr-only" min={0} max={4} value={score} aria-label={i18n.account_password_strength()}></meter>
+						<div class="flex flex-1 gap-1" aria-hidden="true">
 							{#each [1, 2, 3, 4] as i (i)}
 								<span
 									class={[

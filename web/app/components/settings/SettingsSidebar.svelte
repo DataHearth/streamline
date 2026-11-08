@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { SlidersHorizontal } from "@lucide/svelte";
+	import type { SlidersHorizontal } from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { cn } from "@lib/cn";
 	import { createSettingsNav } from "@lib/settings-nav.svelte";

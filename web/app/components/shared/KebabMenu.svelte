@@ -185,7 +185,7 @@
 		{#each items as item (item.key)}
 			{@const Icon = item.icon}
 			{#if item.dividerBefore}
-				<div class="h-px bg-border" role="separator"></div>
+				<hr class="h-px border-0 bg-border" />
 			{/if}
 			<button
 				role="menuitem"

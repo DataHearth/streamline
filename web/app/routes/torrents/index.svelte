@@ -38,9 +38,7 @@
 		Plus,
 		Network,
 	} from "@lucide/svelte";
-	import ActivityToolbar, {
-		ACTIVITY_CHIPS,
-	} from "@components/activity/ActivityToolbar.svelte";
+	import ActivityToolbar from "@components/activity/ActivityToolbar.svelte";
 	import ActivityFilterSheet from "@components/activity/ActivityFilterSheet.svelte";
 	import TouchStatLine from "@components/activity/TouchStatLine.svelte";
 	import TorrentTable from "@components/activity/TorrentTable.svelte";

@@ -35,7 +35,7 @@
 		refresh: SERIES,
 		failed: updateFailed,
 		succeeded: () => i18n.series_quality_updated(),
-		then: () => (qpOpen = false),
+		after: () => (qpOpen = false),
 	}));
 
 	const saveType = createAction<SeriesType>(() => ({
@@ -43,7 +43,7 @@
 		refresh: SERIES,
 		failed: updateFailed,
 		succeeded: () => i18n.series_type_updated(),
-		then: () => (typeOpen = false),
+		after: () => (typeOpen = false),
 	}));
 
 	const searchNow = createAction(() => ({
@@ -65,7 +65,7 @@
 		refresh: SERIES,
 		failed: deleteFailed,
 		succeeded: () => i18n.series_deleted(),
-		then: () => (deleteOpen = false),
+		after: () => (deleteOpen = false),
 	}));
 
 	// Exhaustive by construction — SeriesKebabMenu owns the item list, so an

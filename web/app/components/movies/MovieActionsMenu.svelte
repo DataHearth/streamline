@@ -47,7 +47,7 @@
 		refresh: MOVIES,
 		failed: updateFailed,
 		succeeded: () => i18n.movie_quality_updated(),
-		then: () => (qpOpen = false),
+		after: () => (qpOpen = false),
 	}));
 
 	const refresh = createAction(() => ({
@@ -62,7 +62,7 @@
 		refresh: [["movies"]],
 		failed: deleteFailed,
 		succeeded: () => i18n.movie_deleted(),
-		then: () => (deleteOpen = false),
+		after: () => (deleteOpen = false),
 	}));
 
 	function onPick(a: string) {

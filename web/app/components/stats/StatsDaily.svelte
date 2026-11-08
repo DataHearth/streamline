@@ -20,7 +20,7 @@
 
 	let max = $derived(Math.max(1, ...days.map((d) => Math.max(d.grabbed, d.imported + d.failed))));
 	let ticks = $derived(
-		days.length > 2 ? [days.at(0)!, days.at(Math.floor((days.length - 1) / 2))!, days.at(-1)!] : days,
+		days.filter((_, i) => i === 0 || i === Math.floor((days.length - 1) / 2) || i === days.length - 1),
 	);
 	let summary = $derived(
 		i18n.stats_daily_summary({

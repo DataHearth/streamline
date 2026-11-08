@@ -17,7 +17,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import { cn } from "@lib/cn";
 	import type { ApiKey, AppAccess, Session } from "@lib/types";
-	import { getLocale, locales } from "@lib/paraglide/runtime.js";
+	import { getLocale, type locales } from "@lib/paraglide/runtime.js";
 	import FullScreenPanel from "@components/layout/FullScreenPanel.svelte";
 	import ProfileCard from "./ProfileCard.svelte";
 	import PasswordCard from "./PasswordCard.svelte";

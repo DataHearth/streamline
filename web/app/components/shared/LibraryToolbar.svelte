@@ -1,10 +1,12 @@
 <script lang="ts" module>
+	import type { Component } from "svelte";
+
 	export type ToolbarTab = { key: string; label: string; count?: number; dot?: string };
 	export type ToolbarOption = { key: string; label: string; count?: number };
 	export type ToolbarFacet = {
 		key: string;
 		label: string;
-		icon?: any;
+		icon?: Component<{ size?: number; class?: string; "aria-hidden"?: boolean | "true" }>;
 		value: string;
 		options: ToolbarOption[];
 		onChange: (v: string) => void;
@@ -253,9 +255,8 @@
 	</DropdownMenu>
 
 	{#if view && onViewChange}
-		<div
-			class="inline-flex shrink-0 items-center rounded-md border border-border bg-bg-elevated p-0.5"
-			role="group"
+		<fieldset
+			class="min-w-0 inline-flex shrink-0 items-center rounded-md border border-border bg-bg-elevated p-0.5"
 			aria-label={i18n.common_view_mode()}
 		>
 			<button
@@ -284,7 +285,7 @@
 				<List size={14} aria-hidden="true" />
 				<span class="sr-only">{i18n.common_list_view()}</span>
 			</button>
-		</div>
+		</fieldset>
 	{/if}
 
 	{#if add}

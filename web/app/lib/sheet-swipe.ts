@@ -63,12 +63,17 @@ function releaseVelocity(samples: Sample[], t: number): number {
 	const last = samples[samples.length - 1];
 	if (!last || t - last.t > FLICK_HOLD_MS) return 0;
 	let w = samples.length - 1;
-	while (w > 0 && last.t - samples[w - 1]!.t <= FLICK_WINDOW_MS) w--;
-	const dir = Math.sign(last.y - samples[w]!.y);
+	while (w > 0) {
+		const before = samples[w - 1];
+		if (!before || last.t - before.t > FLICK_WINDOW_MS) break;
+		w--;
+	}
+	const dir = Math.sign(last.y - (samples[w] ?? last).y);
 	let i = samples.length - 1;
 	while (i > 0) {
-		const cur = samples[i]!;
-		const prev = samples[i - 1]!;
+		const cur = samples[i];
+		const prev = samples[i - 1];
+		if (!cur || !prev) break;
 		const step = cur.y - prev.y;
 		if (dir !== 0 && Math.sign(step) === -dir && Math.abs(step) > TURN_PX)
 			break;
@@ -77,7 +82,7 @@ function releaseVelocity(samples: Sample[], t: number): number {
 		if (last.t - prev.t > FLICK_WINDOW_MS && !fast) break;
 		i--;
 	}
-	const from = samples[i]!;
+	const from = samples[i] ?? last;
 	return last.t > from.t ? (last.y - from.y) / (last.t - from.t) : 0;
 }
 
@@ -190,7 +195,7 @@ export function sheetSwipe(
 			samples.push({ y: startY + delta, t });
 			while (
 				samples.length > 1 &&
-				t - samples[0]!.t > FLICK_WINDOW_MS + FLICK_HOLD_MS
+				t - (samples[0]?.t ?? t) > FLICK_WINDOW_MS + FLICK_HOLD_MS
 			)
 				samples.shift();
 		}

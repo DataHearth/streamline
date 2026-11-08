@@ -61,7 +61,7 @@
 				{request.title}
 			</span>
 			<span class="mt-0.5 block truncate text-[12px] text-fg-subtle">
-				{albumBy(request) ? albumBy(request) + " · " : ""}{mine ? "" : requesterName(request) + " · "}{formatRelative(request.created_at)}
+				{albumBy(request) ? `${albumBy(request)} · ` : ""}{mine ? "" : `${requesterName(request)} · `}{formatRelative(request.created_at)}
 			</span>
 		</span>
 

@@ -20,7 +20,7 @@ import { m as i18n } from "./paraglide/messages.js";
 const episodeTokenRe = /S\d{1,2}E\d{1,2}/i;
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const joinDot = (parts: (string | undefined | null)[]) =>
-	parts.filter((p): p is string => Boolean(p && p.trim())).join(" · ");
+	parts.filter((p): p is string => Boolean(p?.trim())).join(" · ");
 const pct = (v: number | undefined | null) =>
 	`${Math.round(Math.min(1, Math.max(0, v ?? 0)) * 100)}%`;
 

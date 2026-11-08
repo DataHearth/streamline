@@ -50,7 +50,7 @@ async function walk(entry: FileSystemEntry, dir: string, out: UploadEntry[]) {
 	for (;;) {
 		const batch = await new Promise<FileSystemEntry[]>((resolve, reject) => reader.readEntries(resolve, reject));
 		if (batch.length === 0) return;
-		await Promise.all(batch.map((child) => walk(child, path + "/", out)));
+		await Promise.all(batch.map((child) => walk(child, `${path}/`, out)));
 	}
 }
 

@@ -124,9 +124,8 @@
 						{/if}
 					</div>
 					{#if shown.length > 0}
-						<div
-							class="hidden shrink-0 items-center gap-1 lg:flex"
-							role="group"
+						<fieldset
+							class="min-w-0 hidden shrink-0 items-center gap-1 lg:flex"
 							aria-label={i18n.dash_scroll_row({ title })}
 						>
 							<button type="button" class={navBtn} aria-label={i18n.common_scroll_left()} disabled={atStart} onclick={() => scrollBy(-1)}>
@@ -135,7 +134,7 @@
 							<button type="button" class={navBtn} aria-label={i18n.common_scroll_right()} disabled={atEnd} onclick={() => scrollBy(1)}>
 								<ChevronRight size={14} aria-hidden="true" />
 							</button>
-						</div>
+						</fieldset>
 					{/if}
 				</header>
 

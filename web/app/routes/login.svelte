@@ -13,7 +13,7 @@
 		type AuthConfig,
 		type LoginInput,
 	} from "@lib/auth_api";
-	import { ApiError, errorText } from "@lib/api";
+	import { errorText } from "@lib/api";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { loadPref, savePref } from "@lib/prefs";
 	import { email as emailSchema } from "@lib/schemas";
