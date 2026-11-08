@@ -2,6 +2,8 @@ package restapi
 
 import (
 	"cmp"
+	"context"
+	"log/slog"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -102,8 +104,7 @@ func toBookEditions(b *ent.Book) []BookEdition {
 			Translator: optString(e.Translator),
 			Isbn13:     optString(e.Isbn13),
 			Asin:       optString(e.Asin),
-			// The edition's own Hardcover id; GET /books/{id} adds its
-			// mappings (withEditionLinks).
+			// The edition's own id; the detail adds its mappings.
 			ExternalIds: toExternalIDs(
 				withOwnID(nil, metadata.SourceHardcover, e.HardcoverEditionID),
 			),
@@ -330,8 +331,43 @@ func toAPISeries(s *ent.BookSeries) BookSeries {
 	}
 }
 
-// withEditionLinks adds each edition's stored mappings (Goodreads, Open
-// Library…) to a book's detail, read for all of its editions in one query.
+// attachEditionLinks adds every edition's mappings to a book detail in one query.
+func (s *Server) attachEditionLinks(
+	ctx context.Context,
+	out *Book,
+	b *ent.Book,
+) error {
+	editionIDs := make([]uint32, 0, len(b.Edges.Editions))
+	for _, e := range b.Edges.Editions {
+		editionIDs = append(editionIDs, e.ID)
+	}
+	links, err := s.store.ExternalIDsFor(
+		ctx,
+		db.ExternalIDsOfBookEdition,
+		editionIDs,
+	)
+	if err != nil {
+		return err
+	}
+	withEditionLinks(out, b, links)
+	return nil
+}
+
+// bookAfterWrite is a patch or refresh answer with its edition links, best effort.
+func (s *Server) bookAfterWrite(
+	ctx context.Context,
+	b *ent.Book,
+	progress map[string]float64,
+) Book {
+	out := toAPIBook(b, progress)
+	if err := s.attachEditionLinks(ctx, &out, b); err != nil {
+		slog.WarnContext(ctx, "book edition links not read",
+			"book.id", b.ID, "error", err)
+	}
+	return out
+}
+
+// withEditionLinks sets each edition's external_ids from the stored mappings.
 func withEditionLinks(out *Book, b *ent.Book, ids map[uint32]db.ExternalIDs) {
 	hc := make(map[uint32]uint32, len(b.Edges.Editions))
 	for _, e := range b.Edges.Editions {
@@ -345,9 +381,7 @@ func withEditionLinks(out *Book, b *ent.Book, ids map[uint32]db.ExternalIDs) {
 	}
 }
 
-// hardcoverIDs is a book's or a series' external_ids: its Hardcover id and
-// nothing else, since Hardcover cross-references no other site (each
-// edition carries its own isbn_13 and asin).
+// hardcoverIDs is a book's or a series' external_ids: its Hardcover id only.
 func hardcoverIDs(id uint32) *ExternalIds {
 	return toExternalIDs(withOwnID(nil, metadata.SourceHardcover, id))
 }

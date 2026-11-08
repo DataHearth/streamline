@@ -117,7 +117,7 @@ It starts with the title's own provider id: `tmdb` for a movie, `tvdb` for a ser
 
 A site with no id is absent.
 
-Every detail response carries it: `GET /movies/{id}`, `/series/{id}`, `/music/artists/{id}`, `/music/albums/{id}` and the albums inside an artist, `/books/{id}`, `/books/series/{id}`, and the add-flow lookups. The lists `GET /movies`, `/series`, `/music/artists` and `/books` carry it only with `?with_external_ids=true`. That costs one extra query for the whole page (none for `/books`), and it is how a sync script gets every IMDb id without one request per title.
+Every detail response carries it: `GET /movies/{id}`, `/series/{id}`, `/music/artists/{id}`, `/music/albums/{id}` and the albums inside an artist, `/books/{id}`, `/books/series/{id}`, the movie and series add-flow lookups, and the add, edit and refresh responses of a movie, a series or a book. The lists `GET /movies`, `/series`, `/music/artists` and `/books` carry it only with `?with_external_ids=true`. That costs one extra query for the whole page (none for `/books`), and it is how a sync script gets every IMDb id without one request per title.
 
 **Name-keyed resources.** Config-backed resources are addressed by name, not numeric ID:
 

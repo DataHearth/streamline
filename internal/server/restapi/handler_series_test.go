@@ -155,7 +155,9 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				"tvdb": "9", "imdb": "tt0903747",
 			}))
 			// A show with no other id still carries its own.
-			Expect(*with.Items[1].ExternalIDs).To(Equal(map[string]string{"tvdb": "10"}))
+			Expect(
+				*with.Items[1].ExternalIDs,
+			).To(Equal(map[string]string{"tvdb": "10"}))
 		})
 
 		It("500s when the service errors", func() {
@@ -299,7 +301,10 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			// The show's own id stays tvdb_id, and the map repeats it beside
 			// the others.
 			Expect(body.ExternalIDs).To(Equal(map[string]string{
-				"tvdb": "81189", "tmdb": "1396", "imdb": "tt0903747", "wikidata": "Q1079",
+				"tvdb":     "81189",
+				"tmdb":     "1396",
+				"imdb":     "tt0903747",
+				"wikidata": "Q1079",
 			}))
 		})
 
@@ -390,6 +395,43 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(body.Seasons[0].Episodes).To(HaveLen(1))
 			Expect(body.Seasons[0].Episodes[0].FileScore).
 				To(HaveValue(Equal(60)))
+		})
+	})
+
+	Describe("PatchSeries", func() {
+		It("answers with the show's detail, its external ids included", func() {
+			show := &ent.TVShow{
+				ID:     1,
+				Title:  "Breaking Bad",
+				Year:   2008,
+				TvdbID: 81189,
+			}
+			app.tvshows.EXPECT().
+				Get(mock.Anything, uint32(1)).
+				Return(show, nil).
+				Once()
+			app.tvshows.EXPECT().Update(mock.Anything, uint32(1), mock.Anything).
+				Return(show, nil).
+				Once()
+			app.store.EXPECT().
+				TitleExternalIDs(mock.Anything, db.ExternalIDsOfSeries, uint32(1)).
+				Return(db.ExternalIDs{"imdb": "tt0903747"}, nil).
+				Once()
+
+			req := app.req(http.MethodPatch, "/api/v1/series/1", app.adminKey,
+				strings.NewReader(`{"monitored":true}`))
+			req.Header.Set("Content-Type", "application/json")
+			resp := app.do(req)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var body struct {
+				ExternalIDs map[string]string `json:"external_ids"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.ExternalIDs).To(Equal(map[string]string{
+				"tvdb": "81189", "imdb": "tt0903747",
+			}))
 		})
 	})
 

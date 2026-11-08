@@ -45,8 +45,7 @@ type MovieDetails struct {
 	// releases named in another language, so matchers compare against these as
 	// well — the movie counterpart of TVResult.Aliases.
 	Aliases []string
-	// IMDbID ("tt…") and WikidataID ("Q…") are TMDB's cross-references for
-	// the film, empty when it holds none.
+	// TMDB's cross-references, empty when it has none.
 	IMDbID     string
 	WikidataID string
 }
@@ -170,8 +169,7 @@ type TVDetails struct {
 	Seasons    []SeasonInfo
 	Episodes   []EpisodeInfo
 	FirstAired string // ISO yyyy-mm-dd, as TVDB returns it
-	// Cross-references from the series record's remoteIds, zero/empty when
-	// TVDB lists none.
+	// TVDB's remoteIds cross-references, zero when none.
 	TMDBID     uint32
 	IMDbID     string
 	WikidataID string
@@ -344,10 +342,7 @@ type ReleaseGroupDetails struct {
 	// CreditsComplete is false when the heavy call failed and the light one
 	// supplied the tracks: the album is hydrated but its credits are not.
 	CreditsComplete bool
-	// ExternalIDs are the other sites' ids MusicBrainz links, keyed by
-	// Source*: Wikidata, Discogs (master), AllMusic and RateYourMusic from
-	// the release group, Spotify, Deezer and Bandcamp from the canonical
-	// release. Never nil from GetReleaseGroup.
+	// Links keyed by Source*: from the release group and the canonical release.
 	ExternalIDs map[string]string
 }
 
@@ -393,10 +388,7 @@ type ArtistDetails struct {
 	DeezerID uint32
 	// WikidataID is the Q-number of the artist's Wikidata item.
 	WikidataID string
-	// ExternalIDs are the other sites' ids MusicBrainz links for the artist,
-	// keyed by Source*: Discogs, AllMusic, Spotify, Bandcamp, Last.fm,
-	// RateYourMusic. Wikidata and Deezer stay in their own fields. Never nil
-	// from GetArtist.
+	// Links keyed by Source*, Wikidata and Deezer aside.
 	ExternalIDs   map[string]string
 	ReleaseGroups []ReleaseGroupInfo
 }
@@ -457,8 +449,7 @@ type MusicProvider interface {
 		mbid, edition string,
 	) (*ReleaseGroupDetails, error)
 	ReleaseGroupEditions(ctx context.Context, mbid string) ([]ReleaseEdition, error)
-	// ArtistLinks and AlbumLinks read only the url relations, the ids an
-	// add, a refresh or a hydration stores, for the links backfill.
+	// ArtistLinks and AlbumLinks read only url-rels, for the links backfill.
 	ArtistLinks(ctx context.Context, mbid string) (map[string]string, error)
 	AlbumLinks(
 		ctx context.Context,

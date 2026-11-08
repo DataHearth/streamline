@@ -69,7 +69,9 @@ var _ = Describe("Hardcover edition links", Label("unit", "metadata"), func() {
 	})
 
 	It("opens the library language's Audible store when Hardcover lists it", func() {
-		configtest.Setup(map[string]any{"library": map[string]any{"book_language": "fr"}})
+		configtest.Setup(
+			map[string]any{"library": map[string]any{"book_language": "fr"}},
+		)
 		hc.client.Transport = srv.transport(body)
 
 		got, err := hc.EditionLinks(ctx, []uint32{32763102})

@@ -3,6 +3,7 @@ package music
 import (
 	"context"
 	"log/slog"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -282,14 +283,11 @@ func (s *Service) AlbumDetail(ctx context.Context, id uint32) (*AlbumView, error
 	return &v, nil
 }
 
-// ArtistExternalIDs is an artist's ids as the wire carries them: its MBID,
-// its rows in external_ids, and its Wikidata and Deezer columns, which stay
-// columns because the overview and the photo read them.
+// ArtistExternalIDs is the wire set: MBID, stored rows, Wikidata and Deezer
+// columns.
 func ArtistExternalIDs(a *ent.Artist, stored db.ExternalIDs) db.ExternalIDs {
 	out := make(db.ExternalIDs, len(stored)+3)
-	for k, v := range stored {
-		out[k] = v
-	}
+	maps.Copy(out, stored)
 	out[metadata.SourceMusicBrainz] = a.Mbid
 	if a.WikidataID != "" {
 		out[metadata.SourceWikidata] = a.WikidataID
@@ -300,10 +298,7 @@ func ArtistExternalIDs(a *ent.Artist, stored db.ExternalIDs) db.ExternalIDs {
 	return out
 }
 
-// attachExternalIDs fills the artist's links and every album's, two reads
-// whatever the discography's size. The artist's Wikidata and Deezer ids are
-// its own columns (the overview and the photo read them) and join the map
-// here, so the wire carries one set.
+// attachExternalIDs fills the artist's and every album's ids in two reads.
 func (s *Service) attachExternalIDs(ctx context.Context, v *ArtistView) error {
 	ids, err := s.db.TitleExternalIDs(ctx, db.ExternalIDsOfArtist, v.Artist.ID)
 	if err != nil {

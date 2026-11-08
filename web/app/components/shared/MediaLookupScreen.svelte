@@ -250,10 +250,7 @@
 	let libraryByLookupId = $derived.by(() => {
 		const map = new Map<number, Movie | TVShow>();
 		for (const item of libraryQuery.data?.items ?? []) {
-			// `in` rather than `isMovie`: the flag is a prop, so it narrows nothing
-			// for the compiler. tvdb_id is the discriminant, not tmdb_id: a series
-			// carries the TMDB id TVDB maps it to as well, and keying it there
-			// would file the show under the wrong lookup id.
+			// tvdb_id is the discriminant: a series carries a tmdb id too.
 			const key = "tvdb_id" in item ? item.tvdb_id : item.tmdb_id;
 			if (key) map.set(key, item);
 		}

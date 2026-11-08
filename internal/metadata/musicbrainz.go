@@ -616,10 +616,7 @@ func (m *MusicBrainz) ArtistArt(
 	return art, nil
 }
 
-// ArtistLinks reads only the artist's url relations, the ids a refresh would
-// store (ArtistDetails.ExternalIDs), in one call where a refresh also walks
-// the whole release-group listing. The links backfill uses it for artists
-// stored before the links were.
+// ArtistLinks reads only an artist's url-rels, one call, for the backfill.
 func (m *MusicBrainz) ArtistLinks(
 	ctx context.Context,
 	mbid string,
@@ -642,11 +639,8 @@ func (m *MusicBrainz) ArtistLinks(
 	return out, nil
 }
 
-// AlbumLinks reads only the url relations of a release group and of the
-// release the album follows (none when release is ""), the ids a hydration
-// would store (ReleaseGroupDetails.ExternalIDs), in at most two small calls
-// where a hydration makes the heavy release call. The links backfill uses it
-// for albums hydrated before the links were.
+// AlbumLinks reads only url-rels: the release group's, then the release's
+// (none when release is ""), for the backfill.
 func (m *MusicBrainz) AlbumLinks(
 	ctx context.Context,
 	releaseGroup, release string,
@@ -680,7 +674,7 @@ func (m *MusicBrainz) AlbumLinks(
 	)
 	switch {
 	case errors.Is(err, ErrNotFound):
-		// A release MusicBrainz merged away still leaves the group's links.
+		// A merged-away release still leaves the group's links.
 		return out, nil
 	case err != nil:
 		return nil, otelx.RecordSpanError(span, err)
@@ -917,9 +911,7 @@ func releaseSortDate(date string) string {
 }
 
 const (
-	// url-rels rides both calls: it adds a handful of links to the answer,
-	// nothing like the expansion that makes the heavy one fail, and a light
-	// retry without it would drop the album's streaming links on the floor.
+	// url-rels rides both calls, so a light retry keeps the streaming links.
 	heavyReleaseInc = "recordings+artist-credits+labels+artist-rels+" +
 		"recording-level-rels+work-rels+work-level-rels+place-rels+url-rels"
 	lightReleaseInc = "recordings+artist-credits+labels+url-rels"

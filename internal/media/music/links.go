@@ -3,6 +3,7 @@ package music
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -15,40 +16,28 @@ import (
 )
 
 const (
-	// linksBatch is how many rows one listing of the links backfill reads.
+	// linksBatch is the page size of one listing.
 	linksBatch = 50
-	// linksRetries is how many times one row is asked again after
-	// MusicBrainz refuses it, each after the wait it named.
+	// linksRetries is how often a rate-limited row is asked again.
 	linksRetries = 3
-	// linksMaxWait caps that wait; a longer one ends the pass for the day.
+	// linksMaxWait caps a wait; a longer one ends the pass.
 	linksMaxWait = 5 * time.Minute
 )
 
-// errLinksStop ends a backfill pass early: MusicBrainz is refusing, or the
-// run is shutting down. The rows left keep links_fetched_at NULL and the next
-// run carries on from them.
+// errLinksStop ends a pass early; the next run resumes.
 var errLinksStop = errors.New("links backfill stopped")
 
-// backfillLinks reads MusicBrainz's links for every artist and every hydrated
-// album stored before streamline kept them (links_fetched_at NULL): one small
-// url-rels call per artist and at most two per album, never the refresh's
-// listing or the hydration's heavy release call. An add, a refresh and a
-// hydration stamp the row themselves, so once the library has been through it
-// a run finds nothing and costs a query.
-//
-// It runs to the end of the backlog inside music-metadata-refresh, at
-// background priority, so a lookup or an add never queues behind it; the
-// first run over a large library takes hours (about 2 s an artist and 4 s an
-// album at the default interval), and the scheduler does not start the job
-// again while it runs. A failed row is skipped for this pass (the cursor moves
-// past it) and retried on the next. A rate limit is waited out (fetchLinks);
-// one that outlasts the retries ends the pass, and the next run resumes.
+// backfillLinks reads MusicBrainz's links for every artist and hydrated
+// album never read (links_fetched_at NULL), with url-rels-only calls at
+// background priority, at the end of music-metadata-refresh. A failed row waits
+// for the next run; a rate limit is waited out (fetchLinks).
 func (s *Service) backfillLinks(ctx context.Context) {
 	ctx, span := tracer.Start(ctx, "music.backfill_links")
 	defer span.End()
 	ctx = metadata.Background(ctx)
 
 	done, failed := 0, 0
+	var lastFailure error
 	progress := func(err error) error {
 		switch {
 		case err == nil:
@@ -63,6 +52,7 @@ func (s *Service) backfillLinks(ctx context.Context) {
 			return errLinksStop
 		default:
 			failed++
+			lastFailure = err
 			return nil
 		}
 	}
@@ -80,13 +70,21 @@ func (s *Service) backfillLinks(ctx context.Context) {
 		slog.WarnContext(ctx, "links backfill failed", "error", err)
 		return
 	}
+	if lastFailure != nil {
+		// Rows are logged where they fail; the span carries the count.
+		_ = otelx.RecordSpanError(span,
+			fmt.Errorf("%d rows failed, the last: %w", failed, lastFailure))
+	}
 	if done+failed > 0 {
 		slog.InfoContext(ctx, "links backfill complete",
 			"done", done, "failed", failed)
 	}
 }
 
-func (s *Service) backfillArtistLinks(ctx context.Context, progress func(error) error) error {
+func (s *Service) backfillArtistLinks(
+	ctx context.Context,
+	progress func(error) error,
+) error {
 	var cursor uint32
 	for {
 		rows, err := s.db.ListArtistsAwaitingLinks(ctx, cursor, linksBatch)
@@ -109,7 +107,10 @@ func (s *Service) backfillArtistLinks(ctx context.Context, progress func(error) 
 	}
 }
 
-func (s *Service) backfillAlbumLinks(ctx context.Context, progress func(error) error) error {
+func (s *Service) backfillAlbumLinks(
+	ctx context.Context,
+	progress func(error) error,
+) error {
 	var cursor uint32
 	for {
 		rows, err := s.db.ListAlbumsAwaitingLinks(ctx, cursor, linksBatch)
@@ -118,8 +119,7 @@ func (s *Service) backfillAlbumLinks(ctx context.Context, progress func(error) e
 		}
 		for _, a := range rows {
 			cursor = a.ID
-			// release_mbid is the release the album follows, the person's
-			// pick included: the one a hydration reads streaming links from.
+			// release_mbid is the release the album follows, a hand pick included.
 			ids, err := fetchLinks(ctx, func() (map[string]string, error) {
 				return s.metadata.AlbumLinks(ctx, a.Mbid, a.ReleaseMbid)
 			})
@@ -134,10 +134,8 @@ func (s *Service) backfillAlbumLinks(ctx context.Context, progress func(error) e
 	}
 }
 
-// fetchLinks calls fetch, waiting out a MusicBrainz rate limit and asking
-// again up to linksRetries times: the limiter holds the background class for
-// the wait MusicBrainz names, and a pass of hours would otherwise end on the
-// first 503 and leave the backlog to the next day.
+// fetchLinks retries a MusicBrainz rate limit up to linksRetries times, so
+// a long pass does not end on the first 503.
 func fetchLinks(
 	ctx context.Context,
 	fetch func() (map[string]string, error),
@@ -159,9 +157,8 @@ func fetchLinks(
 	}
 }
 
-// storeLinks writes one row's links. A row MusicBrainz no longer knows is
-// stamped with its links untouched, so it is not asked for again; any other
-// failure is returned for progress to count.
+// storeLinks writes one row's links; one MusicBrainz no longer knows is
+// stamped with its links untouched.
 func (s *Service) storeLinks(
 	ctx context.Context,
 	kind string,

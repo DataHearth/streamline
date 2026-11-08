@@ -3,6 +3,7 @@ package restapi
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -131,9 +132,7 @@ func toMusicAlbumSummary(a music.AlbumView, artistID uint32) MusicAlbumSummary {
 
 func albumExternalIDs(a music.AlbumView) db.ExternalIDs {
 	out := make(db.ExternalIDs, len(a.ExternalIDs)+1)
-	for k, v := range a.ExternalIDs {
-		out[k] = v
-	}
+	maps.Copy(out, a.ExternalIDs)
 	out[metadata.SourceMusicBrainz] = a.Album.Mbid
 	return out
 }

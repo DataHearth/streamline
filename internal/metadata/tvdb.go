@@ -711,19 +711,14 @@ func (t *TVDB) GetPerson(
 	return d, nil
 }
 
-// tvdbRemoteID is one entry of a record's remoteIds: another site's id for
-// the same series or person, named by sourceName.
+// tvdbRemoteID is one remoteIds entry.
 type tvdbRemoteID struct {
 	ID         string `json:"id"`
 	SourceName string `json:"sourceName"`
 }
 
-// seriesRemoteIDs reads the cross-references the detail page links through
-// out of a series' remoteIds. TVDB names its sources "IMDB",
-// "TheMovieDB.com" and "Wikidata"; the match is on a folded prefix so a
-// renamed source ("TheMovieDB", "TMDB") still lands. A value that is not the
-// shape its site uses is dropped rather than linked: a TMDB id that does not
-// parse, an IMDb id without its "tt", a Wikidata id without its "Q".
+// seriesRemoteIDs reads IMDb, TMDB and Wikidata ids by folded source name,
+// dropping a value not in its site's shape.
 func seriesRemoteIDs(ids []tvdbRemoteID) (tmdbID uint32, imdbID, wikidataID string) {
 	for _, r := range ids {
 		v := strings.TrimSpace(r.ID)

@@ -1514,17 +1514,26 @@ type Store interface {
 		afterID uint32,
 		limit int,
 	) ([]*ent.Album, error)
-	// ListEditionsAwaitingLinks pages the book editions a slot follows whose
-	// Hardcover mappings were never read, by id after a cursor.
+	// ListEditionsAwaitingLinks pages the followed editions never read for links.
 	ListEditionsAwaitingLinks(
 		ctx context.Context,
 		afterID uint32,
 		limit int,
 	) ([]*ent.BookEdition, error)
-	SetEditionLinks(ctx context.Context, id uint32, ids ExternalIDs, at time.Time) error
+	SetEditionLinks(ctx context.Context, links map[uint32]ExternalIDs, at time.Time) error
 	// SetArtistLinks and SetAlbumLinks store a row's links and stamp it.
-	SetArtistLinks(ctx context.Context, id uint32, ids ExternalIDs, at time.Time) error
-	SetAlbumLinks(ctx context.Context, id uint32, ids ExternalIDs, at time.Time) error
+	SetArtistLinks(
+		ctx context.Context,
+		id uint32,
+		ids ExternalIDs,
+		at time.Time,
+	) error
+	SetAlbumLinks(
+		ctx context.Context,
+		id uint32,
+		ids ExternalIDs,
+		at time.Time,
+	) error
 	// ExternalIDsFor returns the ids stored for many rows of one kind,
 	// keyed by row id.
 	ExternalIDsFor(

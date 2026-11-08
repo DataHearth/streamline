@@ -144,9 +144,7 @@ type ArtistDetailsParams struct {
 // Performers are written only when CreditsComplete: a light fallback has no
 // relationships and must not erase what an earlier heavy call stored.
 type HydrationParams struct {
-	// ExternalIDs are the album's links read from the release group and its
-	// release. nil (an album re-hydrated from its stored facts) keeps the
-	// stored ones.
+	// The album's links; nil (stored facts) keeps the stored ones.
 	ExternalIDs     ExternalIDs
 	ReleaseMBID     string
 	OriginalDate    string

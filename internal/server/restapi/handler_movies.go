@@ -199,6 +199,9 @@ func (s *Server) AddMovie(
 	}
 
 	result := movieToAPI(m)
+	result.ExternalIds = s.detailExternalIDs(
+		ctx, db.ExternalIDsOfMovie, m.ID, metadata.SourceTMDB, m.TmdbID,
+	)
 	return AddMovie201JSONResponse(result), nil
 }
 
@@ -278,7 +281,11 @@ func (s *Server) PatchMovie(
 		}, nil
 	}
 
-	return PatchMovie200JSONResponse(movieToAPI(m)), nil
+	result := movieToAPI(m)
+	result.ExternalIds = s.detailExternalIDs(
+		ctx, db.ExternalIDsOfMovie, m.ID, metadata.SourceTMDB, m.TmdbID,
+	)
+	return PatchMovie200JSONResponse(result), nil
 }
 
 func (s *Server) DeleteMovie(
@@ -514,8 +521,12 @@ func (s *Server) RefreshMovieMetadata(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
+	result := movieToAPI(m)
+	result.ExternalIds = s.detailExternalIDs(
+		ctx, db.ExternalIDsOfMovie, m.ID, metadata.SourceTMDB, m.TmdbID,
+	)
 	return RefreshMovieMetadata200JSONResponse{
-		MovieRefreshedJSONResponse: MovieRefreshedJSONResponse(movieToAPI(m)),
+		MovieRefreshedJSONResponse: MovieRefreshedJSONResponse(result),
 	}, nil
 }
 

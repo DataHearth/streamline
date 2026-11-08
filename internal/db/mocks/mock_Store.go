@@ -23369,16 +23369,16 @@ func (_c *MockStore_SetDownloadRecordSelection_Call) RunAndReturn(run func(ctx c
 }
 
 // SetEditionLinks provides a mock function for the type MockStore
-func (_mock *MockStore) SetEditionLinks(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time) error {
-	ret := _mock.Called(ctx, id, ids, at)
+func (_mock *MockStore) SetEditionLinks(ctx context.Context, links map[uint32]db.ExternalIDs, at time.Time) error {
+	ret := _mock.Called(ctx, links, at)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetEditionLinks")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.ExternalIDs, time.Time) error); ok {
-		r0 = returnFunc(ctx, id, ids, at)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, map[uint32]db.ExternalIDs, time.Time) error); ok {
+		r0 = returnFunc(ctx, links, at)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -23392,36 +23392,30 @@ type MockStore_SetEditionLinks_Call struct {
 
 // SetEditionLinks is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id uint32
-//   - ids db.ExternalIDs
+//   - links map[uint32]db.ExternalIDs
 //   - at time.Time
-func (_e *MockStore_Expecter) SetEditionLinks(ctx any, id any, ids any, at any) *MockStore_SetEditionLinks_Call {
-	return &MockStore_SetEditionLinks_Call{Call: _e.mock.On("SetEditionLinks", ctx, id, ids, at)}
+func (_e *MockStore_Expecter) SetEditionLinks(ctx any, links any, at any) *MockStore_SetEditionLinks_Call {
+	return &MockStore_SetEditionLinks_Call{Call: _e.mock.On("SetEditionLinks", ctx, links, at)}
 }
 
-func (_c *MockStore_SetEditionLinks_Call) Run(run func(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time)) *MockStore_SetEditionLinks_Call {
+func (_c *MockStore_SetEditionLinks_Call) Run(run func(ctx context.Context, links map[uint32]db.ExternalIDs, at time.Time)) *MockStore_SetEditionLinks_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 map[uint32]db.ExternalIDs
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(map[uint32]db.ExternalIDs)
 		}
-		var arg2 db.ExternalIDs
+		var arg2 time.Time
 		if args[2] != nil {
-			arg2 = args[2].(db.ExternalIDs)
-		}
-		var arg3 time.Time
-		if args[3] != nil {
-			arg3 = args[3].(time.Time)
+			arg2 = args[2].(time.Time)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -23432,7 +23426,7 @@ func (_c *MockStore_SetEditionLinks_Call) Return(err error) *MockStore_SetEditio
 	return _c
 }
 
-func (_c *MockStore_SetEditionLinks_Call) RunAndReturn(run func(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time) error) *MockStore_SetEditionLinks_Call {
+func (_c *MockStore_SetEditionLinks_Call) RunAndReturn(run func(ctx context.Context, links map[uint32]db.ExternalIDs, at time.Time) error) *MockStore_SetEditionLinks_Call {
 	_c.Call.Return(run)
 	return _c
 }

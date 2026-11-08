@@ -29,9 +29,7 @@ func (Album) Fields() []ent.Field {
 		// pick the canonical one.
 		field.String("edition_mbid").Optional(),
 		field.String("barcode").Optional(),
-		// links_fetched_at stamps the last time MusicBrainz's url relations were
-		// read for the row into external_ids. NULL is a row stored before they
-		// were, which the links backfill (music.Service.backfillLinks) reads.
+		// links_fetched_at NULL is the links backfill's work list.
 		field.Time("links_fetched_at").Optional().Nillable(),
 		field.String("title").NotEmpty(),
 		field.Enum("type").

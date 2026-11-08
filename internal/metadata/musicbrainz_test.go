@@ -394,32 +394,40 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 	})
 
 	Describe("AlbumLinks", func() {
-		It("reads the group's links, then the release's, with url-rels alone", func() {
-			var calls []string
-			mb.client.Transport = mbRoundTripper(
-				func(r *http.Request) (*http.Response, error) {
-					calls = append(calls, r.URL.Path+"?"+r.URL.Query().Get("inc"))
-					if strings.HasPrefix(r.URL.Path, "/ws/2/release-group/") {
-						return jsonResponse(200, `{"relations":[
+		It(
+			"reads the group's links, then the release's, with url-rels alone",
+			func() {
+				var calls []string
+				mb.client.Transport = mbRoundTripper(
+					func(r *http.Request) (*http.Response, error) {
+						calls = append(
+							calls,
+							r.URL.Path+"?"+r.URL.Query().Get("inc"),
+						)
+						if strings.HasPrefix(r.URL.Path, "/ws/2/release-group/") {
+							return jsonResponse(200, `{"relations":[
 							{"type":"discogs","url":{"resource":"https://www.discogs.com/master/21491"}},
 							{"type":"wikidata","url":{"resource":"https://www.wikidata.org/wiki/Q213434"}}
 						]}`), nil
-					}
-					return jsonResponse(200, `{"relations":[
+						}
+						return jsonResponse(200, `{"relations":[
 						{"type":"free streaming","url":{"resource":"https://www.deezer.com/album/1422436"}}
 					]}`), nil
-				},
-			)
-			ids, err := mb.AlbumLinks(ctx, "rg-1", "rel-1")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ids).To(Equal(map[string]string{
-				SourceDiscogs: "21491", SourceWikidata: "Q213434", SourceDeezer: "1422436",
-			}))
-			Expect(calls).To(Equal([]string{
-				"/ws/2/release-group/rg-1?url-rels",
-				"/ws/2/release/rel-1?url-rels",
-			}))
-		})
+					},
+				)
+				ids, err := mb.AlbumLinks(ctx, "rg-1", "rel-1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids).To(Equal(map[string]string{
+					SourceDiscogs:  "21491",
+					SourceWikidata: "Q213434",
+					SourceDeezer:   "1422436",
+				}))
+				Expect(calls).To(Equal([]string{
+					"/ws/2/release-group/rg-1?url-rels",
+					"/ws/2/release/rel-1?url-rels",
+				}))
+			},
+		)
 
 		It("keeps the group's links when the release is gone", func() {
 			mb.client.Transport = mbRoundTripper(

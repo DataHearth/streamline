@@ -15,38 +15,35 @@ import (
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
-// ExternalIDOwner names the kind of row a set of external ids hangs off.
-// ExternalID carries one optional edge per kind and exactly one is ever set,
-// the Credit and MediaEvent pattern, so the owner is named explicitly.
+// ExternalIDOwner names the row kind an id set hangs off; exactly one owner
+// edge is set, as on Credit.
 type ExternalIDOwner string
 
 const (
-	ExternalIDsOfMovie  ExternalIDOwner = "movie"
-	ExternalIDsOfSeries ExternalIDOwner = "series"
-	ExternalIDsOfArtist ExternalIDOwner = "artist"
-	ExternalIDsOfAlbum  ExternalIDOwner = "album"
-	// A book's ids are its editions': Hardcover maps editions, not books.
+	ExternalIDsOfMovie       ExternalIDOwner = "movie"
+	ExternalIDsOfSeries      ExternalIDOwner = "series"
+	ExternalIDsOfArtist      ExternalIDOwner = "artist"
+	ExternalIDsOfAlbum       ExternalIDOwner = "album"
 	ExternalIDsOfBookEdition ExternalIDOwner = "book_edition"
 )
 
 var errUnknownExternalIDOwner = errors.New("unknown external id owner")
 
-// ExternalIDs maps a source (metadata.Source*) to that site's id for one
-// row: what the row's own provider cross-references (TMDB for a movie, TVDB
-// for a series, MusicBrainz for an artist or an album). The provider's own id
-// is never among them; it is the row's column.
-//
-// A write replaces the owner's set with the map, empty values dropped, so a
-// re-identified title never keeps the previous one's ids. A nil map is "not
-// fetched this time" and leaves the stored set alone, which is how an album
-// re-hydrated from its stored facts keeps its links.
+// ExternalIDs maps a source (metadata.Source*) to a site's id, never the
+// provider's own. A write replaces the owner's set; a nil map leaves it.
 type ExternalIDs map[string]string
 
-func externalIDsOf(owner ExternalIDOwner, ownerID uint32) (predicate.ExternalID, error) {
+func externalIDsOf(
+	owner ExternalIDOwner,
+	ownerID uint32,
+) (predicate.ExternalID, error) {
 	return externalIDsOfAny(owner, []uint32{ownerID})
 }
 
-func externalIDsOfAny(owner ExternalIDOwner, ownerIDs []uint32) (predicate.ExternalID, error) {
+func externalIDsOfAny(
+	owner ExternalIDOwner,
+	ownerIDs []uint32,
+) (predicate.ExternalID, error) {
 	switch owner {
 	case ExternalIDsOfMovie:
 		return externalid.MovieIDIn(ownerIDs...), nil
@@ -78,9 +75,7 @@ func ownerIDOf(owner ExternalIDOwner, r *ent.ExternalID) uint32 {
 	}
 }
 
-// replaceExternalIDs writes an owner's ids against a client the caller's
-// transaction already holds (the creates, the refreshes, the album
-// hydration), for the same single-writer reason replaceCast takes one.
+// replaceExternalIDs writes inside the caller's transaction, like replaceCast.
 func replaceExternalIDs(
 	ctx context.Context,
 	cl *ent.Client,
@@ -106,9 +101,7 @@ func replaceExternalIDs(
 		}
 		source := externalid.Source(name)
 		if err := externalid.SourceValidator(source); err != nil {
-			// A source the provider layer reads but the enum does not carry
-			// is a programming error, not the provider's; it costs a link,
-			// never the metadata write.
+			// A source missing from the enum costs a link, never the write.
 			slog.WarnContext(ctx, "dropping external id of an unknown source",
 				"external_id.source", name, "error", err)
 			continue
@@ -137,8 +130,7 @@ func replaceExternalIDs(
 	return nil
 }
 
-// TitleExternalIDs returns the ids stored for one row, an empty map when it
-// has none.
+// TitleExternalIDs returns one row's ids, empty when it has none.
 func (db *DB) TitleExternalIDs(
 	ctx context.Context,
 	owner ExternalIDOwner,
@@ -159,8 +151,7 @@ func (db *DB) TitleExternalIDs(
 	return out, nil
 }
 
-// ExternalIDsFor returns the ids stored for many rows of one kind in one
-// query, keyed by row id; a row with none is absent from the map.
+// ExternalIDsFor reads many rows' ids in one query, keyed by row id.
 func (db *DB) ExternalIDsFor(
 	ctx context.Context,
 	owner ExternalIDOwner,
@@ -188,10 +179,8 @@ func (db *DB) ExternalIDsFor(
 	return out, nil
 }
 
-// ListArtistsAwaitingLinks returns up to limit artists whose links were never
-// read (links_fetched_at NULL), in id order after afterID: the backfill walks
-// them with a cursor, so an artist whose fetch failed is not listed again in
-// the same pass.
+// ListArtistsAwaitingLinks pages the artists never read for links, by id
+// after a cursor, so a failed one is not listed twice in a pass.
 func (db *DB) ListArtistsAwaitingLinks(
 	ctx context.Context,
 	afterID uint32,
@@ -204,8 +193,8 @@ func (db *DB) ListArtistsAwaitingLinks(
 		All(ctx)
 }
 
-// ListAlbumsAwaitingLinks is ListArtistsAwaitingLinks for albums, hydrated
-// ones only: an album not hydrated yet gets its links with its tracks.
+// ListAlbumsAwaitingLinks is its twin for hydrated albums; a stub gets its
+// links with its tracks.
 func (db *DB) ListAlbumsAwaitingLinks(
 	ctx context.Context,
 	afterID uint32,
@@ -222,11 +211,8 @@ func (db *DB) ListAlbumsAwaitingLinks(
 		All(ctx)
 }
 
-// ListEditionsAwaitingLinks returns up to limit editions a slot follows
-// whose links were never read, in id order after afterID. Only those: a book
-// keeps up to 40 editions and Hardcover knows hundreds, while the links only
-// ever open the edition a slot follows. An edition a slot moves to later is
-// listed on the next pass.
+// ListEditionsAwaitingLinks is its twin for the editions a slot follows,
+// the only ones a link opens.
 func (db *DB) ListEditionsAwaitingLinks(
 	ctx context.Context,
 	afterID uint32,
@@ -243,21 +229,32 @@ func (db *DB) ListEditionsAwaitingLinks(
 		All(ctx)
 }
 
-// SetEditionLinks is SetArtistLinks for a book edition.
+// SetEditionLinks stores a batch of editions' links and stamps them in one
+// transaction: one commit per Hardcover request, not one per edition.
 func (db *DB) SetEditionLinks(
 	ctx context.Context,
-	id uint32,
-	ids ExternalIDs,
+	links map[uint32]ExternalIDs,
 	at time.Time,
 ) error {
-	return db.setLinks(ctx, ExternalIDsOfBookEdition, id, ids, func(c *ent.Client) error {
-		return c.BookEdition.UpdateOneID(id).SetLinksFetchedAt(at).Exec(ctx)
-	})
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	c := tx.Client()
+	for id, ids := range links {
+		if err := replaceExternalIDs(ctx, c, ExternalIDsOfBookEdition, id, ids); err != nil {
+			tx.Rollback()
+			return err
+		}
+		if err := c.BookEdition.UpdateOneID(id).SetLinksFetchedAt(at).Exec(ctx); err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
-// SetArtistLinks stores an artist's links and stamps links_fetched_at, in
-// one transaction. nil ids (MusicBrainz no longer knows the artist) only
-// stamp it, so the backfill does not ask again.
+// SetArtistLinks stores an artist's links and stamps it; nil ids only stamp.
 func (db *DB) SetArtistLinks(
 	ctx context.Context,
 	id uint32,

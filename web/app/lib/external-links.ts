@@ -1,53 +1,40 @@
-// Outbound links for a library title: the databases that know it by id, the
-// places it can be played or bought, then the sites people read reviews on. The ids come from the provider the title
-// was added from (TMDB for a movie, TVDB for a series) and from the
-// cross-references that provider keeps — IMDb, TMDB, Wikidata — so a link is
-// only built from an id the record actually carries.
-//
-// A site that resolves one of those ids gets a direct link (Trakt and
-// Letterboxd both redirect from a TMDB or TVDB id). Rotten Tomatoes,
-// Metacritic, SensCritique and AlloCiné have no URL keyed on any id we hold,
-// so they get a search for the title and say so (`search: true`), rather than
-// a guessed slug that lands on the wrong film. The two French sites are only
-// offered in the French locale.
+// Outbound links for a library title, built only from ids it carries. A site
+// with no id-keyed address gets a title search (search: true); SensCritique
+// and AlloCiné only in French.
 
 import { getLocale } from "./paraglide/runtime.js";
 
-// Rendered in this order, a hairline between two groups.
+// Render order; a hairline between groups.
 export const LINK_GROUPS = ["database", "listen", "stores", "reviews"] as const;
 export type ExternalLinkGroup = (typeof LINK_GROUPS)[number];
 
 export type ExternalLink = {
-	// Stable key, also what the {#each} keys on.
+	// Stable key.
 	site: string;
-	// The site's own name, never translated.
+	// The site's name, never translated.
 	label: string;
 	href: string;
 	group: ExternalLinkGroup;
-	// True when href is a title search on the site, not the title's own page.
+	// A title search, not the title's page.
 	search?: boolean;
-	// The query a search link runs, for its accessible label.
+	// The search query, for the accessible label.
 	query?: string;
 };
 
-// The API's ExternalIds: every id a title is known by, keyed by site, each
-// value what that site's address is built from. The title's own provider id
-// is in it too (tmdb for a movie, tvdb for a series, musicbrainz for music,
-// hardcover for a book), repeating its top-level field. Every detail
-// response has it; a list only with with_external_ids=true.
+// The API's ExternalIds: every id a title is known by, keyed by site.
 export type ExternalIds = {
 	imdb?: string;
-	// A movie's own TMDB id, or a series' TMDB TV id, as a decimal string.
+	// A movie's own TMDB id, or a series' TMDB TV id.
 	tmdb?: string;
 	tvdb?: string;
 	musicbrainz?: string;
 	hardcover?: string;
-	// A book edition's, from Hardcover's mappings.
+	// Book edition ids, from Hardcover's mappings.
 	goodreads?: string;
-	// An Open Library edition key, OL…M.
+	// OL…M
 	openlibrary?: string;
 	google_books?: string;
-	// "ASIN:region", e.g. "B0FXY6DVJS:fr".
+	// ASIN:region
 	audible?: string;
 	wikidata?: string;
 	discogs?: string;
@@ -82,10 +69,14 @@ export const tvdbSeriesUrl = (id: number) =>
 	`https://www.thetvdb.com/dereferrer/series/${id}`;
 export const wikidataUrl = (id: string) => `https://www.wikidata.org/wiki/${q(id)}`;
 
-// Rotten Tomatoes and Metacritic index the original (usually English) title;
-// the French sites the localized one the library shows.
+// Latin script, digits and punctuation only.
+const LATIN_TITLE = /^[\p{Script=Latin}\p{Script=Common}\p{Script=Inherited}]+$/u;
+
+// Rotten Tomatoes and Metacritic search the original title unless it is in
+// another script; the French sites the displayed one.
 function reviewSearches(title: string, original: string): ExternalLink[] {
-	const intl = original.trim() || title;
+	const o = original.trim();
+	const intl = o && LATIN_TITLE.test(o) ? o : title;
 	const links: ExternalLink[] = [
 		{
 			site: "rottentomatoes",
@@ -197,13 +188,8 @@ export function seriesLinks(s: SeriesLinkSource): ExternalLink[] {
 	return links;
 }
 
-// ---- Music -----------------------------------------------------------------
-//
-// MusicBrainz's url relations, as GET /music/artists/{id} and the albums in it
-// carry them (ExternalIds). Each value is what the site's address is built
-// from. A review site MusicBrainz links nothing for gets a search, like
-// Rotten Tomatoes for a film.
-
+// ---- Music ----
+// A review site MusicBrainz links nothing for gets a search.
 
 export type ArtistLinkSource = { mbid?: string; name: string; external_ids?: ExternalIds };
 export type ReleaseLinkSource = { mbid?: string; title: string; external_ids?: ExternalIds };
@@ -223,7 +209,7 @@ export function artistLinks(a: ArtistLinkSource): ExternalLink[] {
 			? { site: "discogs", label: "Discogs", href: `https://www.discogs.com/artist/${q(x.discogs)}`, group: "database" }
 			: search("discogs", "Discogs", `https://www.discogs.com/search/?type=artist&q=${q(a.name)}`, "database", a.name),
 	);
-	// Last.fm's segment is already written the way its URL writes it.
+	// Already URL-encoded.
 	if (x.lastfm) links.push({ site: "lastfm", label: "Last.fm", href: `https://www.last.fm/music/${x.lastfm}`, group: "database" });
 	if (x.wikidata) links.push({ site: "wikidata", label: "Wikidata", href: wikidataUrl(x.wikidata), group: "database" });
 	if (x.spotify) links.push({ site: "spotify", label: "Spotify", href: `https://open.spotify.com/artist/${q(x.spotify)}`, group: "listen" });
@@ -243,8 +229,7 @@ export function artistLinks(a: ArtistLinkSource): ExternalLink[] {
 	return links;
 }
 
-// artist is the album's credited name, for the searches: an album title alone
-// finds every album of that name.
+// artist narrows the album searches.
 export function releaseLinks(r: ReleaseLinkSource, artist: string): ExternalLink[] {
 	const x = r.external_ids ?? {};
 	const query = artist ? `${artist} ${r.title}` : r.title;
@@ -276,14 +261,9 @@ export function releaseLinks(r: ReleaseLinkSource, artist: string): ExternalLink
 	return links;
 }
 
-// ---- Books -----------------------------------------------------------------
-//
-// Hardcover maps editions, not books: GET /books/{id} gives each edition a
-// slot follows its Goodreads, Open Library, Google Books, Wikidata and
-// Audible ids (ExternalIds), read once per edition. A link opens the slot's
-// own edition first, then any other edition that has the id, then resolves
-// an ISBN-13 (Goodreads and Open Library both redirect from one), then
-// searches the title. Amazon takes a printed or ebook edition's ASIN.
+// ---- Books ----
+// The followed edition's id first, then any edition's, then the ISBN-13,
+// then a search.
 
 export type BookEditionLinkSource = {
 	id: number;
@@ -303,8 +283,7 @@ export type BookLinkSource = {
 };
 export type BookSeriesLinkSource = { hardcover_slug?: string; title: string; author: string };
 
-// The edition a link is built from: the slot's own, then one in the reader's
-// language, then any, each only if it carries the id.
+// The slot's edition, then the reader's language, then any, if it has the id.
 function editionWith(
 	b: BookLinkSource,
 	format: "ebook" | "audiobook" | undefined,
@@ -324,7 +303,7 @@ function editionWith(
 	return undefined;
 }
 
-// An ebook edition's id first, the audiobook's second, any edition's last.
+// Ebook first, then audiobook, then any.
 function anyEdition(b: BookLinkSource, has: (e: BookEditionLinkSource) => string | undefined) {
 	return editionWith(b, "ebook", has) ?? editionWith(b, "audiobook", has) ?? editionWith(b, undefined, has);
 }
@@ -333,7 +312,7 @@ function amazonHost(): string {
 	return getLocale() === "fr" ? "www.amazon.fr" : "www.amazon.com";
 }
 
-// Audible's stores by the region Hardcover names a mapping with.
+// Audible stores by mapping region.
 const AUDIBLE_HOSTS: Record<string, string> = {
 	us: "www.audible.com",
 	uk: "www.audible.co.uk",
@@ -348,7 +327,7 @@ const AUDIBLE_HOSTS: Record<string, string> = {
 	in: "www.audible.in",
 };
 
-// "B0FXY6DVJS:fr" opens that store; a bare edition ASIN the reader's.
+// A mapped ASIN:region opens that store, a bare ASIN the reader's.
 function audibleUrl(mapped: string | undefined, asin: string | undefined): string | undefined {
 	if (mapped) {
 		const [id, region] = mapped.split(":");

@@ -574,9 +574,8 @@ type tmdbMovieResponse struct {
 	ExternalIDs      tmdbMovieExternals `json:"external_ids"`
 }
 
-// tmdbMovieExternals is append_to_response=external_ids on a movie. imdb_id
-// is also a top-level details field; the appended copy is read only when that
-// one is empty.
+// tmdbMovieExternals is append_to_response=external_ids; imdb_id is also a
+// top-level field.
 type tmdbMovieExternals struct {
 	IMDbID     string `json:"imdb_id"`
 	WikidataID string `json:"wikidata_id"`
