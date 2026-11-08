@@ -261,6 +261,23 @@ func (c *Cardigann) login(
 			return fmt.Errorf("%w; next attempt at %s: %s", ErrLoginBackoff,
 				row.RetryAt.Format(time.RFC3339), row.LastError)
 		}
+		// Another call of this indexer logged in while this one waited for
+		// the lock: its session is live and is not the one this call found
+		// wanting. Adopting it is the deduplication the lock exists for —
+		// logging in again would invalidate it on trackers that keep one
+		// session per account.
+		if row != nil && len(row.Cookies) > 0 &&
+			(row.ExpiresAt == nil || row.ExpiresAt.After(time.Now())) &&
+			(c.session == nil || !maps.Equal(row.Cookies, c.session.params.Cookies)) {
+			c.engine.Adopt(engine.Session{
+				Cookies: row.Cookies, UserAgent: row.UserAgent,
+			})
+			c.session = &sessionRow{params: db.IndexerSessionParams{
+				Cookies: row.Cookies, UserAgent: row.UserAgent,
+				ExpiresAt: row.ExpiresAt, ConfigHash: row.ConfigHash,
+			}}
+			return nil
+		}
 	}
 	err := c.engine.Login(ctx, landing, captcha)
 	if err != nil {

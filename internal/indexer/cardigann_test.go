@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -132,6 +133,56 @@ var _ = Describe("a cardigann indexer", Label("unit", "indexers"), func() {
 		Expect(ok).To(BeFalse())
 	})
 })
+
+var _ = Describe(
+	"a cardigann indexer logging in by form",
+	Label("unit", "indexers"),
+	func() {
+		It("logs in once for two calls that both found no session", func() {
+			name := "3d-" + CurrentSpecReport().LeafNodeText
+			configtest.Setup(map[string]any{
+				"indexers": []map[string]any{{
+					"name":     name,
+					"protocol": "cardigann",
+					"enabled":  true,
+					"cardigann": map[string]any{
+						"definition": "3dtorrents",
+						"settings": map[string]any{
+							"username": "u", "password": "p",
+						},
+					},
+				}},
+			})
+			store := dbmocks.NewMockStore(GinkgoT())
+			rows := memSessions(store)
+			var posts atomic.Int32
+			routeAll(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodPost {
+					posts.Add(1)
+					http.SetCookie(w, &http.Cookie{Name: "pass", Value: "xyz"})
+				}
+				if r.URL.Query().Get("page") == "login" {
+					_, _ = w.Write([]byte(`<form action="takelogin.php">` +
+						`<input name="uid"><input name="pwd"></form>`))
+					return
+				}
+				_, _ = w.Write([]byte(`<a href="logout.php">out</a>`))
+			})
+			svc := New(store)
+			var wg sync.WaitGroup
+			errs := make([]error, 2)
+			for i := range errs {
+				wg.Go(func() {
+					errs[i] = svc.TestByName(context.Background(), name)
+				})
+			}
+			wg.Wait()
+			Expect(errs).To(HaveEach(Succeed()))
+			Expect(posts.Load()).To(Equal(int32(1)))
+			Expect(rows[name].Cookies).To(HaveKeyWithValue("pass", "xyz"))
+		})
+	},
+)
 
 // memSessions backs a store mock's session methods with a map, so a spec
 // reads what the indexer left behind the way the next call would.

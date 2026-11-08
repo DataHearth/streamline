@@ -165,6 +165,15 @@ func (e *Engine) Session() Session {
 	return s
 }
 
+// Adopt takes over a session another engine of the same indexer earned, so
+// a login that finished while this one waited for its turn is not repeated.
+func (e *Engine) Adopt(s Session) {
+	e.resetCookies(s.Cookies)
+	if s.UserAgent != "" {
+		e.ua = s.UserAgent
+	}
+}
+
 // resetCookies replaces the jar with one holding just these cookies, set on
 // the site. A login starts from the definition's own cookies, never from the
 // session it is replacing.
