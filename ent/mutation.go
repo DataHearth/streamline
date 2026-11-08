@@ -35187,6 +35187,7 @@ type MovieMutation struct {
 	tmdb_id                 *uint32
 	addtmdb_id              *int32
 	imdb_id                 *string
+	wikidata_id             *string
 	last_search_at          *time.Time
 	release_date            *time.Time
 	digital_release_date    *time.Time
@@ -35817,6 +35818,55 @@ func (m *MovieMutation) ImdbIDCleared() bool {
 func (m *MovieMutation) ResetImdbID() {
 	m.imdb_id = nil
 	delete(m.clearedFields, movie.FieldImdbID)
+}
+
+// SetWikidataID sets the "wikidata_id" field.
+func (m *MovieMutation) SetWikidataID(s string) {
+	m.wikidata_id = &s
+}
+
+// WikidataID returns the value of the "wikidata_id" field in the mutation.
+func (m *MovieMutation) WikidataID() (r string, exists bool) {
+	v := m.wikidata_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWikidataID returns the old "wikidata_id" field's value of the Movie entity.
+// If the Movie object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MovieMutation) OldWikidataID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWikidataID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWikidataID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWikidataID: %w", err)
+	}
+	return oldValue.WikidataID, nil
+}
+
+// ClearWikidataID clears the value of the "wikidata_id" field.
+func (m *MovieMutation) ClearWikidataID() {
+	m.wikidata_id = nil
+	m.clearedFields[movie.FieldWikidataID] = struct{}{}
+}
+
+// WikidataIDCleared returns if the "wikidata_id" field was cleared in this mutation.
+func (m *MovieMutation) WikidataIDCleared() bool {
+	_, ok := m.clearedFields[movie.FieldWikidataID]
+	return ok
+}
+
+// ResetWikidataID resets all changes to the "wikidata_id" field.
+func (m *MovieMutation) ResetWikidataID() {
+	m.wikidata_id = nil
+	delete(m.clearedFields, movie.FieldWikidataID)
 }
 
 // SetLastSearchAt sets the "last_search_at" field.
@@ -36619,7 +36669,7 @@ func (m *MovieMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MovieMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 22)
 	if m.create_time != nil {
 		fields = append(fields, movie.FieldCreateTime)
 	}
@@ -36652,6 +36702,9 @@ func (m *MovieMutation) Fields() []string {
 	}
 	if m.imdb_id != nil {
 		fields = append(fields, movie.FieldImdbID)
+	}
+	if m.wikidata_id != nil {
+		fields = append(fields, movie.FieldWikidataID)
 	}
 	if m.last_search_at != nil {
 		fields = append(fields, movie.FieldLastSearchAt)
@@ -36713,6 +36766,8 @@ func (m *MovieMutation) Field(name string) (ent.Value, bool) {
 		return m.TmdbID()
 	case movie.FieldImdbID:
 		return m.ImdbID()
+	case movie.FieldWikidataID:
+		return m.WikidataID()
 	case movie.FieldLastSearchAt:
 		return m.LastSearchAt()
 	case movie.FieldReleaseDate:
@@ -36764,6 +36819,8 @@ func (m *MovieMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldTmdbID(ctx)
 	case movie.FieldImdbID:
 		return m.OldImdbID(ctx)
+	case movie.FieldWikidataID:
+		return m.OldWikidataID(ctx)
 	case movie.FieldLastSearchAt:
 		return m.OldLastSearchAt(ctx)
 	case movie.FieldReleaseDate:
@@ -36869,6 +36926,13 @@ func (m *MovieMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetImdbID(v)
+		return nil
+	case movie.FieldWikidataID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWikidataID(v)
 		return nil
 	case movie.FieldLastSearchAt:
 		v, ok := value.(time.Time)
@@ -37042,6 +37106,9 @@ func (m *MovieMutation) ClearedFields() []string {
 	if m.FieldCleared(movie.FieldImdbID) {
 		fields = append(fields, movie.FieldImdbID)
 	}
+	if m.FieldCleared(movie.FieldWikidataID) {
+		fields = append(fields, movie.FieldWikidataID)
+	}
 	if m.FieldCleared(movie.FieldLastSearchAt) {
 		fields = append(fields, movie.FieldLastSearchAt)
 	}
@@ -37091,6 +37158,9 @@ func (m *MovieMutation) ClearField(name string) error {
 		return nil
 	case movie.FieldImdbID:
 		m.ClearImdbID()
+		return nil
+	case movie.FieldWikidataID:
+		m.ClearWikidataID()
 		return nil
 	case movie.FieldLastSearchAt:
 		m.ClearLastSearchAt()
@@ -37159,6 +37229,9 @@ func (m *MovieMutation) ResetField(name string) error {
 		return nil
 	case movie.FieldImdbID:
 		m.ResetImdbID()
+		return nil
+	case movie.FieldWikidataID:
+		m.ResetWikidataID()
 		return nil
 	case movie.FieldLastSearchAt:
 		m.ResetLastSearchAt()
@@ -48212,7 +48285,10 @@ type TVShowMutation struct {
 	monitored         *bool
 	tvdb_id           *uint32
 	addtvdb_id        *int32
+	tmdb_id           *uint32
+	addtmdb_id        *int32
 	imdb_id           *string
+	wikidata_id       *string
 	poster_path       *string
 	network           *string
 	creator           *string
@@ -48820,6 +48896,76 @@ func (m *TVShowMutation) ResetTvdbID() {
 	m.addtvdb_id = nil
 }
 
+// SetTmdbID sets the "tmdb_id" field.
+func (m *TVShowMutation) SetTmdbID(u uint32) {
+	m.tmdb_id = &u
+	m.addtmdb_id = nil
+}
+
+// TmdbID returns the value of the "tmdb_id" field in the mutation.
+func (m *TVShowMutation) TmdbID() (r uint32, exists bool) {
+	v := m.tmdb_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTmdbID returns the old "tmdb_id" field's value of the TVShow entity.
+// If the TVShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TVShowMutation) OldTmdbID(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTmdbID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTmdbID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTmdbID: %w", err)
+	}
+	return oldValue.TmdbID, nil
+}
+
+// AddTmdbID adds u to the "tmdb_id" field.
+func (m *TVShowMutation) AddTmdbID(u int32) {
+	if m.addtmdb_id != nil {
+		*m.addtmdb_id += u
+	} else {
+		m.addtmdb_id = &u
+	}
+}
+
+// AddedTmdbID returns the value that was added to the "tmdb_id" field in this mutation.
+func (m *TVShowMutation) AddedTmdbID() (r int32, exists bool) {
+	v := m.addtmdb_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearTmdbID clears the value of the "tmdb_id" field.
+func (m *TVShowMutation) ClearTmdbID() {
+	m.tmdb_id = nil
+	m.addtmdb_id = nil
+	m.clearedFields[tvshow.FieldTmdbID] = struct{}{}
+}
+
+// TmdbIDCleared returns if the "tmdb_id" field was cleared in this mutation.
+func (m *TVShowMutation) TmdbIDCleared() bool {
+	_, ok := m.clearedFields[tvshow.FieldTmdbID]
+	return ok
+}
+
+// ResetTmdbID resets all changes to the "tmdb_id" field.
+func (m *TVShowMutation) ResetTmdbID() {
+	m.tmdb_id = nil
+	m.addtmdb_id = nil
+	delete(m.clearedFields, tvshow.FieldTmdbID)
+}
+
 // SetImdbID sets the "imdb_id" field.
 func (m *TVShowMutation) SetImdbID(s string) {
 	m.imdb_id = &s
@@ -48867,6 +49013,55 @@ func (m *TVShowMutation) ImdbIDCleared() bool {
 func (m *TVShowMutation) ResetImdbID() {
 	m.imdb_id = nil
 	delete(m.clearedFields, tvshow.FieldImdbID)
+}
+
+// SetWikidataID sets the "wikidata_id" field.
+func (m *TVShowMutation) SetWikidataID(s string) {
+	m.wikidata_id = &s
+}
+
+// WikidataID returns the value of the "wikidata_id" field in the mutation.
+func (m *TVShowMutation) WikidataID() (r string, exists bool) {
+	v := m.wikidata_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWikidataID returns the old "wikidata_id" field's value of the TVShow entity.
+// If the TVShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TVShowMutation) OldWikidataID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWikidataID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWikidataID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWikidataID: %w", err)
+	}
+	return oldValue.WikidataID, nil
+}
+
+// ClearWikidataID clears the value of the "wikidata_id" field.
+func (m *TVShowMutation) ClearWikidataID() {
+	m.wikidata_id = nil
+	m.clearedFields[tvshow.FieldWikidataID] = struct{}{}
+}
+
+// WikidataIDCleared returns if the "wikidata_id" field was cleared in this mutation.
+func (m *TVShowMutation) WikidataIDCleared() bool {
+	_, ok := m.clearedFields[tvshow.FieldWikidataID]
+	return ok
+}
+
+// ResetWikidataID resets all changes to the "wikidata_id" field.
+func (m *TVShowMutation) ResetWikidataID() {
+	m.wikidata_id = nil
+	delete(m.clearedFields, tvshow.FieldWikidataID)
 }
 
 // SetPosterPath sets the "poster_path" field.
@@ -49580,7 +49775,7 @@ func (m *TVShowMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TVShowMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 23)
 	if m.create_time != nil {
 		fields = append(fields, tvshow.FieldCreateTime)
 	}
@@ -49614,8 +49809,14 @@ func (m *TVShowMutation) Fields() []string {
 	if m.tvdb_id != nil {
 		fields = append(fields, tvshow.FieldTvdbID)
 	}
+	if m.tmdb_id != nil {
+		fields = append(fields, tvshow.FieldTmdbID)
+	}
 	if m.imdb_id != nil {
 		fields = append(fields, tvshow.FieldImdbID)
+	}
+	if m.wikidata_id != nil {
+		fields = append(fields, tvshow.FieldWikidataID)
 	}
 	if m.poster_path != nil {
 		fields = append(fields, tvshow.FieldPosterPath)
@@ -49674,8 +49875,12 @@ func (m *TVShowMutation) Field(name string) (ent.Value, bool) {
 		return m.Monitored()
 	case tvshow.FieldTvdbID:
 		return m.TvdbID()
+	case tvshow.FieldTmdbID:
+		return m.TmdbID()
 	case tvshow.FieldImdbID:
 		return m.ImdbID()
+	case tvshow.FieldWikidataID:
+		return m.WikidataID()
 	case tvshow.FieldPosterPath:
 		return m.PosterPath()
 	case tvshow.FieldNetwork:
@@ -49725,8 +49930,12 @@ func (m *TVShowMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldMonitored(ctx)
 	case tvshow.FieldTvdbID:
 		return m.OldTvdbID(ctx)
+	case tvshow.FieldTmdbID:
+		return m.OldTmdbID(ctx)
 	case tvshow.FieldImdbID:
 		return m.OldImdbID(ctx)
+	case tvshow.FieldWikidataID:
+		return m.OldWikidataID(ctx)
 	case tvshow.FieldPosterPath:
 		return m.OldPosterPath(ctx)
 	case tvshow.FieldNetwork:
@@ -49831,12 +50040,26 @@ func (m *TVShowMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTvdbID(v)
 		return nil
+	case tvshow.FieldTmdbID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTmdbID(v)
+		return nil
 	case tvshow.FieldImdbID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetImdbID(v)
+		return nil
+	case tvshow.FieldWikidataID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWikidataID(v)
 		return nil
 	case tvshow.FieldPosterPath:
 		v, ok := value.(string)
@@ -49915,6 +50138,9 @@ func (m *TVShowMutation) AddedFields() []string {
 	if m.addtvdb_id != nil {
 		fields = append(fields, tvshow.FieldTvdbID)
 	}
+	if m.addtmdb_id != nil {
+		fields = append(fields, tvshow.FieldTmdbID)
+	}
 	if m.addruntime != nil {
 		fields = append(fields, tvshow.FieldRuntime)
 	}
@@ -49933,6 +50159,8 @@ func (m *TVShowMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedYear()
 	case tvshow.FieldTvdbID:
 		return m.AddedTvdbID()
+	case tvshow.FieldTmdbID:
+		return m.AddedTmdbID()
 	case tvshow.FieldRuntime:
 		return m.AddedRuntime()
 	case tvshow.FieldRating:
@@ -49959,6 +50187,13 @@ func (m *TVShowMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddTvdbID(v)
+		return nil
+	case tvshow.FieldTmdbID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTmdbID(v)
 		return nil
 	case tvshow.FieldRuntime:
 		v, ok := value.(int16)
@@ -49991,8 +50226,14 @@ func (m *TVShowMutation) ClearedFields() []string {
 	if m.FieldCleared(tvshow.FieldOverview) {
 		fields = append(fields, tvshow.FieldOverview)
 	}
+	if m.FieldCleared(tvshow.FieldTmdbID) {
+		fields = append(fields, tvshow.FieldTmdbID)
+	}
 	if m.FieldCleared(tvshow.FieldImdbID) {
 		fields = append(fields, tvshow.FieldImdbID)
+	}
+	if m.FieldCleared(tvshow.FieldWikidataID) {
+		fields = append(fields, tvshow.FieldWikidataID)
 	}
 	if m.FieldCleared(tvshow.FieldPosterPath) {
 		fields = append(fields, tvshow.FieldPosterPath)
@@ -50044,8 +50285,14 @@ func (m *TVShowMutation) ClearField(name string) error {
 	case tvshow.FieldOverview:
 		m.ClearOverview()
 		return nil
+	case tvshow.FieldTmdbID:
+		m.ClearTmdbID()
+		return nil
 	case tvshow.FieldImdbID:
 		m.ClearImdbID()
+		return nil
+	case tvshow.FieldWikidataID:
+		m.ClearWikidataID()
 		return nil
 	case tvshow.FieldPosterPath:
 		m.ClearPosterPath()
@@ -50115,8 +50362,14 @@ func (m *TVShowMutation) ResetField(name string) error {
 	case tvshow.FieldTvdbID:
 		m.ResetTvdbID()
 		return nil
+	case tvshow.FieldTmdbID:
+		m.ResetTmdbID()
+		return nil
 	case tvshow.FieldImdbID:
 		m.ResetImdbID()
+		return nil
+	case tvshow.FieldWikidataID:
+		m.ResetWikidataID()
 		return nil
 	case tvshow.FieldPosterPath:
 		m.ResetPosterPath()

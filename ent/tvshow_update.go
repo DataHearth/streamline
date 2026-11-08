@@ -197,6 +197,33 @@ func (_u *TVShowUpdate) AddTvdbID(v int32) *TVShowUpdate {
 	return _u
 }
 
+// SetTmdbID sets the "tmdb_id" field.
+func (_u *TVShowUpdate) SetTmdbID(v uint32) *TVShowUpdate {
+	_u.mutation.ResetTmdbID()
+	_u.mutation.SetTmdbID(v)
+	return _u
+}
+
+// SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
+func (_u *TVShowUpdate) SetNillableTmdbID(v *uint32) *TVShowUpdate {
+	if v != nil {
+		_u.SetTmdbID(*v)
+	}
+	return _u
+}
+
+// AddTmdbID adds value to the "tmdb_id" field.
+func (_u *TVShowUpdate) AddTmdbID(v int32) *TVShowUpdate {
+	_u.mutation.AddTmdbID(v)
+	return _u
+}
+
+// ClearTmdbID clears the value of the "tmdb_id" field.
+func (_u *TVShowUpdate) ClearTmdbID() *TVShowUpdate {
+	_u.mutation.ClearTmdbID()
+	return _u
+}
+
 // SetImdbID sets the "imdb_id" field.
 func (_u *TVShowUpdate) SetImdbID(v string) *TVShowUpdate {
 	_u.mutation.SetImdbID(v)
@@ -214,6 +241,26 @@ func (_u *TVShowUpdate) SetNillableImdbID(v *string) *TVShowUpdate {
 // ClearImdbID clears the value of the "imdb_id" field.
 func (_u *TVShowUpdate) ClearImdbID() *TVShowUpdate {
 	_u.mutation.ClearImdbID()
+	return _u
+}
+
+// SetWikidataID sets the "wikidata_id" field.
+func (_u *TVShowUpdate) SetWikidataID(v string) *TVShowUpdate {
+	_u.mutation.SetWikidataID(v)
+	return _u
+}
+
+// SetNillableWikidataID sets the "wikidata_id" field if the given value is not nil.
+func (_u *TVShowUpdate) SetNillableWikidataID(v *string) *TVShowUpdate {
+	if v != nil {
+		_u.SetWikidataID(*v)
+	}
+	return _u
+}
+
+// ClearWikidataID clears the value of the "wikidata_id" field.
+func (_u *TVShowUpdate) ClearWikidataID() *TVShowUpdate {
+	_u.mutation.ClearWikidataID()
 	return _u
 }
 
@@ -639,11 +686,26 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.AddedTvdbID(); ok {
 		_spec.AddField(tvshow.FieldTvdbID, field.TypeUint32, value)
 	}
+	if value, ok := _u.mutation.TmdbID(); ok {
+		_spec.SetField(tvshow.FieldTmdbID, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedTmdbID(); ok {
+		_spec.AddField(tvshow.FieldTmdbID, field.TypeUint32, value)
+	}
+	if _u.mutation.TmdbIDCleared() {
+		_spec.ClearField(tvshow.FieldTmdbID, field.TypeUint32)
+	}
 	if value, ok := _u.mutation.ImdbID(); ok {
 		_spec.SetField(tvshow.FieldImdbID, field.TypeString, value)
 	}
 	if _u.mutation.ImdbIDCleared() {
 		_spec.ClearField(tvshow.FieldImdbID, field.TypeString)
+	}
+	if value, ok := _u.mutation.WikidataID(); ok {
+		_spec.SetField(tvshow.FieldWikidataID, field.TypeString, value)
+	}
+	if _u.mutation.WikidataIDCleared() {
+		_spec.ClearField(tvshow.FieldWikidataID, field.TypeString)
 	}
 	if value, ok := _u.mutation.PosterPath(); ok {
 		_spec.SetField(tvshow.FieldPosterPath, field.TypeString, value)
@@ -1036,6 +1098,33 @@ func (_u *TVShowUpdateOne) AddTvdbID(v int32) *TVShowUpdateOne {
 	return _u
 }
 
+// SetTmdbID sets the "tmdb_id" field.
+func (_u *TVShowUpdateOne) SetTmdbID(v uint32) *TVShowUpdateOne {
+	_u.mutation.ResetTmdbID()
+	_u.mutation.SetTmdbID(v)
+	return _u
+}
+
+// SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
+func (_u *TVShowUpdateOne) SetNillableTmdbID(v *uint32) *TVShowUpdateOne {
+	if v != nil {
+		_u.SetTmdbID(*v)
+	}
+	return _u
+}
+
+// AddTmdbID adds value to the "tmdb_id" field.
+func (_u *TVShowUpdateOne) AddTmdbID(v int32) *TVShowUpdateOne {
+	_u.mutation.AddTmdbID(v)
+	return _u
+}
+
+// ClearTmdbID clears the value of the "tmdb_id" field.
+func (_u *TVShowUpdateOne) ClearTmdbID() *TVShowUpdateOne {
+	_u.mutation.ClearTmdbID()
+	return _u
+}
+
 // SetImdbID sets the "imdb_id" field.
 func (_u *TVShowUpdateOne) SetImdbID(v string) *TVShowUpdateOne {
 	_u.mutation.SetImdbID(v)
@@ -1053,6 +1142,26 @@ func (_u *TVShowUpdateOne) SetNillableImdbID(v *string) *TVShowUpdateOne {
 // ClearImdbID clears the value of the "imdb_id" field.
 func (_u *TVShowUpdateOne) ClearImdbID() *TVShowUpdateOne {
 	_u.mutation.ClearImdbID()
+	return _u
+}
+
+// SetWikidataID sets the "wikidata_id" field.
+func (_u *TVShowUpdateOne) SetWikidataID(v string) *TVShowUpdateOne {
+	_u.mutation.SetWikidataID(v)
+	return _u
+}
+
+// SetNillableWikidataID sets the "wikidata_id" field if the given value is not nil.
+func (_u *TVShowUpdateOne) SetNillableWikidataID(v *string) *TVShowUpdateOne {
+	if v != nil {
+		_u.SetWikidataID(*v)
+	}
+	return _u
+}
+
+// ClearWikidataID clears the value of the "wikidata_id" field.
+func (_u *TVShowUpdateOne) ClearWikidataID() *TVShowUpdateOne {
+	_u.mutation.ClearWikidataID()
 	return _u
 }
 
@@ -1508,11 +1617,26 @@ func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err erro
 	if value, ok := _u.mutation.AddedTvdbID(); ok {
 		_spec.AddField(tvshow.FieldTvdbID, field.TypeUint32, value)
 	}
+	if value, ok := _u.mutation.TmdbID(); ok {
+		_spec.SetField(tvshow.FieldTmdbID, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedTmdbID(); ok {
+		_spec.AddField(tvshow.FieldTmdbID, field.TypeUint32, value)
+	}
+	if _u.mutation.TmdbIDCleared() {
+		_spec.ClearField(tvshow.FieldTmdbID, field.TypeUint32)
+	}
 	if value, ok := _u.mutation.ImdbID(); ok {
 		_spec.SetField(tvshow.FieldImdbID, field.TypeString, value)
 	}
 	if _u.mutation.ImdbIDCleared() {
 		_spec.ClearField(tvshow.FieldImdbID, field.TypeString)
+	}
+	if value, ok := _u.mutation.WikidataID(); ok {
+		_spec.SetField(tvshow.FieldWikidataID, field.TypeString, value)
+	}
+	if _u.mutation.WikidataIDCleared() {
+		_spec.ClearField(tvshow.FieldWikidataID, field.TypeString)
 	}
 	if value, ok := _u.mutation.PosterPath(); ok {
 		_spec.SetField(tvshow.FieldPosterPath, field.TypeString, value)

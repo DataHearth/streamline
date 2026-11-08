@@ -105,6 +105,11 @@ func ImdbID(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldImdbID, v))
 }
 
+// WikidataID applies equality check predicate on the "wikidata_id" field. It's identical to WikidataIDEQ.
+func WikidataID(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldEQ(FieldWikidataID, v))
+}
+
 // LastSearchAt applies equality check predicate on the "last_search_at" field. It's identical to LastSearchAtEQ.
 func LastSearchAt(v time.Time) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldLastSearchAt, v))
@@ -663,6 +668,81 @@ func ImdbIDEqualFold(v string) predicate.Movie {
 // ImdbIDContainsFold applies the ContainsFold predicate on the "imdb_id" field.
 func ImdbIDContainsFold(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldContainsFold(FieldImdbID, v))
+}
+
+// WikidataIDEQ applies the EQ predicate on the "wikidata_id" field.
+func WikidataIDEQ(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldEQ(FieldWikidataID, v))
+}
+
+// WikidataIDNEQ applies the NEQ predicate on the "wikidata_id" field.
+func WikidataIDNEQ(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldNEQ(FieldWikidataID, v))
+}
+
+// WikidataIDIn applies the In predicate on the "wikidata_id" field.
+func WikidataIDIn(vs ...string) predicate.Movie {
+	return predicate.Movie(sql.FieldIn(FieldWikidataID, vs...))
+}
+
+// WikidataIDNotIn applies the NotIn predicate on the "wikidata_id" field.
+func WikidataIDNotIn(vs ...string) predicate.Movie {
+	return predicate.Movie(sql.FieldNotIn(FieldWikidataID, vs...))
+}
+
+// WikidataIDGT applies the GT predicate on the "wikidata_id" field.
+func WikidataIDGT(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldGT(FieldWikidataID, v))
+}
+
+// WikidataIDGTE applies the GTE predicate on the "wikidata_id" field.
+func WikidataIDGTE(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldGTE(FieldWikidataID, v))
+}
+
+// WikidataIDLT applies the LT predicate on the "wikidata_id" field.
+func WikidataIDLT(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldLT(FieldWikidataID, v))
+}
+
+// WikidataIDLTE applies the LTE predicate on the "wikidata_id" field.
+func WikidataIDLTE(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldLTE(FieldWikidataID, v))
+}
+
+// WikidataIDContains applies the Contains predicate on the "wikidata_id" field.
+func WikidataIDContains(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldContains(FieldWikidataID, v))
+}
+
+// WikidataIDHasPrefix applies the HasPrefix predicate on the "wikidata_id" field.
+func WikidataIDHasPrefix(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldHasPrefix(FieldWikidataID, v))
+}
+
+// WikidataIDHasSuffix applies the HasSuffix predicate on the "wikidata_id" field.
+func WikidataIDHasSuffix(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldHasSuffix(FieldWikidataID, v))
+}
+
+// WikidataIDIsNil applies the IsNil predicate on the "wikidata_id" field.
+func WikidataIDIsNil() predicate.Movie {
+	return predicate.Movie(sql.FieldIsNull(FieldWikidataID))
+}
+
+// WikidataIDNotNil applies the NotNil predicate on the "wikidata_id" field.
+func WikidataIDNotNil() predicate.Movie {
+	return predicate.Movie(sql.FieldNotNull(FieldWikidataID))
+}
+
+// WikidataIDEqualFold applies the EqualFold predicate on the "wikidata_id" field.
+func WikidataIDEqualFold(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldEqualFold(FieldWikidataID, v))
+}
+
+// WikidataIDContainsFold applies the ContainsFold predicate on the "wikidata_id" field.
+func WikidataIDContainsFold(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldContainsFold(FieldWikidataID, v))
 }
 
 // LastSearchAtEQ applies the EQ predicate on the "last_search_at" field.

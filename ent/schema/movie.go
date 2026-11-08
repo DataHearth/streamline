@@ -31,9 +31,12 @@ func (Movie) Fields() []ent.Field {
 			Default("wanted"),
 		field.Bool("monitored").Default(true),
 		field.Uint32("tmdb_id").Unique(),
-		// "tt" + digits, as TMDB reports it. A tracker that cannot search by
-		// TMDB id often can by IMDb id, which is what this is queried for.
+		// Cross-references TMDB carries for the film (the details' imdb_id and
+		// external_ids.wikidata_id), refreshed with the rest of the metadata.
+		// They key the detail page's links to IMDb and to the review sites
+		// that resolve an IMDb id; empty when TMDB knows none.
 		field.String("imdb_id").Optional(),
+		field.String("wikidata_id").Optional(),
 		field.Time("last_search_at").Optional().Nillable(),
 		// Primary (theatrical) release, as TMDB reports it. Distinct from
 		// digital_release_date, which is what the release-radar search waits on;

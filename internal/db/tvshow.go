@@ -1,6 +1,7 @@
 package db
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log/slog"
@@ -61,6 +62,16 @@ type CreateTVShowParams struct {
 	QualityProfile string
 	Seasons        []SeasonSeed
 	FirstAired     *time.Time
+	ExternalIDs    TVShowExternalIDs
+}
+
+// TVShowExternalIDs are the other sites' ids TVDB maps the series to. Every
+// metadata write sets them as TVDB answers, zero included, so a re-identified
+// show never keeps the previous series' links.
+type TVShowExternalIDs struct {
+	TMDBID     uint32
+	IMDbID     string
+	WikidataID string
 }
 
 type UpdateTVShowParams struct {
@@ -86,6 +97,7 @@ type UpdateTVShowMetadataParams struct {
 	Aliases       []string
 	Cast          []metadata.CastMember
 	FirstAired    *time.Time
+	ExternalIDs   TVShowExternalIDs
 }
 
 // UpdateTVShowMetadata persists refreshed provider metadata onto an existing
@@ -103,7 +115,6 @@ func (db *DB) UpdateTVShowMetadata(
 		SetTitle(p.Title).
 		SetOriginalTitle(p.OriginalTitle).
 		SetYear(p.Year).
-		SetImdbID(p.IMDbID).
 		SetOverview(p.Overview).
 		SetNetwork(p.Network).
 		SetCreator(p.Creator).
@@ -111,6 +122,9 @@ func (db *DB) UpdateTVShowMetadata(
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
+		SetTmdbID(p.ExternalIDs.TMDBID).
+		SetImdbID(cmp.Or(p.ExternalIDs.IMDbID, p.IMDbID)).
+		SetWikidataID(p.ExternalIDs.WikidataID).
 		SetNillableFirstAired(p.FirstAired)
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
@@ -317,7 +331,6 @@ func (db *DB) CreateTVShow(
 		SetYear(p.Year).
 		SetOverview(p.Overview).
 		SetTvdbID(p.TvdbID).
-		SetImdbID(p.IMDbID).
 		SetSeriesStatus(tvshow.SeriesStatus(orDefault(p.SeriesStatus, "continuing"))).
 		SetType(tvshow.Type(orDefault(p.Type, "standard"))).
 		SetNetwork(p.Network).
@@ -326,6 +339,9 @@ func (db *DB) CreateTVShow(
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
+		SetTmdbID(p.ExternalIDs.TMDBID).
+		SetImdbID(cmp.Or(p.ExternalIDs.IMDbID, p.IMDbID)).
+		SetWikidataID(p.ExternalIDs.WikidataID).
 		SetPosterPath(p.PosterPath).
 		SetQualityProfile(p.QualityProfile).
 		SetNillableFirstAired(p.FirstAired).

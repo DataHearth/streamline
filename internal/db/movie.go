@@ -1,6 +1,7 @@
 package db
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"slices"
@@ -30,6 +31,15 @@ type CreateMovieParams struct {
 	Aliases        []string
 	Cast           []metadata.CastMember
 	ReleaseDate    *time.Time
+	ExternalIDs    MovieExternalIDs
+}
+
+// MovieExternalIDs are the other sites' ids TMDB maps the film to. Every
+// metadata write sets them as TMDB answers, empty included, so a re-identified
+// movie never keeps the previous title's links.
+type MovieExternalIDs struct {
+	IMDbID     string
+	WikidataID string
 }
 
 func (db *DB) CreateMovie(
@@ -45,7 +55,8 @@ func (db *DB) CreateMovie(
 		SetOriginalTitle(p.OriginalTitle).
 		SetYear(p.Year).
 		SetTmdbID(p.TmdbID).
-		SetImdbID(p.IMDbID).
+		SetImdbID(cmp.Or(p.ExternalIDs.IMDbID, p.IMDbID)).
+		SetWikidataID(p.ExternalIDs.WikidataID).
 		SetStatus(p.Status).
 		SetNillableReleaseDate(p.ReleaseDate)
 	if p.Overview != "" {
@@ -485,6 +496,7 @@ type UpdateMovieMetadataParams struct {
 	Aliases       []string
 	Cast          []metadata.CastMember
 	ReleaseDate   *time.Time
+	ExternalIDs   MovieExternalIDs
 }
 
 // UpdateMovieMetadata updates only the TMDB-sourced metadata fields. Status and
@@ -503,12 +515,13 @@ func (db *DB) UpdateMovieMetadata(
 		SetTitle(p.Title).
 		SetOriginalTitle(p.OriginalTitle).
 		SetYear(p.Year).
-		SetImdbID(p.IMDbID).
 		SetOverview(p.Overview).
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
+		SetImdbID(cmp.Or(p.ExternalIDs.IMDbID, p.IMDbID)).
+		SetWikidataID(p.ExternalIDs.WikidataID).
 		SetNillableReleaseDate(p.ReleaseDate).
 		SetLastRefreshedAt(time.Now()).
 		Exec(ctx); err != nil {

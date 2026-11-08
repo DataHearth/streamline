@@ -100,9 +100,19 @@ func TvdbID(v uint32) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldTvdbID, v))
 }
 
+// TmdbID applies equality check predicate on the "tmdb_id" field. It's identical to TmdbIDEQ.
+func TmdbID(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEQ(FieldTmdbID, v))
+}
+
 // ImdbID applies equality check predicate on the "imdb_id" field. It's identical to ImdbIDEQ.
 func ImdbID(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldImdbID, v))
+}
+
+// WikidataID applies equality check predicate on the "wikidata_id" field. It's identical to WikidataIDEQ.
+func WikidataID(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEQ(FieldWikidataID, v))
 }
 
 // PosterPath applies equality check predicate on the "poster_path" field. It's identical to PosterPathEQ.
@@ -615,6 +625,56 @@ func TvdbIDLTE(v uint32) predicate.TVShow {
 	return predicate.TVShow(sql.FieldLTE(FieldTvdbID, v))
 }
 
+// TmdbIDEQ applies the EQ predicate on the "tmdb_id" field.
+func TmdbIDEQ(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEQ(FieldTmdbID, v))
+}
+
+// TmdbIDNEQ applies the NEQ predicate on the "tmdb_id" field.
+func TmdbIDNEQ(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldNEQ(FieldTmdbID, v))
+}
+
+// TmdbIDIn applies the In predicate on the "tmdb_id" field.
+func TmdbIDIn(vs ...uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldIn(FieldTmdbID, vs...))
+}
+
+// TmdbIDNotIn applies the NotIn predicate on the "tmdb_id" field.
+func TmdbIDNotIn(vs ...uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldNotIn(FieldTmdbID, vs...))
+}
+
+// TmdbIDGT applies the GT predicate on the "tmdb_id" field.
+func TmdbIDGT(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldGT(FieldTmdbID, v))
+}
+
+// TmdbIDGTE applies the GTE predicate on the "tmdb_id" field.
+func TmdbIDGTE(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldGTE(FieldTmdbID, v))
+}
+
+// TmdbIDLT applies the LT predicate on the "tmdb_id" field.
+func TmdbIDLT(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldLT(FieldTmdbID, v))
+}
+
+// TmdbIDLTE applies the LTE predicate on the "tmdb_id" field.
+func TmdbIDLTE(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldLTE(FieldTmdbID, v))
+}
+
+// TmdbIDIsNil applies the IsNil predicate on the "tmdb_id" field.
+func TmdbIDIsNil() predicate.TVShow {
+	return predicate.TVShow(sql.FieldIsNull(FieldTmdbID))
+}
+
+// TmdbIDNotNil applies the NotNil predicate on the "tmdb_id" field.
+func TmdbIDNotNil() predicate.TVShow {
+	return predicate.TVShow(sql.FieldNotNull(FieldTmdbID))
+}
+
 // ImdbIDEQ applies the EQ predicate on the "imdb_id" field.
 func ImdbIDEQ(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldImdbID, v))
@@ -688,6 +748,81 @@ func ImdbIDEqualFold(v string) predicate.TVShow {
 // ImdbIDContainsFold applies the ContainsFold predicate on the "imdb_id" field.
 func ImdbIDContainsFold(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldContainsFold(FieldImdbID, v))
+}
+
+// WikidataIDEQ applies the EQ predicate on the "wikidata_id" field.
+func WikidataIDEQ(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEQ(FieldWikidataID, v))
+}
+
+// WikidataIDNEQ applies the NEQ predicate on the "wikidata_id" field.
+func WikidataIDNEQ(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldNEQ(FieldWikidataID, v))
+}
+
+// WikidataIDIn applies the In predicate on the "wikidata_id" field.
+func WikidataIDIn(vs ...string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldIn(FieldWikidataID, vs...))
+}
+
+// WikidataIDNotIn applies the NotIn predicate on the "wikidata_id" field.
+func WikidataIDNotIn(vs ...string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldNotIn(FieldWikidataID, vs...))
+}
+
+// WikidataIDGT applies the GT predicate on the "wikidata_id" field.
+func WikidataIDGT(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldGT(FieldWikidataID, v))
+}
+
+// WikidataIDGTE applies the GTE predicate on the "wikidata_id" field.
+func WikidataIDGTE(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldGTE(FieldWikidataID, v))
+}
+
+// WikidataIDLT applies the LT predicate on the "wikidata_id" field.
+func WikidataIDLT(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldLT(FieldWikidataID, v))
+}
+
+// WikidataIDLTE applies the LTE predicate on the "wikidata_id" field.
+func WikidataIDLTE(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldLTE(FieldWikidataID, v))
+}
+
+// WikidataIDContains applies the Contains predicate on the "wikidata_id" field.
+func WikidataIDContains(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldContains(FieldWikidataID, v))
+}
+
+// WikidataIDHasPrefix applies the HasPrefix predicate on the "wikidata_id" field.
+func WikidataIDHasPrefix(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldHasPrefix(FieldWikidataID, v))
+}
+
+// WikidataIDHasSuffix applies the HasSuffix predicate on the "wikidata_id" field.
+func WikidataIDHasSuffix(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldHasSuffix(FieldWikidataID, v))
+}
+
+// WikidataIDIsNil applies the IsNil predicate on the "wikidata_id" field.
+func WikidataIDIsNil() predicate.TVShow {
+	return predicate.TVShow(sql.FieldIsNull(FieldWikidataID))
+}
+
+// WikidataIDNotNil applies the NotNil predicate on the "wikidata_id" field.
+func WikidataIDNotNil() predicate.TVShow {
+	return predicate.TVShow(sql.FieldNotNull(FieldWikidataID))
+}
+
+// WikidataIDEqualFold applies the EqualFold predicate on the "wikidata_id" field.
+func WikidataIDEqualFold(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEqualFold(FieldWikidataID, v))
+}
+
+// WikidataIDContainsFold applies the ContainsFold predicate on the "wikidata_id" field.
+func WikidataIDContainsFold(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldContainsFold(FieldWikidataID, v))
 }
 
 // PosterPathEQ applies the EQ predicate on the "poster_path" field.

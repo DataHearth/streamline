@@ -153,6 +153,20 @@ func (_c *TVShowCreate) SetTvdbID(v uint32) *TVShowCreate {
 	return _c
 }
 
+// SetTmdbID sets the "tmdb_id" field.
+func (_c *TVShowCreate) SetTmdbID(v uint32) *TVShowCreate {
+	_c.mutation.SetTmdbID(v)
+	return _c
+}
+
+// SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
+func (_c *TVShowCreate) SetNillableTmdbID(v *uint32) *TVShowCreate {
+	if v != nil {
+		_c.SetTmdbID(*v)
+	}
+	return _c
+}
+
 // SetImdbID sets the "imdb_id" field.
 func (_c *TVShowCreate) SetImdbID(v string) *TVShowCreate {
 	_c.mutation.SetImdbID(v)
@@ -163,6 +177,20 @@ func (_c *TVShowCreate) SetImdbID(v string) *TVShowCreate {
 func (_c *TVShowCreate) SetNillableImdbID(v *string) *TVShowCreate {
 	if v != nil {
 		_c.SetImdbID(*v)
+	}
+	return _c
+}
+
+// SetWikidataID sets the "wikidata_id" field.
+func (_c *TVShowCreate) SetWikidataID(v string) *TVShowCreate {
+	_c.mutation.SetWikidataID(v)
+	return _c
+}
+
+// SetNillableWikidataID sets the "wikidata_id" field if the given value is not nil.
+func (_c *TVShowCreate) SetNillableWikidataID(v *string) *TVShowCreate {
+	if v != nil {
+		_c.SetWikidataID(*v)
 	}
 	return _c
 }
@@ -510,9 +538,17 @@ func (_c *TVShowCreate) createSpec() (*TVShow, *sqlgraph.CreateSpec) {
 		_spec.SetField(tvshow.FieldTvdbID, field.TypeUint32, value)
 		_node.TvdbID = value
 	}
+	if value, ok := _c.mutation.TmdbID(); ok {
+		_spec.SetField(tvshow.FieldTmdbID, field.TypeUint32, value)
+		_node.TmdbID = value
+	}
 	if value, ok := _c.mutation.ImdbID(); ok {
 		_spec.SetField(tvshow.FieldImdbID, field.TypeString, value)
 		_node.ImdbID = value
+	}
+	if value, ok := _c.mutation.WikidataID(); ok {
+		_spec.SetField(tvshow.FieldWikidataID, field.TypeString, value)
+		_node.WikidataID = value
 	}
 	if value, ok := _c.mutation.PosterPath(); ok {
 		_spec.SetField(tvshow.FieldPosterPath, field.TypeString, value)

@@ -40,12 +40,15 @@ type MovieDetails struct {
 	Tagline          string
 	ReleaseDate      string // ISO yyyy-mm-dd, as TMDB returns it
 	OriginalLanguage string // ISO 639-1
-	IMDbID           string // "tt" + digits; empty when TMDB links none
 	// Aliases are TMDB's translated and alternative titles, excluding Title and
 	// OriginalTitle. A film held under its localized title equals none of the
 	// releases named in another language, so matchers compare against these as
 	// well — the movie counterpart of TVResult.Aliases.
 	Aliases []string
+	// IMDbID ("tt…") and WikidataID ("Q…") are TMDB's cross-references for
+	// the film, empty when it holds none.
+	IMDbID     string
+	WikidataID string
 }
 
 // PersonDetails is one person's biographical record, as either provider
@@ -167,7 +170,11 @@ type TVDetails struct {
 	Seasons    []SeasonInfo
 	Episodes   []EpisodeInfo
 	FirstAired string // ISO yyyy-mm-dd, as TVDB returns it
-	IMDbID     string // "tt" + digits; empty when TVDB links none
+	// Cross-references from the series record's remoteIds, zero/empty when
+	// TVDB lists none.
+	TMDBID     uint32
+	IMDbID     string
+	WikidataID string
 }
 
 // TVProvider fetches TV-series metadata. Implemented by *TVDB.

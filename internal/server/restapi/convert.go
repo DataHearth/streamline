@@ -103,6 +103,12 @@ func movieToAPI(m *ent.Movie) Movie {
 	if m.Overview != "" {
 		mov.Overview = &m.Overview
 	}
+	if m.ImdbID != "" {
+		mov.ImdbId = &m.ImdbID
+	}
+	if m.WikidataID != "" {
+		mov.WikidataId = &m.WikidataID
+	}
 	if m.QualityProfile != "" {
 		mov.QualityProfile = &m.QualityProfile
 	}
@@ -1243,6 +1249,16 @@ func tvShowBaseToAPI(s *ent.TVShow) TVShow {
 	}
 	if s.Overview != "" {
 		out.Overview = &s.Overview
+	}
+	if s.TmdbID != 0 {
+		id := s.TmdbID
+		out.TmdbId = &id
+	}
+	if s.ImdbID != "" {
+		out.ImdbId = &s.ImdbID
+	}
+	if s.WikidataID != "" {
+		out.WikidataId = &s.WikidataID
 	}
 	if s.Network != "" {
 		out.Network = &s.Network

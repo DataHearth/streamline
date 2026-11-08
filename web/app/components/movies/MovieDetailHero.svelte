@@ -12,6 +12,8 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import HeroBackdrop from "@components/shared/HeroBackdrop.svelte";
 	import { provideHeroHold } from "@lib/hero-hold.svelte";
+	import ExternalLinks from "@components/shared/ExternalLinks.svelte";
+	import { movieLinks } from "@lib/external-links";
 
 	let {
 		movie,
@@ -31,6 +33,7 @@
 	let primary = $derived(pickPrimary(movie.media_files));
 	let backdropSrc = $derived(posterUrl(movie));
 	provideHeroHold();
+	let links = $derived(movieLinks(movie));
 
 	// Single dotted meta line: release · runtime · rating · genres, then any
 	// file-derived facts. Mirrors the prototype's left-aligned header.
@@ -125,6 +128,8 @@
 			{#if movie.overview}
 				<ClampedText class="mt-4" text={movie.overview} />
 			{/if}
+
+			<ExternalLinks {links} class="mt-4" />
 
 			{#if actions}
 				<!-- md and up only: on a phone these live in the pinned bar at the

@@ -37,6 +37,8 @@ const (
 	FieldTmdbID = "tmdb_id"
 	// FieldImdbID holds the string denoting the imdb_id field in the database.
 	FieldImdbID = "imdb_id"
+	// FieldWikidataID holds the string denoting the wikidata_id field in the database.
+	FieldWikidataID = "wikidata_id"
 	// FieldLastSearchAt holds the string denoting the last_search_at field in the database.
 	FieldLastSearchAt = "last_search_at"
 	// FieldReleaseDate holds the string denoting the release_date field in the database.
@@ -111,6 +113,7 @@ var Columns = []string{
 	FieldMonitored,
 	FieldTmdbID,
 	FieldImdbID,
+	FieldWikidataID,
 	FieldLastSearchAt,
 	FieldReleaseDate,
 	FieldDigitalReleaseDate,
@@ -244,6 +247,11 @@ func ByTmdbID(opts ...sql.OrderTermOption) OrderOption {
 // ByImdbID orders the results by the imdb_id field.
 func ByImdbID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldImdbID, opts...).ToFunc()
+}
+
+// ByWikidataID orders the results by the wikidata_id field.
+func ByWikidataID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWikidataID, opts...).ToFunc()
 }
 
 // ByLastSearchAt orders the results by the last_search_at field.

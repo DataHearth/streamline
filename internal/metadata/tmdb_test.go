@@ -355,7 +355,6 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 					w.Header().Set("Content-Type", "application/json")
 					_, _ = w.Write(jsonBytes(map[string]any{
 						"id":           157336,
-						"imdb_id":      "tt0816692",
 						"title":        "Interstellar",
 						"release_date": "2014-11-05",
 						"overview":     "A team of explorers travel through a wormhole.",
@@ -366,6 +365,11 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 						},
 						"runtime":      169,
 						"vote_average": 8.4,
+						"imdb_id":      "tt0816692",
+						"external_ids": map[string]any{
+							"imdb_id":     "tt0816692",
+							"wikidata_id": "Q13417189",
+						},
 						"credits": map[string]any{
 							"cast": []map[string]any{
 								{
@@ -394,6 +398,13 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			Expect(details.Runtime).To(Equal(uint16(169)))
 			Expect(details.Rating).To(BeNumerically("~", 8.4, 0.001))
 			Expect(details.IMDbID).To(Equal("tt0816692"))
+		})
+
+		It("carries TMDB's IMDb and Wikidata cross-references", func() {
+			details, err := client.GetMovie(context.Background(), 157336)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(details.IMDbID).To(Equal("tt0816692"))
+			Expect(details.WikidataID).To(Equal("Q13417189"))
 		})
 
 		It("populates TMDBID on cast entries, leaving TVDBID zero", func() {
@@ -479,7 +490,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 						Expect(r.URL.Query().Get("language")).To(Equal("fr"))
 						Expect(
 							r.URL.Query().Get("append_to_response"),
-						).To(Equal("translations,alternative_titles,credits"))
+						).To(Equal("translations,alternative_titles,credits,external_ids"))
 
 						w.Header().Set("Content-Type", "application/json")
 						_, _ = w.Write(jsonBytes(map[string]any{
