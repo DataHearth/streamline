@@ -79,9 +79,9 @@ commit_parsers = [
     { message = "^\\s*$", skip = true },
     # Scope, not path: --exclude-path drops a commit only when *every* file it
     # touched is excluded, and a chart change routinely edits one file outside
-    # deploy/helm — `feat(helm)!: require image.tag` also touched ci.yaml and
-    # the Taskfile, and so landed in the app's 3.0.0 notes as a breaking change
-    # to an app nobody deploys with helm. A (helm)-scoped commit is a chart
+    # deploy/helm — a `feat(helm)!` that also touches ci.yaml and the Taskfile
+    # would land in the app's notes as a breaking change to an app nobody
+    # deploys with helm. A (helm)-scoped commit is a chart
     # change by definition; cliff.chart.toml is where it belongs.
     { message = "^\\w+\\(helm\\)", skip = true },
     { message = "^feat", group = "Added" },

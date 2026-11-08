@@ -7,7 +7,7 @@ import (
 	"github.com/datahearth/streamline/internal/quality"
 )
 
-// animeProfile is the shape that made this necessary, taken from a real
+// animeProfile is the shape this guards, taken from a real
 // install: almost all of the weight sits in vostfr, and upgrade_until_score is
 // set just above what a release can score.
 func animeProfile() quality.Profile {
@@ -68,10 +68,10 @@ var _ = Describe("ReplacesFile", Label("unit", "quality"), func() {
 	It(
 		"does not upgrade a file that already carries what the release claims",
 		func() {
-			// The bug this exists to prevent: the file's own name was destroyed by
-			// the renamer, so before the probe could answer vostfr it scored 80
-			// against the release's 1080 and every episode in the library read as
-			// upgradable, forever, by any VOSTFR release.
+			// The file's own name is destroyed by the renamer, so without the
+			// probe answering vostfr it would score 80 against the release's
+			// 1080 and every episode in the library would read as upgradable,
+			// forever, by any VOSTFR release.
 			Expect(quality.ReplacesFile(p, probedRow([]string{"fra"}), incoming)).
 				To(BeFalse())
 		},

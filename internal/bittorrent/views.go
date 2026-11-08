@@ -233,8 +233,7 @@ func (e *Engine) Details(
 // SetFilePriorities applies the manual per-file PATCH path (the /torrents
 // detail view's priority editor) and persists the resulting keep-set exactly
 // as SetWantedFiles does, so a restart's metadata re-resolve reproduces this
-// skip instead of falling back to mode "all" (the standalone bugfix this
-// path was missing).
+// skip instead of falling back to mode "all".
 func (e *Engine) SetFilePriorities(
 	ctx context.Context,
 	hash string,

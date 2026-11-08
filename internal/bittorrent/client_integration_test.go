@@ -249,7 +249,7 @@ func (s *logSink) String() string {
 }
 
 // teeEngineLogs routes both log streams the engine can fail through into sink:
-// slog, which now carries the embedded client's records as well as streamline's
+// slog, which carries the embedded client's records as well as streamline's
 // own, and anacrolix's package logger, which anything logging through
 // analog.Default rather than the client config would otherwise write straight
 // to stderr, bypassing GinkgoWriter entirely.
@@ -300,11 +300,11 @@ func closeSeeder(seeder *antorrent.Client, st *antorrent.Torrent) {
 // mid-hash is ignored for requests (anacrolix Piece.ignoreForRequests). A peer
 // that completes its handshake inside that window finds nothing to want, and
 // only requests once the check ends and its message writer is woken to
-// recompute its request state. anacrolix used to lose that wakeup when it
-// landed while the writer was mid-fill, leaving the download at zero bytes
-// with a live unchoked seeder until the next keepalive. The pinned version
-// installs the wakeup channel before filling (anacrolix #1070,
-// peer-conn-msg-writer.go), so the wedge is gone; these specs still wait the
+// recompute its request state. An anacrolix without #1070 loses that wakeup
+// when it lands while the writer is mid-fill, leaving the download at zero
+// bytes with a live unchoked seeder until the next keepalive. The pinned
+// version installs the wakeup channel before filling (anacrolix #1070,
+// peer-conn-msg-writer.go), so it does not wedge; these specs still wait the
 // hashing window out because the handshake-during-check path is anacrolix's
 // to test, not theirs, and hashing is CPU-bound enough that a contended
 // machine — CI especially — lands in it regularly.
@@ -352,9 +352,9 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		engine, stopEngine = newEngine(ctx, dlDir, store)
 	})
 
-	// A magnet whose tr= param carried trailing junk used to panic inside
-	// AddTorrentSpec — on this goroutine and on the announcer's — leaving the
-	// caller a 500 and the torrent registered anyway.
+	// Guards against a magnet whose tr= param carries trailing junk panicking
+	// inside AddTorrentSpec — on this goroutine and on the announcer's —
+	// leaving the caller a 500 and the torrent registered anyway.
 	It("adds a magnet whose announce URL is malformed, minus that tracker",
 		func() {
 			hash, err := engine.AddTorrent(ctx, download.TorrentSource{
@@ -579,11 +579,11 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		Expect(err).NotTo(HaveOccurred())
 		connectToSeeder(engine, hash, seederPort)
 		// Polled tightly on purpose, to catch the first instant seeding is
-		// reported. Seeding used to be read off byte counts that include
-		// written-but-unhashed chunks, so it could arrive with pieces still
-		// queued for hash; closing then dropped their hash results, the store
-		// kept them incomplete, and the restored engine sat stalled with no
-		// peer to fetch them from.
+		// reported. Seeding read off byte counts that include
+		// written-but-unhashed chunks could arrive with pieces still queued
+		// for hash; closing then drops their hash results, the store keeps
+		// them incomplete, and the restored engine sits stalled with no peer
+		// to fetch them from.
 		Eventually(func() download.TorrentStatus {
 			t, terr := engine.GetTorrent(ctx, hash)
 			Expect(terr).NotTo(HaveOccurred())
@@ -618,12 +618,11 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		Expect(views[0].Ratio).To(BeNumerically(">", 0))
 	})
 
-	// Starts 30 download cycles, which made it the loudest victim of
-	// anacrolix's lost writer wakeup (see connectToSeeder) before the pinned
-	// version fixed it. The engine now runs anacrolix's default 1min
-	// keepalive, so a wedged cycle would stall for about the whole 60s
-	// progress wait: a regression upstream shows here as a failure, not a
-	// slow run.
+	// Starts 30 download cycles, which makes it the spec most exposed to
+	// anacrolix's lost writer wakeup (see connectToSeeder). The engine runs
+	// anacrolix's default 1min keepalive, so a wedged cycle would stall for
+	// about the whole 60s progress wait: a regression upstream shows here as
+	// a failure, not a slow run.
 	It("never writes piece completion into a closing store", func() {
 		var sink logSink
 		teeEngineLogs(&sink)
@@ -764,7 +763,7 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 // suite sidesteps the problem by binding to loopback (engineBindIP trips the
 // bound branch of newClientConfig, which already sets the flag); this is the
 // one spec that must stay unbound, to exercise the unbound TCP-dialer branch
-// the bug lived in, so it cannot use that trick. Left as production default,
+// under test, so it cannot use that trick. Left as production default,
 // this spec would multicast a real SSDP M-SEARCH on the developer's or CI
 // machine's LAN and, if a router answers, ask it for a real port mapping.
 func newUnboundEngineNoPortForwarding(
@@ -827,20 +826,18 @@ func newUnboundEngineNoPortForwarding(
 	return e, stop
 }
 
-// Regression coverage for the finding that DisableTCP (set so the engine's
-// own rebindable listener is the only TCP socket anacrolix ever sees — see
-// newClientConfig) silently left outbound TCP dialing dead whenever
-// bind_interface was unset: New only attached a source-bound NetworkDialer
-// inside the bindIP != nil branch, so an unbound engine had cl.dialers
-// permanently empty and could reach peers over uTP only.
+// Guards outbound TCP dialing on an engine with bind_interface unset.
+// DisableTCP (set so the engine's own rebindable listener is the only TCP
+// socket anacrolix ever sees — see newClientConfig) leaves cl.dialers empty
+// unless New attaches a NetworkDialer itself, and an engine that attached one
+// only inside the bindIP != nil branch would reach peers over uTP only.
 //
-// cl.dialers is unexported, so this proves the fix the way the reviewer's
-// fallback allows: end to end, over a real loopback connection, against a
-// seeder with uTP turned off (newTCPOnlySeeder) so a TCP dial is the *only*
-// way in. It does not prove anything about IPv6 TCP dialing (no IPv6
-// loopback assumption is made here) or about dialer ordering when both TCP
-// and uTP peers are reachable — only that TCP dialing exists at all on the
-// unbound path.
+// cl.dialers is unexported, so this proves it end to end, over a real
+// loopback connection, against a seeder with uTP turned off
+// (newTCPOnlySeeder) so a TCP dial is the *only* way in. It does not prove
+// anything about IPv6 TCP dialing (no IPv6 loopback assumption is made here)
+// or about dialer ordering when both TCP and uTP peers are reachable — only
+// that TCP dialing exists at all on the unbound path.
 // A port move ends in a forced DHT re-announce, which is the only half of
 // peer discovery that can be refreshed at once — a tracker only learns the new
 // port at its next scheduled announce. Every engine in this suite runs with

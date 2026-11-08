@@ -96,13 +96,13 @@ func Replaces(p quality.Profile, existing, incoming quality.ReleaseContext) bool
 // ContextFromRow scores a file already in the library, off the columns the
 // importer stored rather than off its path.
 //
-// The path is the wrong input and was the one being used: the renamer wrote it
-// from the naming template, and the default template keeps only the
-// resolution, so re-parsing it reported no group and no source for every
-// imported file. Against a profile scoring the idiomatic "release carries no
-// group" format at -100, that made every file in the library score -100 for a
-// group the row had recorded all along — and since ReplacesFile compares that
-// number against a full release score, the RSS scanner read the whole library
+// The path is the wrong input: the renamer writes it from the naming
+// template, and the default template keeps only the resolution, so re-parsing
+// it reports no group and no source for every imported file. Against a
+// profile scoring the idiomatic "release carries no group" format at -100,
+// that would make every file in the library score -100 for a group the row
+// has recorded all along — and since ReplacesFile compares that number
+// against a full release score, the RSS scanner would read the whole library
 // as upgradable.
 //
 // Probe data wins over the stored parse for the two things it can see
@@ -111,14 +111,13 @@ func Replaces(p quality.Profile, existing, incoming quality.ReleaseContext) bool
 //
 // Title stays the basename and EmptyIsUnknown makes every release_title
 // condition read as unknown here, because nothing stores the release name: the
-// naming template kept a fraction of its tokens. Blanking Title instead was
-// tried and is worse — a file then scores none of remux/vostfr/multi-audio
-// while the release replacing it scores all of them, so everything on disk
-// becomes upgradable. Reporting them unknown is what lets ReplacesFile drop
-// those formats from *both* sides instead. That alone once stopped upgrades
-// happening at all, since the upgrade rules were written entirely in
-// title-matched formats; it works now because the stream fields below answer
-// the ones carrying the weight.
+// naming template keeps a fraction of its tokens. Blanking Title instead is
+// worse — a file then scores none of remux/vostfr/multi-audio while the
+// release replacing it scores all of them, so everything on disk becomes
+// upgradable. Reporting them unknown is what lets ReplacesFile drop those
+// formats from *both* sides instead. That alone would stop upgrades happening
+// at all where the upgrade rules are written entirely in title-matched
+// formats; the stream fields below answer the ones carrying the weight.
 func ContextFromRow(f *ent.MediaFile) quality.ReleaseContext {
 	r := quality.ReleaseContext{
 		Title:          filepath.Base(f.Path),

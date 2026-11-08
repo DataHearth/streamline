@@ -33,12 +33,13 @@ func (o owner) ok() bool { return o.id != 0 }
 // the mutation stand.
 //
 // The hooks run after next.Mutate, so by the time anything here can fail the
-// write they exist to describe has already happened. Returning the error made
-// it the *mutation's* error: a locked events table or a bad payload marshal
-// surfaced as "importing this file failed" or "download status update failed",
-// with the real cause wrapped several layers down — an activity-feed problem
-// dressed up as a library one. Record and PurgeOldEvents already log and count
-// their own failures; this is for the resolve step in front of them.
+// write they exist to describe has already happened. Returning the error would
+// make it the *mutation's* error: a locked events table or a bad payload
+// marshal would surface as "importing this file failed" or "download status
+// update failed", with the real cause wrapped several layers down — an
+// activity-feed problem dressed up as a library one. Record and
+// PurgeOldEvents already log and count their own failures; this is for the
+// resolve step in front of them.
 func auxFailure(ctx context.Context, hook string, err error) {
 	slog.ErrorContext(ctx, "could not attribute an event to its owner",
 		"hook", hook, "error", err)
@@ -140,8 +141,8 @@ func downloadRecordHook() ent.Hook {
 					// stamped by RecordImportSuccess, i.e. once the file is
 					// already filed, where the MediaFile create hook is
 					// separately recording TypeImported. Hanging
-					// download_completed off it produced two rows for one
-					// moment and left the hours between grabbed and imported
+					// download_completed off it would produce two rows for one
+					// moment and leave the hours between grabbed and imported
 					// — the actual download — with nothing in the feed.
 					case downloadrecord.StatusImporting:
 						t = TypeDownloadCompleted
@@ -534,9 +535,10 @@ func downloadRecordOwner(
 	}
 	// A create carries its edges in the mutation or not at all — there is no
 	// stored row to fall back to, and ent refuses IDs() on OpCreate outright.
-	// Reaching the query below therefore failed the whole insert, which is how
-	// an adopted torrent matching nothing in the library ("unidentified — pick
-	// a title", the one proposal shape with no owner) silently never got filed.
+	// Reaching the query below therefore fails the whole insert, so an
+	// adopted torrent matching nothing in the library ("unidentified — pick
+	// a title", the one proposal shape with no owner) would silently never be
+	// filed.
 	if m.Op().Is(ent.OpCreate) {
 		return owner{}, nil
 	}
@@ -655,8 +657,8 @@ type suppressKey struct{}
 //
 // The drift sweep records drift_detected/drift_confirmed itself, naming the
 // file that vanished and the check that proved it. The delete hook cannot see
-// which caller it runs under, so without this the same disappearance landed
-// twice — once diagnosed, once bare — and the bare row read as a second,
+// which caller it runs under, so without this the same disappearance lands
+// twice — once diagnosed, once bare — and the bare row reads as a second,
 // unexplained deletion.
 func SuppressFileRemoved(ctx context.Context) context.Context {
 	return context.WithValue(ctx, suppressKey{}, true)

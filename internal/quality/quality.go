@@ -175,10 +175,9 @@ func ReplacesFile(p Profile, existing, incoming ReleaseContext) bool {
 // Without it the comparison is rigged: a format written only in release_title
 // is unanswerable for a row, so the file scores 0 for it while the release
 // scores its full weight, and every file in the library reads as upgradable by
-// exactly that margin. Measured on a real install: an anime profile paying
-// vostfr 1000 and multi-audio 50 left every episode ~1050 below an
-// upgrade_until_score of 1200 — permanently, since no file could ever earn
-// those points back.
+// exactly that margin. On a real install: an anime profile paying vostfr 1000
+// and multi-audio 50 leaves every episode ~1050 below an upgrade_until_score
+// of 1200 — permanently, since no file can ever earn those points back.
 //
 // Dropping a format is not the same as forgiving it. A "never grab this"
 // negative (junk-source, banned-groups) still rejects the incoming release in
@@ -201,9 +200,9 @@ func (p Profile) comparableTo(existing ReleaseContext) Profile {
 // "At least one", not "all", because the formats worth comparing are exactly
 // the ones pairing a release_title arm with a measurable arm — vostfr as
 // title-or-subtitle_language, multi-audio as title-or-audio_tracks. A row can
-// never answer the title arm, so demanding all of them dropped precisely those
-// formats and left a file that genuinely lacked the French subtitles unable to
-// be upgraded by a release that had them. A format written *only* in
+// never answer the title arm, so demanding all of them would drop precisely
+// those formats and leave a file that genuinely lacks the French subtitles
+// unable to be upgraded by a release that has them. A format written *only* in
 // release_title still drops, which is the point: there the file's non-match is
 // an artifact of the renamer, not a fact about the file.
 //

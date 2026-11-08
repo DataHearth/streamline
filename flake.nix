@@ -92,7 +92,7 @@
             # Derived from the package rather than a runCommand of its own:
             # golangci-lint type-checks, so it needs the module cache and the
             # //go:embed assets that buildGoModule already arranges. A
-            # standalone check had neither and only ever reported "could not
+            # standalone check has neither and only ever reports "could not
             # import entgo.io/ent" from a sandbox with no network.
             lint = self'.packages.streamline.overrideAttrs (old: {
               pname = "streamline-lint";

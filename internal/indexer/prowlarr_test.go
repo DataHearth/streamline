@@ -60,9 +60,9 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 		DescribeTable(
 			"keys the category root and search type off the media kind",
 			// Off the kind, never off whichever id happens to be set. The
-			// id-less rows are the retry in searchAll, which used to send no
-			// categories at all and keyword-searched every indexer's whole
-			// catalogue.
+			// id-less rows are the retry in searchAll, which keyed off the ids
+			// would send no categories at all and keyword-search every
+			// indexer's whole catalogue.
 			func(params SearchParams, wantCat, wantType string) {
 				var gotCat []string
 				var gotType string

@@ -27,8 +27,8 @@ jobs:
       matrix:
         platform: [linux/amd64, linux/arm64]
         # `default` is the distroless image and carries no target and no
-        # suffix, so its tags stay exactly what they were before the
-        # variant existed. `vaapi` selects the Dockerfile's glibc stage.
+        # suffix, so its tags are the bare version tags. `vaapi` selects the
+        # Dockerfile's glibc stage.
         flavor: [default, vaapi]
         include:
           - platform: linux/amd64

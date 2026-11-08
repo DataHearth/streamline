@@ -67,8 +67,8 @@ type mbLimiter struct {
 
 // hold refuses prefetch and background callers for d, after MusicBrainz
 // refused a call. Calls sent into a refusal are refused too and keep the
-// budget drained, so a page of art tiles turned one 503 into a run of them
-// that a person's own lookup kept landing on. Interactive callers are not
+// budget drained, so a page of art tiles would turn one 503 into a run of
+// them that a person's own lookup keeps landing on. Interactive callers are not
 // held: freeing the budget for them is the point.
 func (l *mbLimiter) hold(d time.Duration) {
 	l.mu.Lock()

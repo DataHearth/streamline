@@ -189,7 +189,7 @@ func (e *Engine) AddTorrent(
 		// what is left behind is a torrent the caller was told does not
 		// exist. It survives a restart (boot re-adds every session row),
 		// shows up in the queue, and re-adding the same hash hits the same
-		// failure again — the only way out was deleting it by hand.
+		// failure again — the only way out would be deleting it by hand.
 		e.rollbackAdd(ctx, hash)
 		return "", otelx.RecordSpanError(span, fmt.Errorf("add torrent: %w", err))
 	}
@@ -275,9 +275,9 @@ func (e *Engine) RemoveTorrent(
 	if info != nil && !safeContentName(info.BestName()) {
 		info = nil
 	}
-	// The row goes first. Dropped first, a failed row delete left a torrent
-	// no API could reach any more (every call looks it up live) whose row the
-	// next boot restored — an admin's removal undone by a restart. This way
+	// The row goes first. Dropped first, a failed row delete would leave a
+	// torrent no API can reach (every call looks it up live) whose row the
+	// next boot restores — an admin's removal undone by a restart. This way
 	// round a failure leaves the torrent live, and the removal retryable.
 	if err := e.store.DeleteTorrentSessionByHash(ctx, hash); err != nil {
 		return otelx.RecordSpanError(
@@ -559,8 +559,8 @@ func filesHaveMissingBytes(t *antorrent.Torrent, indexes []int) bool {
 // carries the new one. Trackers do not get that treatment: announceRequest
 // also reads the port live per request, but they only learn it at the *next*
 // scheduled announce. There is no public forced-announce for regular trackers
-// in this version of anacrolix (ModifyTrackers used to force one; it no
-// longer does — torrentRegularTrackerAnnouncer.Stop is now a no-op, and both
+// in this version of anacrolix (ModifyTrackers does not force one —
+// torrentRegularTrackerAnnouncer.Stop is a no-op, and both
 // modifyTrackers and the client-level dispatcher key their state by infohash,
 // so restarting an announcer that's already running is a no-op too). On a
 // long tracker interval this leaves a real window where the tracker still

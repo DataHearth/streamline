@@ -149,10 +149,10 @@ var (
 	testCounter      metric.Int64Counter
 	orphanCounter    metric.Int64Counter
 	// adoptCounter and selectionCounter cover the two sweeps that run on every
-	// monitor tick. Their outcomes reached span attributes only, which are
-	// invisible unless that particular tick happened to be sampled — so a
-	// flood of unidentified adoptions (a misconfigured client category) or a
-	// run of zero-match magnet drops had no signal an alert could watch.
+	// monitor tick. Span attributes alone are invisible unless that
+	// particular tick happens to be sampled — so without these a flood of
+	// unidentified adoptions (a misconfigured client category) or a run of
+	// zero-match magnet drops would have no signal an alert could watch.
 	adoptCounter     metric.Int64Counter
 	adoptPruned      metric.Int64Counter
 	selectionCounter metric.Int64Counter
@@ -1232,8 +1232,8 @@ func (d *download) grabWith(
 	// selection pass's confirmation and a later widen both correct it.
 	//
 	// The outcome lands on the grab's own span as well as in the log. Without
-	// it the span reported a clean grab while the selective download had
-	// silently degraded to whole-torrent, and correlating the two meant
+	// it the span would report a clean grab while the selective download had
+	// silently degraded to whole-torrent, and correlating the two would mean
 	// finding an unlinked warning by hand.
 	if selection != nil {
 		switch serr := client.SetWantedFiles(ctx, hash, selection.files); {
@@ -1507,8 +1507,8 @@ func (d *download) widenSelection(
 		}
 	}
 	// A widen creates no new download record, so the grab hook never fires
-	// for these — from the user's side a series started downloading more
-	// episodes and nothing said so.
+	// for these — without this event, from the user's side a series starts
+	// downloading more episodes and nothing says so.
 	if widened > 0 {
 		slices.Sort(widenedSeasons)
 		if err := events.Record(

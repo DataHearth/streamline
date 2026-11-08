@@ -15,9 +15,9 @@ import (
 // anacrolix reads pieces through mmap by default and keeps every mapping
 // until the storage closes, and the kernel reclaims mapped pages after
 // unmapped ones and never drops them on request. Seeding a few hundred
-// torrents therefore filled the pod's memory cgroup with torrent data that
-// outlived the database's pages: with seeding paused on the homelab, the
-// database volume's reads fell from 65-88 KB/s to near zero. The upload
+// torrents therefore fills the pod's memory cgroup with torrent data that
+// outlives the database's pages: with seeding paused on the homelab, the
+// database volume's reads fall from 65-88 KB/s to near zero. The upload
 // itself is read once per peer request, so caching it buys little.
 //
 // Its contract is upstream's (storage/file-torrent-io.go): a missing or short

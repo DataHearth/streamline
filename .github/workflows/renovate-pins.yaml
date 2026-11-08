@@ -25,9 +25,9 @@ name: Renovate pins
 # The push goes out under a GitHub App when one is configured. A push made with
 # the Actions token does start CI on the new commit, but every run it creates
 # waits at "approval required" until someone approves it — so each derived pin
-# left its PR without checks until the owner came by. An App installation token
-# is an ordinary actor and CI starts by itself. renovate-chart.yaml pushes the
-# same way. Setup, once:
+# would leave its PR without checks until the owner comes by. An App
+# installation token is an ordinary actor and CI starts by itself.
+# renovate-chart.yaml pushes the same way. Setup, once:
 #
 #   1. Create a GitHub App on the owning account (no webhook), repository
 #      permission Contents: Read and write, and nothing else — never Workflows,
@@ -35,8 +35,8 @@ name: Renovate pins
 #   2. Repository variable PINS_APP_CLIENT_ID = the App's Client ID.
 #   3. Repository secret PINS_APP_PRIVATE_KEY = a private key generated for it.
 #
-# Without the variable both jobs fall back to the Actions token and behave as
-# they did before: the commit lands, CI waits for an approval.
+# Without the variable both jobs fall back to the Actions token: the commit
+# lands, CI waits for an approval.
 on:
   pull_request:
     branches: [main]
@@ -62,7 +62,7 @@ jobs:
     if: startsWith(github.head_ref, 'renovate/')
     runs-on: ubuntu-latest
     # A healthy run takes under five minutes. Without a ceiling, a builder
-    # stalled on its disk held all three renovate PRs for 45+ minutes.
+    # stalled on its disk holds every renovate PR for 45+ minutes.
     timeout-minutes: 20
     steps:
       - name: Push token
@@ -86,7 +86,7 @@ jobs:
       # No ssh-key on purpose: every build here only fetches dependencies,
       # which wants the runner's network and disk, and the source-built Go
       # goModules needs comes from the builder's attic cache instead. On the
-      # builder, `go mod vendor` into its Ceph-backed store took 40+ minutes.
+      # builder, `go mod vendor` into its Ceph-backed store takes 40+ minutes.
       - name: Builder cache
         uses: ./.github/actions/nix-builder
         with:
@@ -203,12 +203,12 @@ jobs:
 
           # nix-update is deliberately not used here. It derives vendorHash and
           # nothing else — it knows buildGoModule's `goModules` and has no idea
-          # the frontend derivation contains a pnpm store — yet it rewrote
+          # the frontend derivation contains a pnpm store — yet it rewrites
           # pnpmDeps.hash all the same, because it replaces a hash by
           # substituting its literal text across the whole file. While the two
-          # fields held the same string that put one build's hash into both,
-          # and the next run put the other one into both: a two-cycle that
-          # never converged, landing every renovate PR with one field wrong and
+          # fields hold the same string, that puts one build's hash into both,
+          # and the next run puts the other one into both: a two-cycle that
+          # never converges, landing every renovate PR with one field wrong and
           # the `nix` job red. Deriving each from its own attribute and writing
           # it to its own line is what keeps the two independent.
           fake="sha256-$(printf 'A%.0s' $(seq 43))="

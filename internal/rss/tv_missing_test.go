@@ -720,7 +720,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 					uint32(11), matchIDs(11, 12)).
 				Return(&ent.DownloadRecord{ID: 41}, nil).Once()
 			// The mode is stamped regardless: an empty beat-set imports exactly
-			// as replace_mode none did.
+			// as replace_mode none does.
 			store.EXPECT().
 				SetDownloadRecordReplaceMode(
 					mock.Anything, uint32(41), downloadrecord.ReplaceModeUpgrades,

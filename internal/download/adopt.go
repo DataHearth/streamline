@@ -133,10 +133,9 @@ func classifyMovieAdoption(
 		// Aliases, not just the stored title: with metadata.language set to
 		// anything but English the library holds the localized title while the
 		// release is named in the original, so "Hellboy II : Les Légions d'or
-		// maudites" matched nothing in Hellboy.II.The.Golden.Army.2008 and a
-		// film already on disk was proposed as "unidentified — pick a title".
-		// Every other matcher in the tree already takes the alias set; this was
-		// the one that did not.
+		// maudites" matches nothing in Hellboy.II.The.Golden.Army.2008 and a
+		// film already on disk would be proposed as "unidentified — pick a
+		// title". Every other matcher in the tree takes the alias set too.
 		if library.TitleMatchesAny(
 			parsed.Title, m.Title, append(m.Aliases, m.OriginalTitle),
 		) && parsed.Year == m.Year {
@@ -654,7 +653,7 @@ func (d *download) persistAdoption(
 	// "wanted", because nothing grabbed them here and the completion sweep's
 	// MarkRecordEpisodesImporting only moves rows out of downloading/paused.
 	// The series list counts a show as importing off its *episodes*, so an
-	// adopted import was invisible there for its whole run. Logged rather than
+	// adopted import would be invisible there for its whole run. Logged rather than
 	// returned: the record exists and the import will run either way, and a
 	// badge is not worth failing an adoption over.
 	if status == downloadrecord.StatusImporting {

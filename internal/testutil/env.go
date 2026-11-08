@@ -24,8 +24,8 @@ var inherited = func() map[string]string {
 // prefix as an override layer, so a session that exports real keys — a cloud
 // environment supplying STREAMLINE_METADATA__TMDB_API_KEY as a secret, a
 // shell with a dev instance's settings — leaks them into every spec that
-// loads config: the TMDB mock saw the real key instead of the spec's, and the
-// *_file specs failed excluded_with against a key nobody set.
+// loads config: the TMDB mock sees the real key instead of the spec's, and the
+// *_file specs fail excluded_with against a key nobody set.
 //
 // Only what the process started with goes, and only while it still holds the
 // inherited value: a spec that sets its own variable before loading config is

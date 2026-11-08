@@ -276,8 +276,8 @@ func (h *Hardcover) BookByISBN(ctx context.Context, isbn string) (uint32, error)
 // localDigital and localPhysical are the same two pools restricted to the
 // library's book language: a widely translated book has hundreds of editions,
 // and the most popular ones can all be in other languages (1984's French
-// audiobook and its 21 French paperbacks were in neither pool), which left the
-// preferred language with no ebook or audiobook to pick. They are separate so
+// audiobook and its 21 French paperbacks are in neither pool), which would
+// leave the preferred language with no ebook or audiobook to pick. They are separate so
 // a language's many paperbacks cannot crowd out its one audiobook.
 const hcBooksQuery = `
 query ($ids: [Int!]!, $lang: String!) {

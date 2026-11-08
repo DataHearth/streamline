@@ -382,7 +382,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			Expect(SearchParams{Query: "x", Kind: KindTV}.narrowed()).To(BeFalse())
 			Expect(SearchParams{TMDBID: 1}.narrowed()).To(BeTrue())
 			Expect(SearchParams{TVDBID: 1}.narrowed()).To(BeTrue())
-			// Season and episode count now that they narrow at the tracker.
+			// Season and episode count, since they narrow at the tracker.
 			Expect(SearchParams{Season: 1}.narrowed()).To(BeTrue())
 			Expect(SearchParams{Episode: 1}.narrowed()).To(BeTrue())
 		})
@@ -462,9 +462,9 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			))
 		})
 
-		// The homelab case: a "Narcos" season-2 search came back holding only
+		// The homelab case: a "Narcos" season-2 search comes back holding only
 		// Narcos Mexico, whose name starts with the show's. Prefix tolerance
-		// read all eight as matches and the missing-search grabbed them.
+		// would read all eight as matches and the missing-search grab them.
 		It("refuses a longer show built on this one's name", func() {
 			in := []SearchResult{
 				{Title: "Narcos Mexico S02E03 German DL 1080p BluRay x264-AWARDS"},

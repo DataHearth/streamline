@@ -427,8 +427,8 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 
 	// The season-pack sibling is traced; this is the common case (a show with
 	// fewer than two open episodes never qualifies for a pack search), and
-	// without a span its search-and-grab latency was missing from the trace
-	// while the rarer path right next to it was covered.
+	// without a span its search-and-grab latency would be missing from the
+	// trace while the rarer path right next to it is covered.
 	ctx, span := tracer.Start(ctx, "rss.tv_episode_search",
 		trace.WithAttributes(
 			attribute.Int64("tvshow.id", int64(show.ID)),

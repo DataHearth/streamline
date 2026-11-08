@@ -339,9 +339,9 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 		})
 
 		// The spec above hands classifyEpisodeAdoption a ParseResult it built
-		// itself, so it never exercised the title extraction a real pack name
+		// itself, so it never exercises the title extraction a real pack name
 		// goes through — which is where the language tags between the season
-		// and the resolution used to end up glued onto the title.
+		// and the resolution could end up glued onto the title.
 		It("proposes a pack whose name carries language tags", func() {
 			shows := []*ent.TVShow{buildShow(false, false)}
 			parsed := library.Parse("The.Bear.S01.MULTi.VF2.1080p.WEB.H264-FW")

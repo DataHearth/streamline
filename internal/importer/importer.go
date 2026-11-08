@@ -104,8 +104,8 @@ type Worker struct {
 	// download-record ID, but two records can target one movie or show, and a
 	// destination path is derived from the target alone — concurrent consumers
 	// would race on it. Entries are never evicted: the key space is the
-	// library's, and deleting a mutex another goroutine is about to lock is
-	// how this bug comes back.
+	// library's, and deleting a mutex another goroutine is about to lock
+	// would let two consumers race on one path again.
 	entityLocks sync.Map
 }
 

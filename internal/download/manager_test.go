@@ -210,7 +210,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 		It("accepts a link to a configured indexer", func() {
 			// Reaching the transport (and failing there) proves the guard let
 			// the URL through — resolution of a non-existent host cannot
-			// succeed, but it is no longer ErrUntrustedSource.
+			// succeed, but it is not ErrUntrustedSource.
 			_, err := resolveTorrentSource(ctx, "https://tracker.example/dl?id=1")
 			Expect(err).NotTo(MatchError(ErrUntrustedSource))
 		})
@@ -1696,10 +1696,10 @@ var _ = Describe(
 			func() {
 				// Outer BeforeEach's config leaves download.selective_files at
 				// its default (false) — deliberately not calling
-				// selectiveConfig() here. Off has to be the pre-feature path:
+				// selectiveConfig() here. Off has to be the whole-torrent path:
 				// the whole pre-check is skipped, so the grab reaches the client
-				// exactly as it did before this feature and a duplicate hash is
-				// whatever AddTorrent says it is.
+				// unfiltered and a duplicate hash is whatever AddTorrent says
+				// it is.
 				store.EXPECT().
 					FindLiveDownloadRecordByHash(mock.Anything, hash).
 					Return(nil, nil).Once()

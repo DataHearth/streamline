@@ -106,8 +106,9 @@ func conditionRef(name string, i int) string {
 // The second return is what keeps "no" apart from "don't know". Negate turns a
 // false into a match, so a condition reading a field nobody filled in scores a
 // positive out of ignorance: `negate` on release_group — the idiomatic "this
-// release carries no group" format — matched every library file whose group
-// was never stored, which on a real library was every file, for -100 apiece.
+// release carries no group" format — would match every library file whose
+// group was never stored, which on a real library is every file, for -100
+// apiece.
 // An unknown input matches nothing and negate-matches nothing.
 func (c Condition) eval(r ReleaseContext) (ok, known bool) {
 	switch c.Type {

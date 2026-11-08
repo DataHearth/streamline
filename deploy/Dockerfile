@@ -7,9 +7,9 @@
 # TRAP: where a digest sits next to a version ARG, the digest is what resolves —
 # bumping the version alone silently keeps building the old image. Bump both.
 
-# Pinned, not floating `1.26-alpine`: a moving tag made grype's stdlib findings
+# Pinned, not floating `1.26-alpine`: a moving tag makes grype's stdlib findings
 # drift between builds independently of our code. The cost is that stdlib CVE
-# fixes now require bumping this by hand — grype failing on `stdlib` is the signal.
+# fixes require bumping this by hand — grype failing on `stdlib` is the signal.
 ARG GO_VERSION=1.27.3
 ARG GO_DIGEST=sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb
 
@@ -110,13 +110,13 @@ RUN mkdir -p /out/data /out/config
 # No distro's packaged ffmpeg builds libvmaf in — checked Debian bookworm and
 # trixie, Ubuntu noble, Alpine 3.22, and jellyfin-ffmpeg, none of which carry
 # it (Debian doesn't package libvmaf at all: it's absent from main, contrib,
-# non-free and non-free-firmware alike). The old Debian-bookworm base for this
-# stage was therefore silently a no-op on `transcoding.verify.min_vmaf`: the
-# key parsed and stored fine, the check just never ran. `linuxserver/ffmpeg`
+# non-free and non-free-firmware alike). A Debian base for this stage is
+# therefore silently a no-op on `transcoding.verify.min_vmaf`: the key parses
+# and stores fine, the check just never runs. `linuxserver/ffmpeg`
 # builds ffmpeg from source with libvmaf and VAAPI both compiled in, and
 # bundles the VA drivers (Mesa, Intel iHD/i965, radeonsi) as shared objects
 # under `LIBVA_DRIVERS_PATH`/`LD_LIBRARY_PATH`, already set in its env — so
-# this stage stops installing anything and just builds on top of it. The
+# this stage installs nothing for ffmpeg and just builds on top of it. The
 # trade is a ~780 MB Ubuntu base instead of a Debian install stripped to the
 # render deps, and one more upstream (linuxserver) in the trust chain.
 #
@@ -141,15 +141,15 @@ FROM lscr.io/linuxserver/ffmpeg:9.0-cli-ls81@sha256:ec8ac72754e6c115d330ec37aa18
 #
 # /usr/bin/pebble is a Go binary the Ubuntu base drops in outside dpkg. Nothing
 # here runs it, but grype reports the stdlib it was built with as if it were
-# ours — a lagging Go toolchain there failed the scan as `stdlib go1.26.5` while
-# streamline itself was built by the pinned 1.26.6 image. Deleting the file is
+# ours — a lagging Go toolchain there fails the scan on `stdlib` while
+# streamline itself is built by the pinned, patched image. Deleting the file is
 # the only way to take it off the report; no package owns it to purge.
 #
 # BUILD_DATE is declared here only to keep this layer out of the build cache.
 # image.yaml restores every layer from the GHA cache, and a cached upgrade is
-# the upgrade from whenever the layer was first built: on 2026-10-20 it still
-# held curl 8.18.0-1ubuntu2.7 six days after resolute-security shipped .8 for
-# CVE-2026-92392, and grype failed both vaapi builds on a fix the archive had.
+# the upgrade from whenever the layer was first built: it can hold a curl days
+# behind the one resolute-security ships for a CVE, and grype then fails both
+# vaapi builds on a fix the archive has.
 # A changed ARG misses the cache at the first RUN after it, so CI (which passes
 # a timestamp) upgrades on every build; a plain `docker build` leaves it at
 # `unknown` and keeps its cache.
@@ -183,12 +183,12 @@ CMD ["--config", "/etc/streamline/config.yaml"]
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:1b7b9f0f0e0a1d2155f531db587cc48ec26aaf97ab64364225f5bf18a054e66a
 
 # MUST stay. distroless sets WorkingDir=/home/nonroot (mode 0700, owned by
-# 65532) where debian-slim left it empty, i.e. `/`. The binary's default
-# data_dir is the RELATIVE `./data` — the exact value `streamline config init`
-# writes — and config load creates data_dir (ensureDataDir) before anything
-# else, failing the boot when it cannot. Under /home/nonroot that resolves to
-# a path uid 1000 cannot create, so the container exits at boot instead of
-# using the /data volume below. Drop this line and the documented `docker run -v streamline-data:/data`
+# 65532), not `/`. The binary's default data_dir is the RELATIVE `./data` —
+# the exact value `streamline config init` writes — and config load creates
+# data_dir (ensureDataDir) before anything else, failing the boot when it
+# cannot. Under /home/nonroot that resolves to a path uid 1000 cannot create,
+# so the container exits at boot instead of using the /data volume below.
+# Drop this line and the documented `docker run -v streamline-data:/data`
 # quick start breaks.
 WORKDIR /
 

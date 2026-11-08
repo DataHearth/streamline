@@ -61,8 +61,8 @@ func BuildArgs(
 	args = append(args, "-i", in)
 	// mp4 takes video and audio only. `-map 0` hands the muxer the source's
 	// subtitle and attachment streams too, and mp4 refuses SRT/ASS/PGS and font
-	// attachments outright — which is most mkv sources, so an mp4 target failed
-	// on nearly everything it was pointed at. mkv holds all of it, so it keeps
+	// attachments outright — which is most mkv sources, so an mp4 target would
+	// fail on nearly everything it is pointed at. mkv holds all of it, so it keeps
 	// the whole file.
 	if pol.To.Container == "mp4" {
 		args = append(args, "-map", "0:v", "-map", "0:a")

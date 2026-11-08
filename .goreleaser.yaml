@@ -30,8 +30,9 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      # The vars live in internal/buildinfo, not main — -X against a symbol that
-      # does not exist is silently ignored, which is how v1.0.0 shipped as "dev".
+      # The vars live in internal/buildinfo, not main — -X against a symbol
+      # that does not exist is silently ignored, and the binary reports itself
+      # as "dev".
       - -s -w
       - -X github.com/datahearth/streamline/internal/buildinfo.Version={{.Version}}
       - -X github.com/datahearth/streamline/internal/buildinfo.Commit={{.ShortCommit}}

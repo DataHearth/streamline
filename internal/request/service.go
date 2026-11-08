@@ -319,9 +319,9 @@ func (s *Service) Create(
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	// The request system is the only bridge between a user's ask and a library
-	// change, and none of its four transitions logged anything — so "who
-	// requested this, who approved it, and why was that one denied" was
-	// unanswerable from the log stream.
+	// change, so each of its four transitions logs — otherwise "who requested
+	// this, who approved it, and why was that one denied" is unanswerable from
+	// the log stream.
 	slog.InfoContext(ctx, "media requested",
 		"request.id", row.ID,
 		"media.type", p.MediaType,
@@ -509,8 +509,8 @@ func checkProfile(mediaType, name string) error {
 }
 
 // Deny and Reopen are the negative half of the same workflow as Approve, and
-// were the untraced half — a slow or failing denial showed up in no span at
-// all while its sibling was fully covered.
+// traced like it — untraced, a slow or failing denial would show up in no span
+// at all while its sibling is fully covered.
 func (s *Service) Deny(
 	ctx context.Context,
 	id, adminID uint32,

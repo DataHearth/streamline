@@ -14,11 +14,11 @@ import (
 // sourceFilter keeps an import to the files of the record's own torrent.
 // save_path is derived as <download_path>/<torrent name>, so two torrents
 // named alike share one folder — RuTracker roots many uploads at the artist's
-// name — and a walk of it read the other torrent's files as this release: an
-// Omens LP held on ten tracks of Resolution, and a resolve would have imported
+// name — and a walk of it reads the other torrent's files as this release: an
+// Omens LP would hold on ten tracks of Resolution, and a resolve would import
 // them into its slots. A single-file payload needs no filter. A client that
 // cannot list the torrent (removed, unreachable, no metadata) leaves the walk
-// unfiltered, which is what every import did before.
+// unfiltered.
 func (w *Worker) sourceFilter(
 	ctx context.Context,
 	rec *ent.DownloadRecord,

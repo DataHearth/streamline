@@ -62,7 +62,7 @@ type QBittorrent struct {
 // waits for qBittorrent to register the torrent. 5.x answers the add 202
 // while it is still processing the upload, and until it has, every call
 // addressing the hash answers 404 — a filePrio issued straight after the add
-// lost that race now and then and failed the whole grab.
+// loses that race now and then and fails the whole grab.
 const qbRegistrationWait = 10 * time.Second
 
 // errQBNotRegistered is a 404 from a call addressing a hash qBittorrent does

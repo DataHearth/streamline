@@ -66,7 +66,7 @@ type torrentState struct {
 	// selectionMode and wantedFiles mirror the persisted file-selection
 	// columns, consulted by applyFilePriorities every time startWhenReady
 	// runs — including the metadata-resolve re-run after a restore, so a
-	// restart can't erase a skip the way the old unconditional bump did.
+	// restart can't erase a skip the way an unconditional bump would.
 	selectionMode string
 	wantedFiles   []int
 	// prioritized records that the selection's priorities have been applied
@@ -169,7 +169,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	// own, and cl.dialers is populated only from sockets it created — so
 	// without a dialer added here, nothing ever dials TCP and every outbound
 	// peer connection is uTP-only. Both branches exist to supply the TCP
-	// dialer anacrolix no longer will; only the *binding* differs.
+	// dialer anacrolix then does not; only the *binding* differs.
 	if bindIP != nil {
 		network := "tcp6"
 		if bindIP.To4() != nil {
@@ -663,8 +663,8 @@ func (e *Engine) prioritize(t *antorrent.Torrent, mode string, wanted []int) {
 // selective grab whose keep-set isn't known yet: bump nothing, so a magnet
 // fetches metadata (priority-independent) but no data piece. mode "explicit"
 // wants exactly wanted's indexes and skips the rest — unconditionally,
-// unlike "all", so a repeat run (the restart case this fixes) reproduces the
-// same skip instead of the old code's unconditional bump erasing it.
+// unlike "all", so a repeat run (a restart's metadata re-resolve) reproduces
+// the same skip instead of an unconditional bump erasing it.
 func applyFilePriorities(t *antorrent.Torrent, mode string, wanted []int) {
 	switch mode {
 	case "pending":

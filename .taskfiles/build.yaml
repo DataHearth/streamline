@@ -11,7 +11,7 @@ tasks:
     desc: Build Go binary
     # Task keys the fingerprint on the label, so each BINARY path gets its own:
     # with one shared fingerprint, a binary left at another path by an older
-    # build counted as up to date and a throwaway instance ran stale code.
+    # build counts as up to date and a throwaway instance runs stale code.
     label: "build:go {{.BINARY}}"
     # Frontend assets are embedded via //go:embed — must exist at compile time.
     deps: [js, css]
@@ -23,8 +23,8 @@ tasks:
       - go.mod
       - go.sum
       # Embedded assets (web/embed.go). Globbed, not enumerated: a hand-listed
-      # subset drifts silently — it once missed spa.min.css and embedded a stale
-      # bundle. The only non-embedded files here (input.css, docs.js) are bundle
+      # subset drifts silently — miss one bundle and a stale copy is embedded.
+      # The only non-embedded files here (input.css, docs.js) are bundle
       # inputs, so they never trigger a rebuild that wasn't already due.
       - web/static/**
       - web/app/index.html
