@@ -53,6 +53,7 @@ type CreateTVShowParams struct {
 	Creator        string
 	Runtime        uint16
 	Rating         float64
+	VoteCount      uint32
 	Genres         []string
 	Aliases        []string
 	Cast           []metadata.CastMember
@@ -80,12 +81,22 @@ type UpdateTVShowMetadataParams struct {
 	Creator       string
 	SeriesStatus  string
 	Runtime       uint16
-	Rating        float64
-	Genres        []string
-	Aliases       []string
-	Cast          []metadata.CastMember
-	FirstAired    *time.Time
-	ExternalIDs   ExternalIDs
+	// Rating nil keeps the stored rating: the rating provider was not asked
+	// or failed, and a TMDB outage must not zero every show's rating.
+	Rating      *TVShowRating
+	Genres      []string
+	Aliases     []string
+	Cast        []metadata.CastMember
+	FirstAired  *time.Time
+	ExternalIDs ExternalIDs
+}
+
+// TVShowRating is a series' TMDB rating and the votes behind it, both zero
+// when TMDB knows no such series. The TMDB id it was read from is one of the
+// show's external ids.
+type TVShowRating struct {
+	Rating    float64
+	VoteCount uint32
 }
 
 // UpdateTVShowMetadata persists refreshed provider metadata onto an existing
@@ -107,10 +118,13 @@ func (db *DB) UpdateTVShowMetadata(
 		SetNetwork(p.Network).
 		SetCreator(p.Creator).
 		SetRuntime(p.Runtime).
-		SetRating(p.Rating).
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
 		SetNillableFirstAired(p.FirstAired)
+	if p.Rating != nil {
+		u = u.SetRating(p.Rating.Rating).
+			SetVoteCount(p.Rating.VoteCount)
+	}
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
 	}
@@ -328,6 +342,7 @@ func (db *DB) CreateTVShow(
 		SetCreator(p.Creator).
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
+		SetVoteCount(p.VoteCount).
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
 		SetPosterPath(p.PosterPath).

@@ -565,6 +565,9 @@ func seriesDetailsToRequestMedia(d *metadata.TVDetails) RequestMediaDetails {
 	if d.Rating != 0 {
 		out.Rating = &d.Rating
 	}
+	if d.VoteCount != 0 {
+		out.VoteCount = &d.VoteCount
+	}
 	if d.Runtime != 0 {
 		out.Runtime = &d.Runtime
 	}

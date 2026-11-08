@@ -7141,7 +7141,10 @@ components:
     SeriesSort:
       name: sort
       in: query
-      description: Sort key (recent/title/year/rating/episodes).
+      description: |
+        Sort key (recent/title/year/rating/episodes). `rating` ranks a rating
+        averaged over fewer than 10 TMDB votes among the unrated, then breaks
+        ties by vote count.
       schema:
         type: string
 
@@ -8864,6 +8867,14 @@ components:
           description: |
             TMDB vote average (0–10). Only populated by GET /movies/{id}
             and omitted when TMDB has no votes.
+        vote_count:
+          type: integer
+          x-go-type: uint32
+          nullable: true
+          description: |
+            How many TMDB votes `rating` averages. Only populated by
+            GET /movies/{id}, alongside `rating`; absent for a movie not
+            refreshed since the count was first recorded.
         added_at:
           type: string
           format: date-time
@@ -9509,6 +9520,19 @@ components:
           type: number
           format: float
           nullable: true
+          description: |
+            TMDB vote average (0–10), read from the series under
+            `external_ids.tmdb`, else found by `tvdb_id` (TVDB carries no
+            rating). Omitted when TMDB has no votes, does not know the show,
+            or no TMDB key is configured.
+        vote_count:
+          type: integer
+          x-go-type: uint32
+          nullable: true
+          description: |
+            How many TMDB votes `rating` averages, present with `rating`.
+            `sort=rating` ranks a rating with fewer than 10 votes among the
+            unrated.
         genres:
           type: array
           nullable: true

@@ -420,7 +420,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 		Runtime:       ext.Data.AverageRuntime,
 		FirstAired:    ext.Data.FirstAired,
 		// TVDB v4 removed user ratings; `score` is an arbitrary popularity
-		// metric (not a 0-10 rating), so Rating is left unset (0 = unknown).
+		// metric (not a 0-10 rating), so Rating is left to WithSeriesRatings.
 	}
 	d.TMDBID, d.IMDbID, d.WikidataID = seriesRemoteIDs(ext.Data.RemoteIDs)
 	for _, g := range ext.Data.Genres {

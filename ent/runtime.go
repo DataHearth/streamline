@@ -641,6 +641,10 @@ func init() {
 	movieDescRating := movieFields[14].Descriptor()
 	// movie.DefaultRating holds the default value on creation for the rating field.
 	movie.DefaultRating = movieDescRating.Default.(float64)
+	// movieDescVoteCount is the schema descriptor for vote_count field.
+	movieDescVoteCount := movieFields[15].Descriptor()
+	// movie.DefaultVoteCount holds the default value on creation for the vote_count field.
+	movie.DefaultVoteCount = movieDescVoteCount.Default.(uint32)
 	musicannotationMixin := schema.MusicAnnotation{}.Mixin()
 	musicannotationMixinFields1 := musicannotationMixin[1].Fields()
 	_ = musicannotationMixinFields1
@@ -951,6 +955,10 @@ func init() {
 	tvshowDescRating := tvshowFields[13].Descriptor()
 	// tvshow.DefaultRating holds the default value on creation for the rating field.
 	tvshow.DefaultRating = tvshowDescRating.Default.(float64)
+	// tvshowDescVoteCount is the schema descriptor for vote_count field.
+	tvshowDescVoteCount := tvshowFields[14].Descriptor()
+	// tvshow.DefaultVoteCount holds the default value on creation for the vote_count field.
+	tvshow.DefaultVoteCount = tvshowDescVoteCount.Default.(uint32)
 	torrentsessionMixin := schema.TorrentSession{}.Mixin()
 	torrentsessionMixinFields1 := torrentsessionMixin[1].Fields()
 	_ = torrentsessionMixinFields1

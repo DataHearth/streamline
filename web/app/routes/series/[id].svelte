@@ -22,6 +22,7 @@
 		Trash2,
 	} from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
+	import { formatRating } from "@lib/format";
 	import { createAction, deleteFailed, monitorToast, refreshFailed, searchFailed, SERIES, updateFailed } from "@lib/actions";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { cn } from "@lib/cn";
@@ -201,7 +202,8 @@
 		const n = regularSeasons.length;
 		if (n > 0) p.push(`${n} season${n === 1 ? "" : "s"}`);
 		if (show.total_episodes) p.push(`${show.total_episodes} episodes`);
-		if (show.rating && show.rating > 0) p.push(`★ ${show.rating.toFixed(1)}`);
+		const rating = formatRating(show.rating, show.vote_count);
+		if (rating) p.push(rating);
 		if (show.runtime) p.push(`${show.runtime}m`);
 		if (show.genres?.length) p.push(show.genres.join(" / "));
 		return p;

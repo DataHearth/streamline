@@ -96,6 +96,18 @@ func NewService(
 
 var _ Manager = (*Service)(nil)
 
+// ratingOf is the rating a refresh writes: nil — keep the stored one — when
+// the rating provider was not asked or failed.
+func ratingOf(d *metadata.TVDetails) *db.TVShowRating {
+	if !d.RatingFetched {
+		return nil
+	}
+	return &db.TVShowRating{
+		Rating:    float64(d.Rating),
+		VoteCount: d.VoteCount,
+	}
+}
+
 // seedSeasons folds a provider TVDetails' flat episode list into the
 // per-season seed shape the DB layer consumes.
 func seedSeasons(d *metadata.TVDetails) []db.SeasonSeed {
@@ -164,6 +176,7 @@ func (s *Service) Add(
 		Creator:        d.Creator,
 		Runtime:        d.Runtime,
 		Rating:         float64(d.Rating),
+		VoteCount:      d.VoteCount,
 		Genres:         d.Genres,
 		Aliases:        d.Aliases,
 		Cast:           cast,
@@ -996,7 +1009,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		Creator:       d.Creator,
 		SeriesStatus:  d.Status,
 		Runtime:       d.Runtime,
-		Rating:        float64(d.Rating),
+		Rating:        ratingOf(d),
 		Genres:        d.Genres,
 		Aliases:       d.Aliases,
 		Cast:          cast,
@@ -1124,6 +1137,12 @@ func (s *Service) Reidentify(
 		return nil, nil, otelx.RecordSpanError(span, err)
 	}
 	cast := s.seriesCast(ctx, tvdbID)
+	// A different show: the stored rating was the old one's, so an unrated
+	// answer clears it rather than keeping it.
+	rating := ratingOf(d)
+	if rating == nil {
+		rating = &db.TVShowRating{}
+	}
 	if err := s.db.UpdateTVShowMetadata(ctx, id, db.UpdateTVShowMetadataParams{
 		Title:         d.Title,
 		OriginalTitle: d.OriginalTitle,
@@ -1133,7 +1152,7 @@ func (s *Service) Reidentify(
 		Creator:       d.Creator,
 		SeriesStatus:  d.Status,
 		Runtime:       d.Runtime,
-		Rating:        float64(d.Rating),
+		Rating:        rating,
 		Genres:        d.Genres,
 		Aliases:       d.Aliases,
 		Cast:          cast,

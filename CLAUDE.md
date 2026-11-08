@@ -116,6 +116,8 @@ Cast is written inside the title's transaction; the **person biography fetch is 
 
 **A file gone from disk keeps its row** (`MediaFile.missing_confirmed_at`): past the grace window the title stays `available` with a "missing from disk" mark until `library.missing_file_redownload_after` (default `168h`, `0` at once, `off` never) and a file that returns heals. While `missing_since` is set nothing touches the file on its own schedule, every question of "does this title hold a file" answers through `db.PresentFiles` (imports, adoption, uploads, RSS upgrades), a confirmed row whose owner holds another file goes on the next tick whatever the wait says, and `POST /library/missing-files/forget` removes the row and stops monitoring the title. One word everywhere: missing.
 
+**A series' rating is TMDB's** (TVDB v4 has none): `metadata.WithSeriesRatings` wraps the TVDB provider in `wire.go`, one TMDB request per `GetSeries` (`/3/tv/{id}` for the `tmdb` id TVDB names, else `/find` by TVDB id, whose answer fills that external id), nothing without a TMDB key, and a failed fetch keeps the stored rating (`UpdateTVShowMetadataParams.Rating` nil) rather than zeroing it. Movies and series both store `vote_count`; the series `sort=rating` ranks a rating under 10 votes among the unrated.
+
 **Probe semantics, the event hooks, cast ingest and person enrichment, re-identify ordering, the in-flight marking paths and the list push-down: [`docs/agents/media-lifecycle.md`](docs/agents/media-lifecycle.md) — read it before touching status transitions, `internal/events/`, or `internal/db` list queries.**
 ## Music
 

@@ -5,6 +5,7 @@
 	import { listHref, MOVIES_SEARCH } from "@lib/prefs";
 	import { movieStatus } from "@lib/status";
 	import { formatDate } from "@lib/dates";
+	import { formatRating } from "@lib/format";
 	import Poster from "@components/shared/Poster.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import type { Movie, MediaFile } from "@lib/types";
@@ -44,7 +45,8 @@
 		const digital = formatDate(movie.digital_release_date);
 		if (digital) p.push(i18n.detail_digital_release_on({ date: digital }));
 		if (movie.runtime) p.push(`${movie.runtime}m`);
-		if (movie.rating) p.push(`★ ${movie.rating.toFixed(1)}`);
+		const rating = formatRating(movie.rating, movie.vote_count);
+		if (rating) p.push(rating);
 		if (movie.genres?.length) p.push(movie.genres.join(" / "));
 		if (primary?.parsed_resolution) p.push(primary.parsed_resolution);
 		if (primary?.parsed_codec) p.push(primary.parsed_codec);
