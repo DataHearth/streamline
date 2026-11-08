@@ -1012,7 +1012,7 @@ func mediaFilePaths(files []*ent.MediaFile) []string {
 func (w *Worker) markRequestsAvailable(
 	ctx context.Context,
 	mediaType string,
-	mediaID uint32,
+	mediaID string,
 ) {
 	if err := w.db.MarkRequestsAvailable(ctx, mediaType, mediaID); err != nil {
 		slog.WarnContext(ctx, "mark requests available failed",

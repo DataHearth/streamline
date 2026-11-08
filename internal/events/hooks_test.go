@@ -41,7 +41,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Fight Club").
 			SetOriginalTitle("Fight Club").
 			SetYear(1999).
-			SetTmdbID(550).
+			SetTmdbID("550").
 			SaveX(ctx)
 
 		client.DownloadRecord.Create().
@@ -62,7 +62,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Inception").
 			SetOriginalTitle("Inception").
 			SetYear(2010).
-			SetTmdbID(27205).
+			SetTmdbID("27205").
 			SaveX(ctx)
 
 		dl := client.DownloadRecord.Create().
@@ -89,7 +89,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Dune").
 			SetOriginalTitle("Dune").
 			SetYear(2021).
-			SetTmdbID(438631).
+			SetTmdbID("438631").
 			SaveX(ctx)
 
 		client.DownloadRecord.Create().
@@ -107,7 +107,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Dune").
 			SetOriginalTitle("Dune").
 			SetYear(2021).
-			SetTmdbID(438631).
+			SetTmdbID("438631").
 			SaveX(ctx)
 
 		dl := client.DownloadRecord.Create().
@@ -127,7 +127,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Heat").
 			SetOriginalTitle("Heat").
 			SetYear(1995).
-			SetTmdbID(949).
+			SetTmdbID("949").
 			SaveX(ctx)
 
 		dl := client.DownloadRecord.Create().
@@ -158,7 +158,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Tenet").
 			SetOriginalTitle("Tenet").
 			SetYear(2020).
-			SetTmdbID(577922).
+			SetTmdbID("577922").
 			SaveX(ctx)
 
 		dl := client.DownloadRecord.Create().
@@ -183,7 +183,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Anora").
 			SetOriginalTitle("Anora").
 			SetYear(2024).
-			SetTmdbID(1064213).
+			SetTmdbID("1064213").
 			SaveX(ctx)
 
 		client.MediaFile.Create().
@@ -203,7 +203,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Nickel Boys").
 			SetOriginalTitle("Nickel Boys").
 			SetYear(2024).
-			SetTmdbID(1000837).
+			SetTmdbID("1000837").
 			SaveX(ctx)
 
 		// A bulk caller records one event for the whole batch itself.
@@ -221,7 +221,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Conclave").
 			SetOriginalTitle("Conclave").
 			SetYear(2024).
-			SetTmdbID(974576).
+			SetTmdbID("974576").
 			SaveX(ctx)
 
 		mf := client.MediaFile.Create().
@@ -242,7 +242,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 				SetTitle("Drive").
 				SetOriginalTitle("Drive").
 				SetYear(2011).
-				SetTmdbID(64690).
+				SetTmdbID("64690").
 				SaveX(ctx)
 
 			scan := client.ImportScan.Create().
@@ -295,7 +295,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 
 	It("records an episode-linked record against its episode", func() {
 		show := client.TVShow.Create().
-			SetTitle("The Bear").SetYear(2022).SetTvdbID(9999).SaveX(ctx)
+			SetTitle("The Bear").SetYear(2022).SetTvdbID("9999").SaveX(ctx)
 		season := client.Season.Create().
 			SetNumber(1).SetTvShowID(show.ID).SaveX(ctx)
 		ep := client.Episode.Create().
@@ -325,7 +325,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 
 	It("records an episode import against its episode", func() {
 		show := client.TVShow.Create().
-			SetTitle("Severance").SetYear(2022).SetTvdbID(8888).SaveX(ctx)
+			SetTitle("Severance").SetYear(2022).SetTvdbID("8888").SaveX(ctx)
 		season := client.Season.Create().
 			SetNumber(1).SetTvShowID(show.ID).SaveX(ctx)
 		ep := client.Episode.Create().
@@ -342,7 +342,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 
 	It("records a failed series import against the series", func() {
 		show := client.TVShow.Create().
-			SetTitle("Andor").SetYear(2022).SetTvdbID(7777).SaveX(ctx)
+			SetTitle("Andor").SetYear(2022).SetTvdbID("7777").SaveX(ctx)
 		scan := client.ImportScan.Create().
 			SetSourcePath("/import").
 			SetMode("in_place").
@@ -369,7 +369,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Sicario").
 			SetOriginalTitle("Sicario").
 			SetYear(2015).
-			SetTmdbID(273481).
+			SetTmdbID("273481").
 			SaveX(ctx)
 
 		rows := client.MediaEvent.Query().
@@ -385,7 +385,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Arrival").
 			SetOriginalTitle("Arrival").
 			SetYear(2016).
-			SetTmdbID(329865).
+			SetTmdbID("329865").
 			SaveX(ctx)
 
 		mf := client.MediaFile.Create().
@@ -408,7 +408,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Prisoners").
 			SetOriginalTitle("Prisoners").
 			SetYear(2013).
-			SetTmdbID(146233).
+			SetTmdbID("146233").
 			SaveX(ctx)
 
 		mf := client.MediaFile.Create().
@@ -524,12 +524,12 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 
 		It("emits added for a standalone book, not for a series volume", func() {
 			standalone := client.Book.Create().
-				SetHardcoverID(1).SetTitle("Exhalation").
+				SetHardcoverID("1").SetTitle("Exhalation").
 				SetAuthorName("Ted Chiang").SaveX(ctx)
 			series := client.BookSeries.Create().
-				SetHardcoverID(9).SetTitle("Astérix").SaveX(ctx)
+				SetHardcoverID("9").SetTitle("Astérix").SaveX(ctx)
 			client.Book.Create().
-				SetHardcoverID(2).SetTitle("Astérix #1").
+				SetHardcoverID("2").SetTitle("Astérix #1").
 				SetSeries(series).SaveX(ctx)
 
 			rows := client.MediaEvent.Query().
@@ -550,7 +550,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 
 		It("files a book record against the book with its slot", func() {
 			b := client.Book.Create().
-				SetHardcoverID(1).SetTitle("Exhalation").SaveX(ctx)
+				SetHardcoverID("1").SetTitle("Exhalation").SaveX(ctx)
 			client.DownloadRecord.Create().
 				SetBookID(b.ID).
 				SetBookKind(downloadrecord.BookKindAudiobook).
@@ -595,7 +595,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 
 		It("records a failed book bulk-import entry against its book", func() {
 			b := client.Book.Create().
-				SetHardcoverID(1).SetTitle("Exhalation").SaveX(ctx)
+				SetHardcoverID("1").SetTitle("Exhalation").SaveX(ctx)
 			scan := client.ImportScan.Create().
 				SetSourcePath("/import").SetMode("in_place").SaveX(ctx)
 			row := client.ImportScanBook.Create().
@@ -619,9 +619,9 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 
 		It("records against each new owner through Record", func() {
 			b := client.Book.Create().
-				SetHardcoverID(1).SetTitle("Exhalation").SaveX(ctx)
+				SetHardcoverID("1").SetTitle("Exhalation").SaveX(ctx)
 			series := client.BookSeries.Create().
-				SetHardcoverID(9).SetTitle("Astérix").SaveX(ctx)
+				SetHardcoverID("9").SetTitle("Astérix").SaveX(ctx)
 
 			Expect(
 				Record(ctx, nil, TypeSearched, ScopeAlbum, alb.ID, nil),

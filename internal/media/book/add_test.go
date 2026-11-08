@@ -72,7 +72,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 				f.meta.EXPECT().GetBooks(anyCtx, ids(1)).
 					Return([]*metadata.BookRecord{r}, nil).Once()
 
-				b, err := f.svc.AddBook(f.ctx, AddBookParams{HardcoverID: 1})
+				b, err := f.svc.AddBook(f.ctx, AddBookParams{HardcoverID: "1"})
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(b.EbookMonitored).To(BeTrue())
@@ -100,7 +100,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 
 			b, err := f.svc.AddBook(
 				f.ctx,
-				AddBookParams{HardcoverID: 1, QualityProfile: "comics"},
+				AddBookParams{HardcoverID: "1", QualityProfile: "comics"},
 			)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -110,12 +110,12 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 		It("refuses an unknown profile or monitor before asking Hardcover", func() {
 			_, err := f.svc.AddBook(
 				f.ctx,
-				AddBookParams{HardcoverID: 1, QualityProfile: "ghost"},
+				AddBookParams{HardcoverID: "1", QualityProfile: "ghost"},
 			)
 			Expect(err).To(MatchError(ErrUnknownProfile))
 			_, err = f.svc.AddBook(
 				f.ctx,
-				AddBookParams{HardcoverID: 1, Monitor: "all"},
+				AddBookParams{HardcoverID: "1", Monitor: "all"},
 			)
 			Expect(err).To(MatchError(ErrInvalidMonitor))
 		})
@@ -123,7 +123,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 		It("refuses a book already in the library", func() {
 			f.addBook(1, "Elantris", "")
 
-			_, err := f.svc.AddBook(f.ctx, AddBookParams{HardcoverID: 1})
+			_, err := f.svc.AddBook(f.ctx, AddBookParams{HardcoverID: "1"})
 
 			Expect(err).To(MatchError(ErrBookExists))
 		})
@@ -132,7 +132,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 			f.meta.EXPECT().GetBooks(anyCtx, ids(404)).
 				Return([]*metadata.BookRecord{}, nil).Once()
 
-			_, err := f.svc.AddBook(f.ctx, AddBookParams{HardcoverID: 404})
+			_, err := f.svc.AddBook(f.ctx, AddBookParams{HardcoverID: "404"})
 
 			Expect(err).To(MatchError(ErrHardcoverNotFound))
 			Expect(f.client.Book.Query().CountX(f.ctx)).To(BeZero())
@@ -143,14 +143,14 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 				Return(nil, &metadata.RateLimitedError{RetryAfter: time.Minute}).
 				Once()
 
-			_, err := f.svc.AddBook(f.ctx, AddBookParams{HardcoverID: 1})
+			_, err := f.svc.AddBook(f.ctx, AddBookParams{HardcoverID: "1"})
 
 			Expect(err).To(MatchError(metadata.ErrRateLimited))
 		})
 
 		It("says so when there is no Hardcover key", func() {
 			svc := NewService(f.store, nil, f.posters, f.idx, f.dl, nil, nil)
-			_, err := svc.AddBook(f.ctx, AddBookParams{HardcoverID: 1})
+			_, err := svc.AddBook(f.ctx, AddBookParams{HardcoverID: "1"})
 			Expect(err).To(MatchError(ErrNotConfigured))
 		})
 	})
@@ -158,12 +158,12 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 	Describe("AddSeries", func() {
 		skeleton := func(n int) {
 			GinkgoHelper()
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+			f.meta.EXPECT().GetSeries(anyCtx, "50").
 				Return(seriesRecord("One Piece", n), nil).Once()
 		}
 		batch := func(from, to uint32) {
 			GinkgoHelper()
-			var want []uint32
+			var want []any
 			var recs []*metadata.BookRecord
 			for i := from; i <= to; i++ {
 				want = append(want, 1000+i)
@@ -176,7 +176,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 			skeleton(3)
 			batch(1, 3)
 
-			s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+			s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(s.Title).To(Equal("One Piece"))
@@ -194,10 +194,10 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 		It("keeps the series' Hardcover slug", func() {
 			sk := seriesRecord("One Piece", 1)
 			sk.Slug = "one-piece"
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).Return(sk, nil).Once()
+			f.meta.EXPECT().GetSeries(anyCtx, "50").Return(sk, nil).Once()
 			batch(1, 1)
 
-			s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+			s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(s.HardcoverSlug).To(Equal("one-piece"))
@@ -209,7 +209,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 				skeleton(25)
 				batch(1, 20)
 				// The worker the add starts reads the stubs.
-				var rest []uint32
+				var rest []any
 				var recs []*metadata.BookRecord
 				for i := uint32(21); i <= 25; i++ {
 					rest = append(rest, 1000+i)
@@ -220,7 +220,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 					Return(recs, nil).
 					Once()
 
-				s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+				s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(s.Edges.Volumes).To(HaveLen(25))
@@ -248,7 +248,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 				Once()
 
 			s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{
-				HardcoverID: 50, QualityProfile: "comics",
+				HardcoverID: "50", QualityProfile: "comics",
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -266,11 +266,11 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 			func() {
 				skeleton(1)
 				r := volumeRec(1001)
-				r.Editions[1].Translator, r.Editions[1].TranslatorID = "Une Traductrice", 60
+				r.Editions[1].Translator, r.Editions[1].TranslatorID = "Une Traductrice", "60"
 				f.meta.EXPECT().GetBooks(anyCtx, ids(1001)).
 					Return([]*metadata.BookRecord{r}, nil).Once()
 
-				s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+				s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 
 				Expect(err).NotTo(HaveOccurred())
 				credits := make([]string, 0, len(s.Edges.Contributions))
@@ -296,10 +296,10 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 			func() {
 				sk := seriesRecord("One Piece", 3)
 				sk.Volumes = append(sk.Volumes,
-					metadata.SeriesVolumeRef{Position: 3, BookHardcoverID: 1004},
-					metadata.SeriesVolumeRef{Position: 2, BookHardcoverID: 1005},
+					metadata.SeriesVolumeRef{Position: 3, BookHardcoverID: "1004"},
+					metadata.SeriesVolumeRef{Position: 2, BookHardcoverID: "1005"},
 				)
-				f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).Return(sk, nil).Once()
+				f.meta.EXPECT().GetSeries(anyCtx, "50").Return(sk, nil).Once()
 				c := volumeRec(1002)
 				c.Compilation = true
 				lesser, better := volumeRec(1003), volumeRec(1004)
@@ -310,26 +310,26 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 					}, nil).
 					Once()
 
-				s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+				s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 
 				Expect(err).NotTo(HaveOccurred())
-				hc := make([]uint32, 0, len(s.Edges.Volumes))
+				hc := make([]string, 0, len(s.Edges.Volumes))
 				for _, v := range s.Edges.Volumes {
 					hc = append(hc, v.HardcoverID)
 				}
-				Expect(hc).To(ConsistOf(uint32(1001), uint32(1005), uint32(1004)))
+				Expect(hc).To(ConsistOf("1001", "1005", "1004"))
 			},
 		)
 
 		It("keeps one listing of a volume listed twice at a position", func() {
 			sk := seriesRecord("One Piece", 2)
 			sk.Volumes = append(sk.Volumes, sk.Volumes[1])
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).Return(sk, nil).Once()
+			f.meta.EXPECT().GetSeries(anyCtx, "50").Return(sk, nil).Once()
 			f.meta.EXPECT().GetBooks(anyCtx, ids(1001, 1002)).
 				Return([]*metadata.BookRecord{volumeRec(1001), volumeRec(1002)}, nil).
 				Once()
 
-			s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+			s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(s.Edges.Volumes).To(HaveLen(2))
@@ -350,7 +350,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 
 				s, err := f.svc.AddSeries(
 					f.ctx,
-					AddSeriesParams{HardcoverID: 50, Monitor: "future"},
+					AddSeriesParams{HardcoverID: "50", Monitor: "future"},
 				)
 
 				Expect(err).NotTo(HaveOccurred())
@@ -365,7 +365,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 				skeleton(1)
 				batch(1, 1)
 
-				s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+				s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(s.EditionLanguage).To(Equal("en"))
@@ -379,7 +379,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 			skeleton(2)
 			batch(1, 2)
 
-			s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+			s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(s.Edges.Volumes[0].ID).To(Equal(standalone.ID))
@@ -391,17 +391,17 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 			func() {
 				skeleton(1)
 				batch(1, 1)
-				_, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+				_, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+				_, err = f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 				Expect(err).To(MatchError(ErrSeriesExists))
 
 				f.meta.EXPECT().
-					GetSeries(anyCtx, uint32(404)).
+					GetSeries(anyCtx, "404").
 					Return(nil, nil).
 					Once()
-				_, err = f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 404})
+				_, err = f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "404"})
 				Expect(err).To(MatchError(ErrHardcoverNotFound))
 			},
 		)
@@ -409,12 +409,12 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 		It("refuses an unknown policy or profile", func() {
 			_, err := f.svc.AddSeries(
 				f.ctx,
-				AddSeriesParams{HardcoverID: 50, Monitor: "everything"},
+				AddSeriesParams{HardcoverID: "50", Monitor: "everything"},
 			)
 			Expect(err).To(MatchError(ErrInvalidMonitor))
 			_, err = f.svc.AddSeries(
 				f.ctx,
-				AddSeriesParams{HardcoverID: 50, QualityProfile: "ghost"},
+				AddSeriesParams{HardcoverID: "50", QualityProfile: "ghost"},
 			)
 			Expect(err).To(MatchError(ErrUnknownProfile))
 		})
@@ -424,7 +424,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 			f.meta.EXPECT().GetBooks(anyCtx, ids(1001, 1002)).
 				Return(nil, errors.New("hardcover down")).Once()
 
-			_, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+			_, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 
 			Expect(err).To(MatchError(ContainSubstring("hardcover down")))
 			Expect(f.client.BookSeries.Query().CountX(f.ctx)).To(BeZero())
@@ -440,7 +440,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 				skeleton(hydrateBatch)
 				batch(1, hydrateBatch)
 
-				s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+				s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(s.Edges.Volumes).To(HaveLen(hydrateBatch))

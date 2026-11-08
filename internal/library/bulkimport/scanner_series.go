@@ -60,7 +60,7 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 	if err != nil {
 		slog.WarnContext(ctx, "series scan: tracked-show lookup failed",
 			"scan.id", scan.ID, "error", err)
-		trackedByTVDB = map[uint32]uint32{}
+		trackedByTVDB = map[string]uint32{}
 	}
 
 	queue := make([]db.CreateImportScanShowParams, 0, len(entries))
@@ -156,6 +156,6 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 // a scanned folder as "existing" rather than proposing a duplicate show.
 func (s *Service) trackedShowsByTVDB(
 	ctx context.Context,
-) (map[uint32]uint32, error) {
+) (map[string]uint32, error) {
 	return s.store.TVShowTVDBIndex(ctx)
 }

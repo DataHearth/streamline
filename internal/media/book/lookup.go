@@ -4,9 +4,10 @@ import (
 	"cmp"
 	"context"
 	"slices"
-	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/datahearth/streamline/internal/providerid"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -35,7 +36,7 @@ const (
 // LookupHit is one hit of the add flow. Kind, original title, ongoing and
 // volume count are best effort on a search hit and filled by the detail.
 type LookupHit struct {
-	HardcoverID   uint32
+	HardcoverID   string
 	Type          string
 	Title         string
 	OriginalTitle string
@@ -54,7 +55,7 @@ type LookupHit struct {
 	Slug string
 	// CoverBookIDs are the Hardcover ids of the books adding a series would
 	// pick at its first positions, whose covers stand for it.
-	CoverBookIDs []uint32
+	CoverBookIDs []string
 	// MatchedTitle is the book title, in whatever language, through which a
 	// series was found, when it is not the series' own name.
 	MatchedTitle string
@@ -78,7 +79,7 @@ type LookupDetail struct {
 	Editions []LookupEdition
 	// VolumeBookIDs are the Hardcover ids of the first volumes of a series,
 	// whose covers the panel shows.
-	VolumeBookIDs []uint32
+	VolumeBookIDs []string
 }
 
 // Lookup searches Hardcover for books and series to add. Books alone are one
@@ -153,14 +154,14 @@ func seriesHits(
 	books, series []metadata.BookLookupHit,
 ) ([]LookupHit, []LookupHit, error) {
 	reached := seriesReached(query, books)
-	ids := make([]uint32, 0, len(series)+len(reached))
+	ids := make([]string, 0, len(series)+len(reached))
 	for _, sr := range series {
 		ids = append(ids, sr.HardcoverID)
 	}
 	for _, r := range reached {
 		ids = append(ids, r.id)
 	}
-	slices.Sort(ids)
+	slices.SortFunc(ids, providerid.Compare)
 	ids = slices.Compact(ids)
 	if len(ids) == 0 {
 		return nil, nil, nil
@@ -169,14 +170,14 @@ func seriesHits(
 	if err != nil {
 		return nil, nil, err
 	}
-	byID := make(map[uint32]*metadata.SeriesLookupRecord, len(recs))
+	byID := make(map[string]*metadata.SeriesLookupRecord, len(recs))
 	for i := range recs {
 		byID[recs[i].HardcoverID] = &recs[i]
 	}
 
 	var top, loose, rest []LookupHit
-	searched := map[uint32]metadata.BookLookupHit{}
-	placed := map[uint32]bool{}
+	searched := map[string]metadata.BookLookupHit{}
+	placed := map[string]bool{}
 	for _, sr := range series {
 		rec := byID[sr.HardcoverID]
 		if placed[sr.HardcoverID] || empty(sr, rec) {
@@ -231,7 +232,7 @@ func empty(sr metadata.BookLookupHit, rec *metadata.SeriesLookupRecord) bool {
 }
 
 type reachedSeries struct {
-	id    uint32
+	id    string
 	via   string
 	exact bool
 }
@@ -240,7 +241,7 @@ type reachedSeries struct {
 // title or an alternative title is the query, with that title.
 func seriesReached(query string, books []metadata.BookLookupHit) []reachedSeries {
 	var out []reachedSeries
-	seen := map[uint32]bool{}
+	seen := map[string]bool{}
 	for _, b := range books {
 		via, exact := titleNaming(query, b)
 		if via == "" {
@@ -305,9 +306,9 @@ func seriesHit(
 // remembered for the proxy. A series none of whose numbered volumes has a
 // cover fans its most read unnumbered books instead, so a hit is never drawn
 // as blank tiles while Hardcover holds pictures of its books.
-func coverBooks(vols, loose []metadata.SeriesLookupVolume) []uint32 {
+func coverBooks(vols, loose []metadata.SeriesLookupVolume) []string {
 	cands := make([]volumeCandidate, 0, len(vols))
-	urls := make(map[uint32]string, len(vols))
+	urls := make(map[string]string, len(vols))
 	for _, v := range vols {
 		cands = append(cands, volumeCandidate{
 			position:    v.Position,
@@ -320,10 +321,10 @@ func coverBooks(vols, loose []metadata.SeriesLookupVolume) []uint32 {
 	slices.SortStableFunc(cands, func(a, b volumeCandidate) int {
 		return cmp.Or(
 			cmp.Compare(a.position, b.position),
-			cmp.Compare(a.bookID, b.bookID),
+			providerid.Compare(a.bookID, b.bookID),
 		)
 	})
-	win := slices.DeleteFunc(winnersByPosition(cands), func(id uint32) bool {
+	win := slices.DeleteFunc(winnersByPosition(cands), func(id string) bool {
 		return urls[id] == ""
 	})
 	if len(win) == 0 {
@@ -416,21 +417,17 @@ func hitFrom(h metadata.BookLookupHit) LookupHit {
 	return out
 }
 
-func rememberCover(hardcoverID uint32, url string) {
+func rememberCover(hardcoverID string, url string) {
 	if url == "" {
 		return
 	}
-	artwork.Remember(
-		artwork.KindBooks,
-		strconv.FormatUint(uint64(hardcoverID), 10),
-		artwork.Source{URL: url},
-	)
+	artwork.Remember(artwork.KindBooks, hardcoverID, artwork.Source{URL: url})
 }
 
 // markAdded fills the library join: whether a hit is already held, under which
 // id, and for a series the poster to show.
 func (s *Service) markAdded(ctx context.Context, hits []LookupHit) error {
-	var bookIDs, seriesIDs []uint32
+	var bookIDs, seriesIDs []string
 	for _, h := range hits {
 		switch h.Type {
 		case lookupBook:
@@ -440,8 +437,8 @@ func (s *Service) markAdded(ctx context.Context, hits []LookupHit) error {
 		}
 	}
 	var (
-		held   map[uint32]*ent.Book
-		series map[uint32]db.HeldSeries
+		held   map[string]*ent.Book
+		series map[string]db.HeldSeries
 		err    error
 	)
 	if len(bookIDs) > 0 {
@@ -484,13 +481,13 @@ func (s *Service) markAdded(ctx context.Context, hits []LookupHit) error {
 func (s *Service) LookupDetail(
 	ctx context.Context,
 	kind string,
-	hardcoverID uint32,
+	hardcoverID string,
 ) (*LookupDetail, error) {
 	ctx, span := tracer.Start(ctx, "book.lookup_detail",
 		trace.WithAttributes(attribute.String("lookup.type", kind)))
 	defer span.End()
 
-	key := kind + ":" + strconv.FormatUint(uint64(hardcoverID), 10)
+	key := kind + ":" + hardcoverID
 	cached, ok := s.details.get(key)
 	if !ok {
 		p, err := s.provider()
@@ -519,9 +516,9 @@ func (s *Service) LookupDetail(
 func (s *Service) bookDetail(
 	ctx context.Context,
 	p metadata.BookProvider,
-	id uint32,
+	id string,
 ) (*LookupDetail, error) {
-	recs, err := p.GetBooks(ctx, []uint32{id})
+	recs, err := p.GetBooks(ctx, []string{id})
 	if err != nil {
 		return nil, err
 	}
@@ -584,7 +581,7 @@ func pagesOf(eds []metadata.EditionRecord) uint16 {
 func (s *Service) seriesDetail(
 	ctx context.Context,
 	p metadata.BookProvider,
-	id uint32,
+	id string,
 ) (*LookupDetail, error) {
 	skeleton, err := p.GetSeries(ctx, id)
 	if err != nil {
@@ -614,7 +611,7 @@ func (s *Service) seriesDetail(
 	if err != nil {
 		return nil, err
 	}
-	byID := make(map[uint32]*metadata.BookRecord, len(recs))
+	byID := make(map[string]*metadata.BookRecord, len(recs))
 	for _, r := range recs {
 		byID[r.HardcoverID] = r
 		rememberCover(r.HardcoverID, r.CoverURL)

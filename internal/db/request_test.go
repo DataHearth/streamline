@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/internal/role"
 
 	"github.com/datahearth/streamline/ent"
@@ -47,7 +49,7 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 
 	It("creates a request with the requester edge", func() {
 		r, err := store.CreateRequest(ctx, CreateRequestParams{
-			MediaType: "movie", MediaID: 42, Title: "Flick", RequesterID: userID,
+			MediaType: "movie", MediaID: "42", Title: "Flick", RequesterID: userID,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r.Edges.Requester).NotTo(BeNil())
@@ -60,15 +62,15 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 	})
 
 	It("dedups via FindActiveRequest (pending/approved/available only)", func() {
-		none, err := store.FindActiveRequest(ctx, "movie", 42)
+		none, err := store.FindActiveRequest(ctx, "movie", "42")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(none).To(BeNil())
 
 		_, err = store.CreateRequest(ctx, CreateRequestParams{
-			MediaType: "movie", MediaID: 42, Title: "Flick", RequesterID: userID,
+			MediaType: "movie", MediaID: "42", Title: "Flick", RequesterID: userID,
 		})
 		Expect(err).NotTo(HaveOccurred())
-		found, err := store.FindActiveRequest(ctx, "movie", 42)
+		found, err := store.FindActiveRequest(ctx, "movie", "42")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(found).NotTo(BeNil())
 	})
@@ -77,12 +79,15 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 		"denied requests are not considered active (dedup allows re-request)",
 		func() {
 			r, err := store.CreateRequest(ctx, CreateRequestParams{
-				MediaType: "tvshow", MediaID: 7, Title: "Show", RequesterID: userID,
+				MediaType:   "tvshow",
+				MediaID:     "7",
+				Title:       "Show",
+				RequesterID: userID,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(store.DenyRequest(ctx, r.ID, adminID, "no")).To(Succeed())
 
-			found, err := store.FindActiveRequest(ctx, "tvshow", 7)
+			found, err := store.FindActiveRequest(ctx, "tvshow", "7")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(found).To(BeNil())
 		},
@@ -90,7 +95,7 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 
 	It("approve sets approved_by; deny sets reason; reopen resets", func() {
 		r, err := store.CreateRequest(ctx, CreateRequestParams{
-			MediaType: "movie", MediaID: 1, Title: "M", RequesterID: userID,
+			MediaType: "movie", MediaID: "1", Title: "M", RequesterID: userID,
 		})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -113,37 +118,37 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 
 	It("rejects a second active row but allows a re-request after denial", func() {
 		first, err := store.CreateRequest(ctx, CreateRequestParams{
-			MediaType: "movie", MediaID: 42, Title: "Flick", RequesterID: userID,
+			MediaType: "movie", MediaID: "42", Title: "Flick", RequesterID: userID,
 		})
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = store.CreateRequest(ctx, CreateRequestParams{
-			MediaType: "movie", MediaID: 42, Title: "Flick", RequesterID: userID,
+			MediaType: "movie", MediaID: "42", Title: "Flick", RequesterID: userID,
 		})
 		Expect(ent.IsConstraintError(err)).To(BeTrue())
 
 		Expect(store.DenyRequest(ctx, first.ID, adminID, "no")).To(Succeed())
 		_, err = store.CreateRequest(ctx, CreateRequestParams{
-			MediaType: "movie", MediaID: 42, Title: "Flick", RequesterID: userID,
+			MediaType: "movie", MediaID: "42", Title: "Flick", RequesterID: userID,
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("MarkRequestsAvailable flips approved → available", func() {
 		r, err := store.CreateRequest(ctx, CreateRequestParams{
-			MediaType: "movie", MediaID: 9, Title: "M", RequesterID: userID,
+			MediaType: "movie", MediaID: "9", Title: "M", RequesterID: userID,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(store.ApproveRequest(ctx, r.ID, adminID)).To(Succeed())
 
-		Expect(store.MarkRequestsAvailable(ctx, "movie", 9)).To(Succeed())
+		Expect(store.MarkRequestsAvailable(ctx, "movie", "9")).To(Succeed())
 		got, _ := store.GetRequest(ctx, r.ID)
 		Expect(got.Status).To(Equal(request.StatusAvailable))
 	})
 
 	It("lists requests filtered by status and requester", func() {
 		_, _ = store.CreateRequest(ctx, CreateRequestParams{
-			MediaType: "movie", MediaID: 1, Title: "A", RequesterID: userID,
+			MediaType: "movie", MediaID: "1", Title: "A", RequesterID: userID,
 		})
 		other, _ := store.CreateUser(ctx, CreateUserParams{
 			Email:      "o@x.io",
@@ -151,7 +156,7 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 			AuthMethod: user.AuthMethodLocal,
 		})
 		_, _ = store.CreateRequest(ctx, CreateRequestParams{
-			MediaType: "movie", MediaID: 2, Title: "B", RequesterID: other.ID,
+			MediaType: "movie", MediaID: "2", Title: "B", RequesterID: other.ID,
 		})
 
 		all, total, err := store.ListRequests(ctx, ListRequestsParams{Limit: 50})
@@ -198,12 +203,12 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 		}
 		series := func(id uint32) error {
 			return create(request.MediaTypeBookSeries, func(c *ent.RequestCreate) {
-				c.SetMediaID(id)
+				c.SetMediaID(providerid.Format(id))
 			})
 		}
 		book := func(id uint32) error {
 			return create(request.MediaTypeBook, func(c *ent.RequestCreate) {
-				c.SetMediaID(id)
+				c.SetMediaID(providerid.Format(id))
 			})
 		}
 
@@ -215,19 +220,19 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 				SetRequesterID(userID).
 				Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(r.MediaID).To(BeZero())
+			Expect(r.MediaID).To(BeEmpty())
 			Expect(r.MediaMbid).To(Equal(mbidA))
 		})
 
 		It("saves a book request", func() {
 			r, err := client.Request.Create().
 				SetMediaType(request.MediaTypeBook).
-				SetMediaID(12).
+				SetMediaID("12").
 				SetTitle("Book").
 				SetRequesterID(userID).
 				Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(r.MediaID).To(Equal(uint32(12)))
+			Expect(r.MediaID).To(Equal("12"))
 		})
 
 		It("persists the MBID through the store", func() {
@@ -239,16 +244,16 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(a.MediaMbid).To(Equal(mbidA))
-			Expect(a.MediaID).To(BeZero())
+			Expect(a.MediaID).To(BeEmpty())
 
 			b, err := store.CreateRequest(ctx, CreateRequestParams{
 				MediaType:   "book",
-				MediaID:     4,
+				MediaID:     "4",
 				Title:       "B",
 				RequesterID: userID,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(b.MediaID).To(Equal(uint32(4)))
+			Expect(b.MediaID).To(Equal("4"))
 		})
 
 		It("finds an active request by MBID and ignores a denied one", func() {

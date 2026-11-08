@@ -22,9 +22,9 @@ type Person struct {
 	// UpdateTime holds the value of the "update_time" field.
 	UpdateTime time.Time `json:"update_time,omitempty"`
 	// TmdbID holds the value of the "tmdb_id" field.
-	TmdbID uint32 `json:"tmdb_id,omitempty"`
+	TmdbID string `json:"tmdb_id,omitempty"`
 	// TvdbID holds the value of the "tvdb_id" field.
-	TvdbID uint32 `json:"tvdb_id,omitempty"`
+	TvdbID string `json:"tvdb_id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 	// ProfileURL holds the value of the "profile_url" field.
@@ -76,9 +76,9 @@ func (*Person) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case person.FieldID, person.FieldTmdbID, person.FieldTvdbID:
+		case person.FieldID:
 			values[i] = new(sql.NullInt64)
-		case person.FieldName, person.FieldProfileURL, person.FieldBiography, person.FieldKnownFor, person.FieldBirthday, person.FieldDeathday, person.FieldPlaceOfBirth, person.FieldImdbID, person.FieldInstagramID, person.FieldTwitterID:
+		case person.FieldTmdbID, person.FieldTvdbID, person.FieldName, person.FieldProfileURL, person.FieldBiography, person.FieldKnownFor, person.FieldBirthday, person.FieldDeathday, person.FieldPlaceOfBirth, person.FieldImdbID, person.FieldInstagramID, person.FieldTwitterID:
 			values[i] = new(sql.NullString)
 		case person.FieldCreateTime, person.FieldUpdateTime, person.FieldDetailsFetchedAt:
 			values[i] = new(sql.NullTime)
@@ -116,16 +116,16 @@ func (_m *Person) assignValues(columns []string, values []any) error {
 				_m.UpdateTime = value.Time
 			}
 		case person.FieldTmdbID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tmdb_id", values[i])
 			} else if value.Valid {
-				_m.TmdbID = uint32(value.Int64)
+				_m.TmdbID = value.String
 			}
 		case person.FieldTvdbID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tvdb_id", values[i])
 			} else if value.Valid {
-				_m.TvdbID = uint32(value.Int64)
+				_m.TvdbID = value.String
 			}
 		case person.FieldName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -242,10 +242,10 @@ func (_m *Person) String() string {
 	builder.WriteString(_m.UpdateTime.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("tmdb_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.TmdbID))
+	builder.WriteString(_m.TmdbID)
 	builder.WriteString(", ")
 	builder.WriteString("tvdb_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.TvdbID))
+	builder.WriteString(_m.TvdbID)
 	builder.WriteString(", ")
 	builder.WriteString("name=")
 	builder.WriteString(_m.Name)

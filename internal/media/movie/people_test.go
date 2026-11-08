@@ -6,6 +6,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -78,8 +80,8 @@ var _ = Describe("Movie cast enrichment", Label("unit", "movies"), func() {
 			PlaceOfBirth: "Oakland, California, USA",
 			IMDbID:       "nm0000434",
 		}
-		pending(db.Person{ID: 3, TMDBID: 1892, Name: "Mark Hamill"})
-		metaMock.GetPerson(mock.Anything, uint32(1892)).Return(&details, nil).Once()
+		pending(db.Person{ID: 3, TMDBID: "1892", Name: "Mark Hamill"})
+		metaMock.GetPerson(mock.Anything, "1892").Return(&details, nil).Once()
 		recordSaves()
 
 		svc.enrichPeople(ctx, 9)
@@ -94,7 +96,7 @@ var _ = Describe("Movie cast enrichment", Label("unit", "movies"), func() {
 		// has nothing to look up at all — no GetPerson expectation, so either
 		// one reaching the provider fails the spec.
 		pending(
-			db.Person{ID: 4, TVDBID: 77, Name: "Uncredited Extra"},
+			db.Person{ID: 4, TVDBID: "77", Name: "Uncredited Extra"},
 			db.Person{ID: 5, Name: "Nobody At All"},
 		)
 		recordSaves()
@@ -107,8 +109,8 @@ var _ = Describe("Movie cast enrichment", Label("unit", "movies"), func() {
 	It("leaves the person unstamped when the provider fails", func() {
 		// Nothing is saved, so details_fetched_at stays nil and the next
 		// metadata refresh retries — the import itself is unaffected.
-		pending(db.Person{ID: 3, TMDBID: 1892, Name: "Mark Hamill"})
-		metaMock.GetPerson(mock.Anything, uint32(1892)).
+		pending(db.Person{ID: 3, TMDBID: "1892", Name: "Mark Hamill"})
+		metaMock.GetPerson(mock.Anything, "1892").
 			Return(nil, errors.New("tmdb unreachable")).Once()
 		recordSaves()
 
@@ -127,12 +129,12 @@ var _ = Describe("Movie cast enrichment", Label("unit", "movies"), func() {
 
 	It("keeps going past a person whose lookup failed", func() {
 		pending(
-			db.Person{ID: 3, TMDBID: 1892, Name: "Mark Hamill"},
-			db.Person{ID: 6, TMDBID: 2, Name: "Carrie Fisher"},
+			db.Person{ID: 3, TMDBID: "1892", Name: "Mark Hamill"},
+			db.Person{ID: 6, TMDBID: "2", Name: "Carrie Fisher"},
 		)
-		metaMock.GetPerson(mock.Anything, uint32(1892)).
+		metaMock.GetPerson(mock.Anything, "1892").
 			Return(nil, errors.New("tmdb unreachable")).Once()
-		metaMock.GetPerson(mock.Anything, uint32(2)).
+		metaMock.GetPerson(mock.Anything, "2").
 			Return(&metadata.PersonDetails{Biography: "Also an actor."}, nil).Once()
 		recordSaves()
 
@@ -145,14 +147,17 @@ var _ = Describe("Movie cast enrichment", Label("unit", "movies"), func() {
 	It("holds no more than personDetailConcurrency lookups in flight", func() {
 		people := make([]db.Person, 0, 12)
 		for i := range uint32(12) {
-			people = append(people, db.Person{ID: i + 1, TMDBID: i + 1})
+			people = append(
+				people,
+				db.Person{ID: i + 1, TMDBID: providerid.Format(i + 1)},
+			)
 		}
 		pending(people...)
 
 		var inFlight, peak atomic.Int64
 		metaMock.GetPerson(mock.Anything, mock.Anything).
 			RunAndReturn(func(
-				_ context.Context, _ uint32,
+				_ context.Context, _ string,
 			) (*metadata.PersonDetails, error) {
 				now := inFlight.Add(1)
 				for {

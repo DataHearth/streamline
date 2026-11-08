@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -36,7 +38,7 @@ var _ = Describe("Store.ListUpcomingBooks", Label("integration", "db"), func() {
 		GinkgoHelper()
 		id++
 		c := client.Book.Create().
-			SetHardcoverID(id).
+			SetHardcoverID(providerid.Format(id)).
 			SetTitle(title).
 			SetEbookMonitored(ebook).
 			SetAudiobookMonitored(audiobook).

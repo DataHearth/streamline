@@ -109,6 +109,8 @@ var (
 	DefaultUpdateTime func() time.Time
 	// UpdateDefaultUpdateTime holds the default value on update for the "update_time" field.
 	UpdateDefaultUpdateTime func() time.Time
+	// HardcoverEditionIDValidator is a validator for the "hardcover_edition_id" field. It is called by the builders before save.
+	HardcoverEditionIDValidator func(string) error
 	// LanguageValidator is a validator for the "language" field. It is called by the builders before save.
 	LanguageValidator func(string) error
 	// TitleValidator is a validator for the "title" field. It is called by the builders before save.

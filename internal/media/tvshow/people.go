@@ -62,7 +62,7 @@ func (s *Service) enrichPeople(ctx context.Context, showID uint32) {
 		// The series service holds the TVDB client and nothing else, so a
 		// person carrying only a tmdb id is left to whichever movie credits
 		// them; one with neither has nothing to look up at all.
-		if p.TVDBID == 0 {
+		if p.TVDBID == "" {
 			continue
 		}
 		sem <- struct{}{}

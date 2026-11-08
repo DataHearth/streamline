@@ -36,7 +36,7 @@ func (TVShow) Fields() []ent.Field {
 			Values("standard", "anime", "daily").
 			Default("standard"),
 		field.Bool("monitored").Default(true),
-		field.Uint32("tvdb_id").Unique(),
+		field.String("tvdb_id").NotEmpty().Unique(),
 		field.String("poster_path").Optional(),
 		field.String("network").Optional(),
 		field.String("creator").Optional(),

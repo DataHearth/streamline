@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	entsql "entgo.io/ent/dialect/sql"
 
 	"github.com/datahearth/streamline/ent"
@@ -44,7 +46,7 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 		show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 			Title:        title,
 			Year:         2020,
-			TvdbID:       tvdbID,
+			TvdbID:       providerid.Format(tvdbID),
 			SeriesStatus: "continuing",
 			Type:         "standard",
 			Seasons:      []SeasonSeed{{Number: 1, Episodes: eps}},
@@ -75,7 +77,7 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 		_, err := store.CreateTVShow(ctx, CreateTVShowParams{
 			Title:        title,
 			Year:         year,
-			TvdbID:       tvdbID,
+			TvdbID:       providerid.Format(tvdbID),
 			SeriesStatus: "continuing",
 			Type:         "standard",
 		})
@@ -233,7 +235,7 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 				Title:        "With specials",
 				Year:         2020,
-				TvdbID:       77,
+				TvdbID:       "77",
 				SeriesStatus: "continuing",
 				Type:         "standard",
 				Seasons: []SeasonSeed{
@@ -359,7 +361,7 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 			func(inFlight [][2]int, scope string, seasonNo, epNo uint16) {
 				aired := now.Add(-24 * time.Hour)
 				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-					Title: "Scoped", Year: 2020, TvdbID: 20,
+					Title: "Scoped", Year: 2020, TvdbID: "20",
 					SeriesStatus: "continuing", Type: "standard",
 					Seasons: []SeasonSeed{
 						{Number: 1, Episodes: []EpisodeSeed{
@@ -577,7 +579,7 @@ var _ = Describe("an unmonitored show", Label("unit", "db"), func() {
 		show, err = store.CreateTVShow(ctx, CreateTVShowParams{
 			Title:        "Dropped",
 			Year:         2020,
-			TvdbID:       1,
+			TvdbID:       "1",
 			SeriesStatus: "continuing",
 			Type:         "standard",
 			Seasons: []SeasonSeed{{Number: 1, Episodes: []EpisodeSeed{

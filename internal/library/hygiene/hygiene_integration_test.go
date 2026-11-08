@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -121,20 +123,20 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			Title:         "Inception",
 			OriginalTitle: "Inception",
 			Year:          2010,
-			TmdbID:        27205,
+			TmdbID:        "27205",
 			Status:        entmovie.StatusWanted,
 		})
 		Expect(err).NotTo(HaveOccurred())
 
 		meta.EXPECT().SearchMovie(mock.Anything, "Inception", uint16(2010)).
 			Return([]metadata.MovieResult{
-				{TMDBID: 27205, Title: "Inception", Year: 2010},
+				{TMDBID: "27205", Title: "Inception", Year: 2010},
 			}, nil).Once()
 
 		Expect(svc.RunOrphanScan(ctx)).To(Succeed())
 		Expect(svc.RunOrphanScan(ctx)).To(Succeed())
 
-		movie, err := store.FindMovieByTMDBID(ctx, 27205)
+		movie, err := store.FindMovieByTMDBID(ctx, "27205")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(movie.Status)).To(Equal("available"))
 		files, err := store.ListMediaFilesByMovieID(ctx, movie.ID)
@@ -187,7 +189,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			Title:         "Gone",
 			OriginalTitle: "Gone",
 			Year:          2024,
-			TmdbID:        1234,
+			TmdbID:        "1234",
 			Status:        entmovie.StatusAvailable,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -236,7 +238,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 
 		air := time.Now()
 		show, err := store.CreateTVShow(ctx, db.CreateTVShowParams{
-			Title: "Gone Show", Year: 2024, TvdbID: 4321,
+			Title: "Gone Show", Year: 2024, TvdbID: "4321",
 			Seasons: []db.SeasonSeed{
 				{
 					Number: 1,
@@ -273,7 +275,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 	It("folds a whole show's missing files into one event per type", func() {
 		air := time.Now()
 		show, err := store.CreateTVShow(ctx, db.CreateTVShowParams{
-			Title: "Vanished", Year: 2024, TvdbID: 5555,
+			Title: "Vanished", Year: 2024, TvdbID: "5555",
 			Seasons: []db.SeasonSeed{
 				{
 					Number: 1,
@@ -401,7 +403,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 
 			var err error
 			movie, err = store.CreateMovie(ctx, db.CreateMovieParams{
-				Title: "Control", OriginalTitle: "Control", Year: 2020, TmdbID: 1,
+				Title: "Control", OriginalTitle: "Control", Year: 2020, TmdbID: "1",
 				Status: entmovie.StatusAvailable,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -573,7 +575,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 				show := entClient.TVShow.Create().
 					SetTitle("S").
 					SetYear(2020).
-					SetTvdbID(1).
+					SetTvdbID("1").
 					SaveX(ctx)
 				season := entClient.Season.Create().
 					SetNumber(1).
@@ -586,7 +588,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 					SetSize(4).
 					SetEpisode(episode).
 					SaveX(ctx)
-				book := entClient.Book.Create().SetHardcoverID(1).SetTitle("B").
+				book := entClient.Book.Create().SetHardcoverID("1").SetTitle("B").
 					SetEbookStatus(entbook.EbookStatusAvailable).SaveX(ctx)
 				entClient.MediaFile.Create().
 					SetPath("/gone/b.epub").
@@ -758,7 +760,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			show := entClient.TVShow.Create().
 				SetTitle("Tracked").
 				SetYear(2020).
-				SetTvdbID(1).
+				SetTvdbID("1").
 				SaveX(ctx)
 			season := entClient.Season.Create().
 				SetNumber(1).
@@ -833,7 +835,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 				Title:         "Movie",
 				OriginalTitle: "Movie",
 				Year:          2020,
-				TmdbID:        1000 + id,
+				TmdbID:        providerid.Format(1000 + id),
 				Status:        entmovie.StatusAvailable,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -850,7 +852,8 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			GinkgoHelper()
 			id := next()
 			show := entClient.TVShow.Create().
-				SetTitle("Show").SetYear(2020).SetTvdbID(2000 + id).SaveX(ctx)
+				SetTitle("Show").
+				SetYear(2020).SetTvdbID(providerid.Format(2000 + id)).SaveX(ctx)
 			season := entClient.Season.Create().
 				SetNumber(1).SetTvShow(show).SaveX(ctx)
 			ep := entClient.Episode.Create().
@@ -888,7 +891,8 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			GinkgoHelper()
 			id := next()
 			bk := entClient.Book.Create().
-				SetHardcoverID(3000 + id).SetTitle("Book").SetAuthorName("Author").
+				SetHardcoverID(providerid.Format(3000 + id)).
+				SetTitle("Book").SetAuthorName("Author").
 				SetEbookStatus(entbook.EbookStatusAvailable).SaveX(ctx)
 			own := func(c *ent.MediaFileCreate) {
 				c.SetBook(bk).SetBookKind(entmediafile.BookKindEbook)
@@ -1140,7 +1144,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 
 			BeforeEach(func() {
 				show := entClient.TVShow.Create().
-					SetTitle("Show").SetYear(2020).SetTvdbID(9).SaveX(ctx)
+					SetTitle("Show").SetYear(2020).SetTvdbID("9").SaveX(ctx)
 				season = entClient.Season.Create().
 					SetNumber(1).SetTvShow(show).SaveX(ctx)
 			})
@@ -1321,7 +1325,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 
 			BeforeEach(func() {
 				b = entClient.Book.Create().
-					SetHardcoverID(1).SetTitle("Book").
+					SetHardcoverID("1").SetTitle("Book").
 					SetEbookStatus(entbook.EbookStatusAvailable).
 					SetAudiobookStatus(entbook.AudiobookStatusAvailable).
 					SaveX(ctx)
@@ -1456,10 +1460,10 @@ var _ = Describe(
 
 		It("folds shows found across runs into one series scan", func() {
 			tvmeta.EXPECT().SearchSeries(mock.Anything, "Breaking Bad").
-				Return([]metadata.TVResult{{TVDBID: 81189, Title: "Breaking Bad", Year: 2008}}, nil).
+				Return([]metadata.TVResult{{TVDBID: "81189", Title: "Breaking Bad", Year: 2008}}, nil).
 				Once()
 			tvmeta.EXPECT().SearchSeries(mock.Anything, "The Wire").
-				Return([]metadata.TVResult{{TVDBID: 79126, Title: "The Wire", Year: 2002}}, nil).
+				Return([]metadata.TVResult{{TVDBID: "79126", Title: "The Wire", Year: 2002}}, nil).
 				Once()
 
 			placeShow("Breaking Bad", "Breaking Bad S01E01.mkv")

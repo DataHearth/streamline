@@ -146,7 +146,7 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 			vars := BuildMovieVars(
 				"Test Movie",
 				2024,
-				12345,
+				"12345",
 				ParseResult{
 					Resolution: "1080p",
 					Source:     "WEB-DL",
@@ -169,7 +169,7 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 			vars := BuildMovieVars(
 				"Movie",
 				0,
-				0,
+				"",
 				ParseResult{Resolution: "720p"},
 			)
 			_, hasYear := vars["year"]
@@ -181,7 +181,7 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 		})
 
 		It("renders Plex-style {tmdb-{tmdb_id}} literal braces around id", func() {
-			vars := BuildMovieVars("X", 2024, 999, ParseResult{Extension: "mkv"})
+			vars := BuildMovieVars("X", 2024, "999", ParseResult{Extension: "mkv"})
 			got := ApplyTemplate(
 				"{title} ({year}) {tmdb-{tmdb_id}}/file.{ext}",
 				vars,
@@ -197,7 +197,7 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 				vars := BuildEpisodeVars(
 					"Breaking Bad",
 					2008,
-					81189,
+					"81189",
 					3,
 					7,
 					"One Minute",
@@ -228,7 +228,7 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 			vars := BuildEpisodeVars(
 				"Show",
 				0,
-				0,
+				"",
 				1,
 				1,
 				"",
@@ -244,7 +244,7 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 			vars := BuildEpisodeVars(
 				"Show",
 				2020,
-				0,
+				"",
 				1,
 				1,
 				"",
@@ -259,7 +259,7 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 			vars := BuildEpisodeVars(
 				"Hokkaido Signal",
 				2024,
-				0,
+				"",
 				1,
 				18,
 				"Static",

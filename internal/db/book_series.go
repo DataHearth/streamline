@@ -17,7 +17,7 @@ import (
 // CreateSeriesParams is a series row with its first volumes. Volumes whose
 // RefreshedAt is nil are stubs.
 type CreateSeriesParams struct {
-	HardcoverID      uint32
+	HardcoverID      string
 	Slug             string
 	Title            string
 	OriginalTitle    string
@@ -208,7 +208,7 @@ func (db *DB) FindSeriesByID(
 // FindSeriesByHardcoverID returns nil, nil when no series has the id.
 func (db *DB) FindSeriesByHardcoverID(
 	ctx context.Context,
-	hardcoverID uint32,
+	hardcoverID string,
 ) (*ent.BookSeries, error) {
 	row, err := db.client.BookSeries.Query().
 		Where(bookseries.HardcoverIDEQ(hardcoverID)).
@@ -231,19 +231,19 @@ type HeldSeries struct {
 // many ids there are.
 func (db *DB) FindSeriesByHardcoverIDs(
 	ctx context.Context,
-	ids []uint32,
-) (map[uint32]HeldSeries, error) {
+	ids []string,
+) (map[string]HeldSeries, error) {
 	rows, err := db.client.BookSeries.Query().
 		Where(bookseries.HardcoverIDIn(ids...)).
 		All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[uint32]HeldSeries, len(rows))
+	out := make(map[string]HeldSeries, len(rows))
 	if len(rows) == 0 {
 		return out, nil
 	}
-	byRow := make(map[uint32]uint32, len(rows))
+	byRow := make(map[uint32]string, len(rows))
 	rowIDs := make([]uint32, 0, len(rows))
 	for _, r := range rows {
 		out[r.HardcoverID] = HeldSeries{Series: r}

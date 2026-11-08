@@ -72,16 +72,16 @@ var mbidRe = regexp.MustCompile(
 type MovieAdder interface {
 	Add(
 		ctx context.Context,
-		tmdbID uint32,
+		tmdbID string,
 		qualityProfile string,
 	) (*ent.Movie, string, error)
-	GetByTMDBID(ctx context.Context, tmdbID uint32) (*ent.Movie, error)
+	GetByTMDBID(ctx context.Context, tmdbID string) (*ent.Movie, error)
 }
 
 type ShowAdder interface {
 	Add(
 		ctx context.Context,
-		tvdbID uint32,
+		tvdbID string,
 		qualityProfile string,
 	) (*ent.TVShow, error)
 }
@@ -114,16 +114,16 @@ type AlbumMonitor interface {
 type BookAdder interface {
 	AddBook(
 		ctx context.Context,
-		hardcoverID uint32,
+		hardcoverID string,
 		monitor, qualityProfile string,
 	) error
 	AddSeries(
 		ctx context.Context,
-		hardcoverID uint32,
+		hardcoverID string,
 		monitor, qualityProfile string,
 	) error
-	HasBook(ctx context.Context, hardcoverID uint32) (bool, error)
-	HasSeries(ctx context.Context, hardcoverID uint32) (bool, error)
+	HasBook(ctx context.Context, hardcoverID string) (bool, error)
+	HasSeries(ctx context.Context, hardcoverID string) (bool, error)
 }
 
 type Service struct {
@@ -158,7 +158,7 @@ func NewService(
 
 type CreateParams struct {
 	MediaType      string
-	MediaID        uint32
+	MediaID        string
 	MediaMBID      string
 	Title          string
 	RequesterID    uint32
@@ -184,13 +184,13 @@ func validate(p CreateParams) error {
 	}
 	switch p.MediaType {
 	case "artist":
-		if p.MediaMBID == "" || p.MediaID != 0 {
+		if p.MediaMBID == "" || p.MediaID != "" {
 			return fmt.Errorf(
 				"%w: artist needs a media_mbid and no media_id", ErrInvalidRequest,
 			)
 		}
 	case "album":
-		if p.MediaMBID == "" || p.MediaID != 0 {
+		if p.MediaMBID == "" || p.MediaID != "" {
 			return fmt.Errorf(
 				"%w: album needs a media_mbid and no media_id", ErrInvalidRequest,
 			)
@@ -207,7 +207,7 @@ func validate(p CreateParams) error {
 			)
 		}
 	case "movie", "tvshow", "book", "book_series":
-		if p.MediaID == 0 || p.MediaMBID != "" {
+		if p.MediaID == "" || p.MediaMBID != "" {
 			return fmt.Errorf(
 				"%w: %s needs a media_id and no media_mbid",
 				ErrInvalidRequest, p.MediaType,
@@ -228,7 +228,7 @@ func (s *Service) Create(
 	ctx, span := tracer.Start(ctx, "request.create",
 		trace.WithAttributes(
 			attribute.String("media.type", p.MediaType),
-			attribute.Int("media.id", int(p.MediaID)),
+			attribute.String("media.id", p.MediaID),
 			attribute.String("media.mbid", p.MediaMBID),
 		))
 	defer span.End()

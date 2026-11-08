@@ -566,11 +566,11 @@ func toAPIImportScanBook(sb *ent.ImportScanBook) ImportScanBook {
 		y := sb.ParsedYear
 		out.ParsedYear = &y
 	}
-	if sb.BookHardcoverID != 0 {
+	if sb.BookHardcoverID != "" {
 		id := sb.BookHardcoverID
 		out.BookHardcoverId = &id
 	}
-	if sb.DecisionBookHardcoverID != 0 {
+	if sb.DecisionBookHardcoverID != "" {
 		id := sb.DecisionBookHardcoverID
 		out.DecisionBookHardcoverId = &id
 	}

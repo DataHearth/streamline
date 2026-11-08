@@ -7,7 +7,7 @@ import (
 )
 
 type MovieResult struct {
-	TMDBID        uint32
+	TMDBID        string
 	Title         string
 	OriginalTitle string
 	Year          uint16
@@ -19,8 +19,8 @@ type CastMember struct {
 	// TMDBID and TVDBID are each scoped to their own provider's id space, so
 	// neither is globally unique on its own; exactly one is set depending on
 	// which provider supplied the entry.
-	TMDBID     uint32
-	TVDBID     uint32
+	TMDBID     string
+	TVDBID     string
 	Name       string
 	Character  string
 	ProfileURL string
@@ -71,18 +71,18 @@ type Provider interface {
 		query string,
 		year uint16,
 	) ([]MovieResult, error)
-	GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, error)
+	GetMovie(ctx context.Context, tmdbID string) (*MovieDetails, error)
 	// GetPerson returns the biographical record behind a movie cast entry's
 	// TMDBID.
-	GetPerson(ctx context.Context, tmdbID uint32) (*PersonDetails, error)
+	GetPerson(ctx context.Context, tmdbID string) (*PersonDetails, error)
 	// Recommendations returns TMDB's "recommended" movies for the given
 	// title, capped and ordered as TMDB returns them.
-	Recommendations(ctx context.Context, tmdbID uint32) ([]MovieResult, error)
+	Recommendations(ctx context.Context, tmdbID string) ([]MovieResult, error)
 	// FetchDigitalRelease returns the earliest digital-type (TMDB type 4)
 	// release date for the given region, or (nil, nil) when none is published.
 	FetchDigitalRelease(
 		ctx context.Context,
-		tmdbID uint32,
+		tmdbID string,
 		region string,
 	) (*time.Time, error)
 }
@@ -115,7 +115,7 @@ func CoverArtURL(releaseGroupMBID string) string {
 
 // TVResult is a single TVDB search hit.
 type TVResult struct {
-	TVDBID        uint32
+	TVDBID        string
 	Title         string
 	OriginalTitle string // untranslated TVDB name; blank when no language override
 	Year          uint16
@@ -171,13 +171,13 @@ type TVDetails struct {
 // TVProvider fetches TV-series metadata. Implemented by *TVDB.
 type TVProvider interface {
 	SearchSeries(ctx context.Context, query string) ([]TVResult, error)
-	GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
+	GetSeries(ctx context.Context, tvdbID string) (*TVDetails, error)
 	// GetSeriesCast returns top-billed actors for a series. Cheaper than
 	// GetSeries: one extended-record fetch, no episode pagination.
-	GetSeriesCast(ctx context.Context, tvdbID uint32) ([]CastMember, error)
+	GetSeriesCast(ctx context.Context, tvdbID string) ([]CastMember, error)
 	// GetPerson returns the biographical record behind a series cast entry's
 	// TVDBID.
-	GetPerson(ctx context.Context, tvdbID uint32) (*PersonDetails, error)
+	GetPerson(ctx context.Context, tvdbID string) (*PersonDetails, error)
 }
 
 // ArtistResult is a single MusicBrainz artist search hit.

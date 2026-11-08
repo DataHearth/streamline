@@ -33,7 +33,7 @@ var _ = Describe("PurgeOldEvents", Label("integration", "events"), func() {
 	It("deletes events older than the retention window", func() {
 		movie := client.Movie.Create().
 			SetTitle("Old").
-			SetOriginalTitle("Old").SetYear(2020).SetTmdbID(1).SaveX(ctx)
+			SetOriginalTitle("Old").SetYear(2020).SetTmdbID("1").SaveX(ctx)
 
 		old := client.MediaEvent.Create().
 			SetType(mediaevent.Type(TypeGrabbed)).
@@ -59,7 +59,7 @@ var _ = Describe("PurgeOldEvents", Label("integration", "events"), func() {
 	It("returns 0 when nothing is past retention", func() {
 		movie := client.Movie.Create().
 			SetTitle("Fresh").
-			SetOriginalTitle("Fresh").SetYear(2025).SetTmdbID(2).SaveX(ctx)
+			SetOriginalTitle("Fresh").SetYear(2025).SetTmdbID("2").SaveX(ctx)
 		client.MediaEvent.Create().
 			SetType(mediaevent.Type(TypeImported)).
 			SetMovieID(movie.ID).

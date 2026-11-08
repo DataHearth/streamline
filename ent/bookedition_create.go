@@ -50,7 +50,7 @@ func (_c *BookEditionCreate) SetNillableUpdateTime(v *time.Time) *BookEditionCre
 }
 
 // SetHardcoverEditionID sets the "hardcover_edition_id" field.
-func (_c *BookEditionCreate) SetHardcoverEditionID(v uint32) *BookEditionCreate {
+func (_c *BookEditionCreate) SetHardcoverEditionID(v string) *BookEditionCreate {
 	_c.mutation.SetHardcoverEditionID(v)
 	return _c
 }
@@ -302,6 +302,11 @@ func (_c *BookEditionCreate) check() error {
 	if _, ok := _c.mutation.HardcoverEditionID(); !ok {
 		return &ValidationError{Name: "hardcover_edition_id", err: errors.New(`ent: missing required field "BookEdition.hardcover_edition_id"`)}
 	}
+	if v, ok := _c.mutation.HardcoverEditionID(); ok {
+		if err := bookedition.HardcoverEditionIDValidator(v); err != nil {
+			return &ValidationError{Name: "hardcover_edition_id", err: fmt.Errorf(`ent: validator failed for field "BookEdition.hardcover_edition_id": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Language(); !ok {
 		return &ValidationError{Name: "language", err: errors.New(`ent: missing required field "BookEdition.language"`)}
 	}
@@ -382,7 +387,7 @@ func (_c *BookEditionCreate) createSpec() (*BookEdition, *sqlgraph.CreateSpec) {
 		_node.UpdateTime = value
 	}
 	if value, ok := _c.mutation.HardcoverEditionID(); ok {
-		_spec.SetField(bookedition.FieldHardcoverEditionID, field.TypeUint32, value)
+		_spec.SetField(bookedition.FieldHardcoverEditionID, field.TypeString, value)
 		_node.HardcoverEditionID = value
 	}
 	if value, ok := _c.mutation.Language(); ok {

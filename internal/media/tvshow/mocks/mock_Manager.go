@@ -51,7 +51,7 @@ func (_m *MockManager) EXPECT() *MockManager_Expecter {
 }
 
 // Add provides a mock function for the type MockManager
-func (_mock *MockManager) Add(ctx context.Context, tvdbID uint32, qualityProfile string) (*ent.TVShow, error) {
+func (_mock *MockManager) Add(ctx context.Context, tvdbID string, qualityProfile string) (*ent.TVShow, error) {
 	ret := _mock.Called(ctx, tvdbID, qualityProfile)
 
 	if len(ret) == 0 {
@@ -60,17 +60,17 @@ func (_mock *MockManager) Add(ctx context.Context, tvdbID uint32, qualityProfile
 
 	var r0 *ent.TVShow
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (*ent.TVShow, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*ent.TVShow, error)); ok {
 		return returnFunc(ctx, tvdbID, qualityProfile)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) *ent.TVShow); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *ent.TVShow); ok {
 		r0 = returnFunc(ctx, tvdbID, qualityProfile)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.TVShow)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
 		r1 = returnFunc(ctx, tvdbID, qualityProfile)
 	} else {
 		r1 = ret.Error(1)
@@ -85,21 +85,21 @@ type MockManager_Add_Call struct {
 
 // Add is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tvdbID uint32
+//   - tvdbID string
 //   - qualityProfile string
 func (_e *MockManager_Expecter) Add(ctx any, tvdbID any, qualityProfile any) *MockManager_Add_Call {
 	return &MockManager_Add_Call{Call: _e.mock.On("Add", ctx, tvdbID, qualityProfile)}
 }
 
-func (_c *MockManager_Add_Call) Run(run func(ctx context.Context, tvdbID uint32, qualityProfile string)) *MockManager_Add_Call {
+func (_c *MockManager_Add_Call) Run(run func(ctx context.Context, tvdbID string, qualityProfile string)) *MockManager_Add_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -119,7 +119,7 @@ func (_c *MockManager_Add_Call) Return(tVShow *ent.TVShow, err error) *MockManag
 	return _c
 }
 
-func (_c *MockManager_Add_Call) RunAndReturn(run func(ctx context.Context, tvdbID uint32, qualityProfile string) (*ent.TVShow, error)) *MockManager_Add_Call {
+func (_c *MockManager_Add_Call) RunAndReturn(run func(ctx context.Context, tvdbID string, qualityProfile string) (*ent.TVShow, error)) *MockManager_Add_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -899,7 +899,7 @@ func (_c *MockManager_RefreshOne_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // Reidentify provides a mock function for the type MockManager
-func (_mock *MockManager) Reidentify(ctx context.Context, id uint32, tvdbID uint32) (*ent.TVShow, []string, error) {
+func (_mock *MockManager) Reidentify(ctx context.Context, id uint32, tvdbID string) (*ent.TVShow, []string, error) {
 	ret := _mock.Called(ctx, id, tvdbID)
 
 	if len(ret) == 0 {
@@ -909,24 +909,24 @@ func (_mock *MockManager) Reidentify(ctx context.Context, id uint32, tvdbID uint
 	var r0 *ent.TVShow
 	var r1 []string
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) (*ent.TVShow, []string, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (*ent.TVShow, []string, error)); ok {
 		return returnFunc(ctx, id, tvdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) *ent.TVShow); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) *ent.TVShow); ok {
 		r0 = returnFunc(ctx, id, tvdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.TVShow)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) []string); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) []string); ok {
 		r1 = returnFunc(ctx, id, tvdbID)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, uint32) error); ok {
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, string) error); ok {
 		r2 = returnFunc(ctx, id, tvdbID)
 	} else {
 		r2 = ret.Error(2)
@@ -942,12 +942,12 @@ type MockManager_Reidentify_Call struct {
 // Reidentify is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-//   - tvdbID uint32
+//   - tvdbID string
 func (_e *MockManager_Expecter) Reidentify(ctx any, id any, tvdbID any) *MockManager_Reidentify_Call {
 	return &MockManager_Reidentify_Call{Call: _e.mock.On("Reidentify", ctx, id, tvdbID)}
 }
 
-func (_c *MockManager_Reidentify_Call) Run(run func(ctx context.Context, id uint32, tvdbID uint32)) *MockManager_Reidentify_Call {
+func (_c *MockManager_Reidentify_Call) Run(run func(ctx context.Context, id uint32, tvdbID string)) *MockManager_Reidentify_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -957,9 +957,9 @@ func (_c *MockManager_Reidentify_Call) Run(run func(ctx context.Context, id uint
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		var arg2 uint32
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uint32)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -975,7 +975,7 @@ func (_c *MockManager_Reidentify_Call) Return(tVShow *ent.TVShow, strings []stri
 	return _c
 }
 
-func (_c *MockManager_Reidentify_Call) RunAndReturn(run func(ctx context.Context, id uint32, tvdbID uint32) (*ent.TVShow, []string, error)) *MockManager_Reidentify_Call {
+func (_c *MockManager_Reidentify_Call) RunAndReturn(run func(ctx context.Context, id uint32, tvdbID string) (*ent.TVShow, []string, error)) *MockManager_Reidentify_Call {
 	_c.Call.Return(run)
 	return _c
 }

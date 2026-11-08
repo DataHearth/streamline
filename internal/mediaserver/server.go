@@ -15,7 +15,7 @@ type Server interface {
 	MovieDeepLink(
 		ctx context.Context,
 		hintSection string,
-		tmdbID uint32,
+		tmdbID string,
 		title string,
 		year uint16,
 	) (string, error)
@@ -26,7 +26,7 @@ type Server interface {
 	TVShowDeepLink(
 		ctx context.Context,
 		hintSection string,
-		tvdbID uint32,
+		tvdbID string,
 		title string,
 		year uint16,
 	) (string, error)

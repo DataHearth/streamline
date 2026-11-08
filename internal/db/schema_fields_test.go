@@ -25,7 +25,7 @@ var _ = Describe("TV schema fields", Label("unit", "db"), func() {
 		show := client.TVShow.Create().
 			SetTitle("The Black Sea").
 			SetYear(2023).
-			SetTvdbID(123456).
+			SetTvdbID("123456").
 			SetSeriesStatus(tvshow.SeriesStatusContinuing).
 			SetType(tvshow.TypeAnime).
 			SetNetwork("Halcyon").
@@ -44,7 +44,7 @@ var _ = Describe("TV schema fields", Label("unit", "db"), func() {
 		DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
 
 		show := client.TVShow.Create().
-			SetTitle("X").SetYear(2020).SetTvdbID(1).SaveX(ctx)
+			SetTitle("X").SetYear(2020).SetTvdbID("1").SaveX(ctx)
 		season := client.Season.Create().
 			SetNumber(1).SetTvShow(show).SaveX(ctx)
 		ep := client.Episode.Create().
@@ -71,8 +71,8 @@ var _ = Describe("Person and credit schema fields", Label("unit", "db"), func() 
 
 		p := client.Person.Create().SetName("Ana Vidal").SaveX(ctx)
 
-		Expect(p.TmdbID).To(BeZero())
-		Expect(p.TvdbID).To(BeZero())
+		Expect(p.TmdbID).To(BeEmpty())
+		Expect(p.TvdbID).To(BeEmpty())
 		Expect(p.ProfileURL).To(BeEmpty())
 		Expect(p.Biography).To(BeEmpty())
 		Expect(p.KnownFor).To(BeEmpty())
@@ -133,8 +133,8 @@ var _ = Describe("Person and credit schema fields", Label("unit", "db"), func() 
 			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
 
-			client.Person.Create().SetName("Ana Vidal").SetTmdbID(4021).SaveX(ctx)
-			client.Person.Create().SetName("Ilya Koval").SetTvdbID(9911).SaveX(ctx)
+			client.Person.Create().SetName("Ana Vidal").SetTmdbID("4021").SaveX(ctx)
+			client.Person.Create().SetName("Ilya Koval").SetTvdbID("9911").SaveX(ctx)
 
 			Expect(client.Person.Query().CountX(ctx)).To(Equal(2))
 		},
@@ -147,13 +147,13 @@ var _ = Describe("Person and credit schema fields", Label("unit", "db"), func() 
 
 		person := client.Person.Create().
 			SetName("Ana Vidal").
-			SetTmdbID(4021).
+			SetTmdbID("4021").
 			SaveX(ctx)
 		movie := client.Movie.Create().
 			SetTitle("The Long Wait").SetOriginalTitle("The Long Wait").
-			SetYear(2024).SetTmdbID(700).SaveX(ctx)
+			SetYear(2024).SetTmdbID("700").SaveX(ctx)
 		show := client.TVShow.Create().
-			SetTitle("The Black Sea").SetYear(2023).SetTvdbID(123456).SaveX(ctx)
+			SetTitle("The Black Sea").SetYear(2023).SetTvdbID("123456").SaveX(ctx)
 
 		movieCredit := client.Credit.Create().
 			SetPerson(person).
@@ -183,7 +183,7 @@ var _ = Describe("Person and credit schema fields", Label("unit", "db"), func() 
 
 		movie := client.Movie.Create().
 			SetTitle("The Long Wait").SetOriginalTitle("The Long Wait").
-			SetYear(2024).SetTmdbID(700).SaveX(ctx)
+			SetYear(2024).SetTmdbID("700").SaveX(ctx)
 
 		_, err = client.Credit.Create().SetMovie(movie).Save(ctx)
 		Expect(err).To(HaveOccurred())

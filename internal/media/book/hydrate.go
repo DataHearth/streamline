@@ -163,7 +163,7 @@ func (s *Service) hydrateStubs(ctx context.Context, stubs []*ent.Book) (int, err
 			taken[slot{p.Edges.Series.ID, *p.SeriesPosition}] = true
 		}
 	}
-	ids := make([]uint32, 0, len(stubs))
+	ids := make([]string, 0, len(stubs))
 	candidates := map[uint32][]metadata.SeriesVolumeRef{}
 	for _, b := range stubs {
 		ids = append(ids, b.HardcoverID)
@@ -181,11 +181,11 @@ func (s *Service) hydrateStubs(ctx context.Context, stubs []*ent.Book) (int, err
 	if err != nil {
 		return 0, err
 	}
-	byID := make(map[uint32]*metadata.BookRecord, len(recs))
+	byID := make(map[string]*metadata.BookRecord, len(recs))
 	for _, r := range recs {
 		byID[r.HardcoverID] = r
 	}
-	won := map[uint32]bool{}
+	won := map[string]bool{}
 	for _, refs := range candidates {
 		for id := range positionWinners(orderedVolumes(refs), byID) {
 			won[id] = true

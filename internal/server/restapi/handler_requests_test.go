@@ -79,7 +79,7 @@ var _ = Describe("Handler: Requests", Label("unit", "server", "request"), func()
 			app.requests.EXPECT().
 				Create(mock.Anything, mock.MatchedBy(func(p requestsvc.CreateParams) bool {
 					return p.MediaType == "artist" && p.MediaMBID == "mbid-1" &&
-						p.MediaID == 0 && p.QualityProfile == "Lossless"
+						p.MediaID == "" && p.QualityProfile == "Lossless"
 				})).
 				Return(&ent.Request{ID: 1, MediaType: "artist", MediaMbid: "mbid-1"}, nil).
 				Once()
@@ -101,13 +101,13 @@ var _ = Describe("Handler: Requests", Label("unit", "server", "request"), func()
 		It("creates a series request by Hardcover id", func() {
 			app.requests.EXPECT().
 				Create(mock.Anything, mock.MatchedBy(func(p requestsvc.CreateParams) bool {
-					return p.MediaType == "book_series" && p.MediaID == 77
+					return p.MediaType == "book_series" && p.MediaID == "77"
 				})).
-				Return(&ent.Request{ID: 2, MediaType: "book_series", MediaID: 77}, nil).
+				Return(&ent.Request{ID: 2, MediaType: "book_series", MediaID: "77"}, nil).
 				Once()
 
 			resp := send(http.MethodPost, "/api/v1/requests", app.requestOnlyKey,
-				`{"media_type":"book_series","media_id":77,"title":"S"}`)
+				`{"media_type":"book_series","media_id":"77","title":"S"}`)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 		})
@@ -117,7 +117,7 @@ var _ = Describe("Handler: Requests", Label("unit", "server", "request"), func()
 				Return(nil, requestsvc.ErrDuplicate).Once()
 
 			resp := send(http.MethodPost, "/api/v1/requests", app.requestOnlyKey,
-				`{"media_type":"book","media_id":5,"title":"B"}`)
+				`{"media_type":"book","media_id":"5","title":"B"}`)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 		})
@@ -127,7 +127,7 @@ var _ = Describe("Handler: Requests", Label("unit", "server", "request"), func()
 				Create(mock.Anything, mock.MatchedBy(func(p requestsvc.CreateParams) bool {
 					return p.MediaType == "album" && p.MediaMBID == "rg-1" &&
 						p.ArtistMBID == "a-1" && p.ArtistName == "Nirvana" &&
-						p.MediaID == 0
+						p.MediaID == ""
 				})).
 				Return(&ent.Request{
 					ID: 2, MediaType: "album", MediaMbid: "rg-1", Title: "Nevermind",
@@ -175,7 +175,7 @@ var _ = Describe("Handler: Requests", Label("unit", "server", "request"), func()
 		It("approves with the reviewer's profile", func() {
 			app.requests.EXPECT().
 				Approve(mock.Anything, uint32(4), app.memberID, "Retail").
-				Return(&ent.Request{ID: 4, MediaType: "book", MediaID: 9}, nil).
+				Return(&ent.Request{ID: 4, MediaType: "book", MediaID: "9"}, nil).
 				Once()
 
 			resp := approve(`{"quality_profile":"Retail"}`)

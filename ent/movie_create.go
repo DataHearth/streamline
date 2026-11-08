@@ -127,7 +127,7 @@ func (_c *MovieCreate) SetNillableMonitored(v *bool) *MovieCreate {
 }
 
 // SetTmdbID sets the "tmdb_id" field.
-func (_c *MovieCreate) SetTmdbID(v uint32) *MovieCreate {
+func (_c *MovieCreate) SetTmdbID(v string) *MovieCreate {
 	_c.mutation.SetTmdbID(v)
 	return _c
 }
@@ -428,6 +428,11 @@ func (_c *MovieCreate) check() error {
 	if _, ok := _c.mutation.TmdbID(); !ok {
 		return &ValidationError{Name: "tmdb_id", err: errors.New(`ent: missing required field "Movie.tmdb_id"`)}
 	}
+	if v, ok := _c.mutation.TmdbID(); ok {
+		if err := movie.TmdbIDValidator(v); err != nil {
+			return &ValidationError{Name: "tmdb_id", err: fmt.Errorf(`ent: validator failed for field "Movie.tmdb_id": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.GrabFailures(); !ok {
 		return &ValidationError{Name: "grab_failures", err: errors.New(`ent: missing required field "Movie.grab_failures"`)}
 	}
@@ -500,7 +505,7 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 		_node.Monitored = value
 	}
 	if value, ok := _c.mutation.TmdbID(); ok {
-		_spec.SetField(movie.FieldTmdbID, field.TypeUint32, value)
+		_spec.SetField(movie.FieldTmdbID, field.TypeString, value)
 		_node.TmdbID = value
 	}
 	if value, ok := _c.mutation.LastSearchAt(); ok {

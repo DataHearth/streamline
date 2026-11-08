@@ -33,7 +33,7 @@ type ImportScanShow struct {
 	// Classification holds the value of the "classification" field.
 	Classification importscanshow.Classification `json:"classification,omitempty"`
 	// TvdbID holds the value of the "tvdb_id" field.
-	TvdbID *uint32 `json:"tvdb_id,omitempty"`
+	TvdbID *string `json:"tvdb_id,omitempty"`
 	// Candidates holds the value of the "candidates" field.
 	Candidates []schema.ScannedShowCandidate `json:"candidates,omitempty"`
 	// ExistingTvshowID holds the value of the "existing_tvshow_id" field.
@@ -43,7 +43,7 @@ type ImportScanShow struct {
 	// Decision holds the value of the "decision" field.
 	Decision importscanshow.Decision `json:"decision,omitempty"`
 	// DecisionTvdbID holds the value of the "decision_tvdb_id" field.
-	DecisionTvdbID *uint32 `json:"decision_tvdb_id,omitempty"`
+	DecisionTvdbID *string `json:"decision_tvdb_id,omitempty"`
 	// Outcome holds the value of the "outcome" field.
 	Outcome importscanshow.Outcome `json:"outcome,omitempty"`
 	// OutcomeMessage holds the value of the "outcome_message" field.
@@ -84,9 +84,9 @@ func (*ImportScanShow) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case importscanshow.FieldCandidates:
 			values[i] = new([]byte)
-		case importscanshow.FieldID, importscanshow.FieldParsedYear, importscanshow.FieldTvdbID, importscanshow.FieldExistingTvshowID, importscanshow.FieldFileCount, importscanshow.FieldDecisionTvdbID, importscanshow.FieldCreatedTvshowID:
+		case importscanshow.FieldID, importscanshow.FieldParsedYear, importscanshow.FieldExistingTvshowID, importscanshow.FieldFileCount, importscanshow.FieldCreatedTvshowID:
 			values[i] = new(sql.NullInt64)
-		case importscanshow.FieldFolderPath, importscanshow.FieldParsedTitle, importscanshow.FieldClassification, importscanshow.FieldDecision, importscanshow.FieldOutcome, importscanshow.FieldOutcomeMessage:
+		case importscanshow.FieldFolderPath, importscanshow.FieldParsedTitle, importscanshow.FieldClassification, importscanshow.FieldTvdbID, importscanshow.FieldDecision, importscanshow.FieldDecisionTvdbID, importscanshow.FieldOutcome, importscanshow.FieldOutcomeMessage:
 			values[i] = new(sql.NullString)
 		case importscanshow.FieldCreateTime, importscanshow.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -151,11 +151,11 @@ func (_m *ImportScanShow) assignValues(columns []string, values []any) error {
 				_m.Classification = importscanshow.Classification(value.String)
 			}
 		case importscanshow.FieldTvdbID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tvdb_id", values[i])
 			} else if value.Valid {
-				_m.TvdbID = new(uint32)
-				*_m.TvdbID = uint32(value.Int64)
+				_m.TvdbID = new(string)
+				*_m.TvdbID = value.String
 			}
 		case importscanshow.FieldCandidates:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -185,11 +185,11 @@ func (_m *ImportScanShow) assignValues(columns []string, values []any) error {
 				_m.Decision = importscanshow.Decision(value.String)
 			}
 		case importscanshow.FieldDecisionTvdbID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field decision_tvdb_id", values[i])
 			} else if value.Valid {
-				_m.DecisionTvdbID = new(uint32)
-				*_m.DecisionTvdbID = uint32(value.Int64)
+				_m.DecisionTvdbID = new(string)
+				*_m.DecisionTvdbID = value.String
 			}
 		case importscanshow.FieldOutcome:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -280,7 +280,7 @@ func (_m *ImportScanShow) String() string {
 	builder.WriteString(", ")
 	if v := _m.TvdbID; v != nil {
 		builder.WriteString("tvdb_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
+		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
 	builder.WriteString("candidates=")
@@ -299,7 +299,7 @@ func (_m *ImportScanShow) String() string {
 	builder.WriteString(", ")
 	if v := _m.DecisionTvdbID; v != nil {
 		builder.WriteString("decision_tvdb_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
+		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
 	builder.WriteString("outcome=")

@@ -48,10 +48,10 @@ var _ = Describe("ImportScanBook store", Label("integration", "db"), func() {
 					ParsedAuthor:    "Brandon Sanderson",
 					ParsedISBN:      "9780765311771",
 					Classification:  entimportscanbook.ClassificationAmbiguous,
-					BookHardcoverID: 1,
+					BookHardcoverID: "1",
 					Candidates: []schema.ScannedBookCandidate{
 						{
-							BookHardcoverID: 1,
+							BookHardcoverID: "1",
 							Title:           "Elantris",
 							Author:          "Sanderson",
 							Year:            2005,
@@ -76,7 +76,7 @@ var _ = Describe("ImportScanBook store", Label("integration", "db"), func() {
 	Describe("BookHardcoverIndex", func() {
 		It("includes a book for the slot it has a file in, not the other", func() {
 			b, err := store.CreateBook(ctx, BookSeed{
-				HardcoverID: 1, Title: "Elantris", Kind: "novel",
+				HardcoverID: "1", Title: "Elantris", Kind: "novel",
 				PreferredLanguage: "en",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -88,7 +88,7 @@ var _ = Describe("ImportScanBook store", Label("integration", "db"), func() {
 
 			ebook, err := store.BookHardcoverIndex(ctx, "ebook")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ebook).To(HaveKeyWithValue(uint32(1), b.ID))
+			Expect(ebook).To(HaveKeyWithValue("1", b.ID))
 			audio, err := store.BookHardcoverIndex(ctx, "audiobook")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(audio).To(BeEmpty())
@@ -235,14 +235,14 @@ var _ = Describe("ImportScanBook listing", Label("integration", "db"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		id := rows[0].ID
 
-		hc := uint32(42)
+		hc := "42"
 		Expect(store.UpdateImportScanBookDecision(
 			ctx, scan.ID, id, entimportscanbook.DecisionAccept, &hc,
 		)).To(Succeed())
 		got, err := store.FindImportScanBook(ctx, scan.ID, id)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(got.Decision).To(Equal(entimportscanbook.DecisionAccept))
-		Expect(got.DecisionBookHardcoverID).To(Equal(uint32(42)))
+		Expect(got.DecisionBookHardcoverID).To(Equal("42"))
 
 		Expect(store.UpdateImportScanBookDecision(
 			ctx, scan.ID, id, entimportscanbook.DecisionSkip, nil,

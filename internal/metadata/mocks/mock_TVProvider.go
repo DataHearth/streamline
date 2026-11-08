@@ -48,7 +48,7 @@ func (_m *MockTVProvider) EXPECT() *MockTVProvider_Expecter {
 }
 
 // GetPerson provides a mock function for the type MockTVProvider
-func (_mock *MockTVProvider) GetPerson(ctx context.Context, tvdbID uint32) (*metadata.PersonDetails, error) {
+func (_mock *MockTVProvider) GetPerson(ctx context.Context, tvdbID string) (*metadata.PersonDetails, error) {
 	ret := _mock.Called(ctx, tvdbID)
 
 	if len(ret) == 0 {
@@ -57,17 +57,17 @@ func (_mock *MockTVProvider) GetPerson(ctx context.Context, tvdbID uint32) (*met
 
 	var r0 *metadata.PersonDetails
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*metadata.PersonDetails, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*metadata.PersonDetails, error)); ok {
 		return returnFunc(ctx, tvdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *metadata.PersonDetails); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *metadata.PersonDetails); ok {
 		r0 = returnFunc(ctx, tvdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*metadata.PersonDetails)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, tvdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -82,20 +82,20 @@ type MockTVProvider_GetPerson_Call struct {
 
 // GetPerson is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tvdbID uint32
+//   - tvdbID string
 func (_e *MockTVProvider_Expecter) GetPerson(ctx any, tvdbID any) *MockTVProvider_GetPerson_Call {
 	return &MockTVProvider_GetPerson_Call{Call: _e.mock.On("GetPerson", ctx, tvdbID)}
 }
 
-func (_c *MockTVProvider_GetPerson_Call) Run(run func(ctx context.Context, tvdbID uint32)) *MockTVProvider_GetPerson_Call {
+func (_c *MockTVProvider_GetPerson_Call) Run(run func(ctx context.Context, tvdbID string)) *MockTVProvider_GetPerson_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -110,13 +110,13 @@ func (_c *MockTVProvider_GetPerson_Call) Return(personDetails *metadata.PersonDe
 	return _c
 }
 
-func (_c *MockTVProvider_GetPerson_Call) RunAndReturn(run func(ctx context.Context, tvdbID uint32) (*metadata.PersonDetails, error)) *MockTVProvider_GetPerson_Call {
+func (_c *MockTVProvider_GetPerson_Call) RunAndReturn(run func(ctx context.Context, tvdbID string) (*metadata.PersonDetails, error)) *MockTVProvider_GetPerson_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetSeries provides a mock function for the type MockTVProvider
-func (_mock *MockTVProvider) GetSeries(ctx context.Context, tvdbID uint32) (*metadata.TVDetails, error) {
+func (_mock *MockTVProvider) GetSeries(ctx context.Context, tvdbID string) (*metadata.TVDetails, error) {
 	ret := _mock.Called(ctx, tvdbID)
 
 	if len(ret) == 0 {
@@ -125,17 +125,17 @@ func (_mock *MockTVProvider) GetSeries(ctx context.Context, tvdbID uint32) (*met
 
 	var r0 *metadata.TVDetails
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*metadata.TVDetails, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*metadata.TVDetails, error)); ok {
 		return returnFunc(ctx, tvdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *metadata.TVDetails); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *metadata.TVDetails); ok {
 		r0 = returnFunc(ctx, tvdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*metadata.TVDetails)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, tvdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -150,20 +150,20 @@ type MockTVProvider_GetSeries_Call struct {
 
 // GetSeries is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tvdbID uint32
+//   - tvdbID string
 func (_e *MockTVProvider_Expecter) GetSeries(ctx any, tvdbID any) *MockTVProvider_GetSeries_Call {
 	return &MockTVProvider_GetSeries_Call{Call: _e.mock.On("GetSeries", ctx, tvdbID)}
 }
 
-func (_c *MockTVProvider_GetSeries_Call) Run(run func(ctx context.Context, tvdbID uint32)) *MockTVProvider_GetSeries_Call {
+func (_c *MockTVProvider_GetSeries_Call) Run(run func(ctx context.Context, tvdbID string)) *MockTVProvider_GetSeries_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -178,13 +178,13 @@ func (_c *MockTVProvider_GetSeries_Call) Return(tVDetails *metadata.TVDetails, e
 	return _c
 }
 
-func (_c *MockTVProvider_GetSeries_Call) RunAndReturn(run func(ctx context.Context, tvdbID uint32) (*metadata.TVDetails, error)) *MockTVProvider_GetSeries_Call {
+func (_c *MockTVProvider_GetSeries_Call) RunAndReturn(run func(ctx context.Context, tvdbID string) (*metadata.TVDetails, error)) *MockTVProvider_GetSeries_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetSeriesCast provides a mock function for the type MockTVProvider
-func (_mock *MockTVProvider) GetSeriesCast(ctx context.Context, tvdbID uint32) ([]metadata.CastMember, error) {
+func (_mock *MockTVProvider) GetSeriesCast(ctx context.Context, tvdbID string) ([]metadata.CastMember, error) {
 	ret := _mock.Called(ctx, tvdbID)
 
 	if len(ret) == 0 {
@@ -193,17 +193,17 @@ func (_mock *MockTVProvider) GetSeriesCast(ctx context.Context, tvdbID uint32) (
 
 	var r0 []metadata.CastMember
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]metadata.CastMember, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]metadata.CastMember, error)); ok {
 		return returnFunc(ctx, tvdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []metadata.CastMember); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []metadata.CastMember); ok {
 		r0 = returnFunc(ctx, tvdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]metadata.CastMember)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, tvdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -218,20 +218,20 @@ type MockTVProvider_GetSeriesCast_Call struct {
 
 // GetSeriesCast is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tvdbID uint32
+//   - tvdbID string
 func (_e *MockTVProvider_Expecter) GetSeriesCast(ctx any, tvdbID any) *MockTVProvider_GetSeriesCast_Call {
 	return &MockTVProvider_GetSeriesCast_Call{Call: _e.mock.On("GetSeriesCast", ctx, tvdbID)}
 }
 
-func (_c *MockTVProvider_GetSeriesCast_Call) Run(run func(ctx context.Context, tvdbID uint32)) *MockTVProvider_GetSeriesCast_Call {
+func (_c *MockTVProvider_GetSeriesCast_Call) Run(run func(ctx context.Context, tvdbID string)) *MockTVProvider_GetSeriesCast_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -246,7 +246,7 @@ func (_c *MockTVProvider_GetSeriesCast_Call) Return(castMembers []metadata.CastM
 	return _c
 }
 
-func (_c *MockTVProvider_GetSeriesCast_Call) RunAndReturn(run func(ctx context.Context, tvdbID uint32) ([]metadata.CastMember, error)) *MockTVProvider_GetSeriesCast_Call {
+func (_c *MockTVProvider_GetSeriesCast_Call) RunAndReturn(run func(ctx context.Context, tvdbID string) ([]metadata.CastMember, error)) *MockTVProvider_GetSeriesCast_Call {
 	_c.Call.Return(run)
 	return _c
 }

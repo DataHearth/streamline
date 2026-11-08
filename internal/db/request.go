@@ -10,7 +10,7 @@ import (
 
 type CreateRequestParams struct {
 	MediaType      string
-	MediaID        uint32
+	MediaID        string
 	MediaMBID      string
 	Title          string
 	RequesterID    uint32
@@ -37,10 +37,15 @@ func (db *DB) CreateRequest(
 ) (*ent.Request, error) {
 	c := db.client.Request.Create().
 		SetMediaType(request.MediaType(p.MediaType)).
-		SetMediaID(p.MediaID).
 		SetTitle(p.Title).
 		SetRequesterID(p.RequesterID).
 		SetQualityProfile(p.QualityProfile)
+	// An unset id stays NULL, like the MBIDs below: artist and album requests
+	// carry none, and NULL is outside both partial unique indexes whatever
+	// they compare against.
+	if p.MediaID != "" {
+		c = c.SetMediaID(p.MediaID)
+	}
 	if p.MediaMBID != "" {
 		c = c.SetMediaMbid(p.MediaMBID)
 	}
@@ -94,7 +99,7 @@ func (db *DB) MarkRequestAvailable(ctx context.Context, id uint32) error {
 func (db *DB) FindActiveRequest(
 	ctx context.Context,
 	mediaType string,
-	mediaID uint32,
+	mediaID string,
 ) (*ent.Request, error) {
 	row, err := db.client.Request.Query().
 		Where(
@@ -194,7 +199,7 @@ func (db *DB) ReopenRequest(ctx context.Context, id uint32) error {
 func (db *DB) MarkRequestsAvailable(
 	ctx context.Context,
 	mediaType string,
-	mediaID uint32,
+	mediaID string,
 ) error {
 	_, err := db.client.Request.Update().
 		Where(

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -28,33 +30,44 @@ import (
 
 func hardcoverBook(id uint32, title string) *metadata.BookRecord {
 	return &metadata.BookRecord{
-		HardcoverID: id,
+		HardcoverID: providerid.Format(id),
 		Title:       title,
 		Kind:        metadata.BookKindNovel,
 		ReleaseYear: 2005,
 		Credits: []metadata.BookCredit{{
-			AuthorHardcoverID: 10, Name: "Author", Role: metadata.RoleAuthor,
+			AuthorHardcoverID: "10", Name: "Author", Role: metadata.RoleAuthor,
 		}},
 		Editions: []metadata.EditionRecord{
 			{
-				HardcoverID: id*10 + 1, Language: "en", Title: title,
-				Format: metadata.FormatEbook, Popularity: 5,
+				HardcoverID: providerid.Format(
+					id*10 + 1,
+				),
+				Language:   "en",
+				Title:      title,
+				Format:     metadata.FormatEbook,
+				Popularity: 5,
 			},
 			{
-				HardcoverID: id*10 + 2, Language: "en", Title: title,
-				Format: metadata.FormatAudiobook, Popularity: 3,
+				HardcoverID: providerid.Format(
+					id*10 + 2,
+				),
+				Language:   "en",
+				Title:      title,
+				Format:     metadata.FormatAudiobook,
+				Popularity: 3,
 			},
 		},
 	}
 }
 
+// idsOf matches a request for exactly these Hardcover ids, in order.
 func idsOf(want ...uint32) any {
-	return mock.MatchedBy(func(got []uint32) bool {
+	return mock.MatchedBy(func(got []string) bool {
 		if len(got) != len(want) {
 			return false
 		}
 		for i := range got {
-			if got[i] != want[i] {
+			if got[i] != providerid.Format(want[i]) {
 				return false
 			}
 		}
@@ -153,7 +166,7 @@ var _ = Describe(
 				SetFilePaths(r.paths).
 				SetSlot(r.slot).
 				SetClassification(r.class).
-				SetBookHardcoverID(r.bookHC).
+				SetBookHardcoverID(providerid.Format(r.bookHC)).
 				SetNillableExistingBookID(r.existingID)
 			if r.decision != "" {
 				c.SetDecision(r.decision)
@@ -195,11 +208,11 @@ var _ = Describe(
 			Expect(got.CreatedBookID).NotTo(BeNil())
 
 			Expect(
-				client.Author.Query().Where(entauthor.HardcoverID(10)).CountX(ctx),
+				client.Author.Query().Where(entauthor.HardcoverID("10")).CountX(ctx),
 			).
 				To(Equal(1))
 			b := client.Book.GetX(ctx, *got.CreatedBookID)
-			Expect(b.HardcoverID).To(Equal(uint32(1)))
+			Expect(b.HardcoverID).To(Equal("1"))
 			Expect(b.AuthorName).To(Equal("Author"))
 			Expect(b.EbookStatus).To(Equal(entbook.EbookStatusAvailable))
 			Expect(b.EbookMonitored).To(BeTrue())
@@ -247,10 +260,10 @@ var _ = Describe(
 
 		It("adopts into a book the library already holds without adding it", func() {
 			held, err := store.CreateBook(ctx, db.BookSeed{
-				HardcoverID: 1, Title: "Elantris", AuthorName: "Author",
+				HardcoverID: "1", Title: "Elantris", AuthorName: "Author",
 				Kind: "novel", PreferredLanguage: "en",
 				Credits: []db.CreditSeed{{
-					AuthorHardcoverID: 10, Name: "Author", Role: "author",
+					AuthorHardcoverID: "10", Name: "Author", Role: "author",
 				}},
 				RefreshedAt: new(time.Now()),
 			})
@@ -339,10 +352,10 @@ var _ = Describe(
 
 		It("does not attach a path the book already holds", func() {
 			held, err := store.CreateBook(ctx, db.BookSeed{
-				HardcoverID: 1, Title: "Elantris", AuthorName: "Author",
+				HardcoverID: "1", Title: "Elantris", AuthorName: "Author",
 				Kind: "novel", PreferredLanguage: "en",
 				Credits: []db.CreditSeed{{
-					AuthorHardcoverID: 10, Name: "Author", Role: "author",
+					AuthorHardcoverID: "10", Name: "Author", Role: "author",
 				}},
 				RefreshedAt: new(time.Now()),
 			})

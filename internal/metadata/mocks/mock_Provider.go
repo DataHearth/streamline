@@ -49,7 +49,7 @@ func (_m *MockProvider) EXPECT() *MockProvider_Expecter {
 }
 
 // FetchDigitalRelease provides a mock function for the type MockProvider
-func (_mock *MockProvider) FetchDigitalRelease(ctx context.Context, tmdbID uint32, region string) (*time.Time, error) {
+func (_mock *MockProvider) FetchDigitalRelease(ctx context.Context, tmdbID string, region string) (*time.Time, error) {
 	ret := _mock.Called(ctx, tmdbID, region)
 
 	if len(ret) == 0 {
@@ -58,17 +58,17 @@ func (_mock *MockProvider) FetchDigitalRelease(ctx context.Context, tmdbID uint3
 
 	var r0 *time.Time
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (*time.Time, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*time.Time, error)); ok {
 		return returnFunc(ctx, tmdbID, region)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) *time.Time); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *time.Time); ok {
 		r0 = returnFunc(ctx, tmdbID, region)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*time.Time)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
 		r1 = returnFunc(ctx, tmdbID, region)
 	} else {
 		r1 = ret.Error(1)
@@ -83,21 +83,21 @@ type MockProvider_FetchDigitalRelease_Call struct {
 
 // FetchDigitalRelease is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tmdbID uint32
+//   - tmdbID string
 //   - region string
 func (_e *MockProvider_Expecter) FetchDigitalRelease(ctx any, tmdbID any, region any) *MockProvider_FetchDigitalRelease_Call {
 	return &MockProvider_FetchDigitalRelease_Call{Call: _e.mock.On("FetchDigitalRelease", ctx, tmdbID, region)}
 }
 
-func (_c *MockProvider_FetchDigitalRelease_Call) Run(run func(ctx context.Context, tmdbID uint32, region string)) *MockProvider_FetchDigitalRelease_Call {
+func (_c *MockProvider_FetchDigitalRelease_Call) Run(run func(ctx context.Context, tmdbID string, region string)) *MockProvider_FetchDigitalRelease_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -117,13 +117,13 @@ func (_c *MockProvider_FetchDigitalRelease_Call) Return(time1 *time.Time, err er
 	return _c
 }
 
-func (_c *MockProvider_FetchDigitalRelease_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32, region string) (*time.Time, error)) *MockProvider_FetchDigitalRelease_Call {
+func (_c *MockProvider_FetchDigitalRelease_Call) RunAndReturn(run func(ctx context.Context, tmdbID string, region string) (*time.Time, error)) *MockProvider_FetchDigitalRelease_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetMovie provides a mock function for the type MockProvider
-func (_mock *MockProvider) GetMovie(ctx context.Context, tmdbID uint32) (*metadata.MovieDetails, error) {
+func (_mock *MockProvider) GetMovie(ctx context.Context, tmdbID string) (*metadata.MovieDetails, error) {
 	ret := _mock.Called(ctx, tmdbID)
 
 	if len(ret) == 0 {
@@ -132,17 +132,17 @@ func (_mock *MockProvider) GetMovie(ctx context.Context, tmdbID uint32) (*metada
 
 	var r0 *metadata.MovieDetails
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*metadata.MovieDetails, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*metadata.MovieDetails, error)); ok {
 		return returnFunc(ctx, tmdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *metadata.MovieDetails); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *metadata.MovieDetails); ok {
 		r0 = returnFunc(ctx, tmdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*metadata.MovieDetails)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, tmdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -157,20 +157,20 @@ type MockProvider_GetMovie_Call struct {
 
 // GetMovie is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tmdbID uint32
+//   - tmdbID string
 func (_e *MockProvider_Expecter) GetMovie(ctx any, tmdbID any) *MockProvider_GetMovie_Call {
 	return &MockProvider_GetMovie_Call{Call: _e.mock.On("GetMovie", ctx, tmdbID)}
 }
 
-func (_c *MockProvider_GetMovie_Call) Run(run func(ctx context.Context, tmdbID uint32)) *MockProvider_GetMovie_Call {
+func (_c *MockProvider_GetMovie_Call) Run(run func(ctx context.Context, tmdbID string)) *MockProvider_GetMovie_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -185,13 +185,13 @@ func (_c *MockProvider_GetMovie_Call) Return(movieDetails *metadata.MovieDetails
 	return _c
 }
 
-func (_c *MockProvider_GetMovie_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32) (*metadata.MovieDetails, error)) *MockProvider_GetMovie_Call {
+func (_c *MockProvider_GetMovie_Call) RunAndReturn(run func(ctx context.Context, tmdbID string) (*metadata.MovieDetails, error)) *MockProvider_GetMovie_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetPerson provides a mock function for the type MockProvider
-func (_mock *MockProvider) GetPerson(ctx context.Context, tmdbID uint32) (*metadata.PersonDetails, error) {
+func (_mock *MockProvider) GetPerson(ctx context.Context, tmdbID string) (*metadata.PersonDetails, error) {
 	ret := _mock.Called(ctx, tmdbID)
 
 	if len(ret) == 0 {
@@ -200,17 +200,17 @@ func (_mock *MockProvider) GetPerson(ctx context.Context, tmdbID uint32) (*metad
 
 	var r0 *metadata.PersonDetails
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*metadata.PersonDetails, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*metadata.PersonDetails, error)); ok {
 		return returnFunc(ctx, tmdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *metadata.PersonDetails); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *metadata.PersonDetails); ok {
 		r0 = returnFunc(ctx, tmdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*metadata.PersonDetails)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, tmdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -225,20 +225,20 @@ type MockProvider_GetPerson_Call struct {
 
 // GetPerson is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tmdbID uint32
+//   - tmdbID string
 func (_e *MockProvider_Expecter) GetPerson(ctx any, tmdbID any) *MockProvider_GetPerson_Call {
 	return &MockProvider_GetPerson_Call{Call: _e.mock.On("GetPerson", ctx, tmdbID)}
 }
 
-func (_c *MockProvider_GetPerson_Call) Run(run func(ctx context.Context, tmdbID uint32)) *MockProvider_GetPerson_Call {
+func (_c *MockProvider_GetPerson_Call) Run(run func(ctx context.Context, tmdbID string)) *MockProvider_GetPerson_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -253,13 +253,13 @@ func (_c *MockProvider_GetPerson_Call) Return(personDetails *metadata.PersonDeta
 	return _c
 }
 
-func (_c *MockProvider_GetPerson_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32) (*metadata.PersonDetails, error)) *MockProvider_GetPerson_Call {
+func (_c *MockProvider_GetPerson_Call) RunAndReturn(run func(ctx context.Context, tmdbID string) (*metadata.PersonDetails, error)) *MockProvider_GetPerson_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Recommendations provides a mock function for the type MockProvider
-func (_mock *MockProvider) Recommendations(ctx context.Context, tmdbID uint32) ([]metadata.MovieResult, error) {
+func (_mock *MockProvider) Recommendations(ctx context.Context, tmdbID string) ([]metadata.MovieResult, error) {
 	ret := _mock.Called(ctx, tmdbID)
 
 	if len(ret) == 0 {
@@ -268,17 +268,17 @@ func (_mock *MockProvider) Recommendations(ctx context.Context, tmdbID uint32) (
 
 	var r0 []metadata.MovieResult
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]metadata.MovieResult, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]metadata.MovieResult, error)); ok {
 		return returnFunc(ctx, tmdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []metadata.MovieResult); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []metadata.MovieResult); ok {
 		r0 = returnFunc(ctx, tmdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]metadata.MovieResult)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, tmdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -293,20 +293,20 @@ type MockProvider_Recommendations_Call struct {
 
 // Recommendations is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tmdbID uint32
+//   - tmdbID string
 func (_e *MockProvider_Expecter) Recommendations(ctx any, tmdbID any) *MockProvider_Recommendations_Call {
 	return &MockProvider_Recommendations_Call{Call: _e.mock.On("Recommendations", ctx, tmdbID)}
 }
 
-func (_c *MockProvider_Recommendations_Call) Run(run func(ctx context.Context, tmdbID uint32)) *MockProvider_Recommendations_Call {
+func (_c *MockProvider_Recommendations_Call) Run(run func(ctx context.Context, tmdbID string)) *MockProvider_Recommendations_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -321,7 +321,7 @@ func (_c *MockProvider_Recommendations_Call) Return(movieResults []metadata.Movi
 	return _c
 }
 
-func (_c *MockProvider_Recommendations_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32) ([]metadata.MovieResult, error)) *MockProvider_Recommendations_Call {
+func (_c *MockProvider_Recommendations_Call) RunAndReturn(run func(ctx context.Context, tmdbID string) ([]metadata.MovieResult, error)) *MockProvider_Recommendations_Call {
 	_c.Call.Return(run)
 	return _c
 }

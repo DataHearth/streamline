@@ -46,7 +46,7 @@ var _ = Describe("REST API series", Label("e2e"), func() {
 
 	It("403s a direct library add for a request_only caller", func() {
 		resp := post("/api/v1/series", viewerAuth, map[string]any{
-			"tvdb_id": 121361,
+			"tvdb_id": "121361",
 		})
 		defer resp.Body.Close()
 		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))

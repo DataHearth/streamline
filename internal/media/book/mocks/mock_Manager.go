@@ -799,7 +799,7 @@ func (_c *MockManager_Lookup_Call) RunAndReturn(run func(ctx context.Context, qu
 }
 
 // LookupDetail provides a mock function for the type MockManager
-func (_mock *MockManager) LookupDetail(ctx context.Context, kind string, hardcoverID uint32) (*book.LookupDetail, error) {
+func (_mock *MockManager) LookupDetail(ctx context.Context, kind string, hardcoverID string) (*book.LookupDetail, error) {
 	ret := _mock.Called(ctx, kind, hardcoverID)
 
 	if len(ret) == 0 {
@@ -808,17 +808,17 @@ func (_mock *MockManager) LookupDetail(ctx context.Context, kind string, hardcov
 
 	var r0 *book.LookupDetail
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32) (*book.LookupDetail, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*book.LookupDetail, error)); ok {
 		return returnFunc(ctx, kind, hardcoverID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32) *book.LookupDetail); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *book.LookupDetail); ok {
 		r0 = returnFunc(ctx, kind, hardcoverID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*book.LookupDetail)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
 		r1 = returnFunc(ctx, kind, hardcoverID)
 	} else {
 		r1 = ret.Error(1)
@@ -834,12 +834,12 @@ type MockManager_LookupDetail_Call struct {
 // LookupDetail is a helper method to define mock.On call
 //   - ctx context.Context
 //   - kind string
-//   - hardcoverID uint32
+//   - hardcoverID string
 func (_e *MockManager_Expecter) LookupDetail(ctx any, kind any, hardcoverID any) *MockManager_LookupDetail_Call {
 	return &MockManager_LookupDetail_Call{Call: _e.mock.On("LookupDetail", ctx, kind, hardcoverID)}
 }
 
-func (_c *MockManager_LookupDetail_Call) Run(run func(ctx context.Context, kind string, hardcoverID uint32)) *MockManager_LookupDetail_Call {
+func (_c *MockManager_LookupDetail_Call) Run(run func(ctx context.Context, kind string, hardcoverID string)) *MockManager_LookupDetail_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -849,9 +849,9 @@ func (_c *MockManager_LookupDetail_Call) Run(run func(ctx context.Context, kind 
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 uint32
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uint32)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -867,7 +867,7 @@ func (_c *MockManager_LookupDetail_Call) Return(lookupDetail *book.LookupDetail,
 	return _c
 }
 
-func (_c *MockManager_LookupDetail_Call) RunAndReturn(run func(ctx context.Context, kind string, hardcoverID uint32) (*book.LookupDetail, error)) *MockManager_LookupDetail_Call {
+func (_c *MockManager_LookupDetail_Call) RunAndReturn(run func(ctx context.Context, kind string, hardcoverID string) (*book.LookupDetail, error)) *MockManager_LookupDetail_Call {
 	_c.Call.Return(run)
 	return _c
 }

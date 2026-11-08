@@ -321,13 +321,13 @@ func (s *Service) resolveShow(
 	}
 
 	// Reviewer's pick wins over the classifier's top match.
-	tvdbID := uint32(0)
+	tvdbID := ""
 	if sc.DecisionTvdbID != nil {
 		tvdbID = *sc.DecisionTvdbID
 	} else if sc.TvdbID != nil {
 		tvdbID = *sc.TvdbID
 	}
-	if tvdbID == 0 {
+	if tvdbID == "" {
 		return nil, false, entimportscanshow.OutcomeFailed, "no tvdb match to adopt", 0
 	}
 

@@ -243,10 +243,9 @@ type jellyfinItem struct {
 // "Tvdb"). Jellyfin silently ignores an AnyProviderIdEquals filter it can't
 // honor and returns the first library item, so the deep-link lookups verify the
 // match here instead of trusting the server-side filter.
-func providerIDEquals(ids map[string]string, provider string, want uint64) bool {
-	target := strconv.FormatUint(want, 10)
+func providerIDEquals(ids map[string]string, provider, want string) bool {
 	for k, v := range ids {
-		if strings.EqualFold(k, provider) && v == target {
+		if strings.EqualFold(k, provider) && v == want {
 			return true
 		}
 	}
@@ -258,7 +257,7 @@ func providerIDEquals(ids map[string]string, provider string, want uint64) bool 
 // title + year. Both Jellyfin and Emby share this URL hash route. Returns
 // ErrMovieNotFound when no item matches.
 func (j *Jellyfin) MovieDeepLink(
-	ctx context.Context, _ string, tmdbID uint32, title string, year uint16,
+	ctx context.Context, _ string, tmdbID string, title string, year uint16,
 ) (string, error) {
 	id, err := j.findMovieID(ctx, tmdbID, title, year)
 	if err != nil {
@@ -271,19 +270,19 @@ func (j *Jellyfin) MovieDeepLink(
 }
 
 func (j *Jellyfin) findMovieID(
-	ctx context.Context, tmdbID uint32, title string, year uint16,
+	ctx context.Context, tmdbID string, title string, year uint16,
 ) (string, error) {
-	if tmdbID > 0 {
+	if tmdbID != "" {
 		items, err := j.fetchItems(ctx, url.Values{
 			"Recursive":           {"true"},
 			"IncludeItemTypes":    {"Movie"},
 			"Fields":              {"ProviderIds"},
-			"AnyProviderIdEquals": {fmt.Sprintf("tmdb.%d", tmdbID)},
+			"AnyProviderIdEquals": {"tmdb." + tmdbID},
 			"Limit":               {"5"},
 		})
 		if err == nil {
 			for _, it := range items {
-				if providerIDEquals(it.ProviderIds, "tmdb", uint64(tmdbID)) {
+				if providerIDEquals(it.ProviderIds, "tmdb", tmdbID) {
 					return it.ID, nil
 				}
 			}
@@ -307,7 +306,7 @@ func (j *Jellyfin) findMovieID(
 // TVShowDeepLink mirrors MovieDeepLink for series (Emby shares this API). The
 // hintSection is Plex-only and ignored here.
 func (j *Jellyfin) TVShowDeepLink(
-	ctx context.Context, _ string, tvdbID uint32, title string, year uint16,
+	ctx context.Context, _ string, tvdbID string, title string, year uint16,
 ) (string, error) {
 	id, err := j.findSeriesID(ctx, tvdbID, title, year)
 	if err != nil {
@@ -320,19 +319,19 @@ func (j *Jellyfin) TVShowDeepLink(
 }
 
 func (j *Jellyfin) findSeriesID(
-	ctx context.Context, tvdbID uint32, title string, year uint16,
+	ctx context.Context, tvdbID string, title string, year uint16,
 ) (string, error) {
-	if tvdbID > 0 {
+	if tvdbID != "" {
 		items, err := j.fetchItems(ctx, url.Values{
 			"Recursive":           {"true"},
 			"IncludeItemTypes":    {"Series"},
 			"Fields":              {"ProviderIds"},
-			"AnyProviderIdEquals": {fmt.Sprintf("tvdb.%d", tvdbID)},
+			"AnyProviderIdEquals": {"tvdb." + tvdbID},
 			"Limit":               {"5"},
 		})
 		if err == nil {
 			for _, it := range items {
-				if providerIDEquals(it.ProviderIds, "tvdb", uint64(tvdbID)) {
+				if providerIDEquals(it.ProviderIds, "tvdb", tvdbID) {
 					return it.ID, nil
 				}
 			}

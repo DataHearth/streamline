@@ -7059,8 +7059,7 @@ type AuthorMutation struct {
 	id                   *uint32
 	create_time          *time.Time
 	update_time          *time.Time
-	hardcover_id         *uint32
-	addhardcover_id      *int32
+	hardcover_id         *string
 	name                 *string
 	sort_name            *string
 	image_source         *string
@@ -7250,13 +7249,12 @@ func (m *AuthorMutation) ResetUpdateTime() {
 }
 
 // SetHardcoverID sets the "hardcover_id" field.
-func (m *AuthorMutation) SetHardcoverID(u uint32) {
-	m.hardcover_id = &u
-	m.addhardcover_id = nil
+func (m *AuthorMutation) SetHardcoverID(s string) {
+	m.hardcover_id = &s
 }
 
 // HardcoverID returns the value of the "hardcover_id" field in the mutation.
-func (m *AuthorMutation) HardcoverID() (r uint32, exists bool) {
+func (m *AuthorMutation) HardcoverID() (r string, exists bool) {
 	v := m.hardcover_id
 	if v == nil {
 		return
@@ -7267,7 +7265,7 @@ func (m *AuthorMutation) HardcoverID() (r uint32, exists bool) {
 // OldHardcoverID returns the old "hardcover_id" field's value of the Author entity.
 // If the Author object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AuthorMutation) OldHardcoverID(ctx context.Context) (v uint32, err error) {
+func (m *AuthorMutation) OldHardcoverID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldHardcoverID is only allowed on UpdateOne operations")
 	}
@@ -7281,28 +7279,9 @@ func (m *AuthorMutation) OldHardcoverID(ctx context.Context) (v uint32, err erro
 	return oldValue.HardcoverID, nil
 }
 
-// AddHardcoverID adds u to the "hardcover_id" field.
-func (m *AuthorMutation) AddHardcoverID(u int32) {
-	if m.addhardcover_id != nil {
-		*m.addhardcover_id += u
-	} else {
-		m.addhardcover_id = &u
-	}
-}
-
-// AddedHardcoverID returns the value that was added to the "hardcover_id" field in this mutation.
-func (m *AuthorMutation) AddedHardcoverID() (r int32, exists bool) {
-	v := m.addhardcover_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ResetHardcoverID resets all changes to the "hardcover_id" field.
 func (m *AuthorMutation) ResetHardcoverID() {
 	m.hardcover_id = nil
-	m.addhardcover_id = nil
 }
 
 // SetName sets the "name" field.
@@ -7611,7 +7590,7 @@ func (m *AuthorMutation) SetField(name string, value ent.Value) error {
 		m.SetUpdateTime(v)
 		return nil
 	case author.FieldHardcoverID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -7645,21 +7624,13 @@ func (m *AuthorMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *AuthorMutation) AddedFields() []string {
-	var fields []string
-	if m.addhardcover_id != nil {
-		fields = append(fields, author.FieldHardcoverID)
-	}
-	return fields
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *AuthorMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case author.FieldHardcoverID:
-		return m.AddedHardcoverID()
-	}
 	return nil, false
 }
 
@@ -7668,13 +7639,6 @@ func (m *AuthorMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *AuthorMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case author.FieldHardcoverID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddHardcoverID(v)
-		return nil
 	}
 	return fmt.Errorf("unknown Author numeric field %s", name)
 }
@@ -7831,8 +7795,7 @@ type BookMutation struct {
 	id                           *uint32
 	create_time                  *time.Time
 	update_time                  *time.Time
-	hardcover_id                 *uint32
-	addhardcover_id              *int32
+	hardcover_id                 *string
 	title                        *string
 	original_title               *string
 	sort_title                   *string
@@ -8066,13 +8029,12 @@ func (m *BookMutation) ResetUpdateTime() {
 }
 
 // SetHardcoverID sets the "hardcover_id" field.
-func (m *BookMutation) SetHardcoverID(u uint32) {
-	m.hardcover_id = &u
-	m.addhardcover_id = nil
+func (m *BookMutation) SetHardcoverID(s string) {
+	m.hardcover_id = &s
 }
 
 // HardcoverID returns the value of the "hardcover_id" field in the mutation.
-func (m *BookMutation) HardcoverID() (r uint32, exists bool) {
+func (m *BookMutation) HardcoverID() (r string, exists bool) {
 	v := m.hardcover_id
 	if v == nil {
 		return
@@ -8083,7 +8045,7 @@ func (m *BookMutation) HardcoverID() (r uint32, exists bool) {
 // OldHardcoverID returns the old "hardcover_id" field's value of the Book entity.
 // If the Book object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BookMutation) OldHardcoverID(ctx context.Context) (v uint32, err error) {
+func (m *BookMutation) OldHardcoverID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldHardcoverID is only allowed on UpdateOne operations")
 	}
@@ -8097,28 +8059,9 @@ func (m *BookMutation) OldHardcoverID(ctx context.Context) (v uint32, err error)
 	return oldValue.HardcoverID, nil
 }
 
-// AddHardcoverID adds u to the "hardcover_id" field.
-func (m *BookMutation) AddHardcoverID(u int32) {
-	if m.addhardcover_id != nil {
-		*m.addhardcover_id += u
-	} else {
-		m.addhardcover_id = &u
-	}
-}
-
-// AddedHardcoverID returns the value that was added to the "hardcover_id" field in this mutation.
-func (m *BookMutation) AddedHardcoverID() (r int32, exists bool) {
-	v := m.addhardcover_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ResetHardcoverID resets all changes to the "hardcover_id" field.
 func (m *BookMutation) ResetHardcoverID() {
 	m.hardcover_id = nil
-	m.addhardcover_id = nil
 }
 
 // SetTitle sets the "title" field.
@@ -9935,7 +9878,7 @@ func (m *BookMutation) SetField(name string, value ent.Value) error {
 		m.SetUpdateTime(v)
 		return nil
 	case book.FieldHardcoverID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -10117,9 +10060,6 @@ func (m *BookMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *BookMutation) AddedFields() []string {
 	var fields []string
-	if m.addhardcover_id != nil {
-		fields = append(fields, book.FieldHardcoverID)
-	}
 	if m.addrating_tenths != nil {
 		fields = append(fields, book.FieldRatingTenths)
 	}
@@ -10143,8 +10083,6 @@ func (m *BookMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *BookMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
-	case book.FieldHardcoverID:
-		return m.AddedHardcoverID()
 	case book.FieldRatingTenths:
 		return m.AddedRatingTenths()
 	case book.FieldReleaseYear:
@@ -10164,13 +10102,6 @@ func (m *BookMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *BookMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case book.FieldHardcoverID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddHardcoverID(v)
-		return nil
 	case book.FieldRatingTenths:
 		v, ok := value.(int8)
 		if !ok {
@@ -11447,36 +11378,35 @@ func (m *BookContributionMutation) ResetEdge(name string) error {
 // BookEditionMutation represents an operation that mutates the BookEdition nodes in the graph.
 type BookEditionMutation struct {
 	config
-	op                      Op
-	typ                     string
-	id                      *uint32
-	create_time             *time.Time
-	update_time             *time.Time
-	hardcover_edition_id    *uint32
-	addhardcover_edition_id *int32
-	language                *string
-	title                   *string
-	publisher               *string
-	year                    *uint16
-	addyear                 *int16
-	format                  *bookedition.Format
-	original                *bool
-	pages                   *uint16
-	addpages                *int16
-	duration_seconds        *uint32
-	addduration_seconds     *int32
-	narrator                *string
-	translator              *string
-	isbn_13                 *string
-	asin                    *string
-	popularity              *uint32
-	addpopularity           *int32
-	clearedFields           map[string]struct{}
-	book                    *uint32
-	clearedbook             bool
-	done                    bool
-	oldValue                func(context.Context) (*BookEdition, error)
-	predicates              []predicate.BookEdition
+	op                   Op
+	typ                  string
+	id                   *uint32
+	create_time          *time.Time
+	update_time          *time.Time
+	hardcover_edition_id *string
+	language             *string
+	title                *string
+	publisher            *string
+	year                 *uint16
+	addyear              *int16
+	format               *bookedition.Format
+	original             *bool
+	pages                *uint16
+	addpages             *int16
+	duration_seconds     *uint32
+	addduration_seconds  *int32
+	narrator             *string
+	translator           *string
+	isbn_13              *string
+	asin                 *string
+	popularity           *uint32
+	addpopularity        *int32
+	clearedFields        map[string]struct{}
+	book                 *uint32
+	clearedbook          bool
+	done                 bool
+	oldValue             func(context.Context) (*BookEdition, error)
+	predicates           []predicate.BookEdition
 }
 
 var _ ent.Mutation = (*BookEditionMutation)(nil)
@@ -11656,13 +11586,12 @@ func (m *BookEditionMutation) ResetUpdateTime() {
 }
 
 // SetHardcoverEditionID sets the "hardcover_edition_id" field.
-func (m *BookEditionMutation) SetHardcoverEditionID(u uint32) {
-	m.hardcover_edition_id = &u
-	m.addhardcover_edition_id = nil
+func (m *BookEditionMutation) SetHardcoverEditionID(s string) {
+	m.hardcover_edition_id = &s
 }
 
 // HardcoverEditionID returns the value of the "hardcover_edition_id" field in the mutation.
-func (m *BookEditionMutation) HardcoverEditionID() (r uint32, exists bool) {
+func (m *BookEditionMutation) HardcoverEditionID() (r string, exists bool) {
 	v := m.hardcover_edition_id
 	if v == nil {
 		return
@@ -11673,7 +11602,7 @@ func (m *BookEditionMutation) HardcoverEditionID() (r uint32, exists bool) {
 // OldHardcoverEditionID returns the old "hardcover_edition_id" field's value of the BookEdition entity.
 // If the BookEdition object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BookEditionMutation) OldHardcoverEditionID(ctx context.Context) (v uint32, err error) {
+func (m *BookEditionMutation) OldHardcoverEditionID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldHardcoverEditionID is only allowed on UpdateOne operations")
 	}
@@ -11687,28 +11616,9 @@ func (m *BookEditionMutation) OldHardcoverEditionID(ctx context.Context) (v uint
 	return oldValue.HardcoverEditionID, nil
 }
 
-// AddHardcoverEditionID adds u to the "hardcover_edition_id" field.
-func (m *BookEditionMutation) AddHardcoverEditionID(u int32) {
-	if m.addhardcover_edition_id != nil {
-		*m.addhardcover_edition_id += u
-	} else {
-		m.addhardcover_edition_id = &u
-	}
-}
-
-// AddedHardcoverEditionID returns the value that was added to the "hardcover_edition_id" field in this mutation.
-func (m *BookEditionMutation) AddedHardcoverEditionID() (r int32, exists bool) {
-	v := m.addhardcover_edition_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ResetHardcoverEditionID resets all changes to the "hardcover_edition_id" field.
 func (m *BookEditionMutation) ResetHardcoverEditionID() {
 	m.hardcover_edition_id = nil
-	m.addhardcover_edition_id = nil
 }
 
 // SetLanguage sets the "language" field.
@@ -12566,7 +12476,7 @@ func (m *BookEditionMutation) SetField(name string, value ent.Value) error {
 		m.SetUpdateTime(v)
 		return nil
 	case bookedition.FieldHardcoverEditionID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -12671,9 +12581,6 @@ func (m *BookEditionMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *BookEditionMutation) AddedFields() []string {
 	var fields []string
-	if m.addhardcover_edition_id != nil {
-		fields = append(fields, bookedition.FieldHardcoverEditionID)
-	}
 	if m.addyear != nil {
 		fields = append(fields, bookedition.FieldYear)
 	}
@@ -12694,8 +12601,6 @@ func (m *BookEditionMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *BookEditionMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
-	case bookedition.FieldHardcoverEditionID:
-		return m.AddedHardcoverEditionID()
 	case bookedition.FieldYear:
 		return m.AddedYear()
 	case bookedition.FieldPages:
@@ -12713,13 +12618,6 @@ func (m *BookEditionMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *BookEditionMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case bookedition.FieldHardcoverEditionID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddHardcoverEditionID(v)
-		return nil
 	case bookedition.FieldYear:
 		v, ok := value.(int16)
 		if !ok {
@@ -12948,8 +12846,7 @@ type BookSeriesMutation struct {
 	id                   *uint32
 	create_time          *time.Time
 	update_time          *time.Time
-	hardcover_id         *uint32
-	addhardcover_id      *int32
+	hardcover_id         *string
 	title                *string
 	original_title       *string
 	sort_title           *string
@@ -13159,13 +13056,12 @@ func (m *BookSeriesMutation) ResetUpdateTime() {
 }
 
 // SetHardcoverID sets the "hardcover_id" field.
-func (m *BookSeriesMutation) SetHardcoverID(u uint32) {
-	m.hardcover_id = &u
-	m.addhardcover_id = nil
+func (m *BookSeriesMutation) SetHardcoverID(s string) {
+	m.hardcover_id = &s
 }
 
 // HardcoverID returns the value of the "hardcover_id" field in the mutation.
-func (m *BookSeriesMutation) HardcoverID() (r uint32, exists bool) {
+func (m *BookSeriesMutation) HardcoverID() (r string, exists bool) {
 	v := m.hardcover_id
 	if v == nil {
 		return
@@ -13176,7 +13072,7 @@ func (m *BookSeriesMutation) HardcoverID() (r uint32, exists bool) {
 // OldHardcoverID returns the old "hardcover_id" field's value of the BookSeries entity.
 // If the BookSeries object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BookSeriesMutation) OldHardcoverID(ctx context.Context) (v uint32, err error) {
+func (m *BookSeriesMutation) OldHardcoverID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldHardcoverID is only allowed on UpdateOne operations")
 	}
@@ -13190,28 +13086,9 @@ func (m *BookSeriesMutation) OldHardcoverID(ctx context.Context) (v uint32, err 
 	return oldValue.HardcoverID, nil
 }
 
-// AddHardcoverID adds u to the "hardcover_id" field.
-func (m *BookSeriesMutation) AddHardcoverID(u int32) {
-	if m.addhardcover_id != nil {
-		*m.addhardcover_id += u
-	} else {
-		m.addhardcover_id = &u
-	}
-}
-
-// AddedHardcoverID returns the value that was added to the "hardcover_id" field in this mutation.
-func (m *BookSeriesMutation) AddedHardcoverID() (r int32, exists bool) {
-	v := m.addhardcover_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ResetHardcoverID resets all changes to the "hardcover_id" field.
 func (m *BookSeriesMutation) ResetHardcoverID() {
 	m.hardcover_id = nil
-	m.addhardcover_id = nil
 }
 
 // SetTitle sets the "title" field.
@@ -14303,7 +14180,7 @@ func (m *BookSeriesMutation) SetField(name string, value ent.Value) error {
 		m.SetUpdateTime(v)
 		return nil
 	case bookseries.FieldHardcoverID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -14422,9 +14299,6 @@ func (m *BookSeriesMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *BookSeriesMutation) AddedFields() []string {
 	var fields []string
-	if m.addhardcover_id != nil {
-		fields = append(fields, bookseries.FieldHardcoverID)
-	}
 	if m.addrating_tenths != nil {
 		fields = append(fields, bookseries.FieldRatingTenths)
 	}
@@ -14439,8 +14313,6 @@ func (m *BookSeriesMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *BookSeriesMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
-	case bookseries.FieldHardcoverID:
-		return m.AddedHardcoverID()
 	case bookseries.FieldRatingTenths:
 		return m.AddedRatingTenths()
 	case bookseries.FieldSince:
@@ -14454,13 +14326,6 @@ func (m *BookSeriesMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *BookSeriesMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case bookseries.FieldHardcoverID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddHardcoverID(v)
-		return nil
 	case bookseries.FieldRatingTenths:
 		v, ok := value.(int8)
 		if !ok {
@@ -23831,41 +23696,39 @@ func (m *ImportScanAlbumMutation) ResetEdge(name string) error {
 // ImportScanBookMutation represents an operation that mutates the ImportScanBook nodes in the graph.
 type ImportScanBookMutation struct {
 	config
-	op                            Op
-	typ                           string
-	id                            *uint32
-	create_time                   *time.Time
-	update_time                   *time.Time
-	file_paths                    *[]string
-	appendfile_paths              []string
-	slot                          *importscanbook.Slot
-	parsed_title                  *string
-	parsed_author                 *string
-	parsed_isbn                   *string
-	parsed_year                   *uint16
-	addparsed_year                *int16
-	size                          *int64
-	addsize                       *int64
-	classification                *importscanbook.Classification
-	book_hardcover_id             *uint32
-	addbook_hardcover_id          *int32
-	candidates                    *[]schema.ScannedBookCandidate
-	appendcandidates              []schema.ScannedBookCandidate
-	existing_book_id              *uint32
-	addexisting_book_id           *int32
-	decision                      *importscanbook.Decision
-	decision_book_hardcover_id    *uint32
-	adddecision_book_hardcover_id *int32
-	outcome                       *importscanbook.Outcome
-	outcome_message               *string
-	created_book_id               *uint32
-	addcreated_book_id            *int32
-	clearedFields                 map[string]struct{}
-	scan                          *uint32
-	clearedscan                   bool
-	done                          bool
-	oldValue                      func(context.Context) (*ImportScanBook, error)
-	predicates                    []predicate.ImportScanBook
+	op                         Op
+	typ                        string
+	id                         *uint32
+	create_time                *time.Time
+	update_time                *time.Time
+	file_paths                 *[]string
+	appendfile_paths           []string
+	slot                       *importscanbook.Slot
+	parsed_title               *string
+	parsed_author              *string
+	parsed_isbn                *string
+	parsed_year                *uint16
+	addparsed_year             *int16
+	size                       *int64
+	addsize                    *int64
+	classification             *importscanbook.Classification
+	book_hardcover_id          *string
+	candidates                 *[]schema.ScannedBookCandidate
+	appendcandidates           []schema.ScannedBookCandidate
+	existing_book_id           *uint32
+	addexisting_book_id        *int32
+	decision                   *importscanbook.Decision
+	decision_book_hardcover_id *string
+	outcome                    *importscanbook.Outcome
+	outcome_message            *string
+	created_book_id            *uint32
+	addcreated_book_id         *int32
+	clearedFields              map[string]struct{}
+	scan                       *uint32
+	clearedscan                bool
+	done                       bool
+	oldValue                   func(context.Context) (*ImportScanBook, error)
+	predicates                 []predicate.ImportScanBook
 }
 
 var _ ent.Mutation = (*ImportScanBookMutation)(nil)
@@ -24441,13 +24304,12 @@ func (m *ImportScanBookMutation) ResetClassification() {
 }
 
 // SetBookHardcoverID sets the "book_hardcover_id" field.
-func (m *ImportScanBookMutation) SetBookHardcoverID(u uint32) {
-	m.book_hardcover_id = &u
-	m.addbook_hardcover_id = nil
+func (m *ImportScanBookMutation) SetBookHardcoverID(s string) {
+	m.book_hardcover_id = &s
 }
 
 // BookHardcoverID returns the value of the "book_hardcover_id" field in the mutation.
-func (m *ImportScanBookMutation) BookHardcoverID() (r uint32, exists bool) {
+func (m *ImportScanBookMutation) BookHardcoverID() (r string, exists bool) {
 	v := m.book_hardcover_id
 	if v == nil {
 		return
@@ -24458,7 +24320,7 @@ func (m *ImportScanBookMutation) BookHardcoverID() (r uint32, exists bool) {
 // OldBookHardcoverID returns the old "book_hardcover_id" field's value of the ImportScanBook entity.
 // If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ImportScanBookMutation) OldBookHardcoverID(ctx context.Context) (v uint32, err error) {
+func (m *ImportScanBookMutation) OldBookHardcoverID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldBookHardcoverID is only allowed on UpdateOne operations")
 	}
@@ -24472,28 +24334,9 @@ func (m *ImportScanBookMutation) OldBookHardcoverID(ctx context.Context) (v uint
 	return oldValue.BookHardcoverID, nil
 }
 
-// AddBookHardcoverID adds u to the "book_hardcover_id" field.
-func (m *ImportScanBookMutation) AddBookHardcoverID(u int32) {
-	if m.addbook_hardcover_id != nil {
-		*m.addbook_hardcover_id += u
-	} else {
-		m.addbook_hardcover_id = &u
-	}
-}
-
-// AddedBookHardcoverID returns the value that was added to the "book_hardcover_id" field in this mutation.
-func (m *ImportScanBookMutation) AddedBookHardcoverID() (r int32, exists bool) {
-	v := m.addbook_hardcover_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ClearBookHardcoverID clears the value of the "book_hardcover_id" field.
 func (m *ImportScanBookMutation) ClearBookHardcoverID() {
 	m.book_hardcover_id = nil
-	m.addbook_hardcover_id = nil
 	m.clearedFields[importscanbook.FieldBookHardcoverID] = struct{}{}
 }
 
@@ -24506,7 +24349,6 @@ func (m *ImportScanBookMutation) BookHardcoverIDCleared() bool {
 // ResetBookHardcoverID resets all changes to the "book_hardcover_id" field.
 func (m *ImportScanBookMutation) ResetBookHardcoverID() {
 	m.book_hardcover_id = nil
-	m.addbook_hardcover_id = nil
 	delete(m.clearedFields, importscanbook.FieldBookHardcoverID)
 }
 
@@ -24682,13 +24524,12 @@ func (m *ImportScanBookMutation) ResetDecision() {
 }
 
 // SetDecisionBookHardcoverID sets the "decision_book_hardcover_id" field.
-func (m *ImportScanBookMutation) SetDecisionBookHardcoverID(u uint32) {
-	m.decision_book_hardcover_id = &u
-	m.adddecision_book_hardcover_id = nil
+func (m *ImportScanBookMutation) SetDecisionBookHardcoverID(s string) {
+	m.decision_book_hardcover_id = &s
 }
 
 // DecisionBookHardcoverID returns the value of the "decision_book_hardcover_id" field in the mutation.
-func (m *ImportScanBookMutation) DecisionBookHardcoverID() (r uint32, exists bool) {
+func (m *ImportScanBookMutation) DecisionBookHardcoverID() (r string, exists bool) {
 	v := m.decision_book_hardcover_id
 	if v == nil {
 		return
@@ -24699,7 +24540,7 @@ func (m *ImportScanBookMutation) DecisionBookHardcoverID() (r uint32, exists boo
 // OldDecisionBookHardcoverID returns the old "decision_book_hardcover_id" field's value of the ImportScanBook entity.
 // If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ImportScanBookMutation) OldDecisionBookHardcoverID(ctx context.Context) (v uint32, err error) {
+func (m *ImportScanBookMutation) OldDecisionBookHardcoverID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDecisionBookHardcoverID is only allowed on UpdateOne operations")
 	}
@@ -24713,28 +24554,9 @@ func (m *ImportScanBookMutation) OldDecisionBookHardcoverID(ctx context.Context)
 	return oldValue.DecisionBookHardcoverID, nil
 }
 
-// AddDecisionBookHardcoverID adds u to the "decision_book_hardcover_id" field.
-func (m *ImportScanBookMutation) AddDecisionBookHardcoverID(u int32) {
-	if m.adddecision_book_hardcover_id != nil {
-		*m.adddecision_book_hardcover_id += u
-	} else {
-		m.adddecision_book_hardcover_id = &u
-	}
-}
-
-// AddedDecisionBookHardcoverID returns the value that was added to the "decision_book_hardcover_id" field in this mutation.
-func (m *ImportScanBookMutation) AddedDecisionBookHardcoverID() (r int32, exists bool) {
-	v := m.adddecision_book_hardcover_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ClearDecisionBookHardcoverID clears the value of the "decision_book_hardcover_id" field.
 func (m *ImportScanBookMutation) ClearDecisionBookHardcoverID() {
 	m.decision_book_hardcover_id = nil
-	m.adddecision_book_hardcover_id = nil
 	m.clearedFields[importscanbook.FieldDecisionBookHardcoverID] = struct{}{}
 }
 
@@ -24747,7 +24569,6 @@ func (m *ImportScanBookMutation) DecisionBookHardcoverIDCleared() bool {
 // ResetDecisionBookHardcoverID resets all changes to the "decision_book_hardcover_id" field.
 func (m *ImportScanBookMutation) ResetDecisionBookHardcoverID() {
 	m.decision_book_hardcover_id = nil
-	m.adddecision_book_hardcover_id = nil
 	delete(m.clearedFields, importscanbook.FieldDecisionBookHardcoverID)
 }
 
@@ -25203,7 +25024,7 @@ func (m *ImportScanBookMutation) SetField(name string, value ent.Value) error {
 		m.SetClassification(v)
 		return nil
 	case importscanbook.FieldBookHardcoverID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -25231,7 +25052,7 @@ func (m *ImportScanBookMutation) SetField(name string, value ent.Value) error {
 		m.SetDecision(v)
 		return nil
 	case importscanbook.FieldDecisionBookHardcoverID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -25272,14 +25093,8 @@ func (m *ImportScanBookMutation) AddedFields() []string {
 	if m.addsize != nil {
 		fields = append(fields, importscanbook.FieldSize)
 	}
-	if m.addbook_hardcover_id != nil {
-		fields = append(fields, importscanbook.FieldBookHardcoverID)
-	}
 	if m.addexisting_book_id != nil {
 		fields = append(fields, importscanbook.FieldExistingBookID)
-	}
-	if m.adddecision_book_hardcover_id != nil {
-		fields = append(fields, importscanbook.FieldDecisionBookHardcoverID)
 	}
 	if m.addcreated_book_id != nil {
 		fields = append(fields, importscanbook.FieldCreatedBookID)
@@ -25296,12 +25111,8 @@ func (m *ImportScanBookMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedParsedYear()
 	case importscanbook.FieldSize:
 		return m.AddedSize()
-	case importscanbook.FieldBookHardcoverID:
-		return m.AddedBookHardcoverID()
 	case importscanbook.FieldExistingBookID:
 		return m.AddedExistingBookID()
-	case importscanbook.FieldDecisionBookHardcoverID:
-		return m.AddedDecisionBookHardcoverID()
 	case importscanbook.FieldCreatedBookID:
 		return m.AddedCreatedBookID()
 	}
@@ -25327,26 +25138,12 @@ func (m *ImportScanBookMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddSize(v)
 		return nil
-	case importscanbook.FieldBookHardcoverID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddBookHardcoverID(v)
-		return nil
 	case importscanbook.FieldExistingBookID:
 		v, ok := value.(int32)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddExistingBookID(v)
-		return nil
-	case importscanbook.FieldDecisionBookHardcoverID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddDecisionBookHardcoverID(v)
 		return nil
 	case importscanbook.FieldCreatedBookID:
 		v, ok := value.(int32)
@@ -25596,13 +25393,11 @@ type ImportScanFileMutation struct {
 	classification       *importscanfile.Classification
 	candidates           *[]schema.ScannedCandidate
 	appendcandidates     []schema.ScannedCandidate
-	tmdb_id              *uint32
-	addtmdb_id           *int32
+	tmdb_id              *string
 	existing_movie_id    *uint32
 	addexisting_movie_id *int32
 	decision             *importscanfile.Decision
-	decision_tmdb_id     *uint32
-	adddecision_tmdb_id  *int32
+	decision_tmdb_id     *string
 	outcome              *importscanfile.Outcome
 	outcome_message      *string
 	created_movie_id     *uint32
@@ -26202,13 +25997,12 @@ func (m *ImportScanFileMutation) ResetCandidates() {
 }
 
 // SetTmdbID sets the "tmdb_id" field.
-func (m *ImportScanFileMutation) SetTmdbID(u uint32) {
-	m.tmdb_id = &u
-	m.addtmdb_id = nil
+func (m *ImportScanFileMutation) SetTmdbID(s string) {
+	m.tmdb_id = &s
 }
 
 // TmdbID returns the value of the "tmdb_id" field in the mutation.
-func (m *ImportScanFileMutation) TmdbID() (r uint32, exists bool) {
+func (m *ImportScanFileMutation) TmdbID() (r string, exists bool) {
 	v := m.tmdb_id
 	if v == nil {
 		return
@@ -26219,7 +26013,7 @@ func (m *ImportScanFileMutation) TmdbID() (r uint32, exists bool) {
 // OldTmdbID returns the old "tmdb_id" field's value of the ImportScanFile entity.
 // If the ImportScanFile object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ImportScanFileMutation) OldTmdbID(ctx context.Context) (v uint32, err error) {
+func (m *ImportScanFileMutation) OldTmdbID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldTmdbID is only allowed on UpdateOne operations")
 	}
@@ -26233,28 +26027,9 @@ func (m *ImportScanFileMutation) OldTmdbID(ctx context.Context) (v uint32, err e
 	return oldValue.TmdbID, nil
 }
 
-// AddTmdbID adds u to the "tmdb_id" field.
-func (m *ImportScanFileMutation) AddTmdbID(u int32) {
-	if m.addtmdb_id != nil {
-		*m.addtmdb_id += u
-	} else {
-		m.addtmdb_id = &u
-	}
-}
-
-// AddedTmdbID returns the value that was added to the "tmdb_id" field in this mutation.
-func (m *ImportScanFileMutation) AddedTmdbID() (r int32, exists bool) {
-	v := m.addtmdb_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ClearTmdbID clears the value of the "tmdb_id" field.
 func (m *ImportScanFileMutation) ClearTmdbID() {
 	m.tmdb_id = nil
-	m.addtmdb_id = nil
 	m.clearedFields[importscanfile.FieldTmdbID] = struct{}{}
 }
 
@@ -26267,7 +26042,6 @@ func (m *ImportScanFileMutation) TmdbIDCleared() bool {
 // ResetTmdbID resets all changes to the "tmdb_id" field.
 func (m *ImportScanFileMutation) ResetTmdbID() {
 	m.tmdb_id = nil
-	m.addtmdb_id = nil
 	delete(m.clearedFields, importscanfile.FieldTmdbID)
 }
 
@@ -26378,13 +26152,12 @@ func (m *ImportScanFileMutation) ResetDecision() {
 }
 
 // SetDecisionTmdbID sets the "decision_tmdb_id" field.
-func (m *ImportScanFileMutation) SetDecisionTmdbID(u uint32) {
-	m.decision_tmdb_id = &u
-	m.adddecision_tmdb_id = nil
+func (m *ImportScanFileMutation) SetDecisionTmdbID(s string) {
+	m.decision_tmdb_id = &s
 }
 
 // DecisionTmdbID returns the value of the "decision_tmdb_id" field in the mutation.
-func (m *ImportScanFileMutation) DecisionTmdbID() (r uint32, exists bool) {
+func (m *ImportScanFileMutation) DecisionTmdbID() (r string, exists bool) {
 	v := m.decision_tmdb_id
 	if v == nil {
 		return
@@ -26395,7 +26168,7 @@ func (m *ImportScanFileMutation) DecisionTmdbID() (r uint32, exists bool) {
 // OldDecisionTmdbID returns the old "decision_tmdb_id" field's value of the ImportScanFile entity.
 // If the ImportScanFile object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ImportScanFileMutation) OldDecisionTmdbID(ctx context.Context) (v uint32, err error) {
+func (m *ImportScanFileMutation) OldDecisionTmdbID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDecisionTmdbID is only allowed on UpdateOne operations")
 	}
@@ -26409,28 +26182,9 @@ func (m *ImportScanFileMutation) OldDecisionTmdbID(ctx context.Context) (v uint3
 	return oldValue.DecisionTmdbID, nil
 }
 
-// AddDecisionTmdbID adds u to the "decision_tmdb_id" field.
-func (m *ImportScanFileMutation) AddDecisionTmdbID(u int32) {
-	if m.adddecision_tmdb_id != nil {
-		*m.adddecision_tmdb_id += u
-	} else {
-		m.adddecision_tmdb_id = &u
-	}
-}
-
-// AddedDecisionTmdbID returns the value that was added to the "decision_tmdb_id" field in this mutation.
-func (m *ImportScanFileMutation) AddedDecisionTmdbID() (r int32, exists bool) {
-	v := m.adddecision_tmdb_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ClearDecisionTmdbID clears the value of the "decision_tmdb_id" field.
 func (m *ImportScanFileMutation) ClearDecisionTmdbID() {
 	m.decision_tmdb_id = nil
-	m.adddecision_tmdb_id = nil
 	m.clearedFields[importscanfile.FieldDecisionTmdbID] = struct{}{}
 }
 
@@ -26443,7 +26197,6 @@ func (m *ImportScanFileMutation) DecisionTmdbIDCleared() bool {
 // ResetDecisionTmdbID resets all changes to the "decision_tmdb_id" field.
 func (m *ImportScanFileMutation) ResetDecisionTmdbID() {
 	m.decision_tmdb_id = nil
-	m.adddecision_tmdb_id = nil
 	delete(m.clearedFields, importscanfile.FieldDecisionTmdbID)
 }
 
@@ -26892,7 +26645,7 @@ func (m *ImportScanFileMutation) SetField(name string, value ent.Value) error {
 		m.SetCandidates(v)
 		return nil
 	case importscanfile.FieldTmdbID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -26913,7 +26666,7 @@ func (m *ImportScanFileMutation) SetField(name string, value ent.Value) error {
 		m.SetDecision(v)
 		return nil
 	case importscanfile.FieldDecisionTmdbID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -26954,14 +26707,8 @@ func (m *ImportScanFileMutation) AddedFields() []string {
 	if m.addparsed_year != nil {
 		fields = append(fields, importscanfile.FieldParsedYear)
 	}
-	if m.addtmdb_id != nil {
-		fields = append(fields, importscanfile.FieldTmdbID)
-	}
 	if m.addexisting_movie_id != nil {
 		fields = append(fields, importscanfile.FieldExistingMovieID)
-	}
-	if m.adddecision_tmdb_id != nil {
-		fields = append(fields, importscanfile.FieldDecisionTmdbID)
 	}
 	if m.addcreated_movie_id != nil {
 		fields = append(fields, importscanfile.FieldCreatedMovieID)
@@ -26978,12 +26725,8 @@ func (m *ImportScanFileMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedSize()
 	case importscanfile.FieldParsedYear:
 		return m.AddedParsedYear()
-	case importscanfile.FieldTmdbID:
-		return m.AddedTmdbID()
 	case importscanfile.FieldExistingMovieID:
 		return m.AddedExistingMovieID()
-	case importscanfile.FieldDecisionTmdbID:
-		return m.AddedDecisionTmdbID()
 	case importscanfile.FieldCreatedMovieID:
 		return m.AddedCreatedMovieID()
 	}
@@ -27009,26 +26752,12 @@ func (m *ImportScanFileMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddParsedYear(v)
 		return nil
-	case importscanfile.FieldTmdbID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddTmdbID(v)
-		return nil
 	case importscanfile.FieldExistingMovieID:
 		v, ok := value.(int32)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddExistingMovieID(v)
-		return nil
-	case importscanfile.FieldDecisionTmdbID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddDecisionTmdbID(v)
 		return nil
 	case importscanfile.FieldCreatedMovieID:
 		v, ok := value.(int32)
@@ -27269,8 +26998,7 @@ type ImportScanShowMutation struct {
 	parsed_year           *uint16
 	addparsed_year        *int16
 	classification        *importscanshow.Classification
-	tvdb_id               *uint32
-	addtvdb_id            *int32
+	tvdb_id               *string
 	candidates            *[]schema.ScannedShowCandidate
 	appendcandidates      []schema.ScannedShowCandidate
 	existing_tvshow_id    *uint32
@@ -27278,8 +27006,7 @@ type ImportScanShowMutation struct {
 	file_count            *uint16
 	addfile_count         *int16
 	decision              *importscanshow.Decision
-	decision_tvdb_id      *uint32
-	adddecision_tvdb_id   *int32
+	decision_tvdb_id      *string
 	outcome               *importscanshow.Outcome
 	outcome_message       *string
 	created_tvshow_id     *uint32
@@ -27660,13 +27387,12 @@ func (m *ImportScanShowMutation) ResetClassification() {
 }
 
 // SetTvdbID sets the "tvdb_id" field.
-func (m *ImportScanShowMutation) SetTvdbID(u uint32) {
-	m.tvdb_id = &u
-	m.addtvdb_id = nil
+func (m *ImportScanShowMutation) SetTvdbID(s string) {
+	m.tvdb_id = &s
 }
 
 // TvdbID returns the value of the "tvdb_id" field in the mutation.
-func (m *ImportScanShowMutation) TvdbID() (r uint32, exists bool) {
+func (m *ImportScanShowMutation) TvdbID() (r string, exists bool) {
 	v := m.tvdb_id
 	if v == nil {
 		return
@@ -27677,7 +27403,7 @@ func (m *ImportScanShowMutation) TvdbID() (r uint32, exists bool) {
 // OldTvdbID returns the old "tvdb_id" field's value of the ImportScanShow entity.
 // If the ImportScanShow object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ImportScanShowMutation) OldTvdbID(ctx context.Context) (v *uint32, err error) {
+func (m *ImportScanShowMutation) OldTvdbID(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldTvdbID is only allowed on UpdateOne operations")
 	}
@@ -27691,28 +27417,9 @@ func (m *ImportScanShowMutation) OldTvdbID(ctx context.Context) (v *uint32, err 
 	return oldValue.TvdbID, nil
 }
 
-// AddTvdbID adds u to the "tvdb_id" field.
-func (m *ImportScanShowMutation) AddTvdbID(u int32) {
-	if m.addtvdb_id != nil {
-		*m.addtvdb_id += u
-	} else {
-		m.addtvdb_id = &u
-	}
-}
-
-// AddedTvdbID returns the value that was added to the "tvdb_id" field in this mutation.
-func (m *ImportScanShowMutation) AddedTvdbID() (r int32, exists bool) {
-	v := m.addtvdb_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ClearTvdbID clears the value of the "tvdb_id" field.
 func (m *ImportScanShowMutation) ClearTvdbID() {
 	m.tvdb_id = nil
-	m.addtvdb_id = nil
 	m.clearedFields[importscanshow.FieldTvdbID] = struct{}{}
 }
 
@@ -27725,7 +27432,6 @@ func (m *ImportScanShowMutation) TvdbIDCleared() bool {
 // ResetTvdbID resets all changes to the "tvdb_id" field.
 func (m *ImportScanShowMutation) ResetTvdbID() {
 	m.tvdb_id = nil
-	m.addtvdb_id = nil
 	delete(m.clearedFields, importscanshow.FieldTvdbID)
 }
 
@@ -27957,13 +27663,12 @@ func (m *ImportScanShowMutation) ResetDecision() {
 }
 
 // SetDecisionTvdbID sets the "decision_tvdb_id" field.
-func (m *ImportScanShowMutation) SetDecisionTvdbID(u uint32) {
-	m.decision_tvdb_id = &u
-	m.adddecision_tvdb_id = nil
+func (m *ImportScanShowMutation) SetDecisionTvdbID(s string) {
+	m.decision_tvdb_id = &s
 }
 
 // DecisionTvdbID returns the value of the "decision_tvdb_id" field in the mutation.
-func (m *ImportScanShowMutation) DecisionTvdbID() (r uint32, exists bool) {
+func (m *ImportScanShowMutation) DecisionTvdbID() (r string, exists bool) {
 	v := m.decision_tvdb_id
 	if v == nil {
 		return
@@ -27974,7 +27679,7 @@ func (m *ImportScanShowMutation) DecisionTvdbID() (r uint32, exists bool) {
 // OldDecisionTvdbID returns the old "decision_tvdb_id" field's value of the ImportScanShow entity.
 // If the ImportScanShow object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ImportScanShowMutation) OldDecisionTvdbID(ctx context.Context) (v *uint32, err error) {
+func (m *ImportScanShowMutation) OldDecisionTvdbID(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDecisionTvdbID is only allowed on UpdateOne operations")
 	}
@@ -27988,28 +27693,9 @@ func (m *ImportScanShowMutation) OldDecisionTvdbID(ctx context.Context) (v *uint
 	return oldValue.DecisionTvdbID, nil
 }
 
-// AddDecisionTvdbID adds u to the "decision_tvdb_id" field.
-func (m *ImportScanShowMutation) AddDecisionTvdbID(u int32) {
-	if m.adddecision_tvdb_id != nil {
-		*m.adddecision_tvdb_id += u
-	} else {
-		m.adddecision_tvdb_id = &u
-	}
-}
-
-// AddedDecisionTvdbID returns the value that was added to the "decision_tvdb_id" field in this mutation.
-func (m *ImportScanShowMutation) AddedDecisionTvdbID() (r int32, exists bool) {
-	v := m.adddecision_tvdb_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ClearDecisionTvdbID clears the value of the "decision_tvdb_id" field.
 func (m *ImportScanShowMutation) ClearDecisionTvdbID() {
 	m.decision_tvdb_id = nil
-	m.adddecision_tvdb_id = nil
 	m.clearedFields[importscanshow.FieldDecisionTvdbID] = struct{}{}
 }
 
@@ -28022,7 +27708,6 @@ func (m *ImportScanShowMutation) DecisionTvdbIDCleared() bool {
 // ResetDecisionTvdbID resets all changes to the "decision_tvdb_id" field.
 func (m *ImportScanShowMutation) ResetDecisionTvdbID() {
 	m.decision_tvdb_id = nil
-	m.adddecision_tvdb_id = nil
 	delete(m.clearedFields, importscanshow.FieldDecisionTvdbID)
 }
 
@@ -28429,7 +28114,7 @@ func (m *ImportScanShowMutation) SetField(name string, value ent.Value) error {
 		m.SetClassification(v)
 		return nil
 	case importscanshow.FieldTvdbID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -28464,7 +28149,7 @@ func (m *ImportScanShowMutation) SetField(name string, value ent.Value) error {
 		m.SetDecision(v)
 		return nil
 	case importscanshow.FieldDecisionTvdbID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -28502,17 +28187,11 @@ func (m *ImportScanShowMutation) AddedFields() []string {
 	if m.addparsed_year != nil {
 		fields = append(fields, importscanshow.FieldParsedYear)
 	}
-	if m.addtvdb_id != nil {
-		fields = append(fields, importscanshow.FieldTvdbID)
-	}
 	if m.addexisting_tvshow_id != nil {
 		fields = append(fields, importscanshow.FieldExistingTvshowID)
 	}
 	if m.addfile_count != nil {
 		fields = append(fields, importscanshow.FieldFileCount)
-	}
-	if m.adddecision_tvdb_id != nil {
-		fields = append(fields, importscanshow.FieldDecisionTvdbID)
 	}
 	if m.addcreated_tvshow_id != nil {
 		fields = append(fields, importscanshow.FieldCreatedTvshowID)
@@ -28527,14 +28206,10 @@ func (m *ImportScanShowMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case importscanshow.FieldParsedYear:
 		return m.AddedParsedYear()
-	case importscanshow.FieldTvdbID:
-		return m.AddedTvdbID()
 	case importscanshow.FieldExistingTvshowID:
 		return m.AddedExistingTvshowID()
 	case importscanshow.FieldFileCount:
 		return m.AddedFileCount()
-	case importscanshow.FieldDecisionTvdbID:
-		return m.AddedDecisionTvdbID()
 	case importscanshow.FieldCreatedTvshowID:
 		return m.AddedCreatedTvshowID()
 	}
@@ -28553,13 +28228,6 @@ func (m *ImportScanShowMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddParsedYear(v)
 		return nil
-	case importscanshow.FieldTvdbID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddTvdbID(v)
-		return nil
 	case importscanshow.FieldExistingTvshowID:
 		v, ok := value.(int32)
 		if !ok {
@@ -28573,13 +28241,6 @@ func (m *ImportScanShowMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddFileCount(v)
-		return nil
-	case importscanshow.FieldDecisionTvdbID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddDecisionTvdbID(v)
 		return nil
 	case importscanshow.FieldCreatedTvshowID:
 		v, ok := value.(int32)
@@ -34211,8 +33872,7 @@ type MovieMutation struct {
 	addruntime              *int16
 	status                  *movie.Status
 	monitored               *bool
-	tmdb_id                 *uint32
-	addtmdb_id              *int32
+	tmdb_id                 *string
 	last_search_at          *time.Time
 	release_date            *time.Time
 	digital_release_date    *time.Time
@@ -34741,13 +34401,12 @@ func (m *MovieMutation) ResetMonitored() {
 }
 
 // SetTmdbID sets the "tmdb_id" field.
-func (m *MovieMutation) SetTmdbID(u uint32) {
-	m.tmdb_id = &u
-	m.addtmdb_id = nil
+func (m *MovieMutation) SetTmdbID(s string) {
+	m.tmdb_id = &s
 }
 
 // TmdbID returns the value of the "tmdb_id" field in the mutation.
-func (m *MovieMutation) TmdbID() (r uint32, exists bool) {
+func (m *MovieMutation) TmdbID() (r string, exists bool) {
 	v := m.tmdb_id
 	if v == nil {
 		return
@@ -34758,7 +34417,7 @@ func (m *MovieMutation) TmdbID() (r uint32, exists bool) {
 // OldTmdbID returns the old "tmdb_id" field's value of the Movie entity.
 // If the Movie object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MovieMutation) OldTmdbID(ctx context.Context) (v uint32, err error) {
+func (m *MovieMutation) OldTmdbID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldTmdbID is only allowed on UpdateOne operations")
 	}
@@ -34772,28 +34431,9 @@ func (m *MovieMutation) OldTmdbID(ctx context.Context) (v uint32, err error) {
 	return oldValue.TmdbID, nil
 }
 
-// AddTmdbID adds u to the "tmdb_id" field.
-func (m *MovieMutation) AddTmdbID(u int32) {
-	if m.addtmdb_id != nil {
-		*m.addtmdb_id += u
-	} else {
-		m.addtmdb_id = &u
-	}
-}
-
-// AddedTmdbID returns the value that was added to the "tmdb_id" field in this mutation.
-func (m *MovieMutation) AddedTmdbID() (r int32, exists bool) {
-	v := m.addtmdb_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ResetTmdbID resets all changes to the "tmdb_id" field.
 func (m *MovieMutation) ResetTmdbID() {
 	m.tmdb_id = nil
-	m.addtmdb_id = nil
 }
 
 // SetLastSearchAt sets the "last_search_at" field.
@@ -35827,7 +35467,7 @@ func (m *MovieMutation) SetField(name string, value ent.Value) error {
 		m.SetMonitored(v)
 		return nil
 	case movie.FieldTmdbID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -35917,9 +35557,6 @@ func (m *MovieMutation) AddedFields() []string {
 	if m.addruntime != nil {
 		fields = append(fields, movie.FieldRuntime)
 	}
-	if m.addtmdb_id != nil {
-		fields = append(fields, movie.FieldTmdbID)
-	}
 	if m.addgrab_failures != nil {
 		fields = append(fields, movie.FieldGrabFailures)
 	}
@@ -35938,8 +35575,6 @@ func (m *MovieMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedYear()
 	case movie.FieldRuntime:
 		return m.AddedRuntime()
-	case movie.FieldTmdbID:
-		return m.AddedTmdbID()
 	case movie.FieldGrabFailures:
 		return m.AddedGrabFailures()
 	case movie.FieldRating:
@@ -35966,13 +35601,6 @@ func (m *MovieMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddRuntime(v)
-		return nil
-	case movie.FieldTmdbID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddTmdbID(v)
 		return nil
 	case movie.FieldGrabFailures:
 		v, ok := value.(int8)
@@ -39118,10 +38746,8 @@ type PersonMutation struct {
 	id                 *uint32
 	create_time        *time.Time
 	update_time        *time.Time
-	tmdb_id            *uint32
-	addtmdb_id         *int32
-	tvdb_id            *uint32
-	addtvdb_id         *int32
+	tmdb_id            *string
+	tvdb_id            *string
 	name               *string
 	profile_url        *string
 	biography          *string
@@ -39319,13 +38945,12 @@ func (m *PersonMutation) ResetUpdateTime() {
 }
 
 // SetTmdbID sets the "tmdb_id" field.
-func (m *PersonMutation) SetTmdbID(u uint32) {
-	m.tmdb_id = &u
-	m.addtmdb_id = nil
+func (m *PersonMutation) SetTmdbID(s string) {
+	m.tmdb_id = &s
 }
 
 // TmdbID returns the value of the "tmdb_id" field in the mutation.
-func (m *PersonMutation) TmdbID() (r uint32, exists bool) {
+func (m *PersonMutation) TmdbID() (r string, exists bool) {
 	v := m.tmdb_id
 	if v == nil {
 		return
@@ -39336,7 +38961,7 @@ func (m *PersonMutation) TmdbID() (r uint32, exists bool) {
 // OldTmdbID returns the old "tmdb_id" field's value of the Person entity.
 // If the Person object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *PersonMutation) OldTmdbID(ctx context.Context) (v uint32, err error) {
+func (m *PersonMutation) OldTmdbID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldTmdbID is only allowed on UpdateOne operations")
 	}
@@ -39350,28 +38975,9 @@ func (m *PersonMutation) OldTmdbID(ctx context.Context) (v uint32, err error) {
 	return oldValue.TmdbID, nil
 }
 
-// AddTmdbID adds u to the "tmdb_id" field.
-func (m *PersonMutation) AddTmdbID(u int32) {
-	if m.addtmdb_id != nil {
-		*m.addtmdb_id += u
-	} else {
-		m.addtmdb_id = &u
-	}
-}
-
-// AddedTmdbID returns the value that was added to the "tmdb_id" field in this mutation.
-func (m *PersonMutation) AddedTmdbID() (r int32, exists bool) {
-	v := m.addtmdb_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ClearTmdbID clears the value of the "tmdb_id" field.
 func (m *PersonMutation) ClearTmdbID() {
 	m.tmdb_id = nil
-	m.addtmdb_id = nil
 	m.clearedFields[person.FieldTmdbID] = struct{}{}
 }
 
@@ -39384,18 +38990,16 @@ func (m *PersonMutation) TmdbIDCleared() bool {
 // ResetTmdbID resets all changes to the "tmdb_id" field.
 func (m *PersonMutation) ResetTmdbID() {
 	m.tmdb_id = nil
-	m.addtmdb_id = nil
 	delete(m.clearedFields, person.FieldTmdbID)
 }
 
 // SetTvdbID sets the "tvdb_id" field.
-func (m *PersonMutation) SetTvdbID(u uint32) {
-	m.tvdb_id = &u
-	m.addtvdb_id = nil
+func (m *PersonMutation) SetTvdbID(s string) {
+	m.tvdb_id = &s
 }
 
 // TvdbID returns the value of the "tvdb_id" field in the mutation.
-func (m *PersonMutation) TvdbID() (r uint32, exists bool) {
+func (m *PersonMutation) TvdbID() (r string, exists bool) {
 	v := m.tvdb_id
 	if v == nil {
 		return
@@ -39406,7 +39010,7 @@ func (m *PersonMutation) TvdbID() (r uint32, exists bool) {
 // OldTvdbID returns the old "tvdb_id" field's value of the Person entity.
 // If the Person object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *PersonMutation) OldTvdbID(ctx context.Context) (v uint32, err error) {
+func (m *PersonMutation) OldTvdbID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldTvdbID is only allowed on UpdateOne operations")
 	}
@@ -39420,28 +39024,9 @@ func (m *PersonMutation) OldTvdbID(ctx context.Context) (v uint32, err error) {
 	return oldValue.TvdbID, nil
 }
 
-// AddTvdbID adds u to the "tvdb_id" field.
-func (m *PersonMutation) AddTvdbID(u int32) {
-	if m.addtvdb_id != nil {
-		*m.addtvdb_id += u
-	} else {
-		m.addtvdb_id = &u
-	}
-}
-
-// AddedTvdbID returns the value that was added to the "tvdb_id" field in this mutation.
-func (m *PersonMutation) AddedTvdbID() (r int32, exists bool) {
-	v := m.addtvdb_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ClearTvdbID clears the value of the "tvdb_id" field.
 func (m *PersonMutation) ClearTvdbID() {
 	m.tvdb_id = nil
-	m.addtvdb_id = nil
 	m.clearedFields[person.FieldTvdbID] = struct{}{}
 }
 
@@ -39454,7 +39039,6 @@ func (m *PersonMutation) TvdbIDCleared() bool {
 // ResetTvdbID resets all changes to the "tvdb_id" field.
 func (m *PersonMutation) ResetTvdbID() {
 	m.tvdb_id = nil
-	m.addtvdb_id = nil
 	delete(m.clearedFields, person.FieldTvdbID)
 }
 
@@ -40219,14 +39803,14 @@ func (m *PersonMutation) SetField(name string, value ent.Value) error {
 		m.SetUpdateTime(v)
 		return nil
 	case person.FieldTmdbID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTmdbID(v)
 		return nil
 	case person.FieldTvdbID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -40316,26 +39900,13 @@ func (m *PersonMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *PersonMutation) AddedFields() []string {
-	var fields []string
-	if m.addtmdb_id != nil {
-		fields = append(fields, person.FieldTmdbID)
-	}
-	if m.addtvdb_id != nil {
-		fields = append(fields, person.FieldTvdbID)
-	}
-	return fields
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *PersonMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case person.FieldTmdbID:
-		return m.AddedTmdbID()
-	case person.FieldTvdbID:
-		return m.AddedTvdbID()
-	}
 	return nil, false
 }
 
@@ -40344,20 +39915,6 @@ func (m *PersonMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *PersonMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case person.FieldTmdbID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddTmdbID(v)
-		return nil
-	case person.FieldTvdbID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddTvdbID(v)
-		return nil
 	}
 	return fmt.Errorf("unknown Person numeric field %s", name)
 }
@@ -42695,8 +42252,7 @@ type RequestMutation struct {
 	create_time        *time.Time
 	update_time        *time.Time
 	media_type         *request.MediaType
-	media_id           *uint32
-	addmedia_id        *int32
+	media_id           *string
 	media_mbid         *string
 	artist_mbid        *string
 	artist_name        *string
@@ -42928,13 +42484,12 @@ func (m *RequestMutation) ResetMediaType() {
 }
 
 // SetMediaID sets the "media_id" field.
-func (m *RequestMutation) SetMediaID(u uint32) {
-	m.media_id = &u
-	m.addmedia_id = nil
+func (m *RequestMutation) SetMediaID(s string) {
+	m.media_id = &s
 }
 
 // MediaID returns the value of the "media_id" field in the mutation.
-func (m *RequestMutation) MediaID() (r uint32, exists bool) {
+func (m *RequestMutation) MediaID() (r string, exists bool) {
 	v := m.media_id
 	if v == nil {
 		return
@@ -42945,7 +42500,7 @@ func (m *RequestMutation) MediaID() (r uint32, exists bool) {
 // OldMediaID returns the old "media_id" field's value of the Request entity.
 // If the Request object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RequestMutation) OldMediaID(ctx context.Context) (v uint32, err error) {
+func (m *RequestMutation) OldMediaID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldMediaID is only allowed on UpdateOne operations")
 	}
@@ -42959,28 +42514,9 @@ func (m *RequestMutation) OldMediaID(ctx context.Context) (v uint32, err error) 
 	return oldValue.MediaID, nil
 }
 
-// AddMediaID adds u to the "media_id" field.
-func (m *RequestMutation) AddMediaID(u int32) {
-	if m.addmedia_id != nil {
-		*m.addmedia_id += u
-	} else {
-		m.addmedia_id = &u
-	}
-}
-
-// AddedMediaID returns the value that was added to the "media_id" field in this mutation.
-func (m *RequestMutation) AddedMediaID() (r int32, exists bool) {
-	v := m.addmedia_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ClearMediaID clears the value of the "media_id" field.
 func (m *RequestMutation) ClearMediaID() {
 	m.media_id = nil
-	m.addmedia_id = nil
 	m.clearedFields[request.FieldMediaID] = struct{}{}
 }
 
@@ -42993,7 +42529,6 @@ func (m *RequestMutation) MediaIDCleared() bool {
 // ResetMediaID resets all changes to the "media_id" field.
 func (m *RequestMutation) ResetMediaID() {
 	m.media_id = nil
-	m.addmedia_id = nil
 	delete(m.clearedFields, request.FieldMediaID)
 }
 
@@ -43608,7 +43143,7 @@ func (m *RequestMutation) SetField(name string, value ent.Value) error {
 		m.SetMediaType(v)
 		return nil
 	case request.FieldMediaID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -43677,21 +43212,13 @@ func (m *RequestMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *RequestMutation) AddedFields() []string {
-	var fields []string
-	if m.addmedia_id != nil {
-		fields = append(fields, request.FieldMediaID)
-	}
-	return fields
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *RequestMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case request.FieldMediaID:
-		return m.AddedMediaID()
-	}
 	return nil, false
 }
 
@@ -43700,13 +43227,6 @@ func (m *RequestMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *RequestMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case request.FieldMediaID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddMediaID(v)
-		return nil
 	}
 	return fmt.Errorf("unknown Request numeric field %s", name)
 }
@@ -47164,8 +46684,7 @@ type TVShowMutation struct {
 	series_status     *tvshow.SeriesStatus
 	_type             *tvshow.Type
 	monitored         *bool
-	tvdb_id           *uint32
-	addtvdb_id        *int32
+	tvdb_id           *string
 	poster_path       *string
 	network           *string
 	creator           *string
@@ -47718,13 +47237,12 @@ func (m *TVShowMutation) ResetMonitored() {
 }
 
 // SetTvdbID sets the "tvdb_id" field.
-func (m *TVShowMutation) SetTvdbID(u uint32) {
-	m.tvdb_id = &u
-	m.addtvdb_id = nil
+func (m *TVShowMutation) SetTvdbID(s string) {
+	m.tvdb_id = &s
 }
 
 // TvdbID returns the value of the "tvdb_id" field in the mutation.
-func (m *TVShowMutation) TvdbID() (r uint32, exists bool) {
+func (m *TVShowMutation) TvdbID() (r string, exists bool) {
 	v := m.tvdb_id
 	if v == nil {
 		return
@@ -47735,7 +47253,7 @@ func (m *TVShowMutation) TvdbID() (r uint32, exists bool) {
 // OldTvdbID returns the old "tvdb_id" field's value of the TVShow entity.
 // If the TVShow object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TVShowMutation) OldTvdbID(ctx context.Context) (v uint32, err error) {
+func (m *TVShowMutation) OldTvdbID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldTvdbID is only allowed on UpdateOne operations")
 	}
@@ -47749,28 +47267,9 @@ func (m *TVShowMutation) OldTvdbID(ctx context.Context) (v uint32, err error) {
 	return oldValue.TvdbID, nil
 }
 
-// AddTvdbID adds u to the "tvdb_id" field.
-func (m *TVShowMutation) AddTvdbID(u int32) {
-	if m.addtvdb_id != nil {
-		*m.addtvdb_id += u
-	} else {
-		m.addtvdb_id = &u
-	}
-}
-
-// AddedTvdbID returns the value that was added to the "tvdb_id" field in this mutation.
-func (m *TVShowMutation) AddedTvdbID() (r int32, exists bool) {
-	v := m.addtvdb_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ResetTvdbID resets all changes to the "tvdb_id" field.
 func (m *TVShowMutation) ResetTvdbID() {
 	m.tvdb_id = nil
-	m.addtvdb_id = nil
 }
 
 // SetPosterPath sets the "poster_path" field.
@@ -48722,7 +48221,7 @@ func (m *TVShowMutation) SetField(name string, value ent.Value) error {
 		m.SetMonitored(v)
 		return nil
 	case tvshow.FieldTvdbID:
-		v, ok := value.(uint32)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -48802,9 +48301,6 @@ func (m *TVShowMutation) AddedFields() []string {
 	if m.addyear != nil {
 		fields = append(fields, tvshow.FieldYear)
 	}
-	if m.addtvdb_id != nil {
-		fields = append(fields, tvshow.FieldTvdbID)
-	}
 	if m.addruntime != nil {
 		fields = append(fields, tvshow.FieldRuntime)
 	}
@@ -48821,8 +48317,6 @@ func (m *TVShowMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case tvshow.FieldYear:
 		return m.AddedYear()
-	case tvshow.FieldTvdbID:
-		return m.AddedTvdbID()
 	case tvshow.FieldRuntime:
 		return m.AddedRuntime()
 	case tvshow.FieldRating:
@@ -48842,13 +48336,6 @@ func (m *TVShowMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddYear(v)
-		return nil
-	case tvshow.FieldTvdbID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddTvdbID(v)
 		return nil
 	case tvshow.FieldRuntime:
 		v, ok := value.(int16)

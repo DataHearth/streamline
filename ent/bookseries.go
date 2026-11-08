@@ -22,7 +22,7 @@ type BookSeries struct {
 	// UpdateTime holds the value of the "update_time" field.
 	UpdateTime time.Time `json:"update_time,omitempty"`
 	// HardcoverID holds the value of the "hardcover_id" field.
-	HardcoverID uint32 `json:"hardcover_id,omitempty"`
+	HardcoverID string `json:"hardcover_id,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// OriginalTitle holds the value of the "original_title" field.
@@ -106,9 +106,9 @@ func (*BookSeries) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case bookseries.FieldOngoing:
 			values[i] = new(sql.NullBool)
-		case bookseries.FieldID, bookseries.FieldHardcoverID, bookseries.FieldRatingTenths, bookseries.FieldSince:
+		case bookseries.FieldID, bookseries.FieldRatingTenths, bookseries.FieldSince:
 			values[i] = new(sql.NullInt64)
-		case bookseries.FieldTitle, bookseries.FieldOriginalTitle, bookseries.FieldSortTitle, bookseries.FieldOverview, bookseries.FieldAuthorName, bookseries.FieldKind, bookseries.FieldMonitor, bookseries.FieldQualityProfile, bookseries.FieldEditionLanguage, bookseries.FieldEditionPublisher, bookseries.FieldHardcoverSlug:
+		case bookseries.FieldHardcoverID, bookseries.FieldTitle, bookseries.FieldOriginalTitle, bookseries.FieldSortTitle, bookseries.FieldOverview, bookseries.FieldAuthorName, bookseries.FieldKind, bookseries.FieldMonitor, bookseries.FieldQualityProfile, bookseries.FieldEditionLanguage, bookseries.FieldEditionPublisher, bookseries.FieldHardcoverSlug:
 			values[i] = new(sql.NullString)
 		case bookseries.FieldCreateTime, bookseries.FieldUpdateTime, bookseries.FieldLastRefreshedAt:
 			values[i] = new(sql.NullTime)
@@ -146,10 +146,10 @@ func (_m *BookSeries) assignValues(columns []string, values []any) error {
 				_m.UpdateTime = value.Time
 			}
 		case bookseries.FieldHardcoverID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field hardcover_id", values[i])
 			} else if value.Valid {
-				_m.HardcoverID = uint32(value.Int64)
+				_m.HardcoverID = value.String
 			}
 		case bookseries.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -302,7 +302,7 @@ func (_m *BookSeries) String() string {
 	builder.WriteString(_m.UpdateTime.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("hardcover_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.HardcoverID))
+	builder.WriteString(_m.HardcoverID)
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)

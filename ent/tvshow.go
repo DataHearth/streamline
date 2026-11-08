@@ -39,7 +39,7 @@ type TVShow struct {
 	// Monitored holds the value of the "monitored" field.
 	Monitored bool `json:"monitored,omitempty"`
 	// TvdbID holds the value of the "tvdb_id" field.
-	TvdbID uint32 `json:"tvdb_id,omitempty"`
+	TvdbID string `json:"tvdb_id,omitempty"`
 	// PosterPath holds the value of the "poster_path" field.
 	PosterPath string `json:"poster_path,omitempty"`
 	// Network holds the value of the "network" field.
@@ -115,9 +115,9 @@ func (*TVShow) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case tvshow.FieldRating:
 			values[i] = new(sql.NullFloat64)
-		case tvshow.FieldID, tvshow.FieldYear, tvshow.FieldTvdbID, tvshow.FieldRuntime:
+		case tvshow.FieldID, tvshow.FieldYear, tvshow.FieldRuntime:
 			values[i] = new(sql.NullInt64)
-		case tvshow.FieldTitle, tvshow.FieldOriginalTitle, tvshow.FieldOverview, tvshow.FieldSeriesStatus, tvshow.FieldType, tvshow.FieldPosterPath, tvshow.FieldNetwork, tvshow.FieldCreator, tvshow.FieldQualityProfile:
+		case tvshow.FieldTitle, tvshow.FieldOriginalTitle, tvshow.FieldOverview, tvshow.FieldSeriesStatus, tvshow.FieldType, tvshow.FieldTvdbID, tvshow.FieldPosterPath, tvshow.FieldNetwork, tvshow.FieldCreator, tvshow.FieldQualityProfile:
 			values[i] = new(sql.NullString)
 		case tvshow.FieldCreateTime, tvshow.FieldUpdateTime, tvshow.FieldFirstAired, tvshow.FieldLastRefreshedAt:
 			values[i] = new(sql.NullTime)
@@ -204,10 +204,10 @@ func (_m *TVShow) assignValues(columns []string, values []any) error {
 				_m.Monitored = value.Bool
 			}
 		case tvshow.FieldTvdbID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tvdb_id", values[i])
 			} else if value.Valid {
-				_m.TvdbID = uint32(value.Int64)
+				_m.TvdbID = value.String
 			}
 		case tvshow.FieldPosterPath:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -352,7 +352,7 @@ func (_m *TVShow) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.Monitored))
 	builder.WriteString(", ")
 	builder.WriteString("tvdb_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.TvdbID))
+	builder.WriteString(_m.TvdbID)
 	builder.WriteString(", ")
 	builder.WriteString("poster_path=")
 	builder.WriteString(_m.PosterPath)

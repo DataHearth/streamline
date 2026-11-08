@@ -13,7 +13,7 @@ const pickerCandidateLimit = 5
 type Classification struct {
 	Kind            entimportscanfile.Classification
 	Candidates      []schema.ScannedCandidate
-	TMDBID          uint32
+	TMDBID          string
 	ExistingMovieID uint32
 }
 
@@ -25,12 +25,12 @@ func Classify(
 	path string,
 	parsed library.ParseResult,
 	hits []metadata.MovieResult,
-	alreadyAdded map[uint32]uint32,
+	alreadyAdded map[string]uint32,
 ) Classification {
 	// An id Streamline's own naming template wrote into the path outranks
 	// anything re-derived from the filename: the path was rendered *from* that
 	// id, so a title parsed back out of it can only lose information.
-	if embedded := library.ParseEmbeddedIDs(path).TMDB; embedded != 0 {
+	if embedded := library.ParseEmbeddedIDs(path).TMDB; embedded != "" {
 		return classifyByTMDBID(embedded, hits, alreadyAdded)
 	}
 
@@ -118,9 +118,9 @@ func asCandidate(h metadata.MovieResult) schema.ScannedCandidate {
 // title. The id decides; the hits only supply a display title when one of them
 // happens to be the same movie.
 func classifyByTMDBID(
-	tmdbID uint32,
+	tmdbID string,
 	hits []metadata.MovieResult,
-	alreadyAdded map[uint32]uint32,
+	alreadyAdded map[string]uint32,
 ) Classification {
 	var cands []schema.ScannedCandidate
 	for _, h := range hits {

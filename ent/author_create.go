@@ -50,7 +50,7 @@ func (_c *AuthorCreate) SetNillableUpdateTime(v *time.Time) *AuthorCreate {
 }
 
 // SetHardcoverID sets the "hardcover_id" field.
-func (_c *AuthorCreate) SetHardcoverID(v uint32) *AuthorCreate {
+func (_c *AuthorCreate) SetHardcoverID(v string) *AuthorCreate {
 	_c.mutation.SetHardcoverID(v)
 	return _c
 }
@@ -166,6 +166,11 @@ func (_c *AuthorCreate) check() error {
 	if _, ok := _c.mutation.HardcoverID(); !ok {
 		return &ValidationError{Name: "hardcover_id", err: errors.New(`ent: missing required field "Author.hardcover_id"`)}
 	}
+	if v, ok := _c.mutation.HardcoverID(); ok {
+		if err := author.HardcoverIDValidator(v); err != nil {
+			return &ValidationError{Name: "hardcover_id", err: fmt.Errorf(`ent: validator failed for field "Author.hardcover_id": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Author.name"`)}
 	}
@@ -215,7 +220,7 @@ func (_c *AuthorCreate) createSpec() (*Author, *sqlgraph.CreateSpec) {
 		_node.UpdateTime = value
 	}
 	if value, ok := _c.mutation.HardcoverID(); ok {
-		_spec.SetField(author.FieldHardcoverID, field.TypeUint32, value)
+		_spec.SetField(author.FieldHardcoverID, field.TypeString, value)
 		_node.HardcoverID = value
 	}
 	if value, ok := _c.mutation.Name(); ok {

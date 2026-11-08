@@ -46,7 +46,7 @@ type CreateTVShowParams struct {
 	OriginalTitle  string
 	Year           uint16
 	Overview       string
-	TvdbID         uint32
+	TvdbID         string
 	SeriesStatus   string
 	Type           string
 	Network        string
@@ -388,7 +388,7 @@ func (db *DB) FindTVShowByID(ctx context.Context, id uint32) (*ent.TVShow, error
 
 func (db *DB) FindTVShowByTVDBID(
 	ctx context.Context,
-	tvdbID uint32,
+	tvdbID string,
 ) (*ent.TVShow, error) {
 	row, err := db.client.TVShow.Query().Where(tvshow.TvdbIDEQ(tvdbID)).Only(ctx)
 	if ent.IsNotFound(err) {
@@ -488,7 +488,7 @@ func (db *DB) SetTVShowRefreshedAt(
 // SetTVShowTVDBID repoints a row at a different TVDB show. The season/episode
 // tree still describes the old show until the caller reconciles it, so this is
 // never useful on its own — see tvshow.Service.Reidentify.
-func (db *DB) SetTVShowTVDBID(ctx context.Context, id, tvdbID uint32) error {
+func (db *DB) SetTVShowTVDBID(ctx context.Context, id uint32, tvdbID string) error {
 	return db.client.TVShow.UpdateOneID(id).SetTvdbID(tvdbID).Exec(ctx)
 }
 
@@ -564,10 +564,10 @@ func (db *DB) SetEpisodeMonitored(
 // from a new one were calling ListTvShowsForAdoption, which eager-loads the
 // whole season → episode → media_file tree (~121 KB per show) to read two
 // columns.
-func (db *DB) TVShowTVDBIndex(ctx context.Context) (map[uint32]uint32, error) {
+func (db *DB) TVShowTVDBIndex(ctx context.Context) (map[string]uint32, error) {
 	var rows []struct {
 		ID     uint32 `json:"id"`
-		TvdbID uint32 `json:"tvdb_id"`
+		TvdbID string `json:"tvdb_id"`
 	}
 	err := db.client.TVShow.Query().
 		Select(tvshow.FieldID, tvshow.FieldTvdbID).
@@ -575,9 +575,9 @@ func (db *DB) TVShowTVDBIndex(ctx context.Context) (map[uint32]uint32, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[uint32]uint32, len(rows))
+	out := make(map[string]uint32, len(rows))
 	for _, r := range rows {
-		if r.TvdbID != 0 {
+		if r.TvdbID != "" {
 			out[r.TvdbID] = r.ID
 		}
 	}

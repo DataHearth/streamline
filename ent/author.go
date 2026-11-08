@@ -22,7 +22,7 @@ type Author struct {
 	// UpdateTime holds the value of the "update_time" field.
 	UpdateTime time.Time `json:"update_time,omitempty"`
 	// HardcoverID holds the value of the "hardcover_id" field.
-	HardcoverID uint32 `json:"hardcover_id,omitempty"`
+	HardcoverID string `json:"hardcover_id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 	// SortName holds the value of the "sort_name" field.
@@ -58,9 +58,9 @@ func (*Author) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case author.FieldID, author.FieldHardcoverID:
+		case author.FieldID:
 			values[i] = new(sql.NullInt64)
-		case author.FieldName, author.FieldSortName, author.FieldImageSource:
+		case author.FieldHardcoverID, author.FieldName, author.FieldSortName, author.FieldImageSource:
 			values[i] = new(sql.NullString)
 		case author.FieldCreateTime, author.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -98,10 +98,10 @@ func (_m *Author) assignValues(columns []string, values []any) error {
 				_m.UpdateTime = value.Time
 			}
 		case author.FieldHardcoverID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field hardcover_id", values[i])
 			} else if value.Valid {
-				_m.HardcoverID = uint32(value.Int64)
+				_m.HardcoverID = value.String
 			}
 		case author.FieldName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -169,7 +169,7 @@ func (_m *Author) String() string {
 	builder.WriteString(_m.UpdateTime.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("hardcover_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.HardcoverID))
+	builder.WriteString(_m.HardcoverID)
 	builder.WriteString(", ")
 	builder.WriteString("name=")
 	builder.WriteString(_m.Name)

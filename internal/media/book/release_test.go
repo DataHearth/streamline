@@ -190,13 +190,13 @@ var _ = Describe("Book releases", Label("unit", "integration", "books"), func() 
 		It(
 			"follows the series' profile for a volume that has none of its own",
 			func() {
-				f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+				f.meta.EXPECT().GetSeries(anyCtx, "50").
 					Return(seriesRecord("One Piece", 1), nil).Once()
 				f.meta.EXPECT().GetBooks(anyCtx, ids(1001)).
 					Return([]*metadata.BookRecord{volumeRec(1001)}, nil).Once()
 				s, err := f.svc.AddSeries(
 					f.ctx,
-					AddSeriesParams{HardcoverID: 50, QualityProfile: "comics"},
+					AddSeriesParams{HardcoverID: "50", QualityProfile: "comics"},
 				)
 				Expect(err).NotTo(HaveOccurred())
 				vol := s.Edges.Volumes[0]
@@ -307,7 +307,7 @@ var _ = Describe("Book releases", Label("unit", "integration", "books"), func() 
 
 		It("refuses a book that has not been hydrated", func() {
 			stub := f.client.Book.Create().
-				SetHardcoverID(9).
+				SetHardcoverID("9").
 				SetTitle("Stub").
 				SaveX(f.ctx)
 			err := f.svc.GrabBookRelease(f.ctx, stub.ID, GrabParams{Result: epub})
@@ -528,7 +528,7 @@ var _ = Describe("Book releases", Label("unit", "integration", "books"), func() 
 			f.client.Book.UpdateOneID(b.ID).
 				SetReleaseDate(time.Now().Add(24 * time.Hour)).
 				ExecX(f.ctx)
-			f.client.Book.Create().SetHardcoverID(9).SetTitle("Stub").
+			f.client.Book.Create().SetHardcoverID("9").SetTitle("Stub").
 				SetEbookMonitored(true).
 				SetEbookStatus(book.EbookStatusWanted).SaveX(f.ctx)
 
@@ -548,9 +548,9 @@ var _ = Describe("Book releases", Label("unit", "integration", "books"), func() 
 	Describe("series volumes", func() {
 		add := func(n int) *ent.BookSeries {
 			GinkgoHelper()
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+			f.meta.EXPECT().GetSeries(anyCtx, "50").
 				Return(seriesRecord("One Piece", n), nil).Once()
-			want := []uint32{}
+			want := []any{}
 			recs := []*metadata.BookRecord{}
 			for i := 1; i <= n; i++ {
 				want = append(want, 1000+uint32(i))
@@ -559,7 +559,7 @@ var _ = Describe("Book releases", Label("unit", "integration", "books"), func() 
 			f.meta.EXPECT().GetBooks(anyCtx, ids(want...)).Return(recs, nil).Once()
 			s, err := f.svc.AddSeries(
 				f.ctx,
-				AddSeriesParams{HardcoverID: 50, QualityProfile: "comics"},
+				AddSeriesParams{HardcoverID: "50", QualityProfile: "comics"},
 			)
 			Expect(err).NotTo(HaveOccurred())
 			return s
@@ -679,7 +679,7 @@ var _ = Describe("Book releases", Label("unit", "integration", "books"), func() 
 		It("never searches a volume still hydrating", func() {
 			s := add(1)
 			stub := f.client.Book.Create().
-				SetHardcoverID(1002).
+				SetHardcoverID("1002").
 				SetTitle("One Piece #2").
 				SetSeriesID(s.ID).
 				SetSeriesPosition(2).
@@ -775,14 +775,14 @@ var _ = Describe("Book releases", Label("unit", "integration", "books"), func() 
 		})
 
 		It("counts the wanted volumes of a series", func() {
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+			f.meta.EXPECT().GetSeries(anyCtx, "50").
 				Return(seriesRecord("One Piece", 2), nil).Once()
 			f.meta.EXPECT().GetBooks(anyCtx, ids(1001, 1002)).
 				Return([]*metadata.BookRecord{volumeRec(1001), volumeRec(1002)}, nil).
 				Once()
 			s, err := f.svc.AddSeries(
 				f.ctx,
-				AddSeriesParams{HardcoverID: 50, QualityProfile: "comics"},
+				AddSeriesParams{HardcoverID: "50", QualityProfile: "comics"},
 			)
 			Expect(err).NotTo(HaveOccurred())
 			f.client.Book.UpdateOneID(s.Edges.Volumes[0].ID).

@@ -47,7 +47,7 @@ func (_m *MockBookAdder) EXPECT() *MockBookAdder_Expecter {
 }
 
 // AddBook provides a mock function for the type MockBookAdder
-func (_mock *MockBookAdder) AddBook(ctx context.Context, hardcoverID uint32, monitor string, qualityProfile string) error {
+func (_mock *MockBookAdder) AddBook(ctx context.Context, hardcoverID string, monitor string, qualityProfile string) error {
 	ret := _mock.Called(ctx, hardcoverID, monitor, qualityProfile)
 
 	if len(ret) == 0 {
@@ -55,7 +55,7 @@ func (_mock *MockBookAdder) AddBook(ctx context.Context, hardcoverID uint32, mon
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
 		r0 = returnFunc(ctx, hardcoverID, monitor, qualityProfile)
 	} else {
 		r0 = ret.Error(0)
@@ -70,22 +70,22 @@ type MockBookAdder_AddBook_Call struct {
 
 // AddBook is a helper method to define mock.On call
 //   - ctx context.Context
-//   - hardcoverID uint32
+//   - hardcoverID string
 //   - monitor string
 //   - qualityProfile string
 func (_e *MockBookAdder_Expecter) AddBook(ctx any, hardcoverID any, monitor any, qualityProfile any) *MockBookAdder_AddBook_Call {
 	return &MockBookAdder_AddBook_Call{Call: _e.mock.On("AddBook", ctx, hardcoverID, monitor, qualityProfile)}
 }
 
-func (_c *MockBookAdder_AddBook_Call) Run(run func(ctx context.Context, hardcoverID uint32, monitor string, qualityProfile string)) *MockBookAdder_AddBook_Call {
+func (_c *MockBookAdder_AddBook_Call) Run(run func(ctx context.Context, hardcoverID string, monitor string, qualityProfile string)) *MockBookAdder_AddBook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -110,13 +110,13 @@ func (_c *MockBookAdder_AddBook_Call) Return(err error) *MockBookAdder_AddBook_C
 	return _c
 }
 
-func (_c *MockBookAdder_AddBook_Call) RunAndReturn(run func(ctx context.Context, hardcoverID uint32, monitor string, qualityProfile string) error) *MockBookAdder_AddBook_Call {
+func (_c *MockBookAdder_AddBook_Call) RunAndReturn(run func(ctx context.Context, hardcoverID string, monitor string, qualityProfile string) error) *MockBookAdder_AddBook_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // AddSeries provides a mock function for the type MockBookAdder
-func (_mock *MockBookAdder) AddSeries(ctx context.Context, hardcoverID uint32, monitor string, qualityProfile string) error {
+func (_mock *MockBookAdder) AddSeries(ctx context.Context, hardcoverID string, monitor string, qualityProfile string) error {
 	ret := _mock.Called(ctx, hardcoverID, monitor, qualityProfile)
 
 	if len(ret) == 0 {
@@ -124,7 +124,7 @@ func (_mock *MockBookAdder) AddSeries(ctx context.Context, hardcoverID uint32, m
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
 		r0 = returnFunc(ctx, hardcoverID, monitor, qualityProfile)
 	} else {
 		r0 = ret.Error(0)
@@ -139,22 +139,22 @@ type MockBookAdder_AddSeries_Call struct {
 
 // AddSeries is a helper method to define mock.On call
 //   - ctx context.Context
-//   - hardcoverID uint32
+//   - hardcoverID string
 //   - monitor string
 //   - qualityProfile string
 func (_e *MockBookAdder_Expecter) AddSeries(ctx any, hardcoverID any, monitor any, qualityProfile any) *MockBookAdder_AddSeries_Call {
 	return &MockBookAdder_AddSeries_Call{Call: _e.mock.On("AddSeries", ctx, hardcoverID, monitor, qualityProfile)}
 }
 
-func (_c *MockBookAdder_AddSeries_Call) Run(run func(ctx context.Context, hardcoverID uint32, monitor string, qualityProfile string)) *MockBookAdder_AddSeries_Call {
+func (_c *MockBookAdder_AddSeries_Call) Run(run func(ctx context.Context, hardcoverID string, monitor string, qualityProfile string)) *MockBookAdder_AddSeries_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -179,13 +179,13 @@ func (_c *MockBookAdder_AddSeries_Call) Return(err error) *MockBookAdder_AddSeri
 	return _c
 }
 
-func (_c *MockBookAdder_AddSeries_Call) RunAndReturn(run func(ctx context.Context, hardcoverID uint32, monitor string, qualityProfile string) error) *MockBookAdder_AddSeries_Call {
+func (_c *MockBookAdder_AddSeries_Call) RunAndReturn(run func(ctx context.Context, hardcoverID string, monitor string, qualityProfile string) error) *MockBookAdder_AddSeries_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // HasBook provides a mock function for the type MockBookAdder
-func (_mock *MockBookAdder) HasBook(ctx context.Context, hardcoverID uint32) (bool, error) {
+func (_mock *MockBookAdder) HasBook(ctx context.Context, hardcoverID string) (bool, error) {
 	ret := _mock.Called(ctx, hardcoverID)
 
 	if len(ret) == 0 {
@@ -194,15 +194,15 @@ func (_mock *MockBookAdder) HasBook(ctx context.Context, hardcoverID uint32) (bo
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (bool, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (bool, error)); ok {
 		return returnFunc(ctx, hardcoverID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) bool); ok {
 		r0 = returnFunc(ctx, hardcoverID)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, hardcoverID)
 	} else {
 		r1 = ret.Error(1)
@@ -217,20 +217,20 @@ type MockBookAdder_HasBook_Call struct {
 
 // HasBook is a helper method to define mock.On call
 //   - ctx context.Context
-//   - hardcoverID uint32
+//   - hardcoverID string
 func (_e *MockBookAdder_Expecter) HasBook(ctx any, hardcoverID any) *MockBookAdder_HasBook_Call {
 	return &MockBookAdder_HasBook_Call{Call: _e.mock.On("HasBook", ctx, hardcoverID)}
 }
 
-func (_c *MockBookAdder_HasBook_Call) Run(run func(ctx context.Context, hardcoverID uint32)) *MockBookAdder_HasBook_Call {
+func (_c *MockBookAdder_HasBook_Call) Run(run func(ctx context.Context, hardcoverID string)) *MockBookAdder_HasBook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -245,13 +245,13 @@ func (_c *MockBookAdder_HasBook_Call) Return(b bool, err error) *MockBookAdder_H
 	return _c
 }
 
-func (_c *MockBookAdder_HasBook_Call) RunAndReturn(run func(ctx context.Context, hardcoverID uint32) (bool, error)) *MockBookAdder_HasBook_Call {
+func (_c *MockBookAdder_HasBook_Call) RunAndReturn(run func(ctx context.Context, hardcoverID string) (bool, error)) *MockBookAdder_HasBook_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // HasSeries provides a mock function for the type MockBookAdder
-func (_mock *MockBookAdder) HasSeries(ctx context.Context, hardcoverID uint32) (bool, error) {
+func (_mock *MockBookAdder) HasSeries(ctx context.Context, hardcoverID string) (bool, error) {
 	ret := _mock.Called(ctx, hardcoverID)
 
 	if len(ret) == 0 {
@@ -260,15 +260,15 @@ func (_mock *MockBookAdder) HasSeries(ctx context.Context, hardcoverID uint32) (
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (bool, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (bool, error)); ok {
 		return returnFunc(ctx, hardcoverID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) bool); ok {
 		r0 = returnFunc(ctx, hardcoverID)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, hardcoverID)
 	} else {
 		r1 = ret.Error(1)
@@ -283,20 +283,20 @@ type MockBookAdder_HasSeries_Call struct {
 
 // HasSeries is a helper method to define mock.On call
 //   - ctx context.Context
-//   - hardcoverID uint32
+//   - hardcoverID string
 func (_e *MockBookAdder_Expecter) HasSeries(ctx any, hardcoverID any) *MockBookAdder_HasSeries_Call {
 	return &MockBookAdder_HasSeries_Call{Call: _e.mock.On("HasSeries", ctx, hardcoverID)}
 }
 
-func (_c *MockBookAdder_HasSeries_Call) Run(run func(ctx context.Context, hardcoverID uint32)) *MockBookAdder_HasSeries_Call {
+func (_c *MockBookAdder_HasSeries_Call) Run(run func(ctx context.Context, hardcoverID string)) *MockBookAdder_HasSeries_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -311,7 +311,7 @@ func (_c *MockBookAdder_HasSeries_Call) Return(b bool, err error) *MockBookAdder
 	return _c
 }
 
-func (_c *MockBookAdder_HasSeries_Call) RunAndReturn(run func(ctx context.Context, hardcoverID uint32) (bool, error)) *MockBookAdder_HasSeries_Call {
+func (_c *MockBookAdder_HasSeries_Call) RunAndReturn(run func(ctx context.Context, hardcoverID string) (bool, error)) *MockBookAdder_HasSeries_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -245,7 +245,7 @@ func (s *Service) commitOne(
 		return s.commitAttach(ctx, scan, f)
 	default:
 		tmdbID := f.DecisionTmdbID
-		if tmdbID == 0 {
+		if tmdbID == "" {
 			tmdbID = f.TmdbID
 		}
 		if scan.Mode == entimportscan.ModeInPlace {
@@ -261,7 +261,7 @@ func (s *Service) commitOne(
 // failing the file would strand a real file over a race.
 func (s *Service) addOrFindMovie(
 	ctx context.Context,
-	tmdbID uint32,
+	tmdbID string,
 ) (*ent.Movie, error) {
 	m, _, err := s.movieSvc.Add(ctx, tmdbID, "")
 	if err == nil {
@@ -423,7 +423,7 @@ func (s *Service) commitAttach(
 func (s *Service) commitAdoptInPlace(
 	ctx context.Context,
 	f *ent.ImportScanFile,
-	tmdbID uint32,
+	tmdbID string,
 ) (entimportscanfile.Outcome, string, uint32) {
 	m, err := s.addOrFindMovie(ctx, tmdbID)
 	if err != nil {
@@ -447,7 +447,7 @@ func (s *Service) commitRename(
 	ctx context.Context,
 	scan *ent.ImportScan,
 	f *ent.ImportScanFile,
-	tmdbID uint32,
+	tmdbID string,
 ) (entimportscanfile.Outcome, string, uint32) {
 	m, err := s.addOrFindMovie(ctx, tmdbID)
 	if err != nil {

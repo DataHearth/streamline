@@ -33,13 +33,13 @@ func (s stubServer) RefreshLibrary(
 }
 
 func (s stubServer) MovieDeepLink(
-	_ context.Context, _ string, _ uint32, _ string, _ uint16,
+	_ context.Context, _ string, _ string, _ string, _ uint16,
 ) (string, error) {
 	return s.url, s.err
 }
 
 func (s stubServer) TVShowDeepLink(
-	_ context.Context, _ string, _ uint32, _ string, _ uint16,
+	_ context.Context, _ string, _ string, _ string, _ uint16,
 ) (string, error) {
 	return s.url, s.err
 }
@@ -61,7 +61,7 @@ var _ = Describe("DeepLinker", Label("unit", "mediaserver"), func() {
 			return stubServer{}, nil
 		})
 
-		out := linker.Resolve(ctx, 1, "Title", 2024)
+		out := linker.Resolve(ctx, "1", "Title", 2024)
 		Expect(out).To(BeEmpty())
 	})
 
@@ -74,7 +74,7 @@ var _ = Describe("DeepLinker", Label("unit", "mediaserver"), func() {
 			return stubServer{url: "http://plex:32400/web/details"}, nil
 		})
 
-		out := linker.Resolve(ctx, 100, "Title", 2024)
+		out := linker.Resolve(ctx, "100", "Title", 2024)
 		Expect(out).To(HaveLen(1))
 		Expect(out[0].Status).To(Equal(StatusResolved))
 		Expect(out[0].URL).To(ContainSubstring("/web/"))
@@ -90,7 +90,7 @@ var _ = Describe("DeepLinker", Label("unit", "mediaserver"), func() {
 			return stubServer{err: ErrMovieNotFound}, nil
 		})
 
-		out := linker.Resolve(ctx, 100, "Title", 2024)
+		out := linker.Resolve(ctx, "100", "Title", 2024)
 		Expect(out[0].Status).To(Equal(StatusFallback))
 		Expect(out[0].URL).To(Equal("http://jelly:8096/web/"))
 		Expect(out[0].Fallback).To(BeTrue())
@@ -105,7 +105,7 @@ var _ = Describe("DeepLinker", Label("unit", "mediaserver"), func() {
 			return stubServer{err: errors.New("connection refused")}, nil
 		})
 
-		out := linker.Resolve(ctx, 100, "Title", 2024)
+		out := linker.Resolve(ctx, "100", "Title", 2024)
 		Expect(out[0].Status).To(Equal(StatusUnavailable))
 		Expect(out[0].URL).To(BeEmpty())
 	})
@@ -119,7 +119,7 @@ var _ = Describe("DeepLinker", Label("unit", "mediaserver"), func() {
 			return stubServer{url: "http://plex:32400/web/show"}, nil
 		})
 
-		out := linker.ResolveTV(ctx, 100, "Show", 2024)
+		out := linker.ResolveTV(ctx, "100", "Show", 2024)
 		Expect(out).To(HaveLen(1))
 		Expect(out[0].Status).To(Equal(StatusResolved))
 		Expect(out[0].URL).To(ContainSubstring("/web/"))
@@ -134,7 +134,7 @@ var _ = Describe("DeepLinker", Label("unit", "mediaserver"), func() {
 			return stubServer{err: ErrShowNotFound}, nil
 		})
 
-		out := linker.ResolveTV(ctx, 100, "Show", 2024)
+		out := linker.ResolveTV(ctx, "100", "Show", 2024)
 		Expect(out[0].Status).To(Equal(StatusFallback))
 		Expect(out[0].URL).To(Equal("http://jelly:8096/web/"))
 		Expect(out[0].Fallback).To(BeTrue())

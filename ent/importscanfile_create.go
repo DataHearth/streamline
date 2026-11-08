@@ -139,13 +139,13 @@ func (_c *ImportScanFileCreate) SetCandidates(v []schema.ScannedCandidate) *Impo
 }
 
 // SetTmdbID sets the "tmdb_id" field.
-func (_c *ImportScanFileCreate) SetTmdbID(v uint32) *ImportScanFileCreate {
+func (_c *ImportScanFileCreate) SetTmdbID(v string) *ImportScanFileCreate {
 	_c.mutation.SetTmdbID(v)
 	return _c
 }
 
 // SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
-func (_c *ImportScanFileCreate) SetNillableTmdbID(v *uint32) *ImportScanFileCreate {
+func (_c *ImportScanFileCreate) SetNillableTmdbID(v *string) *ImportScanFileCreate {
 	if v != nil {
 		_c.SetTmdbID(*v)
 	}
@@ -181,13 +181,13 @@ func (_c *ImportScanFileCreate) SetNillableDecision(v *importscanfile.Decision) 
 }
 
 // SetDecisionTmdbID sets the "decision_tmdb_id" field.
-func (_c *ImportScanFileCreate) SetDecisionTmdbID(v uint32) *ImportScanFileCreate {
+func (_c *ImportScanFileCreate) SetDecisionTmdbID(v string) *ImportScanFileCreate {
 	_c.mutation.SetDecisionTmdbID(v)
 	return _c
 }
 
 // SetNillableDecisionTmdbID sets the "decision_tmdb_id" field if the given value is not nil.
-func (_c *ImportScanFileCreate) SetNillableDecisionTmdbID(v *uint32) *ImportScanFileCreate {
+func (_c *ImportScanFileCreate) SetNillableDecisionTmdbID(v *string) *ImportScanFileCreate {
 	if v != nil {
 		_c.SetDecisionTmdbID(*v)
 	}
@@ -429,7 +429,7 @@ func (_c *ImportScanFileCreate) createSpec() (*ImportScanFile, *sqlgraph.CreateS
 		_node.Candidates = value
 	}
 	if value, ok := _c.mutation.TmdbID(); ok {
-		_spec.SetField(importscanfile.FieldTmdbID, field.TypeUint32, value)
+		_spec.SetField(importscanfile.FieldTmdbID, field.TypeString, value)
 		_node.TmdbID = value
 	}
 	if value, ok := _c.mutation.ExistingMovieID(); ok {
@@ -441,7 +441,7 @@ func (_c *ImportScanFileCreate) createSpec() (*ImportScanFile, *sqlgraph.CreateS
 		_node.Decision = value
 	}
 	if value, ok := _c.mutation.DecisionTmdbID(); ok {
-		_spec.SetField(importscanfile.FieldDecisionTmdbID, field.TypeUint32, value)
+		_spec.SetField(importscanfile.FieldDecisionTmdbID, field.TypeString, value)
 		_node.DecisionTmdbID = value
 	}
 	if value, ok := _c.mutation.Outcome(); ok {

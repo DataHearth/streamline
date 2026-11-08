@@ -13,7 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 )
 
-const kaamelottTVDBID = 79175
+const kaamelottTVDBID = "79175"
 
 // The homelab release that produced this spec: a six-season French integrale
 // grabbed by hand to fill three gaps. It names no season, so library.Parse
@@ -37,7 +37,8 @@ var _ = Describe("Manual torrent adoption", Label("e2e", "api"), func() {
 	seedKaamelott := func(ctx context.Context) {
 		GinkgoHelper()
 		show := app.DB.TVShow.Create().
-			SetTitle("Kaamelott").SetYear(2005).SetTvdbID(kaamelottTVDBID).
+			SetTitle("Kaamelott").
+			SetYear(2005).SetTvdbID(kaamelottTVDBID).
 			SaveX(ctx)
 		// A populated specials season, which is what made season 0 reachable
 		// as an anchor in the first place.

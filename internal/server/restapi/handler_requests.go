@@ -92,7 +92,7 @@ func (s *Server) CreateRequest(
 			BadRequestJSONResponse: errBadRequest("unknown media_type"),
 		}, nil
 	}
-	var mediaID uint32
+	var mediaID string
 	if req.Body.MediaId != nil {
 		mediaID = *req.Body.MediaId
 	}
@@ -509,7 +509,7 @@ func movieDetailsToRequestMedia(d *metadata.MovieDetails) RequestMediaDetails {
 	if d.OriginalLanguage != "" {
 		out.OriginalLanguage = &d.OriginalLanguage
 	}
-	if d.TMDBID != 0 {
+	if d.TMDBID != "" {
 		out.TmdbId = &d.TMDBID
 	}
 	if d.Rating != 0 {
@@ -544,7 +544,7 @@ func seriesDetailsToRequestMedia(d *metadata.TVDetails) RequestMediaDetails {
 	if d.FirstAired != "" {
 		out.ReleaseDate = &d.FirstAired
 	}
-	if d.TVDBID != 0 {
+	if d.TVDBID != "" {
 		out.TvdbId = &d.TVDBID
 	}
 	if d.Network != "" {

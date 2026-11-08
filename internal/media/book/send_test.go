@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -232,7 +234,7 @@ var _ = Describe("sending", Label("unit", "book"), func() {
 			now := time.Now()
 			seed := func(hc uint32, pos float64, refreshed *time.Time) db.BookSeed {
 				return db.BookSeed{
-					HardcoverID:    hc,
+					HardcoverID:    providerid.Format(hc),
 					Title:          "Vol " + itoa(uint32(pos)),
 					Kind:           "manga",
 					SeriesPosition: &pos,
@@ -240,7 +242,7 @@ var _ = Describe("sending", Label("unit", "book"), func() {
 				}
 			}
 			s, _, err := f.store.CreateSeries(f.ctx, db.CreateSeriesParams{
-				HardcoverID: 50, Title: "One Piece", Kind: "manga",
+				HardcoverID: "50", Title: "One Piece", Kind: "manga",
 				Monitor: "none", RefreshedAt: now,
 				Volumes: []db.BookSeed{
 					seed(1001, 1, &now), seed(1002, 2, &now), seed(1003, 3, &now),
@@ -292,10 +294,10 @@ var _ = Describe("sending", Label("unit", "book"), func() {
 			now := time.Now()
 			pos := 1.0
 			s, _, err := f.store.CreateSeries(f.ctx, db.CreateSeriesParams{
-				HardcoverID: 50, Title: "One Piece", Kind: "manga",
+				HardcoverID: "50", Title: "One Piece", Kind: "manga",
 				Monitor: "none", RefreshedAt: now,
 				Volumes: []db.BookSeed{{
-					HardcoverID: 1001, Title: "Vol 1", Kind: "manga",
+					HardcoverID: "1001", Title: "Vol 1", Kind: "manga",
 					SeriesPosition: &pos, RefreshedAt: &now,
 				}},
 			})

@@ -111,11 +111,11 @@ func (s *Service) runCommitBooks(ctx context.Context, scan *ent.ImportScan) {
 // a failure is only logged, since an add fetches its own book when the memo
 // has nothing.
 func (s *Service) prefetchBooks(ctx context.Context, batch []*ent.ImportScanBook) {
-	ids := make([]uint32, 0, len(batch))
+	ids := make([]string, 0, len(batch))
 	for _, sc := range batch {
-		if sc.DecisionBookHardcoverID != 0 {
+		if sc.DecisionBookHardcoverID != "" {
 			ids = append(ids, sc.DecisionBookHardcoverID)
-		} else if sc.ExistingBookID == nil && sc.BookHardcoverID != 0 {
+		} else if sc.ExistingBookID == nil && sc.BookHardcoverID != "" {
 			ids = append(ids, sc.BookHardcoverID)
 		}
 	}
@@ -204,7 +204,7 @@ func (s *Service) commitBook(
 	}
 	outcome := entimportscanbook.OutcomeCreated
 	if sc.Classification == entimportscanbook.ClassificationExisting &&
-		sc.DecisionBookHardcoverID == 0 {
+		sc.DecisionBookHardcoverID == "" {
 		outcome = entimportscanbook.OutcomeAttached
 	}
 	return outcome, "", target.ID
@@ -219,14 +219,14 @@ func (s *Service) resolveBook(
 	sc *ent.ImportScanBook,
 ) (*ent.Book, error) {
 	bookHC := sc.BookHardcoverID
-	picked := sc.DecisionBookHardcoverID != 0
+	picked := sc.DecisionBookHardcoverID != ""
 	if picked {
 		bookHC = sc.DecisionBookHardcoverID
 	}
 	if !picked && sc.ExistingBookID != nil {
 		return s.store.FindBookByID(ctx, *sc.ExistingBookID)
 	}
-	if bookHC == 0 {
+	if bookHC == "" {
 		return nil, errors.New("no hardcover match to adopt")
 	}
 
@@ -242,7 +242,7 @@ func (s *Service) resolveBook(
 		if errors.Is(err, book.ErrBookExists) {
 			row, err = s.store.FindBookByHardcoverID(ctx, bookHC)
 			if err == nil && row == nil {
-				err = fmt.Errorf("book %d vanished after a concurrent add", bookHC)
+				err = fmt.Errorf("book %s vanished after a concurrent add", bookHC)
 			}
 		}
 		if err != nil {

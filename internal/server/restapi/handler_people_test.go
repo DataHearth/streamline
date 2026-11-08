@@ -63,7 +63,7 @@ var _ = Describe(
 					}).
 					Return([]db.Person{{
 						ID:         7,
-						TMDBID:     10,
+						TMDBID:     "10",
 						Name:       "Béatrice Dalle",
 						ProfileURL: "https://img/bd.jpg",
 						Credits:    3,
@@ -86,7 +86,7 @@ var _ = Describe(
 				// id is the persons row, not the provider id: it is what
 				// /people/{id} is keyed by.
 				Expect(body.Items[0].Id).To(Equal(uint32(7)))
-				Expect(body.Items[0].TmdbId).To(Equal(uint32(10)))
+				Expect(body.Items[0].TmdbId).To(Equal("10"))
 				Expect(body.Items[0].Credits).To(Equal(uint32(3)))
 				Expect(body.Items[0].ProfileUrl).
 					To(HaveValue(Equal("https://img/bd.jpg")))
@@ -98,10 +98,10 @@ var _ = Describe(
 				app.store.EXPECT().
 					ListPeople(mock.Anything, mock.Anything).
 					Return([]db.Person{
-						{ID: 3, TVDBID: 511, Name: "Nina Meurisse", Credits: 1},
+						{ID: 3, TVDBID: "511", Name: "Nina Meurisse", Credits: 1},
 						{
 							ID:      4,
-							TVDBID:  512,
+							TVDBID:  "512",
 							Name:    "Zachary Chasseriaud",
 							Credits: 1,
 						},
@@ -120,8 +120,8 @@ var _ = Describe(
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 				Expect(body.Items).To(HaveLen(2))
 				Expect(body.Items[0].Id).To(Equal(uint32(3)))
-				Expect(body.Items[0].TvdbId).To(Equal(uint32(511)))
-				Expect(body.Items[0].TmdbId).To(BeZero())
+				Expect(body.Items[0].TvdbId).To(Equal("511"))
+				Expect(body.Items[0].TmdbId).To(BeEmpty())
 				Expect(body.Items[1].Id).To(Equal(uint32(4)))
 			})
 
@@ -129,7 +129,7 @@ var _ = Describe(
 				app.store.EXPECT().
 					ListPeople(mock.Anything, mock.Anything).
 					Return([]db.Person{{
-						TMDBID:  10,
+						TMDBID:  "10",
 						Name:    "Ada Lovelace",
 						Credits: 1,
 					}}, nil).
@@ -155,7 +155,7 @@ var _ = Describe(
 					ListPeople(mock.Anything, mock.Anything).
 					Return([]db.Person{{
 						ID:           7,
-						TMDBID:       10,
+						TMDBID:       "10",
 						Name:         "Ada Lovelace",
 						Credits:      1,
 						Biography:    "A mathematician.",
@@ -199,7 +199,7 @@ var _ = Describe(
 					ListPeople(mock.Anything, mock.Anything).
 					Return([]db.Person{{
 						ID:        3,
-						TVDBID:    511,
+						TVDBID:    "511",
 						Name:      "Nina Meurisse",
 						Credits:   1,
 						Biography: "A performer.",
@@ -237,8 +237,8 @@ var _ = Describe(
 					PersonCredits(mock.Anything, uint32(7)).
 					Return(&db.PersonCredits{
 						ID:         7,
-						TMDBID:     10,
-						TVDBID:     511,
+						TMDBID:     "10",
+						TVDBID:     "511",
 						Name:       "Ada Lovelace",
 						ProfileURL: "https://img/ada.jpg",
 						Biography:  "A mathematician.",
@@ -270,8 +270,8 @@ var _ = Describe(
 				var body PersonCredits
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 				Expect(body.Id).To(Equal(uint32(7)))
-				Expect(body.TmdbId).To(Equal(uint32(10)))
-				Expect(body.TvdbId).To(Equal(uint32(511)))
+				Expect(body.TmdbId).To(Equal("10"))
+				Expect(body.TvdbId).To(Equal("511"))
 				Expect(body.Name).To(Equal("Ada Lovelace"))
 				Expect(body.ProfileUrl).To(HaveValue(Equal("https://img/ada.jpg")))
 				Expect(body.Movies).To(HaveLen(1))

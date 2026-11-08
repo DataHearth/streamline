@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -62,7 +63,7 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 
 	It("adds a movie from TMDB and serves its detail", func() {
 		created := post("/api/v1/movies", adminAuth, map[string]any{
-			"tmdb_id": fakes.MovieTMDBID,
+			"tmdb_id": strconv.Itoa(fakes.MovieTMDBID),
 		})
 		defer created.Body.Close()
 		Expect(created.StatusCode).To(Equal(http.StatusCreated))
@@ -97,7 +98,7 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 		Expect(detail.StatusCode).To(Equal(http.StatusOK))
 		var view struct {
 			Id     uint32   `json:"id"`
-			TmdbId uint32   `json:"tmdb_id"`
+			TmdbId string   `json:"tmdb_id"`
 			Genres []string `json:"genres"`
 			Rating float32  `json:"rating"`
 			Cast   []struct {
@@ -106,7 +107,7 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 		}
 		decode(detail, &view)
 		Expect(view.Id).To(Equal(movie.Id))
-		Expect(view.TmdbId).To(BeEquivalentTo(fakes.MovieTMDBID))
+		Expect(view.TmdbId).To(Equal(strconv.Itoa(fakes.MovieTMDBID)))
 		Expect(view.Genres).To(ContainElement(fakes.MovieGenre))
 		Expect(view.Cast).To(ContainElement(HaveField("Name", fakes.MovieCastName)))
 		Expect(view.Rating).To(BeNumerically("~", fakes.MovieRating, 0.01))
@@ -114,7 +115,7 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 
 	It("403s a direct library add for a request_only caller", func() {
 		resp := post("/api/v1/movies", viewerAuth, map[string]any{
-			"tmdb_id": 550,
+			"tmdb_id": "550",
 		})
 		defer resp.Body.Close()
 		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
@@ -127,7 +128,7 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 
 	It("422s a grab whose download URL is not a configured indexer", func() {
 		created := post("/api/v1/movies", adminAuth, map[string]any{
-			"tmdb_id": fakes.MovieTMDBID,
+			"tmdb_id": strconv.Itoa(fakes.MovieTMDBID),
 		})
 		defer created.Body.Close()
 		Expect(created.StatusCode).To(Equal(http.StatusCreated))
@@ -311,7 +312,7 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 		defer resp.Body.Close()
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		var results []struct {
-			TmdbId    uint32 `json:"tmdb_id"`
+			TmdbId    string `json:"tmdb_id"`
 			Title     string `json:"title"`
 			Year      uint16 `json:"year"`
 			Overview  string `json:"overview"`
@@ -319,7 +320,7 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 		}
 		decode(resp, &results)
 		Expect(results).To(HaveLen(1))
-		Expect(results[0].TmdbId).To(BeEquivalentTo(fakes.MovieTMDBID))
+		Expect(results[0].TmdbId).To(Equal(strconv.Itoa(fakes.MovieTMDBID)))
 		Expect(results[0].Title).To(Equal(fakes.MovieTitle))
 		Expect(results[0].Year).To(BeEquivalentTo(fakes.MovieYear))
 		Expect(results[0].Overview).To(Equal(fakes.MovieOverview))

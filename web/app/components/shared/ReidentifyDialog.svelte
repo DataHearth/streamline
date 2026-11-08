@@ -24,7 +24,7 @@
 	// The provider pick, held between the picker closing and the confirm being
 	// answered. Confirming a destructive-ish repair on the click that chose the
 	// row would make a mis-click unrecoverable.
-	let picked = $state<{ id: number; title: string; year?: number } | null>(
+	let picked = $state<{ id: string; title: string; year?: number } | null>(
 		null,
 	);
 
@@ -34,7 +34,7 @@
 
 	const qc = useQueryClient();
 
-	const reidentify = createMutation<ReidentifyResult, Error, number>(() => ({
+	const reidentify = createMutation<ReidentifyResult, Error, string>(() => ({
 		mutationFn: (providerId) =>
 			api<ReidentifyResult>(`/${kind === "movie" ? "movies" : "series"}/${id}/reidentify`, {
 				method: "POST",

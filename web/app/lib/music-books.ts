@@ -201,7 +201,7 @@ export type BookCredit = Person & { role: BookRole; language?: string; author_id
 
 export type Book = {
 	id: number;
-	hardcover_id?: number;
+	hardcover_id?: string;
 	// Hardcover's community average, out of 5.
 	rating?: number;
 	contributors?: BookCredit[];
@@ -243,7 +243,7 @@ export type SeriesMonitor = "all" | "future" | "none";
 
 export type BookSeries = {
 	id: number;
-	hardcover_id?: number;
+	hardcover_id?: string;
 	// The hardcover.app/series path segment: Hardcover links a series by slug only.
 	hardcover_slug?: string;
 	// Book ids of the first hydrated volumes, at most three: the fanned cover.

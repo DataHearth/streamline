@@ -54,7 +54,7 @@ func (s *Service) RefreshBook(ctx context.Context, id uint32) (*ent.Book, error)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	recs, err := prov.GetBooksFresh(ctx, []uint32{row.HardcoverID})
+	recs, err := prov.GetBooksFresh(ctx, []string{row.HardcoverID})
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("get book: %w", err))
 	}
@@ -101,7 +101,7 @@ func (s *Service) refreshBooks(ctx context.Context, books []*ent.Book) error {
 	if err != nil {
 		return err
 	}
-	ids := make([]uint32, 0, len(books))
+	ids := make([]string, 0, len(books))
 	for _, b := range books {
 		ids = append(ids, b.HardcoverID)
 	}
@@ -109,7 +109,7 @@ func (s *Service) refreshBooks(ctx context.Context, books []*ent.Book) error {
 	if err != nil {
 		return err
 	}
-	byID := make(map[uint32]*metadata.BookRecord, len(recs))
+	byID := make(map[string]*metadata.BookRecord, len(recs))
 	for _, r := range recs {
 		byID[r.HardcoverID] = r
 	}
@@ -162,7 +162,7 @@ func (s *Service) RefreshSeries(
 	}
 
 	vols := orderedVolumes(sk.Volumes)
-	ids := make([]uint32, 0, len(vols))
+	ids := make([]string, 0, len(vols))
 	for _, v := range vols {
 		ids = append(ids, v.BookHardcoverID)
 	}
@@ -170,11 +170,11 @@ func (s *Service) RefreshSeries(
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("get volumes: %w", err))
 	}
-	byID := make(map[uint32]*metadata.BookRecord, len(recs))
+	byID := make(map[string]*metadata.BookRecord, len(recs))
 	for _, r := range recs {
 		byID[r.HardcoverID] = r
 	}
-	held := make(map[uint32]*ent.Book, len(row.Edges.Volumes))
+	held := make(map[string]*ent.Book, len(row.Edges.Volumes))
 	for _, v := range row.Edges.Volumes {
 		held[v.HardcoverID] = v
 	}
@@ -184,7 +184,7 @@ func (s *Service) RefreshSeries(
 	var (
 		lead     *metadata.BookRecord
 		fresh    []db.BookSeed
-		freshRec = map[uint32]*metadata.BookRecord{}
+		freshRec = map[string]*metadata.BookRecord{}
 		jobs     []artJob
 	)
 	win := positionWinners(vols, byID)

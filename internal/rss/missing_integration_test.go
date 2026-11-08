@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -52,13 +54,13 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 				SetTitle("Fight Club").
 				SetOriginalTitle("Fight Club").
 				SetYear(1999).
-				SetTmdbID(550).
+				SetTmdbID("550").
 				SetStatus(movie.StatusWanted).
 				Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
 			indexerM.EXPECT().
-				SearchMovie(mock.Anything, []string{"Fight Club", "Fight Club"}, mock.Anything, uint32(550)).
+				SearchMovie(mock.Anything, []string{"Fight Club", "Fight Club"}, mock.Anything, "550").
 				Return([]indexer.SearchResult{
 					{
 						Title:    "Fight.Club.1999.1080p.BluRay.x264-GROUP",
@@ -90,7 +92,7 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 			var err error
 			m, err = dbClient.Movie.Create().
 				SetTitle("Fight Club").
-				SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID(550).
+				SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID("550").
 				SetStatus(movie.StatusWanted).Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -102,7 +104,7 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 			syncer = newTestSearcher(dbClient, indexerM, dlM)
 
 			indexerM.EXPECT().
-				SearchMovie(mock.Anything, []string{"Fight Club", "Fight Club"}, mock.Anything, uint32(550)).
+				SearchMovie(mock.Anything, []string{"Fight Club", "Fight Club"}, mock.Anything, "550").
 				Return([]indexer.SearchResult{
 					{Title: "Fight.Club.1999.720p.BluRay.x264-GROUP", Seeders: 100},
 				}, nil)
@@ -122,7 +124,7 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 		BeforeEach(func() {
 			_, err := dbClient.Movie.Create().
 				SetTitle("Fight Club").
-				SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID(550).
+				SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID("550").
 				SetStatus(movie.StatusWanted).
 				SetLastSearchAt(time.Now().Add(-1 * time.Hour)).
 				Save(ctx)
@@ -139,7 +141,7 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 		BeforeEach(func() {
 			_, err := dbClient.Movie.Create().
 				SetTitle("Fight Club").
-				SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID(550).
+				SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID("550").
 				SetStatus(movie.StatusWanted).
 				SetGrabFailures(3).
 				Save(ctx)
@@ -158,14 +160,14 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 			var err error
 			m, err = dbClient.Movie.Create().
 				SetTitle("Fight Club").
-				SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID(550).
+				SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID("550").
 				SetStatus(movie.StatusWanted).
 				SetGrabFailures(1).
 				Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
 			indexerM.EXPECT().
-				SearchMovie(mock.Anything, []string{"Fight Club", "Fight Club"}, mock.Anything, uint32(550)).
+				SearchMovie(mock.Anything, []string{"Fight Club", "Fight Club"}, mock.Anything, "550").
 				Return([]indexer.SearchResult{
 					{Title: "Fight.Club.1999.1080p.BluRay.x264-GROUP", Seeders: 50},
 				}, nil)
@@ -193,7 +195,7 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 					_, err := dbClient.Movie.Create().
 						SetTitle(title).
 						SetOriginalTitle(title).
-						SetYear(2020).SetTmdbID(uint32(1000 + i)).
+						SetYear(2020).SetTmdbID(providerid.Format(uint32(1000 + i))).
 						SetStatus(movie.StatusWanted).Save(ctx)
 					Expect(err).NotTo(HaveOccurred())
 				}
@@ -211,7 +213,7 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 					Run(func(
 						ctx context.Context,
 						titles, aliases []string,
-						tmdbID uint32,
+						tmdbID string,
 					) {
 						mu.Lock()
 						active++

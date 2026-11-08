@@ -56,13 +56,13 @@ func (_c *RequestCreate) SetMediaType(v request.MediaType) *RequestCreate {
 }
 
 // SetMediaID sets the "media_id" field.
-func (_c *RequestCreate) SetMediaID(v uint32) *RequestCreate {
+func (_c *RequestCreate) SetMediaID(v string) *RequestCreate {
 	_c.mutation.SetMediaID(v)
 	return _c
 }
 
 // SetNillableMediaID sets the "media_id" field if the given value is not nil.
-func (_c *RequestCreate) SetNillableMediaID(v *uint32) *RequestCreate {
+func (_c *RequestCreate) SetNillableMediaID(v *string) *RequestCreate {
 	if v != nil {
 		_c.SetMediaID(*v)
 	}
@@ -252,10 +252,6 @@ func (_c *RequestCreate) defaults() {
 		v := request.DefaultUpdateTime()
 		_c.mutation.SetUpdateTime(v)
 	}
-	if _, ok := _c.mutation.MediaID(); !ok {
-		v := request.DefaultMediaID
-		_c.mutation.SetMediaID(v)
-	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := request.DefaultStatus
 		_c.mutation.SetStatus(v)
@@ -342,7 +338,7 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 		_node.MediaType = value
 	}
 	if value, ok := _c.mutation.MediaID(); ok {
-		_spec.SetField(request.FieldMediaID, field.TypeUint32, value)
+		_spec.SetField(request.FieldMediaID, field.TypeString, value)
 		_node.MediaID = value
 	}
 	if value, ok := _c.mutation.MediaMbid(); ok {

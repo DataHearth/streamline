@@ -132,6 +132,8 @@ var (
 	TitleValidator func(string) error
 	// DefaultMonitored holds the default value on creation for the "monitored" field.
 	DefaultMonitored bool
+	// TvdbIDValidator is a validator for the "tvdb_id" field. It is called by the builders before save.
+	TvdbIDValidator func(string) error
 	// DefaultRuntime holds the default value on creation for the "runtime" field.
 	DefaultRuntime uint16
 	// DefaultRating holds the default value on creation for the "rating" field.

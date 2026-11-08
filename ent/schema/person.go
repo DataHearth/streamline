@@ -23,13 +23,12 @@ func (Person) Fields() []ent.Field {
 	return []ent.Field{
 		// tmdb_id and tvdb_id are provider-scoped and mutually exclusive in
 		// practice: movie cast comes from TMDB, series cast from TVDB, so
-		// normally exactly one is set and the other stays 0. 0 means "that
-		// provider gave us no id for this person", not "person zero" — which is
-		// why neither is a unique index: every provider-less person would
-		// collide on it. Upserts de-duplicate on the non-zero id, falling back
-		// to name.
-		field.Uint32("tmdb_id").Optional().Default(0),
-		field.Uint32("tvdb_id").Optional().Default(0),
+		// normally exactly one is set and the other stays empty. Empty means
+		// "that provider gave us no id for this person" — which is why neither
+		// is a unique index: every provider-less person would collide on it.
+		// Upserts de-duplicate on the non-empty id, falling back to name.
+		field.String("tmdb_id").Optional(),
+		field.String("tvdb_id").Optional(),
 		field.String("name").NotEmpty(),
 		field.String("profile_url").Optional(),
 		field.String("biography").Optional(),

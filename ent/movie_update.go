@@ -165,23 +165,16 @@ func (_u *MovieUpdate) SetNillableMonitored(v *bool) *MovieUpdate {
 }
 
 // SetTmdbID sets the "tmdb_id" field.
-func (_u *MovieUpdate) SetTmdbID(v uint32) *MovieUpdate {
-	_u.mutation.ResetTmdbID()
+func (_u *MovieUpdate) SetTmdbID(v string) *MovieUpdate {
 	_u.mutation.SetTmdbID(v)
 	return _u
 }
 
 // SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
-func (_u *MovieUpdate) SetNillableTmdbID(v *uint32) *MovieUpdate {
+func (_u *MovieUpdate) SetNillableTmdbID(v *string) *MovieUpdate {
 	if v != nil {
 		_u.SetTmdbID(*v)
 	}
-	return _u
-}
-
-// AddTmdbID adds value to the "tmdb_id" field.
-func (_u *MovieUpdate) AddTmdbID(v int32) *MovieUpdate {
-	_u.mutation.AddTmdbID(v)
 	return _u
 }
 
@@ -591,6 +584,11 @@ func (_u *MovieUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Movie.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.TmdbID(); ok {
+		if err := movie.TmdbIDValidator(v); err != nil {
+			return &ValidationError{Name: "tmdb_id", err: fmt.Errorf(`ent: validator failed for field "Movie.tmdb_id": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -649,10 +647,7 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.SetField(movie.FieldMonitored, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.TmdbID(); ok {
-		_spec.SetField(movie.FieldTmdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedTmdbID(); ok {
-		_spec.AddField(movie.FieldTmdbID, field.TypeUint32, value)
+		_spec.SetField(movie.FieldTmdbID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.LastSearchAt(); ok {
 		_spec.SetField(movie.FieldLastSearchAt, field.TypeTime, value)
@@ -1060,23 +1055,16 @@ func (_u *MovieUpdateOne) SetNillableMonitored(v *bool) *MovieUpdateOne {
 }
 
 // SetTmdbID sets the "tmdb_id" field.
-func (_u *MovieUpdateOne) SetTmdbID(v uint32) *MovieUpdateOne {
-	_u.mutation.ResetTmdbID()
+func (_u *MovieUpdateOne) SetTmdbID(v string) *MovieUpdateOne {
 	_u.mutation.SetTmdbID(v)
 	return _u
 }
 
 // SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
-func (_u *MovieUpdateOne) SetNillableTmdbID(v *uint32) *MovieUpdateOne {
+func (_u *MovieUpdateOne) SetNillableTmdbID(v *string) *MovieUpdateOne {
 	if v != nil {
 		_u.SetTmdbID(*v)
 	}
-	return _u
-}
-
-// AddTmdbID adds value to the "tmdb_id" field.
-func (_u *MovieUpdateOne) AddTmdbID(v int32) *MovieUpdateOne {
-	_u.mutation.AddTmdbID(v)
 	return _u
 }
 
@@ -1499,6 +1487,11 @@ func (_u *MovieUpdateOne) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Movie.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.TmdbID(); ok {
+		if err := movie.TmdbIDValidator(v); err != nil {
+			return &ValidationError{Name: "tmdb_id", err: fmt.Errorf(`ent: validator failed for field "Movie.tmdb_id": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -1574,10 +1567,7 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 		_spec.SetField(movie.FieldMonitored, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.TmdbID(); ok {
-		_spec.SetField(movie.FieldTmdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedTmdbID(); ok {
-		_spec.AddField(movie.FieldTmdbID, field.TypeUint32, value)
+		_spec.SetField(movie.FieldTmdbID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.LastSearchAt(); ok {
 		_spec.SetField(movie.FieldLastSearchAt, field.TypeTime, value)

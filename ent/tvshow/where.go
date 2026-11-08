@@ -96,7 +96,7 @@ func Monitored(v bool) predicate.TVShow {
 }
 
 // TvdbID applies equality check predicate on the "tvdb_id" field. It's identical to TvdbIDEQ.
-func TvdbID(v uint32) predicate.TVShow {
+func TvdbID(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldTvdbID, v))
 }
 
@@ -571,43 +571,68 @@ func MonitoredNEQ(v bool) predicate.TVShow {
 }
 
 // TvdbIDEQ applies the EQ predicate on the "tvdb_id" field.
-func TvdbIDEQ(v uint32) predicate.TVShow {
+func TvdbIDEQ(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldTvdbID, v))
 }
 
 // TvdbIDNEQ applies the NEQ predicate on the "tvdb_id" field.
-func TvdbIDNEQ(v uint32) predicate.TVShow {
+func TvdbIDNEQ(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldNEQ(FieldTvdbID, v))
 }
 
 // TvdbIDIn applies the In predicate on the "tvdb_id" field.
-func TvdbIDIn(vs ...uint32) predicate.TVShow {
+func TvdbIDIn(vs ...string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldIn(FieldTvdbID, vs...))
 }
 
 // TvdbIDNotIn applies the NotIn predicate on the "tvdb_id" field.
-func TvdbIDNotIn(vs ...uint32) predicate.TVShow {
+func TvdbIDNotIn(vs ...string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldNotIn(FieldTvdbID, vs...))
 }
 
 // TvdbIDGT applies the GT predicate on the "tvdb_id" field.
-func TvdbIDGT(v uint32) predicate.TVShow {
+func TvdbIDGT(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldGT(FieldTvdbID, v))
 }
 
 // TvdbIDGTE applies the GTE predicate on the "tvdb_id" field.
-func TvdbIDGTE(v uint32) predicate.TVShow {
+func TvdbIDGTE(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldGTE(FieldTvdbID, v))
 }
 
 // TvdbIDLT applies the LT predicate on the "tvdb_id" field.
-func TvdbIDLT(v uint32) predicate.TVShow {
+func TvdbIDLT(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldLT(FieldTvdbID, v))
 }
 
 // TvdbIDLTE applies the LTE predicate on the "tvdb_id" field.
-func TvdbIDLTE(v uint32) predicate.TVShow {
+func TvdbIDLTE(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldLTE(FieldTvdbID, v))
+}
+
+// TvdbIDContains applies the Contains predicate on the "tvdb_id" field.
+func TvdbIDContains(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldContains(FieldTvdbID, v))
+}
+
+// TvdbIDHasPrefix applies the HasPrefix predicate on the "tvdb_id" field.
+func TvdbIDHasPrefix(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldHasPrefix(FieldTvdbID, v))
+}
+
+// TvdbIDHasSuffix applies the HasSuffix predicate on the "tvdb_id" field.
+func TvdbIDHasSuffix(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldHasSuffix(FieldTvdbID, v))
+}
+
+// TvdbIDEqualFold applies the EqualFold predicate on the "tvdb_id" field.
+func TvdbIDEqualFold(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEqualFold(FieldTvdbID, v))
+}
+
+// TvdbIDContainsFold applies the ContainsFold predicate on the "tvdb_id" field.
+func TvdbIDContainsFold(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldContainsFold(FieldTvdbID, v))
 }
 
 // PosterPathEQ applies the EQ predicate on the "poster_path" field.

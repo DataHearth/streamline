@@ -45,7 +45,7 @@ var _ = Describe("uploads", Label("unit", "books"), func() {
 
 	It("refuses a stub book before receiving", func() {
 		stub := f.client.Book.Create().
-			SetHardcoverID(9).
+			SetHardcoverID("9").
 			SetTitle("Stub").
 			SaveX(f.ctx)
 

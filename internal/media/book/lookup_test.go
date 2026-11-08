@@ -3,6 +3,8 @@ package book
 import (
 	"fmt"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -18,14 +20,21 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 
 	bookHit := func(id uint32, title string) metadata.BookLookupHit {
 		return metadata.BookLookupHit{
-			HardcoverID: id, Type: "book", Title: title, Author: "Someone",
-			Year: 2005, Genres: []string{"Fantasy"}, ImageURL: "https://img/x.jpg",
+			HardcoverID: providerid.Format(
+				id,
+			),
+			Type:     "book",
+			Title:    title,
+			Author:   "Someone",
+			Year:     2005,
+			Genres:   []string{"Fantasy"},
+			ImageURL: "https://img/x.jpg",
 		}
 	}
-	seriesHit := func(id uint32, name string) metadata.BookLookupHit {
+	seriesHit := func(id any, name string) metadata.BookLookupHit {
 		ongoing := true
 		return metadata.BookLookupHit{
-			HardcoverID: id, Type: "series", Title: name, Author: "Someone",
+			HardcoverID: itoa(id), Type: "series", Title: name, Author: "Someone",
 			Volumes: 12, Ongoing: &ongoing,
 		}
 	}
@@ -79,17 +88,17 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 				hits, err := f.svc.Lookup(f.ctx, "Exhalation Ted Chiang", lookupBook)
 
 				Expect(err).NotTo(HaveOccurred())
-				ids := make([]uint32, 0, len(hits))
+				ids := make([]string, 0, len(hits))
 				for _, h := range hits {
 					ids = append(ids, h.HardcoverID)
 				}
-				Expect(ids).To(Equal([]uint32{2, 1, 3}))
+				Expect(ids).To(Equal([]string{"2", "1", "3"}))
 			},
 		)
 
 		It("asks Hardcover for one kind only when told to", func() {
 			elantris := bookHit(1, "Elantris")
-			elantris.SeriesIDs = []uint32{5}
+			elantris.SeriesIDs = []string{"5"}
 			f.meta.EXPECT().LookupBooks(anyCtx, "elantris").
 				Return([]metadata.BookLookupHit{elantris}, nil).Once()
 
@@ -153,13 +162,13 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 			"marks what the library already holds, with the cover and year of a series",
 			func() {
 				added := f.addBook(1, "Elantris", "")
-				f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+				f.meta.EXPECT().GetSeries(anyCtx, "50").
 					Return(seriesRecord("One Piece", 1), nil).Once()
 				f.meta.EXPECT().GetBooks(anyCtx, ids(1001)).
 					Return([]*metadata.BookRecord{volumeRec(1001)}, nil).Once()
 				series, err := f.svc.AddSeries(
 					f.ctx,
-					AddSeriesParams{HardcoverID: 50},
+					AddSeriesParams{HardcoverID: "50"},
 				)
 				Expect(err).NotTo(HaveOccurred())
 				f.meta.EXPECT().LookupBooks(anyCtx, "x").
@@ -199,7 +208,7 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 				b := bookHit(188628, "Foundation")
 				b.Author = "Isaac Asimov"
 				b.AlternativeTitles = []string{"Fondation", "Fundação"}
-				b.SeriesIDs = []uint32{5450, 10331, 60563}
+				b.SeriesIDs = []string{"5450", "10331", "60563"}
 				return b
 			}
 			hitIDs := func(hits []LookupHit) []string {
@@ -303,7 +312,7 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 
 			It("never follows a book whose title is not the query", func() {
 				prelude := bookHit(7, "Prelude to Empire")
-				prelude.SeriesIDs = []uint32{5450}
+				prelude.SeriesIDs = []string{"5450"}
 				f.meta.EXPECT().LookupBooks(anyCtx, "fondation").
 					Return([]metadata.BookLookupHit{prelude}, nil).Once()
 				f.meta.EXPECT().LookupSeries(anyCtx, "fondation").
@@ -319,7 +328,7 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 				"lists a series reached only by the query's words after the books",
 				func() {
 					heir := bookHit(1, "Star Wars: Heir to the Empire")
-					heir.SeriesIDs = []uint32{300}
+					heir.SeriesIDs = []string{"300"}
 					f.meta.EXPECT().LookupBooks(anyCtx, "star wars").
 						Return([]metadata.BookLookupHit{heir, bookHit(2, "Star Wars")}, nil).
 						Once()
@@ -379,9 +388,9 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 				many := foundation()
 				many.SeriesIDs = nil
 				recs := make([]metadata.SeriesLookupRecord, 0, 21)
-				want := make([]uint32, 0, 21)
+				want := make([]any, 0, 21)
 				for i := range uint32(21) {
-					many.SeriesIDs = append(many.SeriesIDs, 100+i)
+					many.SeriesIDs = append(many.SeriesIDs, itoa(100+i))
 					want = append(want, 100+i)
 					recs = append(
 						recs,
@@ -419,18 +428,18 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 					r := seriesRec(5450, "Foundation", 0)
 					r.PrimaryBooks = 7
 					r.Volumes = []metadata.SeriesLookupVolume{
-						{Position: 1, BookHardcoverID: 900, UsersCount: 5},
+						{Position: 1, BookHardcoverID: "900", UsersCount: 5},
 						{
 							Position:        1,
-							BookHardcoverID: 901,
+							BookHardcoverID: "901",
 							UsersCount:      50,
 							Compilation:     true,
 						},
-						{Position: 1, BookHardcoverID: 902, UsersCount: 20},
-						{Position: 2, BookHardcoverID: 911, UsersCount: 1},
-						{Position: 2, BookHardcoverID: 910, UsersCount: 1},
-						{Position: 3, BookHardcoverID: 920},
-						{Position: 4, BookHardcoverID: 930, UsersCount: 99},
+						{Position: 1, BookHardcoverID: "902", UsersCount: 20},
+						{Position: 2, BookHardcoverID: "911", UsersCount: 1},
+						{Position: 2, BookHardcoverID: "910", UsersCount: 1},
+						{Position: 3, BookHardcoverID: "920"},
+						{Position: 4, BookHardcoverID: "930", UsersCount: 99},
 					}
 					for i := range r.Volumes {
 						r.Volumes[i].ImageURL = "https://img/v.jpg"
@@ -442,14 +451,16 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(hits).To(HaveLen(1))
-					Expect(hits[0].CoverBookIDs).To(Equal([]uint32{902, 910, 920}))
+					Expect(
+						hits[0].CoverBookIDs,
+					).To(Equal([]string{"902", "910", "920"}))
 					Expect(hits[0].Volumes).To(Equal(uint32(7)))
 				},
 			)
 		})
 
 		Describe("cover fan", func() {
-			lookupFan := func(r metadata.SeriesLookupRecord) []uint32 {
+			lookupFan := func(r metadata.SeriesLookupRecord) []string {
 				GinkgoHelper()
 				f.meta.EXPECT().LookupBooks(anyCtx, "calvin").Return(nil, nil).Once()
 				f.meta.EXPECT().LookupSeries(anyCtx, "calvin").
@@ -469,21 +480,21 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 				r.Volumes = []metadata.SeriesLookupVolume{
 					{
 						Position:        1,
-						BookHardcoverID: 11,
+						BookHardcoverID: "11",
 						ImageURL:        "https://img/11.jpg",
 					},
-					{Position: 2, BookHardcoverID: 12},
+					{Position: 2, BookHardcoverID: "12"},
 					{
 						Position:        3,
-						BookHardcoverID: 13,
+						BookHardcoverID: "13",
 						ImageURL:        "https://img/13.jpg",
 					},
 				}
 				r.Loose = []metadata.SeriesLookupVolume{
-					{BookHardcoverID: 99, ImageURL: "https://img/99.jpg"},
+					{BookHardcoverID: "99", ImageURL: "https://img/99.jpg"},
 				}
 
-				Expect(lookupFan(r)).To(Equal([]uint32{11, 13}))
+				Expect(lookupFan(r)).To(Equal([]string{"11", "13"}))
 			})
 
 			It(
@@ -493,35 +504,35 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 					r.PrimaryBooks = 6
 					r.Loose = []metadata.SeriesLookupVolume{
 						{
-							BookHardcoverID: 21,
+							BookHardcoverID: "21",
 							UsersCount:      117,
 							ImageURL:        "https://img/21.jpg",
 						},
-						{BookHardcoverID: 22, UsersCount: 2},
+						{BookHardcoverID: "22", UsersCount: 2},
 						{
-							BookHardcoverID: 23,
+							BookHardcoverID: "23",
 							UsersCount:      1,
 							Compilation:     true,
 							ImageURL:        "https://img/23.jpg",
 						},
 						{
-							BookHardcoverID: 24,
+							BookHardcoverID: "24",
 							UsersCount:      1,
 							ImageURL:        "https://img/24.jpg",
 						},
 						{
-							BookHardcoverID: 25,
+							BookHardcoverID: "25",
 							UsersCount:      1,
 							ImageURL:        "https://img/25.jpg",
 						},
 						{
-							BookHardcoverID: 26,
+							BookHardcoverID: "26",
 							UsersCount:      1,
 							ImageURL:        "https://img/26.jpg",
 						},
 					}
 
-					Expect(lookupFan(r)).To(Equal([]uint32{21, 24, 25}))
+					Expect(lookupFan(r)).To(Equal([]string{"21", "24", "25"}))
 				},
 			)
 		})
@@ -538,11 +549,11 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 			hits, err := f.svc.Lookup(f.ctx, "calvin and hobbes", lookupBook)
 
 			Expect(err).NotTo(HaveOccurred())
-			ids := make([]uint32, 0, len(hits))
+			ids := make([]string, 0, len(hits))
 			for _, h := range hits {
 				ids = append(ids, h.HardcoverID)
 			}
-			Expect(ids).To(Equal([]uint32{1, 3}))
+			Expect(ids).To(Equal([]string{"1", "3"}))
 		})
 
 		It("says so when there is no Hardcover key", func() {
@@ -570,7 +581,7 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 				f.meta.EXPECT().GetBooks(anyCtx, ids(1)).
 					Return([]*metadata.BookRecord{r}, nil).Once()
 
-				d, err := f.svc.LookupDetail(f.ctx, lookupBook, 1)
+				d, err := f.svc.LookupDetail(f.ctx, lookupBook, "1")
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(d.Type).To(Equal("book"))
@@ -598,7 +609,7 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 			f.meta.EXPECT().GetBooks(anyCtx, ids(1)).
 				Return([]*metadata.BookRecord{rec(1, "Elantris")}, nil).Once()
 
-			first, err := f.svc.LookupDetail(f.ctx, lookupBook, 1)
+			first, err := f.svc.LookupDetail(f.ctx, lookupBook, "1")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(first.AlreadyAdded).To(BeFalse())
 
@@ -606,10 +617,10 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 			// is the mock, so it is asked once more.
 			f.meta.EXPECT().GetBooks(anyCtx, ids(1)).
 				Return([]*metadata.BookRecord{rec(1, "Elantris")}, nil).Once()
-			added, err := f.svc.AddBook(f.ctx, AddBookParams{HardcoverID: 1})
+			added, err := f.svc.AddBook(f.ctx, AddBookParams{HardcoverID: "1"})
 			Expect(err).NotTo(HaveOccurred())
 
-			second, err := f.svc.LookupDetail(f.ctx, lookupBook, 1)
+			second, err := f.svc.LookupDetail(f.ctx, lookupBook, "1")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(second.AlreadyAdded).To(BeTrue())
 			Expect(second.LibraryID).To(Equal(added.ID))
@@ -618,14 +629,14 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 		It("answers a book Hardcover does not know", func() {
 			f.meta.EXPECT().GetBooks(anyCtx, ids(404)).
 				Return([]*metadata.BookRecord{}, nil).Once()
-			_, err := f.svc.LookupDetail(f.ctx, lookupBook, 404)
+			_, err := f.svc.LookupDetail(f.ctx, lookupBook, "404")
 			Expect(err).To(MatchError(ErrHardcoverNotFound))
 		})
 
 		It(
 			"describes a series from its skeleton and one batch of its first volumes",
 			func() {
-				f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+				f.meta.EXPECT().GetSeries(anyCtx, "50").
 					Return(seriesRecord("One Piece", 10), nil).Once()
 				recs := []*metadata.BookRecord{}
 				for i := uint32(1); i <= 6; i++ {
@@ -637,7 +648,7 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 					Return(recs, nil).
 					Once()
 
-				d, err := f.svc.LookupDetail(f.ctx, lookupSeries, 50)
+				d, err := f.svc.LookupDetail(f.ctx, lookupSeries, "50")
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(d.Type).To(Equal("series"))
@@ -648,7 +659,7 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 				Expect(d.Kind).To(Equal("manga"))
 				Expect(
 					d.VolumeBookIDs,
-				).To(Equal([]uint32{1001, 1002, 1003, 1004, 1005, 1006}))
+				).To(Equal([]string{"1001", "1002", "1003", "1004", "1005", "1006"}))
 				// Distinct (language, publisher) of the first volume's ebooks.
 				Expect(d.Editions).To(HaveLen(2))
 				Expect(d.Editions[0].Format).To(Equal("ebook"))
@@ -665,33 +676,33 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 					sk.Volumes,
 					metadata.SeriesVolumeRef{
 						Position:        1,
-						BookHardcoverID: 1101,
+						BookHardcoverID: "1101",
 						UsersCount:      50,
 					},
 					metadata.SeriesVolumeRef{
 						Position:        2,
-						BookHardcoverID: 1102,
+						BookHardcoverID: "1102",
 						UsersCount:      90,
 						Compilation:     true,
 					},
 				)
-				f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).Return(sk, nil).Once()
+				f.meta.EXPECT().GetSeries(anyCtx, "50").Return(sk, nil).Once()
 				f.meta.EXPECT().GetBooks(anyCtx, ids(1101, 1002, 1003)).
 					Return([]*metadata.BookRecord{
 						volumeRec(1101), volumeRec(1002), volumeRec(1003),
 					}, nil).Once()
 
-				d, err := f.svc.LookupDetail(f.ctx, lookupSeries, 50)
+				d, err := f.svc.LookupDetail(f.ctx, lookupSeries, "50")
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(d.VolumeBookIDs).To(Equal([]uint32{1101, 1002, 1003}))
+				Expect(d.VolumeBookIDs).To(Equal([]string{"1101", "1002", "1003"}))
 				Expect(d.Slug).To(Equal("one-piece"))
 			},
 		)
 
 		It("answers a series Hardcover does not know", func() {
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(404)).Return(nil, nil).Once()
-			_, err := f.svc.LookupDetail(f.ctx, lookupSeries, 404)
+			f.meta.EXPECT().GetSeries(anyCtx, "404").Return(nil, nil).Once()
+			_, err := f.svc.LookupDetail(f.ctx, lookupSeries, "404")
 			Expect(err).To(MatchError(ErrHardcoverNotFound))
 		})
 	})

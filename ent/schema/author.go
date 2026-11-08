@@ -23,7 +23,7 @@ func (Author) Mixin() []ent.Mixin {
 
 func (Author) Fields() []ent.Field {
 	return []ent.Field{
-		field.Uint32("hardcover_id").Unique(),
+		field.String("hardcover_id").NotEmpty().Unique(),
 		field.String("name").NotEmpty(),
 		field.String("sort_name").Optional(),
 		field.String("image_source").Optional().

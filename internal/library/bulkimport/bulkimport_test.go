@@ -64,7 +64,7 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 
 	Describe("UpdateFileDecision", func() {
 		It("persists the decision then returns the file looked up by id", func() {
-			tmdbID := uint32(27205)
+			tmdbID := "27205"
 			store.EXPECT().
 				UpdateImportScanFileDecision(
 					mock.Anything,
@@ -100,7 +100,7 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 				store.EXPECT().
 					UpdateImportScanFileDecision(
 						mock.Anything, uint32(3), uint32(99),
-						entimportscanfile.DecisionSkip, (*uint32)(nil),
+						entimportscanfile.DecisionSkip, (*string)(nil),
 					).
 					Return(db.ErrImportScanFileNotFound).
 					Once()
@@ -116,7 +116,7 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 			store.EXPECT().
 				UpdateImportScanFileDecision(
 					mock.Anything, uint32(3), uint32(12),
-					entimportscanfile.DecisionSkip, (*uint32)(nil),
+					entimportscanfile.DecisionSkip, (*string)(nil),
 				).
 				Return(context.DeadlineExceeded).
 				Once()

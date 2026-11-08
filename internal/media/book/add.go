@@ -8,6 +8,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
@@ -24,13 +26,13 @@ import (
 const hydrateBatch = 20
 
 type AddBookParams struct {
-	HardcoverID    uint32
+	HardcoverID    string
 	Monitor        string // both | ebook | audiobook | none; empty is both
 	QualityProfile string
 }
 
 type AddSeriesParams struct {
-	HardcoverID    uint32
+	HardcoverID    string
 	Monitor        string // all | future | none; empty is all
 	QualityProfile string
 }
@@ -99,7 +101,7 @@ func bookMetadata(
 // creators' photos in the background.
 func (s *Service) AddBook(ctx context.Context, p AddBookParams) (*ent.Book, error) {
 	ctx, span := tracer.Start(ctx, "book.add",
-		trace.WithAttributes(attribute.Int("hardcover_id", int(p.HardcoverID))))
+		trace.WithAttributes(attribute.String("hardcover_id", p.HardcoverID)))
 	defer span.End()
 
 	prov, err := s.provider()
@@ -122,11 +124,11 @@ func (s *Service) AddBook(ctx context.Context, p AddBookParams) (*ent.Book, erro
 	}
 	if existing != nil {
 		return nil, otelx.RecordSpanError(
-			span, fmt.Errorf("%w: hardcover id %d", ErrBookExists, p.HardcoverID),
+			span, fmt.Errorf("%w: hardcover id %s", ErrBookExists, p.HardcoverID),
 		)
 	}
 
-	recs, err := prov.GetBooks(ctx, []uint32{p.HardcoverID})
+	recs, err := prov.GetBooks(ctx, []string{p.HardcoverID})
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("get book: %w", err))
 	}
@@ -144,7 +146,7 @@ func (s *Service) AddBook(ctx context.Context, p AddBookParams) (*ent.Book, erro
 	}))
 	if err != nil {
 		if ent.IsConstraintError(err) {
-			err = fmt.Errorf("%w: hardcover id %d", ErrBookExists, p.HardcoverID)
+			err = fmt.Errorf("%w: hardcover id %s", ErrBookExists, p.HardcoverID)
 		}
 		return nil, otelx.RecordSpanError(span, err)
 	}
@@ -164,7 +166,7 @@ func orderedVolumes(in []metadata.SeriesVolumeRef) []metadata.SeriesVolumeRef {
 	slices.SortStableFunc(out, func(a, b metadata.SeriesVolumeRef) int {
 		return cmp.Or(
 			cmp.Compare(a.Position, b.Position),
-			cmp.Compare(a.BookHardcoverID, b.BookHardcoverID),
+			providerid.Compare(a.BookHardcoverID, b.BookHardcoverID),
 		)
 	})
 	return slices.Compact(out)
@@ -174,7 +176,7 @@ func orderedVolumes(in []metadata.SeriesVolumeRef) []metadata.SeriesVolumeRef {
 // winner rule reads.
 type volumeCandidate struct {
 	position    float64
-	bookID      uint32
+	bookID      string
 	users       uint32
 	compilation bool
 }
@@ -183,9 +185,9 @@ type volumeCandidate struct {
 // then book id, the non-compilation book with the most readers; the lowest
 // book id wins a tie. The winners come in position order, and a position whose
 // candidates are all compilations has none.
-func winnersByPosition(cands []volumeCandidate) []uint32 {
+func winnersByPosition(cands []volumeCandidate) []string {
 	var (
-		out  []uint32
+		out  []string
 		best volumeCandidate
 		have bool
 	)
@@ -213,8 +215,8 @@ func winnersByPosition(cands []volumeCandidate) []uint32 {
 // are judged by their records; a candidate with no record is not one.
 func positionWinners(
 	vols []metadata.SeriesVolumeRef,
-	byID map[uint32]*metadata.BookRecord,
-) map[uint32]bool {
+	byID map[string]*metadata.BookRecord,
+) map[string]bool {
 	cands := make([]volumeCandidate, 0, len(vols))
 	for _, v := range vols {
 		if rec := byID[v.BookHardcoverID]; rec != nil {
@@ -226,7 +228,7 @@ func positionWinners(
 			})
 		}
 	}
-	out := map[uint32]bool{}
+	out := map[string]bool{}
 	for _, id := range winnersByPosition(cands) {
 		out[id] = true
 	}
@@ -236,7 +238,7 @@ func positionWinners(
 // skeletonWinners is the winner rule over an ordered skeleton, judged by the
 // reader counts and compilation flags the skeleton itself carries, so a
 // preview needs no record to pick the volume an add would.
-func skeletonWinners(vols []metadata.SeriesVolumeRef) []uint32 {
+func skeletonWinners(vols []metadata.SeriesVolumeRef) []string {
 	cands := make([]volumeCandidate, 0, len(vols))
 	for _, v := range vols {
 		cands = append(cands, volumeCandidate{
@@ -257,7 +259,7 @@ func seriesCredits(
 ) []metadata.BookCredit {
 	var out []metadata.BookCredit
 	add := func(c metadata.BookCredit) {
-		if c.AuthorHardcoverID == 0 || c.Name == "" {
+		if c.AuthorHardcoverID == "" || c.Name == "" {
 			return
 		}
 		if slices.ContainsFunc(out, func(x metadata.BookCredit) bool {
@@ -290,7 +292,7 @@ func translatorSeeds(lead *metadata.BookRecord, start uint8) []db.CreditSeed {
 	var out []db.CreditSeed
 	seen := map[string]bool{}
 	for _, e := range lead.Editions {
-		if e.Translator == "" || e.TranslatorID == 0 || seen[e.Language] {
+		if e.Translator == "" || e.TranslatorID == "" || seen[e.Language] {
 			continue
 		}
 		seen[e.Language] = true
@@ -370,7 +372,7 @@ func (s *Service) AddSeries(
 	p AddSeriesParams,
 ) (*ent.BookSeries, error) {
 	ctx, span := tracer.Start(ctx, "book.add_series",
-		trace.WithAttributes(attribute.Int("hardcover_id", int(p.HardcoverID))))
+		trace.WithAttributes(attribute.String("hardcover_id", p.HardcoverID)))
 	defer span.End()
 
 	prov, err := s.provider()
@@ -394,7 +396,7 @@ func (s *Service) AddSeries(
 	}
 	if existing != nil {
 		return nil, otelx.RecordSpanError(
-			span, fmt.Errorf("%w: hardcover id %d", ErrSeriesExists, p.HardcoverID),
+			span, fmt.Errorf("%w: hardcover id %s", ErrSeriesExists, p.HardcoverID),
 		)
 	}
 
@@ -410,7 +412,7 @@ func (s *Service) AddSeries(
 	for firstN < len(vols) && vols[firstN].Position == vols[firstN-1].Position {
 		firstN++
 	}
-	var firstIDs []uint32
+	var firstIDs []string
 	for _, v := range vols[:firstN] {
 		firstIDs = append(firstIDs, v.BookHardcoverID)
 	}
@@ -418,7 +420,7 @@ func (s *Service) AddSeries(
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("get volumes: %w", err))
 	}
-	byID := make(map[uint32]*metadata.BookRecord, len(recs))
+	byID := make(map[string]*metadata.BookRecord, len(recs))
 	for _, r := range recs {
 		byID[r.HardcoverID] = r
 	}
@@ -429,7 +431,7 @@ func (s *Service) AddSeries(
 	var (
 		seeds   []db.BookSeed
 		lead    *metadata.BookRecord
-		covers  = map[uint32]string{}
+		covers  = map[string]string{}
 		stubsOf = vols[firstN:]
 	)
 	for _, v := range vols[:firstN] {
@@ -485,7 +487,7 @@ func (s *Service) AddSeries(
 	row, counts, err := s.db.CreateSeries(ctx, params)
 	if err != nil {
 		if ent.IsConstraintError(err) {
-			err = fmt.Errorf("%w: hardcover id %d", ErrSeriesExists, p.HardcoverID)
+			err = fmt.Errorf("%w: hardcover id %s", ErrSeriesExists, p.HardcoverID)
 		}
 		return nil, otelx.RecordSpanError(span, err)
 	}

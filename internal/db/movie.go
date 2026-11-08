@@ -19,7 +19,7 @@ type CreateMovieParams struct {
 	Title          string
 	OriginalTitle  string
 	Year           uint16
-	TmdbID         uint32
+	TmdbID         string
 	Status         movie.Status
 	Overview       string
 	Runtime        uint16
@@ -106,10 +106,10 @@ func (db *DB) CountMoviesByStatus(
 // importer needs exactly this to tell an already-tracked title from a new
 // one; it used to page the entire movie table *with media files attached* to
 // build the same two columns.
-func (db *DB) MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error) {
+func (db *DB) MovieTMDBIndex(ctx context.Context) (map[string]uint32, error) {
 	var rows []struct {
 		ID     uint32 `json:"id"`
-		TmdbID uint32 `json:"tmdb_id"`
+		TmdbID string `json:"tmdb_id"`
 	}
 	err := db.client.Movie.Query().
 		Select(movie.FieldID, movie.FieldTmdbID).
@@ -117,7 +117,7 @@ func (db *DB) MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[uint32]uint32, len(rows))
+	out := make(map[string]uint32, len(rows))
 	for _, r := range rows {
 		out[r.TmdbID] = r.ID
 	}
@@ -434,7 +434,7 @@ func (db *DB) FilterMovies(
 
 func (db *DB) FindMovieByTMDBID(
 	ctx context.Context,
-	tmdbID uint32,
+	tmdbID string,
 ) (*ent.Movie, error) {
 	return db.client.Movie.Query().Where(movie.TmdbIDEQ(tmdbID)).Only(ctx)
 }
@@ -444,7 +444,7 @@ func (db *DB) FindMovieByTMDBID(
 // results without an N+1 lookup loop.
 func (db *DB) FindMoviesByTMDBIDs(
 	ctx context.Context,
-	tmdbIDs []uint32,
+	tmdbIDs []string,
 ) ([]*ent.Movie, error) {
 	if len(tmdbIDs) == 0 {
 		return nil, nil
@@ -518,7 +518,7 @@ func (db *DB) UpdateMovieMetadata(
 // SetMovieTMDBID repoints a row at a different TMDB title. Everything else on
 // the row — files, history, requests, quality profile — is left alone; the
 // caller refreshes metadata afterwards so title/year stop contradicting the id.
-func (db *DB) SetMovieTMDBID(ctx context.Context, id, tmdbID uint32) error {
+func (db *DB) SetMovieTMDBID(ctx context.Context, id uint32, tmdbID string) error {
 	return db.client.Movie.UpdateOneID(id).SetTmdbID(tmdbID).Exec(ctx)
 }
 

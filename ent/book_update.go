@@ -42,23 +42,16 @@ func (_u *BookUpdate) SetUpdateTime(v time.Time) *BookUpdate {
 }
 
 // SetHardcoverID sets the "hardcover_id" field.
-func (_u *BookUpdate) SetHardcoverID(v uint32) *BookUpdate {
-	_u.mutation.ResetHardcoverID()
+func (_u *BookUpdate) SetHardcoverID(v string) *BookUpdate {
 	_u.mutation.SetHardcoverID(v)
 	return _u
 }
 
 // SetNillableHardcoverID sets the "hardcover_id" field if the given value is not nil.
-func (_u *BookUpdate) SetNillableHardcoverID(v *uint32) *BookUpdate {
+func (_u *BookUpdate) SetNillableHardcoverID(v *string) *BookUpdate {
 	if v != nil {
 		_u.SetHardcoverID(*v)
 	}
-	return _u
-}
-
-// AddHardcoverID adds value to the "hardcover_id" field.
-func (_u *BookUpdate) AddHardcoverID(v int32) *BookUpdate {
-	_u.mutation.AddHardcoverID(v)
 	return _u
 }
 
@@ -821,6 +814,11 @@ func (_u *BookUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *BookUpdate) check() error {
+	if v, ok := _u.mutation.HardcoverID(); ok {
+		if err := book.HardcoverIDValidator(v); err != nil {
+			return &ValidationError{Name: "hardcover_id", err: fmt.Errorf(`ent: validator failed for field "Book.hardcover_id": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Title(); ok {
 		if err := book.TitleValidator(v); err != nil {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Book.title": %w`, err)}
@@ -866,10 +864,7 @@ func (_u *BookUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.SetField(book.FieldUpdateTime, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.HardcoverID(); ok {
-		_spec.SetField(book.FieldHardcoverID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedHardcoverID(); ok {
-		_spec.AddField(book.FieldHardcoverID, field.TypeUint32, value)
+		_spec.SetField(book.FieldHardcoverID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(book.FieldTitle, field.TypeString, value)
@@ -1344,23 +1339,16 @@ func (_u *BookUpdateOne) SetUpdateTime(v time.Time) *BookUpdateOne {
 }
 
 // SetHardcoverID sets the "hardcover_id" field.
-func (_u *BookUpdateOne) SetHardcoverID(v uint32) *BookUpdateOne {
-	_u.mutation.ResetHardcoverID()
+func (_u *BookUpdateOne) SetHardcoverID(v string) *BookUpdateOne {
 	_u.mutation.SetHardcoverID(v)
 	return _u
 }
 
 // SetNillableHardcoverID sets the "hardcover_id" field if the given value is not nil.
-func (_u *BookUpdateOne) SetNillableHardcoverID(v *uint32) *BookUpdateOne {
+func (_u *BookUpdateOne) SetNillableHardcoverID(v *string) *BookUpdateOne {
 	if v != nil {
 		_u.SetHardcoverID(*v)
 	}
-	return _u
-}
-
-// AddHardcoverID adds value to the "hardcover_id" field.
-func (_u *BookUpdateOne) AddHardcoverID(v int32) *BookUpdateOne {
-	_u.mutation.AddHardcoverID(v)
 	return _u
 }
 
@@ -2136,6 +2124,11 @@ func (_u *BookUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *BookUpdateOne) check() error {
+	if v, ok := _u.mutation.HardcoverID(); ok {
+		if err := book.HardcoverIDValidator(v); err != nil {
+			return &ValidationError{Name: "hardcover_id", err: fmt.Errorf(`ent: validator failed for field "Book.hardcover_id": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Title(); ok {
 		if err := book.TitleValidator(v); err != nil {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Book.title": %w`, err)}
@@ -2198,10 +2191,7 @@ func (_u *BookUpdateOne) sqlSave(ctx context.Context) (_node *Book, err error) {
 		_spec.SetField(book.FieldUpdateTime, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.HardcoverID(); ok {
-		_spec.SetField(book.FieldHardcoverID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedHardcoverID(); ok {
-		_spec.AddField(book.FieldHardcoverID, field.TypeUint32, value)
+		_spec.SetField(book.FieldHardcoverID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(book.FieldTitle, field.TypeString, value)

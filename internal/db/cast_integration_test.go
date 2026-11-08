@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -34,14 +36,14 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 		GinkgoHelper()
 		return client.Movie.Create().
 			SetTitle(title).SetOriginalTitle(title).SetYear(1999).
-			SetTmdbID(tmdbID).SaveX(ctx).ID
+			SetTmdbID(providerid.Format(tmdbID)).SaveX(ctx).ID
 	}
 
 	newShow := func(title string, tvdbID uint32) uint32 {
 		GinkgoHelper()
 		return client.TVShow.Create().
 			SetTitle(title).SetOriginalTitle(title).SetYear(1999).
-			SetTvdbID(tvdbID).SaveX(ctx).ID
+			SetTvdbID(providerid.Format(tvdbID)).SaveX(ctx).ID
 	}
 
 	movieCredits := func(id uint32) []*ent.Credit {
@@ -69,14 +71,18 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 
 			Expect(
 				store.ReplaceCast(ctx, CastOwnerMovie, first, []metadata.CastMember{
-					{TMDBID: 819, Name: "Edward Norton", Character: "The Narrator"},
+					{
+						TMDBID:    "819",
+						Name:      "Edward Norton",
+						Character: "The Narrator",
+					},
 				}),
 			).To(Succeed())
 			// A different spelling of the name on the second title must not
 			// matter: the id decides.
 			Expect(
 				store.ReplaceCast(ctx, CastOwnerMovie, second, []metadata.CastMember{
-					{TMDBID: 819, Name: "Ed Norton", Character: "Somerset"},
+					{TMDBID: "819", Name: "Ed Norton", Character: "Somerset"},
 				}),
 			).To(Succeed())
 
@@ -93,7 +99,7 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 
 			Expect(
 				store.ReplaceCast(ctx, CastOwnerSeries, first, []metadata.CastMember{
-					{TVDBID: 237586, Name: "Nathan Fillion", Character: "Mal"},
+					{TVDBID: "237586", Name: "Nathan Fillion", Character: "Mal"},
 				}),
 			).To(Succeed())
 			Expect(
@@ -102,15 +108,15 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 					CastOwnerSeries,
 					second,
 					[]metadata.CastMember{
-						{TVDBID: 237586, Name: "Nathan Fillion", Character: "Mal"},
+						{TVDBID: "237586", Name: "Nathan Fillion", Character: "Mal"},
 					},
 				),
 			).To(Succeed())
 
 			Expect(client.Person.Query().CountX(ctx)).To(Equal(1))
 			p := client.Person.Query().OnlyX(ctx)
-			Expect(p.TvdbID).To(Equal(uint32(237586)))
-			Expect(p.TmdbID).To(BeZero())
+			Expect(p.TvdbID).To(Equal("237586"))
+			Expect(p.TmdbID).To(BeEmpty())
 		})
 
 		It("matches an id-less person on the folded name", func() {
@@ -140,30 +146,30 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 
 			Expect(
 				store.ReplaceCast(ctx, CastOwnerMovie, first, []metadata.CastMember{
-					{TMDBID: 16828, Name: "Chris Evans"},
+					{TMDBID: "16828", Name: "Chris Evans"},
 				}),
 			).To(Succeed())
 			Expect(
 				store.ReplaceCast(ctx, CastOwnerMovie, second, []metadata.CastMember{
-					{TMDBID: 99999, Name: "Chris Evans"},
+					{TMDBID: "99999", Name: "Chris Evans"},
 				}),
 			).To(Succeed())
 
 			Expect(client.Person.Query().CountX(ctx)).To(Equal(2))
 			ids := client.Person.Query().Order(ent.Asc(person.FieldID)).AllX(ctx)
-			Expect(ids[0].TmdbID).To(Equal(uint32(16828)))
-			Expect(ids[1].TmdbID).To(Equal(uint32(99999)))
+			Expect(ids[0].TmdbID).To(Equal("16828"))
+			Expect(ids[1].TmdbID).To(Equal("99999"))
 		})
 
 		It("creates a person with whatever ids are known", func() {
 			id := newMovie("Arrival", 329865)
 			Expect(store.ReplaceCast(ctx, CastOwnerMovie, id, []metadata.CastMember{
-				{TMDBID: 1245, Name: "Amy Adams", ProfileURL: "https://i/amy.jpg"},
+				{TMDBID: "1245", Name: "Amy Adams", ProfileURL: "https://i/amy.jpg"},
 			})).To(Succeed())
 
 			p := client.Person.Query().OnlyX(ctx)
-			Expect(p.TmdbID).To(Equal(uint32(1245)))
-			Expect(p.TvdbID).To(BeZero())
+			Expect(p.TmdbID).To(Equal("1245"))
+			Expect(p.TvdbID).To(BeEmpty())
 			Expect(p.ProfileURL).To(Equal("https://i/amy.jpg"))
 		})
 	})
@@ -178,12 +184,12 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 				}),
 			).To(Succeed())
 			before := client.Person.Query().OnlyX(ctx)
-			Expect(before.TvdbID).To(BeZero())
+			Expect(before.TvdbID).To(BeEmpty())
 
 			Expect(
 				store.ReplaceCast(ctx, CastOwnerSeries, show, []metadata.CastMember{
 					{
-						TVDBID:     237587,
+						TVDBID:     "237587",
 						Name:       "Gina Torres",
 						Character:  "Zoe",
 						ProfileURL: "https://i/gina.jpg",
@@ -194,7 +200,7 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 			Expect(client.Person.Query().CountX(ctx)).To(Equal(1))
 			after := client.Person.Query().OnlyX(ctx)
 			Expect(after.ID).To(Equal(before.ID))
-			Expect(after.TvdbID).To(Equal(uint32(237587)))
+			Expect(after.TvdbID).To(Equal("237587"))
 			Expect(after.ProfileURL).To(Equal("https://i/gina.jpg"))
 		})
 
@@ -204,36 +210,36 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 
 			Expect(
 				store.ReplaceCast(ctx, CastOwnerSeries, show, []metadata.CastMember{
-					{TVDBID: 237586, Name: "Nathan Fillion"},
+					{TVDBID: "237586", Name: "Nathan Fillion"},
 				}),
 			).To(Succeed())
 			Expect(
 				store.ReplaceCast(ctx, CastOwnerMovie, film, []metadata.CastMember{
-					{TMDBID: 12074, Name: "Nathan Fillion"},
+					{TMDBID: "12074", Name: "Nathan Fillion"},
 				}),
 			).To(Succeed())
 
 			Expect(client.Person.Query().CountX(ctx)).To(Equal(1))
 			p := client.Person.Query().OnlyX(ctx)
-			Expect(p.TvdbID).To(Equal(uint32(237586)))
-			Expect(p.TmdbID).To(Equal(uint32(12074)))
+			Expect(p.TvdbID).To(Equal("237586"))
+			Expect(p.TmdbID).To(Equal("12074"))
 		})
 
 		It("never overwrites a non-zero id with a different one", func() {
 			film := newMovie("Serenity", 16320)
 			Expect(
 				store.ReplaceCast(ctx, CastOwnerMovie, film, []metadata.CastMember{
-					{TMDBID: 12074, TVDBID: 237586, Name: "Nathan Fillion"},
+					{TMDBID: "12074", TVDBID: "237586", Name: "Nathan Fillion"},
 				}),
 			).To(Succeed())
 			Expect(
 				store.ReplaceCast(ctx, CastOwnerMovie, film, []metadata.CastMember{
-					{TMDBID: 12074, TVDBID: 999999, Name: "Nathan Fillion"},
+					{TMDBID: "12074", TVDBID: "999999", Name: "Nathan Fillion"},
 				}),
 			).To(Succeed())
 
 			p := client.Person.Query().OnlyX(ctx)
-			Expect(p.TvdbID).To(Equal(uint32(237586)))
+			Expect(p.TvdbID).To(Equal("237586"))
 		})
 
 		It("leaves a stored profile url alone when the refresh omits it", func() {
@@ -241,7 +247,7 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 			Expect(
 				store.ReplaceCast(ctx, CastOwnerMovie, film, []metadata.CastMember{
 					{
-						TMDBID:     1245,
+						TMDBID:     "1245",
 						Name:       "Amy Adams",
 						ProfileURL: "https://i/amy.jpg",
 					},
@@ -249,7 +255,7 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 			).To(Succeed())
 			Expect(
 				store.ReplaceCast(ctx, CastOwnerMovie, film, []metadata.CastMember{
-					{TMDBID: 1245, Name: "Amy Adams"},
+					{TMDBID: "1245", Name: "Amy Adams"},
 				}),
 			).To(Succeed())
 
@@ -260,8 +266,8 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 
 	Context("replacement", func() {
 		cast := []metadata.CastMember{
-			{TMDBID: 287, Name: "Brad Pitt", Character: "Tyler Durden"},
-			{TMDBID: 819, Name: "Edward Norton", Character: "The Narrator"},
+			{TMDBID: "287", Name: "Brad Pitt", Character: "Tyler Durden"},
+			{TMDBID: "819", Name: "Edward Norton", Character: "The Narrator"},
 		}
 
 		It("does not duplicate credits on a second call", func() {
@@ -319,7 +325,7 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 			film := newMovie("Serenity", 16320)
 			show := newShow("Firefly", 78874)
 			member := []metadata.CastMember{
-				{TMDBID: 12074, Name: "Nathan Fillion", Character: "Mal"},
+				{TMDBID: "12074", Name: "Nathan Fillion", Character: "Mal"},
 			}
 
 			Expect(
@@ -349,10 +355,10 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 			m, err := store.CreateMovie(ctx, CreateMovieParams{
 				Title:         "Fight Club",
 				OriginalTitle: "Fight Club",
-				TmdbID:        550,
+				TmdbID:        "550",
 				Status:        movie.StatusWanted,
 				Cast: []metadata.CastMember{
-					{TMDBID: 287, Name: "Brad Pitt", Character: "Tyler Durden"},
+					{TMDBID: "287", Name: "Brad Pitt", Character: "Tyler Durden"},
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -362,8 +368,12 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 				Title:         "Fight Club",
 				OriginalTitle: "Fight Club",
 				Cast: []metadata.CastMember{
-					{TMDBID: 287, Name: "Brad Pitt", Character: "Tyler Durden"},
-					{TMDBID: 819, Name: "Edward Norton", Character: "The Narrator"},
+					{TMDBID: "287", Name: "Brad Pitt", Character: "Tyler Durden"},
+					{
+						TMDBID:    "819",
+						Name:      "Edward Norton",
+						Character: "The Narrator",
+					},
 				},
 			})).To(Succeed())
 			Expect(movieCredits(m.ID)).To(HaveLen(2))
@@ -373,9 +383,9 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 			sh, err := store.CreateTVShow(ctx, CreateTVShowParams{
 				Title:         "Firefly",
 				OriginalTitle: "Firefly",
-				TvdbID:        78874,
+				TvdbID:        "78874",
 				Cast: []metadata.CastMember{
-					{TVDBID: 237586, Name: "Nathan Fillion", Character: "Mal"},
+					{TVDBID: "237586", Name: "Nathan Fillion", Character: "Mal"},
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -385,8 +395,8 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 				Title:         "Firefly",
 				OriginalTitle: "Firefly",
 				Cast: []metadata.CastMember{
-					{TVDBID: 237586, Name: "Nathan Fillion", Character: "Mal"},
-					{TVDBID: 237587, Name: "Gina Torres", Character: "Zoe"},
+					{TVDBID: "237586", Name: "Nathan Fillion", Character: "Mal"},
+					{TVDBID: "237587", Name: "Gina Torres", Character: "Zoe"},
 				},
 			})).To(Succeed())
 			Expect(showCredits(sh.ID)).To(HaveLen(2))
@@ -413,15 +423,15 @@ var _ = Describe("Store.TitleCast", Label("integration", "db"), func() {
 	It("returns a movie's cast in billing order, each with its person id", func() {
 		id := client.Movie.Create().
 			SetTitle("Fight Club").SetOriginalTitle("Fight Club").
-			SetYear(1999).SetTmdbID(550).SaveX(ctx).ID
+			SetYear(1999).SetTmdbID("550").SaveX(ctx).ID
 		Expect(store.ReplaceCast(ctx, CastOwnerMovie, id, []metadata.CastMember{
 			{
-				TMDBID:     287,
+				TMDBID:     "287",
 				Name:       "Brad Pitt",
 				Character:  "Tyler Durden",
 				ProfileURL: "https://img/bp.jpg",
 			},
-			{TMDBID: 819, Name: "Edward Norton", Character: "The Narrator"},
+			{TMDBID: "819", Name: "Edward Norton", Character: "The Narrator"},
 		})).To(Succeed())
 
 		cast, err := store.TitleCast(ctx, CastOwnerMovie, id)
@@ -429,14 +439,14 @@ var _ = Describe("Store.TitleCast", Label("integration", "db"), func() {
 		Expect(cast).To(HaveLen(2))
 		Expect(cast[0].Name).To(Equal("Brad Pitt"))
 		Expect(cast[0].Character).To(Equal("Tyler Durden"))
-		Expect(cast[0].TMDBID).To(Equal(uint32(287)))
+		Expect(cast[0].TMDBID).To(Equal("287"))
 		Expect(cast[0].ProfileURL).To(Equal("https://img/bp.jpg"))
 		Expect(cast[1].Name).To(Equal("Edward Norton"))
 
 		// The person id is the API's only key on a cast entry, so it has to be
 		// the persons row and not the provider id it happens to carry.
 		Expect(cast[0].PersonID).To(Equal(
-			client.Person.Query().Where(person.TmdbIDEQ(287)).OnlyX(ctx).ID,
+			client.Person.Query().Where(person.TmdbIDEQ("287")).OnlyX(ctx).ID,
 		))
 		Expect(cast[1].PersonID).NotTo(Equal(cast[0].PersonID))
 	})
@@ -444,23 +454,23 @@ var _ = Describe("Store.TitleCast", Label("integration", "db"), func() {
 	It("carries the tvdb id of a series actor TMDB never named", func() {
 		id := client.TVShow.Create().
 			SetTitle("Firefly").SetOriginalTitle("Firefly").
-			SetYear(2002).SetTvdbID(78874).SaveX(ctx).ID
+			SetYear(2002).SetTvdbID("78874").SaveX(ctx).ID
 		Expect(store.ReplaceCast(ctx, CastOwnerSeries, id, []metadata.CastMember{
-			{TVDBID: 237586, Name: "Nathan Fillion", Character: "Mal"},
+			{TVDBID: "237586", Name: "Nathan Fillion", Character: "Mal"},
 		})).To(Succeed())
 
 		cast, err := store.TitleCast(ctx, CastOwnerSeries, id)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cast).To(HaveLen(1))
-		Expect(cast[0].TVDBID).To(Equal(uint32(237586)))
-		Expect(cast[0].TMDBID).To(BeZero())
+		Expect(cast[0].TVDBID).To(Equal("237586"))
+		Expect(cast[0].TMDBID).To(BeEmpty())
 		Expect(cast[0].PersonID).NotTo(BeZero())
 	})
 
 	It("returns nothing for a title nothing credits", func() {
 		id := client.Movie.Create().
 			SetTitle("Se7en").SetOriginalTitle("Se7en").
-			SetYear(1995).SetTmdbID(807).SaveX(ctx).ID
+			SetYear(1995).SetTmdbID("807").SaveX(ctx).ID
 
 		cast, err := store.TitleCast(ctx, CastOwnerMovie, id)
 		Expect(err).NotTo(HaveOccurred())

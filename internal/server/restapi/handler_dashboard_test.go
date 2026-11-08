@@ -35,7 +35,7 @@ var _ = Describe(
 		Describe("GET /api/v1/activity", func() {
 			It("returns events newest-first with the eager-loaded movie", func() {
 				m := &ent.Movie{
-					ID: 1, Title: "Anora", Year: 2024, TmdbID: 1064213,
+					ID: 1, Title: "Anora", Year: 2024, TmdbID: "1064213",
 				}
 				now := time.Now()
 				e1 := &ent.MediaEvent{
@@ -200,7 +200,7 @@ var _ = Describe(
 							ID:                 10,
 							Title:              "Coming Soon",
 							Year:               2025,
-							TmdbID:             101,
+							TmdbID:             "101",
 							Status:             entmovie.StatusWanted,
 							DigitalReleaseDate: &future,
 						},

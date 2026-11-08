@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -115,7 +116,7 @@ func seedMovie() uint32 {
 		ID uint32 `json:"id"`
 	}
 	Expect(apiDo(http.MethodPost, "/api/v1/movies", map[string]any{
-		"tmdb_id": fakes.MovieTMDBID,
+		"tmdb_id": strconv.Itoa(fakes.MovieTMDBID),
 	}, &movie)).To(Equal(http.StatusCreated))
 	DeferCleanup(func() {
 		Expect(apiDo(

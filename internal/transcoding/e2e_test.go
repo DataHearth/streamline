@@ -127,7 +127,7 @@ var _ = Describe(
 			Expect(err).NotTo(HaveOccurred())
 
 			m, err := store.CreateMovie(ctx, db.CreateMovieParams{
-				Title: "Movie", OriginalTitle: "Movie", Year: 2020, TmdbID: 1,
+				Title: "Movie", OriginalTitle: "Movie", Year: 2020, TmdbID: "1",
 				Status: entmovie.StatusAvailable, QualityProfile: "hevc",
 			})
 			Expect(err).NotTo(HaveOccurred())

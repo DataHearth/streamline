@@ -90,7 +90,7 @@ var _ = Describe("Manager.Grab", Label("integration", "downloads"), func() {
 
 		m, err = dbClient.Movie.Create().
 			SetTitle("Fight Club").
-			SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID(550).
+			SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID("550").
 			SetStatus(movie.StatusWanted).Save(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -204,7 +204,7 @@ var _ = Describe("Manager.CheckStatus", Label("integration", "downloads"), func(
 
 		m, err := dbClient.Movie.Create().
 			SetTitle("Fight Club").
-			SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID(550).
+			SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID("550").
 			SetStatus(movie.StatusDownloading).Save(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -270,7 +270,7 @@ var _ = Describe("Manager.CheckStatus orphan reconciliation",
 
 			m, err := dbClient.Movie.Create().
 				SetTitle("Fight Club").SetOriginalTitle("Fight Club").
-				SetYear(1999).SetTmdbID(550).
+				SetYear(1999).SetTmdbID("550").
 				SetStatus(movie.StatusDownloading).Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -403,7 +403,7 @@ var _ = Describe("Manager.CheckStatus logging",
 
 			m, err := dbClient.Movie.Create().
 				SetTitle("Fight Club").
-				SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID(550).
+				SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID("550").
 				SetStatus(movie.StatusDownloading).Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -467,7 +467,7 @@ var _ = Describe("Manager.PurgeOrphanedTorrents",
 
 			m, err := dbClient.Movie.Create().
 				SetTitle("Fight Club").
-				SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID(550).
+				SetOriginalTitle("Fight Club").SetYear(1999).SetTmdbID("550").
 				SetStatus(movie.StatusDownloading).Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			movieID = m.ID

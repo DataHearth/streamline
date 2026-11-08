@@ -145,6 +145,8 @@ var (
 	DefaultRuntime uint16
 	// DefaultMonitored holds the default value on creation for the "monitored" field.
 	DefaultMonitored bool
+	// TmdbIDValidator is a validator for the "tmdb_id" field. It is called by the builders before save.
+	TmdbIDValidator func(string) error
 	// DefaultGrabFailures holds the default value on creation for the "grab_failures" field.
 	DefaultGrabFailures uint8
 	// DefaultRating holds the default value on creation for the "rating" field.

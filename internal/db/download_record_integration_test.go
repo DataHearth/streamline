@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -41,7 +43,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		store = New(client)
 
 		m, err := store.CreateMovie(ctx, CreateMovieParams{
-			Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: 438631,
+			Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: "438631",
 			Status: entmovie.StatusWanted, QualityProfile: "HD",
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -86,7 +88,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 
 		It("links the book edge and stores the slot kind", func() {
 			b, err := store.CreateBook(ctx, BookSeed{
-				HardcoverID: 1, Title: "Elantris", Kind: "novel",
+				HardcoverID: "1", Title: "Elantris", Kind: "novel",
 				PreferredLanguage: "en",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -111,12 +113,12 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 
 		It("loads a volume's series in the queue and the history", func() {
 			b, err := store.CreateBook(ctx, BookSeed{
-				HardcoverID: 2, Title: "Tome 3", Kind: "bd",
+				HardcoverID: "2", Title: "Tome 3", Kind: "bd",
 				PreferredLanguage: "fr",
 			})
 			Expect(err).NotTo(HaveOccurred())
 			series := client.BookSeries.Create().
-				SetHardcoverID(9).SetTitle("Astérix").SaveX(ctx)
+				SetHardcoverID("9").SetTitle("Astérix").SaveX(ctx)
 			client.Book.UpdateOneID(b.ID).SetSeries(series).ExecX(ctx)
 			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
 				Title: "t", Size: 1, TorrentHash: "volume-hash",
@@ -298,7 +300,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 
 		It("reports a live record on one book slot", func() {
 			b, err := store.CreateBook(ctx, BookSeed{
-				HardcoverID: 77, Title: "Elantris", Kind: "novel",
+				HardcoverID: "77", Title: "Elantris", Kind: "novel",
 				PreferredLanguage: "en",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -384,7 +386,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		It("links the episode edge (not the movie) for a TV grab", func() {
 			ad := time.Now()
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "The Black Sea", Year: 2024, TvdbID: 9001,
+				Title: "The Black Sea", Year: 2024, TvdbID: "9001",
 				Seasons: []SeasonSeed{{
 					Number: 3,
 					Episodes: []EpisodeSeed{
@@ -418,7 +420,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			"finds the completed pack behind a file, never a newer record in flight",
 			func() {
 				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-					Title: "Source", Year: 2024, TvdbID: 9050,
+					Title: "Source", Year: 2024, TvdbID: "9050",
 					Seasons: []SeasonSeed{{Number: 1, Episodes: []EpisodeSeed{
 						{Number: 1, Title: "One"}, {Number: 2, Title: "Two"},
 					}}},
@@ -501,7 +503,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			func() {
 				ad := time.Now()
 				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-					Title: "The Black Sea", Year: 2024, TvdbID: 9001,
+					Title: "The Black Sea", Year: 2024, TvdbID: "9001",
 					Seasons: []SeasonSeed{
 						{
 							Number: 1,
@@ -574,7 +576,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Title:         "Arrival",
 				OriginalTitle: "Arrival",
 				Year:          2016,
-				TmdbID:        329865,
+				TmdbID:        "329865",
 				Status:        entmovie.StatusWanted,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -632,7 +634,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			seed := func(title string, tvdb uint32) *ent.TVShow {
 				GinkgoHelper()
 				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-					Title: title, Year: 2024, TvdbID: tvdb,
+					Title: title, Year: 2024, TvdbID: providerid.Format(tvdb),
 					Seasons: []SeasonSeed{
 						{
 							Number:   1,
@@ -1121,7 +1123,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 					"reverting it to wanted",
 				func() {
 					show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-						Title: "The Black Sea", Year: 2024, TvdbID: 9201,
+						Title: "The Black Sea", Year: 2024, TvdbID: "9201",
 						Seasons: []SeasonSeed{{
 							Number:   1,
 							Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
@@ -1162,7 +1164,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 
 			It("still reverts a fileless episode to wanted", func() {
 				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-					Title: "The Black Sea", Year: 2024, TvdbID: 9202,
+					Title: "The Black Sea", Year: 2024, TvdbID: "9202",
 					Seasons: []SeasonSeed{{
 						Number:   1,
 						Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
@@ -1198,7 +1200,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 	Describe("MarkWantedRecordEpisodesImporting", func() {
 		It("moves a record's own wanted episodes, leaving the season alone", func() {
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "The Black Sea", Year: 2024, TvdbID: 9204,
+				Title: "The Black Sea", Year: 2024, TvdbID: "9204",
 				Seasons: []SeasonSeed{{
 					Number: 1,
 					Episodes: []EpisodeSeed{
@@ -1235,7 +1237,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		// hold lasts, out of every missing search.
 		It("moves only the anchor of a set wider than the torrent", func() {
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "The Black Sea", Year: 2024, TvdbID: 9206,
+				Title: "The Black Sea", Year: 2024, TvdbID: "9206",
 				Seasons: []SeasonSeed{
 					{
 						Number:   1,
@@ -1272,7 +1274,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 
 		It("leaves an episode that already holds a file alone", func() {
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "The Black Sea", Year: 2024, TvdbID: 9205,
+				Title: "The Black Sea", Year: 2024, TvdbID: "9205",
 				Seasons: []SeasonSeed{{
 					Number:   1,
 					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
@@ -1305,7 +1307,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 	Describe("RetryFailedDownloadRecord", func() {
 		It("walks a terminal failure back to importing, media included", func() {
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "The Black Sea", Year: 2024, TvdbID: 9203,
+				Title: "The Black Sea", Year: 2024, TvdbID: "9203",
 				Seasons: []SeasonSeed{{
 					Number:   1,
 					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
@@ -1361,7 +1363,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		newEpisode := func(tvdb uint32) uint32 {
 			GinkgoHelper()
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "Marked", Year: 2024, TvdbID: tvdb,
+				Title: "Marked", Year: 2024, TvdbID: providerid.Format(tvdb),
 				Seasons: []SeasonSeed{{
 					Number:   1,
 					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
@@ -1398,7 +1400,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		createEpisode := func(tvdb uint32) uint32 {
 			GinkgoHelper()
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "The Black Sea", Year: 2024, TvdbID: tvdb,
+				Title: "The Black Sea", Year: 2024, TvdbID: providerid.Format(tvdb),
 				Seasons: []SeasonSeed{{
 					Number:   1,
 					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
@@ -1766,7 +1768,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Title:         "Arrival",
 				OriginalTitle: "Arrival",
 				Year:          2016,
-				TmdbID:        329865,
+				TmdbID:        "329865",
 				Status:        entmovie.StatusAvailable,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -1796,7 +1798,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				eps[i] = EpisodeSeed{Number: uint16(i + 1), Title: "E"}
 			}
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "Show", Year: 2020, TvdbID: tvdb,
+				Title: "Show", Year: 2020, TvdbID: providerid.Format(tvdb),
 				Seasons: []SeasonSeed{{Number: 1, Episodes: eps}},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -1948,7 +1950,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 					{Number: 1, Title: "E1"}, {Number: 2, Title: "E2"},
 				}
 				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-					Title: "Integrale", Year: 2015, TvdbID: 7006,
+					Title: "Integrale", Year: 2015, TvdbID: "7006",
 					Seasons: []SeasonSeed{
 						{Number: 1, Episodes: eps},
 						{Number: 2, Episodes: eps},
@@ -2013,7 +2015,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 	Describe("SyncDownloadStateForRecord", func() {
 		It("pauses then resumes a whole season's downloading episodes", func() {
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "S", Year: 2020, TvdbID: 8001,
+				Title: "S", Year: 2020, TvdbID: "8001",
 				Seasons: []SeasonSeed{{Number: 1, Episodes: []EpisodeSeed{
 					{Number: 1, Title: "E1"}, {Number: 2, Title: "E2"},
 				}}},
@@ -2060,7 +2062,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			// pack's own anchor season — never reached them again.
 			eps := []EpisodeSeed{{Number: 1, Title: "E1"}, {Number: 2, Title: "E2"}}
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "Integrale", Year: 2015, TvdbID: 8002,
+				Title: "Integrale", Year: 2015, TvdbID: "8002",
 				Seasons: []SeasonSeed{
 					{Number: 1, Episodes: eps}, {Number: 2, Episodes: eps},
 				},
@@ -2326,7 +2328,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		createEpisodeRec := func(tvdb uint32) (*ent.DownloadRecord, uint32) {
 			GinkgoHelper()
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "Hold", Year: 2024, TvdbID: tvdb,
+				Title: "Hold", Year: 2024, TvdbID: providerid.Format(tvdb),
 				Seasons: []SeasonSeed{{
 					Number:   1,
 					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
@@ -2446,7 +2448,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		createPackRec := func(tvdb uint32) (*ent.DownloadRecord, []uint32, uint32) {
 			GinkgoHelper()
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "Pack", Year: 2024, TvdbID: tvdb,
+				Title: "Pack", Year: 2024, TvdbID: providerid.Format(tvdb),
 				Seasons: []SeasonSeed{{
 					Number: 1,
 					Episodes: []EpisodeSeed{
@@ -2671,7 +2673,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				eps[i] = EpisodeSeed{Number: uint16(i + 1), Title: "E"}
 			}
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "Selection", Year: 2024, TvdbID: tvdb,
+				Title: "Selection", Year: 2024, TvdbID: providerid.Format(tvdb),
 				Seasons: []SeasonSeed{{Number: 1, Episodes: eps}},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -2779,7 +2781,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			"ListPendingSelectionRecords returns only pending rows, with episode edges loaded",
 			func() {
 				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-					Title: "Selection Show", Year: 2024, TvdbID: 9100,
+					Title: "Selection Show", Year: 2024, TvdbID: "9100",
 					Seasons: []SeasonSeed{{
 						Number:   1,
 						Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},

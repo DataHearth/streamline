@@ -351,7 +351,7 @@ func (_c *MockManager_SearchBook_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // SearchEpisode provides a mock function for the type MockManager
-func (_mock *MockManager) SearchEpisode(ctx context.Context, titles []string, aliases []string, tvdbID uint32, season uint16, episode uint16) ([]indexer.SearchResult, int, error) {
+func (_mock *MockManager) SearchEpisode(ctx context.Context, titles []string, aliases []string, tvdbID string, season uint16, episode uint16) ([]indexer.SearchResult, int, error) {
 	ret := _mock.Called(ctx, titles, aliases, tvdbID, season, episode)
 
 	if len(ret) == 0 {
@@ -361,22 +361,22 @@ func (_mock *MockManager) SearchEpisode(ctx context.Context, titles []string, al
 	var r0 []indexer.SearchResult
 	var r1 int
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32, uint16, uint16) ([]indexer.SearchResult, int, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, string, uint16, uint16) ([]indexer.SearchResult, int, error)); ok {
 		return returnFunc(ctx, titles, aliases, tvdbID, season, episode)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32, uint16, uint16) []indexer.SearchResult); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, string, uint16, uint16) []indexer.SearchResult); ok {
 		r0 = returnFunc(ctx, titles, aliases, tvdbID, season, episode)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]indexer.SearchResult)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, []string, uint32, uint16, uint16) int); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, []string, string, uint16, uint16) int); ok {
 		r1 = returnFunc(ctx, titles, aliases, tvdbID, season, episode)
 	} else {
 		r1 = ret.Get(1).(int)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, []string, []string, uint32, uint16, uint16) error); ok {
+	if returnFunc, ok := ret.Get(2).(func(context.Context, []string, []string, string, uint16, uint16) error); ok {
 		r2 = returnFunc(ctx, titles, aliases, tvdbID, season, episode)
 	} else {
 		r2 = ret.Error(2)
@@ -393,14 +393,14 @@ type MockManager_SearchEpisode_Call struct {
 //   - ctx context.Context
 //   - titles []string
 //   - aliases []string
-//   - tvdbID uint32
+//   - tvdbID string
 //   - season uint16
 //   - episode uint16
 func (_e *MockManager_Expecter) SearchEpisode(ctx any, titles any, aliases any, tvdbID any, season any, episode any) *MockManager_SearchEpisode_Call {
 	return &MockManager_SearchEpisode_Call{Call: _e.mock.On("SearchEpisode", ctx, titles, aliases, tvdbID, season, episode)}
 }
 
-func (_c *MockManager_SearchEpisode_Call) Run(run func(ctx context.Context, titles []string, aliases []string, tvdbID uint32, season uint16, episode uint16)) *MockManager_SearchEpisode_Call {
+func (_c *MockManager_SearchEpisode_Call) Run(run func(ctx context.Context, titles []string, aliases []string, tvdbID string, season uint16, episode uint16)) *MockManager_SearchEpisode_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -414,9 +414,9 @@ func (_c *MockManager_SearchEpisode_Call) Run(run func(ctx context.Context, titl
 		if args[2] != nil {
 			arg2 = args[2].([]string)
 		}
-		var arg3 uint32
+		var arg3 string
 		if args[3] != nil {
-			arg3 = args[3].(uint32)
+			arg3 = args[3].(string)
 		}
 		var arg4 uint16
 		if args[4] != nil {
@@ -443,13 +443,13 @@ func (_c *MockManager_SearchEpisode_Call) Return(searchResults []indexer.SearchR
 	return _c
 }
 
-func (_c *MockManager_SearchEpisode_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tvdbID uint32, season uint16, episode uint16) ([]indexer.SearchResult, int, error)) *MockManager_SearchEpisode_Call {
+func (_c *MockManager_SearchEpisode_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tvdbID string, season uint16, episode uint16) ([]indexer.SearchResult, int, error)) *MockManager_SearchEpisode_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SearchMovie provides a mock function for the type MockManager
-func (_mock *MockManager) SearchMovie(ctx context.Context, titles []string, aliases []string, tmdbID uint32) ([]indexer.SearchResult, error) {
+func (_mock *MockManager) SearchMovie(ctx context.Context, titles []string, aliases []string, tmdbID string) ([]indexer.SearchResult, error) {
 	ret := _mock.Called(ctx, titles, aliases, tmdbID)
 
 	if len(ret) == 0 {
@@ -458,17 +458,17 @@ func (_mock *MockManager) SearchMovie(ctx context.Context, titles []string, alia
 
 	var r0 []indexer.SearchResult
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32) ([]indexer.SearchResult, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, string) ([]indexer.SearchResult, error)); ok {
 		return returnFunc(ctx, titles, aliases, tmdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32) []indexer.SearchResult); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, string) []indexer.SearchResult); ok {
 		r0 = returnFunc(ctx, titles, aliases, tmdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]indexer.SearchResult)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, []string, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, []string, string) error); ok {
 		r1 = returnFunc(ctx, titles, aliases, tmdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -485,12 +485,12 @@ type MockManager_SearchMovie_Call struct {
 //   - ctx context.Context
 //   - titles []string
 //   - aliases []string
-//   - tmdbID uint32
+//   - tmdbID string
 func (_e *MockManager_Expecter) SearchMovie(ctx any, titles any, aliases any, tmdbID any) *MockManager_SearchMovie_Call {
 	return &MockManager_SearchMovie_Call{Call: _e.mock.On("SearchMovie", ctx, titles, aliases, tmdbID)}
 }
 
-func (_c *MockManager_SearchMovie_Call) Run(run func(ctx context.Context, titles []string, aliases []string, tmdbID uint32)) *MockManager_SearchMovie_Call {
+func (_c *MockManager_SearchMovie_Call) Run(run func(ctx context.Context, titles []string, aliases []string, tmdbID string)) *MockManager_SearchMovie_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -504,9 +504,9 @@ func (_c *MockManager_SearchMovie_Call) Run(run func(ctx context.Context, titles
 		if args[2] != nil {
 			arg2 = args[2].([]string)
 		}
-		var arg3 uint32
+		var arg3 string
 		if args[3] != nil {
-			arg3 = args[3].(uint32)
+			arg3 = args[3].(string)
 		}
 		run(
 			arg0,
@@ -523,13 +523,13 @@ func (_c *MockManager_SearchMovie_Call) Return(searchResults []indexer.SearchRes
 	return _c
 }
 
-func (_c *MockManager_SearchMovie_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tmdbID uint32) ([]indexer.SearchResult, error)) *MockManager_SearchMovie_Call {
+func (_c *MockManager_SearchMovie_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tmdbID string) ([]indexer.SearchResult, error)) *MockManager_SearchMovie_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SearchSeason provides a mock function for the type MockManager
-func (_mock *MockManager) SearchSeason(ctx context.Context, titles []string, aliases []string, tvdbID uint32, season uint16) ([]indexer.SearchResult, error) {
+func (_mock *MockManager) SearchSeason(ctx context.Context, titles []string, aliases []string, tvdbID string, season uint16) ([]indexer.SearchResult, error) {
 	ret := _mock.Called(ctx, titles, aliases, tvdbID, season)
 
 	if len(ret) == 0 {
@@ -538,17 +538,17 @@ func (_mock *MockManager) SearchSeason(ctx context.Context, titles []string, ali
 
 	var r0 []indexer.SearchResult
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32, uint16) ([]indexer.SearchResult, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, string, uint16) ([]indexer.SearchResult, error)); ok {
 		return returnFunc(ctx, titles, aliases, tvdbID, season)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32, uint16) []indexer.SearchResult); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, string, uint16) []indexer.SearchResult); ok {
 		r0 = returnFunc(ctx, titles, aliases, tvdbID, season)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]indexer.SearchResult)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, []string, uint32, uint16) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, []string, string, uint16) error); ok {
 		r1 = returnFunc(ctx, titles, aliases, tvdbID, season)
 	} else {
 		r1 = ret.Error(1)
@@ -565,13 +565,13 @@ type MockManager_SearchSeason_Call struct {
 //   - ctx context.Context
 //   - titles []string
 //   - aliases []string
-//   - tvdbID uint32
+//   - tvdbID string
 //   - season uint16
 func (_e *MockManager_Expecter) SearchSeason(ctx any, titles any, aliases any, tvdbID any, season any) *MockManager_SearchSeason_Call {
 	return &MockManager_SearchSeason_Call{Call: _e.mock.On("SearchSeason", ctx, titles, aliases, tvdbID, season)}
 }
 
-func (_c *MockManager_SearchSeason_Call) Run(run func(ctx context.Context, titles []string, aliases []string, tvdbID uint32, season uint16)) *MockManager_SearchSeason_Call {
+func (_c *MockManager_SearchSeason_Call) Run(run func(ctx context.Context, titles []string, aliases []string, tvdbID string, season uint16)) *MockManager_SearchSeason_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -585,9 +585,9 @@ func (_c *MockManager_SearchSeason_Call) Run(run func(ctx context.Context, title
 		if args[2] != nil {
 			arg2 = args[2].([]string)
 		}
-		var arg3 uint32
+		var arg3 string
 		if args[3] != nil {
-			arg3 = args[3].(uint32)
+			arg3 = args[3].(string)
 		}
 		var arg4 uint16
 		if args[4] != nil {
@@ -609,13 +609,13 @@ func (_c *MockManager_SearchSeason_Call) Return(searchResults []indexer.SearchRe
 	return _c
 }
 
-func (_c *MockManager_SearchSeason_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tvdbID uint32, season uint16) ([]indexer.SearchResult, error)) *MockManager_SearchSeason_Call {
+func (_c *MockManager_SearchSeason_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tvdbID string, season uint16) ([]indexer.SearchResult, error)) *MockManager_SearchSeason_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SearchSeries provides a mock function for the type MockManager
-func (_mock *MockManager) SearchSeries(ctx context.Context, titles []string, aliases []string, tvdbID uint32) ([]indexer.SearchResult, error) {
+func (_mock *MockManager) SearchSeries(ctx context.Context, titles []string, aliases []string, tvdbID string) ([]indexer.SearchResult, error) {
 	ret := _mock.Called(ctx, titles, aliases, tvdbID)
 
 	if len(ret) == 0 {
@@ -624,17 +624,17 @@ func (_mock *MockManager) SearchSeries(ctx context.Context, titles []string, ali
 
 	var r0 []indexer.SearchResult
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32) ([]indexer.SearchResult, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, string) ([]indexer.SearchResult, error)); ok {
 		return returnFunc(ctx, titles, aliases, tvdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32) []indexer.SearchResult); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, string) []indexer.SearchResult); ok {
 		r0 = returnFunc(ctx, titles, aliases, tvdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]indexer.SearchResult)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, []string, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, []string, string) error); ok {
 		r1 = returnFunc(ctx, titles, aliases, tvdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -651,12 +651,12 @@ type MockManager_SearchSeries_Call struct {
 //   - ctx context.Context
 //   - titles []string
 //   - aliases []string
-//   - tvdbID uint32
+//   - tvdbID string
 func (_e *MockManager_Expecter) SearchSeries(ctx any, titles any, aliases any, tvdbID any) *MockManager_SearchSeries_Call {
 	return &MockManager_SearchSeries_Call{Call: _e.mock.On("SearchSeries", ctx, titles, aliases, tvdbID)}
 }
 
-func (_c *MockManager_SearchSeries_Call) Run(run func(ctx context.Context, titles []string, aliases []string, tvdbID uint32)) *MockManager_SearchSeries_Call {
+func (_c *MockManager_SearchSeries_Call) Run(run func(ctx context.Context, titles []string, aliases []string, tvdbID string)) *MockManager_SearchSeries_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -670,9 +670,9 @@ func (_c *MockManager_SearchSeries_Call) Run(run func(ctx context.Context, title
 		if args[2] != nil {
 			arg2 = args[2].([]string)
 		}
-		var arg3 uint32
+		var arg3 string
 		if args[3] != nil {
-			arg3 = args[3].(uint32)
+			arg3 = args[3].(string)
 		}
 		run(
 			arg0,
@@ -689,7 +689,7 @@ func (_c *MockManager_SearchSeries_Call) Return(searchResults []indexer.SearchRe
 	return _c
 }
 
-func (_c *MockManager_SearchSeries_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tvdbID uint32) ([]indexer.SearchResult, error)) *MockManager_SearchSeries_Call {
+func (_c *MockManager_SearchSeries_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tvdbID string) ([]indexer.SearchResult, error)) *MockManager_SearchSeries_Call {
 	_c.Call.Return(run)
 	return _c
 }

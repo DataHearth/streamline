@@ -78,7 +78,7 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 
 	It("skips a missing file and still renames the others", func() {
 		since := time.Now()
-		show := &ent.TVShow{ID: 1, Title: "The Wire", Year: 2002, TvdbID: 1}
+		show := &ent.TVShow{ID: 1, Title: "The Wire", Year: 2002, TvdbID: "1"}
 		show.Edges.Seasons = []*ent.Season{
 			{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
 				{ID: 100, Number: 1, Edges: ent.EpisodeEdges{
@@ -122,7 +122,7 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 				SetTitle("The Wire").
 				SetOriginalTitle("The Wire").
 				SetYear(2002).
-				SetTvdbID(1).
+				SetTvdbID("1").
 				SaveX(ctx)
 			showID = row.ID
 		})
@@ -139,7 +139,7 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 					ID:     showID,
 					Title:  "The Wire",
 					Year:   2002,
-					TvdbID: 1,
+					TvdbID: "1",
 				}
 				show.Edges.Seasons = []*ent.Season{
 					{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{

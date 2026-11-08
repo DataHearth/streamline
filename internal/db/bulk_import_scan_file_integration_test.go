@@ -127,7 +127,7 @@ var _ = Describe("ImportScanFile store", Label("integration", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(files).To(HaveLen(1))
 
-			tmdbID := uint32(27205)
+			tmdbID := "32"
 			Expect(store.UpdateImportScanFileDecision(
 				ctx, scanID, files[0].ID, entimportscanfile.DecisionAccept, &tmdbID,
 			)).To(Succeed())
@@ -165,7 +165,7 @@ var _ = Describe("ImportScanFile store", Label("integration", "db"), func() {
 			Expect(foreign[0].Decision).
 				To(Equal(entimportscanfile.DecisionPending))
 
-			tmdbID := uint32(27205)
+			tmdbID := "32"
 			err = store.UpdateImportScanFileDecision(
 				ctx,
 				scanID,

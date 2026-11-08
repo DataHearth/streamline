@@ -51,23 +51,16 @@ func (_u *RequestUpdate) SetNillableMediaType(v *request.MediaType) *RequestUpda
 }
 
 // SetMediaID sets the "media_id" field.
-func (_u *RequestUpdate) SetMediaID(v uint32) *RequestUpdate {
-	_u.mutation.ResetMediaID()
+func (_u *RequestUpdate) SetMediaID(v string) *RequestUpdate {
 	_u.mutation.SetMediaID(v)
 	return _u
 }
 
 // SetNillableMediaID sets the "media_id" field if the given value is not nil.
-func (_u *RequestUpdate) SetNillableMediaID(v *uint32) *RequestUpdate {
+func (_u *RequestUpdate) SetNillableMediaID(v *string) *RequestUpdate {
 	if v != nil {
 		_u.SetMediaID(*v)
 	}
-	return _u
-}
-
-// AddMediaID adds value to the "media_id" field.
-func (_u *RequestUpdate) AddMediaID(v int32) *RequestUpdate {
-	_u.mutation.AddMediaID(v)
 	return _u
 }
 
@@ -356,13 +349,10 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.SetField(request.FieldMediaType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.MediaID(); ok {
-		_spec.SetField(request.FieldMediaID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedMediaID(); ok {
-		_spec.AddField(request.FieldMediaID, field.TypeUint32, value)
+		_spec.SetField(request.FieldMediaID, field.TypeString, value)
 	}
 	if _u.mutation.MediaIDCleared() {
-		_spec.ClearField(request.FieldMediaID, field.TypeUint32)
+		_spec.ClearField(request.FieldMediaID, field.TypeString)
 	}
 	if value, ok := _u.mutation.MediaMbid(); ok {
 		_spec.SetField(request.FieldMediaMbid, field.TypeString, value)
@@ -507,23 +497,16 @@ func (_u *RequestUpdateOne) SetNillableMediaType(v *request.MediaType) *RequestU
 }
 
 // SetMediaID sets the "media_id" field.
-func (_u *RequestUpdateOne) SetMediaID(v uint32) *RequestUpdateOne {
-	_u.mutation.ResetMediaID()
+func (_u *RequestUpdateOne) SetMediaID(v string) *RequestUpdateOne {
 	_u.mutation.SetMediaID(v)
 	return _u
 }
 
 // SetNillableMediaID sets the "media_id" field if the given value is not nil.
-func (_u *RequestUpdateOne) SetNillableMediaID(v *uint32) *RequestUpdateOne {
+func (_u *RequestUpdateOne) SetNillableMediaID(v *string) *RequestUpdateOne {
 	if v != nil {
 		_u.SetMediaID(*v)
 	}
-	return _u
-}
-
-// AddMediaID adds value to the "media_id" field.
-func (_u *RequestUpdateOne) AddMediaID(v int32) *RequestUpdateOne {
-	_u.mutation.AddMediaID(v)
 	return _u
 }
 
@@ -842,13 +825,10 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 		_spec.SetField(request.FieldMediaType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.MediaID(); ok {
-		_spec.SetField(request.FieldMediaID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedMediaID(); ok {
-		_spec.AddField(request.FieldMediaID, field.TypeUint32, value)
+		_spec.SetField(request.FieldMediaID, field.TypeString, value)
 	}
 	if _u.mutation.MediaIDCleared() {
-		_spec.ClearField(request.FieldMediaID, field.TypeUint32)
+		_spec.ClearField(request.FieldMediaID, field.TypeString)
 	}
 	if value, ok := _u.mutation.MediaMbid(); ok {
 		_spec.SetField(request.FieldMediaMbid, field.TypeString, value)

@@ -55,7 +55,7 @@ func (_c *BookCreate) SetNillableUpdateTime(v *time.Time) *BookCreate {
 }
 
 // SetHardcoverID sets the "hardcover_id" field.
-func (_c *BookCreate) SetHardcoverID(v uint32) *BookCreate {
+func (_c *BookCreate) SetHardcoverID(v string) *BookCreate {
 	_c.mutation.SetHardcoverID(v)
 	return _c
 }
@@ -614,6 +614,11 @@ func (_c *BookCreate) check() error {
 	if _, ok := _c.mutation.HardcoverID(); !ok {
 		return &ValidationError{Name: "hardcover_id", err: errors.New(`ent: missing required field "Book.hardcover_id"`)}
 	}
+	if v, ok := _c.mutation.HardcoverID(); ok {
+		if err := book.HardcoverIDValidator(v); err != nil {
+			return &ValidationError{Name: "hardcover_id", err: fmt.Errorf(`ent: validator failed for field "Book.hardcover_id": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Title(); !ok {
 		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "Book.title"`)}
 	}
@@ -702,7 +707,7 @@ func (_c *BookCreate) createSpec() (*Book, *sqlgraph.CreateSpec) {
 		_node.UpdateTime = value
 	}
 	if value, ok := _c.mutation.HardcoverID(); ok {
-		_spec.SetField(book.FieldHardcoverID, field.TypeUint32, value)
+		_spec.SetField(book.FieldHardcoverID, field.TypeString, value)
 		_node.HardcoverID = value
 	}
 	if value, ok := _c.mutation.Title(); ok {

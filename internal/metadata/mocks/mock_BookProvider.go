@@ -48,22 +48,22 @@ func (_m *MockBookProvider) EXPECT() *MockBookProvider_Expecter {
 }
 
 // BookByISBN provides a mock function for the type MockBookProvider
-func (_mock *MockBookProvider) BookByISBN(ctx context.Context, isbn string) (uint32, error) {
+func (_mock *MockBookProvider) BookByISBN(ctx context.Context, isbn string) (string, error) {
 	ret := _mock.Called(ctx, isbn)
 
 	if len(ret) == 0 {
 		panic("no return value specified for BookByISBN")
 	}
 
-	var r0 uint32
+	var r0 string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (string, error)); ok {
 		return returnFunc(ctx, isbn)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) uint32); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) string); ok {
 		r0 = returnFunc(ctx, isbn)
 	} else {
-		r0 = ret.Get(0).(uint32)
+		r0 = ret.Get(0).(string)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, isbn)
@@ -103,18 +103,18 @@ func (_c *MockBookProvider_BookByISBN_Call) Run(run func(ctx context.Context, is
 	return _c
 }
 
-func (_c *MockBookProvider_BookByISBN_Call) Return(v uint32, err error) *MockBookProvider_BookByISBN_Call {
-	_c.Call.Return(v, err)
+func (_c *MockBookProvider_BookByISBN_Call) Return(s string, err error) *MockBookProvider_BookByISBN_Call {
+	_c.Call.Return(s, err)
 	return _c
 }
 
-func (_c *MockBookProvider_BookByISBN_Call) RunAndReturn(run func(ctx context.Context, isbn string) (uint32, error)) *MockBookProvider_BookByISBN_Call {
+func (_c *MockBookProvider_BookByISBN_Call) RunAndReturn(run func(ctx context.Context, isbn string) (string, error)) *MockBookProvider_BookByISBN_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetBooks provides a mock function for the type MockBookProvider
-func (_mock *MockBookProvider) GetBooks(ctx context.Context, ids []uint32) ([]*metadata.BookRecord, error) {
+func (_mock *MockBookProvider) GetBooks(ctx context.Context, ids []string) ([]*metadata.BookRecord, error) {
 	ret := _mock.Called(ctx, ids)
 
 	if len(ret) == 0 {
@@ -123,17 +123,17 @@ func (_mock *MockBookProvider) GetBooks(ctx context.Context, ids []uint32) ([]*m
 
 	var r0 []*metadata.BookRecord
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) ([]*metadata.BookRecord, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) ([]*metadata.BookRecord, error)); ok {
 		return returnFunc(ctx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) []*metadata.BookRecord); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) []*metadata.BookRecord); ok {
 		r0 = returnFunc(ctx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*metadata.BookRecord)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string) error); ok {
 		r1 = returnFunc(ctx, ids)
 	} else {
 		r1 = ret.Error(1)
@@ -148,20 +148,20 @@ type MockBookProvider_GetBooks_Call struct {
 
 // GetBooks is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ids []uint32
+//   - ids []string
 func (_e *MockBookProvider_Expecter) GetBooks(ctx any, ids any) *MockBookProvider_GetBooks_Call {
 	return &MockBookProvider_GetBooks_Call{Call: _e.mock.On("GetBooks", ctx, ids)}
 }
 
-func (_c *MockBookProvider_GetBooks_Call) Run(run func(ctx context.Context, ids []uint32)) *MockBookProvider_GetBooks_Call {
+func (_c *MockBookProvider_GetBooks_Call) Run(run func(ctx context.Context, ids []string)) *MockBookProvider_GetBooks_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 []uint32
+		var arg1 []string
 		if args[1] != nil {
-			arg1 = args[1].([]uint32)
+			arg1 = args[1].([]string)
 		}
 		run(
 			arg0,
@@ -176,13 +176,13 @@ func (_c *MockBookProvider_GetBooks_Call) Return(bookRecords []*metadata.BookRec
 	return _c
 }
 
-func (_c *MockBookProvider_GetBooks_Call) RunAndReturn(run func(ctx context.Context, ids []uint32) ([]*metadata.BookRecord, error)) *MockBookProvider_GetBooks_Call {
+func (_c *MockBookProvider_GetBooks_Call) RunAndReturn(run func(ctx context.Context, ids []string) ([]*metadata.BookRecord, error)) *MockBookProvider_GetBooks_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetBooksFresh provides a mock function for the type MockBookProvider
-func (_mock *MockBookProvider) GetBooksFresh(ctx context.Context, ids []uint32) ([]*metadata.BookRecord, error) {
+func (_mock *MockBookProvider) GetBooksFresh(ctx context.Context, ids []string) ([]*metadata.BookRecord, error) {
 	ret := _mock.Called(ctx, ids)
 
 	if len(ret) == 0 {
@@ -191,17 +191,17 @@ func (_mock *MockBookProvider) GetBooksFresh(ctx context.Context, ids []uint32) 
 
 	var r0 []*metadata.BookRecord
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) ([]*metadata.BookRecord, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) ([]*metadata.BookRecord, error)); ok {
 		return returnFunc(ctx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) []*metadata.BookRecord); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) []*metadata.BookRecord); ok {
 		r0 = returnFunc(ctx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*metadata.BookRecord)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string) error); ok {
 		r1 = returnFunc(ctx, ids)
 	} else {
 		r1 = ret.Error(1)
@@ -216,20 +216,20 @@ type MockBookProvider_GetBooksFresh_Call struct {
 
 // GetBooksFresh is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ids []uint32
+//   - ids []string
 func (_e *MockBookProvider_Expecter) GetBooksFresh(ctx any, ids any) *MockBookProvider_GetBooksFresh_Call {
 	return &MockBookProvider_GetBooksFresh_Call{Call: _e.mock.On("GetBooksFresh", ctx, ids)}
 }
 
-func (_c *MockBookProvider_GetBooksFresh_Call) Run(run func(ctx context.Context, ids []uint32)) *MockBookProvider_GetBooksFresh_Call {
+func (_c *MockBookProvider_GetBooksFresh_Call) Run(run func(ctx context.Context, ids []string)) *MockBookProvider_GetBooksFresh_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 []uint32
+		var arg1 []string
 		if args[1] != nil {
-			arg1 = args[1].([]uint32)
+			arg1 = args[1].([]string)
 		}
 		run(
 			arg0,
@@ -244,13 +244,13 @@ func (_c *MockBookProvider_GetBooksFresh_Call) Return(bookRecords []*metadata.Bo
 	return _c
 }
 
-func (_c *MockBookProvider_GetBooksFresh_Call) RunAndReturn(run func(ctx context.Context, ids []uint32) ([]*metadata.BookRecord, error)) *MockBookProvider_GetBooksFresh_Call {
+func (_c *MockBookProvider_GetBooksFresh_Call) RunAndReturn(run func(ctx context.Context, ids []string) ([]*metadata.BookRecord, error)) *MockBookProvider_GetBooksFresh_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetSeries provides a mock function for the type MockBookProvider
-func (_mock *MockBookProvider) GetSeries(ctx context.Context, id uint32) (*metadata.SeriesRecord, error) {
+func (_mock *MockBookProvider) GetSeries(ctx context.Context, id string) (*metadata.SeriesRecord, error) {
 	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
@@ -259,17 +259,17 @@ func (_mock *MockBookProvider) GetSeries(ctx context.Context, id uint32) (*metad
 
 	var r0 *metadata.SeriesRecord
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*metadata.SeriesRecord, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*metadata.SeriesRecord, error)); ok {
 		return returnFunc(ctx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *metadata.SeriesRecord); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *metadata.SeriesRecord); ok {
 		r0 = returnFunc(ctx, id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*metadata.SeriesRecord)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, id)
 	} else {
 		r1 = ret.Error(1)
@@ -284,20 +284,20 @@ type MockBookProvider_GetSeries_Call struct {
 
 // GetSeries is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id uint32
+//   - id string
 func (_e *MockBookProvider_Expecter) GetSeries(ctx any, id any) *MockBookProvider_GetSeries_Call {
 	return &MockBookProvider_GetSeries_Call{Call: _e.mock.On("GetSeries", ctx, id)}
 }
 
-func (_c *MockBookProvider_GetSeries_Call) Run(run func(ctx context.Context, id uint32)) *MockBookProvider_GetSeries_Call {
+func (_c *MockBookProvider_GetSeries_Call) Run(run func(ctx context.Context, id string)) *MockBookProvider_GetSeries_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -312,13 +312,13 @@ func (_c *MockBookProvider_GetSeries_Call) Return(seriesRecord *metadata.SeriesR
 	return _c
 }
 
-func (_c *MockBookProvider_GetSeries_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*metadata.SeriesRecord, error)) *MockBookProvider_GetSeries_Call {
+func (_c *MockBookProvider_GetSeries_Call) RunAndReturn(run func(ctx context.Context, id string) (*metadata.SeriesRecord, error)) *MockBookProvider_GetSeries_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetSeriesLookup provides a mock function for the type MockBookProvider
-func (_mock *MockBookProvider) GetSeriesLookup(ctx context.Context, ids []uint32) ([]metadata.SeriesLookupRecord, error) {
+func (_mock *MockBookProvider) GetSeriesLookup(ctx context.Context, ids []string) ([]metadata.SeriesLookupRecord, error) {
 	ret := _mock.Called(ctx, ids)
 
 	if len(ret) == 0 {
@@ -327,17 +327,17 @@ func (_mock *MockBookProvider) GetSeriesLookup(ctx context.Context, ids []uint32
 
 	var r0 []metadata.SeriesLookupRecord
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) ([]metadata.SeriesLookupRecord, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) ([]metadata.SeriesLookupRecord, error)); ok {
 		return returnFunc(ctx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) []metadata.SeriesLookupRecord); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) []metadata.SeriesLookupRecord); ok {
 		r0 = returnFunc(ctx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]metadata.SeriesLookupRecord)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string) error); ok {
 		r1 = returnFunc(ctx, ids)
 	} else {
 		r1 = ret.Error(1)
@@ -352,20 +352,20 @@ type MockBookProvider_GetSeriesLookup_Call struct {
 
 // GetSeriesLookup is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ids []uint32
+//   - ids []string
 func (_e *MockBookProvider_Expecter) GetSeriesLookup(ctx any, ids any) *MockBookProvider_GetSeriesLookup_Call {
 	return &MockBookProvider_GetSeriesLookup_Call{Call: _e.mock.On("GetSeriesLookup", ctx, ids)}
 }
 
-func (_c *MockBookProvider_GetSeriesLookup_Call) Run(run func(ctx context.Context, ids []uint32)) *MockBookProvider_GetSeriesLookup_Call {
+func (_c *MockBookProvider_GetSeriesLookup_Call) Run(run func(ctx context.Context, ids []string)) *MockBookProvider_GetSeriesLookup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 []uint32
+		var arg1 []string
 		if args[1] != nil {
-			arg1 = args[1].([]uint32)
+			arg1 = args[1].([]string)
 		}
 		run(
 			arg0,
@@ -380,7 +380,7 @@ func (_c *MockBookProvider_GetSeriesLookup_Call) Return(seriesLookupRecords []me
 	return _c
 }
 
-func (_c *MockBookProvider_GetSeriesLookup_Call) RunAndReturn(run func(ctx context.Context, ids []uint32) ([]metadata.SeriesLookupRecord, error)) *MockBookProvider_GetSeriesLookup_Call {
+func (_c *MockBookProvider_GetSeriesLookup_Call) RunAndReturn(run func(ctx context.Context, ids []string) ([]metadata.SeriesLookupRecord, error)) *MockBookProvider_GetSeriesLookup_Call {
 	_c.Call.Return(run)
 	return _c
 }

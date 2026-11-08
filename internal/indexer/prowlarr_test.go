@@ -38,7 +38,7 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 				DeferCleanup(srv.Close)
 
 				res, err := NewProwlarr(srv.URL, "secret").
-					Search(context.Background(), SearchParams{Query: "Dune", TMDBID: 438631})
+					Search(context.Background(), SearchParams{Query: "Dune", TMDBID: "438631"})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gotKey).To(Equal("secret"))
 				Expect(gotQuery).To(Equal("Dune"))
@@ -81,10 +81,10 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 				Expect(gotType).To(Equal(wantType))
 			},
 			Entry("a series search",
-				SearchParams{Query: "x", Kind: KindTV, TVDBID: 1, Season: 2},
+				SearchParams{Query: "x", Kind: KindTV, TVDBID: "1", Season: 2},
 				"5000", "tvsearch"),
 			Entry("a movie search",
-				SearchParams{Query: "x", Kind: KindMovie, TMDBID: 1},
+				SearchParams{Query: "x", Kind: KindMovie, TMDBID: "1"},
 				"2000", "movie"),
 			Entry("a series retry, which carries no id",
 				SearchParams{Query: "x", Kind: KindTV},
@@ -128,14 +128,14 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 			Entry("an episode",
 				SearchParams{
 					Query: "Breaking Bad", Kind: KindTV,
-					TVDBID: 81189, Season: 2, Episode: 3,
+					TVDBID: "81189", Season: 2, Episode: 3,
 				},
 				"Breaking Bad{season:2}{episode:3}"),
 			Entry("a season pack",
 				SearchParams{Query: "Breaking Bad", Kind: KindTV, Season: 2},
 				"Breaking Bad{season:2}"),
 			Entry("a whole-series search names no season",
-				SearchParams{Query: "Breaking Bad", Kind: KindTV, TVDBID: 81189},
+				SearchParams{Query: "Breaking Bad", Kind: KindTV, TVDBID: "81189"},
 				"Breaking Bad"),
 			Entry("season 0 is not a named season",
 				SearchParams{Query: "Breaking Bad", Kind: KindTV, Episode: 3},
@@ -143,7 +143,7 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 			// The movie token set has no season or episode, and a film has
 			// neither to say.
 			Entry("a movie carries no tokens",
-				SearchParams{Query: "Dune", Kind: KindMovie, TMDBID: 438631},
+				SearchParams{Query: "Dune", Kind: KindMovie, TMDBID: "438631"},
 				"Dune"),
 		)
 
@@ -163,7 +163,7 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 				context.Background(),
 				SearchParams{
 					Query: "Breaking Bad", Kind: KindTV,
-					TVDBID: 81189, TMDBID: 1396, Season: 2, Episode: 3,
+					TVDBID: "81189", TMDBID: "1396", Season: 2, Episode: 3,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -187,11 +187,11 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 				Search(context.Background(), SearchParams{Query: "x"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res).To(HaveLen(2))
-			Expect(res[0].TVDBID).To(Equal(uint32(81189)))
-			Expect(res[0].TMDBID).To(Equal(uint32(1396)))
+			Expect(res[0].TVDBID).To(Equal("81189"))
+			Expect(res[0].TMDBID).To(Equal("1396"))
 			// Absent means the tracker said nothing, and stays zero.
-			Expect(res[1].TVDBID).To(BeZero())
-			Expect(res[1].TMDBID).To(BeZero())
+			Expect(res[1].TVDBID).To(BeEmpty())
+			Expect(res[1].TMDBID).To(BeEmpty())
 		})
 
 		It("maps the info hash, falling back to the magnet", func() {

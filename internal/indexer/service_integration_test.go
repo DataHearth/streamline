@@ -239,7 +239,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 					ctx,
 					[]string{"Interstellar"},
 					nil,
-					157336,
+					"157336",
 				)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(2))
@@ -273,7 +273,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 				})
 
 				results, err := New().SearchMovie(
-					context.Background(), []string{"Interstellar"}, nil, 157336,
+					context.Background(), []string{"Interstellar"}, nil, "157336",
 				)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -336,7 +336,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 				ctx,
 				[]string{"Demon Slayer La Forteresse Infinie"},
 				[]string{"Demon Slayer Infinity Castle"},
-				1311031,
+				"1311031",
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(1))
@@ -411,7 +411,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 					ctx,
 					[]string{"Comme un chef"},
 					nil,
-					127585,
+					"127585",
 				)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -436,7 +436,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 
 			results, _, err := New().
 				SearchEpisode(context.Background(), []string{"Show"},
-					nil, 111, 2, 3)
+					nil, "111", 2, 3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 
@@ -463,7 +463,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
 
 			_, err := New().SearchMovie(context.Background(), []string{"Dune"},
-				nil, 0)
+				nil, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			queries := rec.Queries()
@@ -487,12 +487,12 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 
 			results, _, err := New().
 				SearchEpisode(context.Background(), []string{"Show"},
-					nil, 111, 2, 3)
+					nil, "111", 2, 3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			// The wrong show had 900 seeders and would have won on score.
 			Expect(results[0].Title).To(HaveSuffix("OURS"))
-			Expect(results[0].TVDBID).To(Equal(uint32(111)))
+			Expect(results[0].TVDBID).To(Equal("111"))
 		})
 	})
 })

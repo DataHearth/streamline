@@ -25,8 +25,8 @@ type Person struct {
 	// key: series cast comes from TVDB with no tmdb id at all, so keying on
 	// tmdb_id collapsed every such actor into one.
 	ID         uint32
-	TMDBID     uint32
-	TVDBID     uint32
+	TMDBID     string
+	TVDBID     string
 	Name       string
 	ProfileURL string
 	PersonBio
@@ -101,8 +101,8 @@ type SeriesCredit struct {
 // identity and both credit lists.
 type PersonCredits struct {
 	ID         uint32
-	TMDBID     uint32
-	TVDBID     uint32
+	TMDBID     string
+	TVDBID     string
 	Name       string
 	ProfileURL string
 	PersonBio
@@ -135,8 +135,8 @@ func (db *DB) ListPeople(
 ) ([]Person, error) {
 	var rows []struct {
 		ID           uint32 `sql:"id"`
-		TMDBID       uint32 `sql:"tmdb_id"`
-		TVDBID       uint32 `sql:"tvdb_id"`
+		TMDBID       string `sql:"tmdb_id"`
+		TVDBID       string `sql:"tvdb_id"`
 		Name         string `sql:"name"`
 		ProfileURL   string `sql:"profile_url"`
 		Biography    string `sql:"biography"`

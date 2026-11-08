@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/datahearth/streamline/internal/providerid"
 )
 
 type ParseResult struct {
@@ -530,11 +532,11 @@ func normalizeSource(s string) string {
 // forms are accepted since other tools in the *arr ecosystem use brackets.
 var embeddedIDRe = regexp.MustCompile(`(?i)[{\[](tmdb|tvdb)-(\d{1,9})[}\]]`)
 
-// EmbeddedIDs are provider ids lifted from a path. A zero field means the path
-// carried no id for that provider.
+// EmbeddedIDs are provider ids lifted from a path. An empty field means the
+// path carried no id for that provider.
 type EmbeddedIDs struct {
-	TMDB uint32
-	TVDB uint32
+	TMDB string
+	TVDB string
 }
 
 // ParseEmbeddedIDs lifts {tmdb-N} / {tvdb-N} out of a path. Such an id is
@@ -549,9 +551,9 @@ func ParseEmbeddedIDs(path string) EmbeddedIDs {
 		}
 		switch strings.ToLower(m[1]) {
 		case "tmdb":
-			ids.TMDB = uint32(n)
+			ids.TMDB = providerid.Format(uint32(n))
 		case "tvdb":
-			ids.TVDB = uint32(n)
+			ids.TVDB = providerid.Format(uint32(n))
 		}
 	}
 	return ids

@@ -321,7 +321,7 @@ func (s *Server) GetSeriesLookupDetail(
 // ever shows up hot.
 func (s *Server) seriesWithCast(
 	ctx context.Context,
-	tvdbID uint32,
+	tvdbID string,
 ) (*metadata.TVDetails, error) {
 	d, err := s.metadataTV.GetSeries(ctx, tvdbID)
 	if err != nil {

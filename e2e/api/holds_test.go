@@ -79,7 +79,7 @@ var _ = Describe("REST API held downloads", Label("e2e"), func() {
 		ctx := context.Background()
 		movie, err := app.Store.CreateMovie(ctx, db.CreateMovieParams{
 			Title: "Held Flick", OriginalTitle: "Held Flick", Year: 2024,
-			TmdbID: 770001, Status: entmovie.StatusWanted,
+			TmdbID: "770001", Status: entmovie.StatusWanted,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		// Deleting the movie cascades its download record away. Left behind,
@@ -144,7 +144,7 @@ var _ = Describe("REST API held downloads", Label("e2e"), func() {
 		ctx := context.Background()
 		movie, err := app.Store.CreateMovie(ctx, db.CreateMovieParams{
 			Title: "Plain Flick", OriginalTitle: "Plain Flick", Year: 2024,
-			TmdbID: 770002, Status: entmovie.StatusWanted,
+			TmdbID: "770002", Status: entmovie.StatusWanted,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() {

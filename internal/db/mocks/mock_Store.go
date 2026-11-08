@@ -1396,23 +1396,23 @@ func (_c *MockStore_BookFileRoots_Call) RunAndReturn(run func(ctx context.Contex
 }
 
 // BookHardcoverIndex provides a mock function for the type MockStore
-func (_mock *MockStore) BookHardcoverIndex(ctx context.Context, kind string) (map[uint32]uint32, error) {
+func (_mock *MockStore) BookHardcoverIndex(ctx context.Context, kind string) (map[string]uint32, error) {
 	ret := _mock.Called(ctx, kind)
 
 	if len(ret) == 0 {
 		panic("no return value specified for BookHardcoverIndex")
 	}
 
-	var r0 map[uint32]uint32
+	var r0 map[string]uint32
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (map[uint32]uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (map[string]uint32, error)); ok {
 		return returnFunc(ctx, kind)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) map[uint32]uint32); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) map[string]uint32); ok {
 		r0 = returnFunc(ctx, kind)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[uint32]uint32)
+			r0 = ret.Get(0).(map[string]uint32)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
@@ -1453,12 +1453,12 @@ func (_c *MockStore_BookHardcoverIndex_Call) Run(run func(ctx context.Context, k
 	return _c
 }
 
-func (_c *MockStore_BookHardcoverIndex_Call) Return(uint32ToUint32 map[uint32]uint32, err error) *MockStore_BookHardcoverIndex_Call {
-	_c.Call.Return(uint32ToUint32, err)
+func (_c *MockStore_BookHardcoverIndex_Call) Return(stringToUint32 map[string]uint32, err error) *MockStore_BookHardcoverIndex_Call {
+	_c.Call.Return(stringToUint32, err)
 	return _c
 }
 
-func (_c *MockStore_BookHardcoverIndex_Call) RunAndReturn(run func(ctx context.Context, kind string) (map[uint32]uint32, error)) *MockStore_BookHardcoverIndex_Call {
+func (_c *MockStore_BookHardcoverIndex_Call) RunAndReturn(run func(ctx context.Context, kind string) (map[string]uint32, error)) *MockStore_BookHardcoverIndex_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -7246,7 +7246,7 @@ func (_c *MockStore_FindActiveDownloadRecordByID_Call) RunAndReturn(run func(ctx
 }
 
 // FindActiveRequest provides a mock function for the type MockStore
-func (_mock *MockStore) FindActiveRequest(ctx context.Context, mediaType string, mediaID uint32) (*ent.Request, error) {
+func (_mock *MockStore) FindActiveRequest(ctx context.Context, mediaType string, mediaID string) (*ent.Request, error) {
 	ret := _mock.Called(ctx, mediaType, mediaID)
 
 	if len(ret) == 0 {
@@ -7255,17 +7255,17 @@ func (_mock *MockStore) FindActiveRequest(ctx context.Context, mediaType string,
 
 	var r0 *ent.Request
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32) (*ent.Request, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*ent.Request, error)); ok {
 		return returnFunc(ctx, mediaType, mediaID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32) *ent.Request); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *ent.Request); ok {
 		r0 = returnFunc(ctx, mediaType, mediaID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.Request)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
 		r1 = returnFunc(ctx, mediaType, mediaID)
 	} else {
 		r1 = ret.Error(1)
@@ -7281,12 +7281,12 @@ type MockStore_FindActiveRequest_Call struct {
 // FindActiveRequest is a helper method to define mock.On call
 //   - ctx context.Context
 //   - mediaType string
-//   - mediaID uint32
+//   - mediaID string
 func (_e *MockStore_Expecter) FindActiveRequest(ctx any, mediaType any, mediaID any) *MockStore_FindActiveRequest_Call {
 	return &MockStore_FindActiveRequest_Call{Call: _e.mock.On("FindActiveRequest", ctx, mediaType, mediaID)}
 }
 
-func (_c *MockStore_FindActiveRequest_Call) Run(run func(ctx context.Context, mediaType string, mediaID uint32)) *MockStore_FindActiveRequest_Call {
+func (_c *MockStore_FindActiveRequest_Call) Run(run func(ctx context.Context, mediaType string, mediaID string)) *MockStore_FindActiveRequest_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -7296,9 +7296,9 @@ func (_c *MockStore_FindActiveRequest_Call) Run(run func(ctx context.Context, me
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 uint32
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uint32)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -7314,7 +7314,7 @@ func (_c *MockStore_FindActiveRequest_Call) Return(request1 *ent.Request, err er
 	return _c
 }
 
-func (_c *MockStore_FindActiveRequest_Call) RunAndReturn(run func(ctx context.Context, mediaType string, mediaID uint32) (*ent.Request, error)) *MockStore_FindActiveRequest_Call {
+func (_c *MockStore_FindActiveRequest_Call) RunAndReturn(run func(ctx context.Context, mediaType string, mediaID string) (*ent.Request, error)) *MockStore_FindActiveRequest_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -7802,7 +7802,7 @@ func (_c *MockStore_FindArtistTrackCredits_Call) RunAndReturn(run func(ctx conte
 }
 
 // FindBookByHardcoverID provides a mock function for the type MockStore
-func (_mock *MockStore) FindBookByHardcoverID(ctx context.Context, hardcoverID uint32) (*ent.Book, error) {
+func (_mock *MockStore) FindBookByHardcoverID(ctx context.Context, hardcoverID string) (*ent.Book, error) {
 	ret := _mock.Called(ctx, hardcoverID)
 
 	if len(ret) == 0 {
@@ -7811,17 +7811,17 @@ func (_mock *MockStore) FindBookByHardcoverID(ctx context.Context, hardcoverID u
 
 	var r0 *ent.Book
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Book, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ent.Book, error)); ok {
 		return returnFunc(ctx, hardcoverID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Book); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ent.Book); ok {
 		r0 = returnFunc(ctx, hardcoverID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.Book)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, hardcoverID)
 	} else {
 		r1 = ret.Error(1)
@@ -7836,20 +7836,20 @@ type MockStore_FindBookByHardcoverID_Call struct {
 
 // FindBookByHardcoverID is a helper method to define mock.On call
 //   - ctx context.Context
-//   - hardcoverID uint32
+//   - hardcoverID string
 func (_e *MockStore_Expecter) FindBookByHardcoverID(ctx any, hardcoverID any) *MockStore_FindBookByHardcoverID_Call {
 	return &MockStore_FindBookByHardcoverID_Call{Call: _e.mock.On("FindBookByHardcoverID", ctx, hardcoverID)}
 }
 
-func (_c *MockStore_FindBookByHardcoverID_Call) Run(run func(ctx context.Context, hardcoverID uint32)) *MockStore_FindBookByHardcoverID_Call {
+func (_c *MockStore_FindBookByHardcoverID_Call) Run(run func(ctx context.Context, hardcoverID string)) *MockStore_FindBookByHardcoverID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -7864,7 +7864,7 @@ func (_c *MockStore_FindBookByHardcoverID_Call) Return(book *ent.Book, err error
 	return _c
 }
 
-func (_c *MockStore_FindBookByHardcoverID_Call) RunAndReturn(run func(ctx context.Context, hardcoverID uint32) (*ent.Book, error)) *MockStore_FindBookByHardcoverID_Call {
+func (_c *MockStore_FindBookByHardcoverID_Call) RunAndReturn(run func(ctx context.Context, hardcoverID string) (*ent.Book, error)) *MockStore_FindBookByHardcoverID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -7938,26 +7938,26 @@ func (_c *MockStore_FindBookByID_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // FindBooksByHardcoverIDs provides a mock function for the type MockStore
-func (_mock *MockStore) FindBooksByHardcoverIDs(ctx context.Context, ids []uint32) (map[uint32]*ent.Book, error) {
+func (_mock *MockStore) FindBooksByHardcoverIDs(ctx context.Context, ids []string) (map[string]*ent.Book, error) {
 	ret := _mock.Called(ctx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindBooksByHardcoverIDs")
 	}
 
-	var r0 map[uint32]*ent.Book
+	var r0 map[string]*ent.Book
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) (map[uint32]*ent.Book, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) (map[string]*ent.Book, error)); ok {
 		return returnFunc(ctx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) map[uint32]*ent.Book); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) map[string]*ent.Book); ok {
 		r0 = returnFunc(ctx, ids)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[uint32]*ent.Book)
+			r0 = ret.Get(0).(map[string]*ent.Book)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string) error); ok {
 		r1 = returnFunc(ctx, ids)
 	} else {
 		r1 = ret.Error(1)
@@ -7972,20 +7972,20 @@ type MockStore_FindBooksByHardcoverIDs_Call struct {
 
 // FindBooksByHardcoverIDs is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ids []uint32
+//   - ids []string
 func (_e *MockStore_Expecter) FindBooksByHardcoverIDs(ctx any, ids any) *MockStore_FindBooksByHardcoverIDs_Call {
 	return &MockStore_FindBooksByHardcoverIDs_Call{Call: _e.mock.On("FindBooksByHardcoverIDs", ctx, ids)}
 }
 
-func (_c *MockStore_FindBooksByHardcoverIDs_Call) Run(run func(ctx context.Context, ids []uint32)) *MockStore_FindBooksByHardcoverIDs_Call {
+func (_c *MockStore_FindBooksByHardcoverIDs_Call) Run(run func(ctx context.Context, ids []string)) *MockStore_FindBooksByHardcoverIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 []uint32
+		var arg1 []string
 		if args[1] != nil {
-			arg1 = args[1].([]uint32)
+			arg1 = args[1].([]string)
 		}
 		run(
 			arg0,
@@ -7995,12 +7995,12 @@ func (_c *MockStore_FindBooksByHardcoverIDs_Call) Run(run func(ctx context.Conte
 	return _c
 }
 
-func (_c *MockStore_FindBooksByHardcoverIDs_Call) Return(uint32ToBook map[uint32]*ent.Book, err error) *MockStore_FindBooksByHardcoverIDs_Call {
-	_c.Call.Return(uint32ToBook, err)
+func (_c *MockStore_FindBooksByHardcoverIDs_Call) Return(stringToBook map[string]*ent.Book, err error) *MockStore_FindBooksByHardcoverIDs_Call {
+	_c.Call.Return(stringToBook, err)
 	return _c
 }
 
-func (_c *MockStore_FindBooksByHardcoverIDs_Call) RunAndReturn(run func(ctx context.Context, ids []uint32) (map[uint32]*ent.Book, error)) *MockStore_FindBooksByHardcoverIDs_Call {
+func (_c *MockStore_FindBooksByHardcoverIDs_Call) RunAndReturn(run func(ctx context.Context, ids []string) (map[string]*ent.Book, error)) *MockStore_FindBooksByHardcoverIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -9118,7 +9118,7 @@ func (_c *MockStore_FindMovieByID_Call) RunAndReturn(run func(ctx context.Contex
 }
 
 // FindMovieByTMDBID provides a mock function for the type MockStore
-func (_mock *MockStore) FindMovieByTMDBID(ctx context.Context, tmdbID uint32) (*ent.Movie, error) {
+func (_mock *MockStore) FindMovieByTMDBID(ctx context.Context, tmdbID string) (*ent.Movie, error) {
 	ret := _mock.Called(ctx, tmdbID)
 
 	if len(ret) == 0 {
@@ -9127,17 +9127,17 @@ func (_mock *MockStore) FindMovieByTMDBID(ctx context.Context, tmdbID uint32) (*
 
 	var r0 *ent.Movie
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Movie, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ent.Movie, error)); ok {
 		return returnFunc(ctx, tmdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Movie); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ent.Movie); ok {
 		r0 = returnFunc(ctx, tmdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.Movie)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, tmdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -9152,20 +9152,20 @@ type MockStore_FindMovieByTMDBID_Call struct {
 
 // FindMovieByTMDBID is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tmdbID uint32
+//   - tmdbID string
 func (_e *MockStore_Expecter) FindMovieByTMDBID(ctx any, tmdbID any) *MockStore_FindMovieByTMDBID_Call {
 	return &MockStore_FindMovieByTMDBID_Call{Call: _e.mock.On("FindMovieByTMDBID", ctx, tmdbID)}
 }
 
-func (_c *MockStore_FindMovieByTMDBID_Call) Run(run func(ctx context.Context, tmdbID uint32)) *MockStore_FindMovieByTMDBID_Call {
+func (_c *MockStore_FindMovieByTMDBID_Call) Run(run func(ctx context.Context, tmdbID string)) *MockStore_FindMovieByTMDBID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -9180,13 +9180,13 @@ func (_c *MockStore_FindMovieByTMDBID_Call) Return(movie1 *ent.Movie, err error)
 	return _c
 }
 
-func (_c *MockStore_FindMovieByTMDBID_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32) (*ent.Movie, error)) *MockStore_FindMovieByTMDBID_Call {
+func (_c *MockStore_FindMovieByTMDBID_Call) RunAndReturn(run func(ctx context.Context, tmdbID string) (*ent.Movie, error)) *MockStore_FindMovieByTMDBID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindMoviesByTMDBIDs provides a mock function for the type MockStore
-func (_mock *MockStore) FindMoviesByTMDBIDs(ctx context.Context, tmdbIDs []uint32) ([]*ent.Movie, error) {
+func (_mock *MockStore) FindMoviesByTMDBIDs(ctx context.Context, tmdbIDs []string) ([]*ent.Movie, error) {
 	ret := _mock.Called(ctx, tmdbIDs)
 
 	if len(ret) == 0 {
@@ -9195,17 +9195,17 @@ func (_mock *MockStore) FindMoviesByTMDBIDs(ctx context.Context, tmdbIDs []uint3
 
 	var r0 []*ent.Movie
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) ([]*ent.Movie, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) ([]*ent.Movie, error)); ok {
 		return returnFunc(ctx, tmdbIDs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) []*ent.Movie); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) []*ent.Movie); ok {
 		r0 = returnFunc(ctx, tmdbIDs)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*ent.Movie)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string) error); ok {
 		r1 = returnFunc(ctx, tmdbIDs)
 	} else {
 		r1 = ret.Error(1)
@@ -9220,20 +9220,20 @@ type MockStore_FindMoviesByTMDBIDs_Call struct {
 
 // FindMoviesByTMDBIDs is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tmdbIDs []uint32
+//   - tmdbIDs []string
 func (_e *MockStore_Expecter) FindMoviesByTMDBIDs(ctx any, tmdbIDs any) *MockStore_FindMoviesByTMDBIDs_Call {
 	return &MockStore_FindMoviesByTMDBIDs_Call{Call: _e.mock.On("FindMoviesByTMDBIDs", ctx, tmdbIDs)}
 }
 
-func (_c *MockStore_FindMoviesByTMDBIDs_Call) Run(run func(ctx context.Context, tmdbIDs []uint32)) *MockStore_FindMoviesByTMDBIDs_Call {
+func (_c *MockStore_FindMoviesByTMDBIDs_Call) Run(run func(ctx context.Context, tmdbIDs []string)) *MockStore_FindMoviesByTMDBIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 []uint32
+		var arg1 []string
 		if args[1] != nil {
-			arg1 = args[1].([]uint32)
+			arg1 = args[1].([]string)
 		}
 		run(
 			arg0,
@@ -9248,7 +9248,7 @@ func (_c *MockStore_FindMoviesByTMDBIDs_Call) Return(movies []*ent.Movie, err er
 	return _c
 }
 
-func (_c *MockStore_FindMoviesByTMDBIDs_Call) RunAndReturn(run func(ctx context.Context, tmdbIDs []uint32) ([]*ent.Movie, error)) *MockStore_FindMoviesByTMDBIDs_Call {
+func (_c *MockStore_FindMoviesByTMDBIDs_Call) RunAndReturn(run func(ctx context.Context, tmdbIDs []string) ([]*ent.Movie, error)) *MockStore_FindMoviesByTMDBIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -9538,7 +9538,7 @@ func (_c *MockStore_FindSeedingDownloadRecord_Call) RunAndReturn(run func(ctx co
 }
 
 // FindSeriesByHardcoverID provides a mock function for the type MockStore
-func (_mock *MockStore) FindSeriesByHardcoverID(ctx context.Context, hardcoverID uint32) (*ent.BookSeries, error) {
+func (_mock *MockStore) FindSeriesByHardcoverID(ctx context.Context, hardcoverID string) (*ent.BookSeries, error) {
 	ret := _mock.Called(ctx, hardcoverID)
 
 	if len(ret) == 0 {
@@ -9547,17 +9547,17 @@ func (_mock *MockStore) FindSeriesByHardcoverID(ctx context.Context, hardcoverID
 
 	var r0 *ent.BookSeries
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.BookSeries, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ent.BookSeries, error)); ok {
 		return returnFunc(ctx, hardcoverID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.BookSeries); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ent.BookSeries); ok {
 		r0 = returnFunc(ctx, hardcoverID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.BookSeries)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, hardcoverID)
 	} else {
 		r1 = ret.Error(1)
@@ -9572,20 +9572,20 @@ type MockStore_FindSeriesByHardcoverID_Call struct {
 
 // FindSeriesByHardcoverID is a helper method to define mock.On call
 //   - ctx context.Context
-//   - hardcoverID uint32
+//   - hardcoverID string
 func (_e *MockStore_Expecter) FindSeriesByHardcoverID(ctx any, hardcoverID any) *MockStore_FindSeriesByHardcoverID_Call {
 	return &MockStore_FindSeriesByHardcoverID_Call{Call: _e.mock.On("FindSeriesByHardcoverID", ctx, hardcoverID)}
 }
 
-func (_c *MockStore_FindSeriesByHardcoverID_Call) Run(run func(ctx context.Context, hardcoverID uint32)) *MockStore_FindSeriesByHardcoverID_Call {
+func (_c *MockStore_FindSeriesByHardcoverID_Call) Run(run func(ctx context.Context, hardcoverID string)) *MockStore_FindSeriesByHardcoverID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -9600,32 +9600,32 @@ func (_c *MockStore_FindSeriesByHardcoverID_Call) Return(bookSeries *ent.BookSer
 	return _c
 }
 
-func (_c *MockStore_FindSeriesByHardcoverID_Call) RunAndReturn(run func(ctx context.Context, hardcoverID uint32) (*ent.BookSeries, error)) *MockStore_FindSeriesByHardcoverID_Call {
+func (_c *MockStore_FindSeriesByHardcoverID_Call) RunAndReturn(run func(ctx context.Context, hardcoverID string) (*ent.BookSeries, error)) *MockStore_FindSeriesByHardcoverID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindSeriesByHardcoverIDs provides a mock function for the type MockStore
-func (_mock *MockStore) FindSeriesByHardcoverIDs(ctx context.Context, ids []uint32) (map[uint32]db.HeldSeries, error) {
+func (_mock *MockStore) FindSeriesByHardcoverIDs(ctx context.Context, ids []string) (map[string]db.HeldSeries, error) {
 	ret := _mock.Called(ctx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindSeriesByHardcoverIDs")
 	}
 
-	var r0 map[uint32]db.HeldSeries
+	var r0 map[string]db.HeldSeries
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) (map[uint32]db.HeldSeries, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) (map[string]db.HeldSeries, error)); ok {
 		return returnFunc(ctx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) map[uint32]db.HeldSeries); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) map[string]db.HeldSeries); ok {
 		r0 = returnFunc(ctx, ids)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[uint32]db.HeldSeries)
+			r0 = ret.Get(0).(map[string]db.HeldSeries)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string) error); ok {
 		r1 = returnFunc(ctx, ids)
 	} else {
 		r1 = ret.Error(1)
@@ -9640,20 +9640,20 @@ type MockStore_FindSeriesByHardcoverIDs_Call struct {
 
 // FindSeriesByHardcoverIDs is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ids []uint32
+//   - ids []string
 func (_e *MockStore_Expecter) FindSeriesByHardcoverIDs(ctx any, ids any) *MockStore_FindSeriesByHardcoverIDs_Call {
 	return &MockStore_FindSeriesByHardcoverIDs_Call{Call: _e.mock.On("FindSeriesByHardcoverIDs", ctx, ids)}
 }
 
-func (_c *MockStore_FindSeriesByHardcoverIDs_Call) Run(run func(ctx context.Context, ids []uint32)) *MockStore_FindSeriesByHardcoverIDs_Call {
+func (_c *MockStore_FindSeriesByHardcoverIDs_Call) Run(run func(ctx context.Context, ids []string)) *MockStore_FindSeriesByHardcoverIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 []uint32
+		var arg1 []string
 		if args[1] != nil {
-			arg1 = args[1].([]uint32)
+			arg1 = args[1].([]string)
 		}
 		run(
 			arg0,
@@ -9663,12 +9663,12 @@ func (_c *MockStore_FindSeriesByHardcoverIDs_Call) Run(run func(ctx context.Cont
 	return _c
 }
 
-func (_c *MockStore_FindSeriesByHardcoverIDs_Call) Return(uint32ToHeldSeries map[uint32]db.HeldSeries, err error) *MockStore_FindSeriesByHardcoverIDs_Call {
-	_c.Call.Return(uint32ToHeldSeries, err)
+func (_c *MockStore_FindSeriesByHardcoverIDs_Call) Return(stringToHeldSeries map[string]db.HeldSeries, err error) *MockStore_FindSeriesByHardcoverIDs_Call {
+	_c.Call.Return(stringToHeldSeries, err)
 	return _c
 }
 
-func (_c *MockStore_FindSeriesByHardcoverIDs_Call) RunAndReturn(run func(ctx context.Context, ids []uint32) (map[uint32]db.HeldSeries, error)) *MockStore_FindSeriesByHardcoverIDs_Call {
+func (_c *MockStore_FindSeriesByHardcoverIDs_Call) RunAndReturn(run func(ctx context.Context, ids []string) (map[string]db.HeldSeries, error)) *MockStore_FindSeriesByHardcoverIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -9878,7 +9878,7 @@ func (_c *MockStore_FindTVShowByID_Call) RunAndReturn(run func(ctx context.Conte
 }
 
 // FindTVShowByTVDBID provides a mock function for the type MockStore
-func (_mock *MockStore) FindTVShowByTVDBID(ctx context.Context, tvdbID uint32) (*ent.TVShow, error) {
+func (_mock *MockStore) FindTVShowByTVDBID(ctx context.Context, tvdbID string) (*ent.TVShow, error) {
 	ret := _mock.Called(ctx, tvdbID)
 
 	if len(ret) == 0 {
@@ -9887,17 +9887,17 @@ func (_mock *MockStore) FindTVShowByTVDBID(ctx context.Context, tvdbID uint32) (
 
 	var r0 *ent.TVShow
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.TVShow, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ent.TVShow, error)); ok {
 		return returnFunc(ctx, tvdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.TVShow); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ent.TVShow); ok {
 		r0 = returnFunc(ctx, tvdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.TVShow)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, tvdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -9912,20 +9912,20 @@ type MockStore_FindTVShowByTVDBID_Call struct {
 
 // FindTVShowByTVDBID is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tvdbID uint32
+//   - tvdbID string
 func (_e *MockStore_Expecter) FindTVShowByTVDBID(ctx any, tvdbID any) *MockStore_FindTVShowByTVDBID_Call {
 	return &MockStore_FindTVShowByTVDBID_Call{Call: _e.mock.On("FindTVShowByTVDBID", ctx, tvdbID)}
 }
 
-func (_c *MockStore_FindTVShowByTVDBID_Call) Run(run func(ctx context.Context, tvdbID uint32)) *MockStore_FindTVShowByTVDBID_Call {
+func (_c *MockStore_FindTVShowByTVDBID_Call) Run(run func(ctx context.Context, tvdbID string)) *MockStore_FindTVShowByTVDBID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -9940,7 +9940,7 @@ func (_c *MockStore_FindTVShowByTVDBID_Call) Return(tVShow *ent.TVShow, err erro
 	return _c
 }
 
-func (_c *MockStore_FindTVShowByTVDBID_Call) RunAndReturn(run func(ctx context.Context, tvdbID uint32) (*ent.TVShow, error)) *MockStore_FindTVShowByTVDBID_Call {
+func (_c *MockStore_FindTVShowByTVDBID_Call) RunAndReturn(run func(ctx context.Context, tvdbID string) (*ent.TVShow, error)) *MockStore_FindTVShowByTVDBID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -17570,7 +17570,7 @@ func (_c *MockStore_MarkRequestAvailable_Call) RunAndReturn(run func(ctx context
 }
 
 // MarkRequestsAvailable provides a mock function for the type MockStore
-func (_mock *MockStore) MarkRequestsAvailable(ctx context.Context, mediaType string, mediaID uint32) error {
+func (_mock *MockStore) MarkRequestsAvailable(ctx context.Context, mediaType string, mediaID string) error {
 	ret := _mock.Called(ctx, mediaType, mediaID)
 
 	if len(ret) == 0 {
@@ -17578,7 +17578,7 @@ func (_mock *MockStore) MarkRequestsAvailable(ctx context.Context, mediaType str
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
 		r0 = returnFunc(ctx, mediaType, mediaID)
 	} else {
 		r0 = ret.Error(0)
@@ -17594,12 +17594,12 @@ type MockStore_MarkRequestsAvailable_Call struct {
 // MarkRequestsAvailable is a helper method to define mock.On call
 //   - ctx context.Context
 //   - mediaType string
-//   - mediaID uint32
+//   - mediaID string
 func (_e *MockStore_Expecter) MarkRequestsAvailable(ctx any, mediaType any, mediaID any) *MockStore_MarkRequestsAvailable_Call {
 	return &MockStore_MarkRequestsAvailable_Call{Call: _e.mock.On("MarkRequestsAvailable", ctx, mediaType, mediaID)}
 }
 
-func (_c *MockStore_MarkRequestsAvailable_Call) Run(run func(ctx context.Context, mediaType string, mediaID uint32)) *MockStore_MarkRequestsAvailable_Call {
+func (_c *MockStore_MarkRequestsAvailable_Call) Run(run func(ctx context.Context, mediaType string, mediaID string)) *MockStore_MarkRequestsAvailable_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -17609,9 +17609,9 @@ func (_c *MockStore_MarkRequestsAvailable_Call) Run(run func(ctx context.Context
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 uint32
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uint32)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -17627,7 +17627,7 @@ func (_c *MockStore_MarkRequestsAvailable_Call) Return(err error) *MockStore_Mar
 	return _c
 }
 
-func (_c *MockStore_MarkRequestsAvailable_Call) RunAndReturn(run func(ctx context.Context, mediaType string, mediaID uint32) error) *MockStore_MarkRequestsAvailable_Call {
+func (_c *MockStore_MarkRequestsAvailable_Call) RunAndReturn(run func(ctx context.Context, mediaType string, mediaID string) error) *MockStore_MarkRequestsAvailable_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -18075,7 +18075,7 @@ func (_c *MockStore_MovieFileSummaries_Call) RunAndReturn(run func(ctx context.C
 }
 
 // MovieHasMediaFile provides a mock function for the type MockStore
-func (_mock *MockStore) MovieHasMediaFile(ctx context.Context, tmdbID uint32) (bool, error) {
+func (_mock *MockStore) MovieHasMediaFile(ctx context.Context, tmdbID string) (bool, error) {
 	ret := _mock.Called(ctx, tmdbID)
 
 	if len(ret) == 0 {
@@ -18084,15 +18084,15 @@ func (_mock *MockStore) MovieHasMediaFile(ctx context.Context, tmdbID uint32) (b
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (bool, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (bool, error)); ok {
 		return returnFunc(ctx, tmdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) bool); ok {
 		r0 = returnFunc(ctx, tmdbID)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, tmdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -18107,20 +18107,20 @@ type MockStore_MovieHasMediaFile_Call struct {
 
 // MovieHasMediaFile is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tmdbID uint32
+//   - tmdbID string
 func (_e *MockStore_Expecter) MovieHasMediaFile(ctx any, tmdbID any) *MockStore_MovieHasMediaFile_Call {
 	return &MockStore_MovieHasMediaFile_Call{Call: _e.mock.On("MovieHasMediaFile", ctx, tmdbID)}
 }
 
-func (_c *MockStore_MovieHasMediaFile_Call) Run(run func(ctx context.Context, tmdbID uint32)) *MockStore_MovieHasMediaFile_Call {
+func (_c *MockStore_MovieHasMediaFile_Call) Run(run func(ctx context.Context, tmdbID string)) *MockStore_MovieHasMediaFile_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -18135,7 +18135,7 @@ func (_c *MockStore_MovieHasMediaFile_Call) Return(b bool, err error) *MockStore
 	return _c
 }
 
-func (_c *MockStore_MovieHasMediaFile_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32) (bool, error)) *MockStore_MovieHasMediaFile_Call {
+func (_c *MockStore_MovieHasMediaFile_Call) RunAndReturn(run func(ctx context.Context, tmdbID string) (bool, error)) *MockStore_MovieHasMediaFile_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -18209,23 +18209,23 @@ func (_c *MockStore_MovieSelection_Call) RunAndReturn(run func(ctx context.Conte
 }
 
 // MovieTMDBIndex provides a mock function for the type MockStore
-func (_mock *MockStore) MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error) {
+func (_mock *MockStore) MovieTMDBIndex(ctx context.Context) (map[string]uint32, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for MovieTMDBIndex")
 	}
 
-	var r0 map[uint32]uint32
+	var r0 map[string]uint32
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (map[uint32]uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (map[string]uint32, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) map[uint32]uint32); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context) map[string]uint32); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[uint32]uint32)
+			r0 = ret.Get(0).(map[string]uint32)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
@@ -18260,12 +18260,12 @@ func (_c *MockStore_MovieTMDBIndex_Call) Run(run func(ctx context.Context)) *Moc
 	return _c
 }
 
-func (_c *MockStore_MovieTMDBIndex_Call) Return(uint32ToUint32 map[uint32]uint32, err error) *MockStore_MovieTMDBIndex_Call {
-	_c.Call.Return(uint32ToUint32, err)
+func (_c *MockStore_MovieTMDBIndex_Call) Return(stringToUint32 map[string]uint32, err error) *MockStore_MovieTMDBIndex_Call {
+	_c.Call.Return(stringToUint32, err)
 	return _c
 }
 
-func (_c *MockStore_MovieTMDBIndex_Call) RunAndReturn(run func(ctx context.Context) (map[uint32]uint32, error)) *MockStore_MovieTMDBIndex_Call {
+func (_c *MockStore_MovieTMDBIndex_Call) RunAndReturn(run func(ctx context.Context) (map[string]uint32, error)) *MockStore_MovieTMDBIndex_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -23584,7 +23584,7 @@ func (_c *MockStore_SetMovieLastSearchAt_Call) RunAndReturn(run func(ctx context
 }
 
 // SetMovieTMDBID provides a mock function for the type MockStore
-func (_mock *MockStore) SetMovieTMDBID(ctx context.Context, id uint32, tmdbID uint32) error {
+func (_mock *MockStore) SetMovieTMDBID(ctx context.Context, id uint32, tmdbID string) error {
 	ret := _mock.Called(ctx, id, tmdbID)
 
 	if len(ret) == 0 {
@@ -23592,7 +23592,7 @@ func (_mock *MockStore) SetMovieTMDBID(ctx context.Context, id uint32, tmdbID ui
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
 		r0 = returnFunc(ctx, id, tmdbID)
 	} else {
 		r0 = ret.Error(0)
@@ -23608,12 +23608,12 @@ type MockStore_SetMovieTMDBID_Call struct {
 // SetMovieTMDBID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-//   - tmdbID uint32
+//   - tmdbID string
 func (_e *MockStore_Expecter) SetMovieTMDBID(ctx any, id any, tmdbID any) *MockStore_SetMovieTMDBID_Call {
 	return &MockStore_SetMovieTMDBID_Call{Call: _e.mock.On("SetMovieTMDBID", ctx, id, tmdbID)}
 }
 
-func (_c *MockStore_SetMovieTMDBID_Call) Run(run func(ctx context.Context, id uint32, tmdbID uint32)) *MockStore_SetMovieTMDBID_Call {
+func (_c *MockStore_SetMovieTMDBID_Call) Run(run func(ctx context.Context, id uint32, tmdbID string)) *MockStore_SetMovieTMDBID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -23623,9 +23623,9 @@ func (_c *MockStore_SetMovieTMDBID_Call) Run(run func(ctx context.Context, id ui
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		var arg2 uint32
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uint32)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -23641,7 +23641,7 @@ func (_c *MockStore_SetMovieTMDBID_Call) Return(err error) *MockStore_SetMovieTM
 	return _c
 }
 
-func (_c *MockStore_SetMovieTMDBID_Call) RunAndReturn(run func(ctx context.Context, id uint32, tmdbID uint32) error) *MockStore_SetMovieTMDBID_Call {
+func (_c *MockStore_SetMovieTMDBID_Call) RunAndReturn(run func(ctx context.Context, id uint32, tmdbID string) error) *MockStore_SetMovieTMDBID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -24046,7 +24046,7 @@ func (_c *MockStore_SetTVShowRefreshedAt_Call) RunAndReturn(run func(ctx context
 }
 
 // SetTVShowTVDBID provides a mock function for the type MockStore
-func (_mock *MockStore) SetTVShowTVDBID(ctx context.Context, id uint32, tvdbID uint32) error {
+func (_mock *MockStore) SetTVShowTVDBID(ctx context.Context, id uint32, tvdbID string) error {
 	ret := _mock.Called(ctx, id, tvdbID)
 
 	if len(ret) == 0 {
@@ -24054,7 +24054,7 @@ func (_mock *MockStore) SetTVShowTVDBID(ctx context.Context, id uint32, tvdbID u
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
 		r0 = returnFunc(ctx, id, tvdbID)
 	} else {
 		r0 = ret.Error(0)
@@ -24070,12 +24070,12 @@ type MockStore_SetTVShowTVDBID_Call struct {
 // SetTVShowTVDBID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-//   - tvdbID uint32
+//   - tvdbID string
 func (_e *MockStore_Expecter) SetTVShowTVDBID(ctx any, id any, tvdbID any) *MockStore_SetTVShowTVDBID_Call {
 	return &MockStore_SetTVShowTVDBID_Call{Call: _e.mock.On("SetTVShowTVDBID", ctx, id, tvdbID)}
 }
 
-func (_c *MockStore_SetTVShowTVDBID_Call) Run(run func(ctx context.Context, id uint32, tvdbID uint32)) *MockStore_SetTVShowTVDBID_Call {
+func (_c *MockStore_SetTVShowTVDBID_Call) Run(run func(ctx context.Context, id uint32, tvdbID string)) *MockStore_SetTVShowTVDBID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -24085,9 +24085,9 @@ func (_c *MockStore_SetTVShowTVDBID_Call) Run(run func(ctx context.Context, id u
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		var arg2 uint32
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uint32)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -24103,7 +24103,7 @@ func (_c *MockStore_SetTVShowTVDBID_Call) Return(err error) *MockStore_SetTVShow
 	return _c
 }
 
-func (_c *MockStore_SetTVShowTVDBID_Call) RunAndReturn(run func(ctx context.Context, id uint32, tvdbID uint32) error) *MockStore_SetTVShowTVDBID_Call {
+func (_c *MockStore_SetTVShowTVDBID_Call) RunAndReturn(run func(ctx context.Context, id uint32, tvdbID string) error) *MockStore_SetTVShowTVDBID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -25028,23 +25028,23 @@ func (_c *MockStore_TVShowSelection_Call) RunAndReturn(run func(ctx context.Cont
 }
 
 // TVShowTVDBIndex provides a mock function for the type MockStore
-func (_mock *MockStore) TVShowTVDBIndex(ctx context.Context) (map[uint32]uint32, error) {
+func (_mock *MockStore) TVShowTVDBIndex(ctx context.Context) (map[string]uint32, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for TVShowTVDBIndex")
 	}
 
-	var r0 map[uint32]uint32
+	var r0 map[string]uint32
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (map[uint32]uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (map[string]uint32, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) map[uint32]uint32); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context) map[string]uint32); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[uint32]uint32)
+			r0 = ret.Get(0).(map[string]uint32)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
@@ -25079,12 +25079,12 @@ func (_c *MockStore_TVShowTVDBIndex_Call) Run(run func(ctx context.Context)) *Mo
 	return _c
 }
 
-func (_c *MockStore_TVShowTVDBIndex_Call) Return(uint32ToUint32 map[uint32]uint32, err error) *MockStore_TVShowTVDBIndex_Call {
-	_c.Call.Return(uint32ToUint32, err)
+func (_c *MockStore_TVShowTVDBIndex_Call) Return(stringToUint32 map[string]uint32, err error) *MockStore_TVShowTVDBIndex_Call {
+	_c.Call.Return(stringToUint32, err)
 	return _c
 }
 
-func (_c *MockStore_TVShowTVDBIndex_Call) RunAndReturn(run func(ctx context.Context) (map[uint32]uint32, error)) *MockStore_TVShowTVDBIndex_Call {
+func (_c *MockStore_TVShowTVDBIndex_Call) RunAndReturn(run func(ctx context.Context) (map[string]uint32, error)) *MockStore_TVShowTVDBIndex_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -25684,7 +25684,7 @@ func (_c *MockStore_UpdateImportScanAlbumOutcome_Call) RunAndReturn(run func(ctx
 }
 
 // UpdateImportScanBookDecision provides a mock function for the type MockStore
-func (_mock *MockStore) UpdateImportScanBookDecision(ctx context.Context, scanID uint32, bookID uint32, decision importscanbook.Decision, hardcoverID *uint32) error {
+func (_mock *MockStore) UpdateImportScanBookDecision(ctx context.Context, scanID uint32, bookID uint32, decision importscanbook.Decision, hardcoverID *string) error {
 	ret := _mock.Called(ctx, scanID, bookID, decision, hardcoverID)
 
 	if len(ret) == 0 {
@@ -25692,7 +25692,7 @@ func (_mock *MockStore) UpdateImportScanBookDecision(ctx context.Context, scanID
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanbook.Decision, *uint32) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanbook.Decision, *string) error); ok {
 		r0 = returnFunc(ctx, scanID, bookID, decision, hardcoverID)
 	} else {
 		r0 = ret.Error(0)
@@ -25710,12 +25710,12 @@ type MockStore_UpdateImportScanBookDecision_Call struct {
 //   - scanID uint32
 //   - bookID uint32
 //   - decision importscanbook.Decision
-//   - hardcoverID *uint32
+//   - hardcoverID *string
 func (_e *MockStore_Expecter) UpdateImportScanBookDecision(ctx any, scanID any, bookID any, decision any, hardcoverID any) *MockStore_UpdateImportScanBookDecision_Call {
 	return &MockStore_UpdateImportScanBookDecision_Call{Call: _e.mock.On("UpdateImportScanBookDecision", ctx, scanID, bookID, decision, hardcoverID)}
 }
 
-func (_c *MockStore_UpdateImportScanBookDecision_Call) Run(run func(ctx context.Context, scanID uint32, bookID uint32, decision importscanbook.Decision, hardcoverID *uint32)) *MockStore_UpdateImportScanBookDecision_Call {
+func (_c *MockStore_UpdateImportScanBookDecision_Call) Run(run func(ctx context.Context, scanID uint32, bookID uint32, decision importscanbook.Decision, hardcoverID *string)) *MockStore_UpdateImportScanBookDecision_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -25733,9 +25733,9 @@ func (_c *MockStore_UpdateImportScanBookDecision_Call) Run(run func(ctx context.
 		if args[3] != nil {
 			arg3 = args[3].(importscanbook.Decision)
 		}
-		var arg4 *uint32
+		var arg4 *string
 		if args[4] != nil {
-			arg4 = args[4].(*uint32)
+			arg4 = args[4].(*string)
 		}
 		run(
 			arg0,
@@ -25753,7 +25753,7 @@ func (_c *MockStore_UpdateImportScanBookDecision_Call) Return(err error) *MockSt
 	return _c
 }
 
-func (_c *MockStore_UpdateImportScanBookDecision_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, bookID uint32, decision importscanbook.Decision, hardcoverID *uint32) error) *MockStore_UpdateImportScanBookDecision_Call {
+func (_c *MockStore_UpdateImportScanBookDecision_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, bookID uint32, decision importscanbook.Decision, hardcoverID *string) error) *MockStore_UpdateImportScanBookDecision_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -25828,7 +25828,7 @@ func (_c *MockStore_UpdateImportScanBookOutcome_Call) RunAndReturn(run func(ctx 
 }
 
 // UpdateImportScanFileDecision provides a mock function for the type MockStore
-func (_mock *MockStore) UpdateImportScanFileDecision(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *uint32) error {
+func (_mock *MockStore) UpdateImportScanFileDecision(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *string) error {
 	ret := _mock.Called(ctx, scanID, fileID, decision, tmdbID)
 
 	if len(ret) == 0 {
@@ -25836,7 +25836,7 @@ func (_mock *MockStore) UpdateImportScanFileDecision(ctx context.Context, scanID
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanfile.Decision, *uint32) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanfile.Decision, *string) error); ok {
 		r0 = returnFunc(ctx, scanID, fileID, decision, tmdbID)
 	} else {
 		r0 = ret.Error(0)
@@ -25854,12 +25854,12 @@ type MockStore_UpdateImportScanFileDecision_Call struct {
 //   - scanID uint32
 //   - fileID uint32
 //   - decision importscanfile.Decision
-//   - tmdbID *uint32
+//   - tmdbID *string
 func (_e *MockStore_Expecter) UpdateImportScanFileDecision(ctx any, scanID any, fileID any, decision any, tmdbID any) *MockStore_UpdateImportScanFileDecision_Call {
 	return &MockStore_UpdateImportScanFileDecision_Call{Call: _e.mock.On("UpdateImportScanFileDecision", ctx, scanID, fileID, decision, tmdbID)}
 }
 
-func (_c *MockStore_UpdateImportScanFileDecision_Call) Run(run func(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *uint32)) *MockStore_UpdateImportScanFileDecision_Call {
+func (_c *MockStore_UpdateImportScanFileDecision_Call) Run(run func(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *string)) *MockStore_UpdateImportScanFileDecision_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -25877,9 +25877,9 @@ func (_c *MockStore_UpdateImportScanFileDecision_Call) Run(run func(ctx context.
 		if args[3] != nil {
 			arg3 = args[3].(importscanfile.Decision)
 		}
-		var arg4 *uint32
+		var arg4 *string
 		if args[4] != nil {
-			arg4 = args[4].(*uint32)
+			arg4 = args[4].(*string)
 		}
 		run(
 			arg0,
@@ -25897,7 +25897,7 @@ func (_c *MockStore_UpdateImportScanFileDecision_Call) Return(err error) *MockSt
 	return _c
 }
 
-func (_c *MockStore_UpdateImportScanFileDecision_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *uint32) error) *MockStore_UpdateImportScanFileDecision_Call {
+func (_c *MockStore_UpdateImportScanFileDecision_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *string) error) *MockStore_UpdateImportScanFileDecision_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -25972,7 +25972,7 @@ func (_c *MockStore_UpdateImportScanFileOutcome_Call) RunAndReturn(run func(ctx 
 }
 
 // UpdateImportScanShowDecision provides a mock function for the type MockStore
-func (_mock *MockStore) UpdateImportScanShowDecision(ctx context.Context, scanID uint32, showID uint32, decision importscanshow.Decision, tvdbID *uint32) error {
+func (_mock *MockStore) UpdateImportScanShowDecision(ctx context.Context, scanID uint32, showID uint32, decision importscanshow.Decision, tvdbID *string) error {
 	ret := _mock.Called(ctx, scanID, showID, decision, tvdbID)
 
 	if len(ret) == 0 {
@@ -25980,7 +25980,7 @@ func (_mock *MockStore) UpdateImportScanShowDecision(ctx context.Context, scanID
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanshow.Decision, *uint32) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanshow.Decision, *string) error); ok {
 		r0 = returnFunc(ctx, scanID, showID, decision, tvdbID)
 	} else {
 		r0 = ret.Error(0)
@@ -25998,12 +25998,12 @@ type MockStore_UpdateImportScanShowDecision_Call struct {
 //   - scanID uint32
 //   - showID uint32
 //   - decision importscanshow.Decision
-//   - tvdbID *uint32
+//   - tvdbID *string
 func (_e *MockStore_Expecter) UpdateImportScanShowDecision(ctx any, scanID any, showID any, decision any, tvdbID any) *MockStore_UpdateImportScanShowDecision_Call {
 	return &MockStore_UpdateImportScanShowDecision_Call{Call: _e.mock.On("UpdateImportScanShowDecision", ctx, scanID, showID, decision, tvdbID)}
 }
 
-func (_c *MockStore_UpdateImportScanShowDecision_Call) Run(run func(ctx context.Context, scanID uint32, showID uint32, decision importscanshow.Decision, tvdbID *uint32)) *MockStore_UpdateImportScanShowDecision_Call {
+func (_c *MockStore_UpdateImportScanShowDecision_Call) Run(run func(ctx context.Context, scanID uint32, showID uint32, decision importscanshow.Decision, tvdbID *string)) *MockStore_UpdateImportScanShowDecision_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -26021,9 +26021,9 @@ func (_c *MockStore_UpdateImportScanShowDecision_Call) Run(run func(ctx context.
 		if args[3] != nil {
 			arg3 = args[3].(importscanshow.Decision)
 		}
-		var arg4 *uint32
+		var arg4 *string
 		if args[4] != nil {
-			arg4 = args[4].(*uint32)
+			arg4 = args[4].(*string)
 		}
 		run(
 			arg0,
@@ -26041,7 +26041,7 @@ func (_c *MockStore_UpdateImportScanShowDecision_Call) Return(err error) *MockSt
 	return _c
 }
 
-func (_c *MockStore_UpdateImportScanShowDecision_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, showID uint32, decision importscanshow.Decision, tvdbID *uint32) error) *MockStore_UpdateImportScanShowDecision_Call {
+func (_c *MockStore_UpdateImportScanShowDecision_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, showID uint32, decision importscanshow.Decision, tvdbID *string) error) *MockStore_UpdateImportScanShowDecision_Call {
 	_c.Call.Return(run)
 	return _c
 }

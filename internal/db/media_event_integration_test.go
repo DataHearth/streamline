@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -30,7 +32,9 @@ var _ = Describe("Store.RecentActivity", Label("integration", "db"), func() {
 	createMovie := func(title string, tmdbID uint32) uint32 {
 		GinkgoHelper()
 		m := client.Movie.Create().
-			SetTitle(title).SetOriginalTitle(title).SetYear(2024).SetTmdbID(tmdbID).
+			SetTitle(title).
+			SetOriginalTitle(title).
+			SetYear(2024).SetTmdbID(providerid.Format(tmdbID)).
 			SaveX(ctx)
 		return m.ID
 	}
@@ -128,12 +132,12 @@ var _ = Describe("Store.RecentActivity", Label("integration", "db"), func() {
 
 	It("matches a book, and a series with its volumes", func() {
 		series := client.BookSeries.Create().
-			SetHardcoverID(9).SetTitle("Astérix").SaveX(ctx)
+			SetHardcoverID("9").SetTitle("Astérix").SaveX(ctx)
 		vol := client.Book.Create().
-			SetHardcoverID(1).SetTitle("Astérix le Gaulois").
+			SetHardcoverID("1").SetTitle("Astérix le Gaulois").
 			SetSeries(series).SaveX(ctx)
 		alone := client.Book.Create().
-			SetHardcoverID(2).SetTitle("Exhalation").SaveX(ctx)
+			SetHardcoverID("2").SetTitle("Exhalation").SaveX(ctx)
 		client.MediaEvent.Create().SetType("added").SetBookSeries(series).SaveX(ctx)
 		client.MediaEvent.Create().SetType("imported").SetBook(vol).SaveX(ctx)
 		client.MediaEvent.Create().SetType("imported").SetBook(alone).SaveX(ctx)

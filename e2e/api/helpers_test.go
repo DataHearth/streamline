@@ -149,7 +149,7 @@ func libraryMovieID(tmdbID uint32) uint32 {
 	var page struct {
 		Items []struct {
 			Id     uint32 `json:"id"`
-			TmdbId uint32 `json:"tmdb_id"`
+			TmdbId string `json:"tmdb_id"`
 		} `json:"items"`
 		Total uint32 `json:"total"`
 	}
@@ -157,7 +157,7 @@ func libraryMovieID(tmdbID uint32) uint32 {
 	// A miss must mean "not in the library", never "on a later page".
 	Expect(page.Total).To(BeNumerically("<=", 100))
 	for _, m := range page.Items {
-		if m.TmdbId == tmdbID {
+		if m.TmdbId == strconv.FormatUint(uint64(tmdbID), 10) {
 			return m.Id
 		}
 	}
@@ -169,7 +169,7 @@ func libraryMovieID(tmdbID uint32) uint32 {
 func createLibraryMovie() uint32 {
 	GinkgoHelper()
 	resp := post("/api/v1/movies", adminAuth, map[string]any{
-		"tmdb_id": fakes.MovieTMDBID,
+		"tmdb_id": strconv.Itoa(fakes.MovieTMDBID),
 	})
 	defer resp.Body.Close()
 	Expect(resp.StatusCode).To(Equal(http.StatusCreated))

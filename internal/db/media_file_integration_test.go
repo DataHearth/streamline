@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -42,8 +44,12 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		GinkgoHelper()
 		tmdbSeq++
 		m, err := store.CreateMovie(ctx, CreateMovieParams{
-			Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: tmdbSeq,
-			Status: entmovie.StatusWanted, QualityProfile: "HD",
+			Title:          "Dune",
+			OriginalTitle:  "Dune",
+			Year:           2021,
+			TmdbID:         providerid.Format(tmdbSeq),
+			Status:         entmovie.StatusWanted,
+			QualityProfile: "HD",
 		})
 		Expect(err).NotTo(HaveOccurred())
 		mf, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
@@ -56,7 +62,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 	Describe("CreateMediaFile", func() {
 		It("persists the file linked to a movie", func() {
 			m, err := store.CreateMovie(ctx, CreateMovieParams{
-				Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: 999,
+				Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: "999",
 				Status: entmovie.StatusWanted, QualityProfile: "HD",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -88,8 +94,12 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		It("persists probe info and stamps probed_at when given", func() {
 			tmdbSeq++
 			m, err := store.CreateMovie(ctx, CreateMovieParams{
-				Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: tmdbSeq,
-				Status: entmovie.StatusWanted, QualityProfile: "HD",
+				Title:          "Dune",
+				OriginalTitle:  "Dune",
+				Year:           2021,
+				TmdbID:         providerid.Format(tmdbSeq),
+				Status:         entmovie.StatusWanted,
+				QualityProfile: "HD",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -115,7 +125,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 
 		It("queues a transcode job when QueueTranscode is true", func() {
 			m, err := store.CreateMovie(ctx, CreateMovieParams{
-				Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: 998,
+				Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: "998",
 				Status: entmovie.StatusWanted, QualityProfile: "HD",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -169,7 +179,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 			"leaves the other roots' files in the walk when a book root is skipped",
 			func() {
 				movieFile := createMovieFile()
-				bk := client.Book.Create().SetHardcoverID(2).SetTitle("Elantris").
+				bk := client.Book.Create().SetHardcoverID("2").SetTitle("Elantris").
 					SetAuthorName("Sanderson").SaveX(ctx)
 				client.MediaFile.Create().SetPath("/b/a.epub").SetSize(1).
 					SetBookID(bk.ID).SetBookKind(mediafile.BookKindEbook).ExecX(ctx)
@@ -263,7 +273,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 
 		It("is true for another file of the episode", func() {
 			show := client.TVShow.Create().
-				SetTitle("The Bear").SetYear(2022).SetTvdbID(1).SaveX(ctx)
+				SetTitle("The Bear").SetYear(2022).SetTvdbID("1").SaveX(ctx)
 			season := client.Season.Create().SetNumber(1).SetTvShow(show).SaveX(ctx)
 			ep := client.Episode.Create().
 				SetNumber(1).SetTitle("System").SetSeason(season).SaveX(ctx)
@@ -298,7 +308,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		})
 
 		It("counts the same book slot only", func() {
-			bk := client.Book.Create().SetHardcoverID(2).SetTitle("Elantris").
+			bk := client.Book.Create().SetHardcoverID("2").SetTitle("Elantris").
 				SetAuthorName("Sanderson").SaveX(ctx)
 			mf := client.MediaFile.Create().SetPath("/b/a.epub").SetSize(1).
 				SetBookID(bk.ID).SetBookKind(mediafile.BookKindEbook).SaveX(ctx)
@@ -379,7 +389,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		It("unmonitors and pins an episode, out of the missing search", func() {
 			aired := time.Now().Add(-time.Hour)
 			show := client.TVShow.Create().
-				SetTitle("The Bear").SetYear(2022).SetTvdbID(1).SaveX(ctx)
+				SetTitle("The Bear").SetYear(2022).SetTvdbID("1").SaveX(ctx)
 			season := client.Season.Create().SetNumber(1).SetTvShow(show).SaveX(ctx)
 			ep := client.Episode.Create().
 				SetNumber(1).SetTitle("System").SetSeason(season).SetAirDate(aired).
@@ -449,7 +459,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 			)
 
 			BeforeEach(func() {
-				bk = client.Book.Create().SetHardcoverID(2).SetTitle("Elantris").
+				bk = client.Book.Create().SetHardcoverID("2").SetTitle("Elantris").
 					SetAuthorName("Sanderson").SetLastRefreshedAt(time.Now()).
 					SetEbookMonitored(true).
 					SetEbookStatus(book.EbookStatusAvailable).
@@ -545,7 +555,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 			"lists an ebook replaced within its slot, not a chapter of an audiobook",
 			func() {
 				b := client.Book.Create().
-					SetHardcoverID(1).SetTitle("Elantris").SaveX(ctx)
+					SetHardcoverID("1").SetTitle("Elantris").SaveX(ctx)
 				file := func(path string, kind mediafile.BookKind) *ent.MediaFile {
 					return client.MediaFile.Create().SetPath(path).SetSize(1).
 						SetBookID(b.ID).SetBookKind(kind).SaveX(ctx)
@@ -777,7 +787,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 	Describe("ListAllMediaFilesWithOwners", func() {
 		It("eager-loads both the movie and the episode edge", func() {
 			m, err := store.CreateMovie(ctx, CreateMovieParams{
-				Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: 999,
+				Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: "999",
 				Status: entmovie.StatusWanted, QualityProfile: "HD",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -788,7 +798,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 
 			ad := time.Now()
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "The Bear", Year: 2022, TvdbID: 7777,
+				Title: "The Bear", Year: 2022, TvdbID: "7777",
 				Seasons: []SeasonSeed{
 					{
 						Number: 1,
@@ -843,7 +853,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 	DescribeTable("a removed file leaves an episode on its way in alone",
 		func(st episode.Status) {
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "The Bear", Year: 2022, TvdbID: 7777,
+				Title: "The Bear", Year: 2022, TvdbID: "7777",
 				Seasons: []SeasonSeed{{Number: 1, Episodes: []EpisodeSeed{
 					{Number: 1, Title: "System"},
 				}}},
@@ -869,7 +879,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		It("deletes the media_file row and reverts the episode to wanted", func() {
 			ad := time.Now()
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-				Title: "The Bear", Year: 2022, TvdbID: 7777,
+				Title: "The Bear", Year: 2022, TvdbID: "7777",
 				Seasons: []SeasonSeed{
 					{
 						Number: 1,

@@ -251,11 +251,11 @@ type Store interface {
 	// series and contributors.
 	FindBookByID(ctx context.Context, id uint32) (*ent.Book, error)
 	// FindBookByHardcoverID returns nil, nil when no book has the id.
-	FindBookByHardcoverID(ctx context.Context, hardcoverID uint32) (*ent.Book, error)
+	FindBookByHardcoverID(ctx context.Context, hardcoverID string) (*ent.Book, error)
 	FindBooksByHardcoverIDs(
 		ctx context.Context,
-		ids []uint32,
-	) (map[uint32]*ent.Book, error)
+		ids []string,
+	) (map[string]*ent.Book, error)
 	// ApplyBookMetadata writes provider data onto a book and re-derives its
 	// titles and any slot still without an edition; user state is untouched.
 	ApplyBookMetadata(ctx context.Context, id uint32, m BookMetadata) error
@@ -321,7 +321,7 @@ type Store interface {
 	// FindSeriesByHardcoverID returns nil, nil when no series has the id.
 	FindSeriesByHardcoverID(
 		ctx context.Context,
-		hardcoverID uint32,
+		hardcoverID string,
 	) (*ent.BookSeries, error)
 	ListStaleSeries(
 		ctx context.Context,
@@ -332,8 +332,8 @@ type Store interface {
 	// by Hardcover id, each with its first volume.
 	FindSeriesByHardcoverIDs(
 		ctx context.Context,
-		ids []uint32,
-	) (map[uint32]HeldSeries, error)
+		ids []string,
+	) (map[string]HeldSeries, error)
 	// FirstVolumeID is the lowest-position volume of a series, 0 when it has
 	// none.
 	FirstVolumeID(ctx context.Context, seriesID uint32) (uint32, error)
@@ -557,8 +557,8 @@ type Store interface {
 	// movies
 	CreateMovie(ctx context.Context, p CreateMovieParams) (*ent.Movie, error)
 	FindMovieByID(ctx context.Context, id uint32) (*ent.Movie, error)
-	FindMovieByTMDBID(ctx context.Context, tmdbID uint32) (*ent.Movie, error)
-	FindMoviesByTMDBIDs(ctx context.Context, tmdbIDs []uint32) ([]*ent.Movie, error)
+	FindMovieByTMDBID(ctx context.Context, tmdbID string) (*ent.Movie, error)
+	FindMoviesByTMDBIDs(ctx context.Context, tmdbIDs []string) ([]*ent.Movie, error)
 	CountMovies(ctx context.Context) (int, error)
 	CountMoviesByStatus(ctx context.Context, status movie.Status) (int, error)
 	// MovieFacetCounts tallies the status and monitoring facets of the movie
@@ -567,7 +567,7 @@ type Store interface {
 		ctx context.Context,
 		p FilterMoviesParams,
 	) (MovieFacets, error)
-	MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error)
+	MovieTMDBIndex(ctx context.Context) (map[string]uint32, error)
 	MovieFileSummaries(
 		ctx context.Context,
 		movieIDs []uint32,
@@ -623,7 +623,7 @@ type Store interface {
 	UpdateMovieStatus(ctx context.Context, id uint32, status movie.Status) error
 	// SetMovieTMDBID repoints a row at a different TMDB title, leaving files
 	// and history in place. The caller refreshes metadata afterwards.
-	SetMovieTMDBID(ctx context.Context, id, tmdbID uint32) error
+	SetMovieTMDBID(ctx context.Context, id uint32, tmdbID string) error
 	SetMovieLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	SetMovieDigitalReleaseDate(
 		ctx context.Context,
@@ -932,7 +932,7 @@ type Store interface {
 	// MovieHasMediaFile reports whether the movie identified by tmdbID has at
 	// least one MediaFile row whose file is not missing. Returns (false, nil)
 	// when the movie row itself is absent.
-	MovieHasMediaFile(ctx context.Context, tmdbID uint32) (bool, error)
+	MovieHasMediaFile(ctx context.Context, tmdbID string) (bool, error)
 	// ListAllMediaFilesWithOwners returns every MediaFile row with its owning
 	// movie and episode eagerly loaded. Used by drift_check, which needs to
 	// tell movie-owned, episode-owned and orphaned rows apart.
@@ -1151,7 +1151,7 @@ type Store interface {
 		ctx context.Context,
 		scanID, fileID uint32,
 		decision importscanfile.Decision,
-		tmdbID *uint32,
+		tmdbID *string,
 	) error
 	// BulkUpdateImportScanFileDecisions applies one decision across a scan,
 	// narrowed by classification and/or an explicit id list, returning the
@@ -1185,7 +1185,7 @@ type Store interface {
 		scanID uint32,
 		books []CreateImportScanBookParams,
 	) error
-	BookHardcoverIndex(ctx context.Context, kind string) (map[uint32]uint32, error)
+	BookHardcoverIndex(ctx context.Context, kind string) (map[string]uint32, error)
 	ListImportScanBooksForCommit(
 		ctx context.Context,
 		scanID uint32,
@@ -1211,7 +1211,7 @@ type Store interface {
 		ctx context.Context,
 		scanID, bookID uint32,
 		decision importscanbook.Decision,
-		hardcoverID *uint32,
+		hardcoverID *string,
 	) error
 	UpdateImportScanBookOutcome(
 		ctx context.Context,
@@ -1245,7 +1245,7 @@ type Store interface {
 		ctx context.Context,
 		scanID, showID uint32,
 		decision importscanshow.Decision,
-		tvdbID *uint32,
+		tvdbID *string,
 	) error
 	// BulkUpdateImportScanShowDecisions is the per-show counterpart of
 	// BulkUpdateImportScanFileDecisions.
@@ -1330,7 +1330,7 @@ type Store interface {
 	// tv shows / seasons / episodes
 	CreateTVShow(ctx context.Context, p CreateTVShowParams) (*ent.TVShow, error)
 	FindTVShowByID(ctx context.Context, id uint32) (*ent.TVShow, error)
-	FindTVShowByTVDBID(ctx context.Context, tvdbID uint32) (*ent.TVShow, error)
+	FindTVShowByTVDBID(ctx context.Context, tvdbID string) (*ent.TVShow, error)
 	// TVShowForEpisode returns the show owning episodeID, with every season
 	// and its episodes eager-loaded — the tree a selective-download keep-set
 	// resolution matches a torrent's file names back to episode rows against.
@@ -1365,7 +1365,7 @@ type Store interface {
 	) ([]*ent.TVShow, map[uint32]EpisodeCounts, uint32, error)
 	// SetTVShowTVDBID repoints a row at a different TVDB show. The episode tree
 	// still describes the old show until the caller reconciles it.
-	SetTVShowTVDBID(ctx context.Context, id, tvdbID uint32) error
+	SetTVShowTVDBID(ctx context.Context, id uint32, tvdbID string) error
 	// DetachEpisodeMediaFiles clears the episode edge on every media file under
 	// the show and returns the detached rows, each carrying its former episode
 	// and season so the caller can re-match by number.
@@ -1384,7 +1384,7 @@ type Store interface {
 	) ([]string, error)
 	DeleteTVShow(ctx context.Context, id uint32) error
 	SetSeasonMonitored(ctx context.Context, id uint32, monitored bool) error
-	TVShowTVDBIndex(ctx context.Context) (map[uint32]uint32, error)
+	TVShowTVDBIndex(ctx context.Context) (map[string]uint32, error)
 	ListMediaFilesForDrift(
 		ctx context.Context,
 		afterID uint32,
@@ -1530,7 +1530,7 @@ type Store interface {
 	FindActiveRequest(
 		ctx context.Context,
 		mediaType string,
-		mediaID uint32,
+		mediaID string,
 	) (*ent.Request, error)
 	FindActiveRequestByMBID(
 		ctx context.Context,
@@ -1557,7 +1557,7 @@ type Store interface {
 	MarkRequestsAvailable(
 		ctx context.Context,
 		mediaType string,
-		mediaID uint32,
+		mediaID string,
 	) error
 	// CountRequestsByStatus counts every requester's rows when requesterID is 0.
 	CountRequestsByStatus(

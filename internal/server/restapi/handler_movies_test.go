@@ -38,14 +38,14 @@ var _ = Describe(
 		DescribeTable(
 			"AddMovie maps the service error",
 			func(err error, status int) {
-				app.movies.EXPECT().Add(mock.Anything, uint32(550), "").
+				app.movies.EXPECT().Add(mock.Anything, "550", "").
 					Return(nil, "", err).Once()
 
 				req := app.req(
 					http.MethodPost,
 					"/api/v1/movies",
 					app.adminKey,
-					strings.NewReader(`{"tmdb_id":550}`),
+					strings.NewReader(`{"tmdb_id":"550"}`),
 				)
 				req.Header.Set("Content-Type", "application/json")
 				resp := app.do(req)
@@ -130,14 +130,14 @@ var _ = Describe(
 							ID:     1,
 							Title:  "Movie A",
 							Year:   2020,
-							TmdbID: 100,
+							TmdbID: "100",
 							Status: movie.StatusWanted,
 						},
 						{
 							ID:     2,
 							Title:  "Movie B",
 							Year:   2021,
-							TmdbID: 101,
+							TmdbID: "101",
 							Status: movie.StatusWanted,
 						},
 					}, nil, uint32(2), nil).
@@ -165,7 +165,7 @@ var _ = Describe(
 							ID:             3,
 							Title:          "Broken Import",
 							Year:           2019,
-							TmdbID:         102,
+							TmdbID:         "102",
 							Status:         movie.StatusFailed,
 							QualityProfile: "uhd",
 						},
@@ -192,7 +192,7 @@ var _ = Describe(
 					FilterList(mock.Anything, mock.MatchedBy(func(p moviesvc.FilterParams) bool {
 						return p.NoTotal
 					})).
-					Return([]*ent.Movie{{ID: 1, Title: "Movie A", TmdbID: 100}}, nil, uint32(0), nil).
+					Return([]*ent.Movie{{ID: 1, Title: "Movie A", TmdbID: "100"}}, nil, uint32(0), nil).
 					Once()
 
 				resp, err := http.Get(
@@ -384,12 +384,12 @@ var _ = Describe(
 						ID:     5,
 						Title:  "Fight Club",
 						Year:   1999,
-						TmdbID: 550,
+						TmdbID: "550",
 						Status: movie.StatusWanted,
 					}, nil).
 					Once()
 				app.indexers.EXPECT().
-					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, "550").
 					Return([]indexer.SearchResult{
 						{
 							Title:    "Fight.Club.1999.1080p.BluRay.x264",
@@ -436,10 +436,10 @@ var _ = Describe(
 				grabbed := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
 				app.movies.EXPECT().
 					Get(mock.Anything, uint32(5)).
-					Return(&ent.Movie{ID: 5, Title: "Fight Club", TmdbID: 550}, nil).
+					Return(&ent.Movie{ID: 5, Title: "Fight Club", TmdbID: "550"}, nil).
 					Once()
 				app.indexers.EXPECT().
-					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, "550").
 					Return([]indexer.SearchResult{{
 						Title:             "Fight.Club.1999.1080p.BluRay.x264",
 						Download:          "magnet:a",
@@ -501,13 +501,13 @@ var _ = Describe(
 						ID:             5,
 						Title:          "Fight Club",
 						Year:           1999,
-						TmdbID:         550,
+						TmdbID:         "550",
 						Status:         movie.StatusWanted,
 						QualityProfile: "default",
 					}, nil).
 					Once()
 				app.indexers.EXPECT().
-					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, "550").
 					Return([]indexer.SearchResult{
 						{
 							Title:    "Fight.Club.1999.1080p.WEB-DL.x264",
@@ -571,13 +571,13 @@ var _ = Describe(
 			It("flags results already in the library", func() {
 				results := []metadata.MovieResult{
 					{
-						TMDBID:        550,
+						TMDBID:        "550",
 						Title:         "Fight Club",
 						OriginalTitle: "Fight Club",
 						Year:          1999,
 					},
 					{
-						TMDBID:        807,
+						TMDBID:        "807",
 						Title:         "Se7en",
 						OriginalTitle: "Se7en",
 						Year:          1995,
@@ -601,21 +601,21 @@ var _ = Describe(
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 				var items []struct {
-					TmdbID       uint32 `json:"tmdb_id"`
+					TmdbID       string `json:"tmdb_id"`
 					AlreadyAdded bool   `json:"already_added"`
 				}
 				Expect(json.NewDecoder(resp.Body).Decode(&items)).To(Succeed())
 				Expect(items).To(HaveLen(2))
-				Expect(items[0].TmdbID).To(Equal(uint32(550)))
+				Expect(items[0].TmdbID).To(Equal("550"))
 				Expect(items[0].AlreadyAdded).To(BeTrue())
-				Expect(items[1].TmdbID).To(Equal(uint32(807)))
+				Expect(items[1].TmdbID).To(Equal("807"))
 				Expect(items[1].AlreadyAdded).To(BeFalse())
 			})
 
 			It("returns 500 when the library lookup fails", func() {
 				app.metadata.EXPECT().
 					SearchMovie(mock.Anything, "fincher", uint16(0)).
-					Return([]metadata.MovieResult{{TMDBID: 550, Title: "Fight Club"}}, nil).
+					Return([]metadata.MovieResult{{TMDBID: "550", Title: "Fight Club"}}, nil).
 					Once()
 				app.movies.EXPECT().
 					AnnotateTMDBResults(mock.Anything, mock.Anything).
@@ -638,7 +638,7 @@ var _ = Describe(
 						ID:     movieID,
 						Title:  "Some Movie",
 						Year:   2020,
-						TmdbID: 42,
+						TmdbID: "42",
 						Status: movie.StatusAvailable,
 					}, nil).
 					Once()
@@ -687,7 +687,7 @@ var _ = Describe(
 						ID:     movieID,
 						Title:  "Empty",
 						Year:   2021,
-						TmdbID: 43,
+						TmdbID: "43",
 						Status: movie.StatusWanted,
 					}, nil).
 					Once()
@@ -742,7 +742,7 @@ var _ = Describe(
 						ID:             movieID,
 						Title:          "Some Movie",
 						Year:           2020,
-						TmdbID:         44,
+						TmdbID:         "44",
 						Status:         movie.StatusAvailable,
 						QualityProfile: "default",
 					}, nil).
@@ -784,7 +784,7 @@ var _ = Describe(
 							ID:             movieID,
 							Title:          "Some Movie",
 							Year:           2020,
-							TmdbID:         44,
+							TmdbID:         "44",
 							Status:         movie.StatusAvailable,
 							QualityProfile: "default",
 							Edges: ent.MovieEdges{
@@ -834,7 +834,7 @@ var _ = Describe(
 						ID:     movieID,
 						Title:  "Rated",
 						Year:   2022,
-						TmdbID: 77,
+						TmdbID: "77",
 						Status: movie.StatusAvailable,
 						Rating: 8.2,
 						Genres: []string{"Thriller", "Mystery"},
@@ -848,7 +848,7 @@ var _ = Describe(
 					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
 					Return([]db.CastEntry{{
 						PersonID:  91,
-						TMDBID:    3001,
+						TMDBID:    "3001",
 						Name:      "Yara Osei",
 						Character: "The Broker",
 					}}, nil).
@@ -894,15 +894,15 @@ var _ = Describe(
 						ID:     movieID,
 						Title:  "Some Movie",
 						Year:   2020,
-						TmdbID: 99,
+						TmdbID: "99",
 						Status: movie.StatusAvailable,
 					}, nil).
 					Once()
 				app.metadata.EXPECT().
-					Recommendations(mock.Anything, uint32(99)).
+					Recommendations(mock.Anything, "99").
 					Return([]metadata.MovieResult{
 						{
-							TMDBID:     27205,
+							TMDBID:     "27205",
 							Title:      "Inception",
 							Year:       2010,
 							Overview:   "A thief.",
@@ -925,7 +925,7 @@ var _ = Describe(
 				Expect(ok).To(BeTrue())
 				Expect(items).To(HaveLen(1))
 				it := items[0].(map[string]any)
-				Expect(it["tmdb_id"]).To(BeEquivalentTo(27205))
+				Expect(it["tmdb_id"]).To(Equal("27205"))
 				Expect(it["title"]).To(Equal("Inception"))
 				Expect(it["poster_url"]).To(
 					Equal("https://image.tmdb.org/t/p/w342/inception.jpg"),
@@ -956,12 +956,12 @@ var _ = Describe(
 						ID:     movieID,
 						Title:  "X",
 						Year:   2020,
-						TmdbID: 12,
+						TmdbID: "12",
 						Status: movie.StatusWanted,
 					}, nil).
 					Once()
 				app.metadata.EXPECT().
-					Recommendations(mock.Anything, uint32(12)).
+					Recommendations(mock.Anything, "12").
 					Return(nil, errors.New("tmdb down")).
 					Once()
 
@@ -986,7 +986,7 @@ var _ = Describe(
 						ID:     movieID,
 						Title:  "Fight Club",
 						Year:   1999,
-						TmdbID: 550,
+						TmdbID: "550",
 						Status: movie.StatusAvailable,
 					}, nil).
 					Once()
@@ -1021,7 +1021,7 @@ var _ = Describe(
 						ID:     movieID,
 						Title:  "Broken Import",
 						Year:   2019,
-						TmdbID: 102,
+						TmdbID: "102",
 						Status: movie.StatusFailed,
 					}, nil).
 					Once()
@@ -1112,7 +1112,7 @@ var _ = Describe(
 						ID:     5,
 						Title:  "Fight Club",
 						Year:   1999,
-						TmdbID: 550,
+						TmdbID: "550",
 						Status: movie.StatusAvailable,
 					}, nil).
 					Once()

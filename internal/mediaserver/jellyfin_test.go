@@ -165,7 +165,7 @@ var _ = Describe("Jellyfin Client", Label("unit", "mediaserver"), func() {
 				defer ts.Close()
 
 				_, err := NewJellyfin(ts.URL, "tok").
-					MovieDeepLink(context.Background(), "", 123, "Title", 2024)
+					MovieDeepLink(context.Background(), "", "123", "Title", 2024)
 				Expect(err).To(MatchError(ErrMovieNotFound))
 			},
 		)
@@ -181,7 +181,7 @@ var _ = Describe("Jellyfin Client", Label("unit", "mediaserver"), func() {
 			defer ts.Close()
 
 			link, err := NewJellyfin(ts.URL, "tok").
-				MovieDeepLink(context.Background(), "", 123, "Title", 2024)
+				MovieDeepLink(context.Background(), "", "123", "Title", 2024)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(link).To(ContainSubstring("id=rightid"))
 		})
@@ -201,7 +201,7 @@ var _ = Describe("Jellyfin Client", Label("unit", "mediaserver"), func() {
 			defer ts.Close()
 
 			link, err := NewJellyfin(ts.URL, "tok").
-				MovieDeepLink(context.Background(), "", 0, "Title", 2024)
+				MovieDeepLink(context.Background(), "", "", "Title", 2024)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(link).To(ContainSubstring("id=titlehit"))
 		})

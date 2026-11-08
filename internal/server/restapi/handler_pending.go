@@ -88,13 +88,10 @@ func (s *Server) IdentifyPending(
 	}
 
 	kind := request.Body.Kind
-	var providerID uint32
-	if request.Body.ProviderId != nil {
-		providerID = *request.Body.ProviderId
-	}
+	providerID := deref(request.Body.ProviderId)
 	mbid := deref(request.Body.Mbid)
 	if kind == IdentifyPendingRequestKindAlbum && mbid == "" ||
-		kind != IdentifyPendingRequestKindAlbum && providerID == 0 {
+		kind != IdentifyPendingRequestKindAlbum && providerID == "" {
 		return IdentifyPending422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(
 				"an album takes mbid, every other kind provider_id",
@@ -233,7 +230,7 @@ func identifyMusicError(
 // identifyBook resolves a Hardcover id to a library book, adding it with only
 // the slot the release fills monitored.
 func (s *Server) identifyBook(
-	ctx context.Context, hardcoverID uint32, slot string,
+	ctx context.Context, hardcoverID string, slot string,
 ) (uint32, IdentifyPendingResponseObject) {
 	existing, err := s.store.FindBookByHardcoverID(ctx, hardcoverID)
 	if err != nil {
@@ -272,7 +269,7 @@ func (s *Server) identifyBook(
 // not have it — and returns the episode the record should anchor to and the
 // episodes its torrent covers. A non-nil response is the caller's return value.
 func (s *Server) identifySeries(
-	ctx context.Context, rec *ent.DownloadRecord, tvdbID uint32,
+	ctx context.Context, rec *ent.DownloadRecord, tvdbID string,
 ) (uint32, []uint32, IdentifyPendingResponseObject) {
 	// FindTVShowByTVDBID reports "not in the library" as a nil row with a nil
 	// error, so the row is what decides, not the error.
@@ -319,7 +316,7 @@ func (s *Server) identifySeries(
 }
 
 func (s *Server) identifyMovie(
-	ctx context.Context, tmdbID uint32,
+	ctx context.Context, tmdbID string,
 ) (uint32, IdentifyPendingResponseObject) {
 	// GetByTMDBID reports "not in the library" as a nil row with a nil error,
 	// like FindTVShowByTVDBID above — the row decides, not the error.

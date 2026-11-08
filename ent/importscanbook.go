@@ -41,7 +41,7 @@ type ImportScanBook struct {
 	// Classification holds the value of the "classification" field.
 	Classification importscanbook.Classification `json:"classification,omitempty"`
 	// BookHardcoverID holds the value of the "book_hardcover_id" field.
-	BookHardcoverID uint32 `json:"book_hardcover_id,omitempty"`
+	BookHardcoverID string `json:"book_hardcover_id,omitempty"`
 	// Candidates holds the value of the "candidates" field.
 	Candidates []schema.ScannedBookCandidate `json:"candidates,omitempty"`
 	// ExistingBookID holds the value of the "existing_book_id" field.
@@ -49,7 +49,7 @@ type ImportScanBook struct {
 	// Decision holds the value of the "decision" field.
 	Decision importscanbook.Decision `json:"decision,omitempty"`
 	// DecisionBookHardcoverID holds the value of the "decision_book_hardcover_id" field.
-	DecisionBookHardcoverID uint32 `json:"decision_book_hardcover_id,omitempty"`
+	DecisionBookHardcoverID string `json:"decision_book_hardcover_id,omitempty"`
 	// Outcome holds the value of the "outcome" field.
 	Outcome importscanbook.Outcome `json:"outcome,omitempty"`
 	// OutcomeMessage holds the value of the "outcome_message" field.
@@ -90,9 +90,9 @@ func (*ImportScanBook) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case importscanbook.FieldFilePaths, importscanbook.FieldCandidates:
 			values[i] = new([]byte)
-		case importscanbook.FieldID, importscanbook.FieldParsedYear, importscanbook.FieldSize, importscanbook.FieldBookHardcoverID, importscanbook.FieldExistingBookID, importscanbook.FieldDecisionBookHardcoverID, importscanbook.FieldCreatedBookID:
+		case importscanbook.FieldID, importscanbook.FieldParsedYear, importscanbook.FieldSize, importscanbook.FieldExistingBookID, importscanbook.FieldCreatedBookID:
 			values[i] = new(sql.NullInt64)
-		case importscanbook.FieldSlot, importscanbook.FieldParsedTitle, importscanbook.FieldParsedAuthor, importscanbook.FieldParsedIsbn, importscanbook.FieldClassification, importscanbook.FieldDecision, importscanbook.FieldOutcome, importscanbook.FieldOutcomeMessage:
+		case importscanbook.FieldSlot, importscanbook.FieldParsedTitle, importscanbook.FieldParsedAuthor, importscanbook.FieldParsedIsbn, importscanbook.FieldClassification, importscanbook.FieldBookHardcoverID, importscanbook.FieldDecision, importscanbook.FieldDecisionBookHardcoverID, importscanbook.FieldOutcome, importscanbook.FieldOutcomeMessage:
 			values[i] = new(sql.NullString)
 		case importscanbook.FieldCreateTime, importscanbook.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -182,10 +182,10 @@ func (_m *ImportScanBook) assignValues(columns []string, values []any) error {
 				_m.Classification = importscanbook.Classification(value.String)
 			}
 		case importscanbook.FieldBookHardcoverID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field book_hardcover_id", values[i])
 			} else if value.Valid {
-				_m.BookHardcoverID = uint32(value.Int64)
+				_m.BookHardcoverID = value.String
 			}
 		case importscanbook.FieldCandidates:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -209,10 +209,10 @@ func (_m *ImportScanBook) assignValues(columns []string, values []any) error {
 				_m.Decision = importscanbook.Decision(value.String)
 			}
 		case importscanbook.FieldDecisionBookHardcoverID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field decision_book_hardcover_id", values[i])
 			} else if value.Valid {
-				_m.DecisionBookHardcoverID = uint32(value.Int64)
+				_m.DecisionBookHardcoverID = value.String
 			}
 		case importscanbook.FieldOutcome:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -312,7 +312,7 @@ func (_m *ImportScanBook) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.Classification))
 	builder.WriteString(", ")
 	builder.WriteString("book_hardcover_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.BookHardcoverID))
+	builder.WriteString(_m.BookHardcoverID)
 	builder.WriteString(", ")
 	builder.WriteString("candidates=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Candidates))
@@ -326,7 +326,7 @@ func (_m *ImportScanBook) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.Decision))
 	builder.WriteString(", ")
 	builder.WriteString("decision_book_hardcover_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.DecisionBookHardcoverID))
+	builder.WriteString(_m.DecisionBookHardcoverID)
 	builder.WriteString(", ")
 	builder.WriteString("outcome=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Outcome))

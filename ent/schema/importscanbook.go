@@ -14,7 +14,7 @@ import (
 // item. Stored as JSON in ImportScanBook.candidates; defined here so ent
 // code-gen can reference it without an import cycle.
 type ScannedBookCandidate struct {
-	BookHardcoverID uint32 `json:"book_hardcover_id"`
+	BookHardcoverID string `json:"book_hardcover_id"`
 	Title           string `json:"title"`
 	Author          string `json:"author"`
 	Year            uint16 `json:"year,omitempty"`
@@ -42,14 +42,14 @@ func (ImportScanBook) Fields() []ent.Field {
 		field.Enum("classification").
 			Values("confirmed", "ambiguous", "unmatched", "existing").
 			Default("unmatched"),
-		field.Uint32("book_hardcover_id").Optional(),
+		field.String("book_hardcover_id").Optional(),
 		field.JSON("candidates", []ScannedBookCandidate{}).Optional(),
 		field.Uint32("existing_book_id").Optional().Nillable(),
 
 		field.Enum("decision").
 			Values("pending", "accept", "skip").
 			Default("pending"),
-		field.Uint32("decision_book_hardcover_id").Optional(),
+		field.String("decision_book_hardcover_id").Optional(),
 
 		field.Enum("outcome").
 			Values("pending", "created", "attached", "failed").

@@ -68,7 +68,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(1))
-			Expect(results[0].TMDBID).To(Equal(uint32(157336)))
+			Expect(results[0].TMDBID).To(Equal("157336"))
 			Expect(results[0].Title).To(Equal("Interstellar"))
 			Expect(results[0].Year).To(Equal(uint16(2014)))
 			Expect(results[0].PosterPath).To(Equal("/abc.jpg"))
@@ -384,7 +384,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 		})
 
 		It("should return full movie details", func() {
-			details, err := client.GetMovie(context.Background(), 157336)
+			details, err := client.GetMovie(context.Background(), "157336")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details.Title).To(Equal("Interstellar"))
 			Expect(details.Year).To(Equal(uint16(2014)))
@@ -395,15 +395,15 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 		})
 
 		It("populates TMDBID on cast entries, leaving TVDBID zero", func() {
-			details, err := client.GetMovie(context.Background(), 157336)
+			details, err := client.GetMovie(context.Background(), "157336")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details.Cast).To(HaveLen(1))
-			Expect(details.Cast[0].TMDBID).To(Equal(uint32(1892)))
-			Expect(details.Cast[0].TVDBID).To(BeZero())
+			Expect(details.Cast[0].TMDBID).To(Equal("1892"))
+			Expect(details.Cast[0].TVDBID).To(BeEmpty())
 		})
 
 		It("builds cast portraits at h632, not an upscaled w185", func() {
-			details, err := client.GetMovie(context.Background(), 157336)
+			details, err := client.GetMovie(context.Background(), "157336")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details.Cast).To(HaveLen(1))
 			Expect(details.Cast[0].ProfileURL).
@@ -452,7 +452,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			It(
 				"harvests both sources, deduped, minus the two primary titles",
 				func() {
-					details, err := client.GetMovie(context.Background(), 1311031)
+					details, err := client.GetMovie(context.Background(), "1311031")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(details.Aliases).To(ConsistOf(
 						"Demon Slayer: Kimetsu no Yaiba Infinity Castle",
@@ -503,7 +503,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			It(
 				"forwards language=fr and append_to_response=translations,credits",
 				func() {
-					details, err := client.GetMovie(context.Background(), 157336)
+					details, err := client.GetMovie(context.Background(), "157336")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(details.Title).To(Equal("Interstellaire"))
 				},
@@ -544,7 +544,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 					)
 					client = newTestTMDB(ts.URL)
 
-					details, err := client.GetMovie(context.Background(), 157336)
+					details, err := client.GetMovie(context.Background(), "157336")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(details.Title).To(Equal("Interstellar (EN)"))
 					Expect(
@@ -588,7 +588,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 					)
 					client = newTestTMDB(ts.URL)
 
-					details, err := client.GetMovie(context.Background(), 157336)
+					details, err := client.GetMovie(context.Background(), "157336")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(details.Title).To(Equal("Interstellar"))
 					Expect(details.Overview).To(Equal(""))
@@ -632,11 +632,11 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 
 			results, err := client.Recommendations(
 				context.Background(),
-				157336,
+				"157336",
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(2))
-			Expect(results[0].TMDBID).To(Equal(uint32(27205)))
+			Expect(results[0].TMDBID).To(Equal("27205"))
 			Expect(results[0].Title).To(Equal("Inception"))
 			Expect(results[0].Year).To(Equal(uint16(2010)))
 			Expect(results[0].PosterPath).To(Equal("/inception.jpg"))
@@ -667,7 +667,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			)
 			DeferCleanup(func() { ts.Close() })
 			client = newTestTMDB(ts.URL)
-			_, err := client.GetMovie(context.Background(), 1)
+			_, err := client.GetMovie(context.Background(), "1")
 			Expect(err).To(MatchError(ContainSubstring("tmdb get movie")))
 			Expect(err).To(MatchError(ContainSubstring("unexpected status 404")))
 		})
@@ -680,7 +680,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			)
 			DeferCleanup(func() { ts.Close() })
 			client = newTestTMDB(ts.URL)
-			_, err := client.Recommendations(context.Background(), 1)
+			_, err := client.Recommendations(context.Background(), "1")
 			Expect(err).To(MatchError(ContainSubstring("tmdb recommendations")))
 			Expect(err).To(MatchError(ContainSubstring("unexpected status 500")))
 		})
@@ -783,7 +783,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 
 				date, err := client.FetchDigitalRelease(
 					context.Background(),
-					550,
+					"550",
 					"US",
 				)
 				Expect(err).NotTo(HaveOccurred())
@@ -818,7 +818,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 
 			date, err := client.FetchDigitalRelease(
 				context.Background(),
-				1,
+				"1",
 				"US",
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -849,7 +849,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 
 			date, err := client.FetchDigitalRelease(
 				context.Background(),
-				1,
+				"1",
 				"US",
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -867,7 +867,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 
 			_, err := client.FetchDigitalRelease(
 				context.Background(),
-				1,
+				"1",
 				"US",
 			)
 			Expect(err).To(MatchError(ContainSubstring("tmdb release_dates")))
@@ -898,7 +898,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 
 			date, err := client.FetchDigitalRelease(
 				context.Background(),
-				1,
+				"1",
 				"US",
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -953,7 +953,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			client = newTestTMDB(ts.URL)
 			DeferCleanup(func() { ts.Close() })
 
-			p, err := client.GetPerson(context.Background(), 1892)
+			p, err := client.GetPerson(context.Background(), "1892")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(p.Biography).To(Equal("An American actor."))
 			Expect(p.KnownFor).To(Equal("Acting"))
@@ -991,7 +991,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			client = newTestTMDB(ts.URL)
 			DeferCleanup(func() { ts.Close() })
 
-			p, err := client.GetPerson(context.Background(), 66633)
+			p, err := client.GetPerson(context.Background(), "66633")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(p.Biography).To(BeEmpty())
 			Expect(p.Birthday).To(BeEmpty())
@@ -1012,7 +1012,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			client = newTestTMDB(ts.URL)
 			DeferCleanup(func() { ts.Close() })
 
-			_, err := client.GetPerson(context.Background(), 1)
+			_, err := client.GetPerson(context.Background(), "1")
 			Expect(err).To(MatchError(ContainSubstring("tmdb get person")))
 		})
 	})

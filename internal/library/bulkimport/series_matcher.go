@@ -14,7 +14,7 @@ const showCandidateLimit = 5
 // ShowClassification is the series analogue of Classification.
 type ShowClassification struct {
 	Kind             entimportscanshow.Classification
-	TVDBID           uint32
+	TVDBID           string
 	ExistingTvshowID uint32
 	Candidates       []schema.ScannedShowCandidate
 }
@@ -26,11 +26,11 @@ type ShowClassification struct {
 func ClassifyShow(
 	folder string,
 	title string, year uint16,
-	hits []metadata.TVResult, trackedByTVDB map[uint32]uint32,
+	hits []metadata.TVResult, trackedByTVDB map[string]uint32,
 ) ShowClassification {
 	// An id Streamline's own naming wrote into the folder outranks a title
 	// re-derived from it (mirrors Classify for movies).
-	if embedded := library.ParseEmbeddedIDs(folder).TVDB; embedded != 0 {
+	if embedded := library.ParseEmbeddedIDs(folder).TVDB; embedded != "" {
 		return classifyShowByTVDBID(embedded, hits, trackedByTVDB)
 	}
 
@@ -122,9 +122,9 @@ func soleShowMatch(
 // classifyShowByTVDBID resolves a folder-embedded id without consulting the
 // parsed title.
 func classifyShowByTVDBID(
-	tvdbID uint32,
+	tvdbID string,
 	hits []metadata.TVResult,
-	trackedByTVDB map[uint32]uint32,
+	trackedByTVDB map[string]uint32,
 ) ShowClassification {
 	var cands []schema.ScannedShowCandidate
 	for _, h := range hits {
@@ -180,7 +180,7 @@ func BuildShowParams(
 		year := p.Year
 		params.ParsedYear = &year
 	}
-	if c.TVDBID != 0 {
+	if c.TVDBID != "" {
 		id := c.TVDBID
 		params.TVDBID = &id
 	}

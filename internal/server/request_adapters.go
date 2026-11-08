@@ -96,7 +96,7 @@ type bookRequestAdder struct {
 
 func (b bookRequestAdder) AddBook(
 	ctx context.Context,
-	hardcoverID uint32,
+	hardcoverID string,
 	monitor, qualityProfile string,
 ) error {
 	_, err := b.svc.AddBook(ctx, book.AddBookParams{
@@ -112,7 +112,7 @@ func (b bookRequestAdder) AddBook(
 
 func (b bookRequestAdder) AddSeries(
 	ctx context.Context,
-	hardcoverID uint32,
+	hardcoverID string,
 	monitor, qualityProfile string,
 ) error {
 	_, err := b.svc.AddSeries(ctx, book.AddSeriesParams{
@@ -128,7 +128,7 @@ func (b bookRequestAdder) AddSeries(
 
 func (b bookRequestAdder) HasBook(
 	ctx context.Context,
-	hardcoverID uint32,
+	hardcoverID string,
 ) (bool, error) {
 	return b.client.Book.Query().
 		Where(entbook.HardcoverID(hardcoverID)).Exist(ctx)
@@ -136,7 +136,7 @@ func (b bookRequestAdder) HasBook(
 
 func (b bookRequestAdder) HasSeries(
 	ctx context.Context,
-	hardcoverID uint32,
+	hardcoverID string,
 ) (bool, error) {
 	return b.client.BookSeries.Query().
 		Where(bookseries.HardcoverID(hardcoverID)).Exist(ctx)

@@ -96,7 +96,7 @@ func ParsedReleaseGroup(v string) predicate.ImportScanFile {
 }
 
 // TmdbID applies equality check predicate on the "tmdb_id" field. It's identical to TmdbIDEQ.
-func TmdbID(v uint32) predicate.ImportScanFile {
+func TmdbID(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldEQ(FieldTmdbID, v))
 }
 
@@ -106,7 +106,7 @@ func ExistingMovieID(v uint32) predicate.ImportScanFile {
 }
 
 // DecisionTmdbID applies equality check predicate on the "decision_tmdb_id" field. It's identical to DecisionTmdbIDEQ.
-func DecisionTmdbID(v uint32) predicate.ImportScanFile {
+func DecisionTmdbID(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldEQ(FieldDecisionTmdbID, v))
 }
 
@@ -611,43 +611,58 @@ func CandidatesNotNil() predicate.ImportScanFile {
 }
 
 // TmdbIDEQ applies the EQ predicate on the "tmdb_id" field.
-func TmdbIDEQ(v uint32) predicate.ImportScanFile {
+func TmdbIDEQ(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldEQ(FieldTmdbID, v))
 }
 
 // TmdbIDNEQ applies the NEQ predicate on the "tmdb_id" field.
-func TmdbIDNEQ(v uint32) predicate.ImportScanFile {
+func TmdbIDNEQ(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldNEQ(FieldTmdbID, v))
 }
 
 // TmdbIDIn applies the In predicate on the "tmdb_id" field.
-func TmdbIDIn(vs ...uint32) predicate.ImportScanFile {
+func TmdbIDIn(vs ...string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldIn(FieldTmdbID, vs...))
 }
 
 // TmdbIDNotIn applies the NotIn predicate on the "tmdb_id" field.
-func TmdbIDNotIn(vs ...uint32) predicate.ImportScanFile {
+func TmdbIDNotIn(vs ...string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldNotIn(FieldTmdbID, vs...))
 }
 
 // TmdbIDGT applies the GT predicate on the "tmdb_id" field.
-func TmdbIDGT(v uint32) predicate.ImportScanFile {
+func TmdbIDGT(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldGT(FieldTmdbID, v))
 }
 
 // TmdbIDGTE applies the GTE predicate on the "tmdb_id" field.
-func TmdbIDGTE(v uint32) predicate.ImportScanFile {
+func TmdbIDGTE(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldGTE(FieldTmdbID, v))
 }
 
 // TmdbIDLT applies the LT predicate on the "tmdb_id" field.
-func TmdbIDLT(v uint32) predicate.ImportScanFile {
+func TmdbIDLT(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldLT(FieldTmdbID, v))
 }
 
 // TmdbIDLTE applies the LTE predicate on the "tmdb_id" field.
-func TmdbIDLTE(v uint32) predicate.ImportScanFile {
+func TmdbIDLTE(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldLTE(FieldTmdbID, v))
+}
+
+// TmdbIDContains applies the Contains predicate on the "tmdb_id" field.
+func TmdbIDContains(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldContains(FieldTmdbID, v))
+}
+
+// TmdbIDHasPrefix applies the HasPrefix predicate on the "tmdb_id" field.
+func TmdbIDHasPrefix(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldHasPrefix(FieldTmdbID, v))
+}
+
+// TmdbIDHasSuffix applies the HasSuffix predicate on the "tmdb_id" field.
+func TmdbIDHasSuffix(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldHasSuffix(FieldTmdbID, v))
 }
 
 // TmdbIDIsNil applies the IsNil predicate on the "tmdb_id" field.
@@ -658,6 +673,16 @@ func TmdbIDIsNil() predicate.ImportScanFile {
 // TmdbIDNotNil applies the NotNil predicate on the "tmdb_id" field.
 func TmdbIDNotNil() predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldNotNull(FieldTmdbID))
+}
+
+// TmdbIDEqualFold applies the EqualFold predicate on the "tmdb_id" field.
+func TmdbIDEqualFold(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldEqualFold(FieldTmdbID, v))
+}
+
+// TmdbIDContainsFold applies the ContainsFold predicate on the "tmdb_id" field.
+func TmdbIDContainsFold(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldContainsFold(FieldTmdbID, v))
 }
 
 // ExistingMovieIDEQ applies the EQ predicate on the "existing_movie_id" field.
@@ -731,43 +756,58 @@ func DecisionNotIn(vs ...Decision) predicate.ImportScanFile {
 }
 
 // DecisionTmdbIDEQ applies the EQ predicate on the "decision_tmdb_id" field.
-func DecisionTmdbIDEQ(v uint32) predicate.ImportScanFile {
+func DecisionTmdbIDEQ(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldEQ(FieldDecisionTmdbID, v))
 }
 
 // DecisionTmdbIDNEQ applies the NEQ predicate on the "decision_tmdb_id" field.
-func DecisionTmdbIDNEQ(v uint32) predicate.ImportScanFile {
+func DecisionTmdbIDNEQ(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldNEQ(FieldDecisionTmdbID, v))
 }
 
 // DecisionTmdbIDIn applies the In predicate on the "decision_tmdb_id" field.
-func DecisionTmdbIDIn(vs ...uint32) predicate.ImportScanFile {
+func DecisionTmdbIDIn(vs ...string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldIn(FieldDecisionTmdbID, vs...))
 }
 
 // DecisionTmdbIDNotIn applies the NotIn predicate on the "decision_tmdb_id" field.
-func DecisionTmdbIDNotIn(vs ...uint32) predicate.ImportScanFile {
+func DecisionTmdbIDNotIn(vs ...string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldNotIn(FieldDecisionTmdbID, vs...))
 }
 
 // DecisionTmdbIDGT applies the GT predicate on the "decision_tmdb_id" field.
-func DecisionTmdbIDGT(v uint32) predicate.ImportScanFile {
+func DecisionTmdbIDGT(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldGT(FieldDecisionTmdbID, v))
 }
 
 // DecisionTmdbIDGTE applies the GTE predicate on the "decision_tmdb_id" field.
-func DecisionTmdbIDGTE(v uint32) predicate.ImportScanFile {
+func DecisionTmdbIDGTE(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldGTE(FieldDecisionTmdbID, v))
 }
 
 // DecisionTmdbIDLT applies the LT predicate on the "decision_tmdb_id" field.
-func DecisionTmdbIDLT(v uint32) predicate.ImportScanFile {
+func DecisionTmdbIDLT(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldLT(FieldDecisionTmdbID, v))
 }
 
 // DecisionTmdbIDLTE applies the LTE predicate on the "decision_tmdb_id" field.
-func DecisionTmdbIDLTE(v uint32) predicate.ImportScanFile {
+func DecisionTmdbIDLTE(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldLTE(FieldDecisionTmdbID, v))
+}
+
+// DecisionTmdbIDContains applies the Contains predicate on the "decision_tmdb_id" field.
+func DecisionTmdbIDContains(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldContains(FieldDecisionTmdbID, v))
+}
+
+// DecisionTmdbIDHasPrefix applies the HasPrefix predicate on the "decision_tmdb_id" field.
+func DecisionTmdbIDHasPrefix(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldHasPrefix(FieldDecisionTmdbID, v))
+}
+
+// DecisionTmdbIDHasSuffix applies the HasSuffix predicate on the "decision_tmdb_id" field.
+func DecisionTmdbIDHasSuffix(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldHasSuffix(FieldDecisionTmdbID, v))
 }
 
 // DecisionTmdbIDIsNil applies the IsNil predicate on the "decision_tmdb_id" field.
@@ -778,6 +818,16 @@ func DecisionTmdbIDIsNil() predicate.ImportScanFile {
 // DecisionTmdbIDNotNil applies the NotNil predicate on the "decision_tmdb_id" field.
 func DecisionTmdbIDNotNil() predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldNotNull(FieldDecisionTmdbID))
+}
+
+// DecisionTmdbIDEqualFold applies the EqualFold predicate on the "decision_tmdb_id" field.
+func DecisionTmdbIDEqualFold(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldEqualFold(FieldDecisionTmdbID, v))
+}
+
+// DecisionTmdbIDContainsFold applies the ContainsFold predicate on the "decision_tmdb_id" field.
+func DecisionTmdbIDContainsFold(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldContainsFold(FieldDecisionTmdbID, v))
 }
 
 // OutcomeEQ applies the EQ predicate on the "outcome" field.

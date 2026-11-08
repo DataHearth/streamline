@@ -165,7 +165,7 @@ var _ = Describe("Title search", Label("integration", "db"), func() {
 
 		BeforeEach(func() {
 			show := client.TVShow.Create().
-				SetTitle("Dune: Prophecy").SetYear(2024).SetTvdbID(1).SaveX(ctx)
+				SetTitle("Dune: Prophecy").SetYear(2024).SetTvdbID("1").SaveX(ctx)
 			season = client.Season.Create().
 				SetNumber(1).SetTvShow(show).SaveX(ctx)
 		})

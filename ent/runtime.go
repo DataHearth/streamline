@@ -174,6 +174,10 @@ func init() {
 	author.DefaultUpdateTime = authorDescUpdateTime.Default.(func() time.Time)
 	// author.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
 	author.UpdateDefaultUpdateTime = authorDescUpdateTime.UpdateDefault.(func() time.Time)
+	// authorDescHardcoverID is the schema descriptor for hardcover_id field.
+	authorDescHardcoverID := authorFields[0].Descriptor()
+	// author.HardcoverIDValidator is a validator for the "hardcover_id" field. It is called by the builders before save.
+	author.HardcoverIDValidator = authorDescHardcoverID.Validators[0].(func(string) error)
 	// authorDescName is the schema descriptor for name field.
 	authorDescName := authorFields[1].Descriptor()
 	// author.NameValidator is a validator for the "name" field. It is called by the builders before save.
@@ -193,6 +197,10 @@ func init() {
 	book.DefaultUpdateTime = bookDescUpdateTime.Default.(func() time.Time)
 	// book.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
 	book.UpdateDefaultUpdateTime = bookDescUpdateTime.UpdateDefault.(func() time.Time)
+	// bookDescHardcoverID is the schema descriptor for hardcover_id field.
+	bookDescHardcoverID := bookFields[0].Descriptor()
+	// book.HardcoverIDValidator is a validator for the "hardcover_id" field. It is called by the builders before save.
+	book.HardcoverIDValidator = bookDescHardcoverID.Validators[0].(func(string) error)
 	// bookDescTitle is the schema descriptor for title field.
 	bookDescTitle := bookFields[1].Descriptor()
 	// book.TitleValidator is a validator for the "title" field. It is called by the builders before save.
@@ -251,6 +259,10 @@ func init() {
 	bookedition.DefaultUpdateTime = bookeditionDescUpdateTime.Default.(func() time.Time)
 	// bookedition.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
 	bookedition.UpdateDefaultUpdateTime = bookeditionDescUpdateTime.UpdateDefault.(func() time.Time)
+	// bookeditionDescHardcoverEditionID is the schema descriptor for hardcover_edition_id field.
+	bookeditionDescHardcoverEditionID := bookeditionFields[0].Descriptor()
+	// bookedition.HardcoverEditionIDValidator is a validator for the "hardcover_edition_id" field. It is called by the builders before save.
+	bookedition.HardcoverEditionIDValidator = bookeditionDescHardcoverEditionID.Validators[0].(func(string) error)
 	// bookeditionDescLanguage is the schema descriptor for language field.
 	bookeditionDescLanguage := bookeditionFields[1].Descriptor()
 	// bookedition.LanguageValidator is a validator for the "language" field. It is called by the builders before save.
@@ -290,6 +302,10 @@ func init() {
 	bookseries.DefaultUpdateTime = bookseriesDescUpdateTime.Default.(func() time.Time)
 	// bookseries.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
 	bookseries.UpdateDefaultUpdateTime = bookseriesDescUpdateTime.UpdateDefault.(func() time.Time)
+	// bookseriesDescHardcoverID is the schema descriptor for hardcover_id field.
+	bookseriesDescHardcoverID := bookseriesFields[0].Descriptor()
+	// bookseries.HardcoverIDValidator is a validator for the "hardcover_id" field. It is called by the builders before save.
+	bookseries.HardcoverIDValidator = bookseriesDescHardcoverID.Validators[0].(func(string) error)
 	// bookseriesDescTitle is the schema descriptor for title field.
 	bookseriesDescTitle := bookseriesFields[1].Descriptor()
 	// bookseries.TitleValidator is a validator for the "title" field. It is called by the builders before save.
@@ -613,6 +629,10 @@ func init() {
 	movieDescMonitored := movieFields[6].Descriptor()
 	// movie.DefaultMonitored holds the default value on creation for the monitored field.
 	movie.DefaultMonitored = movieDescMonitored.Default.(bool)
+	// movieDescTmdbID is the schema descriptor for tmdb_id field.
+	movieDescTmdbID := movieFields[7].Descriptor()
+	// movie.TmdbIDValidator is a validator for the "tmdb_id" field. It is called by the builders before save.
+	movie.TmdbIDValidator = movieDescTmdbID.Validators[0].(func(string) error)
 	// movieDescGrabFailures is the schema descriptor for grab_failures field.
 	movieDescGrabFailures := movieFields[11].Descriptor()
 	// movie.DefaultGrabFailures holds the default value on creation for the grab_failures field.
@@ -707,14 +727,6 @@ func init() {
 	person.DefaultUpdateTime = personDescUpdateTime.Default.(func() time.Time)
 	// person.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
 	person.UpdateDefaultUpdateTime = personDescUpdateTime.UpdateDefault.(func() time.Time)
-	// personDescTmdbID is the schema descriptor for tmdb_id field.
-	personDescTmdbID := personFields[0].Descriptor()
-	// person.DefaultTmdbID holds the default value on creation for the tmdb_id field.
-	person.DefaultTmdbID = personDescTmdbID.Default.(uint32)
-	// personDescTvdbID is the schema descriptor for tvdb_id field.
-	personDescTvdbID := personFields[1].Descriptor()
-	// person.DefaultTvdbID holds the default value on creation for the tvdb_id field.
-	person.DefaultTvdbID = personDescTvdbID.Default.(uint32)
 	// personDescName is the schema descriptor for name field.
 	personDescName := personFields[2].Descriptor()
 	// person.NameValidator is a validator for the "name" field. It is called by the builders before save.
@@ -809,10 +821,6 @@ func init() {
 	request.DefaultUpdateTime = requestDescUpdateTime.Default.(func() time.Time)
 	// request.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
 	request.UpdateDefaultUpdateTime = requestDescUpdateTime.UpdateDefault.(func() time.Time)
-	// requestDescMediaID is the schema descriptor for media_id field.
-	requestDescMediaID := requestFields[1].Descriptor()
-	// request.DefaultMediaID holds the default value on creation for the media_id field.
-	request.DefaultMediaID = requestDescMediaID.Default.(uint32)
 	// requestDescTitle is the schema descriptor for title field.
 	requestDescTitle := requestFields[6].Descriptor()
 	// request.TitleValidator is a validator for the "title" field. It is called by the builders before save.
@@ -923,6 +931,10 @@ func init() {
 	tvshowDescMonitored := tvshowFields[7].Descriptor()
 	// tvshow.DefaultMonitored holds the default value on creation for the monitored field.
 	tvshow.DefaultMonitored = tvshowDescMonitored.Default.(bool)
+	// tvshowDescTvdbID is the schema descriptor for tvdb_id field.
+	tvshowDescTvdbID := tvshowFields[8].Descriptor()
+	// tvshow.TvdbIDValidator is a validator for the "tvdb_id" field. It is called by the builders before save.
+	tvshow.TvdbIDValidator = tvshowDescTvdbID.Validators[0].(func(string) error)
 	// tvshowDescRuntime is the schema descriptor for runtime field.
 	tvshowDescRuntime := tvshowFields[12].Descriptor()
 	// tvshow.DefaultRuntime holds the default value on creation for the runtime field.

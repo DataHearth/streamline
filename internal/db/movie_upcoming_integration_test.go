@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -38,7 +40,7 @@ var _ = Describe("Store.UpcomingReleases", Label("integration", "db"), func() {
 			SetTitle(title).
 			SetOriginalTitle(title).
 			SetYear(2025).
-			SetTmdbID(tmdbID).
+			SetTmdbID(providerid.Format(tmdbID)).
 			SetStatus(status)
 		if drd != nil {
 			c = c.SetDigitalReleaseDate(*drd)

@@ -20,7 +20,7 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 				Title:  "Interstellar",
 				Year:   2014,
 				Status: movie.StatusWanted,
-				TmdbID: 157336,
+				TmdbID: "157336",
 			}
 			api := movieToAPI(m)
 			Expect(api.Id).To(Equal(uint32(1)))
@@ -34,7 +34,7 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 				Title:    "Inception",
 				Overview: "dream heist",
 				Status:   movie.StatusDownloading,
-				TmdbID:   27205,
+				TmdbID:   "27205",
 			}
 			api := movieToAPI(m)
 			Expect(api.Overview).NotTo(BeNil())
@@ -47,7 +47,7 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 				ID:                 3,
 				Title:              "La bataille de Gaulle",
 				Status:             movie.StatusWanted,
-				TmdbID:             1165369,
+				TmdbID:             "1165369",
 				DigitalReleaseDate: &digital,
 			}
 			api := movieToAPI(m)

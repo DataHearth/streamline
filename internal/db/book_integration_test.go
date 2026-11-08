@@ -19,7 +19,7 @@ import (
 // audiobook and two makers.
 func elantris(refreshed time.Time) BookSeed {
 	return BookSeed{
-		HardcoverID:        1,
+		HardcoverID:        "1",
 		Title:              "Elantris",
 		AuthorName:         "Brandon Sanderson",
 		Kind:               "novel",
@@ -28,7 +28,7 @@ func elantris(refreshed time.Time) BookSeed {
 		AudiobookMonitored: true,
 		Editions: []EditionSeed{
 			{
-				HardcoverID: 11,
+				HardcoverID: "11",
 				Language:    "en",
 				Title:       "Elantris",
 				Format:      "ebook",
@@ -36,14 +36,14 @@ func elantris(refreshed time.Time) BookSeed {
 				Original:    true,
 			},
 			{
-				HardcoverID: 12,
+				HardcoverID: "12",
 				Language:    "fr",
 				Title:       "Elantris (fr)",
 				Format:      "ebook",
 				Popularity:  4,
 			},
 			{
-				HardcoverID: 13,
+				HardcoverID: "13",
 				Language:    "en",
 				Title:       "Elantris",
 				Format:      "audiobook",
@@ -53,13 +53,13 @@ func elantris(refreshed time.Time) BookSeed {
 		},
 		Credits: []CreditSeed{
 			{
-				AuthorHardcoverID: 100,
+				AuthorHardcoverID: "100",
 				Name:              "Brandon Sanderson",
 				Role:              "author",
 				ImageURL:          "https://img/bs.jpg",
 			},
 			{
-				AuthorHardcoverID: 101,
+				AuthorHardcoverID: "101",
 				Name:              "Some Illustrator",
 				Role:              "artist",
 				Order:             1,
@@ -101,7 +101,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 			Expect(b.Edges.Editions).To(HaveLen(3))
 			Expect(b.Edges.Contributions).To(HaveLen(2))
 			Expect(client.Author.Query().CountX(ctx)).To(Equal(2))
-			a := client.Author.Query().Where(author.HardcoverIDEQ(100)).OnlyX(ctx)
+			a := client.Author.Query().Where(author.HardcoverIDEQ("100")).OnlyX(ctx)
 			Expect(a.ImageSource).To(Equal("https://img/bs.jpg"))
 			Expect(b.AuthorName).To(Equal("Brandon Sanderson"))
 		})
@@ -161,7 +161,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 
 		It("writes a stub without editions and without picking anything", func() {
 			b := create(BookSeed{
-				HardcoverID: 2, Title: "Series #2", Kind: "manga",
+				HardcoverID: "2", Title: "Series #2", Kind: "manga",
 				PreferredLanguage: "fr", EbookMonitored: true,
 				SeriesPosition: new(2.0),
 			})
@@ -175,7 +175,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 		It("shares a person between books", func() {
 			create(elantris(now))
 			other := elantris(now)
-			other.HardcoverID = 2
+			other.HardcoverID = "2"
 			other.Editions = nil
 			create(other)
 
@@ -195,14 +195,14 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 
 	Describe("FindBookByHardcoverID", func() {
 		It("returns nil, nil for an unknown id", func() {
-			got, err := store.FindBookByHardcoverID(ctx, 404)
+			got, err := store.FindBookByHardcoverID(ctx, "404")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got).To(BeNil())
 		})
 
 		It("finds a book with its series edge", func() {
 			create(elantris(now))
-			got, err := store.FindBookByHardcoverID(ctx, 1)
+			got, err := store.FindBookByHardcoverID(ctx, "1")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got.Title).To(Equal("Elantris"))
 		})
@@ -218,7 +218,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 				RatingTenths: new(uint8(42)),
 				Editions: []EditionSeed{
 					{
-						HardcoverID: 11,
+						HardcoverID: "11",
 						Language:    "en",
 						Title:       "Elantris",
 						Format:      "ebook",
@@ -226,14 +226,14 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 						Original:    true,
 					},
 					{
-						HardcoverID: 12,
+						HardcoverID: "12",
 						Language:    "fr",
 						Title:       "Elantris (fr)",
 						Format:      "ebook",
 						Popularity:  4,
 					},
 					{
-						HardcoverID: 13,
+						HardcoverID: "13",
 						Language:    "en",
 						Title:       "Elantris",
 						Format:      "audiobook",
@@ -241,7 +241,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 						Original:    true,
 					},
 					{
-						HardcoverID: 14,
+						HardcoverID: "14",
 						Language:    "de",
 						Title:       "Elantris (de)",
 						Format:      "ebook",
@@ -261,7 +261,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 			Expect(got.Edges.Editions).To(HaveLen(4))
 			ids := make([]uint32, 0, len(got.Edges.Editions))
 			for _, e := range got.Edges.Editions {
-				if e.HardcoverEditionID == 11 {
+				if e.HardcoverEditionID == "11" {
 					Expect(e.Popularity).To(Equal(uint32(99)))
 				}
 				ids = append(ids, e.ID)
@@ -281,7 +281,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 					Title: "Elantris", AuthorName: "Brandon Sanderson",
 					Editions: []EditionSeed{
 						{
-							HardcoverID: 13,
+							HardcoverID: "13",
 							Language:    "en",
 							Title:       "Elantris",
 							Format:      "audiobook",
@@ -295,15 +295,15 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 
 				got, err := store.FindBookByID(ctx, b.ID)
 				Expect(err).NotTo(HaveOccurred())
-				hc := make([]uint32, 0, len(got.Edges.Editions))
+				hc := make([]string, 0, len(got.Edges.Editions))
 				for _, e := range got.Edges.Editions {
 					hc = append(hc, e.HardcoverEditionID)
 				}
 				// 11 is the ebook slot's edition: kept. 12 was unreferenced: gone.
-				Expect(hc).To(ConsistOf(uint32(11), uint32(13)))
+				Expect(hc).To(ConsistOf("11", "13"))
 				Expect(
 					got.Edges.EbookEdition.HardcoverEditionID,
-				).To(Equal(uint32(11)))
+				).To(Equal("11"))
 			},
 		)
 
@@ -363,7 +363,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 
 		It("hydrates a stub, setting its kind", func() {
 			stub := create(BookSeed{
-				HardcoverID: 2, Title: "Series #2", Kind: "novel",
+				HardcoverID: "2", Title: "Series #2", Kind: "novel",
 				PreferredLanguage: "fr", SeriesPosition: new(2.0),
 			})
 
@@ -371,7 +371,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 				Title: "Tome 2", AuthorName: "Someone", Kind: "manga",
 				Editions: []EditionSeed{
 					{
-						HardcoverID: 21,
+						HardcoverID: "21",
 						Language:    "fr",
 						Title:       "Tome 2",
 						Format:      "ebook",
@@ -379,7 +379,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 					},
 				},
 				Credits: []CreditSeed{
-					{AuthorHardcoverID: 200, Name: "Someone", Role: "author"},
+					{AuthorHardcoverID: "200", Name: "Someone", Role: "author"},
 				},
 				RefreshedAt: now,
 			})
@@ -545,7 +545,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 		It("cascades and reports the people left with nothing", func() {
 			b := create(elantris(now))
 			other := elantris(now)
-			other.HardcoverID = 2
+			other.HardcoverID = "2"
 			other.Credits = other.Credits[:1]
 			create(other)
 			client.MediaFile.Create().
@@ -568,21 +568,21 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 			ready := elantris(now)
 			create(ready)
 			unreleased := elantris(now)
-			unreleased.HardcoverID, unreleased.ReleaseDate = 2, &future
+			unreleased.HardcoverID, unreleased.ReleaseDate = "2", &future
 			create(unreleased)
 			released := elantris(now)
-			released.HardcoverID, released.ReleaseDate = 3, &past
+			released.HardcoverID, released.ReleaseDate = "3", &past
 			create(released)
 			stub := BookSeed{
-				HardcoverID: 4, Title: "Stub", Kind: "novel",
+				HardcoverID: "4", Title: "Stub", Kind: "novel",
 				PreferredLanguage: "en", EbookMonitored: true,
 			}
 			create(stub)
 			volume := elantris(now)
-			volume.HardcoverID = 5
+			volume.HardcoverID = "5"
 			vol := create(volume)
 			series := client.BookSeries.Create().
-				SetHardcoverID(9).
+				SetHardcoverID("9").
 				SetTitle("S").
 				SaveX(ctx)
 			client.Book.UpdateOneID(vol.ID).SetSeries(series).ExecX(ctx)
@@ -594,11 +594,11 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 				now.Add(time.Minute),
 			)
 			Expect(err).NotTo(HaveOccurred())
-			ids := []uint32{}
+			ids := []string{}
 			for _, b := range got {
 				ids = append(ids, b.HardcoverID)
 			}
-			Expect(ids).To(ConsistOf(uint32(1), uint32(3)))
+			Expect(ids).To(ConsistOf("1", "3"))
 
 			audio, err := store.ListEligibleBookSlotsForSync(
 				ctx,
@@ -612,7 +612,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 				ids = append(ids, b.HardcoverID)
 			}
 			// A volume's audiobook slot is an ordinary slot.
-			Expect(ids).To(ConsistOf(uint32(1), uint32(3), uint32(5)))
+			Expect(ids).To(ConsistOf("1", "3", "5"))
 
 			volumes, err := store.ListEligibleSeriesVolumes(
 				ctx,
@@ -621,7 +621,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(volumes).To(HaveLen(1))
-			Expect(volumes[0].HardcoverID).To(Equal(uint32(5)))
+			Expect(volumes[0].HardcoverID).To(Equal("5"))
 			Expect(volumes[0].Edges.Series).NotTo(BeNil())
 		})
 
@@ -675,7 +675,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 			create(elantris(now))
 			future := now.Add(24 * time.Hour)
 			unreleased := elantris(now)
-			unreleased.HardcoverID, unreleased.ReleaseDate = 2, &future
+			unreleased.HardcoverID, unreleased.ReleaseDate = "2", &future
 			create(unreleased)
 
 			got, err := store.ListWantedBooks(ctx, 3)
@@ -693,10 +693,10 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 			stale := elantris(now.Add(-48 * time.Hour))
 			create(stale)
 			fresh := elantris(now)
-			fresh.HardcoverID = 2
+			fresh.HardcoverID = "2"
 			create(fresh)
 			stub := create(BookSeed{
-				HardcoverID:       3,
+				HardcoverID:       "3",
 				Title:             "Stub",
 				Kind:              "novel",
 				PreferredLanguage: "en",
@@ -714,7 +714,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got).To(HaveLen(1))
-			Expect(got[0].HardcoverID).To(Equal(uint32(1)))
+			Expect(got[0].HardcoverID).To(Equal("1"))
 		})
 	})
 
@@ -754,7 +754,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 func elantrisEditions() []EditionSeed {
 	return []EditionSeed{
 		{
-			HardcoverID: 11,
+			HardcoverID: "11",
 			Language:    "en",
 			Title:       "Elantris",
 			Format:      "ebook",
@@ -762,14 +762,14 @@ func elantrisEditions() []EditionSeed {
 			Original:    true,
 		},
 		{
-			HardcoverID: 12,
+			HardcoverID: "12",
 			Language:    "fr",
 			Title:       "Elantris (fr)",
 			Format:      "ebook",
 			Popularity:  4,
 		},
 		{
-			HardcoverID: 13,
+			HardcoverID: "13",
 			Language:    "en",
 			Title:       "Elantris",
 			Format:      "audiobook",

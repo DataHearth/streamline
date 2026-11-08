@@ -11,6 +11,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"golang.org/x/text/language"
 	"golang.org/x/text/language/display"
 
@@ -206,8 +208,11 @@ func dbEditions(eds []metadata.EditionRecord) []db.EditionSeed {
 func recordEditionViews(eds []metadata.EditionRecord) []pick.Edition {
 	out := make([]pick.Edition, 0, len(eds))
 	for _, e := range eds {
+		// ID only breaks a popularity tie, lowest first, as it did while
+		// Hardcover's ids were numbers here.
+		id, _ := providerid.Parse(e.HardcoverID)
 		out = append(out, pick.Edition{
-			ID:         e.HardcoverID,
+			ID:         id,
 			Language:   e.Language,
 			Title:      e.Title,
 			Publisher:  e.Publisher,

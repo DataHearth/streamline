@@ -66,7 +66,7 @@ func UpdateTime(v time.Time) predicate.BookEdition {
 }
 
 // HardcoverEditionID applies equality check predicate on the "hardcover_edition_id" field. It's identical to HardcoverEditionIDEQ.
-func HardcoverEditionID(v uint32) predicate.BookEdition {
+func HardcoverEditionID(v string) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldEQ(FieldHardcoverEditionID, v))
 }
 
@@ -211,43 +211,68 @@ func UpdateTimeLTE(v time.Time) predicate.BookEdition {
 }
 
 // HardcoverEditionIDEQ applies the EQ predicate on the "hardcover_edition_id" field.
-func HardcoverEditionIDEQ(v uint32) predicate.BookEdition {
+func HardcoverEditionIDEQ(v string) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldEQ(FieldHardcoverEditionID, v))
 }
 
 // HardcoverEditionIDNEQ applies the NEQ predicate on the "hardcover_edition_id" field.
-func HardcoverEditionIDNEQ(v uint32) predicate.BookEdition {
+func HardcoverEditionIDNEQ(v string) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldNEQ(FieldHardcoverEditionID, v))
 }
 
 // HardcoverEditionIDIn applies the In predicate on the "hardcover_edition_id" field.
-func HardcoverEditionIDIn(vs ...uint32) predicate.BookEdition {
+func HardcoverEditionIDIn(vs ...string) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldIn(FieldHardcoverEditionID, vs...))
 }
 
 // HardcoverEditionIDNotIn applies the NotIn predicate on the "hardcover_edition_id" field.
-func HardcoverEditionIDNotIn(vs ...uint32) predicate.BookEdition {
+func HardcoverEditionIDNotIn(vs ...string) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldNotIn(FieldHardcoverEditionID, vs...))
 }
 
 // HardcoverEditionIDGT applies the GT predicate on the "hardcover_edition_id" field.
-func HardcoverEditionIDGT(v uint32) predicate.BookEdition {
+func HardcoverEditionIDGT(v string) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldGT(FieldHardcoverEditionID, v))
 }
 
 // HardcoverEditionIDGTE applies the GTE predicate on the "hardcover_edition_id" field.
-func HardcoverEditionIDGTE(v uint32) predicate.BookEdition {
+func HardcoverEditionIDGTE(v string) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldGTE(FieldHardcoverEditionID, v))
 }
 
 // HardcoverEditionIDLT applies the LT predicate on the "hardcover_edition_id" field.
-func HardcoverEditionIDLT(v uint32) predicate.BookEdition {
+func HardcoverEditionIDLT(v string) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldLT(FieldHardcoverEditionID, v))
 }
 
 // HardcoverEditionIDLTE applies the LTE predicate on the "hardcover_edition_id" field.
-func HardcoverEditionIDLTE(v uint32) predicate.BookEdition {
+func HardcoverEditionIDLTE(v string) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldLTE(FieldHardcoverEditionID, v))
+}
+
+// HardcoverEditionIDContains applies the Contains predicate on the "hardcover_edition_id" field.
+func HardcoverEditionIDContains(v string) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldContains(FieldHardcoverEditionID, v))
+}
+
+// HardcoverEditionIDHasPrefix applies the HasPrefix predicate on the "hardcover_edition_id" field.
+func HardcoverEditionIDHasPrefix(v string) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldHasPrefix(FieldHardcoverEditionID, v))
+}
+
+// HardcoverEditionIDHasSuffix applies the HasSuffix predicate on the "hardcover_edition_id" field.
+func HardcoverEditionIDHasSuffix(v string) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldHasSuffix(FieldHardcoverEditionID, v))
+}
+
+// HardcoverEditionIDEqualFold applies the EqualFold predicate on the "hardcover_edition_id" field.
+func HardcoverEditionIDEqualFold(v string) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldEqualFold(FieldHardcoverEditionID, v))
+}
+
+// HardcoverEditionIDContainsFold applies the ContainsFold predicate on the "hardcover_edition_id" field.
+func HardcoverEditionIDContainsFold(v string) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldContainsFold(FieldHardcoverEditionID, v))
 }
 
 // LanguageEQ applies the EQ predicate on the "language" field.

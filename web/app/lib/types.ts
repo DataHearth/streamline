@@ -90,7 +90,7 @@ export type TVShow = {
 	series_status: SeriesStatus;
 	type: SeriesType;
 	monitored: boolean;
-	tvdb_id: number;
+	tvdb_id: string;
 	// First air date, ISO yyyy-mm-dd — the series counterpart to
 	// Movie.release_date. Absent for an announced show with no date set, which
 	// is why `year` stays and stays required.
@@ -179,7 +179,7 @@ export type TVShowCounts = {
 };
 
 export type SeriesLookupResult = {
-	tvdb_id: number;
+	tvdb_id: string;
 	title: string;
 	year: number;
 	network?: string;
@@ -194,7 +194,7 @@ export type SeriesLookupResultList = {
 };
 
 export type AddSeriesRequest = {
-	tvdb_id: number;
+	tvdb_id: string;
 	quality_profile?: string;
 	preset?: MonitoringPreset;
 };
@@ -215,8 +215,8 @@ export type LookupDetail = {
 	genres?: string[];
 	cast?: CastMember[];
 	original_language?: string;
-	tmdb_id?: number;
-	tvdb_id?: number;
+	tmdb_id?: string;
+	tvdb_id?: string;
 	// Series only.
 	network?: string;
 	season_count?: number;
@@ -229,7 +229,7 @@ export type CastMember = {
 	// series cast) has tmdb_id 0, so tmdb_id cannot key the person; person_id
 	// is the only stable identity.
 	person_id?: number;
-	tmdb_id?: number;
+	tmdb_id?: string;
 	name: string;
 	character?: string;
 	profile_url?: string;
@@ -243,8 +243,8 @@ export type CastMember = {
 // but is 0 for TVDB-only (series) cast.
 export type Person = {
 	id: number;
-	tmdb_id: number;
-	tvdb_id: number;
+	tmdb_id: string;
+	tvdb_id: string;
 	name: string;
 	profile_url?: string;
 	credits: number;
@@ -264,8 +264,8 @@ export type PersonSeriesCredit = {
 // not TMDB's: a person with none answers 404 rather than an empty page.
 export type PersonDetail = {
 	id: number;
-	tmdb_id: number;
-	tvdb_id: number;
+	tmdb_id: string;
+	tvdb_id: string;
 	name: string;
 	profile_url?: string;
 	// Biography, dates and socials are all provider-dependent and usually
@@ -297,7 +297,7 @@ export type Movie = {
 	// Absent until TMDB publishes one (or with no region configured).
 	digital_release_date?: string | null;
 	status: MovieStatus;
-	tmdb_id: number;
+	tmdb_id: string;
 	overview?: string;
 	runtime?: number;
 	monitored?: boolean;
@@ -470,7 +470,7 @@ export type SeriesRenamePlan = {
 };
 
 export type TMDBMovieResult = {
-	tmdb_id: number;
+	tmdb_id: string;
 	title: string;
 	original_title: string;
 	year: number;
@@ -484,7 +484,7 @@ export type MovieRecommendations = {
 };
 
 export type AddMovieRequest = {
-	tmdb_id: number;
+	tmdb_id: string;
 	quality_profile?: string;
 };
 
@@ -514,7 +514,7 @@ export type MediaRequest = {
 	// separate spaces. An album request also names its artist, since approving
 	// one adds the artist if the library lacks it.
 	media_type: "movie" | "tvshow" | "artist" | "album" | "book" | "book_series";
-	media_id: number;
+	media_id: string;
 	media_mbid?: string;
 	artist_mbid?: string;
 	artist_name?: string;
@@ -574,7 +574,7 @@ export type UpcomingMovie = {
 	id: number;
 	title: string;
 	year: number;
-	tmdb_id: number;
+	tmdb_id: string;
 	digital_release_date: string;
 	release_type: "digital" | "theatrical";
 };
@@ -1687,7 +1687,7 @@ export type ImportFileOutcome =
 export type ImportFileDecision = "pending" | "accept" | "skip";
 
 export type ImportScanCandidate = {
-	tmdb_id: number;
+	tmdb_id: string;
 	title: string;
 	year: number;
 };
@@ -1702,10 +1702,10 @@ export type ImportScanFile = {
 	parsed_release_group?: string;
 	classification: ImportFileClassification;
 	candidates?: ImportScanCandidate[];
-	tmdb_id?: number;
+	tmdb_id?: string;
 	existing_movie_id?: number;
 	decision: ImportFileDecision;
-	decision_tmdb_id?: number;
+	decision_tmdb_id?: string;
 	outcome: ImportFileOutcome;
 	outcome_message?: string;
 	created_movie_id?: number;
@@ -1718,7 +1718,7 @@ export type ImportScanFile = {
 export type ImportShowOutcome = "pending" | "created" | "attached" | "failed";
 
 export type ImportScanShowCandidate = {
-	tvdb_id: number;
+	tvdb_id: string;
 	title: string;
 	year?: number;
 };
@@ -1729,12 +1729,12 @@ export type ImportScanShow = {
 	parsed_title?: string;
 	parsed_year?: number | null;
 	classification: ImportFileClassification;
-	tvdb_id?: number | null;
+	tvdb_id?: string | null;
 	candidates?: ImportScanShowCandidate[];
 	existing_tvshow_id?: number | null;
 	file_count: number;
 	decision: ImportFileDecision;
-	decision_tvdb_id?: number | null;
+	decision_tvdb_id?: string | null;
 	outcome: ImportShowOutcome;
 	outcome_message?: string;
 	created_tvshow_id?: number | null;
@@ -1794,7 +1794,7 @@ export type ImportScanAlbum = {
 // folder of parts. Matched against Hardcover. Its search hits carry no series
 // position, so a candidate is named by its author alone.
 export type ImportScanBookCandidate = {
-	book_hardcover_id: number;
+	book_hardcover_id: string;
 	title: string;
 	author?: string;
 	year?: number;
@@ -1815,11 +1815,11 @@ export type ImportScanBook = {
 	parsed_isbn?: string;
 	parsed_year?: number;
 	classification: ImportFileClassification;
-	book_hardcover_id?: number;
+	book_hardcover_id?: string;
 	candidates?: ImportScanBookCandidate[];
 	existing_book_id?: number | null;
 	decision: ImportFileDecision;
-	decision_book_hardcover_id?: number;
+	decision_book_hardcover_id?: string;
 	outcome: ImportShowOutcome;
 	outcome_message?: string;
 	created_book_id?: number | null;

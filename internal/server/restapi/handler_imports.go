@@ -263,7 +263,7 @@ func (s *Server) UpdateImportFileDecision(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	var tmdbID *uint32
+	var tmdbID *string
 	if req.Body.TmdbId != nil {
 		v := *req.Body.TmdbId
 		tmdbID = &v
@@ -361,7 +361,7 @@ func (s *Server) UpdateImportShowDecision(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	var tvdbID *uint32
+	var tvdbID *string
 	if req.Body.TvdbId != nil {
 		v := *req.Body.TvdbId
 		tvdbID = &v
@@ -649,7 +649,7 @@ func (s *Server) UpdateImportBookDecision(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	var hardcoverID *uint32
+	var hardcoverID *string
 	if req.Body.BookHardcoverId != nil {
 		v := *req.Body.BookHardcoverId
 		hardcoverID = &v

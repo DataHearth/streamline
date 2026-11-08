@@ -60,15 +60,15 @@
 	let qualityProfileName = $state<string>("");
 	// tmdb_id → local movie id for adds made during this modal session;
 	// covers the gap between mutation success and the movies refetch.
-	let sessionAdds = $state(new Map<number, number>());
-	let pendingTmdbId = $state<number | null>(null);
-	let failedPosters = $state(new Set<number>());
+	let sessionAdds = $state(new Map<string, number>());
+	let pendingTmdbId = $state<string | null>(null);
+	let failedPosters = $state(new Set<string>());
 	let searchInput = $state<HTMLInputElement | null>(null);
 	let resultsList = $state<HTMLUListElement | null>(null);
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 	// The highlighted result, whose detail fills the right-hand panel.
-	let selectedTmdbId = $state<number | null>(null);
+	let selectedTmdbId = $state<string | null>(null);
 	// Below md the two columns don't fit side by side, so the modal shows one
 	// at a time: results until you choose, then the panel with a back button.
 	let showPanelOnNarrow = $state(false);
@@ -182,13 +182,13 @@
 		qualityProfileName = v;
 	}
 	let libraryByTmdb = $derived.by(() => {
-		const map = new Map<number, number>();
+		const map = new Map<string, number>();
 		for (const m of moviesQuery.data?.items ?? []) {
 			map.set(m.tmdb_id, m.id);
 		}
 		return map;
 	});
-	const resolveLocalId = (tmdbId: number): number | undefined =>
+	const resolveLocalId = (tmdbId: string): number | undefined =>
 		libraryByTmdb.get(tmdbId) ?? sessionAdds.get(tmdbId);
 
 	// Keep the highlight on a row that still exists as results change.
@@ -292,7 +292,7 @@
 		if (idx >= 0 && results[idx]) selectResult(results[idx]);
 	}
 
-	function markPosterFailed(tmdbId: number) {
+	function markPosterFailed(tmdbId: string) {
 		const next = new Set(failedPosters);
 		next.add(tmdbId);
 		failedPosters = next;

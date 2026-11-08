@@ -34,8 +34,8 @@ type SearchResult struct {
 	// decodes to zero exactly as an unrecorded quality condition reads as
 	// unknown rather than false, and filterProviderIDs turns on that
 	// distinction.
-	TMDBID uint32
-	TVDBID uint32
+	TMDBID string
+	TVDBID string
 
 	// TitleMismatch marks a result preferTitleMatches kept only because
 	// nothing in the set named the show at all. Browsing wants those — a show
@@ -69,8 +69,8 @@ const (
 type SearchParams struct {
 	Query   string
 	Kind    MediaKind
-	TMDBID  uint32
-	TVDBID  uint32
+	TMDBID  string
+	TVDBID  string
 	Season  uint16
 	Episode uint16
 }
@@ -79,7 +79,7 @@ type SearchParams struct {
 // It is what makes the empty-result retry worth issuing: a query that named
 // nothing else has no narrower form to fall back from.
 func (p SearchParams) narrowed() bool {
-	return p.TMDBID > 0 || p.TVDBID > 0 || p.Season > 0 || p.Episode > 0
+	return p.TMDBID != "" || p.TVDBID != "" || p.Season > 0 || p.Episode > 0
 }
 
 type Client interface {

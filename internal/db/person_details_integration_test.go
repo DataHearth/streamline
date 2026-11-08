@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -33,7 +35,7 @@ var _ = Describe("Person details", Label("integration", "db"), func() {
 			Title:         "Solaris",
 			OriginalTitle: "Solaris",
 			Year:          1972,
-			TmdbID:        tmdbID,
+			TmdbID:        providerid.Format(tmdbID),
 			Status:        entmovie.StatusWanted,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -62,7 +64,7 @@ var _ = Describe("Person details", Label("integration", "db"), func() {
 		It("returns only the credited people with no fetch stamp", func() {
 			m := seedMovie(1)
 			fresh, err := client.Person.Create().
-				SetName("Mark Hamill").SetTmdbID(1892).Save(ctx)
+				SetName("Mark Hamill").SetTmdbID("1892").Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			credit(fresh, m)
 
@@ -70,13 +72,13 @@ var _ = Describe("Person details", Label("integration", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(HaveLen(1))
 			Expect(out[0].ID).To(Equal(fresh.ID))
-			Expect(out[0].TMDBID).To(Equal(uint32(1892)))
+			Expect(out[0].TMDBID).To(Equal("1892"))
 		})
 
 		It("drops a person once their details have been saved", func() {
 			m := seedMovie(2)
 			p, err := client.Person.Create().
-				SetName("Mark Hamill").SetTmdbID(1892).Save(ctx)
+				SetName("Mark Hamill").SetTmdbID("1892").Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			credit(p, m)
 
@@ -148,7 +150,7 @@ var _ = Describe("Person details", Label("integration", "db"), func() {
 		It("carries the biographical fields onto both of them", func() {
 			m := seedMovie(5)
 			p, err := client.Person.Create().
-				SetName("Mark Hamill").SetTmdbID(1892).Save(ctx)
+				SetName("Mark Hamill").SetTmdbID("1892").Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			credit(p, m)
 			Expect(store.SavePersonDetails(ctx, p.ID, details)).To(Succeed())

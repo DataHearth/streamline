@@ -370,7 +370,7 @@ func (p *Plex) identity(ctx context.Context) (string, error) {
 func (p *Plex) MovieDeepLink(
 	ctx context.Context,
 	hintSection string,
-	tmdbID uint32,
+	tmdbID string,
 	title string,
 	year uint16,
 ) (string, error) {
@@ -435,14 +435,14 @@ func (p *Plex) movieSectionKeys(
 func (p *Plex) findMovieInSection(
 	ctx context.Context,
 	sectionKey string,
-	tmdbID uint32,
+	tmdbID string,
 	title string,
 	year uint16,
 ) string {
-	if tmdbID > 0 {
+	if tmdbID != "" {
 		q := url.Values{
 			"type": {"1"},
-			"guid": {fmt.Sprintf("tmdb://%d", tmdbID)},
+			"guid": {"tmdb://" + tmdbID},
 		}
 		if k, err := p.querySection(ctx, sectionKey, q, "movie"); err == nil &&
 			k != "" {
@@ -465,7 +465,7 @@ func (p *Plex) findMovieInSection(
 func (p *Plex) TVShowDeepLink(
 	ctx context.Context,
 	hintSection string,
-	tvdbID uint32,
+	tvdbID string,
 	title string,
 	year uint16,
 ) (string, error) {
@@ -523,14 +523,14 @@ func (p *Plex) tvSectionKeys(
 func (p *Plex) findShowInSection(
 	ctx context.Context,
 	sectionKey string,
-	tvdbID uint32,
+	tvdbID string,
 	title string,
 	year uint16,
 ) string {
-	if tvdbID > 0 {
+	if tvdbID != "" {
 		q := url.Values{
 			"type": {"2"},
-			"guid": {fmt.Sprintf("tvdb://%d", tvdbID)},
+			"guid": {"tvdb://" + tvdbID},
 		}
 		if k, err := p.querySection(ctx, sectionKey, q, "show"); err == nil &&
 			k != "" {

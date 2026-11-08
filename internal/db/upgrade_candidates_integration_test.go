@@ -182,7 +182,7 @@ var _ = Describe("Upgrade candidates", Label("integration", "db"), func() {
 		var bk *ent.Book
 
 		BeforeEach(func() {
-			bk = client.Book.Create().SetHardcoverID(2).SetTitle("Elantris").
+			bk = client.Book.Create().SetHardcoverID("2").SetTitle("Elantris").
 				SetAuthorName("Sanderson").SaveX(ctx)
 		})
 

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/book"
@@ -48,7 +50,7 @@ var _ = Describe("RecentArrivals", Label("unit", "db"), func() {
 			}
 		}
 		s, err := store.CreateTVShow(ctx, CreateTVShowParams{
-			Title: title, Year: 2021, TvdbID: tvdbID,
+			Title: title, Year: 2021, TvdbID: providerid.Format(tvdbID),
 			SeriesStatus: "continuing", Type: "standard",
 			Seasons: []SeasonSeed{{Number: 1, Episodes: seeds}},
 		})
@@ -65,7 +67,7 @@ var _ = Describe("RecentArrivals", Label("unit", "db"), func() {
 		func() {
 			m := client.Movie.Create().
 				SetTitle("Northern Halo").
-				SetOriginalTitle("Northern Halo").SetYear(2024).SetTmdbID(1).
+				SetOriginalTitle("Northern Halo").SetYear(2024).SetTmdbID("1").
 				SaveX(ctx)
 			file(
 				now.Add(-5*time.Minute),
@@ -126,12 +128,12 @@ var _ = Describe("RecentArrivals", Label("unit", "db"), func() {
 			}
 
 			series := client.BookSeries.Create().
-				SetHardcoverID(7).
+				SetHardcoverID("7").
 				SetTitle("Les Archives").
 				SaveX(ctx)
 			vol := 2.5
 			b := client.Book.Create().
-				SetHardcoverID(70).
+				SetHardcoverID("70").
 				SetTitle("Les Archives du sel").
 				SetAuthorName("Iris Calder").
 				SetKind(book.KindBd).
@@ -205,7 +207,7 @@ var _ = Describe("RecentArrivals", Label("unit", "db"), func() {
 			client.MediaFile.CreateBulk(bulk...).SaveX(ctx)
 			m := client.Movie.Create().
 				SetTitle("Older").
-				SetOriginalTitle("Older").SetYear(2000).SetTmdbID(2).
+				SetOriginalTitle("Older").SetYear(2000).SetTmdbID("2").
 				SaveX(ctx)
 			file(
 				now.Add(-3*time.Hour),

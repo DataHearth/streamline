@@ -37,23 +37,16 @@ func (_u *AuthorUpdate) SetUpdateTime(v time.Time) *AuthorUpdate {
 }
 
 // SetHardcoverID sets the "hardcover_id" field.
-func (_u *AuthorUpdate) SetHardcoverID(v uint32) *AuthorUpdate {
-	_u.mutation.ResetHardcoverID()
+func (_u *AuthorUpdate) SetHardcoverID(v string) *AuthorUpdate {
 	_u.mutation.SetHardcoverID(v)
 	return _u
 }
 
 // SetNillableHardcoverID sets the "hardcover_id" field if the given value is not nil.
-func (_u *AuthorUpdate) SetNillableHardcoverID(v *uint32) *AuthorUpdate {
+func (_u *AuthorUpdate) SetNillableHardcoverID(v *string) *AuthorUpdate {
 	if v != nil {
 		_u.SetHardcoverID(*v)
 	}
-	return _u
-}
-
-// AddHardcoverID adds value to the "hardcover_id" field.
-func (_u *AuthorUpdate) AddHardcoverID(v int32) *AuthorUpdate {
-	_u.mutation.AddHardcoverID(v)
 	return _u
 }
 
@@ -190,6 +183,11 @@ func (_u *AuthorUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *AuthorUpdate) check() error {
+	if v, ok := _u.mutation.HardcoverID(); ok {
+		if err := author.HardcoverIDValidator(v); err != nil {
+			return &ValidationError{Name: "hardcover_id", err: fmt.Errorf(`ent: validator failed for field "Author.hardcover_id": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Name(); ok {
 		if err := author.NameValidator(v); err != nil {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Author.name": %w`, err)}
@@ -220,10 +218,7 @@ func (_u *AuthorUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.SetField(author.FieldUpdateTime, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.HardcoverID(); ok {
-		_spec.SetField(author.FieldHardcoverID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedHardcoverID(); ok {
-		_spec.AddField(author.FieldHardcoverID, field.TypeUint32, value)
+		_spec.SetField(author.FieldHardcoverID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(author.FieldName, field.TypeString, value)
@@ -314,23 +309,16 @@ func (_u *AuthorUpdateOne) SetUpdateTime(v time.Time) *AuthorUpdateOne {
 }
 
 // SetHardcoverID sets the "hardcover_id" field.
-func (_u *AuthorUpdateOne) SetHardcoverID(v uint32) *AuthorUpdateOne {
-	_u.mutation.ResetHardcoverID()
+func (_u *AuthorUpdateOne) SetHardcoverID(v string) *AuthorUpdateOne {
 	_u.mutation.SetHardcoverID(v)
 	return _u
 }
 
 // SetNillableHardcoverID sets the "hardcover_id" field if the given value is not nil.
-func (_u *AuthorUpdateOne) SetNillableHardcoverID(v *uint32) *AuthorUpdateOne {
+func (_u *AuthorUpdateOne) SetNillableHardcoverID(v *string) *AuthorUpdateOne {
 	if v != nil {
 		_u.SetHardcoverID(*v)
 	}
-	return _u
-}
-
-// AddHardcoverID adds value to the "hardcover_id" field.
-func (_u *AuthorUpdateOne) AddHardcoverID(v int32) *AuthorUpdateOne {
-	_u.mutation.AddHardcoverID(v)
 	return _u
 }
 
@@ -480,6 +468,11 @@ func (_u *AuthorUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *AuthorUpdateOne) check() error {
+	if v, ok := _u.mutation.HardcoverID(); ok {
+		if err := author.HardcoverIDValidator(v); err != nil {
+			return &ValidationError{Name: "hardcover_id", err: fmt.Errorf(`ent: validator failed for field "Author.hardcover_id": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Name(); ok {
 		if err := author.NameValidator(v); err != nil {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Author.name": %w`, err)}
@@ -527,10 +520,7 @@ func (_u *AuthorUpdateOne) sqlSave(ctx context.Context) (_node *Author, err erro
 		_spec.SetField(author.FieldUpdateTime, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.HardcoverID(); ok {
-		_spec.SetField(author.FieldHardcoverID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedHardcoverID(); ok {
-		_spec.AddField(author.FieldHardcoverID, field.TypeUint32, value)
+		_spec.SetField(author.FieldHardcoverID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(author.FieldName, field.TypeString, value)

@@ -99,13 +99,13 @@ func (_c *ImportScanShowCreate) SetNillableClassification(v *importscanshow.Clas
 }
 
 // SetTvdbID sets the "tvdb_id" field.
-func (_c *ImportScanShowCreate) SetTvdbID(v uint32) *ImportScanShowCreate {
+func (_c *ImportScanShowCreate) SetTvdbID(v string) *ImportScanShowCreate {
 	_c.mutation.SetTvdbID(v)
 	return _c
 }
 
 // SetNillableTvdbID sets the "tvdb_id" field if the given value is not nil.
-func (_c *ImportScanShowCreate) SetNillableTvdbID(v *uint32) *ImportScanShowCreate {
+func (_c *ImportScanShowCreate) SetNillableTvdbID(v *string) *ImportScanShowCreate {
 	if v != nil {
 		_c.SetTvdbID(*v)
 	}
@@ -161,13 +161,13 @@ func (_c *ImportScanShowCreate) SetNillableDecision(v *importscanshow.Decision) 
 }
 
 // SetDecisionTvdbID sets the "decision_tvdb_id" field.
-func (_c *ImportScanShowCreate) SetDecisionTvdbID(v uint32) *ImportScanShowCreate {
+func (_c *ImportScanShowCreate) SetDecisionTvdbID(v string) *ImportScanShowCreate {
 	_c.mutation.SetDecisionTvdbID(v)
 	return _c
 }
 
 // SetNillableDecisionTvdbID sets the "decision_tvdb_id" field if the given value is not nil.
-func (_c *ImportScanShowCreate) SetNillableDecisionTvdbID(v *uint32) *ImportScanShowCreate {
+func (_c *ImportScanShowCreate) SetNillableDecisionTvdbID(v *string) *ImportScanShowCreate {
 	if v != nil {
 		_c.SetDecisionTvdbID(*v)
 	}
@@ -397,7 +397,7 @@ func (_c *ImportScanShowCreate) createSpec() (*ImportScanShow, *sqlgraph.CreateS
 		_node.Classification = value
 	}
 	if value, ok := _c.mutation.TvdbID(); ok {
-		_spec.SetField(importscanshow.FieldTvdbID, field.TypeUint32, value)
+		_spec.SetField(importscanshow.FieldTvdbID, field.TypeString, value)
 		_node.TvdbID = &value
 	}
 	if value, ok := _c.mutation.Candidates(); ok {
@@ -417,7 +417,7 @@ func (_c *ImportScanShowCreate) createSpec() (*ImportScanShow, *sqlgraph.CreateS
 		_node.Decision = value
 	}
 	if value, ok := _c.mutation.DecisionTvdbID(); ok {
-		_spec.SetField(importscanshow.FieldDecisionTvdbID, field.TypeUint32, value)
+		_spec.SetField(importscanshow.FieldDecisionTvdbID, field.TypeString, value)
 		_node.DecisionTvdbID = &value
 	}
 	if value, ok := _c.mutation.Outcome(); ok {

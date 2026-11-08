@@ -177,23 +177,16 @@ func (_u *TVShowUpdate) SetNillableMonitored(v *bool) *TVShowUpdate {
 }
 
 // SetTvdbID sets the "tvdb_id" field.
-func (_u *TVShowUpdate) SetTvdbID(v uint32) *TVShowUpdate {
-	_u.mutation.ResetTvdbID()
+func (_u *TVShowUpdate) SetTvdbID(v string) *TVShowUpdate {
 	_u.mutation.SetTvdbID(v)
 	return _u
 }
 
 // SetNillableTvdbID sets the "tvdb_id" field if the given value is not nil.
-func (_u *TVShowUpdate) SetNillableTvdbID(v *uint32) *TVShowUpdate {
+func (_u *TVShowUpdate) SetNillableTvdbID(v *string) *TVShowUpdate {
 	if v != nil {
 		_u.SetTvdbID(*v)
 	}
-	return _u
-}
-
-// AddTvdbID adds value to the "tvdb_id" field.
-func (_u *TVShowUpdate) AddTvdbID(v int32) *TVShowUpdate {
-	_u.mutation.AddTvdbID(v)
 	return _u
 }
 
@@ -553,6 +546,11 @@ func (_u *TVShowUpdate) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "TVShow.type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.TvdbID(); ok {
+		if err := tvshow.TvdbIDValidator(v); err != nil {
+			return &ValidationError{Name: "tvdb_id", err: fmt.Errorf(`ent: validator failed for field "TVShow.tvdb_id": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -614,10 +612,7 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.SetField(tvshow.FieldMonitored, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.TvdbID(); ok {
-		_spec.SetField(tvshow.FieldTvdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedTvdbID(); ok {
-		_spec.AddField(tvshow.FieldTvdbID, field.TypeUint32, value)
+		_spec.SetField(tvshow.FieldTvdbID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.PosterPath(); ok {
 		_spec.SetField(tvshow.FieldPosterPath, field.TypeString, value)
@@ -990,23 +985,16 @@ func (_u *TVShowUpdateOne) SetNillableMonitored(v *bool) *TVShowUpdateOne {
 }
 
 // SetTvdbID sets the "tvdb_id" field.
-func (_u *TVShowUpdateOne) SetTvdbID(v uint32) *TVShowUpdateOne {
-	_u.mutation.ResetTvdbID()
+func (_u *TVShowUpdateOne) SetTvdbID(v string) *TVShowUpdateOne {
 	_u.mutation.SetTvdbID(v)
 	return _u
 }
 
 // SetNillableTvdbID sets the "tvdb_id" field if the given value is not nil.
-func (_u *TVShowUpdateOne) SetNillableTvdbID(v *uint32) *TVShowUpdateOne {
+func (_u *TVShowUpdateOne) SetNillableTvdbID(v *string) *TVShowUpdateOne {
 	if v != nil {
 		_u.SetTvdbID(*v)
 	}
-	return _u
-}
-
-// AddTvdbID adds value to the "tvdb_id" field.
-func (_u *TVShowUpdateOne) AddTvdbID(v int32) *TVShowUpdateOne {
-	_u.mutation.AddTvdbID(v)
 	return _u
 }
 
@@ -1379,6 +1367,11 @@ func (_u *TVShowUpdateOne) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "TVShow.type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.TvdbID(); ok {
+		if err := tvshow.TvdbIDValidator(v); err != nil {
+			return &ValidationError{Name: "tvdb_id", err: fmt.Errorf(`ent: validator failed for field "TVShow.tvdb_id": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -1457,10 +1450,7 @@ func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err erro
 		_spec.SetField(tvshow.FieldMonitored, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.TvdbID(); ok {
-		_spec.SetField(tvshow.FieldTvdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedTvdbID(); ok {
-		_spec.AddField(tvshow.FieldTvdbID, field.TypeUint32, value)
+		_spec.SetField(tvshow.FieldTvdbID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.PosterPath(); ok {
 		_spec.SetField(tvshow.FieldPosterPath, field.TypeString, value)

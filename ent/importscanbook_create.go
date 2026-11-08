@@ -147,13 +147,13 @@ func (_c *ImportScanBookCreate) SetNillableClassification(v *importscanbook.Clas
 }
 
 // SetBookHardcoverID sets the "book_hardcover_id" field.
-func (_c *ImportScanBookCreate) SetBookHardcoverID(v uint32) *ImportScanBookCreate {
+func (_c *ImportScanBookCreate) SetBookHardcoverID(v string) *ImportScanBookCreate {
 	_c.mutation.SetBookHardcoverID(v)
 	return _c
 }
 
 // SetNillableBookHardcoverID sets the "book_hardcover_id" field if the given value is not nil.
-func (_c *ImportScanBookCreate) SetNillableBookHardcoverID(v *uint32) *ImportScanBookCreate {
+func (_c *ImportScanBookCreate) SetNillableBookHardcoverID(v *string) *ImportScanBookCreate {
 	if v != nil {
 		_c.SetBookHardcoverID(*v)
 	}
@@ -195,13 +195,13 @@ func (_c *ImportScanBookCreate) SetNillableDecision(v *importscanbook.Decision) 
 }
 
 // SetDecisionBookHardcoverID sets the "decision_book_hardcover_id" field.
-func (_c *ImportScanBookCreate) SetDecisionBookHardcoverID(v uint32) *ImportScanBookCreate {
+func (_c *ImportScanBookCreate) SetDecisionBookHardcoverID(v string) *ImportScanBookCreate {
 	_c.mutation.SetDecisionBookHardcoverID(v)
 	return _c
 }
 
 // SetNillableDecisionBookHardcoverID sets the "decision_book_hardcover_id" field if the given value is not nil.
-func (_c *ImportScanBookCreate) SetNillableDecisionBookHardcoverID(v *uint32) *ImportScanBookCreate {
+func (_c *ImportScanBookCreate) SetNillableDecisionBookHardcoverID(v *string) *ImportScanBookCreate {
 	if v != nil {
 		_c.SetDecisionBookHardcoverID(*v)
 	}
@@ -450,7 +450,7 @@ func (_c *ImportScanBookCreate) createSpec() (*ImportScanBook, *sqlgraph.CreateS
 		_node.Classification = value
 	}
 	if value, ok := _c.mutation.BookHardcoverID(); ok {
-		_spec.SetField(importscanbook.FieldBookHardcoverID, field.TypeUint32, value)
+		_spec.SetField(importscanbook.FieldBookHardcoverID, field.TypeString, value)
 		_node.BookHardcoverID = value
 	}
 	if value, ok := _c.mutation.Candidates(); ok {
@@ -466,7 +466,7 @@ func (_c *ImportScanBookCreate) createSpec() (*ImportScanBook, *sqlgraph.CreateS
 		_node.Decision = value
 	}
 	if value, ok := _c.mutation.DecisionBookHardcoverID(); ok {
-		_spec.SetField(importscanbook.FieldDecisionBookHardcoverID, field.TypeUint32, value)
+		_spec.SetField(importscanbook.FieldDecisionBookHardcoverID, field.TypeString, value)
 		_node.DecisionBookHardcoverID = value
 	}
 	if value, ok := _c.mutation.Outcome(); ok {

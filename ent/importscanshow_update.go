@@ -114,23 +114,16 @@ func (_u *ImportScanShowUpdate) SetNillableClassification(v *importscanshow.Clas
 }
 
 // SetTvdbID sets the "tvdb_id" field.
-func (_u *ImportScanShowUpdate) SetTvdbID(v uint32) *ImportScanShowUpdate {
-	_u.mutation.ResetTvdbID()
+func (_u *ImportScanShowUpdate) SetTvdbID(v string) *ImportScanShowUpdate {
 	_u.mutation.SetTvdbID(v)
 	return _u
 }
 
 // SetNillableTvdbID sets the "tvdb_id" field if the given value is not nil.
-func (_u *ImportScanShowUpdate) SetNillableTvdbID(v *uint32) *ImportScanShowUpdate {
+func (_u *ImportScanShowUpdate) SetNillableTvdbID(v *string) *ImportScanShowUpdate {
 	if v != nil {
 		_u.SetTvdbID(*v)
 	}
-	return _u
-}
-
-// AddTvdbID adds value to the "tvdb_id" field.
-func (_u *ImportScanShowUpdate) AddTvdbID(v int32) *ImportScanShowUpdate {
-	_u.mutation.AddTvdbID(v)
 	return _u
 }
 
@@ -221,23 +214,16 @@ func (_u *ImportScanShowUpdate) SetNillableDecision(v *importscanshow.Decision) 
 }
 
 // SetDecisionTvdbID sets the "decision_tvdb_id" field.
-func (_u *ImportScanShowUpdate) SetDecisionTvdbID(v uint32) *ImportScanShowUpdate {
-	_u.mutation.ResetDecisionTvdbID()
+func (_u *ImportScanShowUpdate) SetDecisionTvdbID(v string) *ImportScanShowUpdate {
 	_u.mutation.SetDecisionTvdbID(v)
 	return _u
 }
 
 // SetNillableDecisionTvdbID sets the "decision_tvdb_id" field if the given value is not nil.
-func (_u *ImportScanShowUpdate) SetNillableDecisionTvdbID(v *uint32) *ImportScanShowUpdate {
+func (_u *ImportScanShowUpdate) SetNillableDecisionTvdbID(v *string) *ImportScanShowUpdate {
 	if v != nil {
 		_u.SetDecisionTvdbID(*v)
 	}
-	return _u
-}
-
-// AddDecisionTvdbID adds value to the "decision_tvdb_id" field.
-func (_u *ImportScanShowUpdate) AddDecisionTvdbID(v int32) *ImportScanShowUpdate {
-	_u.mutation.AddDecisionTvdbID(v)
 	return _u
 }
 
@@ -437,13 +423,10 @@ func (_u *ImportScanShowUpdate) sqlSave(ctx context.Context) (_node int, err err
 		_spec.SetField(importscanshow.FieldClassification, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.TvdbID(); ok {
-		_spec.SetField(importscanshow.FieldTvdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedTvdbID(); ok {
-		_spec.AddField(importscanshow.FieldTvdbID, field.TypeUint32, value)
+		_spec.SetField(importscanshow.FieldTvdbID, field.TypeString, value)
 	}
 	if _u.mutation.TvdbIDCleared() {
-		_spec.ClearField(importscanshow.FieldTvdbID, field.TypeUint32)
+		_spec.ClearField(importscanshow.FieldTvdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Candidates(); ok {
 		_spec.SetField(importscanshow.FieldCandidates, field.TypeJSON, value)
@@ -475,13 +458,10 @@ func (_u *ImportScanShowUpdate) sqlSave(ctx context.Context) (_node int, err err
 		_spec.SetField(importscanshow.FieldDecision, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.DecisionTvdbID(); ok {
-		_spec.SetField(importscanshow.FieldDecisionTvdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedDecisionTvdbID(); ok {
-		_spec.AddField(importscanshow.FieldDecisionTvdbID, field.TypeUint32, value)
+		_spec.SetField(importscanshow.FieldDecisionTvdbID, field.TypeString, value)
 	}
 	if _u.mutation.DecisionTvdbIDCleared() {
-		_spec.ClearField(importscanshow.FieldDecisionTvdbID, field.TypeUint32)
+		_spec.ClearField(importscanshow.FieldDecisionTvdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Outcome(); ok {
 		_spec.SetField(importscanshow.FieldOutcome, field.TypeEnum, value)
@@ -634,23 +614,16 @@ func (_u *ImportScanShowUpdateOne) SetNillableClassification(v *importscanshow.C
 }
 
 // SetTvdbID sets the "tvdb_id" field.
-func (_u *ImportScanShowUpdateOne) SetTvdbID(v uint32) *ImportScanShowUpdateOne {
-	_u.mutation.ResetTvdbID()
+func (_u *ImportScanShowUpdateOne) SetTvdbID(v string) *ImportScanShowUpdateOne {
 	_u.mutation.SetTvdbID(v)
 	return _u
 }
 
 // SetNillableTvdbID sets the "tvdb_id" field if the given value is not nil.
-func (_u *ImportScanShowUpdateOne) SetNillableTvdbID(v *uint32) *ImportScanShowUpdateOne {
+func (_u *ImportScanShowUpdateOne) SetNillableTvdbID(v *string) *ImportScanShowUpdateOne {
 	if v != nil {
 		_u.SetTvdbID(*v)
 	}
-	return _u
-}
-
-// AddTvdbID adds value to the "tvdb_id" field.
-func (_u *ImportScanShowUpdateOne) AddTvdbID(v int32) *ImportScanShowUpdateOne {
-	_u.mutation.AddTvdbID(v)
 	return _u
 }
 
@@ -741,23 +714,16 @@ func (_u *ImportScanShowUpdateOne) SetNillableDecision(v *importscanshow.Decisio
 }
 
 // SetDecisionTvdbID sets the "decision_tvdb_id" field.
-func (_u *ImportScanShowUpdateOne) SetDecisionTvdbID(v uint32) *ImportScanShowUpdateOne {
-	_u.mutation.ResetDecisionTvdbID()
+func (_u *ImportScanShowUpdateOne) SetDecisionTvdbID(v string) *ImportScanShowUpdateOne {
 	_u.mutation.SetDecisionTvdbID(v)
 	return _u
 }
 
 // SetNillableDecisionTvdbID sets the "decision_tvdb_id" field if the given value is not nil.
-func (_u *ImportScanShowUpdateOne) SetNillableDecisionTvdbID(v *uint32) *ImportScanShowUpdateOne {
+func (_u *ImportScanShowUpdateOne) SetNillableDecisionTvdbID(v *string) *ImportScanShowUpdateOne {
 	if v != nil {
 		_u.SetDecisionTvdbID(*v)
 	}
-	return _u
-}
-
-// AddDecisionTvdbID adds value to the "decision_tvdb_id" field.
-func (_u *ImportScanShowUpdateOne) AddDecisionTvdbID(v int32) *ImportScanShowUpdateOne {
-	_u.mutation.AddDecisionTvdbID(v)
 	return _u
 }
 
@@ -987,13 +953,10 @@ func (_u *ImportScanShowUpdateOne) sqlSave(ctx context.Context) (_node *ImportSc
 		_spec.SetField(importscanshow.FieldClassification, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.TvdbID(); ok {
-		_spec.SetField(importscanshow.FieldTvdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedTvdbID(); ok {
-		_spec.AddField(importscanshow.FieldTvdbID, field.TypeUint32, value)
+		_spec.SetField(importscanshow.FieldTvdbID, field.TypeString, value)
 	}
 	if _u.mutation.TvdbIDCleared() {
-		_spec.ClearField(importscanshow.FieldTvdbID, field.TypeUint32)
+		_spec.ClearField(importscanshow.FieldTvdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Candidates(); ok {
 		_spec.SetField(importscanshow.FieldCandidates, field.TypeJSON, value)
@@ -1025,13 +988,10 @@ func (_u *ImportScanShowUpdateOne) sqlSave(ctx context.Context) (_node *ImportSc
 		_spec.SetField(importscanshow.FieldDecision, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.DecisionTvdbID(); ok {
-		_spec.SetField(importscanshow.FieldDecisionTvdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedDecisionTvdbID(); ok {
-		_spec.AddField(importscanshow.FieldDecisionTvdbID, field.TypeUint32, value)
+		_spec.SetField(importscanshow.FieldDecisionTvdbID, field.TypeString, value)
 	}
 	if _u.mutation.DecisionTvdbIDCleared() {
-		_spec.ClearField(importscanshow.FieldDecisionTvdbID, field.TypeUint32)
+		_spec.ClearField(importscanshow.FieldDecisionTvdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Outcome(); ok {
 		_spec.SetField(importscanshow.FieldOutcome, field.TypeEnum, value)

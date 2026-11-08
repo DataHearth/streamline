@@ -14,7 +14,7 @@ import (
 // Defined here (rather than in the bulkimport package) so ent code-gen can
 // reference it without an import cycle.
 type ScannedCandidate struct {
-	TMDBID uint32 `json:"tmdb_id"`
+	TMDBID string `json:"tmdb_id"`
 	Title  string `json:"title"`
 	Year   uint16 `json:"year"`
 }
@@ -39,13 +39,13 @@ func (ImportScanFile) Fields() []ent.Field {
 			Values("confirmed", "ambiguous", "unmatched", "existing").
 			Default("unmatched"),
 		field.JSON("candidates", []ScannedCandidate{}).Optional(),
-		field.Uint32("tmdb_id").Optional(),
+		field.String("tmdb_id").Optional(),
 		field.Uint32("existing_movie_id").Optional(),
 
 		field.Enum("decision").
 			Values("pending", "accept", "skip").
 			Default("pending"),
-		field.Uint32("decision_tmdb_id").Optional(),
+		field.String("decision_tmdb_id").Optional(),
 
 		field.Enum("outcome").
 			Values("pending", "created", "attached", "skipped", "failed").

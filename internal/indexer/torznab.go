@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -92,15 +94,15 @@ func (t *Torznab) Search(
 		"q":      {params.Query},
 		"limit":  {torznabLimit},
 	}
-	if params.TMDBID > 0 {
+	if params.TMDBID != "" {
 		q.Set("t", "movie")
-		q.Set("tmdbid", strconv.FormatUint(uint64(params.TMDBID), 10))
+		q.Set("tmdbid", params.TMDBID)
 	}
-	if params.TVDBID > 0 || params.Season > 0 {
+	if params.TVDBID != "" || params.Season > 0 {
 		q.Set("t", "tvsearch")
 	}
-	if params.TVDBID > 0 {
-		q.Set("tvdbid", strconv.FormatUint(uint64(params.TVDBID), 10))
+	if params.TVDBID != "" {
+		q.Set("tvdbid", params.TVDBID)
 	}
 	if params.Season > 0 {
 		q.Set("season", strconv.FormatUint(uint64(params.Season), 10))
@@ -181,15 +183,15 @@ func parseItems(items []torznabItem) []SearchResult {
 			// The tracker's own provider ids, when it publishes them. Both
 			// spellings are accepted because both are in the wild; Prowlarr
 			// reads the same pair (NewznabRssParser.GetIntAttribute). An
-			// absent attr leaves the field zero, which filterProviderIDs
+			// absent attr leaves the field empty, which filterProviderIDs
 			// reads as "the tracker said nothing".
 			case "tvdbid", "tvdb":
 				if v, err := strconv.ParseUint(attr.Value, 10, 32); err == nil {
-					r.TVDBID = uint32(v)
+					r.TVDBID = providerid.Format(uint32(v))
 				}
 			case "tmdbid", "tmdb":
 				if v, err := strconv.ParseUint(attr.Value, 10, 32); err == nil {
-					r.TMDBID = uint32(v)
+					r.TMDBID = providerid.Format(uint32(v))
 				}
 			}
 		}

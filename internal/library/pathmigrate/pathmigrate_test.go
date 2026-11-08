@@ -611,7 +611,7 @@ var _ = Describe("Service on real rows", Label("integration", "library"), func()
 			func(l config.LibraryConfig) string { return l.EbookPath },
 			func(client *ent.Client, c *ent.MediaFileCreate) *ent.MediaFileCreate {
 				book := client.Book.Create().
-					SetHardcoverID(1).
+					SetHardcoverID("1").
 					SetTitle("B").
 					SaveX(context.Background())
 				return c.SetBook(book).SetBookKind(entmediafile.BookKindEbook)
@@ -620,7 +620,7 @@ var _ = Describe("Service on real rows", Label("integration", "library"), func()
 			func(l config.LibraryConfig) string { return l.AudiobookPath },
 			func(client *ent.Client, c *ent.MediaFileCreate) *ent.MediaFileCreate {
 				book := client.Book.Create().
-					SetHardcoverID(1).
+					SetHardcoverID("1").
 					SetTitle("B").
 					SaveX(context.Background())
 				return c.SetBook(book).SetBookKind(entmediafile.BookKindAudiobook)

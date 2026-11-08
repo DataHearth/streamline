@@ -34,7 +34,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 	It("returns an empty plan when files already match the target", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
 		svc := NewRenameService(store, nil, "/library/movies", naming)
-		movie := &ent.Movie{ID: 1, Title: "The Matrix", Year: 1999, TmdbID: 603}
+		movie := &ent.Movie{ID: 1, Title: "The Matrix", Year: 1999, TmdbID: "603"}
 		files := []*ent.MediaFile{{
 			ID:   10,
 			Path: "/library/movies/The Matrix (1999)/The Matrix (1999).mkv",
@@ -52,7 +52,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 	It("plans a move for a misnamed file", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
 		svc := NewRenameService(store, nil, "/library/movies", naming)
-		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: 438631}
+		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: "438631"}
 		src := filepath.Join(tmp, "Dune.2021.1080p.WEB-DL.x264-GROUP.mkv")
 		Expect(os.WriteFile(src, []byte("x"), 0o644)).To(Succeed())
 		files := []*ent.MediaFile{{ID: 10, Path: src}}
@@ -74,7 +74,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 	It("skips a missing file and still renames the others", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
 		svc := NewRenameService(store, nil, "/library/movies", naming)
-		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: 438631}
+		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: "438631"}
 		since := time.Now()
 		files := []*ent.MediaFile{
 			{ID: 10, Path: filepath.Join(tmp, "Gone.mkv"), MissingSince: &since},
@@ -100,7 +100,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 			"/library/movies",
 			"../escaped/{title}.{ext}",
 		)
-		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: 438631}
+		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: "438631"}
 		files := []*ent.MediaFile{{ID: 10, Path: "/library/movies/Dune/Dune.mkv"}}
 		store.EXPECT().FindMovieByID(mock.Anything, uint32(1)).
 			Return(movie, nil).Once()
@@ -120,7 +120,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 	It("recovers a quality the name lost, from the probe on the row", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
 		svc := NewRenameService(store, nil, "/library/movies", defaultNaming)
-		movie := &ent.Movie{ID: 1, Title: "13 Hours", Year: 2016, TmdbID: 300671}
+		movie := &ent.Movie{ID: 1, Title: "13 Hours", Year: 2016, TmdbID: "300671"}
 		files := []*ent.MediaFile{{
 			ID: 10,
 			Path: "/library/movies/13 Hours (2016) {tmdb-300671}/" +
@@ -147,7 +147,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 	It("drops the empty brackets when nothing can supply a quality", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
 		svc := NewRenameService(store, nil, "/library/movies", defaultNaming)
-		movie := &ent.Movie{ID: 1, Title: "13 Hours", Year: 2016, TmdbID: 300671}
+		movie := &ent.Movie{ID: 1, Title: "13 Hours", Year: 2016, TmdbID: "300671"}
 		files := []*ent.MediaFile{{
 			ID: 10,
 			Path: "/library/movies/13 Hours (2016) {tmdb-300671}/" +
@@ -170,7 +170,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 		store := dbmocks.NewMockStore(GinkgoT())
 		ms := msmocks.NewMockRefresher(GinkgoT())
 		svc := NewRenameService(store, ms, tmp, naming)
-		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: 438631}
+		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: "438631"}
 		src := filepath.Join(tmp, "Dune.misnamed.mkv")
 		Expect(os.WriteFile(src, []byte("x"), 0o644)).To(Succeed())
 		files := []*ent.MediaFile{{ID: 10, Path: src}}
@@ -204,7 +204,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 	It("prunes the directory the file left behind", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
 		svc := NewRenameService(store, nil, tmp, naming)
-		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: 438631}
+		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: "438631"}
 		// The old layout of the same movie: renaming out of it empties it, which
 		// is what a colon-collapsing re-rename does to every affected title.
 		oldDir := filepath.Join(tmp, "Dune  - Part One (2021)")

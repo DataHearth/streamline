@@ -23,7 +23,7 @@ func (BookEdition) Mixin() []ent.Mixin {
 
 func (BookEdition) Fields() []ent.Field {
 	return []ent.Field{
-		field.Uint32("hardcover_edition_id"),
+		field.String("hardcover_edition_id").NotEmpty(),
 		field.String("language").NotEmpty(),
 		field.String("title").NotEmpty(),
 		field.String("publisher").Default("").

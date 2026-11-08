@@ -34,7 +34,7 @@ type Manager interface {
 		ctx context.Context,
 		scanID, fileID uint32,
 		decision entimportscanfile.Decision,
-		tmdbID *uint32,
+		tmdbID *string,
 	) (*ent.ImportScanFile, error)
 	Cancel(ctx context.Context, id uint32) error
 	Commit(ctx context.Context, id uint32) error
@@ -74,7 +74,7 @@ type FilesParams struct {
 type SeriesAdder interface {
 	Add(
 		ctx context.Context,
-		tvdbID uint32,
+		tvdbID string,
 		qualityProfile string,
 	) (*ent.TVShow, error)
 }
@@ -228,7 +228,7 @@ func (s *Service) UpdateFileDecision(
 	ctx context.Context,
 	scanID, fileID uint32,
 	decision entimportscanfile.Decision,
-	tmdbID *uint32,
+	tmdbID *string,
 ) (*ent.ImportScanFile, error) {
 	if err := s.store.UpdateImportScanFileDecision(
 		ctx,

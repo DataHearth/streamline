@@ -127,8 +127,8 @@ func replaceCast(
 // without it cannot link anywhere, since a TVDB-sourced person has no tmdb id.
 type CastEntry struct {
 	PersonID   uint32
-	TMDBID     uint32
-	TVDBID     uint32
+	TMDBID     string
+	TVDBID     string
 	Name       string
 	Character  string
 	ProfileURL string
@@ -228,10 +228,10 @@ func resolvePerson(
 
 	upd := cl.Person.UpdateOne(found)
 	var enriched bool
-	if found.TmdbID == 0 && c.TMDBID != 0 {
+	if found.TmdbID == "" && c.TMDBID != "" {
 		upd, enriched = upd.SetTmdbID(c.TMDBID), true
 	}
-	if found.TvdbID == 0 && c.TVDBID != 0 {
+	if found.TvdbID == "" && c.TVDBID != "" {
 		upd, enriched = upd.SetTvdbID(c.TVDBID), true
 	}
 	if found.ProfileURL == "" && c.ProfileURL != "" {
@@ -252,13 +252,13 @@ func matchPerson(
 	cl *ent.Client,
 	c metadata.CastMember,
 ) (*ent.Person, error) {
-	if c.TMDBID != 0 {
+	if c.TMDBID != "" {
 		row, err := firstPerson(ctx, cl, person.TmdbIDEQ(c.TMDBID))
 		if err != nil || row != nil {
 			return row, err
 		}
 	}
-	if c.TVDBID != 0 {
+	if c.TVDBID != "" {
 		row, err := firstPerson(ctx, cl, person.TvdbIDEQ(c.TVDBID))
 		if err != nil || row != nil {
 			return row, err
@@ -280,9 +280,9 @@ func matchPerson(
 }
 
 // compatible reports whether a stored id and an incoming one can belong to the
-// same person: either side being 0 is "unknown", which anything satisfies.
-func compatible(stored, incoming uint32) bool {
-	return stored == 0 || incoming == 0 || stored == incoming
+// same person: either side being empty is "unknown", which anything satisfies.
+func compatible(stored, incoming string) bool {
+	return stored == "" || incoming == "" || stored == incoming
 }
 
 func firstPerson(

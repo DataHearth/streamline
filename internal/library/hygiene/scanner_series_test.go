@@ -70,7 +70,7 @@ var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func()
 		expectScanPrelude(nil)
 		tvmeta.EXPECT().SearchSeries(mock.Anything, "Breaking Bad").
 			Return([]metadata.TVResult{
-				{TVDBID: 81189, Title: "Breaking Bad", Year: 2008},
+				{TVDBID: "81189", Title: "Breaking Bad", Year: 2008},
 			}, nil).Once()
 		store.EXPECT().FindOpenImportScanForSource(mock.Anything, tmpDir).
 			Return(nil, &ent.NotFoundError{}).Once()

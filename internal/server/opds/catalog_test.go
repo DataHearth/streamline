@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/go-chi/chi/v5"
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -45,7 +47,7 @@ func newBook(
 ) *ent.Book {
 	g.GinkgoHelper()
 	b := client.Book.Create().
-		SetHardcoverID(hc).
+		SetHardcoverID(providerid.Format(hc)).
 		SetTitle(title).
 		SetAuthorName(a.Name).
 		SaveX(ctx)
@@ -60,7 +62,7 @@ func newCatalogFixture(ctx context.Context) *catalogFixture {
 	g.DeferCleanup(client.Close)
 
 	a := client.Author.Create().
-		SetHardcoverID(1).
+		SetHardcoverID("1").
 		SetName("Brandon Sanderson").
 		SetSortName("Sanderson, Brandon").
 		SaveX(ctx)
@@ -148,7 +150,7 @@ var _ = g.Describe("catalog", g.Label("integration"), func() {
 		"lists authors with ebooks, ordered by sort name falling back to name",
 		func(ctx g.SpecContext) {
 			zed := f.client.Author.Create().
-				SetHardcoverID(2).
+				SetHardcoverID("2").
 				SetName("Aaron Zed").
 				SaveX(ctx)
 			b := newBook(
@@ -167,7 +169,7 @@ var _ = g.Describe("catalog", g.Label("integration"), func() {
 				SetBook(b).
 				SaveX(ctx)
 			audioAuthor := f.client.Author.Create().
-				SetHardcoverID(3).
+				SetHardcoverID("3").
 				SetName("Audio Only").
 				SaveX(ctx)
 			ab := newBook(
@@ -311,19 +313,19 @@ var _ = g.Describe("catalog", g.Label("integration"), func() {
 		"credits every maker of a book and lists it under each author or writer",
 		func(ctx g.SpecContext) {
 			oda := f.client.Author.Create().
-				SetHardcoverID(20).
+				SetHardcoverID("20").
 				SetName("Eiichiro Oda").
 				SaveX(ctx)
 			colorist := f.client.Author.Create().
-				SetHardcoverID(21).
+				SetHardcoverID("21").
 				SetName("Colorist Person").
 				SaveX(ctx)
 			translator := f.client.Author.Create().
-				SetHardcoverID(22).
+				SetHardcoverID("22").
 				SetName("Translator Person").
 				SaveX(ctx)
 			series := f.client.BookSeries.Create().
-				SetHardcoverID(5).
+				SetHardcoverID("5").
 				SetTitle("One Piece").
 				SaveX(ctx)
 			vol := newBook(
@@ -370,7 +372,7 @@ var _ = g.Describe("catalog", g.Label("integration"), func() {
 		"searches a contributing author's name, not only the display name",
 		func(ctx g.SpecContext) {
 			artist := f.client.Author.Create().
-				SetHardcoverID(23).
+				SetHardcoverID("23").
 				SetName("Quiet Illustrator").
 				SaveX(ctx)
 			f.client.BookContribution.Create().

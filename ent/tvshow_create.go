@@ -148,7 +148,7 @@ func (_c *TVShowCreate) SetNillableMonitored(v *bool) *TVShowCreate {
 }
 
 // SetTvdbID sets the "tvdb_id" field.
-func (_c *TVShowCreate) SetTvdbID(v uint32) *TVShowCreate {
+func (_c *TVShowCreate) SetTvdbID(v string) *TVShowCreate {
 	_c.mutation.SetTvdbID(v)
 	return _c
 }
@@ -420,6 +420,11 @@ func (_c *TVShowCreate) check() error {
 	if _, ok := _c.mutation.TvdbID(); !ok {
 		return &ValidationError{Name: "tvdb_id", err: errors.New(`ent: missing required field "TVShow.tvdb_id"`)}
 	}
+	if v, ok := _c.mutation.TvdbID(); ok {
+		if err := tvshow.TvdbIDValidator(v); err != nil {
+			return &ValidationError{Name: "tvdb_id", err: fmt.Errorf(`ent: validator failed for field "TVShow.tvdb_id": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -493,7 +498,7 @@ func (_c *TVShowCreate) createSpec() (*TVShow, *sqlgraph.CreateSpec) {
 		_node.Monitored = value
 	}
 	if value, ok := _c.mutation.TvdbID(); ok {
-		_spec.SetField(tvshow.FieldTvdbID, field.TypeUint32, value)
+		_spec.SetField(tvshow.FieldTvdbID, field.TypeString, value)
 		_node.TvdbID = value
 	}
 	if value, ok := _c.mutation.PosterPath(); ok {

@@ -145,7 +145,7 @@ var _ = Describe("Patching books", Label("unit", "integration", "books"), func()
 					Once()
 				b, err := f.svc.AddBook(
 					f.ctx,
-					AddBookParams{HardcoverID: 1, Monitor: "none"},
+					AddBookParams{HardcoverID: "1", Monitor: "none"},
 				)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -302,9 +302,9 @@ var _ = Describe("Patching books", Label("unit", "integration", "books"), func()
 	Describe("PatchSeries", func() {
 		add := func(n int, policy string) *ent.BookSeries {
 			GinkgoHelper()
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+			f.meta.EXPECT().GetSeries(anyCtx, "50").
 				Return(seriesRecord("One Piece", n), nil).Once()
-			want := []uint32{}
+			want := []any{}
 			recs := []*metadata.BookRecord{}
 			for i := 1; i <= n; i++ {
 				want = append(want, 1000+uint32(i))
@@ -312,7 +312,7 @@ var _ = Describe("Patching books", Label("unit", "integration", "books"), func()
 				// Every volume has a French Kana edition besides the English and
 				// French ones.
 				r.Editions = append(r.Editions, metadata.EditionRecord{
-					HardcoverID: r.HardcoverID*10 + 7,
+					HardcoverID: r.HardcoverID + "7",
 					Language:    "fr",
 					Title:       r.Title + " (Kana)",
 					Publisher:   "Kana",
@@ -324,7 +324,7 @@ var _ = Describe("Patching books", Label("unit", "integration", "books"), func()
 			f.meta.EXPECT().GetBooks(anyCtx, ids(want...)).Return(recs, nil).Once()
 			s, err := f.svc.AddSeries(
 				f.ctx,
-				AddSeriesParams{HardcoverID: 50, Monitor: policy},
+				AddSeriesParams{HardcoverID: "50", Monitor: policy},
 			)
 			Expect(err).NotTo(HaveOccurred())
 			return s

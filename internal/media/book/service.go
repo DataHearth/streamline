@@ -71,7 +71,7 @@ type Manager interface {
 	LookupDetail(
 		ctx context.Context,
 		kind string,
-		hardcoverID uint32,
+		hardcoverID string,
 	) (*LookupDetail, error)
 	AddBook(ctx context.Context, p AddBookParams) (*ent.Book, error)
 	AddSeries(ctx context.Context, p AddSeriesParams) (*ent.BookSeries, error)

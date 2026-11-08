@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -109,8 +111,12 @@ var _ = Describe("Worker.Scan", Label("integration", "transcoding"), func() {
 		GinkgoHelper()
 		tmdbSeq++
 		m, err := store.CreateMovie(ctx, db.CreateMovieParams{
-			Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: tmdbSeq,
-			Status: entmovie.StatusAvailable, QualityProfile: profile,
+			Title:          "Dune",
+			OriginalTitle:  "Dune",
+			Year:           2021,
+			TmdbID:         providerid.Format(tmdbSeq),
+			Status:         entmovie.StatusAvailable,
+			QualityProfile: profile,
 		})
 		Expect(err).NotTo(HaveOccurred())
 

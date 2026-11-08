@@ -81,7 +81,7 @@ func ParsedYear(v uint16) predicate.ImportScanShow {
 }
 
 // TvdbID applies equality check predicate on the "tvdb_id" field. It's identical to TvdbIDEQ.
-func TvdbID(v uint32) predicate.ImportScanShow {
+func TvdbID(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldEQ(FieldTvdbID, v))
 }
 
@@ -96,7 +96,7 @@ func FileCount(v uint16) predicate.ImportScanShow {
 }
 
 // DecisionTvdbID applies equality check predicate on the "decision_tvdb_id" field. It's identical to DecisionTvdbIDEQ.
-func DecisionTvdbID(v uint32) predicate.ImportScanShow {
+func DecisionTvdbID(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldEQ(FieldDecisionTvdbID, v))
 }
 
@@ -401,43 +401,58 @@ func ClassificationNotIn(vs ...Classification) predicate.ImportScanShow {
 }
 
 // TvdbIDEQ applies the EQ predicate on the "tvdb_id" field.
-func TvdbIDEQ(v uint32) predicate.ImportScanShow {
+func TvdbIDEQ(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldEQ(FieldTvdbID, v))
 }
 
 // TvdbIDNEQ applies the NEQ predicate on the "tvdb_id" field.
-func TvdbIDNEQ(v uint32) predicate.ImportScanShow {
+func TvdbIDNEQ(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldNEQ(FieldTvdbID, v))
 }
 
 // TvdbIDIn applies the In predicate on the "tvdb_id" field.
-func TvdbIDIn(vs ...uint32) predicate.ImportScanShow {
+func TvdbIDIn(vs ...string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldIn(FieldTvdbID, vs...))
 }
 
 // TvdbIDNotIn applies the NotIn predicate on the "tvdb_id" field.
-func TvdbIDNotIn(vs ...uint32) predicate.ImportScanShow {
+func TvdbIDNotIn(vs ...string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldNotIn(FieldTvdbID, vs...))
 }
 
 // TvdbIDGT applies the GT predicate on the "tvdb_id" field.
-func TvdbIDGT(v uint32) predicate.ImportScanShow {
+func TvdbIDGT(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldGT(FieldTvdbID, v))
 }
 
 // TvdbIDGTE applies the GTE predicate on the "tvdb_id" field.
-func TvdbIDGTE(v uint32) predicate.ImportScanShow {
+func TvdbIDGTE(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldGTE(FieldTvdbID, v))
 }
 
 // TvdbIDLT applies the LT predicate on the "tvdb_id" field.
-func TvdbIDLT(v uint32) predicate.ImportScanShow {
+func TvdbIDLT(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldLT(FieldTvdbID, v))
 }
 
 // TvdbIDLTE applies the LTE predicate on the "tvdb_id" field.
-func TvdbIDLTE(v uint32) predicate.ImportScanShow {
+func TvdbIDLTE(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldLTE(FieldTvdbID, v))
+}
+
+// TvdbIDContains applies the Contains predicate on the "tvdb_id" field.
+func TvdbIDContains(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldContains(FieldTvdbID, v))
+}
+
+// TvdbIDHasPrefix applies the HasPrefix predicate on the "tvdb_id" field.
+func TvdbIDHasPrefix(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldHasPrefix(FieldTvdbID, v))
+}
+
+// TvdbIDHasSuffix applies the HasSuffix predicate on the "tvdb_id" field.
+func TvdbIDHasSuffix(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldHasSuffix(FieldTvdbID, v))
 }
 
 // TvdbIDIsNil applies the IsNil predicate on the "tvdb_id" field.
@@ -448,6 +463,16 @@ func TvdbIDIsNil() predicate.ImportScanShow {
 // TvdbIDNotNil applies the NotNil predicate on the "tvdb_id" field.
 func TvdbIDNotNil() predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldNotNull(FieldTvdbID))
+}
+
+// TvdbIDEqualFold applies the EqualFold predicate on the "tvdb_id" field.
+func TvdbIDEqualFold(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldEqualFold(FieldTvdbID, v))
+}
+
+// TvdbIDContainsFold applies the ContainsFold predicate on the "tvdb_id" field.
+func TvdbIDContainsFold(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldContainsFold(FieldTvdbID, v))
 }
 
 // CandidatesIsNil applies the IsNil predicate on the "candidates" field.
@@ -571,43 +596,58 @@ func DecisionNotIn(vs ...Decision) predicate.ImportScanShow {
 }
 
 // DecisionTvdbIDEQ applies the EQ predicate on the "decision_tvdb_id" field.
-func DecisionTvdbIDEQ(v uint32) predicate.ImportScanShow {
+func DecisionTvdbIDEQ(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldEQ(FieldDecisionTvdbID, v))
 }
 
 // DecisionTvdbIDNEQ applies the NEQ predicate on the "decision_tvdb_id" field.
-func DecisionTvdbIDNEQ(v uint32) predicate.ImportScanShow {
+func DecisionTvdbIDNEQ(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldNEQ(FieldDecisionTvdbID, v))
 }
 
 // DecisionTvdbIDIn applies the In predicate on the "decision_tvdb_id" field.
-func DecisionTvdbIDIn(vs ...uint32) predicate.ImportScanShow {
+func DecisionTvdbIDIn(vs ...string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldIn(FieldDecisionTvdbID, vs...))
 }
 
 // DecisionTvdbIDNotIn applies the NotIn predicate on the "decision_tvdb_id" field.
-func DecisionTvdbIDNotIn(vs ...uint32) predicate.ImportScanShow {
+func DecisionTvdbIDNotIn(vs ...string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldNotIn(FieldDecisionTvdbID, vs...))
 }
 
 // DecisionTvdbIDGT applies the GT predicate on the "decision_tvdb_id" field.
-func DecisionTvdbIDGT(v uint32) predicate.ImportScanShow {
+func DecisionTvdbIDGT(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldGT(FieldDecisionTvdbID, v))
 }
 
 // DecisionTvdbIDGTE applies the GTE predicate on the "decision_tvdb_id" field.
-func DecisionTvdbIDGTE(v uint32) predicate.ImportScanShow {
+func DecisionTvdbIDGTE(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldGTE(FieldDecisionTvdbID, v))
 }
 
 // DecisionTvdbIDLT applies the LT predicate on the "decision_tvdb_id" field.
-func DecisionTvdbIDLT(v uint32) predicate.ImportScanShow {
+func DecisionTvdbIDLT(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldLT(FieldDecisionTvdbID, v))
 }
 
 // DecisionTvdbIDLTE applies the LTE predicate on the "decision_tvdb_id" field.
-func DecisionTvdbIDLTE(v uint32) predicate.ImportScanShow {
+func DecisionTvdbIDLTE(v string) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldLTE(FieldDecisionTvdbID, v))
+}
+
+// DecisionTvdbIDContains applies the Contains predicate on the "decision_tvdb_id" field.
+func DecisionTvdbIDContains(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldContains(FieldDecisionTvdbID, v))
+}
+
+// DecisionTvdbIDHasPrefix applies the HasPrefix predicate on the "decision_tvdb_id" field.
+func DecisionTvdbIDHasPrefix(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldHasPrefix(FieldDecisionTvdbID, v))
+}
+
+// DecisionTvdbIDHasSuffix applies the HasSuffix predicate on the "decision_tvdb_id" field.
+func DecisionTvdbIDHasSuffix(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldHasSuffix(FieldDecisionTvdbID, v))
 }
 
 // DecisionTvdbIDIsNil applies the IsNil predicate on the "decision_tvdb_id" field.
@@ -618,6 +658,16 @@ func DecisionTvdbIDIsNil() predicate.ImportScanShow {
 // DecisionTvdbIDNotNil applies the NotNil predicate on the "decision_tvdb_id" field.
 func DecisionTvdbIDNotNil() predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldNotNull(FieldDecisionTvdbID))
+}
+
+// DecisionTvdbIDEqualFold applies the EqualFold predicate on the "decision_tvdb_id" field.
+func DecisionTvdbIDEqualFold(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldEqualFold(FieldDecisionTvdbID, v))
+}
+
+// DecisionTvdbIDContainsFold applies the ContainsFold predicate on the "decision_tvdb_id" field.
+func DecisionTvdbIDContainsFold(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldContainsFold(FieldDecisionTvdbID, v))
 }
 
 // OutcomeEQ applies the EQ predicate on the "outcome" field.

@@ -32,7 +32,7 @@ type CreateImportScanBookParams struct {
 	ParsedAuthor    string
 	ParsedISBN      string
 	Classification  entimportscanbook.Classification
-	BookHardcoverID uint32
+	BookHardcoverID string
 	Candidates      []schema.ScannedBookCandidate
 	ExistingBookID  *uint32
 	ParsedYear      uint16
@@ -83,10 +83,10 @@ func (db *DB) BulkCreateImportScanBooks(
 // existing instead of adopted twice.
 func (db *DB) BookHardcoverIndex(
 	ctx context.Context, kind string,
-) (map[uint32]uint32, error) {
+) (map[string]uint32, error) {
 	var rows []struct {
 		ID          uint32 `json:"id"`
-		HardcoverID uint32 `json:"hardcover_id"`
+		HardcoverID string `json:"hardcover_id"`
 	}
 	err := db.client.Book.Query().
 		Where(book.HasMediaFilesWith(
@@ -97,7 +97,7 @@ func (db *DB) BookHardcoverIndex(
 	if err != nil {
 		return nil, fmt.Errorf("book hardcover index: %w", err)
 	}
-	out := make(map[uint32]uint32, len(rows))
+	out := make(map[string]uint32, len(rows))
 	for _, r := range rows {
 		out[r.HardcoverID] = r.ID
 	}
@@ -232,7 +232,7 @@ func (db *DB) FindImportScanBook(
 // book id from another scan matches nothing instead of being mutated.
 func (db *DB) UpdateImportScanBookDecision(
 	ctx context.Context, scanID, bookID uint32,
-	decision entimportscanbook.Decision, hardcoverID *uint32,
+	decision entimportscanbook.Decision, hardcoverID *string,
 ) error {
 	u := db.client.ImportScanBook.Update().
 		Where(

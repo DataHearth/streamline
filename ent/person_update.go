@@ -37,23 +37,16 @@ func (_u *PersonUpdate) SetUpdateTime(v time.Time) *PersonUpdate {
 }
 
 // SetTmdbID sets the "tmdb_id" field.
-func (_u *PersonUpdate) SetTmdbID(v uint32) *PersonUpdate {
-	_u.mutation.ResetTmdbID()
+func (_u *PersonUpdate) SetTmdbID(v string) *PersonUpdate {
 	_u.mutation.SetTmdbID(v)
 	return _u
 }
 
 // SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
-func (_u *PersonUpdate) SetNillableTmdbID(v *uint32) *PersonUpdate {
+func (_u *PersonUpdate) SetNillableTmdbID(v *string) *PersonUpdate {
 	if v != nil {
 		_u.SetTmdbID(*v)
 	}
-	return _u
-}
-
-// AddTmdbID adds value to the "tmdb_id" field.
-func (_u *PersonUpdate) AddTmdbID(v int32) *PersonUpdate {
-	_u.mutation.AddTmdbID(v)
 	return _u
 }
 
@@ -64,23 +57,16 @@ func (_u *PersonUpdate) ClearTmdbID() *PersonUpdate {
 }
 
 // SetTvdbID sets the "tvdb_id" field.
-func (_u *PersonUpdate) SetTvdbID(v uint32) *PersonUpdate {
-	_u.mutation.ResetTvdbID()
+func (_u *PersonUpdate) SetTvdbID(v string) *PersonUpdate {
 	_u.mutation.SetTvdbID(v)
 	return _u
 }
 
 // SetNillableTvdbID sets the "tvdb_id" field if the given value is not nil.
-func (_u *PersonUpdate) SetNillableTvdbID(v *uint32) *PersonUpdate {
+func (_u *PersonUpdate) SetNillableTvdbID(v *string) *PersonUpdate {
 	if v != nil {
 		_u.SetTvdbID(*v)
 	}
-	return _u
-}
-
-// AddTvdbID adds value to the "tvdb_id" field.
-func (_u *PersonUpdate) AddTvdbID(v int32) *PersonUpdate {
-	_u.mutation.AddTvdbID(v)
 	return _u
 }
 
@@ -413,22 +399,16 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.SetField(person.FieldUpdateTime, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.TmdbID(); ok {
-		_spec.SetField(person.FieldTmdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedTmdbID(); ok {
-		_spec.AddField(person.FieldTmdbID, field.TypeUint32, value)
+		_spec.SetField(person.FieldTmdbID, field.TypeString, value)
 	}
 	if _u.mutation.TmdbIDCleared() {
-		_spec.ClearField(person.FieldTmdbID, field.TypeUint32)
+		_spec.ClearField(person.FieldTmdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.TvdbID(); ok {
-		_spec.SetField(person.FieldTvdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedTvdbID(); ok {
-		_spec.AddField(person.FieldTvdbID, field.TypeUint32, value)
+		_spec.SetField(person.FieldTvdbID, field.TypeString, value)
 	}
 	if _u.mutation.TvdbIDCleared() {
-		_spec.ClearField(person.FieldTvdbID, field.TypeUint32)
+		_spec.ClearField(person.FieldTvdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(person.FieldName, field.TypeString, value)
@@ -567,23 +547,16 @@ func (_u *PersonUpdateOne) SetUpdateTime(v time.Time) *PersonUpdateOne {
 }
 
 // SetTmdbID sets the "tmdb_id" field.
-func (_u *PersonUpdateOne) SetTmdbID(v uint32) *PersonUpdateOne {
-	_u.mutation.ResetTmdbID()
+func (_u *PersonUpdateOne) SetTmdbID(v string) *PersonUpdateOne {
 	_u.mutation.SetTmdbID(v)
 	return _u
 }
 
 // SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
-func (_u *PersonUpdateOne) SetNillableTmdbID(v *uint32) *PersonUpdateOne {
+func (_u *PersonUpdateOne) SetNillableTmdbID(v *string) *PersonUpdateOne {
 	if v != nil {
 		_u.SetTmdbID(*v)
 	}
-	return _u
-}
-
-// AddTmdbID adds value to the "tmdb_id" field.
-func (_u *PersonUpdateOne) AddTmdbID(v int32) *PersonUpdateOne {
-	_u.mutation.AddTmdbID(v)
 	return _u
 }
 
@@ -594,23 +567,16 @@ func (_u *PersonUpdateOne) ClearTmdbID() *PersonUpdateOne {
 }
 
 // SetTvdbID sets the "tvdb_id" field.
-func (_u *PersonUpdateOne) SetTvdbID(v uint32) *PersonUpdateOne {
-	_u.mutation.ResetTvdbID()
+func (_u *PersonUpdateOne) SetTvdbID(v string) *PersonUpdateOne {
 	_u.mutation.SetTvdbID(v)
 	return _u
 }
 
 // SetNillableTvdbID sets the "tvdb_id" field if the given value is not nil.
-func (_u *PersonUpdateOne) SetNillableTvdbID(v *uint32) *PersonUpdateOne {
+func (_u *PersonUpdateOne) SetNillableTvdbID(v *string) *PersonUpdateOne {
 	if v != nil {
 		_u.SetTvdbID(*v)
 	}
-	return _u
-}
-
-// AddTvdbID adds value to the "tvdb_id" field.
-func (_u *PersonUpdateOne) AddTvdbID(v int32) *PersonUpdateOne {
-	_u.mutation.AddTvdbID(v)
 	return _u
 }
 
@@ -973,22 +939,16 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 		_spec.SetField(person.FieldUpdateTime, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.TmdbID(); ok {
-		_spec.SetField(person.FieldTmdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedTmdbID(); ok {
-		_spec.AddField(person.FieldTmdbID, field.TypeUint32, value)
+		_spec.SetField(person.FieldTmdbID, field.TypeString, value)
 	}
 	if _u.mutation.TmdbIDCleared() {
-		_spec.ClearField(person.FieldTmdbID, field.TypeUint32)
+		_spec.ClearField(person.FieldTmdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.TvdbID(); ok {
-		_spec.SetField(person.FieldTvdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedTvdbID(); ok {
-		_spec.AddField(person.FieldTvdbID, field.TypeUint32, value)
+		_spec.SetField(person.FieldTvdbID, field.TypeString, value)
 	}
 	if _u.mutation.TvdbIDCleared() {
-		_spec.ClearField(person.FieldTvdbID, field.TypeUint32)
+		_spec.ClearField(person.FieldTvdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(person.FieldName, field.TypeString, value)

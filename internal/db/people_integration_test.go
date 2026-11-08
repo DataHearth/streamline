@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -32,7 +34,7 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 			Title:         title,
 			OriginalTitle: title,
 			Year:          2020,
-			TmdbID:        tmdbID,
+			TmdbID:        providerid.Format(tmdbID),
 			Status:        entmovie.StatusWanted,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -44,7 +46,7 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 		s, err := store.CreateTVShow(ctx, CreateTVShowParams{
 			Title:  title,
 			Year:   2020,
-			TvdbID: tvdbID,
+			TvdbID: providerid.Format(tvdbID),
 		})
 		Expect(err).NotTo(HaveOccurred())
 		return s
@@ -91,8 +93,8 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 			people, err := store.ListPeople(ctx, ListPeopleParams{Limit: 10})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(people).To(HaveLen(2))
-			Expect(people[0].TMDBID).To(BeZero())
-			Expect(people[1].TMDBID).To(BeZero())
+			Expect(people[0].TMDBID).To(BeEmpty())
+			Expect(people[1].TMDBID).To(BeEmpty())
 			Expect(people[0].ID).NotTo(Equal(people[1].ID))
 			Expect([]string{people[0].Name, people[1].Name}).
 				To(ConsistOf("Zachary Chasseriaud", "Nina Meurisse"))
@@ -107,7 +109,7 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 			delta := seedShow("Delta", 4)
 			ada, err := client.Person.Create().
 				SetName("Ada Lovelace").
-				SetTmdbID(10).
+				SetTmdbID("10").
 				SetProfileURL("https://img/ada.jpg").
 				Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -122,7 +124,7 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(people).To(HaveLen(2))
 			Expect(people[0].ID).To(Equal(ada.ID))
-			Expect(people[0].TMDBID).To(Equal(uint32(10)))
+			Expect(people[0].TMDBID).To(Equal("10"))
 			Expect(people[0].ProfileURL).To(Equal("https://img/ada.jpg"))
 			Expect(people[0].Credits).To(Equal(uint32(3)))
 			Expect(people[1].ID).To(Equal(bob.ID))
@@ -192,7 +194,7 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 			gamma := seedShow("Gamma", 3)
 			ada, err := client.Person.Create().
 				SetName("Ada Lovelace").
-				SetTvdbID(77).
+				SetTvdbID("77").
 				SetProfileURL("https://img/ada.jpg").
 				Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -203,8 +205,8 @@ var _ = Describe("People (cast)", Label("integration", "db"), func() {
 			credits, err := store.PersonCredits(ctx, ada.ID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(credits.ID).To(Equal(ada.ID))
-			Expect(credits.TVDBID).To(Equal(uint32(77)))
-			Expect(credits.TMDBID).To(BeZero())
+			Expect(credits.TVDBID).To(Equal("77"))
+			Expect(credits.TMDBID).To(BeEmpty())
 			Expect(credits.Name).To(Equal("Ada Lovelace"))
 			Expect(credits.ProfileURL).To(Equal("https://img/ada.jpg"))
 			Expect(credits.Movies).To(HaveLen(1))

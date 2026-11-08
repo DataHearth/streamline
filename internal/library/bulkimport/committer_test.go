@@ -497,7 +497,7 @@ var _ = Describe("Service.addOrFindMovie", Label("unit", "bulkimport"), func() {
 		svc   *Service
 	)
 
-	const tmdbID = uint32(49948)
+	const tmdbID = "49948"
 
 	BeforeEach(func() {
 		configtest.Setup(map[string]any{
@@ -559,7 +559,7 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 		svc   *Service
 	)
 
-	const tmdbID = uint32(55001)
+	const tmdbID = "55001"
 
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -707,7 +707,7 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 		srcDir string
 	)
 
-	const tmdbID = uint32(55002)
+	const tmdbID = "55002"
 
 	BeforeEach(func() {
 		ctx = context.Background()

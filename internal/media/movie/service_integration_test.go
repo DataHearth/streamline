@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -61,9 +63,9 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		It(
 			"persists the movie row, resolves the default profile, and dispatches poster fetch",
 			func() {
-				meta.EXPECT().GetMovie(mock.Anything, uint32(157336)).
+				meta.EXPECT().GetMovie(mock.Anything, "157336").
 					Return(&metadata.MovieDetails{
-						TMDBID:        157336,
+						TMDBID:        "157336",
 						Title:         "Interstellar",
 						OriginalTitle: "Interstellar",
 						Year:          2014,
@@ -81,7 +83,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 					}).
 					Once()
 
-				m, posterPath, err := svc.Add(ctx, 157336, "")
+				m, posterPath, err := svc.Add(ctx, "157336", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(m.Title).To(Equal("Interstellar"))
 				Expect(m.Year).To(Equal(uint16(2014)))
@@ -90,7 +92,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 
 				persisted, err := store.FindMovieByID(ctx, m.ID)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(persisted.TmdbID).To(Equal(uint32(157336)))
+				Expect(persisted.TmdbID).To(Equal("157336"))
 
 				Eventually(done).Should(BeClosed())
 			},
@@ -101,18 +103,18 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 				map[string]any{"metadata": map[string]any{"tmdb_region": "FR"}},
 			)
 			drd := time.Date(2026, 10, 29, 0, 0, 0, 0, time.UTC)
-			meta.EXPECT().GetMovie(mock.Anything, uint32(1165369)).
+			meta.EXPECT().GetMovie(mock.Anything, "1165369").
 				Return(&metadata.MovieDetails{
-					TMDBID:        1165369,
+					TMDBID:        "1165369",
 					Title:         "La Bataille de Gaulle",
 					OriginalTitle: "La Bataille de Gaulle",
 					Year:          2026,
 				}, nil).Once()
 			meta.EXPECT().
-				FetchDigitalRelease(mock.Anything, uint32(1165369), "FR").
+				FetchDigitalRelease(mock.Anything, "1165369", "FR").
 				Return(&drd, nil).Once()
 
-			m, _, err := svc.Add(ctx, 1165369, "")
+			m, _, err := svc.Add(ctx, "1165369", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(m.DigitalReleaseDate).NotTo(BeNil())
 			Expect(m.DigitalReleaseDate.UTC()).To(Equal(drd))
@@ -124,23 +126,23 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 				"movie_quality_default_profile":  "",
 				"series_quality_default_profile": "",
 			})
-			_, _, err := svc.Add(ctx, 1, "")
+			_, _, err := svc.Add(ctx, "1", "")
 			Expect(err).To(MatchError(ErrNoQualityProfile))
 		})
 
 		It("rejects a duplicate add for the same TMDB id", func() {
-			meta.EXPECT().GetMovie(mock.Anything, uint32(157336)).
+			meta.EXPECT().GetMovie(mock.Anything, "157336").
 				Return(&metadata.MovieDetails{
-					TMDBID:        157336,
+					TMDBID:        "157336",
 					Title:         "Interstellar",
 					OriginalTitle: "Interstellar",
 					Year:          2014,
 				}, nil).Twice()
 
-			_, _, err := svc.Add(ctx, 157336, profileName)
+			_, _, err := svc.Add(ctx, "157336", profileName)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, _, err = svc.Add(ctx, 157336, profileName)
+			_, _, err = svc.Add(ctx, "157336", profileName)
 			Expect(err).To(MatchError(ContainSubstring("already exists")))
 		})
 
@@ -148,9 +150,9 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			"under concurrent adds for the same TMDB id, persists only one row",
 			func() {
 				const concurrency = 4
-				meta.EXPECT().GetMovie(mock.Anything, uint32(99)).
+				meta.EXPECT().GetMovie(mock.Anything, "99").
 					Return(&metadata.MovieDetails{
-						TMDBID:        99,
+						TMDBID:        "99",
 						Title:         "Solo",
 						OriginalTitle: "Solo",
 						Year:          2018,
@@ -162,7 +164,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 				for i := range concurrency {
 					wg.Go(func() {
 						<-start
-						_, _, err := svc.Add(ctx, 99, profileName)
+						_, _, err := svc.Add(ctx, "99", profileName)
 						errs[i] = err
 					})
 				}
@@ -183,7 +185,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 				Expect(success).To(Equal(1))
 				Expect(failure).To(Equal(concurrency - 1))
 
-				rows, err := store.FindMoviesByTMDBIDs(ctx, []uint32{99})
+				rows, err := store.FindMoviesByTMDBIDs(ctx, []string{"99"})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rows).To(HaveLen(1))
 			},
@@ -194,7 +196,10 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		seed := func(title string, tmdbID uint32, status entmovie.Status) {
 			GinkgoHelper()
 			_, err := store.CreateMovie(ctx, db.CreateMovieParams{
-				Title: title, OriginalTitle: title, TmdbID: tmdbID, Status: status,
+				Title:          title,
+				OriginalTitle:  title,
+				TmdbID:         providerid.Format(tmdbID),
+				Status:         status,
 				QualityProfile: profileName,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -245,7 +250,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			_, err := store.CreateMovie(ctx, db.CreateMovieParams{
 				Title:          "A",
 				OriginalTitle:  "A",
-				TmdbID:         1,
+				TmdbID:         "1",
 				Status:         entmovie.StatusWanted,
 				QualityProfile: profileName,
 			})
@@ -253,7 +258,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			_, err = store.CreateMovie(ctx, db.CreateMovieParams{
 				Title:          "B",
 				OriginalTitle:  "B",
-				TmdbID:         2,
+				TmdbID:         "2",
 				Status:         entmovie.StatusDownloading,
 				QualityProfile: profileName,
 			})
@@ -261,7 +266,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			_, err = store.CreateMovie(ctx, db.CreateMovieParams{
 				Title:          "C",
 				OriginalTitle:  "C",
-				TmdbID:         3,
+				TmdbID:         "3",
 				Status:         entmovie.StatusAvailable,
 				QualityProfile: profileName,
 			})
@@ -269,7 +274,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			_, err = store.CreateMovie(ctx, db.CreateMovieParams{
 				Title:          "D",
 				OriginalTitle:  "D",
-				TmdbID:         4,
+				TmdbID:         "4",
 				Status:         entmovie.StatusFailed,
 				QualityProfile: profileName,
 			})
@@ -303,7 +308,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		It("refreshes metadata and persists the digital release date", func() {
 			m, err := store.CreateMovie(ctx, db.CreateMovieParams{
 				Title: "Old Title", OriginalTitle: "Old Title",
-				Year: 2020, TmdbID: 555,
+				Year: 2020, TmdbID: "555",
 				Status: entmovie.StatusWanted, QualityProfile: profileName,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -316,15 +321,15 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			Expect(err).NotTo(HaveOccurred())
 
 			drd := time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)
-			meta.EXPECT().GetMovie(mock.Anything, uint32(555)).
+			meta.EXPECT().GetMovie(mock.Anything, "555").
 				Return(&metadata.MovieDetails{
-					TMDBID:        555,
+					TMDBID:        "555",
 					Title:         "New Title",
 					OriginalTitle: "New Title",
 					Year:          2020,
 				}, nil).Once()
 			meta.EXPECT().
-				FetchDigitalRelease(mock.Anything, uint32(555), "US").
+				FetchDigitalRelease(mock.Anything, "555", "US").
 				Return(&drd, nil).Once()
 
 			Expect(svc.RefreshStale(ctx)).To(Succeed())
@@ -341,7 +346,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			func() {
 				m, err := store.CreateMovie(ctx, db.CreateMovieParams{
 					Title: "Stable", OriginalTitle: "Stable",
-					Year: 2021, TmdbID: 777,
+					Year: 2021, TmdbID: "777",
 					Status: entmovie.StatusWanted, QualityProfile: profileName,
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -350,15 +355,15 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 					SetUpdateTime(past).Save(ctx)
 				Expect(err).NotTo(HaveOccurred())
 
-				meta.EXPECT().GetMovie(mock.Anything, uint32(777)).
+				meta.EXPECT().GetMovie(mock.Anything, "777").
 					Return(&metadata.MovieDetails{
-						TMDBID:        777,
+						TMDBID:        "777",
 						Title:         "Stable",
 						OriginalTitle: "Stable",
 						Year:          2021,
 					}, nil).Once()
 				meta.EXPECT().
-					FetchDigitalRelease(mock.Anything, uint32(777), "US").
+					FetchDigitalRelease(mock.Anything, "777", "US").
 					Return(nil, errors.New("boom")).Once()
 
 				Expect(svc.RefreshStale(ctx)).To(Succeed())
@@ -374,7 +379,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		It("cascades to the movie's media files and download records", func() {
 			m, err := store.CreateMovie(ctx, db.CreateMovieParams{
 				Title: "Doomed", OriginalTitle: "Doomed", Year: 2019,
-				TmdbID: 4242, Status: entmovie.StatusAvailable,
+				TmdbID: "4242", Status: entmovie.StatusAvailable,
 				QualityProfile: profileName,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -414,14 +419,14 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		It("flags rows whose tmdb_id matches an existing movie", func() {
 			_, err := store.CreateMovie(ctx, db.CreateMovieParams{
 				Title: "Existing", OriginalTitle: "Existing",
-				TmdbID: 200, Status: entmovie.StatusWanted,
+				TmdbID: "200", Status: entmovie.StatusWanted,
 				QualityProfile: profileName,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
 			out, err := svc.AnnotateTMDBResults(ctx, []metadata.MovieResult{
-				{TMDBID: 100, Title: "New"},
-				{TMDBID: 200, Title: "Existing"},
+				{TMDBID: "100", Title: "New"},
+				{TMDBID: "200", Title: "Existing"},
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(HaveLen(2))

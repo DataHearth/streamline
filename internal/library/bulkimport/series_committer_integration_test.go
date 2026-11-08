@@ -93,7 +93,7 @@ var _ = Describe(
 					Run(func(context.Context, string, string, ...string) { rescanned <- struct{}{} }).
 					Return(nil).Times(2)
 
-				const tvdbID = uint32(81189)
+				const tvdbID = "81189"
 				tvmeta.EXPECT().
 					GetSeries(mock.Anything, tvdbID).
 					Return(&metadata.TVDetails{
@@ -325,7 +325,7 @@ var _ = Describe(
 					nil, nil, nil, nil,
 				)
 
-				const tvdbID = uint32(81189)
+				const tvdbID = "81189"
 				tvmeta.EXPECT().GetSeries(mock.Anything, tvdbID).
 					Return(&metadata.TVDetails{
 						TVDBID: tvdbID, Title: "Breaking Bad", Year: 2008,
@@ -432,7 +432,7 @@ var _ = Describe(
 					nil, nil, nil, nil,
 				)
 
-				const tvdbID = uint32(99123)
+				const tvdbID = "99123"
 				tvmeta.EXPECT().
 					GetSeries(mock.Anything, tvdbID).
 					Return(&metadata.TVDetails{

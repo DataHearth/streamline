@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -37,8 +39,12 @@ var _ = Describe("TranscodeJob store", Label("integration", "db"), func() {
 		GinkgoHelper()
 		tmdbSeq++
 		m, err := store.CreateMovie(ctx, CreateMovieParams{
-			Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: tmdbSeq,
-			Status: entmovie.StatusWanted, QualityProfile: "HD",
+			Title:          "Dune",
+			OriginalTitle:  "Dune",
+			Year:           2021,
+			TmdbID:         providerid.Format(tmdbSeq),
+			Status:         entmovie.StatusWanted,
+			QualityProfile: "HD",
 		})
 		Expect(err).NotTo(HaveOccurred())
 		mf, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
@@ -55,7 +61,7 @@ var _ = Describe("TranscodeJob store", Label("integration", "db"), func() {
 		tmdbSeq++
 		ad := time.Now()
 		show, err := store.CreateTVShow(ctx, CreateTVShowParams{
-			Title: "The Bear", Year: 2022, TvdbID: tmdbSeq,
+			Title: "The Bear", Year: 2022, TvdbID: providerid.Format(tmdbSeq),
 			Seasons: []SeasonSeed{
 				{
 					Number: 1,

@@ -89,7 +89,7 @@ func (s *Service) runScanBooks(ctx context.Context, scan *ent.ImportScan) {
 			"scan.id", scan.ID, "error", err)
 	}
 
-	indexed := map[entimportscanbook.Slot]map[uint32]uint32{}
+	indexed := map[entimportscanbook.Slot]map[string]uint32{}
 	for _, slot := range []entimportscanbook.Slot{
 		entimportscanbook.SlotEbook, entimportscanbook.SlotAudiobook,
 	} {
@@ -97,7 +97,7 @@ func (s *Service) runScanBooks(ctx context.Context, scan *ent.ImportScan) {
 		if err != nil {
 			slog.WarnContext(ctx, "book scan: tracked-book lookup failed",
 				"scan.id", scan.ID, "slot", slot, "error", err)
-			idx = map[uint32]uint32{}
+			idx = map[string]uint32{}
 		}
 		indexed[slot] = idx
 	}
@@ -413,7 +413,7 @@ func cleanBookName(name string) string {
 func (s *Service) classifyBookCandidate(
 	ctx context.Context,
 	info ebookmeta.Info,
-	indexed map[uint32]uint32,
+	indexed map[string]uint32,
 ) (BookClassification, int, error) {
 	var errs int
 
@@ -427,7 +427,7 @@ func (s *Service) classifyBookCandidate(
 			errs++
 			slog.WarnContext(ctx, "book scan: isbn lookup failed",
 				"isbn", info.ISBN, "error", err)
-		case id != 0:
+		case id != "":
 			return classifyResolvedBook(
 				id,
 				schema.ScannedBookCandidate{BookHardcoverID: id},

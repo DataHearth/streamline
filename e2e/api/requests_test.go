@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -13,7 +14,7 @@ import (
 type requestView struct {
 	Id        uint32 `json:"id"`
 	MediaType string `json:"media_type"`
-	MediaId   uint32 `json:"media_id"`
+	MediaId   string `json:"media_id"`
 	Title     string `json:"title"`
 	Status    string `json:"status"`
 }
@@ -21,7 +22,7 @@ type requestView struct {
 // createRequest submits a request as the given identity. Requests have no
 // delete route, so the created row is left behind and every assertion in this
 // file is written to tolerate pre-existing rows.
-func createRequest(id identity, mediaID uint32, title string) requestView {
+func createRequest(id identity, mediaID string, title string) requestView {
 	GinkgoHelper()
 	resp := post("/api/v1/requests", id, map[string]any{
 		"media_type": "movie",
@@ -37,10 +38,10 @@ func createRequest(id identity, mediaID uint32, title string) requestView {
 
 var _ = Describe("REST API requests", Label("e2e"), func() {
 	It("creates and lists a request", func() {
-		created := createRequest(adminAuth, 900001, "E2E Requested Movie")
+		created := createRequest(adminAuth, "900001", "E2E Requested Movie")
 		Expect(created.Status).To(Equal("pending"))
 		Expect(created.MediaType).To(Equal("movie"))
-		Expect(created.MediaId).To(BeEquivalentTo(900001))
+		Expect(created.MediaId).To(Equal("900001"))
 
 		resp := get(
 			"/api/v1/requests?status=pending&media_type=movie&page=1&limit=50",
@@ -61,12 +62,12 @@ var _ = Describe("REST API requests", Label("e2e"), func() {
 	})
 
 	It("409s a duplicate request for the same media", func() {
-		created := createRequest(adminAuth, 900002, "E2E Duplicate Movie")
+		created := createRequest(adminAuth, "900002", "E2E Duplicate Movie")
 		Expect(created.Id).NotTo(BeZero())
 
 		resp := post("/api/v1/requests", adminAuth, map[string]any{
 			"media_type": "movie",
-			"media_id":   900002,
+			"media_id":   "900002",
 			"title":      "E2E Duplicate Movie",
 		})
 		defer resp.Body.Close()
@@ -79,7 +80,7 @@ var _ = Describe("REST API requests", Label("e2e"), func() {
 	})
 
 	It("returns request counts by status", func() {
-		created := createRequest(adminAuth, 900007, "E2E Counted Movie")
+		created := createRequest(adminAuth, "900007", "E2E Counted Movie")
 
 		resp := get("/api/v1/requests/counts", adminAuth)
 		defer resp.Body.Close()
@@ -96,7 +97,7 @@ var _ = Describe("REST API requests", Label("e2e"), func() {
 	})
 
 	It("denies and reopens a request", func() {
-		created := createRequest(adminAuth, 900003, "E2E Denied Movie")
+		created := createRequest(adminAuth, "900003", "E2E Denied Movie")
 
 		denied := post(
 			fmt.Sprintf("/api/v1/requests/%d/deny", created.Id),
@@ -121,8 +122,8 @@ var _ = Describe("REST API requests", Label("e2e"), func() {
 	})
 
 	It("scopes the list to their own rows for a request_only caller", func() {
-		own := createRequest(viewerAuth, 900004, "E2E Viewer Movie")
-		foreign := createRequest(adminAuth, 900005, "E2E Admin Movie")
+		own := createRequest(viewerAuth, "900004", "E2E Viewer Movie")
+		foreign := createRequest(adminAuth, "900005", "E2E Admin Movie")
 
 		resp := get("/api/v1/requests?limit=50", viewerAuth)
 		defer resp.Body.Close()
@@ -136,7 +137,11 @@ var _ = Describe("REST API requests", Label("e2e"), func() {
 	})
 
 	It("approves a request and adds the movie to the library", func() {
-		created := createRequest(adminAuth, fakes.MovieTMDBID, fakes.MovieTitle)
+		created := createRequest(
+			adminAuth,
+			strconv.Itoa(fakes.MovieTMDBID),
+			fakes.MovieTitle,
+		)
 		DeferCleanup(func() {
 			removed := del(
 				fmt.Sprintf("/api/v1/movies/%d", libraryMovieID(fakes.MovieTMDBID)),
@@ -211,7 +216,7 @@ var _ = Describe("REST API requests", Label("e2e"), func() {
 		})
 
 		It("403s a request_only caller reading someone else's request", func() {
-			foreign := createRequest(adminAuth, 900006, "E2E Foreign Movie")
+			foreign := createRequest(adminAuth, "900006", "E2E Foreign Movie")
 			resp := get(
 				fmt.Sprintf("/api/v1/requests/%d/metadata", foreign.Id),
 				viewerAuth,

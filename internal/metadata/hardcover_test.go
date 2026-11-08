@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -109,7 +110,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			res, err := hc.SearchBooks(ctx, "Elantris Brandon Sanderson")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res).To(HaveLen(1))
-			Expect(res[0].HardcoverID).To(Equal(uint32(1)))
+			Expect(res[0].HardcoverID).To(Equal("1"))
 			Expect(res[0].Author).To(Equal("Brandon Sanderson"))
 			Expect(res[0].Year).To(Equal(uint16(2005)))
 			Expect(gotAuth).To(Equal("Bearer test-token"))
@@ -133,7 +134,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(hits).To(HaveLen(1))
 				Expect(hits[0]).To(Equal(BookLookupHit{
-					HardcoverID: 7, Type: "book", Title: "Elantris",
+					HardcoverID: "7", Type: "book", Title: "Elantris",
 					Author: "Brandon Sanderson & Second & Third", Year: 2005,
 					Genres: []string{"Fantasy"}, ImageURL: "https://img/7.jpg",
 				}))
@@ -195,7 +196,9 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 				Expect(
 					hits[0].AlternativeTitles,
 				).To(Equal([]string{"Fondation", "Fundação"}))
-				Expect(hits[0].SeriesIDs).To(Equal([]uint32{5450, 10331, 60563}))
+				Expect(
+					hits[0].SeriesIDs,
+				).To(Equal([]string{"5450", "10331", "60563"}))
 				Expect(hits[1].AlternativeTitles).To(BeEmpty())
 				Expect(hits[1].SeriesIDs).To(BeEmpty())
 			},
@@ -244,7 +247,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 		It("builds a book from one batch request", func() {
 			hc.client.Transport = srv.transport(wrap(bookRow))
 
-			recs, err := hc.GetBooks(ctx, []uint32{1})
+			recs, err := hc.GetBooks(ctx, []string{"1"})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(srv.queries).To(HaveLen(1))
@@ -253,7 +256,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			Expect(srv.queries[0]).To(ContainSubstring("earliest: editions"))
 			Expect(recs).To(HaveLen(1))
 			b := recs[0]
-			Expect(b.HardcoverID).To(Equal(uint32(1)))
+			Expect(b.HardcoverID).To(Equal("1"))
 			Expect(b.Description).To(Equal("A fallen city."))
 			Expect(b.ReleaseYear).To(Equal(uint16(2005)))
 			Expect(b.ReleaseDate.Year()).To(Equal(2005))
@@ -261,7 +264,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			Expect(b.UsersCount).To(Equal(uint32(5000)))
 			Expect(b.CoverURL).To(Equal("https://img/b.jpg"))
 			Expect(b.Series).To(HaveLen(1))
-			Expect(b.Series[0].SeriesHardcoverID).To(Equal(uint32(77)))
+			Expect(b.Series[0].SeriesHardcoverID).To(Equal("77"))
 			Expect(*b.Series[0].Position).To(Equal(1.0))
 		})
 
@@ -284,7 +287,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
   ]
 }`))
 
-				recs, err := hc.GetBooks(ctx, []uint32{2})
+				recs, err := hc.GetBooks(ctx, []string{"2"})
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(srv.queries[0]).To(ContainSubstring("localDigital: editions"))
@@ -292,13 +295,13 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 					srv.queries[0],
 				).To(ContainSubstring("localPhysical: editions"))
 				Expect(srv.vars[0]["lang"]).NotTo(BeEmpty())
-				formats := map[uint32]string{}
+				formats := map[string]string{}
 				for _, e := range recs[0].Editions {
 					formats[e.HardcoverID] = e.Format
 				}
 				// The French paperback stands in for the ebook French lacks.
-				Expect(formats).To(Equal(map[uint32]string{
-					201: FormatEbook, 202: FormatAudiobook, 203: FormatEbook,
+				Expect(formats).To(Equal(map[string]string{
+					"201": FormatEbook, "202": FormatAudiobook, "203": FormatEbook,
 				}))
 			},
 		)
@@ -317,7 +320,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
   ]
 }`))
 
-			recs, err := hc.GetBooks(ctx, []uint32{9})
+			recs, err := hc.GetBooks(ctx, []string{"9"})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(recs[0].ReleaseYear).To(Equal(uint16(2019)))
@@ -328,17 +331,21 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			func() {
 				hc.client.Transport = srv.transport(wrap(bookRow))
 
-				recs, err := hc.GetBooks(ctx, []uint32{1})
+				recs, err := hc.GetBooks(ctx, []string{"1"})
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(recs[0].Credits).To(Equal([]BookCredit{
 					{
-						AuthorHardcoverID: 10,
+						AuthorHardcoverID: "10",
 						Name:              "Brandon Sanderson",
 						ImageURL:          "https://img/a.jpg",
 						Role:              RoleAuthor,
 					},
-					{AuthorHardcoverID: 11, Name: "A Cover Person", Role: RoleCover},
+					{
+						AuthorHardcoverID: "11",
+						Name:              "A Cover Person",
+						Role:              RoleCover,
+					},
 				}))
 			},
 		)
@@ -346,7 +353,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 		It("orders genres by count and takes the top three", func() {
 			hc.client.Transport = srv.transport(wrap(bookRow))
 
-			recs, err := hc.GetBooks(ctx, []uint32{1})
+			recs, err := hc.GetBooks(ctx, []string{"1"})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(recs[0].Genre).To(Equal("Epic"))
@@ -358,31 +365,31 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			func() {
 				hc.client.Transport = srv.transport(wrap(bookRow))
 
-				recs, err := hc.GetBooks(ctx, []uint32{1})
+				recs, err := hc.GetBooks(ctx, []string{"1"})
 
 				Expect(err).NotTo(HaveOccurred())
 				b := recs[0]
-				byID := map[uint32]EditionRecord{}
+				byID := map[string]EditionRecord{}
 				for _, e := range b.Editions {
 					byID[e.HardcoverID] = e
 				}
 				// en/Tor ebook: the digital edition outranks the paperback and the
 				// earliest, which share its key.
-				Expect(byID).To(HaveKey(uint32(101)))
-				Expect(byID).NotTo(HaveKey(uint32(103)))
-				Expect(byID).NotTo(HaveKey(uint32(105)))
-				Expect(byID[101].Format).To(Equal(FormatEbook))
-				Expect(byID[101].Original).To(BeTrue())
-				Expect(byID[101].ISBN13).To(Equal("9780765311771"))
+				Expect(byID).To(HaveKey("101"))
+				Expect(byID).NotTo(HaveKey("103"))
+				Expect(byID).NotTo(HaveKey("105"))
+				Expect(byID["101"].Format).To(Equal(FormatEbook))
+				Expect(byID["101"].Original).To(BeTrue())
+				Expect(byID["101"].ISBN13).To(Equal("9780765311771"))
 				// The audiobook keeps its narrator and length.
-				Expect(byID[102].Format).To(Equal(FormatAudiobook))
-				Expect(byID[102].Narrator).To(Equal("A Narrator"))
-				Expect(byID[102].DurationSeconds).To(Equal(uint32(98220)))
+				Expect(byID["102"].Format).To(Equal(FormatAudiobook))
+				Expect(byID["102"].Narrator).To(Equal("A Narrator"))
+				Expect(byID["102"].DurationSeconds).To(Equal(uint32(98220)))
 				// French has no digital ebook, so its paperback is the ebook candidate.
-				Expect(byID[104].Format).To(Equal(FormatEbook))
-				Expect(byID[104].Translator).To(Equal("Une Traductrice"))
-				Expect(byID[104].TranslatorID).To(Equal(uint32(60)))
-				Expect(byID[104].Pages).To(Equal(uint16(600)))
+				Expect(byID["104"].Format).To(Equal(FormatEbook))
+				Expect(byID["104"].Translator).To(Equal("Une Traductrice"))
+				Expect(byID["104"].TranslatorID).To(Equal("60"))
+				Expect(byID["104"].Pages).To(Equal(uint16(600)))
 				Expect(b.OriginalLanguage).To(Equal("en"))
 			},
 		)
@@ -396,7 +403,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			)
 			hc.client.Transport = srv.transport(wrap(manga))
 
-			recs, err := hc.GetBooks(ctx, []uint32{1})
+			recs, err := hc.GetBooks(ctx, []string{"1"})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(recs[0].Kind).To(Equal(BookKindManga))
@@ -407,22 +414,22 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			func() {
 				hc.client.Transport = srv.transport(wrap(bookRow))
 
-				_, err := hc.GetBooks(ctx, []uint32{1})
+				_, err := hc.GetBooks(ctx, []string{"1"})
 				Expect(err).NotTo(HaveOccurred())
-				_, err = hc.GetBooks(ctx, []uint32{1})
+				_, err = hc.GetBooks(ctx, []string{"1"})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(srv.queries).To(HaveLen(1))
 
-				_, err = hc.GetBooksFresh(ctx, []uint32{1})
+				_, err = hc.GetBooksFresh(ctx, []string{"1"})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(srv.queries).To(HaveLen(2))
 			},
 		)
 
 		It("batches by twenty and answers in the order asked", func() {
-			ids := make([]uint32, 45)
+			ids := make([]string, 45)
 			for i := range ids {
-				ids[i] = uint32(i + 1)
+				ids[i] = strconv.Itoa(i + 1)
 			}
 			hc.client.Transport = mbRoundTripper(
 				func(r *http.Request) (*http.Response, error) {
@@ -473,11 +480,11 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 					wrap(`{"id": 2, "title": "Known", "cached_contributors": []}`),
 				)
 
-				recs, err := hc.GetBooks(ctx, []uint32{9, 2, 9})
+				recs, err := hc.GetBooks(ctx, []string{"9", "2", "9"})
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(recs).To(HaveLen(1))
-				Expect(recs[0].HardcoverID).To(Equal(uint32(2)))
+				Expect(recs[0].HardcoverID).To(Equal("2"))
 				Expect(srv.vars[0]["ids"]).To(HaveLen(2))
 			},
 		)
@@ -514,7 +521,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 				},
 			)
 
-			recs, err := hc.GetBooks(ctx, []uint32{1, 2, 3, 4})
+			recs, err := hc.GetBooks(ctx, []string{"1", "2", "3", "4"})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(recs).To(HaveLen(4))
@@ -530,13 +537,13 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			  {"contribution":"Narrator","author":{"id":71,"name":"Voice"}}]}]}}`
 				hc.client.Transport = srv.transport(wrap(bare), join)
 
-				recs, err := hc.GetBooks(ctx, []uint32{5})
+				recs, err := hc.GetBooks(ctx, []string{"5"})
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(srv.queries).To(HaveLen(2))
 				Expect(srv.queries[1]).To(ContainSubstring("contributions"))
 				Expect(recs[0].Credits).To(Equal([]BookCredit{{
-					AuthorHardcoverID: 70, Name: "Joined Author",
+					AuthorHardcoverID: "70", Name: "Joined Author",
 					ImageURL: "https://img/j.jpg", Role: RoleAuthor,
 				}}))
 			},
@@ -549,7 +556,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 				`{"errors":[{"message":"field not found"}]}`,
 			)
 
-			recs, err := hc.GetBooks(ctx, []uint32{5})
+			recs, err := hc.GetBooks(ctx, []string{"5"})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(recs).To(HaveLen(1))
@@ -558,7 +565,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 
 		It("surfaces a Hardcover error", func() {
 			hc.client.Transport = srv.transport(`{"errors":[{"message":"boom"}]}`)
-			_, err := hc.GetBooks(ctx, []uint32{1})
+			_, err := hc.GetBooks(ctx, []string{"1"})
 			Expect(err).To(MatchError(ContainSubstring("boom")))
 		})
 
@@ -566,7 +573,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			c, cancel := context.WithCancel(ctx)
 			cancel()
 			hc.client.Transport = srv.transport(wrap())
-			_, err := hc.GetBooks(c, []uint32{1, 2, 3, 4})
+			_, err := hc.GetBooks(c, []string{"1", "2", "3", "4"})
 			Expect(errors.Is(err, context.Canceled)).To(BeTrue())
 		})
 	})
@@ -591,7 +598,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 		It("reads many series in one request, ordered by id", func() {
 			hc.client.Transport = srv.transport(body)
 
-			recs, err := hc.GetSeriesLookup(ctx, []uint32{60563, 5450, 5450})
+			recs, err := hc.GetSeriesLookup(ctx, []string{"60563", "5450", "5450"})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(srv.queries).To(HaveLen(1))
@@ -606,35 +613,35 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			).To(Equal([]any{float64(5450), float64(60563)}))
 			Expect(recs).To(HaveLen(2))
 			Expect(recs[0]).To(Equal(SeriesLookupRecord{
-				HardcoverID: 5450, Name: "Foundation", Slug: "foundation",
+				HardcoverID: "5450", Name: "Foundation", Slug: "foundation",
 				PrimaryBooks: 7, Books: 9, AuthorName: "Isaac Asimov",
 				Ongoing: new(true),
 				Volumes: []SeriesLookupVolume{
 					{
 						Position:        1,
-						BookHardcoverID: 21,
+						BookHardcoverID: "21",
 						UsersCount:      10,
 						Compilation:     true,
 						ImageURL:        "https://img/21.jpg",
 					},
-					{Position: 1, BookHardcoverID: 22},
+					{Position: 1, BookHardcoverID: "22"},
 				},
 				Loose: []SeriesLookupVolume{
 					{
-						BookHardcoverID: 31,
+						BookHardcoverID: "31",
 						UsersCount:      117,
 						ImageURL:        "https://img/31.jpg",
 					},
 				},
 			}))
 			Expect(srv.queries[0]).To(ContainSubstring("loose: book_series("))
-			Expect(recs[1].HardcoverID).To(Equal(uint32(60563)))
+			Expect(recs[1].HardcoverID).To(Equal("60563"))
 			Expect(recs[1].Slug).To(Equal("greater-foundation-universe"))
 			Expect(recs[1].Ongoing).To(BeNil())
 			Expect(recs[1].Volumes).To(Equal([]SeriesLookupVolume{
 				{
 					Position:        1,
-					BookHardcoverID: 11,
+					BookHardcoverID: "11",
 					UsersCount:      50,
 					ImageURL:        "https://img/11.jpg",
 				},
@@ -644,13 +651,13 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 		It("memoises per sorted id set", func() {
 			hc.client.Transport = srv.transport(body)
 
-			_, err := hc.GetSeriesLookup(ctx, []uint32{60563, 5450})
+			_, err := hc.GetSeriesLookup(ctx, []string{"60563", "5450"})
 			Expect(err).NotTo(HaveOccurred())
-			_, err = hc.GetSeriesLookup(ctx, []uint32{5450, 60563})
+			_, err = hc.GetSeriesLookup(ctx, []string{"5450", "60563"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(srv.queries).To(HaveLen(1))
 
-			_, err = hc.GetSeriesLookup(ctx, []uint32{5450})
+			_, err = hc.GetSeriesLookup(ctx, []string{"5450"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(srv.queries).To(HaveLen(2))
 		})
@@ -669,7 +676,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 					return jsonResponse(200, `{"errors":[{"message":"boom"}]}`), nil
 				},
 			)
-			_, err := hc.GetSeriesLookup(ctx, []uint32{1})
+			_, err := hc.GetSeriesLookup(ctx, []string{"1"})
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -682,7 +689,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			    {"position": 1, "book_id": 201, "book": {"users_count": 40, "compilation": true}},
 			    {"position": 2, "book_id": 202, "book": null}]}]}}`)
 
-			sk, err := hc.GetSeries(ctx, 3)
+			sk, err := hc.GetSeries(ctx, "3")
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(srv.queries[0]).To(ContainSubstring("slug"))
@@ -691,11 +698,11 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			Expect(sk.Volumes).To(Equal([]SeriesVolumeRef{
 				{
 					Position:        1,
-					BookHardcoverID: 201,
+					BookHardcoverID: "201",
 					UsersCount:      40,
 					Compilation:     true,
 				},
-				{Position: 2, BookHardcoverID: 202},
+				{Position: 2, BookHardcoverID: "202"},
 			}))
 		})
 
@@ -708,7 +715,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			    {"position": 2, "book_id": 202}, {"position": 1, "book_id": 201},
 			    {"position": null, "book_id": 300}, {"position": 3, "book_id": 202}]}]}}`)
 
-			sk, err := hc.GetSeries(ctx, 3)
+			sk, err := hc.GetSeries(ctx, "3")
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(srv.queries).To(HaveLen(1))
@@ -720,14 +727,14 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			Expect(sk.AuthorImageURL).To(Equal("https://img/oda.jpg"))
 			// A book listed twice is one volume; an entry with no position is not.
 			Expect(sk.Volumes).To(Equal([]SeriesVolumeRef{
-				{Position: 2, BookHardcoverID: 202},
-				{Position: 1, BookHardcoverID: 201},
+				{Position: 2, BookHardcoverID: "202"},
+				{Position: 1, BookHardcoverID: "201"},
 			}))
 		})
 
 		It("returns nil for an unknown series", func() {
 			hc.client.Transport = srv.transport(`{"data":{"series":[]}}`)
-			sk, err := hc.GetSeries(ctx, 404)
+			sk, err := hc.GetSeries(ctx, "404")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(sk).To(BeNil())
 		})
@@ -740,7 +747,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			)
 			id, err := hc.BookByISBN(ctx, "9780765311771")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(id).To(Equal(uint32(42)))
+			Expect(id).To(Equal("42"))
 		})
 
 		It("returns 0 without error when unknown", func() {

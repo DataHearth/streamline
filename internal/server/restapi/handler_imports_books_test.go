@@ -41,15 +41,15 @@ var _ = Describe("Handler: Import scan books",
 					ParsedYear:      2005,
 					Size:            4096,
 					Classification:  entimportscanbook.ClassificationAmbiguous,
-					BookHardcoverID: 1,
+					BookHardcoverID: "1",
 					Candidates: []schema.ScannedBookCandidate{
 						{
-							BookHardcoverID: 1,
+							BookHardcoverID: "1",
 							Title:           "Elantris",
 							Author:          "Brandon Sanderson",
 							Year:            2005,
 						},
-						{BookHardcoverID: 2, Title: "Elantris II"},
+						{BookHardcoverID: "2", Title: "Elantris II"},
 					},
 					Decision: entimportscanbook.DecisionPending,
 					Outcome:  entimportscanbook.OutcomePending,
@@ -76,10 +76,10 @@ var _ = Describe("Handler: Import scan books",
 				Expect(row.Size).To(Equal(int64(4096)))
 				Expect(row.ParsedYear).To(HaveValue(Equal(uint16(2005))))
 				Expect(*row.ParsedTitle).To(Equal("Elantris"))
-				Expect(*row.BookHardcoverId).To(Equal(uint32(1)))
+				Expect(*row.BookHardcoverId).To(Equal("1"))
 				Expect(*row.Candidates).To(HaveLen(2))
 				Expect((*row.Candidates)[0]).To(Equal(ImportScanBookCandidate{
-					BookHardcoverId: 1, Title: "Elantris",
+					BookHardcoverId: "1", Title: "Elantris",
 					Author: new("Brandon Sanderson"), Year: new(uint16(2005)),
 				}))
 				Expect((*row.Candidates)[1].Author).To(BeNil())
@@ -109,7 +109,7 @@ var _ = Describe("Handler: Import scan books",
 		})
 
 		It("PATCH records a pick and answers the row", func() {
-			hc := uint32(2)
+			hc := "2"
 			app.store.EXPECT().UpdateImportScanBookDecision(mock.Anything,
 				uint32(
 					5,
@@ -121,7 +121,7 @@ var _ = Describe("Handler: Import scan books",
 					ID:                      1,
 					Slot:                    entimportscanbook.SlotEbook,
 					Decision:                entimportscanbook.DecisionAccept,
-					DecisionBookHardcoverID: 2,
+					DecisionBookHardcoverID: "2",
 				}, nil).
 				Once()
 
@@ -129,7 +129,7 @@ var _ = Describe("Handler: Import scan books",
 				http.MethodPatch,
 				"/api/v1/library/imports/5/books/1",
 				app.adminKey,
-				strings.NewReader(`{"decision":"accept","book_hardcover_id":2}`),
+				strings.NewReader(`{"decision":"accept","book_hardcover_id":"2"}`),
 			)
 			req.Header.Set("Content-Type", "application/json")
 			resp := app.do(req)
@@ -139,14 +139,14 @@ var _ = Describe("Handler: Import scan books",
 			var row ImportScanBook
 			Expect(json.NewDecoder(resp.Body).Decode(&row)).To(Succeed())
 			Expect(row.Decision).To(Equal(ImportScanBookDecisionAccept))
-			Expect(*row.DecisionBookHardcoverId).To(Equal(uint32(2)))
+			Expect(*row.DecisionBookHardcoverId).To(Equal("2"))
 		})
 
 		It("PATCH 404s for a book of another scan", func() {
 			app.store.EXPECT().UpdateImportScanBookDecision(mock.Anything,
 				uint32(
 					5,
-				), uint32(1), entimportscanbook.DecisionSkip, (*uint32)(nil)).
+				), uint32(1), entimportscanbook.DecisionSkip, (*string)(nil)).
 				Return(db.ErrImportScanBookNotFound).Once()
 			req := app.req(
 				http.MethodPatch,

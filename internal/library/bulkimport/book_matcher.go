@@ -17,7 +17,7 @@ const scoreAuthorAgrees = 2
 // BookClassification is the book analogue of ShowClassification.
 type BookClassification struct {
 	Kind            entimportscanbook.Classification
-	BookHardcoverID uint32
+	BookHardcoverID string
 	ExistingBookID  uint32
 	Candidates      []schema.ScannedBookCandidate
 }
@@ -29,7 +29,7 @@ type BookClassification struct {
 func ClassifyBook(
 	title, author string,
 	hits []metadata.BookSearchResult,
-	indexed map[uint32]uint32,
+	indexed map[string]uint32,
 ) BookClassification {
 	if len(hits) == 0 {
 		return BookClassification{Kind: entimportscanbook.ClassificationUnmatched}
@@ -62,9 +62,9 @@ func ClassifyBook(
 // classifyResolvedBook is the outcome once a single Hardcover book is known,
 // whether by ISBN or by a sole title-and-author match.
 func classifyResolvedBook(
-	bookID uint32,
+	bookID string,
 	cand schema.ScannedBookCandidate,
-	indexed map[uint32]uint32,
+	indexed map[string]uint32,
 ) BookClassification {
 	c := BookClassification{
 		Kind:            entimportscanbook.ClassificationConfirmed,

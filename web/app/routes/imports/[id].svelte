@@ -453,7 +453,7 @@
 	const pickMatch = createMutation<
 		ImportScanFile,
 		Error,
-		{ fileId: number; tmdbId: number }
+		{ fileId: number; tmdbId: string }
 	>(() => ({
 		mutationFn: ({ fileId, tmdbId }) =>
 			api<ImportScanFile>(
@@ -486,7 +486,7 @@
 	const pickShowMatch = createMutation<
 		ImportScanShow,
 		Error,
-		{ showId: number; tvdbId: number }
+		{ showId: number; tvdbId: string }
 	>(() => ({
 		mutationFn: ({ showId, tvdbId }) =>
 			api<ImportScanShow>(
@@ -606,8 +606,8 @@
 
 	function onSheetPick(entry: TouchEntry, candidateId: MatchId) {
 		if (isMB) pickMB.mutate({ rowId: entry.id, matchId: candidateId });
-		else if (isSeries) pickShowMatch.mutate({ showId: entry.id, tvdbId: Number(candidateId) });
-		else pickMatch.mutate({ fileId: entry.id, tmdbId: Number(candidateId) });
+		else if (isSeries) pickShowMatch.mutate({ showId: entry.id, tvdbId: String(candidateId) });
+		else pickMatch.mutate({ fileId: entry.id, tmdbId: String(candidateId) });
 	}
 
 	// Hands off to the lookup surface the app already has, seeded with the parsed
@@ -658,8 +658,8 @@
 	}
 
 	function onSheetMatch(id: MatchId) {
-		if (pickerShow) pickShowMatch.mutate({ showId: pickerShow.id, tvdbId: Number(id) });
-		else if (pickerFile) pickMatch.mutate({ fileId: pickerFile.id, tmdbId: Number(id) });
+		if (pickerShow) pickShowMatch.mutate({ showId: pickerShow.id, tvdbId: String(id) });
+		else if (pickerFile) pickMatch.mutate({ fileId: pickerFile.id, tmdbId: String(id) });
 		closePicker();
 	}
 </script>

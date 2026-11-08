@@ -57,7 +57,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 			r.Rating = 4.2
 			r.Kind = metadata.BookKindNovel
 			r.Editions = append(r.Editions, metadata.EditionRecord{
-				HardcoverID: 19, Language: "de", Title: "Elantris (de)",
+				HardcoverID: "19", Language: "de", Title: "Elantris (de)",
 				Format: metadata.FormatEbook, Popularity: 1,
 			})
 			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1)).
@@ -107,16 +107,16 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 	Describe("RefreshSeries", func() {
 		addSeries := func(n int) *ent.BookSeries {
 			GinkgoHelper()
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+			f.meta.EXPECT().GetSeries(anyCtx, "50").
 				Return(seriesRecord("One Piece", n), nil).Once()
-			want := []uint32{}
+			want := []any{}
 			recs := []*metadata.BookRecord{}
 			for i := 1; i <= n; i++ {
 				want = append(want, 1000+uint32(i))
 				recs = append(recs, volumeRec(1000+uint32(i)))
 			}
 			f.meta.EXPECT().GetBooks(anyCtx, ids(want...)).Return(recs, nil).Once()
-			s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+			s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 			Expect(err).NotTo(HaveOccurred())
 			return s
 		}
@@ -133,7 +133,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 					),
 				).
 					NotTo(BeNil())
-				f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+				f.meta.EXPECT().GetSeries(anyCtx, "50").
 					Return(seriesRecord("One Piece (new)", 3), nil).Once()
 				recs := []*metadata.BookRecord{
 					volumeRec(1001),
@@ -151,7 +151,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 				Expect(got.Title).To(Equal("One Piece (new)"))
 				Expect(got.Edges.Volumes).To(HaveLen(3))
 				fresh := got.Edges.Volumes[2]
-				Expect(fresh.HardcoverID).To(Equal(uint32(1003)))
+				Expect(fresh.HardcoverID).To(Equal("1003"))
 				Expect(fresh.EbookMonitored).To(BeTrue())
 				Expect(fresh.QualityProfile).To(Equal("comics"))
 				Expect(fresh.Edges.EbookEdition.Publisher).To(Equal("Tor"))
@@ -169,7 +169,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 					PatchSeriesParams{Monitor: new("none")},
 				)
 				Expect(err).NotTo(HaveOccurred())
-				f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+				f.meta.EXPECT().GetSeries(anyCtx, "50").
 					Return(seriesRecord("One Piece", 1), nil).Once()
 				f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1001)).
 					Return([]*metadata.BookRecord{volumeRec(1001)}, nil).Once()
@@ -187,7 +187,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 			Expect(s.HardcoverSlug).To(BeEmpty())
 			sk := seriesRecord("One Piece", 1)
 			sk.Slug = "one-piece"
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).Return(sk, nil).Once()
+			f.meta.EXPECT().GetSeries(anyCtx, "50").Return(sk, nil).Once()
 			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1001)).
 				Return([]*metadata.BookRecord{volumeRec(1001)}, nil).Once()
 
@@ -200,11 +200,11 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 		It("hydrates a stub it meets", func() {
 			s := addSeries(1)
 			stub := f.client.Book.Create().
-				SetHardcoverID(1002).
+				SetHardcoverID("1002").
 				SetTitle("One Piece #2").
 				SetSeries(f.client.BookSeries.GetX(f.ctx, s.ID)).
 				SetSeriesPosition(2).SetEbookMonitored(true).SaveX(f.ctx)
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+			f.meta.EXPECT().GetSeries(anyCtx, "50").
 				Return(seriesRecord("One Piece", 2), nil).Once()
 			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1001, 1002)).
 				Return([]*metadata.BookRecord{volumeRec(1001), volumeRec(1002)}, nil).
@@ -221,7 +221,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 			s := addSeries(1)
 			c := volumeRec(1002)
 			c.Compilation = true
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+			f.meta.EXPECT().GetSeries(anyCtx, "50").
 				Return(seriesRecord("One Piece", 2), nil).Once()
 			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1001, 1002)).
 				Return([]*metadata.BookRecord{volumeRec(1001), c}, nil).Once()
@@ -234,7 +234,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 
 		It("answers a series Hardcover no longer knows", func() {
 			s := addSeries(1)
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).Return(nil, nil).Once()
+			f.meta.EXPECT().GetSeries(anyCtx, "50").Return(nil, nil).Once()
 			_, err := f.svc.RefreshSeries(f.ctx, s.ID)
 			Expect(err).To(MatchError(ErrHardcoverNotFound))
 		})
@@ -308,7 +308,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 			a := f.addBook(1, "Elantris", "")
 			stale(a)
 			stub := f.client.Book.Create().
-				SetHardcoverID(7).SetTitle("Stub").SaveX(f.ctx)
+				SetHardcoverID("7").SetTitle("Stub").SaveX(f.ctx)
 			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(7)).
 				Return([]*metadata.BookRecord{rec(7, "Hydrated")}, nil).Once()
 			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1)).
@@ -322,18 +322,21 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 
 		It("refreshes the stale series after the books", func() {
 			s := func() *ent.BookSeries {
-				f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+				f.meta.EXPECT().GetSeries(anyCtx, "50").
 					Return(seriesRecord("One Piece", 1), nil).Once()
 				f.meta.EXPECT().GetBooks(anyCtx, ids(1001)).
 					Return([]*metadata.BookRecord{volumeRec(1001)}, nil).Once()
-				got, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+				got, err := f.svc.AddSeries(
+					f.ctx,
+					AddSeriesParams{HardcoverID: "50"},
+				)
 				Expect(err).NotTo(HaveOccurred())
 				return got
 			}()
 			f.client.BookSeries.UpdateOneID(s.ID).
 				SetLastRefreshedAt(time.Now().Add(-48 * time.Hour)).
 				ExecX(f.ctx)
-			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+			f.meta.EXPECT().GetSeries(anyCtx, "50").
 				Return(seriesRecord("One Piece", 1), nil).Once()
 			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1001)).
 				Return([]*metadata.BookRecord{volumeRec(1001)}, nil).Once()
@@ -354,7 +357,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 			stale(a)
 			stale(b)
 			stub := f.client.Book.Create().
-				SetHardcoverID(7).
+				SetHardcoverID("7").
 				SetTitle("Stub").
 				SaveX(f.ctx)
 			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(7)).
@@ -372,7 +375,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 			stale(a)
 			stale(b)
 			stub := f.client.Book.Create().
-				SetHardcoverID(7).
+				SetHardcoverID("7").
 				SetTitle("Stub").
 				SaveX(f.ctx)
 			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(7)).
@@ -488,7 +491,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 			params := dbSeriesWithStubs()
 			pos := 2.0
 			params.Volumes = append(params.Volumes, db.BookSeed{
-				HardcoverID: 1003, Title: "One Piece #2", Kind: "manga",
+				HardcoverID: "1003", Title: "One Piece #2", Kind: "manga",
 				PreferredLanguage: "fr", SeriesPosition: &pos,
 			})
 			s, _, err := f.store.CreateSeries(f.ctx, params)
@@ -502,18 +505,18 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 			Expect(f.svc.RefreshStale(f.ctx)).To(Succeed())
 
 			vols := f.reloadSeries(s.ID).Edges.Volumes
-			hc := make([]uint32, 0, len(vols))
+			hc := make([]string, 0, len(vols))
 			for _, v := range vols {
 				hc = append(hc, v.HardcoverID)
 			}
-			Expect(hc).To(ConsistOf(uint32(1001), uint32(1003)))
+			Expect(hc).To(ConsistOf("1001", "1003"))
 		})
 
 		It("starts one worker however often it is asked", func() {
 			series()
 			release := make(chan struct{})
 			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1001, 1002)).
-				RunAndReturn(func(context.Context, []uint32) ([]*metadata.BookRecord, error) {
+				RunAndReturn(func(context.Context, []string) ([]*metadata.BookRecord, error) {
 					<-release
 					return []*metadata.BookRecord{
 						volumeRec(1001),

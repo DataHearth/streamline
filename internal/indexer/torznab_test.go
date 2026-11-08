@@ -220,10 +220,10 @@ var _ = Describe("Torznab Client", Label("unit", "indexers"), func() {
 				)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(2))
-				Expect(results[0].TVDBID).To(Equal(uint32(81189)))
-				Expect(results[0].TMDBID).To(Equal(uint32(1396)))
-				Expect(results[1].TVDBID).To(BeZero())
-				Expect(results[1].TMDBID).To(BeZero())
+				Expect(results[0].TVDBID).To(Equal("81189"))
+				Expect(results[0].TMDBID).To(Equal("1396"))
+				Expect(results[1].TVDBID).To(BeEmpty())
+				Expect(results[1].TMDBID).To(BeEmpty())
 			})
 
 			It("reads the info hash from the attr, then a magnet", func() {

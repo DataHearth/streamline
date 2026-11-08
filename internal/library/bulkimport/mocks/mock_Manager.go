@@ -774,7 +774,7 @@ func (_c *MockManager_StartScan_Call) RunAndReturn(run func(ctx context.Context,
 }
 
 // UpdateFileDecision provides a mock function for the type MockManager
-func (_mock *MockManager) UpdateFileDecision(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *uint32) (*ent.ImportScanFile, error) {
+func (_mock *MockManager) UpdateFileDecision(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *string) (*ent.ImportScanFile, error) {
 	ret := _mock.Called(ctx, scanID, fileID, decision, tmdbID)
 
 	if len(ret) == 0 {
@@ -783,17 +783,17 @@ func (_mock *MockManager) UpdateFileDecision(ctx context.Context, scanID uint32,
 
 	var r0 *ent.ImportScanFile
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanfile.Decision, *uint32) (*ent.ImportScanFile, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanfile.Decision, *string) (*ent.ImportScanFile, error)); ok {
 		return returnFunc(ctx, scanID, fileID, decision, tmdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanfile.Decision, *uint32) *ent.ImportScanFile); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanfile.Decision, *string) *ent.ImportScanFile); ok {
 		r0 = returnFunc(ctx, scanID, fileID, decision, tmdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.ImportScanFile)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32, importscanfile.Decision, *uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32, importscanfile.Decision, *string) error); ok {
 		r1 = returnFunc(ctx, scanID, fileID, decision, tmdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -811,12 +811,12 @@ type MockManager_UpdateFileDecision_Call struct {
 //   - scanID uint32
 //   - fileID uint32
 //   - decision importscanfile.Decision
-//   - tmdbID *uint32
+//   - tmdbID *string
 func (_e *MockManager_Expecter) UpdateFileDecision(ctx any, scanID any, fileID any, decision any, tmdbID any) *MockManager_UpdateFileDecision_Call {
 	return &MockManager_UpdateFileDecision_Call{Call: _e.mock.On("UpdateFileDecision", ctx, scanID, fileID, decision, tmdbID)}
 }
 
-func (_c *MockManager_UpdateFileDecision_Call) Run(run func(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *uint32)) *MockManager_UpdateFileDecision_Call {
+func (_c *MockManager_UpdateFileDecision_Call) Run(run func(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *string)) *MockManager_UpdateFileDecision_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -834,9 +834,9 @@ func (_c *MockManager_UpdateFileDecision_Call) Run(run func(ctx context.Context,
 		if args[3] != nil {
 			arg3 = args[3].(importscanfile.Decision)
 		}
-		var arg4 *uint32
+		var arg4 *string
 		if args[4] != nil {
-			arg4 = args[4].(*uint32)
+			arg4 = args[4].(*string)
 		}
 		run(
 			arg0,
@@ -854,7 +854,7 @@ func (_c *MockManager_UpdateFileDecision_Call) Return(importScanFile *ent.Import
 	return _c
 }
 
-func (_c *MockManager_UpdateFileDecision_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *uint32) (*ent.ImportScanFile, error)) *MockManager_UpdateFileDecision_Call {
+func (_c *MockManager_UpdateFileDecision_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *string) (*ent.ImportScanFile, error)) *MockManager_UpdateFileDecision_Call {
 	_c.Call.Return(run)
 	return _c
 }

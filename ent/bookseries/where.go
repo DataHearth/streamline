@@ -66,7 +66,7 @@ func UpdateTime(v time.Time) predicate.BookSeries {
 }
 
 // HardcoverID applies equality check predicate on the "hardcover_id" field. It's identical to HardcoverIDEQ.
-func HardcoverID(v uint32) predicate.BookSeries {
+func HardcoverID(v string) predicate.BookSeries {
 	return predicate.BookSeries(sql.FieldEQ(FieldHardcoverID, v))
 }
 
@@ -216,43 +216,68 @@ func UpdateTimeLTE(v time.Time) predicate.BookSeries {
 }
 
 // HardcoverIDEQ applies the EQ predicate on the "hardcover_id" field.
-func HardcoverIDEQ(v uint32) predicate.BookSeries {
+func HardcoverIDEQ(v string) predicate.BookSeries {
 	return predicate.BookSeries(sql.FieldEQ(FieldHardcoverID, v))
 }
 
 // HardcoverIDNEQ applies the NEQ predicate on the "hardcover_id" field.
-func HardcoverIDNEQ(v uint32) predicate.BookSeries {
+func HardcoverIDNEQ(v string) predicate.BookSeries {
 	return predicate.BookSeries(sql.FieldNEQ(FieldHardcoverID, v))
 }
 
 // HardcoverIDIn applies the In predicate on the "hardcover_id" field.
-func HardcoverIDIn(vs ...uint32) predicate.BookSeries {
+func HardcoverIDIn(vs ...string) predicate.BookSeries {
 	return predicate.BookSeries(sql.FieldIn(FieldHardcoverID, vs...))
 }
 
 // HardcoverIDNotIn applies the NotIn predicate on the "hardcover_id" field.
-func HardcoverIDNotIn(vs ...uint32) predicate.BookSeries {
+func HardcoverIDNotIn(vs ...string) predicate.BookSeries {
 	return predicate.BookSeries(sql.FieldNotIn(FieldHardcoverID, vs...))
 }
 
 // HardcoverIDGT applies the GT predicate on the "hardcover_id" field.
-func HardcoverIDGT(v uint32) predicate.BookSeries {
+func HardcoverIDGT(v string) predicate.BookSeries {
 	return predicate.BookSeries(sql.FieldGT(FieldHardcoverID, v))
 }
 
 // HardcoverIDGTE applies the GTE predicate on the "hardcover_id" field.
-func HardcoverIDGTE(v uint32) predicate.BookSeries {
+func HardcoverIDGTE(v string) predicate.BookSeries {
 	return predicate.BookSeries(sql.FieldGTE(FieldHardcoverID, v))
 }
 
 // HardcoverIDLT applies the LT predicate on the "hardcover_id" field.
-func HardcoverIDLT(v uint32) predicate.BookSeries {
+func HardcoverIDLT(v string) predicate.BookSeries {
 	return predicate.BookSeries(sql.FieldLT(FieldHardcoverID, v))
 }
 
 // HardcoverIDLTE applies the LTE predicate on the "hardcover_id" field.
-func HardcoverIDLTE(v uint32) predicate.BookSeries {
+func HardcoverIDLTE(v string) predicate.BookSeries {
 	return predicate.BookSeries(sql.FieldLTE(FieldHardcoverID, v))
+}
+
+// HardcoverIDContains applies the Contains predicate on the "hardcover_id" field.
+func HardcoverIDContains(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldContains(FieldHardcoverID, v))
+}
+
+// HardcoverIDHasPrefix applies the HasPrefix predicate on the "hardcover_id" field.
+func HardcoverIDHasPrefix(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldHasPrefix(FieldHardcoverID, v))
+}
+
+// HardcoverIDHasSuffix applies the HasSuffix predicate on the "hardcover_id" field.
+func HardcoverIDHasSuffix(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldHasSuffix(FieldHardcoverID, v))
+}
+
+// HardcoverIDEqualFold applies the EqualFold predicate on the "hardcover_id" field.
+func HardcoverIDEqualFold(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldEqualFold(FieldHardcoverID, v))
+}
+
+// HardcoverIDContainsFold applies the ContainsFold predicate on the "hardcover_id" field.
+func HardcoverIDContainsFold(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldContainsFold(FieldHardcoverID, v))
 }
 
 // TitleEQ applies the EQ predicate on the "title" field.

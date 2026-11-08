@@ -50,13 +50,13 @@ func (_c *PersonCreate) SetNillableUpdateTime(v *time.Time) *PersonCreate {
 }
 
 // SetTmdbID sets the "tmdb_id" field.
-func (_c *PersonCreate) SetTmdbID(v uint32) *PersonCreate {
+func (_c *PersonCreate) SetTmdbID(v string) *PersonCreate {
 	_c.mutation.SetTmdbID(v)
 	return _c
 }
 
 // SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
-func (_c *PersonCreate) SetNillableTmdbID(v *uint32) *PersonCreate {
+func (_c *PersonCreate) SetNillableTmdbID(v *string) *PersonCreate {
 	if v != nil {
 		_c.SetTmdbID(*v)
 	}
@@ -64,13 +64,13 @@ func (_c *PersonCreate) SetNillableTmdbID(v *uint32) *PersonCreate {
 }
 
 // SetTvdbID sets the "tvdb_id" field.
-func (_c *PersonCreate) SetTvdbID(v uint32) *PersonCreate {
+func (_c *PersonCreate) SetTvdbID(v string) *PersonCreate {
 	_c.mutation.SetTvdbID(v)
 	return _c
 }
 
 // SetNillableTvdbID sets the "tvdb_id" field if the given value is not nil.
-func (_c *PersonCreate) SetNillableTvdbID(v *uint32) *PersonCreate {
+func (_c *PersonCreate) SetNillableTvdbID(v *string) *PersonCreate {
 	if v != nil {
 		_c.SetTvdbID(*v)
 	}
@@ -287,14 +287,6 @@ func (_c *PersonCreate) defaults() {
 		v := person.DefaultUpdateTime()
 		_c.mutation.SetUpdateTime(v)
 	}
-	if _, ok := _c.mutation.TmdbID(); !ok {
-		v := person.DefaultTmdbID
-		_c.mutation.SetTmdbID(v)
-	}
-	if _, ok := _c.mutation.TvdbID(); !ok {
-		v := person.DefaultTvdbID
-		_c.mutation.SetTvdbID(v)
-	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -354,11 +346,11 @@ func (_c *PersonCreate) createSpec() (*Person, *sqlgraph.CreateSpec) {
 		_node.UpdateTime = value
 	}
 	if value, ok := _c.mutation.TmdbID(); ok {
-		_spec.SetField(person.FieldTmdbID, field.TypeUint32, value)
+		_spec.SetField(person.FieldTmdbID, field.TypeString, value)
 		_node.TmdbID = value
 	}
 	if value, ok := _c.mutation.TvdbID(); ok {
-		_spec.SetField(person.FieldTvdbID, field.TypeUint32, value)
+		_spec.SetField(person.FieldTvdbID, field.TypeString, value)
 		_node.TvdbID = value
 	}
 	if value, ok := _c.mutation.Name(); ok {

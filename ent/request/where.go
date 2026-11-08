@@ -66,7 +66,7 @@ func UpdateTime(v time.Time) predicate.Request {
 }
 
 // MediaID applies equality check predicate on the "media_id" field. It's identical to MediaIDEQ.
-func MediaID(v uint32) predicate.Request {
+func MediaID(v string) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldMediaID, v))
 }
 
@@ -206,43 +206,58 @@ func MediaTypeNotIn(vs ...MediaType) predicate.Request {
 }
 
 // MediaIDEQ applies the EQ predicate on the "media_id" field.
-func MediaIDEQ(v uint32) predicate.Request {
+func MediaIDEQ(v string) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldMediaID, v))
 }
 
 // MediaIDNEQ applies the NEQ predicate on the "media_id" field.
-func MediaIDNEQ(v uint32) predicate.Request {
+func MediaIDNEQ(v string) predicate.Request {
 	return predicate.Request(sql.FieldNEQ(FieldMediaID, v))
 }
 
 // MediaIDIn applies the In predicate on the "media_id" field.
-func MediaIDIn(vs ...uint32) predicate.Request {
+func MediaIDIn(vs ...string) predicate.Request {
 	return predicate.Request(sql.FieldIn(FieldMediaID, vs...))
 }
 
 // MediaIDNotIn applies the NotIn predicate on the "media_id" field.
-func MediaIDNotIn(vs ...uint32) predicate.Request {
+func MediaIDNotIn(vs ...string) predicate.Request {
 	return predicate.Request(sql.FieldNotIn(FieldMediaID, vs...))
 }
 
 // MediaIDGT applies the GT predicate on the "media_id" field.
-func MediaIDGT(v uint32) predicate.Request {
+func MediaIDGT(v string) predicate.Request {
 	return predicate.Request(sql.FieldGT(FieldMediaID, v))
 }
 
 // MediaIDGTE applies the GTE predicate on the "media_id" field.
-func MediaIDGTE(v uint32) predicate.Request {
+func MediaIDGTE(v string) predicate.Request {
 	return predicate.Request(sql.FieldGTE(FieldMediaID, v))
 }
 
 // MediaIDLT applies the LT predicate on the "media_id" field.
-func MediaIDLT(v uint32) predicate.Request {
+func MediaIDLT(v string) predicate.Request {
 	return predicate.Request(sql.FieldLT(FieldMediaID, v))
 }
 
 // MediaIDLTE applies the LTE predicate on the "media_id" field.
-func MediaIDLTE(v uint32) predicate.Request {
+func MediaIDLTE(v string) predicate.Request {
 	return predicate.Request(sql.FieldLTE(FieldMediaID, v))
+}
+
+// MediaIDContains applies the Contains predicate on the "media_id" field.
+func MediaIDContains(v string) predicate.Request {
+	return predicate.Request(sql.FieldContains(FieldMediaID, v))
+}
+
+// MediaIDHasPrefix applies the HasPrefix predicate on the "media_id" field.
+func MediaIDHasPrefix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasPrefix(FieldMediaID, v))
+}
+
+// MediaIDHasSuffix applies the HasSuffix predicate on the "media_id" field.
+func MediaIDHasSuffix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasSuffix(FieldMediaID, v))
 }
 
 // MediaIDIsNil applies the IsNil predicate on the "media_id" field.
@@ -253,6 +268,16 @@ func MediaIDIsNil() predicate.Request {
 // MediaIDNotNil applies the NotNil predicate on the "media_id" field.
 func MediaIDNotNil() predicate.Request {
 	return predicate.Request(sql.FieldNotNull(FieldMediaID))
+}
+
+// MediaIDEqualFold applies the EqualFold predicate on the "media_id" field.
+func MediaIDEqualFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldEqualFold(FieldMediaID, v))
+}
+
+// MediaIDContainsFold applies the ContainsFold predicate on the "media_id" field.
+func MediaIDContainsFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldContainsFold(FieldMediaID, v))
 }
 
 // MediaMbidEQ applies the EQ predicate on the "media_mbid" field.

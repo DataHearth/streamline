@@ -37,23 +37,16 @@ func (_u *BookEditionUpdate) SetUpdateTime(v time.Time) *BookEditionUpdate {
 }
 
 // SetHardcoverEditionID sets the "hardcover_edition_id" field.
-func (_u *BookEditionUpdate) SetHardcoverEditionID(v uint32) *BookEditionUpdate {
-	_u.mutation.ResetHardcoverEditionID()
+func (_u *BookEditionUpdate) SetHardcoverEditionID(v string) *BookEditionUpdate {
 	_u.mutation.SetHardcoverEditionID(v)
 	return _u
 }
 
 // SetNillableHardcoverEditionID sets the "hardcover_edition_id" field if the given value is not nil.
-func (_u *BookEditionUpdate) SetNillableHardcoverEditionID(v *uint32) *BookEditionUpdate {
+func (_u *BookEditionUpdate) SetNillableHardcoverEditionID(v *string) *BookEditionUpdate {
 	if v != nil {
 		_u.SetHardcoverEditionID(*v)
 	}
-	return _u
-}
-
-// AddHardcoverEditionID adds value to the "hardcover_edition_id" field.
-func (_u *BookEditionUpdate) AddHardcoverEditionID(v int32) *BookEditionUpdate {
-	_u.mutation.AddHardcoverEditionID(v)
 	return _u
 }
 
@@ -363,6 +356,11 @@ func (_u *BookEditionUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *BookEditionUpdate) check() error {
+	if v, ok := _u.mutation.HardcoverEditionID(); ok {
+		if err := bookedition.HardcoverEditionIDValidator(v); err != nil {
+			return &ValidationError{Name: "hardcover_edition_id", err: fmt.Errorf(`ent: validator failed for field "BookEdition.hardcover_edition_id": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Language(); ok {
 		if err := bookedition.LanguageValidator(v); err != nil {
 			return &ValidationError{Name: "language", err: fmt.Errorf(`ent: validator failed for field "BookEdition.language": %w`, err)}
@@ -406,10 +404,7 @@ func (_u *BookEditionUpdate) sqlSave(ctx context.Context) (_node int, err error)
 		_spec.SetField(bookedition.FieldUpdateTime, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.HardcoverEditionID(); ok {
-		_spec.SetField(bookedition.FieldHardcoverEditionID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedHardcoverEditionID(); ok {
-		_spec.AddField(bookedition.FieldHardcoverEditionID, field.TypeUint32, value)
+		_spec.SetField(bookedition.FieldHardcoverEditionID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Language(); ok {
 		_spec.SetField(bookedition.FieldLanguage, field.TypeString, value)
@@ -538,23 +533,16 @@ func (_u *BookEditionUpdateOne) SetUpdateTime(v time.Time) *BookEditionUpdateOne
 }
 
 // SetHardcoverEditionID sets the "hardcover_edition_id" field.
-func (_u *BookEditionUpdateOne) SetHardcoverEditionID(v uint32) *BookEditionUpdateOne {
-	_u.mutation.ResetHardcoverEditionID()
+func (_u *BookEditionUpdateOne) SetHardcoverEditionID(v string) *BookEditionUpdateOne {
 	_u.mutation.SetHardcoverEditionID(v)
 	return _u
 }
 
 // SetNillableHardcoverEditionID sets the "hardcover_edition_id" field if the given value is not nil.
-func (_u *BookEditionUpdateOne) SetNillableHardcoverEditionID(v *uint32) *BookEditionUpdateOne {
+func (_u *BookEditionUpdateOne) SetNillableHardcoverEditionID(v *string) *BookEditionUpdateOne {
 	if v != nil {
 		_u.SetHardcoverEditionID(*v)
 	}
-	return _u
-}
-
-// AddHardcoverEditionID adds value to the "hardcover_edition_id" field.
-func (_u *BookEditionUpdateOne) AddHardcoverEditionID(v int32) *BookEditionUpdateOne {
-	_u.mutation.AddHardcoverEditionID(v)
 	return _u
 }
 
@@ -877,6 +865,11 @@ func (_u *BookEditionUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *BookEditionUpdateOne) check() error {
+	if v, ok := _u.mutation.HardcoverEditionID(); ok {
+		if err := bookedition.HardcoverEditionIDValidator(v); err != nil {
+			return &ValidationError{Name: "hardcover_edition_id", err: fmt.Errorf(`ent: validator failed for field "BookEdition.hardcover_edition_id": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Language(); ok {
 		if err := bookedition.LanguageValidator(v); err != nil {
 			return &ValidationError{Name: "language", err: fmt.Errorf(`ent: validator failed for field "BookEdition.language": %w`, err)}
@@ -937,10 +930,7 @@ func (_u *BookEditionUpdateOne) sqlSave(ctx context.Context) (_node *BookEdition
 		_spec.SetField(bookedition.FieldUpdateTime, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.HardcoverEditionID(); ok {
-		_spec.SetField(bookedition.FieldHardcoverEditionID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedHardcoverEditionID(); ok {
-		_spec.AddField(bookedition.FieldHardcoverEditionID, field.TypeUint32, value)
+		_spec.SetField(bookedition.FieldHardcoverEditionID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Language(); ok {
 		_spec.SetField(bookedition.FieldLanguage, field.TypeString, value)

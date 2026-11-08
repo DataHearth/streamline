@@ -1899,7 +1899,7 @@ var _ = Describe(
 					SetTitle("Show").
 					SetOriginalTitle("Show").
 					SetYear(2020).
-					SetTvdbID(1).
+					SetTvdbID("1").
 					SaveX(ctx)
 
 				liveShow := &ent.TVShow{

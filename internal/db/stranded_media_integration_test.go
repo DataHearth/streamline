@@ -137,7 +137,7 @@ var _ = Describe(
 		It(
 			"reverts each book slot on its own, to available when it holds a file",
 			func() {
-				bk := client.Book.Create().SetHardcoverID(2).SetTitle("Elantris").
+				bk := client.Book.Create().SetHardcoverID("2").SetTitle("Elantris").
 					SetAuthorName("Sanderson").
 					SetEbookStatus(book.EbookStatusDownloading).
 					SetAudiobookStatus(book.AudiobookStatusDownloading).

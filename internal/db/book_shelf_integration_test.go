@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -33,28 +35,41 @@ var _ = Describe("Book shelf", Label("integration", "db"), func() {
 	standalone := func(hc uint32, title, authorName, kind string, year uint16) *ent.Book {
 		GinkgoHelper()
 		b, err := store.CreateBook(ctx, BookSeed{
-			HardcoverID: hc, Title: title, AuthorName: authorName, Kind: kind,
-			PreferredLanguage: "en", ReleaseYear: &year,
-			EbookMonitored: true, AudiobookMonitored: true,
+			HardcoverID: providerid.Format(
+				hc,
+			),
+			Title:              title,
+			AuthorName:         authorName,
+			Kind:               kind,
+			PreferredLanguage:  "en",
+			ReleaseYear:        &year,
+			EbookMonitored:     true,
+			AudiobookMonitored: true,
 			Editions: []EditionSeed{
 				{
-					HardcoverID: hc*10 + 1,
+					HardcoverID: providerid.Format(hc*10 + 1),
 					Language:    "en",
 					Title:       title,
 					Format:      "ebook",
 					Popularity:  1,
 				},
 				{
-					HardcoverID: hc*10 + 2,
+					HardcoverID: providerid.Format(hc*10 + 2),
 					Language:    "en",
 					Title:       title,
 					Format:      "audiobook",
 					Popularity:  1,
 				},
 			},
-			Credits: []CreditSeed{{
-				AuthorHardcoverID: 1000 + hc, Name: authorName, Role: "author",
-			}},
+			Credits: []CreditSeed{
+				{
+					AuthorHardcoverID: providerid.Format(
+						1000 + hc,
+					),
+					Name: authorName,
+					Role: "author",
+				},
+			},
 			RefreshedAt: &now,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -105,12 +120,19 @@ var _ = Describe("Book shelf", Label("integration", "db"), func() {
 
 		mk := func(hc uint32, title string, monitor string, vols ...BookSeed) *ent.BookSeries {
 			s, _, err := store.CreateSeries(ctx, CreateSeriesParams{
-				HardcoverID: hc, Title: title, AuthorName: "Mangaka " + title,
-				Kind: "manga", Monitor: monitor, EditionLanguage: "en",
-				RefreshedAt: now, Volumes: vols,
+				HardcoverID: providerid.Format(
+					hc,
+				),
+				Title:           title,
+				AuthorName:      "Mangaka " + title,
+				Kind:            "manga",
+				Monitor:         monitor,
+				EditionLanguage: "en",
+				RefreshedAt:     now,
+				Volumes:         vols,
 				Credits: []CreditSeed{
 					{
-						AuthorHardcoverID: 2000 + hc,
+						AuthorHardcoverID: providerid.Format(2000 + hc),
 						Name:              "Mangaka " + title,
 						Role:              "author",
 					},
@@ -128,7 +150,7 @@ var _ = Describe("Book shelf", Label("integration", "db"), func() {
 		)
 		mk(200, "Naruto", "none", volumeSeed(201, 1, now))
 		mk(300, "Berserk", "all", volumeSeed(301, 1, now), BookSeed{
-			HardcoverID:       302,
+			HardcoverID:       "302",
 			Title:             "Berserk #2",
 			Kind:              "manga",
 			PreferredLanguage: "en",
@@ -137,7 +159,9 @@ var _ = Describe("Book shelf", Label("integration", "db"), func() {
 		})
 
 		vol := func(hc uint32) *ent.Book {
-			return client.Book.Query().Where(book.HardcoverIDEQ(hc)).OnlyX(ctx)
+			return client.Book.Query().
+				Where(book.HardcoverIDEQ(providerid.Format(hc))).
+				OnlyX(ctx)
 		}
 		client.Book.UpdateOneID(vol(101).ID).
 			SetEbookStatus(book.EbookStatusAvailable).ExecX(ctx)
@@ -199,7 +223,7 @@ var _ = Describe("Book shelf", Label("integration", "db"), func() {
 			Expect(byTitle["Berserk"].Status).To(Equal("wanted"))
 			Expect(byTitle["Berserk"].VolumesOut).To(Equal(uint32(2)))
 			Expect(byTitle["One Piece"].CoverID).To(Equal(
-				client.Book.Query().Where(book.HardcoverIDEQ(101)).OnlyX(ctx).ID,
+				client.Book.Query().Where(book.HardcoverIDEQ("101")).OnlyX(ctx).ID,
 			))
 		})
 
@@ -209,11 +233,11 @@ var _ = Describe("Book shelf", Label("integration", "db"), func() {
 				loose := volumeSeed(406, 0, now)
 				loose.SeriesPosition = nil
 				stub := BookSeed{
-					HardcoverID: 402, Title: "Dune #2", Kind: "manga",
+					HardcoverID: "402", Title: "Dune #2", Kind: "manga",
 					PreferredLanguage: "en", SeriesPosition: new(2.0),
 				}
 				dune, _, err := store.CreateSeries(ctx, CreateSeriesParams{
-					HardcoverID: 400, Title: "Dune", Kind: "manga", Monitor: "all",
+					HardcoverID: "400", Title: "Dune", Kind: "manga", Monitor: "all",
 					EditionLanguage: "en", RefreshedAt: now,
 					Volumes: []BookSeed{
 						volumeSeed(404, 4, now), volumeSeed(401, 1, now), stub,
@@ -223,7 +247,7 @@ var _ = Describe("Book shelf", Label("integration", "db"), func() {
 				Expect(err).NotTo(HaveOccurred())
 				id := func(hc uint32) uint32 {
 					return client.Book.Query().
-						Where(book.HardcoverIDEQ(hc)).
+						Where(book.HardcoverIDEQ(providerid.Format(hc))).
 						OnlyX(ctx).
 						ID
 				}
@@ -247,7 +271,7 @@ var _ = Describe("Book shelf", Label("integration", "db"), func() {
 			"leaves out an upcoming volume from the status and the out count",
 			func() {
 				future := now.Add(24 * time.Hour)
-				v := client.Book.Query().Where(book.HardcoverIDEQ(102)).OnlyX(ctx)
+				v := client.Book.Query().Where(book.HardcoverIDEQ("102")).OnlyX(ctx)
 				client.Book.UpdateOneID(v.ID).SetReleaseDate(future).ExecX(ctx)
 
 				rows, _ := list(ShelfParams{Query: "one piece"})

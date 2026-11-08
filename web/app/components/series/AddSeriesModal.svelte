@@ -64,20 +64,20 @@
 	let preset = $state<MonitoringPreset>("all");
 	// tvdb_id → local series id for adds made during this modal session;
 	// covers the gap between mutation success and the series refetch.
-	let sessionAdds = $state(new Map<number, number>());
-	let pendingTvdbId = $state<number | null>(null);
+	let sessionAdds = $state(new Map<string, number>());
+	let pendingTvdbId = $state<string | null>(null);
 	let searchInput = $state<HTMLInputElement | null>(null);
 	let resultsList = $state<HTMLUListElement | null>(null);
-	let failedPosters = $state(new Set<number>());
+	let failedPosters = $state(new Set<string>());
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 	// The highlighted result, whose detail fills the right-hand panel.
-	let selectedTvdbId = $state<number | null>(null);
+	let selectedTvdbId = $state<string | null>(null);
 	// Below md the two columns don't fit side by side, so the modal shows one
 	// at a time: results until you choose, then the panel with a back button.
 	let showPanelOnNarrow = $state(false);
 
-	function markPosterFailed(tvdbId: number) {
+	function markPosterFailed(tvdbId: string) {
 		failedPosters = new Set(failedPosters).add(tvdbId);
 	}
 
@@ -199,13 +199,13 @@
 	];
 
 	let libraryByTvdb = $derived.by(() => {
-		const map = new Map<number, number>();
+		const map = new Map<string, number>();
 		for (const s of seriesListQuery.data?.items ?? []) {
 			map.set(s.tvdb_id, s.id);
 		}
 		return map;
 	});
-	const resolveLocalId = (tvdbId: number): number | undefined =>
+	const resolveLocalId = (tvdbId: string): number | undefined =>
 		libraryByTvdb.get(tvdbId) ?? sessionAdds.get(tvdbId);
 
 	// Keep the highlight on a row that still exists as results change.

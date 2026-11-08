@@ -85,7 +85,7 @@ var _ = Describe("Worker audiobook verification", Label("unit", "importer"), fun
 			DB: db.New(client), Library: library.NewImportService(), Prober: prober,
 		})
 		b = client.Book.Create().
-			SetHardcoverID(2).SetTitle("Elantris").
+			SetHardcoverID("2").SetTitle("Elantris").
 			SetReleaseDate(time.Date(2005, 4, 21, 0, 0, 0, 0, time.UTC)).
 			SetAuthorName("Brandon Sanderson").
 			SetReleaseYear(2005).

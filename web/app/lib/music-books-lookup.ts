@@ -28,7 +28,7 @@ export type ArtistHit = {
 };
 
 export type BookHit = {
-	hardcover_id: number;
+	hardcover_id: string;
 	type: "book" | "series";
 	title: string;
 	original_title?: string;
@@ -47,7 +47,7 @@ export type BookHit = {
 	slug?: string;
 	// Series only: Hardcover book ids of the first volumes adding it would pick,
 	// at most three, each a lookup cover.
-	cover_book_ids?: number[];
+	cover_book_ids?: string[];
 	// Series only: the book title, in any language, the series was found
 	// through, when it is not the series' own name.
 	matched_title?: string;
@@ -77,7 +77,7 @@ export type BookDetail = {
 	editions?: LookupEdition[];
 	// Series only: Hardcover ids of the first volumes, in order; each is a
 	// lookup cover.
-	volume_book_ids?: number[];
+	volume_book_ids?: string[];
 };
 
 // /requests/{id}/metadata answers a music or book request with the hit and its
@@ -295,7 +295,7 @@ export const volumesCount = (n: number) =>
 // pane — and metadata for another request (a cache still holding the last one)
 // is never shown under this one's title.
 export function requestHit(
-	r: { media_type: string; media_id: number; media_mbid?: string; artist_mbid?: string; title: string },
+	r: { media_type: string; media_id: string; media_mbid?: string; artist_mbid?: string; title: string },
 	meta?: ArtistMeta | BookMeta,
 ): LookupHit {
 	if (meta && r.media_type === "artist" && "mbid" in meta && meta.mbid === r.media_mbid) return artistHit(meta);

@@ -3,6 +3,8 @@ package book
 import (
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/stretchr/testify/mock"
 
 	entbook "github.com/datahearth/streamline/ent/book"
@@ -15,14 +17,15 @@ import (
 
 var anyCtx = mock.Anything
 
-// ids matches a request for exactly these Hardcover ids, in order.
-func ids(want ...uint32) any {
-	return mock.MatchedBy(func(got []uint32) bool {
+// ids matches a request for exactly these Hardcover ids, in order. A want is
+// a number or the id string itself.
+func ids(want ...any) any {
+	return mock.MatchedBy(func(got []string) bool {
 		if len(got) != len(want) {
 			return false
 		}
 		for i := range got {
-			if got[i] != want[i] {
+			if got[i] != itoa(want[i]) {
 				return false
 			}
 		}
@@ -35,14 +38,17 @@ func ids(want ...uint32) any {
 func seriesRecord(name string, n int) *metadata.SeriesRecord {
 	const base = 1000
 	sk := &metadata.SeriesRecord{
-		HardcoverID: 50, Name: name, Description: "About " + name,
+		HardcoverID: "50", Name: name, Description: "About " + name,
 		PrimaryBooks: numeric.SaturateU32(n), Books: numeric.SaturateU32(n),
-		AuthorHardcoverID: 20, AuthorName: "Eiichiro Oda",
+		AuthorHardcoverID: "20", AuthorName: "Eiichiro Oda",
 		AuthorImageURL: "https://img/oda.jpg",
 	}
 	for i := 1; i <= n; i++ {
 		sk.Volumes = append(sk.Volumes, metadata.SeriesVolumeRef{
-			Position: float64(i), BookHardcoverID: base + uint32(i),
+			Position: float64(
+				i,
+			),
+			BookHardcoverID: providerid.Format(base + uint32(i)),
 		})
 	}
 	return sk
@@ -52,14 +58,14 @@ func seriesRecord(name string, n int) *metadata.SeriesRecord {
 // whose Hardcover book ids are id*100+position.
 func seriesRec(id uint32, name string, n int) metadata.SeriesLookupRecord {
 	r := metadata.SeriesLookupRecord{
-		HardcoverID: id, Name: name, Slug: "slug-" + itoa(id),
+		HardcoverID: providerid.Format(id), Name: name, Slug: "slug-" + itoa(id),
 		PrimaryBooks: numeric.SaturateU32(n), Books: numeric.SaturateU32(n),
 		AuthorName: "Isaac Asimov",
 	}
 	for i := 1; i <= n; i++ {
 		r.Volumes = append(r.Volumes, metadata.SeriesLookupVolume{
 			Position:        float64(i),
-			BookHardcoverID: id*100 + uint32(i),
+			BookHardcoverID: providerid.Format(id*100 + uint32(i)),
 			UsersCount:      1,
 			ImageURL:        "https://img/s" + itoa(id*100+uint32(i)) + ".jpg",
 		})
@@ -72,7 +78,7 @@ func volumeRec(id uint32) *metadata.BookRecord {
 	r := rec(id, "Volume "+itoa(id))
 	r.Kind = metadata.BookKindManga
 	r.Credits = []metadata.BookCredit{{
-		AuthorHardcoverID: 20, Name: "Eiichiro Oda", Role: metadata.RoleWriter,
+		AuthorHardcoverID: "20", Name: "Eiichiro Oda", Role: metadata.RoleWriter,
 	}}
 	return r
 }
@@ -90,7 +96,7 @@ func bookEditionOf(bookID uint32, publisher string) predicate.BookEdition {
 func dbSeriesWithStubs() db.CreateSeriesParams {
 	stub := func(hc uint32, position float64) db.BookSeed {
 		return db.BookSeed{
-			HardcoverID:       hc,
+			HardcoverID:       providerid.Format(hc),
 			Title:             "One Piece #" + itoa(uint32(position)),
 			Kind:              "manga",
 			PreferredLanguage: "fr",
@@ -98,7 +104,7 @@ func dbSeriesWithStubs() db.CreateSeriesParams {
 		}
 	}
 	return db.CreateSeriesParams{
-		HardcoverID:      50,
+		HardcoverID:      "50",
 		Title:            "One Piece",
 		AuthorName:       "Eiichiro Oda",
 		Kind:             "manga",

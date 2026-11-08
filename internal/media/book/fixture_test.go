@@ -2,10 +2,12 @@ package book
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"sync"
+
+	"github.com/datahearth/streamline/internal/providerid"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -168,20 +170,20 @@ func newFixture() *fixture {
 // English audiobook, each in its own publisher.
 func rec(id uint32, title string) *metadata.BookRecord {
 	return &metadata.BookRecord{
-		HardcoverID: id,
+		HardcoverID: providerid.Format(id),
 		Title:       title,
 		Description: "About " + title,
 		ReleaseYear: 2005,
 		Kind:        metadata.BookKindNovel,
 		CoverURL:    "https://img/b" + itoa(id) + ".jpg",
 		Credits: []metadata.BookCredit{{
-			AuthorHardcoverID: 10, Name: "Brandon Sanderson",
+			AuthorHardcoverID: "10", Name: "Brandon Sanderson",
 			ImageURL: "https://img/a10.jpg", Role: metadata.RoleAuthor,
 		}},
 		OriginalLanguage: "en",
 		Editions: []metadata.EditionRecord{
 			{
-				HardcoverID: id*10 + 1,
+				HardcoverID: providerid.Format(id*10 + 1),
 				Language:    "en",
 				Title:       title,
 				Publisher:   "Tor",
@@ -191,7 +193,7 @@ func rec(id uint32, title string) *metadata.BookRecord {
 				Popularity:  9,
 			},
 			{
-				HardcoverID: id*10 + 2,
+				HardcoverID: providerid.Format(id*10 + 2),
 				Language:    "fr",
 				Title:       title + " (fr)",
 				Publisher:   "Mnemos",
@@ -200,7 +202,7 @@ func rec(id uint32, title string) *metadata.BookRecord {
 				Popularity:  4,
 			},
 			{
-				HardcoverID: id*10 + 3,
+				HardcoverID: providerid.Format(id*10 + 3),
 				Language:    "en",
 				Title:       title,
 				Publisher:   "Audible",
@@ -213,14 +215,19 @@ func rec(id uint32, title string) *metadata.BookRecord {
 	}
 }
 
-func itoa(n uint32) string { return strconv.FormatUint(uint64(n), 10) }
+// itoa renders a fixture's numeric Hardcover id as the string the code
+// carries; an id that already is one passes through.
+func itoa(n any) string { return fmt.Sprint(n) }
 
 // addBook adds a book through the service the way the API does.
 func (f *fixture) addBook(hc uint32, title string, monitor string) *ent.Book {
 	GinkgoHelper()
 	f.meta.EXPECT().GetBooks(anyCtx, ids(hc)).
 		Return([]*metadata.BookRecord{rec(hc, title)}, nil).Once()
-	b, err := f.svc.AddBook(f.ctx, AddBookParams{HardcoverID: hc, Monitor: monitor})
+	b, err := f.svc.AddBook(
+		f.ctx,
+		AddBookParams{HardcoverID: providerid.Format(hc), Monitor: monitor},
+	)
 	Expect(err).NotTo(HaveOccurred())
 	return b
 }

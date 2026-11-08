@@ -48,7 +48,7 @@ func (_m *MockShowAdder) EXPECT() *MockShowAdder_Expecter {
 }
 
 // Add provides a mock function for the type MockShowAdder
-func (_mock *MockShowAdder) Add(ctx context.Context, tvdbID uint32, qualityProfile string) (*ent.TVShow, error) {
+func (_mock *MockShowAdder) Add(ctx context.Context, tvdbID string, qualityProfile string) (*ent.TVShow, error) {
 	ret := _mock.Called(ctx, tvdbID, qualityProfile)
 
 	if len(ret) == 0 {
@@ -57,17 +57,17 @@ func (_mock *MockShowAdder) Add(ctx context.Context, tvdbID uint32, qualityProfi
 
 	var r0 *ent.TVShow
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (*ent.TVShow, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*ent.TVShow, error)); ok {
 		return returnFunc(ctx, tvdbID, qualityProfile)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) *ent.TVShow); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *ent.TVShow); ok {
 		r0 = returnFunc(ctx, tvdbID, qualityProfile)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.TVShow)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
 		r1 = returnFunc(ctx, tvdbID, qualityProfile)
 	} else {
 		r1 = ret.Error(1)
@@ -82,21 +82,21 @@ type MockShowAdder_Add_Call struct {
 
 // Add is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tvdbID uint32
+//   - tvdbID string
 //   - qualityProfile string
 func (_e *MockShowAdder_Expecter) Add(ctx any, tvdbID any, qualityProfile any) *MockShowAdder_Add_Call {
 	return &MockShowAdder_Add_Call{Call: _e.mock.On("Add", ctx, tvdbID, qualityProfile)}
 }
 
-func (_c *MockShowAdder_Add_Call) Run(run func(ctx context.Context, tvdbID uint32, qualityProfile string)) *MockShowAdder_Add_Call {
+func (_c *MockShowAdder_Add_Call) Run(run func(ctx context.Context, tvdbID string, qualityProfile string)) *MockShowAdder_Add_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -116,7 +116,7 @@ func (_c *MockShowAdder_Add_Call) Return(tVShow *ent.TVShow, err error) *MockSho
 	return _c
 }
 
-func (_c *MockShowAdder_Add_Call) RunAndReturn(run func(ctx context.Context, tvdbID uint32, qualityProfile string) (*ent.TVShow, error)) *MockShowAdder_Add_Call {
+func (_c *MockShowAdder_Add_Call) RunAndReturn(run func(ctx context.Context, tvdbID string, qualityProfile string) (*ent.TVShow, error)) *MockShowAdder_Add_Call {
 	_c.Call.Return(run)
 	return _c
 }

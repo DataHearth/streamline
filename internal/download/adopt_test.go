@@ -50,7 +50,7 @@ const adoptHash = "0123456789abcdef0123456789abcdef01234567"
 var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 	Describe("classifyMovieAdoption", func() {
 		candidates := []*ent.Movie{
-			{ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906},
+			{ID: 3, Title: "The Batman", Year: 2022, TmdbID: "414906"},
 		}
 
 		BeforeEach(func() {
@@ -94,7 +94,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 		})
 
 		withFile := []*ent.Movie{{
-			ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+			ID: 3, Title: "The Batman", Year: 2022, TmdbID: "414906",
 			Edges: ent.MovieEdges{MediaFiles: []*ent.MediaFile{{ID: 9, Size: 4096}}},
 		}}
 
@@ -109,7 +109,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		It("auto-imports over a row whose file is missing from disk", func() {
 			gone := []*ent.Movie{{
-				ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+				ID: 3, Title: "The Batman", Year: 2022, TmdbID: "414906",
 				Edges: ent.MovieEdges{MediaFiles: []*ent.MediaFile{
 					{ID: 9, Size: 4096, MissingSince: new(time.Now())},
 				}},
@@ -150,7 +150,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			"proposes on a same-size file whose stored release facts disagree",
 			func() {
 				other := []*ent.Movie{{
-					ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+					ID: 3, Title: "The Batman", Year: 2022, TmdbID: "414906",
 					Edges: ent.MovieEdges{MediaFiles: []*ent.MediaFile{
 						{
 							ID:               9,
@@ -178,8 +178,8 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		It("proposes on an ambiguous (multi) title match", func() {
 			multi := []*ent.Movie{
-				{ID: 3, Title: "The Batman", Year: 2022, TmdbID: 1},
-				{ID: 4, Title: "The Batman", Year: 2022, TmdbID: 2},
+				{ID: 3, Title: "The Batman", Year: 2022, TmdbID: "1"},
+				{ID: 4, Title: "The Batman", Year: 2022, TmdbID: "2"},
 			}
 			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
 			dec, ok := classifyMovieAdoption(parsed, 0, multi)
@@ -518,7 +518,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 				Return(0, nil).Once()
 			store.EXPECT().ListMoviesForAdoption(mock.Anything).
 				Return([]*ent.Movie{{
-					ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+					ID: 3, Title: "The Batman", Year: 2022, TmdbID: "414906",
 					Edges: ent.MovieEdges{
 						MediaFiles: []*ent.MediaFile{{ID: 9, Size: 4096}},
 					},
@@ -633,7 +633,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 					Return(0, nil).Once()
 				store.EXPECT().ListMoviesForAdoption(mock.Anything).
 					Return([]*ent.Movie{{
-						ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+						ID: 3, Title: "The Batman", Year: 2022, TmdbID: "414906",
 					}}, nil).Once()
 				store.EXPECT().ListTvShowsForAdoption(mock.Anything).
 					Return(nil, nil).Once()
@@ -761,7 +761,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 				Return(0, nil).Once()
 			store.EXPECT().ListMoviesForAdoption(mock.Anything).
 				Return([]*ent.Movie{{
-					ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+					ID: 3, Title: "The Batman", Year: 2022, TmdbID: "414906",
 					Edges: ent.MovieEdges{
 						MediaFiles: []*ent.MediaFile{{ID: 9, Size: 4096}},
 					},

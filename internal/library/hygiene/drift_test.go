@@ -197,7 +197,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 			Return(&ent.MediaFile{
 				ID: 99, Path: path, MissingSince: &seen,
 				Edges: ent.MediaFileEdges{
-					Movie: &ent.Movie{ID: 88, Title: "Gone", TmdbID: 1234},
+					Movie: &ent.Movie{ID: 88, Title: "Gone", TmdbID: "1234"},
 				},
 			}, nil).
 			Once()

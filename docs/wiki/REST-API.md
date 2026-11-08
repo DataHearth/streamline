@@ -112,6 +112,8 @@ Activity feeds use cursor pagination instead (`?cursor=`, `?limit=`), since they
 
 Everything database-backed (movies, series, requests, users, imports) uses numeric IDs.
 
+**Provider ids are strings.** Every TMDB, TVDB and Hardcover id — `tmdb_id`, `tvdb_id`, `hardcover_id`, a request's `media_id`, an import row's `decision_*_id`, `provider_id`, `cover_book_ids`, `volume_book_ids` — is a JSON string (`"603"`), in request bodies, responses and path parameters alike, like the MusicBrainz MBIDs always were. An id the provider never gave is `""` or absent, never `0`. Earlier releases sent and took them as numbers; a body that still sends one is now a `400`. The library's own row ids (`id`, `movie_id`, `person_id`, …) stay numeric.
+
 **Update verbs are not uniform.** Media servers use `PATCH`; indexers, download clients and quality profiles use `PUT`. This is a genuine inconsistency in the API, not a documentation error — check the spec if in doubt.
 
 **Secrets are never returned.** Read views expose booleans — `api_key_set`, `password_set`, `client_secret_set` — instead of values. On update, sending a blank secret **preserves** the existing one rather than clearing it, so you can round-trip a config object without leaking or destroying credentials. The exception is a **move**: an update that sends a media server, download client or indexer to another address (or an OIDC provider to another issuer, where a path change counts too) (scheme, host or port — a path or letter-case change is not a move) must carry the secret again, or it is refused with `422` `code: secret_required`, so a typo in the host never hands a stored token to the wrong machine. A secret read from a `*_file` path cannot be moved through the API at all (`403` `code: secret_file_managed`): change the address in the config file. On a download client only the secret it authenticates with is asked for; the other one, unused, is dropped on a move.
@@ -272,7 +274,7 @@ Books come from Hardcover, which needs `metadata.hardcover_api_key`. Without it 
 | `GET` | `/people` | List cast members credited anywhere in the library (`?query=`, `?limit=`, `?offset=`) | Authenticated |
 | `GET` | `/people/{id}` | One person's movie and series credits | Authenticated |
 
-People are rows of their own, related to titles through a `credits` table — one row per person-on-a-title, carrying the character and the billing order. **`id` is that person row, and the only key `/people/{id}` accepts.** It is not a provider id: series cast comes from TVDB and carries no TMDB id at all, so keying the endpoint on `tmdb_id` merged every such actor into a single fictitious person. `tmdb_id` and `tvdb_id` both ride along on the person as data — either is `0` when that provider never named them.
+People are rows of their own, related to titles through a `credits` table — one row per person-on-a-title, carrying the character and the billing order. **`id` is that person row, and the only key `/people/{id}` accepts.** It is not a provider id: series cast comes from TVDB and carries no TMDB id at all, so keying the endpoint on `tmdb_id` merged every such actor into a single fictitious person. `tmdb_id` and `tvdb_id` both ride along on the person as data — either is `""` when that provider never named them.
 
 A person is listed only while something credits them. `credits` counts library items — movies plus series — not credit rows, so a person listed twice on one title counts once. The list is ordered by `credits` descending, then by name; `query` folds accents, case and punctuation on both sides, so `?query=beatrice` finds "Béatrice Dalle".
 
@@ -281,8 +283,8 @@ A person is listed only while something credits them. `credits` counts library i
 ```jsonc
 {
   "id": 42,                                                // persons row — link with this
-  "tmdb_id": 1234,                                          // 0 when TMDB never named them
-  "tvdb_id": 0,                                             // 0 when TVDB never named them
+  "tmdb_id": "1234",                                        // "" when TMDB never named them
+  "tvdb_id": "",                                            // "" when TVDB never named them
   "name": "Béatrice Dalle",
   "profile_url": "https://image.tmdb.org/t/p/w185/…jpg",    // omitted when empty
   "credits": 3,
@@ -314,8 +316,8 @@ The fetch happens **once per person, ever**. An actor credited on thirty titles 
 // GET /api/v1/people/42
 {
   "id": 42,
-  "tmdb_id": 1234,
-  "tvdb_id": 0,
+  "tmdb_id": "1234",
+  "tvdb_id": "",
   "name": "Béatrice Dalle",
   "profile_url": "https://image.tmdb.org/t/p/w185/…jpg",  // omitted when empty
   // …the same optional biographical fields as the list item
@@ -710,7 +712,7 @@ api() { curl -sS -H "X-API-Key: $KEY" -H 'Content-Type: application/json' "$@"; 
 **Add a movie by TMDB ID:**
 
 ```bash
-api -X POST -d '{"tmdb_id":603,"quality_profile":"default"}' "$SL/api/v1/movies"
+api -X POST -d '{"tmdb_id":"603","quality_profile":"default"}' "$SL/api/v1/movies"
 ```
 
 **Find everything still wanted:**
@@ -728,7 +730,7 @@ api -X POST "$SL/api/v1/schedules/movie-missing-search/run"
 **Add a show, monitoring only missing episodes:**
 
 ```bash
-api -X POST -d '{"tvdb_id":81189,"preset":"missing"}' "$SL/api/v1/series"
+api -X POST -d '{"tvdb_id":"81189","preset":"missing"}' "$SL/api/v1/series"
 ```
 
 `preset` is one of `all`, `future`, `missing`, `existing`, `pilot`, `none`, and is applied once at add time to the season/episode tree.

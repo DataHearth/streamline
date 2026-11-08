@@ -23,7 +23,7 @@ type CreateImportScanShowParams struct {
 	ParsedTitle      string
 	ParsedYear       *uint16
 	Classification   entimportscanshow.Classification
-	TVDBID           *uint32
+	TVDBID           *string
 	Candidates       []schema.ScannedShowCandidate
 	ExistingTvshowID *uint32
 	FileCount        uint16
@@ -149,7 +149,7 @@ func (db *DB) FindImportScanShow(
 // nothing rather than be mutated behind a 404.
 func (db *DB) UpdateImportScanShowDecision(
 	ctx context.Context, scanID, showID uint32,
-	decision entimportscanshow.Decision, tvdbID *uint32,
+	decision entimportscanshow.Decision, tvdbID *string,
 ) error {
 	u := db.client.ImportScanShow.Update().
 		Where(

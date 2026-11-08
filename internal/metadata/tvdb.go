@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
@@ -317,7 +319,7 @@ func (t *TVDB) searchSeries(ctx context.Context, query string) ([]TVResult, erro
 		}
 		year := atou16(r.Year)
 		out = append(out, TVResult{
-			TVDBID:        atou32(r.TVDBID),
+			TVDBID:        providerid.Format(atou32(r.TVDBID)),
 			Title:         stripDisambiguationYear(title, year),
 			OriginalTitle: stripDisambiguationYear(r.Name, year),
 			Year:          year,
@@ -346,9 +348,9 @@ func stripDisambiguationYear(title string, year uint16) string {
 	return t
 }
 
-func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error) {
+func (t *TVDB) GetSeries(ctx context.Context, tvdbID string) (*TVDetails, error) {
 	ctx, span := tracer.Start(ctx, "metadata.tvdb.get_series",
-		trace.WithAttributes(attribute.Int("tvdb.id", int(tvdbID))))
+		trace.WithAttributes(attribute.String("tvdb.id", tvdbID)))
 	defer span.End()
 
 	var ext struct {
@@ -395,7 +397,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 			} `json:"translations"`
 		} `json:"data"`
 	}
-	extPath := fmt.Sprintf("/series/%d/extended", tvdbID)
+	extPath := "/series/" + url.PathEscape(tvdbID) + "/extended"
 	if t.language != "" {
 		extPath += "?meta=translations"
 	}
@@ -407,7 +409,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 	}
 
 	d := &TVDetails{
-		TVDBID:        ext.Data.ID,
+		TVDBID:        providerid.Format(ext.Data.ID),
 		Title:         ext.Data.Name,
 		OriginalTitle: ext.Data.Name, // preserved before the language override below
 		Year:          atou16(ext.Data.Year),
@@ -481,7 +483,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 // per-episode fallback of its own.
 func (t *TVDB) episodes(
 	ctx context.Context,
-	tvdbID uint32,
+	tvdbID string,
 	lang string,
 ) ([]EpisodeInfo, error) {
 	langSeg := ""
@@ -506,8 +508,8 @@ func (t *TVDB) episodes(
 			} `json:"links"`
 		}
 		p := fmt.Sprintf(
-			"/series/%d/episodes/default%s?page=%d",
-			tvdbID,
+			"/series/%s/episodes/default%s?page=%d",
+			url.PathEscape(tvdbID),
 			langSeg,
 			page,
 		)
@@ -545,7 +547,7 @@ func (t *TVDB) episodes(
 // than failing the refresh.
 func (t *TVDB) fillUntranslatedEpisodes(
 	ctx context.Context,
-	tvdbID uint32,
+	tvdbID string,
 	eps []EpisodeInfo,
 ) {
 	if t.language == "" {
@@ -594,10 +596,10 @@ func untitledAired(e EpisodeInfo, now time.Time) bool {
 // TVDB's `sort`. Non-actor crew (directors, writers, …) is skipped.
 func (t *TVDB) GetSeriesCast(
 	ctx context.Context,
-	tvdbID uint32,
+	tvdbID string,
 ) ([]CastMember, error) {
 	ctx, span := tracer.Start(ctx, "metadata.tvdb.get_series_cast",
-		trace.WithAttributes(attribute.Int("tvdb.id", int(tvdbID))))
+		trace.WithAttributes(attribute.String("tvdb.id", tvdbID)))
 	defer span.End()
 
 	var ext struct {
@@ -614,7 +616,7 @@ func (t *TVDB) GetSeriesCast(
 	}
 	if err := t.get(
 		ctx,
-		fmt.Sprintf("/series/%d/extended", tvdbID),
+		"/series/"+url.PathEscape(tvdbID)+"/extended",
 		&ext,
 	); err != nil {
 		return nil, otelx.RecordSpanError(
@@ -635,7 +637,7 @@ func (t *TVDB) GetSeriesCast(
 			continue
 		}
 		member := CastMember{
-			TVDBID:     c.PeopleID,
+			TVDBID:     providerid.Format(c.PeopleID),
 			Name:       c.PersonName,
 			Character:  c.Name,
 			ProfileURL: TVDBArtworkURL(c.PersonImg),
@@ -660,10 +662,10 @@ func (t *TVDB) GetSeriesCast(
 // id and nothing else — and no extra request is made hunting for them.
 func (t *TVDB) GetPerson(
 	ctx context.Context,
-	tvdbID uint32,
+	tvdbID string,
 ) (*PersonDetails, error) {
 	ctx, span := tracer.Start(ctx, "metadata.tvdb.get_person",
-		trace.WithAttributes(attribute.Int("tvdb.id", int(tvdbID))))
+		trace.WithAttributes(attribute.String("tvdb.id", tvdbID)))
 	defer span.End()
 
 	var ext struct {
@@ -683,7 +685,7 @@ func (t *TVDB) GetPerson(
 	}
 	if err := t.get(
 		ctx,
-		fmt.Sprintf("/people/%d/extended", tvdbID),
+		"/people/"+url.PathEscape(tvdbID)+"/extended",
 		&ext,
 	); err != nil {
 		return nil, otelx.RecordSpanError(

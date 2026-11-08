@@ -259,7 +259,7 @@ func (s *Service) runScan(ctx context.Context, scan *ent.ImportScan) {
 			"error",
 			err,
 		)
-		alreadyAdded = map[uint32]uint32{}
+		alreadyAdded = map[string]uint32{}
 	}
 
 	tally, ok := s.runMatchPhase(ctx, scan, candidates, alreadyAdded)
@@ -343,7 +343,7 @@ func (s *Service) runMatchPhase(
 	ctx context.Context,
 	scan *ent.ImportScan,
 	candidates []scannedCandidate,
-	alreadyAdded map[uint32]uint32,
+	alreadyAdded map[string]uint32,
 ) (map[entimportscanfile.Classification]int, bool) {
 	sem := make(chan struct{}, scanConcurrency)
 	tally := map[entimportscanfile.Classification]int{}
@@ -413,7 +413,7 @@ func (s *Service) runMatchPhase(
 func (s *Service) classifyOne(
 	ctx context.Context,
 	c scannedCandidate,
-	alreadyAdded map[uint32]uint32,
+	alreadyAdded map[string]uint32,
 ) db.CreateImportScanFileParams {
 	parsed := library.Parse(filepath.Base(c.path))
 	hits, err := s.metadata.SearchMovie(ctx, parsed.Title, parsed.Year)

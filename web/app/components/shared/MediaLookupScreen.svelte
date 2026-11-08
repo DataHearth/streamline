@@ -59,7 +59,8 @@
 	closeOnBack(() => open, () => onClose());
 
 	type Hit = {
-		id: number;
+		// The provider id (TMDB or TVDB), a string like every provider id.
+		id: string;
 		title: string;
 		year?: number;
 		poster_url?: string;
@@ -77,14 +78,14 @@
 	let debounced = $state("");
 	// "" means "let the backend resolve the default profile".
 	let qualityProfileName = $state<string>("");
-	let selectedId = $state<number | null>(null);
+	let selectedId = $state<string | null>(null);
 	let sheetExpanded = $state(false);
-	let pendingId = $state<number | null>(null);
+	let pendingId = $state<string | null>(null);
 	// Lookup id → local id for adds made during this session; covers the gap
 	// between mutation success and the library refetch.
-	let sessionAdds = $state(new Map<number, number>());
-	let requested = $state(new Set<number>());
-	let failedPosters = $state(new Set<number>());
+	let sessionAdds = $state(new Map<string, number>());
+	let requested = $state(new Set<string>());
+	let failedPosters = $state(new Set<string>());
 	let input = $state<HTMLInputElement | null>(null);
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -236,7 +237,7 @@
 	// Lookup id → the library row, so an already-owned title can show what you
 	// have instead of offering to add it again.
 	let libraryByLookupId = $derived.by(() => {
-		const map = new Map<number, Movie | TVShow>();
+		const map = new Map<string, Movie | TVShow>();
 		for (const item of libraryQuery.data?.items ?? []) {
 			// `in` rather than `isMovie`: the flag is a prop, so it narrows nothing
 			// for the compiler, and the required id field is the real discriminant.
@@ -245,8 +246,8 @@
 		}
 		return map;
 	});
-	const localFor = (id: number) => libraryByLookupId.get(id);
-	const localIdFor = (id: number) =>
+	const localFor = (id: string) => libraryByLookupId.get(id);
+	const localIdFor = (id: string) =>
 		libraryByLookupId.get(id)?.id ?? sessionAdds.get(id);
 	const isHeld = (h: Hit) =>
 		localIdFor(h.id) !== undefined || !!h.already_added;
@@ -318,7 +319,7 @@
 		selectedId = h.id;
 		sheetExpanded = false;
 	}
-	function markPosterFailed(id: number) {
+	function markPosterFailed(id: string) {
 		failedPosters = new Set(failedPosters).add(id);
 	}
 </script>

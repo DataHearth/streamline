@@ -96,7 +96,7 @@ func Monitored(v bool) predicate.Movie {
 }
 
 // TmdbID applies equality check predicate on the "tmdb_id" field. It's identical to TmdbIDEQ.
-func TmdbID(v uint32) predicate.Movie {
+func TmdbID(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldTmdbID, v))
 }
 
@@ -546,43 +546,68 @@ func MonitoredNEQ(v bool) predicate.Movie {
 }
 
 // TmdbIDEQ applies the EQ predicate on the "tmdb_id" field.
-func TmdbIDEQ(v uint32) predicate.Movie {
+func TmdbIDEQ(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldTmdbID, v))
 }
 
 // TmdbIDNEQ applies the NEQ predicate on the "tmdb_id" field.
-func TmdbIDNEQ(v uint32) predicate.Movie {
+func TmdbIDNEQ(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldNEQ(FieldTmdbID, v))
 }
 
 // TmdbIDIn applies the In predicate on the "tmdb_id" field.
-func TmdbIDIn(vs ...uint32) predicate.Movie {
+func TmdbIDIn(vs ...string) predicate.Movie {
 	return predicate.Movie(sql.FieldIn(FieldTmdbID, vs...))
 }
 
 // TmdbIDNotIn applies the NotIn predicate on the "tmdb_id" field.
-func TmdbIDNotIn(vs ...uint32) predicate.Movie {
+func TmdbIDNotIn(vs ...string) predicate.Movie {
 	return predicate.Movie(sql.FieldNotIn(FieldTmdbID, vs...))
 }
 
 // TmdbIDGT applies the GT predicate on the "tmdb_id" field.
-func TmdbIDGT(v uint32) predicate.Movie {
+func TmdbIDGT(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldGT(FieldTmdbID, v))
 }
 
 // TmdbIDGTE applies the GTE predicate on the "tmdb_id" field.
-func TmdbIDGTE(v uint32) predicate.Movie {
+func TmdbIDGTE(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldGTE(FieldTmdbID, v))
 }
 
 // TmdbIDLT applies the LT predicate on the "tmdb_id" field.
-func TmdbIDLT(v uint32) predicate.Movie {
+func TmdbIDLT(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldLT(FieldTmdbID, v))
 }
 
 // TmdbIDLTE applies the LTE predicate on the "tmdb_id" field.
-func TmdbIDLTE(v uint32) predicate.Movie {
+func TmdbIDLTE(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldLTE(FieldTmdbID, v))
+}
+
+// TmdbIDContains applies the Contains predicate on the "tmdb_id" field.
+func TmdbIDContains(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldContains(FieldTmdbID, v))
+}
+
+// TmdbIDHasPrefix applies the HasPrefix predicate on the "tmdb_id" field.
+func TmdbIDHasPrefix(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldHasPrefix(FieldTmdbID, v))
+}
+
+// TmdbIDHasSuffix applies the HasSuffix predicate on the "tmdb_id" field.
+func TmdbIDHasSuffix(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldHasSuffix(FieldTmdbID, v))
+}
+
+// TmdbIDEqualFold applies the EqualFold predicate on the "tmdb_id" field.
+func TmdbIDEqualFold(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldEqualFold(FieldTmdbID, v))
+}
+
+// TmdbIDContainsFold applies the ContainsFold predicate on the "tmdb_id" field.
+func TmdbIDContainsFold(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldContainsFold(FieldTmdbID, v))
 }
 
 // LastSearchAtEQ applies the EQ predicate on the "last_search_at" field.

@@ -109,12 +109,13 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 
 	Describe("Create", func() {
 		It("creates a movie request when none active and not in library", func() {
-			storeMk.FindActiveRequest(mock.Anything, "movie", uint32(5)).
+			storeMk.FindActiveRequest(mock.Anything, "movie", "5").
 				Return(nil, nil).Once()
-			movieMk.GetByTMDBID(mock.Anything, uint32(5)).
+			movieMk.GetByTMDBID(mock.Anything, "5").
 				Return(nil, errors.New("not found")).Once()
 			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
-				return p.MediaType == "movie" && p.MediaID == 5 && p.RequesterID == 9
+				return p.MediaType == "movie" && p.MediaID == "5" &&
+					p.RequesterID == 9
 			})).
 				Return(&ent.Request{ID: 1}, nil).
 				Once()
@@ -123,7 +124,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				ctx,
 				request.CreateParams{
 					MediaType:      "movie",
-					MediaID:        5,
+					MediaID:        "5",
 					Title:          "Flick",
 					RequesterID:    9,
 					QualityProfile: "",
@@ -134,9 +135,9 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 		})
 
 		It("records the requester's preferred quality profile", func() {
-			storeMk.FindActiveRequest(mock.Anything, "movie", uint32(5)).
+			storeMk.FindActiveRequest(mock.Anything, "movie", "5").
 				Return(nil, nil).Once()
-			movieMk.GetByTMDBID(mock.Anything, uint32(5)).
+			movieMk.GetByTMDBID(mock.Anything, "5").
 				Return(nil, errors.New("not found")).Once()
 			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
 				return p.QualityProfile == "Remux"
@@ -148,7 +149,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				ctx,
 				request.CreateParams{
 					MediaType:      "movie",
-					MediaID:        5,
+					MediaID:        "5",
 					Title:          "Flick",
 					RequesterID:    9,
 					QualityProfile: "Remux",
@@ -158,14 +159,14 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 		})
 
 		It("rejects duplicates when an active request exists", func() {
-			storeMk.FindActiveRequest(mock.Anything, "movie", uint32(5)).
+			storeMk.FindActiveRequest(mock.Anything, "movie", "5").
 				Return(&ent.Request{ID: 7}, nil).Once()
 
 			_, err := svc.Create(
 				ctx,
 				request.CreateParams{
 					MediaType:      "movie",
-					MediaID:        5,
+					MediaID:        "5",
 					Title:          "Flick",
 					RequesterID:    9,
 					QualityProfile: "",
@@ -175,16 +176,16 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 		})
 
 		It("rejects when the movie is already in the library", func() {
-			storeMk.FindActiveRequest(mock.Anything, "movie", uint32(5)).
+			storeMk.FindActiveRequest(mock.Anything, "movie", "5").
 				Return(nil, nil).Once()
-			movieMk.GetByTMDBID(mock.Anything, uint32(5)).
+			movieMk.GetByTMDBID(mock.Anything, "5").
 				Return(&ent.Movie{ID: 3}, nil).Once()
 
 			_, err := svc.Create(
 				ctx,
 				request.CreateParams{
 					MediaType:      "movie",
-					MediaID:        5,
+					MediaID:        "5",
 					Title:          "Flick",
 					RequesterID:    9,
 					QualityProfile: "",
@@ -194,9 +195,9 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 		})
 
 		It("maps a unique-index violation to request.ErrDuplicate", func() {
-			storeMk.FindActiveRequest(mock.Anything, "movie", uint32(5)).
+			storeMk.FindActiveRequest(mock.Anything, "movie", "5").
 				Return(nil, nil).Once()
-			movieMk.GetByTMDBID(mock.Anything, uint32(5)).
+			movieMk.GetByTMDBID(mock.Anything, "5").
 				Return(nil, errors.New("not found")).Once()
 			storeMk.CreateRequest(mock.Anything, mock.Anything).
 				Return(nil, &ent.ConstraintError{}).Once()
@@ -205,7 +206,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				ctx,
 				request.CreateParams{
 					MediaType:      "movie",
-					MediaID:        5,
+					MediaID:        "5",
 					Title:          "Flick",
 					RequesterID:    9,
 					QualityProfile: "",
@@ -215,16 +216,16 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 		})
 
 		It("rejects when the show is already in the library", func() {
-			storeMk.FindActiveRequest(mock.Anything, "tvshow", uint32(8)).
+			storeMk.FindActiveRequest(mock.Anything, "tvshow", "8").
 				Return(nil, nil).Once()
-			storeMk.FindTVShowByTVDBID(mock.Anything, uint32(8)).
+			storeMk.FindTVShowByTVDBID(mock.Anything, "8").
 				Return(&ent.TVShow{ID: 2}, nil).Once()
 
 			_, err := svc.Create(
 				ctx,
 				request.CreateParams{
 					MediaType:      "tvshow",
-					MediaID:        8,
+					MediaID:        "8",
 					Title:          "Show",
 					RequesterID:    9,
 					QualityProfile: "",
@@ -244,7 +245,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				Return(nil, nil).Once()
 			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
 				return p.MediaType == "artist" && p.MediaMBID == artistMBID &&
-					p.MediaID == 0
+					p.MediaID == ""
 			})).
 				Return(&ent.Request{ID: 1}, nil).
 				Once()
@@ -319,7 +320,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				request.CreateParams{
 					MediaType: "artist",
 					MediaMBID: "x",
-					MediaID:   3,
+					MediaID:   "3",
 				},
 			),
 			Entry("movie without a media_id",
@@ -328,20 +329,26 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				"tvshow with an mbid",
 				request.CreateParams{
 					MediaType: "tvshow",
-					MediaID:   3,
+					MediaID:   "3",
 					MediaMBID: "x",
 				},
 			),
 			Entry("book without a media_id",
 				request.CreateParams{MediaType: "book", Title: "B"}),
-			Entry("book with an mbid",
-				request.CreateParams{MediaType: "book", MediaID: 3, MediaMBID: "x"}),
+			Entry(
+				"book with an mbid",
+				request.CreateParams{
+					MediaType: "book",
+					MediaID:   "3",
+					MediaMBID: "x",
+				},
+			),
 			Entry("book_series without a media_id",
 				request.CreateParams{MediaType: "book_series", Title: "S"}),
 			Entry("album without hints",
 				request.CreateParams{MediaType: "album", MediaMBID: "x"}),
 			Entry("album with a media_id", request.CreateParams{
-				MediaType: "album", MediaMBID: "x", MediaID: 3,
+				MediaType: "album", MediaMBID: "x", MediaID: "3",
 				ArtistMBID: artistUUID, ArtistName: "Nirvana",
 			}),
 			Entry("album with an artist_mbid that is not a UUID",
@@ -357,10 +364,10 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				ArtistName: strings.Repeat("n", 201),
 			}),
 			Entry("artist hints on a movie", request.CreateParams{
-				MediaType: "movie", MediaID: 3, ArtistName: "Nirvana",
+				MediaType: "movie", MediaID: "3", ArtistName: "Nirvana",
 			}),
 			Entry("the removed author type",
-				request.CreateParams{MediaType: "author", MediaID: 3}),
+				request.CreateParams{MediaType: "author", MediaID: "3"}),
 		)
 	})
 
@@ -603,77 +610,77 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 
 	Describe("Create book requests", func() {
 		It("persists a book request", func() {
-			storeMk.FindActiveRequest(mock.Anything, "book", uint32(40)).
+			storeMk.FindActiveRequest(mock.Anything, "book", "40").
 				Return(nil, nil).Once()
-			bookMk.HasBook(mock.Anything, uint32(40)).Return(false, nil).Once()
+			bookMk.HasBook(mock.Anything, "40").Return(false, nil).Once()
 			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
-				return p.MediaType == "book" && p.MediaID == 40
+				return p.MediaType == "book" && p.MediaID == "40"
 			})).
 				Return(&ent.Request{ID: 3}, nil).
 				Once()
 
 			_, err := svc.Create(ctx, request.CreateParams{
-				MediaType: "book", MediaID: 40, Title: "B", RequesterID: 9,
+				MediaType: "book", MediaID: "40", Title: "B", RequesterID: 9,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("persists a series request in its own id space", func() {
-			storeMk.FindActiveRequest(mock.Anything, "book_series", uint32(40)).
+			storeMk.FindActiveRequest(mock.Anything, "book_series", "40").
 				Return(nil, nil).Once()
-			bookMk.HasSeries(mock.Anything, uint32(40)).Return(false, nil).Once()
+			bookMk.HasSeries(mock.Anything, "40").Return(false, nil).Once()
 			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
-				return p.MediaType == "book_series" && p.MediaID == 40
+				return p.MediaType == "book_series" && p.MediaID == "40"
 			})).
 				Return(&ent.Request{ID: 4}, nil).
 				Once()
 
 			_, err := svc.Create(ctx, request.CreateParams{
-				MediaType: "book_series", MediaID: 40, Title: "S", RequesterID: 9,
+				MediaType: "book_series", MediaID: "40", Title: "S", RequesterID: 9,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("rejects a duplicate active book request", func() {
-			storeMk.FindActiveRequest(mock.Anything, "book", uint32(40)).
+			storeMk.FindActiveRequest(mock.Anything, "book", "40").
 				Return(&ent.Request{ID: 7}, nil).Once()
 
 			_, err := svc.Create(ctx, request.CreateParams{
-				MediaType: "book", MediaID: 40, Title: "B", RequesterID: 9,
+				MediaType: "book", MediaID: "40", Title: "B", RequesterID: 9,
 			})
 			Expect(err).To(MatchError(request.ErrDuplicate))
 		})
 
 		It("rejects a book already in the library", func() {
-			storeMk.FindActiveRequest(mock.Anything, "book", uint32(40)).
+			storeMk.FindActiveRequest(mock.Anything, "book", "40").
 				Return(nil, nil).Once()
-			bookMk.HasBook(mock.Anything, uint32(40)).Return(true, nil).Once()
+			bookMk.HasBook(mock.Anything, "40").Return(true, nil).Once()
 
 			_, err := svc.Create(ctx, request.CreateParams{
-				MediaType: "book", MediaID: 40, Title: "B", RequesterID: 9,
+				MediaType: "book", MediaID: "40", Title: "B", RequesterID: 9,
 			})
 			Expect(err).To(MatchError(request.ErrDuplicate))
 		})
 
 		It("rejects a series already in the library", func() {
-			storeMk.FindActiveRequest(mock.Anything, "book_series", uint32(40)).
+			storeMk.FindActiveRequest(mock.Anything, "book_series", "40").
 				Return(nil, nil).Once()
-			bookMk.HasSeries(mock.Anything, uint32(40)).Return(true, nil).Once()
+			bookMk.HasSeries(mock.Anything, "40").Return(true, nil).Once()
 
 			_, err := svc.Create(ctx, request.CreateParams{
-				MediaType: "book_series", MediaID: 40, Title: "S", RequesterID: 9,
+				MediaType: "book_series", MediaID: "40", Title: "S", RequesterID: 9,
 			})
 			Expect(err).To(MatchError(request.ErrDuplicate))
 		})
 	})
 
 	Describe("Approve book requests", func() {
-		bookReq := &ent.Request{ID: 5, MediaType: "book", MediaID: 40}
-		seriesReq := &ent.Request{ID: 6, MediaType: "book_series", MediaID: 50}
+		bookReq := &ent.Request{ID: 5, MediaType: "book", MediaID: "40"}
+		seriesReq := &ent.Request{ID: 6, MediaType: "book_series", MediaID: "50"}
 
 		It("adds the book monitored both with the reviewer's profile", func() {
 			storeMk.GetRequest(mock.Anything, uint32(5)).Return(bookReq, nil).Twice()
-			bookMk.AddBook(mock.Anything, uint32(40), "both", "Retail").
+			bookMk.AddBook(mock.Anything, "40", "both", "Retail").
 				Return(nil).Once()
 			storeMk.ApproveRequest(mock.Anything, uint32(5), uint32(9)).
 				Return(nil).Once()
@@ -686,7 +693,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 			storeMk.GetRequest(mock.Anything, uint32(6)).
 				Return(seriesReq, nil).
 				Twice()
-			bookMk.AddSeries(mock.Anything, uint32(50), "all", "").
+			bookMk.AddSeries(mock.Anything, "50", "all", "").
 				Return(nil).Once()
 			storeMk.ApproveRequest(mock.Anything, uint32(6), uint32(9)).
 				Return(nil).Once()
@@ -750,7 +757,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			movies := reqmocks.NewMockMovieAdder(GinkgoT())
-			movies.EXPECT().GetByTMDBID(mock.Anything, uint32(5)).
+			movies.EXPECT().GetByTMDBID(mock.Anything, "5").
 				Return(nil, errors.New("not found")).Twice()
 			gate := &sync.WaitGroup{}
 			gate.Add(2)
@@ -772,7 +779,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 						ctx,
 						request.CreateParams{
 							MediaType:   "movie",
-							MediaID:     5,
+							MediaID:     "5",
 							Title:       "Flick",
 							RequesterID: u.ID,
 						},
@@ -792,9 +799,9 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 	Describe("Approve", func() {
 		It("adds the movie then marks the request approved", func() {
 			storeMk.GetRequest(mock.Anything, uint32(1)).
-				Return(&ent.Request{ID: 1, MediaType: "movie", MediaID: 5}, nil).
+				Return(&ent.Request{ID: 1, MediaType: "movie", MediaID: "5"}, nil).
 				Twice()
-			movieMk.Add(mock.Anything, uint32(5), "hd").
+			movieMk.Add(mock.Anything, "5", "hd").
 				Return(&ent.Movie{ID: 3}, "", nil).Once()
 			storeMk.ApproveRequest(mock.Anything, uint32(1), uint32(9)).
 				Return(nil).Once()
@@ -806,9 +813,9 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 
 		It("adds the show for tvshow requests", func() {
 			storeMk.GetRequest(mock.Anything, uint32(2)).
-				Return(&ent.Request{ID: 2, MediaType: "tvshow", MediaID: 8}, nil).
+				Return(&ent.Request{ID: 2, MediaType: "tvshow", MediaID: "8"}, nil).
 				Twice()
-			showMk.Add(mock.Anything, uint32(8), "").
+			showMk.Add(mock.Anything, "8", "").
 				Return(&ent.TVShow{ID: 4}, nil).Once()
 			storeMk.ApproveRequest(mock.Anything, uint32(2), uint32(9)).
 				Return(nil).Once()
@@ -819,9 +826,9 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 
 		It("does not approve when the add fails", func() {
 			storeMk.GetRequest(mock.Anything, uint32(1)).
-				Return(&ent.Request{ID: 1, MediaType: "movie", MediaID: 5}, nil).
+				Return(&ent.Request{ID: 1, MediaType: "movie", MediaID: "5"}, nil).
 				Once()
-			movieMk.Add(mock.Anything, uint32(5), "").
+			movieMk.Add(mock.Anything, "5", "").
 				Return(nil, "", errors.New("tmdb down")).Once()
 
 			_, err := svc.Approve(ctx, 1, 9, "")
@@ -830,7 +837,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 
 		It("refuses a profile outside the video family before adding", func() {
 			storeMk.GetRequest(mock.Anything, uint32(1)).
-				Return(&ent.Request{ID: 1, MediaType: "movie", MediaID: 5}, nil).
+				Return(&ent.Request{ID: 1, MediaType: "movie", MediaID: "5"}, nil).
 				Once()
 
 			_, err := svc.Approve(ctx, 1, 9, "Lossless")

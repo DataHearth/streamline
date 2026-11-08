@@ -154,7 +154,7 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 
 			m, err := store.CreateMovie(ctx, db.CreateMovieParams{
 				Title: "Test Movie", OriginalTitle: "Test Movie",
-				Year: 2024, TmdbID: 999,
+				Year: 2024, TmdbID: "999",
 				Status: entmovie.StatusDownloading, QualityProfile: "HD",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -264,7 +264,7 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 
 		m, err := store.CreateMovie(ctx, db.CreateMovieParams{
 			Title: "Restart Movie", OriginalTitle: "Restart Movie",
-			Year: 2024, TmdbID: 888,
+			Year: 2024, TmdbID: "888",
 			Status: entmovie.StatusDownloading, QualityProfile: "HD",
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -345,7 +345,7 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 
 			m, err := store.CreateMovie(ctx, db.CreateMovieParams{
 				Title: "Replace Movie", OriginalTitle: "Replace Movie",
-				Year: 2024, TmdbID: 777,
+				Year: 2024, TmdbID: "777",
 				Status: entmovie.StatusAvailable, QualityProfile: "HD",
 			})
 			Expect(err).NotTo(HaveOccurred())

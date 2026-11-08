@@ -66,7 +66,7 @@ func UpdateTime(v time.Time) predicate.Author {
 }
 
 // HardcoverID applies equality check predicate on the "hardcover_id" field. It's identical to HardcoverIDEQ.
-func HardcoverID(v uint32) predicate.Author {
+func HardcoverID(v string) predicate.Author {
 	return predicate.Author(sql.FieldEQ(FieldHardcoverID, v))
 }
 
@@ -166,43 +166,68 @@ func UpdateTimeLTE(v time.Time) predicate.Author {
 }
 
 // HardcoverIDEQ applies the EQ predicate on the "hardcover_id" field.
-func HardcoverIDEQ(v uint32) predicate.Author {
+func HardcoverIDEQ(v string) predicate.Author {
 	return predicate.Author(sql.FieldEQ(FieldHardcoverID, v))
 }
 
 // HardcoverIDNEQ applies the NEQ predicate on the "hardcover_id" field.
-func HardcoverIDNEQ(v uint32) predicate.Author {
+func HardcoverIDNEQ(v string) predicate.Author {
 	return predicate.Author(sql.FieldNEQ(FieldHardcoverID, v))
 }
 
 // HardcoverIDIn applies the In predicate on the "hardcover_id" field.
-func HardcoverIDIn(vs ...uint32) predicate.Author {
+func HardcoverIDIn(vs ...string) predicate.Author {
 	return predicate.Author(sql.FieldIn(FieldHardcoverID, vs...))
 }
 
 // HardcoverIDNotIn applies the NotIn predicate on the "hardcover_id" field.
-func HardcoverIDNotIn(vs ...uint32) predicate.Author {
+func HardcoverIDNotIn(vs ...string) predicate.Author {
 	return predicate.Author(sql.FieldNotIn(FieldHardcoverID, vs...))
 }
 
 // HardcoverIDGT applies the GT predicate on the "hardcover_id" field.
-func HardcoverIDGT(v uint32) predicate.Author {
+func HardcoverIDGT(v string) predicate.Author {
 	return predicate.Author(sql.FieldGT(FieldHardcoverID, v))
 }
 
 // HardcoverIDGTE applies the GTE predicate on the "hardcover_id" field.
-func HardcoverIDGTE(v uint32) predicate.Author {
+func HardcoverIDGTE(v string) predicate.Author {
 	return predicate.Author(sql.FieldGTE(FieldHardcoverID, v))
 }
 
 // HardcoverIDLT applies the LT predicate on the "hardcover_id" field.
-func HardcoverIDLT(v uint32) predicate.Author {
+func HardcoverIDLT(v string) predicate.Author {
 	return predicate.Author(sql.FieldLT(FieldHardcoverID, v))
 }
 
 // HardcoverIDLTE applies the LTE predicate on the "hardcover_id" field.
-func HardcoverIDLTE(v uint32) predicate.Author {
+func HardcoverIDLTE(v string) predicate.Author {
 	return predicate.Author(sql.FieldLTE(FieldHardcoverID, v))
+}
+
+// HardcoverIDContains applies the Contains predicate on the "hardcover_id" field.
+func HardcoverIDContains(v string) predicate.Author {
+	return predicate.Author(sql.FieldContains(FieldHardcoverID, v))
+}
+
+// HardcoverIDHasPrefix applies the HasPrefix predicate on the "hardcover_id" field.
+func HardcoverIDHasPrefix(v string) predicate.Author {
+	return predicate.Author(sql.FieldHasPrefix(FieldHardcoverID, v))
+}
+
+// HardcoverIDHasSuffix applies the HasSuffix predicate on the "hardcover_id" field.
+func HardcoverIDHasSuffix(v string) predicate.Author {
+	return predicate.Author(sql.FieldHasSuffix(FieldHardcoverID, v))
+}
+
+// HardcoverIDEqualFold applies the EqualFold predicate on the "hardcover_id" field.
+func HardcoverIDEqualFold(v string) predicate.Author {
+	return predicate.Author(sql.FieldEqualFold(FieldHardcoverID, v))
+}
+
+// HardcoverIDContainsFold applies the ContainsFold predicate on the "hardcover_id" field.
+func HardcoverIDContainsFold(v string) predicate.Author {
+	return predicate.Author(sql.FieldContainsFold(FieldHardcoverID, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.

@@ -28,8 +28,8 @@ type CreateImportScanFileParams struct {
 	ParsedReleaseGroup string
 	Classification     entimportscanfile.Classification
 	Candidates         []schema.ScannedCandidate
-	TMDBID             uint32 // 0 = unset
-	ExistingMovieID    uint32 // 0 = unset
+	TMDBID             string // "" = unset
+	ExistingMovieID    uint32 // "" = unset
 }
 
 type FilterImportScanFilesParams struct {
@@ -105,7 +105,7 @@ func applyImportScanFileFields(
 	if len(p.Candidates) > 0 {
 		c.SetCandidates(p.Candidates)
 	}
-	if p.TMDBID != 0 {
+	if p.TMDBID != "" {
 		c.SetTmdbID(p.TMDBID)
 	}
 	if p.ExistingMovieID != 0 {
@@ -165,7 +165,7 @@ func (db *DB) UpdateImportScanFileDecision(
 	ctx context.Context,
 	scanID, fileID uint32,
 	decision entimportscanfile.Decision,
-	tmdbID *uint32,
+	tmdbID *string,
 ) error {
 	u := db.client.ImportScanFile.Update().
 		Where(

@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -216,8 +218,8 @@ func mapProwlarrReleases(releases []prowlarrRelease) []SearchResult {
 			// not the Prowlarr entry; searchAll preserves a non-empty value.
 			Indexer:  r.Indexer,
 			InfoHash: infoHash(r.InfoHash, r.MagnetURL, dl),
-			TMDBID:   r.TMDBID,
-			TVDBID:   r.TVDBID,
+			TMDBID:   providerid.Format(r.TMDBID),
+			TVDBID:   providerid.Format(r.TVDBID),
 		})
 	}
 	return results

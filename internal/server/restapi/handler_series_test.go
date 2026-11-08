@@ -72,7 +72,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			app.tvshows.EXPECT().
 				FilterList(mock.Anything, mock.AnythingOfType("tvshow.FilterParams")).
 				Return(
-					[]*ent.TVShow{{ID: 1, Title: "X", Year: 2020, TvdbID: 9}},
+					[]*ent.TVShow{{ID: 1, Title: "X", Year: 2020, TvdbID: "9"}},
 					map[uint32]db.EpisodeCounts{1: {Total: 10, Have: 4, Wanted: 6}},
 					uint32(1),
 					nil,
@@ -130,7 +130,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				http.MethodPost,
 				"/api/v1/series",
 				app.adminKey,
-				strings.NewReader(`{"tvdb_id":9,"quality_profile":"gone"}`),
+				strings.NewReader(`{"tvdb_id":"9","quality_profile":"gone"}`),
 			)
 			req.Header.Set("Content-Type", "application/json")
 			resp := app.do(req)
@@ -139,7 +139,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		}
 
 		It("422s with no_quality_profile when no profile resolves", func() {
-			app.tvshows.EXPECT().Add(mock.Anything, uint32(9), "gone").
+			app.tvshows.EXPECT().Add(mock.Anything, "9", "gone").
 				Return(nil, tvshow.ErrNoQualityProfile).Once()
 
 			resp := post()
@@ -150,7 +150,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		})
 
 		It("500s, not 409s, when the add fails for any other reason", func() {
-			app.tvshows.EXPECT().Add(mock.Anything, uint32(9), "gone").
+			app.tvshows.EXPECT().Add(mock.Anything, "9", "gone").
 				Return(nil, fmt.Errorf("create tv show: %w", context.Canceled)).
 				Once()
 
@@ -175,14 +175,14 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		It("attaches the cast credited on the show", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
 				Return(&ent.TVShow{
-					ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189,
+					ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: "81189",
 				}, nil).
 				Once()
 			app.store.EXPECT().
 				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
 				Return([]db.CastEntry{{
 					PersonID:  14,
-					TVDBID:    203697,
+					TVDBID:    "203697",
 					Name:      "Bryan Cranston",
 					Character: "Walter White",
 				}}, nil).
@@ -199,7 +199,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 					PersonID  uint32 `json:"person_id"`
 					Name      string `json:"name"`
 					Character string `json:"character"`
-					TmdbID    uint32 `json:"tmdb_id"`
+					TmdbID    string `json:"tmdb_id"`
 					PersonURL string `json:"person_url"`
 				} `json:"cast"`
 			}
@@ -210,14 +210,14 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			// A series actor comes from TVDB with no tmdb id, so person_id is
 			// the only thing on the entry that can address them.
 			Expect(body.Cast[0].PersonID).To(Equal(uint32(14)))
-			Expect(body.Cast[0].TmdbID).To(BeZero())
+			Expect(body.Cast[0].TmdbID).To(BeEmpty())
 			Expect(body.Cast[0].PersonURL).
 				To(Equal("https://www.thetvdb.com/dereferrer/people/203697"))
 		})
 
 		It("omits cast when nothing credits the show", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
-				Return(&ent.TVShow{ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189}, nil).
+				Return(&ent.TVShow{ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: "81189"}, nil).
 				Once()
 			app.store.EXPECT().
 				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
@@ -265,7 +265,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			season := &ent.Season{ID: 2, Number: 1, Monitored: true}
 			season.Edges.Episodes = []*ent.Episode{ep}
 			show := &ent.TVShow{
-				ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189,
+				ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: "81189",
 				QualityProfile: "default",
 			}
 			show.Edges.Seasons = []*ent.Season{season}
@@ -352,10 +352,15 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		It("flags already-added results", func() {
 			app.metadataTV.EXPECT().SearchSeries(mock.Anything, "black sea").
 				Return([]metadata.TVResult{
-					{TVDBID: 9, Title: "The Black Sea", Year: 2024, Network: "HBO"},
+					{
+						TVDBID:  "9",
+						Title:   "The Black Sea",
+						Year:    2024,
+						Network: "HBO",
+					},
 				}, nil).Once()
-			app.store.EXPECT().FindTVShowByTVDBID(mock.Anything, uint32(9)).
-				Return(&ent.TVShow{ID: 1, TvdbID: 9}, nil).Once()
+			app.store.EXPECT().FindTVShowByTVDBID(mock.Anything, "9").
+				Return(&ent.TVShow{ID: 1, TvdbID: "9"}, nil).Once()
 
 			resp := app.do(
 				app.req(
@@ -370,13 +375,13 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 
 			var body struct {
 				Items []struct {
-					TvdbID       uint32 `json:"tvdb_id"`
+					TvdbID       string `json:"tvdb_id"`
 					AlreadyAdded bool   `json:"already_added"`
 				} `json:"items"`
 			}
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 			Expect(body.Items).To(HaveLen(1))
-			Expect(body.Items[0].TvdbID).To(Equal(uint32(9)))
+			Expect(body.Items[0].TvdbID).To(Equal("9"))
 			Expect(body.Items[0].AlreadyAdded).To(BeTrue())
 		})
 	})
@@ -416,12 +421,12 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
 				Return(&ent.TVShow{
 					ID: 3, Title: "Breaking Bad",
-					OriginalTitle: "Breaking Bad (US)", TvdbID: 81189,
+					OriginalTitle: "Breaking Bad (US)", TvdbID: "81189",
 				}, nil).
 				Once()
 			app.indexers.EXPECT().
 				SearchSeason(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
-					uint32(81189), uint16(1)).
+					"81189", uint16(1)).
 				Return([]indexer.SearchResult{
 					{Title: "BB S01 1080p", Download: "magnet:x", Seeders: 20},
 				}, nil).Once()
@@ -803,12 +808,12 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
 				Return(&ent.TVShow{
 					ID: 3, Title: "Breaking Bad",
-					OriginalTitle: "Breaking Bad (US)", TvdbID: 81189,
+					OriginalTitle: "Breaking Bad (US)", TvdbID: "81189",
 				}, nil).
 				Once()
 			app.indexers.EXPECT().
 				SearchSeries(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"},
-					mock.Anything, uint32(81189)).
+					mock.Anything, "81189").
 				Return([]indexer.SearchResult{
 					{Title: "BB Complete 1080p", Download: "magnet:y", Seeders: 42},
 				}, nil).Once()
@@ -840,11 +845,11 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			const hash = "cccccccccccccccccccccccccccccccccccccccc"
 			grabbed := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
-				Return(&ent.TVShow{ID: 3, Title: "Breaking Bad", TvdbID: 81189}, nil).
+				Return(&ent.TVShow{ID: 3, Title: "Breaking Bad", TvdbID: "81189"}, nil).
 				Once()
 			app.indexers.EXPECT().
 				SearchSeason(mock.Anything, []string{"Breaking Bad", ""}, mock.Anything,
-					uint32(81189), uint16(1)).
+					"81189", uint16(1)).
 				Return([]indexer.SearchResult{
 					{Title: "BB S01 1080p", Download: "magnet:x", InfoHash: hash},
 					{Title: "BB S01 720p", Download: "magnet:y"},
@@ -896,7 +901,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			ID:             3,
 			Title:          "Breaking Bad",
 			OriginalTitle:  "Breaking Bad (US)",
-			TvdbID:         81189,
+			TvdbID:         "81189",
 			QualityProfile: "default",
 		}
 
@@ -949,7 +954,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(show, nil).Once()
 			app.indexers.EXPECT().
 				SearchSeries(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"},
-					mock.Anything, uint32(81189)).
+					mock.Anything, "81189").
 				Return(results, nil).Once()
 			app.store.EXPECT().
 				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3), mock.Anything, mock.Anything).
@@ -969,7 +974,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(show, nil).Once()
 			app.indexers.EXPECT().
 				SearchSeason(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
-					uint32(81189), uint16(1)).
+					"81189", uint16(1)).
 				Return(results, nil).Once()
 			app.store.EXPECT().
 				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3), mock.Anything, mock.Anything).
@@ -999,7 +1004,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(&withTree, nil).Once()
 			app.indexers.EXPECT().
 				SearchEpisode(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
-					uint32(81189), uint16(1), uint16(2)).
+					"81189", uint16(1), uint16(2)).
 				Return(results, 0, nil).Once()
 			app.store.EXPECT().
 				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3), mock.Anything, mock.Anything).
@@ -1026,7 +1031,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(&withTree, nil).Once()
 			app.indexers.EXPECT().
 				SearchEpisode(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
-					uint32(81189), uint16(1), uint16(2)).
+					"81189", uint16(1), uint16(2)).
 				Return(nil, 4, nil).Once()
 
 			resp := app.do(app.req(http.MethodPost,

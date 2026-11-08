@@ -18,7 +18,7 @@ type IndexerSearcher interface {
 	SearchMovie(
 		ctx context.Context,
 		titles, aliases []string,
-		tmdbID uint32,
+		tmdbID string,
 	) ([]indexer.SearchResult, error)
 }
 
@@ -44,13 +44,13 @@ type TVIndexerSearcher interface {
 	SearchSeason(
 		ctx context.Context,
 		titles, aliases []string,
-		tvdbID uint32,
+		tvdbID string,
 		season uint16,
 	) ([]indexer.SearchResult, error)
 	SearchEpisode(
 		ctx context.Context,
 		titles, aliases []string,
-		tvdbID uint32,
+		tvdbID string,
 		season, episode uint16,
 	) ([]indexer.SearchResult, int, error)
 }

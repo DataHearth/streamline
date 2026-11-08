@@ -1,6 +1,7 @@
 package bulkimport
 
 import (
+	"github.com/datahearth/streamline/internal/providerid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -10,16 +11,16 @@ import (
 
 var _ = Describe("ClassifyBook", Label("unit", "bulkimport"), func() {
 	elantris := metadata.BookSearchResult{
-		HardcoverID: 1, Title: "Elantris", Author: "Brandon Sanderson", Year: 2005,
+		HardcoverID: "1", Title: "Elantris", Author: "Brandon Sanderson", Year: 2005,
 	}
 
 	DescribeTable("classification",
 		func(
 			title, author string,
 			hits []metadata.BookSearchResult,
-			indexed map[uint32]uint32,
+			indexed map[string]uint32,
 			wantKind entimportscanbook.Classification,
-			wantBook uint32,
+			wantBook string,
 			wantExisting uint32,
 		) {
 			c := ClassifyBook(title, author, hits, indexed)
@@ -29,47 +30,45 @@ var _ = Describe("ClassifyBook", Label("unit", "bulkimport"), func() {
 		},
 		Entry("no hits is unmatched",
 			"Elantris", "Brandon Sanderson", nil, nil,
-			entimportscanbook.ClassificationUnmatched, uint32(0), uint32(0)),
+			entimportscanbook.ClassificationUnmatched, "", uint32(0)),
 		Entry("one title+author hit is confirmed",
 			"Elantris", "Brandon Sanderson",
 			[]metadata.BookSearchResult{
 				elantris,
 				{
-					HardcoverID: 2,
+					HardcoverID: "2",
 					Title:       "Elantris Companion",
 					Author:      "Someone Else",
 				},
 			},
 			nil,
-			entimportscanbook.ClassificationConfirmed, uint32(1), uint32(0)),
+			entimportscanbook.ClassificationConfirmed, "1", uint32(0)),
 		Entry("an inverted author name still matches",
 			"Elantris", "Sanderson, Brandon",
 			[]metadata.BookSearchResult{elantris}, nil,
-			entimportscanbook.ClassificationConfirmed, uint32(1), uint32(0)),
+			entimportscanbook.ClassificationConfirmed, "1", uint32(0)),
 		Entry("a title match by another author is ambiguous",
 			"Elantris", "Nobody",
 			[]metadata.BookSearchResult{elantris}, nil,
-			entimportscanbook.ClassificationAmbiguous, uint32(0), uint32(0)),
+			entimportscanbook.ClassificationAmbiguous, "", uint32(0)),
 		Entry("an unknown author never confirms",
 			"Elantris", "",
 			[]metadata.BookSearchResult{elantris}, nil,
-			entimportscanbook.ClassificationAmbiguous, uint32(0), uint32(0)),
+			entimportscanbook.ClassificationAmbiguous, "", uint32(0)),
 		Entry("a tracked hit is existing",
 			"Elantris", "Brandon Sanderson",
 			[]metadata.BookSearchResult{elantris},
-			map[uint32]uint32{1: 42},
-			entimportscanbook.ClassificationExisting, uint32(1), uint32(42)),
+			map[string]uint32{"1": 42},
+			entimportscanbook.ClassificationExisting, "1", uint32(42)),
 	)
 
 	It("caps ambiguous candidates at pickerCandidateLimit", func() {
 		hits := make([]metadata.BookSearchResult, 0, 8)
 		for i := range 8 {
 			hits = append(hits, metadata.BookSearchResult{
-				HardcoverID: uint32(
-					i + 10,
-				),
-				Title:  "Elantris",
-				Author: "Brandon Sanderson",
+				HardcoverID: providerid.Format(uint32(i + 10)),
+				Title:       "Elantris",
+				Author:      "Brandon Sanderson",
 			})
 		}
 		c := ClassifyBook("Elantris", "Brandon Sanderson", hits, nil)
@@ -82,13 +81,13 @@ var _ = Describe("ClassifyBook", Label("unit", "bulkimport"), func() {
 			"Elantris",
 			"Brandon Sanderson",
 			[]metadata.BookSearchResult{
-				{HardcoverID: 7, Title: "Elantris", Author: "Imposter"},
-				{HardcoverID: 8, Title: "Elantris", Author: "Brandon Sanderson"},
-				{HardcoverID: 9, Title: "Elantris", Author: "Brandon Sanderson"},
+				{HardcoverID: "7", Title: "Elantris", Author: "Imposter"},
+				{HardcoverID: "8", Title: "Elantris", Author: "Brandon Sanderson"},
+				{HardcoverID: "9", Title: "Elantris", Author: "Brandon Sanderson"},
 			},
 			nil,
 		)
-		Expect(c.Candidates[0].BookHardcoverID).To(Equal(uint32(8)))
+		Expect(c.Candidates[0].BookHardcoverID).To(Equal("8"))
 	})
 })
 

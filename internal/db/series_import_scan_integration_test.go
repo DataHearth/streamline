@@ -109,7 +109,7 @@ var _ = Describe("Series import scan store", Label("integration", "db"), func() 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(shows).To(HaveLen(1))
 
-		tvdbID := uint32(81189)
+		tvdbID := "32"
 		Expect(store.UpdateImportScanShowDecision(
 			ctx, scan.ID, shows[0].ID, entimportscanshow.DecisionAccept, &tvdbID,
 		)).To(Succeed())
@@ -154,7 +154,7 @@ var _ = Describe("Series import scan store", Label("integration", "db"), func() 
 		Expect(foreign).To(HaveLen(1))
 		Expect(foreign[0].Decision).To(Equal(entimportscanshow.DecisionPending))
 
-		tvdbID := uint32(81189)
+		tvdbID := "32"
 		err = store.UpdateImportScanShowDecision(
 			ctx, addressed.ID, foreign[0].ID,
 			entimportscanshow.DecisionAccept, &tvdbID,

@@ -48,7 +48,7 @@ func NewDeepLinker(
 // PlayOnResult entries with Status = unavailable so the UI can render them.
 func (l *DeepLinker) Resolve(
 	ctx context.Context,
-	tmdbID uint32,
+	tmdbID string,
 	title string,
 	year uint16,
 ) []PlayOnResult {
@@ -76,7 +76,7 @@ func (l *DeepLinker) Resolve(
 // ResolveTV is the series counterpart of Resolve.
 func (l *DeepLinker) ResolveTV(
 	ctx context.Context,
-	tvdbID uint32,
+	tvdbID string,
 	title string,
 	year uint16,
 ) []PlayOnResult {

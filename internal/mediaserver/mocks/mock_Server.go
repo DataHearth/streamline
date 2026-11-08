@@ -48,7 +48,7 @@ func (_m *MockServer) EXPECT() *MockServer_Expecter {
 }
 
 // MovieDeepLink provides a mock function for the type MockServer
-func (_mock *MockServer) MovieDeepLink(ctx context.Context, hintSection string, tmdbID uint32, title string, year uint16) (string, error) {
+func (_mock *MockServer) MovieDeepLink(ctx context.Context, hintSection string, tmdbID string, title string, year uint16) (string, error) {
 	ret := _mock.Called(ctx, hintSection, tmdbID, title, year)
 
 	if len(ret) == 0 {
@@ -57,15 +57,15 @@ func (_mock *MockServer) MovieDeepLink(ctx context.Context, hintSection string, 
 
 	var r0 string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, string, uint16) (string, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, uint16) (string, error)); ok {
 		return returnFunc(ctx, hintSection, tmdbID, title, year)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, string, uint16) string); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, uint16) string); ok {
 		r0 = returnFunc(ctx, hintSection, tmdbID, title, year)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, uint32, string, uint16) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string, uint16) error); ok {
 		r1 = returnFunc(ctx, hintSection, tmdbID, title, year)
 	} else {
 		r1 = ret.Error(1)
@@ -81,14 +81,14 @@ type MockServer_MovieDeepLink_Call struct {
 // MovieDeepLink is a helper method to define mock.On call
 //   - ctx context.Context
 //   - hintSection string
-//   - tmdbID uint32
+//   - tmdbID string
 //   - title string
 //   - year uint16
 func (_e *MockServer_Expecter) MovieDeepLink(ctx any, hintSection any, tmdbID any, title any, year any) *MockServer_MovieDeepLink_Call {
 	return &MockServer_MovieDeepLink_Call{Call: _e.mock.On("MovieDeepLink", ctx, hintSection, tmdbID, title, year)}
 }
 
-func (_c *MockServer_MovieDeepLink_Call) Run(run func(ctx context.Context, hintSection string, tmdbID uint32, title string, year uint16)) *MockServer_MovieDeepLink_Call {
+func (_c *MockServer_MovieDeepLink_Call) Run(run func(ctx context.Context, hintSection string, tmdbID string, title string, year uint16)) *MockServer_MovieDeepLink_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -98,9 +98,9 @@ func (_c *MockServer_MovieDeepLink_Call) Run(run func(ctx context.Context, hintS
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 uint32
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uint32)
+			arg2 = args[2].(string)
 		}
 		var arg3 string
 		if args[3] != nil {
@@ -126,7 +126,7 @@ func (_c *MockServer_MovieDeepLink_Call) Return(s string, err error) *MockServer
 	return _c
 }
 
-func (_c *MockServer_MovieDeepLink_Call) RunAndReturn(run func(ctx context.Context, hintSection string, tmdbID uint32, title string, year uint16) (string, error)) *MockServer_MovieDeepLink_Call {
+func (_c *MockServer_MovieDeepLink_Call) RunAndReturn(run func(ctx context.Context, hintSection string, tmdbID string, title string, year uint16) (string, error)) *MockServer_MovieDeepLink_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -198,7 +198,7 @@ func (_c *MockServer_RefreshLibrary_Call) RunAndReturn(run func(ctx context.Cont
 }
 
 // TVShowDeepLink provides a mock function for the type MockServer
-func (_mock *MockServer) TVShowDeepLink(ctx context.Context, hintSection string, tvdbID uint32, title string, year uint16) (string, error) {
+func (_mock *MockServer) TVShowDeepLink(ctx context.Context, hintSection string, tvdbID string, title string, year uint16) (string, error) {
 	ret := _mock.Called(ctx, hintSection, tvdbID, title, year)
 
 	if len(ret) == 0 {
@@ -207,15 +207,15 @@ func (_mock *MockServer) TVShowDeepLink(ctx context.Context, hintSection string,
 
 	var r0 string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, string, uint16) (string, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, uint16) (string, error)); ok {
 		return returnFunc(ctx, hintSection, tvdbID, title, year)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, string, uint16) string); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, uint16) string); ok {
 		r0 = returnFunc(ctx, hintSection, tvdbID, title, year)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, uint32, string, uint16) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string, uint16) error); ok {
 		r1 = returnFunc(ctx, hintSection, tvdbID, title, year)
 	} else {
 		r1 = ret.Error(1)
@@ -231,14 +231,14 @@ type MockServer_TVShowDeepLink_Call struct {
 // TVShowDeepLink is a helper method to define mock.On call
 //   - ctx context.Context
 //   - hintSection string
-//   - tvdbID uint32
+//   - tvdbID string
 //   - title string
 //   - year uint16
 func (_e *MockServer_Expecter) TVShowDeepLink(ctx any, hintSection any, tvdbID any, title any, year any) *MockServer_TVShowDeepLink_Call {
 	return &MockServer_TVShowDeepLink_Call{Call: _e.mock.On("TVShowDeepLink", ctx, hintSection, tvdbID, title, year)}
 }
 
-func (_c *MockServer_TVShowDeepLink_Call) Run(run func(ctx context.Context, hintSection string, tvdbID uint32, title string, year uint16)) *MockServer_TVShowDeepLink_Call {
+func (_c *MockServer_TVShowDeepLink_Call) Run(run func(ctx context.Context, hintSection string, tvdbID string, title string, year uint16)) *MockServer_TVShowDeepLink_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -248,9 +248,9 @@ func (_c *MockServer_TVShowDeepLink_Call) Run(run func(ctx context.Context, hint
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 uint32
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uint32)
+			arg2 = args[2].(string)
 		}
 		var arg3 string
 		if args[3] != nil {
@@ -276,7 +276,7 @@ func (_c *MockServer_TVShowDeepLink_Call) Return(s string, err error) *MockServe
 	return _c
 }
 
-func (_c *MockServer_TVShowDeepLink_Call) RunAndReturn(run func(ctx context.Context, hintSection string, tvdbID uint32, title string, year uint16) (string, error)) *MockServer_TVShowDeepLink_Call {
+func (_c *MockServer_TVShowDeepLink_Call) RunAndReturn(run func(ctx context.Context, hintSection string, tvdbID string, title string, year uint16) (string, error)) *MockServer_TVShowDeepLink_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -15,14 +17,14 @@ func raw(
 	popularity uint32,
 ) RawEdition {
 	return RawEdition{
-		HardcoverID: id, Language: lang, Publisher: publisher,
+		HardcoverID: providerid.Format(id), Language: lang, Publisher: publisher,
 		Title: fmt.Sprintf("T%d", id), Popularity: popularity,
 		ReadingFormatID: format,
 	}
 }
 
-func ids(eds []EditionRecord) []uint32 {
-	out := make([]uint32, 0, len(eds))
+func ids(eds []EditionRecord) []string {
+	out := make([]string, 0, len(eds))
 	for _, e := range eds {
 		out = append(out, e.HardcoverID)
 	}
@@ -38,7 +40,7 @@ var _ = Describe("SelectEditions", Label("unit", "metadata"), func() {
 			raw(4, "en", "Tor", 2, 7),
 		}, nil, nil, 2005)
 
-		Expect(ids(got)).To(ConsistOf(uint32(2), uint32(3), uint32(4)))
+		Expect(ids(got)).To(ConsistOf("2", "3", "4"))
 	})
 
 	It("breaks a popularity tie on the lower id", func() {
@@ -47,7 +49,7 @@ var _ = Describe("SelectEditions", Label("unit", "metadata"), func() {
 			raw(3, "en", "Tor", 4, 5),
 		}, nil, nil, 0)
 
-		Expect(ids(got)).To(Equal([]uint32{3}))
+		Expect(ids(got)).To(Equal([]string{"3"}))
 	})
 
 	It("reads the format from the reading format id", func() {
@@ -56,13 +58,13 @@ var _ = Describe("SelectEditions", Label("unit", "metadata"), func() {
 			raw(2, "en", "", 2, 1),
 		}, nil, nil, 0)
 
-		formats := map[uint32]string{}
+		formats := map[string]string{}
 		for _, e := range got {
 			formats[e.HardcoverID] = e.Format
 		}
 		Expect(
 			formats,
-		).To(Equal(map[uint32]string{1: FormatEbook, 2: FormatAudiobook}))
+		).To(Equal(map[string]string{"1": FormatEbook, "2": FormatAudiobook}))
 	})
 
 	It(
@@ -79,7 +81,7 @@ var _ = Describe("SelectEditions", Label("unit", "metadata"), func() {
 			)
 
 			// English already has an ebook; French and Japanese only have paper.
-			Expect(ids(got)).To(ConsistOf(uint32(1), uint32(3), uint32(4)))
+			Expect(ids(got)).To(ConsistOf("1", "3", "4"))
 			for _, e := range got {
 				Expect(e.Format).To(Equal(FormatEbook))
 			}
@@ -109,15 +111,15 @@ var _ = Describe("SelectEditions", Label("unit", "metadata"), func() {
 			}, nil, &earliest, 0)
 
 			Expect(lang).To(Equal("fr"))
-			original := map[uint32]bool{}
+			original := map[string]bool{}
 			for _, e := range got {
 				original[e.HardcoverID] = e.Original
 			}
 			// Two publishers' French ebooks and the French audiobook are all original.
-			Expect(original[2]).To(BeTrue())
-			Expect(original[3]).To(BeTrue())
-			Expect(original[4]).To(BeTrue())
-			Expect(original[1]).To(BeFalse())
+			Expect(original["2"]).To(BeTrue())
+			Expect(original["3"]).To(BeTrue())
+			Expect(original["4"]).To(BeTrue())
+			Expect(original["1"]).To(BeFalse())
 		},
 	)
 
@@ -147,11 +149,11 @@ var _ = Describe("SelectEditions", Label("unit", "metadata"), func() {
 			2005,
 		)
 
-		years := map[uint32]uint16{}
+		years := map[string]uint16{}
 		for _, e := range got {
 			years[e.HardcoverID] = e.Year
 		}
-		Expect(years).To(Equal(map[uint32]uint16{1: 2010, 2: 2005, 3: 1999}))
+		Expect(years).To(Equal(map[string]uint16{"1": 2010, "2": 2005, "3": 1999}))
 	})
 
 	It(
@@ -176,10 +178,10 @@ var _ = Describe("SelectEditions", Label("unit", "metadata"), func() {
 			Expect(len(selected)).To(BeNumerically(">=", 40))
 			Expect(len(selected)).To(BeNumerically("<=", 43))
 			// The unpopular French and Japanese winners survive the cap.
-			Expect(selected).To(ContainElements(uint32(500), uint32(502)))
+			Expect(selected).To(ContainElements("500", "502"))
 			// The most popular English one does too; the 60th does not.
-			Expect(selected).To(ContainElement(uint32(1)))
-			Expect(selected).NotTo(ContainElement(uint32(60)))
+			Expect(selected).To(ContainElement("1"))
+			Expect(selected).NotTo(ContainElement("60"))
 		},
 	)
 })
@@ -200,7 +202,7 @@ var _ = Describe("originalEdition", Label("unit", "metadata"), func() {
 			dated(3, "fr", 464, 2019),
 			dated(4, "de", 380, 2020),
 		}, nil)
-		Expect(got.HardcoverID).To(Equal(uint32(2)))
+		Expect(got.HardcoverID).To(Equal("2"))
 	})
 
 	It("keeps a full-length earliest edition in another language", func() {
@@ -209,6 +211,6 @@ var _ = Describe("originalEdition", Label("unit", "metadata"), func() {
 			dated(2, "en", 296, 2000),
 			dated(3, "fr", 310, 2003),
 		}, nil)
-		Expect(got.HardcoverID).To(Equal(uint32(1)))
+		Expect(got.HardcoverID).To(Equal("1"))
 	})
 })

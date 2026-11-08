@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -22,7 +24,7 @@ func seedSeries(hardcoverID uint32, slug string, volumes int) uint32 {
 		position := float64(i + 1)
 		hc := hardcoverID*100 + uint32(i) + 1
 		seeds = append(seeds, db.BookSeed{
-			HardcoverID:       hc,
+			HardcoverID:       providerid.Format(hc),
 			Title:             fmt.Sprintf("Volume %d", i+1),
 			AuthorName:        "Isaac Asimov",
 			Kind:              "novel",
@@ -31,7 +33,7 @@ func seedSeries(hardcoverID uint32, slug string, volumes int) uint32 {
 			EbookMonitored:    true,
 			RefreshedAt:       &now,
 			Editions: []db.EditionSeed{{
-				HardcoverID: hc*10 + 1,
+				HardcoverID: providerid.Format(hc*10 + 1),
 				Language:    "en",
 				Title:       fmt.Sprintf("Volume %d", i+1),
 				Publisher:   "Spectra",
@@ -41,7 +43,7 @@ func seedSeries(hardcoverID uint32, slug string, volumes int) uint32 {
 		})
 	}
 	s, _, err := app.Store.CreateSeries(context.Background(), db.CreateSeriesParams{
-		HardcoverID:     hardcoverID,
+		HardcoverID:     providerid.Format(hardcoverID),
 		Slug:            slug,
 		Title:           "Foundation",
 		AuthorName:      "Isaac Asimov",

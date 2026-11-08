@@ -108,7 +108,7 @@ func movieWithFile(profile, basename string) *ent.Movie {
 
 func movieWithFileAt(profile, basename string, width uint16) *ent.Movie {
 	m := &ent.Movie{
-		ID: 9, TmdbID: 42, Title: "Dune", Year: 2021,
+		ID: 9, TmdbID: "42", Title: "Dune", Year: 2021,
 		QualityProfile: profile,
 	}
 	m.Edges.MediaFiles = []*ent.MediaFile{fileFixture(
@@ -193,7 +193,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 			newScanner()
 			roottest.Offline(db.RootMovies)
 			store.EXPECT().ListWantedMovies(mock.Anything).Return(
-				[]*ent.Movie{{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}}, nil,
+				[]*ent.Movie{{ID: 7, TmdbID: "42", Title: "Dune", Year: 2021}}, nil,
 			).Once()
 			noUpgrades()
 			feed("Dune.2021.1080p.BluRay.x264-GROUP")
@@ -216,7 +216,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 			newScanner()
 			roottest.Offline(db.RootMusic)
 			store.EXPECT().ListWantedMovies(mock.Anything).Return(
-				[]*ent.Movie{{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}}, nil,
+				[]*ent.Movie{{ID: 7, TmdbID: "42", Title: "Dune", Year: 2021}}, nil,
 			).Once()
 			noUpgrades()
 			feed("Dune.2021.1080p.BluRay.x264-GROUP")
@@ -244,7 +244,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		configtest.Setup(cfg)
 		newScanner()
 		store.EXPECT().ListWantedMovies(mock.Anything).
-			Return([]*ent.Movie{{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}}, nil).
+			Return([]*ent.Movie{{ID: 7, TmdbID: "42", Title: "Dune", Year: 2021}}, nil).
 			Once()
 		// No Feed call: the whole point is not to pull feeds we can't act on.
 		// No upgrade-candidate call either — that query only pays off for a
@@ -266,7 +266,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 	It("grabs on title+year match passing the quality filter", func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
-		wanted := &ent.Movie{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}
+		wanted := &ent.Movie{ID: 7, TmdbID: "42", Title: "Dune", Year: 2021}
 		store.EXPECT().ListWantedMovies(mock.Anything).
 			Return([]*ent.Movie{wanted}, nil).Once()
 		noUpgrades()
@@ -287,7 +287,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 	It("rejects items that fail the quality filter without grabbing", func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
-		wanted := &ent.Movie{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}
+		wanted := &ent.Movie{ID: 7, TmdbID: "42", Title: "Dune", Year: 2021}
 		store.EXPECT().ListWantedMovies(mock.Anything).
 			Return([]*ent.Movie{wanted}, nil).Once()
 		noUpgrades()
@@ -303,7 +303,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		configtest.Setup(defaultRSSConfig(), indexerConfig("a"))
 		newScanner()
 		wanted := &ent.Movie{
-			ID: 7, TmdbID: 42, Title: "Dune", Year: 2021,
+			ID: 7, TmdbID: "42", Title: "Dune", Year: 2021,
 			QualityProfile: uhdProfile,
 		}
 		store.EXPECT().ListWantedMovies(mock.Anything).
@@ -320,7 +320,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 	It("bumps grab_failures when grab errors", func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
-		wanted := &ent.Movie{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}
+		wanted := &ent.Movie{ID: 7, TmdbID: "42", Title: "Dune", Year: 2021}
 		store.EXPECT().ListWantedMovies(mock.Anything).
 			Return([]*ent.Movie{wanted}, nil).Once()
 		noUpgrades()
@@ -338,7 +338,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 	It("skips items whose titles have no parseable year", func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
-		wanted := &ent.Movie{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}
+		wanted := &ent.Movie{ID: 7, TmdbID: "42", Title: "Dune", Year: 2021}
 		store.EXPECT().ListWantedMovies(mock.Anything).
 			Return([]*ent.Movie{wanted}, nil).Once()
 		noUpgrades()
@@ -352,7 +352,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 	It("only grabs the first match when two indexers return the same movie", func() {
 		configtest.Setup(indexerConfig("a", "b"))
 		newScanner()
-		wanted := &ent.Movie{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}
+		wanted := &ent.Movie{ID: 7, TmdbID: "42", Title: "Dune", Year: 2021}
 		store.EXPECT().ListWantedMovies(mock.Anything).
 			Return([]*ent.Movie{wanted}, nil).Once()
 		noUpgrades()

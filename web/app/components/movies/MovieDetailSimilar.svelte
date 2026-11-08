@@ -29,7 +29,7 @@
 		queryFn: () => apiAllPages<Movie>("/movies"),
 	}));
 	let libraryByTmdb = $derived.by(() => {
-		const map = new Map<number, number>();
+		const map = new Map<string, number>();
 		for (const m of libQuery.data?.items ?? []) map.set(m.tmdb_id, m.id);
 		return map;
 	});

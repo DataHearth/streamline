@@ -71,8 +71,8 @@ var _ = Describe("Series cast enrichment", Label("unit", "series"), func() {
 			Biography: "A performer.",
 			Birthday:  "1970-01-02",
 		}
-		pending(db.Person{ID: 8, TVDBID: 456, Name: "Ann Actress"})
-		metaMock.GetPerson(mock.Anything, uint32(456)).Return(&details, nil).Once()
+		pending(db.Person{ID: 8, TVDBID: "456", Name: "Ann Actress"})
+		metaMock.GetPerson(mock.Anything, "456").Return(&details, nil).Once()
 		recordSaves()
 
 		svc.enrichPeople(ctx, 4)
@@ -85,7 +85,7 @@ var _ = Describe("Series cast enrichment", Label("unit", "series"), func() {
 
 	It("skips a person the TVDB client cannot look up", func() {
 		pending(
-			db.Person{ID: 9, TMDBID: 1892, Name: "Mark Hamill"},
+			db.Person{ID: 9, TMDBID: "1892", Name: "Mark Hamill"},
 			db.Person{ID: 10, Name: "Nobody At All"},
 		)
 		recordSaves()
@@ -96,8 +96,8 @@ var _ = Describe("Series cast enrichment", Label("unit", "series"), func() {
 	})
 
 	It("leaves the person unstamped when the provider fails", func() {
-		pending(db.Person{ID: 8, TVDBID: 456, Name: "Ann Actress"})
-		metaMock.GetPerson(mock.Anything, uint32(456)).
+		pending(db.Person{ID: 8, TVDBID: "456", Name: "Ann Actress"})
+		metaMock.GetPerson(mock.Anything, "456").
 			Return(nil, errors.New("tvdb unreachable")).Once()
 		recordSaves()
 

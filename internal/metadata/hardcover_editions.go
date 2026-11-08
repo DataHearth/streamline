@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
@@ -86,7 +88,7 @@ func SelectEditions(
 	bookYear uint16,
 ) (editions []EditionRecord, originalLanguage string) {
 	pool := make([]RawEdition, 0, len(digital)+len(physical)+1)
-	seen := map[uint32]bool{}
+	seen := map[string]bool{}
 	add := func(e RawEdition) {
 		if e.Language == "" || seen[e.HardcoverID] {
 			return
@@ -139,10 +141,10 @@ func SelectEditions(
 			}
 			return 1
 		}
-		return int(a.HardcoverID) - int(b.HardcoverID)
+		return providerid.Compare(a.HardcoverID, b.HardcoverID)
 	})
 
-	keep := map[uint32]bool{}
+	keep := map[string]bool{}
 	best := map[langFormat]bool{}
 	for _, e := range ranked {
 		lf := langFormat{e.Language, e.Format}
@@ -195,7 +197,7 @@ func beats(a, b RawEdition) bool {
 	if a.Popularity != b.Popularity {
 		return a.Popularity > b.Popularity
 	}
-	return a.HardcoverID < b.HardcoverID
+	return providerid.Compare(a.HardcoverID, b.HardcoverID) < 0
 }
 
 // cleanPublisher normalises the publisher part of the winner key.

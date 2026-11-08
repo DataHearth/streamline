@@ -55,7 +55,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 	// showWith builds a wanted show whose season 3 carries the given episodes.
 	showWith := func(eps ...*ent.Episode) *ent.TVShow {
 		show := &ent.TVShow{
-			ID: 1, Title: "The Black Sea", TvdbID: 9001,
+			ID: 1, Title: "The Black Sea", TvdbID: "9001",
 			Type: tvshow.TypeStandard,
 		}
 		se := &ent.Season{ID: 5, Number: 3}

@@ -2,6 +2,7 @@ package indexers
 
 import (
 	"context"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -181,12 +182,12 @@ var _ = Describe(
 			}
 			Expect(byTitle).To(HaveKey("Show.S02E03.1080p.WEB-OURS"))
 			Expect(byTitle["Show.S02E03.1080p.WEB-OURS"].TVDBID).
-				To(Equal(uint32(showTVDBID)))
+				To(Equal(strconv.Itoa(showTVDBID)))
 			Expect(byTitle["Show.S02E03.2160p.WEB-OTHER"].TVDBID).
-				To(Equal(uint32(otherTVDBID)))
+				To(Equal(strconv.Itoa(otherTVDBID)))
 			// Unlabelled stays zero, which is what "the tracker said nothing"
 			// has to look like downstream.
-			Expect(byTitle["Show.S02E03.720p.WEB-NOIDS"].TVDBID).To(BeZero())
+			Expect(byTitle["Show.S02E03.720p.WEB-NOIDS"].TVDBID).To(BeEmpty())
 		})
 
 		It("drops an indexer handed an id its caps omit", func() {

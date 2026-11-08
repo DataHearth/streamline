@@ -86,7 +86,7 @@ func bracketPair(open, closing string) bool {
 func BuildMovieVars(
 	title string,
 	year uint16,
-	tmdbID uint32,
+	tmdbID string,
 	parsed ParseResult,
 ) map[string]string {
 	vars := map[string]string{
@@ -99,8 +99,8 @@ func BuildMovieVars(
 	if year > 0 {
 		vars["year"] = strconv.FormatUint(uint64(year), 10)
 	}
-	if tmdbID != 0 {
-		vars["tmdb_id"] = strconv.FormatUint(uint64(tmdbID), 10)
+	if tmdbID != "" {
+		vars["tmdb_id"] = tmdbID
 	}
 	if parsed.Extension != "" {
 		vars["ext"] = parsed.Extension
@@ -112,7 +112,7 @@ func BuildMovieVars(
 func BuildEpisodeVars(
 	showTitle string,
 	year uint16,
-	tvdbID uint32,
+	tvdbID string,
 	season, episode uint16,
 	episodeTitle string,
 	parsed ParseResult,
@@ -130,8 +130,8 @@ func BuildEpisodeVars(
 	if year > 0 {
 		vars["year"] = strconv.FormatUint(uint64(year), 10)
 	}
-	if tvdbID != 0 {
-		vars["tvdb_id"] = strconv.FormatUint(uint64(tvdbID), 10)
+	if tvdbID != "" {
+		vars["tvdb_id"] = tvdbID
 	}
 	if parsed.Extension != "" {
 		vars["ext"] = parsed.Extension

@@ -32,7 +32,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 						ctx,
 						[]string{"Interstellar"},
 						nil,
-						157336,
+						"157336",
 					)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(results).To(BeEmpty())
@@ -44,7 +44,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			It("returns nil without contacting any indexer", func() {
 				configtest.Setup()
 				results, err := svc.SearchMovie(ctx, []string{"", ""},
-					nil, 0)
+					nil, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(BeNil())
 			})
@@ -129,7 +129,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 						ctx,
 						[]string{"The Black Sea"},
 						nil,
-						12345,
+						"12345",
 						3,
 					)
 					Expect(err).NotTo(HaveOccurred())
@@ -142,7 +142,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			It("returns nil without contacting any indexer", func() {
 				configtest.Setup()
 				results, err := svc.SearchSeason(ctx, []string{"", ""},
-					nil, 0, 0)
+					nil, "", 0)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(BeNil())
 			})
@@ -159,7 +159,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 						ctx,
 						[]string{"The Black Sea"},
 						nil,
-						12345,
+						"12345",
 						3,
 						5,
 					)
@@ -177,7 +177,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 					ctx,
 					[]string{"", ""},
 					nil,
-					0,
+					"",
 					0,
 					0,
 				)
@@ -333,13 +333,13 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			// the release is for, so a disagreement settles it outright —
 			// where preferTitleMatches can only prefer.
 			in := []SearchResult{
-				{Title: "right show", TVDBID: 81189},
-				{Title: "wrong show", TVDBID: 99999},
+				{Title: "right show", TVDBID: "81189"},
+				{Title: "wrong show", TVDBID: "99999"},
 				{Title: "unlabelled"},
 			}
 			out := filterProviderIDs(in, SearchParams{
 				Kind:   KindTV,
-				TVDBID: 81189,
+				TVDBID: "81189",
 			})
 			titles := make([]string, len(out))
 			for i, r := range out {
@@ -354,22 +354,22 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			in := []SearchResult{{Title: "a"}, {Title: "b"}}
 			Expect(filterProviderIDs(in, SearchParams{
 				Kind:   KindMovie,
-				TMDBID: 438631,
+				TMDBID: "438631",
 			})).To(HaveLen(2))
 		})
 
 		It("compares only the id the search itself asked about", func() {
 			// A series' TMDB id on a release says nothing about the TVDB id
 			// the library holds, so a TV search must not read it as a verdict.
-			in := []SearchResult{{Title: "a", TMDBID: 1396, TVDBID: 81189}}
+			in := []SearchResult{{Title: "a", TMDBID: "1396", TVDBID: "81189"}}
 			Expect(filterProviderIDs(in, SearchParams{
 				Kind:   KindTV,
-				TVDBID: 81189,
+				TVDBID: "81189",
 			})).To(HaveLen(1))
 		})
 
 		It("leaves an unscoped search untouched", func() {
-			in := []SearchResult{{Title: "a", TVDBID: 99999}}
+			in := []SearchResult{{Title: "a", TVDBID: "99999"}}
 			Expect(filterProviderIDs(in, SearchParams{Query: "a"})).To(HaveLen(1))
 		})
 	})
@@ -380,8 +380,8 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			// else has no narrower form to fall back from.
 			Expect(SearchParams{Query: "x"}.narrowed()).To(BeFalse())
 			Expect(SearchParams{Query: "x", Kind: KindTV}.narrowed()).To(BeFalse())
-			Expect(SearchParams{TMDBID: 1}.narrowed()).To(BeTrue())
-			Expect(SearchParams{TVDBID: 1}.narrowed()).To(BeTrue())
+			Expect(SearchParams{TMDBID: "1"}.narrowed()).To(BeTrue())
+			Expect(SearchParams{TVDBID: "1"}.narrowed()).To(BeTrue())
 			// Season and episode count now that they narrow at the tracker.
 			Expect(SearchParams{Season: 1}.narrowed()).To(BeTrue())
 			Expect(SearchParams{Episode: 1}.narrowed()).To(BeTrue())

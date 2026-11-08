@@ -13,8 +13,9 @@ import { m as i18n } from "./paraglide/messages.js";
 // The touch review row (and the sheet behind it) renders movie files and series
 // show folders through one shape, so the phone/tablet list is built once and
 // takes a noun. Desktop keeps its two table rows.
-// MusicBrainz ids are strings; every other provider's are numbers.
-export type MatchId = number | string;
+// A provider id: a MusicBrainz UUID, or a TMDB, TVDB or Hardcover id — all
+// strings on the wire.
+export type MatchId = string;
 export type TouchCandidate = {
 	id: MatchId;
 	title: string;
@@ -82,7 +83,7 @@ function titled(title: string, year?: number | null): string {
 
 export function fileEntry(f: ImportScanFile): TouchEntry {
 	const bits = [f.parsed_quality, f.parsed_release_group, formatBytes(f.size)];
-	const chosen = f.decision_tmdb_id ?? null;
+	const chosen = f.decision_tmdb_id || null;
 	const match =
 		chosen != null
 			? (f.candidates ?? []).find((c) => c.tmdb_id === chosen)
@@ -111,7 +112,7 @@ export function fileEntry(f: ImportScanFile): TouchEntry {
 }
 
 export function showEntry(sh: ImportScanShow): TouchEntry {
-	const chosen = sh.decision_tvdb_id ?? null;
+	const chosen = sh.decision_tvdb_id || null;
 	const match =
 		chosen != null
 			? (sh.candidates ?? []).find((c) => c.tvdb_id === chosen)
@@ -187,7 +188,7 @@ export function albumEntry(a: ImportScanAlbum): TouchEntry {
 }
 
 export function bookEntry(b: ImportScanBook): TouchEntry {
-	const chosen = b.decision_book_hardcover_id ?? null;
+	const chosen = b.decision_book_hardcover_id || null;
 	const match = chosen != null ? (b.candidates ?? []).find((c) => c.book_hardcover_id === chosen) : undefined;
 	const parts = b.file_count > 1 ? i18n.imports_file_count_other({ count: b.file_count }) : "";
 	return {
@@ -213,8 +214,9 @@ export function bookEntry(b: ImportScanBook): TouchEntry {
 }
 
 // A provider id as the candidate rows print it: MusicBrainz's are UUIDs, so
-// the first block stands in for the rest, as on the artist page.
-export const shortId = (id: MatchId) => (typeof id === "string" ? id.slice(0, 8) : String(id));
+// the first block stands in for the rest, as on the artist page; the numeric
+// ids of the other providers print whole.
+export const shortId = (id: MatchId) => (id.includes("-") ? id.slice(0, 8) : id);
 
 // The review's wording per kind. Movie and series keep the keys they always
 // had; albums and books carry their own, so no sentence is glued to a noun.

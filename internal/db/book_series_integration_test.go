@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -16,7 +18,7 @@ import (
 // volumeSeed is a hydrated volume with an English and a French ebook edition.
 func volumeSeed(hc uint32, position float64, refreshed time.Time) BookSeed {
 	return BookSeed{
-		HardcoverID:       hc,
+		HardcoverID:       providerid.Format(hc),
 		Title:             "Volume",
 		AuthorName:        "Oda",
 		Kind:              "manga",
@@ -25,20 +27,39 @@ func volumeSeed(hc uint32, position float64, refreshed time.Time) BookSeed {
 		EbookMonitored:    true,
 		Editions: []EditionSeed{
 			{
-				HardcoverID: hc*10 + 1, Language: "en", Title: "En Volume",
-				Publisher: "Viz", Format: "ebook", Popularity: 5, Original: false,
+				HardcoverID: providerid.Format(
+					hc*10 + 1,
+				),
+				Language:   "en",
+				Title:      "En Volume",
+				Publisher:  "Viz",
+				Format:     "ebook",
+				Popularity: 5,
+				Original:   false,
 			},
 			{
-				HardcoverID: hc*10 + 2, Language: "fr", Title: "Tome",
-				Publisher: "Glenat", Format: "ebook", Popularity: 9,
+				HardcoverID: providerid.Format(
+					hc*10 + 2,
+				),
+				Language:   "fr",
+				Title:      "Tome",
+				Publisher:  "Glenat",
+				Format:     "ebook",
+				Popularity: 9,
 			},
 			{
-				HardcoverID: hc*10 + 3, Language: "fr", Title: "Tome (Kana)",
-				Publisher: "Kana", Format: "ebook", Popularity: 2,
+				HardcoverID: providerid.Format(
+					hc*10 + 3,
+				),
+				Language:   "fr",
+				Title:      "Tome (Kana)",
+				Publisher:  "Kana",
+				Format:     "ebook",
+				Popularity: 2,
 			},
 		},
 		Credits: []CreditSeed{
-			{AuthorHardcoverID: 300, Name: "Oda", Role: "writer"},
+			{AuthorHardcoverID: "300", Name: "Oda", Role: "writer"},
 		},
 		RefreshedAt: &refreshed,
 	}
@@ -64,13 +85,13 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 
 	params := func(volumes ...BookSeed) CreateSeriesParams {
 		return CreateSeriesParams{
-			HardcoverID: 50, Title: "One Piece", AuthorName: "Oda", Kind: "manga",
+			HardcoverID: "50", Title: "One Piece", AuthorName: "Oda", Kind: "manga",
 			Monitor: "all", QualityProfile: "manga", EditionLanguage: "en",
 			EditionPublisher: "Viz", RefreshedAt: now,
 			Credits: []CreditSeed{
-				{AuthorHardcoverID: 300, Name: "Oda", Role: "author"},
+				{AuthorHardcoverID: "300", Name: "Oda", Role: "author"},
 				{
-					AuthorHardcoverID: 301,
+					AuthorHardcoverID: "301",
 					Name:              "Translator",
 					Role:              "translator",
 					Language:          "fr",
@@ -85,7 +106,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		return s
 	}
-	volume := func(s *ent.BookSeries, hc uint32) *ent.Book {
+	volume := func(s *ent.BookSeries, hc string) *ent.Book {
 		GinkgoHelper()
 		for _, v := range s.Edges.Volumes {
 			if v.HardcoverID == hc {
@@ -105,7 +126,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 	Describe("CreateSeries", func() {
 		It("writes the series with hydrated volumes and stubs in order", func() {
 			stub := BookSeed{
-				HardcoverID:       3,
+				HardcoverID:       "3",
 				Title:             "One Piece #3",
 				Kind:              "manga",
 				PreferredLanguage: "en",
@@ -139,7 +160,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(counts).To(Equal(VolumeCounts{Created: 1, Adopted: 1}))
-			adopted := volume(s, 1)
+			adopted := volume(s, "1")
 			Expect(adopted.ID).To(Equal(standalone.ID))
 			// Its own data is kept; the series' profile is written through.
 			Expect(adopted.Title).To(Equal("En Volume"))
@@ -150,14 +171,14 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 		It("skips a volume that belongs to another series", func() {
 			create(volumeSeed(1, 1, now))
 			other := params(volumeSeed(1, 1, now), volumeSeed(9, 2, now))
-			other.HardcoverID = 51
+			other.HardcoverID = "51"
 
 			s, counts, err := store.CreateSeries(ctx, other)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(counts.Skipped).To(Equal(1))
 			Expect(s.Edges.Volumes).To(HaveLen(1))
-			Expect(s.Edges.Volumes[0].HardcoverID).To(Equal(uint32(9)))
+			Expect(s.Edges.Volumes[0].HardcoverID).To(Equal("9"))
 		})
 
 		It("writes nothing when a volume fails", func() {
@@ -176,17 +197,17 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 		It(
 			"returns nil for an unknown series and the lowest volume for a known one",
 			func() {
-				got, err := store.FindSeriesByHardcoverID(ctx, 404)
+				got, err := store.FindSeriesByHardcoverID(ctx, "404")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(got).To(BeNil())
 
 				s := create(volumeSeed(2, 2, now), volumeSeed(1, 1, now))
 				id, err := store.FirstVolumeID(ctx, s.ID)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(id).To(Equal(volume(s, 1).ID))
+				Expect(id).To(Equal(volume(s, "1").ID))
 
 				empty := params()
-				empty.HardcoverID = 77
+				empty.HardcoverID = "77"
 				es, _, err := store.CreateSeries(ctx, empty)
 				Expect(err).NotTo(HaveOccurred())
 				id, err = store.FirstVolumeID(ctx, es.ID)
@@ -200,20 +221,20 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 		It("returns each known series with its lowest volume", func() {
 			s := create(volumeSeed(2, 2, now), volumeSeed(1, 1, now))
 			empty := params()
-			empty.HardcoverID = 77
+			empty.HardcoverID = "77"
 			es, _, err := store.CreateSeries(ctx, empty)
 			Expect(err).NotTo(HaveOccurred())
 
 			got, err := store.FindSeriesByHardcoverIDs(
-				ctx, []uint32{s.HardcoverID, 77, 404},
+				ctx, []string{s.HardcoverID, "77", "404"},
 			)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got).To(HaveLen(2))
 			Expect(got[s.HardcoverID].Series.ID).To(Equal(s.ID))
-			Expect(got[s.HardcoverID].FirstVolumeID).To(Equal(volume(s, 1).ID))
-			Expect(got[77].Series.ID).To(Equal(es.ID))
-			Expect(got[77].FirstVolumeID).To(BeZero())
+			Expect(got[s.HardcoverID].FirstVolumeID).To(Equal(volume(s, "1").ID))
+			Expect(got["77"].Series.ID).To(Equal(es.ID))
+			Expect(got["77"].FirstVolumeID).To(BeZero())
 		})
 	})
 
@@ -236,7 +257,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 			"none unmonitors every volume without a file and keeps one with a file",
 			func() {
 				s := create(volumeSeed(1, 1, now), volumeSeed(2, 2, now))
-				v1 := volume(s, 1)
+				v1 := volume(s, "1")
 				client.MediaFile.Create().
 					SetPath("/b/1.cbz").
 					SetSize(1).SetQuality("CBZ").SetFormat("cbz").
@@ -253,9 +274,9 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 				got := fresh(s.ID)
 				Expect(got.Monitor).To(Equal(bookseries.MonitorNone))
 				Expect(
-					volume(got, 1).EbookStatus,
+					volume(got, "1").EbookStatus,
 				).To(Equal(book.EbookStatusAvailable))
-				two := volume(got, 2)
+				two := volume(got, "2")
 				Expect(two.EbookMonitored).To(BeFalse())
 				Expect(two.EbookStatus).To(Equal(book.EbookStatusSkipped))
 			},
@@ -274,8 +295,8 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 				).Error().To(Succeed())
 
 				got := fresh(s.ID)
-				Expect(volume(got, 1).EbookMonitored).To(BeFalse())
-				Expect(volume(got, 2).EbookMonitored).To(BeTrue())
+				Expect(volume(got, "1").EbookMonitored).To(BeFalse())
+				Expect(volume(got, "2").EbookMonitored).To(BeTrue())
 			},
 		)
 
@@ -285,7 +306,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 				a := volumeSeed(1, 1, now)
 				a.EbookMonitored = false
 				s := create(a)
-				client.Book.UpdateOneID(volume(s, 1).ID).
+				client.Book.UpdateOneID(volume(s, "1").ID).
 					ClearEbookEdition().
 					ExecX(ctx)
 
@@ -294,7 +315,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 				).Error().
 					To(Succeed())
 
-				v := volume(fresh(s.ID), 1)
+				v := volume(fresh(s.ID), "1")
 				Expect(v.EbookMonitored).To(BeTrue())
 				Expect(v.EbookStatus).To(Equal(book.EbookStatusWanted))
 				Expect(v.Edges.EbookEdition).NotTo(BeNil())
@@ -305,14 +326,14 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 			"flags a stub without editions, and leaves a volume with no ebook edition alone",
 			func() {
 				stub := BookSeed{
-					HardcoverID: 4, Title: "One Piece #4", Kind: "manga",
+					HardcoverID: "4", Title: "One Piece #4", Kind: "manga",
 					PreferredLanguage: "en", SeriesPosition: new(4.0),
 				}
 				audioOnly := volumeSeed(5, 5, now)
 				audioOnly.EbookMonitored = false
 				audioOnly.Editions = []EditionSeed{
 					{
-						HardcoverID: 51,
+						HardcoverID: "51",
 						Language:    "en",
 						Title:       "Audio",
 						Format:      "audiobook",
@@ -327,8 +348,8 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 					To(Succeed())
 
 				got := fresh(s.ID)
-				Expect(volume(got, 4).EbookMonitored).To(BeTrue())
-				Expect(volume(got, 5).EbookMonitored).To(BeFalse())
+				Expect(volume(got, "4").EbookMonitored).To(BeTrue())
+				Expect(volume(got, "5").EbookMonitored).To(BeFalse())
 			},
 		)
 	})
@@ -338,7 +359,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 			"re-picks volumes without a file by language and publisher and retitles them",
 			func() {
 				s := create(volumeSeed(1, 1, now), volumeSeed(2, 2, now))
-				held := volume(s, 2)
+				held := volume(s, "2")
 				client.MediaFile.Create().
 					SetPath("/b/2.cbz").
 					SetSize(1).SetQuality("CBZ").SetFormat("cbz").
@@ -353,12 +374,12 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 				got := fresh(s.ID)
 				Expect(got.EditionLanguage).To(Equal("fr"))
 				Expect(got.EditionPublisher).To(Equal("Kana"))
-				one := volume(got, 1)
+				one := volume(got, "1")
 				Expect(one.Edges.EbookEdition.Publisher).To(Equal("Kana"))
 				Expect(one.PreferredLanguage).To(Equal("fr"))
 				Expect(one.Title).To(Equal("Tome"))
 				// A volume with a file keeps its file and its edition.
-				two := volume(got, 2)
+				two := volume(got, "2")
 				Expect(two.Edges.EbookEdition.ID).To(Equal(before.ID))
 				Expect(two.PreferredLanguage).To(Equal("en"))
 			},
@@ -373,7 +394,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 					store.SetSeriesEdition(ctx, s.ID, "fr", "Nobody"),
 				).To(Succeed())
 
-				one := volume(fresh(s.ID), 1)
+				one := volume(fresh(s.ID), "1")
 				Expect(one.Edges.EbookEdition.Language).To(Equal("fr"))
 				Expect(one.Edges.EbookEdition.Publisher).To(Equal("Glenat"))
 			},
@@ -391,7 +412,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 			Expect(store.ApplySeriesMetadata(ctx, s.ID, SeriesMetadata{
 				Title: "One Piece!", Overview: "Pirates", AuthorName: "Eiichiro Oda",
 				Ongoing: true, Credits: []CreditSeed{
-					{AuthorHardcoverID: 300, Name: "Oda", Role: "author"},
+					{AuthorHardcoverID: "300", Name: "Oda", Role: "author"},
 				},
 				RefreshedAt: now,
 			})).To(Succeed())
@@ -440,7 +461,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 			func() {
 				create(volumeSeed(1, 1, now))
 				other := params()
-				other.HardcoverID = 60
+				other.HardcoverID = "60"
 				other.RefreshedAt = now.Add(-48 * time.Hour)
 				_, _, err := store.CreateSeries(ctx, other)
 				Expect(err).NotTo(HaveOccurred())
@@ -448,7 +469,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 				got, err := store.ListStaleSeries(ctx, now.Add(-24*time.Hour), 10)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(got).To(HaveLen(1))
-				Expect(got[0].HardcoverID).To(Equal(uint32(60)))
+				Expect(got[0].HardcoverID).To(Equal("60"))
 			},
 		)
 	})
@@ -461,7 +482,7 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 				client.MediaFile.Create().
 					SetPath("/b/1.cbz").
 					SetSize(1).SetQuality("CBZ").SetFormat("cbz").
-					SetBookID(volume(s, 1).ID).
+					SetBookID(volume(s, "1").ID).
 					SetBookKind(mediafile.BookKindEbook).SaveX(ctx)
 
 				orphans, err := store.DeleteSeries(ctx, s.ID)

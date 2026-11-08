@@ -187,23 +187,16 @@ func (_u *ImportScanBookUpdate) SetNillableClassification(v *importscanbook.Clas
 }
 
 // SetBookHardcoverID sets the "book_hardcover_id" field.
-func (_u *ImportScanBookUpdate) SetBookHardcoverID(v uint32) *ImportScanBookUpdate {
-	_u.mutation.ResetBookHardcoverID()
+func (_u *ImportScanBookUpdate) SetBookHardcoverID(v string) *ImportScanBookUpdate {
 	_u.mutation.SetBookHardcoverID(v)
 	return _u
 }
 
 // SetNillableBookHardcoverID sets the "book_hardcover_id" field if the given value is not nil.
-func (_u *ImportScanBookUpdate) SetNillableBookHardcoverID(v *uint32) *ImportScanBookUpdate {
+func (_u *ImportScanBookUpdate) SetNillableBookHardcoverID(v *string) *ImportScanBookUpdate {
 	if v != nil {
 		_u.SetBookHardcoverID(*v)
 	}
-	return _u
-}
-
-// AddBookHardcoverID adds value to the "book_hardcover_id" field.
-func (_u *ImportScanBookUpdate) AddBookHardcoverID(v int32) *ImportScanBookUpdate {
-	_u.mutation.AddBookHardcoverID(v)
 	return _u
 }
 
@@ -273,23 +266,16 @@ func (_u *ImportScanBookUpdate) SetNillableDecision(v *importscanbook.Decision) 
 }
 
 // SetDecisionBookHardcoverID sets the "decision_book_hardcover_id" field.
-func (_u *ImportScanBookUpdate) SetDecisionBookHardcoverID(v uint32) *ImportScanBookUpdate {
-	_u.mutation.ResetDecisionBookHardcoverID()
+func (_u *ImportScanBookUpdate) SetDecisionBookHardcoverID(v string) *ImportScanBookUpdate {
 	_u.mutation.SetDecisionBookHardcoverID(v)
 	return _u
 }
 
 // SetNillableDecisionBookHardcoverID sets the "decision_book_hardcover_id" field if the given value is not nil.
-func (_u *ImportScanBookUpdate) SetNillableDecisionBookHardcoverID(v *uint32) *ImportScanBookUpdate {
+func (_u *ImportScanBookUpdate) SetNillableDecisionBookHardcoverID(v *string) *ImportScanBookUpdate {
 	if v != nil {
 		_u.SetDecisionBookHardcoverID(*v)
 	}
-	return _u
-}
-
-// AddDecisionBookHardcoverID adds value to the "decision_book_hardcover_id" field.
-func (_u *ImportScanBookUpdate) AddDecisionBookHardcoverID(v int32) *ImportScanBookUpdate {
-	_u.mutation.AddDecisionBookHardcoverID(v)
 	return _u
 }
 
@@ -515,13 +501,10 @@ func (_u *ImportScanBookUpdate) sqlSave(ctx context.Context) (_node int, err err
 		_spec.SetField(importscanbook.FieldClassification, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.BookHardcoverID(); ok {
-		_spec.SetField(importscanbook.FieldBookHardcoverID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedBookHardcoverID(); ok {
-		_spec.AddField(importscanbook.FieldBookHardcoverID, field.TypeUint32, value)
+		_spec.SetField(importscanbook.FieldBookHardcoverID, field.TypeString, value)
 	}
 	if _u.mutation.BookHardcoverIDCleared() {
-		_spec.ClearField(importscanbook.FieldBookHardcoverID, field.TypeUint32)
+		_spec.ClearField(importscanbook.FieldBookHardcoverID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Candidates(); ok {
 		_spec.SetField(importscanbook.FieldCandidates, field.TypeJSON, value)
@@ -547,13 +530,10 @@ func (_u *ImportScanBookUpdate) sqlSave(ctx context.Context) (_node int, err err
 		_spec.SetField(importscanbook.FieldDecision, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.DecisionBookHardcoverID(); ok {
-		_spec.SetField(importscanbook.FieldDecisionBookHardcoverID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedDecisionBookHardcoverID(); ok {
-		_spec.AddField(importscanbook.FieldDecisionBookHardcoverID, field.TypeUint32, value)
+		_spec.SetField(importscanbook.FieldDecisionBookHardcoverID, field.TypeString, value)
 	}
 	if _u.mutation.DecisionBookHardcoverIDCleared() {
-		_spec.ClearField(importscanbook.FieldDecisionBookHardcoverID, field.TypeUint32)
+		_spec.ClearField(importscanbook.FieldDecisionBookHardcoverID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Outcome(); ok {
 		_spec.SetField(importscanbook.FieldOutcome, field.TypeEnum, value)
@@ -779,23 +759,16 @@ func (_u *ImportScanBookUpdateOne) SetNillableClassification(v *importscanbook.C
 }
 
 // SetBookHardcoverID sets the "book_hardcover_id" field.
-func (_u *ImportScanBookUpdateOne) SetBookHardcoverID(v uint32) *ImportScanBookUpdateOne {
-	_u.mutation.ResetBookHardcoverID()
+func (_u *ImportScanBookUpdateOne) SetBookHardcoverID(v string) *ImportScanBookUpdateOne {
 	_u.mutation.SetBookHardcoverID(v)
 	return _u
 }
 
 // SetNillableBookHardcoverID sets the "book_hardcover_id" field if the given value is not nil.
-func (_u *ImportScanBookUpdateOne) SetNillableBookHardcoverID(v *uint32) *ImportScanBookUpdateOne {
+func (_u *ImportScanBookUpdateOne) SetNillableBookHardcoverID(v *string) *ImportScanBookUpdateOne {
 	if v != nil {
 		_u.SetBookHardcoverID(*v)
 	}
-	return _u
-}
-
-// AddBookHardcoverID adds value to the "book_hardcover_id" field.
-func (_u *ImportScanBookUpdateOne) AddBookHardcoverID(v int32) *ImportScanBookUpdateOne {
-	_u.mutation.AddBookHardcoverID(v)
 	return _u
 }
 
@@ -865,23 +838,16 @@ func (_u *ImportScanBookUpdateOne) SetNillableDecision(v *importscanbook.Decisio
 }
 
 // SetDecisionBookHardcoverID sets the "decision_book_hardcover_id" field.
-func (_u *ImportScanBookUpdateOne) SetDecisionBookHardcoverID(v uint32) *ImportScanBookUpdateOne {
-	_u.mutation.ResetDecisionBookHardcoverID()
+func (_u *ImportScanBookUpdateOne) SetDecisionBookHardcoverID(v string) *ImportScanBookUpdateOne {
 	_u.mutation.SetDecisionBookHardcoverID(v)
 	return _u
 }
 
 // SetNillableDecisionBookHardcoverID sets the "decision_book_hardcover_id" field if the given value is not nil.
-func (_u *ImportScanBookUpdateOne) SetNillableDecisionBookHardcoverID(v *uint32) *ImportScanBookUpdateOne {
+func (_u *ImportScanBookUpdateOne) SetNillableDecisionBookHardcoverID(v *string) *ImportScanBookUpdateOne {
 	if v != nil {
 		_u.SetDecisionBookHardcoverID(*v)
 	}
-	return _u
-}
-
-// AddDecisionBookHardcoverID adds value to the "decision_book_hardcover_id" field.
-func (_u *ImportScanBookUpdateOne) AddDecisionBookHardcoverID(v int32) *ImportScanBookUpdateOne {
-	_u.mutation.AddDecisionBookHardcoverID(v)
 	return _u
 }
 
@@ -1137,13 +1103,10 @@ func (_u *ImportScanBookUpdateOne) sqlSave(ctx context.Context) (_node *ImportSc
 		_spec.SetField(importscanbook.FieldClassification, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.BookHardcoverID(); ok {
-		_spec.SetField(importscanbook.FieldBookHardcoverID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedBookHardcoverID(); ok {
-		_spec.AddField(importscanbook.FieldBookHardcoverID, field.TypeUint32, value)
+		_spec.SetField(importscanbook.FieldBookHardcoverID, field.TypeString, value)
 	}
 	if _u.mutation.BookHardcoverIDCleared() {
-		_spec.ClearField(importscanbook.FieldBookHardcoverID, field.TypeUint32)
+		_spec.ClearField(importscanbook.FieldBookHardcoverID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Candidates(); ok {
 		_spec.SetField(importscanbook.FieldCandidates, field.TypeJSON, value)
@@ -1169,13 +1132,10 @@ func (_u *ImportScanBookUpdateOne) sqlSave(ctx context.Context) (_node *ImportSc
 		_spec.SetField(importscanbook.FieldDecision, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.DecisionBookHardcoverID(); ok {
-		_spec.SetField(importscanbook.FieldDecisionBookHardcoverID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedDecisionBookHardcoverID(); ok {
-		_spec.AddField(importscanbook.FieldDecisionBookHardcoverID, field.TypeUint32, value)
+		_spec.SetField(importscanbook.FieldDecisionBookHardcoverID, field.TypeString, value)
 	}
 	if _u.mutation.DecisionBookHardcoverIDCleared() {
-		_spec.ClearField(importscanbook.FieldDecisionBookHardcoverID, field.TypeUint32)
+		_spec.ClearField(importscanbook.FieldDecisionBookHardcoverID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Outcome(); ok {
 		_spec.SetField(importscanbook.FieldOutcome, field.TypeEnum, value)

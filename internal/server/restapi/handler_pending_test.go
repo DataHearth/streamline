@@ -97,7 +97,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 		goodOmens := func() *ent.TVShow {
 			ep := &ent.Episode{ID: 501, Number: 1}
 			return &ent.TVShow{
-				ID: 40, Title: "Good Omens", TvdbID: 359569,
+				ID: 40, Title: "Good Omens", TvdbID: "359569",
 				Edges: ent.TVShowEdges{Seasons: []*ent.Season{{
 					Number: 3,
 					Edges:  ent.SeasonEdges{Episodes: []*ent.Episode{ep}},
@@ -119,10 +119,10 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
 				Return(unidentified(), nil).Once()
 			app.store.EXPECT().
-				FindTVShowByTVDBID(mock.Anything, uint32(359569)).
+				FindTVShowByTVDBID(mock.Anything, "359569").
 				Return(nil, nil).Once()
 			app.tvshows.EXPECT().
-				Add(mock.Anything, uint32(359569), "").
+				Add(mock.Anything, "359569", "").
 				Return(&ent.TVShow{ID: 40}, nil).Once()
 			app.tvshows.EXPECT().
 				Get(mock.Anything, uint32(40)).Return(goodOmens(), nil).Once()
@@ -132,7 +132,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 					mock.Anything, mock.AnythingOfType("string"),
 				).Return(nil).Once()
 
-			resp := identify(`{"kind":"series","provider_id":359569}`)
+			resp := identify(`{"kind":"series","provider_id":"359569"}`)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
@@ -144,7 +144,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
 				Return(unidentified(), nil).Once()
 			app.store.EXPECT().
-				FindTVShowByTVDBID(mock.Anything, uint32(359569)).
+				FindTVShowByTVDBID(mock.Anything, "359569").
 				Return(&ent.TVShow{ID: 40}, nil).Once()
 			app.tvshows.EXPECT().
 				Get(mock.Anything, uint32(40)).Return(goodOmens(), nil).Once()
@@ -154,7 +154,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 					mock.Anything, mock.AnythingOfType("string"),
 				).Return(nil).Once()
 
-			resp := identify(`{"kind":"series","provider_id":359569}`)
+			resp := identify(`{"kind":"series","provider_id":"359569"}`)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
@@ -169,10 +169,10 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			// error, exactly like FindTVShowByTVDBID. Mocking it as an ent
 			// NotFound is what let a nil deref through a green suite once.
 			app.movies.EXPECT().
-				GetByTMDBID(mock.Anything, uint32(414906)).
+				GetByTMDBID(mock.Anything, "414906").
 				Return(nil, nil).Once()
 			app.movies.EXPECT().
-				Add(mock.Anything, uint32(414906), "").
+				Add(mock.Anything, "414906", "").
 				Return(&ent.Movie{ID: 3}, "", nil).Once()
 			// A movie proposal links no episodes: IdentifyDownloadRecord
 			// replaces the set, so one left over from a previous series
@@ -183,7 +183,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 					[]uint32(nil), mock.AnythingOfType("string"),
 				).Return(nil).Once()
 
-			resp := identify(`{"kind":"movie","provider_id":414906}`)
+			resp := identify(`{"kind":"movie","provider_id":"414906"}`)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
@@ -195,11 +195,11 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 					ID: 1, Title: "George Orwell - 1984.epub",
 				}, nil).Once()
 			app.store.EXPECT().
-				FindBookByHardcoverID(mock.Anything, uint32(1984)).
+				FindBookByHardcoverID(mock.Anything, "1984").
 				Return(nil, nil).Once()
 			app.books.EXPECT().
 				AddBook(mock.Anything, book.AddBookParams{
-					HardcoverID: 1984, Monitor: book.MonitorEbook,
+					HardcoverID: "1984", Monitor: book.MonitorEbook,
 				}).
 				Return(&ent.Book{ID: 7}, nil).Once()
 			app.store.EXPECT().
@@ -208,7 +208,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 					downloadrecord.BookKindEbook, mock.AnythingOfType("string"),
 				).Return(nil).Once()
 
-			resp := identify(`{"kind":"book","provider_id":1984}`)
+			resp := identify(`{"kind":"book","provider_id":"1984"}`)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
@@ -222,7 +222,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 						ID: 1, Title: "George Orwell - 1984 (Unabridged) M4B",
 					}, nil).Once()
 				app.store.EXPECT().
-					FindBookByHardcoverID(mock.Anything, uint32(1984)).
+					FindBookByHardcoverID(mock.Anything, "1984").
 					Return(&ent.Book{ID: 7}, nil).Once()
 				app.store.EXPECT().
 					IdentifyBookDownloadRecord(
@@ -231,7 +231,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 					).
 					Return(nil).Once()
 
-				resp := identify(`{"kind":"book","provider_id":1984}`)
+				resp := identify(`{"kind":"book","provider_id":"1984"}`)
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 			},
@@ -278,7 +278,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
 				Return(unidentified(), nil).Once()
 
-			resp := identify(`{"kind":"album","provider_id":3}`)
+			resp := identify(`{"kind":"album","provider_id":"3"}`)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
 		})
@@ -293,7 +293,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 					},
 				}, nil).Once()
 
-			resp := identify(`{"kind":"movie","provider_id":414906}`)
+			resp := identify(`{"kind":"movie","provider_id":"414906"}`)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 		})
@@ -306,13 +306,13 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
 				Return(unidentified(), nil).Once()
 			app.store.EXPECT().
-				FindTVShowByTVDBID(mock.Anything, uint32(359569)).
+				FindTVShowByTVDBID(mock.Anything, "359569").
 				Return(&ent.TVShow{ID: 40}, nil).Once()
 			app.tvshows.EXPECT().
 				Get(mock.Anything, uint32(40)).
 				Return(&ent.TVShow{ID: 40, Title: "Good Omens"}, nil).Once()
 
-			resp := identify(`{"kind":"series","provider_id":359569}`)
+			resp := identify(`{"kind":"series","provider_id":"359569"}`)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
 
@@ -326,7 +326,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			req := app.req(
 				http.MethodPost, "/api/v1/activity/pending/1/identify",
 				app.memberKey, strings.NewReader(
-					`{"kind":"movie","provider_id":1}`,
+					`{"kind":"movie","provider_id":"1"}`,
 				),
 			)
 			req.Header.Set("Content-Type", "application/json")

@@ -101,7 +101,7 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 		w = NewWorker(Deps{DB: db.New(client), Library: library.NewImportService()})
 
 		b = client.Book.Create().
-			SetHardcoverID(2).SetTitle("Elantris").
+			SetHardcoverID("2").SetTitle("Elantris").
 			SetReleaseDate(time.Date(2005, 4, 21, 0, 0, 0, 0, time.UTC)).
 			SetAuthorName("Brandon Sanderson").
 			SetReleaseYear(2005).
@@ -392,9 +392,10 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 
 	It("names a file from the slot edition and the profile of its series", func() {
 		series := client.BookSeries.Create().
-			SetHardcoverID(7).SetTitle("Mistborn").SetQualityProfile("e").SaveX(ctx)
+			SetHardcoverID("7").
+			SetTitle("Mistborn").SetQualityProfile("e").SaveX(ctx)
 		ed := client.BookEdition.Create().
-			SetBook(b).SetHardcoverEditionID(70).SetLanguage("fr").
+			SetBook(b).SetHardcoverEditionID("70").SetLanguage("fr").
 			SetTitle("L'Empire ultime").SetFormat("ebook").SaveX(ctx)
 		client.Book.UpdateOneID(b.ID).
 			SetSeries(series).SetSeriesPosition(1).SetEbookEdition(ed).ExecX(ctx)

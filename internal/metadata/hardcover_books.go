@@ -1,7 +1,6 @@
 package metadata
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +9,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/datahearth/streamline/internal/providerid"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -124,7 +125,7 @@ func (h *Hardcover) SearchBooks(
 	results := make([]BookSearchResult, 0, len(docs))
 	for _, d := range docs {
 		r := BookSearchResult{
-			HardcoverID: uint32(d.ID),
+			HardcoverID: providerid.Format(uint32(d.ID)),
 			Title:       d.Title,
 			Year:        d.ReleaseYear,
 		}
@@ -159,7 +160,7 @@ func (h *Hardcover) LookupBooks(
 	hits := make([]BookLookupHit, 0, len(docs))
 	for _, d := range docs {
 		hit := BookLookupHit{
-			HardcoverID: uint32(d.ID),
+			HardcoverID: providerid.Format(uint32(d.ID)),
 			Type:        "book",
 			Title:       d.Title,
 			Year:        d.ReleaseYear,
@@ -170,7 +171,7 @@ func (h *Hardcover) LookupBooks(
 		}
 		for _, id := range d.SeriesIDs {
 			if id != 0 {
-				hit.SeriesIDs = append(hit.SeriesIDs, uint32(id))
+				hit.SeriesIDs = append(hit.SeriesIDs, providerid.Format(uint32(id)))
 			}
 		}
 		if len(d.AuthorNames) > 0 {
@@ -213,7 +214,7 @@ func (h *Hardcover) LookupSeries(
 			continue
 		}
 		hit := BookLookupHit{
-			HardcoverID:  uint32(d.ID),
+			HardcoverID:  providerid.Format(uint32(d.ID)),
 			Type:         "series",
 			Title:        d.Name,
 			Slug:         d.Slug,
@@ -244,7 +245,7 @@ query ($isbn: String!) {
   editions(where: {isbn_13: {_eq: $isbn}}, limit: 1) { book_id }
 }`
 
-func (h *Hardcover) BookByISBN(ctx context.Context, isbn string) (uint32, error) {
+func (h *Hardcover) BookByISBN(ctx context.Context, isbn string) (string, error) {
 	ctx, span := tracer.Start(ctx, "metadata.hardcover.book_by_isbn")
 	defer span.End()
 
@@ -259,12 +260,12 @@ func (h *Hardcover) BookByISBN(ctx context.Context, isbn string) (uint32, error)
 		map[string]any{"isbn": isbn},
 		&payload,
 	); err != nil {
-		return 0, otelx.RecordSpanError(span, err)
+		return "", otelx.RecordSpanError(span, err)
 	}
 	if len(payload.Editions) == 0 {
-		return 0, nil
+		return "", nil
 	}
-	return payload.Editions[0].BookID, nil
+	return providerid.Format(payload.Editions[0].BookID), nil
 }
 
 // hcBooksQuery is the workhorse: one request for up to hcBookBatch books with
@@ -363,7 +364,7 @@ type hcEditionRow struct {
 
 func (r hcEditionRow) raw() RawEdition {
 	e := RawEdition{
-		HardcoverID: r.ID,
+		HardcoverID: providerid.Format(r.ID),
 		Title:       strings.TrimSpace(r.Title),
 		ISBN13:      derefStr(r.ISBN13),
 		ASIN:        derefStr(r.ASIN),
@@ -398,7 +399,7 @@ func (r hcEditionRow) raw() RawEdition {
 			e.Narrator = c.Author.Name
 		case role == RoleTranslator && e.Translator == "":
 			e.Translator = c.Author.Name
-			e.TranslatorID = uint32(c.Author.ID)
+			e.TranslatorID = providerid.Format(uint32(c.Author.ID))
 		}
 	}
 	return e
@@ -496,7 +497,7 @@ type hcBookRow struct {
 
 func (r hcBookRow) record() *BookRecord {
 	rec := &BookRecord{
-		HardcoverID: r.ID,
+		HardcoverID: providerid.Format(r.ID),
 		Title:       strings.TrimSpace(r.Title),
 		Description: derefStr(r.Description),
 		ReleaseDate: parseHCDate(r.ReleaseDate),
@@ -526,7 +527,7 @@ func (r hcBookRow) record() *BookRecord {
 			continue
 		}
 		rec.Series = append(rec.Series, BookSeriesRef{
-			SeriesHardcoverID: bs.Series.ID,
+			SeriesHardcoverID: providerid.Format(bs.Series.ID),
 			Name:              bs.Series.Name,
 			Position:          bs.Position,
 		})
@@ -579,7 +580,7 @@ func creditsFrom(in []hcContributor) []BookCredit {
 			continue
 		}
 		credit := BookCredit{
-			AuthorHardcoverID: uint32(c.Author.ID),
+			AuthorHardcoverID: providerid.Format(uint32(c.Author.ID)),
 			Name:              strings.TrimSpace(c.Author.Name),
 			ImageURL:          c.image(),
 			Role:              role,
@@ -656,7 +657,7 @@ func (h *Hardcover) fetchBooks(
 		rec := row.record()
 		records = append(records, rec)
 		if len(rec.Credits) == 0 && rec.creditsGap {
-			noCredits = append(noCredits, rec.HardcoverID)
+			noCredits = append(noCredits, row.ID)
 		}
 	}
 	if len(noCredits) > 0 {
@@ -695,9 +696,9 @@ func (h *Hardcover) fillCredits(
 	); err != nil {
 		return err
 	}
-	byID := make(map[uint32][]BookCredit, len(payload.Books))
+	byID := make(map[string][]BookCredit, len(payload.Books))
 	for _, b := range payload.Books {
-		byID[b.ID] = creditsFrom(b.Contributions)
+		byID[providerid.Format(b.ID)] = creditsFrom(b.Contributions)
 	}
 	for _, r := range records {
 		if c, ok := byID[r.HardcoverID]; ok {
@@ -709,43 +710,49 @@ func (h *Hardcover) fillCredits(
 
 func (h *Hardcover) GetBooks(
 	ctx context.Context,
-	ids []uint32,
+	ids []string,
 ) ([]*BookRecord, error) {
 	return h.getBooks(ctx, ids, true)
 }
 
 func (h *Hardcover) GetBooksFresh(
 	ctx context.Context,
-	ids []uint32,
+	ids []string,
 ) ([]*BookRecord, error) {
 	return h.getBooks(ctx, ids, false)
 }
 
 func (h *Hardcover) getBooks(
 	ctx context.Context,
-	ids []uint32,
+	ids []string,
 	useMemo bool,
 ) ([]*BookRecord, error) {
 	ctx, span := tracer.Start(ctx, "metadata.hardcover.get_books")
 	defer span.End()
 
-	found := make(map[uint32]*BookRecord, len(ids))
+	found := make(map[string]*BookRecord, len(ids))
 	var missing []uint32
-	asked := make(map[uint32]bool, len(ids))
-	order := make([]uint32, 0, len(ids))
+	asked := make(map[string]bool, len(ids))
+	order := make([]string, 0, len(ids))
 	for _, id := range ids {
 		if asked[id] {
 			continue
 		}
 		asked[id] = true
+		// An id that is no Hardcover number names no book: absent, like an
+		// unknown one.
+		n, ok := providerid.Parse(id)
+		if !ok {
+			continue
+		}
 		order = append(order, id)
 		if useMemo {
-			if rec, ok := h.books.get(strconv.FormatUint(uint64(id), 10)); ok {
+			if rec, ok := h.books.get(id); ok {
 				found[id] = rec
 				continue
 			}
 		}
-		missing = append(missing, id)
+		missing = append(missing, n)
 	}
 	for chunk := range slices.Chunk(missing, hcBookBatch) {
 		recs, err := h.fetchBooks(ctx, chunk)
@@ -754,9 +761,7 @@ func (h *Hardcover) getBooks(
 		}
 		for _, rec := range recs {
 			found[rec.HardcoverID] = rec
-			h.books.put(
-				strconv.FormatUint(uint64(rec.HardcoverID), 10), rec, hcDetailTTL,
-			)
+			h.books.put(rec.HardcoverID, rec, hcDetailTTL)
 		}
 	}
 	out := make([]*BookRecord, 0, len(order))
@@ -785,10 +790,15 @@ query ($id: Int!) {
 
 func (h *Hardcover) GetSeries(
 	ctx context.Context,
-	id uint32,
+	id string,
 ) (*SeriesRecord, error) {
 	ctx, span := tracer.Start(ctx, "metadata.hardcover.get_series")
 	defer span.End()
+
+	n, ok := providerid.Parse(id)
+	if !ok {
+		return nil, nil
+	}
 
 	var payload struct {
 		Series []struct {
@@ -815,7 +825,7 @@ func (h *Hardcover) GetSeries(
 		} `json:"series"`
 	}
 	if err := h.query(
-		ctx, hcSeriesQuery, map[string]any{"id": id}, &payload,
+		ctx, hcSeriesQuery, map[string]any{"id": n}, &payload,
 	); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
@@ -824,7 +834,7 @@ func (h *Hardcover) GetSeries(
 	}
 	row := payload.Series[0]
 	rec := &SeriesRecord{
-		HardcoverID: row.ID,
+		HardcoverID: providerid.Format(row.ID),
 		Name:        strings.TrimSpace(row.Name),
 		Slug:        strings.TrimSpace(row.Slug),
 		Description: derefStr(row.Description),
@@ -837,7 +847,7 @@ func (h *Hardcover) GetSeries(
 		rec.Books = *row.BooksCount
 	}
 	if row.Author != nil {
-		rec.AuthorHardcoverID = row.Author.ID
+		rec.AuthorHardcoverID = providerid.Format(row.Author.ID)
 		rec.AuthorName = strings.TrimSpace(row.Author.Name)
 		rec.AuthorImageURL = string(row.Author.CachedImage)
 	}
@@ -847,7 +857,10 @@ func (h *Hardcover) GetSeries(
 			continue
 		}
 		seenBook[v.BookID] = true
-		ref := SeriesVolumeRef{Position: *v.Position, BookHardcoverID: v.BookID}
+		ref := SeriesVolumeRef{
+			Position:        *v.Position,
+			BookHardcoverID: providerid.Format(v.BookID),
+		}
 		if v.Book != nil {
 			ref.UsersCount = derefU32(v.Book.UsersCount)
 			ref.Compilation = v.Book.Compilation != nil && *v.Book.Compilation
@@ -888,12 +901,17 @@ query ($ids: [Int!]!) {
 // candidate series, memoised per sorted id set.
 func (h *Hardcover) GetSeriesLookup(
 	ctx context.Context,
-	ids []uint32,
+	ids []string,
 ) ([]SeriesLookupRecord, error) {
 	ctx, span := tracer.Start(ctx, "metadata.hardcover.get_series_lookup")
 	defer span.End()
 
-	sorted := slices.Clone(ids)
+	sorted := make([]uint32, 0, len(ids))
+	for _, id := range ids {
+		if n, ok := providerid.Parse(id); ok {
+			sorted = append(sorted, n)
+		}
+	}
 	slices.Sort(sorted)
 	sorted = slices.Compact(sorted)
 	if len(sorted) == 0 {
@@ -901,7 +919,7 @@ func (h *Hardcover) GetSeriesLookup(
 	}
 	parts := make([]string, len(sorted))
 	for i, id := range sorted {
-		parts[i] = strconv.FormatUint(uint64(id), 10)
+		parts[i] = providerid.Format(id)
 	}
 	key := strings.Join(parts, ",")
 	if recs, ok := h.seriesLookups.get(key); ok {
@@ -922,7 +940,7 @@ func (h *Hardcover) GetSeriesLookup(
 			return SeriesLookupVolume{}, false
 		}
 		return SeriesLookupVolume{
-			BookHardcoverID: uint32(v.Book.ID),
+			BookHardcoverID: providerid.Format(uint32(v.Book.ID)),
 			UsersCount:      derefU32(v.Book.UsersCount),
 			Compilation:     v.Book.Compilation != nil && *v.Book.Compilation,
 			ImageURL:        string(v.Book.CachedImage),
@@ -954,7 +972,7 @@ func (h *Hardcover) GetSeriesLookup(
 			continue
 		}
 		rec := SeriesLookupRecord{
-			HardcoverID:  uint32(row.ID),
+			HardcoverID:  providerid.Format(uint32(row.ID)),
 			Name:         strings.TrimSpace(row.Name),
 			Slug:         strings.TrimSpace(row.Slug),
 			PrimaryBooks: derefU32(row.PrimaryBooksCount),
@@ -980,7 +998,7 @@ func (h *Hardcover) GetSeriesLookup(
 		recs = append(recs, rec)
 	}
 	slices.SortFunc(recs, func(a, b SeriesLookupRecord) int {
-		return cmp.Compare(a.HardcoverID, b.HardcoverID)
+		return providerid.Compare(a.HardcoverID, b.HardcoverID)
 	})
 	h.seriesLookups.put(key, recs, hcLookupTTL)
 	return recs, nil

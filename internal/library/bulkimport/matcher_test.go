@@ -1,6 +1,7 @@
 package bulkimport
 
 import (
+	"github.com/datahearth/streamline/internal/providerid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -14,9 +15,13 @@ var _ = Describe("Classify", Label("unit", "bulkimport"), func() {
 		return library.ParseResult{Title: title, Year: year}
 	}
 	hit := func(id uint32, title string, year uint16) metadata.MovieResult {
-		return metadata.MovieResult{TMDBID: id, Title: title, Year: year}
+		return metadata.MovieResult{
+			TMDBID: providerid.Format(id),
+			Title:  title,
+			Year:   year,
+		}
 	}
-	noExisting := map[uint32]uint32{}
+	noExisting := map[string]uint32{}
 	const anyPath = "/srv/Films/Foo/Foo.mkv"
 
 	It("0 hits → unmatched", func() {
@@ -33,7 +38,7 @@ var _ = Describe("Classify", Label("unit", "bulkimport"), func() {
 			noExisting,
 		)
 		Expect(c.Kind).To(Equal(entimportscanfile.ClassificationConfirmed))
-		Expect(c.TMDBID).To(Equal(uint32(603)))
+		Expect(c.TMDBID).To(Equal("603"))
 		Expect(c.Candidates).To(HaveLen(1))
 	})
 
@@ -43,7 +48,7 @@ var _ = Describe("Classify", Label("unit", "bulkimport"), func() {
 			hit(346365, "It", 2017),
 		}, noExisting)
 		Expect(c.Kind).To(Equal(entimportscanfile.ClassificationConfirmed))
-		Expect(c.TMDBID).To(Equal(uint32(346365)))
+		Expect(c.TMDBID).To(Equal("346365"))
 	})
 
 	It("stays ambiguous when several same-titled hits share the year", func() {
@@ -76,16 +81,16 @@ var _ = Describe("Classify", Label("unit", "bulkimport"), func() {
 			noExisting,
 		)
 		Expect(c.Kind).To(Equal(entimportscanfile.ClassificationConfirmed))
-		Expect(c.TMDBID).To(Equal(uint32(603)))
+		Expect(c.TMDBID).To(Equal("603"))
 	})
 
 	It("existing-row collision wins regardless of confidence", func() {
 		c := Classify(anyPath, parsed("The Matrix", 1999),
 			[]metadata.MovieResult{hit(603, "The Matrix", 1999)},
-			map[uint32]uint32{603: 42},
+			map[string]uint32{"603": 42},
 		)
 		Expect(c.Kind).To(Equal(entimportscanfile.ClassificationExisting))
-		Expect(c.TMDBID).To(Equal(uint32(603)))
+		Expect(c.TMDBID).To(Equal("603"))
 		Expect(c.ExistingMovieID).To(Equal(uint32(42)))
 	})
 
@@ -107,14 +112,14 @@ var _ = Describe("Classify", Label("unit", "bulkimport"), func() {
 				hit(49948, "Fantasia 2000", 2000),
 			}, noExisting)
 			Expect(c.Kind).To(Equal(entimportscanfile.ClassificationConfirmed))
-			Expect(c.TMDBID).To(Equal(uint32(49948)))
+			Expect(c.TMDBID).To(Equal("49948"))
 			Expect(c.Candidates).To(HaveLen(1))
 			Expect(c.Candidates[0].Title).To(Equal("Fantasia 2000"))
 		})
 
 		It("still reports existing when that id is already in the library", func() {
 			c := Classify(idPath, parsed("Fantasia", 2000), nil,
-				map[uint32]uint32{49948: 12})
+				map[string]uint32{"49948": 12})
 			Expect(c.Kind).To(Equal(entimportscanfile.ClassificationExisting))
 			Expect(c.ExistingMovieID).To(Equal(uint32(12)))
 		})
@@ -129,14 +134,14 @@ var _ = Describe("Classify across languages", Label("unit", "bulkimport"), func(
 			"/srv/Films/2001 A Space Odyssey (1968)/x.mkv",
 			library.ParseResult{Title: "2001 A Space Odyssey", Year: 1968},
 			[]metadata.MovieResult{{
-				TMDBID:        62,
+				TMDBID:        "62",
 				Title:         "2001 : L'Odyssée de l'espace",
 				OriginalTitle: "2001: A Space Odyssey",
 				Year:          1968,
 			}},
-			map[uint32]uint32{},
+			map[string]uint32{},
 		)
 		Expect(c.Kind).To(Equal(entimportscanfile.ClassificationConfirmed))
-		Expect(c.TMDBID).To(Equal(uint32(62)))
+		Expect(c.TMDBID).To(Equal("62"))
 	})
 })

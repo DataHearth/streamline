@@ -155,7 +155,7 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 
 		BeforeEach(func() {
 			bookmeta.EXPECT().BookByISBN(mock.Anything, "9780765311771").
-				Return(uint32(1), nil).Once()
+				Return("1", nil).Once()
 			bookmeta.EXPECT().SearchBooks(mock.Anything, "Some Unknown Book loose").
 				Return(nil, nil).Once()
 			rows = scan(ebookRoot)
@@ -179,7 +179,7 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 				Expect(
 					elantris.Classification,
 				).To(Equal(entimportscanbook.ClassificationConfirmed))
-				Expect(elantris.BookHardcoverID).To(Equal(uint32(1)))
+				Expect(elantris.BookHardcoverID).To(Equal("1"))
 				Expect(elantris.Candidates).To(HaveLen(1))
 				Expect(elantris.Candidates[0].Title).To(BeEmpty())
 			},
@@ -203,10 +203,10 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 	It("flags a hit already held in the slot as existing", func() {
 		now := time.Now()
 		held, err := store.CreateBook(ctx, db.BookSeed{
-			HardcoverID: 1, Title: "Elantris", AuthorName: "Brandon Sanderson",
+			HardcoverID: "1", Title: "Elantris", AuthorName: "Brandon Sanderson",
 			Kind: "novel", PreferredLanguage: "en", RefreshedAt: &now,
 			Credits: []db.CreditSeed{{
-				AuthorHardcoverID: 10, Name: "Brandon Sanderson", Role: "author",
+				AuthorHardcoverID: "10", Name: "Brandon Sanderson", Role: "author",
 			}},
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -219,8 +219,12 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 		touch(filepath.Join(ebookRoot, "Elantris - Brandon Sanderson.mobi"))
 		bookmeta.EXPECT().SearchBooks(mock.Anything, mock.Anything).
 			Return([]metadata.BookSearchResult{
-				{HardcoverID: 1, Title: "Elantris", Author: "Brandon Sanderson"},
-				{HardcoverID: 2, Title: "Elantris Reissue", Author: "Other Person"},
+				{HardcoverID: "1", Title: "Elantris", Author: "Brandon Sanderson"},
+				{
+					HardcoverID: "2",
+					Title:       "Elantris Reissue",
+					Author:      "Other Person",
+				},
 			}, nil).Once()
 
 		rows := scan(ebookRoot)
@@ -269,7 +273,7 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 		dir := filepath.Join(ebookRoot, "Brandon Sanderson", "Elantris (1)")
 		writeEpub(filepath.Join(dir, "Elantris - Brandon Sanderson.epub"), testOPF)
 		bookmeta.EXPECT().BookByISBN(mock.Anything, "9780765311771").
-			Return(uint32(1), nil).Once()
+			Return("1", nil).Once()
 
 		rows := scan(ebookRoot)
 		Expect(rows).To(HaveLen(1))
@@ -408,7 +412,7 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 			dir := filepath.Join(ebookRoot, "Brandon Sanderson", "Elantris (1)")
 			writeEpub(filepath.Join(dir, "Elantris.epub"), testOPF)
 			bookmeta.EXPECT().BookByISBN(mock.Anything, mock.Anything).
-				Return(uint32(0), nil).Maybe()
+				Return("", nil).Maybe()
 			bookmeta.EXPECT().SearchBooks(mock.Anything, mock.Anything).
 				Return(nil, nil).Maybe()
 

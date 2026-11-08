@@ -316,7 +316,7 @@ paths:
               type: object
               required: [tmdb_id]
               properties:
-                tmdb_id: { type: integer, x-go-type: uint32 }
+                tmdb_id: { type: string }
       responses:
         "200":
           $ref: "#/components/responses/ReidentifyResult"
@@ -926,7 +926,7 @@ paths:
               type: object
               required: [tvdb_id]
               properties:
-                tvdb_id: { type: integer, x-go-type: uint32 }
+                tvdb_id: { type: string }
       responses:
         "200":
           $ref: "#/components/responses/ReidentifyResult"
@@ -6530,8 +6530,7 @@ components:
       required: true
       description: Hardcover book id or series id, as selected by `type`; the two id spaces are separate.
       schema:
-        type: integer
-        x-go-type: uint32
+        type: string
     BookLookupTypeParam:
       name: type
       in: query
@@ -7156,8 +7155,7 @@ components:
       required: true
       description: TMDB movie id.
       schema:
-        type: integer
-        x-go-type: uint32
+        type: string
 
     TVDBID:
       name: tvdb_id
@@ -7165,8 +7163,7 @@ components:
       required: true
       description: TVDB series id.
       schema:
-        type: integer
-        x-go-type: uint32
+        type: string
 
     SeasonNumber:
       name: number
@@ -8704,8 +8701,7 @@ components:
           type: string
           enum: [movie, series, album, book]
         provider_id:
-          type: integer
-          x-go-type: uint32
+          type: string
           description: |
             TMDB id when `kind` is `movie`, TVDB id when it is `series`,
             Hardcover book id when it is `book`. Required for those three.
@@ -8806,11 +8802,7 @@ components:
           type: boolean
           description: Whether Streamline auto-searches and upgrades this title.
         tmdb_id:
-          type: integer
-          format: int64
-          minimum: 0
-          maximum: 4294967295
-          x-go-type: uint32
+          type: string
         quality_profile:
           type: string
           description: Name of the quality profile (empty resolves to the movie default).
@@ -8866,8 +8858,7 @@ components:
             lookup of a title the library does not hold, which has no person
             row behind it.
         tmdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
           description: TMDB person id; links to themoviedb.org/person/{id}.
         name:
           type: string
@@ -9008,11 +8999,7 @@ components:
       required: [tmdb_id]
       properties:
         tmdb_id:
-          type: integer
-          format: int64
-          minimum: 0
-          maximum: 4294967295
-          x-go-type: uint32
+          type: string
         quality_profile:
           type: string
           description: Name of the quality profile (empty resolves to the movie default).
@@ -9079,17 +9066,15 @@ components:
                 only key GET /people/{id} accepts.
               x-go-type: uint32
             tmdb_id:
-              type: integer
+              type: string
               description: |
-                TMDB person id, or 0 when TMDB never supplied one. Data the person
+                TMDB person id, empty when TMDB never supplied one. Data the person
                 carries, not a key.
-              x-go-type: uint32
             tvdb_id:
-              type: integer
+              type: string
               description: |
-                TVDB person id, or 0 when TVDB never supplied one. Series cast
+                TVDB person id, empty when TVDB never supplied one. Series cast
                 comes from TVDB, so these are the entries with no `tmdb_id`.
-              x-go-type: uint32
             name:
               type: string
             profile_url:
@@ -9321,13 +9306,11 @@ components:
               description: Row id in the library's `persons` table.
               x-go-type: uint32
             tmdb_id:
-              type: integer
-              description: TMDB person id, or 0 when TMDB never supplied one.
-              x-go-type: uint32
+              type: string
+              description: TMDB person id, empty when TMDB never supplied one.
             tvdb_id:
-              type: integer
-              description: TVDB person id, or 0 when TVDB never supplied one.
-              x-go-type: uint32
+              type: string
+              description: TVDB person id, empty when TVDB never supplied one.
             name:
               type: string
             profile_url:
@@ -9477,8 +9460,7 @@ components:
         monitored:
           type: boolean
         tvdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         network:
           type: string
         creator:
@@ -11199,8 +11181,7 @@ components:
           type: integer
           x-go-type: uint32
         hardcover_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         title:
           type: string
           description: |
@@ -11315,8 +11296,7 @@ components:
           type: integer
           x-go-type: uint32
         hardcover_id:
-          type: integer
-          x-go-type: uint32
+          type: string
           description: Hardcover series id, a separate id space from books.
         hardcover_slug:
           type: string
@@ -11538,8 +11518,7 @@ components:
       required: [hardcover_id, type, title, author, already_added]
       properties:
         hardcover_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         type:
           $ref: "#/components/schemas/BookShelfType"
         title:
@@ -11583,8 +11562,7 @@ components:
             would pick at its first positions. The SPA builds
             `/posters/lookup/books/{id}/poster.jpg` from each.
           items:
-            type: integer
-            x-go-type: uint32
+            type: string
         matched_title:
           type: string
           description: Series only; the book title, in whatever language, through which the series was found, when it is not the series' own name.
@@ -11647,16 +11625,14 @@ components:
                 a series; the SPA builds `/posters/lookup/books/{id}/poster.jpg`
                 from each.
               items:
-                type: integer
-                x-go-type: uint32
+                type: string
 
     AddBookRequest:
       type: object
       required: [hardcover_id]
       properties:
         hardcover_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         quality_profile:
           type: string
           description: Empty or omitted uses the default book profile; an unknown name answers 422.
@@ -11668,8 +11644,7 @@ components:
       required: [hardcover_id]
       properties:
         hardcover_id:
-          type: integer
-          x-go-type: uint32
+          type: string
           description: Hardcover series id.
         quality_profile:
           type: string
@@ -11885,8 +11860,7 @@ components:
       required: [tvdb_id]
       properties:
         tvdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         quality_profile:
           type: string
           description: Name of the quality profile (empty resolves to the series default).
@@ -11935,8 +11909,7 @@ components:
       required: [tvdb_id, title, year]
       properties:
         tvdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         title:
           type: string
         year:
@@ -11960,11 +11933,7 @@ components:
       required: [tmdb_id, title, original_title, year]
       properties:
         tmdb_id:
-          type: integer
-          format: int64
-          minimum: 0
-          maximum: 4294967295
-          x-go-type: uint32
+          type: string
         title:
           type: string
         original_title:
@@ -14873,8 +14842,7 @@ components:
       required: [tmdb_id, title, year]
       properties:
         tmdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         title:
           type: string
         year:
@@ -14911,8 +14879,7 @@ components:
           items:
             $ref: "#/components/schemas/ImportScanCandidate"
         tmdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         existing_movie_id:
           type: integer
           x-go-type: uint32
@@ -14920,8 +14887,7 @@ components:
           type: string
           enum: [pending, accept, skip]
         decision_tmdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         outcome:
           type: string
           enum: [pending, created, attached, skipped, failed]
@@ -15174,8 +15140,7 @@ components:
           type: string
           enum: [pending, accept, skip]
         tmdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
 
     ImportBulkDecisionRequest:
       type: object
@@ -15233,8 +15198,7 @@ components:
       required: [tvdb_id, title]
       properties:
         tvdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         title:
           type: string
         year:
@@ -15260,8 +15224,7 @@ components:
           type: string
           enum: [confirmed, ambiguous, unmatched, existing]
         tvdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
           nullable: true
         candidates:
           type: array
@@ -15278,8 +15241,7 @@ components:
           type: string
           enum: [pending, accept, skip]
         decision_tvdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
           nullable: true
         outcome:
           type: string
@@ -15317,8 +15279,7 @@ components:
           type: string
           enum: [pending, accept, skip]
         tvdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
 
     ImportScanAlbumCandidate:
       type: object
@@ -15450,8 +15411,7 @@ components:
       required: [book_hardcover_id, title]
       properties:
         book_hardcover_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         title:
           type: string
         author:
@@ -15503,8 +15463,7 @@ components:
           type: string
           enum: [confirmed, ambiguous, unmatched, existing]
         book_hardcover_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         candidates:
           type: array
           items:
@@ -15517,8 +15476,7 @@ components:
           type: string
           enum: [pending, accept, skip]
         decision_book_hardcover_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         outcome:
           type: string
           enum: [pending, created, attached, failed]
@@ -15558,8 +15516,7 @@ components:
           type: string
           enum: [pending, accept, skip]
         book_hardcover_id:
-          type: integer
-          x-go-type: uint32
+          type: string
 
     ActivityEventType:
       type: string
@@ -16092,8 +16049,7 @@ components:
           type: integer
           x-go-type: uint16
         tmdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         digital_release_date:
           type: string
           format: date-time
@@ -16390,13 +16346,12 @@ components:
         media_type:
           $ref: "#/components/schemas/RequestMediaType"
         media_id:
-          type: integer
-          x-go-type: uint32
+          type: string
           description: |
             TMDB id for movies, TVDB id for shows, Hardcover book id for
             books, Hardcover series id for book series (a separate id space,
-            which is why `media_type` is part of the uniqueness key); 0 for
-            artists and albums.
+            which is why `media_type` is part of the uniqueness key); empty
+            for artists and albums.
         media_mbid:
           type: string
           description: |
@@ -16479,8 +16434,7 @@ components:
         media_type:
           $ref: "#/components/schemas/RequestMediaType"
         media_id:
-          type: integer
-          x-go-type: uint32
+          type: string
           description: Required for movie, tvshow, book and book_series; rejected for artist and album.
         media_mbid:
           type: string
@@ -16567,11 +16521,9 @@ components:
         original_language:
           type: string
         tmdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         tvdb_id:
-          type: integer
-          x-go-type: uint32
+          type: string
         network:
           type: string
         season_count:

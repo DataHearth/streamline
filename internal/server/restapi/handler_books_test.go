@@ -68,13 +68,22 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 		fr.Original = false
 		en.Original = true
 		b := &ent.Book{
-			ID: 7, HardcoverID: 70, Title: "Elantris", OriginalTitle: "Elantris VO",
-			AuthorName: "Brandon Sanderson", Kind: "novel", Genre: "Fantasy",
-			Overview: "A fallen city.", PreferredLanguage: "en",
-			ReleaseDate: &released, ReleaseYear: new(uint16(2005)),
-			RatingTenths: new(uint8(42)), CreateTime: now,
-			EbookMonitored: true, EbookStatus: "wanted",
-			AudiobookStatus: "skipped",
+			ID:                7,
+			HardcoverID:       "70",
+			Title:             "Elantris",
+			OriginalTitle:     "Elantris VO",
+			AuthorName:        "Brandon Sanderson",
+			Kind:              "novel",
+			Genre:             "Fantasy",
+			Overview:          "A fallen city.",
+			PreferredLanguage: "en",
+			ReleaseDate:       &released,
+			ReleaseYear:       new(uint16(2005)),
+			RatingTenths:      new(uint8(42)),
+			CreateTime:        now,
+			EbookMonitored:    true,
+			EbookStatus:       "wanted",
+			AudiobookStatus:   "skipped",
 		}
 		b.Edges.Editions = []*ent.BookEdition{fr, en}
 		b.Edges.EbookEdition = en
@@ -297,7 +306,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 			app.books.EXPECT().Lookup(mock.Anything, "one piece", "all").
 				Return([]book.LookupHit{
 					{
-						HardcoverID:  3,
+						HardcoverID:  "3",
 						Type:         "series",
 						Title:        "One Piece",
 						Author:       "Oda",
@@ -308,11 +317,11 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 						CoverID:      31,
 						Year:         1997,
 						Slug:         "one-piece",
-						CoverBookIDs: []uint32{1001, 1002, 1003},
+						CoverBookIDs: []string{"1001", "1002", "1003"},
 						MatchedTitle: "ワンピース",
 					},
 					{
-						HardcoverID: 4,
+						HardcoverID: "4",
 						Type:        "book",
 						Title:       "Guide",
 						Author:      "X",
@@ -339,7 +348,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 			Expect(*s.Volumes).To(Equal(uint32(105)))
 			Expect(s.Kind).To(BeNil())
 			Expect(*s.Slug).To(Equal("one-piece"))
-			Expect(*s.CoverBookIds).To(Equal([]uint32{1001, 1002, 1003}))
+			Expect(*s.CoverBookIds).To(Equal([]string{"1001", "1002", "1003"}))
 			Expect(*s.MatchedTitle).To(Equal("ワンピース"))
 			Expect(b.Slug).To(BeNil())
 			Expect(b.CoverBookIds).To(BeNil())
@@ -410,16 +419,16 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 		)
 
 		It("renders a detail with its extras", func() {
-			app.books.EXPECT().LookupDetail(mock.Anything, "series", uint32(3)).
+			app.books.EXPECT().LookupDetail(mock.Anything, "series", "3").
 				Return(&book.LookupDetail{
-					HardcoverID:  3,
+					HardcoverID:  "3",
 					Type:         "series",
 					Title:        "One Piece",
 					Author:       "Oda",
 					Kind:         "manga",
 					Volumes:      105,
 					Slug:         "one-piece",
-					CoverBookIDs: []uint32{1001, 1002},
+					CoverBookIDs: []string{"1001", "1002"},
 					Overview:     "Pirates",
 					Genres:       []string{"Manga"},
 					Editions: []book.LookupEdition{
@@ -431,7 +440,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 							Original:  true,
 						},
 					},
-					VolumeBookIDs: []uint32{1001, 1002},
+					VolumeBookIDs: []string{"1001", "1002"},
 				}, nil).Once()
 
 			resp := send(
@@ -446,14 +455,14 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 			decode(resp, &d)
 			Expect(d.Overview).To(Equal(new("Pirates")))
 			Expect(*d.Slug).To(Equal("one-piece"))
-			Expect(*d.CoverBookIds).To(Equal([]uint32{1001, 1002}))
-			Expect(*d.VolumeBookIds).To(Equal([]uint32{1001, 1002}))
+			Expect(*d.CoverBookIds).To(Equal([]string{"1001", "1002"}))
+			Expect(*d.VolumeBookIds).To(Equal([]string{"1001", "1002"}))
 			Expect(*d.Editions).To(HaveLen(1))
 			Expect(*(*d.Editions)[0].Original).To(BeTrue())
 		})
 
 		It("answers 404, 400, 429 and 503 on a detail", func() {
-			app.books.EXPECT().LookupDetail(mock.Anything, "book", uint32(404)).
+			app.books.EXPECT().LookupDetail(mock.Anything, "book", "404").
 				Return(nil, book.ErrHardcoverNotFound).Once()
 			Expect(
 				send(
@@ -473,7 +482,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 				).StatusCode,
 			).
 				To(Equal(http.StatusBadRequest))
-			app.books.EXPECT().LookupDetail(mock.Anything, "book", uint32(5)).
+			app.books.EXPECT().LookupDetail(mock.Anything, "book", "5").
 				Return(nil, metadata.ErrRateLimited).Once()
 			Expect(
 				send(
@@ -484,7 +493,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 				).StatusCode,
 			).
 				To(Equal(http.StatusTooManyRequests))
-			app.books.EXPECT().LookupDetail(mock.Anything, "book", uint32(6)).
+			app.books.EXPECT().LookupDetail(mock.Anything, "book", "6").
 				Return(nil, metadata.ErrHardcoverUnauthorized).Once()
 			Expect(
 				send(
@@ -501,7 +510,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 	Describe("POST /books", func() {
 		It("adds a book for a member", func() {
 			app.books.EXPECT().AddBook(mock.Anything, book.AddBookParams{
-				HardcoverID: 70, Monitor: "ebook", QualityProfile: "std",
+				HardcoverID: "70", Monitor: "ebook", QualityProfile: "std",
 			}).Return(aBook(), nil).Once()
 			app.books.EXPECT().
 				Progress(mock.Anything, mock.Anything).
@@ -509,7 +518,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 				Return(nil)
 
 			resp := send(http.MethodPost, "/api/v1/books", app.memberKey,
-				`{"hardcover_id":70,"monitor":"ebook","quality_profile":"std"}`)
+				`{"hardcover_id":"70","monitor":"ebook","quality_profile":"std"}`)
 
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			var b Book
@@ -519,7 +528,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 
 		It("is closed to a request-only user", func() {
 			Expect(send(http.MethodPost, "/api/v1/books", app.requestOnlyKey,
-				`{"hardcover_id":70}`).StatusCode).To(Equal(http.StatusForbidden))
+				`{"hardcover_id":"70"}`).StatusCode).To(Equal(http.StatusForbidden))
 		})
 
 		DescribeTable(
@@ -533,7 +542,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 					http.MethodPost,
 					"/api/v1/books",
 					app.memberKey,
-					`{"hardcover_id":70}`,
+					`{"hardcover_id":"70"}`,
 				)
 				Expect(resp.StatusCode).To(Equal(status))
 			},
@@ -572,7 +581,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 			refreshed := now
 			s := &ent.BookSeries{
 				ID:               9,
-				HardcoverID:      3,
+				HardcoverID:      "3",
 				Title:            "One Piece",
 				AuthorName:       "Oda",
 				Kind:             "manga",
@@ -597,11 +606,11 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 			}
 			s.Edges.Volumes = []*ent.Book{one, stub}
 			app.books.EXPECT().AddSeries(mock.Anything, book.AddSeriesParams{
-				HardcoverID: 3, Monitor: "future",
+				HardcoverID: "3", Monitor: "future",
 			}).Return(s, nil).Once()
 
 			resp := send(http.MethodPost, "/api/v1/books/series", app.memberKey,
-				`{"hardcover_id":3,"monitor":"future"}`)
+				`{"hardcover_id":"3","monitor":"future"}`)
 
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			var out BookSeries
@@ -625,7 +634,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 					http.MethodPost,
 					"/api/v1/books/series",
 					app.memberKey,
-					`{"hardcover_id":3}`,
+					`{"hardcover_id":"3"}`,
 				)
 				Expect(resp.StatusCode).To(Equal(status))
 			},
@@ -828,7 +837,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 				up := now.Add(48 * time.Hour)
 				s := &ent.BookSeries{
 					ID:               9,
-					HardcoverID:      3,
+					HardcoverID:      "3",
 					Title:            "One Piece",
 					OriginalTitle:    "ワンピース",
 					AuthorName:       "Oda",

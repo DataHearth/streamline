@@ -72,7 +72,7 @@ var _ = Describe("TVDB provider", Label("unit", "metadata"), func() {
 		res, err := client.SearchSeries(ctx, "black sea")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res).To(HaveLen(1))
-		Expect(res[0].TVDBID).To(Equal(uint32(123)))
+		Expect(res[0].TVDBID).To(Equal("123"))
 		Expect(
 			res[0].Title,
 		).To(Equal("The Black Sea"))
@@ -82,7 +82,7 @@ var _ = Describe("TVDB provider", Label("unit", "metadata"), func() {
 	})
 
 	It("gets a series with seasons and episodes", func() {
-		d, err := client.GetSeries(ctx, 123)
+		d, err := client.GetSeries(ctx, "123")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(
 			d.Title,
@@ -146,11 +146,11 @@ var _ = Describe("TVDB series cast", Label("unit", "metadata"), func() {
 		client.BaseURL = srv.URL
 		client.token = "test-token" // skip /login round trip
 
-		cast, err := client.GetSeriesCast(context.Background(), 123)
+		cast, err := client.GetSeriesCast(context.Background(), "123")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cast).To(HaveLen(1))
-		Expect(cast[0].TVDBID).To(Equal(uint32(456)))
-		Expect(cast[0].TMDBID).To(BeZero())
+		Expect(cast[0].TVDBID).To(Equal("456"))
+		Expect(cast[0].TMDBID).To(BeEmpty())
 	})
 })
 
@@ -180,7 +180,7 @@ var _ = Describe("TVDB person", Label("unit", "metadata"), func() {
 	It("maps the extended people record", func() {
 		body = `{"data":{"id":456,"name":"Actor A","image":"/a.jpg","birth":"1969-11-04","death":"2024-01-02","birthPlace":"Uvalde, Texas","biographies":[{"biography":"An actor.","language":"eng"}],"remoteIds":[{"id":"nm0000190","sourceName":"IMDB"},{"id":"actor_a","sourceName":"Instagram"},{"id":"ActorA","sourceName":"Twitter"}]}}`
 
-		p, err := client.GetPerson(ctx, 456)
+		p, err := client.GetPerson(ctx, "456")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p.Biography).To(Equal("An actor."))
 		Expect(p.Birthday).To(Equal("1969-11-04"))
@@ -197,7 +197,7 @@ var _ = Describe("TVDB person", Label("unit", "metadata"), func() {
 	It("leaves a person TVDB holds no remote ids for empty", func() {
 		body = `{"data":{"id":456,"name":"Actor A","birth":null,"death":null,"birthPlace":null,"biographies":[],"remoteIds":[]}}`
 
-		p, err := client.GetPerson(ctx, 456)
+		p, err := client.GetPerson(ctx, "456")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p.Biography).To(BeEmpty())
 		Expect(p.Birthday).To(BeEmpty())
@@ -212,7 +212,7 @@ var _ = Describe("TVDB person", Label("unit", "metadata"), func() {
 		client.language = "fra"
 		body = `{"data":{"id":456,"biographies":[{"biography":"An actor.","language":"eng"},{"biography":"Un acteur.","language":"fra"}]}}`
 
-		p, err := client.GetPerson(ctx, 456)
+		p, err := client.GetPerson(ctx, "456")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p.Biography).To(Equal("Un acteur."))
 	})
@@ -227,7 +227,7 @@ var _ = Describe("TVDB person", Label("unit", "metadata"), func() {
 		DeferCleanup(srv.Close)
 		client.BaseURL = srv.URL
 
-		_, err := client.GetPerson(ctx, 456)
+		_, err := client.GetPerson(ctx, "456")
 		Expect(err).To(MatchError(ContainSubstring("tvdb get person")))
 	})
 })
@@ -374,7 +374,7 @@ var _ = Describe("TVDB token handling", Label("unit", "metadata"), func() {
 		res, err := client.SearchSeries(ctx, "q")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res).To(HaveLen(1))
-		Expect(res[0].TVDBID).To(Equal(uint32(7)))
+		Expect(res[0].TVDBID).To(Equal("7"))
 		Expect(logins.Load()).To(Equal(int32(2)))
 		Expect(snapshot()).To(Equal([]string{"token-1", "token-2"}))
 	})
@@ -431,7 +431,7 @@ var _ = Describe("TVDB search fallback", Label("unit", "metadata"), func() {
 		res, err := client.SearchSeries(ctx, "Zom 100 Bucket List of the Dead")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res).To(HaveLen(1))
-		Expect(res[0].TVDBID).To(Equal(uint32(429310)))
+		Expect(res[0].TVDBID).To(Equal("429310"))
 		Expect(queried).To(Equal([]string{
 			"Zom 100 Bucket List of the Dead",
 			"Zom 100 Bucket List",
@@ -638,7 +638,7 @@ var _ = Describe(
 					ep(2, 2, "Original Two", "2026-09-25"),
 				)
 
-				d, err := client.GetSeries(ctx, 7)
+				d, err := client.GetSeries(ctx, "7")
 				Expect(err).NotTo(HaveOccurred())
 				// The translated title stands; an unaired episode stays untitled.
 				Expect(
@@ -660,7 +660,7 @@ var _ = Describe(
 				ep(1, 3, "", ""),
 			)
 
-			_, err := client.GetSeries(ctx, 7)
+			_, err := client.GetSeries(ctx, "7")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(asked).To(Equal([]string{"/series/7/episodes/default/fra"}))
 		})
@@ -671,7 +671,7 @@ var _ = Describe(
 			)
 			pages["/series/7/episodes/default"] = page(ep(2, 1, "", "2026-09-18"))
 
-			d, err := client.GetSeries(ctx, 7)
+			d, err := client.GetSeries(ctx, "7")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(titles(d)).To(Equal([]string{""}))
 			Expect(asked).To(ContainElement("/series/7/episodes/default/eng"))

@@ -122,7 +122,7 @@ var _ = Describe("Handler: Import scan shows",
 			func() {
 				app.store.EXPECT().UpdateImportScanShowDecision(mock.Anything,
 					uint32(5), uint32(999), entimportscanshow.DecisionSkip,
-					(*uint32)(nil)).
+					(*string)(nil)).
 					Return(db.ErrImportScanShowNotFound).Once()
 
 				resp := app.do(app.req(http.MethodPatch,
@@ -157,7 +157,7 @@ var _ = Describe("Handler: Import scan files",
 			func() {
 				app.bulkImports.EXPECT().UpdateFileDecision(mock.Anything,
 					uint32(5), uint32(999), entimportscanfile.DecisionSkip,
-					(*uint32)(nil)).
+					(*string)(nil)).
 					Return(nil, bulkimport.ErrScanFileNotFound).Once()
 
 				resp := app.do(app.req(http.MethodPatch,

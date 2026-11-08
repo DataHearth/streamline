@@ -123,14 +123,14 @@ func seedSeasons(d *metadata.TVDetails) []db.SeasonSeed {
 
 func (s *Service) Add(
 	ctx context.Context,
-	tvdbID uint32,
+	tvdbID string,
 	qualityProfile string,
 ) (*ent.TVShow, error) {
 	ctx, span := tracer.Start(
 		ctx,
 		"tvshow.add",
 		trace.WithAttributes(
-			attribute.Int("tvdb.id", int(tvdbID)),
+			attribute.String("tvdb.id", tvdbID),
 			attribute.String("quality_profile", qualityProfile),
 		),
 	)
@@ -956,7 +956,7 @@ func (s *Service) grabPackAndMark(
 // rather than wiping it.
 func (s *Service) seriesCast(
 	ctx context.Context,
-	tvdbID uint32,
+	tvdbID string,
 ) []metadata.CastMember {
 	cast, err := s.metadata.GetSeriesCast(ctx, tvdbID)
 	if err != nil {
@@ -1068,17 +1068,17 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 // would untrack the library it was asked to repair.
 func (s *Service) Reidentify(
 	ctx context.Context,
-	id, tvdbID uint32,
+	id uint32, tvdbID string,
 ) (*ent.TVShow, []string, error) {
 	ctx, span := tracer.Start(ctx, "tvshow.reidentify",
 		trace.WithAttributes(
 			attribute.Int64("tvshow.id", int64(id)),
-			attribute.Int64("tvshow.tvdb_id", int64(tvdbID)),
+			attribute.String("tvshow.tvdb_id", tvdbID),
 		),
 	)
 	defer span.End()
 
-	if tvdbID == 0 {
+	if tvdbID == "" {
 		return nil, nil, otelx.RecordSpanError(span, ErrInvalidTVDBID)
 	}
 	show, err := s.db.FindTVShowByID(ctx, id)
@@ -1293,7 +1293,7 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 type Manager interface {
 	Add(
 		ctx context.Context,
-		tvdbID uint32,
+		tvdbID string,
 		qualityProfile string,
 	) (*ent.TVShow, error)
 	List(ctx context.Context, page, limit uint16) ([]*ent.TVShow, uint32, error)
@@ -1326,7 +1326,7 @@ type Manager interface {
 	RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error)
 	Reidentify(
 		ctx context.Context,
-		id, tvdbID uint32,
+		id uint32, tvdbID string,
 	) (*ent.TVShow, []string, error)
 	SetSeasonMonitored(ctx context.Context, id uint32, monitored bool) error
 	SetEpisodeMonitored(ctx context.Context, id uint32, monitored bool) error

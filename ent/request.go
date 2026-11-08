@@ -24,8 +24,8 @@ type Request struct {
 	UpdateTime time.Time `json:"update_time,omitempty"`
 	// MediaType holds the value of the "media_type" field.
 	MediaType request.MediaType `json:"media_type,omitempty"`
-	// TMDB ID for movies, TVDB ID for TV shows, Hardcover ID for books and book series (separate id spaces, which is why media_type is in the uniqueness key). Zero for artists and albums.
-	MediaID uint32 `json:"media_id,omitempty"`
+	// TMDB ID for movies, TVDB ID for TV shows, Hardcover ID for books and book series (separate id spaces, which is why media_type is in the uniqueness key). Empty for artists and albums, which key on media_mbid.
+	MediaID string `json:"media_id,omitempty"`
 	// Artist MBID for artist requests, release-group MBID for album requests.
 	MediaMbid string `json:"media_mbid,omitempty"`
 	// Album requests only: the requester's hint until approval, the verified artist after.
@@ -88,9 +88,9 @@ func (*Request) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case request.FieldID, request.FieldMediaID:
+		case request.FieldID:
 			values[i] = new(sql.NullInt64)
-		case request.FieldMediaType, request.FieldMediaMbid, request.FieldArtistMbid, request.FieldArtistName, request.FieldRequestedAs, request.FieldTitle, request.FieldStatus, request.FieldReason, request.FieldQualityProfile:
+		case request.FieldMediaType, request.FieldMediaID, request.FieldMediaMbid, request.FieldArtistMbid, request.FieldArtistName, request.FieldRequestedAs, request.FieldTitle, request.FieldStatus, request.FieldReason, request.FieldQualityProfile:
 			values[i] = new(sql.NullString)
 		case request.FieldCreateTime, request.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -138,10 +138,10 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 				_m.MediaType = request.MediaType(value.String)
 			}
 		case request.FieldMediaID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field media_id", values[i])
 			} else if value.Valid {
-				_m.MediaID = uint32(value.Int64)
+				_m.MediaID = value.String
 			}
 		case request.FieldMediaMbid:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -261,7 +261,7 @@ func (_m *Request) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.MediaType))
 	builder.WriteString(", ")
 	builder.WriteString("media_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.MediaID))
+	builder.WriteString(_m.MediaID)
 	builder.WriteString(", ")
 	builder.WriteString("media_mbid=")
 	builder.WriteString(_m.MediaMbid)

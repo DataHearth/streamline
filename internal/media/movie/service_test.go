@@ -80,7 +80,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					"series_quality_default_profile": "",
 				})
 
-				_, _, err := svc.Add(ctx, 1, "")
+				_, _, err := svc.Add(ctx, "1", "")
 				Expect(err).To(MatchError(ErrNoQualityProfile))
 			})
 		})
@@ -88,56 +88,56 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		Context("with an explicit profile name", func() {
 			It("surfaces metadata provider errors", func() {
 				metaErr := errors.New("tmdb unreachable")
-				metaMock.GetMovie(mock.Anything, uint32(42)).
+				metaMock.GetMovie(mock.Anything, "42").
 					Return(nil, metaErr).Once()
 
-				_, _, err := svc.Add(ctx, 42, "default")
+				_, _, err := svc.Add(ctx, "42", "default")
 				Expect(err).To(MatchError(ContainSubstring("fetch tmdb metadata")))
 				Expect(err).To(MatchError(metaErr))
 			})
 
 			It("returns an already-exists error on constraint violation", func() {
-				metaMock.GetMovie(mock.Anything, uint32(157336)).
+				metaMock.GetMovie(mock.Anything, "157336").
 					Return(&metadata.MovieDetails{
-						TMDBID: 157336, Title: "Interstellar", Year: 2014,
+						TMDBID: "157336", Title: "Interstellar", Year: 2014,
 					}, nil).Once()
 				storeMock.CreateMovie(mock.Anything, mock.AnythingOfType("db.CreateMovieParams")).
 					Return(nil, &ent.ConstraintError{}).
 					Once()
 
-				_, _, err := svc.Add(ctx, 157336, "default")
+				_, _, err := svc.Add(ctx, "157336", "default")
 				Expect(err).To(MatchError(ContainSubstring("already exists")))
 			})
 
 			It("wraps generic create errors", func() {
-				metaMock.GetMovie(mock.Anything, uint32(1)).
+				metaMock.GetMovie(mock.Anything, "1").
 					Return(&metadata.MovieDetails{
-						TMDBID: 1, Title: "X",
+						TMDBID: "1", Title: "X",
 					}, nil).Once()
 				createErr := errors.New("insert blew up")
 				storeMock.CreateMovie(mock.Anything, mock.AnythingOfType("db.CreateMovieParams")).
 					Return(nil, createErr).
 					Once()
 
-				_, _, err := svc.Add(ctx, 1, "default")
+				_, _, err := svc.Add(ctx, "1", "default")
 				Expect(err).To(MatchError(ContainSubstring("create movie")))
 				Expect(err).To(MatchError(createErr))
 			})
 
 			It("dispatches poster fetch when TMDB returns a poster path", func() {
-				metaMock.GetMovie(mock.Anything, uint32(157336)).
+				metaMock.GetMovie(mock.Anything, "157336").
 					Return(&metadata.MovieDetails{
-						TMDBID: 157336, Title: "Interstellar", Year: 2014,
+						TMDBID: "157336", Title: "Interstellar", Year: 2014,
 						PosterPath: "/abc.jpg",
 					}, nil).Once()
 				storeMock.CreateMovie(mock.Anything, mock.MatchedBy(func(p db.CreateMovieParams) bool {
-					return p.TmdbID == 157336 &&
+					return p.TmdbID == "157336" &&
 						p.Title == "Interstellar" &&
 						p.Year == 2014 &&
 						p.QualityProfile == "default" &&
 						p.Status == entmovie.StatusWanted
 				})).
-					Return(&ent.Movie{ID: 11, Title: "Interstellar", TmdbID: 157336}, nil).
+					Return(&ent.Movie{ID: 11, Title: "Interstellar", TmdbID: "157336"}, nil).
 					Once()
 
 				done := make(chan struct{})
@@ -149,7 +149,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					}).
 					Once()
 
-				m, posterPath, err := svc.Add(ctx, 157336, "default")
+				m, posterPath, err := svc.Add(ctx, "157336", "default")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(m.ID).To(Equal(uint32(11)))
 				Expect(posterPath).To(Equal("/abc.jpg"))
@@ -159,13 +159,13 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			It(
 				"logs but does not fail Add when poster fetch returns an error",
 				func() {
-					metaMock.GetMovie(mock.Anything, uint32(157336)).
+					metaMock.GetMovie(mock.Anything, "157336").
 						Return(&metadata.MovieDetails{
-							TMDBID: 157336, Title: "Interstellar", Year: 2014,
+							TMDBID: "157336", Title: "Interstellar", Year: 2014,
 							PosterPath: "/abc.jpg",
 						}, nil).Once()
 					storeMock.CreateMovie(mock.Anything, mock.AnythingOfType("db.CreateMovieParams")).
-						Return(&ent.Movie{ID: 11, Title: "Interstellar", TmdbID: 157336}, nil).
+						Return(&ent.Movie{ID: 11, Title: "Interstellar", TmdbID: "157336"}, nil).
 						Once()
 
 					done := make(chan struct{})
@@ -177,22 +177,22 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 						}).
 						Once()
 
-					_, _, err := svc.Add(ctx, 157336, "default")
+					_, _, err := svc.Add(ctx, "157336", "default")
 					Expect(err).NotTo(HaveOccurred())
 					Eventually(done).Should(BeClosed())
 				},
 			)
 
 			It("skips poster fetch when TMDB has no poster path", func() {
-				metaMock.GetMovie(mock.Anything, uint32(2)).
+				metaMock.GetMovie(mock.Anything, "2").
 					Return(&metadata.MovieDetails{
-						TMDBID: 2, Title: "NoArt",
+						TMDBID: "2", Title: "NoArt",
 					}, nil).Once()
 				storeMock.CreateMovie(mock.Anything, mock.AnythingOfType("db.CreateMovieParams")).
 					Return(&ent.Movie{ID: 3, Title: "NoArt"}, nil).
 					Once()
 
-				_, posterPath, err := svc.Add(ctx, 2, "default")
+				_, posterPath, err := svc.Add(ctx, "2", "default")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(posterPath).To(BeEmpty())
 			})
@@ -297,29 +297,29 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 	Describe("GetByTMDBID", func() {
 		It("returns the movie when one matches the tmdb id", func() {
-			storeMock.FindMovieByTMDBID(mock.Anything, uint32(157336)).
-				Return(&ent.Movie{ID: 1, TmdbID: 157336}, nil).Once()
+			storeMock.FindMovieByTMDBID(mock.Anything, "157336").
+				Return(&ent.Movie{ID: 1, TmdbID: "157336"}, nil).Once()
 
-			m, err := svc.GetByTMDBID(ctx, 157336)
+			m, err := svc.GetByTMDBID(ctx, "157336")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(m).NotTo(BeNil())
-			Expect(m.TmdbID).To(Equal(uint32(157336)))
+			Expect(m.TmdbID).To(Equal("157336"))
 		})
 
 		It("returns (nil, nil) when no row matches", func() {
-			storeMock.FindMovieByTMDBID(mock.Anything, uint32(99999)).
+			storeMock.FindMovieByTMDBID(mock.Anything, "99999").
 				Return(nil, &ent.NotFoundError{}).Once()
 
-			m, err := svc.GetByTMDBID(ctx, 99999)
+			m, err := svc.GetByTMDBID(ctx, "99999")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(m).To(BeNil())
 		})
 
 		It("wraps generic store errors", func() {
-			storeMock.FindMovieByTMDBID(mock.Anything, uint32(1)).
+			storeMock.FindMovieByTMDBID(mock.Anything, "1").
 				Return(nil, errors.New("query fail")).Once()
 
-			_, err := svc.GetByTMDBID(ctx, 1)
+			_, err := svc.GetByTMDBID(ctx, "1")
 			Expect(err).To(MatchError(ContainSubstring("get movie by tmdb_id")))
 		})
 	})
@@ -491,16 +491,16 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 		It("flags rows whose tmdb_id matches an existing movie", func() {
 			input := []metadata.MovieResult{
-				{TMDBID: 1, Title: "A"},
-				{TMDBID: 2, Title: "B"},
-				{TMDBID: 3, Title: "C"},
+				{TMDBID: "1", Title: "A"},
+				{TMDBID: "2", Title: "B"},
+				{TMDBID: "3", Title: "C"},
 			}
 			storeMock.FindMoviesByTMDBIDs(mock.Anything,
-				mock.MatchedBy(func(ids []uint32) bool {
+				mock.MatchedBy(func(ids []string) bool {
 					return len(ids) == 3 &&
-						ids[0] == 1 && ids[1] == 2 && ids[2] == 3
+						ids[0] == "1" && ids[1] == "2" && ids[2] == "3"
 				})).Return([]*ent.Movie{
-				{ID: 11, TmdbID: 2},
+				{ID: 11, TmdbID: "2"},
 			}, nil).Once()
 
 			out, err := svc.AnnotateTMDBResults(ctx, input)
@@ -517,7 +517,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Return(nil, storeErr).Once()
 
 			_, err := svc.AnnotateTMDBResults(ctx,
-				[]metadata.MovieResult{{TMDBID: 1}})
+				[]metadata.MovieResult{{TMDBID: "1"}})
 			Expect(err).To(MatchError(ContainSubstring("find movies by tmdb ids")))
 			Expect(err).To(MatchError(storeErr))
 		})
@@ -583,13 +583,13 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		})
 
 		It("updates title/year/overview via UpdateMovieMetadata", func() {
-			old := &ent.Movie{ID: 1, TmdbID: 42, Title: "Old", Year: 2023}
+			old := &ent.Movie{ID: 1, TmdbID: "42", Title: "Old", Year: 2023}
 			storeMock.ListMoviesStaleSince(mock.Anything, mock.AnythingOfType("time.Time")).
 				Return([]*ent.Movie{old}, nil).
 				Once()
-			metaMock.GetMovie(mock.Anything, uint32(42)).
+			metaMock.GetMovie(mock.Anything, "42").
 				Return(&metadata.MovieDetails{
-					TMDBID:        42,
+					TMDBID:        "42",
 					Title:         "New",
 					OriginalTitle: "Nouveau",
 					Year:          2024,
@@ -608,16 +608,16 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		})
 
 		It("skips a movie on provider error and continues with the rest", func() {
-			m1 := &ent.Movie{ID: 1, TmdbID: 1, Title: "A"}
-			m2 := &ent.Movie{ID: 2, TmdbID: 2, Title: "B"}
+			m1 := &ent.Movie{ID: 1, TmdbID: "1", Title: "A"}
+			m2 := &ent.Movie{ID: 2, TmdbID: "2", Title: "B"}
 			storeMock.ListMoviesStaleSince(mock.Anything, mock.AnythingOfType("time.Time")).
 				Return([]*ent.Movie{m1, m2}, nil).
 				Once()
-			metaMock.GetMovie(mock.Anything, uint32(1)).
+			metaMock.GetMovie(mock.Anything, "1").
 				Return(nil, errors.New("tmdb 404")).Once()
-			metaMock.GetMovie(mock.Anything, uint32(2)).
+			metaMock.GetMovie(mock.Anything, "2").
 				Return(&metadata.MovieDetails{
-					TMDBID:        2,
+					TMDBID:        "2",
 					Title:         "B",
 					OriginalTitle: "B",
 					Year:          2024,
@@ -644,41 +644,41 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 	Describe("Reidentify", func() {
 		It("rejects a zero tmdb id before touching the store", func() {
-			_, err := svc.Reidentify(ctx, 7, 0)
+			_, err := svc.Reidentify(ctx, 7, "")
 			Expect(err).To(MatchError(ErrInvalidTMDBID))
 		})
 
 		It("rejects re-identifying onto the id the row already has", func() {
 			storeMock.FindMovieByID(mock.Anything, uint32(7)).
-				Return(&ent.Movie{ID: 7, TmdbID: 603}, nil).Once()
+				Return(&ent.Movie{ID: 7, TmdbID: "603"}, nil).Once()
 
-			_, err := svc.Reidentify(ctx, 7, 603)
+			_, err := svc.Reidentify(ctx, 7, "603")
 			Expect(err).To(MatchError(ErrSameTMDBID))
 		})
 
 		It("refuses when the target title is already in the library", func() {
 			storeMock.FindMovieByID(mock.Anything, uint32(7)).
-				Return(&ent.Movie{ID: 7, TmdbID: 603}, nil).Once()
-			storeMock.FindMovieByTMDBID(mock.Anything, uint32(604)).
-				Return(&ent.Movie{ID: 40, TmdbID: 604}, nil).Once()
+				Return(&ent.Movie{ID: 7, TmdbID: "603"}, nil).Once()
+			storeMock.FindMovieByTMDBID(mock.Anything, "604").
+				Return(&ent.Movie{ID: 40, TmdbID: "604"}, nil).Once()
 
-			_, err := svc.Reidentify(ctx, 7, 604)
+			_, err := svc.Reidentify(ctx, 7, "604")
 			Expect(err).To(MatchError(ErrMovieExists))
 		})
 
 		It("swaps the id and refreshes metadata from the new title", func() {
 			storeMock.FindMovieByID(mock.Anything, uint32(7)).
-				Return(&ent.Movie{ID: 7, TmdbID: 603, Title: "The Matrix"}, nil).
+				Return(&ent.Movie{ID: 7, TmdbID: "603", Title: "The Matrix"}, nil).
 				Once()
-			storeMock.FindMovieByTMDBID(mock.Anything, uint32(604)).
+			storeMock.FindMovieByTMDBID(mock.Anything, "604").
 				Return(nil, &ent.NotFoundError{}).Once()
-			storeMock.SetMovieTMDBID(mock.Anything, uint32(7), uint32(604)).
+			storeMock.SetMovieTMDBID(mock.Anything, uint32(7), "604").
 				Return(nil).Once()
 			// Proves the refresh reads the *new* id, not the one the row was
 			// loaded with — the whole point of the swap.
-			metaMock.GetMovie(mock.Anything, uint32(604)).
+			metaMock.GetMovie(mock.Anything, "604").
 				Return(&metadata.MovieDetails{
-					TMDBID:        604,
+					TMDBID:        "604",
 					Title:         "The Matrix Reloaded",
 					OriginalTitle: "The Matrix Reloaded",
 					Year:          2003,
@@ -692,12 +692,12 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			).Return(nil).Once()
 			storeMock.FindMovieByID(mock.Anything, uint32(7)).
 				Return(&ent.Movie{
-					ID: 7, TmdbID: 604, Title: "The Matrix Reloaded", Year: 2003,
+					ID: 7, TmdbID: "604", Title: "The Matrix Reloaded", Year: 2003,
 				}, nil).Once()
 
-			m, err := svc.Reidentify(ctx, 7, 604)
+			m, err := svc.Reidentify(ctx, 7, "604")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(m.TmdbID).To(Equal(uint32(604)))
+			Expect(m.TmdbID).To(Equal("604"))
 			Expect(m.Title).To(Equal("The Matrix Reloaded"))
 		})
 
@@ -705,15 +705,15 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			"surfaces a failed refresh rather than leaving the row half-repaired",
 			func() {
 				storeMock.FindMovieByID(mock.Anything, uint32(7)).
-					Return(&ent.Movie{ID: 7, TmdbID: 603}, nil).Once()
-				storeMock.FindMovieByTMDBID(mock.Anything, uint32(604)).
+					Return(&ent.Movie{ID: 7, TmdbID: "603"}, nil).Once()
+				storeMock.FindMovieByTMDBID(mock.Anything, "604").
 					Return(nil, &ent.NotFoundError{}).Once()
-				storeMock.SetMovieTMDBID(mock.Anything, uint32(7), uint32(604)).
+				storeMock.SetMovieTMDBID(mock.Anything, uint32(7), "604").
 					Return(nil).Once()
-				metaMock.GetMovie(mock.Anything, uint32(604)).
+				metaMock.GetMovie(mock.Anything, "604").
 					Return(nil, errors.New("tmdb down")).Once()
 
-				_, err := svc.Reidentify(ctx, 7, 604)
+				_, err := svc.Reidentify(ctx, 7, "604")
 				Expect(
 					err,
 				).To(MatchError(ContainSubstring("refresh after re-identify")))
@@ -744,11 +744,11 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 		It("returns the reloaded row after refreshing metadata", func() {
 			storeMock.FindMovieByID(mock.Anything, uint32(7)).
-				Return(&ent.Movie{ID: 7, TmdbID: 42, Title: "Old", Year: 2023}, nil).
+				Return(&ent.Movie{ID: 7, TmdbID: "42", Title: "Old", Year: 2023}, nil).
 				Once()
-			metaMock.GetMovie(mock.Anything, uint32(42)).
+			metaMock.GetMovie(mock.Anything, "42").
 				Return(&metadata.MovieDetails{
-					TMDBID:        42,
+					TMDBID:        "42",
 					Title:         "New",
 					OriginalTitle: "Nouveau",
 					Year:          2024,
@@ -762,7 +762,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				},
 			).Return(nil).Once()
 			storeMock.FindMovieByID(mock.Anything, uint32(7)).
-				Return(&ent.Movie{ID: 7, TmdbID: 42, Title: "New", Year: 2024}, nil).
+				Return(&ent.Movie{ID: 7, TmdbID: "42", Title: "New", Year: 2024}, nil).
 				Once()
 
 			m, err := svc.RefreshOne(ctx, 7)

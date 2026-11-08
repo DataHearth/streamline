@@ -41,13 +41,13 @@ type ImportScanFile struct {
 	// Candidates holds the value of the "candidates" field.
 	Candidates []schema.ScannedCandidate `json:"candidates,omitempty"`
 	// TmdbID holds the value of the "tmdb_id" field.
-	TmdbID uint32 `json:"tmdb_id,omitempty"`
+	TmdbID string `json:"tmdb_id,omitempty"`
 	// ExistingMovieID holds the value of the "existing_movie_id" field.
 	ExistingMovieID uint32 `json:"existing_movie_id,omitempty"`
 	// Decision holds the value of the "decision" field.
 	Decision importscanfile.Decision `json:"decision,omitempty"`
 	// DecisionTmdbID holds the value of the "decision_tmdb_id" field.
-	DecisionTmdbID uint32 `json:"decision_tmdb_id,omitempty"`
+	DecisionTmdbID string `json:"decision_tmdb_id,omitempty"`
 	// Outcome holds the value of the "outcome" field.
 	Outcome importscanfile.Outcome `json:"outcome,omitempty"`
 	// OutcomeMessage holds the value of the "outcome_message" field.
@@ -88,9 +88,9 @@ func (*ImportScanFile) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case importscanfile.FieldCandidates:
 			values[i] = new([]byte)
-		case importscanfile.FieldID, importscanfile.FieldSize, importscanfile.FieldParsedYear, importscanfile.FieldTmdbID, importscanfile.FieldExistingMovieID, importscanfile.FieldDecisionTmdbID, importscanfile.FieldCreatedMovieID:
+		case importscanfile.FieldID, importscanfile.FieldSize, importscanfile.FieldParsedYear, importscanfile.FieldExistingMovieID, importscanfile.FieldCreatedMovieID:
 			values[i] = new(sql.NullInt64)
-		case importscanfile.FieldSourcePath, importscanfile.FieldParsedTitle, importscanfile.FieldParsedQuality, importscanfile.FieldParsedReleaseGroup, importscanfile.FieldClassification, importscanfile.FieldDecision, importscanfile.FieldOutcome, importscanfile.FieldOutcomeMessage:
+		case importscanfile.FieldSourcePath, importscanfile.FieldParsedTitle, importscanfile.FieldParsedQuality, importscanfile.FieldParsedReleaseGroup, importscanfile.FieldClassification, importscanfile.FieldTmdbID, importscanfile.FieldDecision, importscanfile.FieldDecisionTmdbID, importscanfile.FieldOutcome, importscanfile.FieldOutcomeMessage:
 			values[i] = new(sql.NullString)
 		case importscanfile.FieldCreateTime, importscanfile.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -181,10 +181,10 @@ func (_m *ImportScanFile) assignValues(columns []string, values []any) error {
 				}
 			}
 		case importscanfile.FieldTmdbID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tmdb_id", values[i])
 			} else if value.Valid {
-				_m.TmdbID = uint32(value.Int64)
+				_m.TmdbID = value.String
 			}
 		case importscanfile.FieldExistingMovieID:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -199,10 +199,10 @@ func (_m *ImportScanFile) assignValues(columns []string, values []any) error {
 				_m.Decision = importscanfile.Decision(value.String)
 			}
 		case importscanfile.FieldDecisionTmdbID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field decision_tmdb_id", values[i])
 			} else if value.Valid {
-				_m.DecisionTmdbID = uint32(value.Int64)
+				_m.DecisionTmdbID = value.String
 			}
 		case importscanfile.FieldOutcome:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -303,7 +303,7 @@ func (_m *ImportScanFile) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.Candidates))
 	builder.WriteString(", ")
 	builder.WriteString("tmdb_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.TmdbID))
+	builder.WriteString(_m.TmdbID)
 	builder.WriteString(", ")
 	builder.WriteString("existing_movie_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ExistingMovieID))
@@ -312,7 +312,7 @@ func (_m *ImportScanFile) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.Decision))
 	builder.WriteString(", ")
 	builder.WriteString("decision_tmdb_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.DecisionTmdbID))
+	builder.WriteString(_m.DecisionTmdbID)
 	builder.WriteString(", ")
 	builder.WriteString("outcome=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Outcome))

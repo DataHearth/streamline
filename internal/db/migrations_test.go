@@ -213,11 +213,15 @@ var _ = Describe("person credits backfill", Label("integration", "db"), func() {
 		return out
 	}
 
+	// runMigrations applies everything after the backfill too, and a later
+	// migration turns an unset provider id from 0 into NULL; COALESCE prints
+	// it as the backfill wrote it.
 	people := func() []string {
 		GinkgoHelper()
 		return queryStrings(
-			"SELECT name || '/' || tmdb_id || '/' || tvdb_id ||" +
-				" '/' || profile_url FROM persons ORDER BY name",
+			"SELECT name || '/' || COALESCE(tmdb_id, 0) || '/' ||" +
+				" COALESCE(tvdb_id, 0) || '/' || profile_url FROM persons" +
+				" ORDER BY name",
 		)
 	}
 
@@ -861,3 +865,147 @@ var _ = Describe("pre-migration snapshot", Label("integration", "db"), func() {
 		Expect(v.Version).To(Equal(prev))
 	})
 })
+
+// providerIDsUnsetVersion and providerIDsTextVersion are the pair that turns
+// every TMDB, TVDB and Hardcover id column into text: the first moves the
+// unset 0s to NULL and the scan candidates' ids to strings while the columns
+// are still integers, the second is Atlas's rebuild.
+const (
+	providerIDsUnsetVersion = 20261108081603
+	providerIDsTextVersion  = 20261108081604
+)
+
+var _ = Describe(
+	"provider ids to text migration",
+	Label("integration", "db"),
+	func() {
+		var (
+			sqlDB *sql.DB
+			src   interface {
+				Prev(uint) (uint, error)
+			}
+			m *migrate.Migrate
+		)
+
+		BeforeEach(func() {
+			var err error
+			sqlDB, err = sql.Open(
+				"sqlite",
+				"file:"+filepath.Join(GinkgoT().TempDir(), "provider-ids.db"),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() { Expect(sqlDB.Close()).To(Succeed()) })
+			sqlDB.SetMaxOpenConns(1)
+
+			fs, err := iofs.New(migrationsFS, "migrations")
+			Expect(err).NotTo(HaveOccurred())
+			src = fs
+			drv, err := sqlite.WithInstance(sqlDB, &sqlite.Config{})
+			Expect(err).NotTo(HaveOccurred())
+			m, err = migrate.NewWithInstance("iofs", fs, "sqlite", drv)
+			Expect(err).NotTo(HaveOccurred())
+			previous, err := src.Prev(providerIDsUnsetVersion)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.Migrate(previous)).To(Succeed())
+
+			for _, stmt := range []string{
+				"INSERT INTO movies (id, create_time, update_time, title," +
+					" original_title, year, tmdb_id) VALUES" +
+					" (1, datetime('now'), datetime('now'), 'm', 'm', 1999, 603)",
+				"INSERT INTO persons (id, create_time, update_time, tmdb_id," +
+					" tvdb_id, name) VALUES" +
+					" (1, datetime('now'), datetime('now'), 603, 0, 'Keanu')," +
+					" (2, datetime('now'), datetime('now'), 0, 81189, 'Bryan')",
+				// Two active artist requests share media_id 0: '0' would collide
+				// on the rebuilt partial unique index.
+				"INSERT INTO requests (id, create_time, update_time, media_type," +
+					" media_id, media_mbid, title, user_requests) VALUES" +
+					" (1, datetime('now'), datetime('now'), 'artist', 0, 'mb-a', 'A', 1)," +
+					" (2, datetime('now'), datetime('now'), 'artist', 0, 'mb-b', 'B', 1)," +
+					" (3, datetime('now'), datetime('now'), 'movie', 603, NULL, 'M', 1)",
+				"INSERT INTO import_scan_files (id, create_time, update_time," +
+					" source_path, size, candidates, tmdb_id, decision_tmdb_id," +
+					" import_scan_files) VALUES" +
+					" (1, datetime('now'), datetime('now'), '/m', 1," +
+					` '[{"tmdb_id":603,"title":"A","year":1999},{"tmdb_id":0,"title":"B","year":0}]',` +
+					" 0, 603, 1)",
+			} {
+				_, err = sqlDB.Exec(stmt)
+				Expect(err).NotTo(HaveOccurred(), stmt)
+			}
+		})
+
+		It("carries every id over as text and every unset 0 as NULL", func() {
+			Expect(m.Migrate(providerIDsTextVersion)).To(Succeed())
+
+			var kind, tmdb string
+			Expect(sqlDB.QueryRow(
+				"SELECT typeof(tmdb_id), tmdb_id FROM movies WHERE id = 1",
+			).Scan(&kind, &tmdb)).To(Succeed())
+			Expect(kind).To(Equal("text"))
+			Expect(tmdb).To(Equal("603"))
+
+			var personTMDB, personTVDB sql.NullString
+			Expect(sqlDB.QueryRow(
+				"SELECT tmdb_id, tvdb_id FROM persons WHERE id = 1",
+			).Scan(&personTMDB, &personTVDB)).To(Succeed())
+			Expect(personTMDB).To(Equal(sql.NullString{String: "603", Valid: true}))
+			Expect(personTVDB.Valid).To(BeFalse())
+
+			var unset int
+			Expect(sqlDB.QueryRow(
+				"SELECT count(*) FROM requests WHERE media_id IS NULL",
+			).Scan(&unset)).To(Succeed())
+			Expect(unset).To(Equal(2))
+
+			var candidates string
+			var fileTMDB sql.NullString
+			var decision string
+			Expect(sqlDB.QueryRow(
+				"SELECT candidates, tmdb_id, decision_tmdb_id FROM import_scan_files",
+			).Scan(&candidates, &fileTMDB, &decision)).To(Succeed())
+			Expect(candidates).To(MatchJSON(
+				`[{"tmdb_id":"603","title":"A","year":1999},{"tmdb_id":"","title":"B","year":0}]`,
+			))
+			Expect(fileTMDB.Valid).To(BeFalse())
+			Expect(decision).To(Equal("603"))
+		})
+
+		It("gives the integers and the 0s back on the way down", func() {
+			Expect(m.Migrate(providerIDsTextVersion)).To(Succeed())
+			// What the code writes once the columns are text: an empty id.
+			_, err := sqlDB.Exec("UPDATE persons SET tvdb_id = '' WHERE id = 1")
+			Expect(err).NotTo(HaveOccurred())
+
+			previous, err := src.Prev(providerIDsUnsetVersion)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.Migrate(previous)).To(Succeed())
+
+			var kind string
+			var tmdb int
+			Expect(sqlDB.QueryRow(
+				"SELECT typeof(tmdb_id), tmdb_id FROM movies WHERE id = 1",
+			).Scan(&kind, &tmdb)).To(Succeed())
+			Expect(kind).To(Equal("integer"))
+			Expect(tmdb).To(Equal(603))
+
+			var personTVDB, requestMedia int
+			Expect(sqlDB.QueryRow(
+				"SELECT tvdb_id FROM persons WHERE id = 1",
+			).Scan(&personTVDB)).To(Succeed())
+			Expect(personTVDB).To(BeZero())
+			Expect(sqlDB.QueryRow(
+				"SELECT media_id FROM requests WHERE id = 1",
+			).Scan(&requestMedia)).To(Succeed())
+			Expect(requestMedia).To(BeZero())
+
+			var candidates string
+			Expect(sqlDB.QueryRow(
+				"SELECT candidates FROM import_scan_files",
+			).Scan(&candidates)).To(Succeed())
+			Expect(candidates).To(MatchJSON(
+				`[{"tmdb_id":603,"title":"A","year":1999},{"tmdb_id":0,"title":"B","year":0}]`,
+			))
+		})
+	},
+)

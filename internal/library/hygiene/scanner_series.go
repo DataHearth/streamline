@@ -147,7 +147,7 @@ func (s *Service) pendingShowFolderSet(
 // flag a scanned folder as "existing" rather than proposing a duplicate show.
 func (s *Service) trackedShowsByTVDB(
 	ctx context.Context,
-) (map[uint32]uint32, error) {
+) (map[string]uint32, error) {
 	return s.store.TVShowTVDBIndex(ctx)
 }
 

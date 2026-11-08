@@ -2,7 +2,6 @@ package artwork
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
@@ -29,12 +28,8 @@ func (l EntLibrary) Find(
 	case KindAlbums:
 		id, err = l.Client.Album.Query().Where(album.Mbid(key)).FirstID(ctx)
 	case KindBooks:
-		hc, perr := strconv.ParseUint(key, 10, 32)
-		if perr != nil {
-			return 0, false, nil
-		}
 		id, err = l.Client.Book.Query().
-			Where(book.HardcoverID(uint32(hc))).FirstID(ctx)
+			Where(book.HardcoverID(key)).FirstID(ctx)
 	default:
 		return 0, false, nil
 	}

@@ -129,18 +129,18 @@ type Manager interface {
 	SearchMovie(
 		ctx context.Context,
 		titles, aliases []string,
-		tmdbID uint32,
+		tmdbID string,
 	) ([]SearchResult, error)
 	SearchSeason(
 		ctx context.Context,
 		titles, aliases []string,
-		tvdbID uint32,
+		tvdbID string,
 		season uint16,
 	) ([]SearchResult, error)
 	SearchSeries(
 		ctx context.Context,
 		titles, aliases []string,
-		tvdbID uint32,
+		tvdbID string,
 	) ([]SearchResult, error)
 	// SearchEpisode also reports how many season/whole-series packs covering
 	// the episode were filtered out, so a caller can say why an empty list is
@@ -148,7 +148,7 @@ type Manager interface {
 	SearchEpisode(
 		ctx context.Context,
 		titles, aliases []string,
-		tvdbID uint32,
+		tvdbID string,
 		season, episode uint16,
 	) ([]SearchResult, int, error)
 	// SearchAlbum queries every enabled indexer for an album release. The
@@ -270,7 +270,7 @@ func dedupResults(in []SearchResult) []SearchResult {
 func (i *indexer) SearchMovie(
 	ctx context.Context,
 	titles, aliases []string,
-	tmdbID uint32,
+	tmdbID string,
 ) ([]SearchResult, error) {
 	titles = dedupTitles(titles)
 	match := matchTitles(titles, aliases)
@@ -283,7 +283,7 @@ func (i *indexer) SearchMovie(
 			// that net is otherwise only readable from a library row a later
 			// refresh may already have rewritten.
 			attribute.Int("movie.aliases.count", len(aliases)),
-			attribute.Int64("movie.tmdb_id", int64(tmdbID)),
+			attribute.String("movie.tmdb_id", tmdbID),
 		),
 	)
 	defer span.End()
@@ -323,7 +323,7 @@ func (i *indexer) SearchMovie(
 func (i *indexer) SearchSeason(
 	ctx context.Context,
 	titles, aliases []string,
-	tvdbID uint32,
+	tvdbID string,
 	season uint16,
 ) ([]SearchResult, error) {
 	titles = dedupTitles(titles)
@@ -332,7 +332,7 @@ func (i *indexer) SearchSeason(
 		trace.WithAttributes(
 			attribute.Int("series.titles.count", len(titles)),
 			attribute.Int("series.aliases.count", len(aliases)),
-			attribute.Int64("series.tvdb_id", int64(tvdbID)),
+			attribute.String("series.tvdb_id", tvdbID),
 			attribute.Int("series.season", int(season)),
 		),
 	)
@@ -533,15 +533,15 @@ var absoluteTailRe = regexp.MustCompile(`\s*-\s*\d{1,4}\s*$`)
 // search would place in it, so a mis-tagged upload is filtered out. That is
 // the intended reading of a wrong id, not a regression.
 func filterProviderIDs(results []SearchResult, base SearchParams) []SearchResult {
-	if base.TMDBID == 0 && base.TVDBID == 0 {
+	if base.TMDBID == "" && base.TVDBID == "" {
 		return results
 	}
 	out := make([]SearchResult, 0, len(results))
 	for _, r := range results {
-		if base.TVDBID > 0 && r.TVDBID > 0 && r.TVDBID != base.TVDBID {
+		if base.TVDBID != "" && r.TVDBID != "" && r.TVDBID != base.TVDBID {
 			continue
 		}
-		if base.TMDBID > 0 && r.TMDBID > 0 && r.TMDBID != base.TMDBID {
+		if base.TMDBID != "" && r.TMDBID != "" && r.TMDBID != base.TMDBID {
 			continue
 		}
 		out = append(out, r)
@@ -638,7 +638,7 @@ func filterToSeason(results []SearchResult, season uint16) []SearchResult {
 func (i *indexer) SearchSeries(
 	ctx context.Context,
 	titles, aliases []string,
-	tvdbID uint32,
+	tvdbID string,
 ) ([]SearchResult, error) {
 	titles = dedupTitles(titles)
 	match := matchTitles(titles, aliases)
@@ -646,7 +646,7 @@ func (i *indexer) SearchSeries(
 		trace.WithAttributes(
 			attribute.Int("series.titles.count", len(titles)),
 			attribute.Int("series.aliases.count", len(aliases)),
-			attribute.Int64("series.tvdb_id", int64(tvdbID)),
+			attribute.String("series.tvdb_id", tvdbID),
 		),
 	)
 	defer span.End()
@@ -692,7 +692,7 @@ func (i *indexer) SearchSeries(
 func (i *indexer) SearchEpisode(
 	ctx context.Context,
 	titles, aliases []string,
-	tvdbID uint32,
+	tvdbID string,
 	season, episode uint16,
 ) ([]SearchResult, int, error) {
 	titles = dedupTitles(titles)
@@ -701,7 +701,7 @@ func (i *indexer) SearchEpisode(
 		trace.WithAttributes(
 			attribute.Int("series.titles.count", len(titles)),
 			attribute.Int("series.aliases.count", len(aliases)),
-			attribute.Int64("series.tvdb_id", int64(tvdbID)),
+			attribute.String("series.tvdb_id", tvdbID),
 			attribute.Int("series.season", int(season)),
 			attribute.Int("series.episode", int(episode)),
 		),

@@ -71,8 +71,8 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 	It("fetches TVDB metadata and creates the show with a poster fetch", func() {
 		air := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
-		metaMk.GetSeries(mock.Anything, uint32(123)).Return(&metadata.TVDetails{
-			TVDBID:     123,
+		metaMk.GetSeries(mock.Anything, "123").Return(&metadata.TVDetails{
+			TVDBID:     "123",
 			Title:      "The Black Sea",
 			Year:       2023,
 			Network:    "Halcyon",
@@ -85,17 +85,17 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				{SeasonNumber: 1, Number: 1, Title: "Pilot", AirDate: &air},
 			},
 		}, nil).Once()
-		metaMk.GetSeriesCast(mock.Anything, uint32(123)).
+		metaMk.GetSeriesCast(mock.Anything, "123").
 			Return([]metadata.CastMember{{Name: "Ana Vidal", Character: "Iris"}}, nil).
 			Once()
 
 		storeMk.CreateTVShow(mock.Anything, mock.MatchedBy(func(p db.CreateTVShowParams) bool {
-			return p.TvdbID == 123 && p.Title == "The Black Sea" &&
+			return p.TvdbID == "123" && p.Title == "The Black Sea" &&
 				len(p.Seasons) == 1 &&
 				len(p.Seasons[0].Episodes) == 1 &&
 				len(p.Cast) == 1 && p.Cast[0].Name == "Ana Vidal"
 		})).
-			Return(&ent.TVShow{ID: 7, Title: "The Black Sea", TvdbID: 123}, nil).
+			Return(&ent.TVShow{ID: 7, Title: "The Black Sea", TvdbID: "123"}, nil).
 			Once()
 
 		done := make(chan struct{})
@@ -103,28 +103,28 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error { close(done); return nil }).
 			Once()
 
-		show, err := svc.Add(ctx, 123, "")
+		show, err := svc.Add(ctx, "123", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(show.ID).To(Equal(uint32(7)))
 		Eventually(done).Should(BeClosed())
 	})
 
 	It("adds the show anyway when the cast fetch fails", func() {
-		metaMk.GetSeries(mock.Anything, uint32(123)).Return(&metadata.TVDetails{
-			TVDBID: 123, Title: "The Black Sea",
+		metaMk.GetSeries(mock.Anything, "123").Return(&metadata.TVDetails{
+			TVDBID: "123", Title: "The Black Sea",
 			Status: "continuing",
 			Type:   metadata.SeriesStandard,
 		}, nil).Once()
-		metaMk.GetSeriesCast(mock.Anything, uint32(123)).
+		metaMk.GetSeriesCast(mock.Anything, "123").
 			Return(nil, errors.New("tvdb down")).
 			Once()
 		storeMk.CreateTVShow(mock.Anything, mock.MatchedBy(
 			func(p db.CreateTVShowParams) bool { return len(p.Cast) == 0 },
 		)).
-			Return(&ent.TVShow{ID: 7, TvdbID: 123}, nil).
+			Return(&ent.TVShow{ID: 7, TvdbID: "123"}, nil).
 			Once()
 
-		show, err := svc.Add(ctx, 123, "")
+		show, err := svc.Add(ctx, "123", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(show.ID).To(Equal(uint32(7)))
 	})
@@ -171,7 +171,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			"series_quality_default_profile": "",
 		})
 
-		_, err := svc.Add(ctx, 123, "")
+		_, err := svc.Add(ctx, "123", "")
 		Expect(err).To(MatchError(ErrNoQualityProfile))
 	})
 
@@ -357,11 +357,11 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 	It("RefreshOne re-pulls metadata and stamps refreshed_at", func() {
 		storeMk.FindTVShowByID(mock.Anything, uint32(7)).
-			Return(&ent.TVShow{ID: 7, TvdbID: 123}, nil).Twice()
-		metaMk.GetSeries(mock.Anything, uint32(123)).
-			Return(&metadata.TVDetails{TVDBID: 123, Title: "X"}, nil).
+			Return(&ent.TVShow{ID: 7, TvdbID: "123"}, nil).Twice()
+		metaMk.GetSeries(mock.Anything, "123").
+			Return(&metadata.TVDetails{TVDBID: "123", Title: "X"}, nil).
 			Once()
-		metaMk.GetSeriesCast(mock.Anything, uint32(123)).Return(nil, nil).Once()
+		metaMk.GetSeriesCast(mock.Anything, "123").Return(nil, nil).Once()
 		storeMk.UpdateTVShowMetadata(mock.Anything, uint32(7), mock.Anything).
 			Return(nil).
 			Once()
@@ -379,11 +379,11 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		pruned := filepath.Join(GinkgoT().TempDir(), "Show - S01E09.mkv")
 		Expect(os.WriteFile(pruned, []byte("x"), 0o644)).To(Succeed())
 		storeMk.FindTVShowByID(mock.Anything, uint32(7)).
-			Return(&ent.TVShow{ID: 7, TvdbID: 123}, nil).Twice()
-		metaMk.GetSeries(mock.Anything, uint32(123)).
-			Return(&metadata.TVDetails{TVDBID: 123, Title: "X"}, nil).
+			Return(&ent.TVShow{ID: 7, TvdbID: "123"}, nil).Twice()
+		metaMk.GetSeries(mock.Anything, "123").
+			Return(&metadata.TVDetails{TVDBID: "123", Title: "X"}, nil).
 			Once()
-		metaMk.GetSeriesCast(mock.Anything, uint32(123)).Return(nil, nil).Once()
+		metaMk.GetSeriesCast(mock.Anything, "123").Return(nil, nil).Once()
 		storeMk.UpdateTVShowMetadata(mock.Anything, uint32(7), mock.Anything).
 			Return(nil).
 			Once()
@@ -917,7 +917,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 	Describe("Reidentify", func() {
 		newShow := func() *metadata.TVDetails {
 			return &metadata.TVDetails{
-				TVDBID: 999, Title: "Right Show", Year: 2019,
+				TVDBID: "999", Title: "Right Show", Year: 2019,
 				Status:  "continuing",
 				Type:    metadata.SeriesStandard,
 				Seasons: []metadata.SeasonInfo{{Number: 1, Name: "Season 1"}},
@@ -929,30 +929,30 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		}
 
 		It("rejects a zero tvdb id before touching the store", func() {
-			_, _, err := svc.Reidentify(ctx, 5, 0)
+			_, _, err := svc.Reidentify(ctx, 5, "")
 			Expect(err).To(MatchError(ErrInvalidTVDBID))
 		})
 
 		It("refuses when the target show is already in the library", func() {
 			storeMk.FindTVShowByID(mock.Anything, uint32(5)).
-				Return(&ent.TVShow{ID: 5, TvdbID: 111}, nil).Once()
-			storeMk.FindTVShowByTVDBID(mock.Anything, uint32(999)).
-				Return(&ent.TVShow{ID: 8, TvdbID: 999}, nil).Once()
+				Return(&ent.TVShow{ID: 5, TvdbID: "111"}, nil).Once()
+			storeMk.FindTVShowByTVDBID(mock.Anything, "999").
+				Return(&ent.TVShow{ID: 8, TvdbID: "999"}, nil).Once()
 
-			_, _, err := svc.Reidentify(ctx, 5, 999)
+			_, _, err := svc.Reidentify(ctx, 5, "999")
 			Expect(err).To(MatchError(ErrSeriesExists))
 		})
 
 		It("leaves the series untouched when the TVDB fetch fails", func() {
 			storeMk.FindTVShowByID(mock.Anything, uint32(5)).
-				Return(&ent.TVShow{ID: 5, TvdbID: 111}, nil).Once()
-			storeMk.FindTVShowByTVDBID(mock.Anything, uint32(999)).
+				Return(&ent.TVShow{ID: 5, TvdbID: "111"}, nil).Once()
+			storeMk.FindTVShowByTVDBID(mock.Anything, "999").
 				Return(nil, nil).Once()
-			metaMk.GetSeries(mock.Anything, uint32(999)).
+			metaMk.GetSeries(mock.Anything, "999").
 				Return(nil, errors.New("tvdb down")).Once()
 
 			// No detach, no id write: the mock would fail the spec on any.
-			_, _, err := svc.Reidentify(ctx, 5, 999)
+			_, _, err := svc.Reidentify(ctx, 5, "999")
 			Expect(err).To(MatchError(ContainSubstring("tvdb get series")))
 		})
 
@@ -960,11 +960,11 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			"detaches files before reconciling, then re-attaches them by S/E",
 			func() {
 				storeMk.FindTVShowByID(mock.Anything, uint32(5)).
-					Return(&ent.TVShow{ID: 5, TvdbID: 111, Title: "Wrong Show"}, nil).
+					Return(&ent.TVShow{ID: 5, TvdbID: "111", Title: "Wrong Show"}, nil).
 					Once()
-				storeMk.FindTVShowByTVDBID(mock.Anything, uint32(999)).
+				storeMk.FindTVShowByTVDBID(mock.Anything, "999").
 					Return(nil, nil).Once()
-				metaMk.GetSeries(mock.Anything, uint32(999)).
+				metaMk.GetSeries(mock.Anything, "999").
 					Return(newShow(), nil).
 					Once()
 
@@ -987,9 +987,9 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				}
 				storeMk.DetachEpisodeMediaFiles(mock.Anything, uint32(5)).
 					Return(detached, nil).Once()
-				storeMk.SetTVShowTVDBID(mock.Anything, uint32(5), uint32(999)).
+				storeMk.SetTVShowTVDBID(mock.Anything, uint32(5), "999").
 					Return(nil).Once()
-				metaMk.GetSeriesCast(mock.Anything, uint32(999)).
+				metaMk.GetSeriesCast(mock.Anything, "999").
 					Return(nil, nil).
 					Once()
 				storeMk.UpdateTVShowMetadata(
@@ -1008,7 +1008,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 				// The rebuilt tree: S01E01 and S01E02 exist, E09 does not.
 				rebuilt := &ent.TVShow{
-					ID: 5, TvdbID: 999, Title: "Right Show",
+					ID: 5, TvdbID: "999", Title: "Right Show",
 					Edges: ent.TVShowEdges{Seasons: []*ent.Season{{
 						ID: 90, Number: 1,
 						Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
@@ -1035,7 +1035,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 					Return(rebuilt, nil).
 					Once()
 
-				show, unmatched, err := svc.Reidentify(ctx, 5, 999)
+				show, unmatched, err := svc.Reidentify(ctx, 5, "999")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(show.Title).To(Equal("Right Show"))
 				Expect(unmatched).To(ConsistOf("/tv/Wrong/S01E09.mkv"))

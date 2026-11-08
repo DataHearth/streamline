@@ -92,7 +92,7 @@ var _ = Describe("library root health", Label("integration", "roothealth"), func
 		Register(store)
 		DeferCleanup(func() { Register(nil) })
 		movie = client.Movie.Create().
-			SetTmdbID(1).
+			SetTmdbID("1").
 			SetTitle("Movie").
 			SetOriginalTitle("Movie").
 			SetYear(2020).
@@ -221,7 +221,7 @@ var _ = Describe("library root health", Label("integration", "roothealth"), func
 		configtest.Setup(map[string]any{"library": map[string]any{
 			"ebook_path": root, "audiobook_path": root,
 		}})
-		book := client.Book.Create().SetHardcoverID(1).SetTitle("Book").SaveX(ctx)
+		book := client.Book.Create().SetHardcoverID("1").SetTitle("Book").SaveX(ctx)
 		client.MediaFile.Create().
 			SetPath(filepath.Join(elsewhere, "gone.epub")).
 			SetSize(4).
@@ -241,10 +241,10 @@ var _ = Describe("library root health", Label("integration", "roothealth"), func
 	})
 
 	It("names the roots holding a book's and a series' files", func() {
-		book := client.Book.Create().SetHardcoverID(1).SetTitle("Book").SaveX(ctx)
-		both := client.Book.Create().SetHardcoverID(2).SetTitle("Both").SaveX(ctx)
-		none := client.Book.Create().SetHardcoverID(3).SetTitle("None").SaveX(ctx)
-		series := client.BookSeries.Create().SetHardcoverID(9).SetTitle("Series").
+		book := client.Book.Create().SetHardcoverID("1").SetTitle("Book").SaveX(ctx)
+		both := client.Book.Create().SetHardcoverID("2").SetTitle("Both").SaveX(ctx)
+		none := client.Book.Create().SetHardcoverID("3").SetTitle("None").SaveX(ctx)
+		series := client.BookSeries.Create().SetHardcoverID("9").SetTitle("Series").
 			AddVolumes(book).SaveX(ctx)
 		file := func(b *ent.Book, name string, kind entmediafile.BookKind) {
 			GinkgoHelper()
@@ -275,7 +275,7 @@ var _ = Describe("library root health", Label("integration", "roothealth"), func
 		show := client.TVShow.Create().
 			SetTitle("Show").
 			SetYear(2020).
-			SetTvdbID(1).
+			SetTvdbID("1").
 			SaveX(ctx)
 		season := client.Season.Create().SetNumber(1).SetTvShow(show).SaveX(ctx)
 		episode := client.Episode.Create().SetNumber(1).SetSeason(season).SaveX(ctx)

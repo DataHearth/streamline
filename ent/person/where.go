@@ -66,12 +66,12 @@ func UpdateTime(v time.Time) predicate.Person {
 }
 
 // TmdbID applies equality check predicate on the "tmdb_id" field. It's identical to TmdbIDEQ.
-func TmdbID(v uint32) predicate.Person {
+func TmdbID(v string) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldTmdbID, v))
 }
 
 // TvdbID applies equality check predicate on the "tvdb_id" field. It's identical to TvdbIDEQ.
-func TvdbID(v uint32) predicate.Person {
+func TvdbID(v string) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldTvdbID, v))
 }
 
@@ -211,43 +211,58 @@ func UpdateTimeLTE(v time.Time) predicate.Person {
 }
 
 // TmdbIDEQ applies the EQ predicate on the "tmdb_id" field.
-func TmdbIDEQ(v uint32) predicate.Person {
+func TmdbIDEQ(v string) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldTmdbID, v))
 }
 
 // TmdbIDNEQ applies the NEQ predicate on the "tmdb_id" field.
-func TmdbIDNEQ(v uint32) predicate.Person {
+func TmdbIDNEQ(v string) predicate.Person {
 	return predicate.Person(sql.FieldNEQ(FieldTmdbID, v))
 }
 
 // TmdbIDIn applies the In predicate on the "tmdb_id" field.
-func TmdbIDIn(vs ...uint32) predicate.Person {
+func TmdbIDIn(vs ...string) predicate.Person {
 	return predicate.Person(sql.FieldIn(FieldTmdbID, vs...))
 }
 
 // TmdbIDNotIn applies the NotIn predicate on the "tmdb_id" field.
-func TmdbIDNotIn(vs ...uint32) predicate.Person {
+func TmdbIDNotIn(vs ...string) predicate.Person {
 	return predicate.Person(sql.FieldNotIn(FieldTmdbID, vs...))
 }
 
 // TmdbIDGT applies the GT predicate on the "tmdb_id" field.
-func TmdbIDGT(v uint32) predicate.Person {
+func TmdbIDGT(v string) predicate.Person {
 	return predicate.Person(sql.FieldGT(FieldTmdbID, v))
 }
 
 // TmdbIDGTE applies the GTE predicate on the "tmdb_id" field.
-func TmdbIDGTE(v uint32) predicate.Person {
+func TmdbIDGTE(v string) predicate.Person {
 	return predicate.Person(sql.FieldGTE(FieldTmdbID, v))
 }
 
 // TmdbIDLT applies the LT predicate on the "tmdb_id" field.
-func TmdbIDLT(v uint32) predicate.Person {
+func TmdbIDLT(v string) predicate.Person {
 	return predicate.Person(sql.FieldLT(FieldTmdbID, v))
 }
 
 // TmdbIDLTE applies the LTE predicate on the "tmdb_id" field.
-func TmdbIDLTE(v uint32) predicate.Person {
+func TmdbIDLTE(v string) predicate.Person {
 	return predicate.Person(sql.FieldLTE(FieldTmdbID, v))
+}
+
+// TmdbIDContains applies the Contains predicate on the "tmdb_id" field.
+func TmdbIDContains(v string) predicate.Person {
+	return predicate.Person(sql.FieldContains(FieldTmdbID, v))
+}
+
+// TmdbIDHasPrefix applies the HasPrefix predicate on the "tmdb_id" field.
+func TmdbIDHasPrefix(v string) predicate.Person {
+	return predicate.Person(sql.FieldHasPrefix(FieldTmdbID, v))
+}
+
+// TmdbIDHasSuffix applies the HasSuffix predicate on the "tmdb_id" field.
+func TmdbIDHasSuffix(v string) predicate.Person {
+	return predicate.Person(sql.FieldHasSuffix(FieldTmdbID, v))
 }
 
 // TmdbIDIsNil applies the IsNil predicate on the "tmdb_id" field.
@@ -260,44 +275,69 @@ func TmdbIDNotNil() predicate.Person {
 	return predicate.Person(sql.FieldNotNull(FieldTmdbID))
 }
 
+// TmdbIDEqualFold applies the EqualFold predicate on the "tmdb_id" field.
+func TmdbIDEqualFold(v string) predicate.Person {
+	return predicate.Person(sql.FieldEqualFold(FieldTmdbID, v))
+}
+
+// TmdbIDContainsFold applies the ContainsFold predicate on the "tmdb_id" field.
+func TmdbIDContainsFold(v string) predicate.Person {
+	return predicate.Person(sql.FieldContainsFold(FieldTmdbID, v))
+}
+
 // TvdbIDEQ applies the EQ predicate on the "tvdb_id" field.
-func TvdbIDEQ(v uint32) predicate.Person {
+func TvdbIDEQ(v string) predicate.Person {
 	return predicate.Person(sql.FieldEQ(FieldTvdbID, v))
 }
 
 // TvdbIDNEQ applies the NEQ predicate on the "tvdb_id" field.
-func TvdbIDNEQ(v uint32) predicate.Person {
+func TvdbIDNEQ(v string) predicate.Person {
 	return predicate.Person(sql.FieldNEQ(FieldTvdbID, v))
 }
 
 // TvdbIDIn applies the In predicate on the "tvdb_id" field.
-func TvdbIDIn(vs ...uint32) predicate.Person {
+func TvdbIDIn(vs ...string) predicate.Person {
 	return predicate.Person(sql.FieldIn(FieldTvdbID, vs...))
 }
 
 // TvdbIDNotIn applies the NotIn predicate on the "tvdb_id" field.
-func TvdbIDNotIn(vs ...uint32) predicate.Person {
+func TvdbIDNotIn(vs ...string) predicate.Person {
 	return predicate.Person(sql.FieldNotIn(FieldTvdbID, vs...))
 }
 
 // TvdbIDGT applies the GT predicate on the "tvdb_id" field.
-func TvdbIDGT(v uint32) predicate.Person {
+func TvdbIDGT(v string) predicate.Person {
 	return predicate.Person(sql.FieldGT(FieldTvdbID, v))
 }
 
 // TvdbIDGTE applies the GTE predicate on the "tvdb_id" field.
-func TvdbIDGTE(v uint32) predicate.Person {
+func TvdbIDGTE(v string) predicate.Person {
 	return predicate.Person(sql.FieldGTE(FieldTvdbID, v))
 }
 
 // TvdbIDLT applies the LT predicate on the "tvdb_id" field.
-func TvdbIDLT(v uint32) predicate.Person {
+func TvdbIDLT(v string) predicate.Person {
 	return predicate.Person(sql.FieldLT(FieldTvdbID, v))
 }
 
 // TvdbIDLTE applies the LTE predicate on the "tvdb_id" field.
-func TvdbIDLTE(v uint32) predicate.Person {
+func TvdbIDLTE(v string) predicate.Person {
 	return predicate.Person(sql.FieldLTE(FieldTvdbID, v))
+}
+
+// TvdbIDContains applies the Contains predicate on the "tvdb_id" field.
+func TvdbIDContains(v string) predicate.Person {
+	return predicate.Person(sql.FieldContains(FieldTvdbID, v))
+}
+
+// TvdbIDHasPrefix applies the HasPrefix predicate on the "tvdb_id" field.
+func TvdbIDHasPrefix(v string) predicate.Person {
+	return predicate.Person(sql.FieldHasPrefix(FieldTvdbID, v))
+}
+
+// TvdbIDHasSuffix applies the HasSuffix predicate on the "tvdb_id" field.
+func TvdbIDHasSuffix(v string) predicate.Person {
+	return predicate.Person(sql.FieldHasSuffix(FieldTvdbID, v))
 }
 
 // TvdbIDIsNil applies the IsNil predicate on the "tvdb_id" field.
@@ -308,6 +348,16 @@ func TvdbIDIsNil() predicate.Person {
 // TvdbIDNotNil applies the NotNil predicate on the "tvdb_id" field.
 func TvdbIDNotNil() predicate.Person {
 	return predicate.Person(sql.FieldNotNull(FieldTvdbID))
+}
+
+// TvdbIDEqualFold applies the EqualFold predicate on the "tvdb_id" field.
+func TvdbIDEqualFold(v string) predicate.Person {
+	return predicate.Person(sql.FieldEqualFold(FieldTvdbID, v))
+}
+
+// TvdbIDContainsFold applies the ContainsFold predicate on the "tvdb_id" field.
+func TvdbIDContainsFold(v string) predicate.Person {
+	return predicate.Person(sql.FieldContainsFold(FieldTvdbID, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.

@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -43,7 +45,7 @@ var _ = Describe("GetStats", Label("integration", "db"), func() {
 
 	It("buckets the range by day and keeps the stretch before it apart", func() {
 		m := client.Movie.Create().
-			SetTmdbID(1).
+			SetTmdbID("1").
 			SetTitle("Heat").
 			SetOriginalTitle("Heat").
 			SetYear(1995).
@@ -78,7 +80,7 @@ var _ = Describe("GetStats", Label("integration", "db"), func() {
 
 	It("breaks probed video files down and counts the unprobed apart", func() {
 		m := client.Movie.Create().
-			SetTmdbID(1).
+			SetTmdbID("1").
 			SetTitle("Heat").
 			SetOriginalTitle("Heat").
 			SetYear(1995).
@@ -182,7 +184,7 @@ var _ = Describe("GetStats", Label("integration", "db"), func() {
 			client.Request.Create().
 				SetRequester(ann).
 				SetMediaType(request.MediaTypeMovie).
-				SetMediaID(uint32(created.Unix())).
+				SetMediaID(providerid.Format(uint32(created.Unix()))).
 				SetTitle("t").
 				SetStatus(st).
 				SetCreateTime(created).

@@ -71,7 +71,7 @@ var (
 type Manager interface {
 	Add(
 		ctx context.Context,
-		tmdbID uint32,
+		tmdbID string,
 		qualityProfile string,
 	) (*ent.Movie, string, error)
 	FilterList(
@@ -79,7 +79,7 @@ type Manager interface {
 		p FilterParams,
 	) ([]*ent.Movie, map[uint32]db.MovieFileSummary, uint32, error)
 	Get(ctx context.Context, id uint32) (*ent.Movie, error)
-	GetByTMDBID(ctx context.Context, tmdbID uint32) (*ent.Movie, error)
+	GetByTMDBID(ctx context.Context, tmdbID string) (*ent.Movie, error)
 	Update(ctx context.Context, id uint32, p UpdateParams) (*ent.Movie, error)
 	Delete(ctx context.Context, id uint32, opts DeleteOptions) error
 	DeleteFile(
@@ -88,7 +88,7 @@ type Manager interface {
 		opts DeleteFileOptions,
 	) error
 	RefreshOne(ctx context.Context, id uint32) (*ent.Movie, error)
-	Reidentify(ctx context.Context, id, tmdbID uint32) (*ent.Movie, error)
+	Reidentify(ctx context.Context, id uint32, tmdbID string) (*ent.Movie, error)
 	Counts(ctx context.Context, p FilterParams) (Counts, error)
 	AnnotateTMDBResults(
 		ctx context.Context,
@@ -196,12 +196,12 @@ func NewService(
 
 func (s *Service) Add(
 	ctx context.Context,
-	tmdbID uint32,
+	tmdbID string,
 	qualityProfile string,
 ) (*ent.Movie, string, error) {
 	ctx, span := tracer.Start(ctx, "movie.add",
 		trace.WithAttributes(
-			attribute.Int64("tmdb.id", int64(tmdbID)),
+			attribute.String("tmdb.id", tmdbID),
 			attribute.String("quality_profile", qualityProfile),
 		),
 	)
@@ -249,7 +249,7 @@ func (s *Service) Add(
 		if ent.IsConstraintError(err) {
 			return nil, "", otelx.RecordSpanError(
 				span,
-				fmt.Errorf("%w: tmdb_id %d", ErrMovieExists, tmdbID),
+				fmt.Errorf("%w: tmdb_id %s", ErrMovieExists, tmdbID),
 			)
 		}
 		return nil, "", otelx.RecordSpanError(
@@ -356,10 +356,10 @@ func (s *Service) Get(ctx context.Context, id uint32) (*ent.Movie, error) {
 // rather than as an error.
 func (s *Service) GetByTMDBID(
 	ctx context.Context,
-	tmdbID uint32,
+	tmdbID string,
 ) (*ent.Movie, error) {
 	ctx, span := tracer.Start(ctx, "movie.get_by_tmdb_id",
-		trace.WithAttributes(attribute.Int64("tmdb.id", int64(tmdbID))),
+		trace.WithAttributes(attribute.String("tmdb.id", tmdbID)),
 	)
 	defer span.End()
 
@@ -529,17 +529,17 @@ func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string)
 // move files.
 func (s *Service) Reidentify(
 	ctx context.Context,
-	id, tmdbID uint32,
+	id uint32, tmdbID string,
 ) (*ent.Movie, error) {
 	ctx, span := tracer.Start(ctx, "movie.reidentify",
 		trace.WithAttributes(
 			attribute.Int64("movie.id", int64(id)),
-			attribute.Int64("movie.tmdb_id", int64(tmdbID)),
+			attribute.String("movie.tmdb_id", tmdbID),
 		),
 	)
 	defer span.End()
 
-	if tmdbID == 0 {
+	if tmdbID == "" {
 		return nil, otelx.RecordSpanError(span, ErrInvalidTMDBID)
 	}
 	m, err := s.db.FindMovieByID(ctx, id)
@@ -644,7 +644,7 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 	ctx, span := tracer.Start(ctx, "movie.refresh_stale.movie",
 		trace.WithAttributes(
 			attribute.Int64("movie.id", int64(m.ID)),
-			attribute.Int64("movie.tmdb_id", int64(m.TmdbID)),
+			attribute.String("movie.tmdb_id", m.TmdbID),
 		),
 	)
 	defer span.End()
@@ -755,7 +755,7 @@ func (s *Service) AnnotateTMDBResults(
 	if len(results) == 0 {
 		return nil, nil
 	}
-	ids := make([]uint32, 0, len(results))
+	ids := make([]string, 0, len(results))
 	for _, r := range results {
 		ids = append(ids, r.TMDBID)
 	}
@@ -766,7 +766,7 @@ func (s *Service) AnnotateTMDBResults(
 			fmt.Errorf("find movies by tmdb ids: %w", err),
 		)
 	}
-	added := make(map[uint32]struct{}, len(existing))
+	added := make(map[string]struct{}, len(existing))
 	for _, m := range existing {
 		added[m.TmdbID] = struct{}{}
 	}

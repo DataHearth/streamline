@@ -161,7 +161,7 @@ func libraryCastToAPI(cast []db.CastEntry) []CastMember {
 	out := make([]CastMember, 0, len(cast))
 	for _, c := range cast {
 		m := CastMember{Name: c.Name, PersonId: &c.PersonID}
-		if c.TMDBID != 0 {
+		if c.TMDBID != "" {
 			m.TmdbId = &c.TMDBID
 		}
 		if c.Character != "" {
@@ -184,7 +184,7 @@ func castToAPI(cast []metadata.CastMember) []CastMember {
 	out := make([]CastMember, 0, len(cast))
 	for _, c := range cast {
 		m := CastMember{Name: c.Name}
-		if c.TMDBID != 0 {
+		if c.TMDBID != "" {
 			id := c.TMDBID
 			m.TmdbId = &id
 		}
@@ -209,12 +209,12 @@ func castToAPI(cast []metadata.CastMember) []CastMember {
 
 // providerPersonURL builds the person's page on whichever provider supplied
 // them. tmdb first: a person carrying both ids was matched on the tmdb one.
-func providerPersonURL(tmdbID, tvdbID uint32) string {
+func providerPersonURL(tmdbID, tvdbID string) string {
 	switch {
-	case tmdbID != 0:
-		return fmt.Sprintf("https://www.themoviedb.org/person/%d", tmdbID)
-	case tvdbID != 0:
-		return fmt.Sprintf("https://www.thetvdb.com/dereferrer/people/%d", tvdbID)
+	case tmdbID != "":
+		return fmt.Sprintf("https://www.themoviedb.org/person/%s", tmdbID)
+	case tvdbID != "":
+		return fmt.Sprintf("https://www.thetvdb.com/dereferrer/people/%s", tvdbID)
 	default:
 		return ""
 	}
@@ -806,7 +806,7 @@ func toAPIImportScanFile(f *ent.ImportScanFile) ImportScanFile {
 		}
 		out.Candidates = &cands
 	}
-	if f.TmdbID != 0 {
+	if f.TmdbID != "" {
 		v := f.TmdbID
 		out.TmdbId = &v
 	}
@@ -814,7 +814,7 @@ func toAPIImportScanFile(f *ent.ImportScanFile) ImportScanFile {
 		v := f.ExistingMovieID
 		out.ExistingMovieId = &v
 	}
-	if f.DecisionTmdbID != 0 {
+	if f.DecisionTmdbID != "" {
 		v := f.DecisionTmdbID
 		out.DecisionTmdbId = &v
 	}

@@ -51,7 +51,7 @@ func (_m *MockManager) EXPECT() *MockManager_Expecter {
 }
 
 // Add provides a mock function for the type MockManager
-func (_mock *MockManager) Add(ctx context.Context, tmdbID uint32, qualityProfile string) (*ent.Movie, string, error) {
+func (_mock *MockManager) Add(ctx context.Context, tmdbID string, qualityProfile string) (*ent.Movie, string, error) {
 	ret := _mock.Called(ctx, tmdbID, qualityProfile)
 
 	if len(ret) == 0 {
@@ -61,22 +61,22 @@ func (_mock *MockManager) Add(ctx context.Context, tmdbID uint32, qualityProfile
 	var r0 *ent.Movie
 	var r1 string
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (*ent.Movie, string, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*ent.Movie, string, error)); ok {
 		return returnFunc(ctx, tmdbID, qualityProfile)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) *ent.Movie); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *ent.Movie); ok {
 		r0 = returnFunc(ctx, tmdbID, qualityProfile)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.Movie)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) string); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) string); ok {
 		r1 = returnFunc(ctx, tmdbID, qualityProfile)
 	} else {
 		r1 = ret.Get(1).(string)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, string) error); ok {
+	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string) error); ok {
 		r2 = returnFunc(ctx, tmdbID, qualityProfile)
 	} else {
 		r2 = ret.Error(2)
@@ -91,21 +91,21 @@ type MockManager_Add_Call struct {
 
 // Add is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tmdbID uint32
+//   - tmdbID string
 //   - qualityProfile string
 func (_e *MockManager_Expecter) Add(ctx any, tmdbID any, qualityProfile any) *MockManager_Add_Call {
 	return &MockManager_Add_Call{Call: _e.mock.On("Add", ctx, tmdbID, qualityProfile)}
 }
 
-func (_c *MockManager_Add_Call) Run(run func(ctx context.Context, tmdbID uint32, qualityProfile string)) *MockManager_Add_Call {
+func (_c *MockManager_Add_Call) Run(run func(ctx context.Context, tmdbID string, qualityProfile string)) *MockManager_Add_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -125,7 +125,7 @@ func (_c *MockManager_Add_Call) Return(movie *ent.Movie, s string, err error) *M
 	return _c
 }
 
-func (_c *MockManager_Add_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32, qualityProfile string) (*ent.Movie, string, error)) *MockManager_Add_Call {
+func (_c *MockManager_Add_Call) RunAndReturn(run func(ctx context.Context, tmdbID string, qualityProfile string) (*ent.Movie, string, error)) *MockManager_Add_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -547,7 +547,7 @@ func (_c *MockManager_Get_Call) RunAndReturn(run func(ctx context.Context, id ui
 }
 
 // GetByTMDBID provides a mock function for the type MockManager
-func (_mock *MockManager) GetByTMDBID(ctx context.Context, tmdbID uint32) (*ent.Movie, error) {
+func (_mock *MockManager) GetByTMDBID(ctx context.Context, tmdbID string) (*ent.Movie, error) {
 	ret := _mock.Called(ctx, tmdbID)
 
 	if len(ret) == 0 {
@@ -556,17 +556,17 @@ func (_mock *MockManager) GetByTMDBID(ctx context.Context, tmdbID uint32) (*ent.
 
 	var r0 *ent.Movie
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Movie, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ent.Movie, error)); ok {
 		return returnFunc(ctx, tmdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Movie); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ent.Movie); ok {
 		r0 = returnFunc(ctx, tmdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.Movie)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, tmdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -581,20 +581,20 @@ type MockManager_GetByTMDBID_Call struct {
 
 // GetByTMDBID is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tmdbID uint32
+//   - tmdbID string
 func (_e *MockManager_Expecter) GetByTMDBID(ctx any, tmdbID any) *MockManager_GetByTMDBID_Call {
 	return &MockManager_GetByTMDBID_Call{Call: _e.mock.On("GetByTMDBID", ctx, tmdbID)}
 }
 
-func (_c *MockManager_GetByTMDBID_Call) Run(run func(ctx context.Context, tmdbID uint32)) *MockManager_GetByTMDBID_Call {
+func (_c *MockManager_GetByTMDBID_Call) Run(run func(ctx context.Context, tmdbID string)) *MockManager_GetByTMDBID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -609,7 +609,7 @@ func (_c *MockManager_GetByTMDBID_Call) Return(movie1 *ent.Movie, err error) *Mo
 	return _c
 }
 
-func (_c *MockManager_GetByTMDBID_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32) (*ent.Movie, error)) *MockManager_GetByTMDBID_Call {
+func (_c *MockManager_GetByTMDBID_Call) RunAndReturn(run func(ctx context.Context, tmdbID string) (*ent.Movie, error)) *MockManager_GetByTMDBID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -683,7 +683,7 @@ func (_c *MockManager_RefreshOne_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // Reidentify provides a mock function for the type MockManager
-func (_mock *MockManager) Reidentify(ctx context.Context, id uint32, tmdbID uint32) (*ent.Movie, error) {
+func (_mock *MockManager) Reidentify(ctx context.Context, id uint32, tmdbID string) (*ent.Movie, error) {
 	ret := _mock.Called(ctx, id, tmdbID)
 
 	if len(ret) == 0 {
@@ -692,17 +692,17 @@ func (_mock *MockManager) Reidentify(ctx context.Context, id uint32, tmdbID uint
 
 	var r0 *ent.Movie
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) (*ent.Movie, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (*ent.Movie, error)); ok {
 		return returnFunc(ctx, id, tmdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) *ent.Movie); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) *ent.Movie); ok {
 		r0 = returnFunc(ctx, id, tmdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.Movie)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) error); ok {
 		r1 = returnFunc(ctx, id, tmdbID)
 	} else {
 		r1 = ret.Error(1)
@@ -718,12 +718,12 @@ type MockManager_Reidentify_Call struct {
 // Reidentify is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-//   - tmdbID uint32
+//   - tmdbID string
 func (_e *MockManager_Expecter) Reidentify(ctx any, id any, tmdbID any) *MockManager_Reidentify_Call {
 	return &MockManager_Reidentify_Call{Call: _e.mock.On("Reidentify", ctx, id, tmdbID)}
 }
 
-func (_c *MockManager_Reidentify_Call) Run(run func(ctx context.Context, id uint32, tmdbID uint32)) *MockManager_Reidentify_Call {
+func (_c *MockManager_Reidentify_Call) Run(run func(ctx context.Context, id uint32, tmdbID string)) *MockManager_Reidentify_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -733,9 +733,9 @@ func (_c *MockManager_Reidentify_Call) Run(run func(ctx context.Context, id uint
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		var arg2 uint32
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uint32)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -751,7 +751,7 @@ func (_c *MockManager_Reidentify_Call) Return(movie1 *ent.Movie, err error) *Moc
 	return _c
 }
 
-func (_c *MockManager_Reidentify_Call) RunAndReturn(run func(ctx context.Context, id uint32, tmdbID uint32) (*ent.Movie, error)) *MockManager_Reidentify_Call {
+func (_c *MockManager_Reidentify_Call) RunAndReturn(run func(ctx context.Context, id uint32, tmdbID string) (*ent.Movie, error)) *MockManager_Reidentify_Call {
 	_c.Call.Return(run)
 	return _c
 }

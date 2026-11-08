@@ -34,7 +34,7 @@ const (
 
 // BookCredit is one maker of a book, from Hardcover's contributors.
 type BookCredit struct {
-	AuthorHardcoverID uint32
+	AuthorHardcoverID string
 	Name              string
 	ImageURL          string
 	Role              string
@@ -43,7 +43,7 @@ type BookCredit struct {
 // EditionRecord is the winning edition of one (language, publisher, format)
 // triple of a book.
 type EditionRecord struct {
-	HardcoverID     uint32
+	HardcoverID     string
 	Language        string
 	Title           string
 	Publisher       string
@@ -56,7 +56,7 @@ type EditionRecord struct {
 	Translator      string
 	// TranslatorID is the Hardcover person behind Translator, so a series can
 	// credit translators as people.
-	TranslatorID uint32
+	TranslatorID string
 	ISBN13       string
 	ASIN         string
 	Popularity   uint32
@@ -64,14 +64,14 @@ type EditionRecord struct {
 
 // BookSeriesRef is a series a book belongs to, with the book's position in it.
 type BookSeriesRef struct {
-	SeriesHardcoverID uint32
+	SeriesHardcoverID string
 	Name              string
 	Position          *float64
 }
 
 // BookRecord is one book as the batch query returns it.
 type BookRecord struct {
-	HardcoverID      uint32
+	HardcoverID      string
 	Title            string
 	OriginalTitle    string
 	Description      string
@@ -97,7 +97,7 @@ type BookRecord struct {
 // SeriesVolumeRef is one numbered entry of a series skeleton.
 type SeriesVolumeRef struct {
 	Position        float64
-	BookHardcoverID uint32
+	BookHardcoverID string
 	UsersCount      uint32
 	Compilation     bool
 }
@@ -105,14 +105,14 @@ type SeriesVolumeRef struct {
 // SeriesRecord is a series skeleton: the row and the (position, book id) pairs
 // of its numbered volumes. Volume data comes from the batch book query.
 type SeriesRecord struct {
-	HardcoverID       uint32
+	HardcoverID       string
 	Name              string
 	Slug              string
 	Description       string
 	Completed         bool
 	PrimaryBooks      uint32
 	Books             uint32
-	AuthorHardcoverID uint32
+	AuthorHardcoverID string
 	AuthorName        string
 	AuthorImageURL    string
 	Volumes           []SeriesVolumeRef
@@ -120,7 +120,7 @@ type SeriesRecord struct {
 
 // BookLookupHit is one hit of the add-flow search, a book or a series.
 type BookLookupHit struct {
-	HardcoverID uint32
+	HardcoverID string
 	Type        string // "book" | "series"
 	Title       string
 	Author      string
@@ -137,14 +137,14 @@ type BookLookupHit struct {
 	// AlternativeTitles and SeriesIDs are a book hit's translations and series
 	// membership, as the search document carries them.
 	AlternativeTitles []string
-	SeriesIDs         []uint32
+	SeriesIDs         []string
 }
 
 // SeriesLookupVolume is one numbered entry of a series in the batched lookup,
 // with what the add path's winner rule reads.
 type SeriesLookupVolume struct {
 	Position        float64
-	BookHardcoverID uint32
+	BookHardcoverID string
 	UsersCount      uint32
 	Compilation     bool
 	ImageURL        string
@@ -155,7 +155,7 @@ type SeriesLookupVolume struct {
 // books Hardcover lists with no position, most read first: the only books
 // some series have ("Calvin und Hobbes"), and so the only covers to show.
 type SeriesLookupRecord struct {
-	HardcoverID  uint32
+	HardcoverID  string
 	Name         string
 	Slug         string
 	PrimaryBooks uint32
@@ -169,7 +169,7 @@ type SeriesLookupRecord struct {
 // BookSearchResult is a Hardcover book search hit, used to match scanned
 // files.
 type BookSearchResult struct {
-	HardcoverID uint32
+	HardcoverID string
 	Title       string
 	Author      string
 	Year        uint16
@@ -179,8 +179,8 @@ type BookSearchResult struct {
 type BookProvider interface {
 	// SearchBooks is the scanner's title search.
 	SearchBooks(ctx context.Context, query string) ([]BookSearchResult, error)
-	// BookByISBN resolves an ISBN-13 to a Hardcover book id; 0 = not found.
-	BookByISBN(ctx context.Context, isbn string) (uint32, error)
+	// BookByISBN resolves an ISBN-13 to a Hardcover book id; "" = not found.
+	BookByISBN(ctx context.Context, isbn string) (string, error)
 	// LookupBooks and LookupSeries are the add flow's search, one request
 	// each, memoised for a few minutes per normalised query.
 	LookupBooks(ctx context.Context, query string) ([]BookLookupHit, error)
@@ -188,13 +188,13 @@ type BookProvider interface {
 	// GetBooks returns the books Hardcover knows among ids, in the order
 	// asked, one request per 20. Answers are memoised for ten minutes and must
 	// not be mutated; an unknown id is simply absent.
-	GetBooks(ctx context.Context, ids []uint32) ([]*BookRecord, error)
+	GetBooks(ctx context.Context, ids []string) ([]*BookRecord, error)
 	// GetBooksFresh is GetBooks without the memo, for a refresh.
-	GetBooksFresh(ctx context.Context, ids []uint32) ([]*BookRecord, error)
+	GetBooksFresh(ctx context.Context, ids []string) ([]*BookRecord, error)
 	// GetSeries returns the series skeleton in one request; nil when unknown.
-	GetSeries(ctx context.Context, id uint32) (*SeriesRecord, error)
+	GetSeries(ctx context.Context, id string) (*SeriesRecord, error)
 	// GetSeriesLookup reads many series in one request, memoised for a few
 	// minutes per id set. The answer is in ascending id order; an unknown id
 	// is simply absent.
-	GetSeriesLookup(ctx context.Context, ids []uint32) ([]SeriesLookupRecord, error)
+	GetSeriesLookup(ctx context.Context, ids []string) ([]SeriesLookupRecord, error)
 }

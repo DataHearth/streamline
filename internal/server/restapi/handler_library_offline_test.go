@@ -233,13 +233,13 @@ var _ = Describe(
 				"movie",
 				db.RootMovies,
 				"/api/v1/movies/1/reidentify",
-				`{"tmdb_id":1}`,
+				`{"tmdb_id":"1"}`,
 			),
 			Entry(
 				"series",
 				db.RootSeries,
 				"/api/v1/series/1/reidentify",
-				`{"tvdb_id":1}`,
+				`{"tvdb_id":"1"}`,
 			),
 		)
 

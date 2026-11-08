@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/utils/numeric"
@@ -133,7 +135,7 @@ func (t *TMDB) SearchMovie(
 			originalTitle = title
 		}
 		results = append(results, MovieResult{
-			TMDBID:        r.ID,
+			TMDBID:        providerid.Format(r.ID),
 			Title:         title,
 			OriginalTitle: originalTitle,
 			Year:          extractYear(r.ReleaseDate),
@@ -147,9 +149,9 @@ func (t *TMDB) SearchMovie(
 	return results, nil
 }
 
-func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, error) {
+func (t *TMDB) GetMovie(ctx context.Context, tmdbID string) (*MovieDetails, error) {
 	ctx, span := tracer.Start(ctx, "metadata.tmdb.get_movie",
-		trace.WithAttributes(attribute.Int64("tmdb.id", int64(tmdbID))),
+		trace.WithAttributes(attribute.String("tmdb.id", tmdbID)),
 	)
 	defer span.End()
 
@@ -173,7 +175,7 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 	var resp tmdbMovieResponse
 	if err := t.get(
 		ctx,
-		fmt.Sprintf("/3/movie/%d", tmdbID),
+		"/3/movie/"+url.PathEscape(tmdbID)+"",
 		params,
 		&resp,
 	); err != nil {
@@ -217,7 +219,7 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 	cast := make([]CastMember, 0, len(entries))
 	for _, c := range entries {
 		cast = append(cast, CastMember{
-			TMDBID:     c.ID,
+			TMDBID:     providerid.Format(c.ID),
 			Name:       c.Name,
 			Character:  c.Character,
 			ProfileURL: PosterURL(c.ProfilePath, profileSize),
@@ -242,7 +244,7 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 	}
 
 	return &MovieDetails{
-		TMDBID:           resp.ID,
+		TMDBID:           providerid.Format(resp.ID),
 		Title:            title,
 		OriginalTitle:    originalTitle,
 		Year:             extractYear(resp.ReleaseDate),
@@ -265,10 +267,10 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 // rather than fetched separately.
 func (t *TMDB) GetPerson(
 	ctx context.Context,
-	tmdbID uint32,
+	tmdbID string,
 ) (*PersonDetails, error) {
 	ctx, span := tracer.Start(ctx, "metadata.tmdb.get_person",
-		trace.WithAttributes(attribute.Int64("tmdb.id", int64(tmdbID))),
+		trace.WithAttributes(attribute.String("tmdb.id", tmdbID)),
 	)
 	defer span.End()
 
@@ -290,7 +292,7 @@ func (t *TMDB) GetPerson(
 	var resp tmdbPersonResponse
 	if err := t.get(
 		ctx,
-		fmt.Sprintf("/3/person/%d", tmdbID),
+		"/3/person/"+url.PathEscape(tmdbID)+"",
 		params,
 		&resp,
 	); err != nil {
@@ -319,10 +321,10 @@ func (t *TMDB) GetPerson(
 // MovieResult projection.
 func (t *TMDB) Recommendations(
 	ctx context.Context,
-	tmdbID uint32,
+	tmdbID string,
 ) ([]MovieResult, error) {
 	ctx, span := tracer.Start(ctx, "metadata.tmdb.recommendations",
-		trace.WithAttributes(attribute.Int64("tmdb.id", int64(tmdbID))),
+		trace.WithAttributes(attribute.String("tmdb.id", tmdbID)),
 	)
 	defer span.End()
 
@@ -343,7 +345,7 @@ func (t *TMDB) Recommendations(
 	var resp tmdbSearchResponse
 	if err := t.get(
 		ctx,
-		fmt.Sprintf("/3/movie/%d/recommendations", tmdbID),
+		"/3/movie/"+url.PathEscape(tmdbID)+"/recommendations",
 		params,
 		&resp,
 	); err != nil {
@@ -365,7 +367,7 @@ func (t *TMDB) Recommendations(
 			originalTitle = title
 		}
 		results = append(results, MovieResult{
-			TMDBID:        r.ID,
+			TMDBID:        providerid.Format(r.ID),
 			Title:         title,
 			OriginalTitle: originalTitle,
 			Year:          extractYear(r.ReleaseDate),
@@ -384,12 +386,12 @@ func (t *TMDB) Recommendations(
 // release date for the given region, or (nil, nil) when none is published.
 func (t *TMDB) FetchDigitalRelease(
 	ctx context.Context,
-	tmdbID uint32,
+	tmdbID string,
 	region string,
 ) (*time.Time, error) {
 	ctx, span := tracer.Start(ctx, "metadata.tmdb.fetch_digital_release",
 		trace.WithAttributes(
-			attribute.Int64("tmdb.id", int64(tmdbID)),
+			attribute.String("tmdb.id", tmdbID),
 			attribute.String("region", region),
 		),
 	)
@@ -410,7 +412,7 @@ func (t *TMDB) FetchDigitalRelease(
 	var resp tmdbReleaseDatesResponse
 	if err := t.get(
 		ctx,
-		fmt.Sprintf("/3/movie/%d/release_dates", tmdbID),
+		"/3/movie/"+url.PathEscape(tmdbID)+"/release_dates",
 		nil,
 		&resp,
 	); err != nil {

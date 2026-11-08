@@ -20,7 +20,7 @@ import (
 
 // EditionSeed is one stored edition of a book.
 type EditionSeed struct {
-	HardcoverID     uint32
+	HardcoverID     string
 	Language        string
 	Title           string
 	Publisher       string
@@ -38,7 +38,7 @@ type EditionSeed struct {
 
 // CreditSeed is one contribution of a person to a book or a series.
 type CreditSeed struct {
-	AuthorHardcoverID uint32
+	AuthorHardcoverID string
 	Name              string
 	ImageURL          string
 	Role              string
@@ -50,7 +50,7 @@ type CreditSeed struct {
 // the row a series stub: no editions, never searched, grabbed or imported
 // until the hydration worker fills it in.
 type BookSeed struct {
-	HardcoverID       uint32
+	HardcoverID       string
 	Title             string
 	OriginalTitle     string
 	AuthorName        string
@@ -98,8 +98,8 @@ func upsertAuthors(
 	ctx context.Context,
 	c *ent.Client,
 	credits []CreditSeed,
-) (map[uint32]*ent.Author, error) {
-	out := make(map[uint32]*ent.Author, len(credits))
+) (map[string]*ent.Author, error) {
+	out := make(map[string]*ent.Author, len(credits))
 	for _, cr := range credits {
 		if _, ok := out[cr.AuthorHardcoverID]; ok {
 			continue
@@ -119,7 +119,7 @@ func upsertAuthors(
 			a, err = c.Author.UpdateOne(a).SetImageSource(cr.ImageURL).Save(ctx)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("upsert author %d: %w", cr.AuthorHardcoverID, err)
+			return nil, fmt.Errorf("upsert author %s: %w", cr.AuthorHardcoverID, err)
 		}
 		out[cr.AuthorHardcoverID] = a
 	}
@@ -240,13 +240,13 @@ func createBookTx(
 	}
 	row, err := cr.Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("create book %d: %w", b.HardcoverID, err)
+		return nil, fmt.Errorf("create book %s: %w", b.HardcoverID, err)
 	}
 	editions := make([]*ent.BookEdition, 0, len(b.Editions))
 	for _, e := range b.Editions {
 		ed, err := writeEdition(ctx, c, row.ID, e)
 		if err != nil {
-			return nil, fmt.Errorf("create edition %d: %w", e.HardcoverID, err)
+			return nil, fmt.Errorf("create edition %s: %w", e.HardcoverID, err)
 		}
 		editions = append(editions, ed)
 	}
@@ -403,7 +403,7 @@ func (db *DB) FindBookByID(ctx context.Context, id uint32) (*ent.Book, error) {
 // FindBookByHardcoverID returns nil, nil when no book has the id.
 func (db *DB) FindBookByHardcoverID(
 	ctx context.Context,
-	hardcoverID uint32,
+	hardcoverID string,
 ) (*ent.Book, error) {
 	row, err := db.client.Book.Query().
 		Where(book.HardcoverIDEQ(hardcoverID)).
@@ -419,8 +419,8 @@ func (db *DB) FindBookByHardcoverID(
 // library, with their series edge loaded.
 func (db *DB) FindBooksByHardcoverIDs(
 	ctx context.Context,
-	ids []uint32,
-) (map[uint32]*ent.Book, error) {
+	ids []string,
+) (map[string]*ent.Book, error) {
 	rows, err := db.client.Book.Query().
 		Where(book.HardcoverIDIn(ids...)).
 		WithSeries().
@@ -428,7 +428,7 @@ func (db *DB) FindBooksByHardcoverIDs(
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[uint32]*ent.Book, len(rows))
+	out := make(map[string]*ent.Book, len(rows))
 	for _, r := range rows {
 		out[r.HardcoverID] = r
 	}
@@ -491,11 +491,11 @@ func (db *DB) ApplyBookMetadata(
 		tx.Rollback()
 		return err
 	}
-	byHC := make(map[uint32]*ent.BookEdition, len(stored))
+	byHC := make(map[string]*ent.BookEdition, len(stored))
 	for _, e := range stored {
 		byHC[e.HardcoverEditionID] = e
 	}
-	offered := make(map[uint32]bool, len(m.Editions))
+	offered := make(map[string]bool, len(m.Editions))
 	for _, e := range m.Editions {
 		offered[e.HardcoverID] = true
 		if row, ok := byHC[e.HardcoverID]; ok {
@@ -507,7 +507,7 @@ func (db *DB) ApplyBookMetadata(
 		}
 		if _, err := writeEdition(ctx, c, id, e); err != nil {
 			tx.Rollback()
-			return fmt.Errorf("create edition %d: %w", e.HardcoverID, err)
+			return fmt.Errorf("create edition %s: %w", e.HardcoverID, err)
 		}
 	}
 	pinned := map[uint32]bool{}

@@ -14,7 +14,7 @@ import (
 // as JSON in ImportScanShow.candidates; defined here so ent code-gen can
 // reference it without an import cycle (mirrors ScannedCandidate).
 type ScannedShowCandidate struct {
-	TVDBID uint32 `json:"tvdb_id"`
+	TVDBID string `json:"tvdb_id"`
 	Title  string `json:"title"`
 	Year   uint16 `json:"year,omitempty"`
 }
@@ -34,7 +34,7 @@ func (ImportScanShow) Fields() []ent.Field {
 		field.Enum("classification").
 			Values("confirmed", "ambiguous", "unmatched", "existing").
 			Default("unmatched"),
-		field.Uint32("tvdb_id").Optional().Nillable(),
+		field.String("tvdb_id").Optional().Nillable(),
 		field.JSON("candidates", []ScannedShowCandidate{}).Optional(),
 		field.Uint32("existing_tvshow_id").Optional().Nillable(),
 		field.Uint16("file_count").Default(0),
@@ -42,7 +42,7 @@ func (ImportScanShow) Fields() []ent.Field {
 		field.Enum("decision").
 			Values("pending", "accept", "skip").
 			Default("pending"),
-		field.Uint32("decision_tvdb_id").Optional().Nillable(),
+		field.String("decision_tvdb_id").Optional().Nillable(),
 
 		field.Enum("outcome").
 			Values("pending", "created", "attached", "failed").

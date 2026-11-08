@@ -35,7 +35,7 @@ var _ = Describe("RegisterEntityMetrics", Label("integration", "db"), func() {
 		).To(Succeed())
 
 		_, err := client.Movie.Create().
-			SetTmdbID(1).
+			SetTmdbID("1").
 			SetTitle("Matrix").
 			SetOriginalTitle("Matrix").
 			SetYear(1999).

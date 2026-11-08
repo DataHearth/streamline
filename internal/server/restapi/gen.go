@@ -4536,7 +4536,7 @@ type ActivityTrackRef struct {
 
 // AddBookRequest defines model for AddBookRequest.
 type AddBookRequest struct {
-	HardcoverId uint32 `json:"hardcover_id"`
+	HardcoverId string `json:"hardcover_id"`
 
 	// Monitor Derived from the two slot `*_monitored` flags.
 	Monitor *BookMonitor `json:"monitor,omitempty"`
@@ -4548,7 +4548,7 @@ type AddBookRequest struct {
 // AddBookSeriesRequest defines model for AddBookSeriesRequest.
 type AddBookSeriesRequest struct {
 	// HardcoverId Hardcover series id.
-	HardcoverId uint32 `json:"hardcover_id"`
+	HardcoverId string `json:"hardcover_id"`
 
 	// Monitor Applies to each volume's ebook slot only.
 	Monitor        *BookSeriesMonitor `json:"monitor,omitempty"`
@@ -4559,7 +4559,7 @@ type AddBookSeriesRequest struct {
 type AddMovieRequest struct {
 	// QualityProfile Name of the quality profile (empty resolves to the movie default).
 	QualityProfile *string `json:"quality_profile,omitempty"`
-	TmdbId         uint32  `json:"tmdb_id"`
+	TmdbId         string  `json:"tmdb_id"`
 }
 
 // AddMusicArtistRequest defines model for AddMusicArtistRequest.
@@ -4584,7 +4584,7 @@ type AddSeriesRequest struct {
 
 	// QualityProfile Name of the quality profile (empty resolves to the series default).
 	QualityProfile *string `json:"quality_profile,omitempty"`
-	TvdbId         uint32  `json:"tvdb_id"`
+	TvdbId         string  `json:"tvdb_id"`
 }
 
 // AddSeriesRequestPreset One-shot monitoring preset applied to seasons/episodes.
@@ -4790,7 +4790,7 @@ type Book struct {
 	// Formats Always two entries, ebook first.
 	Formats     []BookFormatSlot `json:"formats"`
 	Genre       *string          `json:"genre,omitempty"`
-	HardcoverId uint32           `json:"hardcover_id"`
+	HardcoverId string           `json:"hardcover_id"`
 	Id          uint32           `json:"id"`
 
 	// Kind A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
@@ -4937,7 +4937,7 @@ type BookLookupDetail struct {
 	// CoverBookIds Series only; Hardcover book ids of the volumes adding the series
 	// would pick at its first positions. The SPA builds
 	// `/posters/lookup/books/{id}/poster.jpg` from each.
-	CoverBookIds *[]uint32 `json:"cover_book_ids,omitempty"`
+	CoverBookIds *[]string `json:"cover_book_ids,omitempty"`
 
 	// CoverId Series hit that is already added; Book id of the library series' lowest-position volume.
 	CoverId  *uint32              `json:"cover_id,omitempty"`
@@ -4945,7 +4945,7 @@ type BookLookupDetail struct {
 
 	// Genres Top 3 genre tags by count.
 	Genres      *[]string `json:"genres,omitempty"`
-	HardcoverId uint32    `json:"hardcover_id"`
+	HardcoverId string    `json:"hardcover_id"`
 
 	// Kind A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
 	Kind *BookKind `json:"kind,omitempty"`
@@ -4974,7 +4974,7 @@ type BookLookupDetail struct {
 	// VolumeBookIds Hardcover book ids of the first 6 or fewer primary volumes of
 	// a series; the SPA builds `/posters/lookup/books/{id}/poster.jpg`
 	// from each.
-	VolumeBookIds *[]uint32 `json:"volume_book_ids,omitempty"`
+	VolumeBookIds *[]string `json:"volume_book_ids,omitempty"`
 
 	// Volumes Series only.
 	Volumes *uint32 `json:"volumes,omitempty"`
@@ -5000,11 +5000,11 @@ type BookLookupHit struct {
 	// CoverBookIds Series only; Hardcover book ids of the volumes adding the series
 	// would pick at its first positions. The SPA builds
 	// `/posters/lookup/books/{id}/poster.jpg` from each.
-	CoverBookIds *[]uint32 `json:"cover_book_ids,omitempty"`
+	CoverBookIds *[]string `json:"cover_book_ids,omitempty"`
 
 	// CoverId Series hit that is already added; Book id of the library series' lowest-position volume.
 	CoverId     *uint32 `json:"cover_id,omitempty"`
-	HardcoverId uint32  `json:"hardcover_id"`
+	HardcoverId string  `json:"hardcover_id"`
 
 	// Kind A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
 	Kind *BookKind `json:"kind,omitempty"`
@@ -5109,7 +5109,7 @@ type BookSeries struct {
 	Editions []string `json:"editions"`
 
 	// HardcoverId Hardcover series id, a separate id space from books.
-	HardcoverId uint32 `json:"hardcover_id"`
+	HardcoverId string `json:"hardcover_id"`
 
 	// HardcoverSlug The hardcover.app/series path segment; absent until Hardcover has reported one.
 	HardcoverSlug *string `json:"hardcover_slug,omitempty"`
@@ -5229,7 +5229,7 @@ type CastMember struct {
 	ProfileUrl *string `json:"profile_url,omitempty"`
 
 	// TmdbId TMDB person id; links to themoviedb.org/person/{id}.
-	TmdbId *uint32 `json:"tmdb_id,omitempty"`
+	TmdbId *string `json:"tmdb_id,omitempty"`
 }
 
 // ChangePasswordRequest defines model for ChangePasswordRequest.
@@ -5277,7 +5277,7 @@ type CreateRequestRequest struct {
 	ArtistName *string `json:"artist_name,omitempty"`
 
 	// MediaId Required for movie, tvshow, book and book_series; rejected for artist and album.
-	MediaId *uint32 `json:"media_id,omitempty"`
+	MediaId *string `json:"media_id,omitempty"`
 
 	// MediaMbid Artist MBID for an artist, release-group MBID for an album;
 	// required for both and rejected for every other type.
@@ -5868,7 +5868,7 @@ type IdentifyPendingRequest struct {
 
 	// ProviderId TMDB id when `kind` is `movie`, TVDB id when it is `series`,
 	// Hardcover book id when it is `book`. Required for those three.
-	ProviderId *uint32 `json:"provider_id,omitempty"`
+	ProviderId *string `json:"provider_id,omitempty"`
 }
 
 // IdentifyPendingRequestKind defines model for IdentifyPendingRequest.Kind.
@@ -6031,13 +6031,13 @@ type ImportScanAlbumList struct {
 
 // ImportScanBook defines model for ImportScanBook.
 type ImportScanBook struct {
-	BookHardcoverId         *uint32                      `json:"book_hardcover_id,omitempty"`
+	BookHardcoverId         *string                      `json:"book_hardcover_id,omitempty"`
 	Candidates              *[]ImportScanBookCandidate   `json:"candidates,omitempty"`
 	Classification          ImportScanBookClassification `json:"classification"`
 	CreatedAt               *time.Time                   `json:"created_at,omitempty"`
 	CreatedBookId           *uint32                      `json:"created_book_id,omitempty"`
 	Decision                ImportScanBookDecision       `json:"decision"`
-	DecisionBookHardcoverId *uint32                      `json:"decision_book_hardcover_id,omitempty"`
+	DecisionBookHardcoverId *string                      `json:"decision_book_hardcover_id,omitempty"`
 	ExistingBookId          *uint32                      `json:"existing_book_id,omitempty"`
 	FileCount               uint16                       `json:"file_count"`
 	FilePaths               []string                     `json:"file_paths"`
@@ -6081,14 +6081,14 @@ type ImportScanBookSlot string
 // ImportScanBookCandidate defines model for ImportScanBookCandidate.
 type ImportScanBookCandidate struct {
 	Author          *string `json:"author,omitempty"`
-	BookHardcoverId uint32  `json:"book_hardcover_id"`
+	BookHardcoverId string  `json:"book_hardcover_id"`
 	Title           string  `json:"title"`
 	Year            *uint16 `json:"year,omitempty"`
 }
 
 // ImportScanBookDecisionRequest defines model for ImportScanBookDecisionRequest.
 type ImportScanBookDecisionRequest struct {
-	BookHardcoverId *uint32                               `json:"book_hardcover_id,omitempty"`
+	BookHardcoverId *string                               `json:"book_hardcover_id,omitempty"`
 	Decision        ImportScanBookDecisionRequestDecision `json:"decision"`
 }
 
@@ -6104,7 +6104,7 @@ type ImportScanBookList struct {
 // ImportScanCandidate defines model for ImportScanCandidate.
 type ImportScanCandidate struct {
 	Title  string `json:"title"`
-	TmdbId uint32 `json:"tmdb_id"`
+	TmdbId string `json:"tmdb_id"`
 	Year   uint16 `json:"year"`
 }
 
@@ -6145,7 +6145,7 @@ type ImportScanFile struct {
 	CreatedAt          *time.Time                   `json:"created_at,omitempty"`
 	CreatedMovieId     *uint32                      `json:"created_movie_id,omitempty"`
 	Decision           ImportScanFileDecision       `json:"decision"`
-	DecisionTmdbId     *uint32                      `json:"decision_tmdb_id,omitempty"`
+	DecisionTmdbId     *string                      `json:"decision_tmdb_id,omitempty"`
 	ExistingMovieId    *uint32                      `json:"existing_movie_id,omitempty"`
 	Id                 uint32                       `json:"id"`
 	Outcome            ImportScanFileOutcome        `json:"outcome"`
@@ -6156,7 +6156,7 @@ type ImportScanFile struct {
 	ParsedYear         *uint16                      `json:"parsed_year,omitempty"`
 	Size               int64                        `json:"size"`
 	SourcePath         string                       `json:"source_path"`
-	TmdbId             *uint32                      `json:"tmdb_id,omitempty"`
+	TmdbId             *string                      `json:"tmdb_id,omitempty"`
 	UpdatedAt          *time.Time                   `json:"updated_at,omitempty"`
 }
 
@@ -6172,7 +6172,7 @@ type ImportScanFileOutcome string
 // ImportScanFileDecisionRequest defines model for ImportScanFileDecisionRequest.
 type ImportScanFileDecisionRequest struct {
 	Decision ImportScanFileDecisionRequestDecision `json:"decision"`
-	TmdbId   *uint32                               `json:"tmdb_id,omitempty"`
+	TmdbId   *string                               `json:"tmdb_id,omitempty"`
 }
 
 // ImportScanFileDecisionRequestDecision defines model for ImportScanFileDecisionRequest.Decision.
@@ -6197,7 +6197,7 @@ type ImportScanShow struct {
 	CreatedAt        *time.Time                   `json:"created_at,omitempty"`
 	CreatedTvshowId  *uint32                      `json:"created_tvshow_id,omitempty"`
 	Decision         ImportScanShowDecision       `json:"decision"`
-	DecisionTvdbId   *uint32                      `json:"decision_tvdb_id,omitempty"`
+	DecisionTvdbId   *string                      `json:"decision_tvdb_id,omitempty"`
 	ExistingTvshowId *uint32                      `json:"existing_tvshow_id,omitempty"`
 	FileCount        uint16                       `json:"file_count"`
 	FolderPath       string                       `json:"folder_path"`
@@ -6206,7 +6206,7 @@ type ImportScanShow struct {
 	OutcomeMessage   *string                      `json:"outcome_message,omitempty"`
 	ParsedTitle      *string                      `json:"parsed_title,omitempty"`
 	ParsedYear       *uint16                      `json:"parsed_year,omitempty"`
-	TvdbId           *uint32                      `json:"tvdb_id,omitempty"`
+	TvdbId           *string                      `json:"tvdb_id,omitempty"`
 	UpdatedAt        *time.Time                   `json:"updated_at,omitempty"`
 }
 
@@ -6222,14 +6222,14 @@ type ImportScanShowOutcome string
 // ImportScanShowCandidate defines model for ImportScanShowCandidate.
 type ImportScanShowCandidate struct {
 	Title  string  `json:"title"`
-	TvdbId uint32  `json:"tvdb_id"`
+	TvdbId string  `json:"tvdb_id"`
 	Year   *uint16 `json:"year,omitempty"`
 }
 
 // ImportScanShowDecisionRequest defines model for ImportScanShowDecisionRequest.
 type ImportScanShowDecisionRequest struct {
 	Decision ImportScanShowDecisionRequestDecision `json:"decision"`
-	TvdbId   *uint32                               `json:"tvdb_id,omitempty"`
+	TvdbId   *string                               `json:"tvdb_id,omitempty"`
 }
 
 // ImportScanShowDecisionRequestDecision defines model for ImportScanShowDecisionRequest.Decision.
@@ -6533,8 +6533,8 @@ type LookupDetail struct {
 	SeasonCount *uint16 `json:"season_count,omitempty"`
 	Status      *string `json:"status,omitempty"`
 	Tagline     *string `json:"tagline,omitempty"`
-	TmdbId      *uint32 `json:"tmdb_id,omitempty"`
-	TvdbId      *uint32 `json:"tvdb_id,omitempty"`
+	TmdbId      *string `json:"tmdb_id,omitempty"`
+	TvdbId      *string `json:"tvdb_id,omitempty"`
 	VoteCount   *uint32 `json:"vote_count,omitempty"`
 }
 
@@ -6879,7 +6879,7 @@ type Movie struct {
 	Runtime *uint16     `json:"runtime,omitempty"`
 	Status  MovieStatus `json:"status"`
 	Title   string      `json:"title"`
-	TmdbId  uint32      `json:"tmdb_id"`
+	TmdbId  string      `json:"tmdb_id"`
 	Year    uint16      `json:"year"`
 }
 
@@ -8094,13 +8094,13 @@ type Person struct {
 	// carries one.
 	ProfileUrl *string `json:"profile_url,omitempty"`
 
-	// TmdbId TMDB person id, or 0 when TMDB never supplied one. Data the person
+	// TmdbId TMDB person id, empty when TMDB never supplied one. Data the person
 	// carries, not a key.
-	TmdbId uint32 `json:"tmdb_id"`
+	TmdbId string `json:"tmdb_id"`
 
-	// TvdbId TVDB person id, or 0 when TVDB never supplied one. Series cast
+	// TvdbId TVDB person id, empty when TVDB never supplied one. Series cast
 	// comes from TVDB, so these are the entries with no `tmdb_id`.
-	TvdbId uint32 `json:"tvdb_id"`
+	TvdbId string `json:"tvdb_id"`
 
 	// TwitterId Handle, not a URL.
 	TwitterId *string `json:"twitter_id,omitempty"`
@@ -8164,11 +8164,11 @@ type PersonCredits struct {
 	ProfileUrl   *string              `json:"profile_url,omitempty"`
 	Series       []PersonSeriesCredit `json:"series"`
 
-	// TmdbId TMDB person id, or 0 when TMDB never supplied one.
-	TmdbId uint32 `json:"tmdb_id"`
+	// TmdbId TMDB person id, empty when TMDB never supplied one.
+	TmdbId string `json:"tmdb_id"`
 
-	// TvdbId TVDB person id, or 0 when TVDB never supplied one.
-	TvdbId uint32 `json:"tvdb_id"`
+	// TvdbId TVDB person id, empty when TVDB never supplied one.
+	TvdbId string `json:"tvdb_id"`
 
 	// TwitterId Handle, not a URL.
 	TwitterId *string `json:"twitter_id,omitempty"`
@@ -8491,9 +8491,9 @@ type Request struct {
 
 	// MediaId TMDB id for movies, TVDB id for shows, Hardcover book id for
 	// books, Hardcover series id for book series (a separate id space,
-	// which is why `media_type` is part of the uniqueness key); 0 for
-	// artists and albums.
-	MediaId uint32 `json:"media_id"`
+	// which is why `media_type` is part of the uniqueness key); empty
+	// for artists and albums.
+	MediaId string `json:"media_id"`
 
 	// MediaMbid MusicBrainz id: the artist of an artist request, the release
 	// group of an album request; absent for every other type.
@@ -8546,8 +8546,8 @@ type RequestMediaDetails struct {
 	SeasonCount *uint16 `json:"season_count,omitempty"`
 	Status      *string `json:"status,omitempty"`
 	Tagline     *string `json:"tagline,omitempty"`
-	TmdbId      *uint32 `json:"tmdb_id,omitempty"`
-	TvdbId      *uint32 `json:"tvdb_id,omitempty"`
+	TmdbId      *string `json:"tmdb_id,omitempty"`
+	TvdbId      *string `json:"tvdb_id,omitempty"`
 	VoteCount   *uint32 `json:"vote_count,omitempty"`
 	Year        *uint16 `json:"year,omitempty"`
 }
@@ -8772,7 +8772,7 @@ type SeriesLookupResult struct {
 	// no artwork.
 	PosterUrl *string `json:"poster_url,omitempty"`
 	Title     string  `json:"title"`
-	TvdbId    uint32  `json:"tvdb_id"`
+	TvdbId    string  `json:"tvdb_id"`
 	Year      uint16  `json:"year"`
 }
 
@@ -9232,7 +9232,7 @@ type TMDBMovieResult struct {
 	// entry has no poster on TMDB.
 	PosterUrl *string `json:"poster_url,omitempty"`
 	Title     string  `json:"title"`
-	TmdbId    uint32  `json:"tmdb_id"`
+	TmdbId    string  `json:"tmdb_id"`
 	Year      uint16  `json:"year"`
 }
 
@@ -9315,7 +9315,7 @@ type TVShow struct {
 	// TotalSeasons Seasons the show has, specials (season 0) excluded — the same
 	// scope the episode rollups below use.
 	TotalSeasons *uint32    `json:"total_seasons,omitempty"`
-	TvdbId       uint32     `json:"tvdb_id"`
+	TvdbId       string     `json:"tvdb_id"`
 	Type         TVShowType `json:"type"`
 
 	// WantedEpisodes Aired/undated episodes without a file (the "missing" count).
@@ -9920,7 +9920,7 @@ type UpcomingMovie struct {
 	Id                 uint32                   `json:"id"`
 	ReleaseType        UpcomingMovieReleaseType `json:"release_type"`
 	Title              string                   `json:"title"`
-	TmdbId             uint32                   `json:"tmdb_id"`
+	TmdbId             string                   `json:"tmdb_id"`
 	Year               uint16                   `json:"year"`
 }
 
@@ -10145,7 +10145,7 @@ type EpisodeID = uint32
 type FileID = uint32
 
 // HardcoverIDParam defines model for HardcoverIDParam.
-type HardcoverIDParam = uint32
+type HardcoverIDParam = string
 
 // ImportClassification defines model for ImportClassification.
 type ImportClassification string
@@ -10300,10 +10300,10 @@ type SessionID = uint32
 type StatsRangeParam = StatsRange
 
 // TMDBID defines model for TMDBID.
-type TMDBID = uint32
+type TMDBID = string
 
 // TVDBID defines model for TVDBID.
-type TVDBID = uint32
+type TVDBID = string
 
 // TitleSearchLimit defines model for TitleSearchLimit.
 type TitleSearchLimit = uint16
@@ -11119,7 +11119,7 @@ type DeleteMovieParams struct {
 
 // ReidentifyMovieJSONBody defines parameters for ReidentifyMovie.
 type ReidentifyMovieJSONBody struct {
-	TmdbId uint32 `json:"tmdb_id"`
+	TmdbId string `json:"tmdb_id"`
 }
 
 // RenameMovieFilesParams defines parameters for RenameMovieFiles.
@@ -11451,7 +11451,7 @@ type DeleteSeriesParams struct {
 
 // ReidentifySeriesJSONBody defines parameters for ReidentifySeries.
 type ReidentifySeriesJSONBody struct {
-	TvdbId uint32 `json:"tvdb_id"`
+	TvdbId string `json:"tvdb_id"`
 }
 
 // RenameSeriesFilesParams defines parameters for RenameSeriesFiles.
@@ -15556,7 +15556,7 @@ func (siw *ServerInterfaceWrapper) GetBookLookup(w http.ResponseWriter, r *http.
 	// ------------- Path parameter "hardcover_id" -------------
 	var hardcoverId HardcoverIDParam
 
-	err = runtime.BindStyledParameterWithOptions("simple", "hardcover_id", chi.URLParam(r, "hardcover_id"), &hardcoverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	err = runtime.BindStyledParameterWithOptions("simple", "hardcover_id", chi.URLParam(r, "hardcover_id"), &hardcoverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hardcover_id", Err: err})
 		return
@@ -20851,7 +20851,7 @@ func (siw *ServerInterfaceWrapper) GetTMDBMovieDetail(w http.ResponseWriter, r *
 	// ------------- Path parameter "tmdb_id" -------------
 	var tmdbId TMDBID
 
-	err = runtime.BindStyledParameterWithOptions("simple", "tmdb_id", chi.URLParam(r, "tmdb_id"), &tmdbId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	err = runtime.BindStyledParameterWithOptions("simple", "tmdb_id", chi.URLParam(r, "tmdb_id"), &tmdbId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tmdb_id", Err: err})
 		return
@@ -21133,7 +21133,7 @@ func (siw *ServerInterfaceWrapper) GetSeriesLookupDetail(w http.ResponseWriter, 
 	// ------------- Path parameter "tvdb_id" -------------
 	var tvdbId TVDBID
 
-	err = runtime.BindStyledParameterWithOptions("simple", "tvdb_id", chi.URLParam(r, "tvdb_id"), &tvdbId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	err = runtime.BindStyledParameterWithOptions("simple", "tvdb_id", chi.URLParam(r, "tvdb_id"), &tvdbId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tvdb_id", Err: err})
 		return

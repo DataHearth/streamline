@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -38,7 +40,7 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 			Title:          title,
 			OriginalTitle:  title,
 			Year:           year,
-			TmdbID:         tmdbID,
+			TmdbID:         providerid.Format(tmdbID),
 			Status:         status,
 			QualityProfile: qualityProfile,
 		})
@@ -198,12 +200,12 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 
 	Describe("FindMovieByTMDBID", func() {
 		It("returns NotFound when absent", func() {
-			_, err := store.FindMovieByTMDBID(ctx, 9999)
+			_, err := store.FindMovieByTMDBID(ctx, "9999")
 			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
 		It("returns the row when present", func() {
 			m := seed("Dune", 2021, 438631, entmovie.StatusWanted)
-			got, err := store.FindMovieByTMDBID(ctx, 438631)
+			got, err := store.FindMovieByTMDBID(ctx, "438631")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got.ID).To(Equal(m.ID))
 		})
@@ -213,7 +215,7 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 		It("returns the matching rows", func() {
 			a := seed("Dune", 2021, 700, entmovie.StatusWanted)
 			seed("Other", 2020, 701, entmovie.StatusWanted)
-			items, err := store.FindMoviesByTMDBIDs(ctx, []uint32{700})
+			items, err := store.FindMoviesByTMDBIDs(ctx, []string{"700"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(items).To(HaveLen(1))
 			Expect(items[0].ID).To(Equal(a.ID))
@@ -240,7 +242,7 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 		It("persists optional overview when provided", func() {
 			m, err := store.CreateMovie(ctx, CreateMovieParams{
 				Title: "Dune", OriginalTitle: "Dune",
-				Year: 2021, TmdbID: 900,
+				Year: 2021, TmdbID: "900",
 				Status:   entmovie.StatusWanted,
 				Overview: "Spice planet", QualityProfile: qualityProfile,
 			})
@@ -318,7 +320,7 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 
 			got, err := store.MovieTMDBIndex(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(got).To(Equal(map[uint32]uint32{980: a.ID, 981: b.ID}))
+			Expect(got).To(Equal(map[string]uint32{"980": a.ID, "981": b.ID}))
 		})
 	})
 

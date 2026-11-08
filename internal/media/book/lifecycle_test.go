@@ -37,16 +37,16 @@ var _ = Describe("Book lifecycle", Label("unit", "integration", "books"), func()
 	}
 	addSeries := func(n int) *ent.BookSeries {
 		GinkgoHelper()
-		f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+		f.meta.EXPECT().GetSeries(anyCtx, "50").
 			Return(seriesRecord("One Piece", n), nil).Once()
-		want := []uint32{}
+		want := []any{}
 		recs := []*metadata.BookRecord{}
 		for i := 1; i <= n; i++ {
 			want = append(want, 1000+uint32(i))
 			recs = append(recs, volumeRec(1000+uint32(i)))
 		}
 		f.meta.EXPECT().GetBooks(anyCtx, ids(want...)).Return(recs, nil).Once()
-		s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+		s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: "50"})
 		Expect(err).NotTo(HaveOccurred())
 		return s
 	}

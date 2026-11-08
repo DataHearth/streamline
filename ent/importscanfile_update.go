@@ -193,23 +193,16 @@ func (_u *ImportScanFileUpdate) ClearCandidates() *ImportScanFileUpdate {
 }
 
 // SetTmdbID sets the "tmdb_id" field.
-func (_u *ImportScanFileUpdate) SetTmdbID(v uint32) *ImportScanFileUpdate {
-	_u.mutation.ResetTmdbID()
+func (_u *ImportScanFileUpdate) SetTmdbID(v string) *ImportScanFileUpdate {
 	_u.mutation.SetTmdbID(v)
 	return _u
 }
 
 // SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
-func (_u *ImportScanFileUpdate) SetNillableTmdbID(v *uint32) *ImportScanFileUpdate {
+func (_u *ImportScanFileUpdate) SetNillableTmdbID(v *string) *ImportScanFileUpdate {
 	if v != nil {
 		_u.SetTmdbID(*v)
 	}
-	return _u
-}
-
-// AddTmdbID adds value to the "tmdb_id" field.
-func (_u *ImportScanFileUpdate) AddTmdbID(v int32) *ImportScanFileUpdate {
-	_u.mutation.AddTmdbID(v)
 	return _u
 }
 
@@ -261,23 +254,16 @@ func (_u *ImportScanFileUpdate) SetNillableDecision(v *importscanfile.Decision) 
 }
 
 // SetDecisionTmdbID sets the "decision_tmdb_id" field.
-func (_u *ImportScanFileUpdate) SetDecisionTmdbID(v uint32) *ImportScanFileUpdate {
-	_u.mutation.ResetDecisionTmdbID()
+func (_u *ImportScanFileUpdate) SetDecisionTmdbID(v string) *ImportScanFileUpdate {
 	_u.mutation.SetDecisionTmdbID(v)
 	return _u
 }
 
 // SetNillableDecisionTmdbID sets the "decision_tmdb_id" field if the given value is not nil.
-func (_u *ImportScanFileUpdate) SetNillableDecisionTmdbID(v *uint32) *ImportScanFileUpdate {
+func (_u *ImportScanFileUpdate) SetNillableDecisionTmdbID(v *string) *ImportScanFileUpdate {
 	if v != nil {
 		_u.SetDecisionTmdbID(*v)
 	}
-	return _u
-}
-
-// AddDecisionTmdbID adds value to the "decision_tmdb_id" field.
-func (_u *ImportScanFileUpdate) AddDecisionTmdbID(v int32) *ImportScanFileUpdate {
-	_u.mutation.AddDecisionTmdbID(v)
 	return _u
 }
 
@@ -506,13 +492,10 @@ func (_u *ImportScanFileUpdate) sqlSave(ctx context.Context) (_node int, err err
 		_spec.ClearField(importscanfile.FieldCandidates, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.TmdbID(); ok {
-		_spec.SetField(importscanfile.FieldTmdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedTmdbID(); ok {
-		_spec.AddField(importscanfile.FieldTmdbID, field.TypeUint32, value)
+		_spec.SetField(importscanfile.FieldTmdbID, field.TypeString, value)
 	}
 	if _u.mutation.TmdbIDCleared() {
-		_spec.ClearField(importscanfile.FieldTmdbID, field.TypeUint32)
+		_spec.ClearField(importscanfile.FieldTmdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.ExistingMovieID(); ok {
 		_spec.SetField(importscanfile.FieldExistingMovieID, field.TypeUint32, value)
@@ -527,13 +510,10 @@ func (_u *ImportScanFileUpdate) sqlSave(ctx context.Context) (_node int, err err
 		_spec.SetField(importscanfile.FieldDecision, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.DecisionTmdbID(); ok {
-		_spec.SetField(importscanfile.FieldDecisionTmdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedDecisionTmdbID(); ok {
-		_spec.AddField(importscanfile.FieldDecisionTmdbID, field.TypeUint32, value)
+		_spec.SetField(importscanfile.FieldDecisionTmdbID, field.TypeString, value)
 	}
 	if _u.mutation.DecisionTmdbIDCleared() {
-		_spec.ClearField(importscanfile.FieldDecisionTmdbID, field.TypeUint32)
+		_spec.ClearField(importscanfile.FieldDecisionTmdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Outcome(); ok {
 		_spec.SetField(importscanfile.FieldOutcome, field.TypeEnum, value)
@@ -765,23 +745,16 @@ func (_u *ImportScanFileUpdateOne) ClearCandidates() *ImportScanFileUpdateOne {
 }
 
 // SetTmdbID sets the "tmdb_id" field.
-func (_u *ImportScanFileUpdateOne) SetTmdbID(v uint32) *ImportScanFileUpdateOne {
-	_u.mutation.ResetTmdbID()
+func (_u *ImportScanFileUpdateOne) SetTmdbID(v string) *ImportScanFileUpdateOne {
 	_u.mutation.SetTmdbID(v)
 	return _u
 }
 
 // SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
-func (_u *ImportScanFileUpdateOne) SetNillableTmdbID(v *uint32) *ImportScanFileUpdateOne {
+func (_u *ImportScanFileUpdateOne) SetNillableTmdbID(v *string) *ImportScanFileUpdateOne {
 	if v != nil {
 		_u.SetTmdbID(*v)
 	}
-	return _u
-}
-
-// AddTmdbID adds value to the "tmdb_id" field.
-func (_u *ImportScanFileUpdateOne) AddTmdbID(v int32) *ImportScanFileUpdateOne {
-	_u.mutation.AddTmdbID(v)
 	return _u
 }
 
@@ -833,23 +806,16 @@ func (_u *ImportScanFileUpdateOne) SetNillableDecision(v *importscanfile.Decisio
 }
 
 // SetDecisionTmdbID sets the "decision_tmdb_id" field.
-func (_u *ImportScanFileUpdateOne) SetDecisionTmdbID(v uint32) *ImportScanFileUpdateOne {
-	_u.mutation.ResetDecisionTmdbID()
+func (_u *ImportScanFileUpdateOne) SetDecisionTmdbID(v string) *ImportScanFileUpdateOne {
 	_u.mutation.SetDecisionTmdbID(v)
 	return _u
 }
 
 // SetNillableDecisionTmdbID sets the "decision_tmdb_id" field if the given value is not nil.
-func (_u *ImportScanFileUpdateOne) SetNillableDecisionTmdbID(v *uint32) *ImportScanFileUpdateOne {
+func (_u *ImportScanFileUpdateOne) SetNillableDecisionTmdbID(v *string) *ImportScanFileUpdateOne {
 	if v != nil {
 		_u.SetDecisionTmdbID(*v)
 	}
-	return _u
-}
-
-// AddDecisionTmdbID adds value to the "decision_tmdb_id" field.
-func (_u *ImportScanFileUpdateOne) AddDecisionTmdbID(v int32) *ImportScanFileUpdateOne {
-	_u.mutation.AddDecisionTmdbID(v)
 	return _u
 }
 
@@ -1108,13 +1074,10 @@ func (_u *ImportScanFileUpdateOne) sqlSave(ctx context.Context) (_node *ImportSc
 		_spec.ClearField(importscanfile.FieldCandidates, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.TmdbID(); ok {
-		_spec.SetField(importscanfile.FieldTmdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedTmdbID(); ok {
-		_spec.AddField(importscanfile.FieldTmdbID, field.TypeUint32, value)
+		_spec.SetField(importscanfile.FieldTmdbID, field.TypeString, value)
 	}
 	if _u.mutation.TmdbIDCleared() {
-		_spec.ClearField(importscanfile.FieldTmdbID, field.TypeUint32)
+		_spec.ClearField(importscanfile.FieldTmdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.ExistingMovieID(); ok {
 		_spec.SetField(importscanfile.FieldExistingMovieID, field.TypeUint32, value)
@@ -1129,13 +1092,10 @@ func (_u *ImportScanFileUpdateOne) sqlSave(ctx context.Context) (_node *ImportSc
 		_spec.SetField(importscanfile.FieldDecision, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.DecisionTmdbID(); ok {
-		_spec.SetField(importscanfile.FieldDecisionTmdbID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedDecisionTmdbID(); ok {
-		_spec.AddField(importscanfile.FieldDecisionTmdbID, field.TypeUint32, value)
+		_spec.SetField(importscanfile.FieldDecisionTmdbID, field.TypeString, value)
 	}
 	if _u.mutation.DecisionTmdbIDCleared() {
-		_spec.ClearField(importscanfile.FieldDecisionTmdbID, field.TypeUint32)
+		_spec.ClearField(importscanfile.FieldDecisionTmdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Outcome(); ok {
 		_spec.SetField(importscanfile.FieldOutcome, field.TypeEnum, value)

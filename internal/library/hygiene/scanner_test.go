@@ -77,12 +77,12 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 				Return(nil, nil).Once()
 			meta.EXPECT().SearchMovie(mock.Anything, "Inception", uint16(2010)).
 				Return([]metadata.MovieResult{
-					{TMDBID: 27205, Title: "Inception", Year: 2010},
+					{TMDBID: "27205", Title: "Inception", Year: 2010},
 				}, nil).Once()
-			store.EXPECT().MovieHasMediaFile(mock.Anything, uint32(27205)).
+			store.EXPECT().MovieHasMediaFile(mock.Anything, "27205").
 				Return(false, nil).Once()
-			store.EXPECT().FindMovieByTMDBID(mock.Anything, uint32(27205)).
-				Return(&ent.Movie{ID: 1, Title: "Inception", Year: 2010, TmdbID: 27205}, nil).
+			store.EXPECT().FindMovieByTMDBID(mock.Anything, "27205").
+				Return(&ent.Movie{ID: 1, Title: "Inception", Year: 2010, TmdbID: "27205"}, nil).
 				Once()
 			store.EXPECT().CreateMediaFile(mock.Anything, mock.MatchedBy(
 				func(p db.CreateMediaFileParams) bool {
@@ -107,11 +107,11 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 			Return(nil, nil).Once()
 		meta.EXPECT().SearchMovie(mock.Anything, "Inception", uint16(2010)).
 			Return([]metadata.MovieResult{
-				{TMDBID: 27205, Title: "Inception", Year: 2010},
+				{TMDBID: "27205", Title: "Inception", Year: 2010},
 			}, nil).Once()
-		store.EXPECT().MovieHasMediaFile(mock.Anything, uint32(27205)).
+		store.EXPECT().MovieHasMediaFile(mock.Anything, "27205").
 			Return(false, nil).Once()
-		store.EXPECT().FindMovieByTMDBID(mock.Anything, uint32(27205)).
+		store.EXPECT().FindMovieByTMDBID(mock.Anything, "27205").
 			Return(nil, &ent.NotFoundError{}).Once()
 		expectQueueWriteOnce(98)
 
@@ -130,8 +130,8 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 			Once()
 		meta.EXPECT().SearchMovie(mock.Anything, "Some Movie", uint16(2010)).
 			Return([]metadata.MovieResult{
-				{TMDBID: 1, Title: "Some Other Movie", Year: 2010},
-				{TMDBID: 2, Title: "Some Movie 2", Year: 2010},
+				{TMDBID: "1", Title: "Some Other Movie", Year: 2010},
+				{TMDBID: "2", Title: "Some Movie 2", Year: 2010},
 			}, nil).Once()
 		expectQueueWriteOnce(99)
 
@@ -194,14 +194,14 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 			Return(nil, nil).
 			Once()
 		meta.EXPECT().SearchMovie(mock.Anything, "Inception", uint16(2010)).
-			Return([]metadata.MovieResult{{TMDBID: 27205, Title: "Inception", Year: 2010}}, nil).
+			Return([]metadata.MovieResult{{TMDBID: "27205", Title: "Inception", Year: 2010}}, nil).
 			Once()
 		store.EXPECT().
-			MovieHasMediaFile(mock.Anything, uint32(27205)).
+			MovieHasMediaFile(mock.Anything, "27205").
 			Return(false, nil).
 			Once()
-		store.EXPECT().FindMovieByTMDBID(mock.Anything, uint32(27205)).
-			Return(&ent.Movie{ID: 1, TmdbID: 27205}, nil).Once()
+		store.EXPECT().FindMovieByTMDBID(mock.Anything, "27205").
+			Return(&ent.Movie{ID: 1, TmdbID: "27205"}, nil).Once()
 		store.EXPECT().CreateMediaFile(mock.Anything, mock.Anything).
 			Return(nil, errors.New("database is locked")).Once()
 		expectQueueWriteOnce(101)

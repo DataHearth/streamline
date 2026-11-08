@@ -65,11 +65,11 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			ID:     1,
 			Title:  "Fight Club",
 			Year:   1999,
-			TmdbID: 550,
+			TmdbID: "550",
 			Status: movie.StatusWanted,
 		}
 		movies.EXPECT().
-			Add(mock.Anything, uint32(550), "").
+			Add(mock.Anything, "550", "").
 			Return(fightClub, "", nil).
 			Once()
 		movies.EXPECT().
@@ -85,7 +85,7 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			Return(nil, nil).
 			Once()
 		searchHit := metadata.MovieResult{
-			TMDBID:   550,
+			TMDBID:   "550",
 			Title:    "Fight Club",
 			Year:     1999,
 			Overview: "An insomniac office worker...",
@@ -102,7 +102,7 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			Once()
 
 		By("adding a movie from TMDB")
-		body := `{"tmdb_id": 550}`
+		body := `{"tmdb_id": "550"}`
 		resp, err := http.Post(
 			ts.URL+"/api/v1/movies",
 			"application/json",
@@ -148,20 +148,20 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 
 	It("should return 409 when adding a duplicate movie", func() {
 		movies.EXPECT().
-			Add(mock.Anything, uint32(550), "").
+			Add(mock.Anything, "550", "").
 			Return(&ent.Movie{
-				ID: 1, Title: "Fight Club", Year: 1999, TmdbID: 550,
+				ID: 1, Title: "Fight Club", Year: 1999, TmdbID: "550",
 				Status: movie.StatusWanted,
 			}, "", nil).
 			Once()
 		movies.EXPECT().
-			Add(mock.Anything, uint32(550), "").
+			Add(mock.Anything, "550", "").
 			// What movie.Service.Add returns on a duplicate: the handler maps
 			// the sentinel to 409, and any other error to 500.
 			Return(nil, "", fmt.Errorf("%w: tmdb_id %d", moviesvc.ErrMovieExists, 550)).
 			Once()
 
-		body := `{"tmdb_id": 550}`
+		body := `{"tmdb_id": "550"}`
 		resp, err := http.Post(
 			ts.URL+"/api/v1/movies",
 			"application/json",
@@ -186,11 +186,11 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			ID:     1,
 			Title:  "Fight Club",
 			Year:   1999,
-			TmdbID: 550,
+			TmdbID: "550",
 			Status: movie.StatusWanted,
 		}
 		movies.EXPECT().
-			Add(mock.Anything, uint32(550), "").
+			Add(mock.Anything, "550", "").
 			Return(fightClub, "", nil).
 			Once()
 		movies.EXPECT().
@@ -226,7 +226,7 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 		resp, err := http.Post(
 			ts.URL+"/api/v1/movies",
 			"application/json",
-			strings.NewReader(`{"tmdb_id": 550}`),
+			strings.NewReader(`{"tmdb_id": "550"}`),
 		)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusCreated))

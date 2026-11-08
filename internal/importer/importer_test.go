@@ -46,7 +46,7 @@ func fixtureRecord(
 	savePath string,
 	attempts uint8,
 ) *ent.DownloadRecord {
-	m := &ent.Movie{ID: movieID, Title: "Flick", Year: 2024, TmdbID: 999}
+	m := &ent.Movie{ID: movieID, Title: "Flick", Year: 2024, TmdbID: "999"}
 	r := &ent.DownloadRecord{
 		ID:                 id,
 		TorrentHash:        "hash",
@@ -1234,7 +1234,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		// The event hangs off a real row: the show the fixture describes has to
 		// exist for the media_events foreign key to hold.
 		row := entClient.TVShow.Create().
-			SetTitle("Show").SetYear(2024).SetTvdbID(4242).SaveX(ctx)
+			SetTitle("Show").SetYear(2024).SetTvdbID("4242").SaveX(ctx)
 		season.Edges.TvShow.ID = row.ID
 
 		src := filepath.Join(tmp, "pack-one-event")
