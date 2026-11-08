@@ -16,7 +16,7 @@
 	import { config } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
 	import { cardigannIndexerForm } from "@lib/schemas";
-	import type { CardigannDefinition, Indexer } from "@lib/types";
+	import type { CardigannDefinition, CardigannSetting, Indexer } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// A built-in indexer's form, generated from its definition's settings.
@@ -53,12 +53,27 @@
 	const valued = (type: string) =>
 		type === "text" || type === "password" || type === "checkbox" || type === "select";
 
+	// A select's value must be one of its option keys, which a few upstream
+	// defaults are not (`DESC` beside `desc`, `t` beside nt/ts/sz/i): the
+	// engine's selectDefault takes a case-insensitive match, else the first
+	// option, and the form seeds the same key or the server refuses it.
+	function selectKey(s: CardigannSetting, value: string | undefined) {
+		const options = s.options ?? [];
+		if (value !== undefined && options.some((o) => o.key === value)) return value;
+		const folded = options.find((o) => o.key.toLowerCase() === value?.toLowerCase());
+		return folded?.key ?? options[0]?.key ?? "";
+	}
+
 	function seed(d: CardigannDefinition): Values {
 		const settings: Record<string, string> = {};
 		for (const s of d.settings) {
 			if (!valued(s.type)) continue;
-			settings[s.name] = editing?.settings?.[s.name] ??
-				(s.secret ? "" : (s.default ?? (s.type === "select" ? (s.options?.[0]?.key ?? "") : "")));
+			const stored = editing?.settings?.[s.name];
+			if (s.type === "select") {
+				settings[s.name] = selectKey(s, stored ?? s.default);
+				continue;
+			}
+			settings[s.name] = stored ?? (s.secret ? "" : (s.default ?? ""));
 		}
 		return {
 			name: editing?.name ?? d.name,
@@ -83,8 +98,9 @@
 			private: v.private,
 			settings: v.settings,
 		};
-		const first = def.data?.links[0];
-		if (v.site && v.site !== first) out.site = v.site;
+		// Always named, so picking the first link back on an edit reaches
+		// the server: a `site` left out means "keep the stored one".
+		if (v.site) out.site = v.site;
 		// The stored proxy comes back without its credentials: sending that
 		// form back unchanged would drop them.
 		if (!editing || v.proxy !== (editing.proxy ?? "")) out.proxy = v.proxy;
