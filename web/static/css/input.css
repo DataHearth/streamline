@@ -73,7 +73,7 @@
 	--fg: #f5f5f7;
 	--fg-muted: #c8c8d2;
 	--fg-subtle: #8a8a99;
-	--fg-faint: #5a5a68;
+	--fg-faint: #74748a;
 
 	/* Status (ops palette — preserved verbatim) */
 	--status-downloading: #3b82f6;
@@ -83,7 +83,7 @@
 	--status-available: #22c55e;
 	--status-wanted: #f59e0b;
 	--status-missing: #64748b;
-	--status-failed: #ef4444;
+	--status-failed: #f87171;
 	--status-paused: #71717a;
 	--status-warning: #f59e0b;
 	--status-seeding: #2dd4bf;
