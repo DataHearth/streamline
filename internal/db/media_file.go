@@ -382,10 +382,10 @@ func (db *DB) UpdateMediaFilePath(
 // page's savings, transcoded_at, and probe — the encode's own probe, which the
 // worker already holds from verifying it.
 //
-// The probe is not optional in practice. Nulling the columns instead left the
-// row scoring off parsed_codec until the media-probe backfill reached it, so an
-// h264→hevc transcode read as x264 for up to a backfill cycle and the RSS feed
-// could grab an "upgrade" over a file it had just produced.
+// The probe is not optional in practice. Nulling the columns instead would
+// leave the row scoring off parsed_codec until the media-probe backfill reached
+// it, so an h264→hevc transcode would read as x264 for up to a backfill cycle
+// and the RSS feed could grab an "upgrade" over a file it had just produced.
 func (db *DB) UpdateMediaFileAfterTranscode(
 	ctx context.Context,
 	id uint32,
@@ -408,9 +408,8 @@ func (db *DB) UpdateMediaFileAfterTranscode(
 }
 
 // ClearMediaFilesMissing clears both missing columns on files seen on disk
-// again. A
-// file that never went missing is not written at all: stamping every row each
-// tick rewrote the whole table into the WAL every 15 minutes.
+// again. A file that never went missing is not written at all: stamping every
+// row each tick would rewrite the whole table into the WAL every 15 minutes.
 func (db *DB) ClearMediaFilesMissing(ctx context.Context, ids []uint32) error {
 	if err := db.client.MediaFile.Update().
 		Where(mediafile.IDIn(ids...)).
@@ -680,8 +679,8 @@ func revertEpisodeStatus(ctx context.Context, tx *ent.Tx, id uint32) error {
 }
 
 // DeleteMediaFile removes a MediaFile row without touching any owner. Used by
-// drift_check to reap rows whose owner is gone (legacy orphans left behind by
-// the pre-cascade movie delete).
+// drift_check to reap rows whose owner is gone (legacy orphans a movie delete
+// that did not cascade left in the database).
 func (db *DB) DeleteMediaFile(ctx context.Context, id uint32) error {
 	if err := db.client.MediaFile.DeleteOneID(id).Exec(ctx); err != nil {
 		return fmt.Errorf("delete media_file %d: %w", id, err)
@@ -713,7 +712,7 @@ func (db *DB) DeleteMediaFileAndRevertMovie(
 	}
 	// Logged here rather than left to callers: drift_check logs its own
 	// reverts, but the importer's upgrade-replace path calls straight into
-	// this and logged nothing, so "why did this go back to wanted" had no
+	// this and logs nothing, so "why did this go back to wanted" would have no
 	// answer on the path that most often causes it.
 	slog.InfoContext(ctx, "media file removed, movie reverted to wanted",
 		"media_file.id", mediaFileID, "movie.id", movieID)

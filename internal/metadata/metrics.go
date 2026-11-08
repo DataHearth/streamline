@@ -12,9 +12,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// TVDB backs every TV metadata refresh and had no metrics at all while TMDB
-// had two — so TVDB latency, error rate, and the token-expiry re-login path
-// were all unalertable. Recorded at the one call both TVDB paths go through,
+// TVDB backs every TV metadata refresh, so its latency, error rate, and the
+// token-expiry re-login path need the same metrics TMDB has to be alertable.
+// Recorded at the one call both TVDB paths go through,
 // rather than per method, so the retry leg is covered too.
 var (
 	tvdbRequests = otelx.Must(meter.Int64Counter(
@@ -45,7 +45,7 @@ func providerEndpoint(path string) string {
 }
 
 // recordProviderStatus puts the upstream status code on the active span and
-// returns the outcome label for it. A 429 and a 500 were previously
+// returns the outcome label for it. Without it a 429 and a 500 are
 // distinguishable only in a log line, so "the provider rate-limited us N times
 // this hour" could not be graphed at all.
 func recordProviderStatus(ctx context.Context, status int) string {

@@ -44,7 +44,7 @@
 	// Every page's title sits at the left of this bar: a section root shows its
 	// section's name (or what the page claimed through pageTitle), a named
 	// sub-page (settings) ends its breadcrumb on its title, and a record's
-	// detail page keeps a plain trail — its hero carries the h1. Pages no longer
+	// detail page keeps a plain trail — its hero carries the h1. Pages do not
 	// set an h1 of their own, so the heading never moves between tabs.
 	const SECTIONS: { prefix: string; label: string }[] = [
 		{ prefix: "/", label: i18n.nav_dashboard() },

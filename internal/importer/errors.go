@@ -38,8 +38,8 @@ var (
 // ErrTracksHeld is returned when every file of an album release matched a
 // track that already holds one and the record replaces none. It is an
 // library.ErrDestExists for classify and the pack importer, with a message
-// that says so: the record used to read "destination already exists", which
-// names no destination and sends a person looking for a file collision.
+// that says so: a bare "destination already exists" names no destination and
+// sends a person looking for a file collision.
 var ErrTracksHeld error = tracksHeldError{}
 
 type tracksHeldError struct{}

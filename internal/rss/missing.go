@@ -129,9 +129,9 @@ func currentSearchWindow(ctx context.Context) (searchWindow, error) {
 //
 // grab_failures is a strike count against a *release choice*, and nothing
 // resets it but a successful grab — so counting a timeout retires the item
-// permanently after max_grab_failures (3 by default) unlucky ticks. That is
-// what a flaky Prowlarr did to a homelab library: episodes with clean,
-// accepted releases stopped being searched at all, since the eligibility
+// permanently after max_grab_failures (3 by default) unlucky ticks. A flaky
+// Prowlarr would do exactly that to a library: episodes with clean, accepted
+// releases stop being searched at all, since the eligibility
 // query gates on the same counter, leaving no symptom beyond a row that sits
 // "wanted" forever.
 func transportFailure(err error) bool {

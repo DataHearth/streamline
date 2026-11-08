@@ -17,8 +17,8 @@ const kaamelottTVDBID = 79175
 
 // The homelab release that produced this spec: a six-season French integrale
 // grabbed by hand to fill three gaps. It names no season, so library.Parse
-// reports season 0 — the *specials* — and the proposal used to anchor on
-// S00E01, an episode the torrent does not even contain.
+// reports season 0 — the *specials* — and a proposal anchored on that lands
+// on S00E01, an episode the torrent does not even contain.
 const integraleName = "Kaamelott Integrale (Livres I a VI + Bonus) FRENCH " +
 	"[1080p] BDRIP HEVC-H265 10bits - Themouche"
 

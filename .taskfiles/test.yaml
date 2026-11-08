@@ -2,9 +2,9 @@ version: "3"
 
 vars:
   # ginkgo builds every suite it is pointed at while it runs them, skipped or
-  # not, inside --timeout. Over the whole tree that was 51 test binaries with no
-  # e2e spec, and building them starved the e2e suites of disk and CPU until
-  # requests and browser clicks hit their own timeouts.
+  # not, inside --timeout. Over the whole tree that is some 50 test binaries
+  # with no e2e spec, and building them starves the e2e suites of disk and CPU
+  # until requests and browser clicks hit their own timeouts.
   E2E_PACKAGES:
     sh: grep -rl --include='*_test.go' 'Label(.*"e2e"' cmd e2e internal |
       xargs -n1 dirname | sort -u | sed 's|^|./|' | tr '\n' ' '

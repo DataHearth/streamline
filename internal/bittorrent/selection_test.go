@@ -77,7 +77,7 @@ var _ = Describe("Engine file selection", Label("unit", "bittorrent"), func() {
 				Return(nil).Once()
 
 			Expect(eng.SetWantedFiles(ctx, hash, []int{1})).To(Succeed())
-			// The §3.3 regression: re-run the resolve hook, selection must hold.
+			// Spec §3.3: re-run the resolve hook, selection must hold.
 			st := eng.getState(hash)
 			applyFilePriorities(t, st.selectionMode, st.wantedFiles)
 			files, err := eng.ListFiles(ctx, hash)

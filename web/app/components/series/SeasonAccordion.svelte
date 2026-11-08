@@ -80,9 +80,9 @@
 		detail = ep;
 	}
 
-	// Three actions behind one ⋯ instead of a single contextual button: the row
-	// used to show Search OR Delete OR a dot, so which action existed depended on
-	// state and details were unreachable at this width entirely.
+	// Three actions behind one ⋯ instead of a single contextual button, which
+	// would show Search OR Delete OR a dot, so which action exists would depend on
+	// state and details would be unreachable at this width entirely.
 	function epMenu(s: Season, ep: Episode): KebabItem[] {
 		const st = episodeStatus(ep, showMonitored);
 		const hasFile = (ep.size ?? 0) > 0;

@@ -34,8 +34,7 @@
 
 	let active = $derived(queue.filter((q) => q.status === "downloading").length);
 	// Bytes/sec across what is actually moving: paused and importing entries
-	// carry a stale rate. The dashboard's only throughput figure since the stat
-	// strip went.
+	// carry a stale rate. The dashboard's only throughput figure.
 	let speedText = $derived(
 		formatSpeed(
 			queue.reduce((s, q) => s + (q.status === "downloading" ? (q.download_speed ?? 0) : 0), 0),
@@ -115,7 +114,7 @@
 								{q.title}
 							</div>
 							<!-- Under the words rather than in a column of its own: the bar
-							     belongs to the title above it, and a middle column put a
+							     belongs to the title above it, and a middle column would put a
 							     hairline of colour between two blocks of text that read as one
 							     unit. It also gets the full text width instead of half of it. -->
 							<div class="mt-2">

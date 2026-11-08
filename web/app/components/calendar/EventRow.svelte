@@ -63,9 +63,9 @@
 		</span>
 	</span>
 
-	<!-- One treatment for both kinds. This used to be a "Wanted" pill on movies
-	     and a bare dot on episodes, so the trailing column meant status on some
-	     rows and kind on others. The dot is kind only — the same amber/purple
+	<!-- One treatment for both kinds. A "Wanted" pill on movies beside a bare
+	     dot on episodes would make the trailing column mean status on some rows
+	     and kind on others. The dot is kind only — the same amber/purple
 	     the filter switch and the grid chips use. A bare colour cannot carry
 	     state without a label, so an album or book whose state is worth saying
 	     (available, downloading, paused, skipped) carries a labelled pill

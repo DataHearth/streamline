@@ -17,9 +17,9 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { errorText } from "@lib/api";
 
-	// The table's replacement below md: one surface, hairline rows, and the ring
-	// carrying what the Status and Progress columns used to. Everything else the
-	// table showed moves into the row's third line or the detail sheet.
+	// The table's counterpart below md: one surface, hairline rows, and the ring
+	// carrying what the Status and Progress columns show. Everything else the
+	// table shows sits in the row's third line or the detail sheet.
 	let {
 		view,
 		rows,

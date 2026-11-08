@@ -65,7 +65,7 @@ var (
 	// token and a 200 while the compromised value stays on the shelf.
 	//
 	// Only a key this update actually changed conflicts. Every other
-	// environment-owned key is withheld silently, as it always was — that is
+	// environment-owned key is withheld silently — that is
 	// an unrelated setting keeping its provenance, not a lost write.
 	ErrEnvOwned = errors.New(
 		"these settings come from the environment and cannot be changed here",
@@ -444,8 +444,8 @@ type loadIssue struct {
 // before it found, and each reports every rule it finds broken rather than
 // returning on one. That is what lets Update tell a reason it inherited from
 // one it is introducing, and the difference is not cosmetic — a phase that
-// stopped early put the same inherited reason at the head of both lists, and
-// Update saved a write it would otherwise have refused.
+// stops early puts the same inherited reason at the head of both lists, and
+// Update saves a write it would otherwise refuse.
 //
 // Within a phase that holds field by field, not rule by rule: validator stops
 // at a field's first failing tag, so a rule behind it does not run and is not
@@ -474,9 +474,10 @@ func loadIssues(fileKeys *koanf.Koanf) []loadIssue {
 //
 // It returns that half-built config rather than nothing, because decoding
 // fills in every key it can and reports the rest: a value of the wrong type is
-// one reason among the reasons, not a licence to stop counting. A file whose
-// port the environment corrects used to report that alone, on both sides of
-// Update's comparison, so an update that broke something else entirely saved.
+// one reason among the reasons, not a licence to stop counting. Stopping there,
+// a file whose port the environment corrects would report that alone, on both
+// sides of Update's comparison, and an update that broke something else
+// entirely would save.
 // The key that failed to decode is left at its zero value and the struct tags
 // report it a second time, which is a duplicate on both sides and inherited
 // like the first.
@@ -577,18 +578,18 @@ func currentWriteBackLoadableLocked() []loadIssue {
 // — letting the save through — for the ones the file was already carrying.
 //
 // The comparison is reason against reason. Comparing loadable against
-// unloadable made one inherited reason answer for every other: an install
-// whose quality_default_profile came from the environment took a
+// unloadable lets one inherited reason answer for every other: an install
+// whose quality_default_profile comes from the environment would take a
 // session_secret_file pointing at nothing — a key the file owns outright and
-// the environment cannot put back — and the next boot stopped on it with every
-// variable still set.
+// the environment cannot put back — and the next boot would stop on it with
+// every variable still set.
 //
 // It is worth no more than the lists it compares, which is why loadIssues
-// reports every reason rather than the first: while a rule that failed ended
-// its phase, the same inherited reason stood at the head of both lists and hid
-// everything behind it, and deleting the quality profile the default names
-// saved through on an install whose only other flaw was a proxy list the
-// environment corrected.
+// reports every reason rather than the first: if a rule that failed ended its
+// phase, the same inherited reason would stand at the head of both lists and
+// hide everything behind it, and deleting the quality profile the default
+// names would save through on an install whose only other flaw is a proxy
+// list the environment corrects.
 //
 // Held by Update's mu.Lock, which is what makes the baseline comparison read
 // current and envOverlay safely.

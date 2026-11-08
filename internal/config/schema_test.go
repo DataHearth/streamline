@@ -187,10 +187,11 @@ var _ = Describe("config.SchemaJSON", Label("unit", "config"), func() {
 		})
 
 		// writeYAMLAtomic marshals the whole struct, zero values included, so a
-		// provider that never named email_linking was rewritten as
-		// `email_linking: ""` on any config.Update — a file this very schema
-		// rejects. Round-trip the real write path rather than asserting on the
-		// normaliser, so the regression is caught wherever it reappears.
+		// provider that never named email_linking is rewritten as
+		// `email_linking: ""` on any config.Update unless normalised — a file
+		// this very schema rejects. Round-trip the real write path rather than
+		// asserting on the normaliser, so the failure is caught wherever it
+		// arises.
 		It("validates the file it writes back for a provider omitting the key",
 			func() {
 				raw := "data_dir: " + GinkgoT().TempDir() + `
@@ -243,7 +244,7 @@ auth:
 		// allow_admin is a bool, so the write-back emits it for every provider
 		// whether or not the file named it — the schema has to know the key or
 		// streamline writes a config its own published schema rejects, the
-		// regression email_linking already hit once.
+		// same trap as email_linking above.
 		It("validates the file it writes back for a provider omitting allow_admin",
 			func() {
 				raw := "data_dir: " + GinkgoT().TempDir() + `

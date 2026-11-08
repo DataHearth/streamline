@@ -5,8 +5,8 @@
 
 	// The touch settings navigation: /settings is a destination below lg instead
 	// of a redirect to General. Five group headings, eleven rows, each carrying
-	// the count it owns — the numbers the old Select jumper flattened into
-	// "Indexers (2)" and the group names it dropped entirely.
+	// the count it owns — the numbers a single native menu would flatten into
+	// "Indexers (2)", and the group names it would drop entirely.
 	const nav = createSettingsNav();
 </script>
 

@@ -65,8 +65,8 @@ conventional_commits = true
 filter_unconventional = false
 # Where this diverges from cliff.toml: a chart release is very often nothing
 # but chore commits — a values/template tidy-up, or renovate moving a subchart
-# pin. cliff.toml skips every chore, which for the chart produced a release
-# section with a heading and nothing under it. The invocation is already
+# pin. cliff.toml skips every chore, which for the chart would produce a
+# release section with a heading and nothing under it. The invocation is already
 # path-filtered to the chart, so any chore(deps) reaching this config touched
 # the chart by definition and is worth listing.
 commit_parsers = [

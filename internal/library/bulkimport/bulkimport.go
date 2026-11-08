@@ -53,9 +53,9 @@ type CommitOptions struct {
 }
 
 // writeTags resolves WriteTags. Adoption takes files already in someone's
-// collection, which it never wrote before tagging existed: a commit that does
-// not ask for tags (an API client or a script sending no body) leaves them
-// byte for byte as they are, comments and all.
+// collection, which it does not write unless asked: a commit that does not
+// ask for tags (an API client or a script sending no body) leaves them byte
+// for byte as they are, comments and all.
 func (o CommitOptions) writeTags() bool {
 	return o.WriteTags != nil && *o.WriteTags
 }
@@ -292,7 +292,7 @@ type BulkDecisionParams struct {
 // BulkDecide applies one decision across a scan's rows and returns how many
 // changed. It dispatches on the scan's kind, so one call serves movie
 // files, series shows, albums and books — reviewing a 465-file scan through the per-row
-// endpoint took 465 requests.
+// endpoint takes 465 requests.
 func (s *Service) BulkDecide(
 	ctx context.Context,
 	p BulkDecisionParams,

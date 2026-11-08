@@ -63,9 +63,9 @@
 					</div>
 				</div>
 				<!-- When and how big share one right-hand column, stacked on the row's two
-				     lines. The time used to sit inside the title block and the size in a
-				     track of its own, which put the two right edges 80px apart and neither
-				     of them on a line the eye could follow down the feed. -->
+				     lines. The time inside the title block and the size in a track of its
+				     own would put the two right edges 80px apart and neither of them on a
+				     line the eye can follow down the feed. -->
 				<div class="flex flex-col items-end gap-0.5 font-mono text-[10.5px] tabular-nums">
 					<time
 						datetime={event.created_at}

@@ -68,7 +68,7 @@ func init() {
 	))
 	// Split out because jobDuration covers verification too, and VMAF alone
 	// runs up to three extra decode passes — "how long does this codec take to
-	// encode" was not answerable from a number that includes them.
+	// encode" is not answerable from a number that includes them.
 	encodeDuration = otelx.Must(meter.Float64Histogram(
 		"streamline.transcoding.encode_duration",
 		metric.WithDescription("ffmpeg encode duration, verification excluded"),
@@ -267,9 +267,9 @@ type claimed struct {
 
 // claim takes the next queued job, books a slot for it and registers its
 // cancel — all three under the one lock, so a job is cancelable from the
-// instant its row says running. Registering in runJob instead left a window
-// where Cancel took the not-running branch: the row went canceled while the
-// encode carried on and completed over it.
+// instant its row says running. Registering in runJob instead would leave a
+// window where Cancel takes the not-running branch: the row goes canceled
+// while the encode carries on and completes over it.
 func (w *Worker) claim(ctx context.Context) (*claimed, error) {
 	job, err := w.db.ClaimNextTranscodeJob(ctx)
 	if err != nil {
@@ -1182,9 +1182,9 @@ func actionName(a Action) string {
 //
 // Every terminal path funnels through here, which is why the span marking
 // lives here too: transcoding.run is opened in runJob and closed by a defer,
-// and nothing between them touched it, so a job that failed, was rejected or
-// was canceled still reported OK. Filtering a tracing backend for error spans
-// found no failing encodes at all.
+// and nothing between them touches it, so without this a job that failed, was
+// rejected or was canceled would still report OK, and filtering a tracing
+// backend for error spans would find no failing encodes at all.
 func record(ctx context.Context, outcome string) {
 	jobsTotal.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("outcome", outcome),

@@ -781,8 +781,8 @@ func (t *TVDB) translateSeasons(
 			// Debug, because the ordinary miss above is not worth a line per
 			// season per show. But it must leave *some* trace: a TVDB outage
 			// or an expired token silently reverts every season of every show
-			// to its original-language name through this exact path, and the
-			// two were indistinguishable when nothing was recorded at all.
+			// to its original-language name through this exact path, and with
+			// nothing recorded at all the two are indistinguishable.
 			slog.DebugContext(ctx, "tvdb season translation unavailable",
 				"tvdb.season_id", id, "error", err)
 			continue
@@ -802,10 +802,10 @@ func normalizeStatus(s string) string {
 	default:
 		// "Upcoming", "Planned" and "In Production" land here with everything
 		// else TVDB might send. A series that has not premiered is still a
-		// series that is coming, which is what "continuing" has to mean once
-		// the third value is gone — and the library only ever holds shows
-		// someone chose to follow, so the distinction bought nothing: the
-		// facet it fed read 0 forever while staying clickable, which is
+		// series that is coming, which is what "continuing" has to mean with
+		// only two values — and the library only ever holds shows someone
+		// chose to follow, so a third value would buy nothing: the facet it
+		// fed would read 0 forever while staying clickable, which is
 		// indistinguishable from a filter that does not work.
 		return "continuing"
 	}

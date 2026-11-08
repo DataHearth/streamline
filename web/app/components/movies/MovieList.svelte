@@ -47,8 +47,8 @@
 	}));
 
 	// Both columns read the list response's file rollup, not media_files —
-	// which is detail-only. totalSize is now the sum of every attached file
-	// rather than the first one's size, which is what the column always meant.
+	// which is detail-only. totalSize is the sum of every attached file, which
+	// is what the column means.
 	function totalSize(s: MovieFileSummary | undefined): string {
 		return s ? formatBytes(s.size_bytes) : "—";
 	}

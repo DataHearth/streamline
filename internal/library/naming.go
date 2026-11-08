@@ -24,9 +24,9 @@ var templateTokenRe = regexp.MustCompile(`(\s*)([\[(])?\{(\w+)(?::(\d+))?\}([\])
 //
 // A token that renders empty *and* is wrapped in a bracket pair takes the pair
 // and the whitespace before it with it. The default movie template ends
-// "[{quality}].{ext}", so a file whose quality is unknown used to land as
-// "13 Hours (2016) [].mkv" — and since the renamer then re-parsed that name on
-// the next pass, the empty brackets were self-perpetuating. Punctuation in a
+// "[{quality}].{ext}", so a file whose quality is unknown would otherwise land
+// as "13 Hours (2016) [].mkv" — and since the renamer re-parses that name on
+// the next pass, the empty brackets would be self-perpetuating. Punctuation in a
 // template delimits a value; with no value there is nothing to delimit. A bare
 // token is left alone: "{title}-{group}" has no pair to remove, and inventing
 // a rule for the separator would change names nobody complained about.
@@ -176,15 +176,14 @@ func BuildAlbumTrackVars(
 // ParsedFromMediaFile builds the naming inputs for a file already in the
 // library, off the columns the importer stored rather than off its path.
 //
-// The path is the wrong input and was the one both rename services used. The
-// renamer *writes* that path from the naming template, and the default
-// template keeps only {quality} — so the first rename dropped the source, the
-// codec and the group, and every pass after it re-parsed a name that no longer
-// carried them. Worse, a file whose quality was never in the name could not
-// recover one: it re-rendered "[]" forever while release_group,
-// parsed_resolution and a full probe sat on the row untouched. This is the
-// naming half of the defect qualityctx.ContextFromRow fixed on the scoring
-// side, and it has the same shape and the same fix.
+// The path is the wrong input. The renamer *writes* that path from the naming
+// template, and the default template keeps only {quality} — so the first
+// rename drops the source, the codec and the group, and every pass after it
+// would re-parse a name that no longer carries them. Worse, a file whose
+// quality was never in the name could not recover one: it would re-render "[]"
+// forever while release_group, parsed_resolution and a full probe sit on the
+// row untouched. qualityctx.ContextFromRow reads the row on the scoring side
+// for the same reason.
 //
 // Precedence runs probe → stored parse → current basename. The basename is
 // last but not dropped: it is the only evidence for a file the importer never

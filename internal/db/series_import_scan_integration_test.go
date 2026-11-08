@@ -120,9 +120,9 @@ var _ = Describe("Series import scan store", Label("integration", "db"), func() 
 		Expect(row.DecisionTvdbID).To(HaveValue(Equal(tvdbID)))
 	})
 
-	// A decision addressed to scan A carrying a show id owned by scan B used to
-	// mutate B's row and only then 404 on the scoped read-back: the client saw a
-	// rejection while the foreign write had already landed.
+	// Guards against a decision addressed to scan A carrying a show id owned by
+	// scan B mutating B's row and only then 404ing on the scoped read-back: the
+	// client would see a rejection while the foreign write had already landed.
 	It("leaves another scan's show untouched", func() {
 		addressed, err := store.CreateImportScan(ctx, CreateImportScanParams{
 			SourcePath: "/tv",

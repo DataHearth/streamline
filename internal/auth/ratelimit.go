@@ -75,8 +75,8 @@ const (
 	// while the table is full: it is never metered at all. The often-quoted
 	// 16.07-granted-per-address is an average over 1,000,000 addresses that
 	// mixes the 262,144 metered ones with the unmetered remainder — it is not a
-	// per-address bound. (5.00 at 262,144 addresses; 20.00 from the evicting map
-	// this replaced, which was already a total bypass.) Filling it means holding 262,144
+	// per-address bound. (5.00 at 262,144 addresses; 20.00 from an evicting map,
+	// which is a total bypass already.) Filling it means holding 262,144
 	// addresses that were each cut off at 5 first, and every account behind them
 	// still locks after auth.lockout.threshold failures.
 	maxKeys = 1 << 18
@@ -232,8 +232,8 @@ func (l *limiter) Allow(key string) (bool, time.Duration) {
 	if !tracked && len(l.cur)+len(l.prev) >= maxKeys {
 		// The documented lapse, made audible. Past the cap every new key is
 		// granted and unrecorded, which means brute-force protection is off —
-		// and it was off silently, with no log and no counter, exactly under
-		// the flood that would trip it.
+		// and without this it would be off silently, with no log and no
+		// counter, exactly under the flood that would trip it.
 		rateLimitTableFull.Add(context.Background(), 1)
 		return true, 0
 	}

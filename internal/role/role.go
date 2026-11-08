@@ -5,22 +5,22 @@
 // ent role, so every write names the authority that decided it: an operator
 // acting through the admin API, the first-boot seed, an invite, a
 // self-registration, or a login through an OIDC provider. A bare
-// `entuser.RoleAdmin` no longer compiles into a params struct, which is what
+// `entuser.RoleAdmin` does not compile into a params struct, which is what
 // this package buys over a lint that looks for one.
 //
 // The escalation it exists to stop is a role reaching a user row without
-// passing the OIDC provider's admin ceiling. Four rounds of that fix kept the
-// type in package auth and enforced the rule with a syntax scan over the
-// package's AST; four times a reviewer found a spelling the scan did not
-// enumerate. The last one needed no new API at all:
+// passing the OIDC provider's admin ceiling. With the type in package auth,
+// the rule rests on a syntax scan over the package's AST, and a reviewer can
+// always find a spelling the scan does not enumerate — one needing no new API
+// at all:
 //
 //	var esc oidcRole
 //	esc.role = string(entuser.RoleAdmin)
 //	mapped = esc
 //
-// — legal because the field was reachable from every file that shared the
-// package, and invisible because the forged value then left through the
-// blessed exit the scan was told to trust.
+// — legal because the field is reachable from every file that shares the
+// package, and invisible because the forged value then leaves through the
+// blessed exit the scan is told to trust.
 //
 // A package boundary is what makes that unwritable rather than unseen. Value's
 // field is unexported and this package exports no setter and no pointer to its
@@ -157,8 +157,8 @@ func known(r string) Value {
 // It reads nothing about the account and nothing about the request — not the
 // auth_method, not the email_linking tier, not which claims arrived. That is
 // the point: a ceiling derived from any of those moves when an attacker or an
-// operator moves them, and each of the first three rounds of this fix fell to a
-// different ordering that exploited exactly that.
+// operator moves them, and an ordering of logins and setting changes can
+// exploit exactly that.
 func Federated(provider, fallback string, candidates ...string) Value {
 	allowAdmin := providerAllowsAdmin(provider)
 	admin := string(entuser.RoleAdmin)

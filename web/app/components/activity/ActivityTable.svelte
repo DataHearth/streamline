@@ -60,8 +60,8 @@
 	);
 	let allPicked = $derived(rows.length > 0 && pickedHere === rows.length);
 	// Columns hide on the table's own container width, not the viewport's: at
-	// tablet the rail leaves it ~630px, where a viewport media query still counted
-	// the 88px it no longer has and kept a column that fell outside the box.
+	// tablet the rail leaves it ~630px, where a viewport media query would count
+	// the 88px the rail takes and keep a column that falls outside the box.
 	type SortKey =
 		| "status"
 		| "title"
@@ -278,7 +278,7 @@
 		</div>
 	{:else}
 		<table class="w-full min-w-[520px] border-collapse text-left">
-			<!-- The header rides over the rows now that the card scrolls, so it needs an
+			<!-- The header rides over the rows since the card scrolls, so it needs an
 			     opaque ground: `bg-surface` is rgba(255,255,255,.04) and the rows read
 			     straight through it. Painted on the cells rather than the row, since
 			     that is what `position: sticky` moves under `border-collapse`. -->

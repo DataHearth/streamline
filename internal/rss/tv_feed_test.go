@@ -354,7 +354,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			// observable: GrabEpisode always fires against the pack's first
 			// episode regardless of how many episodes it actually covers, so
 			// asserting on that call alone can't tell a correct selection from a
-			// regressed one. This release, offered on its own, only gets grabbed
+			// wrong one. This release, offered on its own, only gets grabbed
 			// if E02 is still up for grabs — i.e. wasn't already claimed by the
 			// pack this tick (`pass.grabbed`).
 			betterEp2 = "The.Black.Sea.S03E02.2160p.MULTi.BluRay.x265-GRP"

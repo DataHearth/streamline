@@ -421,24 +421,24 @@ var errHashCostAboveCeiling = errors.New(
 // bcrypt.DefaultCost, and a cheaper one still authenticates after paying its
 // shortfall.
 //
-// A costlier one no longer authenticates at all. It answers exactly like an SSO
+// A costlier one does not authenticate at all. It answers exactly like an SSO
 // account with no password. Stating what that costs the account precisely,
 // because "unusable" overstates one half of it and understates the other: the
 // password is what stops working, not the account. An OIDC-linked identity
 // still signs in through its provider — LoginOIDC never reads password_hash —
-// and that sign-in does not clear the ceiling, it just walks around it. What no
-// longer works is every path that has to verify the stored password, and that
+// and that sign-in does not clear the ceiling, it just walks around it. What
+// stops working is every path that has to verify the stored password, and that
 // is both of them: Login and ChangePassword run the same comparison, so the
 // account cannot rewrite its own hash down to a runnable cost by supplying the
 // current password. Only AdminResetPassword can, rotating the hash at the
 // default cost without verifying the old one.
 //
 // That both paths compare here is what makes the paragraph above true, and it
-// is load-bearing rather than tidy. While ChangePassword called bcrypt
-// directly, a genuine $2a$11$ hash gave one credential two answers: POST
-// /auth/login with the correct password returned 401 in 48.8ms, and POST
+// is load-bearing rather than tidy. With ChangePassword calling bcrypt
+// directly, a genuine $2a$11$ hash gives one credential two answers: POST
+// /auth/login with the correct password returns 401 in 48.8ms, and POST
 // /api/v1/auth/password with that same correct password as current_password
-// returned 204 in 142.2ms, rewrote the row to $2a$10$, and the account logged
+// returns 204 in 142.2ms, rewrites the row to $2a$10$, and the account logs
 // in on its new password immediately after. Any comparison against a stored
 // hash added later belongs here for the same reason.
 //
@@ -773,8 +773,8 @@ func (s *auth) ValidateAPIKey(
 
 	// Best-effort: a failed stamp must not reject an otherwise valid key.
 	// Debounced like the session touch — this one is synchronous, on the
-	// request path, so a bulk consumer used to pay a full row rewrite per
-	// request for a column nothing branches on. At one write per
+	// request path, so undebounced a bulk consumer pays a full row rewrite
+	// per request for a column nothing branches on. At one write per
 	// touchInterval it is rare enough not to be worth detaching.
 	if s.touches.allow(fmt.Sprintf("apikey:%d", ak.ID), now) {
 		if err := s.db.TouchAPIKey(ctx, ak.ID, now); err != nil {

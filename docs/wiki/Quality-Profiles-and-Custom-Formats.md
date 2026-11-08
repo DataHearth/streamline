@@ -34,7 +34,7 @@ flowchart TD
 - [The tester](#the-tester)
 - [Presets](#presets)
 - [Where scores show up](#where-scores-show-up)
-- [Behavior changes from the old filter](#behavior-changes-from-the-old-filter)
+- [How score-then-select picks](#how-score-then-select-picks)
 - [Not in this phase](#not-in-this-phase)
 
 ---
@@ -196,21 +196,21 @@ Every built-in *describes* a release — what codec, what resolution, what sourc
 
 ## Scoring profiles
 
-Four fields were added to the existing profile shape; everything that was there before still means what it meant before:
+A scoring profile is the resolution band and upgrade switch plus the scoring fields:
 
 ```yaml
 quality_profiles:
   - name: default
-    min_resolution: 1080p         # unchanged: hard floor
-    preferred_resolution: 2160p   # now the hard CEILING of the accepted band
-    upgrade_allowed: true         # unchanged: master switch for replacing files
-    allowed_codecs: []            # unchanged: drives import holds only, not grab decisions
-    formats:                      # NEW: score per format, by name
+    min_resolution: 1080p         # hard floor
+    preferred_resolution: 2160p   # the hard CEILING of the accepted band
+    upgrade_allowed: true         # master switch for replacing files
+    allowed_codecs: []            # drives import holds only, not grab decisions
+    formats:                      # score per format, by name
       - { name: x265, score: 100 }
       - { name: hdr, score: 50 }
       - { name: scene-junk, score: -1000 }   # a custom_formats entry of your own
-    min_score: 0                  # NEW: total below this -> release rejected
-    upgrade_until_score: 500      # NEW: stop upgrading once the current file reaches this
+    min_score: 0                  # total below this -> release rejected
+    upgrade_until_score: 500      # stop upgrading once the current file reaches this
 
 movie_quality_default_profile: default
 series_quality_default_profile: default
@@ -224,7 +224,7 @@ series_quality_default_profile: default
 
 `formats[].name` must resolve to a built-in name or a `custom_formats` entry — an unknown name is a `422` on save. A profile with no `formats` at all still works: nothing is scored, so any in-band release passes with a score of `0`.
 
-**`preferred_resolution` changed meaning.** It used to be the exact target when upgrades were off. It's now the ceiling of the accepted `min_resolution`..`preferred_resolution` band — resolution *preference* inside that band is expressed by scoring the built-in `resolution-*` formats instead. A release outside the band (too low, or above `preferred_resolution`) is rejected before any format is even evaluated.
+**`preferred_resolution` is a ceiling, not a target.** It is the top of the accepted `min_resolution`..`preferred_resolution` band — resolution *preference* inside that band is expressed by scoring the built-in `resolution-*` formats instead. A release outside the band (too low, or above `preferred_resolution`) is rejected before any format is even evaluated.
 
 Because it is the ceiling, a `min_resolution` *above* `preferred_resolution` describes an empty band that rejects every release. Config validation refuses it outright rather than letting the profile look configured while grabbing nothing.
 
@@ -265,7 +265,7 @@ Only then does Streamline grab the replacement, mark the new download record's r
 
 Episodes upgrade by the same three rules, but a season pack is judged **episode by episode** against each episode's own file, not against the season as a whole:
 
-- **Each episode in the pack is compared to its own file.** A release that beats episode 3 but not episode 7 replaces episode 3 and leaves episode 7 alone — there's no season-wide veto, so one strong episode no longer blocks a pack that would improve the rest. At least one episode has to qualify for the pack to be grabbed at all.
+- **Each episode in the pack is compared to its own file.** A release that beats episode 3 but not episode 7 replaces episode 3 and leaves episode 7 alone — there's no season-wide veto, so one strong episode doesn't block a pack that would improve the rest. At least one episode has to qualify for the pack to be grabbed at all.
 - **Filling a gap and upgrading happen in the same grab.** If a pack covers episodes you're missing, it's grabbed to fill them, and any episode you already have that the release beats is replaced in that same download — you don't need to re-run it once the season is complete. Both automatic paths work this way: the feed scanner when a pack turns up in the RSS listing, and the missing-episode search when it goes hunting for a season that still has gaps. The missing search only reaches for a pack when **two or more** of a season's episodes are due to be searched this pass — missing, aired, monitored, past their cooldown and under the grab-failure ceiling. A season with three gaps where two are unaired or still cooling down takes the single-episode path instead, and a single-episode grab replaces nothing; a season with no gap at all is never searched, so no pack is ever grabbed purely to upgrade.
 A single-episode release is judged against that one episode alone.
 
@@ -388,9 +388,9 @@ A file in the library is scored from the columns the importer stored — its rel
 
 The exception is `release_title`. It matches the whole raw release name, and a file in your library no longer has one — so against a file this condition is treated as **unanswerable**, not as a miss.
 
-That distinction is the whole game. A format written *only* as a title regex cannot judge a file, so streamline drops it from **both** sides when deciding an upgrade, rather than letting the release score it and the file not. Before this, a profile whose weight sat in title-matched formats read its entire library as upgradable, forever: on one real install an anime profile paying `vostfr` +1000 left every episode about 1050 points below its own `upgrade_until_score`, and no file could ever earn those points back.
+That distinction is the whole game. A format written *only* as a title regex cannot judge a file, so streamline drops it from **both** sides when deciding an upgrade, rather than letting the release score it and the file not. Otherwise a profile whose weight sat in title-matched formats would read its entire library as upgradable, forever: an anime profile paying `vostfr` +1000 would leave every episode about 1050 points below its own `upgrade_until_score`, and no file could ever earn those points back.
 
-**The fix, and what you should do about it:** pair a title regex with a condition the file can answer, in the same format, both non-required. The format then matches a release by its name and a file by its probe, and the two become comparable:
+**What you should do about it:** pair a title regex with a condition the file can answer, in the same format, both non-required. The format then matches a release by its name and a file by its probe, and the two become comparable:
 
 ```yaml
 custom_formats:
@@ -423,20 +423,20 @@ Two consequences remain for those:
 - A `file_score` is a floor, not the score the release originally earned. A REMUX on disk under a profile scoring `remux` at +250 reports 250 less than the release it came from.
 - Those formats take no part in upgrade decisions at all — neither for nor against.
 
-Probing has to be on for any of this: with `ffmpeg.enabled: false` the stream conditions are unanswerable too, and upgrades fall back to comparing only the parsed columns. Files imported before this feature are filled in by the `media-probe` backfill job (25 rows every 15 minutes), so an existing library converges on its own.
+Probing has to be on for any of this: with `ffmpeg.enabled: false` the stream conditions are unanswerable too, and upgrades fall back to comparing only the parsed columns. Files not probed yet are filled in by the `media-probe` backfill job (25 rows every 15 minutes), so an existing library converges on its own.
 
 ---
 
-## Behavior changes from the old filter
+## How score-then-select picks
 
-Three, all a consequence of moving from "first release that passes" to score-then-select — worth knowing if you're tuning an install that predates this feature:
+Three consequences of score-then-select, worth checking against profiles written for "first release that passes":
 
-1. **`pickBest` is now score-ranked, then seeders-ranked** — previously it was first-hit (whichever the indexer listed first). A profile with an empty `formats` list still improves: it becomes seeders-ranked instead of first-hit.
-2. **A profile with `upgrade_allowed: false` and `min_resolution` below `preferred_resolution` can now grab anywhere in that band.** Before, "upgrades off" meant "accept only exactly `preferred_resolution`". Now it means "accept the whole band, just don't replace a file already there."
-3. **`preferred_resolution` is a hard ceiling, everywhere a profile is evaluated** — including the RSS/missing-search feed scanners, not just interactive search. An install whose `preferred_resolution` sits below its media's actual resolution will stop grabbing anything above it until the profile is raised.
+1. **`pickBest` is score-ranked, then seeders-ranked** — not whichever release the indexer listed first. A profile with an empty `formats` list is seeders-ranked.
+2. **A profile with `upgrade_allowed: false` and `min_resolution` below `preferred_resolution` grabs anywhere in that band.** "Upgrades off" means "accept the whole band, just don't replace a file already there", not "accept only exactly `preferred_resolution`".
+3. **`preferred_resolution` is a hard ceiling, everywhere a profile is evaluated** — including the RSS/missing-search feed scanners, not just interactive search. An install whose `preferred_resolution` sits below its media's actual resolution grabs nothing above it until the profile is raised.
 
 > [!WARNING]
-> If your library already has files above a profile's `preferred_resolution`, review your profiles before relying on automatic search after upgrading — the ceiling now applies everywhere, so grabbing above it silently stops until the profile is raised.
+> If your library already has files above a profile's `preferred_resolution`, review your profiles before relying on automatic search after upgrading — the ceiling applies everywhere, so nothing above it is grabbed until the profile is raised.
 
 ---
 

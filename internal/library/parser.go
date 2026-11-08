@@ -27,12 +27,12 @@ var (
 	yearRe = regexp.MustCompile(`\b((?:19|20)\d{2})\b`)
 	// The episode number takes a third digit: a season past 99 episodes is
 	// rare but real (Kaamelott's first four Livres run to 100 shorts each),
-	// and pinned at two digits "S01E100" parsed as episode 10 — silently, so
-	// the file matched the wrong episode or none at all, and nothing about the
-	// release name looked malformed. Greedy, so the third digit wins when it
-	// is there. The season stays at two: every spelling of a season past 99 is
-	// a different problem, and widening it makes "S1E1" ambiguous with tokens
-	// this regex is not anchored against.
+	// and pinned at two digits "S01E100" would parse as episode 10 — silently,
+	// so the file would match the wrong episode or none at all, and nothing
+	// about the release name would look malformed. Greedy, so the third digit
+	// wins when it is there. The season stays at two: every spelling of a
+	// season past 99 is a different problem, and widening it makes "S1E1"
+	// ambiguous with tokens this regex is not anchored against.
 	seasonEpRe   = regexp.MustCompile(`(?i)S(\d{2})E(\d{2,3})`)
 	resolutionRe = regexp.MustCompile(`(?i)\b(720p|1080p|2160p|4K)\b`)
 	sourceRe     = regexp.MustCompile(
@@ -309,9 +309,10 @@ func looksLikeRelease(s string) bool {
 // A "complete" tag alone is not enough: it qualifies whatever the name names,
 // and half the season packs in the wild say it about the season they carry
 // ("Breaking Bad S05 Complete Multi …", "Breaking Bad Saison 04 Complète …").
-// Read as whole-series, those were dropped from a search for exactly the season
-// they hold. So the tag only spans the series when no single season is named —
-// and a season *range* wins over both, since "COMPLETE S01-S05" spans five.
+// Read as whole-series, those would be dropped from a search for exactly the
+// season they hold. So the tag only spans the series when no single season is
+// named — and a season *range* wins over both, since "COMPLETE S01-S05" spans
+// five.
 func IsWholeSeriesPack(name string) bool {
 	if seasonRangeRe.MatchString(name) {
 		return true
@@ -489,8 +490,8 @@ func normalizeCodec(s string) string {
 
 // normalizeResolution canonicalises a matched resolution token to the bucket
 // name every consumer keys on. Groups spell it in any casing they like, and
-// `quality.resolutionRank` is a plain switch: an uppercase "1080P" ranked 0,
-// which `Evaluate` reports as "resolution outside profile band" — a whole
+// `quality.resolutionRank` is a plain switch: an uppercase "1080P" would rank
+// 0, which `Evaluate` reports as "resolution outside profile band" — a whole
 // release rejected for the case of one letter.
 func normalizeResolution(s string) string {
 	lower := strings.ToLower(s)

@@ -217,8 +217,8 @@ func FindCustomFormat(name string) (CustomFormatEntry, bool) {
 // its formats resolved and scored.
 // scoredProfiles memoises assembled profiles. Assembling one compiles every
 // user custom format's conditions through regexp.Compile, and the series
-// detail path resolves a profile per episode — a 200-episode show was ~2,000
-// compilations and megabytes of garbage for one response.
+// detail path resolves a profile per episode — unmemoised, a 200-episode show
+// is ~2,000 compilations and megabytes of garbage for one response.
 //
 // Keyed by the *resolved* entry's name, not the requested one: an unknown name
 // falls back to the default, so keying on the request would let arbitrary

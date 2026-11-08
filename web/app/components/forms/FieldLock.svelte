@@ -3,8 +3,8 @@
 	import { READONLY_HINT } from "@lib/config.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// The marker that says *this control* is the locked one. Before it, a locked
-	// field was cursor-not-allowed plus reduced opacity: a cursor state a touch
+	// The marker that says *this control* is the locked one. Cursor-not-allowed
+	// plus reduced opacity cannot say it: a cursor state a touch
 	// device cannot show, and an opacity drop that reads as "disabled until you
 	// fill in something else" rather than "managed outside the app".
 	let { locked }: { locked: boolean } = $props();

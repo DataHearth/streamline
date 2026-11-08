@@ -58,8 +58,8 @@ var (
 
 // queryOutcome names why an indexer call failed, for the outcome attribute.
 //
-// A blanket "error" put an expired API key, an unreachable tracker and a
-// malformed response in one bucket, so the metric could say an indexer was
+// A blanket "error" would put an expired API key, an unreachable tracker and a
+// malformed response in one bucket, so the metric could say an indexer is
 // failing but never which of those to go and fix.
 func queryOutcome(err error) string {
 	switch {
@@ -97,9 +97,9 @@ func init() {
 		metric.WithDescription("Indexer connection-test invocations by outcome"),
 	))
 	// Feed is what every RSS tick calls, once per enabled indexer — the
-	// primary automated ingestion path, and the one with no counter, so
-	// "indexer X's feed has been failing for an hour" was only ever a log
-	// grep while the search path had a graph.
+	// primary automated ingestion path. Without its own counter, "indexer
+	// X's feed has been failing for an hour" would only ever be a log grep
+	// while the search path has a graph.
 	indexerFeeds = otelx.Must(meter.Int64Counter(
 		"streamline.indexer.feeds",
 		metric.WithDescription("Per-indexer feed fetches by outcome"),
@@ -577,8 +577,8 @@ func filterProviderIDs(results []SearchResult, base SearchParams) []SearchResult
 // show's name because a parsed title keeps what extractTitle could not cut —
 // `Breaking Bad COMPLETE`, a fansub tag, a translated suffix — but only the
 // release tags TitleNamesSameWork knows, never a word that distinguishes one
-// work from another. Bare prefix tolerance did the latter, and every
-// `Narcos Mexico` episode read as a match for `Narcos`.
+// work from another. Bare prefix tolerance would do the latter, and every
+// `Narcos Mexico` episode would read as a match for `Narcos`.
 func preferTitleMatches(results []SearchResult, titles []string) []SearchResult {
 	if len(titles) == 0 {
 		return results
@@ -749,8 +749,8 @@ func (i *indexer) SearchEpisode(
 // A release naming no season and no episode is kept only when it carries an
 // anime absolute number or a daily air date — those shows never spell SxxExx,
 // and dropping them would hide every release they have. Keeping *anything*
-// unnumbered was the first cut of this and it let through the bulk of the noise
-// the filter exists to remove: a bare "Breaking Bad", a whole different show,
+// unnumbered would let through the bulk of the noise the filter exists to
+// remove: a bare "Breaking Bad", a whole different show,
 // and any pack whose only scope word the parser cannot read.
 //
 // The second return counts the dropped releases that are packs *covering* this
@@ -791,8 +791,8 @@ func filterToEpisode(
 // descending. base carries the id/season/episode params shared by every
 // query; Query is filled per title. Per-indexer errors are logged, never
 // returned. When a query keyed by a database id (tmdbid/tvdbid) comes back
-// empty, it is retried once on the bare title (keeping season/episode) since
-// many private trackers don't index by id.
+// empty, it is retried once on the bare title (keeping only the media kind)
+// since many private trackers don't index by id.
 func (i *indexer) searchAll(
 	ctx context.Context,
 	span trace.Span,
@@ -848,13 +848,12 @@ func (i *indexer) searchAll(
 				// and with it Prowlarr's own indexer filtering — still
 				// applies.
 				//
-				// Season and episode are dropped too, not preserved. They
-				// used to be, harmlessly, because nothing forwarded them to
-				// Prowlarr; now that they narrow at the tracker, keeping them
-				// would make the retry re-issue the query that just came back
-				// empty. This is also the path that saves absolute-numbered
-				// anime, where the show genuinely has no SxxExx release and
-				// the title alone is the only query that can match.
+				// Season and episode are dropped too, not preserved: they
+				// narrow at the tracker, so keeping them would make the retry
+				// re-issue the query that just came back empty. This is also
+				// the path that saves absolute-numbered anime, where the show
+				// genuinely has no SxxExx release and the title alone is the
+				// only query that can match.
 				if len(res) == 0 && base.narrowed() {
 					slog.DebugContext(queryCtx,
 						"indexer search empty, retrying on the bare title",
@@ -868,10 +867,11 @@ func (i *indexer) searchAll(
 					if retryErr == nil {
 						res = retry
 					} else {
-						// Dropping this silently made a tracker that is down
-						// or rate-limiting on the retry leg indistinguishable
-						// from a bare-title query that legitimately found
-						// nothing — both left an empty result and no signal.
+						// Dropped silently, a tracker that is down or
+						// rate-limiting on the retry leg would be
+						// indistinguishable from a bare-title query that
+						// legitimately found nothing — both leave an empty
+						// result and no signal.
 						indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
 							attribute.String("indexer.name", idx.Name),
 							attribute.String(

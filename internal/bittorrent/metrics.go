@@ -23,11 +23,11 @@ var (
 // registerEngineGauges publishes the live view of the swarm the engine already
 // computes for the UI.
 //
-// live() has per-torrent speeds, peer counts and status on every call, but the
-// only consumer was the REST endpoint the SPA polls — so "are all torrents
-// stalled", "how much is this box actually moving" and "is the engine even
-// running" were answerable from a browser and from nowhere else. An alerting
-// stack watching OTel had nothing.
+// live() has per-torrent speeds, peer counts and status on every call. Read
+// only by the REST endpoint the SPA polls, "are all torrents stalled", "how
+// much is this box actually moving" and "is the engine even running" would be
+// answerable from a browser and from nowhere else, and an alerting stack
+// watching OTel would have nothing.
 func (e *Engine) registerEngineGauges(ctx context.Context) {
 	active, err := meter.Int64ObservableGauge(
 		"streamline.bittorrent.active_torrents",

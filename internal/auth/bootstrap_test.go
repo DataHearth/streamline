@@ -105,8 +105,8 @@ var _ = Describe("Bootstrap service unit", Label("unit", "auth"), func() {
 
 		It("keeps the generated password out of the logs", func() {
 			// The suite config is reader-backed, so every config write-back
-			// fails with ErrNoPath — the read-only/GitOps case that used to
-			// log the generated password verbatim.
+			// fails with ErrNoPath — the read-only/GitOps case, where the
+			// fallback must not log the generated password verbatim.
 			var logs bytes.Buffer
 			GinkgoWriter.TeeTo(&logs)
 			DeferCleanup(GinkgoWriter.ClearTeeWriters)
@@ -168,7 +168,7 @@ var _ = Describe("Bootstrap service unit", Label("unit", "auth"), func() {
 
 		It("stays quiet about seed config it cannot rewrite", func() {
 			// Reader-backed config: every config.Update fails with ErrNoPath,
-			// the GitOps case that used to nag on every single boot.
+			// the GitOps case, which would otherwise nag on every single boot.
 			seedAdminConfig(defaultAdminEmail, "hunter22", "")
 			var logs bytes.Buffer
 			GinkgoWriter.TeeTo(&logs)

@@ -56,8 +56,8 @@ func (Episode) Edges() []ent.Edge {
 				edge.Table("download_record_episodes"),
 				edge.Columns("episode_id", "download_record_id"),
 			),
-		// The records filed under this episode. The column keeps its pre-M2M
-		// name: renaming it would make the migration drop and re-add it.
+		// The records filed under this episode. The column is not named after
+		// the edge: renaming it would make a migration drop and re-add it.
 		edge.To("anchored_download_records", DownloadRecord.Type).
 			StorageKey(edge.Column("episode_download_records")).
 			Annotations(entsql.OnDelete(entsql.Cascade)),

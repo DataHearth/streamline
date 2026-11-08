@@ -21,7 +21,7 @@ const defaultMaxBody = 1 << 20
 // torrentMaxBody is the carve-out for POST /api/v1/torrents, whose body carries
 // a base64 .torrent file. The domain's own ceiling for a .torrent is 16 MiB
 // (download.maxTorrentFileSize) and base64 inflates by 4/3, so ~21.4 MiB plus
-// JSON framing has to fit or the fix would silently break a documented API
+// JSON framing has to fit or the limit would silently break a documented API
 // capability.
 //
 // It is granted only to an admin caller. The generated strict handler decodes

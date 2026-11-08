@@ -38,10 +38,10 @@ var (
 //
 // Called from BeforeSuite, never BeforeEach: the recorder registers its
 // shutdown with DeferCleanup, which runs at the end of whatever phase called
-// it. Under a per-spec hook the fake was closed after the first spec while the
+// it. Under a per-spec hook the fake would close after the first spec while the
 // endpoints kept naming its port, and Prowlarr — which cannot tell a dead
-// tracker from a disappeared one — disabled every indexer for the backoff
-// window, so nothing after the first spec reached the fake at all.
+// tracker from a disappeared one — would disable every indexer for the backoff
+// window, so nothing after the first spec would reach the fake at all.
 func setup() {
 	GinkgoHelper()
 	containers.Require()

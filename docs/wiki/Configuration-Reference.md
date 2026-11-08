@@ -240,7 +240,7 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `auth.session_secret_file` | path | — | Mutually exclusive with the above |
 | `auth.session_ttl` | duration | `168h` | Session lifetime |
 | `auth.registration_mode` | enum | `disabled` | `disabled` \| `open` \| `invite` |
-| `auth.default_role` | enum | `member` | Role a self-registering user lands on, local or SSO. Fallback only, and `admin` is clamped to `member` — see [Authentication and SSO](Authentication-and-SSO). Renamed from `auth.oidc_default_role`, which is **no longer read at all** |
+| `auth.default_role` | enum | `member` | Role a self-registering user lands on, local or SSO. Fallback only, and `admin` is clamped to `member` — see [Authentication and SSO](Authentication-and-SSO). `auth.oidc_default_role` is **not read at all**: rename it to this key |
 | `auth.seed_admin.email` | string | `""` | Bootstrap admin. No-op once any user exists |
 | `auth.seed_admin.password` | string | `""` | Generated and printed once to stdout if left empty (default email only); never persisted |
 | `auth.seed_admin.password_file` | path | `""` | Mutually exclusive with `password` |
@@ -366,7 +366,7 @@ The FFmpeg suite, two binaries that are each optional on their own. `ffprobe` ba
 | `ffmpeg.enabled` | bool | `true` | `false` turns off everything both binaries back: probing, import verification, transcoding and Subsonic transcoding. **Runtime-editable** |
 | `ffmpeg.path` | path | `""` | A **directory** holding the `ffmpeg`/`ffprobe` binaries — not a binary path. Empty resolves via `$PATH`. Read once at boot; changing it needs a restart |
 
-Missing binaries (or `enabled: false`) degrade gracefully — imports and library scans work exactly as they did before this feature existed, just without `media_info`, and Subsonic apps get the original file. Nothing errors at boot. `GET /api/v1/system/info` surfaces `ffmpeg_warn: true` when probing is enabled but `ffprobe` wasn't found. A missing `ffmpeg` raises no `ffmpeg_warn`; see below. The official Docker image ships both binaries, so either case only bites custom builds or a `path` misconfiguration.
+Missing binaries (or `enabled: false`) degrade gracefully — imports and library scans still work, just without `media_info`, and Subsonic apps get the original file. Nothing errors at boot. `GET /api/v1/system/info` surfaces `ffmpeg_warn: true` when probing is enabled but `ffprobe` wasn't found. A missing `ffmpeg` raises no `ffmpeg_warn`; see below. The official Docker image ships both binaries, so either case only bites custom builds or a `path` misconfiguration.
 
 `ffmpeg.path` also supplies the binary the [transcoder](#transcoding) runs. Both binaries are resolved out of that one directory, so there is no separate `ffmpeg_path` to set — and `ffprobe` being found does not prove `ffmpeg` is: `GET /api/v1/config/ffmpeg` reports a `version` field only when `ffmpeg -version` actually answers.
 

@@ -103,8 +103,8 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(body.Total).To(Equal(1))
 			Expect(body.Items).To(HaveLen(1))
 			Expect(body.Items[0].Title).To(Equal("X"))
-			// The rollup comes from SQL; the tree it used to be derived from
-			// is deliberately absent from a list row.
+			// The rollup comes from SQL; the episode tree is deliberately
+			// absent from a list row.
 			Expect(*body.Items[0].HaveEpisodes).To(Equal(uint32(4)))
 			Expect(*body.Items[0].WantedEpisodes).To(Equal(uint32(6)))
 			Expect(body.Items[0].Seasons).To(BeNil())

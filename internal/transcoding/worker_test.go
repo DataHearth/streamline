@@ -776,8 +776,8 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		job := queueJob(mf)
 
 		// The row is running from the claim, so this is the window a Cancel
-		// used to fall through: it marked the row canceled while the encode
-		// went on to complete over it.
+		// could fall through: marking the row canceled while the encode goes
+		// on to complete over it.
 		c, err := worker.claim(ctx)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c).NotTo(BeNil())

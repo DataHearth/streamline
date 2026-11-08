@@ -129,7 +129,7 @@ func (m *oidcManager) Get(name string) (*OIDCProvider, bool) {
 // approle.Value, a type only that package can fill in. Nothing here reads the
 // account's auth_method to rank it: the shape an adoption leaves behind
 // describes how the row was reached, not how far the provider is trusted, and
-// three rounds of this fix died to gates that confused the two.
+// a gate that confuses the two can be walked around.
 func (s *auth) LoginOIDC(
 	ctx context.Context,
 	provider, subject, email, displayName string,

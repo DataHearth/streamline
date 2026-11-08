@@ -59,7 +59,7 @@
 	});
 
 	// A flat line at zero says nothing, and below lg the sparkline has a row of
-	// its own: with nothing moving it was a 40px band holding a hairline, half
+	// its own: with nothing moving it would be a 40px band holding a hairline, half
 	// the card's height on a tablet.
 	let sparkPoints = $derived.by(() => {
 		if (buffer.length < 2 || !buffer.some((v) => v > 0)) return "";

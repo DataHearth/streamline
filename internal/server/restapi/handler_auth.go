@@ -183,9 +183,9 @@ func (s *Server) RevokeInvite(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	// 404 only for an invite that is genuinely not there. Everything else was
-	// answered the same way, so a database error told the admin the invite had
-	// never existed and left no trace of the real failure anywhere.
+	// 404 only for an invite that is genuinely not there. Answering everything
+	// else the same way would tell the admin a database error's invite had
+	// never existed and leave no trace of the real failure anywhere.
 	if err := s.auth.RevokeInvite(ctx, req.Id); err != nil {
 		if ent.IsNotFound(err) {
 			return RevokeInvite404JSONResponse{

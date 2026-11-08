@@ -26,7 +26,7 @@ var _ = Describe("ListVideoFilesRecursive", Label("unit", "library"), func() {
 			dir := filepath.Join(root, season)
 			Expect(os.MkdirAll(dir, 0o755)).To(Succeed())
 			// A Kaamelott episode is 3 minutes long and lands well under the
-			// feature floor, which used to hide the whole folder.
+			// feature floor, which must not hide the whole folder.
 			want = append(want, writeSizedFile(dir, season+" ep.mkv", 30<<20))
 		}
 		writeSizedFile(root, "thumb.mkv", 1<<20)

@@ -527,7 +527,7 @@ func (s *Service) recordDrift(
 
 // driftGroup is the owner a file's drift is folded into: a show, an album or
 // one slot of a book. Files of these go missing together, and a row per file
-// per tick buried the rest of the history under a single incident.
+// per tick would bury the rest of the history under a single incident.
 type driftGroup struct {
 	scope    events.Scope
 	id       uint32
@@ -674,8 +674,8 @@ func (s *Service) revertMovie(
 	driftReverted.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("media.kind", "movie"),
 	))
-	// deleteOrphan below logs its own removals; this one only had the counter,
-	// so "why did this movie go back to wanted overnight" was answerable from
+	// deleteOrphan below logs its own removals; with only the counter here,
+	// "why did this movie go back to wanted overnight" would be answerable from
 	// the events table and not from the log stream an operator actually greps.
 	slog.InfoContext(ctx, "drift reverted media file",
 		"media_file.id", mediaFileID, "movie.id", movieID)
@@ -752,9 +752,9 @@ func (s *Service) revertBookSlot(
 	return true
 }
 
-// deleteOrphan reaps a row whose owner is gone. Movie deletes predating the
-// cascading FKs left media_files rows behind with a NULL owner; without this
-// they would be re-examined, and warned about, on every tick forever.
+// deleteOrphan reaps a row whose owner is gone: a movie delete without
+// cascading FKs leaves media_files rows behind with a NULL owner, and without
+// this they would be re-examined, and warned about, on every tick forever.
 func (s *Service) deleteOrphan(ctx context.Context, row *ent.MediaFile) bool {
 	if err := s.store.DeleteMediaFile(ctx, row.ID); err != nil {
 		slog.ErrorContext(ctx, "drift orphan delete failed",

@@ -31,7 +31,7 @@ A **Send** button then appears on a book's page, and on a series page for all it
 | CBZ, CBR | No |
 | AZW3, MOBI | No |
 
-A book holding both EPUB and PDF sends the EPUB. Streamline does not convert anything, and Amazon no longer takes CBZ, AZW3 or MOBI by email. Read those through the [OPDS catalogue](Music-and-Books) in a reader app instead. Converting CBZ to PDF is on the [Roadmap](Roadmap).
+A book holding both EPUB and PDF sends the EPUB. Streamline does not convert anything, and Amazon does not take CBZ, AZW3 or MOBI by email. Read those through the [OPDS catalogue](Music-and-Books) in a reader app instead. Converting CBZ to PDF is on the [Roadmap](Roadmap).
 
 ## Size limits
 

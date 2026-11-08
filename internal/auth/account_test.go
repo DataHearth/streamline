@@ -231,9 +231,9 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 
 			// A costlier hash must fail for the password it was actually made
 			// from, or the account walks the ceiling off by rotating its own
-			// password: before this comparison went through comparePassword,
-			// this call returned 204 and rewrote the row at the default cost,
-			// which is the one thing the ceiling exists to prevent. Leaving
+			// password: a comparison outside comparePassword would answer this
+			// call 204 and rewrite the row at the default cost, which is the
+			// one thing the ceiling exists to prevent. Leaving
 			// UpdateUserPassword unmocked is the assertion that it never runs.
 			It(
 				"refuses a hash costlier than the ceiling, right password included",
@@ -253,8 +253,8 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 
 			// FlakeAttempts for the same reason the login table carries it: the
 			// bound is wall-clock, and a spec that loses its core to something
-			// else on the machine reads slow through no fault of the code. The
-			// regression this catches is 15x and up.
+			// else on the machine reads slow through no fault of the code. A
+			// comparison run at the stored cost is 15x and up.
 			DescribeTable(
 				"answers in one default-cost comparison whatever the stored hash costs",
 				FlakeAttempts(3),
@@ -282,7 +282,7 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 					Expect(err).To(MatchError(ErrPasswordInvalid))
 					Expect(elapsed).To(BeNumerically("<", 4*reference))
 				},
-				// 15x the reference before the fix.
+				// 15x the reference when run at its own cost.
 				Entry("cost 14 over a valid salt", atCost(wellFormed, 14)),
 				// 2^31 expansions: this one never answered at all, and held a
 				// core at 100% long after the client had given up.

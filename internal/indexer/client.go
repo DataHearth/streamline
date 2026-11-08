@@ -52,9 +52,9 @@ type SearchResult struct {
 }
 
 // MediaKind is the library kind a search is scoped to. It decides the newznab
-// category root and Prowlarr's search type — both of which used to be derived
-// from whichever id happened to be set, so the id-less retry in searchAll sent
-// neither and keyword-searched the whole catalogue.
+// category root and Prowlarr's search type — derived from whichever id
+// happened to be set instead, the id-less retry in searchAll would send
+// neither and keyword-search the whole catalogue.
 type MediaKind uint8
 
 const (

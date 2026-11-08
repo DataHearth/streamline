@@ -337,7 +337,7 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	// Its own budget, not what the steps above left behind. The shutdowns most
 	// likely to run long — a torrent engine under load, a WAL checkpoint on a
 	// busy disk — are exactly the ones whose telemetry is worth keeping, and
-	// sharing the deadline meant the final batch was dropped precisely then.
+	// sharing the deadline would drop the final batch precisely then.
 	otelCtx, otelCancel := context.WithTimeout(
 		context.Background(),
 		otelFlushTimeout,

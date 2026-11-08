@@ -2,9 +2,9 @@
 	import { Search, SlidersHorizontal, X } from "@lucide/svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// C2, with the status control removed: the segmented Pending / Decided / All
-	// went into the sheet with everything else, and the line that replaces it
-	// answers the question this page is actually asked — "did my thing get
+	// C2 without its status control: the segmented Pending / Decided / All
+	// lives in the sheet with everything else, and this line answers the
+	// question this page is actually asked — "did my thing get
 	// approved" / "what did Camille ask for" — which no status filter can.
 	let {
 		query,

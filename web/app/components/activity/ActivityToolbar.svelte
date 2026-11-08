@@ -108,7 +108,7 @@
 	{/if}
 
 	<!-- Status filters stay in the open as toggle pills: the set is small and
-	     view-specific, and a popover hid which filter was active. The strip swipes
+	     view-specific, and a popover hides which filter is active. The strip swipes
 	     rather than wrapping, so the line height never changes and the switch
 	     beside it keeps its width. Clear sits outside the scroller. -->
 	<div

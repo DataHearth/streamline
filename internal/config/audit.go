@@ -26,16 +26,17 @@ func isSecretKey(key string) bool {
 // changedKeys renders the difference between two flattened config views as
 // sorted "key: old → new" strings.
 //
-// Seven config sections are patchable at runtime by any admin, and the write
-// used to log only that a file was saved. Which setting moved, and from what,
-// was then recoverable only from version control on a file that is typically
-// not in version control — so "who turned selective downloads on last Tuesday,
-// and what was it before" had no answer anywhere.
+// Seven config sections are patchable at runtime by any admin, and a write
+// that logs only that a file was saved leaves which setting moved, and from
+// what, recoverable only from version control on a file that is typically not
+// in version control — so "who turned selective downloads on last Tuesday, and
+// what was it before" has no answer anywhere.
 //
 // Both views are expanded to scalar leaves first. flatten keeps a list whole,
 // and a list of indexers, download clients, media servers or OIDC providers
 // carries each entry's api_key, password or client_secret inside it — keyed
-// "indexers", which no secret part matches, so the whole list printed in clear.
+// "indexers", which no secret part matches, so the whole list would print in
+// clear.
 // Expanded, each secret sits under its own "indexers.0.api_key" and is redacted
 // like any other.
 func changedKeys(prev, next map[string]any) []string {

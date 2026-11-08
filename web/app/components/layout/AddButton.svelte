@@ -185,7 +185,7 @@
 
 <style>
 	/* Clears the bottom bar (56px + safe area) with 14px of air under the pill.
-	   A plain 52px circle can sit closer to the bar than the old labelled pill. */
+	   A plain 52px circle can sit closer to the bar than a labelled pill could. */
 	.add-pill {
 		bottom: calc(env(safe-area-inset-bottom) + 4.75rem);
 		/* The closed fan still occupies its rows (visibility, not display), so the

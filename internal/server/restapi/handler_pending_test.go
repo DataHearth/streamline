@@ -87,7 +87,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 
 	Describe("IdentifyPending", func() {
 		// A pack for a show the library has never heard of: the shape the
-		// adoption pass now files instead of dropping.
+		// adoption pass files as a proposal rather than dropping.
 		unidentified := func() *ent.DownloadRecord {
 			return &ent.DownloadRecord{
 				ID:    1,
@@ -659,8 +659,8 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 	})
 
 	Describe("ReplacePending", func() {
-		// Nothing is deleted here any more. The handler used to clear the file
-		// itself, before anything had been probed — so a held import had
+		// Nothing is deleted here. A handler clearing the file itself would do
+		// it before anything had been probed — so a held import would have
 		// already destroyed the only copy on disk. Raising replace_mode hands
 		// the swap to the importer, which verifies first and, on a pack,
 		// decides it per episode.

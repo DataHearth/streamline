@@ -170,7 +170,7 @@ func (s *auth) RegisterOpen(
 
 	// Register carries the same block, but nothing in production calls it —
 	// the SPA's two real signup paths are this one and RegisterWithInvite, so
-	// the registrations counter read zero on every install that had users.
+	// without it the registrations counter would read zero on every install.
 	outcome := "success"
 	defer func() {
 		registrations.Add(ctx, 1, metric.WithAttributes(

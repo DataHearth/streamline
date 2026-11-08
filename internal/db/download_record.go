@@ -334,8 +334,8 @@ func (db *DB) IdentifyBookDownloadRecord(
 //
 // The live set is diffed in memory rather than bound as NOT IN: it is as long
 // as the client's listing, and past SQLite's bind-variable limit (32766) the
-// statement was refused outright — every tick, so the proposals it existed to
-// reclaim were never reclaimed again.
+// statement would be refused outright — every tick, so the proposals it exists
+// to reclaim would never be reclaimed again.
 func (db *DB) DeleteStalePendingAdoptions(
 	ctx context.Context,
 	clientName string,
@@ -378,7 +378,7 @@ func (db *DB) DeleteStalePendingAdoptions(
 // download client is not among clientNames. A proposal is derived from its
 // client's listing, and only an enabled client is ever listed, so one whose
 // client was disabled or removed is never pruned by the per-client pass — it
-// sat in every user's pending list for good. Disabling a client that comes
+// would sit in every user's pending list for good. Disabling a client that comes
 // back re-proposes whatever it still holds on the next tick.
 func (db *DB) DeleteOrphanedPendingAdoptions(
 	ctx context.Context,
@@ -1397,10 +1397,10 @@ func recordEpisodesWanted(recordID uint32) predicate.Episode {
 // Adoption needs this and the normal completion sweep does not: a grab
 // streamline issued left its episodes "downloading", which is what
 // MarkRecordEpisodesImporting moves. An adopted torrent was never grabbed
-// here, so its episodes sit at "wanted" and no path moved them at all — the
-// record read "importing" while every episode behind it still read "wanted",
-// so the series list's importing facet (which counts shows by episode status)
-// reported nothing while an import was running.
+// here, so its episodes sit at "wanted" and no other path moves them — the
+// record would read "importing" while every episode behind it still read
+// "wanted", so the series list's importing facet (which counts shows by
+// episode status) would report nothing while an import was running.
 //
 // Episodes that already hold a file are left alone: an adopted upgrade is not
 // a gap being filled, and RecordImportFailure would have no way to walk an
@@ -1979,8 +1979,8 @@ func recordEpisodes(recordID uint32) predicate.Episode {
 // settleRecordEpisodes walks a record that just failed back off the episodes
 // it left in flight: RevertOrphanedDownloadingEpisodes' rule, scoped to the
 // record's own set and run in the failing transaction. A pack marks every
-// episode it is for, and only the anchor used to be walked back, so the rest
-// read "importing" until the next monitor tick's sweep found them stranded.
+// episode it is for, so walking back only the anchor would leave the rest
+// reading "importing" until the next monitor tick's sweep found them stranded.
 // An episode another in-flight record still covers is left to it; the caller
 // has already moved this record out of flight.
 func settleRecordEpisodes(ctx context.Context, tx *ent.Tx, recordID uint32) error {
@@ -2011,16 +2011,16 @@ func settleRecordEpisodes(ctx context.Context, tx *ent.Tx, recordID uint32) erro
 // leaves every episode it marked behind.
 //
 // Covering means linked through the record's episodes, never sharing a season
-// with it: a pack spanning seasons anchors in only one, and the season rule
-// that used to stand in for the link declared every other season stranded 20
-// seconds after the grab, so the missing-search grabbed duplicates of episodes
-// already downloading (Narcos INTEGRALE, S02 and S03, 2026-09-20).
+// with it: a pack spanning seasons anchors in only one, so a season rule
+// would declare every other season stranded 20 seconds after the grab, and the
+// missing-search would grab duplicates of episodes already downloading (Narcos
+// INTEGRALE, S02 and S03).
 //
 // Two arms, not one query: an episode with no media file has never had
 // anything, so it goes back to "wanted"; an episode that already has a file
-// (an upgrade target left stranded by a since-fixed bug that marked it
-// downloading) goes back to "available" instead — "wanted" would claim we
-// don't have it. Returns rows reverted across both.
+// (an upgrade target left stranded downloading) goes back to "available"
+// instead — "wanted" would claim we don't have it. Returns rows reverted
+// across both.
 func (db *DB) RevertOrphanedDownloadingEpisodes(
 	ctx context.Context,
 ) (int, error) {
@@ -2151,10 +2151,10 @@ func (db *DB) MarkEpisodeDownloading(
 // downloading/paused — an episode that is available (a replace target) or
 // wanted (never part of this grab) is none of this record's business.
 //
-// The season it used to walk instead is the anchor's, which for a pack
-// spanning seasons is one of several: the other seasons' episodes were left
-// "downloading" with the import already past them, and no later path moves a
-// row the importer is no longer working on.
+// Not the anchor's season: for a pack spanning seasons that is one of
+// several, and the other seasons' episodes would be left "downloading" with
+// the import already past them, where no later path moves a row the importer
+// is no longer working on.
 func (db *DB) MarkRecordEpisodesImporting(
 	ctx context.Context,
 	recordID uint32,
@@ -2180,14 +2180,14 @@ func (db *DB) MarkRecordEpisodesImporting(
 // for movie records, which cover no episode.
 //
 // Scoped to the record's own episodes, not to the season its anchor sits in.
-// Season scope crossed records: pausing a duplicate grab of season 2 also
-// paused the eight episodes of that season a whole-series pack was fetching,
-// and the resume never reached them — the pack's own anchor is in season 1,
-// so its every-tick resume swept a season those episodes were not in. They sat
-// "paused" against a torrent that was never paused, with the orphan sweep
+// Season scope crosses records: pausing a duplicate grab of season 2 would also
+// pause the eight episodes of that season a whole-series pack is fetching, and
+// the resume would never reach them — the pack's own anchor is in season 1, so
+// its every-tick resume sweeps a season those episodes are not in. They would
+// sit "paused" against a torrent that was never paused, with the orphan sweep
 // rightly declining to touch episodes an in-flight record still claims
-// (Narcos INTEGRALE, 2026-09-20). Record scope makes the resume reach them on
-// the next tick.
+// (Narcos INTEGRALE). Record scope makes the resume reach them on the next
+// tick.
 func (db *DB) SyncDownloadStateForRecord(
 	ctx context.Context,
 	recordID uint32,

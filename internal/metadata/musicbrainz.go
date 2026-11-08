@@ -552,7 +552,7 @@ func (m *MusicBrainz) GetArtist(
 		}
 		// website-default leaves out the release groups with no official
 		// release (fan remix compilations, bootleg live recordings), as the
-		// MusicBrainz site does: as albums they were wanted and searched for.
+		// MusicBrainz site does: as albums they would be wanted and searched for.
 		params := url.Values{
 			"artist":               {mbid},
 			"limit":                {"100"},
@@ -781,9 +781,10 @@ type mbCredit struct {
 // canonicalRelease is the earliest official release. Among releases out the
 // same day the one with the fewest audio tracks wins, then the fewest audio
 // discs, then the first listed: the standard edition, which is what
-// releases on the indexers carry. MusicBrainz listed Avatar's Feathers &
-// Flesh CD + live DVD first, and the deluxe one next, so the album took a
-// concert's chapters or two bonus songs no ordinary release has. Video
+// releases on the indexers carry. MusicBrainz lists Avatar's Feathers &
+// Flesh CD + live DVD first, and the deluxe one next, so the first listed
+// would give the album a concert's chapters or two bonus songs no ordinary
+// release has. Video
 // discs never count (fillRelease skips them). Falls back to the first listed
 // release when none is official.
 func canonicalRelease(releases []mbRelease) string {
@@ -825,8 +826,9 @@ func audioSize(media []mbMedium) (tracks, discs int) {
 // sort lexically by when it can have happened: a partial date ranks after
 // every fuller date inside its period and before the next period, and an
 // undated release after every dated one. Compared raw, "2022" sorts before
-// "2022-10-07", and Omens took a Russian pressing dated only by its year,
-// three bonus tracks included, over the standard edition released that day.
+// "2022-10-07", and Omens would take a Russian pressing dated only by its
+// year, three bonus tracks included, over the standard edition released that
+// day.
 func releaseSortDate(date string) string {
 	switch len(date) {
 	case 0:

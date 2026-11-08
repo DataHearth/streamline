@@ -342,9 +342,9 @@ export function outcomeWord(
 	if (e.classification === "confirmed")
 		return { text: series ? i18n.imports_adopt() : i18n.imports_accept(), tone: "ok" };
 	if (e.classification === "existing")
-		// Both kinds bind to an entry the library already has. "Link" was the
-		// shortened form of the show row's "Link to show", but as a bare word in
-		// a trailing column it reads as a hyperlink, so both say Attach.
+		// Both kinds bind to an entry the library already has. "Link", short for
+		// the show row's "Link to show", reads as a hyperlink as a bare word in
+		// a trailing column, so both say Attach.
 		return { text: i18n.imports_attach(), tone: "link" };
 	return { text: i18n.common_decide(), tone: "need" };
 }

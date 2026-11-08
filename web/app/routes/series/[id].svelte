@@ -489,8 +489,8 @@
 		seasons.flatMap((s) => s.episodes ?? []).filter((e) => (e.size ?? 0) > 0),
 	);
 	// Not have_episodes: that rollup excludes specials by design, so a
-	// specials-only show reported 0 and greyed out the two actions whose input
-	// set — seriesFileEpisodes, which spans every season — was non-empty.
+	// specials-only show would report 0 and grey out the two actions whose input
+	// set — seriesFileEpisodes, which spans every season — is non-empty.
 	let hasFiles = $derived(seriesFileEpisodes.length > 0);
 	const seasonTitle = (n: number | string) => i18n.series_season_n({ n });
 	// Every season holding episodes, monitored or not: any of them can be searched.

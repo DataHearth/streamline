@@ -53,7 +53,7 @@ const (
 // name — multi-audio via its audio_tracks arm, resolution-2160p from the
 // stored column. That is a requirement, not a preference: ReplacesFile drops
 // any format the file cannot answer from both sides, so a profile scored in
-// title-only formats (remux and hdr, which these specs used to use) compares
+// title-only formats (remux and hdr, say) compares
 // as an empty profile and no upgrade can ever fire. Two independent axes, so a
 // spec can build a release that is in-band and still scores below the file.
 func upgradeConfig(names ...string) map[string]any {

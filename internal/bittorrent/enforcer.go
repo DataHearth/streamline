@@ -108,7 +108,7 @@ func (e *Engine) persistUploaded(
 
 // flushUploaded persists every torrent's upload total on the way down. Up to
 // a minute of upload is otherwise lost to a clean shutdown, which the tick
-// alone cannot cover now that it skips unchanged rows.
+// alone cannot cover, since it skips unchanged rows.
 func (e *Engine) flushUploaded(ctx context.Context) {
 	for _, t := range e.client.Torrents() {
 		hash := t.InfoHash().HexString()

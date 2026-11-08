@@ -38,8 +38,8 @@
 		maxHeight?: number;
 		// "row" draws the whole control as one tappable row — the label on the
 		// left, the chosen value and chevron on the right — for a picker that
-		// sits on its own in a sheet footer. Nesting the field variant in a
-		// bordered row gave two outlines whose radii never matched.
+		// sits on its own in a sheet footer. The field variant nested in a
+		// bordered row would draw two outlines whose radii never match.
 		variant?: "field" | "row";
 	};
 

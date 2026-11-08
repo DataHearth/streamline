@@ -47,7 +47,7 @@ include_ext = [
   "woff2",
   "sql",
   # web/app/messages/*.json — paraglide compiles these into lib/paraglide, so a
-  # message-only edit silently kept the old bundle without this.
+  # message-only edit would otherwise silently keep the stale bundle.
   "json",
 ]
 include_file = []

@@ -61,7 +61,7 @@
 		<ul class="flex flex-col gap-2">
 			{#each preview.data?.operations ?? [] as op (op.media_file_id)}
 				<!-- Labelled rows, not an arrow: at 12px mono between two long paths the
-				     ↓ was invisible, and nothing said which one was the new name. -->
+				     ↓ is invisible, and nothing says which one is the new name. -->
 				<li
 					class="overflow-hidden rounded-md border border-border bg-bg-card/60 text-xs"
 				>

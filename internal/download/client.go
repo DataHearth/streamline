@@ -65,9 +65,9 @@ type TorrentFile struct {
 // metainfo without (or before) admitting the torrent, so a selective magnet
 // grab can take the exact .torrent path instead of the pending fallback.
 // Deluge implements it via core.prefetch_magnet_metadata (spec §4.2). The
-// builtin engine and Transmission don't yet — this phase was ruled skipped
-// pending evidence it's worth the cost — but either could adopt it later by
-// implementing this same interface.
+// builtin engine and Transmission don't — skipped pending evidence it's worth
+// the cost — but either could adopt it later by implementing this same
+// interface.
 type MagnetMetadataFetcher interface {
 	FetchMagnetMetadata(ctx context.Context, magnet string) ([]byte, error)
 }

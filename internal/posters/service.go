@@ -128,9 +128,9 @@ func (p *posters) Fetch(
 		attribute.String("poster.src", src),
 	)
 
-	// Serve counts cache hits and misses; the outbound fetch behind a miss had
-	// only a span, so an artwork CDN degrading — timeouts, 403s, oversized
-	// bodies — could be seen in a trace and thresholded nowhere.
+	// Serve counts cache hits and misses, and the outbound fetch behind a miss
+	// is counted too: with only a span, an artwork CDN degrading — timeouts,
+	// 403s, oversized bodies — could be seen in a trace and thresholded nowhere.
 	outcome := "ok"
 	defer func() {
 		posterFetch.Add(ctx, 1, metric.WithAttributes(

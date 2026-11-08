@@ -10,9 +10,9 @@ import (
 )
 
 // Bulk import is the most destructive operation in the codebase — one commit
-// renames and moves hundreds of files — and it was the one with no counters at
-// all, so a rising commit-failure rate could only be found by reading logs
-// while every neighbouring subsystem could be graphed.
+// renames and moves hundreds of files — and without counters a rising
+// commit-failure rate could only be found by reading logs while every
+// neighbouring subsystem could be graphed.
 var (
 	meter = otel.Meter(
 		"github.com/datahearth/streamline/internal/library/bulkimport",

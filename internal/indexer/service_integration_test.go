@@ -490,7 +490,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 					nil, 111, 2, 3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(1))
-			// The wrong show had 900 seeders and would have won on score.
+			// The wrong show has 900 seeders and would win on score.
 			Expect(results[0].Title).To(HaveSuffix("OURS"))
 			Expect(results[0].TVDBID).To(Equal(uint32(111)))
 		})

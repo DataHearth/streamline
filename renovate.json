@@ -77,13 +77,13 @@
 			"enabled": false
 		},
 		{
-			"description": "The PR that moves the locked nixpkgs. It no longer touches a toolchain version: nix/{go,node,pnpm}.nix override nixpkgs' package onto the declared patch while the two differ, and .github/workflows/renovate-pins.yaml drops the override's hashes from nix/toolchains.json once the lock catches up. After the major gate on purpose — the later rule wins, so this overrides the major-update dashboard gate above, which a nixpkgs revision would otherwise sit behind forever.",
+			"description": "The PR that moves the locked nixpkgs. It touches no toolchain version: nix/{go,node,pnpm}.nix override nixpkgs' package onto the declared patch while the two differ, and .github/workflows/renovate-pins.yaml drops the override's hashes from nix/toolchains.json once the lock catches up. After the major gate on purpose — the later rule wins, so this overrides the major-update dashboard gate above, which a nixpkgs revision would otherwise sit behind forever.",
 			"matchManagers": ["nix"],
 			"groupName": "nix inputs",
 			"dependencyDashboardApproval": false
 		},
 		{
-			"description": "pnpm: package.json's packageManager field and the setup action in CI. Splitting them meant two PRs for one upgrade.",
+			"description": "pnpm: package.json's packageManager field and the setup action in CI. Split, they would be two PRs for one upgrade.",
 			"matchManagers": ["npm", "github-actions"],
 			"matchDepNames": ["pnpm", "pnpm/action-setup"],
 			"groupName": "pnpm",

@@ -123,8 +123,8 @@ func (s *Service) commitShow(
 	}
 	// Match the whole folder before anything moves. A folder whose files mostly
 	// fail to match is far more likely bound to the wrong show than to be a show
-	// with missing metadata, and adopting it anyway wrote 7 of 76 files into a
-	// same-named series and counted it a success.
+	// with missing metadata, and adopting it anyway would write 7 of 76 files
+	// into a same-named series and count it a success.
 	plan, unmatched := planEpisodes(show, files)
 	if len(plan) <= unmatched {
 		return entimportscanshow.OutcomeFailed, fmt.Sprintf(
@@ -141,8 +141,9 @@ func (s *Service) commitShow(
 	matched := 0
 	touched := map[uint16]struct{}{}
 	// One imported event stands for the whole show, recorded below. Without
-	// this the per-file create hook wrote an activity row per episode, and a
-	// commit of a few hundred files buried every other event in the feed.
+	// this the per-file create hook would write an activity row per episode,
+	// and a commit of a few hundred files would bury every other event in the
+	// feed.
 	ctx = events.SuppressImported(ctx)
 	for _, m := range plan {
 		f, season, target := m.path, m.season, m.episode
@@ -283,11 +284,11 @@ func planEpisodes(show *ent.TVShow, files []string) ([]episodeMatch, int) {
 // matchEpisodePath resolves a file to an episode from its basename, then from
 // each folder above it up to the season folder.
 //
-// SanitizePath used to let a slash through, so an episode titled "A / B / C"
-// was written as folder "… - S01E17 - A" holding folder "B" holding file
-// "C [].mkv". Those files are still on disk, their basename says nothing, and
-// the episode number sits one folder up per slash in the title — three on the
-// homelab. Folder-per-episode releases have the same shape one level deep.
+// An episode titled "A / B / C" written with its slashes unsanitized is folder
+// "… - S01E17 - A" holding folder "B" holding file "C [].mkv". Libraries hold
+// such files: their basename says nothing, and the episode number sits one
+// folder up per slash in the title — three on the homelab. Folder-per-episode
+// releases have the same shape one level deep.
 func matchEpisodePath(
 	f string, seasons []*ent.Season, anime bool,
 ) (uint16, *ent.Episode) {

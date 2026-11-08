@@ -267,8 +267,8 @@ func (db *DB) RetryTranscodeJob(ctx context.Context, id uint32) error {
 // ListImportingDownloadRecords' role for the import path. Refunds the
 // attempt ClaimNextTranscodeJob spent and clears started_at, same as
 // DeferTranscodeJob: a restart mid-encode is not a failed attempt, and
-// without the refund a deploy during a long encode silently spent one of
-// the job's max_failures tries.
+// without the refund a deploy during a long encode would silently spend one
+// of the job's max_failures tries.
 func (db *DB) ResetRunningTranscodeJobs(ctx context.Context) (int, error) {
 	refunded, err := db.client.TranscodeJob.Update().
 		Where(

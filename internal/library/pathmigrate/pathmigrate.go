@@ -544,9 +544,9 @@ func (s *Service) finish(ctx context.Context, err error) {
 			"error", err, "migration.done", done, "migration.skipped", skipped)
 		return
 	}
-	// A rare, operator-triggered, whole-library file move. It reported only
-	// through logs and a Status struct someone had to remember to poll, so a
-	// failed migration surfaced on no dashboard at all.
+	// A rare, operator-triggered, whole-library file move. Without these
+	// counters it reports only through logs and a Status struct someone has
+	// to remember to poll, so a failed migration surfaces on no dashboard.
 	runs.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("outcome", "completed"),
 	))

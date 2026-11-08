@@ -132,15 +132,15 @@ func roleWritesIn(writes []roleWrite, fn string) int {
 // roleWriters are the functions that decide a user's role without asking
 // role.Federated, each because no OIDC login reaches it. Adding a name here
 // asserts that, and the reachability spec below is what checks the assertion
-// rather than taking it — round 5's allow-list carried the same claim in prose
-// and an injected `s.UpdateUser(ctx, u.ID, UserPatch{Role: &esc})` inside
-// LoginOIDC escalated to admin with every spec green.
-// roleWriters is now read by the REACHABILITY spec alone, and it matters more
-// there than it used to. The shape walker stopped flagging what these functions
-// do internally, because db's params take a role.Value and the compiler vouches
-// every one of them — but each still calls a non-OIDC constructor in
-// internal/role, and Go cannot express "only this package may call that". So
-// the residue the type change leaves is exactly "code on an OIDC login's path
+// rather than taking it — an allow-list carrying the same claim in prose lets
+// an injected `s.UpdateUser(ctx, u.ID, UserPatch{Role: &esc})` inside
+// LoginOIDC escalate to admin with every spec green.
+// roleWriters is read by the REACHABILITY spec alone. The shape walker does
+// not flag what these functions do internally, because db's params take a
+// role.Value and the compiler vouches every one of them — but each still calls
+// a non-OIDC constructor in internal/role, and Go cannot express "only this
+// package may call that". So the residue the type leaves is exactly "code on
+// an OIDC login's path
 // calls role.Operator/Seed/Invited/SelfRegistered instead of role.Federated",
 // and keeping an OIDC login out of these functions is what closes it.
 var roleWriters = map[string]string{
@@ -163,10 +163,10 @@ var roleWriters = map[string]string{
 // way to reopen this hole — reach for roleWriters first and let the
 // reachability spec argue with you.
 //
-// issueToken used to be the second entry, which exempted its whole body and
-// left `Claims{Role: "admin"}` — a JWT forgery an OIDC login reaches — outside
-// every spec. It is now held to a shape instead (see rowRole), so the
-// exemption covers the mirror rather than the function.
+// issueToken is deliberately not an entry: that would exempt its whole body and
+// leave `Claims{Role: "admin"}` — a JWT forgery an OIDC login reaches — outside
+// every spec. It is held to a shape instead (see rowRole), so the exemption
+// covers the mirror rather than the function.
 var roleCarriers = map[string]string{
 	"ListUsers": "Role is a list filter, not a value written to a row",
 }
@@ -178,16 +178,16 @@ const (
 )
 
 // The guard type-checks package auth instead of parsing it, because a name is
-// not a type. Round 6's walker trusted any expression spelled
-// `<x>.EntPtr()` whatever `<x>` turned out to be, so
+// not a type. A walker trusting any expression spelled `<x>.EntPtr()`
+// whatever `<x>` turns out to be lets
 //
 //	type shadowRole struct{ r entuser.Role }
 //	func (f shadowRole) EntRolePtr() *entuser.Role { return &f.r }
 //	params.Role = shadowRole{r: entuser.RoleAdmin}.EntPtr()
 //
 // dropped into syncOIDCProfile — not allow-listed, and on an OIDC login's path
-// — landed an admin row, an admin JWT and an admin session with all thirteen
-// specs green. A type checker resolves that receiver to auth.shadowRole, and
+// — land an admin row, an admin JWT and an admin session with every spec
+// green. A type checker resolves that receiver to auth.shadowRole, and
 // the spelling stops being worth anything on its own.
 var (
 	loadOnce sync.Once
@@ -364,10 +364,10 @@ func scanAuth(patches ...patch) *authScan {
 // SetRole/SetNillableRole. Each carries the verdict on its value, which the
 // allow-list then either needs or does not.
 //
-// No filter on the literal's type, deliberately. Round 5's version only looked
-// inside types whose name ended in UserParams, so `UserPatch{Role: &esc}` —
-// declared in this very package — was invisible to it. Every type is cheaper to
-// scan than to enumerate correctly.
+// No filter on the literal's type, deliberately. Looking only inside types
+// whose name ends in UserParams misses `UserPatch{Role: &esc}` — declared in
+// this very package. Every type is cheaper to scan than to enumerate
+// correctly.
 func (a *authScan) roleWrites() []roleWrite {
 	var writes []roleWrite
 	for _, file := range a.files {
@@ -438,22 +438,22 @@ func (a *authScan) vouched(e ast.Expr) bool {
 // zero value is the "no role decided" that write paths skip and RBAC ranks
 // below everything.
 //
-// Round 6 wrote that same sentence against a walker that never resolved the
-// receiver, so it was backed by nothing: a shadowRole declared in this package
-// spelled EntRolePtr() and escalated an OIDC login to admin with every spec
-// green. The claim is worth what the compiler backs, and it is the type
-// identity here that makes the compiler back it.
+// Against a walker that never resolves the receiver, that same sentence is
+// backed by nothing: a shadowRole declared in this package spells EntRolePtr()
+// and escalates an OIDC login to admin with every spec green. The claim is
+// worth what the compiler backs, and it is the type identity here that makes
+// the compiler back it.
 // cappedRole reports whether e already IS a role.Value — the type db's params
-// now take, and one only internal/role can fill in.
+// take, and one only internal/role can fill in.
 //
-// It asks the type checker rather than matching a spelling. Earlier rounds
-// looked for a call to `.EntRole()`/`.EntRolePtr()`, which was a name and not a
-// type: a five-line shadow struct carrying a method of that name satisfied it
-// and landed an admin row. Asking what the expression IS cannot be spelled
-// around, because the only way to obtain a non-zero role.Value is a constructor
-// in that package.
+// It asks the type checker rather than matching a spelling. A call to
+// `.EntRole()`/`.EntRolePtr()` is a name and not a type: a five-line shadow
+// struct carrying a method of that name satisfies a spelling match and lands
+// an admin row. Asking what the expression IS cannot be spelled around,
+// because the only way to obtain a non-zero role.Value is a constructor in
+// that package.
 //
-// The compiler now rejects a raw entuser.Role at these sites on its own, so
+// The compiler rejects a raw entuser.Role at these sites on its own, so
 // this is a backstop for what remains string-typed — the Claims role in the JWT
 // — rather than the thing holding the ceiling up.
 func (a *authScan) cappedRole(e ast.Expr) bool {
@@ -502,9 +502,9 @@ func deref(t types.Type) types.Type {
 
 // callGraph maps each function of package auth to the package functions it
 // names. Resolved by the type checker rather than matched by name, which is
-// what closes round 6's other gap: `up := s.UpdateUser` followed by `up(...)`
-// called an identifier the syntax walker had never heard of, and reached
-// UpdateUser without an edge to it.
+// what catches `up := s.UpdateUser` followed by `up(...)`: to a syntax walker
+// that calls an identifier it has never heard of, and reaches UpdateUser
+// without an edge to it.
 //
 // Every reference counts, not only the ones in call position, because taking a
 // method's value is how a call gets made without spelling one.
@@ -561,7 +561,7 @@ func reachableFrom(graph map[string]map[string]bool, root string) map[string]boo
 
 const (
 	// syncOIDCProfile is on an OIDC login's path and is not allow-listed —
-	// the function round 6's bypass was measured in.
+	// the function the shadow-type bypass is replayed in.
 	syncOIDCProfileAnchor = "\tparams := db.UpdateUserParams{}\n\tdirty := false"
 	loginOIDCAnchor       = "\temail = strings.ToLower(strings.TrimSpace(email))"
 )
@@ -579,8 +579,8 @@ const (
 // attacker picks, not one the compiler enforces.
 //
 // What is still outside all of it is enumerated by the "leave uncovered" table
-// below, which injects each shape and watches nothing happen. Prose alone is
-// how round 6 came to claim a receiver the walker never resolved.
+// below, which injects each shape and watches nothing happen. Prose alone can
+// claim a receiver the walker never resolves.
 var _ = Describe("OIDC role writes", Label("unit", "auth"), func() {
 	// A type error anywhere in the package leaves the checker guessing, and a
 	// guess resolves an EntRolePtr() receiver to invalid rather than to
@@ -609,11 +609,11 @@ var _ = Describe("OIDC role writes", Label("unit", "auth"), func() {
 	// blind — a renamed params type, a moved file, a shape it stopped matching.
 	// These are the writes it has to keep seeing.
 	//
-	// The list is two entries rather than the nine it was, and that shrinkage is
-	// the point: db's params take a role.Value now, so every write the six
-	// user-creating functions make is vouched by the compiler and no longer
-	// reaches this walker at all. What is left is what the type change did not
-	// reach — an invite's own role, and the JWT's role string.
+	// The list is two entries, and that is the point: db's params take a
+	// role.Value, so every write the six user-creating functions make is
+	// vouched by the compiler and never reaches this walker at all. What is
+	// left is what that type does not reach — an invite's own role, and the
+	// JWT's role string.
 	It("still see the role writes no type vouches for", func() {
 		want := []string{"CreateInvite", "ListUsers"}
 
@@ -674,10 +674,10 @@ var _ = Describe("OIDC role writes", Label("unit", "auth"), func() {
 
 	// Every entry is an escalation a reviewer actually landed on a green build,
 	// spliced back into the function it was landed in and replayed against the
-	// walker that now has to see it. The one shape missing is round 5's
-	// `var esc oidcRole; esc.role = …`, which no longer parses to anything
-	// meaningful: role.Value's field is unexported, so that spelling is a
-	// compile error in package auth rather than a write this can catch.
+	// walker that has to see it. The one shape missing is
+	// `var esc oidcRole; esc.role = …`, which parses to nothing meaningful:
+	// role.Value's field is unexported, so that spelling is a compile error in
+	// package auth rather than a write this can catch.
 	DescribeTable(
 		"catch a role write injected into an OIDC path",
 		func(stmts, decls string) {
@@ -722,8 +722,9 @@ var _ = Describe("OIDC role writes", Label("unit", "auth"), func() {
 			"\tvar inv *ent.Invite\n\t_ = Claims{Role: string(inv.Role)}", ""),
 	)
 
-	// The other half of round 5's bypass: the write itself sat in UpdateUser,
-	// which is allow-listed and blameless, and LoginOIDC simply called it.
+	// The other half of the UserPatch bypass: the write itself sits in
+	// UpdateUser, which is allow-listed and blameless, and LoginOIDC simply
+	// calls it.
 	DescribeTable(
 		"catch a call to a role writer injected into an OIDC path",
 		func(stmts, decls string) {
@@ -1921,9 +1922,8 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 
 		// The invite role reaches this path over a channel the provider holds
 		// the far end of, so the ceiling applies to it like every other source.
-		// The alternative was an exception nowhere in the docs, which is how
-		// the last three rounds ended up with a table promising "never" next to
-		// a path that yielded admin.
+		// The alternative is an exception nowhere in the docs, and with it a
+		// table promising "never" next to a path that yields admin.
 		It("caps an admin invite for a provider without allow_admin", func() {
 			setupInviteProvider(false)
 			inviteTx(invite.RoleAdmin, entuser.RoleMember)

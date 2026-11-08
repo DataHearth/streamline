@@ -31,9 +31,9 @@ type ActionOptions<V, D> = {
 
 // createAction is the one write path for a library title, whatever its media
 // type: every monitor toggle, edit, search and delete reports a failure the
-// same way. It used to be written per page — movies and series through
-// mutations with an error toast, music and books with a bare await — and a
-// refused request on the latter did nothing at all.
+// same way. Written per page, the paths drift — a mutation with an error toast
+// on one, a bare await on another, where a refused request does nothing at
+// all.
 //
 // Call it at component init, like createMutation; `isPending` drives
 // MonitorToggle's `pending`.

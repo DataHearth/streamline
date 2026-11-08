@@ -566,9 +566,9 @@ var _ = Describe(
 	},
 )
 
-// replaceModeVersion turned download_records.replace_existing into the
-// replace_mode enum with a table rebuild, whose generated down step dropped a
-// temp table that no longer existed.
+// replaceModeVersion turns download_records.replace_existing into the
+// replace_mode enum with a table rebuild, whose generated down step would drop
+// a temp table that no longer exists by then; its down is hand-written.
 const replaceModeVersion = 20260825181930
 
 var _ = Describe("replace_mode migration", Label("integration", "db"), func() {
@@ -706,10 +706,9 @@ var _ = Describe("album tags_managed backfill", Label("integration", "db"), func
 	})
 })
 
-// Every down step used to be Atlas's own reverse, and for a table rebuild that
-// is only "DROP TABLE new_<table>", a table that no longer exists by then:
-// nine migrations could not be rolled back past, and the init one dropped
-// parent tables under enforced foreign keys. ent/migrate now checks each down
+// Atlas's own reverse of a table rebuild is only "DROP TABLE new_<table>", a
+// table that no longer exists by then, and its reverse of the init migration
+// drops parent tables under enforced foreign keys. ent/migrate checks each down
 // against the replayed schema; this runs the whole chain the way a rollback
 // would, with foreign keys on and rows in the rebuilt tables.
 var _ = Describe("down migrations", Label("integration", "db"), func() {

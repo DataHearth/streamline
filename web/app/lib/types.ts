@@ -1134,10 +1134,9 @@ export type FFmpegConfig = {
 	restart_required?: boolean;
 };
 
-// Runtime-patchable transcoding config. The 2026-07-07 block's own
-// ffmpeg_path / ffprobe_path keys are deliberately absent: the shipped
-// `ffmpeg` block already resolves the binary once at boot and Media probe owns
-// that surface.
+// Runtime-patchable transcoding config. Its own ffmpeg_path / ffprobe_path
+// keys are deliberately absent: the `ffmpeg` block already resolves the
+// binary once at boot and Media probe owns that surface.
 export type TranscodeVerifyConfig = {
 	max_size_percent: number;
 	min_size_percent: number;

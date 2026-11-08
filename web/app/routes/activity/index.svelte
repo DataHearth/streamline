@@ -58,7 +58,7 @@
 
 	// The switch is page state, not a route, but ?view is honoured — the
 	// dashboard's Recent activity panel links straight to the events feed it
-	// samples, which used to land on the queue instead.
+	// samples, which would otherwise land on the queue.
 	function initialView(): View {
 		if (typeof window === "undefined") return "queue";
 		const v = new URLSearchParams(window.location.search).get("view");

@@ -56,7 +56,7 @@
 	let menuWidth = $state(0);
 	let flipped = $state(false);
 	// The list's own height budget, from the space on the side it opened to. A
-	// fixed cap scrolled six 44px rows in a window with room for twenty.
+	// fixed cap would scroll six 44px rows in a window with room for twenty.
 	let maxH = $state(0);
 	// Placement happens a tick after mount, so the menu is held invisible until
 	// it has one — otherwise the first frame paints at the top-left corner.

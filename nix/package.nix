@@ -19,9 +19,9 @@ let
   # A fixed-output derivation's store path is its name and its declared hash,
   # nothing else — so while the name stays put, a hash left stale by a lockfile
   # or toolchain change still resolves to the old output wherever that path is
-  # already in a store, and nothing re-fetches to notice. The homelab builder
-  # did exactly that for pnpmDeps after the pnpm 12.11.2 bump: CI passed a hash
-  # a clean machine would have rejected. Naming each one after what decides its
+  # already in a store, and nothing re-fetches to notice: a builder that holds
+  # the old pnpmDeps passes a hash a clean machine would reject. Naming each
+  # one after what decides its
   # content moves the path whenever that does, so the fetch runs and the hash
   # is checked for real.
   inputsId =
@@ -98,7 +98,7 @@ let
     # which drops WAL mode, so pnpm's writer switches it back to WAL while the
     # install's readers are open. Under rollback journaling that write locks
     # them out, and pnpm 12 treats a read past its 5 s busy_timeout as a missing
-    # snapshot: on a loaded builder the offline install failed with
+    # snapshot: on a loaded builder the offline install fails with
     # ERR_PNPM_NO_OFFLINE_TARBALL on a different package each run. Drop this
     # once the hook restores the index in WAL mode itself.
     prePnpmInstall = ''

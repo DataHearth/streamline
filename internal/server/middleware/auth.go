@@ -212,9 +212,9 @@ func authenticateAPI(
 //
 // This middleware sees every /api/v1 request, so it is where a spike in
 // invalid API keys (a leaked key being tried, a key rollout that went wrong)
-// or in rejected bearer tokens actually shows. Each rejection was logged
-// individually and never aggregated, leaving the signal as unstructured log
-// lines an operator had to build a metric out of after the fact.
+// or in rejected bearer tokens actually shows. Logged individually and never
+// aggregated, the signal would be unstructured log lines an operator has to
+// build a metric out of after the fact.
 func rejectedAuth(ctx context.Context, reason, method string) {
 	slog.InfoContext(ctx, "api auth rejected",
 		"reason", reason, "auth.method", method)

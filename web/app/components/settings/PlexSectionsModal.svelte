@@ -31,8 +31,8 @@
 
 	// Only what the operator picked. A library commonly holds more than one
 	// section of a type — a streamline one beside an existing Radarr/Sonarr one —
-	// and listing the rejects here is what made an earlier version read as though
-	// both were going into config.
+	// and listing the rejects here would read as though both were going into
+	// config.
 	let movieSection = $derived(
 		sections.find((s) => s.type === "movie" && s.key === selectedMovie),
 	);
@@ -40,8 +40,8 @@
 		sections.find((s) => s.type === "show" && s.key === selectedShow),
 	);
 
-	// No fallback to the first of a type: guessing is what put a section the
-	// operator never chose into a snippet they were about to commit.
+	// No fallback to the first of a type: guessing would put a section the
+	// operator never chose into a snippet they are about to commit.
 	let movieKey = $derived(movieSection?.key ?? "<movie-section-key>");
 	let showKey = $derived(showSection?.key ?? "<tv-section-key>");
 

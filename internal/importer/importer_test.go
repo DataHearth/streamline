@@ -861,8 +861,9 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 
 	// A hold writes status=held and only then unwinds to the delete that
 	// clears inFlight. A resolve landing in that gap reads the record as held,
-	// flips it back to importing and enqueues — and used to be dropped as a
-	// duplicate, parking the record at importing until the import_scan tick.
+	// flips it back to importing and enqueues — and must not be dropped as a
+	// duplicate, which would park the record at importing until the
+	// import_scan tick.
 	It("Enqueue during the tail of an import still runs an import", func() {
 		configtest.Setup(map[string]any{
 			"library": map[string]any{

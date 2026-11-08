@@ -126,12 +126,12 @@ func (s *auth) UpdateProfile(
 // not make that optional: this endpoint admits a session cookie or an API key,
 // and the restored backup or migration that brings a costlier hash brings those
 // alongside it, so the comparison is reachable — and /api/v1 carries no per-IP
-// limiter to slow the repeat, unlike POST /auth/login. Measured before this
-// call went through comparePassword, one wrong current_password answered in
-// 48.8ms against a cost-10 hash, 746.0ms against cost 14, and not at all
-// against $2a$31$ by a 45s client timeout: the core it took stayed at 100% long
-// after the client gave up, and four concurrent ones held 398% of a 16-core
-// box. Through comparePassword all three answer in 48-49ms.
+// limiter to slow the repeat, unlike POST /auth/login. Measured with a plain
+// bcrypt compare instead, one wrong current_password answered in 48.8ms
+// against a cost-10 hash, 746.0ms against cost 14, and not at all against
+// $2a$31$ by a 45s client timeout: the core it took stayed at 100% long after
+// the client gave up, and four concurrent ones held 398% of a 16-core box.
+// Through comparePassword all three answer in 48-49ms.
 func (s *auth) ChangePassword(
 	ctx context.Context,
 	userID uint32,

@@ -80,7 +80,7 @@ const (
 const (
 	// refreshWindow is how long the dispatcher collects refreshes before it
 	// sends them: the downloads one RSS cycle grabbed tend to finish together,
-	// and each used to cost every server its own scan.
+	// and sent one by one each would cost every server its own scan.
 	refreshWindow = 30 * time.Second
 	// maxBatchFolders caps the folders one batch rescans one by one. Past it
 	// the whole library is cheaper than as many partial scans, which Plex

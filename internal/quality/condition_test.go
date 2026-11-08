@@ -53,10 +53,10 @@ var _ = Describe("Format.Matches", Label("unit", "quality"), func() {
 	})
 })
 
-// The regression this whole tri-state exists for: `negate` on a field nobody
-// filled in scored a match out of ignorance. On a real library every imported
-// file hit the idiomatic "release carries no group" format for -100 apiece,
-// because the scorer was reading a renamed path that never had a group in it.
+// What this whole tri-state exists for: `negate` on a field nobody filled in
+// must not score a match out of ignorance. Scoring a renamed path that never
+// has a group in it, every imported file on a real library would hit the
+// idiomatic "release carries no group" format for -100 apiece.
 var _ = Describe("unknown vs absent input", Label("unit", "quality"), func() {
 	noGroup := quality.Condition{
 		Type: quality.ConditionReleaseGroup, Pattern: `.`,

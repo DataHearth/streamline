@@ -44,8 +44,8 @@ var _ = Describe("Cookie", Label("unit", "auth"), func() {
 	})
 
 	// Every spelling of "the browser spoke https to me" a mainstream proxy
-	// emits. Each entry used to leave the session JWT without Secure, because
-	// this path exact-matched X-Forwarded-Proto while HSTS understood the lot.
+	// emits. Each entry must mark the session JWT Secure, as HSTS honours the
+	// lot; exact-matching X-Forwarded-Proto alone would miss all of them.
 	// No public https URL is configured, so nothing else can mask a regression.
 	DescribeTable("SetSession marks Secure for every forwarded TLS spelling",
 		func(header, value string) {
@@ -68,9 +68,9 @@ var _ = Describe("Cookie", Label("unit", "auth"), func() {
 		Entry("appended chain", "X-Forwarded-Proto", "https,http"),
 	)
 
-	// The one behavior that moved in the fail-closed direction: the scheme is
-	// now read first-signal-wins, as HSTS already read it, so the standard
-	// header settles it even when a stale X-Forwarded-Proto disagrees.
+	// The fail-closed direction: the scheme is read first-signal-wins, as HSTS
+	// reads it, so the standard header settles it even when a stale
+	// X-Forwarded-Proto disagrees.
 	It(
 		"SetSession lets Forwarded: proto=http beat a stale X-Forwarded-Proto",
 		func() {

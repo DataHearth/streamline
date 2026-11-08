@@ -45,7 +45,7 @@ type Info struct {
 	// AudioLangs and SubLangs hold ISO-639-2/T codes, deduped, sorted and
 	// comma-joined ("eng,fra,jpn"). Comma strings rather than slices because
 	// these land in plain text columns a list scan reads without decoding
-	// anything — the mistake Movie.cast's JSON blob made.
+	// anything, where a JSON blob would make every list scan decode it.
 	AudioLangs string
 	// SubLangs excludes forced tracks: a forced subtitle carries signs and
 	// foreign dialogue, not the script, so counting one would report a French

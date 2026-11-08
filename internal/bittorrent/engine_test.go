@@ -279,8 +279,8 @@ var _ = Describe(
 			Expect(got).To(BeIdenticalTo(pc))
 		})
 
-		// Regression for the bug where an unbound client (no bind_interface)
-		// left both DisableIPv4 and DisableIPv6 unset: cl.listenNetworks()
+		// Guards against an unbound client (no bind_interface) leaving both
+		// DisableIPv4 and DisableIPv6 unset: cl.listenNetworks()
 		// then yields udp4 *and* udp6, and listenAllRetry calls ListenPacket
 		// once per network — two separate utp.Socket instances (each with its
 		// own DHT server) reading the one shared packet conn, racing each
@@ -300,10 +300,10 @@ var _ = Describe(
 			Expect(cc.DisableIPv6).To(BeTrue())
 		})
 
-		// This is the spec whose absence let the regression above through:
-		// the previous "leaves the default dialers alone when unbound" case
-		// passes a nil packet conn, so it never exercises the real shape
-		// (bindIP nil, pc non-nil) that New always builds.
+		// The "leaves the default dialers alone when unbound" case passes a
+		// nil packet conn, so it never exercises the real shape (bindIP nil,
+		// pc non-nil) that New always builds; this one does, and is what
+		// catches the race above.
 		It("calls ListenPacket exactly once for a real unbound client", func() {
 			pc, err := newRebindablePacketConn(nil, 0)
 			Expect(err).NotTo(HaveOccurred())

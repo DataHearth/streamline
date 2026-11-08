@@ -55,11 +55,11 @@ func RemoveMediaFile(ctx context.Context, path, root string) error {
 	stem := strings.TrimSuffix(base, filepath.Ext(base))
 
 	// The media file itself goes by path, not by a name matched against the
-	// directory listing. A row whose path had drifted from disk matched no
-	// entry, fell through every `continue`, and returned success having deleted
-	// nothing — which is how "delete with files" kept a 2.7 GB file and still
-	// reported the title removed. ENOENT is held back rather than returned
-	// here so the sidecars and the prune still run.
+	// directory listing: a row whose path has drifted from disk would match no
+	// entry and return success having deleted nothing, so "delete with files"
+	// would keep a 2.7 GB file and still report the title removed. ENOENT is
+	// held back rather than returned here so the sidecars and the prune still
+	// run.
 	missing := false
 	if err := os.Remove(path); err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
@@ -165,10 +165,10 @@ func MoveSidecars(ctx context.Context, from, to string) {
 // library file without carrying its basename. Plex, Jellyfin and the *arr stack
 // write them, and so does the music tag writer (cover.jpg or cover.png beside
 // an album, folder.jpg in its artist's folder). isSidecar keys on the media file's stem,
-// so none of these is a sidecar, and a directory holding one survived every
-// prune — on a library migrated from the *arr stack that is nearly every
-// directory (629 of 1003 on the homelab), so deleting a title left its folder
-// behind forever. Matched case-insensitively against the whole basename.
+// so none of these is a sidecar, and a directory holding one would survive
+// every prune — on a library migrated from the *arr stack that is nearly every
+// directory (629 of 1003 on the homelab), so deleting a title would leave its
+// folder behind forever. Matched case-insensitively against the whole basename.
 var externalMetadata = map[string]bool{
 	"movie.nfo": true, "tvshow.nfo": true, "season.nfo": true,
 	"poster.jpg": true, "poster.png": true,
@@ -195,8 +195,8 @@ var externalMetadata = map[string]bool{
 //
 // Returns how many directories it removed, and names each one: the walk can
 // climb several levels, and a root computed slightly wrong takes real
-// directories with it. Without the trail there was nothing afterwards to say
-// which ones went.
+// directories with it. Without the trail there would be nothing afterwards to
+// say which ones went.
 func PruneEmptyDirs(ctx context.Context, dir, root string) int {
 	root = filepath.Clean(root)
 	prefix := root + string(filepath.Separator)

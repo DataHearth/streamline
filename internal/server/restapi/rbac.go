@@ -353,10 +353,10 @@ func roleGuard(f StrictHandlerFunc, operationID string) StrictHandlerFunc {
 			return nil, nil
 		}
 		if !auth.RoleAtLeast(c.Role, need) {
-			// The 401s next door are all logged with a reason; these were not,
-			// so a member repeatedly probing admin routes and a UI sending a
-			// stale role looked identical to ordinary traffic — which is to
-			// say, invisible.
+			// The 401s next door are all logged with a reason, and so are
+			// these: unlogged, a member repeatedly probing admin routes and a
+			// UI sending a stale role look identical to ordinary traffic —
+			// which is to say, invisible.
 			slog.InfoContext(ctx, "api request forbidden",
 				"operation", operationID,
 				"role.have", c.Role,

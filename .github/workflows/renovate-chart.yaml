@@ -5,7 +5,7 @@ name: Renovate chart
 # the observability subchart's dependencies, or an image in values.yaml, and
 # cannot bump the parent: its `bumpVersion` only rewrites the Chart.yaml it is
 # editing, which for a subchart dependency is the subchart's own. So every
-# "update helm charts" PR landed red until someone pushed the bump by hand.
+# "update helm charts" PR would land red until someone pushed the bump by hand.
 #
 # This job is that bump, on renovate's own branches: the patch of main's chart
 # version, once. It is a no-op when the version already differs from main's —
@@ -38,8 +38,8 @@ jobs:
       # the runs it creates sit at "approval required" until someone clicks.
       # An App installation token is an ordinary actor, so CI runs on the
       # bumped commit by itself. Without the App configured this falls back to
-      # the Actions token and still pushes — CI then waits for approval, as
-      # before. Setup: renovate-pins.yaml's header.
+      # the Actions token and still pushes — CI then waits for approval.
+      # Setup: renovate-pins.yaml's header.
       - name: Push token
         id: app
         if: vars.PINS_APP_CLIENT_ID != ''

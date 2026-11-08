@@ -9,8 +9,8 @@
 	import type { UserRole } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// Sorting used to BE the table header, so it died with the table. This is
-	// where it lives on touch: role filter and sort key in one sheet behind a
+	// Below lg there is no table, so no header to sort by. This is where
+	// sorting lives on touch: role filter and sort key in one sheet behind a
 	// badged button, leaving the search field its own full-width line.
 	export type UserSortKey = "name" | "role" | "auth" | "created";
 	export type UserSortDir = "asc" | "desc";

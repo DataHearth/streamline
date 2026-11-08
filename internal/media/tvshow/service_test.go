@@ -284,7 +284,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		show := withWantedEpisodes(2)
 		storeMk.FindTVShowByID(mock.Anything, uint32(1)).Return(show, nil).Twice()
 		// One statement per bucket rather than one per row: a 250-episode show
-		// used to cost ~270 autocommits on the single SQLite connection.
+		// would cost ~270 autocommits on the single SQLite connection.
 		storeMk.SetEpisodesMonitored(mock.Anything, []uint32{1, 2}, true).
 			Return(nil).Once()
 		storeMk.SetEpisodesMonitored(mock.Anything, []uint32(nil), false).
@@ -507,8 +507,8 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		)
 
 		// The show's flag gates its episodes' own, matching db.monitoredEpisode:
-		// unmonitoring a show never wrote through to the episode rows, so a page
-		// reading those alone counted gaps the list had already stopped counting.
+		// unmonitoring a show never writes through to the episode rows, so a page
+		// reading those alone would count gaps the list has stopped counting.
 		It("drops a monitored episode whose show is not monitored", func() {
 			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
 				{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{

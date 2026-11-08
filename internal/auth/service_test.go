@@ -722,7 +722,7 @@ var _ = Describe("Login enumeration resistance", Label("unit", "auth"), func() {
 	// spendCostShortfall's arithmetic only holds if each spliced dummy really
 	// runs the cost it is filed under. bcrypt.Cost alone cannot say so — it
 	// reports the header of a hash that dies in base64Decode before a single
-	// round, which is the hole this whole area was fixed for. Only a compare
+	// round, which is the hole this whole area exists to close. Only a compare
 	// that comes back ErrMismatchedHashAndPassword proves the rounds ran, and
 	// only then does the header it ran under mean anything.
 	It("files a lowered-cost dummy under the cost it actually runs", func() {

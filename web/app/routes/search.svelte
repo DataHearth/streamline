@@ -20,9 +20,9 @@
 	// search button links here below md, where the command palette has no
 	// room, and so does its search bar on a touch screen at any width. On a
 	// touch screen it covers the whole screen; opened with a mouse from md, it
-	// renders inline under the top bar. It used to be a screen AppShell drew
-	// over the current page, which put nothing in history — Back left the page
-	// underneath and the search stayed on top of the next one (#140). As a
+	// renders inline under the top bar. Drawn by AppShell as a screen over the
+	// current page, it would put nothing in history — Back would leave the page
+	// underneath and the search stay on top of the next one (#140). As a
 	// route, Back and Cancel return to the page it was opened from (AppShell
 	// restores its scroll position), and the typed query is in the URL, so
 	// Back from a picked result lands on the same results.

@@ -166,7 +166,7 @@ If nothing in a release actually matches what's wanted, the grab is dropped rath
 
 **One related behavior does not depend on this flag.** When the missing-episode search grabs a season pack to fill gaps, any episode you already have that the release beats under your profile's upgrade rules is replaced on import — if it still beats yours once the file itself has been probed, since the importer re-checks each pack member rather than trusting the grab-time decision. With `selective_files` on, the pack downloads the gaps plus exactly those beaten episodes' files; with it off, the whole pack downloads and at least those episodes are replaced — the importer re-decides over every file that arrived, so it can take one the grab-time pass had excluded. See [Upgrades](Quality-Profiles-and-Custom-Formats#upgrades).
 
-The torrent drawer (on the **Torrents** page) still shows every file with its priority and lets you flip one back on manually before the download finishes — the same control that existed before this feature, now driven automatically as well.
+The torrent drawer (on the **Torrents** page) still shows every file with its priority and lets you flip one back on manually before the download finishes — the same priorities the selection sets automatically.
 
 ### Free-space check
 

@@ -13,10 +13,10 @@ import (
 var (
 	meter = otel.Meter("github.com/datahearth/streamline/internal/importer")
 
-	// outcomes is the only aggregate signal for the import pipeline. The
-	// held/failed/terminal transitions were logged and nothing else, so a
-	// growing review queue or a spike in terminal failures after a library
-	// change could only be found by grepping.
+	// outcomes is the only aggregate signal for the import pipeline. With
+	// the held/failed/terminal transitions only logged, a growing review
+	// queue or a spike in terminal failures after a library change could
+	// only be found by grepping.
 	outcomes = otelx.Must(meter.Int64Counter(
 		"streamline.importer.outcomes",
 		metric.WithDescription("Import outcomes by result"),

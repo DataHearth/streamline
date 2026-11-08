@@ -18,11 +18,12 @@ func (d *download) setReachable(name string, ok bool) {
 
 // registerClientGauges publishes per-client reachability.
 //
-// Reachability was only ever measured by the Settings page's "Test connection"
-// button — a thing a person presses. The two sweeps that touch every client
-// every tick logged their failures at debug and moved on, so a download client
-// that had been unreachable for hours looked exactly like one nobody had
-// asked about. This turns the sweep it already does into a signal.
+// Without it, reachability is measured only by the Settings page's "Test
+// connection" button — a thing a person presses. The two sweeps that touch
+// every client every tick log their failures at debug and move on, so a
+// download client that had been unreachable for hours would look exactly like
+// one nobody had asked about. This turns the sweep it already does into a
+// signal.
 //
 // Registered from the first sweep rather than from New, which has no context
 // to log a registration failure against.

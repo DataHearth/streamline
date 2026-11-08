@@ -668,8 +668,8 @@ func (s *Server) GrabEpisodeRelease(
 				"download_record.id", rec.ID, "error", err)
 		}
 	}
-	// The pack and RSS paths mark their episodes; a single manual grab is the
-	// one that didn't, so the row sat on "Wanted" until the import landed.
+	// The pack and RSS paths mark their episodes, and so must a single manual
+	// grab, or the row sits on "Wanted" until the import lands.
 	if _, err := s.store.MarkEpisodeDownloading(
 		ctx, request.EpisodeId,
 	); err != nil {

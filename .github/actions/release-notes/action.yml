@@ -61,11 +61,11 @@ runs:
 
     # The CLI is driven directly rather than through anthropics/claude-code-action:
     # that action rejects `push` outright ("Unsupported event type: push") and both
-    # release lines are tag-push triggered, so the step never once ran under it.
+    # release lines are tag-push triggered, so the step can never run under it.
     #
     # continue-on-error, and the token is optional: a release must never be
     # blocked by the model being unreachable. assemble falls back to the raw
-    # section, which is what shipped before this step existed.
+    # section, a complete release body on its own.
     - id: claude
       if: inputs.claude_code_oauth_token != ''
       continue-on-error: true

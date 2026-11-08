@@ -4,7 +4,7 @@
 	import AuthCard from "@components/auth/AuthCard.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// Torrents, transcoding and imports used to sit under /activity and
+	// Legacy paths of torrents, transcoding and imports under /activity and
 	// /library; bookmarks and an installed app's history still hold those URLs.
 	const MOVED: [RegExp, string][] = [
 		[/^\/activity\/torrents\/?$/, "/torrents"],

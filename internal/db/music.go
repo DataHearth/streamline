@@ -1055,12 +1055,12 @@ func (db *DB) RefreshArtist(
 
 // pruneUnlistedAlbums handles the albums the artist owns that its discography
 // no longer lists — a release group MusicBrainz merged away, or one the
-// discography fetch now leaves out, like a bootleg-only one. An album nothing
+// discography fetch leaves out, like a bootleg-only one. An album nothing
 // was ever done with is deleted. One holding files, download history, an
 // acquisition event or a co-artist is kept, and unmonitored unless its flag
 // was set by hand. The events written for every album (added, searched by the
 // missing-album job, metadata or monitoring changes) are not use: counting
-// them kept nearly every bootleg album a scheduled search had tried.
+// them would keep nearly every bootleg album a scheduled search has tried.
 // An empty listing prunes nothing: it says nothing about the stored albums.
 // It returns the deleted albums' ids.
 func pruneUnlistedAlbums(
@@ -1563,9 +1563,9 @@ func (db *DB) SetAlbumHydration(
 // settleCompletedAlbum moves a wanted or failed album whose every track now
 // holds a file to available, clearing its failure reason. A re-hydration is
 // what completes it: a person re-picking the edition the files are of, or a
-// refresh dropping a track nobody holds. Without it the album kept its old
-// status — a failed one stayed failed with an error about tracks it no longer
-// lacks, and nothing searches a failed album, so it never moved again. An
+// refresh dropping a track nobody holds. Without it the album would keep its
+// old status — a failed one would stay failed with an error about tracks it no
+// longer lacks, and nothing searches a failed album, so it would never move. An
 // album in flight is left to its record, and one this hydration leaves
 // incomplete keeps its status.
 func settleCompletedAlbum(

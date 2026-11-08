@@ -73,8 +73,8 @@ const (
 func Setup(ctx context.Context, cfg Config) (slog.Handler, Shutdown, error) {
 	cs := config.Get()
 
-	// log.app.enabled gates the stderr sink and nothing else. It used to
-	// return early, so quieting local logs also silently stopped traces and
+	// log.app.enabled gates the stderr sink and nothing else. Returning early
+	// here would make quieting local logs also silently stop traces and
 	// metrics — an instance exporting nothing at all, for a reason nowhere
 	// near the OTel config.
 	var appCloser io.Closer

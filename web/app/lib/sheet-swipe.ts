@@ -4,14 +4,13 @@
 //
 // Transform writes go straight to the node: animating anything that relayouts
 // costs a frame per pointermove on mobile Gecko, which is the whole reason the
-// add sheet moved to a pure-transform drag. The gesture only starts from the
-// header or from a list already scrolled to the top — otherwise it belongs to
-// the list.
+// drag is a pure transform. The gesture only starts from the header or from a
+// list already scrolled to the top — otherwise it belongs to the list.
 //
 // On touch the pointer stream is not enough on its own: a touch the browser is
 // allowed to interpret becomes a scroll, and it cancels the pointer the moment
-// it decides that — so the drag used to work only from the header, the one strip
-// carrying `touch-action: none`. `touch-action` cannot express "mine only
+// it decides that — so on pointers alone the drag works only from the header,
+// the one strip carrying `touch-action: none`. `touch-action` cannot express "mine only
 // downward, and only from a list already at the top", so the touch move is
 // claimed in JS, the way LookupSheet claims its own. A drag the touch stream
 // claimed is also ended by it: a late `pointercancel` does not drop the sheet
@@ -20,17 +19,16 @@
 // The release decides from the finger's speed at the end, never from the
 // average over the whole gesture: a pull that stops before letting go has no
 // speed, and only how far it travelled counts. A fast flick wins in its own
-// direction — a flick back up keeps the sheet even past the halfway mark. The
-// average used to let a fast start lend a stopped release enough speed to
+// direction — a flick back up keeps the sheet even past the halfway mark. An
+// average would let a fast start lend a stopped release enough speed to
 // dismiss.
 //
 // A dismissal slides the sheet off the rest of the way from where the finger
 // left it and only then calls `onDismiss`, so the component's `fly` outro runs
 // on a sheet already off screen. Handing the exit to that outro at release
-// snapped the sheet back to its resting place first and then faded it out
-// over 420px — the odd fade a stopped pull ended in. The scrim
-// (`data-sheet-scrim`, a sibling of the sheet) fades with the travel, so it
-// tracks the drag and is gone when the sheet is.
+// would snap the sheet back to its resting place first and then fade it out
+// over 420px. The scrim (`data-sheet-scrim`, a sibling of the sheet) fades
+// with the travel, so it tracks the drag and is gone when the sheet is.
 //
 // The same physics as plein's ModalSheet (aslafy-z/plein), which this mirrors.
 
@@ -57,8 +55,8 @@ type Sample = { y: number; t: number };
  *
  *  A turn ends the span the way a pause does. A finger that reverses without
  *  slowing down leaves no still gap behind it, so the fast pull before the turn
- *  used to widen the span back over itself and outweigh the flick that ended
- *  the gesture: a sheet flicked back up closed. The direction is the net one
+ *  would widen the span back over itself and outweigh the flick that ends
+ *  the gesture: a sheet flicked back up would close. The direction is the net one
  *  over the fixed window, so a pixel of jitter at the end of a fling is not a
  *  turn. */
 function releaseVelocity(samples: Sample[], t: number): number {
