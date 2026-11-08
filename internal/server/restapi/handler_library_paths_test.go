@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"time"
@@ -86,7 +87,11 @@ var _ = Describe("Handler: Library path migration",
 			}
 
 			It("outlives the listener's write timeout", func() {
+				handler := app.srv.Config.Handler
+				app.srv.Close()
+				app.srv = httptest.NewUnstartedServer(handler)
 				app.srv.Config.WriteTimeout = 50 * time.Millisecond
+				app.srv.Start()
 				roottest.Offline(db.RootMusic)
 				app.store.EXPECT().
 					ListRootFilesForDrift(mock.Anything, db.RootMusic, uint32(0), mock.Anything).

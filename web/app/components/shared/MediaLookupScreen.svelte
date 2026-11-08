@@ -619,21 +619,13 @@
 					{i18n.status_requested()}
 				</div>
 			{:else}
-				<div
-					class="flex h-[46px] items-center justify-between gap-3 rounded-xl border border-border bg-surface pr-1.5 pl-3.5"
-				>
-					<span class="flex-none text-[13.5px] text-fg">
-						{canAdd ? i18n.quality_profile() : i18n.quality_preferred()}
-					</span>
-					<div class="w-[9.5rem]">
-						<Select
-							value={qualityProfileName}
-							options={qpOptions}
-							onChange={(v) => (qualityProfileName = v)}
-							ariaLabel={canAdd ? i18n.quality_profile() : i18n.quality_preferred()}
-						/>
-					</div>
-				</div>
+				<Select
+					variant="row"
+					label={canAdd ? i18n.quality_profile() : i18n.quality_preferred()}
+					value={qualityProfileName}
+					options={qpOptions}
+					onChange={(v) => (qualityProfileName = v)}
+				/>
 				<button
 					type="button"
 					disabled={selectedPending}
