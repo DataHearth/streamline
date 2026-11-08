@@ -124,10 +124,13 @@ alone would leave a tracker that moved domains broken until the next streamline 
   secret as surely) — and its **login block**. Either changing keeps the
   old version in `current/` (listed in the catalog's `held` and the NOTICE) and puts the new
   one in `pending/` with its reasons. A definition deleted upstream that is in use is held
-  the same way (`removed`). Everything else applies at once. `Approve` moves the pending
+  the same way (`removed`); a file upstream still carries but **this converter refuses**
+  is neither removed nor held — it stays at its last good version (`Result.Skipped`) and
+  the catalog's `skipped` list says why. Everything else applies at once. `Approve` moves the pending
   file into `current/` and rewrites the index and NOTICE; `Reject` keeps the old version and
   records the refused upstream `sha256` in `pending/index.json`, so the same version is
-  never proposed again while a later one is. A pending index written against another
+  never proposed again while a later one is (a refused removal is remembered as
+  `rejectedRemoval`, since a deletion has no file to hash). A pending index written against another
   snapshot than the one in force is ignored (`List` returns nothing).
 - **REST**: `GET /cardigann/updates` (the snapshot in force + each held update with its
   unified diff, from `hexops/gotextdiff`, and the indexers running it),
@@ -461,12 +464,18 @@ newznab root of the kind, or page past the first response.
   the password off the next login. `proxy` absent keeps, `""` clears, and
   the SPA sends it only when the field changed, since the redacted form sent back would
   drop the credentials. Switching an entry's protocol away from `cardigann` drops the
-  block. Any edit `Forget`s the session.
+  block. An edit never `Forget`s the session: the row carries the settings it was earned
+  under (below), so a credentials change through the API or the YAML retires it alike and
+  an `enabled`/`priority` toggle keeps it and its login backoff.
 - The SPA's form is a TanStack form over `{name, site, enabled, priority, private, proxy,
   settings}` with one field per valued setting (`settings.<name>`): text/password
   (`secret` → password input, "stored, leave blank" help), checkbox (`"true"`/`"false"`),
-  select (option keys). A definition with a captcha says to save first and log in from the
-  card; one with a challenge names `cardigann.solver_url`.
+  select (option keys — seeded through the same rule as the engine's `selectDefault`, a
+  case-insensitive match else the first option, since two upstream defaults are not among
+  their options and the server refuses what the form sends). `site` is always sent, so
+  picking the first link back on an edit reaches the server (absent means "keep"). A
+  definition with a captcha says to save first and log in from the card; one with a
+  challenge names `cardigann.solver_url`.
 
 ## Logins
 
@@ -497,8 +506,15 @@ not to, is `internal/indexer`'s** (`Cardigann.run`).
   (`engine.Session`), kept in the `IndexerSession` row under the indexer's config name,
   live for `engine.SessionLifetime` (30 days, Prowlarr's) and extended by every call that
   works — written only when they changed or a day of lifetime was used, so an RSS tick does
-  not write a row per indexer. With no live session a login runs **before** the first
-  request (Prowlarr spends a request to find out). An edit to, or the removal of, the
+  not write a row per indexer, and **best effort**: a row that could not be written costs
+  one more login later, never the results in hand (`keep` logs and returns nothing). The
+  put is update-then-create, and a create that loses the race on the unique name updates
+  instead. The row carries `config_hash` (`configHash`: definition, site, proxy, settings);
+  a row earned under other settings is read as none (`stored`), for cookies and backoff
+  alike. With no live session a login runs **before** the first request (Prowlarr spends a
+  request to find out); under `loginLock`, a call that finds a live session another call
+  just stored **adopts** it (`Engine.Adopt`) rather than logging in again, which on a
+  one-session-per-account tracker would kill the session it just found. Removing the
   indexer drops the row (`Manager.Forget`).
 - **Backoff**: an automatic login that fails stores `login_failures` and a `retry_at` from
   Prowlarr's escalation (1 min, 5, 10, 15, 30, 1 h, 3, 6, 12, 24 h) and drops the cookies;
