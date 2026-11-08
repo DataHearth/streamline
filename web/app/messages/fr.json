@@ -776,6 +776,8 @@
 	"err_api_key_quota": "Vous détenez déjà le maximum de 20 clés API. Révoquez-en une pour en créer une autre.",
 	"err_catalog_unavailable": "Streamline n'a pas pu lire le catalogue des trackers sur GitHub (Prowlarr/Indexers). Vérifiez que ce serveur joint github.com, puis réessayez.",
 	"err_secret_file_managed": "Ce secret est lu depuis un fichier indiqué dans la configuration. Modifiez-le, ainsi que cette adresse, dans le fichier de configuration.",
+	"rating_votes_one": "{count} vote",
+	"rating_votes_other": "{count} votes",
 	"settings_secret_reenter": "L'adresse a changé : saisissez-le à nouveau. Un secret enregistré n'est jamais envoyé à une nouvelle adresse.",
 	"books_series": "Série",
 	"books_volume_of": "Tome {n} de {title}",

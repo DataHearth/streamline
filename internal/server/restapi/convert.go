@@ -1337,6 +1337,10 @@ func tvShowBaseToAPI(s *ent.TVShow) TVShow {
 	if s.Rating > 0 {
 		r := float32(s.Rating)
 		out.Rating = &r
+		if s.VoteCount > 0 {
+			v := s.VoteCount
+			out.VoteCount = &v
+		}
 	}
 	if len(s.Genres) > 0 {
 		g := s.Genres

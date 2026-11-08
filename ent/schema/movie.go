@@ -44,6 +44,9 @@ func (Movie) Fields() []ent.Field {
 		field.String("failure_reason").Optional(),
 		field.String("quality_profile").Optional(),
 		field.Float("rating").Optional().Default(0),
+		// How many TMDB votes `rating` averages. Zero is "not recorded yet" for
+		// a row from before the count was kept, as well as "no votes".
+		field.Uint32("vote_count").Optional().Default(0),
 		field.Strings("genres").Optional(),
 		// TMDB's translated and alternative titles. A film held under its
 		// localized title matches none of the releases named in any other

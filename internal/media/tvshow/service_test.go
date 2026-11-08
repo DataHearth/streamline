@@ -375,6 +375,45 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	DescribeTable(
+		"RefreshOne writes the rating only when the rating source answered",
+		func(d metadata.TVDetails, want *db.TVShowRating) {
+			storeMk.FindTVShowByID(mock.Anything, uint32(7)).
+				Return(&ent.TVShow{ID: 7, TvdbID: 123}, nil).Twice()
+			metaMk.GetSeries(mock.Anything, uint32(123)).Return(&d, nil).Once()
+			metaMk.GetSeriesCast(mock.Anything, uint32(123)).Return(nil, nil).Once()
+			storeMk.UpdateTVShowMetadata(mock.Anything, uint32(7),
+				mock.MatchedBy(func(p db.UpdateTVShowMetadataParams) bool {
+					if want == nil {
+						return p.Rating == nil
+					}
+					return p.Rating != nil && *p.Rating == *want
+				})).
+				Return(nil).Once()
+			storeMk.ReconcileEpisodes(mock.Anything, uint32(7), mock.Anything).
+				Return(nil, nil).Once()
+			storeMk.SetTVShowRefreshedAt(mock.Anything, uint32(7), mock.Anything).
+				Return(nil).Once()
+			_, err := svc.RefreshOne(ctx, 7)
+			Expect(err).NotTo(HaveOccurred())
+		},
+		Entry("not asked or failed: keep the stored one",
+			metadata.TVDetails{TVDBID: 123, Title: "X"},
+			nil),
+		Entry("rated",
+			metadata.TVDetails{
+				TVDBID: 123, Title: "X",
+				Rating: 8.5, VoteCount: 42, TMDBID: 9, RatingFetched: true,
+			},
+			&db.TVShowRating{Rating: 8.5, VoteCount: 42}),
+		Entry("unknown to TMDB: cleared",
+			metadata.TVDetails{
+				TVDBID: 123, Title: "X",
+				RatingFetched: true,
+			},
+			&db.TVShowRating{}),
+	)
+
 	It("RefreshOne leaves a pruned episode's file on disk", func() {
 		pruned := filepath.Join(GinkgoT().TempDir(), "Show - S01E09.mkv")
 		Expect(os.WriteFile(pruned, []byte("x"), 0o644)).To(Succeed())

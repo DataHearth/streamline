@@ -169,6 +169,14 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	// 3. Create metadata / media / indexer / download services
 	tmdb := metadata.NewTMDB()
 	tvdb := metadata.NewTVDB()
+	// TVDB carries no rating; TMDB rates a series by its TVDB id. Wrapped once
+	// so the service (add, refresh, re-identify) and the lookup detail both
+	// get it; without a TMDB key nothing is asked.
+	var seriesRatings metadata.SeriesRatingProvider
+	if tmdb.Configured() {
+		seriesRatings = tmdb
+	}
+	tvMeta := metadata.WithSeriesRatings(tvdb, seriesRatings)
 	mb := metadata.NewMusicBrainz()
 	var (
 		bookMeta        metadata.BookProvider
@@ -204,7 +212,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	dlManager := download.New(store, builtinClient)
 	dispatcher := mediaserver.NewDispatcher()
 	movieSvc := movie.NewService(store, tmdb, postersSvc, dlManager, dispatcher)
-	tvSvc := tvshow.NewService(store, tvdb, postersSvc, dlManager, dispatcher)
+	tvSvc := tvshow.NewService(store, tvMeta, postersSvc, dlManager, dispatcher)
 	deezer := metadata.NewDeezer()
 	lookupArt, err := artwork.New(artwork.Deps{
 		DataDir: cfg.DataDir,
@@ -600,7 +608,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		TVShows:         tvSvc,
 		Requests:        reqSvc,
 		TVSearcher:      tvMissing,
-		MetadataTV:      tvdb,
+		MetadataTV:      tvMeta,
 		Posters:         postersSvc,
 		LookupArt:       lookupArt,
 		Torrents:        torrentsAPI,

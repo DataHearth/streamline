@@ -402,7 +402,7 @@ func (db *DB) FilterTVShows(
 	case "year":
 		q = q.Order(orderBy(tvshow.FieldYear, descending(p.Order, true)))
 	case "rating":
-		q = q.Order(orderBy(tvshow.FieldRating, descending(p.Order, true)))
+		q = q.Order(orderByRating(descending(p.Order, true)))
 	case "episodes":
 		q = q.Order(orderByEpisodeCount(descending(p.Order, true)))
 	default:
@@ -429,6 +429,27 @@ func orderBy(field string, desc bool) tvshow.OrderOption {
 		return ent.Desc(field)
 	}
 	return ent.Asc(field)
+}
+
+// minRatingVotes is the fewest TMDB votes a rating needs to rank by it.
+const minRatingVotes = 10
+
+// orderByRating ranks by rating, but a rating averaged over fewer than
+// minRatingVotes votes sorts with the unrated: a show with one 10/10 vote
+// otherwise heads "Rating (highest)". The rating itself is still shown, with
+// its vote count. Ties go to the rating with more votes behind it.
+func orderByRating(desc bool) tvshow.OrderOption {
+	return func(s *entsql.Selector) {
+		dir := "ASC"
+		if desc {
+			dir = "DESC"
+		}
+		votes := fmt.Sprintf("COALESCE(%s, 0)", s.C(tvshow.FieldVoteCount))
+		s.OrderExpr(entsql.Raw(fmt.Sprintf(
+			"CASE WHEN %s < %d THEN 0 ELSE COALESCE(%s, 0) END %s, %s %s",
+			votes, minRatingVotes, s.C(tvshow.FieldRating), dir, votes, dir,
+		)))
+	}
 }
 
 // descending resolves an explicit order against the sort key's natural one.

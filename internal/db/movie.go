@@ -26,6 +26,7 @@ type CreateMovieParams struct {
 	Runtime        uint16
 	QualityProfile string
 	Rating         float64
+	VoteCount      uint32
 	Genres         []string
 	Aliases        []string
 	Cast           []metadata.CastMember
@@ -60,6 +61,9 @@ func (db *DB) CreateMovie(
 	}
 	if p.Rating != 0 {
 		b.SetRating(p.Rating)
+	}
+	if p.VoteCount != 0 {
+		b.SetVoteCount(p.VoteCount)
 	}
 	if len(p.Genres) != 0 {
 		b.SetGenres(p.Genres)
@@ -488,6 +492,7 @@ type UpdateMovieMetadataParams struct {
 	IMDbID        string
 	Runtime       uint16
 	Rating        float64
+	VoteCount     uint32
 	Genres        []string
 	Aliases       []string
 	Cast          []metadata.CastMember
@@ -514,6 +519,7 @@ func (db *DB) UpdateMovieMetadata(
 		SetOverview(p.Overview).
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
+		SetVoteCount(p.VoteCount).
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
 		SetImdbID(p.IMDbID).

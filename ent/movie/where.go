@@ -140,6 +140,11 @@ func Rating(v float64) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldRating, v))
 }
 
+// VoteCount applies equality check predicate on the "vote_count" field. It's identical to VoteCountEQ.
+func VoteCount(v uint32) predicate.Movie {
+	return predicate.Movie(sql.FieldEQ(FieldVoteCount, v))
+}
+
 // LastRefreshedAt applies equality check predicate on the "last_refreshed_at" field. It's identical to LastRefreshedAtEQ.
 func LastRefreshedAt(v time.Time) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldLastRefreshedAt, v))
@@ -1053,6 +1058,56 @@ func RatingIsNil() predicate.Movie {
 // RatingNotNil applies the NotNil predicate on the "rating" field.
 func RatingNotNil() predicate.Movie {
 	return predicate.Movie(sql.FieldNotNull(FieldRating))
+}
+
+// VoteCountEQ applies the EQ predicate on the "vote_count" field.
+func VoteCountEQ(v uint32) predicate.Movie {
+	return predicate.Movie(sql.FieldEQ(FieldVoteCount, v))
+}
+
+// VoteCountNEQ applies the NEQ predicate on the "vote_count" field.
+func VoteCountNEQ(v uint32) predicate.Movie {
+	return predicate.Movie(sql.FieldNEQ(FieldVoteCount, v))
+}
+
+// VoteCountIn applies the In predicate on the "vote_count" field.
+func VoteCountIn(vs ...uint32) predicate.Movie {
+	return predicate.Movie(sql.FieldIn(FieldVoteCount, vs...))
+}
+
+// VoteCountNotIn applies the NotIn predicate on the "vote_count" field.
+func VoteCountNotIn(vs ...uint32) predicate.Movie {
+	return predicate.Movie(sql.FieldNotIn(FieldVoteCount, vs...))
+}
+
+// VoteCountGT applies the GT predicate on the "vote_count" field.
+func VoteCountGT(v uint32) predicate.Movie {
+	return predicate.Movie(sql.FieldGT(FieldVoteCount, v))
+}
+
+// VoteCountGTE applies the GTE predicate on the "vote_count" field.
+func VoteCountGTE(v uint32) predicate.Movie {
+	return predicate.Movie(sql.FieldGTE(FieldVoteCount, v))
+}
+
+// VoteCountLT applies the LT predicate on the "vote_count" field.
+func VoteCountLT(v uint32) predicate.Movie {
+	return predicate.Movie(sql.FieldLT(FieldVoteCount, v))
+}
+
+// VoteCountLTE applies the LTE predicate on the "vote_count" field.
+func VoteCountLTE(v uint32) predicate.Movie {
+	return predicate.Movie(sql.FieldLTE(FieldVoteCount, v))
+}
+
+// VoteCountIsNil applies the IsNil predicate on the "vote_count" field.
+func VoteCountIsNil() predicate.Movie {
+	return predicate.Movie(sql.FieldIsNull(FieldVoteCount))
+}
+
+// VoteCountNotNil applies the NotNil predicate on the "vote_count" field.
+func VoteCountNotNil() predicate.Movie {
+	return predicate.Movie(sql.FieldNotNull(FieldVoteCount))
 }
 
 // GenresIsNil applies the IsNil predicate on the "genres" field.

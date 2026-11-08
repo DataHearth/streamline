@@ -130,6 +130,11 @@ func Rating(v float64) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldRating, v))
 }
 
+// VoteCount applies equality check predicate on the "vote_count" field. It's identical to VoteCountEQ.
+func VoteCount(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEQ(FieldVoteCount, v))
+}
+
 // LastRefreshedAt applies equality check predicate on the "last_refreshed_at" field. It's identical to LastRefreshedAtEQ.
 func LastRefreshedAt(v time.Time) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldLastRefreshedAt, v))
@@ -1013,6 +1018,56 @@ func RatingIsNil() predicate.TVShow {
 // RatingNotNil applies the NotNil predicate on the "rating" field.
 func RatingNotNil() predicate.TVShow {
 	return predicate.TVShow(sql.FieldNotNull(FieldRating))
+}
+
+// VoteCountEQ applies the EQ predicate on the "vote_count" field.
+func VoteCountEQ(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEQ(FieldVoteCount, v))
+}
+
+// VoteCountNEQ applies the NEQ predicate on the "vote_count" field.
+func VoteCountNEQ(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldNEQ(FieldVoteCount, v))
+}
+
+// VoteCountIn applies the In predicate on the "vote_count" field.
+func VoteCountIn(vs ...uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldIn(FieldVoteCount, vs...))
+}
+
+// VoteCountNotIn applies the NotIn predicate on the "vote_count" field.
+func VoteCountNotIn(vs ...uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldNotIn(FieldVoteCount, vs...))
+}
+
+// VoteCountGT applies the GT predicate on the "vote_count" field.
+func VoteCountGT(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldGT(FieldVoteCount, v))
+}
+
+// VoteCountGTE applies the GTE predicate on the "vote_count" field.
+func VoteCountGTE(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldGTE(FieldVoteCount, v))
+}
+
+// VoteCountLT applies the LT predicate on the "vote_count" field.
+func VoteCountLT(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldLT(FieldVoteCount, v))
+}
+
+// VoteCountLTE applies the LTE predicate on the "vote_count" field.
+func VoteCountLTE(v uint32) predicate.TVShow {
+	return predicate.TVShow(sql.FieldLTE(FieldVoteCount, v))
+}
+
+// VoteCountIsNil applies the IsNil predicate on the "vote_count" field.
+func VoteCountIsNil() predicate.TVShow {
+	return predicate.TVShow(sql.FieldIsNull(FieldVoteCount))
+}
+
+// VoteCountNotNil applies the NotNil predicate on the "vote_count" field.
+func VoteCountNotNil() predicate.TVShow {
+	return predicate.TVShow(sql.FieldNotNull(FieldVoteCount))
 }
 
 // GenresIsNil applies the IsNil predicate on the "genres" field.

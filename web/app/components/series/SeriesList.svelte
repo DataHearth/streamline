@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatVotes } from "@lib/format";
 	import { countDownloading, countImporting, countWanted } from "@lib/nouns";
 	import { auth } from "@lib/auth.svelte";
 	import { Tv } from "@lucide/svelte";
@@ -204,7 +205,9 @@
 						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted @2xl:table-cell"
 					>
 						{#if show.rating && show.rating > 0}
-							★ {show.rating.toFixed(1)}
+							<span title={formatVotes(show.vote_count) || undefined}>
+								★ {show.rating.toFixed(1)}
+							</span>
 						{:else}
 							—
 						{/if}

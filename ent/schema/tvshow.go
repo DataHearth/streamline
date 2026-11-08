@@ -43,7 +43,12 @@ func (TVShow) Fields() []ent.Field {
 		field.String("network").Optional(),
 		field.String("creator").Optional(),
 		field.Uint16("runtime").Optional().Default(0),
+		// TVDB v4 carries no rating, so `rating` and `vote_count` are TMDB's
+		// (metadata.WithSeriesRatings), zero when TMDB has no key, does not
+		// know the show or has not been asked yet. The TMDB id they were read
+		// from is the show's `tmdb` external id.
 		field.Float("rating").Optional().Default(0),
+		field.Uint32("vote_count").Optional().Default(0),
 		field.Strings("genres").Optional(),
 		// TVDB's alternate names, every translation included: a release is as
 		// likely to carry the English or romaji title as the library's.
