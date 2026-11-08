@@ -40,10 +40,22 @@ func (ExternalID) Fields() []ent.Field {
 // Exactly one owner is set, by the writer (the Credit pattern).
 func (ExternalID) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("movie", Movie.Type).Ref("external_ids").Unique().Field("movie_id"),
-		edge.From("tv_show", TVShow.Type).Ref("external_ids").Unique().Field("tv_show_id"),
-		edge.From("artist", Artist.Type).Ref("external_ids").Unique().Field("artist_id"),
-		edge.From("album", Album.Type).Ref("external_ids").Unique().Field("album_id"),
+		edge.From("movie", Movie.Type).
+			Ref("external_ids").
+			Unique().
+			Field("movie_id"),
+		edge.From("tv_show", TVShow.Type).
+			Ref("external_ids").
+			Unique().
+			Field("tv_show_id"),
+		edge.From("artist", Artist.Type).
+			Ref("external_ids").
+			Unique().
+			Field("artist_id"),
+		edge.From("album", Album.Type).
+			Ref("external_ids").
+			Unique().
+			Field("album_id"),
 		// Hardcover maps editions, not books.
 		edge.From("book_edition", BookEdition.Type).Ref("external_ids").
 			Unique().Field("book_edition_id"),
