@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
@@ -31,6 +32,7 @@ type MovieQuery struct {
 	withMediaFiles      *MediaFileQuery
 	withEvents          *MediaEventQuery
 	withCredits         *CreditQuery
+	withExternalIds     *ExternalIDQuery
 	modifiers           []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -149,6 +151,28 @@ func (_q *MovieQuery) QueryCredits() *CreditQuery {
 			sqlgraph.From(movie.Table, movie.FieldID, selector),
 			sqlgraph.To(credit.Table, credit.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, movie.CreditsTable, movie.CreditsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryExternalIds chains the current query on the "external_ids" edge.
+func (_q *MovieQuery) QueryExternalIds() *ExternalIDQuery {
+	query := (&ExternalIDClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(movie.Table, movie.FieldID, selector),
+			sqlgraph.To(externalid.Table, externalid.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, movie.ExternalIdsTable, movie.ExternalIdsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -352,6 +376,7 @@ func (_q *MovieQuery) Clone() *MovieQuery {
 		withMediaFiles:      _q.withMediaFiles.Clone(),
 		withEvents:          _q.withEvents.Clone(),
 		withCredits:         _q.withCredits.Clone(),
+		withExternalIds:     _q.withExternalIds.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -400,6 +425,17 @@ func (_q *MovieQuery) WithCredits(opts ...func(*CreditQuery)) *MovieQuery {
 		opt(query)
 	}
 	_q.withCredits = query
+	return _q
+}
+
+// WithExternalIds tells the query-builder to eager-load the nodes that are connected to
+// the "external_ids" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MovieQuery) WithExternalIds(opts ...func(*ExternalIDQuery)) *MovieQuery {
+	query := (&ExternalIDClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withExternalIds = query
 	return _q
 }
 
@@ -481,11 +517,12 @@ func (_q *MovieQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Movie,
 	var (
 		nodes       = []*Movie{}
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withDownloadRecords != nil,
 			_q.withMediaFiles != nil,
 			_q.withEvents != nil,
 			_q.withCredits != nil,
+			_q.withExternalIds != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -534,6 +571,13 @@ func (_q *MovieQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Movie,
 		if err := _q.loadCredits(ctx, query, nodes,
 			func(n *Movie) { n.Edges.Credits = []*Credit{} },
 			func(n *Movie, e *Credit) { n.Edges.Credits = append(n.Edges.Credits, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withExternalIds; query != nil {
+		if err := _q.loadExternalIds(ctx, query, nodes,
+			func(n *Movie) { n.Edges.ExternalIds = []*ExternalID{} },
+			func(n *Movie, e *ExternalID) { n.Edges.ExternalIds = append(n.Edges.ExternalIds, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -659,6 +703,37 @@ func (_q *MovieQuery) loadCredits(ctx context.Context, query *CreditQuery, nodes
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "movie_credits" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *MovieQuery) loadExternalIds(ctx context.Context, query *ExternalIDQuery, nodes []*Movie, init func(*Movie), assign func(*Movie, *ExternalID)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Movie)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ExternalID(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(movie.ExternalIdsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.movie_external_ids
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "movie_external_ids" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "movie_external_ids" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

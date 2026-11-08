@@ -1,7 +1,6 @@
 package db
 
 import (
-	"cmp"
 	"context"
 	"fmt"
 	"log/slog"
@@ -64,16 +63,7 @@ type CreateTVShowParams struct {
 	QualityProfile string
 	Seasons        []SeasonSeed
 	FirstAired     *time.Time
-	ExternalIDs    TVShowExternalIDs
-}
-
-// TVShowExternalIDs are the other sites' ids TVDB maps the series to. Every
-// metadata write sets them as TVDB answers, zero included, so a re-identified
-// show never keeps the previous series' links.
-type TVShowExternalIDs struct {
-	TMDBID     uint32
-	IMDbID     string
-	WikidataID string
+	ExternalIDs    ExternalIDs
 }
 
 type UpdateTVShowParams struct {
@@ -100,7 +90,7 @@ type UpdateTVShowMetadataParams struct {
 	Certification string
 	Cast          []metadata.CastMember
 	FirstAired    *time.Time
-	ExternalIDs   TVShowExternalIDs
+	ExternalIDs   ExternalIDs
 }
 
 // UpdateTVShowMetadata persists refreshed provider metadata onto an existing
@@ -126,9 +116,7 @@ func (db *DB) UpdateTVShowMetadata(
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
 		SetCertification(p.Certification).
-		SetTmdbID(p.ExternalIDs.TMDBID).
-		SetImdbID(cmp.Or(p.ExternalIDs.IMDbID, p.IMDbID)).
-		SetWikidataID(p.ExternalIDs.WikidataID).
+		SetImdbID(p.IMDbID).
 		SetNillableFirstAired(p.FirstAired)
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
@@ -147,6 +135,12 @@ func (db *DB) UpdateTVShowMetadata(
 		CastOwnerSeries,
 		id,
 		p.Cast,
+	); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := replaceExternalIDs(
+		ctx, tx.Client(), CastOwnerSeries, id, p.ExternalIDs,
 	); err != nil {
 		tx.Rollback()
 		return err
@@ -348,9 +342,7 @@ func (db *DB) CreateTVShow(
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
 		SetCertification(p.Certification).
-		SetTmdbID(p.ExternalIDs.TMDBID).
-		SetImdbID(cmp.Or(p.ExternalIDs.IMDbID, p.IMDbID)).
-		SetWikidataID(p.ExternalIDs.WikidataID).
+		SetImdbID(p.IMDbID).
 		SetPosterPath(p.PosterPath).
 		SetQualityProfile(p.QualityProfile).
 		SetNillableFirstAired(p.FirstAired).
@@ -394,6 +386,12 @@ func (db *DB) CreateTVShow(
 		CastOwnerSeries,
 		show.ID,
 		p.Cast,
+	); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err := replaceExternalIDs(
+		ctx, tx.Client(), CastOwnerSeries, show.ID, p.ExternalIDs,
 	); err != nil {
 		tx.Rollback()
 		return nil, err

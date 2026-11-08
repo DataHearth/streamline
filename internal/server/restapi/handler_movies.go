@@ -200,7 +200,14 @@ func (s *Server) GetMovie(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
+	ids, err := s.store.TitleExternalIDs(ctx, db.CastOwnerMovie, m.ID)
+	if err != nil {
+		return GetMovie500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
 	result := movieToAPI(m)
+	applyMovieExternalIDs(&result, ids)
 	if len(files) > 0 {
 		apiFiles := make([]MediaFile, 0, len(files))
 		for _, f := range files {

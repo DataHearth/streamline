@@ -40,8 +40,6 @@ type Movie struct {
 	TmdbID uint32 `json:"tmdb_id,omitempty"`
 	// ImdbID holds the value of the "imdb_id" field.
 	ImdbID string `json:"imdb_id,omitempty"`
-	// WikidataID holds the value of the "wikidata_id" field.
-	WikidataID string `json:"wikidata_id,omitempty"`
 	// Certification holds the value of the "certification" field.
 	Certification string `json:"certification,omitempty"`
 	// LastSearchAt holds the value of the "last_search_at" field.
@@ -80,9 +78,11 @@ type MovieEdges struct {
 	Events []*MediaEvent `json:"events,omitempty"`
 	// Credits holds the value of the credits edge.
 	Credits []*Credit `json:"credits,omitempty"`
+	// ExternalIds holds the value of the external_ids edge.
+	ExternalIds []*ExternalID `json:"external_ids,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // DownloadRecordsOrErr returns the DownloadRecords value or an error if the edge
@@ -121,6 +121,15 @@ func (e MovieEdges) CreditsOrErr() ([]*Credit, error) {
 	return nil, &NotLoadedError{edge: "credits"}
 }
 
+// ExternalIdsOrErr returns the ExternalIds value or an error if the edge
+// was not loaded in eager-loading.
+func (e MovieEdges) ExternalIdsOrErr() ([]*ExternalID, error) {
+	if e.loadedTypes[4] {
+		return e.ExternalIds, nil
+	}
+	return nil, &NotLoadedError{edge: "external_ids"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Movie) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -134,7 +143,7 @@ func (*Movie) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case movie.FieldID, movie.FieldYear, movie.FieldRuntime, movie.FieldTmdbID, movie.FieldGrabFailures:
 			values[i] = new(sql.NullInt64)
-		case movie.FieldTitle, movie.FieldOriginalTitle, movie.FieldOverview, movie.FieldStatus, movie.FieldImdbID, movie.FieldWikidataID, movie.FieldCertification, movie.FieldFailureReason, movie.FieldQualityProfile:
+		case movie.FieldTitle, movie.FieldOriginalTitle, movie.FieldOverview, movie.FieldStatus, movie.FieldImdbID, movie.FieldCertification, movie.FieldFailureReason, movie.FieldQualityProfile:
 			values[i] = new(sql.NullString)
 		case movie.FieldCreateTime, movie.FieldUpdateTime, movie.FieldLastSearchAt, movie.FieldReleaseDate, movie.FieldDigitalReleaseDate, movie.FieldLastRefreshedAt:
 			values[i] = new(sql.NullTime)
@@ -224,12 +233,6 @@ func (_m *Movie) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field imdb_id", values[i])
 			} else if value.Valid {
 				_m.ImdbID = value.String
-			}
-		case movie.FieldWikidataID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field wikidata_id", values[i])
-			} else if value.Valid {
-				_m.WikidataID = value.String
 			}
 		case movie.FieldCertification:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -338,6 +341,11 @@ func (_m *Movie) QueryCredits() *CreditQuery {
 	return NewMovieClient(_m.config).QueryCredits(_m)
 }
 
+// QueryExternalIds queries the "external_ids" edge of the Movie entity.
+func (_m *Movie) QueryExternalIds() *ExternalIDQuery {
+	return NewMovieClient(_m.config).QueryExternalIds(_m)
+}
+
 // Update returns a builder for updating this Movie.
 // Note that you need to call Movie.Unwrap() before calling this method if this Movie
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -393,9 +401,6 @@ func (_m *Movie) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("imdb_id=")
 	builder.WriteString(_m.ImdbID)
-	builder.WriteString(", ")
-	builder.WriteString("wikidata_id=")
-	builder.WriteString(_m.WikidataID)
 	builder.WriteString(", ")
 	builder.WriteString("certification=")
 	builder.WriteString(_m.Certification)

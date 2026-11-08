@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/credit"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/season"
@@ -22,14 +23,15 @@ import (
 // TVShowQuery is the builder for querying TVShow entities.
 type TVShowQuery struct {
 	config
-	ctx         *QueryContext
-	order       []tvshow.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.TVShow
-	withSeasons *SeasonQuery
-	withEvents  *MediaEventQuery
-	withCredits *CreditQuery
-	modifiers   []func(*sql.Selector)
+	ctx             *QueryContext
+	order           []tvshow.OrderOption
+	inters          []Interceptor
+	predicates      []predicate.TVShow
+	withSeasons     *SeasonQuery
+	withEvents      *MediaEventQuery
+	withCredits     *CreditQuery
+	withExternalIds *ExternalIDQuery
+	modifiers       []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -125,6 +127,28 @@ func (_q *TVShowQuery) QueryCredits() *CreditQuery {
 			sqlgraph.From(tvshow.Table, tvshow.FieldID, selector),
 			sqlgraph.To(credit.Table, credit.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, tvshow.CreditsTable, tvshow.CreditsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryExternalIds chains the current query on the "external_ids" edge.
+func (_q *TVShowQuery) QueryExternalIds() *ExternalIDQuery {
+	query := (&ExternalIDClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tvshow.Table, tvshow.FieldID, selector),
+			sqlgraph.To(externalid.Table, externalid.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, tvshow.ExternalIdsTable, tvshow.ExternalIdsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -319,14 +343,15 @@ func (_q *TVShowQuery) Clone() *TVShowQuery {
 		return nil
 	}
 	return &TVShowQuery{
-		config:      _q.config,
-		ctx:         _q.ctx.Clone(),
-		order:       append([]tvshow.OrderOption{}, _q.order...),
-		inters:      append([]Interceptor{}, _q.inters...),
-		predicates:  append([]predicate.TVShow{}, _q.predicates...),
-		withSeasons: _q.withSeasons.Clone(),
-		withEvents:  _q.withEvents.Clone(),
-		withCredits: _q.withCredits.Clone(),
+		config:          _q.config,
+		ctx:             _q.ctx.Clone(),
+		order:           append([]tvshow.OrderOption{}, _q.order...),
+		inters:          append([]Interceptor{}, _q.inters...),
+		predicates:      append([]predicate.TVShow{}, _q.predicates...),
+		withSeasons:     _q.withSeasons.Clone(),
+		withEvents:      _q.withEvents.Clone(),
+		withCredits:     _q.withCredits.Clone(),
+		withExternalIds: _q.withExternalIds.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -364,6 +389,17 @@ func (_q *TVShowQuery) WithCredits(opts ...func(*CreditQuery)) *TVShowQuery {
 		opt(query)
 	}
 	_q.withCredits = query
+	return _q
+}
+
+// WithExternalIds tells the query-builder to eager-load the nodes that are connected to
+// the "external_ids" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TVShowQuery) WithExternalIds(opts ...func(*ExternalIDQuery)) *TVShowQuery {
+	query := (&ExternalIDClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withExternalIds = query
 	return _q
 }
 
@@ -445,10 +481,11 @@ func (_q *TVShowQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*TVSho
 	var (
 		nodes       = []*TVShow{}
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			_q.withSeasons != nil,
 			_q.withEvents != nil,
 			_q.withCredits != nil,
+			_q.withExternalIds != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -490,6 +527,13 @@ func (_q *TVShowQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*TVSho
 		if err := _q.loadCredits(ctx, query, nodes,
 			func(n *TVShow) { n.Edges.Credits = []*Credit{} },
 			func(n *TVShow, e *Credit) { n.Edges.Credits = append(n.Edges.Credits, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withExternalIds; query != nil {
+		if err := _q.loadExternalIds(ctx, query, nodes,
+			func(n *TVShow) { n.Edges.ExternalIds = []*ExternalID{} },
+			func(n *TVShow, e *ExternalID) { n.Edges.ExternalIds = append(n.Edges.ExternalIds, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -584,6 +628,37 @@ func (_q *TVShowQuery) loadCredits(ctx context.Context, query *CreditQuery, node
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "tv_show_credits" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TVShowQuery) loadExternalIds(ctx context.Context, query *ExternalIDQuery, nodes []*TVShow, init func(*TVShow), assign func(*TVShow, *ExternalID)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*TVShow)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ExternalID(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(tvshow.ExternalIdsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.tv_show_external_ids
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "tv_show_external_ids" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "tv_show_external_ids" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

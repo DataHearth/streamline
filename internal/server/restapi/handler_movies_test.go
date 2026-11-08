@@ -688,6 +688,10 @@ var _ = Describe(
 					Return(&ent.Movie{ID: movieID, Title: "Film", Year: 2020, TmdbID: 43}, nil).
 					Once()
 				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
+				app.store.EXPECT().
 					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return([]db.CastEntry{
 						{PersonID: 1, Name: "Lead", Character: "Hero"},
@@ -733,6 +737,10 @@ var _ = Describe(
 						Status: movie.StatusAvailable,
 					}, nil).
 					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
 				app.store.EXPECT().
 					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return(nil, nil).
@@ -782,6 +790,10 @@ var _ = Describe(
 						Status: movie.StatusWanted,
 					}, nil).
 					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
 				app.store.EXPECT().
 					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return(nil, nil).
@@ -838,6 +850,10 @@ var _ = Describe(
 						QualityProfile: "default",
 					}, nil).
 					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
 				app.store.EXPECT().
 					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return(nil, nil).
@@ -935,6 +951,10 @@ var _ = Describe(
 					ListMediaFilesByMovieID(mock.Anything, movieID).
 					Return(nil, nil).
 					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
 				app.store.EXPECT().
 					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return([]db.CastEntry{{

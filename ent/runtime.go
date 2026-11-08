@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/importscanbook"
@@ -383,6 +384,25 @@ func init() {
 	episodeDescTvdbID := episodeFields[9].Descriptor()
 	// episode.DefaultTvdbID holds the default value on creation for the tvdb_id field.
 	episode.DefaultTvdbID = episodeDescTvdbID.Default.(uint32)
+	externalidMixin := schema.ExternalID{}.Mixin()
+	externalidMixinFields1 := externalidMixin[1].Fields()
+	_ = externalidMixinFields1
+	externalidFields := schema.ExternalID{}.Fields()
+	_ = externalidFields
+	// externalidDescCreateTime is the schema descriptor for create_time field.
+	externalidDescCreateTime := externalidMixinFields1[0].Descriptor()
+	// externalid.DefaultCreateTime holds the default value on creation for the create_time field.
+	externalid.DefaultCreateTime = externalidDescCreateTime.Default.(func() time.Time)
+	// externalidDescUpdateTime is the schema descriptor for update_time field.
+	externalidDescUpdateTime := externalidMixinFields1[1].Descriptor()
+	// externalid.DefaultUpdateTime holds the default value on creation for the update_time field.
+	externalid.DefaultUpdateTime = externalidDescUpdateTime.Default.(func() time.Time)
+	// externalid.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	externalid.UpdateDefaultUpdateTime = externalidDescUpdateTime.UpdateDefault.(func() time.Time)
+	// externalidDescValue is the schema descriptor for value field.
+	externalidDescValue := externalidFields[1].Descriptor()
+	// externalid.ValueValidator is a validator for the "value" field. It is called by the builders before save.
+	externalid.ValueValidator = externalidDescValue.Validators[0].(func(string) error)
 	importscanMixin := schema.ImportScan{}.Mixin()
 	importscanMixinFields1 := importscanMixin[1].Fields()
 	_ = importscanMixinFields1
@@ -618,11 +638,11 @@ func init() {
 	// movie.DefaultMonitored holds the default value on creation for the monitored field.
 	movie.DefaultMonitored = movieDescMonitored.Default.(bool)
 	// movieDescGrabFailures is the schema descriptor for grab_failures field.
-	movieDescGrabFailures := movieFields[14].Descriptor()
+	movieDescGrabFailures := movieFields[13].Descriptor()
 	// movie.DefaultGrabFailures holds the default value on creation for the grab_failures field.
 	movie.DefaultGrabFailures = movieDescGrabFailures.Default.(uint8)
 	// movieDescRating is the schema descriptor for rating field.
-	movieDescRating := movieFields[17].Descriptor()
+	movieDescRating := movieFields[16].Descriptor()
 	// movie.DefaultRating holds the default value on creation for the rating field.
 	movie.DefaultRating = movieDescRating.Default.(float64)
 	musiccreditMixin := schema.MusicCredit{}.Mixin()
@@ -805,11 +825,11 @@ func init() {
 	// tvshow.DefaultMonitored holds the default value on creation for the monitored field.
 	tvshow.DefaultMonitored = tvshowDescMonitored.Default.(bool)
 	// tvshowDescRuntime is the schema descriptor for runtime field.
-	tvshowDescRuntime := tvshowFields[16].Descriptor()
+	tvshowDescRuntime := tvshowFields[14].Descriptor()
 	// tvshow.DefaultRuntime holds the default value on creation for the runtime field.
 	tvshow.DefaultRuntime = tvshowDescRuntime.Default.(uint16)
 	// tvshowDescRating is the schema descriptor for rating field.
-	tvshowDescRating := tvshowFields[17].Descriptor()
+	tvshowDescRating := tvshowFields[15].Descriptor()
 	// tvshow.DefaultRating holds the default value on creation for the rating field.
 	tvshow.DefaultRating = tvshowDescRating.Default.(float64)
 	torrentdataremovalMixin := schema.TorrentDataRemoval{}.Mixin()
