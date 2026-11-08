@@ -410,10 +410,9 @@
 	{/snippet}
 </MediaFilterSheet>
 
-<!-- md and up: three facet menus rather than a tab strip, a pill strip and two
-     forced line breaks. Each trigger is keyed and iconed — a status dot in the
-     tab's own colour, a screen for type, an eye for monitoring — so the row
-     reads "Status Continuing 9" and one line carries what used to take three.
+<!-- md and up: three facet menus on one line. Each trigger is keyed and
+     iconed — a status dot in the tab's own colour, a screen for type, an eye
+     for monitoring — so the row reads "Status Continuing 9".
      Below lg sort still collapses into the sheet the phone uses. -->
 <div
 	class="lib-toolbar sticky top-16 z-20 hidden flex-wrap items-center gap-2 bg-bg-deep/85 px-4 py-3 backdrop-blur-md md:flex md:gap-2.5 md:px-6"
@@ -731,9 +730,9 @@
 	/* ── Fit, measured against the row and not the window ─────────────────────
 	   The breakpoints are the viewport's, and this row is not: the sidebar takes
 	   248px of it from the width the sidebar expands at, so `lg` fires with about
-	   712px of row to play with. Pinning the field at `lg:w-52` there left the
-	   first line short and holed while the action group wrapped below it — the
-	   break read as arbitrary because the line it broke was not full. The row is
+	   712px of row to play with. Pinning the field at `lg:w-52` there would leave
+	   the first line short and holed while the action group wraps below it — a
+	   break that reads as arbitrary because the line it breaks is not full. The row is
 	   its own container instead. Compact, three facets and four controls make one
 	   line from 836px of row up; expanded they need 1102. */
 	.lib-toolbar {
@@ -741,8 +740,8 @@
 		container-name: libtoolbar;
 	}
 	/* The field takes the slack at every width, as its `flex-1` says: pinning it
-	   to 13rem above 1120px both holed the row and wrapped it, since flex breaks
-	   lines on the basis and select mode's "Select all N" then did not fit. */
+	   to 13rem above 1120px would both hole the row and wrap it, since flex breaks
+	   lines on the basis and select mode's "Select all N" then does not fit. */
 	@container libtoolbar (min-width: 1120px) {
 		.sort-key {
 			display: inline;
@@ -758,7 +757,7 @@
 	}
 	/* The verb spells itself out once the row can pay the 40px for it — also a
 	   container call, not a breakpoint: at 1100px of window with the sidebar out,
-	   "Add series" was the 12px that wrapped the row. */
+	   "Add series" is the 12px that wraps the row. */
 	@container libtoolbar (min-width: 900px) {
 		.add-long {
 			display: inline;

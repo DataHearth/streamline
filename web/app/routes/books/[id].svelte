@@ -258,7 +258,7 @@
 				<!-- Trial: from md, two lines — what the book follows (label, select,
 				     bookmark), then the actions (both searches and the menu). One
 				     wrapping flow in DOM order, broken by a full-width spacer from md,
-				     so a phone keeps its old shape: label over select + bookmark +
+				     so a phone keeps one shape: label over select + bookmark +
 				     menu, with the searches in the pinned bar. No "Downloading…"
 				     chip: the status pill on the cover already says it. -->
 				<div class="flex flex-wrap items-center gap-2 md:gap-x-2.5 md:gap-y-3">

@@ -160,7 +160,7 @@ export type IsActiveFn = (
 
 // The routes the Activity group reaches. Torrents and transcoding are
 // top-level routes rather than children of /activity, so a recursive
-// isActive("/activity") no longer covers them — the group's own highlight has
+// isActive("/activity") does not cover them — the group's own highlight has
 // to name all three.
 export const ACTIVITY_ROUTES = ["/activity", "/torrents", "/transcoding"];
 

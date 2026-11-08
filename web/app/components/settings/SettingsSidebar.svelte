@@ -8,12 +8,12 @@
 
 	// Desktop only, from lg. Below that the section list is a page of its own
 	// (SettingsIndex at /settings) rather than a column competing with the
-	// content for the same width — at 834 the old md sidebar left the content
-	// 430px, which is less than a phone in landscape gets.
+	// content for the same width — at 834 a sidebar from md would leave the
+	// content 430px, which is less than a phone in landscape gets.
 	//
-	// The <Select> jumper this used to render below md is gone with it: it
-	// flattened five groups and eleven destinations into one native menu, and
-	// the index page shows the same structure the sidebar does.
+	// Nor is there a <Select> jumper below md: it would flatten five groups and
+	// eleven destinations into one native menu, and the index page shows the
+	// same structure the sidebar does.
 	type IsActiveFn = (path: string) => boolean;
 	let isActiveFn = $state<IsActiveFn>(() => false);
 	onMount(() => routifyIsActive.subscribe((fn) => (isActiveFn = fn)));

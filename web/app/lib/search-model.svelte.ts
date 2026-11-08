@@ -292,9 +292,9 @@ export function createSearchModel(
 	opts: { compact?: boolean } = {},
 ) {
 	// The palette sits in the global layout, so this model is constructed on
-	// every route. Ungated, each mount pulled the whole movie and series
+	// every route. Ungated, each mount would pull the whole movie and series
 	// libraries for a box that stays closed until the user types — on a
-	// 23-show library that was 2.8 MB and ~2.6s of the /movies page load.
+	// 23-show library that is 2.8 MB and ~2.6s of the /movies page load.
 	//
 	// Matching is the server's, same as the library lists: it searches the
 	// original title too and folds accents, neither of which a filter over

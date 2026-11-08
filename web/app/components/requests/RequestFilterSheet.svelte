@@ -16,9 +16,9 @@
 	import type { RequestCounts } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// Everything the line above can no longer afford to keep on screen: the four
-	// status tabs that overflowed their box at 358px, and the media-type group
-	// that could only wrap onto a second row beneath them.
+	// Everything the line above can't afford to keep on screen: the four
+	// status tabs that overflow their box at 358px, and the media-type group
+	// that can only wrap onto a second row beneath them.
 	let {
 		open,
 		onClose,

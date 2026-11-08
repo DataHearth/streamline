@@ -2,10 +2,10 @@
 // stops being the page title and becomes the selection — close, count, select
 // all — the way Gmail, Photos and iOS Mail turn their app bar over to it.
 //
-// It used to be a band of its own pinned under the top bar, which pushed the
-// list down as selecting began and sat between the rounded cards as a strip
-// that belonged to neither. SelectionTopBar claims this while it is mounted
-// (the pages still place it where their old band was); TopBar renders it.
+// A band of its own pinned under the top bar would push the list down as
+// selecting begins and sit between the rounded cards as a strip that belongs
+// to neither. SelectionTopBar claims this while it is mounted (pages mount it
+// wherever a selection is live); TopBar renders it.
 
 import type { Noun } from "./nouns";
 

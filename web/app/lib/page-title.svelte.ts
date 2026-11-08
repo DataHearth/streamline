@@ -4,7 +4,7 @@
 // page mounting before the previous one unmounts keeps what it set.
 //
 // A claim names the path it is for, and the bar only reads it back on that
-// path. A claim made on /books was seen outliving the page and naming
+// path. Otherwise a claim made on /books can outlive the page and name
 // /calendar "Books" after a client-side navigation, and location.pathname
 // cannot stand in for the path: the next page mounts, and claims, before the
 // URL changes.

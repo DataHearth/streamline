@@ -139,8 +139,8 @@
 	}
 </script>
 
-<!-- md and up only: below that the phone renders DotGrid, so the small-screen
-     variants this used to carry are gone. -->
+<!-- md and up only: below that the phone renders DotGrid, so this carries no
+     small-screen variants. -->
 <div
 	class="flex flex-col rounded-lg border border-border bg-bg-elevated p-2 lg:h-full lg:min-h-0"
 >

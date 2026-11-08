@@ -514,8 +514,8 @@ export function releaseGroups(releases: Release[]): ReleaseGroup[] {
 
 // The release an artist page opens on, read in the list's own order (albums
 // first): the newest monitored one with something missing, else the newest
-// held, else the newest that is out. The API's order mixes every type, and an
-// unmonitored single was opened over the albums the list starts with.
+// held, else the newest that is out. The API's order mixes every type, and
+// would open an unmonitored single over the albums the list starts with.
 export function defaultRelease(releases: Release[]): Release | undefined {
 	const listed = releaseGroups(releases).flatMap((g) => g.releases);
 	return (

@@ -36,8 +36,8 @@
 	let offset = $state(0);
 	let sort = $state<SortKey>("created");
 	let order = $state<SortDir>("desc");
-	// Touch: the sort control was the table header, so it moves into a sheet
-	// alongside the role filter. See UserFilterSheet.
+	// Touch: the sort control is the table header, which is lg-only, so it is a
+	// sheet alongside the role filter. See UserFilterSheet.
 	let sheetOpen = $state(false);
 
 	const qc = useQueryClient();

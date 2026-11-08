@@ -53,7 +53,7 @@
 
 <!-- Below md the four labels are single unbreakable words that overflow a 358px
      card, so the phone gets dots plus the current step's label and sub-label —
-     the latter being exactly what the old strip hid at this width. -->
+     the latter being exactly what a four-label strip hides at this width. -->
 <div
 	class="flex items-center gap-3 rounded-lg border border-border bg-bg-elevated px-4 py-3 md:hidden"
 	aria-label={i18n.imports_progress()}

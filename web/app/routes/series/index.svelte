@@ -103,7 +103,7 @@
 	let order = $state<SeriesOrder>(initial.order);
 	let view = $state<View>(initial.view);
 	// debouncedQuery is what the server query keys on. Typing must not fire a
-	// request per keystroke now that filtering is server-side.
+	// request per keystroke, since filtering is server-side.
 	let debouncedQuery = $state(initial.query);
 	$effect(() => {
 		const q = query;
@@ -166,9 +166,9 @@
 		// Routify mounts the incoming route before it updates window.location, so
 		// on a navigation *into* this page the first flush still sees the outgoing
 		// URL. Writing then would stamp this page's (default, empty) filters onto
-		// the previous route's path and cancel the navigation — which is exactly
-		// what a detail page's back link hit: /series/1?tab=episodes became
-		// /series/1 and never reached the list.
+		// the previous route's path and cancel the navigation — a detail page's
+		// back link would turn /series/1?tab=episodes into /series/1 and never
+		// reach the list.
 		if (window.location.pathname !== "/series") return;
 		savePref(SERIES_SEARCH, search);
 
@@ -300,9 +300,9 @@
 	);
 	let libraryEmpty = $derived(!filtering && libraryTotal === 0);
 
-	// Appending the next page as the sentinel comes into view replaces the old
-	// IncrementalList: a page is 50 cards, which mounts without blocking, and
-	// there is no longer a whole library sitting in memory to slice.
+	// The next page is appended as the sentinel comes into view: a page is 50
+	// cards, which mounts without blocking, and there is no whole library
+	// sitting in memory to slice.
 	let pageSentinel = $state<HTMLDivElement | null>(null);
 	$effect(() => {
 		const el = pageSentinel;

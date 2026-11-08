@@ -427,7 +427,7 @@
 {/snippet}
 
 {#snippet kv(label: string, value: string)}
-	<!-- grid-cols-[160px_1fr] was 45% of a 358px content width, leaving 182px for
+	<!-- grid-cols-[160px_1fr] is 45% of a 358px content width, leaving 182px for
 	     values like `go1.24.1 linux/amd64` or a commit sha. Below sm the label
 	     goes above the value and the value gets the whole line. -->
 	<div class="px-5 py-3 sm:grid sm:grid-cols-[160px_1fr] sm:items-center sm:gap-4">

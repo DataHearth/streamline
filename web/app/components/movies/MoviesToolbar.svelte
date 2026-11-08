@@ -573,8 +573,8 @@
 			</button>
 		</div>
 
-		<!-- Selection is a mode, not a filter, so it gets one icon rather than the
-		     old labelled pair — and only in grid view, where the cards' own
+		<!-- Selection is a mode, not a filter, so it gets one icon rather than a
+		     labelled pair — and only in grid view, where the cards' own
 		     checkboxes are hidden until hover. Select all joins it whenever the mode is
 		     on, at every width from md up: the bulk bar carries one too, but that bar only exists after
 		     something has been picked, which left the empty selection with no way to
@@ -637,21 +637,21 @@
 	/* ── Fit, measured against the row and not the window ─────────────────────
 	   The breakpoints are the viewport's, and this row is not: the sidebar takes
 	   248px of it from the width the sidebar expands at, so `lg` fires with about
-	   712px of row to play with. Pinning the field at `lg:w-60` there left the
-	   first line 240px of field and a 330px hole while the action group wrapped
-	   below it — the break read as arbitrary because the line it broke was not
-	   full. The row is its own container instead, so the three things that decide
+	   712px of row to play with. Pinning the field at `lg:w-60` there would leave
+	   the first line 240px of field and a 330px hole while the action group
+	   wraps below it — a break that reads as arbitrary because the line it breaks
+	   is not full. The row is its own container instead, so the three things that decide
 	   whether one line fits answer to the space they are actually in. */
 	.lib-toolbar {
 		container-type: inline-size;
 		container-name: libtoolbar;
 	}
 	/* The field takes the slack at every width — the `flex-1` it is marked with,
-	   no container rule of its own. It was pinned to 15rem from 990px up, which
-	   left a 185px hole between it and the action group, and pinned it wrapped:
-	   flex breaks lines on an item's basis, before any shrinking, so select
-	   mode's extra "Select all N" pushed the whole group onto a second line and
-	   the grid below it jumped down. A zero basis can do neither. */
+	   no container rule of its own. Pinned to 15rem from 990px up it would leave
+	   a 185px hole between it and the action group, and pinned it wraps: flex
+	   breaks lines on an item's basis, before any shrinking, so select mode's
+	   extra "Select all N" would push the whole group onto a second line and
+	   the grid below it down. A zero basis can do neither. */
 	@container libtoolbar (min-width: 990px) {
 		.sort-key {
 			display: inline;
@@ -667,7 +667,7 @@
 	}
 	/* The verb spells itself out once the row can pay the 40px for it — also a
 	   container call, not a breakpoint: at 1100px of window with the sidebar out,
-	   "Add movie" was what pushed the row over. */
+	   "Add movie" is what pushes the row over. */
 	@container libtoolbar (min-width: 900px) {
 		.add-long {
 			display: inline;

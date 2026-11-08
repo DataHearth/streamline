@@ -153,7 +153,7 @@
 	const navCounts = navCountsQuery();
 
 	// One pill per row, not one per status: four queue dots and three torrent
-	// dots left no room for the label they were annotating. The per-status
+	// dots leave no room for the label they annotate. The per-status
 	// breakdown lives on the page itself.
 	let queuePills = $derived<NavDot[]>(
 		[
@@ -172,8 +172,8 @@
 				key: "torrents",
 				label: i18n.status_downloading(),
 				// Only what is moving. Seeding and stalled are on the page's own
-				// filter row; a nav row that counted them said 5 when one torrent was
-				// actually fetching.
+				// filter row; a nav row that counted them would say 5 when one torrent
+				// is actually fetching.
 				count: torrentCounts.counts.downloading ?? 0,
 				dot: "downloading",
 			},

@@ -1,6 +1,6 @@
 // What the touch layouts of Queue & History and Torrents share: how the ring
 // reads a status, the third line each view puts under a title, and the sort the
-// torrent table's column headers used to own.
+// torrent table's column headers own from md.
 //
 // The ring answers two questions at once — how far along, and in what state.
 // Some states make a percentage a lie: importing sits at 100% but isn't done, a
@@ -369,8 +369,8 @@ export function sortTorrents(
 }
 
 // The sheet's chips, each pinning both key and the order that reads best for
-// it — the column headers are gone below md, and with them the second tap that
-// used to flip direction.
+// it — there are no column headers below md, and so no second tap to flip
+// direction.
 export const TORRENT_SORT_CHIPS: {
 	key: string;
 	label: string;

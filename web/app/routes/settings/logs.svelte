@@ -21,8 +21,8 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { INPUT_CLASS } from "@lib/form";
 
-	// The application and HTTP access logs, out of General: they were most of
-	// that page's editable surface, and the snapshot above them is what an
+	// The application and HTTP access logs, apart from General: they would be
+	// most of that page's editable surface, and the snapshot above them is what an
 	// operator opens General for. Same endpoint, same per-control saves —
 	// telemetry and event retention stay on General.
 	markConfigForm();

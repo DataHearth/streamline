@@ -18,10 +18,10 @@
 
 <!--
   This state already knows what it is doing and how far along it is, so it
-  narrates rather than spins. The 48px LoaderCircle that used to sit above the
-  bar was the second moving thing in a state that has real progress to show —
-  the bar carries it now, indeterminate while the scan is still walking the
-  tree and determinate once it knows the file count.
+  narrates rather than spins. A LoaderCircle above the bar would be a second
+  moving thing in a state that has real progress to show — the bar carries
+  it, indeterminate while the scan is still walking the tree and determinate
+  once it knows the file count.
 -->
 <div class="flex w-full flex-col items-center gap-4 text-center" role="status" aria-live="polite">
 	<div class="space-y-1">

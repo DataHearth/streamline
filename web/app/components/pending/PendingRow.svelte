@@ -88,8 +88,8 @@
 			// The record links one anchor episode, which for a pack is a handle
 			// and not what the torrent holds — naming it read as a proposal to
 			// import that one episode. The scope the preview reports wins when
-			// there is one, so a record identified before the anchor was fixed
-			// is relabelled by the same rule, with nothing to migrate.
+			// there is one, so every record is labelled by the same rule
+			// whichever episode it is anchored on.
 			// Narrowed by value rather than by length: noUncheckedIndexedAccess
 			// types packSeasons[0] as possibly undefined however the length was
 			// tested, and a `?? 0` fallback would render a "S00" that cannot

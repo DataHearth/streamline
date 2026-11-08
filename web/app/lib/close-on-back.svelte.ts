@@ -6,10 +6,10 @@ import { activeRoute } from "@roxi/routify";
 //
 // Back: Chromium's CloseWatcher hands the system Back button and gesture to
 // the topmost open watcher, so nested layers close one at a time and nothing
-// touches history. A layer faked into history instead had to slip past
+// touches history. A layer faked into history instead would have to slip past
 // Routify's patched pushState, and every list page's replaceState of its own
-// query rewrote the faked entry, so Back reverted the filters picked in the
-// sheet. Where CloseWatcher is missing (Safari, Firefox) Back stays a page
+// query would rewrite the faked entry, so Back would revert the filters picked
+// in the sheet. Where CloseWatcher is missing (Safari, Firefox) Back stays a page
 // navigation, which the second rule turns into a close.
 //
 // Page change: a layer is closed as soon as the route's path moves off the one

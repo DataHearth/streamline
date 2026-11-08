@@ -108,7 +108,7 @@
 <style>
 	/* Touch layouts have no pointer to grab a bar with, and a bar that appears
 	   the moment content overflows steals width from the text under it — the
-	   add sheet's synopsis reflowing mid-drag was the visible case. Hide the
+	   add sheet's synopsis reflowing mid-drag is the visible case. Hide the
 	   bars below lg; scrolling itself is untouched. */
 	@media (max-width: 1023px) {
 		:global(*) {

@@ -21,7 +21,7 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { NOUN_TITLE, type Noun } from "@lib/nouns";
 
-	// Everything the library toolbars can no longer afford to keep on screen at
+	// Everything the library toolbars can't afford to keep on screen at
 	// phone width: the filter query, sort, view and the way into
 	// selection. One sheet, one trip.
 	let {

@@ -4,9 +4,9 @@
 	import { createSettingsDesktop } from "@lib/viewport.svelte";
 	import SettingsIndex from "@components/settings/SettingsIndex.svelte";
 
-	// /settings is two things now. From lg the sidebar owns the section list, so
+	// /settings is two things. From lg the sidebar owns the section list, so
 	// landing here with no section chosen is meaningless and it redirects to
-	// General as before. Below lg there is no sidebar and this IS the navigation.
+	// General. Below lg there is no sidebar and this IS the navigation.
 	//
 	// The redirect waits for the media query to resolve — firing it on the
 	// server-default (false) would bounce every phone straight to General and

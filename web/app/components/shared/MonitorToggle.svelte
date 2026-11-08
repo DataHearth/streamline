@@ -15,10 +15,10 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The one bookmark: whether a movie, a show, a season, an episode, an
-	// artist, an album, a book or a book series is monitored. Every placement
-	// used to hand-roll its own button, and they drifted — some disabled while
-	// saving and some did not, the hero ones disagreed on the "on" look, and a
-	// few had a title but no accessible name. The look is chosen by placement
+	// artist, an album, a book or a book series is monitored. One component for
+	// every placement, since hand-rolled buttons drift — some disable while
+	// saving and some do not, the hero ones disagree on the "on" look, and a
+	// few have a title but no accessible name. The look is chosen by placement
 	// (variant + size), never by media type.
 	type Props = {
 		monitored: boolean;

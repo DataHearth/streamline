@@ -23,7 +23,7 @@
 		numeric?: boolean;
 		right?: boolean;
 		// The address absorbs the leftover width and truncates; everything else holds
-		// its content. Client drops out on a narrow sheet — it was squeezing the two
+		// its content. Client drops out on a narrow sheet — it squeezes the two
 		// rate columns, and a clipped "1.2 MB…" is worth less than the peer's name.
 		grow?: boolean;
 		hide?: string;
@@ -121,7 +121,7 @@
 						{p.client || "—"}
 					</td>
 					<!-- whitespace-nowrap: the rate and its unit are one value, and a narrow
-					     column was breaking "1.2 MB/s" across two lines. -->
+					     column breaks "1.2 MB/s" across two lines. -->
 					<td
 						class="w-px whitespace-nowrap px-2 py-2 text-right font-mono text-xs tabular-nums"
 					>

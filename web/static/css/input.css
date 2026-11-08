@@ -783,17 +783,16 @@ textarea:read-only:focus-visible {
 
 /* ------------------------------------------------------------------ */
 /* Small-control floor below lg.                                       */
-/* The responsive audit's warn families were all one thing: primitives */
-/* drawn at desktop density (h-8 discs, h-9 fields and toolbar         */
-/* buttons, h-[30px] view switches, px-3.5/py-2 primary buttons,       */
-/* py-1.5 filter tabs) reaching a thumb 6-14px short of 44. Rather     */
-/* than 200 per-call-site breakpoints, the floor is stated once here   */
-/* and keyed on the utility the primitive already carries, so the      */
+/* Primitives drawn at desktop density (h-8 discs, h-9 fields and      */
+/* toolbar buttons, h-[30px] view switches, px-3.5/py-2 primary        */
+/* buttons, py-1.5 filter tabs) reach a thumb 6-14px short of 44.      */
+/* Rather than 200 per-call-site breakpoints, the floor is stated once */
+/* here and keyed on the utility the primitive already carries, so the */
 /* desktop drawing is untouched and only the reachable box below lg    */
 /* changes. Square icon buttons get the same floor on the cross axis.  */
 /*                                                                     */
-/* `h-10` is deliberately absent: the 40px ceiling group was grown to  */
-/* 40 on purpose, and an invisible 44 there overlaps its neighbour.    */
+/* `h-10` is deliberately absent: the 40px ceiling group is 40 on      */
+/* purpose, and an invisible 44 there overlaps its neighbour.          */
 /* ------------------------------------------------------------------ */
 @media (max-width: 1023px) {
 	button[class~="h-8"],

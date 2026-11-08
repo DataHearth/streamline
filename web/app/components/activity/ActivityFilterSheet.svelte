@@ -9,9 +9,9 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Everything the activity toolbars can't afford to keep on screen below lg:
-	// the release filter, the sort the torrent table's headers used to own, and
+	// the release filter, the sort the torrent table's headers own from md, and
 	// Clear completed. The status set is not here — the toolbar keeps those
-	// pills on screen at every width, so repeating them was two of the same
+	// pills on screen at every width, so repeating them would be two of the same
 	// control.
 	let {
 		open,
