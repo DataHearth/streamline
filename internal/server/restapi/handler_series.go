@@ -81,7 +81,11 @@ func (s *Server) ListSeries(
 	items := make([]TVShow, 0, len(rows))
 	for _, r := range rows {
 		item := tvShowListToAPI(r, counts[r.ID], progress[r.ID])
-		item.ExternalIds = toExternalIDs(external[r.ID])
+		if external != nil {
+			item.ExternalIds = toExternalIDs(
+				withOwnID(external[r.ID], metadata.SourceTVDB, r.TvdbID),
+			)
+		}
 		items = append(items, item)
 	}
 	return ListSeries200JSONResponse{
@@ -372,7 +376,7 @@ func (s *Server) GetSeries(
 		}, nil
 	}
 	result := tvShowToAPI(show)
-	result.ExternalIds = toExternalIDs(ids)
+	result.ExternalIds = toExternalIDs(withOwnID(ids, metadata.SourceTVDB, show.TvdbID))
 	if len(credits) > 0 {
 		apiCast := libraryCastToAPI(credits)
 		result.Cast = &apiCast

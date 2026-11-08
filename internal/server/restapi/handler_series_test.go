@@ -151,9 +151,11 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 
 			with := get("/api/v1/series?with_external_ids=true")
 			Expect(with.Items).To(HaveLen(2))
-			Expect(*with.Items[0].ExternalIDs).To(Equal(map[string]string{"imdb": "tt0903747"}))
-			// A show with none leaves the field out rather than sending {}.
-			Expect(with.Items[1].ExternalIDs).To(BeNil())
+			Expect(*with.Items[0].ExternalIDs).To(Equal(map[string]string{
+				"tvdb": "9", "imdb": "tt0903747",
+			}))
+			// A show with no other id still carries its own.
+			Expect(*with.Items[1].ExternalIDs).To(Equal(map[string]string{"tvdb": "10"}))
 		})
 
 		It("500s when the service errors", func() {
@@ -294,9 +296,10 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			}
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 			Expect(body.TvdbID).To(Equal(uint32(81189)))
-			// The provider's own id stays tvdb_id; the map holds the others.
+			// The show's own id stays tvdb_id, and the map repeats it beside
+			// the others.
 			Expect(body.ExternalIDs).To(Equal(map[string]string{
-				"tmdb": "1396", "imdb": "tt0903747", "wikidata": "Q1079",
+				"tvdb": "81189", "tmdb": "1396", "imdb": "tt0903747", "wikidata": "Q1079",
 			}))
 		})
 

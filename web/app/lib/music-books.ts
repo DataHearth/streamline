@@ -231,6 +231,8 @@ export type Book = {
 	series?: { id: number; title: string; number: number };
 	// Whether the ebook can be emailed to the caller's device, and why not.
 	ebook_send?: { ok: boolean; reason?: string };
+	// Its Hardcover id; editions carry their own isbn_13 and asin.
+	external_ids?: ExternalIds;
 };
 export type SeriesSendPlan = {
 	emails: number;
@@ -253,6 +255,7 @@ export type BookSeries = {
 	hardcover_id?: number;
 	// The hardcover.app/series path segment: Hardcover links a series by slug only.
 	hardcover_slug?: string;
+	external_ids?: ExternalIds;
 	// Book ids of the first hydrated volumes, at most three: the fanned cover.
 	cover_ids: number[];
 	rating?: number;
