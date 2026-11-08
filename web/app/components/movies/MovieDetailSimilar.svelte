@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link } from "@lib/routes";
 	import { auth } from "@lib/auth.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Film, ChevronLeft, ChevronRight } from "@lucide/svelte";
@@ -166,7 +167,7 @@
 
 				{#if localId !== undefined}
 					<a
-						href="/movies/{localId}"
+						href={link.movie(localId)}
 						class="snap-start group relative block overflow-hidden rounded-lg ring-1 ring-border transition duration-200 hover:ring-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent motion-reduce:transition-none"
 						title={i18n.movies_in_library_open()}
 					>

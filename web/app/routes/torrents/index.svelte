@@ -243,7 +243,11 @@
 			: (torrentRows.find((t) => t.hash === swipeRemoveHash) ?? null),
 	);
 	let sortChipKey = $derived(torrentSortChipKey(sort, order));
+	// Everything a reset clears, which the sheet counts. The toolbar's magnifier
+	// counts only what is behind it — the search: the status chips are in the
+	// open, and lighting it for one of them pointed at the wrong control.
 	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0));
+	let hiddenFilters = $derived(search.trim() ? 1 : 0);
 	let selectedTorrent = $derived(
 		torrentItems.find((t) => t.hash === selectedHash) ?? null,
 	);
@@ -520,7 +524,7 @@
 			view="torrents"
 			{statusFilter}
 			{search}
-			{activeFilters}
+			activeFilters={hiddenFilters}
 			onOpenFilters={() => (filtersOpen = true)}
 			onStatusFilterChange={(s) => (statusFilter = s)}
 			onSearchChange={(q) => (search = q)}

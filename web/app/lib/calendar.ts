@@ -11,6 +11,7 @@ import type {
 } from "./types";
 import { getLocale } from "./paraglide/runtime.js";
 import { m as i18n } from "./paraglide/messages.js";
+import { link } from "./routes";
 
 export type CalendarKind = "movie" | "episode" | "album" | "book";
 
@@ -87,7 +88,7 @@ export function toCalendarEvents(movies: UpcomingMovie[]): CalendarEvent[] {
 				? i18n.calendar_theatrical_release()
 				: i18n.calendar_digital_release(),
 		poster: posterUrl({ id: m.id }),
-		href: `/movies/${m.id}`,
+		href: link.movie(m.id),
 		date: new Date(m.digital_release_date),
 		status: "wanted",
 	}));
@@ -108,7 +109,7 @@ export function episodesToCalendarEvents(
 		time: airTime(e.air_date),
 		detail: e.title,
 		poster: tvPosterUrl(e.series_id),
-		href: `/series/${e.series_id}`,
+		href: link.season(e.series_id, e.season),
 		date: new Date(e.air_date),
 		status: e.status,
 	}));
@@ -130,7 +131,7 @@ export function albumsToCalendarEvents(albums: UpcomingAlbum[]): CalendarEvent[]
 		detail: releaseTypeLabel(a.type),
 		poster: albumPosterUrl(a.id),
 		square: true,
-		href: `/music/${a.artist_id}?release=${a.id}`,
+		href: link.album(a.artist_id, a.id),
 		date: parseDay(a.release_date),
 		status: a.status,
 	}));
@@ -148,7 +149,7 @@ export function booksToCalendarEvents(books: UpcomingBook[]): CalendarEvent[] {
 				: i18n.calendar_book_in_series({ series: b.series_title ?? "", n: b.position })
 			: b.series_title,
 		poster: bookPosterUrl(b.id),
-		href: b.series_id ? `/books/series/${b.series_id}` : `/books/${b.id}`,
+		href: b.series_id ? link.bookSeries(b.series_id) : link.book(b.id),
 		date: parseDay(b.release_date),
 		status: b.status,
 	}));

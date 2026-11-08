@@ -12,6 +12,7 @@ import { formatBytes, formatEta } from "./format";
 import { formatRelative } from "./dates";
 import type { TranscodeJob, TranscodeStatus } from "./types";
 import { m as i18n } from "./paraglide/messages.js";
+import { link, targetHref } from "./routes";
 
 // Every job status has a StatusKind of its own, aliased onto an existing
 // --status-* hue in tokens.css. Mapping onto the borrowed kinds directly would
@@ -40,11 +41,11 @@ export function basename(path: string): string {
 	return i === -1 ? path : path.slice(i + 1);
 }
 
-// A job is always about a library item, so the detail offers a way back to it.
-// Episodes resolve to their show — there is no per-episode route.
+// A job is always about a library item, so the detail offers a way back to it:
+// a movie, or an episode's sheet on its show.
 export function jobHref(j: TranscodeJob): string | null {
-	if (j.movie_id) return `/movies/${j.movie_id}`;
-	if (j.series_id) return `/series/${j.series_id}`;
+	if (j.movie_id) return link.movie(j.movie_id);
+	if (j.series_id) return targetHref({ kind: "episode", seriesId: j.series_id, episodeId: j.episode_id }) ?? null;
 	return null;
 }
 

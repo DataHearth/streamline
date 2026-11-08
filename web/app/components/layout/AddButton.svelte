@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ROUTE } from "@lib/routes";
 	import { onMount } from "svelte";
 	import { BookOpen, Film, FolderInput, Music, Plus, Tv } from "@lucide/svelte";
 	import { activeRoute } from "@roxi/routify";
@@ -24,7 +25,7 @@
 	// have no audience there. Requests is the reverse: it is where a member or a
 	// request_only member goes to ask for something, while for an admin it is a
 	// queue of other people's asks and the work there is deciding them.
-	const OPEN_ROUTES = ["/", "/movies", "/series", "/music", "/books"];
+	const OPEN_ROUTES = ["/", ROUTE.movies, ROUTE.shows, ROUTE.music, ROUTE.books];
 
 	let pathname = $state(
 		typeof window !== "undefined" ? window.location.pathname : "/",

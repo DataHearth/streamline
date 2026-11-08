@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link } from "@lib/routes";
 	import { onMount } from "svelte";
 	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import { activeRoute } from "@roxi/routify";
@@ -79,11 +80,23 @@
 			if (!r) return;
 			const [path = "", search] = (r.url ?? "").split("?");
 			const next = /^\/music\/(\d+)$/.exec(path)?.[1];
-			if (!next || next === id) return;
+			if (!next) return;
+			const rel = Number(new URLSearchParams(search ?? "").get("release")) || null;
+			if (next === id) {
+				// A link to one of this artist's releases from the page itself —
+				// an album event on the History tab (DetailHistory's part link).
+				// select() writes ?release= as well, and that re-emission names
+				// the release already selected, so it changes nothing.
+				if (rel !== null && rel !== selectedId) {
+					selectedId = rel;
+					openId = rel;
+					tab = "discography";
+				}
+				return;
+			}
 			id = next;
 			// The route component is reused from artist to artist.
 			manualOpen = false;
-			const rel = Number(new URLSearchParams(search ?? "").get("release")) || null;
 			selectedId = rel;
 			openId = rel;
 			// A tile that named a release came for its tracks; a bare artist link
@@ -153,8 +166,8 @@
 
 	function select(r: Release) {
 		selectedId = r.id;
-		if (typeof window !== "undefined" && window.location.pathname === `/music/${id}`)
-			window.history.replaceState(null, "", `/music/${id}?release=${r.id}`);
+		if (typeof window !== "undefined" && window.location.pathname === link.artist(Number(id)))
+			window.history.replaceState(null, "", link.album(Number(id), r.id));
 	}
 
 	const MONITOR: { key: ArtistMonitor; label: string }[] = [

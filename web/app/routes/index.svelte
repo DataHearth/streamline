@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { href, link, ROUTE } from "@lib/routes";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api, apiAllPages, type Paginated } from "@lib/api";
 	import { SILENT } from "@lib/query";
@@ -153,7 +154,7 @@
 					count: held.length,
 					label: word(held.length, i18n.dash_needs_held_one, i18n.dash_needs_held_other),
 					detail: held.map(entryHeading).join(" · "),
-					href: "/activity",
+					href: ROUTE.activity,
 					token: "held",
 				});
 		}
@@ -168,7 +169,7 @@
 					const n = pending.filter((r) => KIND_MEDIA[key].includes(r.media_type)).length;
 					return n ? [`${label} ${n}`] : [];
 				}).join(" · "),
-				href: "/requests",
+				href: ROUTE.requests,
 				token: "wanted",
 			});
 		if (auth.isAdmin) {
@@ -179,7 +180,7 @@
 					count: scans.length,
 					label: word(scans.length, i18n.dash_needs_imports_one, i18n.dash_needs_imports_other),
 					detail: scans.map((s) => s.source_path).join(" · "),
-					href: scans.length === 1 && scans[0] ? `/imports/${scans[0].id}` : "/imports",
+					href: scans.length === 1 && scans[0] ? link.importScan(scans[0].id) : ROUTE.imports,
 					token: "wanted",
 				});
 		}
@@ -190,7 +191,7 @@
 				count: failed.length,
 				label: word(failed.length, i18n.dash_needs_failed_one, i18n.dash_needs_failed_other),
 				detail: failed.map((m) => m.title).join(" · "),
-				href: "/movies?status=failed",
+				href: href(ROUTE.movies, {}, { status: "failed" }),
 				token: "failed",
 			});
 		return out;

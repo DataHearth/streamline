@@ -15,6 +15,7 @@ import { fold } from "./text";
 import { volumeLabel } from "./music-books";
 import { NOUN_ALBUM } from "./nouns";
 import type { HistoryEntry, HoldReason, QueueEntry, Torrent } from "./types";
+import { link, targetHref, type MediaTarget } from "./routes";
 import { m as i18n } from "./paraglide/messages.js";
 
 const episodeTokenRe = /S\d{1,2}E\d{1,2}/i;
@@ -62,45 +63,62 @@ export function entryRelease(item: QueueEntry | HistoryEntry): string {
 	return item.title;
 }
 
-// The page of the title a download is for, with the events feed's targets
-// (eventSubject): an album opens on its artist with the release selected, an
-// episode or season on its show. Undefined when the record names nothing.
-export function entryHref(item: QueueEntry | HistoryEntry): string | undefined {
-	return mediaHref(item);
-}
-
-export function mediaHref(m: {
-	movie?: { id: number };
-	episode?: { series_id?: number };
-	album?: { id: number; artist_id: number };
-	artist?: { id: number };
-	book?: { id: number };
-}): string | undefined {
-	if (m.album) return m.album.artist_id ? `/music/${m.album.artist_id}?release=${m.album.id}` : undefined;
-	if (m.artist) return `/music/${m.artist.id}`;
-	if (m.book) return `/books/${m.book.id}`;
-	if (m.episode) return m.episode.series_id ? `/series/${m.episode.series_id}` : undefined;
+// What a download is for, as one MediaTarget: an album opens on its artist
+// with the release selected, an episode on its show with its sheet open, a
+// season pack on that season. Undefined when the record names nothing.
+export function entryTarget(item: QueueEntry | HistoryEntry): MediaTarget | undefined {
+	if (item.album) return item.album.artist_id ? { kind: "album", id: item.album.id, artistId: item.album.artist_id } : undefined;
+	if (item.artist) return { kind: "artist", id: item.artist.id };
+	if (item.book) return { kind: "book", id: item.book.id };
+	const ep = item.episode;
+	if (ep) {
+		if (!ep.series_id) return undefined;
+		// A season pack is filed under its season's first episode, which is not
+		// what it is for. A queue entry says how many episodes it covers; a
+		// history entry has only its name, read the way entryHeading reads it —
+		// on the name alone, an episode named by absolute number or air date
+		// (anime, a daily show) read as a pack and opened the whole season.
+		const ids = "episode_ids" in item ? item.episode_ids : undefined;
+		const pack = ids && ids.length > 0 ? ids.length > 1 : !episodeTokenRe.test(item.title);
+		if (pack) return { kind: "season", seriesId: ep.series_id, season: ep.season };
+		return { kind: "episode", seriesId: ep.series_id, season: ep.season, episodeId: ep.episode_id };
+	}
 	// Every other record carries an empty placeholder movie (id 0).
-	if (m.movie?.id) return `/movies/${m.movie.id}`;
+	if (item.movie?.id) return { kind: "movie", id: item.movie.id };
 	return undefined;
 }
 
-// The page of the title a tracked torrent is for.
-export function torrentHref(t: Torrent): string | undefined {
+// The page of the title a download is for (entryTarget's address).
+export function entryHref(item: QueueEntry | HistoryEntry): string | undefined {
+	return targetHref(entryTarget(item));
+}
+
+// What a tracked torrent is for.
+export function torrentTarget(t: Torrent): MediaTarget | undefined {
 	const m = t.media;
 	if (!m) return undefined;
 	switch (m.kind) {
 		case "movie":
-			return mediaHref({ movie: m });
+			return { kind: "movie", id: m.id };
 		case "series":
-			return mediaHref({ episode: { series_id: m.id } });
+			return { kind: "show", id: m.id };
 		case "album":
-			return mediaHref({ album: { id: m.id, artist_id: m.artist_id ?? 0 } });
+			return m.artist_id ? { kind: "album", id: m.id, artistId: m.artist_id } : undefined;
 		case "artist":
-			return mediaHref({ artist: m });
+			return { kind: "artist", id: m.id };
 		case "book":
-			return mediaHref({ book: m });
+			return { kind: "book", id: m.id };
 	}
+}
+
+// The page of the title a tracked torrent is for.
+export function torrentHref(t: Torrent): string | undefined {
+	return targetHref(torrentTarget(t));
+}
+
+// The download record behind a tracked torrent, on Activity.
+export function torrentDownloadHref(t: Torrent): string | undefined {
+	return t.download_id ? link.download(t.download_id) : undefined;
 }
 
 export type RingGlyph =

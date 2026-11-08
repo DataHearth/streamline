@@ -1,6 +1,7 @@
 import { formatBytes } from "./format";
 import { getLocale } from "./paraglide/runtime.js";
 import { m as i18n } from "./paraglide/messages.js";
+import { ROUTE } from "./routes";
 
 // GET /stats — the admin stats page (routes/stats). Every figure is computable
 // from what the server already stores, so the endpoint needs no new table:
@@ -167,10 +168,10 @@ export const KIND_LABEL: Record<StatsKind, () => string> = {
 };
 
 export const KIND_HREF: Record<StatsKind, string> = {
-	movie: "/movies",
-	series: "/series",
-	music: "/music",
-	books: "/books",
+	movie: ROUTE.movies,
+	series: ROUTE.shows,
+	music: ROUTE.music,
+	books: ROUTE.books,
 };
 
 // Breakdowns of one property (resolution, codec) are ordered, not

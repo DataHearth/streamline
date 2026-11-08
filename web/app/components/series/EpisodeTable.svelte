@@ -3,6 +3,7 @@
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { Info, Search, Trash2 } from "@lucide/svelte";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
 	import { cn } from "@lib/cn";
 	import { dragScroll } from "@lib/drag-scroll";
 	import { episodeStatus, episodeTitle } from "@lib/status";
@@ -24,6 +25,8 @@
 		onManualSearch,
 		onDeleteFile,
 		showMonitored = true,
+		seriesId,
+		episodeDownload,
 	}: {
 		episodes: Episode[];
 		seasonNumber: number;
@@ -35,6 +38,11 @@
 		onManualSearch: (ep: Episode) => void;
 		onDeleteFile: (ep: Episode) => void;
 		showMonitored?: boolean;
+		// The show: the episode sheet finds its download by it.
+		seriesId?: number;
+		// The Activity address of the download an episode is waiting on; its
+		// status pill links it.
+		episodeDownload?: (ep: Episode) => string | undefined;
 	} = $props();
 
 	function pad(n: number): string {
@@ -89,6 +97,7 @@
 			{#each episodes as ep (ep.id)}
 				{@const meta = STATUS_META[episodeStatus(ep, showMonitored)]}
 				{@const monitorDisabled = ep.status === "unaired" && !seasonMonitored}
+				{@const dl = episodeDownload?.(ep)}
 				<tr
 					class={cn(
 						"group border-b border-border last:border-b-0 transition hover:bg-surface",
@@ -139,7 +148,9 @@
 						{/if}
 					</td>
 					<td class="px-3 py-2.5">
-						<LabelPill token={meta.token} label={meta.label} variant="translucent" live={meta.live} />
+						<DownloadLink href={dl}>
+							<LabelPill token={meta.token} label={meta.label} variant="translucent" live={meta.live} />
+						</DownloadLink>
 						{#if ep.missing_from_disk}
 							<span class="mt-1 block">
 								<LabelPill token="wanted" label={i18n.file_missing_from_disk()} variant="translucent" />
@@ -199,4 +210,5 @@
 	{onManualSearch}
 	{onDeleteFile}
 	{showMonitored}
+	{seriesId}
 />

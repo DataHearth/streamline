@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link } from "@lib/routes";
 	import type { Snippet } from "svelte";
 	import { Film, Search } from "@lucide/svelte";
 	import MonitorToggle from "./MonitorToggle.svelte";
@@ -68,7 +69,7 @@
 		kebab?: Snippet;
 	} = $props();
 
-	let cardHref = $derived(href ?? `/movies/${movie.id}`);
+	let cardHref = $derived(href ?? link.movie(movie.id));
 	let cardPoster = $derived(posterSrc ?? posterUrl(movie));
 	// The same medium date the heroes print — the caption shares its line with the
 	// rating, which is why it truncates rather than wrapping.

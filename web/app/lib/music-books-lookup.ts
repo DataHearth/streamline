@@ -7,6 +7,7 @@ import type { RequestMediaDetails } from "./types";
 import { hardcoverSeriesHref, kindLabel, overviewLang, type ProfileMedia, type BookFormat, type BookKind, type ReleaseType } from "./music-books";
 import { artistPosterUrl, bookPosterUrl, lookupPosterUrl } from "./posters";
 import { m as i18n } from "./paraglide/messages.js";
+import { link } from "./routes";
 
 export type LookupKind = "artist" | "book";
 
@@ -208,8 +209,8 @@ export const profileMedia = (k: LookupKind): ProfileMedia => (k === "artist" ? "
 export const libraryRoot = (k: LookupKind) => (k === "artist" ? "music" : "books");
 
 export function libraryHref(h: LookupHit, id: number): string {
-	if (h.kind === "artist") return `/music/${id}`;
-	return h.series ? `/books/series/${id}` : `/books/${id}`;
+	if (h.kind === "artist") return link.artist(id);
+	return h.series ? link.bookSeries(id) : link.book(id);
 }
 
 export function monitorOptions(h: LookupHit | undefined): { value: string; label: string }[] {

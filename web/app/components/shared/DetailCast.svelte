@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link } from "@lib/routes";
 	import { cn } from "@lib/cn";
 	import { initials } from "@lib/people";
 	import type { CastMember } from "@lib/types";
@@ -20,7 +21,7 @@
 
 	function memberHref(m: CastMember): string | undefined {
 		if (external) return m.person_url;
-		return m.person_id ? `/people/${m.person_id}` : undefined;
+		return m.person_id ? link.person(m.person_id) : undefined;
 	}
 </script>
 

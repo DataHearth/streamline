@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link } from "@lib/routes";
 	import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import { api, apiAllPages, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
@@ -24,10 +25,10 @@
 	let forgetting = $state<MissingFile[] | null>(null);
 
 	const href = (f: MissingFile) => {
-		if (f.owner_kind === "movie") return `/movies/${f.owner_id}`;
-		if (f.owner_kind === "series") return `/series/${f.owner_id}`;
-		if (f.owner_kind === "artist") return `/music/${f.owner_id}`;
-		return `/books/${f.owner_id}`;
+		if (f.owner_kind === "movie") return link.movie(f.owner_id);
+		if (f.owner_kind === "series") return link.show(f.owner_id);
+		if (f.owner_kind === "artist") return link.artist(f.owner_id);
+		return link.book(f.owner_id);
 	};
 
 	// A root at a time: the server refuses a batch holding a row of an offline

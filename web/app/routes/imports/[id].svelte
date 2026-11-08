@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ROUTE } from "@lib/routes";
 	import {
 		createMutation,
 		createQuery,
@@ -349,7 +350,7 @@
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["imports"] });
 			toast.ok(i18n.imports_scan_discarded());
-			navigate("/imports");
+			navigate(ROUTE.imports);
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));

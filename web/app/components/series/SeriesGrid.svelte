@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link } from "@lib/routes";
 	import { auth } from "@lib/auth.svelte";
 	import { api } from "@lib/api";
 	import { createAction, monitorToast, SERIES, updateFailed } from "@lib/actions";
@@ -89,7 +90,7 @@
 	{#each series as show (show.id)}
 		<PosterCard
 			movie={enrich(show)}
-			href={`/series/${show.id}`}
+			href={link.show(show.id)}
 			posterSrc={tvPosterUrl(show.id)}
 			onMonitor={auth.canAddDirectly ? () => monitor.mutate(show) : undefined}
 			monitorPending={monitor.isPending && monitor.variables?.id === show.id}

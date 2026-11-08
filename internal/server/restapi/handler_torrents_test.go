@@ -69,6 +69,46 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 		}))
 	})
 
+	It(
+		"links a torrent to its download record only while Activity shows it",
+		func() {
+			const other = "00112233445566778899aabbccddeeff00112233"
+			app.torrents.EXPECT().ListViews(mock.Anything).Return(
+				[]bittorrent.TorrentView{
+					{
+						Hash:    testHash,
+						Name:    "Heat",
+						Status:  download.StatusDownloading,
+						Tracked: true,
+						Record: db.TorrentRecord{
+							Title:    "Heat",
+							RecordID: 42,
+							MovieID:  1,
+						},
+					},
+					// An adoption proposal: tracked, with no record Activity lists.
+					{
+						Hash:    other,
+						Name:    "Anora",
+						Status:  download.StatusSeeding,
+						Tracked: true,
+						Record:  db.TorrentRecord{Title: "Anora", MovieID: 2},
+					},
+				},
+			).Once()
+
+			resp, err := http.Get(app.srv.URL + "/api/v1/torrents")
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var list TorrentList
+			Expect(json.NewDecoder(resp.Body).Decode(&list)).To(Succeed())
+			Expect(list.Items).To(HaveLen(2))
+			Expect(list.Items[0].DownloadId).To(HaveValue(Equal(uint32(42))))
+			Expect(list.Items[1].DownloadId).To(BeNil())
+		},
+	)
+
 	It("adds a torrent from a magnet link", func() {
 		app.torrents.EXPECT().AddTorrent(mock.Anything, download.TorrentSource{
 			Magnet: "magnet:?xt=urn:btih:" + testHash,

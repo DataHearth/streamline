@@ -8,6 +8,7 @@
 		X,
 		Copy,
 		ExternalLink,
+		ListVideo,
 		Check,
 		Pause,
 		Play,
@@ -34,7 +35,7 @@
 		formatRatio,
 	} from "@lib/format";
 	import { formatRelative, formatDateTime } from "@lib/dates";
-	import { torrentHref, torrentRelease } from "@lib/activity-touch";
+	import { torrentDownloadHref, torrentHref, torrentRelease } from "@lib/activity-touch";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		Torrent,
@@ -258,6 +259,15 @@
 						>
 							<ExternalLink size={12} aria-hidden="true" />
 							{i18n.activity_open_item()}
+						</a>
+					{/if}
+					{#if torrentDownloadHref(torrent)}
+						<a
+							href={torrentDownloadHref(torrent)}
+							class="touch-hit inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
+						>
+							<ListVideo size={12} aria-hidden="true" />
+							{i18n.detail_open_download()}
 						</a>
 					{/if}
 					<span class="ml-auto font-mono text-xs tabular-nums text-fg-faint">

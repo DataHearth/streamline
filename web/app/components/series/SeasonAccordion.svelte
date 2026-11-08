@@ -3,6 +3,9 @@
 	import SeasonProgress from "./SeasonProgress.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { ChevronRight, Info, Search, Trash2 } from "@lucide/svelte";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
+	import { DOWNLOAD_CHIP_ARROW } from "@lib/title-downloads";
+	import LabelPill from "@components/shared/LabelPill.svelte";
 	import KebabMenu, { type KebabItem } from "@components/shared/KebabMenu.svelte";
 	import EpisodeDetailModal from "./EpisodeDetailModal.svelte";
 	import { slide } from "svelte/transition";
@@ -39,6 +42,9 @@
 		onDeleteFile,
 		onDeleteSeasonFiles,
 		showMonitored = true,
+		seriesId,
+		seasonDownload,
+		episodeDownload,
 	}: {
 		seasons: Season[];
 		selected: number;
@@ -56,6 +62,13 @@
 		// wanted. The season keeps existing — this is not "delete the season".
 		onDeleteSeasonFiles: (s: Season) => void;
 		showMonitored?: boolean;
+		// The show, and the Activity address of the download each season is
+		// waiting on, which a pill under the season's row links.
+		seriesId?: number;
+		// One download, or the queue filtered on the season when there are several.
+		seasonDownload?: (s: Season) => { href: string; count: number } | undefined;
+		// The same for an episode, which its status line links.
+		episodeDownload?: (ep: Episode) => string | undefined;
 	} = $props();
 
 	// Collapse is local, expand is shared. Pushing "nothing open" up into the
@@ -177,7 +190,12 @@
 	{#each seasons as s (s.number)}
 		{@const open = openSeason === s.number}
 		{@const missing = missingEpisodes(s.episodes ?? [], showMonitored)}
-		{@const headline = seasonHeadline(seasonTallies(s, showMonitored), missing)}
+		{@const tally = seasonTallies(s, showMonitored)}
+		{@const headline = seasonHeadline(tally, missing)}
+		{@const seasonDl = seasonDownload?.(s)}
+		{@const linkedHead = !!seasonDl && (tally.downloading > 0 || tally.importing > 0)}
+		<!-- linkedHead: with a download behind it, the in-flight headline moves
+		     to the line under the row as its link, since the row is a button. -->
 		<section class="border-b border-border last:border-b-0">
 			<div
 				class={cn(
@@ -205,7 +223,7 @@
 							{#if seasonBytes(s) > 0}
 								· {formatBytes(seasonBytes(s), "")}
 							{/if}
-							{#if headline}
+							{#if headline && !linkedHead}
 								<span class="whitespace-nowrap"
 									>· <span class={headline.cls}>{headline.text}</span></span
 								>
@@ -267,10 +285,32 @@
 				</button>
 			</div>
 
+			<!-- Its own line under the row, only while the season has a download:
+			     the row is a button, and its controls leave no room for a link.
+			     It carries the row's in-flight headline ("3 downloading"), said
+			     once; an upgrade of episodes that hold files has none, and reads
+			     "Downloading". -->
+			{#if seasonDl}
+				<div class={cn("px-3 pb-3", open && "bg-surface")}>
+					<DownloadLink href={seasonDl.href}>
+						<LabelPill
+							token={linkedHead && tally.downloading === 0 ? "importing" : "downloading"}
+							label={linkedHead && headline
+								? headline.text
+								: seasonDl.count > 1
+									? i18n.detail_n_downloads({ count: seasonDl.count })
+									: i18n.status_downloading()}
+							live
+						/>
+					</DownloadLink>
+				</div>
+			{/if}
+
 			{#if open}
 				<ul transition:slide={{ duration: 180, easing: cubicOut }}>
 					{#each s.episodes ?? [] as ep (ep.id)}
 						{@const st = episodeStatus(ep, showMonitored)}
+						{@const dl = episodeDownload?.(ep)}
 						<li
 							class="flex items-center gap-2.5 border-t border-border bg-bg-deep px-3 py-2.5"
 						>
@@ -298,18 +338,29 @@
 								>
 									{episodeTitle(ep)}
 								</span>
-								<span
-									class={cn(
-										"mt-0.5 block truncate font-mono text-[10.5px]",
-										st === "wanted"
-											? "text-status-wanted"
-											: st === "downloading"
-												? "text-status-downloading"
-												: "text-fg-subtle",
-									)}
-								>
-									{epLine(ep)}
-								</span>
+								{#if dl}
+									<a
+										href={dl}
+										title={i18n.detail_open_download()}
+										class="group/dl mt-0.5 inline-flex max-w-full cursor-pointer items-center gap-1 font-mono text-[10.5px] text-status-downloading underline-offset-2 hover:underline"
+									>
+										<span class="truncate">{epLine(ep)}</span>
+										<span class={DOWNLOAD_CHIP_ARROW}><ChevronRight size={12} aria-hidden="true" /></span>
+									</a>
+								{:else}
+									<span
+										class={cn(
+											"mt-0.5 block truncate font-mono text-[10.5px]",
+											st === "wanted"
+												? "text-status-wanted"
+												: st === "downloading"
+													? "text-status-downloading"
+													: "text-fg-subtle",
+										)}
+									>
+										{epLine(ep)}
+									</span>
+								{/if}
 							</span>
 							<span
 								class={cn("h-1.5 w-1.5 shrink-0 rounded-full", DOT[st])}
@@ -333,4 +384,5 @@
 	{onManualSearch}
 	{onDeleteFile}
 	{showMonitored}
+	{seriesId}
 />

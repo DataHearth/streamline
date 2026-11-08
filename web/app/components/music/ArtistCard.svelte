@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link, ROUTE } from "@lib/routes";
 	import { ArrowDown, Search, UserRound } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { artistNow, artistPill, artistSegments, artistTally, releasesCount, type Artist } from "@lib/music-books";
@@ -36,7 +37,7 @@
 
 	let t = $derived(artistTally(a));
 	let now = $derived(artistNow(a));
-	let href = $derived(`/music/${a.id}`);
+	let href = $derived(link.artist(a.id));
 	let monitored = $derived(a.monitor !== "none");
 
 	// The ring lives in a 100-unit box so it scales with the column. Arcs start
@@ -128,7 +129,7 @@
 					title={a.name}
 					media="music"
 					queryKey="music"
-					backHref="/music"
+					backHref={ROUTE.music}
 					hasFiles={a.size > 0}
 					profile={a.quality_profile}
 					searchLabel={t.wanted > 0 ? i18n.music_search_missing() : undefined}

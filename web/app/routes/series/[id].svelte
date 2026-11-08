@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ClampedText from "@components/shared/ClampedText.svelte";
+	import { link, ROUTE } from "@lib/routes";
 	import { around } from "@lib/message-parts";
 	import {
 		NOUN_EPISODE,
@@ -23,6 +24,7 @@
 		ExternalLink,
 		Trash2,
 	} from "@lucide/svelte";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
 	import { api, errorText } from "@lib/api";
 	import { createAction, deleteFailed, monitorToast, refreshFailed, searchFailed, SERIES, updateFailed } from "@lib/actions";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
@@ -60,6 +62,7 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import HeroBackdrop from "@components/shared/HeroBackdrop.svelte";
 	import { provideHeroHold } from "@lib/hero-hold.svelte";
+	import { downloadsFor, downloadsLink, firstDownloadHref, titleQueueQuery } from "@lib/title-downloads";
 	import type {
 		Episode,
 		MonitoringPreset,
@@ -109,14 +112,28 @@
 	let tabTrack = $state<HTMLElement | null>(null);
 
 	$effect(() => {
+		// Read before the guard below: an effect tracks only what it read, and
+		// returning on the guard first left `tab` untracked, so on a page entered
+		// by an in-app link (the guard's case at mount) no later tab click was
+		// ever written — the URL kept ?tab=episodes&season=N and a reload put the
+		// page back on Episodes.
+		const current = tab;
 		if (typeof window === "undefined") return;
 		// At mount window.location still names the outgoing page: writing ?tab=
 		// onto it sent a search hit that opens on the episodes tab back to the
 		// page it came from.
-		if (window.location.pathname !== `/series/${routeParams.id}`) return;
+		if (!routeParams.id || window.location.pathname !== link.show(Number(routeParams.id))) return;
 		const p = new URLSearchParams(window.location.search);
-		if (tab === "overview") p.delete("tab");
-		else p.set("tab", tab);
+		if (current === "overview") p.delete("tab");
+		else p.set("tab", current);
+		// ?season= and ?episode= are the episodes tab's. Kept on another tab,
+		// focusFrom read them again on the next params emission or a reload and
+		// put the page back on the episodes tab: a page reached through
+		// link.season() (a calendar row, a season pack) could not leave it.
+		if (current !== "episodes") {
+			p.delete("season");
+			p.delete("episode");
+		}
 		const search = p.toString();
 		const next = `${window.location.pathname}${search ? `?${search}` : ""}`;
 		if (next !== window.location.pathname + window.location.search) {
@@ -155,6 +172,34 @@
 	);
 	let currentEpisodes = $derived<Episode[]>(currentSeason?.episodes ?? []);
 
+	// The download a season is waiting on: the season's in-flight count beside
+	// its title is the link to it on Activity. The queue is asked only while the episodes
+	// tab shows an episode on its way; an episode's own sheet asks on its own,
+	// upgrades included.
+	const IN_FLIGHT = new Set<Episode["status"]>(["downloading", "importing", "paused"]);
+	let showInFlight = $derived(seasons.some((s) => (s.episodes ?? []).some((e) => IN_FLIGHT.has(e.status))));
+	const seriesQueue = titleQueueQuery(() => tab === "episodes" && showInFlight);
+	// An episode row's status opens the download it reads out — its own, or
+	// the pack's that covers it.
+	function episodeDownload(ep: Episode): string | undefined {
+		if (!show) return undefined;
+		return firstDownloadHref(seriesQueue.data?.items, { kind: "episode", seriesId: show.id, id: ep.id });
+	}
+	// A season's: the one download it waits on, or — grabbed episode by
+	// episode, or a pack beside an upgrade — the queue filtered on the season.
+	function seasonDownload(s: Season): { href: string; count: number } | undefined {
+		if (!show) return undefined;
+		const matches = downloadsFor(seriesQueue.data?.items, {
+			kind: "season",
+			seriesId: show.id,
+			season: s.number,
+			episodeIds: (s.episodes ?? []).map((e) => e.id),
+		});
+		return downloadsLink(matches, { kind: "season", seriesId: show.id, season: s.number });
+	}
+	// The selected season's, on the md+ episodes tab.
+	let currentSeasonDownload = $derived(currentSeason ? seasonDownload(currentSeason) : undefined);
+
 	// The API's season.missing counts only *monitored* fileless episodes — the
 	// ones a search will chase — so it reads as "wanted" here. Episodes nobody
 	// monitors are the missing ones, and only the client knows that split.
@@ -164,6 +209,18 @@
 		currentSeason
 			? seasonTallies(currentSeason, showMonitored)
 			: { wanted: 0, downloading: 0, importing: 0 },
+	);
+	// Which in-flight count carries the link to the season's downloads, so
+	// the state is said once: downloading, else importing. Neither (an upgrade
+	// of episodes that hold files) and a pill of its own does.
+	let seasonLinkOn = $derived<"downloading" | "importing" | null>(
+		!currentSeasonDownload
+			? null
+			: seasonTally.downloading > 0
+				? "downloading"
+				: seasonTally.importing > 0
+					? "importing"
+					: null,
 	);
 	let showMissing = $derived(
 		regularSeasons.reduce(
@@ -281,15 +338,32 @@
 	// A search hit for one episode lands here as ?season=N&episode=ID: the
 	// season is selected and the episode's sheet opens. Read off the route
 	// params, since window.location still names the outgoing page at mount.
+	// A link to a season alone (`link.season`, a calendar row, a season pack's
+	// download) is ?season=N: the season is selected on the episodes tab. A
+	// link to an episode whose season it does not know (a transcode job) is
+	// ?episode=ID alone, and the season holding it is selected once loaded.
 	let focusEpisodeId = $state<number | null>(null);
+	let seasonFromFocus = false;
 	function focusFrom(p: Record<string, string>) {
 		const ep = Number(p.episode);
-		if (!ep) return;
-		tab = "episodes";
 		const n = Number(p.season);
-		if (Number.isInteger(n)) selectedSeason = n;
-		focusEpisodeId = ep;
+		const hasSeason = typeof p.season === "string" && p.season !== "" && Number.isInteger(n);
+		if (!ep && !hasSeason) return;
+		tab = "episodes";
+		if (hasSeason) selectedSeason = n;
+		if (ep) {
+			focusEpisodeId = ep;
+			seasonFromFocus = !hasSeason;
+		}
 	}
+	$effect(() => {
+		const id = focusEpisodeId;
+		if (id === null || !seasonFromFocus) return;
+		const s = seasons.find((s) => s.episodes?.some((e) => e.id === id));
+		if (!s) return;
+		seasonFromFocus = false;
+		selectedSeason = s.number;
+	});
 	// One sheet at the route rather than one per list: the phone accordion and
 	// the md+ table are both mounted, so each opening its own would show two.
 	let focused = $derived.by(() => {
@@ -416,7 +490,7 @@
 		refresh: SERIES,
 		failed: deleteFailed,
 		succeeded: () => i18n.series_deleted(),
-		after: () => navigate("/series"),
+		after: () => navigate(ROUTE.shows),
 	}));
 
 	const monitorSeason = createAction<Season>(() => ({
@@ -944,6 +1018,9 @@
 				<div class="md:hidden">
 					<SeasonAccordion
 						{seasons}
+						seriesId={show.id}
+						{seasonDownload}
+						{episodeDownload}
 						selected={selectedSeason ?? seasons[0]?.number ?? 0}
 						onSelect={(n) => (selectedSeason = n)}
 						{showMonitored}
@@ -1024,17 +1101,23 @@
 												{/if}
 												{#if seasonTally.downloading > 0}
 													<span class="whitespace-nowrap"
-														><span class="sep text-fg-faint">·&nbsp;</span><span
-															class="text-status-downloading"
-															>{countDownloading(seasonTally.downloading)}</span
+														><span class="sep text-fg-faint">·&nbsp;</span><DownloadLink
+															href={seasonLinkOn === "downloading" ? currentSeasonDownload?.href : undefined}
+															class="rounded-sm underline-offset-2 hover:underline"
+															><span class="text-status-downloading"
+																>{countDownloading(seasonTally.downloading)}</span
+															></DownloadLink
 														></span
 													>
 												{/if}
 												{#if seasonTally.importing > 0}
 													<span class="whitespace-nowrap"
-														><span class="sep text-fg-faint">·&nbsp;</span><span
-															class="text-status-importing"
-															>{countImporting(seasonTally.importing)}</span
+														><span class="sep text-fg-faint">·&nbsp;</span><DownloadLink
+															href={seasonLinkOn === "importing" ? currentSeasonDownload?.href : undefined}
+															class="rounded-sm underline-offset-2 hover:underline"
+															><span class="text-status-importing"
+																>{countImporting(seasonTally.importing)}</span
+															></DownloadLink
 														></span
 													>
 												{/if}
@@ -1051,6 +1134,21 @@
 													>
 												{/if}
 											</span></span>
+										{/if}
+										{#if currentSeasonDownload && !seasonLinkOn}
+											<!-- An upgrade of episodes that hold files: no in-flight
+											     count to carry the link, so its own pill does. -->
+											<span class="inline-flex self-start font-sans lg:self-center">
+												<DownloadLink href={currentSeasonDownload.href}>
+													<LabelPill
+														token="downloading"
+														label={currentSeasonDownload.count > 1
+															? i18n.detail_n_downloads({ count: currentSeasonDownload.count })
+															: i18n.status_downloading()}
+														live
+													/>
+												</DownloadLink>
+											</span>
 										{/if}
 									</div>
 								</div>
@@ -1088,6 +1186,8 @@
 						</div>
 
 						<EpisodeTable
+							seriesId={show.id}
+							{episodeDownload}
 							episodes={currentEpisodes}
 							seasonNumber={currentSeason.number}
 							seriesType={show.type}
@@ -1151,6 +1251,7 @@
 		onConfirm={(withFiles) => del.mutate(withFiles)}
 	/>
 	<EpisodeDetailModal
+		seriesId={show.id}
 		episode={focused?.ep ?? null}
 		code={focused?.code ?? ""}
 		onClose={closeFocus}

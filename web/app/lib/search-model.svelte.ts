@@ -35,6 +35,7 @@ import { openAdd, type AddKind } from "./add-flow";
 import { auth } from "./auth.svelte";
 import { SETTINGS_SECTIONS } from "./settings-nav.svelte";
 import { fold } from "./text";
+import { gotoArgs, ROUTE } from "./routes";
 import type { EpisodeSearchHit, Movie, Person, TVShow } from "./types";
 import {
 	kindLabel,
@@ -201,27 +202,22 @@ export type SearchSection = {
 const TITLE_MIN = 2;
 const TITLE_LIMIT = 5;
 
-const ADMIN_PAGES = new Set([
-	"/torrents",
-	"/transcoding",
-	"/imports",
-	"/settings",
-]);
+const ADMIN_PAGES = new Set<string>([ROUTE.torrents, ROUTE.transcoding, ROUTE.imports, ROUTE.settings]);
 
 const PAGES: PageItem[] = [
-	{ kind: "page", label: i18n.nav_dashboard(), path: "/", icon: LayoutDashboard },
-	{ kind: "page", label: i18n.movies_label(), path: "/movies", icon: Film },
-	{ kind: "page", label: i18n.settings_series(), path: "/series", icon: Tv },
-	{ kind: "page", label: i18n.music_label(), path: "/music", icon: Music },
-	{ kind: "page", label: i18n.books_label(), path: "/books", icon: BookOpen },
-	{ kind: "page", label: i18n.requests_label(), path: "/requests", icon: Inbox },
-	{ kind: "page", label: i18n.nav_activity(), path: "/activity", icon: Activity },
-	{ kind: "page", label: i18n.torrent_label(), path: "/torrents", icon: Magnet },
-	{ kind: "page", label: i18n.transcode_label(), path: "/transcoding", icon: Replace },
-	{ kind: "page", label: i18n.imports_label(), path: "/imports", icon: FolderInput },
-	{ kind: "page", label: i18n.common_calendar(), path: "/calendar", icon: CalendarDays },
-	{ kind: "page", label: i18n.nav_settings(), path: "/settings", icon: Settings },
-	{ kind: "page", label: i18n.common_account(), path: "/account", icon: User },
+	{ kind: "page", label: i18n.nav_dashboard(), path: ROUTE.home, icon: LayoutDashboard },
+	{ kind: "page", label: i18n.movies_label(), path: ROUTE.movies, icon: Film },
+	{ kind: "page", label: i18n.settings_series(), path: ROUTE.shows, icon: Tv },
+	{ kind: "page", label: i18n.music_label(), path: ROUTE.music, icon: Music },
+	{ kind: "page", label: i18n.books_label(), path: ROUTE.books, icon: BookOpen },
+	{ kind: "page", label: i18n.requests_label(), path: ROUTE.requests, icon: Inbox },
+	{ kind: "page", label: i18n.nav_activity(), path: ROUTE.activity, icon: Activity },
+	{ kind: "page", label: i18n.torrent_label(), path: ROUTE.torrents, icon: Magnet },
+	{ kind: "page", label: i18n.transcode_label(), path: ROUTE.transcoding, icon: Replace },
+	{ kind: "page", label: i18n.imports_label(), path: ROUTE.imports, icon: FolderInput },
+	{ kind: "page", label: i18n.common_calendar(), path: ROUTE.calendar, icon: CalendarDays },
+	{ kind: "page", label: i18n.nav_settings(), path: ROUTE.settings, icon: Settings },
+	{ kind: "page", label: i18n.common_account(), path: ROUTE.account, icon: User },
 ];
 
 // One row per add flow: its icon, the palette action that opens it empty, and
@@ -404,8 +400,8 @@ export function createSearchModel(
 		const base = PAGES.filter(
 			(p) =>
 				(isAdmin || !ADMIN_PAGES.has(p.path)) &&
-				(p.path !== "/torrents" || features.torrents) &&
-				(p.path !== "/transcoding" || features.transcoding),
+				(p.path !== ROUTE.torrents || features.torrents) &&
+				(p.path !== ROUTE.transcoding || features.transcoding),
 		);
 		if (isAdmin && typed) {
 			for (const [path, { Icon, title }] of Object.entries(SETTINGS_SECTIONS)) {
@@ -674,26 +670,22 @@ export function searchNav() {
 			return;
 		}
 		if (!navigate) return;
+		const go = (args: [string, Record<string, string>]) => navigate?.(...args);
 		if (item.kind === "page") navigate(item.path);
-		else if (item.kind === "movie")
-			navigate("/movies/[id]", { id: String(item.id) });
-		else if (item.kind === "person")
-			navigate("/people/[id]", { id: String(item.id) });
-		else if (item.kind === "artist")
-			navigate("/music/[id]", { id: String(item.id) });
-		else if (item.kind === "album")
-			navigate("/music/[id]", { id: String(item.artistId), release: String(item.id) });
-		else if (item.kind === "track")
-			navigate("/music/[id]", { id: String(item.artistId), release: String(item.albumId) });
+		else if (item.kind === "movie") go(gotoArgs(ROUTE.movie, { id: item.id }));
+		else if (item.kind === "person") go(gotoArgs(ROUTE.person, { id: item.id }));
+		else if (item.kind === "artist") go(gotoArgs(ROUTE.artist, { id: item.id }));
+		else if (item.kind === "album") go(gotoArgs(ROUTE.artist, { id: item.artistId }, { release: item.id }));
+		else if (item.kind === "track") go(gotoArgs(ROUTE.artist, { id: item.artistId }, { release: item.albumId }));
 		else if (item.kind === "episode")
-			navigate("/series/[id]", {
-				id: String(item.seriesId),
-				tab: "episodes",
-				season: String(item.season),
-				episode: String(item.id),
-			});
-		else if (item.kind === "book")
-			navigate(item.series ? "/books/series/[id]" : "/books/[id]", { id: String(item.id) });
-		else navigate("/series/[id]", { id: String(item.id) });
+			go(
+				gotoArgs(
+					ROUTE.show,
+					{ id: item.seriesId },
+					{ tab: "episodes", season: item.season, episode: item.id },
+				),
+			);
+		else if (item.kind === "book") go(gotoArgs(item.series ? ROUTE.bookSeries : ROUTE.book, { id: item.id }));
+		else go(gotoArgs(ROUTE.show, { id: item.id }));
 	};
 }

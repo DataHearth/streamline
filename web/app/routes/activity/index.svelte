@@ -1,16 +1,25 @@
 <script lang="ts">
-	import { untrack } from "svelte";
+	import { onMount, tick, untrack } from "svelte";
 	import { pageTitle } from "@lib/page-title.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { slide } from "svelte/transition";
 	import { ChevronDown, ChevronRight, LoaderCircle } from "@lucide/svelte";
+	import {
+		downloadFilterFrom,
+		downloadMatches,
+		FILTER_KEYS,
+		type DownloadFilter,
+	} from "@lib/title-downloads";
 	import {
 		createQuery,
 		createInfiniteQuery,
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { api, apiAllPages, errorText } from "@lib/api";
+	import { api, apiAllPages, ApiError, errorText } from "@lib/api";
+	import { ROUTE } from "@lib/routes";
+	import { onEachRouteQuery, replaceRouteQuery } from "@lib/route-query";
+	import { createMediaQuery } from "@lib/viewport.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { entryHeading, entryRelease } from "@lib/activity-touch";
 	import { builtinTorrentsQuery, torrentHref } from "@lib/activity-nav";
@@ -54,9 +63,11 @@
 	// queue/history/events trio the switch above the toolbar swaps between.
 	type View = "queue" | "history" | "events";
 
-	// The switch is page state, not a route, but ?view is honoured — the
-	// dashboard's Recent activity panel links straight to the events feed it
-	// samples, which would otherwise land on the queue.
+	// The switch is page state, not a route, but it lives in ?view (queue, the
+	// default, left out): the dashboard's Recent activity panel links straight
+	// to the events feed it samples, and a reload or a shared link reopens the
+	// view it was on. Read off the route's query below, as the other query
+	// keys are; this first read is for the server render and a cold load.
 	function initialView(): View {
 		if (typeof window === "undefined") return "queue";
 		const v = new URLSearchParams(window.location.search).get("view");
@@ -125,9 +136,12 @@
 	);
 
 	function switchView(v: View) {
+		// The title filter is the queue's: the history is paged on the server.
+		if (v !== "queue") scopeFilter = null;
 		view = v;
 		statusFilter = [];
 		detailId = null;
+		expandedId = null;
 		selection.clear();
 	}
 
@@ -354,9 +368,39 @@
 	let heldItem = $derived(
 		queueItems.find((q) => q.id === resolveId) ?? null,
 	);
-	let historyItems = $derived<HistoryEntry[]>(
-		(history.data?.pages ?? []).flatMap((p) => p.items),
-	);
+	// A linked record further back than the loaded pages is read on its own
+	// (GET /activity/history/{id}) and listed beside them until a page brings
+	// it in.
+	let pinnedHistory = $state<HistoryEntry | null>(null);
+	let historyItems = $derived.by<HistoryEntry[]>(() => {
+		const loaded = (history.data?.pages ?? []).flatMap((p) => p.items);
+		const pin = pinnedHistory;
+		return pin && !loaded.some((i) => i.id === pin.id) ? [pin, ...loaded] : loaded;
+	});
+	// The pin is read once, so nothing that changes the history reaches it: a
+	// removal, a clear, a retry moving it back to the queue left the row on
+	// screen. Every refetch of the loaded pages (each of those invalidates
+	// them) reads it again, and a 404 drops it.
+	$effect(() => {
+		void history.dataUpdatedAt;
+		const pin = untrack(() => pinnedHistory);
+		if (!pin) return;
+		// Once a loaded page holds the record, the page's copy is the one shown
+		// and kept current; reading it again for every page scrolled in was a
+		// request each for nothing.
+		const loaded = untrack(() => (history.data?.pages ?? []).some((p) => p.items.some((i) => i.id === pin.id)));
+		if (loaded) {
+			pinnedHistory = null;
+			return;
+		}
+		api<HistoryEntry>(`/activity/history/${pin.id}`)
+			.then((entry) => {
+				if (pinnedHistory?.id === pin.id) pinnedHistory = entry;
+			})
+			.catch((e) => {
+				if (e instanceof ApiError && e.status === 404 && pinnedHistory?.id === pin.id) pinnedHistory = null;
+			});
+	});
 	// The badge counts the library, not what has been scrolled into view: the
 	// history is cursor-paginated, so historyItems.length is the page size
 	// until the last page loads and the count would sit at 50 forever.
@@ -369,6 +413,8 @@
 	);
 	let rows = $derived.by<(QueueEntry | HistoryEntry)[]>(() => {
 		let out = source;
+		const f = scopeFilter;
+		if (f && view === "queue") out = out.filter((i) => downloadMatches(i, f));
 		if (statusFilter.length)
 			out = out.filter((i) => statusFilter.includes(i.status));
 		if (search.trim()) {
@@ -395,6 +441,157 @@
 	// ── Touch surfaces ───────────────────────────────────────────────────────
 	let filtersOpen = $state(false);
 	let detailId = $state<number | null>(null);
+	// The table's open row (md and up); the sheet's is detailId.
+	let expandedId = $state<number | null>(null);
+
+	// ── ?download=<id> ───────────────────────────────────────────────────────
+	// A title's history, the dashboard's live queue and a torrent link one
+	// download record here (`link.download`): the queue while it is in flight,
+	// the history once it is done. Read off the route being rendered, not
+	// window.location, which still names the page being left at mount
+	// (onEachRouteQuery), and kept in the URL while the record's detail is
+	// open, so a reload reopens it.
+	const wide = createMediaQuery("(min-width: 768px)");
+	let wantedId = $state<number | null>(null);
+	let lastLinked: number | null = null;
+	// The query of the route being shown, which every write starts from — and
+	// the page's own last write until the route catches up with it (Routify
+	// applies a write asynchronously, so two writes in one tick, a view switch
+	// that also closes a row, would otherwise each start from the old query).
+	let routeSearch = "";
+	function writeQuery(
+		mutate: Parameters<typeof replaceRouteQuery>[1],
+	) {
+		const qs = replaceRouteQuery(ROUTE.activity, mutate, routeSearch);
+		if (qs !== undefined) routeSearch = qs;
+	}
+	onMount(() =>
+		onEachRouteQuery(ROUTE.activity, (p, search) => {
+			routeSearch = search;
+			// The view first: a filter is the queue's, and applying it after a
+			// view switch would see the switch clear it.
+			readView(p);
+			readScopeFilter(p);
+			const n = Number(p.download);
+			const id = Number.isInteger(n) && n > 0 ? n : null;
+			if (id === null || id === lastLinked) return;
+			lastLinked = id;
+			wantedId = id;
+		}),
+	);
+
+	// Once per distinct value, like the filter below, so the page's own write
+	// of ?view does not come back as a switch.
+	let lastViewKey = "";
+	function readView(p: Record<string, string>) {
+		const v = p.view === "history" || p.view === "events" ? p.view : "";
+		if (v === lastViewKey) return;
+		lastViewKey = v;
+		const next: View = v || "queue";
+		if (next !== view) switchView(next);
+	}
+	// The URL is written on the reader's own switch, in one write, never from
+	// an effect: a switch made while applying a link runs when the address bar
+	// may still hold the URL being left, and writing then clobbered the link
+	// (an event's download opened on the filter it was clicked from).
+	function pickView(v: View) {
+		switchView(v);
+		lastViewKey = v === "queue" ? "" : v;
+		writeQuery((p) => {
+			if (v !== "queue") for (const k of FILTER_KEYS) p.delete(k);
+			return { view: v === "queue" ? null : v };
+		});
+	}
+
+	// ── ?series=&season= / ?artist= / ?book_series= ──────────────────────────
+	// A part of a page waiting on several downloads (a season grabbed episode
+	// by episode) links here rather than to one of them: the queue, filtered on
+	// that part with the detail pages' own matcher. A chip says so and clears
+	// it. Read off the same query, applied once per distinct filter, so a
+	// re-emission does not bring back a filter the chip cleared.
+	let scopeFilter = $state<DownloadFilter | null>(null);
+	let lastFilterKey = "";
+	function readScopeFilter(p: Record<string, string>) {
+		const f = downloadFilterFrom(p);
+		const key = f ? JSON.stringify(f) : "";
+		if (key === lastFilterKey) return;
+		lastFilterKey = key;
+		scopeFilter = f;
+		// The whole switch, not just the view: the history's open row, sheet
+		// and selection have no place on the filtered queue.
+		if (f && view !== "queue") switchView("queue");
+	}
+	// The reader's ✕ (the chip, the strip's clear, the sheet's reset).
+	function clearScopeFilter() {
+		if (!scopeFilter) return;
+		scopeFilter = null;
+		writeQuery((p) => {
+			for (const k of FILTER_KEYS) p.delete(k);
+		});
+	}
+	// What the chip names: the title as the rows name it — off the queue, else
+	// the loaded history (the downloads may have finished since the link was
+	// followed), and for a season at least the season when neither names it.
+	let scopeLabel = $derived.by(() => {
+		const f = scopeFilter;
+		if (!f) return "";
+		const hit = [...queueItems, ...historyItems].find((i) => downloadMatches(i, f));
+		if (f.kind === "season" || f.kind === "show") {
+			const title = hit?.episode?.show_title;
+			if (f.kind === "show") return title ?? i18n.common_unknown();
+			const season = f.season === 0 ? i18n.series_specials() : i18n.season_number({ number: f.season });
+			return title ? `${title} · ${season}` : season;
+		}
+		if (f.kind === "artist") return hit?.album?.artist_name ?? hit?.artist?.name ?? i18n.common_unknown();
+		return hit?.book?.series?.title ?? i18n.common_unknown();
+	});
+	// The queue first, since a record there is the live one; then the loaded
+	// history; then the record on its own. A record in neither is gone — the
+	// history was cleared, or the download was cancelled.
+	$effect(() => {
+		const id = wantedId;
+		if (id === null || !queue.isSuccess) return;
+		if (queueItems.some((i) => i.id === id)) return untrack(() => openLinked("queue", id));
+		if (!history.isSuccess) return;
+		if (historyItems.some((i) => i.id === id)) return untrack(() => openLinked("history", id));
+		untrack(() => {
+			wantedId = null;
+			api<HistoryEntry>(`/activity/history/${id}`)
+				.then((entry) => {
+					pinnedHistory = entry;
+					openLinked("history", id);
+				})
+				.catch((e) =>
+					toast.err(
+						e instanceof ApiError && e.status === 404 ? i18n.activity_download_gone() : errorText(e),
+					),
+				);
+		});
+	});
+	function openLinked(v: View, id: number) {
+		wantedId = null;
+		if (view !== v) switchView(v);
+		// A filter hiding the row would make the link open nothing visible.
+		statusFilter = [];
+		search = "";
+		if (wide()) {
+			expandedId = id;
+			void tick().then(() =>
+				document.querySelector(`[data-download="${id}"]`)?.scrollIntoView({ block: "center" }),
+			);
+		} else {
+			detailId = id;
+		}
+	}
+	let openId = $derived(wide() ? expandedId : detailId);
+	$effect(() => {
+		const id = openId;
+		// Never rewrite another page's URL while this one is still mounting, nor
+		// drop a link that has not been resolved yet.
+		if (wantedId !== null) return;
+		lastLinked = id;
+		writeQuery(() => ({ download: id }));
+	});
 	// Held by id, not by value: the queue repolls every 2 s, and a sheet holding
 	// the snapshot it opened with would show a frozen speed and percentage.
 	let detailItem = $derived<QueueEntry | HistoryEntry | null>(
@@ -408,7 +605,11 @@
 			? null
 			: (source.find((i) => i.id === swipeConfirm?.id) ?? null),
 	);
-	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0));
+	// Everything a reset clears, which the sheet counts. The toolbar's magnifier
+	// counts only what is behind it — the search: the status chips are in the
+	// open, and lighting it for one of them pointed at the wrong control.
+	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0) + (scopeFilter ? 1 : 0));
+	let hiddenFilters = $derived(search.trim() ? 1 : 0);
 	let clearableCount = $derived(
 		historyItems.filter((h) => h.status === "completed").length,
 	);
@@ -432,6 +633,7 @@
 	function resetFilters() {
 		statusFilter = [];
 		search = "";
+		clearScopeFilter();
 	}
 
 	// ── Selection ────────────────────────────────────────────────────────────
@@ -446,6 +648,7 @@
 	$effect(() => {
 		statusFilter;
 		search;
+		scopeFilter;
 		untrack(() => selection.clear());
 	});
 	// A download that finishes or is cancelled elsewhere leaves the queue on the
@@ -612,7 +815,7 @@
 			<ActivityViewSwitch
 				{view}
 				counts={{ queue: queueItems.length, history: historyTotal }}
-				onViewChange={switchView}
+				onViewChange={pickView}
 			/>
 		</div>
 
@@ -664,7 +867,9 @@
 		view={tableView}
 		{statusFilter}
 		{search}
-		{activeFilters}
+		activeFilters={hiddenFilters}
+		scopeLabel={scopeFilter && view === "queue" ? scopeLabel : undefined}
+		onClearScope={clearScopeFilter}
 		{clearableCount}
 		onOpenFilters={() => (filtersOpen = true)}
 		onStatusFilterChange={(s) => (statusFilter = s)}
@@ -675,7 +880,7 @@
 			<ActivityViewSwitch
 				{view}
 				counts={{ queue: queueItems.length, history: historyTotal }}
-				onViewChange={switchView}
+				onViewChange={pickView}
 			/>
 		{/snippet}
 	</ActivityToolbar>
@@ -719,6 +924,7 @@
 		loadingMore={history.isFetchingNextPage}
 		canControl={auth.isAdmin}
 		torrentHref={rowTorrentHref}
+		bind:expandedId
 		onLoadMore={() => history.fetchNextPage()}
 		onCancel={(id) => cancel.mutate(id)}
 		onPause={(id) => pause.mutate(id)}

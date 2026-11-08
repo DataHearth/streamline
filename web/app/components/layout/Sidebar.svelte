@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ROUTE } from "@lib/routes";
 	import { roleLabel } from "@lib/roles";
 	import { onMount } from "svelte";
 	import {
@@ -110,10 +111,10 @@
 
 	const libraryItems = [
 		{ label: i18n.nav_dashboard(), href: "/", icon: LayoutDashboard },
-		{ label: i18n.movies_label(), href: "/movies", icon: Film },
-		{ label: i18n.settings_series(), href: "/series", icon: Tv },
-		{ label: i18n.music_label(), href: "/music", icon: Music },
-		{ label: i18n.books_label(), href: "/books", icon: BookMarked },
+		{ label: i18n.movies_label(), href: ROUTE.movies, icon: Film },
+		{ label: i18n.settings_series(), href: ROUTE.shows, icon: Tv },
+		{ label: i18n.music_label(), href: ROUTE.music, icon: Music },
+		{ label: i18n.books_label(), href: ROUTE.books, icon: BookMarked },
 	];
 	let opsItems = $derived([
 		...(auth.isAdmin
@@ -132,15 +133,15 @@
 	// which is why this list is derived rather than constant.
 	const features = activityFeatures();
 	let activityLinks = $derived([
-		{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
+		{ label: i18n.activity_queue_history(), href: ROUTE.activity, icon: ListVideo },
 		...(features.torrents
-			? [{ label: i18n.torrent_label(), href: "/torrents", icon: Magnet }]
+			? [{ label: i18n.torrent_label(), href: ROUTE.torrents, icon: Magnet }]
 			: []),
 		...(features.transcoding
 			? [
 					{
 						label: i18n.transcode_label(),
-						href: "/transcoding",
+						href: ROUTE.transcoding,
 						icon: Replace,
 					},
 				]
@@ -311,7 +312,7 @@
 					>
 						<item.icon size={18} class="shrink-0" />
 						<span class="flex-1 truncate">{item.label}</span>
-						{#if item.href === "/movies" && moviesCount !== null}
+						{#if item.href === ROUTE.movies && moviesCount !== null}
 							<span
 								class={cn(
 									"shrink-0 font-mono text-[10.5px] tabular-nums",
@@ -320,7 +321,7 @@
 							>
 								{moviesCount.toLocaleString()}
 							</span>
-						{:else if item.href === "/series" && seriesCount !== null}
+						{:else if item.href === ROUTE.shows && seriesCount !== null}
 							<span
 								class={cn(
 									"shrink-0 font-mono text-[10.5px] tabular-nums",
@@ -329,14 +330,14 @@
 							>
 								{seriesCount.toLocaleString()}
 							</span>
-						{:else if (item.href === "/music" && musicCount !== null) || (item.href === "/books" && booksCount !== null)}
+						{:else if (item.href === ROUTE.music && musicCount !== null) || (item.href === ROUTE.books && booksCount !== null)}
 							<span
 								class={cn(
 									"shrink-0 font-mono text-[10.5px] tabular-nums",
 									active ? "text-accent-text opacity-70" : "text-fg-faint",
 								)}
 							>
-								{(item.href === "/music" ? musicCount : booksCount)?.toLocaleString()}
+								{(item.href === ROUTE.music ? musicCount : booksCount)?.toLocaleString()}
 							</span>
 						{/if}
 					</a>
@@ -360,7 +361,7 @@
 					>
 						<link.icon size={18} class="shrink-0" />
 						<span class="min-w-0 flex-1 truncate">{link.label}</span>
-						{#if link.href === "/activity"}
+						{#if link.href === ROUTE.activity}
 							{#if pendingAdoptions > 0}
 								<span
 									class="shrink-0 rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"
@@ -371,10 +372,10 @@
 							{/if}
 							{@render dotPills(queuePills)}
 						{/if}
-						{#if link.href === "/torrents"}
+						{#if link.href === ROUTE.torrents}
 							{@render dotPills(torrentPills)}
 						{/if}
-						{#if link.href === "/transcoding"}
+						{#if link.href === ROUTE.transcoding}
 							{@render dotPills(transcodePills)}
 						{/if}
 					</a>

@@ -6,8 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
 )
 
@@ -76,8 +78,18 @@ func (s *Server) ListActivity(
 	out := ActivityList{
 		Events: make([]ActivityEvent, 0, len(res.Events)),
 	}
+	shown, err := s.shownEventRecords(ctx, res.Events)
+	if err != nil {
+		return nil, err
+	}
 	for _, e := range res.Events {
-		out.Events = append(out.Events, toActivityEvent(e))
+		ev := toActivityEvent(e)
+		if id := events.DownloadID(e.Payload); id != 0 {
+			if _, ok := shown[id]; ok {
+				ev.DownloadId = &id
+			}
+		}
+		out.Events = append(out.Events, ev)
 	}
 	if res.NextCursor != "" {
 		c := res.NextCursor
@@ -86,6 +98,35 @@ func (s *Server) ListActivity(
 	return ListActivity200JSONResponse{
 		ActivityListJSONResponse: ActivityListJSONResponse(out),
 	}, nil
+}
+
+// shownEventRecords is the set of download records the page's events name
+// that Activity still shows. An event outlives its record — the history is
+// cleared, a proposal is dismissed — and a link to a record that is gone
+// opens nothing.
+func (s *Server) shownEventRecords(
+	ctx context.Context,
+	evs []*ent.MediaEvent,
+) (map[uint32]struct{}, error) {
+	// One record names every event of its grab and import, so a page holds
+	// each id many times; the IN list carries it once.
+	seen := make(map[uint32]struct{}, len(evs))
+	ids := make([]uint32, 0, len(evs))
+	for _, e := range evs {
+		id := events.DownloadID(e.Payload)
+		if id == 0 {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.store.ShownDownloadRecordIDs(ctx, ids)
 }
 
 func (s *Server) ListUpcomingReleases(

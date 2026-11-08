@@ -130,7 +130,11 @@ var _ = Describe("Handler: Activity queue/history",
 			Expect(body.Items[0].Artist).To(BeNil())
 			Expect(
 				body.Items[1].Artist,
-			).To(Equal(&ActivityArtistRef{Id: 1, Name: "Gojira", AlbumCount: 3}))
+			).To(Equal(&ActivityArtistRef{
+				Id: 1, Name: "Gojira", AlbumCount: 3,
+				// The queue names the pack's albums, so an album's page finds it.
+				AlbumIds: &[]uint32{14, 35, 8},
+			}))
 			Expect(body.Items[1].Album).To(BeNil())
 			Expect(
 				body.Items[2].Book,
@@ -310,6 +314,46 @@ var _ = Describe("Handler: Activity queue/history",
 			Expect(body.Items[0].TorrentHash).To(HaveValue(
 				Equal("abcdef0123456789abcdef0123456789abcdef01")))
 		})
+
+		It("GET /activity/history/{id} serves one history row", func() {
+			rec := &ent.DownloadRecord{
+				ID: 9, Title: "Show.S01E02.1080p", Status: "failed",
+				Size: 10, CreateTime: time.Now(), UpdateTime: time.Now(),
+			}
+			rec.Edges.AnchorEpisode = &ent.Episode{ID: 40, Number: 2}
+			rec.Edges.AnchorEpisode.Edges.Season = &ent.Season{Number: 1}
+			rec.Edges.AnchorEpisode.Edges.Season.Edges.TvShow = &ent.TVShow{
+				ID:    3,
+				Title: "Show",
+			}
+			app.store.EXPECT().FindDownloadHistoryEntry(mock.Anything, uint32(9)).
+				Return(rec, nil).Once()
+			resp, err := http.Get(app.srv.URL + "/api/v1/activity/history/9")
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var body HistoryEntry
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Id).To(Equal(uint32(9)))
+			Expect(body.Status).To(Equal(HistoryEntryStatus("failed")))
+			Expect(body.Episode).NotTo(BeNil())
+			Expect(body.Episode.SeriesId).To(HaveValue(Equal(uint32(3))))
+			Expect(body.Episode.EpisodeId).To(HaveValue(Equal(uint32(40))))
+		})
+
+		It(
+			"GET /activity/history/{id} 404s a record the history does not hold",
+			func() {
+				app.store.EXPECT().
+					FindDownloadHistoryEntry(mock.Anything, uint32(9)).
+					Return(nil, &ent.NotFoundError{}).
+					Once()
+				resp, err := http.Get(app.srv.URL + "/api/v1/activity/history/9")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			},
+		)
 
 		It("GET /activity/history counts a pack's albums", func() {
 			rec := &ent.DownloadRecord{

@@ -12,6 +12,8 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import HeroBackdrop from "@components/shared/HeroBackdrop.svelte";
 	import { provideHeroHold } from "@lib/hero-hold.svelte";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
+	import { liveDownload } from "@lib/title-downloads";
 
 	let {
 		movie,
@@ -29,6 +31,12 @@
 	}
 
 	let primary = $derived(pickPrimary(movie.media_files));
+	// The status pill opens the download it reads out. An upgrade of a movie
+	// already held leaves it "available"; the History tab's events link that one.
+	const live = liveDownload(
+		() => ({ kind: "movie", id: movie.id }),
+		() => movie.status === "downloading" || movie.status === "importing",
+	);
 	let backdropSrc = $derived(posterUrl(movie));
 	provideHeroHold();
 
@@ -89,7 +97,9 @@
 			</div>
 			{#if movieStatus(movie) !== "available"}
 				<span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
-					<StatusPill status={movieStatus(movie)} live={movie.status === "downloading"} />
+					<DownloadLink href={live.href}>
+						<StatusPill status={movieStatus(movie)} live={movie.status === "downloading"} />
+					</DownloadLink>
 				</span>
 			{/if}
 		</div>

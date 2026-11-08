@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link, ROUTE } from "@lib/routes";
 	import { BookOpen, Headphones } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { auth } from "@lib/auth.svelte";
@@ -18,7 +19,7 @@
 	let isSeries = $derived(item.type === "series");
 	let hasFiles = $derived(isSeries ? (item.volumes_have ?? 0) > 0 : (item.formats ?? []).some((f) => f.state === "available"));
 
-	let href = $derived(item.type === "series" ? `/books/series/${item.id}` : `/books/${item.id}`);
+	let href = $derived(item.type === "series" ? link.bookSeries(item.id) : link.book(item.id));
 	let formats = $derived((item.formats ?? []).filter((f) => f.state !== "unmonitored"));
 	const tone = (s: FormatState) =>
 		s === "available" ? "text-white/90" : s === "downloading" ? "text-status-downloading" : "text-status-wanted";
@@ -90,7 +91,7 @@
 			title={item.title}
 			media="books"
 			queryKey="books"
-			backHref="/books"
+			backHref={ROUTE.books}
 			{hasFiles}
 			profile={item.quality_profile}
 			removeBody={isSeries ? i18n.books_series_remove_body() : i18n.books_remove_body()}

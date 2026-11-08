@@ -702,6 +702,10 @@ export type ActivityEvent = {
 	album?: ActivityAlbumRef;
 	book?: ActivityBookRef;
 	book_series?: SeriesRef;
+	// The download record the event came from (a grab, its completion or
+	// failure, a hold, the import it produced), set only while that record
+	// still exists: Activity opens it at /activity?download=<id>.
+	download_id?: number;
 };
 
 export type ActivityList = {
@@ -716,6 +720,8 @@ export type EpisodeRef = {
 	season: number;
 	episode: number;
 	series_id?: number;
+	// The episode row: the series page opens its sheet from it.
+	episode_id?: number;
 };
 
 export type HoldCheck =
@@ -787,7 +793,8 @@ export type TrackPlan = {
 export type ActivityAlbumRef = { id: number; title: string; artist_id: number; artist_name: string };
 // album_count is how many albums a discography pack is expected to cover. A
 // book names the slot it fills and, for a volume, its series.
-export type ActivityArtistRef = { id: number; name: string; album_count: number; album_titles?: string[] };
+// album_ids: the albums a discography pack covers (queue only).
+export type ActivityArtistRef = { id: number; name: string; album_count: number; album_ids?: number[]; album_titles?: string[] };
 // The track a single-track upload is for, beside its album.
 export type ActivityTrackRef = { id: number; title: string; disc: number; position: number };
 export type ActivityBookRef = {
@@ -809,6 +816,9 @@ export type QueueEntry = {
 	release_group?: string;
 	movie: Movie;
 	episode?: EpisodeRef;
+	// Every episode the download is for, episode's included (a season pack's
+	// whole season). What a series page finds an episode's download by.
+	episode_ids?: number[];
 	album?: ActivityAlbumRef;
 	track?: ActivityTrackRef;
 	artist?: ActivityArtistRef;
@@ -1533,6 +1543,8 @@ export type Torrent = {
 	release_title?: string;
 	// The library title that record is for; absent when untracked.
 	media?: TorrentMedia;
+	// That record, while Activity shows it (/activity?download=<id>).
+	download_id?: number;
 };
 
 export type TorrentMedia = {

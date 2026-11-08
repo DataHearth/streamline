@@ -460,7 +460,10 @@ type QueueEntry struct {
 	PackAlbumTitles []string
 	// Episode is set for TV download records (with season + show eager-loaded);
 	// nil for movie records. Drives the "<show> · SxxExx" row title.
-	Episode        *ent.Episode
+	Episode *ent.Episode
+	// EpisodeIDs is every episode the record links, Episode's included, in
+	// id order: what a series page matches an episode or a season against.
+	EpisodeIDs     []uint32
 	Indexer        string
 	DownloadClient string
 	// TorrentHash is the record's info hash in DownloadClient, empty when it
@@ -636,6 +639,10 @@ func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 		e.PackAlbumIDs = append(e.PackAlbumIDs, a.ID)
 		e.PackAlbumTitles = append(e.PackAlbumTitles, a.Title)
 	}
+	for _, ep := range rec.Edges.Episodes {
+		e.EpisodeIDs = append(e.EpisodeIDs, ep.ID)
+	}
+	slices.Sort(e.EpisodeIDs)
 	e.Indexer = rec.IndexerName
 	e.DownloadClient = rec.DownloadClientName
 	e.TorrentHash = rec.TorrentHash

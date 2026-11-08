@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link as routeLink } from "@lib/routes";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { params } from "@roxi/routify";
 	import { onMount } from "svelte";
@@ -397,7 +398,7 @@
 					{#each seriesCredits as credit (credit.series.id)}
 						<PosterCard
 							movie={seriesCard(credit.series)}
-							href={`/series/${credit.series.id}`}
+							href={routeLink.show(credit.series.id)}
 							posterSrc={tvPosterUrl(credit.series.id)}
 							detail={credit.character || undefined}
 						/>

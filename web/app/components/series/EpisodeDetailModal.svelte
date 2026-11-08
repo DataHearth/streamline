@@ -43,6 +43,8 @@
 		subtitleLanguages,
 	} from "@lib/media-info";
 	import type { Episode } from "@lib/types";
+	import { liveDownload } from "@lib/title-downloads";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
 
 	// Lifted out of EpisodeTable so the phone accordion opens the same sheet the
 	// desktop table does — the two can't drift into two ideas of "episode info".
@@ -53,6 +55,7 @@
 		onManualSearch,
 		onDeleteFile,
 		showMonitored = true,
+		seriesId,
 	}: {
 		episode: Episode | null;
 		code: string;
@@ -60,7 +63,17 @@
 		onManualSearch: (ep: Episode) => void;
 		onDeleteFile: (ep: Episode) => void;
 		showMonitored?: boolean;
+		// The show, which the queue names an episode's download by.
+		seriesId?: number;
 	} = $props();
+
+	// The download behind the episode — its own, or a pack's that covers it —
+	// asked for only while the sheet is open: an upgrade leaves an episode
+	// "available" while it downloads, so its status cannot gate this.
+	const live = liveDownload(
+		() => (episode && seriesId ? { kind: "episode", seriesId, id: episode.id } : null),
+		() => !!episode && !!seriesId,
+	);
 
 	let probe = $derived(episode ? probeOf(episode) : null);
 	// One row per language, not per track: the API carries language sets, and
@@ -100,7 +113,14 @@
 						label: i18n.series_absolute_num(),
 						value: episode.absolute_number ? `#${episode.absolute_number}` : "—",
 					},
-					{ label: i18n.series_air_date(), value: formatDateTime(episode.air_date) || "—" },
+					// The relative reading rides here, under its own label: beside the
+					// status pill it read as the status's age.
+					{
+						label: i18n.series_air_date(),
+						value: episode.air_date
+							? `${formatDateTime(episode.air_date)} · ${formatRelative(episode.air_date)}`
+							: "—",
+					},
 					{ label: i18n.monitor_monitored(), value: episode.monitored ? i18n.common_yes() : i18n.common_no() },
 					{ label: i18n.common_quality(), value: episode.quality || "—" },
 					{ label: i18n.file_source(), value: episode.parsed_source || "—" },
@@ -137,25 +157,10 @@
 {#if episode}
 	{@const meta = STATUS_META[episodeStatus(episode, showMonitored)]}
 	<Modal open={true} title={episodeTitle(episode)} size="xl" {onClose}>
-		<div class="flex flex-wrap items-center gap-2">
-			<span
-				class="ep-pill inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
-				style:--c={`var(--status-${meta.token})`}
-			>
-				<span
-					class={cn(
-						"dot h-1.5 w-1.5 shrink-0 rounded-full",
-						meta.live && "motion-safe:animate-pulse",
-					)}
-				></span>
-				{meta.label}
-			</span>
-			{#if episode.air_date}
-				<span class="text-xs text-fg-subtle">
-					{formatRelative(episode.air_date)}
-				</span>
-			{/if}
-			{#if episode.file_score !== undefined}
+		<!-- The status is the details table's first row, not a pill up here as
+		     well: the two said "Downloading" twice. -->
+		{#if episode.file_score !== undefined}
+			<div class="flex flex-wrap items-center gap-2">
 				<span
 					class={cn(
 						"shrink-0 rounded-full border px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.1em]",
@@ -170,14 +175,33 @@
 					{i18n.file_score()}
 					{episode.file_score}
 				</span>
-			{/if}
-		</div>
-
-		{#if episode.overview}
-			<p class="mt-3 text-sm leading-relaxed text-fg-muted">{episode.overview}</p>
+			</div>
 		{/if}
 
-		<dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2.5 text-sm">
+		{#if episode.overview}
+			<p class="mt-3 text-sm leading-relaxed text-fg-muted first:mt-0">{episode.overview}</p>
+		{/if}
+
+		<dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2.5 text-sm first:mt-0">
+			<!-- The status in its colour, and while a download is behind it the
+			     way to it: the pill is the link, as in the episode list. -->
+			<dt class="text-fg-subtle">{i18n.common_status()}</dt>
+			<dd class="text-right">
+				<DownloadLink href={live.href}>
+					<span
+						class="ep-pill inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
+						style:--c={`var(--status-${meta.token})`}
+					>
+						<span
+							class={cn(
+								"dot h-1.5 w-1.5 shrink-0 rounded-full",
+								meta.live && "motion-safe:animate-pulse",
+							)}
+						></span>
+						{meta.label}
+					</span>
+				</DownloadLink>
+			</dd>
 			{#each rows as row (row.label)}
 				<dt class="text-fg-subtle">{row.label}</dt>
 				<dd class="text-right font-mono text-xs tabular text-fg-muted">

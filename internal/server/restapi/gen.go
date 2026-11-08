@@ -4452,6 +4452,10 @@ type ActivityArtistRef struct {
 	// AlbumCount Albums the pack is expected to cover.
 	AlbumCount int `json:"album_count"`
 
+	// AlbumIds The albums the pack is expected to cover, in library order, so
+	// an album's page finds the pack downloading it. Set on the queue.
+	AlbumIds *[]uint32 `json:"album_ids,omitempty"`
+
 	// AlbumTitles Those albums' titles, in library order. An uploaded discography
 	// has no release name, so its row names what it filled with these.
 	AlbumTitles *[]string `json:"album_titles,omitempty"`
@@ -4503,6 +4507,13 @@ type ActivityEvent struct {
 	// BookSeries schema, which carry the whole season or volume tree.
 	BookSeries *SeriesRef `json:"book_series,omitempty"`
 	CreatedAt  time.Time  `json:"created_at"`
+
+	// DownloadId The download record the event came from — a grab, the download
+	// completing or failing, a hold, and what its import recorded
+	// (the imported row, a replaced file's removal). Set only while
+	// the record is on the queue or in the history
+	// (`GET /activity/history/{id}` reads a terminal one).
+	DownloadId *uint32 `json:"download_id,omitempty"`
 
 	// Episode Show + S/E context for a TV download record (queue/history rows render
 	// "<show> · SxxExx" from it). Absent on movie records.
@@ -5769,7 +5780,11 @@ type Episode struct {
 // "<show> · SxxExx" from it). Absent on movie records.
 type EpisodeRef struct {
 	Episode uint16 `json:"episode"`
-	Season  uint16 `json:"season"`
+
+	// EpisodeId The episode itself, which the series page opens. On a season
+	// pack's record it is the episode the record is filed under.
+	EpisodeId *uint32 `json:"episode_id,omitempty"`
+	Season    uint16  `json:"season"`
 
 	// SeriesId Set where the row links back to the series page.
 	SeriesId  *uint32 `json:"series_id,omitempty"`
@@ -8525,9 +8540,15 @@ type QueueEntry struct {
 
 	// Episode Show + S/E context for a TV download record (queue/history rows render
 	// "<show> · SxxExx" from it). Absent on movie records.
-	Episode       *EpisodeRef `json:"episode,omitempty"`
-	Eta           *int64      `json:"eta,omitempty"`
-	FailureReason *string     `json:"failure_reason,omitempty"`
+	Episode *EpisodeRef `json:"episode,omitempty"`
+
+	// EpisodeIds Every episode the download is for, the one `episode` names
+	// included: a season pack's whole season, an upgrade's targets.
+	// Absent on any other record. A series page finds the download
+	// behind an episode or a season by it.
+	EpisodeIds    *[]uint32 `json:"episode_ids,omitempty"`
+	Eta           *int64    `json:"eta,omitempty"`
+	FailureReason *string   `json:"failure_reason,omitempty"`
 
 	// HoldReasons Present only on a held entry, one item per failed check.
 	HoldReasons  *[]HoldReason `json:"hold_reasons,omitempty"`
@@ -9568,6 +9589,11 @@ type TorrentAddResult struct {
 type TorrentDetails struct {
 	AddedAt time.Time `json:"added_at"`
 
+	// DownloadId That newest record, while it is on the queue or in the history,
+	// so the torrent links to its detail. Absent when untracked or
+	// when the record is an adoption proposal.
+	DownloadId *uint32 `json:"download_id,omitempty"`
+
 	// DownloadSpeed Bytes per second.
 	DownloadSpeed int64 `json:"download_speed"`
 
@@ -9649,6 +9675,11 @@ type TorrentFilePriorityUpdatePriority string
 // TorrentInfo defines model for TorrentInfo.
 type TorrentInfo struct {
 	AddedAt time.Time `json:"added_at"`
+
+	// DownloadId That newest record, while it is on the queue or in the history,
+	// so the torrent links to its detail. Absent when untracked or
+	// when the record is an adoption proposal.
+	DownloadId *uint32 `json:"download_id,omitempty"`
 
 	// DownloadSpeed Bytes per second.
 	DownloadSpeed int64 `json:"download_speed"`
@@ -12092,6 +12123,9 @@ type ServerInterface interface {
 	// DeleteHistoryItem Delete one history record.
 	// (DELETE /activity/history/{id})
 	DeleteHistoryItem(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// GetHistoryItem One history record.
+	// (GET /activity/history/{id})
+	GetHistoryItem(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// RetryFailedImport Re-run the import for a failed download record.
 	// (POST /activity/history/{id}/retry)
 	RetryFailedImport(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -12950,6 +12984,12 @@ func (_ Unimplemented) ClearCompletedHistory(w http.ResponseWriter, r *http.Requ
 // DeleteHistoryItem Delete one history record.
 // (DELETE /activity/history/{id})
 func (_ Unimplemented) DeleteHistoryItem(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetHistoryItem One history record.
+// (GET /activity/history/{id})
+func (_ Unimplemented) GetHistoryItem(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -14849,6 +14889,32 @@ func (siw *ServerInterfaceWrapper) DeleteHistoryItem(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteHistoryItem(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetHistoryItem operation middleware
+func (siw *ServerInterfaceWrapper) GetHistoryItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHistoryItem(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -23766,6 +23832,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/activity/history/{id}", wrapper.DeleteHistoryItem)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activity/history/{id}", wrapper.GetHistoryItem)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activity/history/{id}/retry", wrapper.RetryFailedImport)
 	})
 	r.Group(func(r chi.Router) {
@@ -24538,6 +24607,42 @@ func (response DeleteHistoryItem500JSONResponse) VisitDeleteHistoryItemResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHistoryItemRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type GetHistoryItemResponseObject interface {
+	VisitGetHistoryItemResponse(w http.ResponseWriter) error
+}
+
+type GetHistoryItem200JSONResponse HistoryEntry
+
+func (response GetHistoryItem200JSONResponse) VisitGetHistoryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHistoryItem404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetHistoryItem404JSONResponse) VisitGetHistoryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -42918,6 +43023,9 @@ type StrictServerInterface interface {
 	// DeleteHistoryItem Delete one history record.
 	// (DELETE /activity/history/{id})
 	DeleteHistoryItem(ctx context.Context, request DeleteHistoryItemRequestObject) (DeleteHistoryItemResponseObject, error)
+	// GetHistoryItem One history record.
+	// (GET /activity/history/{id})
+	GetHistoryItem(ctx context.Context, request GetHistoryItemRequestObject) (GetHistoryItemResponseObject, error)
 	// RetryFailedImport Re-run the import for a failed download record.
 	// (POST /activity/history/{id}/retry)
 	RetryFailedImport(ctx context.Context, request RetryFailedImportRequestObject) (RetryFailedImportResponseObject, error)
@@ -43993,6 +44101,32 @@ func (sh *strictHandler) DeleteHistoryItem(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DeleteHistoryItemResponseObject); ok {
 		if err := validResponse.VisitDeleteHistoryItemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetHistoryItem operation middleware
+func (sh *strictHandler) GetHistoryItem(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetHistoryItemRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetHistoryItem(ctx, request.(GetHistoryItemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetHistoryItem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetHistoryItemResponseObject); ok {
+		if err := validResponse.VisitGetHistoryItemResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

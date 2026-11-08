@@ -8,6 +8,7 @@ import { api, ApiError } from "./api";
 import { auth } from "./auth.svelte";
 import { transcodingDisabled } from "./transcoding";
 import { NAV_POLL_MS, SILENT } from "./query";
+import { link, ROUTE } from "./routes";
 import type {
 	DownloadClient,
 	TorrentList,
@@ -108,7 +109,7 @@ export function torrentHref(
 ): string | null {
 	if (!hash) return null;
 	const h = hash.toLowerCase();
-	return listed.has(h) ? `/torrents?hash=${encodeURIComponent(h)}` : null;
+	return listed.has(h) ? link.torrent(h) : null;
 }
 
 export function torrentCountsQuery() {
@@ -162,7 +163,7 @@ export type IsActiveFn = (
 // top-level routes rather than children of /activity, so a recursive
 // isActive("/activity") does not cover them — the group's own highlight has
 // to name all three.
-export const ACTIVITY_ROUTES = ["/activity", "/torrents", "/transcoding"];
+export const ACTIVITY_ROUTES = [ROUTE.activity, ROUTE.torrents, ROUTE.transcoding];
 
 export const activityGroupActive = (isActive: IsActiveFn) =>
 	ACTIVITY_ROUTES.some((p) => isActive(p));

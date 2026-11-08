@@ -15,6 +15,7 @@ import {
 } from "./music-books";
 import type { DiskUsage, LibraryArrival, Movie, SystemInfo, TVShow } from "./types";
 import { m as i18n } from "./paraglide/messages.js";
+import { ROUTE, targetHref, type MediaTarget } from "./routes";
 
 type Counted = (inputs: { count: string }) => string;
 const n = (v: number) => v.toLocaleString();
@@ -33,10 +34,14 @@ export const kindToken = (a: Pick<LibraryArrival, "kind">): KindToken =>
 // An album opens on its artist's page with the release selected; a volume on
 // its series, which is where a volume lives.
 export function arrivalHref(a: LibraryArrival): string {
-	if (a.kind === "movie") return `/movies/${a.id}`;
-	if (a.kind === "series") return `/series/${a.id}`;
-	if (a.kind === "album") return a.artist_id ? `/music/${a.artist_id}?release=${a.id}` : "/music";
-	return a.series_id ? `/books/series/${a.series_id}` : `/books/${a.id}`;
+	return targetHref(arrivalTarget(a)) ?? ROUTE.music;
+}
+
+function arrivalTarget(a: LibraryArrival): MediaTarget | undefined {
+	if (a.kind === "movie") return { kind: "movie", id: a.id };
+	if (a.kind === "series") return { kind: "show", id: a.id };
+	if (a.kind === "album") return a.artist_id ? { kind: "album", id: a.id, artistId: a.artist_id } : undefined;
+	return a.series_id ? { kind: "bookSeries", id: a.series_id } : { kind: "book", id: a.id };
 }
 
 export function arrivalArt(a: LibraryArrival): string {
@@ -108,7 +113,7 @@ export function movieRow(list: Movie[]): LedgerRow {
 		key: "movies",
 		token: "movie",
 		label: i18n.movies_label(),
-		href: "/movies",
+		href: ROUTE.movies,
 		count: plural(list.length, i18n.dash_movie_count_one, i18n.dash_movie_count_other),
 		detail: plural(have, i18n.dash_available_one, i18n.dash_available_other),
 		total: list.length,
@@ -136,7 +141,7 @@ export function seriesRow(list: TVShow[]): LedgerRow {
 		key: "series",
 		token: "episode",
 		label: i18n.series_label(),
-		href: "/series",
+		href: ROUTE.shows,
 		count: plural(list.length, i18n.dash_series_count_one, i18n.dash_series_count_other),
 		detail: i18n.dash_episodes_of({ have: n(have), total: n(total) }),
 		total,
@@ -166,7 +171,7 @@ export function musicRow(list: Artist[]): LedgerRow {
 		key: "music",
 		token: "album",
 		label: i18n.music_label(),
-		href: "/music",
+		href: ROUTE.music,
 		count: plural(list.length, i18n.music_artists_one, i18n.music_artists_other),
 		detail: i18n.dash_releases_of({ have: n(have), total: n(total) }),
 		total,
@@ -188,7 +193,7 @@ export function booksRow(list: ShelfItem[]): LedgerRow {
 		key: "books",
 		token: "book",
 		label: i18n.books_label(),
-		href: "/books",
+		href: ROUTE.books,
 		count: plural(list.length, i18n.dash_title_count_one, i18n.dash_title_count_other),
 		detail: `${plural(books, i18n.dash_book_count_one, i18n.dash_book_count_other)} · ${plural(list.length - books, i18n.dash_series_count_one, i18n.dash_series_count_other)}`,
 		total: list.length,

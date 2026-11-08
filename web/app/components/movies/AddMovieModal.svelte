@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link } from "@lib/routes";
 	import {
 		createQuery,
 		createMutation,
@@ -544,7 +545,7 @@
 			</button>
 		{:else if selectedInLibrary && !outcome.showing(selected.tmdb_id) && selectedLocalId !== undefined}
 			<a
-				href={`/movies/${selectedLocalId}`}
+				href={link.movie(selectedLocalId)}
 				onclick={onClose}
 				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-4 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 			>

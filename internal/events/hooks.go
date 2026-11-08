@@ -111,7 +111,7 @@ func downloadRecordHook() ent.Hook {
 						return val, nil
 					}
 					recordAux(
-						ctx,
+						forDownloadRecord(ctx, mutatedRecordID(dm, val)),
 						"download_record",
 						c,
 						TypeGrabbed,
@@ -154,7 +154,8 @@ func downloadRecordHook() ent.Hook {
 						return val, nil
 					}
 					recordAux(
-						ctx, "download_record", c, t, o.scope, o.id,
+						forDownloadRecord(ctx, mutatedRecordID(dm, val)),
+						"download_record", c, t, o.scope, o.id,
 						downloadStatusPayload(dm),
 					)
 				}
@@ -421,6 +422,26 @@ func firstID(ids ...*uint32) uint32 {
 		if id != nil && *id != 0 {
 			return *id
 		}
+	}
+	return 0
+}
+
+// forDownloadRecord names the record a download record's own event is about,
+// replacing whatever record ctx was already working for (an import updating
+// another record is not that record's import), and naming none for a bulk
+// update.
+func forDownloadRecord(ctx context.Context, id uint32) context.Context {
+	return context.WithValue(ctx, downloadRecordKey{}, id)
+}
+
+// mutatedRecordID is the record a create or a single-row update wrote, or 0
+// for a bulk update, which names no one record to link the event to.
+func mutatedRecordID(m *ent.DownloadRecordMutation, val ent.Value) uint32 {
+	if rec, ok := val.(*ent.DownloadRecord); ok && rec != nil {
+		return rec.ID
+	}
+	if id, ok := m.ID(); ok {
+		return id
 	}
 	return 0
 }

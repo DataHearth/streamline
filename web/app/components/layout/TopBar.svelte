@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ROUTE } from "@lib/routes";
 	import { onMount, tick, onDestroy } from "svelte";
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -49,13 +50,13 @@
 	// set an h1 of their own, so the heading never moves between tabs.
 	const SECTIONS: { prefix: string; label: string }[] = [
 		{ prefix: "/", label: i18n.nav_dashboard() },
-		{ prefix: "/movies", label: i18n.movies_label() },
-		{ prefix: "/series", label: i18n.settings_series() },
-		{ prefix: "/music", label: i18n.music_label() },
-		{ prefix: "/books", label: i18n.books_label() },
-		{ prefix: "/activity", label: i18n.nav_activity() },
-		{ prefix: "/torrents", label: i18n.torrent_label() },
-		{ prefix: "/transcoding", label: i18n.transcode_label() },
+		{ prefix: ROUTE.movies, label: i18n.movies_label() },
+		{ prefix: ROUTE.shows, label: i18n.settings_series() },
+		{ prefix: ROUTE.music, label: i18n.music_label() },
+		{ prefix: ROUTE.books, label: i18n.books_label() },
+		{ prefix: ROUTE.activity, label: i18n.nav_activity() },
+		{ prefix: ROUTE.torrents, label: i18n.torrent_label() },
+		{ prefix: ROUTE.transcoding, label: i18n.transcode_label() },
 		{ prefix: "/calendar", label: i18n.common_calendar() },
 		{ prefix: "/requests", label: i18n.requests_label() },
 		{ prefix: "/imports", label: i18n.imports_label() },
@@ -115,7 +116,7 @@
 		segments.forEach((seg, i) => {
 			href += `/${seg}`;
 			// /books/series/3 is one page, not a stop under a "Series" crumb.
-			if (root.prefix === "/books" && seg === "series") return;
+			if (root.prefix === ROUTE.books && seg === "series") return;
 			const label = segmentLabel(seg, href);
 			const last = i === segments.length - 1;
 			trail.push(last ? { label, title: !/^\d+$/.test(seg) && !!PAGE_LABELS[href] } : { label, href });

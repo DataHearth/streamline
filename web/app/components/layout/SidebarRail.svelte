@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ROUTE } from "@lib/routes";
 	import { onMount } from "svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -62,19 +63,19 @@
 
 	let MENUS = $derived<Record<string, Link[]>>({
 		Library: [
-			{ label: i18n.movies_label(), href: "/movies", icon: Film },
-			{ label: i18n.settings_series(), href: "/series", icon: Tv },
-			{ label: i18n.music_label(), href: "/music", icon: Music },
-			{ label: i18n.books_label(), href: "/books", icon: BookMarked },
+			{ label: i18n.movies_label(), href: ROUTE.movies, icon: Film },
+			{ label: i18n.settings_series(), href: ROUTE.shows, icon: Tv },
+			{ label: i18n.music_label(), href: ROUTE.music, icon: Music },
+			{ label: i18n.books_label(), href: ROUTE.books, icon: BookMarked },
 		],
 		Activity: [
-			{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
+			{ label: i18n.activity_queue_history(), href: ROUTE.activity, icon: ListVideo },
 			// Each only while its feature is on (activityFeatures).
 			...(features.torrents
-				? [{ label: i18n.torrent_label(), href: "/torrents", icon: Magnet }]
+				? [{ label: i18n.torrent_label(), href: ROUTE.torrents, icon: Magnet }]
 				: []),
 			...(features.transcoding
-				? [{ label: i18n.transcode_label(), href: "/transcoding", icon: Replace }]
+				? [{ label: i18n.transcode_label(), href: ROUTE.transcoding, icon: Replace }]
 				: []),
 		],
 	});
@@ -108,7 +109,7 @@
 		};
 	}
 
-	let libraryActive = $derived(["/movies", "/series", "/music", "/books"].some((p) => isActiveFn(p)));
+	let libraryActive = $derived([ROUTE.movies, ROUTE.shows, ROUTE.music, ROUTE.books].some((p) => isActiveFn(p)));
 	let activityActive = $derived(activityGroupActive(isActiveFn));
 	let dashActive = $derived(isActiveFn("/", {}, { recursive: false }));
 
@@ -235,7 +236,7 @@
 							>
 								<link.icon size={18} class="shrink-0" />
 								<span class="min-w-0 flex-1 truncate">{link.label}</span>
-								{#if link.href === "/movies" && counts.moviesTotal !== null}
+								{#if link.href === ROUTE.movies && counts.moviesTotal !== null}
 									<span
 										class={cn(
 											"shrink-0 font-mono text-[11px] tabular-nums",
@@ -244,7 +245,7 @@
 									>
 										{counts.moviesTotal.toLocaleString()}
 									</span>
-								{:else if link.href === "/series" && counts.seriesTotal !== null}
+								{:else if link.href === ROUTE.shows && counts.seriesTotal !== null}
 									<span
 										class={cn(
 											"shrink-0 font-mono text-[11px] tabular-nums",
@@ -253,7 +254,7 @@
 									>
 										{counts.seriesTotal.toLocaleString()}
 									</span>
-								{:else if link.href === "/torrents"}
+								{:else if link.href === ROUTE.torrents}
 									<span
 										class="flex shrink-0 items-center gap-1.5 font-mono text-[10px] leading-none tabular-nums text-fg-subtle"
 									>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link } from "@lib/routes";
 	import { onMount, tick } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { params } from "@roxi/routify";
@@ -183,7 +184,7 @@
 		if (book.series)
 			rows.push({
 				label: i18n.books_series(),
-				value: [{ text: i18n.books_volume_of({ n: String(book.series.number), title: book.series.title }), href: `/books/series/${book.series.id}` }],
+				value: [{ text: i18n.books_volume_of({ n: String(book.series.number), title: book.series.title }), href: link.bookSeries(book.series.id) }],
 				mono: false,
 			});
 		if (book.genre) rows.push({ label: i18n.music_fact_genre(), value: book.genre, mono: false });
@@ -338,6 +339,7 @@
 			{#each slots as slot (slot.format)}
 				{@const edition = editionOf(slot.edition_id)}
 				<FormatCard
+					bookId={book.id}
 					{slot}
 					{edition}
 					editionCount={book.editions.filter((e) => e.format === slot.format).length}

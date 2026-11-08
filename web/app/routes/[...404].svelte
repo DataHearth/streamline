@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ROUTE } from "@lib/routes";
 	import { onMount } from "svelte";
 	import { Compass, House, Film } from "@lucide/svelte";
 	import AuthCard from "@components/auth/AuthCard.svelte";
@@ -67,7 +68,7 @@
 				{i18n.error_back_to_dashboard()}
 			</a>
 			<a
-				href="/movies"
+				href={ROUTE.movies}
 				class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-border-strong bg-surface px-4 text-sm font-medium text-fg transition-colors hover:border-accent hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 			>
 				<Film size={16} aria-hidden="true" />

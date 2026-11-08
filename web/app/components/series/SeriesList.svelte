@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link } from "@lib/routes";
 	import { countDownloading, countImporting, countWanted } from "@lib/nouns";
 	import { auth } from "@lib/auth.svelte";
 	import { Tv } from "@lucide/svelte";
@@ -121,7 +122,7 @@
 					{/if}
 					<td class="px-3 py-2.5">
 						<a
-							href="/series/{show.id}"
+							href={link.show(show.id)}
 							class="relative block aspect-[2/3] w-10 overflow-hidden rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
 							<div class="absolute inset-0 bg-bg-card"></div>
@@ -139,7 +140,7 @@
 					</td>
 					<td class="min-w-0 px-3 py-2.5">
 						<a
-							href="/series/{show.id}"
+							href={link.show(show.id)}
 							class="block truncate font-medium text-fg transition hover:text-accent-text focus:outline-none focus-visible:underline"
 						>
 							{show.title}

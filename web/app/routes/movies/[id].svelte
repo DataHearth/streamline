@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ROUTE } from "@lib/routes";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { params, goto } from "@roxi/routify";
 	import { Search, LoaderCircle } from "@lucide/svelte";
@@ -128,7 +129,7 @@
 		refresh: [["movies"]],
 		failed: deleteFailed,
 		succeeded: () => i18n.movie_deleted(),
-		after: () => navigate("/movies"),
+		after: () => navigate(ROUTE.movies),
 	}));
 
 	function onKebabPick(a: string) {

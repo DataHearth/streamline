@@ -185,8 +185,11 @@ func (db *DB) AllDownloadRecordHashes(
 // record holding a torrent: the release it was grabbed as, and the library
 // title it is for, so the list can link to that title's page. At most one of
 // the ids is set (AlbumArtistID beside AlbumID); none on an orphan record.
+// RecordID is the record itself while Activity shows it (ShownRecordStatuses),
+// so the torrent can link to its detail; 0 for an adoption proposal.
 type TorrentRecord struct {
 	Title         string
+	RecordID      uint32
 	MovieID       uint32
 	SeriesID      uint32
 	AlbumID       uint32
@@ -229,6 +232,9 @@ func (db *DB) DownloadRecordsByHash(
 
 func torrentRecord(r *ent.DownloadRecord) TorrentRecord {
 	t := TorrentRecord{Title: r.Title}
+	if slices.Contains(ShownRecordStatuses, r.Status) {
+		t.RecordID = r.ID
+	}
 	switch e := r.Edges; {
 	case e.Album != nil:
 		t.AlbumID = e.Album.ID
@@ -1603,13 +1609,7 @@ func (db *DB) ListActiveDownloadRecords(
 	ctx context.Context,
 ) ([]*ent.DownloadRecord, error) {
 	return db.client.DownloadRecord.Query().
-		Where(downloadrecord.StatusIn(
-			downloadrecord.StatusDownloading,
-			downloadrecord.StatusImporting,
-			// Held records are finished downloading but not done: the queue is
-			// where a user is told one is waiting on them.
-			downloadrecord.StatusHeld,
-		)).
+		Where(downloadrecord.StatusIn(queueStatuses...)).
 		WithMovie().
 		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
@@ -1621,6 +1621,8 @@ func (db *DB) ListActiveDownloadRecords(
 		WithAlbums(func(q *ent.AlbumQuery) {
 			q.Select(album.FieldID, album.FieldTitle)
 		}).
+		// Ids only: the queue says which episodes a pack covers, nothing more.
+		WithEpisodes(func(q *ent.EpisodeQuery) { q.Select(episode.FieldID) }).
 		All(ctx)
 }
 
@@ -1858,31 +1860,17 @@ func (db *DB) ListDownloadHistory(
 	if limit <= 0 {
 		limit = defaultActivityLimit
 	}
-	terminal := downloadrecord.StatusIn(
-		downloadrecord.StatusCompleted,
-		downloadrecord.StatusFailed,
-	)
+	terminal := downloadrecord.StatusIn(historyStatuses...)
 	total, err := db.client.DownloadRecord.Query().Where(terminal).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("download history: count: %w", err)
 	}
-	q := db.client.DownloadRecord.Query().
+	q := withHistoryEdges(db.client.DownloadRecord.Query().
 		Where(terminal).
 		Order(
 			ent.Desc(downloadrecord.FieldUpdateTime),
 			ent.Desc(downloadrecord.FieldID),
-		).
-		WithMovie().
-		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
-			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
-		}).
-		WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
-		WithTrack().
-		WithArtist().
-		WithAlbums(func(q *ent.AlbumQuery) {
-			q.Select(album.FieldID, album.FieldTitle)
-		}).
-		WithBook(func(q *ent.BookQuery) { q.WithSeries() })
+		))
 
 	if cursor != "" {
 		ts, id, err := decodeActivityCursor(cursor)
@@ -1911,6 +1899,85 @@ func (db *DB) ListDownloadHistory(
 		res.Records = rows
 	}
 	return res, nil
+}
+
+// queueStatuses are the in-flight states the queue lists. Held records are
+// finished downloading but not done: the queue is where a user is told one is
+// waiting on them.
+var queueStatuses = []downloadrecord.Status{
+	downloadrecord.StatusDownloading,
+	downloadrecord.StatusImporting,
+	downloadrecord.StatusHeld,
+}
+
+// historyStatuses are the terminal states the history lists.
+var historyStatuses = []downloadrecord.Status{
+	downloadrecord.StatusCompleted,
+	downloadrecord.StatusFailed,
+}
+
+// ShownRecordStatuses are the states Activity shows a record in: the queue's
+// and the history's, built from the two lists those views query so a status
+// added to either is linked to as well. Adoption proposals (pending,
+// dismissed) live in the pending sheet and are not linked to.
+var ShownRecordStatuses = slices.Concat(queueStatuses, historyStatuses)
+
+// withHistoryEdges loads what a history row names: the title it is for, down
+// to the album's artist, the episode's show and the volume's series.
+func withHistoryEdges(q *ent.DownloadRecordQuery) *ent.DownloadRecordQuery {
+	return q.
+		WithMovie().
+		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
+			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
+		}).
+		WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
+		WithTrack().
+		WithArtist().
+		WithAlbums(func(q *ent.AlbumQuery) {
+			q.Select(album.FieldID, album.FieldTitle)
+		}).
+		WithBook(func(q *ent.BookQuery) { q.WithSeries() })
+}
+
+// FindDownloadHistoryEntry returns one terminal record with what its history
+// row names, for a link to a record further back than the history's loaded
+// pages. ent.NotFound when it is absent or not terminal.
+func (db *DB) FindDownloadHistoryEntry(
+	ctx context.Context,
+	id uint32,
+) (*ent.DownloadRecord, error) {
+	return withHistoryEdges(db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.ID(id),
+			downloadrecord.StatusIn(historyStatuses...),
+		)).
+		Only(ctx)
+}
+
+// ShownDownloadRecordIDs reports which of ids name a record Activity still
+// shows (ShownRecordStatuses). The activity feed links an event to its
+// record only then: a cleared history row or a proposal has no detail to open.
+func (db *DB) ShownDownloadRecordIDs(
+	ctx context.Context,
+	ids []uint32,
+) (map[uint32]struct{}, error) {
+	out := make(map[uint32]struct{}, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	found, err := db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.IDIn(ids...),
+			downloadrecord.StatusIn(ShownRecordStatuses...),
+		).
+		IDs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("shown download records: %w", err)
+	}
+	for _, id := range found {
+		out[id] = struct{}{}
+	}
+	return out, nil
 }
 
 // DeleteDownloadRecord deletes one record by ID. Returns ent.NotFound when

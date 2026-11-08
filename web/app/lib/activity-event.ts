@@ -25,19 +25,33 @@ import {
 import { formatLabel, tracksCount, volumeLabel } from "./music-books";
 import { NOUN_ALBUM } from "./nouns";
 import { m as i18n } from "./paraglide/messages.js";
+import { link, targetHref, type MediaTarget } from "./routes";
 import type { ActivityEvent, ActivityType } from "./types";
 
 export type EventSubject = {
 	/** Row heading — the title the event happened to. */
 	title: string;
-	/** Detail page, or undefined when the row has nowhere to go. */
+	/** What the row opens on, or undefined when it has nowhere to go. */
+	target?: MediaTarget;
+	/** Its address (`targetHref(target)`). */
 	href?: string;
 	/** Qualifier under the heading (SxxExx, "Season 3"), when there is one. */
 	detail?: string;
+	/**
+	 * The part of the title the event is about, when it is narrower than the
+	 * title itself: the episode, the season, the album, the volume. A detail
+	 * page's History tab is already on the title, so this is the link it has
+	 * left to give.
+	 */
+	part?: MediaTarget;
 };
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const joinDot = (parts: (string | undefined)[]) => parts.filter(Boolean).join(" · ") || undefined;
+
+function subject(s: Omit<EventSubject, "href">): EventSubject {
+	return { ...s, href: targetHref(s.target) };
+}
 
 /**
  * Resolves which of an event's possible owners is set and renders it as one
@@ -48,36 +62,48 @@ const joinDot = (parts: (string | undefined)[]) => parts.filter(Boolean).join(" 
  */
 export function eventSubject(event: ActivityEvent): EventSubject {
 	if (event.movie) {
-		return { title: event.movie.title, href: `/movies/${event.movie.id}` };
+		return subject({ title: event.movie.title, target: { kind: "movie", id: event.movie.id } });
 	}
 	if (event.episode) {
 		const e = event.episode;
-		return {
+		const target: MediaTarget | undefined = e.series_id
+			? { kind: "episode", seriesId: e.series_id, season: e.season, episodeId: e.episode_id }
+			: undefined;
+		return subject({
 			title: e.show_title,
-			href: e.series_id ? `/series/${e.series_id}` : undefined,
+			target,
 			detail: `S${pad(e.season)}E${pad(e.episode)}`,
-		};
+			part: target,
+		});
 	}
 	if (event.series) {
-		return {
+		const season = singleSeason(event.payload);
+		const part: MediaTarget | undefined =
+			season === undefined ? undefined : { kind: "season", seriesId: event.series.id, season };
+		return subject({
 			title: event.series.title,
-			href: `/series/${event.series.id}`,
+			target: part ?? { kind: "show", id: event.series.id },
 			detail: seriesQualifier(event.payload),
-		};
+			part,
+		});
 	}
 	// An album row reads like the queue's — the artist, then which album — and
 	// lands on the artist page with that release open.
 	if (event.album) {
 		const a = event.album;
 		const tracks = event.payload?.tracks;
-		return {
+		const target: MediaTarget | undefined = a.artist_id
+			? { kind: "album", id: a.id, artistId: a.artist_id }
+			: undefined;
+		return subject({
 			title: a.artist_name || a.title,
-			href: a.artist_id ? `/music/${a.artist_id}?release=${a.id}` : undefined,
+			target,
 			detail: joinDot([a.artist_name ? a.title : undefined, typeof tracks === "number" ? tracksCount(tracks) : undefined]),
-		};
+			part: target,
+		});
 	}
 	if (event.artist) {
-		return { title: event.artist.name, href: `/music/${event.artist.id}` };
+		return subject({ title: event.artist.name, target: { kind: "artist", id: event.artist.id } });
 	}
 	// A volume's own title is often just "Tome 3": the series and its number are
 	// what identify it, as in the queue. The slot rides alongside, since a book
@@ -85,16 +111,33 @@ export function eventSubject(event: ActivityEvent): EventSubject {
 	if (event.book) {
 		const b = event.book;
 		const slot = b.slot ? formatLabel(b.slot) : undefined;
-		return {
+		const target: MediaTarget = { kind: "book", id: b.id };
+		return subject({
 			title: b.series ? b.series.title : b.title,
-			href: `/books/${b.id}`,
+			target,
 			detail: joinDot([b.series ? volumeLabel(b.series.number) : undefined, slot]),
-		};
+			// A volume is its own page, under the series page that lists it.
+			part: b.series ? target : undefined,
+		});
 	}
 	if (event.book_series) {
-		return { title: event.book_series.title, href: `/books/series/${event.book_series.id}` };
+		return subject({ title: event.book_series.title, target: { kind: "bookSeries", id: event.book_series.id } });
 	}
 	return { title: i18n.common_unknown() };
+}
+
+/**
+ * The download record an event came from, when it still exists: a grab, the
+ * download finishing or failing, a hold, the import it produced. Its address is
+ * the record's detail on Activity.
+ */
+export function eventDownloadHref(event: ActivityEvent): string | undefined {
+	return event.download_id ? link.download(event.download_id) : undefined;
+}
+
+function singleSeason(payload: Record<string, unknown> | undefined): number | undefined {
+	const seasons = payload?.seasons;
+	return Array.isArray(seasons) && seasons.length === 1 && typeof seasons[0] === "number" ? seasons[0] : undefined;
 }
 
 /**
@@ -107,11 +150,8 @@ export function eventSubject(event: ActivityEvent): EventSubject {
 function seriesQualifier(
 	payload: Record<string, unknown> | undefined,
 ): string | undefined {
-	const seasons = payload?.seasons;
-	const season =
-		Array.isArray(seasons) && seasons.length === 1 && typeof seasons[0] === "number"
-			? i18n.season_number({ number: seasons[0] })
-			: undefined;
+	const n = singleSeason(payload);
+	const season = n === undefined ? undefined : i18n.season_number({ number: n });
 	const episodes = payload?.episodes;
 	if (typeof episodes !== "number") return season;
 	const count =

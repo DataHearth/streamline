@@ -263,6 +263,10 @@ func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 		trace.WithAttributes(attribute.Int64("download_record.id", int64(recordID))),
 	)
 	defer span.End()
+	// Every event the import records — the imported row above all, which the
+	// media file hook writes without seeing the record — names the record, so
+	// a title's history links to the download that filled it.
+	ctx = events.WithDownloadRecord(ctx, recordID)
 
 	rec, err := w.db.FindImportingDownloadRecordByID(ctx, recordID)
 	if err != nil {

@@ -12,6 +12,8 @@
 	import ReleaseCredits from "./ReleaseCredits.svelte";
 	import { peopleList, qualityNote, releaseFacts, releaseGroups, releaseLine, releasePill, releaseTypeLabel, sharedWith, type Release, type Track } from "@lib/music-books";
 	import { albumPosterUrl } from "@lib/posters";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
+	import { firstDownloadHref, titleQueueQuery } from "@lib/title-downloads";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Phone shape of the discography, the way SeasonAccordion is for seasons:
@@ -57,6 +59,13 @@
 	} = $props();
 
 	let groups = $derived(releaseGroups(releases));
+	// An open release's pill opens the download it reads out; one queue read
+	// for the list, while any release is on its way.
+	const inFlight = (r: Release) => r.status === "downloading" || r.status === "paused";
+	const queue = titleQueueQuery(() => releases.some(inFlight));
+	function downloadHref(r: Release): string | undefined {
+		return inFlight(r) ? firstDownloadHref(queue.data?.items, { kind: "album", id: r.id }) : undefined;
+	}
 </script>
 
 {#snippet row(r: Release)}
@@ -96,7 +105,9 @@
 			<div class="px-4 pb-4" transition:slide={{ duration: 200, easing: cubicOut }}>
 				<div class="flex flex-wrap items-center gap-2">
 					{#if pill}
-						<LabelPill token={pill.token} label={pill.label} variant="translucent" live={pill.live} />
+						<DownloadLink href={downloadHref(r)}>
+							<LabelPill token={pill.token} label={pill.label} variant="translucent" live={pill.live} />
+						</DownloadLink>
 					{/if}
 					<span class="font-mono text-[11px] text-fg-muted">{releaseFacts(r).join(" · ")}</span>
 				</div>

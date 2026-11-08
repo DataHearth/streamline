@@ -112,6 +112,16 @@ Select entries the same way as on the queue to **remove** several history record
 
 **Clear completed** tidies out successful entries and leaves the failures. An entry whose torrent is still seeding stays, completed or failed, both here and in the automatic clean-up (completed entries after 30 days, failed ones after 14): without it, Streamline would no longer recognise the torrent as its own and list it under *Needs attention*. Events also age out on their own after `events.retention` (default 90 days).
 
+### From a title to its download, and back
+
+Every download has its own address, `/activity?download=<id>`: Activity opens it on the Queue while it is in flight, on the History once it is done, with its details expanded (the sheet on a phone). A reload keeps it open, and a download further back than the loaded history is fetched on its own.
+
+The links lead there from everywhere a download shows:
+
+- **On a title's page.** While a movie, an episode, an album or a book format is downloading, its *Downloading* pill is the link (the movie's poster, the album panel, the format card), a season's *N downloading* count is too, as are the **Status** row of the episode's sheet and of the movie's Library panel and an episode's status in the season's episode list. When a season waits on several downloads at once — grabbed episode by episode — that count opens the queue filtered on the season (`/activity?series=<id>&season=<n>`); the first chip of the status filters says so, and its ✕ shows the whole queue again. The view you are on (Queue, History, Events) is in the address too, so a reload or a shared link reopens it. The filter applies to the queue only. The chips show their arrow when the pointer is on them. A season pack shows on its season and on each of its episodes, a discography pack on each album it covers. The torrent is one step further: **Open torrent** in the download's details, for an admin under the built-in engine.
+- **In a title's History tab.** Each event — a grab, the download finishing or failing, a hold, the import it produced — links to the download it came from (**Download** at the end of the row), as long as that download is still in Activity. The episode, season, album or volume an event is about links to it too.
+- **In the event feed, the dashboard's live queue and a torrent's drawer.** An event row carries the same download link; a live queue row opens its download rather than the bare Activity page; a torrent Streamline tracks links to its download beside **Open page**.
+
 ---
 
 ## Adopted torrents

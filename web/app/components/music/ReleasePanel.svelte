@@ -8,6 +8,8 @@
 	import ReleaseCredits from "./ReleaseCredits.svelte";
 	import { peopleList, qualityNote, releaseFacts, releasePill, releaseTypeLabel, releaseYear, sharedWith, type Release, type Track } from "@lib/music-books";
 	import { albumPosterUrl } from "@lib/posters";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
+	import { liveDownload } from "@lib/title-downloads";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The selected release, right of the list from md. Two searches, as on the
@@ -53,6 +55,11 @@
 	let pill = $derived(releasePill(r));
 	let facts = $derived(releaseFacts(r));
 	let shared = $derived(sharedWith(r, artistId));
+	// The pill opens the download it reads out.
+	const live = liveDownload(
+		() => ({ kind: "album", id: r.id }),
+		() => r.status === "downloading" || r.status === "paused",
+	);
 	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
 </script>
 
@@ -67,7 +74,9 @@
 		<div class="@container min-w-0 flex-1">
 			<div class="flex flex-wrap items-center gap-2">
 				{#if pill}
-					<LabelPill token={pill.token} label={pill.label} size="md" variant="translucent" live={pill.live} />
+					<DownloadLink href={live.href}>
+						<LabelPill token={pill.token} label={pill.label} size="md" variant="translucent" live={pill.live} />
+					</DownloadLink>
 				{/if}
 				<span class={caps}>{releaseTypeLabel(r.type)}</span>
 				{#if !up && releaseYear(r)}

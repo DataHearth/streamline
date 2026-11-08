@@ -66,6 +66,8 @@
 		clearableCount = 0,
 		onAddTorrent,
 		canAddTorrent = false,
+		scopeLabel,
+		onClearScope,
 	}: {
 		leading?: Snippet;
 		view: View;
@@ -79,10 +81,14 @@
 		clearableCount?: number;
 		onAddTorrent?: () => void;
 		canAddTorrent?: boolean;
+		// A title the queue is filtered on (a season reached from its page): the
+		// strip's first chip, always on, and its ✕ — or the strip's — clears it.
+		scopeLabel?: string;
+		onClearScope?: () => void;
 	} = $props();
 
 	let chips = $derived(ACTIVITY_CHIPS[view]);
-	let anyActive = $derived(chips.some((c) => statusFilter.includes(c.key)));
+	let anyActive = $derived(!!scopeLabel || chips.some((c) => statusFilter.includes(c.key)));
 	function toggleChip(key: string) {
 		onStatusFilterChange(
 			statusFilter.includes(key)
@@ -118,6 +124,19 @@
 			class="filter-chips flex min-w-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
 			aria-label={i18n.activity_status_filter()}
 		>
+			{#if scopeLabel}
+				<button
+					type="button"
+					onclick={() => onClearScope?.()}
+					aria-pressed="true"
+					title={i18n.activity_filter_clear()}
+					class="inline-flex h-11 max-w-[14rem] shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-sm bg-accent-soft px-2.5 text-[11.5px] font-medium text-accent-text transition hover:text-fg lg:h-7"
+				>
+					<span class="truncate">{scopeLabel}</span>
+					<X size={11} aria-hidden="true" />
+					<span class="sr-only">{i18n.activity_filter_clear()}</span>
+				</button>
+			{/if}
 			{#each chips as c (c.key)}
 				{@const on = statusFilter.includes(c.key)}
 				<button
@@ -140,7 +159,10 @@
 		{#if anyActive}
 			<button
 				type="button"
-				onclick={() => onStatusFilterChange([])}
+				onclick={() => {
+					onStatusFilterChange([]);
+					onClearScope?.();
+				}}
 				aria-label={i18n.activity_clear_status_filters()}
 				title={i18n.activity_clear_status_filters()}
 				class="ml-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-sm text-fg-faint transition hover:bg-surface hover:text-fg"

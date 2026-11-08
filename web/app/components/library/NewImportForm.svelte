@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { gotoArgs, ROUTE } from "@lib/routes";
 	import { createForm } from "@tanstack/svelte-form";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { goto } from "@roxi/routify";
@@ -54,7 +55,7 @@
 			qc.invalidateQueries({ queryKey: ["imports"] });
 			toast.ok(i18n.imports_scan_started());
 			onCreated?.();
-			navigate("/imports/[id]", { id: String(scan.id) });
+			navigate(...gotoArgs(ROUTE.importScan, { id: scan.id }));
 		},
 		onError: (err) => {
 			if (hardcoverIssue(err) === "unset") keyUnset = true;

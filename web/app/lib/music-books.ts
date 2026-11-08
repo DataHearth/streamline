@@ -3,6 +3,7 @@
 
 import * as v from "valibot";
 import { m as i18n } from "./paraglide/messages.js";
+import { href, link, ROUTE } from "./routes";
 import { getLocale } from "./paraglide/runtime.js";
 import { formatDate, formatDateShort } from "./dates";
 import { formatBytes } from "./format";
@@ -537,8 +538,8 @@ export function personPhoto(p: Person, role?: BookRole): string | undefined {
 }
 
 export function personHref(p: Person): string | undefined {
-	if (p.artist_id) return `/music/${p.artist_id}`;
-	if (p.shelf) return `/books?author=${encodeURIComponent(p.shelf)}`;
+	if (p.artist_id) return link.artist(p.artist_id);
+	if (p.shelf) return href(ROUTE.books, {}, { author: p.shelf });
 	return undefined;
 }
 

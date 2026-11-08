@@ -48,6 +48,11 @@
 		canceled: i18n.status_canceled(),
 		rejected: i18n.status_rejected(),
 	};
+
+	/** The word a status pill reads, for a status written as text. */
+	export function statusLabel(kind: StatusKind): string {
+		return LABELS[kind];
+	}
 </script>
 
 <script lang="ts">

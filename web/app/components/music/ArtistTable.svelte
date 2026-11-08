@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link, ROUTE } from "@lib/routes";
 	import { UserRound } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { formatBytes } from "@lib/format";
@@ -74,7 +75,7 @@
 							<!-- The size sits on the inner disc: on the link, tokens.css's
 							     touch floor would stretch it into an oval below lg. -->
 							<!-- biome-ignore lint/a11y/useAnchorContent: a pointer-only twin of the named link beside it, out of the tab order -->
-							<a href="/music/{a.id}" tabindex="-1" aria-hidden="true" class="block w-fit">
+							<a href={link.artist(a.id)} tabindex="-1" aria-hidden="true" class="block w-fit">
 								<span class="relative block h-9 w-9 overflow-hidden rounded-full bg-bg-card">
 									<span class="absolute inset-0 grid place-items-center text-fg-faint">
 										<UserRound class="h-4 w-4" aria-hidden="true" />
@@ -85,7 +86,7 @@
 						</td>
 						<td class="max-w-0 px-3 py-2">
 							<a
-								href="/music/{a.id}"
+								href={link.artist(a.id)}
 								class="block truncate font-medium text-fg transition hover:text-accent-text focus:outline-none focus-visible:underline"
 							>
 								{a.name}
@@ -139,7 +140,7 @@
 										title={a.name}
 										media="music"
 										queryKey="music"
-										backHref="/music"
+										backHref={ROUTE.music}
 										hasFiles={a.size > 0}
 										profile={a.quality_profile}
 										searchLabel={t.wanted > 0 ? i18n.music_search_missing() : undefined}

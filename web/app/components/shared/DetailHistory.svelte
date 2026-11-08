@@ -1,12 +1,15 @@
 <script lang="ts">
+	import { DOWNLOAD_CHIP, DOWNLOAD_CHIP_ARROW } from "@lib/title-downloads";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { Activity } from "@lucide/svelte";
+	import { Activity, ChevronRight } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import {
 		EVENT_MARKS,
+		eventDownloadHref,
 		eventSubject,
 		monitoringDetail,
 	} from "@lib/activity-event";
+	import { targetHref } from "@lib/routes";
 	import { formatRelative, formatDateTime } from "@lib/dates";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type { ActivityEvent, ActivityList } from "@lib/types";
@@ -43,6 +46,7 @@
 		queryKey: ["detail-history", filter],
 		queryFn: () => api<ActivityList>(`/activity?${filter}&limit=50`),
 	}));
+
 
 
 	function release(event: ActivityEvent): string {
@@ -106,9 +110,15 @@
 			     many — or which album, which volume, which slot. Without it every
 			     scan, import and completion on a show read as a bare event name
 			     repeated down the list. -->
-			{@const scope = eventSubject(event).detail}
+			{@const subject = eventSubject(event)}
+			{@const part = subject.detail}
+			<!-- The part an event is about (the episode, the season, the album,
+			     the volume) is on this page or one step below it; the download it
+			     came from is on Activity. -->
+			{@const partHref = targetHref(subject.part)}
+			{@const downloadHref = eventDownloadHref(event)}
 			<li
-				class="grid grid-cols-[28px_1fr_auto_auto] items-center gap-4 border-b border-border px-4 py-3 last:border-b-0"
+				class="grid grid-cols-[28px_1fr_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-3 last:border-b-0"
 			>
 				<span
 					class={`grid h-6 w-6 place-items-center rounded-sm ${mark.bg} ${mark.fg}`}
@@ -119,10 +129,19 @@
 					<div class="font-mono text-[10px] tracking-[0.1em] text-fg-faint">
 						{mark.label}
 					</div>
-					{#if scope}
-						<div class="mt-0.5 truncate font-mono text-[11.5px] text-fg">
-							{scope}
-						</div>
+					{#if part}
+						{#if partHref}
+							<a
+								href={partHref}
+								class="mt-0.5 block truncate font-mono text-[11.5px] text-fg underline-offset-2 hover:text-accent-text hover:underline"
+							>
+								{part}
+							</a>
+						{:else}
+							<div class="mt-0.5 truncate font-mono text-[11.5px] text-fg">
+								{part}
+							</div>
+						{/if}
 					{/if}
 					{#if rel}
 						<div class="mt-0.5 truncate font-mono text-[11.5px] text-fg-muted">
@@ -140,6 +159,18 @@
 				<span class="font-mono text-[11px] text-fg-subtle">
 					{sz || ""}
 				</span>
+				{#if downloadHref}
+					<a
+						href={downloadHref}
+						title={i18n.detail_open_download()}
+						class={DOWNLOAD_CHIP}
+					>
+						{i18n.detail_download_link()}
+						<span class={DOWNLOAD_CHIP_ARROW}><ChevronRight size={12} aria-hidden="true" /></span>
+					</a>
+				{:else}
+					<span aria-hidden="true"></span>
+				{/if}
 			</li>
 		{/each}
 	</ul>
