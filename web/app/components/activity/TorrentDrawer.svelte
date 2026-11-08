@@ -24,6 +24,7 @@
 	import TorrentPeersTab from "./TorrentPeersTab.svelte";
 	import TorrentTrackersTab from "./TorrentTrackersTab.svelte";
 	import { cn } from "@lib/cn";
+	import { BELOW_MD } from "@lib/viewport.svelte";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import {
@@ -81,7 +82,7 @@
 	// class, so the breakpoint is read here.
 	let compact = $state(false);
 	onMount(() => {
-		const mql = window.matchMedia("(max-width: 767px)");
+		const mql = window.matchMedia(BELOW_MD);
 		const sync = () => (compact = mql.matches);
 		sync();
 		mql.addEventListener("change", sync);

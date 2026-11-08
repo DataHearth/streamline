@@ -20,6 +20,9 @@ export function createMediaQuery(query: string): () => boolean {
 	return () => matches;
 }
 
+// Below md the shell is the phone one: bottom navigation, sheets, the search page.
+export const BELOW_MD = "(max-width: 767px)";
+
 // The settings shell switches at lg, not md. Below it there is one settings
 // navigation (the index list) and the sub-sidebar is gone; see SettingsSidebar.
 export const SETTINGS_DESKTOP = "(min-width: 1024px)";
