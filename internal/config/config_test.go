@@ -352,6 +352,19 @@ auth:
 				).To(Equal("file-hardcover"))
 			})
 
+			It(
+				"fails to load when a built-in indexer's setting file is unreadable",
+				func() {
+					missing := filepath.Join(GinkgoT().TempDir(), "pass")
+					_, err := Load(writeCfg(
+						"indexers:\n  - name: x\n    protocol: cardigann\n" +
+							"    cardigann:\n      definition: yts\n" +
+							"      settings:\n        password_file: " + missing + "\n",
+					))
+					Expect(err).To(MatchError(ContainSubstring("read secret file")))
+				},
+			)
+
 			It("rejects setting both hardcover key and file", func() {
 				hcPath := filepath.Join(GinkgoT().TempDir(), "hardcover")
 				Expect(

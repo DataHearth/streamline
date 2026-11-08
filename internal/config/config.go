@@ -1708,6 +1708,13 @@ func loadSecretFiles(c *Config) (map[string]string, error) {
 	}
 	for _, x := range c.Indexers {
 		read(x.APIKeyFile)
+		if x.Cardigann != nil {
+			for k, v := range x.Cardigann.Settings {
+				if strings.HasSuffix(k, SettingFileSuffix) {
+					read(v)
+				}
+			}
+		}
 	}
 	for _, d := range c.DownloadClients {
 		read(d.PasswordFile)
@@ -1776,6 +1783,19 @@ func (c *Config) checkIndexers() []error {
 		}
 		if err := CheckCardigannProxy(ix.Cardigann.Proxy); err != nil {
 			errs = append(errs, fmt.Errorf("indexers %q: %w", ix.Name, err))
+		}
+		for k := range ix.Cardigann.Settings {
+			name, ok := strings.CutSuffix(k, SettingFileSuffix)
+			if !ok {
+				continue
+			}
+			_, inline := ix.Cardigann.Settings[name]
+			if _, file := ix.Cardigann.SettingFile(name); file && inline {
+				errs = append(errs, fmt.Errorf(
+					"indexers %q: cardigann.settings %q and %q are both set",
+					ix.Name, name, k,
+				))
+			}
 		}
 	}
 	return errs
@@ -1847,6 +1867,6 @@ func (c *Config) CheckCardigann(ix IndexerEntry) error {
 	if _, err := engine.Site(def, ix.Cardigann.Site); err != nil {
 		return err
 	}
-	_, err = engine.Config(def, ix.Cardigann.Settings)
+	_, err = engine.Config(def, ix.Cardigann.Resolved())
 	return err
 }

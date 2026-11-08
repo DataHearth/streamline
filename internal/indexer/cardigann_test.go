@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -292,6 +294,28 @@ var _ = Describe(
 				Expect(rows[name].Cookies).To(HaveKeyWithValue("pass", "abc"))
 			},
 		)
+
+		It("reads a rotated setting file as other settings", func() {
+			path := filepath.Join(GinkgoT().TempDir(), "pass")
+			hash := func(content string) string {
+				GinkgoHelper()
+				Expect(os.WriteFile(path, []byte(content), 0o600)).To(Succeed())
+				configtest.Setup(map[string]any{"indexers": []any{map[string]any{
+					"name": name, "protocol": "cardigann", "enabled": true,
+					"cardigann": map[string]any{
+						"definition": "3dtorrents",
+						"commit":     cardiganntest.Upstream.Commit,
+						"settings": map[string]any{
+							"username":      "u",
+							"password_file": path,
+						},
+					},
+				}}})
+				ix, _ := config.FindIndexer(name)
+				return configHash(ix)
+			}
+			Expect(hash("old")).NotTo(Equal(hash("new")))
+		})
 
 		It("does not replay a session earned under other settings", func() {
 			exp := time.Now().Add(time.Hour)

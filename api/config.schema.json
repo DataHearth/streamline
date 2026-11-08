@@ -147,7 +147,7 @@
             },
             "settings": {
               "type": "object",
-              "description": "The definition's settings by name: a checkbox is \"true\" or \"false\", a select one of its option keys. A setting left out takes the definition's default.",
+              "description": "The definition's settings by name: a checkbox is \"true\" or \"false\", a select one of its option keys. A setting left out takes the definition's default. A key ending _file reads the setting it names from that file (e.g. apikey_file: /run/secrets/apikey), like every other *_file secret; never both forms of one setting.",
               "additionalProperties": { "type": "string" }
             },
             "proxy": {

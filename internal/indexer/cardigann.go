@@ -103,7 +103,7 @@ func configHash(ix config.IndexerEntry) string {
 	b, _ := json.Marshal(struct {
 		Definition, Site, Proxy string
 		Settings                map[string]string
-	}{c.Definition, c.Site, c.Proxy, c.Settings})
+	}{c.Definition, c.Site, c.Proxy, c.Resolved()})
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
 }
@@ -184,7 +184,7 @@ func newCardigann(
 	c.engine, err = engine.New(def, engine.Options{
 		Name:     ix.Name,
 		Site:     ix.Cardigann.Site,
-		Settings: ix.Cardigann.Settings,
+		Settings: ix.Cardigann.Resolved(),
 		Client:   client,
 		Session:  session,
 		Solver:   solver,

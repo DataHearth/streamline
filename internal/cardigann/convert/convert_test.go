@@ -229,6 +229,14 @@ var _ = Describe("Convert", Label("unit", "cardigann"), func() {
 		},
 	)
 
+	It("has Check refuse a setting whose name ends _file", func() {
+		d.Settings = append(
+			d.Settings,
+			cardigann.Setting{Name: "apikey_file", Type: "text"},
+		)
+		Expect(Check(d)).To(MatchError(ContainSubstring("apikey_file")))
+	})
+
 	It("has Check refuse a template reading an undeclared setting or field", func() {
 		d.Search.Inputs[0].Value = "{{ .Config.nosuch }}"
 		Expect(

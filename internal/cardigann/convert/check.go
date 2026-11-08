@@ -25,6 +25,15 @@ import (
 // Go renders it as "<no value>" and compares it unequal to everything, so an
 // undeclared reference is a definition that runs differently here.
 func Check(d *cardigann.Definition) error {
+	for _, s := range d.Settings {
+		// An indexer's configuration reads a setting key ending _file as a
+		// file to read that setting from (config.SettingFileSuffix).
+		if strings.HasSuffix(s.Name, "_file") {
+			return fmt.Errorf(
+				"setting %q: a name ending _file reads as a file reference", s.Name,
+			)
+		}
+	}
 	names := declaredNames(d)
 	return visit(reflect.ValueOf(d).Elem(),
 		func(f *cardigann.Filter) error { return checkFilter(*f, names) },

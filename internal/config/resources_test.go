@@ -3,6 +3,8 @@ package config_test
 import (
 	"bytes"
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -1093,6 +1095,49 @@ var _ = Describe("cardigann indexer", Label("unit", "config"), func() {
 		Expect(patch(config.CardigannPatch{Site: &first})).To(Succeed())
 		got, _ := config.FindIndexer(e.Name)
 		Expect(got.Cardigann.Settings).To(HaveKeyWithValue("password", "p"))
+	})
+
+	Context("with a setting read from a file", func() {
+		var path string
+
+		BeforeEach(func() {
+			path = filepath.Join(GinkgoT().TempDir(), "pass")
+			Expect(os.WriteFile(path, []byte("  s3cret\n"), 0o600)).To(Succeed())
+		})
+
+		setup := func(settings map[string]any) *config.Config {
+			GinkgoHelper()
+			return configtest.Setup(map[string]any{"indexers": []any{map[string]any{
+				"name": "3dtorrents", "protocol": "cardigann", "enabled": true,
+				"cardigann": map[string]any{
+					"definition": "3dtorrents",
+					"commit":     cardiganntest.Upstream.Commit,
+					"settings":   settings,
+				},
+			}}})
+		}
+
+		It("hands the engine the file's contents under the setting's name", func() {
+			c := setup(map[string]any{"username": "u", "password_file": path})
+			Expect(c.Indexers[0].Cardigann.Resolved()).To(Equal(
+				map[string]string{"username": "u", "password": "s3cret"},
+			))
+			Expect(c.CheckCardigann(c.Indexers[0])).To(Succeed())
+		})
+
+		It("refuses a setting given both inline and as a file", func() {
+			c := setup(map[string]any{"password_file": path})
+			c.Indexers[0].Cardigann.Settings["password"] = "p"
+			Expect(c.Validate()).To(MatchError(And(
+				ContainSubstring("3dtorrents"), ContainSubstring(`"password"`),
+			)))
+		})
+
+		It("refuses a file for a setting the definition does not declare", func() {
+			c := setup(map[string]any{"nosuch_file": path})
+			Expect(c.CheckCardigann(c.Indexers[0])).
+				To(MatchError(ContainSubstring(`unknown setting "nosuch"`)))
+		})
 	})
 
 	It("rejects an entry whose definition is missing or does not run", func() {

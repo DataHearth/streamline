@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/datahearth/streamline/internal/quality"
@@ -112,12 +113,45 @@ type CardigannIndexer struct {
 	Site string `koanf:"site"`
 	// Settings are the definition's settings by name. One left out takes
 	// the definition's default; a checkbox is "true" or "false", a select
-	// one of its option keys.
+	// one of its option keys. A key ending SettingFileSuffix reads the
+	// setting it names from a file, like every other *_file secret; read
+	// them through Resolved.
 	Settings map[string]string `koanf:"settings"`
 	// Proxy sends the tracker's requests through an http, https or socks5
 	// proxy — the solver's browser is told to use it too, since a challenge
 	// clearance is only good for the address that earned it.
 	Proxy string `koanf:"proxy"`
+}
+
+const SettingFileSuffix = "_file"
+
+// SettingFile is the file the setting name is read from, if any. An empty
+// path is no file, as for every other *_file secret.
+func (c *CardigannIndexer) SettingFile(name string) (string, bool) {
+	if c == nil {
+		return "", false
+	}
+	path := c.Settings[name+SettingFileSuffix]
+	return path, path != ""
+}
+
+// Resolved is Settings with every file reference replaced by the setting it
+// names, holding the file's contents. It is nil when Settings is: the
+// session's config_hash encodes the two apart.
+func (c *CardigannIndexer) Resolved() map[string]string {
+	if c == nil || c.Settings == nil {
+		return nil
+	}
+	out := make(map[string]string, len(c.Settings))
+	for k, v := range c.Settings {
+		name, ok := strings.CutSuffix(k, SettingFileSuffix)
+		if !ok {
+			out[k] = v
+		} else if v != "" {
+			out[name] = SecretValue("", v)
+		}
+	}
+	return out
 }
 
 type QualityProfileEntry struct {
