@@ -352,11 +352,14 @@ func archive(
 	return files, versions, nil
 }
 
-var urlHost = regexp.MustCompile(`(?i)\bhttps?://([^/"'\s?#]+)`)
+// urlHost reads a host off an absolute URL or a scheme-relative one: a path
+// written `//other.example/x` resolves against the site to another host, so
+// it re-points a query or header secret as surely as `https://` does.
+var urlHost = regexp.MustCompile(`(?i)(?:\bhttps?:)?//([^/"'\s?#\\]+)`)
 
 // trustChanges names what a change does to where a definition sends things
 // and how it logs in: the hosts it names (links, legacy links, any absolute
-// URL anywhere in it) and its login block.
+// or scheme-relative URL anywhere in it) and its login block.
 func trustChanges(old, next []byte) ([]string, error) {
 	var a, b cardigann.Definition
 	if err := json.Unmarshal(old, &a); err != nil {

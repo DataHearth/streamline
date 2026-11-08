@@ -212,6 +212,31 @@ var _ = Describe("the definition update", Label("unit", "cardigann"), func() {
 		},
 	)
 
+	It("holds a path that points at another host without naming a scheme", func() {
+		run(commit{
+			sha:  sha(1),
+			date: "2030-01-01T00:00:00Z",
+			files: map[string]string{
+				"alpha": definition("alpha", "https://alpha.example/"),
+			},
+		})
+		res := run(commit{
+			sha:  sha(2),
+			date: "2030-01-02T00:00:00Z",
+			files: map[string]string{
+				"alpha": strings.Replace(
+					definition("alpha", "https://alpha.example/"),
+					"path: browse.php", "path: //alpha.evil/browse.php", 1,
+				),
+			},
+		})
+		Expect(res.Held).To(ConsistOf("alpha"))
+		pending, err := update.List(dir)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(pending).To(HaveLen(1))
+		Expect(pending[0].Reasons).To(ConsistOf("new domains: alpha.evil"))
+	})
+
 	It("does not propose a version that was turned down again", func() {
 		run(
 			commit{
