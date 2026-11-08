@@ -13,6 +13,8 @@
 		// is not "outside". A press on any OTHER trigger is outside: this closes,
 		// and that trigger's own click opens its menu.
 		anchor: HTMLElement | null;
+		// Where Escape returns focus when the anchor is not the trigger.
+		returnFocus?: HTMLElement | null;
 		onClose: () => void;
 		// Which edge of the anchor the menu lines up with.
 		align?: "start" | "end";
@@ -34,6 +36,7 @@
 	let {
 		open,
 		anchor,
+		returnFocus,
 		onClose,
 		align = "start",
 		matchAnchor = false,
@@ -175,7 +178,7 @@
 			if (e.key !== "Escape") return;
 			e.preventDefault();
 			onClose();
-			anchor?.focus();
+			(returnFocus ?? anchor)?.focus();
 		};
 		document.addEventListener("mousedown", onDown);
 		document.addEventListener("keydown", onKey);

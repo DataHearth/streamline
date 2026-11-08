@@ -1782,6 +1782,7 @@
 	"series_manual_search_for": "Manual search for {code}",
 	"series_missing_eps": "Missing eps",
 	"series_monitor_all": "All episodes",
+	"series_monitor_choose": "Choose episodes to monitor",
 	"series_monitor_existing": "Existing episodes",
 	"series_monitor_future": "Future episodes",
 	"series_monitor_missing": "Missing episodes",

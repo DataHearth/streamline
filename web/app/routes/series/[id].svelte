@@ -16,7 +16,6 @@
 	import {
 		Tv,
 		ArrowLeft,
-		Eye,
 		Search,
 		ExternalLink,
 		Trash2,
@@ -24,6 +23,7 @@
 	import { api, errorText } from "@lib/api";
 	import { createAction, deleteFailed, monitorToast, refreshFailed, searchFailed, SERIES, updateFailed } from "@lib/actions";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
+	import MonitorSplitButton from "@components/shared/MonitorSplitButton.svelte";
 	import { cn } from "@lib/cn";
 	import { missingEpisodes } from "@lib/status";
 	import { tvPosterUrl } from "@lib/posters";
@@ -32,7 +32,6 @@
 	import Poster from "@components/shared/Poster.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
-	import Select from "@components/forms/Select.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
@@ -205,18 +204,16 @@
 		return p;
 	});
 
-	const presetOptions: { value: MonitoringPreset; label: string }[] = [
-		{ value: "all", label: i18n.series_monitor_all() },
-		{ value: "future", label: i18n.series_monitor_future() },
-		{ value: "missing", label: i18n.series_monitor_missing() },
-		{ value: "existing", label: i18n.series_monitor_existing() },
-		{ value: "pilot", label: i18n.series_monitor_pilot() },
-		{ value: "none", label: i18n.common_none() },
-	];
 	// The backend applies a preset as a one-shot bulk toggle; it stores no
-	// ongoing "monitoring mode", so this control has no persisted value to
-	// reflect. Start unselected-ish on "all" and treat each pick as an action.
-	let presetValue = $state<MonitoringPreset>("all");
+	// ongoing "monitoring mode", so these are actions, not a value.
+	const presetOptions: { key: MonitoringPreset; label: string }[] = [
+		{ key: "all", label: i18n.series_monitor_all() },
+		{ key: "future", label: i18n.series_monitor_future() },
+		{ key: "missing", label: i18n.series_monitor_missing() },
+		{ key: "existing", label: i18n.series_monitor_existing() },
+		{ key: "pilot", label: i18n.series_monitor_pilot() },
+		{ key: "none", label: i18n.common_none() },
+	];
 
 	let deleteOpen = $state(false);
 	let reidentifyOpen = $state(false);
@@ -280,7 +277,6 @@
 		tab = readTab();
 		selectedSeason = null;
 		focusEpisodeId = null;
-		presetValue = "all";
 		deleteOpen = false;
 		qpOpen = false;
 		typeOpen = false;
@@ -332,10 +328,17 @@
 	}));
 
 	const applyPreset = createAction<MonitoringPreset>(() => ({
-		run: (preset) => api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { preset } }),
+		run: async (preset) => {
+			// The show flag gates every search, so switch it on first. Two
+			// requests: in one PATCH the monitor cascade would undo the preset.
+			if (preset !== "none" && !(show?.monitored ?? true)) {
+				await api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { monitored: true } });
+			}
+			return api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { preset } });
+		},
 		refresh: SERIES,
 		failed: updateFailed,
-		succeeded: (p) => i18n.monitor_set_to({ mode: (presetOptions.find((o) => o.value === p)?.label ?? p).toLowerCase() }),
+		succeeded: (p) => i18n.monitor_set_to({ mode: (presetOptions.find((o) => o.key === p)?.label ?? p).toLowerCase() }),
 	}));
 
 	const saveProfile = createAction<string>(() => ({
@@ -662,86 +665,54 @@
 				</div>
 
 				{#if auth.canAddDirectly}
-					<!-- Phone: one row of the actions that matter, then the monitoring
-					     preset on its own line. The md row below carries all of it inline. -->
-					<div class="mt-4 flex flex-col gap-2.5 md:hidden">
-						<div class="flex items-center gap-2">
-							<button
-								type="button"
-								onclick={() => openPackSearch("series")}
-								class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-fg-on-accent transition active:bg-accent-pressed"
-							>
-								<Search size={15} aria-hidden="true" />
-								{(show.wanted_episodes ?? 0) > 0
-									? i18n.series_search_wanted({ count: show.wanted_episodes ?? 0 })
-									: i18n.action_manual_search()}
-							</button>
-							<PlayOnMenu
-								compact
-								path={`/series/${show.id}/play-on`}
-								queryKey={["series", show.id, "play-on"]}
-								disabled={!hasFiles}
-								disabledTitle={i18n.series_available_after_import()}
-							/>
-							<MonitorToggle monitored={show.monitored ?? false} onToggle={() => monitor.mutate(!(show.monitored ?? false))} pending={monitor.isPending} backdrop />
-							<SeriesKebabMenu
-								onPick={onKebabPick}
-								disabledActions={hasFiles ? [] : ["rename"]}
-							/>
-						</div>
-						<div class="flex items-center gap-2">
-							<label
-								for="series-monitor-preset-phone"
-								class="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle"
-							>
-								<Eye size={14} aria-hidden="true" />
-								{i18n.action_monitor()}
-							</label>
-							<div class="min-w-0 flex-1">
-								<Select
-									id="series-monitor-preset-phone"
-									value={presetValue}
-									options={presetOptions}
-									onChange={(v) => {
-										presetValue = v;
-										applyPreset.mutate(v);
-									}}
-								/>
-							</div>
-						</div>
+					<!-- Phone: one row. Tight gaps keep "Search N wanted" on one line. -->
+					<div class="mt-4 flex items-center gap-1.5 md:hidden">
+						<button
+							type="button"
+							onclick={() => openPackSearch("series")}
+							class="inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold leading-tight text-fg-on-accent transition active:bg-accent-pressed"
+						>
+							<Search size={15} class="shrink-0" aria-hidden="true" />
+							{(show.wanted_episodes ?? 0) > 0
+								? i18n.series_search_wanted({ count: show.wanted_episodes ?? 0 })
+								: i18n.action_manual_search()}
+						</button>
+						<PlayOnMenu
+							compact
+							path={`/series/${show.id}/play-on`}
+							queryKey={["series", show.id, "play-on"]}
+							disabled={!hasFiles}
+							disabledTitle={i18n.series_available_after_import()}
+						/>
+						<MonitorSplitButton
+							monitored={show.monitored ?? false}
+							onToggle={() => monitor.mutate(!(show.monitored ?? false))}
+							pending={monitor.isPending || applyPreset.isPending}
+							options={presetOptions}
+							onPick={(v) => applyPreset.mutate(v)}
+							menuLabel={i18n.series_monitor_choose()}
+							backdrop
+						/>
+						<SeriesKebabMenu
+							onPick={onKebabPick}
+							disabledActions={hasFiles ? [] : ["rename"]}
+						/>
 					</div>
 
 					<div
 						class="mt-5 hidden flex-wrap items-center gap-x-2.5 gap-y-3 md:flex"
 						aria-label={i18n.series_actions()}
 					>
-						<!-- Two lines, as on the music and book heroes: what the show
-						     follows (preset + bookmark), then playing, searching and the
-						     menu. The spacer is what breaks the line. -->
-						<div class="flex items-center gap-2">
-							<label
-								for="series-monitor-preset"
-								class="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle"
-							>
-								<Eye size={14} aria-hidden="true" />
-								{i18n.action_monitor()}
-							</label>
-							<div class="w-40">
-								<Select
-									id="series-monitor-preset"
-									value={presetValue}
-									options={presetOptions}
-									onChange={(v) => {
-										presetValue = v;
-										applyPreset.mutate(v);
-									}}
-								/>
-							</div>
-						</div>
-
-						<MonitorToggle monitored={show.monitored ?? false} onToggle={() => monitor.mutate(!(show.monitored ?? false))} pending={monitor.isPending} size="md" backdrop />
-
-						<span class="h-0 basis-full" aria-hidden="true"></span>
+						<MonitorSplitButton
+							monitored={show.monitored ?? false}
+							onToggle={() => monitor.mutate(!(show.monitored ?? false))}
+							pending={monitor.isPending || applyPreset.isPending}
+							options={presetOptions}
+							onPick={(v) => applyPreset.mutate(v)}
+							menuLabel={i18n.series_monitor_choose()}
+							size="md"
+							backdrop
+						/>
 
 						<PlayOnMenu
 							path={`/series/${show.id}/play-on`}
