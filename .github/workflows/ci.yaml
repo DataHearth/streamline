@@ -31,6 +31,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       biome: ${{ steps.filter.outputs.biome }}
       helm: ${{ steps.filter.outputs.helm }}
+      chart: ${{ steps.filter.outputs.chart }}
       nix: ${{ steps.filter.outputs.nix }}
     steps:
       - name: Checkout
@@ -82,6 +83,11 @@ jobs:
               - 'deploy/grafana/dashboards/**'
               - '.taskfiles/helm.yaml'
               - '.github/workflows/ci.yaml'
+            # What ships in the chart tarball, and so what needs a version
+            # bump: a change to how the chart is linted is not one.
+            chart:
+              - 'deploy/helm/**'
+              - 'deploy/grafana/dashboards/**'
             # The flake checks build the package, both NixOS VM tests and the
             # home-manager activation — twenty minutes of runner when it has
             # to run. This is every input those outputs hash over: a pnpm-lock
@@ -330,7 +336,7 @@ jobs:
       # silently swaps the artifact under everyone who pinned it. Touch the
       # chart, bump the chart.
       - name: Chart version must be bumped
-        if: github.event_name == 'pull_request'
+        if: needs.changes.outputs.chart == 'true' && github.event_name == 'pull_request'
         run: |
           git fetch --depth=1 origin "${GITHUB_BASE_REF}"
           chart=deploy/helm/streamline/Chart.yaml
