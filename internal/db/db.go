@@ -1520,7 +1520,11 @@ type Store interface {
 		afterID uint32,
 		limit int,
 	) ([]*ent.BookEdition, error)
-	SetEditionLinks(ctx context.Context, links map[uint32]ExternalIDs, at time.Time) error
+	SetEditionLinks(
+		ctx context.Context,
+		links map[uint32]ExternalIDs,
+		at time.Time,
+	) error
 	// SetArtistLinks and SetAlbumLinks store a row's links and stamp it.
 	SetArtistLinks(
 		ctx context.Context,

@@ -242,11 +242,19 @@ func (db *DB) SetEditionLinks(
 	}
 	c := tx.Client()
 	for id, ids := range links {
-		if err := replaceExternalIDs(ctx, c, ExternalIDsOfBookEdition, id, ids); err != nil {
+		if err := replaceExternalIDs(
+			ctx,
+			c,
+			ExternalIDsOfBookEdition,
+			id,
+			ids,
+		); err != nil {
 			tx.Rollback()
 			return err
 		}
-		if err := c.BookEdition.UpdateOneID(id).SetLinksFetchedAt(at).Exec(ctx); err != nil {
+		if err := c.BookEdition.UpdateOneID(id).
+			SetLinksFetchedAt(at).
+			Exec(ctx); err != nil {
 			tx.Rollback()
 			return err
 		}

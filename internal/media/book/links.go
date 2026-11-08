@@ -82,7 +82,10 @@ func (s *Service) backfillEditionLinks(ctx context.Context) {
 
 // storeEditionLinks reads a batch in one request and stores it in one
 // transaction. An edition Hardcover no longer knows is stamped with none.
-func (s *Service) storeEditionLinks(ctx context.Context, rows []*ent.BookEdition) error {
+func (s *Service) storeEditionLinks(
+	ctx context.Context,
+	rows []*ent.BookEdition,
+) error {
 	hcIDs := make([]uint32, 0, len(rows))
 	for _, e := range rows {
 		hcIDs = append(hcIDs, e.HardcoverEditionID)
