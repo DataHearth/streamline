@@ -13,3 +13,10 @@ export const isApple = /mac|iphone|ipad|ipod/i.test(platform);
 
 // The modifier as a keyboard hint shows it: "⌘" or "Ctrl".
 export const modKey = isApple ? "⌘" : "Ctrl";
+
+// Ctrl/⌘+K, the command palette's shortcut. One predicate for the palette and
+// for /search, which takes the shortcut for its own field first: the two must
+// agree, or the page stops claiming it and the palette opens over the page.
+export function isPaletteShortcut(e: KeyboardEvent): boolean {
+	return (e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey);
+}

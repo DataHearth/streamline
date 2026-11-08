@@ -13,16 +13,13 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import Img from "@components/shared/Img.svelte";
 
-	// One row for both touch surfaces: the phone screen at full size, the tablet
-	// panel dense. The palette keeps its own row — it carries a keyboard cursor
-	// and hover state this one has no use for.
+	// The search page's row (routes/search.svelte). The palette keeps its own
+	// row — it carries a keyboard cursor and hover state this one has no use for.
 	let {
 		item,
-		dense = false,
 		onpick,
 	}: {
 		item: SearchItem;
-		dense?: boolean;
 		onpick: (item: SearchItem) => void;
 	} = $props();
 
@@ -35,15 +32,12 @@
 <button
 	type="button"
 	onclick={() => onpick(item)}
-	class={cn(
-		"flex w-full items-center gap-3 rounded-xl px-2.5 text-left transition-colors hover:bg-surface active:bg-surface",
-		dense ? "min-h-12 py-1.5" : "min-h-14 py-2",
-	)}
+	class="flex min-h-14 w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-surface active:bg-surface"
 >
 	<!-- One slot for every kind, as wide as the widest art (a square): a 2:3
 	     poster centres in it, so the titles line up down the list whatever art
 	     each row has. -->
-	<span class={cn("grid shrink-0 place-items-center", dense ? "w-9" : "w-10")}>
+	<span class="grid w-10 shrink-0 place-items-center">
 	{#if item.kind === "movie" || item.kind === "series" || item.kind === "episode"}
 		{@const MediaIcon = item.kind === "movie" ? Film : Tv}
 		{@const poster =
@@ -51,10 +45,7 @@
 				? posterUrl({ id: item.id })
 				: tvPosterUrl(item.kind === "episode" ? item.seriesId : item.id)}
 		<div
-			class={cn(
-				"relative shrink-0 overflow-hidden rounded-md bg-surface-2 ring-1 ring-border",
-				dense ? "h-10 w-[27px]" : "h-[45px] w-[30px]",
-			)}
+			class="relative h-[45px] w-[30px] shrink-0 overflow-hidden rounded-md bg-surface-2 ring-1 ring-border"
 		>
 			<div class="absolute inset-0 grid place-items-center text-fg-muted">
 				<MediaIcon size={14} aria-hidden="true" />
@@ -69,9 +60,9 @@
 		<div
 			class={cn(
 				"relative shrink-0 overflow-hidden bg-surface-2 ring-1 ring-border",
-				item.kind === "artist" && cn("rounded-full", dense ? "h-9 w-9" : "h-10 w-10"),
-				(item.kind === "album" || item.kind === "track") && cn("rounded-md", dense ? "h-9 w-9" : "h-10 w-10"),
-				item.kind === "book" && cn("rounded-md", dense ? "h-10 w-[27px]" : "h-[45px] w-[30px]"),
+				item.kind === "artist" && "h-10 w-10 rounded-full",
+				(item.kind === "album" || item.kind === "track") && "h-10 w-10 rounded-md",
+				item.kind === "book" && "h-[45px] w-[30px] rounded-md",
 			)}
 		>
 			<div class="absolute inset-0 grid place-items-center text-fg-muted">
@@ -87,10 +78,7 @@
 		</div>
 	{:else if item.kind === "person"}
 		<div
-			class={cn(
-				"relative shrink-0 overflow-hidden rounded-full bg-surface-2 ring-1 ring-border",
-				dense ? "h-9 w-9" : "h-10 w-10",
-			)}
+			class="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-surface-2 ring-1 ring-border"
 		>
 			{#if item.profile_url}
 				<Img
@@ -110,10 +98,7 @@
 	{:else if item.kind === "page" || item.kind === "action"}
 		{@const Icon = item.icon}
 		<div
-			class={cn(
-				"grid shrink-0 place-items-center rounded-lg bg-surface-2 text-fg-muted",
-				dense ? "h-8 w-8" : "h-9 w-9",
-			)}
+			class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-fg-muted"
 		>
 			<Icon size={16} aria-hidden="true" />
 		</div>
@@ -121,12 +106,7 @@
 	</span>
 
 	<span class="min-w-0 flex-1">
-		<span
-			class={cn(
-				"block truncate font-medium tracking-tight text-fg",
-				dense ? "text-[13.5px]" : "text-[14.5px]",
-			)}
-		>
+		<span class="block truncate text-[14.5px] font-medium tracking-tight text-fg">
 			{item.label}
 		</span>
 		{#if isTitle}
