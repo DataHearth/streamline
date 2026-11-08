@@ -153,7 +153,7 @@ Two separate things, and both are needed:
 The unit runs with `ProtectSystem = "strict"`, so the only writable paths are the ones the module grants. It always grants the state dir plus the absolute `data_dir`, `library.movie_path`, `library.series_path`, `library.download_path`, `library.music_path`, `library.ebook_path` and `library.audiobook_path` from your `settings`.
 
 > [!IMPORTANT]
-> Set the music and book roots in `settings` if you use either library. Left unset, they keep the binary's defaults (`/data/music`, `/data/books`, `/data/audiobooks`), which the module does not grant because they sit outside the sandbox. Every album and book import would then fail on a read-only filesystem. Module versions before this change granted only the first four paths; there, list the music and book roots in `extraReadWritePaths` yourself.
+> Set the music and book roots in `settings` if you use either library. Left unset, they keep the binary's defaults (`/data/music`, `/data/books`, `/data/audiobooks`), which the module does not grant because they sit outside the sandbox. Every album and book import would then fail on a read-only filesystem. On an older module that grants only the first four paths, list the music and book roots in `extraReadWritePaths` yourself.
 
 Add anything else the service must write to the same way:
 

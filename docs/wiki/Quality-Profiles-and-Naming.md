@@ -81,7 +81,7 @@ Profiles are also fully manageable at **Settings → Quality profiles** and via 
 
 Movies and shows reference a profile by name. An empty reference resolves to `movie_quality_default_profile` for a movie and `series_quality_default_profile` for a show, so movies and series can each have their own default. A profile cannot be deleted while it is either default.
 
-Config files from before the split carry a single `quality_default_profile`. It is still read and seeds both keys when neither is set; the next time Streamline saves the config it is replaced by the two new keys.
+A config file may carry the single key `quality_default_profile` instead. It is read and seeds both keys when neither is set; the next time Streamline saves the config it is replaced by the two keys.
 
 Profiles are resolved **per item at search time**, not cached at add time — so editing a profile takes effect on the next search with no restart.
 

@@ -189,7 +189,7 @@ To skip the invite for SSO entirely, set `auto_provision: true` on the provider 
 
 ### Which role a new account gets
 
-`auth.default_role` (default `member`) is the role a user lands on when they register **themselves** — and it serves both paths, which is why it is not called `oidc_default_role` any more:
+`auth.default_role` (default `member`) is the role a user lands on when they register **themselves** — one key for both paths:
 
 - an anonymous `POST /auth/register` in `open` mode;
 - an OIDC login provisioning a new account whose claims map to no role.
@@ -198,7 +198,7 @@ It is only ever a **fallback**. An invite carries its own role, chosen by the ad
 
 `admin` is clamped to `member` on both self-registration paths: always on the local one, and on the federated one unless that provider sets `allow_admin: true`. So setting `auth.default_role: admin` for an IdP you trust cannot also hand admin to whoever posts `/auth/register` first. An invite is not clamped locally — naming a role for one specific account is a direct decision — but an invite consumed *through SSO* still passes the provider's ceiling.
 
-> **Upgrading:** this key was previously called `auth.oidc_default_role`, and the old name is **no longer read**. If your config still uses it, rename it — otherwise the key is ignored and new self-registered accounts fall back to `member`, with nothing in the logs to say so. The API is the same clean break: `GET /api/v1/config/auth` returns only `default_role`, and a `PATCH` naming `oidc_default_role` is ignored as an unknown field.
+> **Upgrading:** `auth.oidc_default_role` is **not read**. If your config still uses it, rename it to `auth.default_role` — otherwise the key is ignored and new self-registered accounts fall back to `member`, with nothing in the logs to say so. The API reads only the new name too: `GET /api/v1/config/auth` returns only `default_role`, and a `PATCH` naming `oidc_default_role` is ignored as an unknown field.
 
 Invites: `POST /api/v1/auth/invites` returns the raw token **once**. It takes a `ttl` as a Go duration string (default `168h`); the Invites card offers 1, 3, 7 and 30 days rather than a free-text field, since a typo there is a `422` on a form whose other two fields are fine. The SPA fetches `GET /auth/invite/{token}` to prefill the form; that lookup deliberately skips the email match so the page can render, while `RegisterWithInvite` enforces the binding atomically inside a transaction at submit time. Registration failures are mapped to user-safe messages — raw service errors are logged, never returned.
 

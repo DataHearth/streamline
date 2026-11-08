@@ -108,7 +108,7 @@ Fix the mounts (one parent mount, per [the folder rule](Installation#before-you-
 
 **An import scan entry fails with `only N of M files matched an episode`.** The folder is refused rather than adopted into the wrong show. Two things cause it. Either the folder really is a different show — accept a different match in the review list. Or the filenames carry numbering the show doesn't have: `S02E23` for a season with 22 episodes is a re-numbered DVD rip, and the guard is right to refuse it. Check the season and episode numbers on the series page against the filenames before treating it as a bug.
 
-**A failed import is not a dead end any more.** Expand the row in **Queue & History → History** and use **Retry import** once you've fixed the cause. It clears the attempt counter and hands the record back to the importer. It reads the *same* files as before, so fixing the cause first is the whole point — retrying an unchanged failure just fails again.
+**A failed import is not a dead end.** Expand the row in **Queue & History → History** and use **Retry import** once you've fixed the cause. It clears the attempt counter and hands the record back to the importer. It reads the *same* files as before, so fixing the cause first is the whole point — retrying an unchanged failure just fails again.
 
 ---
 
@@ -125,7 +125,7 @@ The proposal names both paths so you can compare them. Two fixes:
 
 Either way, the proposal re-resolves on the next monitor tick.
 
-> Before this check existed, an unlocatable torrent was auto-imported anyway, failed three times on a path that never existed, and landed in History as permanently failed.
+> That is why an unlocatable torrent waits as a proposal: auto-imported anyway, it would fail three times on a path that never existed and land in History as permanently failed.
 
 ---
 

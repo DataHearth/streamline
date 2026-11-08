@@ -327,7 +327,7 @@ The fetch happens **once per person, ever**. An actor credited on thirty titles 
 
 `character` belongs to the pairing, not to the person: the same actor carries a different one per title. An `id` no person row occupies is a `404`.
 
-The series objects carry no `seasons` array — the credit query leaves the episode tree unloaded — but they do carry the same pre-aggregated rollup the series list sends (`total_seasons`, `have_episodes`, `total_episodes`, `wanted_episodes`, `downloading_episodes`, `importing_episodes`). Those counts are what a client badges a credit with, and sending the show without them is not the same as sending zeros: a client reading an absent count as zero labels a complete show as missing, which is exactly what the credits page did before they were added.
+The series objects carry no `seasons` array — the credit query leaves the episode tree unloaded — but they do carry the same pre-aggregated rollup the series list sends (`total_seasons`, `have_episodes`, `total_episodes`, `wanted_episodes`, `downloading_episodes`, `importing_episodes`). Those counts are what a client badges a credit with, and sending the show without them is not the same as sending zeros: a client reading an absent count as zero labels a complete show as missing.
 
 The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{id}`) is served from the same credits, in billing order, and each entry carries `person_id` — the key to `/people/{id}`. A cast entry from a **provider lookup** of a title the library does not hold (`/movies/lookup/{tmdbId}`, `/series/lookup/{tvdbId}`, an expanded request row) has no person row behind it and so omits `person_id`; it still carries `person_url` to the provider's own page.
 
@@ -744,8 +744,8 @@ mis-matches every file in the show, so it can be overridden:
 api -X PATCH -d '{"type":"anime"}' "$SL/api/v1/series/86"
 ```
 
-The override is durable: a metadata refresh no longer re-derives `type`, so it
-will not be silently undone. `422` for a value outside the three.
+The override is durable: a metadata refresh does not re-derive `type`, so it
+is never silently undone. `422` for a value outside the three.
 
 **Does an episode have a file?** `Episode` carries a `has_file` boolean
 alongside `path`, so presence does not have to be inferred from an empty string
