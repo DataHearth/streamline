@@ -174,7 +174,7 @@ func (s *Service) Add(
 		QualityProfile: qualityProfile,
 		Seasons:        seedSeasons(d),
 		FirstAired:     metadata.ParseISODate(d.FirstAired),
-		ExternalIDs:    showExternalIDs(d),
+		ExternalIDs:    ExternalIDs(d),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create tv show: %w", err)
@@ -1006,7 +1006,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		Certification: d.Certification,
 		Cast:          cast,
 		FirstAired:    metadata.ParseISODate(d.FirstAired),
-		ExternalIDs:   showExternalIDs(d),
+		ExternalIDs:   ExternalIDs(d),
 	}); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
@@ -1145,7 +1145,7 @@ func (s *Service) Reidentify(
 		Certification: d.Certification,
 		Cast:          cast,
 		FirstAired:    metadata.ParseISODate(d.FirstAired),
-		ExternalIDs:   showExternalIDs(d),
+		ExternalIDs:   ExternalIDs(d),
 	}); err != nil {
 		return nil, nil, otelx.RecordSpanError(span, err)
 	}
@@ -1427,7 +1427,9 @@ type Counts struct {
 	DownloadingEpisodes int
 }
 
-func showExternalIDs(d *metadata.TVDetails) db.ExternalIDs {
+// ExternalIDs is what a series stores of TVDB's cross-references, the map
+// every metadata write and the lookup detail build.
+func ExternalIDs(d *metadata.TVDetails) db.ExternalIDs {
 	ids := db.ExternalIDs{
 		metadata.SourceIMDb:     d.IMDbID,
 		metadata.SourceWikidata: d.WikidataID,

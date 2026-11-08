@@ -61,9 +61,23 @@ func (s *Server) ListMovies(
 		}, nil
 	}
 
+	ids := make([]uint32, 0, len(movies))
+	for _, m := range movies {
+		ids = append(ids, m.ID)
+	}
+	external, err := s.pageExternalIDs(
+		ctx, request.Params.WithExternalIds, db.ExternalIDsOfMovie, ids,
+	)
+	if err != nil {
+		return ListMovies500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
 	items := make([]Movie, 0, len(movies))
 	for _, m := range movies {
-		items = append(items, movieListToAPI(m, summaries[m.ID]))
+		item := movieListToAPI(m, summaries[m.ID])
+		item.ExternalIds = toExternalIDs(external[m.ID])
+		items = append(items, item)
 	}
 
 	return ListMovies200JSONResponse{
@@ -207,7 +221,7 @@ func (s *Server) GetMovie(
 		}, nil
 	}
 	result := movieToAPI(m)
-	applyMovieExternalIDs(&result, ids)
+	result.ExternalIds = toExternalIDs(ids)
 	if len(files) > 0 {
 		apiFiles := make([]MediaFile, 0, len(files))
 		for _, f := range files {

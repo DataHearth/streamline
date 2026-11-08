@@ -67,9 +67,23 @@ func (s *Server) ListSeries(
 		}, nil
 	}
 	progress := s.seriesDownloadProgress(ctx, counts)
+	ids := make([]uint32, 0, len(rows))
+	for _, r := range rows {
+		ids = append(ids, r.ID)
+	}
+	external, err := s.pageExternalIDs(
+		ctx, request.Params.WithExternalIds, db.ExternalIDsOfSeries, ids,
+	)
+	if err != nil {
+		return ListSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
 	items := make([]TVShow, 0, len(rows))
 	for _, r := range rows {
-		items = append(items, tvShowListToAPI(r, counts[r.ID], progress[r.ID]))
+		item := tvShowListToAPI(r, counts[r.ID], progress[r.ID])
+		item.ExternalIds = toExternalIDs(external[r.ID])
+		items = append(items, item)
 	}
 	return ListSeries200JSONResponse{
 		Items: items,
@@ -361,7 +375,7 @@ func (s *Server) GetSeries(
 		}, nil
 	}
 	result := tvShowToAPI(show)
-	applyTVShowExternalIDs(&result, ids)
+	result.ExternalIds = toExternalIDs(ids)
 	result.Cast, result.Crew = splitCredits(credits)
 	return GetSeries200JSONResponse{
 		SeriesDetailJSONResponse: SeriesDetailJSONResponse(result),

@@ -117,12 +117,9 @@
 				href: `https://www.thetvdb.com/dereferrer/series/${detail.tvdb_id}`,
 			});
 		}
-		if (detail.imdb_id) {
-			out.push({
-				label: "IMDb",
-				value: detail.imdb_id,
-				href: `https://www.imdb.com/title/${detail.imdb_id}/`,
-			});
+		const imdb = detail.external_ids?.imdb;
+		if (imdb) {
+			out.push({ label: "IMDb", value: imdb, href: `https://www.imdb.com/title/${imdb}/` });
 		}
 		return out;
 	});

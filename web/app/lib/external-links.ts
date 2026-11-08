@@ -30,19 +30,35 @@ export type ExternalLink = {
 	query?: string;
 };
 
+// The API's ExternalIds: other sites' ids for a title, keyed by site, each
+// value what that site's address is built from. A movie carries imdb and
+// wikidata, a series imdb, tmdb and wikidata, an artist or an album the
+// MusicBrainz ones. Every detail response has it; a list only with
+// with_external_ids=true.
+export type ExternalIds = {
+	imdb?: string;
+	// A series' TMDB TV id, as a decimal string.
+	tmdb?: string;
+	wikidata?: string;
+	discogs?: string;
+	allmusic?: string;
+	spotify?: string;
+	deezer?: string;
+	bandcamp?: string;
+	lastfm?: string;
+	rateyourmusic?: string;
+};
+
 export type MovieLinkSource = {
 	tmdb_id: number;
-	imdb_id?: string;
-	wikidata_id?: string;
+	external_ids?: ExternalIds;
 	title: string;
 	original_title?: string;
 };
 
 export type SeriesLinkSource = {
 	tvdb_id: number;
-	tmdb_id?: number;
-	imdb_id?: string;
-	wikidata_id?: string;
+	external_ids?: ExternalIds;
 	title: string;
 	original_title?: string;
 };
@@ -102,9 +118,10 @@ function reviewSearches(title: string, original: string): ExternalLink[] {
 }
 
 export function movieLinks(m: MovieLinkSource): ExternalLink[] {
+	const x = m.external_ids ?? {};
 	const links: ExternalLink[] = [];
-	if (m.imdb_id) {
-		links.push({ site: "imdb", label: "IMDb", href: imdbTitleUrl(m.imdb_id), group: "database" });
+	if (x.imdb) {
+		links.push({ site: "imdb", label: "IMDb", href: imdbTitleUrl(x.imdb), group: "database" });
 	}
 	if (m.tmdb_id) {
 		links.push(
@@ -117,11 +134,11 @@ export function movieLinks(m: MovieLinkSource): ExternalLink[] {
 			},
 		);
 	}
-	if (m.wikidata_id) {
+	if (x.wikidata) {
 		links.push({
 			site: "wikidata",
 			label: "Wikidata",
-			href: wikidataUrl(m.wikidata_id),
+			href: wikidataUrl(x.wikidata),
 			group: "database",
 		});
 	}
@@ -138,15 +155,17 @@ export function movieLinks(m: MovieLinkSource): ExternalLink[] {
 }
 
 export function seriesLinks(s: SeriesLinkSource): ExternalLink[] {
+	const x = s.external_ids ?? {};
+	const tmdbId = Number(x.tmdb) || 0;
 	const links: ExternalLink[] = [];
-	if (s.imdb_id) {
-		links.push({ site: "imdb", label: "IMDb", href: imdbTitleUrl(s.imdb_id), group: "database" });
+	if (x.imdb) {
+		links.push({ site: "imdb", label: "IMDb", href: imdbTitleUrl(x.imdb), group: "database" });
 	}
 	if (s.tvdb_id) {
 		links.push({ site: "tvdb", label: "TVDB", href: tvdbSeriesUrl(s.tvdb_id), group: "database" });
 	}
-	if (s.tmdb_id) {
-		links.push({ site: "tmdb", label: "TMDB", href: tmdbUrl("tv", s.tmdb_id), group: "database" });
+	if (tmdbId) {
+		links.push({ site: "tmdb", label: "TMDB", href: tmdbUrl("tv", tmdbId), group: "database" });
 	}
 	if (s.tvdb_id) {
 		links.push({
@@ -156,11 +175,11 @@ export function seriesLinks(s: SeriesLinkSource): ExternalLink[] {
 			group: "database",
 		});
 	}
-	if (s.wikidata_id) {
+	if (x.wikidata) {
 		links.push({
 			site: "wikidata",
 			label: "Wikidata",
-			href: wikidataUrl(s.wikidata_id),
+			href: wikidataUrl(x.wikidata),
 			group: "database",
 		});
 	}
@@ -171,23 +190,13 @@ export function seriesLinks(s: SeriesLinkSource): ExternalLink[] {
 // ---- Music -----------------------------------------------------------------
 //
 // MusicBrainz's url relations, as GET /music/artists/{id} and the albums in it
-// carry them (MusicExternalIds). Each value is what the site's address is built
+// carry them (ExternalIds). Each value is what the site's address is built
 // from. A review site MusicBrainz links nothing for gets a search, like
 // Rotten Tomatoes for a film.
 
-export type MusicExternalIds = {
-	wikidata?: string;
-	discogs?: string;
-	allmusic?: string;
-	spotify?: string;
-	deezer?: string;
-	bandcamp?: string;
-	lastfm?: string;
-	rateyourmusic?: string;
-};
 
-export type ArtistLinkSource = { mbid?: string; name: string; external_ids?: MusicExternalIds };
-export type ReleaseLinkSource = { mbid?: string; title: string; external_ids?: MusicExternalIds };
+export type ArtistLinkSource = { mbid?: string; name: string; external_ids?: ExternalIds };
+export type ReleaseLinkSource = { mbid?: string; title: string; external_ids?: ExternalIds };
 
 function search(site: string, label: string, href: string, group: ExternalLinkGroup, query: string): ExternalLink {
 	return { site, label, href, group, search: true, query };

@@ -7,7 +7,7 @@ import { getLocale } from "./paraglide/runtime.js";
 import { formatDate, formatDateShort } from "./dates";
 import { formatBytes } from "./format";
 import { authorPosterUrl, artistPosterUrl } from "./posters";
-import type { MusicExternalIds } from "./external-links";
+import type { ExternalIds } from "./external-links";
 
 export type MediaState = "available" | "wanted" | "downloading";
 
@@ -93,7 +93,7 @@ export type Release = {
 	credits?: Credit[];
 	personnel?: Performer[];
 	// MusicBrainz's links for the album, once hydrated.
-	external_ids?: MusicExternalIds;
+	external_ids?: ExternalIds;
 };
 
 export type Artist = {
@@ -123,7 +123,7 @@ export type Artist = {
 	// Newest first, upcoming included.
 	albums: Release[];
 	// MusicBrainz's links for the artist. Detail only.
-	external_ids?: MusicExternalIds;
+	external_ids?: ExternalIds;
 };
 
 // A search hit for one album (GET /music/albums), named with its artist.

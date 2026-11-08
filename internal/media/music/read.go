@@ -282,6 +282,23 @@ func (s *Service) AlbumDetail(ctx context.Context, id uint32) (*AlbumView, error
 	return &v, nil
 }
 
+// ArtistExternalIDs is an artist's links as the wire carries them: its rows
+// in external_ids plus its Wikidata and Deezer columns, which stay columns
+// because the overview and the photo read them.
+func ArtistExternalIDs(a *ent.Artist, stored db.ExternalIDs) db.ExternalIDs {
+	out := make(db.ExternalIDs, len(stored)+2)
+	for k, v := range stored {
+		out[k] = v
+	}
+	if a.WikidataID != "" {
+		out[metadata.SourceWikidata] = a.WikidataID
+	}
+	if a.DeezerID != 0 {
+		out[metadata.SourceDeezer] = strconv.FormatUint(uint64(a.DeezerID), 10)
+	}
+	return out
+}
+
 // attachExternalIDs fills the artist's links and every album's, two reads
 // whatever the discography's size. The artist's Wikidata and Deezer ids are
 // its own columns (the overview and the photo read them) and join the map
@@ -291,13 +308,7 @@ func (s *Service) attachExternalIDs(ctx context.Context, v *ArtistView) error {
 	if err != nil {
 		return err
 	}
-	if v.Artist.WikidataID != "" {
-		ids[metadata.SourceWikidata] = v.Artist.WikidataID
-	}
-	if v.Artist.DeezerID != 0 {
-		ids[metadata.SourceDeezer] = strconv.FormatUint(uint64(v.Artist.DeezerID), 10)
-	}
-	v.ExternalIDs = ids
+	v.ExternalIDs = ArtistExternalIDs(v.Artist, ids)
 
 	albumIDs := make([]uint32, 0, len(v.Albums))
 	for _, a := range v.Albums {

@@ -9,6 +9,8 @@ import (
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/media/movie"
+	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/metadata"
 	requestsvc "github.com/datahearth/streamline/internal/request"
 	"github.com/datahearth/streamline/internal/utils/numeric"
@@ -512,12 +514,8 @@ func movieDetailsToRequestMedia(d *metadata.MovieDetails) RequestMediaDetails {
 	if d.TMDBID != 0 {
 		out.TmdbId = &d.TMDBID
 	}
-	if d.IMDbID != "" {
-		out.ImdbId = &d.IMDbID
-	}
-	if d.WikidataID != "" {
-		out.WikidataId = &d.WikidataID
-	}
+	out.ExternalIds = toExternalIDs(movie.ExternalIDs(d))
+
 	if d.Rating != 0 {
 		out.Rating = &d.Rating
 	}
@@ -553,15 +551,7 @@ func seriesDetailsToRequestMedia(d *metadata.TVDetails) RequestMediaDetails {
 	if d.TVDBID != 0 {
 		out.TvdbId = &d.TVDBID
 	}
-	if d.TMDBID != 0 {
-		out.TmdbId = &d.TMDBID
-	}
-	if d.IMDbID != "" {
-		out.ImdbId = &d.IMDbID
-	}
-	if d.WikidataID != "" {
-		out.WikidataId = &d.WikidataID
-	}
+	out.ExternalIds = toExternalIDs(tvshow.ExternalIDs(d))
 	if d.Network != "" {
 		out.Network = &d.Network
 	}
@@ -607,8 +597,7 @@ func toLookupDetail(d RequestMediaDetails) LookupDetail {
 		Tagline:          d.Tagline,
 		TmdbId:           d.TmdbId,
 		TvdbId:           d.TvdbId,
-		ImdbId:           d.ImdbId,
-		WikidataId:       d.WikidataId,
+		ExternalIds:      d.ExternalIds,
 		VoteCount:        d.VoteCount,
 	}
 }
