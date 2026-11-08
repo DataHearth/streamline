@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/bookedition"
 	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/tvshow"
@@ -37,6 +38,8 @@ type ExternalID struct {
 	ArtistID uint32 `json:"artist_id,omitempty"`
 	// AlbumID holds the value of the "album_id" field.
 	AlbumID uint32 `json:"album_id,omitempty"`
+	// BookEditionID holds the value of the "book_edition_id" field.
+	BookEditionID uint32 `json:"book_edition_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ExternalIDQuery when eager-loading is set.
 	Edges        ExternalIDEdges `json:"edges"`
@@ -53,9 +56,11 @@ type ExternalIDEdges struct {
 	Artist *Artist `json:"artist,omitempty"`
 	// Album holds the value of the album edge.
 	Album *Album `json:"album,omitempty"`
+	// BookEdition holds the value of the book_edition edge.
+	BookEdition *BookEdition `json:"book_edition,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // MovieOrErr returns the Movie value or an error if the edge
@@ -102,12 +107,23 @@ func (e ExternalIDEdges) AlbumOrErr() (*Album, error) {
 	return nil, &NotLoadedError{edge: "album"}
 }
 
+// BookEditionOrErr returns the BookEdition value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ExternalIDEdges) BookEditionOrErr() (*BookEdition, error) {
+	if e.BookEdition != nil {
+		return e.BookEdition, nil
+	} else if e.loadedTypes[4] {
+		return nil, &NotFoundError{label: bookedition.Label}
+	}
+	return nil, &NotLoadedError{edge: "book_edition"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*ExternalID) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case externalid.FieldID, externalid.FieldMovieID, externalid.FieldTvShowID, externalid.FieldArtistID, externalid.FieldAlbumID:
+		case externalid.FieldID, externalid.FieldMovieID, externalid.FieldTvShowID, externalid.FieldArtistID, externalid.FieldAlbumID, externalid.FieldBookEditionID:
 			values[i] = new(sql.NullInt64)
 		case externalid.FieldSource, externalid.FieldValue:
 			values[i] = new(sql.NullString)
@@ -182,6 +198,12 @@ func (_m *ExternalID) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.AlbumID = uint32(value.Int64)
 			}
+		case externalid.FieldBookEditionID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field book_edition_id", values[i])
+			} else if value.Valid {
+				_m.BookEditionID = uint32(value.Int64)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -213,6 +235,11 @@ func (_m *ExternalID) QueryArtist() *ArtistQuery {
 // QueryAlbum queries the "album" edge of the ExternalID entity.
 func (_m *ExternalID) QueryAlbum() *AlbumQuery {
 	return NewExternalIDClient(_m.config).QueryAlbum(_m)
+}
+
+// QueryBookEdition queries the "book_edition" edge of the ExternalID entity.
+func (_m *ExternalID) QueryBookEdition() *BookEditionQuery {
+	return NewExternalIDClient(_m.config).QueryBookEdition(_m)
 }
 
 // Update returns a builder for updating this ExternalID.
@@ -261,6 +288,9 @@ func (_m *ExternalID) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("album_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AlbumID))
+	builder.WriteString(", ")
+	builder.WriteString("book_edition_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BookEditionID))
 	builder.WriteByte(')')
 	return builder.String()
 }

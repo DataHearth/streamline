@@ -102,6 +102,11 @@ func toBookEditions(b *ent.Book) []BookEdition {
 			Translator: optString(e.Translator),
 			Isbn13:     optString(e.Isbn13),
 			Asin:       optString(e.Asin),
+			// The edition's own Hardcover id; GET /books/{id} adds its
+			// mappings (withEditionLinks).
+			ExternalIds: toExternalIDs(
+				withOwnID(nil, metadata.SourceHardcover, e.HardcoverEditionID),
+			),
 		}
 		if e.Original {
 			t := true
@@ -322,6 +327,21 @@ func toAPISeries(s *ent.BookSeries) BookSeries {
 		Editions:       labels,
 		AddedAt:        s.CreateTime,
 		Volumes:        volumes,
+	}
+}
+
+// withEditionLinks adds each edition's stored mappings (Goodreads, Open
+// Library…) to a book's detail, read for all of its editions in one query.
+func withEditionLinks(out *Book, b *ent.Book, ids map[uint32]db.ExternalIDs) {
+	hc := make(map[uint32]uint32, len(b.Edges.Editions))
+	for _, e := range b.Edges.Editions {
+		hc[e.ID] = e.HardcoverEditionID
+	}
+	for i := range out.Editions {
+		e := &out.Editions[i]
+		e.ExternalIds = toExternalIDs(
+			withOwnID(ids[e.Id], metadata.SourceHardcover, hc[e.Id]),
+		)
 	}
 }
 

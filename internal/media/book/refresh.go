@@ -378,6 +378,8 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 		}
 	}
 	scheduler.Progress(ctx, total, total)
+	// After the refreshes, which may have pointed a slot at a new edition.
+	s.backfillEditionLinks(ctx)
 
 	span.SetAttributes(
 		attribute.Int("refresh.refreshed_count", done),

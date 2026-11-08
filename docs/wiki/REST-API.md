@@ -113,7 +113,7 @@ It starts with the title's own provider id: `tmdb` for a movie, `tvdb` for a ser
 - **Movie** (TMDB): `imdb`, `wikidata`.
 - **Series** (TVDB): `imdb`, `tmdb`, `wikidata`.
 - **Artist or album** (MusicBrainz): `wikidata`, `discogs`, `allmusic`, `spotify`, `deezer`, `bandcamp`, `lastfm` (artists only), `rateyourmusic`.
-- **Book or series**: nothing more, since Hardcover keeps no other site's id. Each of a book's `editions` carries its own `isbn_13` and `asin` instead.
+- **Book or series**: nothing more, since Hardcover maps editions, not books. Each of a book's `editions` carries its own `external_ids` (its Hardcover edition id, and on `GET /books/{id}` the `goodreads`, `openlibrary` (an `OL…M` key), `google_books`, `wikidata` and `audible` (`ASIN:region`) ids of the editions a slot follows) beside its `isbn_13` and `asin`.
 
 A site with no id is absent.
 

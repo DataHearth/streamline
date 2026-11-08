@@ -31,6 +31,8 @@ const (
 	FieldArtistID = "artist_id"
 	// FieldAlbumID holds the string denoting the album_id field in the database.
 	FieldAlbumID = "album_id"
+	// FieldBookEditionID holds the string denoting the book_edition_id field in the database.
+	FieldBookEditionID = "book_edition_id"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeTvShow holds the string denoting the tv_show edge name in mutations.
@@ -39,6 +41,8 @@ const (
 	EdgeArtist = "artist"
 	// EdgeAlbum holds the string denoting the album edge name in mutations.
 	EdgeAlbum = "album"
+	// EdgeBookEdition holds the string denoting the book_edition edge name in mutations.
+	EdgeBookEdition = "book_edition"
 	// Table holds the table name of the externalid in the database.
 	Table = "external_ids"
 	// MovieTable is the table that holds the movie relation/edge.
@@ -69,6 +73,13 @@ const (
 	AlbumInverseTable = "albums"
 	// AlbumColumn is the table column denoting the album relation/edge.
 	AlbumColumn = "album_id"
+	// BookEditionTable is the table that holds the book_edition relation/edge.
+	BookEditionTable = "external_ids"
+	// BookEditionInverseTable is the table name for the BookEdition entity.
+	// It exists in this package in order to avoid circular dependency with the "bookedition" package.
+	BookEditionInverseTable = "book_editions"
+	// BookEditionColumn is the table column denoting the book_edition relation/edge.
+	BookEditionColumn = "book_edition_id"
 )
 
 // Columns holds all SQL columns for externalid fields.
@@ -82,6 +93,7 @@ var Columns = []string{
 	FieldTvShowID,
 	FieldArtistID,
 	FieldAlbumID,
+	FieldBookEditionID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -120,6 +132,10 @@ const (
 	SourceBandcamp      Source = "bandcamp"
 	SourceLastfm        Source = "lastfm"
 	SourceRateyourmusic Source = "rateyourmusic"
+	SourceGoodreads     Source = "goodreads"
+	SourceOpenlibrary   Source = "openlibrary"
+	SourceGoogleBooks   Source = "google_books"
+	SourceAudible       Source = "audible"
 )
 
 func (s Source) String() string {
@@ -129,7 +145,7 @@ func (s Source) String() string {
 // SourceValidator is a validator for the "source" field enum values. It is called by the builders before save.
 func SourceValidator(s Source) error {
 	switch s {
-	case SourceImdb, SourceTmdb, SourceWikidata, SourceDiscogs, SourceAllmusic, SourceSpotify, SourceDeezer, SourceBandcamp, SourceLastfm, SourceRateyourmusic:
+	case SourceImdb, SourceTmdb, SourceWikidata, SourceDiscogs, SourceAllmusic, SourceSpotify, SourceDeezer, SourceBandcamp, SourceLastfm, SourceRateyourmusic, SourceGoodreads, SourceOpenlibrary, SourceGoogleBooks, SourceAudible:
 		return nil
 	default:
 		return fmt.Errorf("externalid: invalid enum value for source field: %q", s)
@@ -184,6 +200,11 @@ func ByAlbumID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAlbumID, opts...).ToFunc()
 }
 
+// ByBookEditionID orders the results by the book_edition_id field.
+func ByBookEditionID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBookEditionID, opts...).ToFunc()
+}
+
 // ByMovieField orders the results by movie field.
 func ByMovieField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -209,6 +230,13 @@ func ByArtistField(field string, opts ...sql.OrderTermOption) OrderOption {
 func ByAlbumField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newAlbumStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByBookEditionField orders the results by book_edition field.
+func ByBookEditionField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBookEditionStep(), sql.OrderByField(field, opts...))
 	}
 }
 func newMovieStep() *sqlgraph.Step {
@@ -237,5 +265,12 @@ func newAlbumStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AlbumInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, AlbumTable, AlbumColumn),
+	)
+}
+func newBookEditionStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BookEditionInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, BookEditionTable, BookEditionColumn),
 	)
 }

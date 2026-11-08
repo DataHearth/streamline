@@ -132,6 +132,10 @@ func movieToAPI(m *ent.Movie) Movie {
 func toExternalIDs(ids db.ExternalIDs) *ExternalIds {
 	out := ExternalIds{
 		Allmusic:      idOrNil(ids, metadata.SourceAllMusic),
+		Audible:       idOrNil(ids, metadata.SourceAudible),
+		GoogleBooks:   idOrNil(ids, metadata.SourceGoogleBooks),
+		Goodreads:     idOrNil(ids, metadata.SourceGoodreads),
+		Openlibrary:   idOrNil(ids, metadata.SourceOpenLibrary),
 		Hardcover:     idOrNil(ids, metadata.SourceHardcover),
 		Musicbrainz:   idOrNil(ids, metadata.SourceMusicBrainz),
 		Tvdb:          idOrNil(ids, metadata.SourceTVDB),

@@ -197,4 +197,9 @@ type BookProvider interface {
 	// minutes per id set. The answer is in ascending id order; an unknown id
 	// is simply absent.
 	GetSeriesLookup(ctx context.Context, ids []uint32) ([]SeriesLookupRecord, error)
+	// EditionLinks reads the other sites' ids Hardcover keeps for a few
+	// editions (Goodreads, Open Library, Wikidata, Google Books, Audible),
+	// keyed by Hardcover edition id, one request per 100; an unknown edition
+	// is absent.
+	EditionLinks(ctx context.Context, editionIDs []uint32) (map[uint32]map[string]string, error)
 }

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/bookedition"
 	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/tvshow"
@@ -120,6 +121,20 @@ func (_c *ExternalIDCreate) SetNillableAlbumID(v *uint32) *ExternalIDCreate {
 	return _c
 }
 
+// SetBookEditionID sets the "book_edition_id" field.
+func (_c *ExternalIDCreate) SetBookEditionID(v uint32) *ExternalIDCreate {
+	_c.mutation.SetBookEditionID(v)
+	return _c
+}
+
+// SetNillableBookEditionID sets the "book_edition_id" field if the given value is not nil.
+func (_c *ExternalIDCreate) SetNillableBookEditionID(v *uint32) *ExternalIDCreate {
+	if v != nil {
+		_c.SetBookEditionID(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *ExternalIDCreate) SetID(v uint32) *ExternalIDCreate {
 	_c.mutation.SetID(v)
@@ -144,6 +159,11 @@ func (_c *ExternalIDCreate) SetArtist(v *Artist) *ExternalIDCreate {
 // SetAlbum sets the "album" edge to the Album entity.
 func (_c *ExternalIDCreate) SetAlbum(v *Album) *ExternalIDCreate {
 	return _c.SetAlbumID(v.ID)
+}
+
+// SetBookEdition sets the "book_edition" edge to the BookEdition entity.
+func (_c *ExternalIDCreate) SetBookEdition(v *BookEdition) *ExternalIDCreate {
+	return _c.SetBookEditionID(v.ID)
 }
 
 // Mutation returns the ExternalIDMutation object of the builder.
@@ -329,6 +349,23 @@ func (_c *ExternalIDCreate) createSpec() (*ExternalID, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.AlbumID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.BookEditionIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   externalid.BookEditionTable,
+			Columns: []string{externalid.BookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.BookEditionID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
