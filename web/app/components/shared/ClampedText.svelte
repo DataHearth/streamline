@@ -49,8 +49,8 @@
 	});
 
 	// A hero centres or bottom-aligns its text beside the art, so growing the
-	// text moved the title up. Expanding pins that grid row's items where they
-	// stand, and only what follows the text moves; collapsing unpins them.
+	// text would move the title up. Expanding pins that grid row's items where
+	// they stand, and only what follows the text moves; collapsing unpins them.
 	let unpin: (() => void) | null = null;
 	function pinRow() {
 		for (let a = el?.parentElement; a?.parentElement; a = a.parentElement) {

@@ -27,9 +27,8 @@
 // left it and only then calls `onDismiss`, so the component's `fly` outro runs
 // on a sheet already off screen. Handing the exit to that outro at release
 // would snap the sheet back to its resting place first and then fade it out
-// over 420px. The scrim
-// (`data-sheet-scrim`, a sibling of the sheet) fades with the travel, so it
-// tracks the drag and is gone when the sheet is.
+// over 420px. The scrim (`data-sheet-scrim`, a sibling of the sheet) fades
+// with the travel, so it tracks the drag and is gone when the sheet is.
 //
 // The same physics as plein's ModalSheet (aslafy-z/plein), which this mirrors.
 
