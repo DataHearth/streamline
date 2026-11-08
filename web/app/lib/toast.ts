@@ -8,4 +8,5 @@ export const toast = {
 	warn: (msg: string, opts?: ToastOpts) => sonnerToast.warning(msg, opts),
 	info: (msg: string, opts?: ToastOpts) => sonnerToast.info(msg, opts),
 	promise: sonnerToast.promise,
+	dismiss: sonnerToast.dismiss,
 };

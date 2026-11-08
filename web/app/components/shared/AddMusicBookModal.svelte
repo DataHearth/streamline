@@ -5,7 +5,6 @@
 		BookOpen,
 		Eye,
 		Gauge,
-		LoaderCircle,
 		Music,
 		Plus,
 		Search,
@@ -13,7 +12,8 @@
 	} from "@lucide/svelte";
 	import { fade } from "svelte/transition";
 	import { api, errorText } from "@lib/api";
-	import { toast } from "@lib/toast";
+	import { createOutcome } from "@lib/outcome.svelte";
+	import OutcomeButton from "@components/shared/OutcomeButton.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import type { QualityProfile } from "@lib/types";
 	import { profilesPath } from "@lib/music-books";
@@ -69,6 +69,9 @@
 	let album = $state<LookupRelease | null>(null);
 	let pendingAlbum: LookupRelease | null = null;
 	const requestKey = (h: LookupHit, a: LookupRelease | null) => (a?.mbid ? `${h.key}:${a.mbid}` : h.key);
+	// The last add or request's result, shown on the add button itself; keyed
+	// like `requested`, so an album request answers on that album.
+	const outcome = createOutcome<string>();
 	$effect(() => {
 		void selectedKey;
 		album = null;
@@ -100,6 +103,7 @@
 		refused = null;
 		sessionAdds = new Map();
 		requested = new Set();
+		outcome.clear();
 		failedImages = new Set();
 	});
 
@@ -155,6 +159,7 @@
 		onMutate: (h) => {
 			pendingKey = h.key;
 			pendingAlbum = canAdd ? null : album;
+			outcome.clear();
 		},
 		mutationFn: async (h) => {
 			if (!canAdd) {
@@ -165,20 +170,19 @@
 			return api<{ id: number }>(path, { method: "POST", body });
 		},
 		onSuccess: (item, h) => {
+			outcome.done(requestKey(h, pendingAlbum));
 			if (!canAdd || !item) {
 				requested = new Set(requested).add(requestKey(h, pendingAlbum));
 				qc.invalidateQueries({ queryKey: ["requests"] });
-				toast.ok(i18n.toast_requested({ title: pendingAlbum?.title ?? h.title }));
 				return;
 			}
 			sessionAdds = new Map(sessionAdds).set(h.key, item.id);
 			qc.invalidateQueries({ queryKey: [libraryRoot(kind)] });
-			toast.ok(i18n.toast_added({ title: h.title }));
 		},
-		onError: (e) => {
+		onError: (e, h) => {
 			const issue = hardcoverIssue(e);
 			if (issue) refused = issue;
-			else toast.err(addErrorText(e, canAdd));
+			else outcome.failed(requestKey(h, pendingAlbum), addErrorText(e, canAdd));
 		},
 		onSettled: () => {
 			pendingKey = null;
@@ -472,7 +476,8 @@
 	</div>
 
 	{#if selected}
-		{#if selectedHeld && !album && selectedLocalId !== undefined}
+		{@const settling = outcome.showing(requestKey(selected, album))}
+		{#if selectedHeld && !album && !settling && selectedLocalId !== undefined}
 			<a
 				href={libraryHref(selected, selectedLocalId)}
 				onclick={onClose}
@@ -481,30 +486,30 @@
 				{i18n.action_open_in_library()}
 				<ArrowUpRight size={15} aria-hidden="true" />
 			</a>
-		{:else if selectedHeld && !album}
+		{:else if selectedHeld && !album && !settling}
 			<span class="inline-flex h-9 items-center rounded-md border border-border bg-bg-elevated px-4 text-sm font-medium text-fg-muted">
 				{i18n.status_in_library()}
 			</span>
-		{:else if selectedRequested}
+		{:else if selectedRequested && !settling}
 			<span class="inline-flex h-9 items-center rounded-md border border-accent-line bg-accent-soft px-4 text-sm font-medium text-accent-text">
 				{i18n.status_requested()}
 			</span>
 		{:else}
-			<button
-				type="button"
-				disabled={selectedPending}
-				aria-busy={selectedPending}
-				onclick={() => selected && addMutation.mutate(selected)}
-				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-			>
-				{#if selectedPending}
-					<LoaderCircle size={15} class="animate-spin" aria-hidden="true" />
-					{canAdd ? i18n.action_adding() : i18n.action_requesting()}
-				{:else}
-					<Plus size={15} aria-hidden="true" />
-					{addLabel}
-				{/if}
-			</button>
+			{@render addButton(selected)}
 		{/if}
 	{/if}
+{/snippet}
+
+{#snippet addButton(h: LookupHit)}
+	{@const key = requestKey(h, album)}
+	<OutcomeButton
+		phase={outcome.phase(key, selectedPending)}
+		error={outcome.error(key)}
+		icon={Plus}
+		label={addLabel}
+		pendingLabel={canAdd ? i18n.action_adding() : i18n.action_requesting()}
+		doneLabel={canAdd ? i18n.common_added() : i18n.status_requested()}
+		failedLabel={canAdd ? i18n.common_add_failed() : i18n.common_request_failed()}
+		onclick={() => addMutation.mutate(h)}
+	/>
 {/snippet}

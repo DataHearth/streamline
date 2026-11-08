@@ -12,6 +12,7 @@
 	import AddMusicBookModal from "@components/shared/AddMusicBookModal.svelte";
 	import MusicBookLookupScreen from "@components/shared/MusicBookLookupScreen.svelte";
 	import { restoreScrollOnBack } from "@lib/scroll-restore";
+	import { BELOW_MD } from "@lib/viewport.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { children }: { children: Snippet } = $props();
@@ -37,7 +38,7 @@
 		window.addEventListener("streamline:open-add-series", onOpenSeries);
 		window.addEventListener("streamline:open-add-artist", onOpenArtist);
 		window.addEventListener("streamline:open-add-book", onOpenBook);
-		const mql = window.matchMedia("(max-width: 767px)");
+		const mql = window.matchMedia(BELOW_MD);
 		const syncCompact = () => (compact = mql.matches);
 		syncCompact();
 		mql.addEventListener("change", syncCompact);

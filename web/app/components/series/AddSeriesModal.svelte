@@ -10,14 +10,14 @@
 		Tv,
 		ArrowUpRight,
 		Check,
-		LoaderCircle,
 		Gauge,
 		Eye,
 		X,
 	} from "@lucide/svelte";
 	import { fade } from "svelte/transition";
 	import { api, apiAllPages, errorText, type Paginated } from "@lib/api";
-	import { toast } from "@lib/toast";
+	import { createOutcome } from "@lib/outcome.svelte";
+	import OutcomeButton from "@components/shared/OutcomeButton.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import type {
 		AddSeriesRequest,
@@ -65,6 +65,10 @@
 	// tvdb_id → local series id for adds made during this modal session;
 	// covers the gap between mutation success and the series refetch.
 	let sessionAdds = $state(new Map<number, number>());
+	// tvdb ids requested during this session, by a request-only user.
+	let requested = $state(new Set<number>());
+	// The last add or request's result, shown on the add button itself.
+	const outcome = createOutcome<number>();
 	let pendingTvdbId = $state<number | null>(null);
 	let searchInput = $state<HTMLInputElement | null>(null);
 	let resultsList = $state<HTMLUListElement | null>(null);
@@ -95,6 +99,8 @@
 			qualityProfileName = "";
 			preset = "all";
 			sessionAdds = new Map();
+			requested = new Set();
+			outcome.clear();
 			failedPosters = new Set();
 			selectedTvdbId = null;
 			showPanelOnNarrow = false;
@@ -145,6 +151,7 @@
 	const addMutation = createMutation<TVShow | null, Error, SeriesLookupResult>(() => ({
 		onMutate: (s) => {
 			pendingTvdbId = s.tvdb_id;
+			outcome.clear();
 		},
 		mutationFn: async (s) => {
 			if (!canAdd) {
@@ -167,16 +174,20 @@
 			return api<TVShow>("/series", { method: "POST", body });
 		},
 		onSuccess: (show, s) => {
+			outcome.done(s.tvdb_id);
 			if (!canAdd || !show) {
-				toast.ok(i18n.toast_requested({ title: s.title }));
+				requested = new Set(requested).add(s.tvdb_id);
 				return;
 			}
 			sessionAdds = new Map(sessionAdds).set(s.tvdb_id, show.id);
 			qc.invalidateQueries({ queryKey: ["series"] });
 			qc.invalidateQueries({ queryKey: ["series", "counts"] });
-			toast.ok(i18n.toast_added({ title: s.title }));
 		},
-		onError: (e) => toast.err(errorText(e, i18n.common_add_failed())),
+		onError: (e, s) =>
+			outcome.failed(
+				s.tvdb_id,
+				errorText(e, canAdd ? i18n.common_add_failed() : i18n.common_request_failed()),
+			),
 		onSettled: () => {
 			pendingTvdbId = null;
 		},
@@ -556,7 +567,7 @@
 				<Check size={15} aria-hidden="true" />
 				{i18n.action_use_match()}
 			</button>
-		{:else if selectedInLibrary && selectedLocalId !== undefined}
+		{:else if selectedInLibrary && !outcome.showing(selected.tvdb_id) && selectedLocalId !== undefined}
 			<a
 				href={`/series/${selectedLocalId}`}
 				onclick={onClose}
@@ -565,28 +576,33 @@
 				{i18n.action_open_in_library()}
 				<ArrowUpRight size={15} aria-hidden="true" />
 			</a>
-		{:else if selectedInLibrary}
+		{:else if selectedInLibrary && !outcome.showing(selected.tvdb_id)}
 			<span
 				class="inline-flex h-9 items-center rounded-md border border-border bg-bg-elevated px-4 text-sm font-medium text-fg-muted"
 			>
 				{i18n.status_in_library()}
 			</span>
-		{:else}
-			<button
-				type="button"
-				disabled={selectedPending}
-				aria-busy={selectedPending}
-				onclick={() => selected && addMutation.mutate(selected)}
-				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+		{:else if requested.has(selected.tvdb_id) && !outcome.showing(selected.tvdb_id)}
+			<span
+				class="inline-flex h-9 items-center rounded-md border border-accent-line bg-accent-soft px-4 text-sm font-medium text-accent-text"
 			>
-				{#if selectedPending}
-					<LoaderCircle size={15} class="animate-spin" aria-hidden="true" />
-					{canAdd ? i18n.action_adding() : i18n.action_requesting()}
-				{:else}
-					<Plus size={15} aria-hidden="true" />
-					{canAdd ? i18n.action_add_series() : i18n.action_request()}
-				{/if}
-			</button>
+				{i18n.status_requested()}
+			</span>
+		{:else}
+			{@render addButton(selected)}
 		{/if}
 	{/if}
+{/snippet}
+
+{#snippet addButton(s: SeriesLookupResult)}
+	<OutcomeButton
+		phase={outcome.phase(s.tvdb_id, selectedPending)}
+		error={outcome.error(s.tvdb_id)}
+		icon={Plus}
+		label={canAdd ? i18n.action_add_series() : i18n.action_request()}
+		pendingLabel={canAdd ? i18n.action_adding() : i18n.action_requesting()}
+		doneLabel={canAdd ? i18n.common_added() : i18n.status_requested()}
+		failedLabel={canAdd ? i18n.common_add_failed() : i18n.common_request_failed()}
+		onclick={() => addMutation.mutate(s)}
+	/>
 {/snippet}
