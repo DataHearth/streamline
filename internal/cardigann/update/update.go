@@ -75,9 +75,13 @@ type pendingIndex struct {
 	Upstream cardigann.Upstream `json:"upstream"`
 	Pending  []Pending          `json:"pending"`
 	// Rejected maps a file to the upstream sha256 an administrator turned
-	// down; that version is not proposed again, a later one is.
+	// down; that version is not proposed again, a later one is. A refused
+	// removal is recorded as rejectedRemoval, since a deletion has no file
+	// to hash.
 	Rejected map[string]string `json:"rejected,omitempty"`
 }
+
+const rejectedRemoval = "removed"
 
 // Result says what a run did.
 type Result struct {
@@ -87,6 +91,9 @@ type Result struct {
 	Added   []string
 	Removed []string
 	Held    []string
+	// Skipped names the definitions upstream still carries but this
+	// converter refused, kept at their last good version.
+	Skipped []string
 	Warning string
 }
 
@@ -175,8 +182,26 @@ func Run(
 			File: s.File, Name: s.Name, Reasons: reasons, SHA256: sha,
 		})
 	}
+	refused := func(file string) bool {
+		return slices.ContainsFunc(cat.Skipped, func(k cardigann.Skipped) bool {
+			return strings.TrimSuffix(k.File, ".yml") == file
+		})
+	}
 	for _, s := range base.Definitions {
 		if _, ok := defs[s.File]; ok {
+			continue
+		}
+		// A file upstream still carries but this converter refuses is not
+		// gone: the version that converted keeps working until the
+		// converter catches up, and the catalog's skipped list says why.
+		if refused(s.File) {
+			old, err := definitions.Raw(dir, s.File)
+			if err != nil {
+				return res, err
+			}
+			defs[s.File] = old
+			cat.Definitions = append(cat.Definitions, summaries[s.File])
+			res.Skipped = append(res.Skipped, s.File)
 			continue
 		}
 		if !inUse(s.File) {
@@ -189,6 +214,10 @@ func Run(
 		}
 		keepOld(s.File, old)
 		res.Held = append(res.Held, s.File)
+		if prev.Rejected[s.File] == rejectedRemoval {
+			proposed.Rejected[s.File] = rejectedRemoval
+			continue
+		}
 		proposed.Pending = append(proposed.Pending, Pending{
 			File: s.File, Name: s.Name, Removed: true,
 			Reasons: []string{"removed upstream"},
@@ -574,7 +603,11 @@ func Reject(dir, file string) error {
 	if i < 0 {
 		return ErrNoUpdate
 	}
-	return dropPending(dir, p, i, p.Pending[i].SHA256)
+	rejected := p.Pending[i].SHA256
+	if p.Pending[i].Removed {
+		rejected = rejectedRemoval
+	}
+	return dropPending(dir, p, i, rejected)
 }
 
 func dropPending(dir string, p pendingIndex, i int, rejected string) error {

@@ -40,6 +40,7 @@ func CardigannUpdate() scheduler.JobFunc {
 			"changed", len(res.Changed),
 			"added", len(res.Added),
 			"removed", len(res.Removed),
+			"skipped", res.Skipped,
 			"held", res.Held,
 		)
 		return nil

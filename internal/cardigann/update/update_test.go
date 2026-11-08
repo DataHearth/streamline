@@ -237,6 +237,70 @@ var _ = Describe("the definition update", Label("unit", "cardigann"), func() {
 		Expect(pending[0].Reasons).To(ConsistOf("new domains: alpha.evil"))
 	})
 
+	It("keeps a definition this converter refuses at its last good version", func() {
+		run(commit{
+			sha:  sha(1),
+			date: "2030-01-01T00:00:00Z",
+			files: map[string]string{
+				"alpha": definition("alpha", "https://alpha.example/"),
+				"beta":  definition("beta", "https://beta.example/"),
+			},
+		})
+		res := run(commit{
+			sha:  sha(2),
+			date: "2030-01-02T00:00:00Z",
+			files: map[string]string{
+				"alpha": definition("alpha", "https://alpha.example/"),
+				"beta":  "links: [not a definition",
+			},
+		})
+		Expect(res.Skipped).To(ConsistOf("beta"))
+		Expect(res.Removed).To(BeEmpty())
+		Expect(res.Held).To(BeEmpty())
+		b, err := definitions.Load(dir, "beta")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(b.Links).To(Equal([]string{"https://beta.example/"}))
+		cat, err := definitions.Catalog(dir)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cat.Skipped).To(HaveLen(1))
+		Expect(cat.Skipped[0].File).To(Equal("beta.yml"))
+	})
+
+	It("remembers a refused removal", func() {
+		run(commit{
+			sha:  sha(1),
+			date: "2030-01-01T00:00:00Z",
+			files: map[string]string{
+				"alpha": definition("alpha", "https://alpha.example/"),
+			},
+		})
+		res := run(commit{
+			sha:  sha(2),
+			date: "2030-01-02T00:00:00Z",
+			files: map[string]string{
+				"beta": definition("beta", "https://beta.example/"),
+			},
+		})
+		Expect(res.Held).To(ConsistOf("alpha"))
+		pending, err := update.List(dir)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(pending).To(HaveLen(1))
+		Expect(pending[0].Removed).To(BeTrue())
+		Expect(update.Reject(dir, "alpha")).To(Succeed())
+
+		res = run(commit{
+			sha:  sha(3),
+			date: "2030-01-03T00:00:00Z",
+			files: map[string]string{
+				"beta": definition("beta", "https://beta.example/"),
+			},
+		})
+		Expect(res.Held).To(ConsistOf("alpha"))
+		Expect(update.List(dir)).To(BeEmpty())
+		_, err = definitions.Load(dir, "alpha")
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("does not propose a version that was turned down again", func() {
 		run(
 			commit{
