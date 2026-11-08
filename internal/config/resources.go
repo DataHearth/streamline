@@ -91,7 +91,7 @@ type IndexerEntry struct {
 	Private bool `koanf:"private"`
 	// Cardigann is set exactly when Protocol is "cardigann": which embedded
 	// definition runs the tracker, and the operator's values for its
-	// settings. File-only — the REST API neither shows nor writes it.
+	// settings. The REST API reads and writes it, secrets write-only.
 	Cardigann *CardigannIndexer `koanf:"cardigann"`
 }
 

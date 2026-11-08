@@ -241,10 +241,24 @@ func (s *Server) TestDraftIndexer(
 	}
 	if e.Protocol == "cardigann" {
 		// The target is one of the definition's own links, never one the
-		// caller names; what can be wrong is the definition or a setting.
+		// caller names; what can be wrong is the definition or a setting —
+		// and the proxy, the one address the caller does name, which the
+		// probe would connect to and describe like any draft host.
 		if err := config.CheckCardigann(config.Get().CardigannDir(), e); err != nil {
 			return TestDraftIndexer422JSONResponse{
 				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		}
+		if err := config.CheckCardigannProxy(e.Cardigann.Proxy); err != nil {
+			return TestDraftIndexer422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		}
+		if p := e.Cardigann.Proxy; p != "" && draftTargetRefused(ctx, p) {
+			return TestDraftIndexer422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(
+					draftTargetRefusedMessage,
+				),
 			}, nil
 		}
 	} else if draftTargetRefused(ctx, e.Host) {

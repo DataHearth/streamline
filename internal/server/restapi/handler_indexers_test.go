@@ -273,6 +273,18 @@ var _ = Describe(
 				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
 			})
 
+			It("refuses a built-in draft whose proxy is link-local", func() {
+				body := `{"name":"draft","protocol":"cardigann","cardigann":` +
+					`{"definition":"yts","proxy":"http://169.254.169.254:80"}}`
+
+				req := app.req(http.MethodPost, "/api/v1/indexers/test", "",
+					strings.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			})
+
 			It("returns 200 when the draft credentials work", func() {
 				app.indexers.EXPECT().
 					Test(mock.Anything, mock.Anything).

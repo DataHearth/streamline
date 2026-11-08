@@ -1354,7 +1354,7 @@ export type CustomFormatTestResult = {
 // aggregate feed is standard Torznab). "prowlarr" uses Prowlarr's native JSON
 // search API, the only way to query all of Prowlarr's indexers at once.
 // "cardigann" is a tracker streamline runs itself from an embedded
-// definition; it lives in the config file and the API does not edit it.
+// definition, edited through its own form (CardigannIndexerForm).
 export type IndexerProtocol = "torznab" | "prowlarr" | "cardigann";
 export type EditableIndexerProtocol = Exclude<IndexerProtocol, "cardigann">;
 
