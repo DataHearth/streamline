@@ -457,6 +457,13 @@ type MusicProvider interface {
 		mbid, edition string,
 	) (*ReleaseGroupDetails, error)
 	ReleaseGroupEditions(ctx context.Context, mbid string) ([]ReleaseEdition, error)
+	// ArtistLinks and AlbumLinks read only the url relations, the ids an
+	// add, a refresh or a hydration stores, for the links backfill.
+	ArtistLinks(ctx context.Context, mbid string) (map[string]string, error)
+	AlbumLinks(
+		ctx context.Context,
+		releaseGroup, release string,
+	) (map[string]string, error)
 	SearchReleaseGroups(
 		ctx context.Context,
 		artist, album string,

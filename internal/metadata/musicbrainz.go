@@ -616,6 +616,79 @@ func (m *MusicBrainz) ArtistArt(
 	return art, nil
 }
 
+// ArtistLinks reads only the artist's url relations, the ids a refresh would
+// store (ArtistDetails.ExternalIDs), in one call where a refresh also walks
+// the whole release-group listing. The links backfill uses it for artists
+// stored before the links were.
+func (m *MusicBrainz) ArtistLinks(
+	ctx context.Context,
+	mbid string,
+) (map[string]string, error) {
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.artist_links",
+		trace.WithAttributes(attribute.String("musicbrainz.mbid", mbid)))
+	defer span.End()
+
+	var artist mbArtist
+	if err := m.get(
+		ctx,
+		"/artist/"+url.PathEscape(mbid),
+		url.Values{"inc": {"url-rels"}},
+		&artist,
+	); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	out := map[string]string{}
+	mbURLIDs(out, artist.Relations, mbArtistURLs)
+	return out, nil
+}
+
+// AlbumLinks reads only the url relations of a release group and of the
+// release the album follows (none when release is ""), the ids a hydration
+// would store (ReleaseGroupDetails.ExternalIDs), in at most two small calls
+// where a hydration makes the heavy release call. The links backfill uses it
+// for albums hydrated before the links were.
+func (m *MusicBrainz) AlbumLinks(
+	ctx context.Context,
+	releaseGroup, release string,
+) (map[string]string, error) {
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.album_links",
+		trace.WithAttributes(attribute.String("musicbrainz.mbid", releaseGroup)))
+	defer span.End()
+
+	var rels struct {
+		Relations []mbRel `json:"relations"`
+	}
+	if err := m.get(
+		ctx,
+		"/release-group/"+url.PathEscape(releaseGroup),
+		url.Values{"inc": {"url-rels"}},
+		&rels,
+	); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	out := map[string]string{}
+	mbURLIDs(out, rels.Relations, mbReleaseGroupURLs)
+	if release == "" {
+		return out, nil
+	}
+	rels.Relations = nil
+	err := m.get(
+		ctx,
+		"/release/"+url.PathEscape(release),
+		url.Values{"inc": {"url-rels"}},
+		&rels,
+	)
+	switch {
+	case errors.Is(err, ErrNotFound):
+		// A release MusicBrainz merged away still leaves the group's links.
+		return out, nil
+	case err != nil:
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	mbURLIDs(out, rels.Relations, mbReleaseURLs)
+	return out, nil
+}
+
 // commonsImageURL turns a Wikimedia Commons file page into a 500 px
 // rendition of the file, "" for any other address.
 func commonsImageURL(resource string) string {

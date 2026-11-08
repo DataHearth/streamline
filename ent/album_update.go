@@ -117,6 +117,26 @@ func (_u *AlbumUpdate) ClearBarcode() *AlbumUpdate {
 	return _u
 }
 
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (_u *AlbumUpdate) SetLinksFetchedAt(v time.Time) *AlbumUpdate {
+	_u.mutation.SetLinksFetchedAt(v)
+	return _u
+}
+
+// SetNillableLinksFetchedAt sets the "links_fetched_at" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableLinksFetchedAt(v *time.Time) *AlbumUpdate {
+	if v != nil {
+		_u.SetLinksFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearLinksFetchedAt clears the value of the "links_fetched_at" field.
+func (_u *AlbumUpdate) ClearLinksFetchedAt() *AlbumUpdate {
+	_u.mutation.ClearLinksFetchedAt()
+	return _u
+}
+
 // SetTitle sets the "title" field.
 func (_u *AlbumUpdate) SetTitle(v string) *AlbumUpdate {
 	_u.mutation.SetTitle(v)
@@ -949,6 +969,12 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.BarcodeCleared() {
 		_spec.ClearField(album.FieldBarcode, field.TypeString)
 	}
+	if value, ok := _u.mutation.LinksFetchedAt(); ok {
+		_spec.SetField(album.FieldLinksFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LinksFetchedAtCleared() {
+		_spec.ClearField(album.FieldLinksFetchedAt, field.TypeTime)
+	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(album.FieldTitle, field.TypeString, value)
 	}
@@ -1562,6 +1588,26 @@ func (_u *AlbumUpdateOne) SetNillableBarcode(v *string) *AlbumUpdateOne {
 // ClearBarcode clears the value of the "barcode" field.
 func (_u *AlbumUpdateOne) ClearBarcode() *AlbumUpdateOne {
 	_u.mutation.ClearBarcode()
+	return _u
+}
+
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (_u *AlbumUpdateOne) SetLinksFetchedAt(v time.Time) *AlbumUpdateOne {
+	_u.mutation.SetLinksFetchedAt(v)
+	return _u
+}
+
+// SetNillableLinksFetchedAt sets the "links_fetched_at" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableLinksFetchedAt(v *time.Time) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetLinksFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearLinksFetchedAt clears the value of the "links_fetched_at" field.
+func (_u *AlbumUpdateOne) ClearLinksFetchedAt() *AlbumUpdateOne {
+	_u.mutation.ClearLinksFetchedAt()
 	return _u
 }
 
@@ -2426,6 +2472,12 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	}
 	if _u.mutation.BarcodeCleared() {
 		_spec.ClearField(album.FieldBarcode, field.TypeString)
+	}
+	if value, ok := _u.mutation.LinksFetchedAt(); ok {
+		_spec.SetField(album.FieldLinksFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LinksFetchedAtCleared() {
+		_spec.ClearField(album.FieldLinksFetchedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(album.FieldTitle, field.TypeString, value)

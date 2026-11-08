@@ -120,6 +120,7 @@ type AlbumMutation struct {
 	release_mbid            *string
 	edition_mbid            *string
 	barcode                 *string
+	links_fetched_at        *time.Time
 	title                   *string
 	_type                   *album.Type
 	release_date            *time.Time
@@ -535,6 +536,55 @@ func (m *AlbumMutation) BarcodeCleared() bool {
 func (m *AlbumMutation) ResetBarcode() {
 	m.barcode = nil
 	delete(m.clearedFields, album.FieldBarcode)
+}
+
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (m *AlbumMutation) SetLinksFetchedAt(t time.Time) {
+	m.links_fetched_at = &t
+}
+
+// LinksFetchedAt returns the value of the "links_fetched_at" field in the mutation.
+func (m *AlbumMutation) LinksFetchedAt() (r time.Time, exists bool) {
+	v := m.links_fetched_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLinksFetchedAt returns the old "links_fetched_at" field's value of the Album entity.
+// If the Album object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AlbumMutation) OldLinksFetchedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLinksFetchedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLinksFetchedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLinksFetchedAt: %w", err)
+	}
+	return oldValue.LinksFetchedAt, nil
+}
+
+// ClearLinksFetchedAt clears the value of the "links_fetched_at" field.
+func (m *AlbumMutation) ClearLinksFetchedAt() {
+	m.links_fetched_at = nil
+	m.clearedFields[album.FieldLinksFetchedAt] = struct{}{}
+}
+
+// LinksFetchedAtCleared returns if the "links_fetched_at" field was cleared in this mutation.
+func (m *AlbumMutation) LinksFetchedAtCleared() bool {
+	_, ok := m.clearedFields[album.FieldLinksFetchedAt]
+	return ok
+}
+
+// ResetLinksFetchedAt resets all changes to the "links_fetched_at" field.
+func (m *AlbumMutation) ResetLinksFetchedAt() {
+	m.links_fetched_at = nil
+	delete(m.clearedFields, album.FieldLinksFetchedAt)
 }
 
 // SetTitle sets the "title" field.
@@ -2121,7 +2171,7 @@ func (m *AlbumMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AlbumMutation) Fields() []string {
-	fields := make([]string, 0, 29)
+	fields := make([]string, 0, 30)
 	if m.create_time != nil {
 		fields = append(fields, album.FieldCreateTime)
 	}
@@ -2139,6 +2189,9 @@ func (m *AlbumMutation) Fields() []string {
 	}
 	if m.barcode != nil {
 		fields = append(fields, album.FieldBarcode)
+	}
+	if m.links_fetched_at != nil {
+		fields = append(fields, album.FieldLinksFetchedAt)
 	}
 	if m.title != nil {
 		fields = append(fields, album.FieldTitle)
@@ -2229,6 +2282,8 @@ func (m *AlbumMutation) Field(name string) (ent.Value, bool) {
 		return m.EditionMbid()
 	case album.FieldBarcode:
 		return m.Barcode()
+	case album.FieldLinksFetchedAt:
+		return m.LinksFetchedAt()
 	case album.FieldTitle:
 		return m.Title()
 	case album.FieldType:
@@ -2296,6 +2351,8 @@ func (m *AlbumMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldEditionMbid(ctx)
 	case album.FieldBarcode:
 		return m.OldBarcode(ctx)
+	case album.FieldLinksFetchedAt:
+		return m.OldLinksFetchedAt(ctx)
 	case album.FieldTitle:
 		return m.OldTitle(ctx)
 	case album.FieldType:
@@ -2392,6 +2449,13 @@ func (m *AlbumMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetBarcode(v)
+		return nil
+	case album.FieldLinksFetchedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLinksFetchedAt(v)
 		return nil
 	case album.FieldTitle:
 		v, ok := value.(string)
@@ -2620,6 +2684,9 @@ func (m *AlbumMutation) ClearedFields() []string {
 	if m.FieldCleared(album.FieldBarcode) {
 		fields = append(fields, album.FieldBarcode)
 	}
+	if m.FieldCleared(album.FieldLinksFetchedAt) {
+		fields = append(fields, album.FieldLinksFetchedAt)
+	}
 	if m.FieldCleared(album.FieldReleaseDate) {
 		fields = append(fields, album.FieldReleaseDate)
 	}
@@ -2687,6 +2754,9 @@ func (m *AlbumMutation) ClearField(name string) error {
 		return nil
 	case album.FieldBarcode:
 		m.ClearBarcode()
+		return nil
+	case album.FieldLinksFetchedAt:
+		m.ClearLinksFetchedAt()
 		return nil
 	case album.FieldReleaseDate:
 		m.ClearReleaseDate()
@@ -2758,6 +2828,9 @@ func (m *AlbumMutation) ResetField(name string) error {
 		return nil
 	case album.FieldBarcode:
 		m.ResetBarcode()
+		return nil
+	case album.FieldLinksFetchedAt:
+		m.ResetLinksFetchedAt()
 		return nil
 	case album.FieldTitle:
 		m.ResetTitle()
@@ -3904,6 +3977,7 @@ type ArtistMutation struct {
 	deezer_id               *uint32
 	adddeezer_id            *int32
 	wikidata_id             *string
+	links_fetched_at        *time.Time
 	_path                   *string
 	quality_profile         *string
 	last_refreshed_at       *time.Time
@@ -4801,6 +4875,55 @@ func (m *ArtistMutation) ResetWikidataID() {
 	delete(m.clearedFields, artist.FieldWikidataID)
 }
 
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (m *ArtistMutation) SetLinksFetchedAt(t time.Time) {
+	m.links_fetched_at = &t
+}
+
+// LinksFetchedAt returns the value of the "links_fetched_at" field in the mutation.
+func (m *ArtistMutation) LinksFetchedAt() (r time.Time, exists bool) {
+	v := m.links_fetched_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLinksFetchedAt returns the old "links_fetched_at" field's value of the Artist entity.
+// If the Artist object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ArtistMutation) OldLinksFetchedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLinksFetchedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLinksFetchedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLinksFetchedAt: %w", err)
+	}
+	return oldValue.LinksFetchedAt, nil
+}
+
+// ClearLinksFetchedAt clears the value of the "links_fetched_at" field.
+func (m *ArtistMutation) ClearLinksFetchedAt() {
+	m.links_fetched_at = nil
+	m.clearedFields[artist.FieldLinksFetchedAt] = struct{}{}
+}
+
+// LinksFetchedAtCleared returns if the "links_fetched_at" field was cleared in this mutation.
+func (m *ArtistMutation) LinksFetchedAtCleared() bool {
+	_, ok := m.clearedFields[artist.FieldLinksFetchedAt]
+	return ok
+}
+
+// ResetLinksFetchedAt resets all changes to the "links_fetched_at" field.
+func (m *ArtistMutation) ResetLinksFetchedAt() {
+	m.links_fetched_at = nil
+	delete(m.clearedFields, artist.FieldLinksFetchedAt)
+}
+
 // SetPath sets the "path" field.
 func (m *ArtistMutation) SetPath(s string) {
 	m._path = &s
@@ -5458,7 +5581,7 @@ func (m *ArtistMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ArtistMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 22)
 	if m.create_time != nil {
 		fields = append(fields, artist.FieldCreateTime)
 	}
@@ -5506,6 +5629,9 @@ func (m *ArtistMutation) Fields() []string {
 	}
 	if m.wikidata_id != nil {
 		fields = append(fields, artist.FieldWikidataID)
+	}
+	if m.links_fetched_at != nil {
+		fields = append(fields, artist.FieldLinksFetchedAt)
 	}
 	if m._path != nil {
 		fields = append(fields, artist.FieldPath)
@@ -5562,6 +5688,8 @@ func (m *ArtistMutation) Field(name string) (ent.Value, bool) {
 		return m.DeezerID()
 	case artist.FieldWikidataID:
 		return m.WikidataID()
+	case artist.FieldLinksFetchedAt:
+		return m.LinksFetchedAt()
 	case artist.FieldPath:
 		return m.Path()
 	case artist.FieldQualityProfile:
@@ -5613,6 +5741,8 @@ func (m *ArtistMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldDeezerID(ctx)
 	case artist.FieldWikidataID:
 		return m.OldWikidataID(ctx)
+	case artist.FieldLinksFetchedAt:
+		return m.OldLinksFetchedAt(ctx)
 	case artist.FieldPath:
 		return m.OldPath(ctx)
 	case artist.FieldQualityProfile:
@@ -5744,6 +5874,13 @@ func (m *ArtistMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetWikidataID(v)
 		return nil
+	case artist.FieldLinksFetchedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLinksFetchedAt(v)
+		return nil
 	case artist.FieldPath:
 		v, ok := value.(string)
 		if !ok {
@@ -5869,6 +6006,9 @@ func (m *ArtistMutation) ClearedFields() []string {
 	if m.FieldCleared(artist.FieldWikidataID) {
 		fields = append(fields, artist.FieldWikidataID)
 	}
+	if m.FieldCleared(artist.FieldLinksFetchedAt) {
+		fields = append(fields, artist.FieldLinksFetchedAt)
+	}
 	if m.FieldCleared(artist.FieldPath) {
 		fields = append(fields, artist.FieldPath)
 	}
@@ -5930,6 +6070,9 @@ func (m *ArtistMutation) ClearField(name string) error {
 		return nil
 	case artist.FieldWikidataID:
 		m.ClearWikidataID()
+		return nil
+	case artist.FieldLinksFetchedAt:
+		m.ClearLinksFetchedAt()
 		return nil
 	case artist.FieldPath:
 		m.ClearPath()
@@ -6001,6 +6144,9 @@ func (m *ArtistMutation) ResetField(name string) error {
 		return nil
 	case artist.FieldWikidataID:
 		m.ResetWikidataID()
+		return nil
+	case artist.FieldLinksFetchedAt:
+		m.ResetLinksFetchedAt()
 		return nil
 	case artist.FieldPath:
 		m.ResetPath()

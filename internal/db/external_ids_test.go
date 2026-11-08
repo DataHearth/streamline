@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -86,5 +87,43 @@ var _ = Describe("external ids", Label("integration", "db"), func() {
 			ok.ID:  {"discogs": "21491", "spotify": "6dVIqQ8qmQ5GBnJ9shOYGE"},
 			kid.ID: {"discogs": "21501"},
 		}))
+	})
+
+	It("lists hydrated rows without links after the cursor, and stamps them", func() {
+		a, err := client.Artist.Create().
+			SetMbid("a7f7df4a-77d8-4f12-8acd-5c60c93f4de8").
+			SetName("Radiohead").SetSortName("Radiohead").SetPath("/m/r").
+			SetMonitor(artist.MonitorNone).
+			Save(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		hydrated := client.Album.Create().
+			SetMbid("b1392450-e666-3926-a536-22c65f834433").SetTitle("OK Computer").
+			SetArtistID(a.ID).SetMetadataFetchedAt(time.Now()).SaveX(ctx)
+		// A stub gets its links with its tracks.
+		client.Album.Create().
+			SetMbid("0f1f4d2a-b3a1-3b06-9a2b-0e9fbdb87a6e").SetTitle("Kid A").
+			SetArtistID(a.ID).SaveX(ctx)
+
+		albums, err := store.ListAlbumsAwaitingLinks(ctx, 0, 10)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(albums).To(HaveLen(1))
+		Expect(albums[0].ID).To(Equal(hydrated.ID))
+		albums, err = store.ListAlbumsAwaitingLinks(ctx, hydrated.ID, 10)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(albums).To(BeEmpty())
+
+		Expect(store.SetAlbumLinks(ctx, hydrated.ID, nil, time.Now())).To(Succeed())
+		albums, err = store.ListAlbumsAwaitingLinks(ctx, 0, 10)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(albums).To(BeEmpty())
+
+		artists, err := store.ListArtistsAwaitingLinks(ctx, 0, 10)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(artists).To(HaveLen(1))
+		Expect(store.SetArtistLinks(ctx, a.ID, ExternalIDs{"discogs": "3840"}, time.Now())).
+			To(Succeed())
+		artists, err = store.ListArtistsAwaitingLinks(ctx, 0, 10)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(artists).To(BeEmpty())
 	})
 })

@@ -18,6 +18,7 @@ var (
 		{Name: "release_mbid", Type: field.TypeString, Nullable: true},
 		{Name: "edition_mbid", Type: field.TypeString, Nullable: true},
 		{Name: "barcode", Type: field.TypeString, Nullable: true},
+		{Name: "links_fetched_at", Type: field.TypeTime, Nullable: true},
 		{Name: "title", Type: field.TypeString},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"album", "ep", "single", "compilation", "live", "other"}, Default: "album"},
 		{Name: "release_date", Type: field.TypeTime, Nullable: true},
@@ -51,7 +52,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "albums_artists_albums",
-				Columns:    []*schema.Column{AlbumsColumns[30]},
+				Columns:    []*schema.Column{AlbumsColumns[31]},
 				RefColumns: []*schema.Column{ArtistsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -60,17 +61,17 @@ var (
 			{
 				Name:    "album_artist_albums",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[30]},
+				Columns: []*schema.Column{AlbumsColumns[31]},
 			},
 			{
 				Name:    "album_status",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[20]},
+				Columns: []*schema.Column{AlbumsColumns[21]},
 			},
 			{
 				Name:    "album_metadata_fetched_at",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[27]},
+				Columns: []*schema.Column{AlbumsColumns[28]},
 			},
 		},
 	}
@@ -136,6 +137,7 @@ var (
 		{Name: "genre", Type: field.TypeString, Nullable: true},
 		{Name: "deezer_id", Type: field.TypeUint32, Nullable: true},
 		{Name: "wikidata_id", Type: field.TypeString, Nullable: true},
+		{Name: "links_fetched_at", Type: field.TypeTime, Nullable: true},
 		{Name: "path", Type: field.TypeString, Nullable: true},
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},

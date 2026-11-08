@@ -1502,6 +1502,21 @@ type Store interface {
 		owner ExternalIDOwner,
 		ownerID uint32,
 	) (ExternalIDs, error)
+	// ListArtistsAwaitingLinks and ListAlbumsAwaitingLinks page the rows
+	// whose MusicBrainz links were never read, by id after a cursor.
+	ListArtistsAwaitingLinks(
+		ctx context.Context,
+		afterID uint32,
+		limit int,
+	) ([]*ent.Artist, error)
+	ListAlbumsAwaitingLinks(
+		ctx context.Context,
+		afterID uint32,
+		limit int,
+	) ([]*ent.Album, error)
+	// SetArtistLinks and SetAlbumLinks store a row's links and stamp it.
+	SetArtistLinks(ctx context.Context, id uint32, ids ExternalIDs, at time.Time) error
+	SetAlbumLinks(ctx context.Context, id uint32, ids ExternalIDs, at time.Time) error
 	// ExternalIDsFor returns the ids stored for many rows of one kind,
 	// keyed by row id.
 	ExternalIDsFor(

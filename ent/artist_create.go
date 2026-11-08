@@ -234,6 +234,20 @@ func (_c *ArtistCreate) SetNillableWikidataID(v *string) *ArtistCreate {
 	return _c
 }
 
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (_c *ArtistCreate) SetLinksFetchedAt(v time.Time) *ArtistCreate {
+	_c.mutation.SetLinksFetchedAt(v)
+	return _c
+}
+
+// SetNillableLinksFetchedAt sets the "links_fetched_at" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableLinksFetchedAt(v *time.Time) *ArtistCreate {
+	if v != nil {
+		_c.SetLinksFetchedAt(*v)
+	}
+	return _c
+}
+
 // SetPath sets the "path" field.
 func (_c *ArtistCreate) SetPath(v string) *ArtistCreate {
 	_c.mutation.SetPath(v)
@@ -596,6 +610,10 @@ func (_c *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.WikidataID(); ok {
 		_spec.SetField(artist.FieldWikidataID, field.TypeString, value)
 		_node.WikidataID = value
+	}
+	if value, ok := _c.mutation.LinksFetchedAt(); ok {
+		_spec.SetField(artist.FieldLinksFetchedAt, field.TypeTime, value)
+		_node.LinksFetchedAt = &value
 	}
 	if value, ok := _c.mutation.Path(); ok {
 		_spec.SetField(artist.FieldPath, field.TypeString, value)

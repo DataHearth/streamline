@@ -12156,6 +12156,80 @@ func (_c *MockStore_ListAlbumsAwaitingHydration_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
+// ListAlbumsAwaitingLinks provides a mock function for the type MockStore
+func (_mock *MockStore) ListAlbumsAwaitingLinks(ctx context.Context, afterID uint32, limit int) ([]*ent.Album, error) {
+	ret := _mock.Called(ctx, afterID, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListAlbumsAwaitingLinks")
+	}
+
+	var r0 []*ent.Album
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) ([]*ent.Album, error)); ok {
+		return returnFunc(ctx, afterID, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) []*ent.Album); ok {
+		r0 = returnFunc(ctx, afterID, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Album)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, int) error); ok {
+		r1 = returnFunc(ctx, afterID, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListAlbumsAwaitingLinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListAlbumsAwaitingLinks'
+type MockStore_ListAlbumsAwaitingLinks_Call struct {
+	*mock.Call
+}
+
+// ListAlbumsAwaitingLinks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - afterID uint32
+//   - limit int
+func (_e *MockStore_Expecter) ListAlbumsAwaitingLinks(ctx any, afterID any, limit any) *MockStore_ListAlbumsAwaitingLinks_Call {
+	return &MockStore_ListAlbumsAwaitingLinks_Call{Call: _e.mock.On("ListAlbumsAwaitingLinks", ctx, afterID, limit)}
+}
+
+func (_c *MockStore_ListAlbumsAwaitingLinks_Call) Run(run func(ctx context.Context, afterID uint32, limit int)) *MockStore_ListAlbumsAwaitingLinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListAlbumsAwaitingLinks_Call) Return(albums []*ent.Album, err error) *MockStore_ListAlbumsAwaitingLinks_Call {
+	_c.Call.Return(albums, err)
+	return _c
+}
+
+func (_c *MockStore_ListAlbumsAwaitingLinks_Call) RunAndReturn(run func(ctx context.Context, afterID uint32, limit int) ([]*ent.Album, error)) *MockStore_ListAlbumsAwaitingLinks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListAlbumsTrackless provides a mock function for the type MockStore
 func (_mock *MockStore) ListAlbumsTrackless(ctx context.Context, staleBefore time.Time, releasedBefore time.Time, limit int) ([]*ent.Album, error) {
 	ret := _mock.Called(ctx, staleBefore, releasedBefore, limit)
@@ -12566,6 +12640,80 @@ func (_c *MockStore_ListArtists_Call) Return(artists []*ent.Artist, v uint32, er
 }
 
 func (_c *MockStore_ListArtists_Call) RunAndReturn(run func(ctx context.Context, p db.ListArtistsParams) ([]*ent.Artist, uint32, error)) *MockStore_ListArtists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListArtistsAwaitingLinks provides a mock function for the type MockStore
+func (_mock *MockStore) ListArtistsAwaitingLinks(ctx context.Context, afterID uint32, limit int) ([]*ent.Artist, error) {
+	ret := _mock.Called(ctx, afterID, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListArtistsAwaitingLinks")
+	}
+
+	var r0 []*ent.Artist
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) ([]*ent.Artist, error)); ok {
+		return returnFunc(ctx, afterID, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) []*ent.Artist); ok {
+		r0 = returnFunc(ctx, afterID, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Artist)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, int) error); ok {
+		r1 = returnFunc(ctx, afterID, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListArtistsAwaitingLinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListArtistsAwaitingLinks'
+type MockStore_ListArtistsAwaitingLinks_Call struct {
+	*mock.Call
+}
+
+// ListArtistsAwaitingLinks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - afterID uint32
+//   - limit int
+func (_e *MockStore_Expecter) ListArtistsAwaitingLinks(ctx any, afterID any, limit any) *MockStore_ListArtistsAwaitingLinks_Call {
+	return &MockStore_ListArtistsAwaitingLinks_Call{Call: _e.mock.On("ListArtistsAwaitingLinks", ctx, afterID, limit)}
+}
+
+func (_c *MockStore_ListArtistsAwaitingLinks_Call) Run(run func(ctx context.Context, afterID uint32, limit int)) *MockStore_ListArtistsAwaitingLinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListArtistsAwaitingLinks_Call) Return(artists []*ent.Artist, err error) *MockStore_ListArtistsAwaitingLinks_Call {
+	_c.Call.Return(artists, err)
+	return _c
+}
+
+func (_c *MockStore_ListArtistsAwaitingLinks_Call) RunAndReturn(run func(ctx context.Context, afterID uint32, limit int) ([]*ent.Artist, error)) *MockStore_ListArtistsAwaitingLinks_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -21646,6 +21794,75 @@ func (_c *MockStore_SetAlbumLastSearchAt_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// SetAlbumLinks provides a mock function for the type MockStore
+func (_mock *MockStore) SetAlbumLinks(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time) error {
+	ret := _mock.Called(ctx, id, ids, at)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAlbumLinks")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.ExternalIDs, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, ids, at)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetAlbumLinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAlbumLinks'
+type MockStore_SetAlbumLinks_Call struct {
+	*mock.Call
+}
+
+// SetAlbumLinks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - ids db.ExternalIDs
+//   - at time.Time
+func (_e *MockStore_Expecter) SetAlbumLinks(ctx any, id any, ids any, at any) *MockStore_SetAlbumLinks_Call {
+	return &MockStore_SetAlbumLinks_Call{Call: _e.mock.On("SetAlbumLinks", ctx, id, ids, at)}
+}
+
+func (_c *MockStore_SetAlbumLinks_Call) Run(run func(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time)) *MockStore_SetAlbumLinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 db.ExternalIDs
+		if args[2] != nil {
+			arg2 = args[2].(db.ExternalIDs)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetAlbumLinks_Call) Return(err error) *MockStore_SetAlbumLinks_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetAlbumLinks_Call) RunAndReturn(run func(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time) error) *MockStore_SetAlbumLinks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetAlbumMonitored provides a mock function for the type MockStore
 func (_mock *MockStore) SetAlbumMonitored(ctx context.Context, id uint32, monitored bool) error {
 	ret := _mock.Called(ctx, id, monitored)
@@ -22041,6 +22258,75 @@ func (_c *MockStore_SetArtistDetails_Call) Return(err error) *MockStore_SetArtis
 }
 
 func (_c *MockStore_SetArtistDetails_Call) RunAndReturn(run func(ctx context.Context, id uint32, p db.ArtistDetailsParams, at time.Time) error) *MockStore_SetArtistDetails_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetArtistLinks provides a mock function for the type MockStore
+func (_mock *MockStore) SetArtistLinks(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time) error {
+	ret := _mock.Called(ctx, id, ids, at)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetArtistLinks")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.ExternalIDs, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, ids, at)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetArtistLinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetArtistLinks'
+type MockStore_SetArtistLinks_Call struct {
+	*mock.Call
+}
+
+// SetArtistLinks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - ids db.ExternalIDs
+//   - at time.Time
+func (_e *MockStore_Expecter) SetArtistLinks(ctx any, id any, ids any, at any) *MockStore_SetArtistLinks_Call {
+	return &MockStore_SetArtistLinks_Call{Call: _e.mock.On("SetArtistLinks", ctx, id, ids, at)}
+}
+
+func (_c *MockStore_SetArtistLinks_Call) Run(run func(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time)) *MockStore_SetArtistLinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 db.ExternalIDs
+		if args[2] != nil {
+			arg2 = args[2].(db.ExternalIDs)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetArtistLinks_Call) Return(err error) *MockStore_SetArtistLinks_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetArtistLinks_Call) RunAndReturn(run func(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time) error) *MockStore_SetArtistLinks_Call {
 	_c.Call.Return(run)
 	return _c
 }

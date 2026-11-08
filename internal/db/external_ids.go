@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/predicate"
 )
@@ -174,4 +177,86 @@ func (db *DB) ExternalIDsFor(
 		out[id][string(r.Source)] = r.Value
 	}
 	return out, nil
+}
+
+// ListArtistsAwaitingLinks returns up to limit artists whose links were never
+// read (links_fetched_at NULL), in id order after afterID: the backfill walks
+// them with a cursor, so an artist whose fetch failed is not listed again in
+// the same pass.
+func (db *DB) ListArtistsAwaitingLinks(
+	ctx context.Context,
+	afterID uint32,
+	limit int,
+) ([]*ent.Artist, error) {
+	return db.client.Artist.Query().
+		Where(artist.LinksFetchedAtIsNil(), artist.IDGT(afterID)).
+		Order(ent.Asc(artist.FieldID)).
+		Limit(limit).
+		All(ctx)
+}
+
+// ListAlbumsAwaitingLinks is ListArtistsAwaitingLinks for albums, hydrated
+// ones only: an album not hydrated yet gets its links with its tracks.
+func (db *DB) ListAlbumsAwaitingLinks(
+	ctx context.Context,
+	afterID uint32,
+	limit int,
+) ([]*ent.Album, error) {
+	return db.client.Album.Query().
+		Where(
+			album.LinksFetchedAtIsNil(),
+			album.MetadataFetchedAtNotNil(),
+			album.IDGT(afterID),
+		).
+		Order(ent.Asc(album.FieldID)).
+		Limit(limit).
+		All(ctx)
+}
+
+// SetArtistLinks stores an artist's links and stamps links_fetched_at, in
+// one transaction. nil ids (MusicBrainz no longer knows the artist) only
+// stamp it, so the backfill does not ask again.
+func (db *DB) SetArtistLinks(
+	ctx context.Context,
+	id uint32,
+	ids ExternalIDs,
+	at time.Time,
+) error {
+	return db.setLinks(ctx, ExternalIDsOfArtist, id, ids, func(c *ent.Client) error {
+		return c.Artist.UpdateOneID(id).SetLinksFetchedAt(at).Exec(ctx)
+	})
+}
+
+// SetAlbumLinks is SetArtistLinks for an album.
+func (db *DB) SetAlbumLinks(
+	ctx context.Context,
+	id uint32,
+	ids ExternalIDs,
+	at time.Time,
+) error {
+	return db.setLinks(ctx, ExternalIDsOfAlbum, id, ids, func(c *ent.Client) error {
+		return c.Album.UpdateOneID(id).SetLinksFetchedAt(at).Exec(ctx)
+	})
+}
+
+func (db *DB) setLinks(
+	ctx context.Context,
+	owner ExternalIDOwner,
+	id uint32,
+	ids ExternalIDs,
+	stamp func(*ent.Client) error,
+) error {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	if err := replaceExternalIDs(ctx, tx.Client(), owner, id, ids); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := stamp(tx.Client()); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }

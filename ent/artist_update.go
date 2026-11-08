@@ -317,6 +317,26 @@ func (_u *ArtistUpdate) ClearWikidataID() *ArtistUpdate {
 	return _u
 }
 
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (_u *ArtistUpdate) SetLinksFetchedAt(v time.Time) *ArtistUpdate {
+	_u.mutation.SetLinksFetchedAt(v)
+	return _u
+}
+
+// SetNillableLinksFetchedAt sets the "links_fetched_at" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableLinksFetchedAt(v *time.Time) *ArtistUpdate {
+	if v != nil {
+		_u.SetLinksFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearLinksFetchedAt clears the value of the "links_fetched_at" field.
+func (_u *ArtistUpdate) ClearLinksFetchedAt() *ArtistUpdate {
+	_u.mutation.ClearLinksFetchedAt()
+	return _u
+}
+
 // SetPath sets the "path" field.
 func (_u *ArtistUpdate) SetPath(v string) *ArtistUpdate {
 	_u.mutation.SetPath(v)
@@ -836,6 +856,12 @@ func (_u *ArtistUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.WikidataIDCleared() {
 		_spec.ClearField(artist.FieldWikidataID, field.TypeString)
+	}
+	if value, ok := _u.mutation.LinksFetchedAt(); ok {
+		_spec.SetField(artist.FieldLinksFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LinksFetchedAtCleared() {
+		_spec.ClearField(artist.FieldLinksFetchedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Path(); ok {
 		_spec.SetField(artist.FieldPath, field.TypeString, value)
@@ -1486,6 +1512,26 @@ func (_u *ArtistUpdateOne) ClearWikidataID() *ArtistUpdateOne {
 	return _u
 }
 
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (_u *ArtistUpdateOne) SetLinksFetchedAt(v time.Time) *ArtistUpdateOne {
+	_u.mutation.SetLinksFetchedAt(v)
+	return _u
+}
+
+// SetNillableLinksFetchedAt sets the "links_fetched_at" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableLinksFetchedAt(v *time.Time) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetLinksFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearLinksFetchedAt clears the value of the "links_fetched_at" field.
+func (_u *ArtistUpdateOne) ClearLinksFetchedAt() *ArtistUpdateOne {
+	_u.mutation.ClearLinksFetchedAt()
+	return _u
+}
+
 // SetPath sets the "path" field.
 func (_u *ArtistUpdateOne) SetPath(v string) *ArtistUpdateOne {
 	_u.mutation.SetPath(v)
@@ -2035,6 +2081,12 @@ func (_u *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err erro
 	}
 	if _u.mutation.WikidataIDCleared() {
 		_spec.ClearField(artist.FieldWikidataID, field.TypeString)
+	}
+	if value, ok := _u.mutation.LinksFetchedAt(); ok {
+		_spec.SetField(artist.FieldLinksFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LinksFetchedAtCleared() {
+		_spec.ClearField(artist.FieldLinksFetchedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Path(); ok {
 		_spec.SetField(artist.FieldPath, field.TypeString, value)

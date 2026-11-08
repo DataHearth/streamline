@@ -31,6 +31,8 @@ type Album struct {
 	EditionMbid string `json:"edition_mbid,omitempty"`
 	// Barcode holds the value of the "barcode" field.
 	Barcode string `json:"barcode,omitempty"`
+	// LinksFetchedAt holds the value of the "links_fetched_at" field.
+	LinksFetchedAt *time.Time `json:"links_fetched_at,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// Type holds the value of the "type" field.
@@ -205,7 +207,7 @@ func (*Album) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case album.FieldMbid, album.FieldReleaseMbid, album.FieldEditionMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldOriginalDate, album.FieldEditionDate, album.FieldArtSidecarHash, album.FieldStatus, album.FieldFailureReason, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
 			values[i] = new(sql.NullString)
-		case album.FieldCreateTime, album.FieldUpdateTime, album.FieldReleaseDate, album.FieldLastSearchAt, album.FieldMetadataFetchedAt, album.FieldCreditsFetchedAt:
+		case album.FieldCreateTime, album.FieldUpdateTime, album.FieldLinksFetchedAt, album.FieldReleaseDate, album.FieldLastSearchAt, album.FieldMetadataFetchedAt, album.FieldCreditsFetchedAt:
 			values[i] = new(sql.NullTime)
 		case album.ForeignKeys[0]: // artist_albums
 			values[i] = new(sql.NullInt64)
@@ -265,6 +267,13 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field barcode", values[i])
 			} else if value.Valid {
 				_m.Barcode = value.String
+			}
+		case album.FieldLinksFetchedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field links_fetched_at", values[i])
+			} else if value.Valid {
+				_m.LinksFetchedAt = new(time.Time)
+				*_m.LinksFetchedAt = value.Time
 			}
 		case album.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -517,6 +526,11 @@ func (_m *Album) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("barcode=")
 	builder.WriteString(_m.Barcode)
+	builder.WriteString(", ")
+	if v := _m.LinksFetchedAt; v != nil {
+		builder.WriteString("links_fetched_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)
