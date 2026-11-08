@@ -1,248 +1,264 @@
-// Package definitions serves the Cardigann definitions streamline runs: the
-// snapshot embedded at build time by `task cardigann:sync`, superseded by a
-// newer one the runtime update wrote to the data directory, overridden file
-// by file by the operator's own YAML. Nothing under this directory but this
-// file is hand-written: data/, index.json and NOTICE are regenerated
-// wholesale.
-//
-// Under a data directory's cardigann dir:
-//
-//	current/  the runtime update's snapshot (data/, index.json, NOTICE)
-//	pending/  updates held for approval (internal/cardigann/update)
-//	custom/   <file>.yml, converted on load, winning over both snapshots
+// Package definitions holds the catalog of upstream Cardigann definitions a
+// fetch converted (internal/cardigann/snapshot), in memory only — what an
+// administrator picks a tracker from — and the versions configured indexers
+// are pinned to (an entry names a file and an upstream commit), kept under
+// the data directory so a restart runs them without reaching upstream.
 package definitions
 
 import (
-	"embed"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
-	"strings"
+	"strconv"
 	"sync"
-	"time"
+	"sync/atomic"
 
 	"github.com/datahearth/streamline/internal/cardigann"
 	"github.com/datahearth/streamline/internal/cardigann/convert"
+	"github.com/datahearth/streamline/internal/cardigann/snapshot"
 )
 
-// ErrNotFound means no snapshot carries a definition under that name.
-var ErrNotFound = errors.New("cardigann definition not found")
+var (
+	// ErrNotFound means the catalog carries no definition under that name.
+	ErrNotFound = errors.New("cardigann definition not found")
+	// ErrNotFetched means upstream has not been read since the process
+	// started.
+	ErrNotFetched = errors.New("cardigann definitions not fetched yet")
+	// ErrNotKept means a pinned version is neither the catalog's nor kept
+	// under the data directory; Resolve fetches it.
+	ErrNotKept = errors.New("cardigann definition version not fetched yet")
+)
 
-//go:embed index.json NOTICE data
-var files embed.FS
-
-var embedded = sync.OnceValues(func() (cardigann.Catalog, error) {
-	var c cardigann.Catalog
-	b, err := files.ReadFile("index.json")
-	if err != nil {
-		return c, err
-	}
-	if err := json.Unmarshal(b, &c); err != nil {
-		return c, fmt.Errorf("embedded cardigann index: %w", err)
-	}
-	return c, nil
-})
-
-// runtimeSets caches, per directory, the runtime snapshot's index when it is
-// the one in force; Invalidate drops it after the update rewrites it.
-var runtimeSets sync.Map // dir → *cardigann.Catalog (nil: not in force)
-
-// Invalidate forgets what was read of dir's runtime snapshot.
-func Invalidate(dir string) { runtimeSets.Delete(dir) }
-
-// Current is where the runtime update's snapshot lives under dir.
-func Current(dir string) string { return filepath.Join(dir, "current") }
-
-// Custom is where an operator's own definitions live under dir.
-func Custom(dir string) string { return filepath.Join(dir, "custom") }
-
-// runtime returns dir's runtime snapshot index when it is in force: newer
-// upstream than the embedded one, written by this converter. A binary
-// upgraded past it, or onto a new converter, falls back to its own embedded
-// copy until the next update rewrites the runtime one.
-func runtime(dir string) (*cardigann.Catalog, error) {
-	if dir == "" {
-		return nil, nil
-	}
-	if c, ok := runtimeSets.Load(dir); ok {
-		return c.(*cardigann.Catalog), nil
-	}
-	b, err := os.ReadFile(filepath.Join(Current(dir), "index.json"))
-	if errors.Is(err, fs.ErrNotExist) {
-		runtimeSets.Store(dir, (*cardigann.Catalog)(nil))
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	var rt cardigann.Catalog
-	if err := json.Unmarshal(b, &rt); err != nil {
-		return nil, fmt.Errorf("cardigann runtime index: %w", err)
-	}
-	emb, err := embedded()
-	if err != nil {
-		return nil, err
-	}
-	var inForce *cardigann.Catalog
-	if rt.Converter == convert.Version && rt.Schema == cardigann.SchemaVersion &&
-		newer(rt.Upstream.Date, emb.Upstream.Date) {
-		inForce = &rt
-	}
-	runtimeSets.Store(dir, inForce)
-	return inForce, nil
+// Set is one fetch of upstream: its catalog and each definition encoded.
+type Set struct {
+	catalog cardigann.Catalog
+	defs    map[string][]byte
 }
 
-func newer(a, b string) bool {
-	ta, errA := time.Parse(time.RFC3339, a)
-	tb, errB := time.Parse(time.RFC3339, b)
-	return errA == nil && errB == nil && ta.After(tb)
+// NewSet wraps what snapshot.Build returned.
+func NewSet(cat cardigann.Catalog, defs map[string][]byte) *Set {
+	return &Set{catalog: cat, defs: defs}
 }
 
-// Catalog returns the index of the definitions in force under dir — the
-// runtime snapshot's or the embedded one, with the custom ones folded in —
-// or the embedded one alone when dir is empty. The result is the caller's
-// to filter, sort or edit.
-func Catalog(dir string) (cardigann.Catalog, error) {
-	c, err := Snapshot(dir)
-	if err != nil || dir == "" {
-		return c, err
-	}
-	entries, err := os.ReadDir(Custom(dir))
-	if errors.Is(err, fs.ErrNotExist) {
-		return c, nil
-	}
-	if err != nil {
-		return c, err
-	}
-	for _, e := range entries {
-		name := e.Name()
-		file, ok := strings.CutSuffix(name, ".yml")
-		if !ok || e.IsDir() || !validFile(file) {
-			continue
-		}
-		d, err := loadCustom(dir, file)
-		if err != nil {
-			c.Skipped = append(c.Skipped, cardigann.Skipped{
-				File: "custom/" + name, Reason: err.Error(),
-			})
-			continue
-		}
-		s := cardigann.Summarize(file, d)
-		s.Custom = true
-		if i := slices.IndexFunc(c.Definitions, func(x cardigann.Summary) bool {
-			return x.File == file
-		}); i >= 0 {
-			c.Definitions[i] = s
-		} else {
-			c.Definitions = append(c.Definitions, s)
-		}
-	}
-	slices.SortFunc(c.Definitions, func(a, b cardigann.Summary) int {
-		return strings.Compare(a.File, b.File)
-	})
-	return c, nil
-}
+var current atomic.Pointer[Set]
 
-// Snapshot is Catalog without the custom definitions: the upstream set in
-// force, which a runtime update compares itself against.
-func Snapshot(dir string) (cardigann.Catalog, error) {
-	rt, err := runtime(dir)
-	if err != nil {
-		return cardigann.Catalog{}, err
+// Install puts s in force and returns the set it replaced, nil included.
+func Install(s *Set) *Set { return current.Swap(s) }
+
+// Current is the set in force, nil before the first fetch.
+func Current() *Set { return current.Load() }
+
+// Catalog returns the catalog in force, for the caller to filter or sort.
+func Catalog() (cardigann.Catalog, error) {
+	s := Current()
+	if s == nil {
+		return cardigann.Catalog{}, ErrNotFetched
 	}
-	var c cardigann.Catalog
-	if rt != nil {
-		c = *rt
-	} else if c, err = embedded(); err != nil {
-		return c, err
-	}
+	c := s.catalog
 	c.Definitions = slices.Clone(c.Definitions)
 	for i := range c.Definitions {
-		s := &c.Definitions[i]
-		s.Links = slices.Clone(s.Links)
-		s.Replaces = slices.Clone(s.Replaces)
-		s.Categories = slices.Clone(s.Categories)
-		s.MovieSearch = slices.Clone(s.MovieSearch)
-		s.TVSearch = slices.Clone(s.TVSearch)
+		d := &c.Definitions[i]
+		d.Links = slices.Clone(d.Links)
+		d.Replaces = slices.Clone(d.Replaces)
+		d.Categories = slices.Clone(d.Categories)
+		d.MovieSearch = slices.Clone(d.MovieSearch)
+		d.TVSearch = slices.Clone(d.TVSearch)
 	}
 	c.Skipped = slices.Clone(c.Skipped)
-	c.Held = slices.Clone(c.Held)
 	return c, nil
 }
 
-func validFile(file string) bool {
-	return file != "" && !strings.ContainsAny(file, `/\`) && fs.ValidPath(file)
-}
+// Upstream names the revision the set in force was read from.
+func (s *Set) Upstream() cardigann.Upstream { return s.catalog.Upstream }
 
-// Load decodes the definition in force under dir by its file name
-// (Summary.File) — not its id, which a few upstream files spell differently:
-// the custom one, else the runtime snapshot's, else the embedded one. An
-// empty dir reads the embedded snapshot alone.
-func Load(dir, file string) (*cardigann.Definition, error) {
-	if !validFile(file) {
+// Raw is the encoded definition by its file name (Summary.File) — not its
+// id, which a few upstream files spell differently.
+func (s *Set) Raw(file string) ([]byte, error) {
+	b, ok := s.defs[file]
+	if !ok {
 		return nil, fmt.Errorf("%w: %q", ErrNotFound, file)
 	}
-	if dir != "" {
-		d, err := loadCustom(dir, file)
-		if !errors.Is(err, fs.ErrNotExist) {
-			return d, err
-		}
+	return b, nil
+}
+
+// Raw is the encoded definition by file name in the set in force.
+func Raw(file string) ([]byte, error) {
+	s := Current()
+	if s == nil {
+		return nil, ErrNotFetched
 	}
-	b, err := Raw(dir, file)
-	if err != nil {
-		return nil, err
-	}
+	return s.Raw(file)
+}
+
+// Decode reads an encoded definition.
+func Decode(b []byte) (*cardigann.Definition, error) {
 	var d cardigann.Definition
 	if err := json.Unmarshal(b, &d); err != nil {
-		return nil, fmt.Errorf("cardigann definition %q: %w", file, err)
+		return nil, fmt.Errorf("cardigann definition: %w", err)
 	}
 	return &d, nil
 }
 
-func loadCustom(dir, file string) (*cardigann.Definition, error) {
-	path := filepath.Join(Custom(dir), file+".yml")
-	b, err := os.ReadFile(path) //nolint:gosec // G304: validFile admits no separator
-	if err != nil {
-		return nil, err
-	}
-	d, err := convert.Convert("custom/"+file+".yml", b)
-	if err != nil {
-		return nil, fmt.Errorf("custom definition %s: %w", path, err)
-	}
-	return d, nil
+var (
+	commitRE = regexp.MustCompile(`^[0-9a-f]{40}$`)
+	fileRE   = regexp.MustCompile(`^[0-9a-z][0-9a-z._-]*$`)
+)
+
+// root holds one directory per upstream commit, under the converter version
+// that wrote it: a converter change starts over, re-converting each pinned
+// commit, since what the engine reads is the converted form.
+func root(dataDir string) string {
+	return filepath.Join(
+		dataDir, "cardigann", "v"+strconv.Itoa(convert.Version),
+	)
 }
 
-// Raw is the encoded definition of the upstream snapshot in force under
-// dir, custom definitions aside.
-func Raw(dir, file string) ([]byte, error) {
-	if !validFile(file) {
-		return nil, fmt.Errorf("%w: %q", ErrNotFound, file)
+// kept names file at commit inside root.
+func kept(file, commit string) (string, error) {
+	if commit == "" {
+		return "", errors.New(
+			"cardigann.commit is empty: the cardigann-update job sets it",
+		)
 	}
-	rt, err := runtime(dir)
+	if !commitRE.MatchString(commit) {
+		return "", fmt.Errorf(
+			"cardigann.commit %q is not an upstream commit", commit,
+		)
+	}
+	if !fileRE.MatchString(file) {
+		return "", fmt.Errorf("%w: %q", ErrNotFound, file)
+	}
+	return filepath.Join(commit, file+".json"), nil
+}
+
+func readKept(dataDir, file, commit string) ([]byte, error) {
+	name, err := kept(file, commit)
 	if err != nil {
 		return nil, err
 	}
-	var b []byte
-	if rt != nil {
-		//nolint:gosec // G304: validFile admits no separator
-		b, err = os.ReadFile(filepath.Join(Current(dir), "data", file+".json"))
-	} else {
-		b, err = files.ReadFile("data/" + file + ".json")
+	r, err := os.OpenRoot(root(dataDir))
+	if err == nil {
+		defer r.Close()
+		var b []byte
+		if b, err = r.ReadFile(name); err == nil {
+			return b, nil
+		}
 	}
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%w: %q", ErrNotFound, file)
+		return nil, fmt.Errorf("%w: %s at %.7s", ErrNotKept, file, commit)
 	}
-	return b, err
+	return nil, err
 }
 
-// Notice is the attribution and licence notice shipped with the embedded
-// snapshot. Anything that distributes or displays the definitions carries
-// it.
-func Notice() string {
-	b, _ := files.ReadFile("NOTICE")
-	return string(b)
+// Pinned is file as converted from upstream commit: the catalog's when it
+// was read at that commit, else the copy kept under dataDir. It never
+// reaches upstream; Resolve does.
+func Pinned(dataDir, file, commit string) ([]byte, error) {
+	if s := Current(); s != nil && s.Upstream().Commit == commit {
+		if b, ok := s.defs[file]; ok {
+			return b, nil
+		}
+	}
+	return readKept(dataDir, file, commit)
+}
+
+// Keep stores b as file at commit under dataDir.
+func Keep(dataDir, file, commit string, b []byte) error {
+	name, err := kept(file, commit)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(root(dataDir), 0o750); err != nil {
+		return err
+	}
+	r, err := os.OpenRoot(root(dataDir))
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	if err := r.MkdirAll(commit, 0o750); err != nil {
+		return err
+	}
+	if err := r.WriteFile(name+".partial", b, 0o600); err != nil {
+		return err
+	}
+	return r.Rename(name+".partial", name)
+}
+
+var (
+	resolveMu sync.Mutex
+	// other is the last commit fetched apart from the catalog, so the
+	// entries pinned to it are read from one download.
+	other *Set
+)
+
+// Resolve is the kept copy of file at commit, writing it from the catalog,
+// or fetching that commit from upstream, when it is not kept yet.
+func Resolve(
+	ctx context.Context,
+	client *http.Client,
+	dataDir, file, commit string,
+) ([]byte, error) {
+	b, err := readKept(dataDir, file, commit)
+	if !errors.Is(err, ErrNotKept) {
+		return b, err
+	}
+	resolveMu.Lock()
+	defer resolveMu.Unlock()
+	s := Current()
+	if s == nil || s.Upstream().Commit != commit {
+		if other == nil || other.Upstream().Commit != commit {
+			cat, defs, _, err := snapshot.Fetch(
+				ctx, client, cardigann.Upstream{Commit: commit},
+			)
+			if err != nil {
+				return nil, err
+			}
+			other = NewSet(cat, defs)
+		}
+		s = other
+	}
+	if b, err = s.Raw(file); err != nil {
+		return nil, err
+	}
+	return b, Keep(dataDir, file, commit, b)
+}
+
+// Prune removes every kept copy outside keep (a set of commits), and those
+// an older converter wrote.
+func Prune(dataDir string, keep map[string]bool) error {
+	dir := filepath.Dir(root(dataDir))
+	versions, err := os.ReadDir(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	cur := filepath.Base(root(dataDir))
+	var errs []error
+	for _, v := range versions {
+		if v.Name() != cur {
+			errs = append(errs, os.RemoveAll(filepath.Join(dir, v.Name())))
+			continue
+		}
+		commits, err := os.ReadDir(filepath.Join(dir, cur))
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		for _, c := range commits {
+			if !keep[c.Name()] {
+				errs = append(errs, os.RemoveAll(filepath.Join(dir, cur, c.Name())))
+			}
+		}
+	}
+	return errors.Join(errs...)
 }

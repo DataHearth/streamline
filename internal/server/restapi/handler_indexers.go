@@ -85,6 +85,11 @@ func (s *Server) CreateIndexer(
 		return CreateIndexer403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
 	e := indexerFromBody(*request.Body)
+	if err := pinCardigann(ctx, &e); err != nil {
+		return CreateIndexer422JSONResponse{
+			UnprocessableEntityJSONResponse: errCardigannPin(err),
+		}, nil
+	}
 	switch err := config.AddIndexer(ctx, e); {
 	case errors.Is(err, config.ErrIndexerExists):
 		return CreateIndexer409JSONResponse{
@@ -130,6 +135,25 @@ func (s *Server) UpdateIndexer(
 		}
 		if b.Settings != nil {
 			cp.Settings = *b.Settings
+		}
+		// A new definition is pinned to the catalog's version here; the one
+		// the entry already runs stays on its commit.
+		var err error
+		cur, ok := config.FindIndexer(request.Name)
+		switch {
+		case ok && b.Definition != nil &&
+			(cur.Cardigann == nil || cur.Cardigann.Definition != *b.Definition):
+			var commit string
+			if commit, err = catalogVersion(ctx, *b.Definition); err == nil {
+				cp.Commit = &commit
+			}
+		case ok && cur.Cardigann != nil && cur.Cardigann.Commit != "":
+			_, err = pinnedVersion(ctx, cur)
+		}
+		if err != nil {
+			return UpdateIndexer422JSONResponse{
+				UnprocessableEntityJSONResponse: errCardigannPin(err),
+			}, nil
 		}
 		patch.Cardigann = cp
 	}
@@ -236,7 +260,12 @@ func (s *Server) TestDraftIndexer(
 		// caller names; what can be wrong is the definition or a setting —
 		// and the proxy, the one address the caller does name, which the
 		// probe would connect to and describe like any draft host.
-		if err := config.CheckCardigann(config.Get().CardigannDir(), e); err != nil {
+		if err := pinCardigann(ctx, &e); err != nil {
+			return TestDraftIndexer422JSONResponse{
+				UnprocessableEntityJSONResponse: errCardigannPin(err),
+			}, nil
+		}
+		if err := config.Get().CheckCardigann(e); err != nil {
 			return TestDraftIndexer422JSONResponse{
 				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 			}, nil

@@ -5220,7 +5220,7 @@ type BookVolumeStatus string
 type CardigannCatalog struct {
 	Definitions []CardigannSummary `json:"definitions"`
 
-	// Upstream The Prowlarr/Indexers revision the definitions in force come from.
+	// Upstream The Prowlarr/Indexers revision the catalog was read from; empty before the first read.
 	Upstream CardigannUpstream `json:"upstream"`
 }
 
@@ -5233,10 +5233,7 @@ type CardigannDefinition struct {
 	Categories []string `json:"categories"`
 
 	// Challenge The site sits behind a browser challenge that needs a solver.
-	Challenge bool `json:"challenge"`
-
-	// Custom Read from the data directory's custom folder.
-	Custom      bool   `json:"custom"`
+	Challenge   bool   `json:"challenge"`
 	Description string `json:"description"`
 
 	// File What an indexer's `definition` names.
@@ -5283,10 +5280,7 @@ type CardigannSummary struct {
 	Categories []string `json:"categories"`
 
 	// Challenge The site sits behind a browser challenge that needs a solver.
-	Challenge bool `json:"challenge"`
-
-	// Custom Read from the data directory's custom folder.
-	Custom      bool   `json:"custom"`
+	Challenge   bool   `json:"challenge"`
 	Description string `json:"description"`
 
 	// File What an indexer's `definition` names.
@@ -5304,30 +5298,30 @@ type CardigannSummary struct {
 
 // CardigannUpdate defines model for CardigannUpdate.
 type CardigannUpdate struct {
-	// Diff Unified diff from the version in force to the held one.
+	// Commit The upstream revision of the held version: what a read-only configuration sets each entry's `cardigann.commit` to by hand.
+	Commit string `json:"commit"`
+
+	// Diff Unified diff from the version the first indexer is pinned to to the held one.
 	Diff string `json:"diff"`
 	File string `json:"file"`
 
-	// Indexers The configured indexers running the definition.
+	// Indexers The configured indexers the update is held for.
 	Indexers []string `json:"indexers"`
 	Name     string   `json:"name"`
 
-	// Reasons What the change does to where the definition sends things or how it logs in.
+	// Reasons What the change does to where the definition sends things or how it logs in; empty for a change held only because the configuration is read-only.
 	Reasons []string `json:"reasons"`
-
-	// Removed Upstream deleted the definition; approving removes it.
-	Removed bool `json:"removed"`
 }
 
 // CardigannUpdates defines model for CardigannUpdates.
 type CardigannUpdates struct {
 	Pending []CardigannUpdate `json:"pending"`
 
-	// Upstream The Prowlarr/Indexers revision the definitions in force come from.
+	// Upstream The Prowlarr/Indexers revision the catalog was read from; empty before the first read.
 	Upstream CardigannUpstream `json:"upstream"`
 }
 
-// CardigannUpstream The Prowlarr/Indexers revision the definitions in force come from.
+// CardigannUpstream The Prowlarr/Indexers revision the catalog was read from; empty before the first read.
 type CardigannUpstream struct {
 	Commit string `json:"commit"`
 	Date   string `json:"date"`
@@ -5819,7 +5813,8 @@ type Error struct {
 	// invalid_condition, grab_rejected, rate_limited, worker_unavailable,
 	// hardcover_not_configured, hardcover_key_rejected, not_sendable,
 	// no_device_email, smtp_not_configured, send_failed,
-	// secret_required, secret_file_managed, api_key_quota). Present
+	// secret_required, secret_file_managed, api_key_quota,
+	// catalog_unavailable). Present
 	// for domain errors where the caller needs to branch on the
 	// specific reason; absent
 	// for generic errors where the message is sufficient.
@@ -6371,12 +6366,15 @@ type Indexer struct {
 
 	// Definition The Cardigann definition a `cardigann` indexer runs (its file name). Absent for the other protocols.
 	Definition *string `json:"definition,omitempty"`
-	Enabled    bool    `json:"enabled"`
-	Host       string  `json:"host"`
-	Name       string  `json:"name"`
-	Path       *string `json:"path,omitempty"`
-	Port       uint16  `json:"port"`
-	Priority   *uint8  `json:"priority,omitempty"`
+
+	// DefinitionCommit The Prowlarr/Indexers commit a `cardigann` indexer's definition is read at.
+	DefinitionCommit *string `json:"definition_commit,omitempty"`
+	Enabled          bool    `json:"enabled"`
+	Host             string  `json:"host"`
+	Name             string  `json:"name"`
+	Path             *string `json:"path,omitempty"`
+	Port             uint16  `json:"port"`
+	Priority         *uint8  `json:"priority,omitempty"`
 
 	// Private Whether the tracker is private (invite-only, ratio-tracked). A Torznab feed carries no such flag, so this is the operator's setting; a Prowlarr entry's applies to every tracker behind it.
 	Private bool `json:"private"`
@@ -11132,6 +11130,12 @@ type ListUpcomingReleasesParams struct {
 	To   CalendarTo   `form:"to" json:"to"`
 }
 
+// GetCardigannDefinitionParams defines parameters for GetCardigannDefinition.
+type GetCardigannDefinitionParams struct {
+	// Indexer A configured built-in indexer running this definition.
+	Indexer *string `form:"indexer,omitempty" json:"indexer,omitempty"`
+}
+
 // ListEpisodesParams defines parameters for ListEpisodes.
 type ListEpisodesParams struct {
 	// Query Substring filter over the title, accent-, case- and punctuation-folded.
@@ -12255,7 +12259,7 @@ type ServerInterface interface {
 	GetCardigannCatalog(w http.ResponseWriter, r *http.Request)
 	// GetCardigannDefinition Describe one built-in indexer definition
 	// (GET /cardigann/catalog/{file})
-	GetCardigannDefinition(w http.ResponseWriter, r *http.Request, file DefinitionFile)
+	GetCardigannDefinition(w http.ResponseWriter, r *http.Request, file DefinitionFile, params GetCardigannDefinitionParams)
 	// ListCardigannUpdates List held definition updates
 	// (GET /cardigann/updates)
 	ListCardigannUpdates(w http.ResponseWriter, r *http.Request)
@@ -13281,7 +13285,7 @@ func (_ Unimplemented) GetCardigannCatalog(w http.ResponseWriter, r *http.Reques
 
 // GetCardigannDefinition Describe one built-in indexer definition
 // (GET /cardigann/catalog/{file})
-func (_ Unimplemented) GetCardigannDefinition(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
+func (_ Unimplemented) GetCardigannDefinition(w http.ResponseWriter, r *http.Request, file DefinitionFile, params GetCardigannDefinitionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -16564,8 +16568,24 @@ func (siw *ServerInterfaceWrapper) GetCardigannDefinition(w http.ResponseWriter,
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCardigannDefinitionParams
+
+	// ------------- Optional query parameter "indexer" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "indexer", r.URL.Query(), &params.Indexer, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "indexer"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "indexer", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCardigannDefinition(w, r, file)
+		siw.Handler.GetCardigannDefinition(w, r, file, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -28588,8 +28608,23 @@ func (response GetCardigannCatalog500JSONResponse) VisitGetCardigannCatalogRespo
 	return err
 }
 
+type GetCardigannCatalog503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetCardigannCatalog503JSONResponse) VisitGetCardigannCatalogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetCardigannDefinitionRequestObject struct {
-	File DefinitionFile `json:"file"`
+	File   DefinitionFile `json:"file"`
+	Params GetCardigannDefinitionParams
 }
 
 type GetCardigannDefinitionResponseObject interface {
@@ -28648,6 +28683,20 @@ func (response GetCardigannDefinition500JSONResponse) VisitGetCardigannDefinitio
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannDefinition503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetCardigannDefinition503JSONResponse) VisitGetCardigannDefinitionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -45491,10 +45540,11 @@ func (sh *strictHandler) GetCardigannCatalog(w http.ResponseWriter, r *http.Requ
 }
 
 // GetCardigannDefinition operation middleware
-func (sh *strictHandler) GetCardigannDefinition(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
+func (sh *strictHandler) GetCardigannDefinition(w http.ResponseWriter, r *http.Request, file DefinitionFile, params GetCardigannDefinitionParams) {
 	var request GetCardigannDefinitionRequestObject
 
 	request.File = file
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetCardigannDefinition(ctx, request.(GetCardigannDefinitionRequestObject))

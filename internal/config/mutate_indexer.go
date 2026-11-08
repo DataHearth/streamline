@@ -3,10 +3,12 @@ package config
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"maps"
+	"slices"
+	"strings"
 
-	"github.com/datahearth/streamline/internal/cardigann/definitions"
 	"github.com/datahearth/streamline/internal/cardigann/engine"
 )
 
@@ -39,20 +41,22 @@ type IndexerPatch struct {
 // where the secrets are sent: another of the definition's links, or a
 // proxy they will now pass through. Then every stored secret must be sent
 // again (ErrSecretRequired), as a moved host asks for a Torznab key. Proxy
-// "" clears it.
+// "" clears it. Commit pins the definition's version, which the API takes
+// from the catalog when the definition changes.
 type CardigannPatch struct {
 	Definition *string
+	Commit     *string
 	Site       *string
 	Settings   map[string]string
 	Proxy      *string
 }
 
-// apply merges p into the block it edits, under the definitions in force
-// in dir.
+// apply merges p into the block it edits.
 func (p CardigannPatch) apply(
-	dir string,
-	old *CardigannIndexer,
+	c *Config,
+	ix IndexerEntry,
 ) (*CardigannIndexer, error) {
+	old := ix.Cardigann
 	next := &CardigannIndexer{}
 	if old != nil {
 		*next = *old
@@ -60,6 +64,9 @@ func (p CardigannPatch) apply(
 	}
 	if p.Definition != nil && *p.Definition != next.Definition {
 		next.Definition, next.Settings, next.Site = *p.Definition, nil, ""
+	}
+	if p.Commit != nil {
+		next.Commit = *p.Commit
 	}
 	if p.Site != nil {
 		next.Site = *p.Site
@@ -70,21 +77,26 @@ func (p CardigannPatch) apply(
 	if p.Settings == nil && len(next.Settings) == 0 {
 		return next, nil
 	}
-	def, err := definitions.Load(dir, next.Definition)
+	nix := ix
+	nix.Cardigann = next
+	def, err := c.CardigannDefinition(nix)
 	if err != nil {
 		return nil, err
 	}
 	moved := false
 	if old != nil && next.Definition == old.Definition {
-		from, err := engine.Site(def, old.Site)
-		if err != nil {
-			return nil, err
-		}
 		to, err := engine.Site(def, next.Site)
 		if err != nil {
 			return nil, err
 		}
-		moved = from.String() != to.String() || next.Proxy != old.Proxy
+		// A stored definition that no longer reads cannot say where the
+		// secrets went before, so they are asked for again.
+		moved = true
+		if prev, err := c.CardigannDefinition(ix); err == nil {
+			if from, err := engine.Site(prev, old.Site); err == nil {
+				moved = from.String() != to.String() || next.Proxy != old.Proxy
+			}
+		}
 	}
 	// Non-secret settings come from the patch when it carries any, else
 	// stay; a secret only ever comes from the patch or the store.
@@ -122,7 +134,7 @@ func AddIndexer(ctx context.Context, e IndexerEntry) error {
 			}
 		}
 		if e.Protocol == "cardigann" {
-			if err := CheckCardigann(c.CardigannDir(), e); err != nil {
+			if err := c.CheckCardigann(e); err != nil {
 				return err
 			}
 		}
@@ -191,19 +203,42 @@ func UpdateIndexer(ctx context.Context, name string, p IndexerPatch) error {
 			}
 		}
 		if p.Cardigann != nil {
-			next, err := p.Cardigann.apply(c.CardigannDir(), e.Cardigann)
+			next, err := p.Cardigann.apply(c, e)
 			if err != nil {
 				return err
 			}
 			e.Cardigann = next
 		}
 		if e.Protocol == "cardigann" {
-			if err := CheckCardigann(c.CardigannDir(), e); err != nil {
+			if err := c.CheckCardigann(e); err != nil {
 				return err
 			}
 		}
 		c.Indexers[idx] = e
 		slog.InfoContext(ctx, "indexer updated", "name", name)
+		return nil
+	})
+}
+
+// PinCardigann pins the named built-in indexers to upstream commit's
+// version of their definition, which must be kept already
+// (definitions.Resolve).
+func PinCardigann(ctx context.Context, names []string, commit string) error {
+	return Update(ctx, func(c *Config) error {
+		for i, x := range c.Indexers {
+			if !slices.Contains(names, x.Name) || x.Cardigann == nil {
+				continue
+			}
+			next := *x.Cardigann
+			next.Commit = commit
+			x.Cardigann = &next
+			if err := c.CheckCardigann(x); err != nil {
+				return fmt.Errorf("indexer %q: %w", x.Name, err)
+			}
+			c.Indexers[i] = x
+		}
+		slog.InfoContext(ctx, "built-in indexers moved to a new definition version",
+			"indexer.names", strings.Join(names, ", "), "upstream.commit", commit)
 		return nil
 	})
 }

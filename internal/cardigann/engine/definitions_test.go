@@ -1,26 +1,87 @@
 package engine
 
 import (
+	"bytes"
+	"context"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/internal/cardigann"
+	"github.com/datahearth/streamline/internal/cardigann/convert"
 	"github.com/datahearth/streamline/internal/cardigann/definitions"
+	"github.com/datahearth/streamline/internal/cardigann/snapshot"
 )
 
-// Every embedded definition, login or not, must render its search requests:
+// upstream reads Prowlarr/Indexers' newest commit once per run. These specs
+// need the network, so they run only with STREAMLINE_CARDIGANN_UPSTREAM set
+// — the weekly cardigann-upstream workflow does — and skip otherwise.
+var upstream = sync.OnceValues(func() (*definitions.Set, error) {
+	ctx := context.Background()
+	up, err := snapshot.Latest(ctx, http.DefaultClient)
+	if err != nil {
+		return nil, err
+	}
+	cat, defs, _, err := snapshot.Fetch(ctx, http.DefaultClient, up)
+	if err != nil {
+		return nil, err
+	}
+	return definitions.NewSet(cat, defs), nil
+})
+
+func upstreamSet() (*definitions.Set, cardigann.Catalog) {
+	GinkgoHelper()
+	if os.Getenv("STREAMLINE_CARDIGANN_UPSTREAM") == "" {
+		Skip("STREAMLINE_CARDIGANN_UPSTREAM is not set")
+	}
+	set, err := upstream()
+	Expect(err).NotTo(HaveOccurred())
+	prev := definitions.Install(set)
+	DeferCleanup(func() { definitions.Install(prev) })
+	cat, err := definitions.Catalog()
+	Expect(err).NotTo(HaveOccurred())
+	return set, cat
+}
+
+func upstreamDefinition(set *definitions.Set, file string) *cardigann.Definition {
+	GinkgoHelper()
+	raw, err := set.Raw(file)
+	Expect(err).NotTo(HaveOccurred(), file)
+	def, err := definitions.Decode(raw)
+	Expect(err).NotTo(HaveOccurred(), file)
+	return def
+}
+
+// Every upstream definition, login or not, must render its search requests:
 // that is the engine contract (strings everywhere, every .Query key present,
 // .Config and .Result as maps) checked against what upstream actually wrote.
-var _ = Describe("the embedded definitions", Label("unit", "cardigann"), func() {
+var _ = Describe("the upstream definitions", Label("unit", "cardigann"), func() {
+	It("round-trip byte for byte, and Check accepts each", func() {
+		set, cat := upstreamSet()
+		for _, s := range cat.Definitions {
+			raw, err := set.Raw(s.File)
+			Expect(err).NotTo(HaveOccurred())
+			d := upstreamDefinition(set, s.File)
+			Expect(cardigann.Summarize(s.File, d)).To(Equal(s), s.File)
+			b, err := cardigann.EncodeJSON(d)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				bytes.Equal(b, raw),
+			).To(BeTrue(), "%s does not round-trip", s.File)
+			Expect(convert.Check(d)).To(Succeed(), s.File)
+		}
+	})
+
 	It(
 		"render every search request for a keyword, movie and episode search",
 		func() {
-			cat, err := definitions.Catalog("")
-			Expect(err).NotTo(HaveOccurred())
+			set, cat := upstreamSet()
 			queries := []Query{
 				{Kind: KindSearch, Term: "Dune"},
 				{
@@ -49,8 +110,7 @@ var _ = Describe("the embedded definitions", Label("unit", "cardigann"), func() 
 			}
 			var failures []string
 			for _, s := range cat.Definitions {
-				def, err := definitions.Load("", s.File)
-				Expect(err).NotTo(HaveOccurred())
+				def := upstreamDefinition(set, s.File)
 				site, err := Site(def, "")
 				Expect(err).NotTo(HaveOccurred())
 				config, err := Config(def, nil)
@@ -108,12 +168,10 @@ var _ = Describe("the embedded definitions", Label("unit", "cardigann"), func() 
 	)
 
 	It("build an engine for every definition and render its login", func() {
-		cat, err := definitions.Catalog("")
-		Expect(err).NotTo(HaveOccurred())
+		set, cat := upstreamSet()
 		var failures []string
 		for _, s := range cat.Definitions {
-			def, err := definitions.Load("", s.File)
-			Expect(err).NotTo(HaveOccurred())
+			def := upstreamDefinition(set, s.File)
 			e, err := New(def, Options{Name: "build-" + s.File})
 			Expect(err).NotTo(HaveOccurred(), s.File)
 			login := def.Login

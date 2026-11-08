@@ -1,17 +1,20 @@
-// Package snapshot turns a set of upstream definition files into the
-// converted snapshot streamline reads — data/<file>.json, index.json and the
-// NOTICE — for both the build-time sync (cmd/cardigann-sync, into the
-// embedded copy) and the runtime update (internal/cardigann/update, into the
-// data directory). One code path, so the two can never write different
-// shapes or drop the provenance the licence rests on.
+// Package snapshot fetches upstream's Cardigann definitions and converts
+// them: the newest Prowlarr/Indexers commit, read as one tarball, every file
+// run through internal/cardigann/convert. What it returns is held in memory
+// (internal/cardigann/definitions); nothing is written to disk.
 package snapshot
 
 import (
+	"archive/tar"
 	"cmp"
+	"compress/gzip"
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
+	"io"
+	"net/http"
+	"net/url"
 	"regexp"
 	"slices"
 	"strconv"
@@ -21,10 +24,17 @@ import (
 	"github.com/datahearth/streamline/internal/cardigann/convert"
 )
 
-// ValidName is the shape of a file name a snapshot can carry: one
-// //go:embed accepts (no leading . or _, no :), and one that is only ever a
-// plain path segment under data/.
-var ValidName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*\.yml$`)
+const (
+	repository = "https://github.com/Prowlarr/Indexers"
+	commitsAPI = "https://api.github.com/repos/Prowlarr/Indexers/commits/master"
+	archiveURL = "https://codeload.github.com/Prowlarr/Indexers/tar.gz/"
+	// maxArchive bounds the inflated tarball: the whole repository is a few
+	// MB, every schema version since v1 included.
+	maxArchive = 128 << 20
+	maxFile    = 4 << 20
+)
+
+var sha1Hex = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // File is one upstream definition: the schema version whose directory it
 // was read from, its name under definitions/v<Version>/, and its YAML.
@@ -34,23 +44,20 @@ type File struct {
 	Data    []byte
 }
 
-// Build converts every file into the snapshot's catalog and its encoded
-// definitions, keyed by file name without .yml. Where a name is read from
-// more than one schema version, the newest wins — upstream's per-file
-// fallback (cardigann.SchemaVersion). A file the converter
-// refuses — or whose name a snapshot cannot carry — is skipped with the
-// reason, never fatal: one broken upstream file must not block every other
-// tracker's update.
+// Build converts every file into a catalog and its encoded definitions,
+// keyed by file name without .yml. Where a name is read from more than one
+// schema version, the newest wins — upstream's per-file fallback
+// (cardigann.SchemaVersion). A file the converter refuses is skipped with
+// the reason, never fatal: one broken upstream file must not take every
+// other tracker with it.
 func Build(
 	files []File,
 	up cardigann.Upstream,
-	skipped []cardigann.Skipped,
 ) (cardigann.Catalog, map[string][]byte) {
 	cat := cardigann.Catalog{
 		Schema:    cardigann.SchemaVersion,
 		Converter: convert.Version,
 		Upstream:  up,
-		Skipped:   slices.Clone(skipped),
 	}
 	files = slices.Clone(files)
 	slices.SortStableFunc(files, func(a, b File) int {
@@ -63,18 +70,11 @@ func Build(
 			continue
 		}
 		seen[f.Name] = true
-		if !ValidName.MatchString(f.Name) {
-			cat.Skipped = append(cat.Skipped, cardigann.Skipped{
-				File: f.Name, Reason: "file name cannot be embedded",
-			})
-			continue
-		}
 		rel := fmt.Sprintf("definitions/v%d/%s", f.Version, f.Name)
 		// Keyed by file name, not id: that is what Prowlarr stores an indexer
 		// under and fetches an update by, and a handful of files upstream are
 		// named apart from the id inside them (bluebird.yml holds
-		// bluebirdhd). It also keeps every write inside data/, whatever an
-		// upstream id says.
+		// bluebirdhd).
 		file := strings.TrimSuffix(f.Name, ".yml")
 		d, err := convert.Convert(rel, f.Data)
 		var b []byte
@@ -90,108 +90,153 @@ func Build(
 		defs[file] = b
 		cat.Definitions = append(cat.Definitions, cardigann.Summarize(file, d))
 	}
-	Sort(&cat)
-	return cat, defs
-}
-
-// Sort orders a catalog's listings by file name, which is what keeps a
-// snapshot byte-reproducible.
-func Sort(cat *cardigann.Catalog) {
 	slices.SortFunc(cat.Definitions, func(a, b cardigann.Summary) int {
 		return cmp.Compare(a.File, b.File)
 	})
 	slices.SortFunc(cat.Skipped, func(a, b cardigann.Skipped) int {
 		return cmp.Compare(a.File, b.File)
 	})
-	slices.Sort(cat.Held)
+	return cat, defs
 }
 
-// Write replaces the snapshot under out wholesale, so a definition upstream
-// deleted disappears here too instead of lingering as a stale file.
-func Write(out string, cat cardigann.Catalog, defs map[string][]byte) error {
-	data := filepath.Join(out, "data")
-	if err := os.RemoveAll(data); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(data, 0o750); err != nil {
-		return err
-	}
-	for file, b := range defs {
-		if err := writeFile(filepath.Join(data, file+".json"), b); err != nil {
-			return err
-		}
-	}
-	return WriteIndex(out, cat)
-}
-
-// WriteIndex rewrites a snapshot's index.json and the NOTICE it implies.
-func WriteIndex(out string, cat cardigann.Catalog) error {
-	idx, err := cardigann.EncodeJSON(cat)
+// Latest names upstream's newest commit.
+func Latest(ctx context.Context, client *http.Client) (cardigann.Upstream, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, commitsAPI, nil)
 	if err != nil {
-		return err
+		return cardigann.Upstream{}, err
 	}
-	if err := writeFile(filepath.Join(out, "index.json"), idx); err != nil {
-		return err
+	req.Header.Set("Accept", "application/vnd.github+json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return cardigann.Upstream{}, err
 	}
-	return writeFile(filepath.Join(out, "NOTICE"), []byte(Notice(cat)))
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return cardigann.Upstream{}, fmt.Errorf(
+			"github commits: status %d",
+			resp.StatusCode,
+		)
+	}
+	var c struct {
+		SHA    string `json:"sha"`
+		Commit struct {
+			Committer struct {
+				Date string `json:"date"`
+			} `json:"committer"`
+		} `json:"commit"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxFile)).
+		Decode(&c); err != nil {
+		return cardigann.Upstream{}, fmt.Errorf("github commits: %w", err)
+	}
+	if !sha1Hex.MatchString(c.SHA) {
+		return cardigann.Upstream{}, fmt.Errorf(
+			"github commits: unexpected sha %q",
+			c.SHA,
+		)
+	}
+	return cardigann.Upstream{
+		Repository: repository, Commit: c.SHA, Date: c.Commit.Committer.Date,
+	}, nil
 }
 
-func writeFile(path string, b []byte) error {
-	//nolint:gosec // G306: world-readable, like the source tree it mirrors
-	return os.WriteFile(path, b, 0o644)
+// Fetch reads up's commit and converts it. warning is set when upstream's
+// current schema has moved past the one streamline reads.
+func Fetch(
+	ctx context.Context,
+	client *http.Client,
+	up cardigann.Upstream,
+) (cardigann.Catalog, map[string][]byte, string, error) {
+	files, versions, err := archive(ctx, client, up.Commit)
+	if err != nil {
+		return cardigann.Catalog{}, nil, "", err
+	}
+	warning, err := CheckVersions(versions)
+	if err != nil {
+		return cardigann.Catalog{}, nil, "", err
+	}
+	cat, defs := Build(files, up)
+	return cat, defs, warning, nil
 }
 
-// Prefixes are the upstream directories a snapshot reads, newest first.
-func Prefixes() []string {
-	var out []string
-	for v := cardigann.SchemaVersion; v >= cardigann.OldestSchemaVersion; v-- {
-		out = append(out, fmt.Sprintf("definitions/v%d/", v))
+// archive reads every schema directory's definitions and VERSIONS out of the
+// commit's tarball. Anything but a regular file is left out.
+func archive(
+	ctx context.Context,
+	client *http.Client,
+	commit string,
+) ([]File, string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		archiveURL+url.PathEscape(commit), nil)
+	if err != nil {
+		return nil, "", err
 	}
-	return out
-}
-
-// Notice is the attribution and licence notice a snapshot ships with.
-func Notice(cat cardigann.Catalog) string {
-	up := cat.Upstream
-	held := ""
-	if len(cat.Held) > 0 {
-		held = fmt.Sprintf(`
-Held at an earlier revision, an update to them awaiting an administrator's
-approval: %s.
-`, strings.Join(cat.Held, ", "))
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, "", err
 	}
-	return fmt.Sprintf(`Cardigann indexer definitions
-=============================
-
-The files under data/ are converted from the Cardigann YAML indexer
-definitions maintained by the Prowlarr project:
-
-    %s (definitions/v%d, falling back to v%d per file)
-    revision %s, committed %s
-%s
-Most of those definitions are synced from Jackett
-(https://github.com/Jackett/Jackett). All credit for them belongs to the
-Prowlarr and Jackett contributors.
-
-Licence: Jackett is distributed under the GNU General Public License without
-specifying a version; section 9 of the GPL version 2 lets a recipient choose
-any version published by the Free Software Foundation in that case. The
-Prowlarr/Indexers repository carries no licence file of its own. Streamline
-distributes these files, as modified, under the GNU General Public License
-version 3, like the rest of streamline (LICENSE at the repository root).
-
-Modification notice: %s.
-Each file records, under "source", the upstream path and the sha256 of the
-file it was converted from. The converter is internal/cardigann/convert; the
-sync that wrote this directory is internal/cardigann/cmd/cardigann-sync
-(task cardigann:sync). Do not edit these files by hand — re-run the sync.
-`, up.Repository, cardigann.SchemaVersion, cardigann.OldestSchemaVersion,
-		up.Commit, up.Date, held, convert.Modified)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("upstream archive: status %d", resp.StatusCode)
+	}
+	gz, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("upstream archive: %w", err)
+	}
+	defer gz.Close()
+	tr := tar.NewReader(io.LimitReader(gz, maxArchive))
+	var (
+		files    []File
+		versions string
+	)
+	for {
+		h, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, "", fmt.Errorf("upstream archive: %w", err)
+		}
+		// GitHub roots every entry under "<repo>-<sha>/".
+		_, rel, ok := strings.Cut(h.Name, "/")
+		if !ok || h.Typeflag != tar.TypeReg {
+			continue
+		}
+		version, name := 0, ""
+		for v := cardigann.SchemaVersion; v >= cardigann.OldestSchemaVersion; v-- {
+			if n, ok := strings.CutPrefix(
+				rel,
+				fmt.Sprintf("definitions/v%d/", v),
+			); ok {
+				version, name = v, n
+			}
+		}
+		if rel != "VERSIONS" && (version == 0 || strings.Contains(name, "/") ||
+			!strings.HasSuffix(name, ".yml")) {
+			continue
+		}
+		b, err := io.ReadAll(io.LimitReader(tr, maxFile))
+		if err != nil {
+			return nil, "", fmt.Errorf("upstream archive: %w", err)
+		}
+		if rel == "VERSIONS" {
+			versions = string(b)
+			continue
+		}
+		files = append(files, File{Version: version, Name: name, Data: b})
+	}
+	if versions == "" || len(files) == 0 {
+		return nil, "", fmt.Errorf(
+			"upstream archive: no definitions/v%d..v%d or VERSIONS",
+			cardigann.OldestSchemaVersion, cardigann.SchemaVersion,
+		)
+	}
+	return files, versions, nil
 }
 
 // CheckVersions reads upstream's VERSIONS file. A schema below MIN_VERSION
-// is frozen upstream — still readable, never updated again — so syncing it
-// would ship a snapshot that looks fresh and is not. warning is set when
+// is frozen upstream — still readable, never updated again — so reading it
+// would serve a catalog that looks fresh and is not. warning is set when
 // upstream's current schema has moved past the one streamline reads.
 func CheckVersions(content string) (string, error) {
 	vals := map[string]int{}
@@ -217,7 +262,7 @@ func CheckVersions(content string) (string, error) {
 	}
 	if cur := vals["CURRENT_VERSION"]; cur > cardigann.SchemaVersion {
 		return fmt.Sprintf(
-			"upstream's current schema is v%d; v%d still syncs but will be "+
+			"upstream's current schema is v%d; v%d still reads but will be "+
 				"frozen once it drops below MIN_VERSION",
 			cur, cardigann.SchemaVersion,
 		), nil

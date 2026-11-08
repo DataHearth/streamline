@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Cardigann upstream
+
+# Instances fetch their tracker definitions from Prowlarr/Indexers at run
+# time, so nothing in the repository moves when upstream does. This job
+# reads upstream's newest commit and runs every definition through the
+# engine — what a configured indexer would run after its next update — so a
+# change the converter or the engine cannot take shows up here first.
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: cardigann-upstream
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install Task
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run every upstream definition through the engine
+        env:
+          STREAMLINE_CARDIGANN_UPSTREAM: "1"
+        run: task test:unit -- ./internal/cardigann/engine/...

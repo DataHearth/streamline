@@ -80,6 +80,9 @@ const BY_CODE: Record<string, () => string> = {
 	// Creating an API key past the per-account cap: the fix is revoking one,
 	// not anything in the form.
 	api_key_quota: i18n.err_api_key_quota,
+	// The built-in indexer catalog is read from GitHub: the fix is this server
+	// reaching it, not anything in the form.
+	catalog_unavailable: i18n.err_catalog_unavailable,
 };
 
 function byStatus(status: number): string {

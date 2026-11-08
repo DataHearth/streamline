@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/datahearth/streamline/internal/cardigann/definitions"
+	"github.com/datahearth/streamline/internal/testutil/cardiganntest"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -95,9 +95,8 @@ var _ = Describe(
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(ytsBody))
 			})
-			def, err := definitions.Load("", "yts")
-			Expect(err).NotTo(HaveOccurred())
-			eng, err = New(def, Options{
+			var err error
+			eng, err = New(cardiganntest.Definition("yts"), Options{
 				Name:   "yts-" + CurrentSpecReport().LeafNodeText,
 				Client: trk.client(),
 				Now:    func() time.Time { return time.Date(2026, 10, 11, 0, 0, 0, 0, time.UTC) },

@@ -95,12 +95,19 @@ type IndexerEntry struct {
 	Cardigann *CardigannIndexer `koanf:"cardigann"`
 }
 
-// CardigannIndexer configures a tracker run from an embedded Cardigann
-// definition (internal/cardigann/definitions).
+// CardigannIndexer configures a tracker run from a Cardigann definition,
+// pinned to the upstream commit it was saved at: an upstream change reaches
+// it only through the update job, which holds one that re-points its hosts
+// or its login for an administrator. The converted version itself is kept
+// under the data directory (internal/cardigann/definitions), fetched again
+// at that commit when it is not.
 type CardigannIndexer struct {
-	// Definition is the definition's file name in the snapshot, without
-	// .yml — "eztv", not its display name.
+	// Definition is the definition's upstream file name without .yml —
+	// "eztv", not its display name.
 	Definition string `koanf:"definition"`
+	// Commit is the Prowlarr/Indexers revision the definition is read at;
+	// empty takes the catalog's on the update job's next run.
+	Commit string `koanf:"commit"`
 	// Site picks one of the definition's links; empty is the first.
 	Site string `koanf:"site"`
 	// Settings are the definition's settings by name. One left out takes

@@ -6,13 +6,15 @@
 	} from "@tanstack/svelte-query";
 	import { ShieldAlert } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
+	import { config } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
 	import type { CardigannUpdates } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Upstream changes to a configured built-in indexer's definition that
 	// would move it to other domains or change its login: held until an
-	// administrator reads the diff and decides.
+	// administrator reads the diff and decides. On a read-only instance every
+	// change is held, and approving means copying it into the config file.
 	const qc = useQueryClient();
 	const updates = createQuery<CardigannUpdates>(() => ({
 		queryKey: ["cardigann", "updates"],
@@ -41,6 +43,15 @@
 	}));
 
 	let pending = $derived(updates.data?.pending ?? []);
+
+	async function copyCommit(commit: string) {
+		try {
+			await navigator.clipboard.writeText(commit);
+			toast.ok(i18n.common_copied());
+		} catch {
+			toast.err(i18n.common_clipboard_unavailable());
+		}
+	}
 </script>
 
 {#if pending.length > 0}
@@ -55,7 +66,11 @@
 			<ShieldAlert size={16} class="text-status-wanted" aria-hidden="true" />
 			{i18n.cardigann_updates_title()}
 		</h2>
-		<p class="mt-1 text-xs text-fg-muted">{i18n.cardigann_updates_help()}</p>
+		<p class="mt-1 text-xs text-fg-muted">
+			{config.readOnly
+				? i18n.cardigann_updates_help_readonly()
+				: i18n.cardigann_updates_help()}
+		</p>
 		<ul class="mt-4 space-y-4">
 			{#each pending as u (u.file)}
 				<li class="rounded-md border border-border bg-bg-elevated p-4">
@@ -82,14 +97,24 @@
 							>
 								{i18n.cardigann_update_reject()}
 							</button>
-							<button
-								type="button"
-								disabled={decide.isPending}
-								onclick={() => decide.mutate({ file: u.file, verb: "approve" })}
-								class="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:opacity-60"
-							>
-								{i18n.cardigann_update_approve()}
-							</button>
+							{#if config.readOnly}
+								<button
+									type="button"
+									onclick={() => copyCommit(u.commit)}
+									class="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover"
+								>
+									{i18n.cardigann_update_copy()}
+								</button>
+							{:else}
+								<button
+									type="button"
+									disabled={decide.isPending}
+									onclick={() => decide.mutate({ file: u.file, verb: "approve" })}
+									class="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:opacity-60"
+								>
+									{i18n.cardigann_update_approve()}
+								</button>
+							{/if}
 						</div>
 					</div>
 					<details class="mt-3">

@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/datahearth/streamline/internal/cardigann/definitions"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/testutil/cardiganntest"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
@@ -24,17 +24,16 @@ func (f roundTripFunc) RoundTrip(
 }
 
 var _ = Describe("CardigannUpdate", Label("unit"), func() {
-	It("stops at the commit it already runs, fetching nothing more", func() {
-		configtest.Setup(map[string]any{"data_dir": GinkgoT().TempDir()})
-		emb, err := definitions.Snapshot("")
-		Expect(err).NotTo(HaveOccurred())
+	It("stops at the commit it already holds, fetching nothing more", func() {
+		configtest.Setup()
+		cardiganntest.Install()
 		var hosts []string
 		orig := otelx.HTTPClient.Transport
 		otelx.HTTPClient.Transport = roundTripFunc(
 			func(r *http.Request) (*http.Response, error) {
 				hosts = append(hosts, r.URL.Host)
 				body := fmt.Sprintf(`{"sha":%q,"commit":{"committer":{"date":%q}}}`,
-					emb.Upstream.Commit, emb.Upstream.Date)
+					cardiganntest.Upstream.Commit, cardiganntest.Upstream.Date)
 				return &http.Response{
 					StatusCode: 200,
 					Body:       io.NopCloser(strings.NewReader(body)),

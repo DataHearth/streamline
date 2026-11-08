@@ -2,12 +2,15 @@
 
 `internal/cardigann` is streamline's own reader for the Cardigann YAML definitions
 Prowlarr and Jackett describe trackers in, so a stack can drop Prowlarr/Jackett. **What
-exists today is the converter, the embedded snapshot and the engine**: a `protocol:
-cardigann` indexer entry, created from the catalog in the SPA or in the config file, runs any definition in the
-snapshot, logging in to its tracker when the definition says to (`## Logins`) and getting
-past a browser challenge through a FlareSolverr-compatible solver (`## Browser
-challenges`). A daily job keeps the definitions current with upstream, holding any change
-that re-points a configured tracker for an administrator (`## Runtime updates`). Settings →
+exists today is the converter, a catalog read from upstream at run time, and the engine**:
+nothing of upstream ships in the binary or the repository. A `protocol: cardigann` indexer
+entry, created from the catalog in the SPA or in the config file, **is pinned to the
+upstream commit of the definition it runs** (`cardigann.commit`), the converted version kept
+under `<data_dir>/cardigann/`, logging in to its tracker when the
+definition says to (`## Logins`) and getting past a browser challenge through a
+FlareSolverr-compatible solver (`## Browser challenges`). A daily job reads upstream into
+the catalog and moves each entry to the new version of its definition, holding any change
+that re-points a configured tracker for an administrator (`## Updates`). Settings →
 Indexers browses the catalog and generates the form from a definition's settings (`## The
 catalog and the API`).
 
@@ -15,77 +18,71 @@ catalog and the API`).
 |---|---|
 | `internal/cardigann/` | The model (`Definition` and friends, upstream v12 schema key for key), the strict `Decode`, `Catalog`/`Summarize`, `EncodeJSON` |
 | `internal/cardigann/convert/` | `Convert(path, yaml)` — the .NET-to-Go rewrites — and `Check(def)`, which validates a converted definition as stored. Pure; no I/O |
-| `internal/cardigann/snapshot/` | `Build` (convert a file set into catalog + encoded definitions), `Write`/`WriteIndex` (data/, index.json, NOTICE), `Notice`, `CheckVersions` — the one code path both the sync and the runtime update write through |
-| `internal/cardigann/cmd/cardigann-sync/` | The sync: fetch upstream with git, read `HEAD`'s blobs, hand them to `snapshot` |
-| `internal/cardigann/definitions/` | `//go:embed`s the snapshot and resolves what is in force under a data directory: `Load(dir, file)`, `Catalog(dir)` (custom folded in), `Snapshot(dir)`, `Raw(dir, file)`, `Notice()`. `dir` empty = the embedded copy alone. Only `definitions.go` (and its tests) is hand-written |
-| `internal/cardigann/update/` | The runtime update: `Run` (GitHub commit → tarball → `snapshot` → `<dir>/current`, holding trust changes in `<dir>/pending`), `List`, `Diff`, `Approve`, `Reject` |
+| `internal/cardigann/snapshot/` | `Latest` (upstream's newest commit), `Fetch` (its tarball, converted), `Build` (convert a file set into catalog + encoded definitions), `CheckVersions` |
+| `internal/cardigann/definitions/` | The catalog in memory: `Install`/`Current` (a `Set`), `Catalog()`, `Raw(file)`, `Decode`; and the pinned versions: `Pinned` (catalog or kept copy, never the network), `Resolve` (fetches the commit when it is not kept), `Keep`, `Prune` |
+| `internal/cardigann/update/` | `Fetch`/`Ensure` (read upstream into the catalog), `Run` (fetch, then move every configured entry to the catalog's version of its definition, holding trust changes, pruning kept versions), `List`, `Approve`, `Reject` — held state in memory |
+| `internal/testutil/cardiganntest/` | Three unmodified upstream definitions (`yts`, `3dtorrents`, `13city`, provenance in `testdata/NOTICE`) converted for tests: `Install` (as the catalog), `Spec` (converted), `Definition`, `Commit`/`Keep` (a hand-edited version kept under a made-up commit) |
 | `internal/cardigann/engine/` | Runs a converted definition: renders its search requests, parses the responses (HTML, XML, JSON) into releases, resolves a release's download block. The port of Prowlarr's `CardigannRequestGenerator`/`CardigannParser`/`CardigannBase` |
 | `internal/indexer/cardigann.go` | The `indexer.Client` over an engine, `CardigannSite`, and `ResolveDownload` for the grab path |
 
-## The snapshot is generated
+## The catalog is fetched
 
-`task cardigann:sync` (optionally `REF=<branch|tag|commit>` or `SRC=<checkout>`) makes a
-sparse, shallow, blob-filtered git fetch of `Prowlarr/Indexers` — only
-`definitions/v12/`, `definitions/v11/` and `VERSIONS` — converts every file, and rewrites
-`internal/cardigann/definitions/{data/<file>.json,index.json,NOTICE}` **wholesale**, so a
-definition deleted upstream disappears here too.
+Nothing of upstream is committed. `snapshot.Latest` asks
+`api.github.com/repos/Prowlarr/Indexers/commits/master` for the newest commit, and
+`snapshot.Fetch` reads `codeload.github.com/…/tar.gz/<sha>` (≈750 KB; the whole repository,
+every schema version), converts every file, and returns the catalog and each definition
+encoded; `definitions.Install` puts that set in force, **in memory only**. The
+`cardigann-update` job does it shortly after boot (scheduled jobs run once at start) and
+every `schedules.cardigann_update` (24h); `GET /cardigann/catalog`, a definition lookup, and
+an indexer write that names a new definition call `update.Ensure`, which fetches when
+nothing has been read since the process started. Nothing past the API call is fetched when
+the commit is the one in force. Only regular `definitions/v12/*.yml`,
+`definitions/v11/*.yml` and `VERSIONS` entries are read; inflated size is capped.
 
-- **Never hand-edit the snapshot.** Fix the converter and re-sync. The
-  `definitions` suite re-encodes every embedded definition and compares it byte for byte
-  with the committed file, so a model field that fails to round-trip fails it; it also runs
-  `convert.Check` over every file, so an edited regex (in a filter or a template) or
-  template that no longer compiles fails it. A *well-formed* hand edit still passes — the
-  rule is a rule, not a guard.
-- **The output is a pure function of (upstream commit, converter).** No timestamp but the
-  upstream commit's own, sorted listings, one file per definition. Re-running a sync
-  against the same revision is a no-op diff, so a sync commit shows exactly what upstream
-  changed. Commit a sync as its own change (`chore(cardigann): sync definitions to <sha>`).
+- **No catalog is not a broken indexer.** An entry runs the version kept for its commit,
+  so a server that cannot reach GitHub keeps every configured indexer working; only adding
+  one, changing an entry's definition, or running one whose version is not kept (a fresh
+  `data_dir`, a converter bump) needs GitHub (`503`/`422 code: catalog_unavailable`, which
+  the SPA renders as "check this server can reach github.com").
+- **Kept versions** live at `<data_dir>/cardigann/v<convert.Version>/<commit>/<file>.json`,
+  written (`definitions.Keep`) before any config write that pins a commit — the API on
+  create or definition change, `update.Run` and `Approve` — and by `definitions.Resolve`,
+  which reads the catalog when it is at that commit and otherwise fetches that commit's
+  tarball (the last one fetched apart from the catalog is remembered, so entries pinned to
+  it share one download). `definitions.Pinned` never reaches the network: it is what
+  `config` reads (`Config.CardigannDefinition`, inside `config.Update`), so every caller
+  that pins or edits an entry resolves first. `update.Run` prunes every commit no entry is
+  pinned to after its writes, and every directory an older converter wrote. The data
+  directory is state, so a read-only configuration still keeps versions.
 - **`convert.Version` is bumped whenever the converter's output changes for the same
-  input**, and the sync re-run in the same change. The catalog records the version and the
-  test fails when it disagrees with `convert.Version` — but nothing can notice a converter
-  change made *without* the bump, since the upstream YAML is not in the repo to re-convert.
-  The bump is a manual rule; reviewers enforce it.
-- Git rather than a tarball: a fetch by ref accepts a commit as well as a branch, and the
-  commit SHA comes straight from the checkout for the NOTICE. **The definitions and
-  `VERSIONS` are read from `HEAD`'s git objects** (`ls-tree` + `cat-file --batch`), never
-  the work tree: what is converted is exactly the commit the NOTICE names, whatever `git
-  status` cannot see (assume-unchanged or skip-worktree edits, a narrower sparse checkout),
-  and a committed symlink is skipped as "not a plain file" rather than followed out of the
-  checkout. A file whose name `//go:embed` could not serve (leading `.`/`_`, a `:`, anything
-  outside `[A-Za-z0-9._-]`) is skipped with a reason too. A `-src` directory must be
-  the **root of its own repository** (inside any other work tree git answers for that one —
-  a copied `definitions/` under streamline's gitignored `tmp/` read as clean and stamped
-  streamline's HEAD into the NOTICE), and any local change under `definitions/` or
-  `VERSIONS` — tracked, untracked or ignored, flags set explicitly so no git config can hide
-  one — is refused: the NOTICE would name a revision the files are not. `-ref` and `-src`
-  together are refused too, since `-ref` would be silently ignored.
+  input.** The kept versions sit under it, so a bump re-converts each pinned commit from
+  upstream on first use: a converter fix reaches every entry without an update to hold.
+  There is **no format version on a stored definition**: an engine change that can no
+  longer read what is kept is a converter bump.
 - **Two schema directories, newest per file.** `cardigann.SchemaVersion` (12) is the newest
   schema read and `OldestSchemaVersion` (11) the oldest. v12 is v11 plus the `base64decode`
   and `base64encode` filters (Prowlarr's `WebEncoders.Base64Url*`: URL alphabet, no
   padding; the decoder takes the standard alphabet and padding too), and upstream puts a
   file in `v12/` only when it needs them — at `8b78ad6` that is `blueroms` alone — while
-  Prowlarr falls back to `v11/` file by file. `snapshot.Build` does the same: every
-  directory in `snapshot.Prefixes()` is read and the newest copy of a name wins, its
-  `source.path` naming the directory it came from. The sync fails when upstream's
-  `VERSIONS` puts `SchemaVersion` outside `MIN_VERSION`..`MAX_VERSION` — a frozen version
-  still reads fine and is never updated again, so syncing it would ship a snapshot that
-  looks fresh and is not — and warns when `CURRENT_VERSION` has moved past it. Moving to a
-  new schema is a port of the model (new keys, new filters), then a bump of the constant.
-- Definitions are keyed by their **upstream file name** (`Summary.File`, `Load(file)`), not
+  Prowlarr falls back to `v11/` file by file. `snapshot.Build` does the same: the newest
+  copy of a name wins, its `source.path` naming the directory it came from. A fetch fails
+  when upstream's `VERSIONS` puts `SchemaVersion` outside `MIN_VERSION`..`MAX_VERSION` — a
+  frozen version still reads fine and is never updated again — and warns when
+  `CURRENT_VERSION` has moved past it. Moving to a new schema is a port of the model (new
+  keys, new filters), then a bump of the constant.
+- Definitions are keyed by their **upstream file name** (`Summary.File`, `Raw(file)`), not
   their `id`: Prowlarr stores an indexer under its definition file and fetches updates by
   it (`/master/11/bluebird`), and six files upstream are named apart from the id inside
-  them (`bluebird.yml` holds `bluebirdhd`). It also means no upstream value decides where
-  the sync writes — an id of `../../package` once overwrote `package.json`.
-- **`.github/workflows/cardigann-sync.yaml` runs the sync every Monday** (and on
-  `workflow_dispatch`, with an optional `ref`), runs the cardigann suites over the result,
-  and force-pushes it to the one `cardigann/sync` branch, opening or refreshing a single
-  pull request — an unmerged sync is superseded by the next, which contains it. A pull
-  request opened with the Actions token starts no workflow, so **CI does not run on it
-  until someone pushes to the branch or closes and reopens it**; the body says so. The
-  repository must allow Actions to create pull requests (Settings → Actions → General).
-- A definition the converter refuses — or whose JSON encoding fails — is **skipped,
-  recorded in `index.json`'s `skipped` with the reason, and printed**, never a failed sync.
-  One broken upstream file must not block every other tracker's update.
+  them (`bluebird.yml` holds `bluebirdhd`).
+- A definition the converter refuses — or whose JSON encoding fails — is **skipped and
+  recorded in the catalog's `skipped` with the reason**, never a failed fetch. One broken
+  upstream file must not take every other tracker with it.
+- **`.github/workflows/cardigann-upstream.yaml` runs every Monday** (and on
+  `workflow_dispatch`): with `STREAMLINE_CARDIGANN_UPSTREAM=1`, the engine suite reads
+  upstream's newest commit and runs every definition through the round trip,
+  `convert.Check`, request rendering and login rendering. Without the variable those specs
+  skip, so `task test` never needs the network; a red run is the first sign that something
+  upstream wrote is something the converter or the engine cannot take.
 
 At `8b78ad6` (2026-10-12): 580 definitions (one of them from v12), all converted. Until
 then `1337x.yml` was skipped for an unbalanced `)` in a search-path template that Jackett's
@@ -93,47 +90,44 @@ regex-driven template engine tolerates and Go's parser does not; it was fixed up
 (Jackett/Jackett#17187), which is where such a fix belongs — do not teach the converter to
 guess at unbalanced parentheses.
 
-## Runtime updates
+## Updates
 
-Prowlarr refreshes its definitions at boot and on a schedule; a release-pinned snapshot
-alone would leave a tracker that moved domains broken until the next streamline release.
-`jobs.CardigannUpdate` (`cardigann-update`, `schedules.cardigann_update`, 24h) runs
-`update.Run` against `config.CardigannDir()` (`<data_dir>/cardigann`):
+Prowlarr refreshes its definitions at boot and on a schedule; a tracker that moved domains
+would otherwise stay broken. `jobs.CardigannUpdate` (`cardigann-update`,
+`schedules.cardigann_update`, 24h) runs `update.Run`: fetch (above), then compare every
+configured `cardigann` entry's pinned version with the catalog's version of its
+`definition`.
 
-- **What is fetched**: the commit `api.github.com/repos/Prowlarr/Indexers/commits/master`
-  names, then `codeload.github.com/…/tar.gz/<sha>` (≈750 KB; the whole repository, every
-  schema version) — so the NOTICE names an exact commit, as the sync's does, without git
-  on the host. Only regular `definitions/v12/*.yml`, `definitions/v11/*.yml` and `VERSIONS`
-  entries are read; inflated
-  size is capped. Nothing is fetched past the API call when the commit is the one in force.
-- **One code path with the sync**: `snapshot.Build` converts, `snapshot.Write` writes
-  `data/`, `index.json` and the NOTICE — the provenance the licence rests on is written the
-  same way at runtime. `current/` is replaced **wholesale and atomically** (written beside,
-  renamed into place) so a reader sees the old set or the new one.
-- **What is in force** (`definitions.Load`/`Catalog`): `custom/<file>.yml` (the operator's
-  own YAML, converted on every load, marked `custom` in the catalog) over the runtime
-  `current/` snapshot over the embedded one. `current/` counts **only while its upstream
-  commit is newer than the embedded one and it was written by this converter version and
-  schema** — an upgraded binary falls back to its own newer embedded copy, and a converter
-  change forces the next run to rewrite. Its index is cached per directory;
-  `definitions.Invalidate` follows every write.
-- **The trust hold**: a changed definition that a configured indexer runs (enabled or not)
-  is compared on the **hosts it names** — links, legacy links and every absolute
-  `http(s)://` **or scheme-relative `//host/…`** URL anywhere in its JSON (a path written
-  that way resolves against the site to another host, and re-points a query or header
-  secret as surely) — and its **login block**. Either changing keeps the
-  old version in `current/` (listed in the catalog's `held` and the NOTICE) and puts the new
-  one in `pending/` with its reasons. A definition deleted upstream that is in use is held
-  the same way (`removed`); a file upstream still carries but **this converter refuses**
-  is neither removed nor held — it stays at its last good version (`Result.Skipped`) and
-  the catalog's `skipped` list says why. Everything else applies at once. `Approve` moves the pending
-  file into `current/` and rewrites the index and NOTICE; `Reject` keeps the old version and
-  records the refused upstream `sha256` in `pending/index.json`, so the same version is
-  never proposed again while a later one is (a refused removal is remembered as
-  `rejectedRemoval`, since a deletion has no file to hash). A pending index written against another
-  snapshot than the one in force is ignored (`List` returns nothing).
-- **REST**: `GET /cardigann/updates` (the snapshot in force + each held update with its
-  unified diff, from `hexops/gotextdiff`, and the indexers running it),
+- **An entry names, the data directory holds.** The config carries `cardigann.definition`
+  and `cardigann.commit` only; the converted JSON (a file, not YAML, since field order is
+  meaning — `title` before `title|append` — and koanf flattens a YAML map) is kept per
+  commit (`## The catalog is fetched`). The API pins the catalog's commit when an entry is
+  created or its `definition` changes (`pinCardigann`/`catalogVersion`); an edit to
+  anything else leaves it alone. `config.PinCardigann` is the only other writer. A version
+  equal to the catalog's is left on its commit, so an upstream commit that does not touch
+  a file writes nothing.
+- **The trust hold**: a changed definition is compared on the **hosts it names** — links,
+  legacy links and every absolute `http(s)://` **or scheme-relative `//host/…`** URL
+  anywhere in its JSON (a path written that way resolves against the site to another host,
+  and re-points a query or header secret as surely) — and its **login block**. Neither
+  changing → `config.PinCardigann` writes the new version into the entry at once. Either
+  changing → the entry keeps its version and the update is **held**, with its reasons, the
+  indexers it is for, a unified diff (`hexops/gotextdiff`) from the version the first of
+  them is pinned to, and the new `commit`. An entry with no `commit` (written by hand
+  without one) takes the catalog's as an ordinary change; one whose pinned version cannot
+  be read is held with that as its reason.
+- **A read-only configuration holds every change** (`Pending.Reasons` empty when it is held
+  for that alone): nothing can be written, and the SPA turns *Approve* into *Copy commit*
+  for the operator to set as `cardigann.commit` in the file and redeploy. `Approve` there
+  answers `config.ErrReadOnly` (403).
+- A definition upstream **deletes or this converter refuses** leaves the entries running it
+  on the version they are pinned to — there is nothing to remove and no removal to approve.
+- **Everything held is in memory.** `Approve` keeps the held version and pins every entry
+  it was held for to its commit; `Reject` remembers the refused upstream `sha256` so the same version is not
+  proposed again, a later one is. A restart forgets both, and the next run works the held
+  set out again from the config — a rejection is asked again once per process, which is
+  the price of not keeping a file of it.
+- **REST**: `GET /cardigann/updates` (the catalog's upstream revision + each held update),
   `POST /cardigann/updates/{file}/approve|reject`, admin-only. They live under
   `/cardigann`, not `/indexers`, so no indexer name can collide with them. Settings →
   Indexers shows the held updates above the list.
@@ -243,7 +237,7 @@ split at the `é`.
   (`(a*)*` on `a` captures `a` in Go, `""` in .NET); nothing upstream relies on it.
 - **The engine is decided here, never by trial at runtime.** Which definitions run on the
   backtracking engine is then visible in the data itself, and a pattern that compiles on
-  neither engine fails the definition at sync time rather than a search.
+  neither engine fails the definition at conversion rather than a search.
 - **The engine must run regexp2 with a match timeout, and treat a timeout as that filter
   failing** — not the search hanging. regexp2 backtracks and has no linear-time
   guarantee; here it runs patterns we do not author over HTML from trackers we do not
@@ -357,13 +351,16 @@ indexers:
     protocol: cardigann
     enabled: true
     cardigann:
-      definition: yts            # file name in the snapshot, not the display name
+      definition: yts            # upstream file name, not the display name
+      commit: 8b78ad6…           # the upstream revision it is read at; written by the
+                                 # API, left out → the update job sets the catalog's
       site: https://yts.gg/      # optional; must be one of the definition's links
       settings: {}               # by setting name; omitted ones take the default
 ```
 
-- **`config.CheckCardigann` is the gate**, run by `checkInvariants`: the definition loads,
-  the site is one of its `links`, and
+- **`Config.CheckCardigann` is the gate**: the entry's pinned version is kept, decodes and
+  passes `convert.Check` (it is a file on disk a person can edit), the site is one of its
+  `links`, and
   `engine.Config` accepts the settings — an undeclared name, a select value outside its
   option keys, or a checkbox that is not a boolean is refused. Two upstream selects default
   to a key their own options lack (`DESC` beside `desc`; `t` beside nt/ts/sz/i), which
@@ -432,27 +429,31 @@ newznab root of the kind, or page past the first response.
 
 ## The catalog and the API
 
-- `GET /cardigann/catalog` is `definitions.Catalog(dir)` (custom included) as summaries;
+- `GET /cardigann/catalog` is `definitions.Catalog()` as summaries;
   the SPA filters it client-side (language, privacy, top category, login burden).
-  `GET /cardigann/catalog/{file}` adds the settings. **An `info*` setting's text is
+  `GET /cardigann/catalog/{file}` adds the settings; with `?indexer=<name>` it describes
+  the version that entry is pinned to instead (`Resolve`d, so fetched when not kept),
+  which is what the SPA's edit form reads — the catalog may already be a version ahead. **An `info*` setting's text is
   upstream HTML and goes out as plain text** (goquery `Text()`), never as markup for the
   SPA to trust.
 - `POST /indexers` with `protocol: cardigann` takes `definition`, `site`, `settings`,
-  `proxy`; host, port and api_key are required by `checkIndexers` for the other protocols
-  only, so `IndexerCreate` requires nothing but `name`. A draft test runs
+  `proxy`, and pins the entry to the catalog's `commit`, which is never taken from a
+  request. Host, port and api_key are required by `checkIndexers` for the
+  other protocols only, so `IndexerCreate` requires nothing but `name`. A draft test pins
+  the catalog's version and runs
   `config.CheckCardigann` first (an undeclared setting is a plain 422); the target is a
   definition link, never a caller-named host, so `draftTargetRefused` applies to the one
   address the caller does name, the `proxy`, which the probe would otherwise connect to
   and describe (refused, timeout, bad answer) like any draft host.
 - **`CheckCardigann` is not validation.** `checkIndexers` requires a `definition` name and
-  a well-formed `proxy` and nothing more; whether the definition in force still runs with
-  the entry's `site` and `settings` is checked on every API write (`AddIndexer`,
-  `UpdateIndexer`, the draft test) and only **warned** at `Load`
-  (`warnUnusableCardigann`). The definitions move under a running instance — the update
-  job, an approved hold, a new binary's snapshot, a custom file — and a drifted one used to
-  fail `config.Load`, so an auto-updated image crash-looped until someone edited the YAML.
-  A drifted entry is unusable (`newCardigann` fails it, `searchAll` logs it
-  `misconfigured`) and nothing else.
+  a well-formed `proxy` and nothing more; whether the entry's version runs with its `site`
+  and `settings` is checked on every API write (`AddIndexer`, `UpdateIndexer`,
+  `PinCardigann`, the draft test) and only **warned** at `Load` (`warnUnusableCardigann`,
+  silent for a version that is not kept yet — it is fetched on first use). A definition
+  written by an older engine, or by hand, used to be able to fail `config.Load`,
+  so an auto-updated image crash-looped until someone edited the YAML. An entry that does
+  not run is unusable (`newCardigann` fails it, `searchAll` logs it `misconfigured`) and
+  nothing else.
 - **Secrets never leave**: `Indexer.settings` carries the non-secret values, `secrets_set`
   names the secret ones holding a value, `proxy` comes back without userinfo. On `PUT`,
   `config.CardigannPatch` keeps a secret sent empty or left out — unless the definition
@@ -579,38 +580,23 @@ secret when its name contains `pass`, `key`, `cookie`, `token`, `2fa` or `secret
 `pin` (`secretHints`). Over-flagging costs a masked input; under-flagging leaks a
 credential. When the config entry lands, its redaction reads this flag — not key names.
 
-## Licensing — why the NOTICE is load-bearing
+## Licensing
 
-The decision (option C of the design discussion) is to **embed** the converted snapshot in
-the binary, keeping streamline a single file. The basis:
+Streamline distributes **no** upstream definition: the catalog is read by each instance
+from Prowlarr/Indexers, and the version an entry is pinned to is kept in that operator's
+own data directory. The only upstream files in the repository are the three test fixtures under
+`internal/testutil/cardiganntest/testdata/`, unmodified, with their own `NOTICE`
+(attribution and revision). The basis for those, and for converting at all:
 
 - Jackett, where most definitions originate, ships the GPL-2.0 text and specifies no
   version anywhere (no source headers, no csproj licence, nothing in the README). GPL-2.0
   §9: when a program specifies no version, a recipient may choose any version the FSF has
   published — so the definitions can be taken under GPL-3.0, streamline's licence.
 - `Prowlarr/Indexers` carries no licence file of its own.
-- Converting does not change any of that: a mechanical translation is still the original
-  authors' work, and the GPL's obligations attach to what is distributed — the converted
-  files — not to the script that made them.
 
-Hence, and **never to be dropped**:
-
-- `internal/cardigann/definitions/NOTICE` ships inside the embedded set: the attribution,
-  the upstream revision, the licence basis and the modification notice. `definitions.Notice()`
-  exposes it, so anything that displays or redistributes the definitions can carry it.
-- Every converted file has a `source` block — upstream path, sha256 of the original,
-  `convert.Modified` — the "this file was changed" notice GPL-2 §2(a) / GPL-3 §5(a) ask for.
-  The per-file date lives in the NOTICE (the upstream commit date), not in each file, so a
-  sync does not rewrite every file just to move a date.
-- The runtime update, when it lands, runs the same `Convert` and must write the same
-  provenance for what it fetched.
-
-## Size
-
-The snapshot is ~6.5 MB of indented JSON (580 files) plus a ~330 KB index, embedded
-uncompressed. That is deliberate: indented per-file JSON is what makes a sync reviewable as
-a diff. Compressing it at embed time is the lever if binary size ever matters; the
-committed form should stay diffable either way.
+Every converted definition keeps its `source` block — upstream path, sha256 of the
+original, `convert.Modified` — so an entry says where its copy came from and that it was
+changed.
 
 ## Dependencies
 

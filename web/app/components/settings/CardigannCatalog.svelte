@@ -169,12 +169,6 @@
 										>{i18n.cardigann_badge_challenge()}</span
 									>
 								{/if}
-								{#if d.custom}
-									<span
-										class="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-text"
-										>{i18n.cardigann_badge_custom()}</span
-									>
-								{/if}
 							</span>
 							<span class="line-clamp-2 text-xs text-fg-muted">{d.description}</span>
 							{#if d.categories.length > 0}

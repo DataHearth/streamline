@@ -41,11 +41,14 @@
 	let definition = $derived(editing?.definition ?? file);
 	let open = $derived(definition !== null);
 
+	// An existing indexer is edited against the version it carries, which an
+	// update may not have reached; a new one against the catalog's.
 	const def = createQuery<CardigannDefinition>(() => ({
-		queryKey: ["cardigann", "definition", definition],
+		queryKey: ["cardigann", "definition", definition, editing?.name ?? null],
 		queryFn: () =>
 			api<CardigannDefinition>(
-				`/cardigann/catalog/${encodeURIComponent(definition ?? "")}`,
+				`/cardigann/catalog/${encodeURIComponent(definition ?? "")}` +
+					(editing ? `?indexer=${encodeURIComponent(editing.name)}` : ""),
 			),
 		enabled: definition !== null,
 	}));

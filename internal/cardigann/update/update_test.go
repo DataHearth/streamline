@@ -7,15 +7,19 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/internal/cardigann"
 	"github.com/datahearth/streamline/internal/cardigann/definitions"
+	"github.com/datahearth/streamline/internal/cardigann/snapshot"
 	"github.com/datahearth/streamline/internal/cardigann/update"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/testutil/cardiganntest"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 const versions = "MIN_VERSION=11\nMAX_VERSION=12\nCURRENT_VERSION=11\n"
@@ -55,6 +59,17 @@ search:
       selector: a
       attribute: href
 `, id, id, link)
+}
+
+// spec converts alpha's definition the way a fetch does.
+func spec(body string) []byte {
+	GinkgoHelper()
+	_, defs := snapshot.Build(
+		[]snapshot.File{{Version: 11, Name: "alpha.yml", Data: []byte(body)}},
+		cardigann.Upstream{},
+	)
+	Expect(defs).To(HaveKey("alpha"))
+	return defs["alpha"]
 }
 
 type commit struct {
@@ -99,16 +114,17 @@ func (f roundTripFunc) RoundTrip(
 
 var _ = Describe("the definition update", Label("unit", "cardigann"), func() {
 	var (
-		dir      string
 		head     commit
+		served   map[string]commit
 		archives int
 		client   *http.Client
-		inUse    = func(f string) bool { return f == "alpha" }
 	)
 
 	BeforeEach(func() {
-		dir = GinkgoT().TempDir()
+		prev := definitions.Install(nil)
+		DeferCleanup(func() { definitions.Install(prev) })
 		archives = 0
+		served = map[string]commit{}
 		client = &http.Client{Transport: roundTripFunc(
 			func(r *http.Request) (*http.Response, error) {
 				var body []byte
@@ -118,9 +134,9 @@ var _ = Describe("the definition update", Label("unit", "cardigann"), func() {
 						`{"sha":%q,"commit":{"committer":{"date":%q}}}`,
 						head.sha, head.date)
 				case r.URL.Host == "codeload.github.com" &&
-					strings.HasSuffix(r.URL.Path, "/"+head.sha):
+					served[path.Base(r.URL.Path)].sha != "":
 					archives++
-					body = tarball(head)
+					body = tarball(served[path.Base(r.URL.Path)])
 				default:
 					return &http.Response{StatusCode: 404, Body: http.NoBody}, nil
 				}
@@ -132,258 +148,257 @@ var _ = Describe("the definition update", Label("unit", "cardigann"), func() {
 		)}
 	})
 
+	sha := func(n int) string { return strings.Repeat(fmt.Sprint(n), 40) }
+	// pinTo runs one built-in indexer, A, on alpha at upstream commit.
+	pinTo := func(commit string, readOnly bool) {
+		GinkgoHelper()
+		configtest.SetupFile(map[string]any{
+			"read_only": readOnly,
+			"indexers": []map[string]any{{
+				"name": "A", "protocol": "cardigann", "enabled": true,
+				"cardigann": map[string]any{
+					"definition": "alpha", "commit": commit,
+				},
+			}},
+		})
+	}
+	// configure pins A to a kept version: the one body converts to.
+	configure := func(body string, readOnly bool) {
+		GinkgoHelper()
+		pinTo(cardiganntest.Commit(spec(body)), readOnly)
+		cardiganntest.Keep(config.Get().DataDir, "alpha", spec(body))
+	}
 	run := func(c commit) update.Result {
 		GinkgoHelper()
-		head = c
-		res, err := update.Run(context.Background(), dir, client, inUse)
+		head, served[c.sha] = c, c
+		res, err := update.Run(context.Background(), client)
 		Expect(err).NotTo(HaveOccurred())
 		return res
 	}
-	sha := func(n int) string { return strings.Repeat(fmt.Sprint(n), 40) }
-
-	It(
-		"replaces the snapshot, holds a configured tracker's domain change for approval",
-		func() {
-			res := run(
-				commit{
-					sha:  sha(1),
-					date: "2030-01-01T00:00:00Z",
-					files: map[string]string{
-						"alpha": definition("alpha", "https://alpha.example/"),
-						"beta":  definition("beta", "https://beta.example/"),
-					},
-				},
-			)
-			Expect(res.Added).To(ConsistOf("alpha", "beta"))
-			cat, err := definitions.Catalog(dir)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cat.Upstream.Commit).To(Equal(sha(1)))
-			Expect(cat.Definitions).To(HaveLen(2))
-
-			// Up to date: nothing is fetched.
-			Expect(run(head).Current).To(BeTrue())
-			Expect(archives).To(Equal(1))
-
-			res = run(
-				commit{
-					sha:  sha(2),
-					date: "2030-01-02T00:00:00Z",
-					files: map[string]string{
-						"alpha": definition("alpha", "https://alpha.evil/"),
-						"beta":  definition("beta", "https://beta.moved/"),
-					},
-				},
-			)
-			Expect(res.Held).To(ConsistOf("alpha"))
-			Expect(res.Changed).To(ConsistOf("beta"))
-
-			a, err := definitions.Load(dir, "alpha")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(a.Links).To(Equal([]string{"https://alpha.example/"}))
-			b, err := definitions.Load(dir, "beta")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(b.Links).To(Equal([]string{"https://beta.moved/"}))
-			notice, err := os.ReadFile(
-				filepath.Join(definitions.Current(dir), "NOTICE"),
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(notice)).To(ContainSubstring("approval: alpha."))
-
-			pending, err := update.List(dir)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(pending).To(HaveLen(1))
-			Expect(pending[0].Reasons).To(ContainElements(
-				"new domains: alpha.evil", "dropped domains: alpha.example",
-			))
-			diff, err := update.Diff(dir, "alpha")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(diff).To(ContainSubstring(`-    "https://alpha.example/"`))
-			Expect(diff).To(ContainSubstring(`+    "https://alpha.evil/"`))
-
-			Expect(update.Approve(dir, "alpha")).To(Succeed())
-			a, err = definitions.Load(dir, "alpha")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(a.Links).To(Equal([]string{"https://alpha.evil/"}))
-			Expect(update.List(dir)).To(BeEmpty())
-			cat, err = definitions.Catalog(dir)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cat.Held).To(BeEmpty())
-			Expect(update.Approve(dir, "alpha")).To(MatchError(update.ErrNoUpdate))
-		},
-	)
-
-	It("holds a path that points at another host without naming a scheme", func() {
-		run(commit{
-			sha:  sha(1),
-			date: "2030-01-01T00:00:00Z",
-			files: map[string]string{
-				"alpha": definition("alpha", "https://alpha.example/"),
-			},
-		})
-		res := run(commit{
-			sha:  sha(2),
-			date: "2030-01-02T00:00:00Z",
-			files: map[string]string{
-				"alpha": strings.Replace(
-					definition("alpha", "https://alpha.example/"),
-					"path: browse.php", "path: //alpha.evil/browse.php", 1,
-				),
-			},
-		})
-		Expect(res.Held).To(ConsistOf("alpha"))
-		pending, err := update.List(dir)
+	carried := func() []byte {
+		GinkgoHelper()
+		e, ok := config.FindIndexer("A")
+		Expect(ok).To(BeTrue())
+		b, err := definitions.Pinned(
+			config.Get().DataDir, "alpha", e.Cardigann.Commit,
+		)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(pending).To(HaveLen(1))
-		Expect(pending[0].Reasons).To(ConsistOf("new domains: alpha.evil"))
-	})
+		return b
+	}
 
-	It("keeps a definition this converter refuses at its last good version", func() {
-		run(commit{
-			sha:  sha(1),
-			date: "2030-01-01T00:00:00Z",
-			files: map[string]string{
-				"alpha": definition("alpha", "https://alpha.example/"),
-				"beta":  definition("beta", "https://beta.example/"),
-			},
-		})
-		res := run(commit{
-			sha:  sha(2),
-			date: "2030-01-02T00:00:00Z",
+	It("puts upstream's newest commit in force as the catalog, once", func() {
+		head = commit{
+			sha: sha(1), date: "2030-01-01T00:00:00Z",
 			files: map[string]string{
 				"alpha": definition("alpha", "https://alpha.example/"),
 				"beta":  "links: [not a definition",
 			},
-		})
-		Expect(res.Skipped).To(ConsistOf("beta"))
-		Expect(res.Removed).To(BeEmpty())
-		Expect(res.Held).To(BeEmpty())
-		b, err := definitions.Load(dir, "beta")
+		}
+		served[head.sha] = head
+		Expect(
+			definitions.Catalog(),
+		).Error().
+			To(MatchError(definitions.ErrNotFetched))
+		Expect(update.Ensure(context.Background(), client)).To(Succeed())
+		cat, err := definitions.Catalog()
 		Expect(err).NotTo(HaveOccurred())
-		Expect(b.Links).To(Equal([]string{"https://beta.example/"}))
-		cat, err := definitions.Catalog(dir)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(cat.Upstream.Commit).To(Equal(sha(1)))
+		Expect(cat.Definitions).To(HaveLen(1))
 		Expect(cat.Skipped).To(HaveLen(1))
 		Expect(cat.Skipped[0].File).To(Equal("beta.yml"))
+
+		Expect(update.Ensure(context.Background(), client)).To(Succeed())
+		res, err := update.Fetch(context.Background(), client)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res.Current).To(BeTrue())
+		Expect(archives).To(Equal(1))
 	})
 
-	It("remembers a refused removal", func() {
-		run(commit{
-			sha:  sha(1),
-			date: "2030-01-01T00:00:00Z",
-			files: map[string]string{
-				"alpha": definition("alpha", "https://alpha.example/"),
-			},
-		})
+	It("moves an indexer to a new version that keeps its hosts and login", func() {
+		old := definition("alpha", "https://alpha.one/")
+		configure(old, false)
+		next := strings.Replace(old, "selector: tr", "selector: tr.row", 1)
 		res := run(commit{
-			sha:  sha(2),
-			date: "2030-01-02T00:00:00Z",
-			files: map[string]string{
-				"beta": definition("beta", "https://beta.example/"),
-			},
+			sha: sha(1), date: "2030-01-01T00:00:00Z",
+			files: map[string]string{"alpha": next},
 		})
-		Expect(res.Held).To(ConsistOf("alpha"))
-		pending, err := update.List(dir)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(pending).To(HaveLen(1))
-		Expect(pending[0].Removed).To(BeTrue())
-		Expect(update.Reject(dir, "alpha")).To(Succeed())
+		Expect(res.Applied).To(ConsistOf("A"))
+		Expect(res.Held).To(BeEmpty())
+		Expect(carried()).To(Equal(spec(next)))
+		e, _ := config.FindIndexer("A")
+		Expect(e.Cardigann.Commit).To(Equal(sha(1)))
 
-		res = run(commit{
-			sha:  sha(3),
-			date: "2030-01-03T00:00:00Z",
+		By("removing the version no indexer is pinned to any more")
+		Expect(definitions.Pinned(
+			config.Get().DataDir, "alpha", cardiganntest.Commit(spec(old)),
+		)).Error().To(MatchError(definitions.ErrNotKept))
+
+		By("keeping it across a restart, with nothing fetched")
+		definitions.Install(nil)
+		Expect(carried()).To(Equal(spec(next)))
+	})
+
+	It("pins an indexer written without a commit to the catalog's", func() {
+		pinTo("", false)
+		body := definition("alpha", "https://alpha.zero/")
+		res := run(commit{
+			sha: sha(1), date: "2030-01-01T00:00:00Z",
+			files: map[string]string{"alpha": body},
+		})
+		Expect(res.Applied).To(ConsistOf("A"))
+		Expect(carried()).To(Equal(spec(body)))
+	})
+
+	It("reads a version that is not kept at its commit upstream", func() {
+		old := definition("alpha", "https://alpha.seven/")
+		served[sha(1)] = commit{sha: sha(1), files: map[string]string{"alpha": old}}
+		pinTo(sha(1), false)
+		res := run(commit{
+			sha: sha(2), date: "2030-01-02T00:00:00Z",
 			files: map[string]string{
-				"beta": definition("beta", "https://beta.example/"),
+				"alpha": definition("alpha", "https://alpha.seven.evil/"),
 			},
 		})
 		Expect(res.Held).To(ConsistOf("alpha"))
-		Expect(update.List(dir)).To(BeEmpty())
-		_, err = definitions.Load(dir, "alpha")
-		Expect(err).NotTo(HaveOccurred())
+		Expect(update.List()[0].Diff).
+			To(ContainSubstring(`-    "https://alpha.seven/"`))
+		Expect(carried()).To(Equal(spec(old)))
+	})
+
+	It("holds a domain change for approval, then writes it in", func() {
+		old := definition("alpha", "https://alpha.two/")
+		configure(old, false)
+		next := definition("alpha", "https://alpha.evil/")
+		res := run(commit{
+			sha: sha(2), date: "2030-01-02T00:00:00Z",
+			files: map[string]string{"alpha": next},
+		})
+		Expect(res.Held).To(ConsistOf("alpha"))
+		Expect(carried()).To(Equal(spec(old)))
+
+		pending := update.List()
+		Expect(pending).To(HaveLen(1))
+		p := pending[0]
+		Expect(p.Indexers).To(ConsistOf("A"))
+		Expect(p.Reasons).To(ContainElements(
+			"new domains: alpha.evil", "dropped domains: alpha.two",
+		))
+		Expect(p.Diff).To(ContainSubstring(`-    "https://alpha.two/"`))
+		Expect(p.Diff).To(ContainSubstring(`+    "https://alpha.evil/"`))
+		Expect(p.Commit).To(Equal(sha(2)))
+
+		Expect(update.Approve(context.Background(), "alpha")).To(Succeed())
+		Expect(carried()).To(Equal(spec(next)))
+		Expect(update.List()).To(BeEmpty())
+		Expect(update.Approve(context.Background(), "alpha")).
+			To(MatchError(update.ErrNoUpdate))
+	})
+
+	It("holds a path that points at another host without naming a scheme", func() {
+		old := definition("alpha", "https://alpha.three/")
+		configure(old, false)
+		res := run(commit{
+			sha: sha(3), date: "2030-01-03T00:00:00Z",
+			files: map[string]string{"alpha": strings.Replace(
+				old, "path: browse.php", "path: //alpha.evil/browse.php", 1,
+			)},
+		})
+		Expect(res.Held).To(ConsistOf("alpha"))
+		Expect(update.List()[0].Reasons).To(ConsistOf("new domains: alpha.evil"))
 	})
 
 	It("does not propose a version that was turned down again", func() {
-		run(
-			commit{
-				sha:  sha(1),
-				date: "2030-01-01T00:00:00Z",
-				files: map[string]string{
-					"alpha": definition("alpha", "https://alpha.example/"),
-				},
-			},
-		)
-		evil := definition("alpha", "https://alpha.evil/")
-		run(
-			commit{
-				sha:   sha(2),
-				date:  "2030-01-02T00:00:00Z",
-				files: map[string]string{"alpha": evil},
-			},
-		)
-		Expect(update.Reject(dir, "alpha")).To(Succeed())
-		Expect(update.List(dir)).To(BeEmpty())
+		old := definition("alpha", "https://alpha.four/")
+		configure(old, false)
+		evil := definition("alpha", "https://alpha.four.evil/")
+		run(commit{
+			sha: sha(4), date: "2030-01-04T00:00:00Z",
+			files: map[string]string{"alpha": evil},
+		})
+		Expect(update.Reject("alpha")).To(Succeed())
+		Expect(update.List()).To(BeEmpty())
 
-		res := run(
-			commit{
-				sha:   sha(3),
-				date:  "2030-01-03T00:00:00Z",
-				files: map[string]string{"alpha": evil},
-			},
-		)
-		Expect(res.Held).To(ConsistOf("alpha"))
-		Expect(update.List(dir)).To(BeEmpty())
+		run(commit{
+			sha: sha(5), date: "2030-01-05T00:00:00Z",
+			files: map[string]string{"alpha": evil},
+		})
+		Expect(update.List()).To(BeEmpty())
+		Expect(carried()).To(Equal(spec(old)))
 
-		run(
-			commit{
-				sha:  sha(4),
-				date: "2030-01-04T00:00:00Z",
-				files: map[string]string{
-					"alpha": definition("alpha", "https://alpha.other/"),
-				},
+		run(commit{
+			sha: sha(6), date: "2030-01-06T00:00:00Z",
+			files: map[string]string{
+				"alpha": definition("alpha", "https://alpha.four.other/"),
 			},
-		)
-		Expect(update.List(dir)).To(HaveLen(1))
+		})
+		Expect(update.List()).To(HaveLen(1))
 	})
+
+	It("holds every change on a read-only configuration", func() {
+		old := definition("alpha", "https://alpha.five/")
+		configure(old, true)
+		next := strings.Replace(old, "selector: tr", "selector: tr.row", 1)
+		res := run(commit{
+			sha: sha(7), date: "2030-01-07T00:00:00Z",
+			files: map[string]string{"alpha": next},
+		})
+		Expect(res.Applied).To(BeEmpty())
+		Expect(res.Held).To(ConsistOf("alpha"))
+		p := update.List()[0]
+		Expect(p.Reasons).To(BeEmpty())
+		Expect(p.Commit).To(Equal(sha(7)))
+		Expect(update.Approve(context.Background(), "alpha")).
+			To(MatchError(config.ErrReadOnly))
+	})
+
+	It(
+		"leaves an indexer on its copy when upstream drops or breaks its definition",
+		func() {
+			old := definition("alpha", "https://alpha.six/")
+			configure(old, false)
+			res := run(commit{
+				sha: sha(8), date: "2030-01-08T00:00:00Z",
+				files: map[string]string{"alpha": "links: [not a definition"},
+			})
+			Expect(res.Applied).To(BeEmpty())
+			Expect(res.Held).To(BeEmpty())
+			res = run(commit{
+				sha: sha(9), date: "2030-01-09T00:00:00Z",
+				files: map[string]string{
+					"beta": definition("beta", "https://beta.example/"),
+				},
+			})
+			Expect(res.Applied).To(BeEmpty())
+			Expect(res.Held).To(BeEmpty())
+			Expect(carried()).To(Equal(spec(old)))
+		},
+	)
 
 	It("takes a definition's v12 copy over its v11 one", func() {
-		run(
-			commit{
-				sha:  sha(1),
-				date: "2030-01-01T00:00:00Z",
-				files: map[string]string{
-					"alpha": definition("alpha", "https://alpha.example/"),
-					"beta":  definition("beta", "https://beta.example/"),
-				},
-				v12: map[string]string{
-					"alpha": definition("alpha", "https://alpha.v12.example/"),
-				},
+		head = commit{
+			sha: sha(1), date: "2030-01-01T00:00:00Z",
+			files: map[string]string{
+				"alpha": definition("alpha", "https://alpha.example/"),
+				"beta":  definition("beta", "https://beta.example/"),
 			},
-		)
-		a, err := definitions.Load(dir, "alpha")
-		Expect(err).NotTo(HaveOccurred())
+			v12: map[string]string{
+				"alpha": definition("alpha", "https://alpha.v12.example/"),
+			},
+		}
+		served[head.sha] = head
+		Expect(update.Ensure(context.Background(), client)).To(Succeed())
+		load := func(file string) *cardigann.Definition {
+			GinkgoHelper()
+			raw, err := definitions.Raw(file)
+			Expect(err).NotTo(HaveOccurred())
+			d, err := definitions.Decode(raw)
+			Expect(err).NotTo(HaveOccurred())
+			return d
+		}
+		a := load("alpha")
 		Expect(a.Links).To(Equal([]string{"https://alpha.v12.example/"}))
 		Expect(a.Source.Path).To(Equal("definitions/v12/alpha.yml"))
-		b, err := definitions.Load(dir, "beta")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(b.Source.Path).To(Equal("definitions/v11/beta.yml"))
-	})
-
-	It("lets a custom definition override the snapshot's", func() {
-		Expect(os.MkdirAll(definitions.Custom(dir), 0o750)).To(Succeed())
-		Expect(os.WriteFile(filepath.Join(definitions.Custom(dir), "yts.yml"),
-			[]byte(definition("yts", "https://mine.example/")), 0o600)).To(Succeed())
-		d, err := definitions.Load(dir, "yts")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(d.Links).To(Equal([]string{"https://mine.example/"}))
-		cat, err := definitions.Catalog(dir)
-		Expect(err).NotTo(HaveOccurred())
-		for _, s := range cat.Definitions {
-			if s.File == "yts" {
-				Expect(s.Custom).To(BeTrue())
-			}
-		}
-		// The embedded snapshot still serves everything else.
-		_, err = definitions.Load(dir, "nyaasi")
-		Expect(err).NotTo(HaveOccurred())
+		Expect(load("beta").Source.Path).To(Equal("definitions/v11/beta.yml"))
 	})
 })
 

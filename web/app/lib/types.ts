@@ -1353,8 +1353,8 @@ export type CustomFormatTestResult = {
 // "torznab" covers plain Torznab endpoints and Jackett (its /indexers/all
 // aggregate feed is standard Torznab). "prowlarr" uses Prowlarr's native JSON
 // search API, the only way to query all of Prowlarr's indexers at once.
-// "cardigann" is a tracker streamline runs itself from an embedded
-// definition, edited through its own form (CardigannIndexerForm).
+// "cardigann" is a tracker streamline runs itself from a Prowlarr/Indexers
+// definition it carries, edited through its own form (CardigannIndexerForm).
 export type IndexerProtocol = "torznab" | "prowlarr" | "cardigann";
 export type EditableIndexerProtocol = Exclude<IndexerProtocol, "cardigann">;
 
@@ -1366,8 +1366,10 @@ export type Indexer = {
 	use_ssl?: boolean;
 	api_key_set: boolean;
 	protocol: IndexerProtocol;
-	// The embedded definition a "cardigann" indexer runs.
+	// The definition a "cardigann" indexer runs, and the upstream revision
+	// the copy it carries was converted from.
 	definition?: string;
+	definition_commit?: string;
 	priority?: number;
 	enabled: boolean;
 	// The operator's word for it: Torznab carries no privacy flag. Feeds
@@ -1406,7 +1408,6 @@ export type CardigannSummary = {
 	captcha: boolean;
 	challenge: boolean;
 	categories: string[];
-	custom: boolean;
 };
 
 export type CardigannCatalog = {
@@ -1431,9 +1432,11 @@ export type CardigannUpdate = {
 	file: string;
 	name: string;
 	reasons: string[];
-	removed: boolean;
 	indexers: string[];
 	diff: string;
+	// The held version's upstream revision, which a read-only configuration
+	// sets as the entry's cardigann.commit by hand.
+	commit: string;
 };
 
 export type CardigannUpdates = {

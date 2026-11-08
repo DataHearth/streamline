@@ -40,7 +40,7 @@
 	};
 
 	// Prowlarr aggregates via its native API, a built-in indexer runs an
-	// embedded definition, everything else is a Torznab feed (a single
+	// Prowlarr/Indexers definition, everything else is a Torznab feed (a single
 	// tracker, or a Jackett /all aggregate). Drives the card badge.
 	function provider(i: Indexer): { label: string; hint: string; logo?: string } {
 		switch (i.protocol) {

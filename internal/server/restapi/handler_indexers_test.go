@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/internal/cardigann/engine"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/testutil/cardiganntest"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
@@ -274,6 +275,7 @@ var _ = Describe(
 			})
 
 			It("refuses a built-in draft whose proxy is link-local", func() {
+				cardiganntest.Install()
 				body := `{"name":"draft","protocol":"cardigann","cardigann":` +
 					`{"definition":"yts","proxy":"http://169.254.169.254:80"}}`
 
@@ -302,9 +304,12 @@ var _ = Describe(
 
 		Describe("a cardigann indexer", func() {
 			BeforeEach(func() {
+				cardiganntest.Install()
 				configtest.SetupFile(indexerOverride(map[string]any{
 					"name": "YTS", "protocol": "cardigann", "enabled": true,
-					"cardigann": map[string]any{"definition": "yts"},
+					"cardigann": map[string]any{
+						"definition": "yts", "commit": cardiganntest.Upstream.Commit,
+					},
 				}))
 			})
 
@@ -440,6 +445,7 @@ var _ = Describe(
 					"name": "3D", "protocol": "cardigann", "enabled": true,
 					"cardigann": map[string]any{
 						"definition": "3dtorrents",
+						"commit":     cardiganntest.Upstream.Commit,
 						"settings": map[string]any{
 							"username": "u",
 							"password": "p",
@@ -487,20 +493,11 @@ var _ = Describe(
 		})
 
 		Describe("the definition catalog", func() {
-			It("lists every definition in force", func() {
-				resp := app.do(
-					app.req(http.MethodGet, "/api/v1/cardigann/catalog", "", nil),
-				)
-				defer resp.Body.Close()
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				var got CardigannCatalog
-				Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
-				Expect(len(got.Definitions)).To(BeNumerically(">", 500))
-			})
+			BeforeEach(cardiganntest.Install)
 
 			It("describes a definition's settings, its info as plain text", func() {
 				resp := app.do(app.req(http.MethodGet,
-					"/api/v1/cardigann/catalog/0dayfiles-api", "", nil))
+					"/api/v1/cardigann/catalog/3dtorrents", "", nil))
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				var got CardigannDefinition
@@ -508,15 +505,17 @@ var _ = Describe(
 				var info, key *CardigannSetting
 				for i := range got.Settings {
 					switch got.Settings[i].Name {
-					case "info_key":
+					case "info":
 						info = &got.Settings[i]
-					case "apikey":
+					case "password":
 						key = &got.Settings[i]
 					}
 				}
 				Expect(key.Secret).To(BeTrue())
-				Expect(info.Default).To(HaveValue(ContainSubstring("0DayFiles")))
-				Expect(info.Default).To(HaveValue(Not(ContainSubstring("<a"))))
+				Expect(
+					info.Default,
+				).To(HaveValue(ContainSubstring("Torrents per page:")))
+				Expect(info.Default).To(HaveValue(Not(ContainSubstring("<b"))))
 			})
 
 			It("answers 404 for a definition nobody ships", func() {

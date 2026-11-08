@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/datahearth/streamline/internal/cardigann/definitions"
-
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
 	entbook "github.com/datahearth/streamline/ent/book"
@@ -586,6 +584,10 @@ func indexerToAPI(e config.IndexerEntry) Indexer {
 	if e.Cardigann != nil {
 		def := e.Cardigann.Definition
 		i.Definition = &def
+		if e.Cardigann.Commit != "" {
+			commit := e.Cardigann.Commit
+			i.DefinitionCommit = &commit
+		}
 		if e.Cardigann.Site != "" {
 			site := e.Cardigann.Site
 			i.Site = &site
@@ -1637,7 +1639,9 @@ func cardigannSettingsToAPI(
 	c *config.CardigannIndexer,
 ) (map[string]string, []string) {
 	shown, set := map[string]string{}, []string{}
-	def, err := definitions.Load(config.Get().CardigannDir(), c.Definition)
+	def, err := config.Get().CardigannDefinition(
+		config.IndexerEntry{Cardigann: c},
+	)
 	if err != nil {
 		return shown, set
 	}

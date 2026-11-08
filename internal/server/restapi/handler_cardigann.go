@@ -6,23 +6,7 @@ import (
 
 	"github.com/datahearth/streamline/internal/cardigann/definitions"
 	"github.com/datahearth/streamline/internal/cardigann/update"
-	"github.com/datahearth/streamline/internal/config"
 )
-
-// definitionUsers maps a definition file to the configured indexers that
-// run it.
-func definitionUsers() map[string][]string {
-	out := map[string][]string{}
-	for _, ix := range config.Get().Indexers {
-		if ix.Protocol == "cardigann" && ix.Cardigann != nil {
-			out[ix.Cardigann.Definition] = append(
-				out[ix.Cardigann.Definition],
-				ix.Name,
-			)
-		}
-	}
-	return out
-}
 
 func (s *Server) ListCardigannUpdates(
 	ctx context.Context,
@@ -33,41 +17,20 @@ func (s *Server) ListCardigannUpdates(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	dir := config.Get().CardigannDir()
-	snap, err := definitions.Snapshot(dir)
-	if err != nil {
-		return ListCardigannUpdates500JSONResponse{
-			InternalErrorJSONResponse: errInternal(ctx, err),
-		}, nil
-	}
-	pending, err := update.List(dir)
-	if err != nil {
-		return ListCardigannUpdates500JSONResponse{
-			InternalErrorJSONResponse: errInternal(ctx, err),
-		}, nil
-	}
-	users := definitionUsers()
-	out := CardigannUpdates{
-		Upstream: CardigannUpstream{
-			Commit: snap.Upstream.Commit,
-			Date:   snap.Upstream.Date,
-		},
-		Pending: make([]CardigannUpdate, 0, len(pending)),
+	pending := update.List()
+	out := CardigannUpdates{Pending: make([]CardigannUpdate, 0, len(pending))}
+	if set := definitions.Current(); set != nil {
+		up := set.Upstream()
+		out.Upstream = CardigannUpstream{Commit: up.Commit, Date: up.Date}
 	}
 	for _, p := range pending {
-		diff, err := update.Diff(dir, p.File)
-		if err != nil {
-			return ListCardigannUpdates500JSONResponse{
-				InternalErrorJSONResponse: errInternal(ctx, err),
-			}, nil
-		}
-		ixs := users[p.File]
-		if ixs == nil {
-			ixs = []string{}
+		reasons := p.Reasons
+		if reasons == nil {
+			reasons = []string{}
 		}
 		out.Pending = append(out.Pending, CardigannUpdate{
-			File: p.File, Name: p.Name, Reasons: p.Reasons, Removed: p.Removed,
-			Indexers: ixs, Diff: diff,
+			File: p.File, Name: p.Name, Reasons: reasons, Indexers: p.Indexers,
+			Diff: p.Diff, Commit: p.Commit,
 		})
 	}
 	return ListCardigannUpdates200JSONResponse(out), nil
@@ -82,10 +45,14 @@ func (s *Server) ApproveCardigannUpdate(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	switch err := update.Approve(config.Get().CardigannDir(), request.File); {
+	switch err := update.Approve(ctx, request.File); {
 	case errors.Is(err, update.ErrNoUpdate):
 		return ApproveCardigannUpdate404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	case configLocked(err):
+		return ApproveCardigannUpdate403JSONResponse{
+			ForbiddenJSONResponse: forbiddenResp(err.Error()),
 		}, nil
 	case err != nil:
 		return ApproveCardigannUpdate500JSONResponse{
@@ -104,14 +71,9 @@ func (s *Server) RejectCardigannUpdate(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	switch err := update.Reject(config.Get().CardigannDir(), request.File); {
-	case errors.Is(err, update.ErrNoUpdate):
+	if err := update.Reject(request.File); errors.Is(err, update.ErrNoUpdate) {
 		return RejectCardigannUpdate404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
-		}, nil
-	case err != nil:
-		return RejectCardigannUpdate500JSONResponse{
-			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return RejectCardigannUpdate204Response{}, nil

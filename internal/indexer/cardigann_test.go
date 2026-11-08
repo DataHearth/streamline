@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/testutil/cardiganntest"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
@@ -64,12 +65,15 @@ func routeAll(h http.HandlerFunc) func() []*url.URL {
 
 var _ = Describe("a cardigann indexer", Label("unit", "indexers"), func() {
 	BeforeEach(func() {
+		cardiganntest.Install()
 		configtest.Setup(map[string]any{
 			"indexers": []map[string]any{{
-				"name":      "YTS",
-				"protocol":  "cardigann",
-				"enabled":   true,
-				"cardigann": map[string]any{"definition": "yts"},
+				"name":     "YTS",
+				"protocol": "cardigann",
+				"enabled":  true,
+				"cardigann": map[string]any{
+					"definition": "yts", "commit": cardiganntest.Upstream.Commit,
+				},
 			}},
 		})
 	})
@@ -140,6 +144,7 @@ var _ = Describe(
 	func() {
 		It("logs in once for two calls that both found no session", func() {
 			name := "3d-" + CurrentSpecReport().LeafNodeText
+			cardiganntest.Install()
 			configtest.Setup(map[string]any{
 				"indexers": []map[string]any{{
 					"name":     name,
@@ -147,6 +152,7 @@ var _ = Describe(
 					"enabled":  true,
 					"cardigann": map[string]any{
 						"definition": "3dtorrents",
+						"commit":     cardiganntest.Upstream.Commit,
 						"settings": map[string]any{
 							"username": "u", "password": "p",
 						},
@@ -230,6 +236,7 @@ var _ = Describe(
 			// The pacer is keyed by name: one per spec keeps them from waiting
 			// on each other.
 			name = "city-" + CurrentSpecReport().LeafNodeText
+			cardiganntest.Install()
 			configtest.Setup(map[string]any{
 				"indexers": []map[string]any{{
 					"name":     name,
@@ -237,6 +244,7 @@ var _ = Describe(
 					"enabled":  true,
 					"cardigann": map[string]any{
 						"definition": "13city",
+						"commit":     cardiganntest.Upstream.Commit,
 						"settings":   map[string]any{"cookie": "uid=1; pass=abc"},
 					},
 				}},

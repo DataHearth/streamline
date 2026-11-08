@@ -1,0 +1,7 @@
+The .yml files here are unmodified Cardigann indexer definitions from
+https://github.com/Prowlarr/Indexers at commit
+8b78ad64e4d1dfc531af697c236d570f77c1a22c (definitions/v11), used as test
+fixtures only. Most Prowlarr definitions are synced from Jackett
+(https://github.com/Jackett/Jackett), distributed under the GNU General
+Public License; all credit for them belongs to the Prowlarr and Jackett
+contributors.

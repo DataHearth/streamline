@@ -17,8 +17,8 @@ import (
 // regex — in a filter or inside a template's re_replace call — compiles on the
 // engine it is assigned, and every template parses with the engine's
 // function set. Convert only produces definitions that pass; Check is for
-// what comes back from storage, so the embedded snapshot's test runs it over
-// every file and a hand edit cannot slip past.
+// what comes back from storage — the copy an indexer's configuration entry
+// carries, which a hand edit can reach.
 //
 // It also refuses a template that reads a setting or field the definition
 // does not declare. Prowlarr renders an unknown variable as an empty string;

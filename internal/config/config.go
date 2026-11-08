@@ -25,6 +25,8 @@ import (
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
 
+	"github.com/datahearth/streamline/internal/cardigann"
+	"github.com/datahearth/streamline/internal/cardigann/convert"
 	"github.com/datahearth/streamline/internal/cardigann/definitions"
 	"github.com/datahearth/streamline/internal/cardigann/engine"
 	"github.com/datahearth/streamline/internal/quality"
@@ -76,13 +78,6 @@ type Config struct {
 
 	BookQualityProfiles        []BookQualityProfileEntry `koanf:"book_quality_profiles"         validate:"unique=Name,dive"`
 	BookQualityDefaultProfiles BookQualityDefaults       `koanf:"book_quality_default_profiles"`
-}
-
-// CardigannDir is where built-in indexer definitions beyond the embedded
-// snapshot live: the runtime update's, those held for approval, and the
-// operator's own (internal/cardigann/definitions).
-func (c Config) CardigannDir() string {
-	return filepath.Join(c.DataDir, "cardigann")
 }
 
 // DatabasePath is the SQLite database location, derived from DataDir.
@@ -1786,15 +1781,16 @@ func (c *Config) checkIndexers() []error {
 	return errs
 }
 
-// warnUnusableCardigann names every cardigann entry the definitions in force
-// can no longer run, so a drift the update job or a new snapshot brought is
-// in the boot log rather than only in each failed search.
+// warnUnusableCardigann names every cardigann entry the engine cannot run
+// with the definition it carries — one written by hand, or by an older
+// engine — so it is in the boot log rather than only in each failed search.
 func (c *Config) warnUnusableCardigann() {
 	for _, ix := range c.Indexers {
 		if ix.Protocol != "cardigann" {
 			continue
 		}
-		if err := CheckCardigann(c.CardigannDir(), ix); err != nil {
+		if err := c.CheckCardigann(ix); err != nil &&
+			!errors.Is(err, definitions.ErrNotKept) {
 			slog.WarnContext(
 				context.Background(),
 				"built-in indexer cannot run until its definition or settings are fixed",
@@ -1820,15 +1816,33 @@ func CheckCardigannProxy(proxy string) error {
 	return nil
 }
 
-// CheckCardigann reports whether a cardigann entry names a definition the
-// engine can run with its settings, among those in force under dir.
-func CheckCardigann(dir string, ix IndexerEntry) error {
+// CardigannDefinition is the version a cardigann entry is pinned to, as
+// kept under the data directory (definitions.ErrNotKept when it is not:
+// definitions.Resolve fetches it).
+func (c *Config) CardigannDefinition(
+	ix IndexerEntry,
+) (*cardigann.Definition, error) {
 	if ix.Cardigann == nil || ix.Cardigann.Definition == "" {
-		return errors.New("cardigann.definition is required")
+		return nil, errors.New("cardigann.definition is required")
 	}
-	def, err := definitions.Load(dir, ix.Cardigann.Definition)
+	b, err := definitions.Pinned(
+		c.DataDir, ix.Cardigann.Definition, ix.Cardigann.Commit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return definitions.Decode(b)
+}
+
+// CheckCardigann reports whether the engine can run a cardigann entry's
+// definition with its settings.
+func (c *Config) CheckCardigann(ix IndexerEntry) error {
+	def, err := c.CardigannDefinition(ix)
 	if err != nil {
 		return err
+	}
+	if err := convert.Check(def); err != nil {
+		return fmt.Errorf("cardigann.definition: %w", err)
 	}
 	if _, err := engine.Site(def, ix.Cardigann.Site); err != nil {
 		return err

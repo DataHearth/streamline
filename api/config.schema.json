@@ -122,7 +122,7 @@
         "protocol": {
           "type": "string",
           "enum": ["torznab", "prowlarr", "cardigann"],
-          "description": "cardigann runs the tracker from an embedded Prowlarr/Jackett definition, configured under cardigann."
+          "description": "cardigann runs the tracker from a Prowlarr/Indexers definition, carried and configured under cardigann."
         },
         "priority": { "type": "integer", "minimum": 0, "maximum": 255 },
         "enabled": { "type": "boolean" },
@@ -134,7 +134,12 @@
           "properties": {
             "definition": {
               "type": "string",
-              "description": "The definition's file name in the embedded snapshot, without .yml."
+              "description": "The definition's upstream file name, without .yml."
+            },
+            "commit": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$",
+              "description": "The Prowlarr/Indexers commit the definition is read at. Written when the indexer is saved through the API and moved by the cardigann-update job; left out, the job's next run sets the catalog's."
             },
             "site": {
               "type": "string",

@@ -1,5 +1,5 @@
 // Package convert turns an upstream Cardigann definition (Prowlarr/Indexers,
-// itself synced from Jackett) into the form streamline embeds and runs.
+// itself synced from Jackett) into the form streamline runs.
 //
 // Upstream definitions are written for a C# engine: .NET regexes, .NET date
 // layouts, and a template dialect that is Go's text/template in syntax but
@@ -7,13 +7,9 @@
 // rewritten here, once. A regex RE2 cannot express with .NET's meaning is
 // tagged for regexp2 instead of rewritten; a date layout becomes every Go
 // layout the .NET one accepts. What neither covers fails the definition with
-// a reason, which the sync records instead of shipping a tracker that
+// a reason, which the catalog records instead of offering a tracker that
 // half-works. The few .NET behaviours left to the engine are listed in
 // docs/agents/cardigann.md.
-//
-// The same Convert runs in two places: the build-time sync that produces the
-// embedded snapshot, and the runtime definition update. A definition
-// therefore reaches the engine through exactly one set of rules either way.
 package convert
 
 import (

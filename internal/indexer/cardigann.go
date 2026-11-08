@@ -125,12 +125,16 @@ func newCardigann(
 	if ix.Cardigann == nil {
 		return nil, fmt.Errorf("indexer %q has no cardigann block", ix.Name)
 	}
-	def, err := definitions.Load(
-		config.Get().CardigannDir(),
-		ix.Cardigann.Definition,
+	b, err := definitions.Resolve(
+		ctx, otelx.HTTPClient, config.Get().DataDir,
+		ix.Cardigann.Definition, ix.Cardigann.Commit,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("indexer %q: %w", ix.Name, err)
+	}
+	def, err := definitions.Decode(b)
+	if err != nil {
+		return nil, fmt.Errorf("indexer %q: %w", ix.Name, err)
 	}
 	c := &Cardigann{name: ix.Name, store: store, hash: configHash(ix)}
 	var session engine.Session
@@ -512,12 +516,9 @@ func cardigannSite(ix config.IndexerEntry) (*url.URL, error) {
 	if ix.Cardigann == nil {
 		return nil, fmt.Errorf("indexer %q has no cardigann block", ix.Name)
 	}
-	def, err := definitions.Load(
-		config.Get().CardigannDir(),
-		ix.Cardigann.Definition,
-	)
+	def, err := config.Get().CardigannDefinition(ix)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("indexer %q: %w", ix.Name, err)
 	}
 	return engine.Site(def, ix.Cardigann.Site)
 }

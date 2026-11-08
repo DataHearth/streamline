@@ -34,6 +34,7 @@ import (
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/testutil/cardiganntest"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
@@ -222,12 +223,16 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 
 		Context("with a native cardigann indexer", func() {
 			BeforeEach(func() {
+				cardiganntest.Install()
 				configtest.Setup(map[string]any{
 					"indexers": []map[string]any{{
-						"name":      "YTS",
-						"protocol":  "cardigann",
-						"enabled":   true,
-						"cardigann": map[string]any{"definition": "yts"},
+						"name":     "YTS",
+						"protocol": "cardigann",
+						"enabled":  true,
+						"cardigann": map[string]any{
+							"definition": "yts",
+							"commit":     cardiganntest.Upstream.Commit,
+						},
 					}},
 				})
 			})

@@ -564,11 +564,12 @@ The built-in engine treats what a release names as untrusted:
 
 #### Built-in indexers (`protocol: cardigann`)
 
-Streamline ships the tracker definitions Prowlarr and Jackett use and can run them itself, without Prowlarr or Jackett. The easy way to add one is Settings → Indexers → **Add built-in**: search the catalog, pick a tracker, fill in the form generated from its settings. In this file it looks like this:
+Streamline runs the tracker definitions Prowlarr and Jackett use itself, without Prowlarr or Jackett. It reads them from [Prowlarr/Indexers](https://github.com/Prowlarr/Indexers) on GitHub when it starts and every day after, so the server needs to reach `api.github.com` and `codeload.github.com`. The easy way to add one is Settings → Indexers → **Add built-in**: search the catalog, pick a tracker, fill in the form generated from its settings. Saving it pins the indexer to the Prowlarr/Indexers commit it was read at, and keeps that version of the definition in the data directory (`<data_dir>/cardigann/`), so the indexer keeps working the same way whether or not GitHub can be reached, until you take a new version. On a fresh data directory, the pinned version is read from GitHub again the first time it is needed. In this file it looks like this:
 
 | Field | Required | Notes |
 | --- | --- | --- |
 | `definition` | ✅ | The definition's file name in [Prowlarr/Indexers](https://github.com/Prowlarr/Indexers/tree/master/definitions) (`v12`, else `v11`) without `.yml` — `yts`, `nyaasi`, `thepiratebay` |
+| `commit` | | The Prowlarr/Indexers commit the definition is read at. Settings → Indexers writes it for you; left out, the next definition update sets the latest one |
 | `site` | | One of the definition's own links, when the first one is blocked or slow for you |
 | `settings` | | The definition's settings by name. One you leave out takes its default; a checkbox is `"true"` or `"false"`, a select one of its option keys |
 | `proxy` | | An `http://`, `https://` or `socks5://` proxy the tracker's requests go through — and the challenge solver's browser too (see below). A proxy that decrypts HTTPS sees your tracker credentials |
@@ -580,6 +581,7 @@ indexers:
     enabled: true
     cardigann:
       definition: yts
+      commit: 8b78ad64e4d1dfc531af697c236d570f77c1a22c
   - name: Nyaa
     protocol: cardigann
     enabled: true
@@ -596,9 +598,11 @@ Private trackers work too: give the definition's settings — usually `username`
 | `solver_url` | empty | FlareSolverr-compatible service, e.g. `http://trawl:8191`. Empty: a challenged search fails and says so |
 | `solver_timeout` | `60s` | How long one solve may take |
 
-**Definition updates.** The definitions ship with Streamline, and the `cardigann-update` [scheduled job](Scheduled-Jobs) also fetches Prowlarr's latest ones every day into `<data_dir>/cardigann/current`, so a tracker that moved to a new domain keeps working between releases. An update that would send one of your configured trackers to other domains, or change how it logs in, is not applied by itself: Settings → Indexers shows it with the exact change, and you approve it or keep the version you have. A version you turn down is not offered again.
+**Definition updates.** The `cardigann-update` [scheduled job](Scheduled-Jobs) reads Prowlarr's latest definitions every day and moves each of your built-in indexers to the new version of its own, so a tracker that moved to a new domain keeps working. An update that would send one of your configured trackers to other domains, or change how it logs in, is not applied by itself: Settings → Indexers shows it with the exact change, and you approve it or keep the version you have. A version you turn down is not offered again until Streamline restarts. A definition Prowlarr removes leaves your indexer on the version it has.
 
-**Your own definitions.** Drop a Cardigann YAML file into `<data_dir>/cardigann/custom/` — `mytracker.yml` — and use `definition: mytracker`. A file there with the same name as a shipped definition replaces it. It is read in the same format as Prowlarr's `definitions/v12` and checked the same way: an indexer using a file Streamline cannot read is refused, with the reason.
+**Read-only configuration.** With `read_only: true` Streamline cannot write the file, so every update waits under Settings → Indexers: **Copy commit** puts the new version's commit on your clipboard, to set as the indexer's `commit` in your config and redeploy.
+
+Streamline checks an indexer's definition when it loads (regexes compile, templates parse, settings and site match it); one that does not hold up logs a warning and stays unused, and the rest of Streamline starts as usual.
 
 ### quality_profiles
 
