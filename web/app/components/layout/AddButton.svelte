@@ -5,6 +5,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import { cn } from "@lib/cn";
 	import { bulkMode } from "@lib/bulk-mode.svelte";
+	import { openAdd } from "@lib/add-flow";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Phone only. Adding is a repeated one-handed action, and the top-right
@@ -87,14 +88,7 @@
 
 	function pick(id: Item["id"]) {
 		open = false;
-		if (id === "movie")
-			window.dispatchEvent(new CustomEvent("streamline:open-add-movie"));
-		else if (id === "series")
-			window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
-		else if (id === "artist")
-			window.dispatchEvent(new CustomEvent("streamline:open-add-artist"));
-		else if (id === "book")
-			window.dispatchEvent(new CustomEvent("streamline:open-add-book"));
+		if (id !== "import") openAdd(id);
 	}
 </script>
 

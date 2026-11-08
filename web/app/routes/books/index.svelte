@@ -13,6 +13,7 @@
 	import ShelfCard from "@components/books/ShelfCard.svelte";
 	import type { BookCounts, ShelfItem } from "@lib/music-books";
 	import type { ScheduleList } from "@lib/types";
+	import { openAdd } from "@lib/add-flow";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Shelves by kind; "See all" turns the page into that kind's full grid,
@@ -262,7 +263,7 @@
 		onReset={reset}
 		add={{
 			label: auth.canAddDirectly ? i18n.action_add_book() : i18n.action_request_book_title(),
-			onClick: () => window.dispatchEvent(new CustomEvent("streamline:open-add-book")),
+			onClick: () => openAdd("book"),
 		}}
 	/>
 

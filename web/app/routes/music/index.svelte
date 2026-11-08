@@ -16,6 +16,7 @@
 	import LetterRail from "@components/music/LetterRail.svelte";
 	import { LETTERS, sortLetter, type Artist, type ArtistCounts } from "@lib/music-books";
 	import type { ScheduleList } from "@lib/types";
+	import { openAdd } from "@lib/add-flow";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The music library is the Series pattern: one card per artist, a grid or a
@@ -426,7 +427,7 @@
 		onViewChange={(v) => (view = v)}
 		add={{
 			label: auth.canAddDirectly ? i18n.action_add_artist() : i18n.action_request_artist_title(),
-			onClick: () => window.dispatchEvent(new CustomEvent("streamline:open-add-artist")),
+			onClick: () => openAdd("artist"),
 		}}
 	/>
 

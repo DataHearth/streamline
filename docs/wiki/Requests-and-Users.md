@@ -77,6 +77,8 @@ From a request-only user's side, this is the entire app: search, find, ask.
 
 Search returns titles from TMDB (films), TVDB (shows), MusicBrainz (artists and albums) and Hardcover (books and series, when a Hardcover key is configured), including things not in the library. Pick one, optionally state a quality preference, and submit.
 
+The app's own search (the search bar at the top of the page, the search icon on a phone, or <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>) looks in the library first, and from two typed characters shows a **Not in your library? Request** strip, pinned below the results (above them on a phone or tablet), whether or not the library matched: **Movie**, **Series**, **Artist** and **Book** open the request screen already searching what was typed. A title the household doesn't have is therefore one tap from a request rather than a "no matches".
+
 Their **Requests** page lists what they've asked for and where each one stands. They can't see anyone else's.
 
 ---
