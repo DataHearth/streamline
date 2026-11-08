@@ -27,7 +27,7 @@ without reading why it is shaped that way.**
 ## Upkeep
 
 - A change to one of these subsystems updates its file **in the same change**, exactly as
-  it would have updated `CLAUDE.md` before the split.
+  `CLAUDE.md` itself is kept.
 - Keep the `CLAUDE.md` stub true. It states the shape and the load-bearing invariants; if a
   change moves those, the stub moves with it.
 - New page = new row above **and** a stub in `CLAUDE.md`. A file nothing points at is a
