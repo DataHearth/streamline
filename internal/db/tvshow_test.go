@@ -364,6 +364,39 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 			},
 		)
 
+		It("keeps the stored TMDB id when TMDB failed", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "X", Year: 2020, TvdbID: 14,
+				ExternalIDs: ExternalIDs{"tmdb": "1399", "imdb": "tt0944947"},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// TMDB failed: TVDB's stale mapping must not replace the one TMDB
+			// confirmed, and the other ids still follow TVDB.
+			Expect(
+				store.UpdateTVShowMetadata(ctx, show.ID, UpdateTVShowMetadataParams{
+					Title: "X", Year: 2020, KeepTMDBID: true,
+					ExternalIDs: ExternalIDs{"tmdb": "999", "imdb": "tt0944948"},
+				}),
+			).To(Succeed())
+			ids, err := store.TitleExternalIDs(ctx, ExternalIDsOfSeries, show.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(Equal(ExternalIDs{"tmdb": "1399", "imdb": "tt0944948"}))
+
+			// TMDB answered: its id wins.
+			Expect(
+				store.UpdateTVShowMetadata(ctx, show.ID, UpdateTVShowMetadataParams{
+					Title:       "X",
+					Year:        2020,
+					Rating:      &TVShowRating{Rating: 8.5, VoteCount: 25000},
+					ExternalIDs: ExternalIDs{"tmdb": "1400"},
+				}),
+			).To(Succeed())
+			ids, err = store.TitleExternalIDs(ctx, ExternalIDsOfSeries, show.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(Equal(ExternalIDs{"tmdb": "1400"}))
+		})
+
 		It(
 			"keeps the stored rating when the refresh carries none, writes one it does",
 			func() {

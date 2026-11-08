@@ -224,6 +224,7 @@ var _ = Describe("Series ratings", Label("unit", "metadata"), func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(d.Title).To(Equal("Breaking Bad"))
 				Expect(d.RatingFetched).To(BeFalse())
+				Expect(d.RatingFailed).To(BeTrue())
 				Expect(d.TMDBID).To(Equal(uint32(1396)))
 			},
 		)

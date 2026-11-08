@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
@@ -11,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/season"
@@ -85,7 +87,10 @@ type UpdateTVShowMetadataParams struct {
 	Runtime       uint16
 	// Rating nil keeps the stored rating: the rating provider was not asked
 	// or failed, and a TMDB outage must not zero every show's rating.
-	Rating      *TVShowRating
+	Rating *TVShowRating
+	// KeepTMDBID keeps the stored `tmdb` external id over the one in
+	// ExternalIDs: TMDB failed, so that one is TVDB's mapping alone.
+	KeepTMDBID  bool
 	Genres      []string
 	Aliases     []string
 	Cast        []metadata.CastMember
@@ -149,13 +154,50 @@ func (db *DB) UpdateTVShowMetadata(
 		tx.Rollback()
 		return err
 	}
+	ids, err := keepStoredTMDBID(ctx, tx, id, p)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
 	if err := replaceExternalIDs(
-		ctx, tx.Client(), ExternalIDsOfSeries, id, p.ExternalIDs,
+		ctx, tx.Client(), ExternalIDsOfSeries, id, ids,
 	); err != nil {
 		tx.Rollback()
 		return err
 	}
 	return tx.Commit()
+}
+
+// keepStoredTMDBID is the external ids a refresh writes. The `tmdb` id
+// travels with the rating: TMDB's own answer names the series it rated, and
+// it wins over TVDB's mapping (stale, or missing). When TMDB failed the
+// refresh only has TVDB's mapping, so it keeps the stored `tmdb` id rather
+// than reverting it until the next refresh. Without a TMDB key TVDB's
+// mapping is the only one, and it is written as is.
+func keepStoredTMDBID(
+	ctx context.Context,
+	tx *ent.Tx,
+	id uint32,
+	p UpdateTVShowMetadataParams,
+) (ExternalIDs, error) {
+	if !p.KeepTMDBID || p.ExternalIDs == nil {
+		return p.ExternalIDs, nil
+	}
+	stored, err := tx.ExternalID.Query().
+		Where(
+			externalid.TvShowID(id),
+			externalid.SourceEQ(externalid.Source(metadata.SourceTMDB)),
+		).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return p.ExternalIDs, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("stored tmdb id: %w", err)
+	}
+	ids := maps.Clone(p.ExternalIDs)
+	ids[metadata.SourceTMDB] = stored.Value
+	return ids, nil
 }
 
 // ReconcileEpisodes syncs the stored season/episode tree with freshly fetched
