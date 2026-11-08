@@ -12,6 +12,7 @@
 	import { formatRelative } from "@lib/dates";
 	import { artistPosterUrl } from "@lib/posters";
 	import MediaHero from "@components/shared/MediaHero.svelte";
+	import { artistLinks } from "@lib/external-links";
 	import MonitorSelect from "@components/shared/MonitorSelect.svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
@@ -359,6 +360,7 @@
 			{facts}
 			meta={meta}
 			overview={artist.overview}
+			links={artistLinks(artist)}
 		>
 			{#snippet art()}
 				<div class="relative">
@@ -515,6 +517,7 @@
 				<ReleaseAccordion
 					releases={artist.albums.map((r) => withTrackCredits(r, trackCredits))}
 					artistId={artist.id}
+					artistName={artist.name}
 					openId={open}
 					onToggle={(rid) => (openId = open === rid ? -1 : rid)}
 					{canEdit}
@@ -551,6 +554,7 @@
 					<ReleasePanel
 						release={withTrackCredits(selected, trackCredits)}
 						artistId={artist.id}
+						artistName={artist.name}
 						{canEdit}
 						onSearch={() => searchRelease(selected)}
 						onManualSearch={() => openManual(String(selected.id))}

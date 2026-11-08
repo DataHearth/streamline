@@ -99,6 +99,8 @@ func toBookEditions(b *ent.Book) []BookEdition {
 			Duration:   e.DurationSeconds,
 			Narrator:   optString(e.Narrator),
 			Translator: optString(e.Translator),
+			Isbn13:     optString(e.Isbn13),
+			Asin:       optString(e.Asin),
 		}
 		if e.Original {
 			t := true
