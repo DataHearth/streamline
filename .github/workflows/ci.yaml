@@ -291,20 +291,16 @@ jobs:
       - name: Run tests
         if: needs.changes.outputs.go == 'true'
         run: task test JUNIT_DIR=/tmp/streamline -- --keep-going
-      # test:e2e's --timeout (1m15s) counts the build. From a cold Go build
-      # cache, compiling the web suite takes about 1m40s on a 4-vCPU runner
-      # against some 25s of specs, so a cache miss failed on the timeout with
-      # nothing wrong. Compiling here first leaves the cap to the specs.
-      - name: Compile frontend test binaries
-        if: needs.changes.outputs.go != 'true'
-        run: go test -count=1 -run '^$' ./e2e/web ./internal/server/web
       - name: Run frontend tests
         if: needs.changes.outputs.go != 'true'
         # CLI_ARGS replaces each task's package list. Both run whatever the
-        # first one does, so one report covers everything.
+        # first one does, so one report covers everything. test:e2e's timeout
+        # counts the build: on a 4-vCPU runner the web suite takes about 28s
+        # from a warm Go build cache and about 2m from a cold one (some 25s
+        # of it specs), past the 1m15s local default.
         run: |
           status=0
-          task test:e2e -- --junit-report=/tmp/streamline/junit-e2e.xml ./e2e/web || status=1
+          task test:e2e E2E_TIMEOUT=4m -- --junit-report=/tmp/streamline/junit-e2e.xml ./e2e/web || status=1
           task test:unit -- --junit-report=/tmp/streamline/junit-rest.xml ./internal/server/web || status=1
           exit "$status"
       - name: Publish test report
