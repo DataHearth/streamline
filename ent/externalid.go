@@ -9,6 +9,8 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/tvshow"
@@ -27,12 +29,18 @@ type ExternalID struct {
 	Source externalid.Source `json:"source,omitempty"`
 	// Value holds the value of the "value" field.
 	Value string `json:"value,omitempty"`
+	// MovieID holds the value of the "movie_id" field.
+	MovieID uint32 `json:"movie_id,omitempty"`
+	// TvShowID holds the value of the "tv_show_id" field.
+	TvShowID uint32 `json:"tv_show_id,omitempty"`
+	// ArtistID holds the value of the "artist_id" field.
+	ArtistID uint32 `json:"artist_id,omitempty"`
+	// AlbumID holds the value of the "album_id" field.
+	AlbumID uint32 `json:"album_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ExternalIDQuery when eager-loading is set.
-	Edges                ExternalIDEdges `json:"edges"`
-	movie_external_ids   *uint32
-	tv_show_external_ids *uint32
-	selectValues         sql.SelectValues
+	Edges        ExternalIDEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // ExternalIDEdges holds the relations/edges for other nodes in the graph.
@@ -41,9 +49,13 @@ type ExternalIDEdges struct {
 	Movie *Movie `json:"movie,omitempty"`
 	// TvShow holds the value of the tv_show edge.
 	TvShow *TVShow `json:"tv_show,omitempty"`
+	// Artist holds the value of the artist edge.
+	Artist *Artist `json:"artist,omitempty"`
+	// Album holds the value of the album edge.
+	Album *Album `json:"album,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [4]bool
 }
 
 // MovieOrErr returns the Movie value or an error if the edge
@@ -68,21 +80,39 @@ func (e ExternalIDEdges) TvShowOrErr() (*TVShow, error) {
 	return nil, &NotLoadedError{edge: "tv_show"}
 }
 
+// ArtistOrErr returns the Artist value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ExternalIDEdges) ArtistOrErr() (*Artist, error) {
+	if e.Artist != nil {
+		return e.Artist, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: artist.Label}
+	}
+	return nil, &NotLoadedError{edge: "artist"}
+}
+
+// AlbumOrErr returns the Album value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ExternalIDEdges) AlbumOrErr() (*Album, error) {
+	if e.Album != nil {
+		return e.Album, nil
+	} else if e.loadedTypes[3] {
+		return nil, &NotFoundError{label: album.Label}
+	}
+	return nil, &NotLoadedError{edge: "album"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*ExternalID) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case externalid.FieldID:
+		case externalid.FieldID, externalid.FieldMovieID, externalid.FieldTvShowID, externalid.FieldArtistID, externalid.FieldAlbumID:
 			values[i] = new(sql.NullInt64)
 		case externalid.FieldSource, externalid.FieldValue:
 			values[i] = new(sql.NullString)
 		case externalid.FieldCreateTime, externalid.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
-		case externalid.ForeignKeys[0]: // movie_external_ids
-			values[i] = new(sql.NullInt64)
-		case externalid.ForeignKeys[1]: // tv_show_external_ids
-			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -128,19 +158,29 @@ func (_m *ExternalID) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Value = value.String
 			}
-		case externalid.ForeignKeys[0]:
+		case externalid.FieldMovieID:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field movie_external_ids", value)
+				return fmt.Errorf("unexpected type %T for field movie_id", values[i])
 			} else if value.Valid {
-				_m.movie_external_ids = new(uint32)
-				*_m.movie_external_ids = uint32(value.Int64)
+				_m.MovieID = uint32(value.Int64)
 			}
-		case externalid.ForeignKeys[1]:
+		case externalid.FieldTvShowID:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field tv_show_external_ids", value)
+				return fmt.Errorf("unexpected type %T for field tv_show_id", values[i])
 			} else if value.Valid {
-				_m.tv_show_external_ids = new(uint32)
-				*_m.tv_show_external_ids = uint32(value.Int64)
+				_m.TvShowID = uint32(value.Int64)
+			}
+		case externalid.FieldArtistID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field artist_id", values[i])
+			} else if value.Valid {
+				_m.ArtistID = uint32(value.Int64)
+			}
+		case externalid.FieldAlbumID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field album_id", values[i])
+			} else if value.Valid {
+				_m.AlbumID = uint32(value.Int64)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -163,6 +203,16 @@ func (_m *ExternalID) QueryMovie() *MovieQuery {
 // QueryTvShow queries the "tv_show" edge of the ExternalID entity.
 func (_m *ExternalID) QueryTvShow() *TVShowQuery {
 	return NewExternalIDClient(_m.config).QueryTvShow(_m)
+}
+
+// QueryArtist queries the "artist" edge of the ExternalID entity.
+func (_m *ExternalID) QueryArtist() *ArtistQuery {
+	return NewExternalIDClient(_m.config).QueryArtist(_m)
+}
+
+// QueryAlbum queries the "album" edge of the ExternalID entity.
+func (_m *ExternalID) QueryAlbum() *AlbumQuery {
+	return NewExternalIDClient(_m.config).QueryAlbum(_m)
 }
 
 // Update returns a builder for updating this ExternalID.
@@ -199,6 +249,18 @@ func (_m *ExternalID) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("value=")
 	builder.WriteString(_m.Value)
+	builder.WriteString(", ")
+	builder.WriteString("movie_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.MovieID))
+	builder.WriteString(", ")
+	builder.WriteString("tv_show_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TvShowID))
+	builder.WriteString(", ")
+	builder.WriteString("artist_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ArtistID))
+	builder.WriteString(", ")
+	builder.WriteString("album_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AlbumID))
 	builder.WriteByte(')')
 	return builder.String()
 }

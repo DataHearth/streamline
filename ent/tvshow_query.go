@@ -643,7 +643,9 @@ func (_q *TVShowQuery) loadExternalIds(ctx context.Context, query *ExternalIDQue
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(externalid.FieldTvShowID)
+	}
 	query.Where(predicate.ExternalID(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(tvshow.ExternalIdsColumn), fks...))
 	}))
@@ -652,13 +654,10 @@ func (_q *TVShowQuery) loadExternalIds(ctx context.Context, query *ExternalIDQue
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.tv_show_external_ids
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "tv_show_external_ids" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.TvShowID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "tv_show_external_ids" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "tv_show_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

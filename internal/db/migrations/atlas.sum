@@ -1,4 +1,4 @@
-h1:HJL91rC40ggVaXA+p2pA24iTHl0gx4ncxvK75aLp548=
+h1:h9muoIfJPk6UtBVi6NcWxBR7BBnQBGcLg3rkoCqWn3g=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -93,4 +93,4 @@ h1:HJL91rC40ggVaXA+p2pA24iTHl0gx4ncxvK75aLp548=
 20261115002607_drop_user_opds_token.up.sql h1:OTzHGX+RWcWncMfERBPe+LyopZqzJBSI93kseXWof9Y=
 20261115002922_drop_subsonic.up.sql h1:QCorf5C/vfzy9W4lAr9CPOBqGth66A58dYlrnDwAKzY=
 20261116001014_player_metadata.up.sql h1:wXKbXZipvlb/j1RonORkeWhoV7xGpqHssmB4qhXv8XQ=
-20261116213611_external_ids.up.sql h1:xy7ci8fKHr797Y8YP6yXBj0eaBIYNHLYgNELMhL2A34=
+20261116213743_external_ids.up.sql h1:MnTaD6vMhGeaVNig8wW4sHY8L9aNXeej8Mg4YpTWKoo=

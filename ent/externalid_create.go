@@ -10,6 +10,8 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/tvshow"
@@ -62,23 +64,65 @@ func (_c *ExternalIDCreate) SetValue(v string) *ExternalIDCreate {
 	return _c
 }
 
+// SetMovieID sets the "movie_id" field.
+func (_c *ExternalIDCreate) SetMovieID(v uint32) *ExternalIDCreate {
+	_c.mutation.SetMovieID(v)
+	return _c
+}
+
+// SetNillableMovieID sets the "movie_id" field if the given value is not nil.
+func (_c *ExternalIDCreate) SetNillableMovieID(v *uint32) *ExternalIDCreate {
+	if v != nil {
+		_c.SetMovieID(*v)
+	}
+	return _c
+}
+
+// SetTvShowID sets the "tv_show_id" field.
+func (_c *ExternalIDCreate) SetTvShowID(v uint32) *ExternalIDCreate {
+	_c.mutation.SetTvShowID(v)
+	return _c
+}
+
+// SetNillableTvShowID sets the "tv_show_id" field if the given value is not nil.
+func (_c *ExternalIDCreate) SetNillableTvShowID(v *uint32) *ExternalIDCreate {
+	if v != nil {
+		_c.SetTvShowID(*v)
+	}
+	return _c
+}
+
+// SetArtistID sets the "artist_id" field.
+func (_c *ExternalIDCreate) SetArtistID(v uint32) *ExternalIDCreate {
+	_c.mutation.SetArtistID(v)
+	return _c
+}
+
+// SetNillableArtistID sets the "artist_id" field if the given value is not nil.
+func (_c *ExternalIDCreate) SetNillableArtistID(v *uint32) *ExternalIDCreate {
+	if v != nil {
+		_c.SetArtistID(*v)
+	}
+	return _c
+}
+
+// SetAlbumID sets the "album_id" field.
+func (_c *ExternalIDCreate) SetAlbumID(v uint32) *ExternalIDCreate {
+	_c.mutation.SetAlbumID(v)
+	return _c
+}
+
+// SetNillableAlbumID sets the "album_id" field if the given value is not nil.
+func (_c *ExternalIDCreate) SetNillableAlbumID(v *uint32) *ExternalIDCreate {
+	if v != nil {
+		_c.SetAlbumID(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *ExternalIDCreate) SetID(v uint32) *ExternalIDCreate {
 	_c.mutation.SetID(v)
-	return _c
-}
-
-// SetMovieID sets the "movie" edge to the Movie entity by ID.
-func (_c *ExternalIDCreate) SetMovieID(id uint32) *ExternalIDCreate {
-	_c.mutation.SetMovieID(id)
-	return _c
-}
-
-// SetNillableMovieID sets the "movie" edge to the Movie entity by ID if the given value is not nil.
-func (_c *ExternalIDCreate) SetNillableMovieID(id *uint32) *ExternalIDCreate {
-	if id != nil {
-		_c = _c.SetMovieID(*id)
-	}
 	return _c
 }
 
@@ -87,23 +131,19 @@ func (_c *ExternalIDCreate) SetMovie(v *Movie) *ExternalIDCreate {
 	return _c.SetMovieID(v.ID)
 }
 
-// SetTvShowID sets the "tv_show" edge to the TVShow entity by ID.
-func (_c *ExternalIDCreate) SetTvShowID(id uint32) *ExternalIDCreate {
-	_c.mutation.SetTvShowID(id)
-	return _c
-}
-
-// SetNillableTvShowID sets the "tv_show" edge to the TVShow entity by ID if the given value is not nil.
-func (_c *ExternalIDCreate) SetNillableTvShowID(id *uint32) *ExternalIDCreate {
-	if id != nil {
-		_c = _c.SetTvShowID(*id)
-	}
-	return _c
-}
-
 // SetTvShow sets the "tv_show" edge to the TVShow entity.
 func (_c *ExternalIDCreate) SetTvShow(v *TVShow) *ExternalIDCreate {
 	return _c.SetTvShowID(v.ID)
+}
+
+// SetArtist sets the "artist" edge to the Artist entity.
+func (_c *ExternalIDCreate) SetArtist(v *Artist) *ExternalIDCreate {
+	return _c.SetArtistID(v.ID)
+}
+
+// SetAlbum sets the "album" edge to the Album entity.
+func (_c *ExternalIDCreate) SetAlbum(v *Album) *ExternalIDCreate {
+	return _c.SetAlbumID(v.ID)
 }
 
 // Mutation returns the ExternalIDMutation object of the builder.
@@ -237,7 +277,7 @@ func (_c *ExternalIDCreate) createSpec() (*ExternalID, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.movie_external_ids = &nodes[0]
+		_node.MovieID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.TvShowIDs(); len(nodes) > 0 {
@@ -254,7 +294,41 @@ func (_c *ExternalIDCreate) createSpec() (*ExternalID, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.tv_show_external_ids = &nodes[0]
+		_node.TvShowID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ArtistIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   externalid.ArtistTable,
+			Columns: []string{externalid.ArtistColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ArtistID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AlbumIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   externalid.AlbumTable,
+			Columns: []string{externalid.AlbumColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.AlbumID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

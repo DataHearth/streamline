@@ -338,14 +338,14 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 					Title: "X", Year: 2020, TvdbID: 12,
 					ExternalIDs: ExternalIDs{
-						TMDBID: 1396, IMDbID: "tt0903747", WikidataID: "Q1079",
+						"tmdb": "1396", "imdb": "tt0903747", "wikidata": "Q1079",
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				ids, err := store.TitleExternalIDs(ctx, CastOwnerSeries, show.ID)
+				ids, err := store.TitleExternalIDs(ctx, ExternalIDsOfSeries, show.ID)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(ids).To(Equal(ExternalIDs{
-					TMDBID: 1396, IMDbID: "tt0903747", WikidataID: "Q1079",
+					"tmdb": "1396", "imdb": "tt0903747", "wikidata": "Q1079",
 				}))
 
 				Expect(
@@ -354,13 +354,13 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 						show.ID,
 						UpdateTVShowMetadataParams{
 							Title: "X", Year: 2020,
-							ExternalIDs: ExternalIDs{IMDbID: "tt0903747"},
+							ExternalIDs: ExternalIDs{"imdb": "tt0903747"},
 						},
 					),
 				).To(Succeed())
-				ids, err = store.TitleExternalIDs(ctx, CastOwnerSeries, show.ID)
+				ids, err = store.TitleExternalIDs(ctx, ExternalIDsOfSeries, show.ID)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(ids).To(Equal(ExternalIDs{IMDbID: "tt0903747"}))
+				Expect(ids).To(Equal(ExternalIDs{"imdb": "tt0903747"}))
 			},
 		)
 	})

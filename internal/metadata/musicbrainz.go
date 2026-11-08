@@ -571,8 +571,10 @@ func (m *MusicBrainz) GetArtist(
 	details := &ArtistDetails{
 		ArtistResult: artist.toResult(),
 		Origin:       joinAreas(artist.BeginArea, artist.Area),
+		ExternalIDs:  map[string]string{},
 	}
 	details.Aliases = artist.aliases()
+	mbURLIDs(details.ExternalIDs, artist.Relations, mbArtistURLs)
 	if g := topGenres(artist.Genres); len(g) > 0 {
 		details.Genres = g
 	}
@@ -889,9 +891,12 @@ func releaseSortDate(date string) string {
 }
 
 const (
+	// url-rels rides both calls: it adds a handful of links to the answer,
+	// nothing like the expansion that makes the heavy one fail, and a light
+	// retry without it would drop the album's streaming links on the floor.
 	heavyReleaseInc = "recordings+artist-credits+labels+artist-rels+" +
-		"recording-level-rels+work-rels+work-level-rels+place-rels"
-	lightReleaseInc = "recordings+artist-credits+labels"
+		"recording-level-rels+work-rels+work-level-rels+place-rels+url-rels"
+	lightReleaseInc = "recordings+artist-credits+labels+url-rels"
 )
 
 // mbLookupReleaseCap is the most releases a release-group lookup embeds, with
@@ -905,6 +910,7 @@ type mbReleaseGroupDetail struct {
 	mbReleaseGroup
 	Releases     []mbRelease `json:"releases"`
 	ArtistCredit []mbCredit  `json:"artist-credit"`
+	Relations    []mbRel     `json:"relations"`
 }
 
 // aliases is every other title the group goes by: its own aliases, then the
@@ -990,7 +996,7 @@ func (m *MusicBrainz) fetchReleaseGroup(
 		ctx,
 		"/release-group/"+url.PathEscape(mbid),
 		url.Values{
-			"inc": {"releases+media+artist-credits+genres+aliases"},
+			"inc": {"releases+media+artist-credits+genres+aliases+url-rels"},
 		},
 		&rg,
 	)
@@ -1107,7 +1113,9 @@ func (m *MusicBrainz) GetReleaseGroupEdition(
 		ReleaseMBID:      release,
 		Genres:           topGenres(rg.Genres),
 		Aliases:          rg.aliases(),
+		ExternalIDs:      map[string]string{},
 	}
+	mbURLIDs(details.ExternalIDs, rg.Relations, mbReleaseGroupURLs)
 	if len(rg.ArtistCredit) > 0 {
 		details.ArtistMBID = rg.ArtistCredit[0].Artist.ID
 		details.ArtistName = rg.ArtistCredit[0].Artist.Name
@@ -1135,6 +1143,7 @@ func (m *MusicBrainz) GetReleaseGroupEdition(
 	details.Media = mapMedia(formats)
 	details.CreditsComplete = complete
 	fillRelease(details, rel, complete)
+	mbURLIDs(details.ExternalIDs, rel.Relations, mbReleaseURLs)
 	if err := m.fillTrackAliases(ctx, details, rg.Releases); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}

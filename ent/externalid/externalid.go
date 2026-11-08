@@ -23,10 +23,22 @@ const (
 	FieldSource = "source"
 	// FieldValue holds the string denoting the value field in the database.
 	FieldValue = "value"
+	// FieldMovieID holds the string denoting the movie_id field in the database.
+	FieldMovieID = "movie_id"
+	// FieldTvShowID holds the string denoting the tv_show_id field in the database.
+	FieldTvShowID = "tv_show_id"
+	// FieldArtistID holds the string denoting the artist_id field in the database.
+	FieldArtistID = "artist_id"
+	// FieldAlbumID holds the string denoting the album_id field in the database.
+	FieldAlbumID = "album_id"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeTvShow holds the string denoting the tv_show edge name in mutations.
 	EdgeTvShow = "tv_show"
+	// EdgeArtist holds the string denoting the artist edge name in mutations.
+	EdgeArtist = "artist"
+	// EdgeAlbum holds the string denoting the album edge name in mutations.
+	EdgeAlbum = "album"
 	// Table holds the table name of the externalid in the database.
 	Table = "external_ids"
 	// MovieTable is the table that holds the movie relation/edge.
@@ -35,14 +47,28 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "movie" package.
 	MovieInverseTable = "movies"
 	// MovieColumn is the table column denoting the movie relation/edge.
-	MovieColumn = "movie_external_ids"
+	MovieColumn = "movie_id"
 	// TvShowTable is the table that holds the tv_show relation/edge.
 	TvShowTable = "external_ids"
 	// TvShowInverseTable is the table name for the TVShow entity.
 	// It exists in this package in order to avoid circular dependency with the "tvshow" package.
 	TvShowInverseTable = "tv_shows"
 	// TvShowColumn is the table column denoting the tv_show relation/edge.
-	TvShowColumn = "tv_show_external_ids"
+	TvShowColumn = "tv_show_id"
+	// ArtistTable is the table that holds the artist relation/edge.
+	ArtistTable = "external_ids"
+	// ArtistInverseTable is the table name for the Artist entity.
+	// It exists in this package in order to avoid circular dependency with the "artist" package.
+	ArtistInverseTable = "artists"
+	// ArtistColumn is the table column denoting the artist relation/edge.
+	ArtistColumn = "artist_id"
+	// AlbumTable is the table that holds the album relation/edge.
+	AlbumTable = "external_ids"
+	// AlbumInverseTable is the table name for the Album entity.
+	// It exists in this package in order to avoid circular dependency with the "album" package.
+	AlbumInverseTable = "albums"
+	// AlbumColumn is the table column denoting the album relation/edge.
+	AlbumColumn = "album_id"
 )
 
 // Columns holds all SQL columns for externalid fields.
@@ -52,24 +78,16 @@ var Columns = []string{
 	FieldUpdateTime,
 	FieldSource,
 	FieldValue,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "external_ids"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"movie_external_ids",
-	"tv_show_external_ids",
+	FieldMovieID,
+	FieldTvShowID,
+	FieldArtistID,
+	FieldAlbumID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -92,9 +110,16 @@ type Source string
 
 // Source values.
 const (
-	SourceImdb     Source = "imdb"
-	SourceTmdb     Source = "tmdb"
-	SourceWikidata Source = "wikidata"
+	SourceImdb          Source = "imdb"
+	SourceTmdb          Source = "tmdb"
+	SourceWikidata      Source = "wikidata"
+	SourceDiscogs       Source = "discogs"
+	SourceAllmusic      Source = "allmusic"
+	SourceSpotify       Source = "spotify"
+	SourceDeezer        Source = "deezer"
+	SourceBandcamp      Source = "bandcamp"
+	SourceLastfm        Source = "lastfm"
+	SourceRateyourmusic Source = "rateyourmusic"
 )
 
 func (s Source) String() string {
@@ -104,7 +129,7 @@ func (s Source) String() string {
 // SourceValidator is a validator for the "source" field enum values. It is called by the builders before save.
 func SourceValidator(s Source) error {
 	switch s {
-	case SourceImdb, SourceTmdb, SourceWikidata:
+	case SourceImdb, SourceTmdb, SourceWikidata, SourceDiscogs, SourceAllmusic, SourceSpotify, SourceDeezer, SourceBandcamp, SourceLastfm, SourceRateyourmusic:
 		return nil
 	default:
 		return fmt.Errorf("externalid: invalid enum value for source field: %q", s)
@@ -139,6 +164,26 @@ func ByValue(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldValue, opts...).ToFunc()
 }
 
+// ByMovieID orders the results by the movie_id field.
+func ByMovieID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMovieID, opts...).ToFunc()
+}
+
+// ByTvShowID orders the results by the tv_show_id field.
+func ByTvShowID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTvShowID, opts...).ToFunc()
+}
+
+// ByArtistID orders the results by the artist_id field.
+func ByArtistID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldArtistID, opts...).ToFunc()
+}
+
+// ByAlbumID orders the results by the album_id field.
+func ByAlbumID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAlbumID, opts...).ToFunc()
+}
+
 // ByMovieField orders the results by movie field.
 func ByMovieField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -150,6 +195,20 @@ func ByMovieField(field string, opts ...sql.OrderTermOption) OrderOption {
 func ByTvShowField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newTvShowStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByArtistField orders the results by artist field.
+func ByArtistField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newArtistStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByAlbumField orders the results by album field.
+func ByAlbumField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAlbumStep(), sql.OrderByField(field, opts...))
 	}
 }
 func newMovieStep() *sqlgraph.Step {
@@ -164,5 +223,19 @@ func newTvShowStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TvShowInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, TvShowTable, TvShowColumn),
+	)
+}
+func newArtistStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ArtistInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ArtistTable, ArtistColumn),
+	)
+}
+func newAlbumStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AlbumInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, AlbumTable, AlbumColumn),
 	)
 }

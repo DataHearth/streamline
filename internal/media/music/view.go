@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/musiccredit"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/quality"
 )
 
@@ -85,6 +86,9 @@ type AlbumView struct {
 	Tracks    []TrackView
 	Credits   []CreditView
 	Personnel []PerformerView
+	// ExternalIDs are the album's links (metadata.Source* → id), filled by
+	// the detail reads only.
+	ExternalIDs db.ExternalIDs
 }
 
 // ArtistView is an artist with its rollups. Members is filled by the detail
@@ -100,6 +104,9 @@ type ArtistView struct {
 	OverviewSource string
 	Albums         []AlbumView
 	Members        []MemberView
+	// ExternalIDs are the artist's links, its Wikidata and Deezer columns
+	// included, filled by Detail only.
+	ExternalIDs db.ExternalIDs
 }
 
 // ArtistPage is one page of the artist list.

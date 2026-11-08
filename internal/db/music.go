@@ -108,6 +108,9 @@ type CreateArtistParams struct {
 	QualityProfile string
 	Members        []MemberSeed
 	Albums         []AlbumSeed
+	// ExternalIDs are MusicBrainz's other links for the artist (not its
+	// Wikidata or Deezer id, which have their own columns).
+	ExternalIDs ExternalIDs
 }
 
 // RefreshArtistParams carries provider-sourced fields. Albums already stored
@@ -126,6 +129,7 @@ type RefreshArtistParams struct {
 	Members     []MemberSeed
 	Albums      []AlbumSeed
 	RefreshedAt time.Time
+	ExternalIDs ExternalIDs
 }
 
 // ArtistDetailsParams are the overview fields the Wikipedia step fills; only
@@ -142,6 +146,10 @@ type ArtistDetailsParams struct {
 // Performers are written only when CreditsComplete: a light fallback has no
 // relationships and must not erase what an earlier heavy call stored.
 type HydrationParams struct {
+	// ExternalIDs are the album's links read from the release group and its
+	// release. nil (an album re-hydrated from its stored facts) keeps the
+	// stored ones.
+	ExternalIDs     ExternalIDs
 	ReleaseMBID     string
 	OriginalDate    string
 	EditionDate     string
@@ -334,6 +342,12 @@ func (db *DB) CreateArtist(
 		return nil, err
 	}
 	if err := replaceMembers(ctx, tx.Client(), row.ID, p.Members); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err := replaceExternalIDs(
+		ctx, tx.Client(), ExternalIDsOfArtist, row.ID, p.ExternalIDs,
+	); err != nil {
 		tx.Rollback()
 		return nil, err
 	}
@@ -1001,6 +1015,12 @@ func (db *DB) RefreshArtist(
 		tx.Rollback()
 		return nil, nil, err
 	}
+	if err := replaceExternalIDs(
+		ctx, c, ExternalIDsOfArtist, id, p.ExternalIDs,
+	); err != nil {
+		tx.Rollback()
+		return nil, nil, err
+	}
 	existing, err := c.Album.Query().
 		Where(album.HasArtistWith(artist.IDEQ(id))).
 		All(ctx)
@@ -1396,6 +1416,12 @@ func (db *DB) SetAlbumHydration(
 			SetCreditsVersion(library.MusicCreditsVersion)
 	}
 	if err := u.Exec(ctx); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := replaceExternalIDs(
+		ctx, c, ExternalIDsOfAlbum, albumID, p.ExternalIDs,
+	); err != nil {
 		tx.Rollback()
 		return err
 	}
