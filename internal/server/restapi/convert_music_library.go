@@ -129,28 +129,10 @@ func toMusicAlbumSummary(a music.AlbumView, artistID uint32) MusicAlbumSummary {
 	}
 }
 
-// toMusicExternalIDs renders an artist's or an album's links, nil when it
-// has none so the field is left out.
-func toMusicExternalIDs(ids db.ExternalIDs) *MusicExternalIds {
-	if len(ids) == 0 {
-		return nil
-	}
-	return &MusicExternalIds{
-		Allmusic:      idOrNil(ids, metadata.SourceAllMusic),
-		Bandcamp:      idOrNil(ids, metadata.SourceBandcamp),
-		Deezer:        idOrNil(ids, metadata.SourceDeezer),
-		Discogs:       idOrNil(ids, metadata.SourceDiscogs),
-		Lastfm:        idOrNil(ids, metadata.SourceLastFM),
-		Rateyourmusic: idOrNil(ids, metadata.SourceRateYourMusic),
-		Spotify:       idOrNil(ids, metadata.SourceSpotify),
-		Wikidata:      idOrNil(ids, metadata.SourceWikidata),
-	}
-}
-
 func toMusicAlbum(a music.AlbumView, artistID uint32) MusicAlbum {
 	row := a.Album
 	out := MusicAlbum{
-		ExternalIds:   toMusicExternalIDs(a.ExternalIDs),
+		ExternalIds:   toExternalIDs(a.ExternalIDs),
 		ArtistId:      albumOwnerID(a, artistID),
 		Artists:       toMusicPeople(a.Artists),
 		CatalogNumber: optString(row.CatalogNumber),
@@ -277,7 +259,7 @@ func toMusicArtistDetail(v *music.ArtistView) MusicArtistDetail {
 	for _, al := range v.Albums {
 		out.Albums = append(out.Albums, toMusicAlbum(al, a.ID))
 	}
-	out.ExternalIds = toMusicExternalIDs(v.ExternalIDs)
+	out.ExternalIds = toExternalIDs(v.ExternalIDs)
 	for _, m := range v.Members {
 		instruments := m.Instruments
 		if instruments == nil {
@@ -299,6 +281,7 @@ func toMusicArtistDetail(v *music.ArtistView) MusicArtistDetail {
 func toMusicArtist(v music.ArtistView) MusicArtist {
 	a := v.Artist
 	out := MusicArtist{
+		ExternalIds:    toExternalIDs(v.ExternalIDs),
 		AddedAt:        a.CreateTime,
 		AlbumCount:     v.AlbumCount,
 		Albums:         make([]MusicAlbumSummary, 0, len(v.Albums)),

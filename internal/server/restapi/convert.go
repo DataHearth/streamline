@@ -126,18 +126,26 @@ func movieToAPI(m *ent.Movie) Movie {
 // cross-references (db.TitleExternalIDs) to its detail response. They live in
 // their own table, so only the detail handlers read them, the way they read
 // the cast.
-func applyMovieExternalIDs(out *Movie, ids db.ExternalIDs) {
-	out.ImdbId = idOrNil(ids, metadata.SourceIMDb)
-	out.WikidataId = idOrNil(ids, metadata.SourceWikidata)
-}
-
-func applyTVShowExternalIDs(out *TVShow, ids db.ExternalIDs) {
-	if n, err := strconv.ParseUint(ids[metadata.SourceTMDB], 10, 32); err == nil && n != 0 {
-		id := uint32(n)
-		out.TmdbId = &id
+// toExternalIDs renders a title's stored cross-references, nil when it has
+// none so the field is left out. Every detail response carries them; a list
+// only with with_external_ids=true (pageExternalIDs).
+func toExternalIDs(ids db.ExternalIDs) *ExternalIds {
+	out := ExternalIds{
+		Allmusic:      idOrNil(ids, metadata.SourceAllMusic),
+		Bandcamp:      idOrNil(ids, metadata.SourceBandcamp),
+		Deezer:        idOrNil(ids, metadata.SourceDeezer),
+		Discogs:       idOrNil(ids, metadata.SourceDiscogs),
+		Imdb:          idOrNil(ids, metadata.SourceIMDb),
+		Lastfm:        idOrNil(ids, metadata.SourceLastFM),
+		Rateyourmusic: idOrNil(ids, metadata.SourceRateYourMusic),
+		Spotify:       idOrNil(ids, metadata.SourceSpotify),
+		Tmdb:          idOrNil(ids, metadata.SourceTMDB),
+		Wikidata:      idOrNil(ids, metadata.SourceWikidata),
 	}
-	out.ImdbId = idOrNil(ids, metadata.SourceIMDb)
-	out.WikidataId = idOrNil(ids, metadata.SourceWikidata)
+	if out == (ExternalIds{}) {
+		return nil
+	}
+	return &out
 }
 
 // idOrNil is the stored id for source, nil when there is none, for an
@@ -148,6 +156,20 @@ func idOrNil(ids db.ExternalIDs, source string) *string {
 		return nil
 	}
 	return &v
+}
+
+// pageExternalIDs reads a list page's cross-references in one query when
+// the caller asked for them (with_external_ids=true), nil otherwise.
+func (s *Server) pageExternalIDs(
+	ctx context.Context,
+	want *bool,
+	owner db.ExternalIDOwner,
+	ids []uint32,
+) (map[uint32]db.ExternalIDs, error) {
+	if want == nil || !*want || len(ids) == 0 {
+		return nil, nil
+	}
+	return s.store.ExternalIDsFor(ctx, owner, ids)
 }
 
 // movieListToAPI renders a list entry: the base movie plus the file rollup

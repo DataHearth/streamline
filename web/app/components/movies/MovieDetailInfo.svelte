@@ -392,11 +392,11 @@
 				<dd class="text-right font-mono text-fg">{movie.runtime}m</dd>
 			{/if}
 			{@render idRow("TMDB", String(movie.tmdb_id), tmdbUrl("movie", movie.tmdb_id))}
-			{#if movie.imdb_id}
-				{@render idRow("IMDb", movie.imdb_id, imdbTitleUrl(movie.imdb_id))}
+			{#if movie.external_ids?.imdb}
+				{@render idRow("IMDb", movie.external_ids.imdb, imdbTitleUrl(movie.external_ids.imdb))}
 			{/if}
-			{#if movie.wikidata_id}
-				{@render idRow("Wikidata", movie.wikidata_id, wikidataUrl(movie.wikidata_id))}
+			{#if movie.external_ids?.wikidata}
+				{@render idRow("Wikidata", movie.external_ids.wikidata, wikidataUrl(movie.external_ids.wikidata))}
 			{/if}
 		</dl>
 	</section>
