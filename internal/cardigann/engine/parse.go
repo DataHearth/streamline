@@ -42,7 +42,9 @@ func (e *Engine) parse(
 	v *vars,
 ) ([]Release, error) {
 	if resp.status >= 300 && resp.status < 400 && resp.location != "" {
-		return nil, fmt.Errorf("%w: redirected to %s", ErrStatus, resp.location)
+		return nil, fmt.Errorf(
+			"%w: redirected to %s", ErrStatus, redactLink(resp.location),
+		)
 	}
 	if resp.status != http.StatusOK {
 		return nil, fmt.Errorf("%w: status %d", ErrStatus, resp.status)

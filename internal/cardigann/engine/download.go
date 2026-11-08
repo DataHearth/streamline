@@ -154,7 +154,7 @@ func (e *Engine) Resolve(ctx context.Context, link string) (Download, error) {
 			out.URL = target.String()
 			return out, nil
 		}
-		return Download{}, fmt.Errorf("%w for %s", ErrNoDownload, link)
+		return Download{}, fmt.Errorf("%w for %s", ErrNoDownload, redactLink(link))
 	}
 	return out, nil
 }

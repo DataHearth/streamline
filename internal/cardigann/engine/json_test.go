@@ -129,7 +129,7 @@ var _ = Describe(
 
 		It("reports a redirect a search path does not follow", func() {
 			trk := newTracker(func(w http.ResponseWriter, r *http.Request) {
-				http.Redirect(w, r, "/login.php", http.StatusFound)
+				http.Redirect(w, r, "/login.php?passkey=SECRET", http.StatusFound)
 			})
 			eng, err := New(
 				convertFixture(jsonDefinition),
@@ -138,7 +138,10 @@ var _ = Describe(
 			Expect(err).NotTo(HaveOccurred())
 			_, err = eng.Search(context.Background(), Query{Term: "x"})
 			Expect(err).To(MatchError(ErrStatus))
+			// The error is logged and recorded on a span; a tracker keeps the
+			// request's query, passkey included, on a redirect.
 			Expect(err.Error()).To(ContainSubstring("/login.php"))
+			Expect(err.Error()).NotTo(ContainSubstring("SECRET"))
 		})
 	},
 )

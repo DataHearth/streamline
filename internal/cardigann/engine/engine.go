@@ -31,6 +31,7 @@ import (
 	"golang.org/x/text/encoding/unicode"
 
 	"github.com/datahearth/streamline/internal/cardigann"
+	"github.com/datahearth/streamline/internal/otelx"
 )
 
 var (
@@ -512,6 +513,17 @@ func (e *Engine) resolve(path string, base *url.URL) (*url.URL, error) {
 		return nil, err
 	}
 	return base.ResolveReference(ref), nil
+}
+
+// redactLink is a URL as an error message may carry it: a tracker puts the
+// passkey or API key in the query, and these errors are logged and recorded
+// on spans.
+func redactLink(link string) string {
+	u, err := url.Parse(link)
+	if err != nil {
+		return "<unparseable url>"
+	}
+	return otelx.RedactURL(u)
 }
 
 // headers renders a header block's first value per name (ParseCustomHeaders).
