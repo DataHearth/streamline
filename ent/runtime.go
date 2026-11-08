@@ -618,11 +618,11 @@ func init() {
 	// movie.DefaultMonitored holds the default value on creation for the monitored field.
 	movie.DefaultMonitored = movieDescMonitored.Default.(bool)
 	// movieDescGrabFailures is the schema descriptor for grab_failures field.
-	movieDescGrabFailures := movieFields[13].Descriptor()
+	movieDescGrabFailures := movieFields[14].Descriptor()
 	// movie.DefaultGrabFailures holds the default value on creation for the grab_failures field.
 	movie.DefaultGrabFailures = movieDescGrabFailures.Default.(uint8)
 	// movieDescRating is the schema descriptor for rating field.
-	movieDescRating := movieFields[16].Descriptor()
+	movieDescRating := movieFields[17].Descriptor()
 	// movie.DefaultRating holds the default value on creation for the rating field.
 	movie.DefaultRating = movieDescRating.Default.(float64)
 	musiccreditMixin := schema.MusicCredit{}.Mixin()
@@ -805,11 +805,11 @@ func init() {
 	// tvshow.DefaultMonitored holds the default value on creation for the monitored field.
 	tvshow.DefaultMonitored = tvshowDescMonitored.Default.(bool)
 	// tvshowDescRuntime is the schema descriptor for runtime field.
-	tvshowDescRuntime := tvshowFields[14].Descriptor()
+	tvshowDescRuntime := tvshowFields[16].Descriptor()
 	// tvshow.DefaultRuntime holds the default value on creation for the runtime field.
 	tvshow.DefaultRuntime = tvshowDescRuntime.Default.(uint16)
 	// tvshowDescRating is the schema descriptor for rating field.
-	tvshowDescRating := tvshowFields[15].Descriptor()
+	tvshowDescRating := tvshowFields[17].Descriptor()
 	// tvshow.DefaultRating holds the default value on creation for the rating field.
 	tvshow.DefaultRating = tvshowDescRating.Default.(float64)
 	torrentdataremovalMixin := schema.TorrentDataRemoval{}.Mixin()

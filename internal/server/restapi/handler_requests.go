@@ -512,6 +512,12 @@ func movieDetailsToRequestMedia(d *metadata.MovieDetails) RequestMediaDetails {
 	if d.TMDBID != 0 {
 		out.TmdbId = &d.TMDBID
 	}
+	if d.IMDbID != "" {
+		out.ImdbId = &d.IMDbID
+	}
+	if d.WikidataID != "" {
+		out.WikidataId = &d.WikidataID
+	}
 	if d.Rating != 0 {
 		out.Rating = &d.Rating
 	}
@@ -546,6 +552,15 @@ func seriesDetailsToRequestMedia(d *metadata.TVDetails) RequestMediaDetails {
 	}
 	if d.TVDBID != 0 {
 		out.TvdbId = &d.TVDBID
+	}
+	if d.TMDBID != 0 {
+		out.TmdbId = &d.TMDBID
+	}
+	if d.IMDbID != "" {
+		out.ImdbId = &d.IMDbID
+	}
+	if d.WikidataID != "" {
+		out.WikidataId = &d.WikidataID
 	}
 	if d.Network != "" {
 		out.Network = &d.Network
@@ -592,6 +607,8 @@ func toLookupDetail(d RequestMediaDetails) LookupDetail {
 		Tagline:          d.Tagline,
 		TmdbId:           d.TmdbId,
 		TvdbId:           d.TvdbId,
+		ImdbId:           d.ImdbId,
+		WikidataId:       d.WikidataId,
 		VoteCount:        d.VoteCount,
 	}
 }

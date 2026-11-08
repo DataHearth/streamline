@@ -205,6 +205,26 @@ func (_u *MovieUpdate) ClearImdbID() *MovieUpdate {
 	return _u
 }
 
+// SetWikidataID sets the "wikidata_id" field.
+func (_u *MovieUpdate) SetWikidataID(v string) *MovieUpdate {
+	_u.mutation.SetWikidataID(v)
+	return _u
+}
+
+// SetNillableWikidataID sets the "wikidata_id" field if the given value is not nil.
+func (_u *MovieUpdate) SetNillableWikidataID(v *string) *MovieUpdate {
+	if v != nil {
+		_u.SetWikidataID(*v)
+	}
+	return _u
+}
+
+// ClearWikidataID clears the value of the "wikidata_id" field.
+func (_u *MovieUpdate) ClearWikidataID() *MovieUpdate {
+	_u.mutation.ClearWikidataID()
+	return _u
+}
+
 // SetCertification sets the "certification" field.
 func (_u *MovieUpdate) SetCertification(v string) *MovieUpdate {
 	_u.mutation.SetCertification(v)
@@ -700,6 +720,12 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.ImdbIDCleared() {
 		_spec.ClearField(movie.FieldImdbID, field.TypeString)
 	}
+	if value, ok := _u.mutation.WikidataID(); ok {
+		_spec.SetField(movie.FieldWikidataID, field.TypeString, value)
+	}
+	if _u.mutation.WikidataIDCleared() {
+		_spec.ClearField(movie.FieldWikidataID, field.TypeString)
+	}
 	if value, ok := _u.mutation.Certification(); ok {
 		_spec.SetField(movie.FieldCertification, field.TypeString, value)
 	}
@@ -1149,6 +1175,26 @@ func (_u *MovieUpdateOne) SetNillableImdbID(v *string) *MovieUpdateOne {
 // ClearImdbID clears the value of the "imdb_id" field.
 func (_u *MovieUpdateOne) ClearImdbID() *MovieUpdateOne {
 	_u.mutation.ClearImdbID()
+	return _u
+}
+
+// SetWikidataID sets the "wikidata_id" field.
+func (_u *MovieUpdateOne) SetWikidataID(v string) *MovieUpdateOne {
+	_u.mutation.SetWikidataID(v)
+	return _u
+}
+
+// SetNillableWikidataID sets the "wikidata_id" field if the given value is not nil.
+func (_u *MovieUpdateOne) SetNillableWikidataID(v *string) *MovieUpdateOne {
+	if v != nil {
+		_u.SetWikidataID(*v)
+	}
+	return _u
+}
+
+// ClearWikidataID clears the value of the "wikidata_id" field.
+func (_u *MovieUpdateOne) ClearWikidataID() *MovieUpdateOne {
+	_u.mutation.ClearWikidataID()
 	return _u
 }
 
@@ -1676,6 +1722,12 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 	}
 	if _u.mutation.ImdbIDCleared() {
 		_spec.ClearField(movie.FieldImdbID, field.TypeString)
+	}
+	if value, ok := _u.mutation.WikidataID(); ok {
+		_spec.SetField(movie.FieldWikidataID, field.TypeString, value)
+	}
+	if _u.mutation.WikidataIDCleared() {
+		_spec.ClearField(movie.FieldWikidataID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Certification(); ok {
 		_spec.SetField(movie.FieldCertification, field.TypeString, value)

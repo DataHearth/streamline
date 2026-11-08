@@ -40,6 +40,8 @@ type Movie struct {
 	TmdbID uint32 `json:"tmdb_id,omitempty"`
 	// ImdbID holds the value of the "imdb_id" field.
 	ImdbID string `json:"imdb_id,omitempty"`
+	// WikidataID holds the value of the "wikidata_id" field.
+	WikidataID string `json:"wikidata_id,omitempty"`
 	// Certification holds the value of the "certification" field.
 	Certification string `json:"certification,omitempty"`
 	// LastSearchAt holds the value of the "last_search_at" field.
@@ -132,7 +134,7 @@ func (*Movie) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case movie.FieldID, movie.FieldYear, movie.FieldRuntime, movie.FieldTmdbID, movie.FieldGrabFailures:
 			values[i] = new(sql.NullInt64)
-		case movie.FieldTitle, movie.FieldOriginalTitle, movie.FieldOverview, movie.FieldStatus, movie.FieldImdbID, movie.FieldCertification, movie.FieldFailureReason, movie.FieldQualityProfile:
+		case movie.FieldTitle, movie.FieldOriginalTitle, movie.FieldOverview, movie.FieldStatus, movie.FieldImdbID, movie.FieldWikidataID, movie.FieldCertification, movie.FieldFailureReason, movie.FieldQualityProfile:
 			values[i] = new(sql.NullString)
 		case movie.FieldCreateTime, movie.FieldUpdateTime, movie.FieldLastSearchAt, movie.FieldReleaseDate, movie.FieldDigitalReleaseDate, movie.FieldLastRefreshedAt:
 			values[i] = new(sql.NullTime)
@@ -222,6 +224,12 @@ func (_m *Movie) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field imdb_id", values[i])
 			} else if value.Valid {
 				_m.ImdbID = value.String
+			}
+		case movie.FieldWikidataID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field wikidata_id", values[i])
+			} else if value.Valid {
+				_m.WikidataID = value.String
 			}
 		case movie.FieldCertification:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -385,6 +393,9 @@ func (_m *Movie) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("imdb_id=")
 	builder.WriteString(_m.ImdbID)
+	builder.WriteString(", ")
+	builder.WriteString("wikidata_id=")
+	builder.WriteString(_m.WikidataID)
 	builder.WriteString(", ")
 	builder.WriteString("certification=")
 	builder.WriteString(_m.Certification)

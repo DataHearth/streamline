@@ -146,6 +146,20 @@ func (_c *MovieCreate) SetNillableImdbID(v *string) *MovieCreate {
 	return _c
 }
 
+// SetWikidataID sets the "wikidata_id" field.
+func (_c *MovieCreate) SetWikidataID(v string) *MovieCreate {
+	_c.mutation.SetWikidataID(v)
+	return _c
+}
+
+// SetNillableWikidataID sets the "wikidata_id" field if the given value is not nil.
+func (_c *MovieCreate) SetNillableWikidataID(v *string) *MovieCreate {
+	if v != nil {
+		_c.SetWikidataID(*v)
+	}
+	return _c
+}
+
 // SetCertification sets the "certification" field.
 func (_c *MovieCreate) SetCertification(v string) *MovieCreate {
 	_c.mutation.SetCertification(v)
@@ -534,6 +548,10 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ImdbID(); ok {
 		_spec.SetField(movie.FieldImdbID, field.TypeString, value)
 		_node.ImdbID = value
+	}
+	if value, ok := _c.mutation.WikidataID(); ok {
+		_spec.SetField(movie.FieldWikidataID, field.TypeString, value)
+		_node.WikidataID = value
 	}
 	if value, ok := _c.mutation.Certification(); ok {
 		_spec.SetField(movie.FieldCertification, field.TypeString, value)
