@@ -13,13 +13,22 @@
 		type Release,
 	} from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import ExternalLinks from "@components/shared/ExternalLinks.svelte";
+	import { releaseLinks } from "@lib/external-links";
 
 	// What the liner notes say, under the tracklist: who guests on which
 	// track, who made the record, and the release's own facts. Anyone who is
 	// an artist in the library links to their page.
 	// `idScope` keeps the ids apart: the phone accordion and the md panel both
 	// render the open release, one of them hidden.
-	let { release: r, idScope = "panel" }: { release: Release; idScope?: string } = $props();
+	// artistName is the artist page's own, for the link searches; a shared
+	// release names its owner first instead.
+	let {
+		release: r,
+		idScope = "panel",
+		artistName = "",
+	}: { release: Release; idScope?: string; artistName?: string } = $props();
+	let links = $derived(releaseLinks(r, r.artists?.[0]?.name ?? artistName));
 	let uid = $derived(`${idScope}-${r.id}`);
 
 	const ln = (p: Person): InfoLink => ({ text: p.name, href: personHref(p) });
@@ -75,6 +84,7 @@
 </script>
 
 <div class="flex flex-col gap-4">
+	<ExternalLinks {links} />
 	{#if guests.length}
 		<section aria-labelledby="{uid}-guests">
 			<h3 id="{uid}-guests" class={h3}>{i18n.music_featured_artists()}</h3>
