@@ -456,9 +456,10 @@
 	// set — seriesFileEpisodes, which spans every season — was non-empty.
 	let hasFiles = $derived(seriesFileEpisodes.length > 0);
 	const seasonTitle = (n: number | string) => i18n.series_season_n({ n });
+	// Every season holding episodes, monitored or not: any of them can be searched.
 	let searchSeasons = $derived(
 		seasons
-			.filter((s) => (s.total ?? 0) > 0)
+			.filter((s) => (s.episodes?.length ?? 0) > 0 || (s.total ?? 0) > 0)
 			.map((s) => ({
 				number: s.number,
 				label: s.number === 0 ? i18n.series_specials() : seasonTitle(s.number),
