@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/internal/auth"
 
 	"github.com/datahearth/streamline/internal/config"
@@ -124,6 +126,11 @@ func (s *Server) GetBookLookup(
 	if t := req.Params.Type; t != BookShelfTypeBook && t != BookShelfTypeSeries {
 		return GetBookLookup400JSONResponse{
 			BadRequestJSONResponse: errBadRequest("type must be book or series"),
+		}, nil
+	}
+	if !providerid.Valid(req.HardcoverId) {
+		return GetBookLookup400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("hardcover_id"),
 		}, nil
 	}
 	d, err := s.books.LookupDetail(ctx, string(req.Params.Type), req.HardcoverId)
@@ -284,6 +291,11 @@ func (s *Server) AddBook(
 	if err := requireNotRequestOnly(ctx); err != nil {
 		return AddBook403JSONResponse{ForbiddenJSONResponse: requestOnlyResp}, nil
 	}
+	if !providerid.Valid(req.Body.HardcoverId) {
+		return AddBook400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("hardcover_id"),
+		}, nil
+	}
 	row, err := s.books.AddBook(ctx, book.AddBookParams{
 		HardcoverID:    req.Body.HardcoverId,
 		Monitor:        derefOr(req.Body.Monitor),
@@ -328,6 +340,11 @@ func (s *Server) AddBookSeries(
 	if err := requireNotRequestOnly(ctx); err != nil {
 		return AddBookSeries403JSONResponse{
 			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if !providerid.Valid(req.Body.HardcoverId) {
+		return AddBookSeries400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("hardcover_id"),
 		}, nil
 	}
 	row, err := s.books.AddSeries(ctx, book.AddSeriesParams{

@@ -35,6 +35,29 @@ var _ = Describe(
 			app = newAPIKeyApp()
 		})
 
+		// The ids are compared as strings, so only the canonical form is let
+		// in: "0603" would pass every duplicate check against "603". The
+		// strict mock fails the entry if the service is reached.
+		DescribeTable(
+			"AddMovie refuses an id that is not a canonical provider id",
+			func(body string) {
+				req := app.req(
+					http.MethodPost,
+					"/api/v1/movies",
+					app.adminKey,
+					strings.NewReader(body),
+				)
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			},
+			Entry("a number", `{"tmdb_id":550}`),
+			Entry("a leading zero", `{"tmdb_id":"0550"}`),
+			Entry("empty", `{"tmdb_id":""}`),
+			Entry("a path", `{"tmdb_id":".."}`),
+		)
+
 		DescribeTable(
 			"AddMovie maps the service error",
 			func(err error, status int) {

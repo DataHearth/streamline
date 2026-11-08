@@ -226,7 +226,7 @@ export type LookupDetail = {
 
 export type CastMember = {
 	// The persons row id — what a cast tile links to. TVDB-sourced cast (all
-	// series cast) has tmdb_id 0, so tmdb_id cannot key the person; person_id
+	// series cast) has no tmdb_id, so tmdb_id cannot key the person; person_id
 	// is the only stable identity.
 	person_id?: number;
 	tmdb_id?: string;
@@ -240,7 +240,7 @@ export type CastMember = {
 // A search hit from GET /people. `credits` counts the library titles the
 // person appears in — the reason they are in the index at all. `id` is the
 // persons row id and the only valid key; `tmdb_id` stays for provider links
-// but is 0 for TVDB-only (series) cast.
+// but is "" for TVDB-only (series) cast.
 export type Person = {
 	id: number;
 	tmdb_id: string;

@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
@@ -158,6 +160,11 @@ func (s *Server) AddMovie(
 		return AddMovie403JSONResponse{ForbiddenJSONResponse: requestOnlyResp}, nil
 	}
 
+	if !providerid.Valid(request.Body.TmdbId) {
+		return AddMovie400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("tmdb_id"),
+		}, nil
+	}
 	var qpName string
 	if request.Body.QualityProfile != nil {
 		qpName = *request.Body.QualityProfile
@@ -553,6 +560,11 @@ func (s *Server) ReidentifyMovie(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
+	if !providerid.Valid(request.Body.TmdbId) {
+		return ReidentifyMovie400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("tmdb_id"),
+		}, nil
+	}
 	// A re-identify renames the files, and a rename creates folders first.
 	if err := roothealth.Require(ctx, db.RootMovies); err != nil {
 		return nil, err
@@ -687,6 +699,11 @@ func (s *Server) GetTMDBMovieDetail(
 	ctx context.Context,
 	request GetTMDBMovieDetailRequestObject,
 ) (GetTMDBMovieDetailResponseObject, error) {
+	if !providerid.Valid(request.TmdbId) {
+		return GetTMDBMovieDetail400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("tmdb_id"),
+		}, nil
+	}
 	d, err := s.metadata.GetMovie(ctx, request.TmdbId)
 	if err != nil {
 		return GetTMDBMovieDetail500JSONResponse{

@@ -120,6 +120,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Movie"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "409":
@@ -316,7 +318,7 @@ paths:
               type: object
               required: [tmdb_id]
               properties:
-                tmdb_id: { type: string }
+                tmdb_id: { type: string, pattern: "^[1-9][0-9]{0,9}$" }
       responses:
         "200":
           $ref: "#/components/responses/ReidentifyResult"
@@ -513,6 +515,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/LookupDetailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -555,6 +559,8 @@ paths:
       responses:
         "201":
           $ref: "#/components/responses/SeriesCreated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "409":
@@ -676,6 +682,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/LookupDetailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -926,7 +934,7 @@ paths:
               type: object
               required: [tvdb_id]
               properties:
-                tvdb_id: { type: string }
+                tvdb_id: { type: string, pattern: "^[1-9][0-9]{0,9}$" }
       responses:
         "200":
           $ref: "#/components/responses/ReidentifyResult"
@@ -2523,6 +2531,8 @@ paths:
       responses:
         "201":
           $ref: "#/components/responses/BookCreated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -2584,6 +2594,8 @@ paths:
       responses:
         "201":
           $ref: "#/components/responses/BookSeriesCreated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -5260,6 +5272,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ImportScanFile"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -5300,6 +5314,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ImportScanShow"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -5379,6 +5395,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ImportScanBook"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -5966,6 +5984,8 @@ paths:
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -6531,6 +6551,7 @@ components:
       description: Hardcover book id or series id, as selected by `type`; the two id spaces are separate.
       schema:
         type: string
+        pattern: "^[1-9][0-9]{0,9}$"
     BookLookupTypeParam:
       name: type
       in: query
@@ -7156,6 +7177,7 @@ components:
       description: TMDB movie id.
       schema:
         type: string
+        pattern: "^[1-9][0-9]{0,9}$"
 
     TVDBID:
       name: tvdb_id
@@ -7164,6 +7186,7 @@ components:
       description: TVDB series id.
       schema:
         type: string
+        pattern: "^[1-9][0-9]{0,9}$"
 
     SeasonNumber:
       name: number
@@ -8702,6 +8725,7 @@ components:
           enum: [movie, series, album, book]
         provider_id:
           type: string
+          pattern: "^[1-9][0-9]{0,9}$"
           description: |
             TMDB id when `kind` is `movie`, TVDB id when it is `series`,
             Hardcover book id when it is `book`. Required for those three.
@@ -9000,6 +9024,7 @@ components:
       properties:
         tmdb_id:
           type: string
+          pattern: "^[1-9][0-9]{0,9}$"
         quality_profile:
           type: string
           description: Name of the quality profile (empty resolves to the movie default).
@@ -11633,6 +11658,7 @@ components:
       properties:
         hardcover_id:
           type: string
+          pattern: "^[1-9][0-9]{0,9}$"
         quality_profile:
           type: string
           description: Empty or omitted uses the default book profile; an unknown name answers 422.
@@ -11645,6 +11671,7 @@ components:
       properties:
         hardcover_id:
           type: string
+          pattern: "^[1-9][0-9]{0,9}$"
           description: Hardcover series id.
         quality_profile:
           type: string
@@ -11861,6 +11888,7 @@ components:
       properties:
         tvdb_id:
           type: string
+          pattern: "^[1-9][0-9]{0,9}$"
         quality_profile:
           type: string
           description: Name of the quality profile (empty resolves to the series default).
@@ -15141,6 +15169,7 @@ components:
           enum: [pending, accept, skip]
         tmdb_id:
           type: string
+          pattern: "^[1-9][0-9]{0,9}$"
 
     ImportBulkDecisionRequest:
       type: object
@@ -15280,6 +15309,7 @@ components:
           enum: [pending, accept, skip]
         tvdb_id:
           type: string
+          pattern: "^[1-9][0-9]{0,9}$"
 
     ImportScanAlbumCandidate:
       type: object
@@ -15517,6 +15547,7 @@ components:
           enum: [pending, accept, skip]
         book_hardcover_id:
           type: string
+          pattern: "^[1-9][0-9]{0,9}$"
 
     ActivityEventType:
       type: string
@@ -16435,6 +16466,7 @@ components:
           $ref: "#/components/schemas/RequestMediaType"
         media_id:
           type: string
+          pattern: "^[1-9][0-9]{0,9}$"
           description: Required for movie, tvshow, book and book_series; rejected for artist and album.
         media_mbid:
           type: string

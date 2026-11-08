@@ -30,8 +30,8 @@ type SearchResult struct {
 	// release, not anything we asked for: Prowlarr re-emits the torznab attrs
 	// on ReleaseResource, and the direct Torznab path reads the same attrs.
 	//
-	// Zero means the tracker said nothing — never "no match". An absent attr
-	// decodes to zero exactly as an unrecorded quality condition reads as
+	// Empty means the tracker said nothing — never "no match". An absent attr
+	// decodes to "" exactly as an unrecorded quality condition reads as
 	// unknown rather than false, and filterProviderIDs turns on that
 	// distinction.
 	TMDBID string

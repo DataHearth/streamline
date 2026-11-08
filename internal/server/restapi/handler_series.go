@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
@@ -140,6 +142,11 @@ func (s *Server) AddSeries(
 		return AddSeries403JSONResponse{ForbiddenJSONResponse: requestOnlyResp}, nil
 	}
 
+	if !providerid.Valid(request.Body.TvdbId) {
+		return AddSeries400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("tvdb_id"),
+		}, nil
+	}
 	qp := ""
 	if request.Body.QualityProfile != nil {
 		qp = *request.Body.QualityProfile
@@ -300,6 +307,11 @@ func (s *Server) GetSeriesLookupDetail(
 	ctx context.Context,
 	request GetSeriesLookupDetailRequestObject,
 ) (GetSeriesLookupDetailResponseObject, error) {
+	if !providerid.Valid(request.TvdbId) {
+		return GetSeriesLookupDetail400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("tvdb_id"),
+		}, nil
+	}
 	d, err := s.seriesWithCast(ctx, request.TvdbId)
 	if err != nil {
 		return GetSeriesLookupDetail500JSONResponse{
@@ -774,6 +786,11 @@ func (s *Server) ReidentifySeries(
 	if err := requireAdmin(ctx); err != nil {
 		return ReidentifySeries403JSONResponse{
 			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	if !providerid.Valid(request.Body.TvdbId) {
+		return ReidentifySeries400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("tvdb_id"),
 		}, nil
 	}
 	// A re-identify renames the files, and a rename creates folders first.

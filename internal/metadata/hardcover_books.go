@@ -741,7 +741,7 @@ func (h *Hardcover) getBooks(
 		asked[id] = true
 		// An id that is no Hardcover number names no book: absent, like an
 		// unknown one.
-		n, ok := providerid.Parse(id)
+		n, ok := parseHCID(id)
 		if !ok {
 			continue
 		}
@@ -795,7 +795,7 @@ func (h *Hardcover) GetSeries(
 	ctx, span := tracer.Start(ctx, "metadata.hardcover.get_series")
 	defer span.End()
 
-	n, ok := providerid.Parse(id)
+	n, ok := parseHCID(id)
 	if !ok {
 		return nil, nil
 	}
@@ -908,7 +908,7 @@ func (h *Hardcover) GetSeriesLookup(
 
 	sorted := make([]uint32, 0, len(ids))
 	for _, id := range ids {
-		if n, ok := providerid.Parse(id); ok {
+		if n, ok := parseHCID(id); ok {
 			sorted = append(sorted, n)
 		}
 	}
@@ -1002,4 +1002,16 @@ func (h *Hardcover) GetSeriesLookup(
 	})
 	h.seriesLookups.put(key, recs, hcLookupTTL)
 	return recs, nil
+}
+
+// parseHCID reads a Hardcover id for a GraphQL Int variable. Only the
+// canonical form counts (providerid.Valid): the answers are keyed and memoised
+// by the id string, so "0603" resolved to 603 would be fetched, stored under
+// "603" and then reported absent — or, for a series, resolved where a book is
+// not. Anything else names nothing.
+func parseHCID(id string) (uint32, bool) {
+	if !providerid.Valid(id) {
+		return 0, false
+	}
+	return providerid.Parse(id)
 }

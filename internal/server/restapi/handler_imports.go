@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
@@ -263,10 +265,11 @@ func (s *Server) UpdateImportFileDecision(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	var tmdbID *string
-	if req.Body.TmdbId != nil {
-		v := *req.Body.TmdbId
-		tmdbID = &v
+	tmdbID := req.Body.TmdbId
+	if tmdbID != nil && !providerid.Valid(*tmdbID) {
+		return UpdateImportFileDecision400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("tmdb_id"),
+		}, nil
 	}
 	f, err := s.bulkImports.UpdateFileDecision(
 		ctx,
@@ -361,10 +364,11 @@ func (s *Server) UpdateImportShowDecision(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	var tvdbID *string
-	if req.Body.TvdbId != nil {
-		v := *req.Body.TvdbId
-		tvdbID = &v
+	tvdbID := req.Body.TvdbId
+	if tvdbID != nil && !providerid.Valid(*tvdbID) {
+		return UpdateImportShowDecision400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("tvdb_id"),
+		}, nil
 	}
 	if err := s.store.UpdateImportScanShowDecision(
 		ctx,
@@ -649,10 +653,11 @@ func (s *Server) UpdateImportBookDecision(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	var hardcoverID *string
-	if req.Body.BookHardcoverId != nil {
-		v := *req.Body.BookHardcoverId
-		hardcoverID = &v
+	hardcoverID := req.Body.BookHardcoverId
+	if hardcoverID != nil && !providerid.Valid(*hardcoverID) {
+		return UpdateImportBookDecision400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("book_hardcover_id"),
+		}, nil
 	}
 	if err := s.store.UpdateImportScanBookDecision(
 		ctx,

@@ -912,6 +912,9 @@ var _ = Describe(
 				"INSERT INTO movies (id, create_time, update_time, title," +
 					" original_title, year, tmdb_id) VALUES" +
 					" (1, datetime('now'), datetime('now'), 'm', 'm', 1999, 603)",
+				// A root row holding 0: NOT NULL, so it must come out '', not '0'.
+				"INSERT INTO tv_shows (id, create_time, update_time, title, year," +
+					" tvdb_id) VALUES (1, datetime('now'), datetime('now'), 's', 2020, 0)",
 				"INSERT INTO persons (id, create_time, update_time, tmdb_id," +
 					" tvdb_id, name) VALUES" +
 					" (1, datetime('now'), datetime('now'), 603, 0, 'Keanu')," +
@@ -944,6 +947,13 @@ var _ = Describe(
 			).Scan(&kind, &tmdb)).To(Succeed())
 			Expect(kind).To(Equal("text"))
 			Expect(tmdb).To(Equal("603"))
+
+			var showKind, showTVDB string
+			Expect(sqlDB.QueryRow(
+				"SELECT typeof(tvdb_id), tvdb_id FROM tv_shows WHERE id = 1",
+			).Scan(&showKind, &showTVDB)).To(Succeed())
+			Expect(showKind).To(Equal("text"))
+			Expect(showTVDB).To(BeEmpty())
 
 			var personTMDB, personTVDB sql.NullString
 			Expect(sqlDB.QueryRow(
@@ -988,6 +998,15 @@ var _ = Describe(
 			).Scan(&kind, &tmdb)).To(Succeed())
 			Expect(kind).To(Equal("integer"))
 			Expect(tmdb).To(Equal(603))
+
+			var showTVDB int
+
+			Expect(sqlDB.QueryRow(
+
+				"SELECT tvdb_id FROM tv_shows WHERE id = 1",
+			).Scan(&showTVDB)).To(Succeed())
+
+			Expect(showTVDB).To(BeZero())
 
 			var personTVDB, requestMedia int
 			Expect(sqlDB.QueryRow(

@@ -282,3 +282,13 @@ func errTorrentUnreadable(msg string) UnprocessableEntityJSONResponse {
 	code := codeTorrentUnreadable
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
+
+// errBadProviderID is the 400 for a TMDB, TVDB or Hardcover id a request
+// carries in anything but its canonical form (providerid.Valid). The spec
+// states the same rule as a pattern, but nothing validates a request against
+// the spec, so each handler taking such an id checks it first.
+func errBadProviderID(field string) BadRequestJSONResponse {
+	return errBadRequest(
+		field + " must be a provider id: a positive decimal number, as a string",
+	)
+}

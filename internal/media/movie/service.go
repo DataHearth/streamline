@@ -1,6 +1,7 @@
 package movie
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -231,10 +232,12 @@ func (s *Service) Add(
 	}
 
 	m, err := s.db.CreateMovie(ctx, db.CreateMovieParams{
-		Title:          details.Title,
-		OriginalTitle:  details.OriginalTitle,
-		Year:           details.Year,
-		TmdbID:         tmdbID,
+		Title:         details.Title,
+		OriginalTitle: details.OriginalTitle,
+		Year:          details.Year,
+		// TMDB's own id, not the caller's: the unique index and every
+		// duplicate check compare the strings.
+		TmdbID:         cmp.Or(details.TMDBID, tmdbID),
 		Status:         entmovie.StatusWanted,
 		Overview:       details.Overview,
 		Runtime:        details.Runtime,

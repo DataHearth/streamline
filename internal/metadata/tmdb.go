@@ -175,7 +175,7 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID string) (*MovieDetails, erro
 	var resp tmdbMovieResponse
 	if err := t.get(
 		ctx,
-		"/3/movie/"+url.PathEscape(tmdbID)+"",
+		"/3/movie/"+url.PathEscape(tmdbID),
 		params,
 		&resp,
 	); err != nil {
@@ -292,7 +292,7 @@ func (t *TMDB) GetPerson(
 	var resp tmdbPersonResponse
 	if err := t.get(
 		ctx,
-		"/3/person/"+url.PathEscape(tmdbID)+"",
+		"/3/person/"+url.PathEscape(tmdbID),
 		params,
 		&resp,
 	); err != nil {

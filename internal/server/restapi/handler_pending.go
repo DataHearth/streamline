@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/internal/db"
 
 	"github.com/datahearth/streamline/ent"
@@ -96,6 +98,11 @@ func (s *Server) IdentifyPending(
 			UnprocessableEntityJSONResponse: errUnprocessable(
 				"an album takes mbid, every other kind provider_id",
 			),
+		}, nil
+	}
+	if kind != IdentifyPendingRequestKindAlbum && !providerid.Valid(providerID) {
+		return IdentifyPending400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("provider_id"),
 		}, nil
 	}
 

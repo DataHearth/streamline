@@ -1,4 +1,4 @@
-h1:jQS8w7uFI96P9D+9kiQMo8hMNWemLwPiOKtL37+QZQo=
+h1:GRHOWg8EwGGed1vPPPehlmpHsH7upSKyWp9RdzhS4PM=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -82,5 +82,5 @@ h1:jQS8w7uFI96P9D+9kiQMo8hMNWemLwPiOKtL37+QZQo=
 20261106102703_media_file_book_kind_index.up.sql h1:l2kjrQGFZFbjv7E+Nno8b1CqTKKf6p5NXz7j2kVk41k=
 20261106110416_media_file_missing_confirmed_at.up.sql h1:+Dxlpl3AQutEF207HLDxENC1znW+zOn3lfxOO08WHsc=
 20261106205257_add_media_file_dynamic_range.up.sql h1:/UqJFkQ2bGtP5WOYBtADbd6R4AlefZRw3RlEMSUr96Q=
-20261108081603_provider_ids_unset.up.sql h1:MqLP44Hido3Rr3F+SDU8CHoF+FVhFSZNG06BGUWUcKM=
-20261108081604_provider_ids_text.up.sql h1:I1AspmiCCdkdOkjtkjtjyEqwWxjbOFGm2Id8C3CY9FA=
+20261108081603_provider_ids_unset.up.sql h1:vRuWhFaNOrwvnt9wik7onfmv4QijyLkbtWMmEMoKk0E=
+20261108081604_provider_ids_text.up.sql h1:6d1dkl/PqVyrlJxZuIKgko7nhd/x6qoc89dS/6K0wMY=

@@ -29,7 +29,7 @@ type CreateImportScanFileParams struct {
 	Classification     entimportscanfile.Classification
 	Candidates         []schema.ScannedCandidate
 	TMDBID             string // "" = unset
-	ExistingMovieID    uint32 // "" = unset
+	ExistingMovieID    uint32 // 0 = unset
 }
 
 type FilterImportScanFilesParams struct {

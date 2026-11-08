@@ -112,6 +112,15 @@ var _ = Describe("Handler: Requests", Label("unit", "server", "request"), func()
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 		})
 
+		It("refuses a media_id in any form but the canonical one", func() {
+			// "0603" would miss the duplicate check against a request for
+			// 603; the strict mock fails the spec if Create is reached.
+			resp := send(http.MethodPost, "/api/v1/requests", app.requestOnlyKey,
+				`{"media_type":"movie","media_id":"0603","title":"M"}`)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
 		It("answers 409 duplicate", func() {
 			app.requests.EXPECT().Create(mock.Anything, mock.Anything).
 				Return(nil, requestsvc.ErrDuplicate).Once()

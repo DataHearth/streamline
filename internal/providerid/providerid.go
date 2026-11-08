@@ -43,3 +43,14 @@ func Compare(a, b string) int {
 	}
 	return strings.Compare(a, b)
 }
+
+// Valid reports whether id is a provider id in the one form the code stores
+// and compares: a positive decimal with no sign, space or leading zero, as
+// Format writes it. Every id a request carries in goes through this, because
+// the ids are compared as strings — "0603" would pass every duplicate check
+// against "603" and be stored beside it, and a tracker tagging its release
+// tmdbid 603 would never match it.
+func Valid(id string) bool {
+	n, ok := Parse(id)
+	return ok && Format(n) == id
+}

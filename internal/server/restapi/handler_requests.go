@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/internal/auth"
@@ -92,9 +94,11 @@ func (s *Server) CreateRequest(
 			BadRequestJSONResponse: errBadRequest("unknown media_type"),
 		}, nil
 	}
-	var mediaID string
-	if req.Body.MediaId != nil {
-		mediaID = *req.Body.MediaId
+	mediaID := deref(req.Body.MediaId)
+	if mediaID != "" && !providerid.Valid(mediaID) {
+		return CreateRequest400JSONResponse{
+			BadRequestJSONResponse: errBadProviderID("media_id"),
+		}, nil
 	}
 	r, err := s.requests.Create(ctx, requestsvc.CreateParams{
 		MediaType:      string(req.Body.MediaType),

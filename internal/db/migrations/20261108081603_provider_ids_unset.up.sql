@@ -22,6 +22,18 @@ UPDATE `import_scan_shows` SET `decision_tvdb_id` = NULL WHERE `decision_tvdb_id
 UPDATE `import_scan_books` SET `book_hardcover_id` = NULL WHERE `book_hardcover_id` = 0;
 UPDATE `import_scan_books` SET `decision_book_hardcover_id` = NULL WHERE `decision_book_hardcover_id` = 0;
 
+-- The root columns are NOT NULL, so a 0 there — a row written with no id,
+-- which nothing should have done but nothing refused — becomes '' instead:
+-- copied as '0' it would read as a real id, and a show searched by
+-- tvdbid=0 has every tracker-tagged release filtered away. SQLite keeps
+-- '' as text in an integer column, and the rebuild copies it as it is.
+UPDATE `movies` SET `tmdb_id` = '' WHERE `tmdb_id` = 0;
+UPDATE `tv_shows` SET `tvdb_id` = '' WHERE `tvdb_id` = 0;
+UPDATE `authors` SET `hardcover_id` = '' WHERE `hardcover_id` = 0;
+UPDATE `books` SET `hardcover_id` = '' WHERE `hardcover_id` = 0;
+UPDATE `book_series` SET `hardcover_id` = '' WHERE `hardcover_id` = 0;
+UPDATE `book_editions` SET `hardcover_edition_id` = '' WHERE `hardcover_edition_id` = 0;
+
 -- A scan row's candidates are JSON arrays whose entries carry the id as a
 -- number; the code now decodes it as a string, and a number would fail the
 -- whole row. Each entry's id is rewritten as text, 0 as '' — the rebuild

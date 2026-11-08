@@ -24275,6 +24275,20 @@ func (response IdentifyPending204Response) VisitIdentifyPendingResponse(w http.R
 	return nil
 }
 
+type IdentifyPending400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response IdentifyPending400JSONResponse) VisitIdentifyPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type IdentifyPending403JSONResponse struct{ ForbiddenJSONResponse }
 
 func (response IdentifyPending403JSONResponse) VisitIdentifyPendingResponse(w http.ResponseWriter) error {
@@ -25669,6 +25683,20 @@ func (response AddBook201JSONResponse) VisitAddBookResponse(w http.ResponseWrite
 	return err
 }
 
+type AddBook400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AddBook400JSONResponse) VisitAddBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddBook403JSONResponse struct{ ForbiddenJSONResponse }
 
 func (response AddBook403JSONResponse) VisitAddBookResponse(w http.ResponseWriter) error {
@@ -26406,6 +26434,20 @@ func (response AddBookSeries201JSONResponse) VisitAddBookSeriesResponse(w http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBookSeries400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AddBookSeries400JSONResponse) VisitAddBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -31218,6 +31260,20 @@ func (response UpdateImportBookDecision200JSONResponse) VisitUpdateImportBookDec
 	return err
 }
 
+type UpdateImportBookDecision400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateImportBookDecision400JSONResponse) VisitUpdateImportBookDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateImportBookDecision403JSONResponse struct{ ForbiddenJSONResponse }
 
 func (response UpdateImportBookDecision403JSONResponse) VisitUpdateImportBookDecisionResponse(w http.ResponseWriter) error {
@@ -31586,6 +31642,20 @@ func (response UpdateImportFileDecision200JSONResponse) VisitUpdateImportFileDec
 	return err
 }
 
+type UpdateImportFileDecision400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateImportFileDecision400JSONResponse) VisitUpdateImportFileDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateImportFileDecision403JSONResponse struct{ ForbiddenJSONResponse }
 
 func (response UpdateImportFileDecision403JSONResponse) VisitUpdateImportFileDecisionResponse(w http.ResponseWriter) error {
@@ -31713,6 +31783,20 @@ func (response UpdateImportShowDecision200JSONResponse) VisitUpdateImportShowDec
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateImportShowDecision400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateImportShowDecision400JSONResponse) VisitUpdateImportShowDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -32934,6 +33018,20 @@ func (response AddMovie201JSONResponse) VisitAddMovieResponse(w http.ResponseWri
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddMovie400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AddMovie400JSONResponse) VisitAddMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -38834,6 +38932,20 @@ func (response GetTMDBMovieDetail200JSONResponse) VisitGetTMDBMovieDetailRespons
 	return err
 }
 
+type GetTMDBMovieDetail400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetTMDBMovieDetail400JSONResponse) VisitGetTMDBMovieDetailResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetTMDBMovieDetail500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response GetTMDBMovieDetail500JSONResponse) VisitGetTMDBMovieDetailResponse(w http.ResponseWriter) error {
@@ -38916,6 +39028,20 @@ func (response AddSeries201JSONResponse) VisitAddSeriesResponse(w http.ResponseW
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddSeries400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AddSeries400JSONResponse) VisitAddSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -39088,6 +39214,20 @@ func (response GetSeriesLookupDetail200JSONResponse) VisitGetSeriesLookupDetailR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeriesLookupDetail400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetSeriesLookupDetail400JSONResponse) VisitGetSeriesLookupDetailResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }

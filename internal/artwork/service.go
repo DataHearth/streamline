@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/datahearth/streamline/internal/providerid"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -73,8 +75,7 @@ const (
 )
 
 var (
-	mbidKey   = regexp.MustCompile(`^[0-9a-f-]{36}$`)
-	numberKey = regexp.MustCompile(`^[0-9]{1,10}$`)
+	mbidKey = regexp.MustCompile(`^[0-9a-f-]{36}$`)
 
 	// allowedImageHosts are matched as the host itself or a subdomain of it.
 	// The URL comes from a provider payload the server cached, never from the
@@ -188,7 +189,9 @@ func validKey(kind Kind, key string) bool {
 	case KindArtists, KindAlbums:
 		return mbidKey.MatchString(key)
 	case KindBooks:
-		return numberKey.MatchString(key)
+		// The canonical form only: the library row is matched by the id
+		// string, so "0603" would miss book 603 and fetch it remotely.
+		return providerid.Valid(key)
 	}
 	return false
 }

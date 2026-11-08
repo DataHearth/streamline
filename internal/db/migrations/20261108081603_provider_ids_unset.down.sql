@@ -11,6 +11,12 @@ UPDATE `import_scan_shows` SET `tvdb_id` = NULL WHERE `tvdb_id` = '';
 UPDATE `import_scan_shows` SET `decision_tvdb_id` = NULL WHERE `decision_tvdb_id` = '';
 UPDATE `import_scan_books` SET `book_hardcover_id` = NULL WHERE `book_hardcover_id` = '';
 UPDATE `import_scan_books` SET `decision_book_hardcover_id` = NULL WHERE `decision_book_hardcover_id` = '';
+UPDATE `movies` SET `tmdb_id` = 0 WHERE `tmdb_id` = '';
+UPDATE `tv_shows` SET `tvdb_id` = 0 WHERE `tvdb_id` = '';
+UPDATE `authors` SET `hardcover_id` = 0 WHERE `hardcover_id` = '';
+UPDATE `books` SET `hardcover_id` = 0 WHERE `hardcover_id` = '';
+UPDATE `book_series` SET `hardcover_id` = 0 WHERE `hardcover_id` = '';
+UPDATE `book_editions` SET `hardcover_edition_id` = 0 WHERE `hardcover_edition_id` = '';
 
 -- The candidates' ids back to numbers, '' to 0.
 UPDATE `import_scan_files` SET `candidates` = (

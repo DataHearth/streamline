@@ -31,7 +31,7 @@
 	const decide = createMutation<
 		ImportScanShow,
 		Error,
-		{ decision: ImportFileDecision; tvdbId?: number }
+		{ decision: ImportFileDecision; tvdbId?: string }
 	>(() => ({
 		mutationFn: ({ decision, tvdbId }) =>
 			api<ImportScanShow>(`/library/imports/${scanId}/shows/${show.id}`, {
