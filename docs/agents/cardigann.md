@@ -119,7 +119,9 @@ alone would leave a tracker that moved domains broken until the next streamline 
   `definitions.Invalidate` follows every write.
 - **The trust hold**: a changed definition that a configured indexer runs (enabled or not)
   is compared on the **hosts it names** — links, legacy links and every absolute
-  `http(s)://` URL anywhere in its JSON — and its **login block**. Either changing keeps the
+  `http(s)://` **or scheme-relative `//host/…`** URL anywhere in its JSON (a path written
+  that way resolves against the site to another host, and re-points a query or header
+  secret as surely) — and its **login block**. Either changing keeps the
   old version in `current/` (listed in the catalog's `held` and the NOTICE) and puts the new
   one in `pending/` with its reasons. A definition deleted upstream that is in use is held
   the same way (`removed`). Everything else applies at once. `Approve` moves the pending
@@ -409,10 +411,16 @@ indexers:
 - **Downloads**: a release link on an enabled cardigann entry's site is resolved at grab
   time (`indexer.ResolveDownload`, called from `download.resolveTorrentSource`): the
   `before` request, then the `infohash` block or the first `selectors` entry whose link is
-  a magnet or a bencoded body (`testlinktorrent`), with the download (else search) headers.
-  `checkReleaseSource` admits the tracker's site host and port for a cardigann entry, and
-  every hop is still held to it. No v11 download selector sets `usebeforeresponse`, so the
-  model has no such field there and each selector re-reads the release page.
+  a magnet or a bencoded body (`testlinktorrent`), with the download (else search) headers
+  — and **fetched by the engine itself** (`Engine.Fetch`, through `do`: the indexer's
+  proxy, solver, pacing and session), the bytes or the magnet handed back. The manager's
+  own fetch, with the shared client, is for Torznab and Prowlarr links only: it used to
+  take the resolved URL and headers and so left from the server's real address, where a
+  proxied tracker's clearance was no good. The owner is found by **host** (`cardigannSite`
+  against the link) before any engine is built, so an unrelated entry that no longer runs
+  costs the grab nothing. `checkReleaseSource` admits the tracker's site host and port for
+  a cardigann entry. No v11 download selector sets `usebeforeresponse`, so the model has no
+  such field there and each selector re-reads the release page.
 - **Test** runs the feed query (no term) and passes on a readable answer, results or not.
   **Feed** is the same query.
 
@@ -429,12 +437,28 @@ newznab root of the kind, or page past the first response.
 - `POST /indexers` with `protocol: cardigann` takes `definition`, `site`, `settings`,
   `proxy`; host, port and api_key are required by `checkIndexers` for the other protocols
   only, so `IndexerCreate` requires nothing but `name`. A draft test runs
-  `config.CheckCardigann` first (an undeclared setting is a plain 422) and needs no
-  `draftTargetRefused` — the target is a definition link, never a caller-named host.
+  `config.CheckCardigann` first (an undeclared setting is a plain 422); the target is a
+  definition link, never a caller-named host, so `draftTargetRefused` applies to the one
+  address the caller does name, the `proxy`, which the probe would otherwise connect to
+  and describe (refused, timeout, bad answer) like any draft host.
+- **`CheckCardigann` is not validation.** `checkIndexers` requires a `definition` name and
+  a well-formed `proxy` and nothing more; whether the definition in force still runs with
+  the entry's `site` and `settings` is checked on every API write (`AddIndexer`,
+  `UpdateIndexer`, the draft test) and only **warned** at `Load`
+  (`warnUnusableCardigann`). The definitions move under a running instance — the update
+  job, an approved hold, a new binary's snapshot, a custom file — and a drifted one used to
+  fail `config.Load`, so an auto-updated image crash-looped until someone edited the YAML.
+  A drifted entry is unusable (`newCardigann` fails it, `searchAll` logs it
+  `misconfigured`) and nothing else.
 - **Secrets never leave**: `Indexer.settings` carries the non-secret values, `secrets_set`
   names the secret ones holding a value, `proxy` comes back without userinfo. On `PUT`,
   `config.CardigannPatch` keeps a secret sent empty or left out — unless the definition
-  changes, which starts the settings (and site) over; `proxy` absent keeps, `""` clears, and
+  changes, which starts the settings (and site) over, **or the edit moves where the secrets
+  go**: a `site` resolving to another of the definition's links, or a `proxy` that changes
+  (set, cleared or replaced). Then every stored secret must be sent again
+  (`ErrSecretRequired`, `422 secret_required`), the cardigann form of the moved-host guard
+  on a Torznab key — an admin could otherwise point `proxy` at a host of their own and read
+  the password off the next login. `proxy` absent keeps, `""` clears, and
   the SPA sends it only when the field changed, since the redacted form sent back would
   drop the credentials. Switching an entry's protocol away from `cardigann` drops the
   block. Any edit `Forget`s the session.
@@ -489,15 +513,16 @@ not to, is `internal/indexer`'s** (`Cardigann.run`).
   `data:` URL **whose type is sniffed, never the tracker's header**; `POST
   /indexers/{name}/login {token, answer}` submits that page. A draft has nowhere to hold
   one, so a captcha tracker is saved first, then logged in.
-- **Downloads** go out with the session: `ResolveDownload` runs the download block inside
-  the same login handling and adds the session's `Cookie` and user agent to the target's
-  headers, which `download.resolveTorrentSource` sends.
+- **Downloads** go out with the session: `ResolveDownload` runs the download block and
+  the fetch inside the same login handling, through the engine's own client, whose jar
+  holds the session's cookies and whose user agent is the session's.
 
 ## Browser challenges
 
 A port of Prowlarr's `FlareSolverr` indexer proxy and `CloudFlareDetectionService`, applied
 in `Engine.do` — the one choke point every request goes through (search, login, captcha,
-download block), so all of them are covered.
+download block, the torrent fetch), so all of them are covered. Every redirect-following
+request stops at a `magnet:` hop, which a transport cannot take; `Fetch` hands it back.
 
 - **Detection** (`isChallenge`) is Prowlarr's, exactly: the `Server` header must be
   `cloudflare`, `cloudflare-nginx` or `ddos-guard`, and then either a 503/403 whose body is

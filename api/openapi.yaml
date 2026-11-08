@@ -3488,8 +3488,11 @@ paths:
         `use_ssl` move the indexer to another destination: then the update is
         refused with `422` `code: secret_required` until the key is sent again,
         and with `403` `code: secret_file_managed` when the key comes from
-        `api_key_file`. Changing a `cardigann` indexer drops its tracker
-        session, so the next search logs in with what was saved.
+        `api_key_file`. A `cardigann` indexer's secret settings are kept the
+        same way, and asked again (`422` `code: secret_required`) when `site`
+        or `proxy` moves where they are sent. Changing a `cardigann` indexer
+        drops its tracker session, so the next search logs in with what was
+        saved.
       tags: [indexers]
       requestBody:
         $ref: "#/components/requestBodies/CreateIndexer"
