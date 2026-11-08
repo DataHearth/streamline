@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/musicannotation"
 )
@@ -309,6 +310,21 @@ func (_c *ArtistCreate) SetID(v uint32) *ArtistCreate {
 	return _c
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_c *ArtistCreate) AddExternalIDIDs(ids ...uint32) *ArtistCreate {
+	_c.mutation.AddExternalIDIDs(ids...)
+	return _c
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_c *ArtistCreate) AddExternalIds(v ...*ExternalID) *ArtistCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddExternalIDIDs(ids...)
+}
+
 // AddAlbumIDs adds the "albums" edge to the Album entity by IDs.
 func (_c *ArtistCreate) AddAlbumIDs(ids ...uint32) *ArtistCreate {
 	_c.mutation.AddAlbumIDs(ids...)
@@ -600,6 +616,22 @@ func (_c *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ArtSidecarHash(); ok {
 		_spec.SetField(artist.FieldArtSidecarHash, field.TypeString, value)
 		_node.ArtSidecarHash = value
+	}
+	if nodes := _c.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.ExternalIdsTable,
+			Columns: []string{artist.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.AlbumsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

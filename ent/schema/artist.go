@@ -55,6 +55,8 @@ func (Artist) Fields() []ent.Field {
 
 func (Artist) Edges() []ent.Edge {
 	return []ent.Edge{
+		edge.To("external_ids", ExternalID.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("albums", Album.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("members", ArtistMember.Type).

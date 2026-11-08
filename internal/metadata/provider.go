@@ -344,6 +344,11 @@ type ReleaseGroupDetails struct {
 	// CreditsComplete is false when the heavy call failed and the light one
 	// supplied the tracks: the album is hydrated but its credits are not.
 	CreditsComplete bool
+	// ExternalIDs are the other sites' ids MusicBrainz links, keyed by
+	// Source*: Wikidata, Discogs (master), AllMusic and RateYourMusic from
+	// the release group, Spotify, Deezer and Bandcamp from the canonical
+	// release. Never nil from GetReleaseGroup.
+	ExternalIDs map[string]string
 }
 
 // ArtistMemberInfo is one member of a group.
@@ -387,7 +392,12 @@ type ArtistDetails struct {
 	// DeezerID comes from MusicBrainz's own url-rel, 0 when it has none.
 	DeezerID uint32
 	// WikidataID is the Q-number of the artist's Wikidata item.
-	WikidataID    string
+	WikidataID string
+	// ExternalIDs are the other sites' ids MusicBrainz links for the artist,
+	// keyed by Source*: Discogs, AllMusic, Spotify, Bandcamp, Last.fm,
+	// RateYourMusic. Wikidata and Deezer stay in their own fields. Never nil
+	// from GetArtist.
+	ExternalIDs   map[string]string
 	ReleaseGroups []ReleaseGroupInfo
 }
 

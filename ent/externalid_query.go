@@ -11,6 +11,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -26,7 +28,8 @@ type ExternalIDQuery struct {
 	predicates []predicate.ExternalID
 	withMovie  *MovieQuery
 	withTvShow *TVShowQuery
-	withFKs    bool
+	withArtist *ArtistQuery
+	withAlbum  *AlbumQuery
 	modifiers  []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -101,6 +104,50 @@ func (_q *ExternalIDQuery) QueryTvShow() *TVShowQuery {
 			sqlgraph.From(externalid.Table, externalid.FieldID, selector),
 			sqlgraph.To(tvshow.Table, tvshow.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, externalid.TvShowTable, externalid.TvShowColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryArtist chains the current query on the "artist" edge.
+func (_q *ExternalIDQuery) QueryArtist() *ArtistQuery {
+	query := (&ArtistClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(externalid.Table, externalid.FieldID, selector),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, externalid.ArtistTable, externalid.ArtistColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAlbum chains the current query on the "album" edge.
+func (_q *ExternalIDQuery) QueryAlbum() *AlbumQuery {
+	query := (&AlbumClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(externalid.Table, externalid.FieldID, selector),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, externalid.AlbumTable, externalid.AlbumColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -302,6 +349,8 @@ func (_q *ExternalIDQuery) Clone() *ExternalIDQuery {
 		predicates: append([]predicate.ExternalID{}, _q.predicates...),
 		withMovie:  _q.withMovie.Clone(),
 		withTvShow: _q.withTvShow.Clone(),
+		withArtist: _q.withArtist.Clone(),
+		withAlbum:  _q.withAlbum.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -328,6 +377,28 @@ func (_q *ExternalIDQuery) WithTvShow(opts ...func(*TVShowQuery)) *ExternalIDQue
 		opt(query)
 	}
 	_q.withTvShow = query
+	return _q
+}
+
+// WithArtist tells the query-builder to eager-load the nodes that are connected to
+// the "artist" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ExternalIDQuery) WithArtist(opts ...func(*ArtistQuery)) *ExternalIDQuery {
+	query := (&ArtistClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withArtist = query
+	return _q
+}
+
+// WithAlbum tells the query-builder to eager-load the nodes that are connected to
+// the "album" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ExternalIDQuery) WithAlbum(opts ...func(*AlbumQuery)) *ExternalIDQuery {
+	query := (&AlbumClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAlbum = query
 	return _q
 }
 
@@ -408,19 +479,14 @@ func (_q *ExternalIDQuery) prepareQuery(ctx context.Context) error {
 func (_q *ExternalIDQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ExternalID, error) {
 	var (
 		nodes       = []*ExternalID{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [4]bool{
 			_q.withMovie != nil,
 			_q.withTvShow != nil,
+			_q.withArtist != nil,
+			_q.withAlbum != nil,
 		}
 	)
-	if _q.withMovie != nil || _q.withTvShow != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, externalid.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*ExternalID).scanValues(nil, columns)
 	}
@@ -454,6 +520,18 @@ func (_q *ExternalIDQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*E
 			return nil, err
 		}
 	}
+	if query := _q.withArtist; query != nil {
+		if err := _q.loadArtist(ctx, query, nodes, nil,
+			func(n *ExternalID, e *Artist) { n.Edges.Artist = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAlbum; query != nil {
+		if err := _q.loadAlbum(ctx, query, nodes, nil,
+			func(n *ExternalID, e *Album) { n.Edges.Album = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -461,10 +539,7 @@ func (_q *ExternalIDQuery) loadMovie(ctx context.Context, query *MovieQuery, nod
 	ids := make([]uint32, 0, len(nodes))
 	nodeids := make(map[uint32][]*ExternalID)
 	for i := range nodes {
-		if nodes[i].movie_external_ids == nil {
-			continue
-		}
-		fk := *nodes[i].movie_external_ids
+		fk := nodes[i].MovieID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -481,7 +556,7 @@ func (_q *ExternalIDQuery) loadMovie(ctx context.Context, query *MovieQuery, nod
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "movie_external_ids" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "movie_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -493,10 +568,7 @@ func (_q *ExternalIDQuery) loadTvShow(ctx context.Context, query *TVShowQuery, n
 	ids := make([]uint32, 0, len(nodes))
 	nodeids := make(map[uint32][]*ExternalID)
 	for i := range nodes {
-		if nodes[i].tv_show_external_ids == nil {
-			continue
-		}
-		fk := *nodes[i].tv_show_external_ids
+		fk := nodes[i].TvShowID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -513,7 +585,65 @@ func (_q *ExternalIDQuery) loadTvShow(ctx context.Context, query *TVShowQuery, n
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "tv_show_external_ids" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "tv_show_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *ExternalIDQuery) loadArtist(ctx context.Context, query *ArtistQuery, nodes []*ExternalID, init func(*ExternalID), assign func(*ExternalID, *Artist)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*ExternalID)
+	for i := range nodes {
+		fk := nodes[i].ArtistID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(artist.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "artist_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *ExternalIDQuery) loadAlbum(ctx context.Context, query *AlbumQuery, nodes []*ExternalID, init func(*ExternalID), assign func(*ExternalID, *Album)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*ExternalID)
+	for i := range nodes {
+		fk := nodes[i].AlbumID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(album.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "album_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -549,6 +679,18 @@ func (_q *ExternalIDQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != externalid.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withMovie != nil {
+			_spec.Node.AddColumnOnce(externalid.FieldMovieID)
+		}
+		if _q.withTvShow != nil {
+			_spec.Node.AddColumnOnce(externalid.FieldTvShowID)
+		}
+		if _q.withArtist != nil {
+			_spec.Node.AddColumnOnce(externalid.FieldArtistID)
+		}
+		if _q.withAlbum != nil {
+			_spec.Node.AddColumnOnce(externalid.FieldAlbumID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

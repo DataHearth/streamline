@@ -10211,6 +10211,48 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/MusicAlbum"
+            external_ids:
+              $ref: "#/components/schemas/MusicExternalIds"
+
+    MusicExternalIds:
+      type: object
+      description: |
+        Other sites' ids for an artist or an album, from the url relations
+        MusicBrainz keeps for it; a site MusicBrainz links none for is
+        absent. Each value is what that site's address is built from. An
+        artist's links are read on add and refresh (`music-metadata-refresh`),
+        an album's on hydration: Wikidata, Discogs (the master release),
+        AllMusic and RateYourMusic from the release group, Spotify, Deezer
+        and Bandcamp from the release the album follows.
+      properties:
+        wikidata:
+          type: string
+          description: Wikidata item, `Q…`.
+        discogs:
+          type: string
+          description: Discogs artist id, or master id for an album.
+        allmusic:
+          type: string
+          description: AllMusic id, `mn…` for an artist, `mw…` for an album.
+        spotify:
+          type: string
+          description: Spotify base62 id.
+        deezer:
+          type: string
+          description: Deezer artist or album id.
+        bandcamp:
+          type: string
+          description: |
+            Bandcamp host for an artist (`band.bandcamp.com`), host and path
+            for an album (`band.bandcamp.com/album/name`).
+        lastfm:
+          type: string
+          description: Last.fm artist name as its URL writes it (artists only).
+        rateyourmusic:
+          type: string
+          description: |
+            RateYourMusic path below `/artist/` for an artist, below
+            `/release/` for an album (`album/radiohead/ok_computer`).
 
     MusicMember:
       type: object
@@ -10340,6 +10382,8 @@ components:
             mbid:
               type: string
               description: MusicBrainz release-group id.
+            external_ids:
+              $ref: "#/components/schemas/MusicExternalIds"
             label:
               type: string
             catalog_number:

@@ -2,53 +2,85 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strconv"
+	"log/slog"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/externalid"
-	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
-	"github.com/datahearth/streamline/ent/tvshow"
 )
 
-// ExternalIDs are the other sites' ids a title's provider maps it to, kept in
-// the external_ids table. The provider's own id is not among them: a movie's
-// TMDB id is movies.tmdb_id and a series' TVDB id tv_shows.tvdb_id, so TMDBID
-// is only ever set on a series.
+// ExternalIDOwner names the kind of row a set of external ids hangs off.
+// ExternalID carries one optional edge per kind and exactly one is ever set,
+// the Credit and MediaEvent pattern, so the owner is named explicitly.
+type ExternalIDOwner string
+
+const (
+	ExternalIDsOfMovie  ExternalIDOwner = "movie"
+	ExternalIDsOfSeries ExternalIDOwner = "series"
+	ExternalIDsOfArtist ExternalIDOwner = "artist"
+	ExternalIDsOfAlbum  ExternalIDOwner = "album"
+)
+
+var errUnknownExternalIDOwner = errors.New("unknown external id owner")
+
+// ExternalIDs maps a source (metadata.Source*) to that site's id for one
+// row: what the row's own provider cross-references (TMDB for a movie, TVDB
+// for a series, MusicBrainz for an artist or an album). The provider's own id
+// is never among them; it is the row's column.
 //
-// Every metadata write replaces a title's set with what the provider
-// answered, empty included, so a re-identified title never keeps the previous
-// one's ids.
-type ExternalIDs struct {
-	TMDBID     uint32
-	IMDbID     string
-	WikidataID string
+// A write replaces the owner's set with the map, empty values dropped, so a
+// re-identified title never keeps the previous one's ids. A nil map is "not
+// fetched this time" and leaves the stored set alone, which is how an album
+// re-hydrated from its stored facts keeps its links.
+type ExternalIDs map[string]string
+
+func externalIDsOf(owner ExternalIDOwner, ownerID uint32) (predicate.ExternalID, error) {
+	return externalIDsOfAny(owner, []uint32{ownerID})
 }
 
-// CastOwner names the title kind here as it does for credits: ExternalID has
-// the same two alternative owner edges.
-func externalIDsOf(owner CastOwner, ownerID uint32) (predicate.ExternalID, error) {
+func externalIDsOfAny(owner ExternalIDOwner, ownerIDs []uint32) (predicate.ExternalID, error) {
 	switch owner {
-	case CastOwnerMovie:
-		return externalid.HasMovieWith(movie.IDEQ(ownerID)), nil
-	case CastOwnerSeries:
-		return externalid.HasTvShowWith(tvshow.IDEQ(ownerID)), nil
+	case ExternalIDsOfMovie:
+		return externalid.MovieIDIn(ownerIDs...), nil
+	case ExternalIDsOfSeries:
+		return externalid.TvShowIDIn(ownerIDs...), nil
+	case ExternalIDsOfArtist:
+		return externalid.ArtistIDIn(ownerIDs...), nil
+	case ExternalIDsOfAlbum:
+		return externalid.AlbumIDIn(ownerIDs...), nil
 	default:
-		return nil, fmt.Errorf("%w: %q", errUnknownCastOwner, owner)
+		return nil, fmt.Errorf("%w: %q", errUnknownExternalIDOwner, owner)
 	}
 }
 
-// replaceExternalIDs writes a title's ids against a client the caller's
-// transaction already holds (the creates and the metadata updates), for the
-// same single-writer reason replaceCast takes one.
+func ownerIDOf(owner ExternalIDOwner, r *ent.ExternalID) uint32 {
+	switch owner {
+	case ExternalIDsOfMovie:
+		return r.MovieID
+	case ExternalIDsOfSeries:
+		return r.TvShowID
+	case ExternalIDsOfArtist:
+		return r.ArtistID
+	default:
+		return r.AlbumID
+	}
+}
+
+// replaceExternalIDs writes an owner's ids against a client the caller's
+// transaction already holds (the creates, the refreshes, the album
+// hydration), for the same single-writer reason replaceCast takes one.
 func replaceExternalIDs(
 	ctx context.Context,
 	cl *ent.Client,
-	owner CastOwner,
+	owner ExternalIDOwner,
 	ownerID uint32,
 	ids ExternalIDs,
 ) error {
+	if ids == nil {
+		return nil
+	}
 	ownedBy, err := externalIDsOf(owner, ownerID)
 	if err != nil {
 		return err
@@ -57,24 +89,30 @@ func replaceExternalIDs(
 		return fmt.Errorf("delete external ids: %w", err)
 	}
 
-	values := map[externalid.Source]string{
-		externalid.SourceImdb:     ids.IMDbID,
-		externalid.SourceWikidata: ids.WikidataID,
-	}
-	if ids.TMDBID != 0 {
-		values[externalid.SourceTmdb] = strconv.FormatUint(uint64(ids.TMDBID), 10)
-	}
-	creates := make([]*ent.ExternalIDCreate, 0, len(values))
-	for source, value := range values {
+	creates := make([]*ent.ExternalIDCreate, 0, len(ids))
+	for name, value := range ids {
 		if value == "" {
+			continue
+		}
+		source := externalid.Source(name)
+		if err := externalid.SourceValidator(source); err != nil {
+			// A source the provider layer reads but the enum does not carry
+			// is a programming error, not the provider's; it costs a link,
+			// never the metadata write.
+			slog.WarnContext(ctx, "dropping external id of an unknown source",
+				"external_id.source", name, "error", err)
 			continue
 		}
 		b := cl.ExternalID.Create().SetSource(source).SetValue(value)
 		switch owner {
-		case CastOwnerMovie:
+		case ExternalIDsOfMovie:
 			b = b.SetMovieID(ownerID)
-		case CastOwnerSeries:
+		case ExternalIDsOfSeries:
 			b = b.SetTvShowID(ownerID)
+		case ExternalIDsOfArtist:
+			b = b.SetArtistID(ownerID)
+		case ExternalIDsOfAlbum:
+			b = b.SetAlbumID(ownerID)
 		}
 		creates = append(creates, b)
 	}
@@ -87,32 +125,53 @@ func replaceExternalIDs(
 	return nil
 }
 
-// TitleExternalIDs returns the ids stored for one title, zero-valued for a
-// source it has none for.
+// TitleExternalIDs returns the ids stored for one row, an empty map when it
+// has none.
 func (db *DB) TitleExternalIDs(
 	ctx context.Context,
-	owner CastOwner,
+	owner ExternalIDOwner,
 	ownerID uint32,
 ) (ExternalIDs, error) {
 	ownedBy, err := externalIDsOf(owner, ownerID)
 	if err != nil {
-		return ExternalIDs{}, err
+		return nil, err
 	}
 	rows, err := db.client.ExternalID.Query().Where(ownedBy).All(ctx)
 	if err != nil {
-		return ExternalIDs{}, fmt.Errorf("title external ids: %w", err)
+		return nil, fmt.Errorf("title external ids: %w", err)
 	}
-	var out ExternalIDs
+	out := make(ExternalIDs, len(rows))
 	for _, r := range rows {
-		switch r.Source {
-		case externalid.SourceImdb:
-			out.IMDbID = r.Value
-		case externalid.SourceWikidata:
-			out.WikidataID = r.Value
-		case externalid.SourceTmdb:
-			n, _ := strconv.ParseUint(r.Value, 10, 32)
-			out.TMDBID = uint32(n)
+		out[string(r.Source)] = r.Value
+	}
+	return out, nil
+}
+
+// ExternalIDsFor returns the ids stored for many rows of one kind in one
+// query, keyed by row id; a row with none is absent from the map.
+func (db *DB) ExternalIDsFor(
+	ctx context.Context,
+	owner ExternalIDOwner,
+	ownerIDs []uint32,
+) (map[uint32]ExternalIDs, error) {
+	if len(ownerIDs) == 0 {
+		return map[uint32]ExternalIDs{}, nil
+	}
+	ownedBy, err := externalIDsOfAny(owner, ownerIDs)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.client.ExternalID.Query().Where(ownedBy).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("external ids: %w", err)
+	}
+	out := map[uint32]ExternalIDs{}
+	for _, r := range rows {
+		id := ownerIDOf(owner, r)
+		if out[id] == nil {
+			out[id] = ExternalIDs{}
 		}
+		out[id][string(r.Source)] = r.Value
 	}
 	return out, nil
 }

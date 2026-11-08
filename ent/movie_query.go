@@ -718,7 +718,9 @@ func (_q *MovieQuery) loadExternalIds(ctx context.Context, query *ExternalIDQuer
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(externalid.FieldMovieID)
+	}
 	query.Where(predicate.ExternalID(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(movie.ExternalIdsColumn), fks...))
 	}))
@@ -727,13 +729,10 @@ func (_q *MovieQuery) loadExternalIds(ctx context.Context, query *ExternalIDQuer
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.movie_external_ids
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "movie_external_ids" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.MovieID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "movie_external_ids" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "movie_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

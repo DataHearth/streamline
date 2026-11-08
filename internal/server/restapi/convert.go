@@ -127,24 +127,27 @@ func movieToAPI(m *ent.Movie) Movie {
 // their own table, so only the detail handlers read them, the way they read
 // the cast.
 func applyMovieExternalIDs(out *Movie, ids db.ExternalIDs) {
-	if ids.IMDbID != "" {
-		out.ImdbId = &ids.IMDbID
-	}
-	if ids.WikidataID != "" {
-		out.WikidataId = &ids.WikidataID
-	}
+	out.ImdbId = idOrNil(ids, metadata.SourceIMDb)
+	out.WikidataId = idOrNil(ids, metadata.SourceWikidata)
 }
 
 func applyTVShowExternalIDs(out *TVShow, ids db.ExternalIDs) {
-	if ids.TMDBID != 0 {
-		out.TmdbId = &ids.TMDBID
+	if n, err := strconv.ParseUint(ids[metadata.SourceTMDB], 10, 32); err == nil && n != 0 {
+		id := uint32(n)
+		out.TmdbId = &id
 	}
-	if ids.IMDbID != "" {
-		out.ImdbId = &ids.IMDbID
+	out.ImdbId = idOrNil(ids, metadata.SourceIMDb)
+	out.WikidataId = idOrNil(ids, metadata.SourceWikidata)
+}
+
+// idOrNil is the stored id for source, nil when there is none, for an
+// optional string field of the wire shape.
+func idOrNil(ids db.ExternalIDs, source string) *string {
+	v, ok := ids[source]
+	if !ok || v == "" {
+		return nil
 	}
-	if ids.WikidataID != "" {
-		out.WikidataId = &ids.WikidataID
-	}
+	return &v
 }
 
 // movieListToAPI renders a list entry: the base movie plus the file rollup

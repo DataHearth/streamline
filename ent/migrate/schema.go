@@ -702,10 +702,12 @@ var (
 		{Name: "id", Type: field.TypeUint32, Increment: true},
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
-		{Name: "source", Type: field.TypeEnum, Enums: []string{"imdb", "tmdb", "wikidata"}},
+		{Name: "source", Type: field.TypeEnum, Enums: []string{"imdb", "tmdb", "wikidata", "discogs", "allmusic", "spotify", "deezer", "bandcamp", "lastfm", "rateyourmusic"}},
 		{Name: "value", Type: field.TypeString},
-		{Name: "movie_external_ids", Type: field.TypeUint32, Nullable: true},
-		{Name: "tv_show_external_ids", Type: field.TypeUint32, Nullable: true},
+		{Name: "album_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "artist_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "movie_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "tv_show_id", Type: field.TypeUint32, Nullable: true},
 	}
 	// ExternalIdsTable holds the schema information for the "external_ids" table.
 	ExternalIdsTable = &schema.Table{
@@ -714,38 +716,50 @@ var (
 		PrimaryKey: []*schema.Column{ExternalIdsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "external_ids_movies_external_ids",
+				Symbol:     "external_ids_albums_external_ids",
 				Columns:    []*schema.Column{ExternalIdsColumns[5]},
+				RefColumns: []*schema.Column{AlbumsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "external_ids_artists_external_ids",
+				Columns:    []*schema.Column{ExternalIdsColumns[6]},
+				RefColumns: []*schema.Column{ArtistsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "external_ids_movies_external_ids",
+				Columns:    []*schema.Column{ExternalIdsColumns[7]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "external_ids_tv_shows_external_ids",
-				Columns:    []*schema.Column{ExternalIdsColumns[6]},
+				Columns:    []*schema.Column{ExternalIdsColumns[8]},
 				RefColumns: []*schema.Column{TvShowsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "externalid_source_movie_external_ids",
+				Name:    "externalid_movie_id_source",
 				Unique:  true,
-				Columns: []*schema.Column{ExternalIdsColumns[3], ExternalIdsColumns[5]},
+				Columns: []*schema.Column{ExternalIdsColumns[7], ExternalIdsColumns[3]},
 			},
 			{
-				Name:    "externalid_source_tv_show_external_ids",
+				Name:    "externalid_tv_show_id_source",
 				Unique:  true,
-				Columns: []*schema.Column{ExternalIdsColumns[3], ExternalIdsColumns[6]},
+				Columns: []*schema.Column{ExternalIdsColumns[8], ExternalIdsColumns[3]},
 			},
 			{
-				Name:    "externalid_movie_external_ids",
-				Unique:  false,
-				Columns: []*schema.Column{ExternalIdsColumns[5]},
+				Name:    "externalid_artist_id_source",
+				Unique:  true,
+				Columns: []*schema.Column{ExternalIdsColumns[6], ExternalIdsColumns[3]},
 			},
 			{
-				Name:    "externalid_tv_show_external_ids",
-				Unique:  false,
-				Columns: []*schema.Column{ExternalIdsColumns[6]},
+				Name:    "externalid_album_id_source",
+				Unique:  true,
+				Columns: []*schema.Column{ExternalIdsColumns[5], ExternalIdsColumns[3]},
 			},
 			{
 				Name:    "externalid_source_value",
@@ -2187,8 +2201,10 @@ func init() {
 	DownloadRecordsTable.ForeignKeys[4].RefTable = MoviesTable
 	DownloadRecordsTable.ForeignKeys[5].RefTable = TracksTable
 	EpisodesTable.ForeignKeys[0].RefTable = SeasonsTable
-	ExternalIdsTable.ForeignKeys[0].RefTable = MoviesTable
-	ExternalIdsTable.ForeignKeys[1].RefTable = TvShowsTable
+	ExternalIdsTable.ForeignKeys[0].RefTable = AlbumsTable
+	ExternalIdsTable.ForeignKeys[1].RefTable = ArtistsTable
+	ExternalIdsTable.ForeignKeys[2].RefTable = MoviesTable
+	ExternalIdsTable.ForeignKeys[3].RefTable = TvShowsTable
 	ImportScanAlbumsTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanBooksTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanFilesTable.ForeignKeys[0].RefTable = ImportScansTable

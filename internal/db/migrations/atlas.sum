@@ -1,4 +1,4 @@
-h1:dYrEA0wH8Pws3X4e0fMEG2L52jLgS3jPskWehsdk998=
+h1:EJp5MjM1yDxvgZ/+oj3MzSWFBmBCdEThwxfw6Hp0i/0=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -85,4 +85,4 @@ h1:dYrEA0wH8Pws3X4e0fMEG2L52jLgS3jPskWehsdk998=
 20261108140548_add_imdb_ids.up.sql h1:c2XhMX119cZcSsLM5HKJVP5tbfNGgVoJnMoxClDB/Ek=
 20261108140646_add_indexer_sessions.up.sql h1:mpxUD9G7NBqlvuXUHq2UeAYmg+St2FnXPviKl9AUIR4=
 20261108145512_indexer_session_config_hash.up.sql h1:PgLC2ABkQXpQhXe7UZvSxbiL4hHMyEOWCNglzbk/81E=
-20261109230048_external_ids.up.sql h1:hNUlHf6vmdMndvzqqQqVtAb9RV/a+4GGkBqVyTlKaJM=
+20261109230348_external_ids.up.sql h1:CCIMnGTMvVZJyqnRkkeDRq9lXJm+2GUKW85c5tAb1ak=

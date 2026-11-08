@@ -179,7 +179,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				}, nil).
 				Once()
 			app.store.EXPECT().
-				TitleExternalIDs(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				TitleExternalIDs(mock.Anything, db.ExternalIDsOfSeries, uint32(1)).
 				Return(db.ExternalIDs{}, nil).
 				Maybe()
 			app.store.EXPECT().
@@ -226,9 +226,9 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				}, nil).
 				Once()
 			app.store.EXPECT().
-				TitleExternalIDs(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				TitleExternalIDs(mock.Anything, db.ExternalIDsOfSeries, uint32(1)).
 				Return(db.ExternalIDs{
-					TMDBID: 1396, IMDbID: "tt0903747", WikidataID: "Q1079",
+					"tmdb": "1396", "imdb": "tt0903747", "wikidata": "Q1079",
 				}, nil).
 				Once()
 			app.store.EXPECT().
@@ -260,7 +260,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(&ent.TVShow{ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189}, nil).
 				Once()
 			app.store.EXPECT().
-				TitleExternalIDs(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				TitleExternalIDs(mock.Anything, db.ExternalIDsOfSeries, uint32(1)).
 				Return(db.ExternalIDs{}, nil).
 				Maybe()
 			app.store.EXPECT().
@@ -316,7 +316,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
 				Return(show, nil).Once()
 			app.store.EXPECT().
-				TitleExternalIDs(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				TitleExternalIDs(mock.Anything, db.ExternalIDsOfSeries, uint32(1)).
 				Return(db.ExternalIDs{}, nil).
 				Maybe()
 			app.store.EXPECT().

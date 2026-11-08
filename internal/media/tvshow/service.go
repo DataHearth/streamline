@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1412,9 +1413,12 @@ type Counts struct {
 }
 
 func showExternalIDs(d *metadata.TVDetails) db.ExternalIDs {
-	return db.ExternalIDs{
-		TMDBID:     d.TMDBID,
-		IMDbID:     d.IMDbID,
-		WikidataID: d.WikidataID,
+	ids := db.ExternalIDs{
+		metadata.SourceIMDb:     d.IMDbID,
+		metadata.SourceWikidata: d.WikidataID,
 	}
+	if d.TMDBID != 0 {
+		ids[metadata.SourceTMDB] = strconv.FormatUint(uint64(d.TMDBID), 10)
+	}
+	return ids
 }

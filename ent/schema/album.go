@@ -99,6 +99,8 @@ func (Album) Fields() []ent.Field {
 
 func (Album) Edges() []ent.Edge {
 	return []ent.Edge{
+		edge.To("external_ids", ExternalID.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.From("artist", Artist.Type).Ref("albums").Unique().Required(),
 		edge.To("tracks", Track.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),

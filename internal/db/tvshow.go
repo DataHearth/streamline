@@ -136,7 +136,7 @@ func (db *DB) UpdateTVShowMetadata(
 		return err
 	}
 	if err := replaceExternalIDs(
-		ctx, tx.Client(), CastOwnerSeries, id, p.ExternalIDs,
+		ctx, tx.Client(), ExternalIDsOfSeries, id, p.ExternalIDs,
 	); err != nil {
 		tx.Rollback()
 		return err
@@ -381,7 +381,7 @@ func (db *DB) CreateTVShow(
 		return nil, err
 	}
 	if err := replaceExternalIDs(
-		ctx, tx.Client(), CastOwnerSeries, show.ID, p.ExternalIDs,
+		ctx, tx.Client(), ExternalIDsOfSeries, show.ID, p.ExternalIDs,
 	); err != nil {
 		tx.Rollback()
 		return nil, err

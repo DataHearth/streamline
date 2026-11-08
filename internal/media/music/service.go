@@ -362,6 +362,7 @@ func (s *Service) Add(ctx context.Context, p AddParams) (*ent.Artist, error) {
 		QualityProfile: p.QualityProfile,
 		Members:        memberSeeds(details.Members),
 		Albums:         albumSeeds(details.ReleaseGroups, policy, time.Now()),
+		ExternalIDs:    db.ExternalIDs(details.ExternalIDs),
 	})
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
@@ -647,6 +648,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 		Members:     memberSeeds(details.Members),
 		Albums:      albumSeeds(details.ReleaseGroups, row.Monitor, now),
 		RefreshedAt: now,
+		ExternalIDs: db.ExternalIDs(details.ExternalIDs),
 	})
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
