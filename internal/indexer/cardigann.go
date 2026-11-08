@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"maps"
 	"math"
-	"net/http"
 	"net/url"
 	"slices"
 	"strconv"
@@ -434,73 +433,74 @@ func clampU32(n int64) uint32 {
 // CardigannSite is where a cardigann entry's tracker lives — the host its
 // release and download links point at.
 func CardigannSite(ix config.IndexerEntry) (string, error) {
-	if ix.Cardigann == nil {
-		return "", fmt.Errorf("indexer %q has no cardigann block", ix.Name)
-	}
-	def, err := definitions.Load(
-		config.Get().CardigannDir(),
-		ix.Cardigann.Definition,
-	)
-	if err != nil {
-		return "", err
-	}
-	u, err := engine.Site(def, ix.Cardigann.Site)
+	u, err := cardigannSite(ix)
 	if err != nil {
 		return "", err
 	}
 	return u.String(), nil
 }
 
-// DownloadTarget is what a release link resolved to: a magnet, or an
-// http(s) URL fetched with Method and Header — the session's cookies and
-// user agent among them, for a tracker that only serves logged-in clients.
-type DownloadTarget struct {
-	URL    string
-	Method string
-	Header http.Header
+func cardigannSite(ix config.IndexerEntry) (*url.URL, error) {
+	if ix.Cardigann == nil {
+		return nil, fmt.Errorf("indexer %q has no cardigann block", ix.Name)
+	}
+	def, err := definitions.Load(
+		config.Get().CardigannDir(),
+		ix.Cardigann.Definition,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return engine.Site(def, ix.Cardigann.Site)
 }
 
-// ResolveDownload finds the enabled cardigann indexer whose site link points
-// at and resolves it through that definition's download block. ok is false
-// when no cardigann indexer owns the link, which is then fetched as it is.
+// DownloadTarget is what a release link came to: the .torrent the tracker
+// served, or the magnet it resolved or redirected to.
+type DownloadTarget struct {
+	Bytes  []byte
+	Magnet string
+}
+
+// ResolveDownload finds the enabled cardigann indexer whose site the link
+// points at, resolves it through that definition's download block and
+// fetches it through that indexer's own client — its proxy, solver, pacing
+// and session. ok is false when no cardigann indexer owns the link, which is
+// then fetched as it is. The owner is found by host alone, so an unrelated
+// entry that no longer runs costs nothing here.
 func ResolveDownload(
 	ctx context.Context,
 	store db.Store,
 	link string,
 ) (DownloadTarget, bool, error) {
+	u, err := url.Parse(link)
+	if err != nil {
+		return DownloadTarget{}, false, nil
+	}
 	for _, ix := range config.EnabledIndexers() {
 		if ix.Protocol != "cardigann" {
 			continue
 		}
-		c, err := newCardigann(ctx, ix, store)
-		if err != nil {
-			return DownloadTarget{}, false, err
-		}
-		if !c.engine.Owns(link) {
+		site, err := cardigannSite(ix)
+		if err != nil || !strings.EqualFold(site.Host, u.Host) {
 			continue
 		}
-		var d engine.Download
+		c, err := newCardigann(ctx, ix, store)
+		if err != nil {
+			return DownloadTarget{}, true, err
+		}
+		var t DownloadTarget
 		err = c.run(ctx, func() error {
-			var err error
-			d, err = c.engine.Resolve(ctx, link)
+			d, err := c.engine.Resolve(ctx, link)
+			if err != nil {
+				return err
+			}
+			t.Bytes, t.Magnet, err = c.engine.Fetch(ctx, d)
 			return err
 		})
 		if err != nil {
 			return DownloadTarget{}, true, err
 		}
-		h := d.Header.Clone()
-		s := c.engine.Session()
-		if len(s.Cookies) > 0 && !strings.HasPrefix(d.URL, "magnet:") {
-			parts := make([]string, 0, len(s.Cookies))
-			for _, k := range slices.Sorted(maps.Keys(s.Cookies)) {
-				parts = append(parts, k+"="+s.Cookies[k])
-			}
-			h.Set("Cookie", strings.Join(parts, "; "))
-		}
-		if s.UserAgent != "" {
-			h.Set("User-Agent", s.UserAgent)
-		}
-		return DownloadTarget{URL: d.URL, Method: d.Method, Header: h}, true, nil
+		return t, true, nil
 	}
 	return DownloadTarget{}, false, nil
 }

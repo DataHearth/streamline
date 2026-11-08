@@ -110,12 +110,17 @@ var _ = Describe("a cardigann indexer", Label("unit", "indexers"), func() {
 			To(MatchError(ErrBadResponse))
 	})
 
-	It("reports a link on its site as its own, resolved as it is", func() {
+	It("fetches a link on its site itself, and leaves another host alone", func() {
+		urls := routeAll(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte("d8:announce0:e"))
+		})
 		target, ok, err := ResolveDownload(context.Background(), nil,
 			"https://yts.gg/torrent/download/AAA")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ok).To(BeTrue())
-		Expect(target.URL).To(Equal("https://yts.gg/torrent/download/AAA"))
+		Expect(string(target.Bytes)).To(Equal("d8:announce0:e"))
+		Expect(urls()).To(HaveLen(1))
+		Expect(urls()[0].Path).To(Equal("/torrent/download/AAA"))
 
 		_, ok, err = ResolveDownload(
 			context.Background(),
@@ -227,7 +232,7 @@ var _ = Describe(
 			},
 		)
 
-		It("sends the session with a download it resolves", func() {
+		It("sends the session with a download it fetches", func() {
 			exp := time.Now().Add(time.Hour)
 			rows[name] = db.IndexerSessionParams{
 				Cookies: map[string]string{
@@ -236,11 +241,28 @@ var _ = Describe(
 				},
 				ExpiresAt: &exp,
 			}
+			routeAll(func(w http.ResponseWriter, r *http.Request) {
+				Expect(r.Header.Get("Cookie")).To(ContainSubstring("pass=abc"))
+				Expect(r.Header.Get("Cookie")).To(ContainSubstring("uid=1"))
+				_, _ = w.Write([]byte("d8:announce0:e"))
+			})
 			target, ok, err := ResolveDownload(context.Background(), store,
 				"https://13city.org/download.php?id=7")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ok).To(BeTrue())
-			Expect(target.Header.Get("Cookie")).To(Equal("pass=abc; uid=1"))
+			Expect(string(target.Bytes)).To(Equal("d8:announce0:e"))
+		})
+
+		It("answers the magnet a download link redirects to", func() {
+			routeAll(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Location", "magnet:?xt=urn:btih:abc")
+				w.WriteHeader(http.StatusFound)
+			})
+			target, ok, err := ResolveDownload(context.Background(), store,
+				"https://13city.org/download.php?id=7")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ok).To(BeTrue())
+			Expect(target.Magnet).To(Equal("magnet:?xt=urn:btih:abc"))
 		})
 	},
 )

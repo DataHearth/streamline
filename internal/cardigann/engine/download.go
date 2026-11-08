@@ -159,6 +159,38 @@ func (e *Engine) Resolve(ctx context.Context, link string) (Download, error) {
 	return out, nil
 }
 
+// Fetch downloads what Resolve answered through the engine's own client —
+// the indexer's proxy, its challenge solver and its pacing, with the session
+// the tracker knows — and returns the body, or the magnet a tracker redirects
+// a download link to, which a transport cannot follow.
+func (e *Engine) Fetch(ctx context.Context, d Download) ([]byte, string, error) {
+	if strings.HasPrefix(d.URL, "magnet:") {
+		return nil, d.URL, nil
+	}
+	headers := make(map[string]string, len(d.Header))
+	for k := range d.Header {
+		headers[k] = d.Header.Get(k)
+	}
+	resp, err := e.do(ctx, request{
+		method: d.Method, url: d.URL, headers: headers, redirect: true,
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	if resp.status >= 300 && resp.status < 400 {
+		if strings.HasPrefix(resp.location, "magnet:") {
+			return nil, resp.location, nil
+		}
+		return nil, "", fmt.Errorf(
+			"%w: redirected to %s", ErrStatus, redactLink(resp.location),
+		)
+	}
+	if resp.status != http.StatusOK {
+		return nil, "", fmt.Errorf("%w: status %d", ErrStatus, resp.status)
+	}
+	return resp.raw, "", nil
+}
+
 func (e *Engine) testLinkTorrent() bool {
 	return e.def.TestLinkTorrent == nil || *e.def.TestLinkTorrent
 }

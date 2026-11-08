@@ -53,6 +53,9 @@ const (
 	regexTimeout = 2 * time.Second
 	// maxBody bounds one tracker response.
 	maxBody = 16 << 20
+	// maxRedirects is net/http's own ceiling, kept once the client's policy
+	// is replaced.
+	maxRedirects = 10
 	// userAgent is a desktop browser's, as Jackett sends: tracker front ends
 	// commonly refuse a client that names itself.
 	userAgent = "Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0"
@@ -393,10 +396,16 @@ func (e *Engine) send(ctx context.Context, r request) (*response, error) {
 		req.Header.Set("Referer", r.referer)
 	}
 	client := *e.client
-	if !r.redirect {
-		client.CheckRedirect = func(*http.Request, []*http.Request) error {
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		// A magnet-only tracker answers its download link with a redirect
+		// to the magnet itself, which no transport can follow.
+		if !r.redirect || next.URL.Scheme == "magnet" {
 			return http.ErrUseLastResponse
 		}
+		if len(via) >= maxRedirects {
+			return fmt.Errorf("stopped after %d redirects", maxRedirects)
+		}
+		return nil
 	}
 	resp, err := client.Do(req)
 	if err != nil {

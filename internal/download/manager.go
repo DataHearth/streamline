@@ -2185,34 +2185,26 @@ func resolveTorrentSource(
 		return TorrentSource{}, err
 	}
 	// A native tracker's link may be a release page its definition reads the
-	// real link off, with the headers it sends.
-	method, header := http.MethodGet, http.Header(nil)
+	// real link off; the indexer fetches it itself, through its own proxy,
+	// solver, pacing and session.
 	target, native, err := indexer.ResolveDownload(ctx, store, dl)
 	if err != nil {
 		return TorrentSource{}, fmt.Errorf("resolve download: %w", err)
 	}
 	if native {
-		if strings.HasPrefix(target.URL, "magnet:") {
-			return TorrentSource{Magnet: target.URL}, nil
+		if target.Magnet != "" {
+			return TorrentSource{Magnet: target.Magnet}, nil
 		}
-		if err := checkReleaseSource(target.URL); err != nil {
-			return TorrentSource{}, err
-		}
-		dl, method, header = target.URL, target.Method, target.Header
+		return torrentBody(target.Bytes)
 	}
 	// Both errors below render the release link, which authenticates the
 	// download: Jackett puts a `jackett_apikey` query parameter on it and
 	// Prowlarr an `apikey` (its X-Api-Key header covers the search API, not the
 	// download links it hands back). grab records whatever comes out of here on
 	// the download.grab span, so an unredacted one exports the key.
-	req, err := http.NewRequestWithContext(ctx, method, dl, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, dl, nil)
 	if err != nil {
 		return TorrentSource{}, otelx.RedactTransportError(err)
-	}
-	for k, vs := range header {
-		for _, v := range vs {
-			req.Header.Add(k, v)
-		}
 	}
 	// Every redirect hop is held to the same allowlist as the first: an
 	// allowlisted indexer answering 302 to an arbitrary host otherwise turns
@@ -2254,6 +2246,11 @@ func resolveTorrentSource(
 	if err != nil {
 		return TorrentSource{}, fmt.Errorf("read torrent body: %w", err)
 	}
+	return torrentBody(body)
+}
+
+// torrentBody is a fetched .torrent as a source, held to the size cap.
+func torrentBody(body []byte) (TorrentSource, error) {
 	if int64(len(body)) > MaxTorrentFileSize {
 		return TorrentSource{}, fmt.Errorf(
 			"torrent file exceeds %d byte cap", MaxTorrentFileSize,
