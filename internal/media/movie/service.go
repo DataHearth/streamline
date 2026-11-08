@@ -723,8 +723,8 @@ func (s *Service) updateMetadata(
 	})
 }
 
-func movieExternalIDs(d *metadata.MovieDetails) db.MovieExternalIDs {
-	return db.MovieExternalIDs{IMDbID: d.IMDbID, WikidataID: d.WikidataID}
+func movieExternalIDs(d *metadata.MovieDetails) db.ExternalIDs {
+	return db.ExternalIDs{IMDbID: d.IMDbID, WikidataID: d.WikidataID}
 }
 
 // fetchDigitalRelease persists m's configured-region digital (TMDB type-4)

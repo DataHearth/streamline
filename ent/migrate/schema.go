@@ -697,6 +697,63 @@ var (
 			},
 		},
 	}
+	// ExternalIdsColumns holds the columns for the "external_ids" table.
+	ExternalIdsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "source", Type: field.TypeEnum, Enums: []string{"imdb", "tmdb", "wikidata"}},
+		{Name: "value", Type: field.TypeString},
+		{Name: "movie_external_ids", Type: field.TypeUint32, Nullable: true},
+		{Name: "tv_show_external_ids", Type: field.TypeUint32, Nullable: true},
+	}
+	// ExternalIdsTable holds the schema information for the "external_ids" table.
+	ExternalIdsTable = &schema.Table{
+		Name:       "external_ids",
+		Columns:    ExternalIdsColumns,
+		PrimaryKey: []*schema.Column{ExternalIdsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "external_ids_movies_external_ids",
+				Columns:    []*schema.Column{ExternalIdsColumns[5]},
+				RefColumns: []*schema.Column{MoviesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "external_ids_tv_shows_external_ids",
+				Columns:    []*schema.Column{ExternalIdsColumns[6]},
+				RefColumns: []*schema.Column{TvShowsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "externalid_source_movie_external_ids",
+				Unique:  true,
+				Columns: []*schema.Column{ExternalIdsColumns[3], ExternalIdsColumns[5]},
+			},
+			{
+				Name:    "externalid_source_tv_show_external_ids",
+				Unique:  true,
+				Columns: []*schema.Column{ExternalIdsColumns[3], ExternalIdsColumns[6]},
+			},
+			{
+				Name:    "externalid_movie_external_ids",
+				Unique:  false,
+				Columns: []*schema.Column{ExternalIdsColumns[5]},
+			},
+			{
+				Name:    "externalid_tv_show_external_ids",
+				Unique:  false,
+				Columns: []*schema.Column{ExternalIdsColumns[6]},
+			},
+			{
+				Name:    "externalid_source_value",
+				Unique:  false,
+				Columns: []*schema.Column{ExternalIdsColumns[3], ExternalIdsColumns[4]},
+			},
+		},
+	}
 	// ImportScansColumns holds the columns for the "import_scans" table.
 	ImportScansColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -1307,7 +1364,6 @@ var (
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "tmdb_id", Type: field.TypeUint32, Unique: true},
 		{Name: "imdb_id", Type: field.TypeString, Nullable: true},
-		{Name: "wikidata_id", Type: field.TypeString, Nullable: true},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
 		{Name: "release_date", Type: field.TypeTime, Nullable: true},
 		{Name: "digital_release_date", Type: field.TypeTime, Nullable: true},
@@ -1328,7 +1384,7 @@ var (
 			{
 				Name:    "movie_digital_release_date",
 				Unique:  false,
-				Columns: []*schema.Column{MoviesColumns[15]},
+				Columns: []*schema.Column{MoviesColumns[14]},
 			},
 			{
 				Name:    "movie_status",
@@ -1818,9 +1874,7 @@ var (
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"standard", "anime", "daily"}, Default: "standard"},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "tvdb_id", Type: field.TypeUint32, Unique: true},
-		{Name: "tmdb_id", Type: field.TypeUint32, Nullable: true},
 		{Name: "imdb_id", Type: field.TypeString, Nullable: true},
-		{Name: "wikidata_id", Type: field.TypeString, Nullable: true},
 		{Name: "poster_path", Type: field.TypeString, Nullable: true},
 		{Name: "network", Type: field.TypeString, Nullable: true},
 		{Name: "creator", Type: field.TypeString, Nullable: true},
@@ -2076,6 +2130,7 @@ var (
 		CreditsTable,
 		DownloadRecordsTable,
 		EpisodesTable,
+		ExternalIdsTable,
 		ImportScansTable,
 		ImportScanAlbumsTable,
 		ImportScanBooksTable,
@@ -2132,6 +2187,8 @@ func init() {
 	DownloadRecordsTable.ForeignKeys[4].RefTable = MoviesTable
 	DownloadRecordsTable.ForeignKeys[5].RefTable = TracksTable
 	EpisodesTable.ForeignKeys[0].RefTable = SeasonsTable
+	ExternalIdsTable.ForeignKeys[0].RefTable = MoviesTable
+	ExternalIdsTable.ForeignKeys[1].RefTable = TvShowsTable
 	ImportScanAlbumsTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanBooksTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanFilesTable.ForeignKeys[0].RefTable = ImportScansTable

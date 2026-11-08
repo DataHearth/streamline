@@ -1411,8 +1411,8 @@ type Counts struct {
 	DownloadingEpisodes int
 }
 
-func showExternalIDs(d *metadata.TVDetails) db.TVShowExternalIDs {
-	return db.TVShowExternalIDs{
+func showExternalIDs(d *metadata.TVDetails) db.ExternalIDs {
+	return db.ExternalIDs{
 		TMDBID:     d.TMDBID,
 		IMDbID:     d.IMDbID,
 		WikidataID: d.WikidataID,

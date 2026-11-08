@@ -351,7 +351,14 @@ func (s *Server) GetSeries(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
+	ids, err := s.store.TitleExternalIDs(ctx, db.CastOwnerSeries, show.ID)
+	if err != nil {
+		return GetSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
 	result := tvShowToAPI(show)
+	applyTVShowExternalIDs(&result, ids)
 	if len(credits) > 0 {
 		apiCast := libraryCastToAPI(credits)
 		result.Cast = &apiCast

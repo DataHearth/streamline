@@ -103,12 +103,6 @@ func movieToAPI(m *ent.Movie) Movie {
 	if m.Overview != "" {
 		mov.Overview = &m.Overview
 	}
-	if m.ImdbID != "" {
-		mov.ImdbId = &m.ImdbID
-	}
-	if m.WikidataID != "" {
-		mov.WikidataId = &m.WikidataID
-	}
 	if m.QualityProfile != "" {
 		mov.QualityProfile = &m.QualityProfile
 	}
@@ -126,6 +120,31 @@ func movieToAPI(m *ent.Movie) Movie {
 		mov.MediaFiles = &files
 	}
 	return mov
+}
+
+// applyMovieExternalIDs and applyTVShowExternalIDs attach a title's stored
+// cross-references (db.TitleExternalIDs) to its detail response. They live in
+// their own table, so only the detail handlers read them, the way they read
+// the cast.
+func applyMovieExternalIDs(out *Movie, ids db.ExternalIDs) {
+	if ids.IMDbID != "" {
+		out.ImdbId = &ids.IMDbID
+	}
+	if ids.WikidataID != "" {
+		out.WikidataId = &ids.WikidataID
+	}
+}
+
+func applyTVShowExternalIDs(out *TVShow, ids db.ExternalIDs) {
+	if ids.TMDBID != 0 {
+		out.TmdbId = &ids.TMDBID
+	}
+	if ids.IMDbID != "" {
+		out.ImdbId = &ids.IMDbID
+	}
+	if ids.WikidataID != "" {
+		out.WikidataId = &ids.WikidataID
+	}
 }
 
 // movieListToAPI renders a list entry: the base movie plus the file rollup
@@ -1249,16 +1268,6 @@ func tvShowBaseToAPI(s *ent.TVShow) TVShow {
 	}
 	if s.Overview != "" {
 		out.Overview = &s.Overview
-	}
-	if s.TmdbID != 0 {
-		id := s.TmdbID
-		out.TmdbId = &id
-	}
-	if s.ImdbID != "" {
-		out.ImdbId = &s.ImdbID
-	}
-	if s.WikidataID != "" {
-		out.WikidataId = &s.WikidataID
 	}
 	if s.Network != "" {
 		out.Network = &s.Network

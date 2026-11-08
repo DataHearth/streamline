@@ -24,6 +24,7 @@ import (
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/importscanbook"
@@ -77,6 +78,7 @@ const (
 	TypeCredit           = "Credit"
 	TypeDownloadRecord   = "DownloadRecord"
 	TypeEpisode          = "Episode"
+	TypeExternalID       = "ExternalID"
 	TypeImportScan       = "ImportScan"
 	TypeImportScanAlbum  = "ImportScanAlbum"
 	TypeImportScanBook   = "ImportScanBook"
@@ -20396,6 +20398,626 @@ func (m *EpisodeMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Episode edge %s", name)
 }
 
+// ExternalIDMutation represents an operation that mutates the ExternalID nodes in the graph.
+type ExternalIDMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uint32
+	create_time    *time.Time
+	update_time    *time.Time
+	source         *externalid.Source
+	value          *string
+	clearedFields  map[string]struct{}
+	movie          *uint32
+	clearedmovie   bool
+	tv_show        *uint32
+	clearedtv_show bool
+	done           bool
+	oldValue       func(context.Context) (*ExternalID, error)
+	predicates     []predicate.ExternalID
+}
+
+var _ ent.Mutation = (*ExternalIDMutation)(nil)
+
+// externalidOption allows management of the mutation configuration using functional options.
+type externalidOption func(*ExternalIDMutation)
+
+// newExternalIDMutation creates new mutation for the ExternalID entity.
+func newExternalIDMutation(c config, op Op, opts ...externalidOption) *ExternalIDMutation {
+	m := &ExternalIDMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeExternalID,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withExternalIDID sets the ID field of the mutation.
+func withExternalIDID(id uint32) externalidOption {
+	return func(m *ExternalIDMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ExternalID
+		)
+		m.oldValue = func(ctx context.Context) (*ExternalID, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ExternalID.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withExternalID sets the old ExternalID of the mutation.
+func withExternalID(node *ExternalID) externalidOption {
+	return func(m *ExternalIDMutation) {
+		m.oldValue = func(context.Context) (*ExternalID, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ExternalIDMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ExternalIDMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ExternalID entities.
+func (m *ExternalIDMutation) SetID(id uint32) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ExternalIDMutation) ID() (id uint32, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ExternalIDMutation) IDs(ctx context.Context) ([]uint32, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uint32{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ExternalID.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *ExternalIDMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *ExternalIDMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the ExternalID entity.
+// If the ExternalID object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExternalIDMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *ExternalIDMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *ExternalIDMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *ExternalIDMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the ExternalID entity.
+// If the ExternalID object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExternalIDMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *ExternalIDMutation) ResetUpdateTime() {
+	m.update_time = nil
+}
+
+// SetSource sets the "source" field.
+func (m *ExternalIDMutation) SetSource(e externalid.Source) {
+	m.source = &e
+}
+
+// Source returns the value of the "source" field in the mutation.
+func (m *ExternalIDMutation) Source() (r externalid.Source, exists bool) {
+	v := m.source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSource returns the old "source" field's value of the ExternalID entity.
+// If the ExternalID object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExternalIDMutation) OldSource(ctx context.Context) (v externalid.Source, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSource: %w", err)
+	}
+	return oldValue.Source, nil
+}
+
+// ResetSource resets all changes to the "source" field.
+func (m *ExternalIDMutation) ResetSource() {
+	m.source = nil
+}
+
+// SetValue sets the "value" field.
+func (m *ExternalIDMutation) SetValue(s string) {
+	m.value = &s
+}
+
+// Value returns the value of the "value" field in the mutation.
+func (m *ExternalIDMutation) Value() (r string, exists bool) {
+	v := m.value
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldValue returns the old "value" field's value of the ExternalID entity.
+// If the ExternalID object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExternalIDMutation) OldValue(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldValue is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldValue requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldValue: %w", err)
+	}
+	return oldValue.Value, nil
+}
+
+// ResetValue resets all changes to the "value" field.
+func (m *ExternalIDMutation) ResetValue() {
+	m.value = nil
+}
+
+// SetMovieID sets the "movie" edge to the Movie entity by id.
+func (m *ExternalIDMutation) SetMovieID(id uint32) {
+	m.movie = &id
+}
+
+// ClearMovie clears the "movie" edge to the Movie entity.
+func (m *ExternalIDMutation) ClearMovie() {
+	m.clearedmovie = true
+}
+
+// MovieCleared reports if the "movie" edge to the Movie entity was cleared.
+func (m *ExternalIDMutation) MovieCleared() bool {
+	return m.clearedmovie
+}
+
+// MovieID returns the "movie" edge ID in the mutation.
+func (m *ExternalIDMutation) MovieID() (id uint32, exists bool) {
+	if m.movie != nil {
+		return *m.movie, true
+	}
+	return
+}
+
+// MovieIDs returns the "movie" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MovieID instead. It exists only for internal usage by the builders.
+func (m *ExternalIDMutation) MovieIDs() (ids []uint32) {
+	if id := m.movie; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMovie resets all changes to the "movie" edge.
+func (m *ExternalIDMutation) ResetMovie() {
+	m.movie = nil
+	m.clearedmovie = false
+}
+
+// SetTvShowID sets the "tv_show" edge to the TVShow entity by id.
+func (m *ExternalIDMutation) SetTvShowID(id uint32) {
+	m.tv_show = &id
+}
+
+// ClearTvShow clears the "tv_show" edge to the TVShow entity.
+func (m *ExternalIDMutation) ClearTvShow() {
+	m.clearedtv_show = true
+}
+
+// TvShowCleared reports if the "tv_show" edge to the TVShow entity was cleared.
+func (m *ExternalIDMutation) TvShowCleared() bool {
+	return m.clearedtv_show
+}
+
+// TvShowID returns the "tv_show" edge ID in the mutation.
+func (m *ExternalIDMutation) TvShowID() (id uint32, exists bool) {
+	if m.tv_show != nil {
+		return *m.tv_show, true
+	}
+	return
+}
+
+// TvShowIDs returns the "tv_show" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TvShowID instead. It exists only for internal usage by the builders.
+func (m *ExternalIDMutation) TvShowIDs() (ids []uint32) {
+	if id := m.tv_show; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetTvShow resets all changes to the "tv_show" edge.
+func (m *ExternalIDMutation) ResetTvShow() {
+	m.tv_show = nil
+	m.clearedtv_show = false
+}
+
+// Where appends a list predicates to the ExternalIDMutation builder.
+func (m *ExternalIDMutation) Where(ps ...predicate.ExternalID) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ExternalIDMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ExternalIDMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ExternalID, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ExternalIDMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ExternalIDMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ExternalID).
+func (m *ExternalIDMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ExternalIDMutation) Fields() []string {
+	fields := make([]string, 0, 4)
+	if m.create_time != nil {
+		fields = append(fields, externalid.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, externalid.FieldUpdateTime)
+	}
+	if m.source != nil {
+		fields = append(fields, externalid.FieldSource)
+	}
+	if m.value != nil {
+		fields = append(fields, externalid.FieldValue)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ExternalIDMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case externalid.FieldCreateTime:
+		return m.CreateTime()
+	case externalid.FieldUpdateTime:
+		return m.UpdateTime()
+	case externalid.FieldSource:
+		return m.Source()
+	case externalid.FieldValue:
+		return m.Value()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ExternalIDMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case externalid.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case externalid.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case externalid.FieldSource:
+		return m.OldSource(ctx)
+	case externalid.FieldValue:
+		return m.OldValue(ctx)
+	}
+	return nil, fmt.Errorf("unknown ExternalID field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ExternalIDMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case externalid.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case externalid.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case externalid.FieldSource:
+		v, ok := value.(externalid.Source)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSource(v)
+		return nil
+	case externalid.FieldValue:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetValue(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ExternalID field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ExternalIDMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ExternalIDMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ExternalIDMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ExternalID numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ExternalIDMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ExternalIDMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ExternalIDMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ExternalID nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ExternalIDMutation) ResetField(name string) error {
+	switch name {
+	case externalid.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case externalid.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case externalid.FieldSource:
+		m.ResetSource()
+		return nil
+	case externalid.FieldValue:
+		m.ResetValue()
+		return nil
+	}
+	return fmt.Errorf("unknown ExternalID field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ExternalIDMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.movie != nil {
+		edges = append(edges, externalid.EdgeMovie)
+	}
+	if m.tv_show != nil {
+		edges = append(edges, externalid.EdgeTvShow)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ExternalIDMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case externalid.EdgeMovie:
+		if id := m.movie; id != nil {
+			return []ent.Value{*id}
+		}
+	case externalid.EdgeTvShow:
+		if id := m.tv_show; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ExternalIDMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ExternalIDMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ExternalIDMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedmovie {
+		edges = append(edges, externalid.EdgeMovie)
+	}
+	if m.clearedtv_show {
+		edges = append(edges, externalid.EdgeTvShow)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ExternalIDMutation) EdgeCleared(name string) bool {
+	switch name {
+	case externalid.EdgeMovie:
+		return m.clearedmovie
+	case externalid.EdgeTvShow:
+		return m.clearedtv_show
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ExternalIDMutation) ClearEdge(name string) error {
+	switch name {
+	case externalid.EdgeMovie:
+		m.ClearMovie()
+		return nil
+	case externalid.EdgeTvShow:
+		m.ClearTvShow()
+		return nil
+	}
+	return fmt.Errorf("unknown ExternalID unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ExternalIDMutation) ResetEdge(name string) error {
+	switch name {
+	case externalid.EdgeMovie:
+		m.ResetMovie()
+		return nil
+	case externalid.EdgeTvShow:
+		m.ResetTvShow()
+		return nil
+	}
+	return fmt.Errorf("unknown ExternalID edge %s", name)
+}
+
 // ImportScanMutation represents an operation that mutates the ImportScan nodes in the graph.
 type ImportScanMutation struct {
 	config
@@ -35187,7 +35809,6 @@ type MovieMutation struct {
 	tmdb_id                 *uint32
 	addtmdb_id              *int32
 	imdb_id                 *string
-	wikidata_id             *string
 	last_search_at          *time.Time
 	release_date            *time.Time
 	digital_release_date    *time.Time
@@ -35215,6 +35836,9 @@ type MovieMutation struct {
 	credits                 map[uint32]struct{}
 	removedcredits          map[uint32]struct{}
 	clearedcredits          bool
+	external_ids            map[uint32]struct{}
+	removedexternal_ids     map[uint32]struct{}
+	clearedexternal_ids     bool
 	done                    bool
 	oldValue                func(context.Context) (*Movie, error)
 	predicates              []predicate.Movie
@@ -35818,55 +36442,6 @@ func (m *MovieMutation) ImdbIDCleared() bool {
 func (m *MovieMutation) ResetImdbID() {
 	m.imdb_id = nil
 	delete(m.clearedFields, movie.FieldImdbID)
-}
-
-// SetWikidataID sets the "wikidata_id" field.
-func (m *MovieMutation) SetWikidataID(s string) {
-	m.wikidata_id = &s
-}
-
-// WikidataID returns the value of the "wikidata_id" field in the mutation.
-func (m *MovieMutation) WikidataID() (r string, exists bool) {
-	v := m.wikidata_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldWikidataID returns the old "wikidata_id" field's value of the Movie entity.
-// If the Movie object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MovieMutation) OldWikidataID(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldWikidataID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldWikidataID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldWikidataID: %w", err)
-	}
-	return oldValue.WikidataID, nil
-}
-
-// ClearWikidataID clears the value of the "wikidata_id" field.
-func (m *MovieMutation) ClearWikidataID() {
-	m.wikidata_id = nil
-	m.clearedFields[movie.FieldWikidataID] = struct{}{}
-}
-
-// WikidataIDCleared returns if the "wikidata_id" field was cleared in this mutation.
-func (m *MovieMutation) WikidataIDCleared() bool {
-	_, ok := m.clearedFields[movie.FieldWikidataID]
-	return ok
-}
-
-// ResetWikidataID resets all changes to the "wikidata_id" field.
-func (m *MovieMutation) ResetWikidataID() {
-	m.wikidata_id = nil
-	delete(m.clearedFields, movie.FieldWikidataID)
 }
 
 // SetLastSearchAt sets the "last_search_at" field.
@@ -36635,6 +37210,60 @@ func (m *MovieMutation) ResetCredits() {
 	m.removedcredits = nil
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by ids.
+func (m *MovieMutation) AddExternalIDIDs(ids ...uint32) {
+	if m.external_ids == nil {
+		m.external_ids = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.external_ids[ids[i]] = struct{}{}
+	}
+}
+
+// ClearExternalIds clears the "external_ids" edge to the ExternalID entity.
+func (m *MovieMutation) ClearExternalIds() {
+	m.clearedexternal_ids = true
+}
+
+// ExternalIdsCleared reports if the "external_ids" edge to the ExternalID entity was cleared.
+func (m *MovieMutation) ExternalIdsCleared() bool {
+	return m.clearedexternal_ids
+}
+
+// RemoveExternalIDIDs removes the "external_ids" edge to the ExternalID entity by IDs.
+func (m *MovieMutation) RemoveExternalIDIDs(ids ...uint32) {
+	if m.removedexternal_ids == nil {
+		m.removedexternal_ids = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.external_ids, ids[i])
+		m.removedexternal_ids[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedExternalIds returns the removed IDs of the "external_ids" edge to the ExternalID entity.
+func (m *MovieMutation) RemovedExternalIdsIDs() (ids []uint32) {
+	for id := range m.removedexternal_ids {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ExternalIdsIDs returns the "external_ids" edge IDs in the mutation.
+func (m *MovieMutation) ExternalIdsIDs() (ids []uint32) {
+	for id := range m.external_ids {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetExternalIds resets all changes to the "external_ids" edge.
+func (m *MovieMutation) ResetExternalIds() {
+	m.external_ids = nil
+	m.clearedexternal_ids = false
+	m.removedexternal_ids = nil
+}
+
 // Where appends a list predicates to the MovieMutation builder.
 func (m *MovieMutation) Where(ps ...predicate.Movie) {
 	m.predicates = append(m.predicates, ps...)
@@ -36669,7 +37298,7 @@ func (m *MovieMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MovieMutation) Fields() []string {
-	fields := make([]string, 0, 22)
+	fields := make([]string, 0, 21)
 	if m.create_time != nil {
 		fields = append(fields, movie.FieldCreateTime)
 	}
@@ -36702,9 +37331,6 @@ func (m *MovieMutation) Fields() []string {
 	}
 	if m.imdb_id != nil {
 		fields = append(fields, movie.FieldImdbID)
-	}
-	if m.wikidata_id != nil {
-		fields = append(fields, movie.FieldWikidataID)
 	}
 	if m.last_search_at != nil {
 		fields = append(fields, movie.FieldLastSearchAt)
@@ -36766,8 +37392,6 @@ func (m *MovieMutation) Field(name string) (ent.Value, bool) {
 		return m.TmdbID()
 	case movie.FieldImdbID:
 		return m.ImdbID()
-	case movie.FieldWikidataID:
-		return m.WikidataID()
 	case movie.FieldLastSearchAt:
 		return m.LastSearchAt()
 	case movie.FieldReleaseDate:
@@ -36819,8 +37443,6 @@ func (m *MovieMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldTmdbID(ctx)
 	case movie.FieldImdbID:
 		return m.OldImdbID(ctx)
-	case movie.FieldWikidataID:
-		return m.OldWikidataID(ctx)
 	case movie.FieldLastSearchAt:
 		return m.OldLastSearchAt(ctx)
 	case movie.FieldReleaseDate:
@@ -36926,13 +37548,6 @@ func (m *MovieMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetImdbID(v)
-		return nil
-	case movie.FieldWikidataID:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetWikidataID(v)
 		return nil
 	case movie.FieldLastSearchAt:
 		v, ok := value.(time.Time)
@@ -37106,9 +37721,6 @@ func (m *MovieMutation) ClearedFields() []string {
 	if m.FieldCleared(movie.FieldImdbID) {
 		fields = append(fields, movie.FieldImdbID)
 	}
-	if m.FieldCleared(movie.FieldWikidataID) {
-		fields = append(fields, movie.FieldWikidataID)
-	}
 	if m.FieldCleared(movie.FieldLastSearchAt) {
 		fields = append(fields, movie.FieldLastSearchAt)
 	}
@@ -37158,9 +37770,6 @@ func (m *MovieMutation) ClearField(name string) error {
 		return nil
 	case movie.FieldImdbID:
 		m.ClearImdbID()
-		return nil
-	case movie.FieldWikidataID:
-		m.ClearWikidataID()
 		return nil
 	case movie.FieldLastSearchAt:
 		m.ClearLastSearchAt()
@@ -37230,9 +37839,6 @@ func (m *MovieMutation) ResetField(name string) error {
 	case movie.FieldImdbID:
 		m.ResetImdbID()
 		return nil
-	case movie.FieldWikidataID:
-		m.ResetWikidataID()
-		return nil
 	case movie.FieldLastSearchAt:
 		m.ResetLastSearchAt()
 		return nil
@@ -37269,7 +37875,7 @@ func (m *MovieMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MovieMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.download_records != nil {
 		edges = append(edges, movie.EdgeDownloadRecords)
 	}
@@ -37281,6 +37887,9 @@ func (m *MovieMutation) AddedEdges() []string {
 	}
 	if m.credits != nil {
 		edges = append(edges, movie.EdgeCredits)
+	}
+	if m.external_ids != nil {
+		edges = append(edges, movie.EdgeExternalIds)
 	}
 	return edges
 }
@@ -37313,13 +37922,19 @@ func (m *MovieMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case movie.EdgeExternalIds:
+		ids := make([]ent.Value, 0, len(m.external_ids))
+		for id := range m.external_ids {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MovieMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removeddownload_records != nil {
 		edges = append(edges, movie.EdgeDownloadRecords)
 	}
@@ -37331,6 +37946,9 @@ func (m *MovieMutation) RemovedEdges() []string {
 	}
 	if m.removedcredits != nil {
 		edges = append(edges, movie.EdgeCredits)
+	}
+	if m.removedexternal_ids != nil {
+		edges = append(edges, movie.EdgeExternalIds)
 	}
 	return edges
 }
@@ -37363,13 +37981,19 @@ func (m *MovieMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case movie.EdgeExternalIds:
+		ids := make([]ent.Value, 0, len(m.removedexternal_ids))
+		for id := range m.removedexternal_ids {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MovieMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.cleareddownload_records {
 		edges = append(edges, movie.EdgeDownloadRecords)
 	}
@@ -37381,6 +38005,9 @@ func (m *MovieMutation) ClearedEdges() []string {
 	}
 	if m.clearedcredits {
 		edges = append(edges, movie.EdgeCredits)
+	}
+	if m.clearedexternal_ids {
+		edges = append(edges, movie.EdgeExternalIds)
 	}
 	return edges
 }
@@ -37397,6 +38024,8 @@ func (m *MovieMutation) EdgeCleared(name string) bool {
 		return m.clearedevents
 	case movie.EdgeCredits:
 		return m.clearedcredits
+	case movie.EdgeExternalIds:
+		return m.clearedexternal_ids
 	}
 	return false
 }
@@ -37424,6 +38053,9 @@ func (m *MovieMutation) ResetEdge(name string) error {
 		return nil
 	case movie.EdgeCredits:
 		m.ResetCredits()
+		return nil
+	case movie.EdgeExternalIds:
+		m.ResetExternalIds()
 		return nil
 	}
 	return fmt.Errorf("unknown Movie edge %s", name)
@@ -48269,52 +48901,52 @@ func (m *ShareMutation) ResetEdge(name string) error {
 // TVShowMutation represents an operation that mutates the TVShow nodes in the graph.
 type TVShowMutation struct {
 	config
-	op                Op
-	typ               string
-	id                *uint32
-	create_time       *time.Time
-	update_time       *time.Time
-	title             *string
-	original_title    *string
-	year              *uint16
-	addyear           *int16
-	first_aired       *time.Time
-	overview          *string
-	series_status     *tvshow.SeriesStatus
-	_type             *tvshow.Type
-	monitored         *bool
-	tvdb_id           *uint32
-	addtvdb_id        *int32
-	tmdb_id           *uint32
-	addtmdb_id        *int32
-	imdb_id           *string
-	wikidata_id       *string
-	poster_path       *string
-	network           *string
-	creator           *string
-	runtime           *uint16
-	addruntime        *int16
-	rating            *float64
-	addrating         *float64
-	genres            *[]string
-	appendgenres      []string
-	aliases           *[]string
-	appendaliases     []string
-	last_refreshed_at *time.Time
-	quality_profile   *string
-	clearedFields     map[string]struct{}
-	seasons           map[uint32]struct{}
-	removedseasons    map[uint32]struct{}
-	clearedseasons    bool
-	events            map[uint32]struct{}
-	removedevents     map[uint32]struct{}
-	clearedevents     bool
-	credits           map[uint32]struct{}
-	removedcredits    map[uint32]struct{}
-	clearedcredits    bool
-	done              bool
-	oldValue          func(context.Context) (*TVShow, error)
-	predicates        []predicate.TVShow
+	op                  Op
+	typ                 string
+	id                  *uint32
+	create_time         *time.Time
+	update_time         *time.Time
+	title               *string
+	original_title      *string
+	year                *uint16
+	addyear             *int16
+	first_aired         *time.Time
+	overview            *string
+	series_status       *tvshow.SeriesStatus
+	_type               *tvshow.Type
+	monitored           *bool
+	tvdb_id             *uint32
+	addtvdb_id          *int32
+	imdb_id             *string
+	poster_path         *string
+	network             *string
+	creator             *string
+	runtime             *uint16
+	addruntime          *int16
+	rating              *float64
+	addrating           *float64
+	genres              *[]string
+	appendgenres        []string
+	aliases             *[]string
+	appendaliases       []string
+	last_refreshed_at   *time.Time
+	quality_profile     *string
+	clearedFields       map[string]struct{}
+	seasons             map[uint32]struct{}
+	removedseasons      map[uint32]struct{}
+	clearedseasons      bool
+	events              map[uint32]struct{}
+	removedevents       map[uint32]struct{}
+	clearedevents       bool
+	credits             map[uint32]struct{}
+	removedcredits      map[uint32]struct{}
+	clearedcredits      bool
+	external_ids        map[uint32]struct{}
+	removedexternal_ids map[uint32]struct{}
+	clearedexternal_ids bool
+	done                bool
+	oldValue            func(context.Context) (*TVShow, error)
+	predicates          []predicate.TVShow
 }
 
 var _ ent.Mutation = (*TVShowMutation)(nil)
@@ -48896,76 +49528,6 @@ func (m *TVShowMutation) ResetTvdbID() {
 	m.addtvdb_id = nil
 }
 
-// SetTmdbID sets the "tmdb_id" field.
-func (m *TVShowMutation) SetTmdbID(u uint32) {
-	m.tmdb_id = &u
-	m.addtmdb_id = nil
-}
-
-// TmdbID returns the value of the "tmdb_id" field in the mutation.
-func (m *TVShowMutation) TmdbID() (r uint32, exists bool) {
-	v := m.tmdb_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldTmdbID returns the old "tmdb_id" field's value of the TVShow entity.
-// If the TVShow object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TVShowMutation) OldTmdbID(ctx context.Context) (v uint32, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldTmdbID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldTmdbID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldTmdbID: %w", err)
-	}
-	return oldValue.TmdbID, nil
-}
-
-// AddTmdbID adds u to the "tmdb_id" field.
-func (m *TVShowMutation) AddTmdbID(u int32) {
-	if m.addtmdb_id != nil {
-		*m.addtmdb_id += u
-	} else {
-		m.addtmdb_id = &u
-	}
-}
-
-// AddedTmdbID returns the value that was added to the "tmdb_id" field in this mutation.
-func (m *TVShowMutation) AddedTmdbID() (r int32, exists bool) {
-	v := m.addtmdb_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ClearTmdbID clears the value of the "tmdb_id" field.
-func (m *TVShowMutation) ClearTmdbID() {
-	m.tmdb_id = nil
-	m.addtmdb_id = nil
-	m.clearedFields[tvshow.FieldTmdbID] = struct{}{}
-}
-
-// TmdbIDCleared returns if the "tmdb_id" field was cleared in this mutation.
-func (m *TVShowMutation) TmdbIDCleared() bool {
-	_, ok := m.clearedFields[tvshow.FieldTmdbID]
-	return ok
-}
-
-// ResetTmdbID resets all changes to the "tmdb_id" field.
-func (m *TVShowMutation) ResetTmdbID() {
-	m.tmdb_id = nil
-	m.addtmdb_id = nil
-	delete(m.clearedFields, tvshow.FieldTmdbID)
-}
-
 // SetImdbID sets the "imdb_id" field.
 func (m *TVShowMutation) SetImdbID(s string) {
 	m.imdb_id = &s
@@ -49013,55 +49575,6 @@ func (m *TVShowMutation) ImdbIDCleared() bool {
 func (m *TVShowMutation) ResetImdbID() {
 	m.imdb_id = nil
 	delete(m.clearedFields, tvshow.FieldImdbID)
-}
-
-// SetWikidataID sets the "wikidata_id" field.
-func (m *TVShowMutation) SetWikidataID(s string) {
-	m.wikidata_id = &s
-}
-
-// WikidataID returns the value of the "wikidata_id" field in the mutation.
-func (m *TVShowMutation) WikidataID() (r string, exists bool) {
-	v := m.wikidata_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldWikidataID returns the old "wikidata_id" field's value of the TVShow entity.
-// If the TVShow object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TVShowMutation) OldWikidataID(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldWikidataID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldWikidataID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldWikidataID: %w", err)
-	}
-	return oldValue.WikidataID, nil
-}
-
-// ClearWikidataID clears the value of the "wikidata_id" field.
-func (m *TVShowMutation) ClearWikidataID() {
-	m.wikidata_id = nil
-	m.clearedFields[tvshow.FieldWikidataID] = struct{}{}
-}
-
-// WikidataIDCleared returns if the "wikidata_id" field was cleared in this mutation.
-func (m *TVShowMutation) WikidataIDCleared() bool {
-	_, ok := m.clearedFields[tvshow.FieldWikidataID]
-	return ok
-}
-
-// ResetWikidataID resets all changes to the "wikidata_id" field.
-func (m *TVShowMutation) ResetWikidataID() {
-	m.wikidata_id = nil
-	delete(m.clearedFields, tvshow.FieldWikidataID)
 }
 
 // SetPosterPath sets the "poster_path" field.
@@ -49741,6 +50254,60 @@ func (m *TVShowMutation) ResetCredits() {
 	m.removedcredits = nil
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by ids.
+func (m *TVShowMutation) AddExternalIDIDs(ids ...uint32) {
+	if m.external_ids == nil {
+		m.external_ids = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.external_ids[ids[i]] = struct{}{}
+	}
+}
+
+// ClearExternalIds clears the "external_ids" edge to the ExternalID entity.
+func (m *TVShowMutation) ClearExternalIds() {
+	m.clearedexternal_ids = true
+}
+
+// ExternalIdsCleared reports if the "external_ids" edge to the ExternalID entity was cleared.
+func (m *TVShowMutation) ExternalIdsCleared() bool {
+	return m.clearedexternal_ids
+}
+
+// RemoveExternalIDIDs removes the "external_ids" edge to the ExternalID entity by IDs.
+func (m *TVShowMutation) RemoveExternalIDIDs(ids ...uint32) {
+	if m.removedexternal_ids == nil {
+		m.removedexternal_ids = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.external_ids, ids[i])
+		m.removedexternal_ids[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedExternalIds returns the removed IDs of the "external_ids" edge to the ExternalID entity.
+func (m *TVShowMutation) RemovedExternalIdsIDs() (ids []uint32) {
+	for id := range m.removedexternal_ids {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ExternalIdsIDs returns the "external_ids" edge IDs in the mutation.
+func (m *TVShowMutation) ExternalIdsIDs() (ids []uint32) {
+	for id := range m.external_ids {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetExternalIds resets all changes to the "external_ids" edge.
+func (m *TVShowMutation) ResetExternalIds() {
+	m.external_ids = nil
+	m.clearedexternal_ids = false
+	m.removedexternal_ids = nil
+}
+
 // Where appends a list predicates to the TVShowMutation builder.
 func (m *TVShowMutation) Where(ps ...predicate.TVShow) {
 	m.predicates = append(m.predicates, ps...)
@@ -49775,7 +50342,7 @@ func (m *TVShowMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TVShowMutation) Fields() []string {
-	fields := make([]string, 0, 23)
+	fields := make([]string, 0, 21)
 	if m.create_time != nil {
 		fields = append(fields, tvshow.FieldCreateTime)
 	}
@@ -49809,14 +50376,8 @@ func (m *TVShowMutation) Fields() []string {
 	if m.tvdb_id != nil {
 		fields = append(fields, tvshow.FieldTvdbID)
 	}
-	if m.tmdb_id != nil {
-		fields = append(fields, tvshow.FieldTmdbID)
-	}
 	if m.imdb_id != nil {
 		fields = append(fields, tvshow.FieldImdbID)
-	}
-	if m.wikidata_id != nil {
-		fields = append(fields, tvshow.FieldWikidataID)
 	}
 	if m.poster_path != nil {
 		fields = append(fields, tvshow.FieldPosterPath)
@@ -49875,12 +50436,8 @@ func (m *TVShowMutation) Field(name string) (ent.Value, bool) {
 		return m.Monitored()
 	case tvshow.FieldTvdbID:
 		return m.TvdbID()
-	case tvshow.FieldTmdbID:
-		return m.TmdbID()
 	case tvshow.FieldImdbID:
 		return m.ImdbID()
-	case tvshow.FieldWikidataID:
-		return m.WikidataID()
 	case tvshow.FieldPosterPath:
 		return m.PosterPath()
 	case tvshow.FieldNetwork:
@@ -49930,12 +50487,8 @@ func (m *TVShowMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldMonitored(ctx)
 	case tvshow.FieldTvdbID:
 		return m.OldTvdbID(ctx)
-	case tvshow.FieldTmdbID:
-		return m.OldTmdbID(ctx)
 	case tvshow.FieldImdbID:
 		return m.OldImdbID(ctx)
-	case tvshow.FieldWikidataID:
-		return m.OldWikidataID(ctx)
 	case tvshow.FieldPosterPath:
 		return m.OldPosterPath(ctx)
 	case tvshow.FieldNetwork:
@@ -50040,26 +50593,12 @@ func (m *TVShowMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTvdbID(v)
 		return nil
-	case tvshow.FieldTmdbID:
-		v, ok := value.(uint32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetTmdbID(v)
-		return nil
 	case tvshow.FieldImdbID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetImdbID(v)
-		return nil
-	case tvshow.FieldWikidataID:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetWikidataID(v)
 		return nil
 	case tvshow.FieldPosterPath:
 		v, ok := value.(string)
@@ -50138,9 +50677,6 @@ func (m *TVShowMutation) AddedFields() []string {
 	if m.addtvdb_id != nil {
 		fields = append(fields, tvshow.FieldTvdbID)
 	}
-	if m.addtmdb_id != nil {
-		fields = append(fields, tvshow.FieldTmdbID)
-	}
 	if m.addruntime != nil {
 		fields = append(fields, tvshow.FieldRuntime)
 	}
@@ -50159,8 +50695,6 @@ func (m *TVShowMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedYear()
 	case tvshow.FieldTvdbID:
 		return m.AddedTvdbID()
-	case tvshow.FieldTmdbID:
-		return m.AddedTmdbID()
 	case tvshow.FieldRuntime:
 		return m.AddedRuntime()
 	case tvshow.FieldRating:
@@ -50187,13 +50721,6 @@ func (m *TVShowMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddTvdbID(v)
-		return nil
-	case tvshow.FieldTmdbID:
-		v, ok := value.(int32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddTmdbID(v)
 		return nil
 	case tvshow.FieldRuntime:
 		v, ok := value.(int16)
@@ -50226,14 +50753,8 @@ func (m *TVShowMutation) ClearedFields() []string {
 	if m.FieldCleared(tvshow.FieldOverview) {
 		fields = append(fields, tvshow.FieldOverview)
 	}
-	if m.FieldCleared(tvshow.FieldTmdbID) {
-		fields = append(fields, tvshow.FieldTmdbID)
-	}
 	if m.FieldCleared(tvshow.FieldImdbID) {
 		fields = append(fields, tvshow.FieldImdbID)
-	}
-	if m.FieldCleared(tvshow.FieldWikidataID) {
-		fields = append(fields, tvshow.FieldWikidataID)
 	}
 	if m.FieldCleared(tvshow.FieldPosterPath) {
 		fields = append(fields, tvshow.FieldPosterPath)
@@ -50285,14 +50806,8 @@ func (m *TVShowMutation) ClearField(name string) error {
 	case tvshow.FieldOverview:
 		m.ClearOverview()
 		return nil
-	case tvshow.FieldTmdbID:
-		m.ClearTmdbID()
-		return nil
 	case tvshow.FieldImdbID:
 		m.ClearImdbID()
-		return nil
-	case tvshow.FieldWikidataID:
-		m.ClearWikidataID()
 		return nil
 	case tvshow.FieldPosterPath:
 		m.ClearPosterPath()
@@ -50362,14 +50877,8 @@ func (m *TVShowMutation) ResetField(name string) error {
 	case tvshow.FieldTvdbID:
 		m.ResetTvdbID()
 		return nil
-	case tvshow.FieldTmdbID:
-		m.ResetTmdbID()
-		return nil
 	case tvshow.FieldImdbID:
 		m.ResetImdbID()
-		return nil
-	case tvshow.FieldWikidataID:
-		m.ResetWikidataID()
 		return nil
 	case tvshow.FieldPosterPath:
 		m.ResetPosterPath()
@@ -50404,7 +50913,7 @@ func (m *TVShowMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TVShowMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.seasons != nil {
 		edges = append(edges, tvshow.EdgeSeasons)
 	}
@@ -50413,6 +50922,9 @@ func (m *TVShowMutation) AddedEdges() []string {
 	}
 	if m.credits != nil {
 		edges = append(edges, tvshow.EdgeCredits)
+	}
+	if m.external_ids != nil {
+		edges = append(edges, tvshow.EdgeExternalIds)
 	}
 	return edges
 }
@@ -50439,13 +50951,19 @@ func (m *TVShowMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case tvshow.EdgeExternalIds:
+		ids := make([]ent.Value, 0, len(m.external_ids))
+		for id := range m.external_ids {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TVShowMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.removedseasons != nil {
 		edges = append(edges, tvshow.EdgeSeasons)
 	}
@@ -50454,6 +50972,9 @@ func (m *TVShowMutation) RemovedEdges() []string {
 	}
 	if m.removedcredits != nil {
 		edges = append(edges, tvshow.EdgeCredits)
+	}
+	if m.removedexternal_ids != nil {
+		edges = append(edges, tvshow.EdgeExternalIds)
 	}
 	return edges
 }
@@ -50480,13 +51001,19 @@ func (m *TVShowMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case tvshow.EdgeExternalIds:
+		ids := make([]ent.Value, 0, len(m.removedexternal_ids))
+		for id := range m.removedexternal_ids {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TVShowMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedseasons {
 		edges = append(edges, tvshow.EdgeSeasons)
 	}
@@ -50495,6 +51022,9 @@ func (m *TVShowMutation) ClearedEdges() []string {
 	}
 	if m.clearedcredits {
 		edges = append(edges, tvshow.EdgeCredits)
+	}
+	if m.clearedexternal_ids {
+		edges = append(edges, tvshow.EdgeExternalIds)
 	}
 	return edges
 }
@@ -50509,6 +51039,8 @@ func (m *TVShowMutation) EdgeCleared(name string) bool {
 		return m.clearedevents
 	case tvshow.EdgeCredits:
 		return m.clearedcredits
+	case tvshow.EdgeExternalIds:
+		return m.clearedexternal_ids
 	}
 	return false
 }
@@ -50533,6 +51065,9 @@ func (m *TVShowMutation) ResetEdge(name string) error {
 		return nil
 	case tvshow.EdgeCredits:
 		m.ResetCredits()
+		return nil
+	case tvshow.EdgeExternalIds:
+		m.ResetExternalIds()
 		return nil
 	}
 	return fmt.Errorf("unknown TVShow edge %s", name)

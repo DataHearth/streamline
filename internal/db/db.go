@@ -1496,6 +1496,12 @@ type Store interface {
 		owner CastOwner,
 		ownerID uint32,
 	) ([]CastEntry, error)
+	// TitleExternalIDs returns the other sites' ids stored for a title.
+	TitleExternalIDs(
+		ctx context.Context,
+		owner CastOwner,
+		ownerID uint32,
+	) (ExternalIDs, error)
 	// PeopleNeedingDetails returns the people credited on a title whose
 	// biographical record has never been fetched — the work list for the
 	// post-commit enrichment pass. Credits is not populated.
