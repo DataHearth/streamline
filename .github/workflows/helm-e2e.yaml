@@ -9,9 +9,8 @@ on:
       - "deploy/grafana/dashboards/**"
   workflow_dispatch:
 
-concurrency:
-  group: helm-e2e-${{ github.ref }}
-  cancel-in-progress: true
+# No concurrency group: a run is never cancelled or replaced by a newer one,
+# so every pushed commit keeps its own result.
 
 permissions:
   contents: read

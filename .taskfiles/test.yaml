@@ -23,8 +23,10 @@ tasks:
   e2e:
     desc: Run hermetic e2e tests (API + web; container-backed specs excluded)
     deps: [":build:js", ":build:css"]
+    # The timeout counts the build. E2E_TIMEOUT raises it where the Go build
+    # cache can be cold, which CI's is on a cache miss.
     cmd: go tool ginkgo run -r --keep-going --label-filter="e2e && !containers{{with
-      .LABEL_FILTER}} && {{.}}{{end}}" --timeout=1m15s {{.CLI_ARGS | default .E2E_PACKAGES}}
+      .LABEL_FILTER}} && {{.}}{{end}}" --timeout={{.E2E_TIMEOUT | default "1m15s"}} {{.CLI_ARGS | default .E2E_PACKAGES}}
 
   e2e:containers:
     desc: Run container-backed e2e tests (needs Docker)
