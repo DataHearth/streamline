@@ -200,7 +200,7 @@ func (s *Server) GetMovie(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
-	ids, err := s.store.TitleExternalIDs(ctx, db.CastOwnerMovie, m.ID)
+	ids, err := s.store.TitleExternalIDs(ctx, db.ExternalIDsOfMovie, m.ID)
 	if err != nil {
 		return GetMovie500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),

@@ -351,7 +351,7 @@ func (s *Server) GetSeries(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
-	ids, err := s.store.TitleExternalIDs(ctx, db.CastOwnerSeries, show.ID)
+	ids, err := s.store.TitleExternalIDs(ctx, db.ExternalIDsOfSeries, show.ID)
 	if err != nil {
 		return GetSeries500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),

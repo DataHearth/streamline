@@ -1435,6 +1435,29 @@ func ArtSidecarHashContainsFold(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldContainsFold(FieldArtSidecarHash, v))
 }
 
+// HasExternalIds applies the HasEdge predicate on the "external_ids" edge.
+func HasExternalIds() predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ExternalIdsTable, ExternalIdsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasExternalIdsWith applies the HasEdge predicate on the "external_ids" edge with a given conditions (other predicates).
+func HasExternalIdsWith(preds ...predicate.ExternalID) predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := newExternalIdsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasAlbums applies the HasEdge predicate on the "albums" edge.
 func HasAlbums() predicate.Artist {
 	return predicate.Artist(func(s *sql.Selector) {

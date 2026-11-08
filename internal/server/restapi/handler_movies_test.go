@@ -643,7 +643,7 @@ var _ = Describe(
 					}, nil).
 					Once()
 				app.store.EXPECT().
-					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					TitleExternalIDs(mock.Anything, db.ExternalIDsOfMovie, movieID).
 					Return(db.ExternalIDs{}, nil).
 					Maybe()
 				app.store.EXPECT().
@@ -696,7 +696,7 @@ var _ = Describe(
 					}, nil).
 					Once()
 				app.store.EXPECT().
-					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					TitleExternalIDs(mock.Anything, db.ExternalIDsOfMovie, movieID).
 					Return(db.ExternalIDs{}, nil).
 					Maybe()
 				app.store.EXPECT().
@@ -756,7 +756,7 @@ var _ = Describe(
 					}, nil).
 					Once()
 				app.store.EXPECT().
-					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					TitleExternalIDs(mock.Anything, db.ExternalIDsOfMovie, movieID).
 					Return(db.ExternalIDs{}, nil).
 					Maybe()
 				app.store.EXPECT().
@@ -857,7 +857,7 @@ var _ = Describe(
 					Return(nil, nil).
 					Once()
 				app.store.EXPECT().
-					TitleExternalIDs(mock.Anything, db.CastOwnerMovie, movieID).
+					TitleExternalIDs(mock.Anything, db.ExternalIDsOfMovie, movieID).
 					Return(db.ExternalIDs{}, nil).
 					Maybe()
 				app.store.EXPECT().

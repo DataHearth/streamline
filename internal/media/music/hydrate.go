@@ -503,6 +503,7 @@ func (s *Service) hydrationParams(
 	d *metadata.ReleaseGroupDetails,
 ) (db.HydrationParams, error) {
 	p := db.HydrationParams{
+		ExternalIDs:     db.ExternalIDs(d.ExternalIDs),
 		ReleaseMBID:     d.ReleaseMBID,
 		OriginalDate:    d.OriginalDate,
 		EditionDate:     d.EditionDate,

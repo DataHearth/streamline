@@ -1490,9 +1490,16 @@ type Store interface {
 	// TitleExternalIDs returns the other sites' ids stored for a title.
 	TitleExternalIDs(
 		ctx context.Context,
-		owner CastOwner,
+		owner ExternalIDOwner,
 		ownerID uint32,
 	) (ExternalIDs, error)
+	// ExternalIDsFor returns the ids stored for many rows of one kind,
+	// keyed by row id.
+	ExternalIDsFor(
+		ctx context.Context,
+		owner ExternalIDOwner,
+		ownerIDs []uint32,
+	) (map[uint32]ExternalIDs, error)
 	// PeopleNeedingDetails returns the people credited on a title whose
 	// biographical record has never been fetched — the work list for the
 	// post-commit enrichment pass. Credits is not populated.

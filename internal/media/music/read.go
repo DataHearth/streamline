@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
@@ -204,6 +206,9 @@ func (s *Service) Detail(
 		v.Size += av.Size
 		v.Albums = append(v.Albums, av)
 	}
+	if err := s.attachExternalIDs(ctx, v); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
 	for _, m := range row.Edges.Members {
 		mv := MemberView{
 			PersonView:  people.person(m.Name, m.Mbid),
@@ -269,7 +274,43 @@ func (s *Service) AlbumDetail(ctx context.Context, id uint32) (*AlbumView, error
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	v := fullAlbum(a, s.progressByAlbum(ctx), people, time.Now())
+	if v.ExternalIDs, err = s.db.TitleExternalIDs(
+		ctx, db.ExternalIDsOfAlbum, a.ID,
+	); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
 	return &v, nil
+}
+
+// attachExternalIDs fills the artist's links and every album's, two reads
+// whatever the discography's size. The artist's Wikidata and Deezer ids are
+// its own columns (the overview and the photo read them) and join the map
+// here, so the wire carries one set.
+func (s *Service) attachExternalIDs(ctx context.Context, v *ArtistView) error {
+	ids, err := s.db.TitleExternalIDs(ctx, db.ExternalIDsOfArtist, v.Artist.ID)
+	if err != nil {
+		return err
+	}
+	if v.Artist.WikidataID != "" {
+		ids[metadata.SourceWikidata] = v.Artist.WikidataID
+	}
+	if v.Artist.DeezerID != 0 {
+		ids[metadata.SourceDeezer] = strconv.FormatUint(uint64(v.Artist.DeezerID), 10)
+	}
+	v.ExternalIDs = ids
+
+	albumIDs := make([]uint32, 0, len(v.Albums))
+	for _, a := range v.Albums {
+		albumIDs = append(albumIDs, a.Album.ID)
+	}
+	byAlbum, err := s.db.ExternalIDsFor(ctx, db.ExternalIDsOfAlbum, albumIDs)
+	if err != nil {
+		return err
+	}
+	for i := range v.Albums {
+		v.Albums[i].ExternalIDs = byAlbum[v.Albums[i].Album.ID]
+	}
+	return nil
 }
 
 // peopleIndex resolves a MusicBrainz artist id to the library artist it

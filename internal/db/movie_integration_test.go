@@ -656,27 +656,27 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 					TmdbID:        1202,
 					Status:        entmovie.StatusWanted,
 					ExternalIDs: ExternalIDs{
-						IMDbID:     "tt0816692",
-						WikidataID: "Q13417189",
+						"imdb":     "tt0816692",
+						"wikidata": "Q13417189",
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				ids, err := store.TitleExternalIDs(ctx, CastOwnerMovie, m.ID)
+				ids, err := store.TitleExternalIDs(ctx, ExternalIDsOfMovie, m.ID)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(ids).To(Equal(ExternalIDs{
-					IMDbID: "tt0816692", WikidataID: "Q13417189",
+					"imdb": "tt0816692", "wikidata": "Q13417189",
 				}))
 
 				// A re-identified movie: the new title has an IMDb id and no item.
 				Expect(
 					store.UpdateMovieMetadata(ctx, m.ID, UpdateMovieMetadataParams{
 						Title: "b", OriginalTitle: "b", Year: 2021,
-						ExternalIDs: ExternalIDs{IMDbID: "tt0111161"},
+						ExternalIDs: ExternalIDs{"imdb": "tt0111161"},
 					}),
 				).To(Succeed())
-				ids, err = store.TitleExternalIDs(ctx, CastOwnerMovie, m.ID)
+				ids, err = store.TitleExternalIDs(ctx, ExternalIDsOfMovie, m.ID)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(ids).To(Equal(ExternalIDs{IMDbID: "tt0111161"}))
+				Expect(ids).To(Equal(ExternalIDs{"imdb": "tt0111161"}))
 			},
 		)
 	})

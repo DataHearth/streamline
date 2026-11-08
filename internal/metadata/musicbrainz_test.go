@@ -529,7 +529,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 					case "/ws/2/release-group/rg-1":
 						Expect(
 							r.URL.Query().Get("inc"),
-						).To(Equal("releases+media+artist-credits+genres"))
+						).To(Equal("releases+media+artist-credits+genres+url-rels"))
 						return jsonResponse(200, releaseGroupJSON), nil
 					case "/ws/2/release/rel-1":
 						inc := r.URL.Query().Get("inc")
@@ -772,7 +772,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			_, err := mb.GetReleaseGroup(ctx, "rg-1")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(*incs).To(Equal([]string{
-				"recordings+artist-credits+labels+artist-rels+recording-level-rels+work-rels+work-level-rels+place-rels",
+				"recordings+artist-credits+labels+artist-rels+recording-level-rels+work-rels+work-level-rels+place-rels+url-rels",
 			}))
 		})
 
@@ -1038,7 +1038,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 
 		It("retries once with the light call when the heavy one fails", func() {
 			incs := serve(func(inc string) *http.Response {
-				if inc == "recordings+artist-credits+labels" {
+				if inc == "recordings+artist-credits+labels+url-rels" {
 					return jsonResponse(
 						200,
 						`{"id":"rel-1","label-info":[{"label":{"name":"DGC"}}],"media":[{"position":1,"tracks":[{"position":1,"title":"T","length":1000,"recording":{"id":"r"}}]}]}`,
@@ -1049,7 +1049,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(*incs).To(HaveLen(2))
-			Expect((*incs)[1]).To(Equal("recordings+artist-credits+labels"))
+			Expect((*incs)[1]).To(Equal("recordings+artist-credits+labels+url-rels"))
 			Expect(rg.CreditsComplete).To(BeFalse())
 			Expect(rg.Label).To(Equal("DGC"))
 			Expect(rg.Tracks).To(HaveLen(1))

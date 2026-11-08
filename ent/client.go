@@ -639,6 +639,22 @@ func (c *AlbumClient) GetX(ctx context.Context, id uint32) *Album {
 	return obj
 }
 
+// QueryExternalIds queries the external_ids edge of a Album.
+func (c *AlbumClient) QueryExternalIds(_m *Album) *ExternalIDQuery {
+	query := (&ExternalIDClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(album.Table, album.FieldID, id),
+			sqlgraph.To(externalid.Table, externalid.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, album.ExternalIdsTable, album.ExternalIdsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryArtist queries the artist edge of a Album.
 func (c *AlbumClient) QueryArtist(_m *Album) *ArtistQuery {
 	query := (&ArtistClient{config: c.config}).Query()
@@ -1047,6 +1063,22 @@ func (c *ArtistClient) GetX(ctx context.Context, id uint32) *Artist {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryExternalIds queries the external_ids edge of a Artist.
+func (c *ArtistClient) QueryExternalIds(_m *Artist) *ExternalIDQuery {
+	query := (&ExternalIDClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(externalid.Table, externalid.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, artist.ExternalIdsTable, artist.ExternalIdsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // QueryAlbums queries the albums edge of a Artist.
@@ -3193,6 +3225,38 @@ func (c *ExternalIDClient) QueryTvShow(_m *ExternalID) *TVShowQuery {
 			sqlgraph.From(externalid.Table, externalid.FieldID, id),
 			sqlgraph.To(tvshow.Table, tvshow.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, externalid.TvShowTable, externalid.TvShowColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryArtist queries the artist edge of a ExternalID.
+func (c *ExternalIDClient) QueryArtist(_m *ExternalID) *ArtistQuery {
+	query := (&ArtistClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(externalid.Table, externalid.FieldID, id),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, externalid.ArtistTable, externalid.ArtistColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAlbum queries the album edge of a ExternalID.
+func (c *ExternalIDClient) QueryAlbum(_m *ExternalID) *AlbumQuery {
+	query := (&AlbumClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(externalid.Table, externalid.FieldID, id),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, externalid.AlbumTable, externalid.AlbumColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

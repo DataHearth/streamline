@@ -101,7 +101,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "externalid" package.
 	ExternalIdsInverseTable = "external_ids"
 	// ExternalIdsColumn is the table column denoting the external_ids relation/edge.
-	ExternalIdsColumn = "movie_external_ids"
+	ExternalIdsColumn = "movie_id"
 )
 
 // Columns holds all SQL columns for movie fields.

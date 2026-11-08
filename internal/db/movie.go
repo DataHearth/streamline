@@ -78,7 +78,7 @@ func (db *DB) CreateMovie(
 		return nil, err
 	}
 	if err := replaceExternalIDs(
-		ctx, tx.Client(), CastOwnerMovie, m.ID, p.ExternalIDs,
+		ctx, tx.Client(), ExternalIDsOfMovie, m.ID, p.ExternalIDs,
 	); err != nil {
 		tx.Rollback()
 		return nil, err
@@ -521,7 +521,7 @@ func (db *DB) UpdateMovieMetadata(
 		return err
 	}
 	if err := replaceExternalIDs(
-		ctx, tx.Client(), CastOwnerMovie, id, p.ExternalIDs,
+		ctx, tx.Client(), ExternalIDsOfMovie, id, p.ExternalIDs,
 	); err != nil {
 		tx.Rollback()
 		return err

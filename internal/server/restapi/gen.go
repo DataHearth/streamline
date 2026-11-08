@@ -7002,6 +7002,15 @@ type MusicAlbum struct {
 	// Duration Sum of the track durations in seconds; omitted at 0.
 	Duration *uint32 `json:"duration,omitempty"`
 
+	// ExternalIds Other sites' ids for an artist or an album, from the url relations
+	// MusicBrainz keeps for it; a site MusicBrainz links none for is
+	// absent. Each value is what that site's address is built from. An
+	// artist's links are read on add and refresh (`music-metadata-refresh`),
+	// an album's on hydration: Wikidata, Discogs (the master release),
+	// AllMusic and RateYourMusic from the release group, Spotify, Deezer
+	// and Bandcamp from the release the album follows.
+	ExternalIds *MusicExternalIds `json:"external_ids,omitempty"`
+
 	// FailureReason Present while `status` is `failed`; why the import was refused.
 	FailureReason *string `json:"failure_reason,omitempty"`
 
@@ -7295,6 +7304,15 @@ type MusicArtistDetail struct {
 	AlbumCount uint32       `json:"album_count"`
 	Albums     []MusicAlbum `json:"albums"`
 
+	// ExternalIds Other sites' ids for an artist or an album, from the url relations
+	// MusicBrainz keeps for it; a site MusicBrainz links none for is
+	// absent. Each value is what that site's address is built from. An
+	// artist's links are read on add and refresh (`music-metadata-refresh`),
+	// an album's on hydration: Wikidata, Discogs (the master release),
+	// AllMusic and RateYourMusic from the release group, Spotify, Deezer
+	// and Bandcamp from the release the album follows.
+	ExternalIds *MusicExternalIds `json:"external_ids,omitempty"`
+
 	// Genre Highest-count MusicBrainz genre, title-cased.
 	Genre *string `json:"genre,omitempty"`
 
@@ -7453,6 +7471,41 @@ type MusicCredit struct {
 
 // MusicCreditRole defines model for MusicCreditRole.
 type MusicCreditRole string
+
+// MusicExternalIds Other sites' ids for an artist or an album, from the url relations
+// MusicBrainz keeps for it; a site MusicBrainz links none for is
+// absent. Each value is what that site's address is built from. An
+// artist's links are read on add and refresh (`music-metadata-refresh`),
+// an album's on hydration: Wikidata, Discogs (the master release),
+// AllMusic and RateYourMusic from the release group, Spotify, Deezer
+// and Bandcamp from the release the album follows.
+type MusicExternalIds struct {
+	// Allmusic AllMusic id, `mn…` for an artist, `mw…` for an album.
+	Allmusic *string `json:"allmusic,omitempty"`
+
+	// Bandcamp Bandcamp host for an artist (`band.bandcamp.com`), host and path
+	// for an album (`band.bandcamp.com/album/name`).
+	Bandcamp *string `json:"bandcamp,omitempty"`
+
+	// Deezer Deezer artist or album id.
+	Deezer *string `json:"deezer,omitempty"`
+
+	// Discogs Discogs artist id, or master id for an album.
+	Discogs *string `json:"discogs,omitempty"`
+
+	// Lastfm Last.fm artist name as its URL writes it (artists only).
+	Lastfm *string `json:"lastfm,omitempty"`
+
+	// Rateyourmusic RateYourMusic path below `/artist/` for an artist, below
+	// `/release/` for an album (`album/radiohead/ok_computer`).
+	Rateyourmusic *string `json:"rateyourmusic,omitempty"`
+
+	// Spotify Spotify base62 id.
+	Spotify *string `json:"spotify,omitempty"`
+
+	// Wikidata Wikidata item, `Q…`.
+	Wikidata *string `json:"wikidata,omitempty"`
+}
 
 // MusicGenreCount defines model for MusicGenreCount.
 type MusicGenreCount struct {

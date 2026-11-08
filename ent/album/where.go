@@ -1655,6 +1655,29 @@ func CreditsVersionLTE(v uint8) predicate.Album {
 	return predicate.Album(sql.FieldLTE(FieldCreditsVersion, v))
 }
 
+// HasExternalIds applies the HasEdge predicate on the "external_ids" edge.
+func HasExternalIds() predicate.Album {
+	return predicate.Album(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ExternalIdsTable, ExternalIdsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasExternalIdsWith applies the HasEdge predicate on the "external_ids" edge with a given conditions (other predicates).
+func HasExternalIdsWith(preds ...predicate.ExternalID) predicate.Album {
+	return predicate.Album(func(s *sql.Selector) {
+		step := newExternalIdsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasArtist applies the HasEdge predicate on the "artist" edge.
 func HasArtist() predicate.Album {
 	return predicate.Album(func(s *sql.Selector) {

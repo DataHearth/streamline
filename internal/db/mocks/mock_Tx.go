@@ -6722,6 +6722,80 @@ func (_c *MockTx_DownloadRecordsByHash_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
+// ExternalIDsFor provides a mock function for the type MockTx
+func (_mock *MockTx) ExternalIDsFor(ctx context.Context, owner db.ExternalIDOwner, ownerIDs []uint32) (map[uint32]db.ExternalIDs, error) {
+	ret := _mock.Called(ctx, owner, ownerIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ExternalIDsFor")
+	}
+
+	var r0 map[uint32]db.ExternalIDs
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ExternalIDOwner, []uint32) (map[uint32]db.ExternalIDs, error)); ok {
+		return returnFunc(ctx, owner, ownerIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ExternalIDOwner, []uint32) map[uint32]db.ExternalIDs); ok {
+		r0 = returnFunc(ctx, owner, ownerIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[uint32]db.ExternalIDs)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ExternalIDOwner, []uint32) error); ok {
+		r1 = returnFunc(ctx, owner, ownerIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ExternalIDsFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ExternalIDsFor'
+type MockTx_ExternalIDsFor_Call struct {
+	*mock.Call
+}
+
+// ExternalIDsFor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner db.ExternalIDOwner
+//   - ownerIDs []uint32
+func (_e *MockTx_Expecter) ExternalIDsFor(ctx any, owner any, ownerIDs any) *MockTx_ExternalIDsFor_Call {
+	return &MockTx_ExternalIDsFor_Call{Call: _e.mock.On("ExternalIDsFor", ctx, owner, ownerIDs)}
+}
+
+func (_c *MockTx_ExternalIDsFor_Call) Run(run func(ctx context.Context, owner db.ExternalIDOwner, ownerIDs []uint32)) *MockTx_ExternalIDsFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ExternalIDOwner
+		if args[1] != nil {
+			arg1 = args[1].(db.ExternalIDOwner)
+		}
+		var arg2 []uint32
+		if args[2] != nil {
+			arg2 = args[2].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ExternalIDsFor_Call) Return(uint32ToExternalIDs map[uint32]db.ExternalIDs, err error) *MockTx_ExternalIDsFor_Call {
+	_c.Call.Return(uint32ToExternalIDs, err)
+	return _c
+}
+
+func (_c *MockTx_ExternalIDsFor_Call) RunAndReturn(run func(ctx context.Context, owner db.ExternalIDOwner, ownerIDs []uint32) (map[uint32]db.ExternalIDs, error)) *MockTx_ExternalIDsFor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FailDownloadRecord provides a mock function for the type MockTx
 func (_mock *MockTx) FailDownloadRecord(ctx context.Context, id uint32, reason string) error {
 	ret := _mock.Called(ctx, id, reason)
@@ -25252,7 +25326,7 @@ func (_c *MockTx_TitleCast_Call) RunAndReturn(run func(ctx context.Context, owne
 }
 
 // TitleExternalIDs provides a mock function for the type MockTx
-func (_mock *MockTx) TitleExternalIDs(ctx context.Context, owner db.CastOwner, ownerID uint32) (db.ExternalIDs, error) {
+func (_mock *MockTx) TitleExternalIDs(ctx context.Context, owner db.ExternalIDOwner, ownerID uint32) (db.ExternalIDs, error) {
 	ret := _mock.Called(ctx, owner, ownerID)
 
 	if len(ret) == 0 {
@@ -25261,15 +25335,17 @@ func (_mock *MockTx) TitleExternalIDs(ctx context.Context, owner db.CastOwner, o
 
 	var r0 db.ExternalIDs
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CastOwner, uint32) (db.ExternalIDs, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ExternalIDOwner, uint32) (db.ExternalIDs, error)); ok {
 		return returnFunc(ctx, owner, ownerID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CastOwner, uint32) db.ExternalIDs); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ExternalIDOwner, uint32) db.ExternalIDs); ok {
 		r0 = returnFunc(ctx, owner, ownerID)
 	} else {
-		r0 = ret.Get(0).(db.ExternalIDs)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(db.ExternalIDs)
+		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, db.CastOwner, uint32) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ExternalIDOwner, uint32) error); ok {
 		r1 = returnFunc(ctx, owner, ownerID)
 	} else {
 		r1 = ret.Error(1)
@@ -25284,21 +25360,21 @@ type MockTx_TitleExternalIDs_Call struct {
 
 // TitleExternalIDs is a helper method to define mock.On call
 //   - ctx context.Context
-//   - owner db.CastOwner
+//   - owner db.ExternalIDOwner
 //   - ownerID uint32
 func (_e *MockTx_Expecter) TitleExternalIDs(ctx any, owner any, ownerID any) *MockTx_TitleExternalIDs_Call {
 	return &MockTx_TitleExternalIDs_Call{Call: _e.mock.On("TitleExternalIDs", ctx, owner, ownerID)}
 }
 
-func (_c *MockTx_TitleExternalIDs_Call) Run(run func(ctx context.Context, owner db.CastOwner, ownerID uint32)) *MockTx_TitleExternalIDs_Call {
+func (_c *MockTx_TitleExternalIDs_Call) Run(run func(ctx context.Context, owner db.ExternalIDOwner, ownerID uint32)) *MockTx_TitleExternalIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 db.CastOwner
+		var arg1 db.ExternalIDOwner
 		if args[1] != nil {
-			arg1 = args[1].(db.CastOwner)
+			arg1 = args[1].(db.ExternalIDOwner)
 		}
 		var arg2 uint32
 		if args[2] != nil {
@@ -25318,7 +25394,7 @@ func (_c *MockTx_TitleExternalIDs_Call) Return(externalIDs db.ExternalIDs, err e
 	return _c
 }
 
-func (_c *MockTx_TitleExternalIDs_Call) RunAndReturn(run func(ctx context.Context, owner db.CastOwner, ownerID uint32) (db.ExternalIDs, error)) *MockTx_TitleExternalIDs_Call {
+func (_c *MockTx_TitleExternalIDs_Call) RunAndReturn(run func(ctx context.Context, owner db.ExternalIDOwner, ownerID uint32) (db.ExternalIDs, error)) *MockTx_TitleExternalIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }

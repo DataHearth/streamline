@@ -10,11 +10,12 @@ import (
 	"github.com/datahearth/streamline/ent/schema/mixins"
 )
 
-// ExternalID is one other site's id for a library title: the cross-references
-// the title's own provider keeps (TMDB for a movie, TVDB for a series). The
-// provider's own id stays a column on the title (movies.tmdb_id,
-// tv_shows.tvdb_id) — it is the title's identity, read on every path — and
-// this table holds everything else, so a new source is an enum value rather
+// ExternalID is one other site's id for a library row: the cross-references
+// the row's own provider keeps (TMDB for a movie, TVDB for a series,
+// MusicBrainz's url relations for an artist or an album). The provider's own
+// id stays a column on the row (movies.tmdb_id, tv_shows.tvdb_id,
+// artists.mbid, albums.mbid) — it is the row's identity, read on every path —
+// and this table holds everything else, so a new source is an enum value rather
 // than a column, and a title can be found from any of its ids through the
 // (source, value) index.
 //
@@ -30,32 +31,46 @@ func (ExternalID) Mixin() []ent.Mixin {
 
 func (ExternalID) Fields() []ent.Field {
 	return []ent.Field{
-		field.Enum("source").Values("imdb", "tmdb", "wikidata"),
+		// metadata.Source* names the same values.
+		field.Enum("source").Values(
+			"imdb", "tmdb", "wikidata",
+			"discogs", "allmusic", "spotify", "deezer", "bandcamp", "lastfm",
+			"rateyourmusic",
+		),
 		field.String("value").NotEmpty(),
+		// The owner edges' columns, declared so a batch read (every album of
+		// an artist) can group rows by owner without loading the owners.
+		field.Uint32("movie_id").Optional(),
+		field.Uint32("tv_show_id").Optional(),
+		field.Uint32("artist_id").Optional(),
+		field.Uint32("album_id").Optional(),
 	}
 }
 
-// Edges: of movie and tv_show exactly one is set, the Credit and MediaEvent
+// Edges: of the four owners exactly one is set, the Credit and MediaEvent
 // pattern — they are alternatives, so the invariant belongs to the writer.
 func (ExternalID) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("movie", Movie.Type).Ref("external_ids").Unique(),
-		edge.From("tv_show", TVShow.Type).Ref("external_ids").Unique(),
+		edge.From("movie", Movie.Type).Ref("external_ids").Unique().Field("movie_id"),
+		edge.From("tv_show", TVShow.Type).Ref("external_ids").Unique().Field("tv_show_id"),
+		edge.From("artist", Artist.Type).Ref("external_ids").Unique().Field("artist_id"),
+		edge.From("album", Album.Type).Ref("external_ids").Unique().Field("album_id"),
 	}
 }
 
 func (ExternalID) Indexes() []ent.Index {
 	return []ent.Index{
-		// One id per source per title. The other owner's column is NULL on
+		// One id per source per row. The other owners' columns are NULL on
 		// every row, and SQLite keeps NULLs distinct in a unique index, so each
-		// index only ever constrains its own owner's rows. ent puts the field
-		// first, so these cannot serve a read by owner alone.
-		index.Fields("source").Edges("movie").Unique(),
-		index.Fields("source").Edges("tv_show").Unique(),
-		// The detail page's read of one title's ids, and the cascade delete.
-		index.Edges("movie"),
-		index.Edges("tv_show"),
-		// Lookup by id. Not unique: TVDB can map two series to one TMDB entry.
+		// index only ever constrains its own owner's rows. The owner column
+		// leads, so the same index serves the read of one row's ids, the batch
+		// read and the cascade delete.
+		index.Fields("movie_id", "source").Unique(),
+		index.Fields("tv_show_id", "source").Unique(),
+		index.Fields("artist_id", "source").Unique(),
+		index.Fields("album_id", "source").Unique(),
+		// Lookup by id. Not unique: TVDB can map two series to one TMDB entry,
+		// and MusicBrainz an artist's Spotify page to two of its entries.
 		index.Fields("source", "value"),
 	}
 }

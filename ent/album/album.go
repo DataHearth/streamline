@@ -73,6 +73,8 @@ const (
 	FieldCreditsFetchedAt = "credits_fetched_at"
 	// FieldCreditsVersion holds the string denoting the credits_version field in the database.
 	FieldCreditsVersion = "credits_version"
+	// EdgeExternalIds holds the string denoting the external_ids edge name in mutations.
+	EdgeExternalIds = "external_ids"
 	// EdgeArtist holds the string denoting the artist edge name in mutations.
 	EdgeArtist = "artist"
 	// EdgeTracks holds the string denoting the tracks edge name in mutations.
@@ -91,6 +93,13 @@ const (
 	EdgeCoArtists = "co_artists"
 	// Table holds the table name of the album in the database.
 	Table = "albums"
+	// ExternalIdsTable is the table that holds the external_ids relation/edge.
+	ExternalIdsTable = "external_ids"
+	// ExternalIdsInverseTable is the table name for the ExternalID entity.
+	// It exists in this package in order to avoid circular dependency with the "externalid" package.
+	ExternalIdsInverseTable = "external_ids"
+	// ExternalIdsColumn is the table column denoting the external_ids relation/edge.
+	ExternalIdsColumn = "album_id"
 	// ArtistTable is the table that holds the artist relation/edge.
 	ArtistTable = "albums"
 	// ArtistInverseTable is the table name for the Artist entity.
@@ -435,6 +444,20 @@ func ByCreditsVersion(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreditsVersion, opts...).ToFunc()
 }
 
+// ByExternalIdsCount orders the results by external_ids count.
+func ByExternalIdsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newExternalIdsStep(), opts...)
+	}
+}
+
+// ByExternalIds orders the results by external_ids terms.
+func ByExternalIds(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newExternalIdsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByArtistField orders the results by artist field.
 func ByArtistField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -538,6 +561,13 @@ func ByCoArtists(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newCoArtistsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
+}
+func newExternalIdsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ExternalIdsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ExternalIdsTable, ExternalIdsColumn),
+	)
 }
 func newArtistStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(

@@ -145,6 +145,9 @@ type AlbumMutation struct {
 	credits_version         *uint8
 	addcredits_version      *int8
 	clearedFields           map[string]struct{}
+	external_ids            map[uint32]struct{}
+	removedexternal_ids     map[uint32]struct{}
+	clearedexternal_ids     bool
 	artist                  *uint32
 	clearedartist           bool
 	tracks                  map[uint32]struct{}
@@ -1611,6 +1614,60 @@ func (m *AlbumMutation) ResetCreditsVersion() {
 	m.addcredits_version = nil
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by ids.
+func (m *AlbumMutation) AddExternalIDIDs(ids ...uint32) {
+	if m.external_ids == nil {
+		m.external_ids = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.external_ids[ids[i]] = struct{}{}
+	}
+}
+
+// ClearExternalIds clears the "external_ids" edge to the ExternalID entity.
+func (m *AlbumMutation) ClearExternalIds() {
+	m.clearedexternal_ids = true
+}
+
+// ExternalIdsCleared reports if the "external_ids" edge to the ExternalID entity was cleared.
+func (m *AlbumMutation) ExternalIdsCleared() bool {
+	return m.clearedexternal_ids
+}
+
+// RemoveExternalIDIDs removes the "external_ids" edge to the ExternalID entity by IDs.
+func (m *AlbumMutation) RemoveExternalIDIDs(ids ...uint32) {
+	if m.removedexternal_ids == nil {
+		m.removedexternal_ids = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.external_ids, ids[i])
+		m.removedexternal_ids[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedExternalIds returns the removed IDs of the "external_ids" edge to the ExternalID entity.
+func (m *AlbumMutation) RemovedExternalIdsIDs() (ids []uint32) {
+	for id := range m.removedexternal_ids {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ExternalIdsIDs returns the "external_ids" edge IDs in the mutation.
+func (m *AlbumMutation) ExternalIdsIDs() (ids []uint32) {
+	for id := range m.external_ids {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetExternalIds resets all changes to the "external_ids" edge.
+func (m *AlbumMutation) ResetExternalIds() {
+	m.external_ids = nil
+	m.clearedexternal_ids = false
+	m.removedexternal_ids = nil
+}
+
 // SetArtistID sets the "artist" edge to the Artist entity by id.
 func (m *AlbumMutation) SetArtistID(id uint32) {
 	m.artist = &id
@@ -2775,7 +2832,10 @@ func (m *AlbumMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AlbumMutation) AddedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
+	if m.external_ids != nil {
+		edges = append(edges, album.EdgeExternalIds)
+	}
 	if m.artist != nil {
 		edges = append(edges, album.EdgeArtist)
 	}
@@ -2807,6 +2867,12 @@ func (m *AlbumMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *AlbumMutation) AddedIDs(name string) []ent.Value {
 	switch name {
+	case album.EdgeExternalIds:
+		ids := make([]ent.Value, 0, len(m.external_ids))
+		for id := range m.external_ids {
+			ids = append(ids, id)
+		}
+		return ids
 	case album.EdgeArtist:
 		if id := m.artist; id != nil {
 			return []ent.Value{*id}
@@ -2859,7 +2925,10 @@ func (m *AlbumMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AlbumMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
+	if m.removedexternal_ids != nil {
+		edges = append(edges, album.EdgeExternalIds)
+	}
 	if m.removedtracks != nil {
 		edges = append(edges, album.EdgeTracks)
 	}
@@ -2888,6 +2957,12 @@ func (m *AlbumMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *AlbumMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case album.EdgeExternalIds:
+		ids := make([]ent.Value, 0, len(m.removedexternal_ids))
+		for id := range m.removedexternal_ids {
+			ids = append(ids, id)
+		}
+		return ids
 	case album.EdgeTracks:
 		ids := make([]ent.Value, 0, len(m.removedtracks))
 		for id := range m.removedtracks {
@@ -2936,7 +3011,10 @@ func (m *AlbumMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AlbumMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
+	if m.clearedexternal_ids {
+		edges = append(edges, album.EdgeExternalIds)
+	}
 	if m.clearedartist {
 		edges = append(edges, album.EdgeArtist)
 	}
@@ -2968,6 +3046,8 @@ func (m *AlbumMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *AlbumMutation) EdgeCleared(name string) bool {
 	switch name {
+	case album.EdgeExternalIds:
+		return m.clearedexternal_ids
 	case album.EdgeArtist:
 		return m.clearedartist
 	case album.EdgeTracks:
@@ -3003,6 +3083,9 @@ func (m *AlbumMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *AlbumMutation) ResetEdge(name string) error {
 	switch name {
+	case album.EdgeExternalIds:
+		m.ResetExternalIds()
+		return nil
 	case album.EdgeArtist:
 		m.ResetArtist()
 		return nil
@@ -3825,6 +3908,9 @@ type ArtistMutation struct {
 	details_fetched_at      *time.Time
 	art_sidecar_hash        *string
 	clearedFields           map[string]struct{}
+	external_ids            map[uint32]struct{}
+	removedexternal_ids     map[uint32]struct{}
+	clearedexternal_ids     bool
 	albums                  map[uint32]struct{}
 	removedalbums           map[uint32]struct{}
 	clearedalbums           bool
@@ -4958,6 +5044,60 @@ func (m *ArtistMutation) ResetArtSidecarHash() {
 	delete(m.clearedFields, artist.FieldArtSidecarHash)
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by ids.
+func (m *ArtistMutation) AddExternalIDIDs(ids ...uint32) {
+	if m.external_ids == nil {
+		m.external_ids = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.external_ids[ids[i]] = struct{}{}
+	}
+}
+
+// ClearExternalIds clears the "external_ids" edge to the ExternalID entity.
+func (m *ArtistMutation) ClearExternalIds() {
+	m.clearedexternal_ids = true
+}
+
+// ExternalIdsCleared reports if the "external_ids" edge to the ExternalID entity was cleared.
+func (m *ArtistMutation) ExternalIdsCleared() bool {
+	return m.clearedexternal_ids
+}
+
+// RemoveExternalIDIDs removes the "external_ids" edge to the ExternalID entity by IDs.
+func (m *ArtistMutation) RemoveExternalIDIDs(ids ...uint32) {
+	if m.removedexternal_ids == nil {
+		m.removedexternal_ids = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.external_ids, ids[i])
+		m.removedexternal_ids[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedExternalIds returns the removed IDs of the "external_ids" edge to the ExternalID entity.
+func (m *ArtistMutation) RemovedExternalIdsIDs() (ids []uint32) {
+	for id := range m.removedexternal_ids {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ExternalIdsIDs returns the "external_ids" edge IDs in the mutation.
+func (m *ArtistMutation) ExternalIdsIDs() (ids []uint32) {
+	for id := range m.external_ids {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetExternalIds resets all changes to the "external_ids" edge.
+func (m *ArtistMutation) ResetExternalIds() {
+	m.external_ids = nil
+	m.clearedexternal_ids = false
+	m.removedexternal_ids = nil
+}
+
 // AddAlbumIDs adds the "albums" edge to the Album entity by ids.
 func (m *ArtistMutation) AddAlbumIDs(ids ...uint32) {
 	if m.albums == nil {
@@ -5881,7 +6021,10 @@ func (m *ArtistMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ArtistMutation) AddedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
+	if m.external_ids != nil {
+		edges = append(edges, artist.EdgeExternalIds)
+	}
 	if m.albums != nil {
 		edges = append(edges, artist.EdgeAlbums)
 	}
@@ -5907,6 +6050,12 @@ func (m *ArtistMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *ArtistMutation) AddedIDs(name string) []ent.Value {
 	switch name {
+	case artist.EdgeExternalIds:
+		ids := make([]ent.Value, 0, len(m.external_ids))
+		for id := range m.external_ids {
+			ids = append(ids, id)
+		}
+		return ids
 	case artist.EdgeAlbums:
 		ids := make([]ent.Value, 0, len(m.albums))
 		for id := range m.albums {
@@ -5949,7 +6098,10 @@ func (m *ArtistMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ArtistMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
+	if m.removedexternal_ids != nil {
+		edges = append(edges, artist.EdgeExternalIds)
+	}
 	if m.removedalbums != nil {
 		edges = append(edges, artist.EdgeAlbums)
 	}
@@ -5975,6 +6127,12 @@ func (m *ArtistMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ArtistMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case artist.EdgeExternalIds:
+		ids := make([]ent.Value, 0, len(m.removedexternal_ids))
+		for id := range m.removedexternal_ids {
+			ids = append(ids, id)
+		}
+		return ids
 	case artist.EdgeAlbums:
 		ids := make([]ent.Value, 0, len(m.removedalbums))
 		for id := range m.removedalbums {
@@ -6017,7 +6175,10 @@ func (m *ArtistMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ArtistMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
+	if m.clearedexternal_ids {
+		edges = append(edges, artist.EdgeExternalIds)
+	}
 	if m.clearedalbums {
 		edges = append(edges, artist.EdgeAlbums)
 	}
@@ -6043,6 +6204,8 @@ func (m *ArtistMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *ArtistMutation) EdgeCleared(name string) bool {
 	switch name {
+	case artist.EdgeExternalIds:
+		return m.clearedexternal_ids
 	case artist.EdgeAlbums:
 		return m.clearedalbums
 	case artist.EdgeMembers:
@@ -6071,6 +6234,9 @@ func (m *ArtistMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ArtistMutation) ResetEdge(name string) error {
 	switch name {
+	case artist.EdgeExternalIds:
+		m.ResetExternalIds()
+		return nil
 	case artist.EdgeAlbums:
 		m.ResetAlbums()
 		return nil
@@ -20411,6 +20577,10 @@ type ExternalIDMutation struct {
 	clearedmovie   bool
 	tv_show        *uint32
 	clearedtv_show bool
+	artist         *uint32
+	clearedartist  bool
+	album          *uint32
+	clearedalbum   bool
 	done           bool
 	oldValue       func(context.Context) (*ExternalID, error)
 	predicates     []predicate.ExternalID
@@ -20664,27 +20834,211 @@ func (m *ExternalIDMutation) ResetValue() {
 	m.value = nil
 }
 
-// SetMovieID sets the "movie" edge to the Movie entity by id.
-func (m *ExternalIDMutation) SetMovieID(id uint32) {
-	m.movie = &id
+// SetMovieID sets the "movie_id" field.
+func (m *ExternalIDMutation) SetMovieID(u uint32) {
+	m.movie = &u
+}
+
+// MovieID returns the value of the "movie_id" field in the mutation.
+func (m *ExternalIDMutation) MovieID() (r uint32, exists bool) {
+	v := m.movie
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMovieID returns the old "movie_id" field's value of the ExternalID entity.
+// If the ExternalID object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExternalIDMutation) OldMovieID(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMovieID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMovieID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMovieID: %w", err)
+	}
+	return oldValue.MovieID, nil
+}
+
+// ClearMovieID clears the value of the "movie_id" field.
+func (m *ExternalIDMutation) ClearMovieID() {
+	m.movie = nil
+	m.clearedFields[externalid.FieldMovieID] = struct{}{}
+}
+
+// MovieIDCleared returns if the "movie_id" field was cleared in this mutation.
+func (m *ExternalIDMutation) MovieIDCleared() bool {
+	_, ok := m.clearedFields[externalid.FieldMovieID]
+	return ok
+}
+
+// ResetMovieID resets all changes to the "movie_id" field.
+func (m *ExternalIDMutation) ResetMovieID() {
+	m.movie = nil
+	delete(m.clearedFields, externalid.FieldMovieID)
+}
+
+// SetTvShowID sets the "tv_show_id" field.
+func (m *ExternalIDMutation) SetTvShowID(u uint32) {
+	m.tv_show = &u
+}
+
+// TvShowID returns the value of the "tv_show_id" field in the mutation.
+func (m *ExternalIDMutation) TvShowID() (r uint32, exists bool) {
+	v := m.tv_show
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTvShowID returns the old "tv_show_id" field's value of the ExternalID entity.
+// If the ExternalID object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExternalIDMutation) OldTvShowID(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTvShowID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTvShowID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTvShowID: %w", err)
+	}
+	return oldValue.TvShowID, nil
+}
+
+// ClearTvShowID clears the value of the "tv_show_id" field.
+func (m *ExternalIDMutation) ClearTvShowID() {
+	m.tv_show = nil
+	m.clearedFields[externalid.FieldTvShowID] = struct{}{}
+}
+
+// TvShowIDCleared returns if the "tv_show_id" field was cleared in this mutation.
+func (m *ExternalIDMutation) TvShowIDCleared() bool {
+	_, ok := m.clearedFields[externalid.FieldTvShowID]
+	return ok
+}
+
+// ResetTvShowID resets all changes to the "tv_show_id" field.
+func (m *ExternalIDMutation) ResetTvShowID() {
+	m.tv_show = nil
+	delete(m.clearedFields, externalid.FieldTvShowID)
+}
+
+// SetArtistID sets the "artist_id" field.
+func (m *ExternalIDMutation) SetArtistID(u uint32) {
+	m.artist = &u
+}
+
+// ArtistID returns the value of the "artist_id" field in the mutation.
+func (m *ExternalIDMutation) ArtistID() (r uint32, exists bool) {
+	v := m.artist
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldArtistID returns the old "artist_id" field's value of the ExternalID entity.
+// If the ExternalID object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExternalIDMutation) OldArtistID(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldArtistID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldArtistID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldArtistID: %w", err)
+	}
+	return oldValue.ArtistID, nil
+}
+
+// ClearArtistID clears the value of the "artist_id" field.
+func (m *ExternalIDMutation) ClearArtistID() {
+	m.artist = nil
+	m.clearedFields[externalid.FieldArtistID] = struct{}{}
+}
+
+// ArtistIDCleared returns if the "artist_id" field was cleared in this mutation.
+func (m *ExternalIDMutation) ArtistIDCleared() bool {
+	_, ok := m.clearedFields[externalid.FieldArtistID]
+	return ok
+}
+
+// ResetArtistID resets all changes to the "artist_id" field.
+func (m *ExternalIDMutation) ResetArtistID() {
+	m.artist = nil
+	delete(m.clearedFields, externalid.FieldArtistID)
+}
+
+// SetAlbumID sets the "album_id" field.
+func (m *ExternalIDMutation) SetAlbumID(u uint32) {
+	m.album = &u
+}
+
+// AlbumID returns the value of the "album_id" field in the mutation.
+func (m *ExternalIDMutation) AlbumID() (r uint32, exists bool) {
+	v := m.album
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAlbumID returns the old "album_id" field's value of the ExternalID entity.
+// If the ExternalID object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExternalIDMutation) OldAlbumID(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAlbumID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAlbumID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAlbumID: %w", err)
+	}
+	return oldValue.AlbumID, nil
+}
+
+// ClearAlbumID clears the value of the "album_id" field.
+func (m *ExternalIDMutation) ClearAlbumID() {
+	m.album = nil
+	m.clearedFields[externalid.FieldAlbumID] = struct{}{}
+}
+
+// AlbumIDCleared returns if the "album_id" field was cleared in this mutation.
+func (m *ExternalIDMutation) AlbumIDCleared() bool {
+	_, ok := m.clearedFields[externalid.FieldAlbumID]
+	return ok
+}
+
+// ResetAlbumID resets all changes to the "album_id" field.
+func (m *ExternalIDMutation) ResetAlbumID() {
+	m.album = nil
+	delete(m.clearedFields, externalid.FieldAlbumID)
 }
 
 // ClearMovie clears the "movie" edge to the Movie entity.
 func (m *ExternalIDMutation) ClearMovie() {
 	m.clearedmovie = true
+	m.clearedFields[externalid.FieldMovieID] = struct{}{}
 }
 
 // MovieCleared reports if the "movie" edge to the Movie entity was cleared.
 func (m *ExternalIDMutation) MovieCleared() bool {
-	return m.clearedmovie
-}
-
-// MovieID returns the "movie" edge ID in the mutation.
-func (m *ExternalIDMutation) MovieID() (id uint32, exists bool) {
-	if m.movie != nil {
-		return *m.movie, true
-	}
-	return
+	return m.MovieIDCleared() || m.clearedmovie
 }
 
 // MovieIDs returns the "movie" edge IDs in the mutation.
@@ -20703,27 +21057,15 @@ func (m *ExternalIDMutation) ResetMovie() {
 	m.clearedmovie = false
 }
 
-// SetTvShowID sets the "tv_show" edge to the TVShow entity by id.
-func (m *ExternalIDMutation) SetTvShowID(id uint32) {
-	m.tv_show = &id
-}
-
 // ClearTvShow clears the "tv_show" edge to the TVShow entity.
 func (m *ExternalIDMutation) ClearTvShow() {
 	m.clearedtv_show = true
+	m.clearedFields[externalid.FieldTvShowID] = struct{}{}
 }
 
 // TvShowCleared reports if the "tv_show" edge to the TVShow entity was cleared.
 func (m *ExternalIDMutation) TvShowCleared() bool {
-	return m.clearedtv_show
-}
-
-// TvShowID returns the "tv_show" edge ID in the mutation.
-func (m *ExternalIDMutation) TvShowID() (id uint32, exists bool) {
-	if m.tv_show != nil {
-		return *m.tv_show, true
-	}
-	return
+	return m.TvShowIDCleared() || m.clearedtv_show
 }
 
 // TvShowIDs returns the "tv_show" edge IDs in the mutation.
@@ -20740,6 +21082,60 @@ func (m *ExternalIDMutation) TvShowIDs() (ids []uint32) {
 func (m *ExternalIDMutation) ResetTvShow() {
 	m.tv_show = nil
 	m.clearedtv_show = false
+}
+
+// ClearArtist clears the "artist" edge to the Artist entity.
+func (m *ExternalIDMutation) ClearArtist() {
+	m.clearedartist = true
+	m.clearedFields[externalid.FieldArtistID] = struct{}{}
+}
+
+// ArtistCleared reports if the "artist" edge to the Artist entity was cleared.
+func (m *ExternalIDMutation) ArtistCleared() bool {
+	return m.ArtistIDCleared() || m.clearedartist
+}
+
+// ArtistIDs returns the "artist" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ArtistID instead. It exists only for internal usage by the builders.
+func (m *ExternalIDMutation) ArtistIDs() (ids []uint32) {
+	if id := m.artist; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetArtist resets all changes to the "artist" edge.
+func (m *ExternalIDMutation) ResetArtist() {
+	m.artist = nil
+	m.clearedartist = false
+}
+
+// ClearAlbum clears the "album" edge to the Album entity.
+func (m *ExternalIDMutation) ClearAlbum() {
+	m.clearedalbum = true
+	m.clearedFields[externalid.FieldAlbumID] = struct{}{}
+}
+
+// AlbumCleared reports if the "album" edge to the Album entity was cleared.
+func (m *ExternalIDMutation) AlbumCleared() bool {
+	return m.AlbumIDCleared() || m.clearedalbum
+}
+
+// AlbumIDs returns the "album" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AlbumID instead. It exists only for internal usage by the builders.
+func (m *ExternalIDMutation) AlbumIDs() (ids []uint32) {
+	if id := m.album; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAlbum resets all changes to the "album" edge.
+func (m *ExternalIDMutation) ResetAlbum() {
+	m.album = nil
+	m.clearedalbum = false
 }
 
 // Where appends a list predicates to the ExternalIDMutation builder.
@@ -20776,7 +21172,7 @@ func (m *ExternalIDMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ExternalIDMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 8)
 	if m.create_time != nil {
 		fields = append(fields, externalid.FieldCreateTime)
 	}
@@ -20788,6 +21184,18 @@ func (m *ExternalIDMutation) Fields() []string {
 	}
 	if m.value != nil {
 		fields = append(fields, externalid.FieldValue)
+	}
+	if m.movie != nil {
+		fields = append(fields, externalid.FieldMovieID)
+	}
+	if m.tv_show != nil {
+		fields = append(fields, externalid.FieldTvShowID)
+	}
+	if m.artist != nil {
+		fields = append(fields, externalid.FieldArtistID)
+	}
+	if m.album != nil {
+		fields = append(fields, externalid.FieldAlbumID)
 	}
 	return fields
 }
@@ -20805,6 +21213,14 @@ func (m *ExternalIDMutation) Field(name string) (ent.Value, bool) {
 		return m.Source()
 	case externalid.FieldValue:
 		return m.Value()
+	case externalid.FieldMovieID:
+		return m.MovieID()
+	case externalid.FieldTvShowID:
+		return m.TvShowID()
+	case externalid.FieldArtistID:
+		return m.ArtistID()
+	case externalid.FieldAlbumID:
+		return m.AlbumID()
 	}
 	return nil, false
 }
@@ -20822,6 +21238,14 @@ func (m *ExternalIDMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldSource(ctx)
 	case externalid.FieldValue:
 		return m.OldValue(ctx)
+	case externalid.FieldMovieID:
+		return m.OldMovieID(ctx)
+	case externalid.FieldTvShowID:
+		return m.OldTvShowID(ctx)
+	case externalid.FieldArtistID:
+		return m.OldArtistID(ctx)
+	case externalid.FieldAlbumID:
+		return m.OldAlbumID(ctx)
 	}
 	return nil, fmt.Errorf("unknown ExternalID field %s", name)
 }
@@ -20859,6 +21283,34 @@ func (m *ExternalIDMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetValue(v)
 		return nil
+	case externalid.FieldMovieID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMovieID(v)
+		return nil
+	case externalid.FieldTvShowID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTvShowID(v)
+		return nil
+	case externalid.FieldArtistID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArtistID(v)
+		return nil
+	case externalid.FieldAlbumID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAlbumID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ExternalID field %s", name)
 }
@@ -20866,13 +21318,16 @@ func (m *ExternalIDMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *ExternalIDMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *ExternalIDMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	}
 	return nil, false
 }
 
@@ -20888,7 +21343,20 @@ func (m *ExternalIDMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *ExternalIDMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(externalid.FieldMovieID) {
+		fields = append(fields, externalid.FieldMovieID)
+	}
+	if m.FieldCleared(externalid.FieldTvShowID) {
+		fields = append(fields, externalid.FieldTvShowID)
+	}
+	if m.FieldCleared(externalid.FieldArtistID) {
+		fields = append(fields, externalid.FieldArtistID)
+	}
+	if m.FieldCleared(externalid.FieldAlbumID) {
+		fields = append(fields, externalid.FieldAlbumID)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -20901,6 +21369,20 @@ func (m *ExternalIDMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *ExternalIDMutation) ClearField(name string) error {
+	switch name {
+	case externalid.FieldMovieID:
+		m.ClearMovieID()
+		return nil
+	case externalid.FieldTvShowID:
+		m.ClearTvShowID()
+		return nil
+	case externalid.FieldArtistID:
+		m.ClearArtistID()
+		return nil
+	case externalid.FieldAlbumID:
+		m.ClearAlbumID()
+		return nil
+	}
 	return fmt.Errorf("unknown ExternalID nullable field %s", name)
 }
 
@@ -20920,18 +21402,36 @@ func (m *ExternalIDMutation) ResetField(name string) error {
 	case externalid.FieldValue:
 		m.ResetValue()
 		return nil
+	case externalid.FieldMovieID:
+		m.ResetMovieID()
+		return nil
+	case externalid.FieldTvShowID:
+		m.ResetTvShowID()
+		return nil
+	case externalid.FieldArtistID:
+		m.ResetArtistID()
+		return nil
+	case externalid.FieldAlbumID:
+		m.ResetAlbumID()
+		return nil
 	}
 	return fmt.Errorf("unknown ExternalID field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ExternalIDMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 4)
 	if m.movie != nil {
 		edges = append(edges, externalid.EdgeMovie)
 	}
 	if m.tv_show != nil {
 		edges = append(edges, externalid.EdgeTvShow)
+	}
+	if m.artist != nil {
+		edges = append(edges, externalid.EdgeArtist)
+	}
+	if m.album != nil {
+		edges = append(edges, externalid.EdgeAlbum)
 	}
 	return edges
 }
@@ -20948,13 +21448,21 @@ func (m *ExternalIDMutation) AddedIDs(name string) []ent.Value {
 		if id := m.tv_show; id != nil {
 			return []ent.Value{*id}
 		}
+	case externalid.EdgeArtist:
+		if id := m.artist; id != nil {
+			return []ent.Value{*id}
+		}
+	case externalid.EdgeAlbum:
+		if id := m.album; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ExternalIDMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 4)
 	return edges
 }
 
@@ -20966,12 +21474,18 @@ func (m *ExternalIDMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ExternalIDMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 4)
 	if m.clearedmovie {
 		edges = append(edges, externalid.EdgeMovie)
 	}
 	if m.clearedtv_show {
 		edges = append(edges, externalid.EdgeTvShow)
+	}
+	if m.clearedartist {
+		edges = append(edges, externalid.EdgeArtist)
+	}
+	if m.clearedalbum {
+		edges = append(edges, externalid.EdgeAlbum)
 	}
 	return edges
 }
@@ -20984,6 +21498,10 @@ func (m *ExternalIDMutation) EdgeCleared(name string) bool {
 		return m.clearedmovie
 	case externalid.EdgeTvShow:
 		return m.clearedtv_show
+	case externalid.EdgeArtist:
+		return m.clearedartist
+	case externalid.EdgeAlbum:
+		return m.clearedalbum
 	}
 	return false
 }
@@ -20998,6 +21516,12 @@ func (m *ExternalIDMutation) ClearEdge(name string) error {
 	case externalid.EdgeTvShow:
 		m.ClearTvShow()
 		return nil
+	case externalid.EdgeArtist:
+		m.ClearArtist()
+		return nil
+	case externalid.EdgeAlbum:
+		m.ClearAlbum()
+		return nil
 	}
 	return fmt.Errorf("unknown ExternalID unique edge %s", name)
 }
@@ -21011,6 +21535,12 @@ func (m *ExternalIDMutation) ResetEdge(name string) error {
 		return nil
 	case externalid.EdgeTvShow:
 		m.ResetTvShow()
+		return nil
+	case externalid.EdgeArtist:
+		m.ResetArtist()
+		return nil
+	case externalid.EdgeAlbum:
+		m.ResetAlbum()
 		return nil
 	}
 	return fmt.Errorf("unknown ExternalID edge %s", name)

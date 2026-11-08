@@ -70,6 +70,26 @@ func Value(v string) predicate.ExternalID {
 	return predicate.ExternalID(sql.FieldEQ(FieldValue, v))
 }
 
+// MovieID applies equality check predicate on the "movie_id" field. It's identical to MovieIDEQ.
+func MovieID(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldEQ(FieldMovieID, v))
+}
+
+// TvShowID applies equality check predicate on the "tv_show_id" field. It's identical to TvShowIDEQ.
+func TvShowID(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldEQ(FieldTvShowID, v))
+}
+
+// ArtistID applies equality check predicate on the "artist_id" field. It's identical to ArtistIDEQ.
+func ArtistID(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldEQ(FieldArtistID, v))
+}
+
+// AlbumID applies equality check predicate on the "album_id" field. It's identical to AlbumIDEQ.
+func AlbumID(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldEQ(FieldAlbumID, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.ExternalID {
 	return predicate.ExternalID(sql.FieldEQ(FieldCreateTime, v))
@@ -235,6 +255,126 @@ func ValueContainsFold(v string) predicate.ExternalID {
 	return predicate.ExternalID(sql.FieldContainsFold(FieldValue, v))
 }
 
+// MovieIDEQ applies the EQ predicate on the "movie_id" field.
+func MovieIDEQ(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldEQ(FieldMovieID, v))
+}
+
+// MovieIDNEQ applies the NEQ predicate on the "movie_id" field.
+func MovieIDNEQ(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNEQ(FieldMovieID, v))
+}
+
+// MovieIDIn applies the In predicate on the "movie_id" field.
+func MovieIDIn(vs ...uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldIn(FieldMovieID, vs...))
+}
+
+// MovieIDNotIn applies the NotIn predicate on the "movie_id" field.
+func MovieIDNotIn(vs ...uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNotIn(FieldMovieID, vs...))
+}
+
+// MovieIDIsNil applies the IsNil predicate on the "movie_id" field.
+func MovieIDIsNil() predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldIsNull(FieldMovieID))
+}
+
+// MovieIDNotNil applies the NotNil predicate on the "movie_id" field.
+func MovieIDNotNil() predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNotNull(FieldMovieID))
+}
+
+// TvShowIDEQ applies the EQ predicate on the "tv_show_id" field.
+func TvShowIDEQ(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldEQ(FieldTvShowID, v))
+}
+
+// TvShowIDNEQ applies the NEQ predicate on the "tv_show_id" field.
+func TvShowIDNEQ(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNEQ(FieldTvShowID, v))
+}
+
+// TvShowIDIn applies the In predicate on the "tv_show_id" field.
+func TvShowIDIn(vs ...uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldIn(FieldTvShowID, vs...))
+}
+
+// TvShowIDNotIn applies the NotIn predicate on the "tv_show_id" field.
+func TvShowIDNotIn(vs ...uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNotIn(FieldTvShowID, vs...))
+}
+
+// TvShowIDIsNil applies the IsNil predicate on the "tv_show_id" field.
+func TvShowIDIsNil() predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldIsNull(FieldTvShowID))
+}
+
+// TvShowIDNotNil applies the NotNil predicate on the "tv_show_id" field.
+func TvShowIDNotNil() predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNotNull(FieldTvShowID))
+}
+
+// ArtistIDEQ applies the EQ predicate on the "artist_id" field.
+func ArtistIDEQ(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldEQ(FieldArtistID, v))
+}
+
+// ArtistIDNEQ applies the NEQ predicate on the "artist_id" field.
+func ArtistIDNEQ(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNEQ(FieldArtistID, v))
+}
+
+// ArtistIDIn applies the In predicate on the "artist_id" field.
+func ArtistIDIn(vs ...uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldIn(FieldArtistID, vs...))
+}
+
+// ArtistIDNotIn applies the NotIn predicate on the "artist_id" field.
+func ArtistIDNotIn(vs ...uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNotIn(FieldArtistID, vs...))
+}
+
+// ArtistIDIsNil applies the IsNil predicate on the "artist_id" field.
+func ArtistIDIsNil() predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldIsNull(FieldArtistID))
+}
+
+// ArtistIDNotNil applies the NotNil predicate on the "artist_id" field.
+func ArtistIDNotNil() predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNotNull(FieldArtistID))
+}
+
+// AlbumIDEQ applies the EQ predicate on the "album_id" field.
+func AlbumIDEQ(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldEQ(FieldAlbumID, v))
+}
+
+// AlbumIDNEQ applies the NEQ predicate on the "album_id" field.
+func AlbumIDNEQ(v uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNEQ(FieldAlbumID, v))
+}
+
+// AlbumIDIn applies the In predicate on the "album_id" field.
+func AlbumIDIn(vs ...uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldIn(FieldAlbumID, vs...))
+}
+
+// AlbumIDNotIn applies the NotIn predicate on the "album_id" field.
+func AlbumIDNotIn(vs ...uint32) predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNotIn(FieldAlbumID, vs...))
+}
+
+// AlbumIDIsNil applies the IsNil predicate on the "album_id" field.
+func AlbumIDIsNil() predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldIsNull(FieldAlbumID))
+}
+
+// AlbumIDNotNil applies the NotNil predicate on the "album_id" field.
+func AlbumIDNotNil() predicate.ExternalID {
+	return predicate.ExternalID(sql.FieldNotNull(FieldAlbumID))
+}
+
 // HasMovie applies the HasEdge predicate on the "movie" edge.
 func HasMovie() predicate.ExternalID {
 	return predicate.ExternalID(func(s *sql.Selector) {
@@ -273,6 +413,52 @@ func HasTvShow() predicate.ExternalID {
 func HasTvShowWith(preds ...predicate.TVShow) predicate.ExternalID {
 	return predicate.ExternalID(func(s *sql.Selector) {
 		step := newTvShowStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasArtist applies the HasEdge predicate on the "artist" edge.
+func HasArtist() predicate.ExternalID {
+	return predicate.ExternalID(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ArtistTable, ArtistColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasArtistWith applies the HasEdge predicate on the "artist" edge with a given conditions (other predicates).
+func HasArtistWith(preds ...predicate.Artist) predicate.ExternalID {
+	return predicate.ExternalID(func(s *sql.Selector) {
+		step := newArtistStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAlbum applies the HasEdge predicate on the "album" edge.
+func HasAlbum() predicate.ExternalID {
+	return predicate.ExternalID(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, AlbumTable, AlbumColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAlbumWith applies the HasEdge predicate on the "album" edge with a given conditions (other predicates).
+func HasAlbumWith(preds ...predicate.Album) predicate.ExternalID {
+	return predicate.ExternalID(func(s *sql.Selector) {
+		step := newAlbumStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

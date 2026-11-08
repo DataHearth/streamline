@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
@@ -404,6 +405,21 @@ func (_c *AlbumCreate) SetNillableCreditsVersion(v *uint8) *AlbumCreate {
 func (_c *AlbumCreate) SetID(v uint32) *AlbumCreate {
 	_c.mutation.SetID(v)
 	return _c
+}
+
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_c *AlbumCreate) AddExternalIDIDs(ids ...uint32) *AlbumCreate {
+	_c.mutation.AddExternalIDIDs(ids...)
+	return _c
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_c *AlbumCreate) AddExternalIds(v ...*ExternalID) *AlbumCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddExternalIDIDs(ids...)
 }
 
 // SetArtistID sets the "artist" edge to the Artist entity by ID.
@@ -800,6 +816,22 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreditsVersion(); ok {
 		_spec.SetField(album.FieldCreditsVersion, field.TypeUint8, value)
 		_node.CreditsVersion = value
+	}
+	if nodes := _c.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.ExternalIdsTable,
+			Columns: []string{album.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.ArtistIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
