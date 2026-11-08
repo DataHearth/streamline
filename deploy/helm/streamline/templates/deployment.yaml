@@ -69,17 +69,22 @@ spec:
             - secretRef:
                 name: {{ include "streamline.fullname" . }}-secrets
           {{- end }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            {{- $startup := .Values.startupProbe | default dict }}
+            periodSeconds: {{ $startup.periodSeconds | default 5 }}
+            failureThreshold: {{ $startup.failureThreshold | default 60 }}
           livenessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 10
             periodSeconds: 20
           readinessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 2
             periodSeconds: 5
           resources:
             {{- if .Values.hwAccel.enabled }}

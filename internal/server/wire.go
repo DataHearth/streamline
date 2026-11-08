@@ -145,7 +145,9 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		cfg = config.Get()
 	}
 
-	// 2. Open database
+	// 2. Open database. Boot reads it and the torrent engine's piece
+	// completion page by page, which on slow storage costs minutes.
+	prewarm(ctx, bootFiles(cfg.DatabasePath()))
 	dbClient, err := db.Open(ctx, cfg.DatabasePath())
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)

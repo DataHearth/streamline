@@ -35,6 +35,17 @@ var tracer = otel.Tracer("github.com/datahearth/streamline/internal/bittorrent")
 // the download dir, so wiping the download dir also resets the engine.
 const sessionDirName = ".streamline-session"
 
+func sessionDir(downloadDir string) string {
+	return filepath.Join(downloadDir, sessionDirName)
+}
+
+// PieceCompletionPath is the bolt file New keeps piece completion in for a
+// builtin client downloading into downloadDir. Re-adding a torrent reads it
+// for every piece.
+func PieceCompletionPath(downloadDir string) string {
+	return filepath.Join(sessionDir(downloadDir), ".torrent.bolt.db")
+}
+
 // torrentState mirrors the persisted per-torrent flags for cheap access on
 // every status call.
 type torrentState struct {
@@ -127,11 +138,11 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
-	sessionDir := filepath.Join(entry.DownloadDir, sessionDirName)
-	if err := os.MkdirAll(sessionDir, 0o750); err != nil {
+	stateDir := sessionDir(entry.DownloadDir)
+	if err := os.MkdirAll(stateDir, 0o750); err != nil {
 		return nil, fmt.Errorf("create session dir: %w", err)
 	}
-	pc, err := storage.NewBoltPieceCompletion(sessionDir)
+	pc, err := storage.NewBoltPieceCompletion(stateDir)
 	if err != nil {
 		return nil, fmt.Errorf("open piece completion: %w", err)
 	}

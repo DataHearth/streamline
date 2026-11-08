@@ -79,6 +79,13 @@ securityContext:
   seccompProfile:
     type: RuntimeDefault
 
+# Holds liveness off until /health answers: periodSeconds × failureThreshold
+# (5 min). Raise it if reading or migrating a large database on slow storage
+# takes longer.
+startupProbe:
+  periodSeconds: 5
+  failureThreshold: 60
+
 resources:
   requests:
     cpu: 100m

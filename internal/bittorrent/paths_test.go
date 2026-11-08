@@ -184,3 +184,15 @@ var _ = Describe("removeTorrentData", Label("unit", "bittorrent"), func() {
 		Expect(resolution).To(BeAnExistingFile())
 	})
 })
+
+var _ = Describe("PieceCompletionPath", Label("unit", "bittorrent"), func() {
+	It("names the file the bolt piece completion opens", func() {
+		dir := GinkgoT().TempDir()
+		sessionDir := filepath.Join(dir, sessionDirName)
+		Expect(os.MkdirAll(sessionDir, 0o750)).To(Succeed())
+		pc, err := storage.NewBoltPieceCompletion(sessionDir)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(pc.Close)
+		Expect(PieceCompletionPath(dir)).To(BeAnExistingFile())
+	})
+})
