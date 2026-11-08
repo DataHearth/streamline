@@ -198,7 +198,8 @@
 		/>
 
 		<!-- The six-column table needs ~680px; below lg the settings content column
-		     never has it (at 834 a sidebar from md would leave 430px), so it does not try. -->
+		     never has it (at 834 a sidebar from md would leave 430px), so it does
+		     not try. -->
 		<div class="hidden lg:block">
 		<div
 			class="mt-6 overflow-x-auto rounded-lg border border-border bg-bg-elevated"
