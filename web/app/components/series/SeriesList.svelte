@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { countWanted } from "@lib/nouns";
+	import { countDownloading, countImporting, countWanted } from "@lib/nouns";
 	import { auth } from "@lib/auth.svelte";
 	import { Tv } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
@@ -190,13 +190,13 @@
 							>
 						{/if}
 						{#if (show.downloading_episodes ?? 0) > 0}
-							<span class="ml-1.5 lowercase text-status-downloading"
-								>· {show.downloading_episodes} {i18n.status_downloading()}</span
+							<span class="ml-1.5 text-status-downloading"
+								>· {countDownloading(show.downloading_episodes ?? 0)}</span
 							>
 						{/if}
 						{#if (show.importing_episodes ?? 0) > 0}
-							<span class="ml-1.5 lowercase text-status-importing"
-								>· {show.importing_episodes} {i18n.status_importing()}</span
+							<span class="ml-1.5 text-status-importing"
+								>· {countImporting(show.importing_episodes ?? 0)}</span
 							>
 						{/if}
 					</td>
