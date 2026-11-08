@@ -70,8 +70,8 @@ jobs:
               - '.taskfiles/build.yaml'
               - '.taskfiles/lint.yaml'
               - '.github/workflows/ci.yaml'
-            # lint:frontend lints the static JS/CSS only, not web/app.
             biome:
+              - 'web/app/**'
               - 'web/static/js/**'
               - 'web/static/css/**'
               - 'biome.json'
@@ -211,7 +211,7 @@ jobs:
           if [ "${{ job.status }}" = "success" ]; then
             echo "✅ Biome passed" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "❌ Lint issues — run \`task fmt\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "❌ Lint issues — run \`task lint:frontend\`" >> "$GITHUB_STEP_SUMMARY"
           fi
 
   # esbuild strips types without checking them and Biome does not type-check,

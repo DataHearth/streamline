@@ -16,9 +16,9 @@ tasks:
     cmd: go tool golangci-lint run ./... {{.CLI_ARGS}}
 
   frontend:
-    desc: Lint JS/CSS (biome)
+    desc: Lint the SPA and static JS/CSS (biome)
     cmds:
-      - biome lint web/static/js web/static/css
+      - biome lint web/app web/static/js web/static/css
 
   ts:
     desc: Typecheck the SPA (svelte-check)

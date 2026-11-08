@@ -1,8 +1,10 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
 	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
 	"files": {
 		"includes": [
+			"web/app/**/*.ts",
+			"web/app/**/*.svelte",
 			"web/static/js/**/*.js",
 			"web/static/css/**/*.css",
 			"!web/static/js/bundle.min.js",
@@ -25,6 +27,12 @@
 			"recommended": true,
 			"complexity": {
 				"noImportantStyles": "off"
+			},
+			"a11y": {
+				"noLabelWithoutControl": {
+					"level": "error",
+					"options": { "inputComponents": ["ScoreInput", "Select"] }
+				}
 			}
 		}
 	},
@@ -38,5 +46,14 @@
 		"parser": { "tailwindDirectives": true },
 		"formatter": { "enabled": true },
 		"linter": { "enabled": true }
-	}
+	},
+	"html": {
+		"experimentalFullSupportEnabled": true
+	},
+	"overrides": [
+		{
+			"includes": ["web/app/**"],
+			"formatter": { "enabled": false }
+		}
+	]
 }
