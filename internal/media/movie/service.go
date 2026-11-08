@@ -244,7 +244,7 @@ func (s *Service) Add(
 		Aliases:        details.Aliases,
 		Cast:           details.Cast,
 		ReleaseDate:    metadata.ParseISODate(details.ReleaseDate),
-		ExternalIDs:    movieExternalIDs(details),
+		ExternalIDs:    ExternalIDs(details),
 	})
 	if err != nil {
 		if ent.IsConstraintError(err) {
@@ -717,11 +717,13 @@ func (s *Service) updateMetadata(
 		Aliases:       details.Aliases,
 		Cast:          details.Cast,
 		ReleaseDate:   metadata.ParseISODate(details.ReleaseDate),
-		ExternalIDs:   movieExternalIDs(details),
+		ExternalIDs:   ExternalIDs(details),
 	})
 }
 
-func movieExternalIDs(d *metadata.MovieDetails) db.ExternalIDs {
+// ExternalIDs is what a movie stores of TMDB's cross-references, the map
+// every metadata write and the lookup detail build.
+func ExternalIDs(d *metadata.MovieDetails) db.ExternalIDs {
 	return db.ExternalIDs{
 		metadata.SourceIMDb:     d.IMDbID,
 		metadata.SourceWikidata: d.WikidataID,

@@ -102,6 +102,14 @@ Activity feeds use cursor pagination instead (`?cursor=`, `?limit=`), since they
 
 **Movie list responses carry `file_summary`, not `media_files`.** The rollup gives you `file_count`, `size_bytes` and the largest file's parsed `resolution`/`codec` — enough for a list view, without a page of movies dragging in every file row it owns. Use `GET /movies/{id}` when you need the files themselves.
 
+**Other sites' ids are in `external_ids`.** A movie, a series, an artist and an album carry an `external_ids` object keyed by site, each value what that site's address is built from:
+
+```json
+"external_ids": { "imdb": "tt0903747", "tmdb": "1396", "wikidata": "Q1079" }
+```
+
+A movie gets `imdb` and `wikidata` from TMDB. A series gets `imdb`, `tmdb` (as a string) and `wikidata` from TVDB. An artist or an album gets what MusicBrainz links: `wikidata`, `discogs`, `allmusic`, `spotify`, `deezer`, `bandcamp`, `lastfm` (artists only) and `rateyourmusic`. The title's own provider id is never in it: it stays `tmdb_id`, `tvdb_id` or `mbid`. A site with no id is absent, and so is the whole object when there is none. Every detail response (`GET /movies/{id}`, `/series/{id}`, `/music/artists/{id}`, `/music/albums/{id}`, and the albums inside an artist) carries it. The lists `GET /movies`, `/series` and `/music/artists` carry it only with `?with_external_ids=true`, read for the whole page in one extra query, which is how a sync script gets every IMDb id without one request per title. A book has no `external_ids`: Hardcover keeps no other site's id, and each of a book's `editions` carries its own `isbn_13` and `asin` instead. The add-flow lookups (`GET /search/movie/{tmdb_id}`, `GET /series/lookup/{tvdb_id}`) carry `external_ids` too.
+
 **Name-keyed resources.** Config-backed resources are addressed by name, not numeric ID:
 
 ```

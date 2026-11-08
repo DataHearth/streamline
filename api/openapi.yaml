@@ -90,6 +90,7 @@ paths:
         - $ref: "#/components/parameters/MoviesSort"
         - $ref: "#/components/parameters/MoviesOrder"
         - $ref: "#/components/parameters/WithTotal"
+        - $ref: "#/components/parameters/WithExternalIds"
       responses:
         "200":
           description: Paginated movie list
@@ -533,6 +534,7 @@ paths:
         - $ref: "#/components/parameters/SeriesSort"
         - $ref: "#/components/parameters/SeriesOrder"
         - $ref: "#/components/parameters/WithTotal"
+        - $ref: "#/components/parameters/WithExternalIds"
       responses:
         "200":
           $ref: "#/components/responses/SeriesList"
@@ -1353,6 +1355,7 @@ paths:
         - $ref: "#/components/parameters/MusicArtistSortParam"
         - $ref: "#/components/parameters/MusicArtistOrderParam"
         - $ref: "#/components/parameters/WithTotal"
+        - $ref: "#/components/parameters/WithExternalIds"
       responses:
         "200":
           $ref: "#/components/responses/MusicArtistList"
@@ -6710,6 +6713,16 @@ components:
         type: array
         items:
           $ref: "#/components/schemas/MusicAlbumType"
+    WithExternalIds:
+      name: with_external_ids
+      in: query
+      description: |
+        `true` attaches each item's `external_ids`, read for the whole page
+        in one more query. Off by default: the library grids never show
+        them. Detail responses always carry them.
+      schema:
+        type: boolean
+        default: false
     WithTotal:
       name: with_total
       in: query
@@ -8811,18 +8824,8 @@ components:
           minimum: 0
           maximum: 4294967295
           x-go-type: uint32
-        imdb_id:
-          type: string
-          description: |
-            IMDb title id (`tt…`) TMDB maps the film to. Absent when TMDB has
-            none, and on a movie not refreshed since this field was added
-            until the next `movie-metadata-refresh` run.
-        wikidata_id:
-          type: string
-          description: |
-            Wikidata item (`Q…`) TMDB maps the film to. The item lists every
-            other site's id for the work (Rotten Tomatoes, Metacritic,
-            AlloCiné, SensCritique…). Absent when TMDB has none.
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
         quality_profile:
           type: string
           description: Name of the quality profile (empty resolves to the movie default).
@@ -9491,19 +9494,8 @@ components:
         tvdb_id:
           type: integer
           x-go-type: uint32
-        tmdb_id:
-          type: integer
-          x-go-type: uint32
-          description: |
-            TMDB TV id TVDB maps the series to (its remoteIds). Absent when
-            TVDB lists none, and on a show not refreshed since this field was
-            added until the next `tv-metadata-refresh` run.
-        imdb_id:
-          type: string
-          description: IMDb title id (`tt…`) from TVDB's remoteIds. Absent when TVDB lists none.
-        wikidata_id:
-          type: string
-          description: Wikidata item (`Q…`) from TVDB's remoteIds. Absent when TVDB lists none.
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
         network:
           type: string
         creator:
@@ -9894,6 +9886,8 @@ components:
           x-go-type: uint32
         mbid:
           type: string
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
         name:
           type: string
         sort_name:
@@ -10006,20 +10000,32 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/MusicAlbum"
-            external_ids:
-              $ref: "#/components/schemas/MusicExternalIds"
 
-    MusicExternalIds:
+    ExternalIds:
       type: object
       description: |
-        Other sites' ids for an artist or an album, from the url relations
-        MusicBrainz keeps for it; a site MusicBrainz links none for is
-        absent. Each value is what that site's address is built from. An
-        artist's links are read on add and refresh (`music-metadata-refresh`),
-        an album's on hydration: Wikidata, Discogs (the master release),
-        AllMusic and RateYourMusic from the release group, Spotify, Deezer
-        and Bandcamp from the release the album follows.
+        Other sites' ids for a library title, keyed by site, each value what
+        that site's address is built from. The title's own provider id is
+        never here: it is the title's `tmdb_id`, `tvdb_id` or `mbid`. A site
+        with no id for the title is absent, and so is the whole object when
+        there is none.
+
+        Every detail response carries it. A list carries it only with
+        `with_external_ids=true`, which costs one more query per page.
+
+        Which sites appear depends on the title's provider: TMDB gives a
+        movie `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+        `wikidata`; MusicBrainz gives an artist or an album the rest. An
+        artist's links are read on add and refresh, an album's on hydration.
+        A library from before they were kept is filled by
+        `music-metadata-refresh` (films and series by their own refresh).
       properties:
+        imdb:
+          type: string
+          description: IMDb title id, `tt…`.
+        tmdb:
+          type: string
+          description: TMDB TV id of a series, as a decimal string.
         wikidata:
           type: string
           description: Wikidata item, `Q…`.
@@ -10178,7 +10184,7 @@ components:
               type: string
               description: MusicBrainz release-group id.
             external_ids:
-              $ref: "#/components/schemas/MusicExternalIds"
+              $ref: "#/components/schemas/ExternalIds"
             label:
               type: string
             catalog_number:
@@ -16650,12 +16656,8 @@ components:
         tvdb_id:
           type: integer
           x-go-type: uint32
-        imdb_id:
-          type: string
-          description: IMDb title id (`tt…`) the provider maps the title to.
-        wikidata_id:
-          type: string
-          description: Wikidata item (`Q…`) the provider maps the title to.
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
         network:
           type: string
         season_count:

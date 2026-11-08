@@ -5714,6 +5714,55 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// ExternalIds Other sites' ids for a library title, keyed by site, each value what
+// that site's address is built from. The title's own provider id is
+// never here: it is the title's `tmdb_id`, `tvdb_id` or `mbid`. A site
+// with no id for the title is absent, and so is the whole object when
+// there is none.
+//
+// Every detail response carries it. A list carries it only with
+// `with_external_ids=true`, which costs one more query per page.
+//
+// Which sites appear depends on the title's provider: TMDB gives a
+// movie `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+// `wikidata`; MusicBrainz gives an artist or an album the rest. An
+// artist's links are read on add and refresh, an album's on hydration.
+// A library from before they were kept is filled by
+// `music-metadata-refresh` (films and series by their own refresh).
+type ExternalIds struct {
+	// Allmusic AllMusic id, `mn…` for an artist, `mw…` for an album.
+	Allmusic *string `json:"allmusic,omitempty"`
+
+	// Bandcamp Bandcamp host for an artist (`band.bandcamp.com`), host and path
+	// for an album (`band.bandcamp.com/album/name`).
+	Bandcamp *string `json:"bandcamp,omitempty"`
+
+	// Deezer Deezer artist or album id.
+	Deezer *string `json:"deezer,omitempty"`
+
+	// Discogs Discogs artist id, or master id for an album.
+	Discogs *string `json:"discogs,omitempty"`
+
+	// Imdb IMDb title id, `tt…`.
+	Imdb *string `json:"imdb,omitempty"`
+
+	// Lastfm Last.fm artist name as its URL writes it (artists only).
+	Lastfm *string `json:"lastfm,omitempty"`
+
+	// Rateyourmusic RateYourMusic path below `/artist/` for an artist, below
+	// `/release/` for an album (`album/radiohead/ok_computer`).
+	Rateyourmusic *string `json:"rateyourmusic,omitempty"`
+
+	// Spotify Spotify base62 id.
+	Spotify *string `json:"spotify,omitempty"`
+
+	// Tmdb TMDB TV id of a series, as a decimal string.
+	Tmdb *string `json:"tmdb,omitempty"`
+
+	// Wikidata Wikidata item, `Q…`.
+	Wikidata *string `json:"wikidata,omitempty"`
+}
+
 // FFmpegConfigPatch Only provided fields are applied. found and resolved_path are derived and read-only — sending them has no effect.
 type FFmpegConfigPatch struct {
 	Enabled *bool   `json:"enabled,omitempty"`
@@ -6527,14 +6576,28 @@ type LogRotateConfig struct {
 type LookupDetail struct {
 	Cast         *[]CastMember `json:"cast,omitempty"`
 	EpisodeCount *uint16       `json:"episode_count,omitempty"`
-	Genres       *[]string     `json:"genres,omitempty"`
 
-	// ImdbId IMDb title id (`tt…`) the provider maps the title to.
-	ImdbId           *string  `json:"imdb_id,omitempty"`
-	Network          *string  `json:"network,omitempty"`
-	OriginalLanguage *string  `json:"original_language,omitempty"`
-	Overview         *string  `json:"overview,omitempty"`
-	Rating           *float32 `json:"rating,omitempty"`
+	// ExternalIds Other sites' ids for a library title, keyed by site, each value what
+	// that site's address is built from. The title's own provider id is
+	// never here: it is the title's `tmdb_id`, `tvdb_id` or `mbid`. A site
+	// with no id for the title is absent, and so is the whole object when
+	// there is none.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page.
+	//
+	// Which sites appear depends on the title's provider: TMDB gives a
+	// movie `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the rest. An
+	// artist's links are read on add and refresh, an album's on hydration.
+	// A library from before they were kept is filled by
+	// `music-metadata-refresh` (films and series by their own refresh).
+	ExternalIds      *ExternalIds `json:"external_ids,omitempty"`
+	Genres           *[]string    `json:"genres,omitempty"`
+	Network          *string      `json:"network,omitempty"`
+	OriginalLanguage *string      `json:"original_language,omitempty"`
+	Overview         *string      `json:"overview,omitempty"`
+	Rating           *float32     `json:"rating,omitempty"`
 
 	// ReleaseDate Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
 	ReleaseDate *string `json:"release_date,omitempty"`
@@ -6547,9 +6610,6 @@ type LookupDetail struct {
 	TmdbId      *uint32 `json:"tmdb_id,omitempty"`
 	TvdbId      *uint32 `json:"tvdb_id,omitempty"`
 	VoteCount   *uint32 `json:"vote_count,omitempty"`
-
-	// WikidataId Wikidata item (`Q…`) the provider maps the title to.
-	WikidataId *string `json:"wikidata_id,omitempty"`
 }
 
 // MediaFile defines model for MediaFile.
@@ -6850,6 +6910,23 @@ type Movie struct {
 	// digital date for it yet.
 	DigitalReleaseDate *openapi_types.Date `json:"digital_release_date,omitempty"`
 
+	// ExternalIds Other sites' ids for a library title, keyed by site, each value what
+	// that site's address is built from. The title's own provider id is
+	// never here: it is the title's `tmdb_id`, `tvdb_id` or `mbid`. A site
+	// with no id for the title is absent, and so is the whole object when
+	// there is none.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page.
+	//
+	// Which sites appear depends on the title's provider: TMDB gives a
+	// movie `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the rest. An
+	// artist's links are read on add and refresh, an album's on hydration.
+	// A library from before they were kept is filled by
+	// `music-metadata-refresh` (films and series by their own refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
+
 	// FileSummary Per-movie rollup of the files on disk, carried by list responses in
 	// place of the full media_files array. Absent when the movie has no
 	// files. The library grid's size and quality columns and the bulk-action
@@ -6861,11 +6938,6 @@ type Movie struct {
 	// list responses.
 	Genres *[]string `json:"genres,omitempty"`
 	Id     uint32    `json:"id"`
-
-	// ImdbId IMDb title id (`tt…`) TMDB maps the film to. Absent when TMDB has
-	// none, and on a movie not refreshed since this field was added
-	// until the next `movie-metadata-refresh` run.
-	ImdbId *string `json:"imdb_id,omitempty"`
 
 	// MediaFiles Files attached to this movie. Only populated by GET /movies/{id};
 	// list responses carry file_summary instead. Absent when the movie
@@ -6899,12 +6971,7 @@ type Movie struct {
 	Status  MovieStatus `json:"status"`
 	Title   string      `json:"title"`
 	TmdbId  uint32      `json:"tmdb_id"`
-
-	// WikidataId Wikidata item (`Q…`) TMDB maps the film to. The item lists every
-	// other site's id for the work (Rotten Tomatoes, Metacritic,
-	// AlloCiné, SensCritique…). Absent when TMDB has none.
-	WikidataId *string `json:"wikidata_id,omitempty"`
-	Year       uint16  `json:"year"`
+	Year    uint16      `json:"year"`
 }
 
 // MovieStatus defines model for Movie.Status.
@@ -7010,14 +7077,22 @@ type MusicAlbum struct {
 	// Duration Sum of the track durations in seconds; omitted at 0.
 	Duration *uint32 `json:"duration,omitempty"`
 
-	// ExternalIds Other sites' ids for an artist or an album, from the url relations
-	// MusicBrainz keeps for it; a site MusicBrainz links none for is
-	// absent. Each value is what that site's address is built from. An
-	// artist's links are read on add and refresh (`music-metadata-refresh`),
-	// an album's on hydration: Wikidata, Discogs (the master release),
-	// AllMusic and RateYourMusic from the release group, Spotify, Deezer
-	// and Bandcamp from the release the album follows.
-	ExternalIds *MusicExternalIds `json:"external_ids,omitempty"`
+	// ExternalIds Other sites' ids for a library title, keyed by site, each value what
+	// that site's address is built from. The title's own provider id is
+	// never here: it is the title's `tmdb_id`, `tvdb_id` or `mbid`. A site
+	// with no id for the title is absent, and so is the whole object when
+	// there is none.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page.
+	//
+	// Which sites appear depends on the title's provider: TMDB gives a
+	// movie `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the rest. An
+	// artist's links are read on add and refresh, an album's on hydration.
+	// A library from before they were kept is filled by
+	// `music-metadata-refresh` (films and series by their own refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
 
 	// FailureReason Present while `status` is `failed`; why the import was refused.
 	FailureReason *string `json:"failure_reason,omitempty"`
@@ -7168,6 +7243,23 @@ type MusicArtist struct {
 	// Albums Newest first (release date descending, undated last, then title), upcoming included.
 	Albums []MusicAlbumSummary `json:"albums"`
 
+	// ExternalIds Other sites' ids for a library title, keyed by site, each value what
+	// that site's address is built from. The title's own provider id is
+	// never here: it is the title's `tmdb_id`, `tvdb_id` or `mbid`. A site
+	// with no id for the title is absent, and so is the whole object when
+	// there is none.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page.
+	//
+	// Which sites appear depends on the title's provider: TMDB gives a
+	// movie `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the rest. An
+	// artist's links are read on add and refresh, an album's on hydration.
+	// A library from before they were kept is filled by
+	// `music-metadata-refresh` (films and series by their own refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
+
 	// Genre Highest-count MusicBrainz genre, title-cased.
 	Genre *string `json:"genre,omitempty"`
 
@@ -7225,6 +7317,23 @@ type MusicArtistCore struct {
 
 	// AlbumCount Albums of the artist, upcoming included.
 	AlbumCount uint32 `json:"album_count"`
+
+	// ExternalIds Other sites' ids for a library title, keyed by site, each value what
+	// that site's address is built from. The title's own provider id is
+	// never here: it is the title's `tmdb_id`, `tvdb_id` or `mbid`. A site
+	// with no id for the title is absent, and so is the whole object when
+	// there is none.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page.
+	//
+	// Which sites appear depends on the title's provider: TMDB gives a
+	// movie `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the rest. An
+	// artist's links are read on add and refresh, an album's on hydration.
+	// A library from before they were kept is filled by
+	// `music-metadata-refresh` (films and series by their own refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
 
 	// Genre Highest-count MusicBrainz genre, title-cased.
 	Genre *string `json:"genre,omitempty"`
@@ -7312,14 +7421,22 @@ type MusicArtistDetail struct {
 	AlbumCount uint32       `json:"album_count"`
 	Albums     []MusicAlbum `json:"albums"`
 
-	// ExternalIds Other sites' ids for an artist or an album, from the url relations
-	// MusicBrainz keeps for it; a site MusicBrainz links none for is
-	// absent. Each value is what that site's address is built from. An
-	// artist's links are read on add and refresh (`music-metadata-refresh`),
-	// an album's on hydration: Wikidata, Discogs (the master release),
-	// AllMusic and RateYourMusic from the release group, Spotify, Deezer
-	// and Bandcamp from the release the album follows.
-	ExternalIds *MusicExternalIds `json:"external_ids,omitempty"`
+	// ExternalIds Other sites' ids for a library title, keyed by site, each value what
+	// that site's address is built from. The title's own provider id is
+	// never here: it is the title's `tmdb_id`, `tvdb_id` or `mbid`. A site
+	// with no id for the title is absent, and so is the whole object when
+	// there is none.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page.
+	//
+	// Which sites appear depends on the title's provider: TMDB gives a
+	// movie `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the rest. An
+	// artist's links are read on add and refresh, an album's on hydration.
+	// A library from before they were kept is filled by
+	// `music-metadata-refresh` (films and series by their own refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
 
 	// Genre Highest-count MusicBrainz genre, title-cased.
 	Genre *string `json:"genre,omitempty"`
@@ -7479,41 +7596,6 @@ type MusicCredit struct {
 
 // MusicCreditRole defines model for MusicCreditRole.
 type MusicCreditRole string
-
-// MusicExternalIds Other sites' ids for an artist or an album, from the url relations
-// MusicBrainz keeps for it; a site MusicBrainz links none for is
-// absent. Each value is what that site's address is built from. An
-// artist's links are read on add and refresh (`music-metadata-refresh`),
-// an album's on hydration: Wikidata, Discogs (the master release),
-// AllMusic and RateYourMusic from the release group, Spotify, Deezer
-// and Bandcamp from the release the album follows.
-type MusicExternalIds struct {
-	// Allmusic AllMusic id, `mn…` for an artist, `mw…` for an album.
-	Allmusic *string `json:"allmusic,omitempty"`
-
-	// Bandcamp Bandcamp host for an artist (`band.bandcamp.com`), host and path
-	// for an album (`band.bandcamp.com/album/name`).
-	Bandcamp *string `json:"bandcamp,omitempty"`
-
-	// Deezer Deezer artist or album id.
-	Deezer *string `json:"deezer,omitempty"`
-
-	// Discogs Discogs artist id, or master id for an album.
-	Discogs *string `json:"discogs,omitempty"`
-
-	// Lastfm Last.fm artist name as its URL writes it (artists only).
-	Lastfm *string `json:"lastfm,omitempty"`
-
-	// Rateyourmusic RateYourMusic path below `/artist/` for an artist, below
-	// `/release/` for an album (`album/radiohead/ok_computer`).
-	Rateyourmusic *string `json:"rateyourmusic,omitempty"`
-
-	// Spotify Spotify base62 id.
-	Spotify *string `json:"spotify,omitempty"`
-
-	// Wikidata Wikidata item, `Q…`.
-	Wikidata *string `json:"wikidata,omitempty"`
-}
 
 // MusicGenreCount defines model for MusicGenreCount.
 type MusicGenreCount struct {
@@ -8608,15 +8690,29 @@ type RequestCounts struct {
 type RequestMediaDetails struct {
 	Cast         *[]CastMember `json:"cast,omitempty"`
 	EpisodeCount *uint16       `json:"episode_count,omitempty"`
-	Genres       *[]string     `json:"genres,omitempty"`
 
-	// ImdbId IMDb title id (`tt…`) the provider maps the title to.
-	ImdbId           *string  `json:"imdb_id,omitempty"`
-	Network          *string  `json:"network,omitempty"`
-	OriginalLanguage *string  `json:"original_language,omitempty"`
-	Overview         *string  `json:"overview,omitempty"`
-	PosterUrl        *string  `json:"poster_url,omitempty"`
-	Rating           *float32 `json:"rating,omitempty"`
+	// ExternalIds Other sites' ids for a library title, keyed by site, each value what
+	// that site's address is built from. The title's own provider id is
+	// never here: it is the title's `tmdb_id`, `tvdb_id` or `mbid`. A site
+	// with no id for the title is absent, and so is the whole object when
+	// there is none.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page.
+	//
+	// Which sites appear depends on the title's provider: TMDB gives a
+	// movie `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the rest. An
+	// artist's links are read on add and refresh, an album's on hydration.
+	// A library from before they were kept is filled by
+	// `music-metadata-refresh` (films and series by their own refresh).
+	ExternalIds      *ExternalIds `json:"external_ids,omitempty"`
+	Genres           *[]string    `json:"genres,omitempty"`
+	Network          *string      `json:"network,omitempty"`
+	OriginalLanguage *string      `json:"original_language,omitempty"`
+	Overview         *string      `json:"overview,omitempty"`
+	PosterUrl        *string      `json:"poster_url,omitempty"`
+	Rating           *float32     `json:"rating,omitempty"`
 
 	// ReleaseDate Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
 	ReleaseDate *string `json:"release_date,omitempty"`
@@ -8629,10 +8725,7 @@ type RequestMediaDetails struct {
 	TmdbId      *uint32 `json:"tmdb_id,omitempty"`
 	TvdbId      *uint32 `json:"tvdb_id,omitempty"`
 	VoteCount   *uint32 `json:"vote_count,omitempty"`
-
-	// WikidataId Wikidata item (`Q…`) the provider maps the title to.
-	WikidataId *string `json:"wikidata_id,omitempty"`
-	Year       *uint16 `json:"year,omitempty"`
+	Year        *uint16 `json:"year,omitempty"`
 }
 
 // RequestMediaType defines model for RequestMediaType.
@@ -9352,6 +9445,23 @@ type TVShow struct {
 	// `season` scopes; absent when it spans seasons.
 	DownloadingSeason *uint16 `json:"downloading_season,omitempty"`
 
+	// ExternalIds Other sites' ids for a library title, keyed by site, each value what
+	// that site's address is built from. The title's own provider id is
+	// never here: it is the title's `tmdb_id`, `tvdb_id` or `mbid`. A site
+	// with no id for the title is absent, and so is the whole object when
+	// there is none.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page.
+	//
+	// Which sites appear depends on the title's provider: TMDB gives a
+	// movie `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the rest. An
+	// artist's links are read on add and refresh, an album's on hydration.
+	// A library from before they were kept is filled by
+	// `music-metadata-refresh` (films and series by their own refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
+
 	// FirstAired First air date, ISO yyyy-mm-dd — the series counterpart to
 	// Movie.release_date. Absent for an announced show with no date set,
 	// which is why `year` stays required.
@@ -9362,9 +9472,6 @@ type TVShow struct {
 	// excluded.
 	HaveEpisodes *uint32 `json:"have_episodes,omitempty"`
 	Id           uint32  `json:"id"`
-
-	// ImdbId IMDb title id (`tt…`) from TVDB's remoteIds. Absent when TVDB lists none.
-	ImdbId *string `json:"imdb_id,omitempty"`
 
 	// ImportingEpisodes Episodes past the grab and being written into the library. Cuts
 	// across the counts above the same way.
@@ -9393,15 +9500,10 @@ type TVShow struct {
 
 	// Seasons Seasons with their episodes. Only populated by GET /series/{id};
 	// absent in list responses.
-	Seasons      *[]Season          `json:"seasons,omitempty"`
-	SeriesStatus TVShowSeriesStatus `json:"series_status"`
-	Title        string             `json:"title"`
-
-	// TmdbId TMDB TV id TVDB maps the series to (its remoteIds). Absent when
-	// TVDB lists none, and on a show not refreshed since this field was
-	// added until the next `tv-metadata-refresh` run.
-	TmdbId        *uint32 `json:"tmdb_id,omitempty"`
-	TotalEpisodes *uint32 `json:"total_episodes,omitempty"`
+	Seasons       *[]Season          `json:"seasons,omitempty"`
+	SeriesStatus  TVShowSeriesStatus `json:"series_status"`
+	Title         string             `json:"title"`
+	TotalEpisodes *uint32            `json:"total_episodes,omitempty"`
 
 	// TotalSeasons Seasons the show has, specials (season 0) excluded — the same
 	// scope the episode rollups below use.
@@ -9411,10 +9513,7 @@ type TVShow struct {
 
 	// WantedEpisodes Aired/undated episodes without a file (the "missing" count).
 	WantedEpisodes *uint32 `json:"wanted_episodes,omitempty"`
-
-	// WikidataId Wikidata item (`Q…`) from TVDB's remoteIds. Absent when TVDB lists none.
-	WikidataId *string `json:"wikidata_id,omitempty"`
-	Year       uint16  `json:"year"`
+	Year           uint16  `json:"year"`
 }
 
 // TVShowSeriesStatus defines model for TVShow.SeriesStatus.
@@ -10432,6 +10531,9 @@ type UsersOrder string
 // UsersSort defines model for UsersSort.
 type UsersSort string
 
+// WithExternalIds defines model for WithExternalIds.
+type WithExternalIds = bool
+
 // WithTotal defines model for WithTotal.
 type WithTotal = bool
 
@@ -11165,6 +11267,11 @@ type ListMoviesParams struct {
 	// caller that shows only the page (the search surfaces): the count is a
 	// second pass over every match.
 	WithTotal *WithTotal `form:"with_total,omitempty" json:"with_total,omitempty"`
+
+	// WithExternalIds `true` attaches each item's `external_ids`, read for the whole page
+	// in one more query. Off by default: the library grids never show
+	// them. Detail responses always carry them.
+	WithExternalIds *WithExternalIds `form:"with_external_ids,omitempty" json:"with_external_ids,omitempty"`
 }
 
 // ListMoviesParamsMonitored defines parameters for ListMovies.
@@ -11281,6 +11388,11 @@ type ListMusicArtistsParams struct {
 	// caller that shows only the page (the search surfaces): the count is a
 	// second pass over every match.
 	WithTotal *WithTotal `form:"with_total,omitempty" json:"with_total,omitempty"`
+
+	// WithExternalIds `true` attaches each item's `external_ids`, read for the whole page
+	// in one more query. Off by default: the library grids never show
+	// them. Detail responses always carry them.
+	WithExternalIds *WithExternalIds `form:"with_external_ids,omitempty" json:"with_external_ids,omitempty"`
 }
 
 // ListMusicArtistsParamsMonitored defines parameters for ListMusicArtists.
@@ -11481,6 +11593,11 @@ type ListSeriesParams struct {
 	// caller that shows only the page (the search surfaces): the count is a
 	// second pass over every match.
 	WithTotal *WithTotal `form:"with_total,omitempty" json:"with_total,omitempty"`
+
+	// WithExternalIds `true` attaches each item's `external_ids`, read for the whole page
+	// in one more query. Off by default: the library grids never show
+	// them. Detail responses always carry them.
+	WithExternalIds *WithExternalIds `form:"with_external_ids,omitempty" json:"with_external_ids,omitempty"`
 }
 
 // ListSeriesParamsMonitored defines parameters for ListSeries.
@@ -18308,6 +18425,19 @@ func (siw *ServerInterfaceWrapper) ListMovies(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// ------------- Optional query parameter "with_external_ids" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "with_external_ids", r.URL.Query(), &params.WithExternalIds, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_external_ids"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_external_ids", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListMovies(w, r, params)
 	}))
@@ -19339,6 +19469,19 @@ func (siw *ServerInterfaceWrapper) ListMusicArtists(w http.ResponseWriter, r *ht
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_total"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_total", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "with_external_ids" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "with_external_ids", r.URL.Query(), &params.WithExternalIds, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_external_ids"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_external_ids", Err: err})
 		}
 		return
 	}
@@ -21084,6 +21227,19 @@ func (siw *ServerInterfaceWrapper) ListSeries(w http.ResponseWriter, r *http.Req
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_total"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_total", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "with_external_ids" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "with_external_ids", r.URL.Query(), &params.WithExternalIds, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_external_ids"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_external_ids", Err: err})
 		}
 		return
 	}

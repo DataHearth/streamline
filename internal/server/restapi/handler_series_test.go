@@ -110,6 +110,52 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(body.Items[0].Seasons).To(BeNil())
 		})
 
+		It("attaches external_ids only when the caller asks", func() {
+			app.tvshows.EXPECT().
+				FilterList(mock.Anything, mock.AnythingOfType("tvshow.FilterParams")).
+				Return(
+					[]*ent.TVShow{
+						{ID: 1, Title: "X", Year: 2020, TvdbID: 9},
+						{ID: 2, Title: "Y", Year: 2021, TvdbID: 10},
+					},
+					map[uint32]db.EpisodeCounts{},
+					uint32(2),
+					nil,
+				).
+				Twice()
+			// One read for the whole page, and only on the second request:
+			// the strict mock fails the first if it reads.
+			app.store.EXPECT().
+				ExternalIDsFor(mock.Anything, db.ExternalIDsOfSeries, []uint32{1, 2}).
+				Return(map[uint32]db.ExternalIDs{1: {"imdb": "tt0903747"}}, nil).
+				Once()
+
+			type page struct {
+				Items []struct {
+					ExternalIDs *map[string]string `json:"external_ids"`
+				} `json:"items"`
+			}
+			get := func(path string) page {
+				GinkgoHelper()
+				resp := app.do(app.req(http.MethodGet, path, app.adminKey, nil))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				var body page
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				return body
+			}
+
+			plain := get("/api/v1/series")
+			Expect(plain.Items).To(HaveLen(2))
+			Expect(plain.Items[0].ExternalIDs).To(BeNil())
+
+			with := get("/api/v1/series?with_external_ids=true")
+			Expect(with.Items).To(HaveLen(2))
+			Expect(*with.Items[0].ExternalIDs).To(Equal(map[string]string{"imdb": "tt0903747"}))
+			// A show with none leaves the field out rather than sending {}.
+			Expect(with.Items[1].ExternalIDs).To(BeNil())
+		})
+
 		It("500s when the service errors", func() {
 			app.tvshows.EXPECT().
 				FilterList(mock.Anything, mock.AnythingOfType("tvshow.FilterParams")).
@@ -243,16 +289,15 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 			var body struct {
-				TvdbID     uint32 `json:"tvdb_id"`
-				TmdbID     uint32 `json:"tmdb_id"`
-				ImdbID     string `json:"imdb_id"`
-				WikidataID string `json:"wikidata_id"`
+				TvdbID      uint32            `json:"tvdb_id"`
+				ExternalIDs map[string]string `json:"external_ids"`
 			}
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 			Expect(body.TvdbID).To(Equal(uint32(81189)))
-			Expect(body.TmdbID).To(Equal(uint32(1396)))
-			Expect(body.ImdbID).To(Equal("tt0903747"))
-			Expect(body.WikidataID).To(Equal("Q1079"))
+			// The provider's own id stays tvdb_id; the map holds the others.
+			Expect(body.ExternalIDs).To(Equal(map[string]string{
+				"tmdb": "1396", "imdb": "tt0903747", "wikidata": "Q1079",
+			}))
 		})
 
 		It("omits cast when nothing credits the show", func() {

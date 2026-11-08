@@ -195,8 +195,23 @@ func (s *Server) ListMusicArtists(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
+	ids := make([]uint32, 0, len(res.Items))
+	for _, v := range res.Items {
+		ids = append(ids, v.Artist.ID)
+	}
+	external, err := s.pageExternalIDs(
+		ctx, p.WithExternalIds, db.ExternalIDsOfArtist, ids,
+	)
+	if err != nil {
+		return ListMusicArtists500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
 	items := make([]MusicArtist, len(res.Items))
 	for i, v := range res.Items {
+		if external != nil {
+			v.ExternalIDs = music.ArtistExternalIDs(v.Artist, external[v.Artist.ID])
+		}
 		items[i] = toMusicArtist(v)
 	}
 	return ListMusicArtists200JSONResponse{

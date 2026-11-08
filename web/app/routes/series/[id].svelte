@@ -876,14 +876,14 @@
 								<dd class="text-right font-mono text-fg">{show.runtime}m</dd>
 							{/if}
 							{@render idRow("TVDB", String(show.tvdb_id), tvdbSeriesUrl(show.tvdb_id))}
-							{#if show.tmdb_id}
-								{@render idRow("TMDB", String(show.tmdb_id), tmdbUrl("tv", show.tmdb_id))}
+							{#if show.external_ids?.tmdb}
+								{@render idRow("TMDB", show.external_ids.tmdb, tmdbUrl("tv", Number(show.external_ids.tmdb)))}
 							{/if}
-							{#if show.imdb_id}
-								{@render idRow("IMDb", show.imdb_id, imdbTitleUrl(show.imdb_id))}
+							{#if show.external_ids?.imdb}
+								{@render idRow("IMDb", show.external_ids.imdb, imdbTitleUrl(show.external_ids.imdb))}
 							{/if}
-							{#if show.wikidata_id}
-								{@render idRow("Wikidata", show.wikidata_id, wikidataUrl(show.wikidata_id))}
+							{#if show.external_ids?.wikidata}
+								{@render idRow("Wikidata", show.external_ids.wikidata, wikidataUrl(show.external_ids.wikidata))}
 							{/if}
 						</dl>
 					</section>
