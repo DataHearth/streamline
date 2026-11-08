@@ -282,14 +282,15 @@ func (s *Service) AlbumDetail(ctx context.Context, id uint32) (*AlbumView, error
 	return &v, nil
 }
 
-// ArtistExternalIDs is an artist's links as the wire carries them: its rows
-// in external_ids plus its Wikidata and Deezer columns, which stay columns
-// because the overview and the photo read them.
+// ArtistExternalIDs is an artist's ids as the wire carries them: its MBID,
+// its rows in external_ids, and its Wikidata and Deezer columns, which stay
+// columns because the overview and the photo read them.
 func ArtistExternalIDs(a *ent.Artist, stored db.ExternalIDs) db.ExternalIDs {
-	out := make(db.ExternalIDs, len(stored)+2)
+	out := make(db.ExternalIDs, len(stored)+3)
 	for k, v := range stored {
 		out[k] = v
 	}
+	out[metadata.SourceMusicBrainz] = a.Mbid
 	if a.WikidataID != "" {
 		out[metadata.SourceWikidata] = a.WikidataID
 	}

@@ -132,6 +132,9 @@ func movieToAPI(m *ent.Movie) Movie {
 func toExternalIDs(ids db.ExternalIDs) *ExternalIds {
 	out := ExternalIds{
 		Allmusic:      idOrNil(ids, metadata.SourceAllMusic),
+		Hardcover:     idOrNil(ids, metadata.SourceHardcover),
+		Musicbrainz:   idOrNil(ids, metadata.SourceMusicBrainz),
+		Tvdb:          idOrNil(ids, metadata.SourceTVDB),
 		Bandcamp:      idOrNil(ids, metadata.SourceBandcamp),
 		Deezer:        idOrNil(ids, metadata.SourceDeezer),
 		Discogs:       idOrNil(ids, metadata.SourceDiscogs),
@@ -146,6 +149,20 @@ func toExternalIDs(ids db.ExternalIDs) *ExternalIds {
 		return nil
 	}
 	return &out
+}
+
+// withOwnID is ids plus the title's own provider id under source, a copy:
+// the wire map carries every id the title is known by, the one it is stored
+// under included, while the table only ever holds the others.
+func withOwnID(ids db.ExternalIDs, source string, id uint32) db.ExternalIDs {
+	out := make(db.ExternalIDs, len(ids)+1)
+	for k, v := range ids {
+		out[k] = v
+	}
+	if id != 0 {
+		out[source] = strconv.FormatUint(uint64(id), 10)
+	}
+	return out
 }
 
 // idOrNil is the stored id for source, nil when there is none, for an
@@ -166,8 +183,11 @@ func (s *Server) pageExternalIDs(
 	owner db.ExternalIDOwner,
 	ids []uint32,
 ) (map[uint32]db.ExternalIDs, error) {
-	if want == nil || !*want || len(ids) == 0 {
+	if want == nil || !*want {
 		return nil, nil
+	}
+	if len(ids) == 0 {
+		return map[uint32]db.ExternalIDs{}, nil
 	}
 	return s.store.ExternalIDsFor(ctx, owner, ids)
 }

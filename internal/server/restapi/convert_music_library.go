@@ -129,10 +129,21 @@ func toMusicAlbumSummary(a music.AlbumView, artistID uint32) MusicAlbumSummary {
 	}
 }
 
+func albumExternalIDs(a music.AlbumView) db.ExternalIDs {
+	out := make(db.ExternalIDs, len(a.ExternalIDs)+1)
+	for k, v := range a.ExternalIDs {
+		out[k] = v
+	}
+	out[metadata.SourceMusicBrainz] = a.Album.Mbid
+	return out
+}
+
 func toMusicAlbum(a music.AlbumView, artistID uint32) MusicAlbum {
 	row := a.Album
 	out := MusicAlbum{
-		ExternalIds:   toExternalIDs(a.ExternalIDs),
+		// An album is always shown whole, so its ids go out wherever it does,
+		// its release group's MBID at least.
+		ExternalIds:   toExternalIDs(albumExternalIDs(a)),
 		ArtistId:      albumOwnerID(a, artistID),
 		Artists:       toMusicPeople(a.Artists),
 		CatalogNumber: optString(row.CatalogNumber),

@@ -514,7 +514,9 @@ func movieDetailsToRequestMedia(d *metadata.MovieDetails) RequestMediaDetails {
 	if d.TMDBID != 0 {
 		out.TmdbId = &d.TMDBID
 	}
-	out.ExternalIds = toExternalIDs(movie.ExternalIDs(d))
+	out.ExternalIds = toExternalIDs(
+		withOwnID(movie.ExternalIDs(d), metadata.SourceTMDB, d.TMDBID),
+	)
 
 	if d.Rating != 0 {
 		out.Rating = &d.Rating
@@ -551,7 +553,9 @@ func seriesDetailsToRequestMedia(d *metadata.TVDetails) RequestMediaDetails {
 	if d.TVDBID != 0 {
 		out.TvdbId = &d.TVDBID
 	}
-	out.ExternalIds = toExternalIDs(tvshow.ExternalIDs(d))
+	out.ExternalIds = toExternalIDs(
+		withOwnID(tvshow.ExternalIDs(d), metadata.SourceTVDB, d.TVDBID),
+	)
 	if d.Network != "" {
 		out.Network = &d.Network
 	}
