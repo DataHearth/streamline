@@ -254,6 +254,7 @@ Convention for landing a batch of independent fixes (audit findings, review comm
 - Dev server: `task dev` — live reload via `go tool air` (`.air.toml`; rebuilds with `task build:app`, runs `streamline --config ./tmp/config.yaml`).
 - Lint: `task lint` (`lint:go` golangci-lint + `lint:frontend` biome + `lint:ts` svelte-check). Format: `task fmt` (`golangci-lint fmt` + `biome format --write`) — Biome, not prettier.
 - Clean: `task clean`.
+- **CI runs a section only when its inputs change.** The `changes` job at the top of `.github/workflows/ci.yaml` holds one path filter per section (`go`, `frontend`, `biome`, `helm`, `nix`), and every other job is skipped at the job level unless its filter matched — a skipped job reads as passing to a required check. A frontend-only change runs the SPA jobs, `build` and the web e2e specs (`./e2e/web`), not the whole Go tree; `vulncheck` also runs on every push to main, since advisories arrive without a change. A new top-level file a section reads must be added to its filter, or a change to it runs nothing.
 
 ## Issue triage
 - `.github/labels.yml` is every label the repo carries, grouped `type | status | area | maintainer | renovate`; `labels.yaml` syncs it on push to main (create, update, rename an `aliases` entry in place — never delete). **Add or rename a label in that file, never through the UI**: the triage allowlist is derived from it, and a description doubles as Claude's guidance for when the label fits (100 characters max).
