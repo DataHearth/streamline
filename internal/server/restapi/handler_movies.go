@@ -76,7 +76,11 @@ func (s *Server) ListMovies(
 	items := make([]Movie, 0, len(movies))
 	for _, m := range movies {
 		item := movieListToAPI(m, summaries[m.ID])
-		item.ExternalIds = toExternalIDs(external[m.ID])
+		if external != nil {
+			item.ExternalIds = toExternalIDs(
+				withOwnID(external[m.ID], metadata.SourceTMDB, m.TmdbID),
+			)
+		}
 		items = append(items, item)
 	}
 
@@ -221,7 +225,7 @@ func (s *Server) GetMovie(
 		}, nil
 	}
 	result := movieToAPI(m)
-	result.ExternalIds = toExternalIDs(ids)
+	result.ExternalIds = toExternalIDs(withOwnID(ids, metadata.SourceTMDB, m.TmdbID))
 	if len(files) > 0 {
 		apiFiles := make([]MediaFile, 0, len(files))
 		for _, f := range files {

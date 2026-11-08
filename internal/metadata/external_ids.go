@@ -17,6 +17,17 @@ const (
 	SourceRateYourMusic = "rateyourmusic"
 )
 
+// The providers' own ids under the names the API's external_ids map gives
+// them. They are only ever put on the wire (beside the tmdb_id, tvdb_id,
+// mbid or hardcover_id field they repeat), never stored: that id is the row's
+// own column. SourceTMDB doubles as a movie's own id and a series'
+// cross-reference.
+const (
+	SourceTVDB        = "tvdb"
+	SourceMusicBrainz = "musicbrainz"
+	SourceHardcover   = "hardcover"
+)
+
 // mbURLPattern reads one site's id out of a MusicBrainz url relation. The
 // value kept is what the site's own address is built from: a number, a
 // Spotify base62 id, an AllMusic "mn…"/"mw…" id, or a path where the site

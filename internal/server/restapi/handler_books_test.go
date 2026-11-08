@@ -184,6 +184,24 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 			},
 		)
 
+		It("carries each item's Hardcover id in external_ids only on request", func() {
+			app.books.EXPECT().List(mock.Anything, mock.Anything).
+				Return(book.ShelfPage{Rows: []db.ShelfRow{
+					{Type: "book", ID: 7, Title: "Elantris", Kind: "novel", Status: "available", HardcoverID: 4242},
+					{Type: "series", ID: 9, Title: "One Piece", Kind: "manga", Status: "available", HardcoverID: 17},
+				}}, nil).
+				Twice()
+
+			var plain, with PaginatedShelf
+			decode(send(http.MethodGet, "/api/v1/books", app.requestOnlyKey, ""), &plain)
+			Expect(plain.Items[0].ExternalIds).To(BeNil())
+
+			decode(send(http.MethodGet, "/api/v1/books?with_external_ids=true", app.requestOnlyKey, ""), &with)
+			Expect(with.Items).To(HaveLen(2))
+			Expect(*with.Items[0].ExternalIds.Hardcover).To(Equal("4242"))
+			Expect(*with.Items[1].ExternalIds.Hardcover).To(Equal("17"))
+		})
+
 		It(
 			"sorts newest first by default and oldest first for the other keys",
 			func() {

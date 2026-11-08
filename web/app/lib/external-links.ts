@@ -30,15 +30,18 @@ export type ExternalLink = {
 	query?: string;
 };
 
-// The API's ExternalIds: other sites' ids for a title, keyed by site, each
-// value what that site's address is built from. A movie carries imdb and
-// wikidata, a series imdb, tmdb and wikidata, an artist or an album the
-// MusicBrainz ones. Every detail response has it; a list only with
-// with_external_ids=true.
+// The API's ExternalIds: every id a title is known by, keyed by site, each
+// value what that site's address is built from. The title's own provider id
+// is in it too (tmdb for a movie, tvdb for a series, musicbrainz for music,
+// hardcover for a book), repeating its top-level field. Every detail
+// response has it; a list only with with_external_ids=true.
 export type ExternalIds = {
 	imdb?: string;
-	// A series' TMDB TV id, as a decimal string.
+	// A movie's own TMDB id, or a series' TMDB TV id, as a decimal string.
 	tmdb?: string;
+	tvdb?: string;
+	musicbrainz?: string;
+	hardcover?: string;
 	wikidata?: string;
 	discogs?: string;
 	allmusic?: string;

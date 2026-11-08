@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
@@ -202,6 +203,7 @@ func toAPIBook(b *ent.Book, progress map[string]float64) Book {
 	out := Book{
 		Id:                b.ID,
 		HardcoverId:       b.HardcoverID,
+		ExternalIds:       hardcoverIDs(b.HardcoverID),
 		Title:             b.Title,
 		OriginalTitle:     optString(b.OriginalTitle),
 		Author:            b.AuthorName,
@@ -298,6 +300,7 @@ func toAPISeries(s *ent.BookSeries) BookSeries {
 		labels = append(labels, o.Label)
 	}
 	return BookSeries{
+		ExternalIds:    hardcoverIDs(s.HardcoverID),
 		Id:             s.ID,
 		HardcoverId:    s.HardcoverID,
 		HardcoverSlug:  optString(s.HardcoverSlug),
@@ -320,6 +323,13 @@ func toAPISeries(s *ent.BookSeries) BookSeries {
 		AddedAt:        s.CreateTime,
 		Volumes:        volumes,
 	}
+}
+
+// hardcoverIDs is a book's or a series' external_ids: its Hardcover id and
+// nothing else, since Hardcover cross-references no other site (each
+// edition carries its own isbn_13 and asin).
+func hardcoverIDs(id uint32) *ExternalIds {
+	return toExternalIDs(withOwnID(nil, metadata.SourceHardcover, id))
 }
 
 func toShelfItem(r db.ShelfRow, progress map[uint32]float64) ShelfItem {

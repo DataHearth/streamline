@@ -241,7 +241,12 @@ func (s *Server) ListBooks(
 	}
 	items := make([]ShelfItem, 0, len(res.Rows))
 	for _, r := range res.Rows {
-		items = append(items, toShelfItem(r, res.Progress))
+		item := toShelfItem(r, res.Progress)
+		// The Hardcover id rides the shelf row, so this costs no query.
+		if want := req.Params.WithExternalIds; want != nil && *want {
+			item.ExternalIds = hardcoverIDs(r.HardcoverID)
+		}
+		items = append(items, item)
 	}
 	return ListBooks200JSONResponse{
 		Items: items,
