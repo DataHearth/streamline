@@ -167,6 +167,8 @@ Unmonitor a film you've decided you don't want after all, and it stops appearing
 
 This is the right tool for "I have seasons 1-3 and don't want 4 onwards" — unmonitor season 4, and Streamline stops hunting for it.
 
+On a show's page the bookmark switches the whole show on or off, and the small arrow beside it reopens the choice above (all, future, missing, existing episodes, pilot only, or none) to re-apply it to the show at any time. Picking one on a show that is switched off also switches it back on (except **None**).
+
 ---
 
 ## Fixing a wrong match

@@ -1,3 +1,14 @@
+<script lang="ts" module>
+	// The box variant's tone, shared with MonitorSplitButton's chevron.
+	export function boxTone(monitored: boolean, backdrop: boolean): string {
+		return monitored
+			? "border-accent-line bg-accent-soft text-accent-text"
+			: backdrop
+				? "border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm hover:bg-white/[0.14]"
+				: "border-border bg-bg-elevated text-fg-subtle hover:border-border-strong hover:text-fg";
+	}
+</script>
+
 <script lang="ts">
 	import { Bookmark } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
@@ -75,11 +86,7 @@
 		variant === "box" && [
 			size === "md" || size === "xs" ? "rounded-md" : "rounded-lg",
 			"border",
-			monitored
-				? "border-accent-line bg-accent-soft text-accent-text"
-				: backdrop
-					? "border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm hover:bg-white/[0.14]"
-					: "border-border bg-bg-elevated text-fg-subtle hover:border-border-strong hover:text-fg",
+			boxTone(monitored, backdrop),
 		],
 		variant === "ghost" && [
 			"rounded-md hover:bg-surface",
