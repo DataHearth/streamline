@@ -36,6 +36,11 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 		movies = moviemocks.NewMockManager(t)
 		md = metadatamocks.NewMockProvider(t)
 		store = dbmocks.NewMockStore(t)
+		// Detail-shaped answers (GET, add, refresh) read the title's ids.
+		store.EXPECT().
+			TitleExternalIDs(mock.Anything, mock.Anything, mock.Anything).
+			Return(db.ExternalIDs{}, nil).
+			Maybe()
 
 		srv := New(Config{
 			DB:       store,
