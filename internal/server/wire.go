@@ -189,7 +189,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		dbClient.Close()
 		return nil, fmt.Errorf("create posters service: %w", err)
 	}
-	indexerSvc := indexer.New()
+	indexerSvc := indexer.New(store)
 	var torrentEngine *bittorrent.Engine
 	var builtinClient download.Client
 	if _, ok := config.BuiltinDownloadClient(); ok {
@@ -479,6 +479,11 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			"media-probe",
 			cfg.Schedule.MediaProbe,
 			func(time.Duration) scheduler.JobFunc { return jobs.MediaProbe(hygieneSvc) },
+		},
+		{
+			"cardigann-update",
+			cfg.Schedule.CardigannUpdate,
+			func(time.Duration) scheduler.JobFunc { return jobs.CardigannUpdate() },
 		},
 		{
 			"file-selection",

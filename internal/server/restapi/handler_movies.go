@@ -360,6 +360,7 @@ func (s *Server) SearchMovie(
 		[]string{m.Title, m.OriginalTitle},
 		m.Aliases,
 		m.TmdbID,
+		m.ImdbID,
 	)
 	if err != nil {
 		return SearchMovie500JSONResponse{

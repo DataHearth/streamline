@@ -48,11 +48,11 @@ type prowlarrRelease struct {
 
 	// Provider ids the tracker published on the release, parsed by Prowlarr
 	// out of the torznab attrs and re-emitted here. Absent decodes to 0, which
-	// is "the tracker said nothing". ReleaseResource also carries imdbId and
-	// tvMazeId; neither is decoded because nothing in the library has a
-	// counterpart to compare them against.
+	// is "the tracker said nothing". ReleaseResource also carries tvMazeId,
+	// which nothing in the library has a counterpart for.
 	TMDBID uint32 `json:"tmdbId"`
 	TVDBID uint32 `json:"tvdbId"`
+	IMDbID uint32 `json:"imdbId"`
 }
 
 // newznab category roots keep movie searches from returning TV (and vice
@@ -218,6 +218,7 @@ func mapProwlarrReleases(releases []prowlarrRelease) []SearchResult {
 			InfoHash: infoHash(r.InfoHash, r.MagnetURL, dl),
 			TMDBID:   r.TMDBID,
 			TVDBID:   r.TVDBID,
+			IMDbID:   r.IMDbID,
 		})
 	}
 	return results

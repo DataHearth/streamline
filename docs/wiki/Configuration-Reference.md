@@ -340,6 +340,7 @@ All values are Go duration strings, runtime-editable, pausable and runnable on d
 | `schedules.file_selection` | duration | `30s` | |
 | `schedules.music_tag_sync` | duration | `30m` | The music tag writer: writes every file waiting for its tags, and retries the ones waiting on a torrent |
 | `schedules.database_backup` | duration | `24h` | Backs the database up into `<data_dir>/backups`; see [`backup`](#backup) |
+| `schedules.cardigann_update` | duration | `24h` | Built-in indexer definition update |
 
 **Deprecated aliases**, still honoured with a warning at boot: `rss_sync` (→ `movie_rss_sync`), `orphan_scan` (→ both the `movie_*` and `tv_*` keys), `missing_search` and `metadata_refresh` (each → the `movie_*`, `tv_*`, `music_*` and `book_*` keys).
 
@@ -551,14 +552,57 @@ The built-in engine treats what a release names as untrusted:
 | Field | Required | Notes |
 | --- | --- | --- |
 | `name` | ✅ | |
-| `host`, `port` | ✅ | |
-| `protocol` | ✅ | `torznab` \| `prowlarr` |
+| `protocol` | ✅ | `torznab` \| `prowlarr` \| `cardigann` |
+| `host`, `port` | ✅ for `torznab` and `prowlarr` | |
 | `path` | | Torznab endpoint path |
-| `api_key` / `api_key_file` | | |
+| `api_key` / `api_key_file` | ✅ for `torznab` and `prowlarr` | |
 | `use_ssl` | | |
 | `priority` | | 0–255, lower first |
 | `enabled` | | |
 | `private` | | Default `false`. Marks the tracker as private (invite-only, ratio-tracked); manual search shows it on every release from this indexer. A Torznab feed carries no such flag, so this is your word for it. On a Prowlarr entry it applies to every tracker behind it |
+| `cardigann` | ✅ for `cardigann` | See below |
+
+#### Built-in indexers (`protocol: cardigann`)
+
+Streamline runs the tracker definitions Prowlarr and Jackett use itself, without Prowlarr or Jackett. It reads them from [Prowlarr/Indexers](https://github.com/Prowlarr/Indexers) on GitHub when it starts and every day after, so the server needs to reach `api.github.com` and `codeload.github.com`. The easy way to add one is Settings → Indexers → **Add built-in**: search the catalog, pick a tracker, fill in the form generated from its settings. Saving it pins the indexer to the Prowlarr/Indexers commit it was read at, and keeps that version of the definition in the data directory (`<data_dir>/cardigann/`), so the indexer keeps working the same way whether or not GitHub can be reached, until you take a new version. On a fresh data directory, the pinned version is read from GitHub again the first time it is needed. In this file it looks like this:
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `definition` | ✅ | The definition's file name in [Prowlarr/Indexers](https://github.com/Prowlarr/Indexers/tree/master/definitions) (`v12`, else `v11`) without `.yml` — `yts`, `nyaasi`, `thepiratebay` |
+| `commit` | | The Prowlarr/Indexers commit the definition is read at. Settings → Indexers writes it for you; left out, the next definition update sets the latest one |
+| `site` | | One of the definition's own links, when the first one is blocked or slow for you |
+| `settings` | | The definition's settings by name. One you leave out takes its default; a checkbox is `"true"` or `"false"`, a select one of its option keys |
+| `proxy` | | An `http://`, `https://` or `socks5://` proxy the tracker's requests go through — and the challenge solver's browser too (see below). A proxy that decrypts HTTPS sees your tracker credentials |
+
+```yaml
+indexers:
+  - name: YTS
+    protocol: cardigann
+    enabled: true
+    cardigann:
+      definition: yts
+      commit: 8b78ad64e4d1dfc531af697c236d570f77c1a22c
+  - name: Nyaa
+    protocol: cardigann
+    enabled: true
+    cardigann:
+      definition: nyaasi
+      settings:
+        filter-id: "2"     # trusted uploads only
+```
+
+Private trackers work too: give the definition's settings — usually `username` and `password`, sometimes a `cookie`, an API key or a passkey — and Streamline logs in when it needs to, keeps the session for 30 days and logs in again when the tracker says it expired. A login the tracker refuses is retried with a growing delay (one minute, then five, up to a day), so a wrong password cannot get your account banned; fix the settings and use **Log in** on the indexer's card to try at once. A tracker whose login form shows an image captcha is logged in from that card too: Streamline shows the captcha and you type it. A site behind a browser challenge (Cloudflare, DDoS-Guard) needs a challenge solver: run [trawl](https://github.com/germondai/trawl), [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) or Byparr and point `cardigann.solver_url` at it. When a tracker answers with a challenge page, Streamline has the solver open it in a real browser and reuses the cookies and browser identity it got through with until they expire. A clearance is only good for the address that earned it, so the solver must reach the internet from the same address as Streamline; if Streamline's tracker traffic leaves through a VPN, give the indexer that VPN's proxy as `proxy` — the solver is told to use it too.
+
+| `cardigann.*` | Default | Notes |
+| --- | --- | --- |
+| `solver_url` | empty | FlareSolverr-compatible service, e.g. `http://trawl:8191`. Empty: a challenged search fails and says so |
+| `solver_timeout` | `60s` | How long one solve may take |
+
+**Definition updates.** The `cardigann-update` [scheduled job](Scheduled-Jobs) reads Prowlarr's latest definitions every day and moves each of your built-in indexers to the new version of its own, so a tracker that moved to a new domain keeps working. An update that would send one of your configured trackers to other domains, or change how it logs in, is not applied by itself: Settings → Indexers shows it with the exact change, and you approve it or keep the version you have. A version you turn down is not offered again until Streamline restarts. A definition Prowlarr removes leaves your indexer on the version it has.
+
+**Read-only configuration.** With `read_only: true` Streamline cannot write the file, so every update waits under Settings → Indexers: **Copy commit** puts the new version's commit on your clipboard, to set as the indexer's `commit` in your config and redeploy.
+
+Streamline checks an indexer's definition when it loads (regexes compile, templates parse, settings and site match it); one that does not hold up logs a warning and stays unused, and the rest of Streamline starts as usual.
 
 ### quality_profiles
 

@@ -2,7 +2,11 @@ package restapi
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	"log/slog"
+	"net/http"
+	"strings"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -18,9 +22,59 @@ func (s *Server) ListIndexers(
 	c := config.Get()
 	items := make([]Indexer, 0, len(c.Indexers))
 	for _, e := range c.Indexers {
-		items = append(items, indexerToAPI(e))
+		items = append(items, s.indexerWithSession(ctx, e))
 	}
 	return ListIndexers200JSONResponse(items), nil
+}
+
+// indexerFromBody reads a create or draft-test body into a config entry.
+func indexerFromBody(b IndexerCreate) config.IndexerEntry {
+	e := config.IndexerEntry{Name: b.Name, Protocol: "torznab"}
+	if b.Protocol != nil {
+		e.Protocol = string(*b.Protocol)
+	}
+	if e.Protocol == "cardigann" {
+		c := &config.CardigannIndexer{Settings: map[string]string{}}
+		if b.Definition != nil {
+			c.Definition = *b.Definition
+		}
+		if b.Site != nil {
+			c.Site = *b.Site
+		}
+		if b.Settings != nil {
+			c.Settings = *b.Settings
+		}
+		if b.Proxy != nil {
+			c.Proxy = *b.Proxy
+		}
+		e.Cardigann = c
+	} else {
+		if b.Host != nil {
+			e.Host = *b.Host
+		}
+		if b.Port != nil {
+			e.Port = *b.Port
+		}
+		if b.ApiKey != nil {
+			e.APIKey = *b.ApiKey
+		}
+		if b.Path != nil {
+			e.Path = *b.Path
+		}
+		if b.UseSsl != nil {
+			e.UseSSL = *b.UseSsl
+		}
+	}
+	if b.Priority != nil {
+		e.Priority = *b.Priority
+	}
+	if b.Enabled != nil {
+		e.Enabled = *b.Enabled
+	}
+	if b.Private != nil {
+		e.Private = *b.Private
+	}
+	return e
 }
 
 func (s *Server) CreateIndexer(
@@ -30,32 +84,12 @@ func (s *Server) CreateIndexer(
 	if err := requireAdmin(ctx); err != nil {
 		return CreateIndexer403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
-	e := config.IndexerEntry{
-		Name:     request.Body.Name,
-		Host:     request.Body.Host,
-		Port:     request.Body.Port,
-		APIKey:   request.Body.ApiKey,
-		Protocol: "torznab",
+	e := indexerFromBody(*request.Body)
+	if err := pinCardigann(ctx, &e); err != nil {
+		return CreateIndexer422JSONResponse{
+			UnprocessableEntityJSONResponse: errCardigannPin(err),
+		}, nil
 	}
-	if request.Body.Path != nil {
-		e.Path = *request.Body.Path
-	}
-	if request.Body.UseSsl != nil {
-		e.UseSSL = *request.Body.UseSsl
-	}
-	if request.Body.Priority != nil {
-		e.Priority = *request.Body.Priority
-	}
-	if request.Body.Enabled != nil {
-		e.Enabled = *request.Body.Enabled
-	}
-	if request.Body.Private != nil {
-		e.Private = *request.Body.Private
-	}
-	if request.Body.Protocol != nil {
-		e.Protocol = string(*request.Body.Protocol)
-	}
-
 	switch err := config.AddIndexer(ctx, e); {
 	case errors.Is(err, config.ErrIndexerExists):
 		return CreateIndexer409JSONResponse{
@@ -70,7 +104,7 @@ func (s *Server) CreateIndexer(
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
 	}
-	return CreateIndexer201JSONResponse(indexerToAPI(e)), nil
+	return CreateIndexer201JSONResponse(s.indexerWithSession(ctx, e)), nil
 }
 
 func (s *Server) UpdateIndexer(
@@ -80,19 +114,48 @@ func (s *Server) UpdateIndexer(
 	if err := requireAdmin(ctx); err != nil {
 		return UpdateIndexer403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
+	b := request.Body
 	patch := config.IndexerPatch{
-		Host:     &request.Body.Host,
-		Port:     &request.Body.Port,
-		Path:     request.Body.Path,
-		UseSSL:   request.Body.UseSsl,
-		APIKey:   &request.Body.ApiKey,
-		Priority: request.Body.Priority,
-		Enabled:  request.Body.Enabled,
-		Private:  request.Body.Private,
+		Host:     b.Host,
+		Port:     b.Port,
+		Path:     b.Path,
+		UseSSL:   b.UseSsl,
+		APIKey:   b.ApiKey,
+		Priority: b.Priority,
+		Enabled:  b.Enabled,
+		Private:  b.Private,
 	}
-	if request.Body.Protocol != nil {
-		p := string(*request.Body.Protocol)
+	if b.Protocol != nil {
+		p := string(*b.Protocol)
 		patch.Protocol = &p
+	}
+	if b.Definition != nil || b.Site != nil || b.Settings != nil || b.Proxy != nil {
+		cp := &config.CardigannPatch{
+			Definition: b.Definition, Site: b.Site, Proxy: b.Proxy,
+		}
+		if b.Settings != nil {
+			cp.Settings = *b.Settings
+		}
+		// A new definition is pinned to the catalog's version here; the one
+		// the entry already runs stays on its commit.
+		var err error
+		cur, ok := config.FindIndexer(request.Name)
+		switch {
+		case ok && b.Definition != nil &&
+			(cur.Cardigann == nil || cur.Cardigann.Definition != *b.Definition):
+			var commit string
+			if commit, err = catalogVersion(ctx, *b.Definition); err == nil {
+				cp.Commit = &commit
+			}
+		case ok && cur.Cardigann != nil && cur.Cardigann.Commit != "":
+			_, err = pinnedVersion(ctx, cur)
+		}
+		if err != nil {
+			return UpdateIndexer422JSONResponse{
+				UnprocessableEntityJSONResponse: errCardigannPin(err),
+			}, nil
+		}
+		patch.Cardigann = cp
 	}
 
 	switch err := config.UpdateIndexer(ctx, request.Name, patch); {
@@ -112,7 +175,7 @@ func (s *Server) UpdateIndexer(
 		}, nil
 	}
 	e, _ := config.FindIndexer(request.Name)
-	return UpdateIndexer200JSONResponse(indexerToAPI(e)), nil
+	return UpdateIndexer200JSONResponse(s.indexerWithSession(ctx, e)), nil
 }
 
 func (s *Server) DeleteIndexer(
@@ -122,6 +185,7 @@ func (s *Server) DeleteIndexer(
 	if err := requireAdmin(ctx); err != nil {
 		return DeleteIndexer403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
+	e, found := config.FindIndexer(request.Name)
 	switch err := config.DeleteIndexer(ctx, request.Name); {
 	case errors.Is(err, config.ErrIndexerNotFound):
 		return DeleteIndexer404JSONResponse{
@@ -135,6 +199,12 @@ func (s *Server) DeleteIndexer(
 		return DeleteIndexer500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
+	}
+	if found && e.Protocol == "cardigann" {
+		if err := s.indexers.Forget(ctx, e.Name); err != nil {
+			slog.WarnContext(ctx, "could not drop a deleted indexer's session",
+				"indexer.name", e.Name, "error", err)
+		}
 	}
 	return DeleteIndexer204Response{}, nil
 }
@@ -175,28 +245,49 @@ func (s *Server) TestDraftIndexer(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	b := request.Body
-	if draftTargetRefused(ctx, b.Host) {
+	e := indexerFromBody(*request.Body)
+	p := indexer.TestParams{
+		Protocol:  e.Protocol,
+		Host:      e.Host,
+		Port:      e.Port,
+		Path:      e.Path,
+		UseSSL:    e.UseSSL,
+		APIKey:    e.APIKey,
+		Cardigann: e.Cardigann,
+	}
+	if e.Protocol == "cardigann" {
+		// The target is one of the definition's own links, never one the
+		// caller names; what can be wrong is the definition or a setting —
+		// and the proxy, the one address the caller does name, which the
+		// probe would connect to and describe like any draft host.
+		if err := pinCardigann(ctx, &e); err != nil {
+			return TestDraftIndexer422JSONResponse{
+				UnprocessableEntityJSONResponse: errCardigannPin(err),
+			}, nil
+		}
+		if err := config.Get().CheckCardigann(e); err != nil {
+			return TestDraftIndexer422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		}
+		if err := config.CheckCardigannProxy(e.Cardigann.Proxy); err != nil {
+			return TestDraftIndexer422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		}
+		if p := e.Cardigann.Proxy; p != "" && draftTargetRefused(ctx, p) {
+			return TestDraftIndexer422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(
+					draftTargetRefusedMessage,
+				),
+			}, nil
+		}
+	} else if draftTargetRefused(ctx, e.Host) {
 		return TestDraftIndexer422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(
 				draftTargetRefusedMessage,
 			),
 		}, nil
-	}
-	p := indexer.TestParams{
-		Protocol: "torznab",
-		Host:     b.Host,
-		Port:     b.Port,
-		APIKey:   b.ApiKey,
-	}
-	if b.Protocol != nil {
-		p.Protocol = string(*b.Protocol)
-	}
-	if b.Path != nil {
-		p.Path = *b.Path
-	}
-	if b.UseSsl != nil {
-		p.UseSSL = *b.UseSsl
 	}
 
 	err := s.indexers.Test(ctx, p)
@@ -216,8 +307,21 @@ func (s *Server) TestDraftIndexer(
 // indexerProbeFailure reports the typed connection-test failure by its own
 // sentinel text. The probe error itself is never echoed to the caller: torznab
 // authenticates through an `apikey` query parameter, so a wrapped *url.Error
-// would hand the indexer's key to anyone who can reach the endpoint.
+// would hand the indexer's key to anyone who can reach the endpoint. A
+// built-in indexer's login failures are the exception: their text is the
+// tracker's own message, which carries no URL.
 func indexerProbeFailure(err error) (string, bool) {
+	for _, sentinel := range []error{
+		indexer.ErrLoginFailed,
+		indexer.ErrCaptchaRequired,
+		indexer.ErrLoginBackoff,
+		indexer.ErrCaptchaExpired,
+		indexer.ErrChallenge,
+	} {
+		if errors.Is(err, sentinel) {
+			return err.Error(), true
+		}
+	}
 	for _, sentinel := range []error{
 		indexer.ErrUnreachable,
 		indexer.ErrUnauthorized,
@@ -229,4 +333,121 @@ func indexerProbeFailure(err error) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// indexerWithSession is indexerToAPI plus a built-in indexer's login state.
+func (s *Server) indexerWithSession(
+	ctx context.Context,
+	e config.IndexerEntry,
+) Indexer {
+	i := indexerToAPI(e)
+	if e.Protocol != "cardigann" {
+		return i
+	}
+	st, err := s.indexers.Session(ctx, e.Name)
+	if err != nil {
+		slog.WarnContext(ctx, "could not read an indexer's session",
+			"indexer.name", e.Name, "error", err)
+		return i
+	}
+	i.Session = &IndexerSession{
+		LoginRequired: st.LoginRequired,
+		Captcha:       st.Captcha,
+		LoggedIn:      st.LoggedIn,
+		ExpiresAt:     st.ExpiresAt,
+		RetryAt:       st.RetryAt,
+	}
+	if st.LastError != "" {
+		i.Session.LastError = &st.LastError
+	}
+	return i
+}
+
+func (s *Server) GetIndexerCaptcha(
+	ctx context.Context,
+	request GetIndexerCaptchaRequestObject,
+) (GetIndexerCaptchaResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return GetIndexerCaptcha403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	token, img, err := s.indexers.Captcha(ctx, request.Name)
+	if msg, ok := indexerProbeFailure(err); ok {
+		return GetIndexerCaptcha422JSONResponse{
+			UnprocessableEntityJSONResponse: errConnectionFailed(msg),
+		}, nil
+	}
+	switch {
+	case errors.Is(err, config.ErrIndexerNotFound):
+		return GetIndexerCaptcha404JSONResponse{
+			NotFoundJSONResponse: errNotFound("indexer not found"),
+		}, nil
+	case errors.Is(err, indexer.ErrNotBuiltin):
+		return GetIndexerCaptcha422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	case err != nil:
+		return GetIndexerCaptcha500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	case img == nil:
+		return GetIndexerCaptcha204Response{}, nil
+	}
+	// The page is the tracker's: the type it claims is not trusted into a
+	// data: URL the SPA renders.
+	ct := http.DetectContentType(img.Data)
+	if !strings.HasPrefix(ct, "image/") {
+		return GetIndexerCaptcha422JSONResponse{
+			UnprocessableEntityJSONResponse: errConnectionFailed(
+				"the tracker's captcha is not an image",
+			),
+		}, nil
+	}
+	return GetIndexerCaptcha200JSONResponse{
+		Token: token,
+		Image: "data:" + ct + ";base64," + base64.StdEncoding.EncodeToString(
+			img.Data,
+		),
+	}, nil
+}
+
+func (s *Server) LoginIndexer(
+	ctx context.Context,
+	request LoginIndexerRequestObject,
+) (LoginIndexerResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return LoginIndexer403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
+	}
+	var token, answer string
+	if b := request.Body; b != nil {
+		if b.Token != nil {
+			token = *b.Token
+		}
+		if b.Answer != nil {
+			answer = *b.Answer
+		}
+	}
+	err := s.indexers.Login(ctx, request.Name, token, answer)
+	if msg, ok := indexerProbeFailure(err); ok {
+		return LoginIndexer422JSONResponse{
+			UnprocessableEntityJSONResponse: errConnectionFailed(msg),
+		}, nil
+	}
+	switch {
+	case errors.Is(err, config.ErrIndexerNotFound):
+		return LoginIndexer404JSONResponse{
+			NotFoundJSONResponse: errNotFound("indexer not found"),
+		}, nil
+	case errors.Is(err, indexer.ErrNotBuiltin):
+		return LoginIndexer422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	case err != nil:
+		return LoginIndexer500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	e, _ := config.FindIndexer(request.Name)
+	return LoginIndexer200JSONResponse(s.indexerWithSession(ctx, e)), nil
 }

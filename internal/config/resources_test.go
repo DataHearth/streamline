@@ -1,12 +1,16 @@
 package config_test
 
 import (
+	"bytes"
 	"context"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/internal/cardigann/definitions"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/testutil/cardiganntest"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
@@ -973,5 +977,196 @@ var _ = Describe("stock music profile", Label("unit", "config"), func() {
 		Expect(ok).To(BeTrue())
 		Expect(p.Name).To(Equal("default"))
 		Expect(p.Tiers).To(Equal([]string{"lossless", "high"}))
+	})
+})
+
+var _ = Describe("cardigann indexer", Label("unit", "config"), func() {
+	var ctx context.Context
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		configtest.SetupFile()
+		cardiganntest.Install()
+	})
+
+	cardigann := func(def string, settings map[string]string) config.IndexerEntry {
+		return config.IndexerEntry{
+			Name: def, Protocol: "cardigann", Enabled: true,
+			Cardigann: &config.CardigannIndexer{
+				Definition: def, Commit: cardiganntest.Upstream.Commit,
+				Settings: settings,
+			},
+		}
+	}
+	// keep pins e to a version of its definition edited by hand.
+	keep := func(e config.IndexerEntry, old, next string) {
+		GinkgoHelper()
+		spec := cardiganntest.Spec(e.Cardigann.Definition)
+		edited := bytes.Replace(spec, []byte(old), []byte(next), 1)
+		Expect(edited).NotTo(Equal(spec))
+		e.Cardigann.Commit = cardiganntest.Keep(
+			config.Get().DataDir, e.Cardigann.Definition, edited,
+		)
+	}
+
+	It(
+		"accepts a definition that needs no login, with no host, port or key",
+		func() {
+			Expect(config.AddIndexer(ctx, cardigann("yts", nil))).To(Succeed())
+		},
+	)
+
+	It("accepts a definition that logs in", func() {
+		Expect(config.AddIndexer(ctx, cardigann("3dtorrents", map[string]string{
+			"username": "u", "password": "p",
+		}))).To(Succeed())
+	})
+
+	It("takes an http or socks5 proxy and refuses anything else", func() {
+		e := cardigann("yts", nil)
+		e.Cardigann.Proxy = "socks5://u:p@vpn:1080"
+		Expect(config.AddIndexer(ctx, e)).To(Succeed())
+		e = cardigann("13city", nil)
+		e.Cardigann.Proxy = "ftp://vpn:21"
+		Expect(config.AddIndexer(ctx, e)).
+			To(MatchError(ContainSubstring("cardigann.proxy")))
+	})
+
+	It("defaults the solver timeout and refuses one that is not positive", func() {
+		c := configtest.Setup()
+		Expect(c.Cardigann.SolverTimeout).To(Equal("60s"))
+		c.Cardigann.SolverTimeout = "0s"
+		Expect(
+			c.Validate(),
+		).To(MatchError(ContainSubstring("cardigann.solver_timeout")))
+	})
+
+	It("starts the settings over when an edit changes the definition", func() {
+		e := cardigann(
+			"3dtorrents",
+			map[string]string{"username": "u", "password": "p"},
+		)
+		e.Cardigann.Proxy = "http://vpn:3128"
+		Expect(config.AddIndexer(ctx, e)).To(Succeed())
+		def, commit, clear := "yts", cardiganntest.Upstream.Commit, ""
+		Expect(config.UpdateIndexer(ctx, e.Name, config.IndexerPatch{
+			Cardigann: &config.CardigannPatch{
+				Definition: &def, Commit: &commit, Proxy: &clear,
+			},
+		})).To(Succeed())
+		got, _ := config.FindIndexer(e.Name)
+		Expect(got.Cardigann.Definition).To(Equal("yts"))
+		Expect(got.Cardigann.Settings).To(BeEmpty())
+		Expect(got.Cardigann.Proxy).To(BeEmpty())
+	})
+
+	It("asks for the secrets again when an edit moves where they go", func() {
+		e := cardigann(
+			"3dtorrents",
+			map[string]string{"username": "u", "password": "p"},
+		)
+		// A mirror to move to, which the fixture does not list.
+		keep(e, `"http://www.3dtorrents.org/"`,
+			`"http://www.3dtorrents.org/", "https://3dtorrents.mirror/"`)
+		Expect(config.AddIndexer(ctx, e)).To(Succeed())
+		proxy := "http://vpn:3128"
+		patch := func(c config.CardigannPatch) error {
+			return config.UpdateIndexer(
+				ctx,
+				e.Name,
+				config.IndexerPatch{Cardigann: &c},
+			)
+		}
+		Expect(patch(config.CardigannPatch{Proxy: &proxy})).
+			To(MatchError(config.ErrSecretRequired))
+		Expect(patch(config.CardigannPatch{
+			Proxy:    &proxy,
+			Settings: map[string]string{"username": "u", "password": "p"},
+		})).To(Succeed())
+		mirror := "https://3dtorrents.mirror/"
+		Expect(patch(config.CardigannPatch{
+			Site:     &mirror,
+			Settings: map[string]string{"username": "u", "password": ""},
+		})).To(MatchError(config.ErrSecretRequired))
+		// Naming the link already in force moves nothing.
+		first := "http://www.3dtorrents.org/"
+		Expect(patch(config.CardigannPatch{Site: &first})).To(Succeed())
+		got, _ := config.FindIndexer(e.Name)
+		Expect(got.Cardigann.Settings).To(HaveKeyWithValue("password", "p"))
+	})
+
+	It("rejects an entry whose definition is missing or does not run", func() {
+		e := cardigann("yts", nil)
+		e.Cardigann.Commit = ""
+		Expect(config.AddIndexer(ctx, e)).
+			To(MatchError(ContainSubstring("cardigann.commit")))
+		e.Cardigann.Commit = strings.Repeat("0", 40)
+		Expect(config.AddIndexer(ctx, e)).
+			To(MatchError(definitions.ErrNotKept))
+		// A hand edit the converter would never have written.
+		e = cardigann("yts", nil)
+		keep(e, `"[^\\p{L}`, `"([^\\p{L}`)
+		Expect(config.AddIndexer(ctx, e)).
+			To(MatchError(ContainSubstring("cardigann.definition")))
+	})
+
+	It("rejects a setting the definition does not declare", func() {
+		Expect(
+			config.AddIndexer(ctx, cardigann("yts", map[string]string{"nope": "1"})),
+		).
+			To(MatchError(ContainSubstring(`unknown setting "nope"`)))
+		Expect(config.AddIndexer(ctx, cardigann("yts", nil))).To(Succeed())
+		Expect(config.UpdateIndexer(ctx, "yts", config.IndexerPatch{
+			Cardigann: &config.CardigannPatch{
+				Settings: map[string]string{"nope": "1"},
+			},
+		})).To(MatchError(ContainSubstring(`unknown setting "nope"`)))
+	})
+
+	It("loads a file whose entry the definitions can no longer run", func() {
+		// The definitions move under a running instance; one that drifted
+		// leaves its indexer unusable, never the process unable to start.
+		c := configtest.SetupFile(map[string]any{
+			"indexers": []map[string]any{{
+				"name": "gone", "protocol": "cardigann", "enabled": true,
+				"cardigann": map[string]any{
+					"definition": "yts",
+					"commit":     cardiganntest.Upstream.Commit,
+					"settings":   map[string]any{"nope": "1"},
+				},
+			}},
+		})
+		Expect(c.Indexers).To(HaveLen(1))
+		Expect(c.Validate()).To(Succeed())
+	})
+
+	It("rejects a site that is not one of the definition's links", func() {
+		e := cardigann("yts", nil)
+		e.Cardigann.Site = "https://elsewhere.example/"
+		Expect(config.AddIndexer(ctx, e)).
+			To(MatchError(ContainSubstring("not one of the definition's links")))
+	})
+
+	It(
+		"rejects protocol cardigann without its block, and the block elsewhere",
+		func() {
+			Expect(
+				config.AddIndexer(
+					ctx,
+					config.IndexerEntry{Name: "x", Protocol: "cardigann"},
+				),
+			).
+				To(MatchError(ContainSubstring("cardigann.definition is required")))
+			e := cardigann("yts", nil)
+			e.Protocol, e.Host, e.Port, e.APIKey = "torznab", "h", 1, "k"
+			Expect(config.AddIndexer(ctx, e)).
+				To(MatchError(ContainSubstring("needs protocol cardigann")))
+		},
+	)
+
+	It("still requires an API key of a Torznab entry", func() {
+		Expect(config.AddIndexer(ctx, config.IndexerEntry{
+			Name: "t", Protocol: "torznab", Host: "h", Port: 9117,
+		})).To(MatchError(ContainSubstring("api_key or api_key_file is required")))
 	})
 })

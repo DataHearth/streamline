@@ -315,6 +315,23 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 			Expect(cast).To(HaveLen(1))
 			Expect(cast[0].Name).To(Equal("Ana Vidal"))
 		})
+
+		It("writes the IMDb id the provider links", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Dark", Year: 2017, TvdbID: 12, IMDbID: "tt5753856",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(show.ImdbID).To(Equal("tt5753856"))
+
+			Expect(
+				store.UpdateTVShowMetadata(ctx, show.ID, UpdateTVShowMetadataParams{
+					Title: "Dark", Year: 2017, IMDbID: "tt0000002",
+				}),
+			).To(Succeed())
+			got, err := store.FindTVShowByID(ctx, show.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.ImdbID).To(Equal("tt0000002"))
+		})
 	})
 
 	Describe("ListTVShowsStaleSince", func() {

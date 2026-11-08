@@ -79,6 +79,26 @@ func errConnectionFailed(msg string) UnprocessableEntityJSONResponse {
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
 
+// codeCatalogUnavailable marks a 503, or a 422 on an indexer write, raised
+// because the definition catalog could not be read from upstream: the fix is
+// this server reaching GitHub, not anything in the request.
+const codeCatalogUnavailable = "catalog_unavailable"
+
+func errCatalogUnavailableResp(msg string) ServiceUnavailableJSONResponse {
+	code := codeCatalogUnavailable
+	return ServiceUnavailableJSONResponse{Message: msg, Code: &code}
+}
+
+// errCardigannPin is the 422 for a built-in indexer whose definition could not
+// be read from the catalog.
+func errCardigannPin(err error) UnprocessableEntityJSONResponse {
+	if errors.Is(err, errCatalogUnavailable) {
+		code := codeCatalogUnavailable
+		return UnprocessableEntityJSONResponse{Message: err.Error(), Code: &code}
+	}
+	return errUnprocessable(err.Error())
+}
+
 // codeAPIKeyQuota marks a 422 raised because the caller already holds the
 // maximum number of unexpired API keys. The generic 422 would blame the name
 // just typed; the fix is revoking a key.

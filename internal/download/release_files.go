@@ -42,7 +42,7 @@ func (d *download) ReleaseFiles(
 	if err := checkReleaseSource(result.Download); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	src, err := resolveTorrentSource(ctx, result.Download)
+	src, err := resolveTorrentSource(ctx, d.db, result.Download)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}

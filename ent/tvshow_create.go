@@ -153,6 +153,20 @@ func (_c *TVShowCreate) SetTvdbID(v uint32) *TVShowCreate {
 	return _c
 }
 
+// SetImdbID sets the "imdb_id" field.
+func (_c *TVShowCreate) SetImdbID(v string) *TVShowCreate {
+	_c.mutation.SetImdbID(v)
+	return _c
+}
+
+// SetNillableImdbID sets the "imdb_id" field if the given value is not nil.
+func (_c *TVShowCreate) SetNillableImdbID(v *string) *TVShowCreate {
+	if v != nil {
+		_c.SetImdbID(*v)
+	}
+	return _c
+}
+
 // SetPosterPath sets the "poster_path" field.
 func (_c *TVShowCreate) SetPosterPath(v string) *TVShowCreate {
 	_c.mutation.SetPosterPath(v)
@@ -495,6 +509,10 @@ func (_c *TVShowCreate) createSpec() (*TVShow, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TvdbID(); ok {
 		_spec.SetField(tvshow.FieldTvdbID, field.TypeUint32, value)
 		_node.TvdbID = value
+	}
+	if value, ok := _c.mutation.ImdbID(); ok {
+		_spec.SetField(tvshow.FieldImdbID, field.TypeString, value)
+		_node.ImdbID = value
 	}
 	if value, ok := _c.mutation.PosterPath(); ok {
 		_spec.SetField(tvshow.FieldPosterPath, field.TypeString, value)

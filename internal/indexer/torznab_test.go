@@ -123,6 +123,54 @@ var _ = Describe("Torznab category", Label("unit", "indexers"), func() {
 	)
 })
 
+var _ = Describe("Torznab ids", Label("unit", "indexers"), func() {
+	DescribeTable("sends the IMDb id only when no other id is set",
+		func(params SearchParams, wantT string, wantKeys, absentKeys []string) {
+			var got url.Values
+			client := newTorznabServer(func(w http.ResponseWriter, r *http.Request) {
+				got = r.URL.Query()
+				_, _ = w.Write(torznabXML(nil))
+			})
+			_, err := client.Search(context.Background(), params)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Get("t")).To(Equal(wantT))
+			for _, k := range wantKeys {
+				Expect(got).To(HaveKey(k))
+			}
+			for _, k := range absentKeys {
+				Expect(got).NotTo(HaveKey(k))
+			}
+		},
+		// Jackett answers a query carrying an id its tracker cannot search by
+		// with nothing at all, so the pair would cost every tracker that
+		// knows one of the two.
+		Entry(
+			"movie with a TMDB id",
+			SearchParams{
+				Query:  "Dune",
+				Kind:   KindMovie,
+				TMDBID: 438631,
+				IMDbID: "tt1160419",
+			},
+			"movie",
+			[]string{"tmdbid"},
+			[]string{"imdbid"},
+		),
+		Entry("movie with the IMDb id alone",
+			SearchParams{Query: "Dune", Kind: KindMovie, IMDbID: "tt1160419"},
+			"movie", []string{"imdbid"}, []string{"tmdbid"}),
+		Entry("series with the IMDb id alone",
+			SearchParams{Query: "Dark", Kind: KindTV, IMDbID: "tt5753856"},
+			"tvsearch", []string{"imdbid"}, []string{"tvdbid", "season"}),
+		Entry("episode with the IMDb id alone",
+			SearchParams{
+				Query: "Dark", Kind: KindTV, IMDbID: "tt5753856",
+				Season: 1, Episode: 2,
+			},
+			"tvsearch", []string{"imdbid", "season", "ep"}, []string{"tvdbid"}),
+	)
+})
+
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -201,6 +249,7 @@ var _ = Describe("Torznab Client", Label("unit", "indexers"), func() {
 								ExtraXML: torznabAttrs(map[string]string{
 									"tvdbid": "81189",
 									"tmdb":   "1396",
+									"imdb":   "0903747",
 								}),
 							},
 							{
@@ -222,8 +271,10 @@ var _ = Describe("Torznab Client", Label("unit", "indexers"), func() {
 				Expect(results).To(HaveLen(2))
 				Expect(results[0].TVDBID).To(Equal(uint32(81189)))
 				Expect(results[0].TMDBID).To(Equal(uint32(1396)))
+				Expect(results[0].IMDbID).To(Equal(uint32(903747)))
 				Expect(results[1].TVDBID).To(BeZero())
 				Expect(results[1].TMDBID).To(BeZero())
+				Expect(results[1].IMDbID).To(BeZero())
 			})
 
 			It("reads the info hash from the attr, then a magnet", func() {

@@ -986,7 +986,7 @@ func (d *download) grabWith(
 		return nil, otelx.RecordSpanError(span, err)
 	}
 
-	src, err := resolveTorrentSource(ctx, result.Download)
+	src, err := resolveTorrentSource(ctx, d.db, result.Download)
 	if err != nil {
 		outcome = "fetch_torrent_failed"
 		return nil, otelx.RecordSpanError(
@@ -2133,8 +2133,26 @@ func fromConfiguredIndexer(u *url.URL) bool {
 		}
 	}
 	for _, ix := range config.EnabledIndexers() {
-		if strings.EqualFold(u.Hostname(), ix.Host) &&
-			port == strconv.Itoa(int(ix.Port)) {
+		host, ixPort := ix.Host, strconv.Itoa(int(ix.Port))
+		// A cardigann entry's links point at the tracker's own site.
+		if ix.Protocol == "cardigann" {
+			site, err := indexer.CardigannSite(ix)
+			if err != nil {
+				continue
+			}
+			su, err := url.Parse(site)
+			if err != nil {
+				continue
+			}
+			host, ixPort = su.Hostname(), su.Port()
+			if ixPort == "" {
+				ixPort = "443"
+				if su.Scheme == "http" {
+					ixPort = "80"
+				}
+			}
+		}
+		if strings.EqualFold(u.Hostname(), host) && port == ixPort {
 			return true
 		}
 	}
@@ -2152,7 +2170,11 @@ func isRedirect(code int) bool {
 // Client.AddTorrent expects. magnet: links pass through; http(s) URLs are
 // fetched in-process so download clients that can't reach the indexer
 // (Docker/VPN sandboxes) still get the .torrent bytes.
-func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error) {
+func resolveTorrentSource(
+	ctx context.Context,
+	store db.Store,
+	dl string,
+) (TorrentSource, error) {
 	if dl == "" {
 		return TorrentSource{}, fmt.Errorf("empty download URL")
 	}
@@ -2161,6 +2183,19 @@ func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error)
 	}
 	if err := checkReleaseSource(dl); err != nil {
 		return TorrentSource{}, err
+	}
+	// A native tracker's link may be a release page its definition reads the
+	// real link off; the indexer fetches it itself, through its own proxy,
+	// solver, pacing and session.
+	target, native, err := indexer.ResolveDownload(ctx, store, dl)
+	if err != nil {
+		return TorrentSource{}, fmt.Errorf("resolve download: %w", err)
+	}
+	if native {
+		if target.Magnet != "" {
+			return TorrentSource{Magnet: target.Magnet}, nil
+		}
+		return torrentBody(target.Bytes)
 	}
 	// Both errors below render the release link, which authenticates the
 	// download: Jackett puts a `jackett_apikey` query parameter on it and
@@ -2211,6 +2246,11 @@ func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error)
 	if err != nil {
 		return TorrentSource{}, fmt.Errorf("read torrent body: %w", err)
 	}
+	return torrentBody(body)
+}
+
+// torrentBody is a fetched .torrent as a source, held to the size cap.
+func torrentBody(body []byte) (TorrentSource, error) {
 	if int64(len(body)) > MaxTorrentFileSize {
 		return TorrentSource{}, fmt.Errorf(
 			"torrent file exceeds %d byte cap", MaxTorrentFileSize,

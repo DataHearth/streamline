@@ -106,7 +106,7 @@ var _ = Describe("rejected releases", Label("integration", "rss"), func() {
 
 		It("grabs the next-best release instead of the rejected one", func() {
 			indexerM.EXPECT().
-				SearchMovie(mock.Anything, mock.Anything, mock.Anything, uint32(550)).
+				SearchMovie(mock.Anything, mock.Anything, mock.Anything, uint32(550), mock.Anything).
 				Return(results("BAD"), nil)
 			dlM.EXPECT().Grab(mock.Anything, titled(good), m.ID).
 				Return(&ent.DownloadRecord{}, nil)
@@ -116,7 +116,7 @@ var _ = Describe("rejected releases", Label("integration", "rss"), func() {
 
 		It("matches a result that carries no hash by its title", func() {
 			indexerM.EXPECT().
-				SearchMovie(mock.Anything, mock.Anything, mock.Anything, uint32(550)).
+				SearchMovie(mock.Anything, mock.Anything, mock.Anything, uint32(550), mock.Anything).
 				Return(results(""), nil)
 			dlM.EXPECT().Grab(mock.Anything, titled(good), m.ID).
 				Return(&ent.DownloadRecord{}, nil)
@@ -126,7 +126,7 @@ var _ = Describe("rejected releases", Label("integration", "rss"), func() {
 
 		It("grabs nothing when the rejected release is the only one", func() {
 			indexerM.EXPECT().
-				SearchMovie(mock.Anything, mock.Anything, mock.Anything, uint32(550)).
+				SearchMovie(mock.Anything, mock.Anything, mock.Anything, uint32(550), mock.Anything).
 				Return(results("bad")[:1], nil)
 
 			err := newTestSearcher(dbClient, indexerM, dlM).
@@ -163,7 +163,7 @@ var _ = Describe("rejected releases", Label("integration", "rss"), func() {
 			dlM := mocks.NewMockEpisodeGrabber(GinkgoT())
 			indexerM.EXPECT().
 				SearchEpisode(mock.Anything, mock.Anything, mock.Anything,
-					uint32(4242), uint16(1), uint16(1)).
+					uint32(4242), mock.Anything, uint16(1), uint16(1)).
 				Return([]indexer.SearchResult{
 					{
 						Title:    badEp,

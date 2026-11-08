@@ -51,6 +51,7 @@
 		"file-selection": i18n.schedule_file_selection(),
 		"music-tag-sync": i18n.schedule_music_tag_sync(),
 		"database-backup": i18n.schedule_database_backup(),
+		"cardigann-update": i18n.schedule_cardigann_update(),
 	};
 
 	const qc = useQueryClient();

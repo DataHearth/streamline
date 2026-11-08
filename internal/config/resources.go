@@ -73,20 +73,51 @@ type DownloadClientEntry struct {
 }
 
 type IndexerEntry struct {
-	Name       string `koanf:"name"         validate:"required"`
-	Host       string `koanf:"host"         validate:"required"`
-	Port       uint16 `koanf:"port"         validate:"required,port"`
+	Name string `koanf:"name" validate:"required"`
+	// Host, Port and the API key address a Torznab or Prowlarr endpoint; a
+	// cardigann entry reaches its tracker through the definition instead.
+	Host       string `koanf:"host"         validate:"required_unless=Protocol cardigann"`
+	Port       uint16 `koanf:"port"         validate:"required_unless=Protocol cardigann,omitempty,port"`
 	Path       string `koanf:"path"`
 	UseSSL     bool   `koanf:"use_ssl"`
-	APIKey     string `koanf:"api_key"      validate:"required_without=APIKeyFile,excluded_with=APIKeyFile"`
+	APIKey     string `koanf:"api_key"      validate:"excluded_with=APIKeyFile"`
 	APIKeyFile string `koanf:"api_key_file" validate:"omitempty,excluded_with=APIKey,filepath"`
-	Protocol   string `koanf:"protocol"     validate:"required,oneof=torznab prowlarr"`
+	Protocol   string `koanf:"protocol"     validate:"required,oneof=torznab prowlarr cardigann"`
 	Priority   uint8  `koanf:"priority"`
 	Enabled    bool   `koanf:"enabled"`
 	// Private is the operator's word for it: a Torznab feed carries no
 	// privacy flag, and a Prowlarr entry's applies to every sub-tracker
 	// behind it.
 	Private bool `koanf:"private"`
+	// Cardigann is set exactly when Protocol is "cardigann": which embedded
+	// definition runs the tracker, and the operator's values for its
+	// settings. The REST API reads and writes it, secrets write-only.
+	Cardigann *CardigannIndexer `koanf:"cardigann"`
+}
+
+// CardigannIndexer configures a tracker run from a Cardigann definition,
+// pinned to the upstream commit it was saved at: an upstream change reaches
+// it only through the update job, which holds one that re-points its hosts
+// or its login for an administrator. The converted version itself is kept
+// under the data directory (internal/cardigann/definitions), fetched again
+// at that commit when it is not.
+type CardigannIndexer struct {
+	// Definition is the definition's upstream file name without .yml —
+	// "eztv", not its display name.
+	Definition string `koanf:"definition"`
+	// Commit is the Prowlarr/Indexers revision the definition is read at;
+	// empty takes the catalog's on the update job's next run.
+	Commit string `koanf:"commit"`
+	// Site picks one of the definition's links; empty is the first.
+	Site string `koanf:"site"`
+	// Settings are the definition's settings by name. One left out takes
+	// the definition's default; a checkbox is "true" or "false", a select
+	// one of its option keys.
+	Settings map[string]string `koanf:"settings"`
+	// Proxy sends the tracker's requests through an http, https or socks5
+	// proxy — the solver's browser is told to use it too, since a challenge
+	// clearance is only good for the address that earned it.
+	Proxy string `koanf:"proxy"`
 }
 
 type QualityProfileEntry struct {

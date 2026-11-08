@@ -20,6 +20,7 @@ type CreateMovieParams struct {
 	OriginalTitle  string
 	Year           uint16
 	TmdbID         uint32
+	IMDbID         string
 	Status         movie.Status
 	Overview       string
 	Runtime        uint16
@@ -44,6 +45,7 @@ func (db *DB) CreateMovie(
 		SetOriginalTitle(p.OriginalTitle).
 		SetYear(p.Year).
 		SetTmdbID(p.TmdbID).
+		SetImdbID(p.IMDbID).
 		SetStatus(p.Status).
 		SetNillableReleaseDate(p.ReleaseDate)
 	if p.Overview != "" {
@@ -60,6 +62,9 @@ func (db *DB) CreateMovie(
 	}
 	if len(p.Genres) != 0 {
 		b.SetGenres(p.Genres)
+	}
+	if len(p.Aliases) != 0 {
+		b.SetAliases(p.Aliases)
 	}
 	m, err := b.Save(ctx)
 	if err != nil {
@@ -473,6 +478,7 @@ type UpdateMovieMetadataParams struct {
 	OriginalTitle string
 	Overview      string
 	Year          uint16
+	IMDbID        string
 	Runtime       uint16
 	Rating        float64
 	Genres        []string
@@ -497,6 +503,7 @@ func (db *DB) UpdateMovieMetadata(
 		SetTitle(p.Title).
 		SetOriginalTitle(p.OriginalTitle).
 		SetYear(p.Year).
+		SetImdbID(p.IMDbID).
 		SetOverview(p.Overview).
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).

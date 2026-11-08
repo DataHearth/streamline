@@ -110,7 +110,7 @@
     "indexerEntry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "host", "port", "protocol"],
+      "required": ["name", "protocol"],
       "properties": {
         "name": { "type": "string" },
         "host": { "type": "string" },
@@ -121,12 +121,45 @@
         "api_key_file": { "type": "string" },
         "protocol": {
           "type": "string",
-          "enum": ["torznab", "prowlarr"]
+          "enum": ["torznab", "prowlarr", "cardigann"],
+          "description": "cardigann runs the tracker from a Prowlarr/Indexers definition, carried and configured under cardigann."
         },
         "priority": { "type": "integer", "minimum": 0, "maximum": 255 },
         "enabled": { "type": "boolean" },
-        "private": { "type": "boolean" }
-      }
+        "private": { "type": "boolean" },
+        "cardigann": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["definition"],
+          "properties": {
+            "definition": {
+              "type": "string",
+              "description": "The definition's upstream file name, without .yml."
+            },
+            "commit": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$",
+              "description": "The Prowlarr/Indexers commit the definition is read at. Written when the indexer is saved through the API and moved by the cardigann-update job; left out, the job's next run sets the catalog's."
+            },
+            "site": {
+              "type": "string",
+              "description": "One of the definition's links; empty is its first."
+            },
+            "settings": {
+              "type": "object",
+              "description": "The definition's settings by name: a checkbox is \"true\" or \"false\", a select one of its option keys. A setting left out takes the definition's default.",
+              "additionalProperties": { "type": "string" }
+            },
+            "proxy": {
+              "type": "string",
+              "description": "An http, https or socks5 proxy URL the tracker's requests (and the challenge solver's browser) go through. An HTTPS-intercepting proxy sees the tracker credentials."
+            }
+          }
+        }
+      },
+      "if": { "properties": { "protocol": { "const": "cardigann" } } },
+      "then": { "required": ["cardigann"] },
+      "else": { "required": ["host", "port"] }
     },
     "musicQualityProfileEntry": {
       "type": "object",
@@ -656,6 +689,7 @@
         "file_selection": { "$ref": "#/definitions/duration" },
         "music_tag_sync": { "$ref": "#/definitions/duration" },
         "database_backup": { "$ref": "#/definitions/duration" },
+        "cardigann_update": { "$ref": "#/definitions/duration" },
         "rss_sync": {
           "$ref": "#/definitions/duration",
           "description": "Deprecated: renamed to movie_rss_sync. Still honoured, with a warning on boot."
@@ -701,6 +735,18 @@
           "$ref": "#/definitions/duration",
           "description": "Least time between two MusicBrainz calls (default 1s, what musicbrainz.org allows). Background work keeps twice this between its own calls. \"0s\" removes the limit, for a self-hosted mirror only. Restart required."
         }
+      }
+    },
+    "cardigann": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Shared by every built-in (protocol: cardigann) indexer.",
+      "properties": {
+        "solver_url": {
+          "type": "string",
+          "description": "A FlareSolverr-compatible service (FlareSolverr, trawl, Byparr) used to get past a browser challenge such as Cloudflare's. Empty fails a challenged request."
+        },
+        "solver_timeout": { "$ref": "#/definitions/duration" }
       }
     },
     "events": {

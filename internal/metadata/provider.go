@@ -40,6 +40,7 @@ type MovieDetails struct {
 	Tagline          string
 	ReleaseDate      string // ISO yyyy-mm-dd, as TMDB returns it
 	OriginalLanguage string // ISO 639-1
+	IMDbID           string // "tt" + digits; empty when TMDB links none
 	// Aliases are TMDB's translated and alternative titles, excluding Title and
 	// OriginalTitle. A film held under its localized title equals none of the
 	// releases named in another language, so matchers compare against these as
@@ -166,6 +167,7 @@ type TVDetails struct {
 	Seasons    []SeasonInfo
 	Episodes   []EpisodeInfo
 	FirstAired string // ISO yyyy-mm-dd, as TVDB returns it
+	IMDbID     string // "tt" + digits; empty when TVDB links none
 }
 
 // TVProvider fetches TV-series metadata. Implemented by *TVDB.
