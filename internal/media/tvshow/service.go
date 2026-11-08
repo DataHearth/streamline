@@ -1010,6 +1010,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		SeriesStatus:  d.Status,
 		Runtime:       d.Runtime,
 		Rating:        ratingOf(d),
+		KeepTMDBID:    d.RatingFailed,
 		Genres:        d.Genres,
 		Aliases:       d.Aliases,
 		Cast:          cast,

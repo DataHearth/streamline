@@ -168,9 +168,12 @@ type TVDetails struct {
 	// TVDB. RatingFetched is true when TMDB was asked and answered, even that
 	// it knows no such series (both zero); false when it was not asked or
 	// failed, and the caller keeps whatever rating it already has.
+	// RatingFailed is true only when TMDB was asked and failed: TMDBID is
+	// then TVDB's mapping alone, which TMDB has not confirmed.
 	Rating        float32
 	VoteCount     uint32
 	RatingFetched bool
+	RatingFailed  bool
 	Genres        []string
 	Cast          []CastMember
 	Seasons       []SeasonInfo

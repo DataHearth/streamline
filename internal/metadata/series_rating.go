@@ -163,6 +163,7 @@ func (r *ratedTV) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, err
 	if err != nil {
 		slog.WarnContext(ctx, "series rating fetch failed; keeping the stored one",
 			"tvshow.tvdb_id", tvdbID, "error", err)
+		d.RatingFailed = true
 		return d, nil
 	}
 	d.RatingFetched = true
