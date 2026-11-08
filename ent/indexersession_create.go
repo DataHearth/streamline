@@ -130,6 +130,20 @@ func (_c *IndexerSessionCreate) SetNillableLastError(v *string) *IndexerSessionC
 	return _c
 }
 
+// SetConfigHash sets the "config_hash" field.
+func (_c *IndexerSessionCreate) SetConfigHash(v string) *IndexerSessionCreate {
+	_c.mutation.SetConfigHash(v)
+	return _c
+}
+
+// SetNillableConfigHash sets the "config_hash" field if the given value is not nil.
+func (_c *IndexerSessionCreate) SetNillableConfigHash(v *string) *IndexerSessionCreate {
+	if v != nil {
+		_c.SetConfigHash(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *IndexerSessionCreate) SetID(v uint32) *IndexerSessionCreate {
 	_c.mutation.SetID(v)
@@ -271,6 +285,10 @@ func (_c *IndexerSessionCreate) createSpec() (*IndexerSession, *sqlgraph.CreateS
 	if value, ok := _c.mutation.LastError(); ok {
 		_spec.SetField(indexersession.FieldLastError, field.TypeString, value)
 		_node.LastError = value
+	}
+	if value, ok := _c.mutation.ConfigHash(); ok {
+		_spec.SetField(indexersession.FieldConfigHash, field.TypeString, value)
+		_node.ConfigHash = value
 	}
 	return _node, _spec
 }

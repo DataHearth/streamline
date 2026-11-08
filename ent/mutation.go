@@ -28807,6 +28807,7 @@ type IndexerSessionMutation struct {
 	addlogin_failures *int8
 	retry_at          *time.Time
 	last_error        *string
+	config_hash       *string
 	clearedFields     map[string]struct{}
 	done              bool
 	oldValue          func(context.Context) (*IndexerSession, error)
@@ -29326,6 +29327,55 @@ func (m *IndexerSessionMutation) ResetLastError() {
 	delete(m.clearedFields, indexersession.FieldLastError)
 }
 
+// SetConfigHash sets the "config_hash" field.
+func (m *IndexerSessionMutation) SetConfigHash(s string) {
+	m.config_hash = &s
+}
+
+// ConfigHash returns the value of the "config_hash" field in the mutation.
+func (m *IndexerSessionMutation) ConfigHash() (r string, exists bool) {
+	v := m.config_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldConfigHash returns the old "config_hash" field's value of the IndexerSession entity.
+// If the IndexerSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IndexerSessionMutation) OldConfigHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldConfigHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldConfigHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldConfigHash: %w", err)
+	}
+	return oldValue.ConfigHash, nil
+}
+
+// ClearConfigHash clears the value of the "config_hash" field.
+func (m *IndexerSessionMutation) ClearConfigHash() {
+	m.config_hash = nil
+	m.clearedFields[indexersession.FieldConfigHash] = struct{}{}
+}
+
+// ConfigHashCleared returns if the "config_hash" field was cleared in this mutation.
+func (m *IndexerSessionMutation) ConfigHashCleared() bool {
+	_, ok := m.clearedFields[indexersession.FieldConfigHash]
+	return ok
+}
+
+// ResetConfigHash resets all changes to the "config_hash" field.
+func (m *IndexerSessionMutation) ResetConfigHash() {
+	m.config_hash = nil
+	delete(m.clearedFields, indexersession.FieldConfigHash)
+}
+
 // Where appends a list predicates to the IndexerSessionMutation builder.
 func (m *IndexerSessionMutation) Where(ps ...predicate.IndexerSession) {
 	m.predicates = append(m.predicates, ps...)
@@ -29360,7 +29410,7 @@ func (m *IndexerSessionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *IndexerSessionMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.create_time != nil {
 		fields = append(fields, indexersession.FieldCreateTime)
 	}
@@ -29388,6 +29438,9 @@ func (m *IndexerSessionMutation) Fields() []string {
 	if m.last_error != nil {
 		fields = append(fields, indexersession.FieldLastError)
 	}
+	if m.config_hash != nil {
+		fields = append(fields, indexersession.FieldConfigHash)
+	}
 	return fields
 }
 
@@ -29414,6 +29467,8 @@ func (m *IndexerSessionMutation) Field(name string) (ent.Value, bool) {
 		return m.RetryAt()
 	case indexersession.FieldLastError:
 		return m.LastError()
+	case indexersession.FieldConfigHash:
+		return m.ConfigHash()
 	}
 	return nil, false
 }
@@ -29441,6 +29496,8 @@ func (m *IndexerSessionMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldRetryAt(ctx)
 	case indexersession.FieldLastError:
 		return m.OldLastError(ctx)
+	case indexersession.FieldConfigHash:
+		return m.OldConfigHash(ctx)
 	}
 	return nil, fmt.Errorf("unknown IndexerSession field %s", name)
 }
@@ -29513,6 +29570,13 @@ func (m *IndexerSessionMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetLastError(v)
 		return nil
+	case indexersession.FieldConfigHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetConfigHash(v)
+		return nil
 	}
 	return fmt.Errorf("unknown IndexerSession field %s", name)
 }
@@ -29573,6 +29637,9 @@ func (m *IndexerSessionMutation) ClearedFields() []string {
 	if m.FieldCleared(indexersession.FieldLastError) {
 		fields = append(fields, indexersession.FieldLastError)
 	}
+	if m.FieldCleared(indexersession.FieldConfigHash) {
+		fields = append(fields, indexersession.FieldConfigHash)
+	}
 	return fields
 }
 
@@ -29601,6 +29668,9 @@ func (m *IndexerSessionMutation) ClearField(name string) error {
 		return nil
 	case indexersession.FieldLastError:
 		m.ClearLastError()
+		return nil
+	case indexersession.FieldConfigHash:
+		m.ClearConfigHash()
 		return nil
 	}
 	return fmt.Errorf("unknown IndexerSession nullable field %s", name)
@@ -29636,6 +29706,9 @@ func (m *IndexerSessionMutation) ResetField(name string) error {
 		return nil
 	case indexersession.FieldLastError:
 		m.ResetLastError()
+		return nil
+	case indexersession.FieldConfigHash:
+		m.ResetConfigHash()
 		return nil
 	}
 	return fmt.Errorf("unknown IndexerSession field %s", name)

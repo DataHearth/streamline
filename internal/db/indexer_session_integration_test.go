@@ -29,12 +29,17 @@ var _ = Describe("IndexerSession store", Label("integration", "db"), func() {
 
 		exp := time.Now().Add(time.Hour).UTC().Truncate(time.Second)
 		Expect(store.PutIndexerSession(ctx, "city", IndexerSessionParams{
-			Cookies: map[string]string{"uid": "1"}, ExpiresAt: &exp,
+			Cookies: map[string]string{
+				"uid": "1",
+			},
+			ExpiresAt:  &exp,
+			ConfigHash: "h1",
 		})).To(Succeed())
 		got, err = store.IndexerSession(ctx, "city")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(got.Cookies).To(Equal(map[string]string{"uid": "1"}))
 		Expect(got.ExpiresAt).To(HaveValue(BeTemporally("==", exp)))
+		Expect(got.ConfigHash).To(Equal("h1"))
 
 		// A put replaces the row whole: the expiry it leaves out is cleared.
 		retry := exp.Add(time.Minute)

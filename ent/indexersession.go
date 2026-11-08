@@ -35,7 +35,9 @@ type IndexerSession struct {
 	// RetryAt holds the value of the "retry_at" field.
 	RetryAt *time.Time `json:"retry_at,omitempty"`
 	// LastError holds the value of the "last_error" field.
-	LastError    string `json:"last_error,omitempty"`
+	LastError string `json:"last_error,omitempty"`
+	// ConfigHash holds the value of the "config_hash" field.
+	ConfigHash   string `json:"config_hash,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -48,7 +50,7 @@ func (*IndexerSession) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case indexersession.FieldID, indexersession.FieldLoginFailures:
 			values[i] = new(sql.NullInt64)
-		case indexersession.FieldName, indexersession.FieldUserAgent, indexersession.FieldLastError:
+		case indexersession.FieldName, indexersession.FieldUserAgent, indexersession.FieldLastError, indexersession.FieldConfigHash:
 			values[i] = new(sql.NullString)
 		case indexersession.FieldCreateTime, indexersession.FieldUpdateTime, indexersession.FieldExpiresAt, indexersession.FieldRetryAt:
 			values[i] = new(sql.NullTime)
@@ -131,6 +133,12 @@ func (_m *IndexerSession) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.LastError = value.String
 			}
+		case indexersession.FieldConfigHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field config_hash", values[i])
+			} else if value.Valid {
+				_m.ConfigHash = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -197,6 +205,9 @@ func (_m *IndexerSession) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("last_error=")
 	builder.WriteString(_m.LastError)
+	builder.WriteString(", ")
+	builder.WriteString("config_hash=")
+	builder.WriteString(_m.ConfigHash)
 	builder.WriteByte(')')
 	return builder.String()
 }

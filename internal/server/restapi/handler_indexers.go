@@ -151,14 +151,6 @@ func (s *Server) UpdateIndexer(
 		}, nil
 	}
 	e, _ := config.FindIndexer(request.Name)
-	if e.Protocol == "cardigann" {
-		// The credentials may have changed: the next search logs in with
-		// what was just saved, not on the old session.
-		if err := s.indexers.Forget(ctx, e.Name); err != nil {
-			slog.WarnContext(ctx, "could not drop an edited indexer's session",
-				"indexer.name", e.Name, "error", err)
-		}
-	}
 	return UpdateIndexer200JSONResponse(s.indexerWithSession(ctx, e)), nil
 }
 

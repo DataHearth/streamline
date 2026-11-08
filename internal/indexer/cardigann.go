@@ -3,7 +3,9 @@ package indexer
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -16,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/cardigann/definitions"
 	"github.com/datahearth/streamline/internal/cardigann/engine"
 	"github.com/datahearth/streamline/internal/config"
@@ -78,10 +81,31 @@ func loginLock(name string) *sync.Mutex {
 // that stands in for a Prowlarr or Jackett entry. Its session lives in the
 // store between calls; a draft has no store and keeps nothing.
 type Cardigann struct {
-	name    string
-	engine  *engine.Engine
-	store   db.Store
+	name   string
+	engine *engine.Engine
+	store  db.Store
+	// hash is configHash of the entry this was built from; a stored row
+	// earned under other settings is not this indexer's.
+	hash    string
 	session *sessionRow
+}
+
+// configHash fingerprints what a session is earned under: the definition,
+// the site, the proxy and the settings. An edit to any of them, through the
+// API or the YAML file, makes the stored session someone else's — the old
+// account's cookies replayed for a month otherwise — while an unrelated
+// edit (enabled, priority) keeps it and its login backoff.
+func configHash(ix config.IndexerEntry) string {
+	c := ix.Cardigann
+	if c == nil {
+		return ""
+	}
+	b, _ := json.Marshal(struct {
+		Definition, Site, Proxy string
+		Settings                map[string]string
+	}{c.Definition, c.Site, c.Proxy, c.Settings})
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
 }
 
 type sessionRow struct {
@@ -108,10 +132,10 @@ func newCardigann(
 	if err != nil {
 		return nil, err
 	}
-	c := &Cardigann{name: ix.Name, store: store}
+	c := &Cardigann{name: ix.Name, store: store, hash: configHash(ix)}
 	var session engine.Session
 	if store != nil {
-		row, err := store.IndexerSession(ctx, ix.Name)
+		row, err := c.stored(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -167,6 +191,24 @@ func newCardigann(
 	return c, nil
 }
 
+// stored is the indexer's session row, or nil when there is none or the
+// row was earned under other settings.
+func (c *Cardigann) stored(ctx context.Context) (*ent.IndexerSession, error) {
+	if c.store == nil {
+		return nil, nil
+	}
+	row, err := c.store.IndexerSession(ctx, c.name)
+	if err != nil || row == nil {
+		return nil, err
+	}
+	if row.ConfigHash != c.hash {
+		slog.DebugContext(ctx, "tracker session belongs to earlier settings",
+			"indexer.name", c.name)
+		return nil, nil
+	}
+	return row, nil
+}
+
 // run is HttpIndexerBase.FetchIndexerResponse's login handling around one
 // engine call: log in first when there is no live session, again when a
 // response says the session lapsed, then try once more. The session is kept
@@ -195,7 +237,8 @@ func (c *Cardigann) run(ctx context.Context, call func() error) error {
 	if err != nil {
 		return cardigannError(err)
 	}
-	return c.keep(ctx)
+	c.keep(ctx)
+	return nil
 }
 
 // login runs the definition's login. An automatic one respects the backoff
@@ -209,8 +252,8 @@ func (c *Cardigann) login(
 	lock := loginLock(c.name)
 	lock.Lock()
 	defer lock.Unlock()
-	if !manual && c.store != nil {
-		row, err := c.store.IndexerSession(ctx, c.name)
+	if !manual {
+		row, err := c.stored(ctx)
 		if err != nil {
 			return err
 		}
@@ -225,29 +268,36 @@ func (c *Cardigann) login(
 	}
 	slog.InfoContext(ctx, "tracker login succeeded", "indexer.name", c.name)
 	c.session = &sessionRow{}
-	return c.keep(ctx)
+	c.keep(ctx)
+	return nil
 }
 
 // keep stores the engine's session as live for another SessionLifetime and
-// clears any failure.
-func (c *Cardigann) keep(ctx context.Context) error {
+// clears any failure. Best effort: the search or login it follows succeeded,
+// and a row that could not be written costs one more login later, not the
+// results in hand.
+func (c *Cardigann) keep(ctx context.Context) {
 	s := c.engine.Session()
 	if c.store == nil || (!c.engine.NeedsLogin() && len(s.Cookies) == 0 &&
 		s.UserAgent == "") {
-		return nil
+		return
 	}
 	exp := time.Now().Add(engine.SessionLifetime)
 	p := db.IndexerSessionParams{
 		Cookies: s.Cookies, UserAgent: s.UserAgent, ExpiresAt: &exp,
+		ConfigHash: c.hash,
 	}
 	if c.session != nil && maps.Equal(c.session.params.Cookies, p.Cookies) &&
 		c.session.params.UserAgent == p.UserAgent &&
 		c.session.params.LoginFailures == 0 && c.session.params.ExpiresAt != nil &&
 		c.session.params.ExpiresAt.After(exp.Add(-24*time.Hour)) {
-		return nil
+		return
 	}
 	c.session = &sessionRow{params: p}
-	return c.store.PutIndexerSession(ctx, c.name, p)
+	if err := c.store.PutIndexerSession(ctx, c.name, p); err != nil {
+		slog.WarnContext(ctx, "could not keep the tracker session",
+			"indexer.name", c.name, "error", err)
+	}
 }
 
 // loginFailed records a failed login and the backoff it earns, dropping the
@@ -258,7 +308,7 @@ func (c *Cardigann) loginFailed(ctx context.Context, cause error) error {
 	if c.store == nil {
 		return cause
 	}
-	row, err := c.store.IndexerSession(ctx, c.name)
+	row, err := c.stored(ctx)
 	if err != nil {
 		return errors.Join(cause, err)
 	}
@@ -274,6 +324,7 @@ func (c *Cardigann) loginFailed(ctx context.Context, cause error) error {
 		LoginFailures: failures,
 		RetryAt:       &retry,
 		LastError:     cause.Error(),
+		ConfigHash:    c.hash,
 	}
 	c.session = &sessionRow{params: p}
 	if err := c.store.PutIndexerSession(ctx, c.name, p); err != nil {
@@ -620,8 +671,8 @@ func (i *indexer) Login(ctx context.Context, name, token, answer string) error {
 	return c.login(ctx, true, landing, answer)
 }
 
-// Forget drops a built-in indexer's session, as an edit to its credentials
-// or its removal must.
+// Forget drops a built-in indexer's session when the indexer is removed. An
+// edit needs no Forget: the row carries the settings it was earned under.
 func (i *indexer) Forget(ctx context.Context, name string) error {
 	return i.store.DeleteIndexerSession(ctx, name)
 }

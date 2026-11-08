@@ -974,6 +974,7 @@ var (
 		{Name: "login_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "retry_at", Type: field.TypeTime, Nullable: true},
 		{Name: "last_error", Type: field.TypeString, Nullable: true},
+		{Name: "config_hash", Type: field.TypeString, Nullable: true},
 	}
 	// IndexerSessionsTable holds the schema information for the "indexer_sessions" table.
 	IndexerSessionsTable = &schema.Table{

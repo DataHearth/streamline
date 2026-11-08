@@ -31,6 +31,8 @@ const (
 	FieldRetryAt = "retry_at"
 	// FieldLastError holds the string denoting the last_error field in the database.
 	FieldLastError = "last_error"
+	// FieldConfigHash holds the string denoting the config_hash field in the database.
+	FieldConfigHash = "config_hash"
 	// Table holds the table name of the indexersession in the database.
 	Table = "indexer_sessions"
 )
@@ -47,6 +49,7 @@ var Columns = []string{
 	FieldLoginFailures,
 	FieldRetryAt,
 	FieldLastError,
+	FieldConfigHash,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -118,4 +121,9 @@ func ByRetryAt(opts ...sql.OrderTermOption) OrderOption {
 // ByLastError orders the results by the last_error field.
 func ByLastError(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastError, opts...).ToFunc()
+}
+
+// ByConfigHash orders the results by the config_hash field.
+func ByConfigHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldConfigHash, opts...).ToFunc()
 }

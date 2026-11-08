@@ -446,7 +446,6 @@ var _ = Describe(
 						},
 					},
 				}))
-				app.indexers.EXPECT().Forget(mock.Anything, "3D").Return(nil)
 				app.indexers.EXPECT().Session(mock.Anything, "3D").
 					Return(indexer.SessionState{}, nil)
 				req := app.req(

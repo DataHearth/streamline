@@ -162,6 +162,26 @@ func (_u *IndexerSessionUpdate) ClearLastError() *IndexerSessionUpdate {
 	return _u
 }
 
+// SetConfigHash sets the "config_hash" field.
+func (_u *IndexerSessionUpdate) SetConfigHash(v string) *IndexerSessionUpdate {
+	_u.mutation.SetConfigHash(v)
+	return _u
+}
+
+// SetNillableConfigHash sets the "config_hash" field if the given value is not nil.
+func (_u *IndexerSessionUpdate) SetNillableConfigHash(v *string) *IndexerSessionUpdate {
+	if v != nil {
+		_u.SetConfigHash(*v)
+	}
+	return _u
+}
+
+// ClearConfigHash clears the value of the "config_hash" field.
+func (_u *IndexerSessionUpdate) ClearConfigHash() *IndexerSessionUpdate {
+	_u.mutation.ClearConfigHash()
+	return _u
+}
+
 // Mutation returns the IndexerSessionMutation object of the builder.
 func (_u *IndexerSessionUpdate) Mutation() *IndexerSessionMutation {
 	return _u.mutation
@@ -272,6 +292,12 @@ func (_u *IndexerSessionUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if _u.mutation.LastErrorCleared() {
 		_spec.ClearField(indexersession.FieldLastError, field.TypeString)
+	}
+	if value, ok := _u.mutation.ConfigHash(); ok {
+		_spec.SetField(indexersession.FieldConfigHash, field.TypeString, value)
+	}
+	if _u.mutation.ConfigHashCleared() {
+		_spec.ClearField(indexersession.FieldConfigHash, field.TypeString)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -428,6 +454,26 @@ func (_u *IndexerSessionUpdateOne) ClearLastError() *IndexerSessionUpdateOne {
 	return _u
 }
 
+// SetConfigHash sets the "config_hash" field.
+func (_u *IndexerSessionUpdateOne) SetConfigHash(v string) *IndexerSessionUpdateOne {
+	_u.mutation.SetConfigHash(v)
+	return _u
+}
+
+// SetNillableConfigHash sets the "config_hash" field if the given value is not nil.
+func (_u *IndexerSessionUpdateOne) SetNillableConfigHash(v *string) *IndexerSessionUpdateOne {
+	if v != nil {
+		_u.SetConfigHash(*v)
+	}
+	return _u
+}
+
+// ClearConfigHash clears the value of the "config_hash" field.
+func (_u *IndexerSessionUpdateOne) ClearConfigHash() *IndexerSessionUpdateOne {
+	_u.mutation.ClearConfigHash()
+	return _u
+}
+
 // Mutation returns the IndexerSessionMutation object of the builder.
 func (_u *IndexerSessionUpdateOne) Mutation() *IndexerSessionMutation {
 	return _u.mutation
@@ -568,6 +614,12 @@ func (_u *IndexerSessionUpdateOne) sqlSave(ctx context.Context) (_node *IndexerS
 	}
 	if _u.mutation.LastErrorCleared() {
 		_spec.ClearField(indexersession.FieldLastError, field.TypeString)
+	}
+	if value, ok := _u.mutation.ConfigHash(); ok {
+		_spec.SetField(indexersession.FieldConfigHash, field.TypeString, value)
+	}
+	if _u.mutation.ConfigHashCleared() {
+		_spec.ClearField(indexersession.FieldConfigHash, field.TypeString)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &IndexerSession{config: _u.config}

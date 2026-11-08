@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -149,6 +150,7 @@ func memSessions(store *dbmocks.MockStore) map[string]db.IndexerSessionParams {
 				Name: name, Cookies: p.Cookies, UserAgent: p.UserAgent,
 				ExpiresAt: p.ExpiresAt, LoginFailures: p.LoginFailures,
 				RetryAt: p.RetryAt, LastError: p.LastError,
+				ConfigHash: p.ConfigHash,
 			}, nil
 		},
 	).Maybe()
@@ -232,14 +234,34 @@ var _ = Describe(
 			},
 		)
 
+		It("does not replay a session earned under other settings", func() {
+			exp := time.Now().Add(time.Hour)
+			rows[name] = db.IndexerSessionParams{
+				Cookies:    map[string]string{"uid": "9", "pass": "old"},
+				ExpiresAt:  &exp,
+				ConfigHash: "earlier settings",
+			}
+			routeAll(func(w http.ResponseWriter, r *http.Request) {
+				Expect(r.Header.Get("Cookie")).To(ContainSubstring("pass=abc"))
+				Expect(r.Header.Get("Cookie")).NotTo(ContainSubstring("old"))
+				_, _ = w.Write([]byte(`<a href="logout.php">out</a>`))
+			})
+			Expect(New(store).TestByName(context.Background(), name)).To(Succeed())
+			ix, _ := config.FindIndexer(name)
+			Expect(rows[name].ConfigHash).To(Equal(configHash(ix)))
+			Expect(rows[name].Cookies).To(HaveKeyWithValue("pass", "abc"))
+		})
+
 		It("sends the session with a download it fetches", func() {
 			exp := time.Now().Add(time.Hour)
+			ix, _ := config.FindIndexer(name)
 			rows[name] = db.IndexerSessionParams{
 				Cookies: map[string]string{
 					"uid":  "1",
 					"pass": "abc",
 				},
-				ExpiresAt: &exp,
+				ExpiresAt:  &exp,
+				ConfigHash: configHash(ix),
 			}
 			routeAll(func(w http.ResponseWriter, r *http.Request) {
 				Expect(r.Header.Get("Cookie")).To(ContainSubstring("pass=abc"))

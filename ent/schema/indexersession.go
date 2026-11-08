@@ -31,5 +31,9 @@ func (IndexerSession) Fields() []ent.Field {
 		field.Uint8("login_failures").Default(0),
 		field.Time("retry_at").Optional().Nillable(),
 		field.String("last_error").Optional(),
+		// ConfigHash is the indexer's definition, site, proxy and settings
+		// the session was earned under; a row from other settings is not
+		// replayed, whether the edit came through the API or the YAML.
+		field.String("config_hash").Optional(),
 	}
 }

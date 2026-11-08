@@ -94,6 +94,11 @@ func LastError(v string) predicate.IndexerSession {
 	return predicate.IndexerSession(sql.FieldEQ(FieldLastError, v))
 }
 
+// ConfigHash applies equality check predicate on the "config_hash" field. It's identical to ConfigHashEQ.
+func ConfigHash(v string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldEQ(FieldConfigHash, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.IndexerSession {
 	return predicate.IndexerSession(sql.FieldEQ(FieldCreateTime, v))
@@ -537,6 +542,81 @@ func LastErrorEqualFold(v string) predicate.IndexerSession {
 // LastErrorContainsFold applies the ContainsFold predicate on the "last_error" field.
 func LastErrorContainsFold(v string) predicate.IndexerSession {
 	return predicate.IndexerSession(sql.FieldContainsFold(FieldLastError, v))
+}
+
+// ConfigHashEQ applies the EQ predicate on the "config_hash" field.
+func ConfigHashEQ(v string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldEQ(FieldConfigHash, v))
+}
+
+// ConfigHashNEQ applies the NEQ predicate on the "config_hash" field.
+func ConfigHashNEQ(v string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldNEQ(FieldConfigHash, v))
+}
+
+// ConfigHashIn applies the In predicate on the "config_hash" field.
+func ConfigHashIn(vs ...string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldIn(FieldConfigHash, vs...))
+}
+
+// ConfigHashNotIn applies the NotIn predicate on the "config_hash" field.
+func ConfigHashNotIn(vs ...string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldNotIn(FieldConfigHash, vs...))
+}
+
+// ConfigHashGT applies the GT predicate on the "config_hash" field.
+func ConfigHashGT(v string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldGT(FieldConfigHash, v))
+}
+
+// ConfigHashGTE applies the GTE predicate on the "config_hash" field.
+func ConfigHashGTE(v string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldGTE(FieldConfigHash, v))
+}
+
+// ConfigHashLT applies the LT predicate on the "config_hash" field.
+func ConfigHashLT(v string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldLT(FieldConfigHash, v))
+}
+
+// ConfigHashLTE applies the LTE predicate on the "config_hash" field.
+func ConfigHashLTE(v string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldLTE(FieldConfigHash, v))
+}
+
+// ConfigHashContains applies the Contains predicate on the "config_hash" field.
+func ConfigHashContains(v string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldContains(FieldConfigHash, v))
+}
+
+// ConfigHashHasPrefix applies the HasPrefix predicate on the "config_hash" field.
+func ConfigHashHasPrefix(v string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldHasPrefix(FieldConfigHash, v))
+}
+
+// ConfigHashHasSuffix applies the HasSuffix predicate on the "config_hash" field.
+func ConfigHashHasSuffix(v string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldHasSuffix(FieldConfigHash, v))
+}
+
+// ConfigHashIsNil applies the IsNil predicate on the "config_hash" field.
+func ConfigHashIsNil() predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldIsNull(FieldConfigHash))
+}
+
+// ConfigHashNotNil applies the NotNil predicate on the "config_hash" field.
+func ConfigHashNotNil() predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldNotNull(FieldConfigHash))
+}
+
+// ConfigHashEqualFold applies the EqualFold predicate on the "config_hash" field.
+func ConfigHashEqualFold(v string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldEqualFold(FieldConfigHash, v))
+}
+
+// ConfigHashContainsFold applies the ContainsFold predicate on the "config_hash" field.
+func ConfigHashContainsFold(v string) predicate.IndexerSession {
+	return predicate.IndexerSession(sql.FieldContainsFold(FieldConfigHash, v))
 }
 
 // And groups predicates with the AND operator between them.
