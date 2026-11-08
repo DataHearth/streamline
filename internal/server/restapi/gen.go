@@ -6517,13 +6517,16 @@ type LogRotateConfig struct {
 // search response carries. One shape serves both verticals: movies fill
 // runtime/release_date/tmdb_id, series fill network/season_count/status.
 type LookupDetail struct {
-	Cast             *[]CastMember `json:"cast,omitempty"`
-	EpisodeCount     *uint16       `json:"episode_count,omitempty"`
-	Genres           *[]string     `json:"genres,omitempty"`
-	Network          *string       `json:"network,omitempty"`
-	OriginalLanguage *string       `json:"original_language,omitempty"`
-	Overview         *string       `json:"overview,omitempty"`
-	Rating           *float32      `json:"rating,omitempty"`
+	Cast         *[]CastMember `json:"cast,omitempty"`
+	EpisodeCount *uint16       `json:"episode_count,omitempty"`
+	Genres       *[]string     `json:"genres,omitempty"`
+
+	// ImdbId IMDb title id (`tt…`) the provider maps the title to.
+	ImdbId           *string  `json:"imdb_id,omitempty"`
+	Network          *string  `json:"network,omitempty"`
+	OriginalLanguage *string  `json:"original_language,omitempty"`
+	Overview         *string  `json:"overview,omitempty"`
+	Rating           *float32 `json:"rating,omitempty"`
 
 	// ReleaseDate Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
 	ReleaseDate *string `json:"release_date,omitempty"`
@@ -6536,6 +6539,9 @@ type LookupDetail struct {
 	TmdbId      *uint32 `json:"tmdb_id,omitempty"`
 	TvdbId      *uint32 `json:"tvdb_id,omitempty"`
 	VoteCount   *uint32 `json:"vote_count,omitempty"`
+
+	// WikidataId Wikidata item (`Q…`) the provider maps the title to.
+	WikidataId *string `json:"wikidata_id,omitempty"`
 }
 
 // MediaFile defines model for MediaFile.
@@ -6848,6 +6854,11 @@ type Movie struct {
 	Genres *[]string `json:"genres,omitempty"`
 	Id     uint32    `json:"id"`
 
+	// ImdbId IMDb title id (`tt…`) TMDB maps the film to. Absent when TMDB has
+	// none, and on a movie not refreshed since this field was added
+	// until the next `movie-metadata-refresh` run.
+	ImdbId *string `json:"imdb_id,omitempty"`
+
 	// MediaFiles Files attached to this movie. Only populated by GET /movies/{id};
 	// list responses carry file_summary instead. Absent when the movie
 	// has no files on disk.
@@ -6880,7 +6891,12 @@ type Movie struct {
 	Status  MovieStatus `json:"status"`
 	Title   string      `json:"title"`
 	TmdbId  uint32      `json:"tmdb_id"`
-	Year    uint16      `json:"year"`
+
+	// WikidataId Wikidata item (`Q…`) TMDB maps the film to. The item lists every
+	// other site's id for the work (Rotten Tomatoes, Metacritic,
+	// AlloCiné, SensCritique…). Absent when TMDB has none.
+	WikidataId *string `json:"wikidata_id,omitempty"`
+	Year       uint16  `json:"year"`
 }
 
 // MovieStatus defines model for Movie.Status.
@@ -8529,14 +8545,17 @@ type RequestCounts struct {
 
 // RequestMediaDetails defines model for RequestMediaDetails.
 type RequestMediaDetails struct {
-	Cast             *[]CastMember `json:"cast,omitempty"`
-	EpisodeCount     *uint16       `json:"episode_count,omitempty"`
-	Genres           *[]string     `json:"genres,omitempty"`
-	Network          *string       `json:"network,omitempty"`
-	OriginalLanguage *string       `json:"original_language,omitempty"`
-	Overview         *string       `json:"overview,omitempty"`
-	PosterUrl        *string       `json:"poster_url,omitempty"`
-	Rating           *float32      `json:"rating,omitempty"`
+	Cast         *[]CastMember `json:"cast,omitempty"`
+	EpisodeCount *uint16       `json:"episode_count,omitempty"`
+	Genres       *[]string     `json:"genres,omitempty"`
+
+	// ImdbId IMDb title id (`tt…`) the provider maps the title to.
+	ImdbId           *string  `json:"imdb_id,omitempty"`
+	Network          *string  `json:"network,omitempty"`
+	OriginalLanguage *string  `json:"original_language,omitempty"`
+	Overview         *string  `json:"overview,omitempty"`
+	PosterUrl        *string  `json:"poster_url,omitempty"`
+	Rating           *float32 `json:"rating,omitempty"`
 
 	// ReleaseDate Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
 	ReleaseDate *string `json:"release_date,omitempty"`
@@ -8549,7 +8568,10 @@ type RequestMediaDetails struct {
 	TmdbId      *uint32 `json:"tmdb_id,omitempty"`
 	TvdbId      *uint32 `json:"tvdb_id,omitempty"`
 	VoteCount   *uint32 `json:"vote_count,omitempty"`
-	Year        *uint16 `json:"year,omitempty"`
+
+	// WikidataId Wikidata item (`Q…`) the provider maps the title to.
+	WikidataId *string `json:"wikidata_id,omitempty"`
+	Year       *uint16 `json:"year,omitempty"`
 }
 
 // RequestMediaType defines model for RequestMediaType.
@@ -9280,6 +9302,9 @@ type TVShow struct {
 	HaveEpisodes *uint32 `json:"have_episodes,omitempty"`
 	Id           uint32  `json:"id"`
 
+	// ImdbId IMDb title id (`tt…`) from TVDB's remoteIds. Absent when TVDB lists none.
+	ImdbId *string `json:"imdb_id,omitempty"`
+
 	// ImportingEpisodes Episodes past the grab and being written into the library. Cuts
 	// across the counts above the same way.
 	ImportingEpisodes *uint32 `json:"importing_episodes,omitempty"`
@@ -9307,10 +9332,15 @@ type TVShow struct {
 
 	// Seasons Seasons with their episodes. Only populated by GET /series/{id};
 	// absent in list responses.
-	Seasons       *[]Season          `json:"seasons,omitempty"`
-	SeriesStatus  TVShowSeriesStatus `json:"series_status"`
-	Title         string             `json:"title"`
-	TotalEpisodes *uint32            `json:"total_episodes,omitempty"`
+	Seasons      *[]Season          `json:"seasons,omitempty"`
+	SeriesStatus TVShowSeriesStatus `json:"series_status"`
+	Title        string             `json:"title"`
+
+	// TmdbId TMDB TV id TVDB maps the series to (its remoteIds). Absent when
+	// TVDB lists none, and on a show not refreshed since this field was
+	// added until the next `tv-metadata-refresh` run.
+	TmdbId        *uint32 `json:"tmdb_id,omitempty"`
+	TotalEpisodes *uint32 `json:"total_episodes,omitempty"`
 
 	// TotalSeasons Seasons the show has, specials (season 0) excluded — the same
 	// scope the episode rollups below use.
@@ -9320,7 +9350,10 @@ type TVShow struct {
 
 	// WantedEpisodes Aired/undated episodes without a file (the "missing" count).
 	WantedEpisodes *uint32 `json:"wanted_episodes,omitempty"`
-	Year           uint16  `json:"year"`
+
+	// WikidataId Wikidata item (`Q…`) from TVDB's remoteIds. Absent when TVDB lists none.
+	WikidataId *string `json:"wikidata_id,omitempty"`
+	Year       uint16  `json:"year"`
 }
 
 // TVShowSeriesStatus defines model for TVShow.SeriesStatus.

@@ -45,7 +45,7 @@ var _ = Describe("TVDB provider", Label("unit", "metadata"), func() {
 				Expect(r.URL.Query().Get("meta")).To(Equal("translations"))
 				_, _ = w.Write(
 					[]byte(
-						`{"data":{"id":123,"name":"Kara Deniz","year":"2023","overview":"orig","status":{"name":"Continuing"},"averageRuntime":52,"score":84,"genres":[{"name":"Drama"},{"name":"Mystery"}],"latestNetwork":{"name":"Halcyon"},"seasons":[{"number":1,"type":{"type":"official"}}],"aliases":[{"language":"tur","name":"Karadeniz"}],"translations":{"nameTranslations":[{"language":"eng","name":"The Black Sea"}],"overviewTranslations":[{"language":"eng","overview":"O"}]}}}`,
+						`{"data":{"id":123,"name":"Kara Deniz","year":"2023","overview":"orig","status":{"name":"Continuing"},"averageRuntime":52,"score":84,"genres":[{"name":"Drama"},{"name":"Mystery"}],"latestNetwork":{"name":"Halcyon"},"seasons":[{"number":1,"type":{"type":"official"}}],"aliases":[{"language":"tur","name":"Karadeniz"}],"remoteIds":[{"id":"tt9999999","type":2,"sourceName":"IMDB"},{"id":"424242","type":12,"sourceName":"TheMovieDB.com"},{"id":"Q123456","type":18,"sourceName":"Wikidata"},{"id":"black-sea","sourceName":"TV Maze"}],"translations":{"nameTranslations":[{"language":"eng","name":"The Black Sea"}],"overviewTranslations":[{"language":"eng","overview":"O"}]}}}`,
 					),
 				)
 			},
@@ -99,6 +99,41 @@ var _ = Describe("TVDB provider", Label("unit", "metadata"), func() {
 		Expect(d.Episodes).To(HaveLen(1))
 		Expect(d.Episodes[0].AbsoluteNumber).To(Equal(uint16(1)))
 		Expect(d.Episodes[0].AirDate).NotTo(BeNil())
+		Expect(d.IMDbID).To(Equal("tt9999999"))
+		Expect(d.TMDBID).To(Equal(uint32(424242)))
+		Expect(d.WikidataID).To(Equal("Q123456"))
+	})
+})
+
+var _ = Describe("seriesRemoteIDs", Label("unit", "metadata"), func() {
+	It("leaves every id unset when TVDB lists none", func() {
+		tmdb, imdb, wd := seriesRemoteIDs(nil)
+		Expect(tmdb).To(BeZero())
+		Expect(imdb).To(BeEmpty())
+		Expect(wd).To(BeEmpty())
+	})
+
+	It("drops values that are not the shape their site uses", func() {
+		tmdb, imdb, wd := seriesRemoteIDs([]tvdbRemoteID{
+			{ID: "0903747", SourceName: "IMDB"},
+			{ID: "not-a-number", SourceName: "TheMovieDB.com"},
+			{ID: "1079", SourceName: "Wikidata"},
+		})
+		Expect(tmdb).To(BeZero())
+		Expect(imdb).To(BeEmpty())
+		Expect(wd).To(BeEmpty())
+	})
+
+	It("keeps the first valid id per site", func() {
+		tmdb, imdb, wd := seriesRemoteIDs([]tvdbRemoteID{
+			{ID: " tt0903747 ", SourceName: "imdb"},
+			{ID: "tt1111111", SourceName: "IMDB"},
+			{ID: "1396", SourceName: "TMDB"},
+			{ID: "Q1079", SourceName: "Wikidata"},
+		})
+		Expect(imdb).To(Equal("tt0903747"))
+		Expect(tmdb).To(Equal(uint32(1396)))
+		Expect(wd).To(Equal("Q1079"))
 	})
 })
 

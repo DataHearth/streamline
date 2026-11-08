@@ -645,6 +645,38 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 			Expect(got.Status).To(Equal(entmovie.StatusWanted))
 			Expect(got.LastRefreshedAt).NotTo(BeNil())
 		})
+
+		It(
+			"writes the cross-references as TMDB answers, clearing ones it dropped",
+			func() {
+				m, err := store.CreateMovie(ctx, CreateMovieParams{
+					Title:         "a",
+					OriginalTitle: "a",
+					Year:          2020,
+					TmdbID:        1202,
+					Status:        entmovie.StatusWanted,
+					ExternalIDs: MovieExternalIDs{
+						IMDbID:     "tt0816692",
+						WikidataID: "Q13417189",
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(m.ImdbID).To(Equal("tt0816692"))
+				Expect(m.WikidataID).To(Equal("Q13417189"))
+
+				// A re-identified movie: the new title has an IMDb id and no item.
+				Expect(
+					store.UpdateMovieMetadata(ctx, m.ID, UpdateMovieMetadataParams{
+						Title: "b", OriginalTitle: "b", Year: 2021,
+						ExternalIDs: MovieExternalIDs{IMDbID: "tt0111161"},
+					}),
+				).To(Succeed())
+				got, err := store.FindMovieByID(ctx, m.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.ImdbID).To(Equal("tt0111161"))
+				Expect(got.WikidataID).To(BeEmpty())
+			},
+		)
 	})
 
 	Describe("DeleteMovie", func() {

@@ -8811,6 +8811,18 @@ components:
           minimum: 0
           maximum: 4294967295
           x-go-type: uint32
+        imdb_id:
+          type: string
+          description: |
+            IMDb title id (`tt…`) TMDB maps the film to. Absent when TMDB has
+            none, and on a movie not refreshed since this field was added
+            until the next `movie-metadata-refresh` run.
+        wikidata_id:
+          type: string
+          description: |
+            Wikidata item (`Q…`) TMDB maps the film to. The item lists every
+            other site's id for the work (Rotten Tomatoes, Metacritic,
+            AlloCiné, SensCritique…). Absent when TMDB has none.
         quality_profile:
           type: string
           description: Name of the quality profile (empty resolves to the movie default).
@@ -9479,6 +9491,19 @@ components:
         tvdb_id:
           type: integer
           x-go-type: uint32
+        tmdb_id:
+          type: integer
+          x-go-type: uint32
+          description: |
+            TMDB TV id TVDB maps the series to (its remoteIds). Absent when
+            TVDB lists none, and on a show not refreshed since this field was
+            added until the next `tv-metadata-refresh` run.
+        imdb_id:
+          type: string
+          description: IMDb title id (`tt…`) from TVDB's remoteIds. Absent when TVDB lists none.
+        wikidata_id:
+          type: string
+          description: Wikidata item (`Q…`) from TVDB's remoteIds. Absent when TVDB lists none.
         network:
           type: string
         creator:
@@ -16572,6 +16597,12 @@ components:
         tvdb_id:
           type: integer
           x-go-type: uint32
+        imdb_id:
+          type: string
+          description: IMDb title id (`tt…`) the provider maps the title to.
+        wikidata_id:
+          type: string
+          description: Wikidata item (`Q…`) the provider maps the title to.
         network:
           type: string
         season_count:

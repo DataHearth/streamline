@@ -244,6 +244,7 @@ func (s *Service) Add(
 		Aliases:        details.Aliases,
 		Cast:           details.Cast,
 		ReleaseDate:    metadata.ParseISODate(details.ReleaseDate),
+		ExternalIDs:    movieExternalIDs(details),
 	})
 	if err != nil {
 		if ent.IsConstraintError(err) {
@@ -716,7 +717,12 @@ func (s *Service) updateMetadata(
 		Aliases:       details.Aliases,
 		Cast:          details.Cast,
 		ReleaseDate:   metadata.ParseISODate(details.ReleaseDate),
+		ExternalIDs:   movieExternalIDs(details),
 	})
+}
+
+func movieExternalIDs(d *metadata.MovieDetails) db.MovieExternalIDs {
+	return db.MovieExternalIDs{IMDbID: d.IMDbID, WikidataID: d.WikidataID}
 }
 
 // fetchDigitalRelease persists m's configured-region digital (TMDB type-4)

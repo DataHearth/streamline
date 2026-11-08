@@ -37,6 +37,13 @@ func (TVShow) Fields() []ent.Field {
 			Default("standard"),
 		field.Bool("monitored").Default(true),
 		field.Uint32("tvdb_id").Unique(),
+		// Cross-references from TVDB's remoteIds, refreshed with the rest of
+		// the metadata. tmdb_id is not unique: TVDB maps the ids, and two
+		// series pointing at one TMDB entry is TVDB's data, not a conflict
+		// to refuse an add over. 0 / empty when TVDB lists none.
+		field.Uint32("tmdb_id").Optional(),
+		field.String("imdb_id").Optional(),
+		field.String("wikidata_id").Optional(),
 		field.String("poster_path").Optional(),
 		field.String("network").Optional(),
 		field.String("creator").Optional(),

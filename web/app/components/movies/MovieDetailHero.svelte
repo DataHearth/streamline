@@ -10,6 +10,8 @@
 	import type { Movie, MediaFile } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import Img from "@components/shared/Img.svelte";
+	import ExternalLinks from "@components/shared/ExternalLinks.svelte";
+	import { movieLinks } from "@lib/external-links";
 
 	let {
 		movie,
@@ -28,6 +30,7 @@
 
 	let primary = $derived(pickPrimary(movie.media_files));
 	let backdropSrc = $derived(posterUrl(movie));
+	let links = $derived(movieLinks(movie));
 
 	// Single dotted meta line: release · runtime · rating · genres, then any
 	// file-derived facts. Mirrors the prototype's left-aligned header.
@@ -134,6 +137,8 @@
 					{movie.overview}
 				</p>
 			{/if}
+
+			<ExternalLinks {links} class="mt-4" />
 
 			{#if actions}
 				<!-- md and up only: on a phone these live in the pinned bar at the

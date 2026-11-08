@@ -382,6 +382,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 			Aliases []struct {
 				Name string `json:"name"`
 			} `json:"aliases"`
+			RemoteIDs []tvdbRemoteID `json:"remoteIds"`
 			// Populated only when we request ?meta=translations.
 			Translations struct {
 				NameTranslations []struct {
@@ -421,6 +422,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 		// TVDB v4 removed user ratings; `score` is an arbitrary popularity
 		// metric (not a 0-10 rating), so Rating is left unset (0 = unknown).
 	}
+	d.TMDBID, d.IMDbID, d.WikidataID = seriesRemoteIDs(ext.Data.RemoteIDs)
 	for _, g := range ext.Data.Genres {
 		d.Genres = append(d.Genres, g.Name)
 	}
@@ -675,10 +677,7 @@ func (t *TVDB) GetPerson(
 			Death       string          `json:"death"`
 			BirthPlace  string          `json:"birthPlace"`
 			Biographies []tvdbBiography `json:"biographies"`
-			RemoteIDs   []struct {
-				ID         string `json:"id"`
-				SourceName string `json:"sourceName"`
-			} `json:"remoteIds"`
+			RemoteIDs   []tvdbRemoteID  `json:"remoteIds"`
 		} `json:"data"`
 	}
 	if err := t.get(
@@ -710,6 +709,40 @@ func (t *TVDB) GetPerson(
 		}
 	}
 	return d, nil
+}
+
+// tvdbRemoteID is one entry of a record's remoteIds: another site's id for
+// the same series or person, named by sourceName.
+type tvdbRemoteID struct {
+	ID         string `json:"id"`
+	SourceName string `json:"sourceName"`
+}
+
+// seriesRemoteIDs reads the cross-references the detail page links through
+// out of a series' remoteIds. TVDB names its sources "IMDB",
+// "TheMovieDB.com" and "Wikidata"; the match is on a folded prefix so a
+// renamed source ("TheMovieDB", "TMDB") still lands. A value that is not the
+// shape its site uses is dropped rather than linked: a TMDB id that does not
+// parse, an IMDb id without its "tt", a Wikidata id without its "Q".
+func seriesRemoteIDs(ids []tvdbRemoteID) (tmdbID uint32, imdbID, wikidataID string) {
+	for _, r := range ids {
+		v := strings.TrimSpace(r.ID)
+		switch src := strings.ToLower(r.SourceName); {
+		case strings.HasPrefix(src, "imdb"):
+			if imdbID == "" && strings.HasPrefix(v, "tt") {
+				imdbID = v
+			}
+		case strings.HasPrefix(src, "themoviedb"), src == "tmdb":
+			if tmdbID == 0 {
+				tmdbID = atou32(v)
+			}
+		case strings.HasPrefix(src, "wikidata"):
+			if wikidataID == "" && strings.HasPrefix(v, "Q") {
+				wikidataID = v
+			}
+		}
+	}
+	return tmdbID, imdbID, wikidataID
 }
 
 // pickBiography chooses one entry out of TVDB's per-language biographies array:

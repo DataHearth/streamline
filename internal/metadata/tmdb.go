@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log/slog"
@@ -166,7 +167,9 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 	}()
 
 	params := url.Values{
-		"append_to_response": {"translations,alternative_titles,credits"},
+		"append_to_response": {
+			"translations,alternative_titles,credits,external_ids",
+		},
 	}
 	params = t.withLang(params, t.language)
 
@@ -257,6 +260,8 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 		ReleaseDate:      resp.ReleaseDate,
 		OriginalLanguage: resp.OriginalLanguage,
 		Aliases:          collectAliases([]string{title, originalTitle}, candidates),
+		IMDbID:           cmp.Or(resp.IMDbID, resp.ExternalIDs.IMDbID),
+		WikidataID:       resp.ExternalIDs.WikidataID,
 	}, nil
 }
 
@@ -565,6 +570,16 @@ type tmdbMovieResponse struct {
 	Translations     tmdbTranslationBag `json:"translations"`
 	AltTitles        tmdbAltTitleBag    `json:"alternative_titles"`
 	Credits          tmdbCredits        `json:"credits"`
+	IMDbID           string             `json:"imdb_id"`
+	ExternalIDs      tmdbMovieExternals `json:"external_ids"`
+}
+
+// tmdbMovieExternals is append_to_response=external_ids on a movie. imdb_id
+// is also a top-level details field; the appended copy is read only when that
+// one is empty.
+type tmdbMovieExternals struct {
+	IMDbID     string `json:"imdb_id"`
+	WikidataID string `json:"wikidata_id"`
 }
 
 // tmdbAltTitleBag is append_to_response=alternative_titles. These are the

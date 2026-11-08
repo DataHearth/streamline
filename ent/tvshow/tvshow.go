@@ -37,6 +37,12 @@ const (
 	FieldMonitored = "monitored"
 	// FieldTvdbID holds the string denoting the tvdb_id field in the database.
 	FieldTvdbID = "tvdb_id"
+	// FieldTmdbID holds the string denoting the tmdb_id field in the database.
+	FieldTmdbID = "tmdb_id"
+	// FieldImdbID holds the string denoting the imdb_id field in the database.
+	FieldImdbID = "imdb_id"
+	// FieldWikidataID holds the string denoting the wikidata_id field in the database.
+	FieldWikidataID = "wikidata_id"
 	// FieldPosterPath holds the string denoting the poster_path field in the database.
 	FieldPosterPath = "poster_path"
 	// FieldNetwork holds the string denoting the network field in the database.
@@ -100,6 +106,9 @@ var Columns = []string{
 	FieldType,
 	FieldMonitored,
 	FieldTvdbID,
+	FieldTmdbID,
+	FieldImdbID,
+	FieldWikidataID,
 	FieldPosterPath,
 	FieldNetwork,
 	FieldCreator,
@@ -252,6 +261,21 @@ func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
 // ByTvdbID orders the results by the tvdb_id field.
 func ByTvdbID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTvdbID, opts...).ToFunc()
+}
+
+// ByTmdbID orders the results by the tmdb_id field.
+func ByTmdbID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTmdbID, opts...).ToFunc()
+}
+
+// ByImdbID orders the results by the imdb_id field.
+func ByImdbID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldImdbID, opts...).ToFunc()
+}
+
+// ByWikidataID orders the results by the wikidata_id field.
+func ByWikidataID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWikidataID, opts...).ToFunc()
 }
 
 // ByPosterPath orders the results by the poster_path field.

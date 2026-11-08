@@ -1286,6 +1286,8 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "importing", "available", "failed"}, Default: "wanted"},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "tmdb_id", Type: field.TypeUint32, Unique: true},
+		{Name: "imdb_id", Type: field.TypeString, Nullable: true},
+		{Name: "wikidata_id", Type: field.TypeString, Nullable: true},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
 		{Name: "release_date", Type: field.TypeTime, Nullable: true},
 		{Name: "digital_release_date", Type: field.TypeTime, Nullable: true},
@@ -1306,7 +1308,7 @@ var (
 			{
 				Name:    "movie_digital_release_date",
 				Unique:  false,
-				Columns: []*schema.Column{MoviesColumns[13]},
+				Columns: []*schema.Column{MoviesColumns[15]},
 			},
 			{
 				Name:    "movie_status",
@@ -1796,6 +1798,9 @@ var (
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"standard", "anime", "daily"}, Default: "standard"},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "tvdb_id", Type: field.TypeUint32, Unique: true},
+		{Name: "tmdb_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "imdb_id", Type: field.TypeString, Nullable: true},
+		{Name: "wikidata_id", Type: field.TypeString, Nullable: true},
 		{Name: "poster_path", Type: field.TypeString, Nullable: true},
 		{Name: "network", Type: field.TypeString, Nullable: true},
 		{Name: "creator", Type: field.TypeString, Nullable: true},

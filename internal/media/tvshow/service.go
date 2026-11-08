@@ -170,6 +170,7 @@ func (s *Service) Add(
 		QualityProfile: qualityProfile,
 		Seasons:        seedSeasons(d),
 		FirstAired:     metadata.ParseISODate(d.FirstAired),
+		ExternalIDs:    showExternalIDs(d),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create tv show: %w", err)
@@ -999,6 +1000,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		Aliases:       d.Aliases,
 		Cast:          cast,
 		FirstAired:    metadata.ParseISODate(d.FirstAired),
+		ExternalIDs:   showExternalIDs(d),
 	}); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
@@ -1135,6 +1137,7 @@ func (s *Service) Reidentify(
 		Aliases:       d.Aliases,
 		Cast:          cast,
 		FirstAired:    metadata.ParseISODate(d.FirstAired),
+		ExternalIDs:   showExternalIDs(d),
 	}); err != nil {
 		return nil, nil, otelx.RecordSpanError(span, err)
 	}
@@ -1403,4 +1406,12 @@ type Counts struct {
 	// badge and the dashboard read them, and neither knows the list's state.
 	WantedEpisodes      int
 	DownloadingEpisodes int
+}
+
+func showExternalIDs(d *metadata.TVDetails) db.TVShowExternalIDs {
+	return db.TVShowExternalIDs{
+		TMDBID:     d.TMDBID,
+		IMDbID:     d.IMDbID,
+		WikidataID: d.WikidataID,
+	}
 }

@@ -30,6 +30,8 @@
 	import { listHref, SERIES_SEARCH } from "@lib/prefs";
 	import { formatDate } from "@lib/dates";
 	import Poster from "@components/shared/Poster.svelte";
+	import ExternalLinks from "@components/shared/ExternalLinks.svelte";
+	import { imdbTitleUrl, seriesLinks, tmdbUrl, tvdbSeriesUrl, wikidataUrl } from "@lib/external-links";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
 	import Select from "@components/forms/Select.svelte";
@@ -632,6 +634,8 @@
 					</p>
 				{/if}
 
+				<ExternalLinks links={seriesLinks(show)} class="mt-4" />
+
 				<!-- The bar keeps the rollups' scope, what the library follows or
 				     holds. The line also names the missing episodes, aired ones that
 				     nobody monitors and nobody has, which the bar leaves out. -->
@@ -871,18 +875,16 @@
 								<dt class="text-fg-subtle">{i18n.detail_runtime()}</dt>
 								<dd class="text-right font-mono text-fg">{show.runtime}m</dd>
 							{/if}
-							<dt class="text-fg-subtle">TVDB</dt>
-							<dd class="text-right">
-								<a
-									href="https://www.thetvdb.com/dereferrer/series/{show.tvdb_id}"
-									target="_blank"
-									rel="noopener noreferrer"
-									class="inline-flex items-center gap-1 font-mono text-accent-text transition hover:text-accent"
-								>
-									{show.tvdb_id}
-									<ExternalLink size={11} aria-hidden="true" />
-								</a>
-							</dd>
+							{@render idRow("TVDB", String(show.tvdb_id), tvdbSeriesUrl(show.tvdb_id))}
+							{#if show.tmdb_id}
+								{@render idRow("TMDB", String(show.tmdb_id), tmdbUrl("tv", show.tmdb_id))}
+							{/if}
+							{#if show.imdb_id}
+								{@render idRow("IMDb", show.imdb_id, imdbTitleUrl(show.imdb_id))}
+							{/if}
+							{#if show.wikidata_id}
+								{@render idRow("Wikidata", show.wikidata_id, wikidataUrl(show.wikidata_id))}
+							{/if}
 						</dl>
 					</section>
 				</aside>
@@ -1145,6 +1147,21 @@
 		</Checkbox>
 	</Dialog>
 {/if}
+
+{#snippet idRow(label: string, value: string, href: string)}
+	<dt class="text-fg-subtle">{label}</dt>
+	<dd class="text-right">
+		<a
+			{href}
+			target="_blank"
+			rel="noopener noreferrer"
+			class="inline-flex items-center gap-1 font-mono text-accent-text transition hover:text-accent"
+		>
+			{value}
+			<ExternalLink size={11} aria-hidden="true" />
+		</a>
+	</dd>
+{/snippet}
 
 <style>
 	.hero-overlay {

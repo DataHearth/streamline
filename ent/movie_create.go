@@ -132,6 +132,34 @@ func (_c *MovieCreate) SetTmdbID(v uint32) *MovieCreate {
 	return _c
 }
 
+// SetImdbID sets the "imdb_id" field.
+func (_c *MovieCreate) SetImdbID(v string) *MovieCreate {
+	_c.mutation.SetImdbID(v)
+	return _c
+}
+
+// SetNillableImdbID sets the "imdb_id" field if the given value is not nil.
+func (_c *MovieCreate) SetNillableImdbID(v *string) *MovieCreate {
+	if v != nil {
+		_c.SetImdbID(*v)
+	}
+	return _c
+}
+
+// SetWikidataID sets the "wikidata_id" field.
+func (_c *MovieCreate) SetWikidataID(v string) *MovieCreate {
+	_c.mutation.SetWikidataID(v)
+	return _c
+}
+
+// SetNillableWikidataID sets the "wikidata_id" field if the given value is not nil.
+func (_c *MovieCreate) SetNillableWikidataID(v *string) *MovieCreate {
+	if v != nil {
+		_c.SetWikidataID(*v)
+	}
+	return _c
+}
+
 // SetLastSearchAt sets the "last_search_at" field.
 func (_c *MovieCreate) SetLastSearchAt(v time.Time) *MovieCreate {
 	_c.mutation.SetLastSearchAt(v)
@@ -502,6 +530,14 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TmdbID(); ok {
 		_spec.SetField(movie.FieldTmdbID, field.TypeUint32, value)
 		_node.TmdbID = value
+	}
+	if value, ok := _c.mutation.ImdbID(); ok {
+		_spec.SetField(movie.FieldImdbID, field.TypeString, value)
+		_node.ImdbID = value
+	}
+	if value, ok := _c.mutation.WikidataID(); ok {
+		_spec.SetField(movie.FieldWikidataID, field.TypeString, value)
+		_node.WikidataID = value
 	}
 	if value, ok := _c.mutation.LastSearchAt(); ok {
 		_spec.SetField(movie.FieldLastSearchAt, field.TypeTime, value)
