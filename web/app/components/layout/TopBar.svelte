@@ -20,10 +20,9 @@
 	import { pageTitle } from "@lib/page-title.svelte";
 	import { selectionHeader } from "@lib/selection-header.svelte";
 	import { cn } from "@lib/cn";
-	import SearchField from "@components/layout/SearchField.svelte";
 	import type { SystemInfo } from "@lib/types";
 	import { toast } from "@lib/toast";
-	import { modKey } from "@lib/platform";
+	import { isApple, modKey } from "@lib/platform";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Routify's `activeRoute` only emits once a navigation has resolved, so
@@ -148,6 +147,11 @@
 		down: i18n.lc_down(),
 	};
 	let healthLabel = $derived(HEALTH_LABELS[health]);
+
+	// Shared by the search bar's two forms (link and palette button); each adds
+	// the display that shows it for its pointer.
+	const searchBarClass =
+		"hidden h-10 w-full max-w-[540px] flex-1 shrink-0 items-center gap-2.5 rounded-md border border-border bg-surface px-3.5 text-left text-[13px] text-fg-subtle transition hover:border-border-strong hover:bg-surface-2 hover:text-fg-muted";
 
 	function openPalette() {
 		window.dispatchEvent(new CustomEvent("streamline:open-palette"));
@@ -371,16 +375,33 @@
 		</div>
 	</div>
 
+	<!-- From md the search bar is two controls, one per pointer, picked by the
+	     same `pointer-fine` media query that decides whether routes/search.svelte
+	     draws inline or full-screen, so the two can never disagree. A touch
+	     screen gets a link to the search page, whose field sits above the
+	     on-screen keyboard (on a landscape tablet the keyboard covers most of
+	     the palette's box); a mouse or trackpad gets the palette. -->
+	{#snippet searchBarLabel()}
+		<Search size={14} aria-hidden="true" />
+		<span class="flex-1 truncate">{i18n.search_field_placeholder()}</span>
+	{/snippet}
+	<!-- No aria-label on either: the visible text is the name (WCAG 2.5.3). -->
+	<a
+		href="/search"
+		class="{hideForSelection} {searchBarClass} md:not-pointer-fine:flex"
+	>
+		{@render searchBarLabel()}
+	</a>
 	<button
 		type="button"
 		onclick={openPalette}
-		aria-label={i18n.palette_open()}
-		class="{hideForSelection} hidden h-10 w-full max-w-[540px] flex-1 shrink-0 items-center gap-2.5 rounded-md border border-border bg-surface px-3.5 text-left text-[13px] text-fg-subtle transition hover:border-border-strong hover:bg-surface-2 hover:text-fg-muted lg:flex"
+		aria-keyshortcuts={isApple ? "Meta+K" : "Control+K"}
+		class="{hideForSelection} {searchBarClass} md:pointer-fine:flex"
 	>
-		<Search size={14} aria-hidden="true" />
-		<span class="flex-1 truncate">{i18n.search_field_placeholder()}</span>
+		{@render searchBarLabel()}
 		<kbd
-			class="rounded border border-border bg-surface px-1.5 py-px font-mono text-[10.5px] text-fg-faint"
+			aria-hidden="true"
+			class="hidden rounded border border-border bg-surface px-1.5 py-px font-mono text-[10.5px] text-fg-faint lg:inline"
 		>
 			{modKey} K
 		</kbd>
@@ -389,7 +410,6 @@
 	<!-- flex-none below lg: on a phone this group holds one 44px icon button, and
 	     a flex-1 here took half the header from the breadcrumbs. -->
 	<div class={cn("flex flex-none items-center justify-end gap-2 lg:flex-1", hideForSelection)}>
-		<SearchField />
 		<!-- A link, not the palette: below md search is a page of its own, so
 		     Back closes it (routes/search.svelte). -->
 		<a

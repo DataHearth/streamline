@@ -151,7 +151,7 @@ From the **Episodes** tab, the season header has its own **Search season** butto
 
 Every name in a title's **Cast** tab is a link. Click one and you get that person's page: every movie and series in *your* library they are credited on, each poster labelled with the character they play there.
 
-Cast members also show up in search — the command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>), the phone search screen and the tablet search panel all list matching people under the title hits, with the number of library titles each appears in.
+Cast members also show up in search — the command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>, or the search bar at the top of the page with a mouse) and the search page on phones and tablets both list matching people under the title hits, with the number of library titles each appears in.
 
 The same search finds episodes by their title, each with its show and SxxExx code: picking one opens the series on that episode's season with its details sheet open. It also finds artists, albums and books (see [Music and Books](Music-and-Books#finding-an-artist-an-album-or-a-book)), and an admin can type the name of a settings section, such as *indexers* or *quality profiles*, to jump straight to it.
 

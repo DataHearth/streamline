@@ -12,16 +12,20 @@
 	} from "@lib/search-model.svelte";
 	import { onRouteQuery } from "@lib/route-query";
 	import { restoreScrollOnBack } from "@lib/scroll-restore";
+	import { isPaletteShortcut } from "@lib/platform";
 	import SearchResultRow from "@components/layout/SearchResultRow.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// The phone's search, a page of its own: the top bar's search button links
-	// here below md, where the command palette has no room. It used to be a
-	// screen AppShell drew over the current page, which put nothing in history
-	// — Back left the page underneath and the search stayed on top of the next
-	// one (#140). As a route, Back and Cancel return to the page it was opened
-	// from (AppShell restores its scroll position), and the typed query is in
-	// the URL, so Back from a picked result lands on the same results.
+	// The phone's and the tablet's search, a page of its own: the top bar's
+	// search button links here below md, where the command palette has no
+	// room, and so does its search bar on a touch screen at any width. On a
+	// touch screen it covers the whole screen; opened with a mouse from md, it
+	// renders inline under the top bar. It used to be a screen AppShell drew
+	// over the current page, which put nothing in history — Back left the page
+	// underneath and the search stayed on top of the next one (#140). As a
+	// route, Back and Cancel return to the page it was opened from (AppShell
+	// restores its scroll position), and the typed query is in the URL, so
+	// Back from a picked result lands on the same results.
 	//
 	// A screen rather than a centred dialog: the keyboard takes roughly half a
 	// phone, which leaves a 640px box nowhere to sit. The field goes where the
@@ -30,6 +34,7 @@
 	let query = $state("");
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let listEl = $state<HTMLDivElement | null>(null);
+	let rootEl = $state<HTMLDivElement | null>(null);
 
 	const model = createSearchModel(() => query, { compact: true });
 	const navigateTo = searchNav();
@@ -48,7 +53,15 @@
 		| null = null;
 	onMount(() => goto.subscribe((fn) => (navigate = fn)));
 
+	// Set once the page is on its way out: a second Escape, or Escape after
+	// Cancel or an action, would otherwise go back a second entry before
+	// Routify unmounts the page.
+	let leaving = false;
+	let pendingEscape = 0;
+
 	function leave() {
+		if (leaving) return;
+		leaving = true;
 		if (fromApp) window.history.back();
 		else navigate?.("/", {}, { mode: "replace" });
 	}
@@ -110,22 +123,58 @@
 
 	onMount(() => {
 		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") leave();
+			const shortcut = isPaletteShortcut(e);
+			// An Escape that cancels an IME conversion is the field's; Safari
+			// can report one with isComposing false but keyCode 229.
+			const escape = e.key === "Escape" && !e.isComposing && e.keyCode !== 229;
+			if (!shortcut && !escape) return;
+			// A modal layer over this page (the palette's <dialog>, an
+			// aria-modal Modal such as the add flow, a sheet) owns the keyboard:
+			// its Escape closes it and the page stays. The Modal's
+			// stopPropagation runs in Svelte's delegated listener on this same
+			// document node, so it cannot keep this listener from running.
+			// `dialog[open]`, not `:modal`, which throws where unsupported: the
+			// palette is the app's only <dialog> and always opens modally.
+			if (document.querySelector('dialog[open], [aria-modal="true"]')) return;
+			// Ctrl/⌘+K here is this page's own field, not a second search box
+			// over it: the palette's window listener runs after this one and
+			// skips a prevented shortcut.
+			if (shortcut) {
+				e.preventDefault();
+				inputEl?.focus();
+				return;
+			}
+			// Only an Escape from this page, and one nothing else claimed, leaves
+			// it. A menu over the page (the top bar's add menu, a DropdownMenu)
+			// closes on Escape from a document listener added after this one and
+			// prevents it, so the decision waits for the dispatch to finish;
+			// the target check covers a control that claims it without
+			// preventing.
+			const from = e.target as Node | null;
+			if (from !== document.body && !(from && rootEl?.contains(from))) return;
+			window.clearTimeout(pendingEscape);
+			pendingEscape = window.setTimeout(() => {
+				if (!e.defaultPrevented) leave();
+			});
 		};
 		document.addEventListener("keydown", onKey);
-		return () => document.removeEventListener("keydown", onKey);
+		return () => {
+			document.removeEventListener("keydown", onKey);
+			window.clearTimeout(pendingEscape);
+		};
 	});
 </script>
 
 <div
+	bind:this={rootEl}
 	role="search"
 	aria-label={i18n.common_search()}
 	in:fly={{ y: 16, duration: 200, easing: cubicOut }}
-	class="fixed inset-0 z-50 flex flex-col bg-bg-deep md:static md:z-auto md:min-h-[60dvh]"
+	class="fixed inset-0 z-50 flex flex-col bg-bg-deep md:pointer-fine:static md:pointer-fine:z-auto md:pointer-fine:min-h-[60dvh]"
 >
 	<form
 		onsubmit={onSubmit}
-		class="flex flex-none items-center gap-3 px-4 pb-2.5 pt-[max(env(safe-area-inset-top),10px)]"
+		class="flex w-full flex-none items-center gap-3 px-4 pb-2.5 pt-[max(env(safe-area-inset-top),10px)] md:mx-auto md:max-w-2xl"
 	>
 		<div
 			class="search-box flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-border-strong bg-surface px-3"
@@ -182,30 +231,35 @@
 		bind:this={listEl}
 		class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 pb-[max(env(safe-area-inset-bottom),16px)]"
 	>
-		{#each model.sections as section (section.id)}
-			<div
-				class="flex items-baseline justify-between px-3 pb-1 pt-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
-			>
-				<span>{section.label}</span>
-			</div>
-			{#each section.items as item, i (item.kind + "-" + i)}
-				<SearchResultRow {item} onpick={pick} />
+		<!-- The column is centred inside the scroller rather than the scroller
+		     narrowed to it, so a swipe in the margins of a wide screen still
+		     scrolls the results. -->
+		<div class="md:mx-auto md:max-w-2xl">
+			{#each model.sections as section (section.id)}
+				<div
+					class="flex items-baseline justify-between px-3 pb-1 pt-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
+				>
+					<span>{section.label}</span>
+				</div>
+				{#each section.items as item, i (item.kind + "-" + i)}
+					<SearchResultRow {item} onpick={pick} />
+				{/each}
 			{/each}
-		{/each}
 
-		{#if model.flat.length === 0}
-			<div role="status" class="flex flex-col items-center gap-2.5 px-6 py-14 text-center">
-				{#if model.pending}
-					<LoaderCircle size={26} class="animate-spin text-fg-faint" aria-hidden="true" />
-					<p class="text-[13.5px] text-fg-subtle">{i18n.common_searching()}</p>
-				{:else}
-					<SearchX size={26} class="text-fg-faint" aria-hidden="true" />
-					<p class="text-[13.5px] text-fg-subtle">
-						{i18n.search_no_matches_for({ query: query.trim() })}
-					</p>
-				{/if}
-			</div>
-		{/if}
+			{#if model.flat.length === 0}
+				<div role="status" class="flex flex-col items-center gap-2.5 px-6 py-14 text-center">
+					{#if model.pending}
+						<LoaderCircle size={26} class="animate-spin text-fg-faint" aria-hidden="true" />
+						<p class="text-[13.5px] text-fg-subtle">{i18n.common_searching()}</p>
+					{:else}
+						<SearchX size={26} class="text-fg-faint" aria-hidden="true" />
+						<p class="text-[13.5px] text-fg-subtle">
+							{i18n.search_no_matches_for({ query: query.trim() })}
+						</p>
+					{/if}
+				</div>
+			{/if}
+		</div>
 	</div>
 </div>
 

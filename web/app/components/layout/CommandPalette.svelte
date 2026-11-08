@@ -2,6 +2,7 @@
 	import { onMount, tick } from "svelte";
 	import { Search, Film, Tv, ArrowRight, Music, BookOpen, LoaderCircle } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
+	import { isPaletteShortcut } from "@lib/platform";
 	import { initials } from "@lib/people";
 	import { posterUrl, tvPosterUrl } from "@lib/posters";
 	import Poster from "@components/shared/Poster.svelte";
@@ -24,9 +25,9 @@
 	let dialogEl = $state<HTMLDialogElement | null>(null);
 	let prevFocus: HTMLElement | null = null;
 
-	// The list itself lives in lib/search-model: the phone screen and the tablet
-	// panel show the same items, ordered for touch. Here it keeps the palette's
-	// order — pages and actions first, titles under them.
+	// The list itself lives in lib/search-model: the search page shows the same
+	// items, ordered for touch. Here it keeps the palette's order — pages and
+	// actions first, titles under them.
 	const model = createSearchModel(() => query, {});
 	const navigateTo = searchNav();
 	let sections = $derived(model.sections);
@@ -39,6 +40,12 @@
 		return before + itemIdx;
 	}
 
+	// Opened from the top bar with a fine pointer only (a touch screen's search
+	// bar links to /search instead, see TopBar), and by Ctrl/⌘+K on any
+	// pointer: a shortcut means a hardware keyboard, so no on-screen keyboard
+	// rises over this box, and as a top-layer dialog it opens over the add
+	// flow without the route change that would close it. On /search the page
+	// takes the shortcut for its own field first (onKeydown skips it).
 	async function show() {
 		if (open) return;
 		prevFocus = document.activeElement as HTMLElement | null;
@@ -103,7 +110,9 @@
 
 	function onKeydown(e: KeyboardEvent) {
 		if (!open) {
-			if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
+			if (isPaletteShortcut(e)) {
+				// Taken by the page: /search focuses its own field instead.
+				if (e.defaultPrevented) return;
 				const active = document.activeElement as HTMLElement | null;
 				const isInField =
 					active &&

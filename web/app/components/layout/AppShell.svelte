@@ -22,7 +22,9 @@
 	let addBookOpen = $state(false);
 	// Below md the add/request flow is a full-screen search rather than the split
 	// modal, and search itself is a page (/search) rather than the centred
-	// palette — different components, not something CSS can pick.
+	// palette — different components, not something CSS can pick. From md the
+	// palette is mounted for a mouse's search bar and for Ctrl/⌘+K on any
+	// pointer; a touch screen's search bar is a link to /search (TopBar).
 	let compact = $state(false);
 	let main = $state<HTMLElement | null>(null);
 
