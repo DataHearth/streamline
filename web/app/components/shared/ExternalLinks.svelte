@@ -1,9 +1,6 @@
 <script lang="ts">
-	// The hero's row of outbound links (lib/external-links.ts), one group after
-	// another with a hairline between: the databases that know the title by
-	// id, where to play or buy it, then the review sites. A search
-	// link carries a magnifier instead of the arrow, so a tap that opens a
-	// results page rather than the title's own is not a surprise.
+	// Outbound links (lib/external-links.ts) in groups, a hairline between;
+	// a search link shows a magnifier.
 	import { ExternalLink as ExternalLinkIcon, Search } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { LINK_GROUPS, type ExternalLink } from "@lib/external-links";

@@ -13,19 +13,14 @@ import (
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
-// hcEditionLinksBatch is how many editions one links request reads: as many
-// as fit, since every request counts against the day's budget. Each edition
-// answers at most hcLinksPerPlatform rows per platform (Audible more, one per
-// region), and most carry a handful, so a batch stays a few hundred rows.
+// One request reads hcEditionLinksBatch editions, each platform capped per edition.
 const (
 	hcEditionLinksBatch = 100
-	hcLinksPerPlatform  = 5
+	hcLinksPerPlatform  = 10
 	hcAudibleRegions    = 12
 )
 
-// Hardcover's platform ids (the platforms table) for the sites the library
-// links: an edition's book_mappings rows carry one of them. Read from the
-// live API; the names are Hardcover's own.
+// Hardcover's platforms table ids.
 const (
 	hcPlatformGoodreads   = 1
 	hcPlatformOpenLibrary = 3
@@ -34,13 +29,8 @@ const (
 	hcPlatformAudible     = 32
 )
 
-// hcEditionLinksQuery reads the external ids of a few editions, never of a
-// whole book: a popular book has hundreds of editions, and the library links
-// only the ones its slots follow. Each platform is its own alias with its own
-// limit, so one with many rows (1984's paperback lists eight Goodreads ids)
-// cannot crowd out the others. Depth 2 (editions > book_mappings), the
-// platform by id rather than through its relation. A mapping Hardcover could
-// not load (state cannot_load) is no evidence of anything and is left out.
+// hcEditionLinksQuery reads a few editions' mappings, one aliased, capped
+// list per platform so none crowds out another; depth 2, normalized only.
 var hcEditionLinksQuery = func() string {
 	alias := func(name string, platform, limit int) string {
 		return fmt.Sprintf(`
@@ -84,10 +74,8 @@ var (
 	audibleRe       = regexp.MustCompile(`^([A-Z0-9]{10}):([a-z]{2})$`)
 )
 
-// EditionLinks reads the other sites' ids Hardcover keeps for each edition,
-// keyed by Hardcover edition id; an edition Hardcover does not know is
-// absent, and one it knows with no usable mapping maps to an empty map. One
-// request per hcEditionLinksBatch editions.
+// EditionLinks reads the mappings of the given editions, keyed by Hardcover
+// edition id; an unknown edition is absent.
 func (h *Hardcover) EditionLinks(
 	ctx context.Context,
 	editionIDs []uint32,
@@ -115,11 +103,8 @@ func (h *Hardcover) EditionLinks(
 	return out, nil
 }
 
-// links keeps one id per site: a verified mapping over an unverified one,
-// then the oldest (the query orders by id), and only a value in the shape its
-// site uses. Hardcover stores other things in external_id (a StoryGraph
-// title-author string, an AbeBooks image URL, an Open Library work path), and
-// a link built from one of those lands nowhere.
+// links keeps one well-formed id per site, a verified one first. Hardcover
+// also stores StoryGraph strings, image URLs and OL works there.
 func (r hcEditionLinksRow) links(lang string) map[string]string {
 	out := map[string]string{}
 	pick := func(source string, rows []hcMapping, norm func(string) string) {
@@ -162,11 +147,8 @@ func (r hcEditionLinksRow) links(lang string) map[string]string {
 	return out
 }
 
-// audibleFor picks the Audible store a link opens: Hardcover keeps one
-// mapping per region ("B0FXY6DVJS:us", ":fr", ":de"…), often with a different
-// ASIN in each. The library's book language's own store comes first, then the
-// US one, then the first listed. The value stays "ASIN:region", from which
-// the client builds the store's address.
+// audibleFor picks one "ASIN:region" mapping: the book language's store,
+// else the US one, else the first.
 func audibleFor(rows []hcMapping, lang string) string {
 	want := audibleRegionFor(lang)
 	byRegion := map[string]string{}
@@ -192,8 +174,7 @@ func audibleFor(rows []hcMapping, lang string) string {
 	return first
 }
 
-// audibleRegionFor maps an ISO 639-1 language to the Audible store that sells
-// in it; English is the US store.
+// audibleRegionFor maps an ISO 639-1 language to its Audible store.
 func audibleRegionFor(lang string) string {
 	switch lang {
 	case "en":

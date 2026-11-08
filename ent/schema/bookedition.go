@@ -38,9 +38,7 @@ func (BookEdition) Fields() []ent.Field {
 		field.String("translator").Optional(),
 		field.String("isbn_13").Optional(),
 		field.String("asin").Optional(),
-		// links_fetched_at stamps the last read of the edition's other sites'
-		// ids (external_ids). Only an edition a slot follows is ever read, so
-		// NULL on one of those is the links backfill's work list.
+		// links_fetched_at NULL is the links backfill's work list.
 		field.Time("links_fetched_at").Optional().Nillable(),
 		field.Uint32("popularity").Default(0).
 			Comment("Hardcover users_count; ranks winners."),

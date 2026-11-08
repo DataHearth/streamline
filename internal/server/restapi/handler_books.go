@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/datahearth/streamline/internal/auth"
-	"github.com/datahearth/streamline/internal/db"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
@@ -392,17 +391,11 @@ func (s *Server) GetBook(
 	}
 	progress := s.books.Progress(ctx, []uint32{row.ID})[row.ID]
 	out := toAPIBook(row, progress)
-	editionIDs := make([]uint32, 0, len(row.Edges.Editions))
-	for _, e := range row.Edges.Editions {
-		editionIDs = append(editionIDs, e.ID)
-	}
-	links, err := s.store.ExternalIDsFor(ctx, db.ExternalIDsOfBookEdition, editionIDs)
-	if err != nil {
+	if err := s.attachEditionLinks(ctx, &out, row); err != nil {
 		return GetBook500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
-	withEditionLinks(&out, row, links)
 	if claims := auth.ClaimsFromContext(ctx); claims != nil {
 		state := s.books.SendState(ctx, claims.UserID, row)
 		out.EbookSend = &BookSendState{Ok: state.OK, Reason: optString(state.Reason)}
@@ -465,7 +458,9 @@ func (s *Server) PatchBook(
 	}
 	progress := s.books.Progress(ctx, []uint32{row.ID})[row.ID]
 	return PatchBook200JSONResponse{
-		BookDetailJSONResponse: BookDetailJSONResponse(toAPIBook(row, progress)),
+		BookDetailJSONResponse: BookDetailJSONResponse(
+			s.bookAfterWrite(ctx, row, progress),
+		),
 	}, nil
 }
 
@@ -596,7 +591,9 @@ func (s *Server) RefreshBook(
 	}
 	progress := s.books.Progress(ctx, []uint32{row.ID})[row.ID]
 	return RefreshBook200JSONResponse{
-		BookDetailJSONResponse: BookDetailJSONResponse(toAPIBook(row, progress)),
+		BookDetailJSONResponse: BookDetailJSONResponse(
+			s.bookAfterWrite(ctx, row, progress),
+		),
 	}, nil
 }
 

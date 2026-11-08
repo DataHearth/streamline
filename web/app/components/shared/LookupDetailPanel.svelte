@@ -3,6 +3,7 @@
 	import DetailCast from "./DetailCast.svelte";
 	import type { LookupDetail } from "@lib/types";
 	import { formatDate } from "@lib/dates";
+	import { imdbTitleUrl, tmdbUrl, tvdbSeriesUrl } from "@lib/external-links";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import Img from "@components/shared/Img.svelte";
 
@@ -107,19 +108,19 @@
 			out.push({
 				label: "TMDB",
 				value: `${detail.tmdb_id}`,
-				href: `https://www.themoviedb.org/${kind === "movie" ? "movie" : "tv"}/${detail.tmdb_id}`,
+				href: tmdbUrl(kind === "movie" ? "movie" : "tv", detail.tmdb_id),
 			});
 		}
 		if (detail.tvdb_id) {
 			out.push({
 				label: "TVDB",
 				value: `${detail.tvdb_id}`,
-				href: `https://www.thetvdb.com/dereferrer/series/${detail.tvdb_id}`,
+				href: tvdbSeriesUrl(detail.tvdb_id),
 			});
 		}
 		const imdb = detail.external_ids?.imdb;
 		if (imdb) {
-			out.push({ label: "IMDb", value: imdb, href: `https://www.imdb.com/title/${imdb}/` });
+			out.push({ label: "IMDb", value: imdb, href: imdbTitleUrl(imdb) });
 		}
 		return out;
 	});
