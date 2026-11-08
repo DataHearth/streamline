@@ -315,6 +315,68 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 			Expect(cast).To(HaveLen(1))
 			Expect(cast[0].Name).To(Equal("Ana Vidal"))
 		})
+
+		It(
+			"keeps the stored rating when the refresh carries none, writes one it does",
+			func() {
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "X", Year: 2020, TvdbID: 12,
+					Rating: 8.9, VoteCount: 15000, TmdbID: 1396,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(
+					store.UpdateTVShowMetadata(
+						ctx,
+						show.ID,
+						UpdateTVShowMetadataParams{
+							Title: "X", Year: 2020,
+						},
+					),
+				).To(Succeed())
+				got, err := store.FindTVShowByID(ctx, show.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Rating).To(Equal(8.9))
+				Expect(got.VoteCount).To(Equal(uint32(15000)))
+				Expect(got.TmdbID).To(Equal(uint32(1396)))
+
+				Expect(
+					store.UpdateTVShowMetadata(
+						ctx,
+						show.ID,
+						UpdateTVShowMetadataParams{
+							Title: "X",
+							Year:  2020,
+							Rating: &TVShowRating{
+								Rating:    9.1,
+								VoteCount: 16000,
+								TmdbID:    1396,
+							},
+						},
+					),
+				).To(Succeed())
+				got, err = store.FindTVShowByID(ctx, show.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Rating).To(Equal(9.1))
+				Expect(got.VoteCount).To(Equal(uint32(16000)))
+
+				// TMDB answered that it knows no such show: the rating goes.
+				Expect(
+					store.UpdateTVShowMetadata(
+						ctx,
+						show.ID,
+						UpdateTVShowMetadataParams{
+							Title: "X", Year: 2020, Rating: &TVShowRating{},
+						},
+					),
+				).To(Succeed())
+				got, err = store.FindTVShowByID(ctx, show.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Rating).To(BeZero())
+				Expect(got.VoteCount).To(BeZero())
+				Expect(got.TmdbID).To(BeZero())
+			},
+		)
 	})
 
 	Describe("ListTVShowsStaleSince", func() {

@@ -1,4 +1,6 @@
 import type { StatusKind } from "@components/shared/StatusPill.svelte";
+import { m as i18n } from "./paraglide/messages.js";
+import { getLocale } from "./paraglide/runtime.js";
 
 // formatBytes renders a byte count as a compact human string ("4.1 GB").
 // Defaults to an em dash when unknown so table columns stay aligned; callers
@@ -76,4 +78,30 @@ export function pillStatus(
 		default:
 			return "downloading";
 	}
+}
+
+// formatVotes renders a vote count compactly in the UI language ("15K votes",
+// "1,2 k votes"); empty when unknown.
+export function formatVotes(votes: number | undefined | null): string {
+	if (!votes || votes <= 0) return "";
+	const count = new Intl.NumberFormat(getLocale(), {
+		notation: "compact",
+		maximumFractionDigits: 1,
+	}).format(votes);
+	return votes === 1
+		? i18n.rating_votes_one({ count })
+		: i18n.rating_votes_other({ count });
+}
+
+// formatRating renders a 0–10 TMDB rating with the votes behind it
+// ("★ 8.9 (15K votes)"), so a 10.0 from one vote reads as what it is. Empty
+// when unrated; the votes are left off when the count is unknown (a movie
+// not refreshed since counts were first recorded).
+export function formatRating(
+	rating: number | undefined | null,
+	votes?: number | null,
+): string {
+	if (!rating || rating <= 0) return "";
+	const v = formatVotes(votes);
+	return v ? `★ ${rating.toFixed(1)} (${v})` : `★ ${rating.toFixed(1)}`;
 }

@@ -230,6 +230,20 @@ func (_c *MovieCreate) SetNillableRating(v *float64) *MovieCreate {
 	return _c
 }
 
+// SetVoteCount sets the "vote_count" field.
+func (_c *MovieCreate) SetVoteCount(v uint32) *MovieCreate {
+	_c.mutation.SetVoteCount(v)
+	return _c
+}
+
+// SetNillableVoteCount sets the "vote_count" field if the given value is not nil.
+func (_c *MovieCreate) SetNillableVoteCount(v *uint32) *MovieCreate {
+	if v != nil {
+		_c.SetVoteCount(*v)
+	}
+	return _c
+}
+
 // SetGenres sets the "genres" field.
 func (_c *MovieCreate) SetGenres(v []string) *MovieCreate {
 	_c.mutation.SetGenres(v)
@@ -385,6 +399,10 @@ func (_c *MovieCreate) defaults() {
 		v := movie.DefaultRating
 		_c.mutation.SetRating(v)
 	}
+	if _, ok := _c.mutation.VoteCount(); !ok {
+		v := movie.DefaultVoteCount
+		_c.mutation.SetVoteCount(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -530,6 +548,10 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Rating(); ok {
 		_spec.SetField(movie.FieldRating, field.TypeFloat64, value)
 		_node.Rating = value
+	}
+	if value, ok := _c.mutation.VoteCount(); ok {
+		_spec.SetField(movie.FieldVoteCount, field.TypeUint32, value)
+		_node.VoteCount = value
 	}
 	if value, ok := _c.mutation.Genres(); ok {
 		_spec.SetField(movie.FieldGenres, field.TypeJSON, value)

@@ -311,6 +311,60 @@ func (_u *TVShowUpdate) ClearRating() *TVShowUpdate {
 	return _u
 }
 
+// SetVoteCount sets the "vote_count" field.
+func (_u *TVShowUpdate) SetVoteCount(v uint32) *TVShowUpdate {
+	_u.mutation.ResetVoteCount()
+	_u.mutation.SetVoteCount(v)
+	return _u
+}
+
+// SetNillableVoteCount sets the "vote_count" field if the given value is not nil.
+func (_u *TVShowUpdate) SetNillableVoteCount(v *uint32) *TVShowUpdate {
+	if v != nil {
+		_u.SetVoteCount(*v)
+	}
+	return _u
+}
+
+// AddVoteCount adds value to the "vote_count" field.
+func (_u *TVShowUpdate) AddVoteCount(v int32) *TVShowUpdate {
+	_u.mutation.AddVoteCount(v)
+	return _u
+}
+
+// ClearVoteCount clears the value of the "vote_count" field.
+func (_u *TVShowUpdate) ClearVoteCount() *TVShowUpdate {
+	_u.mutation.ClearVoteCount()
+	return _u
+}
+
+// SetTmdbID sets the "tmdb_id" field.
+func (_u *TVShowUpdate) SetTmdbID(v uint32) *TVShowUpdate {
+	_u.mutation.ResetTmdbID()
+	_u.mutation.SetTmdbID(v)
+	return _u
+}
+
+// SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
+func (_u *TVShowUpdate) SetNillableTmdbID(v *uint32) *TVShowUpdate {
+	if v != nil {
+		_u.SetTmdbID(*v)
+	}
+	return _u
+}
+
+// AddTmdbID adds value to the "tmdb_id" field.
+func (_u *TVShowUpdate) AddTmdbID(v int32) *TVShowUpdate {
+	_u.mutation.AddTmdbID(v)
+	return _u
+}
+
+// ClearTmdbID clears the value of the "tmdb_id" field.
+func (_u *TVShowUpdate) ClearTmdbID() *TVShowUpdate {
+	_u.mutation.ClearTmdbID()
+	return _u
+}
+
 // SetGenres sets the "genres" field.
 func (_u *TVShowUpdate) SetGenres(v []string) *TVShowUpdate {
 	_u.mutation.SetGenres(v)
@@ -654,6 +708,24 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.RatingCleared() {
 		_spec.ClearField(tvshow.FieldRating, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.VoteCount(); ok {
+		_spec.SetField(tvshow.FieldVoteCount, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedVoteCount(); ok {
+		_spec.AddField(tvshow.FieldVoteCount, field.TypeUint32, value)
+	}
+	if _u.mutation.VoteCountCleared() {
+		_spec.ClearField(tvshow.FieldVoteCount, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.TmdbID(); ok {
+		_spec.SetField(tvshow.FieldTmdbID, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedTmdbID(); ok {
+		_spec.AddField(tvshow.FieldTmdbID, field.TypeUint32, value)
+	}
+	if _u.mutation.TmdbIDCleared() {
+		_spec.ClearField(tvshow.FieldTmdbID, field.TypeUint32)
 	}
 	if value, ok := _u.mutation.Genres(); ok {
 		_spec.SetField(tvshow.FieldGenres, field.TypeJSON, value)
@@ -1124,6 +1196,60 @@ func (_u *TVShowUpdateOne) ClearRating() *TVShowUpdateOne {
 	return _u
 }
 
+// SetVoteCount sets the "vote_count" field.
+func (_u *TVShowUpdateOne) SetVoteCount(v uint32) *TVShowUpdateOne {
+	_u.mutation.ResetVoteCount()
+	_u.mutation.SetVoteCount(v)
+	return _u
+}
+
+// SetNillableVoteCount sets the "vote_count" field if the given value is not nil.
+func (_u *TVShowUpdateOne) SetNillableVoteCount(v *uint32) *TVShowUpdateOne {
+	if v != nil {
+		_u.SetVoteCount(*v)
+	}
+	return _u
+}
+
+// AddVoteCount adds value to the "vote_count" field.
+func (_u *TVShowUpdateOne) AddVoteCount(v int32) *TVShowUpdateOne {
+	_u.mutation.AddVoteCount(v)
+	return _u
+}
+
+// ClearVoteCount clears the value of the "vote_count" field.
+func (_u *TVShowUpdateOne) ClearVoteCount() *TVShowUpdateOne {
+	_u.mutation.ClearVoteCount()
+	return _u
+}
+
+// SetTmdbID sets the "tmdb_id" field.
+func (_u *TVShowUpdateOne) SetTmdbID(v uint32) *TVShowUpdateOne {
+	_u.mutation.ResetTmdbID()
+	_u.mutation.SetTmdbID(v)
+	return _u
+}
+
+// SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
+func (_u *TVShowUpdateOne) SetNillableTmdbID(v *uint32) *TVShowUpdateOne {
+	if v != nil {
+		_u.SetTmdbID(*v)
+	}
+	return _u
+}
+
+// AddTmdbID adds value to the "tmdb_id" field.
+func (_u *TVShowUpdateOne) AddTmdbID(v int32) *TVShowUpdateOne {
+	_u.mutation.AddTmdbID(v)
+	return _u
+}
+
+// ClearTmdbID clears the value of the "tmdb_id" field.
+func (_u *TVShowUpdateOne) ClearTmdbID() *TVShowUpdateOne {
+	_u.mutation.ClearTmdbID()
+	return _u
+}
+
 // SetGenres sets the "genres" field.
 func (_u *TVShowUpdateOne) SetGenres(v []string) *TVShowUpdateOne {
 	_u.mutation.SetGenres(v)
@@ -1497,6 +1623,24 @@ func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err erro
 	}
 	if _u.mutation.RatingCleared() {
 		_spec.ClearField(tvshow.FieldRating, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.VoteCount(); ok {
+		_spec.SetField(tvshow.FieldVoteCount, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedVoteCount(); ok {
+		_spec.AddField(tvshow.FieldVoteCount, field.TypeUint32, value)
+	}
+	if _u.mutation.VoteCountCleared() {
+		_spec.ClearField(tvshow.FieldVoteCount, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.TmdbID(); ok {
+		_spec.SetField(tvshow.FieldTmdbID, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedTmdbID(); ok {
+		_spec.AddField(tvshow.FieldTmdbID, field.TypeUint32, value)
+	}
+	if _u.mutation.TmdbIDCleared() {
+		_spec.ClearField(tvshow.FieldTmdbID, field.TypeUint32)
 	}
 	if value, ok := _u.mutation.Genres(); ok {
 		_spec.SetField(tvshow.FieldGenres, field.TypeJSON, value)

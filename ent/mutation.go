@@ -34222,6 +34222,8 @@ type MovieMutation struct {
 	quality_profile         *string
 	rating                  *float64
 	addrating               *float64
+	vote_count              *uint32
+	addvote_count           *int32
 	genres                  *[]string
 	appendgenres            []string
 	aliases                 *[]string
@@ -35167,6 +35169,76 @@ func (m *MovieMutation) ResetRating() {
 	delete(m.clearedFields, movie.FieldRating)
 }
 
+// SetVoteCount sets the "vote_count" field.
+func (m *MovieMutation) SetVoteCount(u uint32) {
+	m.vote_count = &u
+	m.addvote_count = nil
+}
+
+// VoteCount returns the value of the "vote_count" field in the mutation.
+func (m *MovieMutation) VoteCount() (r uint32, exists bool) {
+	v := m.vote_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVoteCount returns the old "vote_count" field's value of the Movie entity.
+// If the Movie object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MovieMutation) OldVoteCount(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVoteCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVoteCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVoteCount: %w", err)
+	}
+	return oldValue.VoteCount, nil
+}
+
+// AddVoteCount adds u to the "vote_count" field.
+func (m *MovieMutation) AddVoteCount(u int32) {
+	if m.addvote_count != nil {
+		*m.addvote_count += u
+	} else {
+		m.addvote_count = &u
+	}
+}
+
+// AddedVoteCount returns the value that was added to the "vote_count" field in this mutation.
+func (m *MovieMutation) AddedVoteCount() (r int32, exists bool) {
+	v := m.addvote_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearVoteCount clears the value of the "vote_count" field.
+func (m *MovieMutation) ClearVoteCount() {
+	m.vote_count = nil
+	m.addvote_count = nil
+	m.clearedFields[movie.FieldVoteCount] = struct{}{}
+}
+
+// VoteCountCleared returns if the "vote_count" field was cleared in this mutation.
+func (m *MovieMutation) VoteCountCleared() bool {
+	_, ok := m.clearedFields[movie.FieldVoteCount]
+	return ok
+}
+
+// ResetVoteCount resets all changes to the "vote_count" field.
+func (m *MovieMutation) ResetVoteCount() {
+	m.vote_count = nil
+	m.addvote_count = nil
+	delete(m.clearedFields, movie.FieldVoteCount)
+}
+
 // SetGenres sets the "genres" field.
 func (m *MovieMutation) SetGenres(s []string) {
 	m.genres = &s
@@ -35596,7 +35668,7 @@ func (m *MovieMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MovieMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.create_time != nil {
 		fields = append(fields, movie.FieldCreateTime)
 	}
@@ -35647,6 +35719,9 @@ func (m *MovieMutation) Fields() []string {
 	}
 	if m.rating != nil {
 		fields = append(fields, movie.FieldRating)
+	}
+	if m.vote_count != nil {
+		fields = append(fields, movie.FieldVoteCount)
 	}
 	if m.genres != nil {
 		fields = append(fields, movie.FieldGenres)
@@ -35699,6 +35774,8 @@ func (m *MovieMutation) Field(name string) (ent.Value, bool) {
 		return m.QualityProfile()
 	case movie.FieldRating:
 		return m.Rating()
+	case movie.FieldVoteCount:
+		return m.VoteCount()
 	case movie.FieldGenres:
 		return m.Genres()
 	case movie.FieldAliases:
@@ -35748,6 +35825,8 @@ func (m *MovieMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldQualityProfile(ctx)
 	case movie.FieldRating:
 		return m.OldRating(ctx)
+	case movie.FieldVoteCount:
+		return m.OldVoteCount(ctx)
 	case movie.FieldGenres:
 		return m.OldGenres(ctx)
 	case movie.FieldAliases:
@@ -35882,6 +35961,13 @@ func (m *MovieMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetRating(v)
 		return nil
+	case movie.FieldVoteCount:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVoteCount(v)
+		return nil
 	case movie.FieldGenres:
 		v, ok := value.([]string)
 		if !ok {
@@ -35926,6 +36012,9 @@ func (m *MovieMutation) AddedFields() []string {
 	if m.addrating != nil {
 		fields = append(fields, movie.FieldRating)
 	}
+	if m.addvote_count != nil {
+		fields = append(fields, movie.FieldVoteCount)
+	}
 	return fields
 }
 
@@ -35944,6 +36033,8 @@ func (m *MovieMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedGrabFailures()
 	case movie.FieldRating:
 		return m.AddedRating()
+	case movie.FieldVoteCount:
+		return m.AddedVoteCount()
 	}
 	return nil, false
 }
@@ -35988,6 +36079,13 @@ func (m *MovieMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddRating(v)
 		return nil
+	case movie.FieldVoteCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddVoteCount(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Movie numeric field %s", name)
 }
@@ -36019,6 +36117,9 @@ func (m *MovieMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(movie.FieldRating) {
 		fields = append(fields, movie.FieldRating)
+	}
+	if m.FieldCleared(movie.FieldVoteCount) {
+		fields = append(fields, movie.FieldVoteCount)
 	}
 	if m.FieldCleared(movie.FieldGenres) {
 		fields = append(fields, movie.FieldGenres)
@@ -36066,6 +36167,9 @@ func (m *MovieMutation) ClearField(name string) error {
 		return nil
 	case movie.FieldRating:
 		m.ClearRating()
+		return nil
+	case movie.FieldVoteCount:
+		m.ClearVoteCount()
 		return nil
 	case movie.FieldGenres:
 		m.ClearGenres()
@@ -36134,6 +36238,9 @@ func (m *MovieMutation) ResetField(name string) error {
 		return nil
 	case movie.FieldRating:
 		m.ResetRating()
+		return nil
+	case movie.FieldVoteCount:
+		m.ResetVoteCount()
 		return nil
 	case movie.FieldGenres:
 		m.ResetGenres()
@@ -47173,6 +47280,10 @@ type TVShowMutation struct {
 	addruntime        *int16
 	rating            *float64
 	addrating         *float64
+	vote_count        *uint32
+	addvote_count     *int32
+	tmdb_id           *uint32
+	addtmdb_id        *int32
 	genres            *[]string
 	appendgenres      []string
 	aliases           *[]string
@@ -48060,6 +48171,146 @@ func (m *TVShowMutation) ResetRating() {
 	delete(m.clearedFields, tvshow.FieldRating)
 }
 
+// SetVoteCount sets the "vote_count" field.
+func (m *TVShowMutation) SetVoteCount(u uint32) {
+	m.vote_count = &u
+	m.addvote_count = nil
+}
+
+// VoteCount returns the value of the "vote_count" field in the mutation.
+func (m *TVShowMutation) VoteCount() (r uint32, exists bool) {
+	v := m.vote_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVoteCount returns the old "vote_count" field's value of the TVShow entity.
+// If the TVShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TVShowMutation) OldVoteCount(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVoteCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVoteCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVoteCount: %w", err)
+	}
+	return oldValue.VoteCount, nil
+}
+
+// AddVoteCount adds u to the "vote_count" field.
+func (m *TVShowMutation) AddVoteCount(u int32) {
+	if m.addvote_count != nil {
+		*m.addvote_count += u
+	} else {
+		m.addvote_count = &u
+	}
+}
+
+// AddedVoteCount returns the value that was added to the "vote_count" field in this mutation.
+func (m *TVShowMutation) AddedVoteCount() (r int32, exists bool) {
+	v := m.addvote_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearVoteCount clears the value of the "vote_count" field.
+func (m *TVShowMutation) ClearVoteCount() {
+	m.vote_count = nil
+	m.addvote_count = nil
+	m.clearedFields[tvshow.FieldVoteCount] = struct{}{}
+}
+
+// VoteCountCleared returns if the "vote_count" field was cleared in this mutation.
+func (m *TVShowMutation) VoteCountCleared() bool {
+	_, ok := m.clearedFields[tvshow.FieldVoteCount]
+	return ok
+}
+
+// ResetVoteCount resets all changes to the "vote_count" field.
+func (m *TVShowMutation) ResetVoteCount() {
+	m.vote_count = nil
+	m.addvote_count = nil
+	delete(m.clearedFields, tvshow.FieldVoteCount)
+}
+
+// SetTmdbID sets the "tmdb_id" field.
+func (m *TVShowMutation) SetTmdbID(u uint32) {
+	m.tmdb_id = &u
+	m.addtmdb_id = nil
+}
+
+// TmdbID returns the value of the "tmdb_id" field in the mutation.
+func (m *TVShowMutation) TmdbID() (r uint32, exists bool) {
+	v := m.tmdb_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTmdbID returns the old "tmdb_id" field's value of the TVShow entity.
+// If the TVShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TVShowMutation) OldTmdbID(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTmdbID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTmdbID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTmdbID: %w", err)
+	}
+	return oldValue.TmdbID, nil
+}
+
+// AddTmdbID adds u to the "tmdb_id" field.
+func (m *TVShowMutation) AddTmdbID(u int32) {
+	if m.addtmdb_id != nil {
+		*m.addtmdb_id += u
+	} else {
+		m.addtmdb_id = &u
+	}
+}
+
+// AddedTmdbID returns the value that was added to the "tmdb_id" field in this mutation.
+func (m *TVShowMutation) AddedTmdbID() (r int32, exists bool) {
+	v := m.addtmdb_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearTmdbID clears the value of the "tmdb_id" field.
+func (m *TVShowMutation) ClearTmdbID() {
+	m.tmdb_id = nil
+	m.addtmdb_id = nil
+	m.clearedFields[tvshow.FieldTmdbID] = struct{}{}
+}
+
+// TmdbIDCleared returns if the "tmdb_id" field was cleared in this mutation.
+func (m *TVShowMutation) TmdbIDCleared() bool {
+	_, ok := m.clearedFields[tvshow.FieldTmdbID]
+	return ok
+}
+
+// ResetTmdbID resets all changes to the "tmdb_id" field.
+func (m *TVShowMutation) ResetTmdbID() {
+	m.tmdb_id = nil
+	m.addtmdb_id = nil
+	delete(m.clearedFields, tvshow.FieldTmdbID)
+}
+
 // SetGenres sets the "genres" field.
 func (m *TVShowMutation) SetGenres(s []string) {
 	m.genres = &s
@@ -48484,7 +48735,7 @@ func (m *TVShowMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TVShowMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 22)
 	if m.create_time != nil {
 		fields = append(fields, tvshow.FieldCreateTime)
 	}
@@ -48532,6 +48783,12 @@ func (m *TVShowMutation) Fields() []string {
 	}
 	if m.rating != nil {
 		fields = append(fields, tvshow.FieldRating)
+	}
+	if m.vote_count != nil {
+		fields = append(fields, tvshow.FieldVoteCount)
+	}
+	if m.tmdb_id != nil {
+		fields = append(fields, tvshow.FieldTmdbID)
 	}
 	if m.genres != nil {
 		fields = append(fields, tvshow.FieldGenres)
@@ -48585,6 +48842,10 @@ func (m *TVShowMutation) Field(name string) (ent.Value, bool) {
 		return m.Runtime()
 	case tvshow.FieldRating:
 		return m.Rating()
+	case tvshow.FieldVoteCount:
+		return m.VoteCount()
+	case tvshow.FieldTmdbID:
+		return m.TmdbID()
 	case tvshow.FieldGenres:
 		return m.Genres()
 	case tvshow.FieldAliases:
@@ -48634,6 +48895,10 @@ func (m *TVShowMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldRuntime(ctx)
 	case tvshow.FieldRating:
 		return m.OldRating(ctx)
+	case tvshow.FieldVoteCount:
+		return m.OldVoteCount(ctx)
+	case tvshow.FieldTmdbID:
+		return m.OldTmdbID(ctx)
 	case tvshow.FieldGenres:
 		return m.OldGenres(ctx)
 	case tvshow.FieldAliases:
@@ -48763,6 +49028,20 @@ func (m *TVShowMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetRating(v)
 		return nil
+	case tvshow.FieldVoteCount:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVoteCount(v)
+		return nil
+	case tvshow.FieldTmdbID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTmdbID(v)
+		return nil
 	case tvshow.FieldGenres:
 		v, ok := value.([]string)
 		if !ok {
@@ -48811,6 +49090,12 @@ func (m *TVShowMutation) AddedFields() []string {
 	if m.addrating != nil {
 		fields = append(fields, tvshow.FieldRating)
 	}
+	if m.addvote_count != nil {
+		fields = append(fields, tvshow.FieldVoteCount)
+	}
+	if m.addtmdb_id != nil {
+		fields = append(fields, tvshow.FieldTmdbID)
+	}
 	return fields
 }
 
@@ -48827,6 +49112,10 @@ func (m *TVShowMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedRuntime()
 	case tvshow.FieldRating:
 		return m.AddedRating()
+	case tvshow.FieldVoteCount:
+		return m.AddedVoteCount()
+	case tvshow.FieldTmdbID:
+		return m.AddedTmdbID()
 	}
 	return nil, false
 }
@@ -48864,6 +49153,20 @@ func (m *TVShowMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddRating(v)
 		return nil
+	case tvshow.FieldVoteCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddVoteCount(v)
+		return nil
+	case tvshow.FieldTmdbID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTmdbID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown TVShow numeric field %s", name)
 }
@@ -48895,6 +49198,12 @@ func (m *TVShowMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(tvshow.FieldRating) {
 		fields = append(fields, tvshow.FieldRating)
+	}
+	if m.FieldCleared(tvshow.FieldVoteCount) {
+		fields = append(fields, tvshow.FieldVoteCount)
+	}
+	if m.FieldCleared(tvshow.FieldTmdbID) {
+		fields = append(fields, tvshow.FieldTmdbID)
 	}
 	if m.FieldCleared(tvshow.FieldGenres) {
 		fields = append(fields, tvshow.FieldGenres)
@@ -48945,6 +49254,12 @@ func (m *TVShowMutation) ClearField(name string) error {
 		return nil
 	case tvshow.FieldRating:
 		m.ClearRating()
+		return nil
+	case tvshow.FieldVoteCount:
+		m.ClearVoteCount()
+		return nil
+	case tvshow.FieldTmdbID:
+		m.ClearTmdbID()
 		return nil
 	case tvshow.FieldGenres:
 		m.ClearGenres()
@@ -49013,6 +49328,12 @@ func (m *TVShowMutation) ResetField(name string) error {
 		return nil
 	case tvshow.FieldRating:
 		m.ResetRating()
+		return nil
+	case tvshow.FieldVoteCount:
+		m.ResetVoteCount()
+		return nil
+	case tvshow.FieldTmdbID:
+		m.ResetTmdbID()
 		return nil
 	case tvshow.FieldGenres:
 		m.ResetGenres()

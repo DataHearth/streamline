@@ -37,7 +37,7 @@ Confirm, and the film lands in your library as **Wanted**. Streamline searches o
 
 ## Adding a TV show
 
-Same **+** button → **Series**. Results come from TVDB.
+Same **+** button → **Series**. Results come from TVDB. TVDB has no ratings, so a show's ★ rating and its vote count are TMDB's, looked up by the show's TVDB id with the same TMDB key movies use; without a TMDB key shows have no rating. Sorting the series list by rating ranks a rating from fewer than 10 votes with the unrated shows, though it is still shown with its count.
 
 Shows have one extra decision, and it's the one worth reading carefully — **which episodes to monitor**:
 

@@ -770,6 +770,8 @@
 	"err_secret_required": "L'adresse a changé : saisissez à nouveau le secret. Streamline n'envoie jamais un secret enregistré à une nouvelle adresse.",
 	"err_api_key_quota": "Vous détenez déjà le maximum de 20 clés API. Révoquez-en une pour en créer une autre.",
 	"err_secret_file_managed": "Ce secret est lu depuis un fichier indiqué dans la configuration. Modifiez-le, ainsi que cette adresse, dans le fichier de configuration.",
+	"rating_votes_one": "{count} vote",
+	"rating_votes_other": "{count} votes",
 	"settings_secret_reenter": "L'adresse a changé : saisissez-le à nouveau. Un secret enregistré n'est jamais envoyé à une nouvelle adresse.",
 	"books_series": "Série",
 	"books_volume_of": "Tome {n} de {title}",

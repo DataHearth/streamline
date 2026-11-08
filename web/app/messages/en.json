@@ -770,6 +770,8 @@
 	"err_secret_required": "The address changed, so enter the secret again. Streamline never sends a stored secret to a new address.",
 	"err_api_key_quota": "You already hold the maximum of 20 API keys. Revoke one to create another.",
 	"err_secret_file_managed": "This secret is read from a file named in the config. Change it, and this address, in the config file.",
+	"rating_votes_one": "{count} vote",
+	"rating_votes_other": "{count} votes",
 	"settings_secret_reenter": "The address changed: enter this again. A stored secret is never sent to a new address.",
 	"books_series": "Series",
 	"books_volume_of": "Volume {n} of {title}",

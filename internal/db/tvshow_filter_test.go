@@ -465,6 +465,49 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 		})
 	})
 
+	Describe("sort=rating", func() {
+		seedRated := func(title string, tvdbID uint32, rating float64, votes uint32) {
+			GinkgoHelper()
+			_, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: title, Year: 2020, TvdbID: tvdbID,
+				SeriesStatus: "continuing", Type: "standard",
+				Rating: rating, VoteCount: votes,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		BeforeEach(func() {
+			seedRated("Unrated", 50, 0, 0)
+			seedRated("One Vote", 51, 10, 1)
+			seedRated("Good", 52, 8.1, 900)
+			seedRated("Great", 53, 8.9, 15000)
+			seedRated("Great Too", 54, 8.9, 40)
+		})
+
+		It(
+			"ranks a rating with too few votes among the unrated, ties by votes",
+			func() {
+				rows, _, _, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+					Sort: "rating", Limit: 20, Now: now,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(titles(rows)).To(Equal([]string{
+					"Great", "Great Too", "Good", "One Vote", "Unrated",
+				}))
+			},
+		)
+
+		It("reverses the same order ascending", func() {
+			rows, _, _, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+				Sort: "rating", Order: "asc", Limit: 20, Now: now,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles(rows)).To(Equal([]string{
+				"Unrated", "One Vote", "Good", "Great Too", "Great",
+			}))
+		})
+	})
+
 	Describe("sort=episodes", func() {
 		It("orders by episode count without loading the tree", func() {
 			seedShow("Few", 8, []EpisodeSeed{{Number: 1, Title: "A"}}, true)

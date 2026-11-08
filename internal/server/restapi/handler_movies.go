@@ -227,6 +227,10 @@ func (s *Server) GetMovie(
 	if m.Rating > 0 {
 		rating := float32(m.Rating)
 		result.Rating = &rating
+		if m.VoteCount > 0 {
+			votes := m.VoteCount
+			result.VoteCount = &votes
+		}
 	}
 	return GetMovie200JSONResponse(result), nil
 }

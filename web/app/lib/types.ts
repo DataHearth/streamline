@@ -98,7 +98,9 @@ export type TVShow = {
 	network?: string;
 	creator?: string;
 	runtime?: number;
+	// TMDB's, by TVDB id: TVDB carries no rating. vote_count rides with it.
 	rating?: number | null;
+	vote_count?: number | null;
 	genres?: string[];
 	quality_profile?: string;
 	// Specials (season 0) count for none of these — not the seasons, not the
@@ -309,6 +311,8 @@ export type Movie = {
 	cast?: CastMember[];
 	genres?: string[];
 	rating?: number;
+	// Detail only, with rating; absent until the movie is refreshed once.
+	vote_count?: number;
 	added_at?: string;
 };
 

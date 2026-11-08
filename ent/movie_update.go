@@ -333,6 +333,33 @@ func (_u *MovieUpdate) ClearRating() *MovieUpdate {
 	return _u
 }
 
+// SetVoteCount sets the "vote_count" field.
+func (_u *MovieUpdate) SetVoteCount(v uint32) *MovieUpdate {
+	_u.mutation.ResetVoteCount()
+	_u.mutation.SetVoteCount(v)
+	return _u
+}
+
+// SetNillableVoteCount sets the "vote_count" field if the given value is not nil.
+func (_u *MovieUpdate) SetNillableVoteCount(v *uint32) *MovieUpdate {
+	if v != nil {
+		_u.SetVoteCount(*v)
+	}
+	return _u
+}
+
+// AddVoteCount adds value to the "vote_count" field.
+func (_u *MovieUpdate) AddVoteCount(v int32) *MovieUpdate {
+	_u.mutation.AddVoteCount(v)
+	return _u
+}
+
+// ClearVoteCount clears the value of the "vote_count" field.
+func (_u *MovieUpdate) ClearVoteCount() *MovieUpdate {
+	_u.mutation.ClearVoteCount()
+	return _u
+}
+
 // SetGenres sets the "genres" field.
 func (_u *MovieUpdate) SetGenres(v []string) *MovieUpdate {
 	_u.mutation.SetGenres(v)
@@ -698,6 +725,15 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.RatingCleared() {
 		_spec.ClearField(movie.FieldRating, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.VoteCount(); ok {
+		_spec.SetField(movie.FieldVoteCount, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedVoteCount(); ok {
+		_spec.AddField(movie.FieldVoteCount, field.TypeUint32, value)
+	}
+	if _u.mutation.VoteCountCleared() {
+		_spec.ClearField(movie.FieldVoteCount, field.TypeUint32)
 	}
 	if value, ok := _u.mutation.Genres(); ok {
 		_spec.SetField(movie.FieldGenres, field.TypeJSON, value)
@@ -1228,6 +1264,33 @@ func (_u *MovieUpdateOne) ClearRating() *MovieUpdateOne {
 	return _u
 }
 
+// SetVoteCount sets the "vote_count" field.
+func (_u *MovieUpdateOne) SetVoteCount(v uint32) *MovieUpdateOne {
+	_u.mutation.ResetVoteCount()
+	_u.mutation.SetVoteCount(v)
+	return _u
+}
+
+// SetNillableVoteCount sets the "vote_count" field if the given value is not nil.
+func (_u *MovieUpdateOne) SetNillableVoteCount(v *uint32) *MovieUpdateOne {
+	if v != nil {
+		_u.SetVoteCount(*v)
+	}
+	return _u
+}
+
+// AddVoteCount adds value to the "vote_count" field.
+func (_u *MovieUpdateOne) AddVoteCount(v int32) *MovieUpdateOne {
+	_u.mutation.AddVoteCount(v)
+	return _u
+}
+
+// ClearVoteCount clears the value of the "vote_count" field.
+func (_u *MovieUpdateOne) ClearVoteCount() *MovieUpdateOne {
+	_u.mutation.ClearVoteCount()
+	return _u
+}
+
 // SetGenres sets the "genres" field.
 func (_u *MovieUpdateOne) SetGenres(v []string) *MovieUpdateOne {
 	_u.mutation.SetGenres(v)
@@ -1623,6 +1686,15 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 	}
 	if _u.mutation.RatingCleared() {
 		_spec.ClearField(movie.FieldRating, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.VoteCount(); ok {
+		_spec.SetField(movie.FieldVoteCount, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedVoteCount(); ok {
+		_spec.AddField(movie.FieldVoteCount, field.TypeUint32, value)
+	}
+	if _u.mutation.VoteCountCleared() {
+		_spec.ClearField(movie.FieldVoteCount, field.TypeUint32)
 	}
 	if value, ok := _u.mutation.Genres(); ok {
 		_spec.SetField(movie.FieldGenres, field.TypeJSON, value)

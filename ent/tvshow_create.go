@@ -223,6 +223,34 @@ func (_c *TVShowCreate) SetNillableRating(v *float64) *TVShowCreate {
 	return _c
 }
 
+// SetVoteCount sets the "vote_count" field.
+func (_c *TVShowCreate) SetVoteCount(v uint32) *TVShowCreate {
+	_c.mutation.SetVoteCount(v)
+	return _c
+}
+
+// SetNillableVoteCount sets the "vote_count" field if the given value is not nil.
+func (_c *TVShowCreate) SetNillableVoteCount(v *uint32) *TVShowCreate {
+	if v != nil {
+		_c.SetVoteCount(*v)
+	}
+	return _c
+}
+
+// SetTmdbID sets the "tmdb_id" field.
+func (_c *TVShowCreate) SetTmdbID(v uint32) *TVShowCreate {
+	_c.mutation.SetTmdbID(v)
+	return _c
+}
+
+// SetNillableTmdbID sets the "tmdb_id" field if the given value is not nil.
+func (_c *TVShowCreate) SetNillableTmdbID(v *uint32) *TVShowCreate {
+	if v != nil {
+		_c.SetTmdbID(*v)
+	}
+	return _c
+}
+
 // SetGenres sets the "genres" field.
 func (_c *TVShowCreate) SetGenres(v []string) *TVShowCreate {
 	_c.mutation.SetGenres(v)
@@ -377,6 +405,14 @@ func (_c *TVShowCreate) defaults() {
 		v := tvshow.DefaultRating
 		_c.mutation.SetRating(v)
 	}
+	if _, ok := _c.mutation.VoteCount(); !ok {
+		v := tvshow.DefaultVoteCount
+		_c.mutation.SetVoteCount(v)
+	}
+	if _, ok := _c.mutation.TmdbID(); !ok {
+		v := tvshow.DefaultTmdbID
+		_c.mutation.SetTmdbID(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -515,6 +551,14 @@ func (_c *TVShowCreate) createSpec() (*TVShow, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Rating(); ok {
 		_spec.SetField(tvshow.FieldRating, field.TypeFloat64, value)
 		_node.Rating = value
+	}
+	if value, ok := _c.mutation.VoteCount(); ok {
+		_spec.SetField(tvshow.FieldVoteCount, field.TypeUint32, value)
+		_node.VoteCount = value
+	}
+	if value, ok := _c.mutation.TmdbID(); ok {
+		_spec.SetField(tvshow.FieldTmdbID, field.TypeUint32, value)
+		_node.TmdbID = value
 	}
 	if value, ok := _c.mutation.Genres(); ok {
 		_spec.SetField(tvshow.FieldGenres, field.TypeJSON, value)

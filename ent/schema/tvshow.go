@@ -41,7 +41,15 @@ func (TVShow) Fields() []ent.Field {
 		field.String("network").Optional(),
 		field.String("creator").Optional(),
 		field.Uint16("runtime").Optional().Default(0),
+		// TVDB v4 carries no rating, so `rating` and `vote_count` are TMDB's,
+		// found by TVDB id (`/find`), and `tmdb_id` is the series it found. All
+		// three are zero when TMDB has no key, does not know the show, or has
+		// not been asked yet. tmdb_id is not unique: TMDB can file two TVDB
+		// entries under one series. It stays off the TVShow API on purpose:
+		// the SPA tells a library Movie from a TVShow by `"tmdb_id" in row`.
 		field.Float("rating").Optional().Default(0),
+		field.Uint32("vote_count").Optional().Default(0),
+		field.Uint32("tmdb_id").Optional().Default(0),
 		field.Strings("genres").Optional(),
 		// TVDB's alternate names, every translation included: a release is as
 		// likely to carry the English or romaji title as the library's.

@@ -156,16 +156,23 @@ const (
 // TVDetails is the full TVDB record used to seed a show + its seasons/episodes.
 type TVDetails struct {
 	TVResult
-	Status     string // "continuing" | "ended"
-	Type       SeriesType
-	Creator    string
-	Runtime    uint16
-	Rating     float32
-	Genres     []string
-	Cast       []CastMember
-	Seasons    []SeasonInfo
-	Episodes   []EpisodeInfo
-	FirstAired string // ISO yyyy-mm-dd, as TVDB returns it
+	Status  string // "continuing" | "ended"
+	Type    SeriesType
+	Creator string
+	Runtime uint16
+	// Rating, VoteCount and TMDBID come from TMDB (WithSeriesRatings), never
+	// from TVDB. RatingFetched is true when TMDB was asked and answered, even
+	// that it knows no such series (all three zero); false when it was not
+	// asked or failed, and the caller keeps whatever rating it already has.
+	Rating        float32
+	VoteCount     uint32
+	TMDBID        uint32
+	RatingFetched bool
+	Genres        []string
+	Cast          []CastMember
+	Seasons       []SeasonInfo
+	Episodes      []EpisodeInfo
+	FirstAired    string // ISO yyyy-mm-dd, as TVDB returns it
 }
 
 // TVProvider fetches TV-series metadata. Implemented by *TVDB.

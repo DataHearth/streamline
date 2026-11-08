@@ -6880,7 +6880,12 @@ type Movie struct {
 	Status  MovieStatus `json:"status"`
 	Title   string      `json:"title"`
 	TmdbId  uint32      `json:"tmdb_id"`
-	Year    uint16      `json:"year"`
+
+	// VoteCount How many TMDB votes `rating` averages. Only populated by
+	// GET /movies/{id}, alongside `rating`; absent for a movie not
+	// refreshed since the count was first recorded.
+	VoteCount *uint32 `json:"vote_count,omitempty"`
+	Year      uint16  `json:"year"`
 }
 
 // MovieStatus defines model for Movie.Status.
@@ -9299,8 +9304,12 @@ type TVShow struct {
 	Overview      *string `json:"overview,omitempty"`
 
 	// QualityProfile Name of the quality profile (empty resolves to the series default).
-	QualityProfile *string  `json:"quality_profile,omitempty"`
-	Rating         *float32 `json:"rating,omitempty"`
+	QualityProfile *string `json:"quality_profile,omitempty"`
+
+	// Rating TMDB vote average (0–10), looked up by `tvdb_id` (TVDB carries no
+	// rating). Omitted when TMDB has no votes, does not know the show,
+	// or no TMDB key is configured.
+	Rating *float32 `json:"rating,omitempty"`
 
 	// Runtime Episode runtime in minutes. Zero when unknown.
 	Runtime *uint16 `json:"runtime,omitempty"`
@@ -9317,6 +9326,11 @@ type TVShow struct {
 	TotalSeasons *uint32    `json:"total_seasons,omitempty"`
 	TvdbId       uint32     `json:"tvdb_id"`
 	Type         TVShowType `json:"type"`
+
+	// VoteCount How many TMDB votes `rating` averages, present with `rating`.
+	// `sort=rating` ranks a rating with fewer than 10 votes among the
+	// unrated.
+	VoteCount *uint32 `json:"vote_count,omitempty"`
 
 	// WantedEpisodes Aired/undated episodes without a file (the "missing" count).
 	WantedEpisodes *uint32 `json:"wanted_episodes,omitempty"`
@@ -11376,7 +11390,9 @@ type ListSeriesParams struct {
 	// Query Case-insensitive title substring filter.
 	Query *SeriesQuery `form:"query,omitempty" json:"query,omitempty"`
 
-	// Sort Sort key (recent/title/year/rating/episodes).
+	// Sort Sort key (recent/title/year/rating/episodes). `rating` ranks a rating
+	// averaged over fewer than 10 TMDB votes among the unrated, then breaks
+	// ties by vote count.
 	Sort *SeriesSort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// Order Sort direction. Omitted, each key uses the direction its name implies:
