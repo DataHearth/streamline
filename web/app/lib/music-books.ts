@@ -7,6 +7,7 @@ import { getLocale } from "./paraglide/runtime.js";
 import { formatDate, formatDateShort } from "./dates";
 import { formatBytes } from "./format";
 import { authorPosterUrl, artistPosterUrl } from "./posters";
+import type { MusicExternalIds } from "./external-links";
 
 export type MediaState = "available" | "wanted" | "downloading";
 
@@ -91,6 +92,8 @@ export type Release = {
 	studio?: string;
 	credits?: Credit[];
 	personnel?: Performer[];
+	// MusicBrainz's links for the album, once hydrated.
+	external_ids?: MusicExternalIds;
 };
 
 export type Artist = {
@@ -119,6 +122,8 @@ export type Artist = {
 	hydrating: boolean;
 	// Newest first, upcoming included.
 	albums: Release[];
+	// MusicBrainz's links for the artist. Detail only.
+	external_ids?: MusicExternalIds;
 };
 
 // A search hit for one album (GET /music/albums), named with its artist.
@@ -179,6 +184,8 @@ export type Edition = {
 	narrator?: string;
 	duration?: number;
 	translator?: string;
+	isbn_13?: string;
+	asin?: string;
 };
 
 // One per format. A book is one entry; its ebook and its audiobook are two

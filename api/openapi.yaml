@@ -11183,6 +11183,15 @@ components:
           type: string
         translator:
           type: string
+        isbn_13:
+          type: string
+          description: |
+            ISBN-13 Hardcover lists for the edition. The detail page links
+            Goodreads and Open Library through it. Absent when there is none,
+            which is common for audiobooks.
+        asin:
+          type: string
+          description: Amazon ASIN (an Audible one for an audiobook). Absent when Hardcover has none.
 
     BookSlotFile:
       type: object

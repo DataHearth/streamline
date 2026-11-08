@@ -15,6 +15,7 @@
 	import UploadSheet from "@components/shared/UploadSheet.svelte";
 	import ReleasesTable from "@components/shared/ReleasesTable.svelte";
 	import MediaHero from "@components/shared/MediaHero.svelte";
+	import { bookLinks } from "@lib/external-links";
 	import MonitorSelect from "@components/shared/MonitorSelect.svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
@@ -242,6 +243,7 @@
 		facts={[kindLabel(book.kind), book.genre].filter((f): f is string => !!f)}
 		{meta}
 		overview={book.overview}
+		links={bookLinks(book)}
 	>
 		{#snippet art()}
 			<div class="shadow-[0_24px_48px_rgb(0_0_0_/0.5)]">

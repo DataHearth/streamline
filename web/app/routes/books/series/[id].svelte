@@ -11,6 +11,7 @@
 	import { bookPosterUrl } from "@lib/posters";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import MediaHero from "@components/shared/MediaHero.svelte";
+	import { bookSeriesLinks } from "@lib/external-links";
 	import MonitorSelect from "@components/shared/MonitorSelect.svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
@@ -202,6 +203,7 @@
 			facts={[kindLabel(s.kind), s.ongoing ? i18n.books_ongoing() : i18n.books_completed(), i18n.music_since({ year: String(s.since) })]}
 			{meta}
 			overview={s.overview}
+			links={bookSeriesLinks(s)}
 		>
 			{#snippet art()}
 				<SeriesCover srcs={covers} alt={i18n.common_poster_alt({ title: s.title })} />

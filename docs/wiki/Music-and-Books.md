@@ -157,6 +157,19 @@ RSS sync, the missing search and the metadata refresh ([Scheduled Jobs](Schedule
 
 Users can request an artist (its whole discography), a single album, a single book or a whole series. Approving an artist adds it monitored for all releases (so every album of a type ticked under Settings → Music), and the request turns available on the artist's first imported album. Approving an album asks MusicBrainz which artist the release group belongs to (never the requester's typed wording), adds that artist with every other album unmonitored if the library lacks it, and monitors just that album; an artist already in the library keeps its own profile, and a release group missing from the artist's list answers `422` with the request left pending; approving a book adds it with both slots monitored, and a series with every volume monitored. Change that on the title's page afterwards. See [Requests and Users](Requests-and-Users).
 
+## Links to other sites
+
+An artist's page, an album's panel, a book's page and a series' page each carry a row of links under the overview, grouped as databases, then where to listen or buy, then reviews:
+
+- **Artist**: MusicBrainz, Discogs, Last.fm and Wikidata; Spotify, Deezer and Bandcamp; AllMusic and RateYourMusic (plus SensCritique in French).
+- **Album**: MusicBrainz, Discogs and Wikidata; Spotify, Deezer and Bandcamp; AllMusic, RateYourMusic and Metacritic (plus SensCritique in French).
+- **Book**: Hardcover and Open Library; Amazon for the ebook and Audible for the audiobook; Goodreads (plus SensCritique in French).
+- **Series**: Hardcover, and a Goodreads search (plus SensCritique in French).
+
+The music links are the ones MusicBrainz keeps for the artist or the album. An artist gets them on its next refresh (`music-metadata-refresh`, ten artists per run, or **Refresh** on the artist's page), an album when its tracks are next fetched. When MusicBrainz links none for Discogs, AllMusic or RateYourMusic, that link searches the name instead, shown with a magnifier rather than an arrow. Streaming links appear only where MusicBrainz has them.
+
+Hardcover keeps no other site's id for a book, so a book's links go through its editions: Goodreads and Open Library open the book from its ISBN (the ebook edition's, else any edition's), and search its title and author when no edition has one. Amazon and Audible need the edition's ASIN and are left out without it. Amazon and Audible point at the `.fr` stores in the French interface.
+
 ## Finding an artist, an album or a book
 
 The command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>), the phone search screen and the tablet search panel search your music and books next to movies and series. An artist is found by name, genre or the title of any of its albums. Albums are results of their own, with their artist and year: picking one opens the artist's discography on that album. An album titled exactly what you typed comes first, so *discovery* finds Daft Punk's album before its remixes; after that, the albums you hold files for. An artist found only through an album that is already listed is left out; when the album is not among the results, the artist row says which one matched (*via “The Album”*). A book is found by its title, any edition's title or an author's name. A series is one row, with its volume count where a book shows its year.

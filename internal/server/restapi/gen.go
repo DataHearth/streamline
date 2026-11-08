@@ -4872,10 +4872,18 @@ type BookCredit struct {
 
 // BookEdition defines model for BookEdition.
 type BookEdition struct {
+	// Asin Amazon ASIN (an Audible one for an audiobook). Absent when Hardcover has none.
+	Asin *string `json:"asin,omitempty"`
+
 	// Duration Audiobook length in seconds.
 	Duration *uint32    `json:"duration,omitempty"`
 	Format   BookFormat `json:"format"`
 	Id       uint32     `json:"id"`
+
+	// Isbn13 ISBN-13 Hardcover lists for the edition. The detail page links
+	// Goodreads and Open Library through it. Absent when there is none,
+	// which is common for audiobooks.
+	Isbn13 *string `json:"isbn_13,omitempty"`
 
 	// Language ISO 639-1.
 	Language string  `json:"language"`

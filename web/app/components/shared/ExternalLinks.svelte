@@ -1,17 +1,19 @@
 <script lang="ts">
-	// The hero's row of outbound links (lib/external-links.ts): the databases
-	// that know the title by id, a hairline, then the review sites. A search
+	// The hero's row of outbound links (lib/external-links.ts), one group after
+	// another with a hairline between: the databases that know the title by
+	// id, where to play or buy it, then the review sites. A search
 	// link carries a magnifier instead of the arrow, so a tap that opens a
 	// results page rather than the title's own is not a surprise.
 	import { ExternalLink as ExternalLinkIcon, Search } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
-	import type { ExternalLink } from "@lib/external-links";
+	import { LINK_GROUPS, type ExternalLink } from "@lib/external-links";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { links, class: className }: { links: ExternalLink[]; class?: string } = $props();
 
-	let databases = $derived(links.filter((l) => l.group === "database"));
-	let reviews = $derived(links.filter((l) => l.group === "reviews"));
+	let groups = $derived(
+		LINK_GROUPS.map((g) => links.filter((l) => l.group === g)).filter((g) => g.length > 0),
+	);
 
 	function labelFor(l: ExternalLink): string {
 		return l.search && l.query
@@ -40,14 +42,13 @@
 
 {#if links.length > 0}
 	<nav aria-label={i18n.external_links()} class={cn("flex flex-wrap items-center gap-1.5", className)}>
-		{#each databases as l (l.site)}
-			{@render pill(l)}
-		{/each}
-		{#if databases.length > 0 && reviews.length > 0}
-			<span class="mx-1 h-4 w-px bg-border" aria-hidden="true"></span>
-		{/if}
-		{#each reviews as l (l.site)}
-			{@render pill(l)}
+		{#each groups as group, i (i)}
+			{#if i > 0}
+				<span class="mx-1 h-4 w-px bg-border" aria-hidden="true"></span>
+			{/if}
+			{#each group as l (l.site)}
+				{@render pill(l)}
+			{/each}
 		{/each}
 	</nav>
 {/if}

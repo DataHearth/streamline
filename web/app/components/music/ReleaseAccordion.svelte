@@ -21,6 +21,7 @@
 	let {
 		releases,
 		artistId,
+		artistName = "",
 		openId,
 		onToggle,
 		canEdit = false,
@@ -38,6 +39,8 @@
 		releases: Release[];
 		// The artist whose page the releases are on.
 		artistId: number;
+		// For the release links' searches.
+		artistName?: string;
 		openId: number | undefined;
 		onToggle: (id: number) => void;
 		canEdit?: boolean;
@@ -186,7 +189,7 @@
 					{/if}
 				</div>
 				<div class="mt-5">
-					<ReleaseCredits release={r} scope="accordion" />
+					<ReleaseCredits release={r} scope="accordion" {artistName} />
 				</div>
 			</div>
 		{/if}

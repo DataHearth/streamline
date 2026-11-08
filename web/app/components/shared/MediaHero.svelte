@@ -3,6 +3,8 @@
 	import { ArrowLeft } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import Img from "@components/shared/Img.svelte";
+	import ExternalLinks from "@components/shared/ExternalLinks.svelte";
+	import type { ExternalLink } from "@lib/external-links";
 
 	// MovieDetailHero's frame for the music and books detail pages: blurred
 	// backdrop, back link, art beside the text from md, stacked on a phone.
@@ -18,6 +20,7 @@
 		facts = [],
 		meta = [],
 		overview,
+		links = [],
 		art,
 		extra,
 		actions,
@@ -35,6 +38,8 @@
 		facts?: string[];
 		meta?: string[];
 		overview?: string;
+		// Outbound links, under the overview (lib/external-links.ts).
+		links?: ExternalLink[];
 		art: Snippet;
 		extra?: Snippet;
 		actions?: Snippet;
@@ -110,6 +115,7 @@
 					{overview}
 				</p>
 			{/if}
+			<ExternalLinks {links} class="mt-4" />
 			{#if extra}
 				{@render extra()}
 			{/if}
