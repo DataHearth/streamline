@@ -3,9 +3,11 @@ import type {
 	Episode,
 	EpisodeStatus,
 	Movie,
+	Season,
 	TVShow,
 } from "./types";
 import { m as i18n } from "./paraglide/messages.js";
+import { countDownloading, countImporting, countMissing, countWanted } from "./nouns";
 
 // The backend keeps a fileless movie in "wanted" whether or not anyone is
 // looking for it. Unmonitored means nobody is, so the card reads "missing".
@@ -45,6 +47,62 @@ export function episodeStatus(
 		return "missing";
 	}
 	return e.status;
+}
+
+export type SeasonTally = { wanted: number; downloading: number; importing: number };
+
+// The tallies a season line names, in the library list's terms: in flight is
+// named for what it is, downloading or importing, beside what is still wanted.
+// season.missing is every aired, followed episode without a file, in-flight
+// grabs included, so a season whose pack was downloading read "22 wanted" in
+// the wanted colour above 22 rows saying downloading. With the episodes loaded
+// the in-flight ones are split out of wanted; the rollup-only fallback cannot
+// tell them apart and keeps the API's count.
+export function seasonTallies(s: Season, showMonitored = true): SeasonTally {
+	const eps = s.episodes ?? [];
+	if (eps.length === 0) return { wanted: s.missing ?? 0, downloading: 0, importing: 0 };
+	const t: SeasonTally = { wanted: 0, downloading: 0, importing: 0 };
+	for (const e of eps) {
+		const st = episodeStatus(e, showMonitored);
+		if (st === "wanted") t.wanted++;
+		else if (st === "downloading") t.downloading++;
+		else if (st === "importing") t.importing++;
+	}
+	return t;
+}
+
+// The one state a season row names beside its count, with the library cards'
+// precedence: in flight beats the gap it fills, a wanted gap beats one nobody
+// follows. The bar under it carries the rest of the breakdown, so a row whose
+// pack is landing reads "20 downloading", not four tallies in four colours.
+export function seasonHeadline(
+	t: SeasonTally,
+	missing: number,
+): { text: string; cls: string } | null {
+	if (t.downloading > 0)
+		return {
+			text: countDownloading(t.downloading),
+			cls: "text-status-downloading",
+		};
+	if (t.importing > 0)
+		return {
+			text: countImporting(t.importing),
+			cls: "text-status-importing",
+		};
+	if (t.wanted > 0) return { text: countWanted(t.wanted), cls: "text-status-wanted" };
+	if (missing > 0) return { text: countMissing(missing), cls: "text-status-missing" };
+	return null;
+}
+
+export function sumTallies(ts: SeasonTally[]): SeasonTally {
+	return ts.reduce(
+		(a, t) => ({
+			wanted: a.wanted + t.wanted,
+			downloading: a.downloading + t.downloading,
+			importing: a.importing + t.importing,
+		}),
+		{ wanted: 0, downloading: 0, importing: 0 },
+	);
 }
 
 export function missingEpisodes(episodes: Episode[], showMonitored = true) {

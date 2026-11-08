@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { countFuture, countMissing, countWanted } from "@lib/nouns";
+	import { countFuture } from "@lib/nouns";
 	import { cn } from "@lib/cn";
-	import { missingEpisodes } from "@lib/status";
+	import { missingEpisodes, seasonHeadline, seasonTallies } from "@lib/status";
 	import SeasonProgress from "./SeasonProgress.svelte";
 	import type { Season } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -35,6 +35,7 @@
 	{#each seasons as s (s.number)}
 		{@const active = selected === s.number}
 		{@const missing = missingEpisodes(s.episodes ?? [], showMonitored)}
+		{@const headline = seasonHeadline(seasonTallies(s, showMonitored), missing)}
 		<button
 			type="button"
 			onclick={() => onSelect(s.number)}
@@ -55,11 +56,8 @@
 			{/if}
 			<div class="font-mono text-[11px] text-fg-muted">
 				<span class="text-fg">{s.available ?? 0}</span>/{s.total ?? 0}
-				{#if (s.missing ?? 0) > 0}
-					<span class="text-status-wanted">· {countWanted(s.missing ?? 0)}</span>
-				{/if}
-				{#if missing > 0}
-					<span class="text-status-missing">· {countMissing(missing)}</span>
+				{#if headline}
+					<span class={headline.cls}>· {headline.text}</span>
 				{/if}
 				{#if (s.unaired ?? 0) > 0}
 					<span class="text-fg-faint">· {countFuture(s.unaired ?? 0)}</span>

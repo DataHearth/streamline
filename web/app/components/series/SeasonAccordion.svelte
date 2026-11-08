@@ -1,6 +1,6 @@
 <script lang="ts">
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
-	import { countMissing, countWanted } from "@lib/nouns";
+	import SeasonProgress from "./SeasonProgress.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { ChevronRight, Info, Search, Trash2 } from "@lucide/svelte";
 	import KebabMenu, { type KebabItem } from "@components/shared/KebabMenu.svelte";
@@ -12,6 +12,8 @@
 		episodeStatus,
 		episodeTitle,
 		missingEpisodes,
+		seasonHeadline,
+		seasonTallies,
 	} from "@lib/status";
 	import { formatBytes } from "@lib/format";
 	import { episodeMedia } from "@lib/media-info";
@@ -132,11 +134,6 @@
 	function seasonBytes(s: Season): number {
 		return (s.episodes ?? []).reduce((n, ep) => n + (ep.size ?? 0), 0);
 	}
-	function pct(s: Season): number {
-		const total = s.total ?? 0;
-		if (total === 0) return 0;
-		return Math.round(((s.available ?? 0) / total) * 100);
-	}
 
 	// One line per episode, and it says the thing that matters for the state it
 	// is in: what the file is, how far a download has got, or what a wanted
@@ -180,7 +177,7 @@
 	{#each seasons as s (s.number)}
 		{@const open = openSeason === s.number}
 		{@const missing = missingEpisodes(s.episodes ?? [], showMonitored)}
-		{@const wanted = s.missing ?? 0}
+		{@const headline = seasonHeadline(seasonTallies(s, showMonitored), missing)}
 		<section class="border-b border-border last:border-b-0">
 			<div
 				class={cn(
@@ -208,24 +205,14 @@
 							{#if seasonBytes(s) > 0}
 								· {formatBytes(seasonBytes(s), "")}
 							{/if}
-							{#if wanted > 0}
-								· <span class="text-status-wanted">{countWanted(wanted)}</span>
-							{/if}
-							{#if missing > 0}
-								· <span class="text-status-missing">{countMissing(missing)}</span>
+							{#if headline}
+								<span class="whitespace-nowrap"
+									>· <span class={headline.cls}>{headline.text}</span></span
+								>
 							{/if}
 						</span>
-						<span
-							class="mt-2 block h-[3px] overflow-hidden rounded-full bg-surface-2"
-							aria-hidden="true"
-						>
-							<span
-								class={cn(
-									"block h-full rounded-full",
-									wanted > 0 ? "bg-status-wanted" : "bg-status-available",
-								)}
-								style:width="{pct(s)}%"
-							></span>
+						<span class="mt-2 block">
+							<SeasonProgress season={s} {showMonitored} />
 						</span>
 					</span>
 				</button>

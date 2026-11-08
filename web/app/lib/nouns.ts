@@ -66,6 +66,14 @@ export const NOUN_DOWNLOAD: Noun = {
 
 // Status tallies for the season and show lines ("3 wanted · 1 missing").
 export const countWanted = counted(i18n.count_wanted_one, i18n.count_wanted_other);
+export const countDownloading = counted(
+	i18n.count_downloading_one,
+	i18n.count_downloading_other,
+);
+export const countImporting = counted(
+	i18n.count_importing_one,
+	i18n.count_importing_other,
+);
 export const countMissing = counted(i18n.count_missing_one, i18n.count_missing_other);
 export const countUnaired = counted(i18n.count_unaired_one, i18n.count_unaired_other);
 export const countFuture = counted(i18n.count_future_one, i18n.count_future_other);

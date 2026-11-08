@@ -4,6 +4,8 @@
 	import {
 		NOUN_EPISODE,
 		countAvailable,
+		countDownloading,
+		countImporting,
 		countMissing,
 		countUnaired,
 		countWanted,
@@ -26,13 +28,13 @@
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import MonitorSplitButton from "@components/shared/MonitorSplitButton.svelte";
 	import { cn } from "@lib/cn";
-	import { missingEpisodes } from "@lib/status";
+	import { missingEpisodes, seasonTallies, sumTallies } from "@lib/status";
 	import { tvPosterUrl } from "@lib/posters";
 	import { listHref, SERIES_SEARCH } from "@lib/prefs";
 	import { formatDate } from "@lib/dates";
 	import Poster from "@components/shared/Poster.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
-	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import SeasonProgress from "@components/series/SeasonProgress.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
@@ -156,6 +158,11 @@
 	// monitors are the missing ones, and only the client knows that split.
 	let showMonitored = $derived(show?.monitored ?? true);
 	let seasonMissing = $derived(missingEpisodes(currentEpisodes, showMonitored));
+	let seasonTally = $derived(
+		currentSeason
+			? seasonTallies(currentSeason, showMonitored)
+			: { wanted: 0, downloading: 0, importing: 0 },
+	);
 	let showMissing = $derived(
 		regularSeasons.reduce(
 			(n, s) => n + missingEpisodes(s.episodes ?? [], showMonitored),
@@ -163,33 +170,63 @@
 		),
 	);
 
+	// The library list's split, read off the loaded tree: what is in flight is
+	// named downloading or importing, across every season as the list counts
+	// it, and wanted is what is left over the numbered seasons. The detail
+	// response carries no in-flight counts, and its wanted_episodes counts an
+	// in-flight episode as wanted until its file exists.
+	let inFlight = $derived(sumTallies(seasons.map((s) => seasonTallies(s, showMonitored))));
+	let wantedEpisodes = $derived(
+		sumTallies(regularSeasons.map((s) => seasonTallies(s, showMonitored))).wanted,
+	);
 	// The pill sits on the poster, as on an artist's photo, and only while
-	// episodes are wanted: an available show needs no badge, the bar says it.
-	let wantedEpisodes = $derived(show?.wanted_episodes ?? 0);
+	// something is in flight or wanted, with the precedence the library cards
+	// use: in flight beats the gap it fills. An available show needs no badge,
+	// the bar says it.
+	let posterPill = $derived.by(() => {
+		if (inFlight.downloading > 0)
+			return {
+				token: "downloading",
+				label: countDownloading(inFlight.downloading),
+				live: true,
+			};
+		if (inFlight.importing > 0)
+			return {
+				token: "importing",
+				label: countImporting(inFlight.importing),
+				live: true,
+			};
+		if (wantedEpisodes > 0)
+			return { token: "wanted", label: countWanted(wantedEpisodes), live: false };
+		return null;
+	});
 	// What the line above the title says about the show, in order. The type
 	// chip follows it on its own.
 	let heroFacts = $derived(
 		show ? [show.series_status, show.network, show.creator].filter((f): f is string => !!f) : [],
 	);
 
-	let airedTotal = $derived.by(() => {
-		if (regularSeasons.length > 0) {
-			return regularSeasons.reduce(
-				(n, s) => n + Math.max(0, (s.total ?? 0) - (s.unaired ?? 0)),
-				0,
-			);
-		}
-		return show?.total_episodes ?? 0;
-	});
 	// Named as First aired where it is labelled, and printed bare in the hero's
 	// dotted meta line — the same date either way.
 	let airedText = $derived(formatDate(show?.first_aired));
 	let unairedTotal = $derived(
 		regularSeasons.reduce((n, s) => n + (s.unaired ?? 0), 0),
 	);
-	let seriesProgress = $derived(
-		(show?.have_episodes ?? 0) / Math.max(1, airedTotal),
-	);
+	// The hero bar is the season bar over the whole run: the numbered seasons'
+	// episodes in one season-shaped bag, so it draws the same segments in the
+	// same colours (available, downloading, importing, paused, wanted,
+	// unaired) as every season below it, where it used to draw available
+	// alone against the aired total.
+	let runSeason = $derived<Season>({
+		id: 0,
+		number: 0,
+		monitored: show?.monitored ?? true,
+		available: regularSeasons.reduce((n, s) => n + (s.available ?? 0), 0),
+		missing: regularSeasons.reduce((n, s) => n + (s.missing ?? 0), 0),
+		unaired: unairedTotal,
+		total: regularSeasons.reduce((n, s) => n + (s.total ?? 0), 0),
+		episodes: regularSeasons.flatMap((s) => s.episodes ?? []),
+	});
 
 	let metaParts = $derived.by(() => {
 		if (!show) return [] as string[];
@@ -564,9 +601,14 @@
 						class="relative h-full w-full object-cover"
 					/>
 				</div>
-				{#if wantedEpisodes > 0}
+				{#if posterPill}
 					<span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
-						<LabelPill token="wanted" label={countWanted(wantedEpisodes)} size="md" />
+						<LabelPill
+							token={posterPill.token}
+							label={posterPill.label}
+							live={posterPill.live}
+							size="md"
+						/>
 					</span>
 				{/if}
 			</div>
@@ -637,28 +679,56 @@
 				     holds. The line also names the missing episodes, aired ones that
 				     nobody monitors and nobody has, which the bar leaves out. -->
 				<div class="mt-5 max-w-[680px]">
+					<!-- Below lg the count has a line to itself and the states follow on
+					     their own, so the break never moves with which states are present.
+					     Each state carries its dot in front and the row is pulled left by
+					     one dot inside a clip, as the facts line above does: whichever state
+					     starts a line has its dot clipped. From lg it is one line. -->
 					<div
-						class="mb-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 font-mono text-xs text-fg-muted"
+						class="mb-1.5 flex flex-col gap-y-0.5 font-mono text-xs text-fg-muted lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-1.5"
 					>
-						<span class="text-fg">{show.have_episodes ?? 0}</span>
-						<span class="text-fg-faint">/</span>
-						<span>{show.total_episodes ?? 0}</span>
-						<span class="text-fg-subtle">{i18n.lc_episodes()}</span>
-						{#if (show.wanted_episodes ?? 0) > 0}
-							<span class="text-status-wanted">· {countWanted(show.wanted_episodes ?? 0)}</span>
-						{/if}
-						{#if showMissing > 0}
-							<span class="text-status-missing">· {countMissing(showMissing)}</span>
-						{/if}
-						{#if unairedTotal > 0}
-							<span class="text-fg-faint">· {countUnaired(unairedTotal)}</span>
+						<span class="flex items-center gap-x-1.5">
+							<span class="text-fg">{show.have_episodes ?? 0}</span>
+							<span class="text-fg-faint">/</span>
+							<span>{show.total_episodes ?? 0}</span>
+							<span class="text-fg-subtle">{i18n.lc_episodes()}</span>
+						</span>
+						{#if wantedEpisodes || inFlight.downloading || inFlight.importing || showMissing || unairedTotal}
+							<span class="max-lg:overflow-hidden"><span
+								class="flex flex-wrap items-center gap-x-1.5 max-lg:-ml-[2ch]"
+							>
+								{#if wantedEpisodes > 0}
+									<span class="whitespace-nowrap text-status-wanted"
+										><span class="sep">·&nbsp;</span>{countWanted(wantedEpisodes)}</span
+									>
+								{/if}
+								{#if inFlight.downloading > 0}
+									<span class="whitespace-nowrap text-status-downloading"
+										><span class="sep">·&nbsp;</span>{countDownloading(inFlight.downloading)}</span
+									>
+								{/if}
+								{#if inFlight.importing > 0}
+									<span class="whitespace-nowrap text-status-importing"
+										><span class="sep">·&nbsp;</span>{countImporting(inFlight.importing)}</span
+									>
+								{/if}
+								{#if showMissing > 0}
+									<span class="whitespace-nowrap text-status-missing"
+										><span class="sep">·&nbsp;</span>{countMissing(showMissing)}</span
+									>
+								{/if}
+								{#if unairedTotal > 0}
+									<span class="whitespace-nowrap text-fg-faint"
+										><span class="sep">·&nbsp;</span>{countUnaired(unairedTotal)}</span
+									>
+								{/if}
+							</span></span>
 						{/if}
 					</div>
-					<ProgressBar
-						value={seriesProgress}
-						status="available"
-						height={4}
-						label={i18n.series_progress()}
+					<SeasonProgress
+						season={runSeason}
+						{showMonitored}
+						label={(summary) => i18n.series_run_progress({ summary })}
 					/>
 				</div>
 
@@ -671,8 +741,8 @@
 							class="inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold leading-tight text-fg-on-accent transition active:bg-accent-pressed"
 						>
 							<Search size={15} class="shrink-0" aria-hidden="true" />
-							{(show.wanted_episodes ?? 0) > 0
-								? i18n.series_search_wanted({ count: show.wanted_episodes ?? 0 })
+							{wantedEpisodes > 0
+								? i18n.series_search_wanted({ count: wantedEpisodes })
 								: i18n.action_manual_search()}
 						</button>
 						<PlayOnMenu
@@ -813,10 +883,22 @@
 							<dd class="text-right font-mono text-fg">
 								{show.have_episodes ?? 0}/{show.total_episodes ?? 0}
 							</dd>
-							{#if (show.wanted_episodes ?? 0) > 0}
+							{#if wantedEpisodes > 0}
 								<dt class="text-fg-subtle">{i18n.status_wanted()}</dt>
 								<dd class="text-right font-mono text-status-wanted">
-									{show.wanted_episodes}
+									{wantedEpisodes}
+								</dd>
+							{/if}
+							{#if inFlight.downloading > 0}
+								<dt class="text-fg-subtle">{i18n.status_downloading()}</dt>
+								<dd class="text-right font-mono text-status-downloading">
+									{inFlight.downloading}
+								</dd>
+							{/if}
+							{#if inFlight.importing > 0}
+								<dt class="text-fg-subtle">{i18n.status_importing()}</dt>
+								<dd class="text-right font-mono text-status-importing">
+									{inFlight.importing}
 								</dd>
 							{/if}
 							{#if showMissing > 0}
@@ -924,25 +1006,59 @@
 											<span class="text-fg-subtle">· {currentSeason.name}</span>
 										{/if}
 									</h2>
-									<p class="mt-0.5 font-mono text-xs text-fg-muted">
-										{NOUN_EPISODE.count(currentSeason.total ?? 0)}
-										<span class="text-fg-faint">·</span>
-										{countAvailable(currentSeason.available ?? 0)}
-										{#if (currentSeason.missing ?? 0) > 0}
+									<!-- The hero's split: counts first, the states on their own
+									     line below lg (a state starting a line loses its dot the
+									     same way), one line from lg. -->
+									<div
+										class="mt-0.5 flex flex-col gap-y-0.5 font-mono text-xs text-fg-muted lg:flex-row lg:flex-wrap lg:gap-x-1.5"
+									>
+										<span class="whitespace-nowrap">
+											{NOUN_EPISODE.count(currentSeason.total ?? 0)}
 											<span class="text-fg-faint">·</span>
-											<span class="text-status-wanted"
-												>{countWanted(currentSeason.missing ?? 0)}</span
+											{countAvailable(currentSeason.available ?? 0)}
+										</span>
+										{#if seasonTally.wanted || seasonTally.downloading || seasonTally.importing || seasonMissing || currentSeason.unaired}
+											<span class="max-lg:overflow-hidden"><span
+												class="flex flex-wrap gap-x-1.5 max-lg:-ml-[2ch]"
 											>
+												{#if seasonTally.wanted > 0}
+													<span class="whitespace-nowrap"
+														><span class="sep text-fg-faint">·&nbsp;</span><span
+															class="text-status-wanted">{countWanted(seasonTally.wanted)}</span
+														></span
+													>
+												{/if}
+												{#if seasonTally.downloading > 0}
+													<span class="whitespace-nowrap"
+														><span class="sep text-fg-faint">·&nbsp;</span><span
+															class="text-status-downloading"
+															>{countDownloading(seasonTally.downloading)}</span
+														></span
+													>
+												{/if}
+												{#if seasonTally.importing > 0}
+													<span class="whitespace-nowrap"
+														><span class="sep text-fg-faint">·&nbsp;</span><span
+															class="text-status-importing"
+															>{countImporting(seasonTally.importing)}</span
+														></span
+													>
+												{/if}
+												{#if seasonMissing > 0}
+													<span class="whitespace-nowrap"
+														><span class="sep text-fg-faint">·&nbsp;</span><span
+															class="text-status-missing">{countMissing(seasonMissing)}</span
+														></span
+													>
+												{/if}
+												{#if (currentSeason.unaired ?? 0) > 0}
+													<span class="whitespace-nowrap text-fg-faint"
+														><span class="sep">·&nbsp;</span>{countUnaired(currentSeason.unaired ?? 0)}</span
+													>
+												{/if}
+											</span></span>
 										{/if}
-										{#if seasonMissing > 0}
-											<span class="text-fg-faint">·</span>
-											<span class="text-status-missing">{countMissing(seasonMissing)}</span>
-										{/if}
-										{#if (currentSeason.unaired ?? 0) > 0}
-											<span class="text-fg-faint">·</span>
-											<span class="text-fg-faint">{countUnaired(currentSeason.unaired ?? 0)}</span>
-										{/if}
-									</p>
+									</div>
 								</div>
 							</div>
 							{#if auth.canAddDirectly}
