@@ -113,6 +113,74 @@ func (_c *MockBookProvider_BookByISBN_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// EditionLinks provides a mock function for the type MockBookProvider
+func (_mock *MockBookProvider) EditionLinks(ctx context.Context, editionIDs []uint32) (map[uint32]map[string]string, error) {
+	ret := _mock.Called(ctx, editionIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for EditionLinks")
+	}
+
+	var r0 map[uint32]map[string]string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) (map[uint32]map[string]string, error)); ok {
+		return returnFunc(ctx, editionIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) map[uint32]map[string]string); ok {
+		r0 = returnFunc(ctx, editionIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[uint32]map[string]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []uint32) error); ok {
+		r1 = returnFunc(ctx, editionIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBookProvider_EditionLinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EditionLinks'
+type MockBookProvider_EditionLinks_Call struct {
+	*mock.Call
+}
+
+// EditionLinks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - editionIDs []uint32
+func (_e *MockBookProvider_Expecter) EditionLinks(ctx any, editionIDs any) *MockBookProvider_EditionLinks_Call {
+	return &MockBookProvider_EditionLinks_Call{Call: _e.mock.On("EditionLinks", ctx, editionIDs)}
+}
+
+func (_c *MockBookProvider_EditionLinks_Call) Run(run func(ctx context.Context, editionIDs []uint32)) *MockBookProvider_EditionLinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []uint32
+		if args[1] != nil {
+			arg1 = args[1].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBookProvider_EditionLinks_Call) Return(uint32ToStringToString map[uint32]map[string]string, err error) *MockBookProvider_EditionLinks_Call {
+	_c.Call.Return(uint32ToStringToString, err)
+	return _c
+}
+
+func (_c *MockBookProvider_EditionLinks_Call) RunAndReturn(run func(ctx context.Context, editionIDs []uint32) (map[uint32]map[string]string, error)) *MockBookProvider_EditionLinks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetBooks provides a mock function for the type MockBookProvider
 func (_mock *MockBookProvider) GetBooks(ctx context.Context, ids []uint32) ([]*metadata.BookRecord, error) {
 	ret := _mock.Called(ctx, ids)

@@ -45,10 +45,18 @@ const (
 	FieldIsbn13 = "isbn_13"
 	// FieldAsin holds the string denoting the asin field in the database.
 	FieldAsin = "asin"
+	// FieldLinksFetchedAt holds the string denoting the links_fetched_at field in the database.
+	FieldLinksFetchedAt = "links_fetched_at"
 	// FieldPopularity holds the string denoting the popularity field in the database.
 	FieldPopularity = "popularity"
 	// EdgeBook holds the string denoting the book edge name in mutations.
 	EdgeBook = "book"
+	// EdgeEbookOf holds the string denoting the ebook_of edge name in mutations.
+	EdgeEbookOf = "ebook_of"
+	// EdgeAudiobookOf holds the string denoting the audiobook_of edge name in mutations.
+	EdgeAudiobookOf = "audiobook_of"
+	// EdgeExternalIds holds the string denoting the external_ids edge name in mutations.
+	EdgeExternalIds = "external_ids"
 	// Table holds the table name of the bookedition in the database.
 	Table = "book_editions"
 	// BookTable is the table that holds the book relation/edge.
@@ -58,6 +66,27 @@ const (
 	BookInverseTable = "books"
 	// BookColumn is the table column denoting the book relation/edge.
 	BookColumn = "book_editions"
+	// EbookOfTable is the table that holds the ebook_of relation/edge.
+	EbookOfTable = "books"
+	// EbookOfInverseTable is the table name for the Book entity.
+	// It exists in this package in order to avoid circular dependency with the "book" package.
+	EbookOfInverseTable = "books"
+	// EbookOfColumn is the table column denoting the ebook_of relation/edge.
+	EbookOfColumn = "book_ebook_edition"
+	// AudiobookOfTable is the table that holds the audiobook_of relation/edge.
+	AudiobookOfTable = "books"
+	// AudiobookOfInverseTable is the table name for the Book entity.
+	// It exists in this package in order to avoid circular dependency with the "book" package.
+	AudiobookOfInverseTable = "books"
+	// AudiobookOfColumn is the table column denoting the audiobook_of relation/edge.
+	AudiobookOfColumn = "book_audiobook_edition"
+	// ExternalIdsTable is the table that holds the external_ids relation/edge.
+	ExternalIdsTable = "external_ids"
+	// ExternalIdsInverseTable is the table name for the ExternalID entity.
+	// It exists in this package in order to avoid circular dependency with the "externalid" package.
+	ExternalIdsInverseTable = "external_ids"
+	// ExternalIdsColumn is the table column denoting the external_ids relation/edge.
+	ExternalIdsColumn = "book_edition_id"
 )
 
 // Columns holds all SQL columns for bookedition fields.
@@ -78,6 +107,7 @@ var Columns = []string{
 	FieldTranslator,
 	FieldIsbn13,
 	FieldAsin,
+	FieldLinksFetchedAt,
 	FieldPopularity,
 }
 
@@ -229,6 +259,11 @@ func ByAsin(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAsin, opts...).ToFunc()
 }
 
+// ByLinksFetchedAt orders the results by the links_fetched_at field.
+func ByLinksFetchedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLinksFetchedAt, opts...).ToFunc()
+}
+
 // ByPopularity orders the results by the popularity field.
 func ByPopularity(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPopularity, opts...).ToFunc()
@@ -240,10 +275,73 @@ func ByBookField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newBookStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByEbookOfCount orders the results by ebook_of count.
+func ByEbookOfCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newEbookOfStep(), opts...)
+	}
+}
+
+// ByEbookOf orders the results by ebook_of terms.
+func ByEbookOf(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEbookOfStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByAudiobookOfCount orders the results by audiobook_of count.
+func ByAudiobookOfCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAudiobookOfStep(), opts...)
+	}
+}
+
+// ByAudiobookOf orders the results by audiobook_of terms.
+func ByAudiobookOf(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAudiobookOfStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByExternalIdsCount orders the results by external_ids count.
+func ByExternalIdsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newExternalIdsStep(), opts...)
+	}
+}
+
+// ByExternalIds orders the results by external_ids terms.
+func ByExternalIds(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newExternalIdsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newBookStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(BookInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, BookTable, BookColumn),
+	)
+}
+func newEbookOfStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EbookOfInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, EbookOfTable, EbookOfColumn),
+	)
+}
+func newAudiobookOfStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AudiobookOfInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, AudiobookOfTable, AudiobookOfColumn),
+	)
+}
+func newExternalIdsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ExternalIdsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ExternalIdsTable, ExternalIdsColumn),
 	)
 }

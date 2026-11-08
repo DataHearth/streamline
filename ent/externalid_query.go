@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/bookedition"
 	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -22,15 +23,16 @@ import (
 // ExternalIDQuery is the builder for querying ExternalID entities.
 type ExternalIDQuery struct {
 	config
-	ctx        *QueryContext
-	order      []externalid.OrderOption
-	inters     []Interceptor
-	predicates []predicate.ExternalID
-	withMovie  *MovieQuery
-	withTvShow *TVShowQuery
-	withArtist *ArtistQuery
-	withAlbum  *AlbumQuery
-	modifiers  []func(*sql.Selector)
+	ctx             *QueryContext
+	order           []externalid.OrderOption
+	inters          []Interceptor
+	predicates      []predicate.ExternalID
+	withMovie       *MovieQuery
+	withTvShow      *TVShowQuery
+	withArtist      *ArtistQuery
+	withAlbum       *AlbumQuery
+	withBookEdition *BookEditionQuery
+	modifiers       []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -148,6 +150,28 @@ func (_q *ExternalIDQuery) QueryAlbum() *AlbumQuery {
 			sqlgraph.From(externalid.Table, externalid.FieldID, selector),
 			sqlgraph.To(album.Table, album.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, externalid.AlbumTable, externalid.AlbumColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryBookEdition chains the current query on the "book_edition" edge.
+func (_q *ExternalIDQuery) QueryBookEdition() *BookEditionQuery {
+	query := (&BookEditionClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(externalid.Table, externalid.FieldID, selector),
+			sqlgraph.To(bookedition.Table, bookedition.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, externalid.BookEditionTable, externalid.BookEditionColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -342,15 +366,16 @@ func (_q *ExternalIDQuery) Clone() *ExternalIDQuery {
 		return nil
 	}
 	return &ExternalIDQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]externalid.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.ExternalID{}, _q.predicates...),
-		withMovie:  _q.withMovie.Clone(),
-		withTvShow: _q.withTvShow.Clone(),
-		withArtist: _q.withArtist.Clone(),
-		withAlbum:  _q.withAlbum.Clone(),
+		config:          _q.config,
+		ctx:             _q.ctx.Clone(),
+		order:           append([]externalid.OrderOption{}, _q.order...),
+		inters:          append([]Interceptor{}, _q.inters...),
+		predicates:      append([]predicate.ExternalID{}, _q.predicates...),
+		withMovie:       _q.withMovie.Clone(),
+		withTvShow:      _q.withTvShow.Clone(),
+		withArtist:      _q.withArtist.Clone(),
+		withAlbum:       _q.withAlbum.Clone(),
+		withBookEdition: _q.withBookEdition.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -399,6 +424,17 @@ func (_q *ExternalIDQuery) WithAlbum(opts ...func(*AlbumQuery)) *ExternalIDQuery
 		opt(query)
 	}
 	_q.withAlbum = query
+	return _q
+}
+
+// WithBookEdition tells the query-builder to eager-load the nodes that are connected to
+// the "book_edition" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ExternalIDQuery) WithBookEdition(opts ...func(*BookEditionQuery)) *ExternalIDQuery {
+	query := (&BookEditionClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withBookEdition = query
 	return _q
 }
 
@@ -480,11 +516,12 @@ func (_q *ExternalIDQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*E
 	var (
 		nodes       = []*ExternalID{}
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withMovie != nil,
 			_q.withTvShow != nil,
 			_q.withArtist != nil,
 			_q.withAlbum != nil,
+			_q.withBookEdition != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -529,6 +566,12 @@ func (_q *ExternalIDQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*E
 	if query := _q.withAlbum; query != nil {
 		if err := _q.loadAlbum(ctx, query, nodes, nil,
 			func(n *ExternalID, e *Album) { n.Edges.Album = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withBookEdition; query != nil {
+		if err := _q.loadBookEdition(ctx, query, nodes, nil,
+			func(n *ExternalID, e *BookEdition) { n.Edges.BookEdition = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -651,6 +694,35 @@ func (_q *ExternalIDQuery) loadAlbum(ctx context.Context, query *AlbumQuery, nod
 	}
 	return nil
 }
+func (_q *ExternalIDQuery) loadBookEdition(ctx context.Context, query *BookEditionQuery, nodes []*ExternalID, init func(*ExternalID), assign func(*ExternalID, *BookEdition)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*ExternalID)
+	for i := range nodes {
+		fk := nodes[i].BookEditionID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(bookedition.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "book_edition_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 
 func (_q *ExternalIDQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -691,6 +763,9 @@ func (_q *ExternalIDQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withAlbum != nil {
 			_spec.Node.AddColumnOnce(externalid.FieldAlbumID)
+		}
+		if _q.withBookEdition != nil {
+			_spec.Node.AddColumnOnce(externalid.FieldBookEditionID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

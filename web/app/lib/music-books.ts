@@ -186,6 +186,8 @@ export type Edition = {
 	translator?: string;
 	isbn_13?: string;
 	asin?: string;
+	// Its Hardcover id, and on the detail its Goodreads, Open Library…
+	external_ids?: ExternalIds;
 };
 
 // One per format. A book is one entry; its ebook and its audiobook are two

@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/bookedition"
 	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/predicate"
 )
@@ -24,6 +25,8 @@ const (
 	ExternalIDsOfSeries ExternalIDOwner = "series"
 	ExternalIDsOfArtist ExternalIDOwner = "artist"
 	ExternalIDsOfAlbum  ExternalIDOwner = "album"
+	// A book's ids are its editions': Hardcover maps editions, not books.
+	ExternalIDsOfBookEdition ExternalIDOwner = "book_edition"
 )
 
 var errUnknownExternalIDOwner = errors.New("unknown external id owner")
@@ -53,6 +56,8 @@ func externalIDsOfAny(owner ExternalIDOwner, ownerIDs []uint32) (predicate.Exter
 		return externalid.ArtistIDIn(ownerIDs...), nil
 	case ExternalIDsOfAlbum:
 		return externalid.AlbumIDIn(ownerIDs...), nil
+	case ExternalIDsOfBookEdition:
+		return externalid.BookEditionIDIn(ownerIDs...), nil
 	default:
 		return nil, fmt.Errorf("%w: %q", errUnknownExternalIDOwner, owner)
 	}
@@ -66,6 +71,8 @@ func ownerIDOf(owner ExternalIDOwner, r *ent.ExternalID) uint32 {
 		return r.TvShowID
 	case ExternalIDsOfArtist:
 		return r.ArtistID
+	case ExternalIDsOfBookEdition:
+		return r.BookEditionID
 	default:
 		return r.AlbumID
 	}
@@ -116,6 +123,8 @@ func replaceExternalIDs(
 			b = b.SetArtistID(ownerID)
 		case ExternalIDsOfAlbum:
 			b = b.SetAlbumID(ownerID)
+		case ExternalIDsOfBookEdition:
+			b = b.SetBookEditionID(ownerID)
 		}
 		creates = append(creates, b)
 	}
@@ -211,6 +220,39 @@ func (db *DB) ListAlbumsAwaitingLinks(
 		Order(ent.Asc(album.FieldID)).
 		Limit(limit).
 		All(ctx)
+}
+
+// ListEditionsAwaitingLinks returns up to limit editions a slot follows
+// whose links were never read, in id order after afterID. Only those: a book
+// keeps up to 40 editions and Hardcover knows hundreds, while the links only
+// ever open the edition a slot follows. An edition a slot moves to later is
+// listed on the next pass.
+func (db *DB) ListEditionsAwaitingLinks(
+	ctx context.Context,
+	afterID uint32,
+	limit int,
+) ([]*ent.BookEdition, error) {
+	return db.client.BookEdition.Query().
+		Where(
+			bookedition.LinksFetchedAtIsNil(),
+			bookedition.Or(bookedition.HasEbookOf(), bookedition.HasAudiobookOf()),
+			bookedition.IDGT(afterID),
+		).
+		Order(ent.Asc(bookedition.FieldID)).
+		Limit(limit).
+		All(ctx)
+}
+
+// SetEditionLinks is SetArtistLinks for a book edition.
+func (db *DB) SetEditionLinks(
+	ctx context.Context,
+	id uint32,
+	ids ExternalIDs,
+	at time.Time,
+) error {
+	return db.setLinks(ctx, ExternalIDsOfBookEdition, id, ids, func(c *ent.Client) error {
+		return c.BookEdition.UpdateOneID(id).SetLinksFetchedAt(at).Exec(ctx)
+	})
 }
 
 // SetArtistLinks stores an artist's links and stamps links_fetched_at, in

@@ -36,6 +36,7 @@ func (ExternalID) Fields() []ent.Field {
 			"imdb", "tmdb", "wikidata",
 			"discogs", "allmusic", "spotify", "deezer", "bandcamp", "lastfm",
 			"rateyourmusic",
+			"goodreads", "openlibrary", "google_books", "audible",
 		),
 		field.String("value").NotEmpty(),
 		// The owner edges' columns, declared so a batch read (every album of
@@ -44,10 +45,11 @@ func (ExternalID) Fields() []ent.Field {
 		field.Uint32("tv_show_id").Optional(),
 		field.Uint32("artist_id").Optional(),
 		field.Uint32("album_id").Optional(),
+		field.Uint32("book_edition_id").Optional(),
 	}
 }
 
-// Edges: of the four owners exactly one is set, the Credit and MediaEvent
+// Edges: of the five owners exactly one is set, the Credit and MediaEvent
 // pattern — they are alternatives, so the invariant belongs to the writer.
 func (ExternalID) Edges() []ent.Edge {
 	return []ent.Edge{
@@ -55,6 +57,10 @@ func (ExternalID) Edges() []ent.Edge {
 		edge.From("tv_show", TVShow.Type).Ref("external_ids").Unique().Field("tv_show_id"),
 		edge.From("artist", Artist.Type).Ref("external_ids").Unique().Field("artist_id"),
 		edge.From("album", Album.Type).Ref("external_ids").Unique().Field("album_id"),
+		// A book's ids are its editions': Hardcover maps each edition to
+		// Goodreads, Open Library and the others, never the book as a whole.
+		edge.From("book_edition", BookEdition.Type).Ref("external_ids").
+			Unique().Field("book_edition_id"),
 	}
 }
 
@@ -69,6 +75,7 @@ func (ExternalID) Indexes() []ent.Index {
 		index.Fields("tv_show_id", "source").Unique(),
 		index.Fields("artist_id", "source").Unique(),
 		index.Fields("album_id", "source").Unique(),
+		index.Fields("book_edition_id", "source").Unique(),
 		// Lookup by id. Not unique: TVDB can map two series to one TMDB entry,
 		// and MusicBrainz an artist's Spotify page to two of its entries.
 		index.Fields("source", "value"),

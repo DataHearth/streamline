@@ -126,4 +126,34 @@ var _ = Describe("external ids", Label("integration", "db"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(artists).To(BeEmpty())
 	})
+
+	It("lists only the editions a slot follows, until their links are read", func() {
+		b, err := store.CreateBook(ctx, elantris(time.Now()))
+		Expect(err).NotTo(HaveOccurred())
+		// The English ebook (11) and audiobook (13) are followed; the French
+		// ebook (12) is kept but no slot points at it, so it costs nothing.
+		eds, err := store.ListEditionsAwaitingLinks(ctx, 0, 10)
+		Expect(err).NotTo(HaveOccurred())
+		hc := []uint32{}
+		for _, e := range eds {
+			hc = append(hc, e.HardcoverEditionID)
+		}
+		Expect(hc).To(ConsistOf(uint32(11), uint32(13)))
+
+		// A stamped edition is never listed again, with links or without.
+		Expect(store.SetEditionLinks(ctx, eds[0].ID,
+			ExternalIDs{"goodreads": "34168383", "openlibrary": "OL27302768M"}, time.Now(),
+		)).To(Succeed())
+		Expect(store.SetEditionLinks(ctx, eds[1].ID, ExternalIDs{}, time.Now())).To(Succeed())
+		left, err := store.ListEditionsAwaitingLinks(ctx, 0, 10)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(left).To(BeEmpty())
+
+		ids, err := store.ExternalIDsFor(ctx, ExternalIDsOfBookEdition, []uint32{eds[0].ID, eds[1].ID})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ids).To(Equal(map[uint32]ExternalIDs{
+			eds[0].ID: {"goodreads": "34168383", "openlibrary": "OL27302768M"},
+		}))
+		_ = b
+	})
 })

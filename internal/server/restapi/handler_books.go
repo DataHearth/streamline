@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/datahearth/streamline/internal/auth"
+	"github.com/datahearth/streamline/internal/db"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
@@ -391,6 +392,17 @@ func (s *Server) GetBook(
 	}
 	progress := s.books.Progress(ctx, []uint32{row.ID})[row.ID]
 	out := toAPIBook(row, progress)
+	editionIDs := make([]uint32, 0, len(row.Edges.Editions))
+	for _, e := range row.Edges.Editions {
+		editionIDs = append(editionIDs, e.ID)
+	}
+	links, err := s.store.ExternalIDsFor(ctx, db.ExternalIDsOfBookEdition, editionIDs)
+	if err != nil {
+		return GetBook500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	withEditionLinks(&out, row, links)
 	if claims := auth.ClaimsFromContext(ctx); claims != nil {
 		state := s.books.SendState(ctx, claims.UserID, row)
 		out.EbookSend = &BookSendState{Ok: state.OK, Reason: optString(state.Reason)}

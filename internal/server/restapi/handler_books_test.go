@@ -678,6 +678,10 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 	Describe("GET /books/{id}", func() {
 		var sendState book.SendState
 		BeforeEach(func() {
+			// The detail reads every edition's links in one query.
+			app.store.EXPECT().
+				ExternalIDsFor(mock.Anything, db.ExternalIDsOfBookEdition, mock.Anything).
+				Return(map[uint32]db.ExternalIDs{}, nil).Maybe()
 			sendState = book.SendState{OK: true}
 			app.books.EXPECT().
 				SendState(mock.Anything, mock.Anything, mock.Anything).

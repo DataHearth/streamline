@@ -42,6 +42,13 @@ export type ExternalIds = {
 	tvdb?: string;
 	musicbrainz?: string;
 	hardcover?: string;
+	// A book edition's, from Hardcover's mappings.
+	goodreads?: string;
+	// An Open Library edition key, OL…M.
+	openlibrary?: string;
+	google_books?: string;
+	// "ASIN:region", e.g. "B0FXY6DVJS:fr".
+	audible?: string;
 	wikidata?: string;
 	discogs?: string;
 	allmusic?: string;
@@ -271,10 +278,12 @@ export function releaseLinks(r: ReleaseLinkSource, artist: string): ExternalLink
 
 // ---- Books -----------------------------------------------------------------
 //
-// Hardcover keeps no other site's id for a book, only each edition's ISBN-13
-// and ASIN. Goodreads and Open Library both resolve an ISBN to the work's
-// page; without one they get a search. Amazon takes a printed or ebook
-// edition's ASIN, Audible an audiobook's.
+// Hardcover maps editions, not books: GET /books/{id} gives each edition a
+// slot follows its Goodreads, Open Library, Google Books, Wikidata and
+// Audible ids (ExternalIds), read once per edition. A link opens the slot's
+// own edition first, then any other edition that has the id, then resolves
+// an ISBN-13 (Goodreads and Open Library both redirect from one), then
+// searches the title. Amazon takes a printed or ebook edition's ASIN.
 
 export type BookEditionLinkSource = {
 	id: number;
@@ -282,6 +291,7 @@ export type BookEditionLinkSource = {
 	format: "ebook" | "audiobook";
 	isbn_13?: string;
 	asin?: string;
+	external_ids?: ExternalIds;
 };
 export type BookLinkSource = {
 	hardcover_id?: number;
@@ -314,34 +324,77 @@ function editionWith(
 	return undefined;
 }
 
+// An ebook edition's id first, the audiobook's second, any edition's last.
+function anyEdition(b: BookLinkSource, has: (e: BookEditionLinkSource) => string | undefined) {
+	return editionWith(b, "ebook", has) ?? editionWith(b, "audiobook", has) ?? editionWith(b, undefined, has);
+}
+
 function amazonHost(): string {
 	return getLocale() === "fr" ? "www.amazon.fr" : "www.amazon.com";
 }
-function audibleHost(): string {
-	return getLocale() === "fr" ? "www.audible.fr" : "www.audible.com";
+
+// Audible's stores by the region Hardcover names a mapping with.
+const AUDIBLE_HOSTS: Record<string, string> = {
+	us: "www.audible.com",
+	uk: "www.audible.co.uk",
+	de: "www.audible.de",
+	fr: "www.audible.fr",
+	ca: "www.audible.ca",
+	au: "www.audible.com.au",
+	jp: "www.audible.co.jp",
+	es: "www.audible.es",
+	it: "www.audible.it",
+	br: "www.audible.com.br",
+	in: "www.audible.in",
+};
+
+// "B0FXY6DVJS:fr" opens that store; a bare edition ASIN the reader's.
+function audibleUrl(mapped: string | undefined, asin: string | undefined): string | undefined {
+	if (mapped) {
+		const [id, region] = mapped.split(":");
+		const host = AUDIBLE_HOSTS[region ?? ""];
+		if (id && host) return `https://${host}/pd/${q(id)}`;
+	}
+	if (asin) return `https://${getLocale() === "fr" ? "www.audible.fr" : "www.audible.com"}/pd/${q(asin)}`;
+	return undefined;
 }
 
 export function bookLinks(b: BookLinkSource): ExternalLink[] {
 	const query = b.author ? `${b.title} ${b.author}` : b.title;
-	const isbn = editionWith(b, "ebook", (e) => e.isbn_13) ?? editionWith(b, undefined, (e) => e.isbn_13);
+	const isbn = anyEdition(b, (e) => e.isbn_13);
+	const goodreads = anyEdition(b, (e) => e.external_ids?.goodreads);
+	const openlibrary = anyEdition(b, (e) => e.external_ids?.openlibrary);
+	const google = anyEdition(b, (e) => e.external_ids?.google_books);
+	const wikidata = anyEdition(b, (e) => e.external_ids?.wikidata);
 	const ebookAsin = editionWith(b, "ebook", (e) => e.asin);
-	const audioAsin = editionWith(b, "audiobook", (e) => e.asin);
+	const audible = audibleUrl(
+		editionWith(b, "audiobook", (e) => e.external_ids?.audible),
+		editionWith(b, "audiobook", (e) => e.asin),
+	);
 	const links: ExternalLink[] = [];
 	if (b.hardcover_id) {
 		links.push({ site: "hardcover", label: "Hardcover", href: `https://hardcover.app/book/${b.hardcover_id}`, group: "database" });
 	}
-	links.push(
-		isbn
-			? { site: "openlibrary", label: "Open Library", href: `https://openlibrary.org/isbn/${q(isbn)}`, group: "database" }
-			: search("openlibrary", "Open Library", `https://openlibrary.org/search?q=${q(query)}`, "database", query),
-	);
+	if (openlibrary) {
+		links.push({ site: "openlibrary", label: "Open Library", href: `https://openlibrary.org/books/${q(openlibrary)}`, group: "database" });
+	} else if (isbn) {
+		links.push({ site: "openlibrary", label: "Open Library", href: `https://openlibrary.org/isbn/${q(isbn)}`, group: "database" });
+	} else {
+		links.push(search("openlibrary", "Open Library", `https://openlibrary.org/search?q=${q(query)}`, "database", query));
+	}
+	if (google) {
+		links.push({ site: "google_books", label: "Google Books", href: `https://books.google.com/books?id=${q(google)}`, group: "database" });
+	}
+	if (wikidata) links.push({ site: "wikidata", label: "Wikidata", href: wikidataUrl(wikidata), group: "database" });
 	if (ebookAsin) links.push({ site: "amazon", label: "Amazon", href: `https://${amazonHost()}/dp/${q(ebookAsin)}`, group: "stores" });
-	if (audioAsin) links.push({ site: "audible", label: "Audible", href: `https://${audibleHost()}/pd/${q(audioAsin)}`, group: "stores" });
-	links.push(
-		isbn
-			? { site: "goodreads", label: "Goodreads", href: `https://www.goodreads.com/book/isbn/${q(isbn)}`, group: "reviews" }
-			: search("goodreads", "Goodreads", `https://www.goodreads.com/search?q=${q(query)}`, "reviews", query),
-	);
+	if (audible) links.push({ site: "audible", label: "Audible", href: audible, group: "stores" });
+	if (goodreads) {
+		links.push({ site: "goodreads", label: "Goodreads", href: `https://www.goodreads.com/book/show/${q(goodreads)}`, group: "reviews" });
+	} else if (isbn) {
+		links.push({ site: "goodreads", label: "Goodreads", href: `https://www.goodreads.com/book/isbn/${q(isbn)}`, group: "reviews" });
+	} else {
+		links.push(search("goodreads", "Goodreads", `https://www.goodreads.com/search?q=${q(query)}`, "reviews", query));
+	}
 	if (getLocale() === "fr") {
 		links.push(search("senscritique", "SensCritique", `https://www.senscritique.com/search?query=${q(b.title)}`, "reviews", b.title));
 	}

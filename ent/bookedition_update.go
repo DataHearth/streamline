@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/bookedition"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
@@ -282,6 +283,26 @@ func (_u *BookEditionUpdate) ClearAsin() *BookEditionUpdate {
 	return _u
 }
 
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (_u *BookEditionUpdate) SetLinksFetchedAt(v time.Time) *BookEditionUpdate {
+	_u.mutation.SetLinksFetchedAt(v)
+	return _u
+}
+
+// SetNillableLinksFetchedAt sets the "links_fetched_at" field if the given value is not nil.
+func (_u *BookEditionUpdate) SetNillableLinksFetchedAt(v *time.Time) *BookEditionUpdate {
+	if v != nil {
+		_u.SetLinksFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearLinksFetchedAt clears the value of the "links_fetched_at" field.
+func (_u *BookEditionUpdate) ClearLinksFetchedAt() *BookEditionUpdate {
+	_u.mutation.ClearLinksFetchedAt()
+	return _u
+}
+
 // SetPopularity sets the "popularity" field.
 func (_u *BookEditionUpdate) SetPopularity(v uint32) *BookEditionUpdate {
 	_u.mutation.ResetPopularity()
@@ -314,6 +335,51 @@ func (_u *BookEditionUpdate) SetBook(v *Book) *BookEditionUpdate {
 	return _u.SetBookID(v.ID)
 }
 
+// AddEbookOfIDs adds the "ebook_of" edge to the Book entity by IDs.
+func (_u *BookEditionUpdate) AddEbookOfIDs(ids ...uint32) *BookEditionUpdate {
+	_u.mutation.AddEbookOfIDs(ids...)
+	return _u
+}
+
+// AddEbookOf adds the "ebook_of" edges to the Book entity.
+func (_u *BookEditionUpdate) AddEbookOf(v ...*Book) *BookEditionUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEbookOfIDs(ids...)
+}
+
+// AddAudiobookOfIDs adds the "audiobook_of" edge to the Book entity by IDs.
+func (_u *BookEditionUpdate) AddAudiobookOfIDs(ids ...uint32) *BookEditionUpdate {
+	_u.mutation.AddAudiobookOfIDs(ids...)
+	return _u
+}
+
+// AddAudiobookOf adds the "audiobook_of" edges to the Book entity.
+func (_u *BookEditionUpdate) AddAudiobookOf(v ...*Book) *BookEditionUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAudiobookOfIDs(ids...)
+}
+
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_u *BookEditionUpdate) AddExternalIDIDs(ids ...uint32) *BookEditionUpdate {
+	_u.mutation.AddExternalIDIDs(ids...)
+	return _u
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_u *BookEditionUpdate) AddExternalIds(v ...*ExternalID) *BookEditionUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalIDIDs(ids...)
+}
+
 // Mutation returns the BookEditionMutation object of the builder.
 func (_u *BookEditionUpdate) Mutation() *BookEditionMutation {
 	return _u.mutation
@@ -323,6 +389,69 @@ func (_u *BookEditionUpdate) Mutation() *BookEditionMutation {
 func (_u *BookEditionUpdate) ClearBook() *BookEditionUpdate {
 	_u.mutation.ClearBook()
 	return _u
+}
+
+// ClearEbookOf clears all "ebook_of" edges to the Book entity.
+func (_u *BookEditionUpdate) ClearEbookOf() *BookEditionUpdate {
+	_u.mutation.ClearEbookOf()
+	return _u
+}
+
+// RemoveEbookOfIDs removes the "ebook_of" edge to Book entities by IDs.
+func (_u *BookEditionUpdate) RemoveEbookOfIDs(ids ...uint32) *BookEditionUpdate {
+	_u.mutation.RemoveEbookOfIDs(ids...)
+	return _u
+}
+
+// RemoveEbookOf removes "ebook_of" edges to Book entities.
+func (_u *BookEditionUpdate) RemoveEbookOf(v ...*Book) *BookEditionUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEbookOfIDs(ids...)
+}
+
+// ClearAudiobookOf clears all "audiobook_of" edges to the Book entity.
+func (_u *BookEditionUpdate) ClearAudiobookOf() *BookEditionUpdate {
+	_u.mutation.ClearAudiobookOf()
+	return _u
+}
+
+// RemoveAudiobookOfIDs removes the "audiobook_of" edge to Book entities by IDs.
+func (_u *BookEditionUpdate) RemoveAudiobookOfIDs(ids ...uint32) *BookEditionUpdate {
+	_u.mutation.RemoveAudiobookOfIDs(ids...)
+	return _u
+}
+
+// RemoveAudiobookOf removes "audiobook_of" edges to Book entities.
+func (_u *BookEditionUpdate) RemoveAudiobookOf(v ...*Book) *BookEditionUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAudiobookOfIDs(ids...)
+}
+
+// ClearExternalIds clears all "external_ids" edges to the ExternalID entity.
+func (_u *BookEditionUpdate) ClearExternalIds() *BookEditionUpdate {
+	_u.mutation.ClearExternalIds()
+	return _u
+}
+
+// RemoveExternalIDIDs removes the "external_ids" edge to ExternalID entities by IDs.
+func (_u *BookEditionUpdate) RemoveExternalIDIDs(ids ...uint32) *BookEditionUpdate {
+	_u.mutation.RemoveExternalIDIDs(ids...)
+	return _u
+}
+
+// RemoveExternalIds removes "external_ids" edges to ExternalID entities.
+func (_u *BookEditionUpdate) RemoveExternalIds(v ...*ExternalID) *BookEditionUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalIDIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -474,6 +603,12 @@ func (_u *BookEditionUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if _u.mutation.AsinCleared() {
 		_spec.ClearField(bookedition.FieldAsin, field.TypeString)
 	}
+	if value, ok := _u.mutation.LinksFetchedAt(); ok {
+		_spec.SetField(bookedition.FieldLinksFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LinksFetchedAtCleared() {
+		_spec.ClearField(bookedition.FieldLinksFetchedAt, field.TypeTime)
+	}
 	if value, ok := _u.mutation.Popularity(); ok {
 		_spec.SetField(bookedition.FieldPopularity, field.TypeUint32, value)
 	}
@@ -502,6 +637,141 @@ func (_u *BookEditionUpdate) sqlSave(ctx context.Context) (_node int, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EbookOfCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.EbookOfTable,
+			Columns: []string{bookedition.EbookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEbookOfIDs(); len(nodes) > 0 && !_u.mutation.EbookOfCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.EbookOfTable,
+			Columns: []string{bookedition.EbookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EbookOfIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.EbookOfTable,
+			Columns: []string{bookedition.EbookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AudiobookOfCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.AudiobookOfTable,
+			Columns: []string{bookedition.AudiobookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAudiobookOfIDs(); len(nodes) > 0 && !_u.mutation.AudiobookOfCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.AudiobookOfTable,
+			Columns: []string{bookedition.AudiobookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AudiobookOfIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.AudiobookOfTable,
+			Columns: []string{bookedition.AudiobookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   bookedition.ExternalIdsTable,
+			Columns: []string{bookedition.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalIdsIDs(); len(nodes) > 0 && !_u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   bookedition.ExternalIdsTable,
+			Columns: []string{bookedition.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   bookedition.ExternalIdsTable,
+			Columns: []string{bookedition.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -783,6 +1053,26 @@ func (_u *BookEditionUpdateOne) ClearAsin() *BookEditionUpdateOne {
 	return _u
 }
 
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (_u *BookEditionUpdateOne) SetLinksFetchedAt(v time.Time) *BookEditionUpdateOne {
+	_u.mutation.SetLinksFetchedAt(v)
+	return _u
+}
+
+// SetNillableLinksFetchedAt sets the "links_fetched_at" field if the given value is not nil.
+func (_u *BookEditionUpdateOne) SetNillableLinksFetchedAt(v *time.Time) *BookEditionUpdateOne {
+	if v != nil {
+		_u.SetLinksFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearLinksFetchedAt clears the value of the "links_fetched_at" field.
+func (_u *BookEditionUpdateOne) ClearLinksFetchedAt() *BookEditionUpdateOne {
+	_u.mutation.ClearLinksFetchedAt()
+	return _u
+}
+
 // SetPopularity sets the "popularity" field.
 func (_u *BookEditionUpdateOne) SetPopularity(v uint32) *BookEditionUpdateOne {
 	_u.mutation.ResetPopularity()
@@ -815,6 +1105,51 @@ func (_u *BookEditionUpdateOne) SetBook(v *Book) *BookEditionUpdateOne {
 	return _u.SetBookID(v.ID)
 }
 
+// AddEbookOfIDs adds the "ebook_of" edge to the Book entity by IDs.
+func (_u *BookEditionUpdateOne) AddEbookOfIDs(ids ...uint32) *BookEditionUpdateOne {
+	_u.mutation.AddEbookOfIDs(ids...)
+	return _u
+}
+
+// AddEbookOf adds the "ebook_of" edges to the Book entity.
+func (_u *BookEditionUpdateOne) AddEbookOf(v ...*Book) *BookEditionUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEbookOfIDs(ids...)
+}
+
+// AddAudiobookOfIDs adds the "audiobook_of" edge to the Book entity by IDs.
+func (_u *BookEditionUpdateOne) AddAudiobookOfIDs(ids ...uint32) *BookEditionUpdateOne {
+	_u.mutation.AddAudiobookOfIDs(ids...)
+	return _u
+}
+
+// AddAudiobookOf adds the "audiobook_of" edges to the Book entity.
+func (_u *BookEditionUpdateOne) AddAudiobookOf(v ...*Book) *BookEditionUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAudiobookOfIDs(ids...)
+}
+
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_u *BookEditionUpdateOne) AddExternalIDIDs(ids ...uint32) *BookEditionUpdateOne {
+	_u.mutation.AddExternalIDIDs(ids...)
+	return _u
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_u *BookEditionUpdateOne) AddExternalIds(v ...*ExternalID) *BookEditionUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalIDIDs(ids...)
+}
+
 // Mutation returns the BookEditionMutation object of the builder.
 func (_u *BookEditionUpdateOne) Mutation() *BookEditionMutation {
 	return _u.mutation
@@ -824,6 +1159,69 @@ func (_u *BookEditionUpdateOne) Mutation() *BookEditionMutation {
 func (_u *BookEditionUpdateOne) ClearBook() *BookEditionUpdateOne {
 	_u.mutation.ClearBook()
 	return _u
+}
+
+// ClearEbookOf clears all "ebook_of" edges to the Book entity.
+func (_u *BookEditionUpdateOne) ClearEbookOf() *BookEditionUpdateOne {
+	_u.mutation.ClearEbookOf()
+	return _u
+}
+
+// RemoveEbookOfIDs removes the "ebook_of" edge to Book entities by IDs.
+func (_u *BookEditionUpdateOne) RemoveEbookOfIDs(ids ...uint32) *BookEditionUpdateOne {
+	_u.mutation.RemoveEbookOfIDs(ids...)
+	return _u
+}
+
+// RemoveEbookOf removes "ebook_of" edges to Book entities.
+func (_u *BookEditionUpdateOne) RemoveEbookOf(v ...*Book) *BookEditionUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEbookOfIDs(ids...)
+}
+
+// ClearAudiobookOf clears all "audiobook_of" edges to the Book entity.
+func (_u *BookEditionUpdateOne) ClearAudiobookOf() *BookEditionUpdateOne {
+	_u.mutation.ClearAudiobookOf()
+	return _u
+}
+
+// RemoveAudiobookOfIDs removes the "audiobook_of" edge to Book entities by IDs.
+func (_u *BookEditionUpdateOne) RemoveAudiobookOfIDs(ids ...uint32) *BookEditionUpdateOne {
+	_u.mutation.RemoveAudiobookOfIDs(ids...)
+	return _u
+}
+
+// RemoveAudiobookOf removes "audiobook_of" edges to Book entities.
+func (_u *BookEditionUpdateOne) RemoveAudiobookOf(v ...*Book) *BookEditionUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAudiobookOfIDs(ids...)
+}
+
+// ClearExternalIds clears all "external_ids" edges to the ExternalID entity.
+func (_u *BookEditionUpdateOne) ClearExternalIds() *BookEditionUpdateOne {
+	_u.mutation.ClearExternalIds()
+	return _u
+}
+
+// RemoveExternalIDIDs removes the "external_ids" edge to ExternalID entities by IDs.
+func (_u *BookEditionUpdateOne) RemoveExternalIDIDs(ids ...uint32) *BookEditionUpdateOne {
+	_u.mutation.RemoveExternalIDIDs(ids...)
+	return _u
+}
+
+// RemoveExternalIds removes "external_ids" edges to ExternalID entities.
+func (_u *BookEditionUpdateOne) RemoveExternalIds(v ...*ExternalID) *BookEditionUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalIDIDs(ids...)
 }
 
 // Where appends a list predicates to the BookEditionUpdate builder.
@@ -1005,6 +1403,12 @@ func (_u *BookEditionUpdateOne) sqlSave(ctx context.Context) (_node *BookEdition
 	if _u.mutation.AsinCleared() {
 		_spec.ClearField(bookedition.FieldAsin, field.TypeString)
 	}
+	if value, ok := _u.mutation.LinksFetchedAt(); ok {
+		_spec.SetField(bookedition.FieldLinksFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LinksFetchedAtCleared() {
+		_spec.ClearField(bookedition.FieldLinksFetchedAt, field.TypeTime)
+	}
 	if value, ok := _u.mutation.Popularity(); ok {
 		_spec.SetField(bookedition.FieldPopularity, field.TypeUint32, value)
 	}
@@ -1033,6 +1437,141 @@ func (_u *BookEditionUpdateOne) sqlSave(ctx context.Context) (_node *BookEdition
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EbookOfCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.EbookOfTable,
+			Columns: []string{bookedition.EbookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEbookOfIDs(); len(nodes) > 0 && !_u.mutation.EbookOfCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.EbookOfTable,
+			Columns: []string{bookedition.EbookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EbookOfIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.EbookOfTable,
+			Columns: []string{bookedition.EbookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AudiobookOfCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.AudiobookOfTable,
+			Columns: []string{bookedition.AudiobookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAudiobookOfIDs(); len(nodes) > 0 && !_u.mutation.AudiobookOfCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.AudiobookOfTable,
+			Columns: []string{bookedition.AudiobookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AudiobookOfIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   bookedition.AudiobookOfTable,
+			Columns: []string{bookedition.AudiobookOfColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   bookedition.ExternalIdsTable,
+			Columns: []string{bookedition.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalIdsIDs(); len(nodes) > 0 && !_u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   bookedition.ExternalIdsTable,
+			Columns: []string{bookedition.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   bookedition.ExternalIdsTable,
+			Columns: []string{bookedition.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
