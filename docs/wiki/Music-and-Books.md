@@ -163,12 +163,12 @@ An artist's page, an album's panel, a book's page and a series' page each carry 
 
 - **Artist**: MusicBrainz, Discogs, Last.fm and Wikidata; Spotify, Deezer and Bandcamp; AllMusic and RateYourMusic (plus SensCritique in French).
 - **Album**: MusicBrainz, Discogs and Wikidata; Spotify, Deezer and Bandcamp; AllMusic, RateYourMusic and Metacritic (plus SensCritique in French).
-- **Book**: Hardcover and Open Library; Amazon for the ebook and Audible for the audiobook; Goodreads (plus SensCritique in French).
+- **Book**: Hardcover, Open Library, Google Books and Wikidata; Amazon for the ebook and Audible for the audiobook; Goodreads (plus SensCritique in French).
 - **Series**: Hardcover, and a Goodreads search (plus SensCritique in French).
 
 The music links are the ones MusicBrainz keeps for the artist or the album. A new artist gets them when it is added and an album when its tracks are fetched. For the library you already had, the first `music-metadata-refresh` after the upgrade reads them for every artist and every album: one small request per artist and at most two per album, never a full refresh. At the default MusicBrainz pace that is about 2 seconds an artist and 4 an album, so a large library takes hours. It runs at background priority, so searches and adds are not slowed. A rate limit is waited out, and whatever is left when the run stops is picked up by the next one. Run the job from **Settings → Schedules** to start it now. When MusicBrainz links none for Discogs, AllMusic or RateYourMusic, that link searches the name instead, shown with a magnifier rather than an arrow. Streaming links appear only where MusicBrainz has them.
 
-Hardcover keeps no other site's id for a book, so a book's links go through its editions: Goodreads and Open Library open the book from its ISBN (the ebook edition's, else any edition's), and search its title and author when no edition has one. Amazon and Audible need the edition's ASIN and are left out without it. Amazon and Audible point at the `.fr` stores in the French interface.
+A book's links are its editions'. Hardcover maps each edition to Goodreads, Open Library, Google Books, Wikidata and Audible, and Streamline reads those ids for the editions your slots follow: the ebook's and the audiobook's, never the hundreds of other editions a popular book has. They are read once per edition, a hundred editions per Hardcover request, at the end of `book-metadata-refresh`, so a new book or a newly picked edition gets them on the next run. Until then, and for an edition Hardcover maps nowhere, Goodreads and Open Library open the book from its ISBN, else search its title and author. Audible opens the store of your book language when Hardcover lists the audiobook there, else the US one. Amazon needs the edition's ASIN and points at the `.fr` store in the French interface.
 
 ## Finding an artist, an album or a book
 

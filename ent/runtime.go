@@ -274,7 +274,7 @@ func init() {
 	// bookedition.DefaultOriginal holds the default value on creation for the original field.
 	bookedition.DefaultOriginal = bookeditionDescOriginal.Default.(bool)
 	// bookeditionDescPopularity is the schema descriptor for popularity field.
-	bookeditionDescPopularity := bookeditionFields[13].Descriptor()
+	bookeditionDescPopularity := bookeditionFields[14].Descriptor()
 	// bookedition.DefaultPopularity holds the default value on creation for the popularity field.
 	bookedition.DefaultPopularity = bookeditionDescPopularity.Default.(uint32)
 	bookseriesMixin := schema.BookSeries{}.Mixin()

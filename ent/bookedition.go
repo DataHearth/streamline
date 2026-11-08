@@ -48,6 +48,8 @@ type BookEdition struct {
 	Isbn13 string `json:"isbn_13,omitempty"`
 	// Asin holds the value of the "asin" field.
 	Asin string `json:"asin,omitempty"`
+	// LinksFetchedAt holds the value of the "links_fetched_at" field.
+	LinksFetchedAt *time.Time `json:"links_fetched_at,omitempty"`
 	// Hardcover users_count; ranks winners.
 	Popularity uint32 `json:"popularity,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -61,9 +63,15 @@ type BookEdition struct {
 type BookEditionEdges struct {
 	// Book holds the value of the book edge.
 	Book *Book `json:"book,omitempty"`
+	// EbookOf holds the value of the ebook_of edge.
+	EbookOf []*Book `json:"ebook_of,omitempty"`
+	// AudiobookOf holds the value of the audiobook_of edge.
+	AudiobookOf []*Book `json:"audiobook_of,omitempty"`
+	// ExternalIds holds the value of the external_ids edge.
+	ExternalIds []*ExternalID `json:"external_ids,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [4]bool
 }
 
 // BookOrErr returns the Book value or an error if the edge
@@ -77,6 +85,33 @@ func (e BookEditionEdges) BookOrErr() (*Book, error) {
 	return nil, &NotLoadedError{edge: "book"}
 }
 
+// EbookOfOrErr returns the EbookOf value or an error if the edge
+// was not loaded in eager-loading.
+func (e BookEditionEdges) EbookOfOrErr() ([]*Book, error) {
+	if e.loadedTypes[1] {
+		return e.EbookOf, nil
+	}
+	return nil, &NotLoadedError{edge: "ebook_of"}
+}
+
+// AudiobookOfOrErr returns the AudiobookOf value or an error if the edge
+// was not loaded in eager-loading.
+func (e BookEditionEdges) AudiobookOfOrErr() ([]*Book, error) {
+	if e.loadedTypes[2] {
+		return e.AudiobookOf, nil
+	}
+	return nil, &NotLoadedError{edge: "audiobook_of"}
+}
+
+// ExternalIdsOrErr returns the ExternalIds value or an error if the edge
+// was not loaded in eager-loading.
+func (e BookEditionEdges) ExternalIdsOrErr() ([]*ExternalID, error) {
+	if e.loadedTypes[3] {
+		return e.ExternalIds, nil
+	}
+	return nil, &NotLoadedError{edge: "external_ids"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*BookEdition) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -88,7 +123,7 @@ func (*BookEdition) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case bookedition.FieldLanguage, bookedition.FieldTitle, bookedition.FieldPublisher, bookedition.FieldFormat, bookedition.FieldNarrator, bookedition.FieldTranslator, bookedition.FieldIsbn13, bookedition.FieldAsin:
 			values[i] = new(sql.NullString)
-		case bookedition.FieldCreateTime, bookedition.FieldUpdateTime:
+		case bookedition.FieldCreateTime, bookedition.FieldUpdateTime, bookedition.FieldLinksFetchedAt:
 			values[i] = new(sql.NullTime)
 		case bookedition.ForeignKeys[0]: // book_editions
 			values[i] = new(sql.NullInt64)
@@ -205,6 +240,13 @@ func (_m *BookEdition) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Asin = value.String
 			}
+		case bookedition.FieldLinksFetchedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field links_fetched_at", values[i])
+			} else if value.Valid {
+				_m.LinksFetchedAt = new(time.Time)
+				*_m.LinksFetchedAt = value.Time
+			}
 		case bookedition.FieldPopularity:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field popularity", values[i])
@@ -234,6 +276,21 @@ func (_m *BookEdition) Value(name string) (ent.Value, error) {
 // QueryBook queries the "book" edge of the BookEdition entity.
 func (_m *BookEdition) QueryBook() *BookQuery {
 	return NewBookEditionClient(_m.config).QueryBook(_m)
+}
+
+// QueryEbookOf queries the "ebook_of" edge of the BookEdition entity.
+func (_m *BookEdition) QueryEbookOf() *BookQuery {
+	return NewBookEditionClient(_m.config).QueryEbookOf(_m)
+}
+
+// QueryAudiobookOf queries the "audiobook_of" edge of the BookEdition entity.
+func (_m *BookEdition) QueryAudiobookOf() *BookQuery {
+	return NewBookEditionClient(_m.config).QueryAudiobookOf(_m)
+}
+
+// QueryExternalIds queries the "external_ids" edge of the BookEdition entity.
+func (_m *BookEdition) QueryExternalIds() *ExternalIDQuery {
+	return NewBookEditionClient(_m.config).QueryExternalIds(_m)
 }
 
 // Update returns a builder for updating this BookEdition.
@@ -307,6 +364,11 @@ func (_m *BookEdition) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("asin=")
 	builder.WriteString(_m.Asin)
+	builder.WriteString(", ")
+	if v := _m.LinksFetchedAt; v != nil {
+		builder.WriteString("links_fetched_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("popularity=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Popularity))
