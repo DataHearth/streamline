@@ -37,6 +37,7 @@
 		TVShow,
 	} from "@lib/types";
 	import LookupDetailPanel from "./LookupDetailPanel.svelte";
+	import ClampedText from "./ClampedText.svelte";
 	import LookupSheet from "./LookupSheet.svelte";
 	import StatusPill from "./StatusPill.svelte";
 	import Select from "@components/forms/Select.svelte";
@@ -558,13 +559,13 @@
 						>
 							{i18n.detail_synopsis()}
 						</h3>
-						<p
-							class="text-[13.5px] leading-relaxed text-fg-muted [text-wrap:pretty] {atFullHeight
-								? ''
-								: 'line-clamp-3'}"
-						>
-							{synopsis}
-						</p>
+						<ClampedText
+							text={synopsis}
+							class="max-w-none"
+							textClass="text-[13.5px]"
+							open={atFullHeight}
+							onReadMore={() => (sheetExpanded = true)}
+						/>
 					</section>
 				{/if}
 			{/if}

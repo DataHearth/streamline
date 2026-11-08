@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ClampedText from "@components/shared/ClampedText.svelte";
 	import type { Snippet } from "svelte";
 	import { ArrowLeft } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
@@ -104,11 +105,7 @@
 				{@render dotted(meta, "mt-3 font-mono text-xs text-fg-muted")}
 			{/if}
 			{#if overview}
-				<p
-					class="mt-4 line-clamp-3 max-w-[680px] text-sm leading-relaxed text-fg-muted [text-wrap:pretty]"
-				>
-					{overview}
-				</p>
+				<ClampedText class="mt-4" text={overview} />
 			{/if}
 			{#if extra}
 				{@render extra()}
