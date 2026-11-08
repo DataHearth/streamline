@@ -48,8 +48,51 @@
 		};
 	});
 
+	// A hero centres or bottom-aligns its text beside the art, so growing the
+	// text moved the title up. Expanding pins that grid row's items where they
+	// stand, and only what follows the text moves; collapsing unpins them.
+	let unpin: (() => void) | null = null;
+	function pinRow() {
+		for (let a = el?.parentElement; a?.parentElement; a = a.parentElement) {
+			const grid = a.parentElement;
+			if (getComputedStyle(grid).display !== "grid") continue;
+			const box = a.getBoundingClientRect();
+			const row = [...grid.children].filter((c): c is HTMLElement => {
+				const b = c.getBoundingClientRect();
+				return c instanceof HTMLElement && b.bottom > box.top && b.top < box.bottom;
+			});
+			if (row.length < 2) return; // stacked: nothing sits beside the text
+			const items = row.map((c) => ({ c, top: c.getBoundingClientRect().top }));
+			const rowTop = Math.min(
+				...items.map(({ c, top }) => top - parseFloat(getComputedStyle(c).marginTop)),
+			);
+			const saved = row.map((c) => [c, c.style.alignSelf, c.style.marginTop] as const);
+			for (const { c, top } of items) {
+				c.style.alignSelf = "start";
+				c.style.marginTop = `${top - rowTop}px`;
+			}
+			const release = () => {
+				for (const [c, align, margin] of saved) {
+					c.style.alignSelf = align;
+					c.style.marginTop = margin;
+				}
+				window.removeEventListener("resize", release);
+				unpin = null;
+			};
+			// The pinned offsets belong to this layout only.
+			window.addEventListener("resize", release);
+			unpin = release;
+			return;
+		}
+	}
+	$effect(() => {
+		if (!expanded) unpin?.();
+	});
+	$effect(() => () => unpin?.());
+
 	async function toggle() {
 		if (!onReadMore) {
+			if (!ownExpanded) pinRow();
 			ownExpanded = !ownExpanded;
 			return;
 		}
