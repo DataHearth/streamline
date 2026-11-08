@@ -52,6 +52,8 @@ type Artist struct {
 	DeezerID uint32 `json:"deezer_id,omitempty"`
 	// WikidataID holds the value of the "wikidata_id" field.
 	WikidataID string `json:"wikidata_id,omitempty"`
+	// LinksFetchedAt holds the value of the "links_fetched_at" field.
+	LinksFetchedAt *time.Time `json:"links_fetched_at,omitempty"`
 	// QualityProfile holds the value of the "quality_profile" field.
 	QualityProfile string `json:"quality_profile,omitempty"`
 	// LastRefreshedAt holds the value of the "last_refreshed_at" field.
@@ -150,7 +152,7 @@ func (*Artist) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case artist.FieldMbid, artist.FieldName, artist.FieldSortName, artist.FieldOverview, artist.FieldOverviewSource, artist.FieldOverviewFr, artist.FieldOverviewSourceFr, artist.FieldMonitor, artist.FieldType, artist.FieldOrigin, artist.FieldGenre, artist.FieldWikidataID, artist.FieldQualityProfile, artist.FieldArtSidecarHash:
 			values[i] = new(sql.NullString)
-		case artist.FieldCreateTime, artist.FieldUpdateTime, artist.FieldLastRefreshedAt, artist.FieldDetailsFetchedAt:
+		case artist.FieldCreateTime, artist.FieldUpdateTime, artist.FieldLinksFetchedAt, artist.FieldLastRefreshedAt, artist.FieldDetailsFetchedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -276,6 +278,13 @@ func (_m *Artist) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field wikidata_id", values[i])
 			} else if value.Valid {
 				_m.WikidataID = value.String
+			}
+		case artist.FieldLinksFetchedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field links_fetched_at", values[i])
+			} else if value.Valid {
+				_m.LinksFetchedAt = new(time.Time)
+				*_m.LinksFetchedAt = value.Time
 			}
 		case artist.FieldQualityProfile:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -419,6 +428,11 @@ func (_m *Artist) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("wikidata_id=")
 	builder.WriteString(_m.WikidataID)
+	builder.WriteString(", ")
+	if v := _m.LinksFetchedAt; v != nil {
+		builder.WriteString("links_fetched_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("quality_profile=")
 	builder.WriteString(_m.QualityProfile)

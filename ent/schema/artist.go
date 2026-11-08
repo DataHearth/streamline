@@ -44,6 +44,10 @@ func (Artist) Fields() []ent.Field {
 		field.String("genre").Optional(),
 		field.Uint32("deezer_id").Optional(),
 		field.String("wikidata_id").Optional(),
+		// links_fetched_at stamps the last time MusicBrainz's url relations were
+		// read for the row into external_ids. NULL is a row stored before they
+		// were, which the links backfill (music.Service.backfillLinks) reads.
+		field.Time("links_fetched_at").Optional().Nillable(),
 		field.String("quality_profile").Optional(),
 		field.Time("last_refreshed_at").Optional().Nillable(),
 		// Stamped once the overview and photo steps have run, so neither is

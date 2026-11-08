@@ -62,6 +62,10 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 		refreshed++
 	}
 
+	// After the refreshes, which stamp the artists they reach: what is left
+	// is the backlog of rows stored before the links were kept.
+	s.backfillLinks(ctx)
+
 	span.SetAttributes(
 		attribute.Int("refresh.refreshed_count", refreshed),
 		attribute.Int("refresh.skipped_count", skipped),
