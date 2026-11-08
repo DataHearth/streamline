@@ -36,6 +36,11 @@
 		searchable?: boolean;
 		// Caps the open list's height in px; it scrolls past that.
 		maxHeight?: number;
+		// "row" draws the whole control as one tappable row — the label on the
+		// left, the chosen value and chevron on the right — for a picker that
+		// sits on its own in a sheet footer. Nesting the field variant in a
+		// bordered row gave two outlines whose radii never matched.
+		variant?: "field" | "row";
 	};
 
 	let {
@@ -49,11 +54,13 @@
 		readOnlyExempt = false,
 		searchable = false,
 		maxHeight,
+		variant = "field",
 	}: Props = $props();
 
 	const lock = readOnlyLock();
 	let configLocked = $derived(!readOnlyExempt && lock());
 	let off = $derived(disabled || configLocked);
+	let row = $derived(variant === "row");
 
 	let open = $state(false);
 	let triggerEl = $state<HTMLButtonElement | null>(null);
@@ -107,40 +114,65 @@
 	}
 </script>
 
-<div class="block">
-	{#if label}
-		<span class="mb-1 flex items-center gap-1.5 text-sm font-medium text-fg"
-			>{label}<FieldLock locked={configLocked} /></span
+<!-- One trigger for both layouts: the row draws its label inside the button,
+     the field above it, and everything else (the binding, ARIA, the handler)
+     is stated once. Without an aria-label the row's name is its content, the
+     label and the chosen value both; the field's label is not associated with
+     its button, so there the button names itself by the value. -->
+{#snippet trigger()}
+	<button
+		bind:this={triggerEl}
+		{id}
+		type="button"
+		disabled={off}
+		aria-label={label ? undefined : ariaLabel}
+		aria-haspopup="listbox"
+		aria-expanded={open}
+		onclick={toggle}
+		class={cn(
+			row
+				? "flex h-[46px] w-full items-center gap-3 rounded-xl border border-border bg-surface px-3.5 text-left transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-accent active:opacity-80"
+				: "flex min-h-11 w-full items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 text-sm text-fg transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-accent lg:h-9 lg:min-h-0",
+			open && "border-accent hover:border-accent",
+			off && "cursor-not-allowed opacity-60",
+		)}
+	>
+		{#if row && label}
+			<span class="flex flex-none items-center gap-1.5 text-[13.5px] text-fg"
+				>{label}<FieldLock locked={configLocked} /></span
+			>
+		{/if}
+		<span
+			class={row
+				? "ml-auto min-w-0 truncate text-[13.5px] font-medium text-fg-muted"
+				: "truncate"}>{selectedLabel}</span
 		>
-	{/if}
-	<div class="relative">
-		<button
-			bind:this={triggerEl}
-			{id}
-			type="button"
-			disabled={off}
-			aria-label={label ? undefined : ariaLabel}
-			aria-haspopup="listbox"
-			aria-expanded={open}
-			onclick={toggle}
+		<ChevronDown
+			size={16}
 			class={cn(
-				"flex min-h-11 w-full items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 text-sm text-fg transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-accent lg:h-9 lg:min-h-0",
-				open && "border-accent",
-				off && "cursor-not-allowed opacity-60",
+				"shrink-0 text-fg-muted transition-transform duration-150",
+				row && "-ml-1",
+				open && "rotate-180",
 			)}
-		>
-			<span class="truncate">{selectedLabel}</span>
-			<ChevronDown
-				size={16}
-				class={cn(
-					"shrink-0 text-fg-muted transition-transform duration-150",
-					open && "rotate-180",
-				)}
-				aria-hidden="true"
-			/>
-		</button>
+			aria-hidden="true"
+		/>
+	</button>
+{/snippet}
+
+{#if row}
+	{@render trigger()}
+{:else}
+	<div class="block">
+		{#if label}
+			<span class="mb-1 flex items-center gap-1.5 text-sm font-medium text-fg"
+				>{label}<FieldLock locked={configLocked} /></span
+			>
+		{/if}
+		<div class="relative">
+			{@render trigger()}
+		</div>
 	</div>
-</div>
+{/if}
 
 <DropdownMenu
 	{open}
