@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -910,6 +911,10 @@ func (i *indexer) searchAll(
 
 	for _, idx := range indexers {
 		wg.Go(func() {
+			// A built-in indexer parses whatever the tracker answers with;
+			// a page that trips the engine must cost this indexer's results,
+			// not the process.
+			defer observability.RecoverPanic(ctx, "indexer search", nil)
 			client, baseURL, err := i.clientFor(ctx, idx)
 			if err != nil {
 				indexerQueries.Add(ctx, 1, metric.WithAttributes(
