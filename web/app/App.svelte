@@ -12,5 +12,14 @@
 	<GlobalActivityBar />
 	<QueueWatcher />
 	<Router {routes} />
-	<Toaster richColors closeButton position="bottom-right" theme="dark" />
+	<!-- Sonner derives right + bottom only from bottom-right. On a phone the
+	     toast spans the screen and the natural flick is horizontal either way,
+	     as on an Android notification, so left dismisses too. -->
+	<Toaster
+		richColors
+		closeButton
+		position="bottom-right"
+		theme="dark"
+		swipeDirections={["left", "right", "bottom"]}
+	/>
 </QueryClientProvider>
