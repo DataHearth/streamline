@@ -85,6 +85,11 @@ func Barcode(v string) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldBarcode, v))
 }
 
+// LinksFetchedAt applies equality check predicate on the "links_fetched_at" field. It's identical to LinksFetchedAtEQ.
+func LinksFetchedAt(v time.Time) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldLinksFetchedAt, v))
+}
+
 // Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
 func Title(v string) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldTitle, v))
@@ -543,6 +548,56 @@ func BarcodeEqualFold(v string) predicate.Album {
 // BarcodeContainsFold applies the ContainsFold predicate on the "barcode" field.
 func BarcodeContainsFold(v string) predicate.Album {
 	return predicate.Album(sql.FieldContainsFold(FieldBarcode, v))
+}
+
+// LinksFetchedAtEQ applies the EQ predicate on the "links_fetched_at" field.
+func LinksFetchedAtEQ(v time.Time) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtNEQ applies the NEQ predicate on the "links_fetched_at" field.
+func LinksFetchedAtNEQ(v time.Time) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtIn applies the In predicate on the "links_fetched_at" field.
+func LinksFetchedAtIn(vs ...time.Time) predicate.Album {
+	return predicate.Album(sql.FieldIn(FieldLinksFetchedAt, vs...))
+}
+
+// LinksFetchedAtNotIn applies the NotIn predicate on the "links_fetched_at" field.
+func LinksFetchedAtNotIn(vs ...time.Time) predicate.Album {
+	return predicate.Album(sql.FieldNotIn(FieldLinksFetchedAt, vs...))
+}
+
+// LinksFetchedAtGT applies the GT predicate on the "links_fetched_at" field.
+func LinksFetchedAtGT(v time.Time) predicate.Album {
+	return predicate.Album(sql.FieldGT(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtGTE applies the GTE predicate on the "links_fetched_at" field.
+func LinksFetchedAtGTE(v time.Time) predicate.Album {
+	return predicate.Album(sql.FieldGTE(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtLT applies the LT predicate on the "links_fetched_at" field.
+func LinksFetchedAtLT(v time.Time) predicate.Album {
+	return predicate.Album(sql.FieldLT(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtLTE applies the LTE predicate on the "links_fetched_at" field.
+func LinksFetchedAtLTE(v time.Time) predicate.Album {
+	return predicate.Album(sql.FieldLTE(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtIsNil applies the IsNil predicate on the "links_fetched_at" field.
+func LinksFetchedAtIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldLinksFetchedAt))
+}
+
+// LinksFetchedAtNotNil applies the NotNil predicate on the "links_fetched_at" field.
+func LinksFetchedAtNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldLinksFetchedAt))
 }
 
 // TitleEQ applies the EQ predicate on the "title" field.

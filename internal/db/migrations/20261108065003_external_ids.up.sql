@@ -1,3 +1,7 @@
+-- add column "links_fetched_at" to table: "artists"
+ALTER TABLE `artists` ADD COLUMN `links_fetched_at` datetime NULL;
+-- add column "links_fetched_at" to table: "albums"
+ALTER TABLE `albums` ADD COLUMN `links_fetched_at` datetime NULL;
 -- create "external_ids" table
 CREATE TABLE `external_ids` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `create_time` datetime NOT NULL, `update_time` datetime NOT NULL, `source` text NOT NULL, `value` text NOT NULL, `album_id` integer NULL, `artist_id` integer NULL, `movie_id` integer NULL, `tv_show_id` integer NULL, CONSTRAINT `external_ids_albums_external_ids` FOREIGN KEY (`album_id`) REFERENCES `albums` (`id`) ON DELETE CASCADE, CONSTRAINT `external_ids_artists_external_ids` FOREIGN KEY (`artist_id`) REFERENCES `artists` (`id`) ON DELETE CASCADE, CONSTRAINT `external_ids_movies_external_ids` FOREIGN KEY (`movie_id`) REFERENCES `movies` (`id`) ON DELETE CASCADE, CONSTRAINT `external_ids_tv_shows_external_ids` FOREIGN KEY (`tv_show_id`) REFERENCES `tv_shows` (`id`) ON DELETE CASCADE);
 -- create index "externalid_movie_id_source" to table: "external_ids"

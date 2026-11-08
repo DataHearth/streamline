@@ -72,27 +72,27 @@ func init() {
 	// album.MbidValidator is a validator for the "mbid" field. It is called by the builders before save.
 	album.MbidValidator = albumDescMbid.Validators[0].(func(string) error)
 	// albumDescTitle is the schema descriptor for title field.
-	albumDescTitle := albumFields[4].Descriptor()
+	albumDescTitle := albumFields[5].Descriptor()
 	// album.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	album.TitleValidator = albumDescTitle.Validators[0].(func(string) error)
 	// albumDescMonitored is the schema descriptor for monitored field.
-	albumDescMonitored := albumFields[10].Descriptor()
+	albumDescMonitored := albumFields[11].Descriptor()
 	// album.DefaultMonitored holds the default value on creation for the monitored field.
 	album.DefaultMonitored = albumDescMonitored.Default.(bool)
 	// albumDescMonitorPinned is the schema descriptor for monitor_pinned field.
-	albumDescMonitorPinned := albumFields[11].Descriptor()
+	albumDescMonitorPinned := albumFields[12].Descriptor()
 	// album.DefaultMonitorPinned holds the default value on creation for the monitor_pinned field.
 	album.DefaultMonitorPinned = albumDescMonitorPinned.Default.(bool)
 	// albumDescTagsManaged is the schema descriptor for tags_managed field.
-	albumDescTagsManaged := albumFields[12].Descriptor()
+	albumDescTagsManaged := albumFields[13].Descriptor()
 	// album.DefaultTagsManaged holds the default value on creation for the tags_managed field.
 	album.DefaultTagsManaged = albumDescTagsManaged.Default.(bool)
 	// albumDescGrabFailures is the schema descriptor for grab_failures field.
-	albumDescGrabFailures := albumFields[15].Descriptor()
+	albumDescGrabFailures := albumFields[16].Descriptor()
 	// album.DefaultGrabFailures holds the default value on creation for the grab_failures field.
 	album.DefaultGrabFailures = albumDescGrabFailures.Default.(uint8)
 	// albumDescCreditsVersion is the schema descriptor for credits_version field.
-	albumDescCreditsVersion := albumFields[26].Descriptor()
+	albumDescCreditsVersion := albumFields[27].Descriptor()
 	// album.DefaultCreditsVersion holds the default value on creation for the credits_version field.
 	album.DefaultCreditsVersion = albumDescCreditsVersion.Default.(uint8)
 	apikeyMixin := schema.ApiKey{}.Mixin()

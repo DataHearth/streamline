@@ -103,6 +103,20 @@ func (_c *AlbumCreate) SetNillableBarcode(v *string) *AlbumCreate {
 	return _c
 }
 
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (_c *AlbumCreate) SetLinksFetchedAt(v time.Time) *AlbumCreate {
+	_c.mutation.SetLinksFetchedAt(v)
+	return _c
+}
+
+// SetNillableLinksFetchedAt sets the "links_fetched_at" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableLinksFetchedAt(v *time.Time) *AlbumCreate {
+	if v != nil {
+		_c.SetLinksFetchedAt(*v)
+	}
+	return _c
+}
+
 // SetTitle sets the "title" field.
 func (_c *AlbumCreate) SetTitle(v string) *AlbumCreate {
 	_c.mutation.SetTitle(v)
@@ -724,6 +738,10 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Barcode(); ok {
 		_spec.SetField(album.FieldBarcode, field.TypeString, value)
 		_node.Barcode = value
+	}
+	if value, ok := _c.mutation.LinksFetchedAt(); ok {
+		_spec.SetField(album.FieldLinksFetchedAt, field.TypeTime, value)
+		_node.LinksFetchedAt = &value
 	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(album.FieldTitle, field.TypeString, value)

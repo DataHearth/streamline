@@ -27,6 +27,8 @@ const (
 	FieldEditionMbid = "edition_mbid"
 	// FieldBarcode holds the string denoting the barcode field in the database.
 	FieldBarcode = "barcode"
+	// FieldLinksFetchedAt holds the string denoting the links_fetched_at field in the database.
+	FieldLinksFetchedAt = "links_fetched_at"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
 	// FieldType holds the string denoting the type field in the database.
@@ -163,6 +165,7 @@ var Columns = []string{
 	FieldReleaseMbid,
 	FieldEditionMbid,
 	FieldBarcode,
+	FieldLinksFetchedAt,
 	FieldTitle,
 	FieldType,
 	FieldReleaseDate,
@@ -337,6 +340,11 @@ func ByEditionMbid(opts ...sql.OrderTermOption) OrderOption {
 // ByBarcode orders the results by the barcode field.
 func ByBarcode(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBarcode, opts...).ToFunc()
+}
+
+// ByLinksFetchedAt orders the results by the links_fetched_at field.
+func ByLinksFetchedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLinksFetchedAt, opts...).ToFunc()
 }
 
 // ByTitle orders the results by the title field.

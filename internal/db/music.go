@@ -327,6 +327,9 @@ func (db *DB) CreateArtist(
 		SetWikidataID(p.WikidataID).
 		SetPath(p.Path).
 		SetQualityProfile(p.QualityProfile)
+	if p.ExternalIDs != nil {
+		b = b.SetLinksFetchedAt(time.Now())
+	}
 	if p.Monitor != "" {
 		b = b.SetMonitor(p.Monitor)
 	}
@@ -998,6 +1001,9 @@ func (db *DB) RefreshArtist(
 	if p.DeezerID != 0 {
 		u = u.SetDeezerID(p.DeezerID)
 	}
+	if p.ExternalIDs != nil {
+		u = u.SetLinksFetchedAt(p.RefreshedAt)
+	}
 	if p.Type != "" {
 		u = u.SetType(artist.Type(p.Type))
 	} else {
@@ -1405,6 +1411,9 @@ func (db *DB) SetAlbumHydration(
 	}
 	if p.Barcode != "" {
 		u = u.SetBarcode(p.Barcode)
+	}
+	if p.ExternalIDs != nil {
+		u = u.SetLinksFetchedAt(at)
 	}
 	if p.CreditsComplete {
 		u = u.SetStudio(p.Studio).SetCreditsFetchedAt(at).
