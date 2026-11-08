@@ -381,7 +381,7 @@
 								onclick={() => (bioExpanded = !bioExpanded)}
 								class="mt-1.5 rounded text-xs font-medium text-accent-text underline-offset-2 transition hover:underline"
 							>
-								{bioExpanded ? i18n.person_read_less() : i18n.person_read_more()}
+								{bioExpanded ? i18n.read_less() : i18n.read_more()}
 							</button>
 						{/if}
 					</div>

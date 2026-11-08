@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ClampedText from "@components/shared/ClampedText.svelte";
 	import { around } from "@lib/message-parts";
 	import {
 		NOUN_EPISODE,
@@ -628,11 +629,7 @@
 				{/if}
 
 				{#if show.overview}
-					<p
-						class="mt-4 line-clamp-3 max-w-[680px] text-sm leading-relaxed text-fg-muted [text-wrap:pretty]"
-					>
-						{show.overview}
-					</p>
+					<ClampedText class="mt-4" text={show.overview} />
 				{/if}
 
 				<!-- The bar keeps the rollups' scope, what the library follows or

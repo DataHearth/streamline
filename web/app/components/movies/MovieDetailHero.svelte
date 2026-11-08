@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ClampedText from "@components/shared/ClampedText.svelte";
 	import type { Snippet } from "svelte";
 	import { Film, ArrowLeft } from "@lucide/svelte";
 	import { posterUrl } from "@lib/posters";
@@ -128,11 +129,7 @@
 			{/if}
 
 			{#if movie.overview}
-				<p
-					class="mt-4 line-clamp-3 max-w-[680px] text-sm leading-relaxed text-fg-muted [text-wrap:pretty]"
-				>
-					{movie.overview}
-				</p>
+				<ClampedText class="mt-4" text={movie.overview} />
 			{/if}
 
 			{#if actions}

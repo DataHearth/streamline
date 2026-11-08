@@ -29,6 +29,7 @@
 		type LookupKind,
 		type LookupRelease,
 	} from "@lib/music-books-lookup";
+	import ClampedText from "./ClampedText.svelte";
 	import LookupSheet from "./LookupSheet.svelte";
 	import ProviderKeyNotice from "./ProviderKeyNotice.svelte";
 	import MusicBookLookupPanel from "./MusicBookLookupPanel.svelte";
@@ -406,9 +407,13 @@
 						<h3 class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint">
 							{isArtist ? i18n.lookup_about() : i18n.detail_synopsis()}
 						</h3>
-						<p class="text-[13.5px] leading-relaxed text-fg-muted [text-wrap:pretty] {atFullHeight ? '' : 'line-clamp-3'}">
-							{synopsis}
-						</p>
+						<ClampedText
+							text={synopsis}
+							class="max-w-none"
+							textClass="text-[13.5px]"
+							open={atFullHeight}
+							onReadMore={() => (sheetExpanded = true)}
+						/>
 					</section>
 				{/if}
 			{/if}
