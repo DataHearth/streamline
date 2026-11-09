@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
@@ -11,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/season"
@@ -54,6 +56,7 @@ type CreateTVShowParams struct {
 	Creator        string
 	Runtime        uint16
 	Rating         float64
+	VoteCount      uint32
 	Genres         []string
 	Aliases        []string
 	Cast           []metadata.CastMember
@@ -82,12 +85,25 @@ type UpdateTVShowMetadataParams struct {
 	Creator       string
 	SeriesStatus  string
 	Runtime       uint16
-	Rating        float64
-	Genres        []string
-	Aliases       []string
-	Cast          []metadata.CastMember
-	FirstAired    *time.Time
-	ExternalIDs   ExternalIDs
+	// Rating nil keeps the stored rating: the rating provider was not asked
+	// or failed, and a TMDB outage must not zero every show's rating.
+	Rating *TVShowRating
+	// KeepTMDBID keeps the stored `tmdb` external id over the one in
+	// ExternalIDs: TMDB failed, so that one is TVDB's mapping alone.
+	KeepTMDBID  bool
+	Genres      []string
+	Aliases     []string
+	Cast        []metadata.CastMember
+	FirstAired  *time.Time
+	ExternalIDs ExternalIDs
+}
+
+// TVShowRating is a series' TMDB rating and the votes behind it, both zero
+// when TMDB knows no such series. The TMDB id it was read from is one of the
+// show's external ids.
+type TVShowRating struct {
+	Rating    float64
+	VoteCount uint32
 }
 
 // UpdateTVShowMetadata persists refreshed provider metadata onto an existing
@@ -109,11 +125,14 @@ func (db *DB) UpdateTVShowMetadata(
 		SetNetwork(p.Network).
 		SetCreator(p.Creator).
 		SetRuntime(p.Runtime).
-		SetRating(p.Rating).
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
 		SetImdbID(p.IMDbID).
 		SetNillableFirstAired(p.FirstAired)
+	if p.Rating != nil {
+		u = u.SetRating(p.Rating.Rating).
+			SetVoteCount(p.Rating.VoteCount)
+	}
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
 	}
@@ -135,13 +154,50 @@ func (db *DB) UpdateTVShowMetadata(
 		tx.Rollback()
 		return err
 	}
+	ids, err := keepStoredTMDBID(ctx, tx, id, p)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
 	if err := replaceExternalIDs(
-		ctx, tx.Client(), ExternalIDsOfSeries, id, p.ExternalIDs,
+		ctx, tx.Client(), ExternalIDsOfSeries, id, ids,
 	); err != nil {
 		tx.Rollback()
 		return err
 	}
 	return tx.Commit()
+}
+
+// keepStoredTMDBID is the external ids a refresh writes. The `tmdb` id
+// travels with the rating: TMDB's own answer names the series it rated, and
+// it wins over TVDB's mapping (stale, or missing). When TMDB failed the
+// refresh only has TVDB's mapping, so it keeps the stored `tmdb` id rather
+// than reverting it until the next refresh. Without a TMDB key TVDB's
+// mapping is the only one, and it is written as is.
+func keepStoredTMDBID(
+	ctx context.Context,
+	tx *ent.Tx,
+	id uint32,
+	p UpdateTVShowMetadataParams,
+) (ExternalIDs, error) {
+	if !p.KeepTMDBID || p.ExternalIDs == nil {
+		return p.ExternalIDs, nil
+	}
+	stored, err := tx.ExternalID.Query().
+		Where(
+			externalid.TvShowID(id),
+			externalid.SourceEQ(externalid.Source(metadata.SourceTMDB)),
+		).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return p.ExternalIDs, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("stored tmdb id: %w", err)
+	}
+	ids := maps.Clone(p.ExternalIDs)
+	ids[metadata.SourceTMDB] = stored.Value
+	return ids, nil
 }
 
 // ReconcileEpisodes syncs the stored season/episode tree with freshly fetched
@@ -331,6 +387,7 @@ func (db *DB) CreateTVShow(
 		SetCreator(p.Creator).
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
+		SetVoteCount(p.VoteCount).
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
 		SetImdbID(p.IMDbID).

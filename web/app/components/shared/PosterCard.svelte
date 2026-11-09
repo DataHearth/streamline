@@ -209,7 +209,9 @@
 				class="mt-0.5 truncate font-mono text-[11px] tracking-tight text-white/80 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]"
 			>
 				{releasedText || movie.year}{#if movie.rating && movie.rating > 0}
-					<span class="text-white/70"> · ★ {movie.rating.toFixed(1)}</span>
+					<!-- An expression, not literal text: Svelte trims the space a text
+					     node opens the span with, which printed "2008· ★ 8.5". -->
+					<span class="text-white/70">{` · ★ ${movie.rating.toFixed(1)}`}</span>
 				{/if}
 			</p>
 			{#if movie.resolution || movie.size_text}

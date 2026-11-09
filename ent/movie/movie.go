@@ -51,6 +51,8 @@ const (
 	FieldQualityProfile = "quality_profile"
 	// FieldRating holds the string denoting the rating field in the database.
 	FieldRating = "rating"
+	// FieldVoteCount holds the string denoting the vote_count field in the database.
+	FieldVoteCount = "vote_count"
 	// FieldGenres holds the string denoting the genres field in the database.
 	FieldGenres = "genres"
 	// FieldAliases holds the string denoting the aliases field in the database.
@@ -127,6 +129,7 @@ var Columns = []string{
 	FieldFailureReason,
 	FieldQualityProfile,
 	FieldRating,
+	FieldVoteCount,
 	FieldGenres,
 	FieldAliases,
 	FieldLastRefreshedAt,
@@ -161,6 +164,8 @@ var (
 	DefaultGrabFailures uint8
 	// DefaultRating holds the default value on creation for the "rating" field.
 	DefaultRating float64
+	// DefaultVoteCount holds the default value on creation for the "vote_count" field.
+	DefaultVoteCount uint32
 )
 
 // Status defines the type for the "status" enum field.
@@ -288,6 +293,11 @@ func ByQualityProfile(opts ...sql.OrderTermOption) OrderOption {
 // ByRating orders the results by the rating field.
 func ByRating(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRating, opts...).ToFunc()
+}
+
+// ByVoteCount orders the results by the vote_count field.
+func ByVoteCount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldVoteCount, opts...).ToFunc()
 }
 
 // ByLastRefreshedAt orders the results by the last_refreshed_at field.

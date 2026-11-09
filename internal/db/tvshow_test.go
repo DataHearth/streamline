@@ -363,6 +363,93 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 				Expect(ids).To(Equal(ExternalIDs{"imdb": "tt0903747"}))
 			},
 		)
+
+		It("keeps the stored TMDB id when TMDB failed", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "X", Year: 2020, TvdbID: 14,
+				ExternalIDs: ExternalIDs{"tmdb": "1399", "imdb": "tt0944947"},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// TMDB failed: TVDB's stale mapping must not replace the one TMDB
+			// confirmed, and the other ids still follow TVDB.
+			Expect(
+				store.UpdateTVShowMetadata(ctx, show.ID, UpdateTVShowMetadataParams{
+					Title: "X", Year: 2020, KeepTMDBID: true,
+					ExternalIDs: ExternalIDs{"tmdb": "999", "imdb": "tt0944948"},
+				}),
+			).To(Succeed())
+			ids, err := store.TitleExternalIDs(ctx, ExternalIDsOfSeries, show.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(Equal(ExternalIDs{"tmdb": "1399", "imdb": "tt0944948"}))
+
+			// TMDB answered: its id wins.
+			Expect(
+				store.UpdateTVShowMetadata(ctx, show.ID, UpdateTVShowMetadataParams{
+					Title:       "X",
+					Year:        2020,
+					Rating:      &TVShowRating{Rating: 8.5, VoteCount: 25000},
+					ExternalIDs: ExternalIDs{"tmdb": "1400"},
+				}),
+			).To(Succeed())
+			ids, err = store.TitleExternalIDs(ctx, ExternalIDsOfSeries, show.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(Equal(ExternalIDs{"tmdb": "1400"}))
+		})
+
+		It(
+			"keeps the stored rating when the refresh carries none, writes one it does",
+			func() {
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "X", Year: 2020, TvdbID: 13,
+					Rating: 8.9, VoteCount: 15000,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(
+					store.UpdateTVShowMetadata(
+						ctx,
+						show.ID,
+						UpdateTVShowMetadataParams{Title: "X", Year: 2020},
+					),
+				).To(Succeed())
+				got, err := store.FindTVShowByID(ctx, show.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Rating).To(Equal(8.9))
+				Expect(got.VoteCount).To(Equal(uint32(15000)))
+
+				Expect(
+					store.UpdateTVShowMetadata(
+						ctx,
+						show.ID,
+						UpdateTVShowMetadataParams{
+							Title:  "X",
+							Year:   2020,
+							Rating: &TVShowRating{Rating: 9.1, VoteCount: 16000},
+						},
+					),
+				).To(Succeed())
+				got, err = store.FindTVShowByID(ctx, show.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Rating).To(Equal(9.1))
+				Expect(got.VoteCount).To(Equal(uint32(16000)))
+
+				// TMDB answered that it knows no such show: the rating goes.
+				Expect(
+					store.UpdateTVShowMetadata(
+						ctx,
+						show.ID,
+						UpdateTVShowMetadataParams{
+							Title: "X", Year: 2020, Rating: &TVShowRating{},
+						},
+					),
+				).To(Succeed())
+				got, err = store.FindTVShowByID(ctx, show.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Rating).To(BeZero())
+				Expect(got.VoteCount).To(BeZero())
+			},
+		)
 	})
 
 	Describe("ListTVShowsStaleSince", func() {

@@ -52,6 +52,8 @@ type TVShow struct {
 	Runtime uint16 `json:"runtime,omitempty"`
 	// Rating holds the value of the "rating" field.
 	Rating float64 `json:"rating,omitempty"`
+	// VoteCount holds the value of the "vote_count" field.
+	VoteCount uint32 `json:"vote_count,omitempty"`
 	// Genres holds the value of the "genres" field.
 	Genres []string `json:"genres,omitempty"`
 	// Aliases holds the value of the "aliases" field.
@@ -128,7 +130,7 @@ func (*TVShow) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case tvshow.FieldRating:
 			values[i] = new(sql.NullFloat64)
-		case tvshow.FieldID, tvshow.FieldYear, tvshow.FieldTvdbID, tvshow.FieldRuntime:
+		case tvshow.FieldID, tvshow.FieldYear, tvshow.FieldTvdbID, tvshow.FieldRuntime, tvshow.FieldVoteCount:
 			values[i] = new(sql.NullInt64)
 		case tvshow.FieldTitle, tvshow.FieldOriginalTitle, tvshow.FieldOverview, tvshow.FieldSeriesStatus, tvshow.FieldType, tvshow.FieldImdbID, tvshow.FieldPosterPath, tvshow.FieldNetwork, tvshow.FieldCreator, tvshow.FieldQualityProfile:
 			values[i] = new(sql.NullString)
@@ -257,6 +259,12 @@ func (_m *TVShow) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field rating", values[i])
 			} else if value.Valid {
 				_m.Rating = value.Float64
+			}
+		case tvshow.FieldVoteCount:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field vote_count", values[i])
+			} else if value.Valid {
+				_m.VoteCount = uint32(value.Int64)
 			}
 		case tvshow.FieldGenres:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -395,6 +403,9 @@ func (_m *TVShow) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("rating=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Rating))
+	builder.WriteString(", ")
+	builder.WriteString("vote_count=")
+	builder.WriteString(fmt.Sprintf("%v", _m.VoteCount))
 	builder.WriteString(", ")
 	builder.WriteString("genres=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Genres))

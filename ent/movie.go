@@ -54,6 +54,8 @@ type Movie struct {
 	QualityProfile string `json:"quality_profile,omitempty"`
 	// Rating holds the value of the "rating" field.
 	Rating float64 `json:"rating,omitempty"`
+	// VoteCount holds the value of the "vote_count" field.
+	VoteCount uint32 `json:"vote_count,omitempty"`
 	// Genres holds the value of the "genres" field.
 	Genres []string `json:"genres,omitempty"`
 	// Aliases holds the value of the "aliases" field.
@@ -139,7 +141,7 @@ func (*Movie) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case movie.FieldRating:
 			values[i] = new(sql.NullFloat64)
-		case movie.FieldID, movie.FieldYear, movie.FieldRuntime, movie.FieldTmdbID, movie.FieldGrabFailures:
+		case movie.FieldID, movie.FieldYear, movie.FieldRuntime, movie.FieldTmdbID, movie.FieldGrabFailures, movie.FieldVoteCount:
 			values[i] = new(sql.NullInt64)
 		case movie.FieldTitle, movie.FieldOriginalTitle, movie.FieldOverview, movie.FieldStatus, movie.FieldImdbID, movie.FieldFailureReason, movie.FieldQualityProfile:
 			values[i] = new(sql.NullString)
@@ -276,6 +278,12 @@ func (_m *Movie) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field rating", values[i])
 			} else if value.Valid {
 				_m.Rating = value.Float64
+			}
+		case movie.FieldVoteCount:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field vote_count", values[i])
+			} else if value.Valid {
+				_m.VoteCount = uint32(value.Int64)
 			}
 		case movie.FieldGenres:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -420,6 +428,9 @@ func (_m *Movie) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("rating=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Rating))
+	builder.WriteString(", ")
+	builder.WriteString("vote_count=")
+	builder.WriteString(fmt.Sprintf("%v", _m.VoteCount))
 	builder.WriteString(", ")
 	builder.WriteString("genres=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Genres))

@@ -49,6 +49,8 @@ const (
 	FieldRuntime = "runtime"
 	// FieldRating holds the string denoting the rating field in the database.
 	FieldRating = "rating"
+	// FieldVoteCount holds the string denoting the vote_count field in the database.
+	FieldVoteCount = "vote_count"
 	// FieldGenres holds the string denoting the genres field in the database.
 	FieldGenres = "genres"
 	// FieldAliases holds the string denoting the aliases field in the database.
@@ -117,6 +119,7 @@ var Columns = []string{
 	FieldCreator,
 	FieldRuntime,
 	FieldRating,
+	FieldVoteCount,
 	FieldGenres,
 	FieldAliases,
 	FieldLastRefreshedAt,
@@ -148,6 +151,8 @@ var (
 	DefaultRuntime uint16
 	// DefaultRating holds the default value on creation for the "rating" field.
 	DefaultRating float64
+	// DefaultVoteCount holds the default value on creation for the "vote_count" field.
+	DefaultVoteCount uint32
 )
 
 // SeriesStatus defines the type for the "series_status" enum field.
@@ -294,6 +299,11 @@ func ByRuntime(opts ...sql.OrderTermOption) OrderOption {
 // ByRating orders the results by the rating field.
 func ByRating(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRating, opts...).ToFunc()
+}
+
+// ByVoteCount orders the results by the vote_count field.
+func ByVoteCount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldVoteCount, opts...).ToFunc()
 }
 
 // ByLastRefreshedAt orders the results by the last_refreshed_at field.

@@ -504,10 +504,18 @@ func (t *TMDB) get(
 			"http.status_code",
 			resp.StatusCode,
 		)
-		return fmt.Errorf("unexpected status %d", resp.StatusCode)
+		return tmdbStatusError(resp.StatusCode)
 	}
 
 	return otelx.DecodeJSON(resp.Body, maxProviderResponse, out)
+}
+
+// tmdbStatusError is a non-200 answer, kept typed so a caller can tell a
+// missing title (404) from a failure.
+type tmdbStatusError int
+
+func (e tmdbStatusError) Error() string {
+	return fmt.Sprintf("unexpected status %d", int(e))
 }
 
 func (t *TMDB) withLang(p url.Values, lang string) url.Values {
