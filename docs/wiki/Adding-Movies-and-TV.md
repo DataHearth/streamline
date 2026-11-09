@@ -100,6 +100,8 @@ Two independent jobs hunt for things, and it helps to know which one is doing wh
 
 **Missing search** (every 12 hours) takes the opposite approach: it walks through everything still marked Wanted and actively searches for it. This is what eventually finds older titles that will never appear in an RSS feed.
 
+For a movie, both skip a release whose name states another year than the movie's, so a remake sharing the title is never grabbed in its place. The missing search (and **Search now**) allows one year either way, since a film's premiere and its release often fall in different years, and keeps a release that states no year; the RSS sync needs the exact year. The interactive search lists every release, whatever its year.
+
 Both exist separately for movies and TV (`movie_rss_sync`, `tv_rss_sync`, `movie_missing_search`, `tv_missing_search`) and all four can be retimed, paused or run on demand from **Settings → Schedules**.
 
 ```mermaid
