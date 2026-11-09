@@ -106,6 +106,8 @@ For TV, a release is matched to a show by name: its title, its original title or
 
 Neither takes a release its indexer reports with zero seeders, for movies, TV, music and books alike: it would sit in the download client until it stalls. It is only skipped, so a later run takes it once someone seeds it, and a release from an indexer that gives no seeder count is not affected. A manual search still lists such a release (hover its seeder count for the note) and lets you grab it.
 
+For a movie, both skip a release whose name states another year than the movie's, so a remake sharing the title is never grabbed in its place. The missing search (and **Search now**) allows one year either way, since a film's premiere and its release often fall in different years, and keeps a release that states no year; the RSS sync needs the exact year. The interactive search lists every release, whatever its year.
+
 Both exist separately for movies and TV (`movie_rss_sync`, `tv_rss_sync`, `movie_missing_search`, `tv_missing_search`) and all four can be retimed, paused or run on demand from **Settings → Schedules**.
 
 ```mermaid

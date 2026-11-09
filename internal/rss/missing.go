@@ -375,7 +375,9 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	match, ok := scoreBest(
 		qualityFor(ctx, config.MediaMovie, m.QualityProfile),
 		dropOtherYears(
-			dropRejected(ctx, results, blocklist.Movie, m.ID), m.Year,
+			ctx,
+			dropRejected(ctx, results, blocklist.Movie, m.ID),
+			m,
 		),
 	)
 	if e := s.db.SetMovieLastSearchAt(ctx, m.ID, time.Now()); e != nil {
@@ -429,27 +431,6 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	return nil
 }
 
-// dropOtherYears leaves out the releases named for another year than the
-// film's. The title is all a search matches on, and a remake or a namesake
-// carries the same one: "Metropolis 2001" was grabbed for the 1927 film. One
-// year either way stays, since a release is often dated by its festival or
-// its home release; a name stating no year is no evidence.
-func dropOtherYears(
-	results []indexer.SearchResult,
-	year uint16,
-) []indexer.SearchResult {
-	if year == 0 {
-		return results
-	}
-	return slices.DeleteFunc(
-		slices.Clone(results),
-		func(r indexer.SearchResult) bool {
-			stated := library.Parse(r.Title).Year
-			return stated != 0 && (stated > year+1 || stated+1 < year)
-		},
-	)
-}
-
 // scoreBest returns the head of rankAccepted — the highest-scoring result p
 // accepts, ties broken by seeders. Indexer order carries no quality signal, so
 // the whole set is scored rather than stopping at the first acceptable
@@ -462,4 +443,61 @@ func scoreBest(
 		return ranked[0], true
 	}
 	return indexer.SearchResult{}, false
+}
+
+// releaseYearDrift is how far a release's stated year may sit from the
+// movie's and still name it: providers date a film by its first screening and
+// release groups by the one they ripped, so a festival premiere in December
+// and a release the following year are the same film.
+const releaseYearDrift = 1
+
+// namesOtherYear reports whether a release states a year that places it on a
+// different film than m. A title is not an identity: "Road House" is a 1989
+// film and a 2024 one, a keyword search returns both, and a profile scores
+// them alike.
+//
+// Silence is not a mismatch: a release stating no year stays eligible, and so
+// does every release while the movie's own year is unknown.
+//
+// The parser takes the last year-like token of a name as its year, so a
+// release of "Blade Runner 2049" that states no year parses as "Blade Runner"
+// of 2049. Such a token is the title's own when the parsed title followed by
+// it names the movie under one of its titles, and then it is no evidence of
+// another film.
+func namesOtherYear(release string, m *ent.Movie) bool {
+	parsed := library.Parse(release)
+	if parsed.Year == 0 || m.Year == 0 {
+		return false
+	}
+	drift := int(parsed.Year) - int(m.Year)
+	if drift >= -releaseYearDrift && drift <= releaseYearDrift {
+		return false
+	}
+	withYear := fmt.Sprintf("%s %d", parsed.Title, parsed.Year)
+	titles := append([]string{m.Title, m.OriginalTitle}, m.Aliases...)
+	return !slices.ContainsFunc(titles, func(t string) bool {
+		return library.TitleNamesSameWork(withYear, t)
+	})
+}
+
+// dropOtherYears removes the releases of another film sharing m's title, so
+// an unattended pick is made among releases of the film that is wanted.
+// Interactive search lists them: a person reads the year.
+func dropOtherYears(
+	ctx context.Context,
+	results []indexer.SearchResult,
+	m *ent.Movie,
+) []indexer.SearchResult {
+	return slices.DeleteFunc(
+		slices.Clone(results),
+		func(r indexer.SearchResult) bool {
+			if !namesOtherYear(r.Title, m) {
+				return false
+			}
+			slog.DebugContext(ctx, "skipping a release of another year",
+				"movie.id", m.ID, "movie.year", m.Year,
+				"release", r.Title, "indexer", r.Indexer)
+			return true
+		},
+	)
 }
