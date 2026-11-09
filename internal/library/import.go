@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -475,7 +476,7 @@ func transferFile(src, dst, mode string) error {
 	case "hardlink":
 		return os.Link(src, dst)
 	case "move":
-		return os.Rename(src, dst)
+		return moveFile(src, dst)
 	case "copy":
 		return copyFile(src, dst)
 	default:
@@ -491,27 +492,118 @@ func MkdirLibraryDir(path string) error {
 	return os.MkdirAll(path, 0o755)
 }
 
-// MoveFile relocates src to dst, creating dst's parent first. os.Rename does
-// it in a single metadata op when both sides share a filesystem; EXDEV means
-// they don't, and the only way across is a full copy. A failed copy takes the
-// half-written destination with it so no truncated media file is left behind
-// at a path the library considers valid.
-func MoveFile(ctx context.Context, src, dst string) error {
+// MoveFile relocates src to dst, creating dst's parent first.
+func MoveFile(_ context.Context, src, dst string) error {
 	if err := MkdirLibraryDir(filepath.Dir(dst)); err != nil {
 		return fmt.Errorf("mkdir %s: %w", filepath.Dir(dst), err)
 	}
-	err := os.Rename(src, dst)
+	return moveFile(src, dst)
+}
+
+// renameFile and copyBytes are os.Rename and io.Copy everywhere but in the
+// specs, which cannot stage two filesystems and swap them to simulate EXDEV
+// and a copy that dies halfway.
+var (
+	renameFile = os.Rename
+	copyBytes  = io.Copy
+)
+
+// moveFile relocates src to dst. os.Rename does it in a single metadata op
+// when both sides share a filesystem; EXDEV means they don't, and the only way
+// across is a full copy. That copy is staged beside dst and renamed into place
+// once it is complete and synced, so dst is either what it was before the call
+// or whole: no truncated media file ever sits at a path the library considers
+// valid. The source is removed last, and only after the copy landed.
+func moveFile(src, dst string) error {
+	err := renameFile(src, dst)
 	if err == nil || !errors.Is(err, syscall.EXDEV) {
 		return err
 	}
-	if err := copyFile(src, dst); err != nil {
-		if rmErr := os.Remove(dst); rmErr != nil && !os.IsNotExist(rmErr) {
-			slog.WarnContext(ctx, "could not remove partial copy",
-				"path", dst, "error", rmErr)
+	if err := copyFileStaged(src, dst); err != nil {
+		return err
+	}
+	if err := os.Remove(src); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		// The source is still there (a read-only downloads mount), so this
+		// was a copy, not a move. The copy is taken back out: a caller told
+		// the move failed finds no file at dst for its retry to trip over.
+		return errors.Join(
+			fmt.Errorf("remove moved source: %w", err),
+			os.Remove(dst),
+		)
+	}
+	return nil
+}
+
+// stagingPath names the temporary file a cross-filesystem move writes before
+// renaming it to dst. It lives in dst's directory so that rename stays on one
+// filesystem, is dot-prefixed with a non-media extension so no scan or media
+// server takes it for a title, and is derived from dst so a copy orphaned by a
+// crash is overwritten by the retry and never piles up. The base name is
+// hashed, not embedded: a release name near the 255-byte limit has no room
+// for a suffix.
+func stagingPath(dst string) string {
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(filepath.Base(dst)))
+	return filepath.Join(
+		filepath.Dir(dst),
+		fmt.Sprintf(".streamline-%016x.partial", h.Sum64()),
+	)
+}
+
+// copyFileStaged copies src to dst through stagingPath(dst). Sync and Close
+// errors count: a full disk or a network mount can report a lost write only
+// there, and the caller deletes the source on success. On any error the staged
+// file is removed and dst is untouched.
+func copyFileStaged(src, dst string) error {
+	//nolint:gosec // same operator-scoped paths as copyFile
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	info, err := in.Stat()
+	if err != nil {
+		return err
+	}
+
+	tmp := stagingPath(dst)
+	// A rename keeps the file's mode, so the copy standing in for one does too.
+	//nolint:gosec // see above; tmp is a sibling of dst
+	out, err := os.OpenFile(
+		tmp,
+		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+		info.Mode().Perm(),
+	)
+	if err != nil {
+		return err
+	}
+	if err := writeStaged(out, in, tmp, dst); err != nil {
+		if rmErr := os.Remove(
+			tmp,
+		); rmErr != nil &&
+			!errors.Is(rmErr, fs.ErrNotExist) {
+			return errors.Join(err, fmt.Errorf("remove partial copy: %w", rmErr))
 		}
 		return err
 	}
-	return os.Remove(src)
+	return nil
+}
+
+// writeStaged fills the staged file, makes it durable, closes it and renames
+// it to dst. It always closes out.
+func writeStaged(out *os.File, in io.Reader, tmp, dst string) error {
+	if _, err := copyBytes(out, in); err != nil {
+		_ = out.Close()
+		return err
+	}
+	if err := out.Sync(); err != nil {
+		_ = out.Close()
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, dst)
 }
 
 func copyFile(src, dst string) error {
