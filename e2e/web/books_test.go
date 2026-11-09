@@ -80,8 +80,9 @@ var _ = Describe("Book series covers", Label("e2e"), func() {
 		// series on Hardcover; the id row is the one that names it.
 		const hardcover = `a[href="https://hardcover.app/series/foundation"]`
 		visibleElement(page, hardcover)
-		var texts []string
-		for _, l := range page.MustElements(hardcover) {
+		links := page.MustElements(hardcover)
+		texts := make([]string, 0, len(links))
+		for _, l := range links {
 			texts = append(texts, l.MustText())
 		}
 		Expect(texts).To(ContainElement(ContainSubstring("5450")))
