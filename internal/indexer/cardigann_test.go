@@ -1,7 +1,10 @@
 package indexer
 
 import (
+	"bytes"
 	"context"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -368,6 +371,125 @@ var _ = Describe(
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ok).To(BeTrue())
 			Expect(target.Magnet).To(Equal("magnet:?xt=urn:btih:abc"))
+		})
+	},
+)
+
+var _ = Describe(
+	"a cardigann indexer whose tracker does not answer in time",
+	Label("unit", "indexers"),
+	func() {
+		const secret = "s3cr3t-passkey"
+
+		var logs *bytes.Buffer
+
+		// hang routes every request to a tracker that never answers.
+		hang := func() {
+			GinkgoHelper()
+			release := make(chan struct{})
+			routeAll(func(_ http.ResponseWriter, r *http.Request) {
+				select {
+				case <-release:
+				case <-r.Context().Done():
+				}
+			})
+			DeferCleanup(func() { close(release) })
+		}
+
+		// short is a deadline the hanging tracker outlives.
+		short := func() context.Context {
+			ctx, cancel := context.WithTimeout(
+				context.Background(), 200*time.Millisecond,
+			)
+			DeferCleanup(cancel)
+			return ctx
+		}
+
+		BeforeEach(func() {
+			cardiganntest.Install()
+			logs = &bytes.Buffer{}
+			prev := slog.Default()
+			slog.SetDefault(slog.New(slog.NewTextHandler(
+				io.MultiWriter(logs, GinkgoWriter),
+				&slog.HandlerOptions{Level: slog.LevelDebug},
+			)))
+			DeferCleanup(func() { slog.SetDefault(prev) })
+		})
+
+		It("keeps the login URL's credentials out of the error, "+
+			"the stored session and the log", func() {
+			name := "3d-" + CurrentSpecReport().LeafNodeText
+			// A get login is the shape that puts the credentials in the
+			// URL; the fixture's own login is a form.
+			spec := cardiganntest.Spec("3dtorrents")
+			edited := bytes.Replace(
+				spec, []byte(`"method": "form"`), []byte(`"method": "get"`), 1,
+			)
+			Expect(edited).NotTo(Equal(spec))
+			dataDir := GinkgoT().TempDir()
+			configtest.Setup(map[string]any{
+				"data_dir": dataDir,
+				"indexers": []map[string]any{{
+					"name":     name,
+					"protocol": "cardigann",
+					"enabled":  true,
+					"cardigann": map[string]any{
+						"definition": "3dtorrents",
+						"commit": cardiganntest.Keep(
+							dataDir, "3dtorrents", edited,
+						),
+						"settings": map[string]any{
+							"username": "u", "password": secret,
+						},
+					},
+				}},
+			})
+			store := dbmocks.NewMockStore(GinkgoT())
+			rows := memSessions(store)
+			hang()
+			svc := New(store)
+
+			err := svc.TestByName(short(), name)
+			Expect(err).To(MatchError(context.DeadlineExceeded))
+			Expect(err.Error()).NotTo(ContainSubstring(secret))
+			Expect(err.Error()).NotTo(ContainSubstring("pwd="))
+
+			Expect(rows[name].LoginFailures).To(Equal(uint8(1)))
+			Expect(rows[name].LastError).NotTo(BeEmpty())
+			Expect(rows[name].LastError).NotTo(ContainSubstring(secret))
+			st, err := svc.Session(context.Background(), name)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(st.LastError).NotTo(ContainSubstring(secret))
+
+			// The held-back retry quotes the stored error.
+			err = svc.TestByName(context.Background(), name)
+			Expect(err).To(MatchError(ErrLoginBackoff))
+			Expect(err.Error()).NotTo(ContainSubstring(secret))
+
+			Expect(logs.String()).To(ContainSubstring("tracker login failed"))
+			Expect(logs.String()).NotTo(ContainSubstring(secret))
+		})
+
+		It("keeps a download link's passkey out of the error and the log", func() {
+			configtest.Setup(map[string]any{
+				"indexers": []map[string]any{{
+					"name":     "yts-" + CurrentSpecReport().LeafNodeText,
+					"protocol": "cardigann",
+					"enabled":  true,
+					"cardigann": map[string]any{
+						"definition": "yts", "commit": cardiganntest.Upstream.Commit,
+					},
+				}},
+			})
+			hang()
+
+			_, ok, err := ResolveDownload(short(), nil,
+				"https://yts.gg/torrent/download/AAA?passkey="+secret)
+			Expect(ok).To(BeTrue())
+			Expect(err).To(MatchError(context.DeadlineExceeded))
+			Expect(err.Error()).NotTo(ContainSubstring(secret))
+			Expect(err.Error()).To(ContainSubstring("yts.gg/torrent/download/AAA"))
+			Expect(logs.String()).NotTo(ContainSubstring(secret))
 		})
 	},
 )

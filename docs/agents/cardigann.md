@@ -582,6 +582,12 @@ request stops at a `magnet:` hop, which a transport cannot take; `Fetch` hands i
 - Errors: `indexer.ErrChallenge` (outcome `challenge`), echoed in connection tests — the
   engine's messages carry no tracker URL, and a transport error reaching the solver is
   redacted.
+- **A request URL is a secret** (a `get` login's credentials, a passkey download link, an
+  API-key search all sit in the query) and net/http quotes it whole in every transport
+  error, a timeout or cancellation included. `Engine.send` passes each through
+  `otelx.RedactTransportError` (scheme, host and path kept, `errors.Is` intact), and
+  `indexer.cardigannError` does so again on its context branch, since what it returns is
+  logged, recorded on spans, stored as `IndexerSession.last_error` and answered by the API.
 
 ## Secrets
 
