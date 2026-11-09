@@ -129,7 +129,9 @@ type Service struct {
 	store    db.Store
 	metadata metadata.Provider
 	tvmeta   metadata.TVProvider
-	cfg      *config.LibraryConfig
+	// pinned, when set, is the library config every pass reads, fixed for the
+	// service's lifetime. Nil reads the live config per call; see lib.
+	pinned *config.LibraryConfig
 
 	// Probe is optional: media_probe no-ops when unset, matching the
 	// importer's own degrade-without-ffmpeg behavior. Set separately from
@@ -137,6 +139,10 @@ type Service struct {
 	Probe ffmpeg.Prober
 }
 
+// New builds the service. A nil cfg follows the live config, which is what
+// the running app wants: the roots and drift_grace_ticks change at runtime (a
+// path migration re-points a root with no restart) and a pass must scan where
+// the library is now. A non-nil cfg pins those settings to the given values.
 func New(
 	store db.Store,
 	meta metadata.Provider,
@@ -147,6 +153,15 @@ func New(
 		store:    store,
 		metadata: meta,
 		tvmeta:   tvmeta,
-		cfg:      cfg,
+		pinned:   cfg,
 	}
+}
+
+// lib returns the library config a pass works with: the pinned one, else the
+// config as it stands at the call.
+func (s *Service) lib() *config.LibraryConfig {
+	if s.pinned != nil {
+		return s.pinned
+	}
+	return &config.Get().Library
 }
