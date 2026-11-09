@@ -11,8 +11,10 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/internal/config"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	metadatamocks "github.com/datahearth/streamline/internal/metadata/mocks"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 func writeFile(path string, sizeMB int) {
@@ -119,6 +121,37 @@ var _ = Describe(
 				Kind:       entimportscan.KindSeries,
 				Mode:       entimportscan.ModeInPlace,
 			})
+			Expect(err).To(MatchError(ErrScanRunning))
+		})
+
+		It("validates against the root the config holds now", func() {
+			configtest.SetupFile(map[string]any{
+				"library": map[string]any{
+					"movie_path": "/nonexistent/movie/root",
+				},
+			})
+			svc = NewService(
+				store, metaProv, nil, nil, nil, nil, nil,
+				"", "",
+				nil, nil, nil, nil,
+			)
+			scan := StartScanParams{
+				SourcePath: tmpDir, Mode: entimportscan.ModeInPlace,
+			}
+			_, err := svc.StartScan(ctx, scan)
+			Expect(err).To(MatchError(ErrLibraryPathMissing))
+
+			// What a path migration does to the root, with no restart.
+			_, err = config.UpdateLibrary(
+				ctx, config.LibraryPatch{MoviePath: &tmpDir},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			store.EXPECT().
+				CountActiveImportScans(mock.Anything).
+				Return(1, nil).
+				Once()
+
+			_, err = svc.StartScan(ctx, scan)
 			Expect(err).To(MatchError(ErrScanRunning))
 		})
 

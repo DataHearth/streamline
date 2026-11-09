@@ -10,9 +10,13 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -20,8 +24,7 @@ import (
 )
 
 var _ = Describe("RenameService", Label("unit", "series"), func() {
-	// Test-only naming template (kept tight & deterministic). Production wires
-	// config.Library.SeriesNaming.
+	// Test-only naming template (kept tight & deterministic).
 	const naming = "{title}/Season {season}/{title} - S{season:2}E{episode:2}.{ext}"
 
 	var (
@@ -35,7 +38,7 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
 		storeMk = store.EXPECT()
-		svc = NewRenameService(store, nil, "/library/tv", naming)
+		svc = newTestRenameService(store, nil, "/library/tv", naming)
 	})
 
 	It("maps NotFound to ErrSeriesNotFound on preview", func() {
@@ -100,6 +103,49 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 		Expect(plan.Operations[0].MediaFileID).To(Equal(uint32(11)))
 	})
 
+	It("plans against the root and template the config holds now", func() {
+		show := &ent.TVShow{ID: 1, Title: "The Wire", Year: 2002, TvdbID: 1}
+		show.Edges.Seasons = []*ent.Season{
+			{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+				{ID: 100, Number: 2, Edges: ent.EpisodeEdges{
+					MediaFiles: []*ent.MediaFile{{
+						ID:   11,
+						Path: "/library/tv/The Wire/Season 1/The Wire - S01E02.mkv",
+					}},
+				}},
+			}}},
+		}
+		storeMk.FindTVShowByID(mock.Anything, uint32(1)).Return(show, nil).Times(3)
+
+		plan, err := svc.Preview(ctx, 1)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(plan.Operations).To(BeEmpty())
+
+		// What a path migration does to the root, with no restart.
+		moved := "/mnt/new/tv"
+		_, err = config.UpdateLibrary(ctx, config.LibraryPatch{SeriesPath: &moved})
+		Expect(err).NotTo(HaveOccurred())
+
+		plan, err = svc.Preview(ctx, 1)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(plan.Operations).To(HaveLen(1))
+		Expect(plan.Operations[0].To).To(
+			Equal("/mnt/new/tv/The Wire/Season 1/The Wire - S01E02.mkv"),
+		)
+
+		// And what Settings → Library does to the template.
+		flat := "{title}/{title} {season}x{episode:2}.{ext}"
+		_, err = config.UpdateLibrary(ctx, config.LibraryPatch{SeriesNaming: &flat})
+		Expect(err).NotTo(HaveOccurred())
+
+		plan, err = svc.Preview(ctx, 1)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(plan.Operations).To(HaveLen(1))
+		Expect(plan.Operations[0].To).To(
+			Equal("/mnt/new/tv/The Wire/The Wire 1x02.mkv"),
+		)
+	})
+
 	Describe("Apply's event recording", func() {
 		var (
 			client *ent.Client
@@ -116,7 +162,7 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 			tmp = GinkgoT().TempDir()
 			ms := msmocks.NewMockRefresher(GinkgoT())
 			msMk = ms.EXPECT()
-			svc = NewRenameService(store, ms, tmp, naming)
+			svc = newTestRenameService(store, ms, tmp, naming)
 
 			row := client.TVShow.Create().
 				SetTitle("The Wire").
@@ -201,3 +247,16 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 		})
 	})
 })
+
+// newTestRenameService loads a config whose series root and naming template
+// are the given ones, backed by a file so a spec can change them through
+// config.Update, and returns a service over it.
+func newTestRenameService(
+	store db.Store, ms mediaserver.Refresher, root, naming string,
+) *RenameService {
+	GinkgoHelper()
+	configtest.SetupFile(map[string]any{
+		"library": map[string]any{"series_path": root, "series_naming": naming},
+	})
+	return NewRenameService(store, ms)
+}
