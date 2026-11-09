@@ -342,6 +342,58 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 		Expect(old).NotTo(BeAnExistingFile())
 	})
 
+	It("keeps the tracked file when the create fails", func() {
+		old := filepath.Join(GinkgoT().TempDir(), "old.mkv")
+		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		f := &ent.ImportScanFile{
+			ID: 7, ExistingMovieID: 42, SourcePath: "/import/Movie.mkv",
+		}
+
+		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+			Return([]*ent.MediaFile{{ID: 9, Path: old}}, nil).Once()
+		store.EXPECT().FindMovieByID(mock.Anything, uint32(42)).
+			Return(&ent.Movie{ID: 42}, nil).Once()
+		store.EXPECT().CreateMediaFile(mock.Anything, mock.Anything).
+			Return(nil, errors.New("disk I/O error")).Once()
+
+		outcome, _, _ := svc.commitAttach(ctx, inPlaceScan, f)
+
+		Expect(outcome).To(Equal(entimportscanfile.OutcomeFailed))
+		Expect(old).To(BeAnExistingFile())
+	})
+
+	It(
+		"is a no-op when the scanned path reaches the movie's file through a symlink",
+		func() {
+			base := GinkgoT().TempDir()
+			realRoot := filepath.Join(base, "real")
+			Expect(os.MkdirAll(realRoot, 0o755)).To(Succeed())
+			Expect(os.WriteFile(
+				filepath.Join(realRoot, "Movie.mkv"), []byte("movie"), 0o644,
+			)).To(Succeed())
+			link := filepath.Join(base, "library")
+			Expect(os.Symlink(realRoot, link)).To(Succeed())
+			// The row keeps the configured root's spelling; the scanner
+			// resolves symlinks before it stores a path.
+			tracked := filepath.Join(link, "Movie.mkv")
+			f := &ent.ImportScanFile{
+				ID:              7,
+				ExistingMovieID: 42,
+				SourcePath:      filepath.Join(realRoot, "Movie.mkv"),
+			}
+
+			store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+				Return([]*ent.MediaFile{{ID: 9, Path: tracked}}, nil).Once()
+
+			outcome, msg, movieID := svc.commitAttach(ctx, inPlaceScan, f)
+
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+			Expect(msg).To(BeEmpty())
+			Expect(movieID).To(Equal(uint32(42)))
+			Expect(tracked).To(BeAnExistingFile())
+		},
+	)
+
 	It("is a no-op when the scanned path is already the movie's file", func() {
 		f := &ent.ImportScanFile{
 			ID:              7,
@@ -486,6 +538,129 @@ var _ = Describe(
 				Expect(recorded.Path).To(BeAnExistingFile())
 			},
 		)
+
+		renameScan := &ent.ImportScan{
+			ID:         1,
+			Mode:       entimportscan.ModeRename,
+			ImportMode: entimportscan.ImportModeHardlink,
+		}
+		video := func(path, content string) {
+			GinkgoHelper()
+			Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
+			body := make([]byte, 60*1024*1024)
+			copy(body, content)
+			Expect(os.WriteFile(path, body, 0o644)).To(Succeed())
+		}
+		head := func(path string, n int) string {
+			GinkgoHelper()
+			body, err := os.ReadFile(path)
+			Expect(err).NotTo(HaveOccurred())
+			return string(body[:n])
+		}
+
+		It("keeps the tracked file and its row when the import fails", func() {
+			old := filepath.Join(libDir, "Fight Club (1999) [old]", "Fight Club.mkv")
+			video(old, "old")
+			// Another file already sits where the scanned one would land.
+			video(
+				filepath.Join(libDir, "Fight Club (1999)", "Fight Club.mkv"),
+				"foreign",
+			)
+			src := filepath.Join(srcDir, "Fight Club 1999 1080p.mkv")
+			video(src, "new")
+			f := &ent.ImportScanFile{ID: 7, ExistingMovieID: 42, SourcePath: src}
+
+			// No DeleteMediaFile and no CreateMediaFile: the mock fails the
+			// spec on either.
+			store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+				Return([]*ent.MediaFile{{ID: 9, Path: old}}, nil).Once()
+			store.EXPECT().FindMovieByID(mock.Anything, uint32(42)).
+				Return(&ent.Movie{ID: 42, Title: "Fight Club", Year: 1999}, nil).
+				Once()
+
+			outcome, msg, _ := svc.commitAttach(ctx, renameScan, f)
+
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeFailed))
+			Expect(msg).To(ContainSubstring("import movie"))
+			Expect(head(old, 3)).To(Equal("old"))
+			Expect(old + replacedSuffix).NotTo(BeAnExistingFile())
+		})
+
+		It("replaces a tracked file sitting at the destination", func() {
+			dest := filepath.Join(libDir, "Fight Club (1999)", "Fight Club.mkv")
+			video(dest, "old")
+			src := filepath.Join(srcDir, "Fight Club 1999 1080p.mkv")
+			video(src, "new")
+			f := &ent.ImportScanFile{ID: 7, ExistingMovieID: 42, SourcePath: src}
+
+			store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+				Return([]*ent.MediaFile{{ID: 9, Path: dest}}, nil).Once()
+			store.EXPECT().FindMovieByID(mock.Anything, uint32(42)).
+				Return(&ent.Movie{ID: 42, Title: "Fight Club", Year: 1999}, nil).
+				Once()
+			created := false
+			store.EXPECT().CreateMediaFile(mock.Anything, mock.Anything).
+				Run(func(context.Context, db.CreateMediaFileParams) {
+					created = true
+				}).Return(&ent.MediaFile{}, nil).Once()
+			store.EXPECT().DeleteMediaFile(mock.Anything, uint32(9)).
+				Run(func(context.Context, uint32) {
+					// The old row goes only once the new one exists.
+					Expect(created).To(BeTrue())
+				}).Return(nil).Once()
+			store.EXPECT().
+				UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+				Return(nil).Once()
+
+			outcome, msg, _ := svc.commitAttach(ctx, renameScan, f)
+
+			Expect(msg).To(BeEmpty())
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+			Expect(head(dest, 3)).To(Equal("new"))
+			Expect(dest + replacedSuffix).NotTo(BeAnExistingFile())
+		})
+
+		It("commits each movie of a flat folder holding several", func() {
+			flat := filepath.Dir(srcDir)
+			first := filepath.Join(flat, "Fight Club 1999 1080p.mkv")
+			second := filepath.Join(flat, "Se7en 1995 1080p.mkv")
+			video(first, "one")
+			video(second, "two")
+
+			for id, tc := range map[uint32]struct {
+				src   string
+				movie *ent.Movie
+			}{
+				42: {first, &ent.Movie{ID: 42, Title: "Fight Club", Year: 1999}},
+				43: {second, &ent.Movie{ID: 43, Title: "Se7en", Year: 1995}},
+			} {
+				store.EXPECT().ListMediaFilesByMovieID(mock.Anything, id).
+					Return(nil, nil).Once()
+				store.EXPECT().FindMovieByID(mock.Anything, id).
+					Return(tc.movie, nil).Once()
+				var recorded db.CreateMediaFileParams
+				store.EXPECT().CreateMediaFile(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, p db.CreateMediaFileParams) {
+						recorded = p
+					}).Return(&ent.MediaFile{}, nil).Once()
+				store.EXPECT().
+					UpdateMovieStatus(mock.Anything, id, entmovie.StatusAvailable).
+					Return(nil).Once()
+
+				outcome, msg, _ := svc.commitAttach(
+					ctx,
+					renameScan,
+					&ent.ImportScanFile{
+						ID: id, ExistingMovieID: id, SourcePath: tc.src,
+					},
+				)
+
+				Expect(msg).To(BeEmpty())
+				Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+				Expect(recorded.Path).To(ContainSubstring(tc.movie.Title))
+				Expect(recorded.Path).To(BeAnExistingFile())
+			}
+		})
 	},
 )
 
@@ -759,6 +934,12 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 			Expect(
 				os.WriteFile(src, make([]byte, 60*1024*1024), 0o644),
 			).To(Succeed())
+			// A second movie beside it: the commit names its own file, so
+			// a folder holding several is not "multiple media files".
+			Expect(os.WriteFile(
+				filepath.Join(srcDir, "Se7en - 1995.mkv"),
+				make([]byte, 60*1024*1024), 0o644,
+			)).To(Succeed())
 			scan := &ent.ImportScan{
 				ID:         1,
 				Mode:       entimportscan.ModeRename,

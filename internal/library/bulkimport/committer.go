@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
-	"os"
-	"path/filepath"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -357,36 +355,14 @@ func (s *Service) commitAttach(
 		return commitFail("list existing files", err, 0)
 	}
 	for _, mf := range existing {
-		if mf.Path == f.SourcePath {
+		if sameFile(mf.Path, f.SourcePath) {
 			return entimportscanfile.OutcomeAttached, "", f.ExistingMovieID
-		}
-	}
-	// A movie holds at most one media file: accepting a scanned file for an
-	// already-known movie replaces whatever file it currently has.
-	for _, mf := range existing {
-		if err := os.Remove(mf.Path); err != nil && !os.IsNotExist(err) {
-			slog.WarnContext(ctx, "attach replace: remove old file failed",
-				"path", mf.Path, "error", err)
-		} else if err == nil {
-			// Only the failure was logged, so the deletion that actually
-			// happened left nothing behind to explain a file disappearing
-			// mid-commit.
-			slog.InfoContext(ctx, "attach replace: replaced an existing file",
-				"movie.id", f.ExistingMovieID,
-				"old_path", mf.Path,
-				"new_path", f.SourcePath)
-		}
-		if err := s.store.DeleteMediaFile(ctx, mf.ID); err != nil {
-			return commitFail("delete replaced file", err, 0)
 		}
 	}
 	m, err := s.store.FindMovieByID(ctx, f.ExistingMovieID)
 	if err != nil {
 		return commitFail("find movie", err, 0)
 	}
-	// A rename scan relocates everything it accepts, existing rows included —
-	// attaching this one where it lies would leave the library split across the
-	// source root and the configured one, which only an inode sweep can find.
 	params := db.CreateMediaFileParams{
 		MovieID:      f.ExistingMovieID,
 		Path:         f.SourcePath,
@@ -399,14 +375,34 @@ func (s *Service) commitAttach(
 			m.QualityProfile,
 		),
 	}
+	// A movie holds at most one media file: accepting a scanned file for an
+	// already-known movie replaces whatever file it currently has. The old
+	// file and its row go only once the new row exists, so a commit that
+	// fails on the way leaves the library its copy.
+	var aside []string
+	// A rename scan relocates everything it accepts, existing rows included —
+	// attaching this one where it lies would leave the library split across the
+	// source root and the configured one, which only an inode sweep can find.
 	if scan.Mode == entimportscan.ModeRename {
+		old := make([]string, len(existing))
+		for i, mf := range existing {
+			old[i] = mf.Path
+		}
+		// Out of the way first: old and new render to the same destination
+		// whenever both were named by the same template.
+		if aside, err = setAside(ctx, old...); err != nil {
+			return commitFail("replace existing file", err, 0)
+		}
+		// The file itself, not its folder: a folder is resolved to "the one
+		// video in it" and a flat folder of movies holds several.
 		imported, err := s.importSvc.ImportMovieWithMode(
 			ctx,
-			filepath.Dir(f.SourcePath),
+			f.SourcePath,
 			m,
 			string(scan.ImportMode),
 		)
 		if err != nil {
+			putBack(ctx, aside)
 			return commitFail("import movie", err, 0)
 		}
 		params.Path = imported.Path
@@ -415,9 +411,28 @@ func (s *Service) commitAttach(
 		params.ReleaseGroup = imported.Parsed.Group
 		params.Parsed = &imported.Parsed
 	}
-	return s.linkAndMarkAvailable(
-		ctx, params, entimportscanfile.OutcomeAttached, 0,
-	)
+	if _, err := s.store.CreateMediaFile(ctx, params); err != nil {
+		putBack(ctx, aside)
+		return commitFail("create media file", err, 0)
+	}
+	for _, mf := range existing {
+		if err := s.store.DeleteMediaFile(ctx, mf.ID); err != nil {
+			putBack(ctx, aside)
+			return commitFail("delete replaced file", err, 0)
+		}
+		if scan.Mode != entimportscan.ModeRename {
+			removeReplaced(ctx, mf.Path, params.Path)
+		}
+	}
+	dropAside(ctx, aside)
+	if err := s.store.UpdateMovieStatus(
+		ctx,
+		params.MovieID,
+		entmovie.StatusAvailable,
+	); err != nil {
+		return commitFail("update movie status", err, 0)
+	}
+	return entimportscanfile.OutcomeAttached, "", params.MovieID
 }
 
 func (s *Service) commitAdoptInPlace(
@@ -453,9 +468,11 @@ func (s *Service) commitRename(
 	if err != nil {
 		return commitFail("add movie", err, 0)
 	}
+	// The file itself, not its folder: a folder is resolved to "the one video
+	// in it" and a flat folder of movies holds several.
 	imported, err := s.importSvc.ImportMovieWithMode(
 		ctx,
-		filepath.Dir(f.SourcePath),
+		f.SourcePath,
 		m,
 		string(scan.ImportMode),
 	)

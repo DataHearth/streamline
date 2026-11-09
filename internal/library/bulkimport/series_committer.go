@@ -164,40 +164,41 @@ func (s *Service) commitShow(
 			continue
 		}
 		// An episode holds at most one media file: committing an accepted show
-		// replaces whatever file a matched episode already has. The same path
-		// being re-scanned is already adopted, so it needs no rewrite.
-		if mf, err := s.store.FindMediaFileByEpisodeID(ctx, target.ID); err == nil {
-			if mf.Path == f {
-				continue
-			}
-			if rmErr := os.Remove(mf.Path); rmErr != nil && !os.IsNotExist(rmErr) {
-				slog.WarnContext(ctx, "series adopt: remove old file failed",
-					"path", mf.Path, "error", rmErr)
-			} else if rmErr == nil {
-				// The failure path was logged and the success path was not, so
-				// the case that actually deleted a file left no trace — and
-				// "where did my old copy go" is asked about exactly that one.
-				slog.InfoContext(ctx, "series adopt: replaced an existing file",
-					"episode.id", target.ID,
-					"old_path", mf.Path,
-					"new_path", f)
-			}
-			if dErr := s.store.DeleteMediaFile(ctx, mf.ID); dErr != nil {
-				slog.WarnContext(ctx, "series adopt: delete replaced file failed",
-					"episode.id", target.ID, "error", dErr)
-				continue
-			}
-		} else if !ent.IsNotFound(err) {
+		// replaces whatever file a matched episode already has. The same file
+		// being re-scanned is already adopted, so it needs no rewrite. The old
+		// file and its row go only once the new row exists, so a file that
+		// fails on the way leaves the episode its copy.
+		old, err := s.store.FindMediaFileByEpisodeID(ctx, target.ID)
+		if ent.IsNotFound(err) {
+			old, err = nil, nil
+		}
+		if err != nil {
 			slog.WarnContext(ctx, "series adopt: media file lookup failed",
 				"episode.id", target.ID, "error", err)
 			continue
 		}
+		if old != nil && sameFile(old.Path, f) {
+			continue
+		}
 		path, size := f, info.Size()
+		var aside []string
 		if scan.Mode == entimportscan.ModeRename {
+			if old != nil {
+				// Out of the way first: old and new render to the same
+				// destination whenever both were named by the same template.
+				if aside, err = setAside(ctx, old.Path); err != nil {
+					slog.WarnContext(
+						ctx, "series adopt: replace existing file failed",
+						"episode.id", target.ID, "error", err,
+					)
+					continue
+				}
+			}
 			imported, err := s.importSvc.ImportEpisodeWithMode(
 				ctx, f, show, season, target, string(scan.ImportMode),
 			)
 			if err != nil {
+				putBack(ctx, aside)
 				slog.WarnContext(ctx, "series adopt: import episode failed",
 					"file", f, "episode.id", target.ID, "error", err)
 				continue
@@ -218,9 +219,23 @@ func (s *Service) commitShow(
 				show.QualityProfile,
 			),
 		}); err != nil {
+			putBack(ctx, aside)
 			slog.WarnContext(ctx, "series adopt: create media file failed",
 				"episode.id", target.ID, "error", err)
 			continue
+		}
+		if old != nil {
+			if dErr := s.store.DeleteMediaFile(ctx, old.ID); dErr != nil {
+				putBack(ctx, aside)
+				slog.WarnContext(ctx, "series adopt: delete replaced file failed",
+					"episode.id", target.ID, "error", dErr)
+				continue
+			}
+			if scan.Mode == entimportscan.ModeRename {
+				dropAside(ctx, aside)
+			} else {
+				removeReplaced(ctx, old.Path, path)
+			}
 		}
 		if err := s.store.SetEpisodeStatus(
 			ctx,
