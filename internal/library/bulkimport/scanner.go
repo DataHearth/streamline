@@ -134,14 +134,14 @@ func (s *Service) validateScanParams(p StartScanParams) (string, error) {
 	var roots []string
 	switch p.Kind {
 	case entimportscan.KindSeries:
-		roots = []string{s.seriesPath}
+		roots = []string{s.seriesRoot()}
 	case entimportscan.KindMusic:
 		roots = []string{config.Get().Library.MusicPath}
 	case entimportscan.KindBook:
 		lib := config.Get().Library
 		roots = []string{lib.EbookPath, lib.AudiobookPath}
 	default:
-		roots = []string{s.moviePath}
+		roots = []string{s.movieRoot()}
 	}
 	inside, resolvedAny := false, false
 	for _, root := range roots {

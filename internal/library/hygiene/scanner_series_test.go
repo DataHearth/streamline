@@ -15,6 +15,7 @@ import (
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func() {
@@ -115,6 +116,29 @@ var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func()
 			Once()
 		store.EXPECT().TVShowTVDBIndex(mock.Anything).Return(nil, nil).Once()
 		// No SearchSeries, no scan writes.
+
+		Expect(svc.RunSeriesOrphanScan(ctx)).To(Succeed())
+	})
+
+	It("scans the root the config holds now", func() {
+		configtest.SetupFile(map[string]any{
+			"library": map[string]any{
+				"series_path": filepath.Join(tmpDir, "gone"),
+			},
+		})
+		svc = New(store, meta, tvmeta, nil)
+		folder := filepath.Dir(
+			placeShowFile("Breaking Bad", "Breaking Bad S01E01.mkv"),
+		)
+		// The configured root does not exist: nothing is read.
+		Expect(svc.RunSeriesOrphanScan(ctx)).To(Succeed())
+
+		// What a path migration does to the root, with no restart.
+		_, err := config.UpdateLibrary(
+			ctx, config.LibraryPatch{SeriesPath: &tmpDir},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		expectScanPrelude([]string{folder})
 
 		Expect(svc.RunSeriesOrphanScan(ctx)).To(Succeed())
 	})

@@ -35,7 +35,7 @@ import (
 // volume not yet mounted would otherwise revert the whole library on the first
 // tick.
 func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) error {
-	graceWindow := interval * time.Duration(s.cfg.DriftGraceTicks)
+	graceWindow := interval * time.Duration(s.lib().DriftGraceTicks)
 
 	ctx, span := tracer.Start(ctx, "hygiene.drift_check")
 	defer span.End()
