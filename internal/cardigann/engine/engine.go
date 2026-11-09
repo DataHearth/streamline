@@ -382,9 +382,14 @@ func (e *Engine) send(ctx context.Context, r request) (*response, error) {
 	if r.method == http.MethodPost {
 		body = strings.NewReader(r.form)
 	}
+	// A login by get, a passkey download link and an API-key search all
+	// carry their secret in the query, and net/http quotes the whole URL in
+	// the error of a request it could not build or finish — a timeout
+	// included. Every caller's error is logged, recorded on a span and, for
+	// a login, stored and shown, so the URL is cut down here, once.
 	req, err := http.NewRequestWithContext(ctx, r.method, r.url, body)
 	if err != nil {
-		return nil, err
+		return nil, otelx.RedactTransportError(err)
 	}
 	ua := userAgent
 	if e.ua != "" {
@@ -418,7 +423,7 @@ func (e *Engine) send(ctx context.Context, r request) (*response, error) {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, otelx.RedactTransportError(err)
 	}
 	defer resp.Body.Close()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
