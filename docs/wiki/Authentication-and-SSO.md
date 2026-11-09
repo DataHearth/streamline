@@ -132,6 +132,8 @@ Generated on first boot and persisted to your config file via an atomic YAML wri
 
 **If the config has no writable backing file, the secret is ephemeral** — regenerated at every start, invalidating all sessions on restart. Any deployment with a read-only config must supply `auth.session_secret` (or `auth.session_secret_file`) explicitly.
 
+A configured `auth.session_secret_file` has to hold the secret by the time Streamline starts: a file that is missing, empty or only whitespace **stops the start with an error** naming it, and nothing is generated in its place.
+
 Rotating it logs everyone out. There's also `POST /api/v1/auth/jwt/rotate` for doing that deliberately.
 
 ---

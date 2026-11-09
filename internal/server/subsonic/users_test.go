@@ -30,7 +30,9 @@ var _ = g.Describe("user management", g.Label("integration"), func() {
 	g.BeforeEach(func() {
 		ctx = context.Background()
 		f = newFixture(ctx)
-		configtest.Setup(nil)
+		configtest.Setup(map[string]any{
+			"auth": map[string]any{"session_secret": "test-secret-key-for-jwt"},
+		})
 		accounts, err := auth.New(db.New(f.client))
 		Expect(err).NotTo(HaveOccurred())
 		f.handler = New(Deps{
