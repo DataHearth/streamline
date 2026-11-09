@@ -59,11 +59,11 @@ Principles:
 --fg:            #F5F5F7    /* primary */
 --fg-muted:      #C8C8D2    /* secondary (passes 4.5:1 on bg-elevated) */
 --fg-subtle:     #8A8A99    /* tertiary, axis labels, helper */
---fg-faint:      #74748A    /* faint, uppercase eyebrow / sub-section (passes 3:1 on every surface) */
+--fg-faint:      #74748A    /* faint, icons / separators / disabled (passes 3:1 on every surface) */
 --fg-on-accent:  #0B0B10
 ```
 
-Never use `--fg-subtle` for body copy. Labels/axis/helper only. `--fg-faint` is reserved for icons, uppercase eyebrows and sub-section dividers: it passes 3:1, the floor for icons (§9), not the 4.5:1 of small text, so any other text that must be read uses `--fg-subtle`.
+Never use `--fg-subtle` for body copy. Labels/axis/helper only. `--fg-faint` is reserved for icons, separator glyphs, disabled states and non-text paint: it passes 3:1, the floor for icons (§9), not the 4.5:1 of small text, so any text that must be read (uppercase eyebrows and sub-section labels included) uses `--fg-subtle`.
 
 ### Status (ops semantics — used on pills, progress, row highlights)
 ```
