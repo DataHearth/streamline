@@ -388,6 +388,65 @@ var _ = Describe("Transmission Client", Label("unit", "downloads"), func() {
 		})
 	})
 
+	Describe("ListTorrents", func() {
+		It("asks for labels and marks a torrent without streamline's foreign",
+			func() {
+				srv := trServer(
+					func(method string, args json.RawMessage) (string, any) {
+						Expect(method).To(Equal("torrent-get"))
+						var a struct {
+							Fields []string `json:"fields"`
+						}
+						Expect(json.Unmarshal(args, &a)).To(Succeed())
+						Expect(a.Fields).To(ContainElement("labels"))
+						return "success", map[string]any{
+							"torrents": []map[string]any{
+								{
+									"hashString": "AAA", "name": "ours",
+									"status": 6, "percentDone": 1.0,
+									"labels": []string{"streamline"},
+								},
+								{
+									"hashString": "BBB", "name": "tagged by hand",
+									"status": 6, "percentDone": 1.0,
+									"labels": []string{"films", "streamline"},
+								},
+								{
+									"hashString": "CCC", "name": "the operator's",
+									"status": 6, "percentDone": 1.0,
+									"labels": []string{"linux-isos"},
+								},
+								{
+									"hashString": "DDD", "name": "unlabelled",
+									"status": 6, "percentDone": 1.0,
+									"labels": []string{},
+								},
+								// A daemon older than 3.00 has no labels field.
+								{
+									"hashString": "EEE", "name": "old daemon",
+									"status": 6, "percentDone": 1.0,
+								},
+							},
+						}
+					},
+				)
+				DeferCleanup(srv.Close)
+
+				torrents, err := NewTransmission(srv.URL, "", "").
+					ListTorrents(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				foreign := map[string]bool{}
+				for _, t := range torrents {
+					foreign[t.Hash] = t.Foreign
+				}
+				Expect(foreign).To(Equal(map[string]bool{
+					"aaa": false, "bbb": false,
+					"ccc": true, "ddd": true, "eee": true,
+				}))
+			},
+		)
+	})
+
 	Describe("RemoveTorrent", func() {
 		It("sends ids and delete-local-data", func() {
 			srv := trServer(func(method string, args json.RawMessage) (string, any) {

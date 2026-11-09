@@ -418,6 +418,13 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 		d.setReachable(dc.Name, true)
 		live := make([]string, 0, len(torrents))
 		for _, t := range torrents {
+			// Transmission and Deluge list the whole client. A torrent
+			// without streamline's label is the operator's own: it is never
+			// proposed, imported or removed, and leaving it out of the live
+			// set drops a proposal an earlier release filed for it.
+			if t.Foreign {
+				continue
+			}
 			live = append(live, t.Hash)
 			if t.Status != StatusSeeding && t.Status != StatusCompleted {
 				continue

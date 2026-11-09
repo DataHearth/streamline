@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/datahearth/streamline/internal/otelx"
@@ -154,21 +155,27 @@ func (t *Transmission) AddTorrent(
 
 // trFields are the torrent-get fields streamline reads. Names are camelCase
 // per the Transmission RPC spec (unlike the hyphenated method names).
+//
+// labels (RPC 16, Transmission 3.00) is how a torrent is known to be
+// streamline's: AddTorrent sets managedCategory, and an operator opts a
+// torrent of their own in by adding the same label. An older daemon returns
+// no labels at all, which reads as "none of these are ours".
 var trFields = []string{
 	"hashString", "name", "percentDone", "totalSize",
-	"downloadDir", "rateDownload", "eta", "status", "errorString",
+	"downloadDir", "rateDownload", "eta", "status", "errorString", "labels",
 }
 
 type trTorrent struct {
-	HashString   string  `json:"hashString"`
-	Name         string  `json:"name"`
-	PercentDone  float64 `json:"percentDone"`
-	TotalSize    int64   `json:"totalSize"`
-	DownloadDir  string  `json:"downloadDir"`
-	RateDownload int64   `json:"rateDownload"`
-	Eta          int64   `json:"eta"`
-	Status       int     `json:"status"`
-	ErrorString  string  `json:"errorString"`
+	HashString   string   `json:"hashString"`
+	Name         string   `json:"name"`
+	PercentDone  float64  `json:"percentDone"`
+	TotalSize    int64    `json:"totalSize"`
+	DownloadDir  string   `json:"downloadDir"`
+	RateDownload int64    `json:"rateDownload"`
+	Eta          int64    `json:"eta"`
+	Status       int      `json:"status"`
+	ErrorString  string   `json:"errorString"`
+	Labels       []string `json:"labels"`
 }
 
 // get runs torrent-get; ids nil fetches all torrents.
@@ -203,6 +210,7 @@ func (t *Transmission) get(ctx context.Context, ids any) ([]Torrent, error) {
 			SavePath:      tr.DownloadDir,
 			DownloadSpeed: tr.RateDownload,
 			ETA:           eta,
+			Foreign:       !slices.Contains(tr.Labels, managedCategory),
 		})
 	}
 	return torrents, nil
@@ -222,6 +230,9 @@ func (t *Transmission) GetTorrent(
 	return &torrents[0], nil
 }
 
+// ListTorrents returns every torrent in the daemon: torrent-get has no
+// label filter. The ones without the streamline label come back marked
+// Torrent.Foreign.
 func (t *Transmission) ListTorrents(ctx context.Context) ([]Torrent, error) {
 	return t.get(ctx, nil)
 }

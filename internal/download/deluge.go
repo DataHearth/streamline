@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/anacrolix/torrent/metainfo"
@@ -306,6 +307,8 @@ type delugeTorrent struct {
 	Eta                 float64 `json:"eta"`
 	State               string  `json:"state"`
 	IsFinished          bool    `json:"is_finished"`
+	// Label is the Label plugin's status field; absent without the plugin.
+	Label string `json:"label"`
 }
 
 func (st delugeTorrent) toTorrent(hash string) Torrent {
@@ -341,8 +344,49 @@ func (d *Deluge) GetTorrent(
 	return &t, nil
 }
 
+// delugeLabelPlugin is the bundled Label plugin's name as
+// core.get_enabled_plugins reports it, and delugeLabelKey the status field it
+// registers.
+const (
+	delugeLabelPlugin = "Label"
+	delugeLabelKey    = "label"
+)
+
+// labelsEnabled reports whether the daemon runs the Label plugin. Asked on
+// every listing rather than remembered: the operator can switch the plugin on
+// or off at any time, and the status field is only requested from a daemon
+// that registers it.
+func (d *Deluge) labelsEnabled(ctx context.Context) (bool, error) {
+	raw, err := d.call(ctx, "core.get_enabled_plugins")
+	if err != nil {
+		return false, err
+	}
+	var plugins []string
+	if err := json.Unmarshal(raw, &plugins); err != nil {
+		return false, fmt.Errorf("%w: %w", ErrBadResponse, err)
+	}
+	return slices.Contains(plugins, delugeLabelPlugin), nil
+}
+
+// ListTorrents returns every torrent in the daemon. Deluge has no built-in
+// way to mark a torrent, and AddTorrent sets none: streamline knows its own
+// grabs by their download record. So every torrent comes back Torrent.Foreign
+// except one the operator gave the Label plugin's `streamline` label, which
+// is the opt-in for adopting a torrent added by hand. Without the plugin
+// nothing can be opted in and nothing is adopted.
+//
+// A failure to read the plugin list fails the listing: answering "all
+// foreign" instead would have the adoption pass prune every open proposal.
 func (d *Deluge) ListTorrents(ctx context.Context) ([]Torrent, error) {
-	raw, err := d.call(ctx, "core.get_torrents_status", map[string]any{}, delugeKeys)
+	labels, err := d.labelsEnabled(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("deluge list: %w", err)
+	}
+	keys := delugeKeys
+	if labels {
+		keys = append(slices.Clone(delugeKeys), delugeLabelKey)
+	}
+	raw, err := d.call(ctx, "core.get_torrents_status", map[string]any{}, keys)
 	if err != nil {
 		return nil, fmt.Errorf("deluge list: %w", err)
 	}
@@ -352,7 +396,9 @@ func (d *Deluge) ListTorrents(ctx context.Context) ([]Torrent, error) {
 	}
 	torrents := make([]Torrent, 0, len(m))
 	for hash, st := range m {
-		torrents = append(torrents, st.toTorrent(hash))
+		t := st.toTorrent(hash)
+		t.Foreign = st.Label != managedCategory
+		torrents = append(torrents, t)
 	}
 	return torrents, nil
 }
