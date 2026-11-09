@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"os"
@@ -47,7 +48,15 @@ func withAuthDeps(
 	}
 	defer dbClient.Close()
 	store := db.New(dbClient)
-	svc, err := auth.New(store)
+	// These commands sign no session, so an instance running on an ephemeral
+	// secret (nothing configured, read-only config) gets a throwaway one here
+	// rather than being refused. A configured secret is used as-is.
+	a := config.Get().Auth
+	secret := config.SecretValue(a.SessionSecret, a.SessionSecretFile)
+	if secret == "" {
+		secret = rand.Text()
+	}
+	svc, err := auth.NewWithSecret(store, secret)
 	if err != nil {
 		return fmt.Errorf("auth: %w", err)
 	}
