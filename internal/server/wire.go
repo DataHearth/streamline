@@ -630,7 +630,7 @@ func apiFailureLimiter() auth.Limiter {
 	return auth.NewLimiter(uint8(limit), 15*time.Minute)
 }
 
-// ensureSessionSecret leaves the config singleton holding a non-empty JWT
+// ensureSessionSecret leaves the config singleton holding a usable JWT
 // signing secret, or returns an error.
 //
 // With nothing configured it generates one and tries to persist it to the
@@ -646,19 +646,20 @@ func apiFailureLimiter() auth.Limiter {
 // that names session_secret_file, and every reader resolves the pair through
 // config.SecretValue, where the file wins — so the instance would run on the
 // empty key, and an empty HMAC key lets any caller sign their own claims.
+//
+// A configured secret under auth.MinSessionSecretLen fails the boot too, file
+// or inline: a file holding only a byte-order mark is not empty, and is no
+// more of a secret.
 func ensureSessionSecret(ctx context.Context) error {
+	if err := auth.CheckConfiguredSessionSecret(); err != nil {
+		return err
+	}
 	cfg := config.Get()
 	if config.SecretValue(
 		cfg.Auth.SessionSecret,
 		cfg.Auth.SessionSecretFile,
 	) != "" {
 		return nil
-	}
-	if cfg.Auth.SessionSecretFile != "" {
-		return fmt.Errorf(
-			"auth.session_secret_file %q is empty: write the session secret to it, or remove the key to have one generated",
-			cfg.Auth.SessionSecretFile,
-		)
 	}
 	secret, err := generateSessionSecret()
 	if err != nil {

@@ -467,11 +467,11 @@
         "trusted_role": { "$ref": "#/definitions/role" },
         "session_secret": {
           "type": "string",
-          "description": "JWT HMAC signing secret. Auto-generated and persisted on first boot when empty."
+          "description": "JWT HMAC signing secret. Auto-generated and persisted on first boot when empty. A configured one must be at least 16 bytes, or the server refuses to start."
         },
         "session_secret_file": {
           "type": "string",
-          "description": "Path to a file holding session_secret. Mutually exclusive with session_secret."
+          "description": "Path to a file holding session_secret. Mutually exclusive with session_secret. The server refuses to start when the file is missing, empty, or holds fewer than 16 bytes."
         },
         "session_ttl": { "$ref": "#/definitions/duration" },
         "registration_mode": {

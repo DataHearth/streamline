@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -211,9 +212,64 @@ type auth struct {
 // with one.
 var ErrEmptySessionSecret = errors.New("session signing secret is empty")
 
+// MinSessionSecretLen is the shortest signing secret the service accepts, in
+// bytes once surrounding whitespace is trimmed. It is a floor, not a strength
+// estimate: what it rules out is a secret that is only technically non-empty —
+// a lone space, a byte-order mark, the six bytes PowerShell writes for an
+// empty UTF-16 file — and so is as public as the empty key. Every secret
+// Streamline generates itself is 32 bytes or more before encoding.
+const MinSessionSecretLen = 16
+
+// ErrShortSessionSecret means the signing key is under MinSessionSecretLen.
+var ErrShortSessionSecret = fmt.Errorf(
+	"session signing secret is shorter than %d bytes",
+	MinSessionSecretLen,
+)
+
+// CheckSessionSecret reports whether secret can be a JWT signing key:
+// ErrEmptySessionSecret when nothing but whitespace is there,
+// ErrShortSessionSecret under the floor, nil otherwise.
+func CheckSessionSecret(secret string) error {
+	switch n := len(strings.TrimSpace(secret)); {
+	case n == 0:
+		return ErrEmptySessionSecret
+	case n < MinSessionSecretLen:
+		return ErrShortSessionSecret
+	}
+	return nil
+}
+
+// CheckConfiguredSessionSecret judges the secret the loaded config names, and
+// words the failure for the operator who has to fix it. Nothing configured at
+// all is not a failure — the server generates one at boot. It is what both
+// the boot and `streamline config validate` ask, so the second predicts the
+// first.
+func CheckConfiguredSessionSecret() error {
+	a := config.Get().Auth
+	secret := config.SecretValue(a.SessionSecret, a.SessionSecretFile)
+	if a.SessionSecretFile == "" && secret == "" {
+		return nil
+	}
+	err := CheckSessionSecret(secret)
+	switch {
+	case err == nil:
+		return nil
+	case a.SessionSecretFile != "":
+		return fmt.Errorf(
+			"auth.session_secret_file %q: %w: write the session secret to it, or remove the key to have one generated",
+			a.SessionSecretFile,
+			err,
+		)
+	}
+	return fmt.Errorf(
+		"auth.session_secret: %w: set a longer one, or remove the key to have one generated",
+		err,
+	)
+}
+
 // New constructs a Manager using session credentials from the process-wide
 // config singleton. Returns an error if auth.session_ttl fails to parse, or
-// ErrEmptySessionSecret when the configured secret resolves to nothing — an
+// what CheckSessionSecret says of the configured secret — an
 // auth.session_secret_file that reads back empty included.
 func New(store db.Store) (Manager, error) {
 	cfg := config.Get()
@@ -232,8 +288,8 @@ func NewWithSecret(store db.Store, sessionSecret string) (Manager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse auth.session_ttl: %w", err)
 	}
-	if sessionSecret == "" {
-		return nil, ErrEmptySessionSecret
+	if err := CheckSessionSecret(sessionSecret); err != nil {
+		return nil, err
 	}
 	a := &auth{db: store, jwtTTL: ttl, touches: newTouchDebounce()}
 	secret := []byte(sessionSecret)

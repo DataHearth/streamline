@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -84,7 +85,42 @@ var _ = Describe("empty session secret", Label("integration", "auth"), func() {
 		Expect(err).To(MatchError(ErrEmptySessionSecret))
 	})
 
-	It("rejects a token signed with the empty key", func() {
+	// Not empty, and no more secret than the empty key: each is a value
+	// anyone can guess from knowing how the file came to be written.
+	DescribeTable("NewWithSecret refuses a secret that is only technically there",
+		func(secret string, want error) {
+			_, err := NewWithSecret(store, secret)
+			Expect(err).To(MatchError(want))
+		},
+		Entry("a lone space", " ", ErrEmptySessionSecret),
+		Entry("a UTF-8 byte-order mark", "\xef\xbb\xbf", ErrShortSessionSecret),
+		Entry(
+			"an empty UTF-16 file as PowerShell 5 writes it",
+			"\xff\xfe\r\x00\n\x00",
+			ErrShortSessionSecret,
+		),
+		Entry(
+			"one byte under the floor",
+			strings.Repeat("k", MinSessionSecretLen-1),
+			ErrShortSessionSecret,
+		),
+		Entry(
+			"the floor in bytes, but padded to it with whitespace",
+			strings.Repeat("k", MinSessionSecretLen-1)+" ",
+			ErrShortSessionSecret,
+		),
+	)
+
+	It("NewWithSecret accepts a secret exactly at the floor", func() {
+		_, err := NewWithSecret(store, strings.Repeat("k", MinSessionSecretLen))
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	// A sanity spec, not the regression for the empty-file boot: it runs on
+	// the suite's own non-empty secret and passes without the fix. The specs
+	// that pin the fix are New refusing above and the stored-empty-key one
+	// below.
+	It("a healthy service rejects a token signed with the empty key", func() {
 		m, err := New(store)
 		Expect(err).NotTo(HaveOccurred())
 		svc := m.(*auth)
@@ -116,21 +152,26 @@ var _ = Describe("empty session secret", Label("integration", "auth"), func() {
 		Expect(err).To(MatchError(ErrEmptySessionSecret))
 	})
 
-	It("refuses to rotate to an empty secret and keeps the live key", func() {
-		m, err := New(store)
-		Expect(err).NotTo(HaveOccurred())
-		svc := m.(*auth)
-		u, token, err := svc.Register(
-			ctx, "user@example.com", "passw0rd!", "admin", SessionMeta{},
-		)
-		Expect(err).NotTo(HaveOccurred())
+	It(
+		"refuses to rotate to an empty or short secret and keeps the live key",
+		func() {
+			m, err := New(store)
+			Expect(err).NotTo(HaveOccurred())
+			svc := m.(*auth)
+			u, token, err := svc.Register(
+				ctx, "user@example.com", "passw0rd!", "admin", SessionMeta{},
+			)
+			Expect(err).NotTo(HaveOccurred())
 
-		_, span := tracer.Start(ctx, "test")
-		defer span.End()
-		_, err = svc.applyJWTSecret(ctx, span, u.ID, "")
-		Expect(err).To(MatchError(ErrEmptySessionSecret))
+			_, span := tracer.Start(ctx, "test")
+			defer span.End()
+			_, err = svc.applyJWTSecret(ctx, span, u.ID, "")
+			Expect(err).To(MatchError(ErrEmptySessionSecret))
+			_, err = svc.applyJWTSecret(ctx, span, u.ID, "too-short")
+			Expect(err).To(MatchError(ErrShortSessionSecret))
 
-		_, err = svc.ValidateToken(token)
-		Expect(err).NotTo(HaveOccurred())
-	})
+			_, err = svc.ValidateToken(token)
+			Expect(err).NotTo(HaveOccurred())
+		},
+	)
 })

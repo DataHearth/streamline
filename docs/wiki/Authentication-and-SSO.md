@@ -134,6 +134,8 @@ Generated on first boot and persisted to your config file via an atomic YAML wri
 
 A configured `auth.session_secret_file` has to hold the secret by the time Streamline starts: a file that is missing, empty or only whitespace **stops the start with an error** naming it, and nothing is generated in its place.
 
+A secret you supply, inline or by file, must be **at least 16 bytes** — shorter also stops the start. That is a floor against placeholders and files that only look empty (a byte-order mark, an empty UTF-16 file), not a recommendation: use `openssl rand -hex 32`. `streamline config validate` reports both conditions before you restart.
+
 Rotating it logs everyone out. There's also `POST /api/v1/auth/jwt/rotate` for doing that deliberately.
 
 ---
