@@ -55,8 +55,8 @@ var _ = Describe("applyMemoryBounds", Label("unit", "bittorrent"), func() {
 	})
 })
 
-var _ = Describe("the engine's content storage", Label("unit", "bittorrent"), func() {
-	It("reports no capacity, so the unverified-bytes bound applies per torrent", func() {
+var _ = Describe("engine content storage", Label("unit", "bittorrent"), func() {
+	It("reports no capacity, so unverified bytes are bounded per torrent", func() {
 		// anacrolix shares one request order, and so one MaxUnverifiedBytes
 		// count, across every torrent whose storage reports the same capacity
 		// (torrent-piece-request-order.go); with none, each torrent has its
@@ -65,14 +65,18 @@ var _ = Describe("the engine's content storage", Label("unit", "bittorrent"), fu
 		dir := GinkgoT().TempDir()
 		src := filepath.Join(dir, "src")
 		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
-		Expect(os.WriteFile(filepath.Join(src, "a.bin"), make([]byte, 64<<10), 0o644)).
-			To(Succeed())
+		content := make([]byte, 64<<10)
+		Expect(
+			os.WriteFile(filepath.Join(src, "a.bin"), content, 0o644),
+		).To(Succeed())
 		info := metainfo.Info{PieceLength: 16 << 10}
 		Expect(info.BuildFromFilePath(src)).To(Succeed())
 
-		st, _ := newContentStorage(filepath.Join(dir, "dl"), storage.NewMapPieceCompletion())
+		completion := storage.NewMapPieceCompletion()
+		st, _ := newContentStorage(filepath.Join(dir, "dl"), completion)
 		DeferCleanup(st.Close)
-		impl, err := st.OpenTorrent(context.Background(), &info, metainfo.Hash{1})
+		ctx := context.Background()
+		impl, err := st.OpenTorrent(ctx, &info, metainfo.Hash{1})
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(impl.Close)
 
