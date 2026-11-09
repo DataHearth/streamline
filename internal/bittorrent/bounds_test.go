@@ -47,7 +47,7 @@ var _ = Describe("applyMemoryBounds", Label("unit", "bittorrent"), func() {
 			To(BeNumerically(">=", 8*(16<<10)))
 	})
 
-	It("keeps the known-peer high water above the low water at every valid peer count", func() {
+	It("keeps the known-peer high water above the low at any peer count", func() {
 		// anacrolix drops known peers down to HighWater and keeps asking for
 		// more while at or under LowWater; inverting them would make the
 		// pruner run against the announcer. Low water is never set, so
