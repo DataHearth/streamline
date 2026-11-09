@@ -70,12 +70,13 @@ var _ = Describe("Engine max_torrents", Label("integration", "bittorrent"), func
 		Expect(errors.Is(err, download.ErrClientFull)).To(BeFalse())
 	})
 
-	It("restores every held torrent past a lowered cap and refuses new ones", func() {
+	It("restores every held torrent past a lowered cap, refusing new ones", func() {
 		for _, h := range []string{firstHash, secondHash} {
-			_, err := store.CreateTorrentSession(ctx, db.CreateTorrentSessionParams{
+			params := db.CreateTorrentSessionParams{
 				InfoHash: h, Name: h, SavePath: dlDir,
 				SourceMagnet: "magnet:?xt=urn:btih:" + h,
-			})
+			}
+			_, err := store.CreateTorrentSession(ctx, params)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
