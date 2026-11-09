@@ -48,12 +48,13 @@ func withAuthDeps(
 	}
 	defer dbClient.Close()
 	store := db.New(dbClient)
-	// These commands sign no session, so an instance running on an ephemeral
-	// secret (nothing configured, read-only config) gets a throwaway one here
-	// rather than being refused. A configured secret is used as-is.
+	// These commands sign no session, so an instance with no usable secret
+	// (nothing configured, or one the server would refuse to boot on) gets a
+	// throwaway here rather than being refused: `auth unlock` has to work on
+	// exactly the instance that is misconfigured. A usable one is used as-is.
 	a := config.Get().Auth
 	secret := config.SecretValue(a.SessionSecret, a.SessionSecretFile)
-	if secret == "" {
+	if auth.CheckSessionSecret(secret) != nil {
 		secret = rand.Text()
 	}
 	svc, err := auth.NewWithSecret(store, secret)
