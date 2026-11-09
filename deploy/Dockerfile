@@ -11,7 +11,7 @@
 # drift between builds independently of our code. The cost is that stdlib CVE
 # fixes require bumping this by hand — grype failing on `stdlib` is the signal.
 ARG GO_VERSION=1.27.3
-ARG GO_DIGEST=sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb
+ARG GO_DIGEST=sha256:fa3d596898d9f126af7c01d14ee7597bab3f39cccf392ef36b69fe77cd681f18
 
 # static-ffmpeg publishes hardened static PIE builds with no external deps,
 # which is what lets a bare COPY of the binaries into distroless (no package
@@ -20,7 +20,7 @@ ARG FFMPEG_VERSION=9.0
 ARG FFMPEG_DIGEST=sha256:b90574a4e2ae62b763c39c384526689e7eb435da6398f4fb3f6c3f1c6a14ce33
 
 # --- Frontend assets (esbuild + TailwindCSS) ---
-FROM node:24.22.2-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS frontend
+FROM node:24.22.2-alpine@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8 AS frontend
 WORKDIR /app
 
 RUN corepack enable
