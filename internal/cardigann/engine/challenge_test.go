@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -90,6 +91,73 @@ var _ = Describe(
 			Expect(err).To(MatchError(ErrChallenge))
 			Expect(err).To(MatchError(ContainSubstring("cardigann.solver_url")))
 		})
+
+		It("keeps what the solver was handed out of its failure message", func() {
+			failing := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					var req solverRequest
+					Expect(json.NewDecoder(r.Body).Decode(&req)).To(Succeed())
+					w.WriteHeader(http.StatusInternalServerError)
+					Expect(json.NewEncoder(w).Encode(map[string]string{
+						"status": "error",
+						"message": "Error: Timeout after 60.0 seconds opening " +
+							req.URL + " (key s3cr3t-passkey)",
+					})).To(Succeed())
+				}),
+			)
+			DeferCleanup(failing.Close)
+			solver.URL = failing.URL
+			_, err := newEngine(solver).do(context.Background(), request{
+				method: http.MethodGet,
+				url:    "https://tracker.example/download.php?id=7&passkey=s3cr3t-passkey",
+			})
+			Expect(err).To(MatchError(ErrChallenge))
+			Expect(err).To(MatchError(ContainSubstring(
+				"Timeout after 60.0 seconds opening https://tracker.example/download.php (",
+			)))
+			Expect(err.Error()).NotTo(ContainSubstring("s3cr3t-passkey"))
+		})
+
+		DescribeTable("scrubbing a solver's message",
+			func(msg string, r request, proxy *url.URL, want string) {
+				Expect(scrubSolverMessage(msg, r, proxy)).To(Equal(want))
+			},
+			Entry(
+				"the request URL, re-encoded by the browser",
+				"net::ERR_FAILED at https://t.example/login.php?uid=u&pwd=p%40ss%20word",
+				request{url: "https://t.example/login.php?uid=u&pwd=p%40ss+word"},
+				nil,
+				"net::ERR_FAILED at https://t.example/login.php",
+			),
+			Entry("a query value quoted on its own, decoded",
+				`could not type "p@ss word"`,
+				request{url: "https://t.example/login.php?uid=u&pwd=p%40ss+word"},
+				nil,
+				`could not type "[redacted]"`),
+			Entry("the posted form and its values",
+				"postData username=bob&password=hunter22 rejected; hunter22",
+				request{
+					method: http.MethodPost,
+					url:    "https://t.example/takelogin.php",
+					form:   "username=bob&password=hunter22",
+				},
+				nil,
+				"postData [redacted] rejected; [redacted]"),
+			Entry("the proxy's credentials",
+				"proxy socks5://alice:pr0xypass@10.0.0.1:1080 refused pr0xypass",
+				request{url: "https://t.example/"},
+				&url.URL{
+					Scheme: "socks5",
+					Host:   "10.0.0.1:1080",
+					User:   url.UserPassword("alice", "pr0xypass"),
+				},
+				"proxy socks5://10.0.0.1:1080 refused [redacted]"),
+			Entry("a short value, left where it stands",
+				"Timeout after 60.0 seconds",
+				request{url: "https://t.example/browse.php?page=0&cat=60"},
+				nil,
+				"Timeout after 60.0 seconds"),
+		)
 
 		It("is not fooled by a 503 from another server", func() {
 			resp := &response{
