@@ -17,7 +17,7 @@ dependencies:
     condition: victoriametrics.enabled
   - name: victoria-logs-single
     alias: victorialogs
-    version: 0.13.10
+    version: 0.13.11
     repository: https://victoriametrics.github.io/helm-charts/
     condition: victorialogs.enabled
   - name: victoria-traces-single
