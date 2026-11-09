@@ -128,7 +128,15 @@ Streamline talks to qBittorrent, Transmission and Deluge, and also ships its own
 
 Hit **Test** before saving. A green result means Streamline reached the client and authenticated; it does *not* prove the paths line up — that shows up later, at import time.
 
-Streamline tags everything it adds with the category (qBittorrent) or label (Transmission) **`streamline`**, and it only manages torrents carrying that tag. Anything else in your client is left completely alone. Usefully, this cuts both ways: if you manually add a torrent *into* the `streamline` category yourself, Streamline notices and offers to import it — see [Activity and Calendar](Activity-and-Calendar#adopted-torrents).
+Streamline only manages the torrents it added itself and the ones you mark as its own. Anything else in your client is left completely alone: never proposed, imported or removed. What the mark is depends on the client:
+
+| Client | What Streamline adds | How to hand it a torrent you added yourself |
+|---|---|---|
+| qBittorrent | Goes in the **`streamline`** category | Put the torrent in the `streamline` category |
+| Transmission | Gets the **`streamline`** label | Add the `streamline` label to the torrent (needs Transmission 3.00 or newer; older versions have no labels, so nothing can be handed over) |
+| Deluge | Not marked: Deluge has nothing built in for it, and Streamline recognises its own downloads by their hash | Enable Deluge's **Label** plugin and give the torrent the `streamline` label. Without the plugin nothing can be handed over |
+
+When you mark a torrent this way, Streamline notices and offers to import it — see [Activity and Calendar](Activity-and-Calendar#adopted-torrents).
 
 ### Using the built-in client
 
