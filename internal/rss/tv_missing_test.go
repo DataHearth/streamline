@@ -290,6 +290,52 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 		})
 	})
 
+	When("no indexer answers", func() {
+		outage := &indexer.UnavailableError{Failures: []indexer.IndexerFailure{{
+			Indexer: "Prowlarr", Outcome: "timeout", Err: indexer.ErrUnreachable,
+		}}}
+		other := func(eps ...*ent.Episode) *ent.TVShow {
+			show := showWith(eps...)
+			show.ID, show.Title, show.OriginalTitle, show.TvdbID = 2, "Other", "", 42
+			return show
+		}
+
+		It(
+			"skips the per-episode fallback after a failed pack search and ends the pass",
+			func() {
+				// Every episode search would go to the indexers that just failed
+				// the pack, and the second show to them as well. No cooldown is
+				// stamped either: the mocks fail the spec on any of those calls.
+				expectEligible([]*ent.TVShow{
+					showWith(
+						&ent.Episode{ID: 11, Number: 1},
+						&ent.Episode{ID: 12, Number: 2},
+					),
+					other(&ent.Episode{ID: 21, Number: 1}),
+				}, nil)
+				indexerM.EXPECT().
+					SearchSeason(mock.Anything, mock.Anything, mock.Anything, uint32(9001), "", uint16(3)).
+					Return(nil, outage).Once()
+
+				Expect(
+					searcher.Run(ctx),
+				).To(MatchError(indexer.ErrNoIndexerAnswered))
+			},
+		)
+
+		It("ends the pass at a failed episode search", func() {
+			expectEligible([]*ent.TVShow{
+				showWith(&ent.Episode{ID: 11, Number: 1}),
+				other(&ent.Episode{ID: 21, Number: 1}),
+			}, nil)
+			indexerM.EXPECT().
+				SearchEpisode(mock.Anything, mock.Anything, mock.Anything, uint32(9001), "", uint16(3), uint16(1)).
+				Return(nil, 0, outage).Once()
+
+			Expect(searcher.Run(ctx)).To(MatchError(indexer.ErrNoIndexerAnswered))
+		})
+	})
+
 	When("a season pack holds nothing for the wanted episodes", func() {
 		// ErrNoWantedFiles means the release cannot fill the gap at all, which
 		// is exactly the standing the single-episode path counts. Uncounted, a

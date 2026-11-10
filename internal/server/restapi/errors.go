@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/metadata"
 )
@@ -166,6 +167,21 @@ const codeGrabRejected = "grab_rejected"
 // codeLibraryOffline marks a change refused because the library root it touches
 // looks gone. The SPA renders the message verbatim.
 const codeLibraryOffline = "library_offline"
+
+// codeIndexersUnavailable marks a release search no enabled indexer answered:
+// a 504 when every one of them timed out, a 502 otherwise. An empty 200 there
+// read as "No releases found" from a search that never heard back from
+// anyone. The message names each indexer and what went wrong with it — words
+// of our own, never a transport error's text — and the SPA renders it
+// verbatim.
+const codeIndexersUnavailable = "indexers_unavailable"
+
+// indexerSearchFailed reports an indexer search error a handler hands to
+// responseError rather than answering itself: an outage, which has its own
+// status and code, or a caller that left before the answer.
+func indexerSearchFailed(err error) bool {
+	return indexer.Unavailable(err) || errors.Is(err, context.Canceled)
+}
 
 // errGrabRejected is errUnprocessable for a refused grab. The message is a
 // download-package sentinel plus the release title the caller submitted, so it

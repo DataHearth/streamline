@@ -23,7 +23,8 @@ var _ MissingSearcher = (*Service)(nil)
 
 // SearchMissing searches the indexers for every eligible wanted album and
 // grabs the best accepted release. Per-album failures are logged and never
-// abort the pass; the error return is for the initial query, a bad config
+// abort the pass, except a search no indexer answered, which ends it and is
+// returned; the error return is otherwise for the initial query, a bad config
 // window or ctx cancellation. An unreleased or unhydrated album is not
 // eligible: the first is not missing yet, the second has no tracks to import
 // into.
@@ -65,7 +66,18 @@ func (s *Service) SearchMissing(ctx context.Context) error {
 			return otelx.RecordSpanError(span, err)
 		}
 		scheduler.Progress(ctx, i, len(albums))
-		if s.searchAlbum(ctx, a) {
+		ok, err := s.searchAlbum(ctx, a)
+		if err != nil {
+			// No indexer answered. The pass stops here: every later album
+			// would wait out the same timeout, and a failed search stamps no
+			// cooldown, so continuing would only repeat it next tick.
+			slog.WarnContext(ctx,
+				"music missing-search pass stopped: no indexer answered",
+				"eligible", len(albums), "searched", i+1, "grabbed", grabbed,
+				"error", err)
+			return otelx.RecordSpanError(span, err)
+		}
+		if ok {
 			grabbed++
 		}
 	}

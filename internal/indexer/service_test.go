@@ -576,12 +576,29 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 				{err: fmt.Errorf("%w: timeout", ErrUnreachable)},
 			}}
 
-			res, err := searchWithFallbacks(ctx, client, torznab, movie)
-			// The first leg was answered, empty: that is the query's result.
-			Expect(err).NotTo(HaveOccurred())
-			Expect(res).To(BeEmpty())
+			_, err := searchWithFallbacks(ctx, client, torznab, movie)
+			// The first leg was answered empty, but the wider question never
+			// was: read as "nothing found", it would stamp the missing
+			// search's no-match cooldown for a search the tracker timed out on.
+			Expect(err).To(MatchError(ErrUnreachable))
 			Expect(client.asked).To(HaveLen(2), "no bare-title leg after a timeout")
 		})
+
+		It(
+			"reads a refused wider leg after an empty answer as nothing found",
+			func() {
+				// A refusal is the tracker answering that it cannot search that
+				// way, so the empty first answer stands.
+				client := &scriptedClient{answers: []scriptedAnswer{
+					{},
+					{err: refused},
+				}}
+
+				res, err := searchWithFallbacks(ctx, client, torznab, episode)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res).To(BeEmpty())
+			},
+		)
 	})
 
 	Describe("SearchParams.narrowed", func() {

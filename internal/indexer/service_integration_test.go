@@ -3,16 +3,19 @@ package indexer
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
@@ -670,3 +673,184 @@ func prowlarrIndexerConfig(rawURL string) map[string]any {
 		},
 	}
 }
+
+// statusServer answers every request with status and body, counting them.
+type statusServer struct {
+	*httptest.Server
+	mu    sync.Mutex
+	calls int
+}
+
+func newStatusServer(status int, body string) *statusServer {
+	s := &statusServer{}
+	s.Server = httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			s.mu.Lock()
+			s.calls++
+			s.mu.Unlock()
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(status)
+			_, _ = w.Write([]byte(body))
+		}))
+	return s
+}
+
+func (s *statusServer) Calls() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.calls
+}
+
+// prowlarrEntries configures one Prowlarr entry per URL, named in order.
+func prowlarrEntries(names []string, urls ...string) map[string]any {
+	GinkgoHelper()
+	entries := make([]map[string]any, 0, len(urls))
+	for i, u := range urls {
+		host, port := splitHostPort(u)
+		entries = append(entries, map[string]any{
+			"name":     names[i],
+			"host":     host,
+			"port":     int(port),
+			"api_key":  "key",
+			"protocol": "prowlarr",
+			"enabled":  true,
+		})
+	}
+	return map[string]any{"indexers": entries}
+}
+
+var _ = Describe("a search no indexer answers", Label("integration", "indexers"),
+	func() {
+		It("fails instead of reading as an empty result", func() {
+			down := newStatusServer(http.StatusInternalServerError, `{}`)
+			DeferCleanup(down.Close)
+			configtest.Setup(prowlarrEntries([]string{"Prowlarr"}, down.URL))
+
+			results, err := New(nil).SearchMovie(context.Background(),
+				[]string{"Dune", "Dune: Part One"}, nil, 438631, "")
+			Expect(results).To(BeEmpty())
+			Expect(err).To(MatchError(ErrNoIndexerAnswered))
+			Expect(Unavailable(err)).To(BeTrue())
+			// Not a transport failure, so not ErrUnreachable either.
+			Expect(err).NotTo(MatchError(ErrUnreachable))
+
+			var ue *UnavailableError
+			Expect(errors.As(err, &ue)).To(BeTrue())
+			Expect(ue.Failures).To(HaveLen(1))
+			Expect(ue.Failures[0].Indexer).To(Equal("Prowlarr"))
+			Expect(ue.Failures[0].Outcome).To(Equal("unexpected_status"))
+			Expect(ue.TimedOut()).To(BeFalse())
+		})
+
+		It("keeps what the indexers that answered found", func() {
+			down := newStatusServer(http.StatusBadGateway, `{}`)
+			DeferCleanup(down.Close)
+			up := newStatusServer(http.StatusOK, `[
+				{"title":"Dune.2021.1080p.WEB-GRP","downloadUrl":"http://x/a.torrent",
+				 "protocol":"torrent","seeders":10}
+			]`)
+			DeferCleanup(up.Close)
+			configtest.Setup(prowlarrEntries(
+				[]string{"Down", "Up"}, down.URL, up.URL,
+			))
+
+			results, err := New(nil).SearchMovie(context.Background(),
+				[]string{"Dune"}, nil, 438631, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(1))
+		})
+
+		It("reads a timed-out indexer as an unreachable one that timed out", func() {
+			release := make(chan struct{})
+			slow := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					select {
+					case <-release:
+					case <-r.Context().Done():
+					}
+				}))
+			DeferCleanup(slow.Close)
+			DeferCleanup(func() { close(release) })
+			was := otelx.HTTPClient.Timeout
+			otelx.HTTPClient.Timeout = 100 * time.Millisecond
+			DeferCleanup(func() { otelx.HTTPClient.Timeout = was })
+			configtest.Setup(prowlarrEntries([]string{"Prowlarr"}, slow.URL))
+
+			_, err := New(nil).SearchMovie(context.Background(),
+				[]string{"Dune"}, nil, 438631, "")
+			Expect(Unavailable(err)).To(BeTrue())
+			Expect(err).To(MatchError(ErrUnreachable))
+			var ue *UnavailableError
+			Expect(errors.As(err, &ue)).To(BeTrue())
+			Expect(ue.TimedOut()).To(BeTrue())
+			Expect(err.Error()).To(ContainSubstring("Prowlarr: timed out"))
+		})
+
+		It("fails a query whose retry failed", func() {
+			// The narrow request answered empty and the wider one was never
+			// answered: nothing says the episode is not there.
+			var (
+				mu    sync.Mutex
+				calls int
+			)
+			srv := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, _ *http.Request) {
+					mu.Lock()
+					calls++
+					n := calls
+					mu.Unlock()
+					if n == 1 {
+						_, _ = w.Write([]byte(`[]`))
+						return
+					}
+					w.WriteHeader(http.StatusServiceUnavailable)
+				}))
+			DeferCleanup(srv.Close)
+			configtest.Setup(prowlarrEntries([]string{"Prowlarr"}, srv.URL))
+
+			_, _, err := New(nil).SearchEpisode(context.Background(),
+				[]string{"Show"}, nil, 111, "", 2, 3)
+			Expect(Unavailable(err)).To(BeTrue())
+			mu.Lock()
+			defer mu.Unlock()
+			Expect(calls).To(Equal(2))
+		})
+
+		It("reports a cancelled search as cancelled, not as an outage", func() {
+			srv := newStatusServer(http.StatusOK, `[]`)
+			DeferCleanup(srv.Close)
+			configtest.Setup(prowlarrEntries([]string{"Prowlarr"}, srv.URL))
+
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			_, err := New(nil).SearchMovie(ctx, []string{"Dune"}, nil, 1, "")
+			Expect(err).To(MatchError(context.Canceled))
+			Expect(Unavailable(err)).To(BeFalse())
+		})
+
+		It("is not an error when no indexer is enabled", func() {
+			configtest.Setup(map[string]any{})
+			results, err := New(nil).SearchMovie(context.Background(),
+				[]string{"Dune"}, nil, 1, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeEmpty())
+		})
+	})
+
+var _ = Describe("the Prowlarr retry", Label("integration", "indexers"), func() {
+	It("does not re-send an id-only movie or series search", func() {
+		srv := newStatusServer(http.StatusOK, `[]`)
+		DeferCleanup(srv.Close)
+		configtest.Setup(prowlarrEntries([]string{"Prowlarr"}, srv.URL))
+
+		_, err := New(nil).SearchMovie(context.Background(),
+			[]string{"Dune"}, nil, 438631, "tt1160419")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(srv.Calls()).To(Equal(1))
+
+		_, err = New(nil).SearchSeries(context.Background(),
+			[]string{"Show"}, nil, 111, "tt1")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(srv.Calls()).To(Equal(2))
+	})
+})

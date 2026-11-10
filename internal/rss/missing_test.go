@@ -135,6 +135,33 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 		})
 	})
 
+	When("no indexer answers", func() {
+		It("stops the pass, stamps no cooldown and returns the error", func() {
+			movies := make([]*ent.Movie, 0, 2*defaultRSSWorkers)
+			for i := range 2 * defaultRSSWorkers {
+				movies = append(movies, &ent.Movie{
+					ID: uint32(i + 1), Title: "Fight Club", TmdbID: 550,
+				})
+			}
+			store.EXPECT().
+				ListEligibleMoviesForSync(mock.Anything, uint8(3), mock.Anything).
+				Return(movies, nil).Once()
+			outage := &indexer.UnavailableError{Failures: []indexer.IndexerFailure{{
+				Indexer: "Prowlarr", Outcome: "timeout", Err: indexer.ErrUnreachable,
+			}}}
+			// One search per worker slot at most: the next slot frees only
+			// once a search has failed, and the pass reads that before
+			// dispatching another. No SetMovieLastSearchAt: the mock would
+			// fail the spec on it.
+			indexerM.EXPECT().
+				SearchMovie(mock.Anything, mock.Anything, mock.Anything, uint32(550), "").
+				Return(nil, outage).Times(defaultRSSWorkers)
+
+			err := syncer.Run(ctx)
+			Expect(err).To(MatchError(indexer.ErrNoIndexerAnswered))
+		})
+	})
+
 	Context("with one eligible movie", func() {
 		var movie *ent.Movie
 

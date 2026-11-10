@@ -4,6 +4,7 @@
 package restapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -224,6 +225,10 @@ func paramErrMessage(err error) string {
 	return "invalid request parameters"
 }
 
+// statusClientClosedRequest is nginx's non-standard status for a request whose
+// client hung up before the answer.
+const statusClientClosedRequest = 499
+
 // responseError handles a handler returning a non-nil error. The generated
 // default writes err.Error() as text/plain, which would hand the client the
 // raw internal error; log it and return an opaque JSON 500 instead.
@@ -239,6 +244,30 @@ func responseError(w http.ResponseWriter, r *http.Request, err error) {
 		); encErr != nil {
 			slog.ErrorContext(ctx, "json encode failed", "error", encErr)
 		}
+		return
+	}
+	if ue, ok := errors.AsType[*indexer.UnavailableError](err); ok {
+		status := http.StatusBadGateway
+		if ue.TimedOut() {
+			status = http.StatusGatewayTimeout
+		}
+		slog.WarnContext(ctx, "release search: no indexer answered", "error", err)
+		code := codeIndexersUnavailable
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		if encErr := json.NewEncoder(w).Encode(
+			Error{Message: ue.Error(), Code: &code},
+		); encErr != nil {
+			slog.ErrorContext(ctx, "json encode failed", "error", encErr)
+		}
+		return
+	}
+	// The caller left before the answer — the SPA aborts a search nobody is
+	// waiting on — so there is nobody to answer and nothing went wrong here.
+	// 499 is the access log's name for it.
+	if errors.Is(err, context.Canceled) && ctx.Err() != nil {
+		slog.DebugContext(ctx, "client went away before the answer", "error", err)
+		w.WriteHeader(statusClientClosedRequest)
 		return
 	}
 	slog.ErrorContext(ctx, "api handler returned an error", "error", err)
