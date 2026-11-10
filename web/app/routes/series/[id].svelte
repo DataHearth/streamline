@@ -618,7 +618,7 @@
 								? "bg-accent-soft text-accent-text"
 								: show.type === "daily"
 									? "bg-status-grabbing/15 text-status-grabbing"
-									: "bg-white/[0.06] text-fg-subtle",
+									: "bg-white/[0.06] text-fg-muted",
 						)}
 					>
 						{show.type}

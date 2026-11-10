@@ -405,7 +405,7 @@
 								"rounded-sm px-1.5 py-px font-mono text-[10px] tabular",
 								t.key === "pending" && t.count > 0
 									? "bg-status-wanted/20 text-status-wanted"
-									: "bg-white/[0.04] text-fg-subtle",
+									: "bg-white/[0.04] text-fg-muted",
 							)}
 						>
 							{t.count}
