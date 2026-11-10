@@ -99,11 +99,15 @@
 <!-- Below md a `leading` switch takes a line of its own and the chips get the
      next one: beside the three-cell switch, 390px left the strip ~25px — one
      dot in an empty pill. Two lines are too tall to pin, so that toolbar scrolls
-     away with the page on a phone; a selection's bar is what stays pinned. -->
+     away with the page on a phone; a selection's bar is what stays pinned.
+     From md that toolbar sticks inside the Queue page's own scrolling column,
+     which already starts below the top bar: its offset is measured from the
+     column's content box, so it only cancels the column's py-6 and never adds
+     the bar's height. Without a switch the toolbar scrolls in #main. -->
 <div
 	class={cn(
-		"top-(--top-bar-height) z-20 -mx-4 mb-1 flex flex-wrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:sticky md:-mx-6 md:gap-3 md:px-6",
-		!leading && "sticky flex-nowrap",
+		"z-20 -mx-4 mb-1 flex flex-wrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:sticky md:-mx-6 md:gap-3 md:px-6",
+		leading ? "md:-top-6" : "sticky top-(--top-bar-height) flex-nowrap",
 	)}
 >
 	{#if leading}
