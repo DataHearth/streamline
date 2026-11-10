@@ -74,7 +74,9 @@ var _ = Describe("Query-string state", Label("e2e"), func() {
 	It("carries the activity view, its chips and the search, view first", func() {
 		page := newSessionPage("/activity?view=history&status=failed,bogus&q=x")
 		expectPath(page, "/activity?view=history&status=failed&q=x")
-		Expect(visibleElement(page, `button[aria-pressed=true]`).MustText()).To(HavePrefix("History"))
+		Expect(
+			visibleElement(page, `button[aria-pressed=true]`).MustText(),
+		).To(HavePrefix("History"))
 
 		// A switch clears the chips, and the URL follows.
 		visibleElement(page, `button[aria-pressed=false]`)
@@ -85,13 +87,17 @@ var _ = Describe("Query-string state", Label("e2e"), func() {
 	It("opens requests on the tab and kind a link names", func() {
 		page := newSessionPage("/requests?tab=all&kind=movies")
 		expectPath(page, "/requests?tab=all&kind=movies")
-		Expect(visibleElement(page, `nav button[aria-current=page]`).MustText()).To(HavePrefix("All"))
+		Expect(
+			visibleElement(page, `nav button[aria-current=page]`).MustText(),
+		).To(HavePrefix("All"))
 	})
 
 	It("keeps the users filter and sort in the URL", func() {
 		page := newSessionPage("/settings/users?role=admin&sort=name")
 		expectPath(page, "/settings/users?role=admin&sort=name")
-		Expect(visibleElement(page, `th[aria-sort=ascending]`).MustText()).To(ContainSubstring("USER"))
+		Expect(
+			visibleElement(page, `th[aria-sort=ascending]`).MustText(),
+		).To(ContainSubstring("USER"))
 
 		visibleElement(page, `th[aria-sort=ascending] button`).MustClick()
 		expectPath(page, "/settings/users?role=admin&sort=name&order=desc")
