@@ -102,7 +102,7 @@
      away with the page on a phone; a selection's bar is what stays pinned. -->
 <div
 	class={cn(
-		"top-16 z-20 -mx-4 mb-1 flex flex-wrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:sticky md:-mx-6 md:gap-3 md:px-6",
+		"top-(--top-bar-height) z-20 -mx-4 mb-1 flex flex-wrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:sticky md:-mx-6 md:gap-3 md:px-6",
 		!leading && "sticky flex-nowrap",
 	)}
 >

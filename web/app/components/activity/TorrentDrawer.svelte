@@ -169,7 +169,7 @@
 			aria-label={i18n.torrent_detail()}
 		>
 			<!-- Header -->
-			<header class="relative shrink-0 border-b border-border p-5">
+			<header class={cn("relative shrink-0 border-b border-border p-5", !compact && "pt-[calc(1.25rem+env(safe-area-inset-top))]")}>
 				{#if compact}
 					<span
 						aria-hidden="true"

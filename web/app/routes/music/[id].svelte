@@ -495,7 +495,7 @@
 			{/snippet}
 		</MediaHero>
 
-		<nav class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
+		<nav class="sticky top-(--top-bar-height) z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
 			<div bind:this={tabTrack} class="flex w-full gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 				{#each tabs as t (t.key)}
 					{@const active = tab === t.key}
@@ -540,7 +540,7 @@
 			<div class="hidden gap-6 px-8 py-6 md:grid md:grid-cols-[200px_1fr] lg:grid-cols-[250px_1fr]">
 				<!-- The top bar (4rem), the sticky tab strip and the grid's own padding
 				     sit above it, so the list scrolls on its own beside a long panel. -->
-				<div class="sticky top-[8.5rem] max-h-[calc(100dvh-10rem)] self-start overflow-y-auto overscroll-contain">
+				<div class="sticky top-[calc(var(--top-bar-height)+4.5rem)] max-h-[calc(100dvh-var(--top-bar-height)-6rem)] self-start overflow-y-auto overscroll-contain">
 					{#key artist.id}
 						<ReleaseList
 							releases={artist.albums}

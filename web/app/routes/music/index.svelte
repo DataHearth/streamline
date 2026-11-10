@@ -190,7 +190,7 @@
 	// ── Letters: where the list is, and going to one ───────────────────────
 	// Each anchor lands under the sticky bars: the top bar, plus the phone's chip
 	// row. From md the letters are a rail down the right edge, not a bar.
-	const ANCHOR = "scroll-mt-[124px] md:scroll-mt-16";
+	const ANCHOR = "scroll-mt-[calc(var(--top-bar-height)+60px)] md:scroll-mt-(--top-bar-height)";
 	let listEl = $state<HTMLElement | null>(null);
 	let mainEl: HTMLElement | null = null;
 	let current = $state<string | null>(null);
@@ -511,7 +511,7 @@
 					<section data-letter={s.letter ?? undefined} class={cn(s.letter && ANCHOR, "pt-2 md:pt-1")}>
 						{#if s.letter}
 							<div
-								class="sticky top-[124px] z-10 -mx-4 mb-3 flex items-center gap-3 bg-bg-deep/85 px-4 py-2.5 backdrop-blur-md md:top-16 md:-mx-6 md:px-6"
+								class="sticky top-[calc(var(--top-bar-height)+60px)] z-10 -mx-4 mb-3 flex items-center gap-3 bg-bg-deep/85 px-4 py-2.5 backdrop-blur-md md:top-(--top-bar-height) md:-mx-6 md:px-6"
 							>
 								<h2 class="text-[20px] font-bold leading-none tracking-tight text-fg">{s.letter}</h2>
 								{#if s.count != null}

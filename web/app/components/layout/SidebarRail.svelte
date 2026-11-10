@@ -159,7 +159,7 @@
 </script>
 
 <aside
-	class="sticky top-0 z-40 hidden h-dvh w-[88px] shrink-0 flex-col items-center gap-1 border-r border-border bg-bg-elevated px-2.5 pb-4 pt-4 md:flex lg:hidden"
+	class="sticky top-0 z-40 hidden h-dvh w-[88px] shrink-0 flex-col items-center gap-1 border-r border-border bg-bg-elevated px-2.5 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] md:flex lg:hidden"
 	aria-label={i18n.nav_primary_navigation()}
 >
 	<a

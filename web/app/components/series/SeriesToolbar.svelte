@@ -240,7 +240,7 @@
 	const triggerOn = "border-accent-line bg-accent-soft text-accent-text";
 </script>
 
-<div class="sticky top-16 z-20 bg-bg-deep/85 backdrop-blur-md md:hidden">
+<div class="sticky top-(--top-bar-height) z-20 bg-bg-deep/85 backdrop-blur-md md:hidden">
 	{#if selecting}
 		<SelectionTopBar
 			count={selectedCount}
@@ -415,7 +415,7 @@
      for monitoring — so the row reads "Status Continuing 9".
      Below lg sort still collapses into the sheet the phone uses. -->
 <div
-	class="lib-toolbar sticky top-16 z-20 hidden flex-wrap items-center gap-2 bg-bg-deep/85 px-4 py-3 backdrop-blur-md md:flex md:gap-2.5 md:px-6"
+	class="lib-toolbar sticky top-(--top-bar-height) z-20 hidden flex-wrap items-center gap-2 bg-bg-deep/85 px-4 py-3 backdrop-blur-md md:flex md:gap-2.5 md:px-6"
 >
 	<div class="relative order-1">
 		<button

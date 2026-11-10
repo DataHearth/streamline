@@ -213,7 +213,7 @@
 </script>
 
 <div
-	class="sticky top-16 z-20 bg-bg-deep/85 backdrop-blur-md md:hidden"
+	class="sticky top-(--top-bar-height) z-20 bg-bg-deep/85 backdrop-blur-md md:hidden"
 >
 	{#if selecting}
 		<SelectionTopBar
@@ -364,7 +364,7 @@
      of a second line. Below lg the search field takes its own line and sort
      collapses into the sheet the phone uses. -->
 <div
-	class="lib-toolbar sticky top-16 z-20 hidden flex-wrap items-center gap-2 bg-bg-deep/85 px-4 py-3 backdrop-blur-md md:flex md:gap-2.5 md:px-6"
+	class="lib-toolbar sticky top-(--top-bar-height) z-20 hidden flex-wrap items-center gap-2 bg-bg-deep/85 px-4 py-3 backdrop-blur-md md:flex md:gap-2.5 md:px-6"
 >
 	<div class="relative order-1">
 		<button

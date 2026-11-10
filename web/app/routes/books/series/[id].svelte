@@ -296,7 +296,7 @@
 			{/snippet}
 		</MediaHero>
 
-		<nav class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
+		<nav class="sticky top-(--top-bar-height) z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
 			<div bind:this={tabTrack} class="flex w-full gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 				{#each tabs as t (t.key)}
 					{@const active = tab === t.key}

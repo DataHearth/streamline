@@ -787,7 +787,7 @@
 
 	<nav
 		aria-label={i18n.series_sections()}
-		class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
+		class="sticky top-(--top-bar-height) z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
 	>
 		<div bind:this={tabTrack} class="tabs-track flex w-full gap-0.5">
 			{#each TABS as t (t.key)}

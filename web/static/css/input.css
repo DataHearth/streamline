@@ -75,6 +75,13 @@
 	--fg-subtle: #8a8a99;
 	--fg-faint: #74748a;
 
+	/* The top bar's height: 4rem below the status bar. In an installed iOS app
+	   the status bar is translucent (index.html) and the page runs under it, so
+	   the bar pads the inset and everything that sticks below it — toolbars,
+	   detail tabs, the stats range bar — offsets by this, not by 4rem. Outside
+	   standalone the inset is 0. */
+	--top-bar-height: calc(4rem + env(safe-area-inset-top));
+
 	/* Status (ops palette — preserved verbatim) */
 	--status-downloading: #3b82f6;
 	--status-grabbing: #a78bfa;
