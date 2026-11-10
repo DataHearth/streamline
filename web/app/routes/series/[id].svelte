@@ -188,18 +188,22 @@
 	// upgrades included.
 	const IN_FLIGHT = new Set<Episode["status"]>(["downloading", "importing", "paused"]);
 	let showInFlight = $derived(seasons.some((s) => (s.episodes ?? []).some((e) => IN_FLIGHT.has(e.status))));
-	const seriesQueue = titleQueueQuery(() => tab === "episodes" && showInFlight);
+	let queueLive = $derived(tab === "episodes" && showInFlight);
+	const seriesQueue = titleQueueQuery(() => queueLive);
+	// Read only while the query is asking: Activity shares the cache entry, and
+	// a queue it left behind would otherwise link a download that is over.
+	let queueItems = $derived(queueLive ? seriesQueue.data?.items : undefined);
 	// An episode row's status opens the download it reads out — its own, or
 	// the pack's that covers it.
 	function episodeDownload(ep: Episode): string | undefined {
 		if (!show) return undefined;
-		return firstDownloadHref(seriesQueue.data?.items, { kind: "episode", seriesId: show.id, id: ep.id });
+		return firstDownloadHref(queueItems, { kind: "episode", seriesId: show.id, id: ep.id });
 	}
 	// A season's: the one download it waits on, or — grabbed episode by
 	// episode, or a pack beside an upgrade — the queue filtered on the season.
 	function seasonDownload(s: Season): { href: string; count: number } | undefined {
 		if (!show) return undefined;
-		const matches = downloadsFor(seriesQueue.data?.items, {
+		const matches = downloadsFor(queueItems, {
 			kind: "season",
 			seriesId: show.id,
 			season: s.number,
