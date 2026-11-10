@@ -687,7 +687,6 @@
 		view={tableView}
 		{statusFilter}
 		{search}
-		{activeFilters}
 		{clearableCount}
 		onOpenFilters={() => (filtersOpen = true)}
 		onStatusFilterChange={(s) => (statusFilter = s)}

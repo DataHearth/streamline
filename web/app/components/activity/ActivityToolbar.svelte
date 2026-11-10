@@ -65,7 +65,6 @@
 		onStatusFilterChange,
 		onSearchChange,
 		onOpenFilters,
-		activeFilters = 0,
 		onClearCompleted,
 		clearableCount = 0,
 		onAddTorrent,
@@ -78,7 +77,6 @@
 		onStatusFilterChange: (s: string[]) => void;
 		onSearchChange: (q: string) => void;
 		onOpenFilters: () => void;
-		activeFilters?: number;
 		onClearCompleted?: () => void;
 		clearableCount?: number;
 		onAddTorrent?: () => void;
@@ -87,6 +85,10 @@
 
 	let chips = $derived(ACTIVITY_CHIPS[view]);
 	let anyActive = $derived(chips.some((c) => statusFilter.includes(c.key)));
+	// The magnifier lights for what is behind it, the search, and nothing else:
+	// the chips are in the open beside it, and lit for one of them it pointed at
+	// the wrong control.
+	let searching = $derived(search.trim() !== "");
 	function toggleChip(key: string) {
 		onStatusFilterChange(
 			statusFilter.includes(key)
@@ -167,17 +169,17 @@
 			title={i18n.common_search_and_sort()}
 			class={cn(
 				"relative ml-auto grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-md border transition lg:hidden",
-				activeFilters > 0
+				searching
 					? "border-accent-line bg-accent-soft text-accent-text"
 					: "border-border-strong bg-bg-elevated text-fg-muted hover:text-fg",
 			)}
 		>
 			<Search size={15} aria-hidden="true" />
-			{#if activeFilters > 0}
+			{#if searching}
 				<span
 					class="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 font-mono text-[9.5px] font-semibold text-fg-on-accent"
 				>
-					{activeFilters}
+					1
 				</span>
 			{/if}
 		</button>
