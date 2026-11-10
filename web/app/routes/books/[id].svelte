@@ -343,6 +343,7 @@
 			{#each slots as slot (slot.format)}
 				{@const edition = editionOf(slot.edition_id)}
 				<FormatCard
+					bookId={book.id}
 					{slot}
 					{edition}
 					editionCount={book.editions.filter((e) => e.format === slot.format).length}

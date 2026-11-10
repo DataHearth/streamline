@@ -2,6 +2,8 @@
 	import { BookOpen, Eye, Headphones, Info, Search } from "@lucide/svelte";
 	import { formatBytes } from "@lib/format";
 	import LabelPill from "@components/shared/LabelPill.svelte";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
+	import { liveDownload } from "@lib/live-download";
 	import LangChip from "./LangChip.svelte";
 	import { editionDetail, formatLabel, languageName, type Edition, type FormatSlot } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -18,7 +20,10 @@
 		onSearch,
 		onChangeEdition,
 		onMonitor,
+		bookId,
 	}: {
+		// The book, which the queue names the slot's download by.
+		bookId: number;
 		slot: FormatSlot;
 		edition: Edition | undefined;
 		editionCount: number;
@@ -30,6 +35,11 @@
 		onMonitor: () => void;
 	} = $props();
 
+	// The pill opens the download it reads out.
+	const live = liveDownload(
+		() => ({ kind: "book", id: bookId, slot: slot.format }),
+		() => slot.state === "downloading",
+	);
 	let pill = $derived.by(() => {
 		if (slot.state === "available") return { token: "available", label: i18n.books_in_library(), live: false };
 		if (slot.state === "downloading")
@@ -65,7 +75,9 @@
 			{#if slot.file?.missing_from_disk}
 				<LabelPill token="wanted" label={i18n.file_missing_from_disk()} size="md" variant="translucent" />
 			{/if}
-			<LabelPill token={pill.token} label={pill.label} size="md" variant="translucent" live={pill.live} />
+			<DownloadLink href={live.href}>
+				<LabelPill token={pill.token} label={pill.label} size="md" variant="translucent" live={pill.live} />
+			</DownloadLink>
 		</span>
 	</div>
 

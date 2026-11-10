@@ -247,3 +247,26 @@ func expectPath(page *rod.Page, path string) {
 		WithPolling(50 * time.Millisecond).
 		Should(HaveSuffix(path))
 }
+
+// awaitQueued waits until the queue endpoint lists the record. The server
+// serves a queue snapshot for two seconds (queueRefreshTTL), so a record
+// seeded straight after another spec's poll is missing from the first answer,
+// and a page opened on it then finds no such download.
+func awaitQueued(id uint32) {
+	GinkgoHelper()
+	Eventually(func() []uint32 {
+		var queue struct {
+			Items []struct {
+				ID uint32 `json:"id"`
+			} `json:"items"`
+		}
+		Expect(apiDo(http.MethodGet, "/api/v1/activity/queue", nil, &queue)).
+			To(Equal(http.StatusOK))
+		ids := make([]uint32, 0, len(queue.Items))
+		for _, it := range queue.Items {
+			ids = append(ids, it.ID)
+		}
+		return ids
+	}).WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).
+		Should(ContainElement(id))
+}

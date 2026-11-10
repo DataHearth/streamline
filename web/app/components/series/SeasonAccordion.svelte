@@ -3,6 +3,9 @@
 	import SeasonProgress from "./SeasonProgress.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { ChevronRight, Info, Search, Trash2 } from "@lucide/svelte";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
+	import LabelPill from "@components/shared/LabelPill.svelte";
+	import { DOWNLOAD_CHIP_ARROW } from "@lib/title-downloads";
 	import KebabMenu, { type KebabItem } from "@components/shared/KebabMenu.svelte";
 	import EpisodeDetailModal from "./EpisodeDetailModal.svelte";
 	import { slide } from "svelte/transition";
@@ -39,6 +42,8 @@
 		onDeleteFile,
 		onDeleteSeasonFiles,
 		showMonitored = true,
+		seasonDownload,
+		episodeDownload,
 	}: {
 		seasons: Season[];
 		selected: number;
@@ -56,6 +61,11 @@
 		// wanted. The season keeps existing — this is not "delete the season".
 		onDeleteSeasonFiles: (s: Season) => void;
 		showMonitored?: boolean;
+		// Where a season's in-flight count links: its one download, or the queue
+		// filtered on the season when it waits on several.
+		seasonDownload?: (s: Season) => { href: string; label: string } | undefined;
+		// The download an episode is waiting on, which its status line links.
+		episodeDownload?: (ep: Episode) => string | undefined;
 	} = $props();
 
 	// Collapse is local, expand is shared. Pushing "nothing open" up into the
@@ -161,6 +171,11 @@
 			? i18n.ep_wanted_aired({ date: formatDateShort(ep.air_date) })
 			: i18n.ep_state_wanted();
 	}
+	// The status line's colour, as a link or not.
+	const EP_LINE: Record<string, string> = {
+		wanted: "text-status-wanted",
+		downloading: "text-status-downloading",
+	};
 	const DOT: Record<string, string> = {
 		available: "bg-status-available",
 		wanted: "bg-status-wanted",
@@ -177,14 +192,15 @@
 	{#each seasons as s (s.number)}
 		{@const open = openSeason === s.number}
 		{@const missing = missingEpisodes(s.episodes ?? [], showMonitored)}
-		{@const headline = seasonHeadline(seasonTallies(s, showMonitored), missing)}
+		{@const tally = seasonTallies(s, showMonitored)}
+		{@const headline = seasonHeadline(tally, missing)}
+		<!-- With a download behind it, the in-flight headline ("3 downloading")
+		     moves to a line under the row and is the link there, said once: the
+		     row is a button, which cannot hold a link. -->
+		{@const seasonDl = tally.downloading > 0 || tally.importing > 0 ? seasonDownload?.(s) : undefined}
 		<section class="border-b border-border last:border-b-0">
-			<div
-				class={cn(
-					"flex items-center gap-3 px-3 py-3 transition",
-					open && "bg-surface",
-				)}
-			>
+			<div class={cn("transition", open && "bg-surface")}>
+			<div class="flex items-center gap-3 px-3 py-3">
 				<button
 					type="button"
 					onclick={() => toggle(s.number)}
@@ -205,7 +221,7 @@
 							{#if seasonBytes(s) > 0}
 								· {formatBytes(seasonBytes(s), "")}
 							{/if}
-							{#if headline}
+							{#if headline && !seasonDl}
 								<span class="whitespace-nowrap"
 									>· <span class={headline.cls}>{headline.text}</span></span
 								>
@@ -267,10 +283,24 @@
 				</button>
 			</div>
 
+			{#if seasonDl && headline}
+				<div class="-mt-3 px-3">
+					<DownloadLink href={seasonDl.href} label={seasonDl.label} class="my-0">
+						<LabelPill
+							token={tally.downloading > 0 ? "downloading" : "importing"}
+							label={headline.text}
+							live
+						/>
+					</DownloadLink>
+				</div>
+			{/if}
+			</div>
+
 			{#if open}
 				<ul transition:slide={{ duration: 180, easing: cubicOut }}>
 					{#each s.episodes ?? [] as ep (ep.id)}
 						{@const st = episodeStatus(ep, showMonitored)}
+						{@const dl = episodeDownload?.(ep)}
 						<li
 							class="flex items-center gap-2.5 border-t border-border bg-bg-deep px-3 py-2.5"
 						>
@@ -298,18 +328,31 @@
 								>
 									{episodeTitle(ep)}
 								</span>
-								<span
-									class={cn(
-										"mt-0.5 block truncate font-mono text-[10.5px]",
-										st === "wanted"
-											? "text-status-wanted"
-											: st === "downloading"
-												? "text-status-downloading"
-												: "text-fg-subtle",
-									)}
-								>
-									{epLine(ep)}
-								</span>
+								{#if dl}
+									<!-- The negative margin takes back touch-hit's padding: the
+									     tap target grows over the row, the row does not. -->
+									<a
+										href={dl}
+										title={i18n.activity_download_open()}
+										class={cn(
+											"group/dl touch-hit -mb-[15px] -mt-[13px] inline-flex max-w-full cursor-pointer items-center gap-1 font-mono text-[10.5px] underline-offset-2 hover:underline",
+											EP_LINE[st] ?? "text-fg-subtle",
+										)}
+									>
+										<span class="truncate">{epLine(ep)}</span>
+										<span class={DOWNLOAD_CHIP_ARROW}><ChevronRight size={12} aria-hidden="true" /></span>
+										<span class="sr-only">{i18n.activity_download_open()}</span>
+									</a>
+								{:else}
+									<span
+										class={cn(
+											"mt-0.5 block truncate font-mono text-[10.5px]",
+											EP_LINE[st] ?? "text-fg-subtle",
+										)}
+									>
+										{epLine(ep)}
+									</span>
+								{/if}
 							</span>
 							<span
 								class={cn("h-1.5 w-1.5 shrink-0 rounded-full", DOT[st])}

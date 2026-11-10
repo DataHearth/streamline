@@ -1,6 +1,7 @@
 <script lang="ts">
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { Info, Search, Trash2 } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
@@ -24,6 +25,7 @@
 		onManualSearch,
 		onDeleteFile,
 		showMonitored = true,
+		episodeDownload,
 	}: {
 		episodes: Episode[];
 		seasonNumber: number;
@@ -35,6 +37,9 @@
 		onManualSearch: (ep: Episode) => void;
 		onDeleteFile: (ep: Episode) => void;
 		showMonitored?: boolean;
+		// The Activity address of the download an episode is waiting on, which
+		// its status pill links.
+		episodeDownload?: (ep: Episode) => string | undefined;
 	} = $props();
 
 	function pad(n: number): string {
@@ -139,7 +144,9 @@
 						{/if}
 					</td>
 					<td class="px-3 py-2.5">
-						<LabelPill token={meta.token} label={meta.label} variant="translucent" live={meta.live} />
+						<DownloadLink href={episodeDownload?.(ep)}>
+							<LabelPill token={meta.token} label={meta.label} variant="translucent" live={meta.live} />
+						</DownloadLink>
 						{#if ep.missing_from_disk}
 							<span class="mt-1 block">
 								<LabelPill token="wanted" label={i18n.file_missing_from_disk()} variant="translucent" />

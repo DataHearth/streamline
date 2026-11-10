@@ -100,6 +100,7 @@ var _ = Describe("Activity links", Label("e2e"), Ordered, func() {
 				})
 			}
 		}
+		awaitQueued(queued)
 	})
 
 	openRow := func(id uint32) string {

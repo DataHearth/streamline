@@ -108,6 +108,12 @@ In the **event feed**, a grab, a download finishing or failing, a hold and the i
 
 `/activity?series=<id>&season=<n>` shows only that season's downloads; `?series=<id>` a whole show's, `?artist=<id>` an artist's, `?book_series=<id>` a book series'. The title is the first chip of the status filters, and its ✕ shows the whole queue again, as do the filters' clear button and the filter sheet's **Reset**. The filter applies to the queue only, so switching to History drops it. A pack that spans several seasons is listed under its first one.
 
+### From a title to its download
+
+While something is downloading, its status on the title's own page is the link to the download: the status pill on a movie's poster and the **Status** row of its Library panel, an episode's status in the season list and in its details sheet, an album's or a book format's status pill. A season pack is linked from every episode it covers. A season's count (**2 downloading**) opens its download, or the queue for that season when it is waiting on several. The **›** appears on hover or keyboard focus, and is always shown on a touch screen.
+
+On a title's **History** tab, each event that came from a download carries the same **Download** link as the event feed. The torrent drawer and the dashboard's live queue link the download too.
+
 ---
 
 ## History

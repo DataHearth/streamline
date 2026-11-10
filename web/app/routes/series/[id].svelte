@@ -61,6 +61,8 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import HeroBackdrop from "@components/shared/HeroBackdrop.svelte";
 	import { provideHeroHold } from "@lib/hero-hold.svelte";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
+	import { downloadHref, IN_FLIGHT, liveQueue, seasonDownloads } from "@lib/live-download";
 	import type {
 		Episode,
 		MonitoringPreset,
@@ -202,6 +204,42 @@
 			return { token: "wanted", label: countWanted(wantedEpisodes), live: false };
 		return null;
 	});
+	// The downloads the episodes tab is waiting on. The queue is asked only
+	// while that tab shows an episode on its way; an episode's sheet asks on
+	// its own, since an upgrade leaves the episode available.
+	const queue = liveQueue(
+		() =>
+			tab === "episodes" &&
+			seasons.some((s) => (s.episodes ?? []).some((e) => IN_FLIGHT.has(e.status))),
+	);
+	// An episode row's status opens the download it reads out: its own, or the
+	// pack's that covers it.
+	function episodeDownload(ep: Episode): string | undefined {
+		return downloadHref(queue.items, { kind: "episode", id: ep.id });
+	}
+	// A season's in-flight count opens the one download it waits on, or the
+	// queue filtered on the season when there are several.
+	function seasonDownload(s: Season): { href: string; label: string } | undefined {
+		if (!show) return undefined;
+		const dl = seasonDownloads(queue.items, {
+			kind: "season",
+			seriesId: show.id,
+			season: s.number,
+			episodeIds: (s.episodes ?? []).map((e) => e.id),
+		});
+		if (!dl) return undefined;
+		return {
+			href: dl.href,
+			label:
+				dl.count > 1
+					? i18n.activity_downloads_open({ count: dl.count })
+					: i18n.activity_download_open(),
+		};
+	}
+	let currentSeasonDownload = $derived(currentSeason ? seasonDownload(currentSeason) : undefined);
+	// A count that links is a word in a line of text, underlined on hover.
+	const COUNT_LINK = "rounded-sm underline-offset-2 hover:underline";
+
 	// What the line above the title says about the show, in order. The type
 	// chip follows it on its own.
 	let heroFacts = $derived(
@@ -927,6 +965,8 @@
 				<div class="md:hidden">
 					<SeasonAccordion
 						{seasons}
+						{seasonDownload}
+						{episodeDownload}
 						selected={selectedSeason ?? seasons[0]?.number ?? 0}
 						onSelect={(n) => (selectedSeason = n)}
 						{showMonitored}
@@ -1007,17 +1047,25 @@
 												{/if}
 												{#if seasonTally.downloading > 0}
 													<span class="whitespace-nowrap"
-														><span class="sep text-fg-faint">·&nbsp;</span><span
-															class="text-status-downloading"
-															>{countDownloading(seasonTally.downloading)}</span
+														><span class="sep text-fg-faint">·&nbsp;</span><DownloadLink
+															href={currentSeasonDownload?.href}
+															label={currentSeasonDownload?.label}
+															class={COUNT_LINK}
+															><span class="text-status-downloading"
+																>{countDownloading(seasonTally.downloading)}</span
+															></DownloadLink
 														></span
 													>
 												{/if}
 												{#if seasonTally.importing > 0}
 													<span class="whitespace-nowrap"
-														><span class="sep text-fg-faint">·&nbsp;</span><span
-															class="text-status-importing"
-															>{countImporting(seasonTally.importing)}</span
+														><span class="sep text-fg-faint">·&nbsp;</span><DownloadLink
+															href={seasonTally.downloading > 0 ? undefined : currentSeasonDownload?.href}
+															label={currentSeasonDownload?.label}
+															class={COUNT_LINK}
+															><span class="text-status-importing"
+																>{countImporting(seasonTally.importing)}</span
+															></DownloadLink
 														></span
 													>
 												{/if}
@@ -1071,6 +1119,7 @@
 						</div>
 
 						<EpisodeTable
+							{episodeDownload}
 							episodes={currentEpisodes}
 							seasonNumber={currentSeason.number}
 							seriesType={show.type}

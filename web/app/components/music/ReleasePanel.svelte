@@ -2,6 +2,8 @@
 	import { Radar, Search, Tags, Upload } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
+	import { liveDownload } from "@lib/live-download";
 	import AlbumEditionPicker from "./AlbumEditionPicker.svelte";
 	import ReleaseCover from "./ReleaseCover.svelte";
 	import Tracklist from "./Tracklist.svelte";
@@ -53,6 +55,12 @@
 	let pill = $derived(releasePill(r));
 	let facts = $derived(releaseFacts(r));
 	let shared = $derived(sharedWith(r, artistId));
+	// The pill opens the download it reads out: the album's own, or the
+	// discography pack that covers it.
+	const live = liveDownload(
+		() => ({ kind: "album", id: r.id }),
+		() => r.status === "downloading" || r.status === "paused",
+	);
 	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
 </script>
 
@@ -67,7 +75,9 @@
 		<div class="@container min-w-0 flex-1">
 			<div class="flex flex-wrap items-center gap-2">
 				{#if pill}
-					<LabelPill token={pill.token} label={pill.label} size="md" variant="translucent" live={pill.live} />
+					<DownloadLink href={live.href}>
+						<LabelPill token={pill.token} label={pill.label} size="md" variant="translucent" live={pill.live} />
+					</DownloadLink>
 				{/if}
 				<span class={caps}>{releaseTypeLabel(r.type)}</span>
 				{#if !up && releaseYear(r)}

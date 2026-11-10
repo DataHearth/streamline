@@ -111,6 +111,7 @@
 	"activity_download_gone": "That download is no longer in Activity",
 	"activity_download_link": "Download",
 	"activity_download_open": "View download",
+	"activity_downloads_open": "View {count} downloads",
 	"activity_events": "Events",
 	"activity_events_empty": "No events yet.",
 	"activity_events_subtitle": "Grabs, imports and drift across the library",
