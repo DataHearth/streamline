@@ -171,7 +171,11 @@
 				<div
 					class={cn(
 						"flex min-h-[92px] flex-col gap-1 overflow-hidden rounded-md border border-border p-1.5 lg:min-h-0",
-						!cell.inMonth && "opacity-40",
+						// 60%, not lower: it is the dimmest the cell goes with the day
+						// number (4.66:1), today's (4.53:1) and the chip titles (6.3:1)
+						// still clearing 4.5:1 on bg-elevated. At 40% they were 2.8:1,
+						// 2.7:1 and 3.5:1.
+						!cell.inMonth && "opacity-60",
 						isToday && "ring-2 ring-inset ring-accent",
 					)}
 				>
@@ -219,7 +223,11 @@
 									longDate.format(cell.date),
 									ev.currentTarget,
 								)}
-							class="flex-none rounded px-1.5 py-0.5 text-left font-mono text-[11px] text-fg-subtle min-h-11 lg:min-h-0 flex items-center transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class={cn(
+								"flex-none rounded px-1.5 py-0.5 text-left font-mono text-[11px] min-h-11 lg:min-h-0 flex items-center transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
+								// fg-subtle under the cell's 60% would be 2.7:1.
+								cell.inMonth ? "text-fg-subtle" : "text-fg-muted",
+							)}
 						>
 							{i18n.calendar_more_count({ count: evs.length - vis })}
 						</button>
