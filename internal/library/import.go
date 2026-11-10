@@ -273,7 +273,43 @@ func (s *ImportService) ImportEpisodeWithMode(
 	)
 	defer span.End()
 
-	return placeFile(ctx, span, placement{
+	return placeFile(
+		ctx,
+		span,
+		episodePlacement(lib, srcFile, show, season, ep, mode),
+	)
+}
+
+// EpisodeDestination is the library path ImportEpisode would place srcFile at,
+// rendered from the live config without touching the filesystem beyond
+// resolving the source.
+func (s *ImportService) EpisodeDestination(
+	srcFile string,
+	show *ent.TVShow,
+	season uint16,
+	ep *ent.Episode,
+) (string, error) {
+	lib := config.Get().Library
+	_, _, dest, err := episodePlacement(
+		lib,
+		srcFile,
+		show,
+		season,
+		ep,
+		"",
+	).destination()
+	return dest, err
+}
+
+func episodePlacement(
+	lib config.LibraryConfig,
+	srcFile string,
+	show *ent.TVShow,
+	season uint16,
+	ep *ent.Episode,
+	mode string,
+) placement {
+	return placement{
 		kind:    "episode",
 		src:     srcFile,
 		minSize: MinEpisodeSize,
@@ -292,7 +328,7 @@ func (s *ImportService) ImportEpisodeWithMode(
 			)
 		},
 		owner: []any{"tvshow.id", show.ID, "episode.id", ep.ID},
-	})
+	}
 }
 
 // ImportAlbumTrack places one audio file into the music library as the given
@@ -368,6 +404,35 @@ type placement struct {
 	resolve func(string) (string, error)
 }
 
+// destination resolves the media file under p.src and renders the path it
+// would be placed at, without touching the destination.
+func (p placement) destination() (srcFile string, parsed ParseResult, dest string, err error) {
+	if p.resolve != nil {
+		srcFile, err = p.resolve(p.src)
+		parsed.Extension = strings.TrimPrefix(
+			strings.ToLower(filepath.Ext(srcFile)),
+			".",
+		)
+	} else {
+		srcFile, err = findMediaFile(p.src, p.minSize, nil)
+		if err == nil {
+			parsed = Parse(filepath.Base(srcFile))
+		}
+	}
+	if err != nil {
+		return "", ParseResult{}, "", err
+	}
+	segments := strings.Split(ApplyTemplate(p.naming, p.buildVars(parsed)), "/")
+	for i, seg := range segments {
+		segments[i] = SanitizePath(seg)
+	}
+	dest = filepath.Join(p.root, filepath.Join(segments...))
+	if !PathUnderRoot(dest, p.root) {
+		return "", ParseResult{}, "", ErrUnsafePath
+	}
+	return srcFile, parsed, dest, nil
+}
+
 // placeFile resolves the media file under p.src, renders its destination from
 // the naming template, transfers it, and records the import metrics. Shared by
 // the movie and episode paths so both report identically — the only real
@@ -389,37 +454,13 @@ func placeFile(
 		imports.Add(ctx, 1, attrs)
 	}()
 
-	var (
-		srcFile string
-		parsed  ParseResult
-		err     error
-	)
-	if p.resolve != nil {
-		srcFile, err = p.resolve(p.src)
-		parsed.Extension = strings.TrimPrefix(
-			strings.ToLower(filepath.Ext(srcFile)),
-			".",
-		)
-	} else {
-		srcFile, err = findMediaFile(p.src, p.minSize, nil)
-		if err == nil {
-			parsed = Parse(filepath.Base(srcFile))
-		}
-	}
+	srcFile, parsed, destPath, err := p.destination()
 	if err != nil {
 		outcome = "no_media"
+		if errors.Is(err, ErrUnsafePath) {
+			outcome = "unsafe_path"
+		}
 		return ImportedFile{}, otelx.RecordSpanError(span, err)
-	}
-
-	segments := strings.Split(ApplyTemplate(p.naming, p.buildVars(parsed)), "/")
-	for i, seg := range segments {
-		segments[i] = SanitizePath(seg)
-	}
-	destPath := filepath.Join(p.root, filepath.Join(segments...))
-
-	if !PathUnderRoot(destPath, p.root) {
-		outcome = "unsafe_path"
-		return ImportedFile{}, otelx.RecordSpanError(span, ErrUnsafePath)
 	}
 	span.SetAttributes(attribute.String("dest.path", destPath))
 

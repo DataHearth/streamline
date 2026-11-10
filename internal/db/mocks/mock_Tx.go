@@ -20298,6 +20298,80 @@ func (_c *MockTx_ReplaceCast_Call) RunAndReturn(run func(ctx context.Context, ow
 	return _c
 }
 
+// ReplaceMediaFile provides a mock function for the type MockTx
+func (_mock *MockTx) ReplaceMediaFile(ctx context.Context, oldID uint32, p db.CreateMediaFileParams) (*ent.MediaFile, error) {
+	ret := _mock.Called(ctx, oldID, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReplaceMediaFile")
+	}
+
+	var r0 *ent.MediaFile
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.CreateMediaFileParams) (*ent.MediaFile, error)); ok {
+		return returnFunc(ctx, oldID, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.CreateMediaFileParams) *ent.MediaFile); ok {
+		r0 = returnFunc(ctx, oldID, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.MediaFile)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, db.CreateMediaFileParams) error); ok {
+		r1 = returnFunc(ctx, oldID, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ReplaceMediaFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReplaceMediaFile'
+type MockTx_ReplaceMediaFile_Call struct {
+	*mock.Call
+}
+
+// ReplaceMediaFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - oldID uint32
+//   - p db.CreateMediaFileParams
+func (_e *MockTx_Expecter) ReplaceMediaFile(ctx any, oldID any, p any) *MockTx_ReplaceMediaFile_Call {
+	return &MockTx_ReplaceMediaFile_Call{Call: _e.mock.On("ReplaceMediaFile", ctx, oldID, p)}
+}
+
+func (_c *MockTx_ReplaceMediaFile_Call) Run(run func(ctx context.Context, oldID uint32, p db.CreateMediaFileParams)) *MockTx_ReplaceMediaFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 db.CreateMediaFileParams
+		if args[2] != nil {
+			arg2 = args[2].(db.CreateMediaFileParams)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ReplaceMediaFile_Call) Return(mediaFile *ent.MediaFile, err error) *MockTx_ReplaceMediaFile_Call {
+	_c.Call.Return(mediaFile, err)
+	return _c
+}
+
+func (_c *MockTx_ReplaceMediaFile_Call) RunAndReturn(run func(ctx context.Context, oldID uint32, p db.CreateMediaFileParams) (*ent.MediaFile, error)) *MockTx_ReplaceMediaFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ResetAlbumGrabFailures provides a mock function for the type MockTx
 func (_mock *MockTx) ResetAlbumGrabFailures(ctx context.Context, id uint32) error {
 	ret := _mock.Called(ctx, id)

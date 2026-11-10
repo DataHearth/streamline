@@ -955,6 +955,13 @@ type Store interface {
 		ctx context.Context,
 		p CreateMediaFileParams,
 	) (*ent.MediaFile, error)
+	// ReplaceMediaFile writes the new row and deletes oldID in one
+	// transaction; it touches no file.
+	ReplaceMediaFile(
+		ctx context.Context,
+		oldID uint32,
+		p CreateMediaFileParams,
+	) (*ent.MediaFile, error)
 	// FindMediaFileByID returns one MediaFile by ID, or ent NotFound.
 	FindMediaFileByID(ctx context.Context, id uint32) (*ent.MediaFile, error)
 	// FindMediaFileByEpisodeID returns the MediaFile owned by an episode (at

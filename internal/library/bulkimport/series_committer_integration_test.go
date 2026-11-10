@@ -676,6 +676,73 @@ var _ = Describe(
 			},
 		)
 
+		It(
+			"keeps an episode's tracked file and row when its replacement fails to import",
+			func() {
+				placeSource("Breaking Bad S01E01.mkv")
+				first := commit(entimportscan.ModeInPlace, nil)
+				Expect(first.Outcome).To(Equal(entimportscanshow.OutcomeCreated))
+				tracked := client.MediaFile.Query().OnlyX(ctx)
+
+				// A repack for the same episode, whose rename destination an
+				// untracked file already holds.
+				placeSource("Breaking Bad S01E01 REPACK.mkv")
+				blockDestination("01")
+
+				again := commit(entimportscan.ModeRename, first.CreatedTvshowID)
+
+				Expect(again.Outcome).To(Equal(entimportscanshow.OutcomeAttached))
+				Expect(again.OutcomeMessage).To(
+					ContainSubstring(library.ErrDestExists.Error()),
+				)
+				Expect(tracked.Path).To(BeAnExistingFile())
+				rows := client.MediaFile.Query().WithEpisode().AllX(ctx)
+				Expect(rows).To(HaveLen(1))
+				Expect(rows[0].ID).To(Equal(tracked.ID))
+				Expect(rows[0].Path).To(Equal(tracked.Path))
+				Expect(string(rows[0].Edges.Episode.Status)).To(Equal("available"))
+			},
+		)
+
+		It(
+			"replaces a renamed file whose replacement renders to the same path",
+			func() {
+				placeSource("Breaking Bad S01E01.mkv")
+				first := commit(entimportscan.ModeRename, nil)
+				Expect(first.Outcome).To(Equal(entimportscanshow.OutcomeCreated))
+				dest := filepath.Join(libDir, "Breaking Bad", "Season 01",
+					"Breaking Bad - S01E01.mkv")
+				Expect(client.MediaFile.Query().OnlyX(ctx).Path).To(Equal(dest))
+
+				// The naming template keeps no release tag, so the repack
+				// lands on the path the first copy holds.
+				Expect(
+					os.Remove(filepath.Join(showFolder, "Breaking Bad S01E01.mkv")),
+				).
+					To(Succeed())
+				const repackSize = 61 * 1024 * 1024
+				Expect(os.WriteFile(
+					filepath.Join(showFolder, "Breaking Bad S01E01 REPACK.mkv"),
+					make([]byte, repackSize), 0o644,
+				)).To(Succeed())
+
+				again := commit(entimportscan.ModeRename, first.CreatedTvshowID)
+
+				Expect(again.Outcome).To(Equal(entimportscanshow.OutcomeAttached))
+				Expect(again.OutcomeMessage).To(BeEmpty())
+				row := client.MediaFile.Query().OnlyX(ctx)
+				Expect(row.Path).To(Equal(dest))
+				Expect(row.Size).To(BeNumerically("==", repackSize))
+				info, err := os.Stat(dest)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(info.Size()).To(BeNumerically("==", repackSize))
+				// Nothing set aside is left behind.
+				entries, err := os.ReadDir(filepath.Dir(dest))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(entries).To(HaveLen(1))
+			},
+		)
+
 		It("stays attached when the folder is committed again", func() {
 			placeSource("Breaking Bad S01E01.mkv")
 

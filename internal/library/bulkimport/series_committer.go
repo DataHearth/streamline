@@ -171,65 +171,25 @@ func (s *Service) commitShow(
 		// An episode holds at most one media file: committing an accepted show
 		// replaces whatever file a matched episode already has. The same path
 		// being re-scanned is already adopted, so it needs no rewrite.
-		if mf, err := s.store.FindMediaFileByEpisodeID(ctx, target.ID); err == nil {
-			if mf.Path == f {
-				tally.present++
-				continue
-			}
-			if rmErr := os.Remove(mf.Path); rmErr != nil && !os.IsNotExist(rmErr) {
-				slog.WarnContext(ctx, "series adopt: remove old file failed",
-					"path", mf.Path, "error", rmErr)
-			} else if rmErr == nil {
-				// The failure path was logged and the success path was not, so
-				// the case that actually deleted a file left no trace — and
-				// "where did my old copy go" is asked about exactly that one.
-				slog.InfoContext(ctx, "series adopt: replaced an existing file",
-					"episode.id", target.ID,
-					"old_path", mf.Path,
-					"new_path", f)
-			}
-			if dErr := s.store.DeleteMediaFile(ctx, mf.ID); dErr != nil {
-				slog.WarnContext(ctx, "series adopt: delete replaced file failed",
-					"episode.id", target.ID, "error", dErr)
-				tally.fail("delete replaced file", dErr)
-				continue
-			}
-		} else if !ent.IsNotFound(err) {
+		old, err := s.store.FindMediaFileByEpisodeID(ctx, target.ID)
+		switch {
+		case err == nil && old.Path == f:
+			tally.present++
+			continue
+		case ent.IsNotFound(err):
+			old = nil
+		case err != nil:
 			slog.WarnContext(ctx, "series adopt: media file lookup failed",
 				"episode.id", target.ID, "error", err)
 			tally.fail("media file lookup", err)
 			continue
 		}
-		path, size := f, info.Size()
-		if scan.Mode == entimportscan.ModeRename {
-			imported, err := s.importSvc.ImportEpisodeWithMode(
-				ctx, f, show, season, target, string(scan.ImportMode),
-			)
-			if err != nil {
-				slog.WarnContext(ctx, "series adopt: import episode failed",
-					"file", f, "episode.id", target.ID, "error", err)
-				tally.fail("import episode", err)
-				continue
-			}
-			path, size, parsed = imported.Path, imported.Size, imported.Parsed
-		}
-		if _, err := s.store.CreateMediaFile(ctx, db.CreateMediaFileParams{
-			EpisodeID:    target.ID,
-			Path:         path,
-			Size:         size,
-			Quality:      parsed.Resolution,
-			Format:       parsed.Extension,
-			ReleaseGroup: parsed.Group,
-			Parsed:       &parsed,
-			Source:       entmediafile.SourceWizard,
-			QueueTranscode: config.TranscodeEligible(
-				config.MediaSeries,
-				show.QualityProfile,
-			),
-		}); err != nil {
-			slog.WarnContext(ctx, "series adopt: create media file failed",
-				"episode.id", target.ID, "error", err)
-			tally.fail("create media file", err)
+		if step, err := s.adoptEpisodeFile(
+			ctx, scan, show, season, target, f, info, parsed, old,
+		); err != nil {
+			slog.WarnContext(ctx, "series adopt: "+step+" failed",
+				"file", f, "episode.id", target.ID, "error", err)
+			tally.fail(step, err)
 			continue
 		}
 		if err := s.store.SetEpisodeStatus(
@@ -284,6 +244,163 @@ func (s *Service) commitShow(
 		)
 	}
 	return success, note, show.ID
+}
+
+// adoptEpisodeFile records f as target's file, transferring it into the
+// series library first on a rename scan, and replaces old when the episode
+// already holds one. The old file and its row go only once the new file is
+// placed and its row written: a replacement that fails anywhere leaves the
+// episode with the file and row it had. On failure it returns the failed step
+// for the outcome message.
+func (s *Service) adoptEpisodeFile(
+	ctx context.Context,
+	scan *ent.ImportScan,
+	show *ent.TVShow,
+	season uint16,
+	target *ent.Episode,
+	f string,
+	info os.FileInfo,
+	parsed library.ParseResult,
+	old *ent.MediaFile,
+) (string, error) {
+	path, size := f, info.Size()
+	// aside holds the old file while its replacement is placed at the very
+	// path it occupies, which a rename re-commit of a copied source renders
+	// to. The importer refuses a different file at the destination, and the
+	// old one must outlive a failed import.
+	var aside string
+	// placed is a file this commit put in the library, which a failed row
+	// write takes back out before the old file is restored.
+	var placed bool
+	if scan.Mode == entimportscan.ModeRename {
+		if old != nil {
+			var err error
+			if aside, err = setAsideAtDestination(
+				s.importSvc,
+				f,
+				show,
+				season,
+				target,
+				old.Path,
+			); err != nil {
+				return "set aside replaced file", err
+			}
+		}
+		imported, err := s.importSvc.ImportEpisodeWithMode(
+			ctx, f, show, season, target, string(scan.ImportMode),
+		)
+		if err != nil {
+			restoreAside(ctx, aside, old)
+			return "import episode", err
+		}
+		// A destination already holding this very inode (a hardlink commit
+		// run again) is the old file itself, not a new one.
+		placed = old == nil || imported.Path != old.Path || aside != ""
+		path, size, parsed = imported.Path, imported.Size, imported.Parsed
+	}
+	params := db.CreateMediaFileParams{
+		EpisodeID:    target.ID,
+		Path:         path,
+		Size:         size,
+		Quality:      parsed.Resolution,
+		Format:       parsed.Extension,
+		ReleaseGroup: parsed.Group,
+		Parsed:       &parsed,
+		Source:       entmediafile.SourceWizard,
+		QueueTranscode: config.TranscodeEligible(
+			config.MediaSeries,
+			show.QualityProfile,
+		),
+	}
+	if old == nil {
+		if _, err := s.store.CreateMediaFile(ctx, params); err != nil {
+			return "create media file", err
+		}
+		return "", nil
+	}
+	if _, err := s.store.ReplaceMediaFile(ctx, old.ID, params); err != nil {
+		if placed {
+			undoPlacement(ctx, f, path, string(scan.ImportMode))
+		}
+		restoreAside(ctx, aside, old)
+		return "replace media file", err
+	}
+	gone := aside
+	if gone == "" && old.Path != path {
+		gone = old.Path
+	}
+	if gone != "" {
+		if err := os.Remove(gone); err != nil && !os.IsNotExist(err) {
+			slog.WarnContext(ctx, "series adopt: remove old file failed",
+				"path", gone, "error", err)
+			return "", nil
+		}
+	}
+	slog.InfoContext(ctx, "series adopt: replaced an existing file",
+		"episode.id", target.ID,
+		"old_path", old.Path,
+		"new_path", path)
+	return "", nil
+}
+
+// setAsideAtDestination renames the old file to a hidden sibling when f's
+// rendered destination is its path and it is not f itself under another name,
+// returning where it went ("" when nothing moved).
+func setAsideAtDestination(
+	svc *library.ImportService,
+	f string,
+	show *ent.TVShow,
+	season uint16,
+	target *ent.Episode,
+	oldPath string,
+) (string, error) {
+	dest, err := svc.EpisodeDestination(f, show, season, target)
+	if err != nil || filepath.Clean(dest) != filepath.Clean(oldPath) {
+		// A source the importer cannot resolve fails in the import itself.
+		return "", nil //nolint:nilerr // reported by the import that follows
+	}
+	oldInfo, err := os.Stat(oldPath)
+	if os.IsNotExist(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if srcInfo, err := os.Stat(f); err == nil && os.SameFile(oldInfo, srcInfo) {
+		return "", nil
+	}
+	aside := filepath.Join(filepath.Dir(oldPath),
+		".streamline-replacing-"+filepath.Base(oldPath))
+	if err := os.Rename(oldPath, aside); err != nil {
+		return "", err
+	}
+	return aside, nil
+}
+
+// restoreAside puts a set-aside old file back at its tracked path.
+func restoreAside(ctx context.Context, aside string, old *ent.MediaFile) {
+	if aside == "" {
+		return
+	}
+	if err := os.Rename(aside, old.Path); err != nil {
+		slog.ErrorContext(ctx, "series adopt: restore replaced file failed",
+			"path", old.Path, "aside", aside, "error", err)
+	}
+}
+
+// undoPlacement takes a file a rename commit placed back out of the library:
+// a move goes back to its source, a copy or hardlink is removed.
+func undoPlacement(ctx context.Context, src, placed, mode string) {
+	var err error
+	if mode == "move" {
+		err = library.MoveFile(ctx, placed, src)
+	} else {
+		err = os.Remove(placed)
+	}
+	if err != nil && !os.IsNotExist(err) {
+		slog.WarnContext(ctx, "series adopt: undo placement failed",
+			"path", placed, "source", src, "error", err)
+	}
 }
 
 // adoptTally counts what commitShow did with each planned file.

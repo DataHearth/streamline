@@ -98,7 +98,42 @@ func (db *DB) CreateMediaFile(
 	ctx context.Context,
 	p CreateMediaFileParams,
 ) (*ent.MediaFile, error) {
-	q := applyParsed(db.client.MediaFile.Create().
+	return createMediaFile(ctx, db.client, p)
+}
+
+// ReplaceMediaFile writes the row p describes and deletes the row oldID in one
+// transaction, so the owner never holds both rows or neither. It touches no
+// file: the caller places the new file before and removes the old one after.
+func (db *DB) ReplaceMediaFile(
+	ctx context.Context,
+	oldID uint32,
+	p CreateMediaFileParams,
+) (*ent.MediaFile, error) {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	mf, err := createMediaFile(ctx, tx.Client(), p)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err := tx.MediaFile.DeleteOneID(oldID).Exec(ctx); err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("delete media_file %d: %w", oldID, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit media_file replace: %w", err)
+	}
+	return mf, nil
+}
+
+func createMediaFile(
+	ctx context.Context,
+	client *ent.Client,
+	p CreateMediaFileParams,
+) (*ent.MediaFile, error) {
+	q := applyParsed(client.MediaFile.Create().
 		SetPath(p.Path).
 		SetSize(p.Size).
 		SetQuality(p.Quality).
@@ -127,7 +162,7 @@ func (db *DB) CreateMediaFile(
 		return nil, err
 	}
 	if p.QueueTranscode {
-		if _, err := db.client.TranscodeJob.Create().
+		if _, err := client.TranscodeJob.Create().
 			SetMediaFile(mf).
 			Save(ctx); err != nil {
 			return nil, fmt.Errorf("queue transcode job: %w", err)
