@@ -1,6 +1,7 @@
 # Demo library and README screenshots
 
-`task docs:screenshots` retakes every image in `docs/assets/`. It builds the binary, then
+`task docs:screenshots` retakes the images in `docs/assets/` (all but `calendar.png`, see
+[The calendar](#the-calendar)). It builds the binary, then
 `go run ./e2e/demo` does the rest:
 
 1. boots a throwaway instance on a scratch directory, with its own port, admin and config;
@@ -71,7 +72,19 @@ MusicBrainz's one request a second that takes minutes, and an album the worker h
 would be one the unthrottled replay then asks for and misses.
 
 Replaying moves every date within two years of an exchange's recording forward by the whole weeks
-since, so an episode that aired the week of the recording airs this week, and the calendar shot
-always has a month to show. Older dates, a film's or a book's own, stay put. Each exchange carries
+since, so an album that was a week away the day of the recording is a week away today. Older dates,
+a film's or a book's own, stay put. Each exchange carries
 the day it was kept (`recorded_at`), so one added by a later `-record` is shifted from its own day;
 one without the field is from `cassette.json`'s `recorded_at`, the day the cassette was started.
+
+## The calendar
+
+`calendar.png` is the one image the demo does not retake today. The calendar lists wanted films,
+monitored episodes, albums and books dated this month or the next thirty days, and a library of
+public-domain and open titles has none. The date shift keeps such an entry current, it cannot make
+one.
+
+So the shot is taken only when `/calendar/upcoming` answers with something, and is otherwise skipped
+with a warning, leaving the image in `-out` as it is rather than replacing it with an empty grid. It
+comes back by itself with a cassette recorded while a catalog entry had a date ahead of it (a
+followed artist with an album announced, a book series with a volume due).

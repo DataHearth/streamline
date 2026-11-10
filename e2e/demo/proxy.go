@@ -579,9 +579,11 @@ func (p *proxy) write(w http.ResponseWriter, ex *exchange, data []byte) {
 var isoDate = regexp.MustCompile(`\b(\d{4})-(\d{2})-(\d{2})\b`)
 
 // shiftDates moves every date within two years of the exchange's recording
-// forward by the whole weeks since it was made, so what was airing that month
-// airs this one and the calendar is never empty. Older dates are a film's or
-// a book's own and stay put.
+// forward by the whole weeks since it was made, so what was about to land
+// when it was recorded is about to land now. That keeps a calendar entry
+// current; it does not make one: a library with no such date has an empty
+// calendar at any age (calendarEmpty in shots.go). Older dates are a film's
+// or a book's own and stay put.
 func (p *proxy) shiftDates(ex *exchange, data []byte) []byte {
 	if ex.BodyFile != "" || !strings.Contains(ex.Header["Content-Type"], "json") {
 		return data

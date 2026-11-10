@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,6 +29,9 @@ type shot struct {
 	before func(p *rod.Page) error
 	// anonymous shots are taken signed out.
 	anonymous bool
+	// skip, when set, is asked before the shot: a reason leaves the image in
+	// -out as it is, for a page that would come out with nothing on it.
+	skip func(context.Context) string
 }
 
 // clickVisible clicks the first match that is on screen: a page often holds a
@@ -166,10 +171,49 @@ func (s *seeder) shots() []shot {
 			height: h,
 		},
 		{name: "requests", path: "/requests", width: w, height: h},
-		{name: "calendar", path: "/calendar", width: w, height: h},
+		{
+			name:   "calendar",
+			path:   "/calendar",
+			width:  w,
+			height: h,
+			skip:   s.calendarEmpty,
+		},
 		{name: "settings", path: "/settings", width: w, height: h},
 		{name: "login", path: "/login", width: w, height: h, anonymous: true},
 	}
+}
+
+// calendarEmpty is the reason not to shoot the calendar: nothing on it. The
+// page lists wanted films, monitored episodes, albums and books dated this
+// month or the next thirty days, and the demo library is public-domain and
+// open titles, decades old: it has such a date only when one of them (a
+// followed artist's next album, mostly) happened to be about to land the day
+// the cassette was recorded. Without one the shot would replace the README's
+// calendar with an empty grid.
+func (s *seeder) calendarEmpty(ctx context.Context) string {
+	now := time.Now().UTC()
+	from := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	to := from.AddDate(0, 1, 0)
+	if next := now.AddDate(0, 0, 30); next.After(to) {
+		to = next
+	}
+	var up struct {
+		Movies   []json.RawMessage `json:"movies"`
+		Episodes []json.RawMessage `json:"episodes"`
+		Albums   []json.RawMessage `json:"albums"`
+		Books    []json.RawMessage `json:"books"`
+	}
+	q := url.Values{
+		"from": {from.Format(time.RFC3339)},
+		"to":   {to.Format(time.RFC3339)},
+	}
+	if err := s.api.get(ctx, "/calendar/upcoming", q, &up); err != nil {
+		return "the calendar could not be read: " + err.Error()
+	}
+	if len(up.Movies)+len(up.Episodes)+len(up.Albums)+len(up.Books) == 0 {
+		return "nothing in the demo library is dated this month or the next 30 days"
+	}
+	return ""
 }
 
 // phoneShots make up mobile.png, side by side.
@@ -219,6 +263,17 @@ func shoot(ctx context.Context, in *instance, s *seeder, o options) error {
 				sh.name,
 			)
 			continue
+		}
+		if sh.skip != nil {
+			if why := sh.skip(ctx); why != "" {
+				slog.WarnContext(
+					ctx,
+					"shot skipped: "+why,
+					"shot",
+					sh.name,
+				)
+				continue
+			}
 		}
 		data, err := capture(browser, in, sh, o.scale)
 		if err != nil {

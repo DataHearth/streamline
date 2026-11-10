@@ -51,7 +51,8 @@ tasks:
   docs:screenshots:
     desc: Retake the README screenshots in docs/assets from the demo library (-- -record to refresh its cassette with real provider keys)
     # e2e/demo boots a throwaway instance on the binary built here, seeds the
-    # demo library through its API and shoots every page. The providers answer
+    # demo library through its API and shoots its pages (the calendar only when
+    # it has something on it). The providers answer
     # from e2e/demo/cassette, fetched from the demo-cassette branch when it is
     # not on disk; -record fills what it lacks from the real ones
     # (STREAMLINE_METADATA__{TMDB,TVDB,HARDCOVER}_API_KEY). Needs ffmpeg and a

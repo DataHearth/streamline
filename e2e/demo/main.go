@@ -1,6 +1,6 @@
 // Command demo builds the demo library the README screenshots show and
 // shoots them. It boots a throwaway instance, seeds it over the REST API, and
-// writes every page in docs/assets at the README's sizes:
+// writes the pages in docs/assets at the README's sizes:
 //
 //	task docs:screenshots                  # replay the cassette, no keys, no network
 //	task docs:screenshots -- -record       # fill the cassette from the real providers
@@ -10,7 +10,8 @@
 // what the cassette lacks upstream and keeps it, which needs
 // STREAMLINE_METADATA__TMDB_API_KEY, __TVDB_API_KEY and __HARDCOVER_API_KEY
 // in the environment; a plain run answers everything from the cassette, with
-// recent dates moved forward so the calendar still has a month to show.
+// recent dates moved forward by the time since it was recorded. The calendar
+// is shot only when the library has something dated this month (shots.go).
 // Downloads come from the fake tracker, media files are written by demomedia,
 // and nothing outside the scratch directory is touched but -out.
 package main
