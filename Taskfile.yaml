@@ -60,7 +60,10 @@ tasks:
       DEMO_BIN: '{{.ROOT_DIR}}/tmp/streamline-demo'
     cmds:
       - task: docs:cassette:fetch
-      - task: build:app
+      # build:go, not its build:app alias: a dep does not forward the vars of
+      # the call, so the alias would build ./streamline and leave DEMO_BIN
+      # unwritten. build:go is the task that reads BINARY (and builds js+css).
+      - task: build:go
         vars: {BINARY: '{{.DEMO_BIN}}'}
       - go run ./e2e/demo -binary {{.DEMO_BIN}} {{.CLI_ARGS}}
 
