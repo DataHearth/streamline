@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -75,5 +76,46 @@ var _ = Describe("sameFile", Label("unit", "bulkimport"), func() {
 		_, err := sameFile(filepath.Join(scanned, "Movie.mkv"), scanned)
 
 		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("keyedMutex", Label("unit", "bulkimport"), func() {
+	It("lets one holder of a key in at a time", func() {
+		var (
+			k       keyedMutex
+			wg      sync.WaitGroup
+			inside  int
+			entered int
+		)
+		for range 50 {
+			wg.Go(func() {
+				defer k.lock(42)()
+				inside++
+				Expect(inside).To(Equal(1))
+				entered++
+				inside--
+			})
+		}
+		wg.Wait()
+
+		Expect(entered).To(Equal(50))
+	})
+
+	It("does not make one key wait for another", func() {
+		var k keyedMutex
+		unlockA := k.lock(1)
+		unlockB := k.lock(2)
+		unlockB()
+		unlockA()
+	})
+
+	It("forgets a key once nobody holds it", func() {
+		var k keyedMutex
+		unlock := k.lock(42)
+		Expect(k.locks).To(HaveKey(uint32(42)))
+
+		unlock()
+
+		Expect(k.locks).To(BeEmpty())
 	})
 })

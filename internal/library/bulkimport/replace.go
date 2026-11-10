@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/datahearth/streamline/internal/library"
 )
@@ -99,4 +100,44 @@ func sameFile(tracked, scanned string) (bool, error) {
 		return false, err
 	}
 	return os.SameFile(ti, si), nil
+}
+
+// keyedMutex is one mutex per key, kept only while someone holds or waits for
+// it. The zero value is ready to use.
+type keyedMutex struct {
+	mu    sync.Mutex
+	locks map[uint32]*keyedLock
+}
+
+type keyedLock struct {
+	sync.Mutex
+	// refs counts the holder and the waiters, under keyedMutex.mu.
+	refs int
+}
+
+// lock takes key's mutex and returns its release. It is not reentrant, and
+// k.mu is never held while waiting for a key, so two callers can only block
+// each other by each holding one key and asking for the other's.
+func (k *keyedMutex) lock(key uint32) (unlock func()) {
+	k.mu.Lock()
+	if k.locks == nil {
+		k.locks = map[uint32]*keyedLock{}
+	}
+	l, ok := k.locks[key]
+	if !ok {
+		l = &keyedLock{}
+		k.locks[key] = l
+	}
+	l.refs++
+	k.mu.Unlock()
+
+	l.Lock()
+	return func() {
+		l.Unlock()
+		k.mu.Lock()
+		if l.refs--; l.refs == 0 {
+			delete(k.locks, key)
+		}
+		k.mu.Unlock()
+	}
 }

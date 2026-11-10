@@ -352,6 +352,13 @@ func (s *Service) commitAttach(
 	scan *ent.ImportScan,
 	f *ent.ImportScanFile,
 ) (entimportscanfile.Outcome, string, uint32) {
+	// A commit runs several files at once and two of them can be copies of
+	// one movie. Each lists the movie's rows, places its file and deletes what
+	// it listed; run together both replace the same row, and the loser's
+	// failed transaction takes the winner's file back out of the library.
+	// Under the lock the second lists the row the first one wrote. It is the
+	// only lock this goroutine takes, and nothing below re-enters.
+	defer s.movieFiles.lock(f.ExistingMovieID)()
 	existing, err := s.store.ListMediaFilesByMovieID(ctx, f.ExistingMovieID)
 	if err != nil {
 		return commitFail("list existing files", err, 0)
