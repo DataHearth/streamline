@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -119,6 +120,10 @@ var _ = Describe("Query-string state", Label("e2e"), func() {
 	// The specs below arrive by a link inside the app. Routify sets the active
 	// route first and writes history from a timer after it, so the page's own
 	// write-back has a window in which the address bar is still the URL left.
+	historyLength := func(page *rod.Page) int {
+		GinkgoHelper()
+		return page.MustEval(`() => history.length`).Int()
+	}
 	const moviesSort = `() => localStorage.setItem("streamline:movies:sort", "year-desc")`
 
 	It("settles a list reached by a link, for its URL and the back link", func() {
@@ -140,5 +145,42 @@ var _ = Describe("Query-string state", Label("e2e"), func() {
 		Eventually(func() string {
 			return *visibleElement(page, `section.hero a`).MustAttribute("href")
 		}).Should(Equal("/movies?sort=year&order=desc"))
+	})
+
+	It("keeps Back when a link to the same page is rewritten", func() {
+		seedMovie()
+		page := newSessionPage("/movies")
+		visibleElement(page, `a[href="/movies"]`)
+		page.MustEval(moviesSort)
+		page.MustNavigate(baseURL + "/movies?status=failed")
+		expectPath(page, "/movies?status=failed&sort=year&order=desc")
+		before := historyLength(page)
+
+		// The sidebar's bare /movies is not how the page spells its state.
+		visibleElement(page, `a[href="/movies"]`).MustClick()
+		expectPath(page, "/movies?sort=year&order=desc")
+		Expect(historyLength(page)).To(Equal(before + 1))
+
+		page.MustEval(`() => history.back()`)
+		expectPath(page, "/movies?status=failed&sort=year&order=desc")
+	})
+
+	It("keeps Back when the URL a same-page link leaves has a hash", func() {
+		seedMovie()
+		page := newSessionPage("/movies?status=failed")
+		expectPath(page, "/movies?status=failed")
+		// The skip link is off screen until focused, so it is clicked in page.
+		page.MustElement(`a[href="#main"]`).MustEval(`() => this.click()`)
+		expectPath(page, "/movies?status=failed#main")
+		before := historyLength(page)
+
+		visibleElement(page, `a[href="/movies"]`).MustClick()
+		Eventually(func() string {
+			return strings.TrimPrefix(page.MustInfo().URL, baseURL)
+		}).Should(Equal("/movies"))
+		Expect(historyLength(page)).To(Equal(before + 1))
+
+		page.MustEval(`() => history.back()`)
+		expectPath(page, "/movies?status=failed#main")
 	})
 })

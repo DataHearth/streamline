@@ -26,10 +26,12 @@ import { activeRoute } from "@roxi/routify";
 // `listOf` — and read a renamed parameter under its old name too.
 //
 // `serialize` returns the page's state as a query. It is the only page state
-// the effect tracks, and the URL is rewritten whenever it changes. `onSync`,
-// when given, gets each query the page settles on while it is the page on
-// screen, the first as it arrives (the library lists remember it for a detail
-// page's back link).
+// the effect tracks, and the URL is rewritten whenever it changes, by
+// replaceState: a link's own history entry is kept and rewritten in place when
+// the page spells its query another way. Nothing is written before the address
+// bar shows the route `apply` read. `onSync`, when given, gets each query the
+// page settles on while it is the page on screen, the first as it arrives (the
+// library lists remember it for a detail page's back link).
 //
 // `path` is the page's path, or a pattern for a page with one path per title
 // (`/^\/movies\/\d+$/`).
@@ -89,13 +91,15 @@ export function syncRouteQuery(
 
 	$effect(() => {
 		const search = serialize().toString();
-		if (active === null || typeof window === "undefined") return;
-		// A navigation into this page — or from one title to another — still has
-		// the outgoing URL in the address bar; writing now would stamp this page's
-		// state onto that route's path and cancel the navigation. `landed` is
-		// tracked, so the write the page owes runs as soon as the route has landed.
+		// A navigation into this page, from one title to another, or a link to
+		// this same page still has the outgoing URL in the address bar. Writing
+		// then would stamp this page's state onto the path being left and cancel
+		// the navigation, or, on the same path, turn the link's history entry
+		// into a replace of the one before it and lose Back. `landed` is tracked,
+		// so the write the page owes runs as soon as the route has landed.
+		if (active === null || !landed || typeof window === "undefined") return;
 		const { pathname, hash } = window.location;
-		if (!landed && pathname !== active) return;
+		if (pathname !== active) return;
 		onSync?.(search);
 		const next = `${pathname}${search ? `?${search}` : ""}${hash}`;
 		if (next === pathname + window.location.search + hash) return;
