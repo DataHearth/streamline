@@ -111,6 +111,7 @@
 	"activity_download_gone": "Ce téléchargement n'est plus dans l'activité",
 	"activity_download_link": "Téléchargement",
 	"activity_download_open": "Voir le téléchargement",
+	"activity_downloads_open": "Voir les {count} téléchargements",
 	"activity_events": "Événements",
 	"activity_events_empty": "Aucun événement pour l'instant.",
 	"activity_events_subtitle": "Récupérations, imports et dérives de la bibliothèque",
