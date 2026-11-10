@@ -6,6 +6,8 @@
 	import { cn } from "@lib/cn";
 	import { formatDateShort } from "@lib/dates";
 	import LabelPill from "@components/shared/LabelPill.svelte";
+	import DownloadLink from "@components/shared/DownloadLink.svelte";
+	import { downloadHref, liveQueue } from "@lib/live-download";
 	import ReleaseCover from "./ReleaseCover.svelte";
 	import ReleaseMark from "./ReleaseMark.svelte";
 	import Tracklist from "./Tracklist.svelte";
@@ -57,6 +59,13 @@
 	} = $props();
 
 	let groups = $derived(releaseGroups(releases));
+	// An open release's pill opens the download it reads out. One queue read
+	// for the whole list, and only while a release is on its way.
+	const inFlight = (r: Release) => r.status === "downloading" || r.status === "paused";
+	const queue = liveQueue(() => releases.some(inFlight));
+	function releaseDownload(r: Release): string | undefined {
+		return inFlight(r) ? downloadHref(queue.items, { kind: "album", id: r.id }) : undefined;
+	}
 </script>
 
 {#snippet row(r: Release)}
@@ -96,7 +105,9 @@
 			<div class="px-4 pb-4" transition:slide={{ duration: 200, easing: cubicOut }}>
 				<div class="flex flex-wrap items-center gap-2">
 					{#if pill}
-						<LabelPill token={pill.token} label={pill.label} variant="translucent" live={pill.live} />
+						<DownloadLink href={releaseDownload(r)}>
+							<LabelPill token={pill.token} label={pill.label} variant="translucent" live={pill.live} />
+						</DownloadLink>
 					{/if}
 					<span class="font-mono text-[11px] text-fg-muted">{releaseFacts(r).join(" · ")}</span>
 				</div>
