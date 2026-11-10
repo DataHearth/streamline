@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from "svelte";
+	import { tick, untrack } from "svelte";
 	import { pageTitle } from "@lib/page-title.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { slide } from "svelte/transition";
@@ -10,7 +10,8 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { api, apiAllPages, errorText } from "@lib/api";
+	import { api, apiAllPages, ApiError, errorText } from "@lib/api";
+	import { createMediaQuery } from "@lib/viewport.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { entryHeading, entryRelease } from "@lib/activity-touch";
 	import { builtinTorrentsQuery, torrentHref } from "@lib/activity-nav";
@@ -58,6 +59,12 @@
 	let view = $state<View>("queue");
 	let statusFilter = $state<string[]>([]);
 	let search = $state("");
+	// ?download=<id> is a download record's address: its detail open, the
+	// expanded row from md up and the sheet below. `wantedId` is the id a URL
+	// named and the page has not found yet; `openId` the record whose detail is
+	// open, whether a link or a click opened it.
+	let wantedId = $state<number | null>(null);
+	let openId = $state<number | null>(null);
 	// The view, its status chips and the search are in the URL: the dashboard's
 	// Recent activity panel links straight to ?view=events. The view is read
 	// first, since the chips are the view's own (a switch clears them).
@@ -69,12 +76,27 @@
 			const keys = ACTIVITY_CHIPS[view === "history" ? "history" : "queue"].map((c) => c.key);
 			statusFilter = listOf(param(p, "status"), keys);
 			search = param(p, "q") ?? "";
+			// A query naming no download closes the detail: Back from a record's
+			// link returns to the view it was followed from.
+			const id = Number(param(p, "download"));
+			wantedId = Number.isInteger(id) && id > 0 ? id : null;
+			openId = null;
 		},
 		() => {
 			const p = new URLSearchParams();
-			setParam(p, "view", view, "queue");
+			// The id is written from the moment the URL names it, not once the
+			// record is found: this runs at mount, before the queue has answered,
+			// and would otherwise strip the link it was opened with.
+			const download = openId ?? wantedId;
+			// A record's address names no view: the page finds which list holds
+			// it. That keeps `link.download` the exact query written here, in
+			// whichever view the record turns up. Spelt differently, a link
+			// followed from the events feed would be rewritten before Routify's
+			// push landed, and Back would skip the feed.
+			if (download === null) setParam(p, "view", view, "queue");
 			setParam(p, "status", statusFilter);
 			setParam(p, "q", search);
+			if (download !== null) p.set("download", String(download));
 			return p;
 		},
 	);
@@ -139,7 +161,8 @@
 	function switchView(v: View) {
 		view = v;
 		statusFilter = [];
-		detailId = null;
+		openId = null;
+		wantedId = null;
 		selection.clear();
 	}
 
@@ -366,9 +389,48 @@
 	let heldItem = $derived(
 		queueItems.find((q) => q.id === resolveId) ?? null,
 	);
-	let historyItems = $derived<HistoryEntry[]>(
+	let loadedHistory = $derived<HistoryEntry[]>(
 		(history.data?.pages ?? []).flatMap((p) => p.items),
 	);
+	// A linked record further back than the loaded pages is read on its own
+	// (GET /activity/history/{id}) and listed ahead of them until a page
+	// brings it in.
+	let pinnedHistory = $state<HistoryEntry | null>(null);
+	// history.dataUpdatedAt as of the pin's last read.
+	let pinnedAt = 0;
+	let historyItems = $derived.by<HistoryEntry[]>(() => {
+		const pin = pinnedHistory;
+		return pin && !loadedHistory.some((i) => i.id === pin.id)
+			? [pin, ...loadedHistory]
+			: loadedHistory;
+	});
+	// The pin is outside the paged query, so nothing that changes the history
+	// reaches it: a removal, a clear, a retry moving it back to the queue would
+	// leave the row on screen. Each of those refetches the loaded pages, and
+	// the pin is read again then; a 404 drops it.
+	$effect(() => {
+		const at = history.dataUpdatedAt;
+		untrack(() => {
+			const pin = pinnedHistory;
+			if (!pin) return;
+			// Once a loaded page holds the record, the page's copy is the one
+			// shown and kept current.
+			if (loadedHistory.some((i) => i.id === pin.id)) {
+				pinnedHistory = null;
+				return;
+			}
+			if (at === pinnedAt) return;
+			pinnedAt = at;
+			api<HistoryEntry>(`/activity/history/${pin.id}`)
+				.then((entry) => {
+					if (pinnedHistory?.id === pin.id) pinnedHistory = entry;
+				})
+				.catch((e) => {
+					if (e instanceof ApiError && e.status === 404 && pinnedHistory?.id === pin.id)
+						pinnedHistory = null;
+				});
+		});
+	});
 	// The badge counts the library, not what has been scrolled into view: the
 	// history is cursor-paginated, so historyItems.length is the page size
 	// until the last page loads and the count would sit at 50 forever.
@@ -417,12 +479,78 @@
 
 	// ── Touch surfaces ───────────────────────────────────────────────────────
 	let filtersOpen = $state(false);
-	let detailId = $state<number | null>(null);
+	// One open detail for both layouts: the table's expanded row from md up, the
+	// sheet below. The sheet locks the page's scroll and takes Escape and Back,
+	// so it is given the record only where it is the layout on screen.
+	const wide = createMediaQuery("(min-width: 768px)");
 	// Held by id, not by value: the queue repolls every 2 s, and a sheet holding
 	// the snapshot it opened with would show a frozen speed and percentage.
-	let detailItem = $derived<QueueEntry | HistoryEntry | null>(
-		detailId === null ? null : (source.find((i) => i.id === detailId) ?? null),
+	let openItem = $derived<QueueEntry | HistoryEntry | null>(
+		openId === null ? null : (source.find((i) => i.id === openId) ?? null),
 	);
+	let detailItem = $derived(wide() ? null : openItem);
+
+	// ── ?download=<id> ───────────────────────────────────────────────────────
+	// The queue first, since a record there is the live one; then the loaded
+	// history; then the record on its own. A record in none of them is gone:
+	// the history was cleared, or the download was cancelled.
+	let lookupId: number | null = null;
+	$effect(() => {
+		const id = wantedId;
+		if (id === null || queue.isPending) return;
+		if (queueItems.some((i) => i.id === id)) return untrack(() => openLinked("queue", id));
+		if (history.isPending) return;
+		if (historyItems.some((i) => i.id === id)) return untrack(() => openLinked("history", id));
+		// The queue repolls every 2 s and would ask again each time.
+		if (lookupId === id) return;
+		lookupId = id;
+		const at = untrack(() => history.dataUpdatedAt);
+		api<HistoryEntry>(`/activity/history/${id}`)
+			.then((entry) => {
+				if (wantedId !== id) return;
+				pinnedAt = at;
+				pinnedHistory = entry;
+				openLinked("history", id);
+			})
+			.catch((e) => {
+				if (wantedId !== id) return;
+				wantedId = null;
+				toast.err(
+					e instanceof ApiError && e.status === 404
+						? i18n.activity_download_gone()
+						: errorText(e),
+				);
+			})
+			.finally(() => {
+				if (lookupId === id) lookupId = null;
+			});
+	});
+	function openLinked(v: "queue" | "history", id: number) {
+		wantedId = null;
+		if (view !== v) {
+			view = v;
+			statusFilter = [];
+			selection.clear();
+		}
+		openId = id;
+		// A filter hiding the row would make the link open nothing visible.
+		if (!rows.some((r) => r.id === id)) {
+			statusFilter = [];
+			search = "";
+		}
+		void tick().then(() =>
+			document.querySelector(`tr[data-download="${id}"]`)?.scrollIntoView({ block: "center" }),
+		);
+	}
+	// A record that leaves the list it was opened in (it finished, was
+	// cancelled, removed or retried) takes its detail, and its id in the URL,
+	// with it.
+	$effect(() => {
+		const id = openId;
+		if (id === null) return;
+		const loading = view === "queue" ? queue.isPending : history.isPending;
+		if (!loading && !source.some((i) => i.id === id)) openId = null;
+	});
 	// A swiped row's cancel / retry / remove asks first, in the sheet's words.
 	// By id for the same reason as the sheet: the queue repolls every 2 s.
 	let swipeConfirm = $state<{ id: number; kind: DownloadConfirm } | null>(null);
@@ -431,6 +559,7 @@
 			? null
 			: (source.find((i) => i.id === swipeConfirm?.id) ?? null),
 	);
+	// Everything a reset clears, which the filter sheet counts.
 	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0));
 	let clearableCount = $derived(
 		historyItems.filter((h) => h.status === "completed").length,
@@ -741,6 +870,7 @@
 		loadingMore={history.isFetchingNextPage}
 		canControl={auth.isAdmin}
 		torrentHref={rowTorrentHref}
+		bind:expandedId={openId}
 		onLoadMore={() => history.fetchNextPage()}
 		onCancel={(id) => cancel.mutate(id)}
 		onPause={(id) => pause.mutate(id)}
@@ -765,7 +895,7 @@
 		{selecting}
 		onToggle={(id) => selection.toggle(id)}
 		onBeginSelect={auth.isAdmin ? (id) => selection.begin(id) : undefined}
-		onOpen={(item) => (detailId = item.id)}
+		onOpen={(item) => (openId = item.id)}
 		onResolve={auth.isAdmin ? (item) => (resolveId = item.id) : undefined}
 		onPause={auth.isAdmin ? (id) => pause.mutate(id) : undefined}
 		onResume={auth.isAdmin ? (id) => resume.mutate(id) : undefined}
@@ -831,10 +961,10 @@
 <ActivityDetailSheet
 	item={detailItem}
 	view={tableView}
-	busy={detailId !== null && busyId === detailId}
+	busy={openId !== null && busyId === openId}
 	canControl={auth.isAdmin}
 	torrentHref={detailItem ? rowTorrentHref(detailItem) : null}
-	onClose={() => (detailId = null)}
+	onClose={() => (openId = null)}
 	onCancel={(id) => cancel.mutate(id)}
 	onPause={(id) => pause.mutate(id)}
 	onResume={(id) => resume.mutate(id)}
