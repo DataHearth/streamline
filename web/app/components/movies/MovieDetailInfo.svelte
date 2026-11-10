@@ -25,6 +25,10 @@
 	import Dialog from "@components/modals/Dialog.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
 	import type { Movie } from "@lib/types";
+	import StatusValue from "@components/shared/StatusValue.svelte";
+	import { statusLabel } from "@components/shared/StatusPill.svelte";
+	import { IN_FLIGHT, liveDownload } from "@lib/live-download";
+	import { movieStatus } from "@lib/status";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
@@ -34,6 +38,12 @@
 		movie: Movie;
 		qualityProfileName: string | null;
 	} = $props();
+
+	// The Status row links the download it reads out, as the poster's pill does.
+	const live = liveDownload(
+		() => ({ kind: "movie", id: movie.id }),
+		() => IN_FLIGHT.has(movie.status),
+	);
 
 	let primary = $derived(
 		movie.media_files?.find((f) => !f.missing_from_disk) ?? movie.media_files?.[0],
@@ -368,8 +378,8 @@
 				{qualityProfileName ?? "—"}
 			</dd>
 			<dt class="text-fg-subtle">{i18n.common_status()}</dt>
-			<dd class="text-right font-mono text-fg capitalize">
-				{movie.status}
+			<dd class="text-right font-mono text-fg">
+				<StatusValue label={statusLabel(movieStatus(movie))} href={live.href} />
 			</dd>
 			<dt class="text-fg-subtle">{i18n.monitor_monitored()}</dt>
 			<dd class="text-right font-mono text-fg">
