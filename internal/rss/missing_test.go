@@ -513,6 +513,187 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 		})
 	})
 
+	Context("when another film shares the title", func() {
+		BeforeEach(func() {
+			movie = &ent.Movie{ID: 7, Title: "Road House", Year: 1989, TmdbID: 10135}
+		})
+
+		expectSearch := func(results ...indexer.SearchResult) {
+			indexerM.EXPECT().
+				SearchMovie(mock.AnythingOfType(ctxType), []string{"Road House", ""}, mock.Anything, uint32(10135), "").
+				Return(results, nil).Once()
+			store.EXPECT().
+				SetMovieLastSearchAt(mock.AnythingOfType(ctxType), uint32(7), mock.AnythingOfType("time.Time")).
+				Return(nil).Once()
+		}
+
+		It(
+			"grabs the release of the wanted year over a better-seeded remake",
+			func() {
+				wanted := indexer.SearchResult{
+					Title:   "Road.House.1989.1080p.BluRay.x264-GROUP",
+					Seeders: 5,
+				}
+				expectSearch(
+					indexer.SearchResult{
+						Title:   "Road.House.2024.1080p.BluRay.x264-OTHER",
+						Seeders: 400,
+					},
+					wanted,
+				)
+				dlM.EXPECT().
+					Grab(mock.AnythingOfType(ctxType), wanted, uint32(7)).
+					Return(&ent.DownloadRecord{}, nil).Once()
+				store.EXPECT().
+					ResetMovieGrabFailures(mock.AnythingOfType(ctxType), uint32(7)).
+					Return(nil).Once()
+
+				Expect(syncer.SearchOne(ctx, movie)).To(Succeed())
+			},
+		)
+
+		It("grabs nothing when only the other film is on offer", func() {
+			expectSearch(indexer.SearchResult{
+				Title:   "Road.House.2024.1080p.BluRay.x264-OTHER",
+				Seeders: 400,
+			})
+
+			Expect(syncer.SearchOne(ctx, movie)).
+				To(MatchError(ErrNoEligibleRelease))
+		})
+
+		It("still grabs a release that states no year", func() {
+			bare := indexer.SearchResult{
+				Title:   "Road.House.1080p.BluRay.x264-GROUP",
+				Seeders: 5,
+			}
+			expectSearch(bare)
+			dlM.EXPECT().
+				Grab(mock.AnythingOfType(ctxType), bare, uint32(7)).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			store.EXPECT().
+				ResetMovieGrabFailures(mock.AnythingOfType(ctxType), uint32(7)).
+				Return(nil).Once()
+
+			Expect(syncer.SearchOne(ctx, movie)).To(Succeed())
+		})
+	})
+
+	DescribeTable("namesOtherYear",
+		func(release string, m *ent.Movie, want bool) {
+			Expect(namesOtherYear(release, m)).To(Equal(want))
+		},
+		Entry("the wanted year",
+			"Road.House.1989.1080p.BluRay.x264",
+			&ent.Movie{Title: "Road House", Year: 1989}, false),
+		Entry("a remake decades later",
+			"Road.House.2024.1080p.WEB.x264",
+			&ent.Movie{Title: "Road House", Year: 1989}, true),
+		Entry("one year late, a festival premiere against its release",
+			"Road.House.1990.1080p.BluRay.x264",
+			&ent.Movie{Title: "Road House", Year: 1989}, false),
+		Entry("one year early",
+			"Road.House.1988.1080p.BluRay.x264",
+			&ent.Movie{Title: "Road House", Year: 1989}, false),
+		Entry("two years off",
+			"Road.House.1991.1080p.BluRay.x264",
+			&ent.Movie{Title: "Road House", Year: 1989}, true),
+		Entry("no year in the release",
+			"Road.House.1080p.BluRay.x264",
+			&ent.Movie{Title: "Road House", Year: 1989}, false),
+		Entry("no year on the movie",
+			"Road.House.2024.1080p.WEB.x264",
+			&ent.Movie{Title: "Road House"}, false),
+		Entry("a title opening on a number, year stated",
+			"2001.A.Space.Odyssey.1968.1080p.BluRay.x264",
+			&ent.Movie{Title: "2001: A Space Odyssey", Year: 1968}, false),
+		Entry("a title opening on a number, no year",
+			"2001.A.Space.Odyssey.1080p.BluRay.x264",
+			&ent.Movie{Title: "2001: A Space Odyssey", Year: 1968}, false),
+		Entry("a title that is a number, year stated",
+			"1917.2019.1080p.BluRay.x264",
+			&ent.Movie{Title: "1917", Year: 2019}, false),
+		Entry("a title that is a number, no year",
+			"1917.1080p.BluRay.x264",
+			&ent.Movie{Title: "1917", Year: 2019}, false),
+		Entry("a title ending on a number, year stated",
+			"Blade.Runner.2049.2017.1080p.BluRay.x264",
+			&ent.Movie{Title: "Blade Runner 2049", Year: 2017}, false),
+		Entry("a title ending on a number the parser reads as the year",
+			"Blade.Runner.2049.1080p.BluRay.x264",
+			&ent.Movie{Title: "Blade Runner 2049", Year: 2017}, false),
+		Entry("that number in the original title only",
+			"Wonder.Woman.1984.1080p.WEB.x264",
+			&ent.Movie{
+				Title:         "Wonder Woman 84",
+				OriginalTitle: "Wonder Woman 1984",
+				Year:          2020,
+			}, false),
+		Entry("that number in an alias only",
+			"Death.Race.2000.1080p.BluRay.x264",
+			&ent.Movie{
+				Title:   "La Course à la mort de l'an 2000",
+				Aliases: []string{"Death Race 2000"},
+				Year:    1975,
+			}, false),
+		Entry("the film's year, then the year of the cut",
+			"Blade.Runner.1982.The.Final.Cut.2007.1080p.BluRay.x264-GRP",
+			&ent.Movie{Title: "Blade Runner", Year: 1982}, false),
+		Entry("the film's year, then the year of the restoration",
+			"Metropolis.1927.Restored.2010.1080p.BluRay.x264-GRP",
+			&ent.Movie{Title: "Metropolis", Year: 1927}, false),
+		Entry("the film's year, then the year of the remaster",
+			"Les.Visiteurs.1993.MULTI.1080p.BluRay.REMASTER.2023.x264",
+			&ent.Movie{Title: "Les Visiteurs", Year: 1993}, false),
+		Entry("the film's year, then a bracketed disc year",
+			"Road.House.1989.1080p.BluRay.x264-GRP[2024]",
+			&ent.Movie{Title: "Road House", Year: 1989}, false),
+		Entry("two years, neither the film's",
+			"Road.House.2024.1080p.BluRay.REMASTER.2025.x264",
+			&ent.Movie{Title: "Road House", Year: 1989}, true),
+		Entry("the other film's year, then the wanted one as the edition's",
+			"Road.House.1989.1080p.BluRay.REMASTER.2024.x264",
+			&ent.Movie{Title: "Road House", Year: 2024}, true),
+		Entry("the other film's year in parentheses, then the wanted one",
+			"Road House (1989) 1080p BluRay 2024 Remaster",
+			&ent.Movie{Title: "Road House", Year: 2024}, true),
+		Entry("the wanted year in parentheses, then the edition's",
+			"Road House (1989) 1080p BluRay 2024 Remaster",
+			&ent.Movie{Title: "Road House", Year: 1989}, false),
+		Entry("a title that is the movie's own year, another film's year",
+			"1984.1956.1080p.BluRay.x264-GRP",
+			&ent.Movie{Title: "1984", Year: 1984}, true),
+		Entry("an alias that is the movie's own year, another film's year",
+			"1984.1956.1080p.BluRay.x264-GRP",
+			&ent.Movie{
+				Title:   "Nineteen Eighty-Four",
+				Aliases: []string{"1984"},
+				Year:    1984,
+			}, true),
+		Entry("a title that is the movie's own year, stated again",
+			"1984.1984.1080p.BluRay.x264-GRP",
+			&ent.Movie{Title: "1984", Year: 1984}, false),
+		Entry("a title that is the movie's own year, no year stated",
+			"1984.1080p.BluRay.x264-GRP",
+			&ent.Movie{Title: "1984", Year: 1984}, false),
+		Entry("a title that is the movie's own year, only an edition year",
+			"1984.1080p.BluRay.REMASTER.2023.x264-GRP",
+			&ent.Movie{Title: "1984", Year: 1984}, true),
+		Entry("a numbered title the movie also carries without its number",
+			"Wonder.Woman.1984.2020.1080p.WEB.x264",
+			&ent.Movie{
+				Title:   "Wonder Woman 1984",
+				Aliases: []string{"Wonder Woman"},
+				Year:    2020,
+			}, false),
+		Entry("the sequel's number against the first film",
+			"Blade.Runner.2049.1080p.BluRay.x264",
+			&ent.Movie{Title: "Blade Runner", Year: 1982}, true),
+		Entry("a numbered title with another film's year",
+			"Death.Race.2000.2008.1080p.BluRay.x264",
+			&ent.Movie{Title: "Death Race 2000", Year: 1975}, true),
+	)
+
 	Context("when the movie pins a quality profile", func() {
 		BeforeEach(func() { movie.QualityProfile = uhdProfile })
 

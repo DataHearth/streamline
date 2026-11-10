@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"regexp"
+	"slices"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -371,7 +375,11 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	resultCount = len(results)
 	match, ok := scoreBest(
 		qualityFor(ctx, config.MediaMovie, m.QualityProfile),
-		dropRejected(ctx, results, blocklist.Movie, m.ID),
+		dropOtherYears(
+			ctx,
+			dropRejected(ctx, results, blocklist.Movie, m.ID),
+			m,
+		),
 	)
 	if e := s.db.SetMovieLastSearchAt(ctx, m.ID, time.Now()); e != nil {
 		slog.WarnContext(ctx,
@@ -436,4 +444,105 @@ func scoreBest(
 		return ranked[0], true
 	}
 	return indexer.SearchResult{}, false
+}
+
+// releaseYearDrift is how far a release's stated year may sit from the
+// movie's and still name it: providers date a film by its first screening and
+// release groups by the one they ripped, so a festival premiere in December
+// and a release the following year are the same film.
+const releaseYearDrift = 1
+
+// namesOtherYear reports whether a release states a year that places it on a
+// different film than m. A title is not an identity: "Road House" is a 1989
+// film and a 2024 one, a keyword search returns both, and a profile scores
+// them alike.
+//
+// Silence is not a mismatch: a release stating no year stays eligible, and so
+// does every release while the movie's own year is unknown.
+//
+// The film's year is the one stated right after its title (yearsAfterTitle),
+// and when the name has one the release is judged on it alone. The parser's
+// year is the fallback for a name whose title is not spelled exactly as the
+// movie's: it is the last year-like token, so a release of "Blade Runner
+// 2049" that states no year parses as "Blade Runner" of 2049. Such a token is
+// the title's own when the parsed title followed by it names the movie under
+// one of its titles, and then it is no evidence of another film.
+func namesOtherYear(release string, m *ent.Movie) bool {
+	parsed := library.Parse(release)
+	if parsed.Year == 0 || m.Year == 0 {
+		return false
+	}
+	titles := append([]string{m.Title, m.OriginalTitle}, m.Aliases...)
+	if years := yearsAfterTitle(release, titles); len(years) > 0 {
+		return !slices.ContainsFunc(years, func(y int) bool {
+			return withinYearDrift(y, m)
+		})
+	}
+	if withinYearDrift(int(parsed.Year), m) {
+		return false
+	}
+	withYear := fmt.Sprintf("%s %d", parsed.Title, parsed.Year)
+	return !slices.ContainsFunc(titles, func(t string) bool {
+		return library.TitleNamesSameWork(withYear, t)
+	})
+}
+
+// releaseYearRe finds every year-like token of a release name, the same shape
+// library.Parse reads a year from.
+var releaseYearRe = regexp.MustCompile(`\b(?:19|20)\d{2}\b`)
+
+func withinYearDrift(year int, m *ent.Movie) bool {
+	drift := year - int(m.Year)
+	return drift >= -releaseYearDrift && drift <= releaseYearDrift
+}
+
+// yearsAfterTitle returns the year-like tokens of a release that directly
+// follow one of the movie's titles: what precedes the token is that title and
+// nothing else. That is where a release states the film's year, wherever the
+// parser's last-token rule lands: on the edition's year in
+// "Blade.Runner.1982.The.Final.Cut.2007" or "Road House (1989) 1080p BluRay
+// 2024 Remaster", whose film is the 1982 and the 1989 one.
+//
+// A token that is the title, or part of it, never follows the title, so it is
+// never taken for the film's year: "1984.1956.1080p" states 1956 for a movie
+// titled or aliased "1984", whatever year that movie is from. More than one
+// token can qualify when one title of the movie extends another with a number
+// ("Wonder Woman" and "Wonder Woman 1984"); the caller keeps the release when
+// any of them is the movie's.
+func yearsAfterTitle(release string, titles []string) []int {
+	var years []int
+	for _, loc := range releaseYearRe.FindAllStringIndex(release, -1) {
+		before := release[:loc[0]]
+		if !slices.ContainsFunc(titles, func(t string) bool {
+			return library.TitleMatchesStrict(before, t)
+		}) {
+			continue
+		}
+		if y, err := strconv.Atoi(release[loc[0]:loc[1]]); err == nil {
+			years = append(years, y)
+		}
+	}
+	return years
+}
+
+// dropOtherYears removes the releases of another film sharing m's title, so
+// an unattended pick is made among releases of the film that is wanted.
+// Interactive search lists them: a person reads the year.
+func dropOtherYears(
+	ctx context.Context,
+	results []indexer.SearchResult,
+	m *ent.Movie,
+) []indexer.SearchResult {
+	return slices.DeleteFunc(
+		slices.Clone(results),
+		func(r indexer.SearchResult) bool {
+			if !namesOtherYear(r.Title, m) {
+				return false
+			}
+			slog.DebugContext(ctx, "skipping a release of another year",
+				"movie.id", m.ID, "movie.year", m.Year,
+				"release", r.Title, "indexer", r.Indexer)
+			return true
+		},
+	)
 }
