@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"maps"
 	"os"
-	"path/filepath"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -391,16 +390,17 @@ func (s *Service) commitAttach(
 	// which a failed row write takes back out before the old one is restored.
 	var aside, asidePath string
 	placed := false
+	// The importer is handed the scanned file itself, never its folder: a
+	// flat folder holds several movies, and resolving "the" media file of
+	// one fails every one of them with ErrMultipleMedia.
 	src := f.SourcePath
 	if scan.Mode == entimportscan.ModeRename {
-		dir := filepath.Dir(f.SourcePath)
 		if len(existing) > 0 {
 			// A source the importer cannot resolve fails in the import itself.
-			if resolved, dest, derr := s.importSvc.MovieDestination(
-				dir,
+			if _, dest, derr := s.importSvc.MovieDestination(
+				src,
 				m,
 			); derr == nil {
-				src = resolved
 				for _, mf := range existing {
 					if !samePath(dest, mf.Path) {
 						continue
@@ -415,7 +415,7 @@ func (s *Service) commitAttach(
 		}
 		imported, err := s.importSvc.ImportMovieWithMode(
 			ctx,
-			dir,
+			src,
 			m,
 			string(scan.ImportMode),
 		)
@@ -513,9 +513,10 @@ func (s *Service) commitRename(
 	if err != nil {
 		return commitFail("add movie", err, 0)
 	}
+	// The scanned file, not its folder: see commitAttach.
 	imported, err := s.importSvc.ImportMovieWithMode(
 		ctx,
-		filepath.Dir(f.SourcePath),
+		f.SourcePath,
 		m,
 		string(scan.ImportMode),
 	)
