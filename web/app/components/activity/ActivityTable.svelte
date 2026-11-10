@@ -30,6 +30,7 @@
 		selected,
 		onToggle,
 		onToggleAll,
+		expandedId = $bindable(null),
 	}: {
 		view: "queue" | "history";
 		rows: (QueueEntry | HistoryEntry)[];
@@ -52,6 +53,9 @@
 		selected?: Set<number>;
 		onToggle?: (id: number, on: boolean) => void;
 		onToggleAll?: (on: boolean) => void;
+		// The open row. Bound by the page, which opens one from ?download= and
+		// keeps its id in the URL.
+		expandedId?: number | null;
 	} = $props();
 
 	let selectable = $derived(!!onToggle && !!selected);
@@ -216,7 +220,6 @@
 	// One row open at a time: two expanded details in a table read as two competing
 	// answers to "what am I looking at", and on a short viewport the second one
 	// pushes the first off screen.
-	let expandedId = $state<number | null>(null);
 	function toggle(id: number) {
 		expandedId = expandedId === id ? null : id;
 	}

@@ -1,5 +1,8 @@
 <script lang="ts">
-	import { Activity } from "@lucide/svelte";
+	import { Activity, ChevronRight } from "@lucide/svelte";
+	import { link } from "@lib/routes";
+	import { DOWNLOAD_CHIP, DOWNLOAD_CHIP_ARROW } from "@lib/title-downloads";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { formatRelative, formatDateTime } from "@lib/dates";
 	import {
 		eventSubject,
@@ -35,11 +38,14 @@
 			label: event.type,
 		}}
 		{@const subject = eventSubject(event)}
-		<li>
+		<!-- The row opens the title; the download it came from, when that record
+		     still exists, is a link of its own beside it (a link cannot hold
+		     another). -->
+		<li class="flex items-start gap-1">
 			<svelte:element
 				this={subject.href ? "a" : "div"}
 				href={subject.href}
-				class="grid grid-cols-[26px_minmax(0,1fr)_auto] items-start gap-2.5 rounded-md px-2 py-2.5 transition {subject.href
+				class="grid min-w-0 flex-1 grid-cols-[26px_minmax(0,1fr)_auto] items-start gap-2.5 rounded-md px-2 py-2.5 transition {subject.href
 					? 'hover:bg-surface'
 					: ''}"
 			>
@@ -77,6 +83,19 @@
 					<span class="text-fg-subtle">{size(event.payload)}</span>
 				</div>
 			</svelte:element>
+			{#if event.download_id}
+				<a
+					href={link.download(event.download_id)}
+					title={i18n.activity_download_open()}
+					data-download-link={event.download_id}
+					class="group/dl touch-hit mr-2 inline-flex shrink-0 cursor-pointer lg:mt-2.5"
+				>
+					<span class={DOWNLOAD_CHIP}>
+						{i18n.activity_download_link()}
+						<span class={DOWNLOAD_CHIP_ARROW}><ChevronRight size={12} aria-hidden="true" /></span>
+					</span>
+				</a>
+			{/if}
 		</li>
 	{/each}
 </ul>

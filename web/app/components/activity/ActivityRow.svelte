@@ -58,6 +58,7 @@
 		checked && "bg-accent-soft",
 	)}
 	aria-expanded={expanded}
+	data-download={item.id}
 	onclick={() => onToggle(item.id)}
 >
 	{#if checked !== undefined}

@@ -328,7 +328,6 @@
 			view="transcoding"
 			{statusFilter}
 			{search}
-			{activeFilters}
 			onOpenFilters={() => (filtersOpen = true)}
 			onStatusFilterChange={(s) => (statusFilter = s)}
 			onSearchChange={(q) => (search = q)}

@@ -65,11 +65,12 @@
 		onStatusFilterChange,
 		onSearchChange,
 		onOpenFilters,
-		activeFilters = 0,
 		onClearCompleted,
 		clearableCount = 0,
 		onAddTorrent,
 		canAddTorrent = false,
+		scopeLabel,
+		onClearScope,
 	}: {
 		leading?: Snippet;
 		view: View;
@@ -78,15 +79,22 @@
 		onStatusFilterChange: (s: string[]) => void;
 		onSearchChange: (q: string) => void;
 		onOpenFilters: () => void;
-		activeFilters?: number;
 		onClearCompleted?: () => void;
 		clearableCount?: number;
 		onAddTorrent?: () => void;
 		canAddTorrent?: boolean;
+		// A title the queue is filtered on (a season reached from its page): the
+		// strip's first chip, always on. Its ✕, or the strip's, clears it.
+		scopeLabel?: string;
+		onClearScope?: () => void;
 	} = $props();
 
 	let chips = $derived(ACTIVITY_CHIPS[view]);
-	let anyActive = $derived(chips.some((c) => statusFilter.includes(c.key)));
+	let anyActive = $derived(!!scopeLabel || chips.some((c) => statusFilter.includes(c.key)));
+	// The magnifier lights for what is behind it, the search, and nothing else:
+	// the chips are in the open beside it, and lit for one of them it pointed at
+	// the wrong control.
+	let searching = $derived(search.trim() !== "");
 	function toggleChip(key: string) {
 		onStatusFilterChange(
 			statusFilter.includes(key)
@@ -122,6 +130,20 @@
 			class="filter-chips flex min-w-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
 			aria-label={i18n.activity_status_filter()}
 		>
+			{#if scopeLabel}
+				<button
+					type="button"
+					onclick={() => onClearScope?.()}
+					aria-pressed="true"
+					data-title-filter
+					title={i18n.activity_show_whole_queue()}
+					class="inline-flex h-11 max-w-[14rem] shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-sm bg-accent-soft px-2.5 text-[11.5px] font-medium text-accent-text transition hover:text-fg lg:h-7"
+				>
+					<span class="truncate">{scopeLabel}</span>
+					<X size={11} class="shrink-0" aria-hidden="true" />
+					<span class="sr-only">{i18n.activity_show_whole_queue()}</span>
+				</button>
+			{/if}
 			{#each chips as c (c.key)}
 				{@const on = statusFilter.includes(c.key)}
 				<button
@@ -144,7 +166,10 @@
 		{#if anyActive}
 			<button
 				type="button"
-				onclick={() => onStatusFilterChange([])}
+				onclick={() => {
+					onStatusFilterChange([]);
+					onClearScope?.();
+				}}
 				aria-label={i18n.activity_clear_status_filters()}
 				title={i18n.activity_clear_status_filters()}
 				class="ml-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-sm text-fg-faint transition hover:bg-surface hover:text-fg"
@@ -167,17 +192,17 @@
 			title={i18n.common_search_and_sort()}
 			class={cn(
 				"relative ml-auto grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-md border transition lg:hidden",
-				activeFilters > 0
+				searching
 					? "border-accent-line bg-accent-soft text-accent-text"
 					: "border-border-strong bg-bg-elevated text-fg-muted hover:text-fg",
 			)}
 		>
 			<Search size={15} aria-hidden="true" />
-			{#if activeFilters > 0}
+			{#if searching}
 				<span
 					class="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 font-mono text-[9.5px] font-semibold text-fg-on-accent"
 				>
-					{activeFilters}
+					1
 				</span>
 			{/if}
 		</button>
