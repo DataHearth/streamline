@@ -83,14 +83,6 @@ var _ = Describe("Tracker", Label("unit"), func() {
 		Consistently(lastClient, "200ms").Should(BeEmpty())
 	})
 
-	It("keeps the two credentials apart", func() {
-		tracker.Touch(ctx, userID, OPDS, time.Time{}, "KOReader")
-		Eventually(func() string {
-			return client.User.GetX(ctx, userID).OpdsLastClient
-		}).Should(Equal("KOReader"))
-		Expect(lastClient()).To(BeEmpty())
-	})
-
 	DescribeTable(
 		"sanitises the client string",
 		func(in, want string) {

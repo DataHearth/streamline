@@ -56,14 +56,6 @@ type User struct {
 	SubsonicCanChangePassword bool `json:"subsonic_can_change_password,omitempty"`
 	// SubsonicMaxBitRate holds the value of the "subsonic_max_bit_rate" field.
 	SubsonicMaxBitRate uint16 `json:"subsonic_max_bit_rate,omitempty"`
-	// OpdsToken holds the value of the "opds_token" field.
-	OpdsToken string `json:"-"`
-	// OpdsCreatedAt holds the value of the "opds_created_at" field.
-	OpdsCreatedAt *time.Time `json:"opds_created_at,omitempty"`
-	// OpdsLastUsedAt holds the value of the "opds_last_used_at" field.
-	OpdsLastUsedAt *time.Time `json:"opds_last_used_at,omitempty"`
-	// OpdsLastClient holds the value of the "opds_last_client" field.
-	OpdsLastClient string `json:"opds_last_client,omitempty"`
 	// FailedLoginCount holds the value of the "failed_login_count" field.
 	FailedLoginCount uint8 `json:"failed_login_count,omitempty"`
 	// LastFailedLoginAt holds the value of the "last_failed_login_at" field.
@@ -193,9 +185,9 @@ func (*User) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case user.FieldID, user.FieldSubsonicMaxBitRate, user.FieldFailedLoginCount:
 			values[i] = new(sql.NullInt64)
-		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldAuthMethod, user.FieldDisplayName, user.FieldDeviceEmail, user.FieldSubsonicPassword, user.FieldSubsonicLastClient, user.FieldOpdsToken, user.FieldOpdsLastClient:
+		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldAuthMethod, user.FieldDisplayName, user.FieldDeviceEmail, user.FieldSubsonicPassword, user.FieldSubsonicLastClient:
 			values[i] = new(sql.NullString)
-		case user.FieldCreateTime, user.FieldUpdateTime, user.FieldSubsonicCreatedAt, user.FieldSubsonicLastUsedAt, user.FieldOpdsCreatedAt, user.FieldOpdsLastUsedAt, user.FieldLastFailedLoginAt, user.FieldLockedUntil:
+		case user.FieldCreateTime, user.FieldUpdateTime, user.FieldSubsonicCreatedAt, user.FieldSubsonicLastUsedAt, user.FieldLastFailedLoginAt, user.FieldLockedUntil:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -333,32 +325,6 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field subsonic_max_bit_rate", values[i])
 			} else if value.Valid {
 				_m.SubsonicMaxBitRate = uint16(value.Int64)
-			}
-		case user.FieldOpdsToken:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field opds_token", values[i])
-			} else if value.Valid {
-				_m.OpdsToken = value.String
-			}
-		case user.FieldOpdsCreatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field opds_created_at", values[i])
-			} else if value.Valid {
-				_m.OpdsCreatedAt = new(time.Time)
-				*_m.OpdsCreatedAt = value.Time
-			}
-		case user.FieldOpdsLastUsedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field opds_last_used_at", values[i])
-			} else if value.Valid {
-				_m.OpdsLastUsedAt = new(time.Time)
-				*_m.OpdsLastUsedAt = value.Time
-			}
-		case user.FieldOpdsLastClient:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field opds_last_client", values[i])
-			} else if value.Valid {
-				_m.OpdsLastClient = value.String
 			}
 		case user.FieldFailedLoginCount:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -519,21 +485,6 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("subsonic_max_bit_rate=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicMaxBitRate))
-	builder.WriteString(", ")
-	builder.WriteString("opds_token=<sensitive>")
-	builder.WriteString(", ")
-	if v := _m.OpdsCreatedAt; v != nil {
-		builder.WriteString("opds_created_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
-	builder.WriteString(", ")
-	if v := _m.OpdsLastUsedAt; v != nil {
-		builder.WriteString("opds_last_used_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
-	builder.WriteString(", ")
-	builder.WriteString("opds_last_client=")
-	builder.WriteString(_m.OpdsLastClient)
 	builder.WriteString(", ")
 	builder.WriteString("failed_login_count=")
 	builder.WriteString(fmt.Sprintf("%v", _m.FailedLoginCount))

@@ -4455,57 +4455,6 @@ paths:
           description: Disabled
         "401":
           $ref: "#/components/responses/Unauthorized"
-  /account/opds-token:
-    get:
-      operationId: getOpdsToken
-      summary: Whether a OPDS token is set, and when it was last used
-      description: >-
-        Requires session authentication (JWT); a request authenticated with an
-        API key is rejected. Never carries the secret: only the POST that
-        generates it does.
-      tags: [account]
-      security:
-        - BearerAuth: []
-      responses:
-        "200":
-          description: Access state
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/AppAccess" }
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-    post:
-      operationId: rotateOpdsToken
-      summary: Generate or rotate the OPDS token
-      description: >-
-        Requires session authentication (JWT). The only response that carries
-        the secret, in plaintext; a lost one is replaced, not read back.
-        The secret is the HTTP Basic password; the user name is the account email. Only its hash is stored. Rotation signs every reader out.
-      tags: [account]
-      security:
-        - BearerAuth: []
-      responses:
-        "200":
-          description: The new secret, shown this once
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/AppAccessCreated" }
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-    delete:
-      operationId: disableOpdsToken
-      summary: Disable access by clearing the OPDS token
-      description: >-
-        Requires session authentication (JWT). Also clears created, last used
-        and client.
-      tags: [account]
-      security:
-        - BearerAuth: []
-      responses:
-        "204":
-          description: Disabled
-        "401":
-          $ref: "#/components/responses/Unauthorized"
   /auth/me/sessions:
     get:
       operationId: listMySessions
@@ -13890,7 +13839,7 @@ components:
     AppAccess:
       type: object
       description: >-
-        One Subsonic or OPDS credential of the caller. Never carries the
+        One Subsonic credential of the caller. Never carries the
         secret.
       required: [enabled, username]
       properties:
@@ -13915,8 +13864,7 @@ components:
           type: string
           maxLength: 64
           description: >-
-            Client-supplied: the Subsonic `c` parameter, or the first product
-            token of the OPDS User-Agent. Display as text only.
+            Client-supplied: the Subsonic `c` parameter. Display as text only.
 
     AppAccessCreated:
       allOf:
@@ -13927,7 +13875,7 @@ components:
             secret:
               type: string
               description: >-
-                The Subsonic password or the OPDS token, in plaintext. This
+                The Subsonic password, in plaintext. This
                 response only.
 
     Session:

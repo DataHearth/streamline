@@ -1914,11 +1914,11 @@ export type ImportScanBook = {
 	updated_at: string;
 };
 
-// Subsonic and OPDS access (/account/subsonic-password, /account/opds-token).
+// Subsonic access (/account/subsonic-password).
 // Both sign in with the account's email and a secret; neither puts the secret in
 // a URL, where logs and referrers would keep it. The secret is only in the POST
 // response.
-export type AppAccessKind = "subsonic" | "opds";
+export type AppAccessKind = "subsonic";
 export type AppAccess = {
 	enabled: boolean;
 	// The name a client signs in with: the account's email.
@@ -1930,7 +1930,7 @@ export type AppAccess = {
 	// The client's product name on its last call, e.g. "Symfonium".
 	last_client?: string;
 };
-// POST: the Subsonic password or the OPDS token, shown once.
+// POST: the Subsonic password, shown once.
 export type AppAccessCreated = AppAccess & { secret: string };
 
 export type ImportStartRequest = {

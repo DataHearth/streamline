@@ -1095,12 +1095,8 @@ func init() {
 	user.DefaultSubsonicMaxBitRate = userDescSubsonicMaxBitRate.Default.(uint16)
 	// user.SubsonicMaxBitRateValidator is a validator for the "subsonic_max_bit_rate" field. It is called by the builders before save.
 	user.SubsonicMaxBitRateValidator = userDescSubsonicMaxBitRate.Validators[0].(func(uint16) error)
-	// userDescOpdsLastClient is the schema descriptor for opds_last_client field.
-	userDescOpdsLastClient := userFields[20].Descriptor()
-	// user.OpdsLastClientValidator is a validator for the "opds_last_client" field. It is called by the builders before save.
-	user.OpdsLastClientValidator = userDescOpdsLastClient.Validators[0].(func(string) error)
 	// userDescFailedLoginCount is the schema descriptor for failed_login_count field.
-	userDescFailedLoginCount := userFields[21].Descriptor()
+	userDescFailedLoginCount := userFields[17].Descriptor()
 	// user.DefaultFailedLoginCount holds the default value on creation for the failed_login_count field.
 	user.DefaultFailedLoginCount = userDescFailedLoginCount.Default.(uint8)
 }

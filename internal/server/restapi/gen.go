@@ -4658,13 +4658,13 @@ type ApiKeyCreated struct {
 // ApiKeyScope `read` may only send GET and HEAD, whatever the owner's role; `full` acts with the owner's current role.
 type ApiKeyScope string
 
-// AppAccess One Subsonic or OPDS credential of the caller. Never carries the secret.
+// AppAccess One Subsonic credential of the caller. Never carries the secret.
 type AppAccess struct {
 	// CreatedAt Set when the secret is generated or rotated.
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 	Enabled   bool       `json:"enabled"`
 
-	// LastClient Client-supplied: the Subsonic `c` parameter, or the first product token of the OPDS User-Agent. Display as text only.
+	// LastClient Client-supplied: the Subsonic `c` parameter. Display as text only.
 	LastClient *string `json:"last_client,omitempty"`
 
 	// LastUsedAt Recorded after a successful authentication, at most once every five minutes.
@@ -4680,13 +4680,13 @@ type AppAccessCreated struct {
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 	Enabled   bool       `json:"enabled"`
 
-	// LastClient Client-supplied: the Subsonic `c` parameter, or the first product token of the OPDS User-Agent. Display as text only.
+	// LastClient Client-supplied: the Subsonic `c` parameter. Display as text only.
 	LastClient *string `json:"last_client,omitempty"`
 
 	// LastUsedAt Recorded after a successful authentication, at most once every five minutes.
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 
-	// Secret The Subsonic password or the OPDS token, in plaintext. This response only.
+	// Secret The Subsonic password, in plaintext. This response only.
 	Secret string `json:"secret"`
 
 	// Username The account email, which is what a player or reader types as its user name.
@@ -12117,15 +12117,6 @@ func (t *RequestMetadata) UnmarshalJSON(b []byte) error {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// DisableOpdsToken Disable access by clearing the OPDS token
-	// (DELETE /account/opds-token)
-	DisableOpdsToken(w http.ResponseWriter, r *http.Request)
-	// GetOpdsToken Whether a OPDS token is set, and when it was last used
-	// (GET /account/opds-token)
-	GetOpdsToken(w http.ResponseWriter, r *http.Request)
-	// RotateOpdsToken Generate or rotate the OPDS token
-	// (POST /account/opds-token)
-	RotateOpdsToken(w http.ResponseWriter, r *http.Request)
 	// DisableSubsonicPassword Disable access by clearing the Subsonic password
 	// (DELETE /account/subsonic-password)
 	DisableSubsonicPassword(w http.ResponseWriter, r *http.Request)
@@ -12947,24 +12938,6 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
-
-// DisableOpdsToken Disable access by clearing the OPDS token
-// (DELETE /account/opds-token)
-func (_ Unimplemented) DisableOpdsToken(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// GetOpdsToken Whether a OPDS token is set, and when it was last used
-// (GET /account/opds-token)
-func (_ Unimplemented) GetOpdsToken(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// RotateOpdsToken Generate or rotate the OPDS token
-// (POST /account/opds-token)
-func (_ Unimplemented) RotateOpdsToken(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
 
 // DisableSubsonicPassword Disable access by clearing the Subsonic password
 // (DELETE /account/subsonic-password)
@@ -14592,48 +14565,6 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
-
-// DisableOpdsToken operation middleware
-func (siw *ServerInterfaceWrapper) DisableOpdsToken(w http.ResponseWriter, r *http.Request) {
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DisableOpdsToken(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetOpdsToken operation middleware
-func (siw *ServerInterfaceWrapper) GetOpdsToken(w http.ResponseWriter, r *http.Request) {
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOpdsToken(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// RotateOpdsToken operation middleware
-func (siw *ServerInterfaceWrapper) RotateOpdsToken(w http.ResponseWriter, r *http.Request) {
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RotateOpdsToken(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
 
 // DisableSubsonicPassword operation middleware
 func (siw *ServerInterfaceWrapper) DisableSubsonicPassword(w http.ResponseWriter, r *http.Request) {
@@ -23603,15 +23534,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/account/subsonic-password", wrapper.RotateSubsonicPassword)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/account/opds-token", wrapper.DisableOpdsToken)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/account/opds-token", wrapper.GetOpdsToken)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/account/opds-token", wrapper.RotateOpdsToken)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/auth/me/sessions", wrapper.ListMySessions)
 	})
 	r.Group(func(r chi.Router) {
@@ -24237,105 +24159,6 @@ type UserUnlockedResponse struct {
 type UserUpdatedJSONResponse User
 
 type UsersListJSONResponse UserList
-
-type DisableOpdsTokenRequestObject struct {
-}
-
-type DisableOpdsTokenResponseObject interface {
-	VisitDisableOpdsTokenResponse(w http.ResponseWriter) error
-}
-
-type DisableOpdsToken204Response struct {
-}
-
-func (response DisableOpdsToken204Response) VisitDisableOpdsTokenResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
-	return nil
-}
-
-type DisableOpdsToken401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response DisableOpdsToken401JSONResponse) VisitDisableOpdsTokenResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetOpdsTokenRequestObject struct {
-}
-
-type GetOpdsTokenResponseObject interface {
-	VisitGetOpdsTokenResponse(w http.ResponseWriter) error
-}
-
-type GetOpdsToken200JSONResponse AppAccess
-
-func (response GetOpdsToken200JSONResponse) VisitGetOpdsTokenResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetOpdsToken401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response GetOpdsToken401JSONResponse) VisitGetOpdsTokenResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type RotateOpdsTokenRequestObject struct {
-}
-
-type RotateOpdsTokenResponseObject interface {
-	VisitRotateOpdsTokenResponse(w http.ResponseWriter) error
-}
-
-type RotateOpdsToken200JSONResponse AppAccessCreated
-
-func (response RotateOpdsToken200JSONResponse) VisitRotateOpdsTokenResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type RotateOpdsToken401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response RotateOpdsToken401JSONResponse) VisitRotateOpdsTokenResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
 
 type DisableSubsonicPasswordRequestObject struct {
 }
@@ -43298,15 +43121,6 @@ func (response UnlockUser404JSONResponse) VisitUnlockUserResponse(w http.Respons
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
-	// DisableOpdsToken Disable access by clearing the OPDS token
-	// (DELETE /account/opds-token)
-	DisableOpdsToken(ctx context.Context, request DisableOpdsTokenRequestObject) (DisableOpdsTokenResponseObject, error)
-	// GetOpdsToken Whether a OPDS token is set, and when it was last used
-	// (GET /account/opds-token)
-	GetOpdsToken(ctx context.Context, request GetOpdsTokenRequestObject) (GetOpdsTokenResponseObject, error)
-	// RotateOpdsToken Generate or rotate the OPDS token
-	// (POST /account/opds-token)
-	RotateOpdsToken(ctx context.Context, request RotateOpdsTokenRequestObject) (RotateOpdsTokenResponseObject, error)
 	// DisableSubsonicPassword Disable access by clearing the Subsonic password
 	// (DELETE /account/subsonic-password)
 	DisableSubsonicPassword(ctx context.Context, request DisableSubsonicPasswordRequestObject) (DisableSubsonicPasswordResponseObject, error)
@@ -44162,78 +43976,6 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
-}
-
-// DisableOpdsToken operation middleware
-func (sh *strictHandler) DisableOpdsToken(w http.ResponseWriter, r *http.Request) {
-	var request DisableOpdsTokenRequestObject
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.DisableOpdsToken(ctx, request.(DisableOpdsTokenRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DisableOpdsToken")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DisableOpdsTokenResponseObject); ok {
-		if err := validResponse.VisitDisableOpdsTokenResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetOpdsToken operation middleware
-func (sh *strictHandler) GetOpdsToken(w http.ResponseWriter, r *http.Request) {
-	var request GetOpdsTokenRequestObject
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetOpdsToken(ctx, request.(GetOpdsTokenRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetOpdsToken")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetOpdsTokenResponseObject); ok {
-		if err := validResponse.VisitGetOpdsTokenResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// RotateOpdsToken operation middleware
-func (sh *strictHandler) RotateOpdsToken(w http.ResponseWriter, r *http.Request) {
-	var request RotateOpdsTokenRequestObject
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.RotateOpdsToken(ctx, request.(RotateOpdsTokenRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RotateOpdsToken")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(RotateOpdsTokenResponseObject); ok {
-		if err := validResponse.VisitRotateOpdsTokenResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
 }
 
 // DisableSubsonicPassword operation middleware

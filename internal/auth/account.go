@@ -2,8 +2,6 @@ package auth
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -214,14 +212,6 @@ func (s *auth) RevokeAPIKeyByID(
 
 const accountSecretLen = 24
 
-// HashOPDSToken is the form an OPDS token is stored in. The token is a random
-// 24-character secret, so an unsalted digest is enough: there is nothing to
-// guess from.
-func HashOPDSToken(token string) string {
-	sum := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(sum[:])
-}
-
 // RotateSubsonicPassword replaces the user's Subsonic password with a fresh
 // generated one and returns it.
 func (s *auth) RotateSubsonicPassword(
@@ -304,49 +294,5 @@ func (s *auth) DisableSubsonicPassword(ctx context.Context, userID uint32) error
 		)
 	}
 	slog.InfoContext(ctx, "subsonic password disabled", "user.id", userID)
-	return nil
-}
-
-// RotateOPDSToken replaces the user's OPDS token with a fresh generated one
-// and returns it. Only its hash is stored, so this return is the one time the
-// token is readable.
-func (s *auth) RotateOPDSToken(ctx context.Context, userID uint32) (string, error) {
-	ctx, span := tracer.Start(ctx, "auth.rotate_opds_token",
-		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
-	)
-	defer span.End()
-
-	token := random.Alphanumeric(accountSecretLen)
-	hashed := HashOPDSToken(token)
-	now := time.Now().UTC()
-	if _, err := s.db.UpdateUser(
-		ctx,
-		userID,
-		db.UpdateUserParams{OPDSToken: &hashed, OPDSCreatedAt: &now},
-	); err != nil {
-		return "", otelx.RecordSpanError(
-			span,
-			fmt.Errorf("rotate opds token: %w", err),
-		)
-	}
-	slog.InfoContext(ctx, "opds token rotated", "user.id", userID)
-	return token, nil
-}
-
-// DisableOPDSToken clears the user's OPDS token, ending OPDS access.
-func (s *auth) DisableOPDSToken(ctx context.Context, userID uint32) error {
-	ctx, span := tracer.Start(ctx, "auth.disable_opds_token",
-		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
-	)
-	defer span.End()
-
-	if _, err := s.db.UpdateUser(
-		ctx,
-		userID,
-		db.UpdateUserParams{ClearOPDSToken: true},
-	); err != nil {
-		return otelx.RecordSpanError(span, fmt.Errorf("disable opds token: %w", err))
-	}
-	slog.InfoContext(ctx, "opds token disabled", "user.id", userID)
 	return nil
 }

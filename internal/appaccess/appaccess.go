@@ -1,4 +1,4 @@
-// Package appaccess records when a user's Subsonic password or OPDS token was
+// Package appaccess records when a user's Subsonic password was
 // last used and by which client. It sits on the hot path of media streaming,
 // so the bookkeeping is debounced and the write never runs on the request.
 package appaccess
@@ -22,7 +22,6 @@ type Kind uint8
 
 const (
 	Subsonic Kind = iota + 1
-	OPDS
 )
 
 const (
@@ -105,10 +104,6 @@ func (t *Tracker) write(
 		upd = upd.Where(user.ID(k.userID), subsonicCreatedAt(credentialSince)).
 			SetSubsonicLastUsedAt(at).
 			SetSubsonicLastClient(client)
-	case OPDS:
-		upd = upd.Where(user.ID(k.userID), opdsCreatedAt(credentialSince)).
-			SetOpdsLastUsedAt(at).
-			SetOpdsLastClient(client)
 	}
 	_, err := upd.Save(ctx)
 	return err
@@ -136,11 +131,4 @@ func subsonicCreatedAt(since time.Time) predicate.User {
 		return user.SubsonicCreatedAtIsNil()
 	}
 	return user.SubsonicCreatedAtEQ(since)
-}
-
-func opdsCreatedAt(since time.Time) predicate.User {
-	if since.IsZero() {
-		return user.OpdsCreatedAtIsNil()
-	}
-	return user.OpdsCreatedAtEQ(since)
 }

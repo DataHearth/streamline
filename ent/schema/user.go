@@ -45,13 +45,6 @@ func (User) Fields() []ent.Field {
 		field.Bool("subsonic_can_change_password").Default(true),
 		// Kbps ceiling on every stream; 0 is none.
 		field.Uint16("subsonic_max_bit_rate").Default(0).Max(320),
-		// SHA-256 hex of the token, never the token: POST shows it once. Used
-		// as the HTTP Basic password for the OPDS catalog; never valid for web
-		// or REST auth.
-		field.String("opds_token").Optional().Sensitive(),
-		field.Time("opds_created_at").Optional().Nillable(),
-		field.Time("opds_last_used_at").Optional().Nillable(),
-		field.String("opds_last_client").Optional().MaxLen(64),
 		field.Uint8("failed_login_count").Default(0),
 		field.Time("last_failed_login_at").Optional().Nillable(),
 		field.Time("locked_until").Optional().Nillable(),

@@ -287,62 +287,6 @@ func (_c *UserCreate) SetNillableSubsonicMaxBitRate(v *uint16) *UserCreate {
 	return _c
 }
 
-// SetOpdsToken sets the "opds_token" field.
-func (_c *UserCreate) SetOpdsToken(v string) *UserCreate {
-	_c.mutation.SetOpdsToken(v)
-	return _c
-}
-
-// SetNillableOpdsToken sets the "opds_token" field if the given value is not nil.
-func (_c *UserCreate) SetNillableOpdsToken(v *string) *UserCreate {
-	if v != nil {
-		_c.SetOpdsToken(*v)
-	}
-	return _c
-}
-
-// SetOpdsCreatedAt sets the "opds_created_at" field.
-func (_c *UserCreate) SetOpdsCreatedAt(v time.Time) *UserCreate {
-	_c.mutation.SetOpdsCreatedAt(v)
-	return _c
-}
-
-// SetNillableOpdsCreatedAt sets the "opds_created_at" field if the given value is not nil.
-func (_c *UserCreate) SetNillableOpdsCreatedAt(v *time.Time) *UserCreate {
-	if v != nil {
-		_c.SetOpdsCreatedAt(*v)
-	}
-	return _c
-}
-
-// SetOpdsLastUsedAt sets the "opds_last_used_at" field.
-func (_c *UserCreate) SetOpdsLastUsedAt(v time.Time) *UserCreate {
-	_c.mutation.SetOpdsLastUsedAt(v)
-	return _c
-}
-
-// SetNillableOpdsLastUsedAt sets the "opds_last_used_at" field if the given value is not nil.
-func (_c *UserCreate) SetNillableOpdsLastUsedAt(v *time.Time) *UserCreate {
-	if v != nil {
-		_c.SetOpdsLastUsedAt(*v)
-	}
-	return _c
-}
-
-// SetOpdsLastClient sets the "opds_last_client" field.
-func (_c *UserCreate) SetOpdsLastClient(v string) *UserCreate {
-	_c.mutation.SetOpdsLastClient(v)
-	return _c
-}
-
-// SetNillableOpdsLastClient sets the "opds_last_client" field if the given value is not nil.
-func (_c *UserCreate) SetNillableOpdsLastClient(v *string) *UserCreate {
-	if v != nil {
-		_c.SetOpdsLastClient(*v)
-	}
-	return _c
-}
-
 // SetFailedLoginCount sets the "failed_login_count" field.
 func (_c *UserCreate) SetFailedLoginCount(v uint8) *UserCreate {
 	_c.mutation.SetFailedLoginCount(v)
@@ -678,11 +622,6 @@ func (_c *UserCreate) check() error {
 			return &ValidationError{Name: "subsonic_max_bit_rate", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_max_bit_rate": %w`, err)}
 		}
 	}
-	if v, ok := _c.mutation.OpdsLastClient(); ok {
-		if err := user.OpdsLastClientValidator(v); err != nil {
-			return &ValidationError{Name: "opds_last_client", err: fmt.Errorf(`ent: validator failed for field "User.opds_last_client": %w`, err)}
-		}
-	}
 	if _, ok := _c.mutation.FailedLoginCount(); !ok {
 		return &ValidationError{Name: "failed_login_count", err: errors.New(`ent: missing required field "User.failed_login_count"`)}
 	}
@@ -793,22 +732,6 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.SubsonicMaxBitRate(); ok {
 		_spec.SetField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
 		_node.SubsonicMaxBitRate = value
-	}
-	if value, ok := _c.mutation.OpdsToken(); ok {
-		_spec.SetField(user.FieldOpdsToken, field.TypeString, value)
-		_node.OpdsToken = value
-	}
-	if value, ok := _c.mutation.OpdsCreatedAt(); ok {
-		_spec.SetField(user.FieldOpdsCreatedAt, field.TypeTime, value)
-		_node.OpdsCreatedAt = &value
-	}
-	if value, ok := _c.mutation.OpdsLastUsedAt(); ok {
-		_spec.SetField(user.FieldOpdsLastUsedAt, field.TypeTime, value)
-		_node.OpdsLastUsedAt = &value
-	}
-	if value, ok := _c.mutation.OpdsLastClient(); ok {
-		_spec.SetField(user.FieldOpdsLastClient, field.TypeString, value)
-		_node.OpdsLastClient = value
 	}
 	if value, ok := _c.mutation.FailedLoginCount(); ok {
 		_spec.SetField(user.FieldFailedLoginCount, field.TypeUint8, value)

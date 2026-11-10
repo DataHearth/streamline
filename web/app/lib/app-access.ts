@@ -2,7 +2,6 @@ import type { AppAccess, AppAccessCreated, AppAccessKind } from "./types";
 
 export const APP_ACCESS_PATH: Record<AppAccessKind, string> = {
 	subsonic: "/account/subsonic-password",
-	opds: "/account/opds-token",
 };
 
 export const appAccessKey = (kind: AppAccessKind) => ["account", kind];

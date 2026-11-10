@@ -54105,10 +54105,6 @@ type UserMutation struct {
 	subsonic_can_change_password  *bool
 	subsonic_max_bit_rate         *uint16
 	addsubsonic_max_bit_rate      *int16
-	opds_token                    *string
-	opds_created_at               *time.Time
-	opds_last_used_at             *time.Time
-	opds_last_client              *string
 	failed_login_count            *uint8
 	addfailed_login_count         *int8
 	last_failed_login_at          *time.Time
@@ -55044,202 +55040,6 @@ func (m *UserMutation) ResetSubsonicMaxBitRate() {
 	m.addsubsonic_max_bit_rate = nil
 }
 
-// SetOpdsToken sets the "opds_token" field.
-func (m *UserMutation) SetOpdsToken(s string) {
-	m.opds_token = &s
-}
-
-// OpdsToken returns the value of the "opds_token" field in the mutation.
-func (m *UserMutation) OpdsToken() (r string, exists bool) {
-	v := m.opds_token
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldOpdsToken returns the old "opds_token" field's value of the User entity.
-// If the User object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserMutation) OldOpdsToken(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldOpdsToken is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldOpdsToken requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldOpdsToken: %w", err)
-	}
-	return oldValue.OpdsToken, nil
-}
-
-// ClearOpdsToken clears the value of the "opds_token" field.
-func (m *UserMutation) ClearOpdsToken() {
-	m.opds_token = nil
-	m.clearedFields[user.FieldOpdsToken] = struct{}{}
-}
-
-// OpdsTokenCleared returns if the "opds_token" field was cleared in this mutation.
-func (m *UserMutation) OpdsTokenCleared() bool {
-	_, ok := m.clearedFields[user.FieldOpdsToken]
-	return ok
-}
-
-// ResetOpdsToken resets all changes to the "opds_token" field.
-func (m *UserMutation) ResetOpdsToken() {
-	m.opds_token = nil
-	delete(m.clearedFields, user.FieldOpdsToken)
-}
-
-// SetOpdsCreatedAt sets the "opds_created_at" field.
-func (m *UserMutation) SetOpdsCreatedAt(t time.Time) {
-	m.opds_created_at = &t
-}
-
-// OpdsCreatedAt returns the value of the "opds_created_at" field in the mutation.
-func (m *UserMutation) OpdsCreatedAt() (r time.Time, exists bool) {
-	v := m.opds_created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldOpdsCreatedAt returns the old "opds_created_at" field's value of the User entity.
-// If the User object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserMutation) OldOpdsCreatedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldOpdsCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldOpdsCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldOpdsCreatedAt: %w", err)
-	}
-	return oldValue.OpdsCreatedAt, nil
-}
-
-// ClearOpdsCreatedAt clears the value of the "opds_created_at" field.
-func (m *UserMutation) ClearOpdsCreatedAt() {
-	m.opds_created_at = nil
-	m.clearedFields[user.FieldOpdsCreatedAt] = struct{}{}
-}
-
-// OpdsCreatedAtCleared returns if the "opds_created_at" field was cleared in this mutation.
-func (m *UserMutation) OpdsCreatedAtCleared() bool {
-	_, ok := m.clearedFields[user.FieldOpdsCreatedAt]
-	return ok
-}
-
-// ResetOpdsCreatedAt resets all changes to the "opds_created_at" field.
-func (m *UserMutation) ResetOpdsCreatedAt() {
-	m.opds_created_at = nil
-	delete(m.clearedFields, user.FieldOpdsCreatedAt)
-}
-
-// SetOpdsLastUsedAt sets the "opds_last_used_at" field.
-func (m *UserMutation) SetOpdsLastUsedAt(t time.Time) {
-	m.opds_last_used_at = &t
-}
-
-// OpdsLastUsedAt returns the value of the "opds_last_used_at" field in the mutation.
-func (m *UserMutation) OpdsLastUsedAt() (r time.Time, exists bool) {
-	v := m.opds_last_used_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldOpdsLastUsedAt returns the old "opds_last_used_at" field's value of the User entity.
-// If the User object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserMutation) OldOpdsLastUsedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldOpdsLastUsedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldOpdsLastUsedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldOpdsLastUsedAt: %w", err)
-	}
-	return oldValue.OpdsLastUsedAt, nil
-}
-
-// ClearOpdsLastUsedAt clears the value of the "opds_last_used_at" field.
-func (m *UserMutation) ClearOpdsLastUsedAt() {
-	m.opds_last_used_at = nil
-	m.clearedFields[user.FieldOpdsLastUsedAt] = struct{}{}
-}
-
-// OpdsLastUsedAtCleared returns if the "opds_last_used_at" field was cleared in this mutation.
-func (m *UserMutation) OpdsLastUsedAtCleared() bool {
-	_, ok := m.clearedFields[user.FieldOpdsLastUsedAt]
-	return ok
-}
-
-// ResetOpdsLastUsedAt resets all changes to the "opds_last_used_at" field.
-func (m *UserMutation) ResetOpdsLastUsedAt() {
-	m.opds_last_used_at = nil
-	delete(m.clearedFields, user.FieldOpdsLastUsedAt)
-}
-
-// SetOpdsLastClient sets the "opds_last_client" field.
-func (m *UserMutation) SetOpdsLastClient(s string) {
-	m.opds_last_client = &s
-}
-
-// OpdsLastClient returns the value of the "opds_last_client" field in the mutation.
-func (m *UserMutation) OpdsLastClient() (r string, exists bool) {
-	v := m.opds_last_client
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldOpdsLastClient returns the old "opds_last_client" field's value of the User entity.
-// If the User object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserMutation) OldOpdsLastClient(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldOpdsLastClient is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldOpdsLastClient requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldOpdsLastClient: %w", err)
-	}
-	return oldValue.OpdsLastClient, nil
-}
-
-// ClearOpdsLastClient clears the value of the "opds_last_client" field.
-func (m *UserMutation) ClearOpdsLastClient() {
-	m.opds_last_client = nil
-	m.clearedFields[user.FieldOpdsLastClient] = struct{}{}
-}
-
-// OpdsLastClientCleared returns if the "opds_last_client" field was cleared in this mutation.
-func (m *UserMutation) OpdsLastClientCleared() bool {
-	_, ok := m.clearedFields[user.FieldOpdsLastClient]
-	return ok
-}
-
-// ResetOpdsLastClient resets all changes to the "opds_last_client" field.
-func (m *UserMutation) ResetOpdsLastClient() {
-	m.opds_last_client = nil
-	delete(m.clearedFields, user.FieldOpdsLastClient)
-}
-
 // SetFailedLoginCount sets the "failed_login_count" field.
 func (m *UserMutation) SetFailedLoginCount(u uint8) {
 	m.failed_login_count = &u
@@ -55899,7 +55699,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 26)
+	fields := make([]string, 0, 22)
 	if m.create_time != nil {
 		fields = append(fields, user.FieldCreateTime)
 	}
@@ -55957,18 +55757,6 @@ func (m *UserMutation) Fields() []string {
 	if m.subsonic_max_bit_rate != nil {
 		fields = append(fields, user.FieldSubsonicMaxBitRate)
 	}
-	if m.opds_token != nil {
-		fields = append(fields, user.FieldOpdsToken)
-	}
-	if m.opds_created_at != nil {
-		fields = append(fields, user.FieldOpdsCreatedAt)
-	}
-	if m.opds_last_used_at != nil {
-		fields = append(fields, user.FieldOpdsLastUsedAt)
-	}
-	if m.opds_last_client != nil {
-		fields = append(fields, user.FieldOpdsLastClient)
-	}
 	if m.failed_login_count != nil {
 		fields = append(fields, user.FieldFailedLoginCount)
 	}
@@ -56024,14 +55812,6 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.SubsonicCanChangePassword()
 	case user.FieldSubsonicMaxBitRate:
 		return m.SubsonicMaxBitRate()
-	case user.FieldOpdsToken:
-		return m.OpdsToken()
-	case user.FieldOpdsCreatedAt:
-		return m.OpdsCreatedAt()
-	case user.FieldOpdsLastUsedAt:
-		return m.OpdsLastUsedAt()
-	case user.FieldOpdsLastClient:
-		return m.OpdsLastClient()
 	case user.FieldFailedLoginCount:
 		return m.FailedLoginCount()
 	case user.FieldLastFailedLoginAt:
@@ -56085,14 +55865,6 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldSubsonicCanChangePassword(ctx)
 	case user.FieldSubsonicMaxBitRate:
 		return m.OldSubsonicMaxBitRate(ctx)
-	case user.FieldOpdsToken:
-		return m.OldOpdsToken(ctx)
-	case user.FieldOpdsCreatedAt:
-		return m.OldOpdsCreatedAt(ctx)
-	case user.FieldOpdsLastUsedAt:
-		return m.OldOpdsLastUsedAt(ctx)
-	case user.FieldOpdsLastClient:
-		return m.OldOpdsLastClient(ctx)
 	case user.FieldFailedLoginCount:
 		return m.OldFailedLoginCount(ctx)
 	case user.FieldLastFailedLoginAt:
@@ -56241,34 +56013,6 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetSubsonicMaxBitRate(v)
 		return nil
-	case user.FieldOpdsToken:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetOpdsToken(v)
-		return nil
-	case user.FieldOpdsCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetOpdsCreatedAt(v)
-		return nil
-	case user.FieldOpdsLastUsedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetOpdsLastUsedAt(v)
-		return nil
-	case user.FieldOpdsLastClient:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetOpdsLastClient(v)
-		return nil
 	case user.FieldFailedLoginCount:
 		v, ok := value.(uint8)
 		if !ok {
@@ -56368,18 +56112,6 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldSubsonicLastClient) {
 		fields = append(fields, user.FieldSubsonicLastClient)
 	}
-	if m.FieldCleared(user.FieldOpdsToken) {
-		fields = append(fields, user.FieldOpdsToken)
-	}
-	if m.FieldCleared(user.FieldOpdsCreatedAt) {
-		fields = append(fields, user.FieldOpdsCreatedAt)
-	}
-	if m.FieldCleared(user.FieldOpdsLastUsedAt) {
-		fields = append(fields, user.FieldOpdsLastUsedAt)
-	}
-	if m.FieldCleared(user.FieldOpdsLastClient) {
-		fields = append(fields, user.FieldOpdsLastClient)
-	}
 	if m.FieldCleared(user.FieldLastFailedLoginAt) {
 		fields = append(fields, user.FieldLastFailedLoginAt)
 	}
@@ -56420,18 +56152,6 @@ func (m *UserMutation) ClearField(name string) error {
 		return nil
 	case user.FieldSubsonicLastClient:
 		m.ClearSubsonicLastClient()
-		return nil
-	case user.FieldOpdsToken:
-		m.ClearOpdsToken()
-		return nil
-	case user.FieldOpdsCreatedAt:
-		m.ClearOpdsCreatedAt()
-		return nil
-	case user.FieldOpdsLastUsedAt:
-		m.ClearOpdsLastUsedAt()
-		return nil
-	case user.FieldOpdsLastClient:
-		m.ClearOpdsLastClient()
 		return nil
 	case user.FieldLastFailedLoginAt:
 		m.ClearLastFailedLoginAt()
@@ -56503,18 +56223,6 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldSubsonicMaxBitRate:
 		m.ResetSubsonicMaxBitRate()
-		return nil
-	case user.FieldOpdsToken:
-		m.ResetOpdsToken()
-		return nil
-	case user.FieldOpdsCreatedAt:
-		m.ResetOpdsCreatedAt()
-		return nil
-	case user.FieldOpdsLastUsedAt:
-		m.ResetOpdsLastUsedAt()
-		return nil
-	case user.FieldOpdsLastClient:
-		m.ResetOpdsLastClient()
 		return nil
 	case user.FieldFailedLoginCount:
 		m.ResetFailedLoginCount()

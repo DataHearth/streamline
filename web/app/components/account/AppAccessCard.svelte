@@ -1,7 +1,7 @@
 <script lang="ts">
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { createQuery, createMutation, useQueryClient } from "@tanstack/svelte-query";
-	import { BookMarked, Clipboard, Headphones, Plus, RotateCw, ShieldAlert, X } from "@lucide/svelte";
+	import { Clipboard, Headphones, Plus, RotateCw, ShieldAlert, X } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { toast } from "@lib/toast";
 	import { formatDateTime, formatRelative } from "@lib/dates";
@@ -10,11 +10,10 @@
 	import Dialog from "@components/modals/Dialog.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// Subsonic and OPDS. Their clients cannot do the app's sign-in, so each user
-	// gets one credential per protocol, and both work the same way: a URL to
-	// point the client at, the account's email as the username, and a secret
-	// made here as the password — a password for music players, a token for
-	// e-readers. The secret never goes in a URL. It is shown once, like an API
+	// Subsonic clients cannot do the app's sign-in, so each user gets a
+	// credential of their own: a URL to point the client at, the account's
+	// email as the username, and a secret made here as the password. The
+	// secret never goes in a URL. It is shown once, like an API
 	// key: the server never answers a read with it, so a lost one is replaced,
 	// not recovered, and replacing it signs every client out.
 	let { kind }: { kind: AppAccessKind } = $props();
@@ -36,26 +35,10 @@
 			created: i18n.account_subsonic_created,
 			off: i18n.account_subsonic_off,
 		},
-		opds: {
-			Icon: BookMarked,
-			title: "OPDS",
-			help: i18n.account_opds_help,
-			intro: i18n.account_opds_intro,
-			create: i18n.account_opds_create,
-			renew: i18n.account_opds_renew,
-			copyNow: i18n.account_opds_copy_now,
-			once: i18n.account_opds_once,
-			renewTitle: i18n.account_opds_renew_title,
-			renewBody: i18n.account_opds_renew_body,
-			offTitle: i18n.account_opds_off_title,
-			offBody: i18n.account_opds_off_body,
-			created: i18n.account_opds_created,
-			off: i18n.account_opds_off,
-		},
 	} as const;
 	let meta = $derived(META[kind]);
 	let path = $derived(APP_ACCESS_PATH[kind]);
-	let server = $derived(kind === "subsonic" ? location.origin : `${location.origin}/opds`);
+	let server = $derived(location.origin);
 
 	// Last use is written in batches, up to five minutes behind the client. A
 	// credential younger than that with no recorded use may well be in use
@@ -156,7 +139,7 @@
 		</p>
 	{:else if data?.enabled}
 		<dl class="divide-y divide-border">
-			{@render row(kind === "subsonic" ? i18n.account_app_server() : i18n.account_app_catalog(), server)}
+			{@render row(i18n.account_app_server(), server)}
 			{@render row(i18n.account_app_username(), data.username)}
 			<div class="flex flex-wrap items-center gap-x-3.5 gap-y-0.5 px-5 py-3 text-xs text-fg-muted">
 				<div class="flex items-center gap-1">

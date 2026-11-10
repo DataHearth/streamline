@@ -684,6 +684,4 @@ var authExcludePaths = []string{
 	"/auth/oidc/",
 	"/rest/",
 	"/share/",
-	"/opds",
-	"/opds/",
 }
