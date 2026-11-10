@@ -652,63 +652,42 @@ func (d *demo) runJob(ctx context.Context, name string) error {
 }
 
 // waitForImports runs the download monitor until every release with files
-// on disk has left the queue, imported or held.
+// on disk has left the queue, imported, or sits held for a decision.
 func (d *demo) waitForImports(ctx context.Context) error {
-	return poll(
-		ctx,
-		15*time.Minute,
-		5*time.Second,
-		"imports to finish",
-		func() (bool, error) {
-			if err := d.runJob(ctx, "download-monitor"); err != nil {
-				return false, err
+	onDisk := map[string]string{}
+	for _, r := range d.releases {
+		if _, err := os.Stat(d.path("downloads", r.Name)); err == nil {
+			onDisk[r.hash()] = r.Name
+		}
+	}
+	return poll(ctx, 20*time.Minute, 5*time.Second, "imports to finish", func() (bool, error) {
+		if err := d.runJob(ctx, "download-monitor"); err != nil {
+			return false, err
+		}
+		var queue any
+		if err := d.admin.get(ctx, "/activity/queue", nil, &queue); err != nil {
+			return false, err
+		}
+		var left []string
+		for _, e := range items(queue) {
+			name, ok := onDisk[strings.ToLower(str(e["torrent_hash"]))]
+			if !ok {
+				continue
 			}
-			var queue any
-			if err := d.admin.get(
-				ctx,
-				"/activity/queue",
-				url.Values{"limit": {"200"}},
-				&queue,
-			); err != nil {
-				return false, err
+			switch st := str(e["status"]); st {
+			case "held":
+			case "error":
+				return false, fmt.Errorf("%s failed: %s", name, str(e["failure_reason"]))
+			default:
+				left = append(left, name+" ("+st+")")
 			}
-			busy := 0
-			for _, e := range items(queue) {
-				name := str(e["release_title"])
-				if name == "" {
-					name = str(e["title"])
-				}
-				st := str(e["status"])
-				if st == "importing" || st == "completed" || st == "verifying" {
-					busy++
-				}
-			}
-			slog.Info(
-				"waiting for imports",
-				"queue",
-				len(items(queue)),
-				"importing",
-				busy,
-			)
-			if busy > 0 {
-				return false, nil
-			}
-			// Every import release has a record that is no longer downloading.
-			pending := 0
-			for _, r := range d.releases {
-				if _, err := os.Stat(d.path("downloads", r.Name)); err != nil {
-					continue
-				}
-				for _, e := range items(queue) {
-					if strings.EqualFold(str(e["release_title"]), r.Name) &&
-						str(e["status"]) == "downloading" {
-						pending++
-					}
-				}
-			}
-			return pending == 0, nil
-		},
-	)
+		}
+		slog.Info("waiting for imports", "left", len(left), "of", len(onDisk))
+		if len(left) > 0 && len(left) <= 3 {
+			slog.Info("still importing", "releases", left)
+		}
+		return len(left) == 0, nil
+	})
 }
 
 func (d *demo) seedRequests(ctx context.Context) error {
@@ -794,7 +773,7 @@ func (d *demo) seedAdoption(ctx context.Context) error {
 			"movies",
 		),
 		"kind":        "movie",
-		"mode":        "in_place",
+		"mode": "rename",
 		"import_mode": "hardlink",
 	}, &scan); err != nil {
 		return err
