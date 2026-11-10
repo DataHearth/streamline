@@ -196,6 +196,24 @@ var _ = Describe(
 					expectUntouched(tracked)
 				},
 			)
+
+			It(
+				"fails and keeps the tracked file when the scanned file is gone",
+				func() {
+					tracked := track("Fight Club (1999)/Fight Club.mkv")
+					// Scanned as a second copy, then removed while the scan
+					// sat in review.
+					gone := filepath.Join(
+						libDir, "Fight Club (1999)", "Fight.Club.1999.REPACK.mkv",
+					)
+
+					outcome, msg := attach(gone)
+
+					Expect(outcome).To(Equal(entimportscanfile.OutcomeFailed))
+					Expect(msg).To(HavePrefix("stat source: "))
+					expectUntouched(tracked)
+				},
+			)
 		})
 	},
 )

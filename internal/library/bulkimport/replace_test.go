@@ -1,6 +1,7 @@
 package bulkimport
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -20,26 +21,59 @@ var _ = Describe("sameFile", Label("unit", "bulkimport"), func() {
 	})
 
 	It("tells two files in one folder apart", func() {
-		Expect(sameFile(tracked, scanned)).To(BeFalse())
+		same, err := sameFile(tracked, scanned)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(same).To(BeFalse())
 	})
 
 	It("recognises a hardlink of the tracked file", func() {
 		link := filepath.Join(dir, "link.mkv")
 		Expect(os.Link(tracked, link)).To(Succeed())
 
-		Expect(sameFile(tracked, link)).To(BeTrue())
+		same, err := sameFile(tracked, link)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(same).To(BeTrue())
 	})
 
 	It("recognises the tracked file reached through a symlinked folder", func() {
 		alias := filepath.Join(GinkgoT().TempDir(), "alias")
 		symlinkOrSkip(dir, alias)
 
-		Expect(sameFile(tracked, filepath.Join(alias, "Movie.mkv"))).To(BeTrue())
+		same, err := sameFile(tracked, filepath.Join(alias, "Movie.mkv"))
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(same).To(BeTrue())
 	})
 
 	It("reads a missing tracked file as a different one", func() {
 		Expect(os.Remove(tracked)).To(Succeed())
 
-		Expect(sameFile(tracked, scanned)).To(BeFalse())
+		same, err := sameFile(tracked, scanned)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(same).To(BeFalse())
+	})
+
+	It("is an error, not a difference, when the scanned file is gone", func() {
+		Expect(os.Remove(scanned)).To(Succeed())
+
+		_, err := sameFile(tracked, scanned)
+
+		Expect(err).To(MatchError(fs.ErrNotExist))
+	})
+
+	It("is an error when the scanned path is not a regular file", func() {
+		_, err := sameFile(tracked, dir)
+
+		Expect(err).To(MatchError(ContainSubstring("not a regular file")))
+	})
+
+	It("is an error when the tracked path cannot be read", func() {
+		// A path through a regular file fails with ENOTDIR, not absence.
+		_, err := sameFile(filepath.Join(scanned, "Movie.mkv"), scanned)
+
+		Expect(err).To(HaveOccurred())
 	})
 })

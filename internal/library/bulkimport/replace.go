@@ -2,6 +2,9 @@ package bulkimport
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -71,17 +74,29 @@ func samePath(a, b string) bool { return filepath.Clean(a) == filepath.Clean(b) 
 // gives one file two spellings, and a hardlink of a tracked file is that file
 // too. Read as a replacement, either would have the commit remove the very
 // file it is adopting.
-func sameFile(tracked, scanned string) bool {
+//
+// "Different" is an answer only a successful comparison gives. A scanned file
+// that is gone or is no regular file is an error: taken for a replacement, it
+// would cost the title the file it has and leave a row pointing at nothing.
+// So is a tracked path that cannot be read for any reason but its absence,
+// which leaves nothing to protect.
+func sameFile(tracked, scanned string) (bool, error) {
 	if tracked == scanned {
-		return true
-	}
-	ti, err := os.Stat(tracked)
-	if err != nil {
-		return false
+		return true, nil
 	}
 	si, err := os.Stat(scanned)
 	if err != nil {
-		return false
+		return false, err
 	}
-	return os.SameFile(ti, si)
+	if !si.Mode().IsRegular() {
+		return false, fmt.Errorf("%s is not a regular file", scanned)
+	}
+	ti, err := os.Stat(tracked)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return os.SameFile(ti, si), nil
 }
