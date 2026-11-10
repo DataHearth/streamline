@@ -109,3 +109,35 @@ var _ = Describe("instance", Label("unit", "demoshots"), func() {
 		SpecTimeout(30*time.Second),
 	)
 })
+
+var _ = Describe("dropConfig", Label("unit", "demoshots"), func() {
+	var (
+		d    *demo
+		file string
+	)
+
+	BeforeEach(func() {
+		d = &demo{root: GinkgoT().TempDir()}
+		file = d.path("config.yaml")
+		Expect(
+			os.WriteFile(file, []byte("metadata: {tmdb_api_key: secret}\n"), 0o600),
+		).To(Succeed())
+	})
+
+	It("removes the config that holds the provider keys", func(ctx SpecContext) {
+		d.dropConfig(ctx)
+		Expect(file).NotTo(BeAnExistingFile())
+	})
+
+	It("leaves it under -keep", func(ctx SpecContext) {
+		d.keep = true
+		d.dropConfig(ctx)
+		Expect(file).To(BeAnExistingFile())
+	})
+
+	It("is quiet when boot never wrote one", func(ctx SpecContext) {
+		Expect(os.Remove(file)).To(Succeed())
+		d.dropConfig(ctx)
+		Expect(file).NotTo(BeAnExistingFile())
+	})
+})

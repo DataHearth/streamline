@@ -20,7 +20,8 @@
 //
 // Everything lives under -root (a fixed path, so the paths the pages show
 // stay the same from run to run), which is wiped at start except for the
-// encoded clips in its cache.
+// encoded clips in its cache. The instance's config.yaml, which holds the
+// provider keys, is removed when the run ends unless -keep is given.
 package main
 
 import (
@@ -100,7 +101,7 @@ func main() {
 		&d.keep,
 		"keep",
 		false,
-		"leave the instance running after the screenshots, until interrupted",
+		"leave the instance running after the screenshots, until interrupted, and keep its config.yaml (provider keys included)",
 	)
 	flag.Parse()
 	if d.binary == "" {
@@ -147,6 +148,9 @@ func (d *demo) run(ctx context.Context) error {
 	if err := d.prepareRoot(); err != nil {
 		return err
 	}
+	// Registered before the instance is started, so it runs after the
+	// instance has stopped and can no longer write the file back.
+	defer d.dropConfig(ctx)
 	d.fx = &fixtures{cache: filepath.Join(d.root, "cache")}
 	d.releases = baseReleases()
 	d.tz = &torznab{}
@@ -255,6 +259,35 @@ func (d *demo) prepareRoot() error {
 		}
 	}
 	return os.WriteFile(d.path(marker), nil, 0o644)
+}
+
+// dropConfig removes the instance's config once the run is over, however it
+// ended: boot writes the provider keys into it in clear, and -root is a
+// fixed, guessable path that is otherwise only emptied by the next run.
+// -keep leaves it, so the instance can be started again by hand.
+func (d *demo) dropConfig(ctx context.Context) {
+	file := d.path("config.yaml")
+	if d.keep {
+		if _, err := os.Stat(file); err == nil {
+			slog.WarnContext(
+				ctx,
+				"config kept; it holds the provider keys",
+				"path",
+				file,
+			)
+		}
+		return
+	}
+	if err := os.Remove(file); err != nil && !errors.Is(err, os.ErrNotExist) {
+		slog.WarnContext(
+			ctx,
+			"config not removed; it holds the provider keys",
+			"path",
+			file,
+			"error",
+			err,
+		)
+	}
 }
 
 func freePort() (int, error) {
