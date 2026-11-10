@@ -232,6 +232,50 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 			},
 		)
 
+		It("applies under a root changed after the service was built", func() {
+			newRoot := filepath.Join(GinkgoT().TempDir(), "tv")
+			_, err := config.UpdateLibrary(
+				ctx, config.LibraryPatch{SeriesPath: &newRoot},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			// A misnamed episode in its own folder under the new root: the
+			// rename empties that folder, so the prune has to run under the
+			// new root to remove it.
+			oldDir := filepath.Join(newRoot, "the.wire.s01")
+			Expect(os.MkdirAll(oldDir, 0o755)).To(Succeed())
+			src := filepath.Join(oldDir, "ep2.mkv")
+			Expect(os.WriteFile(src, []byte("x"), 0o644)).To(Succeed())
+			want := filepath.Join(
+				newRoot, "The Wire", "Season 1", "The Wire - S01E02.mkv",
+			)
+
+			show := &ent.TVShow{ID: showID, Title: "The Wire", Year: 2002, TvdbID: 1}
+			show.Edges.Seasons = []*ent.Season{
+				{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+					{ID: 100, Number: 2, Edges: ent.EpisodeEdges{
+						MediaFiles: []*ent.MediaFile{{ID: 11, Path: src}},
+					}},
+				}}},
+			}
+			storeMk.FindTVShowByID(mock.Anything, showID).Return(show, nil).Once()
+			storeMk.UpdateMediaFilePath(mock.Anything, uint32(11), want).
+				Return(nil).Once()
+			refreshed := make(chan struct{})
+			msMk.RefreshAll(mock.Anything, "series", newRoot, mock.Anything).
+				Run(func(context.Context, string, string, ...string) { close(refreshed) }).
+				Return(nil).Once()
+
+			plan, err := svc.Apply(ctx, showID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(plan.Operations).To(HaveLen(1))
+			Expect(want).To(BeARegularFile())
+			Expect(oldDir).NotTo(BeADirectory())
+			Expect(newRoot).To(BeADirectory())
+			Expect(filepath.Join(tmp, "The Wire")).NotTo(BeADirectory())
+			Eventually(refreshed).Should(BeClosed())
+		})
+
 		It("records nothing when the plan has no operations", func() {
 			storeMk.FindTVShowByID(mock.Anything, showID).
 				Return(&ent.TVShow{ID: showID, Title: "The Wire"}, nil).Once()
