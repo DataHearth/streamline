@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"regexp"
 	"slices"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -435,9 +437,10 @@ const releaseYearDrift = 1
 // Silence is not a mismatch: a release stating no year stays eligible, and so
 // does every release while the movie's own year is unknown.
 //
-// The parser takes the last year-like token of a name as its year, so a
-// release of "Blade Runner 2049" that states no year parses as "Blade Runner"
-// of 2049. Such a token is the title's own when the parsed title followed by
+// The parser takes the last year-like token of a name as its year. A release
+// that states the film's year and then an edition's is therefore judged on
+// every year it carries (statesYearOf), and a release of "Blade Runner 2049"
+// that states no year parses as "Blade Runner" of 2049. Such a token is the title's own when the parsed title followed by
 // it names the movie under one of its titles, and then it is no evidence of
 // another film.
 func namesOtherYear(release string, m *ent.Movie) bool {
@@ -445,8 +448,7 @@ func namesOtherYear(release string, m *ent.Movie) bool {
 	if parsed.Year == 0 || m.Year == 0 {
 		return false
 	}
-	drift := int(parsed.Year) - int(m.Year)
-	if drift >= -releaseYearDrift && drift <= releaseYearDrift {
+	if withinYearDrift(int(parsed.Year), m) || statesYearOf(release, m) {
 		return false
 	}
 	withYear := fmt.Sprintf("%s %d", parsed.Title, parsed.Year)
@@ -454,6 +456,30 @@ func namesOtherYear(release string, m *ent.Movie) bool {
 	return !slices.ContainsFunc(titles, func(t string) bool {
 		return library.TitleNamesSameWork(withYear, t)
 	})
+}
+
+// releaseYearRe finds every year-like token of a release name, the same shape
+// library.Parse reads a year from.
+var releaseYearRe = regexp.MustCompile(`\b(?:19|20)\d{2}\b`)
+
+func withinYearDrift(year int, m *ent.Movie) bool {
+	drift := year - int(m.Year)
+	return drift >= -releaseYearDrift && drift <= releaseYearDrift
+}
+
+// statesYearOf reports whether any year-like token of the release is the
+// movie's. The parser settles on the last one, and a release can state the
+// film's year and then a later one that dates the edition rather than the
+// film: "Blade.Runner.1982.The.Final.Cut.2007", "Metropolis.1927.Restored.
+// 2010", "REMASTER.2023". A name carrying the wanted year is no evidence of
+// another film, whichever token the parser picked.
+func statesYearOf(release string, m *ent.Movie) bool {
+	for _, tok := range releaseYearRe.FindAllString(release, -1) {
+		if y, err := strconv.Atoi(tok); err == nil && withinYearDrift(y, m) {
+			return true
+		}
+	}
+	return false
 }
 
 // dropOtherYears removes the releases of another film sharing m's title, so

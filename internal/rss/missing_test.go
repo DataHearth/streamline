@@ -500,27 +500,30 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 				Return(nil).Once()
 		}
 
-		It("grabs the release of the wanted year over a better-seeded remake", func() {
-			wanted := indexer.SearchResult{
-				Title:   "Road.House.1989.1080p.BluRay.x264-GROUP",
-				Seeders: 5,
-			}
-			expectSearch(
-				indexer.SearchResult{
-					Title:   "Road.House.2024.1080p.BluRay.x264-OTHER",
-					Seeders: 400,
-				},
-				wanted,
-			)
-			dlM.EXPECT().
-				Grab(mock.AnythingOfType(ctxType), wanted, uint32(7)).
-				Return(&ent.DownloadRecord{}, nil).Once()
-			store.EXPECT().
-				ResetMovieGrabFailures(mock.AnythingOfType(ctxType), uint32(7)).
-				Return(nil).Once()
+		It(
+			"grabs the release of the wanted year over a better-seeded remake",
+			func() {
+				wanted := indexer.SearchResult{
+					Title:   "Road.House.1989.1080p.BluRay.x264-GROUP",
+					Seeders: 5,
+				}
+				expectSearch(
+					indexer.SearchResult{
+						Title:   "Road.House.2024.1080p.BluRay.x264-OTHER",
+						Seeders: 400,
+					},
+					wanted,
+				)
+				dlM.EXPECT().
+					Grab(mock.AnythingOfType(ctxType), wanted, uint32(7)).
+					Return(&ent.DownloadRecord{}, nil).Once()
+				store.EXPECT().
+					ResetMovieGrabFailures(mock.AnythingOfType(ctxType), uint32(7)).
+					Return(nil).Once()
 
-			Expect(syncer.SearchOne(ctx, movie)).To(Succeed())
-		})
+				Expect(syncer.SearchOne(ctx, movie)).To(Succeed())
+			},
+		)
 
 		It("grabs nothing when only the other film is on offer", func() {
 			expectSearch(indexer.SearchResult{
@@ -606,6 +609,21 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 				Aliases: []string{"Death Race 2000"},
 				Year:    1975,
 			}, false),
+		Entry("the film's year, then the year of the cut",
+			"Blade.Runner.1982.The.Final.Cut.2007.1080p.BluRay.x264-GRP",
+			&ent.Movie{Title: "Blade Runner", Year: 1982}, false),
+		Entry("the film's year, then the year of the restoration",
+			"Metropolis.1927.Restored.2010.1080p.BluRay.x264-GRP",
+			&ent.Movie{Title: "Metropolis", Year: 1927}, false),
+		Entry("the film's year, then the year of the remaster",
+			"Les.Visiteurs.1993.MULTI.1080p.BluRay.REMASTER.2023.x264",
+			&ent.Movie{Title: "Les Visiteurs", Year: 1993}, false),
+		Entry("the film's year, then a bracketed disc year",
+			"Road.House.1989.1080p.BluRay.x264-GRP[2024]",
+			&ent.Movie{Title: "Road House", Year: 1989}, false),
+		Entry("two years, neither the film's",
+			"Road.House.2024.1080p.BluRay.REMASTER.2025.x264",
+			&ent.Movie{Title: "Road House", Year: 1989}, true),
 		Entry("the sequel's number against the first film",
 			"Blade.Runner.2049.1080p.BluRay.x264",
 			&ent.Movie{Title: "Blade Runner", Year: 1982}, true),
