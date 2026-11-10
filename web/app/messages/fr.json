@@ -151,6 +151,7 @@
 	"activity_retry_import": "Relancer l'import",
 	"activity_retry_import_confirm": "Relancer cet import ?",
 	"activity_retrying_import": "Nouvelle tentative d'import",
+	"activity_show_whole_queue": "Afficher toute la file",
 	"activity_speed_eta": "Vitesse / ETA",
 	"activity_status_filter": "Filtre d'état",
 	"activity_view": "Vue de l'activité",

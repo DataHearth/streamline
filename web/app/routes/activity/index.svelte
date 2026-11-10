@@ -11,6 +11,12 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { api, apiAllPages, ApiError, errorText } from "@lib/api";
+	import {
+		downloadFilterFrom,
+		downloadMatches,
+		setDownloadFilter,
+		type DownloadFilter,
+	} from "@lib/title-downloads";
 	import { createMediaQuery } from "@lib/viewport.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { entryHeading, entryRelease } from "@lib/activity-touch";
@@ -59,6 +65,11 @@
 	let view = $state<View>("queue");
 	let statusFilter = $state<string[]>([]);
 	let search = $state("");
+	// A title the queue is filtered on (?series=&season=, ?series=, ?artist=,
+	// ?book_series=): where a page waiting on several downloads links, since
+	// one link cannot open them all. The queue's only: the history is paged on
+	// the server, so the filter does not survive a switch to it.
+	let scope = $state<DownloadFilter | null>(null);
 	// ?download=<id> is a download record's address: its detail open, the
 	// expanded row from md up and the sheet below. `wantedId` is the id a URL
 	// named and the page has not found yet; `openId` the record whose detail is
@@ -76,6 +87,7 @@
 			const keys = ACTIVITY_CHIPS[view === "history" ? "history" : "queue"].map((c) => c.key);
 			statusFilter = listOf(param(p, "status"), keys);
 			search = param(p, "q") ?? "";
+			scope = view === "queue" ? downloadFilterFrom(p) : null;
 			// A query naming no download closes the detail: Back from a record's
 			// link returns to the view it was followed from.
 			const id = Number(param(p, "download"));
@@ -96,6 +108,7 @@
 			if (download === null) setParam(p, "view", view, "queue");
 			setParam(p, "status", statusFilter);
 			setParam(p, "q", search);
+			if (view === "queue") setDownloadFilter(p, scope);
 			if (download !== null) p.set("download", String(download));
 			return p;
 		},
@@ -161,6 +174,7 @@
 	function switchView(v: View) {
 		view = v;
 		statusFilter = [];
+		if (v !== "queue") scope = null;
 		openId = null;
 		wantedId = null;
 		selection.clear();
@@ -454,6 +468,8 @@
 				(a, b) =>
 					(ATTENTION_RANK[a.status] ?? 2) - (ATTENTION_RANK[b.status] ?? 2),
 			);
+		const f = scope;
+		if (f && view === "queue") out = out.filter((i) => downloadMatches(i, f));
 		if (statusFilter.length)
 			out = out.filter((i) => statusFilter.includes(i.status));
 		if (search.trim()) {
@@ -530,6 +546,7 @@
 		if (view !== v) {
 			view = v;
 			statusFilter = [];
+			if (v !== "queue") scope = null;
 			selection.clear();
 		}
 		openId = id;
@@ -537,6 +554,7 @@
 		if (!rows.some((r) => r.id === id)) {
 			statusFilter = [];
 			search = "";
+			scope = null;
 		}
 		void tick().then(() =>
 			document.querySelector(`tr[data-download="${id}"]`)?.scrollIntoView({ block: "center" }),
@@ -551,6 +569,33 @@
 		const loading = view === "queue" ? queue.isPending : history.isPending;
 		if (!loading && !source.some((i) => i.id === id)) openId = null;
 	});
+
+	// What the title filter's chip reads: the title as the rows name it, off
+	// the queue, else the loaded history (the downloads may have finished since
+	// the link was followed). A season nothing names still reads "Season N".
+	let scopeLabel = $derived.by(() => {
+		const f = scope;
+		if (!f) return "";
+		const all = [...queueItems, ...historyItems];
+		const hit = all.find((i) => downloadMatches(i, f));
+		switch (f.kind) {
+			case "show":
+				return hit?.episode?.show_title ?? i18n.common_unknown();
+			case "season": {
+				const season =
+					f.season === 0 ? i18n.series_specials() : i18n.season_number({ number: f.season });
+				// The season may match nothing while another of the show's
+				// downloads still names it.
+				const title = (hit ?? all.find((i) => i.episode?.series_id === f.seriesId))?.episode
+					?.show_title;
+				return title ? `${title} · ${season}` : season;
+			}
+			case "artist":
+				return hit?.album?.artist_name ?? hit?.artist?.name ?? i18n.common_unknown();
+			case "bookSeries":
+				return hit?.book?.series?.title ?? i18n.common_unknown();
+		}
+	});
 	// A swiped row's cancel / retry / remove asks first, in the sheet's words.
 	// By id for the same reason as the sheet: the queue repolls every 2 s.
 	let swipeConfirm = $state<{ id: number; kind: DownloadConfirm } | null>(null);
@@ -560,7 +605,9 @@
 			: (source.find((i) => i.id === swipeConfirm?.id) ?? null),
 	);
 	// Everything a reset clears, which the filter sheet counts.
-	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0));
+	let activeFilters = $derived(
+		statusFilter.length + (search.trim() ? 1 : 0) + (scope ? 1 : 0),
+	);
 	let clearableCount = $derived(
 		historyItems.filter((h) => h.status === "completed").length,
 	);
@@ -584,6 +631,7 @@
 	function resetFilters() {
 		statusFilter = [];
 		search = "";
+		scope = null;
 	}
 
 	// ── Selection ────────────────────────────────────────────────────────────
@@ -598,6 +646,7 @@
 	$effect(() => {
 		statusFilter;
 		search;
+		scope;
 		untrack(() => selection.clear());
 	});
 	// A download that finishes or is cancelled elsewhere leaves the queue on the
@@ -816,6 +865,8 @@
 		view={tableView}
 		{statusFilter}
 		{search}
+		scopeLabel={scope ? scopeLabel : undefined}
+		onClearScope={() => (scope = null)}
 		{clearableCount}
 		onOpenFilters={() => (filtersOpen = true)}
 		onStatusFilterChange={(s) => (statusFilter = s)}

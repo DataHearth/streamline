@@ -151,6 +151,7 @@
 	"activity_retry_import": "Retry import",
 	"activity_retry_import_confirm": "Retry this import?",
 	"activity_retrying_import": "Retrying import",
+	"activity_show_whole_queue": "Show the whole queue",
 	"activity_speed_eta": "Speed / ETA",
 	"activity_status_filter": "Status filter",
 	"activity_view": "Activity view",
