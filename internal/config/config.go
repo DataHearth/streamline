@@ -475,8 +475,8 @@ type BackupRetention struct {
 }
 
 // FFmpegConfig owns the ffmpeg-suite dependency: ffprobe for probing and
-// ffmpeg for transcoding and Subsonic transcoding, each resolved and optional
-// on its own. Enabled=false makes all of them inert. Path is a directory holding the binaries; empty resolves via $PATH.
+// ffmpeg for transcoding, each resolved and optional on its own.
+// Enabled=false makes both inert. Path is a directory holding the binaries; empty resolves via $PATH.
 // Enabled is runtime-toggleable through config.Update; Path is read at boot.
 type FFmpegConfig struct {
 	Enabled bool   `koanf:"enabled"`

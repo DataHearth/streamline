@@ -610,7 +610,6 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		TrackPlans:      imp,
 		Prober:          prober,
 		Transcoder:      transcoder,
-		AudioTranscoder: prober,
 		Music:           musicSvc,
 		Books:           bookSvc,
 		MetadataBook:    bookMeta,
@@ -682,6 +681,4 @@ var authExcludePaths = []string{
 	"/auth/config",
 	"/auth/invite/",
 	"/auth/oidc/",
-	"/rest/",
-	"/share/",
 }

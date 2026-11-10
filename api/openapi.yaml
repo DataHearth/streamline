@@ -4404,57 +4404,6 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /account/subsonic-password:
-    get:
-      operationId: getSubsonicPassword
-      summary: Whether a Subsonic password is set, and when it was last used
-      description: >-
-        Requires session authentication (JWT); a request authenticated with an
-        API key is rejected. Never carries the secret: only the POST that
-        generates it does.
-      tags: [account]
-      security:
-        - BearerAuth: []
-      responses:
-        "200":
-          description: Access state
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/AppAccess" }
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-    post:
-      operationId: rotateSubsonicPassword
-      summary: Generate or rotate the Subsonic password
-      description: >-
-        Requires session authentication (JWT). The only response that carries
-        the secret, in plaintext; a lost one is replaced, not read back.
-        Rotation signs every Subsonic client out.
-      tags: [account]
-      security:
-        - BearerAuth: []
-      responses:
-        "200":
-          description: The new secret, shown this once
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/AppAccessCreated" }
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-    delete:
-      operationId: disableSubsonicPassword
-      summary: Disable access by clearing the Subsonic password
-      description: >-
-        Requires session authentication (JWT). Also clears created, last used
-        and client.
-      tags: [account]
-      security:
-        - BearerAuth: []
-      responses:
-        "204":
-          description: Disabled
-        "401":
-          $ref: "#/components/responses/Unauthorized"
   /auth/me/sessions:
     get:
       operationId: listMySessions
@@ -5026,10 +4975,8 @@ paths:
       operationId: updateUser
       summary: Patch user (admin)
       description: |
-        Updates a target user's role, display_name, auth_method, or what
-        they may do through the Subsonic API (`subsonic`). Demoting the last
-        remaining admin is rejected with 409 last_admin; a `max_bit_rate`
-        that is neither 0 nor 32-320 with 422.
+        Updates a target user's email, role, display_name or auth_method.
+        Demoting the last remaining admin is rejected with 409 last_admin.
       tags: [users, admin]
       security:
         - BearerAuth: []
@@ -5049,8 +4996,6 @@ paths:
           $ref: "#/components/responses/Conflict"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
     delete:
       operationId: deleteUser
       summary: Delete user (admin)
@@ -13690,8 +13635,6 @@ components:
           description: Address of the user's e-reader; empty when unset.
         send:
           $ref: "#/components/schemas/UserSend"
-        subsonic:
-          $ref: "#/components/schemas/SubsonicAccess"
         created_at:
           type: string
           format: date-time
@@ -13836,48 +13779,6 @@ components:
             raw_token:
               type: string
 
-    AppAccess:
-      type: object
-      description: >-
-        One Subsonic credential of the caller. Never carries the
-        secret.
-      required: [enabled, username]
-      properties:
-        enabled:
-          type: boolean
-        username:
-          type: string
-          description: >-
-            The account email, which is what a player or reader types as its
-            user name.
-        created_at:
-          type: string
-          format: date-time
-          description: Set when the secret is generated or rotated.
-        last_used_at:
-          type: string
-          format: date-time
-          description: >-
-            Recorded after a successful authentication, at most once every five
-            minutes.
-        last_client:
-          type: string
-          maxLength: 64
-          description: >-
-            Client-supplied: the Subsonic `c` parameter. Display as text only.
-
-    AppAccessCreated:
-      allOf:
-        - $ref: "#/components/schemas/AppAccess"
-        - type: object
-          required: [secret]
-          properties:
-            secret:
-              type: string
-              description: >-
-                The Subsonic password, in plaintext. This
-                response only.
-
     Session:
       type: object
       required: [id, created_at, expires_at, is_current]
@@ -14003,65 +13904,6 @@ components:
         auth_method:
           type: string
           enum: [local, oidc, both]
-        subsonic:
-          $ref: "#/components/schemas/SubsonicAccessPatch"
-
-    SubsonicAccess:
-      type: object
-      description: |
-        What the user may do through the Subsonic API (`/rest`). These gate
-        Subsonic calls only, never the web UI or the REST API. Browsing,
-        searching, starring and scrobbling are always allowed.
-      required:
-        - can_stream
-        - can_download
-        - can_manage_playlists
-        - can_share
-        - can_rate
-        - can_change_password
-        - max_bit_rate
-      properties:
-        can_stream:
-          type: boolean
-        can_download:
-          type: boolean
-        can_manage_playlists:
-          type: boolean
-        can_share:
-          type: boolean
-        can_rate:
-          type: boolean
-        can_change_password:
-          type: boolean
-          description: Whether the user may change their own Subsonic password from an app.
-        max_bit_rate:
-          type: integer
-          x-go-type: uint16
-          minimum: 0
-          maximum: 320
-          description: Kbps ceiling on every stream, 0 for none; a stream above it is transcoded.
-
-    SubsonicAccessPatch:
-      type: object
-      description: Only provided fields are applied.
-      properties:
-        can_stream:
-          type: boolean
-        can_download:
-          type: boolean
-        can_manage_playlists:
-          type: boolean
-        can_share:
-          type: boolean
-        can_rate:
-          type: boolean
-        can_change_password:
-          type: boolean
-        max_bit_rate:
-          type: integer
-          minimum: 0
-          maximum: 320
-          description: 0 for no cap, else 32-320.
 
     ResetPasswordRequest:
       type: object

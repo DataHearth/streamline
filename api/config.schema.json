@@ -785,11 +785,11 @@
     "ffmpeg": {
       "type": "object",
       "additionalProperties": false,
-      "description": "The FFmpeg suite, two binaries each optional on its own: ffprobe (media info, import verification, measured audio quality) and ffmpeg (transcoding, Subsonic transcoding).",
+      "description": "The FFmpeg suite, two binaries each optional on its own: ffprobe (media info, import verification, measured audio quality) and ffmpeg (transcoding).",
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "false makes probing, transcoding and Subsonic transcoding inert."
+          "description": "false makes probing and transcoding inert."
         },
         "path": {
           "type": "string",

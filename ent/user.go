@@ -9,7 +9,6 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/datahearth/streamline/ent/playqueue"
 	"github.com/datahearth/streamline/ent/user"
 )
 
@@ -34,28 +33,6 @@ type User struct {
 	DisplayName string `json:"display_name,omitempty"`
 	// DeviceEmail holds the value of the "device_email" field.
 	DeviceEmail string `json:"device_email,omitempty"`
-	// SubsonicPassword holds the value of the "subsonic_password" field.
-	SubsonicPassword string `json:"-"`
-	// SubsonicCreatedAt holds the value of the "subsonic_created_at" field.
-	SubsonicCreatedAt *time.Time `json:"subsonic_created_at,omitempty"`
-	// SubsonicLastUsedAt holds the value of the "subsonic_last_used_at" field.
-	SubsonicLastUsedAt *time.Time `json:"subsonic_last_used_at,omitempty"`
-	// SubsonicLastClient holds the value of the "subsonic_last_client" field.
-	SubsonicLastClient string `json:"subsonic_last_client,omitempty"`
-	// SubsonicCanStream holds the value of the "subsonic_can_stream" field.
-	SubsonicCanStream bool `json:"subsonic_can_stream,omitempty"`
-	// SubsonicCanDownload holds the value of the "subsonic_can_download" field.
-	SubsonicCanDownload bool `json:"subsonic_can_download,omitempty"`
-	// SubsonicCanManagePlaylists holds the value of the "subsonic_can_manage_playlists" field.
-	SubsonicCanManagePlaylists bool `json:"subsonic_can_manage_playlists,omitempty"`
-	// SubsonicCanShare holds the value of the "subsonic_can_share" field.
-	SubsonicCanShare bool `json:"subsonic_can_share,omitempty"`
-	// SubsonicCanRate holds the value of the "subsonic_can_rate" field.
-	SubsonicCanRate bool `json:"subsonic_can_rate,omitempty"`
-	// SubsonicCanChangePassword holds the value of the "subsonic_can_change_password" field.
-	SubsonicCanChangePassword bool `json:"subsonic_can_change_password,omitempty"`
-	// SubsonicMaxBitRate holds the value of the "subsonic_max_bit_rate" field.
-	SubsonicMaxBitRate uint16 `json:"subsonic_max_bit_rate,omitempty"`
 	// FailedLoginCount holds the value of the "failed_login_count" field.
 	FailedLoginCount uint8 `json:"failed_login_count,omitempty"`
 	// LastFailedLoginAt holds the value of the "last_failed_login_at" field.
@@ -78,19 +55,9 @@ type UserEdges struct {
 	Requests []*Request `json:"requests,omitempty"`
 	// Sessions holds the value of the sessions edge.
 	Sessions []*Session `json:"sessions,omitempty"`
-	// MusicAnnotations holds the value of the music_annotations edge.
-	MusicAnnotations []*MusicAnnotation `json:"music_annotations,omitempty"`
-	// Playlists holds the value of the playlists edge.
-	Playlists []*Playlist `json:"playlists,omitempty"`
-	// Shares holds the value of the shares edge.
-	Shares []*Share `json:"shares,omitempty"`
-	// Bookmarks holds the value of the bookmarks edge.
-	Bookmarks []*Bookmark `json:"bookmarks,omitempty"`
-	// PlayQueue holds the value of the play_queue edge.
-	PlayQueue *PlayQueue `json:"play_queue,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [9]bool
+	loadedTypes [4]bool
 }
 
 // APIKeysOrErr returns the APIKeys value or an error if the edge
@@ -129,65 +96,16 @@ func (e UserEdges) SessionsOrErr() ([]*Session, error) {
 	return nil, &NotLoadedError{edge: "sessions"}
 }
 
-// MusicAnnotationsOrErr returns the MusicAnnotations value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) MusicAnnotationsOrErr() ([]*MusicAnnotation, error) {
-	if e.loadedTypes[4] {
-		return e.MusicAnnotations, nil
-	}
-	return nil, &NotLoadedError{edge: "music_annotations"}
-}
-
-// PlaylistsOrErr returns the Playlists value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) PlaylistsOrErr() ([]*Playlist, error) {
-	if e.loadedTypes[5] {
-		return e.Playlists, nil
-	}
-	return nil, &NotLoadedError{edge: "playlists"}
-}
-
-// SharesOrErr returns the Shares value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) SharesOrErr() ([]*Share, error) {
-	if e.loadedTypes[6] {
-		return e.Shares, nil
-	}
-	return nil, &NotLoadedError{edge: "shares"}
-}
-
-// BookmarksOrErr returns the Bookmarks value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) BookmarksOrErr() ([]*Bookmark, error) {
-	if e.loadedTypes[7] {
-		return e.Bookmarks, nil
-	}
-	return nil, &NotLoadedError{edge: "bookmarks"}
-}
-
-// PlayQueueOrErr returns the PlayQueue value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e UserEdges) PlayQueueOrErr() (*PlayQueue, error) {
-	if e.PlayQueue != nil {
-		return e.PlayQueue, nil
-	} else if e.loadedTypes[8] {
-		return nil, &NotFoundError{label: playqueue.Label}
-	}
-	return nil, &NotLoadedError{edge: "play_queue"}
-}
-
 // scanValues returns the types for scanning values from sql.Rows.
 func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldSubsonicCanStream, user.FieldSubsonicCanDownload, user.FieldSubsonicCanManagePlaylists, user.FieldSubsonicCanShare, user.FieldSubsonicCanRate, user.FieldSubsonicCanChangePassword:
-			values[i] = new(sql.NullBool)
-		case user.FieldID, user.FieldSubsonicMaxBitRate, user.FieldFailedLoginCount:
+		case user.FieldID, user.FieldFailedLoginCount:
 			values[i] = new(sql.NullInt64)
-		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldAuthMethod, user.FieldDisplayName, user.FieldDeviceEmail, user.FieldSubsonicPassword, user.FieldSubsonicLastClient:
+		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldAuthMethod, user.FieldDisplayName, user.FieldDeviceEmail:
 			values[i] = new(sql.NullString)
-		case user.FieldCreateTime, user.FieldUpdateTime, user.FieldSubsonicCreatedAt, user.FieldSubsonicLastUsedAt, user.FieldLastFailedLoginAt, user.FieldLockedUntil:
+		case user.FieldCreateTime, user.FieldUpdateTime, user.FieldLastFailedLoginAt, user.FieldLockedUntil:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -258,74 +176,6 @@ func (_m *User) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.DeviceEmail = value.String
 			}
-		case user.FieldSubsonicPassword:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field subsonic_password", values[i])
-			} else if value.Valid {
-				_m.SubsonicPassword = value.String
-			}
-		case user.FieldSubsonicCreatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field subsonic_created_at", values[i])
-			} else if value.Valid {
-				_m.SubsonicCreatedAt = new(time.Time)
-				*_m.SubsonicCreatedAt = value.Time
-			}
-		case user.FieldSubsonicLastUsedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field subsonic_last_used_at", values[i])
-			} else if value.Valid {
-				_m.SubsonicLastUsedAt = new(time.Time)
-				*_m.SubsonicLastUsedAt = value.Time
-			}
-		case user.FieldSubsonicLastClient:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field subsonic_last_client", values[i])
-			} else if value.Valid {
-				_m.SubsonicLastClient = value.String
-			}
-		case user.FieldSubsonicCanStream:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field subsonic_can_stream", values[i])
-			} else if value.Valid {
-				_m.SubsonicCanStream = value.Bool
-			}
-		case user.FieldSubsonicCanDownload:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field subsonic_can_download", values[i])
-			} else if value.Valid {
-				_m.SubsonicCanDownload = value.Bool
-			}
-		case user.FieldSubsonicCanManagePlaylists:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field subsonic_can_manage_playlists", values[i])
-			} else if value.Valid {
-				_m.SubsonicCanManagePlaylists = value.Bool
-			}
-		case user.FieldSubsonicCanShare:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field subsonic_can_share", values[i])
-			} else if value.Valid {
-				_m.SubsonicCanShare = value.Bool
-			}
-		case user.FieldSubsonicCanRate:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field subsonic_can_rate", values[i])
-			} else if value.Valid {
-				_m.SubsonicCanRate = value.Bool
-			}
-		case user.FieldSubsonicCanChangePassword:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field subsonic_can_change_password", values[i])
-			} else if value.Valid {
-				_m.SubsonicCanChangePassword = value.Bool
-			}
-		case user.FieldSubsonicMaxBitRate:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field subsonic_max_bit_rate", values[i])
-			} else if value.Valid {
-				_m.SubsonicMaxBitRate = uint16(value.Int64)
-			}
 		case user.FieldFailedLoginCount:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field failed_login_count", values[i])
@@ -379,31 +229,6 @@ func (_m *User) QuerySessions() *SessionQuery {
 	return NewUserClient(_m.config).QuerySessions(_m)
 }
 
-// QueryMusicAnnotations queries the "music_annotations" edge of the User entity.
-func (_m *User) QueryMusicAnnotations() *MusicAnnotationQuery {
-	return NewUserClient(_m.config).QueryMusicAnnotations(_m)
-}
-
-// QueryPlaylists queries the "playlists" edge of the User entity.
-func (_m *User) QueryPlaylists() *PlaylistQuery {
-	return NewUserClient(_m.config).QueryPlaylists(_m)
-}
-
-// QueryShares queries the "shares" edge of the User entity.
-func (_m *User) QueryShares() *ShareQuery {
-	return NewUserClient(_m.config).QueryShares(_m)
-}
-
-// QueryBookmarks queries the "bookmarks" edge of the User entity.
-func (_m *User) QueryBookmarks() *BookmarkQuery {
-	return NewUserClient(_m.config).QueryBookmarks(_m)
-}
-
-// QueryPlayQueue queries the "play_queue" edge of the User entity.
-func (_m *User) QueryPlayQueue() *PlayQueueQuery {
-	return NewUserClient(_m.config).QueryPlayQueue(_m)
-}
-
 // Update returns a builder for updating this User.
 // Note that you need to call User.Unwrap() before calling this method if this User
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -449,42 +274,6 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("device_email=")
 	builder.WriteString(_m.DeviceEmail)
-	builder.WriteString(", ")
-	builder.WriteString("subsonic_password=<sensitive>")
-	builder.WriteString(", ")
-	if v := _m.SubsonicCreatedAt; v != nil {
-		builder.WriteString("subsonic_created_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
-	builder.WriteString(", ")
-	if v := _m.SubsonicLastUsedAt; v != nil {
-		builder.WriteString("subsonic_last_used_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
-	builder.WriteString(", ")
-	builder.WriteString("subsonic_last_client=")
-	builder.WriteString(_m.SubsonicLastClient)
-	builder.WriteString(", ")
-	builder.WriteString("subsonic_can_stream=")
-	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanStream))
-	builder.WriteString(", ")
-	builder.WriteString("subsonic_can_download=")
-	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanDownload))
-	builder.WriteString(", ")
-	builder.WriteString("subsonic_can_manage_playlists=")
-	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanManagePlaylists))
-	builder.WriteString(", ")
-	builder.WriteString("subsonic_can_share=")
-	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanShare))
-	builder.WriteString(", ")
-	builder.WriteString("subsonic_can_rate=")
-	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanRate))
-	builder.WriteString(", ")
-	builder.WriteString("subsonic_can_change_password=")
-	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanChangePassword))
-	builder.WriteString(", ")
-	builder.WriteString("subsonic_max_bit_rate=")
-	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicMaxBitRate))
 	builder.WriteString(", ")
 	builder.WriteString("failed_login_count=")
 	builder.WriteString(fmt.Sprintf("%v", _m.FailedLoginCount))

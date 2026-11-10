@@ -427,48 +427,6 @@ var (
 		Columns:    BookSeriesColumns,
 		PrimaryKey: []*schema.Column{BookSeriesColumns[0]},
 	}
-	// BookmarksColumns holds the columns for the "bookmarks" table.
-	BookmarksColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUint32, Increment: true},
-		{Name: "create_time", Type: field.TypeTime},
-		{Name: "update_time", Type: field.TypeTime},
-		{Name: "position", Type: field.TypeInt64},
-		{Name: "comment", Type: field.TypeString, Nullable: true},
-		{Name: "track_id", Type: field.TypeUint32},
-		{Name: "user_id", Type: field.TypeUint32},
-	}
-	// BookmarksTable holds the schema information for the "bookmarks" table.
-	BookmarksTable = &schema.Table{
-		Name:       "bookmarks",
-		Columns:    BookmarksColumns,
-		PrimaryKey: []*schema.Column{BookmarksColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "bookmarks_tracks_bookmarks",
-				Columns:    []*schema.Column{BookmarksColumns[5]},
-				RefColumns: []*schema.Column{TracksColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "bookmarks_users_bookmarks",
-				Columns:    []*schema.Column{BookmarksColumns[6]},
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "bookmark_user_id_track_id",
-				Unique:  true,
-				Columns: []*schema.Column{BookmarksColumns[6], BookmarksColumns[5]},
-			},
-			{
-				Name:    "bookmark_track_id",
-				Unique:  false,
-				Columns: []*schema.Column{BookmarksColumns[5]},
-			},
-		},
-	}
 	// CreditsColumns holds the columns for the "credits" table.
 	CreditsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -1341,84 +1299,6 @@ var (
 			},
 		},
 	}
-	// MusicAnnotationsColumns holds the columns for the "music_annotations" table.
-	MusicAnnotationsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUint32, Increment: true},
-		{Name: "create_time", Type: field.TypeTime},
-		{Name: "update_time", Type: field.TypeTime},
-		{Name: "starred_at", Type: field.TypeTime, Nullable: true},
-		{Name: "rating", Type: field.TypeUint8, Default: 0},
-		{Name: "play_count", Type: field.TypeUint32, Default: 0},
-		{Name: "played_at", Type: field.TypeTime, Nullable: true},
-		{Name: "album_id", Type: field.TypeUint32, Nullable: true},
-		{Name: "artist_id", Type: field.TypeUint32, Nullable: true},
-		{Name: "track_id", Type: field.TypeUint32, Nullable: true},
-		{Name: "user_id", Type: field.TypeUint32},
-	}
-	// MusicAnnotationsTable holds the schema information for the "music_annotations" table.
-	MusicAnnotationsTable = &schema.Table{
-		Name:       "music_annotations",
-		Columns:    MusicAnnotationsColumns,
-		PrimaryKey: []*schema.Column{MusicAnnotationsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "music_annotations_albums_annotations",
-				Columns:    []*schema.Column{MusicAnnotationsColumns[7]},
-				RefColumns: []*schema.Column{AlbumsColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "music_annotations_artists_annotations",
-				Columns:    []*schema.Column{MusicAnnotationsColumns[8]},
-				RefColumns: []*schema.Column{ArtistsColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "music_annotations_tracks_annotations",
-				Columns:    []*schema.Column{MusicAnnotationsColumns[9]},
-				RefColumns: []*schema.Column{TracksColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "music_annotations_users_music_annotations",
-				Columns:    []*schema.Column{MusicAnnotationsColumns[10]},
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "musicannotation_user_id_artist_id",
-				Unique:  true,
-				Columns: []*schema.Column{MusicAnnotationsColumns[10], MusicAnnotationsColumns[8]},
-			},
-			{
-				Name:    "musicannotation_user_id_album_id",
-				Unique:  true,
-				Columns: []*schema.Column{MusicAnnotationsColumns[10], MusicAnnotationsColumns[7]},
-			},
-			{
-				Name:    "musicannotation_user_id_track_id",
-				Unique:  true,
-				Columns: []*schema.Column{MusicAnnotationsColumns[10], MusicAnnotationsColumns[9]},
-			},
-			{
-				Name:    "musicannotation_artist_id",
-				Unique:  false,
-				Columns: []*schema.Column{MusicAnnotationsColumns[8]},
-			},
-			{
-				Name:    "musicannotation_album_id",
-				Unique:  false,
-				Columns: []*schema.Column{MusicAnnotationsColumns[7]},
-			},
-			{
-				Name:    "musicannotation_track_id",
-				Unique:  false,
-				Columns: []*schema.Column{MusicAnnotationsColumns[9]},
-			},
-		},
-	}
 	// MusicCreditsColumns holds the columns for the "music_credits" table.
 	MusicCreditsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -1543,78 +1423,6 @@ var (
 				Columns: []*schema.Column{PersonsColumns[4]},
 			},
 		},
-	}
-	// PlayQueuesColumns holds the columns for the "play_queues" table.
-	PlayQueuesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUint32, Increment: true},
-		{Name: "create_time", Type: field.TypeTime},
-		{Name: "update_time", Type: field.TypeTime},
-		{Name: "track_ids", Type: field.TypeJSON, Nullable: true},
-		{Name: "current", Type: field.TypeUint32, Default: 0},
-		{Name: "position", Type: field.TypeInt64, Default: 0},
-		{Name: "changed_by", Type: field.TypeString, Nullable: true, Size: 64},
-		{Name: "user_play_queue", Type: field.TypeUint32, Unique: true},
-	}
-	// PlayQueuesTable holds the schema information for the "play_queues" table.
-	PlayQueuesTable = &schema.Table{
-		Name:       "play_queues",
-		Columns:    PlayQueuesColumns,
-		PrimaryKey: []*schema.Column{PlayQueuesColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "play_queues_users_play_queue",
-				Columns:    []*schema.Column{PlayQueuesColumns[7]},
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-	}
-	// PlaylistsColumns holds the columns for the "playlists" table.
-	PlaylistsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUint32, Increment: true},
-		{Name: "create_time", Type: field.TypeTime},
-		{Name: "update_time", Type: field.TypeTime},
-		{Name: "name", Type: field.TypeString},
-		{Name: "comment", Type: field.TypeString, Nullable: true},
-		{Name: "public", Type: field.TypeBool, Default: false},
-		{Name: "track_ids", Type: field.TypeJSON, Nullable: true},
-		{Name: "user_playlists", Type: field.TypeUint32},
-	}
-	// PlaylistsTable holds the schema information for the "playlists" table.
-	PlaylistsTable = &schema.Table{
-		Name:       "playlists",
-		Columns:    PlaylistsColumns,
-		PrimaryKey: []*schema.Column{PlaylistsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "playlists_users_playlists",
-				Columns:    []*schema.Column{PlaylistsColumns[7]},
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "playlist_user_playlists",
-				Unique:  false,
-				Columns: []*schema.Column{PlaylistsColumns[7]},
-			},
-		},
-	}
-	// RadioStationsColumns holds the columns for the "radio_stations" table.
-	RadioStationsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUint32, Increment: true},
-		{Name: "create_time", Type: field.TypeTime},
-		{Name: "update_time", Type: field.TypeTime},
-		{Name: "name", Type: field.TypeString},
-		{Name: "stream_url", Type: field.TypeString},
-		{Name: "homepage_url", Type: field.TypeString, Nullable: true},
-	}
-	// RadioStationsTable holds the schema information for the "radio_stations" table.
-	RadioStationsTable = &schema.Table{
-		Name:       "radio_stations",
-		Columns:    RadioStationsColumns,
-		PrimaryKey: []*schema.Column{RadioStationsColumns[0]},
 	}
 	// RequestsColumns holds the columns for the "requests" table.
 	RequestsColumns = []*schema.Column{
@@ -1761,45 +1569,6 @@ var (
 				Name:    "session_user_sessions",
 				Unique:  false,
 				Columns: []*schema.Column{SessionsColumns[9]},
-			},
-		},
-	}
-	// SharesColumns holds the columns for the "shares" table.
-	SharesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUint32, Increment: true},
-		{Name: "create_time", Type: field.TypeTime},
-		{Name: "update_time", Type: field.TypeTime},
-		{Name: "token", Type: field.TypeString},
-		{Name: "description", Type: field.TypeString, Nullable: true},
-		{Name: "items", Type: field.TypeJSON},
-		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
-		{Name: "last_visited_at", Type: field.TypeTime, Nullable: true},
-		{Name: "visit_count", Type: field.TypeUint32, Default: 0},
-		{Name: "user_shares", Type: field.TypeUint32},
-	}
-	// SharesTable holds the schema information for the "shares" table.
-	SharesTable = &schema.Table{
-		Name:       "shares",
-		Columns:    SharesColumns,
-		PrimaryKey: []*schema.Column{SharesColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "shares_users_shares",
-				Columns:    []*schema.Column{SharesColumns[9]},
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "share_token",
-				Unique:  true,
-				Columns: []*schema.Column{SharesColumns[3]},
-			},
-			{
-				Name:    "share_user_shares",
-				Unique:  false,
-				Columns: []*schema.Column{SharesColumns[9]},
 			},
 		},
 	}
@@ -1958,17 +1727,6 @@ var (
 		{Name: "auth_method", Type: field.TypeEnum, Enums: []string{"local", "oidc", "both"}, Default: "local"},
 		{Name: "display_name", Type: field.TypeString, Nullable: true},
 		{Name: "device_email", Type: field.TypeString, Nullable: true},
-		{Name: "subsonic_password", Type: field.TypeString, Nullable: true},
-		{Name: "subsonic_created_at", Type: field.TypeTime, Nullable: true},
-		{Name: "subsonic_last_used_at", Type: field.TypeTime, Nullable: true},
-		{Name: "subsonic_last_client", Type: field.TypeString, Nullable: true, Size: 64},
-		{Name: "subsonic_can_stream", Type: field.TypeBool, Default: true},
-		{Name: "subsonic_can_download", Type: field.TypeBool, Default: true},
-		{Name: "subsonic_can_manage_playlists", Type: field.TypeBool, Default: true},
-		{Name: "subsonic_can_share", Type: field.TypeBool, Default: true},
-		{Name: "subsonic_can_rate", Type: field.TypeBool, Default: true},
-		{Name: "subsonic_can_change_password", Type: field.TypeBool, Default: true},
-		{Name: "subsonic_max_bit_rate", Type: field.TypeUint16, Default: 0},
 		{Name: "failed_login_count", Type: field.TypeUint8, Default: 0},
 		{Name: "last_failed_login_at", Type: field.TypeTime, Nullable: true},
 		{Name: "locked_until", Type: field.TypeTime, Nullable: true},
@@ -2065,7 +1823,6 @@ var (
 		BookContributionsTable,
 		BookEditionsTable,
 		BookSeriesTable,
-		BookmarksTable,
 		CreditsTable,
 		DownloadRecordsTable,
 		EpisodesTable,
@@ -2079,18 +1836,13 @@ var (
 		MediaEventsTable,
 		MediaFilesTable,
 		MoviesTable,
-		MusicAnnotationsTable,
 		MusicCreditsTable,
 		OidcIdentitiesTable,
 		PersonsTable,
-		PlayQueuesTable,
-		PlaylistsTable,
-		RadioStationsTable,
 		RequestsTable,
 		ScheduledJobsTable,
 		SeasonsTable,
 		SessionsTable,
-		SharesTable,
 		TvShowsTable,
 		TorrentSessionsTable,
 		TracksTable,
@@ -2113,8 +1865,6 @@ func init() {
 	BookContributionsTable.ForeignKeys[1].RefTable = BooksTable
 	BookContributionsTable.ForeignKeys[2].RefTable = BookSeriesTable
 	BookEditionsTable.ForeignKeys[0].RefTable = BooksTable
-	BookmarksTable.ForeignKeys[0].RefTable = TracksTable
-	BookmarksTable.ForeignKeys[1].RefTable = UsersTable
 	CreditsTable.ForeignKeys[0].RefTable = MoviesTable
 	CreditsTable.ForeignKeys[1].RefTable = PersonsTable
 	CreditsTable.ForeignKeys[2].RefTable = TvShowsTable
@@ -2142,20 +1892,13 @@ func init() {
 	MediaFilesTable.ForeignKeys[1].RefTable = EpisodesTable
 	MediaFilesTable.ForeignKeys[2].RefTable = MoviesTable
 	MediaFilesTable.ForeignKeys[3].RefTable = TracksTable
-	MusicAnnotationsTable.ForeignKeys[0].RefTable = AlbumsTable
-	MusicAnnotationsTable.ForeignKeys[1].RefTable = ArtistsTable
-	MusicAnnotationsTable.ForeignKeys[2].RefTable = TracksTable
-	MusicAnnotationsTable.ForeignKeys[3].RefTable = UsersTable
 	MusicCreditsTable.ForeignKeys[0].RefTable = AlbumsTable
 	MusicCreditsTable.ForeignKeys[1].RefTable = TracksTable
 	OidcIdentitiesTable.ForeignKeys[0].RefTable = UsersTable
-	PlayQueuesTable.ForeignKeys[0].RefTable = UsersTable
-	PlaylistsTable.ForeignKeys[0].RefTable = UsersTable
 	RequestsTable.ForeignKeys[0].RefTable = UsersTable
 	RequestsTable.ForeignKeys[1].RefTable = UsersTable
 	SeasonsTable.ForeignKeys[0].RefTable = TvShowsTable
 	SessionsTable.ForeignKeys[0].RefTable = UsersTable
-	SharesTable.ForeignKeys[0].RefTable = UsersTable
 	TracksTable.ForeignKeys[0].RefTable = AlbumsTable
 	TranscodeJobsTable.ForeignKeys[0].RefTable = MediaFilesTable
 	ArtistCoAlbumsTable.ForeignKeys[0].RefTable = ArtistsTable

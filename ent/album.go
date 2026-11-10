@@ -94,8 +94,6 @@ type AlbumEdges struct {
 	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
 	// Credits holds the value of the credits edge.
 	Credits []*MusicCredit `json:"credits,omitempty"`
-	// Annotations holds the value of the annotations edge.
-	Annotations []*MusicAnnotation `json:"annotations,omitempty"`
 	// Events holds the value of the events edge.
 	Events []*MediaEvent `json:"events,omitempty"`
 	// PackRecords holds the value of the pack_records edge.
@@ -104,7 +102,7 @@ type AlbumEdges struct {
 	CoArtists []*Artist `json:"co_artists,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [8]bool
+	loadedTypes [7]bool
 }
 
 // ArtistOrErr returns the Artist value or an error if the edge
@@ -145,19 +143,10 @@ func (e AlbumEdges) CreditsOrErr() ([]*MusicCredit, error) {
 	return nil, &NotLoadedError{edge: "credits"}
 }
 
-// AnnotationsOrErr returns the Annotations value or an error if the edge
-// was not loaded in eager-loading.
-func (e AlbumEdges) AnnotationsOrErr() ([]*MusicAnnotation, error) {
-	if e.loadedTypes[4] {
-		return e.Annotations, nil
-	}
-	return nil, &NotLoadedError{edge: "annotations"}
-}
-
 // EventsOrErr returns the Events value or an error if the edge
 // was not loaded in eager-loading.
 func (e AlbumEdges) EventsOrErr() ([]*MediaEvent, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[4] {
 		return e.Events, nil
 	}
 	return nil, &NotLoadedError{edge: "events"}
@@ -166,7 +155,7 @@ func (e AlbumEdges) EventsOrErr() ([]*MediaEvent, error) {
 // PackRecordsOrErr returns the PackRecords value or an error if the edge
 // was not loaded in eager-loading.
 func (e AlbumEdges) PackRecordsOrErr() ([]*DownloadRecord, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[5] {
 		return e.PackRecords, nil
 	}
 	return nil, &NotLoadedError{edge: "pack_records"}
@@ -175,7 +164,7 @@ func (e AlbumEdges) PackRecordsOrErr() ([]*DownloadRecord, error) {
 // CoArtistsOrErr returns the CoArtists value or an error if the edge
 // was not loaded in eager-loading.
 func (e AlbumEdges) CoArtistsOrErr() ([]*Artist, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[6] {
 		return e.CoArtists, nil
 	}
 	return nil, &NotLoadedError{edge: "co_artists"}
@@ -439,11 +428,6 @@ func (_m *Album) QueryDownloadRecords() *DownloadRecordQuery {
 // QueryCredits queries the "credits" edge of the Album entity.
 func (_m *Album) QueryCredits() *MusicCreditQuery {
 	return NewAlbumClient(_m.config).QueryCredits(_m)
-}
-
-// QueryAnnotations queries the "annotations" edge of the Album entity.
-func (_m *Album) QueryAnnotations() *MusicAnnotationQuery {
-	return NewAlbumClient(_m.config).QueryAnnotations(_m)
 }
 
 // QueryEvents queries the "events" edge of the Album entity.

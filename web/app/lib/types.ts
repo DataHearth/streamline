@@ -923,22 +923,9 @@ export type User = {
 	device_email?: string;
 	// Only /auth/me fills this; admin user lists leave it out.
 	send?: { configured: boolean; from: string };
-	// What the account may do through the Subsonic API; gates /rest only.
-	subsonic?: SubsonicAccess;
 	created_at: string;
 	failed_login_count?: number;
 	locked_until?: string | null;
-};
-
-export type SubsonicAccess = {
-	can_stream: boolean;
-	can_download: boolean;
-	can_manage_playlists: boolean;
-	can_share: boolean;
-	can_rate: boolean;
-	can_change_password: boolean;
-	// Kbps ceiling on every stream; 0 is none.
-	max_bit_rate: number;
 };
 
 // read: GET and HEAD only, whatever the owner's role. full: the owner's role.
@@ -1913,25 +1900,6 @@ export type ImportScanBook = {
 	created_at: string;
 	updated_at: string;
 };
-
-// Subsonic access (/account/subsonic-password).
-// Both sign in with the account's email and a secret; neither puts the secret in
-// a URL, where logs and referrers would keep it. The secret is only in the POST
-// response.
-export type AppAccessKind = "subsonic";
-export type AppAccess = {
-	enabled: boolean;
-	// The name a client signs in with: the account's email.
-	username: string;
-	created_at?: string;
-	// Written in batches, so it can trail a client's first call by up to five
-	// minutes.
-	last_used_at?: string;
-	// The client's product name on its last call, e.g. "Symfonium".
-	last_client?: string;
-};
-// POST: the Subsonic password, shown once.
-export type AppAccessCreated = AppAccess & { secret: string };
 
 export type ImportStartRequest = {
 	source_path: string;

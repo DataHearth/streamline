@@ -63,8 +63,6 @@ const (
 	EdgeMembers = "members"
 	// EdgeDownloadRecords holds the string denoting the download_records edge name in mutations.
 	EdgeDownloadRecords = "download_records"
-	// EdgeAnnotations holds the string denoting the annotations edge name in mutations.
-	EdgeAnnotations = "annotations"
 	// EdgeEvents holds the string denoting the events edge name in mutations.
 	EdgeEvents = "events"
 	// EdgeCoAlbums holds the string denoting the co_albums edge name in mutations.
@@ -92,13 +90,6 @@ const (
 	DownloadRecordsInverseTable = "download_records"
 	// DownloadRecordsColumn is the table column denoting the download_records relation/edge.
 	DownloadRecordsColumn = "artist_download_records"
-	// AnnotationsTable is the table that holds the annotations relation/edge.
-	AnnotationsTable = "music_annotations"
-	// AnnotationsInverseTable is the table name for the MusicAnnotation entity.
-	// It exists in this package in order to avoid circular dependency with the "musicannotation" package.
-	AnnotationsInverseTable = "music_annotations"
-	// AnnotationsColumn is the table column denoting the annotations relation/edge.
-	AnnotationsColumn = "artist_id"
 	// EventsTable is the table that holds the events relation/edge.
 	EventsTable = "media_events"
 	// EventsInverseTable is the table name for the MediaEvent entity.
@@ -374,20 +365,6 @@ func ByDownloadRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByAnnotationsCount orders the results by annotations count.
-func ByAnnotationsCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newAnnotationsStep(), opts...)
-	}
-}
-
-// ByAnnotations orders the results by annotations terms.
-func ByAnnotations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newAnnotationsStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // ByEventsCount orders the results by events count.
 func ByEventsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -434,13 +411,6 @@ func newDownloadRecordsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(DownloadRecordsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, DownloadRecordsTable, DownloadRecordsColumn),
-	)
-}
-func newAnnotationsStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(AnnotationsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, AnnotationsTable, AnnotationsColumn),
 	)
 }
 func newEventsStep() *sqlgraph.Step {
