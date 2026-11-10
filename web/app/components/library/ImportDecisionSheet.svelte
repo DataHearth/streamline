@@ -137,8 +137,12 @@
 				>
 					{entry.sub}
 				</span>
-				{#if entry.outcome === "failed" && entry.outcomeMessage}
-					<span class="w-full text-[11.5px] text-status-failed">
+				{#if entry.outcomeMessage}
+					<span
+						class="w-full text-[11.5px] {entry.outcome === 'failed'
+							? 'text-status-failed'
+							: 'text-fg-muted'}"
+					>
 						{entry.outcomeMessage}
 					</span>
 				{/if}

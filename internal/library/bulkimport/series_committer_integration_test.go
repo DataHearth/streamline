@@ -520,3 +520,177 @@ func episodeID(show *ent.TVShow) uint32 {
 	}
 	return 0
 }
+
+var _ = Describe(
+	"Series commit outcome",
+	Label("integration", "bulkimport"),
+	func() {
+		const tvdbID = uint32(81189)
+		var (
+			ctx        context.Context
+			root       string
+			srcDir     string
+			libDir     string
+			showFolder string
+			client     *ent.Client
+			store      db.Store
+			tvmeta     *metamocks.MockTVProvider
+			svc        *Service
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			root = GinkgoT().TempDir()
+			srcDir = filepath.Join(root, "downloads")
+			libDir = filepath.Join(root, "tv")
+			showFolder = filepath.Join(srcDir, "Breaking Bad")
+			Expect(os.MkdirAll(showFolder, 0o755)).To(Succeed())
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"series_path": libDir,
+					"series_naming": "{title}/Season {season:02}/" +
+						"{title} - S{season:02}E{episode:02}.{ext}",
+				},
+			})
+			client = dbtest.SetupTestDB(ctx)
+			events.Register(client)
+			DeferCleanup(client.Close)
+			store = db.New(client)
+			tvmeta = metamocks.NewMockTVProvider(GinkgoT())
+			svc = NewService(
+				store, nil, tvmeta, library.NewImportService(), nil,
+				tvshow.NewService(store, tvmeta, nil, nil, nil), nil,
+				libDir, libDir,
+				nil, nil, nil, nil,
+			)
+			tvmeta.EXPECT().GetSeries(mock.Anything, tvdbID).
+				Return(&metadata.TVDetails{
+					TVDBID: tvdbID, Title: "Breaking Bad", Year: 2008,
+					Status: "ended",
+					Type:   metadata.SeriesStandard,
+					Seasons: []metadata.SeasonInfo{
+						{Number: 1, Name: "Season 1"},
+					},
+					Episodes: []metadata.EpisodeInfo{
+						{SeasonNumber: 1, Number: 1, Title: "Pilot"},
+						{SeasonNumber: 1, Number: 2, Title: "Cat's in the Bag..."},
+					},
+				}, nil).Once()
+			tvmeta.EXPECT().GetSeriesCast(mock.Anything, tvdbID).
+				Return(nil, nil).Once()
+		})
+
+		placeSource := func(name string) {
+			Expect(os.WriteFile(
+				filepath.Join(showFolder, name), make([]byte, 60*1024*1024), 0o644,
+			)).To(Succeed())
+		}
+		// blockDestination puts an untracked file where the naming template
+		// sends the episode, so its transfer fails with ErrDestExists.
+		blockDestination := func(episode string) {
+			dest := filepath.Join(libDir, "Breaking Bad", "Season 01",
+				"Breaking Bad - S01E"+episode+".mkv")
+			Expect(os.MkdirAll(filepath.Dir(dest), 0o755)).To(Succeed())
+			Expect(os.WriteFile(dest, []byte("someone else's"), 0o644)).To(Succeed())
+		}
+		commit := func(mode entimportscan.Mode, existing *uint32) *ent.ImportScanShow {
+			scan, err := store.CreateImportScan(ctx, db.CreateImportScanParams{
+				SourcePath: srcDir,
+				Kind:       entimportscan.KindSeries,
+				Mode:       mode,
+				ImportMode: entimportscan.ImportModeCopy,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.UpdateImportScanStatus(
+				ctx, scan.ID, entimportscan.StatusAwaitingReview,
+				db.UpdateScanStatusOpts{},
+			)).To(Succeed())
+			row := db.CreateImportScanShowParams{
+				FolderPath:  showFolder,
+				ParsedTitle: "Breaking Bad",
+				FileCount:   1,
+			}
+			if existing != nil {
+				row.Classification = entimportscanshow.ClassificationExisting
+				row.ExistingTvshowID = existing
+			} else {
+				id := tvdbID
+				row.Classification = entimportscanshow.ClassificationConfirmed
+				row.TVDBID = &id
+			}
+			Expect(store.BulkCreateImportScanShows(
+				ctx, scan.ID, []db.CreateImportScanShowParams{row},
+			)).To(Succeed())
+
+			svc.runCommitSeries(ctx, scan)
+
+			shows, err := client.ImportScanShow.Query().
+				Where(entimportscanshow.HasScanWith(entimportscan.ID(scan.ID))).
+				All(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shows).To(HaveLen(1))
+			return shows[0]
+		}
+		importedEvents := func() int {
+			return client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.Type(events.TypeImported))).
+				CountX(ctx)
+		}
+
+		It("fails the show when its only matched file cannot be imported", func() {
+			placeSource("Breaking Bad S01E01.mkv")
+			blockDestination("01")
+
+			sh := commit(entimportscan.ModeRename, nil)
+
+			Expect(sh.Outcome).To(Equal(entimportscanshow.OutcomeFailed))
+			Expect(sh.OutcomeMessage).To(And(
+				ContainSubstring(
+					"1 files matched an episode, none could be imported",
+				),
+				ContainSubstring(library.ErrDestExists.Error()),
+			))
+			Expect(client.MediaFile.Query().CountX(ctx)).To(BeZero())
+			Expect(importedEvents()).To(BeZero())
+			scan := client.ImportScan.Query().OnlyX(ctx)
+			Expect(scan.CommitSuccessCount).To(BeZero())
+			Expect(scan.CommitFailedCount).To(Equal(uint32(1)))
+		})
+
+		It(
+			"keeps the outcome and names the failures when some files import",
+			func() {
+				placeSource("Breaking Bad S01E01.mkv")
+				placeSource("Breaking Bad S01E02.mkv")
+				blockDestination("02")
+
+				sh := commit(entimportscan.ModeRename, nil)
+
+				Expect(sh.Outcome).To(Equal(entimportscanshow.OutcomeCreated))
+				Expect(sh.OutcomeMessage).To(And(
+					ContainSubstring("1 of 2 matched files could not be imported"),
+					ContainSubstring(library.ErrDestExists.Error()),
+				))
+				Expect(client.MediaFile.Query().CountX(ctx)).To(Equal(1))
+				Expect(importedEvents()).To(Equal(1))
+			},
+		)
+
+		It("stays attached when the folder is committed again", func() {
+			placeSource("Breaking Bad S01E01.mkv")
+
+			first := commit(entimportscan.ModeInPlace, nil)
+			Expect(first.Outcome).To(Equal(entimportscanshow.OutcomeCreated))
+			Expect(first.OutcomeMessage).To(BeEmpty())
+			Expect(first.CreatedTvshowID).NotTo(BeNil())
+
+			again := commit(entimportscan.ModeInPlace, first.CreatedTvshowID)
+
+			Expect(again.Outcome).To(Equal(entimportscanshow.OutcomeAttached))
+			Expect(again.OutcomeMessage).To(BeEmpty())
+			Expect(client.MediaFile.Query().CountX(ctx)).To(Equal(1))
+			// Nothing was imported the second time, so no second event.
+			Expect(importedEvents()).To(Equal(1))
+		})
+	},
+)

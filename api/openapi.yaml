@@ -15738,8 +15738,15 @@ components:
         outcome:
           type: string
           enum: [pending, created, attached, failed]
+          description: |
+            `failed` covers a show none of whose matched files could be
+            linked; a folder whose files the show already tracks is
+            `attached`.
         outcome_message:
           type: string
+          description: |
+            Why the show failed, or on a `created`/`attached` show a note
+            counting the matched files that could not be imported.
         created_tvshow_id:
           type: integer
           x-go-type: uint32

@@ -92,12 +92,12 @@
 
 	<td class="px-4 py-3 align-top whitespace-nowrap">
 		{#if entry.outcome === "created"}
-			<span class="inline-flex items-center gap-1 text-xs font-semibold text-status-available">
+			<span class="inline-flex items-center gap-1 text-xs font-semibold text-status-available" title={entry.outcomeMessage || undefined}>
 				<CircleCheckBig size={13} aria-hidden="true" />
 				{i18n.common_created()}
 			</span>
 		{:else if entry.outcome === "attached"}
-			<span class="inline-flex items-center gap-1 text-xs font-semibold text-status-available">
+			<span class="inline-flex items-center gap-1 text-xs font-semibold text-status-available" title={entry.outcomeMessage || undefined}>
 				<Link2 size={13} aria-hidden="true" />
 				{i18n.imports_attached()}
 			</span>

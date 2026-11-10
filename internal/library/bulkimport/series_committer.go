@@ -138,7 +138,11 @@ func (s *Service) commitShow(
 	if reused {
 		success = entimportscanshow.OutcomeAttached
 	}
-	matched := 0
+	// Every planned file ends in exactly one of three counts: imported (a row
+	// written by this commit), present (the episode already tracks this very
+	// path, which is what committing an adopted folder again looks like) or
+	// failed. Only the last is logged per file, so the outcome has to say so.
+	var tally adoptTally
 	touched := map[uint16]struct{}{}
 	// One imported event stands for the whole show, recorded below. Without
 	// this the per-file create hook would write an activity row per episode,
@@ -161,6 +165,7 @@ func (s *Service) commitShow(
 				"error",
 				err,
 			)
+			tally.fail("stat", err)
 			continue
 		}
 		// An episode holds at most one media file: committing an accepted show
@@ -168,6 +173,7 @@ func (s *Service) commitShow(
 		// being re-scanned is already adopted, so it needs no rewrite.
 		if mf, err := s.store.FindMediaFileByEpisodeID(ctx, target.ID); err == nil {
 			if mf.Path == f {
+				tally.present++
 				continue
 			}
 			if rmErr := os.Remove(mf.Path); rmErr != nil && !os.IsNotExist(rmErr) {
@@ -185,11 +191,13 @@ func (s *Service) commitShow(
 			if dErr := s.store.DeleteMediaFile(ctx, mf.ID); dErr != nil {
 				slog.WarnContext(ctx, "series adopt: delete replaced file failed",
 					"episode.id", target.ID, "error", dErr)
+				tally.fail("delete replaced file", dErr)
 				continue
 			}
 		} else if !ent.IsNotFound(err) {
 			slog.WarnContext(ctx, "series adopt: media file lookup failed",
 				"episode.id", target.ID, "error", err)
+			tally.fail("media file lookup", err)
 			continue
 		}
 		path, size := f, info.Size()
@@ -200,6 +208,7 @@ func (s *Service) commitShow(
 			if err != nil {
 				slog.WarnContext(ctx, "series adopt: import episode failed",
 					"file", f, "episode.id", target.ID, "error", err)
+				tally.fail("import episode", err)
 				continue
 			}
 			path, size, parsed = imported.Path, imported.Size, imported.Parsed
@@ -220,6 +229,7 @@ func (s *Service) commitShow(
 		}); err != nil {
 			slog.WarnContext(ctx, "series adopt: create media file failed",
 				"episode.id", target.ID, "error", err)
+			tally.fail("create media file", err)
 			continue
 		}
 		if err := s.store.SetEpisodeStatus(
@@ -231,11 +241,22 @@ func (s *Service) commitShow(
 				"episode.id", target.ID, "error", err)
 		}
 		touched[season] = struct{}{}
-		matched++
+		tally.imported++
 	}
 	slog.InfoContext(ctx, "series adopted",
-		"tvshow.id", show.ID, "matched", matched, "files", len(files))
-	if matched > 0 {
+		"tvshow.id", show.ID, "imported", tally.imported,
+		"present", tally.present, "failed", tally.failed, "files", len(files))
+	// Nothing written and nothing already there: the show holds no file from
+	// this folder, however many matched. A folder committed again, every file
+	// already tracked, imports nothing and is still attached.
+	if tally.imported == 0 && tally.present == 0 {
+		return entimportscanshow.OutcomeFailed, fmt.Sprintf(
+			"%d files matched an episode, none could be imported (first error: %s); see service logs",
+			tally.failed,
+			tally.firstErr,
+		), show.ID
+	}
+	if tally.imported > 0 {
 		seasons := make([]uint16, 0, len(touched))
 		for n := range touched {
 			seasons = append(seasons, n)
@@ -245,7 +266,7 @@ func (s *Service) commitShow(
 			ctx, nil, events.TypeImported, events.ScopeSeries, show.ID,
 			map[string]any{
 				"seasons":  seasons,
-				"episodes": matched,
+				"episodes": tally.imported,
 				"source":   "bulk_import",
 			},
 		); err != nil {
@@ -253,7 +274,31 @@ func (s *Service) commitShow(
 				"tvshow.id", show.ID, "error", err)
 		}
 	}
-	return success, "", show.ID
+	var note string
+	if tally.failed > 0 {
+		note = fmt.Sprintf(
+			"%d of %d matched files could not be imported (first error: %s); see service logs",
+			tally.failed,
+			len(plan),
+			tally.firstErr,
+		)
+	}
+	return success, note, show.ID
+}
+
+// adoptTally counts what commitShow did with each planned file.
+type adoptTally struct {
+	imported, present, failed int
+	// firstErr is the first failure, labelled with its step, for the outcome
+	// message; the rest are only in the log.
+	firstErr string
+}
+
+func (t *adoptTally) fail(step string, err error) {
+	if t.failed == 0 {
+		t.firstErr = fmt.Sprintf("%s: %v", step, err)
+	}
+	t.failed++
 }
 
 // episodeMatch is one folder file bound to the episode it belongs to.

@@ -6320,12 +6320,19 @@ type ImportScanShow struct {
 	FileCount        uint16                       `json:"file_count"`
 	FolderPath       string                       `json:"folder_path"`
 	Id               uint32                       `json:"id"`
-	Outcome          ImportScanShowOutcome        `json:"outcome"`
-	OutcomeMessage   *string                      `json:"outcome_message,omitempty"`
-	ParsedTitle      *string                      `json:"parsed_title,omitempty"`
-	ParsedYear       *uint16                      `json:"parsed_year,omitempty"`
-	TvdbId           *uint32                      `json:"tvdb_id,omitempty"`
-	UpdatedAt        *time.Time                   `json:"updated_at,omitempty"`
+
+	// Outcome `failed` covers a show none of whose matched files could be
+	// linked; a folder whose files the show already tracks is
+	// `attached`.
+	Outcome ImportScanShowOutcome `json:"outcome"`
+
+	// OutcomeMessage Why the show failed, or on a `created`/`attached` show a note
+	// counting the matched files that could not be imported.
+	OutcomeMessage *string    `json:"outcome_message,omitempty"`
+	ParsedTitle    *string    `json:"parsed_title,omitempty"`
+	ParsedYear     *uint16    `json:"parsed_year,omitempty"`
+	TvdbId         *uint32    `json:"tvdb_id,omitempty"`
+	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
 }
 
 // ImportScanShowClassification defines model for ImportScanShow.Classification.
@@ -6334,7 +6341,9 @@ type ImportScanShowClassification string
 // ImportScanShowDecision defines model for ImportScanShow.Decision.
 type ImportScanShowDecision string
 
-// ImportScanShowOutcome defines model for ImportScanShow.Outcome.
+// ImportScanShowOutcome `failed` covers a show none of whose matched files could be
+// linked; a folder whose files the show already tracks is
+// `attached`.
 type ImportScanShowOutcome string
 
 // ImportScanShowCandidate defines model for ImportScanShowCandidate.

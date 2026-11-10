@@ -118,6 +118,8 @@ Commit runs in the background and reports `{imported} imported, {failed} failed`
 | **Skipped** | You excluded it |
 | **Failed** | Something went wrong — permissions, missing file, cross-filesystem hardlink |
 
+A show folder is judged by its episode files. It is **Failed** when none of its matched files could be linked, for example because every rename collided with a file already at the destination. The reason names the first error, and the service log has the rest. A show where only some files failed stays **Created** or **Attached**, and the outcome's note says how many could not be imported (hover the outcome). Committing the same folder again, with every file already tracked, stays **Attached**.
+
 You can also **Discard** a scan under review, which throws away every decision you made without touching anything.
 
 > [!WARNING]

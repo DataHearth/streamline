@@ -156,6 +156,7 @@
 		{#if show.outcome === "created"}
 			<span
 				class="inline-flex items-center gap-1 text-xs font-semibold text-status-available"
+				title={show.outcome_message || undefined}
 			>
 				<CircleCheckBig size={13} aria-hidden="true" />
 				{i18n.common_created()}
@@ -163,6 +164,7 @@
 		{:else if show.outcome === "attached"}
 			<span
 				class="inline-flex items-center gap-1 text-xs font-semibold text-status-available"
+				title={show.outcome_message || undefined}
 			>
 				<Link2 size={13} aria-hidden="true" />
 				{i18n.imports_attached()}
