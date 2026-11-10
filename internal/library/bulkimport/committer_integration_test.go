@@ -190,8 +190,16 @@ var _ = Describe(
 					})
 					Expect(err).NotTo(HaveOccurred())
 					sources := []string{
-						filepath.Join(srcRoot, "a", "Fight.Club.1999.1080p.GRP1.mkv"),
-						filepath.Join(srcRoot, "b", "Fight.Club.1999.1080p.GRP2.mkv"),
+						filepath.Join(
+							srcRoot,
+							"a",
+							"Fight.Club.1999.1080p.GRP1.mkv",
+						),
+						filepath.Join(
+							srcRoot,
+							"b",
+							"Fight.Club.1999.1080p.GRP2.mkv",
+						),
 					}
 					for i, src := range sources {
 						sparseFile(src, sizes[i])
@@ -238,14 +246,30 @@ var _ = Describe(
 					Expect(entries).To(HaveLen(1), at)
 				}
 			},
-			Entry("hardlink, tracked file at the destination",
-				entimportscan.ImportModeHardlink, "Fight Club (1999)/Fight Club.mkv", 40),
-			Entry("move, tracked file at the destination",
-				entimportscan.ImportModeMove, "Fight Club (1999)/Fight Club.mkv", 40),
-			Entry("copy, tracked file at the destination",
-				entimportscan.ImportModeCopy, "Fight Club (1999)/Fight Club.mkv", 8),
-			Entry("copy, tracked file elsewhere",
-				entimportscan.ImportModeCopy, "Fight Club (1999)/Fight Club 720p.mkv", 8),
+			Entry(
+				"hardlink, tracked file at the destination",
+				entimportscan.ImportModeHardlink,
+				"Fight Club (1999)/Fight Club.mkv",
+				40,
+			),
+			Entry(
+				"move, tracked file at the destination",
+				entimportscan.ImportModeMove,
+				"Fight Club (1999)/Fight Club.mkv",
+				40,
+			),
+			Entry(
+				"copy, tracked file at the destination",
+				entimportscan.ImportModeCopy,
+				"Fight Club (1999)/Fight Club.mkv",
+				8,
+			),
+			Entry(
+				"copy, tracked file elsewhere",
+				entimportscan.ImportModeCopy,
+				"Fight Club (1999)/Fight Club 720p.mkv",
+				8,
+			),
 		)
 
 		Context("on an in-place scan", func() {
