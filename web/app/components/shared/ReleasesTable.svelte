@@ -127,9 +127,9 @@
 	let groupFilter = $state<string>("");
 	let indexerFilter = $state<string>("");
 	let errMsg = $state<string | null>(null);
-	// Cancelling is local: the endpoint answers once, so there is nothing to
-	// abort server-side. Dropping the query is what "stop waiting" means here,
-	// and it leaves a state that says so rather than an empty table.
+	// Cancelling aborts the request (the query passes its signal to api()), so
+	// the server stops querying the indexers too, and leaves a state that says
+	// the search was cancelled rather than an empty table.
 	let canceled = $state(false);
 	const qc = useQueryClient();
 	// When the current view asked for its results. Opening the dialog or
@@ -152,10 +152,14 @@
 		queryKey,
 		// Movie search returns a bare array; series episode search returns an
 		// { items, hidden_packs } envelope. Normalize both.
-		queryFn: async () => {
+		// The signal aborts the request once nothing is waiting on it: a cancel,
+		// the dialog closing, or a scope switch remounting the table. The
+		// server cancels the indexer queries behind it, which would otherwise
+		// run to their timeout for an answer nobody reads.
+		queryFn: async ({ signal }) => {
 			const raw = await api<
 				SearchResult[] | { items?: SearchResult[]; hidden_packs?: number }
-			>(searchPath, { method: "POST" });
+			>(searchPath, { method: "POST", signal });
 			if (Array.isArray(raw)) return { items: raw, hiddenPacks: 0 };
 			return { items: raw.items ?? [], hiddenPacks: raw.hidden_packs ?? 0 };
 		},
