@@ -26,10 +26,12 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "hygiene.series_orphan_scan")
 	defer span.End()
 
-	if _, err := os.Stat(s.lib().SeriesPath); err != nil {
+	// Read once, as the movie scan does: one pass, one root.
+	root := s.lib().SeriesPath
+	if _, err := os.Stat(root); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			slog.InfoContext(ctx, "series path missing; skipping series orphan scan",
-				"path", s.lib().SeriesPath)
+				"path", root)
 			return nil
 		}
 		return otelx.RecordSpanError(span, err)
@@ -55,7 +57,7 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 		return otelx.RecordSpanError(span, err)
 	}
 
-	entries, err := os.ReadDir(s.lib().SeriesPath)
+	entries, err := os.ReadDir(root)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
@@ -66,7 +68,7 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 		if !e.IsDir() {
 			continue
 		}
-		folder := filepath.Join(s.lib().SeriesPath, e.Name())
+		folder := filepath.Join(root, e.Name())
 		if _, ok := pending[folder]; ok {
 			continue
 		}
@@ -99,11 +101,7 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 		return nil
 	}
 	seriesOrphanQueued.Add(ctx, int64(len(queue)))
-	scanID, err := s.openReviewScanID(
-		ctx,
-		s.lib().SeriesPath,
-		entimportscan.KindSeries,
-	)
+	scanID, err := s.openReviewScanID(ctx, root, entimportscan.KindSeries)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
@@ -111,7 +109,7 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 		return otelx.RecordSpanError(span, err)
 	}
 	slog.InfoContext(ctx, "series orphan scan queued shows for review",
-		"count", len(queue), "path", s.lib().SeriesPath)
+		"count", len(queue), "path", root)
 	return nil
 }
 
