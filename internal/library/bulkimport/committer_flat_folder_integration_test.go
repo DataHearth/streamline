@@ -120,12 +120,17 @@ var _ = Describe(
 		It("imports every new movie of the folder", func() {
 			meta.EXPECT().GetMovie(mock.Anything, fightClubTMDB).
 				Return(&metadata.MovieDetails{
-					TMDBID: fightClubTMDB, Title: "Fight Club",
-					OriginalTitle: "Fight Club", Year: 1999,
+					TMDBID:        fightClubTMDB,
+					Title:         "Fight Club",
+					OriginalTitle: "Fight Club",
+					Year:          1999,
 				}, nil).Once()
 			meta.EXPECT().GetMovie(mock.Anything, heatTMDB).
 				Return(&metadata.MovieDetails{
-					TMDBID: heatTMDB, Title: "Heat", OriginalTitle: "Heat", Year: 1995,
+					TMDBID:        heatTMDB,
+					Title:         "Heat",
+					OriginalTitle: "Heat",
+					Year:          1995,
 				}, nil).Once()
 
 			outcome, msg, fightClubID := svc.commitRename(
