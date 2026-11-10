@@ -290,6 +290,9 @@ type instance struct {
 	paths               map[string]string
 	logFile, trackerLog *os.File
 	trackerArgs         []string
+	// exited closes once cmd has been waited on. Only that Wait sets
+	// ProcessState, so the channel is how anything else learns it is gone.
+	exited chan struct{}
 }
 
 func newInstance(
@@ -452,6 +455,11 @@ func (in *instance) start(
 	if err := in.cmd.Start(); err != nil {
 		return fmt.Errorf("start streamline: %w", err)
 	}
+	in.exited = make(chan struct{})
+	go func(c *exec.Cmd, done chan struct{}) {
+		_ = c.Wait()
+		close(done)
+	}(in.cmd, in.exited)
 	slog.InfoContext(
 		ctx,
 		"instance starting",
@@ -471,10 +479,14 @@ func (in *instance) start(
 				return nil
 			}
 		}
-		if in.cmd.ProcessState != nil {
-			break
+		select {
+		case <-in.exited:
+			return fmt.Errorf(
+				"streamline exited before it came up (%s); see %s",
+				in.cmd.ProcessState, in.logFile.Name(),
+			)
+		case <-time.After(300 * time.Millisecond):
 		}
-		time.Sleep(300 * time.Millisecond)
 	}
 	return fmt.Errorf("streamline did not come up; see %s", in.logFile.Name())
 }
@@ -526,8 +538,13 @@ func (in *instance) stop() {
 			continue
 		}
 		_ = c.Process.Signal(os.Interrupt)
-		done := make(chan struct{})
-		go func() { _ = c.Wait(); close(done) }()
+		// The instance is already being waited on (see start); a second Wait
+		// would only error.
+		done := in.exited
+		if c != in.cmd || done == nil {
+			done = make(chan struct{})
+			go func() { _ = c.Wait(); close(done) }()
+		}
 		select {
 		case <-done:
 		case <-time.After(10 * time.Second):
