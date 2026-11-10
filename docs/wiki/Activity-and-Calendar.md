@@ -98,6 +98,16 @@ See [Configuration Reference](Configuration-Reference#import-verification) for t
 > [!TIP]
 > A torrent stuck at the same percentage with no speed has no peers. Remove it and let Streamline find another release, or search manually and pick one with more seeders.
 
+### A download's own address
+
+Every download has an address, `/activity?download=<id>`. Activity opens it with its details expanded (the sheet on a phone): on the Queue while it is in flight, on the History once it is done. A reload keeps it open, the link can be shared, and a download further back than the history loaded so far is fetched on its own. If the download is gone (cancelled, or cleared from the history), Activity says so and shows the queue.
+
+In the **event feed**, a grab, a download finishing or failing, a hold and the import it produced each carry a **Download** link to the download they came from, for as long as it is still in Activity. Back returns to the feed.
+
+### The queue for one title
+
+`/activity?series=<id>&season=<n>` shows only that season's downloads; `?series=<id>` a whole show's, `?artist=<id>` an artist's, `?book_series=<id>` a book series'. The title is the first chip of the status filters, and its ✕ shows the whole queue again, as do the filters' clear button and the filter sheet's **Reset**. The filter applies to the queue only, so switching to History drops it. A pack that spans several seasons is listed under its first one.
+
 ---
 
 ## History
