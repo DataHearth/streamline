@@ -65,7 +65,7 @@
 				value={query}
 				oninput={(e) => onQueryChange(e.currentTarget.value)}
 				placeholder={text.search}
-				class="min-w-0 flex-1 bg-transparent text-[14px] text-fg outline-none placeholder:text-fg-faint"
+				class="min-w-0 flex-1 bg-transparent text-[14px] text-fg outline-none placeholder:text-fg-subtle"
 			/>
 			{#if query}
 				<button

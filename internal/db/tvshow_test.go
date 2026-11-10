@@ -731,6 +731,40 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		})
 	})
 
+	Describe("ListShowNames", func() {
+		It("returns every show with its names, monitored or not", func() {
+			a, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Shōgun", OriginalTitle: "将軍", Year: 2024, TvdbID: 77,
+				Aliases: []string{"Shogun"},
+				Seasons: []SeasonSeed{
+					{Number: 1, Episodes: []EpisodeSeed{{Number: 1, Title: "A"}}},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.SetEpisodeMonitored(
+				ctx, a.Edges.Seasons[0].Edges.Episodes[0].ID, false,
+			)).To(Succeed())
+			b, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Y", Year: 2020, TvdbID: 78,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			shows, err := store.ListShowNames(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shows).To(HaveLen(2))
+			byID := map[uint32]*ent.TVShow{}
+			for _, sh := range shows {
+				byID[sh.ID] = sh
+			}
+			Expect(byID[a.ID].Title).To(Equal("Shōgun"))
+			Expect(byID[a.ID].OriginalTitle).To(Equal("将軍"))
+			Expect(byID[a.ID].Aliases).To(Equal([]string{"Shogun"}))
+			Expect(byID[a.ID].Year).To(Equal(uint16(2024)))
+			Expect(byID[a.ID].Edges.Seasons).To(BeNil())
+			Expect(byID[b.ID].Title).To(Equal("Y"))
+		})
+	})
+
 	Describe("ListUpgradeCandidateShows", func() {
 		var eps map[uint16]*ent.Episode
 

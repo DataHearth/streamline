@@ -224,7 +224,7 @@
 							<th
 								colspan="6"
 								scope="colgroup"
-								class="px-4 py-1.5 text-left font-mono text-[10px] uppercase tracking-[0.16em] text-fg-faint"
+								class="px-4 py-1.5 text-left font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle"
 							>
 								{g.label}
 							</th>
@@ -247,13 +247,13 @@
 				aria-hidden="true"
 			>
 				<span
-					class="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-faint"
+					class="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle"
 				>
 					{i18n.settings_system()}
 				</span>
 				<div class="h-px flex-1 bg-border"></div>
 				<span
-					class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint"
+					class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle"
 				>
 					{i18n.schedules_predefined()}
 				</span>

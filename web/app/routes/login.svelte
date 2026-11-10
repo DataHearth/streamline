@@ -197,7 +197,7 @@
 			</div>
 			<div class="relative flex justify-center text-xs uppercase">
 				<span
-					class="bg-bg-elevated px-2 font-mono tracking-wider text-fg-faint"
+					class="bg-bg-elevated px-2 font-mono tracking-wider text-fg-subtle"
 					>{i18n.auth_or()}</span
 				>
 			</div>

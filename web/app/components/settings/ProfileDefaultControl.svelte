@@ -60,7 +60,7 @@
 			minWidth="13rem"
 			ariaLabel={i18n.quality_make_default_for()}
 		>
-			<li role="presentation" class="px-3 pb-1 pt-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint">
+			<li role="presentation" class="px-3 pb-1 pt-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
 				{i18n.quality_make_default_for()}
 			</li>
 			{#each kinds as k (k.value)}

@@ -557,7 +557,7 @@
 									}}
 									onkeydown={(e) => onGroupKey(e, c, i)}
 									onblur={() => commitGroups(c, i)}
-									class="min-h-11 min-w-32 flex-1 bg-transparent py-0.5 text-sm text-fg placeholder:text-fg-faint focus:outline-none read-only:cursor-not-allowed lg:min-h-0"
+									class="min-h-11 min-w-32 flex-1 bg-transparent py-0.5 text-sm text-fg placeholder:text-fg-subtle focus:outline-none read-only:cursor-not-allowed lg:min-h-0"
 								/>
 							</div>
 						{:else if c.type === "release_title" || c.type === "release_group"}

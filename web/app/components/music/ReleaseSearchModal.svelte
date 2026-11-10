@@ -22,9 +22,12 @@
 		onClose: () => void;
 	} = $props();
 
-	let scope = $state("artist");
-	$effect(() => {
-		if (open) scope = initialScope;
+	// Derived for SeriesReleaseSearchModal's reason: it holds initialScope
+	// before the table mounts, so opening on a release searches that release
+	// and not the previous scope first. Reopening resets it.
+	let scope = $derived.by(() => {
+		void open;
+		return initialScope;
 	});
 
 	// Upcoming releases have nothing to find yet.

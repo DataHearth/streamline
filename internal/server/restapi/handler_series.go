@@ -592,6 +592,9 @@ func (s *Server) BrowseEpisodeReleases(
 		season,
 		episode,
 	)
+	if indexerSearchFailed(err) {
+		return nil, err
+	}
 	if err != nil {
 		return BrowseEpisodeReleases500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -703,6 +706,9 @@ func (s *Server) BrowseSeasonReleases(
 		show.ImdbID,
 		request.Number,
 	)
+	if indexerSearchFailed(err) {
+		return nil, err
+	}
 	if err != nil {
 		return BrowseSeasonReleases500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -846,6 +852,9 @@ func (s *Server) BrowseSeriesReleases(
 		show.TvdbID,
 		show.ImdbID,
 	)
+	if indexerSearchFailed(err) {
+		return nil, err
+	}
 	if err != nil {
 		return BrowseSeriesReleases500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),

@@ -90,6 +90,9 @@ func (s *FeedScanner) newMusicPass(ctx context.Context) (*musicPass, error) {
 				pass.profiles[ar.QualityProfile] = p
 			}
 			key := showKey(ar.Name)
+			if key == "" {
+				continue
+			}
 			into[key] = append(into[key], a)
 		}
 	}

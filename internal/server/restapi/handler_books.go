@@ -642,6 +642,8 @@ func (s *Server) SearchBookReleases(
 		return SearchBookReleases422JSONResponse{
 			UnprocessableEntityJSONResponse: errNoQualityProfile(err.Error()),
 		}, nil
+	case indexerSearchFailed(err):
+		return nil, err
 	default:
 		return SearchBookReleases500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),

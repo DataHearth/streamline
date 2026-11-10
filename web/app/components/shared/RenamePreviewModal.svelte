@@ -45,7 +45,7 @@
 			{#each preview.data?.operations ?? [] as op (op.media_file_id)}
 				<li class="overflow-hidden rounded-md border border-border bg-bg-card/60 text-xs">
 					<div class="flex gap-2.5 px-3 py-2">
-						<span class="w-8 shrink-0 pt-px font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint">{i18n.common_from()}</span>
+						<span class="w-8 shrink-0 pt-px font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle">{i18n.common_from()}</span>
 						<span class="min-w-0 break-all font-mono text-fg-muted" title={op.from}>{op.from}</span>
 					</div>
 					<div class="flex gap-2.5 border-t border-border bg-accent-soft px-3 py-2">

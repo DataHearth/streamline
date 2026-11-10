@@ -13,7 +13,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import { formatRelative } from "@lib/dates";
 	import { loadPref, savePref, MOVIES_SEARCH } from "@lib/prefs";
-	import { onRouteQuery } from "@lib/route-query";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import MoviesToolbar from "@components/movies/MoviesToolbar.svelte";
 	import MovieGrid from "@components/movies/MovieGrid.svelte";
 	import MovieList from "@components/movies/MovieList.svelte";
@@ -34,15 +34,15 @@
 	type SortKey = "title" | "year";
 	type SortOrder = "asc" | "desc";
 
-	const VALID_MON = new Set(["all", "monitored", "unmonitored"]);
-	const VALID_TABS = new Set([
+	const MON = ["all", "monitored", "unmonitored"] as const;
+	const TABS = [
 		"all",
 		"available",
 		"wanted",
 		"downloading",
 		"importing",
 		"failed",
-	]);
+	] as const;
 
 	// An explicit ?sort in the URL wins so shared links keep their ordering;
 	// otherwise fall back to the last sort this browser chose, then A→Z.
@@ -54,18 +54,13 @@
 		),
 	) {
 		const stored = loadPref(SORT_PREF)?.split("-") ?? [];
-		const rawTab = p.get("status") ?? "all";
-		const rawMon = p.get("monitored") ?? "all";
-		const rawSort = p.get("sort") ?? stored[0] ?? "title";
-		const rawOrder = p.get("order") ?? stored[1] ?? "asc";
-		const rawView = p.get("view") ?? "grid";
 		return {
-			tab: VALID_TABS.has(rawTab) ? rawTab : "all",
-			mon: VALID_MON.has(rawMon) ? rawMon : "all",
-			query: p.get("q") ?? "",
-			sort: (rawSort === "year" ? "year" : "title") as SortKey,
-			order: (rawOrder === "desc" ? "desc" : "asc") as SortOrder,
-			view: (rawView === "list" ? "list" : "grid") as View,
+			tab: oneOf(param(p, "status"), TABS, "all") as string,
+			mon: oneOf(param(p, "monitored"), MON, "all") as string,
+			query: param(p, "q") ?? "",
+			sort: oneOf<SortKey>(param(p, "sort") ?? stored[0], ["title", "year"], "title"),
+			order: oneOf<SortOrder>(param(p, "order") ?? stored[1], ["asc", "desc"], "asc"),
+			view: oneOf<View>(param(p, "view"), ["grid", "list"], "grid"),
 		};
 	}
 
@@ -97,10 +92,9 @@
 	});
 	let shownView = $derived<View>(narrow ? "grid" : view);
 
-	// window.location still names the outgoing page while this one mounts, so the
-	// filters a back link carries have to come off the route being rendered.
-	onMount(() =>
-		onRouteQuery("/movies", (p) => {
+	syncRouteQuery(
+		"/movies",
+		(p) => {
 			const v = readParams(p);
 			tab = v.tab;
 			mon = v.mon;
@@ -109,7 +103,18 @@
 			sort = v.sort;
 			order = v.order;
 			view = v.view;
-		}),
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "status", tab, "all");
+			setParam(p, "monitored", mon, "all");
+			setParam(p, "q", query);
+			setParam(p, "sort", sort, "title");
+			setParam(p, "order", order, "asc");
+			setParam(p, "view", view, "grid");
+			return p;
+		},
+		(search) => savePref(MOVIES_SEARCH, search),
 	);
 
 	function setSort(s: SortKey, o: SortOrder) {
@@ -117,35 +122,6 @@
 		order = o;
 		savePref(SORT_PREF, `${s}-${o}`);
 	}
-
-	$effect(() => {
-		// Every reactive read happens before the early returns below: a run that
-		// bails out first would register no dependencies and the effect would
-		// never fire again.
-		const p = new URLSearchParams();
-		if (tab !== "all") p.set("status", tab);
-		if (mon !== "all") p.set("monitored", mon);
-		if (query) p.set("q", query);
-		if (sort !== "title") p.set("sort", sort);
-		if (order !== "asc") p.set("order", order);
-		if (view !== "grid") p.set("view", view);
-		const search = p.toString();
-
-		if (typeof window === "undefined") return;
-		// Routify mounts the incoming route before it updates window.location, so
-		// on a navigation *into* this page the first flush still sees the outgoing
-		// URL. Writing then would stamp this page's (default, empty) filters onto
-		// the previous route's path and cancel the navigation — a detail page's
-		// back link would turn /movies/2?tab=cast into /movies/2 and never reach
-		// the list.
-		if (window.location.pathname !== "/movies") return;
-		savePref(MOVIES_SEARCH, search);
-
-		const next = `${window.location.pathname}${search ? `?${search}` : ""}`;
-		if (next !== window.location.pathname + window.location.search) {
-			window.history.replaceState(null, "", next);
-		}
-	});
 
 	// Filtering, sorting and paging are the server's. Doing all three in the
 	// browser means pulling the whole library, so every stale refetch — window

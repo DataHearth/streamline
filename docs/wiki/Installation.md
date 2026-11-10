@@ -137,6 +137,20 @@ Open <http://localhost:8080>.
 > [!TIP]
 > Pin to `X.Y.Z` or at least `X.Y` for anything you care about.
 
+#### Trying a pull request
+
+Every open pull request opened from a branch of this repository gets an image in a separate package, `ghcr.io/datahearth/streamline-pr`, rebuilt on each push. It is `linux/amd64` only, and unsigned. For PR 159 at commit `3e5928c`:
+
+| Tag | What it tracks |
+| --- | --- |
+| `pr-159`, `pr-159-vaapi` | The PR's latest push |
+| `pr-159-3e5928c`, `pr-159-3e5928c-vaapi` | That commit |
+
+The run's summary under the PR's checks lists the tags. A PR changing nothing that goes into the image (docs, the chart, CI) gets none, and so does a pull request from a fork or a Renovate update.
+
+> [!WARNING]
+> These tags are temporary. They are deleted when the PR closes, merged or not, so a deployment left on one fails at its next image pull. Switch it back to a release tag first.
+
 ### Hardware encoding (VAAPI)
 
 The [transcoder](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files) can encode on an Intel or AMD GPU through VAAPI instead of the CPU. **The default image cannot do this**: its `ffmpeg` is a static build with no libva, and passing a GPU into it changes nothing. Every release also publishes a second image with a `-vaapi` tag suffix, built on [linuxserver's ffmpeg image](https://github.com/linuxserver/docker-ffmpeg) (ffmpeg 9, ~1.2 GB), for exactly this case — no Debian, Ubuntu or Alpine ffmpeg package is built with `libvmaf`, so this is also the only image where [`transcoding.verify.min_vmaf`](Configuration-Reference#transcoding) is actually enforced rather than silently skipped, and it carries `av1_vaapi` alongside the h264/hevc encoders.

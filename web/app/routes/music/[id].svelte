@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { onMount } from "svelte";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
-	import { activeRoute } from "@roxi/routify";
 	import { Radar, Search, Tags, Upload, UserRound } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { createAction, deleteFailed, monitorToast, MUSIC, searchFailed, updateFailed } from "@lib/actions";
@@ -72,24 +71,31 @@
 		manualOpen = true;
 	}
 
-	// The release a tile linked to rides in ?release=, read off the route being
-	// rendered (window.location still names the outgoing page at mount).
-	onMount(() =>
-		activeRoute.subscribe((r) => {
-			if (!r) return;
-			const [path = "", search] = (r.url ?? "").split("?");
-			const next = /^\/music\/(\d+)$/.exec(path)?.[1];
-			if (!next || next === id) return;
-			id = next;
+	// ?tab= names the tab; a release a tile linked to rides in ?release=, which
+	// alone opens the discography on it — a tile that named a release came for
+	// its tracks, while a bare artist link opens on the overview, as a series
+	// does. The release is written only with the discography open, or reading
+	// it back would land on the discography.
+	const TAB_KEYS = ["overview", "discography", "credits", "history"];
+	syncRouteQuery(
+		/^\/music\/\d+$/,
+		(p, path) => {
+			const next = path.slice("/music/".length);
 			// The route component is reused from artist to artist.
-			manualOpen = false;
-			const rel = Number(new URLSearchParams(search ?? "").get("release")) || null;
+			if (next !== id) manualOpen = false;
+			id = next;
+			const rel = Number(param(p, "release")) || null;
 			selectedId = rel;
 			openId = rel;
-			// A tile that named a release came for its tracks; a bare artist link
-			// opens on the overview, as a series does.
-			tab = rel ? "discography" : "overview";
-		}),
+			tab = oneOf(param(p, "tab"), TAB_KEYS, rel ? "discography" : "overview");
+		},
+		() => {
+			const p = new URLSearchParams();
+			const rel = tab === "discography" ? selectedId : null;
+			setParam(p, "tab", tab, rel ? "discography" : "overview");
+			if (rel) p.set("release", String(rel));
+			return p;
+		},
 	);
 
 	const artistQuery = createQuery<Artist>(() => ({
@@ -153,8 +159,6 @@
 
 	function select(r: Release) {
 		selectedId = r.id;
-		if (typeof window !== "undefined" && window.location.pathname === `/music/${id}`)
-			window.history.replaceState(null, "", `/music/${id}?release=${r.id}`);
 	}
 
 	const MONITOR: { key: ArtistMonitor; label: string }[] = [
@@ -324,7 +328,7 @@
 			{ label: i18n.music_fact_last_added(), value: formatRelative(artist.added_at) },
 		];
 	});
-	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
+	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle";
 </script>
 
 {#if artistQuery.isLoading || !id}
@@ -491,7 +495,7 @@
 			{/snippet}
 		</MediaHero>
 
-		<nav class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
+		<nav class="sticky top-(--top-bar-height) z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
 			<div bind:this={tabTrack} class="flex w-full gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 				{#each tabs as t (t.key)}
 					{@const active = tab === t.key}
@@ -502,7 +506,7 @@
 						class={cn("relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4", active ? "text-fg" : "text-fg-subtle hover:text-fg")}
 					>
 						<span>{t.label}</span>
-						{#if t.n != null}<span class="ml-1.5 font-mono text-[11px] text-fg-faint">{t.n}</span>{/if}
+						{#if t.n != null}<span class="ml-1.5 font-mono text-[11px] text-fg-subtle">{t.n}</span>{/if}
 						{#if active}<span aria-hidden="true" class="absolute inset-x-3 -bottom-px h-0.5 rounded-t-sm bg-accent"></span>{/if}
 					</button>
 				{/each}
@@ -536,7 +540,7 @@
 			<div class="hidden gap-6 px-8 py-6 md:grid md:grid-cols-[200px_1fr] lg:grid-cols-[250px_1fr]">
 				<!-- The top bar (4rem), the sticky tab strip and the grid's own padding
 				     sit above it, so the list scrolls on its own beside a long panel. -->
-				<div class="sticky top-[8.5rem] max-h-[calc(100dvh-10rem)] self-start overflow-y-auto overscroll-contain">
+				<div class="sticky top-[calc(var(--top-bar-height)+4.5rem)] max-h-[calc(100dvh-var(--top-bar-height)-6rem)] self-start overflow-y-auto overscroll-contain">
 					{#key artist.id}
 						<ReleaseList
 							releases={artist.albums}

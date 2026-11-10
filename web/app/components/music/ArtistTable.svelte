@@ -43,7 +43,7 @@
 
 <div class="@container overflow-x-auto overflow-y-hidden rounded-lg border border-border bg-bg-elevated/70 backdrop-blur-md">
 	<table class="w-full text-sm">
-		<thead class="bg-bg-elevated/95 text-[10px] uppercase tracking-[0.12em] text-fg-faint">
+		<thead class="bg-bg-elevated/95 text-[10px] uppercase tracking-[0.12em] text-fg-subtle">
 			<tr class="border-b border-border">
 				<th scope="col" class="w-14 px-3 py-2.5" aria-hidden="true"></th>
 				<th scope="col" class="px-3 py-2.5 text-left font-medium">{i18n.music_artist()}</th>
@@ -61,7 +61,7 @@
 						<td colspan="7" class="border-b border-border bg-surface px-3 py-1.5">
 							<span class="font-mono text-[11px] font-semibold text-fg">{s.letter}</span>
 							{#if s.count != null}
-								<span class="ml-2 font-mono text-[10.5px] text-fg-faint">{s.count.toLocaleString()}</span>
+								<span class="ml-2 font-mono text-[10.5px] text-fg-subtle">{s.count.toLocaleString()}</span>
 							{/if}
 						</td>
 					</tr>

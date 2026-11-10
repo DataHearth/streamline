@@ -157,6 +157,24 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 		run([]*ent.Book{wantedBook(true, false)}, ebookItem, ebookItem)
 	})
 
+	It(
+		"matches an accented author against the release that drops the accent",
+		func() {
+			b := wantedBook(true, false)
+			b.AuthorName = "Émile Zola"
+			item := indexer.SearchResult{
+				Title:    "Emile Zola - Book Title (2015) EPUB",
+				Category: "7020",
+			}
+			books.EXPECT().GrabBookRelease(
+				mock.Anything, uint32(1),
+				book.GrabParams{Kind: "ebook", Result: item},
+			).Return(nil).Once()
+			expectBookkeeping("ebook")
+			run([]*ent.Book{b}, item)
+		},
+	)
+
 	It("grabs a wanted audiobook slot", func() {
 		books.EXPECT().GrabBookRelease(
 			mock.Anything, uint32(1),

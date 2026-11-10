@@ -7,7 +7,8 @@
 	import { createAction, monitorToast, MUSIC, searchFailed, updateFailed } from "@lib/actions";
 	import { cn } from "@lib/cn";
 	import { formatRelative } from "@lib/dates";
-	import { onRouteQuery } from "@lib/route-query";
+	import { loadPref, savePref } from "@lib/prefs";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import LibraryToolbar from "@components/shared/LibraryToolbar.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import ArtistCard from "@components/music/ArtistCard.svelte";
@@ -24,47 +25,62 @@
 	// under letters: their headers stay pinned, a jump bar (a fast scroller on
 	// a phone) goes straight to one, and a letter past what is loaded opens the
 	// list at its page rather than fetching every page before it.
-	const STATUSES = new Set(["all", "wanted", "downloading", "available"]);
-	const MONS = new Set(["all", "monitored", "unmonitored"]);
+	const STATUSES = ["all", "wanted", "downloading", "available"] as const;
+	const MONS = ["all", "monitored", "unmonitored"] as const;
 	type View = "grid" | "list";
+	type SortKey = "title" | "recent";
+	type SortOrder = "asc" | "desc";
+	// The direction each sort starts in, and the one a URL naming the sort alone
+	// means: names A→Z, additions newest first.
+	const NATURAL: Record<SortKey, SortOrder> = { title: "asc", recent: "desc" };
+	// The last sort this browser chose, "<key>-<order>", for a URL naming none.
+	const SORT_PREF = "streamline:music:sort";
 
 	let status = $state("all");
 	let mon = $state("all");
 	let genre = $state("all");
 	let query = $state("");
 	let debounced = $state("");
-	let sort = $state("name");
+	let sort = $state<SortKey>("title");
+	let order = $state<SortOrder>("asc");
 	let view = $state<View>("grid");
 
-	onMount(() =>
-		onRouteQuery("/music", (p) => {
-			const s = p.get("status") ?? "all";
-			const m = p.get("monitored") ?? "all";
-			status = STATUSES.has(s) ? s : "all";
-			mon = MONS.has(m) ? m : "all";
-			genre = p.get("genre") || "all";
-			query = debounced = p.get("q") ?? "";
-			sort = p.get("sort") === "recent" ? "recent" : "name";
-			view = p.get("view") === "list" ? "list" : "grid";
-		}),
+	syncRouteQuery(
+		"/music",
+		(p) => {
+			const stored = loadPref(SORT_PREF)?.split("-") ?? [];
+			const named = param(p, "sort");
+			status = oneOf(param(p, "status"), STATUSES, "all");
+			mon = oneOf(param(p, "monitored"), MONS, "all");
+			genre = param(p, "genre") || "all";
+			query = debounced = param(p, "q") ?? "";
+			// `name` is the old spelling of `title`.
+			sort = oneOf<SortKey>((named === "name" ? "title" : named) ?? stored[0], ["title", "recent"], "title");
+			order = oneOf<SortOrder>(param(p, "order") ?? (named ? undefined : stored[1]), ["asc", "desc"], NATURAL[sort]);
+			view = oneOf<View>(param(p, "view"), ["grid", "list"], "grid");
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "status", status, "all");
+			setParam(p, "monitored", mon, "all");
+			setParam(p, "genre", genre, "all");
+			setParam(p, "q", query);
+			setParam(p, "sort", sort, "title");
+			setParam(p, "order", order, NATURAL[sort]);
+			setParam(p, "view", view, "grid");
+			return p;
+		},
 	);
+	function setSort(key: string) {
+		const [s, o] = key.split("-") as [SortKey, SortOrder];
+		sort = s;
+		order = o;
+		savePref(SORT_PREF, key);
+	}
 	$effect(() => {
 		const q = query;
 		const t = setTimeout(() => (debounced = q), 250);
 		return () => clearTimeout(t);
-	});
-	$effect(() => {
-		const p = new URLSearchParams();
-		if (status !== "all") p.set("status", status);
-		if (mon !== "all") p.set("monitored", mon);
-		if (genre !== "all") p.set("genre", genre);
-		if (query) p.set("q", query);
-		if (sort !== "name") p.set("sort", sort);
-		if (view !== "grid") p.set("view", view);
-		const search = p.toString();
-		if (typeof window === "undefined" || window.location.pathname !== "/music") return;
-		const next = `/music${search ? `?${search}` : ""}`;
-		if (next !== window.location.pathname + window.location.search) window.history.replaceState(null, "", next);
 	});
 
 	// A phone has no width for the table, so below md the library is the grid,
@@ -81,7 +97,7 @@
 
 	// A jump past what is loaded opens the list at the letter's page. It holds
 	// only for the filters it was made under; any other result starts at page 1.
-	let filterKey = $derived(JSON.stringify([status, mon, genre, debounced, sort]));
+	let filterKey = $derived(JSON.stringify([status, mon, genre, debounced, sort, order]));
 	let jumped = $state<{ key: string; page: number } | null>(null);
 	let fromPage = $derived(jumped && jumped.key === filterKey ? jumped.page : 1);
 	// Forgotten as soon as the filters move, so going back to them later starts
@@ -103,13 +119,14 @@
 		Paginated<Artist>,
 		Error,
 		{ pages: Paginated<Artist>[]; pageParams: number[] },
-		readonly ["music", "artists", string, string, string, string, string, number],
+		readonly ["music", "artists", string, string, string, string, SortKey, SortOrder, number],
 		number
 	>(() => ({
-		queryKey: ["music", "artists", status, mon, genre, debounced, sort, fromPage] as const,
+		queryKey: ["music", "artists", status, mon, genre, debounced, sort, order, fromPage] as const,
 		queryFn: ({ pageParam }) => {
 			const p = filterParams();
-			p.set("sort", sort);
+			p.set("sort", sort === "title" ? "name" : sort);
+			p.set("order", order);
 			p.set("page", String(pageParam));
 			p.set("limit", String(PAGE_LIMIT));
 			return api<Paginated<Artist>>(`/music/artists?${p}`);
@@ -142,9 +159,11 @@
 	let counts = $derived(countsQuery.data);
 	let letters = $derived(counts?.letters ?? {});
 	let filtering = $derived(status !== "all" || mon !== "all" || genre !== "all" || !!debounced);
-	// Sorted by name the list is filed under letters, whatever its length;
-	// "Recently added" has no letters to file under.
-	let lettered = $derived(sort === "name");
+	// Sorted by name A→Z the list is filed under letters, whatever its length.
+	// "Recently added" has no letters to file under, and the jump bar's page
+	// arithmetic counts letters from the top of an A→Z list, so Z→A is a plain
+	// list too.
+	let lettered = $derived(sort === "title" && order === "asc");
 	let lastFinished = $derived.by(() => {
 		let latest: string | null = null;
 		for (const s of schedulesQuery.data?.items ?? [])
@@ -171,7 +190,7 @@
 	// ── Letters: where the list is, and going to one ───────────────────────
 	// Each anchor lands under the sticky bars: the top bar, plus the phone's chip
 	// row. From md the letters are a rail down the right edge, not a bar.
-	const ANCHOR = "scroll-mt-[124px] md:scroll-mt-16";
+	const ANCHOR = "scroll-mt-[calc(var(--top-bar-height)+60px)] md:scroll-mt-(--top-bar-height)";
 	let listEl = $state<HTMLElement | null>(null);
 	let mainEl: HTMLElement | null = null;
 	let current = $state<string | null>(null);
@@ -375,8 +394,10 @@
 		},
 	]);
 	const SORTS = [
-		{ key: "name", label: i18n.sort_name_az() },
-		{ key: "recent", label: i18n.library_sort_recent() },
+		{ key: "title-asc", label: i18n.sort_name_az() },
+		{ key: "title-desc", label: i18n.sort_name_za() },
+		{ key: "recent-desc", label: i18n.library_sort_recent() },
+		{ key: "recent-asc", label: i18n.sort_oldest_added() },
 	];
 
 	function reset() {
@@ -420,8 +441,8 @@
 		onQueryChange={(q) => (query = q)}
 		placeholder={i18n.music_filter_placeholder()}
 		sorts={SORTS}
-		{sort}
-		onSortChange={(k) => (sort = k)}
+		sort="{sort}-{order}"
+		onSortChange={setSort}
 		onReset={reset}
 		{view}
 		onViewChange={(v) => (view = v)}
@@ -490,11 +511,11 @@
 					<section data-letter={s.letter ?? undefined} class={cn(s.letter && ANCHOR, "pt-2 md:pt-1")}>
 						{#if s.letter}
 							<div
-								class="sticky top-[124px] z-10 -mx-4 mb-3 flex items-center gap-3 bg-bg-deep/85 px-4 py-2.5 backdrop-blur-md md:top-16 md:-mx-6 md:px-6"
+								class="sticky top-[calc(var(--top-bar-height)+60px)] z-10 -mx-4 mb-3 flex items-center gap-3 bg-bg-deep/85 px-4 py-2.5 backdrop-blur-md md:top-(--top-bar-height) md:-mx-6 md:px-6"
 							>
 								<h2 class="text-[20px] font-bold leading-none tracking-tight text-fg">{s.letter}</h2>
 								{#if s.count != null}
-									<span class="font-mono text-[11px] text-fg-faint">{artistsCount(s.count)}</span>
+									<span class="font-mono text-[11px] text-fg-subtle">{artistsCount(s.count)}</span>
 								{/if}
 								<span class="h-px flex-1 bg-border" aria-hidden="true"></span>
 							</div>

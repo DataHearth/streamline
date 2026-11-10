@@ -24,6 +24,7 @@
 	import Select from "@components/forms/Select.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 
 	const LIMIT = 25;
 
@@ -39,6 +40,33 @@
 	// Touch: the sort control is the table header, which is lg-only, so it is a
 	// sheet alongside the role filter. See UserFilterSheet.
 	let sheetOpen = $state(false);
+	// The direction each sort starts in (toggleSort's), and the one a URL
+	// naming the sort alone means.
+	const NATURAL: Record<SortKey, SortDir> = {
+		name: "asc",
+		role: "asc",
+		auth: "asc",
+		created: "desc",
+	};
+	// Paging stays out of the URL. The search seeds both values, so a link's
+	// first request does not wait out the debounce.
+	syncRouteQuery(
+		"/settings/users",
+		(p) => {
+			q = debouncedQ = (param(p, "q") ?? "").trim();
+			role = oneOf<UserRole | "">(param(p, "role"), ["", "admin", "member", "request_only"], "");
+			sort = oneOf<SortKey>(param(p, "sort"), ["name", "role", "auth", "created"], "created");
+			order = oneOf<SortDir>(param(p, "order"), ["asc", "desc"], NATURAL[sort]);
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "q", q.trim());
+			setParam(p, "role", role);
+			setParam(p, "sort", sort, "created");
+			setParam(p, "order", order, NATURAL[sort]);
+			return p;
+		},
+	);
 
 	const qc = useQueryClient();
 
@@ -231,7 +259,7 @@
 						bind:value={q}
 						placeholder={i18n.field_email_or_name()}
 						autocomplete="off"
-						class="w-full rounded-md bg-transparent py-2 pl-9 pr-9 text-sm text-fg placeholder:text-fg-faint focus:outline-none"
+						class="w-full rounded-md bg-transparent py-2 pl-9 pr-9 text-sm text-fg placeholder:text-fg-subtle focus:outline-none"
 					/>
 					{#if q}
 						<button

@@ -16,6 +16,7 @@
 	} from "@tanstack/svelte-query";
 	import { params, goto } from "@roxi/routify";
 	import { onMount } from "svelte";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import {
 		Tv,
 		ArrowLeft,
@@ -76,22 +77,12 @@
 		{ key: "history", label: i18n.common_history() },
 		{ key: "cast", label: i18n.detail_cast() },
 	];
-	const VALID_TABS = new Set<Tab>(["overview", "episodes", "history", "cast"]);
+	const TAB_KEYS = TABS.map((t) => t.key);
 
 	let routeParams = $state<Record<string, string>>({});
 	let navigate = $state<(path: string) => void>(() => {});
 	onMount(() => {
-		// Routify reuses this component instance across /series/[id] param
-		// changes, so per-series UI state has to be cleared by hand. The first
-		// emission only records the id — resetting on it would clobber a
-		// deep-linked ?tab= before the user has navigated anywhere.
-		let currentId: string | undefined;
-		const u1 = params.subscribe((p) => {
-			if (currentId !== undefined && p.id !== currentId) resetSeriesState();
-			currentId = p.id;
-			routeParams = p;
-			focusFrom(p);
-		});
+		const u1 = params.subscribe((p) => (routeParams = p));
 		const u2 = goto.subscribe((fn) => (navigate = fn));
 		return () => {
 			u1();
@@ -100,29 +91,38 @@
 	});
 	const seriesId = $derived(Number(routeParams.id));
 
-	function readTab(): Tab {
-		if (typeof window === "undefined") return "overview";
-		const t = new URLSearchParams(window.location.search).get("tab");
-		return t && VALID_TABS.has(t as Tab) ? (t as Tab) : "overview";
-	}
-	let tab = $state<Tab>(readTab());
+	let tab = $state<Tab>("overview");
 	let tabTrack = $state<HTMLElement | null>(null);
-
-	$effect(() => {
-		if (typeof window === "undefined") return;
-		// At mount window.location still names the outgoing page: writing ?tab=
-		// onto it sent a search hit that opens on the episodes tab back to the
-		// page it came from.
-		if (window.location.pathname !== `/series/${routeParams.id}`) return;
-		const p = new URLSearchParams(window.location.search);
-		if (tab === "overview") p.delete("tab");
-		else p.set("tab", tab);
-		const search = p.toString();
-		const next = `${window.location.pathname}${search ? `?${search}` : ""}`;
-		if (next !== window.location.pathname + window.location.search) {
-			window.history.replaceState(null, "", next);
-		}
-	});
+	// A search hit for one episode lands here as ?season=N&episode=ID: the
+	// season is selected and the episode's sheet opens. Both stay in the URL
+	// while the sheet is open, so a reload reopens it, and go with it.
+	// Routify reuses this component instance across /series/[id] param changes,
+	// so per-series UI state is cleared by hand when the path moves, before the
+	// new show's query is read. The first path only records it.
+	let shownPath: string | null = null;
+	syncRouteQuery(
+		/^\/series\/\d+$/,
+		(p, path) => {
+			if (shownPath !== null && path !== shownPath) resetSeriesState();
+			shownPath = path;
+			tab = oneOf(param(p, "tab"), TAB_KEYS, "overview");
+			const ep = Number(param(p, "episode"));
+			if (!ep) return;
+			tab = "episodes";
+			const n = Number(param(p, "season"));
+			if (Number.isInteger(n)) selectedSeason = n;
+			focusEpisodeId = ep;
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "tab", tab, "overview");
+			if (focusEpisodeId !== null) {
+				if (selectedSeason !== null) p.set("season", String(selectedSeason));
+				p.set("episode", String(focusEpisodeId));
+			}
+			return p;
+		},
+	);
 
 	const seriesQuery = createQuery<TVShow>(() => ({
 		queryKey: ["series", seriesId],
@@ -275,21 +275,9 @@
 	let deleteFiles = $state<{ label: string; episodes: Episode[] } | null>(null);
 	let removeFilesTorrent = $state(false);
 
-	// Clears everything scoped to the show being navigated away from. `tab` is
-	// re-read from the URL rather than reset to a constant so browser
-	// back/forward onto /series/x?tab=cast lands on the tab it was left on.
-	// A search hit for one episode lands here as ?season=N&episode=ID: the
-	// season is selected and the episode's sheet opens. Read off the route
-	// params, since window.location still names the outgoing page at mount.
+	// Clears everything scoped to the show being navigated away from. The tab
+	// is the new URL's, set by syncRouteQuery right after.
 	let focusEpisodeId = $state<number | null>(null);
-	function focusFrom(p: Record<string, string>) {
-		const ep = Number(p.episode);
-		if (!ep) return;
-		tab = "episodes";
-		const n = Number(p.season);
-		if (Number.isInteger(n)) selectedSeason = n;
-		focusEpisodeId = ep;
-	}
 	// One sheet at the route rather than one per list: the phone accordion and
 	// the md+ table are both mounted, so each opening its own would show two.
 	let focused = $derived.by(() => {
@@ -305,16 +293,11 @@
 		return null;
 	});
 	function closeFocus() {
-		focusEpisodeId = null;
 		// Consumed: a reload or a season change should not reopen the sheet.
-		const u = new URL(window.location.href);
-		u.searchParams.delete("season");
-		u.searchParams.delete("episode");
-		window.history.replaceState(null, "", u.pathname + u.search);
+		focusEpisodeId = null;
 	}
 
 	function resetSeriesState() {
-		tab = readTab();
 		selectedSeason = null;
 		focusEpisodeId = null;
 		deleteOpen = false;
@@ -712,7 +695,7 @@
 									>
 								{/if}
 								{#if unairedTotal > 0}
-									<span class="whitespace-nowrap text-fg-faint"
+									<span class="whitespace-nowrap text-fg-subtle"
 										><span class="sep">·&nbsp;</span>{countUnaired(unairedTotal)}</span
 									>
 								{/if}
@@ -804,7 +787,7 @@
 
 	<nav
 		aria-label={i18n.series_sections()}
-		class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
+		class="sticky top-(--top-bar-height) z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
 	>
 		<div bind:this={tabTrack} class="tabs-track flex w-full gap-0.5">
 			{#each TABS as t (t.key)}
@@ -820,7 +803,7 @@
 				>
 					<span>{t.label}</span>
 					{#if t.key === "episodes"}
-						<span class="ml-1.5 font-mono text-[11px] text-fg-faint">
+						<span class="ml-1.5 font-mono text-[11px] text-fg-subtle">
 							{show.have_episodes ?? 0}/{show.total_episodes ?? 0}
 						</span>
 					{/if}
@@ -856,7 +839,7 @@
 					>
 						<h4
 							id="series-info-library"
-							class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+							class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
 						>
 							{i18n.nav_library()}
 						</h4>
@@ -1046,7 +1029,7 @@
 													>
 												{/if}
 												{#if (currentSeason.unaired ?? 0) > 0}
-													<span class="whitespace-nowrap text-fg-faint"
+													<span class="whitespace-nowrap text-fg-subtle"
 														><span class="sep">·&nbsp;</span>{countUnaired(currentSeason.unaired ?? 0)}</span
 													>
 												{/if}

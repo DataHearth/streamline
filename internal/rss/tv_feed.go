@@ -6,8 +6,13 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
+	"unicode"
+
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -93,6 +98,14 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
+	// Which show a name belongs to is decided over the whole library: a show
+	// absent from both listings this tick still owns its title, and another
+	// show's alias must not take its releases.
+	library, err := s.store.ListShowNames(ctx)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	names := resolveShowNames(ctx, library, shows, upgradable)
 	// Every grab below is automatic; without the blocklist any of them could
 	// be a release the user rejected.
 	blocklist, err := s.store.RejectedReleases(ctx)
@@ -112,6 +125,7 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 	}
 
 	pass := &tvPass{
+		names:        names,
 		wanted:       buildEpisodeIndex(shows),
 		upgrades:     buildEpisodeIndex(upgradable),
 		profiles:     resolveShowProfiles(ctx, shows, upgradable),
@@ -142,12 +156,14 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 	return nil
 }
 
-// tvPass carries one tick's state: the two show indexes items are matched
-// against, the profiles resolved for the shows in them, and the episode IDs
-// already grabbed.
+// tvPass carries one tick's state: which show a release name belongs to, the
+// two show indexes by show ID, the profiles resolved for the shows in them,
+// and the episode IDs already grabbed. A release resolves to one show ID
+// first, so it names the same show in both indexes or neither.
 type tvPass struct {
-	wanted   map[string]*wantedShow
-	upgrades map[string]*wantedShow
+	names    showNames
+	wanted   map[uint32]*wantedShow
+	upgrades map[uint32]*wantedShow
 	profiles map[string]quality.Profile
 	// seasonCounts is show id -> season number -> episode total, unfiltered.
 	// Sizes a pack; nil when the lookup failed, which leaves size bounds
@@ -171,8 +187,11 @@ func (s *TVFeedScanner) processItems(
 			continue
 		}
 		parsed := library.Parse(item.Title)
-		key := releaseShowKey(parsed)
-		ws, us := pass.wanted[key], pass.upgrades[key]
+		id, ok := pass.names.resolve(releaseShowKey(parsed), parsed.Year)
+		if !ok {
+			continue
+		}
+		ws, us := pass.wanted[id], pass.upgrades[id]
 		// Both indexes hold the same row for a show with wanted *and* on-disk
 		// episodes, so the profile is one lookup either way.
 		show := indexedShow(ws, us)
@@ -534,34 +553,208 @@ func newWantedShow(show *ent.TVShow) *wantedShow {
 	return w
 }
 
-func buildEpisodeIndex(shows []*ent.TVShow) map[string]*wantedShow {
-	index := make(map[string]*wantedShow, len(shows))
-	for _, show := range shows {
-		w := newWantedShow(show)
-		index[showKey(show.Title)] = w
-		if show.OriginalTitle != "" {
-			index[showKey(show.OriginalTitle)] = w
+// titleYearRe is the year TVDB writes after a title to tell same-named shows
+// apart ("Foundation (2021)"). library.Parse takes the year out of a release
+// name's title, so it has to come off the show's too.
+var titleYearRe = regexp.MustCompile(`\s*\(((?:19|20)\d{2})\)\s*$`)
+
+// splitTitleYear returns title without a trailing "(YYYY)", and that year.
+func splitTitleYear(title string) (string, uint16) {
+	m := titleYearRe.FindStringSubmatchIndex(title)
+	if m == nil {
+		return title, 0
+	}
+	// Four digits from the pattern: always a valid uint16.
+	year, _ := strconv.ParseUint(title[m[2]:m[3]], 10, 16)
+	return title[:m[0]], uint16(year)
+}
+
+// showNameKeys returns the keys a release may name show by, in two tiers —
+// its title and original title, then its aliases — and the years any of them
+// states. Empty keys are left out.
+func showNameKeys(show *ent.TVShow) (titles, aliases []string, years []uint16) {
+	key := func(name string) string {
+		bare, year := splitTitleYear(name)
+		if year != 0 && !slices.Contains(years, year) {
+			years = append(years, year)
 		}
+		return showKey(bare)
+	}
+	for _, t := range []string{show.Title, show.OriginalTitle} {
+		if k := key(t); k != "" && !slices.Contains(titles, k) {
+			titles = append(titles, k)
+		}
+	}
+	for _, a := range show.Aliases {
+		if k := key(a); k != "" && !slices.Contains(titles, k) &&
+			!slices.Contains(aliases, k) {
+			aliases = append(aliases, k)
+		}
+	}
+	return titles, aliases, years
+}
+
+// showNames is which show each release name belongs to, for one tick.
+type showNames struct {
+	// claims is every key a show answers to, with the IDs of the shows
+	// claiming it in the tier that holds it.
+	claims map[string][]uint32
+	// years is every year a show answers to: its own and any its names state.
+	years map[uint32][]uint16
+}
+
+// resolve returns the show a release keyed key, carrying year (0 when it
+// states none), is for. A key one show claims is that show's whatever the
+// year — a daily show's air date reads as a year too. A key several shows
+// claim is the one show among them answering to the release's year, if
+// exactly one does.
+func (n showNames) resolve(key string, year uint16) (uint32, bool) {
+	ids := n.claims[key]
+	if len(ids) == 1 {
+		return ids[0], true
+	}
+	if len(ids) == 0 || year == 0 {
+		return 0, false
+	}
+	var found uint32
+	matches := 0
+	for _, id := range ids {
+		if slices.Contains(n.years[id], year) {
+			found = id
+			matches++
+		}
+	}
+	return found, matches == 1
+}
+
+// resolveShowNames decides which shows each key names, over every show of
+// every list (the same show may appear in several; it is told apart by ID).
+//
+// Titles outrank aliases: an alias claims only a key no show's title holds,
+// so another show's translated title can never take a show's releases. A key
+// claimed by more than one show within its tier is told apart by the
+// release's year only; a release it leaves unresolved is left to the missing
+// search, which queries per show.
+func resolveShowNames(ctx context.Context, lists ...[]*ent.TVShow) showNames {
+	titles := make(map[string][]uint32)
+	aliases := make(map[string][]uint32)
+	names := showNames{
+		claims: make(map[string][]uint32),
+		years:  make(map[uint32][]uint16),
+	}
+	claim := func(tier map[string][]uint32, key string, id uint32) {
+		if !slices.Contains(tier[key], id) {
+			tier[key] = append(tier[key], id)
+		}
+	}
+	for _, list := range lists {
+		for _, show := range list {
+			ts, _, years := showNameKeys(show)
+			for _, k := range ts {
+				claim(titles, k, show.ID)
+			}
+			if show.Year != 0 {
+				years = append(years, show.Year)
+			}
+			for _, y := range years {
+				if !slices.Contains(names.years[show.ID], y) {
+					names.years[show.ID] = append(names.years[show.ID], y)
+				}
+			}
+		}
+	}
+	for _, list := range lists {
+		for _, show := range list {
+			_, as, _ := showNameKeys(show)
+			for _, k := range as {
+				if _, taken := titles[k]; !taken {
+					claim(aliases, k, show.ID)
+				}
+			}
+		}
+	}
+	for _, tier := range []map[string][]uint32{titles, aliases} {
+		for key, ids := range tier {
+			names.claims[key] = ids
+			if len(ids) > 1 {
+				slog.DebugContext(
+					ctx,
+					"tv feed-scan: name shared by several shows, told apart by year only",
+					"key",
+					key,
+					"show.ids",
+					slices.Sorted(slices.Values(ids)),
+				)
+			}
+		}
+	}
+	return names
+}
+
+// buildEpisodeIndex indexes shows by ID.
+func buildEpisodeIndex(shows []*ent.TVShow) map[uint32]*wantedShow {
+	index := make(map[uint32]*wantedShow, len(shows))
+	for _, show := range shows {
+		index[show.ID] = newWantedShow(show)
 	}
 	return index
 }
 
-var (
-	// The opening bracket of a fansub tag is often already gone by the time a
-	// release name reaches here — library.Parse trims leading delimiters off the
-	// title — so it is optional, and everything through the first closing
-	// bracket goes. No show title carries one.
-	fansubTagRe = regexp.MustCompile(`^\[?[^\]]*\]\s*`)
-	separatorRe = regexp.MustCompile(`[^a-z0-9]+`)
-)
+// The opening bracket of a fansub tag is often already gone by the time a
+// release name reaches here — library.Parse trims leading delimiters off the
+// title — so it is optional, and everything through the first closing bracket
+// goes. No show title carries one.
+var fansubTagRe = regexp.MustCompile(`^\[?[^\]]*\]\s*`)
+
+// latinLetters spells the Latin letters NFKD leaves whole the way a release
+// name writes them.
+var latinLetters = map[rune]string{
+	'ß': "ss", 'æ': "ae", 'œ': "oe", 'ø': "o", 'đ': "d", 'ð': "d",
+	'ł': "l", 'þ': "th", 'ı': "i",
+}
 
 // showKey normalizes a title to its comparable form: a leading fansub tag
-// dropped, everything lowercased, every separator collapsed to one space. Both
-// sides of the lookup go through it, so "The.Black.Sea" and "The Black Sea"
-// land on the same key.
+// dropped, everything lowercased, every run of anything but a letter or a
+// digit collapsed to one space. Both sides of the lookup go through it, so
+// "The.Black.Sea" and "The Black Sea" land on the same key.
+//
+// Letters of every script are kept: a title in Cyrillic or Japanese keys to
+// itself, never to the empty key every such title would share. NFKD splits an
+// accent off its letter, and on a Latin, Greek or Cyrillic letter the accent
+// is dropped, since a release name usually leaves it out ("Shōgun" and
+// "Shogun" are one key); in other scripts the mark is part of the letter and
+// stays. NFKD also folds compatibility forms, so full-width "１" is "1".
 func showKey(title string) string {
-	k := fansubTagRe.ReplaceAllString(strings.ToLower(title), "")
-	return strings.TrimSpace(separatorRe.ReplaceAllString(k, " "))
+	var key strings.Builder
+	var base rune
+	sep := false
+	for _, r := range norm.NFKD.String(fansubTagRe.ReplaceAllString(title, "")) {
+		r = unicode.ToLower(r)
+		switch {
+		case unicode.IsLetter(r) || unicode.IsDigit(r):
+			if sep && key.Len() > 0 {
+				key.WriteByte(' ')
+			}
+			sep = false
+			base = r
+			if s, ok := latinLetters[r]; ok {
+				key.WriteString(s)
+			} else {
+				key.WriteRune(r)
+			}
+		case unicode.IsMark(r):
+			// A mark belongs to the letter before it; one with no letter to
+			// attach to, or an accent the release name would not spell, goes.
+			if base == 0 || sep ||
+				unicode.In(base, unicode.Latin, unicode.Greek, unicode.Cyrillic) {
+				continue
+			}
+			key.WriteRune(r)
+		default:
+			sep = true
+		}
+	}
+	return key.String()
 }
 
 // releaseShowKey derives the show key from a parsed release name. library.Parse

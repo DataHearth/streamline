@@ -362,6 +362,9 @@ func (s *Server) SearchMovie(
 		m.TmdbID,
 		m.ImdbID,
 	)
+	if indexerSearchFailed(err) {
+		return nil, err
+	}
 	if err != nil {
 		return SearchMovie500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),

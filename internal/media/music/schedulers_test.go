@@ -142,6 +142,27 @@ var _ = Describe("Music schedulers", Label("unit", "integration", "music"), func
 			},
 		)
 
+		It("stops at a search no indexer answered, stamping nothing", func() {
+			albums := seedAlbums("Bleach", "Nevermind")
+			outage := &indexer.UnavailableError{Failures: []indexer.IndexerFailure{{
+				Indexer: "Prowlarr", Outcome: "timeout", Err: indexer.ErrUnreachable,
+			}}}
+			// One search, not two: the second album would wait out the same
+			// timeout. The mock fails the spec on a second call.
+			e.idx.EXPECT().
+				SearchAlbum(mock.Anything, "Nirvana", mock.Anything, uint16(0)).
+				Return(nil, outage).Once()
+
+			Expect(e.svc.SearchMissing(e.ctx)).To(
+				MatchError(indexer.ErrNoIndexerAnswered),
+			)
+			for _, al := range albums {
+				got := e.client.Album.GetX(e.ctx, al.ID)
+				Expect(got.LastSearchAt).To(BeNil())
+				Expect(got.GrabFailures).To(BeZero())
+			}
+		})
+
 		It("counts a non-transport grab failure", func() {
 			al := seedAlbums("Nevermind")[0]
 			e.idx.EXPECT().

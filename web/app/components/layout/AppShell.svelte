@@ -68,11 +68,14 @@
 	     containing block of every absolute descendant with no positioned
 	     ancestor of its own (an `sr-only` label, mostly): without it those
 	     resolve against <body>, escape this scroller's clip and stretch the
-	     document, which then draws a second scrollbar beside this one. -->
+	     document, which then draws a second scrollbar beside this one.
+	     The bottom padding clears the fixed BottomNav below md, which is its
+	     row plus the safe-area inset, so the inset belongs here as well: on a
+	     device with one the nav otherwise covers the end of every page. -->
 	<main
 		bind:this={main}
 		id="main"
-		class="relative min-w-0 flex-1 overflow-y-auto pb-20 [scrollbar-gutter:stable] md:pb-0"
+		class="relative min-w-0 flex-1 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] [scrollbar-gutter:stable] md:pb-0"
 	>
 		<TopBar />
 		{@render children?.()}

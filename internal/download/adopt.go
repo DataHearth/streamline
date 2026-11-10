@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -582,40 +580,25 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 }
 
 // adoptionPath locates an adopted torrent's payload on disk, and reports
-// whether it found it.
+// whether it found it, through locatePayload.
 //
-// The convention path — <library.download_path>/<torrent name> — wins, because
-// it is what every streamline-grabbed record uses and what the importer's
-// allowed_download_roots fence is configured around. The client's own reported
-// save path, translated through download.path_mappings, is the fallback: a
-// torrent the operator added by hand keeps whatever save path it was added
+// A torrent the operator added by hand keeps whatever save path it was added
 // with, and qBittorrent only relocates it to its category's path under
 // Automatic Torrent Management. Merely tagging such a torrent with the managed
 // category makes streamline adopt it while its files stay where they were.
 //
-// When neither exists the convention path comes back anyway, with false — the
-// caller files a proposal rather than a record it cannot import, and the path
-// is what its reason names.
+// When neither path exists the convention path comes back anyway, with false —
+// the caller files a proposal rather than a record it cannot import, and the
+// path is what its reason names.
 func adoptionPath(t Torrent) (string, bool) {
-	conventional, err := downloadSavePath(t.Name)
+	paths, err := payloadPaths(t)
 	if err != nil {
 		return "", false
 	}
-	if _, err := os.Stat(conventional); err == nil {
-		return conventional, true
+	if found, ok := paths.locate(); ok {
+		return found, true
 	}
-	if t.SavePath != "" {
-		// downloadSavePath has already rejected any name that could climb out
-		// of a root, so joining that same name onto a second root is safe.
-		if alt := filepath.Join(
-			MapClientPath(t.SavePath), t.Name,
-		); alt != conventional {
-			if _, err := os.Stat(alt); err == nil {
-				return alt, true
-			}
-		}
-	}
-	return conventional, false
+	return paths.conventional, false
 }
 
 // persistAdoption writes the adoption record (importing for auto-import,

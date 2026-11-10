@@ -31,7 +31,8 @@
 		PendingItem,
 		HoldAssignments,
 	} from "@lib/types";
-	import ActivityToolbar from "@components/activity/ActivityToolbar.svelte";
+	import ActivityToolbar, { ACTIVITY_CHIPS } from "@components/activity/ActivityToolbar.svelte";
+	import { listOf, oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import ActivityViewSwitch from "@components/activity/ActivityViewSwitch.svelte";
 	import ActivityTable from "@components/activity/ActivityTable.svelte";
 	import ActivityTouchList from "@components/activity/ActivityTouchList.svelte";
@@ -54,18 +55,29 @@
 	// queue/history/events trio the switch above the toolbar swaps between.
 	type View = "queue" | "history" | "events";
 
-	// The switch is page state, not a route, but ?view is honoured — the
-	// dashboard's Recent activity panel links straight to the events feed it
-	// samples, which would otherwise land on the queue.
-	function initialView(): View {
-		if (typeof window === "undefined") return "queue";
-		const v = new URLSearchParams(window.location.search).get("view");
-		return v === "history" || v === "events" ? v : "queue";
-	}
-
-	let view = $state<View>(initialView());
+	let view = $state<View>("queue");
 	let statusFilter = $state<string[]>([]);
 	let search = $state("");
+	// The view, its status chips and the search are in the URL: the dashboard's
+	// Recent activity panel links straight to ?view=events. The view is read
+	// first, since the chips are the view's own (a switch clears them).
+	syncRouteQuery(
+		"/activity",
+		(p) => {
+			view = oneOf<View>(param(p, "view"), ["queue", "history", "events"], "queue");
+			// The events feed shows the queue's chips (the toolbar's own rule).
+			const keys = ACTIVITY_CHIPS[view === "history" ? "history" : "queue"].map((c) => c.key);
+			statusFilter = listOf(param(p, "status"), keys);
+			search = param(p, "q") ?? "";
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "view", view, "queue");
+			setParam(p, "status", statusFilter);
+			setParam(p, "q", search);
+			return p;
+		},
+	);
 	const qc = useQueryClient();
 
 	const queue = createQuery<DownloadQueue>(() => ({
@@ -367,8 +379,19 @@
 	let source = $derived<(QueueEntry | HistoryEntry)[]>(
 		view === "queue" ? queueItems : historyItems,
 	);
+	// The queue arrives in the order the client works it; the rows waiting on a
+	// person (held, then errored) go ahead of that order, or one held download
+	// sits thirty rows down a phone-length list with nothing pointing at it.
+	// The sort is stable, so everything else keeps the order served, and a
+	// header sort on the table still overrides it.
+	const ATTENTION_RANK: Record<string, number> = { held: 0, error: 1 };
 	let rows = $derived.by<(QueueEntry | HistoryEntry)[]>(() => {
 		let out = source;
+		if (view === "queue")
+			out = out.toSorted(
+				(a, b) =>
+					(ATTENTION_RANK[a.status] ?? 2) - (ATTENTION_RANK[b.status] ?? 2),
+			);
 		if (statusFilter.length)
 			out = out.filter((i) => statusFilter.includes(i.status));
 		if (search.trim()) {

@@ -8,6 +8,14 @@ vars:
   E2E_PACKAGES:
     sh: grep -rl --include='*_test.go' 'Label(.*"e2e"' cmd e2e internal |
       xargs -n1 dirname | sort -u | sed 's|^|./|' | tr '\n' ' '
+  # Every other package holding a spec. `task test` runs these and
+  # E2E_PACKAGES as two disjoint package sets, each without a label filter.
+  REST_PACKAGES:
+    sh: |
+      e2e=$(grep -rl --include='*_test.go' 'Label(.*"e2e"' cmd e2e internal |
+        xargs -n1 dirname | sort -u)
+      find cmd e2e internal -name '*_test.go' -exec dirname {} + | sort -u |
+        grep -vxF "$e2e" | sed 's|^|./|' | tr '\n' ' '
 
 tasks:
   unit:
@@ -52,13 +60,25 @@ tasks:
 
   default:
     desc: Run entire test suite
-    # The e2e specs go first and alone: ginkgo starts with cmd/ and e2e/, so in
-    # one run they would sit in the middle of the whole tree's builds. The second
-    # run still happens when the first fails, so one report covers everything.
+    # The browser specs and the embedded-asset specs test the built bundles,
+    # which are gitignored, so a checkout's copy can predate its web/app.
+    # Both builds are fingerprinted and skip when their sources are unchanged.
+    deps: [":build:js", ":build:css"]
+    # The packages holding e2e specs go first and alone: ginkgo starts with
+    # cmd/ and e2e/, so in one run they would sit in the middle of the whole
+    # tree's builds. The two runs take disjoint package sets with no label
+    # filter, so every spec runs exactly once and the reports list as skipped
+    # only the specs that skip themselves (container specs without
+    # STREAMLINE_E2E_CONTAINERS, ffmpeg specs without ffmpeg on PATH). No -r:
+    # each list is every suite package already, and recursing into one would
+    # run its sub-packages a second time.
+    # The second run still happens when the first fails, so one report covers
+    # everything. Task runs a cmd under errexit, so each exit status is caught
+    # with `||`: a bare `e2e=$?` on the next line is never reached after a
+    # failure.
     cmd: |
-      go tool ginkgo run -r --keep-going --label-filter=e2e {{with .JUNIT_DIR}}--junit-report={{.}}/junit-e2e.xml{{end}} {{.CLI_ARGS}} {{.E2E_PACKAGES}}
-      e2e=$?
-      go tool ginkgo run -r --keep-going --label-filter='!e2e' {{with .JUNIT_DIR}}--junit-report={{.}}/junit-rest.xml{{end}} {{.CLI_ARGS}}
-      rest=$?
+      e2e=0
+      go tool ginkgo run --keep-going {{with .JUNIT_DIR}}--junit-report={{.}}/junit-e2e.xml{{end}} {{.CLI_ARGS}} {{.E2E_PACKAGES}} || e2e=$?
+      rest=0
+      go tool ginkgo run --keep-going {{with .JUNIT_DIR}}--junit-report={{.}}/junit-rest.xml{{end}} {{.CLI_ARGS}} {{.REST_PACKAGES}} || rest=$?
       exit $((e2e | rest))
-

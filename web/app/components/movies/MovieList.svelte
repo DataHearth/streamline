@@ -84,7 +84,7 @@
 >
 	<table class="w-full text-sm">
 		<thead
-			class="bg-bg-elevated/95 text-[10px] uppercase tracking-[0.12em] text-fg-faint"
+			class="bg-bg-elevated/95 text-[10px] uppercase tracking-[0.12em] text-fg-subtle"
 		>
 			<tr class="border-b border-border">
 				{#if auth.canAddDirectly}
@@ -200,7 +200,7 @@
 							{movie.title}
 						</a>
 						{#if movie.original_title.trim() && movie.original_title.trim() !== movie.title.trim()}
-							<p class="truncate text-xs italic text-fg-faint">
+							<p class="truncate text-xs italic text-fg-subtle">
 								{movie.original_title}
 							</p>
 						{/if}
@@ -224,7 +224,7 @@
 						class={cn(
 							"hidden px-3 py-2 text-right font-mono text-xs tabular @2xl:table-cell",
 							totalSize(movie.file_summary) === "—"
-								? "text-fg-faint"
+								? "text-fg-subtle"
 								: "text-fg-muted",
 						)}
 					>

@@ -18,6 +18,9 @@ var _ = Describe("mapQBState", Label("unit", "downloads"), func() {
 		Entry("stalledDL", "stalledDL", StatusDownloading),
 		Entry("checkingDL", "checkingDL", StatusDownloading),
 		Entry("checkingResumeData", "checkingResumeData", StatusDownloading),
+		// Relocating a finished torrent: the destination is still being
+		// written, so the monitor must not import it yet.
+		Entry("moving", "moving", StatusDownloading),
 
 		// Seeding bucket
 		Entry("uploading", "uploading", StatusSeeding),
@@ -36,7 +39,6 @@ var _ = Describe("mapQBState", Label("unit", "downloads"), func() {
 		Entry("unknown literal", "unknown", StatusError),
 
 		// Completed — idle UP states are finished downloads awaiting import
-		Entry("moving", "moving", StatusCompleted),
 		Entry("pausedUP", "pausedUP", StatusCompleted),
 		Entry("stoppedUP", "stoppedUP", StatusCompleted),
 		Entry("queuedUP", "queuedUP", StatusCompleted),

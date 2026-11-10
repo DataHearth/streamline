@@ -48,7 +48,7 @@
 		>
 			{c.label}
 			{#if c.count !== undefined}
-				<span class={cn(num, view === c.key ? "opacity-80" : "text-fg-faint")}>
+				<span class={cn(num, view === c.key ? "opacity-80" : "text-fg-subtle")}>
 					{c.count}
 				</span>
 			{/if}

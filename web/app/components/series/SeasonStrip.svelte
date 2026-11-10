@@ -60,7 +60,7 @@
 					<span class={headline.cls}>· {headline.text}</span>
 				{/if}
 				{#if (s.unaired ?? 0) > 0}
-					<span class="text-fg-faint">· {countFuture(s.unaired ?? 0)}</span>
+					<span class="text-fg-subtle">· {countFuture(s.unaired ?? 0)}</span>
 				{/if}
 			</div>
 			<SeasonProgress season={s} {showMonitored} />

@@ -18,6 +18,14 @@ type HoldReason struct {
 	Actual   string `json:"actual"`
 }
 
+// HoldCheckLocation is the check of a completed download whose payload is at
+// neither place streamline looks for it: Expected is the convention path
+// (<library.download_path>/<torrent name>), Actual the client's reported save
+// path through download.path_mappings, empty when the client reports none.
+// The download monitor holds such a record before the import starts and
+// releases it once either path exists.
+const HoldCheckLocation = "location"
+
 type DownloadRecord struct {
 	ent.Schema
 }

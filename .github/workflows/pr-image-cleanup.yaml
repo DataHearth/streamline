@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: PR Image Cleanup
+
+# Deletes the images pr-image.yaml published for a PR once it closes, merged
+# or not, and sweeps daily for what a failed or cancelled cleanup left: every
+# version of a closed PR, and untagged versions older than a day. The
+# selection rules are in .github/scripts/pr-image/prune.sh.
+#
+# Deleting takes the `admin` role on the package, which a workflow's
+# GITHUB_TOKEN holds on a package that repository's workflows published. If
+# that grant is missing (the package was created another way), add this
+# repository under the package's "Manage Actions access" with the Admin role.
+
+on:
+  pull_request:
+    types: [closed]
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+# A PR's cleanup shares pr-image.yaml's group and cancels a build still
+# running for it. The sweep has its own group and is never cancelled.
+concurrency:
+  group: pr-image-${{ github.event.pull_request.number || 'sweep' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+jobs:
+  prune:
+    # A fork's PR, or Renovate's, was never published, and a fork's
+    # `pull_request` token could not delete anything anyway.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       !startsWith(github.head_ref, 'renovate/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: read
+    # `shell: bash` runs with pipefail, so a failing prune is not hidden by
+    # the `tee` into the summary.
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # The default branch's script, never the PR's: a closed PR's merge ref
+      # can be gone, and a PR does not get to change what its cleanup deletes.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch || github.ref }}
+          persist-credentials: false
+          sparse-checkout: .github/scripts/pr-image
+
+      - name: Delete this PR's images
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: .github/scripts/pr-image/prune.sh pr "$PR" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Sweep closed PRs' images
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: .github/scripts/pr-image/prune.sh sweep | tee -a "$GITHUB_STEP_SUMMARY"

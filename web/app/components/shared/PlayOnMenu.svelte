@@ -99,7 +99,7 @@
 			{#if l.status === "fallback"}
 				<span class="text-[10px] text-fg-muted">{i18n.playon_library_fallback()}</span>
 			{:else if l.status === "unavailable"}
-				<span class="text-[10px] text-fg-faint">{i18n.playback_unavailable()}</span>
+				<span class="text-[10px] text-fg-subtle">{i18n.playback_unavailable()}</span>
 			{/if}
 		</span>
 	</span>

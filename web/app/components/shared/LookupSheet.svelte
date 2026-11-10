@@ -238,7 +238,7 @@
 		<div
 			transition:fly={{ y: 460, duration: 280, easing: cubicOut }}
 			bind:clientHeight={availableHeight}
-			class="pointer-events-none absolute inset-x-0 bottom-0 top-9 overflow-hidden"
+			class="pointer-events-none absolute inset-x-0 bottom-0 top-[calc(2.25rem+env(safe-area-inset-top))] overflow-hidden"
 		>
 			<div
 				bind:this={sheetEl}
@@ -314,7 +314,7 @@
 						<button
 							type="button"
 							onclick={() => (expanded = true)}
-							class="mt-2.5 flex w-full items-center justify-center gap-1.5 py-1 text-[13px] text-fg-faint transition hover:text-fg-muted"
+							class="mt-2.5 flex w-full items-center justify-center gap-1.5 py-1 text-[13px] text-fg-subtle transition hover:text-fg-muted"
 						>
 							<ChevronUp size={14} aria-hidden="true" />
 							{hint}

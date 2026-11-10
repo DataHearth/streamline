@@ -78,7 +78,7 @@
 		"border-border bg-surface text-fg-muted active:bg-surface-2";
 	const chipOn = "border-accent-line bg-accent-soft text-accent-text";
 	const label =
-		"mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint";
+		"mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle";
 </script>
 
 {#if open}
@@ -133,7 +133,7 @@
 						value={query}
 						oninput={(e) => onQueryChange(e.currentTarget.value)}
 						placeholder={i18n.common_filter_items({ items: noun.items })}
-						class="min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-fg-faint"
+						class="min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-fg-subtle"
 					/>
 					{#if query}
 						<button

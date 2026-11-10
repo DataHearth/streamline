@@ -90,7 +90,7 @@
 					{group.key}
 				</div>
 				{#if !group.section}
-					<p class="text-xs text-fg-faint">{i18n.plex_sections_unpicked()}</p>
+					<p class="text-xs text-fg-subtle">{i18n.plex_sections_unpicked()}</p>
 				{:else}
 					{@const sec = group.section}
 					<div class="flex items-center gap-2">

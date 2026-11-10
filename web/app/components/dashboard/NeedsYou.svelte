@@ -26,7 +26,7 @@
 	<!-- Phone: a list, with room to say what each one is. From md: one line of
 	     chips, the detail in the tooltip. -->
 	<section class="overflow-hidden rounded-lg border border-border bg-bg-elevated md:hidden">
-		<h2 class="px-4 pb-1 pt-3.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint">
+		<h2 class="px-4 pb-1 pt-3.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle">
 			{i18n.dash_needs_you()}
 		</h2>
 		<ul>

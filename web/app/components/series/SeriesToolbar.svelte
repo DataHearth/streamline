@@ -240,7 +240,7 @@
 	const triggerOn = "border-accent-line bg-accent-soft text-accent-text";
 </script>
 
-<div class="sticky top-16 z-20 bg-bg-deep/85 backdrop-blur-md md:hidden">
+<div class="sticky top-(--top-bar-height) z-20 bg-bg-deep/85 backdrop-blur-md md:hidden">
 	{#if selecting}
 		<SelectionTopBar
 			count={selectedCount}
@@ -356,7 +356,7 @@
 	{#snippet extra()}
 		<div class="pt-5">
 			<div
-				class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
+				class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
 			>
 				{i18n.common_type()}
 			</div>
@@ -381,7 +381,7 @@
 		</div>
 		<div class="pt-5">
 			<div
-				class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
+				class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
 			>
 				{i18n.monitor_monitoring()}
 			</div>
@@ -415,7 +415,7 @@
      for monitoring — so the row reads "Status Continuing 9".
      Below lg sort still collapses into the sheet the phone uses. -->
 <div
-	class="lib-toolbar sticky top-16 z-20 hidden flex-wrap items-center gap-2 bg-bg-deep/85 px-4 py-3 backdrop-blur-md md:flex md:gap-2.5 md:px-6"
+	class="lib-toolbar sticky top-(--top-bar-height) z-20 hidden flex-wrap items-center gap-2 bg-bg-deep/85 px-4 py-3 backdrop-blur-md md:flex md:gap-2.5 md:px-6"
 >
 	<div class="relative order-1">
 		<button
@@ -443,7 +443,7 @@
 			<span
 				class={cn(
 					"font-mono text-[10.5px] tabular",
-					tab !== "all" ? "text-accent-text/70" : "text-fg-faint",
+					tab !== "all" ? "text-accent-text/70" : "text-fg-subtle",
 				)}
 			>
 				{counts[tab]}
@@ -587,7 +587,7 @@
 			value={query}
 			oninput={(e) => onQueryChange(e.currentTarget.value)}
 			placeholder={i18n.common_filter_ellipsis()}
-			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
+			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
 		/>
 		{#if query}
 			<button
@@ -684,7 +684,7 @@
 				>
 					<CheckCheck size={14} aria-hidden="true" />
 					{i18n.common_select_all()}
-					<span class="font-mono text-[10px] tabular text-fg-faint">
+					<span class="font-mono text-[10px] tabular text-fg-subtle">
 						{matchedCount}
 					</span>
 				</button>

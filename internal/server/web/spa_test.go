@@ -111,3 +111,27 @@ var _ = g.Describe("Web-app manifest", g.Label("unit"), func() {
 		Expect(purposes).To(ContainElements("maskable", "monochrome"))
 	})
 })
+
+// An app installed to an iOS home screen draws its own status bar band, white
+// in light mode unless the shell asks for a translucent one, and only the
+// translucent one lets the page run under it. The page is ready for that only
+// because the viewport covers the notch and the top bar pads the inset, so the
+// two halves are checked together.
+var _ = g.Describe("SPA shell head", g.Label("unit"), func() {
+	var shell string
+
+	g.BeforeEach(func() {
+		rr := httptest.NewRecorder()
+		(&Handler{}).SPAShell(rr, httptest.NewRequest(http.MethodGet, "/", nil))
+		shell = rr.Body.String()
+	})
+
+	g.It("runs under a translucent iOS status bar, edge to edge", func() {
+		Expect(
+			shell,
+		).To(ContainSubstring(`<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />`))
+		Expect(
+			shell,
+		).To(MatchRegexp(`<meta name="viewport" content="[^"]*viewport-fit=cover`))
+	})
+})

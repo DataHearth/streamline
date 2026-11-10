@@ -86,7 +86,7 @@
 				type="button"
 				aria-expanded={open}
 				onclick={() => (toggled[g.key] = !open)}
-				class="flex min-h-11 min-w-0 flex-1 items-center gap-1.5 rounded-md px-2.5 text-left font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint transition hover:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring lg:min-h-7"
+				class="flex min-h-11 min-w-0 flex-1 items-center gap-1.5 rounded-md px-2.5 text-left font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle transition hover:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring lg:min-h-7"
 			>
 				<ChevronRight size={12} class={cn("shrink-0 transition-transform duration-150", open && "rotate-90")} aria-hidden="true" />
 				<span class="truncate">{g.label} · {g.releases.length}</span>

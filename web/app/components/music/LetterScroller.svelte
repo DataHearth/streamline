@@ -82,7 +82,7 @@
 	onpointerup={up}
 	onpointercancel={up}
 	class={cn(
-		"fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-0 top-[136px] z-30 w-6 touch-none select-none transition-opacity duration-200 md:hidden",
+		"fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-0 top-[calc(var(--top-bar-height)+72px)] z-30 w-6 touch-none select-none transition-opacity duration-200 md:hidden",
 		active || dragging ? "opacity-100" : "pointer-events-none opacity-0",
 	)}
 >

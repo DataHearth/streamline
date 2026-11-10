@@ -131,7 +131,7 @@
 	     here and stays in view while they scroll. -->
 	<div class="flex flex-col gap-10 md:gap-12">
 		<div
-			class="sticky top-[calc(4rem+env(safe-area-inset-top))] z-20 -mx-4 -mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-bg-deep px-4 py-2.5 md:-mx-8 md:-mb-8 md:px-8"
+			class="sticky top-(--top-bar-height) z-20 -mx-4 -mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-bg-deep px-4 py-2.5 md:-mx-8 md:-mb-8 md:px-8"
 		>
 			{@render rangeControl()}
 		</div>

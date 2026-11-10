@@ -248,6 +248,7 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `auth.lockout.window` | duration | `15m` | Window those failures are counted over |
 | `auth.lockout.duration` | duration | `15m` | How long the lock lasts |
 | `auth.oidc[]` | array | `[]` | See [Authentication and SSO](Authentication-and-SSO#oidc) |
+| `auth.oidc[].scopes` | list | `[]` | Scopes requested on top of `openid email profile` — e.g. `[groups]` for an IdP that sends the groups claim only when asked. File-only. See [Role mapping](Authentication-and-SSO#role-mapping) |
 
 Independently of `auth.lockout`, login and registration are rate-limited per IP at **5 attempts / 15 minutes**. That limit is not configurable.
 
@@ -513,7 +514,7 @@ download:
       to: /srv         # what Streamline calls it
 ```
 
-This is only consulted when a torrent is **not** where Streamline expected it — a normal grab never needs it. See [Troubleshooting](Troubleshooting#an-adopted-torrent-says-files-not-found).
+This is only consulted when a torrent is **not** where Streamline expected it — a normal grab whose files land under `library.download_path` never needs it. When a finished download is not there, Streamline tries the save path the client reports, through these mappings, before it imports; a download found at neither is held rather than imported. This applies both to downloads Streamline grabbed and to torrents it adopts. See [Troubleshooting](Troubleshooting#a-finished-download-is-held-with-location).
 
 ### download_clients
 

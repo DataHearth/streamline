@@ -40,6 +40,10 @@ export type ApiOptions = {
 	method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 	body?: unknown;
 	headers?: Record<string, string>;
+	// Aborts the request; the server sees the connection close and cancels
+	// the work behind it. Pass a query's own signal so a search nothing is
+	// watching any more stops querying the indexers.
+	signal?: AbortSignal;
 };
 
 // The API answers in English by design — `message` stays readable for curl,
@@ -135,6 +139,10 @@ export function errorText(err: unknown, fallback?: string): string {
 		// the request body, which sent an operator hunting through releases for
 		// a reason this message had already named.
 		if (code === "grab_rejected" && err.message) return err.message;
+		// A search no indexer answered names each indexer and what went wrong
+		// with it (timed out, API key rejected…): the generic 502/504 would not
+		// say which one to go and look at.
+		if (code === "indexers_unavailable" && err.message) return err.message;
 		if ((code === "library_offline" || code === "library_online" || code === "library_accept_running") && err.message) return err.message;
 		if ((code === "assignment_rejected" || code === "edition_not_found") && err.message) return err.message;
 		// An upload refused names the file or the target that was the problem:
@@ -187,10 +195,11 @@ function errorFrom(res: Response, parsed: unknown, text: string): ApiError {
 
 export async function api<T = unknown>(
 	path: string,
-	{ method = "GET", body, headers }: ApiOptions = {},
+	{ method = "GET", body, headers, signal }: ApiOptions = {},
 ): Promise<T> {
 	const res = await fetch(BASE + path, {
 		method,
+		signal,
 		credentials: "same-origin",
 		headers: {
 			Accept: "application/json",

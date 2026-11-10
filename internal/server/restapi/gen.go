@@ -863,6 +863,7 @@ const (
 	HoldReasonCheckDuration   HoldReasonCheck = "duration"
 	HoldReasonCheckFolder     HoldReasonCheck = "folder"
 	HoldReasonCheckFormat     HoldReasonCheck = "format"
+	HoldReasonCheckLocation   HoldReasonCheck = "location"
 	HoldReasonCheckMetadata   HoldReasonCheck = "metadata"
 	HoldReasonCheckMissing    HoldReasonCheck = "missing"
 	HoldReasonCheckResolution HoldReasonCheck = "resolution"
@@ -888,6 +889,8 @@ func (e HoldReasonCheck) Valid() bool {
 	case HoldReasonCheckFolder:
 		return true
 	case HoldReasonCheckFormat:
+		return true
+	case HoldReasonCheckLocation:
 		return true
 	case HoldReasonCheckMetadata:
 		return true
@@ -5814,7 +5817,7 @@ type Error struct {
 	// hardcover_not_configured, hardcover_key_rejected, not_sendable,
 	// no_device_email, smtp_not_configured, send_failed,
 	// secret_required, secret_file_managed, api_key_quota,
-	// catalog_unavailable). Present
+	// catalog_unavailable, indexers_unavailable). Present
 	// for domain errors where the caller needs to branch on the
 	// specific reason; absent
 	// for generic errors where the message is sufficient.
@@ -5963,7 +5966,12 @@ type HoldReason struct {
 	// tier the profile does not tick, files tagged as another album, a
 	// file titled differently from the track its number lands on, when
 	// at least half the release's titles agree); format, bitrate and
-	// metadata hold a book.
+	// metadata hold a book. location holds a completed download whose
+	// files are at neither place streamline looks: `expected` is
+	// `<library.download_path>/<torrent name>`, `actual` the client's
+	// reported save path through `download.path_mappings` (absent when
+	// the client reports none); the download monitor releases it once
+	// either exists.
 	Check    HoldReasonCheck `json:"check"`
 	Expected *string         `json:"expected,omitempty"`
 	File     string          `json:"file"`
@@ -5974,7 +5982,12 @@ type HoldReason struct {
 // tier the profile does not tick, files tagged as another album, a
 // file titled differently from the track its number lands on, when
 // at least half the release's titles agree); format, bitrate and
-// metadata hold a book.
+// metadata hold a book. location holds a completed download whose
+// files are at neither place streamline looks: `expected` is
+// `<library.download_path>/<torrent name>`, `actual` the client's
+// reported save path through `download.path_mappings` (absent when
+// the client reports none); the download monitor releases it once
+// either exists.
 type HoldReasonCheck string
 
 // IdentifyPendingRequest defines model for IdentifyPendingRequest.
@@ -6320,12 +6333,19 @@ type ImportScanShow struct {
 	FileCount        uint16                       `json:"file_count"`
 	FolderPath       string                       `json:"folder_path"`
 	Id               uint32                       `json:"id"`
-	Outcome          ImportScanShowOutcome        `json:"outcome"`
-	OutcomeMessage   *string                      `json:"outcome_message,omitempty"`
-	ParsedTitle      *string                      `json:"parsed_title,omitempty"`
-	ParsedYear       *uint16                      `json:"parsed_year,omitempty"`
-	TvdbId           *uint32                      `json:"tvdb_id,omitempty"`
-	UpdatedAt        *time.Time                   `json:"updated_at,omitempty"`
+
+	// Outcome `failed` covers a show none of whose matched files could be
+	// linked; a folder whose files the show already tracks is
+	// `attached`.
+	Outcome ImportScanShowOutcome `json:"outcome"`
+
+	// OutcomeMessage Why the show failed, or on a `created`/`attached` show a note
+	// counting the matched files that could not be imported.
+	OutcomeMessage *string    `json:"outcome_message,omitempty"`
+	ParsedTitle    *string    `json:"parsed_title,omitempty"`
+	ParsedYear     *uint16    `json:"parsed_year,omitempty"`
+	TvdbId         *uint32    `json:"tvdb_id,omitempty"`
+	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
 }
 
 // ImportScanShowClassification defines model for ImportScanShow.Classification.
@@ -6334,7 +6354,9 @@ type ImportScanShowClassification string
 // ImportScanShowDecision defines model for ImportScanShow.Decision.
 type ImportScanShowDecision string
 
-// ImportScanShowOutcome defines model for ImportScanShow.Outcome.
+// ImportScanShowOutcome `failed` covers a show none of whose matched files could be
+// linked; a folder whose files the show already tracks is
+// `attached`.
 type ImportScanShowOutcome string
 
 // ImportScanShowCandidate defines model for ImportScanShowCandidate.
@@ -10582,6 +10604,12 @@ type FFmpegConfig = FFmpegConfigView
 
 // Forbidden defines model for Forbidden.
 type Forbidden = Error
+
+// IndexersTimedOut defines model for IndexersTimedOut.
+type IndexersTimedOut = Error
+
+// IndexersUnavailable defines model for IndexersUnavailable.
+type IndexersUnavailable = Error
 
 // InternalError defines model for InternalError.
 type InternalError = Error
@@ -23934,6 +23962,10 @@ type ImportScanShowJSONResponse ImportScanShow
 
 type ImportScanShowListJSONResponse ImportScanShowList
 
+type IndexersTimedOutJSONResponse Error
+
+type IndexersUnavailableJSONResponse Error
+
 type InternalErrorJSONResponse Error
 
 type JWTRotatedJSONResponse JWTRotated
@@ -28116,6 +28148,36 @@ func (response SearchBookReleases500JSONResponse) VisitSearchBookReleasesRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookReleases502JSONResponse struct {
+	IndexersUnavailableJSONResponse
+}
+
+func (response SearchBookReleases502JSONResponse) VisitSearchBookReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookReleases504JSONResponse struct{ IndexersTimedOutJSONResponse }
+
+func (response SearchBookReleases504JSONResponse) VisitSearchBookReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(504)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -34823,6 +34885,36 @@ func (response SearchMovie500JSONResponse) VisitSearchMovieResponse(w http.Respo
 	return err
 }
 
+type SearchMovie502JSONResponse struct {
+	IndexersUnavailableJSONResponse
+}
+
+func (response SearchMovie502JSONResponse) VisitSearchMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMovie504JSONResponse struct{ IndexersTimedOutJSONResponse }
+
+func (response SearchMovie504JSONResponse) VisitSearchMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(504)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SearchMovieNowRequestObject struct {
 	Id ResourceID `json:"id"`
 }
@@ -35515,6 +35607,36 @@ func (response SearchMusicAlbumReleases500JSONResponse) VisitSearchMusicAlbumRel
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicAlbumReleases502JSONResponse struct {
+	IndexersUnavailableJSONResponse
+}
+
+func (response SearchMusicAlbumReleases502JSONResponse) VisitSearchMusicAlbumReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicAlbumReleases504JSONResponse struct{ IndexersTimedOutJSONResponse }
+
+func (response SearchMusicAlbumReleases504JSONResponse) VisitSearchMusicAlbumReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(504)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -36433,6 +36555,36 @@ func (response BrowseMusicArtistReleases500JSONResponse) VisitBrowseMusicArtistR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BrowseMusicArtistReleases502JSONResponse struct {
+	IndexersUnavailableJSONResponse
+}
+
+func (response BrowseMusicArtistReleases502JSONResponse) VisitBrowseMusicArtistReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BrowseMusicArtistReleases504JSONResponse struct{ IndexersTimedOutJSONResponse }
+
+func (response BrowseMusicArtistReleases504JSONResponse) VisitBrowseMusicArtistReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(504)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -40409,6 +40561,36 @@ func (response BrowseSeriesReleases500JSONResponse) VisitBrowseSeriesReleasesRes
 	return err
 }
 
+type BrowseSeriesReleases502JSONResponse struct {
+	IndexersUnavailableJSONResponse
+}
+
+func (response BrowseSeriesReleases502JSONResponse) VisitBrowseSeriesReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BrowseSeriesReleases504JSONResponse struct{ IndexersTimedOutJSONResponse }
+
+func (response BrowseSeriesReleases504JSONResponse) VisitBrowseSeriesReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(504)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchEpisodeRequestObject struct {
 	Id        ResourceID `json:"id"`
 	EpisodeId EpisodeID  `json:"episodeId"`
@@ -40719,6 +40901,36 @@ func (response BrowseEpisodeReleases500JSONResponse) VisitBrowseEpisodeReleasesR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BrowseEpisodeReleases502JSONResponse struct {
+	IndexersUnavailableJSONResponse
+}
+
+func (response BrowseEpisodeReleases502JSONResponse) VisitBrowseEpisodeReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BrowseEpisodeReleases504JSONResponse struct{ IndexersTimedOutJSONResponse }
+
+func (response BrowseEpisodeReleases504JSONResponse) VisitBrowseEpisodeReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(504)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -41582,6 +41794,36 @@ func (response BrowseSeasonReleases500JSONResponse) VisitBrowseSeasonReleasesRes
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BrowseSeasonReleases502JSONResponse struct {
+	IndexersUnavailableJSONResponse
+}
+
+func (response BrowseSeasonReleases502JSONResponse) VisitBrowseSeasonReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BrowseSeasonReleases504JSONResponse struct{ IndexersTimedOutJSONResponse }
+
+func (response BrowseSeasonReleases504JSONResponse) VisitBrowseSeasonReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(504)
 	_, err := buf.WriteTo(w)
 	return err
 }

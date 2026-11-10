@@ -753,6 +753,91 @@ func (db *DB) HoldDownloadRecord(
 		Exec(ctx)
 }
 
+// HoldDownloadingRecord holds a downloading record with reasons, filtered on
+// downloading so a record that moved on since it was read is left alone.
+// Reports whether the record was held.
+func (db *DB) HoldDownloadingRecord(
+	ctx context.Context,
+	id uint32,
+	reasons []schema.HoldReason,
+) (bool, error) {
+	err := db.client.DownloadRecord.UpdateOneID(id).
+		Where(downloadrecord.StatusEQ(downloadrecord.StatusDownloading)).
+		SetStatus(downloadrecord.StatusHeld).
+		SetHoldReasons(reasons).
+		Exec(ctx)
+	if ent.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("hold downloading record: %w", err)
+	}
+	return true, nil
+}
+
+// ListHeldRecordsByCheck returns the held records whose every hold reason is
+// check, with the movie and anchor episode the download monitor reads.
+func (db *DB) ListHeldRecordsByCheck(
+	ctx context.Context,
+	check string,
+) ([]*ent.DownloadRecord, error) {
+	recs, err := db.client.DownloadRecord.Query().
+		Where(downloadrecord.StatusEQ(downloadrecord.StatusHeld)).
+		WithMovie().
+		WithAnchorEpisode().
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list held records: %w", err)
+	}
+	return slices.DeleteFunc(recs, func(r *ent.DownloadRecord) bool {
+		return len(r.HoldReasons) == 0 ||
+			slices.ContainsFunc(r.HoldReasons, func(h schema.HoldReason) bool {
+				return h.Check != check
+			})
+	}), nil
+}
+
+// SetHeldRecordReasons rewrites a held record's reasons and nothing else, so
+// the status hook records no second hold. Filtered on held.
+func (db *DB) SetHeldRecordReasons(
+	ctx context.Context,
+	id uint32,
+	reasons []schema.HoldReason,
+) error {
+	err := db.client.DownloadRecord.UpdateOneID(id).
+		Where(downloadrecord.StatusEQ(downloadrecord.StatusHeld)).
+		SetHoldReasons(reasons).
+		Exec(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return fmt.Errorf("set held record reasons: %w", err)
+	}
+	return nil
+}
+
+// ReleaseLocatedRecord moves a record held for its payload's location to
+// importing from savePath, the path the payload was found at, clearing its
+// reasons in the same write. Filtered on held, so a record resolved by hand in
+// the meantime is left alone. Reports whether the record moved.
+func (db *DB) ReleaseLocatedRecord(
+	ctx context.Context,
+	id uint32,
+	savePath string,
+) (bool, error) {
+	err := db.client.DownloadRecord.UpdateOneID(id).
+		Where(downloadrecord.StatusEQ(downloadrecord.StatusHeld)).
+		SetStatus(downloadrecord.StatusImporting).
+		SetSavePath(savePath).
+		ClearHoldReasons().
+		Exec(ctx)
+	if ent.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("release located record: %w", err)
+	}
+	return true, nil
+}
+
 // FindHeldDownloadRecordByID fetches a single held record by ID with its Movie
 // and Episode context eager-loaded. Returns ent.NotFound when the record is
 // absent or no longer held.
