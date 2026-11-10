@@ -35,12 +35,18 @@ var _ = Describe("Manager.CheckStatus payload location",
 
 			mu       sync.Mutex
 			savePath string
+			state    string
 		)
 
 		reportSavePath := func(p string) {
 			mu.Lock()
 			defer mu.Unlock()
 			savePath = p
+		}
+		reportState := func(st string) {
+			mu.Lock()
+			defer mu.Unlock()
+			state = st
 		}
 
 		BeforeEach(func() {
@@ -53,6 +59,7 @@ var _ = Describe("Manager.CheckStatus payload location",
 			// qBittorrent in Manual mode: the torrent sits in its default save
 			// path, which it reports as /data/qbit, mounted here at client.
 			reportSavePath("/data/qbit")
+			reportState("uploading")
 
 			mux := http.NewServeMux()
 			mux.HandleFunc("/api/v2/auth/login",
@@ -63,11 +70,11 @@ var _ = Describe("Manager.CheckStatus payload location",
 			mux.HandleFunc("/api/v2/torrents/info",
 				func(w http.ResponseWriter, _ *http.Request) {
 					mu.Lock()
-					p := savePath
+					p, st := savePath, state
 					mu.Unlock()
 					w.Header().Set("Content-Type", "application/json")
 					_, _ = w.Write(jsonBytes([]map[string]any{{
-						"hash": "abc123", "name": name, "state": "uploading",
+						"hash": "abc123", "name": name, "state": st,
 						"progress": 1.0, "size": 5000, "save_path": p,
 					}}))
 				})
@@ -216,6 +223,52 @@ var _ = Describe("Manager.CheckStatus payload location",
 			Expect(
 				rec.HoldReasons[0].Actual,
 			).To(Equal(filepath.Join("/elsewhere", name)))
+		})
+
+		It(
+			"waits for qBittorrent to finish moving the files before importing",
+			func() {
+				// The destination exists from the move's first write, so only the
+				// client's state tells a half-moved payload from a finished one.
+				Expect(os.Mkdir(filepath.Join(client, name), 0o755)).To(Succeed())
+				reportState("moving")
+
+				completed, err := mgr.CheckStatus(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(completed).To(BeEmpty())
+				rec, err := dbClient.DownloadRecord.Get(ctx, recID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec.Status).To(Equal(downloadrecord.StatusDownloading))
+
+				By("importing once the move has ended")
+				reportState("stalledUP")
+				completed, err = mgr.CheckStatus(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(completed).To(HaveLen(1))
+				Expect(completed[0].SavePath).To(Equal(filepath.Join(client, name)))
+			},
+		)
+
+		It("keeps a location hold while qBittorrent is moving the files", func() {
+			_, err := mgr.CheckStatus(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(os.Mkdir(filepath.Join(client, name), 0o755)).To(Succeed())
+			reportState("moving")
+			completed, err := mgr.CheckStatus(ctx)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(completed).To(BeEmpty())
+			rec, err := dbClient.DownloadRecord.Get(ctx, recID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec.Status).To(Equal(downloadrecord.StatusHeld))
+
+			By("releasing it once the move has ended")
+			reportState("uploading")
+			completed, err = mgr.CheckStatus(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(completed).To(HaveLen(1))
 		})
 
 		It("never releases a record held by import verification", func() {
