@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -415,6 +417,102 @@ var _ = Describe("Torznab Client", Label("unit", "indexers"), func() {
 					SearchParams{Query: "x"},
 				)
 				Expect(err).To(MatchError(ErrUnexpectedStatus))
+			})
+		})
+
+		When("the server refuses the query", func() {
+			// What Jackett answers, verbatim in shape: an id its tracker cannot
+			// search by is a 400 with error 203; a search mode the tracker
+			// lacks a 200 with error 201; a bad API key a 200 with error 100;
+			// any exception the tracker raised a 400 with error 900.
+			respond := func(status int, body string) Client {
+				return newTorznabServer(
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.Header().Set("Content-Type", "application/xml")
+						w.WriteHeader(status)
+						_, err := w.Write([]byte(body))
+						Expect(err).NotTo(HaveOccurred())
+					},
+				)
+			}
+			search := func(client Client) error {
+				_, err := client.Search(
+					context.Background(),
+					SearchParams{Query: "x", Kind: KindMovie, TMDBID: 1},
+				)
+				return err
+			}
+			errorDoc := func(code int, description string) string {
+				return fmt.Sprintf(
+					"%s<error code=\"%d\" description=\"%s\" />",
+					xml.Header, code, description,
+				)
+			}
+
+			It(
+				"files a bare 400 under both ErrBadRequest and ErrUnexpectedStatus",
+				func() {
+					err := search(respond(http.StatusBadRequest, ""))
+					Expect(errors.Is(err, ErrBadRequest)).To(BeTrue())
+					Expect(errors.Is(err, ErrUnexpectedStatus)).To(BeTrue())
+				},
+			)
+
+			It(
+				"files a 400 with an unsupported-function document as a refusal",
+				func() {
+					err := search(respond(http.StatusBadRequest, errorDoc(
+						203,
+						"Function Not Available: tmdbid is not supported for movie search by this indexer",
+					)))
+					Expect(errors.Is(err, ErrBadRequest)).To(BeTrue())
+					Expect(errors.Is(err, ErrUnexpectedStatus)).To(BeTrue())
+					Expect(
+						err.Error(),
+					).To(ContainSubstring("tmdbid is not supported"))
+				},
+			)
+
+			It(
+				"files a 200 carrying an incorrect-parameter document as a refusal",
+				func() {
+					err := search(respond(http.StatusOK, errorDoc(201,
+						"jackett does not support the requested query.")))
+					Expect(errors.Is(err, ErrBadRequest)).To(BeTrue())
+					Expect(errors.Is(err, ErrBadResponse)).To(BeFalse())
+				},
+			)
+
+			It(
+				"files a 200 carrying a credentials document as ErrUnauthorized",
+				func() {
+					err := search(
+						respond(http.StatusOK, errorDoc(100, "Invalid API Key")),
+					)
+					Expect(errors.Is(err, ErrUnauthorized)).To(BeTrue())
+					Expect(errors.Is(err, ErrBadRequest)).To(BeFalse())
+				},
+			)
+
+			It(
+				"does not file a tracker failure as a refusal, nor echo its text",
+				func() {
+					err := search(respond(http.StatusBadRequest, errorDoc(
+						900,
+						"System.Exception: https://tracker.example/rss?passkey=secret",
+					)))
+					Expect(errors.Is(err, ErrUnexpectedStatus)).To(BeTrue())
+					Expect(errors.Is(err, ErrBadRequest)).To(BeFalse())
+					Expect(err.Error()).NotTo(ContainSubstring("passkey"))
+				},
+			)
+
+			It("bounds the indexer's own wording", func() {
+				err := search(respond(http.StatusBadRequest,
+					errorDoc(203, strings.Repeat("é", 500))))
+				Expect(errors.Is(err, ErrBadRequest)).To(BeTrue())
+				Expect(len(err.Error())).To(BeNumerically("<", 400))
+				Expect(utf8.ValidString(err.Error())).To(BeTrue())
 			})
 		})
 

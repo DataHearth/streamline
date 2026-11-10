@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"context"
+	"encoding/xml"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -460,6 +461,19 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			Expect(queries[1].Get("categories")).To(Equal("5000"))
 		})
 
+		It("does not re-send a movie search it sent no id with", func() {
+			// prowlarrQuery never forwards the TMDB id, so the bare title
+			// would be this very request again.
+			rec := newProwlarrRecorder(`[]`)
+			DeferCleanup(rec.Close)
+			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+			_, err := New(nil).SearchMovie(context.Background(), []string{"Dune"},
+				nil, 438631, "tt1160419")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec.Queries()).To(HaveLen(1))
+		})
+
 		It("does not retry a query that was already bare", func() {
 			// A movie search with no tmdbid names nothing beyond the title, so
 			// there is no narrower form to fall back from.
@@ -544,6 +558,60 @@ var _ = Describe("the Torznab id ladder", Label("integration", "indexers"),
 			Expect(queries[1].Get("t")).To(Equal("movie"))
 			Expect(queries[2]).NotTo(HaveKey("imdbid"))
 			Expect(queries[2]).NotTo(HaveKey("tmdbid"))
+			Expect(queries[2].Get("q")).To(Equal("Dune"))
+		})
+
+		It("walks the same ladder when Jackett refuses an id", func() {
+			// Jackett answers an id its tracker cannot search by with a 400
+			// and error 203; the bare title is answered.
+			var (
+				mu      sync.Mutex
+				queries []url.Values
+			)
+			ts := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					mu.Lock()
+					queries = append(queries, r.URL.Query())
+					mu.Unlock()
+					w.Header().Set("Content-Type", "application/xml")
+					q := r.URL.Query()
+					if q.Has("tmdbid") || q.Has("imdbid") {
+						w.WriteHeader(http.StatusBadRequest)
+						_, err := w.Write([]byte(xml.Header +
+							`<error code="203" description="Function Not Available" />`))
+						Expect(err).NotTo(HaveOccurred())
+						return
+					}
+					_, err := w.Write(torznabXML([]testRSSItem{{
+						Title: "Dune.2021.1080p.WEB-GRP",
+						Link:  "http://x/a.torrent",
+					}}))
+					Expect(err).NotTo(HaveOccurred())
+				}))
+			DeferCleanup(ts.Close)
+			host, port := splitHostPort(ts.URL)
+			configtest.Setup(map[string]any{
+				"indexers": []map[string]any{{
+					"name":     "Jackett",
+					"host":     host,
+					"port":     int(port),
+					"api_key":  "key",
+					"protocol": "torznab",
+					"enabled":  true,
+				}},
+			})
+
+			results, err := New(nil).SearchMovie(context.Background(),
+				[]string{"Dune"}, nil, 438631, "tt1160419")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(1), "the bare title's release is kept")
+
+			mu.Lock()
+			defer mu.Unlock()
+			Expect(queries).To(HaveLen(3))
+			Expect(queries[0].Get("tmdbid")).To(Equal("438631"))
+			Expect(queries[1].Get("imdbid")).To(Equal("tt1160419"))
+			Expect(queries[2].Get("t")).To(Equal("search"))
 			Expect(queries[2].Get("q")).To(Equal("Dune"))
 		})
 	},

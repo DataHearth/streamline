@@ -106,6 +106,9 @@ func queryOutcome(err error) string {
 		return "unreachable"
 	case errors.Is(err, ErrBadResponse):
 		return "bad_response"
+	// Before ErrUnexpectedStatus, which always travels with it.
+	case errors.Is(err, ErrBadRequest):
+		return "bad_request"
 	case errors.Is(err, ErrUnexpectedStatus):
 		return "unexpected_status"
 	default:
@@ -861,7 +864,9 @@ func filterToEpisode(
 }
 
 // fallbacks lists the wider queries to try, in order, while an indexer keeps
-// answering params with nothing.
+// answering params with nothing, or refusing them (ErrBadRequest). Each rung
+// is asked once at most, so a refused query that falls back to the bare title
+// is never retried again when that comes back empty.
 //
 // Most private trackers don't index by TMDB/TVDB id and silently return
 // nothing when one is set. A Torznab endpoint gets the IMDb id on its own
@@ -883,17 +888,106 @@ func fallbacks(protocol string, params SearchParams) []SearchParams {
 		imdb.TMDBID, imdb.TVDBID = 0, 0
 		out = append(out, imdb)
 	}
-	if params.narrowed() {
+	if sendsNarrowed(protocol, params) {
 		out = append(out, SearchParams{Query: params.Query, Kind: params.Kind})
 	}
 	return out
+}
+
+// sendsNarrowed reports whether protocol's client renders params as a request
+// narrower than the bare title's — what makes the bare-title rung a different
+// request at all. Prowlarr forwards a season, and an episode only under one,
+// but never an id (see prowlarrQuery), so for a movie or a whole-series browse
+// its bare rung is the very request that just came back.
+func sendsNarrowed(protocol string, params SearchParams) bool {
+	if protocol == "prowlarr" {
+		return params.Kind == KindTV && params.Season > 0
+	}
+	return params.narrowed()
+}
+
+// searchWithFallbacks runs one (indexer, title) query and walks fallbacks
+// while it is answered with nothing or refused (ErrBadRequest), returning an
+// error only when no leg was answered at all. Any other failure ends the walk:
+// a timeout or a broken tracker is not helped by a wider query.
+//
+// Each query is counted once by the outcome of its first leg; a retry leg is
+// counted only when it fails, as retry_<outcome>. So a refused first leg whose
+// wider retry answered reads as one bad_request and nothing else.
+func searchWithFallbacks(
+	ctx context.Context,
+	client Client,
+	idx config.IndexerEntry,
+	params SearchParams,
+) ([]SearchResult, error) {
+	count := func(outcome string) {
+		indexerQueries.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("indexer.name", idx.Name),
+			attribute.String("outcome", outcome),
+		))
+	}
+	wider := fallbacks(idx.Protocol, params)
+
+	res, err := client.Search(ctx, params)
+	count(queryOutcome(err))
+	switch {
+	case err == nil:
+	case errors.Is(err, ErrBadRequest) && len(wider) > 0:
+		slog.InfoContext(ctx,
+			"indexer refused the query, retrying a wider one",
+			"indexer", idx.Name,
+			"title", params.Query,
+			"error", err,
+		)
+	default:
+		return nil, err
+	}
+	answered := err == nil
+
+	for _, fallback := range wider {
+		if len(res) > 0 {
+			break
+		}
+		slog.DebugContext(ctx,
+			"indexer search empty or refused, retrying a wider query",
+			"indexer", idx.Name,
+			"title", params.Query,
+			"imdb_id", fallback.IMDbID,
+		)
+		retry, retryErr := client.Search(ctx, fallback)
+		if retryErr == nil {
+			res, answered = retry, true
+			continue
+		}
+		err = retryErr
+		// Counted, a tracker that is down or rate-limiting on the retry leg
+		// is told apart from a bare-title query that legitimately found
+		// nothing — both leave an empty result.
+		count("retry_" + queryOutcome(retryErr))
+		slog.WarnContext(ctx,
+			"indexer retry failed",
+			"indexer", idx.Name,
+			"title", params.Query,
+			"error", retryErr,
+		)
+		// Only a refusal says a wider query could fare better; a tracker
+		// that timed out or failed would only be sent more of the same.
+		if !errors.Is(retryErr, ErrBadRequest) {
+			break
+		}
+	}
+	if !answered {
+		return nil, err
+	}
+	return res, nil
 }
 
 // searchAll fans out one query per (indexer, title) across every enabled
 // indexer, merging results deduped by release identity and sorted by seeders
 // descending. base carries the id/season/episode params shared by every
 // query; Query is filled per title. Per-indexer errors are logged, never
-// returned. A query that comes back empty is retried through fallbacks.
+// returned. A query that comes back empty, or that the indexer refuses as a
+// bad request, is retried through fallbacks.
 func (i *indexer) searchAll(
 	ctx context.Context,
 	span trace.Span,
@@ -935,12 +1029,10 @@ func (i *indexer) searchAll(
 				)
 				params := base
 				params.Query = title
-				res, err := client.Search(queryCtx, params)
+				res, err := searchWithFallbacks(
+					queryCtx, client, idx, params,
+				)
 				if err != nil {
-					indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
-						attribute.String("indexer.name", idx.Name),
-						attribute.String("outcome", queryOutcome(err)),
-					))
 					otelx.RecordSpanError(childSpan, err)
 					slog.WarnContext(queryCtx,
 						"indexer search failed",
@@ -951,44 +1043,6 @@ func (i *indexer) searchAll(
 					childSpan.End()
 					continue
 				}
-				for _, fallback := range fallbacks(idx.Protocol, params) {
-					if len(res) > 0 {
-						break
-					}
-					slog.DebugContext(queryCtx,
-						"indexer search empty, retrying a wider query",
-						"indexer", idx.Name,
-						"title", title,
-						"imdb_id", fallback.IMDbID,
-					)
-					retry, retryErr := client.Search(queryCtx, fallback)
-					if retryErr == nil {
-						res = retry
-					} else {
-						// Dropped silently, a tracker that is down or
-						// rate-limiting on the retry leg would be
-						// indistinguishable from a bare-title query that
-						// legitimately found nothing — both leave an empty
-						// result and no signal.
-						indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
-							attribute.String("indexer.name", idx.Name),
-							attribute.String(
-								"outcome",
-								"retry_"+queryOutcome(retryErr),
-							),
-						))
-						slog.DebugContext(queryCtx,
-							"indexer retry failed",
-							"indexer", idx.Name,
-							"title", title,
-							"error", retryErr,
-						)
-					}
-				}
-				indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
-					attribute.String("indexer.name", idx.Name),
-					attribute.String("outcome", "success"),
-				))
 				childSpan.SetAttributes(attribute.Int("results.count", len(res)))
 				slog.InfoContext(queryCtx,
 					"indexer query complete",
