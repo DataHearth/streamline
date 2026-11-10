@@ -80,7 +80,7 @@ func (d *demo) addTitles(ctx context.Context) error {
 		map[string]int{},
 	}
 
-	var users list
+	var users any
 	if err := d.admin.get(ctx, "/users", nil, &users); err != nil {
 		return err
 	}
