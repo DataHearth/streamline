@@ -162,6 +162,18 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 		qb.FreeSpace = 1_000_000_000
 		registerFakeQBittorrent(qb.URL)
 		movieID := createLibraryMovie()
+		// The 0.1 GB release fits in the fake's 1 GB; it is the reserve that
+		// refuses it, and the suite's config starts with none.
+		reserve := func(gb int) {
+			patch(
+				"/api/v1/config/download",
+				adminAuth,
+				map[string]any{"space_reserve_gb": gb},
+			).
+				Body.Close()
+		}
+		reserve(10)
+		DeferCleanup(reserve, 0)
 
 		resp := post(
 			fmt.Sprintf("/api/v1/movies/%d/search", movieID),
