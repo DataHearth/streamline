@@ -748,6 +748,31 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			},
 		)
 
+		It(
+			"matches a title carrying a year against its release",
+			func() {
+				expectQueries([]*ent.TVShow{named(1, 11, "Foundation (2021)")}, nil)
+				feed("Foundation.2021.S01E01.1080p.WEB-DL.x265-GRP")
+				expectGrab(11)
+				Expect(scanner.Run(ctx)).To(Succeed())
+			},
+		)
+
+		It("grabs for the same-named show the release's year names", func() {
+			classic := named(1, 11, "Doctor Who")
+			classic.Year = 1963
+			revival := named(2, 21, "Doctor Who (2005)")
+			revival.Year = 2005
+			expectQueries([]*ent.TVShow{classic, revival}, nil)
+			feed(
+				"Doctor.Who.2005.S01E01.1080p.WEB-DL.x265-GRP",
+				// No year: either show could be meant.
+				"Doctor.Who.S01E01.1080p.WEB-DL.x265-GRP",
+			)
+			expectGrab(21)
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
 		It("is not ambiguous with itself when a show is in both listings", func() {
 			configtest.Setup(upgradeConfig("a"))
 			newScanner()
@@ -811,7 +836,7 @@ var _ = Describe("showKey", Label("unit", "rss"), func() {
 	})
 })
 
-var _ = Describe("resolveShowKeys", Label("unit", "rss"), func() {
+var _ = Describe("resolveShowNames", Label("unit", "rss"), func() {
 	show := func(id uint32, title, original string, aliases ...string) *ent.TVShow {
 		return &ent.TVShow{
 			ID:            id,
@@ -820,59 +845,85 @@ var _ = Describe("resolveShowKeys", Label("unit", "rss"), func() {
 			Aliases:       aliases,
 		}
 	}
+	// resolve is the resolved show ID, 0 for none (fixture IDs start at 1).
+	resolve := func(names showNames, key string, year uint16) uint32 {
+		id, ok := names.resolve(key, year)
+		if !ok {
+			return 0
+		}
+		return id
+	}
 
 	It("maps every title, original title and alias to its show", func() {
-		owners := resolveShowKeys(context.Background(),
+		names := resolveShowNames(context.Background(),
 			[]*ent.TVShow{show(1, "Shōgun", "将軍", "Shogun 2024")})
-		Expect(owners).To(Equal(map[string]uint32{
-			"shogun": 1, "将軍": 1, "shogun 2024": 1,
+		Expect(names.claims).To(Equal(map[string][]uint32{
+			"shogun": {1}, "将軍": {1}, "shogun 2024": {1},
 		}))
 	})
 
 	It("lets a title outrank another show's alias", func() {
-		owners := resolveShowKeys(context.Background(),
+		names := resolveShowNames(context.Background(),
 			[]*ent.TVShow{show(1, "Dark", "")},
 			[]*ent.TVShow{show(2, "Dark Matter", "", "Dark")})
-		Expect(owners).To(HaveKeyWithValue("dark", uint32(1)))
-		Expect(owners).To(HaveKeyWithValue("dark matter", uint32(2)))
+		Expect(resolve(names, "dark", 0)).To(Equal(uint32(1)))
+		Expect(resolve(names, "dark matter", 0)).To(Equal(uint32(2)))
 	})
 
-	It("drops a key two shows claim in the same tier", func() {
-		owners := resolveShowKeys(context.Background(),
+	It("resolves a key two shows claim in the same tier to neither", func() {
+		names := resolveShowNames(context.Background(),
 			[]*ent.TVShow{show(1, "The Office", ""), show(3, "A", "", "Camelot")},
 			[]*ent.TVShow{show(2, "The Office", ""), show(4, "B", "", "Camelot")})
-		Expect(owners).NotTo(HaveKey("the office"))
-		Expect(owners).NotTo(HaveKey("camelot"))
-		Expect(owners).To(HaveKeyWithValue("a", uint32(3)))
+		Expect(resolve(names, "the office", 0)).To(BeZero())
+		Expect(resolve(names, "camelot", 2020)).To(BeZero())
+		Expect(resolve(names, "a", 0)).To(Equal(uint32(3)))
 	})
 
 	It("is not ambiguous with itself across lists", func() {
-		owners := resolveShowKeys(context.Background(),
+		names := resolveShowNames(context.Background(),
 			[]*ent.TVShow{show(1, "The Black Sea", "", "Mer Noire")},
 			[]*ent.TVShow{show(1, "The Black Sea", "", "Mer Noire")})
-		Expect(owners).To(Equal(map[string]uint32{
-			"the black sea": 1, "mer noire": 1,
+		Expect(names.claims).To(Equal(map[string][]uint32{
+			"the black sea": {1}, "mer noire": {1},
 		}))
 	})
 
-	It("never assigns the empty key", func() {
-		owners := resolveShowKeys(context.Background(),
+	It("never claims the empty key", func() {
+		names := resolveShowNames(context.Background(),
 			[]*ent.TVShow{show(1, "!!!", "", "...")})
-		Expect(owners).To(BeEmpty())
+		Expect(names.claims).To(BeEmpty())
+		Expect(resolve(names, "", 0)).To(BeZero())
 	})
 
-	It("indexes a listing under its own keys only", func() {
-		a, b := show(1, "The Office", ""), show(2, "The Office", "")
-		c := show(3, "Dark", "", "Mörk")
-		owners := resolveShowKeys(
+	It("keys a title without the year that tells it apart", func() {
+		names := resolveShowNames(context.Background(),
+			[]*ent.TVShow{show(1, "Foundation (2021)", "")})
+		Expect(names.claims).To(Equal(map[string][]uint32{"foundation": {1}}))
+		Expect(names.years[1]).To(Equal([]uint16{2021}))
+		// The only show under its key: any year, or none, is still it.
+		Expect(resolve(names, "foundation", 0)).To(Equal(uint32(1)))
+		Expect(resolve(names, "foundation", 1999)).To(Equal(uint32(1)))
+	})
+
+	It("tells same-named shows apart by the release's year", func() {
+		classic := show(1, "Doctor Who", "")
+		classic.Year = 1963
+		revival := show(2, "Doctor Who (2005)", "")
+		revival.Year = 2005
+		names := resolveShowNames(
 			context.Background(),
-			[]*ent.TVShow{a, c},
-			[]*ent.TVShow{b},
+			[]*ent.TVShow{classic, revival},
 		)
-		wanted := buildEpisodeIndex([]*ent.TVShow{a, c}, owners)
-		Expect(wanted).To(HaveLen(2))
-		Expect(wanted["dark"].show).To(BeIdenticalTo(c))
-		Expect(wanted["mork"].show).To(BeIdenticalTo(c))
-		Expect(buildEpisodeIndex([]*ent.TVShow{b}, owners)).To(BeEmpty())
+		Expect(resolve(names, "doctor who", 2005)).To(Equal(uint32(2)))
+		Expect(resolve(names, "doctor who", 1963)).To(Equal(uint32(1)))
+		Expect(resolve(names, "doctor who", 0)).To(BeZero())
+		Expect(resolve(names, "doctor who", 2023)).To(BeZero())
+	})
+
+	It("resolves to neither when both same-named shows answer to the year", func() {
+		a, b := show(1, "The Office", ""), show(2, "The Office (2005)", "")
+		a.Year, b.Year = 2005, 2005
+		names := resolveShowNames(context.Background(), []*ent.TVShow{a, b})
+		Expect(resolve(names, "the office", 2005)).To(BeZero())
 	})
 })

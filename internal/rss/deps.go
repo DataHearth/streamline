@@ -109,8 +109,8 @@ type EligibleEpisodeLister interface {
 type TVFeedStore interface {
 	EligibleEpisodeLister
 	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)
-	// ListShowNames is every show of the library with its names only: which
-	// show a release name belongs to is decided over all of them.
+	// ListShowNames is every show of the library with its names and year
+	// only: which show a release name belongs to is decided over all of them.
 	ListShowNames(ctx context.Context) ([]*ent.TVShow, error)
 }
 

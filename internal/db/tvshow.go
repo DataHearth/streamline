@@ -878,12 +878,18 @@ func (db *DB) ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, err
 }
 
 // ListShowNames loads every show with only the names a release may call it
-// by: title, original title and aliases. The feed scan decides which show a
-// name belongs to over the whole library, since a show outside this tick's
-// wanted and upgrade listings still owns its own title.
+// by — title, original title and aliases — and the year that tells two
+// same-named shows apart. The feed scan decides which show a name belongs to
+// over the whole library, since a show outside this tick's wanted and upgrade
+// listings still owns its own title.
 func (db *DB) ListShowNames(ctx context.Context) ([]*ent.TVShow, error) {
 	return db.client.TVShow.Query().
-		Select(tvshow.FieldTitle, tvshow.FieldOriginalTitle, tvshow.FieldAliases).
+		Select(
+			tvshow.FieldTitle,
+			tvshow.FieldOriginalTitle,
+			tvshow.FieldAliases,
+			tvshow.FieldYear,
+		).
 		All(ctx)
 }
 

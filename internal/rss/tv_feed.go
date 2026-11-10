@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"maps"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -105,7 +105,7 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	owners := resolveShowKeys(ctx, library, shows, upgradable)
+	names := resolveShowNames(ctx, library, shows, upgradable)
 	// Every grab below is automatic; without the blocklist any of them could
 	// be a release the user rejected.
 	blocklist, err := s.store.RejectedReleases(ctx)
@@ -125,8 +125,9 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 	}
 
 	pass := &tvPass{
-		wanted:       buildEpisodeIndex(shows, owners),
-		upgrades:     buildEpisodeIndex(upgradable, owners),
+		names:        names,
+		wanted:       buildEpisodeIndex(shows),
+		upgrades:     buildEpisodeIndex(upgradable),
 		profiles:     resolveShowProfiles(ctx, shows, upgradable),
 		seasonCounts: seasonCounts,
 		rejected:     blocklist,
@@ -155,13 +156,14 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 	return nil
 }
 
-// tvPass carries one tick's state: the two show indexes items are matched
-// against, the profiles resolved for the shows in them, and the episode IDs
-// already grabbed. Both indexes are built from one key → show resolution, so
-// a key names the same show in each or is absent from both.
+// tvPass carries one tick's state: which show a release name belongs to, the
+// two show indexes by show ID, the profiles resolved for the shows in them,
+// and the episode IDs already grabbed. A release resolves to one show ID
+// first, so it names the same show in both indexes or neither.
 type tvPass struct {
-	wanted   map[string]*wantedShow
-	upgrades map[string]*wantedShow
+	names    showNames
+	wanted   map[uint32]*wantedShow
+	upgrades map[uint32]*wantedShow
 	profiles map[string]quality.Profile
 	// seasonCounts is show id -> season number -> episode total, unfiltered.
 	// Sizes a pack; nil when the lookup failed, which leaves size bounds
@@ -185,11 +187,11 @@ func (s *TVFeedScanner) processItems(
 			continue
 		}
 		parsed := library.Parse(item.Title)
-		key := releaseShowKey(parsed)
-		if key == "" {
+		id, ok := pass.names.resolve(releaseShowKey(parsed), parsed.Year)
+		if !ok {
 			continue
 		}
-		ws, us := pass.wanted[key], pass.upgrades[key]
+		ws, us := pass.wanted[id], pass.upgrades[id]
 		// Both indexes hold the same row for a show with wanted *and* on-disk
 		// episodes, so the profile is one lookup either way.
 		show := indexedShow(ws, us)
@@ -551,54 +553,119 @@ func newWantedShow(show *ent.TVShow) *wantedShow {
 	return w
 }
 
-// showNameKeys returns the keys a release may name show by, in two tiers:
-// its title and original title, then its aliases. Empty keys are left out.
-func showNameKeys(show *ent.TVShow) (titles, aliases []string) {
+// titleYearRe is the year TVDB writes after a title to tell same-named shows
+// apart ("Foundation (2021)"). library.Parse takes the year out of a release
+// name's title, so it has to come off the show's too.
+var titleYearRe = regexp.MustCompile(`\s*\(((?:19|20)\d{2})\)\s*$`)
+
+// splitTitleYear returns title without a trailing "(YYYY)", and that year.
+func splitTitleYear(title string) (string, uint16) {
+	m := titleYearRe.FindStringSubmatchIndex(title)
+	if m == nil {
+		return title, 0
+	}
+	// Four digits from the pattern: always a valid uint16.
+	year, _ := strconv.ParseUint(title[m[2]:m[3]], 10, 16)
+	return title[:m[0]], uint16(year)
+}
+
+// showNameKeys returns the keys a release may name show by, in two tiers —
+// its title and original title, then its aliases — and the years any of them
+// states. Empty keys are left out.
+func showNameKeys(show *ent.TVShow) (titles, aliases []string, years []uint16) {
+	key := func(name string) string {
+		bare, year := splitTitleYear(name)
+		if year != 0 && !slices.Contains(years, year) {
+			years = append(years, year)
+		}
+		return showKey(bare)
+	}
 	for _, t := range []string{show.Title, show.OriginalTitle} {
-		if k := showKey(t); k != "" && !slices.Contains(titles, k) {
+		if k := key(t); k != "" && !slices.Contains(titles, k) {
 			titles = append(titles, k)
 		}
 	}
 	for _, a := range show.Aliases {
-		if k := showKey(a); k != "" && !slices.Contains(titles, k) &&
+		if k := key(a); k != "" && !slices.Contains(titles, k) &&
 			!slices.Contains(aliases, k) {
 			aliases = append(aliases, k)
 		}
 	}
-	return titles, aliases
+	return titles, aliases, years
 }
 
-// resolveShowKeys decides which show each key names, over every show of every
-// list (the same show may appear in several; it is told apart by ID).
+// showNames is which show each release name belongs to, for one tick.
+type showNames struct {
+	// claims is every key a show answers to, with the IDs of the shows
+	// claiming it in the tier that holds it.
+	claims map[string][]uint32
+	// years is every year a show answers to: its own and any its names state.
+	years map[uint32][]uint16
+}
+
+// resolve returns the show a release keyed key, carrying year (0 when it
+// states none), is for. A key one show claims is that show's whatever the
+// year — a daily show's air date reads as a year too. A key several shows
+// claim is the one show among them answering to the release's year, if
+// exactly one does.
+func (n showNames) resolve(key string, year uint16) (uint32, bool) {
+	ids := n.claims[key]
+	if len(ids) == 1 {
+		return ids[0], true
+	}
+	if len(ids) == 0 || year == 0 {
+		return 0, false
+	}
+	var found uint32
+	matches := 0
+	for _, id := range ids {
+		if slices.Contains(n.years[id], year) {
+			found = id
+			matches++
+		}
+	}
+	return found, matches == 1
+}
+
+// resolveShowNames decides which shows each key names, over every show of
+// every list (the same show may appear in several; it is told apart by ID).
 //
 // Titles outrank aliases: an alias claims only a key no show's title holds,
 // so another show's translated title can never take a show's releases. A key
-// claimed by more than one show within its tier names none of them and is
-// left out; a release under it is left to the missing search, which queries
-// per show.
-func resolveShowKeys(
-	ctx context.Context,
-	lists ...[]*ent.TVShow,
-) map[string]uint32 {
-	titles := make(map[string]map[uint32]struct{})
-	aliases := make(map[string]map[uint32]struct{})
-	claim := func(tier map[string]map[uint32]struct{}, key string, id uint32) {
-		if tier[key] == nil {
-			tier[key] = make(map[uint32]struct{}, 1)
+// claimed by more than one show within its tier is told apart by the
+// release's year only; a release it leaves unresolved is left to the missing
+// search, which queries per show.
+func resolveShowNames(ctx context.Context, lists ...[]*ent.TVShow) showNames {
+	titles := make(map[string][]uint32)
+	aliases := make(map[string][]uint32)
+	names := showNames{
+		claims: make(map[string][]uint32),
+		years:  make(map[uint32][]uint16),
+	}
+	claim := func(tier map[string][]uint32, key string, id uint32) {
+		if !slices.Contains(tier[key], id) {
+			tier[key] = append(tier[key], id)
 		}
-		tier[key][id] = struct{}{}
 	}
 	for _, list := range lists {
 		for _, show := range list {
-			ts, _ := showNameKeys(show)
+			ts, _, years := showNameKeys(show)
 			for _, k := range ts {
 				claim(titles, k, show.ID)
+			}
+			if show.Year != 0 {
+				years = append(years, show.Year)
+			}
+			for _, y := range years {
+				if !slices.Contains(names.years[show.ID], y) {
+					names.years[show.ID] = append(names.years[show.ID], y)
+				}
 			}
 		}
 	}
 	for _, list := range lists {
 		for _, show := range list {
-			_, as := showNameKeys(show)
+			_, as, _ := showNameKeys(show)
 			for _, k := range as {
 				if _, taken := titles[k]; !taken {
 					claim(aliases, k, show.ID)
@@ -606,37 +673,29 @@ func resolveShowKeys(
 			}
 		}
 	}
-	owners := make(map[string]uint32, len(titles)+len(aliases))
-	for _, tier := range []map[string]map[uint32]struct{}{titles, aliases} {
+	for _, tier := range []map[string][]uint32{titles, aliases} {
 		for key, ids := range tier {
-			if len(ids) == 1 {
-				for id := range ids {
-					owners[key] = id
-				}
-				continue
+			names.claims[key] = ids
+			if len(ids) > 1 {
+				slog.DebugContext(
+					ctx,
+					"tv feed-scan: name shared by several shows, told apart by year only",
+					"key",
+					key,
+					"show.ids",
+					slices.Sorted(slices.Values(ids)),
+				)
 			}
-			slog.DebugContext(ctx,
-				"tv feed-scan: name shared by several shows, left unmatched",
-				"key", key, "show.ids", slices.Sorted(maps.Keys(ids)))
 		}
 	}
-	return owners
+	return names
 }
 
-// buildEpisodeIndex indexes shows under every key owners assigns to them.
-func buildEpisodeIndex(
-	shows []*ent.TVShow,
-	owners map[string]uint32,
-) map[string]*wantedShow {
-	index := make(map[string]*wantedShow, len(shows))
+// buildEpisodeIndex indexes shows by ID.
+func buildEpisodeIndex(shows []*ent.TVShow) map[uint32]*wantedShow {
+	index := make(map[uint32]*wantedShow, len(shows))
 	for _, show := range shows {
-		w := newWantedShow(show)
-		titles, aliases := showNameKeys(show)
-		for _, k := range append(titles, aliases...) {
-			if id, ok := owners[k]; ok && id == show.ID {
-				index[k] = w
-			}
-		}
+		index[show.ID] = newWantedShow(show)
 	}
 	return index
 }

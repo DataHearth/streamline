@@ -759,6 +759,7 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 			Expect(byID[a.ID].Title).To(Equal("Shōgun"))
 			Expect(byID[a.ID].OriginalTitle).To(Equal("将軍"))
 			Expect(byID[a.ID].Aliases).To(Equal([]string{"Shogun"}))
+			Expect(byID[a.ID].Year).To(Equal(uint16(2024)))
 			Expect(byID[a.ID].Edges.Seasons).To(BeNil())
 			Expect(byID[b.ID].Title).To(Equal("Y"))
 		})
