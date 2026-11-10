@@ -153,67 +153,6 @@ var _ = Describe("User store CRUD", Label("integration", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cleared.SubsonicPassword).To(BeEmpty())
 		})
-
-		It("sets then clears the opds token", func() {
-			u := create("a@example.com", "member")
-			token := "secretsecretsecretsecret"
-			set, err := store.UpdateUser(
-				ctx,
-				u.ID,
-				UpdateUserParams{OPDSToken: &token},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(set.OpdsToken).To(Equal(token))
-
-			read, err := store.FindUserByID(ctx, u.ID)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(read.OpdsToken).To(Equal(token))
-
-			cleared, err := store.UpdateUser(
-				ctx,
-				u.ID,
-				UpdateUserParams{ClearOPDSToken: true},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cleared.OpdsToken).To(BeEmpty())
-		})
-
-		It(
-			"resets last use on a new secret and clears every column on disable",
-			func() {
-				u := create("a@example.com", "member")
-				token := "hashed"
-				created := time.Now().UTC().Truncate(time.Second)
-				_, err := store.UpdateUser(ctx, u.ID, UpdateUserParams{
-					OPDSToken: &token, OPDSCreatedAt: &created,
-				})
-				Expect(err).NotTo(HaveOccurred())
-				_, err = store.client.User.UpdateOneID(u.ID).
-					SetOpdsLastUsedAt(time.Now()).
-					SetOpdsLastClient("KOReader").
-					Save(ctx)
-				Expect(err).NotTo(HaveOccurred())
-
-				later := created.Add(time.Hour)
-				rotated, err := store.UpdateUser(ctx, u.ID, UpdateUserParams{
-					OPDSToken: &token, OPDSCreatedAt: &later,
-				})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(
-					rotated.OpdsCreatedAt,
-				).To(HaveValue(BeTemporally("==", later)))
-				Expect(rotated.OpdsLastUsedAt).To(BeNil())
-				Expect(rotated.OpdsLastClient).To(BeEmpty())
-
-				cleared, err := store.UpdateUser(
-					ctx,
-					u.ID,
-					UpdateUserParams{ClearOPDSToken: true},
-				)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(cleared.OpdsCreatedAt).To(BeNil())
-			},
-		)
 	})
 
 	Describe("UpdateUserRole", func() {

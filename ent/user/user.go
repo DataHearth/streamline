@@ -53,14 +53,6 @@ const (
 	FieldSubsonicCanChangePassword = "subsonic_can_change_password"
 	// FieldSubsonicMaxBitRate holds the string denoting the subsonic_max_bit_rate field in the database.
 	FieldSubsonicMaxBitRate = "subsonic_max_bit_rate"
-	// FieldOpdsToken holds the string denoting the opds_token field in the database.
-	FieldOpdsToken = "opds_token"
-	// FieldOpdsCreatedAt holds the string denoting the opds_created_at field in the database.
-	FieldOpdsCreatedAt = "opds_created_at"
-	// FieldOpdsLastUsedAt holds the string denoting the opds_last_used_at field in the database.
-	FieldOpdsLastUsedAt = "opds_last_used_at"
-	// FieldOpdsLastClient holds the string denoting the opds_last_client field in the database.
-	FieldOpdsLastClient = "opds_last_client"
 	// FieldFailedLoginCount holds the string denoting the failed_login_count field in the database.
 	FieldFailedLoginCount = "failed_login_count"
 	// FieldLastFailedLoginAt holds the string denoting the last_failed_login_at field in the database.
@@ -174,10 +166,6 @@ var Columns = []string{
 	FieldSubsonicCanRate,
 	FieldSubsonicCanChangePassword,
 	FieldSubsonicMaxBitRate,
-	FieldOpdsToken,
-	FieldOpdsCreatedAt,
-	FieldOpdsLastUsedAt,
-	FieldOpdsLastClient,
 	FieldFailedLoginCount,
 	FieldLastFailedLoginAt,
 	FieldLockedUntil,
@@ -220,8 +208,6 @@ var (
 	DefaultSubsonicMaxBitRate uint16
 	// SubsonicMaxBitRateValidator is a validator for the "subsonic_max_bit_rate" field. It is called by the builders before save.
 	SubsonicMaxBitRateValidator func(uint16) error
-	// OpdsLastClientValidator is a validator for the "opds_last_client" field. It is called by the builders before save.
-	OpdsLastClientValidator func(string) error
 	// DefaultFailedLoginCount holds the default value on creation for the "failed_login_count" field.
 	DefaultFailedLoginCount uint8
 )
@@ -381,26 +367,6 @@ func BySubsonicCanChangePassword(opts ...sql.OrderTermOption) OrderOption {
 // BySubsonicMaxBitRate orders the results by the subsonic_max_bit_rate field.
 func BySubsonicMaxBitRate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSubsonicMaxBitRate, opts...).ToFunc()
-}
-
-// ByOpdsToken orders the results by the opds_token field.
-func ByOpdsToken(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldOpdsToken, opts...).ToFunc()
-}
-
-// ByOpdsCreatedAt orders the results by the opds_created_at field.
-func ByOpdsCreatedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldOpdsCreatedAt, opts...).ToFunc()
-}
-
-// ByOpdsLastUsedAt orders the results by the opds_last_used_at field.
-func ByOpdsLastUsedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldOpdsLastUsedAt, opts...).ToFunc()
-}
-
-// ByOpdsLastClient orders the results by the opds_last_client field.
-func ByOpdsLastClient(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldOpdsLastClient, opts...).ToFunc()
 }
 
 // ByFailedLoginCount orders the results by the failed_login_count field.

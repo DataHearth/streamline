@@ -110,7 +110,6 @@
 {#snippet appsSection()}
 	<div class="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
 		<AppAccessCard kind="subsonic" />
-		<AppAccessCard kind="opds" />
 		<DeviceEmailCard />
 	</div>
 {/snippet}

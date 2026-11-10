@@ -8,7 +8,6 @@
 		Monitor,
 		RefreshCw,
 		Headphones,
-		BookMarked,
 		Send,
 	} from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
@@ -51,10 +50,6 @@
 		queryKey: appAccessKey("subsonic"),
 		queryFn: () => api<AppAccess>(APP_ACCESS_PATH.subsonic),
 	}));
-	const opds = createQuery<AppAccess>(() => ({
-		queryKey: appAccessKey("opds"),
-		queryFn: () => api<AppAccess>(APP_ACCESS_PATH.opds),
-	}));
 	const onOff = (a: AppAccess | undefined) =>
 		a ? (a.enabled ? i18n.account_app_on() : i18n.account_app_off()) : "";
 
@@ -72,7 +67,6 @@
 		| "keys"
 		| "sessions"
 		| "subsonic"
-		| "opds"
 		| "device"
 		| "jwt";
 
@@ -85,7 +79,6 @@
 		keys: i18n.account_api_keys(),
 		sessions: i18n.account_active_sessions(),
 		subsonic: "Subsonic",
-		opds: "OPDS",
 		device: i18n.account_device_title(),
 		jwt: i18n.account_rotate_key_long(),
 	});
@@ -152,12 +145,6 @@
 					Icon: Headphones,
 					label: "Subsonic",
 					value: onOff(subsonic.data),
-				},
-				{
-					key: "opds" as RowKey,
-					Icon: BookMarked,
-					label: "OPDS",
-					value: onOff(opds.data),
 				},
 				{
 					key: "device" as RowKey,
@@ -262,8 +249,6 @@
 		<SessionsCard />
 	{:else if openRow === "subsonic"}
 		<AppAccessCard kind="subsonic" />
-	{:else if openRow === "opds"}
-		<AppAccessCard kind="opds" />
 	{:else if openRow === "device"}
 		<DeviceEmailCard />
 	{:else if openRow === "jwt"}

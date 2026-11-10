@@ -116,8 +116,6 @@ type Manager interface {
 	RotateSubsonicPassword(ctx context.Context, userID uint32) (string, error)
 	SetSubsonicPassword(ctx context.Context, userID uint32, password string) error
 	DisableSubsonicPassword(ctx context.Context, userID uint32) error
-	RotateOPDSToken(ctx context.Context, userID uint32) (string, error)
-	DisableOPDSToken(ctx context.Context, userID uint32) error
 
 	// OIDC
 	LoginOIDC(

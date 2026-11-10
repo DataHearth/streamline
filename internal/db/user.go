@@ -79,13 +79,10 @@ type UpdateUserParams struct {
 	ClearLockedUntil       bool
 	SubsonicPassword       *string
 	ClearSubsonicPassword  bool
-	OPDSToken              *string
-	ClearOPDSToken         bool
-	// SubsonicCreatedAt and OPDSCreatedAt stamp a freshly generated secret and
-	// reset the credential's last-used and client columns with it. The Clear*
-	// flags above clear all four columns of their credential.
+	// SubsonicCreatedAt stamps a freshly generated secret and resets the
+	// credential's last-used and client columns with it. ClearSubsonicPassword
+	// clears all four columns.
 	SubsonicCreatedAt *time.Time
-	OPDSCreatedAt     *time.Time
 	// Subsonic is the account's Subsonic permissions; nil fields are kept.
 	Subsonic SubsonicAccessParams
 }
@@ -324,19 +321,6 @@ func applyUserUpdate(
 		upd = upd.SetSubsonicCreatedAt(*p.SubsonicCreatedAt).
 			ClearSubsonicLastUsedAt().
 			ClearSubsonicLastClient()
-	}
-	if p.OPDSToken != nil {
-		upd = upd.SetOpdsToken(*p.OPDSToken)
-	} else if p.ClearOPDSToken {
-		upd = upd.ClearOpdsToken().
-			ClearOpdsCreatedAt().
-			ClearOpdsLastUsedAt().
-			ClearOpdsLastClient()
-	}
-	if p.OPDSCreatedAt != nil {
-		upd = upd.SetOpdsCreatedAt(*p.OPDSCreatedAt).
-			ClearOpdsLastUsedAt().
-			ClearOpdsLastClient()
 	}
 	sa := p.Subsonic
 	upd = upd.SetNillableSubsonicCanStream(sa.CanStream).

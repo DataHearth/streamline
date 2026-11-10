@@ -34,7 +34,6 @@ import (
 	"github.com/datahearth/streamline/internal/rss"
 	"github.com/datahearth/streamline/internal/scheduler"
 	"github.com/datahearth/streamline/internal/server/middleware"
-	"github.com/datahearth/streamline/internal/server/opds"
 	"github.com/datahearth/streamline/internal/server/restapi"
 	"github.com/datahearth/streamline/internal/server/subsonic"
 	"github.com/datahearth/streamline/internal/server/web"
@@ -227,7 +226,6 @@ func New(cfg Config) *Server {
 	// Public share links handed out by Subsonic's createShare: excluded from
 	// auth, the token in the path is the credential.
 	s.router.Mount("/share", sonic.SharePage())
-	s.router.Mount("/opds", opds.New(cfg.Ent, appAccess, cfg.Posters).Router())
 
 	s.router.Get(
 		"/posters/{kind}/{id}/poster.jpg",

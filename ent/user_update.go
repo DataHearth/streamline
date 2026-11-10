@@ -331,86 +331,6 @@ func (_u *UserUpdate) AddSubsonicMaxBitRate(v int16) *UserUpdate {
 	return _u
 }
 
-// SetOpdsToken sets the "opds_token" field.
-func (_u *UserUpdate) SetOpdsToken(v string) *UserUpdate {
-	_u.mutation.SetOpdsToken(v)
-	return _u
-}
-
-// SetNillableOpdsToken sets the "opds_token" field if the given value is not nil.
-func (_u *UserUpdate) SetNillableOpdsToken(v *string) *UserUpdate {
-	if v != nil {
-		_u.SetOpdsToken(*v)
-	}
-	return _u
-}
-
-// ClearOpdsToken clears the value of the "opds_token" field.
-func (_u *UserUpdate) ClearOpdsToken() *UserUpdate {
-	_u.mutation.ClearOpdsToken()
-	return _u
-}
-
-// SetOpdsCreatedAt sets the "opds_created_at" field.
-func (_u *UserUpdate) SetOpdsCreatedAt(v time.Time) *UserUpdate {
-	_u.mutation.SetOpdsCreatedAt(v)
-	return _u
-}
-
-// SetNillableOpdsCreatedAt sets the "opds_created_at" field if the given value is not nil.
-func (_u *UserUpdate) SetNillableOpdsCreatedAt(v *time.Time) *UserUpdate {
-	if v != nil {
-		_u.SetOpdsCreatedAt(*v)
-	}
-	return _u
-}
-
-// ClearOpdsCreatedAt clears the value of the "opds_created_at" field.
-func (_u *UserUpdate) ClearOpdsCreatedAt() *UserUpdate {
-	_u.mutation.ClearOpdsCreatedAt()
-	return _u
-}
-
-// SetOpdsLastUsedAt sets the "opds_last_used_at" field.
-func (_u *UserUpdate) SetOpdsLastUsedAt(v time.Time) *UserUpdate {
-	_u.mutation.SetOpdsLastUsedAt(v)
-	return _u
-}
-
-// SetNillableOpdsLastUsedAt sets the "opds_last_used_at" field if the given value is not nil.
-func (_u *UserUpdate) SetNillableOpdsLastUsedAt(v *time.Time) *UserUpdate {
-	if v != nil {
-		_u.SetOpdsLastUsedAt(*v)
-	}
-	return _u
-}
-
-// ClearOpdsLastUsedAt clears the value of the "opds_last_used_at" field.
-func (_u *UserUpdate) ClearOpdsLastUsedAt() *UserUpdate {
-	_u.mutation.ClearOpdsLastUsedAt()
-	return _u
-}
-
-// SetOpdsLastClient sets the "opds_last_client" field.
-func (_u *UserUpdate) SetOpdsLastClient(v string) *UserUpdate {
-	_u.mutation.SetOpdsLastClient(v)
-	return _u
-}
-
-// SetNillableOpdsLastClient sets the "opds_last_client" field if the given value is not nil.
-func (_u *UserUpdate) SetNillableOpdsLastClient(v *string) *UserUpdate {
-	if v != nil {
-		_u.SetOpdsLastClient(*v)
-	}
-	return _u
-}
-
-// ClearOpdsLastClient clears the value of the "opds_last_client" field.
-func (_u *UserUpdate) ClearOpdsLastClient() *UserUpdate {
-	_u.mutation.ClearOpdsLastClient()
-	return _u
-}
-
 // SetFailedLoginCount sets the "failed_login_count" field.
 func (_u *UserUpdate) SetFailedLoginCount(v uint8) *UserUpdate {
 	_u.mutation.ResetFailedLoginCount()
@@ -853,11 +773,6 @@ func (_u *UserUpdate) check() error {
 			return &ValidationError{Name: "subsonic_max_bit_rate", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_max_bit_rate": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.OpdsLastClient(); ok {
-		if err := user.OpdsLastClientValidator(v); err != nil {
-			return &ValidationError{Name: "opds_last_client", err: fmt.Errorf(`ent: validator failed for field "User.opds_last_client": %w`, err)}
-		}
-	}
 	return nil
 }
 
@@ -956,30 +871,6 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedSubsonicMaxBitRate(); ok {
 		_spec.AddField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
-	}
-	if value, ok := _u.mutation.OpdsToken(); ok {
-		_spec.SetField(user.FieldOpdsToken, field.TypeString, value)
-	}
-	if _u.mutation.OpdsTokenCleared() {
-		_spec.ClearField(user.FieldOpdsToken, field.TypeString)
-	}
-	if value, ok := _u.mutation.OpdsCreatedAt(); ok {
-		_spec.SetField(user.FieldOpdsCreatedAt, field.TypeTime, value)
-	}
-	if _u.mutation.OpdsCreatedAtCleared() {
-		_spec.ClearField(user.FieldOpdsCreatedAt, field.TypeTime)
-	}
-	if value, ok := _u.mutation.OpdsLastUsedAt(); ok {
-		_spec.SetField(user.FieldOpdsLastUsedAt, field.TypeTime, value)
-	}
-	if _u.mutation.OpdsLastUsedAtCleared() {
-		_spec.ClearField(user.FieldOpdsLastUsedAt, field.TypeTime)
-	}
-	if value, ok := _u.mutation.OpdsLastClient(); ok {
-		_spec.SetField(user.FieldOpdsLastClient, field.TypeString, value)
-	}
-	if _u.mutation.OpdsLastClientCleared() {
-		_spec.ClearField(user.FieldOpdsLastClient, field.TypeString)
 	}
 	if value, ok := _u.mutation.FailedLoginCount(); ok {
 		_spec.SetField(user.FieldFailedLoginCount, field.TypeUint8, value)
@@ -1703,86 +1594,6 @@ func (_u *UserUpdateOne) AddSubsonicMaxBitRate(v int16) *UserUpdateOne {
 	return _u
 }
 
-// SetOpdsToken sets the "opds_token" field.
-func (_u *UserUpdateOne) SetOpdsToken(v string) *UserUpdateOne {
-	_u.mutation.SetOpdsToken(v)
-	return _u
-}
-
-// SetNillableOpdsToken sets the "opds_token" field if the given value is not nil.
-func (_u *UserUpdateOne) SetNillableOpdsToken(v *string) *UserUpdateOne {
-	if v != nil {
-		_u.SetOpdsToken(*v)
-	}
-	return _u
-}
-
-// ClearOpdsToken clears the value of the "opds_token" field.
-func (_u *UserUpdateOne) ClearOpdsToken() *UserUpdateOne {
-	_u.mutation.ClearOpdsToken()
-	return _u
-}
-
-// SetOpdsCreatedAt sets the "opds_created_at" field.
-func (_u *UserUpdateOne) SetOpdsCreatedAt(v time.Time) *UserUpdateOne {
-	_u.mutation.SetOpdsCreatedAt(v)
-	return _u
-}
-
-// SetNillableOpdsCreatedAt sets the "opds_created_at" field if the given value is not nil.
-func (_u *UserUpdateOne) SetNillableOpdsCreatedAt(v *time.Time) *UserUpdateOne {
-	if v != nil {
-		_u.SetOpdsCreatedAt(*v)
-	}
-	return _u
-}
-
-// ClearOpdsCreatedAt clears the value of the "opds_created_at" field.
-func (_u *UserUpdateOne) ClearOpdsCreatedAt() *UserUpdateOne {
-	_u.mutation.ClearOpdsCreatedAt()
-	return _u
-}
-
-// SetOpdsLastUsedAt sets the "opds_last_used_at" field.
-func (_u *UserUpdateOne) SetOpdsLastUsedAt(v time.Time) *UserUpdateOne {
-	_u.mutation.SetOpdsLastUsedAt(v)
-	return _u
-}
-
-// SetNillableOpdsLastUsedAt sets the "opds_last_used_at" field if the given value is not nil.
-func (_u *UserUpdateOne) SetNillableOpdsLastUsedAt(v *time.Time) *UserUpdateOne {
-	if v != nil {
-		_u.SetOpdsLastUsedAt(*v)
-	}
-	return _u
-}
-
-// ClearOpdsLastUsedAt clears the value of the "opds_last_used_at" field.
-func (_u *UserUpdateOne) ClearOpdsLastUsedAt() *UserUpdateOne {
-	_u.mutation.ClearOpdsLastUsedAt()
-	return _u
-}
-
-// SetOpdsLastClient sets the "opds_last_client" field.
-func (_u *UserUpdateOne) SetOpdsLastClient(v string) *UserUpdateOne {
-	_u.mutation.SetOpdsLastClient(v)
-	return _u
-}
-
-// SetNillableOpdsLastClient sets the "opds_last_client" field if the given value is not nil.
-func (_u *UserUpdateOne) SetNillableOpdsLastClient(v *string) *UserUpdateOne {
-	if v != nil {
-		_u.SetOpdsLastClient(*v)
-	}
-	return _u
-}
-
-// ClearOpdsLastClient clears the value of the "opds_last_client" field.
-func (_u *UserUpdateOne) ClearOpdsLastClient() *UserUpdateOne {
-	_u.mutation.ClearOpdsLastClient()
-	return _u
-}
-
 // SetFailedLoginCount sets the "failed_login_count" field.
 func (_u *UserUpdateOne) SetFailedLoginCount(v uint8) *UserUpdateOne {
 	_u.mutation.ResetFailedLoginCount()
@@ -2238,11 +2049,6 @@ func (_u *UserUpdateOne) check() error {
 			return &ValidationError{Name: "subsonic_max_bit_rate", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_max_bit_rate": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.OpdsLastClient(); ok {
-		if err := user.OpdsLastClientValidator(v); err != nil {
-			return &ValidationError{Name: "opds_last_client", err: fmt.Errorf(`ent: validator failed for field "User.opds_last_client": %w`, err)}
-		}
-	}
 	return nil
 }
 
@@ -2358,30 +2164,6 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if value, ok := _u.mutation.AddedSubsonicMaxBitRate(); ok {
 		_spec.AddField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
-	}
-	if value, ok := _u.mutation.OpdsToken(); ok {
-		_spec.SetField(user.FieldOpdsToken, field.TypeString, value)
-	}
-	if _u.mutation.OpdsTokenCleared() {
-		_spec.ClearField(user.FieldOpdsToken, field.TypeString)
-	}
-	if value, ok := _u.mutation.OpdsCreatedAt(); ok {
-		_spec.SetField(user.FieldOpdsCreatedAt, field.TypeTime, value)
-	}
-	if _u.mutation.OpdsCreatedAtCleared() {
-		_spec.ClearField(user.FieldOpdsCreatedAt, field.TypeTime)
-	}
-	if value, ok := _u.mutation.OpdsLastUsedAt(); ok {
-		_spec.SetField(user.FieldOpdsLastUsedAt, field.TypeTime, value)
-	}
-	if _u.mutation.OpdsLastUsedAtCleared() {
-		_spec.ClearField(user.FieldOpdsLastUsedAt, field.TypeTime)
-	}
-	if value, ok := _u.mutation.OpdsLastClient(); ok {
-		_spec.SetField(user.FieldOpdsLastClient, field.TypeString, value)
-	}
-	if _u.mutation.OpdsLastClientCleared() {
-		_spec.ClearField(user.FieldOpdsLastClient, field.TypeString)
 	}
 	if value, ok := _u.mutation.FailedLoginCount(); ok {
 		_spec.SetField(user.FieldFailedLoginCount, field.TypeUint8, value)

@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
-	"github.com/datahearth/streamline/internal/auth"
 	posmocks "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/server/middleware"
 	mwmocks "github.com/datahearth/streamline/internal/server/middleware/mocks"
@@ -101,52 +100,6 @@ var _ = Describe("self-authenticated mounts", Label("unit", "server"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
-		})
-	})
-
-	Describe("/opds", func() {
-		const realm = `Basic realm="Streamline OPDS"`
-
-		get := func(path string, user, pass string) *http.Response {
-			GinkgoHelper()
-			req, err := http.NewRequest(http.MethodGet, ts.URL+path, nil)
-			Expect(err).NotTo(HaveOccurred())
-			if user != "" {
-				req.SetBasicAuth(user, pass)
-			}
-			resp, err := hc.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			DeferCleanup(resp.Body.Close)
-			return resp
-		}
-
-		DescribeTable("challenges instead of redirecting to login",
-			func(path string) {
-				resp := get(path, "", "")
-				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
-				Expect(resp.Header.Get("WWW-Authenticate")).To(Equal(realm))
-			},
-			Entry("bare", "/opds"),
-			Entry("slash", "/opds/"),
-			Entry("deeper path", "/opds/recent"),
-		)
-
-		It("rejects wrong credentials", func() {
-			Expect(
-				get("/opds/", "nobody@example.com", "x").StatusCode,
-			).To(Equal(http.StatusUnauthorized))
-		})
-
-		It("serves the catalog to a user with an OPDS token", func() {
-			client.User.Create().
-				SetEmail("reader@example.com").
-				SetOpdsToken(auth.HashOPDSToken("sesame")).
-				SaveX(context.Background())
-			resp := get("/opds/", "reader@example.com", "sesame")
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			Expect(
-				resp.Header.Get("Content-Type"),
-			).To(ContainSubstring("application/atom+xml"))
 		})
 	})
 
