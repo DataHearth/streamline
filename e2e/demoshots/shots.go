@@ -73,6 +73,29 @@ func clickText(selector, text string) func(*rod.Page) error {
 	}
 }
 
+// clickVisible clicks the first visible button whose text starts with
+// prefix. Pages keep a phone layout and a desktop one in the markup, and a
+// match on text alone can land on the hidden one.
+func clickVisible(prefix string) func(*rod.Page) error {
+	return func(p *rod.Page) error {
+		res, err := p.Eval(`(prefix) => {
+			const b = [...document.querySelectorAll("button")].find(
+				(el) => el.offsetParent !== null && el.textContent.trim().startsWith(prefix));
+			if (!b) return false;
+			b.click();
+			return true;
+		}`, prefix)
+		if err != nil {
+			return err
+		}
+		if !res.Value.Bool() {
+			return fmt.Errorf("no visible button starting %q", prefix)
+		}
+		time.Sleep(1500 * time.Millisecond)
+		return nil
+	}
+}
+
 func idPath(format string, pick func(*demo) int) func(*demo) string {
 	return func(d *demo) string { return fmt.Sprintf(format, pick(d)) }
 }
@@ -106,9 +129,11 @@ var shotList = []shotSpec{
 	{
 		name: "series-episodes",
 		path: idPath(
-			"/series/%d?tab=episodes&season=1",
+			"/series/%d?tab=episodes",
 			func(d *demo) int { return d.ids.series["The Andy Griffith Show"] },
 		),
+		// The page opens on the newest season; season 1 is the one with files.
+		prep: clickVisible(`Season 01`),
 	},
 	{
 		name: "library-import",
