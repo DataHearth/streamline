@@ -514,6 +514,11 @@
                 "description": "Maps a role_claim value to a Streamline role. Highest-privilege match wins, capped by the provider's allow_admin ceiling; authoritative when set, except on the login that adopts an existing local account by email, which never changes the role.",
                 "additionalProperties": { "$ref": "#/definitions/role" }
               },
+              "scopes": {
+                "type": "array",
+                "description": "Scopes requested on top of openid, email and profile, which are always sent; duplicates are dropped. Dex, Authelia and Okta put a groups claim in the ID token only when the groups scope is requested, so role_claim: groups needs scopes: [groups] there. Name only scopes the provider grants this client: one that checks requested scopes (Google, Authelia) refuses the whole login with invalid_scope otherwise. Keycloak roles come from a mapper, not a scope. File-only.",
+                "items": { "type": "string", "pattern": "^[\\x21\\x23-\\x5B\\x5D-\\x7E]+$" }
+              },
               "email_linking": {
                 "type": "string",
                 "enum": ["disabled", "non_admin", "all"],

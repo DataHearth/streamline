@@ -455,6 +455,45 @@ auth:
 			})
 		})
 
+		Describe("auth.oidc scopes", func() {
+			loadScopes := func(scopes string) (*Config, error) {
+				GinkgoHelper()
+				dir := GinkgoT().TempDir()
+				dataDir := filepath.Join(dir, "data")
+				Expect(os.MkdirAll(dataDir, 0o755)).To(Succeed())
+				cfgFile := filepath.Join(dir, "config.yaml")
+				Expect(os.WriteFile(cfgFile, []byte("data_dir: "+dataDir+`
+auth:
+  oidc:
+    - name: dex
+      issuer: https://dex.example.com
+      client_id: streamline
+      client_secret: secret
+      scopes: `+scopes+"\n"), 0o600)).To(Succeed())
+				return Load(cfgFile)
+			}
+
+			It("loads the extra scopes in order", func() {
+				cfg, err := loadScopes(`[groups, "offline_access"]`)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cfg.Auth.OIDC[0].Scopes).
+					To(Equal([]string{"groups", "offline_access"}))
+			})
+
+			DescribeTable("rejects an entry that is not one scope token",
+				func(scopes string) {
+					_, err := loadScopes(scopes)
+					Expect(err).To(MatchError(ContainSubstring("dex")))
+					Expect(err).To(MatchError(ContainSubstring("scope")))
+				},
+				Entry("empty", `[""]`),
+				Entry("two scopes in one entry", `["groups email"]`),
+				Entry("a quote", `['gro"ups']`),
+				Entry("a backslash", `['gro\\ups']`),
+				Entry("non-ASCII", `["grüps"]`),
+			)
+		})
+
 		// Two entries sharing a name split the settings that authenticate a
 		// token from the settings that bound what it may become: findOIDCProvider
 		// reads the first match, oidcManager.Init keys a map so the last write
