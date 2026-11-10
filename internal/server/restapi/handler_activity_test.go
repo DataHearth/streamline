@@ -13,6 +13,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/importer"
@@ -402,6 +403,20 @@ var _ = Describe("Handler: resolve held downloads",
 				Return(nil).Once()
 
 			Expect(post(3, "delete").StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		It("409s an import of a record held for its payload's location", func() {
+			// No files to import: the download monitor releases it once they
+			// are found, and an import now would spend every attempt on ENOENT.
+			rec := held(6)
+			rec.HoldReasons = []schema.HoldReason{{
+				File: "X", Check: schema.HoldCheckLocation,
+				Expected: "/srv/downloads/X", Actual: "/srv/qbit/X",
+			}}
+			app.store.EXPECT().FindDownloadRecordByID(mock.Anything, uint32(6)).
+				Return(rec, nil).Once()
+
+			Expect(post(6, "import").StatusCode).To(Equal(http.StatusConflict))
 		})
 
 		It("409s a record that is not held", func() {

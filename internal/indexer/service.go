@@ -102,10 +102,15 @@ func queryOutcome(err error) string {
 		return "login_failed"
 	case errors.Is(err, ErrChallenge):
 		return "challenge"
+	case timedOut(err):
+		return outcomeTimeout
 	case errors.Is(err, ErrUnreachable):
 		return "unreachable"
 	case errors.Is(err, ErrBadResponse):
 		return "bad_response"
+	// Before ErrUnexpectedStatus, which always travels with it.
+	case errors.Is(err, ErrBadRequest):
+		return "bad_request"
 	case errors.Is(err, ErrUnexpectedStatus):
 		return "unexpected_status"
 	default:
@@ -358,12 +363,15 @@ func (i *indexer) SearchMovie(
 		return nil, nil
 	}
 
-	results := i.searchAll(
+	results, err := i.searchAll(
 		ctx,
 		span,
 		titles,
 		SearchParams{Kind: KindMovie, TMDBID: tmdbID, IMDbID: imdbID},
 	)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
 	// Same keyword-search noise the TV scopes filter: an indexer ignoring the
 	// tmdbid answers with every film it holds, and a profile cannot tell one
 	// film from another.
@@ -412,7 +420,7 @@ func (i *indexer) SearchSeason(
 
 	// Indexers behind Prowlarr frequently ignore the season param and return
 	// the whole series, so drop releases that belong to a different season.
-	results := i.searchAll(
+	results, err := i.searchAll(
 		ctx,
 		span,
 		titles,
@@ -423,6 +431,9 @@ func (i *indexer) SearchSeason(
 			Season: season,
 		},
 	)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
 	filtered := preferTitleMatches(filterToSeason(results, season), match)
 	span.SetAttributes(
 		attribute.Int("results.pre_season_filter", len(results)),
@@ -458,9 +469,11 @@ func (i *indexer) SearchAlbum(
 		return nil, nil
 	}
 
-	results := withoutAudiobooks(
-		i.searchAll(ctx, span, queries, SearchParams{Kind: KindMusic}),
-	)
+	found, err := i.searchAll(ctx, span, queries, SearchParams{Kind: KindMusic})
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	results := withoutAudiobooks(found)
 	span.SetAttributes(attribute.Int("results.total", len(results)))
 	return results, nil
 }
@@ -484,12 +497,16 @@ func (i *indexer) SearchArtist(
 	if artist == "" {
 		return nil, nil
 	}
-	results := withoutAudiobooks(i.searchAll(
+	found, err := i.searchAll(
 		ctx,
 		span,
 		[]string{artist},
 		SearchParams{Kind: KindMusic},
-	))
+	)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	results := withoutAudiobooks(found)
 	span.SetAttributes(attribute.Int("results.total", len(results)))
 	return results, nil
 }
@@ -542,7 +559,10 @@ func (i *indexer) SearchBook(
 		return nil, nil
 	}
 
-	results := i.searchAll(ctx, span, queries, SearchParams{Kind: mk})
+	results, err := i.searchAll(ctx, span, queries, SearchParams{Kind: mk})
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
 	span.SetAttributes(attribute.Int("results.total", len(results)))
 	return results, nil
 }
@@ -734,12 +754,15 @@ func (i *indexer) SearchSeries(
 		return nil, nil
 	}
 
-	results := i.searchAll(
+	results, err := i.searchAll(
 		ctx,
 		span,
 		titles,
 		SearchParams{Kind: KindTV, TVDBID: tvdbID, IMDbID: imdbID},
 	)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
 	packs := make([]SearchResult, 0, len(results))
 	for _, r := range results {
 		// A tvsearch with no season is a plain series query, so single episodes
@@ -796,7 +819,7 @@ func (i *indexer) SearchEpisode(
 	// Same reason as the season scope: the season/episode params are routinely
 	// ignored, and the empty-result retry drops the id entirely, so what comes
 	// back is a keyword search over the whole series.
-	results := i.searchAll(
+	results, err := i.searchAll(
 		ctx, span, titles,
 		SearchParams{
 			Kind:    KindTV,
@@ -806,6 +829,9 @@ func (i *indexer) SearchEpisode(
 			Episode: episode,
 		},
 	)
+	if err != nil {
+		return nil, 0, otelx.RecordSpanError(span, err)
+	}
 	filtered, hiddenPacks := filterToEpisode(results, season, episode)
 	filtered = preferTitleMatches(filtered, match)
 	span.SetAttributes(
@@ -861,7 +887,9 @@ func filterToEpisode(
 }
 
 // fallbacks lists the wider queries to try, in order, while an indexer keeps
-// answering params with nothing.
+// answering params with nothing, or refusing them (ErrBadRequest). Each rung
+// is asked once at most, so a refused query that falls back to the bare title
+// is never retried again when that comes back empty.
 //
 // Most private trackers don't index by TMDB/TVDB id and silently return
 // nothing when one is set. A Torznab endpoint gets the IMDb id on its own
@@ -883,38 +911,219 @@ func fallbacks(protocol string, params SearchParams) []SearchParams {
 		imdb.TMDBID, imdb.TVDBID = 0, 0
 		out = append(out, imdb)
 	}
-	if params.narrowed() {
+	if sendsNarrowed(protocol, params) {
 		out = append(out, SearchParams{Query: params.Query, Kind: params.Kind})
 	}
 	return out
 }
 
+// sendsNarrowed reports whether protocol's client renders params as a request
+// narrower than the bare title's — what makes the bare-title rung a different
+// request at all. Prowlarr forwards a season, and an episode only under one,
+// but never an id (see prowlarrQuery), so for a movie or a whole-series browse
+// its bare rung is the very request that just came back.
+func sendsNarrowed(protocol string, params SearchParams) bool {
+	if protocol == "prowlarr" {
+		return params.Kind == KindTV && params.Season > 0
+	}
+	return params.narrowed()
+}
+
+// searchWithFallbacks runs one (indexer, title) query and walks fallbacks
+// while it is answered with nothing or refused (ErrBadRequest), returning an
+// error when no leg was answered at all, or when the walk ends empty on a
+// failed wider leg. Any other failure ends the walk: a timeout or a broken
+// tracker is not helped by a wider query.
+//
+// An empty narrow answer followed by a wider leg that failed is a failure,
+// not "nothing found": the wider question was never answered, and the
+// missing searches stamp their no-match cooldown on an empty result. A
+// wider leg the tracker refused is an answer, so it does not count.
+//
+// Each query is counted once by the outcome of its first leg; a retry leg is
+// counted only when it fails, as retry_<outcome>. So a refused first leg whose
+// wider retry answered reads as one bad_request and nothing else.
+func searchWithFallbacks(
+	ctx context.Context,
+	client Client,
+	idx config.IndexerEntry,
+	params SearchParams,
+) ([]SearchResult, error) {
+	count := func(outcome string) {
+		indexerQueries.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("indexer.name", idx.Name),
+			attribute.String("outcome", outcome),
+		))
+	}
+	wider := fallbacks(idx.Protocol, params)
+
+	res, err := client.Search(ctx, params)
+	count(queryOutcome(err))
+	switch {
+	case err == nil:
+	case errors.Is(err, ErrBadRequest) && len(wider) > 0:
+		slog.InfoContext(ctx,
+			"indexer refused the query, retrying a wider one",
+			"indexer", idx.Name,
+			"title", params.Query,
+			"error", err,
+		)
+	default:
+		return nil, err
+	}
+	answered := err == nil
+	// The last wider leg's failure, nil once a leg answers.
+	var lastErr error
+
+	for _, fallback := range wider {
+		if len(res) > 0 {
+			break
+		}
+		slog.DebugContext(ctx,
+			"indexer search empty or refused, retrying a wider query",
+			"indexer", idx.Name,
+			"title", params.Query,
+			"imdb_id", fallback.IMDbID,
+		)
+		retry, retryErr := client.Search(ctx, fallback)
+		if retryErr == nil {
+			res, answered, lastErr = retry, true, nil
+			continue
+		}
+		err, lastErr = retryErr, retryErr
+		// Counted, a tracker that is down or rate-limiting on the retry leg
+		// is told apart from a bare-title query that legitimately found
+		// nothing — both leave an empty result.
+		count("retry_" + queryOutcome(retryErr))
+		slog.WarnContext(ctx,
+			"indexer retry failed",
+			"indexer", idx.Name,
+			"title", params.Query,
+			"error", retryErr,
+		)
+		// Only a refusal says a wider query could fare better; a tracker
+		// that timed out or failed would only be sent more of the same.
+		if !errors.Is(retryErr, ErrBadRequest) {
+			break
+		}
+	}
+	if !answered {
+		return nil, err
+	}
+	if len(res) == 0 && lastErr != nil && !errors.Is(lastErr, ErrBadRequest) {
+		return nil, lastErr
+	}
+	return res, nil
+}
+
+// query runs one title against one indexer through searchWithFallbacks, on
+// its own span, and stamps each result with the indexer it came through.
+func (i *indexer) query(
+	ctx context.Context,
+	client Client,
+	idx config.IndexerEntry,
+	baseURL string,
+	base SearchParams,
+	title string,
+) ([]SearchResult, error) {
+	queryCtx, span := tracer.Start(ctx, "indexer.query",
+		trace.WithAttributes(
+			attribute.String("indexer.name", idx.Name),
+			attribute.String("indexer.url", redactURL(baseURL)),
+			attribute.String("query.title", title),
+		),
+	)
+	defer span.End()
+
+	params := base
+	params.Query = title
+	res, err := searchWithFallbacks(queryCtx, client, idx, params)
+	if err != nil {
+		slog.WarnContext(queryCtx,
+			"indexer search failed",
+			"indexer", idx.Name,
+			"query.title", title,
+			"error", err,
+		)
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	span.SetAttributes(attribute.Int("results.count", len(res)))
+	slog.InfoContext(queryCtx,
+		"indexer query complete",
+		"indexer.name", idx.Name,
+		"query.term", title,
+		"result.count", len(res),
+	)
+	for k := range res {
+		// Prowlarr stamps the real sub-tracker; only fall back to the config
+		// name when the client left it blank (Torznab).
+		if res[k].Indexer == "" {
+			res[k].Indexer = idx.Name
+		}
+		res[k].ConfiguredIndexer = idx.Name
+	}
+	return res, nil
+}
+
+// errIndexerPanicked is the failure recorded for an indexer whose search
+// panicked; the panic itself is logged by RecoverPanic.
+var errIndexerPanicked = errors.New("indexer search panicked")
+
 // searchAll fans out one query per (indexer, title) across every enabled
 // indexer, merging results deduped by release identity and sorted by seeders
 // descending. base carries the id/season/episode params shared by every
-// query; Query is filled per title. Per-indexer errors are logged, never
-// returned. A query that comes back empty is retried through fallbacks.
+// query; Query is filled per title. A query that comes back empty, or that
+// the indexer refuses as a bad request, is retried through fallbacks.
+//
+// An indexer that fails is logged and the others' results are kept. Only when
+// no indexer answered a single query does the search fail, with an
+// *UnavailableError: an empty list there would be read as "nothing found" —
+// the manual search saying "No releases found" without having heard from any
+// indexer, and the missing searches stamping a cooldown for a search that
+// never happened. A cancelled ctx fails it with the ctx's error instead.
 func (i *indexer) searchAll(
 	ctx context.Context,
 	span trace.Span,
 	titles []string,
 	base SearchParams,
-) []SearchResult {
+) ([]SearchResult, error) {
 	indexers := config.EnabledIndexers()
 	span.SetAttributes(attribute.Int("indexers.count", len(indexers)))
 
 	var (
-		mu      sync.Mutex
-		results []SearchResult
-		wg      sync.WaitGroup
+		mu       sync.Mutex
+		results  []SearchResult
+		answered int
+		failures []IndexerFailure
+		wg       sync.WaitGroup
 	)
+	// fail records an indexer that answered none of its queries.
+	fail := func(name, outcome string, err error) {
+		mu.Lock()
+		failures = append(failures, IndexerFailure{
+			Indexer: name, Outcome: outcome, Err: err,
+		})
+		mu.Unlock()
+	}
 
 	for _, idx := range indexers {
 		wg.Go(func() {
+			var (
+				ok      bool
+				lastErr error
+			)
 			// A built-in indexer parses whatever the tracker answers with;
 			// a page that trips the engine must cost this indexer's results,
 			// not the process.
-			defer observability.RecoverPanic(ctx, "indexer search", nil)
+			defer observability.RecoverPanic(ctx, "indexer search", func() {
+				if ok {
+					mu.Lock()
+					answered++
+					mu.Unlock()
+					return
+				}
+				fail(idx.Name, "error", errIndexerPanicked)
+			})
 			client, baseURL, err := i.clientFor(ctx, idx)
 			if err != nil {
 				indexerQueries.Add(ctx, 1, metric.WithAttributes(
@@ -923,97 +1132,56 @@ func (i *indexer) searchAll(
 				))
 				slog.WarnContext(ctx, "indexer unusable", "indexer", idx.Name,
 					"error", err)
+				fail(idx.Name, "misconfigured", err)
 				return
 			}
 			for _, title := range titles {
-				queryCtx, childSpan := tracer.Start(ctx, "indexer.query",
-					trace.WithAttributes(
-						attribute.String("indexer.name", idx.Name),
-						attribute.String("indexer.url", redactURL(baseURL)),
-						attribute.String("query.title", title),
-					),
-				)
-				params := base
-				params.Query = title
-				res, err := client.Search(queryCtx, params)
+				res, err := i.query(ctx, client, idx, baseURL, base, title)
 				if err != nil {
-					indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
-						attribute.String("indexer.name", idx.Name),
-						attribute.String("outcome", queryOutcome(err)),
-					))
-					otelx.RecordSpanError(childSpan, err)
-					slog.WarnContext(queryCtx,
-						"indexer search failed",
-						"indexer", idx.Name,
-						"query.title", title,
-						"error", err,
-					)
-					childSpan.End()
+					lastErr = err
 					continue
 				}
-				for _, fallback := range fallbacks(idx.Protocol, params) {
-					if len(res) > 0 {
-						break
-					}
-					slog.DebugContext(queryCtx,
-						"indexer search empty, retrying a wider query",
-						"indexer", idx.Name,
-						"title", title,
-						"imdb_id", fallback.IMDbID,
-					)
-					retry, retryErr := client.Search(queryCtx, fallback)
-					if retryErr == nil {
-						res = retry
-					} else {
-						// Dropped silently, a tracker that is down or
-						// rate-limiting on the retry leg would be
-						// indistinguishable from a bare-title query that
-						// legitimately found nothing — both leave an empty
-						// result and no signal.
-						indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
-							attribute.String("indexer.name", idx.Name),
-							attribute.String(
-								"outcome",
-								"retry_"+queryOutcome(retryErr),
-							),
-						))
-						slog.DebugContext(queryCtx,
-							"indexer retry failed",
-							"indexer", idx.Name,
-							"title", title,
-							"error", retryErr,
-						)
-					}
-				}
-				indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
-					attribute.String("indexer.name", idx.Name),
-					attribute.String("outcome", "success"),
-				))
-				childSpan.SetAttributes(attribute.Int("results.count", len(res)))
-				slog.InfoContext(queryCtx,
-					"indexer query complete",
-					"indexer.name", idx.Name,
-					"query.term", title,
-					"result.count", len(res),
-				)
-				childSpan.End()
-
-				for k := range res {
-					// Prowlarr stamps the real sub-tracker; only fall back to
-					// the config name when the client left it blank (Torznab).
-					if res[k].Indexer == "" {
-						res[k].Indexer = idx.Name
-					}
-					res[k].ConfiguredIndexer = idx.Name
-				}
+				ok = true
 				mu.Lock()
 				results = append(results, res...)
 				mu.Unlock()
+			}
+			if ok {
+				mu.Lock()
+				answered++
+				mu.Unlock()
+			} else if lastErr != nil {
+				fail(idx.Name, queryOutcome(lastErr), lastErr)
 			}
 		})
 	}
 
 	wg.Wait()
+
+	span.SetAttributes(attribute.Int("indexers.failed", len(failures)))
+	if answered == 0 && len(failures) > 0 {
+		if err := ctx.Err(); err != nil {
+			return nil, fmt.Errorf("indexer search: %w", err)
+		}
+		return nil, &UnavailableError{Failures: failures}
+	}
+	if len(failures) > 0 {
+		names := make([]string, 0, len(failures))
+		for _, f := range failures {
+			names = append(names, f.Indexer)
+		}
+		// The results are what the other indexers had: kept, but said out
+		// loud, since an indexer missing from them reads as one that found
+		// nothing.
+		slog.WarnContext(
+			ctx,
+			"indexer search incomplete: some indexers did not answer",
+			"indexers.failed",
+			names,
+			"indexers.answered",
+			answered,
+		)
+	}
 
 	// Before the dedup and, more to the point, before the truncation below:
 	// a release for the wrong title must not spend one of the 200 slots the
@@ -1054,7 +1222,7 @@ func (i *indexer) searchAll(
 		"titles.count", len(titles),
 		"total_results", len(results),
 	)
-	return results
+	return results, nil
 }
 
 // Feed loads the indexer row by ID, dials Torznab, and returns the indexer's

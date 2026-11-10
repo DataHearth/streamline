@@ -114,7 +114,7 @@
 								)}
 							placeholder={i18n.account_new_password()}
 							autocomplete="new-password"
-							class="h-10 w-full min-w-0 rounded-md border border-status-failed/30 bg-bg px-3 text-sm text-fg placeholder:text-fg-faint focus-visible:border-status-failed focus-visible:outline-2 focus-visible:outline-status-failed md:w-56"
+							class="h-10 w-full min-w-0 rounded-md border border-status-failed/30 bg-bg px-3 text-sm text-fg placeholder:text-fg-subtle focus-visible:border-status-failed focus-visible:outline-2 focus-visible:outline-status-failed md:w-56"
 						/>
 					{/snippet}
 				</form.Field>

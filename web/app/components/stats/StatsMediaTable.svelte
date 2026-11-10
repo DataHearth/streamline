@@ -19,7 +19,7 @@
 	let { media }: { media: StatsMedia[] } = $props();
 
 	let bytes = $derived(media.reduce((a, m) => a + m.bytes, 0));
-	const head = "font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint";
+	const head = "font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle";
 </script>
 
 <div class="min-w-0">

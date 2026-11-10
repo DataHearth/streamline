@@ -75,7 +75,7 @@
 				>
 					{roleLabel(u.role)}
 				</span>
-				<span class="shrink-0 font-mono text-[11px] text-fg-faint">
+				<span class="shrink-0 font-mono text-[11px] text-fg-subtle">
 					{u.auth_method}
 				</span>
 				<ChevronRight

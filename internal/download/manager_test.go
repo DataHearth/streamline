@@ -27,6 +27,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
@@ -406,6 +407,14 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 	})
 
 	Describe("CheckStatus", func() {
+		BeforeEach(func() {
+			// Every tick also re-checks the records held for their payload's
+			// location; none here.
+			store.EXPECT().
+				ListHeldRecordsByCheck(mock.Anything, schema.HoldCheckLocation).
+				Return(nil, nil).Maybe()
+		})
+
 		When("the store fails to list downloading records", func() {
 			It("returns the wrapped error", func() {
 				boom := errors.New("db boom")

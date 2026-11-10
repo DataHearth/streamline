@@ -243,7 +243,8 @@ func (s *Server) ClearCompletedHistory(
 }
 
 // ResolveHeldDownload releases a download held by import verification. import
-// re-runs the import with verification bypassed; regrab and delete both remove
+// re-runs the import with verification bypassed (refused on a hold for the
+// payload's location, which releases itself); regrab and delete both remove
 // the torrent with its files, differing only in whether the media goes back to
 // wanted for another search.
 func (s *Server) ResolveHeldDownload(
@@ -286,6 +287,17 @@ func (s *Server) ResolveHeldDownload(
 	}
 
 	if request.Body.Action == ResolveHeldRequestActionImport {
+		// A location hold has no files to import as-is: the download monitor
+		// releases it on the first tick that finds the payload, and an import
+		// started now would spend every attempt on the path that is missing.
+		if download.IsLocationHold(rec) {
+			return ResolveHeldDownload409JSONResponse{
+				ConflictJSONResponse: errConflict(
+					"the download's files were not found; it imports once " +
+						"they are at the expected or the client's path",
+				),
+			}, nil
+		}
 		tracks, folders, resp, err := s.heldAssignments(ctx, rec.ID, request.Body)
 		if resp != nil || err != nil {
 			return resp, err

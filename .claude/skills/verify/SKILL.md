@@ -16,9 +16,20 @@ Never touch a server you did not start. Someone may already be running one on
 
 ## 1. Toolchain
 
-The environment is the user's to set up: Go, Node, `task`, `pnpm` on PATH and
-`node_modules` installed. Don't install any of them. If one is missing, stop
-and say which one, so the user can fix the environment.
+This needs Go, Node, `task`, `pnpm` on PATH and `node_modules` installed, plus
+`biome` for `task lint:frontend` and a Chromium for the browser checks. When
+one is missing, install it and go on: `task` with `go install
+github.com/go-task/task/v3/cmd/task@<version>`, Biome at the version
+`biome.json`'s `$schema` names (`npm install -g @biomejs/biome@<version>`),
+`node_modules` with `pnpm install --frozen-lockfile`. Say what you installed in
+the report. In a cloud session, also add the step to the environment's setup
+script, so the next session starts with it.
+
+A cloud container runs as root, where Chromium refuses to start without
+`--no-sandbox`: the environment's `CHROME_PATH` names a wrapper that adds it,
+which `e2e/web` and `shot` both read. The Playwright MCP server
+(`.claude/playwright-mcp.sh`) runs the flake devshell's build under direnv and
+the setup script's `@playwright/mcp` against `/opt/pw-browsers` everywhere else.
 
 If a hook blocks a bare `go`, call it as `"$(command -v go)"`.
 

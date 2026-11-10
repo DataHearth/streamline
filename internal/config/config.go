@@ -171,6 +171,16 @@ type OIDCConfig struct {
 	// name contains a dot still wins over the path interpretation.
 	RoleClaim   string            `koanf:"role_claim"`
 	RoleMapping map[string]string `koanf:"role_mapping" validate:"omitempty,dive,oneof=admin member request_only"`
+	// Scopes are requested on top of openid, email and profile, which every
+	// authorization request carries. Dex, Authelia and Okta put a groups claim
+	// in the ID token only when the groups scope is asked for, so a RoleClaim
+	// of groups needs Scopes: [groups] there. It is per provider because a
+	// provider that checks requested scopes (Google; Authelia for a client
+	// whose scopes list lacks it) refuses the whole request with invalid_scope
+	// on one it does not know. Each entry is an RFC 6749 scope-token, checked
+	// by validate; duplicates are dropped when the request is built. File-only,
+	// like RoleClaim and RoleMapping.
+	Scopes []string `koanf:"scopes"`
 	// EmailLinking decides whether a federated identity this provider has
 	// never presented before (a new (provider, subject) pair) may be adopted
 	// into an account that merely shares its email address. Enabling it makes
@@ -614,6 +624,22 @@ type MediaServerConfig struct {
 // not config load.
 var bindInterfacePattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
 
+// validOIDCScope reports whether s is an RFC 6749 §3.3 scope-token:
+// 1*( %x21 / %x23-5B / %x5D-7E ). The scope parameter is these tokens joined
+// by spaces, so a space inside one would split it into two scopes.
+func validOIDCScope(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c < 0x21 || c > 0x7e || c == '"' || c == '\\' {
+			return false
+		}
+	}
+	return true
+}
+
 // normalizeOIDCEmailLinking spells out the zero value as the tier it already
 // means. The write-back marshals the whole struct, zero fields included, so a
 // provider that never named the key would otherwise be rewritten as
@@ -769,6 +795,15 @@ func (c *Config) checkInvariants() error {
 			continue
 		}
 		seenOIDC[p.Name] = true
+		for _, sc := range p.Scopes {
+			if !validOIDCScope(sc) {
+				errs = append(errs, fmt.Errorf(
+					"auth.oidc %q: scope %q is not a valid scope token "+
+						"(non-empty, printable ASCII, no space, quote or backslash)",
+					p.Name, sc,
+				))
+			}
+		}
 	}
 	if len(c.QualityProfiles) > 0 {
 		for _, d := range []struct{ key, name string }{

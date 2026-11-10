@@ -120,7 +120,7 @@
 )}
 	<div class="mt-3.5">
 		<h5
-			class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint"
+			class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle"
 		>
 			{heading}
 		</h5>
@@ -190,7 +190,7 @@
 			<div class="mt-4 border-t border-border pt-3">
 				<div class="flex items-center gap-2">
 					<h4
-						class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+						class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
 					>
 						{i18n.file_media()}
 					</h4>

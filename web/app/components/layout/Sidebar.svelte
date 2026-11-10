@@ -263,7 +263,7 @@
 
 
 <aside
-	class="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-3.5 border-r border-border bg-bg-elevated px-3.5 pb-5 pt-5 lg:flex"
+	class="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-3.5 border-r border-border bg-bg-elevated px-3.5 pb-5 pt-[calc(1.25rem+env(safe-area-inset-top))] lg:flex"
 	aria-label={i18n.nav_primary_navigation()}
 >
 	<div class="px-2 pb-2 pt-1">
@@ -281,7 +281,7 @@
 				<div class="text-[15px] font-semibold leading-tight tracking-tight text-fg">
 					streamline
 				</div>
-				<div class="mt-px font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint">
+				<div class="mt-px font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
 					cinematic ops
 				</div>
 			</div>
@@ -293,7 +293,7 @@
 		class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pr-0.5"
 	>
 		<div
-			class="px-2 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint"
+			class="px-2 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle"
 		>
 			{i18n.nav_library()}
 		</div>
@@ -315,7 +315,7 @@
 							<span
 								class={cn(
 									"shrink-0 font-mono text-[10.5px] tabular-nums",
-									active ? "text-accent-text opacity-70" : "text-fg-faint",
+									active ? "text-accent-text opacity-70" : "text-fg-subtle",
 								)}
 							>
 								{moviesCount.toLocaleString()}
@@ -324,7 +324,7 @@
 							<span
 								class={cn(
 									"shrink-0 font-mono text-[10.5px] tabular-nums",
-									active ? "text-accent-text opacity-70" : "text-fg-faint",
+									active ? "text-accent-text opacity-70" : "text-fg-subtle",
 								)}
 							>
 								{seriesCount.toLocaleString()}
@@ -333,7 +333,7 @@
 							<span
 								class={cn(
 									"shrink-0 font-mono text-[10.5px] tabular-nums",
-									active ? "text-accent-text opacity-70" : "text-fg-faint",
+									active ? "text-accent-text opacity-70" : "text-fg-subtle",
 								)}
 							>
 								{(item.href === "/music" ? musicCount : booksCount)?.toLocaleString()}
@@ -345,7 +345,7 @@
 		</ul>
 
 		<div
-			class="px-2 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint"
+			class="px-2 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle"
 		>
 			{i18n.nav_operations()}
 		</div>
@@ -441,7 +441,7 @@
 						<div class="truncate text-[13px] font-medium leading-tight">
 							{auth.user.display_name || auth.user.email}
 						</div>
-						<div class="mt-px truncate font-mono text-[10px] text-fg-faint">
+						<div class="mt-px truncate font-mono text-[10px] text-fg-subtle">
 							{role}{version ? ` · ${version}` : ""}
 						</div>
 					</div>

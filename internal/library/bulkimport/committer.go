@@ -361,25 +361,6 @@ func (s *Service) commitAttach(
 			return entimportscanfile.OutcomeAttached, "", f.ExistingMovieID
 		}
 	}
-	// A movie holds at most one media file: accepting a scanned file for an
-	// already-known movie replaces whatever file it currently has.
-	for _, mf := range existing {
-		if err := os.Remove(mf.Path); err != nil && !os.IsNotExist(err) {
-			slog.WarnContext(ctx, "attach replace: remove old file failed",
-				"path", mf.Path, "error", err)
-		} else if err == nil {
-			// Only the failure was logged, so the deletion that actually
-			// happened left nothing behind to explain a file disappearing
-			// mid-commit.
-			slog.InfoContext(ctx, "attach replace: replaced an existing file",
-				"movie.id", f.ExistingMovieID,
-				"old_path", mf.Path,
-				"new_path", f.SourcePath)
-		}
-		if err := s.store.DeleteMediaFile(ctx, mf.ID); err != nil {
-			return commitFail("delete replaced file", err, 0)
-		}
-	}
 	m, err := s.store.FindMovieByID(ctx, f.ExistingMovieID)
 	if err != nil {
 		return commitFail("find movie", err, 0)
@@ -399,14 +380,47 @@ func (s *Service) commitAttach(
 			m.QualityProfile,
 		),
 	}
+	// A movie holds at most one media file: accepting a scanned file for an
+	// already-known movie replaces whatever file it currently has. The old
+	// files and rows go only once the new file is placed and its row written,
+	// so a replacement that fails anywhere leaves the movie as it was.
+	//
+	// aside holds the old file at asidePath while its replacement is placed
+	// at that very path (a rename re-commit renders there when the template
+	// keeps no release tag); placed is a file this commit put in the library,
+	// which a failed row write takes back out before the old one is restored.
+	var aside, asidePath string
+	placed := false
+	src := f.SourcePath
 	if scan.Mode == entimportscan.ModeRename {
+		dir := filepath.Dir(f.SourcePath)
+		if len(existing) > 0 {
+			// A source the importer cannot resolve fails in the import itself.
+			if resolved, dest, derr := s.importSvc.MovieDestination(
+				dir,
+				m,
+			); derr == nil {
+				src = resolved
+				for _, mf := range existing {
+					if !samePath(dest, mf.Path) {
+						continue
+					}
+					if aside, err = setAside(src, mf.Path); err != nil {
+						return commitFail("set aside replaced file", err, 0)
+					}
+					asidePath = mf.Path
+					break
+				}
+			}
+		}
 		imported, err := s.importSvc.ImportMovieWithMode(
 			ctx,
-			filepath.Dir(f.SourcePath),
+			dir,
 			m,
 			string(scan.ImportMode),
 		)
 		if err != nil {
+			restoreAside(ctx, aside, asidePath)
 			return commitFail("import movie", err, 0)
 		}
 		params.Path = imported.Path
@@ -414,10 +428,56 @@ func (s *Service) commitAttach(
 		params.Quality = imported.Parsed.Resolution
 		params.ReleaseGroup = imported.Parsed.Group
 		params.Parsed = &imported.Parsed
+		// A destination already holding this very inode (a hardlink commit
+		// run again) is an old file itself, not a new one.
+		placed = aside != "" ||
+			!slices.ContainsFunc(existing, func(mf *ent.MediaFile) bool {
+				return mf.Path == imported.Path
+			})
 	}
-	return s.linkAndMarkAvailable(
-		ctx, params, entimportscanfile.OutcomeAttached, 0,
-	)
+	if len(existing) == 0 {
+		return s.linkAndMarkAvailable(
+			ctx, params, entimportscanfile.OutcomeAttached, 0,
+		)
+	}
+	oldIDs := make([]uint32, len(existing))
+	for i, mf := range existing {
+		oldIDs[i] = mf.ID
+	}
+	if _, err := s.store.ReplaceMediaFile(ctx, oldIDs, params); err != nil {
+		if placed {
+			undoPlacement(ctx, src, params.Path, string(scan.ImportMode))
+		}
+		restoreAside(ctx, aside, asidePath)
+		return commitFail("replace media file", err, 0)
+	}
+	for _, mf := range existing {
+		gone := mf.Path
+		switch {
+		case aside != "" && mf.Path == asidePath:
+			gone = aside
+		case mf.Path == params.Path:
+			continue
+		}
+		if err := os.Remove(gone); err != nil && !os.IsNotExist(err) {
+			slog.WarnContext(ctx, "attach replace: remove old file failed",
+				"path", gone, "error", err)
+			continue
+		}
+		// The deletion is what explains a file disappearing mid-commit.
+		slog.InfoContext(ctx, "attach replace: replaced an existing file",
+			"movie.id", f.ExistingMovieID,
+			"old_path", mf.Path,
+			"new_path", params.Path)
+	}
+	if err := s.store.UpdateMovieStatus(
+		ctx,
+		params.MovieID,
+		entmovie.StatusAvailable,
+	); err != nil {
+		return commitFail("update movie status", err, 0)
+	}
+	return entimportscanfile.OutcomeAttached, "", params.MovieID
 }
 
 func (s *Service) commitAdoptInPlace(

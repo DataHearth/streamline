@@ -30,7 +30,7 @@
 >
 	<span
 		class={cn(
-			"relative grid w-full place-items-center overflow-hidden rounded border border-border bg-bg-card text-fg-faint",
+			"relative grid w-full place-items-center overflow-hidden rounded border border-border bg-bg-card text-fg-subtle",
 			event.square ? "aspect-square" : "aspect-[2/3]",
 		)}
 	>

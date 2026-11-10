@@ -36,11 +36,11 @@
 {/snippet}
 
 <section class="rounded-lg border border-border bg-bg-elevated p-5" aria-labelledby={id}>
-	<h4 {id} class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint">{title}</h4>
+	<h4 {id} class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle">{title}</h4>
 	<dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[12px]">
 		{#each rows as r, i (i)}
 			{#if "group" in r}
-				<div class="col-span-2 mt-2 flex items-center gap-2.5 font-mono text-[9px] uppercase tracking-[0.12em] text-fg-faint">
+				<div class="col-span-2 mt-2 flex items-center gap-2.5 font-mono text-[9px] uppercase tracking-[0.12em] text-fg-subtle">
 					<span>{r.group}</span>
 					<span class="h-px flex-1 bg-border" aria-hidden="true"></span>
 				</div>

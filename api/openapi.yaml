@@ -254,6 +254,9 @@ paths:
         Triggers an interactive search across all enabled indexers for the
         specified movie. Returns ranked results sorted by quality-profile
         score, ties broken by seeders.
+        Answers 502 with `code: indexers_unavailable` when no enabled indexer
+        answered (504 when every one of them timed out); an indexer that fails
+        while another answers costs only its own results.
       tags: [movies]
       responses:
         "200":
@@ -270,6 +273,10 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+        "502":
+          $ref: "#/components/responses/IndexersUnavailable"
+        "504":
+          $ref: "#/components/responses/IndexersTimedOut"
 
   /movies/{id}/search-now:
     parameters:
@@ -776,6 +783,9 @@ paths:
         S01-S05) are filtered out of these results: grabbing one would
         import every season it contains, not only this one. Use the
         whole-series browse (POST /series/{id}/browse) to grab those.
+        Answers 502 with `code: indexers_unavailable` when no enabled indexer
+        answered (504 when every one of them timed out); an indexer that fails
+        while another answers costs only its own results.
       tags: [series]
       responses:
         "200":
@@ -786,6 +796,10 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+        "502":
+          $ref: "#/components/responses/IndexersUnavailable"
+        "504":
+          $ref: "#/components/responses/IndexersTimedOut"
 
   /series/{id}/seasons/{number}/grab:
     parameters:
@@ -951,6 +965,9 @@ paths:
         Interactive search across enabled indexers for the entire series
         (tvsearch keyed by tvdbid, no season). Returns ranked results to choose
         from; POST the chosen release to .../grab to download it.
+        Answers 502 with `code: indexers_unavailable` when no enabled indexer
+        answered (504 when every one of them timed out); an indexer that fails
+        while another answers costs only its own results.
       tags: [series]
       responses:
         "200":
@@ -961,6 +978,10 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+        "502":
+          $ref: "#/components/responses/IndexersUnavailable"
+        "504":
+          $ref: "#/components/responses/IndexersTimedOut"
 
   /series/{id}/release-files:
     parameters:
@@ -1101,6 +1122,9 @@ paths:
         Interactive search across enabled indexers for a single episode
         (tvsearch keyed by tvdbid + season + episode). Returns ranked results
         to choose from; POST the chosen release to .../grab to download it.
+        Answers 502 with `code: indexers_unavailable` when no enabled indexer
+        answered (504 when every one of them timed out); an indexer that fails
+        while another answers costs only its own results.
       tags: [series]
       responses:
         "200":
@@ -1111,6 +1135,10 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+        "502":
+          $ref: "#/components/responses/IndexersUnavailable"
+        "504":
+          $ref: "#/components/responses/IndexersTimedOut"
 
   /series/{id}/refresh-metadata:
     parameters:
@@ -1579,6 +1607,9 @@ paths:
          artist, scored against the artist's quality profile; items are plain `SearchResult`
          with `audio_tier`. POST the chosen item back unchanged to `.../grab`, handle included.
          A 422 with `code: no_quality_profile` means the artist has no usable quality profile.
+        Answers 502 with `code: indexers_unavailable` when no enabled indexer
+        answered (504 when every one of them timed out); an indexer that fails
+        while another answers costs only its own results.
       tags: [music]
       responses:
         "200":
@@ -1591,6 +1622,10 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
+        "502":
+          $ref: "#/components/responses/IndexersUnavailable"
+        "504":
+          $ref: "#/components/responses/IndexersTimedOut"
 
   /music/artists/{id}/grab:
     parameters:
@@ -1833,6 +1868,9 @@ paths:
          loosely). A discography never appears on an album
          search. POST the chosen item back unchanged to `.../grab`, handle included. A 422 with
          `code: no_quality_profile` means the album has no usable quality profile.
+        Answers 502 with `code: indexers_unavailable` when no enabled indexer
+        answered (504 when every one of them timed out); an indexer that fails
+        while another answers costs only its own results.
       tags: [music]
       responses:
         "200":
@@ -1845,6 +1883,10 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
+        "502":
+          $ref: "#/components/responses/IndexersUnavailable"
+        "504":
+          $ref: "#/components/responses/IndexersTimedOut"
 
   /music/albums/{id}/grab:
     parameters:
@@ -2946,6 +2988,9 @@ paths:
          upper-case container. Rejected releases stay in the list with `rejected` set. POST the
          chosen item back unchanged to `.../grab`, handle included. A 422 with
          `code: no_quality_profile` means no usable quality profile resolves.
+        Answers 502 with `code: indexers_unavailable` when no enabled indexer
+        answered (504 when every one of them timed out); an indexer that fails
+        while another answers costs only its own results.
       tags: [books]
       parameters:
         - $ref: "#/components/parameters/BookSlotKind"
@@ -2962,6 +3007,10 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
+        "502":
+          $ref: "#/components/responses/IndexersUnavailable"
+        "504":
+          $ref: "#/components/responses/IndexersTimedOut"
 
   /books/{id}/grab:
     parameters:
@@ -5892,7 +5941,10 @@ paths:
         it for that title from then on (matched by info hash, else by title),
         until the record is retried or removed from the history. Manual search
         and grab are unaffected. 400 when the action is missing or
-        unrecognised, 409 when the record exists but is not held.
+        unrecognised, 409 when the record exists but is not held, and 409 on
+        `import` for a record held only for its payload's location (check
+        `location`): there are no files to import, and the download monitor
+        releases it on its own once they are found.
       tags: [activity]
       requestBody:
         required: true
@@ -8310,6 +8362,24 @@ components:
           schema:
             $ref: "#/components/schemas/SeriesSendPlan"
 
+    IndexersUnavailable:
+      description: |
+        No enabled indexer answered the search (`code: indexers_unavailable`).
+        The message names each indexer and what went wrong with it.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    IndexersTimedOut:
+      description: |
+        No enabled indexer answered the search, and every one of them timed
+        out (`code: indexers_unavailable`). The message names each indexer.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
     BadGateway:
       description: The mail server refused the message (code send_failed).
       content:
@@ -8763,7 +8833,7 @@ components:
             hardcover_not_configured, hardcover_key_rejected, not_sendable,
             no_device_email, smtp_not_configured, send_failed,
             secret_required, secret_file_managed, api_key_quota,
-            catalog_unavailable). Present
+            catalog_unavailable, indexers_unavailable). Present
             for domain errors where the caller needs to branch on the
             specific reason; absent
             for generic errors where the message is sufficient.
@@ -15792,8 +15862,15 @@ components:
         outcome:
           type: string
           enum: [pending, created, attached, failed]
+          description: |
+            `failed` covers a show none of whose matched files could be
+            linked; a folder whose files the show already tracks is
+            `attached`.
         outcome_message:
           type: string
+          description: |
+            Why the show failed, or on a `created`/`attached` show a note
+            counting the matched files that could not be imported.
         created_tvshow_id:
           type: integer
           x-go-type: uint32
@@ -16348,8 +16425,13 @@ components:
             tier the profile does not tick, files tagged as another album, a
             file titled differently from the track its number lands on, when
             at least half the release's titles agree); format, bitrate and
-            metadata hold a book.
-          enum: [corrupt, resolution, duration, codec, always_ask, tier, album, track, missing, folder, format, bitrate, metadata]
+            metadata hold a book. location holds a completed download whose
+            files are at neither place streamline looks: `expected` is
+            `<library.download_path>/<torrent name>`, `actual` the client's
+            reported save path through `download.path_mappings` (absent when
+            the client reports none); the download monitor releases it once
+            either exists.
+          enum: [corrupt, resolution, duration, codec, always_ask, tier, album, track, missing, folder, format, bitrate, metadata, location]
         expected: { type: string }
         actual: { type: string }
 

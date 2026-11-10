@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -522,13 +523,23 @@ var _ = Describe("Login enumeration resistance", Label("unit", "auth"), func() {
 		svc = m.(*auth)
 	})
 
-	// bcryptCost times one real comparison so the assertions below scale with
-	// whatever cost the build uses instead of a hardcoded floor. Every bound is
-	// a lower one: a loaded machine only ever makes bcrypt slower.
+	// referenceSamples is how many comparisons bcryptCost times.
+	const referenceSamples = 5
+
+	// bcryptCost times real comparisons so the assertions below scale with
+	// whatever cost the build uses instead of a hardcoded floor, and keeps the
+	// fastest. A loaded machine slows the reference as easily as the login it
+	// is compared with, and one inflated sample lifts reference/2 above a
+	// normal login; the minimum is the closest reading to the uncontended cost
+	// that both the floor and the ceiling are measured against.
 	bcryptCost := func() time.Duration {
-		start := time.Now()
-		_ = bcrypt.CompareHashAndPassword(dummyPasswordHash, []byte("nope"))
-		return time.Since(start)
+		best := time.Duration(math.MaxInt64)
+		for range referenceSamples {
+			start := time.Now()
+			_ = bcrypt.CompareHashAndPassword(dummyPasswordHash, []byte("nope"))
+			best = min(best, time.Since(start))
+		}
+		return best
 	}
 
 	It("spends a password comparison on an email that does not exist", func() {

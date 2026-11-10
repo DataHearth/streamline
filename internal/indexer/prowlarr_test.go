@@ -246,6 +246,19 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 				TestConnection(context.Background())).To(Succeed())
 		})
 
+		It("maps 400 to ErrBadRequest, still an ErrUnexpectedStatus", func() {
+			srv := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusBadRequest)
+				}))
+			DeferCleanup(srv.Close)
+
+			_, err := NewProwlarr(srv.URL, "k").Search(context.Background(),
+				SearchParams{Query: "Show", Kind: KindTV, Season: 2})
+			Expect(errors.Is(err, ErrBadRequest)).To(BeTrue())
+			Expect(errors.Is(err, ErrUnexpectedStatus)).To(BeTrue())
+		})
+
 		It("maps 401 to ErrUnauthorized", func() {
 			srv := httptest.NewServer(http.HandlerFunc(
 				func(w http.ResponseWriter, _ *http.Request) {

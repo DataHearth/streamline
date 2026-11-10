@@ -324,7 +324,7 @@
      controls, and the rows scrolling under the usual 70% read through them. -->
 <header
 	class={cn(
-		"sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-border bg-bg-deep/70 pl-4 pr-2 pt-[env(safe-area-inset-top)] backdrop-blur-md saturate-150 md:gap-4 md:px-8",
+		"sticky top-0 z-30 flex min-h-(--top-bar-height) items-center gap-2 border-b border-border bg-bg-deep/70 pl-4 pr-2 pt-[env(safe-area-inset-top)] backdrop-blur-md saturate-150 md:gap-4 md:px-8",
 		selection && "max-md:bg-bg-deep/95",
 	)}
 >
@@ -385,7 +385,7 @@
 		{@render searchBarLabel()}
 		<kbd
 			aria-hidden="true"
-			class="hidden rounded border border-border bg-surface px-1.5 py-px font-mono text-[10.5px] text-fg-faint lg:inline"
+			class="hidden rounded border border-border bg-surface px-1.5 py-px font-mono text-[10.5px] text-fg-subtle lg:inline"
 		>
 			{modKey} K
 		</kbd>
@@ -479,7 +479,7 @@
 		style:--menu-width="{ADD_MENU_W}px"
 	>
 		<div
-			class="px-3 pb-1.5 pt-2 font-mono text-[9.5px] uppercase tracking-[0.18em] text-fg-faint"
+			class="px-3 pb-1.5 pt-2 font-mono text-[9.5px] uppercase tracking-[0.18em] text-fg-subtle"
 		>
 			{addHeading}
 		</div>
@@ -511,7 +511,7 @@
 				</span>
 				{#if item.soon}
 					<span
-						class="rounded-sm border border-border px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.1em] text-fg-faint"
+						class="rounded-sm border border-border px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.1em] text-fg-subtle"
 					>
 						{i18n.common_soon()}
 					</span>

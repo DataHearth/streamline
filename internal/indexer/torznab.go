@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/datahearth/streamline/internal/otelx"
 )
@@ -24,6 +25,15 @@ var (
 	ErrUnauthorized     = errors.New("indexer credentials rejected")
 	ErrUnexpectedStatus = errors.New("indexer returned unexpected status")
 	ErrBadResponse      = errors.New("indexer returned malformed response")
+
+	// ErrBadRequest means the indexer refused the query itself — an HTTP 400,
+	// or a Torznab error document saying a parameter or function is not
+	// supported — rather than failing to answer it. It always travels with
+	// ErrUnexpectedStatus, so the callers that only read that one keep
+	// working. searchAll retries such a query on a wider form: Jackett answers
+	// an id its tracker cannot search by this way, where a title-only query
+	// would have been answered.
+	ErrBadRequest = errors.New("indexer rejected the query")
 
 	// ErrFeedUnsupported means the protocol has no forward-feed endpoint at
 	// all, which is a different thing from a feed that came back empty. The
@@ -39,6 +49,14 @@ const (
 	// far past any real result page — Prowlarr's 100-item default is tens of
 	// KB — so hitting it means something is wrong, not that a page was large.
 	maxTorznabResponse = 8 << 20
+
+	// maxTorznabError bounds what is read of a non-200 body looking for a
+	// Torznab error document, which is a single empty element.
+	maxTorznabError = 64 << 10
+
+	// maxTorznabErrorDescription bounds the indexer's own wording carried
+	// into the error, and so into the log and the span.
+	maxTorznabErrorDescription = 200
 
 	// torznabLimit is the page size asked for. Torznab defines no default:
 	// Prowlarr sends 100 of its own accord, a bare Torznab endpoint sends
@@ -109,10 +127,10 @@ func (t *Torznab) Search(
 		q.Set("ep", strconv.FormatUint(uint64(params.Episode), 10))
 	}
 	// Only when no TMDB/TVDB id is sent: Jackett refuses a query carrying an
-	// id its tracker cannot search by (TorznabCapabilities' CanHandleQuery)
-	// and answers it with nothing, so pairing the two would lose every
-	// tracker that knows one but not the other. searchAll asks again with
-	// this id alone when the first query comes back empty.
+	// id its tracker cannot search by (an HTTP 400 with error 203, "Function
+	// Not Available"), so pairing the two would lose every tracker that knows
+	// one but not the other. searchAll asks again with this id alone when the
+	// first query comes back empty or refused.
 	if params.IMDbID != "" && params.TMDBID == 0 && params.TVDBID == 0 {
 		switch params.Kind {
 		case KindMovie:
@@ -243,6 +261,16 @@ func (t *Torznab) get(ctx context.Context, params url.Values, out any) error {
 		resp.StatusCode == http.StatusForbidden:
 		return fmt.Errorf("%w: status %d", ErrUnauthorized, resp.StatusCode)
 	case resp.StatusCode != http.StatusOK:
+		var doc torznabError
+		if err := xml.NewDecoder(
+			io.LimitReader(resp.Body, maxTorznabError),
+		).Decode(&doc); err == nil && doc.Code != 0 {
+			return doc.err(resp.StatusCode)
+		}
+		if resp.StatusCode == http.StatusBadRequest {
+			return fmt.Errorf("%w: status %d: %w",
+				ErrUnexpectedStatus, resp.StatusCode, ErrBadRequest)
+		}
 		return fmt.Errorf("%w: status %d", ErrUnexpectedStatus, resp.StatusCode)
 	}
 
@@ -250,12 +278,88 @@ func (t *Torznab) get(ctx context.Context, params url.Values, out any) error {
 	// whatever it is fed straight into Go structs. Without a ceiling a
 	// misbehaving or hostile endpoint can hold the process at its own chosen
 	// size — the cap turns that into a bounded read that fails cleanly.
-	if err := xml.NewDecoder(
-		io.LimitReader(resp.Body, maxTorznabResponse),
-	).Decode(out); err != nil {
+	dec := xml.NewDecoder(io.LimitReader(resp.Body, maxTorznabResponse))
+	start, err := rootElement(dec)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrBadResponse, err)
+	}
+	// Jackett answers a query its tracker's caps cannot handle at all (a
+	// search mode the tracker lacks, an IMDb movie search it cannot do) with
+	// a 200 carrying an error document, and an invalid API key the same way.
+	if start.Name.Local == "error" {
+		var doc torznabError
+		if err := dec.DecodeElement(&doc, &start); err != nil {
+			return fmt.Errorf("%w: %w", ErrBadResponse, err)
+		}
+		return doc.err(resp.StatusCode)
+	}
+	if err := dec.DecodeElement(out, &start); err != nil {
 		return fmt.Errorf("%w: %w", ErrBadResponse, err)
 	}
 	return nil
+}
+
+// rootElement reads up to the document's first element, skipping the prolog.
+func rootElement(dec *xml.Decoder) (xml.StartElement, error) {
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			return xml.StartElement{}, err
+		}
+		if start, ok := tok.(xml.StartElement); ok {
+			return start, nil
+		}
+	}
+}
+
+// torznabError is the error document of the Newznab/Torznab API:
+// `<error code="203" description="Function Not Available: …"/>`.
+type torznabError struct {
+	XMLName     xml.Name `xml:"error"`
+	Code        int      `xml:"code,attr"`
+	Description string   `xml:"description,attr"`
+}
+
+// err files the document under the sentinel its code means. The spec's 1xx
+// codes are about the account, 2xx about the request (missing or incorrect
+// parameter, no such function, function not available); everything else —
+// 900 above all, which Jackett answers for any exception its tracker raised —
+// is a failure to answer, not a refusal of the query, and retrying it wider
+// would only send a failing tracker more requests.
+//
+// The description is the indexer's own text. It is kept for the 1xx and 2xx
+// codes, whose wording is the spec's or Jackett's fixed sentences; a 900
+// carries an exception's whole text, which can hold the tracker's URL and so
+// its passkey, and is dropped.
+func (e torznabError) err(status int) error {
+	switch {
+	case e.Code >= 100 && e.Code < 200:
+		return fmt.Errorf("%w: status %d: torznab error %d: %s",
+			ErrUnauthorized, status, e.Code, e.description())
+	case e.Code >= 200 && e.Code < 300:
+		return fmt.Errorf("%w: status %d: %w: torznab error %d: %s",
+			ErrUnexpectedStatus, status, ErrBadRequest, e.Code, e.description())
+	default:
+		return fmt.Errorf("%w: status %d: torznab error %d",
+			ErrUnexpectedStatus, status, e.Code)
+	}
+}
+
+func (e torznabError) description() string {
+	d := strings.Map(func(r rune) rune {
+		if r < ' ' || r == 0x7f {
+			return ' '
+		}
+		return r
+	}, strings.TrimSpace(e.Description))
+	if len(d) <= maxTorznabErrorDescription {
+		return d
+	}
+	cut := maxTorznabErrorDescription
+	for cut > 0 && !utf8.RuneStart(d[cut]) {
+		cut--
+	}
+	return d[:cut] + "…"
 }
 
 // XML response types

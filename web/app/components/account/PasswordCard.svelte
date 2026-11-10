@@ -74,7 +74,7 @@
 		"bg-status-available",
 	] as const;
 	const PILL_CLASSES = [
-		"bg-surface text-fg-faint",
+		"bg-surface text-fg-subtle",
 		"bg-status-failed/15 text-status-failed",
 		"bg-status-wanted/15 text-status-wanted",
 		"bg-status-wanted/15 text-status-wanted",

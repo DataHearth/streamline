@@ -1540,8 +1540,9 @@ func (d *download) widenSelection(
 	return live, nil
 }
 
-// CheckStatus polls download clients for all "downloading" records
-// and returns any that have completed.
+// CheckStatus polls download clients for all "downloading" records, and for
+// the records held because their payload was not found, and returns the ones
+// that are ready to import.
 func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error) {
 	ctx, span := tracer.Start(ctx, "download.check_status")
 	defer span.End()
@@ -1553,7 +1554,18 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 			fmt.Errorf("query downloading records: %w", err),
 		)
 	}
-	span.SetAttributes(attribute.Int("tracked.count", len(records)))
+	held, err := d.db.ListHeldRecordsByCheck(ctx, schema.HoldCheckLocation)
+	if err != nil {
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("query location-held records: %w", err),
+		)
+	}
+	span.SetAttributes(
+		attribute.Int("tracked.count", len(records)),
+		attribute.Int("location_held.count", len(held)),
+	)
+	records = append(records, held...)
 
 	var (
 		mu        sync.Mutex
@@ -1583,6 +1595,21 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 			}
 
 			torrent, err := client.GetTorrent(ctx, record.TorrentHash)
+			if record.Status == downloadrecord.StatusHeld {
+				if err != nil {
+					slog.DebugContext(ctx,
+						"failed to get torrent status for a held record",
+						"record.id", record.ID, "hash", record.TorrentHash,
+						"error", err)
+					return
+				}
+				if c, ok := d.releaseLocated(ctx, record, torrent); ok {
+					mu.Lock()
+					completed = append(completed, c)
+					mu.Unlock()
+				}
+				return
+			}
 			if err != nil {
 				switch {
 				case errors.Is(err, ErrTorrentRefused):
@@ -1630,7 +1657,7 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 				return
 			}
 
-			contentPath, err := downloadSavePath(torrent.Name)
+			loc, err := payloadPaths(*torrent)
 			if err != nil {
 				slog.WarnContext(ctx,
 					"refusing torrent with unsafe name",
@@ -1638,6 +1665,11 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 					"name", torrent.Name,
 					"error", err,
 				)
+				return
+			}
+			contentPath, found := loc.locate()
+			if !found {
+				d.holdUnlocated(ctx, record, torrent, loc)
 				return
 			}
 
@@ -1654,22 +1686,7 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 				)
 				return
 			}
-			if err := d.db.MarkRecordEpisodesImporting(
-				ctx, record.ID,
-			); err != nil {
-				slog.WarnContext(ctx,
-					"mark episodes importing failed",
-					"id", record.ID, "error", err)
-			}
-			if record.Edges.Movie != nil {
-				if err := d.db.UpdateMovieStatus(
-					ctx, record.Edges.Movie.ID, movie.StatusImporting,
-				); err != nil {
-					slog.WarnContext(ctx,
-						"mark movie importing failed",
-						"id", record.ID, "error", err)
-				}
-			}
+			d.markMediaImporting(ctx, record)
 			if err := d.db.SetDownloadRecordSavePath(
 				ctx,
 				record.ID,

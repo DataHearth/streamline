@@ -43,7 +43,7 @@
 						{counts[chip.key]}
 					</div>
 					<div
-						class="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint"
+						class="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle"
 					>
 						{chip.label}
 					</div>

@@ -150,7 +150,7 @@
 	>
 		{#each labels as label (label)}
 			<span
-				class="font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint"
+				class="font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle"
 			>
 				{label}
 			</span>
@@ -243,7 +243,7 @@
 		style:--pop-w="{POP_W}px"
 	>
 		<div
-			class="border-b border-border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint"
+			class="border-b border-border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle"
 		>
 			{popLabel}
 		</div>
@@ -258,7 +258,7 @@
 					<EventDot kind={dotToken(e)} />
 					<span class="truncate font-medium">{e.title}</span>
 					{#if e.subtitle}
-						<span class="shrink-0 font-mono text-[10px] text-fg-faint">
+						<span class="shrink-0 font-mono text-[10px] text-fg-subtle">
 							{e.subtitle}
 						</span>
 					{/if}

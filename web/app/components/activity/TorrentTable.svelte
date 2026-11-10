@@ -151,7 +151,7 @@
 	{:else}
 		<table class="w-full min-w-[520px] border-collapse text-left">
 			<thead
-				class="sticky top-0 z-10 bg-surface text-[10px] uppercase tracking-[0.12em] text-fg-faint"
+				class="sticky top-0 z-10 bg-surface text-[10px] uppercase tracking-[0.12em] text-fg-subtle"
 			>
 				<tr>
 					{#if selectable}

@@ -25,7 +25,8 @@
 		type TranscodeSortKey,
 	} from "@lib/transcoding";
 	import type { FFmpegConfig, TranscodeJob } from "@lib/types";
-	import ActivityToolbar from "@components/activity/ActivityToolbar.svelte";
+	import ActivityToolbar, { ACTIVITY_CHIPS } from "@components/activity/ActivityToolbar.svelte";
+	import { listOf, oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import ActivityFilterSheet from "@components/activity/ActivityFilterSheet.svelte";
 	import TouchStatLine from "@components/activity/TouchStatLine.svelte";
 	import TranscodeList from "@components/activity/TranscodeList.svelte";
@@ -36,6 +37,30 @@
 	let statusFilter = $state<string[]>([]);
 	let search = $state("");
 	let sort = $state<TranscodeSortKey>("attention");
+	// Each sort chip pins its own direction and the page offers no other, so
+	// the URL carries `sort` alone.
+	syncRouteQuery(
+		"/transcoding",
+		(p) => {
+			statusFilter = listOf(
+				param(p, "status"),
+				ACTIVITY_CHIPS.transcoding.map((c) => c.key),
+			);
+			search = param(p, "q") ?? "";
+			sort = oneOf(
+				param(p, "sort"),
+				TRANSCODE_SORT_CHIPS.map((c) => c.key),
+				"attention",
+			);
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "status", statusFilter);
+			setParam(p, "q", search);
+			setParam(p, "sort", sort, "attention");
+			return p;
+		},
+	);
 	let filtersOpen = $state(false);
 	let expandedId = $state<number | null>(null);
 	let confirmCancel = $state<TranscodeJob | null>(null);
@@ -204,7 +229,7 @@
 				     matches neither the row metrics nor the tinted surface every other
 				     picker in the app opens. -->
 				<label class="hidden items-center gap-2 lg:flex">
-					<span class="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint">
+					<span class="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
 						{i18n.filter_sort()}
 					</span>
 					<div class="w-[190px]">
@@ -266,13 +291,13 @@
 		>
 			<div>
 				<div class="text-2xl font-bold tabular-nums text-status-running">{running}</div>
-				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint">
+				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle">
 					{i18n.lc_running()}
 				</div>
 			</div>
 			<div>
 				<div class="text-2xl font-bold tabular-nums text-fg">{queued}</div>
-				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint">
+				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle">
 					{i18n.lc_queued()}
 				</div>
 			</div>
@@ -280,7 +305,7 @@
 				<div class="text-2xl font-bold tabular-nums text-status-succeeded">
 					{formatBytes(reclaimed, "—")}
 				</div>
-				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint">
+				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle">
 					{i18n.transcode_reclaimed()}
 				</div>
 			</div>
@@ -293,7 +318,7 @@
 				>
 					{failed}
 				</div>
-				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint">
+				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle">
 					{i18n.lc_failed()}
 				</div>
 			</div>

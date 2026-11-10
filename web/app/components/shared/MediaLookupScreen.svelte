@@ -340,7 +340,7 @@
 		class="fixed inset-0 z-50 flex flex-col bg-bg-deep md:hidden"
 		transition:fly={{ y: 28, duration: 200, easing: cubicOut }}
 	>
-		<header class="flex flex-none items-center justify-between gap-3 px-3 pt-3 pb-2">
+		<header class="flex flex-none items-center justify-between gap-3 px-3 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-2">
 			<button
 				type="button"
 				onclick={onClose}
@@ -349,7 +349,7 @@
 				<ChevronLeft size={20} aria-hidden="true" />
 				{i18n.nav_library()}
 			</button>
-			<span class="font-mono text-[10.5px] uppercase tracking-[0.16em] text-fg-faint">
+			<span class="font-mono text-[10.5px] uppercase tracking-[0.16em] text-fg-subtle">
 				{isMovie ? "TMDB" : "TVDB"}
 			</span>
 		</header>
@@ -366,7 +366,7 @@
 				placeholder={isMovie ? i18n.lookup_search_tmdb_placeholder() : i18n.lookup_search_tvdb_placeholder()}
 				autocomplete="off"
 				aria-label={isMovie ? i18n.lookup_search_tmdb() : i18n.lookup_search_tvdb()}
-				class="h-11 w-full rounded-xl border border-border bg-bg-card pr-10 pl-10 text-base text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent-ring placeholder:text-fg-faint"
+				class="h-11 w-full rounded-xl border border-border bg-bg-card pr-10 pl-10 text-base text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent-ring placeholder:text-fg-subtle"
 			/>
 			{#if query.length > 0}
 				<button
@@ -384,7 +384,7 @@
 		</div>
 
 		{#if debounced.length >= 2 && !searchQuery.isLoading && !searchQuery.isError && results.length > 0}
-			<p class="flex-none px-5 pt-3 pb-1 text-[11.5px] text-fg-faint">
+			<p class="flex-none px-5 pt-3 pb-1 text-[11.5px] text-fg-subtle">
 				{(results.length === 1
 					? i18n.lookup_match_count_one
 					: i18n.lookup_match_count_other)({ count: results.length })}{heldCount > 0
@@ -400,7 +400,7 @@
 					<p class="text-sm font-medium text-fg-muted">
 						{isMovie ? i18n.movies_search_tmdb() : i18n.series_search_tvdb()}
 					</p>
-					<p class="mt-1 text-xs text-fg-faint">
+					<p class="mt-1 text-xs text-fg-subtle">
 						{isMovie ? i18n.movies_type_2_chars() : i18n.series_type_2_chars()}
 					</p>
 				</div>
@@ -428,7 +428,7 @@
 						<Tv class="mb-3 h-8 w-8 text-fg-faint" aria-hidden="true" />
 					{/if}
 					<p class="text-sm font-medium text-fg-muted">{i18n.common_no_matches()}</p>
-					<p class="mt-1 text-xs text-fg-faint">
+					<p class="mt-1 text-xs text-fg-subtle">
 						{isMovie
 							? i18n.lookup_nothing_on_tmdb({ query: debounced })
 							: i18n.lookup_nothing_on_tvdb({ query: debounced })}
@@ -448,7 +448,7 @@
 								<div
 									class="relative aspect-[2/3] overflow-hidden rounded-lg border border-white/[0.06] bg-bg-card shadow-1"
 								>
-									<div class="absolute inset-0 grid place-items-center text-fg-faint">
+									<div class="absolute inset-0 grid place-items-center text-fg-subtle">
 										{#if isMovie}
 											<Film class="h-6 w-6" aria-hidden="true" />
 										{:else}
@@ -506,7 +506,7 @@
 					<div
 						class="relative aspect-[2/3] w-[84px] flex-none overflow-hidden rounded-lg border border-white/[0.06] bg-bg-card shadow-2"
 					>
-						<div class="absolute inset-0 grid place-items-center text-fg-faint">
+						<div class="absolute inset-0 grid place-items-center text-fg-subtle">
 							{#if isMovie}
 								<Film class="h-6 w-6" aria-hidden="true" />
 							{:else}
@@ -533,7 +533,7 @@
 							{selected.title}
 						</h2>
 						{#if selected.subtitle}
-							<p class="mt-1 truncate text-[12.5px] italic text-fg-faint">
+							<p class="mt-1 truncate text-[12.5px] italic text-fg-subtle">
 								{selected.subtitle}
 							</p>
 						{/if}
@@ -566,7 +566,7 @@
 				{#if synopsis}
 					<section class="mt-4">
 						<h3
-							class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint"
+							class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle"
 						>
 							{i18n.detail_synopsis()}
 						</h3>

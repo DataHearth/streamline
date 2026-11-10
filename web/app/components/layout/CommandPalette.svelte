@@ -225,12 +225,12 @@
 					bind:value={query}
 					type="text"
 					placeholder={i18n.palette_placeholder()}
-					class="search-input flex-1 border-0 bg-transparent text-[15px] text-fg placeholder:text-fg-faint"
+					class="search-input flex-1 border-0 bg-transparent text-[15px] text-fg placeholder:text-fg-subtle"
 					autocomplete="off"
 					spellcheck="false"
 				/>
 				<kbd
-					class="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] text-fg-faint"
+					class="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] text-fg-subtle"
 					>ESC</kbd
 				>
 			</div>
@@ -238,7 +238,7 @@
 			<div class="flex-1 overflow-y-auto p-1.5">
 				{#each sections as section, sIdx (section.label)}
 					<div
-						class="px-3 pt-2.5 pb-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
+						class="px-3 pt-2.5 pb-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
 					>
 						{section.label}
 					</div>
@@ -354,7 +354,7 @@
 								{/if}
 							</div>
 							<span
-								class="font-mono text-[9.5px] uppercase tracking-[0.1em] text-fg-faint"
+								class="font-mono text-[9.5px] uppercase tracking-[0.1em] text-fg-subtle"
 							>
 								{itemKindLabel(item)}
 							</span>
@@ -389,7 +389,7 @@
 			/>
 
 			<footer
-				class="flex items-center gap-4 border-t border-border bg-bg-base px-4 py-2 font-mono text-[10.5px] text-fg-faint"
+				class="flex items-center gap-4 border-t border-border bg-bg-base px-4 py-2 font-mono text-[10.5px] text-fg-subtle"
 			>
 				<span>
 					<kbd

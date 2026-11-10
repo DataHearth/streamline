@@ -159,7 +159,7 @@
 </script>
 
 <aside
-	class="sticky top-0 z-40 hidden h-dvh w-[88px] shrink-0 flex-col items-center gap-1 border-r border-border bg-bg-elevated px-2.5 pb-4 pt-4 md:flex lg:hidden"
+	class="sticky top-0 z-40 hidden h-dvh w-[88px] shrink-0 flex-col items-center gap-1 border-r border-border bg-bg-elevated px-2.5 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] md:flex lg:hidden"
 	aria-label={i18n.nav_primary_navigation()}
 >
 	<a
@@ -207,7 +207,7 @@
 						class="absolute left-full top-0 z-50 ml-2.5 w-[272px] overflow-hidden rounded-xl border border-border-strong bg-bg-elevated p-1.5 shadow-4"
 					>
 						<div
-							class="flex items-center justify-between px-2.5 pb-1.5 pt-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
+							class="flex items-center justify-between px-2.5 pb-1.5 pt-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
 						>
 							<span>{group.label}</span>
 							{#if group.key === "Activity"}
@@ -239,7 +239,7 @@
 									<span
 										class={cn(
 											"shrink-0 font-mono text-[11px] tabular-nums",
-											current ? "text-accent-text opacity-70" : "text-fg-faint",
+											current ? "text-accent-text opacity-70" : "text-fg-subtle",
 										)}
 									>
 										{counts.moviesTotal.toLocaleString()}
@@ -248,7 +248,7 @@
 									<span
 										class={cn(
 											"shrink-0 font-mono text-[11px] tabular-nums",
-											current ? "text-accent-text opacity-70" : "text-fg-faint",
+											current ? "text-accent-text opacity-70" : "text-fg-subtle",
 										)}
 									>
 										{counts.seriesTotal.toLocaleString()}

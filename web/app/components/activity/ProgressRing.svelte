@@ -55,7 +55,7 @@
 			style:font-size="{NUM[size]}px"
 		>
 			<!-- With the sign: a bare "0" inside a circle read as a count. -->
-			{arc}<span class="text-[0.75em] text-fg-faint">%</span>
+			{arc}<span class="text-[0.75em] text-fg-subtle">%</span>
 		</span>
 	{:else}
 		<span

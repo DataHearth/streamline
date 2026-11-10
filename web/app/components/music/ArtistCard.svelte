@@ -162,7 +162,7 @@
 			<span class="text-status-failed">{now.failed.title}</span>
 		{:else if now.wanted.length}
 			<span class="text-fg-muted">{now.wanted[0]?.title}</span
-			>{#if now.wanted.length > 1}<span class="ml-1 font-mono text-[10.5px] text-fg-faint">+{now.wanted.length - 1}</span>{/if}
+			>{#if now.wanted.length > 1}<span class="ml-1 font-mono text-[10.5px] text-fg-subtle">+{now.wanted.length - 1}</span>{/if}
 		{:else if now.upcoming}
 			<span class="text-fg-muted">{now.upcoming.title}</span>
 		{:else}

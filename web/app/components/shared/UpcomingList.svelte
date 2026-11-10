@@ -119,7 +119,7 @@
 							<span class="font-mono text-[17px] font-bold tabular leading-none text-fg">
 								{date.day}
 							</span>
-							<span class="mt-1 font-mono text-[9px] tracking-[0.12em] text-fg-faint">
+							<span class="mt-1 font-mono text-[9px] tracking-[0.12em] text-fg-subtle">
 								{date.month}
 							</span>
 						</span>

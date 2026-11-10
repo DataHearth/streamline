@@ -154,7 +154,7 @@
 			<div class="flex min-w-0 items-center gap-2">
 				<h4
 					id="info-file"
-					class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+					class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
 				>
 					{i18n.common_file()}
 				</h4>
@@ -358,7 +358,7 @@
 	>
 		<h4
 			id="info-library"
-			class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+			class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
 		>
 			{i18n.nav_library()}
 		</h4>
@@ -442,7 +442,7 @@
 
 {#snippet group(label: string)}
 	<div
-		class="col-span-2 mt-2 flex items-center gap-2.5 font-mono text-[9px] uppercase tracking-[0.12em] text-fg-faint"
+		class="col-span-2 mt-2 flex items-center gap-2.5 font-mono text-[9px] uppercase tracking-[0.12em] text-fg-subtle"
 	>
 		<span>{label}</span>
 		<span class="h-px flex-1 bg-border" aria-hidden="true"></span>

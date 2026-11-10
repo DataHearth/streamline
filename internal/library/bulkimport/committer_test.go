@@ -303,7 +303,7 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 		},
 	)
 
-	It("replaces the movie's current file before attaching", func() {
+	It("replaces the movie's current file once the new row is written", func() {
 		old := filepath.Join(GinkgoT().TempDir(), "old.mkv")
 		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
 		f := &ent.ImportScanFile{
@@ -318,17 +318,20 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 			Return([]*ent.MediaFile{{ID: 9, Path: old}}, nil).
 			Once()
 		store.EXPECT().
-			DeleteMediaFile(mock.Anything, uint32(9)).
-			Return(nil).
-			Once()
-		store.EXPECT().
 			FindMovieByID(mock.Anything, uint32(42)).
 			Return(&ent.Movie{ID: 42}, nil).
 			Once()
 		store.EXPECT().
-			CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
-				return p.MovieID == 42 && p.Path == "/import/Movie.mkv"
-			})).
+			ReplaceMediaFile(
+				mock.Anything,
+				[]uint32{9},
+				mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
+					return p.MovieID == 42 && p.Path == "/import/Movie.mkv"
+				}),
+			).
+			Run(func(context.Context, []uint32, db.CreateMediaFileParams) {
+				Expect(old).To(BeAnExistingFile())
+			}).
 			Return(&ent.MediaFile{}, nil).
 			Once()
 		store.EXPECT().
@@ -340,6 +343,32 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 		Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
 		Expect(movieID).To(Equal(uint32(42)))
 		Expect(old).NotTo(BeAnExistingFile())
+	})
+
+	It("keeps the movie's current file when the new row cannot be written", func() {
+		old := filepath.Join(GinkgoT().TempDir(), "old.mkv")
+		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		f := &ent.ImportScanFile{
+			ID: 7, ExistingMovieID: 42, SourcePath: "/import/Movie.mkv",
+		}
+
+		store.EXPECT().
+			ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+			Return([]*ent.MediaFile{{ID: 9, Path: old}}, nil).
+			Once()
+		store.EXPECT().
+			FindMovieByID(mock.Anything, uint32(42)).
+			Return(&ent.Movie{ID: 42}, nil).
+			Once()
+		store.EXPECT().
+			ReplaceMediaFile(mock.Anything, []uint32{9}, mock.Anything).
+			Return(nil, errors.New("disk I/O error")).
+			Once()
+
+		outcome, msg, _ := svc.commitAttach(ctx, inPlaceScan, f)
+		Expect(outcome).To(Equal(entimportscanfile.OutcomeFailed))
+		Expect(msg).To(ContainSubstring("replace media file"))
+		Expect(old).To(BeAnExistingFile())
 	})
 
 	It("is a no-op when the scanned path is already the movie's file", func() {

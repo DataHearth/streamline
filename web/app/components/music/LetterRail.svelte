@@ -105,7 +105,7 @@
 					? "bg-accent-soft font-semibold text-accent-text"
 					: has
 						? "text-fg-muted hover:bg-surface hover:text-fg"
-						: "cursor-default text-fg-faint opacity-50",
+						: "cursor-default text-fg-subtle opacity-50",
 			)}
 		>
 			{l}

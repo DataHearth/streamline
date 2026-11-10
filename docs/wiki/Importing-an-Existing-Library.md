@@ -118,10 +118,14 @@ Commit runs in the background and reports `{imported} imported, {failed} failed`
 | **Skipped** | You excluded it |
 | **Failed** | Something went wrong — permissions, missing file, cross-filesystem hardlink |
 
+A show folder is judged by its episode files. It is **Failed** when none of its matched files could be linked, for example because every rename collided with a file already at the destination. The reason names the first error, and the service log has the rest. A show where only some files failed stays **Created** or **Attached**, and the outcome's note says how many could not be imported (hover the outcome). Committing the same folder again, with every file already tracked, stays **Attached**.
+
+An episode that already holds a file is replaced by the scanned one, but only once the new file is in place and recorded: the old file is deleted last. If the new file cannot be imported (for example because an untracked file already sits at its rename destination), the episode keeps the file it had and stays available, and the failure is counted in the outcome's note.
+
 You can also **Discard** a scan under review, which throws away every decision you made without touching anything.
 
 > [!WARNING]
-> Committing an entry flagged *"Movie already in the library"* attaches the scanned file to that entry. If that entry already **has** a file on disk, the old one is deleted and replaced — usually what you want when re-importing a better copy, but it is a deletion, so check before committing a large batch. If it has no file (the common case for titles added by hand or through a request), nothing is deleted and the commit simply attaches.
+> Committing an entry flagged *"Movie already in the library"* attaches the scanned file to that entry. If that entry already **has** a file on disk, the old one is deleted and replaced — usually what you want when re-importing a better copy, but it is a deletion, so check before committing a large batch. The old file is deleted only once the new one is in place and recorded: if the new file cannot be imported, the movie keeps the file it had. If it has no file (the common case for titles added by hand or through a request), nothing is deleted and the commit simply attaches.
 >
 > In **Rename** mode these entries are relocated into your library root like every other accepted entry, using the scan's import mode. They are not left where they were found.
 

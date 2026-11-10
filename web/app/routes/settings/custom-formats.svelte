@@ -169,7 +169,7 @@
 												: i18n.cf_conditions_count_other({
 														count: f.conditions.length,
 													})}
-											<span class="text-fg-faint">· {summary(f)}</span>
+											<span class="text-fg-subtle">· {summary(f)}</span>
 										{/if}
 									</div>
 								</div>

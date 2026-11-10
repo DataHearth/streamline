@@ -76,7 +76,7 @@
 		</p>
 		<p class="mt-0.5 truncate text-[11.5px] text-fg-subtle">{current.sub}</p>
 	</div>
-	<span class="shrink-0 font-mono text-[10.5px] tabular-nums text-fg-faint">
+	<span class="shrink-0 font-mono text-[10.5px] tabular-nums text-fg-subtle">
 		{currentIndex + 1}/{STEPS.length}
 	</span>
 </fieldset>
@@ -97,7 +97,7 @@
 					? 'bg-status-available text-bg-deep'
 					: state === 'current'
 						? 'bg-accent text-fg-on-accent ring-2 ring-accent-ring'
-						: 'border border-border bg-bg-card text-fg-faint'}"
+						: 'border border-border bg-bg-card text-fg-subtle'}"
 			>
 				{#if state === "done"}
 					<Check size={13} aria-hidden="true" />
@@ -116,7 +116,7 @@
 				<span
 					class="block text-[12.5px] font-semibold leading-tight {state ===
 					'pending'
-						? 'text-fg-faint'
+						? 'text-fg-subtle'
 						: 'text-fg'}"
 				>
 					{step.label}

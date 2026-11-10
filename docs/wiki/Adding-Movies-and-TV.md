@@ -80,6 +80,8 @@ A series card in the library shows the same states, read from its episodes: **Do
 
 Both library toolbars filter on **Status** and **Monitoring** independently — "wanted *and* unmonitored" is one view, not two. The series Status menu adds Missing, Downloading and Importing alongside Continuing/Ended; those three are read off the show's episodes rather than being series statuses of their own. A series is **Continuing** whenever it is still running — including one announced but not yet premiered — or **Ended**.
 
+Every view you set up is in the page's address, so you can bookmark it, send it to someone or reload it and get the same view back: the filters, the search, the sort and its direction, grid or list, and on a title's page the tab you are on. The same goes for Queue & History, Torrents, Transcoding, Requests, the users list and the calendar (its month too). Back and Forward step through those views. A page you open with nothing in its address uses your last sort on the four library pages (Movies, Series, Music, Books) and the defaults everywhere else. Links from older versions keep working: they open the view they named.
+
 Cards and detail pages name a **release day** rather than a year once one is known (`2 Feb 2024`) — a film's theatrical release, a show's first air date. An existing library fills these in gradually: the value arrives with the next metadata refresh of each title, and until then the year is shown as before.
 
 A film goes **Failed** after `library.max_grab_failures` (default 3) consecutive failed grab attempts. This is a circuit breaker, not a permanent verdict — it stops Streamline hammering a tracker for something that isn't working. Open the film and hit **Search now** to try again. A timeout reaching your indexer or download client doesn't count toward it: that says nothing about the release, so it is retried on the next pass instead of spending a strike.
@@ -97,6 +99,8 @@ The detail page is where all of this comes together — cast, artwork, and once 
 Two independent jobs hunt for things, and it helps to know which one is doing what.
 
 **RSS sync** (every 15 minutes by default) reads the newest releases from your indexers and checks whether any match something you want. This is what catches new releases quickly — usually within minutes of them being posted.
+
+For TV, a release is matched to a show by name: its title, its original title or one of its alternative and translated titles. Case, punctuation and accents don't matter (`Shogun.2024.S01E01` matches *Shōgun*), and titles in other scripts match releases written in that script. A show's own title always beats another show's alternative title, and a year after a title is ignored (*Foundation (2021)* matches `Foundation.2021.S01E01`). When two shows of your library share a name, a release goes to the one whose year it states (`Doctor.Who.2005.S01E01` to *Doctor Who (2005)*); one that states no year, or a year neither has, matches neither — those releases are left to the missing search, which looks for each show on its own.
 
 **Missing search** (every 12 hours) takes the opposite approach: it walks through everything still marked Wanted and actively searches for it. This is what eventually finds older titles that will never appear in an RSS feed.
 

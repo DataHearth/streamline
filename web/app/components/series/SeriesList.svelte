@@ -58,7 +58,7 @@
 >
 	<table class="w-full text-sm">
 		<thead
-			class="bg-bg-elevated/95 text-[10px] uppercase tracking-[0.12em] text-fg-faint"
+			class="bg-bg-elevated/95 text-[10px] uppercase tracking-[0.12em] text-fg-subtle"
 		>
 			<tr class="border-b border-border">
 				{#if auth.canAddDirectly}
@@ -145,7 +145,7 @@
 							{show.title}
 						</a>
 						{#if show.original_title?.trim() && show.original_title.trim() !== show.title.trim()}
-							<p class="truncate text-xs italic text-fg-faint">
+							<p class="truncate text-xs italic text-fg-subtle">
 								{show.original_title}
 							</p>
 						{/if}

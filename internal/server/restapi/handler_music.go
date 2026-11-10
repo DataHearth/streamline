@@ -695,6 +695,8 @@ func (s *Server) BrowseMusicArtistReleases(
 		return BrowseMusicArtistReleases422JSONResponse{
 			UnprocessableEntityJSONResponse: errNoQualityProfile(err.Error()),
 		}, nil
+	case indexerSearchFailed(err):
+		return nil, err
 	case err != nil:
 		return BrowseMusicArtistReleases500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -860,6 +862,8 @@ func (s *Server) SearchMusicAlbumReleases(
 		return SearchMusicAlbumReleases422JSONResponse{
 			UnprocessableEntityJSONResponse: errNoQualityProfile(err.Error()),
 		}, nil
+	case indexerSearchFailed(err):
+		return nil, err
 	case err != nil:
 		return SearchMusicAlbumReleases500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),

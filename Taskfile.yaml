@@ -48,6 +48,18 @@ tasks:
       - biome format web/static/js web/static/css
       - nixfmt --check flake.nix nix/*.nix
 
+  docs:screenshots:
+    desc: Boot a throwaway instance, seed the demo library and retake the README screenshots (usage - task docs:screenshots -- [-only movies,books] [-keep])
+    # Needs TMDB, TVDB and Hardcover keys as STREAMLINE_METADATA__*_API_KEY,
+    # ffmpeg, and a Chromium (CHROME_PATH or on PATH). e2e/demoshots/main.go
+    # says what it seeds and how.
+    vars:
+      DEMO_BINARY: "{{.ROOT_DIR}}/tmp/demoshots/streamline"
+    cmds:
+      - task: build:go
+        vars: { BINARY: "{{.DEMO_BINARY}}" }
+      - go run ./e2e/demoshots -binary {{.DEMO_BINARY}} {{.CLI_ARGS}}
+
   migrate:diff:
     desc: Generate a new versioned migration from the ent schema (usage - task migrate:diff -- NAME)
     cmd: go run -mod=mod ./ent/migrate/main.go {{.CLI_ARGS}}
