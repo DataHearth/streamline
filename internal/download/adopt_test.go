@@ -582,6 +582,69 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			},
 		)
 
+		// Deluge's default state: no Label plugin, so nothing can carry the
+		// mark and the whole listing is the operator's. The torrent is named
+		// like a wanted movie and its files are in place.
+		It("leaves every Deluge torrent alone when the Label plugin is off",
+			func() {
+				const foreignName = "The.Batman.2022.1080p.BluRay-X"
+				srv := delugeServer(
+					func(method string, _ []json.RawMessage) (any, string) {
+						switch method {
+						case "core.get_enabled_plugins":
+							return []string{}, ""
+						case "core.get_torrents_status":
+							return map[string]any{
+								adoptHash: map[string]any{
+									"name": foreignName, "progress": 100.0,
+									"state": "Seeding", "is_finished": true,
+									"total_size": int64(4096),
+								},
+							}, ""
+						}
+						Fail("unexpected method " + method)
+						return nil, ""
+					},
+				)
+				DeferCleanup(srv.Close)
+				host, portStr, err := net.SplitHostPort(
+					strings.TrimPrefix(srv.URL, "http://"),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				port, err := strconv.Atoi(portStr)
+				Expect(err).NotTo(HaveOccurred())
+
+				root := adoptRoot(foreignName)
+				configtest.Setup(map[string]any{
+					"library": map[string]any{"download_path": root},
+					"download_clients": []map[string]any{{
+						"name": "dg", "client_type": "deluge",
+						"host": host, "port": port, "auth_method": "password",
+						"password": "pw", "enabled": true,
+					}},
+				})
+
+				store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+					Return(map[string]struct{}{}, nil).Once()
+				// Nothing is live, so a proposal an earlier release filed
+				// for this torrent is pruned.
+				store.EXPECT().
+					DeleteStalePendingAdoptions(mock.Anything, "dg", []string{}).
+					Return(0, nil).Once()
+				store.EXPECT().
+					DeleteOrphanedPendingAdoptions(mock.Anything, []string{"dg"}).
+					Return(0, nil).Once()
+
+				// Nothing is untracked, so the pass exits before loading the
+				// library: a library read or a CreateDownloadRecord fails
+				// the mock.
+				ids, err := mgr.AdoptManualTorrents(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids).To(BeEmpty())
+			},
+		)
+
 		It("files a torrent that is the library's own file as completed", func() {
 			root := adoptRoot("The.Batman.2022.1080p.BluRay-X")
 			configtest.Setup(map[string]any{

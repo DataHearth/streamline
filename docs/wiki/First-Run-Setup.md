@@ -138,6 +138,8 @@ Streamline only manages the torrents it added itself and the ones you mark as it
 
 When you mark a torrent this way, Streamline notices and offers to import it — see [Activity and Calendar](Activity-and-Calendar#adopted-torrents).
 
+Earlier releases treated every Transmission and Deluge torrent as Streamline's. Upgrading removes the open proposals for torrents without the mark, but it does not undo an adoption that already went further: one that is importing, held or failed keeps its entry in Activity and, if it imports, its torrent is cleaned up like any other download. After upgrading, check Activity for entries you do not recognise.
+
 ### Using the built-in client
 
 Set the type to `builtin` and Streamline downloads torrents itself, no external client at all:
