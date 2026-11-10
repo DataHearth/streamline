@@ -540,6 +540,9 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			})
 
 			It("keeps a row whose stat fails with a permission error", func() {
+				if os.Geteuid() == 0 {
+					Skip("root bypasses file permissions, so the stat cannot fail")
+				}
 				locked := filepath.Join(musicDir, "locked")
 				Expect(os.Mkdir(locked, 0o755)).To(Succeed())
 				unreadable := filepath.Join(locked, "01.flac")
