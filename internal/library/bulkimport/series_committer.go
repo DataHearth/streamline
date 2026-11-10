@@ -176,8 +176,16 @@ func (s *Service) commitShow(
 		same := false
 		if err == nil {
 			if same, err = sameFile(old.Path, f); err != nil {
-				slog.WarnContext(ctx, "series adopt: compare with tracked file failed",
-					"file", f, "tracked", old.Path, "error", err)
+				slog.WarnContext(
+					ctx,
+					"series adopt: compare with tracked file failed",
+					"file",
+					f,
+					"tracked",
+					old.Path,
+					"error",
+					err,
+				)
 				tally.fail("compare with tracked file", err)
 				continue
 			}
