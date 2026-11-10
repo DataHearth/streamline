@@ -14,14 +14,15 @@ without reading why it is shaped that way.**
 | File | Read before touching |
 |---|---|
 | [`auth-and-oidc.md`](auth-and-oidc.md) | `internal/auth/`, `internal/role/`, auth middleware, `internal/server/web/auth.go`, anything writing a user's role |
-| [`books.md`](books.md) | `internal/media/book/`, `internal/metadata/hardcover*`, `internal/db/book_shelf.go`, `internal/importer/book*.go`, `internal/server/opds/`, `/books/*` handlers |
+| [`books.md`](books.md) | `internal/media/book/`, `internal/metadata/hardcover*`, `internal/db/book_shelf.go`, `internal/importer/book*.go`, `/books/*` handlers |
 | [`bulk-import-matching.md`](bulk-import-matching.md) | `internal/library/` parsing & naming templates, `internal/library/bulkimport/`, rename services, TMDB/TVDB classifiers |
 | [`cardigann.md`](cardigann.md) | `internal/cardigann/**`, the fetched catalog, the version each entry is pinned to and its updates |
 | [`config-surface.md`](config-surface.md) | `internal/config/`, `/config/*` handlers, `api/config.schema.json`, config-backed resource CRUD |
 | [`downloads-and-imports.md`](downloads-and-imports.md) | `internal/bittorrent/`, `internal/importer/`, `internal/download/adopt.go`, `internal/mediaserver/` |
+| [`extensions.md`](extensions.md) | `internal/extension/`, `internal/db/extension_views.go`, `extensions/**`, the `extensions` config family, the `/extensions` handlers, `database-backup`'s extension pass |
 | [`frontend.md`](frontend.md) | `web/app/**`, `web/static/**`, `routify.config.js`, `web/embed.go` |
 | [`media-lifecycle.md`](media-lifecycle.md) | episode/movie status transitions, `internal/events/`, `internal/db` list queries, the `media-probe` job, re-identify |
-| [`music.md`](music.md) | `internal/media/music/`, `internal/metadata/musicbrainz.go`/`mblimiter.go`, `internal/server/subsonic/`, `internal/importer/album*.go`/`pack.go`, `/music/*` handlers |
+| [`music.md`](music.md) | `internal/media/music/`, `internal/metadata/musicbrainz.go`/`mblimiter.go`, `internal/importer/album*.go`/`pack.go`, `/music/*` handlers |
 | [`music-tags.md`](music-tags.md) | `internal/library/audiotags/`, `internal/library/music_tags.go`, `internal/media/music/tags.go`, `internal/download/seeding.go`, the album importer's tagging, `library.music_tags` |
 | [`nix.md`](nix.md) | `nix/**`, `flake.nix`, `nix/toolchains.json`, `renovate-pins.yaml`, the toolchain declarations in go.mod and `package.json` |
 | [`quality-scoring.md`](quality-scoring.md) | `internal/quality/**`, `qualityctx`, RSS feed/missing-search scanners, profile & custom-format handlers |

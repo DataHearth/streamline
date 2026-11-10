@@ -15,7 +15,7 @@
   <Support>https://github.com/DataHearth/streamline/discussions</Support>
   <Project>https://github.com/DataHearth/streamline</Project>
   <ReadMe>https://github.com/DataHearth/streamline/wiki/Installation#unraid</ReadMe>
-  <Overview>Streamline is one self-hosted app for movies, TV, music and books: it replaces Radarr, Sonarr, Lidarr, Readarr and Seerr with a single binary. Web UI, REST API, multi-user with SSO, a built-in request system, Torznab and Prowlarr indexers, qBittorrent, Transmission, Deluge or a built-in torrent engine, and Plex, Jellyfin and Emby notifications. Subsonic and OPDS servers are included.[br][br]
+  <Overview>Streamline is one self-hosted app for movies, TV, music and books: it replaces Radarr, Sonarr, Lidarr, Readarr and Seerr with a single binary. Web UI, REST API, multi-user with SSO, a built-in request system, Torznab and Prowlarr indexers, qBittorrent, Transmission, Deluge or a built-in torrent engine, and Plex, Jellyfin and Emby notifications. OPDS is an extension you can add.[br][br]
 On first start Streamline writes its config file to the Config folder and creates an admin account, admin@streamline.local, whose generated password is printed ONCE in the container log (the line reading 'default admin credentials'). Log in, then change it.[br][br]
 Keep downloads and media on ONE share mapped to the same path inside the container (the Data share below) so imports can hardlink, and give your torrent client the same mapping.[br][br]
 The container runs as nobody:users (99:100). Intel or AMD hardware transcoding needs the latest-vaapi tag, /dev/dri and the render group: see the Installation wiki.</Overview>
@@ -30,7 +30,7 @@ The container runs as nobody:users (99:100). Intel or AMD hardware transcoding n
   <DonateText/>
   <DonateLink/>
   <Requires>A share holding both your downloads and your media folders (for example /mnt/user/data with downloads/ and media/ inside), so imports can hardlink instead of copying.</Requires>
-  <Config Name="Web UI port" Target="8080" Default="8080" Mode="tcp" Description="Port of the web UI, the REST API, Subsonic (/rest) and OPDS (/opds)." Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Web UI port" Target="8080" Default="8080" Mode="tcp" Description="Port of the web UI, the REST API and extensions such as OPDS (/opds)." Type="Port" Display="always" Required="true" Mask="false">8080</Config>
   <Config Name="Data share" Target="/mnt/user/data" Default="/mnt/user/data" Mode="rw" Description="One share holding both downloads and media, mapped to the SAME path inside the container. Map it identically in your torrent client so the paths it reports resolve here unchanged." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/data</Config>
   <Config Name="Config" Target="/etc/streamline" Default="/mnt/user/appdata/streamline/config" Mode="rw" Description="Holds config.yaml. Written with the defaults on first start; settings saved from the web UI are written back here." Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/streamline/config</Config>
   <Config Name="App data" Target="/data" Default="/mnt/user/appdata/streamline/data" Mode="rw" Description="The database, poster cache and built-in torrent engine state. Back this up." Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/streamline/data</Config>

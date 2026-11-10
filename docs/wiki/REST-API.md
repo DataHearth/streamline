@@ -433,15 +433,30 @@ An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` and 
 | `GET` `POST` | `/auth/me/api-keys` | List / create your API keys | Any |
 | `GET` | `/auth/me/sessions` | List your sessions | Any |
 | `DELETE` | `/auth/me/api-keys/{id}` · `/auth/me/sessions/{id}` | Revoke your own key or session | Any |
-| `GET` `POST` `DELETE` | `/account/subsonic-password` | State (`enabled`, `username`, `created_at`, `last_used_at`, `last_client`, never the secret) / generate-or-rotate (the only response carrying `secret`) / disable your Subsonic password | Any, session only |
-| `GET` `POST` `DELETE` | `/account/opds-token` | The same shape for your OPDS token; `username` is your email and `secret` is the Basic password. Only a hash is stored | Any, session only |
 | `POST` | `/auth/jwt/rotate` | Rotate the JWT signing secret (logs everyone out) | 🔒 Admin |
 | `GET` `POST` | `/auth/invites` | List / create invites | 🔒 Admin |
 | `DELETE` | `/auth/invites/{id}` | Revoke an invite | 🔒 Admin |
 | `GET` `POST` | `/users` | List / create users | 🔒 Admin |
-| `GET` `PATCH` `DELETE` | `/users/{uid}` | Fetch / update / delete a user; `subsonic` carries what they may do through the Subsonic API (`can_stream`, `can_download`, `can_manage_playlists`, `can_share`, `can_rate`, `can_change_password`, `max_bit_rate` 0 or 32-320) and a `PATCH` may send any subset of it | 🔒 Admin |
+| `GET` `PATCH` `DELETE` | `/users/{uid}` | Fetch / update / delete a user; a `PATCH` may send any subset of `email`, `role`, `display_name` and `auth_method` | 🔒 Admin |
 | `POST` | `/users/{uid}/password-reset` · `/unlock` | Reset a password or clear a lockout | 🔒 Admin |
 | `DELETE` | `/users/{uid}/api-keys/{kid}` · `/sessions/{sid}` | Revoke another user's key or session | 🔒 Admin |
+
+### Extensions
+
+See [Extensions](Extensions) for what these manage. The six on `/extensions` need an admin, and the write ones answer `403` on a `read_only` instance. The two on `/users/{uid}/extensions` need an admin too; they write to the extension's own database, not the config, so they work on a `read_only` instance.
+
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` `POST` | `/extensions` | List `items`, each entry with its `state` (`running`, `disabled`, `needs_approval`, `failed`, `starting`), `reason`, `version`, what its manifest `requested` and what the entry holds (`granted`), both as mounts with their `auth`, views with their description and `bundle` (`music`, `books`), services and folders, and the account `card` it declares / add an entry (`name`, `source`, `sha256`, `enabled`, `grants`: `mounts`, `views`, `services` and, optionally, `folders`). An unreadable source is saved and shown as `failed`, not refused | 🔒 Admin |
+| `POST` | `/extensions/inspect` | Read a module without saving anything: `name`, `version`, what it asks for (`requested`) and its `card`. `422 extension_unreadable` when it cannot be fetched or read | 🔒 Admin |
+| `PATCH` `DELETE` | `/extensions/{name}` | Update `source`, `sha256`, `enabled` or `grants` / remove the entry; `?purge=true` also deletes its data directory | 🔒 Admin |
+| `POST` | `/extensions/{name}/approve` | Set the grants to exactly what the module's manifest asks for; a body is ignored. `422 extension_unreadable` when it cannot be read | 🔒 Admin |
+| `GET` | `/account/extensions` | The credential cards running extensions declare, each with its `mount`, what a client signs in with (`username`: `email` or `none`) and whether you hold a secret for it (`enabled`) | 🔑 Session |
+| `GET` `POST` `DELETE` | `/account/extensions/{name}/credential` | Your secret for an extension's card: state (never the secret) / generate or rotate (the only response carrying `secret`) / remove. `404` when the extension is not running or has no card, `502` when it does not answer | 🔑 Session |
+| `GET` | `/users/{uid}/extensions` | A user's values on every `settings` card a running extension declares: `extension`, `card`, `title`, `fields` (`id`, `kind` `switch` or `number`, `label`, `min`, `max`) and `values`. A card whose extension does not answer is left out. `404` for an unknown user | 🔒 Admin |
+| `PUT` | `/users/{uid}/extensions/{name}/cards/{card}` | Set a user's values on a settings card: `{"values": {"<field id>": …}}`, a switch `true` or `false`, a number a whole number within its `min` and `max`; a field left out is left as it is. `204` saved; `404` unknown user, or an extension that is not running or has no such card; `422 card_values_invalid` when a value does not fit its field (checked before the extension is called); `502` when the extension does not answer. Needs a session, not an API key | 🔒 Admin |
+
+An extension serves its own routes beside these: `/api/v1/extensions/{name}/cards/...` (an extension's cards; signed-in users) and `/api/v1/extensions/{name}/api/...`, plus whatever prefixes it mounts, such as `/opds`. Those are not in the OpenAPI spec; each extension documents its own. An API key reads everything under `/extensions` but writes only to an extension's own `/api/...`: adding, changing, approving or removing an extension, and its cards, need a session.
 
 ### Config, schedules, system
 
