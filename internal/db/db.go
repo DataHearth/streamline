@@ -766,6 +766,31 @@ type Store interface {
 		ctx context.Context,
 		id uint32,
 	) (*ent.DownloadRecord, error)
+	// HoldDownloadingRecord holds a downloading record (filtered on that
+	// status) and reports whether it did.
+	HoldDownloadingRecord(
+		ctx context.Context,
+		id uint32,
+		reasons []schema.HoldReason,
+	) (bool, error)
+	// ListHeldRecordsByCheck returns the held records whose every reason is
+	// check.
+	ListHeldRecordsByCheck(
+		ctx context.Context,
+		check string,
+	) ([]*ent.DownloadRecord, error)
+	SetHeldRecordReasons(
+		ctx context.Context,
+		id uint32,
+		reasons []schema.HoldReason,
+	) error
+	// ReleaseLocatedRecord moves a held record to importing from savePath and
+	// reports whether it did.
+	ReleaseLocatedRecord(
+		ctx context.Context,
+		id uint32,
+		savePath string,
+	) (bool, error)
 	ReleaseHeldDownloadRecord(
 		ctx context.Context,
 		id uint32,
@@ -928,6 +953,13 @@ type Store interface {
 	// media files — used by the library importer
 	CreateMediaFile(
 		ctx context.Context,
+		p CreateMediaFileParams,
+	) (*ent.MediaFile, error)
+	// ReplaceMediaFile writes the new row and deletes oldIDs in one
+	// transaction; it touches no file.
+	ReplaceMediaFile(
+		ctx context.Context,
+		oldIDs []uint32,
 		p CreateMediaFileParams,
 	) (*ent.MediaFile, error)
 	// FindMediaFileByID returns one MediaFile by ID, or ent NotFound.
@@ -1462,6 +1494,9 @@ type Store interface {
 	// ListUpgradeCandidateShows returns shows whose episode edges hold the
 	// rows already on disk that an upgrade may replace, files loaded.
 	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)
+	// ListShowNames returns every show with its id, title, original title,
+	// aliases and year loaded and nothing else.
+	ListShowNames(ctx context.Context) ([]*ent.TVShow, error)
 	// UpgradeCandidateShow is ListUpgradeCandidateShows for one show, for a
 	// missing-search pass immediately before a pack grab.
 	UpgradeCandidateShow(ctx context.Context, showID uint32) (*ent.TVShow, error)

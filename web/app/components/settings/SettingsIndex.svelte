@@ -52,7 +52,7 @@
 		<Icon size={18} class="shrink-0 text-fg-muted" aria-hidden="true" />
 		<span class="min-w-0 flex-1 truncate text-[15px] text-fg">{label}</span>
 		{#if count !== undefined}
-			<span class="shrink-0 font-mono text-xs tabular-nums text-fg-faint">
+			<span class="shrink-0 font-mono text-xs tabular-nums text-fg-subtle">
 				{count}
 			</span>
 		{/if}

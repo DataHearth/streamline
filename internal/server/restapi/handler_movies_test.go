@@ -425,6 +425,57 @@ var _ = Describe(
 			})
 		})
 
+		Describe("SearchMovie when no indexer answers", func() {
+			BeforeEach(func() {
+				app.movies.EXPECT().
+					Get(mock.Anything, uint32(5)).
+					Return(&ent.Movie{ID: 5, Title: "Fight Club", TmdbID: 550}, nil).
+					Once()
+			})
+
+			search := func(err error) (*http.Response, Error) {
+				app.indexers.EXPECT().
+					SearchMovie(mock.Anything, mock.Anything, mock.Anything, uint32(550), "").
+					Return(nil, err).
+					Once()
+				resp := app.do(app.req(
+					http.MethodPost, "/api/v1/movies/5/search", app.adminKey, nil,
+				))
+				DeferCleanup(resp.Body.Close)
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				return resp, body
+			}
+
+			It("answers 502 indexers_unavailable, naming the indexer", func() {
+				resp, body := search(&indexer.UnavailableError{
+					Failures: []indexer.IndexerFailure{{
+						Indexer: "Prowlarr",
+						Outcome: "unauthorized",
+						Err:     indexer.ErrUnauthorized,
+					}},
+				})
+				Expect(resp.StatusCode).To(Equal(http.StatusBadGateway))
+				Expect(body.Code).To(HaveValue(Equal("indexers_unavailable")))
+				Expect(
+					body.Message,
+				).To(ContainSubstring("Prowlarr: API key rejected"))
+			})
+
+			It("answers 504 when every indexer timed out", func() {
+				resp, body := search(&indexer.UnavailableError{
+					Failures: []indexer.IndexerFailure{{
+						Indexer: "Prowlarr",
+						Outcome: "timeout",
+						Err:     indexer.ErrUnreachable,
+					}},
+				})
+				Expect(resp.StatusCode).To(Equal(http.StatusGatewayTimeout))
+				Expect(body.Code).To(HaveValue(Equal("indexers_unavailable")))
+				Expect(body.Message).To(ContainSubstring("Prowlarr: timed out"))
+			})
+		})
+
 		Describe("SearchMovie release facts", func() {
 			It("stamps indexer privacy and the movie's grab history", func() {
 				configtest.Setup(map[string]any{

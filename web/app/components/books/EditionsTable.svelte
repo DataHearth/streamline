@@ -55,7 +55,7 @@
 <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
 	<div class="flex items-baseline gap-2">
 		<h2 class="text-[15px] font-semibold text-fg">{i18n.books_editions()}</h2>
-		<span class="font-mono text-[11px] text-fg-faint">{editions.length}</span>
+		<span class="font-mono text-[11px] text-fg-subtle">{editions.length}</span>
 	</div>
 	<fieldset class="min-w-0 inline-flex rounded-lg border border-border bg-bg-elevated p-0.5" aria-label={i18n.books_format()}>
 		{#each segs as s (s.key)}
@@ -69,7 +69,7 @@
 				)}
 			>
 				{s.label}
-				<span class="font-mono text-[10.5px] text-fg-faint">{s.n}</span>
+				<span class="font-mono text-[10.5px] text-fg-subtle">{s.n}</span>
 			</button>
 		{/each}
 	</fieldset>
@@ -80,7 +80,7 @@
 		<thead>
 			<tr class="border-b border-border">
 				{#each [i18n.common_language(), i18n.books_edition(), i18n.books_format(), i18n.common_details()] as h (h)}
-					<th class="px-3 py-2.5 text-left font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint">{h}</th>
+					<th class="px-3 py-2.5 text-left font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle">{h}</th>
 				{/each}
 				<th class="px-3 py-2.5"><span class="sr-only">{i18n.books_use()}</span></th>
 			</tr>
@@ -92,7 +92,7 @@
 						<div class="flex items-center gap-1.5">
 							<LangChip code={e.language} active={used(e)} />
 							{#if e.original}
-								<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-faint">{i18n.books_original()}</span>
+								<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">{i18n.books_original()}</span>
 							{/if}
 						</div>
 					</td>
@@ -128,7 +128,7 @@
 				<div class="flex items-center gap-1.5">
 					<LangChip code={e.language} active={used(e)} />
 					{#if e.original}
-						<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-faint">{i18n.books_original()}</span>
+						<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">{i18n.books_original()}</span>
 					{/if}
 				</div>
 				<p class="mt-1 truncate text-[13.5px] text-fg">{e.publisher} · {e.year}</p>

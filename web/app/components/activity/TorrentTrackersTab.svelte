@@ -30,7 +30,7 @@
 			</li>
 		{/each}
 	</ul>
-	<div class="mt-3 flex items-start gap-1.5 text-[11px] text-fg-faint">
+	<div class="mt-3 flex items-start gap-1.5 text-[11px] text-fg-subtle">
 		<Info size={12} class="mt-0.5 shrink-0" aria-hidden="true" />
 		<span>
 			{i18n.trackers_announce_only()}

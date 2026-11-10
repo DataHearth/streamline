@@ -38,7 +38,7 @@
 	{#if p.photo}
 		<Img src={p.photo} alt="" loading="lazy" class="h-full w-full object-cover" />
 	{:else}
-		<span class={cn("grid h-full w-full place-items-center font-mono font-bold text-fg-faint", small ? "text-[12px]" : "text-2xl")}>
+		<span class={cn("grid h-full w-full place-items-center font-mono font-bold text-fg-subtle", small ? "text-[12px]" : "text-2xl")}>
 			{initials(p.name)}
 		</span>
 	{/if}
@@ -68,7 +68,7 @@
 							<span class="flex min-w-0 items-baseline gap-1.5 text-[11.5px] text-fg-subtle">
 								{#if p.role}<span class="min-w-0 truncate">{p.role}</span>{/if}
 								{#if p.role && p.note}<span class="text-fg-faint" aria-hidden="true">·</span>{/if}
-								{#if p.note}<span class="shrink-0 font-mono text-[10.5px] text-fg-faint">{p.note}</span>{/if}
+								{#if p.note}<span class="shrink-0 font-mono text-[10.5px] text-fg-subtle">{p.note}</span>{/if}
 							</span>
 						{/if}
 					</span>
@@ -102,7 +102,7 @@
 						<div class="mt-0.5 truncate text-[10.5px] text-fg-subtle">{p.role}</div>
 					{/if}
 					{#if p.note}
-						<div class="mt-0.5 truncate font-mono text-[10px] text-fg-faint">{p.note}</div>
+						<div class="mt-0.5 truncate font-mono text-[10px] text-fg-subtle">{p.note}</div>
 					{/if}
 				</svelte:element>
 			</li>

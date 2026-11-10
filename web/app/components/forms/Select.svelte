@@ -208,7 +208,7 @@
 			placeholder={i18n.common_search()}
 			aria-label={i18n.common_search()}
 			onkeydown={onSearchKey}
-			class="h-9 w-full min-w-0 bg-transparent text-sm text-fg placeholder:text-fg-faint focus:outline-none"
+			class="h-9 w-full min-w-0 bg-transparent text-sm text-fg placeholder:text-fg-subtle focus:outline-none"
 		/>
 	</label>
 {/snippet}

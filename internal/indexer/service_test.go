@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -417,12 +418,16 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			}))
 		})
 
-		It("goes straight to the bare title for Prowlarr", func() {
-			// Prowlarr never forwards an id, so the IMDb rung would re-issue
-			// the query that just came back empty.
-			Expect(fallbacks("prowlarr", ids)).To(Equal([]SearchParams{
-				{Query: "Dune", Kind: KindMovie},
-			}))
+		It("has nothing wider to offer a Prowlarr movie search", func() {
+			// Prowlarr never forwards an id, so both the IMDb rung and the
+			// bare title would re-issue the query that just came back.
+			Expect(fallbacks("prowlarr", ids)).To(BeEmpty())
+		})
+
+		It("drops a Prowlarr season to the bare title", func() {
+			Expect(fallbacks("prowlarr", SearchParams{
+				Query: "Show", Kind: KindTV, TVDBID: 1, Season: 2, Episode: 3,
+			})).To(Equal([]SearchParams{{Query: "Show", Kind: KindTV}}))
 		})
 
 		It("skips the IMDb rung when it was the only id already", func() {
@@ -434,6 +439,166 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 		It("has nothing wider to offer a bare title", func() {
 			Expect(fallbacks("torznab", SearchParams{Query: "Dune"})).To(BeEmpty())
 		})
+	})
+
+	Describe("sendsNarrowed", func() {
+		It("reads Torznab and built-in indexers as sending every narrowing", func() {
+			for _, protocol := range []string{"torznab", "cardigann"} {
+				Expect(sendsNarrowed(protocol, SearchParams{TMDBID: 1})).To(BeTrue())
+				Expect(sendsNarrowed(protocol, SearchParams{Season: 1})).To(BeTrue())
+				Expect(
+					sendsNarrowed(protocol, SearchParams{Query: "x"}),
+				).To(BeFalse())
+			}
+		})
+
+		It("reads Prowlarr as sending a TV season only", func() {
+			// prowlarrQuery drops every id, and an episode with no season.
+			Expect(sendsNarrowed("prowlarr", SearchParams{
+				Kind: KindMovie, TMDBID: 1, IMDbID: "tt1",
+			})).To(BeFalse())
+			Expect(sendsNarrowed("prowlarr", SearchParams{
+				Kind: KindTV, TVDBID: 1,
+			})).To(BeFalse())
+			Expect(sendsNarrowed("prowlarr", SearchParams{
+				Kind: KindTV, Episode: 3,
+			})).To(BeFalse())
+			Expect(sendsNarrowed("prowlarr", SearchParams{
+				Kind: KindTV, TVDBID: 1, Season: 2,
+			})).To(BeTrue())
+		})
+	})
+
+	Describe("searchWithFallbacks", func() {
+		refused := fmt.Errorf("torznab search: %w: status 400: %w",
+			ErrUnexpectedStatus, ErrBadRequest)
+		torznab := config.IndexerEntry{Name: "Jackett", Protocol: "torznab"}
+		episode := SearchParams{
+			Query: "Show", Kind: KindTV, TVDBID: 111, Season: 2, Episode: 3,
+		}
+		release := []SearchResult{{Title: "Show.S02E03.1080p.WEB-GRP"}}
+
+		It("retries a refused narrowed query once on the bare title", func() {
+			client := &scriptedClient{answers: []scriptedAnswer{
+				{err: refused},
+				{res: release},
+			}}
+
+			res, err := searchWithFallbacks(ctx, client, torznab, episode)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(Equal(release))
+			Expect(client.asked).To(Equal([]SearchParams{
+				episode,
+				// The kind stays, so the category root still applies; the
+				// ids, season and episode go.
+				{Query: "Show", Kind: KindTV},
+			}))
+		})
+
+		It("does not retry again when the bare title comes back empty", func() {
+			client := &scriptedClient{answers: []scriptedAnswer{
+				{err: refused},
+				{},
+			}}
+
+			res, err := searchWithFallbacks(ctx, client, torznab, episode)
+			Expect(err).NotTo(HaveOccurred(), "the bare title was answered")
+			Expect(res).To(BeEmpty())
+			Expect(client.asked).To(HaveLen(2))
+		})
+
+		It("walks the IMDb rung before the bare title on a refusal", func() {
+			movie := SearchParams{
+				Query: "Dune", Kind: KindMovie, TMDBID: 438631, IMDbID: "tt1160419",
+			}
+			client := &scriptedClient{answers: []scriptedAnswer{
+				{err: refused},
+				{err: refused},
+				{res: release},
+			}}
+
+			res, err := searchWithFallbacks(ctx, client, torznab, movie)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(Equal(release))
+			Expect(client.asked).To(Equal([]SearchParams{
+				movie,
+				{Query: "Dune", Kind: KindMovie, IMDbID: "tt1160419"},
+				{Query: "Dune", Kind: KindMovie},
+			}))
+		})
+
+		It("does not retry a refused query that was not narrowed", func() {
+			client := &scriptedClient{answers: []scriptedAnswer{{err: refused}}}
+
+			_, err := searchWithFallbacks(ctx, client, torznab,
+				SearchParams{Query: "Dune", Kind: KindMovie})
+			Expect(err).To(MatchError(ErrBadRequest))
+			Expect(client.asked).To(HaveLen(1))
+		})
+
+		It("does not retry a refused Prowlarr movie search", func() {
+			// Prowlarr sends no id, so the bare title is the same request.
+			client := &scriptedClient{answers: []scriptedAnswer{{err: refused}}}
+
+			_, err := searchWithFallbacks(ctx, client,
+				config.IndexerEntry{Name: "Prowlarr", Protocol: "prowlarr"},
+				SearchParams{Query: "Dune", Kind: KindMovie, TMDBID: 438631})
+			Expect(err).To(MatchError(ErrBadRequest))
+			Expect(client.asked).To(HaveLen(1))
+		})
+
+		It("does not retry a query that failed for another reason", func() {
+			client := &scriptedClient{answers: []scriptedAnswer{{
+				err: fmt.Errorf("%w: status 500", ErrUnexpectedStatus),
+			}}}
+
+			_, err := searchWithFallbacks(ctx, client, torznab, episode)
+			Expect(err).To(MatchError(ErrUnexpectedStatus))
+			Expect(client.asked).To(HaveLen(1))
+		})
+
+		It("reports the retry's failure when no leg was answered", func() {
+			client := &scriptedClient{answers: []scriptedAnswer{
+				{err: refused},
+				{err: fmt.Errorf("%w: timeout", ErrUnreachable)},
+			}}
+
+			_, err := searchWithFallbacks(ctx, client, torznab, episode)
+			Expect(err).To(MatchError(ErrUnreachable))
+		})
+
+		It("stops the ladder at a retry that failed for another reason", func() {
+			movie := SearchParams{
+				Query: "Dune", Kind: KindMovie, TMDBID: 438631, IMDbID: "tt1160419",
+			}
+			client := &scriptedClient{answers: []scriptedAnswer{
+				{},
+				{err: fmt.Errorf("%w: timeout", ErrUnreachable)},
+			}}
+
+			_, err := searchWithFallbacks(ctx, client, torznab, movie)
+			// The first leg was answered empty, but the wider question never
+			// was: read as "nothing found", it would stamp the missing
+			// search's no-match cooldown for a search the tracker timed out on.
+			Expect(err).To(MatchError(ErrUnreachable))
+			Expect(client.asked).To(HaveLen(2), "no bare-title leg after a timeout")
+		})
+
+		It(
+			"reads a refused wider leg after an empty answer as nothing found",
+			func() {
+				// A refusal is the tracker answering that it cannot search that
+				// way, so the empty first answer stands.
+				client := &scriptedClient{answers: []scriptedAnswer{
+					{},
+					{err: refused},
+				}}
+
+				res, err := searchWithFallbacks(ctx, client, torznab, episode)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res).To(BeEmpty())
+			},
+		)
 	})
 
 	Describe("SearchParams.narrowed", func() {
@@ -595,3 +760,34 @@ var _ = Describe("withoutAudiobooks", Label("unit", "indexers"), func() {
 		},
 	)
 })
+
+// scriptedAnswer is one reply of a scriptedClient.
+type scriptedAnswer struct {
+	res []SearchResult
+	err error
+}
+
+// scriptedClient answers each Search with the next scripted reply, recording
+// what it was asked. A call past the script fails the spec.
+type scriptedClient struct {
+	answers []scriptedAnswer
+	asked   []SearchParams
+}
+
+func (c *scriptedClient) Search(
+	_ context.Context,
+	params SearchParams,
+) ([]SearchResult, error) {
+	GinkgoHelper()
+	c.asked = append(c.asked, params)
+	Expect(len(c.asked)).To(BeNumerically("<=", len(c.answers)),
+		"searched more often than scripted")
+	a := c.answers[len(c.asked)-1]
+	return a.res, a.err
+}
+
+func (c *scriptedClient) Feed(context.Context) ([]SearchResult, error) {
+	return nil, ErrFeedUnsupported
+}
+
+func (c *scriptedClient) TestConnection(context.Context) error { return nil }

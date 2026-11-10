@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { onMount } from "svelte";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { params } from "@roxi/routify";
 	import { Search, Send } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
@@ -42,7 +41,19 @@
 	// Where a stacked BD or manga card leads: monitoring and edition are set
 	// once for the whole series, and the volumes sit in a grid.
 	let id = $state("");
-	onMount(() => params.subscribe((p) => (id = p.id ?? "")));
+	let tab = $state<string>("overview");
+	syncRouteQuery(
+		/^\/books\/series\/\d+$/,
+		(p, path) => {
+			id = path.slice("/books/series/".length);
+			tab = oneOf(param(p, "tab"), ["overview", "volumes", "history"], "overview");
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "tab", tab, "overview");
+			return p;
+		},
+	);
 
 	const seriesQuery = createQuery<BookSeries>(() => ({
 		queryKey: ["books", "series", id],
@@ -60,7 +71,6 @@
 	let have = $derived(out.filter((v) => v.status === "available").length);
 	let wanted = $derived(out.filter((v) => v.status === "wanted").length);
 	let next = $derived(s?.volumes.find((v) => v.status === "upcoming"));
-	let tab = $state<string>("overview");
 	let tabTrack = $state<HTMLElement | null>(null);
 	let tabs = $derived([
 		{ key: "overview", label: i18n.common_overview(), n: "" },
@@ -124,7 +134,7 @@
 		if (next?.release_date) p.push(i18n.books_next_volume({ n: String(next.number), date: formatDate(next.release_date) }));
 		return p;
 	});
-	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
+	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle";
 
 	let people = $derived(
 		(s ? bookPeople(s.contributors ?? []) : []).map((x) => ({
@@ -286,7 +296,7 @@
 			{/snippet}
 		</MediaHero>
 
-		<nav class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
+		<nav class="sticky top-(--top-bar-height) z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
 			<div bind:this={tabTrack} class="flex w-full gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 				{#each tabs as t (t.key)}
 					{@const active = tab === t.key}
@@ -297,7 +307,7 @@
 						class={cn("relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4", active ? "text-fg" : "text-fg-subtle hover:text-fg")}
 					>
 						<span>{t.label}</span>
-						{#if t.n}<span class="ml-1.5 font-mono text-[11px] text-fg-faint">{t.n}</span>{/if}
+						{#if t.n}<span class="ml-1.5 font-mono text-[11px] text-fg-subtle">{t.n}</span>{/if}
 						{#if active}<span aria-hidden="true" class="absolute inset-x-3 -bottom-px h-0.5 rounded-t-sm bg-accent"></span>{/if}
 					</button>
 				{/each}

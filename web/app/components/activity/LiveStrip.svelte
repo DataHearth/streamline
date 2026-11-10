@@ -89,7 +89,7 @@
 	<div>
 		<div class="text-2xl font-bold tabular-nums text-fg">{active}</div>
 		<div
-			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
+			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle"
 		>
 			{i18n.common_active()}
 		</div>
@@ -99,7 +99,7 @@
 			{formatSpeed(aggregate) || "—"}
 		</div>
 		<div
-			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
+			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle"
 		>
 			{i18n.torrent_aggregate_down()}
 		</div>
@@ -107,7 +107,7 @@
 	<div>
 		<div class="text-2xl font-bold tabular-nums text-fg">{importing}</div>
 		<div
-			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
+			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle"
 		>
 			{i18n.activity_importing()}
 		</div>
@@ -117,7 +117,7 @@
 			{formatEta(minEta) || "—"}
 		</div>
 		<div
-			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
+			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle"
 		>
 			{i18n.activity_next_eta()}
 		</div>

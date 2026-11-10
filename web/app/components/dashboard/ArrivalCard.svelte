@@ -42,7 +42,7 @@
 				</div>
 			{:else}
 				<div class="relative aspect-[2/3] w-full overflow-hidden rounded-lg shadow-[0_12px_32px_rgb(0_0_0_/0.45)]">
-					<div class="absolute inset-0 grid place-items-center bg-bg-card text-fg-faint">
+					<div class="absolute inset-0 grid place-items-center bg-bg-card text-fg-subtle">
 						{#if a.kind === "series"}
 							<Tv class="h-1/5 w-1/5" aria-hidden="true" />
 						{:else}

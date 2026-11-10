@@ -89,7 +89,7 @@
 {#snippet facetChips()}
 	{#each facets as f (f.key)}
 		<div class="pt-5">
-			<div class="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-faint">
+			<div class="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-subtle">
 				{f.label}
 			</div>
 			<div class="flex flex-wrap gap-2">
@@ -124,7 +124,7 @@
 		<span class={cn("h-2 w-2 rounded-full", current?.dot ?? "bg-fg-subtle")} aria-hidden="true"></span>
 		{current?.label}
 		{#if current?.count != null}
-			<span class="font-mono text-[10.5px] font-normal tabular text-fg-faint">{current.count}</span>
+			<span class="font-mono text-[10.5px] font-normal tabular text-fg-subtle">{current.count}</span>
 		{/if}
 		<ChevronDown size={14} class="text-fg-subtle" aria-hidden="true" />
 	</button>
@@ -215,7 +215,7 @@
 			oninput={(e) => onQueryChange(e.currentTarget.value)}
 			{placeholder}
 			aria-label={placeholder}
-			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint [&::-webkit-search-cancel-button]:hidden"
+			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle [&::-webkit-search-cancel-button]:hidden"
 		/>
 		{#if query}
 			<button
@@ -300,7 +300,7 @@
 	{/if}
 </div>
 
-<div class="sticky top-16 z-20 bg-bg-deep/85 backdrop-blur-md md:hidden">
+<div class="sticky top-(--top-bar-height) z-20 bg-bg-deep/85 backdrop-blur-md md:hidden">
 	<div class="flex items-center gap-2 px-4 py-2">
 		<nav
 			use:dragScroll

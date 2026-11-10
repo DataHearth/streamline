@@ -71,7 +71,7 @@
 {:else}
 	<div class="@container">
 	<table class="w-full border-collapse text-left">
-		<thead class="text-[10px] uppercase tracking-[0.12em] text-fg-faint">
+		<thead class="text-[10px] uppercase tracking-[0.12em] text-fg-subtle">
 			<tr class="border-b border-border">
 				{#each COLS as c (c.key)}
 					<th
@@ -128,7 +128,7 @@
 						<span
 							class={(p.download_rate ?? 0) > 0
 								? "text-status-downloading"
-								: "text-fg-faint"}
+								: "text-fg-subtle"}
 						>
 							{formatSpeed(p.download_rate) || "—"}
 						</span>
@@ -137,7 +137,7 @@
 						class="w-px whitespace-nowrap py-2 pl-2 text-right font-mono text-xs tabular-nums"
 					>
 						<span
-							class={(p.upload_rate ?? 0) > 0 ? "text-status-seeding" : "text-fg-faint"}
+							class={(p.upload_rate ?? 0) > 0 ? "text-status-seeding" : "text-fg-subtle"}
 						>
 							{formatSpeed(p.upload_rate) || "—"}
 						</span>
@@ -147,7 +147,7 @@
 		</tbody>
 	</table>
 	</div>
-	<p class="mt-3 text-[11px] text-fg-faint">
+	<p class="mt-3 text-[11px] text-fg-subtle">
 		{i18n.torrent_peers_summary({ connected: peers.length, swarm: peerCount })}
 	</p>
 {/if}

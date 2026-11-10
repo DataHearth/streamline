@@ -63,7 +63,7 @@
 	const chipOff = "border-border bg-surface text-fg-muted active:bg-surface-2";
 	const chipOn = "border-accent-line bg-accent-soft text-accent-text";
 	const label =
-		"mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint";
+		"mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle";
 
 	let chips = $derived(statusChips(counts));
 	// The same dot the rows carry, so a chip and the rows it keeps match.

@@ -70,7 +70,7 @@
 					<time
 						datetime={event.created_at}
 						title={formatDateTime(event.created_at)}
-						class="whitespace-nowrap text-fg-faint"
+						class="whitespace-nowrap text-fg-subtle"
 					>
 						{formatRelative(event.created_at)}
 					</time>

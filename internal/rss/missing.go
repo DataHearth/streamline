@@ -151,8 +151,11 @@ func unthrottledWindow() searchWindow {
 }
 
 // Run performs one sync pass over all eligible wanted movies.
-// Returns a non-nil error only for ctx cancellation; per-movie errors are
-// logged and counted but do not abort the run.
+// Per-movie errors are logged and counted but do not abort the run, with one
+// exception: a search no indexer answered stops the pass, which then returns
+// that error. Every later movie would wait out the same timeout for the same
+// non-answer, and with no cooldown stamped on a failed search the next tick
+// would walk the whole list into it again.
 func (s *MissingSearcher) Run(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "rss.sync")
 	defer span.End()
@@ -221,6 +224,7 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 	}
 
 	var grabbed, noMatch, alreadyExists, errCount, done atomic.Int64
+	var unavailable atomic.Pointer[error]
 	sem := make(chan struct{}, s.workers)
 	var wg sync.WaitGroup
 
@@ -228,8 +232,14 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 		if err := ctx.Err(); err != nil {
 			break
 		}
-		wg.Add(1)
 		sem <- struct{}{}
+		// Read once a worker slot is free, so the search that freed it has
+		// already said whether any indexer answered.
+		if unavailable.Load() != nil {
+			<-sem
+			break
+		}
+		wg.Add(1)
 		go func(m *ent.Movie) {
 			defer wg.Done()
 			defer func() { <-sem }()
@@ -239,6 +249,9 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 				grabbed.Add(1)
 			case errors.Is(err, ErrNoEligibleRelease):
 				noMatch.Add(1)
+			case indexer.Unavailable(err):
+				errCount.Add(1)
+				unavailable.CompareAndSwap(nil, &err)
 			case errors.Is(err, download.ErrTorrentAlreadyExists):
 				alreadyExists.Add(1)
 				slog.InfoContext(ctx,
@@ -261,6 +274,16 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		outcome = "cancelled"
 		return otelx.RecordSpanError(span, err)
+	}
+	if err := unavailable.Load(); err != nil {
+		outcome = "indexers_unavailable"
+		slog.WarnContext(ctx, "missing-search pass stopped: no indexer answered",
+			"eligible", len(movies),
+			"searched", done.Load(),
+			"grabbed", grabbed.Load(),
+			"error", *err,
+		)
+		return otelx.RecordSpanError(span, *err)
 	}
 	slog.InfoContext(ctx, "missing-search pass complete",
 		"eligible", len(movies),
@@ -296,8 +319,8 @@ func (s *MissingSearcher) SearchNow(ctx context.Context, m *ent.Movie) {
 //
 // Returns nil on a successful grab, ErrNoEligibleRelease when nothing matches
 // the quality bar, or a wrapped error on indexer / downloader failure.
-// last_search_at is bumped whenever the indexer responds (success or no
-// match) so cooldown counters advance.
+// last_search_at is bumped whenever an indexer answered (a grab or no match)
+// so cooldown counters advance; a search no indexer answered stamps nothing.
 func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	ctx, span := tracer.Start(ctx, "rss.process_movie",
 		trace.WithAttributes(

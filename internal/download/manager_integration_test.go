@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -201,6 +202,11 @@ var _ = Describe("Manager.CheckStatus", Label("integration", "downloads"), func(
 
 		host, port := splitHostPort(ts.URL)
 		qbitClientConfig("qbit-test", host, port)
+		// The payload is at the convention path, where the monitor looks
+		// first; a missing one is held (see the payload location specs).
+		Expect(os.Mkdir(filepath.Join(
+			config.Get().Library.DownloadPath, "Fight.Club.1999.1080p",
+		), 0o755)).To(Succeed())
 
 		m, err := dbClient.Movie.Create().
 			SetTitle("Fight Club").

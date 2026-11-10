@@ -137,8 +137,12 @@
 				>
 					{entry.sub}
 				</span>
-				{#if entry.outcome === "failed" && entry.outcomeMessage}
-					<span class="w-full text-[11.5px] text-status-failed">
+				{#if entry.outcomeMessage}
+					<span
+						class="w-full text-[11.5px] {entry.outcome === 'failed'
+							? 'text-status-failed'
+							: 'text-fg-muted'}"
+					>
 						{entry.outcomeMessage}
 					</span>
 				{/if}
@@ -151,7 +155,7 @@
 				{#if canPick}
 					{#if entry.candidates.length > 0}
 						<div
-							class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
+							class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
 						>
 							{i18n.imports_candidates_from({ source })}
 						</div>

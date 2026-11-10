@@ -39,11 +39,15 @@
 		onClose: () => void;
 	} = $props();
 
-	// scope is "series" (whole show) or a season number as a string.
-	let scope = $state("series");
-	// Reset to defaults each time the modal reopens.
-	$effect(() => {
-		if (open) scope = initialScope;
+	// scope is "series" (whole show) or a season number as a string. It is
+	// derived so it already holds initialScope when the table below mounts: a
+	// scope set by an $effect lands after the mount, and the table would first
+	// search the previous scope across every indexer, for a list nothing
+	// shows. Reopening resets it; picking another scope overrides it until
+	// then.
+	let scope = $derived.by(() => {
+		void open;
+		return initialScope;
 	});
 
 	let options = $derived([

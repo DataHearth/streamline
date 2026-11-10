@@ -104,7 +104,7 @@
 {#snippet stat(Icon: typeof Shield, label: string, value: string)}
 	<div class="flex flex-col gap-1 bg-bg-elevated px-3.5 py-3">
 		<dt
-			class="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-fg-faint"
+			class="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-fg-subtle"
 		>
 			<Icon size={11} aria-hidden="true" />
 			{label}

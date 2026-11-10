@@ -3,11 +3,15 @@
 
 	// `dot` maps each filter to a real --status-* token (some chip keys like
 	// "importing"/"error" have no token of their own — mirror lib/format.pillStatus).
-	const ACTIVITY_CHIPS: Record<
+	// The pages read the keys too, to check a ?status= list against them.
+	export const ACTIVITY_CHIPS: Record<
 		ActivityView,
 		{ key: string; label: string; dot: string }[]
 	> = {
+		// Held leads: it is the one state waiting on a person, and the page
+		// lists those rows first as well.
 		queue: [
+			{ key: "held", label: i18n.lc_held(), dot: "held" },
 			{ key: "downloading", label: i18n.lc_downloading(), dot: "downloading" },
 			{ key: "stalled", label: i18n.lc_stalled(), dot: "stalled" },
 			{ key: "importing", label: i18n.lc_importing(), dot: "grabbing" },
@@ -98,7 +102,7 @@
      away with the page on a phone; a selection's bar is what stays pinned. -->
 <div
 	class={cn(
-		"top-16 z-20 -mx-4 mb-1 flex flex-wrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:sticky md:-mx-6 md:gap-3 md:px-6",
+		"top-(--top-bar-height) z-20 -mx-4 mb-1 flex flex-wrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:sticky md:-mx-6 md:gap-3 md:px-6",
 		!leading && "sticky flex-nowrap",
 	)}
 >
@@ -208,7 +212,7 @@
 					? i18n.transcode_filter_placeholder()
 					: i18n.activity_filter_title_movie()}
 			aria-label={i18n.activity_filter()}
-			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
+			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
 		/>
 		{#if search}
 			<button

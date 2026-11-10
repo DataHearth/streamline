@@ -2,16 +2,20 @@ package indexer
 
 import (
 	"context"
+	"encoding/xml"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
@@ -460,6 +464,19 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			Expect(queries[1].Get("categories")).To(Equal("5000"))
 		})
 
+		It("does not re-send a movie search it sent no id with", func() {
+			// prowlarrQuery never forwards the TMDB id, so the bare title
+			// would be this very request again.
+			rec := newProwlarrRecorder(`[]`)
+			DeferCleanup(rec.Close)
+			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+			_, err := New(nil).SearchMovie(context.Background(), []string{"Dune"},
+				nil, 438631, "tt1160419")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec.Queries()).To(HaveLen(1))
+		})
+
 		It("does not retry a query that was already bare", func() {
 			// A movie search with no tmdbid names nothing beyond the title, so
 			// there is no narrower form to fall back from.
@@ -546,6 +563,60 @@ var _ = Describe("the Torznab id ladder", Label("integration", "indexers"),
 			Expect(queries[2]).NotTo(HaveKey("tmdbid"))
 			Expect(queries[2].Get("q")).To(Equal("Dune"))
 		})
+
+		It("walks the same ladder when Jackett refuses an id", func() {
+			// Jackett answers an id its tracker cannot search by with a 400
+			// and error 203; the bare title is answered.
+			var (
+				mu      sync.Mutex
+				queries []url.Values
+			)
+			ts := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					mu.Lock()
+					queries = append(queries, r.URL.Query())
+					mu.Unlock()
+					w.Header().Set("Content-Type", "application/xml")
+					q := r.URL.Query()
+					if q.Has("tmdbid") || q.Has("imdbid") {
+						w.WriteHeader(http.StatusBadRequest)
+						_, err := w.Write([]byte(xml.Header +
+							`<error code="203" description="Function Not Available" />`))
+						Expect(err).NotTo(HaveOccurred())
+						return
+					}
+					_, err := w.Write(torznabXML([]testRSSItem{{
+						Title: "Dune.2021.1080p.WEB-GRP",
+						Link:  "http://x/a.torrent",
+					}}))
+					Expect(err).NotTo(HaveOccurred())
+				}))
+			DeferCleanup(ts.Close)
+			host, port := splitHostPort(ts.URL)
+			configtest.Setup(map[string]any{
+				"indexers": []map[string]any{{
+					"name":     "Jackett",
+					"host":     host,
+					"port":     int(port),
+					"api_key":  "key",
+					"protocol": "torznab",
+					"enabled":  true,
+				}},
+			})
+
+			results, err := New(nil).SearchMovie(context.Background(),
+				[]string{"Dune"}, nil, 438631, "tt1160419")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(1), "the bare title's release is kept")
+
+			mu.Lock()
+			defer mu.Unlock()
+			Expect(queries).To(HaveLen(3))
+			Expect(queries[0].Get("tmdbid")).To(Equal("438631"))
+			Expect(queries[1].Get("imdbid")).To(Equal("tt1160419"))
+			Expect(queries[2].Get("t")).To(Equal("search"))
+			Expect(queries[2].Get("q")).To(Equal("Dune"))
+		})
 	},
 )
 
@@ -602,3 +673,184 @@ func prowlarrIndexerConfig(rawURL string) map[string]any {
 		},
 	}
 }
+
+// statusServer answers every request with status and body, counting them.
+type statusServer struct {
+	*httptest.Server
+	mu    sync.Mutex
+	calls int
+}
+
+func newStatusServer(status int, body string) *statusServer {
+	s := &statusServer{}
+	s.Server = httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			s.mu.Lock()
+			s.calls++
+			s.mu.Unlock()
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(status)
+			_, _ = w.Write([]byte(body))
+		}))
+	return s
+}
+
+func (s *statusServer) Calls() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.calls
+}
+
+// prowlarrEntries configures one Prowlarr entry per URL, named in order.
+func prowlarrEntries(names []string, urls ...string) map[string]any {
+	GinkgoHelper()
+	entries := make([]map[string]any, 0, len(urls))
+	for i, u := range urls {
+		host, port := splitHostPort(u)
+		entries = append(entries, map[string]any{
+			"name":     names[i],
+			"host":     host,
+			"port":     int(port),
+			"api_key":  "key",
+			"protocol": "prowlarr",
+			"enabled":  true,
+		})
+	}
+	return map[string]any{"indexers": entries}
+}
+
+var _ = Describe("a search no indexer answers", Label("integration", "indexers"),
+	func() {
+		It("fails instead of reading as an empty result", func() {
+			down := newStatusServer(http.StatusInternalServerError, `{}`)
+			DeferCleanup(down.Close)
+			configtest.Setup(prowlarrEntries([]string{"Prowlarr"}, down.URL))
+
+			results, err := New(nil).SearchMovie(context.Background(),
+				[]string{"Dune", "Dune: Part One"}, nil, 438631, "")
+			Expect(results).To(BeEmpty())
+			Expect(err).To(MatchError(ErrNoIndexerAnswered))
+			Expect(Unavailable(err)).To(BeTrue())
+			// Not a transport failure, so not ErrUnreachable either.
+			Expect(err).NotTo(MatchError(ErrUnreachable))
+
+			var ue *UnavailableError
+			Expect(errors.As(err, &ue)).To(BeTrue())
+			Expect(ue.Failures).To(HaveLen(1))
+			Expect(ue.Failures[0].Indexer).To(Equal("Prowlarr"))
+			Expect(ue.Failures[0].Outcome).To(Equal("unexpected_status"))
+			Expect(ue.TimedOut()).To(BeFalse())
+		})
+
+		It("keeps what the indexers that answered found", func() {
+			down := newStatusServer(http.StatusBadGateway, `{}`)
+			DeferCleanup(down.Close)
+			up := newStatusServer(http.StatusOK, `[
+				{"title":"Dune.2021.1080p.WEB-GRP","downloadUrl":"http://x/a.torrent",
+				 "protocol":"torrent","seeders":10}
+			]`)
+			DeferCleanup(up.Close)
+			configtest.Setup(prowlarrEntries(
+				[]string{"Down", "Up"}, down.URL, up.URL,
+			))
+
+			results, err := New(nil).SearchMovie(context.Background(),
+				[]string{"Dune"}, nil, 438631, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(1))
+		})
+
+		It("reads a timed-out indexer as an unreachable one that timed out", func() {
+			release := make(chan struct{})
+			slow := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					select {
+					case <-release:
+					case <-r.Context().Done():
+					}
+				}))
+			DeferCleanup(slow.Close)
+			DeferCleanup(func() { close(release) })
+			was := otelx.HTTPClient.Timeout
+			otelx.HTTPClient.Timeout = 100 * time.Millisecond
+			DeferCleanup(func() { otelx.HTTPClient.Timeout = was })
+			configtest.Setup(prowlarrEntries([]string{"Prowlarr"}, slow.URL))
+
+			_, err := New(nil).SearchMovie(context.Background(),
+				[]string{"Dune"}, nil, 438631, "")
+			Expect(Unavailable(err)).To(BeTrue())
+			Expect(err).To(MatchError(ErrUnreachable))
+			var ue *UnavailableError
+			Expect(errors.As(err, &ue)).To(BeTrue())
+			Expect(ue.TimedOut()).To(BeTrue())
+			Expect(err.Error()).To(ContainSubstring("Prowlarr: timed out"))
+		})
+
+		It("fails a query whose retry failed", func() {
+			// The narrow request answered empty and the wider one was never
+			// answered: nothing says the episode is not there.
+			var (
+				mu    sync.Mutex
+				calls int
+			)
+			srv := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, _ *http.Request) {
+					mu.Lock()
+					calls++
+					n := calls
+					mu.Unlock()
+					if n == 1 {
+						_, _ = w.Write([]byte(`[]`))
+						return
+					}
+					w.WriteHeader(http.StatusServiceUnavailable)
+				}))
+			DeferCleanup(srv.Close)
+			configtest.Setup(prowlarrEntries([]string{"Prowlarr"}, srv.URL))
+
+			_, _, err := New(nil).SearchEpisode(context.Background(),
+				[]string{"Show"}, nil, 111, "", 2, 3)
+			Expect(Unavailable(err)).To(BeTrue())
+			mu.Lock()
+			defer mu.Unlock()
+			Expect(calls).To(Equal(2))
+		})
+
+		It("reports a cancelled search as cancelled, not as an outage", func() {
+			srv := newStatusServer(http.StatusOK, `[]`)
+			DeferCleanup(srv.Close)
+			configtest.Setup(prowlarrEntries([]string{"Prowlarr"}, srv.URL))
+
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			_, err := New(nil).SearchMovie(ctx, []string{"Dune"}, nil, 1, "")
+			Expect(err).To(MatchError(context.Canceled))
+			Expect(Unavailable(err)).To(BeFalse())
+		})
+
+		It("is not an error when no indexer is enabled", func() {
+			configtest.Setup(map[string]any{})
+			results, err := New(nil).SearchMovie(context.Background(),
+				[]string{"Dune"}, nil, 1, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeEmpty())
+		})
+	})
+
+var _ = Describe("the Prowlarr retry", Label("integration", "indexers"), func() {
+	It("does not re-send an id-only movie or series search", func() {
+		srv := newStatusServer(http.StatusOK, `[]`)
+		DeferCleanup(srv.Close)
+		configtest.Setup(prowlarrEntries([]string{"Prowlarr"}, srv.URL))
+
+		_, err := New(nil).SearchMovie(context.Background(),
+			[]string{"Dune"}, nil, 438631, "tt1160419")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(srv.Calls()).To(Equal(1))
+
+		_, err = New(nil).SearchSeries(context.Background(),
+			[]string{"Show"}, nil, 111, "tt1")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(srv.Calls()).To(Equal(2))
+	})
+})

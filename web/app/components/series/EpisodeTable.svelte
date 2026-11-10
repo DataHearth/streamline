@@ -61,7 +61,7 @@
 >
 	<table class="w-full text-sm">
 		<thead
-			class="bg-bg-elevated/95 text-[10px] uppercase tracking-[0.12em] text-fg-faint"
+			class="bg-bg-elevated/95 text-[10px] uppercase tracking-[0.12em] text-fg-subtle"
 		>
 			<tr class="border-b border-border">
 				<th scope="col" class="w-10 px-2 py-2.5" aria-hidden="true"></th>
@@ -110,7 +110,7 @@
 					<td class="px-3 py-2.5 font-mono text-xs tabular text-fg-muted">
 						{epCode(ep)}
 						{#if ep.absolute_number && seriesType !== "anime"}
-							<span class="text-fg-faint">· #{ep.absolute_number}</span>
+							<span class="text-fg-subtle">· #{ep.absolute_number}</span>
 						{/if}
 					</td>
 					<!-- max-w-0 + w-full, not min-w-0: the table lays out auto, where a
@@ -133,7 +133,7 @@
 					>
 						{#if ep.air_date}
 							{formatDateShort(ep.air_date)}
-							<span class="block text-fg-faint">{formatRelative(ep.air_date)}</span>
+							<span class="block text-fg-subtle">{formatRelative(ep.air_date)}</span>
 						{:else}
 							—
 						{/if}

@@ -47,8 +47,10 @@ type slotWork struct {
 // grabs the best accepted release. Standalone books are searched slot by slot;
 // the ebook volumes of a series are grouped and searched together, so a
 // series costs one query set per pass. Per-slot failures are logged and never
-// abort the pass; the error return is for the initial queries, a bad config
-// window or ctx cancellation.
+// abort the pass, except a search no indexer answered, which ends it and is
+// returned: every later slot would wait out the same timeout, and a failed
+// search stamps no cooldown. The error return is otherwise for the initial
+// queries, a bad config window or ctx cancellation.
 func (s *Service) SearchMissing(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "book.search_missing")
 	defer span.End()
@@ -106,7 +108,11 @@ func (s *Service) SearchMissing(ctx context.Context) error {
 			return otelx.RecordSpanError(span, err)
 		}
 		scheduler.Progress(ctx, i, total)
-		if s.searchSlot(ctx, w.book, w.kind) {
+		ok, err := s.searchSlot(ctx, w.book, w.kind)
+		if err != nil {
+			return s.stopMissing(ctx, span, total, i+1, grabbed, err)
+		}
+		if ok {
 			grabbed++
 		}
 	}
@@ -115,12 +121,29 @@ func (s *Service) SearchMissing(ctx context.Context) error {
 			return otelx.RecordSpanError(span, err)
 		}
 		scheduler.Progress(ctx, len(work)+i, total)
-		grabbed += s.searchSeriesVolumes(ctx, g.series, g.volumes)
+		n, err := s.searchSeriesVolumes(ctx, g.series, g.volumes)
+		grabbed += n
+		if err != nil {
+			return s.stopMissing(ctx, span, total, len(work)+i+1, grabbed, err)
+		}
 	}
 	scheduler.Progress(ctx, total, total)
 	slog.InfoContext(ctx, "book missing-search pass complete",
 		"eligible", total, "grabbed", grabbed)
 	return nil
+}
+
+// stopMissing ends a missing-search pass no indexer answered.
+func (s *Service) stopMissing(
+	ctx context.Context,
+	span trace.Span,
+	eligible, searched, grabbed int,
+	err error,
+) error {
+	slog.WarnContext(ctx, "book missing-search pass stopped: no indexer answered",
+		"eligible", eligible, "searched", searched, "grabbed", grabbed,
+		"error", err)
+	return otelx.RecordSpanError(span, err)
 }
 
 type seriesGroup struct {
@@ -147,11 +170,16 @@ func groupBySeries(volumes []*ent.Book) []seriesGroup {
 	return groups
 }
 
-// searchSlot reports whether a release was grabbed. last_search_at is stamped
-// whenever the indexers answered, so the cooldown advances on an empty result
-// too; a failed search stamps nothing and counts no strike. Rejected releases
-// are kept for the UI and never grabbed here.
-func (s *Service) searchSlot(ctx context.Context, b *ent.Book, kind string) bool {
+// searchSlot reports whether a release was grabbed, and the error of a search
+// no indexer answered. last_search_at is stamped whenever the indexers
+// answered, so the cooldown advances on an empty result too; a failed search
+// stamps nothing and counts no strike. Rejected releases are kept for the UI
+// and never grabbed here.
+func (s *Service) searchSlot(
+	ctx context.Context,
+	b *ent.Book,
+	kind string,
+) (bool, error) {
 	ctx, span := tracer.Start(ctx, "book.search_missing.slot",
 		trace.WithAttributes(
 			attribute.Int("book.id", int(b.ID)),
@@ -184,7 +212,10 @@ func (s *Service) searchSlot(ctx context.Context, b *ent.Book, kind string) bool
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "book missing-search: search failed",
 			"book.id", b.ID, "book.kind", kind, "error", err)
-		return false
+		if indexer.Unavailable(err) {
+			return false, err
+		}
+		return false, nil
 	}
 	results = len(releases)
 	if err := s.db.SetBookSlotLastSearchAt(ctx, b.ID, kind, time.Now()); err != nil {
@@ -195,9 +226,9 @@ func (s *Service) searchSlot(ctx context.Context, b *ent.Book, kind string) bool
 	sortReleases(releases)
 	if s.grabBest(ctx, span, b, kind, namingBook(releases, b)) {
 		outcome = "grabbed"
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 // namingBook keeps the releases whose name is this book by this author. An
@@ -331,12 +362,13 @@ func bestForVolume(
 // searchSeriesVolumes searches the wanted volumes of one series with a single
 // series query, parsing the volume out of each release; each volume takes the
 // best accepted match. At most maxVolumeFallbacks volumes the query missed get
-// a query of their own. It returns how many volumes it grabbed.
+// a query of their own. It returns how many volumes it grabbed, and the error
+// of a search no indexer answered, which ends the pass.
 func (s *Service) searchSeriesVolumes(
 	ctx context.Context,
 	series *ent.BookSeries,
 	vols []*ent.Book,
-) int {
+) (int, error) {
 	ctx, span := tracer.Start(ctx, "book.search_series_missing",
 		trace.WithAttributes(
 			attribute.Int("series.id", int(series.ID)),
@@ -380,7 +412,10 @@ func (s *Service) searchSeriesVolumes(
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "series missing-search: search failed",
 			"series.id", series.ID, "error", err)
-		return 0
+		if indexer.Unavailable(err) {
+			return 0, err
+		}
+		return 0, nil
 	}
 	byVolume := volumeReleases(found, series)
 
@@ -428,6 +463,10 @@ func (s *Service) searchSeriesVolumes(
 			otelx.RecordSpanError(span, err)
 			slog.WarnContext(ctx, "series missing-search: volume search failed",
 				"book.id", v.ID, "error", err)
+			if indexer.Unavailable(err) {
+				span.SetAttributes(attribute.Int("series.grabbed", grabbed))
+				return grabbed, err
+			}
 			continue
 		}
 		releases, ok := bestForVolume(
@@ -439,7 +478,7 @@ func (s *Service) searchSeriesVolumes(
 		}
 	}
 	span.SetAttributes(attribute.Int("series.grabbed", grabbed))
-	return grabbed
+	return grabbed, nil
 }
 
 // wantedSlot reports a slot a search could act on: monitored, wanted, and on a
@@ -492,7 +531,9 @@ func (s *Service) SearchNowBook(
 	go func() {
 		defer observability.RecoverPanic(bg, "book.search_now", nil)
 		for _, k := range slots {
-			s.searchSlot(bg, b, k)
+			if _, err := s.searchSlot(bg, b, k); err != nil {
+				break
+			}
 		}
 	}()
 	return numeric.SaturateU32(len(slots)), nil
@@ -522,7 +563,7 @@ func (s *Service) SearchNowSeries(ctx context.Context, id uint32) (uint32, error
 	bg := context.WithoutCancel(ctx)
 	go func() {
 		defer observability.RecoverPanic(bg, "book.search_now_series", nil)
-		s.searchSeriesVolumes(bg, series, wanted)
+		_, _ = s.searchSeriesVolumes(bg, series, wanted)
 	}()
 	return numeric.SaturateU32(len(wanted)), nil
 }

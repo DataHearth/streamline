@@ -111,7 +111,7 @@
 		<h2
 			class="text-[11px] font-semibold uppercase tracking-[0.14em] {danger
 				? 'text-status-failed'
-				: 'text-fg-faint'}"
+				: 'text-fg-subtle'}"
 		>
 			{title}
 		</h2>

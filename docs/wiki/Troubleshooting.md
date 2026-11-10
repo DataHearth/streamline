@@ -56,7 +56,7 @@ Titles sit at **Wanted** forever. Work down this list in order.
 
 **2. Is there an enabled download client that passes its test?** Settings → Download clients → Test.
 
-**3. Does a manual search return results?** Open the title → **Search**. An empty result usually means your indexers have nothing, but two other causes look identical:
+**3. Does a manual search return results?** Open the title → **Search**. When no indexer answered at all — timed out, unreachable, refused the API key — the search says so and names each indexer, rather than showing an empty list; the missing searches stop their pass there and leave the titles' cooldown alone, so they are searched again on the next run. If only some indexers fail, you get what the others found, and the log has an `indexer search incomplete` line naming the rest. An empty result usually means your indexers have nothing, but two other causes look identical:
 
 - **Your indexer proxy is down.** Prowlarr answers a failed search with `200 OK` and an empty list — not an error — so Streamline cannot tell a search that found nothing from one that crashed. If a Prowlarr search works in Prowlarr's own UI but not here, check Prowlarr's log for `SearchController: Search failed`. A search that dies in Prowlarr's capability lookup leaves no `Searching indexer(s):` line for the term at all, and one unreachable indexer proxy is enough to empty every categorised search.
 - **The title is held in a different language from its releases.** Streamline matches results against the title, the original title, and the provider's translated and alternative titles. A film or show whose provider record carries no alias in the language its releases are named in will have those releases filtered out. A metadata refresh re-harvests the alias list.
@@ -70,7 +70,7 @@ Titles sit at **Wanted** forever. Work down this list in order.
 
 Loosen the profile, or grab the release manually — a manual grab bypasses the profile entirely.
 
-**5. Has it been long enough?** RSS sync runs every 15 minutes; missing search every 12 hours. A title that failed to match once is also on a `library.no_match_cooldown` (6h default) before it's searched again. Force it with **Search now** on the title, or run the job from Settings → Schedules.
+**5. Has it been long enough?** RSS sync runs every 15 minutes; missing search every 12 hours. A title that was searched and matched nothing is also on a `library.no_match_cooldown` (6h default) before it's searched again; a search no indexer answered does not start that cooldown. Force it with **Search now** on the title, or run the job from Settings → Schedules.
 
 **6. Is it marked Failed?** After `library.max_grab_failures` (default 3) consecutive failures Streamline stops trying. **Search now** resets it. Episodes report the running count as `grab_failures` (absent when zero) on the series detail response, which is the only warning before an episode goes quiet — a retired episode is skipped by the search entirely, so it produces no log line and no activity entry.
 
@@ -111,6 +111,19 @@ Fix the mounts (one parent mount, per [the folder rule](Installation#before-you-
 **A failed import is not a dead end.** Expand the row in **Queue & History → History** and use **Retry import** once you've fixed the cause. It clears the attempt counter and hands the record back to the importer. It reads the *same* files as before, so fixing the cause first is the whole point — retrying an unchanged failure just fails again.
 
 ---
+
+## A finished download is held with "location"
+
+A download finished in the client, and on **Queue & History** it sits under *Needs attention* as held, with a **location** finding: *Streamline looks in* `library.download_path/<torrent name>`, *The client saved to* another path. Nothing has been imported.
+
+Streamline never tells the client where to save. It expects the files at `library.download_path/<torrent name>`, and when they are not there it tries the save path the client reports, translated through [path mappings](Configuration-Reference#path-mappings). Found at neither, the download is held instead of imported. Two common causes:
+
+- **qBittorrent's torrent management mode is Manual** (its default). In Manual mode a category's save path is ignored, so a grab tagged `streamline` still lands in the default save path. Set Options → Downloads → **Default Torrent Management Mode: Automatic**, and give the `streamline` category your download folder as its save path. For a torrent already downloaded, right-click it → **Automatic Torrent Management** (or **Set location**) to move it. Transmission and Deluge behave the same way whenever their download directory is not your download folder.
+- **The client and Streamline see the folder under different paths** (Docker, Kubernetes). Add a [path mapping](Configuration-Reference#path-mappings) from the client's path to Streamline's.
+
+While qBittorrent is moving a torrent's files (switching it to Automatic Torrent Management, **Set location**, or out of its incomplete folder), Streamline shows it as downloading and waits for the move to end before it imports. You don't need to do anything else: Streamline checks again every 30 seconds and starts the import as soon as the files are at either path. **Import anyway** is not offered, since there is nothing to import yet; **Delete** removes the torrent and its files from the client.
+
+> That is why it waits as held: imported anyway, it would fail `library.import_max_attempts` times on a path nothing was written to and land in History as failed.
 
 ## An adopted torrent says "files not found"
 

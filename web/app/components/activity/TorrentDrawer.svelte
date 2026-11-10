@@ -169,7 +169,7 @@
 			aria-label={i18n.torrent_detail()}
 		>
 			<!-- Header -->
-			<header class="relative shrink-0 border-b border-border p-5">
+			<header class={cn("relative shrink-0 border-b border-border p-5", !compact && "pt-[calc(1.25rem+env(safe-area-inset-top))]")}>
 				{#if compact}
 					<span
 						aria-hidden="true"
@@ -260,7 +260,7 @@
 							{i18n.activity_open_item()}
 						</a>
 					{/if}
-					<span class="ml-auto font-mono text-xs tabular-nums text-fg-faint">
+					<span class="ml-auto font-mono text-xs tabular-nums text-fg-subtle">
 						{#if torrent.status === "downloading" && torrent.eta > 0}
 							{i18n.queue_time_left({ eta: formatEta(torrent.eta) })}
 						{:else if torrent.status === "seeding"}
@@ -284,13 +284,13 @@
 
 				<!-- meta -->
 				<dl class="mt-4 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-xs">
-					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">{i18n.torrent_save_path()}</dt>
+					<dt class="font-medium uppercase tracking-[0.1em] text-fg-subtle">{i18n.torrent_save_path()}</dt>
 					<dd class="min-w-0 break-all font-mono text-fg-muted">{torrent.save_path}</dd>
-					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">{i18n.torrent_swarm()}</dt>
+					<dt class="font-medium uppercase tracking-[0.1em] text-fg-subtle">{i18n.torrent_swarm()}</dt>
 					<dd class="font-mono tabular-nums text-fg-muted">
 						{i18n.torrent_seeds_peers_line({ seeds: torrent.seeds, peers: torrent.peer_count })}
 					</dd>
-					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">{i18n.common_added()}</dt>
+					<dt class="font-medium uppercase tracking-[0.1em] text-fg-subtle">{i18n.common_added()}</dt>
 					<dd class="text-fg-muted" title={formatDateTime(torrent.added_at)}>
 						{formatRelative(torrent.added_at)}
 					</dd>
@@ -317,7 +317,7 @@
 						{#if t.key === "peers"}<Users size={13} aria-hidden="true" />{/if}
 						{#if t.key === "trackers"}<Globe size={13} aria-hidden="true" />{/if}
 						{t.label}
-						<span class="font-mono tabular-nums text-[10px] text-fg-faint">{tabCount(t.key)}</span>
+						<span class="font-mono tabular-nums text-[10px] text-fg-subtle">{tabCount(t.key)}</span>
 					</button>
 				{/each}
 			</div>
@@ -413,7 +413,7 @@
 			{value}
 		</div>
 		<div
-			class="mt-0.5 truncate text-[9px] font-medium uppercase tracking-[0.1em] text-fg-faint md:text-[10px]"
+			class="mt-0.5 truncate text-[9px] font-medium uppercase tracking-[0.1em] text-fg-subtle md:text-[10px]"
 		>
 			{label}
 		</div>

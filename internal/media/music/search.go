@@ -238,10 +238,11 @@ func (s *Service) GrabArtistRelease(
 }
 
 // searchAlbum searches the indexers for one album and grabs the best release
-// the profile accepts. It reports whether it grabbed. last_search_at is
-// stamped whenever the indexers answered, so the cooldown advances on an empty
-// result too; a failed search stamps nothing and counts no strike.
-func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
+// the profile accepts. It reports whether it grabbed, and the error of a search
+// no indexer answered, which ends a pass over several albums. last_search_at
+// is stamped whenever the indexers answered, so the cooldown advances on an
+// empty result too; a failed search stamps nothing and counts no strike.
+func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) (bool, error) {
 	ctx, span := tracer.Start(ctx, "music.search_album_pass",
 		trace.WithAttributes(attribute.Int("album.id", int(a.ID))))
 	defer span.End()
@@ -267,7 +268,7 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "music search: rejected releases unavailable",
 			"album.id", a.ID, "error", err)
-		return false
+		return false, nil
 	}
 	releases, err := s.SearchAlbumReleases(ctx, a.ID)
 	if err != nil {
@@ -275,7 +276,10 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "music search: search failed",
 			"album.id", a.ID, "error", err)
-		return false
+		if indexer.Unavailable(err) {
+			return false, err
+		}
+		return false, nil
 	}
 	results = len(releases)
 	if err := s.db.SetAlbumLastSearchAt(ctx, a.ID, time.Now()); err != nil {
@@ -288,7 +292,7 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		AlbumRelease.Rejected,
 	)
 	if len(accepted) == 0 {
-		return false
+		return false, nil
 	}
 
 	// A CUE disc image is only known once the release's own .torrent is
@@ -307,7 +311,7 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 	}
 	if errors.Is(err, download.ErrCueImage) {
 		outcome = "cue_image"
-		return false
+		return false, nil
 	}
 	if err != nil {
 		outcome = "grab_failed"
@@ -320,14 +324,14 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 					"album.id", a.ID, "error", e)
 			}
 		}
-		return false
+		return false, nil
 	}
 	outcome = "grabbed"
 	if err := s.db.ResetAlbumGrabFailures(ctx, a.ID); err != nil {
 		slog.WarnContext(ctx, "music search: reset grab_failures failed",
 			"album.id", a.ID, "error", err)
 	}
-	return true
+	return true, nil
 }
 
 // SearchAlbumNow runs one search-and-grab pass for the album in the
@@ -365,7 +369,7 @@ func (s *Service) SearchAlbumNow(ctx context.Context, albumID uint32) error {
 	)
 	go func() {
 		defer observability.RecoverPanic(bg, "music.search_album", nil)
-		s.searchAlbum(bg, a)
+		_, _ = s.searchAlbum(bg, a)
 	}()
 	return nil
 }
@@ -410,7 +414,14 @@ func (s *Service) SearchArtistNow(ctx context.Context, artistID uint32) error {
 			if err != nil || live {
 				continue
 			}
-			if s.searchAlbum(bg, a) {
+			ok, err := s.searchAlbum(bg, a)
+			if err != nil {
+				// No indexer answered: every album after it would wait out
+				// the same timeout for the same non-answer.
+				otelx.RecordSpanError(span, err)
+				break
+			}
+			if ok {
 				grabbed++
 			}
 		}

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { pageTitle } from "@lib/page-title.svelte";
-	import { onMount } from "svelte";
 	import { createInfiniteQuery, createQuery, keepPreviousData } from "@tanstack/svelte-query";
 	import { ArrowLeft, Layers, UserRound } from "@lucide/svelte";
 	import { api, apiAllPages, errorText, PAGE_LIMIT, type Paginated } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { formatRelative } from "@lib/dates";
-	import { onRouteQuery } from "@lib/route-query";
+	import { loadPref, savePref } from "@lib/prefs";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import LibraryToolbar from "@components/shared/LibraryToolbar.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import Shelf from "@components/books/Shelf.svelte";
@@ -19,8 +19,15 @@
 	// Shelves by kind; "See all" turns the page into that kind's full grid,
 	// with ?kind= in the URL so back returns to the shelves.
 	type Kind = "all" | "novel" | "bd" | "manga";
-	const KINDS = new Set(["novel", "bd", "manga"]);
-	const STATUSES = new Set(["all", "wanted", "downloading", "available"]);
+	const KINDS: Kind[] = ["all", "novel", "bd", "manga"];
+	const STATUSES = ["all", "wanted", "downloading", "available"] as const;
+	type SortKey = "recent" | "title";
+	type SortOrder = "asc" | "desc";
+	// The direction each sort starts in, and the one a URL naming the sort alone
+	// means: additions newest first, titles A→Z.
+	const NATURAL: Record<SortKey, SortOrder> = { recent: "desc", title: "asc" };
+	// The last sort this browser chose, "<key>-<order>", for a URL naming none.
+	const SORT_PREF = "streamline:books:sort";
 
 	let kind = $state<Kind>("all");
 	let status = $state("all");
@@ -28,53 +35,50 @@
 	let format = $state("all");
 	let query = $state("");
 	let debounced = $state("");
-	let sort = $state("added");
+	let sort = $state<SortKey>("recent");
+	let order = $state<SortOrder>("desc");
 
-	function apply(p: URLSearchParams) {
-		const k = p.get("kind") ?? "";
-		const s = p.get("status") ?? "all";
-		kind = (KINDS.has(k) ? k : "all") as Kind;
-		status = STATUSES.has(s) ? s : "all";
-		author = p.get("author") ?? "all";
-		format = ["ebook", "audiobook"].includes(p.get("format") ?? "") ? (p.get("format") as string) : "all";
-		query = debounced = p.get("q") ?? "";
-		sort = p.get("sort") === "title" ? "title" : "added";
-	}
 	function params() {
 		const p = new URLSearchParams();
-		if (kind !== "all") p.set("kind", kind);
-		if (status !== "all") p.set("status", status);
-		if (author !== "all") p.set("author", author);
-		if (format !== "all") p.set("format", format);
-		if (query) p.set("q", query);
-		if (sort !== "added") p.set("sort", sort);
-		return p.toString();
+		setParam(p, "kind", kind, "all");
+		setParam(p, "status", status, "all");
+		setParam(p, "author", author, "all");
+		setParam(p, "format", format, "all");
+		setParam(p, "q", query);
+		setParam(p, "sort", sort, "recent");
+		setParam(p, "order", order, NATURAL[sort]);
+		return p;
 	}
-	onMount(() => {
-		const off = onRouteQuery("/books", apply);
-		const pop = () => {
-			if (window.location.pathname === "/books") apply(new URLSearchParams(window.location.search));
-		};
-		window.addEventListener("popstate", pop);
-		return () => {
-			off();
-			window.removeEventListener("popstate", pop);
-		};
-	});
+	syncRouteQuery(
+		"/books",
+		(p) => {
+			const stored = loadPref(SORT_PREF)?.split("-") ?? [];
+			const named = param(p, "sort");
+			kind = oneOf(param(p, "kind"), KINDS, "all");
+			status = oneOf(param(p, "status"), STATUSES, "all");
+			author = param(p, "author") || "all";
+			format = oneOf(param(p, "format"), ["all", "ebook", "audiobook"], "all");
+			query = debounced = param(p, "q") ?? "";
+			// `added` is the old spelling of `recent`.
+			sort = oneOf<SortKey>((named === "added" ? "recent" : named) ?? stored[0], ["recent", "title"], "recent");
+			order = oneOf<SortOrder>(param(p, "order") ?? (named ? undefined : stored[1]), ["asc", "desc"], NATURAL[sort]);
+		},
+		params,
+	);
+	function setSort(key: string) {
+		const [s, o] = key.split("-") as [SortKey, SortOrder];
+		sort = s;
+		order = o;
+		savePref(SORT_PREF, key);
+	}
 	$effect(() => {
 		const q = query;
 		const t = setTimeout(() => (debounced = q), 250);
 		return () => clearTimeout(t);
 	});
-	$effect(() => {
-		const search = params();
-		if (typeof window === "undefined" || window.location.pathname !== "/books") return;
-		const next = `/books${search ? `?${search}` : ""}`;
-		if (next !== window.location.pathname + window.location.search) window.history.replaceState(null, "", next);
-	});
 	function openKind(k: Kind) {
 		kind = k;
-		const search = params();
+		const search = params().toString();
 		window.history.pushState(null, "", `/books${search ? `?${search}` : ""}`);
 		document.getElementById("main")?.scrollTo({ top: 0 });
 	}
@@ -107,13 +111,14 @@
 		Paginated<ShelfItem>,
 		Error,
 		{ pages: Paginated<ShelfItem>[]; pageParams: number[] },
-		readonly ["books", "list", "grid", Kind, string, string, string, string, string],
+		readonly ["books", "list", "grid", Kind, string, string, string, string, SortKey, SortOrder],
 		number
 	>(() => ({
-		queryKey: ["books", "list", "grid", kind, status, author, format, debounced, sort] as const,
+		queryKey: ["books", "list", "grid", kind, status, author, format, debounced, sort, order] as const,
 		queryFn: ({ pageParam }) => {
 			const p = filterParams(true);
-			p.set("sort", sort);
+			p.set("sort", sort === "recent" ? "added" : sort);
+			p.set("order", order);
 			p.set("page", String(pageParam));
 			p.set("limit", String(PAGE_LIMIT));
 			return api<Paginated<ShelfItem>>(`/books?${p}`);
@@ -213,8 +218,10 @@
 		},
 	]);
 	const SORTS = [
-		{ key: "added", label: i18n.library_sort_recent() },
-		{ key: "title", label: i18n.library_sort_title() },
+		{ key: "recent-desc", label: i18n.library_sort_recent() },
+		{ key: "recent-asc", label: i18n.sort_oldest_added() },
+		{ key: "title-asc", label: i18n.library_sort_title() },
+		{ key: "title-desc", label: i18n.sort_title_za() },
 	];
 	function reset() {
 		status = "all";
@@ -258,8 +265,8 @@
 		onQueryChange={(q) => (query = q)}
 		placeholder={i18n.books_filter_placeholder()}
 		sorts={SORTS}
-		{sort}
-		onSortChange={(k) => (sort = k)}
+		sort="{sort}-{order}"
+		onSortChange={setSort}
 		onReset={reset}
 		add={{
 			label: auth.canAddDirectly ? i18n.action_add_book() : i18n.action_request_book_title(),

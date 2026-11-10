@@ -55,7 +55,7 @@
 	{#if elapsed >= 5 || onCancel}
 		<div class="mt-0.5 flex items-center gap-2.5">
 			{#if elapsed >= 5}
-				<span class="tabular font-mono text-[11px] text-fg-faint">
+				<span class="tabular font-mono text-[11px] text-fg-subtle">
 					{i18n.common_elapsed_seconds({ seconds: elapsed })}
 				</span>
 			{/if}

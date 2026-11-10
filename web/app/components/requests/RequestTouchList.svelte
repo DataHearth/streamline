@@ -47,7 +47,7 @@
 						{g.label}
 					</h2>
 					{#if g.count}
-						<span class="font-mono text-[11px] tabular-nums text-fg-faint">
+						<span class="font-mono text-[11px] tabular-nums text-fg-subtle">
 							{g.rows.length}
 						</span>
 					{/if}

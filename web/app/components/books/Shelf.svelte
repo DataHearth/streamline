@@ -42,7 +42,7 @@
 <section class="w-full px-4 pt-6 md:px-6" aria-label={title}>
 	<div class="mb-1 flex items-center gap-3">
 		<h2 class="text-[15px] font-semibold text-fg">{title}</h2>
-		<span class="font-mono text-[11px] text-fg-faint">{items.length}</span>
+		<span class="font-mono text-[11px] text-fg-subtle">{items.length}</span>
 		<div class="ml-auto flex items-center gap-3">
 			{#if canPrev || canNext}
 				<div class="hidden gap-1 md:flex">

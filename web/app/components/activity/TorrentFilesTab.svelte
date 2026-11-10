@@ -205,7 +205,7 @@
 </script>
 
 <div class="flex items-center justify-between gap-2 pb-2">
-	<p class="text-[11px] text-fg-faint">
+	<p class="text-[11px] text-fg-subtle">
 		{#each filesSummary as p}{#if p.slot === "count"}<span class="font-mono tabular-nums text-fg-muted">{total.count}</span>{:else if p.slot === "size"}<span class="font-mono tabular-nums text-fg-muted">{formatBytes(total.size)}</span>{:else}{p.text}{/if}{/each}{virtual
 			? ` · ${i18n.torrent_virtualized()}`
 			: ""}
@@ -263,7 +263,7 @@
 							{row.name}
 						</span>
 						<span
-							class="ml-1 shrink-0 whitespace-nowrap font-mono text-[10px] tabular-nums text-fg-faint"
+							class="ml-1 shrink-0 whitespace-nowrap font-mono text-[10px] tabular-nums text-fg-subtle"
 						>
 							{row.count} · {formatBytes(row.size)}
 							{#if row.size > 0}· {Math.round((row.done / row.size) * 100)}%{/if}
@@ -294,7 +294,7 @@
 									onclick={() => setFolderPriority(row.path, p.key)}
 									class={cn(
 										"flex min-h-10 items-center gap-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition lg:min-h-0",
-										sel ? p.on : "text-fg-faint hover:bg-surface hover:text-fg",
+										sel ? p.on : "text-fg-subtle hover:bg-surface hover:text-fg",
 									)}
 								>
 									<span
@@ -324,7 +324,7 @@
 					<span
 						class={cn(
 							"min-w-0 flex-1 truncate text-xs",
-							skip ? "text-fg-faint line-through" : "text-fg-muted",
+							skip ? "text-fg-subtle line-through" : "text-fg-muted",
 						)}
 						title={f.fname}
 					>
@@ -335,7 +335,7 @@
 							<div class="w-12">
 								<ProgressBar value={f.progress} {status} height={2} />
 							</div>
-							<span class="font-mono tabular-nums text-[10px] text-fg-faint">
+							<span class="font-mono tabular-nums text-[10px] text-fg-subtle">
 								{Math.round(f.progress * 100)}%
 							</span>
 						{/if}
@@ -363,7 +363,7 @@
 									onclick={() => onSetPriority(f.index, p.key)}
 									class={cn(
 										"flex min-h-10 items-center gap-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition lg:min-h-0",
-										sel ? p.on : "text-fg-faint hover:bg-surface hover:text-fg",
+										sel ? p.on : "text-fg-subtle hover:bg-surface hover:text-fg",
 									)}
 								>
 									<span

@@ -196,7 +196,7 @@
 {#each groups as g (g.key)}
 	{@const allMonitored = g.releases.every((r) => r.monitored)}
 	<div class="flex items-center justify-between gap-2 pl-4 pr-1 pt-3">
-		<p class="min-w-0 truncate font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-faint">
+		<p class="min-w-0 truncate font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-subtle">
 			{g.label} · {g.releases.length}
 		</p>
 		{#if canEdit && onMonitorGroup}

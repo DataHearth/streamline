@@ -13,7 +13,7 @@
 		const r = x.grabs > 0 ? x.failed / x.grabs : 0;
 		return r >= 0.25 ? "text-status-failed" : r >= 0.1 ? "text-status-warning" : "text-fg-muted";
 	};
-	const head = "font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint";
+	const head = "font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle";
 </script>
 
 <div class="min-w-0">

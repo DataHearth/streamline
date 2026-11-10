@@ -841,9 +841,17 @@ func (q *QBittorrent) FreeSpace(ctx context.Context) (int64, error) {
 // upload phase, so idle `UP` states report Completed (not Paused) and the
 // monitor still imports them — matching transmission/deluge. Only the `DL`
 // side is genuinely mid-transfer and therefore Paused.
+//
+// `moving` is Downloading, as Deluge's Moving is: qBittorrent reports it while
+// it relocates a finished torrent's files (a category path applied under
+// Automatic Torrent Management, Set location, the move out of the incomplete
+// folder on completion), and the destination already exists partly written.
+// Read as finished, the monitor would import half a payload and the
+// transcoder would treat its source as idle.
 func mapQBState(state string) TorrentStatus {
 	switch state {
 	case "downloading",
+		"moving",
 		"metaDL",
 		"forcedDL",
 		"allocating",
@@ -855,7 +863,7 @@ func mapQBState(state string) TorrentStatus {
 		return StatusSeeding
 	case "pausedDL", "stoppedDL", "queuedDL":
 		return StatusPaused
-	case "pausedUP", "stoppedUP", "queuedUP", "moving":
+	case "pausedUP", "stoppedUP", "queuedUP":
 		return StatusCompleted
 	case "error", "missingFiles", "unknown":
 		return StatusError

@@ -420,6 +420,28 @@ var _ = Describe("Book releases", Label("unit", "integration", "books"), func() 
 			Expect(got.AudiobookLastSearchAt).To(BeNil())
 		})
 
+		It("stops at a search no indexer answered, stamping nothing", func() {
+			b := f.addBook(1, "Elantris", "both")
+			outage := &indexer.UnavailableError{Failures: []indexer.IndexerFailure{{
+				Indexer: "Prowlarr", Outcome: "timeout", Err: indexer.ErrUnreachable,
+			}}}
+			// The ebook slot's search fails; the audiobook slot's would go to
+			// the same indexers, and the mock fails the spec if it is sent.
+			f.idx.EXPECT().
+				SearchBook(anyCtx, "Brandon Sanderson", "Elantris", uint16(2005), mediafile.BookKindEbook).
+				Return(nil, outage).
+				Once()
+
+			Expect(
+				f.svc.SearchMissing(f.ctx),
+			).To(MatchError(indexer.ErrNoIndexerAnswered))
+
+			got := f.reloadBook(b.ID)
+			Expect(got.EbookLastSearchAt).To(BeNil())
+			Expect(got.AudiobookLastSearchAt).To(BeNil())
+			Expect(got.EbookGrabFailures).To(BeZero())
+		})
+
 		It("never grabs a release that names another book", func() {
 			b := f.addBook(1, "Warbreaker", "ebook")
 			f.idx.EXPECT().

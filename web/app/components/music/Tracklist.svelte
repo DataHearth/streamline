@@ -67,7 +67,7 @@
 <div class="overflow-hidden rounded-lg border border-border bg-bg-elevated/70">
 	{#if !compact}
 		<div
-			class="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint"
+			class="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle"
 		>
 			<span>{i18n.music_tracklist()}</span>
 			{#if qualityNote}
@@ -94,7 +94,7 @@
 			>
 				<span
 					class={cn(
-						"shrink-0 text-right font-mono text-fg-faint",
+						"shrink-0 text-right font-mono text-fg-subtle",
 						compact ? "text-[11px]" : "text-xs",
 						multiDisc ? (compact ? "w-8" : "w-9") : compact ? "w-5" : "w-6",
 					)}

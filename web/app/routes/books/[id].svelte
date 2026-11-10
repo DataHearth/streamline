@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { onMount, tick } from "svelte";
+	import { tick } from "svelte";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { params } from "@roxi/routify";
 	import { LoaderCircle, Radar, Search, Send, Upload } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { BOOKS, createAction, monitorToast, searchFailed, updateFailed } from "@lib/actions";
@@ -50,13 +50,18 @@
 	let tab = $state<(typeof TABS)[number]>("overview");
 	let tabTrack = $state<HTMLElement | null>(null);
 	// The route component is reused from book to book; a volume link followed
-	// from one book's history opens the next on its overview.
-	onMount(() =>
-		params.subscribe((p) => {
-			const next = p.id ?? "";
-			if (next !== id) tab = "overview";
-			id = next;
-		}),
+	// from one book's history opens the next on the tab its URL names.
+	syncRouteQuery(
+		/^\/books\/\d+$/,
+		(p, path) => {
+			id = path.slice("/books/".length);
+			tab = oneOf(param(p, "tab"), TABS, "overview");
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "tab", tab, "overview");
+			return p;
+		},
 	);
 
 	const bookQuery = createQuery<Book>(() => ({
@@ -158,7 +163,7 @@
 			? [book.author, i18n.books_first_published({ year: String(book.first_published) }), (book.editions.length === 1 ? i18n.books_editions_n_one : i18n.books_editions_n_other)({ count: String(book.editions.length) })]
 			: [],
 	);
-	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
+	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle";
 
 	// The movie overview's two columns, under the format cards: what the book
 	// is and who made it, beside its facts and our copy of it. Translators and
@@ -310,7 +315,7 @@
 		{/snippet}
 	</MediaHero>
 
-	<nav class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
+	<nav class="sticky top-(--top-bar-height) z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
 		<div bind:this={tabTrack} class="flex w-full gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 			{#each [{ key: "overview", label: i18n.common_overview() }, { key: "history", label: i18n.common_history() }] as const as t (t.key)}
 				{@const active = tab === t.key}
@@ -457,11 +462,11 @@
 			<div class="mt-5 grid gap-3 sm:grid-cols-2">
 				{#each [{ label: i18n.replace_current_file(), e: pendingCurrent, detail: [pendingCurrent.publisher, String(pendingCurrent.year), pendingSlot.file?.container, pendingSlot.file ? formatBytes(pendingSlot.file.size, "") : ""] }, { label: i18n.replace_replaced_by(), e: pending, detail: [pending.publisher, String(pending.year), editionDetail(pending)] }] as box (box.label)}
 					<div class="rounded-lg border border-border bg-bg-deep/60 p-3.5">
-						<p class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint">{box.label}</p>
+						<p class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle">{box.label}</p>
 						<div class="mt-2 flex items-center gap-1.5">
 							<LangChip code={box.e.language} active />
 							{#if box.e.original}
-								<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-faint">{i18n.books_original()}</span>
+								<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">{i18n.books_original()}</span>
 							{/if}
 						</div>
 						<p class="mt-1.5 text-[13.5px] text-fg">{box.e.title}</p>

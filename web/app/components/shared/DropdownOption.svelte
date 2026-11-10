@@ -50,7 +50,7 @@
 			// One line centres in the 44px touch row; a hint makes it two, and the
 			// marks then sit on the first line.
 			hint ? "items-start" : "items-center",
-			selected ? "text-accent" : count === 0 ? "text-fg-faint" : "text-fg",
+			selected ? "text-accent" : count === 0 ? "text-fg-subtle" : "text-fg",
 		)}
 	>
 		{#if dot}
@@ -85,7 +85,7 @@
 				class={cn(
 					"shrink-0 font-mono text-[10.5px] tabular",
 					hint && "mt-[3px]",
-					selected ? "text-accent/70" : "text-fg-faint",
+					selected ? "text-accent/70" : "text-fg-subtle",
 				)}
 			>
 				{count}

@@ -71,7 +71,7 @@
 			<h2
 				class={[
 					"font-mono text-[11px] font-semibold uppercase tracking-[0.16em]",
-					danger ? "text-status-failed" : "text-fg-faint",
+					danger ? "text-status-failed" : "text-fg-subtle",
 				]}
 			>
 				{title}

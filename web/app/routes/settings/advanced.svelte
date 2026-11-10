@@ -271,7 +271,7 @@
 					spellcheck="false"
 					autocapitalize="off"
 					autocorrect="off"
-					class="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-fg placeholder:font-sans placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+					class="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-fg placeholder:font-sans placeholder:text-fg-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
 				/>
 			</label>
 			<ArrowRight
@@ -290,7 +290,7 @@
 					spellcheck="false"
 					autocapitalize="off"
 					autocorrect="off"
-					class="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-fg placeholder:font-sans placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+					class="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-fg placeholder:font-sans placeholder:text-fg-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
 				/>
 			</label>
 		</div>
@@ -316,12 +316,12 @@
 						>{resultRoot}</span
 					>
 					{#if rootUnchanged}
-						<span class="shrink-0 font-sans text-xs text-fg-faint">
+						<span class="shrink-0 font-sans text-xs text-fg-subtle">
 							{i18n.migration_unchanged()}
 						</span>
 					{/if}
 				{:else}
-					<span class="font-sans text-fg-faint">
+					<span class="font-sans text-fg-subtle">
 						{#each fillInTo as p}{#if p.slot === "to"}<em class="not-italic">{i18n.common_to()}</em
 							>{:else}{p.text}{/if}{/each}
 					</span>
@@ -456,7 +456,7 @@
 						{/each}
 					</ul>
 					{#if preview.total > preview.samples.length}
-						<p class="mt-1.5 text-[11px] text-fg-faint">
+						<p class="mt-1.5 text-[11px] text-fg-subtle">
 							{i18n.common_and_n_more({ count: preview.total - preview.samples.length })}
 						</p>
 					{/if}
@@ -520,7 +520,7 @@
 				</div>
 
 				{#if live && s.current}
-					<p class="mt-2 truncate font-mono text-[11px] text-fg-faint">
+					<p class="mt-2 truncate font-mono text-[11px] text-fg-subtle">
 						{s.current}
 					</p>
 				{/if}
