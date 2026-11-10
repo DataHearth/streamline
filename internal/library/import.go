@@ -500,12 +500,22 @@ func MoveFile(_ context.Context, src, dst string) error {
 	return moveFile(src, dst)
 }
 
-// renameFile and copyBytes are os.Rename and io.Copy everywhere but in the
-// specs, which cannot stage two filesystems and swap them to simulate EXDEV
-// and a copy that dies halfway.
+// renameFile, copyBytes and removeFile are os.Rename, io.Copy and os.Remove
+// everywhere but in the specs, which cannot stage two filesystems and swap
+// them to simulate EXDEV, a copy that dies halfway and a source that will not
+// go away.
 var (
 	renameFile = os.Rename
 	copyBytes  = io.Copy
+	removeFile = os.Remove
+)
+
+// ErrSourceNotRemovable is a cross-filesystem move whose source cannot be
+// deleted: the downloads side is mounted read-only or its folder is not
+// writable. Only a copy can import from there.
+var ErrSourceNotRemovable = errors.New(
+	"cannot remove the source of a cross-filesystem move: the download " +
+		"folder is not writable (use library.import_mode copy)",
 )
 
 // moveFile relocates src to dst. os.Rename does it in a single metadata op
@@ -519,18 +529,42 @@ func moveFile(src, dst string) error {
 	if err == nil || !errors.Is(err, syscall.EXDEV) {
 		return err
 	}
+	// Asked before the copy: a remux is tens of gigabytes, and every retry
+	// would write all of it only to take it back out.
+	if err := checkSourceRemovable(src); err != nil {
+		return err
+	}
 	if err := copyFileStaged(src, dst); err != nil {
 		return err
 	}
-	if err := os.Remove(src); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		// The source is still there (a read-only downloads mount), so this
-		// was a copy, not a move. The copy is taken back out: a caller told
-		// the move failed finds no file at dst for its retry to trip over.
-		return errors.Join(
-			fmt.Errorf("remove moved source: %w", err),
-			os.Remove(dst),
-		)
+	if err := removeFile(src); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		// The source is still there, so this was a copy, not a move. The copy
+		// is taken back out: a caller told the move failed finds no file at
+		// dst for its retry to trip over.
+		err = fmt.Errorf("%w: %w", ErrSourceNotRemovable, err)
+		if rmErr := os.Remove(dst); rmErr != nil {
+			return errors.Join(err, fmt.Errorf("remove the copy: %w", rmErr))
+		}
+		return err
 	}
+	return nil
+}
+
+// checkSourceRemovable reports ErrSourceNotRemovable when src's folder refuses
+// a new entry for want of permission or because its filesystem is read-only,
+// which is what deleting src needs too. Any other refusal says nothing about
+// the delete (a full disk refuses the probe, and a move is what frees it), so
+// the move goes ahead.
+func checkSourceRemovable(src string) error {
+	probe, err := os.CreateTemp(filepath.Dir(src), ".streamline-*.probe")
+	if err != nil {
+		if errors.Is(err, fs.ErrPermission) || errors.Is(err, syscall.EROFS) {
+			return fmt.Errorf("%w: %w", ErrSourceNotRemovable, err)
+		}
+		return nil
+	}
+	_ = probe.Close()
+	_ = os.Remove(probe.Name())
 	return nil
 }
 
@@ -567,11 +601,16 @@ func copyFileStaged(src, dst string) error {
 	}
 
 	tmp := stagingPath(dst)
+	// A staged file left by a crashed run goes first. Opening it again would
+	// keep its mode, and one copied from a read-only source refuses the write.
+	if err := os.Remove(tmp); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("remove stale partial copy: %w", err)
+	}
 	// A rename keeps the file's mode, so the copy standing in for one does too.
 	//nolint:gosec // see above; tmp is a sibling of dst
 	out, err := os.OpenFile(
 		tmp,
-		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+		os.O_WRONLY|os.O_CREATE|os.O_EXCL,
 		info.Mode().Perm(),
 	)
 	if err != nil {
