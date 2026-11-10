@@ -56,6 +56,32 @@ var _ = Describe("Movies page", Label("e2e"), func() {
 			To(ContainSubstring("Your library is empty"))
 		expectPath(page, "/movies")
 	})
+
+	// The filters are in the query string (#134): a link opens the view it
+	// names, a same-page link and Back/Forward move the page with the URL, and
+	// a value the page does not offer falls back to its default.
+	It("follows its query string through links and history", func() {
+		page := newSessionPage("/movies?status=wanted")
+		page.MustElementR("p", "No movies match this view")
+		expectPath(page, "/movies?status=wanted")
+
+		page.MustEval(`() => history.pushState(null, "", "/movies")`)
+		page.MustElementR("p", "Your library is empty")
+
+		page.MustEval(`() => history.back()`)
+		page.MustElementR("p", "No movies match this view")
+		expectPath(page, "/movies?status=wanted")
+
+		page.MustEval(`() => history.forward()`)
+		page.MustElementR("p", "Your library is empty")
+		expectPath(page, "/movies")
+	})
+
+	It("drops a status it does not offer", func() {
+		page := newSessionPage("/movies?status=bogus")
+		page.MustElementR("p", "Your library is empty")
+		expectPath(page, "/movies")
+	})
 })
 
 // Every metadata value asserted here comes from the in-process TMDB fake, so
