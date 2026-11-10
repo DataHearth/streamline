@@ -109,8 +109,11 @@
 			const ep = Number(param(p, "episode"));
 			if (!ep) return;
 			tab = "episodes";
-			const n = Number(param(p, "season"));
-			if (Number.isInteger(n)) selectedSeason = n;
+			// Number(null) is 0: a link naming no season would open the specials.
+			// Left unset, the season is picked as the one holding the episode.
+			const season = param(p, "season");
+			const n = season ? Number(season) : Number.NaN;
+			selectedSeason = Number.isInteger(n) ? n : null;
 			focusEpisodeId = ep;
 		},
 		() => {
@@ -144,6 +147,16 @@
 		// — covers both the initial default and a carry-over from the previously
 		// viewed series, which would otherwise render an empty season strip.
 		if (seasons.some((s) => s.number === selectedSeason)) return;
+		// An episode link naming no season, or one the show does not have, opens
+		// on the season holding the episode.
+		const held =
+			focusEpisodeId === null
+				? undefined
+				: seasons.find((s) => s.episodes?.some((e) => e.id === focusEpisodeId));
+		if (held) {
+			selectedSeason = held.number;
+			return;
+		}
 		// Default to the latest non-special season, falling back to whatever
 		// the last entry is (e.g. a specials-only show).
 		const pool = regularSeasons.length > 0 ? regularSeasons : seasons;

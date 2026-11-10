@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -182,5 +183,40 @@ var _ = Describe("Query-string state", Label("e2e"), func() {
 
 		page.MustEval(`() => history.back()`)
 		expectPath(page, "/movies?status=failed#main")
+	})
+
+	// A show with specials and two seasons, one episode each; returns its path
+	// and the id of season 1's episode. Specials are what season 0 selects, and
+	// season 2 is the one the page picks by default.
+	seedShow := func() (string, uint32) {
+		GinkgoHelper()
+		ctx := context.Background()
+		show := app.DB.TVShow.Create().
+			SetTitle("Query State").SetYear(2005).SetTvdbID(990134).
+			SaveX(ctx)
+		DeferCleanup(func() {
+			app.DB.TVShow.DeleteOneID(show.ID).ExecX(context.Background())
+		})
+		var target uint32
+		for n := range uint16(3) {
+			season := app.DB.Season.Create().
+				SetNumber(n).SetTvShow(show).SaveX(ctx)
+			ep := app.DB.Episode.Create().
+				SetNumber(1).SetTitle(fmt.Sprintf("Part %d", n)).
+				SetSeason(season).SaveX(ctx)
+			if n == 1 {
+				target = ep.ID
+			}
+		}
+		return fmt.Sprintf("/series/%d", show.ID), target
+	}
+
+	It("opens an episode link naming no season on the episode's season", func() {
+		path, episode := seedShow()
+		page := newSessionPage(fmt.Sprintf("%s?episode=%d", path, episode))
+		expectPath(page, fmt.Sprintf("%s?tab=episodes&season=1&episode=%d", path, episode))
+		Expect(
+			visibleElement(page, `button[aria-current=true]`).MustText(),
+		).To(MatchRegexp(`(?i)^season 0?1\b`))
 	})
 })
