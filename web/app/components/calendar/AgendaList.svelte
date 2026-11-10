@@ -34,7 +34,7 @@
 			<!-- The date header stays put while its own events scroll past it, so
 			     the day a row belongs to is always on screen. -->
 			<div
-				class="sticky top-0 z-10 flex items-center gap-2.5 bg-bg-deep px-3 pb-1.5 pt-4"
+				class="sticky top-(--top-bar-height) z-10 flex items-center gap-2.5 bg-bg-deep px-3 pb-1.5 pt-4"
 			>
 				<span
 					class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
