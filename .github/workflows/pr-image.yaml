@@ -1,0 +1,192 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: PR Image
+
+# Publishes an image of every open same-repo PR to its own package,
+# ghcr.io/datahearth/streamline-pr, so a PR can be tried on a real deployment
+# without building it by hand. pr-image-cleanup.yaml deletes the images when
+# the PR closes. A separate package keeps PR tags out of the release package,
+# and the cleanup cannot reach a release tag at all.
+#
+# Four tags per commit (PR 159 at 3e5928c):
+#   pr-159         pr-159-3e5928c          (default, distroless)
+#   pr-159-vaapi   pr-159-3e5928c-vaapi    (vaapi)
+# The moving tag follows the PR's head. The commit tag is what lets the
+# cleanup find a version after the next push moved the moving tag off it.
+#
+# Fork PRs are not published: their `pull_request` token is read-only, and
+# building PR code under `pull_request_target` would hand it write access.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    # What reaches the image: the Dockerfile's COPY sources, filtered by
+    # .dockerignore, and this workflow. A PR that touches none of them has the
+    # same image as main.
+    paths:
+      - "deploy/Dockerfile"
+      - ".dockerignore"
+      - "go.mod"
+      - "go.sum"
+      - "api/**"
+      - "cmd/**"
+      - "ent/**"
+      - "internal/**"
+      - "web/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "routify.config.js"
+      - ".github/workflows/pr-image.yaml"
+      - "!**/*_test.go"
+      - "!**/mocks/**"
+
+# Shared with pr-image-cleanup.yaml: a new push cancels the build of the one
+# it replaces, and closing the PR cancels a build still running, so nothing is
+# pushed after the cleanup.
+concurrency:
+  group: pr-image-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: datahearth/streamline-pr
+  # metadata-action reads the merge commit by default; the tags and the
+  # revision label name the PR's head, which is what is built.
+  DOCKER_METADATA_PR_HEAD_SHA: "true"
+
+jobs:
+  build:
+    # Same-repo PRs only, and never Renovate's: a dependency bump is tested by
+    # CI, and an image per renovate push would fill the package.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !startsWith(github.head_ref, 'renovate/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [default, vaapi]
+        include:
+          - flavor: vaapi
+            target: vaapi
+            suffix: -vaapi
+    steps:
+      # The head commit, not the merge commit `pull_request` checks out by
+      # default: the tag names a commit, so the image is that commit.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute build info
+        id: info
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          echo "version=pr-${PR}-${SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
+            suffix=${{ matrix.suffix }}
+          tags: |
+            type=ref,event=pr
+            type=sha,format=short,prefix=pr-${{ github.event.pull_request.number }}-
+
+      # linux/amd64 only: a throwaway image does not need the arm64 build that
+      # doubles image.yaml's time. `provenance: false` and `sbom: false` make
+      # each push one manifest, one package version, with no index or
+      # attestation children the cleanup would have to chase. No signature:
+      # nothing should pin a PR image.
+      #
+      # The cache is read from main's scopes and never written: a PR scope per
+      # flavor would push main's out of the repository's cache quota.
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: deploy/Dockerfile
+          target: ${{ matrix.target }}
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.flavor }}-linux/amd64
+          provenance: false
+          sbom: false
+          push: true
+          build-args: |
+            VERSION=${{ steps.info.outputs.version }}
+            COMMIT=${{ github.event.pull_request.head.sha }}
+            BUILD_DATE=${{ steps.info.outputs.date }}
+
+      # A report, not a gate: the image is already pushed, and a PR is not
+      # where a base-image CVE gets fixed. image.yaml gates what ships.
+      - name: Vulnerability scan with grype
+        id: grype
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          severity-cutoff: high
+          fail-build: false
+          only-fixed: true
+          output-format: table
+          output-file: grype-report.txt
+
+      - name: Summary
+        if: always()
+        env:
+          FLAVOR: ${{ matrix.flavor }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+          BUILD: ${{ steps.build.outcome }}
+        run: |
+          {
+            echo "### PR image (${FLAVOR})"
+            if [ "$BUILD" = "success" ]; then
+              echo "✅ Pushed \`${DIGEST}\`"
+              echo ""
+              echo '```sh'
+              echo "docker pull ${TAGS%%$'\n'*}"
+              echo '```'
+              echo ""
+              echo "**Tags:**"
+              while read -r tag; do echo "- \`${tag}\`"; done <<<"$TAGS"
+              echo ""
+              echo "These tags are deleted when the PR closes: switch a deployment back before merging."
+            else
+              echo "❌ Build failed"
+            fi
+            if [ -f grype-report.txt ]; then
+              echo ""
+              echo "<details><summary>Grype report (fixable high/critical, not a gate)</summary>"
+              echo ""
+              echo '```'
+              cat grype-report.txt
+              echo '```'
+              echo "</details>"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
