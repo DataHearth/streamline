@@ -177,8 +177,18 @@ func (s *Service) commitShow(
 				"episode.id", target.ID, "error", err)
 			continue
 		}
-		if old != nil && sameFile(old.Path, f) {
-			continue
+		if old != nil {
+			same, err := sameFile(old.Path, f)
+			if err != nil {
+				slog.WarnContext(
+					ctx, "series adopt: compare with existing file failed",
+					"file", f, "episode.id", target.ID, "error", err,
+				)
+				continue
+			}
+			if same {
+				continue
+			}
 		}
 		path, size := f, info.Size()
 		var aside []string
@@ -186,19 +196,25 @@ func (s *Service) commitShow(
 			if old != nil {
 				// Out of the way first: old and new render to the same
 				// destination whenever both were named by the same template.
+				// A file that cannot be renamed stays where it is: the import
+				// is refused if it holds the destination, and otherwise it is
+				// removed like an in-place replacement.
 				if aside, err = setAside(ctx, old.Path); err != nil {
 					slog.WarnContext(
-						ctx, "series adopt: replace existing file failed",
-						"episode.id", target.ID, "error", err,
+						ctx,
+						"series adopt: existing file not set aside, replacing around it",
+						"episode.id",
+						target.ID,
+						"error",
+						err,
 					)
-					continue
 				}
 			}
 			imported, err := s.importSvc.ImportEpisodeWithMode(
 				ctx, f, show, season, target, string(scan.ImportMode),
 			)
 			if err != nil {
-				putBack(ctx, aside)
+				putBack(ctx, aside, f)
 				slog.WarnContext(ctx, "series adopt: import episode failed",
 					"file", f, "episode.id", target.ID, "error", err)
 				continue
@@ -219,20 +235,20 @@ func (s *Service) commitShow(
 				show.QualityProfile,
 			),
 		}); err != nil {
-			putBack(ctx, aside)
+			putBack(ctx, aside, "")
 			slog.WarnContext(ctx, "series adopt: create media file failed",
 				"episode.id", target.ID, "error", err)
 			continue
 		}
 		if old != nil {
 			if dErr := s.store.DeleteMediaFile(ctx, old.ID); dErr != nil {
-				putBack(ctx, aside)
+				putBack(ctx, aside, "")
 				slog.WarnContext(ctx, "series adopt: delete replaced file failed",
 					"episode.id", target.ID, "error", dErr)
 				continue
 			}
-			if scan.Mode == entimportscan.ModeRename {
-				dropAside(ctx, aside)
+			if len(aside) > 0 {
+				dropAside(ctx, old.Path)
 			} else {
 				removeReplaced(ctx, old.Path, path)
 			}

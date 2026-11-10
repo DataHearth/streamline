@@ -355,7 +355,13 @@ func (s *Service) commitAttach(
 		return commitFail("list existing files", err, 0)
 	}
 	for _, mf := range existing {
-		if sameFile(mf.Path, f.SourcePath) {
+		// A scanned file that cannot be read fails the row here, before
+		// anything of the tracked one is touched.
+		same, err := sameFile(mf.Path, f.SourcePath)
+		if err != nil {
+			return commitFail("stat source", err, 0)
+		}
+		if same {
 			return entimportscanfile.OutcomeAttached, "", f.ExistingMovieID
 		}
 	}
@@ -378,7 +384,8 @@ func (s *Service) commitAttach(
 	// A movie holds at most one media file: accepting a scanned file for an
 	// already-known movie replaces whatever file it currently has. The old
 	// file and its row go only once the new row exists, so a commit that
-	// fails on the way leaves the library its copy.
+	// fails on the way leaves the library its copy. Each old file goes with
+	// its own row: one whose row could not be deleted stays.
 	var aside []string
 	// A rename scan relocates everything it accepts, existing rows included —
 	// attaching this one where it lies would leave the library split across the
@@ -389,9 +396,14 @@ func (s *Service) commitAttach(
 			old[i] = mf.Path
 		}
 		// Out of the way first: old and new render to the same destination
-		// whenever both were named by the same template.
+		// whenever both were named by the same template. A file that cannot
+		// be renamed (a folder a media server owns, a read-only mount) stays
+		// where it is: the import is refused if it holds the destination, and
+		// otherwise it is removed like an in-place replacement.
 		if aside, err = setAside(ctx, old...); err != nil {
-			return commitFail("replace existing file", err, 0)
+			slog.WarnContext(ctx,
+				"bulk import: existing file not set aside, replacing around it",
+				"movie.id", f.ExistingMovieID, "error", err)
 		}
 		// The file itself, not its folder: a folder is resolved to "the one
 		// video in it" and a flat folder of movies holds several.
@@ -402,7 +414,7 @@ func (s *Service) commitAttach(
 			string(scan.ImportMode),
 		)
 		if err != nil {
-			putBack(ctx, aside)
+			putBack(ctx, aside, f.SourcePath)
 			return commitFail("import movie", err, 0)
 		}
 		params.Path = imported.Path
@@ -412,19 +424,22 @@ func (s *Service) commitAttach(
 		params.Parsed = &imported.Parsed
 	}
 	if _, err := s.store.CreateMediaFile(ctx, params); err != nil {
-		putBack(ctx, aside)
+		putBack(ctx, aside, "")
 		return commitFail("create media file", err, 0)
 	}
 	for _, mf := range existing {
 		if err := s.store.DeleteMediaFile(ctx, mf.ID); err != nil {
-			putBack(ctx, aside)
+			// What is still set aside belongs to rows that are still there.
+			putBack(ctx, aside, "")
 			return commitFail("delete replaced file", err, 0)
 		}
-		if scan.Mode != entimportscan.ModeRename {
+		if i := slices.Index(aside, mf.Path); i >= 0 {
+			dropAside(ctx, mf.Path)
+			aside = slices.Delete(aside, i, i+1)
+		} else {
 			removeReplaced(ctx, mf.Path, params.Path)
 		}
 	}
-	dropAside(ctx, aside)
 	if err := s.store.UpdateMovieStatus(
 		ctx,
 		params.MovieID,

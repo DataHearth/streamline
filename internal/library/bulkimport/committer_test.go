@@ -304,12 +304,15 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 	)
 
 	It("replaces the movie's current file before attaching", func() {
-		old := filepath.Join(GinkgoT().TempDir(), "old.mkv")
+		dir := GinkgoT().TempDir()
+		old := filepath.Join(dir, "old.mkv")
 		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		src := filepath.Join(dir, "Movie.mkv")
+		Expect(os.WriteFile(src, []byte("new"), 0o644)).To(Succeed())
 		f := &ent.ImportScanFile{
 			ID:              7,
 			ExistingMovieID: 42,
-			SourcePath:      "/import/Movie.mkv",
+			SourcePath:      src,
 			Size:            1_500_000_000,
 		}
 
@@ -327,7 +330,7 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 			Once()
 		store.EXPECT().
 			CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
-				return p.MovieID == 42 && p.Path == "/import/Movie.mkv"
+				return p.MovieID == 42 && p.Path == src
 			})).
 			Return(&ent.MediaFile{}, nil).
 			Once()
@@ -340,14 +343,68 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 		Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
 		Expect(movieID).To(Equal(uint32(42)))
 		Expect(old).NotTo(BeAnExistingFile())
+		Expect(src).To(BeAnExistingFile())
+	})
+
+	It("keeps the tracked file and its row when the scanned file is gone", func() {
+		dir := GinkgoT().TempDir()
+		old := filepath.Join(dir, "old.mkv")
+		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		f := &ent.ImportScanFile{
+			ID:              7,
+			ExistingMovieID: 42,
+			// Scanned, then removed before the commit ran.
+			SourcePath: filepath.Join(dir, "Movie.mkv"),
+		}
+
+		// No create and no delete: the mock fails the spec on either.
+		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+			Return([]*ent.MediaFile{{ID: 9, Path: old}}, nil).Once()
+
+		outcome, msg, _ := svc.commitAttach(ctx, inPlaceScan, f)
+
+		Expect(outcome).To(Equal(entimportscanfile.OutcomeFailed))
+		Expect(msg).To(ContainSubstring("stat source"))
+		Expect(old).To(BeAnExistingFile())
+	})
+
+	It("removes only the files whose rows it deleted", func() {
+		dir := GinkgoT().TempDir()
+		first := filepath.Join(dir, "first.mkv")
+		second := filepath.Join(dir, "second.mkv")
+		src := filepath.Join(dir, "Movie.mkv")
+		for _, p := range []string{first, second, src} {
+			Expect(os.WriteFile(p, []byte(p), 0o644)).To(Succeed())
+		}
+		f := &ent.ImportScanFile{ID: 7, ExistingMovieID: 42, SourcePath: src}
+
+		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+			Return([]*ent.MediaFile{
+				{ID: 9, Path: first}, {ID: 10, Path: second},
+			}, nil).Once()
+		store.EXPECT().FindMovieByID(mock.Anything, uint32(42)).
+			Return(&ent.Movie{ID: 42}, nil).Once()
+		store.EXPECT().CreateMediaFile(mock.Anything, mock.Anything).
+			Return(&ent.MediaFile{}, nil).Once()
+		store.EXPECT().DeleteMediaFile(mock.Anything, uint32(9)).
+			Return(nil).Once()
+		store.EXPECT().DeleteMediaFile(mock.Anything, uint32(10)).
+			Return(errors.New("database is locked")).Once()
+
+		outcome, _, _ := svc.commitAttach(ctx, inPlaceScan, f)
+
+		Expect(outcome).To(Equal(entimportscanfile.OutcomeFailed))
+		Expect(first).NotTo(BeAnExistingFile())
+		Expect(second).To(BeAnExistingFile())
 	})
 
 	It("keeps the tracked file when the create fails", func() {
-		old := filepath.Join(GinkgoT().TempDir(), "old.mkv")
+		dir := GinkgoT().TempDir()
+		old := filepath.Join(dir, "old.mkv")
 		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
-		f := &ent.ImportScanFile{
-			ID: 7, ExistingMovieID: 42, SourcePath: "/import/Movie.mkv",
-		}
+		src := filepath.Join(dir, "Movie.mkv")
+		Expect(os.WriteFile(src, []byte("new"), 0o644)).To(Succeed())
+		f := &ent.ImportScanFile{ID: 7, ExistingMovieID: 42, SourcePath: src}
 
 		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(42)).
 			Return([]*ent.MediaFile{{ID: 9, Path: old}}, nil).Once()
@@ -618,6 +675,83 @@ var _ = Describe(
 			Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
 			Expect(head(dest, 3)).To(Equal("new"))
 			Expect(dest + replacedSuffix).NotTo(BeAnExistingFile())
+		})
+
+		It("drops the set-aside file of each row it deleted and puts back the rest",
+			func() {
+				first := filepath.Join(
+					libDir,
+					"Fight Club (1999) [a]",
+					"Fight Club.mkv",
+				)
+				second := filepath.Join(
+					libDir,
+					"Fight Club (1999) [b]",
+					"Fight Club.mkv",
+				)
+				video(first, "one")
+				video(second, "two")
+				src := filepath.Join(srcDir, "Fight Club 1999 1080p.mkv")
+				video(src, "new")
+				f := &ent.ImportScanFile{ID: 7, ExistingMovieID: 42, SourcePath: src}
+
+				store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+					Return([]*ent.MediaFile{
+						{ID: 9, Path: first}, {ID: 10, Path: second},
+					}, nil).Once()
+				store.EXPECT().FindMovieByID(mock.Anything, uint32(42)).
+					Return(&ent.Movie{ID: 42, Title: "Fight Club", Year: 1999}, nil).
+					Once()
+				store.EXPECT().CreateMediaFile(mock.Anything, mock.Anything).
+					Return(&ent.MediaFile{}, nil).Once()
+				store.EXPECT().DeleteMediaFile(mock.Anything, uint32(9)).
+					Return(nil).Once()
+				store.EXPECT().DeleteMediaFile(mock.Anything, uint32(10)).
+					Return(errors.New("database is locked")).Once()
+
+				outcome, _, _ := svc.commitAttach(ctx, renameScan, f)
+
+				Expect(outcome).To(Equal(entimportscanfile.OutcomeFailed))
+				Expect(first).NotTo(BeAnExistingFile())
+				Expect(first + replacedSuffix).NotTo(BeAnExistingFile())
+				Expect(head(second, 3)).To(Equal("two"))
+				Expect(second + replacedSuffix).NotTo(BeAnExistingFile())
+			},
+		)
+
+		It("replaces around a tracked file it cannot set aside", func() {
+			old := filepath.Join(libDir, "Fight Club (1999) [old]", "Fight Club.mkv")
+			video(old, "old")
+			// What an interrupted replacement left: never renamed over.
+			Expect(os.WriteFile(old+replacedSuffix, []byte("kept"), 0o644)).
+				To(Succeed())
+			src := filepath.Join(srcDir, "Fight Club 1999 1080p.mkv")
+			video(src, "new")
+			f := &ent.ImportScanFile{ID: 7, ExistingMovieID: 42, SourcePath: src}
+
+			store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+				Return([]*ent.MediaFile{{ID: 9, Path: old}}, nil).Once()
+			store.EXPECT().FindMovieByID(mock.Anything, uint32(42)).
+				Return(&ent.Movie{ID: 42, Title: "Fight Club", Year: 1999}, nil).
+				Once()
+			var recorded db.CreateMediaFileParams
+			store.EXPECT().CreateMediaFile(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, p db.CreateMediaFileParams) {
+					recorded = p
+				}).Return(&ent.MediaFile{}, nil).Once()
+			store.EXPECT().DeleteMediaFile(mock.Anything, uint32(9)).
+				Return(nil).Once()
+			store.EXPECT().
+				UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+				Return(nil).Once()
+
+			outcome, msg, _ := svc.commitAttach(ctx, renameScan, f)
+
+			Expect(msg).To(BeEmpty())
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+			Expect(head(recorded.Path, 3)).To(Equal("new"))
+			Expect(old).NotTo(BeAnExistingFile())
+			Expect(head(old+replacedSuffix, 4)).To(Equal("kept"))
 		})
 
 		It("commits each movie of a flat folder holding several", func() {
