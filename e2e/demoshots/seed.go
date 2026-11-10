@@ -281,9 +281,10 @@ func (d *demo) waitForMetadata(ctx context.Context) error {
 			if found == nil {
 				return fmt.Errorf("%s has no volume %d", s.Title, n)
 			}
-			book := found
-			if b, ok := found["book"].(obj); ok {
-				book = b
+			// A volume names its book; the title and makers are the book's.
+			var book obj
+			if err := d.admin.get(ctx, fmt.Sprintf("/books/%d", num(found["id"])), nil, &book); err != nil {
+				return err
 			}
 			author := str(book["author"])
 			if author == "" {
