@@ -169,6 +169,13 @@ git-cliff, so don't hand-edit `CHANGELOG.md`.
 Keep the PR to one topic. Rebase on `main` rather than merging it in. Fill in
 the PR template checklist.
 
+A PR from a branch of this repository is published as an image,
+`ghcr.io/datahearth/streamline-pr:pr-<number>` (`-vaapi` for the VAAPI
+flavor), so you and a reviewer can try it on a real deployment. The tags are
+deleted when the PR closes. A PR from a fork gets no image: its workflow token
+cannot push. See
+[Trying a pull request](https://github.com/datahearth/streamline/wiki/Installation#trying-a-pull-request).
+
 **A UI/UX change needs screenshots or a video in the PR.** That covers
 anything that changes what a page looks like or how it behaves: a new page or
 component, a layout, style or copy change, an interaction. Show before and

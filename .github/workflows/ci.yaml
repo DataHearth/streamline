@@ -288,8 +288,21 @@ jobs:
           chrome=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)
           [ -n "$chrome" ] || { echo "::error::no Chrome on the runner, so e2e/web would skip"; exit 1; }
           echo "CHROME_PATH=$chrome" >> "$GITHUB_ENV"
+      # The ffmpeg and transcoding e2e specs run the real encoder and skip
+      # without it on PATH; Ubuntu's build carries libx264, libx265, libmp3lame
+      # and libopus, which they use.
+      - name: Install ffmpeg
+        if: needs.changes.outputs.go == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      # STREAMLINE_E2E_CONTAINERS lets the container-backed specs (qBittorrent,
+      # Prowlarr) start their images on the runner's Docker instead of
+      # skipping, so `task test` runs every spec.
       - name: Run tests
         if: needs.changes.outputs.go == 'true'
+        env:
+          STREAMLINE_E2E_CONTAINERS: "1"
         run: task test JUNIT_DIR=/tmp/streamline -- --keep-going
       - name: Run frontend tests
         if: needs.changes.outputs.go != 'true'

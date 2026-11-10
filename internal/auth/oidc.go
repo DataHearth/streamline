@@ -87,11 +87,24 @@ func (m *oidcManager) Init(ctx context.Context, redirectBase string) {
 				ClientID:     p.ClientID,
 				ClientSecret: config.SecretValue(p.ClientSecret, p.ClientSecretFile),
 				Endpoint:     prv.Endpoint(),
-				Scopes:       []string{oidc.ScopeOpenID, "email", "profile"},
+				Scopes:       oidcScopes(p.Scopes),
 				RedirectURL:  redirectBase + "/auth/oidc/" + p.Name + "/callback",
 			},
 		}
 	}
+}
+
+// oidcScopes is the scope list of an authorization request: openid, email
+// and profile, always, then the provider's extra scopes in their configured
+// order, each once.
+func oidcScopes(extra []string) []string {
+	scopes := []string{oidc.ScopeOpenID, "email", "profile"}
+	for _, s := range extra {
+		if !slices.Contains(scopes, s) {
+			scopes = append(scopes, s)
+		}
+	}
+	return scopes
 }
 
 // Register is a test helper for injecting a pre-built provider.

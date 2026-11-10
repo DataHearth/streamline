@@ -298,6 +298,23 @@ With `role_claim` and `role_mapping` both set, the claim is **authoritative** �
 
 With no mapping configured, new users get `auth.default_role` and existing users keep whatever role they have.
 
+Every authorization request asks for the `openid email profile` scopes. Some IdPs — Dex, Authelia and Okta among them — only put a `groups` claim in the ID token when the `groups` scope is requested too; without it `role_claim: groups` finds nothing and every user lands on `auth.default_role`. If your IdP only sends groups when asked, add the scope to that provider:
+
+```yaml
+auth:
+  oidc:
+    - name: dex
+      issuer: https://dex.example.com
+      client_id: streamline
+      client_secret_file: /run/secrets/oidc-client-secret
+      scopes: [groups]
+      role_claim: groups
+      role_mapping:
+        streamline-admins: admin
+```
+
+`scopes` lists **extra** scopes only; the three base scopes are always sent and a repeated entry is sent once. Name only scopes the IdP grants this client: providers that check requested scopes (Google, or Authelia when the client's `scopes` list lacks one) refuse the whole login with `invalid_scope` — on their own error page, or back on Streamline's login page as `oidc_provider_error`. Keycloak needs none — its roles come from a mapper (`role_claim: realm_access.roles`), not a scope. Like the role mapping, `scopes` is set in the config file only, and takes effect on restart.
+
 ### Errors
 
 Callback failures redirect to `/login?error=<code>`:

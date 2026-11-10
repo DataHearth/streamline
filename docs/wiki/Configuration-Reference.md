@@ -248,6 +248,7 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `auth.lockout.window` | duration | `15m` | Window those failures are counted over |
 | `auth.lockout.duration` | duration | `15m` | How long the lock lasts |
 | `auth.oidc[]` | array | `[]` | See [Authentication and SSO](Authentication-and-SSO#oidc) |
+| `auth.oidc[].scopes` | list | `[]` | Scopes requested on top of `openid email profile` — e.g. `[groups]` for an IdP that sends the groups claim only when asked. File-only. See [Role mapping](Authentication-and-SSO#role-mapping) |
 
 Independently of `auth.lockout`, login and registration are rate-limited per IP at **5 attempts / 15 minutes**. That limit is not configurable.
 
