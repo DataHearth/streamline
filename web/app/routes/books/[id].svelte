@@ -142,7 +142,12 @@
 		const main = document.getElementById("main");
 		const el = editionsEl;
 		if (!main || !el) return;
-		const top = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - 88;
+		// Land a gap below what stays pinned: the top bar, whose height includes
+		// the safe-area inset of an installed iOS app, and the tab strip under
+		// it. Measured, not assumed: a fixed 88px put the heading under both.
+		const bar = main.querySelector<HTMLElement>(":scope > header")?.offsetHeight ?? 0;
+		const tabs = tabTrack?.parentElement?.offsetHeight ?? 0;
+		const top = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - bar - tabs - 16;
 		main.scrollTo({ top, behavior: "smooth" });
 	}
 	function use(e: Edition) {
