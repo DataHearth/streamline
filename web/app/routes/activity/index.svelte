@@ -367,8 +367,19 @@
 	let source = $derived<(QueueEntry | HistoryEntry)[]>(
 		view === "queue" ? queueItems : historyItems,
 	);
+	// The queue arrives in the order the client works it; the rows waiting on a
+	// person (held, then errored) go ahead of that order, or one held download
+	// sits thirty rows down a phone-length list with nothing pointing at it.
+	// The sort is stable, so everything else keeps the order served, and a
+	// header sort on the table still overrides it.
+	const ATTENTION_RANK: Record<string, number> = { held: 0, error: 1 };
 	let rows = $derived.by<(QueueEntry | HistoryEntry)[]>(() => {
 		let out = source;
+		if (view === "queue")
+			out = out.toSorted(
+				(a, b) =>
+					(ATTENTION_RANK[a.status] ?? 2) - (ATTENTION_RANK[b.status] ?? 2),
+			);
 		if (statusFilter.length)
 			out = out.filter((i) => statusFilter.includes(i.status));
 		if (search.trim()) {

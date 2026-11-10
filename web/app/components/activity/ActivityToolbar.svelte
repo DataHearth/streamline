@@ -7,7 +7,10 @@
 		ActivityView,
 		{ key: string; label: string; dot: string }[]
 	> = {
+		// Held leads: it is the one state waiting on a person, and the page
+		// lists those rows first as well.
 		queue: [
+			{ key: "held", label: i18n.lc_held(), dot: "held" },
 			{ key: "downloading", label: i18n.lc_downloading(), dot: "downloading" },
 			{ key: "stalled", label: i18n.lc_stalled(), dot: "stalled" },
 			{ key: "importing", label: i18n.lc_importing(), dot: "grabbing" },
