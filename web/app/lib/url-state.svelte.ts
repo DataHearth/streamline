@@ -25,10 +25,11 @@ import { activeRoute } from "@roxi/routify";
 // hand-edited or stale URL falls back to the defaults through `oneOf` and
 // `listOf` — and read a renamed parameter under its old name too.
 //
-// `serialize` returns the page's state as a query. It is the effect's only
-// tracked read, and the URL is rewritten whenever it changes. `onSync`, when
-// given, gets each query the page settles on while it is the page on screen
-// (the library lists remember it for a detail page's back link).
+// `serialize` returns the page's state as a query. It is the only page state
+// the effect tracks, and the URL is rewritten whenever it changes. `onSync`,
+// when given, gets each query the page settles on while it is the page on
+// screen, the first as it arrives (the library lists remember it for a detail
+// page's back link).
 //
 // `path` is the page's path, or a pattern for a page with one path per title
 // (`/^\/movies\/\d+$/`).
@@ -44,6 +45,11 @@ export function syncRouteQuery(
 	// before `apply` has seeded the page from its own URL, or the defaults the
 	// page starts with would replace the filters a link carries.
 	let active = $state<string | null>(null);
+	// Whether the address bar shows the route `apply` last read. Routify sets
+	// the active route first and writes history from a timer after it, so until
+	// then window.location is still the URL being left.
+	let landed = $state(false);
+	let arrival = 0;
 
 	$effect(() =>
 		untrack(() =>
@@ -52,6 +58,8 @@ export function syncRouteQuery(
 				const url = new URL(r.url ?? "", "http://x");
 				if (!matches(url.pathname)) {
 					active = null;
+					landed = false;
+					arrival++;
 					return;
 				}
 				// Routify mounts the incoming route before window.location catches up,
@@ -64,7 +72,17 @@ export function syncRouteQuery(
 				// to show.
 				const echo = active === url.pathname && r.mode === "replaceState";
 				active = url.pathname;
-				if (!echo) apply(url.searchParams, url.pathname);
+				if (echo) return;
+				apply(url.searchParams, url.pathname);
+				// Subscribers run before Routify queues its history write, so one
+				// timer would fire ahead of it; the second is queued behind it.
+				landed = false;
+				const mine = ++arrival;
+				setTimeout(() =>
+					setTimeout(() => {
+						if (mine === arrival) landed = true;
+					}),
+				);
 			}),
 		),
 	);
@@ -74,9 +92,10 @@ export function syncRouteQuery(
 		if (active === null || typeof window === "undefined") return;
 		// A navigation into this page — or from one title to another — still has
 		// the outgoing URL in the address bar; writing now would stamp this page's
-		// state onto that route's path and cancel the navigation.
+		// state onto that route's path and cancel the navigation. `landed` is
+		// tracked, so the write the page owes runs as soon as the route has landed.
 		const { pathname, hash } = window.location;
-		if (pathname !== active) return;
+		if (!landed && pathname !== active) return;
 		onSync?.(search);
 		const next = `${pathname}${search ? `?${search}` : ""}${hash}`;
 		if (next === pathname + window.location.search + hash) return;
