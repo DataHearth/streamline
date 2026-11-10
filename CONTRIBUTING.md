@@ -71,6 +71,29 @@ change an input:
 `api/openapi.yaml` is the source of truth for the REST API — write the spec
 first, then implement the generated handler interface.
 
+## README screenshots
+
+The screenshots in `docs/assets/` come from one command:
+
+```bash
+task docs:screenshots                       # all twenty
+task docs:screenshots -- -only movies,books # some of them
+task docs:screenshots -- -keep              # leave the instance up afterwards
+```
+
+It boots a throwaway instance under `$TMPDIR/streamline-demo`, adds a demo
+library of public-domain films, television and books and Creative Commons
+music, grabs it through a fake indexer and a fake qBittorrent, imports the
+finished releases from files ffmpeg makes, files the requests and a library
+import, and shoots each page. It needs `ffmpeg`, a Chromium (`CHROME_PATH` or
+on `PATH`) and the TMDB, TVDB and Hardcover keys as
+`STREAMLINE_METADATA__TMDB_API_KEY`, `STREAMLINE_METADATA__TVDB_API_KEY` and
+`STREAMLINE_METADATA__HARDCOVER_API_KEY`. A run takes about fifteen minutes,
+most of it MusicBrainz's one request a second; the first also encodes the
+video clips it reuses. Retake them when a change shows on any of the pages,
+and read every image before committing them. What the demo holds and the two
+values it stages are described in `e2e/demoshots/main.go`.
+
 ## Conventions
 
 The full house style lives in [CLAUDE.md](CLAUDE.md) — it is written for AI
