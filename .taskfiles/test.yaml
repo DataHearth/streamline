@@ -52,6 +52,10 @@ tasks:
 
   default:
     desc: Run entire test suite
+    # The browser specs and the embedded-asset specs test the built bundles,
+    # which are gitignored, so a checkout's copy can predate its web/app.
+    # Both builds are fingerprinted and skip when their sources are unchanged.
+    deps: [":build:js", ":build:css"]
     # The e2e specs go first and alone: ginkgo starts with cmd/ and e2e/, so in
     # one run they would sit in the middle of the whole tree's builds. The second
     # run still happens when the first fails, so one report covers everything.
