@@ -42,9 +42,13 @@ import (
 // -record it is sent upstream and kept. A request is keyed by its method, URL
 // and body with the provider keys taken out, so a cassette recorded with one
 // set of keys replays with none.
+//
+// The instance also makes calls that are no provider's (offCassette). Those
+// are refused the same way in both modes and are neither kept nor counted.
 
-// cassetteMeta is cassette.json: when the recording was made, which replay
-// shifts recent dates by.
+// cassetteMeta is cassette.json: when the recording was started. An exchange
+// kept before each carried its own date (exchange.RecordedAt) is taken to be
+// from that day.
 type cassetteMeta struct {
 	RecordedAt time.Time `json:"recorded_at"`
 }
@@ -65,6 +69,21 @@ type exchange struct {
 	// placeholder is all anyone needs; recording, the instance needs the
 	// real one for the calls that follow, so the exchange is fetched again.
 	Scrubbed bool `json:"scrubbed,omitempty"`
+	// RecordedAt is the day this exchange was kept, which replay shifts its
+	// recent dates from. A cassette is filled in over time (-record keeps
+	// what it lacks), so one date for the whole of it would move a later
+	// exchange too far. Zero means cassette.json's.
+	RecordedAt time.Time `json:"recorded_at,omitzero"`
+}
+
+// offCassette lists the hosts the instance calls for something other than
+// metadata or an image: the built-in indexer definitions, a commit lookup
+// then a tarball of megabytes from GitHub (internal/cardigann/snapshot). The
+// demo configures no built-in indexer, so they are refused in both modes
+// rather than recorded, published with the cassette and counted as missing.
+var offCassette = map[string]bool{
+	"api.github.com":      true,
+	"codeload.github.com": true,
 }
 
 // keptHeaders are the response headers worth replaying.
@@ -79,8 +98,9 @@ type proxy struct {
 	dir     string
 	record  bool
 	secrets []string // replaced by "REDACTED" in keys and recordings
-	shift   time.Duration
 	meta    cassetteMeta
+	// now is the clock, a field so a spec can replay a cassette later.
+	now func() time.Time
 
 	ca     *x509.Certificate
 	caKey  *ecdsa.PrivateKey
@@ -110,6 +130,7 @@ func newProxy(dir string, record bool, secrets []string) (*proxy, error) {
 		record: record,
 		certs:  map[string]*tls.Certificate{},
 		paced:  map[string]time.Time{},
+		now:    time.Now,
 		upstream: &http.Client{
 			Timeout: 2 * time.Minute,
 			// Redirects go back to the instance, which follows them through
@@ -138,7 +159,7 @@ func newProxy(dir string, record bool, secrets []string) (*proxy, error) {
 				dir,
 			)
 		}
-		p.meta.RecordedAt = time.Now().UTC().Truncate(24 * time.Hour)
+		p.meta.RecordedAt = p.today()
 		raw, _ := json.MarshalIndent(p.meta, "", "  ")
 		if err := os.WriteFile(
 			filepath.Join(dir, "cassette.json"),
@@ -148,13 +169,14 @@ func newProxy(dir string, record bool, secrets []string) (*proxy, error) {
 			return nil, err
 		}
 	}
-	// Whole weeks, so a weekly show still airs on its weekday.
-	weeks := time.Since(p.meta.RecordedAt) / (7 * 24 * time.Hour)
-	p.shift = weeks * 7 * 24 * time.Hour
 	if err := p.makeCA(); err != nil {
 		return nil, err
 	}
 	return p, nil
+}
+
+func (p *proxy) today() time.Time {
+	return p.now().UTC().Truncate(24 * time.Hour)
 }
 
 func (p *proxy) makeCA() error {
@@ -281,6 +303,17 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 		u.Scheme = scheme
 	}
 	key, shown := p.key(r.Method, &u, body)
+	if offCassette[u.Hostname()] {
+		slog.DebugContext(
+			r.Context(),
+			"not a provider call",
+			"request",
+			r.Method+" "+shown,
+		)
+		w.Header().Set("X-Demo-Cassette", "off")
+		http.Error(w, "not a call the demo cassette answers", http.StatusBadGateway)
+		return
+	}
 	file := filepath.Join(p.dir, safeHost(u.Host), key+".json")
 
 	if ex, data, err := p.load(file); err == nil && (!p.record || !ex.Scrubbed) {
@@ -342,10 +375,11 @@ func (p *proxy) handle(w http.ResponseWriter, r *http.Request, scheme string) {
 		return
 	}
 	ex := exchange{
-		Method: r.Method,
-		URL:    shown,
-		Status: resp.StatusCode,
-		Header: map[string]string{},
+		Method:     r.Method,
+		URL:        shown,
+		Status:     resp.StatusCode,
+		Header:     map[string]string{},
+		RecordedAt: p.today(),
 	}
 	for _, h := range keptHeaders {
 		if v := resp.Header.Get(h); v != "" {
@@ -544,13 +578,22 @@ func (p *proxy) write(w http.ResponseWriter, ex *exchange, data []byte) {
 // isoDate matches a calendar date, alone or leading a timestamp.
 var isoDate = regexp.MustCompile(`\b(\d{4})-(\d{2})-(\d{2})\b`)
 
-// shiftDates moves every date within two years of the recording forward by
-// the whole weeks since it was made, so what was airing that month airs this
-// one and the calendar is never empty. Older dates are a film's or a book's
-// own and stay put.
+// shiftDates moves every date within two years of the exchange's recording
+// forward by the whole weeks since it was made, so what was airing that month
+// airs this one and the calendar is never empty. Older dates are a film's or
+// a book's own and stay put.
 func (p *proxy) shiftDates(ex *exchange, data []byte) []byte {
-	if p.shift <= 0 || ex.BodyFile != "" ||
-		!strings.Contains(ex.Header["Content-Type"], "json") {
+	if ex.BodyFile != "" || !strings.Contains(ex.Header["Content-Type"], "json") {
+		return data
+	}
+	recorded := ex.RecordedAt
+	if recorded.IsZero() {
+		recorded = p.meta.RecordedAt
+	}
+	// Whole weeks, so a weekly show still airs on its weekday.
+	const week = 7 * 24 * time.Hour
+	shift := p.now().Sub(recorded) / week * week
+	if shift <= 0 {
 		return data
 	}
 	window := 2 * 365 * 24 * time.Hour
@@ -559,10 +602,10 @@ func (p *proxy) shiftDates(ex *exchange, data []byte) []byte {
 		if err != nil {
 			return m
 		}
-		if d := t.Sub(p.meta.RecordedAt); d < -window || d > window {
+		if d := t.Sub(recorded); d < -window || d > window {
 			return m
 		}
-		return []byte(t.Add(p.shift).Format("2006-01-02"))
+		return []byte(t.Add(shift).Format("2006-01-02"))
 	})
 }
 

@@ -45,6 +45,9 @@ Hardcover, Deezer, the Cover Art Archive, Wikimedia — goes through a recording
 
 - **A plain run replays** `e2e/demo/cassette/`: no key, no network, the same library every time. A
   request the cassette lacks answers `502` and is listed in the summary.
+- **A call that is no provider's is refused in both modes**, neither recorded nor counted: the
+  built-in indexer definitions the instance fetches from GitHub (`offCassette` in `proxy.go`), a
+  tarball of megabytes the demo has no use for.
 - **The cassette lives on the `demo-cassette` branch**, an orphan holding nothing else, not in
   `main`'s history: its images are megabytes no build needs. `task docs:screenshots` fetches it into
   the (gitignored) directory when it is not there (`task docs:cassette:fetch`; `CASSETTE_REMOTE` and
@@ -67,6 +70,8 @@ Recording waits, before the shots, for every followed artist's discography to fi
 MusicBrainz's one request a second that takes minutes, and an album the worker had not reached
 would be one the unthrottled replay then asks for and misses.
 
-Replaying moves every date within two years of the recording (`cassette.json`'s `recorded_at`)
-forward by the whole weeks since, so an episode that aired the week of the recording airs this week,
-and the calendar shot always has a month to show. Older dates, a film's or a book's own, stay put.
+Replaying moves every date within two years of an exchange's recording forward by the whole weeks
+since, so an episode that aired the week of the recording airs this week, and the calendar shot
+always has a month to show. Older dates, a film's or a book's own, stay put. Each exchange carries
+the day it was kept (`recorded_at`), so one added by a later `-record` is shifted from its own day;
+one without the field is from `cassette.json`'s `recorded_at`, the day the cassette was started.
