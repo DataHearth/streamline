@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -149,6 +150,7 @@ func Record(
 	default:
 		q = q.SetMovieID(ownerID)
 	}
+	payload = withDownloadID(ctx, payload)
 	if payload != nil {
 		q = q.SetPayload(payload)
 	}
@@ -182,6 +184,67 @@ func Record(
 }
 
 var defaultClient *ent.Client
+
+// PayloadDownloadID is the payload key naming the download record an event
+// came from: a grab, the download completing or failing, a hold, and every
+// event its import records (the imported row, a replaced file's removal). The
+// activity feed hands it on as ActivityEvent.download_id, which is what links
+// a history row to the record's detail on Activity.
+const PayloadDownloadID = "download_id"
+
+type downloadRecordKey struct{}
+
+// WithDownloadRecord marks ctx as working on behalf of one download record, so
+// every event recorded under it names that record. The importer sets it per
+// record: the imported events of a movie or an episode come from the media
+// file create hook, which cannot see the record behind the file.
+func WithDownloadRecord(ctx context.Context, id uint32) context.Context {
+	if id == 0 {
+		return ctx
+	}
+	return context.WithValue(ctx, downloadRecordKey{}, id)
+}
+
+func downloadRecordFrom(ctx context.Context) uint32 {
+	v, _ := ctx.Value(downloadRecordKey{}).(uint32)
+	return v
+}
+
+// withDownloadID returns payload with the ctx's download record in it, unless
+// the caller named one already. A copy: a caller's map is not ours to change.
+func withDownloadID(ctx context.Context, payload map[string]any) map[string]any {
+	id := downloadRecordFrom(ctx)
+	if id == 0 {
+		return payload
+	}
+	if _, ok := payload[PayloadDownloadID]; ok {
+		return payload
+	}
+	out := maps.Clone(payload)
+	if out == nil {
+		out = map[string]any{}
+	}
+	out[PayloadDownloadID] = id
+	return out
+}
+
+// DownloadID reads an event payload's download record back, or 0. A payload
+// round-trips through JSON, so the number comes back a float64.
+func DownloadID(payload map[string]any) uint32 {
+	switch v := payload[PayloadDownloadID].(type) {
+	case float64:
+		if v > 0 && v <= float64(^uint32(0)) && v == float64(uint32(v)) {
+			return uint32(v)
+		}
+	case uint32:
+		return v
+	case int:
+		if v > 0 && int64(v) <= int64(^uint32(0)) {
+			return uint32(v)
+		}
+	}
+	return 0
+}
 
 // PurgeOldEvents deletes MediaEvent rows whose create_time is older
 // than (now - retention). Returns the number of rows deleted.
