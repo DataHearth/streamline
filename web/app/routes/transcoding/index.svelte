@@ -25,7 +25,8 @@
 		type TranscodeSortKey,
 	} from "@lib/transcoding";
 	import type { FFmpegConfig, TranscodeJob } from "@lib/types";
-	import ActivityToolbar from "@components/activity/ActivityToolbar.svelte";
+	import ActivityToolbar, { ACTIVITY_CHIPS } from "@components/activity/ActivityToolbar.svelte";
+	import { listOf, oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import ActivityFilterSheet from "@components/activity/ActivityFilterSheet.svelte";
 	import TouchStatLine from "@components/activity/TouchStatLine.svelte";
 	import TranscodeList from "@components/activity/TranscodeList.svelte";
@@ -36,6 +37,30 @@
 	let statusFilter = $state<string[]>([]);
 	let search = $state("");
 	let sort = $state<TranscodeSortKey>("attention");
+	// Each sort chip pins its own direction and the page offers no other, so
+	// the URL carries `sort` alone.
+	syncRouteQuery(
+		"/transcoding",
+		(p) => {
+			statusFilter = listOf(
+				param(p, "status"),
+				ACTIVITY_CHIPS.transcoding.map((c) => c.key),
+			);
+			search = param(p, "q") ?? "";
+			sort = oneOf(
+				param(p, "sort"),
+				TRANSCODE_SORT_CHIPS.map((c) => c.key),
+				"attention",
+			);
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "status", statusFilter);
+			setParam(p, "q", search);
+			setParam(p, "sort", sort, "attention");
+			return p;
+		},
+	);
 	let filtersOpen = $state(false);
 	let expandedId = $state<number | null>(null);
 	let confirmCancel = $state<TranscodeJob | null>(null);

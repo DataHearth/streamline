@@ -24,6 +24,7 @@
 	import CalendarFilterSwitch from "@components/calendar/CalendarFilter.svelte";
 	import CalendarViewSwitch from "@components/calendar/CalendarViewSwitch.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { getLocale } from "@lib/paraglide/runtime.js";
 
 	const today = new Date();
@@ -32,6 +33,41 @@
 	let selected = $state(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
 	let filter = $state<CalendarFilter>("all");
 	let view = $state<CalendarView>("month");
+
+	// The view, the kind filter and the month on screen are in the URL; the
+	// month (`YYYY-MM`) only when it is not this one. A swipe rewrites it in
+	// place, so history does not fill with months.
+	const pad2 = (n: number) => String(n).padStart(2, "0");
+	const thisMonth = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}`;
+	syncRouteQuery(
+		"/calendar",
+		(p) => {
+			view = oneOf<CalendarView>(param(p, "view"), ["month", "upcoming"], "month");
+			filter = oneOf<CalendarFilter>(
+				param(p, "kind"),
+				["all", "movies", "episodes", "albums", "books"],
+				"all",
+			);
+			const m = /^(\d{4})-(\d{2})$/.exec(param(p, "month") ?? "");
+			const y = Number(m?.[1]);
+			const mo = Number(m?.[2]);
+			if (m && mo >= 1 && mo <= 12) {
+				year = y;
+				month0 = mo - 1;
+			} else {
+				year = today.getFullYear();
+				month0 = today.getMonth();
+			}
+			syncSelection();
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "view", view, "month");
+			setParam(p, "kind", filter, "all");
+			setParam(p, "month", `${year}-${pad2(month0 + 1)}`, thisMonth);
+			return p;
+		},
+	);
 
 	const weekStart = resolveWeekStart();
 

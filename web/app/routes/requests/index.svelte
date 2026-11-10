@@ -66,6 +66,8 @@
 		QualityProfile,
 	} from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
+	import { createMediaQuery } from "@lib/viewport.svelte";
 
 	let tab = $state<RequestTab>("pending");
 	const NONE_RIGHT_NOW: Record<RequestTab, () => string> = {
@@ -80,6 +82,29 @@
 	let touchTab = $state<RequestTab>("all");
 	let kind = $state<RequestKind>("all");
 	let query = $state("");
+	// One ?tab= for both bands: a link opens either on the tab it names, and the
+	// URL writes the tab on screen against that band's own default, so a bare
+	// /requests still opens each band where it always did.
+	const TABS: RequestTab[] = ["pending", "approved", "rejected", "all"];
+	const wide = createMediaQuery("(min-width: 1024px)");
+	syncRouteQuery(
+		"/requests",
+		(p) => {
+			const named = param(p, "tab");
+			tab = oneOf(named, TABS, "pending");
+			touchTab = oneOf(named, TABS, "all");
+			kind = oneOf(param(p, "kind"), KIND_CHIPS.map((c) => c.key), "all");
+			query = param(p, "q") ?? "";
+		},
+		() => {
+			const p = new URLSearchParams();
+			if (wide()) setParam(p, "tab", tab, "pending");
+			else setParam(p, "tab", touchTab, "all");
+			setParam(p, "kind", kind, "all");
+			setParam(p, "q", query);
+			return p;
+		},
+	);
 	let filterOpen = $state(false);
 	// The accordion (lg) and the sheet (below lg) are two containers for the same
 	// decision, so each tracks its own open row — but both by id, never by the

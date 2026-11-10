@@ -70,4 +70,43 @@ var _ = Describe("Query-string state", Label("e2e"), func() {
 		Eventually(func() string { return active(page) }).Should(Equal("History"))
 		expectPath(page, path+"?tab=history")
 	})
+
+	It("carries the activity view, its chips and the search, view first", func() {
+		page := newSessionPage("/activity?view=history&status=failed,bogus&q=x")
+		expectPath(page, "/activity?view=history&status=failed&q=x")
+		Expect(visibleElement(page, `button[aria-pressed=true]`).MustText()).To(HavePrefix("History"))
+
+		// A switch clears the chips, and the URL follows.
+		visibleElement(page, `button[aria-pressed=false]`)
+		page.MustElementR(`button[aria-pressed]`, "^Queue").MustClick()
+		expectPath(page, "/activity?q=x")
+	})
+
+	It("opens requests on the tab and kind a link names", func() {
+		page := newSessionPage("/requests?tab=all&kind=movies")
+		expectPath(page, "/requests?tab=all&kind=movies")
+		Expect(visibleElement(page, `nav button[aria-current=page]`).MustText()).To(HavePrefix("All"))
+	})
+
+	It("keeps the users filter and sort in the URL", func() {
+		page := newSessionPage("/settings/users?role=admin&sort=name")
+		expectPath(page, "/settings/users?role=admin&sort=name")
+		Expect(visibleElement(page, `th[aria-sort=ascending]`).MustText()).To(ContainSubstring("USER"))
+
+		visibleElement(page, `th[aria-sort=ascending] button`).MustClick()
+		expectPath(page, "/settings/users?role=admin&sort=name&order=desc")
+	})
+
+	It("keeps the calendar's month and kind in the URL", func() {
+		page := newSessionPage("/calendar?month=2026-01&kind=movies")
+		page.MustElementR("h2", "January 2026")
+		expectPath(page, "/calendar?kind=movies&month=2026-01")
+
+		visibleElement(page, `button[aria-label="Next month"]`).MustClick()
+		page.MustElementR("h2", "February 2026")
+		expectPath(page, "/calendar?kind=movies&month=2026-02")
+
+		page = newSessionPage("/calendar?month=2026-13")
+		expectPath(page, "/calendar")
+	})
 })
