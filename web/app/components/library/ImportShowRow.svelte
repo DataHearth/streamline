@@ -196,7 +196,7 @@
 		{:else if show.classification === "existing"}
 			<span class="text-xs text-fg-subtle">{i18n.imports_link_to_show()}</span>
 		{:else}
-			<span class="text-xs text-fg-faint">{i18n.imports_awaits_decision()}</span>
+			<span class="text-xs text-fg-subtle">{i18n.imports_awaits_decision()}</span>
 		{/if}
 	</td>
 

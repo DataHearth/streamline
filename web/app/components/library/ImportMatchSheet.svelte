@@ -207,7 +207,7 @@
 						type="search"
 						bind:value={q}
 						placeholder={i18n.imports_search_source({ source })}
-						class="min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-fg-faint"
+						class="min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-fg-subtle"
 					/>
 					{#if q}
 						<button
@@ -291,7 +291,7 @@
 										</span>
 										{#if h.sub}
 											<span
-												class="mt-1 line-clamp-2 block text-[11.5px] leading-relaxed text-fg-faint"
+												class="mt-1 line-clamp-2 block text-[11.5px] leading-relaxed text-fg-subtle"
 											>
 												{h.sub}
 											</span>

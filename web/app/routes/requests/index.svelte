@@ -357,7 +357,7 @@
 				<div
 					class={cn(
 						"font-mono text-2xl font-bold tabular",
-						s.n > 0 ? s.cls : "text-fg-faint",
+						s.n > 0 ? s.cls : "text-fg-subtle",
 					)}
 				>
 					{s.n}
@@ -405,7 +405,7 @@
 								"rounded-sm px-1.5 py-px font-mono text-[10px] tabular",
 								t.key === "pending" && t.count > 0
 									? "bg-status-wanted/20 text-status-wanted"
-									: "bg-white/[0.04] text-fg-faint",
+									: "bg-white/[0.04] text-fg-subtle",
 							)}
 						>
 							{t.count}
@@ -492,13 +492,13 @@
 								<div class="flex items-center gap-2">
 									<span class="truncate font-medium text-fg">{r.title}</span>
 									<span
-										class="shrink-0 font-mono text-[10px] uppercase tracking-wide text-fg-faint"
+										class="shrink-0 font-mono text-[10px] uppercase tracking-wide text-fg-subtle"
 									>
 										{kindLabel(r.media_type)}
 									</span>
 								</div>
 								<div class="mt-0.5 truncate text-[12px] text-fg-subtle">
-									{#if albumBy(r)}{albumBy(r)}{#if requestedAs(r)}<span class="text-fg-faint">{" ("}{requestedAs(r)}{")"}</span>{/if}{" · "}{/if}{requesterName(r)} · {formatRelative(r.created_at)}
+									{#if albumBy(r)}{albumBy(r)}{#if requestedAs(r)}<span class="text-fg-subtle">{" ("}{requestedAs(r)}{")"}</span>{/if}{" · "}{/if}{requesterName(r)} · {formatRelative(r.created_at)}
 								</div>
 							</div>
 							<span
@@ -562,13 +562,13 @@
 
 								<dl class="grid gap-2 text-[13px] sm:grid-cols-2">
 									<div>
-										<dt class="text-[11px] uppercase tracking-wide text-fg-faint">
+										<dt class="text-[11px] uppercase tracking-wide text-fg-subtle">
 											{i18n.requests_requested_by()}
 										</dt>
 										<dd class="mt-0.5 text-fg">{r.requester.email}</dd>
 									</div>
 									<div>
-										<dt class="text-[11px] uppercase tracking-wide text-fg-faint">
+										<dt class="text-[11px] uppercase tracking-wide text-fg-subtle">
 											{i18n.quality_preferred()}
 										</dt>
 										<dd class="mt-0.5 font-mono text-fg">
@@ -577,7 +577,7 @@
 									</div>
 									{#if r.approved_by}
 										<div>
-											<dt class="text-[11px] uppercase tracking-wide text-fg-faint">
+											<dt class="text-[11px] uppercase tracking-wide text-fg-subtle">
 												{i18n.requests_decided_by()}
 											</dt>
 											<dd class="mt-0.5 text-fg">
@@ -589,7 +589,7 @@
 								</dl>
 								{#if r.status === "denied" && r.reason}
 									<div class="mt-3">
-										<div class="text-[11px] uppercase tracking-wide text-fg-faint">
+										<div class="text-[11px] uppercase tracking-wide text-fg-subtle">
 											{i18n.common_reason()}
 										</div>
 										<blockquote
@@ -632,7 +632,7 @@
 											<div class="min-w-[12rem]">
 												<label
 													for="qp-{r.id}"
-													class="mb-1 block text-[11px] font-medium uppercase tracking-wide text-fg-faint"
+													class="mb-1 block text-[11px] font-medium uppercase tracking-wide text-fg-subtle"
 												>
 													{i18n.quality_profile()}
 												</label>
@@ -755,7 +755,7 @@
 		bind:value={denyReason}
 		rows="3"
 		placeholder={i18n.requests_reason_example()}
-		class="w-full rounded-md border border-border bg-bg-card px-3 py-2 text-sm text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent-ring placeholder:text-fg-faint"
+		class="w-full rounded-md border border-border bg-bg-card px-3 py-2 text-sm text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent-ring placeholder:text-fg-subtle"
 	></textarea>
 </Dialog>
 

@@ -30,7 +30,7 @@
 			oninput={(e) => onQueryChange(e.currentTarget.value)}
 			placeholder={i18n.requests_search_placeholder()}
 			aria-label={i18n.requests_search_aria()}
-			class="min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-fg-faint"
+			class="min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-fg-subtle"
 		/>
 		{#if query}
 			<button

@@ -644,7 +644,7 @@
 			</span>
 			<span title={fmtDate(r.published_at)}>{fmtAge(r.published_at)}</span>
 			{#if r.release_group}
-				<span class="font-mono text-[11px] text-fg-faint">{r.release_group}</span>
+				<span class="font-mono text-[11px] text-fg-subtle">{r.release_group}</span>
 			{/if}
 			{@render filesToggle(r)}
 		</div>
@@ -708,7 +708,7 @@
 {:else}
 	{@render packsHidden()}
 	<div class="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-		<span class="tabular text-[11px] text-fg-faint">
+		<span class="tabular text-[11px] text-fg-subtle">
 			{#if technical}
 				{i18n.releases_count_of({ visible: rows.length, total: data.length })}
 			{:else}
@@ -945,7 +945,7 @@
 				)}
 			>
 				<thead
-					class="sticky top-0 z-10 bg-bg-elevated text-[10px] uppercase tracking-[0.12em] text-fg-faint [&_th]:bg-surface"
+					class="sticky top-0 z-10 bg-bg-elevated text-[10px] uppercase tracking-[0.12em] text-fg-subtle [&_th]:bg-surface"
 				>
 					<tr class="border-b border-border">
 						<th
@@ -1246,7 +1246,7 @@
 	</p>
 	{#if existing && replaceCount === 1}
 		<div class="mt-3.5 rounded-md border border-border bg-bg-base px-3 py-2.5">
-			<div class="font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint">
+			<div class="font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle">
 				{i18n.replace_current_file()}
 			</div>
 			{#if existing.name}

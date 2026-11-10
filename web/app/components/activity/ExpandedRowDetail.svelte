@@ -129,7 +129,7 @@
 			>
 				{#each rows as kv (kv.label)}
 					<dt
-						class="font-medium uppercase tracking-[0.1em] text-fg-faint"
+						class="font-medium uppercase tracking-[0.1em] text-fg-subtle"
 					>
 						{kv.label}
 					</dt>

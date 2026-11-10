@@ -201,7 +201,7 @@
 				autocomplete="off"
 				autocapitalize="off"
 				spellcheck="false"
-				class="search-input min-w-0 flex-1 border-0 bg-transparent text-[15px] text-fg placeholder:text-fg-faint"
+				class="search-input min-w-0 flex-1 border-0 bg-transparent text-[15px] text-fg placeholder:text-fg-subtle"
 			/>
 			{#if typed}
 				<button
@@ -244,7 +244,7 @@
 		<div class="md:mx-auto md:max-w-2xl">
 			{#each model.sections as section (section.id)}
 				<div
-					class="flex items-baseline justify-between px-3 pb-1 pt-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
+					class="flex items-baseline justify-between px-3 pb-1 pt-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
 				>
 					<span>{section.label}</span>
 				</div>

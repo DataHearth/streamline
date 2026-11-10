@@ -158,7 +158,7 @@
 						)}{albumBy(request, verifiedArtist) ? ` · ${albumBy(request, verifiedArtist)}` : ""}
 					</p>
 					{#if requestedAs(request, verifiedArtist)}
-						<p class="mt-0.5 truncate text-[11.5px] text-fg-faint">{requestedAs(request, verifiedArtist)}</p>
+						<p class="mt-0.5 truncate text-[11.5px] text-fg-subtle">{requestedAs(request, verifiedArtist)}</p>
 					{/if}
 				</div>
 				<button
@@ -255,7 +255,7 @@
 				{#if reviewer && pending}
 					<div class="mt-3 border-t border-border pt-4">
 						<div
-							class="mb-2 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
+							class="mb-2 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
 						>
 							{i18n.requests_add_with_profile()}
 						</div>

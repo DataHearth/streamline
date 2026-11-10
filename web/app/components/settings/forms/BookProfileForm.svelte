@@ -46,7 +46,7 @@
 				? "border-accent-line bg-accent-soft text-accent-text"
 				: "border-border bg-bg-elevated text-fg-muted hover:border-border-strong",
 		);
-	const h4 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
+	const h4 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle";
 </script>
 
 <div class="space-y-4">

@@ -356,7 +356,7 @@
 	{#snippet extra()}
 		<div class="pt-5">
 			<div
-				class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
+				class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
 			>
 				{i18n.common_type()}
 			</div>
@@ -381,7 +381,7 @@
 		</div>
 		<div class="pt-5">
 			<div
-				class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
+				class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
 			>
 				{i18n.monitor_monitoring()}
 			</div>
@@ -443,7 +443,7 @@
 			<span
 				class={cn(
 					"font-mono text-[10.5px] tabular",
-					tab !== "all" ? "text-accent-text/70" : "text-fg-faint",
+					tab !== "all" ? "text-accent-text/70" : "text-fg-subtle",
 				)}
 			>
 				{counts[tab]}
@@ -587,7 +587,7 @@
 			value={query}
 			oninput={(e) => onQueryChange(e.currentTarget.value)}
 			placeholder={i18n.common_filter_ellipsis()}
-			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
+			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
 		/>
 		{#if query}
 			<button
@@ -684,7 +684,7 @@
 				>
 					<CheckCheck size={14} aria-hidden="true" />
 					{i18n.common_select_all()}
-					<span class="font-mono text-[10px] tabular text-fg-faint">
+					<span class="font-mono text-[10px] tabular text-fg-subtle">
 						{matchedCount}
 					</span>
 				</button>

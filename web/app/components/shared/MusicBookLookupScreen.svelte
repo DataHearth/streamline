@@ -238,7 +238,7 @@
 				<ChevronLeft size={20} aria-hidden="true" />
 				{i18n.nav_library()}
 			</button>
-			<span class="font-mono text-[10.5px] uppercase tracking-[0.16em] text-fg-faint">{LOOKUP_SOURCE[kind]}</span>
+			<span class="font-mono text-[10.5px] uppercase tracking-[0.16em] text-fg-subtle">{LOOKUP_SOURCE[kind]}</span>
 		</header>
 
 		<div class="relative flex-none px-4">
@@ -250,7 +250,7 @@
 				placeholder={isArtist ? i18n.lookup_search_mb_placeholder() : i18n.lookup_search_hc_placeholder()}
 				autocomplete="off"
 				aria-label={isArtist ? i18n.lookup_search_mb() : i18n.lookup_search_hc()}
-				class="h-11 w-full rounded-xl border border-border bg-bg-card pr-10 pl-10 text-base text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent-ring placeholder:text-fg-faint"
+				class="h-11 w-full rounded-xl border border-border bg-bg-card pr-10 pl-10 text-base text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent-ring placeholder:text-fg-subtle"
 			/>
 			{#if query.length > 0}
 				<button
@@ -268,7 +268,7 @@
 		</div>
 
 		{#if debounced.length >= 2 && !searchQuery.isLoading && !searchQuery.isError && results.length > 0}
-			<p class="flex-none px-5 pt-3 pb-1 text-[11.5px] text-fg-faint">
+			<p class="flex-none px-5 pt-3 pb-1 text-[11.5px] text-fg-subtle">
 				{(results.length === 1 ? i18n.lookup_match_count_one : i18n.lookup_match_count_other)({ count: results.length })}{heldCount > 0
 					? ` · ${i18n.lookup_held_in_library({ count: heldCount })}`
 					: ""}
@@ -280,7 +280,7 @@
 				<div class="flex flex-col items-center justify-center px-8 py-20 text-center">
 					<Search class="mb-3 h-8 w-8 text-fg-faint" aria-hidden="true" />
 					<p class="text-sm font-medium text-fg-muted">{isArtist ? i18n.lookup_mb_prompt() : i18n.lookup_hc_prompt()}</p>
-					<p class="mt-1 text-xs text-fg-faint">{isArtist ? i18n.lookup_type_2_artist() : i18n.lookup_type_2_book()}</p>
+					<p class="mt-1 text-xs text-fg-subtle">{isArtist ? i18n.lookup_type_2_artist() : i18n.lookup_type_2_book()}</p>
 				</div>
 			{:else if searchQuery.isLoading}
 				<div class="grid grid-cols-3 gap-3">
@@ -308,7 +308,7 @@
 						<BookOpen class="mb-3 h-8 w-8 text-fg-faint" aria-hidden="true" />
 					{/if}
 					<p class="text-sm font-medium text-fg-muted">{i18n.common_no_matches()}</p>
-					<p class="mt-1 text-xs text-fg-faint">
+					<p class="mt-1 text-xs text-fg-subtle">
 						{(isArtist ? i18n.lookup_nothing_on_mb : i18n.lookup_nothing_on_hc)({ query: debounced })}
 					</p>
 				</div>
@@ -323,7 +323,7 @@
 										<SeriesCover srcs={r.covers} rounded="rounded-md" loading="eager" />
 									{:else}
 										<div class="relative overflow-hidden border border-white/[0.06] bg-bg-card shadow-1 {thumb}">
-											<div class="absolute inset-0 grid place-items-center text-fg-faint">
+											<div class="absolute inset-0 grid place-items-center text-fg-subtle">
 												{#if isArtist}
 													<Music class="h-6 w-6" aria-hidden="true" />
 												{:else}
@@ -358,7 +358,7 @@
 									</p>
 								{/if}
 								{#if r.book?.matched_title}
-									<p class="mt-0.5 truncate text-[10.5px] italic text-fg-faint">
+									<p class="mt-0.5 truncate text-[10.5px] italic text-fg-subtle">
 										{i18n.lookup_series_via({ title: r.book.matched_title })}
 									</p>
 								{/if}
@@ -385,7 +385,7 @@
 						</div>
 					{:else}
 						<div class="relative w-[84px] flex-none overflow-hidden border border-white/[0.06] bg-bg-card shadow-2 {thumb}">
-							<div class="absolute inset-0 grid place-items-center text-fg-faint">
+							<div class="absolute inset-0 grid place-items-center text-fg-subtle">
 								{#if isArtist}
 									<Music class="h-6 w-6" aria-hidden="true" />
 								{:else}
@@ -408,7 +408,7 @@
 							<p class="mt-1 truncate text-[13px] text-fg-muted">{i18n.lookup_by({ name: selected.book.author })}</p>
 						{/if}
 						{#if selected.aside}
-							<p class="mt-1 truncate text-[12.5px] italic text-fg-faint">{selected.aside}</p>
+							<p class="mt-1 truncate text-[12.5px] italic text-fg-subtle">{selected.aside}</p>
 						{/if}
 						<div class="mt-2.5 flex flex-wrap gap-1.5">
 							{#each hitChips(selected) as c (c)}
@@ -421,7 +421,7 @@
 				</div>
 				{#if synopsis}
 					<section class="mt-4">
-						<h3 class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint">
+						<h3 class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle">
 							{isArtist ? i18n.lookup_about() : i18n.detail_synopsis()}
 						</h3>
 						<ClampedText

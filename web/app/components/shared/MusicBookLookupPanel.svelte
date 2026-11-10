@@ -101,7 +101,7 @@
 		return rows.filter((f) => f !== null);
 	});
 
-	const h4 = "mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint";
+	const h4 = "mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle";
 	const chip = "inline-flex h-6 items-center rounded-full border border-border bg-surface px-2.5 font-mono text-[11px] text-fg-muted";
 </script>
 
@@ -113,7 +113,7 @@
 			<BookOpen class="mb-3 h-8 w-8 text-fg-faint" aria-hidden="true" />
 		{/if}
 		<p class="text-sm font-medium text-fg-muted">{i18n.lookup_nothing_selected()}</p>
-		<p class="mt-1 text-xs text-fg-faint">
+		<p class="mt-1 text-xs text-fg-subtle">
 			{isArtist ? i18n.lookup_pick_artist() : i18n.lookup_pick_book()}
 		</p>
 	</div>
@@ -142,7 +142,7 @@
 							? 'aspect-square rounded-full'
 							: 'aspect-[2/3] rounded-md'}"
 					>
-						<div class="absolute inset-0 grid place-items-center text-fg-faint">
+						<div class="absolute inset-0 grid place-items-center text-fg-subtle">
 							{#if isArtist}
 								<Music class="h-7 w-7" aria-hidden="true" />
 							{:else}
@@ -166,7 +166,7 @@
 						<p class="mt-1 truncate text-[13px] text-fg-muted">{i18n.lookup_by({ name: hit.book.author })}</p>
 					{/if}
 					{#if hit.aside}
-						<p class="mt-1 truncate text-[12.5px] italic text-fg-faint">{hit.aside}</p>
+						<p class="mt-1 truncate text-[12.5px] italic text-fg-subtle">{hit.aside}</p>
 					{/if}
 					<div class="mt-3 flex flex-wrap gap-1.5">
 						{#each chips as c (c)}
@@ -176,7 +176,7 @@
 							<span class="{chip} border-status-downloading/30 text-status-downloading">{i18n.books_ongoing()}</span>
 						{/if}
 						{#if loading}
-							<span class="{chip} text-fg-faint">{i18n.lc_loading()}</span>
+							<span class="{chip} text-fg-subtle">{i18n.lc_loading()}</span>
 						{/if}
 					</div>
 				</div>
@@ -258,7 +258,7 @@
 							<span class="text-[13px] font-medium text-fg">
 								{languageName(e.language, true)}
 								{#if e.original}
-									<span class="ml-1 font-mono text-[10px] uppercase tracking-[0.1em] text-fg-faint">{i18n.books_original()}</span>
+									<span class="ml-1 font-mono text-[10px] uppercase tracking-[0.1em] text-fg-subtle">{i18n.books_original()}</span>
 								{/if}
 							</span>
 							<span class="text-[12px] text-fg-muted">{e.formats.join(" · ")}</span>

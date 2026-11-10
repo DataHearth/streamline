@@ -172,7 +172,7 @@
 							</span>
 							<span class="line-clamp-2 text-xs text-fg-muted">{d.description}</span>
 							{#if d.categories.length > 0}
-								<span class="text-[11px] text-fg-faint">{d.categories.join(" · ")}</span>
+								<span class="text-[11px] text-fg-subtle">{d.categories.join(" · ")}</span>
 							{/if}
 						</button>
 					</li>

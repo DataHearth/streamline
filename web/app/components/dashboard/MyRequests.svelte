@@ -19,7 +19,7 @@
 {#if rows.length > 0}
 	<section class="overflow-hidden rounded-lg border border-border bg-bg-elevated md:max-w-[560px]" aria-labelledby="mine-title">
 		<header class="flex items-baseline justify-between gap-3 px-4 pb-1 pt-3.5">
-			<h2 id="mine-title" class="font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint">
+			<h2 id="mine-title" class="font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle">
 				{i18n.dash_your_requests()}
 			</h2>
 			<a href="/requests" class="touch-hit text-[11.5px] text-fg-subtle transition hover:text-accent-text">

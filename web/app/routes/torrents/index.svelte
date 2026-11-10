@@ -387,7 +387,7 @@
 							if (e.key === "Enter") submitPort();
 							if (e.key === "Escape") portOpen = false;
 						}}
-						class="h-9 w-28 rounded-md border border-border bg-bg px-3 font-mono text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+						class="h-9 w-28 rounded-md border border-border bg-bg px-3 font-mono text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
 					/>
 					<button
 						type="button"
@@ -474,7 +474,7 @@
 					{torrentDownloading}
 				</div>
 				<div
-					class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
+					class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle"
 				>
 					{i18n.status_downloading()}
 				</div>
@@ -484,7 +484,7 @@
 					{torrentSeeding}
 				</div>
 				<div
-					class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
+					class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle"
 				>
 					{i18n.status_seeding()}
 				</div>
@@ -494,7 +494,7 @@
 					{formatSpeed(torrentAggDown) || "—"}
 				</div>
 				<div
-					class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
+					class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle"
 				>
 					{i18n.torrent_aggregate_down()}
 				</div>
@@ -504,7 +504,7 @@
 					{formatSpeed(torrentAggUp) || "—"}
 				</div>
 				<div
-					class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
+					class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle"
 				>
 					{i18n.sort_aggregate_up()}
 				</div>

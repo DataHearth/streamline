@@ -59,11 +59,13 @@ Principles:
 --fg:            #F5F5F7    /* primary */
 --fg-muted:      #C8C8D2    /* secondary (passes 4.5:1 on bg-elevated) */
 --fg-subtle:     #8A8A99    /* tertiary, axis labels, helper */
---fg-faint:      #74748A    /* faint, uppercase eyebrow / sub-section (passes 3:1 on every surface) */
+--fg-faint:      #74748A    /* icons, separators, disabled states — never text (passes 3:1 on every surface, not 4.5:1) */
 --fg-on-accent:  #0B0B10
 ```
 
-Never use `--fg-subtle` for body copy. Labels/axis/helper only. `--fg-faint` is reserved for icons, uppercase eyebrows and sub-section dividers: it passes 3:1, the floor for icons (§9), not the 4.5:1 of small text, so any other text that must be read uses `--fg-subtle`.
+Never use `--fg-subtle` for body copy. Labels/axis/helper only. It is also the lowest grey any text may take — eyebrows (`LIBRARY`, `OPERATIONS`), table heads, counters, metadata and placeholders included: at 4.54–5.77:1 it is the only grey below `--fg-muted` that clears WCAG's 4.5:1 for small text (1.4.3) on every surface.
+
+`--fg-faint` is for what is not read as text: Lucide icons and a wrapper holding nothing but icons, separator glyphs (`·`, `/`, `→`, a `—` standing for no value, a `before:content-['·']` bullet), the empty-state art behind a missing poster, and disabled states (`disabled:text-fg-faint`, exempt under 1.4.3). It passes 3:1, the floor for icons (§9). A text element that wants to read quieter than its neighbours does it with size, weight or case, not with this token.
 
 ### Status (ops semantics — used on pills, progress, row highlights)
 ```
@@ -492,8 +494,8 @@ Copy-paste this block into every PR description that touches UI.
 **Contrast**
 - [ ] Primary text `--fg` (≥7:1)
 - [ ] Secondary `--fg-muted` (≥4.5:1)
-- [ ] `--fg-subtle` only for labels/helpers (≤4.5:1 allowed, not body)
-- [ ] Icons ≥3:1 on their surface (`--fg-faint` is the lowest token that passes)
+- [ ] `--fg-subtle` only for labels/helpers, and the lowest grey any text takes (≥4.5:1)
+- [ ] Icons ≥3:1 on their surface (`--fg-faint` is the lowest token that passes); no text in `--fg-faint` but separators and disabled states
 
 **Layout**
 - [ ] Works at 375/768/1024/1440

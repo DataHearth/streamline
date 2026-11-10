@@ -259,7 +259,7 @@
 						bind:value={q}
 						placeholder={i18n.field_email_or_name()}
 						autocomplete="off"
-						class="w-full rounded-md bg-transparent py-2 pl-9 pr-9 text-sm text-fg placeholder:text-fg-faint focus:outline-none"
+						class="w-full rounded-md bg-transparent py-2 pl-9 pr-9 text-sm text-fg placeholder:text-fg-subtle focus:outline-none"
 					/>
 					{#if q}
 						<button

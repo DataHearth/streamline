@@ -193,7 +193,7 @@
 	{:else if data.pack}
 		{@render headline(packTone, packSummary)}
 		{#if packAlbums.length > 0}
-			<div class="mt-2.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint">
+			<div class="mt-2.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle">
 				{upload ? i18n.upload_pack_heading() : i18n.release_files_pack_heading()}
 			</div>
 			<ul class="mt-1 flex max-h-56 flex-col gap-0.5 overflow-y-auto overscroll-contain">
@@ -205,7 +205,7 @@
 							<X size={13} class="shrink-0 text-status-failed" aria-label={i18n.release_files_track_out()} />
 						{/if}
 						<span class={cn("min-w-0 flex-1 truncate", a.in ? "text-fg" : "text-fg-subtle")}>{a.title}</span>
-						<span class="shrink-0 font-mono text-[10.5px] tabular text-fg-faint">
+						<span class="shrink-0 font-mono text-[10.5px] tabular text-fg-subtle">
 							{a.in
 								? a.missing > 0
 									? i18n.release_files_pack_tracks({ covered: a.covered, count: a.missing })
@@ -219,14 +219,14 @@
 			</ul>
 		{/if}
 		{#if packSkipped.length > 0}
-			<div class="mt-2.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint">
+			<div class="mt-2.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle">
 				{upload ? i18n.upload_pack_skipped_heading() : i18n.release_files_pack_skipped_heading()}
 			</div>
 			<ul class="mt-1 flex max-h-40 flex-col gap-0.5 overflow-y-auto overscroll-contain">
 				{#each packSkipped as f (f.path)}
 					<li class="min-w-0 text-fg-subtle">
 						<span class="break-all font-mono text-[11px]">{f.path}</span>
-						<span class="text-[11px] text-fg-faint">
+						<span class="text-[11px] text-fg-subtle">
 							· {f.known && !upload ? i18n.release_files_pack_skip_done() : i18n.release_files_pack_skip_unknown()}
 						</span>
 					</li>
@@ -234,7 +234,7 @@
 			</ul>
 		{/if}
 		{@render fileList(data.files)}
-		<p class="mt-2 text-[11px] text-fg-faint">
+		<p class="mt-2 text-[11px] text-fg-subtle">
 			{upload ? i18n.upload_pack_hint() : i18n.release_files_pack_hint()}
 		</p>
 	{:else}
@@ -242,7 +242,7 @@
 			{@render headline(tone, summary)}
 		{/if}
 		{#if missing.length > 0}
-			<div class="mt-2.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint">
+			<div class="mt-2.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle">
 				{text.heading()}
 			</div>
 			<ul class="mt-1 flex max-h-56 flex-col gap-0.5 overflow-y-auto overscroll-contain">
@@ -253,14 +253,14 @@
 						{:else}
 							<X size={13} class="shrink-0 text-status-failed" aria-label={i18n.release_files_track_out()} />
 						{/if}
-						<span class="shrink-0 font-mono text-[11px] tabular text-fg-faint">{t.label}</span>
+						<span class="shrink-0 font-mono text-[11px] tabular text-fg-subtle">{t.label}</span>
 						<span class={cn("min-w-0 truncate", t.in ? "text-fg" : "text-fg-subtle")}>{t.title}</span>
 					</li>
 				{/each}
 			</ul>
 		{/if}
 		{@render fileList(data.files)}
-		<p class="mt-2 text-[11px] text-fg-faint">{upload ? i18n.upload_hint() : text.hint()}</p>
+		<p class="mt-2 text-[11px] text-fg-subtle">{upload ? i18n.upload_hint() : text.hint()}</p>
 	{/if}
 </div>
 
@@ -288,7 +288,7 @@
 					<span class={cn("min-w-0 flex-1 break-all font-mono text-[11px]", f.matched ? "text-fg" : "text-fg-subtle")}>
 						{f.path}
 					</span>
-					<span class="shrink-0 font-mono text-[10.5px] tabular text-fg-faint">{formatBytes(f.size)}</span>
+					<span class="shrink-0 font-mono text-[10.5px] tabular text-fg-subtle">{formatBytes(f.size)}</span>
 				</li>
 			{/each}
 		</ul>

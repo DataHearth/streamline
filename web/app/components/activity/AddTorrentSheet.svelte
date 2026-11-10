@@ -134,7 +134,7 @@
 				data-sheet-scroll
 				class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-2"
 			>
-				<div class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint">
+				<div class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle">
 					{i18n.torrent_magnet_link()}
 				</div>
 				<div
@@ -155,7 +155,7 @@
 						}}
 						placeholder="magnet:?xt=urn:btih:…"
 						aria-label={i18n.torrent_magnet_link()}
-						class="min-w-0 flex-1 bg-transparent font-mono text-[13px] text-fg outline-none placeholder:text-fg-faint"
+						class="min-w-0 flex-1 bg-transparent font-mono text-[13px] text-fg outline-none placeholder:text-fg-subtle"
 					/>
 					<button
 						type="button"

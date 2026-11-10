@@ -229,7 +229,7 @@
 				     matches neither the row metrics nor the tinted surface every other
 				     picker in the app opens. -->
 				<label class="hidden items-center gap-2 lg:flex">
-					<span class="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint">
+					<span class="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
 						{i18n.filter_sort()}
 					</span>
 					<div class="w-[190px]">
@@ -291,13 +291,13 @@
 		>
 			<div>
 				<div class="text-2xl font-bold tabular-nums text-status-running">{running}</div>
-				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint">
+				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle">
 					{i18n.lc_running()}
 				</div>
 			</div>
 			<div>
 				<div class="text-2xl font-bold tabular-nums text-fg">{queued}</div>
-				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint">
+				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle">
 					{i18n.lc_queued()}
 				</div>
 			</div>
@@ -305,7 +305,7 @@
 				<div class="text-2xl font-bold tabular-nums text-status-succeeded">
 					{formatBytes(reclaimed, "—")}
 				</div>
-				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint">
+				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle">
 					{i18n.transcode_reclaimed()}
 				</div>
 			</div>
@@ -318,7 +318,7 @@
 				>
 					{failed}
 				</div>
-				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint">
+				<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle">
 					{i18n.lc_failed()}
 				</div>
 			</div>

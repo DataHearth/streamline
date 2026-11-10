@@ -303,7 +303,7 @@
 							class="grid grid-cols-[auto_1fr] items-baseline gap-x-3 px-2.5 py-2"
 						>
 							<dt
-								class="font-mono text-[10px] uppercase tracking-[0.1em] text-fg-faint"
+								class="font-mono text-[10px] uppercase tracking-[0.1em] text-fg-subtle"
 							>
 								{CHECK_LABELS[f.check]?.() ?? f.check}
 							</dt>
@@ -313,11 +313,11 @@
 								{#if f.check === "location"}
 									<span class="flex min-w-0 flex-col gap-1 text-left">
 										<span class="break-all">
-											<span class="text-fg-faint">{i18n.hold_location_expected()}</span>
+											<span class="text-fg-subtle">{i18n.hold_location_expected()}</span>
 											{f.expected}
 										</span>
 										<span class="break-all" style:color="var(--status-held)">
-											<span class="text-fg-faint">{i18n.hold_location_actual()}</span>
+											<span class="text-fg-subtle">{i18n.hold_location_actual()}</span>
 											{f.actual || i18n.hold_location_unreported()}
 										</span>
 									</span>

@@ -152,7 +152,7 @@
 				{item.reason}
 			{/if}
 		</p>
-		<p class="mt-1 truncate font-mono text-[11px] text-fg-faint" title={item.title}>
+		<p class="mt-1 truncate font-mono text-[11px] text-fg-subtle" title={item.title}>
 			{item.title}
 		</p>
 		{#if showBreakdown && counts}
@@ -183,12 +183,12 @@
 						</li>
 					{/each}
 					{#if counts.keeps.length > 0}
-						<li class="pt-1 text-fg-faint">
+						<li class="pt-1 text-fg-subtle">
 							{i18n.pending_kept_note({ count: counts.keeps.length })}
 						</li>
 					{/if}
 					{#if counts.unmatched > 0}
-						<li class="text-fg-faint">
+						<li class="text-fg-subtle">
 							{(counts.unmatched === 1
 								? i18n.pending_unmatched_one
 								: i18n.pending_unmatched_other)({ count: counts.unmatched })}
@@ -200,7 +200,7 @@
 						the split is the best answer available before the transfer.
 					-->
 					{#if counts.upgrades.length > 0}
-						<li class="pt-1 text-fg-faint italic">
+						<li class="pt-1 text-fg-subtle italic">
 							{i18n.pending_upgrades_estimated()}
 						</li>
 					{/if}

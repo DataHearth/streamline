@@ -64,7 +64,7 @@
 
 	{#if row.system}
 		<span
-			class="grid h-11 w-8 shrink-0 place-items-center text-fg-faint"
+			class="grid h-11 w-8 shrink-0 place-items-center text-fg-subtle"
 			title={i18n.settings_managed_by_streamline()}
 		>
 			<Lock size={14} aria-hidden="true" />

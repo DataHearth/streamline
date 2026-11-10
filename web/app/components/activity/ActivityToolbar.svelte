@@ -212,7 +212,7 @@
 					? i18n.transcode_filter_placeholder()
 					: i18n.activity_filter_title_movie()}
 			aria-label={i18n.activity_filter()}
-			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
+			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
 		/>
 		{#if search}
 			<button

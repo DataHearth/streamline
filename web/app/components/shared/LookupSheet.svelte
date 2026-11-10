@@ -314,7 +314,7 @@
 						<button
 							type="button"
 							onclick={() => (expanded = true)}
-							class="mt-2.5 flex w-full items-center justify-center gap-1.5 py-1 text-[13px] text-fg-faint transition hover:text-fg-muted"
+							class="mt-2.5 flex w-full items-center justify-center gap-1.5 py-1 text-[13px] text-fg-subtle transition hover:text-fg-muted"
 						>
 							<ChevronUp size={14} aria-hidden="true" />
 							{hint}

@@ -283,7 +283,7 @@
 			     straight through it. Painted on the cells rather than the row, since
 			     that is what `position: sticky` moves under `border-collapse`. -->
 			<thead
-				class="sticky top-0 z-10 text-[10px] uppercase tracking-[0.12em] text-fg-faint"
+				class="sticky top-0 z-10 text-[10px] uppercase tracking-[0.12em] text-fg-subtle"
 			>
 				<tr>
 					{#if selectable}

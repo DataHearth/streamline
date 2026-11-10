@@ -116,7 +116,7 @@
 					<mark.icon size={13} aria-hidden="true" />
 				</span>
 				<div class="min-w-0">
-					<div class="font-mono text-[10px] tracking-[0.1em] text-fg-faint">
+					<div class="font-mono text-[10px] tracking-[0.1em] text-fg-subtle">
 						{mark.label}
 					</div>
 					{#if scope}

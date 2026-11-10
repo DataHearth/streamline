@@ -328,7 +328,7 @@
 			{ label: i18n.music_fact_last_added(), value: formatRelative(artist.added_at) },
 		];
 	});
-	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
+	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle";
 </script>
 
 {#if artistQuery.isLoading || !id}
@@ -506,7 +506,7 @@
 						class={cn("relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4", active ? "text-fg" : "text-fg-subtle hover:text-fg")}
 					>
 						<span>{t.label}</span>
-						{#if t.n != null}<span class="ml-1.5 font-mono text-[11px] text-fg-faint">{t.n}</span>{/if}
+						{#if t.n != null}<span class="ml-1.5 font-mono text-[11px] text-fg-subtle">{t.n}</span>{/if}
 						{#if active}<span aria-hidden="true" class="absolute inset-x-3 -bottom-px h-0.5 rounded-t-sm bg-accent"></span>{/if}
 					</button>
 				{/each}

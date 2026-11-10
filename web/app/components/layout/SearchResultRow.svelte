@@ -126,7 +126,7 @@
 		<ChevronRight size={18} class="shrink-0 text-fg-faint" aria-hidden="true" />
 	{:else}
 		<span
-			class="shrink-0 font-mono text-[9.5px] uppercase tracking-[0.1em] text-fg-faint"
+			class="shrink-0 font-mono text-[9.5px] uppercase tracking-[0.1em] text-fg-subtle"
 		>
 			{itemKindLabel(item)}
 		</span>

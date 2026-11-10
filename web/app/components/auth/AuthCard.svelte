@@ -32,7 +32,7 @@
 				/>
 				{#if eyebrow}
 					<span
-						class="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-faint"
+						class="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle"
 					>
 						{eyebrow}
 					</span>

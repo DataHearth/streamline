@@ -71,7 +71,7 @@
 		if (r.mbid) rows.push({ label: "MusicBrainz", value: [{ text: r.mbid.slice(0, 8), href: `https://musicbrainz.org/release-group/${r.mbid}`, external: true }], mono: true });
 		return rows;
 	});
-	const h3 = "mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
+	const h3 = "mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle";
 </script>
 
 <div class="flex flex-col gap-4">

@@ -74,7 +74,7 @@
 			<div class="flex items-center gap-2">
 				<span class="italic text-fg-muted">{i18n.torrent_fetching_metadata()}</span>
 			</div>
-			<div class="truncate font-mono text-[11px] text-fg-faint">
+			<div class="truncate font-mono text-[11px] text-fg-subtle">
 				{torrent.hash.slice(0, 24)}…
 			</div>
 		{:else}
@@ -128,7 +128,7 @@
 					{fetching ? "—" : `${Math.round(torrent.progress * 100)}%`}
 				</span>
 				{#if torrent.status === "downloading" && torrent.eta > 0}
-					<span class="font-mono tabular-nums text-[10px] text-fg-faint">
+					<span class="font-mono tabular-nums text-[10px] text-fg-subtle">
 						{formatEta(torrent.eta)}
 					</span>
 				{/if}
@@ -139,21 +139,21 @@
 	<!-- Narrow containers get one stacked cell instead of two columns; the
 	     separate Down and Up columns come back at @3xl. -->
 	<td class={cn("px-2 leading-tight @3xl:hidden", num, pad)}>
-		<div class={torrent.download_speed > 0 ? "text-status-downloading" : "text-fg-faint"}>
+		<div class={torrent.download_speed > 0 ? "text-status-downloading" : "text-fg-subtle"}>
 			{formatSpeed(torrent.download_speed) || "—"}
 		</div>
-		<div class={torrent.upload_speed > 0 ? "text-status-seeding" : "text-fg-faint"}>
+		<div class={torrent.upload_speed > 0 ? "text-status-seeding" : "text-fg-subtle"}>
 			{formatSpeed(torrent.upload_speed) || "—"}
 		</div>
 	</td>
 
 	<td class={cn("hidden px-2 @3xl:table-cell", num, pad)}>
-		<span class={torrent.download_speed > 0 ? "text-status-downloading" : "text-fg-faint"}>
+		<span class={torrent.download_speed > 0 ? "text-status-downloading" : "text-fg-subtle"}>
 			{formatSpeed(torrent.download_speed) || "—"}
 		</span>
 	</td>
 	<td class={cn("hidden px-2 @3xl:table-cell", num, pad)}>
-		<span class={torrent.upload_speed > 0 ? "text-status-seeding" : "text-fg-faint"}>
+		<span class={torrent.upload_speed > 0 ? "text-status-seeding" : "text-fg-subtle"}>
 			{formatSpeed(torrent.upload_speed) || "—"}
 		</span>
 	</td>
@@ -169,7 +169,7 @@
 		     a third figure only when there is nobody connected to talk about. -->
 		{#if torrent.peer_count === 0 && torrent.seeds === 0}
 			{#if torrent.known_peers}
-				<span class="text-fg-faint" title={i18n.torrent_known_peers_help()}>
+				<span class="text-fg-subtle" title={i18n.torrent_known_peers_help()}>
 					{i18n.torrent_known_peers({ count: torrent.known_peers })}
 				</span>
 			{:else}
@@ -177,7 +177,7 @@
 			{/if}
 		{:else}
 			<span class="text-fg-muted">{torrent.seeds}</span>
-			<span class="text-fg-faint"> / {torrent.peer_count}</span>
+			<span class="text-fg-subtle"> / {torrent.peer_count}</span>
 		{/if}
 	</td>
 	<td

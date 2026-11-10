@@ -131,7 +131,7 @@
 				<input
 					bind:value={newName}
 					placeholder={i18n.account_key_name_example()}
-					class="min-h-11 lg:h-9 lg:min-h-0 w-full rounded-md border border-border bg-bg px-3 text-sm text-fg placeholder:text-fg-faint focus-visible:outline-2 focus-visible:outline-accent"
+					class="min-h-11 lg:h-9 lg:min-h-0 w-full rounded-md border border-border bg-bg px-3 text-sm text-fg placeholder:text-fg-subtle focus-visible:outline-2 focus-visible:outline-accent"
 				/>
 			</label>
 			<div class="w-full sm:w-44">

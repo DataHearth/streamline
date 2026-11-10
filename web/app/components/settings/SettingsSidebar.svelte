@@ -27,7 +27,7 @@
 >
 	<div class="mb-3.5 px-2">
 		<div
-			class="font-mono text-[9.5px] uppercase tracking-[0.18em] text-fg-faint"
+			class="font-mono text-[9.5px] uppercase tracking-[0.18em] text-fg-subtle"
 		>
 			{i18n.nav_settings()}
 		</div>
@@ -39,7 +39,7 @@
 		{#each nav.groups as g (g.name)}
 			<div>
 				<div
-					class="px-2.5 pb-1.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint"
+					class="px-2.5 pb-1.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle"
 				>
 					{g.name}
 				</div>
@@ -86,7 +86,7 @@
 			<span
 				class={cn(
 					"inline-flex min-w-5 items-center justify-center rounded-full px-1.5 font-mono text-[10px] font-semibold",
-					active ? "text-accent-text/80" : "text-fg-faint",
+					active ? "text-accent-text/80" : "text-fg-subtle",
 				)}
 			>
 				{count}
