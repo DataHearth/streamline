@@ -357,9 +357,15 @@ func (s *Service) commitAttach(
 		return commitFail("list existing files", err, 0)
 	}
 	// The scanned file is already the movie's, under this path or another
-	// spelling of it: nothing to replace.
+	// spelling of it: nothing to replace. One that is gone since the scan
+	// replaces nothing either, and an in-place commit has no import to fail
+	// on it before the tracked file is removed.
 	for _, mf := range existing {
-		if sameFile(mf.Path, f.SourcePath) {
+		same, err := sameFile(mf.Path, f.SourcePath)
+		if err != nil {
+			return commitFail("stat source", err, 0)
+		}
+		if same {
 			return entimportscanfile.OutcomeAttached, "", f.ExistingMovieID
 		}
 	}

@@ -173,8 +173,17 @@ func (s *Service) commitShow(
 		// being re-scanned, under its tracked path or another spelling of it,
 		// is already adopted, so it needs no rewrite.
 		old, err := s.store.FindMediaFileByEpisodeID(ctx, target.ID)
+		same := false
+		if err == nil {
+			if same, err = sameFile(old.Path, f); err != nil {
+				slog.WarnContext(ctx, "series adopt: compare with tracked file failed",
+					"file", f, "tracked", old.Path, "error", err)
+				tally.fail("compare with tracked file", err)
+				continue
+			}
+		}
 		switch {
-		case err == nil && sameFile(old.Path, f):
+		case same:
 			tally.present++
 			continue
 		case ent.IsNotFound(err):
