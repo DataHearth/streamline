@@ -36,12 +36,23 @@ export function onEachRouteQuery(
 	path: string,
 	apply: (p: Record<string, string>, search: string) => void,
 ) {
+	return onEachRouteUrl((routePath, search) => {
+		if (routePath !== path) return;
+		apply(Object.fromEntries(new URLSearchParams(search)), search);
+	});
+}
+
+/**
+ * Every route emission as its path and raw query — for a page whose own path
+ * moves with a param (/series/[id]), which cannot name one path up front. The
+ * caller keeps both and uses the query as replaceRouteQuery's base only while
+ * the path is still its own.
+ */
+export function onEachRouteUrl(apply: (path: string, search: string) => void) {
 	return activeRoute.subscribe((r) => {
 		if (!r) return;
 		const [routePath, rest] = (r.url ?? "").split("?");
-		if (routePath !== path) return;
-		const search = (rest ?? "").split("#")[0] ?? "";
-		apply(Object.fromEntries(new URLSearchParams(search)), search);
+		apply(routePath ?? "", (rest ?? "").split("#")[0] ?? "");
 	});
 }
 
@@ -79,6 +90,12 @@ export function replaceRouteQuery(
 		else p.set(k, String(v));
 	}
 	const qs = p.toString();
+	// Nothing to change on the route's own query: Routify reflects it to the
+	// address bar itself. Writing it first turned a link's pending pushState
+	// into a replaceState (the write is a navigation of its own, and the one
+	// reflect that follows takes the last one's mode), so Back skipped the
+	// page state the link was clicked on.
+	if (base !== undefined && qs === base) return qs;
 	const next = `${path}${qs ? `?${qs}` : ""}${window.location.hash}`;
 	if (next !== window.location.pathname + window.location.search + window.location.hash) {
 		window.history.replaceState(null, "", next);

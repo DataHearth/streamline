@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ClampedText from "@components/shared/ClampedText.svelte";
 	import { link, ROUTE } from "@lib/routes";
+	import { onEachRouteUrl, replaceRouteQuery } from "@lib/route-query";
 	import { around } from "@lib/message-parts";
 	import {
 		NOUN_EPISODE,
@@ -96,11 +97,25 @@
 			focusFrom(p);
 		});
 		const u2 = goto.subscribe((fn) => (navigate = fn));
+		const u3 = onEachRouteUrl((path, search) => (routeAt = { path, search }));
 		return () => {
 			u1();
 			u2();
+			u3();
 		};
 	});
+	// The route being rendered, which every query write starts from. A link to
+	// this page from itself (the History tab's season and episode links) moves
+	// the route before the address bar, and a write built on window.location
+	// then put back the query being left: ?season= and ?episode= were dropped.
+	// It also holds the page's own last write until the route re-emits it.
+	let routeAt = { path: "", search: "" };
+	function writeQuery(mutate: Parameters<typeof replaceRouteQuery>[1]) {
+		if (!routeParams.id) return;
+		const path = link.show(Number(routeParams.id));
+		const qs = replaceRouteQuery(path, mutate, routeAt.path === path ? routeAt.search : undefined);
+		if (qs !== undefined) routeAt = { path, search: qs };
+	}
 	const seriesId = $derived(Number(routeParams.id));
 
 	function readTab(): Tab {
@@ -121,24 +136,19 @@
 		if (typeof window === "undefined") return;
 		// At mount window.location still names the outgoing page: writing ?tab=
 		// onto it sent a search hit that opens on the episodes tab back to the
-		// page it came from.
-		if (!routeParams.id || window.location.pathname !== link.show(Number(routeParams.id))) return;
-		const p = new URLSearchParams(window.location.search);
-		if (current === "overview") p.delete("tab");
-		else p.set("tab", current);
-		// ?season= and ?episode= are the episodes tab's. Kept on another tab,
-		// focusFrom read them again on the next params emission or a reload and
-		// put the page back on the episodes tab: a page reached through
-		// link.season() (a calendar row, a season pack) could not leave it.
-		if (current !== "episodes") {
-			p.delete("season");
-			p.delete("episode");
-		}
-		const search = p.toString();
-		const next = `${window.location.pathname}${search ? `?${search}` : ""}`;
-		if (next !== window.location.pathname + window.location.search) {
-			window.history.replaceState(null, "", next);
-		}
+		// page it came from. replaceRouteQuery holds that guard.
+		writeQuery((p) => {
+			if (current === "overview") p.delete("tab");
+			else p.set("tab", current);
+			// ?season= and ?episode= are the episodes tab's. Kept on another tab,
+			// focusFrom read them again on the next params emission or a reload and
+			// put the page back on the episodes tab: a page reached through
+			// link.season() (a calendar row, a season pack) could not leave it.
+			if (current !== "episodes") {
+				p.delete("season");
+				p.delete("episode");
+			}
+		});
 	});
 
 	const seriesQuery = createQuery<TVShow>(() => ({
@@ -381,10 +391,10 @@
 	function closeFocus() {
 		focusEpisodeId = null;
 		// Consumed: a reload or a season change should not reopen the sheet.
-		const u = new URL(window.location.href);
-		u.searchParams.delete("season");
-		u.searchParams.delete("episode");
-		window.history.replaceState(null, "", u.pathname + u.search);
+		writeQuery((p) => {
+			p.delete("season");
+			p.delete("episode");
+		});
 	}
 
 	function resetSeriesState() {
