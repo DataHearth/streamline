@@ -214,7 +214,10 @@ var _ = Describe("Query-string state", Label("e2e"), func() {
 	It("opens an episode link naming no season on the episode's season", func() {
 		path, episode := seedShow()
 		page := newSessionPage(fmt.Sprintf("%s?episode=%d", path, episode))
-		expectPath(page, fmt.Sprintf("%s?tab=episodes&season=1&episode=%d", path, episode))
+		expectPath(
+			page,
+			fmt.Sprintf("%s?tab=episodes&season=1&episode=%d", path, episode),
+		)
 		Expect(
 			visibleElement(page, `button[aria-current=true]`).MustText(),
 		).To(MatchRegexp(`(?i)^season 0?1\b`))
