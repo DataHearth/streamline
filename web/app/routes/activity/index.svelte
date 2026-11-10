@@ -508,7 +508,7 @@
 <div
 	use:pullRefresh={{ onRefresh: refreshAll }}
 	class={cn(
-		"group relative flex flex-col px-4 py-6 md:max-h-[calc(100dvh-4rem)] md:min-h-0 md:overflow-y-auto md:px-6",
+		"group relative flex flex-col px-4 py-6 md:max-h-[calc(100dvh-var(--top-bar-height))] md:min-h-0 md:overflow-y-auto md:px-6",
 		auth.isAdmin && selection.size > 0 && "md:pb-24",
 	)}
 >
