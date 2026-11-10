@@ -356,8 +356,10 @@ func (s *Service) commitAttach(
 	if err != nil {
 		return commitFail("list existing files", err, 0)
 	}
+	// The scanned file is already the movie's, under this path or another
+	// spelling of it: nothing to replace.
 	for _, mf := range existing {
-		if mf.Path == f.SourcePath {
+		if sameFile(mf.Path, f.SourcePath) {
 			return entimportscanfile.OutcomeAttached, "", f.ExistingMovieID
 		}
 	}

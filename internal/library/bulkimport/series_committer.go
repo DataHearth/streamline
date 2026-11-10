@@ -169,11 +169,12 @@ func (s *Service) commitShow(
 			continue
 		}
 		// An episode holds at most one media file: committing an accepted show
-		// replaces whatever file a matched episode already has. The same path
-		// being re-scanned is already adopted, so it needs no rewrite.
+		// replaces whatever file a matched episode already has. The same file
+		// being re-scanned, under its tracked path or another spelling of it,
+		// is already adopted, so it needs no rewrite.
 		old, err := s.store.FindMediaFileByEpisodeID(ctx, target.ID)
 		switch {
-		case err == nil && old.Path == f:
+		case err == nil && sameFile(old.Path, f):
 			tally.present++
 			continue
 		case ent.IsNotFound(err):

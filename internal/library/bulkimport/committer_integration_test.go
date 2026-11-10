@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -159,5 +160,53 @@ var _ = Describe(
 			Expect(row.Path).To(BeAnExistingFile())
 			Expect(tracked.Path).NotTo(BeAnExistingFile())
 		})
+
+		Context("on an in-place scan", func() {
+			BeforeEach(func() {
+				scan = &ent.ImportScan{ID: 1, Mode: entimportscan.ModeInPlace}
+			})
+
+			// expectUntouched asserts the movie still holds exactly the row
+			// and the file it had before the commit.
+			expectUntouched := func(tracked *ent.MediaFile) {
+				GinkgoHelper()
+				Expect(tracked.Path).To(BeAnExistingFile())
+				row := client.MediaFile.Query().OnlyX(ctx)
+				Expect(row.ID).To(Equal(tracked.ID))
+				Expect(row.Path).To(Equal(tracked.Path))
+			}
+
+			It(
+				"keeps a tracked file scanned again under its symlink-resolved path",
+				func() {
+					// The library root is a symlink: the row keeps the path
+					// the file was imported under, the scanner resolves it.
+					realLib := filepath.Join(filepath.Dir(libDir), "real-movies")
+					Expect(os.MkdirAll(realLib, 0o755)).To(Succeed())
+					symlinkOrSkip(realLib, libDir)
+					tracked := track("Fight Club (1999)/Fight Club.mkv")
+					resolved, err := filepath.EvalSymlinks(tracked.Path)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(resolved).NotTo(Equal(tracked.Path))
+
+					outcome, msg := attach(resolved)
+
+					Expect(msg).To(BeEmpty())
+					Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+					expectUntouched(tracked)
+				},
+			)
+		})
 	},
 )
+
+// symlinkOrSkip creates link pointing at target, skipping the spec where the
+// platform refuses: Windows needs a privilege or developer mode for it.
+func symlinkOrSkip(target, link string) {
+	GinkgoHelper()
+	err := os.Symlink(target, link)
+	if err != nil && runtime.GOOS == "windows" {
+		Skip("symlinks are unavailable here: " + err.Error())
+	}
+	Expect(err).NotTo(HaveOccurred())
+}
