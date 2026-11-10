@@ -55,10 +55,12 @@ tasks:
     # The e2e specs go first and alone: ginkgo starts with cmd/ and e2e/, so in
     # one run they would sit in the middle of the whole tree's builds. The second
     # run still happens when the first fails, so one report covers everything.
+    # Task runs a cmd under errexit, so each exit status is caught with `||`:
+    # a bare `e2e=$?` on the next line is never reached after a failure.
     cmd: |
-      go tool ginkgo run -r --keep-going --label-filter=e2e {{with .JUNIT_DIR}}--junit-report={{.}}/junit-e2e.xml{{end}} {{.CLI_ARGS}} {{.E2E_PACKAGES}}
-      e2e=$?
-      go tool ginkgo run -r --keep-going --label-filter='!e2e' {{with .JUNIT_DIR}}--junit-report={{.}}/junit-rest.xml{{end}} {{.CLI_ARGS}}
-      rest=$?
+      e2e=0
+      go tool ginkgo run -r --keep-going --label-filter=e2e {{with .JUNIT_DIR}}--junit-report={{.}}/junit-e2e.xml{{end}} {{.CLI_ARGS}} {{.E2E_PACKAGES}} || e2e=$?
+      rest=0
+      go tool ginkgo run -r --keep-going --label-filter='!e2e' {{with .JUNIT_DIR}}--junit-report={{.}}/junit-rest.xml{{end}} {{.CLI_ARGS}} || rest=$?
       exit $((e2e | rest))
 
