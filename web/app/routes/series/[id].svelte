@@ -107,7 +107,11 @@
 			shownPath = path;
 			tab = oneOf(param(p, "tab"), TAB_KEYS, "overview");
 			const ep = Number(param(p, "episode"));
-			if (!ep) return;
+			if (!ep) {
+				// Back to an entry naming no episode closes the sheet a link opened.
+				focusEpisodeId = null;
+				return;
+			}
 			tab = "episodes";
 			// Number(null) is 0: a link naming no season would open the specials.
 			// Left unset, the season is picked as the one holding the episode.

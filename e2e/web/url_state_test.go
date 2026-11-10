@@ -219,4 +219,25 @@ var _ = Describe("Query-string state", Label("e2e"), func() {
 			visibleElement(page, `button[aria-current=true]`).MustText(),
 		).To(MatchRegexp(`(?i)^season 0?1\b`))
 	})
+
+	It("closes the episode sheet a link opened when Back leaves it", func() {
+		path, episode := seedShow()
+		page := newSessionPage(path + "?tab=history")
+		expectPath(page, path+"?tab=history")
+
+		// What picking the episode in the global search does from this page.
+		link := fmt.Sprintf("%s?tab=episodes&season=1&episode=%d", path, episode)
+		page.MustEval(fmt.Sprintf(`() => history.pushState(null, "", %q)`, link))
+		visibleElement(page, `[role=dialog]`)
+		expectPath(page, link)
+
+		page.MustEval(`() => history.back()`)
+		expectPath(page, path+"?tab=history")
+		Eventually(func() int {
+			return len(visibleElements(page, `[role=dialog]`))
+		}).Should(BeZero())
+		// The entry left is not rewritten to carry the episode.
+		Consistently(func() string { return page.MustInfo().URL }, "500ms").
+			Should(HaveSuffix(path + "?tab=history"))
+	})
 })
