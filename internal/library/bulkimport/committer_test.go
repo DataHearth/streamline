@@ -3,8 +3,12 @@ package bulkimport
 import (
 	"context"
 	"errors"
+	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
+	"sync"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -795,6 +799,111 @@ var _ = Describe(
 				Expect(recorded.Path).To(BeAnExistingFile())
 			}
 		})
+
+		// runCommit commits several files at once, and the default naming
+		// renders two same-resolution copies of a movie to one destination.
+		DescribeTable(
+			"commits two scanned copies of one tracked movie at the same time",
+			func(mode entimportscan.ImportMode) {
+				scan := &ent.ImportScan{
+					ID: 1, Mode: entimportscan.ModeRename, ImportMode: mode,
+				}
+				sparse := func(path, content string) {
+					GinkgoHelper()
+					Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
+					Expect(os.WriteFile(path, []byte(content), 0o644)).To(Succeed())
+					Expect(os.Truncate(path, 60*1024*1024)).To(Succeed())
+				}
+				dest := filepath.Join(libDir, "Fight Club (1999)", "Fight Club.mkv")
+				srcs := []string{
+					filepath.Join(srcDir, "A", "Fight Club 1999 1080p.mkv"),
+					filepath.Join(srcDir, "B", "Fight Club 1999 2160p.mkv"),
+				}
+
+				// A store that keeps its rows: each commit has to see what
+				// the other one wrote.
+				var mu sync.Mutex
+				var rows map[uint32]string
+				var nextID uint32
+				store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+					RunAndReturn(func(context.Context, uint32) ([]*ent.MediaFile, error) {
+						mu.Lock()
+						defer mu.Unlock()
+						out := make([]*ent.MediaFile, 0, len(rows))
+						for id, p := range rows {
+							out = append(out, &ent.MediaFile{ID: id, Path: p})
+						}
+						return out, nil
+					})
+				store.EXPECT().FindMovieByID(mock.Anything, uint32(42)).
+					Return(&ent.Movie{ID: 42, Title: "Fight Club", Year: 1999}, nil)
+				store.EXPECT().CreateMediaFile(mock.Anything, mock.Anything).
+					RunAndReturn(func(
+						_ context.Context, p db.CreateMediaFileParams,
+					) (*ent.MediaFile, error) {
+						mu.Lock()
+						defer mu.Unlock()
+						nextID++
+						rows[nextID] = p.Path
+						return &ent.MediaFile{ID: nextID}, nil
+					})
+				store.EXPECT().DeleteMediaFile(mock.Anything, mock.Anything).
+					RunAndReturn(func(_ context.Context, id uint32) error {
+						mu.Lock()
+						defer mu.Unlock()
+						if _, ok := rows[id]; !ok {
+							return errors.New("media_file not found")
+						}
+						delete(rows, id)
+						return nil
+					})
+				store.EXPECT().
+					UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+					Return(nil)
+
+				for range 20 {
+					sparse(dest, "old")
+					sparse(srcs[0], "aaa")
+					sparse(srcs[1], "bbb")
+					rows, nextID = map[uint32]string{1: dest}, 1
+
+					var wg sync.WaitGroup
+					msgs := make([]string, len(srcs))
+					for n, src := range srcs {
+						wg.Go(func() {
+							defer GinkgoRecover()
+							_, msgs[n], _ = svc.commitAttach(
+								ctx,
+								scan,
+								&ent.ImportScanFile{
+									ID: uint32(
+										n + 1,
+									),
+									ExistingMovieID: 42,
+									SourcePath:      src,
+								},
+							)
+						})
+					}
+					wg.Wait()
+
+					// The later commit replaced the earlier one's file: one
+					// row, one file, and it is one of the two scanned.
+					Expect(msgs).To(HaveEach(BeEmpty()))
+					Expect(rows).To(HaveLen(1))
+					Expect(slices.Collect(maps.Values(rows))).To(ConsistOf(dest))
+					Expect(head(dest, 3)).To(BeElementOf("aaa", "bbb"))
+					Expect(dest + replacedSuffix).NotTo(BeAnExistingFile())
+					if mode == entimportscan.ImportModeHardlink {
+						Expect(head(srcs[0], 3)).To(Equal("aaa"))
+						Expect(head(srcs[1], 3)).To(Equal("bbb"))
+					}
+					Expect(os.Remove(dest)).To(Succeed())
+				}
+			},
+			Entry("hardlinking", entimportscan.ImportModeHardlink),
+			Entry("moving", entimportscan.ImportModeMove),
+		)
 	},
 )
 
@@ -1068,12 +1177,6 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 			Expect(
 				os.WriteFile(src, make([]byte, 60*1024*1024), 0o644),
 			).To(Succeed())
-			// A second movie beside it: the commit names its own file, so
-			// a folder holding several is not "multiple media files".
-			Expect(os.WriteFile(
-				filepath.Join(srcDir, "Se7en - 1995.mkv"),
-				make([]byte, 60*1024*1024), 0o644,
-			)).To(Succeed())
 			scan := &ent.ImportScan{
 				ID:         1,
 				Mode:       entimportscan.ModeRename,
@@ -1105,6 +1208,78 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 			Expect(movieID).To(Equal(uint32(42)))
 		},
 	)
+
+	It("commits each new movie of a flat folder holding several", func() {
+		configtest.Setup(map[string]any{
+			"library": map[string]any{
+				"movie_path":   libDir,
+				"movie_naming": "{title} ({year})/{title}.{ext}",
+				"import_mode":  "hardlink",
+			},
+			"metadata": map[string]any{"tmdb_region": ""},
+		})
+		svc = NewService(
+			store, meta, nil, library.NewImportService(),
+			movie.NewService(store, meta, nil, nil, nil), nil, nil,
+			libDir, libDir,
+			nil, nil, nil, nil,
+		)
+		scan := &ent.ImportScan{
+			ID:         1,
+			Mode:       entimportscan.ModeRename,
+			ImportMode: entimportscan.ImportModeHardlink,
+		}
+		movies := []*ent.Movie{
+			{ID: 42, Title: "Fight Club", Year: 1999},
+			{ID: 43, Title: "Se7en", Year: 1995},
+		}
+		srcs := make([]string, len(movies))
+		for i, m := range movies {
+			srcs[i] = filepath.Join(
+				srcDir,
+				fmt.Sprintf("%s - %d.mkv", m.Title, m.Year),
+			)
+			Expect(os.WriteFile(srcs[i], nil, 0o644)).To(Succeed())
+			Expect(os.Truncate(srcs[i], 60*1024*1024)).To(Succeed())
+		}
+
+		for i, m := range movies {
+			id := tmdbID + uint32(i)
+			meta.EXPECT().GetMovie(mock.Anything, id).
+				Return(&metadata.MovieDetails{
+					TMDBID: id, Title: m.Title, Year: m.Year,
+				}, nil).Once()
+			store.EXPECT().CreateMovie(mock.Anything, mock.Anything).
+				Return(m, nil).Once()
+			var recorded db.CreateMediaFileParams
+			store.EXPECT().CreateMediaFile(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, p db.CreateMediaFileParams) {
+					recorded = p
+				}).Return(&ent.MediaFile{}, nil).Once()
+			store.EXPECT().
+				UpdateMovieStatus(mock.Anything, m.ID, entmovie.StatusAvailable).
+				Return(nil).Once()
+
+			outcome, msg, movieID := svc.commitRename(
+				ctx,
+				scan,
+				&ent.ImportScanFile{ID: uint32(i + 1), SourcePath: srcs[i]},
+				id,
+			)
+
+			Expect(msg).To(BeEmpty())
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeCreated))
+			Expect(movieID).To(Equal(m.ID))
+			Expect(recorded.Path).To(Equal(
+				filepath.Join(
+					libDir,
+					fmt.Sprintf("%s (%d)", m.Title, m.Year),
+					m.Title+".mkv",
+				),
+			))
+			Expect(recorded.Path).To(BeAnExistingFile())
+		}
+	})
 })
 
 var _ = Describe("CommitOptions", Label("unit", "bulkimport"), func() {

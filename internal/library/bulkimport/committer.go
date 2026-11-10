@@ -350,6 +350,9 @@ func (s *Service) commitAttach(
 	scan *ent.ImportScan,
 	f *ent.ImportScanFile,
 ) (entimportscanfile.Outcome, string, uint32) {
+	// Held from the listing to the last row delete: another scanned copy of
+	// this movie, committed alongside, has to list the row this one writes.
+	defer lockMovieFiles(f.ExistingMovieID)()
 	existing, err := s.store.ListMediaFilesByMovieID(ctx, f.ExistingMovieID)
 	if err != nil {
 		return commitFail("list existing files", err, 0)
@@ -414,7 +417,7 @@ func (s *Service) commitAttach(
 			string(scan.ImportMode),
 		)
 		if err != nil {
-			putBack(ctx, aside, f.SourcePath)
+			putBack(ctx, aside, partialSource(err, f.SourcePath))
 			return commitFail("import movie", err, 0)
 		}
 		params.Path = imported.Path

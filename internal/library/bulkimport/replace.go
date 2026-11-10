@@ -7,7 +7,48 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"sync"
+
+	"github.com/datahearth/streamline/internal/library"
 )
+
+// movieLocks serialises the replacement of one movie's file. A commit runs
+// several files at once and two of them can be copies of one movie: each
+// lists the tracked rows, places its file and deletes what it listed, so run
+// together both replace the same row and neither sees the other's. Under the
+// lock the second lists the row the first one wrote.
+var movieLocks = struct {
+	mu    sync.Mutex
+	locks map[uint32]*movieLock
+}{locks: map[uint32]*movieLock{}}
+
+type movieLock struct {
+	sync.Mutex
+	users int
+}
+
+// lockMovieFiles takes the movie's replacement lock and returns its release.
+// It is not reentrant.
+func lockMovieFiles(movieID uint32) (unlock func()) {
+	movieLocks.mu.Lock()
+	l, ok := movieLocks.locks[movieID]
+	if !ok {
+		l = &movieLock{}
+		movieLocks.locks[movieID] = l
+	}
+	l.users++
+	movieLocks.mu.Unlock()
+
+	l.Lock()
+	return func() {
+		l.Unlock()
+		movieLocks.mu.Lock()
+		if l.users--; l.users == 0 {
+			delete(movieLocks.locks, movieID)
+		}
+		movieLocks.mu.Unlock()
+	}
+}
 
 // replacedSuffix names a tracked library file set aside while the scanned
 // file replacing it is placed. It is the importer's suffix, so a file a
@@ -107,6 +148,26 @@ func putBack(ctx context.Context, moved []string, partialOf string) {
 	}
 }
 
+// partialSource names, for putBack, the scanned file whose failed import may
+// have left a partial copy behind. An import refused before its transfer
+// started wrote nothing: what sits at a library path is then someone else's
+// file (the destination was taken, by another commit's import for one), and
+// the empty answer has putBack leave it alone.
+func partialSource(importErr error, scanned string) string {
+	for _, early := range []error{
+		library.ErrDestExists,
+		library.ErrNoMedia,
+		library.ErrMultipleMedia,
+		library.ErrSampleOnly,
+		library.ErrUnsafePath,
+	} {
+		if errors.Is(importErr, early) {
+			return ""
+		}
+	}
+	return scanned
+}
+
 // discardPartial removes what a failed import of scanned left at path and
 // reports whether the path is free. It refuses when the scanned file cannot
 // be found at its own path: what sits at path may then be all that is left
@@ -139,8 +200,12 @@ func dropAside(ctx context.Context, path string) {
 // removeReplaced deletes a tracked file that was replaced without being set
 // aside, once the replacement's row exists and its own is gone. It deletes
 // only what it can tell apart from the replacement: the replacement must be
-// on disk, as another file.
+// on disk, as another file. A replacement at the tracked path itself took
+// the place of a file that was already gone, and leaves nothing to remove.
 func removeReplaced(ctx context.Context, path, newPath string) {
+	if path == newPath {
+		return
+	}
 	if same, err := sameFile(path, newPath); err != nil || same {
 		slog.WarnContext(ctx, "bulk import: replaced file left in place",
 			"path", path, "new_path", newPath, "error", err)

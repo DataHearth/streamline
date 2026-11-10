@@ -2,11 +2,15 @@ package bulkimport
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/library"
 )
 
 var _ = Describe("Replacing a tracked file", Label("unit", "bulkimport"), func() {
@@ -72,6 +76,63 @@ var _ = Describe("Replacing a tracked file", Label("unit", "bulkimport"), func()
 
 			Expect(read(tracked)).To(Equal("replacement"))
 			Expect(read(tracked + replacedSuffix)).To(Equal("original"))
+		})
+	})
+
+	Describe("partialSource", func() {
+		It("names the scanned file when the transfer itself failed", func() {
+			err := fmt.Errorf("transfer file: %w", errors.New("no space left"))
+
+			Expect(partialSource(err, scanned)).To(Equal(scanned))
+		})
+
+		DescribeTable("names nothing when the import was refused before it",
+			func(refusal error) {
+				err := fmt.Errorf("import: %w", refusal)
+
+				Expect(partialSource(err, scanned)).To(BeEmpty())
+			},
+			Entry("destination taken", library.ErrDestExists),
+			Entry("no media", library.ErrNoMedia),
+			Entry("several media files", library.ErrMultipleMedia),
+			Entry("unsafe path", library.ErrUnsafePath),
+		)
+
+		It("leaves another commit's file at the path of a refused import", func() {
+			moved, err := setAside(ctx, tracked)
+			Expect(err).NotTo(HaveOccurred())
+			// Another import landed there first; its scanned file may be
+			// gone, and this one's is still in place.
+			write(tracked, "someone else's")
+
+			putBack(ctx, moved, partialSource(library.ErrDestExists, scanned))
+
+			Expect(read(tracked)).To(Equal("someone else's"))
+			Expect(read(tracked + replacedSuffix)).To(Equal("original"))
+		})
+	})
+
+	Describe("removeReplaced", func() {
+		It("removes a tracked file the replacement sits beside", func() {
+			removeReplaced(ctx, tracked, scanned)
+
+			Expect(tracked).NotTo(BeAnExistingFile())
+			Expect(read(scanned)).To(Equal("replacement"))
+		})
+
+		It("leaves a replacement that took the tracked path", func() {
+			removeReplaced(ctx, tracked, tracked)
+
+			Expect(read(tracked)).To(Equal("original"))
+		})
+
+		It("leaves a hardlink of the replacement", func() {
+			link := filepath.Join(dir, "link.mkv")
+			Expect(os.Link(tracked, link)).To(Succeed())
+
+			removeReplaced(ctx, tracked, link)
+
+			Expect(read(tracked)).To(Equal("original"))
 		})
 	})
 

@@ -214,7 +214,7 @@ func (s *Service) commitShow(
 				ctx, f, show, season, target, string(scan.ImportMode),
 			)
 			if err != nil {
-				putBack(ctx, aside, f)
+				putBack(ctx, aside, partialSource(err, f))
 				slog.WarnContext(ctx, "series adopt: import episode failed",
 					"file", f, "episode.id", target.ID, "error", err)
 				continue
