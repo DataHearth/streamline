@@ -127,7 +127,11 @@ var _ = g.Describe("SPA shell head", g.Label("unit"), func() {
 	})
 
 	g.It("runs under a translucent iOS status bar, edge to edge", func() {
-		Expect(shell).To(ContainSubstring(`<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />`))
-		Expect(shell).To(MatchRegexp(`<meta name="viewport" content="[^"]*viewport-fit=cover`))
+		Expect(
+			shell,
+		).To(ContainSubstring(`<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />`))
+		Expect(
+			shell,
+		).To(MatchRegexp(`<meta name="viewport" content="[^"]*viewport-fit=cover`))
 	})
 })
