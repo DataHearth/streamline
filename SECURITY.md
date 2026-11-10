@@ -41,9 +41,7 @@ In scope — anything that breaks the security model of a correctly configured
 instance:
 
 - Authentication or session bypass (`streamline_session` cookie, JWT, API keys,
-  the Subsonic `/rest` and OPDS `/opds` credentials)
-- Reaching more through a public share link (`/share/{token}`) than the tracks
-  it was made for, or after its owner lost the right to share
+  the OPDS extension's `/opds` credentials)
 - Privilege escalation between users, or past RBAC on `/api/v1/*`
 - OIDC flow flaws — account takeover via identity linking, state/nonce/PKCE
   handling
@@ -58,10 +56,6 @@ Out of scope:
 
 - Exposing Streamline to the internet without TLS or a reverse proxy. It is
   built to sit behind one.
-- The Subsonic protocol's own design. Its token scheme is `md5(password + salt)`,
-  so the per-user Subsonic password is stored recoverable by necessity; it is
-  separate from the account password and never accepted by the web UI or the
-  REST API.
 - Anything requiring existing admin credentials. Admins can already write config
   and read the library by design.
 - Resource exhaustion from your own configuration — huge libraries, aggressive

@@ -361,14 +361,14 @@ All three API keys have `_file` twins.
 
 ### ffmpeg
 
-The FFmpeg suite, two binaries that are each optional on their own. `ffprobe` backs the media probe: technical details (resolution, codecs, duration, bitrate, stream languages) read from your files and shown as `media_info` on movies and episodes. It also backs [import verification](#import-verification) and measured music and audiobook quality. `ffmpeg` backs the [transcoder](#transcoding) and [Subsonic](Subsonic) transcoding. See [REST API](REST-API#media-probe) and [Optional: ffmpeg and ffprobe](Installation#optional-ffmpeg-and-ffprobe).
+The FFmpeg suite, two binaries that are each optional on their own. `ffprobe` backs the media probe: technical details (resolution, codecs, duration, bitrate, stream languages) read from your files and shown as `media_info` on movies and episodes. It also backs [import verification](#import-verification) and measured music and audiobook quality. `ffmpeg` backs the [transcoder](#transcoding). See [REST API](REST-API#media-probe) and [Optional: ffmpeg and ffprobe](Installation#optional-ffmpeg-and-ffprobe).
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `ffmpeg.enabled` | bool | `true` | `false` turns off everything both binaries back: probing, import verification, transcoding and Subsonic transcoding. **Runtime-editable** |
+| `ffmpeg.enabled` | bool | `true` | `false` turns off everything both binaries back: probing, import verification and transcoding. **Runtime-editable** |
 | `ffmpeg.path` | path | `""` | A **directory** holding the `ffmpeg`/`ffprobe` binaries — not a binary path. Empty resolves via `$PATH`. Read once at boot; changing it needs a restart |
 
-Missing binaries (or `enabled: false`) degrade gracefully — imports and library scans still work, just without `media_info`, and Subsonic apps get the original file. Nothing errors at boot. `GET /api/v1/system/info` surfaces `ffmpeg_warn: true` when probing is enabled but `ffprobe` wasn't found. A missing `ffmpeg` raises no `ffmpeg_warn`; see below. The official Docker image ships both binaries, so either case only bites custom builds or a `path` misconfiguration.
+Missing binaries (or `enabled: false`) degrade gracefully — imports and library scans still work, just without `media_info`. Nothing errors at boot. `GET /api/v1/system/info` surfaces `ffmpeg_warn: true` when probing is enabled but `ffprobe` wasn't found. A missing `ffmpeg` raises no `ffmpeg_warn`; see below. The official Docker image ships both binaries, so either case only bites custom builds or a `path` misconfiguration.
 
 `ffmpeg.path` also supplies the binary the [transcoder](#transcoding) runs. Both binaries are resolved out of that one directory, so there is no separate `ffmpeg_path` to set — and `ffprobe` being found does not prove `ffmpeg` is: `GET /api/v1/config/ffmpeg` reports a `version` field only when `ffmpeg -version` actually answers.
 
@@ -464,6 +464,24 @@ Database backups under `<data_dir>/backups` — see [Backups](GitOps-and-Kuberne
 | `backup.retention.manual` | int | `10` | Backups `streamline backup` keeps. `0` keeps every one |
 
 A database replaced by `streamline restore` is kept as a `pre-restore` backup and never pruned.
+
+### extensions
+
+WebAssembly [extensions](Extensions). File-only to write by hand; also editable through `/api/v1/extensions` unless `read_only`. An API change applies at once; a file edit is read at the next start.
+
+| Key | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `extensions[]` | array | `[]` | |
+
+Per entry:
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `name` | ✅ | Unique key, `^[a-z0-9][a-z0-9-]{0,31}$`; must equal the name inside the module |
+| `source` | ✅ | An `https://` URL or an absolute path to a `.wasm` file |
+| `sha256` | with a URL | The module's hex SHA-256; the download is refused when it differs |
+| `enabled` | | `false` stops it and keeps the entry |
+| `grants.mounts[]`, `grants.views[]`, `grants.services[]`, `grants.folders[]` | | What the module may use; must hold everything its manifest asks for, or it stays in `needs_approval`. See [Approving permissions](Extensions#approving-permissions), and read the warning there before granting the `ffmpeg` service |
 
 ### media_server
 

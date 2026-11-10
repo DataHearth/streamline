@@ -10,7 +10,7 @@
 - [Requests and Users](Requests-and-Users)
 - [Music and Books](Music-and-Books)
 - [Uploading files](Uploading-files)
-- [Subsonic](Subsonic)
+- [Extensions](Extensions)
 - [Send to Kindle](Send-to-Kindle)
 - [NixOS and Nix](NixOS)
 - [Proxmox VE (LXC)](Proxmox)
@@ -25,6 +25,7 @@
 - [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats)
 - [Scheduled Jobs](Scheduled-Jobs)
 - [REST API](REST-API)
+- [Writing an extension](Writing-an-extension)
 - [Observability and Logging](Observability-and-Logging)
 - [GitOps and Kubernetes](GitOps-and-Kubernetes)
 

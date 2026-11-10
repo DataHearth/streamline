@@ -10,16 +10,17 @@ Missing something you need? [Open an issue](https://github.com/datahearth/stream
 | --- | --- |
 | Movies | ✅ Shipped |
 | TV shows | ✅ Shipped |
-| Music | ✅ Shipped — library management with background hydration of tracks and credits, Wikipedia overviews and artist photos, monitor policies, adoption of existing files, a Subsonic server (playlists, stars and play counts, queue sync, share links, lyrics, transcoding), searching and grabbing albums and discography packs with tag writing, RSS and scheduled searches, and requests |
-| Books | ✅ Shipped — a book-first library (books and series with volumes, editions per language and publisher, an ebook and an audiobook slot each), adoption of existing files, an OPDS catalog, searching and grabbing per slot, RSS and scheduled searches, and requests |
-| Subsonic server for music apps (OpenSubsonic, playlists, shares, transcoding) | ✅ Shipped |
-| OPDS catalogue for e-reader apps | ✅ Shipped |
+| Music | ✅ Shipped — library management with background hydration of tracks and credits, Wikipedia overviews and artist photos, monitor policies, adoption of existing files, searching and grabbing albums and discography packs with tag writing, RSS and scheduled searches, and requests |
+| Books | ✅ Shipped — a book-first library (books and series with volumes, editions per language and publisher, an ebook and an audiobook slot each), adoption of existing files, an OPDS catalog (an [extension](Extensions)), searching and grabbing per slot, RSS and scheduled searches, and requests |
+| Subsonic server for music apps | ↗️ No longer part of Streamline — it shipped built in and is moving to a separate project |
+| OPDS catalogue for e-reader apps | ✅ Shipped, as an [extension](Extensions) |
+| Extensions: WebAssembly modules that add routes, read a granted slice of the library and keep their own database | ✅ Shipped — see [Writing an extension](Writing-an-extension); a web UI for managing them and for their account cards is planned |
 | Send to e-reader by email (EPUB and PDF) | ✅ Shipped |
 | Upload albums, tracks, discographies and books from the UI or API, imported like a finished download | ✅ Shipped |
 | CBZ → PDF for send to e-reader | 📋 Planned |
 | Music tag engine (Streamline keeps every file's tags and artwork in step with its library) | ✅ Shipped — full MusicBrainz tag set with composers, performers and production credits, the album cover in each file and `cover.jpg`/`folder.jpg` beside them, a per-release tag panel with hand-set tags, and edits made elsewhere undone under *Managed* — without losing ReplayGain, lyrics or a release's own art |
 
-Music and books work like movies and TV: adopt your existing library, then let automatic searching, grabbing and requests fill the gaps. Music is reachable from Subsonic clients and books from OPDS readers; see [Music and Books](Music-and-Books). Music metadata can come from a self-hosted MusicBrainz mirror at whatever pace it allows (`metadata.musicbrainz_url`, `metadata.musicbrainz_interval`).
+Music and books work like movies and TV: adopt your existing library, then let automatic searching, grabbing and requests fill the gaps. Books are reachable from OPDS readers; see [Music and Books](Music-and-Books). Music metadata can come from a self-hosted MusicBrainz mirror at whatever pace it allows (`metadata.musicbrainz_url`, `metadata.musicbrainz_interval`).
 
 ## Downloading
 
