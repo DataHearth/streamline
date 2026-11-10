@@ -20255,8 +20255,8 @@ func (_c *MockStore_ReplaceCast_Call) RunAndReturn(run func(ctx context.Context,
 }
 
 // ReplaceMediaFile provides a mock function for the type MockStore
-func (_mock *MockStore) ReplaceMediaFile(ctx context.Context, oldID uint32, p db.CreateMediaFileParams) (*ent.MediaFile, error) {
-	ret := _mock.Called(ctx, oldID, p)
+func (_mock *MockStore) ReplaceMediaFile(ctx context.Context, oldIDs []uint32, p db.CreateMediaFileParams) (*ent.MediaFile, error) {
+	ret := _mock.Called(ctx, oldIDs, p)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReplaceMediaFile")
@@ -20264,18 +20264,18 @@ func (_mock *MockStore) ReplaceMediaFile(ctx context.Context, oldID uint32, p db
 
 	var r0 *ent.MediaFile
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.CreateMediaFileParams) (*ent.MediaFile, error)); ok {
-		return returnFunc(ctx, oldID, p)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32, db.CreateMediaFileParams) (*ent.MediaFile, error)); ok {
+		return returnFunc(ctx, oldIDs, p)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.CreateMediaFileParams) *ent.MediaFile); ok {
-		r0 = returnFunc(ctx, oldID, p)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32, db.CreateMediaFileParams) *ent.MediaFile); ok {
+		r0 = returnFunc(ctx, oldIDs, p)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.MediaFile)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, db.CreateMediaFileParams) error); ok {
-		r1 = returnFunc(ctx, oldID, p)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []uint32, db.CreateMediaFileParams) error); ok {
+		r1 = returnFunc(ctx, oldIDs, p)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -20289,21 +20289,21 @@ type MockStore_ReplaceMediaFile_Call struct {
 
 // ReplaceMediaFile is a helper method to define mock.On call
 //   - ctx context.Context
-//   - oldID uint32
+//   - oldIDs []uint32
 //   - p db.CreateMediaFileParams
-func (_e *MockStore_Expecter) ReplaceMediaFile(ctx any, oldID any, p any) *MockStore_ReplaceMediaFile_Call {
-	return &MockStore_ReplaceMediaFile_Call{Call: _e.mock.On("ReplaceMediaFile", ctx, oldID, p)}
+func (_e *MockStore_Expecter) ReplaceMediaFile(ctx any, oldIDs any, p any) *MockStore_ReplaceMediaFile_Call {
+	return &MockStore_ReplaceMediaFile_Call{Call: _e.mock.On("ReplaceMediaFile", ctx, oldIDs, p)}
 }
 
-func (_c *MockStore_ReplaceMediaFile_Call) Run(run func(ctx context.Context, oldID uint32, p db.CreateMediaFileParams)) *MockStore_ReplaceMediaFile_Call {
+func (_c *MockStore_ReplaceMediaFile_Call) Run(run func(ctx context.Context, oldIDs []uint32, p db.CreateMediaFileParams)) *MockStore_ReplaceMediaFile_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint32
+		var arg1 []uint32
 		if args[1] != nil {
-			arg1 = args[1].(uint32)
+			arg1 = args[1].([]uint32)
 		}
 		var arg2 db.CreateMediaFileParams
 		if args[2] != nil {
@@ -20323,7 +20323,7 @@ func (_c *MockStore_ReplaceMediaFile_Call) Return(mediaFile *ent.MediaFile, err 
 	return _c
 }
 
-func (_c *MockStore_ReplaceMediaFile_Call) RunAndReturn(run func(ctx context.Context, oldID uint32, p db.CreateMediaFileParams) (*ent.MediaFile, error)) *MockStore_ReplaceMediaFile_Call {
+func (_c *MockStore_ReplaceMediaFile_Call) RunAndReturn(run func(ctx context.Context, oldIDs []uint32, p db.CreateMediaFileParams) (*ent.MediaFile, error)) *MockStore_ReplaceMediaFile_Call {
 	_c.Call.Return(run)
 	return _c
 }

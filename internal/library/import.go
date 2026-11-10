@@ -219,7 +219,28 @@ func (s *ImportService) ImportMovieWithMode(
 	)
 	defer span.End()
 
-	return placeFile(ctx, span, placement{
+	return placeFile(ctx, span, moviePlacement(lib, srcDir, m, mode))
+}
+
+// MovieDestination resolves the media file ImportMovie would take from srcDir
+// and the library path it would place it at, rendered from the live config
+// without touching the destination.
+func (s *ImportService) MovieDestination(
+	srcDir string,
+	m *ent.Movie,
+) (src, dest string, err error) {
+	src, _, dest, err = moviePlacement(config.Get().Library, srcDir, m, "").
+		destination()
+	return src, dest, err
+}
+
+func moviePlacement(
+	lib config.LibraryConfig,
+	srcDir string,
+	m *ent.Movie,
+	mode string,
+) placement {
+	return placement{
 		kind:    "movie",
 		src:     srcDir,
 		minSize: MinMediaSize,
@@ -230,7 +251,7 @@ func (s *ImportService) ImportMovieWithMode(
 			return BuildMovieVars(m.Title, m.Year, m.TmdbID, parsed)
 		},
 		owner: []any{"movie.id", m.ID},
-	})
+	}
 }
 
 // ImportEpisode places a single episode file into the series library. srcFile
@@ -280,25 +301,19 @@ func (s *ImportService) ImportEpisodeWithMode(
 	)
 }
 
-// EpisodeDestination is the library path ImportEpisode would place srcFile at,
-// rendered from the live config without touching the filesystem beyond
-// resolving the source.
+// EpisodeDestination resolves the media file ImportEpisode would take from
+// srcFile and the library path it would place it at, rendered from the live
+// config without touching the destination.
 func (s *ImportService) EpisodeDestination(
 	srcFile string,
 	show *ent.TVShow,
 	season uint16,
 	ep *ent.Episode,
-) (string, error) {
+) (src, dest string, err error) {
 	lib := config.Get().Library
-	_, _, dest, err := episodePlacement(
-		lib,
-		srcFile,
-		show,
-		season,
-		ep,
-		"",
-	).destination()
-	return dest, err
+	src, _, dest, err = episodePlacement(lib, srcFile, show, season, ep, "").
+		destination()
+	return src, dest, err
 }
 
 func episodePlacement(

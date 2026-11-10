@@ -101,12 +101,12 @@ func (db *DB) CreateMediaFile(
 	return createMediaFile(ctx, db.client, p)
 }
 
-// ReplaceMediaFile writes the row p describes and deletes the row oldID in one
-// transaction, so the owner never holds both rows or neither. It touches no
-// file: the caller places the new file before and removes the old one after.
+// ReplaceMediaFile writes the row p describes and deletes the rows oldIDs in
+// one transaction, so the owner never holds both or neither. It touches no
+// file: the caller places the new file before and removes the old ones after.
 func (db *DB) ReplaceMediaFile(
 	ctx context.Context,
-	oldID uint32,
+	oldIDs []uint32,
 	p CreateMediaFileParams,
 ) (*ent.MediaFile, error) {
 	tx, err := db.client.Tx(ctx)
@@ -118,9 +118,11 @@ func (db *DB) ReplaceMediaFile(
 		tx.Rollback()
 		return nil, err
 	}
-	if err := tx.MediaFile.DeleteOneID(oldID).Exec(ctx); err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("delete media_file %d: %w", oldID, err)
+	for _, id := range oldIDs {
+		if err := tx.MediaFile.DeleteOneID(id).Exec(ctx); err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("delete media_file %d: %w", id, err)
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("commit media_file replace: %w", err)

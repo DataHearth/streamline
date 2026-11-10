@@ -125,7 +125,7 @@ An episode that already holds a file is replaced by the scanned one, but only on
 You can also **Discard** a scan under review, which throws away every decision you made without touching anything.
 
 > [!WARNING]
-> Committing an entry flagged *"Movie already in the library"* attaches the scanned file to that entry. If that entry already **has** a file on disk, the old one is deleted and replaced — usually what you want when re-importing a better copy, but it is a deletion, so check before committing a large batch. If it has no file (the common case for titles added by hand or through a request), nothing is deleted and the commit simply attaches.
+> Committing an entry flagged *"Movie already in the library"* attaches the scanned file to that entry. If that entry already **has** a file on disk, the old one is deleted and replaced — usually what you want when re-importing a better copy, but it is a deletion, so check before committing a large batch. The old file is deleted only once the new one is in place and recorded: if the new file cannot be imported, the movie keeps the file it had. If it has no file (the common case for titles added by hand or through a request), nothing is deleted and the commit simply attaches.
 >
 > In **Rename** mode these entries are relocated into your library root like every other accepted entry, using the scan's import mode. They are not left where they were found.
 

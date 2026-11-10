@@ -274,23 +274,21 @@ func (s *Service) adoptEpisodeFile(
 	var placed bool
 	if scan.Mode == entimportscan.ModeRename {
 		if old != nil {
-			var err error
-			if aside, err = setAsideAtDestination(
-				s.importSvc,
-				f,
-				show,
-				season,
-				target,
-				old.Path,
-			); err != nil {
-				return "set aside replaced file", err
+			src, dest, err := s.importSvc.EpisodeDestination(f, show, season, target)
+			// A source the importer cannot resolve fails in the import itself.
+			if err == nil && samePath(dest, old.Path) {
+				if aside, err = setAside(src, old.Path); err != nil {
+					return "set aside replaced file", err
+				}
 			}
 		}
 		imported, err := s.importSvc.ImportEpisodeWithMode(
 			ctx, f, show, season, target, string(scan.ImportMode),
 		)
 		if err != nil {
-			restoreAside(ctx, aside, old)
+			if old != nil {
+				restoreAside(ctx, aside, old.Path)
+			}
 			return "import episode", err
 		}
 		// A destination already holding this very inode (a hardlink commit
@@ -318,11 +316,15 @@ func (s *Service) adoptEpisodeFile(
 		}
 		return "", nil
 	}
-	if _, err := s.store.ReplaceMediaFile(ctx, old.ID, params); err != nil {
+	if _, err := s.store.ReplaceMediaFile(
+		ctx,
+		[]uint32{old.ID},
+		params,
+	); err != nil {
 		if placed {
 			undoPlacement(ctx, f, path, string(scan.ImportMode))
 		}
-		restoreAside(ctx, aside, old)
+		restoreAside(ctx, aside, old.Path)
 		return "replace media file", err
 	}
 	gone := aside
@@ -341,66 +343,6 @@ func (s *Service) adoptEpisodeFile(
 		"old_path", old.Path,
 		"new_path", path)
 	return "", nil
-}
-
-// setAsideAtDestination renames the old file to a hidden sibling when f's
-// rendered destination is its path and it is not f itself under another name,
-// returning where it went ("" when nothing moved).
-func setAsideAtDestination(
-	svc *library.ImportService,
-	f string,
-	show *ent.TVShow,
-	season uint16,
-	target *ent.Episode,
-	oldPath string,
-) (string, error) {
-	dest, err := svc.EpisodeDestination(f, show, season, target)
-	if err != nil || filepath.Clean(dest) != filepath.Clean(oldPath) {
-		// A source the importer cannot resolve fails in the import itself.
-		return "", nil //nolint:nilerr // reported by the import that follows
-	}
-	oldInfo, err := os.Stat(oldPath)
-	if os.IsNotExist(err) {
-		return "", nil
-	}
-	if err != nil {
-		return "", err
-	}
-	if srcInfo, err := os.Stat(f); err == nil && os.SameFile(oldInfo, srcInfo) {
-		return "", nil
-	}
-	aside := filepath.Join(filepath.Dir(oldPath),
-		".streamline-replacing-"+filepath.Base(oldPath))
-	if err := os.Rename(oldPath, aside); err != nil {
-		return "", err
-	}
-	return aside, nil
-}
-
-// restoreAside puts a set-aside old file back at its tracked path.
-func restoreAside(ctx context.Context, aside string, old *ent.MediaFile) {
-	if aside == "" {
-		return
-	}
-	if err := os.Rename(aside, old.Path); err != nil {
-		slog.ErrorContext(ctx, "series adopt: restore replaced file failed",
-			"path", old.Path, "aside", aside, "error", err)
-	}
-}
-
-// undoPlacement takes a file a rename commit placed back out of the library:
-// a move goes back to its source, a copy or hardlink is removed.
-func undoPlacement(ctx context.Context, src, placed, mode string) {
-	var err error
-	if mode == "move" {
-		err = library.MoveFile(ctx, placed, src)
-	} else {
-		err = os.Remove(placed)
-	}
-	if err != nil && !os.IsNotExist(err) {
-		slog.WarnContext(ctx, "series adopt: undo placement failed",
-			"path", placed, "source", src, "error", err)
-	}
 }
 
 // adoptTally counts what commitShow did with each planned file.
