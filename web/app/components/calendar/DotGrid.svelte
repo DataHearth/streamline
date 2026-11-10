@@ -71,10 +71,10 @@
 						class={cn(
 							"font-mono text-[13px] font-semibold leading-none tabular",
 							// An out-of-month day steps down by weight and one grey, never
-							// by opacity: fg-subtle at 60% is 2.7:1 on a live button. On
-							// the selected fill fg-subtle is 4.36:1, so it takes fg-muted.
+							// by opacity: fg-subtle at 60% is 2.7:1 on a live button. It is
+							// never the selected one (the page's `select` moves the month).
 							!cell.inMonth
-								? cn("font-normal", isSelected ? "text-fg-muted" : "text-fg-subtle")
+								? "font-normal text-fg-subtle"
 								: isSelected || isCurrent
 									? "text-accent-text"
 									: "text-fg-muted",
