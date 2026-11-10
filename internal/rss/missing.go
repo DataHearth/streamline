@@ -437,22 +437,28 @@ const releaseYearDrift = 1
 // Silence is not a mismatch: a release stating no year stays eligible, and so
 // does every release while the movie's own year is unknown.
 //
-// The parser takes the last year-like token of a name as its year. A release
-// that states the film's year and then an edition's is therefore judged on
-// every year it carries (statesYearOf), and a release of "Blade Runner 2049"
-// that states no year parses as "Blade Runner" of 2049. Such a token is the title's own when the parsed title followed by
-// it names the movie under one of its titles, and then it is no evidence of
-// another film.
+// The film's year is the one stated right after its title (yearsAfterTitle),
+// and when the name has one the release is judged on it alone. The parser's
+// year is the fallback for a name whose title is not spelled exactly as the
+// movie's: it is the last year-like token, so a release of "Blade Runner
+// 2049" that states no year parses as "Blade Runner" of 2049. Such a token is
+// the title's own when the parsed title followed by it names the movie under
+// one of its titles, and then it is no evidence of another film.
 func namesOtherYear(release string, m *ent.Movie) bool {
 	parsed := library.Parse(release)
 	if parsed.Year == 0 || m.Year == 0 {
 		return false
 	}
-	if withinYearDrift(int(parsed.Year), m) || statesYearOf(release, m) {
+	titles := append([]string{m.Title, m.OriginalTitle}, m.Aliases...)
+	if years := yearsAfterTitle(release, titles); len(years) > 0 {
+		return !slices.ContainsFunc(years, func(y int) bool {
+			return withinYearDrift(y, m)
+		})
+	}
+	if withinYearDrift(int(parsed.Year), m) {
 		return false
 	}
 	withYear := fmt.Sprintf("%s %d", parsed.Title, parsed.Year)
-	titles := append([]string{m.Title, m.OriginalTitle}, m.Aliases...)
 	return !slices.ContainsFunc(titles, func(t string) bool {
 		return library.TitleNamesSameWork(withYear, t)
 	})
@@ -467,19 +473,33 @@ func withinYearDrift(year int, m *ent.Movie) bool {
 	return drift >= -releaseYearDrift && drift <= releaseYearDrift
 }
 
-// statesYearOf reports whether any year-like token of the release is the
-// movie's. The parser settles on the last one, and a release can state the
-// film's year and then a later one that dates the edition rather than the
-// film: "Blade.Runner.1982.The.Final.Cut.2007", "Metropolis.1927.Restored.
-// 2010", "REMASTER.2023". A name carrying the wanted year is no evidence of
-// another film, whichever token the parser picked.
-func statesYearOf(release string, m *ent.Movie) bool {
-	for _, tok := range releaseYearRe.FindAllString(release, -1) {
-		if y, err := strconv.Atoi(tok); err == nil && withinYearDrift(y, m) {
-			return true
+// yearsAfterTitle returns the year-like tokens of a release that directly
+// follow one of the movie's titles: what precedes the token is that title and
+// nothing else. That is where a release states the film's year, wherever the
+// parser's last-token rule lands: on the edition's year in
+// "Blade.Runner.1982.The.Final.Cut.2007" or "Road House (1989) 1080p BluRay
+// 2024 Remaster", whose film is the 1982 and the 1989 one.
+//
+// A token that is the title, or part of it, never follows the title, so it is
+// never taken for the film's year: "1984.1956.1080p" states 1956 for a movie
+// titled or aliased "1984", whatever year that movie is from. More than one
+// token can qualify when one title of the movie extends another with a number
+// ("Wonder Woman" and "Wonder Woman 1984"); the caller keeps the release when
+// any of them is the movie's.
+func yearsAfterTitle(release string, titles []string) []int {
+	var years []int
+	for _, loc := range releaseYearRe.FindAllStringIndex(release, -1) {
+		before := release[:loc[0]]
+		if !slices.ContainsFunc(titles, func(t string) bool {
+			return library.TitleMatchesStrict(before, t)
+		}) {
+			continue
+		}
+		if y, err := strconv.Atoi(release[loc[0]:loc[1]]); err == nil {
+			years = append(years, y)
 		}
 	}
-	return false
+	return years
 }
 
 // dropOtherYears removes the releases of another film sharing m's title, so
