@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 
@@ -17,7 +16,7 @@ import (
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
 
-var _ = Describe("self-authenticated mounts", Label("unit", "server"), func() {
+var _ = Describe("auth exclude list", Label("unit", "server"), func() {
 	var (
 		client *ent.Client
 		ts     *httptest.Server
@@ -44,63 +43,6 @@ var _ = Describe("self-authenticated mounts", Label("unit", "server"), func() {
 		hc = &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error {
 			return http.ErrUseLastResponse
 		}}
-	})
-
-	subsonicCall := func(query string) map[string]any {
-		GinkgoHelper()
-		resp, err := hc.Get(ts.URL + "/rest/ping?f=json" + query)
-		Expect(err).NotTo(HaveOccurred())
-		defer resp.Body.Close()
-		Expect(resp.StatusCode).To(Equal(http.StatusOK))
-		var body map[string]map[string]any
-		Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
-		return body["subsonic-response"]
-	}
-
-	Describe("/rest", func() {
-		It("reaches the subsonic handler without a session", func() {
-			res := subsonicCall("")
-			Expect(res["status"]).To(Equal("failed"))
-			Expect(res["error"].(map[string]any)["code"]).To(BeEquivalentTo(10))
-		})
-
-		It("answers wrong credentials for an unknown user", func() {
-			res := subsonicCall("&u=nobody@example.com&p=x")
-			Expect(res["error"].(map[string]any)["code"]).To(BeEquivalentTo(40))
-		})
-
-		It("accepts a user with a subsonic password", func() {
-			client.User.Create().
-				SetEmail("listener@example.com").
-				SetSubsonicPassword("sesame").
-				SaveX(context.Background())
-			res := subsonicCall("&u=listener@example.com&p=sesame")
-			Expect(res["status"]).To(Equal("ok"))
-		})
-	})
-
-	Describe("/share", func() {
-		It("reaches the share page without a session", func() {
-			u := client.User.Create().
-				SetEmail("listener@example.com").
-				SaveX(context.Background())
-			client.Share.Create().
-				SetToken("tok123").
-				SetItems([]string{}).
-				SetOwnerID(u.ID).
-				SaveX(context.Background())
-
-			resp, err := hc.Get(ts.URL + "/share/tok123")
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			Expect(resp.Header.Get("Content-Type")).To(HavePrefix("text/html"))
-
-			resp, err = hc.Get(ts.URL + "/share/unknown")
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
-		})
 	})
 
 	It("keeps the exclude list narrow", func() {

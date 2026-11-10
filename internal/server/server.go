@@ -10,7 +10,6 @@ import (
 
 	oasspec "github.com/datahearth/streamline/api"
 	"github.com/datahearth/streamline/ent"
-	"github.com/datahearth/streamline/internal/appaccess"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/config"
@@ -35,7 +34,6 @@ import (
 	"github.com/datahearth/streamline/internal/scheduler"
 	"github.com/datahearth/streamline/internal/server/middleware"
 	"github.com/datahearth/streamline/internal/server/restapi"
-	"github.com/datahearth/streamline/internal/server/subsonic"
 	"github.com/datahearth/streamline/internal/server/web"
 	"github.com/datahearth/streamline/internal/transcoding"
 	"github.com/datahearth/streamline/internal/utils/httputil"
@@ -100,9 +98,6 @@ type Config struct {
 	TrackPlans      importer.TrackPlanner
 	Prober          ffmpeg.Prober
 	Transcoder      *transcoding.Worker
-	// AudioTranscoder converts music for Subsonic's stream; nil serves every
-	// file as it is.
-	AudioTranscoder subsonic.Transcoder
 	AuthMiddleware  func(http.Handler) http.Handler
 	HTTPLog         func(http.Handler) http.Handler
 }
@@ -209,23 +204,6 @@ func New(cfg Config) *Server {
 
 	restapi.Mount(s.router, s.api)
 	web.Mount(s.router, s.web)
-
-	appAccess := appaccess.NewTracker(cfg.Ent)
-	sonic := subsonic.New(subsonic.Deps{
-		Ent:        cfg.Ent,
-		Posters:    cfg.Posters,
-		Tracker:    appAccess,
-		Transcoder: cfg.AudioTranscoder,
-		Jobs:       cfg.Scheduler,
-		Accounts:   cfg.Auth,
-	})
-	s.router.Mount(
-		"/rest",
-		sonic.Routes(),
-	)
-	// Public share links handed out by Subsonic's createShare: excluded from
-	// auth, the token in the path is the credential.
-	s.router.Mount("/share", sonic.SharePage())
 
 	s.router.Get(
 		"/posters/{kind}/{id}/poster.jpg",

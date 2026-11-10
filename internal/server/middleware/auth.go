@@ -236,8 +236,8 @@ var identityPrefixes = []string{
 	// jwt/rotate re-issues a bearer token to the caller, so a key reaching it
 	// would bootstrap the very session credential this list denies it.
 	"/api/v1/auth/jwt",
-	// Mints per-user protocol credentials (Subsonic) and hands back the
-	// plaintext on read.
+	// Mints per-user extension credentials and hands back the plaintext
+	// secret in the response.
 	"/api/v1/account",
 	"/api/v1/users",
 	// Registration mode and the OIDC providers decide who can get an account

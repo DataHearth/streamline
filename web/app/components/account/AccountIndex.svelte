@@ -7,15 +7,13 @@
 		KeyRound,
 		Monitor,
 		RefreshCw,
-		Headphones,
 		Send,
 	} from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "@lib/api";
-	import { APP_ACCESS_PATH, appAccessKey } from "@lib/app-access";
 	import { auth } from "@lib/auth.svelte";
 	import { cn } from "@lib/cn";
-	import type { ApiKey, AppAccess, Session } from "@lib/types";
+	import type { ApiKey, Session } from "@lib/types";
 	import { getLocale, type locales } from "@lib/paraglide/runtime.js";
 	import FullScreenPanel from "@components/layout/FullScreenPanel.svelte";
 	import ProfileCard from "./ProfileCard.svelte";
@@ -24,7 +22,6 @@
 	import APIKeysCard from "./APIKeysCard.svelte";
 	import SessionsCard from "./SessionsCard.svelte";
 	import JWTRotateCard from "./JWTRotateCard.svelte";
-	import AppAccessCard from "./AppAccessCard.svelte";
 	import DeviceEmailCard from "./DeviceEmailCard.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -46,12 +43,6 @@
 		queryKey: ["auth", "me", "sessions"],
 		queryFn: () => api<Session[]>("/auth/me/sessions"),
 	}));
-	const subsonic = createQuery<AppAccess>(() => ({
-		queryKey: appAccessKey("subsonic"),
-		queryFn: () => api<AppAccess>(APP_ACCESS_PATH.subsonic),
-	}));
-	const onOff = (a: AppAccess | undefined) =>
-		a ? (a.enabled ? i18n.account_app_on() : i18n.account_app_off()) : "";
 
 	type Locale = (typeof locales)[number];
 	function endonym(code: Locale): string {
@@ -66,7 +57,6 @@
 		| "language"
 		| "keys"
 		| "sessions"
-		| "subsonic"
 		| "device"
 		| "jwt";
 
@@ -78,7 +68,6 @@
 		language: i18n.account_language(),
 		keys: i18n.account_api_keys(),
 		sessions: i18n.account_active_sessions(),
-		subsonic: "Subsonic",
 		device: i18n.account_device_title(),
 		jwt: i18n.account_rotate_key_long(),
 	});
@@ -140,12 +129,6 @@
 			name: i18n.account_section_apps(),
 			danger: false,
 			rows: [
-				{
-					key: "subsonic" as RowKey,
-					Icon: Headphones,
-					label: "Subsonic",
-					value: onOff(subsonic.data),
-				},
 				{
 					key: "device" as RowKey,
 					Icon: Send,
@@ -247,8 +230,6 @@
 		<APIKeysCard />
 	{:else if openRow === "sessions"}
 		<SessionsCard />
-	{:else if openRow === "subsonic"}
-		<AppAccessCard kind="subsonic" />
 	{:else if openRow === "device"}
 		<DeviceEmailCard />
 	{:else if openRow === "jwt"}
