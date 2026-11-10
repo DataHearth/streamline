@@ -731,6 +731,11 @@ export type HoldCheck =
 	| "format"
 	| "bitrate"
 	| "metadata"
+	// Not a check on a file: the completed download is at neither the
+	// convention path (`expected`) nor the client's mapped save path (`actual`).
+	// The download monitor releases it once either exists, so it is never
+	// imported by hand.
+	| "location"
 	// Not a failed check: `library.probe.always_ask` holds an otherwise-clean
 	// import so a person signs off on it, so it carries no expected/actual pair.
 	| "always_ask";

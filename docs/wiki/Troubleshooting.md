@@ -112,6 +112,19 @@ Fix the mounts (one parent mount, per [the folder rule](Installation#before-you-
 
 ---
 
+## A finished download is held with "location"
+
+A download finished in the client, and on **Queue & History** it sits under *Needs attention* as held, with a **location** finding: *Streamline looks in* `library.download_path/<torrent name>`, *The client saved to* another path. Nothing has been imported.
+
+Streamline never tells the client where to save. It expects the files at `library.download_path/<torrent name>`, and when they are not there it tries the save path the client reports, translated through [path mappings](Configuration-Reference#path-mappings). Found at neither, the download is held instead of imported. Two common causes:
+
+- **qBittorrent's torrent management mode is Manual** (its default). In Manual mode a category's save path is ignored, so a grab tagged `streamline` still lands in the default save path. Set Options → Downloads → **Default Torrent Management Mode: Automatic**, and give the `streamline` category your download folder as its save path. For a torrent already downloaded, right-click it → **Automatic Torrent Management** (or **Set location**) to move it. Transmission and Deluge behave the same way whenever their download directory is not your download folder.
+- **The client and Streamline see the folder under different paths** (Docker, Kubernetes). Add a [path mapping](Configuration-Reference#path-mappings) from the client's path to Streamline's.
+
+You don't need to do anything else: Streamline checks again every 30 seconds and starts the import as soon as the files are at either path. **Import anyway** is not offered, since there is nothing to import yet; **Delete** removes the torrent and its files from the client.
+
+> That is why it waits as held: imported anyway, it would fail `library.import_max_attempts` times on a path nothing was written to and land in History as failed.
+
 ## An adopted torrent says "files not found"
 
 You added a torrent in your download client yourself, tagged it `streamline` so Streamline would pick it up, and it shows on **Queue & History** under *Needs attention* as a proposal reading `files not found — client reports /some/path`.

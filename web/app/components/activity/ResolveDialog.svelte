@@ -63,6 +63,12 @@
 		heldFiles.size > 0 ||
 			(item?.hold_reasons ?? []).some((r) => r.check === "missing"),
 	);
+	// Held because the files are at neither path streamline looks: nothing can
+	// be imported as-is, and the monitor releases it once they are found.
+	const locationHold = $derived(
+		(item?.hold_reasons ?? []).length > 0 &&
+			(item?.hold_reasons ?? []).every((r) => r.check === "location"),
+	);
 	const planQuery = createQuery<TrackPlan>(() => ({
 		queryKey: ["track-plan", item?.id],
 		queryFn: () => api<TrackPlan>(`/downloads/${item?.id}/track-plan`),
@@ -199,11 +205,13 @@
 		format: () => i18n.hold_check_format(),
 		bitrate: () => i18n.hold_check_bitrate(),
 		metadata: () => i18n.hold_check_metadata(),
+		location: () => i18n.hold_check_location(),
 	};
 
 	// `always_ask` holds a file nothing is wrong with, so it has no claim to
 	// contrast against — rendering the pair would read as a fifth failure.
-	const hasExpectation = (r: HoldReason) => r.check !== "always_ask";
+	const hasExpectation = (r: HoldReason) =>
+		r.check !== "always_ask" && r.check !== "location";
 
 	// The hold is on the download; the reasons are itemised per file. A season
 	// pack therefore lists several files, each with its own findings.
@@ -243,18 +251,22 @@
 	{onClose}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
-		{
-			label: plan || folderPlan ? i18n.hold_import() : i18n.hold_import_anyway(),
-			variant: "ghost",
-			dismiss: false,
-			disabled:
-				pending ||
-				!canImport ||
-				!foldersReady ||
-				(needsPlan && planQuery.isPending) ||
-				(heldFolders.size > 0 && folderQuery.isPending),
-			onClick: importHeld,
-		},
+		...(locationHold
+			? []
+			: [
+					{
+						label: plan || folderPlan ? i18n.hold_import() : i18n.hold_import_anyway(),
+						variant: "ghost" as const,
+						dismiss: false,
+						disabled:
+							pending ||
+							!canImport ||
+							!foldersReady ||
+							(needsPlan && planQuery.isPending) ||
+							(heldFolders.size > 0 && folderQuery.isPending),
+						onClick: importHeld,
+					},
+				]),
 		{
 			label: regrab ? i18n.hold_delete_and_search() : i18n.common_delete(),
 			variant: "danger",
@@ -265,7 +277,9 @@
 	]}
 >
 	<p class="text-sm leading-relaxed text-fg-muted">
-		{heldFolders.size > 0
+		{locationHold
+			? i18n.hold_body_location()
+			: heldFolders.size > 0
 			? i18n.hold_body_folders()
 			: fileCount === 0
 			? i18n.hold_body_incomplete()
@@ -296,7 +310,18 @@
 							<dd
 								class="flex items-baseline justify-end gap-2 text-right font-mono text-xs"
 							>
-								{#if hasExpectation(f)}
+								{#if f.check === "location"}
+									<span class="flex min-w-0 flex-col gap-1 text-left">
+										<span class="break-all">
+											<span class="text-fg-faint">{i18n.hold_location_expected()}</span>
+											{f.expected}
+										</span>
+										<span class="break-all" style:color="var(--status-held)">
+											<span class="text-fg-faint">{i18n.hold_location_actual()}</span>
+											{f.actual || i18n.hold_location_unreported()}
+										</span>
+									</span>
+								{:else if hasExpectation(f)}
 									{#if f.expected}
 										<span class="text-fg-subtle line-through">{f.expected}</span>
 										<span class="text-fg-faint" aria-hidden="true">→</span>

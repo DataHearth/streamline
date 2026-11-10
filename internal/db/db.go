@@ -766,6 +766,31 @@ type Store interface {
 		ctx context.Context,
 		id uint32,
 	) (*ent.DownloadRecord, error)
+	// HoldDownloadingRecord holds a downloading record (filtered on that
+	// status) and reports whether it did.
+	HoldDownloadingRecord(
+		ctx context.Context,
+		id uint32,
+		reasons []schema.HoldReason,
+	) (bool, error)
+	// ListHeldRecordsByCheck returns the held records whose every reason is
+	// check.
+	ListHeldRecordsByCheck(
+		ctx context.Context,
+		check string,
+	) ([]*ent.DownloadRecord, error)
+	SetHeldRecordReasons(
+		ctx context.Context,
+		id uint32,
+		reasons []schema.HoldReason,
+	) error
+	// ReleaseLocatedRecord moves a held record to importing from savePath and
+	// reports whether it did.
+	ReleaseLocatedRecord(
+		ctx context.Context,
+		id uint32,
+		savePath string,
+	) (bool, error)
 	ReleaseHeldDownloadRecord(
 		ctx context.Context,
 		id uint32,

@@ -863,6 +863,7 @@ const (
 	HoldReasonCheckDuration   HoldReasonCheck = "duration"
 	HoldReasonCheckFolder     HoldReasonCheck = "folder"
 	HoldReasonCheckFormat     HoldReasonCheck = "format"
+	HoldReasonCheckLocation   HoldReasonCheck = "location"
 	HoldReasonCheckMetadata   HoldReasonCheck = "metadata"
 	HoldReasonCheckMissing    HoldReasonCheck = "missing"
 	HoldReasonCheckResolution HoldReasonCheck = "resolution"
@@ -888,6 +889,8 @@ func (e HoldReasonCheck) Valid() bool {
 	case HoldReasonCheckFolder:
 		return true
 	case HoldReasonCheckFormat:
+		return true
+	case HoldReasonCheckLocation:
 		return true
 	case HoldReasonCheckMetadata:
 		return true
@@ -5963,7 +5966,12 @@ type HoldReason struct {
 	// tier the profile does not tick, files tagged as another album, a
 	// file titled differently from the track its number lands on, when
 	// at least half the release's titles agree); format, bitrate and
-	// metadata hold a book.
+	// metadata hold a book. location holds a completed download whose
+	// files are at neither place streamline looks: `expected` is
+	// `<library.download_path>/<torrent name>`, `actual` the client's
+	// reported save path through `download.path_mappings` (absent when
+	// the client reports none); the download monitor releases it once
+	// either exists.
 	Check    HoldReasonCheck `json:"check"`
 	Expected *string         `json:"expected,omitempty"`
 	File     string          `json:"file"`
@@ -5974,7 +5982,12 @@ type HoldReason struct {
 // tier the profile does not tick, files tagged as another album, a
 // file titled differently from the track its number lands on, when
 // at least half the release's titles agree); format, bitrate and
-// metadata hold a book.
+// metadata hold a book. location holds a completed download whose
+// files are at neither place streamline looks: `expected` is
+// `<library.download_path>/<torrent name>`, `actual` the client's
+// reported save path through `download.path_mappings` (absent when
+// the client reports none); the download monitor releases it once
+// either exists.
 type HoldReasonCheck string
 
 // IdentifyPendingRequest defines model for IdentifyPendingRequest.

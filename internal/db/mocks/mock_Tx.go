@@ -10718,6 +10718,78 @@ func (_c *MockTx_HoldDownloadRecord_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
+// HoldDownloadingRecord provides a mock function for the type MockTx
+func (_mock *MockTx) HoldDownloadingRecord(ctx context.Context, id uint32, reasons []schema.HoldReason) (bool, error) {
+	ret := _mock.Called(ctx, id, reasons)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HoldDownloadingRecord")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []schema.HoldReason) (bool, error)); ok {
+		return returnFunc(ctx, id, reasons)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []schema.HoldReason) bool); ok {
+		r0 = returnFunc(ctx, id, reasons)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, []schema.HoldReason) error); ok {
+		r1 = returnFunc(ctx, id, reasons)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_HoldDownloadingRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HoldDownloadingRecord'
+type MockTx_HoldDownloadingRecord_Call struct {
+	*mock.Call
+}
+
+// HoldDownloadingRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - reasons []schema.HoldReason
+func (_e *MockTx_Expecter) HoldDownloadingRecord(ctx any, id any, reasons any) *MockTx_HoldDownloadingRecord_Call {
+	return &MockTx_HoldDownloadingRecord_Call{Call: _e.mock.On("HoldDownloadingRecord", ctx, id, reasons)}
+}
+
+func (_c *MockTx_HoldDownloadingRecord_Call) Run(run func(ctx context.Context, id uint32, reasons []schema.HoldReason)) *MockTx_HoldDownloadingRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 []schema.HoldReason
+		if args[2] != nil {
+			arg2 = args[2].([]schema.HoldReason)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_HoldDownloadingRecord_Call) Return(b bool, err error) *MockTx_HoldDownloadingRecord_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockTx_HoldDownloadingRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32, reasons []schema.HoldReason) (bool, error)) *MockTx_HoldDownloadingRecord_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // HoldsOtherFile provides a mock function for the type MockTx
 func (_mock *MockTx) HoldsOtherFile(ctx context.Context, row *ent.MediaFile) (bool, error) {
 	ret := _mock.Called(ctx, row)
@@ -13258,6 +13330,74 @@ func (_c *MockTx_ListEligibleSeriesVolumes_Call) Return(books []*ent.Book, err e
 }
 
 func (_c *MockTx_ListEligibleSeriesVolumes_Call) RunAndReturn(run func(ctx context.Context, maxGrabFailures uint8, notSearchedSince time.Time) ([]*ent.Book, error)) *MockTx_ListEligibleSeriesVolumes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListHeldRecordsByCheck provides a mock function for the type MockTx
+func (_mock *MockTx) ListHeldRecordsByCheck(ctx context.Context, check string) ([]*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, check)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListHeldRecordsByCheck")
+	}
+
+	var r0 []*ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, check)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []*ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, check)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, check)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListHeldRecordsByCheck_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListHeldRecordsByCheck'
+type MockTx_ListHeldRecordsByCheck_Call struct {
+	*mock.Call
+}
+
+// ListHeldRecordsByCheck is a helper method to define mock.On call
+//   - ctx context.Context
+//   - check string
+func (_e *MockTx_Expecter) ListHeldRecordsByCheck(ctx any, check any) *MockTx_ListHeldRecordsByCheck_Call {
+	return &MockTx_ListHeldRecordsByCheck_Call{Call: _e.mock.On("ListHeldRecordsByCheck", ctx, check)}
+}
+
+func (_c *MockTx_ListHeldRecordsByCheck_Call) Run(run func(ctx context.Context, check string)) *MockTx_ListHeldRecordsByCheck_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListHeldRecordsByCheck_Call) Return(downloadRecords []*ent.DownloadRecord, err error) *MockTx_ListHeldRecordsByCheck_Call {
+	_c.Call.Return(downloadRecords, err)
+	return _c
+}
+
+func (_c *MockTx_ListHeldRecordsByCheck_Call) RunAndReturn(run func(ctx context.Context, check string) ([]*ent.DownloadRecord, error)) *MockTx_ListHeldRecordsByCheck_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -19898,6 +20038,78 @@ func (_c *MockTx_ReleaseHeldDownloadRecord_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// ReleaseLocatedRecord provides a mock function for the type MockTx
+func (_mock *MockTx) ReleaseLocatedRecord(ctx context.Context, id uint32, savePath string) (bool, error) {
+	ret := _mock.Called(ctx, id, savePath)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReleaseLocatedRecord")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (bool, error)); ok {
+		return returnFunc(ctx, id, savePath)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) bool); ok {
+		r0 = returnFunc(ctx, id, savePath)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) error); ok {
+		r1 = returnFunc(ctx, id, savePath)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ReleaseLocatedRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReleaseLocatedRecord'
+type MockTx_ReleaseLocatedRecord_Call struct {
+	*mock.Call
+}
+
+// ReleaseLocatedRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - savePath string
+func (_e *MockTx_Expecter) ReleaseLocatedRecord(ctx any, id any, savePath any) *MockTx_ReleaseLocatedRecord_Call {
+	return &MockTx_ReleaseLocatedRecord_Call{Call: _e.mock.On("ReleaseLocatedRecord", ctx, id, savePath)}
+}
+
+func (_c *MockTx_ReleaseLocatedRecord_Call) Run(run func(ctx context.Context, id uint32, savePath string)) *MockTx_ReleaseLocatedRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ReleaseLocatedRecord_Call) Return(b bool, err error) *MockTx_ReleaseLocatedRecord_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockTx_ReleaseLocatedRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32, savePath string) (bool, error)) *MockTx_ReleaseLocatedRecord_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ReopenRequest provides a mock function for the type MockTx
 func (_mock *MockTx) ReopenRequest(ctx context.Context, id uint32) error {
 	ret := _mock.Called(ctx, id)
@@ -23270,6 +23482,69 @@ func (_c *MockTx_SetEpisodesMonitored_Call) Return(err error) *MockTx_SetEpisode
 }
 
 func (_c *MockTx_SetEpisodesMonitored_Call) RunAndReturn(run func(ctx context.Context, ids []uint32, monitored bool) error) *MockTx_SetEpisodesMonitored_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetHeldRecordReasons provides a mock function for the type MockTx
+func (_mock *MockTx) SetHeldRecordReasons(ctx context.Context, id uint32, reasons []schema.HoldReason) error {
+	ret := _mock.Called(ctx, id, reasons)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetHeldRecordReasons")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []schema.HoldReason) error); ok {
+		r0 = returnFunc(ctx, id, reasons)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SetHeldRecordReasons_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetHeldRecordReasons'
+type MockTx_SetHeldRecordReasons_Call struct {
+	*mock.Call
+}
+
+// SetHeldRecordReasons is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - reasons []schema.HoldReason
+func (_e *MockTx_Expecter) SetHeldRecordReasons(ctx any, id any, reasons any) *MockTx_SetHeldRecordReasons_Call {
+	return &MockTx_SetHeldRecordReasons_Call{Call: _e.mock.On("SetHeldRecordReasons", ctx, id, reasons)}
+}
+
+func (_c *MockTx_SetHeldRecordReasons_Call) Run(run func(ctx context.Context, id uint32, reasons []schema.HoldReason)) *MockTx_SetHeldRecordReasons_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 []schema.HoldReason
+		if args[2] != nil {
+			arg2 = args[2].([]schema.HoldReason)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SetHeldRecordReasons_Call) Return(err error) *MockTx_SetHeldRecordReasons_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SetHeldRecordReasons_Call) RunAndReturn(run func(ctx context.Context, id uint32, reasons []schema.HoldReason) error) *MockTx_SetHeldRecordReasons_Call {
 	_c.Call.Return(run)
 	return _c
 }

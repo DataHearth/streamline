@@ -513,7 +513,7 @@ download:
       to: /srv         # what Streamline calls it
 ```
 
-This is only consulted when a torrent is **not** where Streamline expected it — a normal grab never needs it. See [Troubleshooting](Troubleshooting#an-adopted-torrent-says-files-not-found).
+This is only consulted when a torrent is **not** where Streamline expected it — a normal grab whose files land under `library.download_path` never needs it. When a finished download is not there, Streamline tries the save path the client reports, through these mappings, before it imports; a download found at neither is held rather than imported. This applies both to downloads Streamline grabbed and to torrents it adopts. See [Troubleshooting](Troubleshooting#a-finished-download-is-held-with-location).
 
 ### download_clients
 

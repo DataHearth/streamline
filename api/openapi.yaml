@@ -5892,7 +5892,10 @@ paths:
         it for that title from then on (matched by info hash, else by title),
         until the record is retried or removed from the history. Manual search
         and grab are unaffected. 400 when the action is missing or
-        unrecognised, 409 when the record exists but is not held.
+        unrecognised, 409 when the record exists but is not held, and 409 on
+        `import` for a record held only for its payload's location (check
+        `location`): there are no files to import, and the download monitor
+        releases it on its own once they are found.
       tags: [activity]
       requestBody:
         required: true
@@ -16301,8 +16304,13 @@ components:
             tier the profile does not tick, files tagged as another album, a
             file titled differently from the track its number lands on, when
             at least half the release's titles agree); format, bitrate and
-            metadata hold a book.
-          enum: [corrupt, resolution, duration, codec, always_ask, tier, album, track, missing, folder, format, bitrate, metadata]
+            metadata hold a book. location holds a completed download whose
+            files are at neither place streamline looks: `expected` is
+            `<library.download_path>/<torrent name>`, `actual` the client's
+            reported save path through `download.path_mappings` (absent when
+            the client reports none); the download monitor releases it once
+            either exists.
+          enum: [corrupt, resolution, duration, codec, always_ask, tier, album, track, missing, folder, format, bitrate, metadata, location]
         expected: { type: string }
         actual: { type: string }
 
