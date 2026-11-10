@@ -117,7 +117,11 @@
 			// holding a linked episode, else the show's default.
 			selectedSeason = Number.isInteger(n) && n >= 0 ? n : null;
 			const ep = Number(param(p, "episode"));
-			if (!ep) return;
+			if (!ep) {
+				// Back to an entry naming no episode closes the sheet a link opened.
+				focusEpisodeId = null;
+				return;
+			}
 			tab = "episodes";
 			focusEpisodeId = ep;
 		},
