@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
-	import { Activity } from "@lucide/svelte";
+	import { Activity, ChevronRight } from "@lucide/svelte";
+	import { link } from "@lib/routes";
+	import { DOWNLOAD_CHIP, DOWNLOAD_CHIP_ARROW } from "@lib/title-downloads";
 	import { api, errorText } from "@lib/api";
+	import { cn } from "@lib/cn";
 	import {
 		EVENT_MARKS,
 		eventSubject,
@@ -58,6 +61,9 @@
 	}
 
 	let events = $derived(q.data?.events ?? []);
+	// The download column exists only when some event still has its record: a
+	// title with none keeps the four columns it had.
+	let linked = $derived(events.some((e) => e.download_id));
 </script>
 
 {#if q.isLoading}
@@ -108,7 +114,10 @@
 			     repeated down the list. -->
 			{@const scope = eventSubject(event).detail}
 			<li
-				class="grid grid-cols-[28px_1fr_auto_auto] items-center gap-4 border-b border-border px-4 py-3 last:border-b-0"
+				class={cn(
+					"grid items-center gap-4 border-b border-border px-4 py-3 last:border-b-0",
+					linked ? "grid-cols-[28px_1fr_auto_auto_auto]" : "grid-cols-[28px_1fr_auto_auto]",
+				)}
 			>
 				<span
 					class={`grid h-6 w-6 place-items-center rounded-sm ${mark.bg} ${mark.fg}`}
@@ -140,6 +149,22 @@
 				<span class="font-mono text-[11px] text-fg-subtle">
 					{sz || ""}
 				</span>
+				<!-- The download the event came from, while its record still exists:
+				     the events feed's chip, opening the same detail on Activity. -->
+				{#if event.download_id}
+					<a
+						href={link.download(event.download_id)}
+						title={i18n.activity_download_open()}
+						class="group/dl touch-hit -my-[15px] inline-flex cursor-pointer lg:my-0"
+					>
+						<span class={DOWNLOAD_CHIP}>
+							{i18n.activity_download_link()}
+							<span class={DOWNLOAD_CHIP_ARROW}><ChevronRight size={12} aria-hidden="true" /></span>
+						</span>
+					</a>
+				{:else if linked}
+					<span aria-hidden="true"></span>
+				{/if}
 			</li>
 		{/each}
 	</ul>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { link } from "@lib/routes";
 	import { Activity } from "@lucide/svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
 	import TouchRow from "@components/activity/TouchRow.svelte";
@@ -92,7 +93,7 @@
 					title={entryHeading(q)}
 					release={q.title}
 					meta={queueMeta(q)}
-					href="/activity"
+					href={link.download(q.id)}
 				/>
 			{/each}
 		</div>
@@ -101,7 +102,7 @@
 			{#each rows as q (q.id)}
 				<li>
 					<a
-						href="/activity"
+						href={link.download(q.id)}
 						class="grid grid-cols-[1fr_168px] items-center gap-4 rounded-md px-3 py-3 transition hover:bg-surface"
 					>
 						<div class="min-w-0">
