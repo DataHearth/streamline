@@ -78,6 +78,10 @@ func marshalOverrides(tmpDir string, overrides []map[string]any) []byte {
 			"movie_path":    filepath.Join(tmpDir, "movies"),
 			"series_path":   filepath.Join(tmpDir, "series"),
 		},
+		// The default reserve is 10 GB of the temp dir's volume, so on a host
+		// with less free than that every spec that receives an upload was
+		// refused. A spec about the reserve sets its own.
+		"download": map[string]any{"space_reserve_gb": 0},
 	}
 	k := koanf.New(".")
 	Expect(k.Load(confmap.Provider(base, "."), nil)).To(Succeed())
