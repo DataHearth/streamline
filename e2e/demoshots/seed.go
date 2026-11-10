@@ -840,14 +840,16 @@ func (d *demo) seedAdoption(ctx context.Context) error {
 }
 
 // settle probes the imported files and waits for the music worker to finish
-// filling in the discographies, so the pages show tracks and covers.
+// filling in the discographies, so the pages show tracks and covers. A
+// release group MusicBrainz keeps refusing is not worth failing the run
+// over: past the wait, the screenshots are taken with it still pending.
 func (d *demo) settle(ctx context.Context) error {
 	if err := d.runJob(ctx, "media-probe"); err != nil {
 		return err
 	}
-	return poll(
+	err := poll(
 		ctx,
-		20*time.Minute,
+		10*time.Minute,
 		10*time.Second,
 		"music hydration",
 		func() (bool, error) {
@@ -881,6 +883,16 @@ func (d *demo) settle(ctx context.Context) error {
 			return left == 0, nil
 		},
 	)
+	if _, ok := errors.AsType[*pollTimeout](err); ok {
+		slog.WarnContext(
+			ctx,
+			"music hydration did not finish; shooting with what is there",
+			"error",
+			err,
+		)
+		return nil
+	}
+	return err
 }
 
 // seedCalendar moves a few release dates into the current month. A library

@@ -145,6 +145,17 @@ func retry(ctx context.Context, budget time.Duration, fn func() error) error {
 	}
 }
 
+// pollTimeout is a poll that ran out of time, which a caller may decide to
+// live with.
+type pollTimeout struct {
+	budget time.Duration
+	what   string
+}
+
+func (e *pollTimeout) Error() string {
+	return fmt.Sprintf("timed out after %s waiting for %s", e.budget, e.what)
+}
+
 // poll calls check every interval until it reports done, an error, or the
 // budget runs out.
 func poll(
@@ -163,7 +174,7 @@ func poll(
 			return nil
 		}
 		if time.Now().After(deadline) {
-			return fmt.Errorf("timed out after %s waiting for %s", budget, what)
+			return &pollTimeout{budget: budget, what: what}
 		}
 		select {
 		case <-ctx.Done():
