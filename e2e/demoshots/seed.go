@@ -652,7 +652,9 @@ func (d *demo) runJob(ctx context.Context, name string) error {
 }
 
 // waitForImports runs the download monitor until every release with files
-// on disk has left the queue, imported, or sits held for a decision.
+// on disk is in the history, imported, or in the queue, held for a decision.
+// The queue is a snapshot the server refreshes on its own, so a release
+// missing from it right after the grab is not a finished one.
 func (d *demo) waitForImports(ctx context.Context) error {
 	onDisk := map[string]string{}
 	for _, r := range d.releases {
@@ -664,22 +666,30 @@ func (d *demo) waitForImports(ctx context.Context) error {
 		if err := d.runJob(ctx, "download-monitor"); err != nil {
 			return false, err
 		}
-		var queue any
+		done := map[string]bool{}
+		var history, queue any
+		if err := d.admin.get(ctx, "/activity/history", url.Values{"limit": {"200"}}, &history); err != nil {
+			return false, err
+		}
+		for _, e := range items(history) {
+			h := strings.ToLower(str(e["torrent_hash"]))
+			if name, ok := onDisk[h]; ok && str(e["status"]) == "failed" {
+				return false, fmt.Errorf("import of %s failed", name)
+			}
+			done[h] = true
+		}
 		if err := d.admin.get(ctx, "/activity/queue", nil, &queue); err != nil {
 			return false, err
 		}
-		var left []string
 		for _, e := range items(queue) {
-			name, ok := onDisk[strings.ToLower(str(e["torrent_hash"]))]
-			if !ok {
-				continue
+			if str(e["status"]) == "held" {
+				done[strings.ToLower(str(e["torrent_hash"]))] = true
 			}
-			switch st := str(e["status"]); st {
-			case "held":
-			case "error":
-				return false, fmt.Errorf("%s failed: %s", name, str(e["failure_reason"]))
-			default:
-				left = append(left, name+" ("+st+")")
+		}
+		var left []string
+		for h, name := range onDisk {
+			if !done[h] {
+				left = append(left, name)
 			}
 		}
 		slog.Info("waiting for imports", "left", len(left), "of", len(onDisk))
@@ -795,14 +805,13 @@ func (d *demo) seedAdoption(ctx context.Context) error {
 				return false, err
 			}
 			st := str(scan["status"])
-			if st == "failed" {
+			if st == "failed" || st == "cancelled" {
 				return false, fmt.Errorf(
 					"library import failed: %s",
 					str(scan["failure_reason"]),
 				)
 			}
-			return st != "pending" && st != "discovering" && st != "parsing" &&
-				st != "scanning", nil
+			return st == "awaiting_review" || st == "completed", nil
 		},
 	)
 }
