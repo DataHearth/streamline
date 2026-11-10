@@ -45,7 +45,7 @@
 	{:else}
 		<ReadOnlyStrip />
 		<div
-			class="mx-auto w-full max-w-7xl px-4 pb-0 pt-6 md:px-8 md:pt-7 lg:pb-7"
+			class="mx-auto w-full max-w-7xl px-4 pb-10 pt-6 md:px-8 md:pb-12 md:pt-7 lg:pb-7"
 		>
 			{#if !isIndex}
 				<a
