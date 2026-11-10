@@ -8062,6 +8062,74 @@ func (_c *MockStore_FindBooksByHardcoverIDs_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// FindDownloadHistoryEntry provides a mock function for the type MockStore
+func (_mock *MockStore) FindDownloadHistoryEntry(ctx context.Context, id uint32) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindDownloadHistoryEntry")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_FindDownloadHistoryEntry_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindDownloadHistoryEntry'
+type MockStore_FindDownloadHistoryEntry_Call struct {
+	*mock.Call
+}
+
+// FindDownloadHistoryEntry is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) FindDownloadHistoryEntry(ctx any, id any) *MockStore_FindDownloadHistoryEntry_Call {
+	return &MockStore_FindDownloadHistoryEntry_Call{Call: _e.mock.On("FindDownloadHistoryEntry", ctx, id)}
+}
+
+func (_c *MockStore_FindDownloadHistoryEntry_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_FindDownloadHistoryEntry_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_FindDownloadHistoryEntry_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockStore_FindDownloadHistoryEntry_Call {
+	_c.Call.Return(downloadRecord, err)
+	return _c
+}
+
+func (_c *MockStore_FindDownloadHistoryEntry_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.DownloadRecord, error)) *MockStore_FindDownloadHistoryEntry_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindDownloadRecordByID provides a mock function for the type MockStore
 func (_mock *MockStore) FindDownloadRecordByID(ctx context.Context, id uint32) (*ent.DownloadRecord, error) {
 	ret := _mock.Called(ctx, id)
@@ -25288,6 +25356,74 @@ func (_c *MockStore_ShelfCountsFor_Call) Return(shelfCounts db.ShelfCounts, err 
 }
 
 func (_c *MockStore_ShelfCountsFor_Call) RunAndReturn(run func(ctx context.Context, p db.ShelfParams) (db.ShelfCounts, error)) *MockStore_ShelfCountsFor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ShownDownloadRecordIDs provides a mock function for the type MockStore
+func (_mock *MockStore) ShownDownloadRecordIDs(ctx context.Context, ids []uint32) (map[uint32]struct{}, error) {
+	ret := _mock.Called(ctx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ShownDownloadRecordIDs")
+	}
+
+	var r0 map[uint32]struct{}
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) (map[uint32]struct{}, error)); ok {
+		return returnFunc(ctx, ids)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) map[uint32]struct{}); ok {
+		r0 = returnFunc(ctx, ids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[uint32]struct{})
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []uint32) error); ok {
+		r1 = returnFunc(ctx, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ShownDownloadRecordIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ShownDownloadRecordIDs'
+type MockStore_ShownDownloadRecordIDs_Call struct {
+	*mock.Call
+}
+
+// ShownDownloadRecordIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ids []uint32
+func (_e *MockStore_Expecter) ShownDownloadRecordIDs(ctx any, ids any) *MockStore_ShownDownloadRecordIDs_Call {
+	return &MockStore_ShownDownloadRecordIDs_Call{Call: _e.mock.On("ShownDownloadRecordIDs", ctx, ids)}
+}
+
+func (_c *MockStore_ShownDownloadRecordIDs_Call) Run(run func(ctx context.Context, ids []uint32)) *MockStore_ShownDownloadRecordIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []uint32
+		if args[1] != nil {
+			arg1 = args[1].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ShownDownloadRecordIDs_Call) Return(uint32ToVal map[uint32]struct{}, err error) *MockStore_ShownDownloadRecordIDs_Call {
+	_c.Call.Return(uint32ToVal, err)
+	return _c
+}
+
+func (_c *MockStore_ShownDownloadRecordIDs_Call) RunAndReturn(run func(ctx context.Context, ids []uint32) (map[uint32]struct{}, error)) *MockStore_ShownDownloadRecordIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }

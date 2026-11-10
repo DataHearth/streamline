@@ -1710,6 +1710,40 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("FindDownloadHistoryEntry", func() {
+		It("reads a terminal record with its title and NotFounds any other", func() {
+			done := createRec("done", downloadrecord.StatusFailed)
+			live := createRec("live", downloadrecord.StatusDownloading)
+
+			got, err := store.FindDownloadHistoryEntry(ctx, done.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Edges.Movie).NotTo(BeNil())
+
+			_, err = store.FindDownloadHistoryEntry(ctx, live.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+	})
+
+	Describe("ShownDownloadRecordIDs", func() {
+		It(
+			"keeps the records Activity shows and drops proposals and the gone",
+			func() {
+				live := createRec("live", downloadrecord.StatusDownloading)
+				done := createRec("done", downloadrecord.StatusCompleted)
+				proposal := createRec("proposal", downloadrecord.StatusPending)
+
+				got, err := store.ShownDownloadRecordIDs(
+					ctx,
+					[]uint32{live.ID, done.ID, proposal.ID, 9999},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got).To(HaveLen(2))
+				Expect(got).To(HaveKey(live.ID))
+				Expect(got).To(HaveKey(done.ID))
+			},
+		)
+	})
+
 	Describe("DeleteDownloadRecord", func() {
 		It("deletes one record and NotFounds when absent", func() {
 			rec := createRec("x", downloadrecord.StatusFailed)
@@ -2124,30 +2158,51 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 	})
 
 	Describe("DownloadRecordsByHash", func() {
-		titled := func(hash, title string) {
+		titledAs := func(hash, title string, status downloadrecord.Status) uint32 {
 			GinkgoHelper()
-			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
 				Title: title, Size: 1,
-				TorrentHash: hash, Status: downloadrecord.StatusCompleted,
+				TorrentHash: hash, Status: status,
 				MovieID: movieID, DownloadClientName: clientName,
 			})
 			Expect(err).NotTo(HaveOccurred())
+			return rec.ID
+		}
+		titled := func(hash, title string) uint32 {
+			GinkgoHelper()
+			return titledAs(hash, title, downloadrecord.StatusCompleted)
 		}
 
 		It("maps each asked hash to its newest record", func() {
-			titled("H1", "Lamb Of God - Omens - 2022, FLAC")
+			omens := titled("H1", "Lamb Of God - Omens - 2022, FLAC")
 			titled("H2", "Old grab")
-			titled("H2", "New grab")
+			newer := titled("H2", "New grab")
 			titled("H3", "Not asked for")
 			titled("", "No hash")
 
 			recs, err := store.DownloadRecordsByHash(ctx, []string{"H1", "H2", "H4"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(recs).To(Equal(map[string]TorrentRecord{
-				"H1": {Title: "Lamb Of God - Omens - 2022, FLAC", MovieID: movieID},
-				"H2": {Title: "New grab", MovieID: movieID},
+				"H1": {
+					Title:    "Lamb Of God - Omens - 2022, FLAC",
+					RecordID: omens,
+					MovieID:  movieID,
+				},
+				"H2": {Title: "New grab", RecordID: newer, MovieID: movieID},
 			}))
 		})
+
+		It(
+			"names no record for an adoption proposal, which Activity does not show",
+			func() {
+				titledAs("H5", "Proposed", downloadrecord.StatusPending)
+
+				recs, err := store.DownloadRecordsByHash(ctx, []string{"H5"})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(recs["H5"].RecordID).To(BeZero())
+				Expect(recs["H5"].Title).To(Equal("Proposed"))
+			},
+		)
 
 		It("asks nothing of the database for no hashes", func() {
 			recs, err := store.DownloadRecordsByHash(ctx, nil)

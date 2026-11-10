@@ -707,6 +707,7 @@ func episodeRefFor(ep *ent.Episode) *EpisodeRef {
 		Season:    se.Number,
 		Episode:   ep.Number,
 		SeriesId:  &show.ID,
+		EpisodeId: &ep.ID,
 	}
 }
 
@@ -924,9 +925,17 @@ func toQueueEntry(e download.QueueEntry) QueueEntry {
 		out.Movie = movieToAPI(e.Movie)
 	}
 	out.Episode = episodeRef(e.Episode)
+	if len(e.EpisodeIDs) > 0 {
+		ids := slices.Clone(e.EpisodeIDs)
+		out.EpisodeIds = &ids
+	}
 	out.Album = activityAlbumRef(e.Album)
 	out.Track = activityTrackRef(e.Track)
 	out.Artist = activityArtistRef(e.Artist, len(e.PackAlbumIDs), e.PackAlbumTitles)
+	if out.Artist != nil && len(e.PackAlbumIDs) > 0 {
+		ids := slices.Clone(e.PackAlbumIDs)
+		out.Artist.AlbumIds = &ids
+	}
 	out.Book = activityBookRef(e.Book, e.BookKind)
 	out.Uploaded = uploadedRef(e.Uploaded)
 	if e.DownloadSpeed != 0 {
@@ -1046,7 +1055,8 @@ func episodeRef(ep *ent.Episode) *EpisodeRef {
 	if ep == nil {
 		return nil
 	}
-	ref := &EpisodeRef{Episode: ep.Number}
+	id := ep.ID
+	ref := &EpisodeRef{Episode: ep.Number, EpisodeId: &id}
 	if se := ep.Edges.Season; se != nil {
 		ref.Season = se.Number
 		if sh := se.Edges.TvShow; sh != nil {
