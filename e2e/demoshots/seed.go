@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -931,39 +932,123 @@ func (d *demo) seedCalendar(ctx context.Context) error {
 		); err != nil {
 			return err
 		}
-		seasons := objs(show["seasons"])
-		if len(seasons) == 0 {
-			continue
+		pick, err := calendarEpisodes(show)
+		if err != nil {
+			return fmt.Errorf("%s: %w", title, err)
 		}
-		last := seasons[len(seasons)-1]
+		if len(pick.empty) > 0 {
+			slog.WarnContext(
+				ctx,
+				"calendar: later seasons have no episodes; dating an earlier one",
+				"series",
+				title,
+				"empty_seasons",
+				pick.empty,
+				"season",
+				pick.season,
+			)
+		}
 		day := first
 		for day.Weekday() != time.Weekday(weekday) {
 			day = day.AddDate(0, 0, 1)
 		}
-		for i, ep := range objs(last["episodes"]) {
-			if i >= 5 {
-				break
-			}
-			if _, err := db.ExecContext(
+		for i, id := range pick.episodes {
+			if err := setDate(
 				ctx,
+				db,
 				`UPDATE episodes SET air_date = ? WHERE id = ?`,
 				day.AddDate(0, 0, 7*i),
-				num(ep["id"]),
+				id,
 			); err != nil {
-				return err
+				return fmt.Errorf(
+					"%s season %d episode id %d: %w",
+					title,
+					pick.season,
+					id,
+					err,
+				)
 			}
 		}
+		slog.InfoContext(
+			ctx,
+			"calendar: episodes dated",
+			"series",
+			title,
+			"season",
+			pick.season,
+			"episodes",
+			len(pick.episodes),
+		)
 	}
 	for i, title := range []string{"Safety Last!", "The Gold Rush", "Dementia 13"} {
-		day := first.AddDate(0, 0, 9+7*i)
-		if _, err := db.ExecContext(
+		if err := setDate(
 			ctx,
+			db,
 			`UPDATE movies SET digital_release_date = ? WHERE id = ?`,
-			day,
+			first.AddDate(0, 0, 9+7*i),
 			d.ids.movies[title],
 		); err != nil {
-			return err
+			return fmt.Errorf("%s: %w", title, err)
 		}
+	}
+	return nil
+}
+
+// calendarPick is the episodes of one show seedCalendar gives a date.
+type calendarPick struct {
+	season   int
+	episodes []int
+	// empty lists the later seasons passed over for having no episode.
+	empty []int
+}
+
+// calendarEpisodes picks the first five episodes of a show's last season
+// that has any. The season list and the episode list are two separate
+// answers from the provider, so a show can end on a season row with nothing
+// in it; taking that one would date no episode and leave the show off the
+// calendar without a word. A show with no episode at all is an error.
+func calendarEpisodes(show obj) (calendarPick, error) {
+	var pick calendarPick
+	seasons := objs(show["seasons"])
+	for _, se := range slices.Backward(seasons) {
+		number := num(se["number"])
+		episodes := objs(se["episodes"])
+		if len(episodes) == 0 {
+			pick.empty = append(pick.empty, number)
+			continue
+		}
+		pick.season = number
+		for _, ep := range episodes[:min(5, len(episodes))] {
+			pick.episodes = append(pick.episodes, num(ep["id"]))
+		}
+		return pick, nil
+	}
+	return pick, fmt.Errorf(
+		"none of its %d seasons has an episode to put on the calendar",
+		len(seasons),
+	)
+}
+
+// setDate runs one of seedCalendar's updates and insists it changed exactly
+// one row: these writes go around the API, so a row that is not there would
+// otherwise only show as a gap in the screenshot.
+func setDate(
+	ctx context.Context,
+	db *sql.DB,
+	query string,
+	when time.Time,
+	id int,
+) error {
+	res, err := db.ExecContext(ctx, query, when, id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return fmt.Errorf("the date update matched %d rows, not 1", n)
 	}
 	return nil
 }
