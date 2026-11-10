@@ -339,6 +339,16 @@ func (d *demo) capture(
 		}
 		settle(page)
 	}
+	if broken := brokenImages(page); len(broken) > 0 {
+		slog.WarnContext(
+			page.GetContext(),
+			"screenshot taken with images that failed to load",
+			"file",
+			file,
+			"images",
+			broken,
+		)
+	}
 	b, err := page.Screenshot(
 		false,
 		&proto.PageCaptureScreenshot{Format: proto.PageCaptureScreenshotFormatPng},
@@ -366,6 +376,28 @@ func settle(page *rod.Page) {
 		time.Sleep(300 * time.Millisecond)
 	}
 	time.Sleep(700 * time.Millisecond)
+}
+
+// brokenImages lists the images in the viewport that finished loading with
+// nothing to draw. settle cannot tell them from loaded ones: `complete` is
+// true for both, and waiting longer would not mend one, so the page is still
+// shot and the caller says which images to look at.
+func brokenImages(page *rod.Page) []string {
+	res, err := page.Eval(`() => [...document.images].filter(i => {
+		if (!i.complete || i.naturalWidth > 0 || !i.currentSrc) return false;
+		const r = i.getBoundingClientRect();
+		return r.width > 0 && r.height > 0 &&
+			r.bottom > 0 && r.right > 0 &&
+			r.top < innerHeight && r.left < innerWidth;
+	}).map(i => i.currentSrc)`)
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, v := range res.Value.Arr() {
+		out = append(out, v.Str())
+	}
+	return out
 }
 
 func readPNG(file string) (image.Image, error) {
