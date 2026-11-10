@@ -115,4 +115,30 @@ var _ = Describe("Query-string state", Label("e2e"), func() {
 		page = newSessionPage("/calendar?month=2026-13")
 		expectPath(page, "/calendar")
 	})
+
+	// The specs below arrive by a link inside the app. Routify sets the active
+	// route first and writes history from a timer after it, so the page's own
+	// write-back has a window in which the address bar is still the URL left.
+	const moviesSort = `() => localStorage.setItem("streamline:movies:sort", "year-desc")`
+
+	It("settles a list reached by a link, for its URL and the back link", func() {
+		id := seedMovie()
+		page := newSessionPage("/movies?status=failed")
+		expectPath(page, "/movies?status=failed")
+		page.MustEval(moviesSort)
+
+		visibleElement(page, `a[href="/series"]`).MustClick()
+		expectPath(page, "/series")
+		visibleElement(page, `a[href="/movies"]`).MustClick()
+		// The remembered sort is the page's state: the bare link is rewritten.
+		expectPath(page, "/movies?sort=year&order=desc")
+
+		// The detail page's back link returns to the list as it was left, not
+		// to the filter of an earlier visit.
+		visibleElement(page, fmt.Sprintf(`a[href="/movies/%d"]`, id)).MustClick()
+		expectPath(page, fmt.Sprintf("/movies/%d", id))
+		Eventually(func() string {
+			return *visibleElement(page, `section.hero a`).MustAttribute("href")
+		}).Should(Equal("/movies?sort=year&order=desc"))
+	})
 })
