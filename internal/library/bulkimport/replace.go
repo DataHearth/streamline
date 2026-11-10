@@ -64,3 +64,24 @@ func undoPlacement(ctx context.Context, src, placed, mode string) {
 }
 
 func samePath(a, b string) bool { return filepath.Clean(a) == filepath.Clean(b) }
+
+// sameFile reports whether a tracked path and a scanned one name one file on
+// disk. The scanner stores symlink-resolved paths while a tracked row keeps
+// the path it was imported under, so a library root reached through a symlink
+// gives one file two spellings, and a hardlink of a tracked file is that file
+// too. Read as a replacement, either would have the commit remove the very
+// file it is adopting.
+func sameFile(tracked, scanned string) bool {
+	if tracked == scanned {
+		return true
+	}
+	ti, err := os.Stat(tracked)
+	if err != nil {
+		return false
+	}
+	si, err := os.Stat(scanned)
+	if err != nil {
+		return false
+	}
+	return os.SameFile(ti, si)
+}
