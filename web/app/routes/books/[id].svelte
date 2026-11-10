@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { onMount, tick } from "svelte";
+	import { tick } from "svelte";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { params } from "@roxi/routify";
 	import { LoaderCircle, Radar, Search, Send, Upload } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { BOOKS, createAction, monitorToast, searchFailed, updateFailed } from "@lib/actions";
@@ -50,13 +50,18 @@
 	let tab = $state<(typeof TABS)[number]>("overview");
 	let tabTrack = $state<HTMLElement | null>(null);
 	// The route component is reused from book to book; a volume link followed
-	// from one book's history opens the next on its overview.
-	onMount(() =>
-		params.subscribe((p) => {
-			const next = p.id ?? "";
-			if (next !== id) tab = "overview";
-			id = next;
-		}),
+	// from one book's history opens the next on the tab its URL names.
+	syncRouteQuery(
+		/^\/books\/\d+$/,
+		(p, path) => {
+			id = path.slice("/books/".length);
+			tab = oneOf(param(p, "tab"), TABS, "overview");
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "tab", tab, "overview");
+			return p;
+		},
 	);
 
 	const bookQuery = createQuery<Book>(() => ({

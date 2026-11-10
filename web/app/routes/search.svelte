@@ -10,7 +10,7 @@
 		searchNav,
 		type SearchItem,
 	} from "@lib/search-model.svelte";
-	import { onRouteQuery } from "@lib/route-query";
+	import { param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { restoreScrollOnBack } from "@lib/scroll-restore";
 	import { isPaletteShortcut } from "@lib/platform";
 	import SearchResultRow from "@components/layout/SearchResultRow.svelte";
@@ -102,25 +102,20 @@
 
 	let typed = $derived(query.trim().length > 0);
 
-	onMount(() =>
-		onRouteQuery("/search", (p) => {
-			query = p.get("q") ?? "";
+	syncRouteQuery(
+		"/search",
+		(p) => {
+			query = param(p, "q") ?? "";
 			// Coming back to results is for reading them; an empty field is for
 			// typing, so that one gets the keyboard.
 			if (!query) inputEl?.focus();
-		}),
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "q", query.trim());
+			return p;
+		},
 	);
-
-	$effect(() => {
-		const q = query.trim();
-		// Routify mounts the incoming route before it updates window.location;
-		// writing then would stamp this query onto the outgoing page's path.
-		if (typeof window === "undefined" || window.location.pathname !== "/search") return;
-		const next = q ? `/search?${new URLSearchParams({ q })}` : "/search";
-		if (next !== window.location.pathname + window.location.search) {
-			window.history.replaceState(null, "", next);
-		}
-	});
 
 	// The results scroll on their own, under the fixed field: Back from a picked
 	// result puts them where they were, as AppShell does for #main.

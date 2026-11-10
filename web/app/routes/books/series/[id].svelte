@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { onMount } from "svelte";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { params } from "@roxi/routify";
 	import { Search, Send } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
@@ -42,7 +41,19 @@
 	// Where a stacked BD or manga card leads: monitoring and edition are set
 	// once for the whole series, and the volumes sit in a grid.
 	let id = $state("");
-	onMount(() => params.subscribe((p) => (id = p.id ?? "")));
+	let tab = $state<string>("overview");
+	syncRouteQuery(
+		/^\/books\/series\/\d+$/,
+		(p, path) => {
+			id = path.slice("/books/series/".length);
+			tab = oneOf(param(p, "tab"), ["overview", "volumes", "history"], "overview");
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "tab", tab, "overview");
+			return p;
+		},
+	);
 
 	const seriesQuery = createQuery<BookSeries>(() => ({
 		queryKey: ["books", "series", id],
@@ -60,7 +71,6 @@
 	let have = $derived(out.filter((v) => v.status === "available").length);
 	let wanted = $derived(out.filter((v) => v.status === "wanted").length);
 	let next = $derived(s?.volumes.find((v) => v.status === "upcoming"));
-	let tab = $state<string>("overview");
 	let tabTrack = $state<HTMLElement | null>(null);
 	let tabs = $derived([
 		{ key: "overview", label: i18n.common_overview(), n: "" },

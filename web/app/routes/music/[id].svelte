@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { onMount } from "svelte";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
-	import { activeRoute } from "@roxi/routify";
 	import { Radar, Search, Tags, Upload, UserRound } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { createAction, deleteFailed, monitorToast, MUSIC, searchFailed, updateFailed } from "@lib/actions";
@@ -72,24 +71,31 @@
 		manualOpen = true;
 	}
 
-	// The release a tile linked to rides in ?release=, read off the route being
-	// rendered (window.location still names the outgoing page at mount).
-	onMount(() =>
-		activeRoute.subscribe((r) => {
-			if (!r) return;
-			const [path = "", search] = (r.url ?? "").split("?");
-			const next = /^\/music\/(\d+)$/.exec(path)?.[1];
-			if (!next || next === id) return;
-			id = next;
+	// ?tab= names the tab; a release a tile linked to rides in ?release=, which
+	// alone opens the discography on it — a tile that named a release came for
+	// its tracks, while a bare artist link opens on the overview, as a series
+	// does. The release is written only with the discography open, or reading
+	// it back would land on the discography.
+	const TAB_KEYS = ["overview", "discography", "credits", "history"];
+	syncRouteQuery(
+		/^\/music\/\d+$/,
+		(p, path) => {
+			const next = path.slice("/music/".length);
 			// The route component is reused from artist to artist.
-			manualOpen = false;
-			const rel = Number(new URLSearchParams(search ?? "").get("release")) || null;
+			if (next !== id) manualOpen = false;
+			id = next;
+			const rel = Number(param(p, "release")) || null;
 			selectedId = rel;
 			openId = rel;
-			// A tile that named a release came for its tracks; a bare artist link
-			// opens on the overview, as a series does.
-			tab = rel ? "discography" : "overview";
-		}),
+			tab = oneOf(param(p, "tab"), TAB_KEYS, rel ? "discography" : "overview");
+		},
+		() => {
+			const p = new URLSearchParams();
+			const rel = tab === "discography" ? selectedId : null;
+			setParam(p, "tab", tab, rel ? "discography" : "overview");
+			if (rel) p.set("release", String(rel));
+			return p;
+		},
 	);
 
 	const artistQuery = createQuery<Artist>(() => ({
@@ -153,8 +159,6 @@
 
 	function select(r: Release) {
 		selectedId = r.id;
-		if (typeof window !== "undefined" && window.location.pathname === `/music/${id}`)
-			window.history.replaceState(null, "", `/music/${id}?release=${r.id}`);
 	}
 
 	const MONITOR: { key: ArtistMonitor; label: string }[] = [

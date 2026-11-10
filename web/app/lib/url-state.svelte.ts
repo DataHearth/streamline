@@ -19,8 +19,8 @@ import { activeRoute } from "@roxi/routify";
 //
 // Call it while the component initialises: it registers two effects.
 //
-// `apply` gets the query the page is rendered for and sets the page's state
-// from it. It runs once at mount, then again on Back/Forward and on a link to
+// `apply` gets the query the page is rendered for (and its path) and sets the
+// page's state from it. It runs once at mount, then again on Back/Forward and on a link to
 // the same path while the page stays mounted. It must accept anything — a
 // hand-edited or stale URL falls back to the defaults through `oneOf` and
 // `listOf` — and read a renamed parameter under its old name too.
@@ -29,46 +29,56 @@ import { activeRoute } from "@roxi/routify";
 // tracked read, and the URL is rewritten whenever it changes. `onSync`, when
 // given, gets each query the page settles on while it is the page on screen
 // (the library lists remember it for a detail page's back link).
+//
+// `path` is the page's path, or a pattern for a page with one path per title
+// (`/^\/movies\/\d+$/`).
 export function syncRouteQuery(
-	path: string,
-	apply: (p: URLSearchParams) => void,
+	path: string | RegExp,
+	apply: (p: URLSearchParams, path: string) => void,
 	serialize: () => URLSearchParams,
 	onSync?: (search: string) => void,
 ) {
-	// Nothing is written until `apply` has seeded the page from its own URL, or
-	// the defaults the page starts with would replace the filters a link carries.
-	let seeded = $state(false);
+	const matches = (p: string) => (typeof path === "string" ? p === path : path.test(p));
+	// The path the route was last rendered for while it was this page's, null
+	// before the first and once the route moves elsewhere. Nothing is written
+	// before `apply` has seeded the page from its own URL, or the defaults the
+	// page starts with would replace the filters a link carries.
+	let active = $state<string | null>(null);
 
 	$effect(() =>
 		untrack(() =>
 			activeRoute.subscribe((r) => {
 				if (!r) return;
 				const url = new URL(r.url ?? "", "http://x");
-				if (url.pathname !== path) return;
+				if (!matches(url.pathname)) {
+					active = null;
+					return;
+				}
 				// Routify mounts the incoming route before window.location catches up,
 				// so a page reading its own query at mount sees the *previous* URL;
 				// activeRoute carries the one the page is rendered for. After that, a
-				// replaceState is the page's own write-back coming round again —
-				// applying it could revert a keystroke typed since — while a popState
-				// (Back/Forward) or a pushState (a link to this same page) is a view
-				// the page has to show.
-				if (seeded && r.mode === "replaceState") return;
-				apply(url.searchParams);
-				seeded = true;
+				// replaceState on the same path is the page's own write-back coming
+				// round again — applying it could revert a keystroke typed since —
+				// while a popState (Back/Forward) or a pushState (a link to this same
+				// page, or to another title on a detail page) is a view the page has
+				// to show.
+				const echo = active === url.pathname && r.mode === "replaceState";
+				active = url.pathname;
+				if (!echo) apply(url.searchParams, url.pathname);
 			}),
 		),
 	);
 
 	$effect(() => {
 		const search = serialize().toString();
-		if (!seeded || typeof window === "undefined") return;
-		// A navigation *into* this page still has the outgoing URL in the address
-		// bar; writing now would stamp this page's filters onto that route's path
-		// and cancel the navigation.
+		if (active === null || typeof window === "undefined") return;
+		// A navigation into this page — or from one title to another — still has
+		// the outgoing URL in the address bar; writing now would stamp this page's
+		// state onto that route's path and cancel the navigation.
 		const { pathname, hash } = window.location;
-		if (pathname !== path) return;
+		if (pathname !== active) return;
 		onSync?.(search);
-		const next = `${path}${search ? `?${search}` : ""}${hash}`;
+		const next = `${pathname}${search ? `?${search}` : ""}${hash}`;
 		if (next === pathname + window.location.search + hash) return;
 		// The state must be null. Routify patches history.replaceState, routes the
 		// call through its router and writes its own state; data carrying a

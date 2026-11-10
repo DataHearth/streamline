@@ -13,7 +13,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import { formatRelative } from "@lib/dates";
 	import { loadPref, savePref, SERIES_SEARCH } from "@lib/prefs";
-	import { onRouteQuery } from "@lib/route-query";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import SeriesToolbar from "@components/series/SeriesToolbar.svelte";
 	import type {
 		SeriesTab,
@@ -42,30 +42,19 @@
 
 	type View = "grid" | "list";
 
-	const VALID_TABS = new Set<SeriesTab>([
+	const TABS: SeriesTab[] = [
 		"all",
 		"continuing",
 		"ended",
 		"missing",
 		"downloading",
 		"importing",
-	]);
-	const VALID_TYPES = new Set<SeriesTypeFilter>([
-		"all",
-		"standard",
-		"anime",
-		"daily",
-	]);
-	const VALID_MON = new Set<SeriesMonFilter>(["all", "monitored", "unmonitored"]);
-	const VALID_SORTS = new Set<SeriesSort>([
-		"recent",
-		"title",
-		"year",
-		"rating",
-		"episodes",
-	]);
-
-	const VALID_ORDERS = new Set<SeriesOrder>(["asc", "desc"]);
+	];
+	// `type` is how a show numbers its episodes, an axis of its own — not the
+	// `kind` other pages use for a family of media.
+	const TYPES: SeriesTypeFilter[] = ["all", "standard", "anime", "daily"];
+	const MON: SeriesMonFilter[] = ["all", "monitored", "unmonitored"];
+	const SORTS: SeriesSort[] = ["recent", "title", "year", "rating", "episodes"];
 
 	// An explicit ?sort in the URL wins so shared links keep their ordering;
 	// otherwise fall back to the last sort this browser chose, then A→Z. The
@@ -78,20 +67,14 @@
 		),
 	) {
 		const stored = loadPref(SORT_PREF)?.split("-") ?? [];
-		const rawTab = (p.get("status") ?? "all") as SeriesTab;
-		const rawType = (p.get("type") ?? "all") as SeriesTypeFilter;
-		const rawMon = (p.get("monitored") ?? "all") as SeriesMonFilter;
-		const rawSort = (p.get("sort") ?? stored[0] ?? "title") as SeriesSort;
-		const rawOrder = (p.get("order") ?? stored[1] ?? "asc") as SeriesOrder;
-		const rawView = p.get("view") ?? "grid";
 		return {
-			tab: VALID_TABS.has(rawTab) ? rawTab : "all",
-			typeFilter: VALID_TYPES.has(rawType) ? rawType : "all",
-			mon: VALID_MON.has(rawMon) ? rawMon : "all",
-			query: p.get("q") ?? "",
-			sort: VALID_SORTS.has(rawSort) ? rawSort : "title",
-			order: VALID_ORDERS.has(rawOrder) ? rawOrder : "asc",
-			view: (rawView === "list" ? "list" : "grid") as View,
+			tab: oneOf(param(p, "status"), TABS, "all"),
+			typeFilter: oneOf(param(p, "type"), TYPES, "all"),
+			mon: oneOf(param(p, "monitored"), MON, "all"),
+			query: param(p, "q") ?? "",
+			sort: oneOf(param(p, "sort") ?? stored[0], SORTS, "title"),
+			order: oneOf<SeriesOrder>(param(p, "order") ?? stored[1], ["asc", "desc"], "asc"),
+			view: oneOf<View>(param(p, "view"), ["grid", "list"], "grid"),
 		};
 	}
 
@@ -123,10 +106,9 @@
 	});
 	let shownView = $derived<View>(narrow ? "grid" : view);
 
-	// window.location still names the outgoing page while this one mounts, so the
-	// filters a back link carries have to come off the route being rendered.
-	onMount(() =>
-		onRouteQuery("/series", (p) => {
+	syncRouteQuery(
+		"/series",
+		(p) => {
 			const v = readParams(p);
 			tab = v.tab;
 			typeFilter = v.typeFilter;
@@ -136,7 +118,19 @@
 			sort = v.sort;
 			order = v.order;
 			view = v.view;
-		}),
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "status", tab, "all");
+			setParam(p, "type", typeFilter, "all");
+			setParam(p, "monitored", mon, "all");
+			setParam(p, "q", query);
+			setParam(p, "sort", sort, "title");
+			setParam(p, "order", order, "asc");
+			setParam(p, "view", view, "grid");
+			return p;
+		},
+		(search) => savePref(SERIES_SEARCH, search),
 	);
 
 	function setSort(s: SeriesSort, o: SeriesOrder) {
@@ -144,36 +138,6 @@
 		order = o;
 		savePref(SORT_PREF, `${s}-${o}`);
 	}
-
-	$effect(() => {
-		// Every reactive read happens before the early returns below: a run that
-		// bails out first would register no dependencies and the effect would
-		// never fire again.
-		const p = new URLSearchParams();
-		if (tab !== "all") p.set("status", tab);
-		if (typeFilter !== "all") p.set("type", typeFilter);
-		if (mon !== "all") p.set("monitored", mon);
-		if (query) p.set("q", query);
-		if (sort !== "title") p.set("sort", sort);
-		if (order !== "asc") p.set("order", order);
-		if (view !== "grid") p.set("view", view);
-		const search = p.toString();
-
-		if (typeof window === "undefined") return;
-		// Routify mounts the incoming route before it updates window.location, so
-		// on a navigation *into* this page the first flush still sees the outgoing
-		// URL. Writing then would stamp this page's (default, empty) filters onto
-		// the previous route's path and cancel the navigation — a detail page's
-		// back link would turn /series/1?tab=episodes into /series/1 and never
-		// reach the list.
-		if (window.location.pathname !== "/series") return;
-		savePref(SERIES_SEARCH, search);
-
-		const next = `${window.location.pathname}${search ? `?${search}` : ""}`;
-		if (next !== window.location.pathname + window.location.search) {
-			window.history.replaceState(null, "", next);
-		}
-	});
 
 	// Filtering, sorting and paging are the server's — db.FilterTVShows has
 	// pushed all three into SQL since the list-performance work; the page just

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from "svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
@@ -23,20 +22,23 @@
 	} from "@components/settings/forms/QualityProfileForm.svelte";
 	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
 	import MediaProfilesPanel from "@components/settings/MediaProfilesPanel.svelte";
-	import { onRouteQuery } from "@lib/route-query";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { cn } from "@lib/cn";
 	import { profilesPath, type ProfileMedia } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Video, music and books keep separate lists: a resolution means nothing to
-	// a FLAC or an EPUB. ?media= opens a tab directly.
+	// a FLAC or an EPUB. ?kind= names the tab (?media= is its old spelling).
 	type Tab = "video" | ProfileMedia;
 	let media = $state<Tab>("video");
-	onMount(() =>
-		onRouteQuery("/settings/quality-profiles", (p) => {
-			const m = p.get("media");
-			if (m === "music" || m === "books") media = m;
-		}),
+	syncRouteQuery(
+		"/settings/quality-profiles",
+		(p) => (media = oneOf<Tab>(param(p, "kind", "media"), ["video", "music", "books"], "video")),
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "kind", media, "video");
+			return p;
+		},
 	);
 	let panel = $state<{ openCreate: () => void } | null>(null);
 

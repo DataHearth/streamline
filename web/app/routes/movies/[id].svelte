@@ -3,6 +3,7 @@
 	import { params, goto } from "@roxi/routify";
 	import { Search, LoaderCircle } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { createAction, deleteFailed, monitorToast, MOVIES, refreshFailed, searchFailed, updateFailed } from "@lib/actions";
@@ -33,7 +34,7 @@
 		{ key: "history", label: i18n.common_history() },
 		{ key: "cast", label: i18n.detail_cast() },
 	];
-	const VALID_TABS = new Set<Tab>(["overview", "history", "cast"]);
+	const TAB_KEYS = TABS.map((t) => t.key);
 
 	let routeParams = $state<Record<string, string>>({});
 	let navigate = $state<(path: string) => void>(() => {});
@@ -47,25 +48,17 @@
 	});
 	const movieId = $derived(Number(routeParams.id));
 
-	function readTab(): Tab {
-		if (typeof window === "undefined") return "overview";
-		const t = new URLSearchParams(window.location.search).get("tab");
-		return t && VALID_TABS.has(t as Tab) ? (t as Tab) : "overview";
-	}
-	let tab = $state<Tab>(readTab());
+	let tab = $state<Tab>("overview");
 	let tabTrack = $state<HTMLElement | null>(null);
-
-	$effect(() => {
-		if (typeof window === "undefined") return;
-		const p = new URLSearchParams(window.location.search);
-		if (tab === "overview") p.delete("tab");
-		else p.set("tab", tab);
-		const search = p.toString();
-		const next = `${window.location.pathname}${search ? `?${search}` : ""}`;
-		if (next !== window.location.pathname + window.location.search) {
-			window.history.replaceState(null, "", next);
-		}
-	});
+	syncRouteQuery(
+		/^\/movies\/\d+$/,
+		(p) => (tab = oneOf(param(p, "tab"), TAB_KEYS, "overview")),
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "tab", tab, "overview");
+			return p;
+		},
+	);
 
 	const movieQuery = createQuery<Movie>(() => ({
 		queryKey: ["movie", movieId],

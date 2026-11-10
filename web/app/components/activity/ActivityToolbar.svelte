@@ -3,7 +3,8 @@
 
 	// `dot` maps each filter to a real --status-* token (some chip keys like
 	// "importing"/"error" have no token of their own — mirror lib/format.pillStatus).
-	const ACTIVITY_CHIPS: Record<
+	// The pages read the keys too, to check a ?status= list against them.
+	export const ACTIVITY_CHIPS: Record<
 		ActivityView,
 		{ key: string; label: string; dot: string }[]
 	> = {

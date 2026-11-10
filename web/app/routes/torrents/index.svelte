@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount, untrack } from "svelte";
-	import { params } from "@roxi/routify";
 	import {
 		createQuery,
 		createMutation,
@@ -38,7 +37,8 @@
 		Plus,
 		Network,
 	} from "@lucide/svelte";
-	import ActivityToolbar from "@components/activity/ActivityToolbar.svelte";
+	import ActivityToolbar, { ACTIVITY_CHIPS } from "@components/activity/ActivityToolbar.svelte";
+	import { listOf, oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import ActivityFilterSheet from "@components/activity/ActivityFilterSheet.svelte";
 	import TouchStatLine from "@components/activity/TouchStatLine.svelte";
 	import TorrentTable from "@components/activity/TorrentTable.svelte";
@@ -87,39 +87,45 @@
 	let statusFilter = $state<string[]>([]);
 	let search = $state("");
 	// The open drawer is in the URL (?hash=), so it survives a reload and the
-	// activity page can link a download straight to its torrent. Seeded from
-	// Routify's params, which carry the query string: on an in-app navigation
-	// the page mounts before window.location holds the new URL, so reading it
-	// here found the page being left and the drawer never opened.
+	// activity page can link a download straight to its torrent.
 	let selectedHash = $state<string | null>(null);
-	onMount(() => {
-		let seeded = false;
-		return params.subscribe((p) => {
-			if (seeded) return;
-			seeded = true;
-			if (typeof p.hash === "string" && p.hash)
-				selectedHash = p.hash.toLowerCase();
-		});
-	});
-	$effect(() => {
-		// Never rewrite another page's URL while this one is still mounting.
-		if (typeof window === "undefined" || window.location.pathname !== "/torrents")
-			return;
-		const p = new URLSearchParams(window.location.search);
-		if (selectedHash) p.set("hash", selectedHash);
-		else p.delete("hash");
-		const qs = p.toString();
-		const next = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
-		if (next !== window.location.pathname + window.location.search) {
-			window.history.replaceState(null, "", next);
-		}
-	});
 	let addOpen = $state(false);
 	let filtersOpen = $state(false);
 	// One sort for both surfaces — the table's headers set it from md up, the
 	// filter sheet's chips below lg. Held here so the two can't disagree.
 	let sort = $state<TorrentSortKey>("status");
 	let order = $state<SortOrder>("asc");
+	const STATUS_KEYS = ACTIVITY_CHIPS.torrents.map((c) => c.key);
+	const SORT_KEYS: TorrentSortKey[] = [
+		"status",
+		"name",
+		"progress",
+		"size",
+		"download_speed",
+		"upload_speed",
+		"ratio",
+		"seeds",
+		"added_at",
+	];
+	syncRouteQuery(
+		"/torrents",
+		(p) => {
+			statusFilter = listOf(param(p, "status"), STATUS_KEYS);
+			search = param(p, "q") ?? "";
+			sort = oneOf(param(p, "sort"), SORT_KEYS, "status");
+			order = oneOf<SortOrder>(param(p, "order"), ["asc", "desc"], "asc");
+			selectedHash = param(p, "hash")?.toLowerCase() || null;
+		},
+		() => {
+			const p = new URLSearchParams();
+			setParam(p, "status", statusFilter);
+			setParam(p, "q", search);
+			setParam(p, "sort", sort, "status");
+			setParam(p, "order", order, "asc");
+			setParam(p, "hash", selectedHash ?? "");
+			return p;
+		},
+	);
 	const qc = useQueryClient();
 
 	// Below md the add form is a sheet rather than the centred modal — different
