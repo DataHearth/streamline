@@ -169,7 +169,9 @@ var _ = Describe("moving across filesystems", Label("unit", "library"), func() {
 	})
 
 	It("overwrites a staged copy a crashed run left behind", func() {
-		Expect(os.WriteFile(stagingPath(dst), []byte("stale-and-longer"), 0o600)).
+		// Read-only, as the staged copy of a 0444 source is: reopening it for
+		// writing is refused to everyone but root.
+		Expect(os.WriteFile(stagingPath(dst), []byte("stale-and-longer"), 0o400)).
 			To(Succeed())
 
 		Expect(transferFile(src, dst, "move")).To(Succeed())
@@ -178,6 +180,45 @@ var _ = Describe("moving across filesystems", Label("unit", "library"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("bytes"))
 		Expect(entries()).To(ConsistOf("dst.mkv"))
+	})
+
+	It("takes the copy back out when the source cannot be removed", func() {
+		origRemove := removeFile
+		DeferCleanup(func() { removeFile = origRemove })
+		removeFile = func(name string) error {
+			return &os.PathError{Op: "remove", Path: name, Err: syscall.EROFS}
+		}
+
+		err := transferFile(src, dst, "move")
+		Expect(err).To(MatchError(ErrSourceNotRemovable))
+		Expect(err).To(MatchError(syscall.EROFS))
+
+		Expect(src).To(BeAnExistingFile())
+		Expect(entries()).To(BeEmpty())
+	})
+
+	It("copies nothing out of a folder it could not remove the source from", func() {
+		if os.Geteuid() == 0 {
+			Skip("root writes to a read-only directory")
+		}
+		srcDir := filepath.Join(tmp, "downloads")
+		Expect(os.MkdirAll(srcDir, 0o750)).To(Succeed())
+		locked := filepath.Join(srcDir, "src.mkv")
+		Expect(os.WriteFile(locked, []byte("bytes"), 0o640)).To(Succeed())
+		Expect(os.Chmod(srcDir, 0o550)).To(Succeed())
+		DeferCleanup(func() { Expect(os.Chmod(srcDir, 0o750)).To(Succeed()) })
+		copies := 0
+		copyBytes = func(w io.Writer, r io.Reader) (int64, error) {
+			copies++
+			return io.Copy(w, r)
+		}
+
+		Expect(transferFile(locked, dst, "move")).
+			To(MatchError(ErrSourceNotRemovable))
+
+		Expect(copies).To(BeZero())
+		Expect(locked).To(BeAnExistingFile())
+		Expect(entries()).To(BeEmpty())
 	})
 
 	It("does not fall back on a rename error other than EXDEV", func() {

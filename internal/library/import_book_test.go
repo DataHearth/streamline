@@ -2,8 +2,11 @@ package library
 
 import (
 	"context"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -148,6 +151,80 @@ var _ = Describe("ImportService books", Label("unit", "library"), func() {
 			Expect(os.WriteFile(target, []byte("part two"), 0o644)).To(Succeed())
 			_, err = svc.ImportAudiobook(ctx, src, nil, book, false, "copy")
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("moves back what it placed when a later file fails", func() {
+			names := []string{"Part 01.mp3", "Part 02.mp3", "Part 03.mp3"}
+			for _, name := range names {
+				write(src, name)
+			}
+			// The library on its own filesystem, and no room for the third
+			// file: the first two have left the download by then.
+			origRename, origCopy := renameFile, copyBytes
+			DeferCleanup(func() { renameFile, copyBytes = origRename, origCopy })
+			renameFile = func(oldpath, newpath string) error {
+				if filepath.Dir(oldpath) != filepath.Dir(newpath) {
+					return &os.LinkError{
+						Op: "rename", Old: oldpath, New: newpath, Err: syscall.EXDEV,
+					}
+				}
+				return os.Rename(oldpath, newpath)
+			}
+			copies := 0
+			copyBytes = func(w io.Writer, r io.Reader) (int64, error) {
+				copies++
+				if copies == len(names) {
+					return 0, errors.New("no space left on device")
+				}
+				return io.Copy(w, r)
+			}
+
+			_, err := svc.ImportAudiobook(ctx, src, nil, book, false, "move")
+			Expect(err).To(MatchError(ContainSubstring("no space left on device")))
+
+			for _, name := range names {
+				contents, readErr := os.ReadFile(filepath.Join(src, name))
+				Expect(readErr).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("bytes of " + name))
+			}
+			left, err := os.ReadDir(src)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(left).To(HaveLen(len(names)))
+			dir := filepath.Join(audio, "Brandon Sanderson", "Elantris (2005)")
+			Expect(dir).NotTo(BeADirectory())
+		})
+
+		It("keeps a moved file it cannot move back", func() {
+			write(src, "Part 01.mp3")
+			write(src, "Part 02.mp3")
+			origRename, origCopy := renameFile, copyBytes
+			DeferCleanup(func() { renameFile, copyBytes = origRename, origCopy })
+			renameFile = func(oldpath, newpath string) error {
+				if filepath.Dir(oldpath) != filepath.Dir(newpath) {
+					return &os.LinkError{
+						Op: "rename", Old: oldpath, New: newpath, Err: syscall.EXDEV,
+					}
+				}
+				return os.Rename(oldpath, newpath)
+			}
+			copies := 0
+			copyBytes = func(w io.Writer, r io.Reader) (int64, error) {
+				copies++
+				if copies > 1 {
+					return 0, errors.New("input/output error")
+				}
+				return io.Copy(w, r)
+			}
+
+			_, err := svc.ImportAudiobook(ctx, src, nil, book, false, "move")
+			Expect(err).To(HaveOccurred())
+
+			dir := filepath.Join(audio, "Brandon Sanderson", "Elantris (2005)")
+			contents, err := os.ReadFile(filepath.Join(dir, "Part 01.mp3"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(contents)).To(Equal("bytes of Part 01.mp3"))
+			Expect(filepath.Join(src, "Part 01.mp3")).NotTo(BeAnExistingFile())
+			Expect(filepath.Join(src, "Part 02.mp3")).To(BeAnExistingFile())
 		})
 
 		It("fails with ErrNoMedia when there is no audio", func() {
