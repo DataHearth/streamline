@@ -31,6 +31,9 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 		feeder  *mocks.MockIndexerFeeder
 		grabber *mocks.MockEpisodeGrabber
 		scanner *TVFeedScanner
+		// library is what ListShowNames answers: the shows outside both
+		// listings. The listed shows are resolved alongside it either way.
+		library []*ent.TVShow
 	)
 
 	newScanner := func() {
@@ -39,6 +42,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		library = nil
 		store = dbmocks.NewMockStore(GinkgoT())
 		// Nothing rejected; blocklist_integration_test.go covers the filter.
 		store.EXPECT().RejectedReleases(mock.Anything).Return(nil, nil).Maybe()
@@ -84,6 +88,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 		expectEligible(wanted, nil)
 		store.EXPECT().ListUpgradeCandidateShows(mock.Anything).
 			Return(upgradable, nil).Once()
+		store.EXPECT().ListShowNames(mock.Anything).Return(library, nil).Once()
 	}
 
 	// expectDownloading stubs the two writes every successful grab performs.
@@ -611,5 +616,263 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				Expect(scanner.Run(ctx)).To(Succeed())
 			},
 		)
+	})
+	Context("show names", func() {
+		// named builds a wanted show whose season 1 holds episode 1 (id epID).
+		named := func(id, epID uint32, title string, aliases ...string) *ent.TVShow {
+			show := &ent.TVShow{
+				ID: id, Title: title, Aliases: aliases, Type: tvshow.TypeStandard,
+			}
+			se := &ent.Season{ID: id * 10, Number: 1}
+			se.Edges.Episodes = []*ent.Episode{{ID: epID, Number: 1}}
+			show.Edges.Seasons = []*ent.Season{se}
+			return show
+		}
+
+		feed := func(titles ...string) {
+			items := make([]indexer.SearchResult, len(titles))
+			for i, t := range titles {
+				items[i] = indexer.SearchResult{Title: t}
+			}
+			feeder.EXPECT().Feed(mock.Anything, "a").Return(items, nil).Once()
+		}
+
+		expectGrab := func(epID uint32) {
+			grabber.EXPECT().
+				GrabEpisode(mock.Anything, mock.Anything, epID, []uint32{epID}).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			store.EXPECT().ResetEpisodeGrabFailures(mock.Anything, epID).
+				Return(nil).Once()
+			expectDownloading(epID)
+		}
+
+		BeforeEach(func() {
+			configtest.Setup(indexerConfig("a"))
+			newScanner()
+		})
+
+		It("grabs a release in a non-Latin script for its own show only", func() {
+			expectQueries([]*ent.TVShow{
+				named(1, 11, "Мастер и Маргарита"),
+				named(2, 21, "Слово пацана"),
+			}, nil)
+			feed(
+				"Мастер.и.Маргарита.S01E01.1080p.WEB-DL.x265-GRP",
+				// Other shows in a non-Latin script: were every such title one
+				// key, these would be grabbed for whichever show held it.
+				"Метод.S01E01.1080p.WEB-DL.x265-GRP",
+				"Ψ.S01E01.1080p.WEB-DL.x265-GRP",
+			)
+			expectGrab(11)
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
+		It(
+			"matches an accented title against the release that drops the accent",
+			func() {
+				expectQueries([]*ent.TVShow{named(1, 11, "Shōgun")}, nil)
+				feed("Shogun.2024.S01E01.1080p.WEB-DL.x265-GRP")
+				expectGrab(11)
+				Expect(scanner.Run(ctx)).To(Succeed())
+			},
+		)
+
+		It("grabs nothing for a release whose name holds no title", func() {
+			expectQueries([]*ent.TVShow{named(1, 11, "Мастер и Маргарита")}, nil)
+			feed("S01E01.1080p.WEB-DL.x265-GRP", "!!!.S01E01.1080p.WEB-DL.x265-GRP")
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
+		It("matches a release named by an alias", func() {
+			expectQueries([]*ent.TVShow{
+				named(1, 11, "La casa de papel", "Money Heist"),
+			}, nil)
+			feed("Money.Heist.S01E01.1080p.WEB-DL.x265-GRP")
+			expectGrab(11)
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
+		It("never lets an alias take another show's title", func() {
+			// Show 2's alias is show 1's title; show 1 is outside both listings
+			// this tick, and still owns its name.
+			library = []*ent.TVShow{{ID: 1, Title: "Dark"}}
+			expectQueries([]*ent.TVShow{named(2, 21, "Dark Matter", "Dark")}, nil)
+			feed("Dark.S01E01.1080p.WEB-DL.x265-GRP")
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
+		It("matches neither of two shows sharing a title", func() {
+			expectQueries([]*ent.TVShow{
+				named(1, 11, "The Office"),
+				named(2, 21, "The Office"),
+			}, nil)
+			feed("The.Office.S01E01.1080p.WEB-DL.x265-GRP")
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
+		It(
+			"matches neither of two shows sharing an alias, and each by its title",
+			func() {
+				expectQueries([]*ent.TVShow{
+					named(1, 11, "Kaamelott", "Camelot"),
+					named(2, 21, "Merlin", "Camelot"),
+				}, nil)
+				feed(
+					"Camelot.S01E01.1080p.WEB-DL.x265-GRP",
+					"Merlin.S01E01.1080p.WEB-DL.x265-GRP",
+				)
+				expectGrab(21)
+				Expect(scanner.Run(ctx)).To(Succeed())
+			},
+		)
+
+		It(
+			"matches neither show when the wanted and upgrade listings split a title",
+			func() {
+				configtest.Setup(upgradeConfig("a"))
+				newScanner()
+				onDisk := named(2, 21, "The Office")
+				onDisk.Edges.Seasons[0].Edges.Episodes[0].Edges.MediaFiles = []*ent.MediaFile{
+					fileFixture(
+						"/tv/The Office/S01E01.mkv",
+						"The.Office.S01E01.720p.mkv",
+						1280,
+					),
+				}
+				expectQueries(
+					[]*ent.TVShow{named(1, 11, "The Office")},
+					[]*ent.TVShow{onDisk},
+				)
+				feed("The.Office.S01E01.2160p.MULTi.BluRay.x265-GRP")
+				Expect(scanner.Run(ctx)).To(Succeed())
+			},
+		)
+
+		It("is not ambiguous with itself when a show is in both listings", func() {
+			configtest.Setup(upgradeConfig("a"))
+			newScanner()
+			wanted := named(1, 11, "The Black Sea")
+			onDisk := named(1, 12, "The Black Sea")
+			onDisk.Edges.Seasons[0].Edges.Episodes[0].Number = 2
+			onDisk.Edges.Seasons[0].Edges.Episodes[0].Edges.MediaFiles = []*ent.MediaFile{
+				fileFixture(
+					"/tv/The Black Sea/S01E02.mkv",
+					"The.Black.Sea.S01E02.720p.mkv",
+					1280,
+				),
+			}
+			library = []*ent.TVShow{{ID: 1, Title: "The Black Sea"}}
+			expectQueries([]*ent.TVShow{wanted}, []*ent.TVShow{onDisk})
+			feed("The.Black.Sea.S01E01.1080p.WEB-DL.x265-GRP")
+			expectGrab(11)
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+	})
+})
+
+var _ = Describe("showKey", Label("unit", "rss"), func() {
+	DescribeTable(
+		"normalizes a title",
+		func(title, want string) {
+			Expect(showKey(title)).To(Equal(want))
+		},
+		Entry("dots and case", "The.Black.SEA", "the black sea"),
+		Entry(
+			"Cyrillic keeps its letters",
+			"Мастер и Маргарита",
+			"мастер и маргарита",
+		),
+		Entry("Cyrillic ё folds to е", "Ёлки", "елки"),
+		Entry("Greek accents are dropped", "Ψυχή", "ψυχη"),
+		Entry("CJK keeps its letters", "葬送のフリーレン", "葬送のフリーレン"),
+		Entry("accented Latin", "Shōgun", "shogun"),
+		Entry("decomposed input keys like composed input", "Shōgun", "shogun"),
+		Entry(
+			"Latin letters NFKD keeps whole",
+			"Bjørk Straße Łódź",
+			"bjork strasse lodz",
+		),
+		Entry("full-width digits", "Ｆｏｏ　１", "foo 1"),
+		Entry("a fansub tag goes", "[SubsPlease] Frieren", "frieren"),
+		Entry(
+			"a fansub tag whose bracket was trimmed",
+			"SubsPlease] 葬送のフリーレン - 18",
+			"葬送のフリーレン 18",
+		),
+		Entry("punctuation only keys to nothing", "!!! ...", ""),
+		Entry("empty", "", ""),
+	)
+
+	It("keeps the marks of a script whose marks are part of the letter", func() {
+		// Dakuten: ブ and フ are different letters, so neither may fold into
+		// the other — but both spellings of ブ still share a key.
+		Expect(showKey("ブ")).NotTo(Equal(showKey("フ")))
+		Expect(showKey("ブ")).To(Equal(showKey("ブ")))
+	})
+})
+
+var _ = Describe("resolveShowKeys", Label("unit", "rss"), func() {
+	show := func(id uint32, title, original string, aliases ...string) *ent.TVShow {
+		return &ent.TVShow{
+			ID:            id,
+			Title:         title,
+			OriginalTitle: original,
+			Aliases:       aliases,
+		}
+	}
+
+	It("maps every title, original title and alias to its show", func() {
+		owners := resolveShowKeys(context.Background(),
+			[]*ent.TVShow{show(1, "Shōgun", "将軍", "Shogun 2024")})
+		Expect(owners).To(Equal(map[string]uint32{
+			"shogun": 1, "将軍": 1, "shogun 2024": 1,
+		}))
+	})
+
+	It("lets a title outrank another show's alias", func() {
+		owners := resolveShowKeys(context.Background(),
+			[]*ent.TVShow{show(1, "Dark", "")},
+			[]*ent.TVShow{show(2, "Dark Matter", "", "Dark")})
+		Expect(owners).To(HaveKeyWithValue("dark", uint32(1)))
+		Expect(owners).To(HaveKeyWithValue("dark matter", uint32(2)))
+	})
+
+	It("drops a key two shows claim in the same tier", func() {
+		owners := resolveShowKeys(context.Background(),
+			[]*ent.TVShow{show(1, "The Office", ""), show(3, "A", "", "Camelot")},
+			[]*ent.TVShow{show(2, "The Office", ""), show(4, "B", "", "Camelot")})
+		Expect(owners).NotTo(HaveKey("the office"))
+		Expect(owners).NotTo(HaveKey("camelot"))
+		Expect(owners).To(HaveKeyWithValue("a", uint32(3)))
+	})
+
+	It("is not ambiguous with itself across lists", func() {
+		owners := resolveShowKeys(context.Background(),
+			[]*ent.TVShow{show(1, "The Black Sea", "", "Mer Noire")},
+			[]*ent.TVShow{show(1, "The Black Sea", "", "Mer Noire")})
+		Expect(owners).To(Equal(map[string]uint32{
+			"the black sea": 1, "mer noire": 1,
+		}))
+	})
+
+	It("never assigns the empty key", func() {
+		owners := resolveShowKeys(context.Background(),
+			[]*ent.TVShow{show(1, "!!!", "", "...")})
+		Expect(owners).To(BeEmpty())
+	})
+
+	It("indexes a listing under its own keys only", func() {
+		a, b := show(1, "The Office", ""), show(2, "The Office", "")
+		c := show(3, "Dark", "", "Mörk")
+		owners := resolveShowKeys(
+			context.Background(),
+			[]*ent.TVShow{a, c},
+			[]*ent.TVShow{b},
+		)
+		wanted := buildEpisodeIndex([]*ent.TVShow{a, c}, owners)
+		Expect(wanted).To(HaveLen(2))
+		Expect(wanted["dark"].show).To(BeIdenticalTo(c))
+		Expect(wanted["mork"].show).To(BeIdenticalTo(c))
+		Expect(buildEpisodeIndex([]*ent.TVShow{b}, owners)).To(BeEmpty())
 	})
 })

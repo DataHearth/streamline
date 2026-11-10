@@ -877,6 +877,16 @@ func (db *DB) ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, err
 		All(ctx)
 }
 
+// ListShowNames loads every show with only the names a release may call it
+// by: title, original title and aliases. The feed scan decides which show a
+// name belongs to over the whole library, since a show outside this tick's
+// wanted and upgrade listings still owns its own title.
+func (db *DB) ListShowNames(ctx context.Context) ([]*ent.TVShow, error) {
+	return db.client.TVShow.Query().
+		Select(tvshow.FieldTitle, tvshow.FieldOriginalTitle, tvshow.FieldAliases).
+		All(ctx)
+}
+
 // UpgradeCandidateShow loads one show the way ListUpgradeCandidateShows loads
 // many, for a missing-search pass that only needs one show's context
 // immediately before a pack grab. Nil with a nil error when the show has no

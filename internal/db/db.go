@@ -1487,6 +1487,9 @@ type Store interface {
 	// ListUpgradeCandidateShows returns shows whose episode edges hold the
 	// rows already on disk that an upgrade may replace, files loaded.
 	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)
+	// ListShowNames returns every show with its id, title, original title and
+	// aliases loaded and nothing else.
+	ListShowNames(ctx context.Context) ([]*ent.TVShow, error)
 	// UpgradeCandidateShow is ListUpgradeCandidateShows for one show, for a
 	// missing-search pass immediately before a pack grab.
 	UpgradeCandidateShow(ctx context.Context, showID uint32) (*ent.TVShow, error)

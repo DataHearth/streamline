@@ -152,6 +152,22 @@ var _ = Describe("FeedScanner music pass", Label("unit", "rss"), func() {
 		)
 	})
 
+	It(
+		"matches an accented artist against the release that drops the accent",
+		func() {
+			a := wantedAlbum()
+			a.Edges.Artist.Name = "Björk"
+			item := indexer.SearchResult{
+				Title:    "Bjork - Album Title (2020) [FLAC]",
+				Category: "3040",
+			}
+			albums.EXPECT().GrabAlbumRelease(mock.Anything, uint32(1), item).
+				Return(nil).Once()
+			expectBookkeeping(1)
+			run([]*ent.Album{a}, item)
+		},
+	)
+
 	It("passes the failure cap to the candidate query", func() {
 		run(nil, flacItem)
 	})

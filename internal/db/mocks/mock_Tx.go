@@ -15868,6 +15868,68 @@ func (_c *MockTx_ListShelf_Call) RunAndReturn(run func(ctx context.Context, p db
 	return _c
 }
 
+// ListShowNames provides a mock function for the type MockTx
+func (_mock *MockTx) ListShowNames(ctx context.Context) ([]*ent.TVShow, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListShowNames")
+	}
+
+	var r0 []*ent.TVShow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]*ent.TVShow, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []*ent.TVShow); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.TVShow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListShowNames_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListShowNames'
+type MockTx_ListShowNames_Call struct {
+	*mock.Call
+}
+
+// ListShowNames is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTx_Expecter) ListShowNames(ctx any) *MockTx_ListShowNames_Call {
+	return &MockTx_ListShowNames_Call{Call: _e.mock.On("ListShowNames", ctx)}
+}
+
+func (_c *MockTx_ListShowNames_Call) Run(run func(ctx context.Context)) *MockTx_ListShowNames_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListShowNames_Call) Return(tVShows []*ent.TVShow, err error) *MockTx_ListShowNames_Call {
+	_c.Call.Return(tVShows, err)
+	return _c
+}
+
+func (_c *MockTx_ListShowNames_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.TVShow, error)) *MockTx_ListShowNames_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListStaleSeries provides a mock function for the type MockTx
 func (_mock *MockTx) ListStaleSeries(ctx context.Context, cutoff time.Time, limit int) ([]*ent.BookSeries, error) {
 	ret := _mock.Called(ctx, cutoff, limit)
