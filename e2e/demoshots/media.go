@@ -221,6 +221,17 @@ func writeEPUB(path, title, author string) error {
 			return err
 		}
 	}
+	// A stored image-sized entry gives the file the weight of a real
+	// ebook, so the library does not list it at one kilobyte.
+	img, err := zw.CreateHeader(
+		&zip.FileHeader{Name: "images/cover.jpg", Method: zip.Store},
+	)
+	if err != nil {
+		return err
+	}
+	if _, err := img.Write(make([]byte, 1_200_000+len(title)*7919)); err != nil {
+		return err
+	}
 	if err := zw.Close(); err != nil {
 		return err
 	}

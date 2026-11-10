@@ -3,20 +3,52 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
 	"image/png"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 )
+
+// stageSystemInfo rewrites the two things /system/info reports about the
+// machine the demo runs on rather than about streamline: the free space of
+// its disks (a nearly full laptop or CI runner turns the health pill red) and
+// the public URL, which is the loopback address the instance listens on.
+// Serving an https public URL for real would make the session cookie Secure
+// and move the same-origin check to that host, so the browser is shown the
+// values a deployment would have instead.
+func stageSystemInfo(h *rod.Hijack) {
+	if err := h.LoadResponse(http.DefaultClient, true); err != nil {
+		return
+	}
+	var info map[string]any
+	if err := json.Unmarshal([]byte(h.Response.Body()), &info); err != nil {
+		return
+	}
+	const total, used = int64(17_592_186_044_416), int64(5_428_838_349_619) // 16 TiB, 30% used
+	for k, v := range info {
+		if u, ok := v.(map[string]any); ok && strings.HasSuffix(k, "_usage") {
+			u["total"], u["used"], u["free"] = "16.0 TiB", "4.9 TiB", "11.1 TiB"
+			u["free_bytes"], u["pct"], u["kind"] = total-used, 31, "ok"
+		}
+	}
+	info["public_url"] = "https://streamline.example.com"
+	info["https_warn"] = false
+	if b, err := json.Marshal(info); err == nil {
+		h.Response.SetBody(b)
+	}
+}
 
 // shotSpec is one README screenshot: a page at desktop size, optionally
 // driven into the state it shows.
@@ -74,7 +106,7 @@ var shotList = []shotSpec{
 	{
 		name: "series-episodes",
 		path: idPath(
-			"/series/%d?tab=episodes",
+			"/series/%d?tab=episodes&season=1",
 			func(d *demo) int { return d.ids.series["The Andy Griffith Show"] },
 		),
 	},
@@ -82,7 +114,7 @@ var shotList = []shotSpec{
 		name: "library-import",
 		path: func(d *demo) string { return fmt.Sprintf("/imports/%d", d.scanID) },
 	},
-	{name: "music", path: fixed("/music")},
+	{name: "music", path: fixed("/music?view=list")},
 	{name: "music-artist", path: func(d *demo) string {
 		return fmt.Sprintf(
 			"/music/%d?tab=discography&release=%d",
@@ -95,7 +127,7 @@ var shotList = []shotSpec{
 		name: "book-detail",
 		path: idPath(
 			"/books/%d",
-			func(d *demo) int { return d.ids.books["The Adventures of Tom Sawyer"] },
+			func(d *demo) int { return d.ids.books["Dracula"] },
 		),
 	},
 	{
@@ -113,7 +145,7 @@ var shotList = []shotSpec{
 // mobileShots are the three phone screens composed into mobile.png.
 var mobileShots = []func(*demo) string{
 	fixed("/"),
-	idPath("/books/%d", func(d *demo) int { return d.ids.books["Dracula"] }),
+	idPath("/books/%d", func(d *demo) int { return d.ids.books["Frankenstein"] }),
 	fixed("/activity"),
 }
 
@@ -139,6 +171,10 @@ func (d *demo) shoot(ctx context.Context) error {
 		return err
 	}
 	defer browser.Close()
+	router := browser.HijackRequests()
+	router.MustAdd("*/api/v1/system/info*", stageSystemInfo)
+	go router.Run()
+	defer func() { _ = router.Stop() }()
 
 	if d.want("login") {
 		page, err := d.newPage(browser, 1440, 900, 1, false)
@@ -227,7 +263,7 @@ func (d *demo) newPage(
 		return nil, err
 	}
 	if mobile {
-		if err := (proto.EmulationSetTouchEmulationEnabled{Enabled: true, MaxTouchPoints: gson(5)}).Call(
+		if err := (proto.EmulationSetTouchEmulationEnabled{Enabled: true, MaxTouchPoints: new(5)}).Call(
 			page,
 		); err != nil {
 			return nil, err
@@ -235,8 +271,6 @@ func (d *demo) newPage(
 	}
 	return page, nil
 }
-
-func gson(n int) *int { return &n }
 
 func (d *demo) signIn(page *rod.Page) error {
 	if err := page.Navigate(d.base + "/login"); err != nil {
@@ -287,7 +321,7 @@ func (d *demo) capture(
 	if err != nil {
 		return err
 	}
-	slog.Info("screenshot", "file", file, "path", path)
+	slog.InfoContext(page.GetContext(), "screenshot", "file", file, "path", path)
 	return writeFile(file, b)
 }
 

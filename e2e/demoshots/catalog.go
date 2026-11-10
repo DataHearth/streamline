@@ -771,22 +771,33 @@ var manualSearchReleases = []struct {
 	age                time.Duration
 	seeders            int
 }{
-	{"1080p", "BluRay", "SiGMA", 24 * gb, 30 * 24 * time.Hour, 41},
-	{"2160p", "BluRay", "HONE", 12 * gb, 30 * 24 * time.Hour, 26},
-	{"2160p", "WEB-DL", "RAWR", 20 * gb, 3 * 24 * time.Hour, 18},
-	{"2160p", "BluRay", "EDITH", 16 * gb, 210 * 24 * time.Hour, 9},
-	{"1080p", "WEB-DL", "KOGi", 9 * gb, 30 * 24 * time.Hour, 14},
-	{"720p", "BluRay", "FLUX", 5 * gb, 400 * 24 * time.Hour, 6},
-	{"2160p", "WEB-DL", "TOMMY", 40 * gb, 150 * 24 * time.Hour, 11},
+	{"1080p", "BluRay", "SiGMA", 24 * gb, 30 * 24 * time.Hour, 214},
+	{"2160p", "BluRay", "HONE", 12 * gb, 30 * 24 * time.Hour, 96},
+	{"2160p", "WEB-DL", "RAWR", 20 * gb, 3 * 24 * time.Hour, 61},
+	{"2160p", "BluRay", "EDITH", 16 * gb, 210 * 24 * time.Hour, 23},
+	{"1080p", "WEB-DL", "KOGi", 9 * gb, 30 * 24 * time.Hour, 132},
+	{"720p", "BluRay", "FLUX", 5 * gb, 400 * 24 * time.Hour, 8},
+	{"2160p", "WEB-DL", "TOMMY", 40 * gb, 150 * 24 * time.Hour, 57},
 }
 
 func manualReleases() []*release {
 	out := make([]*release, 0, len(manualSearchReleases))
 	for _, v := range manualSearchReleases {
-		m := movieSpec{Title: manualSearchMovie, Year: 1925, Res: v.res, Source: v.source, Group: v.group}
+		m := movieSpec{
+			Title:  manualSearchMovie,
+			Year:   1925,
+			Res:    v.res,
+			Source: v.source,
+			Group:  v.group,
+		}
 		out = append(out, &release{
-			Name: m.release(), Category: "2000", Size: v.size, Match: words(manualSearchMovie),
-			Age: v.age, Seeders: v.seeders, State: "downloading",
+			Name:     m.release(),
+			Category: "2000",
+			Size:     v.size,
+			Match:    words(manualSearchMovie),
+			Age:      v.age,
+			Seeders:  v.seeders,
+			State:    "downloading",
 		})
 	}
 	return out

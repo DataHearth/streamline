@@ -11,9 +11,12 @@
 // release per title, a fake qBittorrent reports each one at the progress the
 // catalog gives it, and the releases meant to finish are real files made with
 // ffmpeg, so every import, the held one included, goes through streamline's
-// own pipeline. The only state written behind the API's back is a handful of
-// release dates moved into the current month, since a library of old titles
-// has nothing on its calendar.
+// own pipeline. Two things are staged rather than real, and nothing else:
+// a handful of release dates are written into the current month, since a
+// library of old titles has nothing on its calendar, and the browser is
+// shown a 16 TiB disk and an https public URL in /system/info, since the
+// real figures describe the machine taking the screenshots
+// (stageSystemInfo).
 //
 // Everything lives under -root (a fixed path, so the paths the pages show
 // stay the same from run to run), which is wiped at start except for the
@@ -126,7 +129,7 @@ func main() {
 	)
 	defer stop()
 	if err := d.run(ctx); err != nil {
-		slog.Error("demoshots failed", "error", err)
+		slog.ErrorContext(ctx, "demoshots failed", "error", err)
 		stop()
 		os.Exit(1) //nolint:gocritic // the deferred stop has already run
 	}
@@ -155,7 +158,7 @@ func (d *demo) run(ctx context.Context) error {
 	if d.qbAddr, err = serve("127.0.0.1", d.qb); err != nil {
 		return err
 	}
-	slog.Info("encoding clips (cached after the first run)")
+	slog.InfoContext(ctx, "encoding clips (cached after the first run)")
 	for _, c := range []clip{clipMovie1080, clipMovie2160, clipEpisode} {
 		if _, err := d.fx.clip(ctx, c); err != nil {
 			return err
@@ -191,11 +194,11 @@ func (d *demo) run(ctx context.Context) error {
 	}
 	for _, s := range steps {
 		start := time.Now()
-		slog.Info("step", "name", s.name)
+		slog.InfoContext(ctx, "step", "name", s.name)
 		if err := s.fn(ctx); err != nil {
 			return fmt.Errorf("%s: %w", s.name, err)
 		}
-		slog.Info(
+		slog.InfoContext(ctx,
 			"step done",
 			"name",
 			s.name,
@@ -207,7 +210,7 @@ func (d *demo) run(ctx context.Context) error {
 		return fmt.Errorf("screenshots: %w", err)
 	}
 	if d.keep {
-		slog.Info(
+		slog.InfoContext(ctx,
 			"instance left running until interrupted",
 			"url",
 			d.base,
@@ -295,6 +298,7 @@ metadata:
 		os.Getenv("STREAMLINE_METADATA__TMDB_API_KEY"),
 		os.Getenv("STREAMLINE_METADATA__TVDB_API_KEY"),
 		os.Getenv("STREAMLINE_METADATA__HARDCOVER_API_KEY"))
+	//nolint:gosec // d.root is this program's own scratch directory
 	if err := os.WriteFile(d.path("config.yaml"), []byte(cfg), 0o600); err != nil {
 		return nil, err
 	}
@@ -313,7 +317,14 @@ metadata:
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
-	slog.Info("instance starting", "url", d.base, "log", d.path("server.log"))
+	slog.InfoContext(
+		ctx,
+		"instance starting",
+		"url",
+		d.base,
+		"log",
+		d.path("server.log"),
+	)
 	err = poll(
 		ctx,
 		2*time.Minute,

@@ -283,7 +283,12 @@ func (d *demo) waitForMetadata(ctx context.Context) error {
 			}
 			// A volume names its book; the title and makers are the book's.
 			var book obj
-			if err := d.admin.get(ctx, fmt.Sprintf("/books/%d", num(found["id"])), nil, &book); err != nil {
+			if err := d.admin.get(
+				ctx,
+				fmt.Sprintf("/books/%d", num(found["id"])),
+				nil,
+				&book,
+			); err != nil {
 				return err
 			}
 			author := str(book["author"])
@@ -662,42 +667,60 @@ func (d *demo) waitForImports(ctx context.Context) error {
 			onDisk[r.hash()] = r.Name
 		}
 	}
-	return poll(ctx, 20*time.Minute, 5*time.Second, "imports to finish", func() (bool, error) {
-		if err := d.runJob(ctx, "download-monitor"); err != nil {
-			return false, err
-		}
-		done := map[string]bool{}
-		var history, queue any
-		if err := d.admin.get(ctx, "/activity/history", url.Values{"limit": {"200"}}, &history); err != nil {
-			return false, err
-		}
-		for _, e := range items(history) {
-			h := strings.ToLower(str(e["torrent_hash"]))
-			if name, ok := onDisk[h]; ok && str(e["status"]) == "failed" {
-				return false, fmt.Errorf("import of %s failed", name)
+	return poll(
+		ctx,
+		20*time.Minute,
+		5*time.Second,
+		"imports to finish",
+		func() (bool, error) {
+			if err := d.runJob(ctx, "download-monitor"); err != nil {
+				return false, err
 			}
-			done[h] = true
-		}
-		if err := d.admin.get(ctx, "/activity/queue", nil, &queue); err != nil {
-			return false, err
-		}
-		for _, e := range items(queue) {
-			if str(e["status"]) == "held" {
-				done[strings.ToLower(str(e["torrent_hash"]))] = true
+			done := map[string]bool{}
+			var history, queue any
+			if err := d.admin.get(
+				ctx,
+				"/activity/history",
+				url.Values{"limit": {"200"}},
+				&history,
+			); err != nil {
+				return false, err
 			}
-		}
-		var left []string
-		for h, name := range onDisk {
-			if !done[h] {
-				left = append(left, name)
+			for _, e := range items(history) {
+				h := strings.ToLower(str(e["torrent_hash"]))
+				if name, ok := onDisk[h]; ok && str(e["status"]) == "failed" {
+					return false, fmt.Errorf("import of %s failed", name)
+				}
+				done[h] = true
 			}
-		}
-		slog.Info("waiting for imports", "left", len(left), "of", len(onDisk))
-		if len(left) > 0 && len(left) <= 3 {
-			slog.Info("still importing", "releases", left)
-		}
-		return len(left) == 0, nil
-	})
+			if err := d.admin.get(ctx, "/activity/queue", nil, &queue); err != nil {
+				return false, err
+			}
+			for _, e := range items(queue) {
+				if str(e["status"]) == "held" {
+					done[strings.ToLower(str(e["torrent_hash"]))] = true
+				}
+			}
+			var left []string
+			for h, name := range onDisk {
+				if !done[h] {
+					left = append(left, name)
+				}
+			}
+			slog.InfoContext(
+				ctx,
+				"waiting for imports",
+				"left",
+				len(left),
+				"of",
+				len(onDisk),
+			)
+			if len(left) > 0 && len(left) <= 3 {
+				slog.InfoContext(ctx, "still importing", "releases", left)
+			}
+			return len(left) == 0, nil
+		},
+	)
 }
 
 func (d *demo) seedRequests(ctx context.Context) error {
@@ -783,7 +806,7 @@ func (d *demo) seedAdoption(ctx context.Context) error {
 			"movies",
 		),
 		"kind":        "movie",
-		"mode": "rename",
+		"mode":        "rename",
 		"import_mode": "hardlink",
 	}, &scan); err != nil {
 		return err
@@ -854,7 +877,7 @@ func (d *demo) settle(ctx context.Context) error {
 					}
 				}
 			}
-			slog.Info("waiting for music hydration", "albums_left", left)
+			slog.InfoContext(ctx, "waiting for music hydration", "albums_left", left)
 			return left == 0, nil
 		},
 	)
