@@ -814,3 +814,20 @@ func FindMediaServer(name string) (MediaServerEntry, bool) {
 	}
 	return MediaServerEntry{}, false
 }
+
+// ExtensionEntry is one WebAssembly extension. Source is an https URL, which
+// must carry the module's sha256, or an absolute path to a local file.
+type ExtensionEntry struct {
+	Name    string          `koanf:"name"    validate:"required"`
+	Source  string          `koanf:"source"`
+	SHA256  string          `koanf:"sha256"`
+	Enabled bool            `koanf:"enabled"`
+	Grants  ExtensionGrants `koanf:"grants"`
+}
+
+type ExtensionGrants struct {
+	Mounts   []string `koanf:"mounts"`
+	Views    []string `koanf:"views"`
+	Services []string `koanf:"services"`
+	Folders  []string `koanf:"folders"`
+}

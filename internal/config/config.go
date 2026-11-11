@@ -78,6 +78,8 @@ type Config struct {
 
 	BookQualityProfiles        []BookQualityProfileEntry `koanf:"book_quality_profiles"         validate:"unique=Name,dive"`
 	BookQualityDefaultProfiles BookQualityDefaults       `koanf:"book_quality_default_profiles"`
+
+	Extensions []ExtensionEntry `koanf:"extensions" validate:"unique=Name,dive"`
 }
 
 // DatabasePath is the SQLite database location, derived from DataDir.
@@ -826,6 +828,7 @@ func (c *Config) checkInvariants() error {
 	}
 	errs = append(errs, c.checkMusicBookProfiles()...)
 	errs = append(errs, c.checkIndexers()...)
+	errs = append(errs, c.checkExtensions()...)
 	if d, err := time.ParseDuration(
 		c.Cardigann.SolverTimeout,
 	); err != nil ||
@@ -1157,6 +1160,7 @@ func defaults() map[string]any {
 		"media_server.servers":            []any{},
 		"download_clients":                []any{},
 		"indexers":                        []any{},
+		"extensions":                      []any{},
 		"quality_profiles": []map[string]any{
 			{
 				"name":                 "default",
