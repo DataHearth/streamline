@@ -1901,6 +1901,24 @@ export type ImportScanBook = {
 	updated_at: string;
 };
 
+// An extension card's credential (/account/extensions/{name}/credential,
+// lib/extensions.ts). A client signs in with the account's email, or no
+// username, and a secret that never goes in a URL, where logs and referrers
+// would keep it. The secret is only in the POST response.
+export type AppAccess = {
+	enabled: boolean;
+	// The account's email.
+	username: string;
+	created_at?: string;
+	// Written in batches, so it can trail a client's first call by up to five
+	// minutes.
+	last_used_at?: string;
+	// The client's product name on its last call, e.g. "KOReader".
+	last_client?: string;
+};
+// POST: the secret, shown once.
+export type AppAccessCreated = AppAccess & { secret: string };
+
 export type ImportStartRequest = {
 	source_path: string;
 	kind?: ImportScanKind;

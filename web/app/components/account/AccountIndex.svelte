@@ -7,10 +7,12 @@
 		KeyRound,
 		Monitor,
 		RefreshCw,
+		Puzzle,
 		Send,
 	} from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "@lib/api";
+	import { ACCOUNT_EXTENSIONS_KEY, ACCOUNT_EXTENSIONS_PATH, type ExtensionAccountCard } from "@lib/extensions";
 	import { auth } from "@lib/auth.svelte";
 	import { cn } from "@lib/cn";
 	import type { ApiKey, Session } from "@lib/types";
@@ -22,6 +24,7 @@
 	import APIKeysCard from "./APIKeysCard.svelte";
 	import SessionsCard from "./SessionsCard.svelte";
 	import JWTRotateCard from "./JWTRotateCard.svelte";
+	import AppAccessCard from "./AppAccessCard.svelte";
 	import DeviceEmailCard from "./DeviceEmailCard.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -43,6 +46,14 @@
 		queryKey: ["auth", "me", "sessions"],
 		queryFn: () => api<Session[]>("/auth/me/sessions"),
 	}));
+	// The sign-in cards running extensions declare, each a row of its own
+	// carrying On / Off. Same keys as the cards, so opening one reads from this
+	// cache.
+	const extensionCards = createQuery<ExtensionAccountCard[]>(() => ({
+		queryKey: ACCOUNT_EXTENSIONS_KEY,
+		queryFn: () => api<ExtensionAccountCard[]>(ACCOUNT_EXTENSIONS_PATH),
+	}));
+	let cards = $derived(extensionCards.data ?? []);
 
 	type Locale = (typeof locales)[number];
 	function endonym(code: Locale): string {
@@ -57,12 +68,17 @@
 		| "language"
 		| "keys"
 		| "sessions"
+		| `ext:${string}`
 		| "device"
 		| "jwt";
 
 	let openRow = $state<RowKey | null>(null);
+	// The extension card a row opened, by its extension's name.
+	let openCard = $derived(
+		openRow?.startsWith("ext:") ? cards.find((c) => `ext:${c.extension}` === openRow) ?? null : null,
+	);
 
-	let titles = $derived<Record<RowKey, string>>({
+	let titles = $derived<Record<string, string>>({
 		profile: i18n.common_profile(),
 		password: i18n.common_password(),
 		language: i18n.account_language(),
@@ -71,6 +87,8 @@
 		device: i18n.account_device_title(),
 		jwt: i18n.account_rotate_key_long(),
 	});
+
+	let panelTitle = $derived(openCard ? openCard.title : openRow ? (titles[openRow] ?? "") : "");
 
 	let groups = $derived([
 		{
@@ -129,6 +147,12 @@
 			name: i18n.account_section_apps(),
 			danger: false,
 			rows: [
+				...cards.map((c) => ({
+					key: `ext:${c.extension}` as RowKey,
+					Icon: Puzzle,
+					label: c.title,
+					value: c.enabled ? i18n.account_app_on() : i18n.account_app_off(),
+				})),
 				{
 					key: "device" as RowKey,
 					Icon: Send,
@@ -217,7 +241,7 @@
 
 <FullScreenPanel
 	open={openRow !== null}
-	title={openRow ? titles[openRow] : ""}
+	title={panelTitle}
 	onClose={() => (openRow = null)}
 >
 	{#if openRow === "profile"}
@@ -230,6 +254,8 @@
 		<APIKeysCard />
 	{:else if openRow === "sessions"}
 		<SessionsCard />
+	{:else if openCard}
+		<AppAccessCard extension={openCard} />
 	{:else if openRow === "device"}
 		<DeviceEmailCard />
 	{:else if openRow === "jwt"}
