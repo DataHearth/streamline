@@ -50,6 +50,7 @@ jobs:
               - 'api/**'
               - 'ent/**'
               - 'internal/**'
+              - 'extensions/**'
               - 'cmd/**'
               - 'e2e/**'
               - '.golangci.yml'
@@ -382,6 +383,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build binary + assets
         run: task build:app
+      - name: Build extensions
+        run: task build:extensions
       # Skipped once any entry for this go.sum exists: the test job's covers
       # this one's. The explicit go.sum paths keep node_modules out of the
       # hash, which a `**` glob would read after the pnpm install.

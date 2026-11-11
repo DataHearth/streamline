@@ -16,7 +16,7 @@
 		{
 			"customType": "regex",
 			"description": "Go's version, from go.dev's release list: go.mod's `go` directive and the Dockerfile's GO_VERSION, moved in one PR. nix/go.nix overrides nixpkgs' go_1_NN onto it; renovate-pins.yaml re-pins GO_DIGEST and derives the source hash.",
-			"managerFilePatterns": ["/^go\\.mod$/", "/^deploy/Dockerfile$/"],
+			"managerFilePatterns": ["/(^|/)go\\.mod$/", "/^deploy/Dockerfile$/"],
 			"matchStrings": ["(?m)^go (?<currentValue>\\d+\\.\\d+\\.\\d+)$", "(?m)^ARG GO_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)$"],
 			"depNameTemplate": "go",
 			"datasourceTemplate": "golang-version"
