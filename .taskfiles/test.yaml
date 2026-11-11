@@ -20,11 +20,13 @@ vars:
 tasks:
   unit:
     desc: Run unit tests only
+    deps: [":build:extensions"]
     cmd: go tool ginkgo run -r --keep-going --label-filter="unit{{with .LABEL_FILTER}} &&
       {{.}}{{end}}" {{.CLI_ARGS}}
 
   integration:
     desc: Run integration tests
+    deps: [":build:extensions"]
     cmd: go tool ginkgo run -r --keep-going --label-filter="integration{{with .LABEL_FILTER}} &&
       {{.}}{{end}}" {{.CLI_ARGS}}
 
@@ -46,6 +48,7 @@ tasks:
 
   coverage:
     desc: Run unit + integration tests with coverage report (e2e excluded, generated code filtered)
+    deps: [":build:extensions"]
     cmds:
       - mkdir -p /tmp/streamline
       - go tool ginkgo run -r --keep-going --label-filter="!e2e"
@@ -63,7 +66,7 @@ tasks:
     # The browser specs and the embedded-asset specs test the built bundles,
     # which are gitignored, so a checkout's copy can predate its web/app.
     # Both builds are fingerprinted and skip when their sources are unchanged.
-    deps: [":build:js", ":build:css"]
+    deps: [":build:js", ":build:css", ":build:extensions"]
     # The packages holding e2e specs go first and alone: ginkgo starts with
     # cmd/ and e2e/, so in one run they would sit in the middle of the whole
     # tree's builds. The two runs take disjoint package sets with no label

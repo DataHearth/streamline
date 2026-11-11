@@ -41,3 +41,6 @@
 __pycache__/
 *.pyc
 /result
+
+# WebAssembly extensions are build outputs
+*.wasm

@@ -36,6 +36,20 @@ tasks:
     generates:
       - "{{.BINARY}}"
 
+  extensions:
+    desc: Build the WebAssembly extension the specs run against
+    cmds:
+      - cd internal/extension/testdata/echo && GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o echo.wasm .
+      - cd internal/extension/testdata/echo && GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -ldflags "-X main.extra=1" -o echo-full.wasm .
+    sources:
+      - extensions/sdk/**/*.go
+      - extensions/sdk/go.mod
+      - internal/extension/testdata/echo/**/*.go
+      - internal/extension/testdata/echo/go.mod
+    generates:
+      - internal/extension/testdata/echo/echo.wasm
+      - internal/extension/testdata/echo/echo-full.wasm
+
   js:
     desc: Bundle JS — docs bundle (scalar), SPA bundle (svelte)
     cmds:
