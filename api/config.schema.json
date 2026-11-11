@@ -36,6 +36,53 @@
         "compress": { "type": "boolean" }
       }
     },
+    "extensionEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"
+        },
+        "source": {
+          "type": "string",
+          "description": "An https:// URL (sha256 required) or an absolute path to the .wasm file."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$",
+          "description": "Hex SHA-256 the fetched module must match. Required for an https source."
+        },
+        "enabled": { "type": "boolean" },
+        "grants": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mounts": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "URL prefixes the extension answers."
+            },
+            "views": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Read-only library views the extension may query."
+            },
+            "services": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Host services the extension may use."
+            },
+            "folders": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Library folders the extension may read (music, artwork) and its own cache folder (cache)."
+            }
+          }
+        }
+      }
+    },
     "mediaServerEntry": {
       "type": "object",
       "additionalProperties": false,
@@ -1013,6 +1060,11 @@
       "type": "array",
       "description": "Torrent download clients.",
       "items": { "$ref": "#/definitions/downloadClientEntry" }
+    },
+    "extensions": {
+      "type": "array",
+      "description": "WebAssembly extensions loaded into the process. Each runs with only the mounts, library views and services granted here.",
+      "items": { "$ref": "#/definitions/extensionEntry" }
     },
     "indexers": {
       "type": "array",

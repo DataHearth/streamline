@@ -64,6 +64,7 @@ var listElementTypes = map[string]reflect.Type{
 	"quality_profiles":     reflect.TypeFor[QualityProfileEntry](),
 	"media_server.servers": reflect.TypeFor[MediaServerEntry](),
 	"custom_formats":       reflect.TypeFor[CustomFormatEntry](),
+	"extensions":           reflect.TypeFor[ExtensionEntry](),
 
 	"music_quality_profiles": reflect.TypeFor[MusicQualityProfileEntry](),
 	"book_quality_profiles":  reflect.TypeFor[BookQualityProfileEntry](),
