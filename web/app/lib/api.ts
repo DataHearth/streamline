@@ -153,6 +153,10 @@ export function errorText(err: unknown, fallback?: string): string {
 		// An upload refused names the file or the target that was the problem:
 		// the generic 422 or 409 would hide which.
 		if ((code === "upload_rejected" || code === "upload_conflict" || code === "no_space") && err.message) return err.message;
+		// Why an extension's module could not be read — a checksum mismatch, a
+		// file over 32 MiB, an http:// source, a taken address, an unknown view —
+		// is the server's own sentence, and the only one that says what to fix.
+		if (code === "extension_unreadable" && err.message) return err.message;
 		// A send's refusal names the reason: the file's format, the SMTP server's
 		// own reply. The generic 422 or 502 would hide it.
 		if ((code === "send_failed" || code === "not_sendable" || code === "no_device_email") && err.message) return err.message;
