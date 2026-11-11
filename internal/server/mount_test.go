@@ -32,6 +32,7 @@ var _ = Describe("auth exclude list", Label("unit", "server"), func() {
 			mwmocks.NewMockAuthenticator(GinkgoT()),
 			nil,
 			authExcludePaths,
+			nil,
 		)
 		srv := New(Config{
 			Ent:            client,

@@ -56,7 +56,8 @@ func Start(extra ...map[string]any) (*server.App, string) {
 		"auth": map[string]any{
 			"session_secret": "e2e-session-secret",
 			// Hidden seam (see server.apiFailureLimiter): every spec shares one
-			// loopback address, and the route sweep alone spends 131 failures.
+			// loopback address, and the route sweep alone spends more failures than
+			// the limit allows.
 			"api_failure_limit": "0",
 			// The default is "disabled", under which invite creation is
 			// refused — specs that exercise invites need a mode that admits

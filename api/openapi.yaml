@@ -27,6 +27,8 @@ tags:
     description: Download client management and testing
   - name: media-servers
     description: Plex / Jellyfin / Emby server management and testing
+  - name: extensions
+    description: WebAssembly extension management (admin)
   - name: library
     description: Bulk-file import wizard (scan → review → commit)
   - name: system
@@ -4102,6 +4104,135 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  # ── Extensions ─────────────────────────────────────────
+  /extensions:
+    get:
+      operationId: listExtensions
+      summary: List configured extensions (admin)
+      description: >-
+        Every `extensions` entry with its state, what its manifest asks for
+        and what was granted.
+      tags: [extensions, admin]
+      responses:
+        "200":
+          $ref: "#/components/responses/ExtensionList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createExtension
+      summary: Add an extension (admin)
+      description: >-
+        Saves the entry and reconciles. A module that cannot be loaded is
+        saved too and reports `state: failed` with its reason.
+      tags: [extensions, admin]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateExtension"
+      responses:
+        "201":
+          $ref: "#/components/responses/ExtensionCreated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /extensions/inspect:
+    post:
+      operationId: inspectExtension
+      summary: Read an extension's manifest without saving anything (admin)
+      description: >-
+        Resolves `source` (verifying `sha256`) and returns the manifest with a
+        description of each view it asks for. `422` with
+        `code: extension_unreadable` when the module cannot be fetched, read
+        or does not match its checksum.
+      tags: [extensions, admin]
+      requestBody:
+        $ref: "#/components/requestBodies/InspectExtension"
+      responses:
+        "200":
+          $ref: "#/components/responses/ExtensionInspected"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /extensions/{name}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    patch:
+      operationId: updateExtension
+      summary: Update an extension (admin)
+      tags: [extensions, admin]
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateExtension"
+      responses:
+        "200":
+          $ref: "#/components/responses/ExtensionOK"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteExtension
+      summary: Remove an extension (admin)
+      description: >-
+        Removes the entry. With `purge=true` the extension's own data
+        directory is deleted too; without it the data stays on disk.
+      tags: [extensions, admin]
+      parameters:
+        - $ref: "#/components/parameters/ExtensionPurge"
+      responses:
+        "204":
+          $ref: "#/components/responses/ExtensionDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /extensions/{name}/approve:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    post:
+      operationId: approveExtension
+      summary: Grant exactly what the current manifest asks for (admin)
+      description: >-
+        Reads the manifest of the module the entry points at now and sets
+        `grants` to its mounts, views and services, then reconciles. A
+        request body is ignored: the grant is always what the module asks
+        for. `422` with `code: extension_unreadable` when the module cannot
+        be read.
+      tags: [extensions, admin]
+      responses:
+        "200":
+          $ref: "#/components/responses/ExtensionOK"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   # ── Media Servers ──────────────────────────────────────
   /media-servers:
     get:
@@ -4404,6 +4535,90 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /account/extensions:
+    get:
+      operationId: listAccountExtensions
+      summary: The account cards running extensions declare
+      description: >-
+        One entry per running extension that declares a `credential` card,
+        with whether the caller holds a secret for it. Requires session
+        authentication (JWT).
+      tags: [account]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Account cards.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExtensionAccountCard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /account/extensions/{name}/credential:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    get:
+      operationId: getExtensionCredential
+      summary: Whether the caller holds a secret for an extension's card
+      description: >-
+        Requires session authentication (JWT). The extension answers; `404`
+        when it is not running or declares no credential card, `502` when
+        its answer cannot be read. Never carries the secret.
+      tags: [account]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Access state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AppAccess" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+    post:
+      operationId: rotateExtensionCredential
+      summary: Generate or rotate the caller's secret for an extension's card
+      description: >-
+        Requires session authentication (JWT). The only response that carries
+        the secret, in plaintext.
+      tags: [account]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: The new secret, shown this once
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AppAccessCreated" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+    delete:
+      operationId: revokeExtensionCredential
+      summary: Remove the caller's secret for an extension's card
+      description: Requires session authentication (JWT).
+      tags: [account]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Removed
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          $ref: "#/components/responses/BadGateway"
   /auth/me/sessions:
     get:
       operationId: listMySessions
@@ -5065,6 +5280,69 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /users/{uid}/extensions:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    get:
+      operationId: listUserExtensions
+      summary: A user's settings cards from running extensions (admin)
+      description: >-
+        One entry per settings card a running extension declares, with the
+        target user's current values. A card that does not answer is left out.
+        Admin only.
+      tags: [users, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Settings cards.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserExtensionCard"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{uid}/extensions/{name}/cards/{card}:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+      - $ref: "#/components/parameters/ResourceName"
+      - $ref: "#/components/parameters/ExtensionCardID"
+    put:
+      operationId: updateUserExtensionCard
+      summary: Set a user's values on an extension's settings card (admin)
+      description: >-
+        The host checks `values` against the card's declared fields before the
+        extension is called: every key must be declared, a switch is a boolean,
+        a number a whole number within its bounds (`422` otherwise). `404` for
+        an unknown user, or an extension that is not running or has no such
+        settings card; `502` when the extension does not answer. A write is an
+        identity mutation, so an API key is refused. Admin only.
+      tags: [users, admin]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExtensionCardValues" }
+      responses:
+        "204":
+          description: Saved
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "502":
+          $ref: "#/components/responses/BadGateway"
 
   /users/{uid}/api-keys/{kid}:
     parameters:
@@ -6901,6 +7179,14 @@ components:
       description: Stable resource name (identity for config-backed resources).
       schema:
         type: string
+    ExtensionPurge:
+      name: purge
+      in: query
+      required: false
+      description: Also delete the extension's data directory.
+      schema:
+        type: boolean
+        default: false
     TorrentHash:
       name: hash
       in: path
@@ -6983,6 +7269,13 @@ components:
       schema:
         type: integer
         x-go-type: uint32
+    ExtensionCardID:
+      name: card
+      in: path
+      required: true
+      description: The id of a card an extension declares.
+      schema:
+        type: string
     ApiKeyID:
       name: kid
       in: path
@@ -7720,6 +8013,27 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/OIDCProviderPatch"
+
+    CreateExtension:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ExtensionCreate"
+
+    UpdateExtension:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ExtensionUpdate"
+
+    InspectExtension:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ExtensionInspectRequest"
 
     CreateMediaServer:
       required: true
@@ -8479,6 +8793,37 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/OIDCProviderListView"
+
+    ExtensionOK:
+      description: Extension detail.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Extension"
+
+    ExtensionCreated:
+      description: Extension added.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Extension"
+
+    ExtensionDeleted:
+      description: Extension removed.
+
+    ExtensionInspected:
+      description: What the module is and asks for.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ExtensionInspect"
+
+    ExtensionList:
+      description: Configured extensions.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ExtensionList"
 
     MediaServerList:
       description: List of configured media servers.
@@ -13779,6 +14124,47 @@ components:
             raw_token:
               type: string
 
+    AppAccess:
+      type: object
+      description: >-
+        The caller's credential for an extension's account card. Never
+        carries the secret.
+      required: [enabled, username]
+      properties:
+        enabled:
+          type: boolean
+        username:
+          type: string
+          description: >-
+            The account email, which is what a player or reader types as its
+            user name.
+        created_at:
+          type: string
+          format: date-time
+          description: Set when the secret is generated or rotated.
+        last_used_at:
+          type: string
+          format: date-time
+          description: >-
+            The last successful authentication, as the extension records it.
+        last_client:
+          type: string
+          maxLength: 64
+          description: >-
+            Client-supplied: the name the client gave on its last call.
+            Display as text only.
+
+    AppAccessCreated:
+      allOf:
+        - $ref: "#/components/schemas/AppAccess"
+        - type: object
+          required: [secret]
+          properties:
+            secret:
+              type: string
+              description: >-
+                The secret, in plaintext. This response only.
+
     Session:
       type: object
       required: [id, created_at, expires_at, is_current]
@@ -14902,6 +15288,263 @@ components:
         restart_required:
           type: boolean
           description: True when OIDC mutations are pending a process restart.
+
+    ExtensionGrants:
+      type: object
+      required: [mounts, views, services]
+      properties:
+        mounts:
+          type: array
+          items:
+            type: string
+        views:
+          type: array
+          items:
+            type: string
+        services:
+          type: array
+          items:
+            type: string
+        folders:
+          type: array
+          items:
+            type: string
+          description: >-
+            Library folders the extension may read (`music`, `artwork`) and its
+            own `cache` folder. Absent means none.
+
+    Extension:
+      type: object
+      required: [name, source, enabled, state, granted]
+      properties:
+        name:
+          type: string
+        source:
+          type: string
+        sha256:
+          type: string
+        enabled:
+          type: boolean
+        state:
+          type: string
+          enum: [running, disabled, needs_approval, failed, starting]
+          description: >-
+            `starting` is an entry the first boot reconcile has not reached
+            yet.
+        reason:
+          type: string
+          description: Why the extension is not running, when it is not.
+        version:
+          type: string
+          description: The manifest's version; absent until the module was read.
+        requested:
+          $ref: "#/components/schemas/ExtensionPermissions"
+        granted:
+          $ref: "#/components/schemas/ExtensionPermissions"
+        card:
+          $ref: "#/components/schemas/ExtensionCard"
+
+    ExtensionList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Extension"
+
+    ExtensionPermissions:
+      type: object
+      description: >-
+        What a module asks for (`requested`, absent while it could not be
+        read) or what an entry holds (`granted`).
+      required: [mounts, views, services, folders]
+      properties:
+        mounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionMount"
+        views:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionViewInfo"
+        services:
+          type: array
+          items:
+            type: string
+        folders:
+          type: array
+          items:
+            type: string
+
+    ExtensionCard:
+      type: object
+      description: The account card a module declares.
+      required: [kind, title, mount, username]
+      properties:
+        kind:
+          type: string
+          description: "`credential` is the only kind."
+        title:
+          type: string
+        mount:
+          type: string
+          description: The mount a client is pointed at.
+        username:
+          type: string
+          description: "`email` or `none`: what the client signs in with."
+        fields:
+          type: array
+          description: The controls of a `settings` card.
+          items:
+            $ref: "#/components/schemas/ExtensionCardField"
+
+    ExtensionCardField:
+      type: object
+      required: [id, kind, label, min, max]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum: [switch, number]
+        label:
+          type: string
+        min:
+          type: integer
+          format: int64
+          description: Lowest value of a `number`; unused on a `switch`.
+        max:
+          type: integer
+          format: int64
+          description: Highest value of a `number`; unused on a `switch`.
+
+    ExtensionCardValues:
+      type: object
+      required: [values]
+      properties:
+        values:
+          type: object
+          description: >-
+            Field id to its value: a boolean for a `switch`, an integer for a
+            `number`.
+          additionalProperties: true
+
+    UserExtensionCard:
+      type: object
+      required: [extension, card, title, fields, values]
+      properties:
+        extension:
+          type: string
+        card:
+          type: string
+          description: The card's id.
+        title:
+          type: string
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionCardField"
+        values:
+          type: object
+          description: The target user's current value for each field.
+          additionalProperties: true
+
+    ExtensionAccountCard:
+      type: object
+      required: [extension, kind, title, mount, username, enabled]
+      properties:
+        extension:
+          type: string
+        kind:
+          type: string
+        title:
+          type: string
+        mount:
+          type: string
+          description: The path a client is pointed at, under this instance's address.
+        username:
+          type: string
+          description: "`email` or `none`."
+        enabled:
+          type: boolean
+          description: Whether the caller holds a secret for it.
+
+    ExtensionCreate:
+      type: object
+      required: [name, source]
+      properties:
+        name:
+          type: string
+        source:
+          type: string
+          description: An https URL (which needs `sha256`) or an absolute path.
+        sha256:
+          type: string
+        enabled:
+          type: boolean
+        grants:
+          $ref: "#/components/schemas/ExtensionGrants"
+
+    ExtensionUpdate:
+      type: object
+      properties:
+        source:
+          type: string
+        sha256:
+          type: string
+          description: An empty string clears the checksum.
+        enabled:
+          type: boolean
+        grants:
+          $ref: "#/components/schemas/ExtensionGrants"
+
+    ExtensionInspectRequest:
+      type: object
+      required: [source]
+      properties:
+        source:
+          type: string
+        sha256:
+          type: string
+
+    ExtensionMount:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+        auth:
+          type: string
+          description: >-
+            `session` or `self`, as the module declares it; absent for a
+            granted mount whose module could not be read.
+
+    ExtensionViewInfo:
+      type: object
+      required: [name, description]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          description: What granting the view lets the extension do; empty for a view this build does not know.
+        bundle:
+          type: string
+          description: The group a view belongs to (`music`, `books`); absent for a view that stands alone.
+
+    ExtensionInspect:
+      type: object
+      required: [name, version, requested]
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        requested:
+          $ref: "#/components/schemas/ExtensionPermissions"
+        card:
+          $ref: "#/components/schemas/ExtensionCard"
 
     MediaServerListView:
       type: object

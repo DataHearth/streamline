@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/dbbackup"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/extension"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/importer"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -61,6 +62,7 @@ type App struct {
 	Importer   *importer.Worker
 	HTTPLogger *observability.HTTPLogger
 	Torrents   *bittorrent.Engine
+	Extensions *extension.Manager
 	// MediaServers holds the refreshes collected over its window; shutdown
 	// flushes it, or the last imports would never reach the servers.
 	MediaServers *mediaserver.Dispatcher
@@ -353,10 +355,29 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	limiter := auth.NewLimiter(5, 15*time.Minute)
 
 	// 8. Middleware
-	authMW := middleware.NewAuth(authSvc, apiFailureLimiter(), authExcludePaths)
-
-	// 9. Scheduler
+	// The scheduler is built ahead of the extension manager, whose library
+	// scan service runs the drift-check job through it.
 	sched := scheduler.New(scheduler.WithStateHook(jobsstate.NewHook(dbClient)))
+	extMgr := extension.NewManager(
+		cfg.DataDir,
+		cfg.DatabasePath(),
+		prober,
+		libraryScanner{client: dbClient, jobs: sched},
+	)
+	authMW := middleware.NewAuth(
+		authSvc,
+		apiFailureLimiter(),
+		authExcludePaths,
+		extMgr.SelfAuthenticated,
+	)
+	go func() {
+		defer observability.RecoverPanic(ctx, "extension reconcile", func() {
+			slog.ErrorContext(ctx, "extensions stay off after a panic at boot")
+		})
+		if err := extMgr.Reconcile(ctx); err != nil {
+			slog.ErrorContext(ctx, "could not start extensions", "error", err)
+		}
+	}()
 
 	missingSearcher := rss.NewMissingSearcher(store, indexerSvc, dlManager)
 	feedScanner := rss.NewFeedScanner(
@@ -511,6 +532,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 					cfg.DatabasePath(),
 					dbbackup.Dir(cfg.DataDir),
 					interval,
+					extMgr.DataPaths,
 				)
 			},
 		},
@@ -534,6 +556,12 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		"purge-api-keys",
 		time.Hour,
 		jobs.PurgeAPIKeys(authSvc),
+		scheduler.WithSystem(),
+	)
+	sched.Register(
+		"extension-cache-sweep",
+		time.Hour,
+		extMgr.SweepCaches,
 		scheduler.WithSystem(),
 	)
 	purgeUploads := jobs.PurgeUploads(store)
@@ -586,6 +614,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Indexers:        indexerSvc,
 		Downloads:       dlManager,
 		MediaServers:    mediaServerSvc,
+		ExtensionHost:   extMgr,
 		RefreshStatus:   dispatcher,
 		DeepLinker:      deepLinker,
 		Renamer:         renamer,
@@ -616,6 +645,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		MetadataMusic:   mb,
 		Hardcover:       hardcoverHealth,
 		AuthMiddleware:  authMW,
+		Extensions:      extMgr.Middleware(bookFiles{client: dbClient}, postersSvc),
 		HTTPLog:         httpLogger.Middleware(httpAccessSkip),
 	})
 
@@ -629,6 +659,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Importer:   imp,
 		HTTPLogger: httpLogger,
 		Torrents:   torrentEngine,
+		Extensions: extMgr,
 
 		MediaServers: dispatcher,
 	}, nil

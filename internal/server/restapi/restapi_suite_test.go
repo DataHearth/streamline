@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -18,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	downloadmocks "github.com/datahearth/streamline/internal/download/mocks"
+	"github.com/datahearth/streamline/internal/extension"
 	ffmpegmocks "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	importermocks "github.com/datahearth/streamline/internal/importer/mocks"
 	indexermocks "github.com/datahearth/streamline/internal/indexer/mocks"
@@ -95,6 +97,10 @@ type apiKeyApp struct {
 	prober        *ffmpegmocks.MockProber
 	importer      *importermocks.MockEnqueuer
 	trackPlans    *importermocks.MockTrackPlanner
+	// extensions is a real manager; corePath is where a spec that runs an
+	// extension creates its core database (db.Open) before reconciling.
+	extensions *extension.Manager
+	corePath   string
 
 	// Identity tokens consumed by the synthetic auth middleware.
 	adminKey       string
@@ -113,7 +119,15 @@ func newAPIKeyApp() *apiKeyApp {
 	GinkgoHelper()
 	t := GinkgoT()
 
+	extDir := t.TempDir()
 	a := &apiKeyApp{
+		corePath: filepath.Join(extDir, "core.db"),
+		extensions: extension.NewManager(
+			extDir,
+			filepath.Join(extDir, "core.db"),
+			nil,
+			nil,
+		),
 		auth:           authmocks.NewMockManager(t),
 		movies:         moviemocks.NewMockManager(t),
 		metadata:       metadatamocks.NewMockProvider(t),
@@ -156,6 +170,7 @@ func newAPIKeyApp() *apiKeyApp {
 		Indexers:       a.indexers,
 		Downloads:      a.downloads,
 		MediaServers:   a.mediaServers,
+		Extensions:     a.extensions,
 		TVShows:        a.tvshows,
 		MetadataTV:     a.metadataTV,
 		Music:          a.music,

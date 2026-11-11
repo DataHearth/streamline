@@ -817,6 +817,51 @@ func (e EpisodeStatus) Valid() bool {
 	}
 }
 
+// Defines values for ExtensionState.
+const (
+	ExtensionStateDisabled      ExtensionState = "disabled"
+	ExtensionStateFailed        ExtensionState = "failed"
+	ExtensionStateNeedsApproval ExtensionState = "needs_approval"
+	ExtensionStateRunning       ExtensionState = "running"
+	ExtensionStateStarting      ExtensionState = "starting"
+)
+
+// Valid indicates whether the value is a known member of the ExtensionState enum.
+func (e ExtensionState) Valid() bool {
+	switch e {
+	case ExtensionStateDisabled:
+		return true
+	case ExtensionStateFailed:
+		return true
+	case ExtensionStateNeedsApproval:
+		return true
+	case ExtensionStateRunning:
+		return true
+	case ExtensionStateStarting:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExtensionCardFieldKind.
+const (
+	ExtensionCardFieldKindNumber ExtensionCardFieldKind = "number"
+	ExtensionCardFieldKindSwitch ExtensionCardFieldKind = "switch"
+)
+
+// Valid indicates whether the value is a known member of the ExtensionCardFieldKind enum.
+func (e ExtensionCardFieldKind) Valid() bool {
+	switch e {
+	case ExtensionCardFieldKindNumber:
+		return true
+	case ExtensionCardFieldKindSwitch:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HTTPLogConfigFormat.
 const (
 	HTTPLogConfigFormatCombined HTTPLogConfigFormat = "combined"
@@ -4658,6 +4703,41 @@ type ApiKeyCreated struct {
 // ApiKeyScope `read` may only send GET and HEAD, whatever the owner's role; `full` acts with the owner's current role.
 type ApiKeyScope string
 
+// AppAccess The caller's credential for an extension's account card. Never carries the secret.
+type AppAccess struct {
+	// CreatedAt Set when the secret is generated or rotated.
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	Enabled   bool       `json:"enabled"`
+
+	// LastClient Client-supplied: the name the client gave on its last call. Display as text only.
+	LastClient *string `json:"last_client,omitempty"`
+
+	// LastUsedAt The last successful authentication, as the extension records it.
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+
+	// Username The account email, which is what a player or reader types as its user name.
+	Username string `json:"username"`
+}
+
+// AppAccessCreated defines model for AppAccessCreated.
+type AppAccessCreated struct {
+	// CreatedAt Set when the secret is generated or rotated.
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	Enabled   bool       `json:"enabled"`
+
+	// LastClient Client-supplied: the name the client gave on its last call. Display as text only.
+	LastClient *string `json:"last_client,omitempty"`
+
+	// LastUsedAt The last successful authentication, as the extension records it.
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+
+	// Secret The secret, in plaintext. This response only.
+	Secret string `json:"secret"`
+
+	// Username The account email, which is what a player or reader types as its user name.
+	Username string `json:"username"`
+}
+
 // AppLogConfig defines model for AppLogConfig.
 type AppLogConfig struct {
 	Enabled *bool               `json:"enabled,omitempty"`
@@ -5790,6 +5870,164 @@ type Error struct {
 
 	// Message Human-readable, safe-to-display error message.
 	Message string `json:"message"`
+}
+
+// Extension defines model for Extension.
+type Extension struct {
+	// Card The account card a module declares.
+	Card    *ExtensionCard `json:"card,omitempty"`
+	Enabled bool           `json:"enabled"`
+
+	// Granted What a module asks for (`requested`, absent while it could not be read) or what an entry holds (`granted`).
+	Granted ExtensionPermissions `json:"granted"`
+	Name    string               `json:"name"`
+
+	// Reason Why the extension is not running, when it is not.
+	Reason *string `json:"reason,omitempty"`
+
+	// Requested What a module asks for (`requested`, absent while it could not be read) or what an entry holds (`granted`).
+	Requested *ExtensionPermissions `json:"requested,omitempty"`
+	Sha256    *string               `json:"sha256,omitempty"`
+	Source    string                `json:"source"`
+
+	// State `starting` is an entry the first boot reconcile has not reached yet.
+	State ExtensionState `json:"state"`
+
+	// Version The manifest's version; absent until the module was read.
+	Version *string `json:"version,omitempty"`
+}
+
+// ExtensionState `starting` is an entry the first boot reconcile has not reached yet.
+type ExtensionState string
+
+// ExtensionAccountCard defines model for ExtensionAccountCard.
+type ExtensionAccountCard struct {
+	// Enabled Whether the caller holds a secret for it.
+	Enabled   bool   `json:"enabled"`
+	Extension string `json:"extension"`
+	Kind      string `json:"kind"`
+
+	// Mount The path a client is pointed at, under this instance's address.
+	Mount string `json:"mount"`
+	Title string `json:"title"`
+
+	// Username `email` or `none`.
+	Username string `json:"username"`
+}
+
+// ExtensionCard The account card a module declares.
+type ExtensionCard struct {
+	// Fields The controls of a `settings` card.
+	Fields *[]ExtensionCardField `json:"fields,omitempty"`
+
+	// Kind `credential` is the only kind.
+	Kind string `json:"kind"`
+
+	// Mount The mount a client is pointed at.
+	Mount string `json:"mount"`
+	Title string `json:"title"`
+
+	// Username `email` or `none`: what the client signs in with.
+	Username string `json:"username"`
+}
+
+// ExtensionCardField defines model for ExtensionCardField.
+type ExtensionCardField struct {
+	Id    string                 `json:"id"`
+	Kind  ExtensionCardFieldKind `json:"kind"`
+	Label string                 `json:"label"`
+
+	// Max Highest value of a `number`; unused on a `switch`.
+	Max int64 `json:"max"`
+
+	// Min Lowest value of a `number`; unused on a `switch`.
+	Min int64 `json:"min"`
+}
+
+// ExtensionCardFieldKind defines model for ExtensionCardField.Kind.
+type ExtensionCardFieldKind string
+
+// ExtensionCardValues defines model for ExtensionCardValues.
+type ExtensionCardValues struct {
+	// Values Field id to its value: a boolean for a `switch`, an integer for a `number`.
+	Values map[string]interface{} `json:"values"`
+}
+
+// ExtensionCreate defines model for ExtensionCreate.
+type ExtensionCreate struct {
+	Enabled *bool            `json:"enabled,omitempty"`
+	Grants  *ExtensionGrants `json:"grants,omitempty"`
+	Name    string           `json:"name"`
+	Sha256  *string          `json:"sha256,omitempty"`
+
+	// Source An https URL (which needs `sha256`) or an absolute path.
+	Source string `json:"source"`
+}
+
+// ExtensionGrants defines model for ExtensionGrants.
+type ExtensionGrants struct {
+	// Folders Library folders the extension may read (`music`, `artwork`) and its own `cache` folder. Absent means none.
+	Folders  *[]string `json:"folders,omitempty"`
+	Mounts   []string  `json:"mounts"`
+	Services []string  `json:"services"`
+	Views    []string  `json:"views"`
+}
+
+// ExtensionInspect defines model for ExtensionInspect.
+type ExtensionInspect struct {
+	// Card The account card a module declares.
+	Card *ExtensionCard `json:"card,omitempty"`
+	Name string         `json:"name"`
+
+	// Requested What a module asks for (`requested`, absent while it could not be read) or what an entry holds (`granted`).
+	Requested ExtensionPermissions `json:"requested"`
+	Version   string               `json:"version"`
+}
+
+// ExtensionInspectRequest defines model for ExtensionInspectRequest.
+type ExtensionInspectRequest struct {
+	Sha256 *string `json:"sha256,omitempty"`
+	Source string  `json:"source"`
+}
+
+// ExtensionList defines model for ExtensionList.
+type ExtensionList struct {
+	Items []Extension `json:"items"`
+}
+
+// ExtensionMount defines model for ExtensionMount.
+type ExtensionMount struct {
+	// Auth `session` or `self`, as the module declares it; absent for a granted mount whose module could not be read.
+	Auth *string `json:"auth,omitempty"`
+	Path string  `json:"path"`
+}
+
+// ExtensionPermissions What a module asks for (`requested`, absent while it could not be read) or what an entry holds (`granted`).
+type ExtensionPermissions struct {
+	Folders  []string            `json:"folders"`
+	Mounts   []ExtensionMount    `json:"mounts"`
+	Services []string            `json:"services"`
+	Views    []ExtensionViewInfo `json:"views"`
+}
+
+// ExtensionUpdate defines model for ExtensionUpdate.
+type ExtensionUpdate struct {
+	Enabled *bool            `json:"enabled,omitempty"`
+	Grants  *ExtensionGrants `json:"grants,omitempty"`
+
+	// Sha256 An empty string clears the checksum.
+	Sha256 *string `json:"sha256,omitempty"`
+	Source *string `json:"source,omitempty"`
+}
+
+// ExtensionViewInfo defines model for ExtensionViewInfo.
+type ExtensionViewInfo struct {
+	// Bundle The group a view belongs to (`music`, `books`); absent for a view that stands alone.
+	Bundle *string `json:"bundle,omitempty"`
+
+	// Description What granting the view lets the extension do; empty for a view this build does not know.
+	Description string `json:"description"`
+	Name        string `json:"name"`
 }
 
 // FFmpegConfigPatch Only provided fields are applied. found and resolved_path are derived and read-only — sending them has no effect.
@@ -10180,6 +10418,18 @@ type UserDetail struct {
 	User     User      `json:"user"`
 }
 
+// UserExtensionCard defines model for UserExtensionCard.
+type UserExtensionCard struct {
+	// Card The card's id.
+	Card      string               `json:"card"`
+	Extension string               `json:"extension"`
+	Fields    []ExtensionCardField `json:"fields"`
+	Title     string               `json:"title"`
+
+	// Values The target user's current value for each field.
+	Values map[string]interface{} `json:"values"`
+}
+
 // UserList defines model for UserList.
 type UserList struct {
 	Items []User `json:"items"`
@@ -10291,6 +10541,12 @@ type DeleteSeriesFiles = bool
 
 // EpisodeID defines model for EpisodeID.
 type EpisodeID = uint32
+
+// ExtensionCardID defines model for ExtensionCardID.
+type ExtensionCardID = string
+
+// ExtensionPurge defines model for ExtensionPurge.
+type ExtensionPurge = bool
 
 // FileID defines model for FileID.
 type FileID = uint32
@@ -10548,6 +10804,15 @@ type Conflict = Error
 // DownloadConfig defines model for DownloadConfig.
 type DownloadConfig = DownloadConfigView
 
+// ExtensionCreated defines model for ExtensionCreated.
+type ExtensionCreated = Extension
+
+// ExtensionInspected defines model for ExtensionInspected.
+type ExtensionInspected = ExtensionInspect
+
+// ExtensionOK defines model for ExtensionOK.
+type ExtensionOK = Extension
+
 // FFmpegConfig defines model for FFmpegConfig.
 type FFmpegConfig = FFmpegConfigView
 
@@ -10774,6 +11039,9 @@ type CreateCustomFormat = CustomFormatCreate
 // CreateDownloadClient defines model for CreateDownloadClient.
 type CreateDownloadClient = DownloadClientCreate
 
+// CreateExtension defines model for CreateExtension.
+type CreateExtension = ExtensionCreate
+
 // CreateIndexer A Torznab or Prowlarr indexer takes host, port and api_key; a `cardigann` one takes definition and its settings instead.
 type CreateIndexer = IndexerCreate
 
@@ -10825,6 +11093,9 @@ type IdentifyPending = IdentifyPendingRequest
 // IgnorePending defines model for IgnorePending.
 type IgnorePending = IgnorePendingRequest
 
+// InspectExtension defines model for InspectExtension.
+type InspectExtension = ExtensionInspectRequest
+
 // MonitorToggle defines model for MonitorToggle.
 type MonitorToggle = MonitorToggleRequest
 
@@ -10869,6 +11140,9 @@ type UpdateAuthConfig = AuthConfigPatch
 
 // UpdateDownloadConfig Only provided fields are applied.
 type UpdateDownloadConfig = DownloadConfigPatch
+
+// UpdateExtension defines model for UpdateExtension.
+type UpdateExtension = ExtensionUpdate
 
 // UpdateFFmpegConfig Only provided fields are applied. found and resolved_path are derived and read-only — sending them has no effect.
 type UpdateFFmpegConfig = FFmpegConfigPatch
@@ -11126,6 +11400,12 @@ type ListEpisodesParams struct {
 
 	// Offset Zero-based offset for pagination.
 	Offset *TitleSearchOffset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// DeleteExtensionParams defines parameters for DeleteExtension.
+type DeleteExtensionParams struct {
+	// Purge Also delete the extension's data directory.
+	Purge *ExtensionPurge `form:"purge,omitempty" json:"purge,omitempty"`
 }
 
 // ListImportsParams defines parameters for ListImports.
@@ -11769,6 +12049,15 @@ type UpdateDownloadClientJSONRequestBody = DownloadClientCreate
 // ResolveHeldDownloadJSONRequestBody defines body for ResolveHeldDownload for application/json ContentType.
 type ResolveHeldDownloadJSONRequestBody = ResolveHeldRequest
 
+// CreateExtensionJSONRequestBody defines body for CreateExtension for application/json ContentType.
+type CreateExtensionJSONRequestBody = ExtensionCreate
+
+// InspectExtensionJSONRequestBody defines body for InspectExtension for application/json ContentType.
+type InspectExtensionJSONRequestBody = ExtensionInspectRequest
+
+// UpdateExtensionJSONRequestBody defines body for UpdateExtension for application/json ContentType.
+type UpdateExtensionJSONRequestBody = ExtensionUpdate
+
 // CreateIndexerJSONRequestBody defines body for CreateIndexer for application/json ContentType.
 type CreateIndexerJSONRequestBody = IndexerCreate
 
@@ -11952,6 +12241,9 @@ type CreateUserJSONRequestBody = CreateUserRequest
 // UpdateUserJSONRequestBody defines body for UpdateUser for application/json ContentType.
 type UpdateUserJSONRequestBody = UpdateUserRequest
 
+// UpdateUserExtensionCardJSONRequestBody defines body for UpdateUserExtensionCard for application/json ContentType.
+type UpdateUserExtensionCardJSONRequestBody = ExtensionCardValues
+
 // ResetUserPasswordJSONRequestBody defines body for ResetUserPassword for application/json ContentType.
 type ResetUserPasswordJSONRequestBody = ResetPasswordRequest
 
@@ -12045,6 +12337,18 @@ func (t *RequestMetadata) UnmarshalJSON(b []byte) error {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// ListAccountExtensions The account cards running extensions declare
+	// (GET /account/extensions)
+	ListAccountExtensions(w http.ResponseWriter, r *http.Request)
+	// RevokeExtensionCredential Remove the caller's secret for an extension's card
+	// (DELETE /account/extensions/{name}/credential)
+	RevokeExtensionCredential(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// GetExtensionCredential Whether the caller holds a secret for an extension's card
+	// (GET /account/extensions/{name}/credential)
+	GetExtensionCredential(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// RotateExtensionCredential Generate or rotate the caller's secret for an extension's card
+	// (POST /account/extensions/{name}/credential)
+	RotateExtensionCredential(w http.ResponseWriter, r *http.Request, name ResourceName)
 	// ListActivity Library activity events.
 	// (GET /activity)
 	ListActivity(w http.ResponseWriter, r *http.Request, params ListActivityParams)
@@ -12339,6 +12643,24 @@ type ServerInterface interface {
 	// ListEpisodes Search the library's episodes by title
 	// (GET /episodes)
 	ListEpisodes(w http.ResponseWriter, r *http.Request, params ListEpisodesParams)
+	// ListExtensions List configured extensions (admin)
+	// (GET /extensions)
+	ListExtensions(w http.ResponseWriter, r *http.Request)
+	// CreateExtension Add an extension (admin)
+	// (POST /extensions)
+	CreateExtension(w http.ResponseWriter, r *http.Request)
+	// InspectExtension Read an extension's manifest without saving anything (admin)
+	// (POST /extensions/inspect)
+	InspectExtension(w http.ResponseWriter, r *http.Request)
+	// DeleteExtension Remove an extension (admin)
+	// (DELETE /extensions/{name})
+	DeleteExtension(w http.ResponseWriter, r *http.Request, name ResourceName, params DeleteExtensionParams)
+	// UpdateExtension Update an extension (admin)
+	// (PATCH /extensions/{name})
+	UpdateExtension(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// ApproveExtension Grant exactly what the current manifest asks for (admin)
+	// (POST /extensions/{name}/approve)
+	ApproveExtension(w http.ResponseWriter, r *http.Request, name ResourceName)
 	// ListIndexers List configured indexers
 	// (GET /indexers)
 	ListIndexers(w http.ResponseWriter, r *http.Request)
@@ -12843,6 +13165,12 @@ type ServerInterface interface {
 	// RevokeUserApiKey Revoke user's API key (admin)
 	// (DELETE /users/{uid}/api-keys/{kid})
 	RevokeUserApiKey(w http.ResponseWriter, r *http.Request, uid UserID, kid ApiKeyID)
+	// ListUserExtensions A user's settings cards from running extensions (admin)
+	// (GET /users/{uid}/extensions)
+	ListUserExtensions(w http.ResponseWriter, r *http.Request, uid UserID)
+	// UpdateUserExtensionCard Set a user's values on an extension's settings card (admin)
+	// (PUT /users/{uid}/extensions/{name}/cards/{card})
+	UpdateUserExtensionCard(w http.ResponseWriter, r *http.Request, uid UserID, name ResourceName, card ExtensionCardID)
 	// ResetUserPassword Reset user password (admin)
 	// (POST /users/{uid}/password-reset)
 	ResetUserPassword(w http.ResponseWriter, r *http.Request, uid UserID)
@@ -12857,6 +13185,30 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// ListAccountExtensions The account cards running extensions declare
+// (GET /account/extensions)
+func (_ Unimplemented) ListAccountExtensions(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RevokeExtensionCredential Remove the caller's secret for an extension's card
+// (DELETE /account/extensions/{name}/credential)
+func (_ Unimplemented) RevokeExtensionCredential(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetExtensionCredential Whether the caller holds a secret for an extension's card
+// (GET /account/extensions/{name}/credential)
+func (_ Unimplemented) GetExtensionCredential(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RotateExtensionCredential Generate or rotate the caller's secret for an extension's card
+// (POST /account/extensions/{name}/credential)
+func (_ Unimplemented) RotateExtensionCredential(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // ListActivity Library activity events.
 // (GET /activity)
@@ -13443,6 +13795,42 @@ func (_ Unimplemented) GetHeldDownloadTrackPlan(w http.ResponseWriter, r *http.R
 // ListEpisodes Search the library's episodes by title
 // (GET /episodes)
 func (_ Unimplemented) ListEpisodes(w http.ResponseWriter, r *http.Request, params ListEpisodesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListExtensions List configured extensions (admin)
+// (GET /extensions)
+func (_ Unimplemented) ListExtensions(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateExtension Add an extension (admin)
+// (POST /extensions)
+func (_ Unimplemented) CreateExtension(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// InspectExtension Read an extension's manifest without saving anything (admin)
+// (POST /extensions/inspect)
+func (_ Unimplemented) InspectExtension(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteExtension Remove an extension (admin)
+// (DELETE /extensions/{name})
+func (_ Unimplemented) DeleteExtension(w http.ResponseWriter, r *http.Request, name ResourceName, params DeleteExtensionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateExtension Update an extension (admin)
+// (PATCH /extensions/{name})
+func (_ Unimplemented) UpdateExtension(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ApproveExtension Grant exactly what the current manifest asks for (admin)
+// (POST /extensions/{name}/approve)
+func (_ Unimplemented) ApproveExtension(w http.ResponseWriter, r *http.Request, name ResourceName) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -14440,6 +14828,18 @@ func (_ Unimplemented) RevokeUserApiKey(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ListUserExtensions A user's settings cards from running extensions (admin)
+// (GET /users/{uid}/extensions)
+func (_ Unimplemented) ListUserExtensions(w http.ResponseWriter, r *http.Request, uid UserID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateUserExtensionCard Set a user's values on an extension's settings card (admin)
+// (PUT /users/{uid}/extensions/{name}/cards/{card})
+func (_ Unimplemented) UpdateUserExtensionCard(w http.ResponseWriter, r *http.Request, uid UserID, name ResourceName, card ExtensionCardID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ResetUserPassword Reset user password (admin)
 // (POST /users/{uid}/password-reset)
 func (_ Unimplemented) ResetUserPassword(w http.ResponseWriter, r *http.Request, uid UserID) {
@@ -14466,6 +14866,98 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListAccountExtensions operation middleware
+func (siw *ServerInterfaceWrapper) ListAccountExtensions(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAccountExtensions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeExtensionCredential operation middleware
+func (siw *ServerInterfaceWrapper) RevokeExtensionCredential(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeExtensionCredential(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetExtensionCredential operation middleware
+func (siw *ServerInterfaceWrapper) GetExtensionCredential(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetExtensionCredential(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RotateExtensionCredential operation middleware
+func (siw *ServerInterfaceWrapper) RotateExtensionCredential(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RotateExtensionCredential(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListActivity operation middleware
 func (siw *ServerInterfaceWrapper) ListActivity(w http.ResponseWriter, r *http.Request) {
@@ -17176,6 +17668,142 @@ func (siw *ServerInterfaceWrapper) ListEpisodes(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListEpisodes(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListExtensions operation middleware
+func (siw *ServerInterfaceWrapper) ListExtensions(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListExtensions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateExtension operation middleware
+func (siw *ServerInterfaceWrapper) CreateExtension(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateExtension(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// InspectExtension operation middleware
+func (siw *ServerInterfaceWrapper) InspectExtension(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.InspectExtension(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteExtension operation middleware
+func (siw *ServerInterfaceWrapper) DeleteExtension(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteExtensionParams
+
+	// ------------- Optional query parameter "purge" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "purge", r.URL.Query(), &params.Purge, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "purge"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "purge", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteExtension(w, r, name, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateExtension operation middleware
+func (siw *ServerInterfaceWrapper) UpdateExtension(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateExtension(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveExtension operation middleware
+func (siw *ServerInterfaceWrapper) ApproveExtension(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveExtension(w, r, name)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -22667,6 +23295,76 @@ func (siw *ServerInterfaceWrapper) RevokeUserApiKey(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ListUserExtensions operation middleware
+func (siw *ServerInterfaceWrapper) ListUserExtensions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "uid" -------------
+	var uid UserID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "uid", chi.URLParam(r, "uid"), &uid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uid", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUserExtensions(w, r, uid)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateUserExtensionCard operation middleware
+func (siw *ServerInterfaceWrapper) UpdateUserExtensionCard(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "uid" -------------
+	var uid UserID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "uid", chi.URLParam(r, "uid"), &uid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uid", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "card" -------------
+	var card ExtensionCardID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "card", chi.URLParam(r, "card"), &card, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "card", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateUserExtensionCard(w, r, uid, name, card)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ResetUserPassword operation middleware
 func (siw *ServerInterfaceWrapper) ResetUserPassword(w http.ResponseWriter, r *http.Request) {
 
@@ -23339,6 +24037,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/torrents/{hash}/files/{index}", wrapper.SetTorrentFilePriority)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/extensions", wrapper.ListExtensions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/extensions", wrapper.CreateExtension)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/extensions/inspect", wrapper.InspectExtension)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/extensions/{name}", wrapper.DeleteExtension)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/extensions/{name}", wrapper.UpdateExtension)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/extensions/{name}/approve", wrapper.ApproveExtension)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/media-servers", wrapper.ListMediaServers)
 	})
 	r.Group(func(r chi.Router) {
@@ -23382,6 +24098,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/auth/me/api-keys/{id}", wrapper.DeleteMyApiKey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/account/extensions", wrapper.ListAccountExtensions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/account/extensions/{name}/credential", wrapper.RevokeExtensionCredential)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/account/extensions/{name}/credential", wrapper.GetExtensionCredential)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/account/extensions/{name}/credential", wrapper.RotateExtensionCredential)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/auth/me/sessions", wrapper.ListMySessions)
@@ -23478,6 +24206,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{uid}/unlock", wrapper.UnlockUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{uid}/extensions", wrapper.ListUserExtensions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/users/{uid}/extensions/{name}/cards/{card}", wrapper.UpdateUserExtensionCard)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/users/{uid}/api-keys/{kid}", wrapper.RevokeUserApiKey)
@@ -23736,6 +24470,17 @@ type DownloadQueueJSONResponse DownloadQueue
 
 type EpisodeUpdatedResponse struct {
 }
+
+type ExtensionCreatedJSONResponse Extension
+
+type ExtensionDeletedResponse struct {
+}
+
+type ExtensionInspectedJSONResponse ExtensionInspect
+
+type ExtensionListJSONResponse ExtensionList
+
+type ExtensionOKJSONResponse Extension
 
 type FFmpegConfigJSONResponse FFmpegConfigView
 
@@ -24009,6 +24754,227 @@ type UserUnlockedResponse struct {
 type UserUpdatedJSONResponse User
 
 type UsersListJSONResponse UserList
+
+type ListAccountExtensionsRequestObject struct {
+}
+
+type ListAccountExtensionsResponseObject interface {
+	VisitListAccountExtensionsResponse(w http.ResponseWriter) error
+}
+
+type ListAccountExtensions200JSONResponse []ExtensionAccountCard
+
+func (response ListAccountExtensions200JSONResponse) VisitListAccountExtensionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAccountExtensions401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListAccountExtensions401JSONResponse) VisitListAccountExtensionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeExtensionCredentialRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type RevokeExtensionCredentialResponseObject interface {
+	VisitRevokeExtensionCredentialResponse(w http.ResponseWriter) error
+}
+
+type RevokeExtensionCredential204Response struct {
+}
+
+func (response RevokeExtensionCredential204Response) VisitRevokeExtensionCredentialResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RevokeExtensionCredential401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RevokeExtensionCredential401JSONResponse) VisitRevokeExtensionCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeExtensionCredential404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RevokeExtensionCredential404JSONResponse) VisitRevokeExtensionCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeExtensionCredential502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response RevokeExtensionCredential502JSONResponse) VisitRevokeExtensionCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetExtensionCredentialRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type GetExtensionCredentialResponseObject interface {
+	VisitGetExtensionCredentialResponse(w http.ResponseWriter) error
+}
+
+type GetExtensionCredential200JSONResponse AppAccess
+
+func (response GetExtensionCredential200JSONResponse) VisitGetExtensionCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetExtensionCredential401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetExtensionCredential401JSONResponse) VisitGetExtensionCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetExtensionCredential404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetExtensionCredential404JSONResponse) VisitGetExtensionCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetExtensionCredential502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response GetExtensionCredential502JSONResponse) VisitGetExtensionCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateExtensionCredentialRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type RotateExtensionCredentialResponseObject interface {
+	VisitRotateExtensionCredentialResponse(w http.ResponseWriter) error
+}
+
+type RotateExtensionCredential200JSONResponse AppAccessCreated
+
+func (response RotateExtensionCredential200JSONResponse) VisitRotateExtensionCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateExtensionCredential401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RotateExtensionCredential401JSONResponse) VisitRotateExtensionCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateExtensionCredential404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RotateExtensionCredential404JSONResponse) VisitRotateExtensionCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateExtensionCredential502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response RotateExtensionCredential502JSONResponse) VisitRotateExtensionCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type ListActivityRequestObject struct {
 	Params ListActivityParams
@@ -30722,6 +31688,462 @@ func (response ListEpisodes400JSONResponse) VisitListEpisodesResponse(w http.Res
 type ListEpisodes500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ListEpisodes500JSONResponse) VisitListEpisodesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExtensionsRequestObject struct {
+}
+
+type ListExtensionsResponseObject interface {
+	VisitListExtensionsResponse(w http.ResponseWriter) error
+}
+
+type ListExtensions200JSONResponse struct{ ExtensionListJSONResponse }
+
+func (response ListExtensions200JSONResponse) VisitListExtensionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExtensions403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListExtensions403JSONResponse) VisitListExtensionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExtensions500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListExtensions500JSONResponse) VisitListExtensionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateExtensionRequestObject struct {
+	Body *CreateExtensionJSONRequestBody
+}
+
+type CreateExtensionResponseObject interface {
+	VisitCreateExtensionResponse(w http.ResponseWriter) error
+}
+
+type CreateExtension201JSONResponse struct{ ExtensionCreatedJSONResponse }
+
+func (response CreateExtension201JSONResponse) VisitCreateExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateExtension403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateExtension403JSONResponse) VisitCreateExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateExtension409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateExtension409JSONResponse) VisitCreateExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateExtension413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateExtension413JSONResponse) VisitCreateExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateExtension422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response CreateExtension422JSONResponse) VisitCreateExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateExtension500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateExtension500JSONResponse) VisitCreateExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type InspectExtensionRequestObject struct {
+	Body *InspectExtensionJSONRequestBody
+}
+
+type InspectExtensionResponseObject interface {
+	VisitInspectExtensionResponse(w http.ResponseWriter) error
+}
+
+type InspectExtension200JSONResponse struct{ ExtensionInspectedJSONResponse }
+
+func (response InspectExtension200JSONResponse) VisitInspectExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type InspectExtension403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response InspectExtension403JSONResponse) VisitInspectExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type InspectExtension413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response InspectExtension413JSONResponse) VisitInspectExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type InspectExtension422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response InspectExtension422JSONResponse) VisitInspectExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type InspectExtension500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response InspectExtension500JSONResponse) VisitInspectExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteExtensionRequestObject struct {
+	Name   ResourceName `json:"name"`
+	Params DeleteExtensionParams
+}
+
+type DeleteExtensionResponseObject interface {
+	VisitDeleteExtensionResponse(w http.ResponseWriter) error
+}
+
+type DeleteExtension204Response = ExtensionDeletedResponse
+
+func (response DeleteExtension204Response) VisitDeleteExtensionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteExtension403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteExtension403JSONResponse) VisitDeleteExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteExtension404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteExtension404JSONResponse) VisitDeleteExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteExtension500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteExtension500JSONResponse) VisitDeleteExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateExtensionRequestObject struct {
+	Name ResourceName `json:"name"`
+	Body *UpdateExtensionJSONRequestBody
+}
+
+type UpdateExtensionResponseObject interface {
+	VisitUpdateExtensionResponse(w http.ResponseWriter) error
+}
+
+type UpdateExtension200JSONResponse struct{ ExtensionOKJSONResponse }
+
+func (response UpdateExtension200JSONResponse) VisitUpdateExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateExtension403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateExtension403JSONResponse) VisitUpdateExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateExtension404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateExtension404JSONResponse) VisitUpdateExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateExtension413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateExtension413JSONResponse) VisitUpdateExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateExtension422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateExtension422JSONResponse) VisitUpdateExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateExtension500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateExtension500JSONResponse) VisitUpdateExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveExtensionRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type ApproveExtensionResponseObject interface {
+	VisitApproveExtensionResponse(w http.ResponseWriter) error
+}
+
+type ApproveExtension200JSONResponse struct{ ExtensionOKJSONResponse }
+
+func (response ApproveExtension200JSONResponse) VisitApproveExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveExtension403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ApproveExtension403JSONResponse) VisitApproveExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveExtension404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ApproveExtension404JSONResponse) VisitApproveExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveExtension422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response ApproveExtension422JSONResponse) VisitApproveExtensionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveExtension500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ApproveExtension500JSONResponse) VisitApproveExtensionResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -42693,6 +44115,133 @@ func (response RevokeUserApiKey404JSONResponse) VisitRevokeUserApiKeyResponse(w 
 	return err
 }
 
+type ListUserExtensionsRequestObject struct {
+	Uid UserID `json:"uid"`
+}
+
+type ListUserExtensionsResponseObject interface {
+	VisitListUserExtensionsResponse(w http.ResponseWriter) error
+}
+
+type ListUserExtensions200JSONResponse []UserExtensionCard
+
+func (response ListUserExtensions200JSONResponse) VisitListUserExtensionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUserExtensions403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListUserExtensions403JSONResponse) VisitListUserExtensionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUserExtensions404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListUserExtensions404JSONResponse) VisitListUserExtensionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUserExtensionCardRequestObject struct {
+	Uid  UserID          `json:"uid"`
+	Name ResourceName    `json:"name"`
+	Card ExtensionCardID `json:"card"`
+	Body *UpdateUserExtensionCardJSONRequestBody
+}
+
+type UpdateUserExtensionCardResponseObject interface {
+	VisitUpdateUserExtensionCardResponse(w http.ResponseWriter) error
+}
+
+type UpdateUserExtensionCard204Response struct {
+}
+
+func (response UpdateUserExtensionCard204Response) VisitUpdateUserExtensionCardResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdateUserExtensionCard403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateUserExtensionCard403JSONResponse) VisitUpdateUserExtensionCardResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUserExtensionCard404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateUserExtensionCard404JSONResponse) VisitUpdateUserExtensionCardResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUserExtensionCard422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateUserExtensionCard422JSONResponse) VisitUpdateUserExtensionCardResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUserExtensionCard502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response UpdateUserExtensionCard502JSONResponse) VisitUpdateUserExtensionCardResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ResetUserPasswordRequestObject struct {
 	Uid  UserID `json:"uid"`
 	Body *ResetUserPasswordJSONRequestBody
@@ -42856,6 +44405,18 @@ func (response UnlockUser404JSONResponse) VisitUnlockUserResponse(w http.Respons
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// ListAccountExtensions The account cards running extensions declare
+	// (GET /account/extensions)
+	ListAccountExtensions(ctx context.Context, request ListAccountExtensionsRequestObject) (ListAccountExtensionsResponseObject, error)
+	// RevokeExtensionCredential Remove the caller's secret for an extension's card
+	// (DELETE /account/extensions/{name}/credential)
+	RevokeExtensionCredential(ctx context.Context, request RevokeExtensionCredentialRequestObject) (RevokeExtensionCredentialResponseObject, error)
+	// GetExtensionCredential Whether the caller holds a secret for an extension's card
+	// (GET /account/extensions/{name}/credential)
+	GetExtensionCredential(ctx context.Context, request GetExtensionCredentialRequestObject) (GetExtensionCredentialResponseObject, error)
+	// RotateExtensionCredential Generate or rotate the caller's secret for an extension's card
+	// (POST /account/extensions/{name}/credential)
+	RotateExtensionCredential(ctx context.Context, request RotateExtensionCredentialRequestObject) (RotateExtensionCredentialResponseObject, error)
 	// ListActivity Library activity events.
 	// (GET /activity)
 	ListActivity(ctx context.Context, request ListActivityRequestObject) (ListActivityResponseObject, error)
@@ -43150,6 +44711,24 @@ type StrictServerInterface interface {
 	// ListEpisodes Search the library's episodes by title
 	// (GET /episodes)
 	ListEpisodes(ctx context.Context, request ListEpisodesRequestObject) (ListEpisodesResponseObject, error)
+	// ListExtensions List configured extensions (admin)
+	// (GET /extensions)
+	ListExtensions(ctx context.Context, request ListExtensionsRequestObject) (ListExtensionsResponseObject, error)
+	// CreateExtension Add an extension (admin)
+	// (POST /extensions)
+	CreateExtension(ctx context.Context, request CreateExtensionRequestObject) (CreateExtensionResponseObject, error)
+	// InspectExtension Read an extension's manifest without saving anything (admin)
+	// (POST /extensions/inspect)
+	InspectExtension(ctx context.Context, request InspectExtensionRequestObject) (InspectExtensionResponseObject, error)
+	// DeleteExtension Remove an extension (admin)
+	// (DELETE /extensions/{name})
+	DeleteExtension(ctx context.Context, request DeleteExtensionRequestObject) (DeleteExtensionResponseObject, error)
+	// UpdateExtension Update an extension (admin)
+	// (PATCH /extensions/{name})
+	UpdateExtension(ctx context.Context, request UpdateExtensionRequestObject) (UpdateExtensionResponseObject, error)
+	// ApproveExtension Grant exactly what the current manifest asks for (admin)
+	// (POST /extensions/{name}/approve)
+	ApproveExtension(ctx context.Context, request ApproveExtensionRequestObject) (ApproveExtensionResponseObject, error)
 	// ListIndexers List configured indexers
 	// (GET /indexers)
 	ListIndexers(ctx context.Context, request ListIndexersRequestObject) (ListIndexersResponseObject, error)
@@ -43654,6 +45233,12 @@ type StrictServerInterface interface {
 	// RevokeUserApiKey Revoke user's API key (admin)
 	// (DELETE /users/{uid}/api-keys/{kid})
 	RevokeUserApiKey(ctx context.Context, request RevokeUserApiKeyRequestObject) (RevokeUserApiKeyResponseObject, error)
+	// ListUserExtensions A user's settings cards from running extensions (admin)
+	// (GET /users/{uid}/extensions)
+	ListUserExtensions(ctx context.Context, request ListUserExtensionsRequestObject) (ListUserExtensionsResponseObject, error)
+	// UpdateUserExtensionCard Set a user's values on an extension's settings card (admin)
+	// (PUT /users/{uid}/extensions/{name}/cards/{card})
+	UpdateUserExtensionCard(ctx context.Context, request UpdateUserExtensionCardRequestObject) (UpdateUserExtensionCardResponseObject, error)
 	// ResetUserPassword Reset user password (admin)
 	// (POST /users/{uid}/password-reset)
 	ResetUserPassword(ctx context.Context, request ResetUserPasswordRequestObject) (ResetUserPasswordResponseObject, error)
@@ -43702,6 +45287,108 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListAccountExtensions operation middleware
+func (sh *strictHandler) ListAccountExtensions(w http.ResponseWriter, r *http.Request) {
+	var request ListAccountExtensionsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAccountExtensions(ctx, request.(ListAccountExtensionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAccountExtensions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAccountExtensionsResponseObject); ok {
+		if err := validResponse.VisitListAccountExtensionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RevokeExtensionCredential operation middleware
+func (sh *strictHandler) RevokeExtensionCredential(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request RevokeExtensionCredentialRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RevokeExtensionCredential(ctx, request.(RevokeExtensionCredentialRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RevokeExtensionCredential")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RevokeExtensionCredentialResponseObject); ok {
+		if err := validResponse.VisitRevokeExtensionCredentialResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetExtensionCredential operation middleware
+func (sh *strictHandler) GetExtensionCredential(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request GetExtensionCredentialRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetExtensionCredential(ctx, request.(GetExtensionCredentialRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetExtensionCredential")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetExtensionCredentialResponseObject); ok {
+		if err := validResponse.VisitGetExtensionCredentialResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RotateExtensionCredential operation middleware
+func (sh *strictHandler) RotateExtensionCredential(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request RotateExtensionCredentialRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RotateExtensionCredential(ctx, request.(RotateExtensionCredentialRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RotateExtensionCredential")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RotateExtensionCredentialResponseObject); ok {
+		if err := validResponse.VisitRotateExtensionCredentialResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ListActivity operation middleware
@@ -46419,6 +48106,178 @@ func (sh *strictHandler) ListEpisodes(w http.ResponseWriter, r *http.Request, pa
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListEpisodesResponseObject); ok {
 		if err := validResponse.VisitListEpisodesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListExtensions operation middleware
+func (sh *strictHandler) ListExtensions(w http.ResponseWriter, r *http.Request) {
+	var request ListExtensionsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListExtensions(ctx, request.(ListExtensionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListExtensions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListExtensionsResponseObject); ok {
+		if err := validResponse.VisitListExtensionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateExtension operation middleware
+func (sh *strictHandler) CreateExtension(w http.ResponseWriter, r *http.Request) {
+	var request CreateExtensionRequestObject
+
+	var body CreateExtensionJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateExtension(ctx, request.(CreateExtensionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateExtension")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateExtensionResponseObject); ok {
+		if err := validResponse.VisitCreateExtensionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// InspectExtension operation middleware
+func (sh *strictHandler) InspectExtension(w http.ResponseWriter, r *http.Request) {
+	var request InspectExtensionRequestObject
+
+	var body InspectExtensionJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.InspectExtension(ctx, request.(InspectExtensionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "InspectExtension")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(InspectExtensionResponseObject); ok {
+		if err := validResponse.VisitInspectExtensionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteExtension operation middleware
+func (sh *strictHandler) DeleteExtension(w http.ResponseWriter, r *http.Request, name ResourceName, params DeleteExtensionParams) {
+	var request DeleteExtensionRequestObject
+
+	request.Name = name
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteExtension(ctx, request.(DeleteExtensionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteExtension")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteExtensionResponseObject); ok {
+		if err := validResponse.VisitDeleteExtensionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateExtension operation middleware
+func (sh *strictHandler) UpdateExtension(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request UpdateExtensionRequestObject
+
+	request.Name = name
+
+	var body UpdateExtensionJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateExtension(ctx, request.(UpdateExtensionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateExtension")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateExtensionResponseObject); ok {
+		if err := validResponse.VisitUpdateExtensionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApproveExtension operation middleware
+func (sh *strictHandler) ApproveExtension(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request ApproveExtensionRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApproveExtension(ctx, request.(ApproveExtensionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApproveExtension")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApproveExtensionResponseObject); ok {
+		if err := validResponse.VisitApproveExtensionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -51195,6 +53054,67 @@ func (sh *strictHandler) RevokeUserApiKey(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RevokeUserApiKeyResponseObject); ok {
 		if err := validResponse.VisitRevokeUserApiKeyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListUserExtensions operation middleware
+func (sh *strictHandler) ListUserExtensions(w http.ResponseWriter, r *http.Request, uid UserID) {
+	var request ListUserExtensionsRequestObject
+
+	request.Uid = uid
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListUserExtensions(ctx, request.(ListUserExtensionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListUserExtensions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListUserExtensionsResponseObject); ok {
+		if err := validResponse.VisitListUserExtensionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateUserExtensionCard operation middleware
+func (sh *strictHandler) UpdateUserExtensionCard(w http.ResponseWriter, r *http.Request, uid UserID, name ResourceName, card ExtensionCardID) {
+	var request UpdateUserExtensionCardRequestObject
+
+	request.Uid = uid
+	request.Name = name
+	request.Card = card
+
+	var body UpdateUserExtensionCardJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateUserExtensionCard(ctx, request.(UpdateUserExtensionCardRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateUserExtensionCard")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateUserExtensionCardResponseObject); ok {
+		if err := validResponse.VisitUpdateUserExtensionCardResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

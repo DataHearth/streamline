@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/extension"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/importer"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -69,6 +70,7 @@ type Config struct {
 	Indexers        indexer.Manager
 	Downloads       download.Downloader
 	MediaServers    mediaserver.Manager
+	ExtensionHost   *extension.Manager
 	RefreshStatus   mediaserver.RefreshStatuses
 	DeepLinker      *mediaserver.DeepLinker
 	Renamer         library.Renamer
@@ -100,6 +102,8 @@ type Config struct {
 	Transcoder      *transcoding.Worker
 	AuthMiddleware  func(http.Handler) http.Handler
 	HTTPLog         func(http.Handler) http.Handler
+	// Extensions dispatches the paths extensions mount; nil mounts none.
+	Extensions func(http.Handler) http.Handler
 }
 
 // New assembles the composition root.
@@ -118,6 +122,7 @@ func New(cfg Config) *Server {
 		Indexers:        cfg.Indexers,
 		Downloads:       cfg.Downloads,
 		MediaServers:    cfg.MediaServers,
+		Extensions:      cfg.ExtensionHost,
 		RefreshStatus:   cfg.RefreshStatus,
 		DeepLinker:      cfg.DeepLinker,
 		Renamer:         cfg.Renamer,
@@ -177,6 +182,9 @@ func New(cfg Config) *Server {
 	// so nothing is lost by deferring. /auth/login and /auth/register are only
 	// *excluded* from auth, not from the chain, so they are still capped.
 	s.router.Use(middleware.BodyLimit)
+	if cfg.Extensions != nil {
+		s.router.Use(cfg.Extensions)
+	}
 
 	s.router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
