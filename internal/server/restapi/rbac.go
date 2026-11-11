@@ -60,6 +60,14 @@ var minRole = map[string]string{
 	"DeleteMySession": roleRequestOnly,
 	"ChangePassword":  roleRequestOnly,
 
+	"ListAccountExtensions":     roleRequestOnly,
+	"GetExtensionCredential":    roleRequestOnly,
+	"RotateExtensionCredential": roleRequestOnly,
+	"RevokeExtensionCredential": roleRequestOnly,
+
+	"ListUserExtensions":      roleAdmin,
+	"UpdateUserExtensionCard": roleAdmin,
+
 	"ListUpcomingReleases": roleRequestOnly,
 	"ListLibraryArrivals":  roleRequestOnly,
 
@@ -135,6 +143,12 @@ var minRole = map[string]string{
 	"ListMissingFiles":         roleAdmin,
 	"ForgetMissingFiles":       roleAdmin,
 
+	"ListExtensions":                   roleAdmin,
+	"InspectExtension":                 roleAdmin,
+	"CreateExtension":                  roleAdmin,
+	"UpdateExtension":                  roleAdmin,
+	"ApproveExtension":                 roleAdmin,
+	"DeleteExtension":                  roleAdmin,
 	"ListMediaServers":                 roleAdmin,
 	"GetMediaServer":                   roleAdmin,
 	"CreateMediaServer":                roleAdmin,

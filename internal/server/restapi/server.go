@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/extension"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/importer"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -47,6 +48,7 @@ type Server struct {
 	indexers        indexer.Manager
 	downloads       download.Downloader
 	mediaServers    mediaserver.Manager
+	extensions      *extension.Manager
 	refreshStatus   mediaserver.RefreshStatuses
 	scheduler       scheduler.Controller
 	bulkImports     bulkimport.Manager
@@ -91,6 +93,7 @@ type Deps struct {
 	Indexers     indexer.Manager
 	Downloads    download.Downloader
 	MediaServers mediaserver.Manager
+	Extensions   *extension.Manager
 	// RefreshStatus feeds each media server's last_refresh; nil leaves it
 	// out.
 	RefreshStatus   mediaserver.RefreshStatuses
@@ -131,6 +134,7 @@ func New(d Deps) *Server {
 		indexers:        d.Indexers,
 		downloads:       d.Downloads,
 		mediaServers:    d.MediaServers,
+		extensions:      d.Extensions,
 		refreshStatus:   d.RefreshStatus,
 		scheduler:       d.Scheduler,
 		bulkImports:     d.BulkImports,
