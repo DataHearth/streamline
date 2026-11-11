@@ -118,9 +118,71 @@ func main() {
 		log.Println("schema unchanged, no migration written")
 		return
 	}
+	if err := dropUnknownTables(ctx, dir, files); err != nil {
+		log.Fatalf("drop removed tables: %v", err)
+	}
+	if files, err = dir.Files(); err != nil {
+		log.Fatalf("list migrations: %v", err)
+	}
 	if err := checkDown(ctx, files); err != nil {
 		log.Fatalf("down migration: %v", err)
 	}
+}
+
+// dropUnknownTables appends, to the newest up file, the drop of every table
+// the replayed history holds and the ent schema no longer declares. ent's own
+// plan keeps table creations and modifications only, so a removed schema
+// would leave its table behind for good.
+func dropUnknownTables(
+	ctx context.Context,
+	dir *sqltool.GolangMigrateDir,
+	files []atlasmigrate.File,
+) error {
+	db, drv, err := replay(ctx, files)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	realm, err := drv.InspectRealm(ctx, nil)
+	if err != nil {
+		return err
+	}
+	var changes []atlasschema.Change
+	for _, sch := range realm.Schemas {
+		for _, t := range sch.Tables {
+			declared := slices.ContainsFunc(
+				migrate.Tables,
+				func(d *schema.Table) bool { return d.Name == t.Name },
+			)
+			if !declared {
+				changes = append(changes, &atlasschema.DropTable{T: t})
+			}
+		}
+	}
+	if len(changes) == 0 {
+		return nil
+	}
+	plan, err := drv.PlanChanges(ctx, "drop", changes)
+	if err != nil {
+		return err
+	}
+	newest := files[len(files)-1]
+	var b strings.Builder
+	b.Write(newest.Bytes())
+	for _, c := range plan.Changes {
+		if c.Comment != "" {
+			fmt.Fprintf(&b, "-- %s\n", c.Comment)
+		}
+		fmt.Fprintf(&b, "%s;\n", c.Cmd)
+	}
+	if err := dir.WriteFile(newest.Name(), []byte(b.String())); err != nil {
+		return err
+	}
+	sum, err := dir.Checksum()
+	if err != nil {
+		return err
+	}
+	return atlasmigrate.WriteSumFile(dir, sum)
 }
 
 // checkHistory runs checkDown on every migration, oldest first, each against
