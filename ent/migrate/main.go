@@ -17,8 +17,8 @@
 // Every down file is therefore checked by running it on the replayed history:
 // one that does not restore the previous schema is replaced by Atlas's plan
 // from the new schema back to the previous one (a rebuild of its own, which
-// copies the rows), and that is checked the same way. Either way both files
-// are generated: never hand-edit one.
+// copies the rows), and that is checked the same way. What a schema diff
+// cannot carry (rows moved between tables, a backfill) is added by hand.
 //
 // -check-history runs the same check on every migration in the directory, in
 // order, and replaces each down step that fails it. A down that passes is
