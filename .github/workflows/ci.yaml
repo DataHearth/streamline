@@ -104,43 +104,12 @@ jobs:
               - 'pnpm-workspace.yaml'
               - '.github/workflows/ci.yaml'
 
-  lint-go:
-    needs: changes
-    if: needs.changes.outputs.go == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
-      - name: Set up pnpm
-        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-      - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24.22.2
-          cache: pnpm
-      - name: Install Task
-        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install frontend deps
-        run: pnpm install --frozen-lockfile
-      - name: Lint Go
-        run: task lint:go
-      - name: Summary
-        if: always()
-        run: |
-          echo "### Go Lint" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ golangci-lint passed" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "❌ golangci-lint found issues" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
+  # Three stages, each waiting on the one before: vulncheck, then the lints
+  # and the build, then test and nix. A failure in a stage skips every later
+  # one. A stage's job skipped by its own filter does not: each later job's
+  # `if` names `!failure()`, which replaces the default "every need
+  # succeeded" and is true whenever no job before it failed.
+  #
   # Advisories land without any change here, so main is scanned on every push.
   vulncheck:
     needs: changes
@@ -150,10 +119,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Go
+        id: go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
+      - name: Restore Go cache
+        id: go-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-test-${{ hashFiles('go.sum', 'extensions/**/go.sum', 'internal/extension/testdata/**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-build-${{ hashFiles('go.sum', 'extensions/**/go.sum', 'internal/extension/testdata/**/go.sum') }}
+            go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-test-
+            go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-build-
       - name: Set up pnpm
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - name: Set up Node.js
@@ -179,9 +161,59 @@ jobs:
             echo "❌ govulncheck reported vulnerabilities" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  lint-go:
+    needs: [changes, vulncheck]
+    if: ${{ !cancelled() && !failure() && needs.changes.outputs.go == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        id: go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Restore Go cache
+        id: go-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-test-${{ hashFiles('go.sum', 'extensions/**/go.sum', 'internal/extension/testdata/**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-build-${{ hashFiles('go.sum', 'extensions/**/go.sum', 'internal/extension/testdata/**/go.sum') }}
+            go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-test-
+            go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-build-
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.2
+          cache: pnpm
+      - name: Install Task
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Lint Go
+        run: task lint:go
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Go Lint" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ golangci-lint passed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ golangci-lint found issues" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   lint-frontend:
-    needs: changes
-    if: needs.changes.outputs.biome == 'true'
+    needs: [changes, vulncheck]
+    if: ${{ !cancelled() && !failure() && needs.changes.outputs.biome == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -217,8 +249,8 @@ jobs:
   # esbuild strips types without checking them and Biome does not type-check,
   # so this is the only job that catches a type error in web/app.
   lint-ts:
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    needs: [changes, vulncheck]
+    if: ${{ !cancelled() && !failure() && needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -250,121 +282,9 @@ jobs:
             echo "❌ svelte-check found problems — run \`task lint:ts\`" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  # A frontend-only change runs what reads the SPA: the web e2e specs, which
-  # drive it in a browser, and the unit specs over the embedded assets
-  # (internal/server/web, the one test package importing `web`). Only a Go
-  # change needs the whole tree.
-  test:
-    needs: changes
-    if: needs.changes.outputs.go == 'true' || needs.changes.outputs.frontend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
-      - name: Set up pnpm
-        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-      - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24.22.2
-          cache: pnpm
-      - name: Install Task
-        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install frontend deps
-        run: pnpm install --frozen-lockfile
-      - name: Build frontend assets
-        run: task build:js build:css
-      # e2e/web skips its whole suite, green, when CHROME_PATH is unset; the
-      # runner image ships Google Chrome, and its absence fails here instead.
-      - name: Locate Chrome
-        run: |
-          chrome=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)
-          [ -n "$chrome" ] || { echo "::error::no Chrome on the runner, so e2e/web would skip"; exit 1; }
-          echo "CHROME_PATH=$chrome" >> "$GITHUB_ENV"
-      # The ffmpeg and transcoding e2e specs run the real encoder and skip
-      # without it on PATH; Ubuntu's build carries libx264, libx265, libmp3lame
-      # and libopus, which they use.
-      - name: Install ffmpeg
-        if: needs.changes.outputs.go == 'true'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ffmpeg
-      # STREAMLINE_E2E_CONTAINERS lets the container-backed specs (qBittorrent,
-      # Prowlarr) start their images on the runner's Docker instead of
-      # skipping, so `task test` runs every spec.
-      - name: Run tests
-        if: needs.changes.outputs.go == 'true'
-        env:
-          STREAMLINE_E2E_CONTAINERS: "1"
-        run: task test JUNIT_DIR=/tmp/streamline -- --keep-going
-      - name: Run frontend tests
-        if: needs.changes.outputs.go != 'true'
-        # CLI_ARGS replaces each task's package list. Both run whatever the
-        # first one does, so one report covers everything. test:e2e's timeout
-        # counts the build: on a 4-vCPU runner the web suite takes about 28s
-        # from a warm Go build cache and about 2m from a cold one (some 25s
-        # of it specs), past the 1m15s local default.
-        run: |
-          status=0
-          task test:e2e E2E_TIMEOUT=4m -- --junit-report=/tmp/streamline/junit-e2e.xml ./e2e/web || status=1
-          task test:unit -- --junit-report=/tmp/streamline/junit-rest.xml ./internal/server/web || status=1
-          exit "$status"
-      - name: Publish test report
-        if: success() || failure()
-        uses: mikepenz/action-junit-report@4a26df3e2ae132254ba12a53f65a388d0961e786 # v6.7.0
-        with:
-          report_paths: /tmp/streamline/junit-*.xml
-          check_name: Test Results
-          detailed_summary: true
-          fail_on_failure: false
-
-  build:
-    needs: changes
-    if: needs.changes.outputs.go == 'true' || needs.changes.outputs.frontend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
-      - name: Set up pnpm
-        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-      - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24.22.2
-          cache: pnpm
-      - name: Install Task
-        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install frontend deps
-        run: pnpm install --frozen-lockfile
-      - name: Build binary + assets
-        run: task build:app
-      - name: Summary
-        if: always()
-        run: |
-          echo "### Build" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ Binary + frontend assets compiled" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "❌ Build failed" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
   lint-helm:
-    needs: changes
-    if: needs.changes.outputs.helm == 'true'
+    needs: [changes, vulncheck]
+    if: ${{ !cancelled() && !failure() && needs.changes.outputs.helm == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -422,9 +342,171 @@ jobs:
             echo "❌ Helm validation failed" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  build:
+    needs: [changes, vulncheck]
+    if: ${{ !cancelled() && !failure() && (needs.changes.outputs.go == 'true' || needs.changes.outputs.frontend == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        id: go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Restore Go cache
+        id: go-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-test-${{ hashFiles('go.sum', 'extensions/**/go.sum', 'internal/extension/testdata/**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-build-${{ hashFiles('go.sum', 'extensions/**/go.sum', 'internal/extension/testdata/**/go.sum') }}
+            go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-test-
+            go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-build-
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.2
+          cache: pnpm
+      - name: Install Task
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Build binary + assets
+        run: task build:app
+      # Skipped once any entry for this go.sum exists: the test job's covers
+      # this one's. The explicit go.sum paths keep node_modules out of the
+      # hash, which a `**` glob would read after the pnpm install.
+      - name: Save Go cache
+        if: github.ref == 'refs/heads/main' && steps.go-cache.outputs.cache-hit != 'true' && steps.go-cache.outputs.cache-matched-key != format('go-{0}-{1}-build-{2}', runner.os, steps.go.outputs.go-version, hashFiles('go.sum', 'extensions/**/go.sum', 'internal/extension/testdata/**/go.sum'))
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-build-${{ hashFiles('go.sum', 'extensions/**/go.sum', 'internal/extension/testdata/**/go.sum') }}
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Build" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Binary + frontend assets compiled" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Build failed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # A frontend-only change runs what reads the SPA: the web e2e specs, which
+  # drive it in a browser, and the unit specs over the embedded assets
+  # (internal/server/web, the one test package importing `web`). Only a Go
+  # change needs the whole tree.
+  test:
+    needs: [changes, lint-go, lint-frontend, lint-ts, lint-helm, build]
+    if: ${{ !cancelled() && !failure() && (needs.changes.outputs.go == 'true' || needs.changes.outputs.frontend == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        id: go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Restore Go cache
+        id: go-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-test-${{ hashFiles('go.sum', 'extensions/**/go.sum', 'internal/extension/testdata/**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-build-${{ hashFiles('go.sum', 'extensions/**/go.sum', 'internal/extension/testdata/**/go.sum') }}
+            go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-test-
+            go-${{ runner.os }}-${{ steps.go.outputs.go-version }}-build-
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.2
+          cache: pnpm
+      - name: Install Task
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Build frontend assets
+        run: task build:js build:css
+      # e2e/web skips its whole suite, green, when CHROME_PATH is unset; the
+      # runner image ships Google Chrome, and its absence fails here instead.
+      - name: Locate Chrome
+        run: |
+          chrome=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)
+          [ -n "$chrome" ] || { echo "::error::no Chrome on the runner, so e2e/web would skip"; exit 1; }
+          echo "CHROME_PATH=$chrome" >> "$GITHUB_ENV"
+      # The ffmpeg and transcoding e2e specs run the real encoder and skip
+      # without it on PATH; Ubuntu's build carries libx264, libx265, libmp3lame
+      # and libopus, which they use.
+      - name: Install ffmpeg
+        if: needs.changes.outputs.go == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      # STREAMLINE_E2E_CONTAINERS lets the container-backed specs (qBittorrent,
+      # Prowlarr) start their images on the runner's Docker instead of
+      # skipping, so `task test` runs every spec.
+      - name: Run tests
+        if: needs.changes.outputs.go == 'true'
+        env:
+          STREAMLINE_E2E_CONTAINERS: "1"
+        run: task test JUNIT_DIR=/tmp/streamline -- --keep-going
+      # An entry is never rewritten once saved, so the Go cache has two per
+      # go.sum: this one, with every module and every test binary, which is
+      # what each job asks for first, and the build job's, saved a stage
+      # earlier, which is there when the tests on main fail. Only on main,
+      # whose caches every PR can read, and only after the whole tree ran.
+      - name: Save Go cache
+        if: github.ref == 'refs/heads/main' && needs.changes.outputs.go == 'true' && steps.go-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ steps.go-cache.outputs.cache-primary-key }}
+      - name: Run frontend tests
+        if: needs.changes.outputs.go != 'true'
+        # CLI_ARGS replaces each task's package list. Both run whatever the
+        # first one does, so one report covers everything. test:e2e's timeout
+        # counts the build: on a 4-vCPU runner the web suite takes about 28s
+        # from a warm Go build cache and about 2m from a cold one (some 25s
+        # of it specs), past the 1m15s local default.
+        run: |
+          status=0
+          task test:e2e E2E_TIMEOUT=4m -- --junit-report=/tmp/streamline/junit-e2e.xml ./e2e/web || status=1
+          task test:unit -- --junit-report=/tmp/streamline/junit-rest.xml ./internal/server/web || status=1
+          exit "$status"
+      - name: Publish test report
+        if: success() || failure()
+        uses: mikepenz/action-junit-report@4a26df3e2ae132254ba12a53f65a388d0961e786 # v6.7.0
+        with:
+          report_paths: /tmp/streamline/junit-*.xml
+          check_name: Test Results
+          detailed_summary: true
+          fail_on_failure: false
+
   nix:
-    needs: changes
-    if: needs.changes.outputs.nix == 'true'
+    needs: [changes, lint-go, lint-frontend, lint-ts, lint-helm, build]
+    if: ${{ !cancelled() && !failure() && needs.changes.outputs.nix == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
