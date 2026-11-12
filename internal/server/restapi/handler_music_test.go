@@ -224,6 +224,16 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 			Expect(errCode(resp)).To(Equal("rate_limited"))
 		})
 
+		It("answers 502 with no wait when MusicBrainz cannot answer", func() {
+			app.music.EXPECT().SearchArtists(mock.Anything, "x").
+				Return(nil, fmt.Errorf("musicbrainz: /artist: %w", metadata.ErrUnavailable)).
+				Once()
+			resp := get("/api/v1/music/search?query=x")
+			Expect(resp.StatusCode).To(Equal(http.StatusBadGateway))
+			Expect(resp.Header.Get("Retry-After")).To(BeEmpty())
+			Expect(errCode(resp)).To(Equal("provider_unavailable"))
+		})
+
 		It("is open to a request-only caller", func() {
 			app.music.EXPECT().
 				SearchArtists(mock.Anything, "x").

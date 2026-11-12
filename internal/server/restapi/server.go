@@ -262,6 +262,19 @@ func responseError(w http.ResponseWriter, r *http.Request, err error) {
 		}
 		return
 	}
+	if errors.Is(err, metadata.ErrUnavailable) {
+		slog.WarnContext(ctx, "metadata provider unavailable", "error", err)
+		code := codeProviderUnavailable
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadGateway)
+		if encErr := json.NewEncoder(w).Encode(Error{
+			Message: "MusicBrainz is not answering; try again shortly.",
+			Code:    &code,
+		}); encErr != nil {
+			slog.ErrorContext(ctx, "json encode failed", "error", encErr)
+		}
+		return
+	}
 	// The caller left before the answer — the SPA aborts a search nobody is
 	// waiting on — so there is nobody to answer and nothing went wrong here.
 	// 499 is the access log's name for it.

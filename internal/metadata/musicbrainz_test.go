@@ -146,16 +146,39 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(limited.RetryAfter).To(Equal(7 * time.Second))
 		})
 
-		It("waits a minute when a 503 names no Retry-After", func() {
+		It("waits a minute when a 503 names only a rate-limit zone", func() {
 			mb.client.Transport = mbRoundTripper(
 				func(*http.Request) (*http.Response, error) {
-					return jsonResponse(503, `{}`), nil
+					resp := jsonResponse(503, `{}`)
+					resp.Header.Set("X-RateLimit-Zone", "global")
+					return resp, nil
 				},
 			)
 			_, err := mb.SearchArtists(ctx, "nirvana")
 			var limited *RateLimitedError
 			Expect(errors.As(err, &limited)).To(BeTrue())
 			Expect(limited.RetryAfter).To(Equal(time.Minute))
+		})
+
+		It("reports a 503 naming no limit as unavailable and holds nothing", func() {
+			calls := 0
+			mb.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					calls++
+					if calls == 1 {
+						return jsonResponse(503, `{}`), nil
+					}
+					return jsonResponse(200, `{}`), nil
+				},
+			)
+			var out struct{}
+			err := mb.get(ctx, "/artist", url.Values{}, &out)
+			Expect(err).To(MatchError(ErrUnavailable))
+			Expect(err).NotTo(MatchError(ErrRateLimited))
+
+			Expect(
+				mb.get(Background(ctx), "/artist", url.Values{}, &out),
+			).To(Succeed())
 		})
 
 		It("waits a minute when a 503 names a zero Retry-After", func() {
@@ -685,7 +708,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 
 				_, err := mb.ReleaseGroupEditions(ctx, "rg-1")
 
-				Expect(err).To(MatchError(ErrRateLimited))
+				Expect(err).To(MatchError(ErrUnavailable))
 			})
 		})
 
@@ -1058,11 +1081,22 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 		})
 
 		It("does not retry a rate limit", func() {
+			incs := serve(func(string) *http.Response {
+				resp := jsonResponse(503, `{}`)
+				resp.Header.Set("Retry-After", "7")
+				return resp
+			})
+			_, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).To(MatchError(ErrRateLimited))
+			Expect(*incs).To(HaveLen(1))
+		})
+
+		It("does not retry an unavailable MusicBrainz", func() {
 			incs := serve(
 				func(string) *http.Response { return jsonResponse(503, `{}`) },
 			)
 			_, err := mb.GetReleaseGroup(ctx, "rg-1")
-			Expect(err).To(MatchError(ErrRateLimited))
+			Expect(err).To(MatchError(ErrUnavailable))
 			Expect(*incs).To(HaveLen(1))
 		})
 

@@ -35,8 +35,8 @@ const (
 
 	genreListTTL = 24 * time.Hour
 
-	// mbDefaultRetryAfter is how long a 503 with no Retry-After asks callers
-	// to leave MusicBrainz alone.
+	// mbDefaultRetryAfter is how long a rate-limit answer with no usable
+	// Retry-After asks callers to leave MusicBrainz alone.
 	mbDefaultRetryAfter = time.Minute
 
 	maxLookupGenres = 5
@@ -127,6 +127,18 @@ func (m *MusicBrainz) fetch(
 		return otelx.RecordSpanError(span,
 			fmt.Errorf("musicbrainz: %s: %w", path, ErrNotFound))
 	case http.StatusServiceUnavailable, http.StatusTooManyRequests:
+		// MusicBrainz throttles with 503 and names it in these headers. A 503
+		// carrying neither is a server that could not answer (a mirror whose
+		// search backend timed out), and holding the limiter for it would
+		// stop every background call over one slow query.
+		if resp.StatusCode == http.StatusServiceUnavailable &&
+			resp.Header.Get("Retry-After") == "" &&
+			resp.Header.Get("X-RateLimit-Zone") == "" {
+			slog.WarnContext(ctx, "musicbrainz unavailable",
+				"musicbrainz.endpoint", path, "http.status_code", resp.StatusCode)
+			return otelx.RecordSpanError(span,
+				fmt.Errorf("musicbrainz: %s: %w", path, ErrUnavailable))
+		}
 		retry := mbDefaultRetryAfter
 		// MusicBrainz's busy 503 can carry Retry-After: 0, which taken at its
 		// word leaves the hydration worker retrying every 2s.
@@ -1032,7 +1044,7 @@ func (m *MusicBrainz) getRelease(
 		return rel, true, nil
 	}
 	if errors.Is(err, ErrNotFound) || errors.Is(err, ErrRateLimited) ||
-		ctx.Err() != nil {
+		errors.Is(err, ErrUnavailable) || ctx.Err() != nil {
 		return mbRelease{}, false, err
 	}
 	slog.WarnContext(ctx, "musicbrainz heavy release call failed, retrying light",

@@ -143,6 +143,9 @@ export function errorText(err: unknown, fallback?: string): string {
 		// with it (timed out, API key rejected…): the generic 502/504 would not
 		// say which one to go and look at.
 		if (code === "indexers_unavailable" && err.message) return err.message;
+		// A metadata provider that could not answer names itself; the generic
+		// 502 would not say the fault is upstream.
+		if (code === "provider_unavailable" && err.message) return err.message;
 		if ((code === "library_offline" || code === "library_online" || code === "library_accept_running") && err.message) return err.message;
 		if ((code === "assignment_rejected" || code === "edition_not_found") && err.message) return err.message;
 		// An upload refused names the file or the target that was the problem:

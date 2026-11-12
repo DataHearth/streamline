@@ -10702,6 +10702,9 @@ type OIDCProviderList = OIDCProviderListView
 // PayloadTooLarge defines model for PayloadTooLarge.
 type PayloadTooLarge = Error
 
+// ProviderUnavailable defines model for ProviderUnavailable.
+type ProviderUnavailable = Error
+
 // RateLimited defines model for RateLimited.
 type RateLimited = Error
 
@@ -24063,6 +24066,8 @@ type PendingListJSONResponse PendingList
 
 type PendingPreviewJSONResponse PendingPreview
 
+type ProviderUnavailableJSONResponse Error
+
 type QualityProfileDefaultSetResponse struct {
 }
 
@@ -35257,6 +35262,22 @@ func (response ListMusicAlbumEditions500JSONResponse) VisitListMusicAlbumEdition
 	return err
 }
 
+type ListMusicAlbumEditions502JSONResponse struct {
+	ProviderUnavailableJSONResponse
+}
+
+func (response ListMusicAlbumEditions502JSONResponse) VisitListMusicAlbumEditionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SetMusicAlbumEditionRequestObject struct {
 	Id   ResourceID `json:"id"`
 	Body *SetMusicAlbumEditionJSONRequestBody
@@ -35344,6 +35365,22 @@ func (response SetMusicAlbumEdition500JSONResponse) VisitSetMusicAlbumEditionRes
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetMusicAlbumEdition502JSONResponse struct {
+	ProviderUnavailableJSONResponse
+}
+
+func (response SetMusicAlbumEdition502JSONResponse) VisitSetMusicAlbumEditionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -36222,6 +36259,22 @@ func (response AddMusicArtist500JSONResponse) VisitAddMusicArtistResponse(w http
 	return err
 }
 
+type AddMusicArtist502JSONResponse struct {
+	ProviderUnavailableJSONResponse
+}
+
+func (response AddMusicArtist502JSONResponse) VisitAddMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetMusicArtistCountsRequestObject struct {
 	Params GetMusicArtistCountsParams
 }
@@ -36755,6 +36808,22 @@ func (response RefreshMusicArtist500JSONResponse) VisitRefreshMusicArtistRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshMusicArtist502JSONResponse struct {
+	ProviderUnavailableJSONResponse
+}
+
+func (response RefreshMusicArtist502JSONResponse) VisitRefreshMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -37721,6 +37790,22 @@ func (response SearchMusicArtists500JSONResponse) VisitSearchMusicArtistsRespons
 	return err
 }
 
+type SearchMusicArtists502JSONResponse struct {
+	ProviderUnavailableJSONResponse
+}
+
+func (response SearchMusicArtists502JSONResponse) VisitSearchMusicArtistsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SearchMusicReleasesRequestObject struct {
 	Params SearchMusicReleasesParams
 }
@@ -37786,6 +37871,22 @@ func (response SearchMusicReleases500JSONResponse) VisitSearchMusicReleasesRespo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicReleases502JSONResponse struct {
+	ProviderUnavailableJSONResponse
+}
+
+func (response SearchMusicReleases502JSONResponse) VisitSearchMusicReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -37856,6 +37957,22 @@ func (response GetMusicArtistLookup500JSONResponse) VisitGetMusicArtistLookupRes
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistLookup502JSONResponse struct {
+	ProviderUnavailableJSONResponse
+}
+
+func (response GetMusicArtistLookup502JSONResponse) VisitGetMusicArtistLookupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
 	_, err := buf.WriteTo(w)
 	return err
 }

@@ -48,6 +48,8 @@ func (s *Server) SearchMusicArtists(
 		return SearchMusicArtists429JSONResponse{
 			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
 		}, nil
+	case errors.Is(err, metadata.ErrUnavailable), errors.Is(err, context.Canceled):
+		return nil, err
 	case err != nil:
 		return SearchMusicArtists500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -94,6 +96,8 @@ func (s *Server) SearchMusicReleases(
 		return SearchMusicReleases429JSONResponse{
 			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
 		}, nil
+	case errors.Is(err, metadata.ErrUnavailable), errors.Is(err, context.Canceled):
+		return nil, err
 	case err != nil:
 		return SearchMusicReleases500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -141,6 +145,8 @@ func (s *Server) GetMusicArtistLookup(
 		return GetMusicArtistLookup429JSONResponse{
 			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
 		}, nil
+	case errors.Is(err, metadata.ErrUnavailable), errors.Is(err, context.Canceled):
+		return nil, err
 	case err != nil:
 		return GetMusicArtistLookup500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -274,6 +280,8 @@ func (s *Server) AddMusicArtist(
 		return AddMusicArtist429JSONResponse{
 			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
 		}, nil
+	case errors.Is(err, metadata.ErrUnavailable), errors.Is(err, context.Canceled):
+		return nil, err
 	case err != nil:
 		return AddMusicArtist500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -498,6 +506,8 @@ func (s *Server) RefreshMusicArtist(
 		return RefreshMusicArtist429JSONResponse{
 			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
 		}, nil
+	case errors.Is(err, metadata.ErrUnavailable), errors.Is(err, context.Canceled):
+		return nil, err
 	case err != nil:
 		return RefreshMusicArtist500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),

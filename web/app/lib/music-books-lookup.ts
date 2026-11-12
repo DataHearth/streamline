@@ -152,13 +152,13 @@ export function bookHit(b: BookHit): SearchHit {
 	};
 }
 
-export async function lookupSearch(kind: LookupKind, q: string): Promise<SearchHit[]> {
+export async function lookupSearch(kind: LookupKind, q: string, signal?: AbortSignal): Promise<SearchHit[]> {
 	const query = encodeURIComponent(q);
 	if (kind === "artist") {
-		const res = await api<{ items: ArtistHit[] }>(`/music/search?query=${query}`);
+		const res = await api<{ items: ArtistHit[] }>(`/music/search?query=${query}`, { signal });
 		return (res.items ?? []).map(artistHit);
 	}
-	const res = await api<{ items: BookHit[] }>(`/books/search?query=${query}`);
+	const res = await api<{ items: BookHit[] }>(`/books/search?query=${query}`, { signal });
 	return (res.items ?? []).map(bookHit);
 }
 

@@ -125,7 +125,7 @@
 
 	const searchQuery = createQuery<SearchHit[]>(() => ({
 		queryKey: ["mb-lookup", kind, debounced],
-		queryFn: () => lookupSearch(kind, debounced),
+		queryFn: ({ signal }) => lookupSearch(kind, debounced, signal),
 		enabled: open && debounced.length >= 2,
 		staleTime: 60_000,
 	}));

@@ -6,7 +6,12 @@ import (
 	"time"
 )
 
-var ErrRateLimited = errors.New("metadata: provider rate limited")
+var (
+	ErrRateLimited = errors.New("metadata: provider rate limited")
+	// ErrUnavailable is a provider that answered without serving the call
+	// and without asking to be left alone: an outage, not a limit.
+	ErrUnavailable = errors.New("metadata: provider unavailable")
+)
 
 // RateLimitedError carries how long the caller should leave the provider
 // alone. It wraps ErrRateLimited, so errors.Is is the usual test.

@@ -1299,7 +1299,8 @@ paths:
         Searches MusicBrainz for artists matching the query. Used to find MBIDs before
          adding artists to the library. Open to every authenticated user, `request_only`
          included, since the request form reads it. A 429 (`code: rate_limited`) is
-         MusicBrainz answering 503.
+         MusicBrainz throttling (a 503 carrying `Retry-After` or a rate-limit zone);
+         a 503 carrying neither answers 502 (`code: provider_unavailable`).
       tags: [music]
       parameters:
         - $ref: "#/components/parameters/MusicSearchQuery"
@@ -1308,6 +1309,8 @@ paths:
           $ref: "#/components/responses/MusicSearchResults"
         "429":
           $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/ProviderUnavailable"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1333,6 +1336,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "429":
           $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/ProviderUnavailable"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1357,6 +1362,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/ProviderUnavailable"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1414,6 +1421,8 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
         "429":
           $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/ProviderUnavailable"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1546,6 +1555,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/ProviderUnavailable"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1718,6 +1729,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/ProviderUnavailable"
         "500":
           $ref: "#/components/responses/InternalError"
     put:
@@ -1746,6 +1759,8 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
         "429":
           $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/ProviderUnavailable"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -8389,6 +8404,16 @@ components:
 
     ServiceUnavailable:
       description: Feature not configured.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    ProviderUnavailable:
+      description: |
+        The metadata provider could not answer (`code: provider_unavailable`):
+        an outage or an overloaded server, not a rate limit, so there is no
+        wait to observe.
       content:
         application/json:
           schema:

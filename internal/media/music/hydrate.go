@@ -31,6 +31,10 @@ const (
 	// MusicBrainz says to back off.
 	maxRateLimitPause = 5 * time.Minute
 
+	// unavailablePause is how long the worker stands down after MusicBrainz
+	// could not answer.
+	unavailablePause = time.Minute
+
 	hydrationOK     = "ok"
 	hydrationLight  = "light"
 	hydrationFailed = "failed"
@@ -226,6 +230,15 @@ func (s *Service) hydrationWorker(ctx context.Context) {
 			}
 			// Not a failure of the album's: it goes back on the queue,
 			// which a refill would not do.
+			s.requeue(ctx, it)
+		case errors.Is(err, metadata.ErrUnavailable):
+			// An outage is not the album's failure either, and without a
+			// pause the worker would fail the whole queue against it.
+			slog.WarnContext(ctx, "music hydration waiting for musicbrainz",
+				"retry_after", unavailablePause)
+			if serr := sleep(ctx, unavailablePause); serr != nil {
+				return
+			}
 			s.requeue(ctx, it)
 		case err != nil:
 			failed[it.albumID] = struct{}{}

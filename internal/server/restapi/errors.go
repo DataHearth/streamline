@@ -257,6 +257,10 @@ func errRateLimited(err error) RateLimitedJSONResponse {
 	}
 }
 
+// codeProviderUnavailable marks the 502 of a metadata provider that could not
+// answer, which the SPA must not present as a limit with a wait.
+const codeProviderUnavailable = "provider_unavailable"
+
 // codeWorkerUnavailable marks a 409 from POST /transcoding/scan raised because
 // the worker cannot run (ffmpeg disabled or not found), as opposed to the
 // plain 409 for a scan already in flight. The SPA reads both scan 409s as
