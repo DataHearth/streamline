@@ -68,6 +68,7 @@ const (
 	folderCache        = "cache"
 	serviceFFmpeg      = "ffmpeg"
 	serviceLibraryScan = "library_scan"
+	serviceHTTP        = "http"
 )
 
 var (
@@ -79,6 +80,7 @@ var (
 		serviceServePoster,
 		serviceFFmpeg,
 		serviceLibraryScan,
+		serviceHTTP,
 	}
 )
 

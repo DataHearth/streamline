@@ -823,6 +823,10 @@ type ExtensionEntry struct {
 	SHA256  string          `koanf:"sha256"`
 	Enabled bool            `koanf:"enabled"`
 	Grants  ExtensionGrants `koanf:"grants"`
+	// Hosts are the host:port pairs the extension may call through the http
+	// service. The file is the only place they are written from: an API that
+	// could add one could point a guest at anything Streamline can reach.
+	Hosts []string `koanf:"hosts"`
 }
 
 type ExtensionGrants struct {

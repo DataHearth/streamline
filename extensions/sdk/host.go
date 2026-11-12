@@ -17,3 +17,6 @@ func hostScanStatus(offset uint64) uint64
 
 //go:wasmimport extism:host/user scan_start
 func hostScanStart(offset uint64) uint64
+
+//go:wasmimport extism:host/user http_request
+func hostHTTPRequest(offset uint64) uint64

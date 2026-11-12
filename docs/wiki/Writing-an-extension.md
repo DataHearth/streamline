@@ -50,7 +50,7 @@ A fresh instance of the module handles **every** request, so nothing in memory s
 | `mounts[]` | `{prefix, auth}`. `prefix` is one path segment (`/opds`); `auth` is `session` (Streamline signs the user in first and tells you who) or `self` (you check credentials, e.g. HTTP Basic). A prefix that is one of Streamline's own routes is refused; `/rest` and `/share` are free |
 | `views[]` | Names from [the table below](#views) |
 | `folders[]` | `music`, `movies`, `series`, `artwork`, `cache`, see [Folders](#folders) |
-| `services[]` | `serve_file`, `serve_poster`, `ffmpeg`, `library_scan` |
+| `services[]` | `serve_file`, `serve_poster`, `ffmpeg`, `library_scan`, `http` |
 | `account_cards[]` | `{id, kind, title, mount, username, fields}`. `kind: credential` is a credential the account page manages (`mount`, `username`); `kind: settings` is a set of per-user controls an admin edits (`fields`, see [Settings cards](#settings-cards)). Your module answers both at `/api/v1/extensions/<name>/cards/<id>` |
 
 Whatever you list must be granted by the admin, exactly. A settings card that declares no field, two fields with one id, a field of another kind or a number whose `min` is above its `max` makes the manifest unusable, and the extension fails to start.
@@ -155,6 +155,22 @@ Nothing is sent until ffmpeg's first byte, so a failure before it becomes someth
 | No output within 30 seconds, or it exited having written nothing | the fallback file | 502 |
 
 Once the first byte is out the answer is a 200 with your `ContentType` (default `application/octet-stream`) and `Headers` (minus the dropped ones), without range support; if ffmpeg fails after that, the body simply ends early. The fallback is sent like any `SendFile`, so it needs a folder holding its path.
+
+## Calling another server
+
+The `http` service makes an HTTP request for you; a guest has no socket of its own.
+
+```go
+res, err := sdk.Fetch(sdk.FetchRequest{
+	Method:  "POST",
+	URL:     "http://engine.lan:8097/v1/sessions",
+	Headers: map[string][]string{"Authorization": {"Bearer " + secret}},
+	Body:    body,
+})
+// res.Status, res.Headers, res.Body
+```
+
+The URL's `host:port` must be in the `hosts` list the admin wrote for your extension in the config file; your manifest cannot ask for a host, so say in your documentation which server to list. `err` is set when the service is not granted, the host is not listed, or no answer came back. A status of 400 or more is an answer, not an error, and so is a redirect: it is never followed. The call runs inside your request's 30 seconds and the answer is at most 16 MiB.
 
 ## Library scan
 

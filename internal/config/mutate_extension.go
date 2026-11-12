@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/url"
 	"path/filepath"
 	"regexp"
@@ -34,6 +35,15 @@ func validateExtensionName(e ExtensionEntry) error {
 func validateExtension(e ExtensionEntry) error {
 	if err := validateExtensionName(e); err != nil {
 		return err
+	}
+	for _, h := range e.Hosts {
+		host, port, err := net.SplitHostPort(h)
+		if err != nil || host == "" || port == "" || h != strings.ToLower(h) {
+			return fmt.Errorf(
+				"extension %q: host %q: want host:port in lower case",
+				e.Name, h,
+			)
+		}
 	}
 	if e.SHA256 != "" && !extensionSHA256.MatchString(e.SHA256) {
 		return fmt.Errorf("extension %q: sha256 must be 64 hex digits", e.Name)

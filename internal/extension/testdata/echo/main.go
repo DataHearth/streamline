@@ -149,6 +149,18 @@ func handle() int32 {
 				return sdk.Response{Status: 502, Body: []byte(err.Error())}
 			}
 			return sdk.Response{Status: 204}
+		case "/fetch":
+			q, _ := url.ParseQuery(r.Query)
+			res, err := sdk.Fetch(sdk.FetchRequest{
+				Method:  r.Method,
+				URL:     q.Get("url"),
+				Headers: map[string][]string{"X-Echo": {"1"}},
+				Body:    r.Body,
+			})
+			if err != nil {
+				return sdk.Response{Status: 502, Body: []byte(err.Error())}
+			}
+			return sdk.Response{Status: res.Status, Headers: res.Headers, Body: res.Body}
 		case "/fs/folders":
 			folders := r.Folders
 			if folders == nil {
