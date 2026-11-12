@@ -1698,6 +1698,7 @@ export type SystemInfo = {
 	server_port?: number;
 	read_only?: boolean;
 	trusted_proxies?: string[];
+	cors_origins?: string[];
 	trusted_networks?: string[];
 	trusted_role?: string;
 	seed_admin_email?: string;

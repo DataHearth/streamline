@@ -174,6 +174,7 @@ func New(cfg Config) *Server {
 	}
 	s.router.Use(middleware.Recoverer)
 	s.router.Use(middleware.RouteTagger)
+	s.router.Use(middleware.CORS())
 	if cfg.AuthMiddleware != nil {
 		s.router.Use(cfg.AuthMiddleware)
 	}

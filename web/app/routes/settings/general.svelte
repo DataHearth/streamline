@@ -173,6 +173,10 @@
 				(d.trusted_proxies ?? []).join(", ") || i18n.settings_trusts_nobody(),
 			)}
 			{@render kv(
+				i18n.settings_cors_origins(),
+				(d.cors_origins ?? []).join(", ") || i18n.settings_cors_origins_none(),
+			)}
+			{@render kv(
 				i18n.settings_trusted_networks(),
 				(d.trusted_networks ?? []).join(", ") || i18n.settings_trusts_nobody(),
 			)}

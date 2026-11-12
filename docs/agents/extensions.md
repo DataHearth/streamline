@@ -49,6 +49,8 @@ Two further subtrees are always the host's: `/api/v1/extensions/<name>/cards[/..
 
 **What a guest serves cannot script the web UI.** It answers on the app's own origin, so `dispatcher.serve` sets `Content-Security-Policy` (`guestCSP`: `sandbox; default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'`, so a page may play audio from its own origin and run no script) and `nosniff` on every answer, the streamed ones included, and drops the guest's own values for both.
 
+**A cross-origin page reaches an extension through core's allow-list.** `middleware.CORS` answers the preflight of an origin in `server.cors_origins` before auth runs, for every path, so a guest on a `session` mount or the `/api` subtree never sees one and needs no CORS code. A guest on a `self` mount does see the `OPTIONS` of an origin that is not listed, and its own `Access-Control-*` headers are passed through.
+
 Credentials never cross by accident. The `Cookie` header is never handed to a guest; `Authorization` and `X-Api-Key` are withheld on every path that is not a `self` mount (OPDS needs Basic). The guest's `Set-Cookie`, `Content-Length`, `Transfer-Encoding`, `Connection`, `Content-Security-Policy` and `X-Content-Type-Options` response headers are dropped (from `stream_ffmpeg`'s `headers` too), and a status outside 100-599 is a 500.
 
 ## Folders
