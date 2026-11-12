@@ -12,7 +12,7 @@ Missing something you need? [Open an issue](https://github.com/datahearth/stream
 | TV shows | ✅ Shipped |
 | Music | ✅ Shipped — library management with background hydration of tracks and credits, Wikipedia overviews and artist photos, monitor policies, adoption of existing files, searching and grabbing albums and discography packs with tag writing, RSS and scheduled searches, and requests |
 | Books | ✅ Shipped — a book-first library (books and series with volumes, editions per language and publisher, an ebook and an audiobook slot each), adoption of existing files, an OPDS catalog (an [extension](Extensions)), searching and grabbing per slot, RSS and scheduled searches, and requests |
-| Subsonic server for music apps | 🚧 In progress — it left core and comes back as an [extension](Extensions) in a repository of its own (`streamline-subsonic`), not yet released |
+| Subsonic server for music apps | 🚧 In progress — an [extension](Extensions) in a repository of its own (`streamline-subsonic`), not yet released |
 | OPDS catalogue for e-reader apps | ✅ Shipped, as an [extension](Extensions) |
 | Extensions: WebAssembly modules that add routes, read a granted slice of the library and keep their own database | ✅ Shipped — managed at Settings → Extensions, with their sign-in cards on the account page and their per-user settings on a user's page; see [Writing an extension](Writing-an-extension) |
 | Send to e-reader by email (EPUB and PDF) | ✅ Shipped |
