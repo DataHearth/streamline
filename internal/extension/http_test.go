@@ -163,17 +163,22 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 			To(Equal(http.StatusTeapot))
 	})
 
-	It("reports a self-authenticated mount only while it is live", func() {
-		Expect(mgr.SelfAuthenticated("/echo/x")).To(BeTrue())
-		Expect(mgr.SelfAuthenticated("/echo")).To(BeTrue())
-		Expect(mgr.SelfAuthenticated("/other/x")).To(BeFalse())
-		Expect(mgr.SelfAuthenticated("/api/v1/extensions/echo/api/x")).To(BeFalse())
+	It(
+		"lets a self-authenticated mount, and a stopped one, past the session check",
+		func() {
+			Expect(mgr.SelfAuthenticated("/echo/x")).To(BeTrue())
+			Expect(mgr.SelfAuthenticated("/echo")).To(BeTrue())
+			Expect(mgr.SelfAuthenticated("/other/x")).To(BeFalse())
+			Expect(
+				mgr.SelfAuthenticated("/api/v1/extensions/echo/api/x"),
+			).To(BeFalse())
 
-		entry.Enabled = false
-		cfg.Extensions = []config.ExtensionEntry{entry}
-		Expect(mgr.Reconcile(ctx)).To(Succeed())
-		Expect(mgr.SelfAuthenticated("/echo/x")).To(BeFalse())
-	})
+			entry.Enabled = false
+			cfg.Extensions = []config.ExtensionEntry{entry}
+			Expect(mgr.Reconcile(ctx)).To(Succeed())
+			Expect(mgr.SelfAuthenticated("/echo/x")).To(BeTrue())
+		},
+	)
 
 	It("answers 404 on the mount of an extension that is not running", func() {
 		entry.Enabled = false

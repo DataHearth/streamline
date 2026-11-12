@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"path/filepath"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -147,6 +148,31 @@ var _ = Describe("Extension view catalogue", Label("integration", "db"), func() 
 			v, _ := ExtensionViewByName(n)
 			Expect(v.Bundle).To(Equal("books"), n)
 		}
+	})
+
+	It("marks a user locked only until the lock expires", func() {
+		v, _ := ExtensionViewByName("users")
+		_, err := conn.ExecContext(
+			ctx,
+			"CREATE TEMP VIEW streamline_users AS "+v.SQL,
+		)
+		Expect(err).NotTo(HaveOccurred())
+		locked := func() int {
+			GinkgoHelper()
+			var n int
+			Expect(conn.QueryRowContext(ctx,
+				"SELECT locked FROM streamline_users").Scan(&n)).To(Succeed())
+			return n
+		}
+		Expect(locked()).To(Equal(0))
+
+		Expect(client.User.Update().
+			SetLockedUntil(time.Now().Add(time.Hour)).Exec(ctx)).To(Succeed())
+		Expect(locked()).To(Equal(1))
+
+		Expect(client.User.Update().
+			SetLockedUntil(time.Now().Add(-time.Hour)).Exec(ctx)).To(Succeed())
+		Expect(locked()).To(Equal(0))
 	})
 
 	It("lowercases the email in user_logins", func() {
