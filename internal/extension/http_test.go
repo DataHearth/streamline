@@ -269,6 +269,18 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 			Expect(rr.Body.String()).To(Equal("/cards/token"))
 		})
 
+		It("names the API key the caller came with", func() {
+			rr := do(http.MethodGet, "/api/v1/extensions/echo/api/ping",
+				func(r *http.Request) {
+					*r = *r.WithContext(auth.ContextWithClaims(r.Context(), &auth.Claims{
+						UserID: 4, Role: "member", APIKeyID: 9, APIKeyName: "Living-room TV",
+					}))
+				})
+			Expect(rr.Body.String()).To(MatchJSON(
+				`{"id":4,"role":"member","key_id":9,"key_name":"Living-room TV"}`,
+			))
+		})
+
 		It("keeps a settings card off the signed-in subtree", func() {
 			Expect(
 				do(

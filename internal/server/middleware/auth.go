@@ -163,6 +163,8 @@ func authenticateAPI(
 			Email:       u.Email,
 			DisplayName: u.DisplayName,
 			Role:        string(u.Role),
+			APIKeyID:    ak.ID,
+			APIKeyName:  ak.Name,
 		})
 		next.ServeHTTP(w, r.WithContext(ctx))
 		return
