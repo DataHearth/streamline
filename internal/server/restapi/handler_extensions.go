@@ -105,7 +105,7 @@ func (s *Server) CreateExtension(
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
 	}
-	if err := s.extensions.Reconcile(ctx); err != nil {
+	if err := s.reconcileExtensions(ctx); err != nil {
 		return CreateExtension500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
@@ -159,7 +159,7 @@ func (s *Server) UpdateExtension(
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
 	}
-	if err := s.extensions.Reconcile(ctx); err != nil {
+	if err := s.reconcileExtensions(ctx); err != nil {
 		return UpdateExtension500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
@@ -220,7 +220,7 @@ func (s *Server) ApproveExtension(
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
 	}
-	if err := s.extensions.Reconcile(ctx); err != nil {
+	if err := s.reconcileExtensions(ctx); err != nil {
 		return ApproveExtension500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
@@ -254,7 +254,7 @@ func (s *Server) DeleteExtension(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
-	if err := s.extensions.Reconcile(ctx); err != nil {
+	if err := s.reconcileExtensions(ctx); err != nil {
 		return DeleteExtension500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
@@ -394,4 +394,11 @@ func extensionToAPI(e config.ExtensionEntry, statuses []extension.Status) Extens
 		}
 	}
 	return out
+}
+
+// reconcileExtensions applies a config change that is already saved, so it
+// outlives the request: a client that hangs up while a module compiles would
+// otherwise leave the entry failed on a cancelled start.
+func (s *Server) reconcileExtensions(ctx context.Context) error {
+	return s.extensions.Reconcile(context.WithoutCancel(ctx))
 }
