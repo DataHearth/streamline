@@ -38,7 +38,7 @@ func handle() int32 {
 }
 ```
 
-A fresh instance of the module handles **every** request, so nothing in memory survives between two: keep state in your database, or files in your cache folder. Each instance gets random bytes from the operating system, so `crypto/rand` is safe for tokens.
+A fresh instance of the module handles **every** request, so nothing in memory survives between two: keep state in your database, or files in your cache folder. The request says where it came from: `Mount` is the prefix it arrived under (empty on your `/api` and `/cards` subtrees) and `Origin` the scheme and host the client used (`https://media.example`), worked out by Streamline behind its trusted proxies; build absolute links from it, never from `X-Forwarded-*`. Each instance gets random bytes from the operating system, so `crypto/rand` is safe for tokens.
 
 ## Manifest
 
@@ -199,16 +199,16 @@ Each granted view appears as `streamline_<name>`, read-only. Columns are stable 
 | `authors` | Read book authors | `id`, `name`, `sort_name` |
 | `book_contributions` | Read who made each book | `id`, `author_id`, `book_id`, `series_id`, `role`, `language`, `position` (one of `book_id` and `series_id` is set) |
 | `book_files` | Read which book files exist | `id`, `book_id`, `slot` (`ebook` or `audiobook`), `format`, `size`, `filename` (the base name, never a path), `added_at`, `updated_at`; files marked missing are left out |
-| `artists` | Read the music library | `id`, `mbid`, `name`, `sort_name`, `type`, `origin`, `since`, `genre`, `overview`, `added_at`, `updated_at` |
+| `artists` | Read the music library | `id`, `mbid`, `name`, `sort_name`, `type`, `origin`, `since`, `genre`, `overview`, `added_at`, `updated_at`, `overview_fr` |
 | `artist_members` | Read the music library | `id`, `artist_id`, `name`, `mbid`, `instruments`, `from_year`, `to_year`, `ordinal` |
 | `albums` | Read the music library | `id`, `mbid`, `artist_id` (the album's owner), `title`, `type`, `release_date`, `original_date`, `edition_date`, `genres`, `label`, `country`, `status`, `added_at`, `updated_at` |
 | `album_artists` | Read the music library | `album_id`, `artist_id`, `owner` (1 for the owner, 0 for every other artist the album is listed under) |
 | `tracks` | Read the music library | `id`, `mbid`, `album_id`, `title`, `disc`, `position`, `duration` (seconds), `bonus`, `artist_credit`, `added_at`, `updated_at` |
 | `music_credits` | Read the music library | `id`, `album_id`, `track_id`, `kind`, `role`, `name`, `mbid`, `instruments`, `guest`, `ordinal` |
-| `music_files` | Read the music library | `id`, `track_id`, `path` (absolute, on the server), `format`, `quality`, `size`, `duration` (seconds), `bitrate`, `sample_rate` and `bit_depth` (always NULL), `channels`, `missing` (1 when the file is gone from disk) |
+| `music_files` | Read the music library | `id`, `track_id`, `path` (absolute, on the server), `format`, `quality`, `size`, `duration` (seconds), `bitrate`, `sample_rate` and `bit_depth` (always NULL), `channels`, `missing` (1 when the file is gone from disk), `added_at` (when the file joined the library) |
 | `genres` | Read the music library | `name`, `album_count` |
 
-The API groups views in bundles for the admin (`music`, `books`); your manifest still lists each view by name. There is no view of password hashes, sessions, API keys or requests. Two views carry what others never do: `music_files.path`, so you can open and send the file, and `legacy_subsonic_users.password`, the one readable password, so a Subsonic extension can carry its accounts over.
+The API groups views in bundles for the admin (`music`, `books`); your manifest still lists each view by name. There is no view of password hashes, sessions, API keys or requests. One view carries what others never do: `music_files.path`, so you can open and send the file.
 
 ## Limits
 

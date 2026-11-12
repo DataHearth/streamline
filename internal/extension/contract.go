@@ -67,8 +67,13 @@ type Request struct {
 	Query   string              `json:"query"`
 	Headers map[string][]string `json:"headers"`
 	Body    []byte              `json:"body"`
-	Caller  *Caller             `json:"caller,omitempty"`
-	Folders []Folder            `json:"folders,omitempty"`
+	// Mount is the prefix the request arrived under, empty for the
+	// extension's own /api and /cards subtrees. Origin is the scheme and host
+	// the client used, as Streamline works it out behind its trusted proxies.
+	Mount   string   `json:"mount,omitempty"`
+	Origin  string   `json:"origin,omitempty"`
+	Caller  *Caller  `json:"caller,omitempty"`
+	Folders []Folder `json:"folders,omitempty"`
 	// TargetUser is the account a settings card is read or written for: an
 	// admin editing another user, so it can differ from Caller.
 	TargetUser uint32 `json:"target_user,omitempty"`

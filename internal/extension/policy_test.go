@@ -84,6 +84,17 @@ ORDER BY a.id`, nil)
 		Entry("table no view is built on", "SELECT count(*) FROM core.sessions"),
 	)
 
+	It("lets a guest index its own tables", func() {
+		for _, stmt := range []string{
+			"CREATE TABLE plays (user_id INTEGER, track_id INTEGER)",
+			"CREATE INDEX plays_user ON plays (user_id)",
+		} {
+			res, err := conn.Exec(ctx, stmt, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res.Error).To(BeEmpty(), stmt)
+		}
+	})
+
 	It("has no view that was not granted", func() {
 		res, err := conn.Query(ctx, "SELECT * FROM streamline_sessions", nil)
 		Expect(err).NotTo(HaveOccurred())

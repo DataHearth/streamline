@@ -77,6 +77,9 @@ func handle() int32 {
 			return sdk.Response{ServeFile: &sdk.ServeFile{FileID: 7, Filename: "a.epub", ContentType: "application/epub+zip"}}
 		case "/query":
 			return sdk.Response{Status: 200, Body: []byte(r.Query)}
+		case "/request":
+			b, _ := json.Marshal(map[string]string{"mount": r.Mount, "origin": r.Origin})
+			return sdk.Response{Status: 200, Body: b}
 		case "/headers", "/api/headers":
 			b, _ := json.Marshal(r.Headers)
 			return sdk.Response{Status: 200, Body: b}
