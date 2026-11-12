@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	pathpkg "path"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -53,7 +54,7 @@ var posterViews = map[string]string{"books": "books", "authors": "authors"}
 
 var droppedResponseHeaders = []string{
 	"Set-Cookie", "Content-Length", "Transfer-Encoding", "Connection",
-	"Content-Security-Policy", "X-Content-Type-Options",
+	"Content-Security-Policy", "X-Content-Type-Options", "Cache-Control",
 }
 
 // guestCSP keeps a document an extension serves from running script or
@@ -209,6 +210,7 @@ func (d *dispatcher) serve(
 
 	w.Header().Set("Content-Security-Policy", guestCSP)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cache-Control", "no-store, private")
 	outcome := d.handle(ctx, w, r, run, rel, authKind, span)
 	requests.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("extension", run.name),
@@ -248,6 +250,10 @@ func (d *dispatcher) handle(
 			run.name,
 			errors.New("the guest answered an invalid status code"),
 		)
+	}
+
+	if cc := guestCacheControl(resp.Headers); cc != "" && resp.StreamFFmpeg == nil {
+		w = &cacheWriter{ResponseWriter: w, value: cc}
 	}
 
 	switch {
@@ -630,3 +636,62 @@ func (w slowClientWriter) Write(p []byte) (int, error) {
 	}
 	return w.ResponseWriter.Write(p)
 }
+
+var cacheDirective = regexp.MustCompile(
+	`^(private|immutable|must-revalidate|no-cache|max-age=\d{1,9})$`,
+)
+
+// guestCacheControl returns the Cache-Control a guest asked for when it keeps
+// the answer in the client's own cache, and "" otherwise. A mount that checks
+// its own credentials takes them in the URL, so a shared cache holding the
+// answer would hold the credentials' worth with it.
+func guestCacheControl(headers map[string][]string) string {
+	var asked []string
+	for k, vs := range headers {
+		if strings.EqualFold(k, "Cache-Control") {
+			asked = vs
+		}
+	}
+	if len(asked) != 1 {
+		return ""
+	}
+	directives := strings.Split(strings.ToLower(asked[0]), ",")
+	for i, d := range directives {
+		directives[i] = strings.TrimSpace(d)
+		if !cacheDirective.MatchString(directives[i]) {
+			return ""
+		}
+	}
+	if !slices.Contains(directives, "private") {
+		return ""
+	}
+	return strings.Join(directives, ", ")
+}
+
+// cacheWriter applies a guest's Cache-Control to a successful answer only, so
+// a missing file or a failed read is never kept by the client.
+type cacheWriter struct {
+	http.ResponseWriter
+	value string
+	wrote bool
+}
+
+func (c *cacheWriter) WriteHeader(status int) {
+	if !c.wrote {
+		c.wrote = true
+		switch status {
+		case http.StatusOK, http.StatusPartialContent, http.StatusNotModified:
+			c.Header().Set("Cache-Control", c.value)
+		}
+	}
+	c.ResponseWriter.WriteHeader(status)
+}
+
+func (c *cacheWriter) Write(b []byte) (int, error) {
+	if !c.wrote {
+		c.WriteHeader(http.StatusOK)
+	}
+	return c.ResponseWriter.Write(b)
+}
+
+func (c *cacheWriter) Unwrap() http.ResponseWriter { return c.ResponseWriter }
