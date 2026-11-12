@@ -30,6 +30,8 @@ An admin can also add one from **Settings → Extensions** in the web UI, which 
 
 ## Approving permissions
 
+[![Approving an extension that asks for full access](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/extensions-approve-desktop.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/extensions-approve-desktop.png)
+
 A module declares, in its manifest, what it needs:
 
 - **mounts**: the URL prefixes it answers, and whether it checks credentials itself (`self`, as a reader app's Basic login) or uses Streamline's own sign-in.
