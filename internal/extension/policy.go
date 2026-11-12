@@ -60,7 +60,7 @@ func newPolicy(views []View) sqlite.AuthorizerFn {
 			}
 		case sqlite.AuthInsert, sqlite.AuthUpdate, sqlite.AuthDelete,
 			sqlite.AuthCreateTable, sqlite.AuthDropTable, sqlite.AuthAlterTable,
-			sqlite.AuthCreateIndex, sqlite.AuthDropIndex,
+			sqlite.AuthCreateIndex, sqlite.AuthDropIndex, sqlite.AuthReindex,
 			sqlite.AuthDropView, sqlite.AuthDropTrigger:
 			if db == "main" {
 				return sqlite.AuthorizerOK

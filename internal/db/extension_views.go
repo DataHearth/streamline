@@ -115,10 +115,11 @@ WHERE book_kind IS NOT NULL AND missing_since IS NULL`,
 		Description: musicDescription,
 		Columns: []string{
 			"id", "mbid", "name", "sort_name", "type", "origin", "since", "genre",
-			"overview", "added_at", "updated_at",
+			"overview", "added_at", "updated_at", "overview_fr",
 		},
 		SQL: `SELECT id, mbid, name, sort_name, type, origin, since, genre,
-	overview, create_time AS added_at, update_time AS updated_at
+	overview, create_time AS added_at, update_time AS updated_at,
+	COALESCE(overview_fr, '') AS overview_fr
 FROM core.artists`,
 		Tables: []string{"artists"},
 	},
@@ -194,12 +195,12 @@ FROM core.music_credits`,
 		Description: musicDescription,
 		Columns: []string{
 			"id", "track_id", "path", "format", "quality", "size", "duration",
-			"bitrate", "sample_rate", "bit_depth", "channels", "missing",
+			"bitrate", "sample_rate", "bit_depth", "channels", "missing", "added_at",
 		},
 		SQL: `SELECT id, track_media_files AS track_id, path, format, quality,
 	size, duration_seconds AS duration, bitrate,
 	NULL AS sample_rate, NULL AS bit_depth, audio_channels AS channels,
-	missing_since IS NOT NULL AS missing
+	missing_since IS NOT NULL AS missing, create_time AS added_at
 FROM core.media_files
 WHERE track_media_files IS NOT NULL`,
 		Tables: []string{"media_files"},

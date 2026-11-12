@@ -14,6 +14,7 @@ import (
 
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/utils/httputil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -393,6 +394,10 @@ func buildRequest(r *http.Request, rel, authKind string) (Request, error) {
 		Query:   r.URL.RawQuery,
 		Headers: headers,
 		Body:    body,
+		Origin:  httputil.RequestOrigin(r),
+	}
+	if !strings.HasPrefix(r.URL.Path, "/api/v1/extensions/") {
+		req.Mount, _ = splitMount(r.URL.Path)
 	}
 	if authKind == authSelf {
 		return req, nil

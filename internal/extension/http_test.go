@@ -199,6 +199,13 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 		Expect(do(http.MethodGet, "/movies").Code).To(Equal(http.StatusTeapot))
 	})
 
+	It("tells a guest its mount and the origin the request came to", func() {
+		rr := do(http.MethodGet, "http://media.example/echo/request")
+		Expect(rr.Body.String()).To(MatchJSON(
+			`{"mount": "/echo", "origin": "http://media.example"}`,
+		))
+	})
+
 	It("forces its own content policy on what a guest serves", func() {
 		rr := do(http.MethodGet, "/echo/x")
 		Expect(rr.Header().Get("Content-Security-Policy")).To(Equal(guestCSP))
