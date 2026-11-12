@@ -15310,7 +15310,7 @@ components:
           items:
             type: string
           description: >-
-            Library folders the extension may read (`music`, `artwork`) and its
+            Library folders the extension may read (`music`, `movies`, `series`, `artwork`) and its
             own `cache` folder. Absent means none.
 
     Extension:
@@ -15531,7 +15531,7 @@ components:
           description: What granting the view lets the extension do; empty for a view this build does not know.
         bundle:
           type: string
-          description: The group a view belongs to (`music`, `books`); absent for a view that stands alone.
+          description: The group a view belongs to (`music`, `books`, `video`); absent for a view that stands alone.
 
     ExtensionInspect:
       type: object

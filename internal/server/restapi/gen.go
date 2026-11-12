@@ -5966,7 +5966,7 @@ type ExtensionCreate struct {
 
 // ExtensionGrants defines model for ExtensionGrants.
 type ExtensionGrants struct {
-	// Folders Library folders the extension may read (`music`, `artwork`) and its own `cache` folder. Absent means none.
+	// Folders Library folders the extension may read (`music`, `movies`, `series`, `artwork`) and its own `cache` folder. Absent means none.
 	Folders  *[]string `json:"folders,omitempty"`
 	Mounts   []string  `json:"mounts"`
 	Services []string  `json:"services"`
@@ -6022,7 +6022,7 @@ type ExtensionUpdate struct {
 
 // ExtensionViewInfo defines model for ExtensionViewInfo.
 type ExtensionViewInfo struct {
-	// Bundle The group a view belongs to (`music`, `books`); absent for a view that stands alone.
+	// Bundle The group a view belongs to (`music`, `books`, `video`); absent for a view that stands alone.
 	Bundle *string `json:"bundle,omitempty"`
 
 	// Description What granting the view lets the extension do; empty for a view this build does not know.

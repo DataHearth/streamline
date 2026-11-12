@@ -62,6 +62,8 @@ var reservedPrefixes = []string{
 
 const (
 	folderMusic        = "music"
+	folderMovies       = "movies"
+	folderSeries       = "series"
 	folderArtwork      = "artwork"
 	folderCache        = "cache"
 	serviceFFmpeg      = "ffmpeg"
@@ -69,7 +71,9 @@ const (
 )
 
 var (
-	knownFolders  = []string{folderMusic, folderArtwork, folderCache}
+	knownFolders = []string{
+		folderMusic, folderMovies, folderSeries, folderArtwork, folderCache,
+	}
 	knownServices = []string{
 		serviceServeFile,
 		serviceServePoster,

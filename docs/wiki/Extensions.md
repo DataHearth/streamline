@@ -38,6 +38,7 @@ A module declares, in its manifest, what it needs:
 - **views**: read-only slices of your library, such as "Read the book library" or "See users' email addresses". Some come in groups: the music library and the book library. Each view lists its columns in [Writing an extension](Writing-an-extension#views).
 - **folders**: directories it can open.
   - `music`: your music library folder (`library.music_path`), read-only.
+  - `movies` and `series`: your movie and series library folders (`library.movie_path`, `library.series_path`), read-only.
   - `artwork`: Streamline's own copies of covers, posters and artist photos, read-only.
   - `cache`: a folder of its own, `<data_dir>/extensions/<name>/cache`, which it can write. Streamline deletes its oldest files once it holds more than 1 GiB (checked every hour by the `extension-cache-sweep` job).
 - **services**:
