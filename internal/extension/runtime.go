@@ -2,6 +2,7 @@ package extension
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -148,7 +149,12 @@ func (m *Module) call(
 	in []byte,
 	mounts wazero.FSConfig,
 ) ([]byte, error) {
-	mc := wazero.NewModuleConfig().WithSysWalltime().WithSysNanotime()
+	// wazero hands every instance the same fixed random stream unless told
+	// otherwise, so a token a guest draws would be the same for everyone.
+	mc := wazero.NewModuleConfig().
+		WithSysWalltime().
+		WithSysNanotime().
+		WithRandSource(rand.Reader)
 	if mounts != nil {
 		mc = mc.WithFSConfig(mounts)
 	}

@@ -60,6 +60,15 @@ var _ = Describe("Module", Label("unit"), func() {
 		Expect(string(resp.Body)).To(ContainSubstring(`"n"`))
 	})
 
+	It("gives each instance its own random bytes", func() {
+		first, err := handle(context.Background(), "/random")
+		Expect(err).NotTo(HaveOccurred())
+		second, err := handle(context.Background(), "/random")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(first.Body).To(HaveLen(32))
+		Expect(second.Body).NotTo(Equal(first.Body))
+	})
+
 	It("survives a trap", func() {
 		_, err := handle(context.Background(), "/trap")
 		Expect(err).To(MatchError(ErrGuestFailed))

@@ -38,7 +38,7 @@ func handle() int32 {
 }
 ```
 
-A fresh instance of the module handles **every** request, so nothing in memory survives between two: keep state in your database, or files in your cache folder.
+A fresh instance of the module handles **every** request, so nothing in memory survives between two: keep state in your database, or files in your cache folder. Each instance gets random bytes from the operating system, so `crypto/rand` is safe for tokens.
 
 ## Manifest
 

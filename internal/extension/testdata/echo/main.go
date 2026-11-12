@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"net/url"
 	"os"
@@ -65,6 +67,12 @@ func handle() int32 {
 			}
 			b, _ := json.Marshal(res)
 			return sdk.Response{Status: 200, Body: b}
+		case "/random":
+			b := make([]byte, 16)
+			if _, err := rand.Read(b); err != nil {
+				return sdk.Response{Status: 500, Body: []byte(err.Error())}
+			}
+			return sdk.Response{Status: 200, Body: []byte(hex.EncodeToString(b))}
 		case "/file":
 			return sdk.Response{ServeFile: &sdk.ServeFile{FileID: 7, Filename: "a.epub", ContentType: "application/epub+zip"}}
 		case "/query":
