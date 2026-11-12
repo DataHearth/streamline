@@ -11,6 +11,7 @@
 		extensionPath,
 		extensionYaml,
 		grantsOf,
+		hasFullAccess,
 		isEmpty,
 		type Extension,
 	} from "@lib/extensions";
@@ -55,6 +56,10 @@
 			: "",
 	);
 
+	// The block that names ffmpeg is first among the new permissions, so the
+	// button that grants it says so.
+	let fullAccess = $derived(hasFullAccess(diff.added));
+
 	const head = "flex items-center gap-2 text-[13px] font-semibold";
 </script>
 
@@ -68,8 +73,8 @@
 		: [
 				{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 				{
-					label: i18n.extensions_approve(),
-					variant: "primary",
+					label: fullAccess ? i18n.extensions_approve_full_access() : i18n.extensions_approve(),
+					variant: fullAccess ? "danger" : "primary",
 					dismiss: false,
 					pending: approve.isPending,
 					onClick: () => shown && approve.mutate(shown),

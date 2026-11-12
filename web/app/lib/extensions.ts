@@ -18,26 +18,33 @@ export type MountAuth = "self" | "session";
 export type ExtensionMount = { path: string; auth?: MountAuth };
 
 // One kind of library data the module can read, with the server's
-// admin-facing description ("See users' email addresses"). Version 1 has
-// the account views (users, user_logins) and the books and music bundles.
-export type ExtensionView = { name: string; description: string; bundle?: string };
+// admin-facing description ("See users' email addresses").
+// A view in a bundle (the music or the book library) is listed with its
+// siblings; `users` and `user_logins` stand alone.
+export type ExtensionBundle = "music" | "books";
+export type ExtensionView = { name: string; description: string; bundle?: ExtensionBundle };
 
+// A folder the module may use: Streamline's music library and its cached
+// artwork, read only, and a cache of its own it can write.
+export type ExtensionFolder = "music" | "artwork" | "cache";
+
+// `ffmpeg` is full trust, so it is never listed as a service: see hasFullAccess.
 export type ExtensionService = "serve_file" | "serve_poster" | "ffmpeg" | "library_scan";
 
 // What a module asks for, or what an entry holds, in the words the admin reads.
 export type ExtensionPermissions = {
 	mounts: ExtensionMount[];
 	views: ExtensionView[];
+	folders: ExtensionFolder[];
 	services: ExtensionService[];
-	folders: string[];
 };
 
 // What an entry stores and the YAML carries: names only.
 export type ExtensionGrants = {
 	mounts: string[];
 	views: string[];
+	folders: ExtensionFolder[];
 	services: ExtensionService[];
-	folders: string[];
 };
 
 // An account card the module declares. `credential` is the only kind in
@@ -106,6 +113,24 @@ export type ExtensionAccountCard = {
 	enabled: boolean;
 };
 
+// GET /users/{uid}/extensions: one per running extension that declares a
+// settings card, for an admin editing that account. The extension names the
+// fields and their words; core draws them and checks the values.
+export type ExtensionSettingsField =
+	| { id: string; kind: "switch"; label: string }
+	| { id: string; kind: "number"; label: string; min: number; max: number };
+export type ExtensionUserCard = {
+	extension: string;
+	card: string;
+	title: string;
+	fields: ExtensionSettingsField[];
+	values: Record<string, boolean | number>;
+};
+export const userExtensionsPath = (uid: number) => `/users/${uid}/extensions`;
+export const userExtensionsKey = (uid: number) => ["user", uid, "extensions"];
+export const userExtensionCardPath = (uid: number, name: string, card: string) =>
+	`/users/${uid}/extensions/${encodeURIComponent(name)}/cards/${encodeURIComponent(card)}`;
+
 export const EXTENSIONS_PATH = "/extensions";
 export const EXTENSIONS_KEY = ["extensions"];
 export const extensionPath = (name: string) => `/extensions/${encodeURIComponent(name)}`;
@@ -131,27 +156,41 @@ export const AUTH_LABEL: Record<MountAuth, () => string> = {
 	session: i18n.extensions_auth_session,
 };
 
-export const SERVICE_META: Record<ExtensionService, { label: () => string; help: () => string }> = {
+export const SERVICE_META: Record<Exclude<ExtensionService, "ffmpeg">, { label: () => string; help: () => string }> = {
 	serve_file: { label: i18n.extensions_service_serve_file, help: i18n.extensions_service_serve_file_help },
 	serve_poster: { label: i18n.extensions_service_serve_poster, help: i18n.extensions_service_serve_poster_help },
-	ffmpeg: { label: i18n.extensions_service_ffmpeg, help: i18n.extensions_service_ffmpeg_help },
 	library_scan: { label: i18n.extensions_service_library_scan, help: i18n.extensions_service_library_scan_help },
 };
 
-export const NO_PERMISSIONS: ExtensionPermissions = { mounts: [], views: [], services: [], folders: [] };
+export const FOLDER_META: Record<ExtensionFolder, { label: () => string; access: () => string; help?: () => string }> = {
+	music: { label: i18n.extensions_folder_music, access: i18n.extensions_folder_read_only },
+	artwork: { label: i18n.extensions_folder_artwork, access: i18n.extensions_folder_read_only, help: i18n.extensions_folder_artwork_help },
+	cache: { label: i18n.extensions_folder_cache, access: i18n.extensions_folder_cache_access },
+};
+
+export const BUNDLE_LABEL: Record<ExtensionBundle, () => string> = {
+	music: i18n.extensions_bundle_music,
+	books: i18n.extensions_bundle_books,
+};
+
+// ffmpeg runs uncaged with the module's own arguments, so holding it means
+// holding everything Streamline can reach.
+export const hasFullAccess = (p: { services: ExtensionService[] }) => p.services.includes("ffmpeg");
+
+export const NO_PERMISSIONS: ExtensionPermissions = { mounts: [], views: [], folders: [], services: [] };
 
 // What the list shows as the extension's permissions: what the module asks
 // for, or, when it could not be read, what the entry still holds.
 export const shownPermissions = (x: Extension) => x.requested ?? x.granted;
 
 export const isEmpty = (p: ExtensionPermissions) =>
-	p.mounts.length === 0 && p.views.length === 0 && p.services.length === 0 && p.folders.length === 0;
+	p.mounts.length === 0 && p.views.length === 0 && p.folders.length === 0 && p.services.length === 0;
 
 export const grantsOf = (p: ExtensionPermissions): ExtensionGrants => ({
 	mounts: p.mounts.map((m) => m.path),
 	views: p.views.map((v) => v.name),
-	services: [...p.services],
 	folders: [...p.folders],
+	services: [...p.services],
 });
 
 // The approval's three parts: what the module asks for that the entry does
@@ -164,34 +203,37 @@ export function diffPermissions(requested: ExtensionPermissions, granted: Extens
 		added: {
 			mounts: requested.mounts.filter((m) => !has.mounts.includes(m.path)),
 			views: requested.views.filter((v) => !has.views.includes(v.name)),
-			services: requested.services.filter((s) => !has.services.includes(s)),
 			folders: requested.folders.filter((f) => !has.folders.includes(f)),
+			services: requested.services.filter((s) => !has.services.includes(s)),
 		},
 		kept: {
 			mounts: requested.mounts.filter((m) => has.mounts.includes(m.path)),
 			views: requested.views.filter((v) => has.views.includes(v.name)),
-			services: requested.services.filter((s) => has.services.includes(s)),
 			folders: requested.folders.filter((f) => has.folders.includes(f)),
+			services: requested.services.filter((s) => has.services.includes(s)),
 		},
 		dropped: {
 			mounts: granted.mounts.filter((m) => !asks.mounts.includes(m.path)),
 			views: granted.views.filter((v) => !asks.views.includes(v.name)),
-			services: granted.services.filter((s) => !asks.services.includes(s)),
 			folders: granted.folders.filter((f) => !asks.folders.includes(f)),
+			services: granted.services.filter((s) => !asks.services.includes(s)),
 		},
 	} satisfies Record<string, ExtensionPermissions>;
 }
 
-// "1 address · 8 kinds of library data · 2 services", each part only when
-// there is some.
+// "1 address · 8 kinds of library data · 3 folders · 2 services", each part
+// only when there is some. An ffmpeg grant is not counted among the services:
+// the list leads with "Full access" in its own colour, ahead of this line.
 export function permissionSummary(p: ExtensionPermissions): string {
 	const parts: string[] = [];
 	const n = (count: number, one: (a: { count: number }) => string, other: (a: { count: number }) => string) =>
 		(count === 1 ? one : other)({ count });
 	if (p.mounts.length) parts.push(n(p.mounts.length, i18n.extensions_n_addresses_one, i18n.extensions_n_addresses_other));
 	if (p.views.length) parts.push(n(p.views.length, i18n.extensions_n_views_one, i18n.extensions_n_views_other));
-	if (p.services.length) parts.push(n(p.services.length, i18n.extensions_n_services_one, i18n.extensions_n_services_other));
-	return parts.length ? parts.join(" · ") : i18n.extensions_permissions_none();
+	if (p.folders.length) parts.push(n(p.folders.length, i18n.extensions_n_folders_one, i18n.extensions_n_folders_other));
+	const services = p.services.filter((s) => s !== "ffmpeg").length;
+	if (services) parts.push(n(services, i18n.extensions_n_services_one, i18n.extensions_n_services_other));
+	return parts.length ? parts.join(" · ") : hasFullAccess(p) ? "" : i18n.extensions_permissions_none();
 }
 
 // Client-side checks, so an obviously wrong source is caught before a round
@@ -230,8 +272,8 @@ export function extensionYaml(entry: { name: string; source: string; sha256?: st
 		"    grants:",
 		`      mounts: ${list(entry.grants.mounts)}`,
 		`      views: ${list(entry.grants.views)}`,
-		`      services: ${list(entry.grants.services)}`,
 		`      folders: ${list(entry.grants.folders)}`,
+		`      services: ${list(entry.grants.services)}`,
 	];
 	return lines.join("\n");
 }
