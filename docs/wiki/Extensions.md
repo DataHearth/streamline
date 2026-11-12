@@ -71,7 +71,7 @@ A module can never use a mount that Streamline itself owns (`/api`, `/books`, `/
 
 Changes made through the web UI or the API apply at once. A file edit is read at the next start.
 
-An extension that is not running answers `404` on its mounts.
+An extension that is not running answers `404` on its mounts, to an app with no Streamline session too.
 
 ## What an extension serves
 

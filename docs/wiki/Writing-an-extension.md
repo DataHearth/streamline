@@ -192,7 +192,7 @@ Each granted view appears as `streamline_<name>`, read-only. Columns are stable 
 
 | View | Grant text | Columns |
 | --- | --- | --- |
-| `users` | See user names and roles | `id`, `display_name`, `role` |
+| `users` | See user names and roles | `id`, `display_name`, `role`, `locked` (1 while the account is locked after failed sign-ins; refuse its credentials) |
 | `user_logins` | See users' email addresses | `user_id`, `email` (lower-cased) |
 | `books` | Read the book library | `id`, `title`, `original_title`, `sort_title`, `author_name`, `kind`, `genre`, `release_year`, `release_date`, `overview`, `preferred_language`, `series_id`, `series_position`, `added_at`, `updated_at` |
 | `book_series` | Read the book series | `id`, `title`, `original_title`, `sort_title`, `author_name`, `kind`, `overview`, `ongoing` |

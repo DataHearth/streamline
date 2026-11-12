@@ -14,9 +14,19 @@ var extensionViews = []ExtensionView{
 	{
 		Name:        "users",
 		Description: "See user names and roles",
-		Columns:     []string{"id", "display_name", "role"},
-		SQL:         `SELECT id, COALESCE(display_name, '') AS display_name, role FROM core.users`,
-		Tables:      []string{"users"},
+		Columns:     []string{"id", "display_name", "role", "locked"},
+		SQL: `SELECT id, COALESCE(display_name, '') AS display_name, role,
+	-- The driver stores a time as Go prints it ("2006-01-02 15:04:05.9 -0700 MST"),
+	-- which julianday cannot read; one it still cannot place counts as locked.
+	CASE WHEN locked_until IS NULL THEN 0 ELSE COALESCE(COALESCE(
+		julianday(locked_until),
+		julianday(substr(locked_until, 1, 19)
+			|| substr(substr(locked_until, 20), instr(substr(locked_until, 20), ' ') + 1, 3)
+			|| ':'
+			|| substr(substr(locked_until, 20), instr(substr(locked_until, 20), ' ') + 4, 2))
+	) > julianday('now'), 1) END AS locked
+FROM core.users`,
+		Tables: []string{"users"},
 	},
 	{
 		Name:        "user_logins",

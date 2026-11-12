@@ -147,12 +147,18 @@ func splitMount(path string) (prefix, tail string) {
 	return path[:i+1], path[i+1:]
 }
 
-// SelfAuthenticated reports whether path lies under a live mount that checks
-// its own credentials, so the auth middleware must let it through.
+// SelfAuthenticated reports whether the auth middleware must let path
+// through: it lies under a live mount that checks its own credentials, or
+// under a stopped one, which answers 404 to everyone. A client of a
+// self-authenticated mount never holds a session, and redirecting it to the
+// login page would read as the server being there.
 func (m *Manager) SelfAuthenticated(path string) bool {
 	prefix, _ := splitMount(path)
 	if prefix == "" {
 		return false
+	}
+	if (*m.stopped.Load())[prefix] {
+		return true
 	}
 	e, ok := (*m.table.Load())[prefix]
 	return ok && e.mount.Auth == authSelf
