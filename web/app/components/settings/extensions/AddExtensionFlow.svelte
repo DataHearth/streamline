@@ -10,6 +10,7 @@
 		EXTENSIONS_PATH,
 		extensionYaml,
 		grantsOf,
+		hasFullAccess,
 		shaProblem,
 		shortSha,
 		sourceProblem,
@@ -150,7 +151,10 @@
 			: i18n.extensions_inspect()
 		: add.isPending
 			? i18n.common_saving()
-			: i18n.extensions_grant_add()}
+			: found && hasFullAccess(found.requested)
+				? i18n.extensions_grant_add_full_access()
+				: i18n.extensions_grant_add()}
+	submitTone={step === "review" && found && hasFullAccess(found.requested) ? "danger" : "accent"}
 	submitDisabled={pending}
 	showSubmit={step === "source" || undefined}
 	{onClose}

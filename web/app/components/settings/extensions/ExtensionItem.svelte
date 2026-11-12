@@ -6,6 +6,7 @@
 		AUTH_LABEL,
 		STATE_PILL,
 		diffPermissions,
+		hasFullAccess,
 		permissionSummary,
 		shownPermissions,
 		type Extension,
@@ -163,7 +164,12 @@
 			class="flex min-h-11 w-full items-center gap-2 px-4 py-2 text-left transition hover:bg-surface md:px-5 lg:min-h-10"
 		>
 			<span class="shrink-0 text-xs font-medium text-fg-muted">{i18n.extensions_permissions()}</span>
-			<span class="min-w-0 flex-1 truncate text-xs text-fg-subtle">{permissionSummary(perms)}</span>
+			<span class="min-w-0 flex-1 truncate text-xs text-fg-subtle">
+				{#if hasFullAccess(perms)}
+					<span class="font-semibold text-status-failed">{i18n.extensions_full_access_title()}</span>{permissionSummary(perms) ? " · " : ""}
+				{/if}
+				{permissionSummary(perms)}
+			</span>
 			<ChevronDown size={14} class={cn("shrink-0 text-fg-faint transition-transform", open && "rotate-180")} aria-hidden="true" />
 		</button>
 		{#if open}

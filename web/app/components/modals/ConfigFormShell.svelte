@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import type { Snippet } from "svelte";
+	import { cn } from "@lib/cn";
 	import { fade } from "svelte/transition";
 	import { config } from "@lib/config.svelte";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
@@ -27,6 +28,7 @@
 		submitLabel: string;
 		submitDisabled?: boolean;
 		showSubmit?: boolean;
+		submitTone?: "accent" | "danger";
 		size?: "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
 		onClose: () => void;
 		children: Snippet;
@@ -46,6 +48,7 @@
 		submitLabel,
 		submitDisabled = false,
 		showSubmit: showSubmitProp,
+		submitTone = "accent",
 		size = "xl",
 		onClose,
 		children,
@@ -147,7 +150,10 @@
 						type="submit"
 						form={formId}
 						disabled={submitDisabled}
-						class="min-h-11 shrink-0 rounded-md px-2 py-2 text-sm font-semibold text-accent-text transition active:bg-bg-hover disabled:opacity-40"
+						class={cn(
+							"min-h-11 shrink-0 rounded-md px-2 py-2 text-sm font-semibold transition active:bg-bg-hover disabled:opacity-40",
+							submitTone === "danger" ? "text-status-failed" : "text-accent-text",
+						)}
 					>
 						{submitLabel}
 					</button>
@@ -175,6 +181,7 @@
 				{submitLabel}
 				{submitDisabled}
 				showSubmit={submitShown}
+				{submitTone}
 				onCancel={onClose}
 			>
 				{#snippet left()}
