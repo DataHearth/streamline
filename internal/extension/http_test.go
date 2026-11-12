@@ -206,6 +206,31 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 		))
 	})
 
+	DescribeTable(
+		"lets a guest cache privately and nothing wider",
+		func(query, want string) {
+			rr := do(http.MethodGet, "/echo/cache?"+query)
+			Expect(rr.Header().Values("Cache-Control")).To(Equal([]string{want}))
+		},
+		Entry(
+			"private with an age",
+			"cc=private,+max-age%3D86400",
+			"private, max-age=86400",
+		),
+		Entry("public", "cc=public,+max-age%3D86400", "no-store, private"),
+		Entry("no private", "cc=max-age%3D86400", "no-store, private"),
+		Entry(
+			"a shared-cache age",
+			"cc=private,+s-maxage%3D60",
+			"no-store, private",
+		),
+		Entry(
+			"an error answer",
+			"cc=private,+max-age%3D86400&status=404",
+			"no-store, private",
+		),
+	)
+
 	It("forces its own content policy on what a guest serves", func() {
 		rr := do(http.MethodGet, "/echo/x")
 		Expect(rr.Header().Get("Content-Security-Policy")).To(Equal(guestCSP))

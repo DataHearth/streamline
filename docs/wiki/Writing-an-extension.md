@@ -38,7 +38,7 @@ func handle() int32 {
 }
 ```
 
-A fresh instance of the module handles **every** request, so nothing in memory survives between two: keep state in your database, or files in your cache folder. The request says where it came from: `Mount` is the prefix it arrived under (empty on your `/api` and `/cards` subtrees) and `Origin` the scheme and host the client used (`https://media.example`), worked out by Streamline behind its trusted proxies; build absolute links from it, never from `X-Forwarded-*`. Each instance gets random bytes from the operating system, so `crypto/rand` is safe for tokens.
+A fresh instance of the module handles **every** request, so nothing in memory survives between two: keep state in your database, or files in your cache folder. The request says where it came from: `Mount` is the prefix it arrived under (empty on your `/api` and `/cards` subtrees) and `Origin` the scheme and host the client used (`https://media.example`), worked out by Streamline behind its trusted proxies; build absolute links from it, never from `X-Forwarded-*`. Nothing you serve is cached unless you ask: a `Cache-Control` header on your answer is honoured when it is `private` with any of `max-age=N`, `immutable`, `must-revalidate`, `no-cache` (on a body, `send_file`, `serve_file` or `serve_poster` answer that succeeds), and ignored otherwise, `public` included. Each instance gets random bytes from the operating system, so `crypto/rand` is safe for tokens.
 
 ## Manifest
 
