@@ -2,7 +2,7 @@ package db
 
 type ExtensionView struct {
 	Name, Description string
-	// Bundle groups views a guest is granted together: music, books, or
+	// Bundle groups views a guest is granted together: music, books, video, or
 	// empty for a view that stands alone.
 	Bundle  string
 	Columns []string
@@ -216,9 +216,85 @@ WHERE a.genres IS NOT NULL
 GROUP BY g.value`,
 		Tables: []string{"albums"},
 	},
+	{
+		Name:        "movies",
+		Bundle:      "video",
+		Description: videoDescription,
+		Columns: []string{
+			"id", "tmdb_id", "imdb_id", "title", "original_title", "year",
+			"overview", "runtime", "release_date", "rating", "genres", "added_at",
+			"updated_at",
+		},
+		SQL: `SELECT id, tmdb_id, imdb_id, title, original_title, year, overview,
+	runtime, release_date, rating, genres,
+	create_time AS added_at, update_time AS updated_at
+FROM core.movies`,
+		Tables: []string{"movies"},
+	},
+	{
+		Name:        "series",
+		Bundle:      "video",
+		Description: videoDescription,
+		Columns: []string{
+			"id", "tvdb_id", "imdb_id", "title", "original_title", "year",
+			"first_aired", "overview", "status", "type", "network", "runtime",
+			"rating", "genres", "added_at", "updated_at",
+		},
+		SQL: `SELECT id, tvdb_id, imdb_id, title, original_title, year, first_aired,
+	overview, series_status AS status, type, network, runtime, rating, genres,
+	create_time AS added_at, update_time AS updated_at
+FROM core.tv_shows`,
+		Tables: []string{"tv_shows"},
+	},
+	{
+		Name:        "seasons",
+		Bundle:      "video",
+		Description: videoDescription,
+		Columns:     []string{"id", "series_id", "number", "name"},
+		SQL: `SELECT id, tv_show_seasons AS series_id, number, name
+FROM core.seasons`,
+		Tables: []string{"seasons"},
+	},
+	{
+		Name:        "episodes",
+		Bundle:      "video",
+		Description: videoDescription,
+		Columns: []string{
+			"id", "season_id", "number", "absolute_number", "title", "overview",
+			"air_date", "added_at", "updated_at",
+		},
+		SQL: `SELECT id, season_episodes AS season_id, number, absolute_number,
+	title, overview, air_date,
+	create_time AS added_at, update_time AS updated_at
+FROM core.episodes`,
+		Tables: []string{"episodes"},
+	},
+	{
+		Name:        "video_files",
+		Bundle:      "video",
+		Description: videoDescription,
+		Columns: []string{
+			"id", "movie_id", "episode_id", "path", "container", "quality", "size",
+			"duration", "video_codec", "width", "height", "dynamic_range",
+			"audio_codec", "channels", "bitrate", "audio_langs", "sub_langs",
+			"missing", "added_at", "updated_at",
+		},
+		SQL: `SELECT id, movie_media_files AS movie_id,
+	episode_media_files AS episode_id, path, container, quality, size,
+	duration_seconds AS duration, video_codec, width, height, dynamic_range,
+	audio_codec, audio_channels AS channels, bitrate, audio_langs, sub_langs,
+	missing_since IS NOT NULL AS missing,
+	create_time AS added_at, update_time AS updated_at
+FROM core.media_files
+WHERE movie_media_files IS NOT NULL OR episode_media_files IS NOT NULL`,
+		Tables: []string{"media_files"},
+	},
 }
 
-const musicDescription = "Read the music library"
+const (
+	musicDescription = "Read the music library"
+	videoDescription = "Read the movie and series library"
+)
 
 func ExtensionViews() []ExtensionView {
 	out := make([]ExtensionView, len(extensionViews))

@@ -49,7 +49,7 @@ A fresh instance of the module handles **every** request, so nothing in memory s
 | `streamline_api` | Must be `1`. A module for another version is refused |
 | `mounts[]` | `{prefix, auth}`. `prefix` is one path segment (`/opds`); `auth` is `session` (Streamline signs the user in first and tells you who) or `self` (you check credentials, e.g. HTTP Basic). A prefix that is one of Streamline's own routes is refused; `/rest` and `/share` are free |
 | `views[]` | Names from [the table below](#views) |
-| `folders[]` | `music`, `artwork`, `cache`, see [Folders](#folders) |
+| `folders[]` | `music`, `movies`, `series`, `artwork`, `cache`, see [Folders](#folders) |
 | `services[]` | `serve_file`, `serve_poster`, `ffmpeg`, `library_scan` |
 | `account_cards[]` | `{id, kind, title, mount, username, fields}`. `kind: credential` is a credential the account page manages (`mount`, `username`); `kind: settings` is a set of per-user controls an admin edits (`fields`, see [Settings cards](#settings-cards)). Your module answers both at `/api/v1/extensions/<name>/cards/<id>` |
 
@@ -97,6 +97,8 @@ Each granted folder is mounted into your module for the length of one call:
 | Folder | What it is | Mounted at | Access |
 | --- | --- | --- | --- |
 | `music` | The music library, `library.music_path` | `/folders/music` | read-only |
+| `movies` | The movie library, `library.movie_path` | `/folders/movies` | read-only |
+| `series` | The series library, `library.series_path` | `/folders/series` | read-only |
 | `artwork` | Streamline's poster cache, laid out `<kind>/<id>/poster.jpg` | `/folders/artwork` | read-only |
 | `cache` | Your own folder, `<data_dir>/extensions/<name>/cache` | `/folders/cache` | read and write |
 
@@ -207,8 +209,13 @@ Each granted view appears as `streamline_<name>`, read-only. Columns are stable 
 | `music_credits` | Read the music library | `id`, `album_id`, `track_id`, `kind`, `role`, `name`, `mbid`, `instruments`, `guest`, `ordinal` |
 | `music_files` | Read the music library | `id`, `track_id`, `path` (absolute, on the server), `format`, `quality`, `size`, `duration` (seconds), `bitrate`, `sample_rate` and `bit_depth` (always NULL), `channels`, `missing` (1 when the file is gone from disk), `added_at` (when the file joined the library) |
 | `genres` | Read the music library | `name`, `album_count` |
+| `movies` | Read the movie and series library | `id`, `tmdb_id`, `imdb_id`, `title`, `original_title`, `year`, `overview`, `runtime` (minutes), `release_date`, `rating`, `genres` (a JSON list), `added_at`, `updated_at` |
+| `series` | Read the movie and series library | `id`, `tvdb_id`, `imdb_id`, `title`, `original_title`, `year`, `first_aired`, `overview`, `status`, `type`, `network`, `runtime` (minutes), `rating`, `genres` (a JSON list), `added_at`, `updated_at` |
+| `seasons` | Read the movie and series library | `id`, `series_id`, `number` (0 is the specials), `name` |
+| `episodes` | Read the movie and series library | `id`, `season_id`, `number`, `absolute_number`, `title`, `overview`, `air_date`, `added_at`, `updated_at` |
+| `video_files` | Read the movie and series library | `id`, `movie_id`, `episode_id` (one of the two is set), `path` (absolute, on the server), `container`, `quality`, `size`, `duration` (seconds), `video_codec`, `width`, `height`, `dynamic_range`, `audio_codec`, `channels`, `bitrate`, `audio_langs`, `sub_langs`, `missing` (1 when the file is gone from disk), `added_at`, `updated_at`; the probe columns are NULL until the file was probed |
 
-The API groups views in bundles for the admin (`music`, `books`); your manifest still lists each view by name. There is no view of password hashes, sessions, API keys or requests. One view carries what others never do: `music_files.path`, so you can open and send the file.
+The API groups views in bundles for the admin (`music`, `books`, `video`); your manifest still lists each view by name. There is no view of password hashes, sessions, API keys or requests. Two views carry what others never do: `music_files.path` and `video_files.path`, so you can open and send the file.
 
 ## Limits
 

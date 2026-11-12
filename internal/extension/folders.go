@@ -57,15 +57,22 @@ func (m *Manager) folders(ctx context.Context, run *Running) []Folder {
 
 func (m *Manager) folderHost(extension, folder string) string {
 	switch folder {
-	case folderMusic:
-		if cfg := config.Get(); cfg != nil {
-			return cfg.Library.MusicPath
-		}
-		return ""
 	case folderArtwork:
 		return filepath.Join(m.dataDir, "posters")
-	default:
+	case folderCache:
 		return m.cacheDir(extension)
+	}
+	cfg := config.Get()
+	if cfg == nil {
+		return ""
+	}
+	switch folder {
+	case folderMusic:
+		return cfg.Library.MusicPath
+	case folderMovies:
+		return cfg.Library.MoviePath
+	default:
+		return cfg.Library.SeriesPath
 	}
 }
 

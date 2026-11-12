@@ -19,14 +19,14 @@ export type ExtensionMount = { path: string; auth?: MountAuth };
 
 // One kind of library data the module can read, with the server's
 // admin-facing description ("See users' email addresses").
-// A view in a bundle (the music or the book library) is listed with its
+// A view in a bundle (the music, book or video library) is listed with its
 // siblings; `users` and `user_logins` stand alone.
-export type ExtensionBundle = "music" | "books";
+export type ExtensionBundle = "music" | "books" | "video";
 export type ExtensionView = { name: string; description: string; bundle?: ExtensionBundle };
 
-// A folder the module may use: Streamline's music library and its cached
+// A folder the module may use: Streamline's library folders and its cached
 // artwork, read only, and a cache of its own it can write.
-export type ExtensionFolder = "music" | "artwork" | "cache";
+export type ExtensionFolder = "music" | "movies" | "series" | "artwork" | "cache";
 
 // `ffmpeg` is full trust, so it is never listed as a service: see hasFullAccess.
 export type ExtensionService = "serve_file" | "serve_poster" | "ffmpeg" | "library_scan";
@@ -164,6 +164,8 @@ export const SERVICE_META: Record<Exclude<ExtensionService, "ffmpeg">, { label: 
 
 export const FOLDER_META: Record<ExtensionFolder, { label: () => string; access: () => string; help?: () => string }> = {
 	music: { label: i18n.extensions_folder_music, access: i18n.extensions_folder_read_only },
+	movies: { label: i18n.extensions_folder_movies, access: i18n.extensions_folder_read_only },
+	series: { label: i18n.extensions_folder_series, access: i18n.extensions_folder_read_only },
 	artwork: { label: i18n.extensions_folder_artwork, access: i18n.extensions_folder_read_only, help: i18n.extensions_folder_artwork_help },
 	cache: { label: i18n.extensions_folder_cache, access: i18n.extensions_folder_cache_access },
 };
@@ -171,6 +173,7 @@ export const FOLDER_META: Record<ExtensionFolder, { label: () => string; access:
 export const BUNDLE_LABEL: Record<ExtensionBundle, () => string> = {
 	music: i18n.extensions_bundle_music,
 	books: i18n.extensions_bundle_books,
+	video: i18n.extensions_bundle_video,
 };
 
 // ffmpeg runs uncaged with the module's own arguments, so holding it means

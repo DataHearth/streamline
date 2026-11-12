@@ -75,6 +75,7 @@ var _ = Describe("Extension view catalogue", Label("integration", "db"), func() 
 		allowed := map[string]string{
 			"user_logins|email": "",
 			"music_files|path":  "",
+			"video_files|path":  "",
 		}
 		for _, v := range ExtensionViews() {
 			_, err := conn.ExecContext(ctx,
@@ -147,6 +148,10 @@ var _ = Describe("Extension view catalogue", Label("integration", "db"), func() 
 		for _, n := range []string{"books", "book_series", "authors", "book_contributions", "book_files"} {
 			v, _ := ExtensionViewByName(n)
 			Expect(v.Bundle).To(Equal("books"), n)
+		}
+		for _, n := range []string{"movies", "series", "seasons", "episodes", "video_files"} {
+			v, _ := ExtensionViewByName(n)
+			Expect(v.Bundle).To(Equal("video"), n)
 		}
 	})
 
