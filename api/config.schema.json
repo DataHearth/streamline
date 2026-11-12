@@ -55,6 +55,11 @@
           "description": "Hex SHA-256 the fetched module must match. Required for an https source."
         },
         "enabled": { "type": "boolean" },
+        "hosts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "host:port pairs, lower case, the extension may call through the http service (engine.lan:8097). Written in this file only; the API never changes it. Empty allows none. A redirect is handed back to the extension, never followed."
+        },
         "grants": {
           "type": "object",
           "additionalProperties": false,

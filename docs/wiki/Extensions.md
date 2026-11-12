@@ -45,6 +45,7 @@ A module declares, in its manifest, what it needs:
   - `serve_file`: send a book file to a client, for downloads.
   - `serve_poster`: send a book or author picture to a client.
   - `library_scan`: see whether the library scan (the `drift-check` job) is running, when it last finished and how many tracks have a file, and start one.
+  - `http`: call other servers, but only the ones you list yourself under the entry's `hosts` in the config file (see below). With no host listed it can call nothing.
   - `ffmpeg`: run Streamline's ffmpeg and ffprobe with whatever options the extension chooses. Read the warning below before granting it.
 
 > **Warning: `ffmpeg` is full trust.** The web UI lists it as **Run ffmpeg freely**: "This extension can read and write any file Streamline can, and use the network." That is meant literally. Streamline runs ffmpeg with the extension's own options and nothing confines it, so an extension holding this permission can read any file Streamline's account can read (your library, the config file and its secrets, the database), overwrite or create files anywhere Streamline can write, and reach any address on your network or the internet. Grant it only to an extension you trust as much as Streamline itself. ffmpeg must be enabled on Settings → Media probe for it to run at all.
@@ -59,6 +60,14 @@ A new entry has no grants, so it sits in **needs approval** and does not run. Ap
 ```
 
 For a module that asks for folders, `grants` carries a `folders` list beside the others (`folders: [music, artwork, cache]`).
+
+A module holding the `http` service reaches only the servers named in `hosts`, which sits beside `grants` on the entry, each as `host:port` in lower case:
+
+```yaml
+    hosts: [engine.lan:8097]
+```
+
+`hosts` is written in the config file only: neither the web UI nor the API changes it, and approving an update never touches it. The port is part of the match, and a redirect is handed back to the extension rather than followed, so a listed server cannot send the call somewhere else.
 
 A module can never use a mount that Streamline itself owns (`/api`, `/books`, `/music`, `/settings` and the other app pages), and two extensions cannot share a prefix. `/rest` and `/share` are not Streamline's: they are left for a Subsonic extension.
 

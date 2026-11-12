@@ -3116,6 +3116,8 @@
 	"extensions_service_serve_file_help": "for downloads",
 	"extensions_service_serve_poster": "Serve posters",
 	"extensions_service_serve_poster_help": "for covers",
+	"extensions_service_http": "Call other servers",
+	"extensions_service_http_help": "only the ones listed under hosts in the config file",
 	"extensions_service_library_scan": "Library scan",
 	"extensions_service_library_scan_help": "Start a scan and read its progress",
 	"extensions_serving": "Answers at",

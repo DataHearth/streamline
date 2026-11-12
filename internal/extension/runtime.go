@@ -192,6 +192,7 @@ func hostFunctions() []extism.HostFunction {
 		extism.NewHostFunctionWithStack("ffmpeg_run", ffmpegHost, i64, i64),
 		extism.NewHostFunctionWithStack("scan_status", scanStatusHost, i64, i64),
 		extism.NewHostFunctionWithStack("scan_start", scanStartHost, i64, i64),
+		extism.NewHostFunctionWithStack("http_request", fetchHost, i64, i64),
 	}
 }
 

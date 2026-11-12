@@ -323,3 +323,45 @@ func scan(fn func(uint64) uint64) (ScanInfo, error) {
 	}
 	return res.ScanInfo, nil
 }
+
+// FetchRequest is one HTTP request the host makes for the extension.
+type FetchRequest struct {
+	Method  string              `json:"method"`
+	URL     string              `json:"url"`
+	Headers map[string][]string `json:"headers"`
+	Body    []byte              `json:"body"`
+}
+
+type FetchResponse struct {
+	Status  int                 `json:"status"`
+	Headers map[string][]string `json:"headers"`
+	Body    []byte              `json:"body"`
+	Error   string              `json:"error,omitempty"`
+}
+
+// Fetch sends req through the host and returns the answer as it came back: a
+// redirect is not followed and a status of 400 or more is not an error. It
+// needs the http service, and the URL's host:port must be in the hosts list
+// the admin wrote for this extension. The answer is at most 16 MiB.
+func Fetch(req FetchRequest) (FetchResponse, error) {
+	in, err := json.Marshal(req)
+	if err != nil {
+		return FetchResponse{}, err
+	}
+	mem := pdk.AllocateBytes(in)
+	defer mem.Free()
+	off := hostHTTPRequest(mem.Offset())
+	if off == 0 {
+		return FetchResponse{}, fmt.Errorf("sdk: host call failed")
+	}
+	out := pdk.FindMemory(off)
+	defer out.Free()
+	var res FetchResponse
+	if err := json.Unmarshal(out.ReadBytes(), &res); err != nil {
+		return FetchResponse{}, err
+	}
+	if res.Error != "" {
+		return FetchResponse{}, errors.New(res.Error)
+	}
+	return res, nil
+}

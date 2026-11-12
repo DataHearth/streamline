@@ -29,7 +29,7 @@ export type ExtensionView = { name: string; description: string; bundle?: Extens
 export type ExtensionFolder = "music" | "movies" | "series" | "artwork" | "cache";
 
 // `ffmpeg` is full trust, so it is never listed as a service: see hasFullAccess.
-export type ExtensionService = "serve_file" | "serve_poster" | "ffmpeg" | "library_scan";
+export type ExtensionService = "serve_file" | "serve_poster" | "ffmpeg" | "library_scan" | "http";
 
 // What a module asks for, or what an entry holds, in the words the admin reads.
 export type ExtensionPermissions = {
@@ -160,6 +160,7 @@ export const SERVICE_META: Record<Exclude<ExtensionService, "ffmpeg">, { label: 
 	serve_file: { label: i18n.extensions_service_serve_file, help: i18n.extensions_service_serve_file_help },
 	serve_poster: { label: i18n.extensions_service_serve_poster, help: i18n.extensions_service_serve_poster_help },
 	library_scan: { label: i18n.extensions_service_library_scan, help: i18n.extensions_service_library_scan_help },
+	http: { label: i18n.extensions_service_http, help: i18n.extensions_service_http_help },
 };
 
 export const FOLDER_META: Record<ExtensionFolder, { label: () => string; access: () => string; help?: () => string }> = {

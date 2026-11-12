@@ -3116,6 +3116,8 @@
 	"extensions_service_serve_file_help": "pour les téléchargements",
 	"extensions_service_serve_poster": "Servir les affiches",
 	"extensions_service_serve_poster_help": "pour les couvertures",
+	"extensions_service_http": "Appeler d'autres serveurs",
+	"extensions_service_http_help": "uniquement ceux listés sous hosts dans le fichier de configuration",
 	"extensions_service_library_scan": "Analyse de la bibliothèque",
 	"extensions_service_library_scan_help": "lancer une analyse et lire sa progression",
 	"extensions_serving": "Répond sur",

@@ -159,6 +159,24 @@ type StreamFFmpeg struct {
 	Fallback    *SendFile           `json:"fallback,omitempty"`
 }
 
+// FetchCall is one HTTP request a guest asks the host to make, through the
+// http grant, to a host the entry's hosts list names.
+type FetchCall struct {
+	Method  string              `json:"method"`
+	URL     string              `json:"url"`
+	Headers map[string][]string `json:"headers"`
+	Body    []byte              `json:"body"`
+}
+
+// FetchResult is the answer as it came back, a redirect included. Error is
+// set, and the rest empty, when the host made no request or got no answer.
+type FetchResult struct {
+	Status  int                 `json:"status"`
+	Headers map[string][]string `json:"headers"`
+	Body    []byte              `json:"body"`
+	Error   string              `json:"error,omitempty"`
+}
+
 // Scanner is the host's library scan, reached through the library_scan
 // grant.
 type Scanner interface {
