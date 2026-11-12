@@ -10,7 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent/schema/mixins"
 )
 
-// Author is a person record: OPDS, naming, the shelf facet and photos. It is
+// Author is a person record: naming, the shelf facet and photos. It is
 // never monitored and never fetched on its own; it arrives inside book and
 // series calls.
 type Author struct {

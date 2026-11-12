@@ -2,7 +2,7 @@
 
 An extension is a small WebAssembly program that adds a feature to Streamline without being part of it. It can answer requests under a URL prefix of its own, read the parts of your library and the folders you allow, and keep its own database. Without the one exception below it cannot touch anything else: no file outside the folders you allowed, no password outside what its permissions name, no network. The exception is the **ffmpeg** permission, which is full trust, see [Approving permissions](#approving-permissions).
 
-The first one is **OPDS**, the e-book catalogue e-reader apps read. It used to be built in and is now an extension you add, published from [its own repository](https://github.com/Streamline-HQ/streamline-opds), see [Upgrading from a release with OPDS built in](#upgrading-from-a-release-with-opds-built-in).
+The first one is **OPDS**, the e-book catalogue e-reader apps read, published from [its own repository](https://github.com/Streamline-HQ/streamline-opds).
 
 ## Adding an extension
 
@@ -93,23 +93,13 @@ An extension answers on the same address as the web UI, so everything it serves 
 
 Each extension has its own database, `<data_dir>/extensions/<name>/data.db`, and, when it asks for one, its `cache` folder beside it. The database holds whatever the extension stores (OPDS keeps its reader tokens there). Removing an entry leaves the data alone, so re-adding it picks up where it left off; `DELETE /api/v1/extensions/{name}?purge=true` removes the directory too.
 
-An extension that copies data over from an earlier release, as OPDS copies its tokens, does it once and remembers that it did in its own database. Deleting it with `purge=true` forgets that, so adding it again copies everything over again from what Streamline still holds, including tokens and passwords that were changed or removed in the extension since.
-
 ## Backups
 
 The daily `database-backup` job snapshots every extension's database (never its cache folder) after Streamline's own, into `<data_dir>/backups/extensions/<name>`, keeping `backup.retention.scheduled` of them. A failing extension never fails the job; it logs a warning. Restoring one is a file copy: stop Streamline, copy the snapshot over `<data_dir>/extensions/<name>/data.db`, start it. See [Backups](GitOps-and-Kubernetes#backups).
 
-## Upgrading from a release with OPDS or Subsonic built in
+## Signing in to an extension
 
-Neither is part of the Streamline binary any more. `/opds` answers only once the `opds` extension is added and approved; Subsonic is becoming an extension too, a separate project that has not been released yet, and until it is, Subsonic music apps cannot connect.
-
-**Nothing an earlier release stored for them is kept.** The upgrade removes every account's OPDS token and Subsonic password from the database, and the stars, ratings, play counts, playlists, play queues, bookmarks, share links and radio stations of the built-in Subsonic server are not carried into the extension. An extension starts empty:
-
-1. Add the extension's entry (URL and checksum from its latest release) and approve it.
-2. Each user makes a new token or password under **Account → Players & readers** in the web UI, where a running extension shows its own card, or at `/api/v1/account/extensions/{name}/credential`: `GET` for its state, `POST` to generate or rotate (the secret is in that one response only), `DELETE` to disable.
-3. Enter the new secret in each reader or music app. Old share links stop working.
-
-Streamline takes a backup of the database before the upgrade changes it ([Backups](GitOps-and-Kubernetes#backups)); that copy is the only place the old data remains.
+An extension that serves reader or music apps gives each user a credential of its own. A running extension shows its card under **Account → Players & readers** in the web UI; the same is at `/api/v1/account/extensions/{name}/credential`: `GET` for its state, `POST` to generate or rotate (the secret is in that one response only), `DELETE` to disable.
 
 ## Writing your own
 
