@@ -114,6 +114,7 @@ func fillFileOnlySettings(out *SystemInfo, s sysinfo.Snapshot) {
 	out.TrustedRole = &role
 	out.SeedAdminSecret = &secret
 	out.TrustedProxies = &s.TrustedProxies
+	out.CorsOrigins = &s.CORSOrigins
 	out.TrustedNetworks = &s.TrustedNetworks
 	if s.SeedAdminEmail != "" {
 		v := s.SeedAdminEmail

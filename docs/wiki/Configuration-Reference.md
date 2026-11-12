@@ -157,7 +157,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | OIDC providers | ⚠️ CRUD works, but only loaded at startup — restart required | Settings → Single Sign-On |
 | Everything else | ❌ File only, restart required | — |
 
-Notably **not** runtime-editable: `data_dir`, server host/port, `server.trusted_proxies`, `auth.mode`, `auth.trusted_networks`, `auth.trusted_role`, `auth.seed_admin.*` and the session secrets.
+Notably **not** runtime-editable: `data_dir`, server host/port, `server.trusted_proxies`, `server.cors_origins`, `auth.mode`, `auth.trusted_networks`, `auth.trusted_role`, `auth.seed_admin.*` and the session secrets.
 
 > [!IMPORTANT]
 > The trust-boundary keys are deliberately file-only — the same reason the [OIDC](Authentication-and-SSO) provider API never exposes `allow_admin` or `email_linking`.
@@ -228,6 +228,7 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `server.host` | string | `0.0.0.0` | Bind address |
 | `server.port` | int | `8080` | 1–65535 |
 | `server.trusted_proxies` | []cidr | `[]` | CIDRs whose `X-Forwarded-*` headers are believed. Empty trusts none. List the proxies themselves, ideally a `/32` each — never a client subnet |
+| `server.cors_origins` | []origin | `[]` | Other origins whose pages may call the API and extensions from a browser, each as `scheme://host[:port]` in lower case with no path (`https://player.example.com`). Empty allows none. Cookies are never accepted from another origin, so such a page signs in with an API key. Under `auth.mode: trusted-network`, a listed origin's page reads the API as `trusted_role` from any browser on a trusted network |
 
 ### auth
 

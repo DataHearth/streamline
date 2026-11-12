@@ -105,6 +105,10 @@ type ServerConfig struct {
 	// without authenticating, on top of taking over another client's login
 	// rate-limit budget and access-log identity.
 	TrustedProxies []string `koanf:"trusted_proxies" validate:"dive,cidr"`
+	// CORSOrigins are the browser origins, other than the server's own, whose
+	// pages may read API and extension answers. Each is scheme://host[:port]
+	// exactly as the browser sends it in Origin.
+	CORSOrigins []string `koanf:"cors_origins"`
 }
 
 type AuthConfig struct {
@@ -780,6 +784,16 @@ func (c *Config) checkInvariants() error {
 			))
 		}
 	}
+	for _, o := range c.Server.CORSOrigins {
+		u, err := url.Parse(o)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") ||
+			u.Host == "" || o != u.Scheme+"://"+strings.ToLower(u.Host) {
+			errs = append(errs, fmt.Errorf(
+				"server.cors_origins %q: write scheme://host[:port] in lower case, with no path or trailing slash",
+				o,
+			))
+		}
+	}
 	// The other name-keyed lists get this from a `unique=Name` tag; auth.oidc
 	// is spelled out because a duplicate there is a privilege split rather than
 	// a config typo, and the operator needs the offending name. The provider a
@@ -1061,6 +1075,7 @@ func defaults() map[string]any {
 		"server.host":                           "0.0.0.0",
 		"server.port":                           8080,
 		"server.trusted_proxies":                []string{},
+		"server.cors_origins":                   []string{},
 		"data_dir":                              "./data",
 		"read_only":                             false,
 		"torrent_listen_port":                   0,

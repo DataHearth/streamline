@@ -17336,6 +17336,13 @@ components:
           description: >-
             CIDRs whose X-Forwarded-* headers are believed. Empty trusts
             nothing.
+        cors_origins:
+          type: array
+          items:
+            type: string
+          description: >-
+            Other origins whose pages may read API and extension answers.
+            Empty allows none.
         trusted_networks:
           type: array
           items:

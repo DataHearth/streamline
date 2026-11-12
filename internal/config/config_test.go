@@ -633,6 +633,31 @@ quality_profiles:
 			Expect(err).To(MatchError(ContainSubstring("'required' tag")))
 		})
 
+		DescribeTable(
+			"server.cors_origins",
+			func(origin string, ok bool) {
+				err := (&Config{
+					Server: ServerConfig{CORSOrigins: []string{origin}},
+				}).checkInvariants()
+				refused := ContainSubstring("server.cors_origins")
+				if ok {
+					refused = Not(refused)
+				}
+				Expect(err).To(MatchError(refused))
+			},
+			Entry("an https origin", "https://player.example.com", true),
+			Entry("an origin with a port", "http://localhost:1430", true),
+			Entry("a trailing slash", "https://player.example.com/", false),
+			Entry("a path", "https://player.example.com/app", false),
+			Entry("a wildcard", "*", false),
+			Entry("no scheme", "player.example.com", false),
+			Entry(
+				"upper case, which no browser sends",
+				"https://Player.example.com",
+				false,
+			),
+		)
+
 		Context("server.trusted_proxies", func() {
 			loadProxies := func(entry string) error {
 				GinkgoHelper()

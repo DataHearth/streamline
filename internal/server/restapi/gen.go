@@ -9518,12 +9518,15 @@ type SystemConfigView struct {
 
 // SystemInfo defines model for SystemInfo.
 type SystemInfo struct {
-	AuthMode  string     `json:"auth_mode"`
-	BuiltAt   *string    `json:"built_at,omitempty"`
-	Commit    *string    `json:"commit,omitempty"`
-	DataDir   string     `json:"data_dir"`
-	DataUsage *DiskUsage `json:"data_usage,omitempty"`
-	DbPath    string     `json:"db_path"`
+	AuthMode string  `json:"auth_mode"`
+	BuiltAt  *string `json:"built_at,omitempty"`
+	Commit   *string `json:"commit,omitempty"`
+
+	// CorsOrigins Other origins whose pages may read API and extension answers. Empty allows none.
+	CorsOrigins *[]string  `json:"cors_origins,omitempty"`
+	DataDir     string     `json:"data_dir"`
+	DataUsage   *DiskUsage `json:"data_usage,omitempty"`
+	DbPath      string     `json:"db_path"`
 
 	// DbSize Human-readable file size, empty when stat fails.
 	DbSize  *string    `json:"db_size,omitempty"`

@@ -76,6 +76,10 @@ For anything non-interactive, use an API key instead.
 
 ---
 
+### Calling the API from another website
+
+A browser blocks a page on one address from reading an API on another unless the API allows that address. List the page's origin under `server.cors_origins` in the config file (`https://player.example.com`, no path, restart required) and Streamline answers its preflight requests and lets it read the answers, extension paths included. The page must sign in with `Authorization: Bearer` or `X-API-Key`: the session cookie is never accepted from another origin. Apps that are not browsers need none of this.
+
 ## Conventions
 
 **Pagination.** Collection endpoints take `?page=` (default 1) and `?limit=` (default 20) and return an envelope:

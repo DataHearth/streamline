@@ -1877,6 +1877,8 @@
 	"settings_build_runtime": "Build et exécution",
 	"settings_changes_after_restart": "Les modifications s'appliquent après redémarrage.",
 	"settings_connections": "Connexions",
+	"settings_cors_origins": "Autres origines autorisées",
+	"settings_cors_origins_none": "aucune — ce site uniquement",
 	"settings_custom_formats": "Formats personnalisés",
 	"settings_download_clients": "Clients de téléchargement",
 	"settings_ffmpeg_missing": "ffmpeg manquant",
