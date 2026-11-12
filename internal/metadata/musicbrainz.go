@@ -528,7 +528,9 @@ func (m *MusicBrainz) GetArtist(
 	details := &ArtistDetails{
 		ArtistResult: artist.toResult(),
 		Origin:       joinAreas(artist.BeginArea, artist.Area),
+		ExternalIDs:  map[string]string{},
 	}
+	mbURLIDs(details.ExternalIDs, artist.Relations, mbArtistURLs)
 	if g := topGenres(artist.Genres); len(g) > 0 {
 		details.Genres = g
 	}
@@ -612,6 +614,73 @@ func (m *MusicBrainz) ArtistArt(
 	}
 	art.DeezerID = d.DeezerID
 	return art, nil
+}
+
+// ArtistLinks reads only an artist's url-rels, one call, for the backfill.
+func (m *MusicBrainz) ArtistLinks(
+	ctx context.Context,
+	mbid string,
+) (map[string]string, error) {
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.artist_links",
+		trace.WithAttributes(attribute.String("musicbrainz.mbid", mbid)))
+	defer span.End()
+
+	var artist mbArtist
+	if err := m.get(
+		ctx,
+		"/artist/"+url.PathEscape(mbid),
+		url.Values{"inc": {"url-rels"}},
+		&artist,
+	); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	out := map[string]string{}
+	mbURLIDs(out, artist.Relations, mbArtistURLs)
+	return out, nil
+}
+
+// AlbumLinks reads only url-rels: the release group's, then the release's
+// (none when release is ""), for the backfill.
+func (m *MusicBrainz) AlbumLinks(
+	ctx context.Context,
+	releaseGroup, release string,
+) (map[string]string, error) {
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.album_links",
+		trace.WithAttributes(attribute.String("musicbrainz.mbid", releaseGroup)))
+	defer span.End()
+
+	var rels struct {
+		Relations []mbRel `json:"relations"`
+	}
+	if err := m.get(
+		ctx,
+		"/release-group/"+url.PathEscape(releaseGroup),
+		url.Values{"inc": {"url-rels"}},
+		&rels,
+	); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	out := map[string]string{}
+	mbURLIDs(out, rels.Relations, mbReleaseGroupURLs)
+	if release == "" {
+		return out, nil
+	}
+	rels.Relations = nil
+	err := m.get(
+		ctx,
+		"/release/"+url.PathEscape(release),
+		url.Values{"inc": {"url-rels"}},
+		&rels,
+	)
+	switch {
+	case errors.Is(err, ErrNotFound):
+		// A merged-away release still leaves the group's links.
+		return out, nil
+	case err != nil:
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	mbURLIDs(out, rels.Relations, mbReleaseURLs)
+	return out, nil
 }
 
 // commonsImageURL turns a Wikimedia Commons file page into a 500 px
@@ -842,9 +911,10 @@ func releaseSortDate(date string) string {
 }
 
 const (
+	// url-rels rides both calls, so a light retry keeps the streaming links.
 	heavyReleaseInc = "recordings+artist-credits+labels+artist-rels+" +
-		"recording-level-rels+work-rels+work-level-rels+place-rels"
-	lightReleaseInc = "recordings+artist-credits+labels"
+		"recording-level-rels+work-rels+work-level-rels+place-rels+url-rels"
+	lightReleaseInc = "recordings+artist-credits+labels+url-rels"
 )
 
 // mbLookupReleaseCap is the most releases a release-group lookup embeds, with
@@ -858,6 +928,7 @@ type mbReleaseGroupDetail struct {
 	mbReleaseGroup
 	Releases     []mbRelease `json:"releases"`
 	ArtistCredit []mbCredit  `json:"artist-credit"`
+	Relations    []mbRel     `json:"relations"`
 }
 
 func (m *MusicBrainz) fetchReleaseGroup(
@@ -869,7 +940,7 @@ func (m *MusicBrainz) fetchReleaseGroup(
 		ctx,
 		"/release-group/"+url.PathEscape(mbid),
 		url.Values{
-			"inc": {"releases+media+artist-credits+genres"},
+			"inc": {"releases+media+artist-credits+genres+url-rels"},
 		},
 		&rg,
 	)
@@ -985,7 +1056,9 @@ func (m *MusicBrainz) GetReleaseGroupEdition(
 		ReleaseGroupInfo: rg.toInfo(),
 		ReleaseMBID:      release,
 		Genres:           topGenres(rg.Genres),
+		ExternalIDs:      map[string]string{},
 	}
+	mbURLIDs(details.ExternalIDs, rg.Relations, mbReleaseGroupURLs)
 	if len(rg.ArtistCredit) > 0 {
 		details.ArtistMBID = rg.ArtistCredit[0].Artist.ID
 		details.ArtistName = rg.ArtistCredit[0].Artist.Name
@@ -1013,6 +1086,7 @@ func (m *MusicBrainz) GetReleaseGroupEdition(
 	details.Media = mapMedia(formats)
 	details.CreditsComplete = complete
 	fillRelease(details, rel, complete)
+	mbURLIDs(details.ExternalIDs, rel.Relations, mbReleaseURLs)
 	return details, nil
 }
 

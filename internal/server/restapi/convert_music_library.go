@@ -3,6 +3,7 @@ package restapi
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -129,9 +130,19 @@ func toMusicAlbumSummary(a music.AlbumView, artistID uint32) MusicAlbumSummary {
 	}
 }
 
+func albumExternalIDs(a music.AlbumView) db.ExternalIDs {
+	out := make(db.ExternalIDs, len(a.ExternalIDs)+1)
+	maps.Copy(out, a.ExternalIDs)
+	out[metadata.SourceMusicBrainz] = a.Album.Mbid
+	return out
+}
+
 func toMusicAlbum(a music.AlbumView, artistID uint32) MusicAlbum {
 	row := a.Album
 	out := MusicAlbum{
+		// An album is always shown whole, so its ids go out wherever it does,
+		// its release group's MBID at least.
+		ExternalIds:   toExternalIDs(albumExternalIDs(a)),
 		ArtistId:      albumOwnerID(a, artistID),
 		Artists:       toMusicPeople(a.Artists),
 		CatalogNumber: optString(row.CatalogNumber),
@@ -258,6 +269,7 @@ func toMusicArtistDetail(v *music.ArtistView) MusicArtistDetail {
 	for _, al := range v.Albums {
 		out.Albums = append(out.Albums, toMusicAlbum(al, a.ID))
 	}
+	out.ExternalIds = toExternalIDs(v.ExternalIDs)
 	for _, m := range v.Members {
 		instruments := m.Instruments
 		if instruments == nil {
@@ -279,6 +291,7 @@ func toMusicArtistDetail(v *music.ArtistView) MusicArtistDetail {
 func toMusicArtist(v music.ArtistView) MusicArtist {
 	a := v.Artist
 	out := MusicArtist{
+		ExternalIds:    toExternalIDs(v.ExternalIDs),
 		AddedAt:        a.CreateTime,
 		AlbumCount:     v.AlbumCount,
 		Albums:         make([]MusicAlbumSummary, 0, len(v.Albums)),

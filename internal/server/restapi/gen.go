@@ -4793,8 +4793,30 @@ type Book struct {
 	EbookSend *BookSendState `json:"ebook_send,omitempty"`
 
 	// Editions Preferred language first, then by format.
-	Editions       []BookEdition `json:"editions"`
-	FirstPublished uint16        `json:"first_published"`
+	Editions []BookEdition `json:"editions"`
+
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds    *ExternalIds `json:"external_ids,omitempty"`
+	FirstPublished uint16       `json:"first_published"`
 
 	// Formats Always two entries, ebook first.
 	Formats     []BookFormatSlot `json:"formats"`
@@ -4881,10 +4903,40 @@ type BookCredit struct {
 
 // BookEdition defines model for BookEdition.
 type BookEdition struct {
+	// Asin Amazon ASIN (an Audible one for an audiobook). Absent when Hardcover has none.
+	Asin *string `json:"asin,omitempty"`
+
 	// Duration Audiobook length in seconds.
-	Duration *uint32    `json:"duration,omitempty"`
-	Format   BookFormat `json:"format"`
-	Id       uint32     `json:"id"`
+	Duration *uint32 `json:"duration,omitempty"`
+
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
+	Format      BookFormat   `json:"format"`
+	Id          uint32       `json:"id"`
+
+	// Isbn13 ISBN-13 Hardcover lists for the edition. The detail page links
+	// Goodreads and Open Library through it. Absent when there is none,
+	// which is common for audiobooks.
+	Isbn13 *string `json:"isbn_13,omitempty"`
 
 	// Language ISO 639-1.
 	Language string  `json:"language"`
@@ -5116,6 +5168,28 @@ type BookSeries struct {
 
 	// Editions Every selectable label, ordered by number of volumes covered.
 	Editions []string `json:"editions"`
+
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
 
 	// HardcoverId Hardcover series id, a separate id space from books.
 	HardcoverId uint32 `json:"hardcover_id"`
@@ -5825,6 +5899,86 @@ type Error struct {
 
 	// Message Human-readable, safe-to-display error message.
 	Message string `json:"message"`
+}
+
+// ExternalIds Every id the library knows a title by, keyed by site, each value what
+// that site's address is built from: the title's own provider id first
+// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+// or an album, `hardcover` for a book or a book series — the same value
+// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+// stay), then the other sites' ids that provider cross-references. A
+// site with no id for the title is absent.
+//
+// Every detail response carries it. A list carries it only with
+// `with_external_ids=true`, which costs one more query per page (none
+// for `/books`, whose items have only their Hardcover id).
+//
+// Which other sites appear depends on the provider: TMDB gives a movie
+// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+// Hardcover gives a book nothing more: each edition carries its own
+// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+// an album's on hydration, and a library from before they were kept is
+// filled by `music-metadata-refresh` (films and series by their own
+// refresh).
+type ExternalIds struct {
+	// Allmusic AllMusic id, `mn…` for an artist, `mw…` for an album.
+	Allmusic *string `json:"allmusic,omitempty"`
+
+	// Audible An audiobook edition's Audible product, `ASIN:region` (`B0FXY6DVJS:fr`):
+	// the store of `library.book_language` when Hardcover lists one,
+	// else the US store, else the first it lists.
+	Audible *string `json:"audible,omitempty"`
+
+	// Bandcamp Bandcamp host for an artist (`band.bandcamp.com`), host and path
+	// for an album (`band.bandcamp.com/album/name`).
+	Bandcamp *string `json:"bandcamp,omitempty"`
+
+	// Deezer Deezer artist or album id.
+	Deezer *string `json:"deezer,omitempty"`
+
+	// Discogs Discogs artist id, or master id for an album.
+	Discogs *string `json:"discogs,omitempty"`
+
+	// Goodreads Goodreads book id of an edition (Goodreads' books are editions).
+	Goodreads *string `json:"goodreads,omitempty"`
+
+	// GoogleBooks Google Books volume id of an edition.
+	GoogleBooks *string `json:"google_books,omitempty"`
+
+	// Hardcover Hardcover id, as a decimal string: a book's or a book series'
+	// (`hardcover_id`), or an edition's own. The three are separate id
+	// spaces.
+	Hardcover *string `json:"hardcover,omitempty"`
+
+	// Imdb IMDb title id, `tt…`.
+	Imdb *string `json:"imdb,omitempty"`
+
+	// Lastfm Last.fm artist name as its URL writes it (artists only).
+	Lastfm *string `json:"lastfm,omitempty"`
+
+	// Musicbrainz An artist's MusicBrainz id, or an album's release group (`mbid`).
+	Musicbrainz *string `json:"musicbrainz,omitempty"`
+
+	// Openlibrary Open Library edition key of an edition, `OL…M`.
+	Openlibrary *string `json:"openlibrary,omitempty"`
+
+	// Rateyourmusic RateYourMusic path below `/artist/` for an artist, below
+	// `/release/` for an album (`album/radiohead/ok_computer`).
+	Rateyourmusic *string `json:"rateyourmusic,omitempty"`
+
+	// Spotify Spotify base62 id.
+	Spotify *string `json:"spotify,omitempty"`
+
+	// Tmdb TMDB id, as a decimal string: a movie's own (`tmdb_id`), or the
+	// TV id TVDB maps a series to.
+	Tmdb *string `json:"tmdb,omitempty"`
+
+	// Tvdb A series' own TVDB id (`tvdb_id`), as a decimal string.
+	Tvdb *string `json:"tvdb,omitempty"`
+
+	// Wikidata Wikidata item, `Q…`.
+	Wikidata *string `json:"wikidata,omitempty"`
 }
 
 // FFmpegConfigPatch Only provided fields are applied. found and resolved_path are derived and read-only — sending them has no effect.
@@ -6716,13 +6870,35 @@ type LogRotateConfig struct {
 // search response carries. One shape serves both verticals: movies fill
 // runtime/release_date/tmdb_id, series fill network/season_count/status.
 type LookupDetail struct {
-	Cast             *[]CastMember `json:"cast,omitempty"`
-	EpisodeCount     *uint16       `json:"episode_count,omitempty"`
-	Genres           *[]string     `json:"genres,omitempty"`
-	Network          *string       `json:"network,omitempty"`
-	OriginalLanguage *string       `json:"original_language,omitempty"`
-	Overview         *string       `json:"overview,omitempty"`
-	Rating           *float32      `json:"rating,omitempty"`
+	Cast         *[]CastMember `json:"cast,omitempty"`
+	EpisodeCount *uint16       `json:"episode_count,omitempty"`
+
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds      *ExternalIds `json:"external_ids,omitempty"`
+	Genres           *[]string    `json:"genres,omitempty"`
+	Network          *string      `json:"network,omitempty"`
+	OriginalLanguage *string      `json:"original_language,omitempty"`
+	Overview         *string      `json:"overview,omitempty"`
+	Rating           *float32     `json:"rating,omitempty"`
 
 	// ReleaseDate Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
 	ReleaseDate *string `json:"release_date,omitempty"`
@@ -7035,6 +7211,28 @@ type Movie struct {
 	// digital date for it yet.
 	DigitalReleaseDate *openapi_types.Date `json:"digital_release_date,omitempty"`
 
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
+
 	// FileSummary Per-movie rollup of the files on disk, carried by list responses in
 	// place of the full media_files array. Absent when the movie has no
 	// files. The library grid's size and quality columns and the bulk-action
@@ -7185,6 +7383,28 @@ type MusicAlbum struct {
 	// Duration Sum of the track durations in seconds; omitted at 0.
 	Duration *uint32 `json:"duration,omitempty"`
 
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
+
 	// FailureReason Present while `status` is `failed`; why the import was refused.
 	FailureReason *string `json:"failure_reason,omitempty"`
 
@@ -7334,6 +7554,28 @@ type MusicArtist struct {
 	// Albums Newest first (release date descending, undated last, then title), upcoming included.
 	Albums []MusicAlbumSummary `json:"albums"`
 
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
+
 	// Genre Highest-count MusicBrainz genre, title-cased.
 	Genre *string `json:"genre,omitempty"`
 
@@ -7391,6 +7633,28 @@ type MusicArtistCore struct {
 
 	// AlbumCount Albums of the artist, upcoming included.
 	AlbumCount uint32 `json:"album_count"`
+
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
 
 	// Genre Highest-count MusicBrainz genre, title-cased.
 	Genre *string `json:"genre,omitempty"`
@@ -7477,6 +7741,28 @@ type MusicArtistDetail struct {
 	// AlbumCount Albums of the artist, upcoming included.
 	AlbumCount uint32       `json:"album_count"`
 	Albums     []MusicAlbum `json:"albums"`
+
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
 
 	// Genre Highest-count MusicBrainz genre, title-cased.
 	Genre *string `json:"genre,omitempty"`
@@ -8728,14 +9014,36 @@ type RequestCounts struct {
 
 // RequestMediaDetails defines model for RequestMediaDetails.
 type RequestMediaDetails struct {
-	Cast             *[]CastMember `json:"cast,omitempty"`
-	EpisodeCount     *uint16       `json:"episode_count,omitempty"`
-	Genres           *[]string     `json:"genres,omitempty"`
-	Network          *string       `json:"network,omitempty"`
-	OriginalLanguage *string       `json:"original_language,omitempty"`
-	Overview         *string       `json:"overview,omitempty"`
-	PosterUrl        *string       `json:"poster_url,omitempty"`
-	Rating           *float32      `json:"rating,omitempty"`
+	Cast         *[]CastMember `json:"cast,omitempty"`
+	EpisodeCount *uint16       `json:"episode_count,omitempty"`
+
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds      *ExternalIds `json:"external_ids,omitempty"`
+	Genres           *[]string    `json:"genres,omitempty"`
+	Network          *string      `json:"network,omitempty"`
+	OriginalLanguage *string      `json:"original_language,omitempty"`
+	Overview         *string      `json:"overview,omitempty"`
+	PosterUrl        *string      `json:"poster_url,omitempty"`
+	Rating           *float32     `json:"rating,omitempty"`
 
 	// ReleaseDate Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
 	ReleaseDate *string `json:"release_date,omitempty"`
@@ -9047,6 +9355,28 @@ type ShelfItem struct {
 
 	// CoverIds Series only; library Book ids of the first volumes (at most 3, position order) whose posters make up the cover.
 	CoverIds *[]uint32 `json:"cover_ids,omitempty"`
+
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
 
 	// Formats Books only.
 	Formats *[]BookShelfFormat `json:"formats,omitempty"`
@@ -9467,6 +9797,28 @@ type TVShow struct {
 	// DownloadingSeason Season the in-flight grab lands in. Present for the `episode` and
 	// `season` scopes; absent when it spans seasons.
 	DownloadingSeason *uint16 `json:"downloading_season,omitempty"`
+
+	// ExternalIds Every id the library knows a title by, keyed by site, each value what
+	// that site's address is built from: the title's own provider id first
+	// (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+	// or an album, `hardcover` for a book or a book series — the same value
+	// as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+	// stay), then the other sites' ids that provider cross-references. A
+	// site with no id for the title is absent.
+	//
+	// Every detail response carries it. A list carries it only with
+	// `with_external_ids=true`, which costs one more query per page (none
+	// for `/books`, whose items have only their Hardcover id).
+	//
+	// Which other sites appear depends on the provider: TMDB gives a movie
+	// `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+	// `wikidata`; MusicBrainz gives an artist or an album the music sites.
+	// Hardcover gives a book nothing more: each edition carries its own
+	// `isbn_13` and `asin`. An artist's links are read on add and refresh,
+	// an album's on hydration, and a library from before they were kept is
+	// filled by `music-metadata-refresh` (films and series by their own
+	// refresh).
+	ExternalIds *ExternalIds `json:"external_ids,omitempty"`
 
 	// FirstAired First air date, ISO yyyy-mm-dd — the series counterpart to
 	// Movie.release_date. Absent for an announced show with no date set,
@@ -10540,6 +10892,9 @@ type UsersOrder string
 // UsersSort defines model for UsersSort.
 type UsersSort string
 
+// WithExternalIds defines model for WithExternalIds.
+type WithExternalIds = bool
+
 // WithTotal defines model for WithTotal.
 type WithTotal = bool
 
@@ -11017,6 +11372,11 @@ type ListBooksParams struct {
 	// caller that shows only the page (the search surfaces): the count is a
 	// second pass over every match.
 	WithTotal *WithTotal `form:"with_total,omitempty" json:"with_total,omitempty"`
+
+	// WithExternalIds `true` attaches each item's `external_ids`, read for the whole page
+	// in one more query (none for `/books`). Off by default: the library
+	// grids never show them. Detail responses always carry them.
+	WithExternalIds *WithExternalIds `form:"with_external_ids,omitempty" json:"with_external_ids,omitempty"`
 }
 
 // ListBooksParamsStatus defines parameters for ListBooks.
@@ -11285,6 +11645,11 @@ type ListMoviesParams struct {
 	// caller that shows only the page (the search surfaces): the count is a
 	// second pass over every match.
 	WithTotal *WithTotal `form:"with_total,omitempty" json:"with_total,omitempty"`
+
+	// WithExternalIds `true` attaches each item's `external_ids`, read for the whole page
+	// in one more query (none for `/books`). Off by default: the library
+	// grids never show them. Detail responses always carry them.
+	WithExternalIds *WithExternalIds `form:"with_external_ids,omitempty" json:"with_external_ids,omitempty"`
 }
 
 // ListMoviesParamsMonitored defines parameters for ListMovies.
@@ -11401,6 +11766,11 @@ type ListMusicArtistsParams struct {
 	// caller that shows only the page (the search surfaces): the count is a
 	// second pass over every match.
 	WithTotal *WithTotal `form:"with_total,omitempty" json:"with_total,omitempty"`
+
+	// WithExternalIds `true` attaches each item's `external_ids`, read for the whole page
+	// in one more query (none for `/books`). Off by default: the library
+	// grids never show them. Detail responses always carry them.
+	WithExternalIds *WithExternalIds `form:"with_external_ids,omitempty" json:"with_external_ids,omitempty"`
 }
 
 // ListMusicArtistsParamsMonitored defines parameters for ListMusicArtists.
@@ -11601,6 +11971,11 @@ type ListSeriesParams struct {
 	// caller that shows only the page (the search surfaces): the count is a
 	// second pass over every match.
 	WithTotal *WithTotal `form:"with_total,omitempty" json:"with_total,omitempty"`
+
+	// WithExternalIds `true` attaches each item's `external_ids`, read for the whole page
+	// in one more query (none for `/books`). Off by default: the library
+	// grids never show them. Detail responses always carry them.
+	WithExternalIds *WithExternalIds `form:"with_external_ids,omitempty" json:"with_external_ids,omitempty"`
 }
 
 // ListSeriesParamsMonitored defines parameters for ListSeries.
@@ -15549,6 +15924,19 @@ func (siw *ServerInterfaceWrapper) ListBooks(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "with_external_ids" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "with_external_ids", r.URL.Query(), &params.WithExternalIds, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_external_ids"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_external_ids", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListBooks(w, r, params)
 	}))
@@ -18668,6 +19056,19 @@ func (siw *ServerInterfaceWrapper) ListMovies(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// ------------- Optional query parameter "with_external_ids" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "with_external_ids", r.URL.Query(), &params.WithExternalIds, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_external_ids"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_external_ids", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListMovies(w, r, params)
 	}))
@@ -19699,6 +20100,19 @@ func (siw *ServerInterfaceWrapper) ListMusicArtists(w http.ResponseWriter, r *ht
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_total"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_total", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "with_external_ids" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "with_external_ids", r.URL.Query(), &params.WithExternalIds, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_external_ids"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_external_ids", Err: err})
 		}
 		return
 	}
@@ -21444,6 +21858,19 @@ func (siw *ServerInterfaceWrapper) ListSeries(w http.ResponseWriter, r *http.Req
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_total"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_total", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "with_external_ids" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "with_external_ids", r.URL.Query(), &params.WithExternalIds, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_external_ids"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_external_ids", Err: err})
 		}
 		return
 	}

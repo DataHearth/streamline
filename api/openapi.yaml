@@ -90,6 +90,7 @@ paths:
         - $ref: "#/components/parameters/MoviesSort"
         - $ref: "#/components/parameters/MoviesOrder"
         - $ref: "#/components/parameters/WithTotal"
+        - $ref: "#/components/parameters/WithExternalIds"
       responses:
         "200":
           description: Paginated movie list
@@ -540,6 +541,7 @@ paths:
         - $ref: "#/components/parameters/SeriesSort"
         - $ref: "#/components/parameters/SeriesOrder"
         - $ref: "#/components/parameters/WithTotal"
+        - $ref: "#/components/parameters/WithExternalIds"
       responses:
         "200":
           $ref: "#/components/responses/SeriesList"
@@ -1381,6 +1383,7 @@ paths:
         - $ref: "#/components/parameters/MusicArtistSortParam"
         - $ref: "#/components/parameters/MusicArtistOrderParam"
         - $ref: "#/components/parameters/WithTotal"
+        - $ref: "#/components/parameters/WithExternalIds"
       responses:
         "200":
           $ref: "#/components/responses/MusicArtistList"
@@ -2543,6 +2546,7 @@ paths:
         - $ref: "#/components/parameters/BookShelfSortParam"
         - $ref: "#/components/parameters/BookShelfOrderParam"
         - $ref: "#/components/parameters/WithTotal"
+        - $ref: "#/components/parameters/WithExternalIds"
       responses:
         "200":
           $ref: "#/components/responses/BookShelfPage"
@@ -6959,6 +6963,16 @@ components:
         type: array
         items:
           $ref: "#/components/schemas/MusicAlbumType"
+    WithExternalIds:
+      name: with_external_ids
+      in: query
+      description: |
+        `true` attaches each item's `external_ids`, read for the whole page
+        in one more query (none for `/books`). Off by default: the library
+        grids never show them. Detail responses always carry them.
+      schema:
+        type: boolean
+        default: false
     WithTotal:
       name: with_total
       in: query
@@ -9086,6 +9100,8 @@ components:
           minimum: 0
           maximum: 4294967295
           x-go-type: uint32
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
         quality_profile:
           type: string
           description: Name of the quality profile (empty resolves to the movie default).
@@ -9754,6 +9770,8 @@ components:
         tvdb_id:
           type: integer
           x-go-type: uint32
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
         network:
           type: string
         creator:
@@ -10144,6 +10162,8 @@ components:
           x-go-type: uint32
         mbid:
           type: string
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
         name:
           type: string
         sort_name:
@@ -10256,6 +10276,95 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/MusicAlbum"
+
+    ExternalIds:
+      type: object
+      description: |
+        Every id the library knows a title by, keyed by site, each value what
+        that site's address is built from: the title's own provider id first
+        (`tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist
+        or an album, `hardcover` for a book or a book series — the same value
+        as the title's `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id`, which
+        stay), then the other sites' ids that provider cross-references. A
+        site with no id for the title is absent.
+
+        Every detail response carries it. A list carries it only with
+        `with_external_ids=true`, which costs one more query per page (none
+        for `/books`, whose items have only their Hardcover id).
+
+        Which other sites appear depends on the provider: TMDB gives a movie
+        `imdb` and `wikidata`; TVDB gives a series `imdb`, `tmdb` and
+        `wikidata`; MusicBrainz gives an artist or an album the music sites.
+        Hardcover gives a book nothing more: each edition carries its own
+        `isbn_13` and `asin`. An artist's links are read on add and refresh,
+        an album's on hydration, and a library from before they were kept is
+        filled by `music-metadata-refresh` (films and series by their own
+        refresh).
+      properties:
+        imdb:
+          type: string
+          description: IMDb title id, `tt…`.
+        tmdb:
+          type: string
+          description: |
+            TMDB id, as a decimal string: a movie's own (`tmdb_id`), or the
+            TV id TVDB maps a series to.
+        tvdb:
+          type: string
+          description: A series' own TVDB id (`tvdb_id`), as a decimal string.
+        musicbrainz:
+          type: string
+          description: |
+            An artist's MusicBrainz id, or an album's release group (`mbid`).
+        hardcover:
+          type: string
+          description: |
+            Hardcover id, as a decimal string: a book's or a book series'
+            (`hardcover_id`), or an edition's own. The three are separate id
+            spaces.
+        goodreads:
+          type: string
+          description: Goodreads book id of an edition (Goodreads' books are editions).
+        openlibrary:
+          type: string
+          description: Open Library edition key of an edition, `OL…M`.
+        google_books:
+          type: string
+          description: Google Books volume id of an edition.
+        audible:
+          type: string
+          description: |
+            An audiobook edition's Audible product, `ASIN:region` (`B0FXY6DVJS:fr`):
+            the store of `library.book_language` when Hardcover lists one,
+            else the US store, else the first it lists.
+        wikidata:
+          type: string
+          description: Wikidata item, `Q…`.
+        discogs:
+          type: string
+          description: Discogs artist id, or master id for an album.
+        allmusic:
+          type: string
+          description: AllMusic id, `mn…` for an artist, `mw…` for an album.
+        spotify:
+          type: string
+          description: Spotify base62 id.
+        deezer:
+          type: string
+          description: Deezer artist or album id.
+        bandcamp:
+          type: string
+          description: |
+            Bandcamp host for an artist (`band.bandcamp.com`), host and path
+            for an album (`band.bandcamp.com/album/name`).
+        lastfm:
+          type: string
+          description: Last.fm artist name as its URL writes it (artists only).
+        rateyourmusic:
+          type: string
+          description: |
+            RateYourMusic path below `/artist/` for an artist, below
+            `/release/` for an album (`album/radiohead/ok_computer`).
 
     MusicMember:
       type: object
@@ -10385,6 +10494,8 @@ components:
             mbid:
               type: string
               description: MusicBrainz release-group id.
+            external_ids:
+              $ref: "#/components/schemas/ExternalIds"
             label:
               type: string
             catalog_number:
@@ -11389,6 +11500,17 @@ components:
           type: string
         translator:
           type: string
+        isbn_13:
+          type: string
+          description: |
+            ISBN-13 Hardcover lists for the edition. The detail page links
+            Goodreads and Open Library through it. Absent when there is none,
+            which is common for audiobooks.
+        asin:
+          type: string
+          description: Amazon ASIN (an Audible one for an audiobook). Absent when Hardcover has none.
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
 
     BookSlotFile:
       type: object
@@ -11476,6 +11598,8 @@ components:
         hardcover_id:
           type: integer
           x-go-type: uint32
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
         title:
           type: string
           description: |
@@ -11593,6 +11717,8 @@ components:
           type: integer
           x-go-type: uint32
           description: Hardcover series id, a separate id space from books.
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
         hardcover_slug:
           type: string
           description: The hardcover.app/series path segment; absent until Hardcover has reported one.
@@ -11674,6 +11800,8 @@ components:
       description: One entry of the books shelf. `id` is only unique together with `type`.
       required: [type, id, cover_id, title, author, kind, status, added_at]
       properties:
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
         type:
           $ref: "#/components/schemas/BookShelfType"
         id:
@@ -17108,6 +17236,8 @@ components:
         tvdb_id:
           type: integer
           x-go-type: uint32
+        external_ids:
+          $ref: "#/components/schemas/ExternalIds"
         network:
           type: string
         season_count:

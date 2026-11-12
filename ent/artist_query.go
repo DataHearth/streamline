@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -28,6 +29,7 @@ type ArtistQuery struct {
 	order               []artist.OrderOption
 	inters              []Interceptor
 	predicates          []predicate.Artist
+	withExternalIds     *ExternalIDQuery
 	withAlbums          *AlbumQuery
 	withMembers         *ArtistMemberQuery
 	withDownloadRecords *DownloadRecordQuery
@@ -69,6 +71,28 @@ func (_q *ArtistQuery) Unique(unique bool) *ArtistQuery {
 func (_q *ArtistQuery) Order(o ...artist.OrderOption) *ArtistQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryExternalIds chains the current query on the "external_ids" edge.
+func (_q *ArtistQuery) QueryExternalIds() *ExternalIDQuery {
+	query := (&ExternalIDClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, selector),
+			sqlgraph.To(externalid.Table, externalid.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, artist.ExternalIdsTable, artist.ExternalIdsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // QueryAlbums chains the current query on the "albums" edge.
@@ -395,6 +419,7 @@ func (_q *ArtistQuery) Clone() *ArtistQuery {
 		order:               append([]artist.OrderOption{}, _q.order...),
 		inters:              append([]Interceptor{}, _q.inters...),
 		predicates:          append([]predicate.Artist{}, _q.predicates...),
+		withExternalIds:     _q.withExternalIds.Clone(),
 		withAlbums:          _q.withAlbums.Clone(),
 		withMembers:         _q.withMembers.Clone(),
 		withDownloadRecords: _q.withDownloadRecords.Clone(),
@@ -406,6 +431,17 @@ func (_q *ArtistQuery) Clone() *ArtistQuery {
 		path:      _q.path,
 		modifiers: append([]func(*sql.Selector){}, _q.modifiers...),
 	}
+}
+
+// WithExternalIds tells the query-builder to eager-load the nodes that are connected to
+// the "external_ids" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ArtistQuery) WithExternalIds(opts ...func(*ExternalIDQuery)) *ArtistQuery {
+	query := (&ExternalIDClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withExternalIds = query
+	return _q
 }
 
 // WithAlbums tells the query-builder to eager-load the nodes that are connected to
@@ -552,7 +588,8 @@ func (_q *ArtistQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Artis
 	var (
 		nodes       = []*Artist{}
 		_spec       = _q.querySpec()
-		loadedTypes = [6]bool{
+		loadedTypes = [7]bool{
+			_q.withExternalIds != nil,
 			_q.withAlbums != nil,
 			_q.withMembers != nil,
 			_q.withDownloadRecords != nil,
@@ -581,6 +618,13 @@ func (_q *ArtistQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Artis
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
+	}
+	if query := _q.withExternalIds; query != nil {
+		if err := _q.loadExternalIds(ctx, query, nodes,
+			func(n *Artist) { n.Edges.ExternalIds = []*ExternalID{} },
+			func(n *Artist, e *ExternalID) { n.Edges.ExternalIds = append(n.Edges.ExternalIds, e) }); err != nil {
+			return nil, err
+		}
 	}
 	if query := _q.withAlbums; query != nil {
 		if err := _q.loadAlbums(ctx, query, nodes,
@@ -627,6 +671,36 @@ func (_q *ArtistQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Artis
 	return nodes, nil
 }
 
+func (_q *ArtistQuery) loadExternalIds(ctx context.Context, query *ExternalIDQuery, nodes []*Artist, init func(*Artist), assign func(*Artist, *ExternalID)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Artist)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(externalid.FieldArtistID)
+	}
+	query.Where(predicate.ExternalID(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(artist.ExternalIdsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ArtistID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "artist_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
 func (_q *ArtistQuery) loadAlbums(ctx context.Context, query *AlbumQuery, nodes []*Artist, init func(*Artist), assign func(*Artist, *Album)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uint32]*Artist)

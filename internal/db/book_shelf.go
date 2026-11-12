@@ -59,6 +59,7 @@ type ShelfRow struct {
 	VolumesHave    uint32    `sql:"volumes_have"`
 	VolumesOut     uint32    `sql:"volumes_out"`
 	QualityProfile string    `sql:"quality_profile"`
+	HardcoverID    uint32    `sql:"hardcover_id"`
 	AddedAt        time.Time `sql:"-"`
 	// CoverIDs are a series' first positioned, hydrated volumes, whose posters
 	// stand for it; empty for a book.
@@ -213,7 +214,8 @@ func shelfUnion(q *sqlBuilder, p ShelfParams, now time.Time, omit string) {
  (`+es+`) AS ebook_state, (`+as+`) AS audiobook_state,
  0 AS volumes_have, 0 AS volumes_out, COALESCE(b.quality_profile, '') AS quality_profile,
  CASE WHEN `+ebookOK()+` THEN 1 ELSE 0 END AS ebook_ok,
- CASE WHEN `+audioOK()+` THEN 1 ELSE 0 END AS audio_ok
+ CASE WHEN `+audioOK()+` THEN 1 ELSE 0 END AS audio_ok,
+ b.hardcover_id AS hardcover_id
  FROM books b WHERE b.book_series_volumes IS NULL`, now)
 	shelfFilters(q, p, omit, "book")
 
@@ -231,7 +233,7 @@ func shelfUnion(q *sqlBuilder, p ShelfParams, now time.Time, omit string) {
  '', '',
  (SELECT COUNT(*) FROM books v WHERE v.book_series_volumes = s.id AND v.ebook_status = 'available'),
  (SELECT COUNT(*) FROM books v WHERE v.book_series_volumes = s.id AND `+releasedVolume+`),
- COALESCE(s.quality_profile, ''), 1, 0
+ COALESCE(s.quality_profile, ''), 1, 0, s.hardcover_id
  FROM book_series s WHERE 1 = 1`, now, now, now)
 	shelfFilters(q, p, omit, "series")
 }
@@ -264,6 +266,7 @@ var shelfColumns = []string{
 	"volumes_have",
 	"volumes_out",
 	"quality_profile",
+	"hardcover_id",
 }
 
 func shelfOrder(p ShelfParams) string {

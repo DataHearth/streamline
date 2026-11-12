@@ -34,6 +34,8 @@
 	import { listHref, SERIES_SEARCH } from "@lib/prefs";
 	import { formatDate } from "@lib/dates";
 	import Poster from "@components/shared/Poster.svelte";
+	import ExternalLinks from "@components/shared/ExternalLinks.svelte";
+	import { imdbTitleUrl, seriesLinks, tmdbUrl, tvdbSeriesUrl, wikidataUrl } from "@lib/external-links";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import SeasonProgress from "@components/series/SeasonProgress.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
@@ -652,6 +654,8 @@
 					<ClampedText class="mt-4" text={show.overview} />
 				{/if}
 
+				<ExternalLinks links={seriesLinks(show)} class="mt-4" />
+
 				<!-- The bar keeps the rollups' scope, what the library follows or
 				     holds. The line also names the missing episodes, aired ones that
 				     nobody monitors and nobody has, which the bar leaves out. -->
@@ -899,18 +903,16 @@
 								<dt class="text-fg-subtle">{i18n.detail_runtime()}</dt>
 								<dd class="text-right font-mono text-fg">{show.runtime}m</dd>
 							{/if}
-							<dt class="text-fg-subtle">TVDB</dt>
-							<dd class="text-right">
-								<a
-									href="https://www.thetvdb.com/dereferrer/series/{show.tvdb_id}"
-									target="_blank"
-									rel="noopener noreferrer"
-									class="inline-flex items-center gap-1 font-mono text-accent-text transition hover:text-accent"
-								>
-									{show.tvdb_id}
-									<ExternalLink size={11} aria-hidden="true" />
-								</a>
-							</dd>
+							{@render idRow("TVDB", String(show.tvdb_id), tvdbSeriesUrl(show.tvdb_id))}
+							{#if show.external_ids?.tmdb}
+								{@render idRow("TMDB", show.external_ids.tmdb, tmdbUrl("tv", Number(show.external_ids.tmdb)))}
+							{/if}
+							{#if show.external_ids?.imdb}
+								{@render idRow("IMDb", show.external_ids.imdb, imdbTitleUrl(show.external_ids.imdb))}
+							{/if}
+							{#if show.external_ids?.wikidata}
+								{@render idRow("Wikidata", show.external_ids.wikidata, wikidataUrl(show.external_ids.wikidata))}
+							{/if}
 						</dl>
 					</section>
 				</aside>
@@ -1207,6 +1209,21 @@
 		</Checkbox>
 	</Dialog>
 {/if}
+
+{#snippet idRow(label: string, value: string, href: string)}
+	<dt class="text-fg-subtle">{label}</dt>
+	<dd class="text-right">
+		<a
+			{href}
+			target="_blank"
+			rel="noopener noreferrer"
+			class="inline-flex items-center gap-1 font-mono text-accent-text transition hover:text-accent"
+		>
+			{value}
+			<ExternalLink size={11} aria-hidden="true" />
+		</a>
+	</dd>
+{/snippet}
 
 <style>
 	.tabs-track {

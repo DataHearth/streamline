@@ -2,6 +2,8 @@ package restapi
 
 import (
 	"cmp"
+	"context"
+	"log/slog"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
@@ -99,6 +102,12 @@ func toBookEditions(b *ent.Book) []BookEdition {
 			Duration:   e.DurationSeconds,
 			Narrator:   optString(e.Narrator),
 			Translator: optString(e.Translator),
+			Isbn13:     optString(e.Isbn13),
+			Asin:       optString(e.Asin),
+			// The edition's own id; the detail adds its mappings.
+			ExternalIds: toExternalIDs(
+				withOwnID(nil, metadata.SourceHardcover, e.HardcoverEditionID),
+			),
 		}
 		if e.Original {
 			t := true
@@ -200,6 +209,7 @@ func toAPIBook(b *ent.Book, progress map[string]float64) Book {
 	out := Book{
 		Id:                b.ID,
 		HardcoverId:       b.HardcoverID,
+		ExternalIds:       hardcoverIDs(b.HardcoverID),
 		Title:             b.Title,
 		OriginalTitle:     optString(b.OriginalTitle),
 		Author:            b.AuthorName,
@@ -296,6 +306,7 @@ func toAPISeries(s *ent.BookSeries) BookSeries {
 		labels = append(labels, o.Label)
 	}
 	return BookSeries{
+		ExternalIds:    hardcoverIDs(s.HardcoverID),
 		Id:             s.ID,
 		HardcoverId:    s.HardcoverID,
 		HardcoverSlug:  optString(s.HardcoverSlug),
@@ -318,6 +329,61 @@ func toAPISeries(s *ent.BookSeries) BookSeries {
 		AddedAt:        s.CreateTime,
 		Volumes:        volumes,
 	}
+}
+
+// attachEditionLinks adds every edition's mappings to a book detail in one query.
+func (s *Server) attachEditionLinks(
+	ctx context.Context,
+	out *Book,
+	b *ent.Book,
+) error {
+	editionIDs := make([]uint32, 0, len(b.Edges.Editions))
+	for _, e := range b.Edges.Editions {
+		editionIDs = append(editionIDs, e.ID)
+	}
+	links, err := s.store.ExternalIDsFor(
+		ctx,
+		db.ExternalIDsOfBookEdition,
+		editionIDs,
+	)
+	if err != nil {
+		return err
+	}
+	withEditionLinks(out, b, links)
+	return nil
+}
+
+// bookAfterWrite is a patch or refresh answer with its edition links, best effort.
+func (s *Server) bookAfterWrite(
+	ctx context.Context,
+	b *ent.Book,
+	progress map[string]float64,
+) Book {
+	out := toAPIBook(b, progress)
+	if err := s.attachEditionLinks(ctx, &out, b); err != nil {
+		slog.WarnContext(ctx, "book edition links not read",
+			"book.id", b.ID, "error", err)
+	}
+	return out
+}
+
+// withEditionLinks sets each edition's external_ids from the stored mappings.
+func withEditionLinks(out *Book, b *ent.Book, ids map[uint32]db.ExternalIDs) {
+	hc := make(map[uint32]uint32, len(b.Edges.Editions))
+	for _, e := range b.Edges.Editions {
+		hc[e.ID] = e.HardcoverEditionID
+	}
+	for i := range out.Editions {
+		e := &out.Editions[i]
+		e.ExternalIds = toExternalIDs(
+			withOwnID(ids[e.Id], metadata.SourceHardcover, hc[e.Id]),
+		)
+	}
+}
+
+// hardcoverIDs is a book's or a series' external_ids: its Hardcover id only.
+func hardcoverIDs(id uint32) *ExternalIds {
+	return toExternalIDs(withOwnID(nil, metadata.SourceHardcover, id))
 }
 
 func toShelfItem(r db.ShelfRow, progress map[uint32]float64) ShelfItem {

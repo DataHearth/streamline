@@ -6779,6 +6779,80 @@ func (_c *MockTx_DownloadRecordsByHash_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
+// ExternalIDsFor provides a mock function for the type MockTx
+func (_mock *MockTx) ExternalIDsFor(ctx context.Context, owner db.ExternalIDOwner, ownerIDs []uint32) (map[uint32]db.ExternalIDs, error) {
+	ret := _mock.Called(ctx, owner, ownerIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ExternalIDsFor")
+	}
+
+	var r0 map[uint32]db.ExternalIDs
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ExternalIDOwner, []uint32) (map[uint32]db.ExternalIDs, error)); ok {
+		return returnFunc(ctx, owner, ownerIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ExternalIDOwner, []uint32) map[uint32]db.ExternalIDs); ok {
+		r0 = returnFunc(ctx, owner, ownerIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[uint32]db.ExternalIDs)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ExternalIDOwner, []uint32) error); ok {
+		r1 = returnFunc(ctx, owner, ownerIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ExternalIDsFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ExternalIDsFor'
+type MockTx_ExternalIDsFor_Call struct {
+	*mock.Call
+}
+
+// ExternalIDsFor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner db.ExternalIDOwner
+//   - ownerIDs []uint32
+func (_e *MockTx_Expecter) ExternalIDsFor(ctx any, owner any, ownerIDs any) *MockTx_ExternalIDsFor_Call {
+	return &MockTx_ExternalIDsFor_Call{Call: _e.mock.On("ExternalIDsFor", ctx, owner, ownerIDs)}
+}
+
+func (_c *MockTx_ExternalIDsFor_Call) Run(run func(ctx context.Context, owner db.ExternalIDOwner, ownerIDs []uint32)) *MockTx_ExternalIDsFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ExternalIDOwner
+		if args[1] != nil {
+			arg1 = args[1].(db.ExternalIDOwner)
+		}
+		var arg2 []uint32
+		if args[2] != nil {
+			arg2 = args[2].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ExternalIDsFor_Call) Return(uint32ToExternalIDs map[uint32]db.ExternalIDs, err error) *MockTx_ExternalIDsFor_Call {
+	_c.Call.Return(uint32ToExternalIDs, err)
+	return _c
+}
+
+func (_c *MockTx_ExternalIDsFor_Call) RunAndReturn(run func(ctx context.Context, owner db.ExternalIDOwner, ownerIDs []uint32) (map[uint32]db.ExternalIDs, error)) *MockTx_ExternalIDsFor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FailDownloadRecord provides a mock function for the type MockTx
 func (_mock *MockTx) FailDownloadRecord(ctx context.Context, id uint32, reason string) error {
 	ret := _mock.Called(ctx, id, reason)
@@ -12198,6 +12272,80 @@ func (_c *MockTx_ListAlbumsAwaitingHydration_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
+// ListAlbumsAwaitingLinks provides a mock function for the type MockTx
+func (_mock *MockTx) ListAlbumsAwaitingLinks(ctx context.Context, afterID uint32, limit int) ([]*ent.Album, error) {
+	ret := _mock.Called(ctx, afterID, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListAlbumsAwaitingLinks")
+	}
+
+	var r0 []*ent.Album
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) ([]*ent.Album, error)); ok {
+		return returnFunc(ctx, afterID, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) []*ent.Album); ok {
+		r0 = returnFunc(ctx, afterID, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Album)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, int) error); ok {
+		r1 = returnFunc(ctx, afterID, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListAlbumsAwaitingLinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListAlbumsAwaitingLinks'
+type MockTx_ListAlbumsAwaitingLinks_Call struct {
+	*mock.Call
+}
+
+// ListAlbumsAwaitingLinks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - afterID uint32
+//   - limit int
+func (_e *MockTx_Expecter) ListAlbumsAwaitingLinks(ctx any, afterID any, limit any) *MockTx_ListAlbumsAwaitingLinks_Call {
+	return &MockTx_ListAlbumsAwaitingLinks_Call{Call: _e.mock.On("ListAlbumsAwaitingLinks", ctx, afterID, limit)}
+}
+
+func (_c *MockTx_ListAlbumsAwaitingLinks_Call) Run(run func(ctx context.Context, afterID uint32, limit int)) *MockTx_ListAlbumsAwaitingLinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListAlbumsAwaitingLinks_Call) Return(albums []*ent.Album, err error) *MockTx_ListAlbumsAwaitingLinks_Call {
+	_c.Call.Return(albums, err)
+	return _c
+}
+
+func (_c *MockTx_ListAlbumsAwaitingLinks_Call) RunAndReturn(run func(ctx context.Context, afterID uint32, limit int) ([]*ent.Album, error)) *MockTx_ListAlbumsAwaitingLinks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListAlbumsTrackless provides a mock function for the type MockTx
 func (_mock *MockTx) ListAlbumsTrackless(ctx context.Context, staleBefore time.Time, releasedBefore time.Time, limit int) ([]*ent.Album, error) {
 	ret := _mock.Called(ctx, staleBefore, releasedBefore, limit)
@@ -12612,6 +12760,80 @@ func (_c *MockTx_ListArtists_Call) RunAndReturn(run func(ctx context.Context, p 
 	return _c
 }
 
+// ListArtistsAwaitingLinks provides a mock function for the type MockTx
+func (_mock *MockTx) ListArtistsAwaitingLinks(ctx context.Context, afterID uint32, limit int) ([]*ent.Artist, error) {
+	ret := _mock.Called(ctx, afterID, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListArtistsAwaitingLinks")
+	}
+
+	var r0 []*ent.Artist
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) ([]*ent.Artist, error)); ok {
+		return returnFunc(ctx, afterID, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) []*ent.Artist); ok {
+		r0 = returnFunc(ctx, afterID, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Artist)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, int) error); ok {
+		r1 = returnFunc(ctx, afterID, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListArtistsAwaitingLinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListArtistsAwaitingLinks'
+type MockTx_ListArtistsAwaitingLinks_Call struct {
+	*mock.Call
+}
+
+// ListArtistsAwaitingLinks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - afterID uint32
+//   - limit int
+func (_e *MockTx_Expecter) ListArtistsAwaitingLinks(ctx any, afterID any, limit any) *MockTx_ListArtistsAwaitingLinks_Call {
+	return &MockTx_ListArtistsAwaitingLinks_Call{Call: _e.mock.On("ListArtistsAwaitingLinks", ctx, afterID, limit)}
+}
+
+func (_c *MockTx_ListArtistsAwaitingLinks_Call) Run(run func(ctx context.Context, afterID uint32, limit int)) *MockTx_ListArtistsAwaitingLinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListArtistsAwaitingLinks_Call) Return(artists []*ent.Artist, err error) *MockTx_ListArtistsAwaitingLinks_Call {
+	_c.Call.Return(artists, err)
+	return _c
+}
+
+func (_c *MockTx_ListArtistsAwaitingLinks_Call) RunAndReturn(run func(ctx context.Context, afterID uint32, limit int) ([]*ent.Artist, error)) *MockTx_ListArtistsAwaitingLinks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListArtistsStaleSince provides a mock function for the type MockTx
 func (_mock *MockTx) ListArtistsStaleSince(ctx context.Context, cutoff time.Time, limit int) ([]*ent.Artist, error) {
 	ret := _mock.Called(ctx, cutoff, limit)
@@ -12948,6 +13170,80 @@ func (_c *MockTx_ListDownloadingRecordsWithMovie_Call) Return(downloadRecords []
 }
 
 func (_c *MockTx_ListDownloadingRecordsWithMovie_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.DownloadRecord, error)) *MockTx_ListDownloadingRecordsWithMovie_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListEditionsAwaitingLinks provides a mock function for the type MockTx
+func (_mock *MockTx) ListEditionsAwaitingLinks(ctx context.Context, afterID uint32, limit int) ([]*ent.BookEdition, error) {
+	ret := _mock.Called(ctx, afterID, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListEditionsAwaitingLinks")
+	}
+
+	var r0 []*ent.BookEdition
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) ([]*ent.BookEdition, error)); ok {
+		return returnFunc(ctx, afterID, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) []*ent.BookEdition); ok {
+		r0 = returnFunc(ctx, afterID, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.BookEdition)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, int) error); ok {
+		r1 = returnFunc(ctx, afterID, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListEditionsAwaitingLinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListEditionsAwaitingLinks'
+type MockTx_ListEditionsAwaitingLinks_Call struct {
+	*mock.Call
+}
+
+// ListEditionsAwaitingLinks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - afterID uint32
+//   - limit int
+func (_e *MockTx_Expecter) ListEditionsAwaitingLinks(ctx any, afterID any, limit any) *MockTx_ListEditionsAwaitingLinks_Call {
+	return &MockTx_ListEditionsAwaitingLinks_Call{Call: _e.mock.On("ListEditionsAwaitingLinks", ctx, afterID, limit)}
+}
+
+func (_c *MockTx_ListEditionsAwaitingLinks_Call) Run(run func(ctx context.Context, afterID uint32, limit int)) *MockTx_ListEditionsAwaitingLinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListEditionsAwaitingLinks_Call) Return(bookEditions []*ent.BookEdition, err error) *MockTx_ListEditionsAwaitingLinks_Call {
+	_c.Call.Return(bookEditions, err)
+	return _c
+}
+
+func (_c *MockTx_ListEditionsAwaitingLinks_Call) RunAndReturn(run func(ctx context.Context, afterID uint32, limit int) ([]*ent.BookEdition, error)) *MockTx_ListEditionsAwaitingLinks_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -22008,6 +22304,75 @@ func (_c *MockTx_SetAlbumLastSearchAt_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// SetAlbumLinks provides a mock function for the type MockTx
+func (_mock *MockTx) SetAlbumLinks(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time) error {
+	ret := _mock.Called(ctx, id, ids, at)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAlbumLinks")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.ExternalIDs, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, ids, at)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SetAlbumLinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAlbumLinks'
+type MockTx_SetAlbumLinks_Call struct {
+	*mock.Call
+}
+
+// SetAlbumLinks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - ids db.ExternalIDs
+//   - at time.Time
+func (_e *MockTx_Expecter) SetAlbumLinks(ctx any, id any, ids any, at any) *MockTx_SetAlbumLinks_Call {
+	return &MockTx_SetAlbumLinks_Call{Call: _e.mock.On("SetAlbumLinks", ctx, id, ids, at)}
+}
+
+func (_c *MockTx_SetAlbumLinks_Call) Run(run func(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time)) *MockTx_SetAlbumLinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 db.ExternalIDs
+		if args[2] != nil {
+			arg2 = args[2].(db.ExternalIDs)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SetAlbumLinks_Call) Return(err error) *MockTx_SetAlbumLinks_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SetAlbumLinks_Call) RunAndReturn(run func(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time) error) *MockTx_SetAlbumLinks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetAlbumMonitored provides a mock function for the type MockTx
 func (_mock *MockTx) SetAlbumMonitored(ctx context.Context, id uint32, monitored bool) error {
 	ret := _mock.Called(ctx, id, monitored)
@@ -22403,6 +22768,75 @@ func (_c *MockTx_SetArtistDetails_Call) Return(err error) *MockTx_SetArtistDetai
 }
 
 func (_c *MockTx_SetArtistDetails_Call) RunAndReturn(run func(ctx context.Context, id uint32, p db.ArtistDetailsParams, at time.Time) error) *MockTx_SetArtistDetails_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetArtistLinks provides a mock function for the type MockTx
+func (_mock *MockTx) SetArtistLinks(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time) error {
+	ret := _mock.Called(ctx, id, ids, at)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetArtistLinks")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.ExternalIDs, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, ids, at)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SetArtistLinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetArtistLinks'
+type MockTx_SetArtistLinks_Call struct {
+	*mock.Call
+}
+
+// SetArtistLinks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - ids db.ExternalIDs
+//   - at time.Time
+func (_e *MockTx_Expecter) SetArtistLinks(ctx any, id any, ids any, at any) *MockTx_SetArtistLinks_Call {
+	return &MockTx_SetArtistLinks_Call{Call: _e.mock.On("SetArtistLinks", ctx, id, ids, at)}
+}
+
+func (_c *MockTx_SetArtistLinks_Call) Run(run func(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time)) *MockTx_SetArtistLinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 db.ExternalIDs
+		if args[2] != nil {
+			arg2 = args[2].(db.ExternalIDs)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SetArtistLinks_Call) Return(err error) *MockTx_SetArtistLinks_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SetArtistLinks_Call) RunAndReturn(run func(ctx context.Context, id uint32, ids db.ExternalIDs, at time.Time) error) *MockTx_SetArtistLinks_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -23366,6 +23800,69 @@ func (_c *MockTx_SetDownloadRecordSelection_Call) Return(err error) *MockTx_SetD
 }
 
 func (_c *MockTx_SetDownloadRecordSelection_Call) RunAndReturn(run func(ctx context.Context, id uint32, state downloadrecord.SelectionState, files []int, selectedBytes int64) error) *MockTx_SetDownloadRecordSelection_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetEditionLinks provides a mock function for the type MockTx
+func (_mock *MockTx) SetEditionLinks(ctx context.Context, links map[uint32]db.ExternalIDs, at time.Time) error {
+	ret := _mock.Called(ctx, links, at)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetEditionLinks")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, map[uint32]db.ExternalIDs, time.Time) error); ok {
+		r0 = returnFunc(ctx, links, at)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SetEditionLinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetEditionLinks'
+type MockTx_SetEditionLinks_Call struct {
+	*mock.Call
+}
+
+// SetEditionLinks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - links map[uint32]db.ExternalIDs
+//   - at time.Time
+func (_e *MockTx_Expecter) SetEditionLinks(ctx any, links any, at any) *MockTx_SetEditionLinks_Call {
+	return &MockTx_SetEditionLinks_Call{Call: _e.mock.On("SetEditionLinks", ctx, links, at)}
+}
+
+func (_c *MockTx_SetEditionLinks_Call) Run(run func(ctx context.Context, links map[uint32]db.ExternalIDs, at time.Time)) *MockTx_SetEditionLinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 map[uint32]db.ExternalIDs
+		if args[1] != nil {
+			arg1 = args[1].(map[uint32]db.ExternalIDs)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SetEditionLinks_Call) Return(err error) *MockTx_SetEditionLinks_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SetEditionLinks_Call) RunAndReturn(run func(ctx context.Context, links map[uint32]db.ExternalIDs, at time.Time) error) *MockTx_SetEditionLinks_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -25846,6 +26343,80 @@ func (_c *MockTx_TitleCast_Call) Return(castEntrys []db.CastEntry, err error) *M
 }
 
 func (_c *MockTx_TitleCast_Call) RunAndReturn(run func(ctx context.Context, owner db.CastOwner, ownerID uint32) ([]db.CastEntry, error)) *MockTx_TitleCast_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TitleExternalIDs provides a mock function for the type MockTx
+func (_mock *MockTx) TitleExternalIDs(ctx context.Context, owner db.ExternalIDOwner, ownerID uint32) (db.ExternalIDs, error) {
+	ret := _mock.Called(ctx, owner, ownerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TitleExternalIDs")
+	}
+
+	var r0 db.ExternalIDs
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ExternalIDOwner, uint32) (db.ExternalIDs, error)); ok {
+		return returnFunc(ctx, owner, ownerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ExternalIDOwner, uint32) db.ExternalIDs); ok {
+		r0 = returnFunc(ctx, owner, ownerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(db.ExternalIDs)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ExternalIDOwner, uint32) error); ok {
+		r1 = returnFunc(ctx, owner, ownerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_TitleExternalIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TitleExternalIDs'
+type MockTx_TitleExternalIDs_Call struct {
+	*mock.Call
+}
+
+// TitleExternalIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner db.ExternalIDOwner
+//   - ownerID uint32
+func (_e *MockTx_Expecter) TitleExternalIDs(ctx any, owner any, ownerID any) *MockTx_TitleExternalIDs_Call {
+	return &MockTx_TitleExternalIDs_Call{Call: _e.mock.On("TitleExternalIDs", ctx, owner, ownerID)}
+}
+
+func (_c *MockTx_TitleExternalIDs_Call) Run(run func(ctx context.Context, owner db.ExternalIDOwner, ownerID uint32)) *MockTx_TitleExternalIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ExternalIDOwner
+		if args[1] != nil {
+			arg1 = args[1].(db.ExternalIDOwner)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_TitleExternalIDs_Call) Return(externalIDs db.ExternalIDs, err error) *MockTx_TitleExternalIDs_Call {
+	_c.Call.Return(externalIDs, err)
+	return _c
+}
+
+func (_c *MockTx_TitleExternalIDs_Call) RunAndReturn(run func(ctx context.Context, owner db.ExternalIDOwner, ownerID uint32) (db.ExternalIDs, error)) *MockTx_TitleExternalIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }

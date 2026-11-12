@@ -107,6 +107,9 @@ type CreateArtistParams struct {
 	QualityProfile string
 	Members        []MemberSeed
 	Albums         []AlbumSeed
+	// ExternalIDs are MusicBrainz's other links for the artist (not its
+	// Wikidata or Deezer id, which have their own columns).
+	ExternalIDs ExternalIDs
 }
 
 // RefreshArtistParams carries provider-sourced fields. Albums already stored
@@ -124,6 +127,7 @@ type RefreshArtistParams struct {
 	Members     []MemberSeed
 	Albums      []AlbumSeed
 	RefreshedAt time.Time
+	ExternalIDs ExternalIDs
 }
 
 // ArtistDetailsParams are the overview fields the Wikipedia step fills; only
@@ -140,6 +144,8 @@ type ArtistDetailsParams struct {
 // Performers are written only when CreditsComplete: a light fallback has no
 // relationships and must not erase what an earlier heavy call stored.
 type HydrationParams struct {
+	// The album's links; nil (stored facts) keeps the stored ones.
+	ExternalIDs     ExternalIDs
 	ReleaseMBID     string
 	OriginalDate    string
 	EditionDate     string
@@ -319,6 +325,9 @@ func (db *DB) CreateArtist(
 		SetWikidataID(p.WikidataID).
 		SetPath(p.Path).
 		SetQualityProfile(p.QualityProfile)
+	if p.ExternalIDs != nil {
+		b = b.SetLinksFetchedAt(time.Now())
+	}
 	if p.Monitor != "" {
 		b = b.SetMonitor(p.Monitor)
 	}
@@ -331,6 +340,12 @@ func (db *DB) CreateArtist(
 		return nil, err
 	}
 	if err := replaceMembers(ctx, tx.Client(), row.ID, p.Members); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err := replaceExternalIDs(
+		ctx, tx.Client(), ExternalIDsOfArtist, row.ID, p.ExternalIDs,
+	); err != nil {
 		tx.Rollback()
 		return nil, err
 	}
@@ -984,6 +999,9 @@ func (db *DB) RefreshArtist(
 	if p.DeezerID != 0 {
 		u = u.SetDeezerID(p.DeezerID)
 	}
+	if p.ExternalIDs != nil {
+		u = u.SetLinksFetchedAt(p.RefreshedAt)
+	}
 	if p.Type != "" {
 		u = u.SetType(artist.Type(p.Type))
 	} else {
@@ -994,6 +1012,12 @@ func (db *DB) RefreshArtist(
 		return nil, nil, err
 	}
 	if err := replaceMembers(ctx, c, id, p.Members); err != nil {
+		tx.Rollback()
+		return nil, nil, err
+	}
+	if err := replaceExternalIDs(
+		ctx, c, ExternalIDsOfArtist, id, p.ExternalIDs,
+	); err != nil {
 		tx.Rollback()
 		return nil, nil, err
 	}
@@ -1386,11 +1410,20 @@ func (db *DB) SetAlbumHydration(
 	if p.Barcode != "" {
 		u = u.SetBarcode(p.Barcode)
 	}
+	if p.ExternalIDs != nil {
+		u = u.SetLinksFetchedAt(at)
+	}
 	if p.CreditsComplete {
 		u = u.SetStudio(p.Studio).SetCreditsFetchedAt(at).
 			SetCreditsVersion(library.MusicCreditsVersion)
 	}
 	if err := u.Exec(ctx); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := replaceExternalIDs(
+		ctx, c, ExternalIDsOfAlbum, albumID, p.ExternalIDs,
+	); err != nil {
 		tx.Rollback()
 		return err
 	}

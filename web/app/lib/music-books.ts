@@ -7,6 +7,7 @@ import { getLocale } from "./paraglide/runtime.js";
 import { formatDate, formatDateShort } from "./dates";
 import { formatBytes } from "./format";
 import { authorPosterUrl, artistPosterUrl } from "./posters";
+import type { ExternalIds } from "./external-links";
 
 export type MediaState = "available" | "wanted" | "downloading";
 
@@ -91,6 +92,8 @@ export type Release = {
 	studio?: string;
 	credits?: Credit[];
 	personnel?: Performer[];
+	// MusicBrainz's links for the album, once hydrated.
+	external_ids?: ExternalIds;
 };
 
 export type Artist = {
@@ -119,6 +122,8 @@ export type Artist = {
 	hydrating: boolean;
 	// Newest first, upcoming included.
 	albums: Release[];
+	// MusicBrainz's links for the artist. Detail only.
+	external_ids?: ExternalIds;
 };
 
 // A search hit for one album (GET /music/albums), named with its artist.
@@ -179,6 +184,10 @@ export type Edition = {
 	narrator?: string;
 	duration?: number;
 	translator?: string;
+	isbn_13?: string;
+	asin?: string;
+	// Its Hardcover id, and on the detail its Goodreads, Open Library…
+	external_ids?: ExternalIds;
 };
 
 // One per format. A book is one entry; its ebook and its audiobook are two
@@ -224,6 +233,8 @@ export type Book = {
 	series?: { id: number; title: string; number: number };
 	// Whether the ebook can be emailed to the caller's device, and why not.
 	ebook_send?: { ok: boolean; reason?: string };
+	// Its Hardcover id; editions carry their own isbn_13 and asin.
+	external_ids?: ExternalIds;
 };
 export type SeriesSendPlan = {
 	emails: number;
@@ -246,6 +257,7 @@ export type BookSeries = {
 	hardcover_id?: number;
 	// The hardcover.app/series path segment: Hardcover links a series by slug only.
 	hardcover_slug?: string;
+	external_ids?: ExternalIds;
 	// Book ids of the first hydrated volumes, at most three: the fanned cover.
 	cover_ids: number[];
 	rating?: number;

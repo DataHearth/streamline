@@ -102,6 +102,23 @@ Activity feeds use cursor pagination instead (`?cursor=`, `?limit=`), since they
 
 **Movie list responses carry `file_summary`, not `media_files`.** The rollup gives you `file_count`, `size_bytes` and the largest file's parsed `resolution`/`codec` — enough for a list view, without a page of movies dragging in every file row it owns. Use `GET /movies/{id}` when you need the files themselves.
 
+**Every id a title is known by is in `external_ids`.** A movie, a series, an artist, an album, a book and a book series carry an `external_ids` object keyed by site, each value a string and what that site's address is built from:
+
+```json
+"external_ids": { "tvdb": "81189", "imdb": "tt0903747", "tmdb": "1396", "wikidata": "Q1079" }
+```
+
+It starts with the title's own provider id: `tmdb` for a movie, `tvdb` for a series, `musicbrainz` for an artist or an album (the release group), `hardcover` for a book or a series. That value repeats the `tmdb_id`, `tvdb_id`, `mbid` or `hardcover_id` field, which stays. Then come the ids that provider cross-references:
+
+- **Movie** (TMDB): `imdb`, `wikidata`.
+- **Series** (TVDB): `imdb`, `tmdb`, `wikidata`.
+- **Artist or album** (MusicBrainz): `wikidata`, `discogs`, `allmusic`, `spotify`, `deezer`, `bandcamp`, `lastfm` (artists only), `rateyourmusic`.
+- **Book or series**: nothing more, since Hardcover maps editions, not books. Each of a book's `editions` carries its own `external_ids` (its Hardcover edition id, and on `GET /books/{id}` the `goodreads`, `openlibrary` (an `OL…M` key), `google_books`, `wikidata` and `audible` (`ASIN:region`) ids of the editions a slot follows) beside its `isbn_13` and `asin`.
+
+A site with no id is absent.
+
+Every detail response carries it: `GET /movies/{id}`, `/series/{id}`, `/music/artists/{id}`, `/music/albums/{id}` and the albums inside an artist, `/books/{id}`, `/books/series/{id}`, the movie and series add-flow lookups, and the add, edit and refresh responses of a movie, a series or a book. The lists `GET /movies`, `/series`, `/music/artists` and `/books` carry it only with `?with_external_ids=true`. That costs one extra query for the whole page (none for `/books`), and it is how a sync script gets every IMDb id without one request per title.
+
 **Name-keyed resources.** Config-backed resources are addressed by name, not numeric ID:
 
 ```

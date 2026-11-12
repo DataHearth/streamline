@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
@@ -336,6 +337,21 @@ func (_c *MovieCreate) AddCredits(v ...*Credit) *MovieCreate {
 	return _c.AddCreditIDs(ids...)
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_c *MovieCreate) AddExternalIDIDs(ids ...uint32) *MovieCreate {
+	_c.mutation.AddExternalIDIDs(ids...)
+	return _c
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_c *MovieCreate) AddExternalIds(v ...*ExternalID) *MovieCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddExternalIDIDs(ids...)
+}
+
 // Mutation returns the MovieMutation object of the builder.
 func (_c *MovieCreate) Mutation() *MovieMutation {
 	return _c.mutation
@@ -618,6 +634,22 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.ExternalIdsTable,
+			Columns: []string{movie.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

@@ -66,9 +66,27 @@ func (s *Server) ListSeries(
 		}, nil
 	}
 	progress := s.seriesDownloadProgress(ctx, counts)
+	ids := make([]uint32, 0, len(rows))
+	for _, r := range rows {
+		ids = append(ids, r.ID)
+	}
+	external, err := s.pageExternalIDs(
+		ctx, request.Params.WithExternalIds, db.ExternalIDsOfSeries, ids,
+	)
+	if err != nil {
+		return ListSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
 	items := make([]TVShow, 0, len(rows))
 	for _, r := range rows {
-		items = append(items, tvShowListToAPI(r, counts[r.ID], progress[r.ID]))
+		item := tvShowListToAPI(r, counts[r.ID], progress[r.ID])
+		if external != nil {
+			item.ExternalIds = toExternalIDs(
+				withOwnID(external[r.ID], metadata.SourceTVDB, r.TvdbID),
+			)
+		}
+		items = append(items, item)
 	}
 	return ListSeries200JSONResponse{
 		Items: items,
@@ -171,8 +189,12 @@ func (s *Server) AddSeries(
 		}
 		show = updated
 	}
+	result := tvShowToAPI(show)
+	result.ExternalIds = s.detailExternalIDs(
+		ctx, db.ExternalIDsOfSeries, show.ID, metadata.SourceTVDB, show.TvdbID,
+	)
 	return AddSeries201JSONResponse{
-		SeriesCreatedJSONResponse: SeriesCreatedJSONResponse(tvShowToAPI(show)),
+		SeriesCreatedJSONResponse: SeriesCreatedJSONResponse(result),
 	}, nil
 }
 
@@ -351,7 +373,16 @@ func (s *Server) GetSeries(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
+	ids, err := s.store.TitleExternalIDs(ctx, db.ExternalIDsOfSeries, show.ID)
+	if err != nil {
+		return GetSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
 	result := tvShowToAPI(show)
+	result.ExternalIds = toExternalIDs(
+		withOwnID(ids, metadata.SourceTVDB, show.TvdbID),
+	)
 	if len(credits) > 0 {
 		apiCast := libraryCastToAPI(credits)
 		result.Cast = &apiCast
@@ -397,8 +428,12 @@ func (s *Server) PatchSeries(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
+	result := tvShowToAPI(show)
+	result.ExternalIds = s.detailExternalIDs(
+		ctx, db.ExternalIDsOfSeries, show.ID, metadata.SourceTVDB, show.TvdbID,
+	)
 	return PatchSeries200JSONResponse{
-		SeriesDetailJSONResponse: SeriesDetailJSONResponse(tvShowToAPI(show)),
+		SeriesDetailJSONResponse: SeriesDetailJSONResponse(result),
 	}, nil
 }
 
@@ -995,8 +1030,12 @@ func (s *Server) RefreshSeriesMetadata(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
+	result := tvShowToAPI(show)
+	result.ExternalIds = s.detailExternalIDs(
+		ctx, db.ExternalIDsOfSeries, show.ID, metadata.SourceTVDB, show.TvdbID,
+	)
 	return RefreshSeriesMetadata200JSONResponse{
-		SeriesDetailJSONResponse: SeriesDetailJSONResponse(tvShowToAPI(show)),
+		SeriesDetailJSONResponse: SeriesDetailJSONResponse(result),
 	}, nil
 }
 

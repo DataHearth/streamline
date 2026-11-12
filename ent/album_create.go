@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
@@ -98,6 +99,20 @@ func (_c *AlbumCreate) SetBarcode(v string) *AlbumCreate {
 func (_c *AlbumCreate) SetNillableBarcode(v *string) *AlbumCreate {
 	if v != nil {
 		_c.SetBarcode(*v)
+	}
+	return _c
+}
+
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (_c *AlbumCreate) SetLinksFetchedAt(v time.Time) *AlbumCreate {
+	_c.mutation.SetLinksFetchedAt(v)
+	return _c
+}
+
+// SetNillableLinksFetchedAt sets the "links_fetched_at" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableLinksFetchedAt(v *time.Time) *AlbumCreate {
+	if v != nil {
+		_c.SetLinksFetchedAt(*v)
 	}
 	return _c
 }
@@ -406,6 +421,21 @@ func (_c *AlbumCreate) SetID(v uint32) *AlbumCreate {
 	return _c
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_c *AlbumCreate) AddExternalIDIDs(ids ...uint32) *AlbumCreate {
+	_c.mutation.AddExternalIDIDs(ids...)
+	return _c
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_c *AlbumCreate) AddExternalIds(v ...*ExternalID) *AlbumCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddExternalIDIDs(ids...)
+}
+
 // SetArtistID sets the "artist" edge to the Artist entity by ID.
 func (_c *AlbumCreate) SetArtistID(id uint32) *AlbumCreate {
 	_c.mutation.SetArtistID(id)
@@ -709,6 +739,10 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 		_spec.SetField(album.FieldBarcode, field.TypeString, value)
 		_node.Barcode = value
 	}
+	if value, ok := _c.mutation.LinksFetchedAt(); ok {
+		_spec.SetField(album.FieldLinksFetchedAt, field.TypeTime, value)
+		_node.LinksFetchedAt = &value
+	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(album.FieldTitle, field.TypeString, value)
 		_node.Title = value
@@ -800,6 +834,22 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreditsVersion(); ok {
 		_spec.SetField(album.FieldCreditsVersion, field.TypeUint8, value)
 		_node.CreditsVersion = value
+	}
+	if nodes := _c.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.ExternalIdsTable,
+			Columns: []string{album.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.ArtistIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

@@ -63,6 +63,8 @@ func (Movie) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("credits", Credit.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("external_ids", ExternalID.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

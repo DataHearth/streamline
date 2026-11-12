@@ -25,6 +25,7 @@ import (
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/importscanbook"
@@ -125,6 +126,7 @@ func checkColumn(t, c string) error {
 			credit.Table:           credit.ValidColumn,
 			downloadrecord.Table:   downloadrecord.ValidColumn,
 			episode.Table:          episode.ValidColumn,
+			externalid.Table:       externalid.ValidColumn,
 			importscan.Table:       importscan.ValidColumn,
 			importscanalbum.Table:  importscanalbum.ValidColumn,
 			importscanbook.Table:   importscanbook.ValidColumn,

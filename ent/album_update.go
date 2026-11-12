@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
@@ -113,6 +114,26 @@ func (_u *AlbumUpdate) SetNillableBarcode(v *string) *AlbumUpdate {
 // ClearBarcode clears the value of the "barcode" field.
 func (_u *AlbumUpdate) ClearBarcode() *AlbumUpdate {
 	_u.mutation.ClearBarcode()
+	return _u
+}
+
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (_u *AlbumUpdate) SetLinksFetchedAt(v time.Time) *AlbumUpdate {
+	_u.mutation.SetLinksFetchedAt(v)
+	return _u
+}
+
+// SetNillableLinksFetchedAt sets the "links_fetched_at" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableLinksFetchedAt(v *time.Time) *AlbumUpdate {
+	if v != nil {
+		_u.SetLinksFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearLinksFetchedAt clears the value of the "links_fetched_at" field.
+func (_u *AlbumUpdate) ClearLinksFetchedAt() *AlbumUpdate {
+	_u.mutation.ClearLinksFetchedAt()
 	return _u
 }
 
@@ -532,6 +553,21 @@ func (_u *AlbumUpdate) AddCreditsVersion(v int8) *AlbumUpdate {
 	return _u
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_u *AlbumUpdate) AddExternalIDIDs(ids ...uint32) *AlbumUpdate {
+	_u.mutation.AddExternalIDIDs(ids...)
+	return _u
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_u *AlbumUpdate) AddExternalIds(v ...*ExternalID) *AlbumUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalIDIDs(ids...)
+}
+
 // SetArtistID sets the "artist" edge to the Artist entity by ID.
 func (_u *AlbumUpdate) SetArtistID(id uint32) *AlbumUpdate {
 	_u.mutation.SetArtistID(id)
@@ -651,6 +687,27 @@ func (_u *AlbumUpdate) AddCoArtists(v ...*Artist) *AlbumUpdate {
 // Mutation returns the AlbumMutation object of the builder.
 func (_u *AlbumUpdate) Mutation() *AlbumMutation {
 	return _u.mutation
+}
+
+// ClearExternalIds clears all "external_ids" edges to the ExternalID entity.
+func (_u *AlbumUpdate) ClearExternalIds() *AlbumUpdate {
+	_u.mutation.ClearExternalIds()
+	return _u
+}
+
+// RemoveExternalIDIDs removes the "external_ids" edge to ExternalID entities by IDs.
+func (_u *AlbumUpdate) RemoveExternalIDIDs(ids ...uint32) *AlbumUpdate {
+	_u.mutation.RemoveExternalIDIDs(ids...)
+	return _u
+}
+
+// RemoveExternalIds removes "external_ids" edges to ExternalID entities.
+func (_u *AlbumUpdate) RemoveExternalIds(v ...*ExternalID) *AlbumUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalIDIDs(ids...)
 }
 
 // ClearArtist clears the "artist" edge to the Artist entity.
@@ -912,6 +969,12 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.BarcodeCleared() {
 		_spec.ClearField(album.FieldBarcode, field.TypeString)
 	}
+	if value, ok := _u.mutation.LinksFetchedAt(); ok {
+		_spec.SetField(album.FieldLinksFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LinksFetchedAtCleared() {
+		_spec.ClearField(album.FieldLinksFetchedAt, field.TypeTime)
+	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(album.FieldTitle, field.TypeString, value)
 	}
@@ -1036,6 +1099,51 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedCreditsVersion(); ok {
 		_spec.AddField(album.FieldCreditsVersion, field.TypeUint8, value)
+	}
+	if _u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.ExternalIdsTable,
+			Columns: []string{album.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalIdsIDs(); len(nodes) > 0 && !_u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.ExternalIdsTable,
+			Columns: []string{album.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.ExternalIdsTable,
+			Columns: []string{album.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _u.mutation.ArtistCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1483,6 +1591,26 @@ func (_u *AlbumUpdateOne) ClearBarcode() *AlbumUpdateOne {
 	return _u
 }
 
+// SetLinksFetchedAt sets the "links_fetched_at" field.
+func (_u *AlbumUpdateOne) SetLinksFetchedAt(v time.Time) *AlbumUpdateOne {
+	_u.mutation.SetLinksFetchedAt(v)
+	return _u
+}
+
+// SetNillableLinksFetchedAt sets the "links_fetched_at" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableLinksFetchedAt(v *time.Time) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetLinksFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearLinksFetchedAt clears the value of the "links_fetched_at" field.
+func (_u *AlbumUpdateOne) ClearLinksFetchedAt() *AlbumUpdateOne {
+	_u.mutation.ClearLinksFetchedAt()
+	return _u
+}
+
 // SetTitle sets the "title" field.
 func (_u *AlbumUpdateOne) SetTitle(v string) *AlbumUpdateOne {
 	_u.mutation.SetTitle(v)
@@ -1899,6 +2027,21 @@ func (_u *AlbumUpdateOne) AddCreditsVersion(v int8) *AlbumUpdateOne {
 	return _u
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_u *AlbumUpdateOne) AddExternalIDIDs(ids ...uint32) *AlbumUpdateOne {
+	_u.mutation.AddExternalIDIDs(ids...)
+	return _u
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_u *AlbumUpdateOne) AddExternalIds(v ...*ExternalID) *AlbumUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalIDIDs(ids...)
+}
+
 // SetArtistID sets the "artist" edge to the Artist entity by ID.
 func (_u *AlbumUpdateOne) SetArtistID(id uint32) *AlbumUpdateOne {
 	_u.mutation.SetArtistID(id)
@@ -2018,6 +2161,27 @@ func (_u *AlbumUpdateOne) AddCoArtists(v ...*Artist) *AlbumUpdateOne {
 // Mutation returns the AlbumMutation object of the builder.
 func (_u *AlbumUpdateOne) Mutation() *AlbumMutation {
 	return _u.mutation
+}
+
+// ClearExternalIds clears all "external_ids" edges to the ExternalID entity.
+func (_u *AlbumUpdateOne) ClearExternalIds() *AlbumUpdateOne {
+	_u.mutation.ClearExternalIds()
+	return _u
+}
+
+// RemoveExternalIDIDs removes the "external_ids" edge to ExternalID entities by IDs.
+func (_u *AlbumUpdateOne) RemoveExternalIDIDs(ids ...uint32) *AlbumUpdateOne {
+	_u.mutation.RemoveExternalIDIDs(ids...)
+	return _u
+}
+
+// RemoveExternalIds removes "external_ids" edges to ExternalID entities.
+func (_u *AlbumUpdateOne) RemoveExternalIds(v ...*ExternalID) *AlbumUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalIDIDs(ids...)
 }
 
 // ClearArtist clears the "artist" edge to the Artist entity.
@@ -2309,6 +2473,12 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	if _u.mutation.BarcodeCleared() {
 		_spec.ClearField(album.FieldBarcode, field.TypeString)
 	}
+	if value, ok := _u.mutation.LinksFetchedAt(); ok {
+		_spec.SetField(album.FieldLinksFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LinksFetchedAtCleared() {
+		_spec.ClearField(album.FieldLinksFetchedAt, field.TypeTime)
+	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(album.FieldTitle, field.TypeString, value)
 	}
@@ -2433,6 +2603,51 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	}
 	if value, ok := _u.mutation.AddedCreditsVersion(); ok {
 		_spec.AddField(album.FieldCreditsVersion, field.TypeUint8, value)
+	}
+	if _u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.ExternalIdsTable,
+			Columns: []string{album.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalIdsIDs(); len(nodes) > 0 && !_u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.ExternalIdsTable,
+			Columns: []string{album.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.ExternalIdsTable,
+			Columns: []string{album.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _u.mutation.ArtistCleared() {
 		edge := &sqlgraph.EdgeSpec{

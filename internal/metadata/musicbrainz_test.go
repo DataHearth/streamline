@@ -393,6 +393,59 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 		})
 	})
 
+	Describe("AlbumLinks", func() {
+		It(
+			"reads the group's links, then the release's, with url-rels alone",
+			func() {
+				var calls []string
+				mb.client.Transport = mbRoundTripper(
+					func(r *http.Request) (*http.Response, error) {
+						calls = append(
+							calls,
+							r.URL.Path+"?"+r.URL.Query().Get("inc"),
+						)
+						if strings.HasPrefix(r.URL.Path, "/ws/2/release-group/") {
+							return jsonResponse(200, `{"relations":[
+							{"type":"discogs","url":{"resource":"https://www.discogs.com/master/21491"}},
+							{"type":"wikidata","url":{"resource":"https://www.wikidata.org/wiki/Q213434"}}
+						]}`), nil
+						}
+						return jsonResponse(200, `{"relations":[
+						{"type":"free streaming","url":{"resource":"https://www.deezer.com/album/1422436"}}
+					]}`), nil
+					},
+				)
+				ids, err := mb.AlbumLinks(ctx, "rg-1", "rel-1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids).To(Equal(map[string]string{
+					SourceDiscogs:  "21491",
+					SourceWikidata: "Q213434",
+					SourceDeezer:   "1422436",
+				}))
+				Expect(calls).To(Equal([]string{
+					"/ws/2/release-group/rg-1?url-rels",
+					"/ws/2/release/rel-1?url-rels",
+				}))
+			},
+		)
+
+		It("keeps the group's links when the release is gone", func() {
+			mb.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					if strings.HasPrefix(r.URL.Path, "/ws/2/release-group/") {
+						return jsonResponse(200, `{"relations":[
+							{"type":"discogs","url":{"resource":"https://www.discogs.com/master/21491"}}
+						]}`), nil
+					}
+					return jsonResponse(404, `{"error":"Not Found"}`), nil
+				},
+			)
+			ids, err := mb.AlbumLinks(ctx, "rg-1", "rel-gone")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(Equal(map[string]string{SourceDiscogs: "21491"}))
+		})
+	})
+
 	Describe("ArtistArt", func() {
 		It("reads the Deezer link and Commons image off the url-rels alone", func() {
 			var calls []string
@@ -529,7 +582,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 					case "/ws/2/release-group/rg-1":
 						Expect(
 							r.URL.Query().Get("inc"),
-						).To(Equal("releases+media+artist-credits+genres"))
+						).To(Equal("releases+media+artist-credits+genres+url-rels"))
 						return jsonResponse(200, releaseGroupJSON), nil
 					case "/ws/2/release/rel-1":
 						inc := r.URL.Query().Get("inc")
@@ -772,7 +825,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			_, err := mb.GetReleaseGroup(ctx, "rg-1")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(*incs).To(Equal([]string{
-				"recordings+artist-credits+labels+artist-rels+recording-level-rels+work-rels+work-level-rels+place-rels",
+				"recordings+artist-credits+labels+artist-rels+recording-level-rels+work-rels+work-level-rels+place-rels+url-rels",
 			}))
 		})
 
@@ -1038,7 +1091,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 
 		It("retries once with the light call when the heavy one fails", func() {
 			incs := serve(func(inc string) *http.Response {
-				if inc == "recordings+artist-credits+labels" {
+				if inc == "recordings+artist-credits+labels+url-rels" {
 					return jsonResponse(
 						200,
 						`{"id":"rel-1","label-info":[{"label":{"name":"DGC"}}],"media":[{"position":1,"tracks":[{"position":1,"title":"T","length":1000,"recording":{"id":"r"}}]}]}`,
@@ -1049,7 +1102,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(*incs).To(HaveLen(2))
-			Expect((*incs)[1]).To(Equal("recordings+artist-credits+labels"))
+			Expect((*incs)[1]).To(Equal("recordings+artist-credits+labels+url-rels"))
 			Expect(rg.CreditsComplete).To(BeFalse())
 			Expect(rg.Label).To(Equal("DGC"))
 			Expect(rg.Tracks).To(HaveLen(1))

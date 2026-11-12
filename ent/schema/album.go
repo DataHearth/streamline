@@ -29,6 +29,8 @@ func (Album) Fields() []ent.Field {
 		// pick the canonical one.
 		field.String("edition_mbid").Optional(),
 		field.String("barcode").Optional(),
+		// links_fetched_at NULL is the links backfill's work list.
+		field.Time("links_fetched_at").Optional().Nillable(),
 		field.String("title").NotEmpty(),
 		field.Enum("type").
 			Values("album", "ep", "single", "compilation", "live", "other").
@@ -99,6 +101,8 @@ func (Album) Fields() []ent.Field {
 
 func (Album) Edges() []ent.Edge {
 	return []ent.Edge{
+		edge.To("external_ids", ExternalID.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.From("artist", Artist.Type).Ref("albums").Unique().Required(),
 		edge.To("tracks", Track.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),

@@ -61,9 +61,27 @@ func (s *Server) ListMovies(
 		}, nil
 	}
 
+	ids := make([]uint32, 0, len(movies))
+	for _, m := range movies {
+		ids = append(ids, m.ID)
+	}
+	external, err := s.pageExternalIDs(
+		ctx, request.Params.WithExternalIds, db.ExternalIDsOfMovie, ids,
+	)
+	if err != nil {
+		return ListMovies500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
 	items := make([]Movie, 0, len(movies))
 	for _, m := range movies {
-		items = append(items, movieListToAPI(m, summaries[m.ID]))
+		item := movieListToAPI(m, summaries[m.ID])
+		if external != nil {
+			item.ExternalIds = toExternalIDs(
+				withOwnID(external[m.ID], metadata.SourceTMDB, m.TmdbID),
+			)
+		}
+		items = append(items, item)
 	}
 
 	return ListMovies200JSONResponse{
@@ -181,6 +199,9 @@ func (s *Server) AddMovie(
 	}
 
 	result := movieToAPI(m)
+	result.ExternalIds = s.detailExternalIDs(
+		ctx, db.ExternalIDsOfMovie, m.ID, metadata.SourceTMDB, m.TmdbID,
+	)
 	return AddMovie201JSONResponse(result), nil
 }
 
@@ -200,7 +221,14 @@ func (s *Server) GetMovie(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
+	ids, err := s.store.TitleExternalIDs(ctx, db.ExternalIDsOfMovie, m.ID)
+	if err != nil {
+		return GetMovie500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
 	result := movieToAPI(m)
+	result.ExternalIds = toExternalIDs(withOwnID(ids, metadata.SourceTMDB, m.TmdbID))
 	if len(files) > 0 {
 		apiFiles := make([]MediaFile, 0, len(files))
 		for _, f := range files {
@@ -253,7 +281,11 @@ func (s *Server) PatchMovie(
 		}, nil
 	}
 
-	return PatchMovie200JSONResponse(movieToAPI(m)), nil
+	result := movieToAPI(m)
+	result.ExternalIds = s.detailExternalIDs(
+		ctx, db.ExternalIDsOfMovie, m.ID, metadata.SourceTMDB, m.TmdbID,
+	)
+	return PatchMovie200JSONResponse(result), nil
 }
 
 func (s *Server) DeleteMovie(
@@ -492,8 +524,12 @@ func (s *Server) RefreshMovieMetadata(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
+	result := movieToAPI(m)
+	result.ExternalIds = s.detailExternalIDs(
+		ctx, db.ExternalIDsOfMovie, m.ID, metadata.SourceTMDB, m.TmdbID,
+	)
 	return RefreshMovieMetadata200JSONResponse{
-		MovieRefreshedJSONResponse: MovieRefreshedJSONResponse(movieToAPI(m)),
+		MovieRefreshedJSONResponse: MovieRefreshedJSONResponse(result),
 	}, nil
 }
 

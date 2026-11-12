@@ -74,9 +74,11 @@ type TVShowEdges struct {
 	Events []*MediaEvent `json:"events,omitempty"`
 	// Credits holds the value of the credits edge.
 	Credits []*Credit `json:"credits,omitempty"`
+	// ExternalIds holds the value of the external_ids edge.
+	ExternalIds []*ExternalID `json:"external_ids,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // SeasonsOrErr returns the Seasons value or an error if the edge
@@ -104,6 +106,15 @@ func (e TVShowEdges) CreditsOrErr() ([]*Credit, error) {
 		return e.Credits, nil
 	}
 	return nil, &NotLoadedError{edge: "credits"}
+}
+
+// ExternalIdsOrErr returns the ExternalIds value or an error if the edge
+// was not loaded in eager-loading.
+func (e TVShowEdges) ExternalIdsOrErr() ([]*ExternalID, error) {
+	if e.loadedTypes[3] {
+		return e.ExternalIds, nil
+	}
+	return nil, &NotLoadedError{edge: "external_ids"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -302,6 +313,11 @@ func (_m *TVShow) QueryEvents() *MediaEventQuery {
 // QueryCredits queries the "credits" edge of the TVShow entity.
 func (_m *TVShow) QueryCredits() *CreditQuery {
 	return NewTVShowClient(_m.config).QueryCredits(_m)
+}
+
+// QueryExternalIds queries the "external_ids" edge of the TVShow entity.
+func (_m *TVShow) QueryExternalIds() *ExternalIDQuery {
+	return NewTVShowClient(_m.config).QueryExternalIds(_m)
 }
 
 // Update returns a builder for updating this TVShow.

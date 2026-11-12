@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
@@ -469,6 +470,21 @@ func (_u *MovieUpdate) AddCredits(v ...*Credit) *MovieUpdate {
 	return _u.AddCreditIDs(ids...)
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_u *MovieUpdate) AddExternalIDIDs(ids ...uint32) *MovieUpdate {
+	_u.mutation.AddExternalIDIDs(ids...)
+	return _u
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_u *MovieUpdate) AddExternalIds(v ...*ExternalID) *MovieUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalIDIDs(ids...)
+}
+
 // Mutation returns the MovieMutation object of the builder.
 func (_u *MovieUpdate) Mutation() *MovieMutation {
 	return _u.mutation
@@ -556,6 +572,27 @@ func (_u *MovieUpdate) RemoveCredits(v ...*Credit) *MovieUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCreditIDs(ids...)
+}
+
+// ClearExternalIds clears all "external_ids" edges to the ExternalID entity.
+func (_u *MovieUpdate) ClearExternalIds() *MovieUpdate {
+	_u.mutation.ClearExternalIds()
+	return _u
+}
+
+// RemoveExternalIDIDs removes the "external_ids" edge to ExternalID entities by IDs.
+func (_u *MovieUpdate) RemoveExternalIDIDs(ids ...uint32) *MovieUpdate {
+	_u.mutation.RemoveExternalIDIDs(ids...)
+	return _u
+}
+
+// RemoveExternalIds removes "external_ids" edges to ExternalID entities.
+func (_u *MovieUpdate) RemoveExternalIds(v ...*ExternalID) *MovieUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalIDIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -926,6 +963,51 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.ExternalIdsTable,
+			Columns: []string{movie.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalIdsIDs(); len(nodes) > 0 && !_u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.ExternalIdsTable,
+			Columns: []string{movie.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.ExternalIdsTable,
+			Columns: []string{movie.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1390,6 +1472,21 @@ func (_u *MovieUpdateOne) AddCredits(v ...*Credit) *MovieUpdateOne {
 	return _u.AddCreditIDs(ids...)
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_u *MovieUpdateOne) AddExternalIDIDs(ids ...uint32) *MovieUpdateOne {
+	_u.mutation.AddExternalIDIDs(ids...)
+	return _u
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_u *MovieUpdateOne) AddExternalIds(v ...*ExternalID) *MovieUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalIDIDs(ids...)
+}
+
 // Mutation returns the MovieMutation object of the builder.
 func (_u *MovieUpdateOne) Mutation() *MovieMutation {
 	return _u.mutation
@@ -1477,6 +1574,27 @@ func (_u *MovieUpdateOne) RemoveCredits(v ...*Credit) *MovieUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCreditIDs(ids...)
+}
+
+// ClearExternalIds clears all "external_ids" edges to the ExternalID entity.
+func (_u *MovieUpdateOne) ClearExternalIds() *MovieUpdateOne {
+	_u.mutation.ClearExternalIds()
+	return _u
+}
+
+// RemoveExternalIDIDs removes the "external_ids" edge to ExternalID entities by IDs.
+func (_u *MovieUpdateOne) RemoveExternalIDIDs(ids ...uint32) *MovieUpdateOne {
+	_u.mutation.RemoveExternalIDIDs(ids...)
+	return _u
+}
+
+// RemoveExternalIds removes "external_ids" edges to ExternalID entities.
+func (_u *MovieUpdateOne) RemoveExternalIds(v ...*ExternalID) *MovieUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalIDIDs(ids...)
 }
 
 // Where appends a list predicates to the MovieUpdate builder.
@@ -1877,6 +1995,51 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.ExternalIdsTable,
+			Columns: []string{movie.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalIdsIDs(); len(nodes) > 0 && !_u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.ExternalIdsTable,
+			Columns: []string{movie.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.ExternalIdsTable,
+			Columns: []string{movie.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

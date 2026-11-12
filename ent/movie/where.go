@@ -1217,6 +1217,29 @@ func HasCreditsWith(preds ...predicate.Credit) predicate.Movie {
 	})
 }
 
+// HasExternalIds applies the HasEdge predicate on the "external_ids" edge.
+func HasExternalIds() predicate.Movie {
+	return predicate.Movie(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ExternalIdsTable, ExternalIdsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasExternalIdsWith applies the HasEdge predicate on the "external_ids" edge with a given conditions (other predicates).
+func HasExternalIdsWith(preds ...predicate.ExternalID) predicate.Movie {
+	return predicate.Movie(func(s *sql.Selector) {
+		step := newExternalIdsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Movie) predicate.Movie {
 	return predicate.Movie(sql.AndPredicates(predicates...))

@@ -323,6 +323,17 @@ var _ = Describe("Music schedulers", Label("unit", "integration", "music"), func
 	})
 
 	Describe("RefreshStale", func() {
+		// The links backfill runs at the end of every refresh: these specs
+		// seed artists stored without links, which it reads once each.
+		BeforeEach(func() {
+			e.provider.EXPECT().ArtistLinks(mock.Anything, mock.Anything).
+				Return(map[string]string{}, nil).Maybe()
+			e.provider.EXPECT().
+				AlbumLinks(mock.Anything, mock.Anything, mock.Anything).
+				Return(map[string]string{}, nil).
+				Maybe()
+		})
+
 		makeArtist := func(mbid string, refreshed *time.Time) *ent.Artist {
 			GinkgoHelper()
 			c := e.client.Artist.Create().SetMbid(mbid).SetName(mbid)
@@ -441,3 +452,100 @@ var _ = Describe("Music schedulers", Label("unit", "integration", "music"), func
 		})
 	})
 })
+
+var _ = Describe(
+	"Music links backfill",
+	Label("unit", "integration", "music"),
+	func() {
+		var e *env
+
+		BeforeEach(func() {
+			e = newEnv(false)
+		})
+
+		seed := func() (*ent.Artist, *ent.Album) {
+			GinkgoHelper()
+			recent := time.Now().Add(-time.Hour)
+			a := e.client.Artist.Create().
+				SetMbid("a74b1b7f-71a5-4011-9441-d0b5e4122711").SetName("Radiohead").
+				SetLastRefreshedAt(recent).SaveX(e.ctx)
+			al := e.client.Album.Create().
+				SetMbid("b1392450-e666-3926-a536-22c65f834433").
+				SetTitle("OK Computer").
+				SetArtistID(a.ID).SetReleaseMbid("rel-1").
+				SetMetadataFetchedAt(recent).SaveX(e.ctx)
+			return a, al
+		}
+
+		It(
+			"reads the links of rows stored before them, then leaves them alone",
+			func() {
+				a, al := seed()
+				e.provider.EXPECT().ArtistLinks(mock.Anything, a.Mbid).
+					Return(map[string]string{metadata.SourceDiscogs: "3840"}, nil).
+					Once()
+				e.provider.EXPECT().AlbumLinks(mock.Anything, al.Mbid, "rel-1").
+					Return(map[string]string{metadata.SourceSpotify: "6dVIqQ8qmQ5GBnJ9shOYGE"}, nil).
+					Once()
+
+				Expect(e.svc.RefreshStale(e.ctx)).To(Succeed())
+
+				ids, err := e.store.TitleExternalIDs(
+					e.ctx,
+					db.ExternalIDsOfArtist,
+					a.ID,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids).To(Equal(db.ExternalIDs{"discogs": "3840"}))
+				ids, err = e.store.TitleExternalIDs(
+					e.ctx,
+					db.ExternalIDsOfAlbum,
+					al.ID,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(
+					ids,
+				).To(Equal(db.ExternalIDs{"spotify": "6dVIqQ8qmQ5GBnJ9shOYGE"}))
+				Expect(
+					e.client.Artist.GetX(e.ctx, a.ID).LinksFetchedAt,
+				).NotTo(BeNil())
+				Expect(
+					e.client.Album.GetX(e.ctx, al.ID).LinksFetchedAt,
+				).NotTo(BeNil())
+
+				// The strict mock carries no second expectation: a second run asks
+				// MusicBrainz nothing.
+				Expect(e.svc.RefreshStale(e.ctx)).To(Succeed())
+			},
+		)
+
+		It(
+			"stamps a row MusicBrainz no longer knows, so it is not asked again",
+			func() {
+				a, al := seed()
+				e.provider.EXPECT().ArtistLinks(mock.Anything, a.Mbid).
+					Return(nil, metadata.ErrNotFound).Once()
+				e.provider.EXPECT().AlbumLinks(mock.Anything, al.Mbid, "rel-1").
+					Return(nil, errors.New("boom")).Once()
+
+				Expect(e.svc.RefreshStale(e.ctx)).To(Succeed())
+
+				Expect(
+					e.client.Artist.GetX(e.ctx, a.ID).LinksFetchedAt,
+				).NotTo(BeNil())
+				// Any other failure is retried on the next run.
+				Expect(e.client.Album.GetX(e.ctx, al.ID).LinksFetchedAt).To(BeNil())
+			},
+		)
+
+		It("ends the pass on a rate limit longer than it waits out", func() {
+			a, _ := seed()
+			e.provider.EXPECT().ArtistLinks(mock.Anything, a.Mbid).
+				Return(nil, &metadata.RateLimitedError{RetryAfter: time.Hour}).Once()
+			// No AlbumLinks expectation: the pass stops before the albums.
+
+			Expect(e.svc.RefreshStale(e.ctx)).To(Succeed())
+			Expect(e.client.Artist.GetX(e.ctx, a.ID).LinksFetchedAt).To(BeNil())
+		})
+	},
+)

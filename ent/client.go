@@ -28,6 +28,7 @@ import (
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/importscanbook"
@@ -88,6 +89,8 @@ type Client struct {
 	DownloadRecord *DownloadRecordClient
 	// Episode is the client for interacting with the Episode builders.
 	Episode *EpisodeClient
+	// ExternalID is the client for interacting with the ExternalID builders.
+	ExternalID *ExternalIDClient
 	// ImportScan is the client for interacting with the ImportScan builders.
 	ImportScan *ImportScanClient
 	// ImportScanAlbum is the client for interacting with the ImportScanAlbum builders.
@@ -166,6 +169,7 @@ func (c *Client) init() {
 	c.Credit = NewCreditClient(c.config)
 	c.DownloadRecord = NewDownloadRecordClient(c.config)
 	c.Episode = NewEpisodeClient(c.config)
+	c.ExternalID = NewExternalIDClient(c.config)
 	c.ImportScan = NewImportScanClient(c.config)
 	c.ImportScanAlbum = NewImportScanAlbumClient(c.config)
 	c.ImportScanBook = NewImportScanBookClient(c.config)
@@ -298,6 +302,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Credit:           NewCreditClient(cfg),
 		DownloadRecord:   NewDownloadRecordClient(cfg),
 		Episode:          NewEpisodeClient(cfg),
+		ExternalID:       NewExternalIDClient(cfg),
 		ImportScan:       NewImportScanClient(cfg),
 		ImportScanAlbum:  NewImportScanAlbumClient(cfg),
 		ImportScanBook:   NewImportScanBookClient(cfg),
@@ -357,6 +362,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Credit:           NewCreditClient(cfg),
 		DownloadRecord:   NewDownloadRecordClient(cfg),
 		Episode:          NewEpisodeClient(cfg),
+		ExternalID:       NewExternalIDClient(cfg),
 		ImportScan:       NewImportScanClient(cfg),
 		ImportScanAlbum:  NewImportScanAlbumClient(cfg),
 		ImportScanBook:   NewImportScanBookClient(cfg),
@@ -415,12 +421,12 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Album, c.ApiKey, c.Artist, c.ArtistMember, c.Author, c.Book,
 		c.BookContribution, c.BookEdition, c.BookSeries, c.Bookmark, c.Credit,
-		c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanAlbum, c.ImportScanBook,
-		c.ImportScanFile, c.ImportScanShow, c.IndexerSession, c.Invite, c.MediaEvent,
-		c.MediaFile, c.Movie, c.MusicAnnotation, c.MusicCredit, c.OIDCIdentity,
-		c.Person, c.PlayQueue, c.Playlist, c.RadioStation, c.Request, c.ScheduledJob,
-		c.Season, c.Session, c.Share, c.TVShow, c.TorrentSession, c.Track,
-		c.TranscodeJob, c.User,
+		c.DownloadRecord, c.Episode, c.ExternalID, c.ImportScan, c.ImportScanAlbum,
+		c.ImportScanBook, c.ImportScanFile, c.ImportScanShow, c.IndexerSession,
+		c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.MusicAnnotation, c.MusicCredit,
+		c.OIDCIdentity, c.Person, c.PlayQueue, c.Playlist, c.RadioStation, c.Request,
+		c.ScheduledJob, c.Season, c.Session, c.Share, c.TVShow, c.TorrentSession,
+		c.Track, c.TranscodeJob, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -432,12 +438,12 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Album, c.ApiKey, c.Artist, c.ArtistMember, c.Author, c.Book,
 		c.BookContribution, c.BookEdition, c.BookSeries, c.Bookmark, c.Credit,
-		c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanAlbum, c.ImportScanBook,
-		c.ImportScanFile, c.ImportScanShow, c.IndexerSession, c.Invite, c.MediaEvent,
-		c.MediaFile, c.Movie, c.MusicAnnotation, c.MusicCredit, c.OIDCIdentity,
-		c.Person, c.PlayQueue, c.Playlist, c.RadioStation, c.Request, c.ScheduledJob,
-		c.Season, c.Session, c.Share, c.TVShow, c.TorrentSession, c.Track,
-		c.TranscodeJob, c.User,
+		c.DownloadRecord, c.Episode, c.ExternalID, c.ImportScan, c.ImportScanAlbum,
+		c.ImportScanBook, c.ImportScanFile, c.ImportScanShow, c.IndexerSession,
+		c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.MusicAnnotation, c.MusicCredit,
+		c.OIDCIdentity, c.Person, c.PlayQueue, c.Playlist, c.RadioStation, c.Request,
+		c.ScheduledJob, c.Season, c.Session, c.Share, c.TVShow, c.TorrentSession,
+		c.Track, c.TranscodeJob, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -472,6 +478,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.DownloadRecord.mutate(ctx, m)
 	case *EpisodeMutation:
 		return c.Episode.mutate(ctx, m)
+	case *ExternalIDMutation:
+		return c.ExternalID.mutate(ctx, m)
 	case *ImportScanMutation:
 		return c.ImportScan.mutate(ctx, m)
 	case *ImportScanAlbumMutation:
@@ -637,6 +645,22 @@ func (c *AlbumClient) GetX(ctx context.Context, id uint32) *Album {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryExternalIds queries the external_ids edge of a Album.
+func (c *AlbumClient) QueryExternalIds(_m *Album) *ExternalIDQuery {
+	query := (&ExternalIDClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(album.Table, album.FieldID, id),
+			sqlgraph.To(externalid.Table, externalid.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, album.ExternalIdsTable, album.ExternalIdsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // QueryArtist queries the artist edge of a Album.
@@ -1047,6 +1071,22 @@ func (c *ArtistClient) GetX(ctx context.Context, id uint32) *Artist {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryExternalIds queries the external_ids edge of a Artist.
+func (c *ArtistClient) QueryExternalIds(_m *Artist) *ExternalIDQuery {
+	query := (&ExternalIDClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(externalid.Table, externalid.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, artist.ExternalIdsTable, artist.ExternalIdsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // QueryAlbums queries the albums edge of a Artist.
@@ -2027,6 +2067,54 @@ func (c *BookEditionClient) QueryBook(_m *BookEdition) *BookQuery {
 			sqlgraph.From(bookedition.Table, bookedition.FieldID, id),
 			sqlgraph.To(book.Table, book.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, bookedition.BookTable, bookedition.BookColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEbookOf queries the ebook_of edge of a BookEdition.
+func (c *BookEditionClient) QueryEbookOf(_m *BookEdition) *BookQuery {
+	query := (&BookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookedition.Table, bookedition.FieldID, id),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, bookedition.EbookOfTable, bookedition.EbookOfColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAudiobookOf queries the audiobook_of edge of a BookEdition.
+func (c *BookEditionClient) QueryAudiobookOf(_m *BookEdition) *BookQuery {
+	query := (&BookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookedition.Table, bookedition.FieldID, id),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, bookedition.AudiobookOfTable, bookedition.AudiobookOfColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryExternalIds queries the external_ids edge of a BookEdition.
+func (c *BookEditionClient) QueryExternalIds(_m *BookEdition) *ExternalIDQuery {
+	query := (&ExternalIDClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookedition.Table, bookedition.FieldID, id),
+			sqlgraph.To(externalid.Table, externalid.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, bookedition.ExternalIdsTable, bookedition.ExternalIdsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3057,6 +3145,219 @@ func (c *EpisodeClient) mutate(ctx context.Context, m *EpisodeMutation) (Value, 
 		return (&EpisodeDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Episode mutation op: %q", m.Op())
+	}
+}
+
+// ExternalIDClient is a client for the ExternalID schema.
+type ExternalIDClient struct {
+	config
+}
+
+// NewExternalIDClient returns a client for the ExternalID from the given config.
+func NewExternalIDClient(c config) *ExternalIDClient {
+	return &ExternalIDClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `externalid.Hooks(f(g(h())))`.
+func (c *ExternalIDClient) Use(hooks ...Hook) {
+	c.hooks.ExternalID = append(c.hooks.ExternalID, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `externalid.Intercept(f(g(h())))`.
+func (c *ExternalIDClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ExternalID = append(c.inters.ExternalID, interceptors...)
+}
+
+// Create returns a builder for creating a ExternalID entity.
+func (c *ExternalIDClient) Create() *ExternalIDCreate {
+	mutation := newExternalIDMutation(c.config, OpCreate)
+	return &ExternalIDCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ExternalID entities.
+func (c *ExternalIDClient) CreateBulk(builders ...*ExternalIDCreate) *ExternalIDCreateBulk {
+	return &ExternalIDCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ExternalIDClient) MapCreateBulk(slice any, setFunc func(*ExternalIDCreate, int)) *ExternalIDCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ExternalIDCreateBulk{err: fmt.Errorf("calling to ExternalIDClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ExternalIDCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ExternalIDCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ExternalID.
+func (c *ExternalIDClient) Update() *ExternalIDUpdate {
+	mutation := newExternalIDMutation(c.config, OpUpdate)
+	return &ExternalIDUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ExternalIDClient) UpdateOne(_m *ExternalID) *ExternalIDUpdateOne {
+	mutation := newExternalIDMutation(c.config, OpUpdateOne, withExternalID(_m))
+	return &ExternalIDUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ExternalIDClient) UpdateOneID(id uint32) *ExternalIDUpdateOne {
+	mutation := newExternalIDMutation(c.config, OpUpdateOne, withExternalIDID(id))
+	return &ExternalIDUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ExternalID.
+func (c *ExternalIDClient) Delete() *ExternalIDDelete {
+	mutation := newExternalIDMutation(c.config, OpDelete)
+	return &ExternalIDDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ExternalIDClient) DeleteOne(_m *ExternalID) *ExternalIDDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ExternalIDClient) DeleteOneID(id uint32) *ExternalIDDeleteOne {
+	builder := c.Delete().Where(externalid.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ExternalIDDeleteOne{builder}
+}
+
+// Query returns a query builder for ExternalID.
+func (c *ExternalIDClient) Query() *ExternalIDQuery {
+	return &ExternalIDQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeExternalID},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ExternalID entity by its id.
+func (c *ExternalIDClient) Get(ctx context.Context, id uint32) (*ExternalID, error) {
+	return c.Query().Where(externalid.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ExternalIDClient) GetX(ctx context.Context, id uint32) *ExternalID {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryMovie queries the movie edge of a ExternalID.
+func (c *ExternalIDClient) QueryMovie(_m *ExternalID) *MovieQuery {
+	query := (&MovieClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(externalid.Table, externalid.FieldID, id),
+			sqlgraph.To(movie.Table, movie.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, externalid.MovieTable, externalid.MovieColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTvShow queries the tv_show edge of a ExternalID.
+func (c *ExternalIDClient) QueryTvShow(_m *ExternalID) *TVShowQuery {
+	query := (&TVShowClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(externalid.Table, externalid.FieldID, id),
+			sqlgraph.To(tvshow.Table, tvshow.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, externalid.TvShowTable, externalid.TvShowColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryArtist queries the artist edge of a ExternalID.
+func (c *ExternalIDClient) QueryArtist(_m *ExternalID) *ArtistQuery {
+	query := (&ArtistClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(externalid.Table, externalid.FieldID, id),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, externalid.ArtistTable, externalid.ArtistColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAlbum queries the album edge of a ExternalID.
+func (c *ExternalIDClient) QueryAlbum(_m *ExternalID) *AlbumQuery {
+	query := (&AlbumClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(externalid.Table, externalid.FieldID, id),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, externalid.AlbumTable, externalid.AlbumColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryBookEdition queries the book_edition edge of a ExternalID.
+func (c *ExternalIDClient) QueryBookEdition(_m *ExternalID) *BookEditionQuery {
+	query := (&BookEditionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(externalid.Table, externalid.FieldID, id),
+			sqlgraph.To(bookedition.Table, bookedition.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, externalid.BookEditionTable, externalid.BookEditionColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ExternalIDClient) Hooks() []Hook {
+	return c.hooks.ExternalID
+}
+
+// Interceptors returns the client interceptors.
+func (c *ExternalIDClient) Interceptors() []Interceptor {
+	return c.inters.ExternalID
+}
+
+func (c *ExternalIDClient) mutate(ctx context.Context, m *ExternalIDMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ExternalIDCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ExternalIDUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ExternalIDUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ExternalIDDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ExternalID mutation op: %q", m.Op())
 	}
 }
 
@@ -4774,6 +5075,22 @@ func (c *MovieClient) QueryCredits(_m *Movie) *CreditQuery {
 			sqlgraph.From(movie.Table, movie.FieldID, id),
 			sqlgraph.To(credit.Table, credit.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, movie.CreditsTable, movie.CreditsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryExternalIds queries the external_ids edge of a Movie.
+func (c *MovieClient) QueryExternalIds(_m *Movie) *ExternalIDQuery {
+	query := (&ExternalIDClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(movie.Table, movie.FieldID, id),
+			sqlgraph.To(externalid.Table, externalid.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, movie.ExternalIdsTable, movie.ExternalIdsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -6814,6 +7131,22 @@ func (c *TVShowClient) QueryCredits(_m *TVShow) *CreditQuery {
 	return query
 }
 
+// QueryExternalIds queries the external_ids edge of a TVShow.
+func (c *TVShowClient) QueryExternalIds(_m *TVShow) *ExternalIDQuery {
+	query := (&ExternalIDClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tvshow.Table, tvshow.FieldID, id),
+			sqlgraph.To(externalid.Table, externalid.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, tvshow.ExternalIdsTable, tvshow.ExternalIdsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *TVShowClient) Hooks() []Hook {
 	return c.hooks.TVShow
@@ -7631,8 +7964,8 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 type (
 	hooks struct {
 		Album, ApiKey, Artist, ArtistMember, Author, Book, BookContribution,
-		BookEdition, BookSeries, Bookmark, Credit, DownloadRecord, Episode, ImportScan,
-		ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow,
+		BookEdition, BookSeries, Bookmark, Credit, DownloadRecord, Episode, ExternalID,
+		ImportScan, ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow,
 		IndexerSession, Invite, MediaEvent, MediaFile, Movie, MusicAnnotation,
 		MusicCredit, OIDCIdentity, Person, PlayQueue, Playlist, RadioStation, Request,
 		ScheduledJob, Season, Session, Share, TVShow, TorrentSession, Track,
@@ -7640,8 +7973,8 @@ type (
 	}
 	inters struct {
 		Album, ApiKey, Artist, ArtistMember, Author, Book, BookContribution,
-		BookEdition, BookSeries, Bookmark, Credit, DownloadRecord, Episode, ImportScan,
-		ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow,
+		BookEdition, BookSeries, Bookmark, Credit, DownloadRecord, Episode, ExternalID,
+		ImportScan, ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow,
 		IndexerSession, Invite, MediaEvent, MediaFile, Movie, MusicAnnotation,
 		MusicCredit, OIDCIdentity, Person, PlayQueue, Playlist, RadioStation, Request,
 		ScheduledJob, Season, Session, Share, TVShow, TorrentSession, Track,

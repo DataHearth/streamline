@@ -76,9 +76,11 @@ type MovieEdges struct {
 	Events []*MediaEvent `json:"events,omitempty"`
 	// Credits holds the value of the credits edge.
 	Credits []*Credit `json:"credits,omitempty"`
+	// ExternalIds holds the value of the external_ids edge.
+	ExternalIds []*ExternalID `json:"external_ids,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // DownloadRecordsOrErr returns the DownloadRecords value or an error if the edge
@@ -115,6 +117,15 @@ func (e MovieEdges) CreditsOrErr() ([]*Credit, error) {
 		return e.Credits, nil
 	}
 	return nil, &NotLoadedError{edge: "credits"}
+}
+
+// ExternalIdsOrErr returns the ExternalIds value or an error if the edge
+// was not loaded in eager-loading.
+func (e MovieEdges) ExternalIdsOrErr() ([]*ExternalID, error) {
+	if e.loadedTypes[4] {
+		return e.ExternalIds, nil
+	}
+	return nil, &NotLoadedError{edge: "external_ids"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -320,6 +331,11 @@ func (_m *Movie) QueryEvents() *MediaEventQuery {
 // QueryCredits queries the "credits" edge of the Movie entity.
 func (_m *Movie) QueryCredits() *CreditQuery {
 	return NewMovieClient(_m.config).QueryCredits(_m)
+}
+
+// QueryExternalIds queries the "external_ids" edge of the Movie entity.
+func (_m *Movie) QueryExternalIds() *ExternalIDQuery {
+	return NewMovieClient(_m.config).QueryExternalIds(_m)
 }
 
 // Update returns a builder for updating this Movie.

@@ -382,10 +382,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 			Aliases []struct {
 				Name string `json:"name"`
 			} `json:"aliases"`
-			RemoteIDs []struct {
-				ID         string `json:"id"`
-				SourceName string `json:"sourceName"`
-			} `json:"remoteIds"`
+			RemoteIDs []tvdbRemoteID `json:"remoteIds"`
 			// Populated only when we request ?meta=translations.
 			Translations struct {
 				NameTranslations []struct {
@@ -425,6 +422,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 		// TVDB v4 removed user ratings; `score` is an arbitrary popularity
 		// metric (not a 0-10 rating), so Rating is left unset (0 = unknown).
 	}
+	d.TMDBID, d.IMDbID, d.WikidataID = seriesRemoteIDs(ext.Data.RemoteIDs)
 	for _, g := range ext.Data.Genres {
 		d.Genres = append(d.Genres, g.Name)
 	}
@@ -433,12 +431,6 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 	}
 	for _, tr := range ext.Data.Translations.NameTranslations {
 		d.Aliases = append(d.Aliases, tr.Name)
-	}
-	for _, r := range ext.Data.RemoteIDs {
-		if strings.EqualFold(r.SourceName, "imdb") {
-			d.IMDbID = r.ID
-			break
-		}
 	}
 	if inferAnime(d.Genres, ext.Data.OriginalLanguage, ext.Data.OriginalCountry) {
 		d.Type = SeriesAnime
@@ -685,10 +677,7 @@ func (t *TVDB) GetPerson(
 			Death       string          `json:"death"`
 			BirthPlace  string          `json:"birthPlace"`
 			Biographies []tvdbBiography `json:"biographies"`
-			RemoteIDs   []struct {
-				ID         string `json:"id"`
-				SourceName string `json:"sourceName"`
-			} `json:"remoteIds"`
+			RemoteIDs   []tvdbRemoteID  `json:"remoteIds"`
 		} `json:"data"`
 	}
 	if err := t.get(
@@ -720,6 +709,35 @@ func (t *TVDB) GetPerson(
 		}
 	}
 	return d, nil
+}
+
+// tvdbRemoteID is one remoteIds entry.
+type tvdbRemoteID struct {
+	ID         string `json:"id"`
+	SourceName string `json:"sourceName"`
+}
+
+// seriesRemoteIDs reads IMDb, TMDB and Wikidata ids by folded source name,
+// dropping a value not in its site's shape.
+func seriesRemoteIDs(ids []tvdbRemoteID) (tmdbID uint32, imdbID, wikidataID string) {
+	for _, r := range ids {
+		v := strings.TrimSpace(r.ID)
+		switch src := strings.ToLower(r.SourceName); {
+		case strings.HasPrefix(src, "imdb"):
+			if imdbID == "" && strings.HasPrefix(v, "tt") {
+				imdbID = v
+			}
+		case strings.HasPrefix(src, "themoviedb"), src == "tmdb":
+			if tmdbID == 0 {
+				tmdbID = atou32(v)
+			}
+		case strings.HasPrefix(src, "wikidata"):
+			if wikidataID == "" && strings.HasPrefix(v, "Q") {
+				wikidataID = v
+			}
+		}
+	}
+	return tmdbID, imdbID, wikidataID
 }
 
 // pickBiography chooses one entry out of TVDB's per-language biographies array:

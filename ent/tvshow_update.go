@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/credit"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/season"
@@ -452,6 +453,21 @@ func (_u *TVShowUpdate) AddCredits(v ...*Credit) *TVShowUpdate {
 	return _u.AddCreditIDs(ids...)
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_u *TVShowUpdate) AddExternalIDIDs(ids ...uint32) *TVShowUpdate {
+	_u.mutation.AddExternalIDIDs(ids...)
+	return _u
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_u *TVShowUpdate) AddExternalIds(v ...*ExternalID) *TVShowUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalIDIDs(ids...)
+}
+
 // Mutation returns the TVShowMutation object of the builder.
 func (_u *TVShowUpdate) Mutation() *TVShowMutation {
 	return _u.mutation
@@ -518,6 +534,27 @@ func (_u *TVShowUpdate) RemoveCredits(v ...*Credit) *TVShowUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCreditIDs(ids...)
+}
+
+// ClearExternalIds clears all "external_ids" edges to the ExternalID entity.
+func (_u *TVShowUpdate) ClearExternalIds() *TVShowUpdate {
+	_u.mutation.ClearExternalIds()
+	return _u
+}
+
+// RemoveExternalIDIDs removes the "external_ids" edge to ExternalID entities by IDs.
+func (_u *TVShowUpdate) RemoveExternalIDIDs(ids ...uint32) *TVShowUpdate {
+	_u.mutation.RemoveExternalIDIDs(ids...)
+	return _u
+}
+
+// RemoveExternalIds removes "external_ids" edges to ExternalID entities.
+func (_u *TVShowUpdate) RemoveExternalIds(v ...*ExternalID) *TVShowUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalIDIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -843,6 +880,51 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.ExternalIdsTable,
+			Columns: []string{tvshow.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalIdsIDs(); len(nodes) > 0 && !_u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.ExternalIdsTable,
+			Columns: []string{tvshow.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.ExternalIdsTable,
+			Columns: []string{tvshow.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1291,6 +1373,21 @@ func (_u *TVShowUpdateOne) AddCredits(v ...*Credit) *TVShowUpdateOne {
 	return _u.AddCreditIDs(ids...)
 }
 
+// AddExternalIDIDs adds the "external_ids" edge to the ExternalID entity by IDs.
+func (_u *TVShowUpdateOne) AddExternalIDIDs(ids ...uint32) *TVShowUpdateOne {
+	_u.mutation.AddExternalIDIDs(ids...)
+	return _u
+}
+
+// AddExternalIds adds the "external_ids" edges to the ExternalID entity.
+func (_u *TVShowUpdateOne) AddExternalIds(v ...*ExternalID) *TVShowUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalIDIDs(ids...)
+}
+
 // Mutation returns the TVShowMutation object of the builder.
 func (_u *TVShowUpdateOne) Mutation() *TVShowMutation {
 	return _u.mutation
@@ -1357,6 +1454,27 @@ func (_u *TVShowUpdateOne) RemoveCredits(v ...*Credit) *TVShowUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCreditIDs(ids...)
+}
+
+// ClearExternalIds clears all "external_ids" edges to the ExternalID entity.
+func (_u *TVShowUpdateOne) ClearExternalIds() *TVShowUpdateOne {
+	_u.mutation.ClearExternalIds()
+	return _u
+}
+
+// RemoveExternalIDIDs removes the "external_ids" edge to ExternalID entities by IDs.
+func (_u *TVShowUpdateOne) RemoveExternalIDIDs(ids ...uint32) *TVShowUpdateOne {
+	_u.mutation.RemoveExternalIDIDs(ids...)
+	return _u
+}
+
+// RemoveExternalIds removes "external_ids" edges to ExternalID entities.
+func (_u *TVShowUpdateOne) RemoveExternalIds(v ...*ExternalID) *TVShowUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalIDIDs(ids...)
 }
 
 // Where appends a list predicates to the TVShowUpdate builder.
@@ -1712,6 +1830,51 @@ func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.ExternalIdsTable,
+			Columns: []string{tvshow.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalIdsIDs(); len(nodes) > 0 && !_u.mutation.ExternalIdsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.ExternalIdsTable,
+			Columns: []string{tvshow.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalIdsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.ExternalIdsTable,
+			Columns: []string{tvshow.ExternalIdsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalid.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

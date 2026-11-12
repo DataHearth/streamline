@@ -1531,6 +1531,55 @@ type Store interface {
 		owner CastOwner,
 		ownerID uint32,
 	) ([]CastEntry, error)
+	// TitleExternalIDs returns the other sites' ids stored for a title.
+	TitleExternalIDs(
+		ctx context.Context,
+		owner ExternalIDOwner,
+		ownerID uint32,
+	) (ExternalIDs, error)
+	// ListArtistsAwaitingLinks and ListAlbumsAwaitingLinks page the rows
+	// whose MusicBrainz links were never read, by id after a cursor.
+	ListArtistsAwaitingLinks(
+		ctx context.Context,
+		afterID uint32,
+		limit int,
+	) ([]*ent.Artist, error)
+	ListAlbumsAwaitingLinks(
+		ctx context.Context,
+		afterID uint32,
+		limit int,
+	) ([]*ent.Album, error)
+	// ListEditionsAwaitingLinks pages the followed editions never read for links.
+	ListEditionsAwaitingLinks(
+		ctx context.Context,
+		afterID uint32,
+		limit int,
+	) ([]*ent.BookEdition, error)
+	SetEditionLinks(
+		ctx context.Context,
+		links map[uint32]ExternalIDs,
+		at time.Time,
+	) error
+	// SetArtistLinks and SetAlbumLinks store a row's links and stamp it.
+	SetArtistLinks(
+		ctx context.Context,
+		id uint32,
+		ids ExternalIDs,
+		at time.Time,
+	) error
+	SetAlbumLinks(
+		ctx context.Context,
+		id uint32,
+		ids ExternalIDs,
+		at time.Time,
+	) error
+	// ExternalIDsFor returns the ids stored for many rows of one kind,
+	// keyed by row id.
+	ExternalIDsFor(
+		ctx context.Context,
+		owner ExternalIDOwner,
+		ownerIDs []uint32,
+	) (map[uint32]ExternalIDs, error)
 	// PeopleNeedingDetails returns the people credited on a title whose
 	// biographical record has never been fetched — the work list for the
 	// post-commit enrichment pass. Credits is not populated.

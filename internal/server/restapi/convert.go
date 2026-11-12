@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/url"
 	"path/filepath"
 	"slices"
@@ -120,6 +121,85 @@ func movieToAPI(m *ent.Movie) Movie {
 		mov.MediaFiles = &files
 	}
 	return mov
+}
+
+// toExternalIDs renders an id set, nil when empty.
+func toExternalIDs(ids db.ExternalIDs) *ExternalIds {
+	out := ExternalIds{
+		Allmusic:      idOrNil(ids, metadata.SourceAllMusic),
+		Audible:       idOrNil(ids, metadata.SourceAudible),
+		GoogleBooks:   idOrNil(ids, metadata.SourceGoogleBooks),
+		Goodreads:     idOrNil(ids, metadata.SourceGoodreads),
+		Openlibrary:   idOrNil(ids, metadata.SourceOpenLibrary),
+		Hardcover:     idOrNil(ids, metadata.SourceHardcover),
+		Musicbrainz:   idOrNil(ids, metadata.SourceMusicBrainz),
+		Tvdb:          idOrNil(ids, metadata.SourceTVDB),
+		Bandcamp:      idOrNil(ids, metadata.SourceBandcamp),
+		Deezer:        idOrNil(ids, metadata.SourceDeezer),
+		Discogs:       idOrNil(ids, metadata.SourceDiscogs),
+		Imdb:          idOrNil(ids, metadata.SourceIMDb),
+		Lastfm:        idOrNil(ids, metadata.SourceLastFM),
+		Rateyourmusic: idOrNil(ids, metadata.SourceRateYourMusic),
+		Spotify:       idOrNil(ids, metadata.SourceSpotify),
+		Tmdb:          idOrNil(ids, metadata.SourceTMDB),
+		Wikidata:      idOrNil(ids, metadata.SourceWikidata),
+	}
+	if out == (ExternalIds{}) {
+		return nil
+	}
+	return &out
+}
+
+// withOwnID copies ids and adds the provider's own id, which is never stored.
+func withOwnID(ids db.ExternalIDs, source string, id uint32) db.ExternalIDs {
+	out := make(db.ExternalIDs, len(ids)+1)
+	maps.Copy(out, ids)
+	if id != 0 {
+		out[source] = strconv.FormatUint(uint64(id), 10)
+	}
+	return out
+}
+
+// detailExternalIDs is the external_ids of an add, patch or refresh response;
+// best effort, since the write already happened.
+func (s *Server) detailExternalIDs(
+	ctx context.Context,
+	owner db.ExternalIDOwner,
+	id uint32,
+	source string,
+	ownID uint32,
+) *ExternalIds {
+	ids, err := s.store.TitleExternalIDs(ctx, owner, id)
+	if err != nil {
+		slog.WarnContext(ctx, "external ids not read",
+			"external_id.owner", string(owner), "owner.id", id, "error", err)
+	}
+	return toExternalIDs(withOwnID(ids, source, ownID))
+}
+
+// idOrNil is ids[source], nil when unset.
+func idOrNil(ids db.ExternalIDs, source string) *string {
+	v, ok := ids[source]
+	if !ok || v == "" {
+		return nil
+	}
+	return &v
+}
+
+// pageExternalIDs reads a page's ids in one query, only with_external_ids=true.
+func (s *Server) pageExternalIDs(
+	ctx context.Context,
+	want *bool,
+	owner db.ExternalIDOwner,
+	ids []uint32,
+) (map[uint32]db.ExternalIDs, error) {
+	if want == nil || !*want {
+		return nil, nil
+	}
+	if len(ids) == 0 {
+		return map[uint32]db.ExternalIDs{}, nil
+	}
+	return s.store.ExternalIDsFor(ctx, owner, ids)
 }
 
 // movieListToAPI renders a list entry: the base movie plus the file rollup

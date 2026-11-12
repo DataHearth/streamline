@@ -125,6 +125,11 @@ func WikidataID(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldWikidataID, v))
 }
 
+// LinksFetchedAt applies equality check predicate on the "links_fetched_at" field. It's identical to LinksFetchedAtEQ.
+func LinksFetchedAt(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldLinksFetchedAt, v))
+}
+
 // Path applies equality check predicate on the "path" field. It's identical to PathEQ.
 func Path(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldPath, v))
@@ -1110,6 +1115,56 @@ func WikidataIDContainsFold(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldContainsFold(FieldWikidataID, v))
 }
 
+// LinksFetchedAtEQ applies the EQ predicate on the "links_fetched_at" field.
+func LinksFetchedAtEQ(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtNEQ applies the NEQ predicate on the "links_fetched_at" field.
+func LinksFetchedAtNEQ(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtIn applies the In predicate on the "links_fetched_at" field.
+func LinksFetchedAtIn(vs ...time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldLinksFetchedAt, vs...))
+}
+
+// LinksFetchedAtNotIn applies the NotIn predicate on the "links_fetched_at" field.
+func LinksFetchedAtNotIn(vs ...time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldLinksFetchedAt, vs...))
+}
+
+// LinksFetchedAtGT applies the GT predicate on the "links_fetched_at" field.
+func LinksFetchedAtGT(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldGT(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtGTE applies the GTE predicate on the "links_fetched_at" field.
+func LinksFetchedAtGTE(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldGTE(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtLT applies the LT predicate on the "links_fetched_at" field.
+func LinksFetchedAtLT(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldLT(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtLTE applies the LTE predicate on the "links_fetched_at" field.
+func LinksFetchedAtLTE(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldLTE(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtIsNil applies the IsNil predicate on the "links_fetched_at" field.
+func LinksFetchedAtIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldLinksFetchedAt))
+}
+
+// LinksFetchedAtNotNil applies the NotNil predicate on the "links_fetched_at" field.
+func LinksFetchedAtNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldLinksFetchedAt))
+}
+
 // PathEQ applies the EQ predicate on the "path" field.
 func PathEQ(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldPath, v))
@@ -1433,6 +1488,29 @@ func ArtSidecarHashEqualFold(v string) predicate.Artist {
 // ArtSidecarHashContainsFold applies the ContainsFold predicate on the "art_sidecar_hash" field.
 func ArtSidecarHashContainsFold(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldContainsFold(FieldArtSidecarHash, v))
+}
+
+// HasExternalIds applies the HasEdge predicate on the "external_ids" edge.
+func HasExternalIds() predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ExternalIdsTable, ExternalIdsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasExternalIdsWith applies the HasEdge predicate on the "external_ids" edge with a given conditions (other predicates).
+func HasExternalIdsWith(preds ...predicate.ExternalID) predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := newExternalIdsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // HasAlbums applies the HasEdge predicate on the "albums" edge.

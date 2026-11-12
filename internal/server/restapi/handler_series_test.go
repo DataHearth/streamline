@@ -110,6 +110,56 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(body.Items[0].Seasons).To(BeNil())
 		})
 
+		It("attaches external_ids only when the caller asks", func() {
+			app.tvshows.EXPECT().
+				FilterList(mock.Anything, mock.AnythingOfType("tvshow.FilterParams")).
+				Return(
+					[]*ent.TVShow{
+						{ID: 1, Title: "X", Year: 2020, TvdbID: 9},
+						{ID: 2, Title: "Y", Year: 2021, TvdbID: 10},
+					},
+					map[uint32]db.EpisodeCounts{},
+					uint32(2),
+					nil,
+				).
+				Twice()
+			// One read for the whole page, and only on the second request:
+			// the strict mock fails the first if it reads.
+			app.store.EXPECT().
+				ExternalIDsFor(mock.Anything, db.ExternalIDsOfSeries, []uint32{1, 2}).
+				Return(map[uint32]db.ExternalIDs{1: {"imdb": "tt0903747"}}, nil).
+				Once()
+
+			type page struct {
+				Items []struct {
+					ExternalIDs *map[string]string `json:"external_ids"`
+				} `json:"items"`
+			}
+			get := func(path string) page {
+				GinkgoHelper()
+				resp := app.do(app.req(http.MethodGet, path, app.adminKey, nil))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				var body page
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				return body
+			}
+
+			plain := get("/api/v1/series")
+			Expect(plain.Items).To(HaveLen(2))
+			Expect(plain.Items[0].ExternalIDs).To(BeNil())
+
+			with := get("/api/v1/series?with_external_ids=true")
+			Expect(with.Items).To(HaveLen(2))
+			Expect(*with.Items[0].ExternalIDs).To(Equal(map[string]string{
+				"tvdb": "9", "imdb": "tt0903747",
+			}))
+			// A show with no other id still carries its own.
+			Expect(
+				*with.Items[1].ExternalIDs,
+			).To(Equal(map[string]string{"tvdb": "10"}))
+		})
+
 		It("500s when the service errors", func() {
 			app.tvshows.EXPECT().
 				FilterList(mock.Anything, mock.AnythingOfType("tvshow.FilterParams")).
@@ -179,6 +229,10 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				}, nil).
 				Once()
 			app.store.EXPECT().
+				TitleExternalIDs(mock.Anything, db.ExternalIDsOfSeries, uint32(1)).
+				Return(db.ExternalIDs{}, nil).
+				Maybe()
+			app.store.EXPECT().
 				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
 				Return([]db.CastEntry{{
 					PersonID:  14,
@@ -215,10 +269,53 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				To(Equal("https://www.thetvdb.com/dereferrer/people/203697"))
 		})
 
+		It("serves the cross-references stored for the show", func() {
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
+				Return(&ent.TVShow{
+					ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189,
+				}, nil).
+				Once()
+			app.store.EXPECT().
+				TitleExternalIDs(mock.Anything, db.ExternalIDsOfSeries, uint32(1)).
+				Return(db.ExternalIDs{
+					"tmdb": "1396", "imdb": "tt0903747", "wikidata": "Q1079",
+				}, nil).
+				Once()
+			app.store.EXPECT().
+				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				Return(nil, nil).
+				Once()
+
+			resp := app.do(
+				app.req(http.MethodGet, "/api/v1/series/1", app.adminKey, nil),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var body struct {
+				TvdbID      uint32            `json:"tvdb_id"`
+				ExternalIDs map[string]string `json:"external_ids"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.TvdbID).To(Equal(uint32(81189)))
+			// The show's own id stays tvdb_id, and the map repeats it beside
+			// the others.
+			Expect(body.ExternalIDs).To(Equal(map[string]string{
+				"tvdb":     "81189",
+				"tmdb":     "1396",
+				"imdb":     "tt0903747",
+				"wikidata": "Q1079",
+			}))
+		})
+
 		It("omits cast when nothing credits the show", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
 				Return(&ent.TVShow{ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189}, nil).
 				Once()
+			app.store.EXPECT().
+				TitleExternalIDs(mock.Anything, db.ExternalIDsOfSeries, uint32(1)).
+				Return(db.ExternalIDs{}, nil).
+				Maybe()
 			app.store.EXPECT().
 				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
 				Return(nil, nil).
@@ -272,6 +369,10 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
 				Return(show, nil).Once()
 			app.store.EXPECT().
+				TitleExternalIDs(mock.Anything, db.ExternalIDsOfSeries, uint32(1)).
+				Return(db.ExternalIDs{}, nil).
+				Maybe()
+			app.store.EXPECT().
 				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
 				Return(nil, nil).
 				Once()
@@ -294,6 +395,43 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(body.Seasons[0].Episodes).To(HaveLen(1))
 			Expect(body.Seasons[0].Episodes[0].FileScore).
 				To(HaveValue(Equal(60)))
+		})
+	})
+
+	Describe("PatchSeries", func() {
+		It("answers with the show's detail, its external ids included", func() {
+			show := &ent.TVShow{
+				ID:     1,
+				Title:  "Breaking Bad",
+				Year:   2008,
+				TvdbID: 81189,
+			}
+			app.tvshows.EXPECT().
+				Get(mock.Anything, uint32(1)).
+				Return(show, nil).
+				Once()
+			app.tvshows.EXPECT().Update(mock.Anything, uint32(1), mock.Anything).
+				Return(show, nil).
+				Once()
+			app.store.EXPECT().
+				TitleExternalIDs(mock.Anything, db.ExternalIDsOfSeries, uint32(1)).
+				Return(db.ExternalIDs{"imdb": "tt0903747"}, nil).
+				Once()
+
+			req := app.req(http.MethodPatch, "/api/v1/series/1", app.adminKey,
+				strings.NewReader(`{"monitored":true}`))
+			req.Header.Set("Content-Type", "application/json")
+			resp := app.do(req)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var body struct {
+				ExternalIDs map[string]string `json:"external_ids"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.ExternalIDs).To(Equal(map[string]string{
+				"tvdb": "81189", "imdb": "tt0903747",
+			}))
 		})
 	})
 

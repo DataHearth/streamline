@@ -1,3 +1,4 @@
+import type { ExternalIds } from "./external-links";
 import type { BookFormat, BookKind, ReleaseType } from "./music-books";
 
 export type MovieStatus =
@@ -91,6 +92,9 @@ export type TVShow = {
 	type: SeriesType;
 	monitored: boolean;
 	tvdb_id: number;
+	// Other sites' ids (TVDB's remoteIds): detail responses always, lists only
+	// with with_external_ids=true.
+	external_ids?: ExternalIds;
 	// First air date, ISO yyyy-mm-dd — the series counterpart to
 	// Movie.release_date. Absent for an announced show with no date set, which
 	// is why `year` stays and stays required.
@@ -217,6 +221,7 @@ export type LookupDetail = {
 	original_language?: string;
 	tmdb_id?: number;
 	tvdb_id?: number;
+	external_ids?: ExternalIds;
 	// Series only.
 	network?: string;
 	season_count?: number;
@@ -298,6 +303,9 @@ export type Movie = {
 	digital_release_date?: string | null;
 	status: MovieStatus;
 	tmdb_id: number;
+	// Other sites' ids TMDB maps the film to: detail responses always, lists
+	// only with with_external_ids=true.
+	external_ids?: ExternalIds;
 	overview?: string;
 	runtime?: number;
 	monitored?: boolean;
