@@ -76,6 +76,10 @@ type Claims struct {
 	DisplayName string `json:"display_name,omitempty"`
 	Role        string `json:"role"`
 	JTI         string `json:"jti,omitempty"`
+	// APIKeyID and APIKeyName name the API key a request authenticated with,
+	// zero for a session. The middleware sets them; no token carries them.
+	APIKeyID   uint32 `json:"-"`
+	APIKeyName string `json:"-"`
 	jwt.RegisteredClaims
 }
 

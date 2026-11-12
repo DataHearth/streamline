@@ -411,7 +411,10 @@ func buildRequest(r *http.Request, rel, authKind string) (Request, error) {
 	headers.Del("Authorization")
 	headers.Del("X-Api-Key")
 	if c := auth.ClaimsFromContext(r.Context()); c != nil {
-		req.Caller = &Caller{ID: c.UserID, Role: c.Role}
+		req.Caller = &Caller{
+			ID: c.UserID, Role: c.Role,
+			KeyID: c.APIKeyID, KeyName: c.APIKeyName,
+		}
 	}
 	return req, nil
 }

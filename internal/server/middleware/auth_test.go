@@ -23,7 +23,9 @@ import (
 
 // keyOf is an API key row as ValidateAPIKey returns it: owner loaded.
 func keyOf(u *ent.User, scope apikey.Scope) *ent.ApiKey {
-	return &ent.ApiKey{ID: 9, Scope: scope, Edges: ent.ApiKeyEdges{Owner: u}}
+	return &ent.ApiKey{
+		ID: 9, Name: "tv", Scope: scope, Edges: ent.ApiKeyEdges{Owner: u},
+	}
 }
 
 var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
@@ -431,6 +433,8 @@ var _ = g.Describe("read-scoped API key", g.Label("unit"), func() {
 			Expect(reached).NotTo(BeNil())
 			Expect(reached.UserID).To(Equal(uint32(1)))
 			Expect(reached.Role).To(Equal("admin"))
+			Expect(reached.APIKeyID).To(Equal(uint32(9)))
+			Expect(reached.APIKeyName).To(Equal("tv"))
 		},
 		g.Entry("GET", http.MethodGet, "/api/v1/movies"),
 		g.Entry("HEAD", http.MethodHead, "/api/v1/movies"),

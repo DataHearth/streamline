@@ -109,9 +109,13 @@ func (r Request) GuestPath(hostPath string) (string, bool) {
 	return "", false
 }
 
+// Caller is the signed-in user. KeyID and KeyName are the API key the request
+// came with, both zero for a browser session.
 type Caller struct {
-	ID   uint32 `json:"id"`
-	Role string `json:"role"`
+	ID      uint32 `json:"id"`
+	Role    string `json:"role"`
+	KeyID   uint32 `json:"key_id,omitempty"`
+	KeyName string `json:"key_name,omitempty"`
 }
 
 type Response struct {

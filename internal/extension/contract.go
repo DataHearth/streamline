@@ -87,9 +87,14 @@ type Folder struct {
 	GuestPath string `json:"guest_path"`
 }
 
+// Caller is the signed-in user. KeyID and KeyName are the API key the request
+// came with, both zero for a browser session: one key per device makes the
+// key the device, and a revoked key stops arriving.
 type Caller struct {
-	ID   uint32 `json:"id"`
-	Role string `json:"role"`
+	ID      uint32 `json:"id"`
+	Role    string `json:"role"`
+	KeyID   uint32 `json:"key_id,omitempty"`
+	KeyName string `json:"key_name,omitempty"`
 }
 
 type Response struct {
