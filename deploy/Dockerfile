@@ -10,7 +10,7 @@
 # Pinned, not floating `1.26-alpine`: a moving tag makes grype's stdlib findings
 # drift between builds independently of our code. The cost is that stdlib CVE
 # fixes require bumping this by hand — grype failing on `stdlib` is the signal.
-ARG GO_VERSION=1.27.3
+ARG GO_VERSION=1.27.4
 ARG GO_DIGEST=sha256:fa3d596898d9f126af7c01d14ee7597bab3f39cccf392ef36b69fe77cd681f18
 
 # static-ffmpeg publishes hardened static PIE builds with no external deps,
