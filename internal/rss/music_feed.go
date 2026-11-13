@@ -3,6 +3,7 @@ package rss
 import (
 	"context"
 	"log/slog"
+	"slices"
 	"strconv"
 	"time"
 
@@ -89,11 +90,15 @@ func (s *FeedScanner) newMusicPass(ctx context.Context) (*musicPass, error) {
 				}
 				pass.profiles[ar.QualityProfile] = p
 			}
-			key := showKey(ar.Name)
-			if key == "" {
-				continue
+			var keys []string
+			for _, name := range library.ArtistNames(ar) {
+				key := showKey(name)
+				if key == "" || slices.Contains(keys, key) {
+					continue
+				}
+				keys = append(keys, key)
+				into[key] = append(into[key], a)
 			}
-			into[key] = append(into[key], a)
 		}
 	}
 	index(pass.wanted, albums)
@@ -124,7 +129,7 @@ func (s *FeedScanner) processMusicItems(
 		}
 		var a *ent.Album
 		for _, cand := range pass.wanted[showKey(artistPart)] {
-			if library.TitleNamesSameWork(albumPart, cand.Title) {
+			if library.AlbumTitleNamed(albumPart, cand) {
 				a = cand
 				break
 			}

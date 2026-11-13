@@ -1261,6 +1261,23 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			},
 		)
 
+		It("backfills a monitored album's aliases, files or not", func() {
+			Expect(store.SetAlbumHydration(ctx, rg2.ID, heavy(), now)).To(Succeed())
+			list := func() []*ent.Album {
+				rows, err := store.ListAlbumsAwaitingDetails(
+					ctx, now.Add(time.Minute), 10)
+				Expect(err).NotTo(HaveOccurred())
+				return rows
+			}
+			Expect(list()).To(BeEmpty(), "hydration wrote a list")
+
+			client.Album.UpdateOneID(rg2.ID).ClearAliases().ExecX(ctx)
+			Expect(list()).To(HaveLen(1))
+
+			client.Album.UpdateOneID(rg2.ID).SetMonitored(false).ExecX(ctx)
+			Expect(list()).To(BeEmpty())
+		})
+
 		It(
 			"does not list an outdated credits layout again until its retry is due, nor one too large for the heavy call",
 			func() {

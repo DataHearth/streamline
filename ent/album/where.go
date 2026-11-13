@@ -840,6 +840,16 @@ func GenresNotNil() predicate.Album {
 	return predicate.Album(sql.FieldNotNull(FieldGenres))
 }
 
+// AliasesIsNil applies the IsNil predicate on the "aliases" field.
+func AliasesIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldAliases))
+}
+
+// AliasesNotNil applies the NotNil predicate on the "aliases" field.
+func AliasesNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldAliases))
+}
+
 // MonitoredEQ applies the EQ predicate on the "monitored" field.
 func MonitoredEQ(v bool) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldMonitored, v))

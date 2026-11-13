@@ -47,11 +47,12 @@ func MatchPackDir(dir string, albums []*ent.Album) *ent.Album {
 
 	var matches []*ent.Album
 	for _, a := range albums {
-		for _, c := range candidates {
-			if TitleMatchesStrict(strings.TrimSpace(c), a.Title) {
-				matches = append(matches, a)
-				break
-			}
+		if slices.ContainsFunc(candidates, func(c string) bool {
+			return slices.ContainsFunc(AlbumTitles(a), func(t string) bool {
+				return TitleMatchesStrict(strings.TrimSpace(c), t)
+			})
+		}) {
+			matches = append(matches, a)
 		}
 	}
 	if len(matches) > 1 && year != 0 {

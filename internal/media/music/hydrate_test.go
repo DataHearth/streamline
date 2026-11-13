@@ -281,6 +281,27 @@ var _ = Describe("Album hydration", Label("unit", "integration", "music"), func(
 			Expect(got.Genres).To(Equal([]string{"Grunge", "Alternative Rock"}))
 		})
 
+		It("stores the album's aliases, an empty list when it has none", func() {
+			_, albums := e.seedArtist("IC3PEAK",
+				albumSeed{mbid: "rg-1", title: "Сказка"},
+				albumSeed{mbid: "rg-2", title: "Kiss of Death"})
+			d := hydrated("rg-1", "Смерти больше нет")
+			d.Aliases = []string{"Fairytale", "Skazka"}
+			e.provider.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
+				Return(d, nil).Once()
+			e.provider.EXPECT().GetReleaseGroup(mock.Anything, "rg-2").
+				Return(hydrated("rg-2", "Dead Moon"), nil).Once()
+
+			Expect(e.svc.HydrateAlbum(e.ctx, albums[0].ID)).To(Succeed())
+			Expect(e.svc.HydrateAlbum(e.ctx, albums[1].ID)).To(Succeed())
+
+			Expect(e.client.Album.GetX(e.ctx, albums[0].ID).Aliases).
+				To(Equal([]string{"Fairytale", "Skazka"}))
+			got := e.client.Album.GetX(e.ctx, albums[1].ID).Aliases
+			Expect(got).NotTo(BeNil())
+			Expect(got).To(BeEmpty())
+		})
+
 		It("records an empty genre list rather than none", func() {
 			_, albums := e.seedArtist("Nirvana",
 				albumSeed{mbid: "rg-1", title: "Nevermind"})

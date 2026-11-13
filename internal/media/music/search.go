@@ -91,7 +91,7 @@ func namingAlbum(releases []AlbumRelease, a *ent.Album) []AlbumRelease {
 		return nil
 	}
 	return slices.DeleteFunc(slices.Clone(releases), func(r AlbumRelease) bool {
-		return !library.ReleaseNamesWork(r.Result.Title, artist.Name, a.Title)
+		return !library.ReleaseNamesAlbum(r.Result.Title, artist, a)
 	})
 }
 
@@ -152,7 +152,7 @@ func (s *Service) SearchAlbumReleases(
 	releases := judge(results, profile, library.MusicScopeAlbum,
 		func(p library.ParsedMusicRelease) bool { return !p.Discography },
 		func(r indexer.SearchResult) string {
-			if library.ReleaseNamesOtherWork(r.Title, artist.Name, a.Title) {
+			if library.ReleaseNamesOtherAlbum(r.Title, artist, a) {
 				return otherAlbumReason
 			}
 			return ""
@@ -186,7 +186,7 @@ func (s *Service) BrowseArtistReleases(
 	}
 	byArtist := make([]indexer.SearchResult, 0, len(results))
 	for _, r := range results {
-		if library.ReleaseNamedByCreator(r.Title, a.Name) {
+		if library.ReleaseNamedByArtist(r.Title, a) {
 			byArtist = append(byArtist, r)
 		}
 	}

@@ -170,6 +170,12 @@ func (_c *AlbumCreate) SetGenres(v []string) *AlbumCreate {
 	return _c
 }
 
+// SetAliases sets the "aliases" field.
+func (_c *AlbumCreate) SetAliases(v []string) *AlbumCreate {
+	_c.mutation.SetAliases(v)
+	return _c
+}
+
 // SetMonitored sets the "monitored" field.
 func (_c *AlbumCreate) SetMonitored(v bool) *AlbumCreate {
 	_c.mutation.SetMonitored(v)
@@ -732,6 +738,10 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Genres(); ok {
 		_spec.SetField(album.FieldGenres, field.TypeJSON, value)
 		_node.Genres = value
+	}
+	if value, ok := _c.mutation.Aliases(); ok {
+		_spec.SetField(album.FieldAliases, field.TypeJSON, value)
+		_node.Aliases = value
 	}
 	if value, ok := _c.mutation.Monitored(); ok {
 		_spec.SetField(album.FieldMonitored, field.TypeBool, value)

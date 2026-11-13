@@ -222,6 +222,24 @@ func (_u *AlbumUpdate) ClearGenres() *AlbumUpdate {
 	return _u
 }
 
+// SetAliases sets the "aliases" field.
+func (_u *AlbumUpdate) SetAliases(v []string) *AlbumUpdate {
+	_u.mutation.SetAliases(v)
+	return _u
+}
+
+// AppendAliases appends value to the "aliases" field.
+func (_u *AlbumUpdate) AppendAliases(v []string) *AlbumUpdate {
+	_u.mutation.AppendAliases(v)
+	return _u
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (_u *AlbumUpdate) ClearAliases() *AlbumUpdate {
+	_u.mutation.ClearAliases()
+	return _u
+}
+
 // SetMonitored sets the "monitored" field.
 func (_u *AlbumUpdate) SetMonitored(v bool) *AlbumUpdate {
 	_u.mutation.SetMonitored(v)
@@ -947,6 +965,17 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.GenresCleared() {
 		_spec.ClearField(album.FieldGenres, field.TypeJSON)
 	}
+	if value, ok := _u.mutation.Aliases(); ok {
+		_spec.SetField(album.FieldAliases, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedAliases(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, album.FieldAliases, value)
+		})
+	}
+	if _u.mutation.AliasesCleared() {
+		_spec.ClearField(album.FieldAliases, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.Monitored(); ok {
 		_spec.SetField(album.FieldMonitored, field.TypeBool, value)
 	}
@@ -1586,6 +1615,24 @@ func (_u *AlbumUpdateOne) AppendGenres(v []string) *AlbumUpdateOne {
 // ClearGenres clears the value of the "genres" field.
 func (_u *AlbumUpdateOne) ClearGenres() *AlbumUpdateOne {
 	_u.mutation.ClearGenres()
+	return _u
+}
+
+// SetAliases sets the "aliases" field.
+func (_u *AlbumUpdateOne) SetAliases(v []string) *AlbumUpdateOne {
+	_u.mutation.SetAliases(v)
+	return _u
+}
+
+// AppendAliases appends value to the "aliases" field.
+func (_u *AlbumUpdateOne) AppendAliases(v []string) *AlbumUpdateOne {
+	_u.mutation.AppendAliases(v)
+	return _u
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (_u *AlbumUpdateOne) ClearAliases() *AlbumUpdateOne {
+	_u.mutation.ClearAliases()
 	return _u
 }
 
@@ -2343,6 +2390,17 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	}
 	if _u.mutation.GenresCleared() {
 		_spec.ClearField(album.FieldGenres, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Aliases(); ok {
+		_spec.SetField(album.FieldAliases, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedAliases(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, album.FieldAliases, value)
+		})
+	}
+	if _u.mutation.AliasesCleared() {
+		_spec.ClearField(album.FieldAliases, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Monitored(); ok {
 		_spec.SetField(album.FieldMonitored, field.TypeBool, value)

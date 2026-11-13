@@ -43,6 +43,8 @@ type Album struct {
 	EditionDate string `json:"edition_date,omitempty"`
 	// Genres holds the value of the "genres" field.
 	Genres []string `json:"genres,omitempty"`
+	// Aliases holds the value of the "aliases" field.
+	Aliases []string `json:"aliases,omitempty"`
 	// Monitored holds the value of the "monitored" field.
 	Monitored bool `json:"monitored,omitempty"`
 	// MonitorPinned holds the value of the "monitor_pinned" field.
@@ -186,7 +188,7 @@ func (*Album) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case album.FieldGenres, album.FieldTagOverrides:
+		case album.FieldGenres, album.FieldAliases, album.FieldTagOverrides:
 			values[i] = new([]byte)
 		case album.FieldMonitored, album.FieldMonitorPinned, album.FieldTagsManaged:
 			values[i] = new(sql.NullBool)
@@ -292,6 +294,14 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 			} else if value != nil && len(*value) > 0 {
 				if err := json.Unmarshal(*value, &_m.Genres); err != nil {
 					return fmt.Errorf("unmarshal field genres: %w", err)
+				}
+			}
+		case album.FieldAliases:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field aliases", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Aliases); err != nil {
+					return fmt.Errorf("unmarshal field aliases: %w", err)
 				}
 			}
 		case album.FieldMonitored:
@@ -521,6 +531,9 @@ func (_m *Album) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("genres=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Genres))
+	builder.WriteString(", ")
+	builder.WriteString("aliases=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Aliases))
 	builder.WriteString(", ")
 	builder.WriteString("monitored=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Monitored))

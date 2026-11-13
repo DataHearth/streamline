@@ -539,10 +539,11 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 
 		const releaseGroupJSON = `{"id":"rg-1","title":"Nevermind","primary-type":"Album","first-release-date":"1991-09",
 			"genres":[{"name":"alternative rock","count":4},{"name":"grunge","count":9}],
+			"aliases":[{"name":"Never Mind"},{"name":"nevermind"}],
 			"artist-credit":[{"name":"Nirvana","artist":{"id":"a-n","name":"Nirvana"}}],"releases":[
-			{"id":"rel-2","status":"Official","date":"1992-01-01","media":[{"format":"12\" Vinyl"},{"format":"Digital Media"}]},
+			{"id":"rel-2","title":"Nevermind","status":"Official","date":"1992-01-01","media":[{"format":"12\" Vinyl"},{"format":"Digital Media"}]},
 			{"id":"rel-1","status":"Official","date":"1991-09-24","media":[{"format":"CD"}]},
-			{"id":"rel-0","status":"Bootleg","date":"1991-01-01","media":[{"format":"Cassette"}]}]}`
+			{"id":"rel-0","title":"Nebamaindo","status":"Bootleg","date":"1991-01-01","media":[{"format":"Cassette"}]}]}`
 
 		serve := func(release func(inc string) *http.Response) *[]string {
 			var incs []string
@@ -552,7 +553,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 					case "/ws/2/release-group/rg-1":
 						Expect(
 							r.URL.Query().Get("inc"),
-						).To(Equal("releases+media+artist-credits+genres"))
+						).To(Equal("releases+media+artist-credits+genres+aliases"))
 						return jsonResponse(200, releaseGroupJSON), nil
 					case "/ws/2/release/rel-1":
 						inc := r.URL.Query().Get("inc")
@@ -831,6 +832,15 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				Expect(rg.Genres).To(Equal([]string{"Grunge", "Alternative Rock"}))
 			},
 		)
+
+		It("lists the group's aliases and its releases' other titles", func() {
+			serve(
+				func(string) *http.Response { return jsonResponse(200, heavyRelease) },
+			)
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.Aliases).To(Equal([]string{"Never Mind", "Nebamaindo"}))
+		})
 
 		It("reads no edition date from a date MusicBrainz did not write", func() {
 			serve(func(string) *http.Response {

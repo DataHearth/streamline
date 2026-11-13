@@ -24,6 +24,7 @@ var (
 		{Name: "original_date", Type: field.TypeString, Nullable: true},
 		{Name: "edition_date", Type: field.TypeString, Nullable: true},
 		{Name: "genres", Type: field.TypeJSON, Nullable: true},
+		{Name: "aliases", Type: field.TypeJSON, Nullable: true},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "monitor_pinned", Type: field.TypeBool, Default: false},
 		{Name: "tags_managed", Type: field.TypeBool, Default: true},
@@ -51,7 +52,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "albums_artists_albums",
-				Columns:    []*schema.Column{AlbumsColumns[30]},
+				Columns:    []*schema.Column{AlbumsColumns[31]},
 				RefColumns: []*schema.Column{ArtistsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -60,17 +61,17 @@ var (
 			{
 				Name:    "album_artist_albums",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[30]},
+				Columns: []*schema.Column{AlbumsColumns[31]},
 			},
 			{
 				Name:    "album_status",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[20]},
+				Columns: []*schema.Column{AlbumsColumns[21]},
 			},
 			{
 				Name:    "album_metadata_fetched_at",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[27]},
+				Columns: []*schema.Column{AlbumsColumns[28]},
 			},
 		},
 	}

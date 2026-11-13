@@ -143,6 +143,7 @@ type HydrationParams struct {
 	OriginalDate    string
 	EditionDate     string
 	Genres          []string
+	Aliases         []string
 	Barcode         string
 	Label           string
 	CatalogNumber   string
@@ -1374,6 +1375,7 @@ func (db *DB) SetAlbumHydration(
 		SetEditionDate(p.EditionDate).
 		// Never NULL once hydrated: NULL is the marker the backfill reads.
 		SetGenres(append([]string{}, p.Genres...)).
+		SetAliases(append([]string{}, p.Aliases...)).
 		SetMetadataFetchedAt(at)
 	if p.OriginalDate != "" {
 		u = u.SetOriginalDate(p.OriginalDate)
@@ -1680,7 +1682,9 @@ func matchStoredTracks(
 // part of hydration), credits stored under an older layout than
 // library.MusicCreditsVersion, or tracks carrying no credited artist
 // (hydrated before those were stored; listed at any size, once its retry is
-// due). Albums without files wait for their import.
+// due). Albums without files wait for their import, except a monitored one
+// whose aliases were never fetched: the searches compare release names with
+// them, so it is listed with or without files.
 //
 // An album waiting on its credits layout is listed only when its release is
 // small enough for the heavy call (the credits sweep's own cap) and its last
@@ -1696,25 +1700,27 @@ func (db *DB) ListAlbumsAwaitingDetails(
 	return db.client.Album.Query().
 		Where(
 			album.MetadataFetchedAtNotNil(),
-			album.Or(
-				album.GenresIsNil(),
-				album.And(
-					album.CreditsFetchedAtNotNil(),
-					album.CreditsVersionLT(library.MusicCreditsVersion),
-					album.MetadataFetchedAtLT(retryBefore),
-					smallRelease(),
+			album.Or(album.And(album.AliasesIsNil(), album.Monitored(true)), album.And(
+				album.Or(
+					album.GenresIsNil(),
+					album.And(
+						album.CreditsFetchedAtNotNil(),
+						album.CreditsVersionLT(library.MusicCreditsVersion),
+						album.MetadataFetchedAtLT(retryBefore),
+						smallRelease(),
+					),
+					// Hydrated before track artists were stored. The light call
+					// carries them too, so a release too large for the heavy one
+					// still gets them.
+					album.And(
+						album.MetadataFetchedAtLT(retryBefore),
+						album.Not(album.HasTracksWith(track.HasCreditsWith(
+							musiccredit.KindEQ(musiccredit.KindArtist),
+						))),
+					),
 				),
-				// Hydrated before track artists were stored. The light call
-				// carries them too, so a release too large for the heavy one
-				// still gets them.
-				album.And(
-					album.MetadataFetchedAtLT(retryBefore),
-					album.Not(album.HasTracksWith(track.HasCreditsWith(
-						musiccredit.KindEQ(musiccredit.KindArtist),
-					))),
-				),
-			),
-			album.HasTracksWith(track.HasMediaFiles()),
+				album.HasTracksWith(track.HasMediaFiles()),
+			)),
 		).
 		WithArtist().
 		Order(ent.Asc(album.FieldMetadataFetchedAt), ent.Asc(album.FieldID)).

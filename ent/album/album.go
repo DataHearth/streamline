@@ -39,6 +39,8 @@ const (
 	FieldEditionDate = "edition_date"
 	// FieldGenres holds the string denoting the genres field in the database.
 	FieldGenres = "genres"
+	// FieldAliases holds the string denoting the aliases field in the database.
+	FieldAliases = "aliases"
 	// FieldMonitored holds the string denoting the monitored field in the database.
 	FieldMonitored = "monitored"
 	// FieldMonitorPinned holds the string denoting the monitor_pinned field in the database.
@@ -160,6 +162,7 @@ var Columns = []string{
 	FieldOriginalDate,
 	FieldEditionDate,
 	FieldGenres,
+	FieldAliases,
 	FieldMonitored,
 	FieldMonitorPinned,
 	FieldTagsManaged,

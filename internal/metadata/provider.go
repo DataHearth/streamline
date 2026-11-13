@@ -323,6 +323,9 @@ type ReleaseGroupDetails struct {
 	EditionDate string
 	// Genres are the release group's top genres by vote, at most five.
 	Genres []string
+	// Aliases are the group's other titles: its MusicBrainz aliases and the
+	// titles of its releases that differ from its own.
+	Aliases []string
 	// Media is the union of the release group's physical media: cd, vinyl,
 	// digital, cassette.
 	Media  []string

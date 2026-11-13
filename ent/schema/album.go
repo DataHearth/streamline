@@ -46,6 +46,12 @@ func (Album) Fields() []ent.Field {
 		// backfills; hydration always writes a list, empty when MusicBrainz
 		// has none.
 		field.JSON("genres", []string{}).Optional(),
+		// aliases are the other titles the album goes by: the release
+		// group's MusicBrainz aliases and the titles of its releases, which
+		// is where a romanized or translated title lives ("Skazka" and
+		// "Fairytale" for "Сказка"). NULL is an album hydrated before they
+		// were fetched, backfilled like genres.
+		field.JSON("aliases", []string{}).Optional(),
 		field.Bool("monitored").Default(true),
 		// monitor_pinned marks a monitored flag set by hand, which the
 		// monitored-types catch-up leaves alone; changing the artist's policy

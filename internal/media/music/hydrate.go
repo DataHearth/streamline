@@ -477,7 +477,7 @@ func (s *Service) SetAlbumEdition(
 // tag writer reads: genres never fetched, or credits stored under an older
 // layout. ListAlbumsAwaitingDetails is its query twin.
 func detailsStale(a *ent.Album) bool {
-	return a.Genres == nil ||
+	return a.Genres == nil || (a.Aliases == nil && a.Monitored) ||
 		(a.CreditsFetchedAt != nil && a.CreditsVersion < library.MusicCreditsVersion)
 }
 
@@ -498,6 +498,7 @@ func storedDetails(a *ent.Album) *metadata.ReleaseGroupDetails {
 		Country:       a.Country,
 		EditionDate:   a.EditionDate,
 		Genres:        []string{},
+		Aliases:       a.Aliases,
 		Media:         media,
 	}
 }
@@ -520,6 +521,7 @@ func (s *Service) hydrationParams(
 		OriginalDate:    d.OriginalDate,
 		EditionDate:     d.EditionDate,
 		Genres:          d.Genres,
+		Aliases:         d.Aliases,
 		Barcode:         d.Barcode,
 		Label:           d.Label,
 		CatalogNumber:   d.CatalogNumber,

@@ -60,7 +60,7 @@ func (s *FeedScanner) tryAlbumUpgrade(
 ) bool {
 	var a *ent.Album
 	for _, cand := range pass.upgrades[showKey(artistPart)] {
-		if library.TitleNamesSameWork(albumPart, cand.Title) {
+		if library.AlbumTitleNamed(albumPart, cand) {
 			a = cand
 			break
 		}

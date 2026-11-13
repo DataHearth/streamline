@@ -347,6 +347,9 @@ type mbReleaseGroup struct {
 	SecondaryTypes   []string `json:"secondary-types"`
 	FirstReleaseDate string   `json:"first-release-date"`
 	Genres           []mbTag  `json:"genres"`
+	Aliases          []struct {
+		Name string `json:"name"`
+	} `json:"aliases"`
 }
 
 func (rg mbReleaseGroup) toInfo() ReleaseGroupInfo {
@@ -872,6 +875,30 @@ type mbReleaseGroupDetail struct {
 	ArtistCredit []mbCredit  `json:"artist-credit"`
 }
 
+// aliases is every other title the group goes by: its own aliases, then the
+// titles of its releases, pseudo-releases included, since that is where
+// MusicBrainz files a transliteration.
+func (rg mbReleaseGroupDetail) aliases() []string {
+	out := []string{}
+	add := func(name string) {
+		name = strings.TrimSpace(name)
+		if name == "" || strings.EqualFold(name, rg.Title) ||
+			slices.ContainsFunc(out, func(o string) bool {
+				return strings.EqualFold(o, name)
+			}) {
+			return
+		}
+		out = append(out, name)
+	}
+	for _, a := range rg.Aliases {
+		add(a.Name)
+	}
+	for _, r := range rg.Releases {
+		add(r.Title)
+	}
+	return out
+}
+
 func (m *MusicBrainz) fetchReleaseGroup(
 	ctx context.Context,
 	mbid string,
@@ -881,7 +908,7 @@ func (m *MusicBrainz) fetchReleaseGroup(
 		ctx,
 		"/release-group/"+url.PathEscape(mbid),
 		url.Values{
-			"inc": {"releases+media+artist-credits+genres"},
+			"inc": {"releases+media+artist-credits+genres+aliases"},
 		},
 		&rg,
 	)
@@ -997,6 +1024,7 @@ func (m *MusicBrainz) GetReleaseGroupEdition(
 		ReleaseGroupInfo: rg.toInfo(),
 		ReleaseMBID:      release,
 		Genres:           topGenres(rg.Genres),
+		Aliases:          rg.aliases(),
 	}
 	if len(rg.ArtistCredit) > 0 {
 		details.ArtistMBID = rg.ArtistCredit[0].Artist.ID

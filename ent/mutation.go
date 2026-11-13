@@ -127,6 +127,8 @@ type AlbumMutation struct {
 	edition_date            *string
 	genres                  *[]string
 	appendgenres            []string
+	aliases                 *[]string
+	appendaliases           []string
 	monitored               *bool
 	monitor_pinned          *bool
 	tags_managed            *bool
@@ -816,6 +818,71 @@ func (m *AlbumMutation) ResetGenres() {
 	m.genres = nil
 	m.appendgenres = nil
 	delete(m.clearedFields, album.FieldGenres)
+}
+
+// SetAliases sets the "aliases" field.
+func (m *AlbumMutation) SetAliases(s []string) {
+	m.aliases = &s
+	m.appendaliases = nil
+}
+
+// Aliases returns the value of the "aliases" field in the mutation.
+func (m *AlbumMutation) Aliases() (r []string, exists bool) {
+	v := m.aliases
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAliases returns the old "aliases" field's value of the Album entity.
+// If the Album object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AlbumMutation) OldAliases(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAliases is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAliases requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAliases: %w", err)
+	}
+	return oldValue.Aliases, nil
+}
+
+// AppendAliases adds s to the "aliases" field.
+func (m *AlbumMutation) AppendAliases(s []string) {
+	m.appendaliases = append(m.appendaliases, s...)
+}
+
+// AppendedAliases returns the list of values that were appended to the "aliases" field in this mutation.
+func (m *AlbumMutation) AppendedAliases() ([]string, bool) {
+	if len(m.appendaliases) == 0 {
+		return nil, false
+	}
+	return m.appendaliases, true
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (m *AlbumMutation) ClearAliases() {
+	m.aliases = nil
+	m.appendaliases = nil
+	m.clearedFields[album.FieldAliases] = struct{}{}
+}
+
+// AliasesCleared returns if the "aliases" field was cleared in this mutation.
+func (m *AlbumMutation) AliasesCleared() bool {
+	_, ok := m.clearedFields[album.FieldAliases]
+	return ok
+}
+
+// ResetAliases resets all changes to the "aliases" field.
+func (m *AlbumMutation) ResetAliases() {
+	m.aliases = nil
+	m.appendaliases = nil
+	delete(m.clearedFields, album.FieldAliases)
 }
 
 // SetMonitored sets the "monitored" field.
@@ -2064,7 +2131,7 @@ func (m *AlbumMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AlbumMutation) Fields() []string {
-	fields := make([]string, 0, 29)
+	fields := make([]string, 0, 30)
 	if m.create_time != nil {
 		fields = append(fields, album.FieldCreateTime)
 	}
@@ -2100,6 +2167,9 @@ func (m *AlbumMutation) Fields() []string {
 	}
 	if m.genres != nil {
 		fields = append(fields, album.FieldGenres)
+	}
+	if m.aliases != nil {
+		fields = append(fields, album.FieldAliases)
 	}
 	if m.monitored != nil {
 		fields = append(fields, album.FieldMonitored)
@@ -2184,6 +2254,8 @@ func (m *AlbumMutation) Field(name string) (ent.Value, bool) {
 		return m.EditionDate()
 	case album.FieldGenres:
 		return m.Genres()
+	case album.FieldAliases:
+		return m.Aliases()
 	case album.FieldMonitored:
 		return m.Monitored()
 	case album.FieldMonitorPinned:
@@ -2251,6 +2323,8 @@ func (m *AlbumMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldEditionDate(ctx)
 	case album.FieldGenres:
 		return m.OldGenres(ctx)
+	case album.FieldAliases:
+		return m.OldAliases(ctx)
 	case album.FieldMonitored:
 		return m.OldMonitored(ctx)
 	case album.FieldMonitorPinned:
@@ -2377,6 +2451,13 @@ func (m *AlbumMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetGenres(v)
+		return nil
+	case album.FieldAliases:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAliases(v)
 		return nil
 	case album.FieldMonitored:
 		v, ok := value.(bool)
@@ -2575,6 +2656,9 @@ func (m *AlbumMutation) ClearedFields() []string {
 	if m.FieldCleared(album.FieldGenres) {
 		fields = append(fields, album.FieldGenres)
 	}
+	if m.FieldCleared(album.FieldAliases) {
+		fields = append(fields, album.FieldAliases)
+	}
 	if m.FieldCleared(album.FieldArtSidecarHash) {
 		fields = append(fields, album.FieldArtSidecarHash)
 	}
@@ -2642,6 +2726,9 @@ func (m *AlbumMutation) ClearField(name string) error {
 		return nil
 	case album.FieldGenres:
 		m.ClearGenres()
+		return nil
+	case album.FieldAliases:
+		m.ClearAliases()
 		return nil
 	case album.FieldArtSidecarHash:
 		m.ClearArtSidecarHash()
@@ -2719,6 +2806,9 @@ func (m *AlbumMutation) ResetField(name string) error {
 		return nil
 	case album.FieldGenres:
 		m.ResetGenres()
+		return nil
+	case album.FieldAliases:
+		m.ResetAliases()
 		return nil
 	case album.FieldMonitored:
 		m.ResetMonitored()
