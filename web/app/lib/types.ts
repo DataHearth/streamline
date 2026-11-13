@@ -1009,7 +1009,7 @@ export type LockoutConfig = {
 	duration?: string;
 };
 
-// The three roots are read-only here — a root only moves through the path
+// The roots are read-only here — a root only moves through the path
 // migration on Settings → Advanced, which rewrites every stored path before it
 // repoints the config. They ride along so the page can show where the library
 // lives without a second request.
@@ -1035,6 +1035,9 @@ export type LibraryConfig = {
 	allowed_download_roots?: string[];
 	movie_path?: string;
 	series_path?: string;
+	music_path?: string;
+	ebook_path?: string;
+	audiobook_path?: string;
 	download_path?: string;
 	probe?: ProbeConfig;
 	music_tags: MusicTagsConfig;

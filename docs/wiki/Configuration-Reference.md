@@ -170,7 +170,7 @@ They are all **shown** read-only under **Server & security** on Settings → Gen
 
 **Three settings name the peer port; only one of them wins.** `download_clients[].listen_port` is what the builtin client's form edits, `torrent_listen_port` overrides it whenever it is non-zero (`BuiltinDownloadClient` resolves this), and the endpoint above moves the live socket without touching either. While an override is in force the form's **Listen port** field goes read-only and says so, because editing it there would save happily and change nothing — set the port through `STREAMLINE_TORRENT_LISTEN_PORT`, or move the running engine from the Torrents page.
 
-**The three library roots are a special case.** `library.movie_path`, `series_path` and `download_path` show up read-only on Settings → Library and are changed through Settings → Advanced instead. That flow rewrites every stored path in the database and *then* repoints the config; a plain edit would leave every existing file recorded under the old prefix.
+**The library roots are a special case.** `library.movie_path`, `series_path`, `music_path`, `ebook_path`, `audiobook_path` and `download_path` show up read-only on Settings → Library and are changed through Settings → Advanced instead. That flow rewrites every stored path in the database and *then* repoints the config; a plain edit would leave every existing file recorded under the old prefix.
 
 Setting `read_only: true` refuses every runtime write, turning the first two rows into ❌ as well.
 

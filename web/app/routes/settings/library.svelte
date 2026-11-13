@@ -285,6 +285,9 @@
 			<div class="mt-4 grid gap-3 sm:grid-cols-3">
 				{@render readonlyPath(i18n.library_movie_path(), lib.movie_path ?? "")}
 				{@render readonlyPath(i18n.library_series_path(), lib.series_path ?? "")}
+				{@render readonlyPath(i18n.library_music_path(), lib.music_path ?? "")}
+				{@render readonlyPath(i18n.library_ebook_path(), lib.ebook_path ?? "")}
+				{@render readonlyPath(i18n.library_audiobook_path(), lib.audiobook_path ?? "")}
 				{@render readonlyPath(
 					i18n.library_download_path(),
 					lib.download_path ?? "",

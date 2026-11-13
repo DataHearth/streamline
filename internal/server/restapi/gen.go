@@ -6586,7 +6586,7 @@ type LibraryArrivals struct {
 	Items []LibraryArrival `json:"items"`
 }
 
-// LibraryConfigPatch Only provided fields are applied. The three roots are absent by design — see LibraryConfigView.movie_path.
+// LibraryConfigPatch Only provided fields are applied. The roots are absent by design — see LibraryConfigView.movie_path.
 type LibraryConfigPatch struct {
 	AllowedDownloadRoots *[]string `json:"allowed_download_roots,omitempty"`
 	AudiobookNaming      *string   `json:"audiobook_naming,omitempty"`
@@ -6631,6 +6631,7 @@ type LibraryConfigPatchImportMode string
 type LibraryConfigView struct {
 	AllowedDownloadRoots *[]string `json:"allowed_download_roots,omitempty"`
 	AudiobookNaming      string    `json:"audiobook_naming"`
+	AudiobookPath        *string   `json:"audiobook_path,omitempty"`
 
 	// BookLanguage ISO 639-1 language a new book prefers (`library.book_language`); seeds `Book.preferred_language` at add.
 	BookLanguage string `json:"book_language"`
@@ -6640,6 +6641,7 @@ type LibraryConfigView struct {
 	DownloadPath       *string                     `json:"download_path,omitempty"`
 	DriftGraceTicks    int                         `json:"drift_grace_ticks"`
 	EbookNaming        string                      `json:"ebook_naming"`
+	EbookPath          *string                     `json:"ebook_path,omitempty"`
 	ImportMaxAttempts  int                         `json:"import_max_attempts"`
 	ImportMode         LibraryConfigViewImportMode `json:"import_mode"`
 	KeepTorrentSeeding bool                        `json:"keep_torrent_seeding"`
@@ -6663,6 +6665,7 @@ type LibraryConfigView struct {
 	// catches existing artists up.
 	MusicMonitoredTypes []MusicAlbumType `json:"music_monitored_types"`
 	MusicNaming         string           `json:"music_naming"`
+	MusicPath           *string          `json:"music_path,omitempty"`
 
 	// MusicTags The tags Streamline writes into music files (`library.music_tags`).
 	// The view always carries every field; when patched, only provided
@@ -11021,7 +11024,7 @@ type UpdateImportFileDecision = ImportScanFileDecisionRequest
 // UpdateImportShowDecision defines model for UpdateImportShowDecision.
 type UpdateImportShowDecision = ImportScanShowDecisionRequest
 
-// UpdateLibraryConfig Only provided fields are applied. The three roots are absent by design — see LibraryConfigView.movie_path.
+// UpdateLibraryConfig Only provided fields are applied. The roots are absent by design — see LibraryConfigView.movie_path.
 type UpdateLibraryConfig = LibraryConfigPatch
 
 // UpdateMe defines model for UpdateMe.

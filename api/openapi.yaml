@@ -14345,6 +14345,15 @@ components:
         series_path:
           type: string
           readOnly: true
+        music_path:
+          type: string
+          readOnly: true
+        ebook_path:
+          type: string
+          readOnly: true
+        audiobook_path:
+          type: string
+          readOnly: true
         download_path:
           type: string
           readOnly: true
@@ -14356,7 +14365,7 @@ components:
     LibraryConfigPatch:
       type: object
       description: >-
-        Only provided fields are applied. The three roots are absent by
+        Only provided fields are applied. The roots are absent by
         design — see LibraryConfigView.movie_path.
       properties:
         monitor_specials:

@@ -881,7 +881,7 @@ func musicTagsView(c config.MusicTagsConfig) MusicTagsConfig {
 }
 
 // libraryConfigView maps config.LibraryConfig into the generated view. The
-// three roots ride along read-only: the settings page shows where the library
+// roots ride along read-only: the settings page shows where the library
 // lives, and pathmigrate owns moving it. probe is always populated (never
 // null) so the page reflects the stored values instead of falling back to a
 // client-side guess.
@@ -892,7 +892,6 @@ func libraryConfigView(l config.LibraryConfig) LibraryConfigJSONResponse {
 	if roots == nil {
 		roots = []string{}
 	}
-	moviePath, seriesPath, downloadPath := l.MoviePath, l.SeriesPath, l.DownloadPath
 	return LibraryConfigJSONResponse{
 		MonitorSpecials:            l.MonitorSpecials,
 		MusicMonitoredTypes:        musicAlbumTypes(l.MusicMonitoredTypes),
@@ -912,9 +911,12 @@ func libraryConfigView(l config.LibraryConfig) LibraryConfigJSONResponse {
 		DriftGraceTicks:            int(l.DriftGraceTicks),
 		MissingFileRedownloadAfter: l.MissingFileRedownloadAfter,
 		AllowedDownloadRoots:       &roots,
-		MoviePath:                  &moviePath,
-		SeriesPath:                 &seriesPath,
-		DownloadPath:               &downloadPath,
+		MoviePath:                  &l.MoviePath,
+		SeriesPath:                 &l.SeriesPath,
+		MusicPath:                  &l.MusicPath,
+		EbookPath:                  &l.EbookPath,
+		AudiobookPath:              &l.AudiobookPath,
+		DownloadPath:               &l.DownloadPath,
 		Probe: &ProbeConfig{
 			AlwaysAsk:        &alwaysAsk,
 			MinDurationRatio: &minDurationRatio,
