@@ -48,14 +48,22 @@ export function arrivalArt(a: LibraryArrival): string {
 
 // The two caption lines under a card's title: whose it is or what the import
 // added, then — where the art and the line above do not already say it —
-// what landed: an album's type, a book's format or volume. A movie and a show
+// what landed: how many tracks of an album (the track itself when it is one),
+// a book's format or volume. A movie and a show
 // leave the second line to the time alone.
 export function arrivalLines(a: LibraryArrival): { sub: string; kind: string } {
 	if (a.kind === "movie") return { sub: [a.year, a.resolution].filter(Boolean).join(" · "), kind: "" };
 	if (a.kind === "series")
 		return { sub: a.addition ? additionLabel(a.addition) : a.year ? String(a.year) : "", kind: "" };
-	if (a.kind === "album")
-		return { sub: a.artist_name ?? "", kind: releaseTypeLabel(a.release_type ?? "album") };
+	if (a.kind === "album") {
+		const what =
+			a.tracks === 1 && a.track_title
+				? a.track_title
+				: a.tracks
+					? plural(a.tracks, i18n.music_tracks_one, i18n.music_tracks_other)
+					: releaseTypeLabel(a.release_type ?? "album");
+		return { sub: a.artist_name ?? "", kind: what };
+	}
 	if (a.volume != null) return { sub: a.author ?? "", kind: volumeLabel(a.volume) };
 	// A format is drawn as its icon on the card (as on the books shelf): the
 	// word runs long in French and would push the time out.

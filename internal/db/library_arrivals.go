@@ -45,6 +45,10 @@ type Arrival struct {
 	ArtistID    uint32
 	ArtistName  string
 	ReleaseType album.Type
+	// Tracks is how many tracks the import placed; TrackTitle names the
+	// track when it was the only one.
+	Tracks     int
+	TrackTitle string
 	// Book. SeriesID is zero for a standalone book.
 	Author   string
 	BookKind book.Kind
@@ -70,6 +74,8 @@ type arrivalFile struct {
 	Episode  uint16             `sql:"episode_number"`
 	EpTitle  string             `sql:"episode_title"`
 	AlbumID  *uint32            `sql:"album_id"`
+	TrackID  *uint32            `sql:"track_id"`
+	TrTitle  string             `sql:"track_title"`
 }
 
 type arrivalKey struct {
@@ -171,6 +177,8 @@ func (db *DB) arrivalFiles(ctx context.Context, offset int) ([]arrivalFile, erro
 				),
 				entsql.As(coalesce(ep.C(episode.FieldTitle), "''"), "episode_title"),
 				entsql.As(tr.C(track.AlbumColumn), "album_id"),
+				entsql.As(tr.C(track.FieldID), "track_id"),
+				entsql.As(coalesce(tr.C(track.FieldTitle), "''"), "track_title"),
 			)
 		}).
 		Scan(ctx, &rows)
@@ -281,6 +289,19 @@ func (db *DB) hydrateArrivals(
 				})
 			}
 			a.Addition = newAddition(eps, seasonSizes[b.key.id])
+		case ArrivalAlbum:
+			tracks := make(map[uint32]string, len(b.files))
+			for _, f := range b.files {
+				if f.TrackID != nil {
+					tracks[*f.TrackID] = f.TrTitle
+				}
+			}
+			a.Tracks = len(tracks)
+			if len(tracks) == 1 {
+				for _, title := range tracks {
+					a.TrackTitle = title
+				}
+			}
 		case ArrivalBook:
 			a.Format = b.key.format
 		}

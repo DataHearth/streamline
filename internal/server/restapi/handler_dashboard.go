@@ -194,6 +194,10 @@ func toLibraryArrival(a db.Arrival) LibraryArrival {
 		out.ArtistName = optString(a.ArtistName)
 		rt := LibraryArrivalReleaseType(a.ReleaseType)
 		out.ReleaseType = &rt
+		if a.Tracks > 0 {
+			out.Tracks = &a.Tracks
+		}
+		out.TrackTitle = optString(a.TrackTitle)
 	case db.ArrivalBook:
 		out.Author = optString(a.Author)
 		bk := LibraryArrivalBookKind(a.BookKind)

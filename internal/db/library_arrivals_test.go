@@ -158,6 +158,8 @@ var _ = Describe("RecentArrivals", Label("unit", "db"), func() {
 				"book:audiobook",
 				"series:",
 			}))
+			Expect(got[2].Tracks).To(Equal(2))
+			Expect(got[2].TrackTitle).To(BeEmpty())
 
 			Expect(got[0].ID).To(Equal(m.ID))
 			Expect(got[0].Title).To(Equal("Northern Halo"))
