@@ -2,6 +2,7 @@ package music
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -12,16 +13,9 @@ import (
 	"github.com/datahearth/streamline/internal/scheduler"
 )
 
-const (
-	// metadataMinRefreshInterval is how long an artist is left alone between
-	// scheduled refreshes. A manual run waives it.
-	metadataMinRefreshInterval = 24 * time.Hour
-
-	// refreshBatch caps one run: each artist costs a MusicBrainz request per
-	// new release-group at 1 req/s, so the oldest are refreshed first and the
-	// backlog drains over successive ticks.
-	refreshBatch = 10
-)
+// metadataMinRefreshInterval is how long an artist is left alone between
+// scheduled refreshes. A manual run waives it.
+const metadataMinRefreshInterval = 24 * time.Hour
 
 // MetadataRefresher re-pulls provider metadata for stale artists.
 type MetadataRefresher interface {
@@ -30,9 +24,10 @@ type MetadataRefresher interface {
 
 var _ MetadataRefresher = (*Service)(nil)
 
-// RefreshStale refreshes up to refreshBatch artists not refreshed within
+// RefreshStale refreshes every artist not refreshed within
 // metadataMinRefreshInterval, oldest first. Per-row failures are logged and
-// skipped; it returns an error only when the initial query fails.
+// skipped, and a rate limit ends the run, the rest waiting for the next one;
+// it returns an error only when the initial query fails.
 func (s *Service) RefreshStale(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "music.refresh_stale")
 	defer span.End()
@@ -41,7 +36,7 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 	if !scheduler.Manual(ctx) {
 		cutoff = cutoff.Add(-metadataMinRefreshInterval)
 	}
-	rows, err := s.db.ListArtistsStaleSince(ctx, cutoff, refreshBatch)
+	rows, err := s.db.ListArtistsStaleSince(ctx, cutoff)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
@@ -57,6 +52,11 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 			slog.WarnContext(ctx, "artist refresh failed",
 				"artist.id", a.ID, "error", err)
 			skipped++
+			// The limiter refuses every background call for the length of
+			// the wait, so each artist left would fail the same way.
+			if errors.Is(err, metadata.ErrRateLimited) || ctx.Err() != nil {
+				break
+			}
 			continue
 		}
 		refreshed++

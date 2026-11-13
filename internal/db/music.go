@@ -1852,13 +1852,12 @@ func (db *DB) ResetAlbumGrabFailures(ctx context.Context, id uint32) error {
 	return db.client.Album.UpdateOneID(id).SetGrabFailures(0).Exec(ctx)
 }
 
-// ListArtistsStaleSince returns at most limit artists never refreshed or last
-// refreshed before cutoff, oldest first. Keyed on last_refreshed_at, not
+// ListArtistsStaleSince returns the artists never refreshed or last refreshed
+// before cutoff, oldest first. Keyed on last_refreshed_at, not
 // update_time, which moves on every write.
 func (db *DB) ListArtistsStaleSince(
 	ctx context.Context,
 	cutoff time.Time,
-	limit int,
 ) ([]*ent.Artist, error) {
 	return db.client.Artist.Query().
 		Where(artist.Or(
@@ -1866,7 +1865,6 @@ func (db *DB) ListArtistsStaleSince(
 			artist.LastRefreshedAtLT(cutoff),
 		)).
 		Order(ent.Asc(artist.FieldLastRefreshedAt), ent.Asc(artist.FieldID)).
-		Limit(limit).
 		All(ctx)
 }
 

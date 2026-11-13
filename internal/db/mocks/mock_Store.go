@@ -12569,8 +12569,8 @@ func (_c *MockStore_ListArtists_Call) RunAndReturn(run func(ctx context.Context,
 }
 
 // ListArtistsStaleSince provides a mock function for the type MockStore
-func (_mock *MockStore) ListArtistsStaleSince(ctx context.Context, cutoff time.Time, limit int) ([]*ent.Artist, error) {
-	ret := _mock.Called(ctx, cutoff, limit)
+func (_mock *MockStore) ListArtistsStaleSince(ctx context.Context, cutoff time.Time) ([]*ent.Artist, error) {
+	ret := _mock.Called(ctx, cutoff)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListArtistsStaleSince")
@@ -12578,18 +12578,18 @@ func (_mock *MockStore) ListArtistsStaleSince(ctx context.Context, cutoff time.T
 
 	var r0 []*ent.Artist
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, int) ([]*ent.Artist, error)); ok {
-		return returnFunc(ctx, cutoff, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) ([]*ent.Artist, error)); ok {
+		return returnFunc(ctx, cutoff)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, int) []*ent.Artist); ok {
-		r0 = returnFunc(ctx, cutoff, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) []*ent.Artist); ok {
+		r0 = returnFunc(ctx, cutoff)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*ent.Artist)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time, int) error); ok {
-		r1 = returnFunc(ctx, cutoff, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time) error); ok {
+		r1 = returnFunc(ctx, cutoff)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -12604,12 +12604,11 @@ type MockStore_ListArtistsStaleSince_Call struct {
 // ListArtistsStaleSince is a helper method to define mock.On call
 //   - ctx context.Context
 //   - cutoff time.Time
-//   - limit int
-func (_e *MockStore_Expecter) ListArtistsStaleSince(ctx any, cutoff any, limit any) *MockStore_ListArtistsStaleSince_Call {
-	return &MockStore_ListArtistsStaleSince_Call{Call: _e.mock.On("ListArtistsStaleSince", ctx, cutoff, limit)}
+func (_e *MockStore_Expecter) ListArtistsStaleSince(ctx any, cutoff any) *MockStore_ListArtistsStaleSince_Call {
+	return &MockStore_ListArtistsStaleSince_Call{Call: _e.mock.On("ListArtistsStaleSince", ctx, cutoff)}
 }
 
-func (_c *MockStore_ListArtistsStaleSince_Call) Run(run func(ctx context.Context, cutoff time.Time, limit int)) *MockStore_ListArtistsStaleSince_Call {
+func (_c *MockStore_ListArtistsStaleSince_Call) Run(run func(ctx context.Context, cutoff time.Time)) *MockStore_ListArtistsStaleSince_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -12619,14 +12618,9 @@ func (_c *MockStore_ListArtistsStaleSince_Call) Run(run func(ctx context.Context
 		if args[1] != nil {
 			arg1 = args[1].(time.Time)
 		}
-		var arg2 int
-		if args[2] != nil {
-			arg2 = args[2].(int)
-		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
@@ -12637,7 +12631,7 @@ func (_c *MockStore_ListArtistsStaleSince_Call) Return(artists []*ent.Artist, er
 	return _c
 }
 
-func (_c *MockStore_ListArtistsStaleSince_Call) RunAndReturn(run func(ctx context.Context, cutoff time.Time, limit int) ([]*ent.Artist, error)) *MockStore_ListArtistsStaleSince_Call {
+func (_c *MockStore_ListArtistsStaleSince_Call) RunAndReturn(run func(ctx context.Context, cutoff time.Time) ([]*ent.Artist, error)) *MockStore_ListArtistsStaleSince_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -338,9 +338,10 @@ var _ = Describe("Music schedulers", Label("unit", "integration", "music"), func
 			}
 		}
 
-		It("refreshes only stale artists, at most refreshBatch per run", func() {
+		It("refreshes every stale artist and only those", func() {
+			const stale = 12
 			recent := time.Now().Add(-time.Hour)
-			for i := range refreshBatch + 2 {
+			for i := range stale {
 				makeArtist(fmt.Sprintf("stale-%02d", i), nil)
 			}
 			fresh := makeArtist("fresh", &recent)
@@ -348,16 +349,27 @@ var _ = Describe("Music schedulers", Label("unit", "integration", "music"), func
 				RunAndReturn(func(_ context.Context, mbid string) (*metadata.ArtistDetails, error) {
 					return details(mbid), nil
 				}).
-				Times(refreshBatch)
+				Times(stale)
 			start := time.Now()
 
 			Expect(e.svc.RefreshStale(e.ctx)).To(Succeed())
 
 			Expect(e.client.Artist.Query().
 				Where(artist.LastRefreshedAtGTE(start)).Count(e.ctx)).
-				To(Equal(refreshBatch))
+				To(Equal(stale))
 			Expect(e.client.Artist.GetX(e.ctx, fresh.ID).LastRefreshedAt).
 				To(HaveValue(BeTemporally("~", recent, time.Second)))
+		})
+
+		It("ends the run at a rate limit", func() {
+			for i := range 3 {
+				makeArtist(fmt.Sprintf("stale-%02d", i), nil)
+			}
+			e.provider.EXPECT().GetArtist(mock.Anything, mock.Anything).
+				Return(nil, &metadata.RateLimitedError{RetryAfter: time.Minute}).
+				Once()
+
+			Expect(e.svc.RefreshStale(e.ctx)).To(Succeed())
 		})
 
 		It("persists a release group new to the artist and hydrates it", func() {

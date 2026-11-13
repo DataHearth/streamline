@@ -1962,7 +1962,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			},
 		)
 
-		It("lists stale artists oldest first within the limit", func() {
+		It("lists stale artists oldest first", func() {
 			fresh, err := store.CreateArtist(ctx, CreateArtistParams{
 				MBID: "a-3", Name: "Fresh",
 			})
@@ -1977,15 +1977,11 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			client.Artist.UpdateOneID(older.ID).
 				SetLastRefreshedAt(time.Now().Add(-48 * time.Hour)).ExecX(ctx)
 
-			rows, err := store.ListArtistsStaleSince(ctx, cutoff, 10)
+			rows, err := store.ListArtistsStaleSince(ctx, cutoff)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rows).To(HaveLen(2))
 			Expect(rows[0].ID).To(Equal(a.ID))
 			Expect(rows[1].ID).To(Equal(older.ID))
-
-			rows, err = store.ListArtistsStaleSince(ctx, cutoff, 1)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(rows).To(HaveLen(1))
 		})
 	})
 

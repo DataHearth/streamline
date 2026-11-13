@@ -235,12 +235,11 @@ type Store interface {
 	SetAlbumLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	IncrementAlbumGrabFailures(ctx context.Context, id uint32) error
 	ResetAlbumGrabFailures(ctx context.Context, id uint32) error
-	// ListArtistsStaleSince returns at most limit artists never refreshed or
-	// refreshed before cutoff, oldest first.
+	// ListArtistsStaleSince returns the artists never refreshed or refreshed
+	// before cutoff, oldest first.
 	ListArtistsStaleSince(
 		ctx context.Context,
 		cutoff time.Time,
-		limit int,
 	) ([]*ent.Artist, error)
 
 	// books
