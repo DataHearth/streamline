@@ -1021,6 +1021,10 @@ export type LibraryConfig = {
 	book_language: string;
 	movie_naming: string;
 	series_naming: string;
+	music_naming: string;
+	ebook_naming: string;
+	audiobook_naming: string;
+	book_series_naming: string;
 	import_mode: ImportTransferMode;
 	keep_torrent_seeding: boolean;
 	no_match_cooldown: string;

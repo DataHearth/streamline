@@ -328,6 +328,16 @@
 					),
 				{ mono: true },
 			)}
+			{#each [["music_naming", i18n.library_music_naming(), i18n.library_music_naming_help()], ["ebook_naming", i18n.library_ebook_naming(), i18n.library_ebook_naming_help()], ["audiobook_naming", i18n.library_audiobook_naming(), i18n.library_audiobook_naming_help()], ["book_series_naming", i18n.library_book_series_naming(), i18n.library_book_series_naming_help()]] as const as [key, label, help] (key)}
+				{@render field(
+					key,
+					label,
+					help,
+					draftOf(key, lib[key]),
+					() => commitText(key, lib[key], (v) => saveLibrary.mutate({ [key]: v })),
+					{ mono: true },
+				)}
+			{/each}
 		</section>
 
 		<section class="mt-4 space-y-4 rounded-lg border border-border bg-bg-card p-4">

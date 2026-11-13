@@ -51,6 +51,10 @@ type LibraryPatch struct {
 	AudiobookPath              *string
 	MovieNaming                *string
 	SeriesNaming               *string
+	MusicNaming                *string
+	EbookNaming                *string
+	AudiobookNaming            *string
+	BookSeriesNaming           *string
 	ImportMode                 *string
 	KeepTorrentSeeding         *bool
 	NoMatchCooldown            *string
@@ -390,6 +394,18 @@ func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, erro
 		}
 		if patch.SeriesNaming != nil {
 			c.Library.SeriesNaming = *patch.SeriesNaming
+		}
+		if patch.MusicNaming != nil {
+			c.Library.MusicNaming = *patch.MusicNaming
+		}
+		if patch.EbookNaming != nil {
+			c.Library.EbookNaming = *patch.EbookNaming
+		}
+		if patch.AudiobookNaming != nil {
+			c.Library.AudiobookNaming = *patch.AudiobookNaming
+		}
+		if patch.BookSeriesNaming != nil {
+			c.Library.BookSeriesNaming = *patch.BookSeriesNaming
 		}
 		if patch.ImportMode != nil {
 			c.Library.ImportMode = *patch.ImportMode

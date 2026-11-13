@@ -1080,7 +1080,7 @@ func defaults() map[string]any {
 		"library.series_path":                   "/media/series",
 		"library.series_naming":                 "{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}",
 		"library.music_path":                    "/media/music",
-		"library.music_naming":                  "{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title}.{ext}",
+		"library.music_naming":                  "{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title} [{BitDepth}-{SampleRate}].{ext}",
 		"library.ebook_path":                    "/media/books",
 		"library.ebook_naming":                  "{Author}/{Title} ({Year})",
 		"library.audiobook_path":                "/media/audiobooks",

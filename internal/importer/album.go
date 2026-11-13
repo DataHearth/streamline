@@ -306,7 +306,13 @@ func (w *Worker) importAlbumFiles(
 			continue
 		}
 		imported, err := w.lib.ImportAlbumTrack(
-			ctx, f.path, artist, alb, f.tr, multiDisc, mode,
+			ctx, f.path, artist, alb, f.tr, multiDisc,
+			library.AudioNaming{
+				Quality:      tierName(f.q),
+				BitDepth:     f.q.bitDepth,
+				SampleRateHz: f.q.sampleRateHz,
+			},
+			mode,
 		)
 		if err != nil {
 			putBack(ctx, moved)
@@ -325,6 +331,9 @@ func (w *Worker) importAlbumFiles(
 			Format:      f.info.Format,
 			Size:        imported.Size,
 			TagsPending: tagging,
+			Measured:    f.q.probed,
+			BitDepth:    f.q.bitDepth,
+			SampleRate:  f.q.sampleRateHz,
 		})
 	}
 	if len(rows) == 0 {

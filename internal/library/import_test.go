@@ -385,7 +385,7 @@ var _ = Describe("ImportAlbumTrack", Label("unit", "library"), func() {
 	It("places an audio file below the video size floor", func() {
 		src := writeSizedFile(srcDir, "whatever.flac", 1024)
 		got, err := NewImportService().
-			ImportAlbumTrack(context.Background(), src, artist, alb, tr, true, "")
+			ImportAlbumTrack(context.Background(), src, artist, alb, tr, true, AudioNaming{}, "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(got.Path).To(Equal(filepath.Join(
 			musicDir, "Nirvana", "Nevermind (1991)", "2-05 - Lithium.flac",
@@ -397,15 +397,31 @@ var _ = Describe("ImportAlbumTrack", Label("unit", "library"), func() {
 	It("drops the disc prefix on a single-disc album", func() {
 		src := writeSizedFile(srcDir, "a.mp3", 10)
 		got, err := NewImportService().
-			ImportAlbumTrack(context.Background(), src, artist, alb, tr, false, "")
+			ImportAlbumTrack(context.Background(), src, artist, alb, tr, false, AudioNaming{}, "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(filepath.Base(got.Path)).To(Equal("05 - Lithium.mp3"))
+	})
+
+	It("renders the audio facts it is given into the name", func() {
+		configtest.Setup(map[string]any{
+			"library": map[string]any{
+				"music_path":   musicDir,
+				"music_naming": "{Track:02} - {Title} [{BitDepth}-{SampleRate}].{ext}",
+			},
+		})
+		src := writeSizedFile(srcDir, "a.flac", 10)
+		got, err := NewImportService().ImportAlbumTrack(
+			context.Background(), src, artist, alb, tr, false,
+			AudioNaming{BitDepth: 24, SampleRateHz: 96000}, "",
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filepath.Base(got.Path)).To(Equal("05 - Lithium [24-96].flac"))
 	})
 
 	It("honours the mode override over the configured one", func() {
 		src := writeSizedFile(srcDir, "a.mp3", 10)
 		got, err := NewImportService().
-			ImportAlbumTrack(context.Background(), src, artist, alb, tr, false, "hardlink")
+			ImportAlbumTrack(context.Background(), src, artist, alb, tr, false, AudioNaming{}, "hardlink")
 		Expect(err).NotTo(HaveOccurred())
 		srcInfo, err := os.Stat(src)
 		Expect(err).NotTo(HaveOccurred())
@@ -424,6 +440,7 @@ var _ = Describe("ImportAlbumTrack", Label("unit", "library"), func() {
 			alb,
 			tr,
 			false,
+			AudioNaming{},
 			"",
 		)
 		Expect(err).NotTo(HaveOccurred())
@@ -434,6 +451,7 @@ var _ = Describe("ImportAlbumTrack", Label("unit", "library"), func() {
 			alb,
 			tr,
 			false,
+			AudioNaming{},
 			"",
 		)
 		Expect(err).To(MatchError(ErrDestExists))

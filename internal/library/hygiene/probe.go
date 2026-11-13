@@ -7,7 +7,9 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/scheduler"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -25,7 +27,8 @@ const probeFetchRoundsMax = 4
 
 // RunMediaProbe backfills media info onto MediaFile rows that have never been
 // probed (probed_at IS NULL) — including rows created by adoption, orphan
-// scan and bulk import, which deliberately don't probe inline. No-ops when
+// scan and bulk import, which deliberately don't probe inline — and the bit
+// depth and sample rate of track files that were never measured. No-ops when
 // ffmpeg is disabled or missing, so the config toggle works without a
 // restart.
 func (s *Service) RunMediaProbe(ctx context.Context) error {
@@ -36,6 +39,29 @@ func (s *Service) RunMediaProbe(ctx context.Context) error {
 		return nil
 	}
 
+	videos, err := s.probeBatch(ctx, s.store.ListUnprobedMediaFiles, s.probeRow)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	tracks, err := s.probeBatch(
+		ctx,
+		s.store.ListUnmeasuredTrackFiles,
+		s.measureTrack,
+	)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	span.SetAttributes(attribute.Int("rows", videos+tracks))
+	return nil
+}
+
+// probeBatch runs probe over up to probeBatchSize of the rows list returns and
+// reports how many rows it looked at.
+func (s *Service) probeBatch(
+	ctx context.Context,
+	list func(context.Context, int) ([]*ent.MediaFile, error),
+	probe func(context.Context, *ent.MediaFile) bool,
+) (int, error) {
 	// Rows deliberately skipped for a stat failure are never stamped, so a
 	// re-fetch at a larger limit sees them again — track IDs already handled
 	// this tick and grow the limit until probeBatchSize probes were actually
@@ -44,9 +70,9 @@ func (s *Service) RunMediaProbe(ctx context.Context) error {
 	attempted := 0
 	limit := probeBatchSize
 	for range probeFetchRoundsMax {
-		rows, err := s.store.ListUnprobedMediaFiles(ctx, limit)
+		rows, err := list(ctx, limit)
 		if err != nil {
-			return otelx.RecordSpanError(span, err)
+			return len(seen), err
 		}
 
 		for _, row := range rows {
@@ -56,10 +82,10 @@ func (s *Service) RunMediaProbe(ctx context.Context) error {
 			seen[row.ID] = struct{}{}
 
 			if ctx.Err() != nil {
-				return ctx.Err()
+				return len(seen), ctx.Err()
 			}
 
-			if s.probeRow(ctx, row) {
+			if probe(ctx, row) {
 				attempted++
 				scheduler.Progress(ctx, attempted, probeBatchSize)
 				if attempted >= probeBatchSize {
@@ -73,8 +99,38 @@ func (s *Service) RunMediaProbe(ctx context.Context) error {
 		}
 		limit *= 2
 	}
-	span.SetAttributes(attribute.Int("rows", len(seen)))
-	return nil
+	return len(seen), nil
+}
+
+// measureTrack reads a track file's bit depth and sample rate for the music
+// naming tokens, returning true when a probe was attempted. A failed probe
+// stamps zeros so the row is not retried; a stat failure is left to
+// drift-check, unstamped.
+func (s *Service) measureTrack(ctx context.Context, row *ent.MediaFile) bool {
+	if _, err := os.Stat(row.Path); err != nil {
+		mediaProbeMissing.Add(ctx, 1)
+		return false
+	}
+	var facts quality.AudioFacts
+	info, err := s.Probe.ProbeAudio(ctx, row.Path)
+	if err != nil {
+		slog.WarnContext(ctx, "track probe failed", "path", row.Path, "error", err)
+		mediaProbeFailed.Add(ctx, 1)
+	} else {
+		facts = library.AudioFactsFromProbe(info)
+		mediaProbeProbed.Add(ctx, 1)
+	}
+	err = s.store.StampTrackFileAudio(
+		ctx,
+		row.ID,
+		facts.BitDepth,
+		facts.SampleRateHz,
+	)
+	if err != nil && !ent.IsNotFound(err) {
+		slog.ErrorContext(ctx, "stamp track probe failed",
+			"media_file.id", row.ID, "error", err)
+	}
+	return true
 }
 
 // probeRow stats, probes, and stamps a single row, returning true when a

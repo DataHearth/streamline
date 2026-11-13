@@ -491,6 +491,60 @@ func (_u *MediaFileUpdate) ClearDynamicRange() *MediaFileUpdate {
 	return _u
 }
 
+// SetBitDepth sets the "bit_depth" field.
+func (_u *MediaFileUpdate) SetBitDepth(v uint8) *MediaFileUpdate {
+	_u.mutation.ResetBitDepth()
+	_u.mutation.SetBitDepth(v)
+	return _u
+}
+
+// SetNillableBitDepth sets the "bit_depth" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableBitDepth(v *uint8) *MediaFileUpdate {
+	if v != nil {
+		_u.SetBitDepth(*v)
+	}
+	return _u
+}
+
+// AddBitDepth adds value to the "bit_depth" field.
+func (_u *MediaFileUpdate) AddBitDepth(v int8) *MediaFileUpdate {
+	_u.mutation.AddBitDepth(v)
+	return _u
+}
+
+// ClearBitDepth clears the value of the "bit_depth" field.
+func (_u *MediaFileUpdate) ClearBitDepth() *MediaFileUpdate {
+	_u.mutation.ClearBitDepth()
+	return _u
+}
+
+// SetSampleRate sets the "sample_rate" field.
+func (_u *MediaFileUpdate) SetSampleRate(v uint32) *MediaFileUpdate {
+	_u.mutation.ResetSampleRate()
+	_u.mutation.SetSampleRate(v)
+	return _u
+}
+
+// SetNillableSampleRate sets the "sample_rate" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableSampleRate(v *uint32) *MediaFileUpdate {
+	if v != nil {
+		_u.SetSampleRate(*v)
+	}
+	return _u
+}
+
+// AddSampleRate adds value to the "sample_rate" field.
+func (_u *MediaFileUpdate) AddSampleRate(v int32) *MediaFileUpdate {
+	_u.mutation.AddSampleRate(v)
+	return _u
+}
+
+// ClearSampleRate clears the value of the "sample_rate" field.
+func (_u *MediaFileUpdate) ClearSampleRate() *MediaFileUpdate {
+	_u.mutation.ClearSampleRate()
+	return _u
+}
+
 // SetParsedSource sets the "parsed_source" field.
 func (_u *MediaFileUpdate) SetParsedSource(v string) *MediaFileUpdate {
 	_u.mutation.SetParsedSource(v)
@@ -1173,6 +1227,24 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.DynamicRangeCleared() {
 		_spec.ClearField(mediafile.FieldDynamicRange, field.TypeString)
+	}
+	if value, ok := _u.mutation.BitDepth(); ok {
+		_spec.SetField(mediafile.FieldBitDepth, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedBitDepth(); ok {
+		_spec.AddField(mediafile.FieldBitDepth, field.TypeUint8, value)
+	}
+	if _u.mutation.BitDepthCleared() {
+		_spec.ClearField(mediafile.FieldBitDepth, field.TypeUint8)
+	}
+	if value, ok := _u.mutation.SampleRate(); ok {
+		_spec.SetField(mediafile.FieldSampleRate, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedSampleRate(); ok {
+		_spec.AddField(mediafile.FieldSampleRate, field.TypeUint32, value)
+	}
+	if _u.mutation.SampleRateCleared() {
+		_spec.ClearField(mediafile.FieldSampleRate, field.TypeUint32)
 	}
 	if value, ok := _u.mutation.ParsedSource(); ok {
 		_spec.SetField(mediafile.FieldParsedSource, field.TypeString, value)
@@ -1913,6 +1985,60 @@ func (_u *MediaFileUpdateOne) ClearDynamicRange() *MediaFileUpdateOne {
 	return _u
 }
 
+// SetBitDepth sets the "bit_depth" field.
+func (_u *MediaFileUpdateOne) SetBitDepth(v uint8) *MediaFileUpdateOne {
+	_u.mutation.ResetBitDepth()
+	_u.mutation.SetBitDepth(v)
+	return _u
+}
+
+// SetNillableBitDepth sets the "bit_depth" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableBitDepth(v *uint8) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetBitDepth(*v)
+	}
+	return _u
+}
+
+// AddBitDepth adds value to the "bit_depth" field.
+func (_u *MediaFileUpdateOne) AddBitDepth(v int8) *MediaFileUpdateOne {
+	_u.mutation.AddBitDepth(v)
+	return _u
+}
+
+// ClearBitDepth clears the value of the "bit_depth" field.
+func (_u *MediaFileUpdateOne) ClearBitDepth() *MediaFileUpdateOne {
+	_u.mutation.ClearBitDepth()
+	return _u
+}
+
+// SetSampleRate sets the "sample_rate" field.
+func (_u *MediaFileUpdateOne) SetSampleRate(v uint32) *MediaFileUpdateOne {
+	_u.mutation.ResetSampleRate()
+	_u.mutation.SetSampleRate(v)
+	return _u
+}
+
+// SetNillableSampleRate sets the "sample_rate" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableSampleRate(v *uint32) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetSampleRate(*v)
+	}
+	return _u
+}
+
+// AddSampleRate adds value to the "sample_rate" field.
+func (_u *MediaFileUpdateOne) AddSampleRate(v int32) *MediaFileUpdateOne {
+	_u.mutation.AddSampleRate(v)
+	return _u
+}
+
+// ClearSampleRate clears the value of the "sample_rate" field.
+func (_u *MediaFileUpdateOne) ClearSampleRate() *MediaFileUpdateOne {
+	_u.mutation.ClearSampleRate()
+	return _u
+}
+
 // SetParsedSource sets the "parsed_source" field.
 func (_u *MediaFileUpdateOne) SetParsedSource(v string) *MediaFileUpdateOne {
 	_u.mutation.SetParsedSource(v)
@@ -2625,6 +2751,24 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 	}
 	if _u.mutation.DynamicRangeCleared() {
 		_spec.ClearField(mediafile.FieldDynamicRange, field.TypeString)
+	}
+	if value, ok := _u.mutation.BitDepth(); ok {
+		_spec.SetField(mediafile.FieldBitDepth, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedBitDepth(); ok {
+		_spec.AddField(mediafile.FieldBitDepth, field.TypeUint8, value)
+	}
+	if _u.mutation.BitDepthCleared() {
+		_spec.ClearField(mediafile.FieldBitDepth, field.TypeUint8)
+	}
+	if value, ok := _u.mutation.SampleRate(); ok {
+		_spec.SetField(mediafile.FieldSampleRate, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedSampleRate(); ok {
+		_spec.AddField(mediafile.FieldSampleRate, field.TypeUint32, value)
+	}
+	if _u.mutation.SampleRateCleared() {
+		_spec.ClearField(mediafile.FieldSampleRate, field.TypeUint32)
 	}
 	if value, ok := _u.mutation.ParsedSource(); ok {
 		_spec.SetField(mediafile.FieldParsedSource, field.TypeString, value)

@@ -61,6 +61,10 @@ const (
 	FieldProbedAt = "probed_at"
 	// FieldDynamicRange holds the string denoting the dynamic_range field in the database.
 	FieldDynamicRange = "dynamic_range"
+	// FieldBitDepth holds the string denoting the bit_depth field in the database.
+	FieldBitDepth = "bit_depth"
+	// FieldSampleRate holds the string denoting the sample_rate field in the database.
+	FieldSampleRate = "sample_rate"
 	// FieldParsedSource holds the string denoting the parsed_source field in the database.
 	FieldParsedSource = "parsed_source"
 	// FieldParsedResolution holds the string denoting the parsed_resolution field in the database.
@@ -166,6 +170,8 @@ var Columns = []string{
 	FieldSubLangs,
 	FieldProbedAt,
 	FieldDynamicRange,
+	FieldBitDepth,
+	FieldSampleRate,
 	FieldParsedSource,
 	FieldParsedResolution,
 	FieldParsedCodec,
@@ -416,6 +422,16 @@ func ByProbedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByDynamicRange orders the results by the dynamic_range field.
 func ByDynamicRange(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDynamicRange, opts...).ToFunc()
+}
+
+// ByBitDepth orders the results by the bit_depth field.
+func ByBitDepth(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBitDepth, opts...).ToFunc()
+}
+
+// BySampleRate orders the results by the sample_rate field.
+func BySampleRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSampleRate, opts...).ToFunc()
 }
 
 // ByParsedSource orders the results by the parsed_source field.

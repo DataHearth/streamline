@@ -16674,6 +16674,74 @@ func (_c *MockStore_ListTvShowsForAdoption_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// ListUnmeasuredTrackFiles provides a mock function for the type MockStore
+func (_mock *MockStore) ListUnmeasuredTrackFiles(ctx context.Context, limit int) ([]*ent.MediaFile, error) {
+	ret := _mock.Called(ctx, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListUnmeasuredTrackFiles")
+	}
+
+	var r0 []*ent.MediaFile
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]*ent.MediaFile, error)); ok {
+		return returnFunc(ctx, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []*ent.MediaFile); ok {
+		r0 = returnFunc(ctx, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.MediaFile)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListUnmeasuredTrackFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUnmeasuredTrackFiles'
+type MockStore_ListUnmeasuredTrackFiles_Call struct {
+	*mock.Call
+}
+
+// ListUnmeasuredTrackFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - limit int
+func (_e *MockStore_Expecter) ListUnmeasuredTrackFiles(ctx any, limit any) *MockStore_ListUnmeasuredTrackFiles_Call {
+	return &MockStore_ListUnmeasuredTrackFiles_Call{Call: _e.mock.On("ListUnmeasuredTrackFiles", ctx, limit)}
+}
+
+func (_c *MockStore_ListUnmeasuredTrackFiles_Call) Run(run func(ctx context.Context, limit int)) *MockStore_ListUnmeasuredTrackFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListUnmeasuredTrackFiles_Call) Return(mediaFiles []*ent.MediaFile, err error) *MockStore_ListUnmeasuredTrackFiles_Call {
+	_c.Call.Return(mediaFiles, err)
+	return _c
+}
+
+func (_c *MockStore_ListUnmeasuredTrackFiles_Call) RunAndReturn(run func(ctx context.Context, limit int) ([]*ent.MediaFile, error)) *MockStore_ListUnmeasuredTrackFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListUnprobedMediaFiles provides a mock function for the type MockStore
 func (_mock *MockStore) ListUnprobedMediaFiles(ctx context.Context, limit int) ([]*ent.MediaFile, error) {
 	ret := _mock.Called(ctx, limit)
@@ -25658,6 +25726,75 @@ func (_c *MockStore_StampMediaFileProbe_Call) Return(err error) *MockStore_Stamp
 }
 
 func (_c *MockStore_StampMediaFileProbe_Call) RunAndReturn(run func(ctx context.Context, id uint32, path string, info *ffmpeg.Info) error) *MockStore_StampMediaFileProbe_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// StampTrackFileAudio provides a mock function for the type MockStore
+func (_mock *MockStore) StampTrackFileAudio(ctx context.Context, id uint32, bitDepth uint8, sampleRate uint32) error {
+	ret := _mock.Called(ctx, id, bitDepth, sampleRate)
+
+	if len(ret) == 0 {
+		panic("no return value specified for StampTrackFileAudio")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint8, uint32) error); ok {
+		r0 = returnFunc(ctx, id, bitDepth, sampleRate)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_StampTrackFileAudio_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'StampTrackFileAudio'
+type MockStore_StampTrackFileAudio_Call struct {
+	*mock.Call
+}
+
+// StampTrackFileAudio is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - bitDepth uint8
+//   - sampleRate uint32
+func (_e *MockStore_Expecter) StampTrackFileAudio(ctx any, id any, bitDepth any, sampleRate any) *MockStore_StampTrackFileAudio_Call {
+	return &MockStore_StampTrackFileAudio_Call{Call: _e.mock.On("StampTrackFileAudio", ctx, id, bitDepth, sampleRate)}
+}
+
+func (_c *MockStore_StampTrackFileAudio_Call) Run(run func(ctx context.Context, id uint32, bitDepth uint8, sampleRate uint32)) *MockStore_StampTrackFileAudio_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint8
+		if args[2] != nil {
+			arg2 = args[2].(uint8)
+		}
+		var arg3 uint32
+		if args[3] != nil {
+			arg3 = args[3].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_StampTrackFileAudio_Call) Return(err error) *MockStore_StampTrackFileAudio_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_StampTrackFileAudio_Call) RunAndReturn(run func(ctx context.Context, id uint32, bitDepth uint8, sampleRate uint32) error) *MockStore_StampTrackFileAudio_Call {
 	_c.Call.Return(run)
 	return _c
 }

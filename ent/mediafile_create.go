@@ -331,6 +331,34 @@ func (_c *MediaFileCreate) SetNillableDynamicRange(v *string) *MediaFileCreate {
 	return _c
 }
 
+// SetBitDepth sets the "bit_depth" field.
+func (_c *MediaFileCreate) SetBitDepth(v uint8) *MediaFileCreate {
+	_c.mutation.SetBitDepth(v)
+	return _c
+}
+
+// SetNillableBitDepth sets the "bit_depth" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableBitDepth(v *uint8) *MediaFileCreate {
+	if v != nil {
+		_c.SetBitDepth(*v)
+	}
+	return _c
+}
+
+// SetSampleRate sets the "sample_rate" field.
+func (_c *MediaFileCreate) SetSampleRate(v uint32) *MediaFileCreate {
+	_c.mutation.SetSampleRate(v)
+	return _c
+}
+
+// SetNillableSampleRate sets the "sample_rate" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableSampleRate(v *uint32) *MediaFileCreate {
+	if v != nil {
+		_c.SetSampleRate(*v)
+	}
+	return _c
+}
+
 // SetParsedSource sets the "parsed_source" field.
 func (_c *MediaFileCreate) SetParsedSource(v string) *MediaFileCreate {
 	_c.mutation.SetParsedSource(v)
@@ -854,6 +882,14 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.DynamicRange(); ok {
 		_spec.SetField(mediafile.FieldDynamicRange, field.TypeString, value)
 		_node.DynamicRange = &value
+	}
+	if value, ok := _c.mutation.BitDepth(); ok {
+		_spec.SetField(mediafile.FieldBitDepth, field.TypeUint8, value)
+		_node.BitDepth = value
+	}
+	if value, ok := _c.mutation.SampleRate(); ok {
+		_spec.SetField(mediafile.FieldSampleRate, field.TypeUint32, value)
+		_node.SampleRate = &value
 	}
 	if value, ok := _c.mutation.ParsedSource(); ok {
 		_spec.SetField(mediafile.FieldParsedSource, field.TypeString, value)

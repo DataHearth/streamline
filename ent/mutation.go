@@ -31667,6 +31667,10 @@ type MediaFileMutation struct {
 	sub_langs             *string
 	probed_at             *time.Time
 	dynamic_range         *string
+	bit_depth             *uint8
+	addbit_depth          *int8
+	sample_rate           *uint32
+	addsample_rate        *int32
 	parsed_source         *string
 	parsed_resolution     *string
 	parsed_codec          *string
@@ -33015,6 +33019,146 @@ func (m *MediaFileMutation) ResetDynamicRange() {
 	delete(m.clearedFields, mediafile.FieldDynamicRange)
 }
 
+// SetBitDepth sets the "bit_depth" field.
+func (m *MediaFileMutation) SetBitDepth(u uint8) {
+	m.bit_depth = &u
+	m.addbit_depth = nil
+}
+
+// BitDepth returns the value of the "bit_depth" field in the mutation.
+func (m *MediaFileMutation) BitDepth() (r uint8, exists bool) {
+	v := m.bit_depth
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBitDepth returns the old "bit_depth" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldBitDepth(ctx context.Context) (v uint8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBitDepth is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBitDepth requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBitDepth: %w", err)
+	}
+	return oldValue.BitDepth, nil
+}
+
+// AddBitDepth adds u to the "bit_depth" field.
+func (m *MediaFileMutation) AddBitDepth(u int8) {
+	if m.addbit_depth != nil {
+		*m.addbit_depth += u
+	} else {
+		m.addbit_depth = &u
+	}
+}
+
+// AddedBitDepth returns the value that was added to the "bit_depth" field in this mutation.
+func (m *MediaFileMutation) AddedBitDepth() (r int8, exists bool) {
+	v := m.addbit_depth
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearBitDepth clears the value of the "bit_depth" field.
+func (m *MediaFileMutation) ClearBitDepth() {
+	m.bit_depth = nil
+	m.addbit_depth = nil
+	m.clearedFields[mediafile.FieldBitDepth] = struct{}{}
+}
+
+// BitDepthCleared returns if the "bit_depth" field was cleared in this mutation.
+func (m *MediaFileMutation) BitDepthCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldBitDepth]
+	return ok
+}
+
+// ResetBitDepth resets all changes to the "bit_depth" field.
+func (m *MediaFileMutation) ResetBitDepth() {
+	m.bit_depth = nil
+	m.addbit_depth = nil
+	delete(m.clearedFields, mediafile.FieldBitDepth)
+}
+
+// SetSampleRate sets the "sample_rate" field.
+func (m *MediaFileMutation) SetSampleRate(u uint32) {
+	m.sample_rate = &u
+	m.addsample_rate = nil
+}
+
+// SampleRate returns the value of the "sample_rate" field in the mutation.
+func (m *MediaFileMutation) SampleRate() (r uint32, exists bool) {
+	v := m.sample_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSampleRate returns the old "sample_rate" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldSampleRate(ctx context.Context) (v *uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSampleRate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSampleRate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSampleRate: %w", err)
+	}
+	return oldValue.SampleRate, nil
+}
+
+// AddSampleRate adds u to the "sample_rate" field.
+func (m *MediaFileMutation) AddSampleRate(u int32) {
+	if m.addsample_rate != nil {
+		*m.addsample_rate += u
+	} else {
+		m.addsample_rate = &u
+	}
+}
+
+// AddedSampleRate returns the value that was added to the "sample_rate" field in this mutation.
+func (m *MediaFileMutation) AddedSampleRate() (r int32, exists bool) {
+	v := m.addsample_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearSampleRate clears the value of the "sample_rate" field.
+func (m *MediaFileMutation) ClearSampleRate() {
+	m.sample_rate = nil
+	m.addsample_rate = nil
+	m.clearedFields[mediafile.FieldSampleRate] = struct{}{}
+}
+
+// SampleRateCleared returns if the "sample_rate" field was cleared in this mutation.
+func (m *MediaFileMutation) SampleRateCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldSampleRate]
+	return ok
+}
+
+// ResetSampleRate resets all changes to the "sample_rate" field.
+func (m *MediaFileMutation) ResetSampleRate() {
+	m.sample_rate = nil
+	m.addsample_rate = nil
+	delete(m.clearedFields, mediafile.FieldSampleRate)
+}
+
 // SetParsedSource sets the "parsed_source" field.
 func (m *MediaFileMutation) SetParsedSource(s string) {
 	m.parsed_source = &s
@@ -34064,7 +34208,7 @@ func (m *MediaFileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaFileMutation) Fields() []string {
-	fields := make([]string, 0, 38)
+	fields := make([]string, 0, 40)
 	if m.create_time != nil {
 		fields = append(fields, mediafile.FieldCreateTime)
 	}
@@ -34133,6 +34277,12 @@ func (m *MediaFileMutation) Fields() []string {
 	}
 	if m.dynamic_range != nil {
 		fields = append(fields, mediafile.FieldDynamicRange)
+	}
+	if m.bit_depth != nil {
+		fields = append(fields, mediafile.FieldBitDepth)
+	}
+	if m.sample_rate != nil {
+		fields = append(fields, mediafile.FieldSampleRate)
 	}
 	if m.parsed_source != nil {
 		fields = append(fields, mediafile.FieldParsedSource)
@@ -34233,6 +34383,10 @@ func (m *MediaFileMutation) Field(name string) (ent.Value, bool) {
 		return m.ProbedAt()
 	case mediafile.FieldDynamicRange:
 		return m.DynamicRange()
+	case mediafile.FieldBitDepth:
+		return m.BitDepth()
+	case mediafile.FieldSampleRate:
+		return m.SampleRate()
 	case mediafile.FieldParsedSource:
 		return m.ParsedSource()
 	case mediafile.FieldParsedResolution:
@@ -34318,6 +34472,10 @@ func (m *MediaFileMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldProbedAt(ctx)
 	case mediafile.FieldDynamicRange:
 		return m.OldDynamicRange(ctx)
+	case mediafile.FieldBitDepth:
+		return m.OldBitDepth(ctx)
+	case mediafile.FieldSampleRate:
+		return m.OldSampleRate(ctx)
 	case mediafile.FieldParsedSource:
 		return m.OldParsedSource(ctx)
 	case mediafile.FieldParsedResolution:
@@ -34518,6 +34676,20 @@ func (m *MediaFileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDynamicRange(v)
 		return nil
+	case mediafile.FieldBitDepth:
+		v, ok := value.(uint8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBitDepth(v)
+		return nil
+	case mediafile.FieldSampleRate:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSampleRate(v)
+		return nil
 	case mediafile.FieldParsedSource:
 		v, ok := value.(string)
 		if !ok {
@@ -34652,6 +34824,12 @@ func (m *MediaFileMutation) AddedFields() []string {
 	if m.addaudio_tracks != nil {
 		fields = append(fields, mediafile.FieldAudioTracks)
 	}
+	if m.addbit_depth != nil {
+		fields = append(fields, mediafile.FieldBitDepth)
+	}
+	if m.addsample_rate != nil {
+		fields = append(fields, mediafile.FieldSampleRate)
+	}
 	if m.addsize_before != nil {
 		fields = append(fields, mediafile.FieldSizeBefore)
 	}
@@ -34686,6 +34864,10 @@ func (m *MediaFileMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedBitrate()
 	case mediafile.FieldAudioTracks:
 		return m.AddedAudioTracks()
+	case mediafile.FieldBitDepth:
+		return m.AddedBitDepth()
+	case mediafile.FieldSampleRate:
+		return m.AddedSampleRate()
 	case mediafile.FieldSizeBefore:
 		return m.AddedSizeBefore()
 	case mediafile.FieldTagsMtime:
@@ -34751,6 +34933,20 @@ func (m *MediaFileMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddAudioTracks(v)
+		return nil
+	case mediafile.FieldBitDepth:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBitDepth(v)
+		return nil
+	case mediafile.FieldSampleRate:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSampleRate(v)
 		return nil
 	case mediafile.FieldSizeBefore:
 		v, ok := value.(int64)
@@ -34841,6 +35037,12 @@ func (m *MediaFileMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(mediafile.FieldDynamicRange) {
 		fields = append(fields, mediafile.FieldDynamicRange)
+	}
+	if m.FieldCleared(mediafile.FieldBitDepth) {
+		fields = append(fields, mediafile.FieldBitDepth)
+	}
+	if m.FieldCleared(mediafile.FieldSampleRate) {
+		fields = append(fields, mediafile.FieldSampleRate)
 	}
 	if m.FieldCleared(mediafile.FieldParsedSource) {
 		fields = append(fields, mediafile.FieldParsedSource)
@@ -34951,6 +35153,12 @@ func (m *MediaFileMutation) ClearField(name string) error {
 		return nil
 	case mediafile.FieldDynamicRange:
 		m.ClearDynamicRange()
+		return nil
+	case mediafile.FieldBitDepth:
+		m.ClearBitDepth()
+		return nil
+	case mediafile.FieldSampleRate:
+		m.ClearSampleRate()
 		return nil
 	case mediafile.FieldParsedSource:
 		m.ClearParsedSource()
@@ -35070,6 +35278,12 @@ func (m *MediaFileMutation) ResetField(name string) error {
 		return nil
 	case mediafile.FieldDynamicRange:
 		m.ResetDynamicRange()
+		return nil
+	case mediafile.FieldBitDepth:
+		m.ResetBitDepth()
+		return nil
+	case mediafile.FieldSampleRate:
+		m.ResetSampleRate()
 		return nil
 	case mediafile.FieldParsedSource:
 		m.ResetParsedSource()

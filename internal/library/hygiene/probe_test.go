@@ -28,6 +28,7 @@ var _ = Describe("Service.RunMediaProbe", Label("unit", "hygiene"), func() {
 		store        *dbmocks.MockStore
 		prober       *ffmpegmocks.MockProber
 		svc          *Service
+		tracks       []*ent.MediaFile
 	)
 
 	BeforeEach(func() {
@@ -45,7 +46,47 @@ var _ = Describe("Service.RunMediaProbe", Label("unit", "hygiene"), func() {
 			nil,
 		)
 		svc.Probe = prober
+
+		tracks = nil
+		store.EXPECT().ListUnmeasuredTrackFiles(mock.Anything, mock.Anything).
+			RunAndReturn(func(context.Context, int) ([]*ent.MediaFile, error) {
+				return tracks, nil
+			}).Maybe()
 	})
+
+	It(
+		"measures unmeasured track files and stamps zeros when the probe fails",
+		func() {
+			configtest.Setup(map[string]any{
+				"ffmpeg": map[string]any{"enabled": true},
+			})
+			failing := filepath.Join(tmpDir, "broken.flac")
+			Expect(os.WriteFile(failing, []byte("data"), 0o644)).To(Succeed())
+			tracks = []*ent.MediaFile{
+				{ID: 7, Path: existingFile},
+				{ID: 8, Path: failing},
+				{ID: 9, Path: filepath.Join(tmpDir, "gone.flac")},
+			}
+
+			store.EXPECT().ListUnprobedMediaFiles(mock.Anything, probeBatchSize).
+				Return(nil, nil).Once()
+			prober.EXPECT().Available().Return(true).Once()
+			prober.EXPECT().ProbeAudio(mock.Anything, existingFile).
+				Return(&ffmpeg.AudioInfo{
+					Codec: "flac", BitDepth: 24, SampleRateHz: 96000,
+				}, nil).Once()
+			prober.EXPECT().ProbeAudio(mock.Anything, failing).
+				Return(nil, errors.New("boom")).Once()
+			store.EXPECT().
+				StampTrackFileAudio(mock.Anything, uint32(7), uint8(24), uint32(96000)).
+				Return(nil).Once()
+			store.EXPECT().
+				StampTrackFileAudio(mock.Anything, uint32(8), uint8(0), uint32(0)).
+				Return(nil).Once()
+
+			Expect(svc.RunMediaProbe(ctx)).To(Succeed())
+		},
+	)
 
 	It("no-ops when ffmpeg is disabled", func() {
 		configtest.Setup(map[string]any{

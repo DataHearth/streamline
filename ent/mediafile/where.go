@@ -165,6 +165,16 @@ func DynamicRange(v string) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldDynamicRange, v))
 }
 
+// BitDepth applies equality check predicate on the "bit_depth" field. It's identical to BitDepthEQ.
+func BitDepth(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldBitDepth, v))
+}
+
+// SampleRate applies equality check predicate on the "sample_rate" field. It's identical to SampleRateEQ.
+func SampleRate(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldSampleRate, v))
+}
+
 // ParsedSource applies equality check predicate on the "parsed_source" field. It's identical to ParsedSourceEQ.
 func ParsedSource(v string) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldParsedSource, v))
@@ -1558,6 +1568,106 @@ func DynamicRangeEqualFold(v string) predicate.MediaFile {
 // DynamicRangeContainsFold applies the ContainsFold predicate on the "dynamic_range" field.
 func DynamicRangeContainsFold(v string) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldContainsFold(FieldDynamicRange, v))
+}
+
+// BitDepthEQ applies the EQ predicate on the "bit_depth" field.
+func BitDepthEQ(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldBitDepth, v))
+}
+
+// BitDepthNEQ applies the NEQ predicate on the "bit_depth" field.
+func BitDepthNEQ(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldBitDepth, v))
+}
+
+// BitDepthIn applies the In predicate on the "bit_depth" field.
+func BitDepthIn(vs ...uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldBitDepth, vs...))
+}
+
+// BitDepthNotIn applies the NotIn predicate on the "bit_depth" field.
+func BitDepthNotIn(vs ...uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldBitDepth, vs...))
+}
+
+// BitDepthGT applies the GT predicate on the "bit_depth" field.
+func BitDepthGT(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldBitDepth, v))
+}
+
+// BitDepthGTE applies the GTE predicate on the "bit_depth" field.
+func BitDepthGTE(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldBitDepth, v))
+}
+
+// BitDepthLT applies the LT predicate on the "bit_depth" field.
+func BitDepthLT(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldBitDepth, v))
+}
+
+// BitDepthLTE applies the LTE predicate on the "bit_depth" field.
+func BitDepthLTE(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldBitDepth, v))
+}
+
+// BitDepthIsNil applies the IsNil predicate on the "bit_depth" field.
+func BitDepthIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldBitDepth))
+}
+
+// BitDepthNotNil applies the NotNil predicate on the "bit_depth" field.
+func BitDepthNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldBitDepth))
+}
+
+// SampleRateEQ applies the EQ predicate on the "sample_rate" field.
+func SampleRateEQ(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldSampleRate, v))
+}
+
+// SampleRateNEQ applies the NEQ predicate on the "sample_rate" field.
+func SampleRateNEQ(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldSampleRate, v))
+}
+
+// SampleRateIn applies the In predicate on the "sample_rate" field.
+func SampleRateIn(vs ...uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldSampleRate, vs...))
+}
+
+// SampleRateNotIn applies the NotIn predicate on the "sample_rate" field.
+func SampleRateNotIn(vs ...uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldSampleRate, vs...))
+}
+
+// SampleRateGT applies the GT predicate on the "sample_rate" field.
+func SampleRateGT(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldSampleRate, v))
+}
+
+// SampleRateGTE applies the GTE predicate on the "sample_rate" field.
+func SampleRateGTE(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldSampleRate, v))
+}
+
+// SampleRateLT applies the LT predicate on the "sample_rate" field.
+func SampleRateLT(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldSampleRate, v))
+}
+
+// SampleRateLTE applies the LTE predicate on the "sample_rate" field.
+func SampleRateLTE(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldSampleRate, v))
+}
+
+// SampleRateIsNil applies the IsNil predicate on the "sample_rate" field.
+func SampleRateIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldSampleRate))
+}
+
+// SampleRateNotNil applies the NotNil predicate on the "sample_rate" field.
+func SampleRateNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldSampleRate))
 }
 
 // ParsedSourceEQ applies the EQ predicate on the "parsed_source" field.

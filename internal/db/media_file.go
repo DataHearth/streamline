@@ -197,6 +197,41 @@ func (db *DB) ListUnprobedMediaFiles(
 	return rows, nil
 }
 
+func (db *DB) ListUnmeasuredTrackFiles(
+	ctx context.Context,
+	limit int,
+) ([]*ent.MediaFile, error) {
+	rows, err := db.client.MediaFile.Query().
+		Where(
+			mediafile.SampleRateIsNil(),
+			mediafile.MissingSinceIsNil(),
+			mediafile.HasTrack(),
+		).
+		Order(ent.Asc(mediafile.FieldID)).
+		Limit(limit).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list unmeasured track files: %w", err)
+	}
+	return rows, nil
+}
+
+func (db *DB) StampTrackFileAudio(
+	ctx context.Context,
+	id uint32,
+	bitDepth uint8,
+	sampleRate uint32,
+) error {
+	err := db.client.MediaFile.UpdateOneID(id).
+		SetBitDepth(bitDepth).
+		SetSampleRate(sampleRate).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("stamp audio facts on media_file %d: %w", id, err)
+	}
+	return nil
+}
+
 // StampMediaFileProbe records a probe attempt's result. A nil info (failed
 // probe) still sets probed_at, so ListUnprobedMediaFiles never re-selects it.
 //

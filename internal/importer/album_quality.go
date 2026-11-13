@@ -22,6 +22,9 @@ type albumFileQuality struct {
 	tier   quality.AudioTier
 	known  bool
 	probed bool
+	// Measured, and zero for a lossy file: only a lossless one has them.
+	bitDepth     uint8
+	sampleRateHz uint32
 }
 
 // assessAlbumFile classifies one source file: measured when ffprobe is
@@ -36,8 +39,12 @@ func (w *Worker) assessAlbumFile(
 	if config.Get().FFmpeg.Enabled && w.probe != nil && w.probe.Available() {
 		info, err := w.probe.ProbeAudio(ctx, path)
 		if err == nil {
-			t, ok := quality.AudioTierOf(library.AudioFactsFromProbe(info))
-			return albumFileQuality{tier: t, known: ok, probed: true}
+			facts := library.AudioFactsFromProbe(info)
+			t, ok := quality.AudioTierOf(facts)
+			return albumFileQuality{
+				tier: t, known: ok, probed: true,
+				bitDepth: facts.BitDepth, sampleRateHz: facts.SampleRateHz,
+			}
 		}
 		slog.WarnContext(ctx, "album import: probe failed, tier not verified",
 			"file", filepath.Base(path), "error", err)

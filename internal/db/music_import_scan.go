@@ -55,6 +55,20 @@ type AdoptAlbumFile struct {
 	Size    int64
 	// TagsPending queues the file for the music tag writer.
 	TagsPending bool
+	// Measured says a probe read the file. BitDepth and SampleRate (Hz) are
+	// then recorded as they are, zero for a lossy file; an unmeasured file is
+	// left for the backfill.
+	Measured   bool
+	BitDepth   uint8
+	SampleRate uint32
+}
+
+// audioFacts writes a measured file's bit depth and sample rate.
+func (f AdoptAlbumFile) audioFacts(c *ent.MediaFileCreate) *ent.MediaFileCreate {
+	if !f.Measured {
+		return c
+	}
+	return c.SetBitDepth(f.BitDepth).SetSampleRate(f.SampleRate)
 }
 
 func (db *DB) ListPendingImportScanAlbumFolders(
@@ -245,7 +259,7 @@ func adoptAlbumFiles(
 		return fmt.Errorf("monitor album %d: %w", albumID, err)
 	}
 	for _, f := range files {
-		if err := c.MediaFile.Create().
+		if err := f.audioFacts(c.MediaFile.Create()).
 			SetPath(f.Path).
 			SetSize(f.Size).
 			SetQuality(f.Quality).

@@ -67,6 +67,10 @@ type MediaFile struct {
 	ProbedAt *time.Time `json:"probed_at,omitempty"`
 	// DynamicRange holds the value of the "dynamic_range" field.
 	DynamicRange *string `json:"dynamic_range,omitempty"`
+	// BitDepth holds the value of the "bit_depth" field.
+	BitDepth uint8 `json:"bit_depth,omitempty"`
+	// SampleRate holds the value of the "sample_rate" field.
+	SampleRate *uint32 `json:"sample_rate,omitempty"`
 	// ParsedSource holds the value of the "parsed_source" field.
 	ParsedSource string `json:"parsed_source,omitempty"`
 	// ParsedResolution holds the value of the "parsed_resolution" field.
@@ -182,7 +186,7 @@ func (*MediaFile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case mediafile.FieldID, mediafile.FieldSize, mediafile.FieldDurationSeconds, mediafile.FieldWidth, mediafile.FieldHeight, mediafile.FieldAudioChannels, mediafile.FieldBitrate, mediafile.FieldAudioTracks, mediafile.FieldSizeBefore, mediafile.FieldTagsMtime, mediafile.FieldTagsSize, mediafile.FieldTagFailures:
+		case mediafile.FieldID, mediafile.FieldSize, mediafile.FieldDurationSeconds, mediafile.FieldWidth, mediafile.FieldHeight, mediafile.FieldAudioChannels, mediafile.FieldBitrate, mediafile.FieldAudioTracks, mediafile.FieldBitDepth, mediafile.FieldSampleRate, mediafile.FieldSizeBefore, mediafile.FieldTagsMtime, mediafile.FieldTagsSize, mediafile.FieldTagFailures:
 			values[i] = new(sql.NullInt64)
 		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec, mediafile.FieldAudioLangs, mediafile.FieldSubLangs, mediafile.FieldDynamicRange, mediafile.FieldParsedSource, mediafile.FieldParsedResolution, mediafile.FieldParsedCodec, mediafile.FieldBookKind, mediafile.FieldTagsState, mediafile.FieldTagsHash, mediafile.FieldTagsError, mediafile.FieldTagsArtHash:
 			values[i] = new(sql.NullString)
@@ -358,6 +362,19 @@ func (_m *MediaFile) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.DynamicRange = new(string)
 				*_m.DynamicRange = value.String
+			}
+		case mediafile.FieldBitDepth:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field bit_depth", values[i])
+			} else if value.Valid {
+				_m.BitDepth = uint8(value.Int64)
+			}
+		case mediafile.FieldSampleRate:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field sample_rate", values[i])
+			} else if value.Valid {
+				_m.SampleRate = new(uint32)
+				*_m.SampleRate = uint32(value.Int64)
 			}
 		case mediafile.FieldParsedSource:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -617,6 +634,14 @@ func (_m *MediaFile) String() string {
 	if v := _m.DynamicRange; v != nil {
 		builder.WriteString("dynamic_range=")
 		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	builder.WriteString("bit_depth=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BitDepth))
+	builder.WriteString(", ")
+	if v := _m.SampleRate; v != nil {
+		builder.WriteString("sample_rate=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("parsed_source=")

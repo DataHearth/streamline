@@ -358,6 +358,7 @@ func (s *ImportService) ImportAlbumTrack(
 	alb *ent.Album,
 	tr *ent.Track,
 	multiDisc bool,
+	audio AudioNaming,
 	mode string,
 ) (ImportedFile, error) {
 	lib := config.Get().Library
@@ -395,6 +396,7 @@ func (s *ImportService) ImportAlbumTrack(
 				tr.Position,
 				tr.Title,
 				ext,
+				audio,
 			)
 		},
 		owner: []any{"album.id", alb.ID, "track.id", tr.ID},

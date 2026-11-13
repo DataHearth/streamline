@@ -25,23 +25,75 @@ var _ = Describe("BuildAlbumTrackVars", Label("unit", "library"), func() {
 			3,
 			"X",
 			"flac",
+			AudioNaming{},
 		)
 		Expect(ApplyTemplate("{Artist}/{Album} ({Year})/"+tpl, vars)).
 			To(Equal("Nirvana/Nevermind (1991)/03 - X.flac"))
 	})
 
 	It("prefixes the disc on a multi-disc album only", func() {
-		multi := BuildAlbumTrackVars("A", "B", 2000, 2, true, 3, "X", "flac")
+		multi := BuildAlbumTrackVars(
+			"A",
+			"B",
+			2000,
+			2,
+			true,
+			3,
+			"X",
+			"flac",
+			AudioNaming{},
+		)
 		Expect(ApplyTemplate(tpl, multi)).To(Equal("2-03 - X.flac"))
-		single := BuildAlbumTrackVars("A", "B", 2000, 1, false, 3, "X", "flac")
+		single := BuildAlbumTrackVars(
+			"A",
+			"B",
+			2000,
+			1,
+			false,
+			3,
+			"X",
+			"flac",
+			AudioNaming{},
+		)
 		Expect(ApplyTemplate(tpl, single)).To(Equal("03 - X.flac"))
 	})
 
 	It("pads the track with the shipped default template", func() {
 		configtest.Setup()
-		vars := BuildAlbumTrackVars("A", "B", 2000, 1, false, 1, "Song", "mp3")
+		vars := BuildAlbumTrackVars(
+			"A", "B", 2000, 1, false, 1, "Song", "mp3", AudioNaming{Quality: "high"},
+		)
 		Expect(ApplyTemplate(config.Get().Library.MusicNaming, vars)).
 			To(Equal("A/B (2000)/01 - Song.mp3"))
+	})
+
+	It("names a measured lossless file's bit depth and sample rate in kHz", func() {
+		configtest.Setup()
+		vars := BuildAlbumTrackVars(
+			"A", "B", 2000, 1, false, 1, "Song", "flac",
+			AudioNaming{Quality: "lossless", BitDepth: 16, SampleRateHz: 44100},
+		)
+		Expect(ApplyTemplate(config.Get().Library.MusicNaming, vars)).
+			To(Equal("A/B (2000)/01 - Song [16-44.1].flac"))
+		vars = BuildAlbumTrackVars(
+			"A", "B", 2000, 1, false, 1, "Song", "flac",
+			AudioNaming{Quality: "hires", BitDepth: 24, SampleRateHz: 96000},
+		)
+		Expect(
+			ApplyTemplate(
+				"{Title} [{Quality}] ({BitDepth}/{SampleRate}).{ext}",
+				vars,
+			),
+		).
+			To(Equal("Song [hires] (24/96).flac"))
+	})
+
+	It("keeps a bracket pair when one of its tokens has a value", func() {
+		vars := BuildAlbumTrackVars(
+			"A", "B", 2000, 1, false, 1, "Song", "flac", AudioNaming{BitDepth: 24},
+		)
+		Expect(ApplyTemplate("{Title} [{BitDepth}-{SampleRate}].{ext}", vars)).
+			To(Equal("Song [24-].flac"))
 	})
 })
 

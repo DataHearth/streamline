@@ -438,27 +438,31 @@ func (s *Service) planAlbumFiles(
 			continue
 		}
 		covered[tr.ID] = struct{}{}
-		plan = append(plan, db.AdoptAlbumFile{
-			TrackID: tr.ID,
-			Path:    path,
-			Quality: s.adoptedTier(ctx, path),
-			Format:  info.Format,
-			Size:    stat.Size(),
-		})
+		f := s.adoptedQuality(ctx, path)
+		f.TrackID, f.Path, f.Format, f.Size = tr.ID, path, info.Format, stat.Size()
+		plan = append(plan, f)
 	}
 	return plan, unmatched, adopted, len(alb.Edges.Tracks) - len(covered), nil
 }
 
-// adoptedTier is the tier recorded for an adopted file: measured when ffprobe
-// is available, otherwise read off the extension, where a lossless one is
-// lossless, never hi-res, and every other file is left without a tier rather
-// than guessed at.
-func (s *Service) adoptedTier(ctx context.Context, path string) string {
+// adoptedQuality is what is recorded about how an adopted file sounds: measured
+// when ffprobe is available, otherwise the tier is read off the extension,
+// where a lossless one is lossless, never hi-res, and every other file is left
+// without a tier rather than guessed at.
+func (s *Service) adoptedQuality(
+	ctx context.Context,
+	path string,
+) db.AdoptAlbumFile {
+	var out db.AdoptAlbumFile
 	if s.probing() {
 		info, err := s.prober.ProbeAudio(ctx, path)
 		if err == nil {
-			if t, ok := quality.AudioTierOf(library.AudioFactsFromProbe(info)); ok {
-				return t.String()
+			facts := library.AudioFactsFromProbe(info)
+			out.Measured = true
+			out.BitDepth, out.SampleRate = facts.BitDepth, facts.SampleRateHz
+			if t, ok := quality.AudioTierOf(facts); ok {
+				out.Quality = t.String()
+				return out
 			}
 		} else {
 			slog.WarnContext(ctx, "music adopt: probe failed, tier from extension",
@@ -466,9 +470,9 @@ func (s *Service) adoptedTier(ctx context.Context, path string) string {
 		}
 	}
 	if strings.EqualFold(filepath.Ext(path), ".flac") {
-		return quality.TierLossless.String()
+		out.Quality = quality.TierLossless.String()
 	}
-	return ""
+	return out
 }
 
 func (s *Service) probing() bool {

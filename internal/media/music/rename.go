@@ -183,6 +183,7 @@ func trackTarget(
 	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(f.Path)), ".")
 	vars := library.BuildAlbumTrackVars(
 		a.Name, alb.Title, year, t.Disc, multiDisc, t.Position, t.Title, ext,
+		library.AudioNamingOf(f),
 	)
 	segments := strings.Split(library.ApplyTemplate(lib.MusicNaming, vars), "/")
 	for i, seg := range segments {

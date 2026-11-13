@@ -1064,6 +1064,20 @@ type Store interface {
 		path string,
 		info *ffmpeg.Info,
 	) error
+	// ListUnmeasuredTrackFiles returns up to limit track rows whose bit depth
+	// and sample rate were never read (sample_rate IS NULL), oldest-first.
+	ListUnmeasuredTrackFiles(
+		ctx context.Context,
+		limit int,
+	) ([]*ent.MediaFile, error)
+	// StampTrackFileAudio records what a probe measured of a track file;
+	// zeros (a lossy file, a failed probe) still take the row off the list.
+	StampTrackFileAudio(
+		ctx context.Context,
+		id uint32,
+		bitDepth uint8,
+		sampleRate uint32,
+	) error
 	// UpdateMediaFilePath rewrites a MediaFile's path (used by rename).
 	UpdateMediaFilePath(ctx context.Context, id uint32, path string) error
 	// DeleteMediaFile removes a MediaFile row and leaves owners untouched.

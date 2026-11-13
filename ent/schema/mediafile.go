@@ -60,6 +60,12 @@ func (MediaFile) Fields() []ent.Field {
 		// unstamping probed_at, which would make every other stream column
 		// unknown, and quality scoring with them, while the backfill runs.
 		field.String("dynamic_range").Optional().Nillable(),
+		// What a lossless track file measures, for the music naming tokens.
+		// Outside the probed_at contract: sample_rate NULL alone means the
+		// file was never measured and queues the backfill, 0 that it was and
+		// has nothing to say (a lossy file, a failed probe). Hz.
+		field.Uint8("bit_depth").Optional(),
+		field.Uint32("sample_rate").Optional().Nillable(),
 		// Derived from the filename, stored because deriving it is ~12 regex
 		// passes and every response that mentions a file would otherwise redo
 		// them — once per file, per episode, per poll. The filename never

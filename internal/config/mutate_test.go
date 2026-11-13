@@ -159,6 +159,24 @@ var _ = Describe("Config mutate", Label("unit", "config"), func() {
 			Expect(config.Get().Library.Probe.MinDurationRatio).To(Equal(0.5))
 		})
 
+		It("applies the music and book naming templates", func() {
+			music, ebook, audio, series := "m", "e", "a", "s"
+			got, err := config.UpdateLibrary(
+				context.Background(),
+				config.LibraryPatch{
+					MusicNaming:      &music,
+					EbookNaming:      &ebook,
+					AudiobookNaming:  &audio,
+					BookSeriesNaming: &series,
+				},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.MusicNaming).To(Equal("m"))
+			Expect(got.EbookNaming).To(Equal("e"))
+			Expect(got.AudiobookNaming).To(Equal("a"))
+			Expect(got.BookSeriesNaming).To(Equal("s"))
+		})
+
 		It("applies always_ask without disturbing min_duration_ratio", func() {
 			t := true
 			got, err := config.UpdateLibrary(

@@ -17,6 +17,12 @@ import (
 // key, format spec, closing delimiter.
 var templateTokenRe = regexp.MustCompile(`(\s*)([\[(])?\{(\w+)(?::(\d+))?\}([\])])?`)
 
+// templateGroupRe matches a bracket pair, with the whitespace before it, that
+// holds no bracket and no path separator: "[{BitDepth}-{SampleRate}]". A pair
+// holding several tokens that all render empty goes whole, separator included,
+// where the per-token rule would leave "[-]".
+var templateGroupRe = regexp.MustCompile(`\s*(?:\[[^\[\]()/]*\]|\([^\[\]()/]*\))`)
+
 // ApplyTemplate replaces {key} and {key:02} tokens in a template string
 // with values from the provided map. Format spec {key:02} zero-pads
 // numeric values to the given width. Unknown tokens render as empty —
@@ -37,6 +43,18 @@ var templateTokenRe = regexp.MustCompile(`(\s*)([\[(])?\{(\w+)(?::(\d+))?\}([\])
 // directories, which sanitising the split segments afterwards can no longer
 // see.
 func ApplyTemplate(tpl string, vars map[string]string) string {
+	tpl = templateGroupRe.ReplaceAllStringFunc(tpl, func(match string) string {
+		tokens := templateTokenRe.FindAllStringSubmatch(match, -1)
+		if len(tokens) < 2 {
+			return match
+		}
+		for _, t := range tokens {
+			if renderToken(vars, t[3], t[4]) != "" {
+				return match
+			}
+		}
+		return ""
+	})
 	return templateTokenRe.ReplaceAllStringFunc(tpl, func(match string) string {
 		parts := templateTokenRe.FindStringSubmatch(match)
 		space, open, key, fmtSpec, closing := parts[1], parts[2], parts[3], parts[4], parts[5]
@@ -156,6 +174,7 @@ func BuildAlbumTrackVars(
 	multiDisc bool,
 	track uint16,
 	title, ext string,
+	audio AudioNaming,
 ) map[string]string {
 	vars := map[string]string{
 		"Artist": artist,
@@ -170,7 +189,36 @@ func BuildAlbumTrackVars(
 	if multiDisc {
 		vars["Disc"] = strconv.FormatUint(uint64(disc), 10) + "-"
 	}
+	if audio.Quality != "" {
+		vars["Quality"] = audio.Quality
+	}
+	if audio.BitDepth > 0 {
+		vars["BitDepth"] = strconv.FormatUint(uint64(audio.BitDepth), 10)
+	}
+	if audio.SampleRateHz > 0 {
+		vars["SampleRate"] = strconv.FormatFloat(
+			float64(audio.SampleRateHz)/1000, 'f', -1, 64,
+		)
+	}
 	return vars
+}
+
+// AudioNaming is what a music template can say about how one file sounds:
+// {Quality} is the tier, {BitDepth} and {SampleRate} (kHz: 44.1, 96) what a
+// lossless file measures. A zero field renders empty.
+type AudioNaming struct {
+	Quality      string
+	BitDepth     uint8
+	SampleRateHz uint32
+}
+
+// AudioNamingOf reads the naming facts a track file's row stores.
+func AudioNamingOf(f *ent.MediaFile) AudioNaming {
+	n := AudioNaming{Quality: f.Quality, BitDepth: f.BitDepth}
+	if f.SampleRate != nil {
+		n.SampleRateHz = *f.SampleRate
+	}
+	return n
 }
 
 // ParsedFromMediaFile builds the naming inputs for a file already in the

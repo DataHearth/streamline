@@ -245,6 +245,34 @@ var _ = Describe("Music import scan store", Label("integration", "db"), func() {
 			}
 		})
 
+		It("queues only unmeasured track files for the audio backfill", func() {
+			a := seedAlbum()
+			t1, t2 := a.Edges.Tracks[0].ID, a.Edges.Tracks[1].ID
+			Expect(store.AdoptAlbumFiles(ctx, a.ID, []AdoptAlbumFile{
+				{
+					TrackID: t1, Path: "/music/01.flac", Size: 10,
+					Measured: true, BitDepth: 24, SampleRate: 96000,
+				},
+				{TrackID: t2, Path: "/music/02.flac", Size: 20},
+			})).To(Succeed())
+
+			rows, err := store.ListUnmeasuredTrackFiles(ctx, 10)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Path).To(Equal("/music/02.flac"))
+
+			Expect(store.StampTrackFileAudio(ctx, rows[0].ID, 0, 0)).To(Succeed())
+			rows, err = store.ListUnmeasuredTrackFiles(ctx, 10)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(BeEmpty())
+
+			measured, err := client.MediaFile.Query().
+				Where(mediafile.Path("/music/01.flac")).Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(measured.BitDepth).To(Equal(uint8(24)))
+			Expect(*measured.SampleRate).To(Equal(uint32(96000)))
+		})
+
 		It("never moves an album out of downloading", func() {
 			a := seedAlbum()
 			Expect(client.Album.UpdateOneID(a.ID).

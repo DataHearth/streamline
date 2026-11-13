@@ -6588,19 +6588,25 @@ type LibraryArrivals struct {
 
 // LibraryConfigPatch Only provided fields are applied. The three roots are absent by design — see LibraryConfigView.movie_path.
 type LibraryConfigPatch struct {
-	AllowedDownloadRoots *[]string                     `json:"allowed_download_roots,omitempty"`
-	BookLanguage         *string                       `json:"book_language,omitempty"`
-	DriftGraceTicks      *int                          `json:"drift_grace_ticks,omitempty"`
-	ImportMaxAttempts    *int                          `json:"import_max_attempts,omitempty"`
-	ImportMode           *LibraryConfigPatchImportMode `json:"import_mode,omitempty"`
-	KeepTorrentSeeding   *bool                         `json:"keep_torrent_seeding,omitempty"`
-	MaxGrabFailures      *int                          `json:"max_grab_failures,omitempty"`
+	AllowedDownloadRoots *[]string `json:"allowed_download_roots,omitempty"`
+	AudiobookNaming      *string   `json:"audiobook_naming,omitempty"`
+	BookLanguage         *string   `json:"book_language,omitempty"`
+
+	// BookSeriesNaming Ebook volumes of a book series (`library.book_series_naming`); not `series_naming`, the TV template.
+	BookSeriesNaming   *string                       `json:"book_series_naming,omitempty"`
+	DriftGraceTicks    *int                          `json:"drift_grace_ticks,omitempty"`
+	EbookNaming        *string                       `json:"ebook_naming,omitempty"`
+	ImportMaxAttempts  *int                          `json:"import_max_attempts,omitempty"`
+	ImportMode         *LibraryConfigPatchImportMode `json:"import_mode,omitempty"`
+	KeepTorrentSeeding *bool                         `json:"keep_torrent_seeding,omitempty"`
+	MaxGrabFailures    *int                          `json:"max_grab_failures,omitempty"`
 
 	// MissingFileRedownloadAfter How long a confirmed missing file keeps its row and its title's status. A Go duration, 0 for no wait, or off for never.
 	MissingFileRedownloadAfter *string           `json:"missing_file_redownload_after,omitempty"`
 	MonitorSpecials            *bool             `json:"monitor_specials,omitempty"`
 	MovieNaming                *string           `json:"movie_naming,omitempty"`
 	MusicMonitoredTypes        *[]MusicAlbumType `json:"music_monitored_types,omitempty"`
+	MusicNaming                *string           `json:"music_naming,omitempty"`
 
 	// MusicTags The tags Streamline writes into music files (`library.music_tags`).
 	// The view always carries every field; when patched, only provided
@@ -6624,11 +6630,16 @@ type LibraryConfigPatchImportMode string
 // LibraryConfigView defines model for LibraryConfigView.
 type LibraryConfigView struct {
 	AllowedDownloadRoots *[]string `json:"allowed_download_roots,omitempty"`
+	AudiobookNaming      string    `json:"audiobook_naming"`
 
 	// BookLanguage ISO 639-1 language a new book prefers (`library.book_language`); seeds `Book.preferred_language` at add.
-	BookLanguage       string                      `json:"book_language"`
+	BookLanguage string `json:"book_language"`
+
+	// BookSeriesNaming Ebook volumes of a book series (`library.book_series_naming`); not `series_naming`, the TV template.
+	BookSeriesNaming   string                      `json:"book_series_naming"`
 	DownloadPath       *string                     `json:"download_path,omitempty"`
 	DriftGraceTicks    int                         `json:"drift_grace_ticks"`
+	EbookNaming        string                      `json:"ebook_naming"`
 	ImportMaxAttempts  int                         `json:"import_max_attempts"`
 	ImportMode         LibraryConfigViewImportMode `json:"import_mode"`
 	KeepTorrentSeeding bool                        `json:"keep_torrent_seeding"`
@@ -6651,6 +6662,7 @@ type LibraryConfigView struct {
 	// (add, refresh, monitor change); `POST /music/monitored-types/apply`
 	// catches existing artists up.
 	MusicMonitoredTypes []MusicAlbumType `json:"music_monitored_types"`
+	MusicNaming         string           `json:"music_naming"`
 
 	// MusicTags The tags Streamline writes into music files (`library.music_tags`).
 	// The view always carries every field; when patched, only provided

@@ -2803,7 +2803,7 @@ paths:
       summary: Rename a series' volume files to match the library naming pattern
       description: |
         Plans (and unless `preview` is true applies) a rename of the union of the series'
-         member books' files: ebook volumes by `library.series_naming`, audiobook folders by
+         member books' files: ebook volumes by `library.book_series_naming`, audiobook folders by
          `library.audiobook_naming` with filenames kept. Empty `operations` means everything is
          already correct. Books have no media-server refresh.
       tags: [books]
@@ -14254,6 +14254,10 @@ components:
         - book_language
         - movie_naming
         - series_naming
+        - music_naming
+        - ebook_naming
+        - audiobook_naming
+        - book_series_naming
         - import_mode
         - keep_torrent_seeding
         - no_match_cooldown
@@ -14293,6 +14297,17 @@ components:
           type: string
         series_naming:
           type: string
+        music_naming:
+          type: string
+        ebook_naming:
+          type: string
+        audiobook_naming:
+          type: string
+        book_series_naming:
+          type: string
+          description: >-
+            Ebook volumes of a book series (`library.book_series_naming`);
+            not `series_naming`, the TV template.
         import_mode:
           type: string
           enum: [hardlink, copy, move]
@@ -14359,6 +14374,17 @@ components:
           type: string
         series_naming:
           type: string
+        music_naming:
+          type: string
+        ebook_naming:
+          type: string
+        audiobook_naming:
+          type: string
+        book_series_naming:
+          type: string
+          description: >-
+            Ebook volumes of a book series (`library.book_series_naming`);
+            not `series_naming`, the TV template.
         import_mode:
           type: string
           enum: [hardlink, copy, move]

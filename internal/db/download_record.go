@@ -1196,7 +1196,7 @@ func (db *DB) RecordAlbumImportSuccess(
 		return err
 	}
 	for _, f := range p.Files {
-		if err := tx.MediaFile.Create().
+		if err := f.audioFacts(tx.MediaFile.Create()).
 			SetPath(f.Path).
 			SetSize(f.Size).
 			SetQuality(f.Quality).

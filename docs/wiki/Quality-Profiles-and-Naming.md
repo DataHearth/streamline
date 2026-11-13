@@ -189,7 +189,7 @@ An unrecognised token, or one whose value isn't populated, becomes an empty stri
 {title} - {group}               →  The Matrix -           # when unparsed
 ```
 
-An empty token wrapped in `[...]` or `(...)` takes the brackets **and the space before them** with it — punctuation in a template is there to delimit a value, and with no value there is nothing to delimit. A bare token has no pair to remove, so a separator around one survives; keep an optional token in brackets if you want the segment to disappear cleanly.
+An empty token wrapped in `[...]` or `(...)` takes the brackets **and the space before them** with it (a pair holding several tokens goes when all of them are empty) — punctuation in a template is there to delimit a value, and with no value there is nothing to delimit. A bare token has no pair to remove, so a separator around one survives; keep an optional token in brackets if you want the segment to disappear cleanly.
 
 > [!NOTE]
 > The movie default contains `{tmdb-{tmdb_id}}` — nested braces. The parser matches `{tmdb_id}` inside it, so this renders as `{tmdb-603}` rather than `tmdb-603`: the literal outer braces stay in the directory name. Plex and Jellyfin both read `{tmdb-603}` as an ID hint, so this is intentional and works — but if you write your own template, know that the braces are literal text, not template syntax.
@@ -241,11 +241,11 @@ series_naming: '{title}/{title} - {air_date} - {episode_title}.{ext}'
 
 ## Music and book naming
 
-Music and books have templates of their own, with **capitalised** tokens — a token is looked up exactly as written, so `{artist}` in a music template renders empty. These templates are file-only (edit `config.yaml` and restart).
+Music and books have templates of their own, with **capitalised** tokens — a token is looked up exactly as written, so `{artist}` in a music template renders empty. Like the movie and series templates they are edited on Settings → Library and apply to the next import or rename.
 
 ```yaml
 library:
-  music_naming: '{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title}.{ext}'
+  music_naming: '{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title} [{BitDepth}-{SampleRate}].{ext}'
   ebook_naming: '{Author}/{Title} ({Year})'
   audiobook_naming: '{Author}/{Title} ({Year})'
   book_series_naming: '{Author}/{Series}/{Series} - Vol. {Volume:02}'
@@ -262,6 +262,13 @@ library:
 | `{Track}` | Track number; `{Track:02}` pads it | `03` |
 | `{Title}` | Track title | `Digital Love` |
 | `{ext}` | File extension | `flac` |
+| `{Quality}` | The file's quality tier: `hires`, `lossless`, `high`, `standard` or `low` — omitted when it could not be established | `lossless` |
+| `{BitDepth}` | Bit depth of a lossless file — omitted for a lossy file and for one that was never measured | `24` |
+| `{SampleRate}` | Sample rate of a lossless file in kHz — omitted like `{BitDepth}` | `96`, `44.1` |
+
+`{BitDepth}` and `{SampleRate}` are measured with ffprobe when a file is imported or adopted, so they need [`ffmpeg.enabled`](Configuration-Reference#ffmpeg). Files already in the library are measured in the background by the `media-probe` job, 25 per run; until a file is measured its bracket is simply left out, and **Rename** on the artist adds it afterwards. The default template ends `[{BitDepth}-{SampleRate}]`: a bracket pair whose tokens are all empty disappears whole, so an MP3 is named `03 - Digital Love.mp3` and a FLAC `03 - Digital Love [16-44.1].flac`.
+
+These three are per file. In a folder segment (`{Album} [{Quality}]`) an album whose tracks differ would be split across two folders, so keep them in the file name.
 
 **Books** (`library.ebook_naming` and `library.audiobook_naming`, under `library.ebook_path` and `library.audiobook_path`; an ebook volume of a series uses `library.book_series_naming` instead):
 
