@@ -121,7 +121,7 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 		grabber = mocks.NewMockDownloader(GinkgoT())
 		books = mocks.NewMockBookGrabber(GinkgoT())
 		configtest.Setup(bookConfig("idx"))
-		scanner = NewFeedScanner(store, feeder, grabber, nil, books)
+		scanner = NewFeedScanner(store, feeder, grabber, nil, books, nil)
 	})
 
 	Describe("an offline library root", func() {

@@ -49,6 +49,7 @@ func judge(
 	results []indexer.SearchResult,
 	profile config.MusicQualityProfileEntry,
 	scope library.MusicScope,
+	wav bool,
 	keep func(library.ParsedMusicRelease) bool,
 	other func(indexer.SearchResult) string,
 ) []AlbumRelease {
@@ -58,7 +59,7 @@ func judge(
 		if !keep(parsed) {
 			continue
 		}
-		score, reason := library.JudgeMusicRelease(parsed, profile, scope)
+		score, reason := library.JudgeMusicRelease(parsed, profile, scope, wav)
 		if other != nil {
 			if why := other(r); why != "" {
 				score, reason = -1, why
@@ -199,6 +200,7 @@ func (s *Service) SearchAlbumReleases(
 	}
 	results = withoutRepeats(results)
 	releases := judge(results, profile, library.MusicScopeAlbum,
+		library.ConvertsWAV(s.prober),
 		func(p library.ParsedMusicRelease) bool { return !p.Discography },
 		func(r indexer.SearchResult) string {
 			if !library.ReleaseNamesAlbum(r.Title, artist, a) {
@@ -240,6 +242,7 @@ func (s *Service) BrowseArtistReleases(
 		}
 	}
 	releases := judge(byArtist, profile, library.MusicScopeArtist,
+		library.ConvertsWAV(s.prober),
 		func(p library.ParsedMusicRelease) bool { return p.Discography }, nil)
 	span.SetAttributes(attribute.Int("releases", len(releases)))
 	return releases, nil

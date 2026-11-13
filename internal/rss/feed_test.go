@@ -149,7 +149,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 	)
 
 	newScanner := func() {
-		scanner = NewFeedScanner(store, feeder, grabber, nil, nil)
+		scanner = NewFeedScanner(store, feeder, grabber, nil, nil, nil)
 	}
 
 	noUpgrades := func() {

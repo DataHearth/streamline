@@ -30,6 +30,8 @@ type musicPass struct {
 	profiles map[string]config.MusicQualityProfileEntry
 	grabbed  map[uint32]struct{}
 	rejected *db.ReleaseBlocklist
+	// wav is whether a WAV release can be imported, read once for the pass.
+	wav bool
 }
 
 // musicCategory reports whether a Torznab category is music. 3030 is the
@@ -63,6 +65,7 @@ func (s *FeedScanner) newMusicPass(ctx context.Context) (*musicPass, error) {
 		upgrades: make(map[string][]*ent.Album),
 		profiles: make(map[string]config.MusicQualityProfileEntry),
 		grabbed:  make(map[uint32]struct{}),
+		wav:      library.ConvertsWAV(s.prober),
 	}
 	unresolved := make(map[string]struct{})
 	index := func(into map[string][]*ent.Album, list []*ent.Album) {
@@ -147,7 +150,9 @@ func (s *FeedScanner) processMusicItems(
 			continue
 		}
 		profile := pass.profiles[a.Edges.Artist.QualityProfile]
-		if library.ScoreMusicRelease(parsed, profile, library.MusicScopeAlbum) < 0 {
+		if library.ScoreMusicRelease(
+			parsed, profile, library.MusicScopeAlbum, pass.wav,
+		) < 0 {
 			slog.DebugContext(ctx, "feed-scan: music format rejected",
 				"album", a.Title, "release", item.Title, "format", parsed.Source)
 			continue

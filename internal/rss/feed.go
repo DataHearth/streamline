@@ -12,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/roothealth"
@@ -40,6 +41,7 @@ type FeedScanner struct {
 	grabber  Downloader
 	albums   AlbumGrabber
 	books    BookGrabber
+	prober   ffmpeg.Prober
 }
 
 func NewFeedScanner(
@@ -48,6 +50,7 @@ func NewFeedScanner(
 	grabber Downloader,
 	albums AlbumGrabber,
 	books BookGrabber,
+	prober ffmpeg.Prober,
 ) *FeedScanner {
 	return &FeedScanner{
 		store:    store,
@@ -55,6 +58,7 @@ func NewFeedScanner(
 		grabber:  grabber,
 		albums:   albums,
 		books:    books,
+		prober:   prober,
 	}
 }
 

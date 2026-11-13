@@ -79,6 +79,7 @@ func newEnv(withEnrichment bool) *env {
 		ph,
 		lk,
 		nil,
+		nil,
 	)
 	e.setConfig(map[string]any{})
 	return e

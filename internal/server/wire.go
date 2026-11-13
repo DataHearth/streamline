@@ -217,9 +217,13 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		dbClient.Close()
 		return nil, fmt.Errorf("create lookup art service: %w", err)
 	}
+	// Constructed once and kept: the music service, bulk import, the media-probe backfill job and
+	// the restapi Server (system-info + config/ffmpeg endpoints) reuse this
+	// same prober.
+	prober := ffmpeg.NewCLI(cfg.FFmpeg.Path)
 	musicSvc := music.NewService(
 		store, mb, postersSvc, deezer, indexerSvc, dlManager,
-		metadata.NewWikipedia(), deezer, mb, dispatcher,
+		metadata.NewWikipedia(), deezer, mb, dispatcher, prober,
 	)
 	var mail mailer.Sender
 	if cfg.SMTP.Enabled() {
@@ -241,10 +245,6 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			return nil, fmt.Errorf("create library path %s: %w", p, err)
 		}
 	}
-	// Constructed once and kept: bulk import, the media-probe backfill job and
-	// the restapi Server (system-info + config/ffmpeg endpoints) reuse this
-	// same prober.
-	prober := ffmpeg.NewCLI(cfg.FFmpeg.Path)
 	libSvc := library.NewImportService()
 	bulkImportSvc := bulkimport.NewService(
 		store,
@@ -365,6 +365,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		dlManager,
 		musicSvc,
 		bookSvc,
+		prober,
 	)
 
 	reqSvc := request.NewService(

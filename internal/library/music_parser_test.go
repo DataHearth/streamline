@@ -115,7 +115,7 @@ var _ = Describe("ScoreMusicRelease", Label("unit", "library"), func() {
 		Preferred: "lossless",
 	}
 	score := func(name string, scope MusicScope) (int, string) {
-		return JudgeMusicRelease(ParseMusicRelease(name), profile, scope)
+		return JudgeMusicRelease(ParseMusicRelease(name), profile, scope, true)
 	}
 
 	It("ranks by tier and rejects a tier outside the profile", func() {
@@ -172,7 +172,20 @@ var _ = Describe("ScoreMusicRelease", Label("unit", "library"), func() {
 
 	It("scores through ScoreMusicRelease", func() {
 		Expect(ScoreMusicRelease(
-			ParseMusicRelease("X - Y FLAC"), profile, MusicScopeAlbum,
+			ParseMusicRelease("X - Y FLAC"), profile, MusicScopeAlbum, true,
+		)).To(BeNumerically(">", 0))
+	})
+
+	It("rejects a WAV release only when WAV does not convert", func() {
+		wav := ParseMusicRelease("Ado.Kyogen.2022.WAV.[16Bit.44.1kHz]-NOTAG")
+		s, why := JudgeMusicRelease(wav, profile, MusicScopeAlbum, false)
+		Expect(s).To(Equal(-1))
+		Expect(why).To(Equal(WAVReason))
+		s, why = JudgeMusicRelease(wav, profile, MusicScopeAlbum, true)
+		Expect(s).To(BeNumerically(">=", 0))
+		Expect(why).To(BeEmpty())
+		Expect(ScoreMusicRelease(
+			ParseMusicRelease("X - Y FLAC"), profile, MusicScopeAlbum, false,
 		)).To(BeNumerically(">", 0))
 	})
 })

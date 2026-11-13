@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -177,6 +178,7 @@ type Service struct {
 	photos    metadata.ArtistPhotoProvider
 	links     metadata.ArtistLinkProvider
 	ms        mediaserver.Refresher
+	prober    ffmpeg.Prober
 
 	details         *memo[*metadata.ArtistDetails]
 	lookups         *memo[*lookupBody]
@@ -187,7 +189,8 @@ type Service struct {
 
 // NewService wires the music service. overviews and photos may be nil, which
 // turns the Wikipedia and Deezer steps of an add off; links may be nil, which
-// leaves the photo step unable to tell namesakes sharing a Deezer page apart.
+// leaves the photo step unable to tell namesakes sharing a Deezer page apart;
+// prober may be nil, which leaves WAV releases rejected.
 func NewService(
 	store db.Store,
 	meta metadata.MusicProvider,
@@ -199,11 +202,12 @@ func NewService(
 	photos metadata.ArtistPhotoProvider,
 	links metadata.ArtistLinkProvider,
 	ms mediaserver.Refresher,
+	prober ffmpeg.Prober,
 ) *Service {
 	return &Service{
 		db: store, metadata: meta, posters: p, covers: covers,
 		indexer: idx, download: dl, overviews: overviews, photos: photos,
-		links: links, ms: ms,
+		links: links, ms: ms, prober: prober,
 		details: newMemo[*metadata.ArtistDetails](detailsTTL, detailsCacheLimit),
 		lookups: newMemo[*lookupBody](detailsTTL, detailsCacheLimit),
 		releaseSearches: newMemo[[]metadata.ReleaseGroupSearchResult](

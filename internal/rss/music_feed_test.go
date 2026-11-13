@@ -87,7 +87,7 @@ var _ = Describe("FeedScanner music pass", Label("unit", "rss"), func() {
 		grabber = mocks.NewMockDownloader(GinkgoT())
 		albums = mocks.NewMockAlbumGrabber(GinkgoT())
 		configtest.Setup(musicConfig("idx"))
-		scanner = NewFeedScanner(store, feeder, grabber, albums, nil)
+		scanner = NewFeedScanner(store, feeder, grabber, albums, nil, nil)
 	})
 
 	flacItem := indexer.SearchResult{

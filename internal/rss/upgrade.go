@@ -78,7 +78,9 @@ func (s *FeedScanner) tryAlbumUpgrade(
 	if !profile.UpgradeAllowed {
 		return false
 	}
-	if library.ScoreMusicRelease(parsed, profile, library.MusicScopeAlbum) < 0 {
+	if library.ScoreMusicRelease(
+		parsed, profile, library.MusicScopeAlbum, pass.wav,
+	) < 0 {
 		return false
 	}
 	have, known := albumHeldTier(a)

@@ -13,7 +13,9 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/download"
+	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/library"
 )
 
 var _ = Describe("Music searches", Label("unit", "integration", "music"), func() {
@@ -78,6 +80,29 @@ var _ = Describe("Music searches", Label("unit", "integration", "music"), func()
 			Expect(
 				got[4].Reason,
 			).To(Equal("quality is not stated in the release name"))
+		})
+
+		It("rejects a WAV release unless WAV converts", func() {
+			e.idx.EXPECT().
+				SearchAlbum(mock.Anything, "Nirvana", "Nevermind", uint16(1991)).
+				Return([]indexer.SearchResult{
+					{Title: "Nirvana - Nevermind (1991) [WAV]", Seeders: 9},
+				}, nil).
+				Twice()
+
+			got, err := e.svc.SearchAlbumReleases(e.ctx, al.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(HaveLen(1))
+			Expect(got[0].Reason).To(Equal(library.WAVReason))
+
+			prober := mockffmpeg.NewMockProber(GinkgoT())
+			prober.EXPECT().Available().Return(true)
+			prober.EXPECT().FFmpegPath().Return("/bin/ffmpeg")
+			e.svc.prober = prober
+			got, err = e.svc.SearchAlbumReleases(e.ctx, al.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(HaveLen(1))
+			Expect(got[0].Rejected()).To(BeFalse())
 		})
 
 		It("sets aside a release named for another album or artist", func() {

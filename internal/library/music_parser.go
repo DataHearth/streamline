@@ -177,16 +177,24 @@ func formatKHz(hz uint32) string {
 	return strconv.FormatFloat(float64(hz)/1000, 'f', 1, 64)
 }
 
+// WAVReason rejects a WAV release while its files cannot be converted to FLAC.
+const WAVReason = "WAV files cannot be converted: ffmpeg is unavailable or conversion is off"
+
 // JudgeMusicRelease scores a release against a profile and, when it scores -1,
 // says why. A release whose quality the name does not state is rejected
-// rather than guessed at: there is no catch-all tier.
+// rather than guessed at: there is no catch-all tier. wav says whether the
+// importer converts WAV files (ConvertsWAV); it cannot import one as it is.
 func JudgeMusicRelease(
 	p ParsedMusicRelease,
 	profile config.MusicQualityProfileEntry,
 	scope MusicScope,
+	wav bool,
 ) (int, string) {
 	if !p.TierKnown {
 		return -1, "quality is not stated in the release name"
+	}
+	if p.Facts.Codec == "wav" && !wav {
+		return -1, WAVReason
 	}
 	mp := profile.Profile()
 	score := mp.Score(p.Tier, quality.AudioFine(p.Facts))
@@ -208,7 +216,8 @@ func ScoreMusicRelease(
 	p ParsedMusicRelease,
 	profile config.MusicQualityProfileEntry,
 	scope MusicScope,
+	wav bool,
 ) int {
-	score, _ := JudgeMusicRelease(p, profile, scope)
+	score, _ := JudgeMusicRelease(p, profile, scope, wav)
 	return score
 }
