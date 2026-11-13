@@ -236,6 +236,26 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			})).To(HaveLen(2))
 		})
 
+		It("collapses one torrent reached through two indexer entries", func() {
+			viaProwlarr := rel("TR4KER", "http://prowlarr/1")
+			viaProwlarr.InfoURL = "https://tr4ker.example/torrent/9"
+			native := rel("tr4ker-native", "https://tr4ker.example/dl/9")
+			native.InfoURL = viaProwlarr.InfoURL
+			Expect(dedupResults([]SearchResult{viaProwlarr, native})).To(HaveLen(1))
+
+			viaProwlarr.InfoURL, native.InfoURL = "", ""
+			viaProwlarr.InfoHash, native.InfoHash = "abc", "abc"
+			Expect(dedupResults([]SearchResult{viaProwlarr, native})).To(HaveLen(1))
+		})
+
+		It("keeps two torrents listed on one details page", func() {
+			a := rel("C411", "http://p/1")
+			a.InfoURL = "https://c411.example/group/3"
+			b := a
+			b.Title, b.Size = "Slime.S04E07.2160p-GRP", 6_000_000_000
+			Expect(dedupResults([]SearchResult{a, b})).To(HaveLen(2))
+		})
+
 		It("keeps a same-named release of a different size", func() {
 			a := rel("C411", "http://p/1")
 			b := a

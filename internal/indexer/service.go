@@ -306,6 +306,11 @@ func matchTitles(titles, aliases []string) []string {
 // modal. Title+indexer+size is the release identity; the indexer stays in the
 // key so the same release on two trackers keeps both rows, which carry their
 // own seeder counts.
+//
+// One tracker configured twice, behind Prowlarr and as a built-in indexer,
+// answers under two indexer names. Those rows are one torrent, told by an
+// equal info hash or, where neither side publishes one, an equal details page
+// and size.
 func dedupResults(in []SearchResult) []SearchResult {
 	if len(in) < 2 {
 		return in
@@ -313,11 +318,23 @@ func dedupResults(in []SearchResult) []SearchResult {
 	seen := make(map[string]struct{}, len(in))
 	out := in[:0]
 	for _, r := range in {
-		key := fmt.Sprintf("%s|%s|%d", r.Title, r.Indexer, r.Size)
-		if _, ok := seen[key]; ok {
+		keys := []string{fmt.Sprintf("%s|%s|%d", r.Title, r.Indexer, r.Size)}
+		if r.InfoHash != "" {
+			keys = append(keys, "hash|"+r.InfoHash)
+		}
+		if r.InfoURL != "" {
+			// With the size: a tracker can list several torrents on one page.
+			keys = append(keys, fmt.Sprintf("page|%s|%d", r.InfoURL, r.Size))
+		}
+		if slices.ContainsFunc(keys, func(k string) bool {
+			_, dup := seen[k]
+			return dup
+		}) {
 			continue
 		}
-		seen[key] = struct{}{}
+		for _, k := range keys {
+			seen[k] = struct{}{}
+		}
 		out = append(out, r)
 	}
 	return out
