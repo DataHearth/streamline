@@ -56,13 +56,15 @@ func (i *indexer) clientFor(
 	ix config.IndexerEntry,
 ) (Client, string, error) {
 	if ix.Protocol == "cardigann" {
-		site, err := CardigannSite(ix)
+		// newCardigann first: it resolves the pinned definition, fetching and
+		// keeping a version not on disk yet, which CardigannSite only reads.
+		c, err := newCardigann(ctx, ix, i.store)
 		if err != nil {
 			return nil, "", err
 		}
-		c, err := newCardigann(ctx, ix, i.store)
+		site, err := CardigannSite(ix)
 		if err != nil {
-			return nil, site, err
+			return nil, "", err
 		}
 		return c, site, nil
 	}
