@@ -13558,6 +13558,12 @@ components:
             grabbed as. `name` is the torrent's own, which its uploader
             chose and which can name no release at all ("Lamb Of God" for an
             Omens LP). Absent when the torrent is untracked.
+        indexer:
+          type: string
+          description: >-
+            The indexer that record's release was grabbed from. Absent when the
+            torrent is untracked or the record names none (an adoption, an
+            upload).
         media:
           $ref: "#/components/schemas/TorrentMedia"
 

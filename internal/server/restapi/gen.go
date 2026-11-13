@@ -9607,6 +9607,9 @@ type TorrentDetails struct {
 	Files []TorrentFile `json:"files"`
 	Hash  string        `json:"hash"`
 
+	// Indexer The indexer that record's release was grabbed from. Absent when the torrent is untracked or the record names none (an adoption, an upload).
+	Indexer *string `json:"indexer,omitempty"`
+
 	// KnownPeers Peers the tracker and DHT have named, connected or not. seeds and
 	// peer_count are connections, so a complete torrent nobody is
 	// currently pulling from reads 0/0 — the same as one nothing can
@@ -9687,6 +9690,9 @@ type TorrentInfo struct {
 	// Eta Seconds to completion; 0 = unknown.
 	Eta  int64  `json:"eta"`
 	Hash string `json:"hash"`
+
+	// Indexer The indexer that record's release was grabbed from. Absent when the torrent is untracked or the record names none (an adoption, an upload).
+	Indexer *string `json:"indexer,omitempty"`
 
 	// KnownPeers Peers the tracker and DHT have named, connected or not. seeds and
 	// peer_count are connections, so a complete torrent nobody is

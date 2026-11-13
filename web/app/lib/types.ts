@@ -1541,6 +1541,8 @@ export type Torrent = {
 	// absent when untracked. `name` is the uploader's and can name no
 	// release at all.
 	release_title?: string;
+	// The indexer that record's release was grabbed from, when it names one.
+	indexer?: string;
 	// The library title that record is for; absent when untracked.
 	media?: TorrentMedia;
 };

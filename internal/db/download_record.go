@@ -187,6 +187,7 @@ func (db *DB) AllDownloadRecordHashes(
 // the ids is set (AlbumArtistID beside AlbumID); none on an orphan record.
 type TorrentRecord struct {
 	Title         string
+	Indexer       string
 	MovieID       uint32
 	SeriesID      uint32
 	AlbumID       uint32
@@ -228,7 +229,7 @@ func (db *DB) DownloadRecordsByHash(
 }
 
 func torrentRecord(r *ent.DownloadRecord) TorrentRecord {
-	t := TorrentRecord{Title: r.Title}
+	t := TorrentRecord{Title: r.Title, Indexer: r.IndexerName}
 	switch e := r.Edges; {
 	case e.Album != nil:
 		t.AlbumID = e.Album.ID

@@ -290,6 +290,10 @@
 					<dd class="font-mono tabular-nums text-fg-muted">
 						{i18n.torrent_seeds_peers_line({ seeds: torrent.seeds, peers: torrent.peer_count })}
 					</dd>
+					{#if torrent.indexer}
+						<dt class="font-medium uppercase tracking-[0.1em] text-fg-subtle">{i18n.common_indexer()}</dt>
+						<dd class="min-w-0 break-words text-fg-muted">{torrent.indexer}</dd>
+					{/if}
 					<dt class="font-medium uppercase tracking-[0.1em] text-fg-subtle">{i18n.common_added()}</dt>
 					<dd class="text-fg-muted" title={formatDateTime(torrent.added_at)}>
 						{formatRelative(torrent.added_at)}

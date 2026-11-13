@@ -259,6 +259,7 @@ func torrentInfoToAPI(v bittorrent.TorrentView) TorrentInfo {
 		SeedingStopped: v.SeedingStopped,
 		Tracked:        v.Tracked,
 		ReleaseTitle:   releaseTitle,
+		Indexer:        optString(v.Record.Indexer),
 		Media:          torrentMedia(v.Record),
 	}
 }
@@ -336,6 +337,7 @@ func torrentDetailsToAPI(d bittorrent.TorrentDetails) TorrentDetails {
 		SeedingStopped: d.SeedingStopped,
 		Tracked:        d.Tracked,
 		ReleaseTitle:   releaseTitle,
+		Indexer:        optString(d.Record.Indexer),
 		Media:          torrentMedia(d.Record),
 		Files:          files,
 		Trackers:       d.Trackers,
