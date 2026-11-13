@@ -11,6 +11,13 @@ import (
 
 var (
 	titleNonAlnum    = regexp.MustCompile(`[^a-z0-9]+`)
+	titleLatinLetter = regexp.MustCompile(`[a-z]`)
+	// A letter of any script but Latin: "not (a non-letter or a Latin one)".
+	titleOtherScript = regexp.MustCompile(`[^\P{L}\p{Latin}]`)
+	// An accent goes where a release name would not spell it; in other
+	// scripts a mark is part of its letter (が is か plus a voicing mark).
+	titleAccent      = regexp.MustCompile(`([\p{Latin}\p{Greek}\p{Cyrillic}])\p{M}+`)
+	titleNonLetter   = regexp.MustCompile(`[^\p{L}\p{N}\p{M}]+`)
 	titleArticleHead = regexp.MustCompile(`^(the|a|an)`)
 	// TVDB disambiguates same-named shows inside the title string itself
 	// ("Foundation (2021)"), so the year has to come off before comparing or
@@ -28,26 +35,79 @@ var (
 // Without it "Détective Conan" would normalize to "dtectiveconan" and match
 // none of its own releases, so preferTitleMatches would find nothing to prefer
 // and fall back to handing the whole result set to the season-pack grabber.
+//
+// A title with no Latin letter at all ("Сказка", "進撃の巨人") keeps the
+// letters of its own script, Cyrillic romanized so that it equals the
+// "Skazka" a scene release writes. A title holding any Latin letter is
+// reduced to those: a tracker's "Левиафан / Leviathan" has to stay equal to
+// "Leviathan". normalizePair is what compares two names that both hold
+// another script.
 func normalizeTitle(s string) string {
 	s = titleYearSuffix.ReplaceAllString(s, "")
 	s = strings.ToLower(norm.NFD.String(s))
-	s = titleNonAlnum.ReplaceAllString(s, "")
+	if titleLatinLetter.MatchString(s) {
+		s = titleNonAlnum.ReplaceAllString(s, "")
+	} else {
+		s = foldAllScripts(s)
+	}
 	s = titleArticleHead.ReplaceAllString(s, "")
 	return s
 }
 
-// TitleComparable reports whether a title survives normalization: one in a
-// non-Latin script normalizes to nothing and can be compared to no other.
-func TitleComparable(s string) bool { return normalizeTitle(s) != "" }
+func foldAllScripts(s string) string {
+	s = cyrillicToLatin.Replace(titleAccent.ReplaceAllString(s, "$1"))
+	return titleNonLetter.ReplaceAllString(s, "")
+}
+
+// normalizeAllScripts is normalizeTitle keeping every script's letters,
+// whatever the title holds.
+func normalizeAllScripts(s string) string {
+	s = titleYearSuffix.ReplaceAllString(s, "")
+	s = strings.ToLower(norm.NFD.String(s))
+	return titleArticleHead.ReplaceAllString(foldAllScripts(s), "")
+}
+
+// normalizePair normalizes two names for comparison with each other. When
+// both hold letters of another script they are compared on every letter:
+// reduced to their Latin ones, "患者A" was "a" and "勇気のReason" was
+// "reason", equal to any release spelling that fragment. When either is
+// Latin alone the other is read by its Latin letters, which is what keeps a
+// two-script release name equal to the Latin title it carries.
+func normalizePair(a, b string) (string, string) {
+	if titleOtherScript.MatchString(a) && titleOtherScript.MatchString(b) {
+		return normalizeAllScripts(a), normalizeAllScripts(b)
+	}
+	return normalizeTitle(a), normalizeTitle(b)
+}
+
+// ponytail: one romanization (the common English one, "zh", "ya", "kh"). A
+// release spelled by another convention ("Sladkaja žizn" for "Сладкая жизнь")
+// does not match; compare under several tables if such releases get missed.
+// Runs after NFD, where й and ё are и and е plus a combining mark.
+var cyrillicToLatin = strings.NewReplacer(
+	"а", "a", "б", "b", "в", "v", "г", "g", "д", "d", "е", "e", "ж", "zh",
+	"з", "z", "и", "i", "к", "k", "л", "l", "м", "m", "н", "n", "о", "o",
+	"п", "p", "р", "r", "с", "s", "т", "t", "у", "u", "ф", "f", "х", "kh",
+	"ц", "ts", "ч", "ch", "ш", "sh", "щ", "shch", "ъ", "", "ы", "y", "ь", "",
+	"э", "e", "ю", "yu", "я", "ya", "і", "i", "є", "e", "ґ", "g",
+)
+
+// TitleComparable reports whether a title survives normalization: one made of
+// punctuation alone ("!!!") normalizes to nothing and can be compared to no
+// other.
+func TitleComparable(s string) bool { return normalizeAllScripts(s) != "" }
 
 // TitleMatches reports whether two titles are equal after normalization.
-func TitleMatches(a, b string) bool { return normalizeTitle(a) == normalizeTitle(b) }
+func TitleMatches(a, b string) bool {
+	na, nb := normalizePair(a, b)
+	return na == nb
+}
 
 // TitleMatchesStrict is TitleMatches for callers deciding whether two names
-// denote the same thing: a name that normalizes to nothing (non-Latin script,
-// "!!!") matches nothing, where TitleMatches would call two of them equal.
+// denote the same thing: a name that normalizes to nothing ("!!!") matches
+// nothing, where TitleMatches would call two of them equal.
 func TitleMatchesStrict(a, b string) bool {
-	na, nb := normalizeTitle(a), normalizeTitle(b)
+	na, nb := normalizePair(a, b)
 	return na != "" && na == nb
 }
 
@@ -71,7 +131,7 @@ func TitleMatchesAny(title, name string, alts []string) bool {
 // other, both being non-empty. It is a weaker signal than TitleMatches and is
 // only used to rank candidates, never to confirm one.
 func TitlePrefixMatches(a, b string) bool {
-	na, nb := normalizeTitle(a), normalizeTitle(b)
+	na, nb := normalizePair(a, b)
 	if na == "" || nb == "" {
 		return false
 	}
@@ -108,7 +168,7 @@ var titleTagSuffix = regexp.MustCompile(
 // one, which is the only reading that reaches a title held under a fuller
 // name.
 func TitleNamesSameWork(release, title string) bool {
-	nr, nt := normalizeTitle(release), normalizeTitle(title)
+	nr, nt := normalizePair(release, title)
 	if nr == "" || nt == "" {
 		return false
 	}

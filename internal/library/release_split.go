@@ -86,17 +86,17 @@ func ReleaseNamedByCreator(name, creator string) bool {
 // nothing answers false, since an interactive search shows every result and
 // unsure is not "other".
 func ReleaseNamesOtherWork(name, creator, title string) bool {
-	c, t := normalizeTitle(creator), normalizeTitle(title)
-	if c == "" || t == "" {
+	if !TitleComparable(creator) || !TitleComparable(title) {
 		return false
 	}
 	if len(releaseReadings(name, creator)) > 0 {
 		return !ReleaseNamesWork(name, creator, title)
 	}
-	n := normalizeTitle(name)
-	bare := normalizeTitle(releaseLeadTagsRe.ReplaceAllString(name, ""))
+	n, t := normalizePair(name, title)
+	nc, c := normalizePair(name, creator)
+	bare, _ := normalizePair(releaseLeadTagsRe.ReplaceAllString(name, ""), creator)
 	return !strings.Contains(n, t) &&
-		!strings.HasPrefix(n, c) && !strings.HasPrefix(bare, c)
+		!strings.HasPrefix(nc, c) && !strings.HasPrefix(bare, c)
 }
 
 // releaseReadings is every (creator, title) pair a release name can be read
@@ -118,7 +118,7 @@ func releaseReadings(name, creator string) [][2]string {
 		if !ok {
 			c, t, ok = splitAtCreator(n, creator)
 		}
-		if ok && normalizeTitle(c) != "" && normalizeTitle(t) != "" {
+		if ok && TitleComparable(c) && TitleComparable(t) {
 			out = append(out, [2]string{c, t})
 		}
 	}

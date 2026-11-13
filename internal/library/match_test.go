@@ -23,6 +23,17 @@ var _ = Describe("TitleMatches", Label("unit", "library"), func() {
 	It("folds accents a scene release never carries", func() {
 		Expect(TitleMatches("Détective Conan", "Detective Conan")).To(BeTrue())
 	})
+	It("romanizes a title written in Cyrillic alone", func() {
+		Expect(TitleMatches("Брат 2", "Brat 2")).To(BeTrue())
+		Expect(TitleMatches("Сказка", "Брат")).To(BeFalse())
+	})
+	It("keeps a mark that is part of its letter", func() {
+		Expect(TitleMatches("ばか", "はか")).To(BeFalse())
+		Expect(TitleMatches("Чёрный", "Черныи")).To(BeTrue())
+	})
+	It("reads a two-script name by its Latin letters", func() {
+		Expect(TitleMatches("Левиафан / Leviathan", "Leviathan")).To(BeTrue())
+	})
 })
 
 var _ = Describe("TitleNamesSameWork", Label("unit", "library"), func() {

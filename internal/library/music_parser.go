@@ -72,8 +72,12 @@ type ParsedMusicRelease struct {
 // ParseMusicRelease reads codec, bit depth, sample rate, bit rate and VBR
 // preset from a release name and classifies them with quality.AudioTierOf.
 func ParseMusicRelease(name string) ParsedMusicRelease {
+	title := name
+	// "_" is a word character to \b, so "[FLAC_16bits_44.1khz]" would state
+	// no codec.
+	name = strings.ReplaceAll(name, "_", " ")
 	p := ParsedMusicRelease{
-		Title:       name,
+		Title:       title,
 		Discography: musicDiscoRe.MatchString(name),
 		CueImage:    musicCueImageRe.MatchString(name),
 	}

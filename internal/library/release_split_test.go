@@ -191,8 +191,53 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 	)
 
 	It("answers false when the artist normalizes to nothing", func() {
-		Expect(ReleaseNamesOtherWork("ゴジラ - The Link [FLAC]", "ゴジラ", "Magma")).
+		Expect(ReleaseNamesOtherWork("!!! - The Link [FLAC]", "!!!", "Magma")).
 			To(BeFalse())
+	})
+
+	DescribeTable(
+		"compares an album titled in Cyrillic",
+		func(name string, other bool) {
+			Expect(ReleaseNamesOtherWork(name, "IC3PEAK", "Сказка")).To(Equal(other))
+			Expect(ReleaseNamesWork(name, "IC3PEAK", "Сказка")).To(Equal(!other))
+		},
+		Entry("in its own script", "IC3PEAK - СКАЗКА (2018) [MP3 320]", false),
+		Entry("romanized", "IC3PEAK.Skazka[FLAC_16bits_44.1Khz](2018)", false),
+		Entry(
+			"another album",
+			"IC3PEAK - Kiss of Death - 2022 (FLAC 44.1 kHz)",
+			true,
+		),
+		Entry(
+			"another album, romanized",
+			"IC3PEAK.Sladkaja_žizn[FLAC_16bits_44.1khz](2017)",
+			true,
+		),
+	)
+
+	DescribeTable(
+		"compares a title mixing two scripts on all of its letters",
+		func(artist, title, name string, other bool) {
+			Expect(ReleaseNamesOtherWork(name, artist, title)).To(Equal(other))
+			Expect(ReleaseNamesWork(name, artist, title)).To(Equal(!other))
+		},
+		Entry("itself", "Ado", "患者A", "Ado - 患者A (2026) [FLAC]", false),
+		Entry("its Latin letters alone", "Ado", "患者A", "Ado - 残夢 [FLAC]", true),
+		Entry("another title ending alike",
+			"Ado", "勇気のReason", "Ado - 和解のReason [FLAC]", true),
+		Entry("a two-script title by its Latin half",
+			"IC3PEAK", "Червь / Worm", "IC3PEAK - Worm (2020) [FLAC]", false),
+		Entry("an artist in another script, no separator",
+			"星野源", "エピソード", "星野源 エピソード FLAC", false),
+		Entry("that artist's other album",
+			"星野源", "エピソード", "星野源 - ばかのうた [FLAC]", true),
+	)
+
+	It("compares a title in a script it cannot romanize", func() {
+		Expect(ReleaseNamesOtherWork("ゴジラ - The Link [FLAC]", "ゴジラ", "Magma")).
+			To(BeTrue())
+		Expect(ReleaseNamesWork("坂本龍一 - 千のナイフ [FLAC]", "坂本龍一", "千のナイフ")).
+			To(BeTrue())
 	})
 
 	It(

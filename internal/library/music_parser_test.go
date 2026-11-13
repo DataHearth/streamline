@@ -17,6 +17,9 @@ var _ = Describe("ParseMusicRelease", Label("unit", "library"), func() {
 			Expect(p.Source).To(Equal(wantSource))
 			Expect(p.Tier).To(Equal(wantTier))
 		},
+		Entry("underscores around the codec",
+			"IC3PEAK.Skazka[FLAC_16bits_44.1Khz](2018)",
+			ParseMusicRelease("Artist - Album [FLAC]").Source, quality.TierLossless),
 		Entry("flac 24/96 by kHz",
 			"Nirvana - Nevermind (1991) [FLAC 24bit-96kHz]",
 			"FLAC 24/96", quality.TierHiRes),
