@@ -83,6 +83,22 @@ func (db *DB) SetTorrentSessionName(
 	return err
 }
 
+func (db *DB) SetTorrentSessionSource(
+	ctx context.Context,
+	infoHash string,
+	torrent []byte,
+) error {
+	_, err := db.client.TorrentSession.Update().
+		Where(
+			torrentsession.InfoHashEQ(infoHash),
+			torrentsession.SourceMagnetNEQ(""),
+		).
+		SetSourceTorrent(torrent).
+		ClearSourceMagnet().
+		Save(ctx)
+	return err
+}
+
 func (db *DB) CountTorrentSessions(ctx context.Context) (int, error) {
 	return db.client.TorrentSession.Query().Count(ctx)
 }

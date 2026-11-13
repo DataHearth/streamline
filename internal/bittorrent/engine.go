@@ -5,6 +5,7 @@
 package bittorrent
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -604,14 +605,14 @@ func (e *Engine) restore(ctx context.Context) error {
 		// with Info()==nil, and the default file prioritization must fire once
 		// metadata resolves so a subsequent resume isn't stuck with no wanted
 		// pieces. Data stays gated by the Disallow calls above until resumed.
-		e.startWhenReady(t, s.SeedStopped)
+		e.startWhenReady(t, s.SeedStopped, s.SourceMagnet != "")
 	}
 	return nil
 }
 
 // startWhenReady begins downloading once torrent metadata is known. Magnet
 // adds resolve info asynchronously, so this must not block the caller.
-func (e *Engine) startWhenReady(t *antorrent.Torrent, seedStopped bool) {
+func (e *Engine) startWhenReady(t *antorrent.Torrent, seedStopped, magnet bool) {
 	e.wg.Go(func() {
 		select {
 		case <-t.GotInfo():
@@ -633,7 +634,36 @@ func (e *Engine) startWhenReady(t *antorrent.Torrent, seedStopped bool) {
 				"persisting resolved torrent name failed",
 				"info_hash", hash, "error", err)
 		}
+		if magnet {
+			e.keepMetainfo(t, hash)
+		}
 	})
+}
+
+// keepMetainfo stores what a magnet resolved to as the session's source, so
+// the next boot re-adds it with its files known instead of waiting on the
+// swarm for the metadata again.
+func (e *Engine) keepMetainfo(t *antorrent.Torrent, hash string) {
+	mi := t.Metainfo()
+	var buf bytes.Buffer
+	if err := mi.Write(&buf); err != nil {
+		slog.WarnContext(context.Background(),
+			"encoding a resolved magnet's metainfo failed",
+			"info_hash", hash, "error", err)
+		return
+	}
+	// restore drops a session whose source it cannot parse, and specFromSource
+	// refuses anything over this cap: such a torrent stays a magnet.
+	if buf.Len() > download.MaxTorrentFileSize {
+		return
+	}
+	if err := e.store.SetTorrentSessionSource(
+		context.Background(), hash, buf.Bytes(),
+	); err != nil {
+		slog.WarnContext(context.Background(),
+			"persisting a resolved magnet's metainfo failed",
+			"info_hash", hash, "error", err)
+	}
 }
 
 // prioritize is the only way file priorities are ever applied. It runs

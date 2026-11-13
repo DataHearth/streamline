@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/ent/torrentsession"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
@@ -925,6 +926,42 @@ var _ = Describe(
 			Expect(err).NotTo(HaveOccurred())
 			return ib, metainfo.HashBytes(ib)
 		}
+
+		It("keeps a resolved magnet's metainfo as the session's source", func() {
+			ctx := context.Background()
+			dlDir := filepath.Join(GinkgoT().TempDir(), "dl")
+			Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+			entClient := dbtest.SetupTestDB(ctx)
+			DeferCleanup(entClient.Close)
+			engine, _ := newEngine(ctx, dlDir, db.New(entClient))
+
+			info, infoHash := packInfo(100)
+			hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+				Magnet: "magnet:?xt=urn:btih:" + infoHash.HexString(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			t, ok := engine.client.Torrent(infoHash)
+			Expect(ok).To(BeTrue())
+			Expect(t.SetInfoBytes(info)).To(Succeed())
+
+			var stored []byte
+			Eventually(func() []byte {
+				s, serr := entClient.TorrentSession.Query().
+					Where(torrentsession.InfoHashEQ(hash)).
+					Only(ctx)
+				Expect(serr).NotTo(HaveOccurred())
+				if len(s.SourceTorrent) > 0 {
+					Expect(s.SourceMagnet).To(BeEmpty())
+				}
+				stored = s.SourceTorrent
+				return stored
+			}).WithTimeout(10 * time.Second).ShouldNot(BeEmpty())
+
+			spec, _, _, err := specFromSource(download.TorrentSource{Bytes: stored})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(spec.InfoHash).To(Equal(infoHash))
+			Expect(spec.InfoBytes).To(Equal(info))
+		})
 
 		It("drops a second magnet sharing a held name and reports why", func() {
 			ctx := context.Background()

@@ -508,6 +508,13 @@ type Store interface {
 		paused bool,
 	) error
 	SetTorrentSessionName(ctx context.Context, infoHash, name string) error
+	// SetTorrentSessionSource replaces a session's magnet with the .torrent
+	// its metadata resolved to. A session added from a .torrent is left alone.
+	SetTorrentSessionSource(
+		ctx context.Context,
+		infoHash string,
+		torrent []byte,
+	) error
 	SetTorrentSessionCompleted(
 		ctx context.Context,
 		infoHash string,

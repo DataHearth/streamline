@@ -328,6 +328,9 @@ var _ = Describe("Engine.AddTorrent selection", Label("unit", "bittorrent"), fun
 			store.EXPECT().
 				SetTorrentSessionName(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
+			store.EXPECT().
+				SetTorrentSessionSource(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Maybe()
 
 			hash, err := eng.AddTorrent(ctx, download.TorrentSource{
 				Bytes: raw, WantedFiles: []int{1},

@@ -25091,6 +25091,69 @@ func (_c *MockStore_SetTorrentSessionSelection_Call) RunAndReturn(run func(ctx c
 	return _c
 }
 
+// SetTorrentSessionSource provides a mock function for the type MockStore
+func (_mock *MockStore) SetTorrentSessionSource(ctx context.Context, infoHash string, torrent []byte) error {
+	ret := _mock.Called(ctx, infoHash, torrent)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetTorrentSessionSource")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []byte) error); ok {
+		r0 = returnFunc(ctx, infoHash, torrent)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetTorrentSessionSource_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTorrentSessionSource'
+type MockStore_SetTorrentSessionSource_Call struct {
+	*mock.Call
+}
+
+// SetTorrentSessionSource is a helper method to define mock.On call
+//   - ctx context.Context
+//   - infoHash string
+//   - torrent []byte
+func (_e *MockStore_Expecter) SetTorrentSessionSource(ctx any, infoHash any, torrent any) *MockStore_SetTorrentSessionSource_Call {
+	return &MockStore_SetTorrentSessionSource_Call{Call: _e.mock.On("SetTorrentSessionSource", ctx, infoHash, torrent)}
+}
+
+func (_c *MockStore_SetTorrentSessionSource_Call) Run(run func(ctx context.Context, infoHash string, torrent []byte)) *MockStore_SetTorrentSessionSource_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []byte
+		if args[2] != nil {
+			arg2 = args[2].([]byte)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionSource_Call) Return(err error) *MockStore_SetTorrentSessionSource_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionSource_Call) RunAndReturn(run func(ctx context.Context, infoHash string, torrent []byte) error) *MockStore_SetTorrentSessionSource_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetTorrentSessionUploaded provides a mock function for the type MockStore
 func (_mock *MockStore) SetTorrentSessionUploaded(ctx context.Context, infoHash string, uploaded int64) error {
 	ret := _mock.Called(ctx, infoHash, uploaded)

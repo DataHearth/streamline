@@ -208,7 +208,7 @@ func (e *Engine) AddTorrent(
 			st.wantedFiles = wantedFiles
 		}
 	})
-	e.startWhenReady(t, false)
+	e.startWhenReady(t, false, sourceMagnet != "")
 	return hash, nil
 }
 
