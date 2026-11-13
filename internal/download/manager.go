@@ -163,6 +163,7 @@ var (
 	adoptPruned      metric.Int64Counter
 	selectionCounter metric.Int64Counter
 	seedReapCounter  metric.Int64Counter
+	rotationCounter  metric.Int64Counter
 )
 
 func init() {
@@ -218,6 +219,13 @@ func init() {
 				"once their seed limit was reached",
 		),
 	))
+	rotationCounter = otelx.Must(meter.Int64Counter(
+		"streamline.download.rotation_removals",
+		metric.WithDescription(
+			"Imported builtin torrents removed with their files "+
+				"to make room in a full engine",
+		),
+	))
 
 	// Prime instruments with 0 so series appear in the backend before the
 	// first real event.
@@ -228,6 +236,7 @@ func init() {
 	testCounter.Add(ctx, 0)
 	orphanCounter.Add(ctx, 0)
 	seedReapCounter.Add(ctx, 0)
+	rotationCounter.Add(ctx, 0)
 	grabDuration.Record(ctx, 0)
 }
 
@@ -391,6 +400,7 @@ type download struct {
 	gaugesOnce sync.Once
 
 	grabbing hashLocks
+	rotateMu sync.Mutex
 
 	cueMu      sync.Mutex
 	cueChecked map[uint32]struct{}
@@ -1223,7 +1233,7 @@ func (d *download) grabWith(
 		)
 	}
 
-	hash, err := client.AddTorrent(ctx, src)
+	hash, err := d.addRotating(ctx, dc, client, src)
 	if err != nil {
 		if errors.Is(err, ErrTorrentAlreadyExists) {
 			outcome = "already_exists"

@@ -36,6 +36,9 @@ type Torrent struct {
 	// rules and expose no equivalent, so they always report false and the
 	// seed-complete sweep never acts on them.
 	SeedingStopped bool
+	// Ratio is bytes uploaded over the torrent's size. Only the builtin
+	// engine fills it; rotation at the engine's cap is its only reader.
+	Ratio float64
 }
 
 // TorrentSource is what the manager hands to Client.AddTorrent.

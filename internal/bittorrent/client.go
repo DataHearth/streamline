@@ -803,6 +803,7 @@ func (e *Engine) view(t *antorrent.Torrent) download.Torrent {
 		DownloadSpeed:  l.downloadSpeed,
 		ETA:            l.eta,
 		SeedingStopped: l.seedingStopped,
+		Ratio:          ratio(l.uploaded, l.size),
 	}
 }
 

@@ -1770,6 +1770,52 @@ func (db *DB) FindImportedDownloadRecordByHash(
 	return rec, nil
 }
 
+// ImportedTorrentTimes reports, among hashes, the torrents nothing waits on
+// any more: those with a completed record and no record still downloading,
+// importing, held, pending or failed, each with its newest import time (the
+// zero time when none was recorded). A re-grab widened onto a seeding torrent
+// files a live record beside the completed one, which is why the unfinished
+// statuses are read too.
+func (db *DB) ImportedTorrentTimes(
+	ctx context.Context,
+	hashes []string,
+) (map[string]time.Time, error) {
+	out := make(map[string]time.Time, len(hashes))
+	if len(hashes) == 0 {
+		return out, nil
+	}
+	recs, err := db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.TorrentHashIn(hashes...),
+			downloadrecord.StatusNEQ(downloadrecord.StatusDismissed),
+		).
+		Select(
+			downloadrecord.FieldTorrentHash,
+			downloadrecord.FieldStatus,
+			downloadrecord.FieldImportedAt,
+		).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list imported torrent times: %w", err)
+	}
+	unfinished := map[string]struct{}{}
+	for _, rec := range recs {
+		if rec.Status != downloadrecord.StatusCompleted {
+			unfinished[rec.TorrentHash] = struct{}{}
+			continue
+		}
+		at := out[rec.TorrentHash]
+		if rec.ImportedAt != nil && rec.ImportedAt.After(at) {
+			at = *rec.ImportedAt
+		}
+		out[rec.TorrentHash] = at
+	}
+	for hash := range unfinished {
+		delete(out, hash)
+	}
+	return out, nil
+}
+
 // FindWidenableDownloadRecordByHash is FindLiveDownloadRecordByHash plus
 // StatusCompleted: a completed record's torrent commonly still sits in the
 // client seeding, and a re-grab landing on that hash (spec §4.6) needs to find

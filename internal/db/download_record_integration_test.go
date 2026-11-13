@@ -341,6 +341,82 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("ImportedTorrentTimes", func() {
+		imported := func(hash string, at *time.Time) {
+			GinkgoHelper()
+			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1,
+				TorrentHash: hash, Status: downloadrecord.StatusCompleted,
+				MovieID: movieID, DownloadClientName: clientName,
+				ImportedAt: at,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		}
+		t1 := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+		t2 := t1.Add(48 * time.Hour)
+		t3 := t1.Add(72 * time.Hour)
+
+		It("returns the newest import time per completed hash", func() {
+			imported("a", &t1)
+			imported("a", &t2)
+			imported("b", &t3)
+
+			got, err := store.ImportedTorrentTimes(ctx, []string{"a", "b", "x"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(HaveLen(2))
+			Expect(got["a"]).To(BeTemporally("==", t2))
+			Expect(got["b"]).To(BeTemporally("==", t3))
+		})
+
+		It("leaves out a hash that also has an unfinished record", func() {
+			for _, status := range []downloadrecord.Status{
+				downloadrecord.StatusDownloading,
+				downloadrecord.StatusImporting,
+				downloadrecord.StatusHeld,
+				downloadrecord.StatusPending,
+				downloadrecord.StatusFailed,
+			} {
+				hash := string(status)
+				imported(hash, &t1)
+				createRec(hash, status)
+			}
+
+			got, err := store.ImportedTorrentTimes(ctx, []string{
+				"downloading", "importing", "held", "pending", "failed",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
+		})
+
+		It("leaves out hashes with no completed record", func() {
+			createRec("held", downloadrecord.StatusHeld)
+			createRec("gone", downloadrecord.StatusDismissed)
+
+			got, err := store.ImportedTorrentTimes(
+				ctx, []string{"held", "gone", "nope"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
+		})
+
+		It(
+			"reports a completed record with no import time as the zero time",
+			func() {
+				imported("a", nil)
+
+				got, err := store.ImportedTorrentTimes(ctx, []string{"a"})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got).To(HaveKeyWithValue("a", time.Time{}))
+			},
+		)
+
+		It("answers an empty list with an empty map", func() {
+			got, err := store.ImportedTorrentTimes(ctx, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
+		})
+	})
+
 	Describe("FindImportedDownloadRecordByHash", func() {
 		It("returns the completed record for the hash", func() {
 			rec := createRec("done", downloadrecord.StatusCompleted)

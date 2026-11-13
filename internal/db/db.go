@@ -877,6 +877,10 @@ type Store interface {
 		ctx context.Context,
 		hash string,
 	) (*ent.DownloadRecord, error)
+	ImportedTorrentTimes(
+		ctx context.Context,
+		hashes []string,
+	) (map[string]time.Time, error)
 	// FindSeedingDownloadRecord returns the newest completed record that
 	// carried a file for the movie, or for the episode — any record whose
 	// episodes include it — and still names a torrent hash and a download
