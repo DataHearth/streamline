@@ -498,12 +498,13 @@ Found a vulnerability? Don't open an issue — see [SECURITY.md](SECURITY.md).
 
 > **The library shown in every screenshot and in the demo video is fabricated.** Every title it holds is
 > public domain or openly licensed: Blender Open Movies, silent and mid-century films and TV whose copyright
-> has lapsed, Creative Commons albums (Nine Inch Nails' *Ghosts I–IV* and *The Slip*, Kimiko Ishizaka's CC0
-> *Open Goldberg Variations*, Josh Woodward, Brad Sucks, Kai Engel and others) and public-domain books. An
-> artist's wider discography appears only as metadata. Posters, covers and metadata come from public metadata
-> providers; the "files" behind them do not exist. Streamline is a library manager — it neither hosts nor
-> distributes media. It does not endorse copyright infringement or any other unlawful use, and the authors
-> accept no responsibility for how you use it. Obtaining content you have the right to is your responsibility.
+> has lapsed, Creative Commons albums (Jonathan Coulton's *Thing a Week*, Brad Sucks, Josh Woodward, Broke For
+> Free and Chris Zabriskie) and public-domain books. An artist's wider discography appears only as metadata.
+> Posters, covers and metadata come from public metadata providers; the files behind them are placeholders the
+> screenshot generator makes (a still frame, silence, a book of one title page), not the works. Streamline is a
+> library manager — it neither hosts nor distributes media. It does not endorse copyright infringement or any
+> other unlawful use, and the authors accept no responsibility for how you use it. Obtaining content you have
+> the right to is your responsibility.
 
 |  |  |
 | --- | --- |

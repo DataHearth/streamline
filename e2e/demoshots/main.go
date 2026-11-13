@@ -20,7 +20,8 @@
 //
 // Everything lives under -root (a fixed path, so the paths the pages show
 // stay the same from run to run), which is wiped at start except for the
-// encoded clips in its cache.
+// encoded clips in its cache. The instance's config.yaml, which holds the
+// provider keys, is removed when the run ends unless -keep is given.
 package main
 
 import (
@@ -100,7 +101,7 @@ func main() {
 		&d.keep,
 		"keep",
 		false,
-		"leave the instance running after the screenshots, until interrupted",
+		"leave the instance running after the screenshots, until interrupted, and keep its config.yaml (provider keys included)",
 	)
 	flag.Parse()
 	if d.binary == "" {
@@ -147,6 +148,9 @@ func (d *demo) run(ctx context.Context) error {
 	if err := d.prepareRoot(); err != nil {
 		return err
 	}
+	// Registered before the instance is started, so it runs after the
+	// instance has stopped and can no longer write the file back.
+	defer d.dropConfig(ctx)
 	d.fx = &fixtures{cache: filepath.Join(d.root, "cache")}
 	d.releases = baseReleases()
 	d.tz = &torznab{}
@@ -165,14 +169,11 @@ func (d *demo) run(ctx context.Context) error {
 		}
 	}
 
-	proc, err := d.boot(ctx)
+	inst, err := d.boot(ctx)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = proc.Process.Signal(syscall.SIGTERM)
-		_ = proc.Wait()
-	}()
+	defer inst.stop()
 
 	if d.admin, err = login(ctx, d.base, adminEmail, adminPassword); err != nil {
 		return err
@@ -260,6 +261,35 @@ func (d *demo) prepareRoot() error {
 	return os.WriteFile(d.path(marker), nil, 0o644)
 }
 
+// dropConfig removes the instance's config once the run is over, however it
+// ended: boot writes the provider keys into it in clear, and -root is a
+// fixed, guessable path that is otherwise only emptied by the next run.
+// -keep leaves it, so the instance can be started again by hand.
+func (d *demo) dropConfig(ctx context.Context) {
+	file := d.path("config.yaml")
+	if d.keep {
+		if _, err := os.Stat(file); err == nil {
+			slog.WarnContext(
+				ctx,
+				"config kept; it holds the provider keys",
+				"path",
+				file,
+			)
+		}
+		return
+	}
+	if err := os.Remove(file); err != nil && !errors.Is(err, os.ErrNotExist) {
+		slog.WarnContext(
+			ctx,
+			"config not removed; it holds the provider keys",
+			"path",
+			file,
+			"error",
+			err,
+		)
+	}
+}
+
 func freePort() (int, error) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -269,9 +299,91 @@ func freePort() (int, error) {
 	return ln.Addr().(*net.TCPAddr).Port, nil
 }
 
+// instance is the streamline process the screenshots are taken of.
+type instance struct {
+	cmd *exec.Cmd
+	log string
+	// exited closes once the process has been waited on. Only that Wait sets
+	// ProcessState, and a second Wait would only error, so the channel is how
+	// everything else learns the process is gone.
+	exited chan struct{}
+}
+
+// startInstance starts cmd with its output in the file at logPath and waits
+// on it from the start, so an instance that dies is noticed when it dies.
+func startInstance(cmd *exec.Cmd, logPath string) (*instance, error) {
+	logf, err := os.Create(logPath)
+	if err != nil {
+		return nil, err
+	}
+	cmd.Stdout, cmd.Stderr = logf, logf
+	if err := cmd.Start(); err != nil {
+		logf.Close()
+		return nil, err
+	}
+	in := &instance{cmd: cmd, log: logPath, exited: make(chan struct{})}
+	go func() {
+		_ = cmd.Wait()
+		logf.Close()
+		close(in.exited)
+	}()
+	return in, nil
+}
+
+// waitHealthy waits for base to answer /health, and gives up at once, with
+// the exit status, when the process exits first: an instance that refused
+// its config will not answer however long it is polled.
+func (in *instance) waitHealthy(
+	ctx context.Context,
+	base string,
+	budget time.Duration,
+) error {
+	return poll(
+		ctx,
+		budget,
+		500*time.Millisecond,
+		"the instance to answer /health",
+		func() (bool, error) {
+			resp, err := http.Get(
+				base + "/health",
+			) //nolint:noctx // a loopback probe
+			if err == nil {
+				resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
+					return true, nil
+				}
+			}
+			select {
+			case <-in.exited:
+				return false, fmt.Errorf(
+					"the instance exited before it answered /health (%s); see %s",
+					in.cmd.ProcessState,
+					in.log,
+				)
+			default:
+				return false, nil
+			}
+		},
+	)
+}
+
+// stop asks the process to terminate and waits for it, through the one Wait
+// startInstance began. One that ignores the request for ten seconds is
+// killed.
+func (in *instance) stop() {
+	_ = in.cmd.Process.Signal(syscall.SIGTERM)
+	select {
+	case <-in.exited:
+		return
+	case <-time.After(10 * time.Second):
+	}
+	_ = in.cmd.Process.Kill()
+	<-in.exited
+}
+
 // boot writes the config and starts the instance with no STREAMLINE_*
 // variable of this shell, which would override the file.
-func (d *demo) boot(ctx context.Context) (*exec.Cmd, error) {
+func (d *demo) boot(ctx context.Context) (*instance, error) {
 	port, err := freePort()
 	if err != nil {
 		return nil, err
@@ -302,10 +414,6 @@ metadata:
 	if err := os.WriteFile(d.path("config.yaml"), []byte(cfg), 0o600); err != nil {
 		return nil, err
 	}
-	logf, err := os.Create(d.path("server.log"))
-	if err != nil {
-		return nil, err
-	}
 	//nolint:gosec // the binary the task target just built
 	cmd := exec.CommandContext(ctx, d.binary, "--config", d.path("config.yaml"))
 	for _, kv := range os.Environ() {
@@ -313,33 +421,14 @@ metadata:
 			cmd.Env = append(cmd.Env, kv)
 		}
 	}
-	cmd.Stdout, cmd.Stderr = logf, logf
-	if err := cmd.Start(); err != nil {
+	inst, err := startInstance(cmd, d.path("server.log"))
+	if err != nil {
 		return nil, err
 	}
-	slog.InfoContext(
-		ctx,
-		"instance starting",
-		"url",
-		d.base,
-		"log",
-		d.path("server.log"),
-	)
-	err = poll(
-		ctx,
-		2*time.Minute,
-		500*time.Millisecond,
-		"the instance to answer /health",
-		func() (bool, error) {
-			resp, err := http.Get(
-				d.base + "/health",
-			) //nolint:noctx // a loopback probe
-			if err != nil {
-				return false, nil
-			}
-			resp.Body.Close()
-			return resp.StatusCode == http.StatusOK, nil
-		},
-	)
-	return cmd, err
+	slog.InfoContext(ctx, "instance starting", "url", d.base, "log", inst.log)
+	if err := inst.waitHealthy(ctx, d.base, 2*time.Minute); err != nil {
+		inst.stop()
+		return nil, err
+	}
+	return inst, nil
 }
