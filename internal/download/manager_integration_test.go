@@ -153,6 +153,62 @@ var _ = Describe("Manager.Grab", Label("integration", "downloads"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(refreshed.Status).To(Equal(movie.StatusDownloading))
 	})
+
+	Describe("a title that already has a download in flight", func() {
+		first := indexer.SearchResult{
+			Title:    "Fight.Club.1999.1080p.BluRay.x264-GROUP",
+			Download: "magnet:?xt=urn:btih:abc123&dn=fightclub",
+		}
+		second := indexer.SearchResult{
+			Title:    "Fight.Club.1999.1080p.WEB.x264-OTHER",
+			Download: "magnet:?xt=urn:btih:def456&dn=fightclub-web",
+		}
+
+		records := func() int {
+			GinkgoHelper()
+			n, err := dbClient.DownloadRecord.Query().Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			return n
+		}
+
+		It("refuses an automatic grab of another release of the movie", func() {
+			_, err := mgr.Grab(Automatic(ctx), first, m.ID)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = mgr.Grab(Automatic(ctx), second, m.ID)
+			Expect(err).To(MatchError(ErrAlreadyDownloading))
+			Expect(records()).To(Equal(1))
+		})
+
+		It("refuses an automatic grab of another release of the episode", func() {
+			show, err := db.New(dbClient).CreateTVShow(ctx, db.CreateTVShowParams{
+				Title: "Mob Land", Year: 2025, TvdbID: 42,
+				SeriesStatus: "continuing", Type: "standard",
+				Seasons: []db.SeasonSeed{{
+					Number:   2,
+					Episodes: []db.EpisodeSeed{{Number: 9, Title: "Nine"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			ep := show.Edges.Seasons[0].Edges.Episodes[0].ID
+
+			_, err = mgr.GrabEpisode(Automatic(ctx), first, ep, []uint32{ep})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = mgr.GrabEpisode(Automatic(ctx), second, ep, []uint32{ep})
+			Expect(err).To(MatchError(ErrAlreadyDownloading))
+			Expect(records()).To(Equal(1))
+		})
+
+		It("lets a grab by hand take a second release", func() {
+			_, err := mgr.Grab(ctx, first, m.ID)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = mgr.Grab(ctx, second, m.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(records()).To(Equal(2))
+		})
+	})
 })
 
 var _ = Describe("Manager.CheckStatus", Label("integration", "downloads"), func() {

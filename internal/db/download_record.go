@@ -2057,6 +2057,24 @@ var inFlightRecordStatuses = []downloadrecord.Status{
 	downloadrecord.StatusHeld,
 }
 
+func (db *DB) VideoHasLiveRecord(
+	ctx context.Context,
+	movieID uint32,
+	episodeIDs []uint32,
+) (bool, error) {
+	target := downloadrecord.HasEpisodesWith(episode.IDIn(episodeIDs...))
+	if movieID != 0 {
+		target = downloadrecord.HasMovieWith(movie.ID(movieID))
+	}
+	live, err := db.client.DownloadRecord.Query().
+		Where(downloadrecord.StatusIn(inFlightRecordStatuses...), target).
+		Exist(ctx)
+	if err != nil {
+		return false, fmt.Errorf("video has live record: %w", err)
+	}
+	return live, nil
+}
+
 // recordEpisodes selects every episode a record's download is for.
 func recordEpisodes(recordID uint32) predicate.Episode {
 	return episode.HasDownloadRecordsWith(downloadrecord.ID(recordID))

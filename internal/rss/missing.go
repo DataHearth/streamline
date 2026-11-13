@@ -124,8 +124,8 @@ func currentSearchWindow(ctx context.Context) (searchWindow, error) {
 }
 
 // transportFailure reports whether err is the indexer or the download client
-// being unreachable, or the download disk being full, rather than anything
-// about the release.
+// being unreachable, the download disk being full, or the title already
+// downloading, rather than anything about the release.
 //
 // grab_failures is a strike count against a *release choice*, and nothing
 // resets it but a successful grab — so counting a timeout retires the item
@@ -137,6 +137,7 @@ func currentSearchWindow(ctx context.Context) (searchWindow, error) {
 func transportFailure(err error) bool {
 	return errors.Is(err, download.ErrUnreachable) ||
 		errors.Is(err, download.ErrNoSpace) ||
+		errors.Is(err, download.ErrAlreadyDownloading) ||
 		errors.Is(err, indexer.ErrUnreachable)
 }
 
@@ -322,7 +323,7 @@ func (s *MissingSearcher) SearchNow(ctx context.Context, m *ent.Movie) {
 // last_search_at is bumped whenever an indexer answered (a grab or no match)
 // so cooldown counters advance; a search no indexer answered stamps nothing.
 func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
-	ctx, span := tracer.Start(ctx, "rss.process_movie",
+	ctx, span := tracer.Start(download.Automatic(ctx), "rss.process_movie",
 		trace.WithAttributes(
 			attribute.Int64("movie.id", int64(m.ID)),
 			attribute.String("movie.title", m.Title),

@@ -55,7 +55,7 @@ func NewTVFeedScanner(
 }
 
 func (s *TVFeedScanner) Run(ctx context.Context) error {
-	ctx, span := tracer.Start(ctx, "rss.tv_feed_scan")
+	ctx, span := tracer.Start(download.Automatic(ctx), "rss.tv_feed_scan")
 	defer span.End()
 
 	indexers := config.EnabledIndexers()

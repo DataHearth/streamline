@@ -856,6 +856,13 @@ type Store interface {
 		ctx context.Context,
 		hash string,
 	) (*ent.DownloadRecord, error)
+	// VideoHasLiveRecord reports whether a download for the movie, or for
+	// any of the episodes, is in flight. A zero movieID names no movie.
+	VideoHasLiveRecord(
+		ctx context.Context,
+		movieID uint32,
+		episodeIDs []uint32,
+	) (bool, error)
 	FindWidenableDownloadRecordByHash(
 		ctx context.Context,
 		hash string,

@@ -52,7 +52,7 @@ func NewEpisodeMissingSearcher(
 // failed search stamps no cooldown, so the next tick would search them all
 // again. Satisfies the MissingSearchRunner contract used by jobs.
 func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
-	ctx, span := tracer.Start(ctx, "rss.tv_missing_search")
+	ctx, span := tracer.Start(download.Automatic(ctx), "rss.tv_missing_search")
 	defer span.End()
 
 	status, err := roothealth.Offline(ctx, db.RootSeries)
@@ -108,7 +108,7 @@ func (s *EpisodeMissingSearcher) SearchShow(
 	ctx context.Context,
 	showID uint32,
 ) error {
-	ctx, span := tracer.Start(ctx, "rss.tv_search_show",
+	ctx, span := tracer.Start(download.Automatic(ctx), "rss.tv_search_show",
 		trace.WithAttributes(attribute.Int64("tvshow.id", int64(showID))),
 	)
 	defer span.End()

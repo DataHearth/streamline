@@ -11,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/roothealth"
@@ -71,7 +72,7 @@ type feedPass struct {
 }
 
 func (s *FeedScanner) Run(ctx context.Context) error {
-	ctx, span := tracer.Start(ctx, "rss.feed_scan")
+	ctx, span := tracer.Start(download.Automatic(ctx), "rss.feed_scan")
 	defer span.End()
 
 	indexers := config.EnabledIndexers()

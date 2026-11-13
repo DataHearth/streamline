@@ -66,6 +66,12 @@ var (
 	// caller treats this as a soft skip — no grab_failures increment, no
 	// new DownloadRecord — since state has drifted, not a real failure.
 	ErrTorrentAlreadyExists = errors.New("torrent already exists in download client")
+	// ErrAlreadyDownloading refuses an automatic grab for a movie or an
+	// episode that already has a download in flight. No strike: the release
+	// is not at fault.
+	ErrAlreadyDownloading = errors.New(
+		"a download for this title is already in flight",
+	)
 	// ErrUnsafeTorrentName is returned when a client-supplied torrent name
 	// would place the save path outside the configured download directory.
 	ErrUnsafeTorrentName = errors.New(
@@ -773,6 +779,19 @@ func (d *download) queueClientAction(
 	return fn(client, ctx, rec.TorrentHash)
 }
 
+type automaticKey struct{}
+
+// Automatic marks ctx as an unattended pass (a feed scan, a missing search),
+// whose grabs leave a movie or an episode with a download in flight alone.
+func Automatic(ctx context.Context) context.Context {
+	return context.WithValue(ctx, automaticKey{}, true)
+}
+
+func automatic(ctx context.Context) bool {
+	marked, _ := ctx.Value(automaticKey{}).(bool)
+	return marked
+}
+
 // Grab picks the highest-priority enabled download client, sends the torrent,
 // creates a DownloadRecord in "downloading" status, and flips the movie's status
 // so UI + sync logic see the transition.
@@ -964,6 +983,28 @@ func (d *download) grabWith(
 	if err := checkReleaseSource(result.Download); err != nil {
 		outcome = "untrusted_source"
 		return nil, otelx.RecordSpanError(span, err)
+	}
+
+	// An unattended pass picks from a list it read when it started, and
+	// another pass may have grabbed for the same title since: a second
+	// release of one episode would download beside the first. A person
+	// grabbing by hand may want exactly that, so only automatic grabs stop.
+	if automatic(ctx) && (movieID != 0 || episodeID != 0) {
+		episodes := wantedEpisodes
+		if episodeID != 0 {
+			episodes = append(slices.Clone(episodes), episodeID)
+		}
+		live, err := d.db.VideoHasLiveRecord(ctx, movieID, episodes)
+		if err != nil {
+			outcome = "live_record_lookup_failed"
+			return nil, otelx.RecordSpanError(span, err)
+		}
+		if live {
+			outcome = "already_downloading"
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("%w: %s", ErrAlreadyDownloading, result.Title),
+			)
+		}
 	}
 
 	dc, ok := config.PickDownloadClient()

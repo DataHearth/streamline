@@ -27782,3 +27782,75 @@ func (_c *MockTx_UserSessionExists_Call) RunAndReturn(run func(ctx context.Conte
 	_c.Call.Return(run)
 	return _c
 }
+
+// VideoHasLiveRecord provides a mock function for the type MockTx
+func (_mock *MockTx) VideoHasLiveRecord(ctx context.Context, movieID uint32, episodeIDs []uint32) (bool, error) {
+	ret := _mock.Called(ctx, movieID, episodeIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VideoHasLiveRecord")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []uint32) (bool, error)); ok {
+		return returnFunc(ctx, movieID, episodeIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []uint32) bool); ok {
+		r0 = returnFunc(ctx, movieID, episodeIDs)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, []uint32) error); ok {
+		r1 = returnFunc(ctx, movieID, episodeIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_VideoHasLiveRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VideoHasLiveRecord'
+type MockTx_VideoHasLiveRecord_Call struct {
+	*mock.Call
+}
+
+// VideoHasLiveRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - movieID uint32
+//   - episodeIDs []uint32
+func (_e *MockTx_Expecter) VideoHasLiveRecord(ctx any, movieID any, episodeIDs any) *MockTx_VideoHasLiveRecord_Call {
+	return &MockTx_VideoHasLiveRecord_Call{Call: _e.mock.On("VideoHasLiveRecord", ctx, movieID, episodeIDs)}
+}
+
+func (_c *MockTx_VideoHasLiveRecord_Call) Run(run func(ctx context.Context, movieID uint32, episodeIDs []uint32)) *MockTx_VideoHasLiveRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 []uint32
+		if args[2] != nil {
+			arg2 = args[2].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_VideoHasLiveRecord_Call) Return(b bool, err error) *MockTx_VideoHasLiveRecord_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockTx_VideoHasLiveRecord_Call) RunAndReturn(run func(ctx context.Context, movieID uint32, episodeIDs []uint32) (bool, error)) *MockTx_VideoHasLiveRecord_Call {
+	_c.Call.Return(run)
+	return _c
+}
