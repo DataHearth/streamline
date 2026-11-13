@@ -6,13 +6,14 @@
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { requireAdmin } from "@lib/guards";
+	import { userExtensionsKey, userExtensionsPath, type ExtensionUserCard } from "@lib/extensions";
 	import type { UserDetail } from "@lib/types";
 	import UserHero from "@components/users/UserHero.svelte";
 	import UserDetailHeader from "@components/users/UserDetailHeader.svelte";
 	import UserDangerActions from "@components/users/UserDangerActions.svelte";
 	import UserSessionsCard from "@components/users/UserSessionsCard.svelte";
 	import UserAPIKeysCard from "@components/users/UserAPIKeysCard.svelte";
-	import UserSubsonicCard from "@components/users/UserSubsonicCard.svelte";
+	import UserExtensionCard from "@components/users/UserExtensionCard.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let routeParams = $state<Record<string, string>>({});
@@ -30,6 +31,16 @@
 	const detail = createQuery<UserDetail>(() => ({
 		queryKey: ["user", userId],
 		queryFn: () => api<UserDetail>(`/users/${userId}`),
+		enabled:
+			Number.isFinite(userId) &&
+			userId > 0 &&
+			!auth.loading &&
+			auth.user?.role === "admin",
+	}));
+
+	const extensionCards = createQuery<ExtensionUserCard[]>(() => ({
+		queryKey: userExtensionsKey(userId),
+		queryFn: () => api<ExtensionUserCard[]>(userExtensionsPath(userId)),
 		enabled:
 			Number.isFinite(userId) &&
 			userId > 0 &&
@@ -79,9 +90,19 @@
 			<UserDetailHeader user={target} />
 		</div>
 
-		{@render section(i18n.users_subsonic_title(), i18n.users_subsonic_desc())}
-		<UserSubsonicCard user={target} />
-
+		{#if extensionCards.isError}
+			{@render section(i18n.extensions_user_section_title(), i18n.extensions_user_section_desc())}
+			<p class="text-sm text-status-failed">
+				{i18n.extensions_user_load_failed({ message: errorText(extensionCards.error, i18n.common_unknown_error()) })}
+			</p>
+		{:else if extensionCards.data?.length}
+			{@render section(i18n.extensions_user_section_title(), i18n.extensions_user_section_desc())}
+			<div class="grid grid-cols-1 items-start gap-5">
+				{#each extensionCards.data as card (`${card.extension}/${card.card}`)}
+					<UserExtensionCard userId={target.id} {card} />
+				{/each}
+			</div>
+		{/if}
 		{@render section(
 			i18n.account_section_devices(),
 			i18n.users_devices_desc(),

@@ -62,10 +62,9 @@ func UploadLength(ctx context.Context) int64 {
 	return -1
 }
 
-// idleBody pushes the read and write deadlines ahead on every Read, the
-// read-side twin of the Subsonic stream's idleWriter. The write half matters
-// as much: writeTimeout is armed when the headers are read, so without it a
-// long upload could not be answered.
+// idleBody pushes the read and write deadlines ahead on every Read. The write
+// half matters as much as the read: writeTimeout is armed when the headers are
+// read, so without it a long upload could not be answered.
 type idleBody struct {
 	io.ReadCloser
 	rc *http.ResponseController

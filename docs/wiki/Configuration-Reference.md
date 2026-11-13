@@ -157,7 +157,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | OIDC providers | ⚠️ CRUD works, but only loaded at startup — restart required | Settings → Single Sign-On |
 | Everything else | ❌ File only, restart required | — |
 
-Notably **not** runtime-editable: `data_dir`, server host/port, `server.trusted_proxies`, `auth.mode`, `auth.trusted_networks`, `auth.trusted_role`, `auth.seed_admin.*` and the session secrets.
+Notably **not** runtime-editable: `data_dir`, server host/port, `server.trusted_proxies`, `server.cors_origins`, `auth.mode`, `auth.trusted_networks`, `auth.trusted_role`, `auth.seed_admin.*` and the session secrets.
 
 > [!IMPORTANT]
 > The trust-boundary keys are deliberately file-only — the same reason the [OIDC](Authentication-and-SSO) provider API never exposes `allow_admin` or `email_linking`.
@@ -228,6 +228,7 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `server.host` | string | `0.0.0.0` | Bind address |
 | `server.port` | int | `8080` | 1–65535 |
 | `server.trusted_proxies` | []cidr | `[]` | CIDRs whose `X-Forwarded-*` headers are believed. Empty trusts none. List the proxies themselves, ideally a `/32` each — never a client subnet |
+| `server.cors_origins` | []origin | `[]` | Other origins whose pages may call the API and extensions from a browser, each as `scheme://host[:port]` in lower case with no path (`https://player.example.com`). Empty allows none. Cookies are never accepted from another origin, so such a page signs in with an API key. Under `auth.mode: trusted-network`, a listed origin's page reads the API as `trusted_role` from any browser on a trusted network |
 
 ### auth
 
@@ -361,14 +362,14 @@ All three API keys have `_file` twins.
 
 ### ffmpeg
 
-The FFmpeg suite, two binaries that are each optional on their own. `ffprobe` backs the media probe: technical details (resolution, codecs, duration, bitrate, stream languages) read from your files and shown as `media_info` on movies and episodes. It also backs [import verification](#import-verification) and measured music and audiobook quality. `ffmpeg` backs the [transcoder](#transcoding) and [Subsonic](Subsonic) transcoding. See [REST API](REST-API#media-probe) and [Optional: ffmpeg and ffprobe](Installation#optional-ffmpeg-and-ffprobe).
+The FFmpeg suite, two binaries that are each optional on their own. `ffprobe` backs the media probe: technical details (resolution, codecs, duration, bitrate, stream languages) read from your files and shown as `media_info` on movies and episodes. It also backs [import verification](#import-verification) and measured music and audiobook quality. `ffmpeg` backs the [transcoder](#transcoding). See [REST API](REST-API#media-probe) and [Optional: ffmpeg and ffprobe](Installation#optional-ffmpeg-and-ffprobe).
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `ffmpeg.enabled` | bool | `true` | `false` turns off everything both binaries back: probing, import verification, transcoding and Subsonic transcoding. **Runtime-editable** |
+| `ffmpeg.enabled` | bool | `true` | `false` turns off everything both binaries back: probing, import verification and transcoding. **Runtime-editable** |
 | `ffmpeg.path` | path | `""` | A **directory** holding the `ffmpeg`/`ffprobe` binaries — not a binary path. Empty resolves via `$PATH`. Read once at boot; changing it needs a restart |
 
-Missing binaries (or `enabled: false`) degrade gracefully — imports and library scans still work, just without `media_info`, and Subsonic apps get the original file. Nothing errors at boot. `GET /api/v1/system/info` surfaces `ffmpeg_warn: true` when probing is enabled but `ffprobe` wasn't found. A missing `ffmpeg` raises no `ffmpeg_warn`; see below. The official Docker image ships both binaries, so either case only bites custom builds or a `path` misconfiguration.
+Missing binaries (or `enabled: false`) degrade gracefully — imports and library scans still work, just without `media_info`. Nothing errors at boot. `GET /api/v1/system/info` surfaces `ffmpeg_warn: true` when probing is enabled but `ffprobe` wasn't found. A missing `ffmpeg` raises no `ffmpeg_warn`; see below. The official Docker image ships both binaries, so either case only bites custom builds or a `path` misconfiguration.
 
 `ffmpeg.path` also supplies the binary the [transcoder](#transcoding) runs. Both binaries are resolved out of that one directory, so there is no separate `ffmpeg_path` to set — and `ffprobe` being found does not prove `ffmpeg` is: `GET /api/v1/config/ffmpeg` reports a `version` field only when `ffmpeg -version` actually answers.
 
@@ -464,6 +465,24 @@ Database backups under `<data_dir>/backups` — see [Backups](GitOps-and-Kuberne
 | `backup.retention.manual` | int | `10` | Backups `streamline backup` keeps. `0` keeps every one |
 
 A database replaced by `streamline restore` is kept as a `pre-restore` backup and never pruned.
+
+### extensions
+
+WebAssembly [extensions](Extensions). File-only to write by hand; also editable through `/api/v1/extensions` unless `read_only`. An API change applies at once; a file edit is read at the next start.
+
+| Key | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `extensions[]` | array | `[]` | |
+
+Per entry:
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `name` | ✅ | Unique key, `^[a-z0-9][a-z0-9-]{0,31}$`; must equal the name inside the module |
+| `source` | ✅ | An `https://` URL or an absolute path to a `.wasm` file |
+| `sha256` | with a URL | The module's hex SHA-256; the download is refused when it differs |
+| `enabled` | | `false` stops it and keeps the entry |
+| `grants.mounts[]`, `grants.views[]`, `grants.services[]`, `grants.folders[]` | | What the module may use; must hold everything its manifest asks for, or it stays in `needs_approval`. See [Approving permissions](Extensions#approving-permissions), and read the warning there before granting the `ffmpeg` service |
 
 ### media_server
 

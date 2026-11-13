@@ -18,6 +18,7 @@ without reading why it is shaped that way.**
 | [`cardigann.md`](cardigann.md) | `internal/cardigann/**`, the fetched catalog, the version each entry is pinned to and its updates |
 | [`config-surface.md`](config-surface.md) | `internal/config/`, `/config/*` handlers, `api/config.schema.json`, config-backed resource CRUD |
 | [`downloads-and-imports.md`](downloads-and-imports.md) | `internal/bittorrent/`, `internal/importer/`, `internal/download/adopt.go`, `internal/mediaserver/` |
+| [`extensions.md`](extensions.md) | `internal/extension/`, `internal/db/extension_views.go`, `extensions/**`, the `extensions` config family, the `/extensions` handlers, `database-backup`'s extension pass |
 | [`frontend.md`](frontend.md) | `web/app/**`, `web/static/**`, `routify.config.js`, `web/embed.go` |
 | [`media-lifecycle.md`](media-lifecycle.md) | episode/movie status transitions, `internal/events/`, `internal/db` list queries, the `media-probe` job, re-identify |
 | [`music-tags.md`](music-tags.md) | `internal/library/audiotags/`, `internal/library/music_tags.go`, `internal/media/music/tags.go`, `internal/download/seeding.go`, the album importer's tagging, `library.music_tags` |

@@ -923,22 +923,9 @@ export type User = {
 	device_email?: string;
 	// Only /auth/me fills this; admin user lists leave it out.
 	send?: { configured: boolean; from: string };
-	// What the account may do through the Subsonic API; gates /rest only.
-	subsonic?: SubsonicAccess;
 	created_at: string;
 	failed_login_count?: number;
 	locked_until?: string | null;
-};
-
-export type SubsonicAccess = {
-	can_stream: boolean;
-	can_download: boolean;
-	can_manage_playlists: boolean;
-	can_share: boolean;
-	can_rate: boolean;
-	can_change_password: boolean;
-	// Kbps ceiling on every stream; 0 is none.
-	max_bit_rate: number;
 };
 
 // read: GET and HEAD only, whatever the owner's role. full: the owner's role.
@@ -1690,6 +1677,7 @@ export type SystemInfo = {
 	server_port?: number;
 	read_only?: boolean;
 	trusted_proxies?: string[];
+	cors_origins?: string[];
 	trusted_networks?: string[];
 	trusted_role?: string;
 	seed_admin_email?: string;
@@ -1914,23 +1902,22 @@ export type ImportScanBook = {
 	updated_at: string;
 };
 
-// Subsonic and OPDS access (/account/subsonic-password, /account/opds-token).
-// Both sign in with the account's email and a secret; neither puts the secret in
-// a URL, where logs and referrers would keep it. The secret is only in the POST
-// response.
-export type AppAccessKind = "subsonic" | "opds";
+// An extension card's credential (/account/extensions/{name}/credential,
+// lib/extensions.ts). A client signs in with the account's email, or no
+// username, and a secret that never goes in a URL, where logs and referrers
+// would keep it. The secret is only in the POST response.
 export type AppAccess = {
 	enabled: boolean;
-	// The name a client signs in with: the account's email.
+	// The account's email.
 	username: string;
 	created_at?: string;
 	// Written in batches, so it can trail a client's first call by up to five
 	// minutes.
 	last_used_at?: string;
-	// The client's product name on its last call, e.g. "Symfonium".
+	// The client's product name on its last call, e.g. "KOReader".
 	last_client?: string;
 };
-// POST: the Subsonic password or the OPDS token, shown once.
+// POST: the secret, shown once.
 export type AppAccessCreated = AppAccess & { secret: string };
 
 export type ImportStartRequest = {

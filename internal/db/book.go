@@ -593,7 +593,8 @@ func updateEdition(
 }
 
 // deleteOrphanAuthors removes people left with no contribution so the facet and
-// OPDS do not list ghosts, returning their ids for poster cleanup.
+// the `authors` extension view do not list ghosts, returning their ids for
+// poster cleanup.
 func deleteOrphanAuthors(ctx context.Context, c *ent.Client) ([]uint32, error) {
 	orphans, err := c.Author.Query().
 		Where(author.Not(author.HasContributions())).

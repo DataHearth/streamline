@@ -29,18 +29,17 @@ Hardcover's free plan allows 60 requests a minute and 5,000 a day. Streamline pa
 - Background work (hydrating a series, the scheduled refresh) stops when only the reserve is left, or at the first `429`, and carries on at its next run.
 - When a title has an ISBN, a scan resolves it with one request and does not search by title.
 
-## Listening and reading from other apps
+## Reading from other apps
 
 | Protocol | Path | Clients | Credentials |
 | --- | --- | --- | --- |
-| [Subsonic](Subsonic) 1.16.1 + OpenSubsonic | `/rest` | Symfonium, DSub, Tempo, play:Sub, Sublime Music | your email plus a generated Subsonic password |
-| OPDS 1.2 | `/opds` | KOReader, Moon+ Reader, Foliate, Thorium | your email plus a generated OPDS token |
+| OPDS 1.2 (the [OPDS extension](Extensions)) | `/opds` | KOReader, Moon+ Reader, Foliate, Thorium | your email plus a generated OPDS token |
 
-Both secrets are per user and separate from your login password. Generate, rotate or disable them through `/api/v1/account/subsonic-password` and `/api/v1/account/opds-token`; the account page in the web UI exposes the same actions. A secret is shown **once**, when you generate it; a lost one is replaced, not read back, and rotating signs every player or reader out. Each card also shows when the secret was created, when it was last used and by which client (the Subsonic `c` parameter, or the OPDS reader's name). Neither secret works for the web UI or the REST API.
+The token is per user and separate from your login password. It is generated, rotated or turned off on the extension's card on your account page (`/api/v1/account/extensions/opds/credential`), since OPDS only exists once its [extension is added](Extensions#adding-an-extension). It is shown **once**, when you generate it; a lost one is replaced, not read back, and rotating signs every reader out. It works neither for the web UI nor for the REST API.
 
-For OPDS the catalogue URL carries no secret: point the reader at `https://your-host/opds` and sign in with your **email** as the user name and the **token** as the password. The server stores only a hash of the token.
+The catalogue URL carries no secret: point the reader at `https://your-host/opds` and sign in with your **email** as the user name and the **token** as the password. The server stores only a hash of the token.
 
-Subsonic covers browsing, album and song lists, search, stars, ratings and play counts, playlists, play queue sync across devices, bookmarks, public share links, lyrics, internet radio and streaming with on-the-fly transcoding; see [Subsonic](Subsonic) for what each does. OPDS serves an author catalogue (authors and writers, series volumes listed under theirs), a recently-added feed and search over titles and every credited name, and downloads the best available ebook format per book. Audiobooks never appear in OPDS. Cover thumbnails are served from an OPDS route too, so readers that only hold the OPDS token show them.
+OPDS serves an author catalogue (authors and writers, series volumes listed under theirs), a recently-added feed and search over titles and every credited name, and downloads the best available ebook format per book. Audiobooks never appear in OPDS. Cover thumbnails are served from an OPDS route too, so readers that only hold the OPDS token show them.
 
 ## How books are organised
 

@@ -77,29 +77,6 @@ type UpdateUserParams struct {
 	ClearLastFailedLoginAt bool
 	LockedUntil            *time.Time
 	ClearLockedUntil       bool
-	SubsonicPassword       *string
-	ClearSubsonicPassword  bool
-	OPDSToken              *string
-	ClearOPDSToken         bool
-	// SubsonicCreatedAt and OPDSCreatedAt stamp a freshly generated secret and
-	// reset the credential's last-used and client columns with it. The Clear*
-	// flags above clear all four columns of their credential.
-	SubsonicCreatedAt *time.Time
-	OPDSCreatedAt     *time.Time
-	// Subsonic is the account's Subsonic permissions; nil fields are kept.
-	Subsonic SubsonicAccessParams
-}
-
-// SubsonicAccessParams patches what an account may do through the Subsonic
-// API. Nil fields are left untouched.
-type SubsonicAccessParams struct {
-	CanStream          *bool
-	CanDownload        *bool
-	CanManagePlaylists *bool
-	CanShare           *bool
-	CanRate            *bool
-	CanChangePassword  *bool
-	MaxBitRate         *uint16
 }
 
 func (db *DB) FindUserByEmail(ctx context.Context, email string) (*ent.User, error) {
@@ -312,40 +289,6 @@ func applyUserUpdate(
 	} else if p.ClearLockedUntil {
 		upd = upd.ClearLockedUntil()
 	}
-	if p.SubsonicPassword != nil {
-		upd = upd.SetSubsonicPassword(*p.SubsonicPassword)
-	} else if p.ClearSubsonicPassword {
-		upd = upd.ClearSubsonicPassword().
-			ClearSubsonicCreatedAt().
-			ClearSubsonicLastUsedAt().
-			ClearSubsonicLastClient()
-	}
-	if p.SubsonicCreatedAt != nil {
-		upd = upd.SetSubsonicCreatedAt(*p.SubsonicCreatedAt).
-			ClearSubsonicLastUsedAt().
-			ClearSubsonicLastClient()
-	}
-	if p.OPDSToken != nil {
-		upd = upd.SetOpdsToken(*p.OPDSToken)
-	} else if p.ClearOPDSToken {
-		upd = upd.ClearOpdsToken().
-			ClearOpdsCreatedAt().
-			ClearOpdsLastUsedAt().
-			ClearOpdsLastClient()
-	}
-	if p.OPDSCreatedAt != nil {
-		upd = upd.SetOpdsCreatedAt(*p.OPDSCreatedAt).
-			ClearOpdsLastUsedAt().
-			ClearOpdsLastClient()
-	}
-	sa := p.Subsonic
-	upd = upd.SetNillableSubsonicCanStream(sa.CanStream).
-		SetNillableSubsonicCanDownload(sa.CanDownload).
-		SetNillableSubsonicCanManagePlaylists(sa.CanManagePlaylists).
-		SetNillableSubsonicCanShare(sa.CanShare).
-		SetNillableSubsonicCanRate(sa.CanRate).
-		SetNillableSubsonicCanChangePassword(sa.CanChangePassword).
-		SetNillableSubsonicMaxBitRate(sa.MaxBitRate)
 	return upd
 }
 

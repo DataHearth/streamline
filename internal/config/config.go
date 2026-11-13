@@ -78,6 +78,8 @@ type Config struct {
 
 	BookQualityProfiles        []BookQualityProfileEntry `koanf:"book_quality_profiles"         validate:"unique=Name,dive"`
 	BookQualityDefaultProfiles BookQualityDefaults       `koanf:"book_quality_default_profiles"`
+
+	Extensions []ExtensionEntry `koanf:"extensions" validate:"unique=Name,dive"`
 }
 
 // DatabasePath is the SQLite database location, derived from DataDir.
@@ -103,6 +105,10 @@ type ServerConfig struct {
 	// without authenticating, on top of taking over another client's login
 	// rate-limit budget and access-log identity.
 	TrustedProxies []string `koanf:"trusted_proxies" validate:"dive,cidr"`
+	// CORSOrigins are the browser origins, other than the server's own, whose
+	// pages may read API and extension answers. Each is scheme://host[:port]
+	// exactly as the browser sends it in Origin.
+	CORSOrigins []string `koanf:"cors_origins"`
 }
 
 type AuthConfig struct {
@@ -475,8 +481,8 @@ type BackupRetention struct {
 }
 
 // FFmpegConfig owns the ffmpeg-suite dependency: ffprobe for probing and
-// ffmpeg for transcoding and Subsonic transcoding, each resolved and optional
-// on its own. Enabled=false makes all of them inert. Path is a directory holding the binaries; empty resolves via $PATH.
+// ffmpeg for transcoding, each resolved and optional on its own.
+// Enabled=false makes both inert. Path is a directory holding the binaries; empty resolves via $PATH.
 // Enabled is runtime-toggleable through config.Update; Path is read at boot.
 type FFmpegConfig struct {
 	Enabled bool   `koanf:"enabled"`
@@ -778,6 +784,16 @@ func (c *Config) checkInvariants() error {
 			))
 		}
 	}
+	for _, o := range c.Server.CORSOrigins {
+		u, err := url.Parse(o)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") ||
+			u.Host == "" || o != u.Scheme+"://"+strings.ToLower(u.Host) {
+			errs = append(errs, fmt.Errorf(
+				"server.cors_origins %q: write scheme://host[:port] in lower case, with no path or trailing slash",
+				o,
+			))
+		}
+	}
 	// The other name-keyed lists get this from a `unique=Name` tag; auth.oidc
 	// is spelled out because a duplicate there is a privilege split rather than
 	// a config typo, and the operator needs the offending name. The provider a
@@ -823,6 +839,7 @@ func (c *Config) checkInvariants() error {
 	}
 	errs = append(errs, c.checkMusicBookProfiles()...)
 	errs = append(errs, c.checkIndexers()...)
+	errs = append(errs, c.checkExtensions()...)
 	if d, err := time.ParseDuration(
 		c.Cardigann.SolverTimeout,
 	); err != nil ||
@@ -1058,6 +1075,7 @@ func defaults() map[string]any {
 		"server.host":                           "0.0.0.0",
 		"server.port":                           8080,
 		"server.trusted_proxies":                []string{},
+		"server.cors_origins":                   []string{},
 		"data_dir":                              "./data",
 		"read_only":                             false,
 		"torrent_listen_port":                   0,
@@ -1153,6 +1171,7 @@ func defaults() map[string]any {
 		"media_server.servers":            []any{},
 		"download_clients":                []any{},
 		"indexers":                        []any{},
+		"extensions":                      []any{},
 		"quality_profiles": []map[string]any{
 			{
 				"name":                 "default",

@@ -51,6 +51,7 @@ type Snapshot struct {
 	ServerPort        uint16
 	ReadOnly          bool
 	TrustedProxies    []string
+	CORSOrigins       []string
 	TrustedNetworks   []string
 	TrustedRole       string
 	SeedAdminEmail    string
@@ -140,6 +141,7 @@ func Collect() Snapshot {
 		ServerPort:      cfg.Server.Port,
 		ReadOnly:        cfg.ReadOnly,
 		TrustedProxies:  cfg.Server.TrustedProxies,
+		CORSOrigins:     cfg.Server.CORSOrigins,
 		TrustedNetworks: cfg.Auth.TrustedNetworks,
 		TrustedRole:     cfg.Auth.TrustedRole,
 		SeedAdminEmail:  cfg.Auth.SeedAdmin.Email,

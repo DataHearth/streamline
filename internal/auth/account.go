@@ -2,19 +2,15 @@ package auth
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/mail"
 	"strings"
-	"time"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/otelx"
-	"github.com/datahearth/streamline/internal/utils/random"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/crypto/bcrypt"
@@ -209,144 +205,5 @@ func (s *auth) RevokeAPIKeyByID(
 	if n == 0 {
 		return ErrAPIKeyNotFound
 	}
-	return nil
-}
-
-const accountSecretLen = 24
-
-// HashOPDSToken is the form an OPDS token is stored in. The token is a random
-// 24-character secret, so an unsalted digest is enough: there is nothing to
-// guess from.
-func HashOPDSToken(token string) string {
-	sum := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(sum[:])
-}
-
-// RotateSubsonicPassword replaces the user's Subsonic password with a fresh
-// generated one and returns it.
-func (s *auth) RotateSubsonicPassword(
-	ctx context.Context,
-	userID uint32,
-) (string, error) {
-	ctx, span := tracer.Start(ctx, "auth.rotate_subsonic_password",
-		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
-	)
-	defer span.End()
-
-	pw := random.Alphanumeric(accountSecretLen)
-	now := time.Now().UTC()
-	if _, err := s.db.UpdateUser(
-		ctx,
-		userID,
-		db.UpdateUserParams{SubsonicPassword: &pw, SubsonicCreatedAt: &now},
-	); err != nil {
-		return "", otelx.RecordSpanError(
-			span,
-			fmt.Errorf("rotate subsonic password: %w", err),
-		)
-	}
-	slog.InfoContext(ctx, "subsonic password rotated", "user.id", userID)
-	return pw, nil
-}
-
-// SetSubsonicPassword sets the user's Subsonic password to one the caller
-// chose (the Subsonic API's changePassword, for the caller's own account). It is
-// held to the login password policy but never becomes the login password:
-// it is stored recoverable, so it must not double as a web credential.
-// Returns ErrPasswordWeak or ErrUserNotFound.
-func (s *auth) SetSubsonicPassword(
-	ctx context.Context,
-	userID uint32,
-	password string,
-) error {
-	ctx, span := tracer.Start(ctx, "auth.set_subsonic_password",
-		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
-	)
-	defer span.End()
-
-	if err := validatePassword(password); err != nil {
-		return err
-	}
-	now := time.Now().UTC()
-	if _, err := s.db.UpdateUser(
-		ctx,
-		userID,
-		db.UpdateUserParams{SubsonicPassword: &password, SubsonicCreatedAt: &now},
-	); err != nil {
-		if ent.IsNotFound(err) {
-			return ErrUserNotFound
-		}
-		return otelx.RecordSpanError(
-			span,
-			fmt.Errorf("set subsonic password: %w", err),
-		)
-	}
-	slog.InfoContext(ctx, "subsonic password set", "target.user.id", userID)
-	return nil
-}
-
-// DisableSubsonicPassword clears the user's Subsonic password, ending Subsonic
-// access.
-func (s *auth) DisableSubsonicPassword(ctx context.Context, userID uint32) error {
-	ctx, span := tracer.Start(ctx, "auth.disable_subsonic_password",
-		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
-	)
-	defer span.End()
-
-	if _, err := s.db.UpdateUser(
-		ctx,
-		userID,
-		db.UpdateUserParams{ClearSubsonicPassword: true},
-	); err != nil {
-		return otelx.RecordSpanError(
-			span,
-			fmt.Errorf("disable subsonic password: %w", err),
-		)
-	}
-	slog.InfoContext(ctx, "subsonic password disabled", "user.id", userID)
-	return nil
-}
-
-// RotateOPDSToken replaces the user's OPDS token with a fresh generated one
-// and returns it. Only its hash is stored, so this return is the one time the
-// token is readable.
-func (s *auth) RotateOPDSToken(ctx context.Context, userID uint32) (string, error) {
-	ctx, span := tracer.Start(ctx, "auth.rotate_opds_token",
-		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
-	)
-	defer span.End()
-
-	token := random.Alphanumeric(accountSecretLen)
-	hashed := HashOPDSToken(token)
-	now := time.Now().UTC()
-	if _, err := s.db.UpdateUser(
-		ctx,
-		userID,
-		db.UpdateUserParams{OPDSToken: &hashed, OPDSCreatedAt: &now},
-	); err != nil {
-		return "", otelx.RecordSpanError(
-			span,
-			fmt.Errorf("rotate opds token: %w", err),
-		)
-	}
-	slog.InfoContext(ctx, "opds token rotated", "user.id", userID)
-	return token, nil
-}
-
-// DisableOPDSToken clears the user's OPDS token, ending OPDS access.
-func (s *auth) DisableOPDSToken(ctx context.Context, userID uint32) error {
-	ctx, span := tracer.Start(ctx, "auth.disable_opds_token",
-		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
-	)
-	defer span.End()
-
-	if _, err := s.db.UpdateUser(
-		ctx,
-		userID,
-		db.UpdateUserParams{ClearOPDSToken: true},
-	); err != nil {
-		return otelx.RecordSpanError(span, fmt.Errorf("disable opds token: %w", err))
-	}
-	slog.InfoContext(ctx, "opds token disabled", "user.id", userID)
 	return nil
 }

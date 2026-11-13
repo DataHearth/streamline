@@ -1504,29 +1504,6 @@ func HasDownloadRecordsWith(preds ...predicate.DownloadRecord) predicate.Artist 
 	})
 }
 
-// HasAnnotations applies the HasEdge predicate on the "annotations" edge.
-func HasAnnotations() predicate.Artist {
-	return predicate.Artist(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, AnnotationsTable, AnnotationsColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasAnnotationsWith applies the HasEdge predicate on the "annotations" edge with a given conditions (other predicates).
-func HasAnnotationsWith(preds ...predicate.MusicAnnotation) predicate.Artist {
-	return predicate.Artist(func(s *sql.Selector) {
-		step := newAnnotationsStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasEvents applies the HasEdge predicate on the "events" edge.
 func HasEvents() predicate.Artist {
 	return predicate.Artist(func(s *sql.Selector) {

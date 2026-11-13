@@ -36,6 +36,58 @@
         "compress": { "type": "boolean" }
       }
     },
+    "extensionEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"
+        },
+        "source": {
+          "type": "string",
+          "description": "An https:// URL (sha256 required) or an absolute path to the .wasm file."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$",
+          "description": "Hex SHA-256 the fetched module must match. Required for an https source."
+        },
+        "enabled": { "type": "boolean" },
+        "hosts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "host:port pairs, lower case, the extension may call through the http service (engine.lan:8097). Written in this file only; the API never changes it. Empty allows none. A redirect is handed back to the extension, never followed."
+        },
+        "grants": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mounts": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "URL prefixes the extension answers."
+            },
+            "views": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Read-only library views the extension may query."
+            },
+            "services": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Host services the extension may use."
+            },
+            "folders": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Library folders the extension may read (music, artwork) and its own cache folder (cache)."
+            }
+          }
+        }
+      }
+    },
     "mediaServerEntry": {
       "type": "object",
       "additionalProperties": false,
@@ -448,6 +500,11 @@
           "type": "array",
           "description": "CIDR ranges of reverse proxies allowed to set X-Forwarded-* headers. Empty trusts none, so the connecting peer is always treated as the client. WARNING: list the proxies themselves, as narrowly as possible (ideally /32 or /128 each) — never a whole client subnet. Naming a range clients can also occupy (10.0.0.0/8, 192.168.0.0/16, a Kubernetes pod or node CIDR) makes every host in it a trusted proxy: any of them can then forge X-Forwarded-For to claim an address inside auth.trusted_networks and be granted auth.trusted_role without authenticating.",
           "items": { "type": "string" }
+        },
+        "cors_origins": {
+          "type": "array",
+          "description": "Browser origins, other than the server's own, whose pages may read API and extension answers. Each is scheme://host[:port] exactly as the browser sends it, lower case, no path. Empty allows none. Cookies are never accepted across origins, so such a page signs in with an API key. Under auth.mode trusted-network a listed origin's page reads the API as trusted_role from any browser on a trusted network.",
+          "items": { "type": "string" }
         }
       }
     },
@@ -785,11 +842,11 @@
     "ffmpeg": {
       "type": "object",
       "additionalProperties": false,
-      "description": "The FFmpeg suite, two binaries each optional on its own: ffprobe (media info, import verification, measured audio quality) and ffmpeg (transcoding, Subsonic transcoding).",
+      "description": "The FFmpeg suite, two binaries each optional on its own: ffprobe (media info, import verification, measured audio quality) and ffmpeg (transcoding).",
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "false makes probing, transcoding and Subsonic transcoding inert."
+          "description": "false makes probing and transcoding inert."
         },
         "path": {
           "type": "string",
@@ -1013,6 +1070,11 @@
       "type": "array",
       "description": "Torrent download clients.",
       "items": { "$ref": "#/definitions/downloadClientEntry" }
+    },
+    "extensions": {
+      "type": "array",
+      "description": "WebAssembly extensions loaded into the process. Each runs with only the mounts, library views and services granted here.",
+      "items": { "$ref": "#/definitions/extensionEntry" }
     },
     "indexers": {
       "type": "array",

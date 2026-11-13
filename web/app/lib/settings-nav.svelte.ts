@@ -17,11 +17,13 @@ import {
 	KeyRound,
 	Users,
 	FileText,
+	Puzzle,
 } from "@lucide/svelte";
 import { createQuery } from "@tanstack/svelte-query";
 import { auth } from "./auth.svelte";
 import { api } from "./api";
 import { profilesPath } from "./music-books";
+import { EXTENSIONS_KEY, EXTENSIONS_PATH, type ExtensionList } from "./extensions";
 import type {
 	CustomFormat,
 	DownloadClient,
@@ -49,6 +51,7 @@ export const SETTINGS_SECTIONS = {
 	"/settings/general": { Icon: SlidersHorizontal, title: () => i18n.settings_general() },
 	"/settings/logs": { Icon: FileText, title: () => i18n.settings_logs() },
 	"/settings/advanced": { Icon: Wrench, title: () => i18n.settings_advanced() },
+	"/settings/extensions": { Icon: Puzzle, title: () => i18n.settings_extensions() },
 	"/settings/library": { Icon: FolderTree, title: () => i18n.settings_library() },
 	"/settings/quality-profiles": { Icon: Gauge, title: () => i18n.settings_quality_profiles() },
 	"/settings/custom-formats": { Icon: Tags, title: () => i18n.settings_custom_formats() },
@@ -142,6 +145,13 @@ export function createSettingsNav(withCounts = true) {
 		enabled: withCounts && !auth.loading && auth.user?.role === "admin",
 	}));
 
+	// Admin-only, like the page.
+	const extensions = createQuery<ExtensionList>(() => ({
+		queryKey: EXTENSIONS_KEY,
+		queryFn: () => api<ExtensionList>(EXTENSIONS_PATH),
+		enabled: withCounts && !auth.loading && auth.user?.role === "admin",
+	}));
+
 	let groups = $derived.by<SettingsGroup[]>(() => {
 		const base: SettingsGroup[] = [
 			{
@@ -152,6 +162,9 @@ export function createSettingsNav(withCounts = true) {
 					// what level, where to, and how a log file rotates.
 					section("/settings/logs"),
 					section("/settings/advanced"),
+					// What the server runs beside itself: admin-only, since every
+					// extension is granted access to library and user data.
+					...(isAdmin ? [section("/settings/extensions", extensions.data?.items.length)] : []),
 				],
 			},
 			{

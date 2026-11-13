@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/datahearth/streamline/blob/main/LICENSE)
 [![CI](https://github.com/datahearth/streamline/actions/workflows/ci.yaml/badge.svg)](https://github.com/datahearth/streamline/actions/workflows/ci.yaml)
 
-Self-hosted unified media manager. One binary replaces Radarr, Sonarr, Lidarr, Readarr and Seerr — movies, TV, music and books, with library management, indexer searching, download-client handling (or a built-in torrent client), file organisation, multi-user requests, a Subsonic server for music players, an OPDS catalogue for e-readers, and a REST API.
+Self-hosted unified media manager. One binary replaces Radarr, Sonarr, Lidarr, Readarr and Seerr — movies, TV, music and books, with library management, indexer searching, download-client handling (or a built-in torrent client), file organisation, multi-user requests, an OPDS catalogue for e-readers (an extension), and a REST API.
 
 [![Dashboard](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/dashboard.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/dashboard.png)
 
@@ -25,7 +25,7 @@ For anyone running Streamline for themselves, their family, or a handful of frie
 | **[Activity and Calendar](Activity-and-Calendar)** | The queue, history, stuck downloads, what's coming |
 | **[Requests and Users](Requests-and-Users)** | Inviting people, roles, approving requests |
 | **[Music and Books](Music-and-Books)** | Artists, albums and discography packs; books, series and their two slots; tags and covers |
-| **[Subsonic](Subsonic)** | Listening from Symfonium, DSub, Feishin and other Subsonic apps |
+| **[Extensions](Extensions)** | Adding the OPDS e-book catalogue, and writing your own ([Writing an extension](Writing-an-extension)) |
 | **[Send to Kindle](Send-to-Kindle)** | Emailing an ebook to your e-reader |
 | **[NixOS and Nix](NixOS)** | The flake, the NixOS module and the home-manager module |
 | **[Proxmox VE (LXC)](Proxmox)** | Installing and updating in a Proxmox container |
@@ -66,7 +66,7 @@ For operators who want the whole surface: every config key, declarative deploys,
 
 ## What Streamline does today
 
-Movies, TV, music and books are all shipped, each with adoption of an existing library, automatic searching and grabbing, and requests — alongside the built-in torrent client, quality scoring, transcoding, a Subsonic server, an OPDS catalogue, send-to-e-reader, database backups and the REST API. Usenet and a built-in player are planned.
+Movies, TV, music and books are all shipped, each with adoption of an existing library, automatic searching and grabbing, and requests — alongside the built-in torrent client, quality scoring, transcoding, an OPDS extension, send-to-e-reader, database backups and the REST API. Usenet and a built-in player are planned.
 
 The full picture — every media type, download path, playback option and platform feature, marked Shipped, In progress or Planned — is on the **[Roadmap](Roadmap)**.
 

@@ -382,7 +382,7 @@ The drift check cannot find its file. A folder may have been renamed or a disk m
 - **You deleted it on purpose:** press **Forget**. The record goes and the movie, episode, album or book slot stops being monitored, so it is not downloaded again. Turn monitoring back on from its page if you change your mind. A file found back on disk keeps its record. **Forget all** leaves the files of an offline library root alone and says so, and forgets the rest.
 - **You want it back now:** an import without replace fills a missing file, so a manual search and grab works straight away.
 
-While a file is missing, nothing tries to tag, transcode, probe or rename it, and Subsonic and OPDS stop offering it. Stats file counts leave it out, but title counts still count the title as available.
+While a file is missing, nothing tries to tag, transcode, probe or rename it, and the OPDS extension stops offering it. Stats file counts leave it out, but title counts still count the title as available.
 
 ## Music and books
 

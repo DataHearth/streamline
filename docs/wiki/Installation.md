@@ -2,7 +2,7 @@
 
 Streamline is a single binary with no external dependencies — no database server, no runtime, no CGO. Pick whichever install method matches how you already run things.
 
-A few features are gated behind two binaries from the FFmpeg suite, `ffprobe` and `ffmpeg`. Each is an opt-in extra on its own and never a requirement. Without `ffprobe`, Streamline runs the same but has no media info and no import verification. Without `ffmpeg`, it has no transcoding and no converted Subsonic streams. See [Optional: ffmpeg and ffprobe](#optional-ffmpeg-and-ffprobe).
+A few features are gated behind two binaries from the FFmpeg suite, `ffprobe` and `ffmpeg`. Each is an opt-in extra on its own and never a requirement. Without `ffprobe`, Streamline runs the same but has no media info and no import verification. Without `ffmpeg`, it has no transcoding. See [Optional: ffmpeg and ffprobe](#optional-ffmpeg-and-ffprobe).
 
 ## Which install method?
 
@@ -258,7 +258,7 @@ Then **Docker → Add Container → Template → streamline**, check the paths a
 
 | Template field | Default | What it is |
 | --- | --- | --- |
-| Web UI port | `8080` | Web UI, REST API, Subsonic and OPDS |
+| Web UI port | `8080` | Web UI, REST API and any [extension](Extensions) mounts |
 | Data share | `/mnt/user/data` → `/mnt/user/data` | **One** share holding both downloads and media, at the same path inside the container — the folder rule above applies with full force, and Unraid users hit it constantly |
 | Config | `/mnt/user/appdata/streamline/config` → `/etc/streamline` | `config.yaml`, written with the defaults on first start |
 | App data | `/mnt/user/appdata/streamline/data` → `/data` | Database, poster cache, built-in torrent state — back this up |
@@ -340,12 +340,10 @@ These features are gated behind them, and only these:
 | **Scoring a file you already have** | `ffprobe` | The `audio_tracks`, `audio_language` and `subtitle_language` conditions are answerable only from a probe. Without one they are unanswerable for a file on disk, so automatic upgrades compare the two sides on the parsed release name alone — see [What a file can be scored on](Quality-Profiles-and-Custom-Formats#what-a-file-can-be-scored-on) |
 | **Measured music and audiobook quality** | `ffprobe` | An imported album's real tier (a "FLAC" that is a 128k transcode) and an audiobook's real bit rate are checked against the profile only when they can be measured; the import review shows a file's extension instead of `FLAC 24/96` |
 | **[Transcoding](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files)** | `ffmpeg` | `ffprobe` alone is not enough. Without `ffmpeg` the transcode worker stays idle and **Scan library** refuses |
-| **Converted [Subsonic](Subsonic#transcoding) streams** | `ffmpeg` | Apps always get the original file, whatever bitrate or format they ask for, and an account's maximum bitrate cannot be enforced |
 
 Everything else — searching, grabbing, importing, renaming, requests, notifications — works
 identically either way. A missing binary is a **graceful degrade, never a boot error**: nothing
-fails, nothing is retried forever, imports fall back to filename parsing without `ffprobe`, and
-Subsonic apps get the original file without `ffmpeg`.
+fails, nothing is retried forever, and imports fall back to filename parsing without `ffprobe`.
 
 **Where the binaries come from:**
 
@@ -363,7 +361,7 @@ Reference](Configuration-Reference#ffmpeg):
 
 ```yaml
 ffmpeg:
-  enabled: true    # false switches off probing, transcoding and Subsonic transcoding; runtime-editable
+  enabled: true    # false switches off probing and transcoding; runtime-editable
   path: ""         # a DIRECTORY holding ffmpeg/ffprobe. Empty resolves via $PATH. Read at boot
 ```
 

@@ -118,6 +118,9 @@ jobs:
           while read -r file version; do
             check "${file} node-version" "$version" "$node"
           done < <(grep -oP '^\s*node-version: \K\S+' --with-filename .github/workflows/*.yaml | tr ':' ' ')
+          for mod in extensions/sdk/go.mod internal/extension/testdata/echo/go.mod; do
+            check "${mod} go directive" "$(sed -n 's/^go //p' "$mod")" "$go"
+          done
           [ "$fail" -eq 0 ]
 
           # What the locked nixpkgs ships on each line — empty when it has no

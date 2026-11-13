@@ -76,6 +76,10 @@ type Claims struct {
 	DisplayName string `json:"display_name,omitempty"`
 	Role        string `json:"role"`
 	JTI         string `json:"jti,omitempty"`
+	// APIKeyID and APIKeyName name the API key a request authenticated with,
+	// zero for a session. The middleware sets them; no token carries them.
+	APIKeyID   uint32 `json:"-"`
+	APIKeyName string `json:"-"`
 	jwt.RegisteredClaims
 }
 
@@ -113,11 +117,6 @@ type Manager interface {
 	) error
 	ListAPIKeys(ctx context.Context, userID uint32) ([]*ent.ApiKey, error)
 	RevokeAPIKeyByID(ctx context.Context, userID, keyID uint32) error
-	RotateSubsonicPassword(ctx context.Context, userID uint32) (string, error)
-	SetSubsonicPassword(ctx context.Context, userID uint32, password string) error
-	DisableSubsonicPassword(ctx context.Context, userID uint32) error
-	RotateOPDSToken(ctx context.Context, userID uint32) (string, error)
-	DisableOPDSToken(ctx context.Context, userID uint32) error
 
 	// OIDC
 	LoginOIDC(

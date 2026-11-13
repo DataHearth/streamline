@@ -83,10 +83,9 @@ These bypass auth entirely:
 | `/auth/login`, `/auth/register` | The POST endpoints behind them |
 | `/auth/config`, `/auth/invite/` | What the login page needs before anyone is signed in: the registration mode and SSO buttons, and an invite's bound email |
 | `/auth/oidc/` | Prefix match — the whole OIDC start/callback flow |
-| `/rest/`, `/share/` | The [Subsonic](Subsonic) API and its public share pages. Subsonic authenticates every request itself, from the user name and Subsonic password in the query; a share link is its own credential |
-| `/opds`, `/opds/` | The OPDS catalogue, which authenticates itself by HTTP Basic with your email and OPDS token (both forms are listed because a path ending in `/` matches as a prefix and anything else exactly) |
+| A mount of an [extension](Extensions) declared `self` | Passed through while the extension is running; the extension checks credentials itself (the OPDS extension, by HTTP Basic with your email and its token) |
 
-Neither the Subsonic password nor the OPDS token works anywhere else, and no session cookie, Bearer token or API key works on `/rest` or `/opds`.
+The OPDS token works nowhere else, and no session cookie, Bearer token or API key works on `/opds`. An extension never sees your session cookie, and sees your Bearer token or API key only on a `self` mount.
 
 ---
 

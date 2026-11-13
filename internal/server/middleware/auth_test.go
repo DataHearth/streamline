@@ -23,7 +23,9 @@ import (
 
 // keyOf is an API key row as ValidateAPIKey returns it: owner loaded.
 func keyOf(u *ent.User, scope apikey.Scope) *ent.ApiKey {
-	return &ent.ApiKey{ID: 9, Scope: scope, Edges: ent.ApiKeyEdges{Owner: u}}
+	return &ent.ApiKey{
+		ID: 9, Name: "tv", Scope: scope, Edges: ent.ApiKeyEdges{Owner: u},
+	}
 }
 
 var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
@@ -285,14 +287,9 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			g.Entry("key mint", http.MethodPost, "/api/v1/auth/me/api-keys"),
 			g.Entry("key revoke", http.MethodDelete, "/api/v1/auth/me/api-keys/3"),
 			g.Entry(
-				"opds token rotate",
+				"extension credential mint",
 				http.MethodPost,
-				"/api/v1/account/opds-token",
-			),
-			g.Entry(
-				"subsonic password rotate",
-				http.MethodPost,
-				"/api/v1/account/subsonic-password",
+				"/api/v1/account/extensions/opds/credential",
 			),
 			g.Entry(
 				"session revoke",
@@ -302,7 +299,38 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			g.Entry("password change", http.MethodPost, "/api/v1/auth/password"),
 			g.Entry("invite create", http.MethodPost, "/api/v1/auth/invites"),
 			g.Entry("user admin", http.MethodPatch, "/api/v1/users/2"),
+			g.Entry(
+				"user extension card",
+				http.MethodPut,
+				"/api/v1/users/2/extensions/echo/cards/prefs",
+			),
 			g.Entry("jwt rotate", http.MethodPost, "/api/v1/auth/jwt/rotate"),
+			g.Entry(
+				"extension card token",
+				http.MethodPost,
+				"/api/v1/extensions/opds/cards/token",
+			),
+			g.Entry(
+				"extension card token behind a dot segment",
+				http.MethodPost,
+				"/api/v1/extensions/opds/api/../cards/token",
+			),
+			g.Entry("extension add", http.MethodPost, "/api/v1/extensions"),
+			g.Entry(
+				"extension inspect",
+				http.MethodPost,
+				"/api/v1/extensions/inspect",
+			),
+			g.Entry(
+				"extension approve",
+				http.MethodPost,
+				"/api/v1/extensions/opds/approve",
+			),
+			g.Entry(
+				"extension delete",
+				http.MethodDelete,
+				"/api/v1/extensions/opds",
+			),
 			g.Entry("registration mode", http.MethodPatch, "/api/v1/config/auth"),
 			g.Entry("oidc provider add", http.MethodPost, "/api/v1/config/oidc"),
 			g.Entry(
@@ -328,6 +356,21 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			),
 			g.Entry("media mutation", http.MethodPost, "/api/v1/movies"),
 			g.Entry("prefix boundary", http.MethodPost, "/api/v1/userstats"),
+			g.Entry(
+				"extension card read",
+				http.MethodGet,
+				"/api/v1/extensions/opds/cards/token",
+			),
+			g.Entry(
+				"extension api write",
+				http.MethodPost,
+				"/api/v1/extensions/opds/api/sync",
+			),
+			g.Entry(
+				"extension prefix boundary",
+				http.MethodPost,
+				"/api/v1/extensionsx",
+			),
 		)
 
 		g.It("allows the same mutation over Bearer", func() {
@@ -390,6 +433,8 @@ var _ = g.Describe("read-scoped API key", g.Label("unit"), func() {
 			Expect(reached).NotTo(BeNil())
 			Expect(reached.UserID).To(Equal(uint32(1)))
 			Expect(reached.Role).To(Equal("admin"))
+			Expect(reached.APIKeyID).To(Equal(uint32(9)))
+			Expect(reached.APIKeyName).To(Equal("tv"))
 		},
 		g.Entry("GET", http.MethodGet, "/api/v1/movies"),
 		g.Entry("HEAD", http.MethodHead, "/api/v1/movies"),
@@ -553,7 +598,7 @@ var _ = g.Describe("NewAuth in trusted-network mode", g.Label("unit"), func() {
 			w.WriteHeader(http.StatusOK)
 		})
 		h := httputil.ClientIPResolver()(
-			NewAuth(mocks.NewMockAuthenticator(g.GinkgoT()), nil, nil)(inner),
+			NewAuth(mocks.NewMockAuthenticator(g.GinkgoT()), nil, nil, nil)(inner),
 		)
 
 		rr := httptest.NewRecorder()
@@ -692,4 +737,45 @@ var _ = g.Describe("redirectToLogin", g.Label("unit"), func() {
 		g.Entry("a backslash after a valid path", `/movies\evil.example`),
 		g.Entry("an encoded double slash", "/%2f%2fevil.example"),
 	)
+})
+
+var _ = g.Describe("NewAuth self-authenticated paths", g.Label("unit"), func() {
+	g.BeforeEach(func() {
+		configtest.Setup(map[string]any{"auth": map[string]any{"mode": "full"}})
+	})
+
+	serve := func(selfAuth func(string) bool, path string) (int, bool) {
+		g.GinkgoHelper()
+		reached := false
+		inner := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			reached = true
+		})
+		h := NewAuth(
+			mocks.NewMockAuthenticator(g.GinkgoT()),
+			nil,
+			nil,
+			selfAuth,
+		)(inner)
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path, nil))
+		return rr.Code, reached
+	}
+
+	g.It("skips authentication for a path the hook claims", func() {
+		code, reached := serve(
+			func(p string) bool { return p == "/opds/x" },
+			"/opds/x",
+		)
+		Expect(reached).To(BeTrue())
+		Expect(code).To(Equal(http.StatusOK))
+	})
+
+	g.It("still authenticates every other path", func() {
+		code, reached := serve(
+			func(p string) bool { return p == "/opds/x" },
+			"/movies",
+		)
+		Expect(reached).To(BeFalse())
+		Expect(code).To(Equal(http.StatusFound))
+	})
 })

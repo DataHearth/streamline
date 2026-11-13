@@ -9,10 +9,19 @@
 	import LanguageCard from "@components/account/LanguageCard.svelte";
 	import AppAccessCard from "@components/account/AppAccessCard.svelte";
 	import DeviceEmailCard from "@components/account/DeviceEmailCard.svelte";
+	import { createQuery } from "@tanstack/svelte-query";
+	import { api } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
+	import { ACCOUNT_EXTENSIONS_KEY, ACCOUNT_EXTENSIONS_PATH, type ExtensionAccountCard } from "@lib/extensions";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let isAdmin = $derived(auth.user?.role === "admin");
+
+	// One sign-in card per running extension that declares one (OPDS, …).
+	const extensionCards = createQuery<ExtensionAccountCard[]>(() => ({
+		queryKey: ACCOUNT_EXTENSIONS_KEY,
+		queryFn: () => api<ExtensionAccountCard[]>(ACCOUNT_EXTENSIONS_PATH),
+	}));
 </script>
 
 <div
@@ -109,8 +118,9 @@
 
 {#snippet appsSection()}
 	<div class="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-		<AppAccessCard kind="subsonic" />
-		<AppAccessCard kind="opds" />
+		{#each extensionCards.data ?? [] as card (card.extension)}
+			<AppAccessCard extension={card} />
+		{/each}
 		<DeviceEmailCard />
 	</div>
 {/snippet}
