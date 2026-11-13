@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
@@ -20,25 +21,30 @@ import (
 )
 
 // RenameService computes and applies episode-file renames for a series using
-// the library naming pattern. libraryRoot is config.Library.SeriesPath; naming
-// is config.Library.SeriesNaming (passed in at construction so tests don't
-// depend on the singleton).
+// the library naming pattern. The root (config.Library.SeriesPath) and the
+// template (config.Library.SeriesNaming) are read from the live config on every
+// call: both change at runtime (a path migration re-points the root, Settings →
+// Library edits the template), and a rename must land where the library is now.
 type RenameService struct {
-	db          db.Store
-	ms          mediaserver.Refresher
-	libraryRoot string
-	naming      string
+	db db.Store
+	ms mediaserver.Refresher
 }
 
-func NewRenameService(
-	store db.Store, ms mediaserver.Refresher, libraryRoot, naming string,
-) *RenameService {
-	return &RenameService{
-		db:          store,
-		ms:          ms,
-		libraryRoot: libraryRoot,
-		naming:      naming,
-	}
+func NewRenameService(store db.Store, ms mediaserver.Refresher) *RenameService {
+	return &RenameService{db: store, ms: ms}
+}
+
+// renameRules is the library root and naming template one Preview or Apply
+// works with, read once so a config change mid-call cannot split a plan
+// between two roots.
+type renameRules struct {
+	root   string
+	naming string
+}
+
+func currentRenameRules() renameRules {
+	lib := config.Get().Library
+	return renameRules{root: lib.SeriesPath, naming: lib.SeriesNaming}
 }
 
 // Preview returns the rename plan without applying it. Empty Operations means
@@ -50,7 +56,7 @@ func (r *RenameService) Preview(
 		trace.WithAttributes(attribute.Int64("series.id", int64(seriesID))))
 	defer span.End()
 
-	plan, err := r.buildPlan(ctx, seriesID)
+	plan, err := r.buildPlan(ctx, seriesID, currentRenameRules())
 	if err != nil {
 		return library.RenamePlan{}, otelx.RecordSpanError(span, err)
 	}
@@ -68,14 +74,15 @@ func (r *RenameService) Apply(
 		trace.WithAttributes(attribute.Int64("series.id", int64(seriesID))))
 	defer span.End()
 
-	plan, err := r.buildPlan(ctx, seriesID)
+	rules := currentRenameRules()
+	plan, err := r.buildPlan(ctx, seriesID, rules)
 	if err != nil {
 		return library.RenamePlan{}, otelx.RecordSpanError(span, err)
 	}
 	// See the movie twin: deferred so a half-applied plan still rescans.
 	if len(plan.Operations) > 0 {
 		defer mediaserver.RefreshInBackground(
-			ctx, r.ms, "series", r.libraryRoot, plan.Paths()...,
+			ctx, r.ms, "series", rules.root, plan.Paths()...,
 		)
 	}
 	for _, op := range plan.Operations {
@@ -92,7 +99,7 @@ func (r *RenameService) Apply(
 		// a title into a directory at each colon leaves one behind per title on a
 		// re-rename pass. Prune before the DB write: the file is already at
 		// op.To, so a failure here must not abort the rename.
-		library.PruneEmptyDirs(ctx, filepath.Dir(op.From), r.libraryRoot)
+		library.PruneEmptyDirs(ctx, filepath.Dir(op.From), rules.root)
 		if err := r.db.UpdateMediaFilePath(ctx, op.MediaFileID, op.To); err != nil {
 			return library.RenamePlan{}, otelx.RecordSpanError(span,
 				fmt.Errorf("update media_file %d: %w", op.MediaFileID, err))
@@ -131,7 +138,7 @@ func renamedSeasons(ops []library.RenameOperation) []uint16 {
 }
 
 func (r *RenameService) buildPlan(
-	ctx context.Context, seriesID uint32,
+	ctx context.Context, seriesID uint32, rules renameRules,
 ) (library.RenamePlan, error) {
 	show, err := r.db.FindTVShowByID(ctx, seriesID)
 	if err != nil {
@@ -149,13 +156,13 @@ func (r *RenameService) buildPlan(
 				if f.MissingSince != nil {
 					continue
 				}
-				target := r.target(show, se.Number, ep, f)
+				target := renameTarget(rules, show, se.Number, ep, f)
 				if target == f.Path {
 					continue
 				}
 				// See the movie twin: the template is the admin's, and a
 				// literal ".." in it would walk the file out of the root.
-				if !library.PathUnderRoot(target, r.libraryRoot) {
+				if !library.PathUnderRoot(target, rules.root) {
 					slog.WarnContext(
 						ctx,
 						"rename skipped: the naming template puts this file outside the library",
@@ -181,7 +188,7 @@ func (r *RenameService) buildPlan(
 	return plan, nil
 }
 
-// target computes the canonical path using the same primitives the importer
+// renameTarget computes the canonical path using the same primitives the importer
 // relies on (library.BuildEpisodeVars + ApplyTemplate + SanitizePath) so that
 // renames land at the importer's destination. Sanitisation is per-segment to
 // preserve directory separators.
@@ -190,17 +197,21 @@ func (r *RenameService) buildPlan(
 // re-parsing a name this service wrote loses every token the template omits,
 // which for the default template is all of them but the quality — and then
 // loses the quality too on the pass after that.
-func (r *RenameService) target(
-	show *ent.TVShow, season uint16, ep *ent.Episode, f *ent.MediaFile,
+func renameTarget(
+	rules renameRules,
+	show *ent.TVShow,
+	season uint16,
+	ep *ent.Episode,
+	f *ent.MediaFile,
 ) string {
 	parsed := library.ParsedFromMediaFile(f)
 	vars := library.BuildEpisodeVars(
 		show.Title, show.Year, show.TvdbID, season, ep.Number, ep.Title, parsed,
 	)
-	rel := library.ApplyTemplate(r.naming, vars)
+	rel := library.ApplyTemplate(rules.naming, vars)
 	segments := strings.Split(rel, "/")
 	for i, seg := range segments {
 		segments[i] = library.SanitizePath(seg)
 	}
-	return filepath.Join(append([]string{r.libraryRoot}, segments...)...)
+	return filepath.Join(append([]string{rules.root}, segments...)...)
 }

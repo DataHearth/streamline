@@ -254,15 +254,16 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		movieSvc,
 		tvSvc,
 		dispatcher,
-		cfg.Library.MoviePath,
-		cfg.Library.SeriesPath,
+		// No pinned roots: bulk import reads them from the live config.
+		"",
+		"",
 		mb,
 		musicSvc,
 		bookMeta,
 		bookSvc,
 		bulkimport.WithProber(prober),
 	)
-	hygieneSvc := hygiene.New(store, tmdb, tvdb, &cfg.Library)
+	hygieneSvc := hygiene.New(store, tmdb, tvdb, nil)
 	if n, err := bulkImportSvc.AbortInflight(ctx); err != nil {
 		slog.WarnContext(
 			ctx,
@@ -280,12 +281,8 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	}
 	musicSvc.ResumeHydration(ctx)
 	deepLinker := mediaserver.NewDeepLinker(nil)
-	renamer := movie.NewRenameService(
-		store, dispatcher, cfg.Library.MoviePath, cfg.Library.MovieNaming,
-	)
-	seriesRenamer := tvshow.NewRenameService(
-		store, dispatcher, cfg.Library.SeriesPath, cfg.Library.SeriesNaming,
-	)
+	renamer := movie.NewRenameService(store, dispatcher)
+	seriesRenamer := tvshow.NewRenameService(store, dispatcher)
 	pathMigrations := pathmigrate.NewService(store)
 	pathMigrations.WarnOnDrift(ctx)
 	hygieneSvc.Probe = prober

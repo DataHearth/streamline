@@ -223,7 +223,7 @@ func (s *Service) runCommit(ctx context.Context, scan *ent.ImportScan) {
 	countCommit(ctx, "movie", "success", int64(successCount))
 	countCommit(ctx, "movie", "failed", int64(failedCount))
 	if successCount > 0 {
-		mediaserver.RefreshInBackground(ctx, s.ms, "movie", s.moviePath)
+		mediaserver.RefreshInBackground(ctx, s.ms, "movie", s.movieRoot())
 	}
 }
 

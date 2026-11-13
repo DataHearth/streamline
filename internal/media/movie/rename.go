@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
@@ -18,26 +19,31 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// RenameService computes and applies media-file renames for a movie using the
-// library naming pattern. libraryRoot is config.Library.MoviePath; naming is
-// config.Library.MovieNaming (passed in at construction so tests don't depend
-// on the singleton).
+// RenameService computes and applies media-file renames for a movie using
+// the library naming pattern. The root (config.Library.MoviePath) and the
+// template (config.Library.MovieNaming) are read from the live config on every
+// call: both change at runtime (a path migration re-points the root, Settings →
+// Library edits the template), and a rename must land where the library is now.
 type RenameService struct {
-	db          db.Store
-	ms          mediaserver.Refresher
-	libraryRoot string
-	naming      string
+	db db.Store
+	ms mediaserver.Refresher
 }
 
-func NewRenameService(
-	store db.Store, ms mediaserver.Refresher, libraryRoot, naming string,
-) *RenameService {
-	return &RenameService{
-		db:          store,
-		ms:          ms,
-		libraryRoot: libraryRoot,
-		naming:      naming,
-	}
+func NewRenameService(store db.Store, ms mediaserver.Refresher) *RenameService {
+	return &RenameService{db: store, ms: ms}
+}
+
+// renameRules is the library root and naming template one Preview or Apply
+// works with, read once so a config change mid-call cannot split a plan
+// between two roots.
+type renameRules struct {
+	root   string
+	naming string
+}
+
+func currentRenameRules() renameRules {
+	lib := config.Get().Library
+	return renameRules{root: lib.MoviePath, naming: lib.MovieNaming}
 }
 
 // Preview returns the rename plan without applying it. Empty Operations means
@@ -49,7 +55,7 @@ func (r *RenameService) Preview(
 		trace.WithAttributes(attribute.Int64("movie.id", int64(movieID))))
 	defer span.End()
 
-	plan, err := r.buildPlan(ctx, movieID)
+	plan, err := r.buildPlan(ctx, movieID, currentRenameRules())
 	if err != nil {
 		return library.RenamePlan{}, otelx.RecordSpanError(span, err)
 	}
@@ -67,7 +73,8 @@ func (r *RenameService) Apply(
 		trace.WithAttributes(attribute.Int64("movie.id", int64(movieID))))
 	defer span.End()
 
-	plan, err := r.buildPlan(ctx, movieID)
+	rules := currentRenameRules()
+	plan, err := r.buildPlan(ctx, movieID, rules)
 	if err != nil {
 		return library.RenamePlan{}, otelx.RecordSpanError(span, err)
 	}
@@ -75,7 +82,7 @@ func (r *RenameService) Apply(
 	// already moved.
 	if len(plan.Operations) > 0 {
 		defer mediaserver.RefreshInBackground(
-			ctx, r.ms, "movie", r.libraryRoot, plan.Paths()...,
+			ctx, r.ms, "movie", rules.root, plan.Paths()...,
 		)
 	}
 	for _, op := range plan.Operations {
@@ -92,7 +99,7 @@ func (r *RenameService) Apply(
 		// a title into a directory at each colon leaves one behind per title on a
 		// re-rename pass. Prune before the DB write: the file is already at
 		// op.To, so a failure here must not abort the rename.
-		library.PruneEmptyDirs(ctx, filepath.Dir(op.From), r.libraryRoot)
+		library.PruneEmptyDirs(ctx, filepath.Dir(op.From), rules.root)
 		if err := r.db.UpdateMediaFilePath(ctx, op.MediaFileID, op.To); err != nil {
 			return library.RenamePlan{}, otelx.RecordSpanError(span,
 				fmt.Errorf("update media_file %d: %w", op.MediaFileID, err))
@@ -115,7 +122,7 @@ func (r *RenameService) Apply(
 }
 
 func (r *RenameService) buildPlan(
-	ctx context.Context, movieID uint32,
+	ctx context.Context, movieID uint32, rules renameRules,
 ) (library.RenamePlan, error) {
 	m, err := r.db.FindMovieByID(ctx, movieID)
 	if err != nil {
@@ -135,14 +142,14 @@ func (r *RenameService) buildPlan(
 		if f.MissingSince != nil {
 			continue
 		}
-		target := r.target(m, f)
+		target := renameTarget(rules, m, f)
 		if target == f.Path {
 			continue
 		}
 		// Values are sanitized, but the template is the admin's, and a
 		// literal ".." in it walks every file out of the root. The importer
 		// refuses the same template; a rename leaves the file where it is.
-		if !library.PathUnderRoot(target, r.libraryRoot) {
+		if !library.PathUnderRoot(target, rules.root) {
 			slog.WarnContext(
 				ctx,
 				"rename skipped: the naming template puts this file outside the library",
@@ -164,7 +171,7 @@ func (r *RenameService) buildPlan(
 	return plan, nil
 }
 
-// target computes the canonical path using the same primitives the importer
+// renameTarget computes the canonical path using the same primitives the importer
 // relies on (library.ApplyTemplate + BuildMovieVars + SanitizePath) so that
 // renames land at the importer's destination. The sanitisation pass is
 // per-segment to preserve directory separators.
@@ -173,13 +180,13 @@ func (r *RenameService) buildPlan(
 // re-parsing a name this service wrote loses every token the template omits,
 // which for the default template is all of them but the quality — and then
 // loses the quality too on the pass after that.
-func (r *RenameService) target(m *ent.Movie, f *ent.MediaFile) string {
+func renameTarget(rules renameRules, m *ent.Movie, f *ent.MediaFile) string {
 	parsed := library.ParsedFromMediaFile(f)
 	vars := library.BuildMovieVars(m.Title, m.Year, m.TmdbID, parsed)
-	rel := library.ApplyTemplate(r.naming, vars)
+	rel := library.ApplyTemplate(rules.naming, vars)
 	segments := strings.Split(rel, "/")
 	for i, seg := range segments {
 		segments[i] = library.SanitizePath(seg)
 	}
-	return filepath.Join(append([]string{r.libraryRoot}, segments...)...)
+	return filepath.Join(append([]string{rules.root}, segments...)...)
 }
