@@ -102,6 +102,10 @@ type TorrentDetails struct {
 	Files    []FileView
 	Trackers []string
 	Peers    []PeerView
+	// HashFailures counts the pieces that failed their hash check since the
+	// engine started: a seeder serving altered files shows up here, where the
+	// progress only reads as stuck short of 100%.
+	HashFailures int64
 }
 
 // FilePriority is one file-priority assignment (index into Details.Files).
@@ -194,13 +198,15 @@ func (e *Engine) Details(
 	if err != nil {
 		return TorrentDetails{}, err
 	}
+	stats := t.Stats()
 	d := TorrentDetails{
 		TorrentView: e.torrentView(
 			t, e.trackedRecords(ctx, []string{t.InfoHash().HexString()}),
 		),
-		Files:    []FileView{},
-		Trackers: []string{},
-		Peers:    []PeerView{},
+		Files:        []FileView{},
+		Trackers:     []string{},
+		Peers:        []PeerView{},
+		HashFailures: stats.PiecesDirtiedBad.Int64(),
 	}
 	if t.Info() != nil {
 		for i, f := range t.Files() {

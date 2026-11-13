@@ -290,6 +290,12 @@
 					<dd class="font-mono tabular-nums text-fg-muted">
 						{i18n.torrent_seeds_peers_line({ seeds: torrent.seeds, peers: torrent.peer_count })}
 					</dd>
+					{#if detail?.hash_failures}
+						<dt class="font-medium uppercase tracking-[0.1em] text-fg-subtle">{i18n.torrent_hash_failures()}</dt>
+						<dd class="text-status-failed" title={i18n.torrent_hash_failures_help()}>
+							{detail.hash_failures.toLocaleString()}
+						</dd>
+					{/if}
 					{#if torrent.indexer}
 						<dt class="font-medium uppercase tracking-[0.1em] text-fg-subtle">{i18n.common_indexer()}</dt>
 						<dd class="min-w-0 break-words text-fg-muted">{torrent.indexer}</dd>

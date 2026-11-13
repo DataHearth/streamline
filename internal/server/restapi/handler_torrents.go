@@ -361,6 +361,7 @@ func torrentDetailsToAPI(d bittorrent.TorrentDetails) TorrentDetails {
 		Indexer:        optString(d.Record.Indexer),
 		Media:          torrentMedia(d.Record),
 		Files:          files,
+		HashFailures:   &d.HashFailures,
 		Trackers:       d.Trackers,
 		Peers:          peers,
 	}

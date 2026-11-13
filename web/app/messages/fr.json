@@ -2170,6 +2170,8 @@
 	"torrent_seeds_peers_line": "{seeds} seeders · {peers} pairs",
 	"torrent_stat_down": "↓ Réception",
 	"torrent_stat_up": "↑ Envoi",
+	"torrent_hash_failures": "Pièces invalides",
+	"torrent_hash_failures_help": "Pièces dont la vérification a échoué depuis le dernier redémarrage. Un nombre qui augmente sur un torrent bloqué signifie qu'une source envoie des données qui ne lui correspondent pas.",
 	"torrent_swarm": "Essaim",
 	"torrent_tap_change_file": "Touchez pour choisir un autre fichier",
 	"torrent_this": "ce torrent",

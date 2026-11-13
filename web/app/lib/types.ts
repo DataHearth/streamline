@@ -1573,6 +1573,8 @@ export type TorrentPeer = {
 
 // GET /torrents/{hash} — the list item plus its file/tracker/peer breakdown.
 export type TorrentDetails = Torrent & {
+	// Pieces that failed their hash check since the engine started.
+	hash_failures?: number;
 	files: TorrentFile[];
 	trackers: string[];
 	peers: TorrentPeer[];

@@ -9607,6 +9607,9 @@ type TorrentDetails struct {
 	Files []TorrentFile `json:"files"`
 	Hash  string        `json:"hash"`
 
+	// HashFailures Pieces that failed their hash check since the engine started. A count that keeps growing on a torrent stuck short of 100% means a peer is serving data that does not match the torrent.
+	HashFailures *int64 `json:"hash_failures,omitempty"`
+
 	// Indexer The indexer that record's release was grabbed from. Absent when the torrent is untracked or the record names none (an adoption, an upload).
 	Indexer *string `json:"indexer,omitempty"`
 

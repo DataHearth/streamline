@@ -13645,6 +13645,13 @@ components:
         - type: object
           required: [files, trackers, peers]
           properties:
+            hash_failures:
+              type: integer
+              format: int64
+              description: >-
+                Pieces that failed their hash check since the engine started.
+                A count that keeps growing on a torrent stuck short of 100%
+                means a peer is serving data that does not match the torrent.
             files:
               type: array
               items:

@@ -2170,6 +2170,8 @@
 	"torrent_seeds_peers_line": "{seeds} seeds · {peers} peers",
 	"torrent_stat_down": "↓ Down",
 	"torrent_stat_up": "↑ Up",
+	"torrent_hash_failures": "Bad pieces",
+	"torrent_hash_failures_help": "Pieces that failed verification since the last restart. A growing count on a stuck torrent means a peer is sending data that does not match it.",
 	"torrent_swarm": "Swarm",
 	"torrent_tap_change_file": "Tap to choose a different file",
 	"torrent_this": "this torrent",
