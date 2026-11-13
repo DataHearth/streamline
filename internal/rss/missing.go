@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -372,7 +374,9 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	resultCount = len(results)
 	match, ok := scoreBest(
 		qualityFor(ctx, config.MediaMovie, m.QualityProfile),
-		dropRejected(ctx, results, blocklist.Movie, m.ID),
+		dropOtherYears(
+			dropRejected(ctx, results, blocklist.Movie, m.ID), m.Year,
+		),
 	)
 	if e := s.db.SetMovieLastSearchAt(ctx, m.ID, time.Now()); e != nil {
 		slog.WarnContext(ctx,
@@ -423,6 +427,27 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 		"release", match.Title,
 	)
 	return nil
+}
+
+// dropOtherYears leaves out the releases named for another year than the
+// film's. The title is all a search matches on, and a remake or a namesake
+// carries the same one: "Metropolis 2001" was grabbed for the 1927 film. One
+// year either way stays, since a release is often dated by its festival or
+// its home release; a name stating no year is no evidence.
+func dropOtherYears(
+	results []indexer.SearchResult,
+	year uint16,
+) []indexer.SearchResult {
+	if year == 0 {
+		return results
+	}
+	return slices.DeleteFunc(
+		slices.Clone(results),
+		func(r indexer.SearchResult) bool {
+			stated := library.Parse(r.Title).Year
+			return stated != 0 && (stated > year+1 || stated+1 < year)
+		},
+	)
 }
 
 // scoreBest returns the head of rankAccepted — the highest-scoring result p

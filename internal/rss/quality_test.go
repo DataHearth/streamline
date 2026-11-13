@@ -163,6 +163,24 @@ var _ = Describe("scoreBest", Label("unit", "rss"), func() {
 		Expect(got.Title).To(Equal("Movie.2024.1080p.WEB-DL.x264"))
 	})
 
+	It("leaves out a release dated another year than the film", func() {
+		kept := dropOtherYears([]indexer.SearchResult{
+			{Title: "Metropolis.2001.1080p.BluRay.x264-GRP"},
+			{Title: "Metropolis.1927.1080p.BluRay.x264-GRP"},
+			{Title: "Metropolis.1928.1080p.BluRay.x264-GRP"},
+			{Title: "Metropolis.1080p.BluRay.x264-GRP"},
+		}, 1927)
+		titles := make([]string, len(kept))
+		for i, r := range kept {
+			titles[i] = r.Title
+		}
+		Expect(titles).To(Equal([]string{
+			"Metropolis.1927.1080p.BluRay.x264-GRP",
+			"Metropolis.1928.1080p.BluRay.x264-GRP",
+			"Metropolis.1080p.BluRay.x264-GRP",
+		}))
+	})
+
 	It("returns false when every release is outside the band", func() {
 		results := []indexer.SearchResult{
 			{Title: "Movie.2024.720p.WEB-DL.x264", Seeders: 900},
