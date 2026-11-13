@@ -13389,6 +13389,33 @@ components:
           type: integer
         max_download_kbps:
           type: integer
+        max_peers_per_torrent:
+          type: integer
+          minimum: 0
+          maximum: 200
+          description: >-
+            Established peer connections per torrent. 0 or absent = the
+            engine's default (15). Each connection costs about 160 KB of
+            memory, up to about 420 KB while seeding. Restart required.
+        max_unverified_mb:
+          type: integer
+          minimum: 0
+          maximum: 1024
+          description: >-
+            MiB of downloaded piece data not yet hash-checked, per torrent,
+            counted in whole pieces. 0 or absent = the engine's default (16).
+            Raise it for releases with large pieces: one 16 MiB piece fills
+            the default alone, and that torrent then downloads one piece at a
+            time. Costs page cache, not process memory. Restart required.
+        max_torrents:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          description: >-
+            Torrents the engine holds at once; a grab past it is refused with
+            `422` `code: grab_rejected`. 0 or absent = the engine's default
+            (500). Lowering it below what the engine holds removes nothing.
+            Restart required.
         seed_ratio:
           type: number
           format: double
@@ -13449,6 +13476,33 @@ components:
           type: integer
         max_download_kbps:
           type: integer
+        max_peers_per_torrent:
+          type: integer
+          minimum: 0
+          maximum: 200
+          description: >-
+            Established peer connections per torrent. 0 or absent = the
+            engine's default (15). Each connection costs about 160 KB of
+            memory, up to about 420 KB while seeding. Restart required.
+        max_unverified_mb:
+          type: integer
+          minimum: 0
+          maximum: 1024
+          description: >-
+            MiB of downloaded piece data not yet hash-checked, per torrent,
+            counted in whole pieces. 0 or absent = the engine's default (16).
+            Raise it for releases with large pieces: one 16 MiB piece fills
+            the default alone, and that torrent then downloads one piece at a
+            time. Costs page cache, not process memory. Restart required.
+        max_torrents:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          description: >-
+            Torrents the engine holds at once; a grab past it is refused with
+            `422` `code: grab_rejected`. 0 or absent = the engine's default
+            (500). Lowering it below what the engine holds removes nothing.
+            Restart required.
         seed_ratio:
           type: number
           format: double

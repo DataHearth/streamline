@@ -330,6 +330,15 @@ const kbps = v.pipe(
 	v.integer(),
 	v.minValue(0, i18n.validation_zero_unlimited()),
 );
+// Peer-pool and torrent limits: 0 keeps the engine's default, and the maxima
+// mirror the config's validate tags (resources.go).
+const engineLimit = (max: number) =>
+	v.pipe(
+		v.number(i18n.validation_enter_number()),
+		v.integer(),
+		v.minValue(0, i18n.validation_default_range({ max })),
+		v.maxValue(max, i18n.validation_default_range({ max })),
+	);
 
 export const builtinClientForm = v.object({
 	download_dir: v.pipe(
@@ -352,6 +361,9 @@ export const builtinClientForm = v.object({
 	),
 	max_download_kbps: kbps,
 	max_upload_kbps: kbps,
+	max_peers_per_torrent: engineLimit(200),
+	max_unverified_mb: engineLimit(1024),
+	max_torrents: engineLimit(10000),
 	seed_ratio: v.pipe(v.number(i18n.validation_enter_ratio()), v.minValue(0, i18n.validation_zero_unlimited())),
 	seed_time: v.pipe(
 		v.string(),

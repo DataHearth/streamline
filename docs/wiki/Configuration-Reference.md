@@ -535,16 +535,21 @@ Built-in engine only (ignored for external clients):
 | `download_dir` | ✅ for `builtin` | Where the engine writes |
 | `listen_port` | | Incoming BitTorrent port. Overridden by [`torrent_listen_port`](#torrent_listen_port) when that is set — required if your VPN assigns a forwarded port per session, since such a port can't live in a file |
 | `max_upload_kbps`, `max_download_kbps` | | `0` = unlimited |
+| `max_peers_per_torrent` | | Peer connections per torrent, `0`–`200`. `0` = the default, **15**. Each connection costs about 160 KB of memory, and up to about 420 KB while seeding, so raise this only on a machine with memory to spare: ten torrents at 100 peers is about 1,000 connections |
+| `max_unverified_mb` | | MiB of downloaded data not yet hash-checked, `0`–`1024`. `0` = the default, **16**. It applies to each torrent separately and is counted in whole pieces, so a release with 16 MiB pieces fills the default on its own and then downloads one piece at a time. Raise it if large releases download slowly. It costs disk cache rather than process memory |
+| `max_torrents` | | Torrents the engine holds at once, `0`–`10000`. `0` = the default, **500**. Lowering it below what the engine already holds removes nothing; new grabs are refused until the count is back under |
 | `seed_ratio` | | Stop seeding at this ratio. Uploaded bytes are persisted per torrent and accumulate across restarts, so a restart doesn't hand a torrent back its ratio |
 | `seed_time` | | Stop seeding after this duration, measured from the persisted completion time |
 | `disable_dht` | | Turns off the distributed hash table. **Recommended on a small machine.** DHT keeps a routing table warm and answers queries from the wider network continuously, whether or not you are downloading — none of which an indexer-driven setup needs, since every torrent here arrives from a tracker that already knows its peers. Left on it costs memory and a steady trickle of background traffic for nothing. Turn it off unless you add magnets by hand and rely on public swarms to find them |
 | `bind_interface` | | Bind to one interface — useful for a VPN tunnel |
 
+The three `max_*` limits are read when the engine starts, so a change takes a restart, like every other built-in setting. Their defaults keep the engine inside a 256 MB machine.
+
 Once `seed_ratio` or `seed_time` is reached, the built-in engine stops uploading and streamline then removes that torrent **and deletes its files** — but only when the download was already imported into your library, which is the point at which the download copy is a second copy of a file you already have. A torrent still waiting on you (a held import, an adoption proposal) or one streamline never grabbed is left alone, and external clients keep their own ratio handling and their own files.
 
 The built-in engine treats what a release names as untrusted:
 
-- It holds at most **500 torrents**. A grab past that is refused with a message saying so; remove finished torrents to make room.
+- It holds at most **500 torrents** unless `max_torrents` says otherwise. A grab past that is refused with a message saying so; remove finished torrents to make room.
 - It won't announce to a tracker, fetch a webseed or pull metadata from an address on the machine itself (loopback), on its link (link-local, which includes the `169.254.169.254` cloud metadata endpoint), or a multicast one. Private LAN addresses are fine, so a tracker on your homelab still works. Peer addresses and DHT nodes embedded in a magnet are ignored; the trackers and DHT find the swarm.
 - It refuses a torrent whose name is empty, `.`, `..`, `.streamline-session`, contains a path separator, or is already used by another torrent it holds. Any of those would land on data that isn't the torrent's. It also refuses a torrent whose name is already on disk with files of different sizes, or with a half-finished `.part` download it doesn't own: that is another release's data. Re-adding the same torrent over its own complete files is fine.
 
