@@ -75,7 +75,11 @@ func DiscFolderNumber(name string) (uint8, bool) {
 	return uint8(n), true
 }
 
-// MatchTrack prefers the tagged (disc, track) pair and falls back to the title.
+// MatchTrack prefers the tagged (disc, track) pair and falls back to the
+// title. The title may come from the file's name when it carries no tag, so
+// punctuation does not count: a vinyl rip named "A1 - Goblin..flac" reads as
+// "Goblin." and is the track "Goblin". The exact comparison stays for a title
+// that normalizes to nothing, which TitleMatchesStrict never matches.
 func MatchTrack(tracks []*ent.Track, info audiotags.Info) *ent.Track {
 	if t := trackAt(tracks, info); t != nil {
 		return t
@@ -85,7 +89,8 @@ func MatchTrack(tracks []*ent.Track, info audiotags.Info) *ent.Track {
 		return nil
 	}
 	if i := slices.IndexFunc(tracks, func(t *ent.Track) bool {
-		return strings.EqualFold(strings.TrimSpace(t.Title), title)
+		return strings.EqualFold(strings.TrimSpace(t.Title), title) ||
+			TitleMatchesStrict(t.Title, title)
 	}); i >= 0 {
 		return tracks[i]
 	}

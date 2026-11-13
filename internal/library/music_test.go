@@ -79,6 +79,34 @@ var _ = Describe("ReadTrackInfo", Label("unit", "library"), func() {
 	})
 })
 
+var _ = Describe("MatchTrack", Label("unit", "library"), func() {
+	tracks := []*ent.Track{
+		{ID: 1, Disc: 1, Position: 1, Title: "Eternal Rains Will Come"},
+		{ID: 2, Disc: 1, Position: 2, Title: "Goblin"},
+		{ID: 3, Disc: 1, Position: 3, Title: "葬送"},
+	}
+
+	It("matches a title read off a file name past its punctuation", func() {
+		// "C1 - Goblin..flac": no tags, no track number, a trailing period.
+		Expect(MatchTrack(tracks, audiotags.Info{Title: "Goblin."}).ID).
+			To(Equal(uint32(2)))
+		Expect(
+			MatchTrack(tracks, audiotags.Info{Title: "eternal rains will come."}).ID,
+		).
+			To(Equal(uint32(1)))
+	})
+
+	It("still matches a title no normalization can read, when it is exact", func() {
+		Expect(
+			MatchTrack(tracks, audiotags.Info{Title: "葬送"}).ID,
+		).To(Equal(uint32(3)))
+	})
+
+	It("matches nothing for another title", func() {
+		Expect(MatchTrack(tracks, audiotags.Info{Title: "Goblins"})).To(BeNil())
+	})
+})
+
 var _ = Describe("TrackMatcher", Label("unit", "library"), func() {
 	album := []*ent.Track{
 		{ID: 1, Disc: 1, Position: 1, Title: "Regret"},
