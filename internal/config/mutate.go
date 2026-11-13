@@ -57,6 +57,7 @@ type LibraryPatch struct {
 	BookSeriesNaming           *string
 	ImportMode                 *string
 	KeepTorrentSeeding         *bool
+	ConvertWAV                 *bool
 	NoMatchCooldown            *string
 	MaxGrabFailures            *uint8
 	ImportMaxAttempts          *uint8
@@ -412,6 +413,9 @@ func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, erro
 		}
 		if patch.KeepTorrentSeeding != nil {
 			c.Library.KeepTorrentSeeding = *patch.KeepTorrentSeeding
+		}
+		if patch.ConvertWAV != nil {
+			c.Library.ConvertWAV = *patch.ConvertWAV
 		}
 		if patch.NoMatchCooldown != nil {
 			c.Library.NoMatchCooldown = *patch.NoMatchCooldown

@@ -10,8 +10,30 @@ import (
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 )
+
+// ConvertsWAV reports whether a WAV file can be imported, as the FLAC the
+// importer converts it to. Read per call: both switches change at runtime.
+func ConvertsWAV(p ffmpeg.Prober) bool {
+	cfg := config.Get()
+	return p != nil && cfg.FFmpeg.Enabled && cfg.Library.ConvertWAV &&
+		p.Available() && p.FFmpegPath() != ""
+}
+
+// IsReleaseAudio is audiotags.IsAudioFile for the files of a download or an
+// upload, which may also be WAV when wav says it converts. The library itself
+// never holds one, so audiotags does not know the extension.
+func IsReleaseAudio(p string, wav bool) bool {
+	if audiotags.IsAudioFile(p) {
+		return true
+	}
+	base := filepath.Base(p)
+	return wav && !strings.HasPrefix(base, ".") &&
+		strings.EqualFold(filepath.Ext(base), ".wav")
+}
 
 var discFolderRe = regexp.MustCompile(`(?i)^(?:cd|dis[ck])\s*(\d+)$`)
 

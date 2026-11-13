@@ -8,7 +8,9 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	"github.com/datahearth/streamline/internal/library/audiotags"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("TrackInfoFromName", Label("unit", "library"), func() {
@@ -273,5 +275,43 @@ var _ = Describe("CueImage", Label("unit", "library"), func() {
 		Entry("sheet in another folder",
 			[]string{"A/A.flac", "A/Scans/A.cue"}, 10, false),
 		Entry("OS separators", []string{`A\A.wv`, `A\A.CUE`}, 10, true),
+	)
+})
+
+var _ = Describe("ConvertsWAV", Label("unit", "library"), func() {
+	DescribeTable("needs ffmpeg enabled and found, and the switch on",
+		func(enabled, convert, ffprobe bool, ffmpegPath string, want bool) {
+			configtest.Setup(map[string]any{
+				"ffmpeg":  map[string]any{"enabled": enabled},
+				"library": map[string]any{"convert_wav": convert},
+			})
+			p := mockffmpeg.NewMockProber(GinkgoT())
+			p.EXPECT().Available().Return(ffprobe).Maybe()
+			p.EXPECT().FFmpegPath().Return(ffmpegPath).Maybe()
+			Expect(ConvertsWAV(p)).To(Equal(want))
+		},
+		Entry("all on", true, true, true, "/bin/ffmpeg", true),
+		Entry("ffmpeg disabled", false, true, true, "/bin/ffmpeg", false),
+		Entry("switch off", true, false, true, "/bin/ffmpeg", false),
+		Entry("no ffprobe", true, true, false, "/bin/ffmpeg", false),
+		Entry("no ffmpeg binary", true, true, true, "", false),
+	)
+
+	It("is false without a prober", func() {
+		configtest.Setup()
+		Expect(ConvertsWAV(nil)).To(BeFalse())
+	})
+})
+
+var _ = Describe("IsReleaseAudio", Label("unit", "library"), func() {
+	DescribeTable("audio files, and WAV only when it converts",
+		func(p string, wav, want bool) {
+			Expect(IsReleaseAudio(p, wav)).To(Equal(want))
+		},
+		Entry("flac", "a/01.flac", false, true),
+		Entry("wav, converting", "a/01 x.WAV", true, true),
+		Entry("wav, not converting", "a/01 x.wav", false, false),
+		Entry("hidden wav", "a/.01.wav", true, false),
+		Entry("cue", "a/x.cue", true, false),
 	)
 })

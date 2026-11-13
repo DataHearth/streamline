@@ -283,11 +283,14 @@ type LibraryConfig struct {
 	// directory is not validated at boot — it may be a bind-mount that
 	// comes up after streamline; the importer surfaces a clear stat error
 	// if the path is wrong.
-	DownloadPath         string   `koanf:"download_path"          validate:"required"`
-	ImportMode           string   `koanf:"import_mode"            validate:"required,oneof=hardlink copy move"`
-	NoMatchCooldown      string   `koanf:"no_match_cooldown"      validate:"required"`
-	MaxGrabFailures      uint8    `koanf:"max_grab_failures"      validate:"required,min=1"`
-	KeepTorrentSeeding   bool     `koanf:"keep_torrent_seeding"`
+	DownloadPath       string `koanf:"download_path"        validate:"required"`
+	ImportMode         string `koanf:"import_mode"          validate:"required,oneof=hardlink copy move"`
+	NoMatchCooldown    string `koanf:"no_match_cooldown"    validate:"required"`
+	MaxGrabFailures    uint8  `koanf:"max_grab_failures"    validate:"required,min=1"`
+	KeepTorrentSeeding bool   `koanf:"keep_torrent_seeding"`
+	// ConvertWAV lets a music import convert WAV files to FLAC. Off, or
+	// without ffmpeg, a WAV release is rejected at search.
+	ConvertWAV           bool     `koanf:"convert_wav"`
 	ImportMaxAttempts    uint8    `koanf:"import_max_attempts"    validate:"required,min=1"`
 	AllowedDownloadRoots []string `koanf:"allowed_download_roots"`
 	// DriftGraceTicks is the number of consecutive drift_check ticks a
@@ -1093,6 +1096,7 @@ func defaults() map[string]any {
 		"library.monitor_specials":              false,
 		"library.music_monitored_types":         []string{"album", "ep", "single"},
 		"library.keep_torrent_seeding":          true,
+		"library.convert_wav":                   true,
 		"library.import_max_attempts":           3,
 		"library.allowed_download_roots":        []string{},
 		"library.no_match_cooldown":             "6h",

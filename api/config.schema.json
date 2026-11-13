@@ -591,6 +591,7 @@
         "no_match_cooldown": { "$ref": "#/definitions/duration" },
         "max_grab_failures": { "type": "integer", "minimum": 1 },
         "keep_torrent_seeding": { "type": "boolean" },
+        "convert_wav": { "type": "boolean" },
         "import_max_attempts": { "type": "integer", "minimum": 1 },
         "allowed_download_roots": {
           "type": "array",

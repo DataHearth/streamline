@@ -177,6 +177,17 @@ var _ = Describe("Config mutate", Label("unit", "config"), func() {
 			Expect(got.BookSeriesNaming).To(Equal("s"))
 		})
 
+		It("converts WAV by default and takes a patch turning it off", func() {
+			Expect(config.Get().Library.ConvertWAV).To(BeTrue())
+			off := false
+			got, err := config.UpdateLibrary(
+				context.Background(),
+				config.LibraryPatch{ConvertWAV: &off},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.ConvertWAV).To(BeFalse())
+		})
+
 		It("applies always_ask without disturbing min_duration_ratio", func() {
 			t := true
 			got, err := config.UpdateLibrary(
