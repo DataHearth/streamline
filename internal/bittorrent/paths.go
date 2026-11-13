@@ -64,6 +64,7 @@ func newContentStorage(
 		// (an import moving it, a user deleting it) faults the process with
 		// SIGBUS instead of failing the write.
 		DisableMmap: true,
+		Logger:      storageSlogger(),
 	}), dir), paths
 }
 

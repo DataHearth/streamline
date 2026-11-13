@@ -38,3 +38,35 @@ func engineSlogger() *slog.Logger {
 		min:   slog.LevelError,
 	})
 }
+
+// staleFlushHandler drops the two warnings anacrolix's file storage logs when
+// it re-verifies a piece of a file it already renamed off its ".part" name:
+// MarkComplete flushes the ".part" path whatever the file is called by then,
+// finds nothing there, and carries on. Opening a torrent sets every complete
+// piece that touches an unfinished file back to unknown
+// (setCompletionFromPartFiles), so the piece a finished file shares with a
+// skipped one is verified again on every boot, and each time logged these two
+// lines for data that is intact.
+type staleFlushHandler struct{ slog.Handler }
+
+func (h staleFlushHandler) Handle(ctx context.Context, r slog.Record) error {
+	switch r.Message {
+	case "error flushing completed piece", "error flushing file before promotion":
+		return nil
+	}
+	return h.Handler.Handle(ctx, r)
+}
+
+func (h staleFlushHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return staleFlushHandler{h.Handler.WithAttrs(attrs)}
+}
+
+func (h staleFlushHandler) WithGroup(name string) slog.Handler {
+	return staleFlushHandler{h.Handler.WithGroup(name)}
+}
+
+// storageSlogger is the file storage's logger: slog.Default's records, less
+// the stale flush warnings.
+func storageSlogger() *slog.Logger {
+	return slog.New(staleFlushHandler{slog.Default().Handler()})
+}
