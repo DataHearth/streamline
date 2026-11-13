@@ -136,6 +136,9 @@ func (s *auth) applyJWTSecret(
 	callerID uint32,
 	encoded string,
 ) (string, error) {
+	if err := CheckSessionSecret(encoded); err != nil {
+		return "", otelx.RecordSpanError(span, err)
+	}
 	newSecret := []byte(encoded)
 	s.jwtSecret.Store(&newSecret)
 

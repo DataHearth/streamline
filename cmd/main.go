@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/buildinfo"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/observability"
@@ -204,6 +205,12 @@ func configValidate(_ context.Context, cmd *cli.Command) error {
 		_, err = config.Load(path)
 	}
 	if err != nil {
+		return fmt.Errorf("invalid config: %w", err)
+	}
+	// Not a Config.Validate rule — the CLI's auth commands must still load
+	// such a config — but the server refuses to boot on it, and this command
+	// exists to say so first.
+	if err := auth.CheckConfiguredSessionSecret(); err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
 	fmt.Fprintln(os.Stderr, "configuration is valid")

@@ -236,8 +236,8 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `auth.mode` | enum | `full` | `full` \| `trusted-network` \| `disabled` — see [Authentication and SSO](Authentication-and-SSO#auth-modes) |
 | `auth.trusted_networks` | []cidr | `[]` | CIDRs auto-authenticated when mode is `trusted-network` |
 | `auth.trusted_role` | enum | `member` | Role granted to trusted-network requests |
-| `auth.session_secret` | string | *generated* | JWT HMAC key |
-| `auth.session_secret_file` | path | — | Mutually exclusive with the above |
+| `auth.session_secret` | string | *generated* | JWT HMAC key. When set, at least 16 bytes |
+| `auth.session_secret_file` | path | — | Mutually exclusive with the above. A missing or empty file, or one under 16 bytes, stops the start |
 | `auth.session_ttl` | duration | `168h` | Session lifetime |
 | `auth.registration_mode` | enum | `disabled` | `disabled` \| `open` \| `invite` |
 | `auth.default_role` | enum | `member` | Role a self-registering user lands on, local or SSO. Fallback only, and `admin` is clamped to `member` — see [Authentication and SSO](Authentication-and-SSO). `auth.oidc_default_role` is **not read at all**: rename it to this key |

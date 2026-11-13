@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -205,20 +206,105 @@ type auth struct {
 	pendingRotations sync.Map
 }
 
+// ErrEmptySessionSecret means the service was handed no JWT signing key. An
+// empty HMAC key is not "no authentication", it is a key everyone knows: any
+// caller could sign their own claims, so nothing here ever signs or verifies
+// with one.
+var ErrEmptySessionSecret = errors.New("session signing secret is empty")
+
+// MinSessionSecretLen is the shortest signing secret the service accepts, in
+// bytes once surrounding whitespace is trimmed. It is a floor, not a strength
+// estimate: what it rules out is a secret that is only technically non-empty —
+// a lone space, a byte-order mark, the six bytes PowerShell writes for an
+// empty UTF-16 file — and so is as public as the empty key. Every secret
+// Streamline generates itself is 32 bytes or more before encoding.
+const MinSessionSecretLen = 16
+
+// ErrShortSessionSecret means the signing key is under MinSessionSecretLen.
+var ErrShortSessionSecret = fmt.Errorf(
+	"session signing secret is shorter than %d bytes",
+	MinSessionSecretLen,
+)
+
+// CheckSessionSecret reports whether secret can be a JWT signing key:
+// ErrEmptySessionSecret when nothing but whitespace is there,
+// ErrShortSessionSecret under the floor, nil otherwise.
+func CheckSessionSecret(secret string) error {
+	switch n := len(strings.TrimSpace(secret)); {
+	case n == 0:
+		return ErrEmptySessionSecret
+	case n < MinSessionSecretLen:
+		return ErrShortSessionSecret
+	}
+	return nil
+}
+
+// CheckConfiguredSessionSecret judges the secret the loaded config names, and
+// words the failure for the operator who has to fix it. Nothing configured at
+// all is not a failure — the server generates one at boot. It is what both
+// the boot and `streamline config validate` ask, so the second predicts the
+// first.
+func CheckConfiguredSessionSecret() error {
+	a := config.Get().Auth
+	secret := config.SecretValue(a.SessionSecret, a.SessionSecretFile)
+	if a.SessionSecretFile == "" && secret == "" {
+		return nil
+	}
+	err := CheckSessionSecret(secret)
+	switch {
+	case err == nil:
+		return nil
+	case a.SessionSecretFile != "":
+		return fmt.Errorf(
+			"auth.session_secret_file %q: %w: write the session secret to it, or remove the key to have one generated",
+			a.SessionSecretFile,
+			err,
+		)
+	}
+	return fmt.Errorf(
+		"auth.session_secret: %w: set a longer one, or remove the key to have one generated",
+		err,
+	)
+}
+
 // New constructs a Manager using session credentials from the process-wide
-// config singleton. Returns an error if auth.session_ttl fails to parse.
+// config singleton. Returns an error if auth.session_ttl fails to parse, or
+// what CheckSessionSecret says of the configured secret — an
+// auth.session_secret_file that reads back empty included.
 func New(store db.Store) (Manager, error) {
+	cfg := config.Get()
+	return NewWithSecret(
+		store,
+		config.SecretValue(cfg.Auth.SessionSecret, cfg.Auth.SessionSecretFile),
+	)
+}
+
+// NewWithSecret is New with the signing secret supplied by the caller rather
+// than read from the config. It is for a caller that has no use for the
+// configured one — the CLI, which signs nothing that outlives the command.
+func NewWithSecret(store db.Store, sessionSecret string) (Manager, error) {
 	cfg := config.Get()
 	ttl, err := time.ParseDuration(cfg.Auth.SessionTTL)
 	if err != nil {
 		return nil, fmt.Errorf("parse auth.session_ttl: %w", err)
 	}
+	if err := CheckSessionSecret(sessionSecret); err != nil {
+		return nil, err
+	}
 	a := &auth{db: store, jwtTTL: ttl, touches: newTouchDebounce()}
-	secret := []byte(
-		config.SecretValue(cfg.Auth.SessionSecret, cfg.Auth.SessionSecretFile),
-	)
+	secret := []byte(sessionSecret)
 	a.jwtSecret.Store(&secret)
 	return a, nil
+}
+
+// signingKey returns the live HMAC key, refusing an empty one. New and
+// applyJWTSecret already keep an empty key out; this is the last line, on the
+// two paths where one would actually be used.
+func (s *auth) signingKey() ([]byte, error) {
+	if k := s.jwtSecret.Load(); k != nil && len(*k) > 0 {
+		return *k, nil
+	}
+	return nil, ErrEmptySessionSecret
 }
 
 // Register creates a new user with a bcrypt-hashed password
@@ -708,8 +794,12 @@ func (s *auth) issueToken(
 		ID:          jti,
 	}
 
+	key, err := s.signingKey()
+	if err != nil {
+		return "", fmt.Errorf("sign token: %w", err)
+	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString(*s.jwtSecret.Load())
+	signed, err := token.SignedString(key)
 	if err != nil {
 		return "", fmt.Errorf("sign token: %w", err)
 	}
@@ -735,7 +825,7 @@ func (s *auth) ValidateToken(tokenString string) (*Claims, error) {
 					token.Header["alg"],
 				)
 			}
-			return *s.jwtSecret.Load(), nil
+			return s.signingKey()
 		},
 	)
 	if err != nil {

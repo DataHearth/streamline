@@ -88,42 +88,11 @@ func httpAccessSkip(r *http.Request) bool {
 // Logging uses the process-wide slog.Default installed by cmd/main.go after
 // observability.Setup, so no logger is plumbed through component constructors.
 func NewFromConfig(ctx context.Context) (*App, error) {
-	cfg := config.Get()
-
-	// 1. Ensure a session secret exists. Try to persist it to the backing
-	//    config file so sessions survive restarts. If persistence fails
-	//    (no backing file in tests, read-only mount in compose/k8s), fall
-	//    back to an in-memory secret and warn — sessions will then reset
-	//    every restart, which is preferable to refusing to boot.
-	if config.SecretValue(cfg.Auth.SessionSecret, cfg.Auth.SessionSecretFile) == "" {
-		secret, err := generateSessionSecret()
-		if err != nil {
-			return nil, fmt.Errorf("generate session secret: %w", err)
-		}
-		if err := config.Update(ctx, func(c *config.Config) error {
-			c.Auth.SessionSecret = secret
-			return nil
-		}); err != nil {
-			if errors.Is(err, config.ErrNoPath) ||
-				errors.Is(err, config.ErrReadOnly) {
-				slog.WarnContext(
-					ctx,
-					"session secret not persisted (read-only or no backing file) — set auth.session_secret to keep sessions across restarts",
-				)
-			} else {
-				slog.WarnContext(
-					ctx,
-					"could not persist generated session secret — sessions will not survive restart",
-					"error",
-					err,
-				)
-			}
-			cfg.Auth.SessionSecret = secret
-		} else {
-			cfg = config.Get()
-			slog.InfoContext(ctx, "generated and persisted new session secret")
-		}
+	// 1. Ensure a session secret exists.
+	if err := ensureSessionSecret(ctx); err != nil {
+		return nil, err
 	}
+	cfg := config.Get()
 
 	// Plex client identifier: a stable per-install ID required by Plex's PIN
 	// OAuth flow. Generated lazily — only once a Plex server is configured —
@@ -659,6 +628,66 @@ func apiFailureLimiter() auth.Limiter {
 		return nil
 	}
 	return auth.NewLimiter(uint8(limit), 15*time.Minute)
+}
+
+// ensureSessionSecret leaves the config singleton holding a usable JWT
+// signing secret, or returns an error.
+//
+// With nothing configured it generates one and tries to persist it to the
+// backing config file so sessions survive restarts. If persistence fails (no
+// backing file in tests, read-only mount in compose/k8s), it falls back to an
+// in-memory secret and warns — sessions will then reset every restart, which
+// is preferable to refusing to boot.
+//
+// A configured auth.session_secret_file that reads back empty is different: it
+// is a secret that has not materialised yet, not a request to generate one.
+// Boot fails, exactly as it does when the file is missing. Generating
+// would have nowhere to go — session_secret cannot be written into a config
+// that names session_secret_file, and every reader resolves the pair through
+// config.SecretValue, where the file wins — so the instance would run on the
+// empty key, and an empty HMAC key lets any caller sign their own claims.
+//
+// A configured secret under auth.MinSessionSecretLen fails the boot too, file
+// or inline: a file holding only a byte-order mark is not empty, and is no
+// more of a secret.
+func ensureSessionSecret(ctx context.Context) error {
+	if err := auth.CheckConfiguredSessionSecret(); err != nil {
+		return err
+	}
+	cfg := config.Get()
+	if config.SecretValue(
+		cfg.Auth.SessionSecret,
+		cfg.Auth.SessionSecretFile,
+	) != "" {
+		return nil
+	}
+	secret, err := generateSessionSecret()
+	if err != nil {
+		return fmt.Errorf("generate session secret: %w", err)
+	}
+	if err := config.Update(ctx, func(c *config.Config) error {
+		c.Auth.SessionSecret = secret
+		return nil
+	}); err != nil {
+		if errors.Is(err, config.ErrNoPath) ||
+			errors.Is(err, config.ErrReadOnly) {
+			slog.WarnContext(
+				ctx,
+				"session secret not persisted (read-only or no backing file) — set auth.session_secret to keep sessions across restarts",
+			)
+		} else {
+			slog.WarnContext(
+				ctx,
+				"could not persist generated session secret — sessions will not survive restart",
+				"error",
+				err,
+			)
+		}
+		cfg.Auth.SessionSecret = secret
+		return nil
+	}
+	slog.InfoContext(ctx, "generated and persisted new session secret")
+	return nil
 }
 
 // generateSessionSecret returns 64 bytes of crypto/rand encoded as base64.
