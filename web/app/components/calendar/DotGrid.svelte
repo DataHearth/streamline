@@ -70,8 +70,11 @@
 					<span
 						class={cn(
 							"font-mono text-[13px] font-semibold leading-none tabular",
+							// An out-of-month day steps down by weight and one grey, never
+							// by opacity: fg-subtle at 60% is 2.7:1 on a live button. It is
+							// never the selected one (the page's `select` moves the month).
 							!cell.inMonth
-								? "text-fg-subtle opacity-60"
+								? "font-normal text-fg-subtle"
 								: isSelected || isCurrent
 									? "text-accent-text"
 									: "text-fg-muted",

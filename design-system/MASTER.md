@@ -59,11 +59,13 @@ Principles:
 --fg:            #F5F5F7    /* primary */
 --fg-muted:      #C8C8D2    /* secondary (passes 4.5:1 on bg-elevated) */
 --fg-subtle:     #8A8A99    /* tertiary, axis labels, helper */
---fg-faint:      #74748A    /* icons, separators, disabled states — never text (passes 3:1 on every surface, not 4.5:1) */
+--fg-faint:      #74748A    /* icons, separators, disabled states — never text (passes 3:1 on every flat surface, not 4.5:1) */
 --fg-on-accent:  #0B0B10
 ```
 
-Never use `--fg-subtle` for body copy. Labels/axis/helper only. It is also the lowest grey any text may take — eyebrows (`LIBRARY`, `OPERATIONS`), table heads, counters, metadata and placeholders included: at 4.54–5.77:1 it is the only grey below `--fg-muted` that clears WCAG's 4.5:1 for small text (1.4.3) on every surface.
+Never use `--fg-subtle` for body copy. Labels/axis/helper only. It is also the lowest grey any text may take — eyebrows (`LIBRARY`, `OPERATIONS`), table heads, counters, metadata and placeholders included: at 4.54–5.77:1 it is the only grey below `--fg-muted` that clears WCAG's 4.5:1 for small text (1.4.3) on every flat surface (`--bg-deep` to `--bg-hover`).
+
+That holds on the flat surfaces only. A translucent white overlay (`bg-surface`, `bg-surface-2`, `bg-white/[0.04]`, `bg-white/[0.06]`) lightens what is under it: `--fg-subtle` stays above 4.5:1 on an overlay over `--bg-deep`, `--bg-base` or `--bg-elevated` (4.58:1 at worst), and falls to 4.45:1 on 4% over `--bg-card`, 4.19:1 on 6%, lower still over `--bg-hover`. Text on an overlay that sits on `--bg-card`, `--bg-hover`, an image or another overlay takes `--fg-muted`: the count pill of an active tab, a tag inside a card, a pill over a hero backdrop. `opacity-*` on text, or on a container holding text, is the same subtraction: `--fg-subtle` at 60% is 2.7:1, and `--fg-muted` needs 60% or more to stay above 4.5:1 on `--bg-elevated`. Step down with weight or one grey instead.
 
 `--fg-faint` is for what is not read as text: Lucide icons and a wrapper holding nothing but icons, separator glyphs (`·`, `/`, `→`, a `—` standing for no value, a `before:content-['·']` bullet), the empty-state art behind a missing poster, and disabled states (`disabled:text-fg-faint`, exempt under 1.4.3). It passes 3:1, the floor for icons (§9). A text element that wants to read quieter than its neighbours does it with size, weight or case, not with this token.
 
@@ -494,7 +496,8 @@ Copy-paste this block into every PR description that touches UI.
 **Contrast**
 - [ ] Primary text `--fg` (≥7:1)
 - [ ] Secondary `--fg-muted` (≥4.5:1)
-- [ ] `--fg-subtle` only for labels/helpers, and the lowest grey any text takes (≥4.5:1)
+- [ ] `--fg-subtle` only for labels/helpers, and the lowest grey any text takes (≥4.5:1 on flat surfaces)
+- [ ] Text on a translucent overlay over `--bg-card`, `--bg-hover` or an image is `--fg-muted`; no `opacity-*` below 60 over text
 - [ ] Icons ≥3:1 on their surface (`--fg-faint` is the lowest token that passes); no text in `--fg-faint` but separators and disabled states
 
 **Layout**
