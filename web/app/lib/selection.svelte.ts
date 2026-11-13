@@ -26,6 +26,10 @@ export class Selection<K> {
 		else next.delete(key);
 		this.keys = next;
 	}
+	// A toolbar's toggle: selection mode on, nothing picked yet.
+	start() {
+		this.#mode = true;
+	}
 	// The long press: selection mode on, and the held row with it.
 	begin(key: K) {
 		this.#mode = true;

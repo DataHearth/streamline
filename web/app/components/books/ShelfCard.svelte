@@ -6,6 +6,8 @@
 	import BookCover from "./BookCover.svelte";
 	import SeriesCover from "./SeriesCover.svelte";
 	import LibraryActions from "@components/shared/LibraryActions.svelte";
+	import SelectBox from "@components/shared/SelectBox.svelte";
+	import { longPress } from "@lib/long-press";
 	import { bookPosterUrl } from "@lib/posters";
 	import { formatLabel, kindLabel, type FormatState, type ShelfItem } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -13,8 +15,29 @@
 	// A cover on a shelf or in a kind's grid. A series is one card fanning its
 	// first volumes; a book shows which formats it follows, white when that
 	// format is in the library, amber when it is wanted.
-	let { item }: { item: ShelfItem } = $props();
+	// Selection as on PosterCard: opt-in through onSelect, the box behind hover
+	// until something is selected, and a touch long press starts it.
+	let {
+		item,
+		selected = false,
+		selectionActive = false,
+		onSelect,
+		onLongPress,
+	}: {
+		item: ShelfItem;
+		selected?: boolean;
+		selectionActive?: boolean;
+		onSelect?: (v: boolean) => void;
+		onLongPress?: () => void;
+	} = $props();
 	let canEdit = $derived(auth.canAddDirectly);
+	// While selecting, the card is a selection target rather than a link.
+	// Capture phase: Routify's click scope sits below Svelte's delegated root.
+	function onCardClick(e: MouseEvent) {
+		if (!onSelect || !selectionActive) return;
+		e.preventDefault();
+		onSelect(!selected);
+	}
 	let isSeries = $derived(item.type === "series");
 	let hasFiles = $derived(isSeries ? (item.volumes_have ?? 0) > 0 : (item.formats ?? []).some((f) => f.state === "available"));
 
@@ -26,9 +49,10 @@
 		s === "available" ? i18n.status_available() : s === "downloading" ? i18n.status_downloading() : i18n.status_wanted();
 </script>
 
-<div class="group relative">
+<div class="group relative" use:longPress={{ onLongPress: () => onLongPress?.(), disabled: !onLongPress || selectionActive }}>
 <a
 	{href}
+	onclickcapture={onCardClick}
 	class="relative block rounded-lg transition duration-200 hover:scale-[1.02] focus:outline-none focus-visible:scale-[1.02]"
 	title={item.title}
 >
@@ -36,6 +60,7 @@
 		class={cn(
 			"relative overflow-hidden rounded-lg transition group-hover:shadow-[var(--shadow-card-hover)] group-has-[:focus-visible]:shadow-[var(--shadow-card-hover)]",
 			isSeries && "bg-bg-deep",
+			selected && "shadow-[0_0_0_2px_var(--accent)]",
 		)}
 	>
 		{#if isSeries}
@@ -73,7 +98,12 @@
 				{/if}
 			</p>
 		</div>
-		<div class="absolute left-2 top-2">
+		<div
+			class={cn(
+				"absolute left-2 top-2 transition",
+				onSelect && (selectionActive ? "opacity-0" : "group-hover:opacity-0 group-has-[:focus-visible]:opacity-0"),
+			)}
+		>
 			<StatusPill status={item.status} size="sm" live={item.status === "downloading"} />
 		</div>
 		{#if item.status === "downloading"}
@@ -83,7 +113,24 @@
 		{/if}
 	</div>
 </a>
-{#if canEdit}
+{#if onSelect}
+	<div
+		class={cn(
+			"absolute left-2 top-2 z-10 transition",
+			selectionActive
+				? "opacity-100"
+				: "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-has-[:focus-visible]:pointer-events-auto group-has-[:focus-visible]:opacity-100",
+		)}
+	>
+		<SelectBox
+			variant="card"
+			checked={selected}
+			onChange={(v) => onSelect(v)}
+			label={selected ? i18n.a11y_deselect_item({ title: item.title }) : i18n.a11y_select_item({ title: item.title })}
+		/>
+	</div>
+{/if}
+{#if canEdit && !selectionActive}
 	<div class="pointer-events-none absolute right-2 top-2 opacity-0 transition duration-200 group-hover:pointer-events-auto group-hover:opacity-100 group-has-[:focus-visible]:pointer-events-auto group-has-[:focus-visible]:opacity-100">
 		<LibraryActions
 			base={isSeries ? `/books/series/${item.id}` : `/books/${item.id}`}

@@ -7,6 +7,8 @@
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import LibraryActions from "@components/shared/LibraryActions.svelte";
+	import SelectBox from "@components/shared/SelectBox.svelte";
+	import { longPress } from "@lib/long-press";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// One artist in the library grid, the way a show is one poster in Series:
@@ -25,6 +27,10 @@
 		onSearch,
 		onMonitor,
 		monitorPending = false,
+		selected = false,
+		selectionActive = false,
+		onSelect,
+		onLongPress,
 	}: {
 		artist: Artist;
 		canEdit?: boolean;
@@ -32,7 +38,21 @@
 		onMonitor?: () => void;
 		// The monitor write is in flight.
 		monitorPending?: boolean;
+		// Selection as on PosterCard: opt-in through onSelect, the box behind
+		// hover until something is selected, and a touch long press starts it.
+		selected?: boolean;
+		selectionActive?: boolean;
+		onSelect?: (v: boolean) => void;
+		onLongPress?: () => void;
 	} = $props();
+
+	// While selecting, the card is a selection target rather than a link.
+	// Capture phase: Routify's click scope sits below Svelte's delegated root.
+	function onCardClick(e: MouseEvent) {
+		if (!onSelect || !selectionActive) return;
+		e.preventDefault();
+		onSelect(!selected);
+	}
 
 	let t = $derived(artistTally(a));
 	let now = $derived(artistNow(a));
@@ -64,12 +84,19 @@
 		"grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-black/65 text-white backdrop-blur-sm transition hover:bg-black/80 lg:h-7 lg:w-7";
 </script>
 
-<div class="group relative flex min-w-0 flex-col items-center text-center">
+<div
+	class="group relative flex min-w-0 flex-col items-center text-center"
+	use:longPress={{ onLongPress: () => onLongPress?.(), disabled: !onLongPress || selectionActive }}
+>
 	<div class="relative w-[88%] max-w-[120px]">
 		<a
 			{href}
 			aria-label={a.name}
-			class="relative block aspect-square rounded-full transition duration-200 group-hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep"
+			onclickcapture={onCardClick}
+			class={cn(
+				"relative block aspect-square rounded-full transition duration-200 group-hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep",
+				selected && "ring-2 ring-accent ring-offset-2 ring-offset-bg-deep",
+			)}
 		>
 			<svg class="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 100 100" aria-hidden="true">
 				<circle cx="50" cy="50" r={R} fill="none" stroke="rgb(255 255 255 / 0.08)" stroke-width="2.6" />
@@ -98,7 +125,7 @@
 			<span
 				class={cn(
 					"pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[40%] rounded-full transition",
-					canEdit && "group-hover:opacity-0 group-has-[:focus-visible]:opacity-0",
+					canEdit && !selectionActive && "group-hover:opacity-0 group-has-[:focus-visible]:opacity-0",
 				)}
 			>
 				<LabelPill token={pill.token} label={pill.label} live={pill.live} />
@@ -107,7 +134,25 @@
 
 		<!-- The pill makes way for the actions while the card is hovered or
 		     focused, as PosterCard's status does for its checkbox. -->
-		{#if canEdit}
+		{#if onSelect}
+			<div
+				class={cn(
+					"absolute left-0 top-0 z-10 transition",
+					selectionActive
+						? "opacity-100"
+						: "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-has-[:focus-visible]:pointer-events-auto group-has-[:focus-visible]:opacity-100",
+				)}
+			>
+				<SelectBox
+					variant="card"
+					checked={selected}
+					onChange={(v) => onSelect(v)}
+					label={selected ? i18n.a11y_deselect_item({ title: a.name }) : i18n.a11y_select_item({ title: a.name })}
+				/>
+			</div>
+		{/if}
+
+		{#if canEdit && !selectionActive}
 			<div
 				class="pointer-events-none absolute bottom-0 left-1/2 flex -translate-x-1/2 translate-y-[45%] gap-1 opacity-0 transition duration-200 group-hover:pointer-events-auto group-hover:opacity-100 group-has-[:focus-visible]:pointer-events-auto group-has-[:focus-visible]:opacity-100"
 			>
@@ -146,6 +191,7 @@
 		{href}
 		tabindex="-1"
 		aria-hidden="true"
+		onclickcapture={onCardClick}
 		class="mt-4 line-clamp-2 w-full text-[13px] font-semibold leading-snug text-fg transition group-hover:text-accent-text"
 	>
 		{a.name}

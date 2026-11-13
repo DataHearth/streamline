@@ -2,14 +2,18 @@
 	import { onMount, tick, untrack } from "svelte";
 	import { createInfiniteQuery, createQuery, keepPreviousData } from "@tanstack/svelte-query";
 	import { Eye, Tags } from "@lucide/svelte";
-	import { api, errorText, PAGE_LIMIT, type Paginated } from "@lib/api";
+	import { api, apiAllPages, errorText, PAGE_LIMIT, type Paginated } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { createAction, monitorToast, MUSIC, searchFailed, updateFailed } from "@lib/actions";
 	import { cn } from "@lib/cn";
 	import { formatRelative } from "@lib/dates";
 	import { loadPref, savePref } from "@lib/prefs";
 	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
+	import { NOUN_ARTIST } from "@lib/nouns";
+	import { Selection } from "@lib/selection.svelte";
+	import { toast } from "@lib/toast";
 	import LibraryToolbar from "@components/shared/LibraryToolbar.svelte";
+	import LibraryBulkActions, { type BulkRow } from "@components/shared/LibraryBulkActions.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import ArtistCard from "@components/music/ArtistCard.svelte";
 	import ArtistTable from "@components/music/ArtistTable.svelte";
@@ -423,6 +427,63 @@
 	}));
 	let monitorPendingId = $derived(toggleMonitor.isPending ? (toggleMonitor.variables?.id ?? null) : null);
 
+	// ── Selection ────────────────────────────────────────────────────────────
+	const sel = new Selection<string>();
+	const bulkRow = (a: Artist): BulkRow => ({
+		key: String(a.id),
+		base: `/music/artists/${a.id}`,
+		hasFiles: a.size > 0,
+		monitor: { on: "all", off: "none", current: a.monitor !== "none" },
+	});
+	// "Select all" reads every match; a hand-picked selection reads the loaded
+	// cards. Dropped with the selection.
+	let fetchedRows = $state<BulkRow[] | null>(null);
+	let bulkRows = $derived(fetchedRows ?? items.map(bulkRow));
+	// Bumped whenever a selection is cleared, so a select all still in flight
+	// when the filters change does not select the next filter's rows.
+	let selectionEpoch = 0;
+	async function selectAll() {
+		sel.start();
+		const epoch = selectionEpoch;
+		let all: Artist[];
+		try {
+			// ponytail: walks the full list pages, album tiles included; a slim
+			// /music/artists/selection like the movies' one when a library makes
+			// this slow.
+			all = (await apiAllPages<Artist>(`/music/artists?${filterParams()}`)).items;
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_unknown_error()));
+			return;
+		}
+		if (epoch !== selectionEpoch) return;
+		fetchedRows = all.map(bulkRow);
+		sel.selectAll(fetchedRows.map((r) => r.key));
+	}
+	function clearSelection() {
+		selectionEpoch++;
+		fetchedRows = null;
+		sel.clear();
+	}
+	$effect(() => {
+		status;
+		mon;
+		genre;
+		query;
+		untrack(clearSelection);
+	});
+	let selection = $derived(
+		auth.canAddDirectly
+			? {
+					mode: sel.selecting,
+					count: sel.size,
+					total: matched,
+					noun: NOUN_ARTIST,
+					onModeChange: (v: boolean) => (v ? sel.start() : clearSelection()),
+					onSelectAll: selectAll,
+				}
+			: undefined,
+	);
+
 	const GRID =
 		"grid grid-cols-3 gap-x-3 gap-y-6 md:grid-cols-[repeat(auto-fill,minmax(120px,1fr))] md:gap-x-4 md:gap-y-7 lg:gap-x-5";
 </script>
@@ -444,8 +505,9 @@
 		sort="{sort}-{order}"
 		onSortChange={setSort}
 		onReset={reset}
-		{view}
+		view={shownView}
 		onViewChange={(v) => (view = v)}
+		{selection}
 		add={{
 			label: auth.canAddDirectly ? i18n.action_add_artist() : i18n.action_request_artist_title(),
 			onClick: () => openAdd("artist"),
@@ -504,6 +566,9 @@
 						onMonitor={(a) => toggleMonitor.mutate(a)}
 						{monitorPendingId}
 						anchorClass={ANCHOR}
+						selected={selection && sel.keys}
+						onToggle={selection && ((a, v) => sel.toggle(String(a.id), v))}
+						onToggleAll={selection && ((v) => (v ? void selectAll() : clearSelection()))}
 					/>
 				</div>
 			{:else}
@@ -528,6 +593,10 @@
 									onSearch={() => searchMissing.mutate(a)}
 									onMonitor={() => toggleMonitor.mutate(a)}
 									monitorPending={monitorPendingId === a.id}
+									selected={sel.has(String(a.id))}
+									selectionActive={sel.selecting}
+									onSelect={selection && ((v) => sel.toggle(String(a.id), v))}
+									onLongPress={selection && (() => sel.begin(String(a.id)))}
 								/>
 							{/each}
 						</div>
@@ -544,6 +613,20 @@
 			{#if shownView === "grid"}
 				<LetterScroller {letters} {progress} active={scrolling} onScrub={scrub} />
 			{/if}
+		{/if}
+
+		{#if selection}
+			<LibraryBulkActions
+				rows={bulkRows}
+				selected={sel.keys}
+				total={matched}
+				noun={NOUN_ARTIST}
+				media="music"
+				removeBody={i18n.bulk_remove_artists_body()}
+				filesLabel={i18n.music_delete_files_label()}
+				onSelectAll={selectAll}
+				onClear={clearSelection}
+			/>
 		{/if}
 	{/if}
 </div>

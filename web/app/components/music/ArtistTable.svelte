@@ -7,6 +7,7 @@
 	import Poster from "@components/shared/Poster.svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import LibraryActions from "@components/shared/LibraryActions.svelte";
+	import SelectBox from "@components/shared/SelectBox.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The list view: SeriesList's table, one row per artist, with the grid's
@@ -20,6 +21,9 @@
 		onMonitor,
 		monitorPendingId = null,
 		anchorClass = "",
+		selected,
+		onToggle,
+		onToggleAll,
 	}: {
 		sections: Section[];
 		canEdit?: boolean;
@@ -28,7 +32,15 @@
 		monitorPendingId?: number | null;
 		// The scroll margin a letter jump lands with, under the sticky bars.
 		anchorClass?: string;
+		// All three or none: the checkbox column.
+		selected?: Set<string>;
+		onToggle?: (a: Artist, v: boolean) => void;
+		onToggleAll?: (v: boolean) => void;
 	} = $props();
+
+	let loaded = $derived(sections.flatMap((s) => s.items));
+	let pageSelected = $derived(loaded.filter((a) => selected?.has(String(a.id))).length);
+	let allSelected = $derived(loaded.length > 0 && pageSelected === loaded.length);
 
 	// Same precedence as the card's pill: a refused import, what is missing,
 	// what is on its way, then whether the followed releases are all there.
@@ -45,6 +57,16 @@
 	<table class="w-full text-sm">
 		<thead class="bg-bg-elevated/95 text-[10px] uppercase tracking-[0.12em] text-fg-subtle">
 			<tr class="border-b border-border">
+				{#if onToggle}
+					<th scope="col" class="w-10 py-2.5 pl-3">
+						<SelectBox
+							checked={allSelected}
+							indeterminate={pageSelected > 0 && !allSelected}
+							onChange={(v) => onToggleAll?.(v)}
+							label={allSelected ? i18n.common_deselect_all() : i18n.common_select_all()}
+						/>
+					</th>
+				{/if}
 				<th scope="col" class="w-14 px-3 py-2.5" aria-hidden="true"></th>
 				<th scope="col" class="px-3 py-2.5 text-left font-medium">{i18n.music_artist()}</th>
 				<th scope="col" class="hidden w-36 px-3 py-2.5 text-left font-medium @3xl:table-cell">{i18n.music_fact_genre()}</th>
@@ -58,7 +80,7 @@
 			{#each sections as s}
 				{#if s.letter}
 					<tr data-letter={s.letter} class={anchorClass}>
-						<td colspan="7" class="border-b border-border bg-surface px-3 py-1.5">
+						<td colspan={onToggle ? 8 : 7} class="border-b border-border bg-surface px-3 py-1.5">
 							<span class="font-mono text-[11px] font-semibold text-fg">{s.letter}</span>
 							{#if s.count != null}
 								<span class="ml-2 font-mono text-[10.5px] text-fg-subtle">{s.count.toLocaleString()}</span>
@@ -69,7 +91,17 @@
 				{#each s.items as a (a.id)}
 					{@const t = artistTally(a)}
 					{@const failed = artistNow(a).failed}
-					<tr class="group border-b border-border transition last:border-b-0 hover:bg-surface">
+					{@const isSel = selected?.has(String(a.id)) ?? false}
+					<tr class={cn("group border-b border-border transition last:border-b-0 hover:bg-surface", isSel && "bg-accent-soft")}>
+						{#if onToggle}
+							<td class="py-2 pl-3">
+								<SelectBox
+									checked={isSel}
+									onChange={(v) => onToggle(a, v)}
+									label={isSel ? i18n.a11y_deselect_item({ title: a.name }) : i18n.a11y_select_item({ title: a.name })}
+								/>
+							</td>
+						{/if}
 						<td class="px-3 py-2">
 							<!-- The size sits on the inner disc: on the link, tokens.css's
 							     touch floor would stretch it into an oval below lg. -->

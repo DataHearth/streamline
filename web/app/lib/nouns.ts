@@ -38,6 +38,11 @@ export const NOUN_SHOW: Noun = {
 	items: i18n.noun_show_items(),
 };
 
+export const NOUN_ARTIST: Noun = {
+	count: counted(i18n.noun_artist_one, i18n.noun_artist_other),
+	items: i18n.noun_artist_items(),
+};
+
 export const NOUN_ALBUM: Noun = {
 	count: counted(i18n.noun_album_one, i18n.noun_album_other),
 	items: i18n.noun_album_items(),

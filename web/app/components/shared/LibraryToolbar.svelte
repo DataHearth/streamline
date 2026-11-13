@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	import type { Component } from "svelte";
+	import type { Noun } from "@lib/nouns";
 
 	export type ToolbarTab = { key: string; label: string; count?: number; dot?: string };
 	export type ToolbarOption = { key: string; label: string; count?: number };
@@ -11,22 +12,32 @@
 		options: ToolbarOption[];
 		onChange: (v: string) => void;
 	};
+	// A page with bulk actions hands its selection over; without one the
+	// toolbar shows no way into it.
+	export type ToolbarSelection = {
+		mode: boolean;
+		count: number;
+		total: number;
+		noun: Noun;
+		onModeChange: (v: boolean) => void;
+		onSelectAll: () => void;
+	};
 </script>
 
 <script lang="ts">
-	import { ChevronDown, LayoutGrid, List, Plus, Search, SlidersHorizontal, X } from "@lucide/svelte";
+	import { CheckCheck, ChevronDown, LayoutGrid, List, ListChecks, Plus, Search, SlidersHorizontal, X } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { dragScroll } from "@lib/drag-scroll";
 	import DropdownMenu from "@components/shared/DropdownMenu.svelte";
 	import DropdownOption from "@components/shared/DropdownOption.svelte";
 	import MediaFilterSheet from "@components/shared/MediaFilterSheet.svelte";
+	import SelectionTopBar from "@components/shared/SelectionTopBar.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The music and books toolbar: the library toolbars' vocabulary — a status
 	// menu, facet menus, the filter field, a sort and, where a page has two
-	// layouts, the series grid/list switch — without selection, which these
-	// pages have no use for yet. Below md it is the movies phone row: status
-	// chips plus the filter sheet.
+	// layouts, the series grid/list switch and its way into selection. Below md
+	// it is the movies phone row: status chips plus the filter sheet.
 	let {
 		statusLabel,
 		tabs,
@@ -44,6 +55,7 @@
 		view,
 		onViewChange,
 		foldFacets = false,
+		selection,
 	}: {
 		statusLabel: string;
 		tabs: ToolbarTab[];
@@ -65,6 +77,7 @@
 		// bar with two facets and the view switch wraps past the 698px a tablet
 		// leaves it.
 		foldFacets?: boolean;
+		selection?: ToolbarSelection;
 	} = $props();
 
 	let menu = $state<string | null>(null);
@@ -288,6 +301,38 @@
 		</fieldset>
 	{/if}
 
+	<!-- A list's rows carry their own checkboxes; only cards need the mode. -->
+	{#if selection && view !== "list"}
+		{#if selection.mode}
+			<button
+				type="button"
+				onclick={selection.onSelectAll}
+				disabled={selection.total === 0}
+				class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:pointer-events-none disabled:opacity-40"
+			>
+				<CheckCheck size={14} aria-hidden="true" />
+				{i18n.common_select_all()}
+				<span class="font-mono text-[10px] tabular text-fg-subtle">{selection.total}</span>
+			</button>
+		{/if}
+		<button
+			type="button"
+			onclick={() => selection.onModeChange(!selection.mode)}
+			aria-pressed={selection.mode}
+			aria-label={i18n.common_select()}
+			title={i18n.common_select()}
+			class={cn(
+				"grid h-9 w-9 shrink-0 place-items-center rounded-md border transition",
+				selection.mode ? chipOn : "border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg",
+			)}
+		>
+			<ListChecks size={15} aria-hidden="true" />
+		</button>
+		{#if selection.count > 0}
+			<span class="font-mono text-[11px] tabular text-accent-text">{selection.count}</span>
+		{/if}
+	{/if}
+
 	{#if add}
 		<button
 			type="button"
@@ -301,6 +346,15 @@
 </div>
 
 <div class="sticky top-(--top-bar-height) z-20 bg-bg-deep/85 backdrop-blur-md md:hidden">
+	{#if selection?.mode}
+		<SelectionTopBar
+			count={selection.count}
+			total={selection.total}
+			noun={selection.noun}
+			onClear={() => selection.onModeChange(false)}
+			onSelectAll={selection.onSelectAll}
+		/>
+	{/if}
 	<div class="flex items-center gap-2 px-4 py-2">
 		<nav
 			use:dragScroll
@@ -360,8 +414,9 @@
 	</div>
 </div>
 
-<!-- A page with one layout passes no view, and "list" keeps the sheet's layout
-     switch and selection entry out; the switch is md-only either way. -->
+<!-- A page with one layout passes no view: its cards are the sheet's "grid",
+     which is what offers the selection entry, or "list" when it has no
+     selection. The layout switch is md-only either way. -->
 <MediaFilterSheet
 	open={sheetOpen}
 	onClose={() => (sheetOpen = false)}
@@ -370,8 +425,10 @@
 	sortOptions={sorts}
 	{sort}
 	{onSortChange}
-	view={view ?? "list"}
+	noun={selection?.noun}
+	view={view ?? (selection ? "grid" : "list")}
 	onViewChange={onViewChange ?? (() => {})}
+	onSelectMode={selection ? () => selection.onModeChange(true) : undefined}
 	{onReset}
 	{activeCount}
 	extra={facets.length > 0 ? facetChips : undefined}

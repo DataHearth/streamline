@@ -291,6 +291,9 @@ export type ShelfItem = {
 	quality_profile?: string;
 };
 
+// A book and a series can share an id.
+export const shelfKey = (i: ShelfItem) => `${i.type}-${i.id}`;
+
 // Hardcover links a series by slug only; `/series/{id}` is a 404.
 export const hardcoverSeriesHref = (slug?: string) => (slug ? `https://hardcover.app/series/${slug}` : undefined);
 

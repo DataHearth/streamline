@@ -3,7 +3,8 @@
 	import { cn } from "@lib/cn";
 	import { dragScroll } from "@lib/drag-scroll";
 	import ShelfCard from "./ShelfCard.svelte";
-	import type { ShelfItem } from "@lib/music-books";
+	import { shelfKey, type ShelfItem } from "@lib/music-books";
+	import type { Selection } from "@lib/selection.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// One row of covers. From md, arrows appear only while the row overflows;
@@ -13,7 +14,15 @@
 		items,
 		seeAllHref,
 		onSeeAll,
-	}: { title: string; items: ShelfItem[]; seeAllHref?: string; onSeeAll?: () => void } = $props();
+		selection,
+	}: {
+		title: string;
+		items: ShelfItem[];
+		seeAllHref?: string;
+		onSeeAll?: () => void;
+		// Makes the covers selectable, keyed by shelfKey.
+		selection?: Selection<string>;
+	} = $props();
 
 	let scroller = $state<HTMLDivElement | null>(null);
 	let canPrev = $state(false);
@@ -79,9 +88,15 @@
 			"-mx-4 flex snap-x gap-3 overflow-x-auto scroll-px-4 px-4 pb-2 pt-3 [scrollbar-width:none] md:-mx-6 md:gap-4 md:scroll-px-6 md:px-6 [&::-webkit-scrollbar]:hidden",
 		)}
 	>
-		{#each items as it (`${it.type}-${it.id}`)}
+		{#each items as it (shelfKey(it))}
 			<div class="w-[112px] shrink-0 snap-start md:w-[140px]">
-				<ShelfCard item={it} />
+				<ShelfCard
+					item={it}
+					selected={selection?.has(shelfKey(it))}
+					selectionActive={selection?.selecting}
+					onSelect={selection && ((v) => selection.toggle(shelfKey(it), v))}
+					onLongPress={selection && (() => selection.begin(shelfKey(it)))}
+				/>
 			</div>
 		{/each}
 	</div>

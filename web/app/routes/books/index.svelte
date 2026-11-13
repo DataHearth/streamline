@@ -11,7 +11,12 @@
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import Shelf from "@components/books/Shelf.svelte";
 	import ShelfCard from "@components/books/ShelfCard.svelte";
-	import type { BookCounts, ShelfItem } from "@lib/music-books";
+	import { shelfKey, type BookCounts, type ShelfItem } from "@lib/music-books";
+	import { untrack } from "svelte";
+	import { NOUN_TITLE } from "@lib/nouns";
+	import { Selection } from "@lib/selection.svelte";
+	import { toast } from "@lib/toast";
+	import LibraryBulkActions, { type BulkRow } from "@components/shared/LibraryBulkActions.svelte";
 	import type { ScheduleList } from "@lib/types";
 	import { openAdd } from "@lib/add-flow";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -238,6 +243,65 @@
 			.join(" · "),
 	);
 	$effect(() => pageTitle.claim("/books", kind === "all" ? i18n.books_label() : kindTitle));
+
+	// ── Selection ────────────────────────────────────────────────────────────
+	// No monitor switch: a book follows two formats, so "monitor" names none.
+	const sel = new Selection<string>();
+	const bulkRow = (i: ShelfItem): BulkRow => ({
+		key: shelfKey(i),
+		base: i.type === "series" ? `/books/series/${i.id}` : `/books/${i.id}`,
+		hasFiles: i.type === "series" ? (i.volumes_have ?? 0) > 0 : (i.formats ?? []).some((f) => f.state === "available"),
+	});
+	let matched = $derived(kind === "all" ? items.length : (gridQuery.data?.pages?.[0]?.total ?? 0));
+	// A kind's grid is paged, so its "select all" reads every match; the
+	// shelves already hold theirs. Dropped with the selection.
+	let fetchedRows = $state<BulkRow[] | null>(null);
+	let bulkRows = $derived(fetchedRows ?? shown.map(bulkRow));
+	// Bumped whenever a selection is cleared, so a select all still in flight
+	// when the filters change does not select the next filter's rows.
+	let selectionEpoch = 0;
+	async function selectAll() {
+		sel.start();
+		const epoch = selectionEpoch;
+		let all = items;
+		if (kind !== "all") {
+			try {
+				all = (await apiAllPages<ShelfItem>(`/books?${filterParams(true)}`)).items;
+			} catch (e) {
+				toast.err(errorText(e, i18n.common_unknown_error()));
+				return;
+			}
+			if (epoch !== selectionEpoch) return;
+			fetchedRows = all.map(bulkRow);
+		}
+		sel.selectAll(all.map(shelfKey));
+	}
+	function clearSelection() {
+		selectionEpoch++;
+		fetchedRows = null;
+		sel.clear();
+	}
+	$effect(() => {
+		kind;
+		status;
+		author;
+		format;
+		query;
+		untrack(clearSelection);
+	});
+	let selection = $derived(
+		auth.canAddDirectly
+			? {
+					mode: sel.selecting,
+					count: sel.size,
+					total: matched,
+					noun: NOUN_TITLE,
+					onModeChange: (v: boolean) => (v ? sel.start() : clearSelection()),
+					onSelectAll: selectAll,
+				}
+			: undefined,
+	);
+	let shelfSelection = $derived(selection && sel);
 </script>
 
 <div class="flex flex-col pb-6">
@@ -268,6 +332,7 @@
 		sort="{sort}-{order}"
 		onSortChange={setSort}
 		onReset={reset}
+		{selection}
 		add={{
 			label: auth.canAddDirectly ? i18n.action_add_book() : i18n.action_request_book_title(),
 			onClick: () => openAdd("book"),
@@ -303,16 +368,36 @@
 			</div>
 		</div>
 	{:else if kind === "all"}
-		<Shelf title={i18n.books_shelf_recent()} items={recent} />
+		<Shelf title={i18n.books_shelf_recent()} items={recent} selection={shelfSelection} />
 		{#each shelves as s (s.k)}
-			<Shelf title={s.title} items={s.items} seeAllHref={`/books?kind=${s.k}`} onSeeAll={() => openKind(s.k)} />
+			<Shelf title={s.title} items={s.items} seeAllHref={`/books?kind=${s.k}`} onSeeAll={() => openKind(s.k)} selection={shelfSelection} />
 		{/each}
 	{:else}
 		<div class="grid w-full grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-4 gap-y-6 px-4 pt-5 md:grid-cols-[repeat(auto-fill,minmax(170px,1fr))] md:px-6">
-			{#each kindItems as it (`${it.type}-${it.id}`)}
-				<ShelfCard item={it} />
+			{#each kindItems as it (shelfKey(it))}
+				<ShelfCard
+					item={it}
+					selected={sel.has(shelfKey(it))}
+					selectionActive={sel.selecting}
+					onSelect={selection && ((v) => sel.toggle(shelfKey(it), v))}
+					onLongPress={selection && (() => sel.begin(shelfKey(it)))}
+				/>
 			{/each}
 		</div>
 		<div bind:this={pageSentinel} aria-hidden="true"></div>
+	{/if}
+
+	{#if selection}
+		<LibraryBulkActions
+			rows={bulkRows}
+			selected={sel.keys}
+			total={matched}
+			noun={NOUN_TITLE}
+			media="books"
+			removeBody={i18n.bulk_remove_books_body()}
+			filesLabel={i18n.books_delete_files_label()}
+			onSelectAll={selectAll}
+			onClear={clearSelection}
+		/>
 	{/if}
 </div>
