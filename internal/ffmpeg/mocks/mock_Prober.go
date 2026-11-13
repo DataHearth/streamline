@@ -91,6 +91,69 @@ func (_c *MockProber_Available_Call) RunAndReturn(run func() bool) *MockProber_A
 	return _c
 }
 
+// ConvertToFLAC provides a mock function for the type MockProber
+func (_mock *MockProber) ConvertToFLAC(ctx context.Context, src string, dst string) error {
+	ret := _mock.Called(ctx, src, dst)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ConvertToFLAC")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = returnFunc(ctx, src, dst)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockProber_ConvertToFLAC_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ConvertToFLAC'
+type MockProber_ConvertToFLAC_Call struct {
+	*mock.Call
+}
+
+// ConvertToFLAC is a helper method to define mock.On call
+//   - ctx context.Context
+//   - src string
+//   - dst string
+func (_e *MockProber_Expecter) ConvertToFLAC(ctx any, src any, dst any) *MockProber_ConvertToFLAC_Call {
+	return &MockProber_ConvertToFLAC_Call{Call: _e.mock.On("ConvertToFLAC", ctx, src, dst)}
+}
+
+func (_c *MockProber_ConvertToFLAC_Call) Run(run func(ctx context.Context, src string, dst string)) *MockProber_ConvertToFLAC_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProber_ConvertToFLAC_Call) Return(err error) *MockProber_ConvertToFLAC_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockProber_ConvertToFLAC_Call) RunAndReturn(run func(ctx context.Context, src string, dst string) error) *MockProber_ConvertToFLAC_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FFmpegPath provides a mock function for the type MockProber
 func (_mock *MockProber) FFmpegPath() string {
 	ret := _mock.Called()

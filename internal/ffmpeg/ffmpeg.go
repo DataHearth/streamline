@@ -95,6 +95,9 @@ type Prober interface {
 	// Version runs `ffmpeg -version` and returns the version token from its
 	// first line. Errors when ffmpeg is unresolved.
 	Version(ctx context.Context) (string, error)
+	// ConvertToFLAC writes src's first audio stream to dst as FLAC, tags
+	// kept. A failed conversion leaves no file at dst.
+	ConvertToFLAC(ctx context.Context, src, dst string) error
 }
 
 // CLI probes through the ffprobe executable and drives ffmpeg. Both binaries
