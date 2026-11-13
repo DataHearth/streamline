@@ -113,8 +113,17 @@ type sessionRow struct {
 }
 
 func (s *sessionRow) live(now time.Time) bool {
-	return s != nil && len(s.params.Cookies) > 0 &&
-		(s.params.ExpiresAt == nil || s.params.ExpiresAt.After(now))
+	return s != nil && sessionLive(s.params.Cookies, s.params.ExpiresAt, now)
+}
+
+// sessionLive reports a session a login earned and that has not lapsed. A
+// login that authenticates with an API key leaves no cookie, so the expiry
+// keep stamps is what says it happened; a failed login stamps none.
+func sessionLive(cookies map[string]string, expires *time.Time, now time.Time) bool {
+	if expires == nil {
+		return len(cookies) > 0
+	}
+	return expires.After(now)
 }
 
 func newCardigann(
@@ -270,9 +279,10 @@ func (c *Cardigann) login(
 		// wanting. Adopting it is the deduplication the lock exists for —
 		// logging in again would invalidate it on trackers that keep one
 		// session per account.
-		if row != nil && len(row.Cookies) > 0 &&
-			(row.ExpiresAt == nil || row.ExpiresAt.After(time.Now())) &&
-			(c.session == nil || !maps.Equal(row.Cookies, c.session.params.Cookies)) {
+		now := time.Now()
+		if row != nil && sessionLive(row.Cookies, row.ExpiresAt, now) &&
+			(!c.session.live(now) ||
+				!maps.Equal(row.Cookies, c.session.params.Cookies)) {
 			c.engine.Adopt(engine.Session{
 				Cookies: row.Cookies, UserAgent: row.UserAgent,
 			})

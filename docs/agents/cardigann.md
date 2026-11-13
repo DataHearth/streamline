@@ -517,7 +517,10 @@ not to, is `internal/indexer`'s** (`Cardigann.run`).
   indexer logs in and repeats the call **once**; still asked → a failed login.
 - **Sessions** are the jar's cookies for the site URL plus the user agent
   (`engine.Session`), kept in the `IndexerSession` row under the indexer's config name,
-  live for `engine.SessionLifetime` (30 days, Prowlarr's) and extended by every call that
+  live for `engine.SessionLifetime` (30 days, Prowlarr's; **the expiry `keep` stamps is
+  what makes a session live, not its cookies** (`sessionLive`): a login that authenticates
+  with an API key leaves no cookie, and judged by cookies it logged in again before every
+  query) and extended by every call that
   works — written only when they changed or a day of lifetime was used, so an RSS tick does
   not write a row per indexer, and **best effort**: a row that could not be written costs
   one more login later, never the results in hand (`keep` logs and returns nothing). The

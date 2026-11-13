@@ -224,6 +224,22 @@ func memSessions(store *dbmocks.MockStore) map[string]db.IndexerSessionParams {
 	return rows
 }
 
+var _ = Describe("sessionLive", Label("unit", "indexers"), func() {
+	now := time.Now()
+	later, earlier := now.Add(time.Hour), now.Add(-time.Hour)
+
+	DescribeTable("says whether a login is still good",
+		func(cookies map[string]string, expires *time.Time, live bool) {
+			Expect(sessionLive(cookies, expires, now)).To(Equal(live))
+		},
+		Entry("an API-key login, which leaves no cookie", nil, &later, true),
+		Entry("a cookie login", map[string]string{"uid": "1"}, &later, true),
+		Entry("a lapsed one", map[string]string{"uid": "1"}, &earlier, false),
+		Entry("a lapsed API-key login", nil, &earlier, false),
+		Entry("a failed login's row, which stamps no expiry", nil, nil, false),
+	)
+})
+
 var _ = Describe(
 	"a cardigann indexer that logs in",
 	Label("unit", "indexers"),
