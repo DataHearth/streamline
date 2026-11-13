@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Layers } from "@lucide/svelte";
 	import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import Select from "@components/forms/Select.svelte";
 	import { api, errorText } from "@lib/api";
@@ -93,8 +94,9 @@
 		type="button"
 		disabled={open}
 		onclick={() => (open = true)}
-		class="text-left text-xs text-fg-muted underline-offset-2 hover:text-fg hover:underline disabled:opacity-60"
+		class="inline-flex h-11 items-center gap-1.5 text-[13px] font-medium text-accent-text underline-offset-2 hover:underline disabled:opacity-60 lg:h-7"
 	>
+		<Layers size={14} aria-hidden="true" />
 		{i18n.music_edition_change()}
 	</button>
 {/if}
