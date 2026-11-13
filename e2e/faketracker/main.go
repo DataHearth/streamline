@@ -14,7 +14,16 @@
 // resolves episode files against library rows, and the feed matchers resolve
 // "Creator - Title" against monitored albums and books, so an unknown title
 // zero-matches and the release is dropped by design. Album tracks are tagged
-// (artist, album, track number) so the album importer can bind them. Register
+// (artist, album, track number, title) so the album importer can bind them.
+//
+// An album's third field is a track count or its titles, "|" between them:
+// the importer holds a file whose title differs from its track's, so only a
+// titled album is imported without a person. A fourth field replaces the
+// release name, for one the default "Artist - Album [MP3 320]" cannot spell:
+//
+//	-album "IC3PEAK:Skazka:Sčitaločka|Skazka|Privet:IC3PEAK.Skazka[MP3_320](2018)"
+//
+// Register
 // the printed indexer entry (or POST it to /api/v1/indexers), then search and
 // grab, or run the rss-sync job.
 //
@@ -86,6 +95,8 @@ type pack struct {
 	seasonLo int
 	seasonHi int // == seasonLo for a single-season pack
 	episodes int // per season; tracks for an album, parts for an audiobook
+	// titles are an album's track titles, "Track NN" when it was given a count.
+	titles []string
 
 	release  string // release name, e.g. Breaking.Bad.S01.1080p.WEB-DL.x264-FAKE
 	category string // torznab category attr
@@ -140,7 +151,8 @@ func main() {
 	flag.Var(
 		&albumSpecs,
 		"album",
-		`repeatable "Artist:Album:tracks", e.g. "Boards of Canada:Hi Scores:6"`,
+		`repeatable "Artist:Album:tracks[:release name]", tracks a count or `+
+			`"|"-separated titles, e.g. "Boards of Canada:Hi Scores:6"`,
 	)
 	flag.Var(
 		&ebookSpecs,
@@ -309,7 +321,8 @@ func parseCreatorPack(
 	if counted {
 		want = 3
 	}
-	if len(parts) != want {
+	named := kind == kindAlbum && len(parts) == want+1
+	if len(parts) != want && !named {
 		shape := "Creator:Title"
 		if counted {
 			shape += ":count"
@@ -320,6 +333,28 @@ func parseCreatorPack(
 		kind:    kind,
 		creator: strings.TrimSpace(parts[0]),
 		title:   strings.TrimSpace(parts[1]),
+	}
+	if named {
+		p.release = strings.TrimSpace(parts[3])
+		if p.release == "" || strings.ContainsAny(p.release, `/\`) {
+			return nil, fmt.Errorf(
+				"bad %s %q: release name must be a plain folder name",
+				flagName, spec,
+			)
+		}
+	}
+	if kind == kindAlbum && strings.Contains(parts[2], "|") {
+		for t := range strings.SplitSeq(parts[2], "|") {
+			if t = strings.TrimSpace(t); t == "" || strings.ContainsAny(t, `/\`) {
+				return nil, fmt.Errorf(
+					"bad %s %q: track titles must be plain file names",
+					flagName, spec,
+				)
+			}
+			p.titles = append(p.titles, t)
+		}
+		p.episodes = len(p.titles)
+		return p, nil
 	}
 	if p.creator == "" || p.title == "" {
 		return nil, fmt.Errorf(
@@ -388,7 +423,9 @@ func (p *pack) build(dataDir, announce string) error {
 	case kindAlbum:
 		// "Creator - Title" is what splitCreatorTitle wants, [MP3 320] is the
 		// format tier of the embedded template.
-		p.release = fmt.Sprintf("%s - %s [MP3 320]", p.creator, p.title)
+		if p.release == "" {
+			p.release = fmt.Sprintf("%s - %s [MP3 320]", p.creator, p.title)
+		}
 		p.category = "3000"
 		write = p.writeAlbum
 	case kindEbook:
@@ -467,7 +504,7 @@ func (p *pack) writeSeasons(dir string) error {
 // importer can bind the file to a track by number. An existing file is kept
 // as is: the tag writer's frame order is not stable, so rewriting would move
 // the infohash on every restart while live records still point at the old one.
-func (p *pack) writeTrack(dir, name string, n int) error {
+func (p *pack) writeTrack(dir, name, title string, n int) error {
 	path := filepath.Join(dir, name)
 	if _, err := os.Stat(path); err == nil {
 		return nil
@@ -479,7 +516,7 @@ func (p *pack) writeTrack(dir, name string, n int) error {
 		audiotags.KeyArtist:      {p.creator},
 		audiotags.KeyAlbumArtist: {p.creator},
 		audiotags.KeyAlbum:       {p.title},
-		audiotags.KeyTitle:       {fmt.Sprintf("Track %02d", n)},
+		audiotags.KeyTitle:       {title},
 		audiotags.KeyTrackNumber: {strconv.Itoa(n)},
 		audiotags.KeyDiscNumber:  {"1"},
 	}, audiotags.Policy{})
@@ -487,8 +524,12 @@ func (p *pack) writeTrack(dir, name string, n int) error {
 
 func (p *pack) writeAlbum(dir string) error {
 	for n := 1; n <= p.episodes; n++ {
-		name := fmt.Sprintf("%02d - Track %02d.mp3", n, n)
-		if err := p.writeTrack(dir, name, n); err != nil {
+		title := fmt.Sprintf("Track %02d", n)
+		if len(p.titles) > 0 {
+			title = p.titles[n-1]
+		}
+		name := fmt.Sprintf("%02d - %s.mp3", n, title)
+		if err := p.writeTrack(dir, name, title, n); err != nil {
 			return err
 		}
 	}
@@ -498,7 +539,12 @@ func (p *pack) writeAlbum(dir string) error {
 func (p *pack) writeAudiobook(dir string) error {
 	for n := 1; n <= p.episodes; n++ {
 		name := fmt.Sprintf("%s - Part %02d.mp3", p.title, n)
-		if err := p.writeTrack(dir, name, n); err != nil {
+		if err := p.writeTrack(
+			dir,
+			name,
+			fmt.Sprintf("Track %02d", n),
+			n,
+		); err != nil {
 			return err
 		}
 	}
