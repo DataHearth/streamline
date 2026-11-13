@@ -22,6 +22,8 @@ var _ = Describe("Handler: uploads", Label("unit", "server"), func() {
 	BeforeEach(func() {
 		app = newAPIKeyApp()
 		app.addMember("")
+		// A music upload asks whether WAV files convert.
+		app.prober.EXPECT().Available().Return(false).Maybe()
 	})
 
 	postUpload := func(path string) *http.Response {

@@ -107,6 +107,7 @@ var _ = Describe("Receive", Label("unit"), func() {
 			context.Background(),
 			multipart.NewReader(body, boundary),
 			kind,
+			false,
 		)
 	}
 
@@ -185,6 +186,7 @@ var _ = Describe("Receive", Label("unit"), func() {
 			context.Background(),
 			multipart.NewReader(cut, boundary),
 			upload.KindAlbum,
+			false,
 		)
 		Expect(err).To(HaveOccurred())
 		Expect(err).NotTo(MatchError(upload.ErrRejected))
@@ -195,28 +197,47 @@ var _ = Describe("Receive", Label("unit"), func() {
 		"takes a PDF as a booklet on music and as the book on an ebook upload",
 		func() {
 			Expect(
-				upload.Classify(upload.KindAlbum, "Booklet.pdf"),
+				upload.Classify(upload.KindAlbum, "Booklet.pdf", false),
 			).To(Equal(upload.Ignore))
 			Expect(
-				upload.Classify(upload.KindArtist, "A/Booklet.pdf"),
+				upload.Classify(upload.KindArtist, "A/Booklet.pdf", false),
 			).To(Equal(upload.Ignore))
 			Expect(
-				upload.Classify(upload.KindEbook, "book.pdf"),
+				upload.Classify(upload.KindEbook, "book.pdf", false),
 			).To(Equal(upload.Keep))
 			Expect(
-				upload.Classify(upload.KindAudiobook, "book.pdf"),
+				upload.Classify(upload.KindAudiobook, "book.pdf", false),
 			).To(Equal(upload.Refuse))
 		},
 	)
 
+	It("keeps a WAV on a music upload only when WAV converts", func() {
+		Expect(upload.Classify(upload.KindAlbum, "01 a.wav", true)).
+			To(Equal(upload.Keep))
+		Expect(upload.Classify(upload.KindTrack, "01 a.WAV", true)).
+			To(Equal(upload.Keep))
+		Expect(upload.Classify(upload.KindAlbum, "01 a.wav", false)).
+			To(Equal(upload.Refuse))
+		Expect(upload.Classify(upload.KindEbook, "a.wav", true)).
+			To(Equal(upload.Refuse))
+		Expect(upload.CheckNames(upload.KindAlbum, []string{"01 a.wav"}, true)).
+			To(Succeed())
+		Expect(upload.CheckNames(upload.KindAlbum, []string{"01 a.wav"}, false)).
+			To(MatchError(upload.ErrRejected))
+	})
+
 	It("checks names the way the receiver does, before any byte", func() {
 		Expect(
-			upload.CheckNames(upload.KindAlbum, []string{"CD1/01.flac", "x.jpg"}),
+			upload.CheckNames(
+				upload.KindAlbum,
+				[]string{"CD1/01.flac", "x.jpg"},
+				false,
+			),
 		).To(Succeed())
-		err := upload.CheckNames(upload.KindAlbum, []string{"bonus.mkv"})
+		err := upload.CheckNames(upload.KindAlbum, []string{"bonus.mkv"}, false)
 		Expect(err).To(MatchError(upload.ErrRejected))
 		Expect(err).To(MatchError(ContainSubstring("bonus.mkv")))
-		Expect(upload.CheckNames(upload.KindAlbum, []string{"../x.flac"})).
+		Expect(upload.CheckNames(upload.KindAlbum, []string{"../x.flac"}, false)).
 			To(MatchError(upload.ErrRejected))
 	})
 
@@ -228,6 +249,7 @@ var _ = Describe("Receive", Label("unit"), func() {
 			context.Background(),
 			multipart.NewReader(strings.NewReader(body), "b"),
 			upload.KindAlbum,
+			false,
 		)
 		Expect(err).To(MatchError(upload.ErrRejected))
 		Expect(err).To(MatchError(ContainSubstring("cut off")))
@@ -252,6 +274,7 @@ var _ = Describe("Receive", Label("unit"), func() {
 				context.Background(),
 				multipart.NewReader(&buf, mw.Boundary()),
 				upload.KindAlbum,
+				false,
 			)
 			Expect(err).To(MatchError(upload.ErrRejected))
 			Expect(entries(upload.Root())).To(BeEmpty())
@@ -266,6 +289,7 @@ var _ = Describe("Receive", Label("unit"), func() {
 			upload.CheckNames(
 				upload.KindAlbum,
 				[]string{strings.Repeat("a", 300) + ".flac"},
+				false,
 			),
 		).
 			To(MatchError(upload.ErrRejected))
@@ -363,6 +387,7 @@ var _ = Describe("Receive", Label("unit"), func() {
 				context.Background(),
 				multipart.NewReader(panicReader{}, "x"),
 				upload.KindAlbum,
+				false,
 			)
 			Expect(err).To(MatchError(upload.ErrRejected))
 			Expect(err.Error()).To(ContainSubstring("allowed_download_roots"))

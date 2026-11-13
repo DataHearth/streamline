@@ -7,6 +7,7 @@ import (
 
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/music"
@@ -94,9 +95,10 @@ func unprocessableUpload(
 // checked the target.
 func receiver(
 	body *multipart.Reader,
+	wav bool,
 ) func(context.Context, upload.Kind) (*upload.Staged, error) {
 	return func(ctx context.Context, kind upload.Kind) (*upload.Staged, error) {
-		return upload.Receive(ctx, body, kind)
+		return upload.Receive(ctx, body, kind, wav)
 	}
 }
 
@@ -159,7 +161,10 @@ func (s *Server) UploadMusicAlbum(
 			Replace: uploadReplace(request.Params.ReplaceExisting),
 			Title:   uploadTitle(request.Params.Title),
 		}
-		r, uerr := s.music.UploadAlbum(ctx, request.Id, o, receiver(request.Body))
+		r, uerr := s.music.UploadAlbum(
+			ctx, request.Id, o,
+			receiver(request.Body, library.ConvertsWAV(s.prober)),
+		)
 		err = uerr
 		if r != nil {
 			rec = r.ID
@@ -206,7 +211,10 @@ func (s *Server) UploadMusicTrack(
 			Replace: uploadReplace(request.Params.ReplaceExisting),
 			Title:   uploadTitle(request.Params.Title),
 		}
-		r, uerr := s.music.UploadTrack(ctx, request.Id, o, receiver(request.Body))
+		r, uerr := s.music.UploadTrack(
+			ctx, request.Id, o,
+			receiver(request.Body, library.ConvertsWAV(s.prober)),
+		)
 		err = uerr
 		if r != nil {
 			rec = r.ID
@@ -255,7 +263,8 @@ func (s *Server) UploadMusicArtist(
 			Title:   uploadTitle(request.Params.Title),
 		}
 		r, sk, uerr := s.music.UploadArtist(
-			ctx, request.Id, o, receiver(request.Body),
+			ctx, request.Id, o,
+			receiver(request.Body, library.ConvertsWAV(s.prober)),
 		)
 		err = uerr
 		skipped = sk
@@ -310,7 +319,11 @@ func (s *Server) UploadBook(
 			Title:   uploadTitle(request.Params.Title),
 		}
 		r, uerr := s.books.UploadBook(
-			ctx, request.Id, string(request.Params.Slot), o, receiver(request.Body),
+			ctx,
+			request.Id,
+			string(request.Params.Slot),
+			o,
+			receiver(request.Body, false),
 		)
 		err = uerr
 		if r != nil {

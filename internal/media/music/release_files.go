@@ -14,7 +14,6 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
-	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -72,7 +71,7 @@ func (s *Service) AlbumReleaseFiles(
 		return nil, otelx.RecordSpanError(span, err)
 	}
 
-	view := albumFilesView(a, files)
+	view := albumFilesView(a, files, library.ConvertsWAV(s.prober))
 	span.SetAttributes(
 		attribute.Int("files", len(view.Files)),
 		attribute.Int("tracks_matched", countInRelease(view.Tracks)),
@@ -94,11 +93,12 @@ func countInRelease(tracks []ReleaseTrackView) int {
 func albumFilesView(
 	a *ent.Album,
 	files []download.ReleaseFile,
+	wav bool,
 ) *ReleaseFilesView {
 	tracks := a.Edges.Tracks
 	var audio []string
 	for _, f := range files {
-		if audiotags.IsAudioFile(f.Path) {
+		if library.IsReleaseAudio(f.Path, wav) {
 			audio = append(audio, f.Path)
 		}
 	}
@@ -108,7 +108,7 @@ func albumFilesView(
 	view := &ReleaseFilesView{Files: make([]ReleaseFileView, 0, len(files))}
 	for _, f := range files {
 		fv := ReleaseFileView{Path: f.Path, Size: f.Size}
-		if audiotags.IsAudioFile(f.Path) {
+		if library.IsReleaseAudio(f.Path, wav) {
 			if t := matcher.MatchByName(f.Path); t != nil {
 				fv.TrackID = t.ID
 				in[t.ID] = true

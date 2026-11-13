@@ -47,6 +47,7 @@ const (
 	rootName      = ".uploads"
 	partialSuffix = ".partial"
 	cueExt        = ".cue"
+	wavExt        = ".wav"
 	gib           = int64(1) << 30
 	maxNameBytes  = 255
 	maxNamedFiles = 5
@@ -290,8 +291,9 @@ const (
 )
 
 // Classify decides by the file's name alone, so a preview and the receiver
-// cannot disagree.
-func Classify(kind Kind, name string) Verdict {
+// cannot disagree. wav says a music upload's WAV files convert on import
+// (library.ConvertsWAV); otherwise one is refused like any media out of place.
+func Classify(kind Kind, name string, wav bool) Verdict {
 	base := path.Base(name)
 	if strings.HasPrefix(base, ".") {
 		return Ignore
@@ -309,7 +311,7 @@ func Classify(kind Kind, name string) Verdict {
 		_, kept = ebookmeta.AudiobookExtensions[ext]
 	default:
 		_, kept = audiotags.AudioExtensions[ext]
-		kept = kept || ext == cueExt
+		kept = kept || ext == cueExt || (wav && ext == wavExt)
 	}
 	if kept {
 		return Keep
@@ -317,7 +319,7 @@ func Classify(kind Kind, name string) Verdict {
 	_, audio := audiotags.AudioExtensions[ext]
 	_, ebook := ebookmeta.EbookExtensions[ext]
 	_, audiobook := ebookmeta.AudiobookExtensions[ext]
-	if audio || ebook || audiobook || library.MediaExts[ext] {
+	if audio || ebook || audiobook || ext == wavExt || library.MediaExts[ext] {
 		return Refuse
 	}
 	return Ignore
@@ -325,13 +327,13 @@ func Classify(kind Kind, name string) Verdict {
 
 // CheckNames applies the receiver's per-file refusals to a list of names, so a
 // preview can answer them before any byte is sent.
-func CheckNames(kind Kind, names []string) error {
+func CheckNames(kind Kind, names []string, wav bool) error {
 	for _, raw := range names {
 		rel, err := cleanName(raw)
 		if err != nil {
 			return err
 		}
-		if Classify(kind, rel) == Refuse {
+		if Classify(kind, rel, wav) == Refuse {
 			return refusedFile(rel)
 		}
 	}
@@ -366,12 +368,17 @@ func newName() string {
 }
 
 // Receive streams every part of mr into a fresh staging dir.
-func Receive(ctx context.Context, mr *multipart.Reader, kind Kind) (*Staged, error) {
+func Receive(
+	ctx context.Context,
+	mr *multipart.Reader,
+	kind Kind,
+	wav bool,
+) (*Staged, error) {
 	ctx, span := tracer.Start(ctx, "upload.receive")
 	defer span.End()
 	span.SetAttributes(attribute.String("upload.kind", string(kind)))
 
-	staged, err := receive(ctx, mr, kind)
+	staged, err := receive(ctx, mr, kind, wav)
 	outcome := "staged"
 	switch {
 	case err == nil:
@@ -397,7 +404,12 @@ func Receive(ctx context.Context, mr *multipart.Reader, kind Kind) (*Staged, err
 	return staged, otelx.RecordSpanError(span, err)
 }
 
-func receive(ctx context.Context, mr *multipart.Reader, kind Kind) (*Staged, error) {
+func receive(
+	ctx context.Context,
+	mr *multipart.Reader,
+	kind Kind,
+	wav bool,
+) (*Staged, error) {
 	if err := checkRoots(); err != nil {
 		return nil, err
 	}
@@ -460,7 +472,7 @@ func receive(ctx context.Context, mr *multipart.Reader, kind Kind) (*Staged, err
 		if err != nil {
 			return fail(err)
 		}
-		switch Classify(kind, rel) {
+		switch Classify(kind, rel, wav) {
 		case Refuse:
 			return fail(refusedFile(rel))
 		case Ignore:

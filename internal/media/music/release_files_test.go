@@ -8,6 +8,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/internal/download"
+	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	"github.com/datahearth/streamline/internal/indexer"
 )
 
@@ -64,6 +65,30 @@ var _ = Describe("AlbumReleaseFiles", Label("unit", "integration", "music"), fun
 			"House of Eternal Hunt": {false, false},
 			"The Eagle Has Landed":  {false, true},
 		}))
+	})
+
+	It("counts WAV files only when they convert", func() {
+		_, albums := e.seedArtist("Ado", albumSeed{
+			mbid: "rg-k", title: "狂言", tracks: []string{"レディメイド", "踊"},
+		})
+		files := []download.ReleaseFile{
+			{Path: "01 レディメイド.wav", Size: 30},
+			{Path: "02 踊.wav", Size: 40},
+		}
+		e.dl.EXPECT().ReleaseFiles(mock.Anything, release).Return(files, nil).Twice()
+
+		v, err := e.svc.AlbumReleaseFiles(e.ctx, albums[0].ID, release)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(countInRelease(v.Tracks)).To(BeZero())
+
+		prober := mockffmpeg.NewMockProber(GinkgoT())
+		prober.EXPECT().Available().Return(true)
+		prober.EXPECT().FFmpegPath().Return("/bin/ffmpeg")
+		e.svc.prober = prober
+		v, err = e.svc.AlbumReleaseFiles(e.ctx, albums[0].ID, release)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(countInRelease(v.Tracks)).To(Equal(2))
+		Expect(v.Files[0].TrackID).NotTo(BeZero())
 	})
 
 	It("passes the download manager's refusal through", func() {

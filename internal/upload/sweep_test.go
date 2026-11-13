@@ -37,6 +37,7 @@ var _ = Describe("Sweep", Label("unit"), func() {
 				context.Background(),
 				multipart.NewReader(pr, "b"),
 				upload.KindAlbum,
+				false,
 			)
 			Expect(err).To(HaveOccurred())
 		}()

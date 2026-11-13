@@ -16,7 +16,6 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
-	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/upload"
 )
@@ -46,6 +45,7 @@ func (s *Service) AlbumUploadPreview(
 		))
 	defer span.End()
 
+	wav := library.ConvertsWAV(s.prober)
 	a, err := s.db.FindAlbumByID(ctx, albumID)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, albumNotFound(err))
@@ -53,13 +53,17 @@ func (s *Service) AlbumUploadPreview(
 	if err := s.checkAlbumsFree(ctx, albumID); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	if err := upload.CheckNames(upload.KindAlbum, filePaths(files)); err != nil {
+	if err := upload.CheckNames(
+		upload.KindAlbum,
+		filePaths(files),
+		wav,
+	); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	if err := upload.CheckSpace(filesSize(files)); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	view := albumFilesView(a, files)
+	view := albumFilesView(a, files, wav)
 	view.TracksPending = a.MetadataFetchedAt == nil
 	return view, nil
 }
@@ -79,15 +83,20 @@ func (s *Service) ArtistUploadPreview(
 		))
 	defer span.End()
 
+	wav := library.ConvertsWAV(s.prober)
 	art, err := s.db.FindArtistByID(ctx, artistID)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, notFound(err))
 	}
-	if err := upload.CheckNames(upload.KindArtist, filePaths(files)); err != nil {
+	if err := upload.CheckNames(
+		upload.KindArtist,
+		filePaths(files),
+		wav,
+	); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	all := db.ArtistAlbums(art)
-	view := packFilesView(all, all, files)
+	view := packFilesView(all, all, files, wav)
 
 	// Only what would be sent counts: the sheet leaves unmatched folders out.
 	var sent int64
@@ -193,7 +202,11 @@ func (s *Service) UploadTrack(
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	defer staged.Done()
-	if len(staged.Files) != 1 || !audiotags.IsAudioFile(staged.Files[0].Path) {
+	if len(staged.Files) != 1 ||
+		!library.IsReleaseAudio(
+			staged.Files[0].Path,
+			library.ConvertsWAV(s.prober),
+		) {
 		staged.Discard()
 		return nil, otelx.RecordSpanError(span, fmt.Errorf(
 			"%w: a track takes exactly one audio file", upload.ErrRejected))

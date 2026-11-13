@@ -11,7 +11,6 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
-	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -99,7 +98,7 @@ func (s *Service) ArtistPackFiles(
 		}
 	}
 
-	view := packFilesView(linked, all, files)
+	view := packFilesView(linked, all, files, library.ConvertsWAV(s.prober))
 	span.SetAttributes(
 		attribute.Int("files", len(view.Files)),
 		attribute.Int("folders", len(view.Folders)),
@@ -124,6 +123,7 @@ func countNamed(albums []PackAlbumView) int {
 func packFilesView(
 	linked, all []*ent.Album,
 	files []download.ReleaseFile,
+	wav bool,
 ) *DiscographyFilesView {
 	byID := make(map[uint32]*ent.Album, len(all))
 	for _, a := range all {
@@ -134,7 +134,7 @@ func packFilesView(
 	// whether their numbers name the album's tracks.
 	byDir := map[string][]string{}
 	for _, f := range files {
-		if audiotags.IsAudioFile(f.Path) {
+		if library.IsReleaseAudio(f.Path, wav) {
 			dir := library.PackAlbumDir(f.Path)
 			byDir[dir] = append(byDir[dir], f.Path)
 		}
@@ -147,7 +147,7 @@ func packFilesView(
 	in := map[uint32]bool{}
 	for _, f := range files {
 		fv := PackFileView{Path: f.Path, Size: f.Size}
-		if audiotags.IsAudioFile(f.Path) {
+		if library.IsReleaseAudio(f.Path, wav) {
 			dir := library.PackAlbumDir(f.Path)
 			i, seen := folders[dir]
 			if !seen {

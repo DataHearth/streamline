@@ -116,7 +116,7 @@ func (s *Service) BookUploadPreview(
 }
 
 func uploadOutcome(kind upload.Kind, name string) string {
-	switch upload.Classify(kind, name) {
+	switch upload.Classify(kind, name, false) {
 	case upload.Keep:
 		return outcomeKept
 	case upload.Refuse:
