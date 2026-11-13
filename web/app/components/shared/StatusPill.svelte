@@ -14,6 +14,7 @@
 		| "completed"
 		| "fetching"
 		| "stalled"
+		| "checking"
 		| "unaired"
 		| "skipped"
 		// Transcode job states. Each aliases an existing --status-* hue in
@@ -40,6 +41,7 @@
 		completed: i18n.status_completed(),
 		fetching: i18n.status_fetching_metadata(),
 		stalled: i18n.status_stalled(),
+		checking: i18n.status_checking(),
 		unaired: i18n.status_unaired(),
 		skipped: i18n.status_skipped(),
 		queued: i18n.status_queued(),

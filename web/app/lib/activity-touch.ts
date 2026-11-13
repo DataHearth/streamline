@@ -257,6 +257,12 @@ export function torrentMeta(t: Torrent): MetaLine {
 			color: "var(--status-stalled)",
 		};
 	}
+	if (t.status === "checking") {
+		return {
+			text: joinDot([i18n.lc_checking(), pct(t.progress)]),
+			color: "var(--status-checking)",
+		};
+	}
 	if (t.status === "paused") {
 		return { text: joinDot([i18n.queue_paused_at({ pct: pct(t.progress) }), formatBytes(t.size, "")]) };
 	}
@@ -306,10 +312,11 @@ export type SortOrder = "asc" | "desc";
 // stuck ones, then anything merely seeding or done.
 export const TORRENT_STATUS_RANK: Record<string, number> = {
 	downloading: 0,
-	stalled: 1,
-	paused: 2,
-	seeding: 3,
-	completed: 4,
+	checking: 1,
+	stalled: 2,
+	paused: 3,
+	seeding: 4,
+	completed: 5,
 };
 
 // Every key ends on the hash, so no two distinct torrents ever compare equal.

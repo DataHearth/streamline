@@ -50,7 +50,8 @@
 			t.status === "downloading" ||
 			t.status === "seeding" ||
 			t.status === "fetching" ||
-			t.status === "stalled";
+			t.status === "stalled" ||
+			t.status === "checking";
 		const toggle = paused ? onResume : pausable ? onPause : undefined;
 		return {
 			start: toggle && {

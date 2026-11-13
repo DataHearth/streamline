@@ -97,6 +97,7 @@
 	--status-completed: #94a3b8;
 	--status-stalled: #f97316;
 	--status-fetching: #818cf8;
+	--status-checking: var(--status-fetching);
 	/* Episode-only states. Aliases, not new hues: an episode nobody can have
 	   yet reads like anything else that is absent, and skipped reads like
 	   paused. Matches the season-progress and episode-modal mappings. */

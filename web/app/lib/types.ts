@@ -1504,7 +1504,8 @@ export type TorrentStatus =
 	| "completed"
 	| "paused"
 	| "fetching"
-	| "stalled";
+	| "stalled"
+	| "checking";
 
 export type TorrentFilePriority = "skip" | "normal" | "high";
 

@@ -123,7 +123,7 @@
 
 	let fetching = $derived(torrent?.status === "fetching");
 	let canPause = $derived(
-		torrent && (torrent.status === "downloading" || torrent.status === "seeding" || torrent.status === "fetching" || torrent.status === "stalled"),
+		torrent && (torrent.status === "downloading" || torrent.status === "seeding" || torrent.status === "fetching" || torrent.status === "stalled" || torrent.status === "checking"),
 	);
 	let active = $derived(
 		torrent !== null && (torrent.status === "downloading" || torrent.status === "seeding" || torrent.status === "fetching"),

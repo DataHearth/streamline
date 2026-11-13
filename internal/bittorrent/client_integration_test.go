@@ -535,6 +535,57 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 			Should(Equal(download.StatusStalled))
 	})
 
+	It(
+		"reports checking, with no download speed, while hashing a partial download after a restart",
+		func() {
+			tmp := GinkgoT().TempDir()
+			seedDir := filepath.Join(tmp, "seed")
+			dlDir := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(seedDir, 0o755)).To(Succeed())
+			Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+			// Large enough to stop the download half way, and for the check
+			// of that half to outlast many 1ms polls.
+			checkBytes, checkPort := newSeederOfSize(seedDir, 128<<20, 256<<10)
+			checkEngine, closeCheck := newEngine(ctx, dlDir, store)
+
+			hash, err := checkEngine.AddTorrent(ctx, download.TorrentSource{
+				Bytes: checkBytes,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				Expect(store.DeleteTorrentSessionByHash(ctx, hash)).To(Succeed())
+			})
+			connectToSeeder(checkEngine, hash, checkPort)
+			Eventually(func() float64 {
+				t, terr := checkEngine.GetTorrent(ctx, hash)
+				Expect(terr).NotTo(HaveOccurred())
+				return t.Progress
+			}).WithTimeout(60 * time.Second).WithPolling(time.Millisecond).
+				Should(BeNumerically(">", 0.5))
+			closeCheck()
+
+			// The restored engine knows no peer, so everything it reports as
+			// progress is the half already on disk passing its hash again.
+			checkEngine, _ = newEngine(ctx, dlDir, store)
+			var seen []download.TorrentStatus
+			Eventually(func() download.TorrentStatus {
+				t, terr := checkEngine.GetTorrent(ctx, hash)
+				Expect(terr).NotTo(HaveOccurred())
+				if t.Status == download.StatusChecking {
+					Expect(t.DownloadSpeed).To(BeZero())
+				}
+				seen = append(seen, t.Status)
+				return t.Status
+			}).WithTimeout(60 * time.Second).WithPolling(time.Millisecond).
+				Should(Equal(download.StatusStalled))
+			Expect(seen).To(ContainElement(download.StatusChecking))
+			Expect(seen).NotTo(ContainElement(download.StatusDownloading))
+			t, err := checkEngine.GetTorrent(ctx, hash)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(t.Progress).To(BeNumerically(">", 0.4))
+		},
+	)
+
 	It("deletes the incomplete .part file for single-file torrents", func() {
 		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
 			Bytes: torrentBytes,

@@ -2913,6 +2913,7 @@ func (e TVShowType) Valid() bool {
 
 // Defines values for TorrentDetailsStatus.
 const (
+	TorrentDetailsStatusChecking    TorrentDetailsStatus = "checking"
 	TorrentDetailsStatusCompleted   TorrentDetailsStatus = "completed"
 	TorrentDetailsStatusDownloading TorrentDetailsStatus = "downloading"
 	TorrentDetailsStatusFetching    TorrentDetailsStatus = "fetching"
@@ -2924,6 +2925,8 @@ const (
 // Valid indicates whether the value is a known member of the TorrentDetailsStatus enum.
 func (e TorrentDetailsStatus) Valid() bool {
 	switch e {
+	case TorrentDetailsStatusChecking:
+		return true
 	case TorrentDetailsStatusCompleted:
 		return true
 	case TorrentDetailsStatusDownloading:
@@ -2985,6 +2988,7 @@ func (e TorrentFilePriorityUpdatePriority) Valid() bool {
 
 // Defines values for TorrentInfoStatus.
 const (
+	TorrentInfoStatusChecking    TorrentInfoStatus = "checking"
 	TorrentInfoStatusCompleted   TorrentInfoStatus = "completed"
 	TorrentInfoStatusDownloading TorrentInfoStatus = "downloading"
 	TorrentInfoStatusFetching    TorrentInfoStatus = "fetching"
@@ -2996,6 +3000,8 @@ const (
 // Valid indicates whether the value is a known member of the TorrentInfoStatus enum.
 func (e TorrentInfoStatus) Valid() bool {
 	switch e {
+	case TorrentInfoStatusChecking:
+		return true
 	case TorrentInfoStatusCompleted:
 		return true
 	case TorrentInfoStatusDownloading:
@@ -9644,8 +9650,12 @@ type TorrentDetails struct {
 	SeedingStopped bool `json:"seeding_stopped"`
 
 	// Seeds Connected peers holding the complete torrent.
-	Seeds  int                  `json:"seeds"`
-	Size   int64                `json:"size"`
+	Seeds int   `json:"seeds"`
+	Size  int64 `json:"size"`
+
+	// Status `checking` means the engine is hashing data already on disk, which
+	// it does for every unfinished file after a restart; nothing is
+	// requested from peers meanwhile and `download_speed` is 0.
 	Status TorrentDetailsStatus `json:"status"`
 
 	// Tracked False for arbitrary adds not tied to a library item.
@@ -9657,7 +9667,9 @@ type TorrentDetails struct {
 	Uploaded    int64 `json:"uploaded"`
 }
 
-// TorrentDetailsStatus defines model for TorrentDetails.Status.
+// TorrentDetailsStatus `checking` means the engine is hashing data already on disk, which
+// it does for every unfinished file after a restart; nothing is
+// requested from peers meanwhile and `download_speed` is 0.
 type TorrentDetailsStatus string
 
 // TorrentFile defines model for TorrentFile.
@@ -9727,8 +9739,12 @@ type TorrentInfo struct {
 	SeedingStopped bool `json:"seeding_stopped"`
 
 	// Seeds Connected peers holding the complete torrent.
-	Seeds  int               `json:"seeds"`
-	Size   int64             `json:"size"`
+	Seeds int   `json:"seeds"`
+	Size  int64 `json:"size"`
+
+	// Status `checking` means the engine is hashing data already on disk, which
+	// it does for every unfinished file after a restart; nothing is
+	// requested from peers meanwhile and `download_speed` is 0.
 	Status TorrentInfoStatus `json:"status"`
 
 	// Tracked False for arbitrary adds not tied to a library item.
@@ -9739,7 +9755,9 @@ type TorrentInfo struct {
 	Uploaded    int64 `json:"uploaded"`
 }
 
-// TorrentInfoStatus defines model for TorrentInfo.Status.
+// TorrentInfoStatus `checking` means the engine is hashing data already on disk, which
+// it does for every unfinished file after a restart; nothing is
+// requested from peers meanwhile and `download_speed` is 0.
 type TorrentInfoStatus string
 
 // TorrentList defines model for TorrentList.

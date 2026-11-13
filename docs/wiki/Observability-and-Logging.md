@@ -126,7 +126,7 @@ Beyond those, the series worth building alerts on:
 | --- | --- |
 | `streamline.scheduler.job.last_success_unixtime` | "Has this background job stopped running?" A job that silently dies produces no errors to count — only a timestamp that stops advancing. |
 | `streamline.download.client_reachable` | Whether each download client answered its last call. `0` for more than a few minutes means the client is down. |
-| `streamline.bittorrent.stalled_torrents` | Incomplete torrents with no peers. |
+| `streamline.bittorrent.stalled_torrents` | Incomplete torrents with no peers, not counting one that is checking its data. |
 | `streamline.transcoding.running` vs `.max_concurrent` | Saturated or stalled. Queue depth is `streamline_transcode_jobs_by_status{status="queued"}`. |
 | `streamline.importer.outcomes` | Imports by `held` / `failed` / `terminal` / `succeeded`; `streamline.importer.queued` is the backlog. |
 | `streamline.indexer.queries` / `.feeds` | Per-indexer outcome, split into `unauthorized`, `unreachable`, `bad_response`, `bad_request` — an expired API key and a dead tracker are different problems. `bad_request` is a tracker refusing the search itself (Jackett does this for an id its tracker cannot search by); Streamline then asks again with a wider search, and a retry that fails is counted as `retry_<outcome>`. |

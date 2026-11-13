@@ -38,6 +38,22 @@ func wantedMissing(t *antorrent.Torrent) int64 {
 	return wantedBytes(t) - wantedCompleted(t)
 }
 
+// checkingStored reports whether the torrent is hashing data it found on disk
+// rather than data a peer just sent. Opening a torrent sets every complete
+// piece of an unfinished file back to unknown (anacrolix's
+// setCompletionFromPartFiles), so a partial download hashes everything it
+// holds again on each boot. A piece received from a peer is hashed with its
+// completion already known (Ok, not Complete), which is what tells the two
+// apart.
+func checkingStored(t *antorrent.Torrent) bool {
+	for _, run := range t.PieceStateRuns() {
+		if run.Checking && !run.Ok {
+			return true
+		}
+	}
+	return false
+}
+
 // wantedVerified reports whether every piece a wanted file spans has passed
 // its hash check. wantedMissing reaching zero does not say that: anacrolix's
 // File.BytesCompleted counts dirty chunks — written, not yet hashed — as

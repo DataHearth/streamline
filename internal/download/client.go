@@ -9,12 +9,13 @@ const (
 	StatusSeeding     TorrentStatus = "seeding"
 	StatusPaused      TorrentStatus = "paused"
 	StatusCompleted   TorrentStatus = "completed"
-	// StatusFetching (magnet metadata not yet resolved) and StatusStalled
-	// (downloading with no connected peers) are only emitted by the builtin
-	// bittorrent engine; external clients map their equivalents to
-	// StatusDownloading.
+	// StatusFetching (magnet metadata not yet resolved), StatusStalled
+	// (downloading with no connected peers) and StatusChecking (hashing data
+	// already on disk) are only emitted by the builtin bittorrent engine;
+	// external clients map their equivalents to StatusDownloading.
 	StatusFetching TorrentStatus = "fetching"
 	StatusStalled  TorrentStatus = "stalled"
+	StatusChecking TorrentStatus = "checking"
 	StatusError    TorrentStatus = "error"
 )
 

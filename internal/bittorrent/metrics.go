@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -72,7 +73,8 @@ func (e *Engine) registerEngineGauges(ctx context.Context) {
 				torrents++
 				down += l.downloadSpeed
 				up += l.uploadSpeed
-				if l.progress < 1 && l.activePeers == 0 {
+				if l.progress < 1 && l.activePeers == 0 &&
+					l.status != download.StatusChecking {
 					stalledCount++
 				}
 			}

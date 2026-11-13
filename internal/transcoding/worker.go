@@ -744,7 +744,9 @@ func (w *Worker) seeding(
 		}
 		return "", false
 	}
-	live := status == download.StatusDownloading || status == download.StatusSeeding
+	live := status == download.StatusDownloading ||
+		status == download.StatusSeeding ||
+		status == download.StatusChecking
 	return status, live
 }
 

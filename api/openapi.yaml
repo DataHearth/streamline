@@ -13520,7 +13520,11 @@ components:
           type: string
         status:
           type: string
-          enum: [downloading, seeding, completed, paused, fetching, stalled]
+          description: |
+            `checking` means the engine is hashing data already on disk, which
+            it does for every unfinished file after a restart; nothing is
+            requested from peers meanwhile and `download_speed` is 0.
+          enum: [downloading, seeding, completed, paused, fetching, stalled, checking]
         progress:
           type: number
           format: double

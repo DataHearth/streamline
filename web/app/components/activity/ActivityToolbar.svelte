@@ -25,6 +25,7 @@
 		torrents: [
 			{ key: "downloading", label: i18n.lc_downloading(), dot: "downloading" },
 			{ key: "stalled", label: i18n.lc_stalled(), dot: "stalled" },
+			{ key: "checking", label: i18n.lc_checking(), dot: "checking" },
 			{ key: "seeding", label: i18n.lc_seeding(), dot: "seeding" },
 			{ key: "completed", label: i18n.lc_completed(), dot: "completed" },
 			{ key: "paused", label: i18n.lc_paused(), dot: "paused" },

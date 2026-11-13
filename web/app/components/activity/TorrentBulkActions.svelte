@@ -39,7 +39,8 @@
 				t.status === "downloading" ||
 				t.status === "seeding" ||
 				t.status === "fetching" ||
-				t.status === "stalled",
+				t.status === "stalled" ||
+				t.status === "checking",
 		),
 	);
 	let resumable = $derived(picked.filter((t) => t.status === "paused"));

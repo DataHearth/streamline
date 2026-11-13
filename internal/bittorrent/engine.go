@@ -1,7 +1,8 @@
 // Package bittorrent embeds a BitTorrent engine (anacrolix/torrent) exposed
 // as the "builtin" download client. The torrent list survives restarts via
 // the torrent_sessions table; piece completion lives in a bolt file under
-// the download dir, so boot re-adds never re-hash or re-download.
+// the download dir, so boot re-adds never re-download. A finished file is not
+// re-hashed either; an unfinished one is (see checkingStored).
 package bittorrent
 
 import (

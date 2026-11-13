@@ -163,6 +163,8 @@ Live view of the engine's torrents: peers, pieces, ratio, up/down rates. You can
 
 A torrent is listed under the name inside its `.torrent` file, which the uploader chose and which can differ from the release name shown in Queue and History — a RuTracker upload of an album is often just the artist's name. For a torrent Streamline grabbed, the release name appears under the torrent's own, and the search box matches either one (or the infohash).
 
+A torrent marked **Checking** is re-reading data it already has, to make sure it is intact. This happens to every unfinished download after Streamline restarts: its percentage climbs back to where it was, nothing is downloaded meanwhile, and it then carries on (or shows **Stalled** if no peer is connected).
+
 Tick several torrents (or press and hold one on a phone) to **pause**, **resume** or **remove** them together. Removing asks once whether to delete the downloaded files too, and any download Streamline was tracking for a removed torrent goes back to wanted.
 
 On a phone, swipe a torrent right to **pause** or **resume** it, or left to **remove** it, which asks the same question about its files.

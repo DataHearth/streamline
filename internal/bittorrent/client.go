@@ -761,6 +761,12 @@ func (e *Engine) live(t *antorrent.Torrent) liveStats {
 	// constant base into it would change nothing but the first sample.
 	sessionUp := stats.BytesWrittenData.Int64()
 	down, up := e.rates(hash, completed, sessionUp)
+	status := e.status(t, hash)
+	// Every piece that passes the check adds to completed, which rates reads
+	// as bytes arriving.
+	if status == download.StatusChecking {
+		down = 0
+	}
 	var eta int64
 	if down > 0 && size > completed {
 		eta = (size - completed) / down
@@ -769,7 +775,7 @@ func (e *Engine) live(t *antorrent.Torrent) liveStats {
 	return liveStats{
 		hash:           hash,
 		name:           t.Name(),
-		status:         e.status(t, hash),
+		status:         status,
 		progress:       progress,
 		size:           size,
 		downloadSpeed:  down,
@@ -838,6 +844,9 @@ func (e *Engine) status(
 			return download.StatusCompleted
 		}
 		return download.StatusSeeding
+	}
+	if checkingStored(t) {
+		return download.StatusChecking
 	}
 	// Downloading but with nothing to download from: no data can move, so
 	// surface it as stalled rather than a healthy-looking "downloading".
