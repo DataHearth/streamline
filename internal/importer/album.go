@@ -23,6 +23,7 @@ import (
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/quality"
 )
 
 // albumImportMode is the transfer mode an album import uses. A move while the
@@ -46,9 +47,10 @@ func albumImportMode(libCfg config.LibraryConfig) string {
 }
 
 // listAudioFiles returns every audio file at path, which is a file or a
-// directory walked recursively. Unreadable descendants are skipped; only an
+// directory walked recursively, WAV files among them when wav says the import
+// converts them. Unreadable descendants are skipped; only an
 // unreadable root is an error.
-func listAudioFiles(path string) ([]string, error) {
+func listAudioFiles(path string, wav bool) ([]string, error) {
 	var out []string
 	err := filepath.WalkDir(
 		path,
@@ -62,7 +64,7 @@ func listAudioFiles(path string) ([]string, error) {
 			if d.IsDir() {
 				return nil
 			}
-			if audiotags.IsAudioFile(p) {
+			if library.IsReleaseAudio(p, wav) {
 				out = append(out, p)
 			}
 			return nil
@@ -107,7 +109,7 @@ func (w *Worker) AlbumTrackPlan(
 	if alb == nil || rec.Edges.Artist != nil || rec.Edges.Track != nil {
 		return TrackPlan{}, ErrNotSingleAlbum
 	}
-	files, err := listAudioFiles(rec.SavePath)
+	files, err := listAudioFiles(rec.SavePath, library.ConvertsWAV(w.probe))
 	if err != nil {
 		return TrackPlan{}, fmt.Errorf("list album files: %w", err)
 	}
@@ -142,7 +144,7 @@ func (w *Worker) importAlbumRecord(
 	rec *ent.DownloadRecord,
 	libCfg config.LibraryConfig,
 ) error {
-	files, err := listAudioFiles(rec.SavePath)
+	files, err := listAudioFiles(rec.SavePath, library.ConvertsWAV(w.probe))
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("list album files: %w", err))
 	}
@@ -296,7 +298,44 @@ func (w *Worker) importAlbumFiles(
 	// between. Released before the album is tagged, which takes it per file.
 	unlockFiles := library.LockAlbumFiles(alb.ID)
 	defer unlockFiles()
+	// A WAV is converted here and its FLAC moved into place: the library
+	// never holds the WAV, and the source stays as the torrent has it.
+	convertDir := ""
+	defer func() {
+		if convertDir == "" {
+			return
+		}
+		if err := os.RemoveAll(convertDir); err != nil {
+			slog.WarnContext(ctx, "album import: conversion folder not removed",
+				"path", convertDir, "error", err)
+		}
+	}()
 	for _, f := range plan {
+		src, fileMode, format, q := f.path, mode, f.info.Format, f.q
+		if isWAV(f.path) {
+			if convertDir == "" {
+				dir, err := os.MkdirTemp(libCfg.MusicPath, convertDirPattern)
+				if err != nil {
+					firstErr = errors.Join(firstErr, err)
+					continue
+				}
+				convertDir = dir
+			}
+			converted, measured, err := w.convertWAV(ctx, f.path, convertDir)
+			if err != nil {
+				slog.WarnContext(ctx, "album import: WAV conversion failed",
+					"file", filepath.Base(f.path), "track.id", f.tr.ID, "error", err)
+				firstErr = errors.Join(firstErr, err)
+				continue
+			}
+			src, fileMode, format = converted, "move", "flac"
+			// The FLAC is what the library holds: a float WAV measures 32-bit
+			// and its FLAC 24.
+			facts := library.AudioFactsFromProbe(measured)
+			q.tier, q.known = quality.AudioTierOf(facts)
+			q.probed = true
+			q.bitDepth, q.sampleRateHz = facts.BitDepth, facts.SampleRateHz
+		}
 		old := f.tr.Edges.MediaFiles
 		moved, err := setAside(ctx, old)
 		if err != nil {
@@ -306,13 +345,13 @@ func (w *Worker) importAlbumFiles(
 			continue
 		}
 		imported, err := w.lib.ImportAlbumTrack(
-			ctx, f.path, artist, alb, f.tr, multiDisc,
+			ctx, src, artist, alb, f.tr, multiDisc,
 			library.AudioNaming{
-				Quality:      tierName(f.q),
-				BitDepth:     f.q.bitDepth,
-				SampleRateHz: f.q.sampleRateHz,
+				Quality:      tierName(q),
+				BitDepth:     q.bitDepth,
+				SampleRateHz: q.sampleRateHz,
 			},
-			mode,
+			fileMode,
 		)
 		if err != nil {
 			putBack(ctx, moved)
@@ -327,13 +366,13 @@ func (w *Worker) importAlbumFiles(
 		rows = append(rows, db.AdoptAlbumFile{
 			TrackID:     f.tr.ID,
 			Path:        imported.Path,
-			Quality:     tierName(f.q),
-			Format:      f.info.Format,
+			Quality:     tierName(q),
+			Format:      format,
 			Size:        imported.Size,
 			TagsPending: tagging,
-			Measured:    f.q.probed,
-			BitDepth:    f.q.bitDepth,
-			SampleRate:  f.q.sampleRateHz,
+			Measured:    q.probed,
+			BitDepth:    q.bitDepth,
+			SampleRate:  q.sampleRateHz,
 		})
 	}
 	if len(rows) == 0 {

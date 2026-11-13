@@ -26,6 +26,11 @@ var (
 	// backed-up importer degrades silently otherwise: each drop logs one line
 	// with nothing aggregating them, so nobody notices until imports go
 	// missing.
+	wavConversions = otelx.Must(meter.Int64Counter(
+		"streamline.importer.wav_conversions",
+		metric.WithDescription("WAV files converted to FLAC on import, by outcome"),
+	))
+
 	dropped = otelx.Must(meter.Int64Counter(
 		"streamline.importer.enqueue_dropped",
 		metric.WithDescription("Enqueues dropped because the queue was full"),

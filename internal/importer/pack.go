@@ -40,7 +40,7 @@ func (w *Worker) importPackRecord(
 		attribute.Int64("artist.id", int64(artist.ID)),
 		attribute.Int("pack.albums", len(linked)),
 	)
-	files, err := listAudioFiles(rec.SavePath)
+	files, err := listAudioFiles(rec.SavePath, library.ConvertsWAV(w.probe))
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("list pack files: %w", err))
 	}
@@ -225,7 +225,7 @@ func (w *Worker) PackFolderPlan(
 	if rec.Edges.Artist == nil {
 		return FolderPlan{}, ErrNotPack
 	}
-	files, err := listAudioFiles(rec.SavePath)
+	files, err := listAudioFiles(rec.SavePath, library.ConvertsWAV(w.probe))
 	if err != nil {
 		return FolderPlan{}, fmt.Errorf("list pack files: %w", err)
 	}

@@ -29,6 +29,9 @@ var (
 	// ErrCueImage is returned when an album release is disc images, one file
 	// per disc or vinyl side, cut by a CUE sheet beside them.
 	ErrCueImage = errors.New("release is a " + library.CueImageReason)
+	// ErrConversionFailed is returned when a WAV file could not be converted
+	// to a FLAC holding the same audio. Nothing was placed for it.
+	ErrConversionFailed = errors.New("converting to FLAC failed")
 	// ErrNoBookProfile is returned when an ebook record has no quality profile
 	// to choose its format by: none is configured for the author or as the
 	// default.

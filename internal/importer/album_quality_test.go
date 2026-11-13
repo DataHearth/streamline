@@ -153,6 +153,7 @@ var _ = Describe(
 			})
 			alb = fixtureAlbum()
 			prober.EXPECT().Available().Return(true).Maybe()
+			prober.EXPECT().FFmpegPath().Return("/bin/ffmpeg").Maybe()
 		})
 
 		It(
